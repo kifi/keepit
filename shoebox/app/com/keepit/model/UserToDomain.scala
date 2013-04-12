@@ -39,11 +39,17 @@ trait UserToDomainRepo extends Repo[UserToDomain] {
   def get(userId: Id[User], domainId: Id[Domain], kind: State[UserToDomainKind],
           excludeState: Option[State[UserToDomain]] = Some(UserToDomainStates.INACTIVE))
       (implicit session: RSession): Option[UserToDomain]
+
+  def exists(userId: Id[User], domainId: Id[Domain], kind: State[UserToDomainKind],
+          excludeState: Option[State[UserToDomain]] = Some(UserToDomainStates.INACTIVE))
+      (implicit session: RSession): Boolean
 }
 
 @Singleton
-class UserToDomainRepoImpl @Inject()(val db: DataBaseComponent)
-  extends DbRepo[UserToDomain] with UserToDomainRepo {
+class UserToDomainRepoImpl @Inject()(
+  val db: DataBaseComponent,
+  val clock: Clock)
+    extends DbRepo[UserToDomain] with UserToDomainRepo {
 
   import DBSession._
   import FortyTwoTypeMappers._
@@ -60,6 +66,11 @@ class UserToDomainRepoImpl @Inject()(val db: DataBaseComponent)
           excludeState: Option[State[UserToDomain]] = Some(UserToDomainStates.INACTIVE))
       (implicit session: RSession): Option[UserToDomain] =
     (for (t <- table if t.userId === userId && t.domainId === domainId && t.kind === kind && t.state =!= excludeState.orNull) yield t).firstOption
+
+  def exists(userId: Id[User], domainId: Id[Domain], kind: State[UserToDomainKind],
+          excludeState: Option[State[UserToDomain]] = Some(UserToDomainStates.INACTIVE))
+      (implicit session: RSession): Boolean =
+    (for (t <- table if t.userId === userId && t.domainId === domainId && t.kind === kind && t.state =!= excludeState.orNull) yield t.id).firstOption.isDefined
 }
 
 object UserToDomainStates extends States[UserToDomain]

@@ -26,13 +26,12 @@ import play.api.data._
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.libs.json.Json
-import com.keepit.common.controller.FortyTwoController
-import com.keepit.common.controller.FortyTwoController._
+import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
 import com.keepit.common.db._
 import com.keepit.common.social.{SocialId, SocialNetworks}
 import com.keepit.common.net._
 import com.keepit.model._
-import com.keepit.common.controller.BrowserExtensionController
 import com.keepit.common.healthcheck._
 import com.keepit.common.db.slick._
 
@@ -40,6 +39,7 @@ import com.google.inject.{Inject, Singleton}
 
 @Singleton
 class ExtAuthController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   healthcheckPlugin: HealthcheckPlugin,
   userRepo: UserRepo,
@@ -47,13 +47,14 @@ class ExtAuthController @Inject() (
   urlPatternRepo: URLPatternRepo,
   sliderRuleRepo: SliderRuleRepo,
   userExperimentRepo: UserExperimentRepo)
-    extends BrowserExtensionController {
-  def start = AuthenticatedJsonAction { implicit request =>
+    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
+  def start = AuthenticatedJsonToJsonAction { implicit request =>
     val userId = request.userId
     val socialUser = request.socialUser
     log.info(s"start id: $userId, facebook id: ${socialUser.id}")
 
-    val (userAgent, version, installationIdOpt) = request.body.asJson.map { json =>
+    val json = request.body
+    val (userAgent, version, installationIdOpt) =
       (UserAgent((json \ "agent").as[String]),
        KifiVersion((json \ "version").as[String]),
        (json \ "installation").asOpt[String].flatMap { id =>
@@ -69,7 +70,7 @@ class ExtAuthController @Inject() (
                errorMessage = Some("Invalid ExternalId passed in \"%s\" for userId %s".format(id, userId))))
          }
          kiId
-       })}.get
+       })
     log.info(s"start details: $userAgent, $version, $installationIdOpt")
 
     val (user, installation, experiments, sliderRuleGroup, urlPatterns) = db.readWrite{implicit s =>
@@ -84,7 +85,7 @@ class ExtAuthController @Inject() (
         case Some(install) =>
           install
       }
-      val experiments: Seq[String] = userExperimentRepo.getByUser(user.id.get).map(_.experimentType.value)
+      val experiments: Seq[String] = userExperimentRepo.getUserExperiments(user.id.get).map(_.value)
       val sliderRuleGroup: SliderRuleGroup = sliderRuleRepo.getGroup("default")
       val urlPatterns: Seq[String] = urlPatternRepo.getActivePatterns
       (user, installation, experiments, sliderRuleGroup, urlPatterns)
@@ -104,13 +105,14 @@ class ExtAuthController @Inject() (
   }
 
   // where SecureSocial sends users if it can't figure out the right place (see securesocial.conf)
-  def welcome = SecuredAction() { implicit request =>
-    log.debug("in welcome. with user : [ %s ]".format(request.user ))
+  def welcome = AuthenticatedJsonAction { implicit request =>
+    log.debug("in welcome. with user : [ %s ]".format(request.socialUser))
     Redirect(com.keepit.controllers.website.routes.HomeController.home())
   }
 
-  def logOut = UserAwareAction { implicit request =>
-    Ok(views.html.logOut(request.user)).withNewSession
+  // TODO: Fix logOut. ActionAuthenticator currently sets a new session cookie after this action clears it.
+  def logOut = AuthenticatedHtmlAction { implicit request =>
+    Ok(views.html.logOut(Some(request.socialUser))).withNewSession
   }
 
   def whois = AuthenticatedJsonAction { request =>

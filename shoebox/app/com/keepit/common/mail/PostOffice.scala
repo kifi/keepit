@@ -41,6 +41,7 @@ object PostOffice {
     val COMMENT = ElectronicMailCategory("COMMENT")
     val MESSAGE = ElectronicMailCategory("MESSAGE")
     val ADMIN = ElectronicMailCategory("ADMIN")
+    val EMAIL_KEEP = ElectronicMailCategory("EMAIL_KEEP")
   }
 
   val BODY_MAX_SIZE = 524288

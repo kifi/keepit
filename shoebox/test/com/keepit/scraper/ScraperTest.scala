@@ -29,23 +29,23 @@ import java.io.ByteArrayInputStream
 import java.io.OutputStreamWriter
 
 class ScraperTest extends Specification {
-  implicit val config = ScraperConfig(
-    minInterval = 12.0d, //hours
-    maxInterval = 1024.0d, //hours
-    intervalIncrement = 2.0d, //hours
-    intervalDecrement = 1.0d, //hours
+  val config = ScraperConfig(
+    minInterval = 18.0d, //hours
+    maxInterval = 30.0d, //hours
+    intervalIncrement = 4.0d, //hours
+    intervalDecrement = 2.0d, //hours
     initialBackoff = 1.0d, //hours
-    maxBackoff = 1024.0d, //hours
+    maxBackoff = 12.0d, //hours
     changeThreshold = 0.05
   )
 
   "Scraper" should {
     "get a article from an existing website" in {
-      running(new EmptyApplication().withFakeHealthcheck) {
+      running(new EmptyApplication().withFakeHealthcheck()) {
         val store = new FakeArticleStore()
         val scraper = getMockScraper(store)
         val url = "http://www.keepit.com/existing"
-        val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(33)))
+        val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.SCRAPE_WANTED).copy(id = Some(Id(33)))
         val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get))
 
         result must beAnInstanceOf[Scraped] // Article
@@ -58,11 +58,11 @@ class ScraperTest extends Specification {
     }
 
     "throw an error from a non-existing website" in {
-      running(new EmptyApplication().withFakeHealthcheck) {
+      running(new EmptyApplication().withFakeHealthcheck()) {
         val store = new FakeArticleStore()
         val scraper = getMockScraper(store)
         val url = "http://www.keepit.com/missing"
-        val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.ACTIVE).copy(id = Some(Id(44)))
+        val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.SCRAPE_WANTED).copy(id = Some(Id(44)))
         val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get))
         result must beAnInstanceOf[Error]
         (result: @unchecked) match {
@@ -72,7 +72,7 @@ class ScraperTest extends Specification {
     }
 
     "fetch allActive" in {
-      running(new EmptyApplication().withFakeHealthcheck) {
+      running(new EmptyApplication().withFakeHealthcheck()) {
         inject[Database].readWrite { implicit s =>
           val uriRepo = inject[NormalizedURIRepo]
           val scrapeRepo = inject[ScrapeInfoRepo]
@@ -88,13 +88,13 @@ class ScraperTest extends Specification {
       }
     }
 
-    "fetch ACTIVE uris and scrape them" in {
-      running(new EmptyApplication().withFakeHealthcheck) {
+    "fetch SCRAPE_WANTED uris and scrape them" in {
+      running(new EmptyApplication().withFakeHealthcheck()) {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         val (uri1, uri2, info1, info2) = inject[Database].readWrite { implicit s =>
-          val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing"))
-          val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing"))
+          val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing", state = NormalizedURIStates.SCRAPE_WANTED))
+          val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing", state = NormalizedURIStates.SCRAPE_WANTED))
           val info1 = scrapeRepo.getByUri(uri1.id.get).get
           val info2 = scrapeRepo.getByUri(uri2.id.get).get
           (uri1, uri2, info1, info2)
@@ -116,18 +116,20 @@ class ScraperTest extends Specification {
 
     "adjust scrape schedule" in {
       // DEV should be using the default ScraperConfig
-      running(new EmptyApplication().withFakeHealthcheck) {
+      running(new EmptyApplication().withFakeHealthcheck()) {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         var (uri1, uri2, info1, info2) = inject[Database].readWrite { implicit s =>
-          val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing"))
-          val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing"))
+          val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing", state = NormalizedURIStates.SCRAPE_WANTED))
+          val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing", state = NormalizedURIStates.SCRAPE_WANTED))
           val info1 = scrapeRepo.getByUri(uri1.id.get).get
           val info2 = scrapeRepo.getByUri(uri2.id.get).get
           (uri1, uri2, info1, info2)
         }
         val store = new FakeArticleStore()
-        getMockScraper(store).run
+        val httpFetcher = getMockHttpFetcher()
+        val scraper = getMockScraper(store, httpFetcher)
+        scraper.run
         store.size === 2
 
         // get ScrapeInfo from db
@@ -149,30 +151,33 @@ class ScraperTest extends Specification {
 
         // max interval
         info1 = info1a
-        (0 to ((config.maxInterval / config.intervalIncrement).toInt * 2)).foreach{ i =>
-          info1 = scrapeAndUpdateScrapeInfo(info1, getMockScraper(store))
+        (0 to ((config.maxInterval / config.intervalIncrement).toInt + 2)).foreach{ i =>
+          info1 = scrapeAndUpdateScrapeInfo(info1, scraper)
         }
         info1.interval === config.maxInterval
 
         // min interval
         info1 = info1a
-        (0 to ((info1.interval / config.intervalDecrement).toInt * 2)).foreach{ i =>
-          info1 = scrapeAndUpdateScrapeInfo(info1, getMockScraper(store, i.toString))
+        (0 to ((info1.interval / config.intervalDecrement).toInt + 2)).foreach{ i =>
+          httpFetcher.setSuffix(i.toString)
+          info1 = scrapeAndUpdateScrapeInfo(info1, scraper)
         }
         info1.interval === config.minInterval
 
         info2 = info2a
         // exponential backoff
         var backoff = info2.nextScrape.getMillis - currentDateTime.getMillis
-        backoff = (0 until 5).foldLeft(backoff){ (backoff, i) =>
-          info2 = scrapeAndUpdateScrapeInfo(info2, getMockScraper(store))
+        backoff = (0 until 3).foldLeft(backoff){ (backoff, i) =>
+          info2 = scrapeAndUpdateScrapeInfo(info2, scraper)
           val newBackoff = info2.nextScrape.getMillis - currentDateTime.getMillis
           (newBackoff > (backoff * 1.5)) === true
           newBackoff
         }
         // max backoff
-        backoff = (5 until 20).foldLeft(backoff){ (backoff, i) =>
-          info2 = scrapeAndUpdateScrapeInfo(info2, getMockScraper(store))
+        var repeat = 0
+        while (config.initialBackoff * (1 << repeat) < config.maxBackoff) repeat += 1
+        backoff = (3 to repeat).foldLeft(backoff){ (backoff, i) =>
+          info2 = scrapeAndUpdateScrapeInfo(info2, scraper)
           info2.nextScrape.getMillis - currentDateTime.getMillis
         }
         val maxBackoffMillis = config.maxBackoff * 60*60*1000
@@ -182,11 +187,11 @@ class ScraperTest extends Specification {
 
     "not scrape a not-modified page" in {
       // DEV should be using the default ScraperConfig
-      running(new EmptyApplication().withFakeHealthcheck) {
+      running(new EmptyApplication().withFakeHealthcheck()) {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         var (uri1, info1) = inject[Database].readWrite { implicit s =>
-          val uri1 = uriRepo.save(NormalizedURIFactory(title = "notModified", url = "http://www.keepit.com/notModified"))
+          val uri1 = uriRepo.save(NormalizedURIFactory(title = "notModified", url = "http://www.keepit.com/notModified", state = NormalizedURIStates.SCRAPE_WANTED))
           val info1 = scrapeRepo.getByUri(uri1.id.get).get
           (uri1, info1)
         }
@@ -230,7 +235,7 @@ class ScraperTest extends Specification {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         var info = inject[Database].readWrite { implicit s =>
-          val uri = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing"))
+          val uri = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing", state = NormalizedURIStates.SCRAPE_WANTED))
           scrapeRepo.getByUri(uri.id.get).get
         }
         inject[Database].readWrite { implicit s =>
@@ -260,8 +265,8 @@ class ScraperTest extends Specification {
     new HttpInputStream(new ByteArrayInputStream(baos.toByteArray))
   }
 
-  def getMockScraper(articleStore: ArticleStore, suffix: String = "") = {
-    val mockHttpFetcher = new HttpFetcher {
+  def getMockHttpFetcher() = {
+    new HttpFetcher with SettableSuffix {
       def fetch(url: String , ifModifiedSince: Option[DateTime] = None)(f: HttpInputStream => Unit): HttpFetchStatus = {
         val httpContext = new BasicHttpContext()
         val htmlTemplate = "<html> <head><title>foo%s</title></head> <body>this is a body text. bar%s.</body> </html>"
@@ -287,13 +292,22 @@ class ScraperTest extends Specification {
       }
       def close() {}
     }
-    new Scraper(inject[Database], mockHttpFetcher, articleStore, ScraperConfig(),
-      inject[ScrapeInfoRepo], inject[NormalizedURIRepo], inject[HealthcheckPlugin], inject[UnscrapableRepo]) {
+  }
+
+  def getMockScraper(articleStore: ArticleStore, mockHttpFetcher: HttpFetcher = getMockHttpFetcher) = {
+    new Scraper(inject[Database], mockHttpFetcher, articleStore, config,
+      inject[ScrapeInfoRepo], inject[NormalizedURIRepo], inject[HealthcheckPlugin],
+      inject[BookmarkRepo], inject[UnscrapableRepo]) {
       override protected def getExtractor(url: String): Extractor = {
         new TikaBasedExtractor(url, 10000) {
           protected def getContentHandler = new BodyContentHandler(output)
         }
       }
     }
+  }
+
+  trait SettableSuffix {
+    var suffix = ""
+    def setSuffix(s: String) { suffix = s }
   }
 }

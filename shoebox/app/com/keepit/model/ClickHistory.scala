@@ -46,7 +46,11 @@ class ClickHistoryUserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends 
 }
 
 @Singleton
-class ClickHistoryRepoImpl @Inject() (val db: DataBaseComponent, val clickCache: ClickHistoryUserIdCache) extends DbRepo[ClickHistory] with ClickHistoryRepo {
+class ClickHistoryRepoImpl @Inject() (
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val clickCache: ClickHistoryUserIdCache)
+    extends DbRepo[ClickHistory] with ClickHistoryRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._

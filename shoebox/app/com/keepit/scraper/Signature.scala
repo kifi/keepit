@@ -52,9 +52,11 @@ class SignatureBuilder(windowSize: Int = 20) {
   private[this] var canceler = 0
 
   def add(text: String) = {
-    val ts = new StandardTokenizer(Version.LUCENE_36, new StringReader(text))
+    val ts = new StandardTokenizer(Version.LUCENE_41, new StringReader(text))
     val termAttr = ts.getAttribute(classOf[CharTermAttribute])
     var h = window(ptr % windowSize)
+
+    ts.reset()
     while (ts.incrementToken()) {
       h = ((h >>> 31) | (h << 1)) ^ hash(termAttr.buffer(), termAttr.length())
       ptr += 1

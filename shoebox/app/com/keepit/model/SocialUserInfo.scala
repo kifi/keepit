@@ -55,6 +55,7 @@ trait SocialUserInfoRepo extends Repo[SocialUserInfo] {
 
 case class SocialUserInfoUserKey(userId: Id[User]) extends Key[List[SocialUserInfo]] {
   val namespace = "social_user_info_by_userid"
+  override val version = 2
   def toKey(): String = userId.id.toString
 }
 class SocialUserInfoUserCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[SocialUserInfoUserKey, List[SocialUserInfo]] {
@@ -75,7 +76,10 @@ class SocialUserInfoNetworkCache @Inject() (val repo: FortyTwoCachePlugin) exten
 
 @Singleton
 class SocialUserInfoRepoImpl @Inject() (
-    val db: DataBaseComponent, val userCache: SocialUserInfoUserCache, val networkCache: SocialUserInfoNetworkCache)
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val userCache: SocialUserInfoUserCache,
+  val networkCache: SocialUserInfoNetworkCache)
     extends DbRepo[SocialUserInfo] with SocialUserInfoRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
@@ -117,7 +121,8 @@ class SocialUserInfoRepoImpl @Inject() (
   }
 
   def getNeedToBeRefreshed()(implicit session: RSession): Seq[SocialUserInfo] =
-    (for(f <- table if f.lastGraphRefresh isNull) yield f).list
+    (for(f <- table if f.userId.isNotNull && (f.lastGraphRefresh.isNull || f.lastGraphRefresh < currentDateTime.minusDays(15))) yield f).list
+
 
   def getOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUserInfo] =
     (for(f <- table if f.socialId === id && f.networkType === networkType) yield f).firstOption

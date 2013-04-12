@@ -2,28 +2,30 @@ package com.keepit.search.index
 
 import com.keepit.search.SemanticVector
 import com.keepit.search.SemanticVectorComposer
-import org.apache.lucene.index.IndexReader
+import org.apache.lucene.index.AtomicReader
+import org.apache.lucene.index.AtomicReaderContext
+import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.index.Term
-import org.apache.lucene.index.Payload
 import org.apache.lucene.index.SegmentReader
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
+import org.apache.lucene.search.Explanation
 import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
+import org.apache.lucene.search.similarities.TFIDFSimilarity
 import org.apache.lucene.util.PriorityQueue
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.JavaConversions._
 
 
 object Searcher {
-  def apply(indexReader: IndexReader) = new Searcher(WrappedIndexReader(indexReader))
-  def apply(indexReader: IndexReader, idMapper: IdMapper) = new Searcher(WrappedIndexReader(indexReader, idMapper))
-
+  def apply(indexReader: DirectoryReader) = new Searcher(WrappedIndexReader(indexReader))
   def reopen(oldSearcher: Searcher) = new Searcher(WrappedIndexReader.reopen(oldSearcher.indexReader))
 }
 
 class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexReader) {
 
-  def idf(term: Term) = getSimilarity.idf(docFreq(term), maxDoc)
+  def idf(term: Term) = getSimilarity.asInstanceOf[TFIDFSimilarity]idf(indexReader.docFreq(term), indexReader.maxDoc)
 
   // search: hits are ordered by score
   def search(query: Query): Seq[Hit] = {
@@ -44,36 +46,58 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     if (rewrittenQuery != null) {
       val weight = createNormalizedWeight(rewrittenQuery)
       if(weight != null) {
-        var i = 0
-        val subReaders = indexReader.wrappedSubReaders
-        while (i < subReaders.length) {
-          val subReader = subReaders(i)
-          val scorer = weight.scorer(subReader, true, true)
+        indexReader.getContext.leaves.foreach{ subReaderContext =>
+          val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
+          val scorer = weight.scorer(subReaderContext, true, false, subReader.getLiveDocs)
           if (scorer != null) {
             f(scorer, subReader.getIdMapper)
           }
-          i += 1
         }
       }
     }
   }
 
+  def findDocIdAndAtomicReaderContext(id: Long): Option[(Int, AtomicReaderContext)] = {
+    indexReader.getContext.leaves.foreach{ subReaderContext =>
+      val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
+      val liveDocs = subReader.getLiveDocs
+      val docid = subReader.getIdMapper.getDocId(id)
+      if (docid >= 0 && (liveDocs == null || liveDocs.get(docid))) return Some((docid, subReaderContext))
+    }
+    None
+  }
+
+  def explain(query: Query, id: Long): Explanation = {
+    findDocIdAndAtomicReaderContext(id) match {
+      case Some((docid, context)) =>
+        val rewrittenQuery = rewrite(query)
+        if (rewrittenQuery != null) {
+          val weight = createNormalizedWeight(rewrittenQuery)
+          weight.explain(context, docid)
+        } else {
+          new Explanation(0.0f, "rewrittten query is null")
+        }
+      case None =>
+        new Explanation(0.0f, "failed to find docid")
+    }
+  }
+
   protected def getSemanticVectorComposer(term: Term) = {
     val composer = new SemanticVectorComposer
-    val tp = indexReader.termPositions(term)
-    var vector = new Array[Byte](SemanticVector.arraySize)
-    try {
-      while (tp.next) {
+    indexReader.getContext.leaves.foreach{ subReaderContext =>
+      val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
+      val tp = subReader.termPositionsEnum(term)
+      var vector = new SemanticVector(new Array[Byte](SemanticVector.arraySize))
+      while (tp.nextDoc < NO_MORE_DOCS) {
         var freq = tp.freq()
         while (freq > 0) {
           freq -= 1
           tp.nextPosition()
-          vector = tp.getPayload(vector, 0)
+          val payload = tp.getPayload()
+          vector.set(payload.bytes, payload.offset, payload.length)
           composer.add(vector, 1)
         }
       }
-    } finally {
-      tp.close()
     }
     composer
   }
@@ -105,8 +129,7 @@ class MutableHit(var id: Long, var score: Float) {
   }
 }
 
-class HitQueue(sz: Int) extends PriorityQueue[MutableHit] {
-  initialize(sz)
+class HitQueue(sz: Int) extends PriorityQueue[MutableHit](sz) {
   override def lessThan(a: MutableHit, b: MutableHit) = (a.score < b.score || (a.score == b.score && a.id < b.id))
 
   var overflow: MutableHit = null // sorry about the null, but this is necessary to work with lucene's priority queue efficiently

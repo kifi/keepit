@@ -9,11 +9,18 @@ import com.keepit.common.time._
 import com.keepit.model._
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
+import org.apache.lucene.search.Explanation
 import org.apache.lucene.util.PriorityQueue
+import com.keepit.search.query.{TopLevelQuery,QueryUtil}
+import com.keepit.search.query.parser.SpellCorrector
+import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
+import com.keepit.common.time._
+import com.keepit.common.controller.FortyTwoServices
+import play.api.libs.json._
 import java.util.UUID
 import scala.math._
 import org.joda.time.DateTime
-import org.apache.lucene.search.Explanation
+
 
 class MainSearcher(
     userId: Id[User],
@@ -25,7 +32,11 @@ class MainSearcher(
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
-    clickHistoryTracker: ClickHistoryTracker
+    clickHistoryTracker: ClickHistoryTracker,
+    persistEventPlugin: PersistEventPlugin,
+    spellCorrector: SpellCorrector)
+    (implicit private val clock: Clock,
+    private val fortyTwoServices: FortyTwoServices
 ) extends Logging {
   val currentTime = currentDateTime.getMillis()
   val idFilter = filter.idFilter
@@ -39,10 +50,9 @@ class MainSearcher(
   val halfDecayMillis = config.asFloat("halfDecayHours") * (60.0f * 60.0f * 1000.0f) // hours to millis
   val proximityBoost = config.asFloat("proximityBoost")
   val semanticBoost = config.asFloat("semanticBoost")
-  val dumpingByRank = config.asBoolean("dumpingByRank")
-  val dumpingHalfDecayMine = config.asFloat("dumpingHalfDecayMine")
-  val dumpingHalfDecayFriends = config.asFloat("dumpingHalfDecayFriends")
-  val dumpingHalfDecayOthers = config.asFloat("dumpingHalfDecayOthers")
+  val dampingHalfDecayMine = config.asFloat("dampingHalfDecayMine")
+  val dampingHalfDecayFriends = config.asFloat("dampingHalfDecayFriends")
+  val dampingHalfDecayOthers = config.asFloat("dampingHalfDecayOthers")
   val svWeightMyBookMarks = config.asInt("svWeightMyBookMarks")
   val svWeightBrowsingHistory = config.asInt("svWeightBrowsingHistory")
   val svWeightClickHistory = config.asInt("svWeightClickHistory")
@@ -75,9 +85,11 @@ class MainSearcher(
   private[this] val friendEdgeSet = uriGraphSearcher.getUserToUserEdgeSet(userId, friendIds)
   private[this] val filteredFriendEdgeSet = if (customFilterOn) uriGraphSearcher.getUserToUserEdgeSet(userId, filteredFriendIds) else friendEdgeSet
 
+
+
   def findSharingUsers(id: Id[NormalizedURI]) = {
     val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet
-    val effectiveSharingSize = if (customFilterOn) uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).size else sharingUsers.size
+    val effectiveSharingSize = if (customFilterOn) filter.filterFriends(sharingUsers).size else sharingUsers.size
     (sharingUsers, effectiveSharingSize)
   }
 
@@ -99,7 +111,10 @@ class MainSearcher(
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
-    parser.parse(queryString).map{ articleQuery =>
+
+    val parsedQuery = parser.parse(queryString)
+
+    parsedQuery.map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
       val personalizedSearcher = getPersonalizedSearcher(articleQuery)
@@ -126,7 +141,7 @@ class MainSearcher(
       }
     }
 
-    (myHits, friendsHits, othersHits)
+    (myHits, friendsHits, othersHits, parsedQuery)
   }
 
   def search(queryString: String, numHitsToReturn: Int, lastUUID: Option[ExternalId[ArticleSearchResultRef]], filter: SearchFilter = SearchFilter.default()): ArticleSearchResult = {
@@ -134,21 +149,30 @@ class MainSearcher(
     implicit val lang = Lang("en") // TODO: detect
     val now = currentDateTime
     val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost)
-    val (myHits, friendsHits, othersHits) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
+    val (myHits, friendsHits, othersHits, parsedQuery) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts) match {
+      case (myHits, friendsHits, othersHits, parsedQuery) => {
+        if ( myHits.size() + friendsHits.size() + othersHits.size() > 0 ) (myHits, friendsHits, othersHits, parsedQuery)
+        else {
+          val alternative = try { spellCorrector.getAlternativeQuery(queryString) } catch { case e: Exception => log.error("unexpected SpellCorrector error" ); queryString }
+          if (alternative.trim == queryString.trim)	(myHits, friendsHits, othersHits, parsedQuery)
+          else searchText(alternative, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
+        }
+      }
+    }
 
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
 
     val hits = createQueue(numHitsToReturn)
 
-    // global high score
-    val highScore = max(max(myHits.highScore, friendsHits.highScore), othersHits.highScore)
+    // global high score excluding others (an orphan uri sometimes makes results disappear)
+    val highScore = max(myHits.highScore, friendsHits.highScore)
 
     var threshold = highScore * tailCutting
 
     if (myHits.size > 0) {
       myHits.toRankedIterator.map{ case (h, rank) =>
-        if (dumpingByRank) h.score = h.score * dumpFunc(rank, dumpingHalfDecayMine) // dumping the scores by rank
+        h.score = h.score * dampFunc(rank, dampingHalfDecayMine) // damping the scores by rank
         h
       }.takeWhile{ h =>
         h.score > threshold
@@ -166,7 +190,7 @@ class MainSearcher(
       val queue = createQueue(numHitsToReturn - min(minMyBookmarks, hits.size))
       hits.drop(hits.size - minMyBookmarks).foreach{ h => queue.insert(h) }
       friendsHits.toRankedIterator.map{ case (h, rank) =>
-        if (dumpingByRank) h.score = h.score * dumpFunc(rank, dumpingHalfDecayFriends) // dumping the scores by rank
+        h.score = h.score * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank
         h
       }.takeWhile{ h =>
         h.score > threshold
@@ -184,7 +208,7 @@ class MainSearcher(
     if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers) {
       val queue = createQueue(numHitsToReturn - hits.size)
       othersHits.toRankedIterator.map{ case (h, rank) =>
-        if (dumpingByRank) h.score = h.score * dumpFunc(rank, dumpingHalfDecayOthers) // dumping the scores by rank
+        h.score = h.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
         h
       }.takeWhile{
         h => h.score > threshold
@@ -203,10 +227,20 @@ class MainSearcher(
     hitList.foreach{ h => if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id) }
 
     val newIdFilter = filter.idFilter ++ hitList.map(_.id)
+    val (svVar,svExistVar) = SemanticVariance.svVariance(parsedQuery, hitList, this.articleSearcher, this.uriGraphSearcher);								// compute sv variance. may need to record the time elapsed.
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
+
+    val searchResultUuid = ExternalId[ArticleSearchResultRef]()
+
+    val metaData = JsObject( Seq("queryUUID"->JsString(searchResultUuid.id), "svVariance"-> JsNumber(svVar), "svExistenceVar" -> JsNumber(svExistVar) ))
+    persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData))
+
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit),
-        myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt, (idFilter.size / numHitsToReturn).toInt)
+        myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt,
+        (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = svExistVar)
   }
+
+
 
   private def getPublicBookmarkCount(id: Long) = {
     uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).size
@@ -214,7 +248,7 @@ class MainSearcher(
 
   def createQueue(sz: Int) = new ArticleHitQueue(sz)
 
-  private def dumpFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble/halfDecay, 3.0d))).toFloat
+  private def dampFunc(rank: Int, halfDecay: Double) = (1.0d / (1.0d + pow(rank.toDouble/halfDecay, 3.0d))).toFloat
 
   private def bookmarkScore(bookmarkCount: Int) = (1.0f - (1.0f/(1.0f + bookmarkCount.toFloat)))
 
@@ -233,16 +267,12 @@ class MainSearcher(
     parser.parse(queryString).map{ query =>
       var personalizedSearcher = getPersonalizedSearcher(query)
       personalizedSearcher.setSimilarity(similarity)
-      val idMapper = personalizedSearcher.indexReader.getIdMapper
-
-      (query, personalizedSearcher.explain(query, idMapper.getDocId(uriId.id)))
+      (query, personalizedSearcher.explain(query, uriId.id))
     }
   }
 }
 
-class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit] {
-
-  super.initialize(sz)
+class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit](sz) {
 
   val NO_FRIEND_IDS = Set.empty[Id[User]]
 
@@ -324,7 +354,11 @@ case class ArticleSearchResult(
   millisPassed: Int,
   pageNumber: Int,
   uuid: ExternalId[ArticleSearchResultRef] = ExternalId(),
-  time: DateTime = currentDateTime)
+  time: DateTime = currentDateTime,
+  svVariance: Float = -1.0f,			// semantic vector variance
+  svExistenceVar: Float = -1.0f
+)
+
 
 class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmarkScore: Float, val recencyScore: Float) extends Equals {
   var boostedTextScore: Float = Float.NaN

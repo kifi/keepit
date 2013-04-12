@@ -1,23 +1,34 @@
 <div class="kifi-slider2">
+  <span class="kifi-slider2-x" style="background-image:url({{bgUrl}})"></span>
   <span class="kifi-slider2-keep {{#isKept}}{{#isPrivate}}kifi-private{{/isPrivate}}{{^isPrivate}}kifi-public{{/isPrivate}}{{/isKept}}{{^isKept}}kifi-unkept{{/isKept}}">
     <span class="kifi-slider2-keep-btn kifi-hoverless"></span>
     <span class="kifi-slider2-lock" style="background-image:url({{bgUrl}})"></span>
   </span>
   <span class="kifi-slider2-dock">
-    <span class="kifi-slider2-dock-btn kifi-slider2-noti" style="background-image:url({{bgUrl}})"></span>
+    <span class="kifi-slider2-dock-btn kifi-slider2-notices" style="background-image:url({{bgUrl}})" data-pane="notices">
+      {{#newNotices}}
+      <span class="kifi-count kifi-unread">{{newNotices}}</span>
+      {{/newNotices}}
+    </span>
     <span class="kifi-slider2-dock-sep"></span>
-    <span class="kifi-slider2-dock-btn kifi-slider2-comm" style="background-image:url({{bgUrl}})">
+    <span class="kifi-slider2-dock-btn kifi-slider2-comments" style="background-image:url({{bgUrl}})" data-pane="comments">
       {{#newComments}}
-      <span class="kifi-slider2-dock-count">{{newComments}}</span>
+      <span class="kifi-count kifi-unread">{{newComments}}</span>
       {{/newComments}}
+      {{^newComments}}{{#numComments}}
+      <span class="kifi-count">{{numComments}}</span>
+      {{/numComments}}{{/newComments}}
     </span>
     <span class="kifi-slider2-dock-sep"></span>
-    <span class="kifi-slider2-dock-btn kifi-slider2-mess" style="background-image:url({{bgUrl}})">
+    <span class="kifi-slider2-dock-btn kifi-slider2-threads" style="background-image:url({{bgUrl}})" data-pane="threads">
       {{#newMessages}}
-      <span class="kifi-slider2-dock-count">{{newMessages}}</span>
+      <span class="kifi-count kifi-unread">{{newMessages}}</span>
       {{/newMessages}}
+      {{^newMessages}}{{#numMessages}}
+      <span class="kifi-count">{{numMessages}}</span>
+      {{/numMessages}}{{/newMessages}}
     </span>
     <span class="kifi-slider2-dock-sep"></span>
-    <span class="kifi-slider2-dock-btn kifi-slider2-pane" style="background-image:url({{bgUrl}})"></span>
+    <span class="kifi-slider2-dock-btn kifi-slider2-general" style="background-image:url({{bgUrl}})" data-pane="general"></span>
   </span>
 </div>

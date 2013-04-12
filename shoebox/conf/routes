@@ -25,17 +25,29 @@ GET     /authenticate/:provider     securesocial.controllers.LoginPage.authentic
 POST    /authenticate/:provider     securesocial.controllers.LoginPage.authenticateByPost(provider)
 
 ##########################################
+# External Services API
+##########################################
+#todo(eishay): change routes and callback in sendgrid
+POST    /admin/logging/emails       @com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
+# todo(eishay): We should move the paths of the following two and update pingdom
+GET     /admin/healthcheck/ping     @com.keepit.common.healthcheck.WebsiteHealthController.ping()
+GET     /admin/healthcheck/isHealthy    @com.keepit.common.healthcheck.WebsiteHealthController.isHealthy()
+
+##########################################
 # Extension API
 ##########################################
 
 POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksController.addBookmarks
-GET     /bookmarks/check            @com.keepit.controllers.ext.ExtBookmarksController.checkIfExists(uri: String, ver: String)
+GET     /bookmarks/check            @com.keepit.controllers.ext.ExtBookmarksController.checkIfExists(uri: String)
 POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
 POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updatePrivacy()
 GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksController.getNumMutualKeeps(id: ExternalId[User])
 
-POST    /comments/add               @com.keepit.controllers.ext.ExtCommentController.createComment()
+GET     /comments                   @com.keepit.controllers.ext.ExtCommentController.getComments(url: String)
 GET     /comments/public            @com.keepit.controllers.ext.ExtCommentController.getComments(url: String)
+# TODO: delete redundant /comments/public route above after all extensions reach 2.2.49
+POST    /comments/add               @com.keepit.controllers.ext.ExtCommentController.createComment()
+POST    /comments/:id/remove        @com.keepit.controllers.ext.ExtCommentController.removeComment(id: ExternalId[Comment])
 POST    /comments/follow            @com.keepit.controllers.ext.ExtCommentController.startFollowing()
 POST    /comments/unfollow          @com.keepit.controllers.ext.ExtCommentController.stopFollowing()
 
@@ -50,6 +62,9 @@ GET     /users/friends              @com.keepit.controllers.ext.ExtUserControlle
 
 POST    /users/events               @com.keepit.controllers.ext.ExtEventController.logUserEvents
 
+
+GET     /users/picture/$width<[0-9]{2,3}>/:id       @com.keepit.controllers.assets.UserPictureController.get(width: Int, id: ExternalId[User])
+
 GET     /search                     @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None)
 GET     /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts(ids: String)
 
@@ -57,6 +72,8 @@ POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthControlle
 GET     /welcome                    @com.keepit.controllers.ext.ExtAuthController.welcome
 GET     /whois                      @com.keepit.controllers.ext.ExtAuthController.whois
 GET     /session/end                @com.keepit.controllers.ext.ExtAuthController.logOut
+
+GET     /ext/ws                     @com.keepit.controllers.ext.ExtStreamController.ws()
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
@@ -72,6 +89,7 @@ GET     /admin/graphs/bookmarks.json    @com.keepit.controllers.admin.AdminDashb
 GET     /admin/events               @com.keepit.controllers.admin.AdminEventController.reportList
 POST    /admin/events/buildReport   @com.keepit.controllers.admin.AdminEventController.buildReport
 GET     /admin/events/report        @com.keepit.controllers.admin.AdminEventController.getReport(reportName: String)
+GET     /admin/events/activityData  @com.keepit.controllers.admin.AdminEventController.activityDataAsCsv
 
 GET     /admin/realtime/event       @com.keepit.controllers.admin.AdminEventController.eventViewer
 GET     /admin/realtime/event/stream      @com.keepit.controllers.admin.AdminEventController.eventStream
@@ -85,30 +103,34 @@ POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarks
 GET     /admin/bookmarks/all        @com.keepit.controllers.admin.AdminBookmarksController.all
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Bookmark])
 
-GET     /admin/scrape               com.keepit.controllers.admin.ScraperController.scrape
-GET     /admin/scrape/:state        com.keepit.controllers.admin.ScraperController.scrapeByState(state: State[NormalizedURI])
-GET     /admin/scraped/:uriId       com.keepit.controllers.admin.ScraperController.getScraped(uriId: Id[NormalizedURI])
+GET     /admin/scrape               @com.keepit.controllers.admin.ScraperController.scrape
+GET     /admin/scrape/:state        @com.keepit.controllers.admin.ScraperController.scrapeByState(state: State[NormalizedURI])
+GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperController.getScraped(uriId: Id[NormalizedURI])
 
-GET     /admin/data/integrity       com.keepit.controllers.admin.ScraperController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
-GET     /admin/data/dupe            com.keepit.controllers.admin.ScraperController.duplicateDocumentDetection
-GET     /admin/data/orphan          com.keepit.controllers.admin.ScraperController.orphanCleanup
-GET     /admin/data/unscrapable     com.keepit.controllers.admin.ScraperController.getUnscrapable()
-POST    /admin/data/previewUnscrapable     com.keepit.controllers.admin.ScraperController.previewUnscrapable()
-POST    /admin/data/unscrapable     com.keepit.controllers.admin.ScraperController.createUnscrapable()
-GET     /admin/data/renormalize     com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
-POST    /admin/data/handleDuplicate com.keepit.controllers.admin.ScraperController.handleDuplicate
-POST    /admin/data/handleDuplicates com.keepit.controllers.admin.ScraperController.handleDuplicates
+GET     /admin/data/integrity       @com.keepit.controllers.admin.ScraperController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
+GET     /admin/data/dupe            @com.keepit.controllers.admin.ScraperController.duplicateDocumentDetection
+GET     /admin/data/orphan          @com.keepit.controllers.admin.ScraperController.orphanCleanup
+GET     /admin/data/unscrapable     @com.keepit.controllers.admin.ScraperController.getUnscrapable()
+POST    /admin/data/previewUnscrapable     @com.keepit.controllers.admin.ScraperController.previewUnscrapable()
+POST    /admin/data/unscrapable     @com.keepit.controllers.admin.ScraperController.createUnscrapable()
+GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
+POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.ScraperController.handleDuplicate
+POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.ScraperController.handleDuplicates
 
-GET     /admin/article/index        @com.keepit.controllers.admin.ArticleIndexerController.index
-GET     /admin/article/getSequenceNumber @com.keepit.controllers.admin.ArticleIndexerController.getSequenceNumber
-GET     /admin/article/index/:state @com.keepit.controllers.admin.ArticleIndexerController.indexByState(state: State[NormalizedURI])
-GET     /admin/article/indexInfo    @com.keepit.controllers.admin.ArticleIndexerController.indexInfo
-GET     /admin/article/refreshSearcher @com.keepit.controllers.admin.ArticleIndexerController.refreshSearcher
-GET     /admin/article/dumpDoc/:uriId  @com.keepit.controllers.admin.ArticleIndexerController.dumpLuceneDocument(uriId: Id[NormalizedURI])
+GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
+GET     /admin/article/sequenceNumber @com.keepit.controllers.admin.AdminArticleIndexerController.getSequenceNumber
+GET     /admin/article/index/:state @com.keepit.controllers.admin.AdminArticleIndexerController.indexByState(state: State[NormalizedURI])
+GET     /admin/article/indexInfo    @com.keepit.controllers.admin.AdminArticleIndexerController.indexInfo
+GET     /admin/article/refreshSearcher @com.keepit.controllers.admin.AdminArticleIndexerController.refreshSearcher
+GET     /admin/article/dumpDoc/:uriId  @com.keepit.controllers.admin.AdminArticleIndexerController.dumpLuceneDocument(uriId: Id[NormalizedURI])
 
-GET     /admin/uriGraph/load        com.keepit.controllers.admin.URIGraphController.load
-GET     /admin/uriGraph/update/:userId com.keepit.controllers.admin.URIGraphController.update(userId: Id[User])
-GET     /admin/uriGraph/dumpDoc/:userId  com.keepit.controllers.admin.URIGraphController.dumpLuceneDocument(userId: Id[User])
+POST     /admin/search/spell/buildDict         @com.keepit.controllers.admin.AdminSpellCorrectorController.buildDictionary
+GET     /admin/search/spell        @com.keepit.controllers.admin.AdminSpellCorrectorController.spellController
+GET     /admin/search/spell/test-correct  @com.keepit.controllers.admin.AdminSpellCorrectorController.correctSpelling(query: String)
+
+GET     /admin/uriGraph/load        @com.keepit.controllers.admin.AdminURIGraphController.load
+GET     /admin/uriGraph/update/:userId @com.keepit.controllers.admin.AdminURIGraphController.update(userId: Id[User])
+GET     /admin/uriGraph/dumpDoc/:userId  @com.keepit.controllers.admin.AdminURIGraphController.dumpLuceneDocument(userId: Id[User])
 
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.usersView
 GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User])
@@ -120,20 +142,21 @@ POST    /admin/user/:id/update      @com.keepit.controllers.admin.AdminUserContr
 GET     /admin/user/:id/social_users/refresh @com.keepit.controllers.admin.AdminUserController.refreshAllSocialInfo(id: Id[User])
 POST    /admin/user/:id/impersonate @com.keepit.controllers.admin.AdminAuthController.impersonate(id: Id[User])
 POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
+POST    /admin/users/sendNotification @com.keepit.controllers.admin.AdminUserController.sendNotificationToAllUsers()
 
 GET     /admin/social_users/:page   @com.keepit.controllers.admin.AdminSocialUserController.socialUsersView(page: Int)
 GET     /admin/social_user/:id      @com.keepit.controllers.admin.AdminSocialUserController.socialUserView(id: Id[SocialUserInfo])
 GET     /admin/social_user/:id/refresh @com.keepit.controllers.admin.AdminSocialUserController.refreshSocialInfo(id: Id[SocialUserInfo])
 GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUserController.resetSocialUser(id: Id[SocialUserInfo])
 
-GET     /admin/server               com.keepit.common.healthcheck.HealthController.serviceView()
+GET     /admin/server               @com.keepit.common.healthcheck.AdminHealthController.serviceView()
 
-GET     /admin/emails/comment       com.keepit.controllers.admin.AdminEmailPreviewController.newComment
-GET     /admin/emails/message       com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
-GET     /admin/emails/message-reply com.keepit.controllers.admin.AdminEmailPreviewController.newMessageReply
+GET     /admin/emails/comment       @com.keepit.controllers.admin.AdminEmailPreviewController.newComment
+GET     /admin/emails/message       @com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
+GET     /admin/emails/message-reply @com.keepit.controllers.admin.AdminEmailPreviewController.newMessageReply
 
-GET     /admin/electronicMails       com.keepit.controllers.admin.ElectronicMailController.electronicMailsViewFirstPage
-GET     /admin/electronicMails/:page com.keepit.controllers.admin.ElectronicMailController.electronicMailsView(page: Int)
+GET     /admin/electronicMails       @com.keepit.controllers.admin.ElectronicMailController.electronicMailsViewFirstPage
+GET     /admin/electronicMails/:page @com.keepit.controllers.admin.ElectronicMailController.electronicMailsView(page: Int)
 
 GET     /admin/follows              @com.keepit.controllers.admin.AdminCommentController.followsView
 GET     /admin/comments             @com.keepit.controllers.admin.AdminCommentController.commentsViewFirstPage
@@ -154,33 +177,57 @@ GET     /admin/searchExperiments/kifiHadResults/:id   @com.keepit.controllers.ad
 GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchController.explain(query: String, uriId: Id[NormalizedURI])
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResultRef])
 
-GET     /admin/slider/rules         com.keepit.controllers.admin.SliderAdminController.getRules
-POST    /admin/slider/rules         com.keepit.controllers.admin.SliderAdminController.saveRules
-GET     /admin/slider/patterns      com.keepit.controllers.admin.SliderAdminController.getPatterns
-POST    /admin/slider/patterns      com.keepit.controllers.admin.SliderAdminController.savePatterns
-GET     /admin/slider/domainTags    com.keepit.controllers.admin.SliderAdminController.getDomainTags
-POST    /admin/slider/domainTags    com.keepit.controllers.admin.SliderAdminController.saveDomainTags
-GET     /admin/slider/domains       com.keepit.controllers.admin.SliderAdminController.getDomainOverrides
-POST    /admin/slider/domains       com.keepit.controllers.admin.SliderAdminController.saveDomainOverrides
-POST    /admin/slider/domains/fetch com.keepit.controllers.admin.SliderAdminController.refetchClassifications
-GET     /admin/slider/importEvents  com.keepit.controllers.admin.SliderAdminController.getImportEvents
+GET     /admin/slider/rules         @com.keepit.controllers.admin.SliderAdminController.getRules
+POST    /admin/slider/rules         @com.keepit.controllers.admin.SliderAdminController.saveRules
+GET     /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminController.getPatterns
+POST    /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminController.savePatterns
+GET     /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminController.getDomainTags
+POST    /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminController.saveDomainTags
+GET     /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.getDomainOverrides
+POST    /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.saveDomainOverrides
+POST    /admin/slider/domains/fetch @com.keepit.controllers.admin.SliderAdminController.refetchClassifications
+GET     /admin/slider/importEvents  @com.keepit.controllers.admin.SliderAdminController.getImportEvents
 
-GET     /admin/phrases              com.keepit.controllers.admin.PhraseController.displayPhrases(page: Int ?= 0)
-POST    /admin/phrases/add          com.keepit.controllers.admin.PhraseController.addPhrase
-POST    /admin/phrases/refresh      com.keepit.controllers.admin.PhraseController.refreshPhrases
-POST    /admin/phrases/save         com.keepit.controllers.admin.PhraseController.savePhrases
+GET     /admin/phrases              @com.keepit.controllers.admin.PhraseController.displayPhrases(page: Int ?= 0)
+POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseController.addPhrase
+POST    /admin/phrases/refresh      @com.keepit.controllers.admin.PhraseController.refreshPhrases
+POST    /admin/phrases/save         @com.keepit.controllers.admin.PhraseController.savePhrases
 
-GET     /admin/healthcheck/ping     com.keepit.common.healthcheck.HealthController.ping()
-GET     /admin/healthcheck/error    com.keepit.common.healthcheck.HealthController.causeError()
 # Using a get so we can invoke from browser and have it take care of the auth part
-GET     /admin/healthcheck/emailErrors    com.keepit.common.healthcheck.HealthController.reportErrors()
-GET     /admin/healthcheck/errors   com.keepit.common.healthcheck.HealthController.getErrors()
-GET     /admin/healthcheck/isHealthy    com.keepit.common.healthcheck.HealthController.isHealthy()
-GET     /admin/healthcheck/resetErrorCount    com.keepit.common.healthcheck.HealthController.resetErrorCount()
-
-POST    /admin/logging/emails       com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
+GET     /admin/healthcheck/error    @com.keepit.common.healthcheck.AdminHealthController.causeError()
+GET     /admin/healthcheck/emailErrors    @com.keepit.common.healthcheck.AdminHealthController.reportErrors()
+GET     /admin/healthcheck/errors   @com.keepit.common.healthcheck.AdminHealthController.getErrors()
+GET     /admin/healthcheck/resetErrorCount    @com.keepit.common.healthcheck.AdminHealthController.resetErrorCount()
 
 GET     /admin/labs/rankVsScore     @com.keepit.controllers.admin.AdminSearchLabsController.rankVsScore(q: Option[String] ?= None)
 GET     /admin/labs/rankVsScore.json @com.keepit.controllers.admin.AdminSearchLabsController.rankVsScoreJson(q: Option[String] ?= None)
 GET     /admin/labs/friendMap       @com.keepit.controllers.admin.AdminSearchLabsController.friendMap(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLabsController.friendMapJson(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
+
+# INTERNAL ROUTES
+POST    /internal/search/events/resultClicked @com.keepit.controllers.search.SearchEventController.logResultClicked()
+
+GET     /internal/search/uriGraph/info         @com.keepit.controllers.search.URIGraphController.indexInfo()
+GET     /internal/search/uriGraph/sharingUserInfo @com.keepit.controllers.search.URIGraphController.sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI])
+POST    /internal/search/uriGraph/update       @com.keepit.controllers.search.URIGraphController.updateURIGraph()
+POST    /internal/search/uriGraph/reindex      @com.keepit.controllers.search.URIGraphController.reindex()
+POST    /internal/search/uriGraph/dumpDoc/:id  @com.keepit.controllers.search.URIGraphController.dumpLuceneDocument(id: Id[User])
+
+GET     /internal/search/index/info            @com.keepit.controllers.search.ArticleIndexerController.indexInfo()
+POST    /internal/search/index/update          @com.keepit.controllers.search.ArticleIndexerController.index()
+POST    /internal/search/index/reindex         @com.keepit.controllers.search.ArticleIndexerController.reindex()
+GET     /internal/search/index/sequenceNumber  @com.keepit.controllers.search.ArticleIndexerController.getSequenceNumber()
+POST    /internal/search/index/refreshSearcher @com.keepit.controllers.search.ArticleIndexerController.refreshSearcher()
+POST    /internal/search/index/refreshPhrases  @com.keepit.controllers.search.ArticleIndexerController.refreshPhrases()
+POST    /internal/search/index/dumpDoc/:id     @com.keepit.controllers.search.ArticleIndexerController.dumpLuceneDocument(id: Id[NormalizedURI])
+
+POST    /internal/search/search/keeps          @com.keepit.controllers.search.SearchController.searchKeeps(userId: Id[User], query: String)
+GET     /internal/search/search/explainResult  @com.keepit.controllers.search.SearchController.explain(query: String, userId: Id[User], uriId: Id[NormalizedURI])
+
+POST    /internal/search/spell/buildDict       @com.keepit.controllers.search.SpellCorrectorController.buildDictionary()
+GET     /internal/search/spell/buildStatus     @com.keepit.controllers.search.SpellCorrectorController.getBuildStatus()
+GET     /internal/search/spell/make-correction     @com.keepit.controllers.search.SpellCorrectorController.correctSpelling(query: String)
+
+
+GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.SearchController.friendMapJson(userId: Id[User], query: Option[String] ?= None, minKeeps: Option[Int] ?= None)
+GET     /internal/search/search/rankVsScoreJson @com.keepit.controllers.search.SearchController.rankVsScoreJson(query: Option[String] ?= None)

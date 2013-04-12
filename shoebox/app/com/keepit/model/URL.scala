@@ -26,17 +26,12 @@ object URLHistoryCause {
   val SPLIT = URLHistoryCause("split")
   val MERGE = URLHistoryCause("merge")
 }
-case class URLHistory(date: DateTime, id: Id[NormalizedURI], cause: URLHistoryCause)
-
-object URLHistory {
-  def apply(id: Id[NormalizedURI], cause: URLHistoryCause): URLHistory = URLHistory(inject[DateTime], id, cause)
-  def apply(id: Id[NormalizedURI]): URLHistory = URLHistory(inject[DateTime], id, URLHistoryCause.CREATE)
-}
+case class URLHistory(date: DateTime, id: Id[NormalizedURI], cause: URLHistoryCause = URLHistoryCause.CREATE)
 
 case class URL (
   id: Option[Id[URL]] = None,
-  createdAt: DateTime = inject[DateTime],
-  updatedAt: DateTime = inject[DateTime],
+  createdAt: DateTime = currentDateTime,
+  updatedAt: DateTime = currentDateTime,
   url: String,
   domain: Option[String],
   normalizedUriId: Id[NormalizedURI],
@@ -51,10 +46,8 @@ case class URL (
 }
 
 object URLFactory {
-  def apply(url: String, normalizedUriId: Id[NormalizedURI],
-      createdAt: DateTime = inject[DateTime], updatedAt: DateTime = inject[DateTime]) =
-    URL(url = url, normalizedUriId = normalizedUriId, domain = URI.parse(url).toOption.flatMap(_.host).map(_.name),
-      createdAt = createdAt, updatedAt = updatedAt)
+  def apply(url: String, normalizedUriId: Id[NormalizedURI]) =
+    URL(url = url, normalizedUriId = normalizedUriId, domain = URI.parse(url).toOption.flatMap(_.host).map(_.name))
 }
 
 @ImplementedBy(classOf[URLRepoImpl])
@@ -65,7 +58,7 @@ trait URLRepo extends Repo[URL] {
 }
 
 @Singleton
-class URLRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[URL] with URLRepo {
+class URLRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[URL] with URLRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._

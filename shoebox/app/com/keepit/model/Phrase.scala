@@ -32,7 +32,7 @@ trait PhraseRepo extends Repo[Phrase] {
 }
 
 @Singleton
-class PhraseRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Phrase] with PhraseRepo {
+class PhraseRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[Phrase] with PhraseRepo {
   import db.Driver.Implicit._
   import DBSession._
   import FortyTwoTypeMappers._

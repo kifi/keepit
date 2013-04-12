@@ -41,7 +41,6 @@ object MongoKeyMapFunc {
 
 case class MongoMapFunc(js: String) extends MongoFunc
 object MongoMapFunc {
-
   val USER_DATE_COUNT = MongoMapFunc("""
     function() {
       var date = new Date(this.createdAt);
@@ -49,6 +48,26 @@ object MongoMapFunc {
       emit({day: dateKey,userId: this.metaData.userId},{count:1});
     };
     """)
+
+  val USER_WEEK_COUNT = MongoMapFunc("""
+    function() {
+      var d = new Date(this.createdAt);
+      var date = new Date(d.getTime() + 24*60*60*1000*(7 - d.getDay()));
+      var weekKey = date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + '';
+      emit({day: weekKey,userId: this.metaData.userId},{count:1});
+    };
+    """)
+
+  val USER_MONTH_COUNT = MongoMapFunc("""
+    function() {
+      var date = new Date(this.createdAt);
+      date.setDate(1);
+      date.setMonth(date.getMonth()+1);
+      var monthKey = date.getFullYear() + '-' + (date.getMonth()+1) + '-' + date.getDate() + '';
+      emit({day: monthKey,userId: this.metaData.userId},{count:1});
+    };
+    """)
+
   val KEY_DAY_COUNT = MongoMapFunc("""
     function() {
       emit(this['_id']['day'], {count: 1});

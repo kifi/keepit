@@ -10,6 +10,8 @@
 // @require scripts/lib/lodash.min.js
 // @require scripts/lib/mustache-0.7.1.min.js
 // @require scripts/render.js
+// @require scripts/formatting.js
+// @require scripts/look.js
 // @require scripts/snapshot.js
 
 slider = function() {
@@ -127,6 +129,7 @@ slider = function() {
           }
         });
 
+        badGlobalState["session"] = o.session;
         badGlobalState["updates"] = {
           publicCount: o.numComments,
           messageCount: o.numMessages,
@@ -199,6 +202,7 @@ slider = function() {
     .on("mouseenter", ".kifi-keeper", function() {
       var $a = $(this).showHover({
         hideDelay: 600,
+        fadesOut: true,
         create: function(callback) {
           var friend = o.friends[$a.prevAll(".kifi-keeper").length];
           render("html/friend_card.html", {
@@ -206,7 +210,7 @@ slider = function() {
             facebookId: friend.facebookId,
             iconsUrl: api.url("images/social_icons.png")
           }, callback);
-          api.port.emit("get_num_mutual_keeps", {id: friend.externalId}, function gotNumMutualKeeps(o) {
+          api.port.emit("get_num_mutual_keeps", {id: friend.id}, function gotNumMutualKeeps(o) {
             $a.find(".kifi-kcard-mutual").text(o.n + " mutual keep" + (o.n == 1 ? "" : "s"));
           });
         }});
@@ -423,69 +427,6 @@ slider = function() {
     });
   }
 
-  function commentTextFormatter() {
-    return function(text, render) {
-      // Careful... this is raw text (necessary for URL detection). Be sure to Mustache.escape untrusted portions!
-      text = render(text);
-
-      // linkify look-here links (from markdown)
-      var parts = text.split(/\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:((?:\\\)|[^)])*)\)/);
-      for (var i = 1; i < parts.length; i += 3) {
-        parts[i] = "<a href='x-kifi-sel:" + parts[i+1].replace(/\\\)/g, ")") + "'>" + Mustache.escape(parts[i].replace(/\\\]/g, "]")) + "</a>";
-        parts[i+1] = "";
-      }
-
-      for (i = 0; i < parts.length; i += 3) {
-        // linkify URLs, from http://regex.info/listing.cgi?ed=3&p=207
-        var bits = parts[i].split(/(\b(?:(ftp|https?):\/\/[-\w]+(?:\.\w[-\w]*)+|(?:[a-z0-9](?:[-a-z0-9]*[a-z0-9])?\.)+(?:com|edu|biz|gov|in(?:t|fo)|mil|net|org|name|coop|aero|museum|[a-z][a-z]\b))(?::[0-9]{1,5})?(?:\/[^.!,?;"'<>()\[\]{}\s\x7F-\xFF]*(?:[.!,?]+[^.!,?;"'<>()\[\]{}\s\x7F-\xFF]+)*)?)/);
-        for (var j = 1; j < bits.length; j += 3) {
-          var escapedUri = Mustache.escape(bits[j]);
-          bits[j] = '<a target=_blank href="' + (bits[j+1] ? ""  : "http://") + escapedUri + '">' + escapedUri + "</a>";
-          bits[j+1] = "";
-        }
-        for (j = 0; j < bits.length; j += 3) {
-          bits[j] = Mustache.escape(bits[j]);
-        }
-        parts[i] = bits.join("");
-      }
-
-      return "<p class=first-line>" + parts.join("").replace(/\n(?:[ \t\r]*\n)*/g, "</p><p>") + "</p>";
-    }
-  }
-
-  function commentDateFormatter() {
-    return function(text, render) {
-      try {
-        return new Date(render(text)).toString();
-      } catch (e) {
-        return "";
-      }
-    }
-  }
-
-  function isoDateFormatter() {
-    return function(text, render) {
-      try {
-        return new Date(render(text)).toISOString();
-      } catch (e) {
-        return "";
-      }
-    }
-  }
-
-  function commentSerializer(html) {
-    html = html
-      .replace(/<div><br\s*[\/]?><\/div>/gi, '\n')
-      .replace(/<br\s*[\/]?>/gi, '\n')
-      .replace(/<\/div><div>/gi, '\n')
-      .replace(/<div\s*[\/]?>/gi, '\n')
-      .replace(/<\/div>/gi, '')
-      .replace(/<a [^>]*\bhref="x-kifi-sel:([^"]*)"[^>]*>(.*?)<\/a>/gi, function($0, $1, $2) {
-        return "[" + $2.replace(/\]/g, "\\]") + "](x-kifi-sel:" + $1.replace(/\)/g, "\\)") + ")";
-      });
-    return $('<div>').html(html).text().trim();
-  }
-
   function updateCommentCount(type, count) {
     count = count != null ? count : $(".kifi-comment-real").length; // if no count passed in, count DOM nodes
 
@@ -510,9 +451,9 @@ slider = function() {
         "lastName": "",
         "avatar": session.avatarUrl
       },
-      formatComments: commentTextFormatter,
-      formatDate: commentDateFormatter,
-      formatIsoDate: isoDateFormatter,
+      formatComments: getTextFormatter,
+      formatLocalDate: getLocalDateFormatter,
+      formatIsoDate: getIsoDateFormatter,
       comments: visibleComments,
       showControlBar: type == "public",
       following: following,
@@ -522,9 +463,9 @@ slider = function() {
 
     // TODO: fix indentation below
 
-      if (visibleComments.length && visibleComments[0].user && visibleComments[0].user.externalId) {
+      if (visibleComments.length && visibleComments[0].user && visibleComments[0].user.id) {
         for (msg in visibleComments) {
-          visibleComments[msg]["isLoggedInUser"] = visibleComments[msg].user.externalId == session.userId
+          visibleComments[msg]["isLoggedInUser"] = visibleComments[msg].user.id == session.userId
         }
       }
 
@@ -535,19 +476,17 @@ slider = function() {
         for (msg in iterMessages) {
           var recipients = iterMessages[msg]["recipients"];
           var l = recipients.length;
-          if(l == 0) { // No recipients!
+          if (l == 0) { // No recipients!
             threadAvatar = params.kifiuser.avatar;
-          }
-          else if(l == 1) {
+          } else if (l == 1) {
             threadAvatar = iterMessages[msg]["recipients"][0]["avatar"];
-          }
-          else {
+          } else {
             threadAvatar = api.url("images/convo.png");
           }
           iterMessages[msg]["threadAvatar"] = threadAvatar;
 
           var recipientNames = [];
-          for(r in recipients) {
+          for (r in recipients) {
             var name = recipients[r].firstName + " " + recipients[r].lastName;
             recipientNames.push(name);
           }
@@ -559,31 +498,28 @@ slider = function() {
 
           var displayedRecipients = [];
           var storedRecipients = [];
-          if(l == 0) {
+          if (l == 0) {
             displayedRecipients.push(session.name);
-          }
-          else if(l <= 4) {
+          } else if (l <= 4) {
             displayedRecipients = recipientNames.slice(0, l);
-          }
-          else {
+          } else {
             displayedRecipients = recipientNames.slice(0, 3);
             storedRecipients = recipientNames.slice(3);
           }
 
-          for(d in displayedRecipients) {
+          for (d in displayedRecipients) {
             displayedRecipients[d] = formatRecipient(displayedRecipients[d]);
           }
 
           var recipientText;
-          if(l == 0) {
+          if (l == 0) {
             recipientText = displayedRecipients[0];
-          } else if(l <= 4) {
-            if(l == 1)
-              recipientText = displayedRecipients[0];
-            else if(l == 2)
-              recipientText = displayedRecipients[0] + " and " + displayedRecipients[1];
-            else if(l == 3 || l == 4)
-              recipientText = displayedRecipients.slice(0, l - 1).join(", ") + " and " + displayedRecipients[l - 1];
+          } else if (l == 1) {
+            recipientText = displayedRecipients[0];
+          } else if (l == 2) {
+            recipientText = displayedRecipients[0] + " and " + displayedRecipients[1];
+          } else if (l == 3 || l == 4)
+            recipientText = displayedRecipients.slice(0, l - 1).join(", ") + " and " + displayedRecipients[l - 1];
           } else {
             recipientText = displayedRecipients.slice(0, 3).join(", ");
             storedRecipients = recipientNames.slice(3);
@@ -599,8 +535,8 @@ slider = function() {
           var othersInConversation = {};
           visibleComments.forEach(function(c) {
             c.recipients.concat([c.user]).forEach(function(u) {
-              if (u.externalId != session.userId) {
-                othersInConversation[u.externalId] = u.firstName + " " + u.lastName;
+              if (u.id != session.userId) {
+                othersInConversation[u.id] = u.firstName + " " + u.lastName;
               }
             });
           });
@@ -610,7 +546,7 @@ slider = function() {
           }).join(", ");
           params.recipientText = visibleComments[0].recipientText;
           params.storedRecipients = visibleComments[0].storedRecipients;
-          params.externalId = visibleComments[0].externalId;
+          params.id = visibleComments[0].id;
           params.recipientCount = othersIds.length;
           params.recipientCountText = othersIds.length == 1 ? "person" : "people";
           params.hideComposeTo = true;
@@ -677,77 +613,9 @@ slider = function() {
       $(this).toggleClass("kifi-following", following);
     });
 
-    $container.children(".kifi-comments-body,.kifi-comments-post").on("mousedown", "a[href^='x-kifi-sel:']", function(e) {
-      if (e.which != 1) return;
-      e.preventDefault();
-      var el = snapshot.fuzzyFind(this.href.substring(11));
-      if (el) {
-        // make absolute positioning relative to document instead of viewport
-        document.documentElement.style.position = "relative";
-
-        var aRect = this.getBoundingClientRect();
-        var elRect = el.getBoundingClientRect();
-        var sTop = e.pageY - e.clientY, sLeft = e.pageX - e.clientX;
-        var ms = scrollTo(elRect);
-        $("<div class=kifi-snapshot-highlight>").css({
-          left: aRect.left + sLeft,
-          top: aRect.top + sTop,
-          width: aRect.width,
-          height: aRect.height
-        }).appendTo("body").animate({
-          left: elRect.left + sLeft - 3,
-          top: elRect.top + sTop - 2,
-          width: elRect.width + 6,
-          height: elRect.height + 4
-        }, ms).delay(2000).fadeOut(1000, function() {$(this).remove()});
-      } else {
-        alert("Sorry, this reference is no longer valid on this page.");
-      }
-
-      function scrollTo(r) {  // TODO: factor out for reuse
-        var pad = 100;
-        var hWin = $(window).height();
-        var wWin = $(window).width();
-        var sTop = $(document).scrollTop(), sTop2;
-        var sLeft = $(document).scrollLeft(), sLeft2;
-        var oTop = sTop + r.top;
-        var oLeft = sLeft + r.left;
-
-        if (r.height + 2 * pad < hWin) { // fits with space around it
-          sTop2 = (sTop > oTop - pad) ? oTop - pad :
-            (sTop + hWin < oTop + r.height + pad) ? oTop + r.height + pad - hWin : sTop;
-        } else if (r.height < hWin) { // fits without full space around it, so center
-          sTop2 = oTop - (hWin - r.height) / 2;
-        } else { // does not fit, so get it to fill up window
-          sTop2 = sTop < oTop ? oTop : (sTop + hWin > oTop + r.height) ? oTop + r.height - hWin : sTop;
-        }
-        sTop2 = Math.max(0, sTop2);
-
-        if (r.width + 2 * pad < wWin) { // fits with space around it
-          sLeft2 = (sLeft > oLeft - pad) ? oLeft - pad :
-            (sLeft + wWin < oLeft + r.width + pad) ? oLeft + r.width + pad - wWin : sLeft;
-        } else if (r.width < wWin) { // fits without full space around it, so center
-          sLeft2 = oLeft - (wWin - r.width) / 2;
-        } else { // does not fit, so get it to fill up window
-          sLeft2 = sLeft < oLeft ? oLeft : (sLeft + wWin > oLeft + r.width) ? oLeft + r.width - wWin : sLeft;
-        }
-        sLeft2 = Math.max(0, sLeft2);
-
-        if (sTop2 == sTop && sLeft2 == sLeft) return 400;
-
-        var ms = Math.max(400, Math.min(800, 100 * Math.log(Math.max(Math.abs(sLeft2 - sLeft), Math.abs(sTop2, sTop)))));
-        $("<b>").css({position: "absolute", opacity: 0, display: "none"}).appendTo("body").animate({opacity: 1}, {
-            duration: ms,
-            step: function(a) {
-              window.scroll(
-                sLeft2 * a + sLeft * (1 - a),
-                sTop2 * a + sTop * (1 - a));
-            }, complete: function() {
-              $(this).remove()
-            }});
-        return ms;
-      }
-    }).on("click", "a[href^='x-kifi-sel:']", function(e) {
+    $container.children(".kifi-comments-body,.kifi-comments-post")
+    .on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
+    .on("click", "a[href^='x-kifi-sel:']", function(e) {
       e.preventDefault();
     });
 
@@ -765,9 +633,8 @@ slider = function() {
     });
 
     if (type == "message") {
-      api.port.emit("get_friends", function(data) {
-        api.log("friends:", data);
-        var friends = data.friends; //TODO!
+      api.port.emit("get_friends", function(friends) {
+        api.log("friends:", friends);
         for (var i in friends) {
           var f = friends[i];
           f.name = f.firstName + " " + f.lastName;
@@ -782,7 +649,7 @@ slider = function() {
           animateDropdown: false,
           preventDuplicates: true,
           allowTabOut: true,
-          tokenValue: "externalId",
+          tokenValue: "id",
           theme: "kifi",
           zindex: 2147483641});
         $container.find("#token-input-to-list").keypress(function(e) {
@@ -795,105 +662,39 @@ slider = function() {
 
     var typeName = type == "public" ? "comment" : "message";
     var placeholder = "<span class=kifi-placeholder>Add a " + typeName + "…</span>";
-    $cpv.find(".kifi-comment-compose").html(placeholder);
-    $cpv.on("focus", ".kifi-comment-compose", function() {
-      $(this).find(".kifi-placeholder").remove();
-    }).on("blur", ".kifi-comment-compose", function() {
-      var value = $(this).html();
-      value = commentSerializer(value);
-      if (!value) { // unchanged text!
-        $(this).html(placeholder);
-      }
-    }).on("click", ".kifi-take-snapshot", function() {
-      // make absolute positioning relative to document instead of viewport
-      document.documentElement.style.position = "relative";
-      this.blur();
-      slideOut();
+    var $kcc = $cpv.find(".kifi-comment-compose").html(placeholder)
+    .focus(function() {
+      $kcc.find(".kifi-placeholder").remove();
+    })
+    .blur(function() {
+      // wkb.ug/112854 crbug.com/222546
+      $("<input style=position:fixed;top:999%>").appendTo("html").each(function() {this.setSelectionRange(0,0)}).remove();
 
-      var sel = {}, cX, cY;
-      var $shades = $(["t","b","l","r"].map(function(s) {
-        return $("<div class='kifi-snapshot-shade kifi-snapshot-shade-" + s + "'>")[0];
-      }));
-      var $glass = $("<div class=kifi-snapshot-glass>");
-      var $selectable = $shades.add($glass).appendTo("body").on("mousemove", function(e) {
-        updateSelection(cX = e.clientX, cY = e.clientY, e.pageX - e.clientX, e.pageY - e.clientY);
-      });
-      render("html/comments/snapshot_bar.html", {"type": typeName}, function(html) {
-        $(html).appendTo("body")
-          .draggable({cursor: "move", distance: 10, handle: ".kifi-snapshot-bar", scroll: false})
-          .on("click", ".kifi-snapshot-cancel", exitSnapshotMode)
-          .add($shades).css("opacity", 0).animate({opacity: 1}, 300);
-        key("esc", "snapshot", exitSnapshotMode);
-        key.setScope("snapshot");
-      });
-      $(window).scroll(function() {
-        if (sel) updateSelection(cX, cY);
-      });
-      $glass.click(function() {
-        exitSnapshotMode();
-        $(".kifi-slider").find(".kifi-comment-compose")
-          .find(".kifi-placeholder").remove().end()
-          .append(" <a href='x-kifi-sel:" + snapshot.generateSelector(sel.el).replace("'", "&#39;") + "'>look here</a>");
-      });
-      function exitSnapshotMode() {
-        $selectable.add(".kifi-snapshot-bar-wrap").animate({opacity: 0}, 400, function() { $(this).remove(); });
-        key.setScope();
-        key.deleteScope("snapshot");
+      if (!convertDraftToText($kcc.html())) { // unchanged text!
+        $kcc.html(placeholder);
+      }
+    });
+    $cpv.on("click", ".kifi-take-snapshot", function() {
+      $cpv.blur();
+      slideOut();
+      snapshot.take(typeName, function(selector) {
         slideIn();
-        $(".kifi-slider").find(".kifi-comment-compose").each(function() {
-          var el = this;
-          setTimeout(function() {
-            el.focus();
-            var r = document.createRange(), s = window.getSelection();
-            r.selectNodeContents(el);
-            r.collapse(false);
-            s.removeAllRanges();
-            s.addRange(r);
-          }, 0);
-        });
-      }
-      function updateSelection(clientX, clientY, scrollLeft, scrollTop) {
-        $selectable.hide();
-        var el = document.elementFromPoint(clientX, clientY);
-        $selectable.show();
-        if (!el) return;
-        if (scrollLeft == null) scrollLeft = document.body.scrollLeft;
-        if (scrollTop == null) scrollTop = document.body.scrollTop;
-        var pageX = scrollLeft + clientX;
-        var pageY = scrollTop + clientY;
-        if (el === sel.el) {
-          // track the latest hover point over the current element
-          sel.x = pageX; sel.y = pageY;
-        } else {
-          var r = el.getBoundingClientRect();
-          var dx = Math.abs(pageX - sel.x);
-          var dy = Math.abs(pageY - sel.y);
-          if (!sel.el ||
-              (dx == 0 || r.width < sel.r.width * 2 * dx) &&
-              (dy == 0 || r.height < sel.r.height * 2 * dy) &&
-              (dx == 0 && dy == 0 || r.width * r.height < sel.r.width * sel.r.height * Math.sqrt(dx * dx + dy * dy))) {
-            // if (sel.el) api.log(
-            //   r.width + " < " + sel.r.width + " * 2 * " + dx + " AND " +
-            //   r.height + " < " + sel.r.height + " * 2 * " + dy + " AND " +
-            //   r.width * r.height + " < " + sel.r.width * sel.r.height + " * " + Math.sqrt(dx * dx + dy * dy));
-            var yT = scrollTop + r.top - 2;
-            var yB = scrollTop + r.bottom + 2;
-            var xL = scrollLeft + r.left - 3;
-            var xR = scrollLeft + r.right + 3;
-            $shades.eq(0).css({height: yT});
-            $shades.eq(1).css({top: yB, height: document.documentElement.scrollHeight - yB});
-            $shades.eq(2).css({top: yT, height: yB - yT, width: xL});
-            $shades.eq(3).css({top: yT, height: yB - yT, left: xR});
-            $glass.css({top: yT, height: yB - yT, left: xL, width: xR - xL});
-            sel.el = el; sel.r = r; sel.x = pageX; sel.y = pageY;
-          }
+        if (selector) {
+          $kcc.append(" <a href='x-kifi-sel:" + selector.replace("'", "&#39;") + "'>look here</a>");
         }
-      }
+        $kcc.focus();
+        var r = document.createRange();
+        r.selectNodeContents($kcc[0]);
+        r.collapse(false);
+        var s = window.getSelection();
+        s.removeAllRanges();
+        s.addRange(r);
+      });
     }).on("click", ".kifi-submit-comment", function() {
       $(this).closest("form").submit();
     }).on("submit", ".kifi-comment-form", function(e) {
       e.preventDefault();
-      var text = commentSerializer($(".kifi-comment-compose").find(".kifi-placeholder").remove().end().html());
+      var text = convertDraftToText($(".kifi-comment-compose").find(".kifi-placeholder").remove().end().html());
       if (!text) {
         $(".kifi-comment-compose").html(placeholder);
         return false;
@@ -910,9 +711,9 @@ slider = function() {
         var params = newComment;
 
         newComment.isLoggedInUser = true;
-        params["formatComments"] = commentTextFormatter;
-        params["formatDate"] = commentDateFormatter;
-        params["formatIsoDate"] = isoDateFormatter;
+        params["formatComments"] = getTextFormatter;
+        params["formatLocalDate"] = getLocalDateFormatter;
+        params["formatIsoDate"] = getIsoDateFormatter;
 
         badGlobalState["updates"].publicCount++;
         badGlobalState["updates"].countSum++;
@@ -928,7 +729,7 @@ slider = function() {
       return false;
     }).on("submit", ".kifi-message-form", function(e) {
       e.preventDefault();
-      var text = commentSerializer($(".kifi-comment-compose").find(".kifi-placeholder").remove().end().html());
+      var text = convertDraftToText($(".kifi-comment-compose").find(".kifi-placeholder").remove().end().html());
       if (!text) {
         $(".kifi-comment-compose").html(placeholder);
         return false;
@@ -943,22 +744,21 @@ slider = function() {
       badGlobalState["updates"].messageCount++;
       badGlobalState["updates"].countSum++;
 
-      if(!isReply) {
+      if (!isReply) {
         var recipientJson = $("#to-list").tokenInput("get");
         $("#to-list").tokenInput("clear");
 
         var recipientArr = [];
-        for(r in recipientJson) {
-          recipientArr.push(recipientJson[r]["externalId"]);
+        for (r in recipientJson) {
+          recipientArr.push(recipientJson[r].id);
         }
-        if(recipientArr.length == 0) {
+        if (recipientArr.length == 0) {
           alert("Silly you. You need to add some friends!");
           return false;
         }
         recipients = recipientArr.join(",");
         api.log("[submit] to:", recipients);
-      }
-      else {
+      } else {
         parent = $(this).parents(".kifi-comment-wrapper").find(".kifi-thread-wrapper").data("id");
         api.log("[submit] thread id:", parent);
       }
@@ -972,15 +772,15 @@ slider = function() {
         if (!isReply) {
           updateCommentCount(type, +$(".kifi-tab-count-messages").text() + 1);
           api.log("[submitted] not a reply. redirecting to new message");
-          showComments(session, type, newComment.message.externalId);
+          showComments(session, type, newComment.message.id);
           return;
         }
 
         var params = newComment.message;
         newComment.message.isLoggedInUser = true;
-        params["formatComments"] = commentTextFormatter;
-        params["formatDate"] = commentDateFormatter;
-        params["formatIsoDate"] = isoDateFormatter;
+        params["formatComments"] = getTextFormatter;
+        params["formatLocalDate"] = getLocalDateFormatter;
+        params["formatIsoDate"] = getIsoDateFormatter;
 
         render("html/comments/comment.html", params, function(html) {
           //drawCommentView(html, session, type);
@@ -1009,13 +809,13 @@ slider = function() {
           "createdAt": new Date,
           "text": text,
           "user": {
-            "externalId": session.userId,
+            "id": session.userId,
             "firstName": session.name,
             "lastName": "",
             "facebookId": session.facebookId
           },
           "permissions": type,
-          "externalId": response.commentId});
+          "id": response.commentId});
     });
   }
 

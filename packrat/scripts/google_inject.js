@@ -25,7 +25,6 @@ api.log("[google_inject]");
   var response = {};      // latest kifi results received
   var showMoreOnArrival;
   var clicks = {kifi: 0, google: 0};
-  var friends;            // friends cache for custom filter autocomplete
 
   // "main" div seems to always stay in the page, so only need to bind listener once.
   // TODO: move this code lower, so it runs after we initiate the first search
@@ -50,7 +49,7 @@ api.log("[google_inject]");
     clearTimeout(keyTimer);
     keyTimer = setTimeout(search, 120);  // enough of a delay that we won't search after *every* keystroke (similar to Google's behavior)
   });
-  $("#gbqf").submit(function() {  // stable identifier: "Google Bar Query Form"
+  var $qf = $("#gbqf").submit(function() {  // stable identifier: "Google Bar Query Form"
     tQuery = +new Date;
     clearTimeout(keyTimer);
     search();  // immediate search
@@ -152,11 +151,11 @@ api.log("[google_inject]");
     return m && unescape(m[0].substr(3).replace("+", " ")).trim() || "";
   }
 
-  $(window).bind("hashchange", function() {
+  $(window).on("hashchange", function() {
     api.log("[hashchange]");
     checkSearchType();
     search();  // needed for switch from shopping to web search, for example
-  }).bind("unload", function() {
+  }).on("unload", function() {
     if (response.query === query && new Date - tKifiResultsShown > 2000) {
       logEvent("search", "searchUnload", {
         "query": response.query,
@@ -167,7 +166,7 @@ api.log("[google_inject]");
   });
 
   var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
-  new MutationObserver(function onMutation(mutations) {
+  var observer = new MutationObserver(function onMutation(mutations) {
     for (var i = 0; i < mutations.length; i++) {
       for (var j = 0, nodes = mutations[i].addedNodes; j < nodes.length; j++) {
         if (nodes[j].id === "ires") {
@@ -182,7 +181,22 @@ api.log("[google_inject]");
         }
       }
     }
-  }).observe(document.getElementById("main"), {childList: true, subtree: true});  // TODO: optimize away subtree
+  });
+  observer.observe(document.getElementById("main"), {childList: true, subtree: true});  // TODO: optimize away subtree
+
+  window.addEventListener("kifiunload", function f(e) {
+    if (e.lifeId !== lifeId) {
+      api.log("[google_inject] end life:", lifeId);
+      window.removeEventListener("kifiunload", f);
+      $(window).off("hashchange unload");
+      observer.disconnect();
+      $q.off("input");
+      $qf.off("submit");
+      clearTimeout(idleTimer);
+      $res.remove();
+      $res.length = 0;
+    }
+  });
 
   /*******************************************************/
 
@@ -227,7 +241,7 @@ api.log("[google_inject]");
     }
     url = url.replace(/^https?:\/\//, "");
     if (url.length > 64) {
-      url = url.substring(0, 60) + "...";
+      url = url.substr(0, 60) + "...";
     }
     return boldSearchTerms(url, response.query);
   }
@@ -284,20 +298,12 @@ api.log("[google_inject]");
         $res.find(".kifi-res-filter-custom").slideDown(200, function() {
           $("#token-input-kifi-res-filter-cust").focus();
         });
-        if (friends) {
-          withFriends();
-        } else {
-          api.port.emit("get_friends", function(data) {
-            api.log("friends:", data);
-            friends = data.friends;
-            for (var i in friends) {
-              var f = friends[i];
-              f.name = f.firstName + " " + f.lastName;
-            }
-            withFriends();
-          });
-        }
-        function withFriends() {
+        api.port.emit("get_friends", function(friends) {
+          api.log("friends:", friends);
+          for (var i in friends) {
+            var f = friends[i];
+            f.name = f.firstName + " " + f.lastName;
+          }
           api.require("scripts/lib/jquery-tokeninput-1.6.1.min.js", function() {
             if ($in.prev("ul").length) return;
             $in.tokenInput(friends, {
@@ -310,18 +316,18 @@ api.log("[google_inject]");
               animateDropdown: false,
               preventDuplicates: true,
               allowTabOut: true,
-              tokenValue: "externalId",
+              tokenValue: "id",
               theme: "googly",
               onReady: function() {
                 $("#token-input-kifi-res-filter-cust").focus();
               },
               onAdd: function(friend) {
-                api.log("[onAdd]", friend.externalId, friend.name);
-                search("", filter.length > 1 ? (filter + "." + friend.externalId) : friend.externalId);
+                api.log("[onAdd]", friend.id, friend.name);
+                search("", filter.length > 1 ? (filter + "." + friend.id) : friend.id);
               },
               onDelete: function(friend) {
-                api.log("[onDelete]", friend.externalId, friend.name);
-                var f = filter.split(".").filter(function(id) {return id != friend.externalId}).join(".");
+                api.log("[onDelete]", friend.id, friend.name);
+                var f = filter.split(".").filter(function(id) {return id != friend.id}).join(".");
                 if (f) {
                   search("", f);
                 } else {
@@ -329,7 +335,7 @@ api.log("[google_inject]");
                 }
               }});
            });
-        }
+        });
       }
     }).on("click", ".kifi-res-filter-custom-x", function() {
       $res.find(".kifi-res-filter[data-filter=a]").click();
@@ -339,6 +345,7 @@ api.log("[google_inject]");
     }).on("mouseenter", ".kifi-face.kifi-friend", function() {
       var $a = $(this).showHover({
         hideDelay: 600,
+        fadesOut: true,
         create: function(callback) {
           var i = $a.closest("li.g").prevAll("li.g").length, j = $a.prevAll(".kifi-friend").length;
           var friend = response.hits[i].users[j];
@@ -347,33 +354,31 @@ api.log("[google_inject]");
             facebookId: friend.facebookId,
             iconsUrl: api.url("images/social_icons.png")
           }, callback);
-          api.port.emit("get_num_mutual_keeps", {id: friend.externalId}, function gotNumMutualKeeps(o) {
+          api.port.emit("get_num_mutual_keeps", {id: friend.id}, function gotNumMutualKeeps(o) {
             $a.find(".kifi-kcard-mutual").text(plural(o.n, "mutual keep"));
           });
         }});
-    }).on("mouseenter", ".kifi-res-friends", function() {
-      var $a = $(this).showHover(function(callback) {
-        var i = $a.closest("li.g").prevAll("li.g").length;
-        render("html/search/friends.html", {friends: response.hits[i].users}, function(html) {
-          callback(html, function(w) {this.style.left = ($a[0].offsetWidth - w) / 2 + "px"});
-        });
-      });
+    }).on("mouseenter", ".kifi-res-friends", function(e) {
+      if (e.target !== this) return;
+      var $a = $(this).showHover({
+        fadesOut: true,
+        create: function(callback) {
+          var i = $a.closest("li.g").prevAll("li.g").length;
+          render("html/search/friends.html", {friends: response.hits[i].users}, function(html) {
+            callback(html, function(w) {this.style.left = ($a[0].offsetWidth - w) / 2 + "px"});
+          });
+        }});
     }).on("mouseenter", ".kifi-chatter", function() {
       var $ch = $(this).showHover({
         hideDelay: 600,
+        fadesOut: true,
         create: function(callback) {
           var n = $ch.data("n");
           render("html/search/chatter.html", {
             numComments: n[0],
             numMessages: n[1],
             pluralize: function() {return pluralLambda}
-          }, function(html) {
-            callback($(html).on("transitionend", function(e) {
-              if (e.originalEvent.propertyName === "opacity" && !$ch.hasClass("kifi-hover-showing")) {
-                this.style.display = "none";
-              }
-            }));
-          });
+          }, callback);
         }});
     }).on("click", ".kifi-chatter-deeplink", function() {
       api.port.emit("add_deep_link_listener", {locator: $(this).data("locator")});

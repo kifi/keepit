@@ -1,34 +1,57 @@
 package com.keepit
 
+import java.util.concurrent.atomic.AtomicBoolean
+
 import com.google.inject.{Stage, Guice, Module, Injector}
 import com.keepit.common.controller.FortyTwoServices
-import com.keepit.common.controller.ServiceType
+import com.keepit.common.controller.ReportedException
 import com.keepit.common.db.ExternalId
+import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
-import com.keepit.common.controller
 import com.keepit.inject._
-import play.api.Play.current
+
+import play.api._
 import play.api.mvc.Results.InternalServerError
 import play.api.mvc._
-import play.api._
-import play.api.Mode
 import play.utils.Threads
-import com.keepit.common.healthcheck.HealthcheckError
-import com.keepit.common.controller.ReportedException
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with Logging {
 
+  implicit def richInjector(injector: Injector) = new RichInjector(injector)
+
   def modules: Seq[Module]
 
-  lazy val injector: Injector = mode match {
-    case Mode.Dev => Guice.createInjector(Stage.DEVELOPMENT, modules: _*)
-    case Mode.Prod => Guice.createInjector(Stage.PRODUCTION, modules: _*)
-    case Mode.Test => Guice.createInjector(Stage.DEVELOPMENT, modules: _*)
-    case m => throw new IllegalStateException(s"Unknown mode $m")
+  private val creatingInjector = new AtomicBoolean(false)
+
+  /**
+   * While executing the code block that return the injector,
+   * we found few times that one of the injected components was using inject[Foo] during their construction
+   * instead using the constructor injector (a bug).
+   * In that case the application will try to access the injector - that is being created at this moment.
+   * Then scala executes the injector code block again which eventually creates an infinit stack trace and out of stack space.
+   * The exception is to help us understand the problem.
+   * As we kill the inject[Foo] pattern then there will be no use for the creatingInjector.
+   * We'll still want the lazy val since the injector is depending on things from the application (like the configuration info)
+   * and we don't want to instantiate it until the onStart(app: Application) is executed.
+  */
+  lazy val injector: Injector = {
+    if (creatingInjector.getAndSet(true)) throw new Exception("Injector is being created!")
+    mode match {
+      case Mode.Dev => Guice.createInjector(Stage.DEVELOPMENT, modules: _*)
+      case Mode.Prod => Guice.createInjector(Stage.PRODUCTION, modules: _*)
+      case Mode.Test => Guice.createInjector(Stage.DEVELOPMENT, modules: _*)
+      case m => throw new IllegalStateException(s"Unknown mode $m")
+    }
   }
 
-  override def getControllerInstance[A](clazz: Class[A]) = injector.getInstance(clazz)
+  override def getControllerInstance[A](clazz: Class[A]) = try {
+    injector.getInstance(clazz)
+  } catch {
+    case e: Throwable =>
+      injector.inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.API))
+      throw e
+  }
 
   override def beforeStart (app: Application): Unit = {
     val conf = app.configuration
@@ -82,7 +105,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
       if (app.mode != Mode.Test && app.mode != Mode.Dev) injector.inject[HealthcheckPlugin].reportStop()
       injector.inject[AppScope].onStop(app)
     } catch {
-      case e: Throwable => 
+      case e: Throwable =>
         val errorMessage = "====================== error during onStop ==============================="
         println(errorMessage)
         e.printStackTrace

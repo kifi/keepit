@@ -13,9 +13,7 @@ import com.keepit.common.social.SocialId
 import com.keepit.common.db._
 import com.keepit.common.social.SocialNetworks.FACEBOOK
 import com.keepit.common.time._
-import com.keepit.common.controller.FortyTwoController
-import com.keepit.common.controller.FortyTwoController.ImpersonateCookie
-import com.keepit.common.controller.FortyTwoController.KifiInstallationCookie
+import com.keepit.common.controller.FortyTwoCookies.{ImpersonateCookie, KifiInstallationCookie}
 import com.keepit.model._
 import com.keepit.model.ExperimentTypes.ADMIN
 import com.keepit.test.FakeClock
@@ -31,7 +29,7 @@ class ExtAuthControllerTest extends Specification with DbRepos {
 
   "ExtAuthController" should {
     "start" in {
-      running(new EmptyApplication().withFakeSecureSocialUserService.withFakeHealthcheck) {
+      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeHealthcheck()) {
         val now = new DateTime(2012, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         val today = now.toDateTime
         inject[FakeClock].push(today)
@@ -52,7 +50,7 @@ class ExtAuthControllerTest extends Specification with DbRepos {
         //first round
         val fakeRequest1 = FakeRequest().
             withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook").
-            withJsonBody(JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"))))
+            withBody[JsValue](JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"))))
         val authRequest1 = AuthenticatedRequest(null, user.id.get, fakeRequest1)
         val result1 = inject[ExtAuthController].start(authRequest1)
         status(result1) must equalTo(OK)
@@ -75,7 +73,7 @@ class ExtAuthControllerTest extends Specification with DbRepos {
         //second round
         val fakeRequest2 = FakeRequest().
             withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook").
-            withJsonBody(JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"), "installation" -> JsString(kifiInstallation1.externalId.id))))
+            withBody[JsValue](JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"), "installation" -> JsString(kifiInstallation1.externalId.id))))
         val authRequest2 = AuthenticatedRequest(null, user.id.get, fakeRequest2)
         val result2 = inject[ExtAuthController].start(authRequest2)
         status(result2) must equalTo(OK)

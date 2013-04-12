@@ -1,8 +1,6 @@
 package com.keepit.model
 
-import play.api.Play.current
 import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.inject._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
@@ -36,7 +34,12 @@ trait SocialConnectionRepo extends Repo[SocialConnection] {
 }
 
 @Singleton
-class SocialConnectionRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[SocialConnection] with SocialConnectionRepo {
+class SocialConnectionRepoImpl @Inject() (
+    val db: DataBaseComponent,
+    val clock: Clock,
+    socialRepo: SocialUserInfoRepoImpl)
+  extends DbRepo[SocialConnection] with SocialConnectionRepo {
+
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import scala.slick.jdbc.StaticQuery
@@ -93,7 +96,6 @@ class SocialConnectionRepoImpl @Inject() (val db: DataBaseComponent) extends DbR
 
 
   def getUserConnections(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo] = {
-    val socialRepo = inject[SocialUserInfoRepoImpl]
     socialRepo.getByUser(id).map(_.id.get) match {
       case ids if !ids.isEmpty =>
         val connections = (for {
@@ -109,7 +111,6 @@ class SocialConnectionRepoImpl @Inject() (val db: DataBaseComponent) extends DbR
   }
 
   def getSocialUserConnections(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserInfo] = {
-    val socialRepo = inject[SocialUserInfoRepoImpl]
     val connections = (for {
       t <- table if ((t.socialUser1 === id || t.socialUser2 === id) && t.state === SocialConnectionStates.ACTIVE)
     } yield t ).list

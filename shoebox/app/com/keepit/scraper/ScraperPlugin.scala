@@ -1,5 +1,7 @@
 package com.keepit.scraper
 
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.actor.ActorFactory
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
 import com.keepit.model.NormalizedURI
@@ -18,7 +20,11 @@ import com.keepit.common.plugin.SchedulingPlugin
 case object Scrape
 case class ScrapeInstance(uri: NormalizedURI)
 
-private[scraper] class ScraperActor(scraper: Scraper) extends FortyTwoActor with Logging {
+private[scraper] class ScraperActor @Inject() (
+    scraper: Scraper,
+    healthcheckPlugin: HealthcheckPlugin)
+  extends FortyTwoActor(healthcheckPlugin) with Logging {
+
   def receive() = {
     case Scrape => sender ! scraper.run()
     case ScrapeInstance(uri) => sender ! scraper.safeProcessURI(uri)
@@ -31,17 +37,20 @@ trait ScraperPlugin extends SchedulingPlugin {
   def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])]
 }
 
-class ScraperPluginImpl @Inject() (system: ActorSystem, scraper: Scraper) extends ScraperPlugin with Logging {
+class ScraperPluginImpl @Inject() (
+  actorFactory: ActorFactory[ScraperActor],
+  scraper: Scraper)
+    extends ScraperPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private val actor = system.actorOf(Props { new ScraperActor(scraper) })
+  private lazy val actor = actorFactory.get()
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting ScraperPluginImpl")
-    scheduleTask(system, 0 seconds, 1 minutes, actor, Scrape)
+    scheduleTask(actorFactory.system, 0 seconds, 1 minutes, actor, Scrape)
   }
   override def onStop() {
     log.info("stopping ScraperPluginImpl")

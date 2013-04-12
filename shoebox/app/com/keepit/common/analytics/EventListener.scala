@@ -1,52 +1,73 @@
 package com.keepit.common.analytics
 
-import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
+import play.api.libs.json.{ JsArray, JsBoolean, JsNumber, JsObject, JsString }
+import com.keepit.serializer.EventSerializer
+import scala.collection.JavaConversions._
+import java.util.{ Set => JSet }
+import com.google.inject.{ Inject, Singleton }
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.common.db._
-import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.net.URINormalizer
-import com.keepit.search.ArticleSearchResultRef
-import play.api.Play.current
-import java.sql.Connection
+import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.HealthcheckPlugin
-import java.util.{Set => JSet}
-import scala.collection.JavaConversions._
-import com.keepit.search.ResultClickTracker
-import com.keepit.search.BrowsingHistoryTracker
-import com.keepit.search.ClickHistoryTracker
 import com.keepit.common.plugin.SchedulingPlugin
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.keepit.common.actor.ActorFactory
+import com.keepit.common.time._
+import com.keepit.common.controller.FortyTwoServices
+import com.keepit.model._
+import com.keepit.search.{ SearchServiceClient, ArticleSearchResultRef, BrowsingHistoryTracker, ClickHistoryTracker }
 import com.keepit.common.akka.FortyTwoActor
 import akka.actor.ActorSystem
 import akka.actor.Props
-import com.keepit.classify.DomainTagImportActor
+import play.api.libs.json.JsObject
+import play.api.libs.json.Json
+import com.google.inject.Provider
 
-trait EventListenerPlugin extends SchedulingPlugin {
-  def onEvent: PartialFunction[Event,Unit]
+abstract class EventListenerPlugin(
+    userRepo: UserRepo,
+    normalizedURIRepo: NormalizedURIRepo)
+  extends SchedulingPlugin {
 
-  case class SearchMeta(query: String, url: String, normUrl: Option[NormalizedURI], queryUUID: Option[ExternalId[ArticleSearchResultRef]])
+  def onEvent: PartialFunction[Event, Unit]
+
+  case class SearchMeta(
+    query: String,
+    url: String,
+    normUrl: Option[NormalizedURI],
+    rank: Int,
+    queryUUID: Option[ExternalId[ArticleSearchResultRef]]
+  )
+
   def searchParser(externalUser: ExternalId[User], json: JsObject)(implicit s: RSession) = {
     val query = (json \ "query").asOpt[String].getOrElse("")
     val url = (json \ "url").asOpt[String].getOrElse("")
-    val user = inject[UserRepo].get(externalUser)
-    val normUrl = inject[NormalizedURIRepo].getByNormalizedUrl(url)
+    val user = userRepo.get(externalUser)
+    val normUrl = normalizedURIRepo.getByNormalizedUrl(url)
+    val rank = (json \ "whichResult").asOpt[Int].getOrElse(-1)
     val queryUUID = ExternalId.asOpt[ArticleSearchResultRef]((json \ "queryUUID").asOpt[String].getOrElse(""))
-    (user, SearchMeta(query, url, normUrl, queryUUID))
+    (user, SearchMeta(query, url, normUrl, rank, queryUUID))
   }
 }
 
 @Singleton
-class EventHelper @Inject() (system: ActorSystem, listeners: JSet[EventListenerPlugin], eventStream: EventStream) {
-  private val default = system.actorOf(Props(new EventHelperActor(listeners, eventStream)))
-  def newEvent(event: Event): Seq[String] = {
-    default ! event
-    listeners.filter(_.onEvent.isDefinedAt(event)).map(_.getClass.getSimpleName.replaceAll("\\$","")).toSeq
-  }
+class EventHelper @Inject() (
+    actorFactory: ActorFactory[EventHelperActor],
+    listeners: JSet[EventListenerPlugin]) {
+  private lazy val actor = actorFactory.get()
+
+  def newEvent(event: Event): Unit = actor ! event
+
+  def matchEvent(event: Event): Seq[String] =
+    listeners.filter(_.onEvent.isDefinedAt(event)).map(_.getClass.getSimpleName.replaceAll("\\$", "")).toSeq
 }
 
-class EventHelperActor(listeners: JSet[EventListenerPlugin], eventStream: EventStream) extends FortyTwoActor {
+class EventHelperActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin,
+    listeners: JSet[EventListenerPlugin],
+    eventStream: EventStream)
+  extends FortyTwoActor(healthcheckPlugin) {
+
   def receive = {
     case event: Event =>
       eventStream.streamEvent(event)
@@ -56,35 +77,43 @@ class EventHelperActor(listeners: JSet[EventListenerPlugin], eventStream: EventS
 }
 
 @Singleton
-class KifiResultClickedListener extends EventListenerPlugin {
-  private lazy val resultClickTracker = inject[ResultClickTracker]
-  private lazy val clickHistoryTracker = inject[ClickHistoryTracker]
+class KifiResultClickedListener @Inject() (
+    userRepo: UserRepo,
+    normalizedURIRepo: NormalizedURIRepo,
+    searchServiceClient: SearchServiceClient,
+    clickHistoryTracker: ClickHistoryTracker,
+    db: Database,
+    bookmarkRepo: BookmarkRepo)
+  extends EventListenerPlugin(userRepo, normalizedURIRepo) {
 
-  def onEvent: PartialFunction[Event,Unit] = {
-    case Event(_,UserEventMetadata(EventFamilies.SEARCH,"kifiResultClicked",externalUser,_,experiments,metaData,_),_,_) =>
-      val (user, meta, bookmark) = inject[Database].readOnly {implicit s =>
+  def onEvent: PartialFunction[Event, Unit] = {
+    case Event(_, UserEventMetadata(EventFamilies.SEARCH, "kifiResultClicked", externalUser, _, experiments, metaData, _), _, _) =>
+      val (user, meta, bookmark) = db.readOnly { implicit s =>
         val (user, meta) = searchParser(externalUser, metaData)
-        val bookmarkRepo = inject[BookmarkRepo]
-        val bookmark = meta.normUrl.map(n => bookmarkRepo.getByUriAndUser(n.id.get,user.id.get)).flatten
+        val bookmark = meta.normUrl.map(n => bookmarkRepo.getByUriAndUser(n.id.get, user.id.get)).flatten
         (user, meta, bookmark)
       }
-      meta.normUrl.foreach{ n =>
-        resultClickTracker.add(user.id.get, meta.query, n.id.get, !bookmark.isEmpty)
+      meta.normUrl.foreach { n =>
+        searchServiceClient.logResultClicked(user.id.get, meta.query, n.id.get, meta.rank, !bookmark.isEmpty)
         clickHistoryTracker.add(user.id.get, n.id.get)
       }
   }
 }
 
 @Singleton
-class UsefulPageListener extends EventListenerPlugin {
-  private lazy val browsingHistoryTracker = inject[BrowsingHistoryTracker]
+class UsefulPageListener @Inject() (
+    userRepo: UserRepo,
+    normalizedURIRepo: NormalizedURIRepo,
+    db: Database,
+    browsingHistoryTracker: BrowsingHistoryTracker)
+  extends EventListenerPlugin(userRepo, normalizedURIRepo) {
 
-  def onEvent: PartialFunction[Event,Unit] = {
+  def onEvent: PartialFunction[Event, Unit] = {
     case Event(_, UserEventMetadata(EventFamilies.SLIDER, "usefulPage", externalUser, _, experiments, metaData, _), _, _) =>
-      val (user, url, normUrl) = inject[Database].readOnly {implicit s =>
-        val user = inject[UserRepo].get(externalUser)
+      val (user, url, normUrl) = db.readOnly { implicit s =>
+        val user = userRepo.get(externalUser)
         val url = (metaData \ "url").asOpt[String].getOrElse("")
-        val normUrl = inject[NormalizedURIRepo].getByNormalizedUrl(url)
+        val normUrl = normalizedURIRepo.getByNormalizedUrl(url)
         (user, url, normUrl)
       }
       normUrl.foreach(n => browsingHistoryTracker.add(user.id.get, n.id.get))
@@ -92,16 +121,20 @@ class UsefulPageListener extends EventListenerPlugin {
 }
 
 @Singleton
-class SliderShownListener extends EventListenerPlugin {
-  private lazy val sliderHistoryTracker = inject[SliderHistoryTracker]
+class SliderShownListener @Inject() (
+    userRepo: UserRepo,
+    normalizedURIRepo: NormalizedURIRepo,
+    db: Database,
+    sliderHistoryTracker: SliderHistoryTracker)
+  extends EventListenerPlugin(userRepo, normalizedURIRepo) {
 
-  def onEvent: PartialFunction[Event,Unit] = {
+  def onEvent: PartialFunction[Event, Unit] = {
     case Event(_, UserEventMetadata(EventFamilies.SLIDER, "sliderShown", externalUser, _, experiments, metaData, _), _, _) =>
-      val (user, normUri) = inject[Database].readWrite {implicit s =>
-        val user = inject[UserRepo].get(externalUser)
+      val (user, normUri) = db.readWrite(attempts = 2) { implicit s =>
+        val user = userRepo.get(externalUser)
         val normUri = (metaData \ "url").asOpt[String].map { url =>
-          val repo = inject[NormalizedURIRepo]
-          repo.getByNormalizedUrl(url).getOrElse(repo.save(NormalizedURIFactory(url)))
+          normalizedURIRepo.getByNormalizedUrl(url).getOrElse(
+            normalizedURIRepo.save(NormalizedURIFactory(url, NormalizedURIStates.ACTIVE)))
         }
         (user, normUri)
       }
@@ -109,11 +142,43 @@ class SliderShownListener extends EventListenerPlugin {
   }
 }
 
+abstract class SearchUnloadListener(userRepo: UserRepo, normalizedURIRepo: NormalizedURIRepo) extends EventListenerPlugin(userRepo, normalizedURIRepo)
+
 @Singleton
-class DeadQueryListener extends EventListenerPlugin {
-  def onEvent: PartialFunction[Event,Unit] = {
-    case Event(_,UserEventMetadata(EventFamilies.SEARCH,"searchUnload",externalUser,_,experiments,metaData,_),_,_)
-      if (metaData \ "kifiClicked").asOpt[String].getOrElse("-1").toDouble.toInt == 0 =>
+class SearchUnloadListenerImpl @Inject() (
+    userRepo: UserRepo,
+    normalizedURIRepo: NormalizedURIRepo,
+    persistEventProvider: Provider[PersistEventPlugin],
+    store: MongoEventStore,
+    implicit private val clock: Clock,
+    implicit private val fortyTwoServices: FortyTwoServices)
+  extends SearchUnloadListener(userRepo, normalizedURIRepo) {
+
+  def onEvent: PartialFunction[Event, Unit] = {
+    case Event(_, UserEventMetadata(EventFamilies.SEARCH, "searchUnload", _, _, _, metaData, _), _, _) => {
+      val kifiClicks = (metaData \ "kifiResultsClicked").asOpt[Int].getOrElse(-1)
+      val googleClicks = (metaData \ "googleResultsClicked").asOpt[Int].getOrElse(-1)
+      val uuid = (metaData \ "queryUUID").asOpt[String].getOrElse("")
+      val q = MongoSelector(EventFamilies.SERVER_SEARCH).withEventName("search_return_hits").withMetaData("queryUUID", uuid)
+      store.find(q).map { dbo =>
+        val data = EventSerializer.eventSerializer.mongoReads(dbo).get.metaData
+        val svVar = (data.metaData \ "svVariance").asOpt[Double].getOrElse(-1.0) // retrieve the related semantic variance
+        val newMetaData = Json.obj("queryUUID" -> uuid,
+          "svVariance" -> svVar,
+          "kifiResultsClicked" -> kifiClicks,
+          "googleResultsClicked" -> googleClicks)
+
+        val event = Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_statistics", newMetaData)
+        persistEventProvider.get.persist(event)
+      }
+    }
+  }
+}
+
+class FakeSearchUnloadListenerImpl @Inject() (userRepo: UserRepo, normalizedURIRepo: NormalizedURIRepo) extends SearchUnloadListener(userRepo, normalizedURIRepo) {
+  def onEvent: PartialFunction[Event, Unit] = {
+    case event @ Event(_, UserEventMetadata(EventFamilies.SEARCH, "searchUnload", _, _, _, metaData, _), _, _) =>
+      // Nothing for now
   }
 }
 

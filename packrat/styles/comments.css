@@ -317,6 +317,9 @@ div.kifi-more-recipient-list {
   background-color: inherit;
   background-position: -40px 0;
 }
+body.kifi-snapshot-root {
+  position: relative; /* replace viewport as absolute positioning root */
+}
 body .kifi-snapshot-glass {
   position: absolute;
   z-index: 2147483639;
@@ -487,13 +490,17 @@ div.token-input-dropdown-kifi p {
   color: #777;
 }
 div.token-input-dropdown-kifi ul {
+  position: static;
+  float: none;
   margin: 0 !important;
   padding: 0 !important;
 }
 div.token-input-dropdown-kifi ul li {
   background: #fff;
-  padding: 3px !important;
+  position: static;
+  float: none;
   margin: 0 !important;
+  padding: 3px !important;
   list-style-type: none;
   text-align: left;
   font: 11px "helvetica neue",Helvetica,Arial,sans-serif;

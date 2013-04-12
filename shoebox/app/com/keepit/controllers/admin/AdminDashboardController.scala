@@ -16,7 +16,7 @@ import com.keepit.common.db._
 
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.search.ArticleStore
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.common.healthcheck.BabysitterTimeout
@@ -30,16 +30,17 @@ import com.keepit.common.db.slick.Repo
 import scala.concurrent.duration._
 import views.html
 
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.google.inject.{Inject, Singleton, Provider}
 
 @Singleton
 class AdminDashboardController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   userRepo: UserRepo,
   bookmarkRepo: BookmarkRepo,
-  date: Provider[LocalDate])
-    extends AdminController {
+  clock: Clock)
+    extends AdminController(actionAuthenticator) {
 
   implicit val timeout = BabysitterTimeout(1 minutes, 2 minutes)
 
@@ -52,7 +53,7 @@ class AdminDashboardController @Inject() (
     val userCounts = if (Play.isDev) {
       Seq.fill(40)(math.round(math.pow((math.random * 4), 2D).toFloat) - 2)
     } else {
-      (0 to Days.daysBetween(day0, date.get).getDays()) map {i => dayCounts(day0.plusDays(i))}
+      (0 to Days.daysBetween(day0, clock.today).getDays()) map {i => dayCounts(day0.plusDays(i))}
     }
     JsObject(List(
         "day0" -> day0.toJson,

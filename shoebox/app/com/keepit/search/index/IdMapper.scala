@@ -1,8 +1,9 @@
 package com.keepit.search.index
 
-import org.apache.lucene.index.IndexReader
+import org.apache.lucene.index.AtomicReader
 import scala.collection.mutable.ArrayStack
 import java.lang.Long.bitCount
+import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 
 abstract class IdMapper {
   def getId(docid: Int): Long
@@ -10,44 +11,24 @@ abstract class IdMapper {
 }
 
 object ArrayIdMapper {
-  def apply(indexReader: IndexReader) = {
-    val maxDoc = indexReader.maxDoc();
-    val idArray = new Array[Long](maxDoc);
-    val payloadBuffer = new Array[Byte](8)
-    val tp = indexReader.termPositions(Indexer.idPayloadTerm);
-    try {
-      var idx = 0;
-      while (tp.next()) {
-        val doc = tp.doc();
-        while (idx < doc) {
-          idArray(idx) = Indexer.DELETED_ID; // fill the gap
-          idx += 1
-        }
-        tp.nextPosition();
-        tp.getPayload(payloadBuffer, 0)
-        val id = bytesToLong(payloadBuffer)
-        idArray(idx) = id
+  def apply(indexReader: AtomicReader) = {
+    val maxDoc = indexReader.maxDoc()
+    val liveDocs = indexReader.getLiveDocs()
+    val idArray = new Array[Long](maxDoc)
+    val idVals = indexReader.getNumericDocValues(Indexer.idValueFieldName)
+    var idx = 0
+    if (idVals != null) {
+      while (idx < maxDoc) {
+        idArray(idx) = if (liveDocs == null || liveDocs.get(idx)) idVals.get(idx) else Indexer.DELETED_ID
         idx += 1
       }
-      while(idx < maxDoc) {
-        idArray(idx) = Indexer.DELETED_ID; // fill the gap
+    } else {
+      while (idx < maxDoc) {
+        idArray(idx) = Indexer.DELETED_ID
         idx += 1
       }
-    } finally {
-      tp.close();
     }
     new ArrayIdMapper(idArray)
-  }
-
-  def bytesToLong(bytes: Array[Byte]): Long = {
-    ((bytes(0) & 0xFF).toLong) |
-    ((bytes(1) & 0xFF).toLong <<  8) |
-    ((bytes(2) & 0xFF).toLong << 16) |
-    ((bytes(3) & 0xFF).toLong << 24) |
-    ((bytes(4) & 0xFF).toLong << 32) |
-    ((bytes(5) & 0xFF).toLong << 40) |
-    ((bytes(6) & 0xFF).toLong << 48) |
-    ((bytes(7) & 0xFF).toLong << 56)
   }
 }
 
@@ -58,11 +39,11 @@ class ArrayIdMapper(idArray: Array[Long]) extends IdMapper {
   def getDocId(id: Long) = reserveMapper(id)
 }
 
-class ReverseArrayMapper(ids: Array[Long], indexes: Array[Int], sz: Int, ranks: Array[Int], bitmaps: Array[Long], chains: Array[Long]) {
+class ReverseArrayMapper(ids: Array[Long], indexes: Array[Int], sz: Int, bucketStart: Array[Int], bitmaps: Array[Long], chains: Array[Long]) {
   def apply(id: Long): Int = {
     val h = ReverseArrayMapper.hash(id)
     val bucket = (h % sz).toInt
-    val start = ranks(bucket)
+    val start = bucketStart(bucket)
     val bitmap = bitmaps(bucket)
     var mask = (1L << ((h / sz) & 0x3F))
     if ((bitmap & mask) != 0) {
@@ -79,7 +60,7 @@ class ReverseArrayMapper(ids: Array[Long], indexes: Array[Int], sz: Int, ranks: 
           while (true) {
             c = base + bitCount(chain & (mask - 1L))
             index = indexes(start + c)
-            if (ids(index) == id) return index // fount it by traversing the chain. now return.
+            if (ids(index) == id) return index // found it by traversing the chain. now return.
             else {
               if (c < 64) {
                 // traverse the chain
@@ -88,7 +69,7 @@ class ReverseArrayMapper(ids: Array[Long], indexes: Array[Int], sz: Int, ranks: 
               } else {
                 // run out of chain bits. resort to the linear search
                 c = (start + c + 1)
-                val end = ranks(bucket + 1)
+                val end = bucketStart(bucket + 1)
                 while (c < end) {
                   index = indexes(c)
                   if (ids(index) == id) return index // found it by the linear search. now return.
@@ -113,28 +94,31 @@ object ReverseArrayMapper {
 
   def apply(ids: Array[Long], loadFactor: Double = 0.5d) = {
     val sz = (ids.length.toDouble / loadFactor).toInt / 64 + 1
-    val ranks = genRanks(sz, ids)
-    val (indexes, bitmaps, chains) = genBitmaps(ids, sz, ranks)
-    new ReverseArrayMapper(ids, indexes, sz, ranks, bitmaps, chains)
+    val buckets = genBuckets(sz, ids)
+    val (indexes, bitmaps, chains) = genBitmaps(ids, sz, buckets)
+    new ReverseArrayMapper(ids, indexes, sz, buckets, bitmaps, chains)
   }
 
-  private[this] def genRanks(sz: Int, ids: Array[Long]) = {
-    val ranks = new Array[Int](sz + 1)
+  private[this] def genBuckets(sz: Int, ids: Array[Long]) = {
+    val buckets = new Array[Int](sz + 1)
     var i = 0
     while (i < ids.length) {
-      ranks((hash(ids(i)) % sz).toInt) += 1
+      val id = ids(i)
+      if (id != Indexer.DELETED_ID) {
+        buckets((hash(id) % sz).toInt) += 1
+      }
       i += 1
     }
     i = 0
     while (i < sz) {
-      ranks(i + 1) += ranks(i)
+      buckets(i + 1) += buckets(i)
       i += 1
     }
-    ranks
+    buckets
   }
 
-  private[this] def genBitmaps(ids: Array[Long], sz: Int, ranks: Array[Int]) = {
-    val indexes = distribute(ids, sz, ranks)
+  private[this] def genBitmaps(ids: Array[Long], sz: Int, buckets: Array[Int]) = {
+    val indexes = distribute(ids, sz, buckets)
     val bitmaps = new Array[Long](sz)
     val chains = new Array[Long](sz)
     val slots = new Array[ArrayStack[Int]](64)
@@ -145,8 +129,8 @@ object ReverseArrayMapper {
     }
     i = 0
     while (i < sz) {
-      var start = ranks(i)
-      var end = ranks(i + 1)
+      var start = buckets(i)
+      var end = buckets(i + 1)
       val (bitmap, chain) = genBitmap(ids, indexes, start, end, sz, slots)
       bitmaps(i) = bitmap
       chains(i) = chain
@@ -200,14 +184,16 @@ object ReverseArrayMapper {
     (bitmap, chain)
   }
 
-  private[this] def distribute(ids: Array[Long], sz: Int, ranks: Array[Int]) = {
+  private[this] def distribute(ids: Array[Long], sz: Int, buckets: Array[Int]) = {
     val indexes = new Array[Int](ids.length)
     var i = 0
     while (i < ids.length) {
-      val v = ids(i)
-      val bucket = (hash(v) % sz).toInt
-      ranks(bucket) -= 1
-      indexes(ranks(bucket)) = i
+      val id = ids(i)
+      if (id != Indexer.DELETED_ID) {
+        val bucket = (hash(id) % sz).toInt
+        buckets(bucket) -= 1
+        indexes(buckets(bucket)) = i
+      }
       i += 1
     }
     indexes

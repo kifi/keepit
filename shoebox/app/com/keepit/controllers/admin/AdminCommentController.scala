@@ -8,15 +8,14 @@ import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.async.dispatch
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.mail.{ElectronicMail, EmailAddresses, PostOffice}
 import com.keepit.common.social._
 import com.keepit.model._
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
-import com.keepit.serializer.CommentWithSocialUserSerializer.commentWithSocialUserSerializer
+import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import play.api.http.ContentTypes
 import play.api.libs.concurrent.Akka
@@ -35,14 +34,16 @@ import com.keepit.common.analytics.ActivityStream
 import views.html
 
 @Singleton
-class AdminCommentController @Inject() (db: Database,
+class AdminCommentController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
+  db: Database,
   commentRepo: CommentRepo,
   commentRecipientRepo: CommentRecipientRepo,
   normalizedURIRepo: NormalizedURIRepo,
   userWithSocialRepo: UserWithSocialRepo,
   followRepo: FollowRepo,
   userRepo: UserRepo)
-    extends AdminController {
+    extends AdminController(actionAuthenticator) {
 
   def followsView = AdminHtmlAction { implicit request =>
     val uriAndUsers = db.readOnly { implicit s =>

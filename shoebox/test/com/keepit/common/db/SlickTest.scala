@@ -1,5 +1,6 @@
 package com.keepit.common.db
 
+import com.keepit.common.time.Clock
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.test._
@@ -14,6 +15,7 @@ import org.specs2.mutable.Specification
 import scala.slick.lifted.Query
 import com.keepit.common.db.slick._
 import org.joda.time.DateTime
+import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 
 class SlickTest extends Specification {
 
@@ -37,7 +39,7 @@ class SlickTest extends Specification {
         }
 
         //we can abstract out much of the standard repo and have it injected/mocked out
-        class BarRepoImpl(val db: DataBaseComponent) extends BarRepo with DbRepo[Bar] {
+        class BarRepoImpl(val db: DataBaseComponent, val clock: Clock) extends BarRepo with DbRepo[Bar] {
           import db.Driver.Implicit._ // here's the driver, abstracted away
 
           implicit object BarIdTypeMapper extends BaseTypeMapper[Id[Bar]] {
@@ -58,7 +60,7 @@ class SlickTest extends Specification {
           def createTableForTesting()(implicit session: RWSession) = table.ddl.create
         }
 
-        val repo: BarRepo = new BarRepoImpl(inject[DataBaseComponent])
+        val repo: BarRepo = new BarRepoImpl(inject[DataBaseComponent], inject[Clock])
 
         //just for testing you know...
         inject[Database].readWrite{ implicit session =>
@@ -144,6 +146,41 @@ class SlickTest extends Specification {
       }
     }
 
+
+    "re-try MySQLIntegrityConstraintViolationException failed transactions" in {
+
+      running(new ShoeboxApplication()) {
+        val db = inject[Database]
+        import db.db.Driver.Implicit._ // here's the driver, abstracted away
+
+        var count = 0
+
+        db.readWrite(3) { implicit session =>
+          count += 1
+        }
+        count === 1
+
+        count = 0
+        db.readWrite(3) { implicit session =>
+          count += 1
+          if(count < 3) throw new MySQLIntegrityConstraintViolationException
+        }
+        count === 3
+
+        count = 0
+        ({
+          db.readWrite(1) { implicit session =>
+            count += 1
+            throw new MySQLIntegrityConstraintViolationException
+          }
+          Unit
+        }) must throwA[MySQLIntegrityConstraintViolationException]
+        count === 1
+
+
+      }
+    }
+
     "using external id" in {
       running(new ShoeboxApplication()) {
 
@@ -163,7 +200,7 @@ class SlickTest extends Specification {
         }
 
         //we can abstract out much of the standard repo and have it injected/mocked out
-        class BarRepoImpl(val db: DataBaseComponent) extends BarRepo with DbRepo[Bar] with ExternalIdColumnDbFunction[Bar] {
+        class BarRepoImpl(val db: DataBaseComponent, val clock: Clock) extends BarRepo with DbRepo[Bar] with ExternalIdColumnDbFunction[Bar] {
           import db.Driver.Implicit._ // here's the driver, abstracted away
 
           implicit object BarIdTypeMapper extends BaseTypeMapper[Id[Bar]] {
@@ -184,7 +221,7 @@ class SlickTest extends Specification {
           def createTableForTesting()(implicit session: RWSession) = table.ddl.create
         }
 
-        val repo: BarRepo = new BarRepoImpl(inject[DataBaseComponent])
+        val repo: BarRepo = new BarRepoImpl(inject[DataBaseComponent], inject[Clock])
 
         //just for testing you know...
         val (b1, b2) = inject[Database].readWrite{ implicit session =>

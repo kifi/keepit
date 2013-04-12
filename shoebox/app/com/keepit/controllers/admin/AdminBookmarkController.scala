@@ -3,9 +3,8 @@ package com.keepit.controllers.admin
 import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
 import com.keepit.common.analytics.EventFamilies
 import com.keepit.common.analytics.Events
-import com.keepit.common.async._
 import com.keepit.common.performance._
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
@@ -36,7 +35,9 @@ import com.google.inject.{Inject, Singleton}
 import views.html
 
 @Singleton
-class AdminBookmarksController @Inject() (db: Database,
+class AdminBookmarksController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
+  db: Database,
   scraper: ScraperPlugin,
   bookmarkRepo: BookmarkRepo,
   uriRepo: NormalizedURIRepo,
@@ -44,15 +45,17 @@ class AdminBookmarksController @Inject() (db: Database,
   userRepo: UserRepo,
   scrapeRepo: ScrapeInfoRepo,
   socialUserInfoRepo: SocialUserInfoRepo)
-    extends AdminController {
+    extends AdminController(actionAuthenticator) {
 
   def edit(id: Id[Bookmark]) = AdminHtmlAction { request =>
-    db.readOnly { implicit session =>
-      val bookmark = bookmarkRepo.get(id)
-      val uri = uriRepo.get(bookmark.uriId)
-      val user = socialRepo.toUserWithSocial(userRepo.get(bookmark.userId))
-      val scrapeInfo = scrapeRepo.getByUri(bookmark.uriId)
-      Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo))
+    Async {
+      db.readOnlyAsync { implicit session =>
+        val bookmark = bookmarkRepo.get(id)
+        val uri = uriRepo.get(bookmark.uriId)
+        val user = socialRepo.toUserWithSocial(userRepo.get(bookmark.userId))
+        val scrapeInfo = scrapeRepo.getByUri(bookmark.uriId)
+        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo))
+      }
     }
   }
 

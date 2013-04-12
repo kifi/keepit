@@ -3,18 +3,18 @@ package com.keepit.search
 import java.io.File
 import java.io.FileInputStream
 import java.util.Properties
-import java.util.concurrent.atomic.AtomicReference
 
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.model.User
+import com.keepit.model.ExperimentTypes.NO_SEARCH_EXPERIMENTS
+import com.keepit.model.{UserExperimentRepo, User}
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.QueryHash
 
 object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
-      "phraseBoost" -> "0.0",
+      "phraseBoost" -> "0.3",
       "siteBoost" -> "2.0",
       "enableCoordinator" -> "true",
       "similarity" -> "default",
@@ -30,12 +30,11 @@ object SearchConfig {
       "halfDecayHours" -> "24",
       "recencyBoost" -> "1.0",
       "tailCutting" -> "0.20",
-      "proximityBoost" -> "1.0",
-      "semanticBoost" -> "5.0",
-      "dumpingByRank" -> "true",
-      "dumpingHalfDecayMine" -> "8.0",
-      "dumpingHalfDecayFriends" -> "6.0",
-      "dumpingHalfDecayOthers" -> "2.0"
+      "proximityBoost" -> "0.3",
+      "semanticBoost" -> "0.4",
+      "dampingHalfDecayMine" -> "8.0",
+      "dampingHalfDecayFriends" -> "6.0",
+      "dampingHalfDecayOthers" -> "2.0"
     )
   private[this] val descriptions =
     Map[String, String](
@@ -45,7 +44,7 @@ object SearchConfig {
       "similarity" -> "similarity characteristics",
       "svWeightMyBookMarks" -> "semantics vector weight for my bookmarks",
       "svWeightBrowsingHistory" -> "semantic vector weight for browsing history",
-      "svWeightBrowsingHistory" -> "semantic vector weight for click history",
+      "svWeightClickHistory" -> "semantic vector weight for click history",
       "maxResultClickBoost" -> "boosting by recent result clicks",
       "minMyBookmarks" -> "the minimum number of my bookmarks in a search result",
       "myBookmarkBoost" -> "importance of my bookmark",
@@ -55,20 +54,24 @@ object SearchConfig {
       "percentMatch" -> "the minimum percentage of search terms have to match (weighted by IDF)",
       "halfDecayHours" -> "the time the recency boost becomes half",
       "recencyBoost" -> "importance of the recent bookmarks",
-      "tailCutting" -> "after dumping, a hit with a score below the high score multiplied by this will be removed",
+      "tailCutting" -> "after damping, a hit with a score below the high score multiplied by this will be removed",
       "proximityBoost" -> "boosting by proximity",
       "semanticBoost" -> "boosting by semantic vector",
-      "dumpingByRank" -> "enable score dumping by rank",
-      "dumpingHalfDecayMine" -> "how many top hits in my bookmarks are important",
-      "dumpingHalfDecayFriends" -> "how many top hits in friends' bookmarks are important",
-      "dumpingHalfDecayOthers" -> "how many top hits in others' bookmark are important"
+      "dampingByRank" -> "enable score damping by rank",
+      "dampingHalfDecayMine" -> "how many top hits in my bookmarks are important",
+      "dampingHalfDecayFriends" -> "how many top hits in friends' bookmarks are important",
+      "dampingHalfDecayOthers" -> "how many top hits in others' bookmark are important"
     )
 
   def apply(params: (String, String)*): SearchConfig = SearchConfig(Map(params:_*))
   def getDescription(name: String) = descriptions.get(name)
 }
 
-class SearchConfigManager(configDir: Option[File], experimentRepo: SearchConfigExperimentRepo, db: Database) {
+class SearchConfigManager(
+    configDir: Option[File],
+    experimentRepo: SearchConfigExperimentRepo,
+    userExperimentRepo: UserExperimentRepo,
+    db: Database) {
 
   private[this] val analyzer = DefaultAnalyzer.defaultAnalyzer
 
@@ -90,25 +93,17 @@ class SearchConfigManager(configDir: Option[File], experimentRepo: SearchConfigE
     }.getOrElse(new SearchConfig(SearchConfig.defaultParams))
   }
 
-  private[this] val _activeExperiments = new AtomicReference(db.readWrite { implicit s =>
-    experimentRepo.getActive()
-  })
+  def activeExperiments: Seq[SearchConfigExperiment] =
+    db.readOnly { implicit s => experimentRepo.getActive() }
 
-  def activeExperiments: Seq[SearchConfigExperiment] = _activeExperiments.get
+  def getExperiments: Seq[SearchConfigExperiment] =
+    db.readOnly { implicit s => experimentRepo.getNotInactive() }
 
-  def getExperiments: Seq[SearchConfigExperiment] = db.readOnly { implicit s =>
-    experimentRepo.getNotInactive()
-  }
+  def getExperiment(id: Id[SearchConfigExperiment]): SearchConfigExperiment =
+    db.readOnly { implicit s => experimentRepo.get(id) }
 
-  def getExperiment(id: Id[SearchConfigExperiment]): SearchConfigExperiment = db.readOnly { implicit s =>
-    experimentRepo.get(id)
-  }
-
-  def saveExperiment(experiment: SearchConfigExperiment): SearchConfigExperiment = db.readWrite { implicit s =>
-    val exp = experimentRepo.save(experiment)
-    _activeExperiments.set(experimentRepo.getActive())
-    exp
-  }
+  def saveExperiment(experiment: SearchConfigExperiment): SearchConfigExperiment =
+    db.readWrite { implicit s => experimentRepo.save(experiment) }
 
   private var userConfig = Map.empty[Long, SearchConfig]
   def getUserConfig(userId: Id[User]) = userConfig.getOrElse(userId.id, defaultConfig)
@@ -126,12 +121,16 @@ class SearchConfigManager(configDir: Option[File], experimentRepo: SearchConfigE
     userConfig.get(userId.id) match {
       case Some(config) => (config, None)
       case None =>
-        val hashFrac = hash(userId, queryText)
-
-        var frac = 0.0
-        val experiment = activeExperiments.find { e =>
-          frac += e.weight
-          frac >= hashFrac
+        val shouldExclude = db.readOnly { implicit s =>
+          userExperimentRepo.hasExperiment(userId, NO_SEARCH_EXPERIMENTS)
+        }
+        val experiment = if (shouldExclude) None else {
+          val hashFrac = hash(userId, queryText)
+          var frac = 0.0
+          activeExperiments.find { e =>
+            frac += e.weight
+            frac >= hashFrac
+          }
         }
 
         (defaultConfig(experiment.map(_.config.params).getOrElse(Map())), experiment.map(_.id.get))

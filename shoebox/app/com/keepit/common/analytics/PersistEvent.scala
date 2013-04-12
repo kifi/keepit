@@ -8,6 +8,8 @@ import akka.actor.Cancellable
 import org.joda.time._
 
 import com.google.inject.Inject
+
+import com.keepit.common.actor.ActorFactory
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
@@ -29,23 +31,26 @@ case class Update(userId: Id[User])
 case class Persist(event: Event, queueTime: DateTime)
 case class PersistMany(events: Seq[Event], queueTime: DateTime)
 
-private[analytics] class PersistEventActor extends FortyTwoActor with Logging {
+private[analytics] class PersistEventActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin, eventHelper: EventHelper, eventRepo: EventRepo)
+  extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
     case Persist(event, queueTime) =>
+      eventHelper.newEvent(event)
       val diff = Seconds.secondsBetween(queueTime, currentDateTime).getSeconds
       if(diff > 120) {
         val ex = new Exception("Event log is backing up. Event was queued %s seconds ago".format(diff))
-        inject[HealthcheckPlugin].addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
         // To keep the event log from backing too far up, ignore very old events.
         // If we get this, use parallel actors.
       }
       else {
-        try { event.persistToS3() } catch { case ex: Throwable =>
-          inject[HealthcheckPlugin].addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        try { eventRepo.persistToS3(event) } catch { case ex: Throwable =>
+          healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
         }
-        try { event.persistToMongo() } catch { case ex: Throwable =>
-          inject[HealthcheckPlugin].addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        try { eventRepo.persistToMongo(event) } catch { case ex: Throwable =>
+          healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
         }
       }
     case PersistMany(events, queueTime) =>
@@ -59,10 +64,11 @@ trait PersistEventPlugin extends SchedulingPlugin {
   def persist(events: Seq[Event]): Unit
 }
 
+class PersistEventPluginImpl @Inject() (
+    actorFactory: ActorFactory[PersistEventActor])
+    extends PersistEventPlugin with Logging {
 
-class PersistEventPluginImpl @Inject() (system: ActorSystem) extends PersistEventPlugin with Logging {
-
-  private val actor = system.actorOf(Props { new PersistEventActor })
+  private lazy val actor = actorFactory.get()
 
   override def enabled: Boolean = true
   override def onStart() {
@@ -76,9 +82,10 @@ class PersistEventPluginImpl @Inject() (system: ActorSystem) extends PersistEven
   def persist(events: Seq[Event]): Unit = actor ! PersistMany(events, currentDateTime)
 }
 
-class FakePersistEventPluginImpl @Inject() (system: ActorSystem) extends PersistEventPlugin with Logging {
+class FakePersistEventPluginImpl @Inject() (system: ActorSystem, eventHelper: EventHelper) extends PersistEventPlugin with Logging {
 
   def persist(event: Event): Unit = {
+    eventHelper.newEvent(event)
     log.info("Fake persisting event %s".format(event.externalId))
   }
   def persist(events: Seq[Event]): Unit = {

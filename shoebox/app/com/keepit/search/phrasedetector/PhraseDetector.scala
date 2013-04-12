@@ -2,6 +2,9 @@ package com.keepit.search.phrasedetector
 
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
+import com.keepit.model.{PhraseRepo, Phrase}
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.DocUtil
 import com.keepit.search.index.Indexer
@@ -10,28 +13,24 @@ import com.keepit.search.index.FieldDecoder
 import com.keepit.search.Lang
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
-import org.apache.lucene.index.TermPositions
+import org.apache.lucene.index.DocsAndPositionsEnum
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.store.Directory
+import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.PriorityQueue
 import org.apache.lucene.util.Version
 import java.io.File
 import java.io.FileReader
 import java.io.LineNumberReader
 import java.io.IOException
-import scala.collection.mutable.ArrayBuffer
 import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.inject._
-import org.apache.lucene.store.RAMDirectory
-import com.keepit.common.db.slick.Database
-import com.keepit.model.{PhraseRepo, Phrase}
 import scala.slick.util.CloseableIterator
-import play.api.Play.current
-import com.keepit.common.logging.Logging
+import scala.collection.mutable.ArrayBuffer
+import scala.collection.JavaConversions._
 
 object PhraseDetector {
-  val termTemplate = new Term("p", "")
-  def createTerm(text: String) = termTemplate.createTerm(text)
+  val fieldName = "p"
+  def createTerm(text: String) = new Term(fieldName, text)
 }
 
 @Singleton
@@ -41,10 +40,10 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
     val pq = new PQ(terms.size)
 
     val pterms = terms.map{ term => PhraseDetector.createTerm(term.text()) }.zipWithIndex
-    indexer.getSearcher.indexReader.getSequentialSubReaders.foreach{ reader =>
+    indexer.getSearcher.indexReader.leaves.foreach{ subReaderContext =>
       pterms.foreach{ case (pterm, index) =>
-        val tp = reader.termPositions(pterm)
-        if (tp.next()) pq.insertWithOverflow(new Word(index, tp))
+        val tp = subReaderContext.reader.termPositionsEnum(pterm)
+        if (tp != null && tp.nextDoc() < NO_MORE_DOCS) pq.insertWithOverflow(new Word(index, tp))
       }
       var top = pq.top
       while (pq.size > 1) {
@@ -56,7 +55,7 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
           if (top.isEndOfPhrase) {
             result += ((phraseIndex, phraseLength)) // one phrase found
           }
-          top = if (top.next()) {
+          top = if (top.nextDoc() < NO_MORE_DOCS) {
             pq.updateTop()
           } else {
             pq.pop()
@@ -64,7 +63,7 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
           }
         }
         while (top != null && top.doc == doc) {
-          top = if (top.next()) {
+          top = if (top.nextDoc() < NO_MORE_DOCS) {
             pq.updateTop()
           } else {
             pq.pop()
@@ -77,18 +76,13 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
     result
   }
 
-  private class Word(val index: Int, tp: TermPositions) {
-    var doc = tp.doc()
+  private class Word(val index: Int, tp: DocsAndPositionsEnum) {
+    var doc = tp.docID()
     private[this] var end = 0
 
-    def next() = {
-      if (tp.next()) {
-        doc = tp.doc()
-        true
-      } else {
-        doc = NO_MORE_DOCS
-        false
-      }
+    def nextDoc() = {
+      doc = tp.nextDoc()
+      doc
     }
 
     def hasPosition(target: Int): Boolean = {
@@ -106,8 +100,7 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
     def isEndOfPhrase = (end == 1)
   }
 
-  private class PQ(sz: Int) extends PriorityQueue[Word] {
-    super.initialize(sz)
+  private class PQ(sz: Int) extends PriorityQueue[Word](sz) {
     override def lessThan(a: Word, b: Word) = (a.doc < b.doc || (a.doc == b.doc && a.index < b.index))
   }
 }
@@ -118,7 +111,7 @@ object PhraseIndexer {
 
   def apply(indexDirectory: Directory, db: Database, phraseRepo: PhraseRepo): PhraseIndexer  = {
     val analyzer = DefaultAnalyzer.forIndexing
-    val config = new IndexWriterConfig(Version.LUCENE_36, analyzer)
+    val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
     new PhraseIndexerImpl(indexDirectory, db, phraseRepo, config)
   }
 }
@@ -130,15 +123,37 @@ abstract class PhraseIndexer(indexDirectory: Directory, indexWriterConfig: Index
 
 class PhraseIndexerImpl(indexDirectory: Directory, db: Database, phraseRepo: PhraseRepo, indexWriterConfig: IndexWriterConfig) extends PhraseIndexer(indexDirectory, indexWriterConfig) with Logging  {
 
+  final val BATCH_SIZE = 200000
+
   def reload() {
-    db.readOnly { implicit session =>
       log.info("[PhraseIndexer] reloading phrase index")
-      val indexableIterator = phraseRepo.allIterator.map(p => new PhraseIndexable(p.id.get, p.phrase, p.lang))
-      reloadWithCloseableIterator(indexableIterator, refresh = false)
+      val indexableIterator = new Iterator[PhraseIndexable] {
+        var cache = collection.mutable.Queue[PhraseIndexable]()
+        var page = 0
+        private def update() = {
+          if(cache.size <= 1) {
+            db.readOnly { implicit session =>
+              cache = cache ++ phraseRepo.page(page, BATCH_SIZE).map(p => new PhraseIndexable(p.id.get, p.phrase, p.lang))
+              page += 1
+            }
+          }
+        }
+
+        def next() = {
+          update()
+          cache.dequeue
+        }
+        def hasNext() = {
+          update()
+          cache.size > 0
+        }
+      }
+      //val indexableIterator = phraseRepo.allIterator.map(p => new PhraseIndexable(p.id.get, p.phrase, p.lang))
+      log.info("[PhraseIndexer] Iterator created")
+      reload(indexableIterator, refresh = false)
       log.info("[PhraseIndexer] refreshing searcher")
       refreshSearcher()
       log.info("[PhraseIndexer] phrase import complete")
-    }
   }
 
   def reloadWithCloseableIterator(indexableIterator: CloseableIterator[PhraseIndexable], refresh: Boolean) {
@@ -148,7 +163,7 @@ class PhraseIndexerImpl(indexDirectory: Directory, db: Database, phraseRepo: Phr
 
   def reload(indexableIterator: Iterator[PhraseIndexable], refresh: Boolean = true) {
     deleteAllDocuments(refresh = false)
-    indexDocuments(indexableIterator, 500000, refresh = false){ s => log.info(s"[PhraseIndexer] imported ${s.length} phrases. First in batch id: ${s.headOption.map(t=> t._1.id.id).getOrElse("")}") }
+    indexDocuments(indexableIterator, BATCH_SIZE, refresh = false){ s => log.info(s"[PhraseIndexer] imported ${s.length} phrases. First in batch id: ${s.headOption.map(t=> t._1.id.id).getOrElse("")}") }
     if (refresh) refreshSearcher()
   }
 }
@@ -156,6 +171,7 @@ class PhraseIndexerImpl(indexDirectory: Directory, db: Database, phraseRepo: Phr
 
 class PhraseIndexable(override val id: Id[Phrase], phrase: String, lang: Lang) extends Indexable[Phrase] with PhraseFieldBuilder {
   override val sequenceNumber = SequenceNumber.ZERO
+  override val isDeleted = false
   override def buildDocument = {
     val doc = super.buildDocument
     doc.add(buildPhraseField("p", phrase, lang))

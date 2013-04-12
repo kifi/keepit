@@ -16,6 +16,9 @@ import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 
 import com.google.inject.{Provider, ImplementedBy, Inject}
+
+import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.actor.ActorFactory
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
 import com.keepit.common.db.Id
@@ -24,7 +27,6 @@ import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, Healthcheck
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{EmailAddresses, ElectronicMail, PostOffice}
 import com.keepit.common.time._
-import com.keepit.inject.inject
 
 import akka.actor.Status.Failure
 import akka.actor.{ActorSystem, Props}
@@ -52,10 +54,19 @@ object DomainTagImportEvents {
   val REMOVE_TAG_FAILURE = "removeTagFailure"
 }
 
-private[classify] class DomainTagImportActor(db: Database, updater: SensitivityUpdater, clock: Provider[DateTime],
-    domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo,
-    persistEventPlugin: PersistEventPlugin, settings: DomainTagImportSettings)
-    extends FortyTwoActor with Logging {
+private[classify] class DomainTagImportActor @Inject() (
+  db: Database,
+  updater: SensitivityUpdater,
+  implicit private val clock: Clock,
+  domainRepo: DomainRepo,
+  tagRepo: DomainTagRepo,
+  domainToTagRepo: DomainToTagRepo,
+  persistEventPlugin: PersistEventPlugin,
+  settings: DomainTagImportSettings,
+  postOffice: PostOffice,
+  healthcheckPlugin: HealthcheckPlugin,
+  implicit private val fortyTwoServices: FortyTwoServices)
+    extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   import DomainTagImportEvents._
 
@@ -70,13 +81,13 @@ private[classify] class DomainTagImportActor(db: Database, updater: SensitivityU
  def receive = {
     case RefetchAll =>
       try {
-        val outputFilename = FILE_FORMAT.format(clock.get().toString(DATE_FORMAT))
+        val outputFilename = FILE_FORMAT.format(clock.now.toString(DATE_FORMAT))
         val outputPath = new URI(s"${settings.localDir}/$outputFilename").normalize.getPath
         log.info(s"refetching all domains to $outputPath")
         WS.url(settings.url).get().onSuccess { case res =>
           persistEvent(IMPORT_START, JsObject(Seq()))
           val startTime = currentDateTime
-          inject[PostOffice].sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
+          postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
             subject = "Domain import started", htmlBody = s"Domain import started at $startTime",
             category = PostOffice.Categories.ADMIN))
           val s = new FileOutputStream(outputPath)
@@ -86,21 +97,22 @@ private[classify] class DomainTagImportActor(db: Database, updater: SensitivityU
             s.close()
           }
           val zipFile = new ZipFile(outputPath)
-          val results = (for (entry <- zipFile.entries if entry.getName.endsWith("/domains")) yield {
-            val tagName = entry.getName.split("/", 2) match {
-              case Array(categoryName, _) => DomainTagName(categoryName)
-              case _ => throw new IllegalStateException("Invalid domain format: " + entry.getName)
-            }
-            if (!DomainTagName.isBlacklisted(tagName)) {
+          val results = zipFile.entries.toSeq.collect {
+            case entry if entry.getName.endsWith("/domains") =>
+              entry.getName.split("/", 2) match {
+                case Array(categoryName, _) => (DomainTagName(categoryName), entry)
+                case _ => throw new IllegalStateException("Invalid domain format: " + entry.getName)
+              }
+          }.collect {
+            case (tagName, entry) if !DomainTagName.isBlacklisted(tagName) =>
               val domains = Source.fromInputStream(zipFile.getInputStream(entry)).getLines()
                 .map(_.toLowerCase.trim).filter { domain =>
                   val valid = Domain.isValid(domain)
                   if (!valid) log.debug("'%s' is not a valid domain!" format domain)
                   valid
                 }.toSet.toSeq
-              Some(withSensitivityUpdate(applyTagToDomains(tagName, domains)))
-            } else None
-          }).flatten
+              withSensitivityUpdate(applyTagToDomains(tagName, domains))
+          }
           val (added, removed, total) =
             (results.map(_.added).sum, results.map(_.removed).sum, results.map(_.total).sum)
           persistEvent(IMPORT_SUCCESS, JsObject(Seq(
@@ -109,10 +121,12 @@ private[classify] class DomainTagImportActor(db: Database, updater: SensitivityU
             "totalDomains" -> JsNumber(total)
           )))
           val endTime = currentDateTime
-          inject[PostOffice].sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
+          postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
             subject = "Domain import finished",
-            htmlBody = s"Domain import started at $startTime and succeeded at $endTime with $added added, " +
-                s"$removed removed, and $total total domains.",
+            htmlBody =
+                s"Domain import started at $startTime and completed successfully at $endTime " +
+                s"with $added domain-tag pairs added, $removed domain-tag pairs removed, " +
+                s"and $total total domain-tag pairs.",
             category = PostOffice.Categories.ADMIN))
         }
       } catch {
@@ -153,7 +167,7 @@ private[classify] class DomainTagImportActor(db: Database, updater: SensitivityU
 
   private def failWithException(eventName: String, e: Exception) {
     log.error(s"fail on event $eventName", e)
-    inject[HealthcheckPlugin].addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(e.getMessage)))
+    healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(e.getMessage)))
     persistEventPlugin.persist(Events.serverEvent(
       EventFamilies.EXCEPTION,
       eventName,
@@ -285,14 +299,11 @@ trait DomainTagImporter {
   def applyTagToDomains(tagName: DomainTagName, domainNames: Seq[String]): Future[DomainTag]
 }
 
-class DomainTagImporterImpl @Inject()(domainRepo: DomainRepo, tagRepo: DomainTagRepo, domainToTagRepo: DomainToTagRepo,
-    updater: SensitivityUpdater, clock: Provider[DateTime], system: ActorSystem, db: Database,
-    persistEventPlugin: PersistEventPlugin, settings: DomainTagImportSettings)
+class DomainTagImporterImpl @Inject() (
+  actorFactory: ActorFactory[DomainTagImportActor])
     extends DomainTagImporter {
 
-  private val actor = system.actorOf(Props {
-    new DomainTagImportActor(db, updater, clock, domainRepo, tagRepo, domainToTagRepo, persistEventPlugin, settings)
-  })
+  private lazy val actor = actorFactory.get()
 
   def refetchClassifications() {
     actor ! RefetchAll

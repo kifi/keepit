@@ -1,5 +1,6 @@
 package com.keepit.search
 
+import scala.math._
 import java.io.File
 import java.io.RandomAccessFile
 import java.nio.channels.FileChannel.MapMode
@@ -110,9 +111,9 @@ class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int,
       positions(i) = pos
       i += 1
     }
-    // randomly overwrite the half of the positions
+    // randomly overwrite the positions proportionally to updateStrength
     i = 0
-    val numUpdatePositions = (numHashFuncs.toDouble * updateStrength).toInt
+    val numUpdatePositions = min(ceil(numHashFuncs.toDouble * updateStrength).toInt, numHashFuncs)
     while (i < numUpdatePositions) {
       val index = rnd.nextInt(positions.length - i) + i
       val pos = positions(index)

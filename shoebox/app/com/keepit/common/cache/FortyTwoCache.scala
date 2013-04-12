@@ -3,7 +3,6 @@ package com.keepit.common.cache
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
 import com.google.inject.{Inject, Singleton}
-import com.keepit.inject._
 import play.api.Play.current
 import scala.collection.mutable
 import play.api.libs.json._
@@ -29,6 +28,7 @@ class CacheStatistics {
 
 // Abstraction around play2-memcached plugin
 trait FortyTwoCachePlugin extends SchedulingPlugin {
+  val stats: CacheStatistics
   def get(key: String): Option[Any]
   def remove(key: String): Unit
   def set(key: String, value: Any, expiration: Int = 0): Unit
@@ -37,7 +37,7 @@ trait FortyTwoCachePlugin extends SchedulingPlugin {
 }
 
 @Singleton
-class MemcachedCache @Inject() (val cache: MemcachedPlugin) extends FortyTwoCachePlugin {
+class MemcachedCache @Inject() (val cache: MemcachedPlugin, val stats: CacheStatistics) extends FortyTwoCachePlugin {
   def get(key: String): Option[Any] =
     cache.api.get(key)
 
@@ -55,7 +55,7 @@ class MemcachedCache @Inject() (val cache: MemcachedPlugin) extends FortyTwoCach
 }
 
 @Singleton
-class InMemoryCache extends FortyTwoCachePlugin {
+class InMemoryCache @Inject() (val stats: CacheStatistics) extends FortyTwoCachePlugin {
 
   import play.api.Play
   import play.api.cache.{EhCachePlugin, Cache}
@@ -76,7 +76,7 @@ class InMemoryCache extends FortyTwoCachePlugin {
 }
 
 @Singleton
-class HashMapMemoryCache extends FortyTwoCachePlugin {
+class HashMapMemoryCache @Inject() (val stats: CacheStatistics) extends FortyTwoCachePlugin {
 
   val cache = mutable.HashMap[String, Any]()
 
@@ -95,8 +95,9 @@ class HashMapMemoryCache extends FortyTwoCachePlugin {
 
 trait Key[T] {
   val namespace: String
+  val version: Int = 1
   def toKey(): String
-  override final def toString: String = namespace + "#" + toKey()
+  override final def toString: String = namespace + "#" + version + "#" + toKey()
 }
 
 trait ObjectCache[K <: Key[T], T] {
@@ -133,8 +134,8 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
   def get(key: K): Option[T] = {
     val objOpt = repo.get(key.toString).map(deserialize)
     objOpt match {
-      case Some(_) => inject[CacheStatistics].incrHits(key.getClass.getSimpleName)
-      case None => inject[CacheStatistics].incrMisses(key.getClass.getSimpleName)
+      case Some(_) => repo.stats.incrHits(key.getClass.getSimpleName)
+      case None => repo.stats.incrMisses(key.getClass.getSimpleName)
     }
     objOpt
   }
@@ -150,9 +151,10 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
       case x: java.lang.Boolean => x.booleanValue()
       case x: scala.Array[_] => x
       case x: JsValue => Json.stringify(x)
+      case x: String => x
     }
     repo.set(key.toString, properlyBoxed, ttl.toSeconds.toInt)
-    inject[CacheStatistics].incrSets(key.getClass.getSimpleName)
+    repo.stats.incrSets(key.getClass.getSimpleName)
     value
   }
   def remove(key: K) { repo.remove(key.toString) }

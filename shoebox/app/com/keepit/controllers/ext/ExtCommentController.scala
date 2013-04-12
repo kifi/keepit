@@ -8,15 +8,14 @@ import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.async.dispatch
-import com.keepit.common.controller.BrowserExtensionController
+import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.mail.{ElectronicMail, EmailAddresses, PostOffice}
 import com.keepit.common.social._
 import com.keepit.model._
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
-import com.keepit.serializer.CommentWithSocialUserSerializer.commentWithSocialUserSerializer
+import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import play.api.http.ContentTypes
 import play.api.libs.concurrent.Akka
@@ -33,24 +32,33 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.common.analytics.ActivityStream
 import views.html
+import com.keepit.realtime.UserNotifier
+import com.keepit.controllers.core.PaneDetails
+import scala.concurrent.future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 @Singleton
-class ExtCommentController @Inject() (db: Database,
+class ExtCommentController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
+  db: Database,
   commentRepo: CommentRepo,
   commentRecipientRepo: CommentRecipientRepo,
   normalizedURIRepo: NormalizedURIRepo,
   commentReadRepo: CommentReadRepo,
   urlRepo: URLRepo,
   userRepo: UserRepo,
+  userExperimentRepo: UserExperimentRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
-  commentWithSocialUserRepo: CommentWithSocialUserRepo,
+  CommentWithBasicUserRepo: CommentWithBasicUserRepo,
   followRepo: FollowRepo,
   threadInfoRepo: ThreadInfoRepo,
   emailAddressRepo: EmailAddressRepo,
   deepLinkRepo: DeepLinkRepo,
   postOffice: PostOffice,
-  activityStream: ActivityStream)
-    extends BrowserExtensionController {
+  activityStream: ActivityStream,
+  userNotifier: UserNotifier,
+  paneDetails: PaneDetails)
+    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def getCounts(ids: String) = AuthenticatedJsonAction { request =>
     val nUriExtIds = ids.split('.').map(ExternalId[NormalizedURI](_))
@@ -63,8 +71,8 @@ class ExtCommentController @Inject() (db: Database,
     Ok(JsObject(counts.map { case (id, n) => id.id -> JsArray(Seq(JsNumber(n._1), JsNumber(n._2))) }))
   }
 
-  def createComment() = AuthenticatedJsonAction { request =>
-    val o = request.body.asJson.get
+  def createComment() = AuthenticatedJsonToJsonAction { request =>
+    val o = request.body
     val (urlStr, title, text, permissions, recipients, parent) = (
       (o \ "url").as[String],
       (o \ "title") match { case JsString(s) => s; case _ => ""},
@@ -86,8 +94,6 @@ class ExtCommentController @Inject() (db: Database,
       val url: URL = urlRepo.save(urlRepo.get(urlStr).getOrElse(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
 
       permissions.toLowerCase match {
-        case "private" =>
-          commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PRIVATE, parent = parentIdOpt))
         case "message" =>
           val newComment = commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.MESSAGE, parent = parentIdOpt))
           createRecipients(newComment.id.get, recipients, parentIdOpt)
@@ -115,18 +121,33 @@ class ExtCommentController @Inject() (db: Database,
       }
     }
 
-    dispatch(notifyRecipients(comment), {e => log.error("Could not persist emails for comment %s".format(comment.id.get), e)})
+    future {
+      notifyRecipients(comment)
+    } onFailure { case e =>
+      log.error("Could not persist emails for comment %s".format(comment.id.get), e)
+    }
 
     addToActivityStream(comment)
 
     comment.permissions match {
-      case CommentPermissions.PUBLIC =>
-        Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
       case CommentPermissions.MESSAGE =>
-        val threadInfo = db.readOnly(implicit s => commentWithSocialUserRepo.load(comment))
-        Ok(JsObject(Seq("message" -> commentWithSocialUserSerializer.writes(threadInfo))))
+        val message = db.readOnly(implicit s => CommentWithBasicUserRepo.load(comment))
+        Ok(Json.obj("message" -> commentWithBasicUserSerializer.writes(message)))
       case _ =>
-        Ok(JsObject(Seq("commentId" -> JsString(comment.externalId.id))))
+        Ok(Json.obj("commentId" -> comment.externalId.id, "createdAt" -> JsString(comment.createdAt.toString)))
+    }
+  }
+
+  def removeComment(id: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
+    db.readWrite { implicit s =>
+      if (userExperimentRepo.hasExperiment(request.userId, ExperimentTypes.ADMIN)) {
+        commentRepo.getOpt(id).filter(_.isActive).map { c =>
+          commentRepo.save(c.withState(CommentStates.INACTIVE))
+        }
+        Ok(Json.obj("state" -> "INACTIVE"))
+      } else {
+        Unauthorized("ADMIN")
+      }
     }
   }
 
@@ -152,86 +173,25 @@ class ExtCommentController @Inject() (db: Database,
   }
 
   def getComments(url: String) = AuthenticatedJsonAction { request =>
-    val (comments, commentRead) = db.readOnly { implicit session =>
-      val normUriOpt = normalizedURIRepo.getByNormalizedUrl(url)
+    val comments = paneDetails.getComments(request.userId, url)
 
-      val comments = normUriOpt map { normalizedURI =>
-          publicComments(normalizedURI).map(commentWithSocialUserRepo.load(_))
-        } getOrElse Nil
-
-      val lastCommentId = comments match {
-        case Nil => None
-        case commentList => Some(commentList.map(_.comment.id.get).maxBy(_.id))
-      }
-
-      val commentRead = normUriOpt.flatMap { normUri =>
-        lastCommentId.map { lastCom =>
-          commentReadRepo.getByUserAndUri(request.userId, normUri.id.get) match {
-            case Some(commentRead) => // existing CommentRead entry for this user/url
-              if (commentRead.lastReadId.id < lastCom.id) Some(commentRead.withLastReadId(lastCom))
-              else None
-            case None =>
-              Some(CommentRead(userId = request.userId, uriId = normUri.id.get, lastReadId = lastCom))
-          }
-        }
-      }
-      (comments, commentRead.flatten)
-    }
-
-    commentRead.map { cr =>
-      db.readWrite { implicit session =>
-        commentReadRepo.save(cr)
-      }
-    }
-
-    Ok(commentWithSocialUserSerializer.writes(CommentPermissions.PUBLIC -> comments))
+    Ok(commentWithBasicUserSerializer.writes(CommentPermissions.PUBLIC -> comments))
   }
 
   def getMessageThreadList(url: String) = AuthenticatedJsonAction { request =>
-    val comments = db.readOnly { implicit s =>
-      normalizedURIRepo.getByNormalizedUrl(url) map { normalizedURI =>
-          messageComments(request.userId, normalizedURI).map(threadInfoRepo.load(_, Some(request.userId))).reverse
-        } getOrElse Nil
-    }
-    log.info("comments for url %s:\n%s".format(url, comments mkString "\n"))
+    val comments = paneDetails.getMessageThreadList(request.userId, url)
+
     Ok(threadInfoSerializer.writes(CommentPermissions.MESSAGE -> comments))
   }
 
   def getMessageThread(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
-    val (messages, commentReadToSave) = db.readOnly{ implicit session =>
-      val comment = commentRepo.get(commentId)
-      val parent = comment.parent.map(commentRepo.get).getOrElse(comment)
+    val messages = paneDetails.getMessageThread(request.userId, commentId)
 
-      val messages: Seq[CommentWithSocialUser] = parent +: commentRepo.getChildren(parent.id.get) map { msg =>
-        commentWithSocialUserRepo.load(msg)
-      }
-
-      // mark latest message as read for viewer
-
-      val lastMessageId = messages.map(_.comment.id.get).maxBy(_.id)
-
-      val commentReadToSave = commentReadRepo.getByUserAndParent(request.userId, parent.id.get) match {
-        case Some(cr) if cr.lastReadId == lastMessageId =>
-          None
-        case Some(cr) =>
-          Some(cr.withLastReadId(lastMessageId))
-        case None =>
-          Some(CommentRead(userId = request.userId, uriId = parent.uriId, parentId = parent.id, lastReadId = lastMessageId))
-      }
-      (messages, commentReadToSave)
-    }
-
-    commentReadToSave.map { cr =>
-      db.readWrite{ implicit session =>
-        commentReadRepo.save(cr)
-      }
-    }
-
-    Ok(commentWithSocialUserSerializer.writes(CommentPermissions.MESSAGE -> messages))
+    Ok(commentWithBasicUserSerializer.writes(CommentPermissions.MESSAGE -> messages))
   }
 
-  def startFollowing() = AuthenticatedJsonAction { request =>
-    val url = (request.body.asJson.get \ "url").as[String]
+  def startFollowing() = AuthenticatedJsonToJsonAction { request =>
+    val url = (request.body \ "url").as[String]
     db.readWrite { implicit session =>
       val uriId = normalizedURIRepo.getByNormalizedUrl(url).getOrElse(normalizedURIRepo.save(NormalizedURIFactory(url = url))).id.get
       followRepo.get(request.userId, uriId, excludeState = None) match {
@@ -247,8 +207,8 @@ class ExtCommentController @Inject() (db: Database,
     Ok(JsObject(Seq("following" -> JsBoolean(true))))
   }
 
-  def stopFollowing() = AuthenticatedJsonAction { request =>
-    val url = (request.body.asJson.get \ "url").as[String]
+  def stopFollowing() = AuthenticatedJsonToJsonAction { request =>
+    val url = (request.body \ "url").as[String]
     db.readWrite { implicit session =>
       normalizedURIRepo.getByNormalizedUrl(url).map { uri =>
         followRepo.get(request.userId, uri.id.get).map { follow =>
@@ -297,56 +257,9 @@ class ExtCommentController @Inject() (db: Database,
   private[controllers] def notifyRecipients(comment: Comment): Unit = {
     comment.permissions match {
       case CommentPermissions.PUBLIC =>
-        db.readWrite { implicit s =>
-          val author = userRepo.get(comment.userId)
-          val uri = normalizedURIRepo.get(comment.uriId)
-          val follows = followRepo.getByUri(uri.id.get)
-          for (userId <- follows.map(_.userId).toSet - comment.userId) {
-            val recipient = userRepo.get(userId)
-            val deepLink = deepLinkRepo.save(DeepLink(
-                initatorUserId = Option(comment.userId),
-                recipientUserId = Some(userId),
-                uriId = Some(comment.uriId),
-                urlId = comment.urlId,
-                deepLocator = DeepLocator.ofComment(comment)))
-            val addrs = emailAddressRepo.getByUser(userId)
-            for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
-              postOffice.sendMail(ElectronicMail(
-                  senderUserId = Option(comment.userId),
-                  from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
-                  to = addr,
-                  subject = "%s %s commented on a page you are following".format(author.firstName, author.lastName),
-                  htmlBody = replaceLookHereLinks(html.email.newComment(author, recipient, deepLink.url, comment).body),
-                  category = PostOffice.Categories.COMMENT))
-            }
-          }
-        }
+        userNotifier.comment(comment)
       case CommentPermissions.MESSAGE =>
-        db.readWrite { implicit s =>
-          val senderId = comment.userId
-          val sender = userRepo.get(senderId)
-          val uri = normalizedURIRepo.get(comment.uriId)
-          val participants = commentRepo.getParticipantsUserIds(comment.id.get)
-          for (userId <- participants - senderId) {
-            val recipient = userRepo.get(userId)
-            val deepLink = deepLinkRepo.save(DeepLink(
-                initatorUserId = Option(comment.userId),
-                recipientUserId = Some(userId),
-                uriId = Some(comment.uriId),
-                urlId = comment.urlId,
-                deepLocator = DeepLocator.ofMessageThread(comment)))
-            val addrs = emailAddressRepo.getByUser(userId)
-            for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
-              postOffice.sendMail(ElectronicMail(
-                  senderUserId = Option(comment.userId),
-                  from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(sender.firstName, sender.lastName)),
-                  to = addr,
-                  subject = "%s %s sent you a message using KiFi".format(sender.firstName, sender.lastName),
-                  htmlBody = replaceLookHereLinks(html.email.newMessage(sender, recipient, deepLink.url, comment).body),
-                  category = PostOffice.Categories.MESSAGE))
-            }
-          }
-        }
+        userNotifier.message(comment)
       case unsupported =>
         log.error("unsupported comment type for email %s".format(unsupported))
     }

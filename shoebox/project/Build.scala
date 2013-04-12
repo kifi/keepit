@@ -39,8 +39,9 @@ object ApplicationBuild extends Build {
       "com.typesafe.akka" % "akka-testkit" % "2.0.2",
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
       "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2",
-      "org.apache.lucene" % "lucene-core" % "3.6.1",
-      "org.apache.lucene" % "lucene-analyzers" % "3.6.1",
+      "org.apache.lucene" % "lucene-core" % "4.2.0",
+      "org.apache.lucene" % "lucene-analyzers-common" % "4.2.0",
+      "org.apache.lucene" % "lucene-suggest" % "4.2.0",
       "org.apache.httpcomponents" % "httpclient" % "4.2.1",
       "org.apache.tika" % "tika-parsers" % "1.3",
       "org.apache.commons" % "commons-math3" % "3.1.1",
@@ -52,7 +53,8 @@ object ApplicationBuild extends Build {
       "de.l3s.boilerpipe" % "boilerpipe" % "1.2.0",
       "org.jsoup" % "jsoup" % "1.7.1",
       "spy" % "spymemcached" % "2.8.1",
-      "com.typesafe.slick" %% "slick" % "1.0.0"
+      "com.typesafe.slick" %% "slick" % "1.0.0",
+      "com.typesafe.slick" %% "slick-testkit" % "1.0.0"
     ) map (_.excludeAll(ExclusionRule(organization = "com.cedarsoft")))
 
     val main = play.Project(appName, appVersion, appDependencies).settings(
@@ -82,8 +84,7 @@ object ApplicationBuild extends Build {
         "com.keepit.common.db.{ExternalId, Id, State}",
         "com.keepit.model._",
         "com.keepit.common.social._",
-        "com.keepit.search._",
-        "com.keepit.common.healthcheck.HealthcheckError"
+        "com.keepit.search._"
       ),
 
       libraryDependencies ++= Seq(

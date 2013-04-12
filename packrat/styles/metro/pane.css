@@ -1,0 +1,272 @@
+/* a weak blank-slate (insulation) attempt, continued from slider2.css */
+.kifi-pane input:not([type]),
+.kifi-pane input[type=text] {
+  background: #fff !important;
+  color: #2D2D2D !important;
+  box-shadow: none;
+  outline: none;
+}
+
+.kifi-pane {
+  position: fixed;
+  top: 0;
+  right: -322px;
+  bottom: 0;
+  left: auto;
+  width: 322px;
+  height: 100%;
+  background: #34495e;
+  font: 12px "Helvetica Neue",arial,sans-serif;
+  text-align: left;
+  direction: ltr;
+  z-index: 2147483639;
+}
+.kifi-pane,
+.kifi-pane-parent.kifi-with-pane .kifi-slider2 {
+  -webkit-transition: right .25s ease-in;
+  transition: right .25s ease-in;
+}
+.kifi-pane-parent.kifi-with-pane .kifi-pane {
+  right: 0;
+}
+.kifi-pane-parent.kifi-with-pane.kifi-snapshot-mode .kifi-pane,
+.kifi-pane-parent.kifi-with-pane.kifi-snapshot-mode .kifi-slider2 {
+  right: -322px;
+}
+
+html.kifi-pane-parent {
+  position: relative;
+  width: auto;
+  min-width: 0;
+  margin-right: 0;
+  -webkit-transition: margin-right .25s ease-in;
+  transition: margin-right .25s ease-in;
+}
+html.kifi-pane-parent.kifi-with-pane {
+  margin-right: 322px;
+}
+html.kifi-pane-parent.kifi-with-pane.kifi-snapshot-mode {
+  margin-right: 0;
+}
+.kifi-pane-head {
+  height: 39px;
+  background: #2c3e50;
+}
+.kifi-pane-head-logo {
+  position: relative;
+  top: 10px;
+  left: 19px;
+  height: 18px;
+  width: auto;
+  border: 0;
+  padding: 0;
+}
+a.kifi-pane-head-settings {
+  float: right;
+  width: 40px;
+  height: 100%;
+  margin-right: 6px;
+  background-size: 16px;
+  background-position: 12px 12px;
+  background-repeat: no-repeat;
+}
+a.kifi-pane-head-settings:hover {
+  background-color: #374d63;
+}
+a.kifi-pane-head-settings:active {
+  background-color: #324559;
+}
+.kifi-pane input[type=text].kifi-pane-search {
+  margin: 0;
+  width: 100%;
+  height: auto;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  border: 0 solid transparent;
+  border-width: 0 6px;
+  border-radius: 0;
+  outline: none !important;
+  box-shadow: none !important;
+  background: #ecf0f1 padding-box !important;
+  padding: 9px 12px;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: normal;
+  color: #333;
+  -webkit-transition: background-color linear .1s;
+  transition: background-color linear .1s;
+}
+.kifi-pane input[type=text].kifi-pane-search:focus {
+  background-color: #fff !important;
+}
+
+/* shared */
+.kifi-pane-cubby {
+  position: absolute;
+  top: 77px;
+  bottom: 54px;
+  left: 6px;
+  right: 6px;
+}
+.kifi-pane-boxes {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  -webkit-transition: -webkit-transform ease-in-out .15s;
+  transition: -webkit-transform ease-in-out .15s, transform ease-in-out .15s;
+}
+.kifi-pane-box {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+.kifi-pane-title,
+a.kifi-pane-back {
+  padding: 0 12px;
+  font-size: 12px;
+  line-height: 40px;
+  color: #fff !important;
+}
+.kifi-pane-title {
+  float: right;
+}
+a.kifi-pane-back {
+  display: inline-block;
+  padding-right: 18px;
+}
+a.kifi-pane-back:hover {
+  text-decoration: none;
+  background-color: #67829c;
+}
+a.kifi-pane-back:active {
+  background-color: #607991;
+}
+.kifi-pane-tall {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fafafa;
+}
+.kifi-pane-tall-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: auto;
+}
+
+/* general pane */
+.kifi-pane-general {
+  padding: 0 12px;
+  font-size: 13px;
+  color: #f8f8f8;
+}
+.kifi-pane-page-title {
+  margin: 22px 0 4px;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kifi-pane-page-url {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.kifi-pane-kept {
+  margin-top: 9px;
+  border-top: 1px solid #2c3e50;
+  line-height: 38px;
+}
+.kifi-pane-kept-y,
+.kifi-pane-kept.kifi-kept .kifi-pane-kept-n {
+  display: none;
+}
+.kifi-pane-kept.kifi-kept .kifi-pane-kept-y {
+  display: inline;
+}
+.kifi-pane-kept-by {
+  border-top: 1px solid #2c3e50;
+  padding-top: 9px;
+}
+.kifi-pane-keepers {
+  font-size: 0;
+  white-space: nowrap;
+  cursor: default;
+}
+a.kifi-pane-keeper {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  margin-right: 1px;
+  background-size: 100%;
+  border-radius: 2px;
+  position: relative;
+}
+.kifi-pane-keepers-caption {
+  line-height: 31px;
+}
+.kifi-pane-in-collections {
+  border-top: 1px solid #2c3e50;
+  padding-top: 9px;
+}
+.kifi-pane-in-collections-list.kifi-none {
+  color: #aaa;
+}
+.kifi-pane-actions {
+  position: absolute;
+  bottom: 40px;
+  left: 0;
+  width: 100%;
+  height: auto;
+  font-size: 14px;
+  line-height: 20px;
+  color: #f8f8f8;
+}
+a.kifi-pane-action {
+  display: block;
+  margin: 0 -6px;
+  padding: 10px 18px;
+  color: inherit !important;
+  text-decoration: none !important;
+}
+a.kifi-pane-action:hover {
+  color: #fff !important;
+  background: #67829c;
+}
+a.kifi-pane-action:active {
+  background-color: #607991;
+}
+
+/* thread pane */
+.kifi-thread-who {
+  background-color: #ecf0f1;
+  padding: 10px 12px;
+}
+.kifi-thread-participants {
+  margin-top: 3px;
+}
+.kifi-thread-participant {
+  font-weight: bold;
+}
+.kifi-thread-who>.kifi-thread-participant {
+  margin-left: 1px;
+}
+.kifi-thread-participants .kifi-thread-participant::before {
+  content: ", ";
+  font-weight: normal;
+}
+.kifi-thread-participants .kifi-thread-participant:first-child::before {
+  content: ""
+}
+.kifi-thread-participants .kifi-thread-participant:last-child::before {
+  content: " and "
+}

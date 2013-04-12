@@ -140,6 +140,7 @@ input#token-input-kifi-res-filter-cust {
   box-sizing: border-box;
 }
 input#kifi-res-filter-cust { /* shown temporarily until $.tokenInput called */
+  -moz-box-sizing: border-box;
   box-sizing: border-box;
   width: 467px;
   border: 1px solid #e2e2e2;
@@ -154,6 +155,7 @@ input#token-input-kifi-res-filter-cust:-moz-placeholder {
 }
 ul.token-input-list-googly {
   overflow: hidden;
+  -moz-box-sizing: border-box;
   box-sizing: border-box;
   width: 467px;
   margin: 0;
@@ -343,12 +345,17 @@ a.kifi-res-friends {
   background-color: #282828;
   color: #fff;
   font-size: 11px;
-  z-index: 99;
   cursor: default;
-  display: none;
+  z-index: 99;
+  opacity: 0;
+  -webkit-transition: opacity 120ms ease-in-out, bottom 120ms ease-out;
+  transition: opacity 120ms ease-in-out, bottom 120ms ease-out;
 }
 .kifi-hover-showing .kifi-res-friends-hover {
-  display: block;
+  bottom: 22px;
+  opacity: 1;
+  -webkit-transition-duration: 60ms;
+  transition-duration: 60ms;
 }
 .kifi-res-friends-▾ {
   position: absolute;
@@ -396,14 +403,12 @@ a.kifi-res-friends {
   cursor: default;
   z-index: 99;
   opacity: 0;
-  -webkit-transition: opacity 90ms ease-in-out, bottom 90ms ease-out;
-  transition: opacity 90ms ease-in-out, bottom 90ms ease-out;
+  -webkit-transition: opacity 60ms ease-in-out, bottom 60ms ease-out;
+  transition: opacity 60ms ease-in-out, bottom 60ms ease-out;
 }
 .kifi-hover-showing .kifi-chatter-hover {
   bottom: 24px;
   opacity: 1;
-  -webkit-transition: opacity 90ms ease-in-out, bottom 90ms ease-out;
-  transition: opacity 90ms ease-in-out, bottom 90ms ease-out;
 }
 .kifi-chatter-hover::after {
   content: " ";

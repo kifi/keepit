@@ -8,6 +8,7 @@ import com.keepit.common.time._
 import com.keepit.scraper.ScraperConfig
 import org.joda.time.DateTime
 import scala.math._
+import com.google.inject.Provider
 
 case class ScrapeInfo(
   id: Option[Id[ScrapeInfo]] = None,
@@ -69,7 +70,10 @@ trait ScrapeInfoRepo extends Repo[ScrapeInfo] {
 }
 
 @Singleton
-class ScrapeInfoRepoImpl @Inject() (val db: DataBaseComponent, val normUriRepo: NormalizedURIRepoImpl)
+class ScrapeInfoRepoImpl @Inject() (
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val normUriRepo: Provider[NormalizedURIRepoImpl])
     extends DbRepo[ScrapeInfo] with ScrapeInfoRepo {
 
   import DBSession._
@@ -91,7 +95,7 @@ class ScrapeInfoRepoImpl @Inject() (val db: DataBaseComponent, val normUriRepo: 
 
   def allActive(implicit session: RSession): Seq[ScrapeInfo] = {
     (for {
-      (s, u) <- table innerJoin normUriRepo.table on (_.uriId is _.id)
+      (s, u) <- table innerJoin normUriRepo.get.table on (_.uriId is _.id)
     } yield s.*).list
   }
 

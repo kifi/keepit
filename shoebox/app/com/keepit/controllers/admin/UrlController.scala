@@ -17,11 +17,10 @@ import java.util.concurrent.TimeUnit
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 
-import com.keepit.inject._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.model._
 import com.keepit.search.ArticleStore
-import com.keepit.common.controller.AdminController
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.BabysitterTimeout
 import org.joda.time.LocalDate
@@ -35,7 +34,23 @@ import views.html
 /**
  * Charts, etc.
  */
-object UrlController extends AdminController {
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.google.inject.{Inject, Singleton}
+
+@Singleton
+class UrlController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
+  db: Database,
+  clock: Clock,
+  postOffice: PostOffice,
+  uriRepo: NormalizedURIRepo,
+  urlRepo: URLRepo,
+  userRepo: UserRepo,
+  bookmarkRepo: BookmarkRepo,
+  commentRepo: CommentRepo,
+  deepLinkRepo: DeepLinkRepo,
+  followRepo: FollowRepo)
+    extends AdminController(actionAuthenticator) {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
 
@@ -48,7 +63,6 @@ object UrlController extends AdminController {
   def renormalize(readOnly: Boolean = true, domain: Option[String] = None) = AdminHtmlAction { implicit request =>
     Akka.future {
       val result = doRenormalize(readOnly, domain).replaceAll("\n","\n<br>")
-      val postOffice = inject[PostOffice]
       postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = "Renormalization Report", htmlBody = result, category = PostOffice.Categories.ADMIN))
     }
     Ok("Started! Will email %s".format(EmailAddresses.ENG))
@@ -57,15 +71,8 @@ object UrlController extends AdminController {
   def doRenormalize(readOnly: Boolean = true, domain: Option[String] = None) = {
     // Processes all models that reference a `NormalizedURI`, and renormalizes all URLs.
     val changedURIs = scala.collection.mutable.MutableList[ChangedNormURI]()
-    val (urlsSize, changes) = inject[Database].readWrite {implicit session =>
+    val (urlsSize, changes) = db.readWrite {implicit session =>
 
-      val uriRepo = inject[NormalizedURIRepo]
-      val urlRepo = inject[URLRepo]
-      val userRepo = inject[UserRepo]
-      val bookmarkRepo = inject[BookmarkRepo]
-      val commentRepo = inject[CommentRepo]
-      val deepLinkRepo = inject[DeepLinkRepo]
-      val followRepo = inject[FollowRepo]
       val urls = urlRepo.all
       val urlsSize = urls.size
       val changes = scala.collection.mutable.Map[String, Int]()
@@ -89,7 +96,7 @@ object UrlController extends AdminController {
             if(url.normalizedUriId != normalizedUri.id.get.id) {
               changes("url") += 1
               if(!readOnly) {
-                urlRepo.save(url.withNormUriId(normalizedUri.id.get).withHistory(URLHistory(normalizedUri.id.get,reason)))
+                urlRepo.save(url.withNormUriId(normalizedUri.id.get).withHistory(URLHistory(clock.now, normalizedUri.id.get,reason)))
               }
             }
 

@@ -17,15 +17,19 @@ sealed abstract class ServiceType(val name: String)
 
 object ServiceType {
   case object SHOEBOX extends ServiceType("SHOEBOX")
+  case object SEARCH extends ServiceType("SEARCH")
   case object DEV_MODE extends ServiceType("DEV_MODE")
   case object TEST_MODE extends ServiceType("TEST_MODE")
 }
 
-case class FortyTwoServices(started: DateTime) {
+case class FortyTwoServices(clock: Clock) {
+
+  val started = clock.now
 
   val serviceByCode = Map(
     ServiceType.SHOEBOX.name -> ServiceType.SHOEBOX,
-    ServiceType.DEV_MODE.name -> ServiceType.DEV_MODE
+    ServiceType.DEV_MODE.name -> ServiceType.DEV_MODE,
+    ServiceType.SEARCH.name -> ServiceType.SEARCH
   )
 
   lazy val currentService: ServiceType = current.mode match {

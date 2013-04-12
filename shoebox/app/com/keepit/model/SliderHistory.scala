@@ -1,8 +1,6 @@
 package com.keepit.model
 
-import play.api.Play.current
 import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.inject._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
@@ -53,9 +51,12 @@ class SliderHistoryUserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends
   def serialize(sliderHistory: SliderHistory) = SliderHistoryBinarySerializer.sliderHistoryBinarySerializer.writes(sliderHistory)
 }
 
-
 @Singleton
-class SliderHistoryRepoImpl @Inject() (val db: DataBaseComponent, val browsingCache: SliderHistoryUserIdCache) extends DbRepo[SliderHistory] with SliderHistoryRepo {
+class SliderHistoryRepoImpl @Inject() (
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val browsingCache: SliderHistoryUserIdCache)
+    extends DbRepo[SliderHistory] with SliderHistoryRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
@@ -88,20 +89,13 @@ class SliderHistoryRepoImpl @Inject() (val db: DataBaseComponent, val browsingCa
 
 }
 
-object SliderHistoryTracker {
-  def apply(filterSize: Int, numHashFuncs: Int, minHits: Int) = {
-    new SliderHistoryTracker(filterSize, numHashFuncs, minHits)
-  }
-}
-
-class SliderHistoryTracker(tableSize: Int, numHashFuncs: Int, minHits: Int) {
+class SliderHistoryTracker(sliderHistoryRepo: SliderHistoryRepo, db: Database, tableSize: Int, numHashFuncs: Int, minHits: Int) {
 
   def add(userId: Id[User], uriId: Id[NormalizedURI]): SliderHistory = {
     val filter = getMultiHashFilter(userId)
     filter.put(uriId.id)
 
-    inject[Database].readWrite { implicit session =>
-      val sliderHistoryRepo = inject[SliderHistoryRepo]
+    db.readWrite { implicit session =>
       sliderHistoryRepo.save(sliderHistoryRepo.getByUserId(userId) match {
         case Some(bh) =>
           bh.withFilter(filter.getFilter)
@@ -112,8 +106,7 @@ class SliderHistoryTracker(tableSize: Int, numHashFuncs: Int, minHits: Int) {
   }
 
   def getMultiHashFilter(userId: Id[User]) = {
-    val sliderHistoryRepo = inject[SliderHistoryRepo]
-    inject[Database].readOnly { implicit session =>
+    db.readOnly { implicit session =>
       sliderHistoryRepo.getByUserId(userId) match {
         case Some(sliderHistory) =>
           new MultiHashFilter(sliderHistory.tableSize, sliderHistory.filter, sliderHistory.numHashFuncs, sliderHistory.minHits)

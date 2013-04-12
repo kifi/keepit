@@ -13,6 +13,8 @@ import akka.pattern.ask
 
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.common.actor.ActorFactory
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.akka.FortyTwoActor
 import scala.concurrent.Future
 import com.keepit.serializer.EventSerializer
@@ -20,16 +22,17 @@ import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.model._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import com.keepit.inject._
 
 @Singleton
-class ActivityStream {
+class ActivityStream @Inject() (
+    actorFactory: ActorFactory[ActivityStreamActor],
+    clock: Clock) {
   implicit val timeout = Timeout(1 second)
 
-  lazy val default = Akka.system.actorOf(Props[ActivityStreamActor])
+  lazy val actor = actorFactory.get()
 
   def newStream(): Future[(Iteratee[JsValue,_],Enumerator[JsValue])] = {
-    (default ? NewStream).map {
+    (actor ? NewStream).map {
       case Connected(enumerator) =>
         // Since we're expecting no input from the client, just consume and discard the input
         val iteratee = Iteratee.foreach[JsValue]{ s => /* ignore for now */ }
@@ -37,13 +40,16 @@ class ActivityStream {
     }
   }
 
-  def streamActivity(kind: String, json: JsObject) = default ! BroadcastActivity(kind, json)
+  def streamActivity(kind: String, json: JsObject) = actor ! BroadcastActivity(kind, json)
 
 }
 
-class ActivityStreamActor extends FortyTwoActor {
-  val (activityEnumerator, activityChannel) = Concurrent.broadcast[JsValue]
+class ActivityStreamActor @Inject() (
+    healthcheckPlugin: HealthcheckPlugin,
+    clock: Clock)
+  extends FortyTwoActor(healthcheckPlugin) {
 
+  val (activityEnumerator, activityChannel) = Concurrent.broadcast[JsValue]
 
   def receive = {
     case NewStream =>
@@ -55,7 +61,7 @@ class ActivityStreamActor extends FortyTwoActor {
   def notifyAll(kind: String, json: JsObject) {
     val msg = Json.obj(
       "kind" -> kind,
-      "time" -> inject[DateTime].toStandardTimeString,
+      "time" -> clock.now.toStandardTimeString,
       "activity" -> json
     )
     activityChannel.push(msg)

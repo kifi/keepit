@@ -1,25 +1,26 @@
 package com.keepit.controllers.admin
 
-import com.keepit.common.controller.AdminController
-import play.api.mvc.Action
-import play.api.Play
-import play.api.http.ContentTypes
-import play.api.Play.current
-import com.keepit.search.phrasedetector.{PhraseIndexer, PhraseImporter}
-import com.keepit.model.{PhraseStates, PhraseRepo, Phrase}
-import com.keepit.inject._
-import com.keepit.common.db.slick.Database
-import com.keepit.search.Lang
+import com.google.inject.{Inject, Singleton}
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
+import com.keepit.common.db.slick.Database
+import com.keepit.model.{PhraseStates, PhraseRepo, Phrase}
+import com.keepit.search.phrasedetector.PhraseImporter
+import com.keepit.search.{SearchServiceClient, Lang}
 import views.html
 
-object PhraseController extends AdminController  {
+@Singleton
+class PhraseController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
+  db: Database,
+  phraseRepo: PhraseRepo,
+  searchClient: SearchServiceClient)
+    extends AdminController(actionAuthenticator) {
 
   val pageSize = 50
 
   def displayPhrases(page: Int = 0) = AdminHtmlAction{ implicit request =>
-    val phraseRepo = inject[PhraseRepo]
-    val (phrasesOpt, count) = inject[Database].readOnly { implicit session =>
+    val (phrasesOpt, count) = db.readOnly { implicit session =>
       val count = 10//phraseRepo.count
       val phrasesOpt = if(!PhraseImporter.isInProgress) {
         Some(phraseRepo.page(page, pageSize))
@@ -33,7 +34,7 @@ object PhraseController extends AdminController  {
   }
 
   def refreshPhrases = AdminHtmlAction{ implicit request =>
-    inject[PhraseIndexer].reload()
+    searchClient.refreshPhrases()
     Redirect(com.keepit.controllers.admin.routes.PhraseController.displayPhrases())
   }
   def addPhrase = AdminHtmlAction{ implicit request =>
@@ -42,16 +43,16 @@ object PhraseController extends AdminController  {
     val lang = body.get("lang").get
     val source = body.get("source").get
 
-    inject[Database].readWrite { implicit session =>
-      inject[PhraseRepo].save(Phrase(phrase = phrase, lang = Lang(lang), source = source))
+    db.readWrite { implicit session =>
+      phraseRepo.save(Phrase(phrase = phrase, lang = Lang(lang), source = source))
     }
     Redirect(com.keepit.controllers.admin.routes.PhraseController.displayPhrases())
   }
 
   def savePhrases = AdminHtmlAction { implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_(0))
-    inject[Database].readWrite { implicit session =>
-      val repo = inject[PhraseRepo]
+    db.readWrite { implicit session =>
+      val repo = phraseRepo
       for (key <- body.keys.filter(_.startsWith("phrase_")).map(_.substring(7))) {
         val id = Id[Phrase](key.toLong)
         val elem = repo.get(id)

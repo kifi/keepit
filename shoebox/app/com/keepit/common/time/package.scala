@@ -1,8 +1,11 @@
 package com.keepit.common
 
+import com.google.inject.Singleton
 import java.util.Locale
 import org.joda.time.{DateTime, DateTimeZone, LocalDate, LocalTime}
-import org.joda.time.format.DateTimeFormat
+import org.joda.time.format._
+import play.api.libs.json.{JsValue, Format}
+import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsString
 
 package object time {
@@ -30,15 +33,44 @@ package object time {
   val HTTP_HEADER_DATETIME_FORMAT = DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss 'GMT'")
                                              .withLocale(Locale.ENGLISH)
                                              .withZone(zones.UTC)
-  val STANDARD_DATETIME_FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS Z")
+  val STANDARD_DATETIME_FORMAT =
+    new DateTimeFormatterBuilder().append(
+      ISODateTimeFormat.dateTime.getPrinter,
+      Array[DateTimeParser](
+        ISODateTimeFormat.dateTime.getParser,
+        DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS Z").getParser))
+    .toFormatter.withLocale(Locale.ENGLISH).withZone(zones.PT)
+
+  val UTC_DATETIME_FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss.SSS Z")
                                              .withLocale(Locale.ENGLISH)
-                                             .withZone(zones.PT)
+                                             .withZone(zones.UTC)
   val STANDARD_DATE_FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd")
                                              .withLocale(Locale.ENGLISH)
                                              .withZone(zones.PT)
 
+  implicit val DateTimeJsonFormat: Format[DateTime] = new Format[DateTime] {
+    def reads(json: JsValue) = JsSuccess(parseStandardTime(json.as[String]))
+    def writes(o: DateTime) = JsString(o.toStandardTimeString)
+  }
+
   def currentDate(implicit zone: DateTimeZone) = new LocalDate(zone)
   def currentDateTime(implicit zone: DateTimeZone) = new DateTime(zone)
+
+  /**
+   * Using a clock is similar to have inject a Provider[DateTime] and Provider[LocalDate] with the diferance that it has a bit nicer syntax and a bit easier to test.
+   * The reason we should avoid injecting the time object directly is that many times a time object injected
+   * it is used as the "now" or "today" time which wasn't accurate since the time the DateTime or LocalDate object
+   * where injected wasn't neccecarily the time that they where intended to use.
+   * For example, if a repo need a clock to time the update time of an entity then it should not use a DateTime that it got while
+   * instantiating, it should use a clock and ask it each time for a new timestamp.
+   * Avoiding the time object injection would help us avoid these very hard to spot bugs.
+  */
+  @Singleton
+  class Clock() {
+    val clockZone: DateTimeZone = DEFAULT_DATE_TIME_ZONE
+    def today: LocalDate = new LocalDate(clockZone)
+    def now: DateTime = new DateTime(clockZone)
+  }
 
   implicit val localDateOrdering = new Ordering[LocalDate] {
     def compare(a: LocalDate, b: LocalDate) = a.compareTo(b)

@@ -1,9 +1,9 @@
 @(userWithSocial: UserWithSocial, bookmark: Bookmark, normalizedUri: NormalizedURI, scrapeInfo: Option[ScrapeInfo])
 
-@admin("Bookmark: " + bookmark.title) {
+@admin("Bookmark: " + bookmark.title.getOrElse("")) {
    <table class="table table-bordered">
       <tr>
-        <th>Title</th><td><a href="@bookmark.url">@{if(bookmark.title.isEmpty) "NO TITLE" else bookmark.title}</a></td>
+        <th>Title</th><td><a href="@bookmark.url">@{bookmark.title.getOrElse("NO TITLE")}</a></td>
       </tr>
       <tr>
         <th>Page Content</th><td>@adminHelper.articleDisplay(normalizedUri)</td>

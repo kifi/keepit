@@ -6,20 +6,11 @@ import com.keepit.classify.{DomainTagName, Domain}
 import com.keepit.common.db._
 import com.keepit.common.mail.ElectronicMailCategory
 import com.keepit.common.mail.ElectronicMailMessageId
+import com.keepit.common.db.{Id, State, Model, ExternalId, LargeString}
 import com.keepit.common.mail._
 import com.keepit.common.social.SocialId
 import com.keepit.common.social._
 import com.keepit.common.time._
-import com.keepit.model.Comment
-import com.keepit.model.ExperimentType
-import com.keepit.model.Follow
-import com.keepit.model.KifiInstallation
-import com.keepit.model.NormalizedURI
-import com.keepit.model.SocialUserInfo
-import com.keepit.model.URL
-import com.keepit.model.Unscrapable
-import com.keepit.model.User
-import com.keepit.model.UserToDomainKind
 import com.keepit.model._
 import com.keepit.search.ArticleSearchResultRef
 import com.keepit.search.Lang
@@ -62,6 +53,10 @@ object FortyTwoTypeMappers {
 
   implicit object NormalizedURIExternalIdTypeMapper extends BaseTypeMapper[ExternalId[NormalizedURI]] {
     def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[NormalizedURI](profile)
+  }
+
+  implicit object UserNotificationExternalIdTypeMapper extends BaseTypeMapper[ExternalId[UserNotification]] {
+    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[UserNotification](profile)
   }
 
   //Ids
@@ -109,6 +104,10 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new IdMapperDelegate[SearchConfigExperiment](profile)
   }
 
+  implicit object UserNotificationIdTypeMapper extends BaseTypeMapper[Id[UserNotification]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[UserNotification](profile)
+  }
+
   //States
   implicit object NormalizedURIStateTypeMapper extends BaseTypeMapper[State[NormalizedURI]] {
     def apply(profile: BasicProfile) = new StateMapperDelegate[NormalizedURI](profile)
@@ -136,6 +135,10 @@ object FortyTwoTypeMappers {
 
   implicit object UserToDomainKindTypeMapper extends BaseTypeMapper[State[UserToDomainKind]] {
     def apply(profile: BasicProfile) = new StateMapperDelegate[UserToDomainKind](profile)
+  }
+
+  implicit object UserNotificationStateMapper extends BaseTypeMapper[State[UserNotification]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[UserNotification](profile)
   }
 
   //Other
@@ -217,6 +220,14 @@ object FortyTwoTypeMappers {
 
   implicit object LangTypeMapper extends BaseTypeMapper[Lang] {
     def apply(profile: BasicProfile) = new LangMapperDelegate(profile)
+  }
+
+  implicit object UserNotificationCategoryTypeMapper extends BaseTypeMapper[UserNotificationCategory] {
+    def apply(profile: BasicProfile) = new UserNotificationCategoryMapperDelegate(profile)
+  }
+
+  implicit object UserNotificationDetailsTypeMapper extends BaseTypeMapper[UserNotificationDetails] {
+    def apply(profile: BasicProfile) = new UserNotificationDetailsMapperDelegate(profile)
   }
 }
 
@@ -491,5 +502,23 @@ class LangMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[Lan
   def zero = Lang("")
   def sourceToDest(value: Lang) = value.lang
   def safeDestToSource(str: String) = Lang(str)
+}
+
+//************************************
+//       UserNotificationCategory -> String
+//************************************
+class UserNotificationCategoryMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[UserNotificationCategory](profile) {
+  def zero = UserNotificationCategory("")
+  def sourceToDest(value: UserNotificationCategory) = value.name
+  def safeDestToSource(str: String) = UserNotificationCategory(str)
+}
+
+//************************************
+//       UserNotificationDetails -> String
+//************************************
+class UserNotificationDetailsMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[UserNotificationDetails](profile) {
+  def zero = UserNotificationDetails(Json.obj())
+  def sourceToDest(value: UserNotificationDetails) = Json.stringify(value.payload)
+  def safeDestToSource(str: String) = UserNotificationDetails(Json.parse(str).asInstanceOf[JsObject])
 }
 

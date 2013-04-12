@@ -1,49 +1,46 @@
 package com.keepit.test
 
-import play.api.Play
-import play.api.GlobalSettings
-import play.api.Application
-import play.api.db.DB
+import akka.actor.ActorSystem
+import akka.actor.Cancellable
+import akka.actor.Scheduler
 import com.google.inject.Module
-import com.google.inject.Singleton
 import com.google.inject.Provides
-import com.google.inject.util.Modules
-import com.keepit.common.controller.FortyTwoServices
-import com.keepit.common.healthcheck.FakeHealthcheck
-import com.keepit.common.healthcheck.FakeHealthcheckModule
-import com.keepit.common.healthcheck.Healthcheck
-import com.keepit.common.mail.FakeMailModule
-import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.time._
-import com.keepit.common.social.FakeSecureSocialUserServiceModule
-import com.keepit.shoebox.{ShoeboxGlobal, ShoeboxModule}
-import com.keepit.dev.{DevGlobal, DevModule}
-import com.keepit.inject._
-import com.keepit.model._
-import com.keepit.FortyTwoGlobal
-import com.tzavellas.sse.guice.ScalaModule
-import com.keepit.common.store.FakeStoreModule
-import com.keepit.common.healthcheck.{Babysitter, BabysitterImpl, BabysitterTimeout}
-import com.keepit.common.db.SlickModule
-import com.keepit.common.db.DbInfo
-import com.keepit.common.db.slick._
-import scala.slick.session.{Database => SlickDatabase}
-import org.joda.time.DateTime
-import org.joda.time.LocalDate
-import akka.actor.{Scheduler, Cancellable, ActorRef}
-import akka.util.Duration
-import scala.collection.mutable.{Stack => MutableStack}
+import com.google.inject.Singleton
 import com.google.inject.multibindings.Multibinder
+import com.google.inject.util.Modules
+import com.keepit.common.actor.ActorPlugin
 import com.keepit.common.analytics.{SliderShownListener, UsefulPageListener, KifiResultClickedListener, EventListenerPlugin}
 import com.keepit.common.cache.{HashMapMemoryCache, FortyTwoCachePlugin}
-import akka.actor.Scheduler
-import akka.actor.Cancellable
-import akka.actor.ActorRef
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent.Future
-import scala.concurrent.duration._
-import com.keepit.common.actor.ActorPlugin
-import akka.actor.ActorSystem
+import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.db.DbInfo
+import com.keepit.common.db.SlickModule
+import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck.FakeHealthcheckModule
+import com.keepit.common.healthcheck.{Babysitter, BabysitterImpl, BabysitterTimeout}
+import com.keepit.common.logging.Logging
+import com.keepit.common.mail.{FakeMailToKeepPlugin, MailToKeepPlugin, FakeMailModule}
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.social.FakeSecureSocialUserServiceModule
+import com.keepit.common.store.FakeStoreModule
+import com.keepit.common.time._
+import com.keepit.common.analytics._
+import com.keepit.dev.{SearchDevGlobal, ShoeboxDevGlobal, DevGlobal}
+import com.keepit.inject._
+import com.keepit.model._
+import com.keepit.search.index._
+import com.keepit.search._
+import com.tzavellas.sse.guice.ScalaModule
+import org.joda.time.DateTime
+import org.joda.time.LocalDate
+import play.api.Application
+import play.api.Play
+import play.api.db.DB
+import scala.concurrent._
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.util._
+import com.keepit.common.social.SocialGraphPlugin
+import scala.collection.mutable.{Stack => MutableStack}
+import scala.slick.session.{Database => SlickDatabase}
 
 class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplication() {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
@@ -53,19 +50,24 @@ class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplica
   def withFakeHttpClient() = overrideWith(FakeHttpClientModule())
   def withFakeStore() = overrideWith(FakeStoreModule())
   def withRealBabysitter() = overrideWith(BabysitterModule())
-  def withFakeTime() = overrideWith(FakeTimeModule())
   def withFakeSecureSocialUserService() = overrideWith(FakeSecureSocialUserServiceModule())
+  def withFakePhraseIndexer() = overrideWith(FakePhraseIndexerModule())
+  def withTestActorSystem() = overrideWith(TestActorSystemModule())
+  def withFakePersistEvent() = overrideWith(FakePersistEventModule())
 
   def overrideWith(model: Module): TestApplication =
     new TestApplication(new TestGlobal(Modules.`override`(global.modules: _*).`with`(model)))
 }
 
 class DevApplication() extends TestApplication(new TestGlobal(DevGlobal.modules: _*))
-class ShoeboxApplication() extends TestApplication(new TestGlobal(ShoeboxGlobal.modules: _*))
+class ShoeboxApplication() extends TestApplication(new TestGlobal(ShoeboxDevGlobal.modules: _*))
+class SearchApplication() extends TestApplication(new TestGlobal(SearchDevGlobal.modules: _*))
 class EmptyApplication() extends TestApplication(new TestGlobal(TestModule()))
 
 trait DbRepos {
+
   import play.api.Play.current
+
   def db = inject[Database]
   def userRepo = inject[UserRepo]
   def uriRepo = inject[NormalizedURIRepo]
@@ -91,6 +93,8 @@ case class TestModule() extends ScalaModule {
       lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
     }))
     bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
+    bind[MailToKeepPlugin].to[FakeMailToKeepPlugin]
+    bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
 
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
     listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
@@ -98,14 +102,31 @@ case class TestModule() extends ScalaModule {
     listenerBinder.addBinding().to(classOf[SliderShownListener])
   }
 
-  @Provides @Singleton
-  def clock = new FakeClock
+  @Provides
+  @Singleton
+  def fakeClock: FakeClock = new FakeClock()
 
   @Provides
-  def dateTime(clock: FakeClock) : DateTime = clock.pop
+  @Singleton
+  def clickHistoryTracker(repo: ClickHistoryRepo, db: Database): ClickHistoryTracker = new ClickHistoryTracker(-1, -1, -1, repo, db)
 
   @Provides
-  def localDate(clock: FakeClock) : LocalDate = clock.pop.toLocalDate
+  @Singleton
+  def sliderHistoryTracker(sliderHistoryRepo: SliderHistoryRepo, db: Database): SliderHistoryTracker =
+    new SliderHistoryTracker(sliderHistoryRepo, db, -1, -1, -1)
+
+  @Provides
+  @Singleton
+  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database): BrowsingHistoryTracker =
+    new BrowsingHistoryTracker(-1, -1, -1, browsingHistoryRepo, db)
+
+  @Provides
+  @Singleton
+  def searchServiceClient: SearchServiceClient = new SearchServiceClientImpl(null, -1, null)
+
+  @Provides
+  @Singleton
+  def clock(clock: FakeClock): Clock = clock
 
   @Provides
   @AppScoped
@@ -113,29 +134,44 @@ case class TestModule() extends ScalaModule {
 
   @Provides
   @Singleton
-  def fortyTwoServices(dateTime: DateTime): FortyTwoServices = FortyTwoServices(dateTime)
+  def fortyTwoServices(clock: Clock): FortyTwoServices = FortyTwoServices(clock)
 }
 
-case class FakeTimeModule() extends ScalaModule {
-  def configure(): Unit = {}
-
-  @Provides @Singleton
-  def clock = new FakeClock
-
-  @Provides
-  def dateTime(clock: FakeClock) : DateTime = clock.pop
-
-  @Provides
-  def localDate(clock: FakeClock) : LocalDate = clock.pop.toLocalDate
-}
-
-
-class FakeClock {
+class FakeClock extends Clock with Logging {
   val stack = MutableStack[DateTime]()
 
   def push(t : DateTime): FakeClock = { stack push t; this }
-  def push(d : LocalDate): FakeClock = { stack push d.toDateTimeAtStartOfDay(DEFAULT_DATE_TIME_ZONE); this }
-  def pop(): DateTime = if (stack.isEmpty) currentDateTime else stack.pop
+  def push(d : LocalDate): FakeClock = { stack push d.toDateTimeAtStartOfDay(clockZone); this }
+
+  override def today: LocalDate = this.now.toLocalDate
+  override def now: DateTime = {
+    if (stack.isEmpty) {
+      val nowTime = super.now
+      log.debug(s"FakeClock is retuning real now value: $nowTime")
+      nowTime
+    } else {
+      val fakeNowTime = stack.pop
+      log.debug(s"FakeClock is retuning fake now value: $fakeNowTime")
+      fakeNowTime
+    }
+  }
+}
+
+class FakeSocialGraphPlugin extends SocialGraphPlugin {
+  def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]] =
+    future { throw new Exception("Not Implemented") }
+}
+
+case class TestActorSystemModule() extends ScalaModule {
+  override def configure(): Unit = {
+    bind[ActorSystem].toInstance(ActorSystem("system"))
+  }
+}
+
+case class FakePersistEventModule() extends ScalaModule {
+  override def configure(): Unit = {
+    bind[PersistEventPlugin].to[FakePersistEventPluginImpl]
+  }
 }
 
 case class BabysitterModule() extends ScalaModule {

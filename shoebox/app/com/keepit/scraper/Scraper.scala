@@ -35,6 +35,7 @@ class Scraper @Inject() (
   scrapeInfoRepo: ScrapeInfoRepo,
   normalizedURIRepo: NormalizedURIRepo,
   healthcheckPlugin: HealthcheckPlugin,
+  bookmarkRepo: BookmarkRepo,
   unscrapableRepo: UnscrapableRepo)
     extends Logging {
 
@@ -83,7 +84,7 @@ class Scraper @Inject() (
 
 
   private def processURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = {
-    log.info(s"scraping $uri")
+    log.debug(s"scraping $uri")
 
     fetchArticle(uri, info) match {
       case Scraped(article, signature) =>
@@ -93,14 +94,18 @@ class Scraper @Inject() (
         val scrapedURI = db.readWrite { implicit s =>
           // update the scrape schedule and the uri state to SCRAPED
           scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
-          normalizedURIRepo.saveAsIndexable(uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+          val savedUri = normalizedURIRepo.save(uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+          bookmarkRepo.getByUriWithoutTitle(savedUri.id.get).foreach { bookmark =>
+            bookmarkRepo.save(bookmark.copy(title = savedUri.title))
+          }
+          savedUri
         }
-        log.info("fetched uri %s => %s".format(uri, article))
+        log.debug("fetched uri %s => %s".format(uri, article))
         (scrapedURI, Some(article))
       case NotScrapable(destinationUrl) =>
         val unscrapableURI = db.readWrite { implicit s =>
           scrapeInfoRepo.save(info.withDestinationUrl(destinationUrl).withDocumentUnchanged())
-          normalizedURIRepo.saveAsIndexable(uri.withState(NormalizedURIStates.UNSCRAPABLE))
+          normalizedURIRepo.save(uri.withState(NormalizedURIStates.UNSCRAPABLE))
         }
         (unscrapableURI, None)
       case NotModified =>
@@ -125,7 +130,7 @@ class Scraper @Inject() (
         // the article is saved. update the scrape schedule and the state to SCRAPE_FAILED and save
         val errorURI = db.readWrite { implicit s =>
           scrapeInfoRepo.save(info.withFailure())
-          normalizedURIRepo.saveAsIndexable(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
+          normalizedURIRepo.save(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
         }
         (errorURI, None)
     }
@@ -190,7 +195,8 @@ class Scraper @Inject() (
             // now detect the document change
             val docChanged = signature.similarTo(Signature(info.signature)) < (1.0d - config.changeThreshold * (config.minInterval / info.interval))
 
-            if (!docChanged) {
+            // if unchanged, don't trigger indexing. buf if SCRAPE_WANTED, we always invoke indexing.
+            if (!docChanged && normalizedUri.state != NormalizedURIStates.SCRAPE_WANTED) {
               NotModified
             } else {
               val contentLang = LangDetector.detect(content)

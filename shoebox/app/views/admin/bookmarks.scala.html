@@ -77,6 +77,9 @@
           case "PLUGIN_START" => {
             <span class="label label-info">Plugin Restart</span>
           }
+          case "EMAIL" => {
+            <span class="label label-success">Email</span>
+          }
         }}
       </td>
       <td>@adminHelper.dateTimeDisplay(bookmark.createdAt)</td>
@@ -89,7 +92,7 @@
 }
 
 <script type="text/javascript">
-  $.get("@routes.ArticleIndexerController.getSequenceNumber", function (data) {
+  $.get("@routes.AdminArticleIndexerController.getSequenceNumber", function (data) {
     var sequenceNumber = data.sequenceNumber
     $(".uri-state").each(function () {
       var seq = $(this).data('seq');

@@ -25,6 +25,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.model._
 import com.keepit.common.db._
+import com.google.inject.Provider
 
 import scala.concurrent.duration._
 import com.google.inject.{Inject, ImplementedBy, Singleton}
@@ -46,7 +47,7 @@ case class NormalizedURI  (
   def withUpdateTime(now: DateTime): NormalizedURI = copy(updatedAt = now)
 
   def withState(state: State[NormalizedURI]) = copy(state = state)
-  def withTitle(title: String) = if(title.isEmpty()) this else copy(title = Some(title))
+  def withTitle(title: String) = if (title.isEmpty()) this else copy(title = Some(title))
 }
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
@@ -54,8 +55,8 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def allActive()(implicit session: RSession): Seq[NormalizedURI]
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getByNormalizedUrl(url: String)(implicit session: RSession): Option[NormalizedURI]
+  def getByNormalizedUri(normalizedUri: String)(implicit session: RSession): Option[NormalizedURI]
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
-  def saveAsIndexable(model: NormalizedURI)(implicit session: RWSession): NormalizedURI
 }
 
 case class NormalizedURIKey(id: Id[NormalizedURI]) extends Key[NormalizedURI] {
@@ -71,7 +72,9 @@ class NormalizedURICache @Inject() (val repo: FortyTwoCachePlugin) extends Forty
 @Singleton
 class NormalizedURIRepoImpl @Inject() (
   val db: DataBaseComponent,
-  idCache: NormalizedURICache)
+  val clock: Clock,
+  idCache: NormalizedURICache,
+  scrapeRepoProvider: Provider[ScrapeInfoRepo])
     extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
@@ -87,11 +90,6 @@ class NormalizedURIRepoImpl @Inject() (
     def seq = column[SequenceNumber]("seq", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state ~ seq <> (NormalizedURI,
         NormalizedURI.unapply _)
-  }
-
-  def saveAsIndexable(model: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
-    val num = sequence.incrementAndGet()
-    save(model.copy(seq = num))
   }
 
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
@@ -117,9 +115,28 @@ class NormalizedURIRepoImpl @Inject() (
     (for(f <- table if f.state === NormalizedURIStates.ACTIVE) yield f).list
 
   override def save(uri: NormalizedURI)(implicit session: RWSession): NormalizedURI = {
-    val saved = super.save(uri)
-    val scrapeRepo = inject[ScrapeInfoRepo]
-    scrapeRepo.getByUri(saved.id.get).getOrElse(scrapeRepo.save(ScrapeInfo(uriId = saved.id.get)))
+    val num = sequence.incrementAndGet()
+    val saved = super.save(uri.copy(seq = num))
+
+    lazy val scrapeRepo = scrapeRepoProvider.get
+    if (uri.state == NormalizedURIStates.INACTIVE || uri.state == NormalizedURIStates.ACTIVE) {
+      // If uri.state is ACTIVE or INACTIVE, we do not want an ACTIVE ScrapeInfo record for it
+      scrapeRepo.getByUri(saved.id.get) match {
+        case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.ACTIVE =>
+          scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.INACTIVE))
+        case _ => // do nothing
+      }
+    } else {
+      // Otherwise, ensure that ScrapeInfo has an active record for it.
+      scrapeRepo.getByUri(saved.id.get) match {
+        case Some(scrapeInfo) if scrapeInfo.state == ScrapeInfoStates.INACTIVE =>
+          scrapeRepo.save(scrapeInfo.withState(ScrapeInfoStates.ACTIVE))
+        case Some(scrapeInfo) => // do nothing
+        case None =>
+          scrapeRepo.save(ScrapeInfo(uriId = saved.id.get))
+      }
+    }
+
     saved
   }
 
@@ -134,8 +151,12 @@ class NormalizedURIRepoImpl @Inject() (
     limited.list
   }
 
-  def getByNormalizedUrl(url: String)(implicit session: RSession): Option[NormalizedURI] = {
-    val hash = NormalizedURIFactory.hashUrl(NormalizedURIFactory.normalize(url))
+  // TODO: Rename to getByUrl.
+  def getByNormalizedUrl(url: String)(implicit session: RSession): Option[NormalizedURI] =
+    getByNormalizedUri(NormalizedURIFactory.normalize(url))
+
+  def getByNormalizedUri(normalizedUri: String)(implicit session: RSession): Option[NormalizedURI] = {
+    val hash = NormalizedURIFactory.hashUrl(normalizedUri)
     (for (t <- table if t.urlHash === hash) yield t).firstOption
   }
 }
@@ -145,6 +166,9 @@ object NormalizedURIFactory {
 
   def apply(url: String): NormalizedURI =
     apply(title = None, url = url, state = NormalizedURIStates.ACTIVE)
+
+  def apply(url: String, state: State[NormalizedURI]): NormalizedURI =
+    apply(title = None, url = url, state = state)
 
   def apply(title: String, url: String): NormalizedURI =
     NormalizedURIFactory(title = Some(title), url = url, state = NormalizedURIStates.ACTIVE)
@@ -169,15 +193,17 @@ object NormalizedURIStates extends States[NormalizedURI] {
   val SCRAPED	= State[NormalizedURI]("scraped")
   val SCRAPE_FAILED = State[NormalizedURI]("scrape_failed")
   val UNSCRAPABLE = State[NormalizedURI]("unscrapable")
+  val SCRAPE_WANTED = State[NormalizedURI]("scrape_wanted")
 
   type Transitions = Map[State[NormalizedURI], Set[State[NormalizedURI]]]
 
   val ALL_TRANSITIONS: Transitions = Map(
-      (ACTIVE -> Set(SCRAPED, SCRAPE_FAILED, UNSCRAPABLE, INACTIVE)),
-      (SCRAPED -> Set(ACTIVE, INACTIVE)),
-      (SCRAPE_FAILED -> Set(ACTIVE, INACTIVE)),
-      (UNSCRAPABLE -> Set(ACTIVE, INACTIVE)),
-      (INACTIVE -> Set(ACTIVE, INACTIVE)))
+      (ACTIVE -> Set(SCRAPE_WANTED)),
+      (SCRAPE_WANTED -> Set(SCRAPED, SCRAPE_FAILED, UNSCRAPABLE, INACTIVE)),
+      (SCRAPED -> Set(SCRAPE_WANTED, INACTIVE)),
+      (SCRAPE_FAILED -> Set(SCRAPE_WANTED, INACTIVE)),
+      (UNSCRAPABLE -> Set(SCRAPE_WANTED, INACTIVE)),
+      (INACTIVE -> Set(SCRAPE_WANTED, ACTIVE, INACTIVE)))
 
   val ADMIN_TRANSITIONS: Transitions = Map(
       (ACTIVE -> Set.empty),

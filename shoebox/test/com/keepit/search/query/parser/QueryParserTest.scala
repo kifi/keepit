@@ -7,9 +7,12 @@ import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
-import com.keepit.search.graph.UserToUserEdgeSet
+import org.apache.lucene.analysis.core.WhitespaceAnalyzer
+import org.apache.lucene.document.Document
+import org.apache.lucene.document.Field
+import org.apache.lucene.index.IndexReader
+import org.apache.lucene.index.IndexWriter
 import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.util.Version
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.BooleanQuery
@@ -18,12 +21,14 @@ import org.apache.lucene.search.BooleanClause._
 import org.apache.lucene.search.BooleanClause._
 import org.apache.lucene.search.BooleanQuery
 import org.apache.lucene.search.Query
+import org.apache.lucene.store.RAMDirectory
+import org.apache.lucene.util.Version
 import com.keepit.search.index.DefaultAnalyzer
 
 class QueryParserTest extends Specification {
 
   private trait QueryParserScope extends Scope {
-    val analyzer = DefaultAnalyzer.forParsing(Lang("en"))
+    val analyzer = new org.apache.lucene.analysis.standard.StandardAnalyzer(org.apache.lucene.util.Version.LUCENE_41) //DefaultAnalyzer.forParsing(Lang("en"))
     val parser = new QueryParser(analyzer, None) with DefaultSyntax
   }
 
@@ -122,6 +127,19 @@ class QueryParserTest extends Specification {
 
       query = parser.parse("aaa\"bbb ")
       query.toString === "Some(\"aaa bbb\")"
+    }
+
+    "handle missing term after operators" in new QueryParserScope {
+      var query = parser.parse("+")
+      query.toString === "None"
+
+      query = parser.parse("aaa +")
+      query.toString === "Some(aaa)"
+      query = parser.parse("aaa -")
+      query.toString === "Some(aaa)"
+
+      query = parser.parse("aaa site:")
+      query.toString === "Some(aaa)"
     }
   }
 }

@@ -1,16 +1,10 @@
 <div class="kifi-pane">
   <div class="kifi-pane-head">
-    <span class="kifi-pane-head-logo">Logo</span>
-    <a class="kifi-pane-head-settings" href="javascript:">Settings</a>
+    <a class="kifi-pane-head-settings" href="javascript:" style="background-image:url({{gearUrl}})" title="Settings"></a>
+    <img class="kifi-pane-head-logo" src="{{kifiLogoUrl}}">
   </div>
   <input class="kifi-pane-search" type="text" placeholder="Find on KiFi...">
-  <div class="kifi-pane-page-title">{{title}}</div>
-  <div class="kifi-pane-page-url">{{url}}</div>
-
-  <div class="kifi-pane-actions">
-    <a class="kifi-pane-action" href="javascript:">Add a note</a>
-    <a class="kifi-pane-action" href="javascript:">Keep to a collection</a>
-    <a class="kifi-pane-action" href="javascript:">Read it later</a>
-    <a class="kifi-pane-action" href="javascript:">Share on your social networks</a>
+  <div class="kifi-pane-cubby">
+    {{>pane}}
   </div>
 </div>

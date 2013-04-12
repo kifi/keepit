@@ -12,17 +12,18 @@ import play.api.libs.json.JsArray
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import play.api.libs.json.JsNumber
+import org.joda.time.DateTime
 
 class URLHistorySerializer extends Format[Seq[URLHistory]] {
 
   def writes(history: Seq[URLHistory]): JsValue =
     JsArray(history map ( r => JsObject(
-        Seq("date" -> JsString(r.date.toStandardTimeString), "id" -> JsNumber(r.id.id), "cause" -> JsString(r.cause.value))
+        Seq("date" -> Json.toJson(r.date), "id" -> JsNumber(r.id.id), "cause" -> JsString(r.cause.value))
     )))
 
   def reads(json: JsValue): JsResult[Seq[URLHistory]] = 
     JsSuccess((json \ "history").asOpt[List[JsObject]].getOrElse(Nil).map { h =>
-      val date = parseStandardTime((h \ "date").as[String])
+      val date = (h \ "date").as[DateTime]
       val id = Id[NormalizedURI]((h \ "id").as[Int])
       val cause = URLHistoryCause((h \ "cause").as[String])
       URLHistory(date, id, cause)

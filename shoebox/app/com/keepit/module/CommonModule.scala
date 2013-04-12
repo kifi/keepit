@@ -1,30 +1,36 @@
 package com.keepit.module
 
-import akka.actor.ActorSystem
+import java.io.File
+import java.net.InetAddress
 import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.google.inject.multibindings.Multibinder
+import com.keepit.common.actor.ActorFactory
 import com.keepit.common.actor.ActorPlugin
 import com.keepit.common.analytics._
 import com.keepit.common.cache.MemcachedCacheModule
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.controller._
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.{HealthcheckPluginImpl, HealthcheckPlugin}
+import com.keepit.common.healthcheck.{HealthcheckHost, HealthcheckPluginImpl, HealthcheckPlugin, HealthcheckActor}
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{MailSenderPluginImpl, MailSenderPlugin, PostOffice}
 import com.keepit.common.net.HttpClient
 import com.keepit.common.net.HttpClientImpl
 import com.keepit.common.social.{SocialGraphPluginImpl, SocialGraphPlugin}
 import com.keepit.inject.{FortyTwoModule, AppScoped}
-import com.keepit.model.SliderHistoryTracker
+import com.keepit.model.{UserExperimentRepo, SliderHistoryTracker, SliderHistoryRepo, BrowsingHistoryRepo, ClickHistoryRepo}
 import com.keepit.scraper.ScraperConfig
 import com.keepit.scraper.{HttpFetcherImpl, HttpFetcher}
 import com.keepit.search._
+import com.keepit.shoebox.{ShoeboxServiceClientImpl, ShoeboxServiceClient}
 import com.mongodb.casbah.MongoConnection
 import com.tzavellas.sse.guice.ScalaModule
-import java.io.File
-import java.net.InetAddress
+import akka.actor.ActorSystem
 import play.api.Play.current
+import com.keepit.model.UserRepo
+import com.keepit.model.NormalizedURIRepo
+import com.keepit.common.time.Clock
+import com.google.inject.Provider
 
 class CommonModule extends ScalaModule with Logging {
 
@@ -43,13 +49,27 @@ class CommonModule extends ScalaModule with Logging {
     listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
     listenerBinder.addBinding().to(classOf[UsefulPageListener])
     listenerBinder.addBinding().to(classOf[SliderShownListener])
+    listenerBinder.addBinding().to(classOf[SearchUnloadListener])
   }
 
   @Singleton
   @Provides
-  def searchConfigManager(expRepo: SearchConfigExperimentRepo, db: Database): SearchConfigManager = {
+  def searchUnloadProvider(
+    userRepo: UserRepo,
+    normalizedURIRepo: NormalizedURIRepo,
+    persistEventProvider: Provider[PersistEventPlugin],
+    store: MongoEventStore,
+    clock: Clock,
+    fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
+    new SearchUnloadListenerImpl(userRepo, normalizedURIRepo, persistEventProvider, store, clock, fortyTwoServices)
+  }
+
+  @Singleton
+  @Provides
+  def searchConfigManager(
+      expRepo: SearchConfigExperimentRepo, userExpRepo: UserExperimentRepo, db: Database): SearchConfigManager = {
     val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
-    new SearchConfigManager(optFile, expRepo, db)
+    new SearchConfigManager(optFile, expRepo, userExpRepo, db)
   }
 
   @Singleton
@@ -70,24 +90,24 @@ class CommonModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def clickHistoryTracker: ClickHistoryTracker = {
+  def clickHistoryTracker(repo: ClickHistoryRepo, db: Database): ClickHistoryTracker = {
     val conf = current.configuration.getConfig("click-history-tracker").get
     val filterSize = conf.getInt("filterSize").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val minHits = conf.getInt("minHits").get
 
-    ClickHistoryTracker(filterSize, numHashFuncs, minHits)
+    new ClickHistoryTracker(filterSize, numHashFuncs, minHits, repo, db)
   }
 
   @Singleton
   @Provides
-  def browsingHistoryTracker: BrowsingHistoryTracker = {
+  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database): BrowsingHistoryTracker = {
     val conf = current.configuration.getConfig("browsing-history-tracker").get
     val filterSize = conf.getInt("filterSize").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val minHits = conf.getInt("minHits").get
 
-    BrowsingHistoryTracker(filterSize, numHashFuncs, minHits)
+    new BrowsingHistoryTracker(filterSize, numHashFuncs, minHits, browsingHistoryRepo, db)
   }
 
   @Provides
@@ -99,9 +119,13 @@ class CommonModule extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def healthcheckProvider(system: ActorSystem, postOffice: PostOffice, services: FortyTwoServices): HealthcheckPlugin = {
-    val host = InetAddress.getLocalHost().getCanonicalHostName()
-    new HealthcheckPluginImpl(system, host, postOffice, services)
+  def healthcheckHost(): HealthcheckHost = HealthcheckHost(InetAddress.getLocalHost().getHostName())
+
+  @Provides
+  @AppScoped
+  def healthcheckProvider(actorFactory: ActorFactory[HealthcheckActor], postOffice: PostOffice,
+      services: FortyTwoServices, host: HealthcheckHost): HealthcheckPlugin = {
+    new HealthcheckPluginImpl(actorFactory, services, postOffice, host)
   }
 
   @Singleton
@@ -130,13 +154,30 @@ class CommonModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def sliderHistoryTracker: SliderHistoryTracker = {
+  def sliderHistoryTracker(sliderHistoryRepo: SliderHistoryRepo, db: Database): SliderHistoryTracker = {
     val conf = current.configuration.getConfig("slider-history-tracker").get
     val filterSize = conf.getInt("filterSize").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val minHits = conf.getInt("minHits").get
 
-    SliderHistoryTracker(filterSize, numHashFuncs, minHits)
+    new SliderHistoryTracker(sliderHistoryRepo, db, filterSize, numHashFuncs, minHits)
   }
 
+  @Singleton
+  @Provides
+  def searchServiceClient(client: HttpClient): SearchServiceClient = {
+    new SearchServiceClientImpl(
+      current.configuration.getString("service.search.host").get,
+      current.configuration.getInt("service.search.port").get,
+      client)
+  }
+
+  @Singleton
+  @Provides
+  def shoeboxServiceClient(client: HttpClient): ShoeboxServiceClient = {
+    new ShoeboxServiceClientImpl(
+      current.configuration.getString("service.shoebox.host").get,
+      current.configuration.getInt("service.shoebox.port").get,
+      client)
+  }
 }

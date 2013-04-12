@@ -25,7 +25,7 @@ const windows = require("sdk/windows").browserWindows;
 const tabs = require("sdk/tabs");
 const privateMode = require("sdk/private-browsing");
 
-var nextTabId = 1;
+var nextTabId = 1, topTabWin = windows.activeWindow;
 const pages = {}, workers = {}, tabsById = {};  // all by tab.id
 function createPage(tab) {
   if (!tab || !tab.id) throw Error(tab ? "tab without id" : "tab required");
@@ -52,9 +52,13 @@ function onIconClick(win) {
 }
 
 exports.loadReason = {upgrade: "update", downgrade: "update"}[self.loadReason] || self.loadReason;
+
+const hexRe = /^#[0-9a-f]{3}$/i;
 exports.log = function() {
-  var d = new Date(), ds = d.toString();
-  var args = Array.prototype.slice.apply(arguments);
+  var d = new Date, ds = d.toString(), args = Array.slice(arguments);
+  if (hexRe.test(args[0])) {
+    args.shift();
+  }
   for (var i = 0; i < args.length; i++) {
     var arg = args[i];
     if (typeof arg == "object") {
@@ -65,7 +69,7 @@ exports.log = function() {
       }
     }
   }
-  console.log("[" + ds.substring(0,2) + ds.substring(15,24) + "." + String(+d).substring(10) + "]", args.join(" "));
+  console.log("[" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "]", args.join(" "));
 };
 exports.log.error = function(exception, context) {
   console.error((context ? "[" + context + "] " : "") + exception);
@@ -176,23 +180,106 @@ exports.request = function(method, url, data, done, fail) {
   require("sdk/request").Request(options)[method.toLowerCase()]();
 };
 
+var socketPage, socketHandlers = [,];
+var socketCallbacks = {}, nextSocketCallbackId = 1;  // TODO: garbage collect old uncalled callbacks
+exports.socket = {
+  open: function(url, handlers) {
+    socketHandlers.push(handlers);
+    var socketId = socketHandlers.length - 1;
+    exports.log("[api.socket.open]", socketId, url);
+    if (socketPage) {
+      socketPage.port.emit("open_socket", socketId, url);
+    } else {
+      socketPage = require("sdk/page-worker").Page({
+        contentScriptFile: [
+          data.url("scripts/lib/reconnecting-websocket.js"),
+          data.url("scripts/workers/socket.js")],
+        contentScriptWhen: "start",
+        contentScriptOptions: {socketId: socketId, url: url},
+        contentURL: data.url("html/workers/socket.html")
+      });
+      socketPage.port.on("socket_message", onSocketMessage);
+    }
+    return {
+      send: function(arr, callback) {
+        if (callback) {
+          var id = nextSocketCallbackId++;
+          socketCallbacks[id] = callback;
+          arr.splice(1, 0, id);
+        }
+        socketPage.port.emit("socket_send", socketId, arr);
+      },
+      close: function() {
+        exports.log("[api.socket.close]", socketId);
+        delete socketHandlers[socketId];
+        socketPage.port.emit("close_socket", socketId);
+        if (!socketHandlers.some(function(h) {return h})) {
+          socketPage.destroy();
+          socketPage = null;
+        }
+        this.send = this.close = exports.noop;
+      }
+    };
+  }
+}
+function onSocketMessage(socketId, data) {
+  try {
+    var msg = JSON.parse(data);
+    if (Array.isArray(msg)) {
+      var id = msg.shift();
+      if (id > 0) {
+        var callback = socketCallbacks[id];
+        if (callback) {
+          delete socketCallbacks[id];
+          callback.apply(null, msg);
+        } else {
+          exports.log("[api.socket.receive] Ignoring, no callback", id, msg);
+        }
+      } else {
+        var handlers = socketHandlers[socketId];
+        if (handlers) {
+          var handler = handlers[id];
+          if (handler) {
+            handler.apply(null, msg);
+          } else {
+            exports.log("[api.socket.receive] Ignoring, no handler", id, msg);
+          }
+        } else {
+          exports.log("[api.socket.receive] Ignoring, no handlers", socketId, id, msg);
+        }
+      }
+    } else {
+      exports.log("[api.socket.receive] Ignoring, not array", msg);
+    }
+  } catch (e) {
+    exports.log.error("[api.socket.receive]", e);
+  }
+}
+
 exports.storage = require("sdk/simple-storage").storage;
 
+const hostRe = /^https?:\/\/[^\/]*/;
 exports.tabs = {
   each: function(callback) {
-    Object.keys(pages)
-    .map(function(tabId) { return pages[tabId]; })
-    .filter(function(page) { return /^https?:/.test(page.url); })
-    .forEach(callback);
+    for each (let page in pages) {
+      if (/^https?:/.test(page.url)) callback(page);
+    }
+  },
+  eachSelected: function(callback) {
+    for each (let win in windows) {
+      var page = pages[win.tabs.activeTab.id];
+      if (page && /^https?:/.test(page.url)) callback(page);
+    }
   },
   emit: function(tab, type, data) {
-    if (tab === pages[tab.id]) {
+    var currTab = pages[tab.id];
+    if (tab === currTab || currTab && currTab.url.match(hostRe)[0] == tab.url.match(hostRe)[0]) {
       exports.log("[api.tabs.emit] tab:", tab.id, "type:", type, "data:", data, "url:", tab.url);
       workers[tab.id].forEach(function(worker) {
         worker.port.emit(type, data);
       });
     } else {
-      exports.log.error(Error("tab " + tab.id + " no longer at " + tab.url), "api.tabs.emit:" + type);
+      exports.log("[api.tabs.emit] SUPPRESSED tab:", tab.id, "type:", type, "navigated:", tab.url, "->", currTab && currTab.url);
     }
   },
   get: function(pageId) {
@@ -201,10 +288,6 @@ exports.tabs = {
   isFocused: function(page) {
     var tab = tabsById[page.id], win = tab.window;
     return win === windows.activeWindow && tab === win.tabs.activeTab;
-  },
-  isSelected: function(page) {
-    var tab = tabsById[page.id];
-    return tab === tab.window.tabs.activeTab;
   },
   on: {
     focus: new Listeners,
@@ -282,6 +365,9 @@ windows
   removeFromWindow(win);
 })
 .on("activate", function(win) {
+  if (win.tabs.activeTab) {  // TODO: better detection of a window's tab support (popups have activeTab)
+    topTabWin = win;
+  }
   var page = pages[win.tabs.activeTab.id];
   if (page && /^https?:/.test(page.url)) {
     dispatch.call(exports.tabs.on.focus, page);

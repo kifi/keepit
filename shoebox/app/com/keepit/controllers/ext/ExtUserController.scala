@@ -14,7 +14,7 @@ import com.keepit.search.graph.URIGraph
 import com.keepit.search.Lang
 import com.keepit.search.MainSearcherFactory
 import com.keepit.common.mail._
-import com.keepit.common.controller.BrowserExtensionController
+import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 
 import scala.concurrent.Await
 import play.api.libs.concurrent.Execution.Implicits._
@@ -27,6 +27,7 @@ import com.google.inject.{Inject, Singleton}
 
 @Singleton
 class ExtUserController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   domainRepo: DomainRepo,
   userToDomainRepo: UserToDomainRepo,
@@ -34,7 +35,7 @@ class ExtUserController @Inject() (
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   sliderInfoLoader: SliderInfoLoader)
-    extends BrowserExtensionController {
+    extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def getSliderInfo(url: String) = AuthenticatedJsonAction { request =>
     val sliderInfo = sliderInfoLoader.load(request.userId, url)
@@ -42,18 +43,18 @@ class ExtUserController @Inject() (
         "kept" -> sliderInfo.bookmark.isDefined,
         "private" -> JsBoolean(sliderInfo.bookmark.map(_.isPrivate).getOrElse(false)),
         "following" -> sliderInfo.following,
-        "friends" -> userWithSocialSerializer.writes(sliderInfo.socialUsers),
+        "friends" -> sliderInfo.socialUsers.map(BasicUserSerializer.basicUserSerializer.writes),
         "numComments" -> sliderInfo.numComments,
         "numMessages" -> sliderInfo.numMessages,
         "neverOnSite" -> sliderInfo.neverOnSite.isDefined,
         "sensitive" -> JsBoolean(sliderInfo.sensitive.getOrElse(false))))
   }
 
-  def suppressSliderForSite() = AuthenticatedJsonAction { request =>
-    val json = request.body.asJson.get
+  def suppressSliderForSite() = AuthenticatedJsonToJsonAction { request =>
+    val json = request.body
     val host: String = URI.parse((json \ "url").as[String]).get.host.get.name
     val suppress: Boolean = (json \ "suppress").as[Boolean]
-    val utd = db.readWrite {implicit s =>
+    db.readWrite(attempts = 3) { implicit s =>
       val domain = domainRepo.get(host, excludeState = None) match {
         case Some(d) if d.isActive => d
         case Some(d) => domainRepo.save(d.withState(DomainStates.ACTIVE))

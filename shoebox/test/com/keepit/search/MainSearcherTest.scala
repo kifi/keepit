@@ -11,7 +11,6 @@ import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
-import com.keepit.inject._
 import com.keepit.test._
 import org.specs2.mutable._
 import play.api.Play.current
@@ -24,33 +23,42 @@ import scala.util.Random
 import com.keepit.inject._
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
+import com.keepit.common.analytics.FakePersistEventPluginImpl
+import com.keepit.search.query.parser.FakeSpellCorrector
+import com.keepit.common.controller.FortyTwoServices
+import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.store.{Directory, MMapDirectory, RAMDirectory}
+import org.apache.lucene.util.Version
+import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphDecoders}
+import org.apache.lucene.util.Version
 
 class MainSearcherTest extends Specification with DbRepos {
 
   val resultClickTracker = ResultClickTracker(8)
-  val browsingHistoryTracker = running(new EmptyApplication()) {
-    BrowsingHistoryTracker(3067, 2, 1)
-  }
-  val clickHistoryTracker = running(new EmptyApplication()) {
-    ClickHistoryTracker(307, 2, 1)
-  }
 
   def initData(numUsers: Int, numUris: Int) = db.readWrite { implicit s =>
     ((0 until numUsers).map(n => userRepo.save(User(firstName = "foo" + n, lastName = ""))).toList,
-     (0 until numUris).map(n => uriRepo.saveAsIndexable(NormalizedURIFactory(title = "a" + n,
+     (0 until numUris).map(n => uriRepo.save(NormalizedURIFactory(title = "a" + n,
        url = "http://www.keepit.com/article" + n, state = SCRAPED))).toList)
   }
 
   def initIndexes(store: ArticleStore) = {
-    val articleIndexer = ArticleIndexer(new RAMDirectory, store)
-    val uriGraph = URIGraph(new RAMDirectory)
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    val articleIndexer = new ArticleIndexer(new RAMDirectory, config, store, db, inject[NormalizedURIRepo], null)
+    val uriGraph = new URIGraphImpl(new RAMDirectory, config, URIGraphDecoders.decoders(), bookmarkRepo, db)
+    implicit val clock = inject[Clock]
+    implicit val fortyTwoServices = inject[FortyTwoServices]
     val mainSearcherFactory = new MainSearcherFactory(
         articleIndexer,
         uriGraph,
         new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer())),
         resultClickTracker,
-        browsingHistoryTracker,
-        clickHistoryTracker)
+        new BrowsingHistoryTracker(3067, 2, 1, inject[BrowsingHistoryRepo], inject[Database]),
+        new ClickHistoryTracker(307, 2, 1, inject[ClickHistoryRepo], inject[Database]),
+        inject[FakePersistEventPluginImpl],
+        inject[FakeSpellCorrector],
+        clock,
+        fortyTwoServices)
     (uriGraph, articleIndexer, mainSearcherFactory)
   }
 
@@ -87,7 +95,7 @@ class MainSearcherTest extends Specification with DbRepos {
 
   "MainSearcher" should {
     "search and categorize using social graph" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHealthcheck()) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         val bookmarks = db.readWrite { implicit s =>
@@ -112,7 +120,7 @@ class MainSearcherTest extends Specification with DbRepos {
             val friendIds = friends.map(_.id.get).toSet - userId
             val mainSearcher = mainSearcherFactory(userId, friendIds, SearchFilter.default(), allHitsConfig)
             val graphSearcher = mainSearcher.uriGraphSearcher
-            val (myHits, friendsHits, othersHits) = mainSearcher.searchText("alldocs", numHitsPerCategory, clickBoosts)(Lang("en"))
+            val (myHits, friendsHits, othersHits, parsedQuery) = mainSearcher.searchText("alldocs", numHitsPerCategory, clickBoosts)(Lang("en"))
 
             //println("----")
             val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet.map(_.id)
@@ -146,7 +154,7 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "return a single list of hits" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHealthcheck()) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         val bookmarks = db.readWrite { implicit session =>
@@ -204,7 +212,7 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "search personal bookmark titles" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHealthcheck()) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         val bookmarks = db.readWrite {implicit s =>
@@ -267,7 +275,7 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "score using matches in a bookmark title and an article" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHealthcheck()) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         val bookmarks = db.readWrite { implicit s =>
@@ -302,7 +310,7 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "paginate" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHealthcheck()) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         val bookmarks = db.readWrite { implicit s =>
@@ -350,7 +358,7 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "boost recent bookmarks" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHealthcheck()) {
         val (users, uris) = initData(numUsers = 1, numUris = 5)
         val userId = users.head.id.get
         val now = currentDateTime
@@ -386,7 +394,7 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "be able to cut the long tail" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHealthcheck()) {
         val (users, uris) = initData(numUsers = 1, numUris = 10)
         val userId = users.head.id.get
 
@@ -427,7 +435,7 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "show own private bookmarks" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHealthcheck()) {
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
@@ -460,7 +468,7 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "not show friends private bookmarks" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHealthcheck()) {
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
@@ -497,7 +505,7 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "search hits using a stemmed word" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHealthcheck()) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         val bookmarks = db.readWrite { implicit s =>

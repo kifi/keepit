@@ -6,11 +6,11 @@ import com.keepit.common.controller.FortyTwoServices
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.State
 import com.keepit.common.time._
-import com.keepit.inject.inject
 import com.keepit.model._
 
 import play.api.Play.current
 import play.api.libs.json._
+import com.google.inject.Inject
 
 trait EventFamily {
   val name: String
@@ -40,6 +40,8 @@ object EventFamilies {
   val GENERIC_SERVER = ServerEventFamily("")
   val EXCEPTION = ServerEventFamily("exception")
   val DOMAIN_TAG_IMPORT = ServerEventFamily("domain_tag_import")
+  val SERVER_SEARCH = ServerEventFamily("server_search")
+
 
   def apply(event: String): EventFamily = {
     event.toLowerCase.trim match {
@@ -49,6 +51,7 @@ object EventFamilies {
       case ACCOUNT.name => ACCOUNT
       case NOTIFICATION.name => NOTIFICATION
       case EXCEPTION.name => EXCEPTION
+      case SERVER_SEARCH.name => SERVER_SEARCH
       case s => throw new Exception("Unknown event family %s".format(s))
     }
   }
@@ -64,22 +67,39 @@ trait EventMetadata {
 case class UserEventMetadata(eventFamily: EventFamily, eventName: String, userId: ExternalId[User], installId: String, userExperiments: Seq[State[ExperimentType]], metaData: JsObject, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
 case class ServerEventMetadata(eventFamily: EventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
 
-case class Event(externalId: ExternalId[Event] = ExternalId[Event](), metaData: EventMetadata, createdAt: DateTime,
-    serverVersion: String = inject[FortyTwoServices].currentService + ":" + inject[FortyTwoServices].currentVersion) {
+case class Event(
+  externalId: ExternalId[Event] = ExternalId[Event](),
+  metaData: EventMetadata,
+  createdAt: DateTime,
+  serverVersion: String
+)
 
-  inject[EventHelper].newEvent(this)
-
-  def persistToS3(): Event = {
-    inject[S3EventStore] += (externalId -> this)
-    this
+class EventRepo @Inject() (s3EventStore: S3EventStore, mongoEventStore: MongoEventStore) {
+  def persistToS3(event: Event): Event = {
+    s3EventStore += (event.externalId -> event)
+    event
   }
-  def persistToMongo(): Event = inject[MongoEventStore].save(this)
+  def persistToMongo(event: Event): Event = mongoEventStore.save(event)
+  def persist(event: Event): Event = {
+    persistToS3(event)
+    persistToMongo(event)
+  }
 }
 
 object Events {
-  def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Seq[State[ExperimentType]], installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil, createdAt: DateTime = currentDateTime) =
-    Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData, prevEvents), createdAt = createdAt)
+  def serverVersion(implicit fortyTwoServices: FortyTwoServices) = fortyTwoServices.currentService + ":" + fortyTwoServices.currentVersion
 
-  def serverEvent(eventFamily: EventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil, createdAt: DateTime = currentDateTime) =
-    Event(metaData = ServerEventMetadata(eventFamily, eventName, metaData, prevEvents), createdAt = createdAt)
+  def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Seq[State[ExperimentType]],
+      installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil) (implicit clock: Clock, fortyTwoServices: FortyTwoServices) =
+    Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData, prevEvents), createdAt = clock.now,
+      serverVersion = serverVersion(fortyTwoServices))
+
+  def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Seq[State[ExperimentType]],
+      installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]], createdAt: DateTime) (implicit clock: Clock, fortyTwoServices: FortyTwoServices) =
+    Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData, prevEvents), createdAt = createdAt,
+      serverVersion = serverVersion(fortyTwoServices))
+
+  def serverEvent(eventFamily: EventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil)  (implicit clock: Clock, fortyTwoServices: FortyTwoServices) =
+    Event(metaData = ServerEventMetadata(eventFamily, eventName, metaData, prevEvents), createdAt = clock.now,
+      serverVersion = serverVersion(fortyTwoServices))
 }

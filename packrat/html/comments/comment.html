@@ -1,4 +1,4 @@
-<div class="kifi-comment-wrap" data-id="{{externalId}}">
+<div class="kifi-comment-wrap" data-id="{{id}}">
   <div class="kifi-comment kifi-comment-real">
     <img class="kifi-comment-avatar {{#isLoggedInUser}}kifi-self-avatar{{/isLoggedInUser}}" src="https://graph.facebook.com/{{user.facebookId}}/picture?type=square">
 
@@ -8,6 +8,6 @@
     </div>
   </div>
   <div class="kifi-comment-meta">
-    <time datetime="{{#formatIsoDate}}{{createdAt}}{{/formatIsoDate}}">{{#formatDate}}{{createdAt}}{{/formatDate}}</time>
+    <time datetime="{{#formatIsoDate}}{{createdAt}}{{/formatIsoDate}}">{{#formatLocalDate}}{{createdAt}}{{/formatLocalDate}}</time>
   </div>
 </div>

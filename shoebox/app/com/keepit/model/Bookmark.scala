@@ -32,7 +32,7 @@ case class Bookmark(
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   externalId: ExternalId[Bookmark] = ExternalId(),
-  title: String,
+  title: Option[String] = None,
   uriId: Id[NormalizedURI],
   urlId: Option[Id[URL]] = None, // todo(Andrew): remove Option after grandfathering process
   url: String, // denormalized for efficiency
@@ -66,6 +66,7 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def allActive()(implicit session: RSession): Seq[Bookmark]
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Option[Bookmark]
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark]
+  def getByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark]
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Bookmark]
   def getUsersChanged(num: SequenceNumber)(implicit session: RSession): Seq[(Id[User], SequenceNumber)]
   def count(userId: Id[User])(implicit session: RSession): Int
@@ -90,6 +91,7 @@ class BookmarkCountCache @Inject() (val repo: FortyTwoCachePlugin) extends Forty
 @Singleton
 class BookmarkRepoImpl @Inject() (
   val db: DataBaseComponent,
+  val clock: Clock,
   val countCache: BookmarkCountCache)
       extends DbRepo[Bookmark] with BookmarkRepo with ExternalIdColumnDbFunction[Bookmark] {
   import FortyTwoTypeMappers._
@@ -100,7 +102,7 @@ class BookmarkRepoImpl @Inject() (
   private val sequence = db.getSequence("bookmark_sequence")
 
   override lazy val table = new RepoTable[Bookmark](db, "bookmark") with ExternalIdColumn[Bookmark] {
-    def title = column[String]("title", O.NotNull)
+    def title = column[Option[String]]("title", O.Nullable)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def urlId = column[Id[URL]]("url_id", O.NotNull)
     def url =   column[String]("url", O.NotNull)
@@ -134,6 +136,9 @@ class BookmarkRepoImpl @Inject() (
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.uriId === uriId && b.state === BookmarkStates.ACTIVE) yield b).list
 
+  def getByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark] =
+    (for(b <- table if b.uriId === uriId && b.state === BookmarkStates.ACTIVE && b.title.isNull) yield b).list
+
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).list
 
@@ -165,11 +170,11 @@ class BookmarkRepoImpl @Inject() (
 
 object BookmarkFactory {
 
-  def apply(uri: NormalizedURI, userId: Id[User], title: String, url: URL, source: BookmarkSource, isPrivate: Boolean, kifiInstallation: Option[ExternalId[KifiInstallation]]): Bookmark =
+  def apply(uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: BookmarkSource, isPrivate: Boolean, kifiInstallation: Option[ExternalId[KifiInstallation]]): Bookmark =
     Bookmark(title = title, userId = userId, uriId = uri.id.get, urlId = Some(url.id.get), url = url.url, source = source, isPrivate = isPrivate)
 
   def apply(title: String, url: URL, uriId: Id[NormalizedURI], userId: Id[User], source: BookmarkSource): Bookmark =
-    Bookmark(title = title, urlId = Some(url.id.get), url = url.url, uriId = uriId, userId = userId, source = source)
+    Bookmark(title = Some(title), urlId = Some(url.id.get), url = url.url, uriId = uriId, userId = userId, source = source)
 
   def apply(title: String, urlId: Id[URL],  uriId: Id[NormalizedURI], userId: Id[User], source: BookmarkSource, isPrivate: Boolean): Bookmark =
     BookmarkFactory(title = title, urlId = urlId, uriId = uriId, userId = userId, source = source, isPrivate = isPrivate)

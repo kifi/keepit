@@ -1,31 +1,36 @@
 package com.keepit.controllers.admin
 
-import scala.concurrent.ExecutionContext.global
-
-import java.util.concurrent.{Callable, TimeUnit}
-
-import com.google.common.cache.{CacheLoader, CacheBuilder}
-import com.google.common.util.concurrent.ListenableFutureTask
+import scala.Some
+import scala.collection.concurrent
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent._
+import org.joda.time._
 import com.google.inject.{Inject, Singleton}
-import com.keepit.common.analytics.reports.{Report, DailyDustSettledKifiHadResultsByExperiment, DailyKifiResultClickedByExperiment, DailyGoogleResultClickedByExperiment}
-import com.keepit.common.controller.AdminController
+import com.keepit.common.analytics.reports.{ReportRepo, DailyDustSettledKifiHadResultsByExperimentRepo, DailyKifiResultClickedByExperimentRepo, DailyGoogleResultClickedByExperimentRepo}
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.social._
 import com.keepit.common.time._
+import com.keepit.model.User
 import com.keepit.model._
 import com.keepit.search._
-
-import play.api.libs.json.{JsString, JsArray, JsNumber, JsObject}
+import play.api.libs.json.JsArray
+import play.api.libs.json.JsNumber
+import play.api.libs.json.JsObject
+import play.api.libs.json.JsString
 import views.html
+import com.keepit.common.analytics.MongoEventStore
 
 @Singleton
 class AdminSearchConfigController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   userWithSocialRepo: UserWithSocialRepo,
   userRepo: UserRepo,
-  configManager: SearchConfigManager)
-    extends AdminController {
+  configManager: SearchConfigManager,
+  store: MongoEventStore)
+    extends AdminController(actionAuthenticator) {
 
   def showUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val user = db.readOnly { implicit s =>
@@ -60,21 +65,40 @@ class AdminSearchConfigController @Inject() (
     Ok(html.admin.searchConfigExperiments(experiments, default.params))
   }
 
+  private val existingReportData = new concurrent.TrieMap[ReportRepo, (DateTime, Map[LocalDate, Int])]()
+  private val refetchInterval = Minutes.minutes(10)
+  private val expireInterval = Days.ONE
+  private def refetchReportData(report: ReportRepo, endDate: DateTime, days: Int): Map[LocalDate, Int] = {
+    val (lastDate, existingData) = existingReportData.get(report).getOrElse((START_OF_TIME, Map()))
+    val completeReportData = report.get(Seq(endDate.minusDays(days), lastDate).max, endDate)
+        .list.map(row => row.date.toLocalDate -> row.fields.head._2.value.toInt).toMap
+    val data = (existingData ++ completeReportData).toMap
+    existingReportData += report -> (endDate, data)
+    data
+  }
+  private def getReportData(report: ReportRepo, endDate: DateTime, days: Int = 20): Map[LocalDate, Int] = {
+    val (lastDate, existingData) = existingReportData.get(report).getOrElse((START_OF_TIME, Map()))
+    if (lastDate.plus(expireInterval) isBefore endDate) {
+      refetchReportData(report, endDate, days)
+    } else {
+      if (lastDate.plus(refetchInterval) isBefore endDate) {
+        future { refetchReportData(report, endDate, days) }
+      }
+      existingData.asInstanceOf[Map[LocalDate, Int]]
+    }
+  }
+
   private def getChartData(
-      reportA: Option[SearchConfigExperiment] => Report,
-      reportB: Option[SearchConfigExperiment] => Report,
+      reportA: Option[SearchConfigExperiment] => ReportRepo,
+      reportB: Option[SearchConfigExperiment] => ReportRepo,
       experiment: Option[SearchConfigExperiment],
       minDays: Int = 10, maxDays: Int = 20) = {
     val now = currentDateTime
-    val today = now.toLocalDate
-    val completeReportA = reportA(experiment).get(now.minusDays(maxDays), now)
-    val completeReportB = reportB(experiment).get(now.minusDays(maxDays), now)
-    val completeReportADefault = reportA(None).get(now.minusDays(maxDays), now)
-    val completeReportBDefault = reportB(None).get(now.minusDays(maxDays), now)
-    val aMap = completeReportA.list.map(row => row.date.toLocalDate -> row.fields.head._2.value.toInt).toMap
-    val bMap = completeReportB.list.map(row => row.date.toLocalDate -> row.fields.head._2.value.toInt).toMap
-    val aDefMap = completeReportADefault.list.map(row => row.date.toLocalDate -> row.fields.head._2.value.toInt).toMap
-    val bDefMap = completeReportBDefault.list.map(row => row.date.toLocalDate -> row.fields.head._2.value.toInt).toMap
+    val today = currentDate
+    val aMap = getReportData(reportA(experiment), now)
+    val bMap = getReportData(reportB(experiment), now)
+    val aDefMap = getReportData(reportA(None), now)
+    val bDefMap = getReportData(reportB(None), now)
     val (days, (as, bs, values), (adefs, bdefs, defaultValues)) = (for (i <- maxDays to 0 by -1) yield {
       val day = today.minusDays(i)
       val (a, b) = (aMap.get(day).getOrElse(0), bMap.get(day).getOrElse(0))
@@ -99,40 +123,17 @@ class AdminSearchConfigController @Inject() (
     ))
   }
 
-  private lazy val kifiVsGoogleCache = CacheBuilder.newBuilder()
-    .expireAfterWrite(1, TimeUnit.DAYS)
-    .refreshAfterWrite(10, TimeUnit.MINUTES)
-    .build(new CacheLoader[Id[SearchConfigExperiment], JsObject] {
-      def load(expId: Id[SearchConfigExperiment]) = {
-        val e = Some(expId).filter(_.id > 0).map(configManager.getExperiment)
-        getChartData(new DailyKifiResultClickedByExperiment(_), new DailyGoogleResultClickedByExperiment(_), e)
-      }
-      override def reload(key: Id[SearchConfigExperiment], oldValue: JsObject) = {
-        val task = ListenableFutureTask.create(new Callable[JsObject] { def call = load(key) })
-        global.execute(task); task
-      }
-  })
-  private lazy val kifiHadResultsCache = CacheBuilder.newBuilder()
-    .expireAfterWrite(1, TimeUnit.DAYS)
-    .refreshAfterWrite(10, TimeUnit.MINUTES)
-    .build(new CacheLoader[Id[SearchConfigExperiment], JsObject] {
-      def load(expId: Id[SearchConfigExperiment]) = {
-        val e = Some(expId).filter(_.id > 0).map(configManager.getExperiment)
-        getChartData(new DailyDustSettledKifiHadResultsByExperiment(_, true),
-          new DailyDustSettledKifiHadResultsByExperiment(_, false), e)
-      }
-      override def reload(key: Id[SearchConfigExperiment], oldValue: JsObject) = {
-        val task = ListenableFutureTask.create(new Callable[JsObject] { def call = load(key) })
-        global.execute(task); task
-      }
-    })
-
   def getKifiVsGoogle(expId: Id[SearchConfigExperiment]) = AdminJsonAction { implicit request =>
-    Ok(kifiVsGoogleCache(expId))
+    val e = Some(expId).filter(_.id > 0).map(configManager.getExperiment)
+    val data = getChartData(new DailyKifiResultClickedByExperimentRepo(store, _), new DailyGoogleResultClickedByExperimentRepo(store, _), e)
+    Ok(data)
   }
 
   def getKifiHadResults(expId: Id[SearchConfigExperiment]) = AdminJsonAction { implicit request =>
-    Ok(kifiHadResultsCache(expId))
+    val e = Some(expId).filter(_.id > 0).map(configManager.getExperiment)
+    val data = getChartData(new DailyDustSettledKifiHadResultsByExperimentRepo(store, _, true),
+      new DailyDustSettledKifiHadResultsByExperimentRepo(store, _, false), e)
+    Ok(data)
   }
 
   def addNewExperiment = AdminHtmlAction { implicit request =>

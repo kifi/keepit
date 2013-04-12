@@ -6,6 +6,7 @@ import org.apache.lucene.search.BooleanClause.Occur._
 import org.apache.lucene.search.Query
 import scala.util.matching.Regex.Match
 import scala.collection.mutable.ArrayBuffer
+import scala.annotation.tailrec
 
 object DefaultSyntax {
   val queryFields = Set("", "site")
@@ -25,6 +26,7 @@ trait DefaultSyntax extends QueryParser {
 
   override val fields = queryFields
 
+  private[this] var inputText: CharSequence = ""
   private[this] var buf: CharSequence = ""
 
   private def removeLeadingSpaces(queryText: CharSequence): CharSequence = {
@@ -72,7 +74,7 @@ trait DefaultSyntax extends QueryParser {
       case _ =>
         (endOfQueryRegex findPrefixMatchOf buf) match {
           case Some(m) => ""
-          case _ => throw new QueryParserException("failed to parse terms before the end of query")
+          case _ => throw new QueryParserException(s"failed to parse terms before the end of query input=[${inputText}] buf=[${buf}]")
         }
     }
   }
@@ -101,6 +103,7 @@ trait DefaultSyntax extends QueryParser {
     QuerySpec(occur, field, term, quoted)
   }
 
+  @tailrec
   private def parse(result: List[QuerySpec]): List[QuerySpec] = {
     buf match {
       case "" => result.reverse
@@ -109,9 +112,10 @@ trait DefaultSyntax extends QueryParser {
   }
 
   override def parse(queryText: CharSequence): Option[Query] = {
-    if(queryText == null) {
+    if (queryText == null) {
       None
     } else {
+      inputText = queryText
       buf = removeLeadingSpaces(queryText)
       val querySpecList = parse(Nil)
       val clauses = querySpecList.foldLeft(ArrayBuffer.empty[BooleanClause]) { (clauses, spec) =>

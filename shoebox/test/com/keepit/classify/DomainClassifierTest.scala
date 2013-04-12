@@ -1,40 +1,29 @@
 package com.keepit.classify
 
-import org.joda.time.DateTime
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
+import java.util.concurrent.TimeUnit
+
+import org.specs2.execute.SkipException
 import org.specs2.mutable.Specification
 
-import com.keepit.common.analytics.FakePersistEventPluginImpl
 import com.keepit.common.db.slick.Database
-import com.keepit.common.net.FakeHttpClient
-import com.keepit.inject.{provide, inject}
-import com.keepit.test.{DbRepos, EmptyApplication}
+import com.keepit.common.net.{HttpClient, FakeHttpClient}
+import com.keepit.inject._
+import com.keepit.test.{DevApplication, DbRepos}
 
-import akka.actor.ActorSystem
-import scala.concurrent.Await
 import play.api.Play.current
 import play.api.test.Helpers.running
 
-import scala.concurrent.duration._
-import java.util.concurrent.TimeUnit
-import org.specs2.execute.SkipException
-
 class DomainClassifierTest extends Specification with DbRepos {
-  val system = ActorSystem("system")
   "The domain classifier" should {
     "use imported classifications and not fetch for known domains" in {
       throw new SkipException(skipped)
-      running(new EmptyApplication()) {
-        //val client = new HttpClientImpl()
-        val client = new FakeHttpClient(Some(Map.empty))
-
-        val classifier = new DomainClassifierImpl(system, inject[Database], client,
-          inject[SensitivityUpdater], inject[DomainRepo], inject[DomainTagRepo], inject[DomainToTagRepo])
+      running(new DevApplication().withFakeMail().withFakePersistEvent().withFakeHealthcheck().withFakeHttpClient()) {
+        val classifier = inject[DomainClassifierImpl]
         val tagRepo = inject[DomainTagRepo]
-        val domainRepo = inject[DomainRepo]
-        val domainToTagRepo = inject[DomainToTagRepo]
-        val importer = new DomainTagImporterImpl(domainRepo, tagRepo, domainToTagRepo,
-          inject[SensitivityUpdater], provide(new DateTime), system, db,
-          new FakePersistEventPluginImpl(system), DomainTagImportSettings())
+        val importer = inject[DomainTagImporterImpl]
         inject[Database].readWrite { implicit s =>
           tagRepo.save(DomainTag(name = DomainTagName("Search Engines"), sensitive = Some(false)))
           tagRepo.save(DomainTag(name = DomainTagName("Technology and computers"), sensitive = Some(false)))
@@ -55,17 +44,20 @@ class DomainClassifierTest extends Specification with DbRepos {
     }
     "fetch if necessary" in {
       throw new SkipException(skipped)
-      running(new EmptyApplication()) {
-        val client = new FakeHttpClient(Some({
-          case s if s.contains("yahoo.com") => "FR~Search engines"
-          case s if s.contains("zdnet.com") => "FM~Technology and computers,News and magazines"
-          case s if s.contains("schwab.com") => "FM~Business and services,Finance (Banks, Real estate, Insurance)"
-          case s if s.contains("hover.com") => "FM~Business and services,Web hosting"
-          case s if s.contains("42go.com") || s.contains("addepar.com") => "FM~Technology and computers"
-          case s if s.contains("playboy.com") || s.contains("porn.com") => "FM~Porn"
-        }))
-        val classifier = new DomainClassifierImpl(system, inject[Database], client,
-          inject[SensitivityUpdater], inject[DomainRepo], inject[DomainTagRepo], inject[DomainToTagRepo])
+      running(new DevApplication().withFakeMail().withFakePersistEvent().withFakeHealthcheck()
+          .overrideWith(new FortyTwoModule {
+            override def configure() {
+              bind[HttpClient].toInstance(new FakeHttpClient(Some({
+                case s if s.contains("yahoo.com") => "FR~Search engines"
+                case s if s.contains("zdnet.com") => "FM~Technology and computers,News and magazines"
+                case s if s.contains("schwab.com") => "FM~Business and services,Finance (Banks, Real estate, Insurance)"
+                case s if s.contains("hover.com") => "FM~Business and services,Web hosting"
+                case s if s.contains("42go.com") || s.contains("addepar.com") => "FM~Technology and computers"
+                case s if s.contains("playboy.com") || s.contains("porn.com") => "FM~Porn"
+              })))
+            }
+          })) {
+        val classifier = inject[DomainClassifierImpl]
         val domainRepo = inject[DomainRepo]
         val tagRepo = inject[DomainTagRepo]
         inject[Database].readWrite { implicit s =>
@@ -103,6 +95,8 @@ class DomainClassifierTest extends Specification with DbRepos {
         classifier.isSensitive("playboy.com") === Right(true)
         classifier.isSensitive("www.porn.com") === Right(true)
         classifier.isSensitive("porn.com") === Right(true)
+
+        classifier.isSensitive("local-domain") === Right(true)
       }
     }
   }

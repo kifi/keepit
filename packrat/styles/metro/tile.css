@@ -1,0 +1,68 @@
+#kifi-tile {
+  position: fixed;
+  z-index: 2147483639;
+  bottom: 6px;
+  right: 6px;
+  left: auto;
+  top: auto;
+  width: 42px;
+  height: 42px;
+  text-align: center;
+  font-family: "Helvetica Neue",arial,sans-serif;
+}
+.kifi-with-pane #kifi-tile {
+  display: none;
+}
+.kifi-tile-transparent {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-radius: 5px;
+  background-color: #263f5c;
+  background-size: 26px auto;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: .4;
+}
+.kifi-kept .kifi-tile-transparent {
+  background-color: #0a5aab;
+  background-image: none !important;
+}
+.kifi-kept .kifi-tile-transparent::before {
+  content: "kept";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  color: #fff;
+  font-size: 14px;
+  line-height: 42px;
+}
+
+.kifi-count,
+.kifi-slider2 .kifi-count {
+  display: inline-block;
+  position: relative;
+  top: -12px;
+  -moz-box-sizing: content-box;
+  box-sizing: content-box;
+  min-width: 20px;
+  border-radius: 15px;
+  background: #263f5c padding-box;
+  color: #fff;
+  font-size: 10px;
+  line-height: 20px;
+}
+.kifi-count.kifi-unread {
+  background-color: #e74c3c;
+}
+.kifi-tile-transparent .kifi-count {
+  border: 3px solid;
+  border-color: transparent #fff #fff;
+  top: -15px;
+}
+#kifi-tile.kifi-behind-slider .kifi-count {
+  display: none;
+}

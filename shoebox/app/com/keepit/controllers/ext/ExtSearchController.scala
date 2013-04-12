@@ -11,7 +11,6 @@ import play.api.Play.current
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.async._
 import com.keepit.model._
 import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
 import java.sql.Connection
@@ -22,13 +21,15 @@ import com.keepit.search.graph._
 import com.keepit.search._
 import com.keepit.common.social.UserWithSocial
 import com.keepit.search.ArticleSearchResultStore
-import com.keepit.common.controller.BrowserExtensionController
+import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.performance._
 import scala.util.Try
 import views.html
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.social.BasicUser
 import com.keepit.common.social.BasicUserRepo
+import scala.concurrent.future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchHit(id: Id[NormalizedURI], externalId: ExternalId[NormalizedURI], title: Option[String], url: String)
@@ -43,6 +44,7 @@ case class PersonalSearchResultPacket(
 
 @Singleton
 class ExtSearchController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
   db: Database,
   userRepo: UserRepo,
   socialConnectionRepo: SocialConnectionRepo,
@@ -54,7 +56,7 @@ class ExtSearchController @Inject() (
   bookmarkRepo: BookmarkRepo,
   uriRepo: NormalizedURIRepo,
   basicUserRepo: BasicUserRepo)
-    extends BrowserExtensionController {
+    extends BrowserExtensionController(actionAuthenticator) with SearchServiceController {
 
   def search(query: String, filter: Option[String], maxHits: Int, lastUUIDStr: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
     val lastUUID = lastUUIDStr.flatMap{
@@ -63,7 +65,7 @@ class ExtSearchController @Inject() (
     }
 
     val userId = request.userId
-    log.info("searching with %s using userId id %s".format(query, userId))
+    log.info(s"""User ${userId} searched ${query.length} characters""")
     val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
     val (friendIds, searchFilter) = time("search-connections") {
       db.readOnly { implicit s =>
@@ -103,14 +105,14 @@ class ExtSearchController @Inject() (
   }
 
   private def reportArticleSearchResult(res: ArticleSearchResult) {
-    dispatch ({
+    future {
       db.readWrite { implicit s =>
         articleSearchResultRefRepo.save(ArticleSearchResultFactory(res))
       }
       articleSearchResultStore += (res.uuid -> res)
-    }, { e =>
+    } onFailure { case e =>
       log.error("Could not persist article search result %s".format(res), e)
-    })
+    }
   }
 
   private[ext] def toPersonalSearchResultPacket(userId: Id[User],
@@ -150,7 +152,7 @@ class ExtSearchController @Inject() (
 
   private[ext] def toPersonalSearchHit(uri: NormalizedURI, bookmark: Option[Bookmark]) = {
     val (title, url) = bookmark match {
-      case Some(bookmark) => (Some(bookmark.title), bookmark.url)
+      case Some(bookmark) => (bookmark.title, bookmark.url)
       case None => (uri.title, uri.url)
     }
 

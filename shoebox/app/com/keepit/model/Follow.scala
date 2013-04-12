@@ -44,7 +44,7 @@ trait FollowRepo extends Repo[Follow] {
 }
 
 @Singleton
-class FollowRepoImpl @Inject() (val db: DataBaseComponent) extends DbRepo[Follow] with FollowRepo {
+class FollowRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[Follow] with FollowRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._

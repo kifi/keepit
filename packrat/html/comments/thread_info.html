@@ -1,4 +1,4 @@
-<div class="kifi-comment-wrap" data-id="{{externalId}}">
+<div class="kifi-comment-wrap" data-id="{{id}}">
   <div class="kifi-comment kifi-comment-real kifi-thread-info">
     <img class="kifi-comment-avatar" src="{{threadAvatar}}">
 
@@ -14,7 +14,7 @@
       {{#formatComments}}{{&digest}}{{/formatComments}}
     </div>
     <div class="kifi-comment-meta">
-      <time datetime="{{#formatIsoDate}}{{lastCommentedAt}}{{/formatIsoDate}}">{{#formatDate}}{{lastCommentedAt}}{{/formatDate}}</time>
+      <time datetime="{{#formatIsoDate}}{{lastCommentedAt}}{{/formatIsoDate}}">{{#formatLocalDate}}{{lastCommentedAt}}{{/formatLocalDate}}</time>
     </div>
   </div>
 </div>

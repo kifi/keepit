@@ -1,0 +1,104 @@
+#kifi-notify-notice-wrapper {
+	position: fixed;
+	top: 20px;
+	right: 20px;
+	width: 315px;
+	z-index: 2147483647;
+  font-family: "Helvetica Neue",arial,sans-serif;
+}
+
+#kifi-notify-notice-wrapper .kifi-notify-item-wrapper {
+	position: relative;
+	margin: 0 0 10px;
+}
+
+#kifi-notify-notice-wrapper .kifi-notify-item {
+	display: block;
+  background-color: #1f272f;
+  opacity: .9;
+	color: #eee;
+  padding: 15px;
+	font-size: 11px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  cursor: pointer
+}
+
+#kifi-notify-notice-wrapper .kifi-notify-item:hover {
+  opacity: 1;
+}
+
+#kifi-notify-notice-wrapper .kifi-notify-item p {
+	padding: 0;
+	margin: 0;
+	word-wrap: break-word;
+}
+#kifi-notify-notice-wrapper .kifi-notify-close {
+	position: absolute;
+	top: 5px;
+	right: 3px;
+  color: #ddd;
+	cursor: pointer;
+	width: 15px;
+	height: 15px;
+}
+
+#kifi-notify-notice-wrapper .kifi-notify-title {
+  font-weight: bold;
+  font-size: 16px;
+  line-height: 16px;
+  margin: 0 0 2px;
+}
+
+#kifi-notify-notice-wrapper .kifi-notify-subtitle {
+  font-size: 13px;
+}
+
+#kifi-notify-notice-wrapper .kifi-notify-link {
+  margin: 0 0 4px;
+  display: block;
+  font-size: 13px;
+  font-style: italic;
+  color: #76c5ff;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+#kifi-notify-notice-wrapper .kifi-notify-text {
+  margin-top: 8px;
+  display: block;
+  font-size: 13px;
+  font-style: italic;
+  color: #fff;
+  padding-right: 8px;
+}
+
+#kifi-notify-notice-wrapper .kifi-notify-image {
+	float: left;
+  width: 42px;
+  height: 42px;
+  border-radius: 2px;
+}
+
+#kifi-notify-notice-wrapper .kifi-on-page {
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+#kifi-notify-notice-wrapper .kifi-notify-footer {
+  float: right;
+  margin: -7px 0 -5px;
+  position: relative;
+  font-size: 11px;
+  color: #999;
+}
+
+#kifi-notify-notice-wrapper .kifi-notify-with-image,
+#kifi-notify-notice-wrapper .kifi-notify-without-image {
+	padding: 0;
+}
+#kifi-notify-notice-wrapper .kifi-notify-with-image {
+	float: right;
+  width: 230px;
+}
