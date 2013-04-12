@@ -4,14 +4,14 @@ var api = api || require("./api");
 
 var pageData = {};
 var notifications = [];
-var lastNotifyRead;
+var notificationsRead = {};
 var friends = [];
 var friendsById = {};
 
 function clearDataCache() {
   pageData = {};
   notifications.length = 0;
-  lastNotifyRead = null;
+  notificationsRead = {};
   friends.length = 0;
   friendsById = {};
 }
@@ -176,10 +176,12 @@ const socketHandlers = {
     api.tabs.eachSelected(function(tab) {
       api.tabs.emit(tab, "notifications", notifications);
     });
+    countUnreadNotifications();
   },
   last_notify_read_time: function(t) {
     api.log("[socket:last_notify_read_time]", t);
-    lastNotifyRead = new Date(t);
+    notificationsRead.time = new Date(t);
+    countUnreadNotifications();
   },
   thread: function(th) {
     api.log("[socket:thread]", th);
@@ -406,6 +408,12 @@ function createDeepLinkListener(link, linkTabId, respond) {
 function initTab(tab, o) {  // o is pageData[tab.nUri]
   var metro = session.experiments.indexOf("metro") >= 0;
   var unread = findUnread(o.threads, o.lastMessageRead);
+  o.counts = {
+    unreadNotices: notifications.filter(function(n) {return new Date(n.time) > notificationsRead.time}).length,
+    numComments: o.comments.length,
+    unreadComments: o.comments.filter(function(c) {return friendsById[c.user.id] && new Date(c.createdAt) > o.lastCommentRead}).length,
+    numMessages: o.threads.reduce(function(n, t) {return n + t.messageCount}, 0),
+    unreadMessages: unread.messages};
   var data = {
     metro: metro,
     kept: !!o.kept,
@@ -415,11 +423,7 @@ function initTab(tab, o) {  // o is pageData[tab.nUri]
     otherKeeps: o.keeps - o.keepers.length - (o.kept == "public" ? 1 : 0),
     sensitive: !!o.sensitive,
     neverOnSite: !!o.neverOnSite,
-    numComments: o.comments.length,
-    unreadComments: o.comments.filter(function(c) {return friendsById[c.user.id] && new Date(c.createdAt) > o.lastCommentRead}).length,
-    numMessages: o.threads.reduce(function(n, t) {return n + t.messageCount}, 0),
-    unreadMessages: unread.messages,
-    unreadNotices: notifications.filter(function(n) {return new Date(n.time) > lastNotifyRead}).length};
+    counts: o.counts};
 
   if (session.rules.rules.message && unread.messages) {
     data.trigger = "message";
@@ -427,7 +431,7 @@ function initTab(tab, o) {  // o is pageData[tab.nUri]
     unread.threads.forEach(function(id) {
       socket.send(["get_thread", id]);
     });
-  } else if (session.rules.rules.comment && data.unreadComments && (metro || !o.neverOnSite)) {
+  } else if (session.rules.rules.comment && data.counts.unreadComments && (metro || !o.neverOnSite)) {
     data.trigger = "comment";
     data.locator = "/comments";
   } else if (!o.kept && (metro || !o.neverOnSite) && (!o.sensitive || !session.rules.rules.sensitive)) {
@@ -472,6 +476,20 @@ function findUnread(threads, readTimes) {
     }
   }
   return unread;
+}
+
+function countUnreadNotifications() {
+  for (var n = 0; n < notifications.length; n++) {
+    if (new Date(notifications[n].time) < notificationsRead.time) break;
+  }
+  notificationsRead.unread = n;
+  api.tabs.eachSelected(function(tab) {
+    var d = pageData[tab.nUri];
+    if (d && d.counts && d.counts.unreadNotices != n) {
+      d.counts.unreadNotices = n;
+      api.tabs.emit(tab, "counts", d.counts);
+    }
+  });
 }
 
 // Finds KiFi bookmark folder by id (if provided) or by name in the Bookmarks Bar,
@@ -643,7 +661,7 @@ function subscribe(tab) {
     api.log("[subscribe] %i %s %s", tab.id, tab.url, tab.icon);
     api.icon.set(tab, "icons/keep.faint.png");
     var d = pageData[tab.url];
-    if (d) {  // optimization: page is open elsewhere and url happens to be normalized
+    if (d && d.counts) {  // optimization: page url is normalized and page is open elsewhere
       finish(tab.url);
       setIcon(tab, d.kept);
       initTab(tab, d);
@@ -685,10 +703,15 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
 
 api.tabs.on.focus.add(function(tab) {
   api.log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab);
+  var d;
   if (tab.autoShowSec != null && !tab.autoShowTimer) {
     scheduleAutoShow(tab);
   } else {
     subscribe(tab);
+  }
+  var d = pageData[tab.nUri];
+  if (d && d.counts) {
+    api.tabs.emit(tab, "counts", d.counts);
   }
 });
 
