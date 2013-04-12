@@ -150,11 +150,11 @@ class MainSearcher(
     val now = currentDateTime
     val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost)
     val (myHits, friendsHits, othersHits, parsedQuery) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts) match {
-      case (h1, h2, h3, q) => {
-        if ( h1.size() + h2.size() + h3.size() > 0 ) (h1,h2,h3,q)
+      case (myHits, friendsHits, othersHits, parsedQuery) => {
+        if ( myHits.size() + friendsHits.size() + othersHits.size() > 0 ) (myHits, friendsHits, othersHits, parsedQuery)
         else {
-          val alternative = try { spellCorrector.getAlternativeQuery(queryString) } catch { case e: Exception => log.error("unexpected SpellCorrector error" ); queryString}
-          if (alternative.trim == queryString.trim)	(h1,h2,h3,q)
+          val alternative = try { spellCorrector.getAlternativeQuery(queryString) } catch { case e: Exception => log.error("unexpected SpellCorrector error" ); queryString }
+          if (alternative.trim == queryString.trim)	(myHits, friendsHits, othersHits, parsedQuery)
           else searchText(alternative, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
         }
       }
