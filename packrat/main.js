@@ -480,7 +480,7 @@ function findUnread(threads, readTimes) {
       }
     }
     if (thUnread) {
-      unread.threads.push(t.id);
+      unread.threads.push(th.id);
     }
   }
   return unread;
