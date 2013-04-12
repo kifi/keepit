@@ -90,7 +90,7 @@ slider2 = function() {
             if (e.target !== this) {
               this.classList.add("kifi-hoverless");
             }
-            if ((e.target === this || e.target.parentNode === this) && (o.keepers || o.keeps) && !$pane) {
+            if ((e.target === this || e.target.parentNode === this) && (o.keepers.length || o.keeps) && !$pane) {
               $(this).showHover({
                 reuse: false,
                 showDelay: 250,
@@ -102,8 +102,8 @@ slider2 = function() {
                   render("html/metro/keepers.html", {
                     link: true,
                     keepers: keepers,
-                    anyKeepers: !!keepers,
-                    captionHtml: formatCountHtml(o.kept, (o.keepers || 0).length, o.otherKeeps)
+                    anyKeepers: keepers.length,
+                    captionHtml: formatCountHtml(o.kept, o.keepers.length, o.otherKeeps)
                   }, function(html) {
                     callback($("<div class=kifi-slider2-tip>").html(html).data("keepers", keepers));
                   });
@@ -310,7 +310,7 @@ slider2 = function() {
         url: location.href,
         kept: info.kept,
         keepers: pick(info.keepers, 7),
-        keepersCaptionHtml: formatCountHtml(0, (info.keepers || 0).length, info.otherKeeps)};
+        keepersCaptionHtml: formatCountHtml(0, info.keepers.length, info.otherKeeps)};
     },
     thread: function(recipients) {
       return {
@@ -521,8 +521,8 @@ slider2 = function() {
           // TODO: preload friend pictures
           render("html/metro/keepers.html", {
             keepers: keepers,
-            anyKeepers: !!keepers,
-            captionHtml: formatCountHtml(info.kept, (info.keepers || 0).length, info.otherKeeps)
+            anyKeepers: keepers.length,
+            captionHtml: formatCountHtml(info.kept, info.keepers.length, info.otherKeeps)
           }, function(html) {
             callback($("<div class=kifi-slider2-tip>").html(html));
           });
