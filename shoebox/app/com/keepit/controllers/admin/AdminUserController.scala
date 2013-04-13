@@ -168,7 +168,6 @@ class AdminUserController @Inject() (
     }
 
     db.readWrite(implicit s => userRepo.save(userRepo.get(userId).withState(userState)))
-
     Ok
   }
 

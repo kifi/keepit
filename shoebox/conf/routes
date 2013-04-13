@@ -11,6 +11,7 @@ GET     /invite                     @com.keepit.controllers.website.HomeControll
 GET     /gettingStarted             @com.keepit.controllers.website.HomeController.gettingStarted
 
 GET     /onboarding/tos             @com.keepit.controllers.website.OnboardingController.tos
+POST    /onboarding/tos             @com.keepit.controllers.website.OnboardingController.tosAccept
 
 GET     /giveMeA200                 @com.keepit.controllers.website.HomeController.giveMeA200
 

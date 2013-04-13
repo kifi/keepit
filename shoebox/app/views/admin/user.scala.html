@@ -61,6 +61,16 @@
         </td>
       </tr>
       <tr>
+        <th>State</th>
+        <td class="form-inline">
+          <select id="state">
+          @for(state <- Seq(UserStates.ACTIVE, UserStates.INACTIVE, UserStates.PENDING, UserStates.BLOCKED)) {
+            <option  @if(userWithSocial.user.state.value == state.value){selected}>@state.value</option>
+          }
+          </select>
+        </td>
+      </tr>
+      <tr>
         <th>Useful page update count</th>
         <td>@historyUpdateCount</td>
       </tr>
@@ -155,6 +165,15 @@
       location.href="@com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(userWithSocial.user.id.get)"
     }
     $(function() {
+      $("#state").change(function() {
+        var $td = $(this).closest("td");
+        var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
+          $.post('@com.keepit.controllers.admin.routes.AdminUserController.changeState(userWithSocial.user.id.get, "~")'.replace("~", $(this).val()))
+            .done(function () {
+              $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
+            });
+      });
+      
       $("#experiments").on("click", "input", function() {
         var $td = $(this).closest("#experiments");
         var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);

@@ -24,11 +24,18 @@ class OnboardingController @Inject() (db: Database,
 
   def tos = HtmlAction(true)(authenticatedAction = { request =>
     val userAgreedToTOS = db.readOnly(userValueRepo.getValue(request.user.id.get, "agreedToTOS")(_)).map(_.toBoolean).getOrElse(false)
-    if(userAgreedToTOS) {
+    if(!userAgreedToTOS) {
       Ok(views.html.website.onboarding.userLegalAgreement())
     } else {
       Redirect(com.keepit.controllers.website.routes.HomeController.home)
     }
+  }, unauthenticatedAction = { request =>
+    Redirect(routes.HomeController.home())
+  })
+  
+  def tosAccept = HtmlAction(true)(authenticatedAction = { request =>
+    db.readWrite(userValueRepo.setValue(request.user.id.get, "agreedToTOS", "true")(_))
+    Redirect(com.keepit.controllers.website.routes.HomeController.home)
   }, unauthenticatedAction = { request =>
     Redirect(routes.HomeController.home())
   })

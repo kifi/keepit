@@ -1,6 +1,6 @@
 @()
 
-@views.html.website.helper.main(title = "Kifi", scripts = Seq("onboarding")) {
+@views.html.website.helper.main(title = "Kifi", scripts = Seq("website/onboarding")) {
     <div class="user_avatar">
       <img src="images/effi.jpg" width="112" height="112">
     </div>
@@ -43,8 +43,9 @@ Limitation of Liability. TO THE FULL EXTENT PERMISSIBLE UNDER APPLICABLE LAW, LI
 <p>(Thanks for putting up with this!)
         </div>
         <div class="agree_check"><span class="check"><input type="checkbox" class="agree" value="agree"></span> <label>I agree.</label></div>
-        
-        <div id="agree_btn"><a href="#" class="btn blue">I am ready let me in!</a></div>
+        <form id="agree_form" action="@com.keepit.controllers.website.routes.OnboardingController.tosAccept()" method="POST">
+          <div id="agree_btn"><div class="btn blue">I am ready let me in!</div></div>
+        </form>
     </div>
 
     <div class="fb_friends_large clearfix">

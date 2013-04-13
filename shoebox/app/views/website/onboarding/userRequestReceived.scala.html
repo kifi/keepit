@@ -1,36 +1,36 @@
-@()
+@(user: User, email: String, friendsOnKifi: Set[ExternalId[User]])
 
-@views.html.website.helper.main(title = "You're signed up for Kifi!", scripts = Seq("onboarding")) {
+@views.html.website.helper.main(title = "You're signed up for Kifi!", scripts = Seq("website/onboarding")) {
   <div class="user_avatar">
-    <img src="images/effi.jpg" width="112" height="112">
+    <img src="@com.keepit.controllers.assets.routes.UserPictureController.get(112, user.externalId)" width="112" height="112">
   </div>
 
   <section class="content clearfix">
     <header class="content_header">
-        <h2>Hi, Effi Fuks-Leichtag</h2>
+        <h2>Hi, @user.firstName @user.lastName</h2>
         <h3>You're on the list!</h3>
         
     </header>
     
     <p>We are reviewing requests and adding beta users every day.</p>
-    <p>When we have room for you, an email will be sent to
-      <span id="change_email"><input id="email" type="text" class="blue keep_text" value="effi@@fuks.co.il" disabled> <span id="change_email_link" class="grey small" data-text="( Confirm )">( Change email)</span></span>
+    <p>When we have room for you, an email will be sent to:
+      <div id="change_email"><input id="email" type="text" class="blue keep_text" value="@email" disabled autocomplete="off"> <span id="change_email_link" class="grey small" data-text="( Confirm )">( Change email)</span>
+      </div>
       <span id="email_width"></span>
     </p>
 
-    <div class="fb_friends_large clearfix">
-        <p>77 of your friends are already in the KiFi private beta</p>
+    @if(friendsOnKifi.nonEmpty) {
+      <div class="fb_friends_large clearfix">
+        <p>@friendsOnKifi.size of your friends @if(friendsOnKifi.size==1){is}else{are} already in the KiFi private beta</p>
         <div class="friends">
-            <a href="#"><img src="images/fb_friend_large1.jpg" width="66" height="66"></a>
-            <a href="#"><img src="images/fb_friend_large2.jpg" width="66" height="66"></a>
-            <a href="#"><img src="images/fb_friend_large3.jpg" width="66" height="66"></a>
-            <a href="#"><img src="images/fb_friend_large4.jpg" width="66" height="66"></a>
-            <a href="#"><img src="images/fb_friend_large5.jpg" width="66" height="66"></a>
-            <a href="#"><img src="images/fb_friend_large6.jpg" width="66" height="66"></a>
-            <a href="#"><img src="images/fb_friend_large7.jpg" width="66" height="66"></a>
-            <a href="#"><span class="more_friends">+70</span></a>
+          @for(friend <- friendsOnKifi.take(7)) {
+            <a href="#"><img src="@com.keepit.controllers.assets.routes.UserPictureController.get(66, friend)" width="66" height="66"></a>
+          }
+          @if(friendsOnKifi.size > 7) {
+            <a href="#"><span class="more_friends">+@{friendsOnKifi.size-7}</span></a>
+          }
         </div>
-    </div>
+      </div>
+    }
   </section>
-
 }
