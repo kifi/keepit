@@ -9,15 +9,15 @@ var renderNotices;
   const NOTICE_TYPES = ["message", "comment"]; // TODO: make templates for other notice types
   const SCROLL_DISTANCE = 40; // pixels from the bottom scrolled to get more
   const MAX_NOTIFICATIONS = 100; // maximum number of notifications
+  const NEW_FADE_TIMEOUT = 1000; // number of ms to wait before starting to fade
   var numShown = 10;
   var numRequested = numShown;
-
   api.port.on({
-    notifications: function (notices) {
-      notices = notices.slice(0, numRequested);
+    notifications: function (data) {
+      var notices = data.notifications.slice(0, Math.max(numRequested, data.numUnread));
       var $notifyPane = $(".kifi-notices");
       if ($notifyPane.length) {
-        getRenderedNotices(notices, $notifyPane, function () {
+        getRenderedNotices(notices, data.numUnread, $notifyPane, function () {
           numShown = numRequested = notices.length;
         });
       }
@@ -70,10 +70,10 @@ var renderNotices;
     }
   }
 
-  function getRenderedNotices(notices, $notifyPane, callback) {
+  function getRenderedNotices(notices, numUnread, $notifyPane, callback) {
     var renderedNotices = [];
     var done = 0;
-    $.each(notices, function (i, notice) { 
+    $.each(notices, function (i, notice) {
       if (~NOTICE_TYPES.indexOf(notice.category)) {
         var authors = notice.details.authors || [notice.details.author]
         render("html/metro/notice_" + notice.category + ".html", $.extend({
@@ -83,10 +83,13 @@ var renderNotices;
           avatar: authors[0].avatar,
           formattedAuthor: formatAuthorNames(authors)
         }, notice), function (html) {
-          renderedNotices[i] = html;
+          renderedNotices[i] = $(html).toggleClass('kifi-notice-new', i < numUnread);
           if (++done == notices.length) {
             $notifyPane.html(renderedNotices);
             $notifyPane.find("time").timeago();
+            setTimeout(function () {
+              $notifyPane.find(".kifi-notice-new").removeClass("kifi-notice-new");
+            }, NEW_FADE_TIMEOUT);
             callback();
           }
         });

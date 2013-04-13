@@ -491,6 +491,8 @@ slider2 = function() {
     threads: receiveData.bind(null, "threads"),
     thread: receiveData.bind(null, "thread", "id"),
     counts: function(o) {
+      info.counts = o;
+      if (!$slider) return;
       var $btns = $slider.find(".kifi-slider2-dock-btn");
       [[".kifi-slider2-notices", o.unreadNotices],
        [".kifi-slider2-comments", o.unreadComments, o.numComments],

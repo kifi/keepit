@@ -173,10 +173,7 @@ const socketHandlers = {
     notifications.sort(function(a, b) {
       return new Date(b.time) - new Date(a.time);
     });
-    api.tabs.eachSelected(function(tab) {
-      api.tabs.emit(tab, "notifications", notifications);
-    });
-    countUnreadNotifications();
+    emitNotifications();
   },
   last_notify_read_time: function(t) {
     api.log("[socket:last_notify_read_time]", t);
@@ -373,9 +370,7 @@ api.port.on({
       var oldest = (notifications[notifications.length-1] || {}).time;
       socket.send(["get_notifications", howMany - notifications.length, oldest]);
     } else {
-      api.tabs.eachSelected(function(tab) {
-        api.tabs.emit(tab, "notifications", notifications);
-      });
+      emitNotifications();
     }
   },
   set_last_notify_read_time: function() {
@@ -392,6 +387,17 @@ api.port.on({
     return true;
   }
 });
+
+function emitNotifications() {
+  countUnreadNotifications();
+  api.tabs.eachSelected(function(tab) {
+    api.tabs.emit(tab, "notifications", {
+      notifications: notifications,
+      numUnread: notificationsRead.unread,
+      lastRead: notificationsRead.time
+    });
+  });
+}
 
 function createDeepLinkListener(link, linkTabId, respond) {
   var createdTime = new Date;
