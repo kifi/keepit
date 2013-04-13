@@ -9,7 +9,11 @@
 // @require scripts/compose.js
 // @require scripts/snapshot.js
 
-function renderThreads($container, threads) {
+threadsPane = function() {
+  var $list = $();
+  return {
+    render: function($container, threads) {
+  // ---> TODO: indent properly (postponed to make code review easier)
   threads.forEach(function(t) {
     t.recipientsPictured = t.recipients.slice(0, 4);
   });
@@ -37,13 +41,32 @@ function renderThreads($container, threads) {
         threads.filter(function(t) {return t.id == id})[0].recipients;
       $th.closest(".kifi-pane").triggerHandler("kifi:show-pane", ["thread", recipients, id])
     })
-    .on("kifi:compose-submit", sendMessage)
+    .on("kifi:compose-submit", sendMessage.bind(null, $container))
     .find("time").timeago();
 
     attachComposeBindings($container, "message");
+
+    $list = $container.find(".kifi-threads-list");
+    $container.closest(".kifi-pane-box").on("kifi:remove", function() {
+      $list.length = 0;
+    });
   });
 
-  function sendMessage(e, text, recipientIds) {
+  // --->
+    },
+    update: function(thread) {
+      if (!$list.length) return;
+      renderThread(thread, function($th) {
+        var $old = $list.children("[data-id=" + thread.id + "]");
+        if ($old.length) {
+          $old.replaceWith($th);
+        } else {
+          $list.append($th).layout()[0].scrollTop = 99999;
+        }
+      });
+    }};
+
+  function sendMessage($container, e, text, recipientIds) {
     // logEvent("slider", "comment");
     api.port.emit("post_comment", {
       "url": document.URL,
@@ -51,25 +74,28 @@ function renderThreads($container, threads) {
       "text": text,
       "permissions": "message",
       "recipients": recipientIds
-    }, function(response) {
-      api.log("[sendMessage] resp:", response);
-      render("html/metro/thread.html", {
-        "formatSnippet": getSnippetFormatter,
-        "formatLocalDate": getLocalDateFormatter,
-        "formatIsoDate": getIsoDateFormatter,
-        "lastCommentedAt": response.message.createdAt,
-        "recipientsPictured": response.message.recipients.slice(0, 4),
-        "messageCount": 1,
-        "digest": text,
-        "id": response.message.id
-      }, function(html) {
-        var $threads = $container.find(".kifi-threads-list");
-        $(html).data("recipients", response.message.recipients)
-        .find("time").timeago().end().appendTo($threads);
-        $threads[0].scrollTop = 99999;
+    }, function(resp) {
+      api.log("[sendMessage] resp:", resp);
+      renderThread(resp.message, function($th) {
+        $list.append($th).layout()[0].scrollTop = 99999;
         $container.find(".kifi-compose-draft").empty().blur();
         $container.find(".kifi-compose-to").tokenInput("clear");
       });
     });
   }
-}
+
+  function renderThread(o, callback) { // o can be a thread or a childless parent message
+    render("html/metro/thread.html", {
+      "formatSnippet": getSnippetFormatter,
+      "formatLocalDate": getLocalDateFormatter,
+      "formatIsoDate": getIsoDateFormatter,
+      "lastCommentedAt": o.lastCommentedAt || o.createdAt,
+      "recipientsPictured": o.recipients.slice(0, 4),
+      "messageCount": o.messageCount || 1,
+      "digest": o.digest || o.text,
+      "id": o.id
+    }, function(html) {
+      callback($(html).data("recipients", o.recipients).find("time").timeago().end());
+    });
+  }
+}();

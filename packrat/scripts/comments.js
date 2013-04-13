@@ -8,7 +8,14 @@
 // @require scripts/compose.js
 // @require scripts/snapshot.js
 
-function renderComments($container, comments, isAdmin) {
+commentsPane = function() {
+  var $posted = $();
+  return {
+    render: function($container, comments, userId, isAdmin) {
+      comments.forEach(function(c) {
+        c.isLoggedInUser = c.user.id == userId;
+      });
+  // ---> TODO: indent properly (postponed to make code review easier)
   render("html/metro/comments.html", {
     formatComment: getTextFormatter,
     formatLocalDate: getLocalDateFormatter,
@@ -23,15 +30,14 @@ function renderComments($container, comments, isAdmin) {
     comment: "comment.html",
     compose: "compose.html"
   }, function(html) {
-    var $posted = $(html).prependTo($container)
+    $(html).prependTo($container)
     .on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
     .on("click", "a[href^='x-kifi-sel:']", function(e) {
       e.preventDefault();
     })
-    .on("kifi:compose-submit", submitComment)
-    .find(".kifi-comments-posted");
+    .on("kifi:compose-submit", submitComment.bind(null, $container))
+    .find("time").timeago();
 
-    $posted.find("time").timeago();
     if (isAdmin) {
       $posted.on("mouseenter", ".kifi-comment-posted", function() {
         if (this.lastChild.className != "kifi-comment-x") {
@@ -56,9 +62,23 @@ function renderComments($container, comments, isAdmin) {
     }
 
     attachComposeBindings($container, "comment");
-  });
 
-  function submitComment(e, text) {
+    $posted = $container.find(".kifi-comments-posted");
+    $container.closest(".kifi-pane-box").on("kifi:remove", function() {
+      $posted.length = 0;
+    });
+  });
+  // --->
+    },
+    update: function(comment, userId) {
+      if (!$posted.length) return;
+      comment.isLoggedInUser = comment.user.id == userId;
+      renderComment(comment, function($c) {
+        $posted.append($c).layout()[0].scrollTop = 99999;  // should we compare timestamps and insert in order?
+      });
+    }};
+
+  function submitComment($container, e, text) {
     logEvent("slider", "comment");
     api.port.emit("post_comment", {
       "url": document.URL,
@@ -67,10 +87,7 @@ function renderComments($container, comments, isAdmin) {
       "permissions": "public"
     }, function(response) {
       api.log("[submitComment] resp:", response);
-      render("html/metro/comment.html", {
-        "formatComment": getTextFormatter,
-        "formatLocalDate": getLocalDateFormatter,
-        "formatIsoDate": getIsoDateFormatter,
+      renderComment({
         "createdAt": response.createdAt,
         "text": text,
         "user": {
@@ -81,12 +98,19 @@ function renderComments($container, comments, isAdmin) {
         },
         "isLoggedInUser": true,
         "id": response.commentId
-      }, function(html) {
-        var $posted = $container.find(".kifi-comments-posted");
-        $(html).find("time").timeago().end().appendTo($posted);
-        $posted[0].scrollTop = 99999;
+      }, function($c) {
+        $posted.append($c).layout()[0].scrollTop = 99999;
         $container.find(".kifi-compose-draft").empty().blur();
       });
     });
   }
-}
+
+  function renderComment(c, callback) {
+    c.formatComment = getTextFormatter;
+    c.formatLocalDate = getLocalDateFormatter;
+    c.formatIsoDate = getIsoDateFormatter;
+    render("html/metro/comment.html", c, function(html) {
+      callback($(html).find("time").timeago().end());
+    });
+  }
+}();

@@ -27,7 +27,7 @@ var renderNotices;
 
   $(document).on("visibilitychange webkitvisibilitychange", requestNotices);
 
-  renderNotices = function ($container, isAdmin) {
+  renderNotices = function($container) {
     render("html/metro/notices.html", {}, function (html) {
       var $notifyPane = $(html).appendTo($container);
       $notifyPane.scroll(function() {
@@ -39,7 +39,7 @@ var renderNotices;
         }
       });
       requestNotices();
-      
+
       $notifyPane.on('click', '.kifi-notice', function(e) {
         var url = $(this).find('.kifi-link').attr('href');
         if (url) {

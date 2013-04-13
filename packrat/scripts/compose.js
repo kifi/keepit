@@ -101,7 +101,7 @@ function attachComposeBindings($c, composeTypeName) {
   });
 
   var hOld, elAbove = $f[0].previousElementSibling;
-  updateMaxHeight();
+  elAbove.clientHeight, updateMaxHeight();
 
   $(window).on("resize", updateMaxHeight);
 
