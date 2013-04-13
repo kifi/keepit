@@ -26,7 +26,7 @@ var renderNotices;
 
   $(document).on("visibilitychange webkitvisibilitychange", requestNotices);
 
-  renderNotices = function ($container, isAdmin) {
+  renderNotices = function($container) {
     render("html/metro/notices.html", {}, function (html) {
       var $notifyPane = $(html).appendTo($container);
       $notifyPane.scroll(function() {
@@ -38,7 +38,7 @@ var renderNotices;
         }
       });
       requestNotices();
-      
+
       $notifyPane.on('click', '.kifi-notice', function(e) {
         var url = $(this).find('.kifi-link').attr('href');
         if (url) {
@@ -73,7 +73,7 @@ var renderNotices;
   function getRenderedNotices(notices, $notifyPane, callback) {
     var renderedNotices = [];
     var done = 0;
-    $.each(notices, function (i, notice) { 
+    $.each(notices, function (i, notice) {
       if (~NOTICE_TYPES.indexOf(notice.category)) {
         var authors = notice.details.authors || [notice.details.author]
         render("html/metro/notice_" + notice.category + ".html", $.extend({
