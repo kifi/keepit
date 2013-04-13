@@ -10,6 +10,7 @@ jQuery.fn.layout = function() {
   return this.each(function() {this.clientHeight});  // forces layout
 };
 
+var commentsPane = 0, threadsPane = 0, threadPane = 0;  // set when api.require'd
 slider2 = function() {
   var $tile = $("#kifi-tile"), $slider, $pane, lastShownAt, info;
 
@@ -390,7 +391,7 @@ slider2 = function() {
     notices: function($box) {
       api.port.emit("session", function (session) {
         api.require("scripts/notices.js", function() {
-          renderNotices($box.find(".kifi-pane-tall"), ~session.experiments.indexOf("admin"));
+          renderNotices($box.find(".kifi-pane-tall"));
           api.port.emit("set_last_notify_read_time");
         });
       });
@@ -398,11 +399,8 @@ slider2 = function() {
     comments: function($box) {
       requireData("comments", function(comments) {
         api.port.emit("session", function(session) {
-          comments.forEach(function(c) {
-            c.isLoggedInUser = c.user.id == session.userId;
-          });
           api.require("scripts/comments.js", function() {
-            renderComments($box.find(".kifi-pane-tall"), comments, ~session.experiments.indexOf("admin"));
+            commentsPane.render($box.find(".kifi-pane-tall"), comments, session.userId, ~session.experiments.indexOf("admin"));
             var lastCom = comments[comments.length - 1];
             api.port.emit("set_comment_read", {id: lastCom.id, time: lastCom.createdAt});
           });
@@ -412,9 +410,9 @@ slider2 = function() {
     threads: function($box) {
       requireData("threads", function(threads) {
         api.require("scripts/threads.js", function() {
-          renderThreads($box.find(".kifi-pane-tall"), threads);
+          threadsPane.render($box.find(".kifi-pane-tall"), threads);
           threads.forEach(function(th) {
-            requireData("thread/" + th.id, api.noop);
+            requireData("thread/" + th.id, api.noop);  // preloading
           });
         });
       });
@@ -422,10 +420,12 @@ slider2 = function() {
     thread: function($box, threadId) {
       var $tall = $box.find(".kifi-pane-tall").css("margin-top", $box.find(".kifi-thread-who").outerHeight());
       requireData("thread/" + threadId, function(th) {
-        api.require("scripts/thread.js", function() {
-          renderThread($tall, th.id, th.messages);
-          var lastMsg = th.messages[th.messages.length - 1];
-          api.port.emit("set_message_read", {threadId: th.id, messageId: lastMsg.id, time: lastMsg.createdAt});
+        api.port.emit("session", function(session) {
+          api.require("scripts/thread.js", function() {
+            threadPane.render($tall, th.id, th.messages, session.userId);
+            var lastMsg = th.messages[th.messages.length - 1];
+            api.port.emit("set_message_read", {threadId: th.id, messageId: lastMsg.id, time: lastMsg.createdAt});
+          });
         });
       });
     },
@@ -490,6 +490,17 @@ slider2 = function() {
     comments: receiveData.bind(null, "comments"),
     threads: receiveData.bind(null, "threads"),
     thread: receiveData.bind(null, "thread", "id"),
+    comment: function(comment) {
+      api.port.emit("session", function(session) {
+        (commentsPane.update || api.noop)(comment, session.userId);
+      });
+    },
+    message: function(o) {
+      api.port.emit("session", function(session) {
+        (threadsPane.update || api.noop)(o.thread);
+        (threadPane.update || api.noop)(o.thread, o.message, session.userId);
+      });
+    },
     counts: function(o) {
       info.counts = o;
       if (!$slider) return;
