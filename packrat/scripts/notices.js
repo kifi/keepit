@@ -9,15 +9,16 @@ var renderNotices;
   const NOTICE_TYPES = ["message", "comment"]; // TODO: make templates for other notice types
   const SCROLL_DISTANCE = 40; // pixels from the bottom scrolled to get more
   const MAX_NOTIFICATIONS = 100; // maximum number of notifications
+  const NEW_FADE_TIMEOUT = 1000; // number of ms to wait before starting to fade
+  const NEW_FADE_DURATION = 3000; // length of the fade
   var numShown = 10;
   var numRequested = numShown;
-
   api.port.on({
-    notifications: function (notices) {
-      notices = notices.slice(0, numRequested);
+    notifications: function (data) {
+      var notices = data.notifications.slice(0, Math.max(numRequested, data.numUnread));
       var $notifyPane = $(".kifi-notices");
       if ($notifyPane.length) {
-        getRenderedNotices(notices, $notifyPane, function () {
+        getRenderedNotices(notices, data.numUnread, $notifyPane, function () {
           numShown = numRequested = notices.length;
         });
       }
@@ -70,7 +71,7 @@ var renderNotices;
     }
   }
 
-  function getRenderedNotices(notices, $notifyPane, callback) {
+  function getRenderedNotices(notices, numUnread, $notifyPane, callback) {
     var renderedNotices = [];
     var done = 0;
     $.each(notices, function (i, notice) {
@@ -83,10 +84,19 @@ var renderNotices;
           avatar: authors[0].avatar,
           formattedAuthor: formatAuthorNames(authors)
         }, notice), function (html) {
-          renderedNotices[i] = html;
+          renderedNotices[i] = $(html).toggleClass('kifi-notice-new', i < numUnread);
           if (++done == notices.length) {
             $notifyPane.html(renderedNotices);
             $notifyPane.find("time").timeago();
+            var $newNotices = $notifyPane.find(".kifi-notice-new").css({
+              transition: 'background ' + NEW_FADE_DURATION + 'ms ease',
+            });
+            setTimeout(function () {
+              $newNotices.removeClass('kifi-notice-new');
+              setTimeout(function() {
+                $newNotices.css({ transition: 'background 0s ease' });
+              }, NEW_FADE_DURATION);
+            }, NEW_FADE_TIMEOUT);
             callback();
           }
         });

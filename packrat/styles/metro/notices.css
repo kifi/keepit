@@ -21,6 +21,10 @@
 .kifi-notice-state-visited:hover {
   background: #f8fafd;
 }
+.kifi-notice-new,
+.kifi-notice-new:hover {
+  background: #f7f0d0;
+}
 .kifi-notice time {
   margin: 4px 0 0 0;
   font-size: 11px;
