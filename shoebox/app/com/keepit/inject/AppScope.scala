@@ -75,17 +75,17 @@ class AppScope extends Scope with Logging {
     // return a provider that always gives the same instance
     new Provider[T] {
       def get: T = {
-        log.info(s"requesting for $key")
+        log.debug(s"requesting for $key")
         if (stopped || stopping) throw new IllegalStateException(s"requesting for $key (pre lock) while the scope stopped=$stopped, stopping=$stopping")
         val instance = appScope synchronized {
           if (stopped || stopping) throw new IllegalStateException(s"requesting for $key (in lock) while the scope stopped=$stopped, stopping=$stopping")
           instances.get(key) match {
             case Some(inst) =>
-              log.info(s"returning existing instance of ${inst.getClass().getName()}")
+              log.debug(s"returning existing instance of ${inst.getClass().getName()}")
               inst.asInstanceOf[T]
             case None =>
               val inst = unscoped.get()
-              log.info(s"creating new instance of ${inst.getClass().getName()}")
+              log.debug(s"creating new instance of ${inst.getClass().getName()}")
               // if this instance is a plugin, start it and add to the list of plugins
               inst match {
                 case plugin: Plugin =>
@@ -96,11 +96,11 @@ class AppScope extends Scope with Logging {
                 case _ =>
               }
               instances += key -> inst
-              log.info(s"returning initiated instance of ${inst.getClass().getName()}")
+              log.debug(s"returning initiated instance of ${inst.getClass().getName()}")
               inst
           }
         }
-        log.info(s"instance of key $key is $instance")
+        log.debug(s"instance of key $key is $instance")
         instance
       }
     }

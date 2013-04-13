@@ -54,6 +54,7 @@ class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplica
   def withFakePhraseIndexer() = overrideWith(FakePhraseIndexerModule())
   def withTestActorSystem() = overrideWith(TestActorSystemModule())
   def withFakePersistEvent() = overrideWith(FakePersistEventModule())
+  def withFakeCache() = overrideWith(FakeCacheModule())
 
   def overrideWith(model: Module): TestApplication =
     new TestApplication(new TestGlobal(Modules.`override`(global.modules: _*).`with`(model)))
@@ -160,6 +161,12 @@ class FakeClock extends Clock with Logging {
 class FakeSocialGraphPlugin extends SocialGraphPlugin {
   def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]] =
     future { throw new Exception("Not Implemented") }
+}
+
+case class FakeCacheModule() extends ScalaModule {
+  override def configure() {
+    bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
+  }
 }
 
 case class TestActorSystemModule() extends ScalaModule {

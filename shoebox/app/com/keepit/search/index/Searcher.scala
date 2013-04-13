@@ -58,14 +58,11 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
   }
 
   def findDocIdAndAtomicReaderContext(id: Long): Option[(Int, AtomicReaderContext)] = {
-    val wrappedSubReaders = indexReader.wrappedSubReaders
-    var i = 0
-    while (i < wrappedSubReaders.length) {
-      val r = wrappedSubReaders(i)
-      val liveDocs = r.getLiveDocs
-      val docid = r.getIdMapper.getDocId(id)
-      if (docid >= 0 && (liveDocs == null || liveDocs.get(docid))) return Some((docid, r.getContext()))
-      i += 1
+    indexReader.getContext.leaves.foreach{ subReaderContext =>
+      val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
+      val liveDocs = subReader.getLiveDocs
+      val docid = subReader.getIdMapper.getDocId(id)
+      if (docid >= 0 && (liveDocs == null || liveDocs.get(docid))) return Some((docid, subReaderContext))
     }
     None
   }

@@ -31,76 +31,7 @@ import org.joda.time.DateTime
 import scala.concurrent.{Future, Await}
 import com.google.inject.{Inject, Provider}
 import scala.concurrent.duration._
-
-case class HealthcheckErrorSignature(value: String) extends AnyVal
-
-case class HealthcheckError(error: Option[Throwable] = None, method: Option[String] = None,
-    path: Option[String] = None, callType: CallType, errorMessage: Option[String] = None,
-    id: ExternalId[HealthcheckError] = ExternalId(), createdAt: DateTime = currentDateTime) {
-
-  lazy val signature: HealthcheckErrorSignature = {
-    val permText: String =
-      causeStacktraceHead(4).getOrElse(errorMessage.getOrElse("")) +
-      path.getOrElse("") +
-      method.getOrElse("") +
-      callType.toString
-    val binaryHash = MessageDigest.getInstance("MD5").digest(permText.getBytes("UTF-8"))
-    HealthcheckErrorSignature(new String(new Base64().encode(binaryHash), "UTF-8"))
-  }
-
-  def causeStacktraceHead(depth: Int, throwable: Option[Throwable] = error): Option[String] = throwable match {
-    case None => None
-    case Some(t) =>
-      causeStacktraceHead(depth, Option(t.getCause)) match {
-        case Some(msg) => Some(msg)
-        case None =>
-          Some(t.getStackTrace().take(depth).mkString)
-      }
-  }
-
-  lazy val stackTraceHtml: String = {
-    def causeString(throwableOptions: Option[Throwable]): String = throwableOptions match {
-      case None => "[No Cause]"
-      case Some(t) => (t.getStackTrace() mkString "\n<br/> &nbsp; ") + s"\n<br/> &nbsp; Cause: ${causeString(Option(t.getCause))}"
-    }
-    causeString(error)
-  }
-
-  lazy val titleHtml: String = {
-    def causeString(throwableOptions: Option[Throwable]): String = throwableOptions match {
-      case None => "[No Cause]"
-      case Some(t) => s"${t.getClass.getName}: ${t.getMessage}\n<br/> &nbsp; Cause: ${causeString(Option(t.getCause))}"
-    }
-    (error map (e => causeString(error))).getOrElse(errorMessage.getOrElse(this.toString))
-  }
-
-  def toHtml: String = {
-    val message = new StringBuilder("%s: [%s] Error during call of type %s".format(createdAt, id, callType))
-    method.map { m =>
-      message ++= "<br/>http method [%s]".format(m)
-    }
-    path.map { p =>
-      message ++= "<br/>path [%s]v".format(p)
-    }
-    errorMessage.map { em =>
-      message ++= "<br/>error message: %s".format(em.replaceAll("\n", "\n<br/>"))
-    }
-    error.map { e =>
-      message ++= "<br/>Exception %s stack trace: \n<br/>".format(e.toString())
-      message ++= stackTraceHtml
-      causeDisplay(e)
-    }
-
-    def causeDisplay(e: Throwable): Unit = {
-      Option(e.getCause) map { cause =>
-        message ++= "<br/>from cause: %s\n<br/>".format(cause.toString)
-        message ++= (cause.getStackTrace() mkString "\n<br/> &nbsp; ")
-        causeDisplay(cause)
-      }
-    }
-    message.toString()
-  }
-}
+import scala.collection.mutable.{HashMap => MMap}
 
 object Healthcheck {
 
@@ -115,12 +46,29 @@ object Healthcheck {
 }
 
 case object ReportErrorsAction
-case object ErrorCountSinceLastCheck
+case object ErrorCount
 case object ResetErrorCount
 case object GetErrors
 
 case class HealthcheckHost(host: String) extends AnyVal {
   override def toString = host
+}
+
+case class SendHealthcheckMail(history: HealthcheckErrorHistory, host: HealthcheckHost) {
+  def sendMail(postOffice: PostOffice, services: FortyTwoServices): Unit = {
+    val subject = s"ERROR: [${services.currentService}/$host] ${history.lastError.subjectName}"
+    val body = views.html.email.healthcheckMail(history).body
+    postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
+        subject = subject, htmlBody = body, category = PostOffice.Categories.HEALTHCHECK))
+  }
+}
+
+case class HealthcheckErrorHistory(signature: HealthcheckErrorSignature, count: Int, countSinceLastAlert: Int, lastError: HealthcheckError) {
+  def addError(error: HealthcheckError): HealthcheckErrorHistory = {
+    require(error.signature == signature)
+    copy(count = count + 1, countSinceLastAlert = countSinceLastAlert + 1, lastError = error)
+  }
+  def reset(): HealthcheckErrorHistory = copy(countSinceLastAlert = 0)
 }
 
 class HealthcheckActor @Inject() (
@@ -130,52 +78,37 @@ class HealthcheckActor @Inject() (
     host: HealthcheckHost)
   extends FortyTwoActor(healthcheckPlugin) with Logging {
 
-  private def initErrors: Map[HealthcheckErrorSignature, List[HealthcheckError]] = Map().withDefaultValue(List[HealthcheckError]())
-
-  private var errorsSinceStart: Map[HealthcheckErrorSignature, Int] = Map().withDefaultValue(0)
-  private var errors = initErrors
-  private var errorCount = 0
-  private var lastError: Option[DateTime] = None
-  private val startupTime = currentDateTime
+  private val errors: MMap[HealthcheckErrorSignature, HealthcheckErrorHistory] = new MMap()
 
   def receive() = {
     case ReportErrorsAction =>
-      if (errors.nonEmpty) {
-        val titles = errors map {case(sig, errorList) =>
-          s"${errorList.size} since last report, ${errorsSinceStart(sig)} since start of: ${errorList.last.titleHtml}"
-        } mkString "\n<br/>"
-
-        val messages = errors map {case(sig, errorList) =>
-          s"${errorList.size} since last report, ${errorsSinceStart(sig)} since start of errorList sig ${sig.value}:\n<br/>${errorList.last.toHtml}"
-        } mkString "\n<br/><hr/>"
-        val subject = s"ERROR REPORT: ${errors.map(_._2.size).sum} errors since last report on ${services.currentService.name} ($host) version ${services.currentVersion} compiled on ${services.compilationTime}"
-        errors = initErrors
-
-        val htmlMessage = Html(s"$titles<br/><hr/><br/>$messages")
-
-        postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = subject, htmlBody = htmlMessage.body, category = PostOffice.Categories.HEALTHCHECK))
+      errors.values filter { _.countSinceLastAlert > 0 } foreach { history =>
+        errors(history.signature) = history.reset()
+        self ! SendHealthcheckMail(history, host)
       }
-    case ErrorCountSinceLastCheck =>
-      val errorCountSinceLastCheck = errorCount
-      sender ! errorCountSinceLastCheck
-    case ResetErrorCount =>
-      errorCount = 0
     case GetErrors =>
-      sender ! errors.values.flatten.toSeq
+      val lastErrors: Seq[HealthcheckError] = errors.values map {history => history.lastError} toSeq;
+      sender ! lastErrors
+    case sendMail: SendHealthcheckMail => sendMail.sendMail(postOffice, services)
+    case ErrorCount => sender ! errors.values.foldLeft(0)(_ + _.count)
+    case ResetErrorCount => errors.clear()
     case error: HealthcheckError =>
-      val sigErrors = error :: errors(error.signature)
-      errors = errors + (error.signature -> sigErrors)
-      errorsSinceStart = errorsSinceStart + (error.signature -> (errorsSinceStart(error.signature) + 1))
-      errorCount = errorCount + 1
-      lastError = Some(currentDateTime)
+      val signature = error.signature
+      val history = errors.contains(signature) match {
+        case false =>
+          val newHistory = HealthcheckErrorHistory(signature, 1, 0, error)
+          self ! SendHealthcheckMail(newHistory, host)
+          newHistory
+        case true =>
+          errors(signature).addError(error)
+      }
+      errors(signature) = history
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
 
 trait HealthcheckPlugin extends SchedulingPlugin {
-  def errorCountFuture(): Future[Int]
   def errorCount(): Int
-  def errorsFuture(): Future[List[HealthcheckError]]
   def errors(): Seq[HealthcheckError]
   def resetErrorCount(): Unit
   def addError(error: HealthcheckError): HealthcheckError
@@ -201,19 +134,13 @@ class HealthcheckPluginImpl @Inject() (
      scheduleTask(actorFactory.system, 0 seconds, 10 minutes, actor, ReportErrorsAction)
   }
 
-  def errorCountFuture(): Future[Int] = (actor ? ErrorCountSinceLastCheck).mapTo[Int]
+  def errorCount(): Int = Await.result((actor ? ErrorCount).mapTo[Int], 1 seconds)
 
-  def errorCount(): Int = Await.result(errorCountFuture(), 5 seconds)
-
-  def errorsFuture(): Future[List[HealthcheckError]] = (actor ? GetErrors).mapTo[List[HealthcheckError]]
-
-  def errors(): Seq[HealthcheckError] = Await.result(errorsFuture(), 20 seconds)
+  def errors(): Seq[HealthcheckError] = Await.result((actor ? GetErrors).mapTo[List[HealthcheckError]], 1 seconds)
 
   def resetErrorCount(): Unit = actor ! ResetErrorCount
 
   def reportErrors(): Unit = actor ! ReportErrorsAction
-
-  def fakeError() = addError(HealthcheckError(None, None, None, Healthcheck.API, Some("Fake error")))
 
   def addError(error: HealthcheckError): HealthcheckError = {
     actor ! error

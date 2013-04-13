@@ -14,13 +14,9 @@ case class FakeHealthcheck() extends HealthcheckPlugin {
 
   val _errors = MutableList[HealthcheckError]()
 
-  def errorCountFuture(): Future[Int] = future {_errors.size}
-
   def errorCount(): Int = errors.size
 
   def resetErrorCount(): Unit = _errors.clear
-
-  def errorsFuture(): Future[List[HealthcheckError]] = future {_errors.toList}
 
   def errors(): List[HealthcheckError] = _errors.toList
 

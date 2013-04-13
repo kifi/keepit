@@ -51,12 +51,13 @@ class MailToKeepMessageParserTest extends Specification {
         message.setFrom(new InternetAddress("eishay@42go.com"))
         message.setRecipient(RecipientType.TO, new InternetAddress("greg@methvin.net"))
 
-        val htmlText = "<p>Hey, you should check out fuks.co.il, google.com/search and HTTP://YAHOO.COM/</p>"
+        val htmlText = "<p>Hey, you should check out google.com/search and HTTP://YAHOO.COM/</p> " +
+          "<a href=3D\"mailto:effi@fuks.co.il\" target=\"_blank\">effi@fuks.co.il</a>"
         message.setContent(htmlText, "text/html")
         message.saveChanges()
 
         parser.getUris(message).map(_.toString.toLowerCase) ===
-            Seq("http://42go.com", "http://fuks.co.il", "http://google.com/search", "http://yahoo.com")
+            Seq("http://42go.com", "http://google.com/search", "http://yahoo.com")
       }
     }
     "parse out users correctly" in {

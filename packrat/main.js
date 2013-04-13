@@ -119,10 +119,9 @@ const socketHandlers = {
     if (d) {
       d.kept = o.kept;
       d.sensitive = o.sensitive;
-      for (var i = 0; i < d.tabs.length; i++) {
-        var tab = api.tabs.get(d.tabs[i]);
+      d.tabs.forEach(function(tab) {
         setIcon(tab, d.kept);
-      }
+      });
     }
   },
   uri_2: function(uri, o) {
@@ -136,15 +135,15 @@ const socketHandlers = {
       d.following = o.following;
       d.comments = o.comments || [];
       d.threads = o.threads || [];
-      d.lastCommentRead = o.lastCommentRead ? new Date(o.lastCommentRead) : null;
+      d.messages = {};
+      d.lastCommentRead = new Date(o.lastCommentRead || 0);
       d.lastMessageRead = {};
       for (var k in o.lastMessageRead) {
         d.lastMessageRead[k] = new Date(o.lastMessageRead);
       }
-      for (var i = 0; i < d.tabs.length; i++) {
-        var tab = api.tabs.get(d.tabs[i]);
+      d.tabs.forEach(function(tab) {
         initTab(tab, d);
-      }
+      });
     }
   },
   notification: function(notification) {
@@ -173,28 +172,53 @@ const socketHandlers = {
     notifications.sort(function(a, b) {
       return new Date(b.time) - new Date(a.time);
     });
-    api.tabs.eachSelected(function(tab) {
-      api.tabs.emit(tab, "notifications", notifications);
-    });
-    countUnreadNotifications();
+    emitNotifications();
   },
   last_notify_read_time: function(t) {
     api.log("[socket:last_notify_read_time]", t);
     notificationsRead.time = new Date(t);
     countUnreadNotifications();
   },
+  comment: function(nUri, c) {
+    api.log("[socket:comment]", c);
+    var d = pageData[nUri];
+    if (d && d.comments) {
+      d.comments.push(c);
+      d.tabs.forEach(function(tab) {
+        api.tabs.emit(tab, "comment", c);
+      });
+    }
+  },
   thread: function(th) {
     api.log("[socket:thread]", th);
     var d = pageData[th.uri];
-    if (d) {
-      d.threads.filter(function(t) {return t.id == th.id}).forEach(function(t) {
-        t.messages = th.messages;
+    if (d && d.messages) {
+      d.messages[th.id] = th.messages;
+      d.tabs.forEach(function(tab) {
+        api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages});
       });
-      delete th.uri;
-      for (var i = 0; i < d.tabs.length; i++) {
-        var tab = api.tabs.get(d.tabs[i]);
-        api.tabs.emit(tab, "thread", th);
+    }
+  },
+  message: function(nUri, th, message) {
+    api.log("[socket:message]", nUri, th, message);
+    var d = pageData[nUri];
+    if (d && d.threads) {
+      for (var i = 0, n = d.threads.length; i < n; i++) {
+        if (d.threads[i].id == th.id) break;
       }
+      if (i < n) {
+        d.threads[i] = th;
+        var messages = d.messages[th.id];
+        if (messages && !messages.some(hasId(message.id))) {  // sent messages come via POST resp and socket
+          messages.push(message);
+        }
+      } else {
+        d.threads.push(th);
+        d.messages[th.id] = [message];
+      }
+      d.tabs.forEach(function(tab) {
+        api.tabs.emit(tab, "message", {thread: th, message: message});
+      });
     }
   }
 };
@@ -313,15 +337,20 @@ api.port.on({
             "facebookId": session.facebookId
           }});
       } else if (data.permissions == "message") {
+        var threadId = data.parent;
         d.threads.forEach(function(th) {
-          if (th.id == data.parent) {
-            th.messages.push(o.message);
+          if (th.id == threadId) {
             th.messageCount++;
             th.messageTimes[o.message.id] = o.message.createdAt;
             th.lastCommentedAt = o.message.createdAt;
             th.digest = o.message.text;
           }
         });
+        if (d.messages[threadId]) {
+          d.messages[threadId].push(o.message);
+        } else {
+          d.messages[threadId] = [o.message];
+        }
       }
       respond(o);
     });
@@ -334,11 +363,19 @@ api.port.on({
     });
     return true;
   },
-  set_comment_read: function(id) {
-    socket.send(["set_comment_read", id]);
+  set_comment_read: function(o, _, tab) {
+    var d = pageData[tab.nUri], time = new Date(o.time);
+    if (!d || time > d.lastCommentRead) {
+      if (d) d.lastCommentRead = time;
+      socket.send(["set_comment_read", o.id]);
+    }
   },
-  set_message_read: function(id) {
-    socket.send(["set_message_read", id]);
+  set_message_read: function(o, _, tab) {
+    var d = pageData[tab.nUri], time = new Date(o.time);
+    if (!d || time > (d.lastMessageRead[o.threadId] || 0)) {
+      if (d) d.lastMessageRead[o.threadId] = time;
+      socket.send(["set_message_read", o.messageId]);
+    }
   },
   comments: function(_, _, tab) {
     var d = pageData[tab.nUri];
@@ -353,9 +390,9 @@ api.port.on({
     }
   },
   thread: function(id, _, tab) {
-    var d = pageData[tab.nUri], th;
-    if (d && d.threads && (th = d.threads.filter(function(t) {return t.id == id})[0]) && th.messages) {
-      api.tabs.emit(tab, "thread", th);
+    var d = pageData[tab.nUri];
+    if (d && d.messages[id]) {
+      api.tabs.emit(tab, "thread", {id: id, messages: d.messages[id]});
     } else {
       socket.send(["get_thread", id]);
     }
@@ -365,13 +402,11 @@ api.port.on({
       var oldest = (notifications[notifications.length-1] || {}).time;
       socket.send(["get_notifications", howMany - notifications.length, oldest]);
     } else {
-      api.tabs.eachSelected(function(tab) {
-        api.tabs.emit(tab, "notifications", notifications);
-      });
+      emitNotifications();
     }
   },
-  set_last_notify_read_time: function() {
-    socket.send(["set_last_notify_read_time"]);
+  notifications_read: function() {
+    socket.send(["set_last_notify_read_time", (notifications[0] || {}).time]);
   },
   session: function(_, respond) {
     respond(session);
@@ -384,6 +419,17 @@ api.port.on({
     return true;
   }
 });
+
+function emitNotifications() {
+  countUnreadNotifications();
+  api.tabs.eachSelected(function(tab) {
+    api.tabs.emit(tab, "notifications", {
+      notifications: notifications,
+      numUnread: notificationsRead.unread,
+      lastRead: notificationsRead.time
+    });
+  });
+}
 
 function createDeepLinkListener(link, linkTabId, respond) {
   var createdTime = new Date;
@@ -472,7 +518,7 @@ function findUnread(threads, readTimes) {
       }
     }
     if (thUnread) {
-      unread.threads.push(t.id);
+      unread.threads.push(th.id);
     }
   }
   return unread;
@@ -480,7 +526,7 @@ function findUnread(threads, readTimes) {
 
 function countUnreadNotifications() {
   for (var n = 0; n < notifications.length; n++) {
-    if (new Date(notifications[n].time) < notificationsRead.time) break;
+    if (new Date(notifications[n].time) <= notificationsRead.time) break;
   }
   notificationsRead.unread = n;
   api.tabs.eachSelected(function(tab) {
@@ -674,9 +720,12 @@ function subscribe(tab) {
   }
   function finish(uri) {
     tab.nUri = uri;
-    if (d.tabs.indexOf(tab.id) < 0) {
-      d.tabs.push(tab.id);
+    for (var i = 0; i < d.tabs.length; i++) {
+      if (d.tabs[i].id == tab.id) {
+        d.tabs.splice(i--, 1);
+      }
     }
+    d.tabs.push(tab);
     api.log("[subscribe:finish] %i page data: %o", tab.id, d);
   }
 }
@@ -745,9 +794,13 @@ api.tabs.on.unload.add(function(tab) {
   api.log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab);
   api.timers.clearTimeout(tab.autoShowTimer);
   delete tab.autoShowTimer;
-  var d = pageData[tab.nUri], i;
-  if (d && ~(i = d.tabs.indexOf(tab.id))) {
-    d.tabs.splice(i, 1);
+  var d = pageData[tab.nUri];
+  if (d) {
+    for (var i = 0; i < d.tabs.length; i++) {
+      if (d.tabs[i].id == tab.id) {
+        d.tabs.splice(i--, 1);
+      }
+    }
     if (!d.tabs.length) {
       delete pageData[tab.nUri];
     }
@@ -780,6 +833,10 @@ function compilePatterns(o) {
     o.patterns[i] = new RegExp(o.patterns[i], "");
   }
   return o;
+}
+
+function hasId(id) {
+  return function(o) {return o.id == id};
 }
 
 function getFullyQualifiedKey(key) {
