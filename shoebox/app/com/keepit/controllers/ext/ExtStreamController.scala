@@ -159,10 +159,14 @@ class ExtStreamController @Inject() (
               }))
             },
             "get_last_notify_read_time" -> { _ =>
-              channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(userId).toString()))
+              channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(userId).toStandardTimeString))
             },
-            "set_last_notify_read_time" -> { _ =>
-              channel.push(Json.arr("last_notify_read_time", setLastNotifyTime(userId).toString()))
+            "set_last_notify_read_time" -> { data =>
+              val time = data match {
+                case JsString(dateTime) +: _ => parseStandardTime(dateTime)
+                case _ => clock.now
+              }
+              channel.push(Json.arr("last_notify_read_time", setLastNotifyTime(userId, time).toStandardTimeString))
             },
             "get_notifications" -> { case JsNumber(howMany) +: params =>
               val createdBefore = params match {
@@ -225,8 +229,8 @@ class ExtStreamController @Inject() (
     db.readOnly(implicit s => userNotificationRepo.getLastReadTime(userId))
   }
 
-  private def setLastNotifyTime(userId: Id[User]): DateTime = {
-    db.readWrite(implicit s => userNotificationRepo.setLastReadTime(userId))
+  private def setLastNotifyTime(userId: Id[User], time: DateTime): DateTime = {
+    db.readWrite(implicit s => userNotificationRepo.setLastReadTime(userId, time))
   }
 
   private def getNotifications(userId: Id[User], createdBefore: Option[DateTime], howMany: Int): Seq[SendableNotification] = {
