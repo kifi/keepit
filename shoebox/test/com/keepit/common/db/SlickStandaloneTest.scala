@@ -1,5 +1,6 @@
 package com.keepit.common.db
 
+import com.keepit.common.time.Clock
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.test._
@@ -13,8 +14,11 @@ import org.specs2.mutable.Specification
 import scala.slick.lifted.Query
 import com.keepit.common.db.slick._
 import org.joda.time.DateTime
+import com.google.inject.{Stage, Guice, Module, Injector}
+import scala.slick.session.{Database => SlickDatabase}
+import com.google.inject.util.Modules
 
-class SlickStandalonTest extends Specification with TestDBRunner {
+class SlickStandalonTest extends Specification with TestDBRunner with TestInjector {
 
   "Slick" should {
 
@@ -31,10 +35,10 @@ class SlickStandalonTest extends Specification with TestDBRunner {
       //could be easily mocked up
       trait BarRepo extends Repo[Bar] {
         //here you may have model specific queries...
-        def getByName(name: String)(implicit session: ROSession): Seq[Bar]
+        def getByName(name: String)(implicit session: RSession): Seq[Bar]
       }
 
-      class BarRepoImpl(val db: DataBaseComponent) extends BarRepo with DbRepo[Bar] {
+      class BarRepoImpl(val db: DataBaseComponent, val clock: Clock) extends BarRepo with DbRepo[Bar] {
         import db.Driver.Implicit._ // here's the driver, abstracted away
 
         implicit object BarIdTypeMapper extends BaseTypeMapper[Id[Bar]] {
@@ -46,33 +50,36 @@ class SlickStandalonTest extends Specification with TestDBRunner {
           def * = id.? ~ name <> (Bar, Bar.unapply _)
         }
 
-        def getByName(name: String)(implicit session: ROSession): Seq[Bar] = {
+        def getByName(name: String)(implicit session: RSession): Seq[Bar] = {
           val q = for ( f <- table if f.name is name ) yield (f)
           q.list
         }
-
-        //only for testing
-        def createTableForTesting()(implicit session: RWSession) = table.ddl.create
       }
 
-      withDB { db =>
-        val repo: BarRepo = new BarRepoImpl(db.db)
+      withInjector { implicit injector =>
+        withDB { db =>
+          val repo: BarRepoImpl = new BarRepoImpl(db.db, new Clock())
+          2 == 2
+          db.readWrite{ implicit session =>
+            val fooA = repo.save(Bar(name = "A"))
+            fooA.id.get.id === 1
+          }
 
-        //just for testing you know...
-        db.readWrite{ implicit session =>
-          repo.asInstanceOf[BarRepoImpl].createTableForTesting() //only in test mode we should know about the implementation
-          val fooA = repo.save(Bar(name = "A"))
-          fooA.id.get.id === 1
-          val fooB = repo.save(Bar(name = "B"))
-          fooB.id.get.id === 2
-        }
+          db.readWrite{ implicit session =>
+            val fooB = repo.save(Bar(name = "B"))
+            fooB.id.get.id === 2
+          }
 
-        db.readOnly{ implicit session =>
-          repo.count(session) === 2
-          val a = repo.getByName("A")
-          a.size === 1
-          a.head.name === "A"
+          db.readWrite{ implicit session =>
+            repo.all().size === 2
+            repo.count(session) === 2
+            val a = repo.getByName("A")
+            a.size === 1
+            a.head.name === "A"
+          }
+
         }
+        1 === 1
       }
     }
   }

@@ -20,8 +20,6 @@ class MySQL(val dbInfo: DbInfo)
   }
 }
 
-
-
 object MySQL {
   val driverName = "com.mysql.jdbc.Driver"
 }

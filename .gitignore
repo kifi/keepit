@@ -62,3 +62,5 @@ shoebox/conf/app_version.txt
 shoebox/bin/*
 shoebox/bin
 nohup.out
+shoebox/mem.h2.db
+shoebox/mem.trace.db

@@ -41,6 +41,9 @@ import scala.util._
 import com.keepit.common.social.SocialGraphPlugin
 import scala.collection.mutable.{Stack => MutableStack}
 import scala.slick.session.{Database => SlickDatabase}
+import com.keepit.search.index.FakePhraseIndexerModule
+import com.google.inject.Provider
+import com.keepit.search.index.FakePhraseIndexerModule
 
 class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplication() {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
@@ -80,18 +83,14 @@ trait DbRepos {
   def unscrapableRepo = inject[UnscrapableRepo]
 }
 
-case class TestModule() extends ScalaModule {
+case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   def configure(): Unit = {
     val appScope = new AppScope
     bindScope(classOf[AppScoped], appScope)
     bind[AppScope].toInstance(appScope)
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[Babysitter].to[FakeBabysitter]
-    install(new SlickModule(new DbInfo() {
-      //later on we can customize it by the application name
-      lazy val database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
-      lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
-    }))
+    install(new SlickModule(dbInfo.getOrElse(dbInfoFromApplication)))
     bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
     bind[MailToKeepPlugin].to[FakeMailToKeepPlugin]
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
@@ -100,6 +99,12 @@ case class TestModule() extends ScalaModule {
     listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
     listenerBinder.addBinding().to(classOf[UsefulPageListener])
     listenerBinder.addBinding().to(classOf[SliderShownListener])
+  }
+
+  private def dbInfoFromApplication(): DbInfo = new DbInfo() {
+    //later on we can customize it by the application name
+    lazy val database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
+    lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
   }
 
   @Provides
@@ -130,7 +135,8 @@ case class TestModule() extends ScalaModule {
 
   @Provides
   @AppScoped
-  def actorPluginProvider: ActorPlugin = new ActorPlugin("shoebox-test-actor-system")
+  def actorPluginProvider: ActorPlugin =
+    new ActorPlugin(ActorSystem("shoebox-test-actor-system", Play.current.configuration.underlying, Play.current.classloader))
 
   @Provides
   @Singleton

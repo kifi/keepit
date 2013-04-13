@@ -13,16 +13,22 @@ import scala.util.Success
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import akka.actor.ActorSystem
 import scala.concurrent._
+import scala.slick.lifted.DDL
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
 trait DataBaseComponent {
   val Driver: ExtendedDriver
   def dbInfo: DbInfo
-  lazy val handle: SlickDatabase = dbInfo.database
+  lazy val handle: SlickDatabase = {
+    println("initiating DB handle")
+    dbInfo.database
+  }
 
   def getSequence(name: String): DbSequence
 
   def entityName(name: String): String = name
+
+  def tableToInit(table: TableWithDDL): Unit = ???
 }
 
 class Database @Inject() (

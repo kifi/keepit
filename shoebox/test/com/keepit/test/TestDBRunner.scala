@@ -1,32 +1,40 @@
 package com.keepit.test
 
-import scala.slick.testutil.TestDBs
-import java.util.concurrent.atomic.AtomicLong
+import com.google.inject.Injector
+import com.keepit.common.db.slick.Database
+import com.keepit.inject.RichInjector
+import com.keepit.common.db.slick.DbRepo
+import com.keepit.common.db.slick.DataBaseComponent
+import com.keepit.common.db.slick.H2
+import com.keepit.common.db.slick.TableInitListener
+import scala.slick.lifted.DDL
+import com.keepit.common.db.slick.TableWithDDL
 
 trait TestDBRunner {
-  val testDB: TestDB = TestDBs.H2Mem
-
-  private lazy val dbInstance = testDB.createDB()
-
-  def withDB[T](f: Database => T) = {
-    testDB.cleanUpBefore()
+  def withDB[T](f: Database => T)(implicit injector: RichInjector) = {
+    val db = injector.inject[Database]
+    val h2 = injector.inject[DataBaseComponent].asInstanceOf[H2]
+    h2.initListener = Some(new TableInitListener {
+      def init(table: TableWithDDL) = initTable(db, table)
+    })
     try {
-      f(new Database(new DataBaseComponent(dbInstance)))
+      (f(db))
     } finally {
-      testDB.cleanUpAfter()
+      db.readWrite { implicit session =>
+        val conn = session.conn
+        val st = conn.createStatement()
+        st.execute("DROP ALL OBJECTS")
+      }
+    }
+  }
+
+  def initTable(db: Database, table: TableWithDDL): Unit = {
+    println(s"initiating table [$table.tableName]")
+    db.readWrite { implicit session =>
+      session.withTransaction {
+        for (s <- table.ddl.createStatements)
+          session.withPreparedStatement(s)(_.execute)
+      }
     }
   }
 }
-
-// see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
-class TestDBComponent(val testDB: TestDB)
-    extends DataBaseComponent {
-  println("initiating TestDB driver")
-  val Driver = testDB
-  private lazy val dbSequence = new AtomicLong(0)
-
-  def getSequence(name: String): DbSequence = DbSequence(dbSequence.incrementAndGet)
-
-  override def entityName(name: String): String = name.toUpperCase()
-}
-
