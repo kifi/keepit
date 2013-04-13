@@ -392,7 +392,6 @@ slider2 = function() {
       api.port.emit("session", function (session) {
         api.require("scripts/notices.js", function() {
           renderNotices($box.find(".kifi-pane-tall"));
-          api.port.emit("set_last_notify_read_time");
         });
       });
     },

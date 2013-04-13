@@ -405,8 +405,8 @@ api.port.on({
       emitNotifications();
     }
   },
-  set_last_notify_read_time: function() {
-    socket.send(["set_last_notify_read_time"]);
+  notifications_read: function() {
+    socket.send(["set_last_notify_read_time", (notifications[0] || {}).time]);
   },
   session: function(_, respond) {
     respond(session);
@@ -526,7 +526,7 @@ function findUnread(threads, readTimes) {
 
 function countUnreadNotifications() {
   for (var n = 0; n < notifications.length; n++) {
-    if (new Date(notifications[n].time) < notificationsRead.time) break;
+    if (new Date(notifications[n].time) <= notificationsRead.time) break;
   }
   notificationsRead.unread = n;
   api.tabs.eachSelected(function(tab) {
