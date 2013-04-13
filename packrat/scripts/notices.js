@@ -10,6 +10,7 @@ var renderNotices;
   const SCROLL_DISTANCE = 40; // pixels from the bottom scrolled to get more
   const MAX_NOTIFICATIONS = 100; // maximum number of notifications
   const NEW_FADE_TIMEOUT = 1000; // number of ms to wait before starting to fade
+  const NEW_FADE_DURATION = 3000; // length of the fade
   var numShown = 10;
   var numRequested = numShown;
   api.port.on({
@@ -87,8 +88,14 @@ var renderNotices;
           if (++done == notices.length) {
             $notifyPane.html(renderedNotices);
             $notifyPane.find("time").timeago();
+            var $newNotices = $notifyPane.find(".kifi-notice-new").css({
+              transition: 'background ' + NEW_FADE_DURATION + 'ms ease',
+            });
             setTimeout(function () {
-              $notifyPane.find(".kifi-notice-new").removeClass("kifi-notice-new");
+              $newNotices.removeClass('kifi-notice-new');
+              setTimeout(function() {
+                $newNotices.css({ transition: 'background 0s ease' });
+              }, NEW_FADE_DURATION);
             }, NEW_FADE_TIMEOUT);
             callback();
           }

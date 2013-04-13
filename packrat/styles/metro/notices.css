@@ -10,9 +10,6 @@
   padding: 10px 12px 10px 58px;
   min-height: 10px;
   background: #e5ebf1;
-  transition-property: background;
-  transition-duration: 3s;
-  transition-timing-function: ease;
 }
 .kifi-notice:hover {
   cursor: pointer;
