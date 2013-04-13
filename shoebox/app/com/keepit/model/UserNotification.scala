@@ -6,13 +6,9 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import com.keepit.search.Lang
-import scala.slick.util.CloseableIterator
 import play.api.libs.json.JsValue
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
-import play.libs.Json
-import com.keepit.serializer.SendableNotificationSerializer
 import scala.slick.lifted.Query
 
 case class UserNotificationDetails(payload: JsValue) extends AnyVal
@@ -41,7 +37,7 @@ trait UserNotificationRepo extends Repo[UserNotification] with ExternalIdColumnF
   def getWithCommentIds(userId: Id[User], commentIds: Traversable[Id[Comment]], excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED))(implicit session: RSession): Seq[UserNotification]
   def getUnreadCount(userId: Id[User])(implicit session: RSession): Int
   def getLastReadTime(userId: Id[User])(implicit session: RSession): DateTime
-  def setLastReadTime(userId: Id[User])(implicit session: RWSession): DateTime
+  def setLastReadTime(userId: Id[User], time: DateTime)(implicit session: RWSession): DateTime
 }
 
 @Singleton
@@ -75,8 +71,8 @@ class UserNotificationRepoImpl @Inject() (
   def getWithCommentIds(userId: Id[User], commentIds: Traversable[Id[Comment]], excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED))(implicit session: RSession): Seq[UserNotification] =
     (for(b <- table if b.userId === userId && !b.state.inSet(excludeStates) && b.commentId.inSet(commentIds)) yield b).list
 
-  def setLastReadTime(userId: Id[User])(implicit session: RWSession): DateTime =
-    parseStandardTime(userValueRepo.setValue(userId, "notificationLastRead", clock.now.toStandardTimeString))
+  def setLastReadTime(userId: Id[User], time: DateTime)(implicit session: RWSession): DateTime =
+    parseStandardTime(userValueRepo.setValue(userId, "notificationLastRead", time.toStandardTimeString))
 
   def getLastReadTime(userId: Id[User])(implicit session: RSession): DateTime =
     userValueRepo.getValue(userId, "notificationLastRead").map(parseStandardTime).getOrElse(START_OF_TIME)
@@ -95,7 +91,7 @@ object UserNotificationStates {
   val SUBSUMED = State[UserNotification]("subsumed")
 }
 
-case class UserNotificationCategory(val name: String) extends AnyVal
+case class UserNotificationCategory(name: String) extends AnyVal
 
 object UserNotificationCategories {
   val COMMENT = UserNotificationCategory("comment")

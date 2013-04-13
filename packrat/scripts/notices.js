@@ -19,6 +19,7 @@ var renderNotices;
       var $notifyPane = $(".kifi-notices");
       if ($notifyPane.length) {
         getRenderedNotices(notices, data.numUnread, $notifyPane, function () {
+          api.port.emit("notifications_read");
           numShown = numRequested = notices.length;
         });
       }
