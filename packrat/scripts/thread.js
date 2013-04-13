@@ -8,7 +8,14 @@
 // @require scripts/compose.js
 // @require scripts/snapshot.js
 
-function renderThread($container, threadId, messages) {
+threadPane = function() {
+  var $sent = $();
+  return {
+    render: function($container, threadId, messages, userId) {
+      messages.forEach(function(m) {
+        m.isLoggedInUser = m.user.id == userId;
+      });
+  // ---> TODO: indent properly (postponed to make code review easier)
   render("html/metro/messages.html", {
     formatMessage: getTextFormatter,
     formatLocalDate: getLocalDateFormatter,
@@ -26,14 +33,31 @@ function renderThread($container, threadId, messages) {
     .on("click", "a[href^='x-kifi-sel:']", function(e) {
       e.preventDefault();
     })
-    .on("kifi:compose-submit", sendReply)
+    .on("kifi:compose-submit", sendReply.bind(null, $container, threadId))
     .find("time").timeago();
 
     attachComposeBindings($container, "message");
-  });
 
-  function sendReply(e, text, recipientIds) {
-    // logEvent("slider", "comment");
+    $sent = $container.find(".kifi-messages-sent").data("threadId", threadId);
+    $container.closest(".kifi-pane-box").on("kifi:remove", function() {
+      $sent.length = 0;
+    });
+  });
+  // --->
+    },
+    update: function(thread, message, userId) {
+      if ($sent.length &&
+          $sent.data("threadId") == thread.id &&
+          !$sent.children("[data-id=" + message.id + "]").length) {  // sent messages come via POST resp and socket
+        message.isLoggedInUser = message.user.id == userId;
+        renderMessage(message, function($m) {
+          $sent.append($m).layout()[0].scrollTop = 99999;  // should we compare timestamps and insert in order?
+        });
+      }
+    }};
+
+  function sendReply($container, threadId, e, text, recipientIds) {
+    // logEvent("keeper", "reply");
     api.port.emit("post_comment", {
       "url": document.URL,
       "title": document.title,
@@ -43,26 +67,20 @@ function renderThread($container, threadId, messages) {
       "parent": threadId
     }, function(response) {
       api.log("[sendReply] resp:", response);
-      render("html/metro/message.html", {
-        "formatMessage": getTextFormatter,
-        "formatLocalDate": getLocalDateFormatter,
-        "formatIsoDate": getIsoDateFormatter,
-        "createdAt": response.message.createdAt,
-        "text": text,
-        "user": {
-          "id": response.session.userId,
-          "firstName": response.session.name,
-          "lastName": "",
-          "facebookId": response.session.facebookId
-        },
-        "isLoggedInUser": true,
-        "id": response.commentId
-      }, function(html) {
-        var $sent = $container.find(".kifi-messages-sent");
-        $(html).find("time").timeago().end().appendTo($sent);
-        $sent[0].scrollTop = 99999;
+      response.message.isLoggedInUser = true;
+      renderMessage(response.message, function($m) {
+        $sent.append($m).layout()[0].scrollTop = 99999;
         $container.find(".kifi-compose-draft").empty().blur();
       });
     });
   }
-}
+
+  function renderMessage(m, callback) {
+    m.formatMessage = getTextFormatter;
+    m.formatLocalDate = getLocalDateFormatter;
+    m.formatIsoDate = getIsoDateFormatter;
+    render("html/metro/message.html", m, function(html) {
+      callback($(html).find("time").timeago().end());
+    });
+  }
+}();

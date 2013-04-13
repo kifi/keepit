@@ -125,7 +125,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
       }
       // Returns whether the viewport coords (x, y) are in the trapezoid between the top edge
       // of hover trigger element and the bottom edge of the hover element.
-      function between(x, y) {
+      function between(x, y) {  // TODO: fix "Cannot read property '0' of undefined" from onMouseLeave (from keeper)
         var rT = $a[0].getBoundingClientRect(), rH = data.$h[0].getBoundingClientRect();
         return y >= rH.bottom && y <= rT.top &&
           !leftOf(x, y, rH.left, rH.bottom, rT.left, rT.top) &&
