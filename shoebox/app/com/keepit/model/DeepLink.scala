@@ -68,7 +68,7 @@ class DeepLinkRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[DeepLink](db, "deep_link") {
+  override val table = new RepoTable[DeepLink](db, "deep_link") {
     def initatorUserId = column[Id[User]]("initiator_user_id")
     def recipientUserId = column[Id[User]]("recipient_user_id")
     def uriId = column[Id[NormalizedURI]]("uri_id")

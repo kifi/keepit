@@ -103,8 +103,11 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   private def dbInfoFromApplication(): DbInfo = new DbInfo() {
     //later on we can customize it by the application name
-    lazy val database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
-    lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
+    lazy val database = SlickDatabase.forURL(
+      url = "jdbc:h2:mem:shoebox;USER=shoebox;MODE=MYSQL;MVCC=TRUE;DB_CLOSE_DELAY=-1")
+    lazy val driverName = H2.driverName
+//    lazy val database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
+//    lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
   }
 
   @Provides
@@ -187,7 +190,7 @@ case class BabysitterModule() extends ScalaModule {
 }
 
 class FakeBabysitter extends Babysitter {
-  def watch[A](timeout: BabysitterTimeout)(block: => A)(implicit app: Application): A = {
+  def watch[A](timeout: BabysitterTimeout)(block: => A): A = {
     block
   }
 }

@@ -80,7 +80,7 @@ class ScrapeInfoRepoImpl @Inject() (
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
-  override lazy val table = new RepoTable[ScrapeInfo](db, "scrape_info") {
+  override val table = new RepoTable[ScrapeInfo](db, "scrape_info") {
     def uriId =      column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def lastScrape = column[DateTime]("last_scrape", O.NotNull)
     def nextScrape = column[DateTime]("next_scrape", O.NotNull)

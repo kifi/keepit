@@ -37,7 +37,7 @@ class PhraseRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
   import DBSession._
   import FortyTwoTypeMappers._
 
-  override lazy val table = new RepoTable[Phrase](db, "phrase") {
+  override val table = new RepoTable[Phrase](db, "phrase") {
     def phrase = column[String]("phrase", O.NotNull)
     def source = column[String]("source", O.NotNull)
     def lang = column[Lang]("lang", O.NotNull)

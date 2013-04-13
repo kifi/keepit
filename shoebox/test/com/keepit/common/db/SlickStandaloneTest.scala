@@ -18,7 +18,7 @@ import com.google.inject.{Stage, Guice, Module, Injector}
 import scala.slick.session.{Database => SlickDatabase}
 import com.google.inject.util.Modules
 
-class SlickStandalonTest extends Specification with TestDBRunner with TestInjector {
+class SlickStandalonTest extends Specification with TestDBRunner {
 
   "Slick" should {
 
@@ -45,7 +45,7 @@ class SlickStandalonTest extends Specification with TestDBRunner with TestInject
           def apply(profile: BasicProfile) = new IdMapperDelegate[Bar](profile)
         }
 
-        override lazy val table = new RepoTable[Bar](db, "foo") {
+        override val table = new RepoTable[Bar](db, "foo") {
           def name = column[String]("name")
           def * = id.? ~ name <> (Bar, Bar.unapply _)
         }
@@ -56,31 +56,29 @@ class SlickStandalonTest extends Specification with TestDBRunner with TestInject
         }
       }
 
-      withInjector { implicit injector =>
-        withDB { db =>
-          val repo: BarRepoImpl = new BarRepoImpl(db.db, new Clock())
-          2 == 2
-          db.readWrite{ implicit session =>
-            val fooA = repo.save(Bar(name = "A"))
-            fooA.id.get.id === 1
-          }
-
-          db.readWrite{ implicit session =>
-            val fooB = repo.save(Bar(name = "B"))
-            fooB.id.get.id === 2
-          }
-
-          db.readWrite{ implicit session =>
-            repo.all().size === 2
-            repo.count(session) === 2
-            val a = repo.getByName("A")
-            a.size === 1
-            a.head.name === "A"
-          }
-
+      withDB() { implicit injector =>
+        val repo: BarRepoImpl = new BarRepoImpl(db.db, new Clock())
+        2 == 2
+        db.readWrite{ implicit session =>
+          val fooA = repo.save(Bar(name = "A"))
+          fooA.id.get.id === 1
         }
-        1 === 1
+
+        db.readWrite{ implicit session =>
+          val fooB = repo.save(Bar(name = "B"))
+          fooB.id.get.id === 2
+        }
+
+        db.readWrite{ implicit session =>
+          repo.all().size === 2
+          repo.count(session) === 2
+          val a = repo.getByName("A")
+          a.size === 1
+          a.head.name === "A"
+        }
+
       }
+      1 === 1
     }
   }
 }

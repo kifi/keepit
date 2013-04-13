@@ -79,7 +79,7 @@ class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cl
   import scala.slick.lifted.Query
   import DBSession._
 
-  override lazy val table = new RepoTable[ElectronicMail](db, "electronic_mail") with ExternalIdColumn[ElectronicMail] {
+  override val table = new RepoTable[ElectronicMail](db, "electronic_mail") with ExternalIdColumn[ElectronicMail] {
     def senderUserId = column[Id[User]]("user_id", O.Nullable)
     def from = column[SystemEmailAddress]("from_addr", O.NotNull)
     def fromName = column[String]("from_name", O.Nullable)

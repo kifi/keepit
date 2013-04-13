@@ -101,7 +101,7 @@ class BookmarkRepoImpl @Inject() (
 
   private val sequence = db.getSequence("bookmark_sequence")
 
-  override lazy val table = new RepoTable[Bookmark](db, "bookmark") with ExternalIdColumn[Bookmark] {
+  override val table = new RepoTable[Bookmark](db, "bookmark") with ExternalIdColumn[Bookmark] {
     def title = column[Option[String]]("title", O.Nullable)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def urlId = column[Id[URL]]("url_id", O.NotNull)

@@ -54,7 +54,7 @@ class DomainTagRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) e
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
-  override lazy val table = new RepoTable[DomainTag](db, "domain_tag") {
+  override val table = new RepoTable[DomainTag](db, "domain_tag") {
     def name = column[DomainTagName]("name", O.NotNull)
     def sensitive = column[Option[Boolean]]("sensitive", O.Nullable)
     def * = id.? ~ name ~ sensitive ~ state ~ createdAt ~ updatedAt <> (DomainTag, DomainTag.unapply _)
