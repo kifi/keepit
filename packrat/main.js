@@ -405,8 +405,8 @@ api.port.on({
       emitNotifications();
     }
   },
-  set_last_notify_read_time: function() {
-    socket.send(["set_last_notify_read_time"]);
+  notifications_read: function() {
+    socket.send(["set_last_notify_read_time", (notifications[0] || {}).time]);
   },
   session: function(_, respond) {
     respond(session);
