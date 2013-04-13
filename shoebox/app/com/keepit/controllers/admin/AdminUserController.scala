@@ -159,6 +159,18 @@ class AdminUserController @Inject() (
     Ok(Json.obj(experiment -> true))
   }
 
+  def changeState(userId: Id[User], state: String) = AdminJsonAction { request =>
+    val userState = state match {
+      case "active" => UserStates.ACTIVE
+      case "inactive" => UserStates.INACTIVE
+      case "blocked" => UserStates.BLOCKED
+      case "pending" => UserStates.PENDING
+    }
+
+    db.readWrite(implicit s => userRepo.save(userRepo.get(userId).withState(userState)))
+    Ok
+  }
+
   def removeExperiment(userId: Id[User], experiment: String) = AdminJsonAction { request =>
     db.readWrite { implicit session =>
       userExperimentRepo.get(userId, ExperimentTypes(experiment)).foreach { ue =>
