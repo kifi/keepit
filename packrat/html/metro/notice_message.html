@@ -1,14 +1,14 @@
 <div class="kifi-notice kifi-notice-message kifi-notice-state-{{state}}" data-id="{{id}}">
-  <time datetime="{{#formatIsoDate}}{{time}}{{/formatIsoDate}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
   <img class="kifi-notice-avatar" src="{{avatar}}">
   <div class="kifi-notice-name">
     {{{formattedAuthor}}}
   </div>
   <div class="kifi-notice-action">
-  	 sent you a message
+  	 Message
   </div>
   <div class="kifi-notice-page">
-  	on this page: <a href="{{details.url}}" class="kifi-link" target="_blank">{{details.title}}</a>
+  	<a href="{{details.url}}" class="kifi-link" target="_blank">{{details.title}}</a>
   </div>
   <div class="kifi-notice-text">{{#formatMessage}}{{{details.text}}}{{/formatMessage}}</div>
+  <time datetime="{{#formatIsoDate}}{{time}}{{/formatIsoDate}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
 </div>

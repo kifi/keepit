@@ -136,7 +136,7 @@ const socketHandlers = {
       d.following = o.following;
       d.comments = o.comments || [];
       d.threads = o.threads || [];
-      d.lastCommentRead = o.lastCommentRead ? new Date(o.lastCommentRead) : null;
+      d.lastCommentRead = new Date(o.lastCommentRead || 0);
       d.lastMessageRead = {};
       for (var k in o.lastMessageRead) {
         d.lastMessageRead[k] = new Date(o.lastMessageRead);
@@ -187,7 +187,7 @@ const socketHandlers = {
     api.log("[socket:thread]", th);
     var d = pageData[th.uri];
     if (d) {
-      d.threads.filter(function(t) {return t.id == th.id}).forEach(function(t) {
+      d.threads.filter(hasId(th.id)).forEach(function(t) {
         t.messages = th.messages;
       });
       delete th.uri;
@@ -334,11 +334,19 @@ api.port.on({
     });
     return true;
   },
-  set_comment_read: function(id) {
-    socket.send(["set_comment_read", id]);
+  set_comment_read: function(o, _, tab) {
+    var d = pageData[tab.nUri], time = new Date(o.time);
+    if (!d || time > d.lastCommentRead) {
+      if (d) d.lastCommentRead = time;
+      socket.send(["set_comment_read", o.id]);
+    }
   },
-  set_message_read: function(id) {
-    socket.send(["set_message_read", id]);
+  set_message_read: function(o, _, tab) {
+    var d = pageData[tab.nUri], time = new Date(o.time);
+    if (!d || time > (d.lastMessageRead[o.threadId] || 0)) {
+      if (d) d.lastMessageRead[o.threadId] = time;
+      socket.send(["set_message_read", o.messageId]);
+    }
   },
   comments: function(_, _, tab) {
     var d = pageData[tab.nUri];
@@ -354,7 +362,7 @@ api.port.on({
   },
   thread: function(id, _, tab) {
     var d = pageData[tab.nUri], th;
-    if (d && d.threads && (th = d.threads.filter(function(t) {return t.id == id})[0]) && th.messages) {
+    if (d && d.threads && (th = d.threads.filter(hasId(id))[0]) && th.messages) {
       api.tabs.emit(tab, "thread", th);
     } else {
       socket.send(["get_thread", id]);
@@ -472,7 +480,7 @@ function findUnread(threads, readTimes) {
       }
     }
     if (thUnread) {
-      unread.threads.push(t.id);
+      unread.threads.push(th.id);
     }
   }
   return unread;
@@ -780,6 +788,10 @@ function compilePatterns(o) {
     o.patterns[i] = new RegExp(o.patterns[i], "");
   }
   return o;
+}
+
+function hasId(id) {
+  return function(o) {return o.id == id};
 }
 
 function getFullyQualifiedKey(key) {
