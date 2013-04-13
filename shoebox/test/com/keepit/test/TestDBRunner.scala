@@ -48,7 +48,6 @@ trait TestDBRunner extends TestInjector {
       h2.initListener = Some(new TableInitListener {
         def init(table: TableWithDDL) = initTable(db, table)
       })
-      val userRep = userRepo
       try {
         (f(injector))
       } finally {
