@@ -9,6 +9,13 @@ import play.api.libs.json.JsArray
 import com.keepit.model.NormalizedURI
 import java.util.concurrent.atomic.AtomicBoolean
 import com.keepit.common.logging.Logging
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.concurrent.Akka
+import play.api.Play.current
+import scala.concurrent.duration._
+import play.api.libs.json.Json
+import com.keepit.common.time.Clock
+import com.google.inject.Inject
 
 /** A Channel, which accepts pushed messages, and manages connections to it.
   */
@@ -176,7 +183,9 @@ abstract class ChannelManagerImpl[T](name: String, creator: T => Channel) extend
 
 // Used for user-specific transmissions, such as notifications.
 class UserSpecificChannel(id: Id[User]) extends ChannelImpl(id)
-@Singleton class UserChannel extends ChannelManagerImpl("user", (id: Id[User]) => new UserSpecificChannel(id))
+@Singleton class UserChannel @Inject() (clock: Clock) extends ChannelManagerImpl("user", (id: Id[User]) => new UserSpecificChannel(id)) {
+    Akka.system.scheduler.schedule(10 seconds, 30 seconds)(broadcast(Json.arr("tick", clock.now)))
+}
 
 // Used for page-specific transmissions, such as new comments.
 class UriSpecificChannel(uri: String) extends ChannelImpl(uri)
