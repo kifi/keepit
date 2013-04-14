@@ -36,7 +36,7 @@ object ApplicationBuild extends Build {
       jdbc,
       "mysql" % "mysql-connector-java" % "5.1.10",
       "org.clapper" %% "grizzled-slf4j" % "1.0.1",
-      "com.typesafe.akka" % "akka-testkit" % "2.0.2",
+      "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
       "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2",
       "org.apache.lucene" % "lucene-core" % "4.2.0",
