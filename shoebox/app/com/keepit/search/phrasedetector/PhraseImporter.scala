@@ -12,7 +12,6 @@ import com.keepit.model.PhraseRepo
 import com.keepit.model.{Phrase => PhraseModel}
 import akka.actor.Status.Failure
 import akka.actor.{ActorSystem, Props, Actor}
-import akka.dispatch.Future
 import akka.pattern.ask
 import play.api.libs.json.{JsArray, JsNumber, JsString, JsObject}
 
