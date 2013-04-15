@@ -33,7 +33,7 @@ function ajax(method, uri, data, done, fail) {  // method and uri are required
         }
       }
     }
-    uri = (~uri.indexOf("?") ? "&" : "?") + a.join("&").replace(/%20/g, "+");
+    uri += (~uri.indexOf("?") ? "&" : "?") + a.join("&").replace(/%20/g, "+");
     data = null;
   }
 
