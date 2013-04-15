@@ -15,60 +15,58 @@ commentsPane = function() {
       comments.forEach(function(c) {
         c.isLoggedInUser = c.user.id == userId;
       });
-  // ---> TODO: indent properly (postponed to make code review easier)
-  render("html/metro/comments.html", {
-    formatComment: getTextFormatter,
-    formatLocalDate: getLocalDateFormatter,
-    formatIsoDate: getIsoDateFormatter,
-    comments: comments,
-    draftPlaceholder: "Type a comment…",
-    submitButtonLabel: "Post",
-    // following: following,
-    snapshotUri: api.url("images/snapshot.png")
-    // connected_networks: api.url("images/social_icons.png")
-  }, {
-    comment: "comment.html",
-    compose: "compose.html"
-  }, function(html) {
-    $(html).prependTo($container)
-    .on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
-    .on("click", "a[href^='x-kifi-sel:']", function(e) {
-      e.preventDefault();
-    })
-    .on("kifi:compose-submit", submitComment.bind(null, $container))
-    .find("time").timeago();
+      render("html/metro/comments.html", {
+        formatComment: getTextFormatter,
+        formatLocalDate: getLocalDateFormatter,
+        formatIsoDate: getIsoDateFormatter,
+        comments: comments,
+        draftPlaceholder: "Type a comment…",
+        submitButtonLabel: "Post",
+        // following: following,
+        snapshotUri: api.url("images/snapshot.png")
+        // connected_networks: api.url("images/social_icons.png")
+      }, {
+        comment: "comment.html",
+        compose: "compose.html"
+      }, function(html) {
+        $(html).prependTo($container)
+        .on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
+        .on("click", "a[href^='x-kifi-sel:']", function(e) {
+          e.preventDefault();
+        })
+        .on("kifi:compose-submit", submitComment.bind(null, $container))
+        .find("time").timeago();
 
-    if (isAdmin) {
-      $posted.on("mouseenter", ".kifi-comment-posted", function() {
-        if (this.lastChild.className != "kifi-comment-x") {
-          $(this).append("<div class=kifi-comment-x>");
-        }
-      }).on("click", ".kifi-comment-x", function() {
-        var $x = $(this);
-        if ($x.hasClass("kifi-confirm")) {
-          $x.addClass("kifi-confirmed");
-          var id = $x.parent().animate({opacity: .1}, 400).data("id");
-          api.log("[deleteComment]", id);
-          api.port.emit("delete_comment", id, function() {
-            $x.parent().slideUp(function() {
-              $(this).remove();
-            });
+        if (isAdmin) {
+          $posted.on("mouseenter", ".kifi-comment-posted", function() {
+            if (this.lastChild.className != "kifi-comment-x") {
+              $(this).append("<div class=kifi-comment-x>");
+            }
+          }).on("click", ".kifi-comment-x", function() {
+            var $x = $(this);
+            if ($x.hasClass("kifi-confirm")) {
+              $x.addClass("kifi-confirmed");
+              var id = $x.parent().animate({opacity: .1}, 400).data("id");
+              api.log("[deleteComment]", id);
+              api.port.emit("delete_comment", id, function() {
+                $x.parent().slideUp(function() {
+                  $(this).remove();
+                });
+              });
+            } else {
+              $x.addClass("kifi-confirm");
+              setTimeout($x.removeClass.bind($x, "kifi-confirm"), 1000);
+            }
           });
-        } else {
-          $x.addClass("kifi-confirm");
-          setTimeout($x.removeClass.bind($x, "kifi-confirm"), 1000);
         }
+
+        attachComposeBindings($container, "comment");
+
+        $posted = $container.find(".kifi-comments-posted");
+        $container.closest(".kifi-pane-box").on("kifi:remove", function() {
+          $posted.length = 0;
+        });
       });
-    }
-
-    attachComposeBindings($container, "comment");
-
-    $posted = $container.find(".kifi-comments-posted");
-    $container.closest(".kifi-pane-box").on("kifi:remove", function() {
-      $posted.length = 0;
-    });
-  });
-  // --->
     },
     update: function(comment, userId) {
       if (!$posted.length) return;

@@ -15,35 +15,33 @@ threadPane = function() {
       messages.forEach(function(m) {
         m.isLoggedInUser = m.user.id == userId;
       });
-  // ---> TODO: indent properly (postponed to make code review easier)
-  render("html/metro/messages.html", {
-    formatMessage: getTextFormatter,
-    formatLocalDate: getLocalDateFormatter,
-    formatIsoDate: getIsoDateFormatter,
-    messages: messages,
-    draftPlaceholder: "Type a message…",
-    submitButtonLabel: "Send",
-    snapshotUri: api.url("images/snapshot.png")
-  }, {
-    message: "message.html",
-    compose: "compose.html"
-  }, function(html) {
-    $(html).prependTo($container)
-    .on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
-    .on("click", "a[href^='x-kifi-sel:']", function(e) {
-      e.preventDefault();
-    })
-    .on("kifi:compose-submit", sendReply.bind(null, $container, threadId))
-    .find("time").timeago();
+      render("html/metro/messages.html", {
+        formatMessage: getTextFormatter,
+        formatLocalDate: getLocalDateFormatter,
+        formatIsoDate: getIsoDateFormatter,
+        messages: messages,
+        draftPlaceholder: "Type a message…",
+        submitButtonLabel: "Send",
+        snapshotUri: api.url("images/snapshot.png")
+      }, {
+        message: "message.html",
+        compose: "compose.html"
+      }, function(html) {
+        $(html).prependTo($container)
+        .on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
+        .on("click", "a[href^='x-kifi-sel:']", function(e) {
+          e.preventDefault();
+        })
+        .on("kifi:compose-submit", sendReply.bind(null, $container, threadId))
+        .find("time").timeago();
 
-    attachComposeBindings($container, "message");
+        attachComposeBindings($container, "message");
 
-    $sent = $container.find(".kifi-messages-sent").data("threadId", threadId);
-    $container.closest(".kifi-pane-box").on("kifi:remove", function() {
-      $sent.length = 0;
-    });
-  });
-  // --->
+        $sent = $container.find(".kifi-messages-sent").data("threadId", threadId);
+        $container.closest(".kifi-pane-box").on("kifi:remove", function() {
+          $sent.length = 0;
+        });
+      });
     },
     update: function(thread, message, userId) {
       if ($sent.length &&
