@@ -6,6 +6,7 @@ import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.Searcher
 import com.keepit.search.graph.URIGraphSearcher
+import com.keepit.search.query.IdSetFilter
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
@@ -70,25 +71,34 @@ class SemanticVectorSearcher(articleSearcher: Searcher, uriGraphSearcher: URIGra
   def getSemanticVectors(term: Term, uriIds:Set[Long]): Map[Long, SemanticVector] = {
 
     val subReaders = indexReader.wrappedSubReaders
-    var sv = Map[Long, SemanticVector]();
+    var sv = Map[Long, SemanticVector]()
     var i = 0
 
-    var earlyStop = false
-    var docsRead = 0
-    var docsToRead = uriIds.size
-
-    while (i < subReaders.length && !earlyStop) {
+    var docsToRead = uriIds.size // for early stop: don't need to go through every subreader
+    val filter = new IdSetFilter(uriIds)
+    
+    while (i < subReaders.length && docsToRead > 0) {
       val subReader = subReaders(i)
-      val idMapper = subReader.getIdMapper
-      val tp = subReader.termPositionsEnum(term)
-      if (tp != null) {
-        // iterate over docs containing this term
-        while (tp.nextDoc < NO_MORE_DOCS) {
-          val id = idMapper.getId(tp.docID())
-          if (uriIds.contains(id)) {
-            docsRead += 1
-            earlyStop = (docsRead == docsToRead)							// early stop: don't need to go through every subreader
-            var vector = new SemanticVector(new Array[Byte](SemanticVector.arraySize))
+      val docIdSet = filter.getDocIdSet(subReader.getContext, subReader.getLiveDocs)
+      if (docIdSet != null) {
+        val tp = subReader.termPositionsEnum(term)
+        val iter = docIdSet.iterator
+
+        def next(): Int = {
+          var doc = iter.nextDoc()
+          while (iter.docID != tp.docID) {
+            doc = if (iter.docID < tp.docID) iter.advance(tp.docID) else tp.advance(iter.docID)
+          }
+          doc
+        }
+        
+        if (iter != null && tp != null) {
+          val mapper = subReader.getIdMapper
+
+          while (next() < NO_MORE_DOCS) {
+            docsToRead -= 1
+            val id = mapper.getId(tp.docID)
+            val vector = new SemanticVector(new Array[Byte](SemanticVector.arraySize))
             if (tp.freq() > 0){
               tp.nextPosition()
               val payload = tp.getPayload()
