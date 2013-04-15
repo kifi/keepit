@@ -83,7 +83,6 @@ var renderNotices;
         render("html/metro/notice_" + notice.category + ".html", $.extend({
           formatMessage: getSnippetFormatter,
           formatLocalDate: getLocalDateFormatter,
-          formatIsoDate: getIsoDateFormatter,
           avatar: authors[0].avatar,
           formattedAuthor: formatAuthorNames(authors)
         }, notice), function (html) {

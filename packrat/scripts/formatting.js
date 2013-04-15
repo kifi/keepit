@@ -53,16 +53,6 @@ function getLocalDateFormatter() {
   }
 }
 
-function getIsoDateFormatter() {
-  return function(text, render) {
-    try {
-      return new Date(render(text)).toISOString();
-    } catch (e) {
-      return "";
-    }
-  }
-}
-
 function convertDraftToText(html) {
   html = html
     .replace(/<div><br\s*[\/]?><\/div>/gi, '\n')

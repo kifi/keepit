@@ -5,7 +5,7 @@
     {{/recipientsPictured}}
     <span class="kifi-thread-msg-count">{{messageCount}}</span>
   </div>
-  <time datetime="{{#formatIsoDate}}{{lastCommentedAt}}{{/formatIsoDate}}">{{#formatLocalDate}}{{lastCommentedAt}}{{/formatLocalDate}}</time>
+  <time datetime="{{lastCommentedAt}}">{{#formatLocalDate}}{{lastCommentedAt}}{{/formatLocalDate}}</time>
   <p class="kifi-thread-snippet">
     {{#formatSnippet}}{{{digest}}}{{/formatSnippet}}
   </p>
