@@ -399,7 +399,7 @@ slider2 = function() {
       requireData("comments", function(comments) {
         api.port.emit("session", function(session) {
           api.require("scripts/comments.js", function() {
-            commentsPane.render($box.find(".kifi-pane-tall"), comments, session.userId, ~session.experiments.indexOf("admin"));
+            commentsPane.render($box.find(".kifi-pane-tall"), comments, session);
             var lastCom = comments[comments.length - 1];
             api.port.emit("set_comment_read", {id: lastCom.id, time: lastCom.createdAt});
           });
@@ -421,7 +421,7 @@ slider2 = function() {
       requireData("thread/" + threadId, function(th) {
         api.port.emit("session", function(session) {
           api.require("scripts/thread.js", function() {
-            threadPane.render($tall, th.id, th.messages, session.userId);
+            threadPane.render($tall, th.id, th.messages, session);
             var lastMsg = th.messages[th.messages.length - 1];
             api.port.emit("set_message_read", {threadId: th.id, messageId: lastMsg.id, time: lastMsg.createdAt});
           });

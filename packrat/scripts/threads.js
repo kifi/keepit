@@ -52,15 +52,16 @@ threadsPane = function() {
       });
     },
     update: function(thread) {
-      if (!$list.length) return;
-      renderThread(thread, function($th) {
-        var $old = $list.children("[data-id=" + thread.id + "]");
-        if ($old.length) {
-          $old.replaceWith($th);
-        } else {
-          $list.append($th).layout()[0].scrollTop = 99999;
-        }
-      });
+      if ($list.length) {
+        renderThread(thread, function($th) {
+          var $old = $list.children("[data-id=" + thread.id + "],[data-id=]").first();
+          if ($old.length) {
+            $old.replaceWith($th);
+          } else {
+            $list.append($th).layout()[0].scrollTop = 99999;
+          }
+        });
+      }
     }};
 
   function sendMessage($container, e, text, recipientIds) {
@@ -73,26 +74,31 @@ threadsPane = function() {
       "recipients": recipientIds
     }, function(resp) {
       api.log("[sendMessage] resp:", resp);
-      renderThread(resp.message, function($th) {
-        $list.append($th).layout()[0].scrollTop = 99999;
-        $container.find(".kifi-compose-draft").empty().blur();
-        $container.find(".kifi-compose-to").tokenInput("clear");
-      });
+    });
+    var friends = $container.find(".kifi-compose-to").data("friends").reduce(function(o, f) {
+      o[f.id] = f;
+      return o;
+    }, {});
+    renderThread({
+      id: "",
+      lastCommentedAt: new Date().toISOString(),
+      recipients: recipientIds.split(",").map(function(id) {return friends[id]}),
+      messageCount: 1,
+      digest: text
+    }, function($th) {
+      $list.append($th).layout()[0].scrollTop = 99999;
+      $container.find(".kifi-compose-draft").empty().blur();
+      $container.find(".kifi-compose-to").tokenInput("clear");
     });
   }
 
-  function renderThread(o, callback) { // o can be a thread or a childless parent message
-    render("html/metro/thread.html", {
-      "formatSnippet": getSnippetFormatter,
-      "formatLocalDate": getLocalDateFormatter,
-      "formatIsoDate": getIsoDateFormatter,
-      "lastCommentedAt": o.lastCommentedAt || o.createdAt,
-      "recipientsPictured": o.recipients.slice(0, 4),
-      "messageCount": o.messageCount || 1,
-      "digest": o.digest || o.text,
-      "id": o.id
-    }, function(html) {
-      callback($(html).data("recipients", o.recipients).find("time").timeago().end());
+  function renderThread(th, callback) { // o can be a thread or a childless parent message
+    th.formatSnippet = getSnippetFormatter;
+    th.formatLocalDate = getLocalDateFormatter;
+    th.formatIsoDate = getIsoDateFormatter;
+    th.recipientsPictured = th.recipients.slice(0, 4);
+    render("html/metro/thread.html", th, function(html) {
+      callback($(html).data("recipients", th.recipients).find("time").timeago().end());
     });
   }
 }();

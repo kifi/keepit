@@ -11,9 +11,9 @@
 threadPane = function() {
   var $sent = $();
   return {
-    render: function($container, threadId, messages, userId) {
+    render: function($container, threadId, messages, session) {
       messages.forEach(function(m) {
-        m.isLoggedInUser = m.user.id == userId;
+        m.isLoggedInUser = m.user.id == session.userId;
       });
       render("html/metro/messages.html", {
         formatMessage: getTextFormatter,
@@ -32,7 +32,7 @@ threadPane = function() {
         .on("click", "a[href^='x-kifi-sel:']", function(e) {
           e.preventDefault();
         })
-        .on("kifi:compose-submit", sendReply.bind(null, $container, threadId))
+        .on("kifi:compose-submit", sendReply.bind(null, $container, threadId, session))
         .find("time").timeago();
 
         attachComposeBindings($container, "message");
@@ -44,17 +44,20 @@ threadPane = function() {
       });
     },
     update: function(thread, message, userId) {
-      if ($sent.length &&
-          $sent.data("threadId") == thread.id &&
-          !$sent.children("[data-id=" + message.id + "]").length) {  // sent messages come via POST resp and socket
+      if ($sent.length && $sent.data("threadId") == thread.id) {
         message.isLoggedInUser = message.user.id == userId;
         renderMessage(message, function($m) {
-          $sent.append($m).layout()[0].scrollTop = 99999;  // should we compare timestamps and insert in order?
+          var $old;
+          if (message.isLoggedInUser && ($old = $sent.children("[data-id=]").first()).length) {
+            $old.replaceWith($m);
+          } else {
+            $sent.append($m).layout()[0].scrollTop = 99999;  // should we compare timestamps and insert in order?
+          }
         });
       }
     }};
 
-  function sendReply($container, threadId, e, text, recipientIds) {
+  function sendReply($container, threadId, session, e, text, recipientIds) {
     // logEvent("keeper", "reply");
     api.port.emit("post_comment", {
       "url": document.URL,
@@ -65,11 +68,20 @@ threadPane = function() {
       "parent": threadId
     }, function(response) {
       api.log("[sendReply] resp:", response);
-      response.message.isLoggedInUser = true;
-      renderMessage(response.message, function($m) {
-        $sent.append($m).layout()[0].scrollTop = 99999;
-        $container.find(".kifi-compose-draft").empty().blur();
-      });
+    });
+    renderMessage({
+      id: "",
+      createdAt: new Date().toISOString(),
+      text: text,
+      user: {
+        id: session.userId,
+        firstName: session.name,
+        lastName: "",
+        facebookId: session.facebookId
+      },
+      isLoggedInUser: true
+    }, function($m) {
+      $sent.append($m).layout()[0].scrollTop = 99999;
     });
   }
 
