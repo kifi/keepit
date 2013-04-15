@@ -118,9 +118,7 @@ class URIGraphSearcher(searcher: Searcher) {
       if (docValues != null) {
         docValues.get(userDocId, ref)
         if (ref.length > 0) {
-          val buf = new Array[Byte](ref.length)
-          System.arraycopy(ref.bytes, ref.offset, buf, 0, ref.length)
-          uriList = Some(new URIList(buf))
+          uriList = Some(new URIList(ref.bytes, ref.offset, ref.length))
         }
       }
     }
