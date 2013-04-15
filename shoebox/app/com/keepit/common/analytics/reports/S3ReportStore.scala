@@ -18,6 +18,7 @@ import com.keepit.common.store.ObjectStore
 import com.keepit.common.store.S3ObjectStore
 import com.keepit.common.store.S3Bucket
 import play.api.libs.json.Format
+import com.keepit.common.store.InMemoryObjectStore
 
 trait ReportStore extends ObjectStore[String, Report] {
   def getReports(): List[String] = Nil
@@ -31,4 +32,8 @@ class S3ReportStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, 
     import scala.collection.JavaConversions._
     amazonS3Client.listObjects(bucketName).getObjectSummaries.map(o => o.getKey).toList
   }
+}
+
+class InMemoryReportStoreImpl extends InMemoryObjectStore[String, Report] with ReportStore {
+  override def getReports(): List[String] = localStore.keySet.toList
 }
