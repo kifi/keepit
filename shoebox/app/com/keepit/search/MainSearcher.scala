@@ -153,7 +153,7 @@ class MainSearcher(
       case (myHits, friendsHits, othersHits, parsedQuery) => {
         if ( myHits.size() + friendsHits.size() + othersHits.size() > 0 ) (myHits, friendsHits, othersHits, parsedQuery)
         else {
-          val alternative = try { spellCorrector.getAlternativeQuery(queryString); } catch { case e: Exception => log.error("unexpected SpellCorrector error" ); queryString }
+          val alternative = try { spellCorrector.getAlternativeQuery(queryString) } catch { case e: Exception => log.error("unexpected SpellCorrector error" ); queryString }
           if (alternative.trim == queryString.trim)	(myHits, friendsHits, othersHits, parsedQuery)
           else searchText(alternative, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
         }
