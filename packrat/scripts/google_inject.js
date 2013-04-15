@@ -475,7 +475,7 @@ api.log("[google_inject]");
     hit.displayUrl = displayURLFormatter(hit.bookmark.url);
     // api.log("[processHit] hit url:", hit.bookmark.url, "displayed as:", hit.displayUrl);
 
-    hit.bookmark.title = boldSearchTerms(hit.bookmark.title, response.query);
+    hit.bookmark.title = boldSearchTerms(hit.bookmark.title || hit.bookmark.url, response.query);
 
     if (response.showScores === true) {
       hit.displayScore = "[" + Math.round(hit.score * 100) / 100 + "] ";
