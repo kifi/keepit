@@ -166,8 +166,11 @@ class MainSearcher(
     val hits = createQueue(numHitsToReturn)
 
     // global high score excluding others (an orphan uri sometimes makes results disappear)
-    val highScore = max(myHits.highScore, friendsHits.highScore)
-
+    val highScore = {
+      val score = max(myHits.highScore, friendsHits.highScore)
+      if (score < 0.0f) 1.0f else score
+    }
+    
     var threshold = highScore * tailCutting
 
     if (myHits.size > 0) {
