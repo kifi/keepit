@@ -50,6 +50,7 @@ function attachComposeBindings($c, composeTypeName) {
         tokenValue: "id",
         theme: "KiFi",
         zindex: 2147483641});
+      $t.data("friends", friends);
     });
   }
 
@@ -69,7 +70,7 @@ function attachComposeBindings($c, composeTypeName) {
       }
       args.push(recipients.map(function(r) {return r.id}).join(","));
     }
-    $d.trigger("kifi:compose-submit", args);
+    $d.empty().trigger("kifi:compose-submit", args).focus();
     var $submit = $f.find(".kifi-compose-submit").addClass("kifi-active");
     setTimeout($submit.removeClass.bind($submit, "kifi-active"), 10);
   })

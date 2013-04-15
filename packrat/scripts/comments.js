@@ -11,9 +11,9 @@
 commentsPane = function() {
   var $posted = $();
   return {
-    render: function($container, comments, userId, isAdmin) {
+    render: function($container, comments, session) {
       comments.forEach(function(c) {
-        c.isLoggedInUser = c.user.id == userId;
+        c.isLoggedInUser = c.user.id == session.userId;
       });
       render("html/metro/comments.html", {
         formatComment: getTextFormatter,
@@ -33,10 +33,10 @@ commentsPane = function() {
         .on("click", "a[href^='x-kifi-sel:']", function(e) {
           e.preventDefault();
         })
-        .on("kifi:compose-submit", submitComment.bind(null, $container))
+        .on("kifi:compose-submit", submitComment.bind(null, $container, session))
         .find("time").timeago();
 
-        if (isAdmin) {
+        if (~session.experiments.indexOf("admin")) {
           $posted.on("mouseenter", ".kifi-comment-posted", function() {
             if (this.lastChild.className != "kifi-comment-x") {
               $(this).append("<div class=kifi-comment-x>");
@@ -68,14 +68,20 @@ commentsPane = function() {
       });
     },
     update: function(comment, userId) {
-      if (!$posted.length) return;
-      comment.isLoggedInUser = comment.user.id == userId;
-      renderComment(comment, function($c) {
-        $posted.append($c).layout()[0].scrollTop = 99999;  // should we compare timestamps and insert in order?
-      });
+      if ($posted.length) {
+        comment.isLoggedInUser = comment.user.id == userId;
+        renderComment(comment, function($c) {
+          var $old;
+          if (comment.isLoggedInUser && ($old = $posted.children("[data-id=]").first()).length) {
+            $old.replaceWith($c);
+          } else {
+            $posted.append($c).layout()[0].scrollTop = 99999;  // should we compare timestamps and insert in order?
+          }
+        });
+      }
     }};
 
-  function submitComment($container, e, text) {
+  function submitComment($container, session, e, text) {
     logEvent("slider", "comment");
     api.port.emit("post_comment", {
       "url": document.URL,
@@ -84,21 +90,20 @@ commentsPane = function() {
       "permissions": "public"
     }, function(response) {
       api.log("[submitComment] resp:", response);
-      renderComment({
-        "createdAt": response.createdAt,
-        "text": text,
-        "user": {
-          "id": response.session.userId,
-          "firstName": response.session.name,
-          "lastName": "",
-          "facebookId": response.session.facebookId
-        },
-        "isLoggedInUser": true,
-        "id": response.commentId
-      }, function($c) {
-        $posted.append($c).layout()[0].scrollTop = 99999;
-        $container.find(".kifi-compose-draft").empty().blur();
-      });
+    });
+    renderComment({
+      "createdAt": new Date().toISOString(),
+      "text": text,
+      "user": {
+        "id": session.userId,
+        "firstName": session.name,
+        "lastName": "",
+        "facebookId": session.facebookId
+      },
+      "isLoggedInUser": true,
+      "id": ""
+    }, function($c) {
+      $posted.append($c).layout()[0].scrollTop = 99999;
     });
   }
 
