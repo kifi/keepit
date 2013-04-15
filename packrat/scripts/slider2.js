@@ -335,7 +335,6 @@ slider2 = function() {
         $boxes.layout().css("transform", "translate(" + (back ? 0 : -d) + "px,0)")
         .on("transitionend webkitTransitionEnd", function() {
           $old.trigger("kifi:remove").remove();
-          api.log("[transitionend] triggering kifi:shown 1");
           $new.detach().css({left: "", width: ""}).appendTo($cubby).data("shown", true).triggerHandler("kifi:shown");
           $boxes.remove();
           $cubby.css("overflow", "");
@@ -355,7 +354,6 @@ slider2 = function() {
           var $html = $("html").addClass("kifi-pane-parent");
           $pane = $(html).data("pane", pane).appendTo($html).layout()
           .on("transitionend webkitTransitionEnd", function f(e) {
-            api.log("[transitionend] triggering kifi:shown 2");
             $pane.off("transitionend webkitTransitionEnd", f);
             $box.data("shown", true).triggerHandler("kifi:shown");
           })
