@@ -12,7 +12,6 @@ import com.keepit.search.query.ProximityQuery
 import com.keepit.search.query.QueryUtil._
 import com.keepit.search.query.SemanticVectorQuery
 import com.keepit.search.query.SiteQuery
-import com.keepit.search.query.TopLevelQuery
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
