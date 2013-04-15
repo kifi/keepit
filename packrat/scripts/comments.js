@@ -65,6 +65,8 @@ commentsPane = function() {
         $container.closest(".kifi-pane-box").on("kifi:remove", function() {
           $posted.length = 0;
         });
+
+        emitRead(comments[comments.length - 1]);
       });
     },
     update: function(comment, userId) {
@@ -77,6 +79,7 @@ commentsPane = function() {
           } else {
             $posted.append($c).layout()[0].scrollTop = 99999;  // should we compare timestamps and insert in order?
           }
+          emitRead(comment);
         });
       }
     }};
@@ -113,5 +116,9 @@ commentsPane = function() {
     render("html/metro/comment.html", c, function(html) {
       callback($(html).find("time").timeago().end());
     });
+  }
+
+  function emitRead(c) {
+    api.port.emit("set_comment_read", {id: c.id, time: c.createdAt});
   }
 }();

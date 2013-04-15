@@ -14,7 +14,7 @@ threadsPane = function() {
   return {
     render: function($container, o) {
       o.threads.forEach(function(t) {
-        var n = messageCount(t.messageTimes, new Date(o.read[t.id] || 0));
+        var n = messageCount(t, new Date(o.read[t.id] || 0));
         t.messageCount = Math.abs(n);
         t.messagesUnread = n < 0;
         t.recipientsPictured = t.recipients.slice(0, 4);
@@ -53,8 +53,11 @@ threadsPane = function() {
         });
       });
     },
-    update: function(thread) {
+    update: function(thread, readTime) {
       if ($list.length) {
+        var n = messageCount(thread, new Date(readTime || 0));
+        thread.messageCount = Math.abs(n);
+        thread.messagesUnread = n < 0;
         renderThread(thread, function($th) {
           var $old = $list.children("[data-id=" + thread.id + "],[data-id=]").first();
           if ($old.length) {
@@ -86,6 +89,7 @@ threadsPane = function() {
       lastCommentedAt: new Date().toISOString(),
       recipients: recipientIds.split(",").map(function(id) {return friends[id]}),
       messageCount: 1,
+      messagesUnread: false,
       digest: text
     }, function($th) {
       $list.append($th).layout()[0].scrollTop = 99999;
@@ -103,10 +107,10 @@ threadsPane = function() {
     });
   }
 
-  function messageCount(messageTimes, readTime) {
+  function messageCount(th, readTime) {
     var n = 0, nUnr = 0;
-    for (var id in messageTimes) {
-      if (new Date(messageTimes[id]) > readTime) {
+    for (var id in th.messageTimes) {
+      if (new Date(th.messageTimes[id]) > readTime) {
         nUnr++;
       }
       n++;
