@@ -155,7 +155,7 @@ var injected, t0 = +new Date;
     var n = 0;
     for (var i in counts) {
       var c = counts[i];  // negative means unread
-      n = (c < 0 ? Math.min(n, 0) : n) + c;
+      n = (c < 0 ? Math.min(n, 0) : n) + (n < 0 ? Math.min(c, 0) : c);
     }
     if (n) {
       count.textContent = Math.abs(n);
