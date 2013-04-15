@@ -547,7 +547,7 @@ function messageCount(d) {
   return -nUnr || n;
 }
 
-function unreadThreads(threads, readTimes) {
+function unreadThreadIds(threads, readTimes) {
   return threads.filter(function(th) {
     var readTime = new Date(readTimes[th.id] || 0);
     for (var id in th.messageTimes) {

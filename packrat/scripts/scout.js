@@ -60,7 +60,10 @@ var injected, t0 = +new Date;
       }
       rules = o.rules || 0;
       if (o.metro) {
-        insertTile(o);
+        if (!tile) {
+          insertTile(o);
+        }
+        updateCount(o.counts);
       }
       if (o.locator) {
         openSlider(o);
@@ -133,7 +136,6 @@ var injected, t0 = +new Date;
     tile.innerHTML = "<div class=kifi-tile-transparent style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>";
     count = document.createElement("span");
     count.className = "kifi-count";
-    updateCount(o.counts);
     document.documentElement.appendChild(tile);
     tile.addEventListener("mouseover", function() {
       withSlider2(function() {
