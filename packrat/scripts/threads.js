@@ -19,7 +19,6 @@ threadsPane = function() {
       render("html/metro/threads.html", {
         formatSnippet: getSnippetFormatter,
         formatLocalDate: getLocalDateFormatter,
-        formatIsoDate: getIsoDateFormatter,
         threads: threads,
         showTo: true,
         draftPlaceholder: "Type a message…",
@@ -85,7 +84,6 @@ threadsPane = function() {
     render("html/metro/thread.html", {
       "formatSnippet": getSnippetFormatter,
       "formatLocalDate": getLocalDateFormatter,
-      "formatIsoDate": getIsoDateFormatter,
       "lastCommentedAt": o.lastCommentedAt || o.createdAt,
       "recipientsPictured": o.recipients.slice(0, 4),
       "messageCount": o.messageCount || 1,

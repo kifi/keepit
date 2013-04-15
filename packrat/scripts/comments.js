@@ -18,7 +18,6 @@ commentsPane = function() {
       render("html/metro/comments.html", {
         formatComment: getTextFormatter,
         formatLocalDate: getLocalDateFormatter,
-        formatIsoDate: getIsoDateFormatter,
         comments: comments,
         draftPlaceholder: "Type a comment…",
         submitButtonLabel: "Post",
@@ -106,7 +105,6 @@ commentsPane = function() {
   function renderComment(c, callback) {
     c.formatComment = getTextFormatter;
     c.formatLocalDate = getLocalDateFormatter;
-    c.formatIsoDate = getIsoDateFormatter;
     render("html/metro/comment.html", c, function(html) {
       callback($(html).find("time").timeago().end());
     });
