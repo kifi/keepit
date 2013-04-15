@@ -92,7 +92,7 @@ threadsPane = function() {
     });
   }
 
-  function renderThread(th, callback) { // o can be a thread or a childless parent message
+  function renderThread(th, callback) {
     th.formatSnippet = getSnippetFormatter;
     th.formatLocalDate = getLocalDateFormatter;
     th.formatIsoDate = getIsoDateFormatter;
