@@ -186,7 +186,16 @@ const socketHandlers = {
       d.comments.push(c);
       d.tabs.forEach(function(tab) {
         api.tabs.emit(tab, "comment", c);
+        tellTabsIfCountChanged(d, "c", commentCount(d));
       });
+    }
+  },
+  comment_read: function(nUri, time) {
+    api.log("[socket:comment_read]", nUri, time);
+    var d = pageData[nUri];
+    if (d) {
+      d.lastCommentRead = new Date(time);
+      tellTabsIfCountChanged(d, "c", commentCount(d));
     }
   },
   thread: function(th) {
@@ -218,9 +227,21 @@ const socketHandlers = {
       }
       d.tabs.forEach(function(tab) {
         api.tabs.emit(tab, "message", {thread: th, message: message});
+        tellTabsIfCountChanged(d, "m", messageCount(d));
       });
     }
-  }
+  },
+  message_read: function(nUri, threadId, time) {
+    api.log("[socket:message_read]", nUri, threadId, time);
+    var d = pageData[nUri];
+    if (d) {
+      d.lastMessageRead[threadId] = new Date(time);
+      d.tabs.forEach(function(tab) {
+        // api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages});  // TODO: reflect read state in threads view
+        tellTabsIfCountChanged(d, "m", messageCount(d));
+      });
+    }
+  },
 };
 
 // ===== Handling messages from content scripts or other extension pages
@@ -454,13 +475,10 @@ function createDeepLinkListener(link, linkTabId, respond) {
 
 function initTab(tab, o) {  // o is pageData[tab.nUri]
   var metro = session.experiments.indexOf("metro") >= 0;
-  var unread = findUnread(o.threads, o.lastMessageRead);
   o.counts = {
-    unreadNotices: notifications.filter(function(n) {return new Date(n.time) > notificationsRead.time}).length,
-    numComments: o.comments.length,
-    unreadComments: o.comments.filter(function(c) {return friendsById[c.user.id] && new Date(c.createdAt) > o.lastCommentRead}).length,
-    numMessages: o.threads.reduce(function(n, t) {return n + t.messageCount}, 0),
-    unreadMessages: unread.messages};
+    n: -notifications.filter(function(n) {return new Date(n.time) > notificationsRead.time}).length,
+    c: commentCount(o),
+    m: messageCount(o)};
   var data = {
     metro: metro,
     kept: !!o.kept,
@@ -472,13 +490,14 @@ function initTab(tab, o) {  // o is pageData[tab.nUri]
     neverOnSite: !!o.neverOnSite,
     counts: o.counts};
 
-  if (session.rules.rules.message && unread.messages) {
+  if (session.rules.rules.message && o.counts.m < 0) {  // unread message(s)
+    var ids = unreadThreadIds(o.threads, o.lastMessageRead);
     data.trigger = "message";
-    data.locator = "/messages" + (unread.threads.length > 1 ? "" : "/" + unread.threads[0]);
-    unread.threads.forEach(function(id) {
+    data.locator = "/messages" + (ids.length > 1 ? "" : "/" + ids[0]);
+    ids.forEach(function(id) {
       socket.send(["get_thread", id]);
     });
-  } else if (session.rules.rules.comment && data.counts.unreadComments && (metro || !o.neverOnSite)) {
+  } else if (session.rules.rules.comment && o.counts.c < 0 && (metro || !o.neverOnSite)) {  // unread comment(s)
     data.trigger = "comment";
     data.locator = "/comments";
   } else if (!o.kept && (metro || !o.neverOnSite) && (!o.sensitive || !session.rules.rules.sensitive)) {
@@ -508,21 +527,35 @@ function initTab(tab, o) {  // o is pageData[tab.nUri]
   }
 }
 
-function findUnread(threads, readTimes) {
-  var unread = {threads: [], messages: 0};
-  for (var i = 0; i < threads.length; i++) {
-    var th = threads[i], thReadTime = new Date(readTimes[th.id] || 0), thUnread;
+function commentCount(d) {  // comments only count as unread if by a friend. negative means unread.
+  return -d.comments.filter(function(c) {
+      return friendsById[c.user.id] && new Date(c.createdAt) > d.lastCommoentRead;
+    }).length || d.comments.length;
+}
+
+function messageCount(d) {
+  var n = 0, nUnr = 0;
+  for (var i = 0; i < d.threads.length; i++) {
+    var th = d.threads[i], thReadTime = new Date(d.lastMessageRead[th.id] || 0);
+    n += th.messageCount;
     for (var id in th.messageTimes) {
       if (new Date(th.messageTimes[id]) > thReadTime) {
-        thUnread = true;
-        unread.messages++;
+        nUnr++;
       }
     }
-    if (thUnread) {
-      unread.threads.push(th.id);
-    }
   }
-  return unread;
+  return -nUnr || n;
+}
+
+function unreadThreads(threads, readTimes) {
+  return threads.filter(function(th) {
+    var readTime = new Date(readTimes[th.id] || 0);
+    for (var id in th.messageTimes) {
+      if (new Date(th.messageTimes[id]) > readTime) {
+        return true;
+      }
+    }
+  }).map(function(t) {return t.id});
 }
 
 function countUnreadNotifications() {
@@ -537,6 +570,15 @@ function countUnreadNotifications() {
       api.tabs.emit(tab, "counts", d.counts);
     }
   });
+}
+
+function tellTabsIfCountChanged(d, key, count) {
+  if (d.counts[key] != count) {
+    d.counts[key] = count;
+    d.tabs.forEach(function(tab) {
+      api.tabs.emit(tab, "counts", d.counts);
+    });
+  }
 }
 
 // Finds KiFi bookmark folder by id (if provided) or by name in the Bookmarks Bar,

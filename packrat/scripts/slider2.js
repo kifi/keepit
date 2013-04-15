@@ -39,11 +39,11 @@ slider2 = function() {
         // "sensitive": o.sensitive,
         // "site": location.hostname,
         // "neverOnSite": o.neverOnSite,
-        "numComments": o.counts.numComments,
-        "numMessages": o.counts.numMessages,
-        "newComments": o.counts.unreadComments,
-        "newMessages": o.counts.unreadMessages,
-        "newNotices": o.counts.unreadNotices,
+        "noticesCount": o.counts.n,
+        "commentsUnread": o.counts.c < 0,
+        "commentCount": Math.abs(o.counts.c),
+        "messagesUnread": o.counts.m < 0,
+        "messageCount": Math.abs(o.counts.m),
         // "connected_networks": api.url("images/networks.png")
       }, function(html) {
         if ($slider) {
@@ -504,13 +504,13 @@ slider2 = function() {
       info.counts = o;
       if (!$slider) return;
       var $btns = $slider.find(".kifi-slider2-dock-btn");
-      [[".kifi-slider2-notices", o.unreadNotices],
-       [".kifi-slider2-comments", o.unreadComments, o.numComments],
-       [".kifi-slider2-threads", o.unreadMessages, o.numMessages]].forEach(function(a) {
+      [[".kifi-slider2-notices", o.n],
+       [".kifi-slider2-comments", o.c],
+       [".kifi-slider2-threads", o.m]].forEach(function(a) {
         $btns.filter(a[0]).find(".kifi-count")
-          .toggleClass("kifi-unread", !!a[1])
-          .text(a[1] || a[2] || "")
-          .css("display", a[1] || a[2] ? "" : "none");
+          .toggleClass("kifi-unread", a[1] < 0)
+          .text(Math.abs(a[1]) || "")
+          .css("display", a[1] ? "" : "none");
       });
     }});
 
