@@ -13,46 +13,43 @@ threadsPane = function() {
   var $list = $();
   return {
     render: function($container, threads) {
-  // ---> TODO: indent properly (postponed to make code review easier)
-  threads.forEach(function(t) {
-    t.recipientsPictured = t.recipients.slice(0, 4);
-  });
-  render("html/metro/threads.html", {
-    formatSnippet: getSnippetFormatter,
-    formatLocalDate: getLocalDateFormatter,
-    formatIsoDate: getIsoDateFormatter,
-    threads: threads,
-    showTo: true,
-    draftPlaceholder: "Type a message…",
-    submitButtonLabel: "Send",
-    snapshotUri: api.url("images/snapshot.png")
-  }, {
-    thread: "thread.html",
-    compose: "compose.html"
-  }, function(html) {
-    $(html).prependTo($container)
-    .on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
-    .on("click", "a[href^='x-kifi-sel:']", function(e) {
-      e.preventDefault();
-    })
-    .on("click", ".kifi-thread", function() {
-      var $th = $(this), id = $th.data("id");
-      var recipients = $th.data("recipients") ||
-        threads.filter(function(t) {return t.id == id})[0].recipients;
-      $th.closest(".kifi-pane").triggerHandler("kifi:show-pane", ["thread", recipients, id])
-    })
-    .on("kifi:compose-submit", sendMessage.bind(null, $container))
-    .find("time").timeago();
+      threads.forEach(function(t) {
+        t.recipientsPictured = t.recipients.slice(0, 4);
+      });
+      render("html/metro/threads.html", {
+        formatSnippet: getSnippetFormatter,
+        formatLocalDate: getLocalDateFormatter,
+        formatIsoDate: getIsoDateFormatter,
+        threads: threads,
+        showTo: true,
+        draftPlaceholder: "Type a message…",
+        submitButtonLabel: "Send",
+        snapshotUri: api.url("images/snapshot.png")
+      }, {
+        thread: "thread.html",
+        compose: "compose.html"
+      }, function(html) {
+        $(html).prependTo($container)
+        .on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
+        .on("click", "a[href^='x-kifi-sel:']", function(e) {
+          e.preventDefault();
+        })
+        .on("click", ".kifi-thread", function() {
+          var $th = $(this), id = $th.data("id");
+          var recipients = $th.data("recipients") ||
+            threads.filter(function(t) {return t.id == id})[0].recipients;
+          $th.closest(".kifi-pane").triggerHandler("kifi:show-pane", ["thread", recipients, id])
+        })
+        .on("kifi:compose-submit", sendMessage.bind(null, $container))
+        .find("time").timeago();
 
-    attachComposeBindings($container, "message");
+        attachComposeBindings($container, "message");
 
-    $list = $container.find(".kifi-threads-list");
-    $container.closest(".kifi-pane-box").on("kifi:remove", function() {
-      $list.length = 0;
-    });
-  });
-
-  // --->
+        $list = $container.find(".kifi-threads-list");
+        $container.closest(".kifi-pane-box").on("kifi:remove", function() {
+          $list.length = 0;
+        });
+      });
     },
     update: function(thread) {
       if (!$list.length) return;
