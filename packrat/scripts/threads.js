@@ -12,14 +12,17 @@
 threadsPane = function() {
   var $list = $();
   return {
-    render: function($container, threads) {
-      threads.forEach(function(t) {
+    render: function($container, o) {
+      o.threads.forEach(function(t) {
+        var n = messageCount(t, new Date(o.read[t.id] || 0));
+        t.messageCount = Math.abs(n);
+        t.messagesUnread = n < 0;
         t.recipientsPictured = t.recipients.slice(0, 4);
       });
       render("html/metro/threads.html", {
         formatSnippet: getSnippetFormatter,
         formatLocalDate: getLocalDateFormatter,
-        threads: threads,
+        threads: o.threads,
         showTo: true,
         draftPlaceholder: "Type a message…",
         submitButtonLabel: "Send",
@@ -36,7 +39,7 @@ threadsPane = function() {
         .on("click", ".kifi-thread", function() {
           var $th = $(this), id = $th.data("id");
           var recipients = $th.data("recipients") ||
-            threads.filter(function(t) {return t.id == id})[0].recipients;
+            o.threads.filter(function(t) {return t.id == id})[0].recipients;
           $th.closest(".kifi-pane").triggerHandler("kifi:show-pane", ["thread", recipients, id])
         })
         .on("kifi:compose-submit", sendMessage.bind(null, $container))
@@ -50,8 +53,11 @@ threadsPane = function() {
         });
       });
     },
-    update: function(thread) {
+    update: function(thread, readTime) {
       if ($list.length) {
+        var n = messageCount(thread, new Date(readTime || 0));
+        thread.messageCount = Math.abs(n);
+        thread.messagesUnread = n < 0;
         renderThread(thread, function($th) {
           var $old = $list.children("[data-id=" + thread.id + "],[data-id=]").first();
           if ($old.length) {
@@ -83,6 +89,7 @@ threadsPane = function() {
       lastCommentedAt: new Date().toISOString(),
       recipients: recipientIds.split(",").map(function(id) {return friends[id]}),
       messageCount: 1,
+      messagesUnread: false,
       digest: text
     }, function($th) {
       $list.append($th).layout()[0].scrollTop = 99999;
@@ -98,5 +105,16 @@ threadsPane = function() {
     render("html/metro/thread.html", th, function(html) {
       callback($(html).data("recipients", th.recipients).find("time").timeago().end());
     });
+  }
+
+  function messageCount(th, readTime) {
+    var n = 0, nUnr = 0;
+    for (var id in th.messageTimes) {
+      if (new Date(th.messageTimes[id]) > readTime) {
+        nUnr++;
+      }
+      n++;
+    }
+    return -nUnr || n;
   }
 }();

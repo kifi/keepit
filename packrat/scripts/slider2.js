@@ -407,17 +407,15 @@ slider2 = function() {
         api.port.emit("session", function(session) {
           api.require("scripts/comments.js", function() {
             commentsPane.render($box.find(".kifi-pane-tall"), comments, session);
-            var lastCom = comments[comments.length - 1];
-            api.port.emit("set_comment_read", {id: lastCom.id, time: lastCom.createdAt});
           });
         });
       });
     },
     threads: function($box) {
-      requireData("threads", function(threads) {
+      requireData("threads", function(o) {
         api.require("scripts/threads.js", function() {
-          threadsPane.render($box.find(".kifi-pane-tall"), threads);
-          threads.forEach(function(th) {
+          threadsPane.render($box.find(".kifi-pane-tall"), o);
+          o.threads.forEach(function(th) {
             requireData("thread/" + th.id, api.noop);  // preloading
           });
         });
@@ -429,8 +427,6 @@ slider2 = function() {
         api.port.emit("session", function(session) {
           api.require("scripts/thread.js", function() {
             threadPane.render($tall, th.id, th.messages, session);
-            var lastMsg = th.messages[th.messages.length - 1];
-            api.port.emit("set_message_read", {threadId: th.id, messageId: lastMsg.id, time: lastMsg.createdAt});
           });
         });
       });
@@ -501,9 +497,12 @@ slider2 = function() {
         (commentsPane.update || api.noop)(comment, session.userId);
       });
     },
+    thread_info: function(o) {
+      (threadsPane.update || api.noop)(o.thread, o.read);
+    },
     message: function(o) {
       api.port.emit("session", function(session) {
-        (threadsPane.update || api.noop)(o.thread);
+        (threadsPane.update || api.noop)(o.thread, o.read);
         (threadPane.update || api.noop)(o.thread, o.message, session.userId);
       });
     },
