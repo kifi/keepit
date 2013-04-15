@@ -139,7 +139,7 @@ const socketHandlers = {
       d.lastCommentRead = new Date(o.lastCommentRead || 0);
       d.lastMessageRead = {};
       for (var k in o.lastMessageRead) {
-        d.lastMessageRead[k] = new Date(o.lastMessageRead);
+        d.lastMessageRead[k] = new Date(o.lastMessageRead[k]);
       }
       d.tabs.forEach(function(tab) {
         initTab(tab, d);
@@ -407,7 +407,7 @@ api.port.on({
   threads: function(_, _, tab) {
     var d = pageData[tab.nUri];
     if (d && d.threads) {
-      api.tabs.emit(tab, "threads", d.threads);
+      api.tabs.emit(tab, "threads", {threads: d.threads, read: d.lastMessageRead});
     }
   },
   thread: function(id, _, tab) {

@@ -12,14 +12,17 @@
 threadsPane = function() {
   var $list = $();
   return {
-    render: function($container, threads) {
-      threads.forEach(function(t) {
+    render: function($container, o) {
+      o.threads.forEach(function(t) {
+        var n = messageCount(t.messageTimes, new Date(o.read[t.id] || 0));
+        t.messageCount = Math.abs(n);
+        t.messagesUnread = n < 0;
         t.recipientsPictured = t.recipients.slice(0, 4);
       });
       render("html/metro/threads.html", {
         formatSnippet: getSnippetFormatter,
         formatLocalDate: getLocalDateFormatter,
-        threads: threads,
+        threads: o.threads,
         showTo: true,
         draftPlaceholder: "Type a message…",
         submitButtonLabel: "Send",
@@ -36,7 +39,7 @@ threadsPane = function() {
         .on("click", ".kifi-thread", function() {
           var $th = $(this), id = $th.data("id");
           var recipients = $th.data("recipients") ||
-            threads.filter(function(t) {return t.id == id})[0].recipients;
+            o.threads.filter(function(t) {return t.id == id})[0].recipients;
           $th.closest(".kifi-pane").triggerHandler("kifi:show-pane", ["thread", recipients, id])
         })
         .on("kifi:compose-submit", sendMessage.bind(null, $container))
@@ -98,5 +101,16 @@ threadsPane = function() {
     render("html/metro/thread.html", th, function(html) {
       callback($(html).data("recipients", th.recipients).find("time").timeago().end());
     });
+  }
+
+  function messageCount(messageTimes, readTime) {
+    var n = 0, nUnr = 0;
+    for (var id in messageTimes) {
+      if (new Date(messageTimes[id]) > readTime) {
+        nUnr++;
+      }
+      n++;
+    }
+    return -nUnr || n;
   }
 }();
