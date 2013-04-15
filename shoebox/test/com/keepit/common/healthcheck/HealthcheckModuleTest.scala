@@ -13,7 +13,7 @@ class HealthcheckModuleTest extends Specification {
 
   "HealthcheckModule" should {
     "load" in {
-      running(new ShoeboxApplication().withFakeMail()) {
+      running(new ShoeboxApplication().withFakeMail().withFakeCache()) {
 
         val mail1 = inject[HealthcheckPlugin].reportStart()
         val outbox1 = inject[FakeOutbox]
