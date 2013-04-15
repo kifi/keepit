@@ -56,6 +56,7 @@ var injected, t0 = +new Date;
       if (openTo) {
         o.locator = openTo.locator;
         o.trigger = openTo.trigger;
+        o.force = openTo.force;
         openTo = null;
       }
       rules = o.rules || 0;
@@ -106,7 +107,11 @@ var injected, t0 = +new Date;
   function openSlider(o) {
     if (info.metro) {
       withSlider2(function() {
-        slider2.shown() || slider2.show(info, o.trigger, o.locator);
+        if (o.force) {
+          slider2.openDeepLink(info, o.trigger, o.locator);
+        } else {
+          slider2.shown() || slider2.show(info, o.trigger, o.locator);
+        }
       });
     } else {
       withSlider(function() {

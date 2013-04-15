@@ -435,6 +435,28 @@ api.port.on({
   get_friends: function(_, respond) {
     respond(friends);
   },
+  open_deep_link: function(data, _, tab) {
+    var uriData = pageData[data.nUri];
+    if (uriData) {
+      var tab = tab.nUri == data.nUri ? tab : uriData.tabs[0];
+      if (tab.ready) {
+        api.tabs.emit(tab, "open_slider_to", {
+          force: true,
+          trigger: "deepLink",
+          locator: data.locator,
+          metro: session.experiments.indexOf("metro") >= 0
+        });
+      } else {
+        createDeepLinkListener(data, tab.id);
+      }
+      api.tabs.select(tab.id);
+    } else {
+      api.tabs.open(data.nUri, function (tabId) {
+        createDeepLinkListener(data, tabId);
+      });
+      return true;
+    }
+  },
   add_deep_link_listener: function(data, respond, tab) {
     createDeepLinkListener(data, tab.id, respond);
     return true;
