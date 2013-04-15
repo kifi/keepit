@@ -25,7 +25,7 @@ const windows = require("sdk/windows").browserWindows;
 const tabs = require("sdk/tabs");
 const privateMode = require("sdk/private-browsing");
 
-var nextTabId = 1, topTabWin = windows.activeWindow;
+var topTabWin = windows.activeWindow;
 const pages = {}, workers = {}, tabsById = {};  // all by tab.id
 function createPage(tab) {
   if (!tab || !tab.id) throw Error(tab ? "tab without id" : "tab required");
@@ -41,6 +41,7 @@ exports.icon = {
   set: function(page, path) {
     if (page === pages[page.id]) {
       page.icon = path;
+      exports.log("page:", page);
       var tab = tabsById[page.id], win = tab.window;
       if (tab === win.tabs.activeTab) {
         icon.show(win, url(path));
@@ -304,7 +305,6 @@ exports.version = self.version;
 
 tabs
 .on("open", function(tab) {
-  tab.id = tab.id || nextTabId++;
   exports.log("[tabs.open]", tab.id, tab.url);
   tabsById[tab.id] = tab;
 })
@@ -387,11 +387,8 @@ for each (let win in windows) {
     win.removeIcon = icon.addToWindow(win, onIconClick);
   }
   for each (let tab in win.tabs) {
-    if (!tab.id) {
-      tab.id = nextTabId++;
-      exports.log("[windows]", tab.id, tab.url);
-      tabsById[tab.id] = tab;
-    }
+    exports.log("[windows]", tab.id, tab.url);
+    tabsById[tab.id] = tab;
     let page = pages[tab.id] || createPage(tab);
     // TODO: initialize page.complete somehow
   }
@@ -408,7 +405,6 @@ PageMod({
   onAttach: function(worker) {
     if (privateMode.isPrivate(worker.tab)) return;
     var tab = worker.tab;
-    tab.id = tab.id || nextTabId++;
     exports.log("[onAttach]", tab.id, "start.js", tab.url);
     worker.port.on("api:start", function() {
       exports.log("[api:start]", tab.id, tab.url);
