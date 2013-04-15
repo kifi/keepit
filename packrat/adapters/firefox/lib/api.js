@@ -320,7 +320,7 @@ tabs
 })
 .on("activate", function(tab) {
   var page = pages[tab.id];
-  if ((!page || !page.active) && !privateMode.isActive) {
+  if ((!page || !page.active) && !privateMode.isPrivate(tab)) {
     exports.log("[tabs.activate]", tab.id, tab.url);
     if (!/^about:/.test(tab.url)) {
       if (page) {
@@ -348,19 +348,19 @@ tabs
   }
 })
 .on("ready", function(tab) {
-  if (privateMode.isActive) return;
+  if (privateMode.isPrivate(tab)) return;
   exports.log("[tabs.ready]", tab.id, tab.url);
   pages[tab.id] || createPage(tab);
 });
 
 windows
 .on("open", function(win) {
-  if (privateMode.isActive) return;
+  if (privateMode.isPrivate(win)) return;
   exports.log("[windows.open]", win.title);
   win.removeIcon = icon.addToWindow(win, onIconClick);
 })
 .on("close", function(win) {
-  if (privateMode.isActive) return;
+  if (privateMode.isPrivate(win)) return;
   exports.log("[windows.close]", win.title);
   removeFromWindow(win);
 })
@@ -381,7 +381,7 @@ windows
 });
 
 for each (let win in windows) {
-  if (privateMode.isActive) continue;
+  if (privateMode.isPrivate(win)) continue;
   if (!win.removeIcon) {
     exports.log("[windows] adding icon to window:", win.title);
     win.removeIcon = icon.addToWindow(win, onIconClick);
@@ -406,7 +406,7 @@ PageMod({
   contentScriptWhen: "start",
   attachTo: ["existing", "top"],
   onAttach: function(worker) {
-    if (privateMode.isActive) return;
+    if (privateMode.isPrivate(worker.tab)) return;
     var tab = worker.tab;
     tab.id = tab.id || nextTabId++;
     exports.log("[onAttach]", tab.id, "start.js", tab.url);
@@ -447,7 +447,7 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
       contentScriptOptions: {dataUriPrefix: url("")},
       attachTo: ["existing", "top"],
       onAttach: function(worker) {
-        if (privateMode.isActive) return; // TODO: tell script not to do anything if privateMode.isActive
+        if (privateMode.isPrivate(worker.tab)) return;
         let tab = worker.tab, page = pages[tab.id];
         exports.log("[onAttach]", tab.id, this.contentScriptFile, tab.url, page);
         let injected = extend({}, o.injected);
@@ -496,12 +496,6 @@ function removeFromWindow(win) {
     delete win.removeIcon;
   }
 }
-
-privateMode.on("start", function() {
-  for each (let win in windows) {
-    removeFromWindow(win);
-  }
-});
 
 exports.onUnload = function(reason) {
   for each (let win in windows) {
