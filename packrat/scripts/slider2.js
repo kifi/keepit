@@ -335,7 +335,7 @@ slider2 = function() {
         $boxes.layout().css("transform", "translate(" + (back ? 0 : -d) + "px,0)")
         .on("transitionend webkitTransitionEnd", function() {
           $old.trigger("kifi:remove").remove();
-          $new.detach().css({left: "", width: ""}).appendTo($cubby);
+          $new.detach().css({left: "", width: ""}).appendTo($cubby).data("shown", true).triggerHandler("kifi:shown");
           $boxes.remove();
           $cubby.css("overflow", "");
         });
@@ -353,6 +353,10 @@ slider2 = function() {
         function(html) {
           var $html = $("html").addClass("kifi-pane-parent");
           $pane = $(html).data("pane", pane).appendTo($html).layout()
+          .on("transitionend webkitTransitionEnd", function f(e) {
+            $pane.off("transitionend webkitTransitionEnd", f);
+            $box.data("shown", true).triggerHandler("kifi:shown");
+          })
           .on("keydown", ".kifi-pane-search", function(e) {
             var q;
             if (e.which == 13 && (q = this.value.trim())) {
@@ -369,7 +373,8 @@ slider2 = function() {
             e.stopPropagation();
           });
           $html.addClass("kifi-with-pane");
-          populatePane[pane]($pane.find(".kifi-pane-box"), populateArg);
+          var $box = $pane.find(".kifi-pane-box");
+          populatePane[pane]($box, populateArg);
         });
       });
     }
