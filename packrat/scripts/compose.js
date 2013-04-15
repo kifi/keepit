@@ -50,10 +50,7 @@ function attachComposeBindings($c, composeTypeName) {
         tokenValue: "id",
         theme: "KiFi",
         zindex: 2147483641});
-      $("#token-input-kifi-compose-to").focus();
     });
-  } else {
-    $d.focus();
   }
 
   $f.submit(function(e) {
@@ -105,9 +102,26 @@ function attachComposeBindings($c, composeTypeName) {
 
   $(window).on("resize", updateMaxHeight);
 
-  $c.closest(".kifi-pane-box").on("kifi:remove", function() {
+  $c.closest(".kifi-pane-box")
+  .on("kifi:shown", setFocus)
+  .on("kifi:remove", function() {
     $(window).off("resize", updateMaxHeight);
+  }).each(function() {
+    if ($(this).data("shown")) {
+      setFocus();
+    }
   });
+
+  function setFocus() {
+    api.log("[setFocus]");
+    if ($t.length) {
+      if (!$f.find("#token-input-kifi-compose-to").focus().length) {
+        setTimeout(setFocus, 100);
+      }
+    } else {
+      $d.focus();
+    }
+  }
 
   function updateMaxHeight() {
     var hNew = Math.max(0, $c[0].offsetHeight - $f[0].offsetHeight);
