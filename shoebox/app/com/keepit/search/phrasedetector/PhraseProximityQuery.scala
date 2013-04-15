@@ -122,7 +122,7 @@ class PhraseHelper(terms: Seq[String], phrases: Set[(Int, Int)]) {
     var maxScore = 0.0f
     Arrays.fill(ls, 0.0f)
     Arrays.fill(lp, -1)
-    var prevPos = -2                                // previous term's ending position. set to -2, so initially there is a gap between prevPos and 0
+    var prevPos = -1
     var runLen = 0
     var localSum = 0.0f
     matches.foreach {
