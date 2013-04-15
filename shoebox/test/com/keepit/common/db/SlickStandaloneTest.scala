@@ -18,7 +18,7 @@ import com.google.inject.{Stage, Guice, Module, Injector}
 import scala.slick.session.{Database => SlickDatabase}
 import com.google.inject.util.Modules
 
-class SlickStandalonTest extends Specification with TestDBRunner {
+class SlickStandaloneTest extends Specification with TestDBRunner {
 
   "Slick" should {
 
