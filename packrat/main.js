@@ -565,8 +565,8 @@ function countUnreadNotifications() {
   notificationsRead.unread = n;
   api.tabs.eachSelected(function(tab) {
     var d = pageData[tab.nUri];
-    if (d && d.counts && d.counts.unreadNotices != n) {
-      d.counts.unreadNotices = n;
+    if (d && d.counts && d.counts.n != -n) {
+      d.counts.n = -n;
       api.tabs.emit(tab, "counts", d.counts);
     }
   });
