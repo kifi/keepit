@@ -19,7 +19,6 @@ threadsPane = function() {
       render("html/metro/threads.html", {
         formatSnippet: getSnippetFormatter,
         formatLocalDate: getLocalDateFormatter,
-        formatIsoDate: getIsoDateFormatter,
         threads: threads,
         showTo: true,
         draftPlaceholder: "Type a message…",
@@ -95,7 +94,6 @@ threadsPane = function() {
   function renderThread(th, callback) {
     th.formatSnippet = getSnippetFormatter;
     th.formatLocalDate = getLocalDateFormatter;
-    th.formatIsoDate = getIsoDateFormatter;
     th.recipientsPictured = th.recipients.slice(0, 4);
     render("html/metro/thread.html", th, function(html) {
       callback($(html).data("recipients", th.recipients).find("time").timeago().end());
