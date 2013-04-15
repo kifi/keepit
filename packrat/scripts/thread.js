@@ -18,7 +18,6 @@ threadPane = function() {
       render("html/metro/messages.html", {
         formatMessage: getTextFormatter,
         formatLocalDate: getLocalDateFormatter,
-        formatIsoDate: getIsoDateFormatter,
         messages: messages,
         draftPlaceholder: "Type a message…",
         submitButtonLabel: "Send",
@@ -76,7 +75,6 @@ threadPane = function() {
   function renderMessage(m, callback) {
     m.formatMessage = getTextFormatter;
     m.formatLocalDate = getLocalDateFormatter;
-    m.formatIsoDate = getIsoDateFormatter;
     render("html/metro/message.html", m, function(html) {
       callback($(html).find("time").timeago().end());
     });

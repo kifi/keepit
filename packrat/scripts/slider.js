@@ -453,7 +453,6 @@ slider = function() {
       },
       formatComments: getTextFormatter,
       formatLocalDate: getLocalDateFormatter,
-      formatIsoDate: getIsoDateFormatter,
       comments: visibleComments,
       showControlBar: type == "public",
       following: following,
@@ -713,7 +712,6 @@ slider = function() {
         newComment.isLoggedInUser = true;
         params["formatComments"] = getTextFormatter;
         params["formatLocalDate"] = getLocalDateFormatter;
-        params["formatIsoDate"] = getIsoDateFormatter;
 
         badGlobalState["updates"].publicCount++;
         badGlobalState["updates"].countSum++;
@@ -780,7 +778,6 @@ slider = function() {
         newComment.message.isLoggedInUser = true;
         params["formatComments"] = getTextFormatter;
         params["formatLocalDate"] = getLocalDateFormatter;
-        params["formatIsoDate"] = getIsoDateFormatter;
 
         render("html/comments/comment.html", params, function(html) {
           //drawCommentView(html, session, type);
