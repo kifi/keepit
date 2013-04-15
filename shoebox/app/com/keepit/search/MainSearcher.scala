@@ -11,7 +11,7 @@ import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
 import org.apache.lucene.util.PriorityQueue
-import com.keepit.search.query.{TopLevelQuery,QueryUtil}
+import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
 import com.keepit.common.time._
