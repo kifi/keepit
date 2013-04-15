@@ -8,7 +8,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
-import com.keepit.model.{UserRepo, User}
+import com.keepit.model.{EmailAddressRepo, UserRepo, User}
 import com.keepit.search.SearchConfigManager
 import org.joda.time.{Months, ReadablePeriod, Weeks}
 import play.api.data.Forms._
@@ -35,6 +35,7 @@ class AdminEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   userRepo: UserRepo,
+  emailRepo: EmailAddressRepo,
   searchConfigManager: SearchConfigManager,
   rb: ReportBuilderPlugin,
   reportStore: ReportStore,
@@ -110,13 +111,15 @@ class AdminEventController @Inject() (
 
   def activityDataAsCsv() = AdminCsvAction("user_activity_data.csv") { request =>
     val activityData = getActivityData()
-    val header = Seq("Name", "active past 7 days", "active past 30 days").mkString(",")
-    val users = db.readOnly { implicit s => userRepo.all() }.toSeq.sortBy(u => s"${u.lastName}, ${u.firstName}")
-    val csvString = header + users.map { user =>
-      Seq(s"${user.firstName} ${user.lastName}",
+    val header = Seq("Name", "Email", "active past 7 days", "active past 30 days").mkString(",")
+    val users = db.readOnly { implicit s =>
+      userRepo.all().map { u => (u, emailRepo.getByUser(u.id.get)) }
+    }.toSeq.sortBy(u => s"${u._1.lastName}, ${u._1.firstName}")
+    val csvString = header + users.map { case (user, emails) =>
+      Seq(s"${user.firstName} ${user.lastName}", emails.map(_.address).mkString("; "),
         if (activityData.activeUsers1Wk.contains(user)) "yes" else "no",
         if (activityData.activeUsers1Mo.contains(user)) "yes" else "no"
-      ).mkString(",")
+      ).map(_.replace("\"", "\"\"")).mkString("\"","\",\"", "\"")
     }.mkString("\n", "\n", "\n")
     Ok(csvString)
   }
