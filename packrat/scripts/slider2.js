@@ -414,10 +414,10 @@ slider2 = function() {
       });
     },
     threads: function($box) {
-      requireData("threads", function(threads) {
+      requireData("threads", function(o) {
         api.require("scripts/threads.js", function() {
-          threadsPane.render($box.find(".kifi-pane-tall"), threads);
-          threads.forEach(function(th) {
+          threadsPane.render($box.find(".kifi-pane-tall"), o);
+          o.threads.forEach(function(th) {
             requireData("thread/" + th.id, api.noop);  // preloading
           });
         });
