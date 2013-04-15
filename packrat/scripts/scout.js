@@ -151,6 +151,7 @@ var injected, t0 = +new Date;
   }
 
   function updateCount(o) {
+    if (!count) return;
     var u = o.unreadNotices + o.unreadComments + o.unreadMessages;
     var n = o.numComments + o.numMessages;
     if (u || n) {
