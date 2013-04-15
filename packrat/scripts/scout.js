@@ -150,17 +150,20 @@ var injected, t0 = +new Date;
     });
   }
 
-  function updateCount(o) {
+  function updateCount(counts) {
     if (!count) return;
-    var u = o.unreadNotices + o.unreadComments + o.unreadMessages;
-    var n = o.numComments + o.numMessages;
-    if (u || n) {
-      count.textContent = u || n;
-      count.classList[u ? "add" : "remove"]("kifi-unread");
-      (u ? tile : tile.firstChild).appendChild(count);
+    var n = 0;
+    for (var i in counts) {
+      var c = counts[i];  // negative means unread
+      n = (c < 0 ? Math.min(n, 0) : n) + (n < 0 ? Math.min(c, 0) : c);
+    }
+    if (n) {
+      count.textContent = Math.abs(n);
+      count.classList[n < 0 ? "add" : "remove"]("kifi-unread");
+      (n < 0 ? tile : tile.firstChild).appendChild(count);
     } else if (count.parentNode) {
       count.parentNode.removeChild(count);
     }
-    tile.classList[u || n ? "add" : "remove"]("kifi-with-count");
+    tile.classList[n ? "add" : "remove"]("kifi-with-count");
   }
 }();
