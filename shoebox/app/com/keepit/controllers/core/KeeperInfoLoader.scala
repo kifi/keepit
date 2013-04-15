@@ -103,11 +103,11 @@ class KeeperInfoLoader @Inject() (
           val following = followRepo.get(userId, uri.id.get).isDefined
           val comments = paneDetails.getComments(uri.id.get)
           val threads = paneDetails.getMessageThreadList(userId, uri.id.get)
-          val lastCommentRead = commentReadRepo.getByUserAndUri(userId, uri.id.get).map(_.updatedAt)
+          val lastCommentRead = commentReadRepo.getByUserAndUri(userId, uri.id.get).map(_.createdAt)
           val lastMessageRead = commentRepo.getMessages(uri.id.get, userId)
               .map(t =>
                 commentReadRepo.getByUserAndParent(userId, t.id.get)
-                  .map((t.externalId -> _.updatedAt))
+                  .map((t.externalId -> _.createdAt))
               ).flatten.toMap
 
           (nUri, shown, neverOnSite, following, comments, threads, lastCommentRead, lastMessageRead)

@@ -15,7 +15,6 @@ import akka.pattern.ask
 import scala.concurrent.Await
 import play.api.libs.concurrent._
 import org.joda.time.DateTime
-import akka.dispatch.Future
 import com.google.inject.Provider
 import scala.collection.mutable.{Map => MutableMap}
 import com.keepit.common.db._

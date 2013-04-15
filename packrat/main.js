@@ -4,14 +4,14 @@ var api = api || require("./api");
 
 var pageData = {};
 var notifications = [];
-var lastNotifyRead;
+var notificationsRead = {};
 var friends = [];
 var friendsById = {};
 
 function clearDataCache() {
   pageData = {};
   notifications.length = 0;
-  lastNotifyRead = null;
+  notificationsRead = {};
   friends.length = 0;
   friendsById = {};
 }
@@ -33,11 +33,11 @@ function ajax(method, uri, data, done, fail) {  // method and uri are required
         }
       }
     }
-    uri = uri + (uri.indexOf("?") < 0 ? "?" : "&") + a.join("&").replace(/%20/g, "+");
+    uri += (~uri.indexOf("?") ? "&" : "?") + a.join("&").replace(/%20/g, "+");
     data = null;
   }
 
-  api.request(method, uri, data, done, fail);
+  api.request(method, "http://" + getServer() + uri, data, done, fail);
 }
 
 // ===== Event logging
@@ -50,7 +50,7 @@ function logEvent(eventFamily, eventName, metaData, prevEvents) {
     return;
   }
   var ev = {
-    installId: getConfigs().kifi_installation_id, // ExternalId[KifiInstallation]
+    installId: getStored("kifi_installation_id"), // ExternalId[KifiInstallation]
     eventFamily: eventFamily, // Category (see eventFamilies)
     eventName: eventName}; // Any key for this event
   if (metaData) {
@@ -119,10 +119,9 @@ const socketHandlers = {
     if (d) {
       d.kept = o.kept;
       d.sensitive = o.sensitive;
-      for (var i = 0; i < d.tabs.length; i++) {
-        var tab = api.tabs.get(d.tabs[i]);
+      d.tabs.forEach(function(tab) {
         setIcon(tab, d.kept);
-      }
+      });
     }
   },
   uri_2: function(uri, o) {
@@ -136,23 +135,22 @@ const socketHandlers = {
       d.following = o.following;
       d.comments = o.comments || [];
       d.threads = o.threads || [];
-      d.lastCommentRead = o.lastCommentRead ? new Date(o.lastCommentRead) : null;
+      d.messages = {};
+      d.lastCommentRead = new Date(o.lastCommentRead || 0);
       d.lastMessageRead = {};
       for (var k in o.lastMessageRead) {
-        d.lastMessageRead[k] = new Date(o.lastMessageRead);
+        d.lastMessageRead[k] = new Date(o.lastMessageRead[k]);
       }
-      for (var i = 0; i < d.tabs.length; i++) {
-        var tab = api.tabs.get(d.tabs[i]);
+      d.tabs.forEach(function(tab) {
         initTab(tab, d);
-      }
+      });
     }
   },
   notification: function(notification) {
     api.log("[socket:notification]", notification);
-    var activeTab = api.tabs.getActive();
-    if (activeTab) {
-      api.tabs.emit(activeTab, "show_notification", notification);
-    }
+    api.tabs.eachSelected(function(tab) {
+      api.tabs.emit(tab, "show_notification", notification);
+    });
     socketHandlers.notifications([notification]);
   },
   notifications: function(arr) {
@@ -174,29 +172,76 @@ const socketHandlers = {
     notifications.sort(function(a, b) {
       return new Date(b.time) - new Date(a.time);
     });
-    var activeTab = api.tabs.getActive();
-    if (activeTab) {
-      api.tabs.emit(activeTab, "notifications", notifications);
-    }
+    emitNotifications();
   },
   last_notify_read_time: function(t) {
     api.log("[socket:last_notify_read_time]", t);
-    lastNotifyRead = new Date(t);
+    notificationsRead.time = new Date(t);
+    countUnreadNotifications();
+  },
+  comment: function(nUri, c) {
+    api.log("[socket:comment]", c);
+    var d = pageData[nUri];
+    if (d && d.comments) {
+      d.comments.push(c);
+      d.tabs.forEach(function(tab) {
+        api.tabs.emit(tab, "comment", c);
+        tellTabsIfCountChanged(d, "c", commentCount(d));
+      });
+    }
+  },
+  comment_read: function(nUri, time) {
+    api.log("[socket:comment_read]", nUri, time);
+    var d = pageData[nUri];
+    if (d) {
+      d.lastCommentRead = new Date(time);
+      tellTabsIfCountChanged(d, "c", commentCount(d));
+    }
   },
   thread: function(th) {
     api.log("[socket:thread]", th);
     var d = pageData[th.uri];
-    if (d) {
-      d.threads.filter(function(t) {return t.id == th.id}).forEach(function(t) {
-        t.messages = th.messages;
+    if (d && d.messages) {
+      d.messages[th.id] = th.messages;
+      d.tabs.forEach(function(tab) {
+        api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages});
       });
-      delete th.uri;
-      for (var i = 0; i < d.tabs.length; i++) {
-        var tab = api.tabs.get(d.tabs[i]);
-        api.tabs.emit(tab, "thread", th);
-      }
     }
-  }
+  },
+  message: function(nUri, th, message) {
+    api.log("[socket:message]", nUri, th, message);
+    var d = pageData[nUri];
+    if (d && d.threads) {
+      for (var i = 0, n = d.threads.length; i < n; i++) {
+        if (d.threads[i].id == th.id) break;
+      }
+      if (i < n) {
+        d.threads[i] = th;
+        var messages = d.messages[th.id];
+        if (messages && !messages.some(hasId(message.id))) {  // sent messages come via POST resp and socket
+          messages.push(message);
+        }
+      } else {
+        d.threads.push(th);
+        d.messages[th.id] = [message];
+      }
+      d.tabs.forEach(function(tab) {
+        api.tabs.emit(tab, "message", {thread: th, message: message});
+        tellTabsIfCountChanged(d, "m", messageCount(d));
+      });
+    }
+  },
+  message_read: function(nUri, threadId, time) {
+    api.log("[socket:message_read]", nUri, threadId, time);
+    var d = pageData[nUri];
+    if (d) {
+      d.lastMessageRead[threadId] = new Date(time);
+      d.tabs.forEach(function(tab) {
+        // api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages});  // TODO: reflect read state in threads view
+        tellTabsIfCountChanged(d, "m", messageCount(d));
+      });
+    }
+  },
 };
 
 // ===== Handling messages from content scripts or other extension pages
@@ -215,34 +260,34 @@ api.port.on({
   get_keeps: searchOnServer,
   get_chatter: function(data, respond) {
     api.log("[get_chatter]", data.ids);
-    ajax("GET", "http://" + getConfigs().server + "/search/chatter", {ids: data.ids.join(".")}, respond);
+    ajax("GET", "/search/chatter", {ids: data.ids.join(".")}, respond);
     return true;
   },
   get_num_mutual_keeps: function(data, respond) {
     api.log("[get_num_mutual_keeps]", data.id);
-    ajax("GET", "http://" + getConfigs().server + "/bookmarks/mutual/" + data.id, respond);
+    ajax("GET", "/bookmarks/mutual/" + data.id, respond);
     return true;
   },
   add_bookmarks: function(data, respond) {
-    getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
+    getBookmarkFolderInfo(getStored("bookmark_id"), function(info) {
       addKeep(info, data, respond);
     });
     return true;
   },
   unkeep: function(_, respond, tab) {
-    getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
+    getBookmarkFolderInfo(getStored("bookmark_id"), function(info) {
       removeKeep(info, tab.url, respond);
     });
     return true;
   },
   set_private: function(data, respond, tab) {
-    getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
+    getBookmarkFolderInfo(getStored("bookmark_id"), function(info) {
       setPrivate(info, tab.url, data, respond);
     });
     return true;
   },
   follow: function(data, respond, tab) {
-    ajax("POST", "http://" + getConfigs().server + "/comments/" + (data ? "follow" : "unfollow"), {url: tab.url}, function(o) {
+    ajax("POST", "/comments/" + (data ? "follow" : "unfollow"), {url: tab.url}, function(o) {
       api.log("[follow] resp:", o);
     });
   },
@@ -272,24 +317,24 @@ api.port.on({
     return true;
 
     function getSliderInfo() {
-      ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
+      ajax("GET", "/users/slider", {url: tab.url}, function(o) {
         o.session = session;
         respond(o);
       });
     }
   },
   get_slider_updates: function(_, respond, tab) {
-    ajax("GET", "http://" + getConfigs().server + "/users/slider/updates", {url: tab.url}, respond);
+    ajax("GET", "/users/slider/updates", {url: tab.url}, respond);
     return true;
   },
   suppress_on_site: function(data, _, tab) {
-    ajax("POST", "http://" + getConfigs().server + "/users/slider/suppress", {url: tab.url, suppress: data});
+    ajax("POST", "/users/slider/suppress", {url: tab.url, suppress: data});
   },
   log_event: function(data) {
     logEvent.apply(null, data);
   },
   get_comments: function(data, respond, tab) {
-    ajax("GET", "http://" + getConfigs().server +
+    ajax("GET",
       (data.kind == "public" ? "/comments" : "/messages/threads") +
       (data.commentId ? "/" + data.commentId : "?url=" + encodeURIComponent(tab.url)),
       function(o) {
@@ -313,32 +358,45 @@ api.port.on({
             "facebookId": session.facebookId
           }});
       } else if (data.permissions == "message") {
+        var threadId = data.parent;
         d.threads.forEach(function(th) {
-          if (th.id == data.parent) {
-            th.messages.push(o.message);
+          if (th.id == threadId) {
             th.messageCount++;
             th.messageTimes[o.message.id] = o.message.createdAt;
             th.lastCommentedAt = o.message.createdAt;
             th.digest = o.message.text;
           }
         });
+        if (d.messages[threadId]) {
+          d.messages[threadId].push(o.message);
+        } else {
+          d.messages[threadId] = [o.message];
+        }
       }
       respond(o);
     });
     return true;
   },
   delete_comment: function(id, respond) {
-    ajax("POST", "http://" + getConfigs().server + "/comments/" + id + "/remove", function(o) {
+    ajax("POST", "/comments/" + id + "/remove", function(o) {
       api.log("[deleteComment] response:", o);
       respond(o);
     });
     return true;
   },
-  set_comment_read: function(id) {
-    socket.send(["set_comment_read", id]);
+  set_comment_read: function(o, _, tab) {
+    var d = pageData[tab.nUri], time = new Date(o.time);
+    if (!d || time > d.lastCommentRead) {
+      if (d) d.lastCommentRead = time;
+      socket.send(["set_comment_read", o.id]);
+    }
   },
-  set_message_read: function(id) {
-    socket.send(["set_message_read", id]);
+  set_message_read: function(o, _, tab) {
+    var d = pageData[tab.nUri], time = new Date(o.time);
+    if (!d || time > (d.lastMessageRead[o.threadId] || 0)) {
+      if (d) d.lastMessageRead[o.threadId] = time;
+      socket.send(["set_message_read", o.messageId]);
+    }
   },
   comments: function(_, _, tab) {
     var d = pageData[tab.nUri];
@@ -349,13 +407,13 @@ api.port.on({
   threads: function(_, _, tab) {
     var d = pageData[tab.nUri];
     if (d && d.threads) {
-      api.tabs.emit(tab, "threads", d.threads);
+      api.tabs.emit(tab, "threads", {threads: d.threads, read: d.lastMessageRead});
     }
   },
   thread: function(id, _, tab) {
-    var d = pageData[tab.nUri], th;
-    if (d && d.threads && (th = d.threads.filter(function(t) {return t.id == id})[0]) && th.messages) {
-      api.tabs.emit(tab, "thread", th);
+    var d = pageData[tab.nUri];
+    if (d && d.messages[id]) {
+      api.tabs.emit(tab, "thread", {id: id, messages: d.messages[id]});
     } else {
       socket.send(["get_thread", id]);
     }
@@ -365,14 +423,11 @@ api.port.on({
       var oldest = (notifications[notifications.length-1] || {}).time;
       socket.send(["get_notifications", howMany - notifications.length, oldest]);
     } else {
-      var activeTab = api.tabs.getActive();
-      if (activeTab) {
-        api.tabs.emit(activeTab, "notifications", notifications);
-      }
+      emitNotifications();
     }
   },
-  set_last_notify_read_time: function() {
-    socket.send(["set_last_notify_read_time"]);
+  notifications_read: function(time) {
+    socket.send(["set_last_notify_read_time", time]);
   },
   session: function(_, respond) {
     respond(session);
@@ -386,6 +441,17 @@ api.port.on({
   }
 });
 
+function emitNotifications() {
+  countUnreadNotifications();
+  api.tabs.eachSelected(function(tab) {
+    api.tabs.emit(tab, "notifications", {
+      notifications: notifications,
+      numUnread: notificationsRead.unread,
+      lastRead: notificationsRead.time
+    });
+  });
+}
+
 function createDeepLinkListener(link, linkTabId, respond) {
   var createdTime = new Date;
   api.tabs.on.ready.add(function deepLinkListener(tab) {
@@ -395,7 +461,8 @@ function createDeepLinkListener(link, linkTabId, respond) {
       return;
     }
     if (linkTabId == tab.id) {
-      var hasForwarded = tab.url.indexOf(getConfigs().server + "/r/") < 0 && tab.url.indexOf("dev.ezkeep.com") < 0;
+      // uncomment second clause below to develop /r/ page using production deep links
+      var hasForwarded = tab.url.indexOf(getServer() + "/r/") < 0 /* && tab.url.indexOf("dev.ezkeep.com") < 0 */;
       if (hasForwarded) {
         api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, link.locator);
         api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: link.locator, metro: session.experiments.indexOf("metro") >= 0});
@@ -408,7 +475,10 @@ function createDeepLinkListener(link, linkTabId, respond) {
 
 function initTab(tab, o) {  // o is pageData[tab.nUri]
   var metro = session.experiments.indexOf("metro") >= 0;
-  var unread = findUnread(o.threads, o.lastMessageRead);
+  o.counts = {
+    n: -notifications.filter(function(n) {return new Date(n.time) > notificationsRead.time}).length,
+    c: commentCount(o),
+    m: messageCount(o)};
   var data = {
     metro: metro,
     kept: !!o.kept,
@@ -418,19 +488,16 @@ function initTab(tab, o) {  // o is pageData[tab.nUri]
     otherKeeps: o.keeps - o.keepers.length - (o.kept == "public" ? 1 : 0),
     sensitive: !!o.sensitive,
     neverOnSite: !!o.neverOnSite,
-    numComments: o.comments.length,
-    unreadComments: o.comments.filter(function(c) {return friendsById[c.user.id] && new Date(c.createdAt) > o.lastCommentRead}).length,
-    numMessages: o.threads.reduce(function(n, t) {return n + t.messageCount}, 0),
-    unreadMessages: unread.messages,
-    unreadNotices: notifications.filter(function(n) {return new Date(n.time) > lastNotifyRead}).length};
+    counts: o.counts};
 
-  if (session.rules.rules.message && unread.messages) {
+  if (session.rules.rules.message && o.counts.m < 0) {  // unread message(s)
+    var ids = unreadThreadIds(o.threads, o.lastMessageRead);
     data.trigger = "message";
-    data.locator = "/messages" + (unread.threads.length > 1 ? "" : "/" + unread.threads[0]);
-    unread.threads.forEach(function(id) {
+    data.locator = "/messages" + (ids.length > 1 ? "" : "/" + ids[0]);
+    ids.forEach(function(id) {
       socket.send(["get_thread", id]);
     });
-  } else if (session.rules.rules.comment && data.unreadComments && (metro || !o.neverOnSite)) {
+  } else if (session.rules.rules.comment && o.counts.c < 0 && (metro || !o.neverOnSite)) {  // unread comment(s)
     data.trigger = "comment";
     data.locator = "/comments";
   } else if (!o.kept && (metro || !o.neverOnSite) && (!o.sensitive || !session.rules.rules.sensitive)) {
@@ -460,21 +527,58 @@ function initTab(tab, o) {  // o is pageData[tab.nUri]
   }
 }
 
-function findUnread(threads, readTimes) {
-  var unread = {threads: [], messages: 0};
-  for (var i = 0; i < threads.length; i++) {
-    var th = threads[i], thReadTime = new Date(readTimes[th.id] || 0), thUnread;
+function commentCount(d) {  // comments only count as unread if by a friend. negative means unread.
+  return -d.comments.filter(function(c) {
+      return friendsById[c.user.id] && new Date(c.createdAt) > d.lastCommoentRead;
+    }).length || d.comments.length;
+}
+
+function messageCount(d) {
+  var n = 0, nUnr = 0;
+  for (var i = 0; i < d.threads.length; i++) {
+    var th = d.threads[i], thReadTime = new Date(d.lastMessageRead[th.id] || 0);
+    n += th.messageCount;
     for (var id in th.messageTimes) {
       if (new Date(th.messageTimes[id]) > thReadTime) {
-        thUnread = true;
-        unread.messages++;
+        nUnr++;
       }
     }
-    if (thUnread) {
-      unread.threads.push(t.id);
-    }
   }
-  return unread;
+  return -nUnr || n;
+}
+
+function unreadThreadIds(threads, readTimes) {
+  return threads.filter(function(th) {
+    var readTime = new Date(readTimes[th.id] || 0);
+    for (var id in th.messageTimes) {
+      if (new Date(th.messageTimes[id]) > readTime) {
+        return true;
+      }
+    }
+  }).map(function(t) {return t.id});
+}
+
+function countUnreadNotifications() {
+  for (var n = 0; n < notifications.length; n++) {
+    if (new Date(notifications[n].time) <= notificationsRead.time) break;
+  }
+  notificationsRead.unread = n;
+  api.tabs.eachSelected(function(tab) {
+    var d = pageData[tab.nUri];
+    if (d && d.counts && d.counts.n != -n) {
+      d.counts.n = -n;
+      api.tabs.emit(tab, "counts", d.counts);
+    }
+  });
+}
+
+function tellTabsIfCountChanged(d, key, count) {
+  if (d.counts[key] != count) {
+    d.counts[key] = count;
+    d.tabs.forEach(function(tab) {
+      api.tabs.emit(tab, "counts", d.counts);
+    });
+  }
 }
 
 // Finds KiFi bookmark folder by id (if provided) or by name in the Bookmarks Bar,
@@ -568,7 +672,7 @@ function removeKeep(bmInfo, url, respond) {
     });
   });
 
-  ajax("POST", "http://" + getConfigs().server + "/bookmarks/remove", {url: url}, function(o) {
+  ajax("POST", "/bookmarks/remove", {url: url}, function(o) {
     api.log("[removeKeep] response:", o);
     respond(o);
   });
@@ -587,7 +691,7 @@ function setPrivate(bmInfo, url, priv, respond) {
     });
   });
 
-  ajax("POST", "http://" + getConfigs().server + "/bookmarks/private", {url: url, private: priv}, function(o) {
+  ajax("POST", "/bookmarks/private", {url: url, private: priv}, function(o) {
     api.log("[setPrivate] response:", o);
     respond(o);
   });
@@ -595,7 +699,7 @@ function setPrivate(bmInfo, url, priv, respond) {
 
 function postComment(request, respond) {
   api.log("[postComment] req:", request);
-  ajax("POST", "http://" + getConfigs().server + "/comments/add", {
+  ajax("POST", "/comments/add", {
       url: request.url,
       title: request.title,
       text: request.text,
@@ -618,8 +722,7 @@ function searchOnServer(request, respond) {
     return;
   }
 
-  var config = getConfigs();
-  ajax("GET", "http://" + config.server + "/search", {
+  ajax("GET", "/search", {
       q: request.query,
       f: request.filter === "a" ? null : request.filter,
       maxHits: request.lastUUID ? 5 : api.prefs.get("maxResults"),
@@ -629,7 +732,7 @@ function searchOnServer(request, respond) {
     function(resp) {
       api.log("[searchOnServer] response:", resp);
       resp.session = session;
-      resp.server = config.server;
+      resp.server = getServer();
       resp.showScores = api.prefs.get("showScores");
       respond(resp);
     });
@@ -646,7 +749,7 @@ function subscribe(tab) {
     api.log("[subscribe] %i %s %s", tab.id, tab.url, tab.icon);
     api.icon.set(tab, "icons/keep.faint.png");
     var d = pageData[tab.url];
-    if (d) {  // optimization: page is open elsewhere and url happens to be normalized
+    if (d && d.counts) {  // optimization: page url is normalized and page is open elsewhere
       finish(tab.url);
       setIcon(tab, d.kept);
       initTab(tab, d);
@@ -659,9 +762,12 @@ function subscribe(tab) {
   }
   function finish(uri) {
     tab.nUri = uri;
-    if (d.tabs.indexOf(tab.id) < 0) {
-      d.tabs.push(tab.id);
+    for (var i = 0; i < d.tabs.length; i++) {
+      if (d.tabs[i].id == tab.id) {
+        d.tabs.splice(i--, 1);
+      }
     }
+    d.tabs.push(tab);
     api.log("[subscribe:finish] %i page data: %o", tab.id, d);
   }
 }
@@ -675,7 +781,7 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
   api.log("[postBookmarks]");
   supplyBookmarks(function(bookmarks) {
     api.log("[postBookmarks] bookmarks:", bookmarks);
-    ajax("POST", "http://" + getConfigs().server + "/bookmarks/add", {
+    ajax("POST", "/bookmarks/add", {
         bookmarks: bookmarks,
         source: bookmarkSource},
       function(o) {
@@ -692,6 +798,10 @@ api.tabs.on.focus.add(function(tab) {
     scheduleAutoShow(tab);
   } else {
     subscribe(tab);
+  }
+  var d = pageData[tab.nUri];
+  if (d && d.counts) {
+    api.tabs.emit(tab, "counts", d.counts);
   }
 });
 
@@ -726,9 +836,13 @@ api.tabs.on.unload.add(function(tab) {
   api.log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab);
   api.timers.clearTimeout(tab.autoShowTimer);
   delete tab.autoShowTimer;
-  var d = pageData[tab.nUri], i;
-  if (d && ~(i = d.tabs.indexOf(tab.id))) {
-    d.tabs.splice(i, 1);
+  var d = pageData[tab.nUri];
+  if (d) {
+    for (var i = 0; i < d.tabs.length; i++) {
+      if (d.tabs[i].id == tab.id) {
+        d.tabs.splice(i--, 1);
+      }
+    }
     if (!d.tabs.length) {
       delete pageData[tab.nUri];
     }
@@ -763,27 +877,28 @@ function compilePatterns(o) {
   return o;
 }
 
+function hasId(id) {
+  return function(o) {return o.id == id};
+}
+
 function getFullyQualifiedKey(key) {
   return (api.prefs.get("env") || "production") + "_" + key;
 }
 
-function removeFromConfigs(key) {
-  delete api.storage[getFullyQualifiedKey(key)];
+function getServer() {
+  return api.prefs.get("env") === "development" ? "dev.ezkeep.com:9000" : "keepitfindit.com";
 }
 
-function setConfigs(key, value) {
-  var prev = api.storage[getFullyQualifiedKey(key)];
+function getStored(key) {
+  return api.storage[getFullyQualifiedKey(key)];
+}
+
+function store(key, value) {
+  var qKey = getFullyQualifiedKey(key), prev = api.storage[qKey];
   if (value != null && prev !== String(value)) {
-    api.log("[setConfigs]", key, " = ", value, " (was ", prev, ")");
-    api.storage[getFullyQualifiedKey(key)] = value;
+    api.log("[store] %s = %s (was %s)", key, value, prev);
+    api.storage[qKey] = value;
   }
-}
-
-function getConfigs() {
-  return {
-    "server": api.prefs.get("env") === "development" ? "dev.ezkeep.com:9000" : "keepitfindit.com",
-    "kifi_installation_id": api.storage[getFullyQualifiedKey("kifi_installation_id")],
-    "bookmark_id": api.storage[getFullyQualifiedKey("bookmark_id")]};
 }
 
 api.on.install.add(function() {
@@ -798,7 +913,7 @@ api.on.update.add(function() {
 var session, socket;
 
 function authenticate(callback) {
-  var config = getConfigs(), dev = api.prefs.get("env") === "development";
+  var dev = api.prefs.get("env") === "development";
   if (dev) {
     openFacebookConnect();
   } else {
@@ -806,8 +921,8 @@ function authenticate(callback) {
   }
 
   function startSession(onFail) {
-    ajax("POST", "http://" + config.server + "/kifi/start", {
-      installation: config.kifi_installation_id,
+    ajax("POST", "/kifi/start", {
+      installation: getStored("kifi_installation_id"),
       version: api.version,
       agent: api.browserVersion},
     function done(data) {
@@ -815,19 +930,17 @@ function authenticate(callback) {
       logEvent("extension", "authenticated");
 
       session = compilePatterns(data);
-      socket = api.socket.open(
-        (api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws",
-        socketHandlers);
+      socket = api.socket.open((dev ? "ws://" : "wss://") + getServer() + "/ext/ws", socketHandlers);
       socket.send(["get_notifications", 10]);
       socket.send(["get_last_notify_read_time"]);
       socket.send(["get_friends"]);
       logEvent.catchUp();
 
-      setConfigs("kifi_installation_id", data.installationId);
+      store("kifi_installation_id", data.installationId);
 
       // Locate or create KeepIt bookmark folder.
-      getBookmarkFolderInfo(config.bookmark_id, function(info) {
-        setConfigs("bookmark_id", info.keepItId);
+      getBookmarkFolderInfo(getStored("bookmark_id"), function(info) {
+        store("bookmark_id", info.keepItId);
       });
 
       callback();
@@ -843,13 +956,14 @@ function authenticate(callback) {
 
   function openFacebookConnect() {
     api.log("[openFacebookConnect]");
+    var server = getServer();
     api.popup.open({
       name: "kifi-authenticate",
-      url: "http://" + config.server + "/authenticate/facebook",
+      url: "http://" + server + "/authenticate/facebook",
       width: 1020,
       height: 530}, {
       navigate: function(url) {
-        if (url == "http://" + config.server + "/#_=_") {
+        if (url == "http://" + server + "/#_=_") {
           api.log("[openFacebookConnect] closing popup");
           this.close();
           startSession();
@@ -869,7 +983,7 @@ function deauthenticate(callback) {
   // TODO: make all page icons faint?
   api.popup.open({
     name: "kifi-deauthenticate",
-    url: "http://" + getConfigs().server + "/session/end",
+    url: "http://" + getServer() + "/session/end",
     width: 200,
     height: 100})
   callback();
@@ -881,9 +995,5 @@ logEvent("extension", "started");
 
 authenticate(function() {
   api.log("[main] authenticated");
-  api.tabs.each(function(tab) {
-    if (api.tabs.isSelected(tab)) {
-      subscribe(tab);
-    }
-  });
+  api.tabs.eachSelected(subscribe);
 });

@@ -110,6 +110,7 @@ class ExtAuthController @Inject() (
     Redirect(com.keepit.controllers.website.routes.HomeController.home())
   }
 
+  // TODO: Fix logOut. ActionAuthenticator currently sets a new session cookie after this action clears it.
   def logOut = AuthenticatedHtmlAction { implicit request =>
     Ok(views.html.logOut(Some(request.socialUser))).withNewSession
   }

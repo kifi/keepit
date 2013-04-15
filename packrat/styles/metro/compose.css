@@ -132,6 +132,7 @@ div.kifi-snapshot-highlight {
 
 form.kifi-compose input[type=text] { /* either input */
   height: auto;
+  min-height: 0;
   margin: 0;
   border: none;
   background-color: #fff;

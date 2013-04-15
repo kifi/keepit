@@ -8,38 +8,40 @@ import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.google.inject.multibindings.Multibinder
 import com.google.inject.util.Modules
-import com.keepit.common.actor.ActorPlugin
-import com.keepit.common.analytics.{SliderShownListener, UsefulPageListener, KifiResultClickedListener, EventListenerPlugin}
+import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
+import com.keepit.common.analytics._
 import com.keepit.common.cache.{HashMapMemoryCache, FortyTwoCachePlugin}
 import com.keepit.common.controller.FortyTwoServices
 import com.keepit.common.db.DbInfo
 import com.keepit.common.db.SlickModule
 import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck.BabysitterTimeout
 import com.keepit.common.healthcheck.FakeHealthcheckModule
-import com.keepit.common.healthcheck.{Babysitter, BabysitterImpl, BabysitterTimeout}
+import com.keepit.common.healthcheck.{Babysitter, BabysitterImpl}
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{FakeMailToKeepPlugin, MailToKeepPlugin, FakeMailModule}
+import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.mail.{FakeMailToKeepPlugin, MailToKeepPlugin}
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSecureSocialUserServiceModule
+import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.store.FakeStoreModule
 import com.keepit.common.time._
-import com.keepit.common.analytics._
 import com.keepit.dev.{SearchDevGlobal, ShoeboxDevGlobal, DevGlobal}
 import com.keepit.inject._
+import com.keepit.model.SocialConnection
+import com.keepit.model.SocialUserInfo
 import com.keepit.model._
-import com.keepit.search.index._
 import com.keepit.search._
+import com.keepit.search.index.FakePhraseIndexerModule
 import com.tzavellas.sse.guice.ScalaModule
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
 import play.api.Application
 import play.api.Play
 import play.api.db.DB
-import scala.concurrent._
 import play.api.libs.concurrent.Execution.Implicits._
-import scala.util._
-import com.keepit.common.social.SocialGraphPlugin
 import scala.collection.mutable.{Stack => MutableStack}
+import scala.concurrent._
 import scala.slick.session.{Database => SlickDatabase}
 
 class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplication() {
@@ -52,8 +54,9 @@ class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplica
   def withRealBabysitter() = overrideWith(BabysitterModule())
   def withFakeSecureSocialUserService() = overrideWith(FakeSecureSocialUserServiceModule())
   def withFakePhraseIndexer() = overrideWith(FakePhraseIndexerModule())
-  def withTestActorSystem() = overrideWith(TestActorSystemModule())
+  def withTestActorSystem(system: ActorSystem) = overrideWith(TestActorSystemModule(system))
   def withFakePersistEvent() = overrideWith(FakePersistEventModule())
+  def withFakeCache() = overrideWith(FakeCacheModule())
 
   def overrideWith(model: Module): TestApplication =
     new TestApplication(new TestGlobal(Modules.`override`(global.modules: _*).`with`(model)))
@@ -162,9 +165,16 @@ class FakeSocialGraphPlugin extends SocialGraphPlugin {
     future { throw new Exception("Not Implemented") }
 }
 
-case class TestActorSystemModule() extends ScalaModule {
+case class FakeCacheModule() extends ScalaModule {
+  override def configure() {
+    bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
+  }
+}
+
+case class TestActorSystemModule(system: ActorSystem) extends ScalaModule {
   override def configure(): Unit = {
-    bind[ActorSystem].toInstance(ActorSystem("system"))
+    bind[ActorSystem].toInstance(system)
+    bind[ActorBuilder].to[TestActorBuilderImpl]
   }
 }
 

@@ -58,6 +58,8 @@ class ExtStreamController @Inject() (
   sliderRuleRepo: SliderRuleRepo,
   urlPatternRepo: URLPatternRepo,
   commentRepo: CommentRepo,
+  commentReadRepo: CommentReadRepo,
+  normUriRepo: NormalizedURIRepo,
   paneData: PaneDetails,
   eventHelper: EventHelper,
   implicit private val clock: Clock,
@@ -130,7 +132,7 @@ class ExtStreamController @Inject() (
               channel.push(Json.arr(requestId.toLong, nUri))
               channel.push(Json.arr("uri_1", nUri, keeperInfoLoader.load1(userId, nUri)))
               channel.push(Json.arr("uri_2", nUri, keeperInfoLoader.load2(userId, nUri)))
-              },
+            },
             "unsubscribe_uri" -> { case JsString(url) +: _ =>
               val nUri = URINormalizer.normalize(url)
               subscriptions.get(nUri).foreach(_.unsubscribe())
@@ -157,23 +159,31 @@ class ExtStreamController @Inject() (
               }))
             },
             "get_last_notify_read_time" -> { _ =>
-              channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(userId).toString()))
+              channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(userId).toStandardTimeString))
             },
-            "set_last_notify_read_time" -> { _ =>
-              channel.push(Json.arr("last_notify_read_time", setLastNotifyTime(userId).toString()))
+            "set_last_notify_read_time" -> { data =>
+              val time = data match {
+                case JsString(dateTime) +: _ => parseStandardTime(dateTime)
+                case _ => clock.now
+              }
+              channel.push(Json.arr("last_notify_read_time", setLastNotifyTime(userId, time).toStandardTimeString))
             },
             "get_notifications" -> { case JsNumber(howMany) +: params =>
               val createdBefore = params match {
                 case JsString(time) +: _ => Some(parseStandardTime(time))
                 case _ => None
               }
-              channel.push(Json.arr("notifications", getNotifications(userId, createdBefore, howMany.toInt)))
+              val toFetch =
+                if (createdBefore.isEmpty)
+                  math.max(db.readOnly(implicit s => userNotificationRepo.getUnreadCount(userId)), howMany.toInt)
+                else howMany.toInt
+              channel.push(Json.arr("notifications", getNotifications(userId, createdBefore, toFetch)))
             },
-            "set_message_read" -> { case JsString(messageExternalId) +: _ =>
-              setMessageRead(userId, messageExternalId)
+            "set_message_read" -> { case JsString(messageId) +: _ =>
+              setMessageRead(userId, ExternalId[Comment](messageId))
             },
-            "set_comment_read" -> { case JsString(commentExternalId) +: _ =>
-              setCommentRead(userId, commentExternalId)
+            "set_comment_read" -> { case JsString(commentId) +: _ =>
+              setCommentRead(userId, ExternalId[Comment](commentId))
             })
 
           val iteratee = asyncIteratee { jsArr =>
@@ -219,8 +229,8 @@ class ExtStreamController @Inject() (
     db.readOnly(implicit s => userNotificationRepo.getLastReadTime(userId))
   }
 
-  private def setLastNotifyTime(userId: Id[User]): DateTime = {
-    db.readWrite(implicit s => userNotificationRepo.setLastReadTime(userId))
+  private def setLastNotifyTime(userId: Id[User], time: DateTime): DateTime = {
+    db.readWrite(implicit s => userNotificationRepo.setLastReadTime(userId, time))
   }
 
   private def getNotifications(userId: Id[User], createdBefore: Option[DateTime], howMany: Int): Seq[SendableNotification] = {
@@ -241,28 +251,51 @@ class ExtStreamController @Inject() (
     eventHelper.newEvent(event)
   }
 
-  private def setMessageRead(userId: Id[User], externalId: String) {
+  private def setMessageRead(userId: Id[User], messageExtId: ExternalId[Comment]) {
     db.readWrite { implicit session =>
-      val comment = commentRepo.get(ExternalId[Comment](externalId))
-      userNotificationRepo.getWithCommentId(userId, comment.id.get).foreach { n =>
-        userChannel.push(userId, Json.arr("notifications", Seq(
-          SendableNotification.fromUserNotification(
-            userNotificationRepo.save(n.withState(UserNotificationStates.VISITED)))
-        )))
+      val message = commentRepo.get(messageExtId)
+      val parent = message.parent.map(commentRepo.get).getOrElse(message)
+      (commentReadRepo.getByUserAndParent(userId, parent.id.get) match {
+        case Some(cr) if cr.lastReadId != message.id.get =>
+          Some(commentReadRepo.save(cr.withLastReadId(message.id.get)))
+        case None =>
+          Some(commentReadRepo.save(CommentRead(userId = userId, uriId = parent.uriId, parentId = parent.id, lastReadId = message.id.get)))
+        case _ => None
+      }) foreach { _ =>
+        val nUri = normUriRepo.get(parent.uriId)
+        userChannel.push(userId, Json.arr("message_read", nUri.url, parent.externalId.id, message.createdAt))
+        userNotificationRepo.getWithCommentId(userId, message.id.get) foreach { n =>
+          val vn = userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
+          userChannel.push(userId, Json.arr("notifications", Seq(SendableNotification.fromUserNotification(vn))))
+        }
       }
     }
   }
 
-  private def setCommentRead(userId: Id[User], externalId: String) {
+  private def setCommentRead(userId: Id[User], commentExtId: ExternalId[Comment]) {
     db.readWrite { implicit session =>
-      val commentId = commentRepo.get(ExternalId[Comment](externalId)).id.get
-      userNotificationRepo.getWithCommentId(userId, commentId).foreach { n =>
-        userChannel.push(userId, Json.arr("notifications", Seq(
-          SendableNotification.fromUserNotification(
-            userNotificationRepo.save(n.withState(UserNotificationStates.VISITED)))
-        )))
+      val comment = commentRepo.get(commentExtId)
+      (commentReadRepo.getByUserAndUri(userId, comment.uriId) match {
+        case Some(cr) if cr.lastReadId != comment.id.get =>
+          Some(commentReadRepo.save(cr.withLastReadId(comment.id.get)))
+        case None =>
+          Some(commentReadRepo.save(CommentRead(userId = userId, uriId = comment.uriId, lastReadId = comment.id.get)))
+        case _ => None
+      }) foreach { _ =>
+        val nUri = normUriRepo.get(comment.uriId)
+        userChannel.push(userId, Json.arr("comment_read", nUri.url, comment.createdAt))
+
+        val commentIds = commentRepo.getPublicIdsCreatedBefore(nUri.id.get, comment.createdAt) :+ comment.id.get
+        val notifications = userNotificationRepo.getWithCommentIds(userId, commentIds, setCommentReadExcludeStates) map { n =>
+          userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
+        }
+        userChannel.push(userId, Json.arr("notifications", notifications map SendableNotification.fromUserNotification))
       }
     }
   }
+  private val setCommentReadExcludeStates = Set(
+    UserNotificationStates.INACTIVE,
+    UserNotificationStates.VISITED,
+    UserNotificationStates.SUBSUMED)
 
 }

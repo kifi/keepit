@@ -39,7 +39,7 @@ class BasicUserRepo @Inject() (socialUserRepo: SocialUserInfoRepo, userRepo: Use
       firstName = user.firstName,
       lastName = user.lastName,
       facebookId = socialUserInfo.headOption.map(_.socialId.id).getOrElse(""), // This needs to be refactored when we switch to multiple social networks. However, the extension relies on it now.
-      avatar = s"http://graph.facebook.com/${socialUserInfo.headOption.map(_.socialId.id).getOrElse("")}/picture?width=200&height=200" // todo: The extension should fetch avatars based on the size it needs
+      avatar = s"https://graph.facebook.com/${socialUserInfo.headOption.map(_.socialId.id).getOrElse("")}/picture?width=200&height=200" // todo: The extension should fetch avatars based on the size it needs
     )
   }
 }
