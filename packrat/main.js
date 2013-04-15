@@ -407,11 +407,7 @@ api.port.on({
   threads: function(_, _, tab) {
     var d = pageData[tab.nUri];
     if (d && d.threads) {
-      var readTimes = {};
-      for (var id in d.lastMessageRead) {
-        readTimes[id] = d.lastMessageRead[id].toISOString();
-      }
-      api.tabs.emit(tab, "threads", {threads: d.threads, read: readTimes});
+      api.tabs.emit(tab, "threads", {threads: d.threads, read: d.lastMessageRead});
     }
   },
   thread: function(id, _, tab) {
