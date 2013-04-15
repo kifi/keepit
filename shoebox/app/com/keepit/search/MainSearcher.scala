@@ -154,7 +154,6 @@ class MainSearcher(
         if ( myHits.size() + friendsHits.size() + othersHits.size() > 0 ) (myHits, friendsHits, othersHits, parsedQuery)
         else {
           val alternative = try { spellCorrector.getAlternativeQuery(queryString); } catch { case e: Exception => log.error("unexpected SpellCorrector error" ); queryString }
-          println("\n\n\n spell checker gives correction: " + alternative)
           if (alternative.trim == queryString.trim)	(myHits, friendsHits, othersHits, parsedQuery)
           else searchText(alternative, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
         }
@@ -171,7 +170,7 @@ class MainSearcher(
       val score = max(myHits.highScore, friendsHits.highScore)
       if (score < 0.0f) 1.0f else score
     }
-    
+
     var threshold = highScore * tailCutting
 
     if (myHits.size > 0) {
