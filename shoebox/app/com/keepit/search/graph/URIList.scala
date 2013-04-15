@@ -67,8 +67,10 @@ object URIList {
   def unitToMillis(units: Long) = units * TIME_UNIT
 }
 
-class URIList(bytes: Array[Byte]) {
-  val in = new InputStreamDataInput(new ByteArrayInputStream(bytes))
+class URIList(bytes: Array[Byte], offset: Int, length: Int) {
+  def this(bytes: Array[Byte]) = this(bytes, 0, bytes.length)
+  
+  val in = new InputStreamDataInput(new ByteArrayInputStream(bytes, offset, length))
   val version = {
     val version = in.readByte()
     version match {
