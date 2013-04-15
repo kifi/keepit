@@ -1,8 +1,8 @@
-@()
+@(user: User, email: String)
 
-@views.html.website.helper.main(title = "Installing Kifi") {
+@views.html.website.helper.main(title = "Installing Kifi", hiddenElements = Seq("inviteFriends")) {
   <div class="user_avatar">
-  <img src="images/effi.jpg" width="112" height="112">
+  <img src="@com.keepit.controllers.assets.routes.UserPictureController.get(112, user.externalId)" width="112" height="112">
   </div>
 
   <section class="content clearfix">

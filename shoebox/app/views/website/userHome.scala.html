@@ -1,27 +1,27 @@
-@()
+@(user: User, friendsOnKifi: Set[ExternalId[User]])
 
 @helper.main(title = "Kifi Home") {
   <div class="user_avatar">
-    <img src="images/effi.jpg" width="112" height="112">
+    <img src="@com.keepit.controllers.assets.routes.UserPictureController.get(112, user.externalId)" width="112" height="112">
   </div>
 
   <section class="content clearfix">
     <header class="content_header">
-        <h2>Hi, Effi</h2>
+        <h2>Hi, @user.firstName</h2>
         <h3>Welcome to your KiFi Private beta page</h3>
-        <div class="fb_friends_small clearfix">
-          <h4>Your facebook friends using KiFi: 82</h4>
+        @if(friendsOnKifi.nonEmpty) {
+          <div class="fb_friends_small clearfix">
+            <h4>Your facebook friends using KiFi: @friendsOnKifi.size</h4>
             <div class="friends">
-              <a href="#"><img src="images/fb_friend_small1.jpg" width="30" height="30"></a>
-                <a href="#"><img src="images/fb_friend_small2.jpg" width="30" height="30"></a>
-                <a href="#"><img src="images/fb_friend_small3.jpg" width="30" height="30"></a>
-                <a href="#"><img src="images/fb_friend_small4.jpg" width="30" height="30"></a>
-                <a href="#"><img src="images/fb_friend_small5.jpg" width="30" height="30"></a>
-                <a href="#"><img src="images/fb_friend_small6.jpg" width="30" height="30"></a>
-                <a href="#"><img src="images/fb_friend_small7.jpg" width="30" height="30"></a>
-                <a href="#"><span class="more_friends">+70</span></a>
+              @for(friend <- friendsOnKifi.take(7)) {
+                <a href="#"><img src="@com.keepit.controllers.assets.routes.UserPictureController.get(30, friend)" width="30" height="30"></a>
+              }
+              @if(friendsOnKifi.size > 7) {
+                <a href="#"><span class="more_friends">+@{friendsOnKifi.size-7}</span></a>
+              }
             </div>
-        </div>
+          </div>
+        }
     </header>
 
     <h2>What would you like to do today?</h2>

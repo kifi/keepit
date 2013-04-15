@@ -9,7 +9,10 @@
             <nav class="main_nav" id="main_nav">
                 <ul>
                     <li class="current"><a href="/">Home</a></li>
-                    <li><a href="invite.html">Invite friends to private beta</a></li>
+                    @if(!hiddenElements.contains("inviteFriends")) {
+                    <li><a href="/invite">Invite friends to private beta</a></li>
+                    }
+                    <li><a href="/logout">Log out</a></li>
                 </ul>
             </nav>
         </div>

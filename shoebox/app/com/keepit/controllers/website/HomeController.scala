@@ -29,13 +29,26 @@ class HomeController @Inject() (db: Database,
     else {
       val userAgreedToTOS = db.readOnly(userValueRepo.getValue(request.user.id.get, "agreedToTOS")(_)).map(_.toBoolean).getOrElse(false)
       if(!userAgreedToTOS) {
-        Redirect(routes.OnboardingController.tos())
+        Ok
+        //Redirect(routes.OnboardingController.tos()) // disabled for now
       } else {
-        Ok(views.html.website.userHome())
+        val friendsOnKifi = db.readOnly { implicit session =>
+          socialConnectionRepo.getFortyTwoUserConnections(request.user.id.get).map { u =>
+            val user = userRepo.get(u)
+            if(user.state == UserStates.ACTIVE) Some(user.externalId)
+            else None
+          } flatten
+        }
+        // Admin only for now
+        if(request.experimants.contains("admin"))
+          Ok(views.html.website.userHome(request.user, friendsOnKifi))
+        else
+          Ok
       }
     }
   }, unauthenticatedAction = { implicit request =>
-    Ok(views.html.website.welcome())
+    Ok
+    //Ok(views.html.website.welcome()) // disabled for now
   })
   
   def pendingHome()(implicit request: AuthenticatedRequest[AnyContent]) = {
@@ -55,11 +68,20 @@ class HomeController @Inject() (db: Database,
   }
 
   def invite = AuthenticatedHtmlAction { implicit request =>
-    Ok(views.html.website.inviteFriends())
+    
+    val friendsOnKifi = db.readOnly { implicit session =>
+      socialConnectionRepo.getFortyTwoUserConnections(request.user.id.get).map { u =>
+        val user = userRepo.get(u)
+        if(user.state == UserStates.ACTIVE) Some(user.externalId)
+        else None
+      } flatten
+    }
+    Ok(views.html.website.inviteFriends(request.user, friendsOnKifi))
   }
 
   def gettingStarted = AuthenticatedHtmlAction { implicit request =>
-    Ok(views.html.website.gettingStarted())
+    
+    Ok(views.html.website.gettingStarted(request.user))
   }
 
 

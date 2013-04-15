@@ -19,13 +19,21 @@ import com.google.inject.{Inject, Singleton}
 class OnboardingController @Inject() (db: Database,
   userRepo: UserRepo,
   userValueRepo: UserValueRepo,
+  socialConnectionRepo: SocialConnectionRepo,
   actionAuthenticator: ActionAuthenticator)
     extends WebsiteController(actionAuthenticator) {
 
   def tos = HtmlAction(true)(authenticatedAction = { request =>
     val userAgreedToTOS = db.readOnly(userValueRepo.getValue(request.user.id.get, "agreedToTOS")(_)).map(_.toBoolean).getOrElse(false)
     if(!userAgreedToTOS) {
-      Ok(views.html.website.onboarding.userLegalAgreement())
+      val friendsOnKifi = db.readOnly { implicit session =>
+        socialConnectionRepo.getFortyTwoUserConnections(request.user.id.get).map { u =>
+          val user = userRepo.get(u)
+          if(user.state == UserStates.ACTIVE) Some(user.externalId)
+          else None
+        } flatten
+      }
+      Ok(views.html.website.onboarding.userLegalAgreement(request.user, friendsOnKifi))
     } else {
       Redirect(com.keepit.controllers.website.routes.HomeController.home)
     }
@@ -35,7 +43,7 @@ class OnboardingController @Inject() (db: Database,
   
   def tosAccept = HtmlAction(true)(authenticatedAction = { request =>
     db.readWrite(userValueRepo.setValue(request.user.id.get, "agreedToTOS", "true")(_))
-    Redirect(com.keepit.controllers.website.routes.HomeController.home)
+    Redirect(com.keepit.controllers.website.routes.HomeController.gettingStarted)
   }, unauthenticatedAction = { request =>
     Redirect(routes.HomeController.home())
   })

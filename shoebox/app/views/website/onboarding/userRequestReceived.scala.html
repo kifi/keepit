@@ -1,6 +1,6 @@
 @(user: User, email: String, friendsOnKifi: Set[ExternalId[User]])
 
-@views.html.website.helper.main(title = "You're signed up for Kifi!", scripts = Seq("website/onboarding")) {
+@views.html.website.helper.main(title = "You're signed up for Kifi!", scripts = Seq("website/onboarding"), hiddenElements = Seq("inviteFriends")) {
   <div class="user_avatar">
     <img src="@com.keepit.controllers.assets.routes.UserPictureController.get(112, user.externalId)" width="112" height="112">
   </div>

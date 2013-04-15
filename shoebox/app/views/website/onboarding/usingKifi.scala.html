@@ -1,8 +1,8 @@
-@()
+@(user: User, friendsOnKifi: Set[ExternalId[User]])
 
 @views.html.website.helper.main(title = "Using Kifi") {
   <div class="user_avatar">
-  <img src="images/effi.jpg" width="112" height="112">
+  <img src="@com.keepit.controllers.assets.routes.UserPictureController.get(112, user.externalId)" width="112" height="112">
   </div>
 
   <section class="content clearfix">
@@ -10,12 +10,12 @@
         <div class="watch_video">
           <span>Watch a video</span>
             <div class="video_thumb">
-              <img src="images/video_thumb.jpg" width="138" height="85">
+              <img src="@routes.Assets.at("images/video_thumb.jpg")" width="138" height="85">
                 <div class="play_video" data-popup="video"></div>
             </div>
         </div>
 
-        <h2>Yay Effi, you’re in!</h2>
+        <h2>Yay @user.firstName, you’re in!</h2>
         <h3>Welcome to the KiFi Private Beta</h3>                    
     </header>
 
@@ -24,11 +24,11 @@
     <div class="how_to clearfix">
       <div class="container left">
           <h3>Simply keep any link by using the KiFi Keeper</h3>
-          <img src="images/how_to1.jpg" width="301" height="233"> 
+          <img src="@routes.Assets.at("images/how_to1.jpg")" width="301" height="233"> 
         </div>
       <div class="container right">
           <h3>Easly find you and your friends keeps by searching google</h3>
-          <img src="images/how_to2.jpg" width="301" height="233"> 
+          <img src="@routes.Assets.at("images/how_to2.jpg")" width="301" height="233"> 
         </div>                    
     </div> 
   </section>
