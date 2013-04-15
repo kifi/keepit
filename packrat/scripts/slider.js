@@ -518,7 +518,7 @@ slider = function() {
             recipientText = displayedRecipients[0];
           } else if (l == 2) {
             recipientText = displayedRecipients[0] + " and " + displayedRecipients[1];
-          } else if (l == 3 || l == 4)
+          } else if (l == 3 || l == 4) {
             recipientText = displayedRecipients.slice(0, l - 1).join(", ") + " and " + displayedRecipients[l - 1];
           } else {
             recipientText = displayedRecipients.slice(0, 3).join(", ");
