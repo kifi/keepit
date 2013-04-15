@@ -219,14 +219,14 @@ const socketHandlers = {
         d.threads[i] = th;
         var messages = d.messages[th.id];
         if (messages && !messages.some(hasId(message.id))) {  // sent messages come via POST resp and socket
-          messages.push(message);
+          messages.push(message);  // should we maintain chronological order?
         }
       } else {
-        d.threads.push(th);
+        d.threads.push(th);  // should we maintain chronological order?
         d.messages[th.id] = [message];
       }
       d.tabs.forEach(function(tab) {
-        api.tabs.emit(tab, "message", {thread: th, message: message});
+        api.tabs.emit(tab, "message", {thread: th, message: message, read: d.lastMessageRead[th.id]});
         tellTabsIfCountChanged(d, "m", messageCount(d));
       });
     }
@@ -237,7 +237,7 @@ const socketHandlers = {
     if (d) {
       d.lastMessageRead[threadId] = new Date(time);
       d.tabs.forEach(function(tab) {
-        // api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages});  // TODO: reflect read state in threads view
+        api.tabs.emit(tab, "thread_info", {thread: d.threads.filter(hasId(threadId))[0], read: d.lastMessageRead[threadId]});
         tellTabsIfCountChanged(d, "m", messageCount(d));
       });
     }
