@@ -19,13 +19,9 @@ trait TestInjector {
   def inject[A](implicit m: Manifest[A], injector: RichInjector): A = injector.inject[A]
 
   def withInjector[T](overrideingModules: Module*)(f: RichInjector => T) = {
-
-    def dbInfo: DbInfo = new DbInfo() {
-      lazy val database = SlickDatabase.forURL(
-          url = "jdbc:h2:mem:shoebox;USER=shoebox;MODE=MYSQL;MVCC=TRUE;DB_CLOSE_DELAY=-1")
-      lazy val driverName = H2.driverName
-    }
-
+    Class.forName("org.h2.Driver")
+    def dbInfo: DbInfo = TestDbInfo.dbInfo
+//    val conn = DriverManager.getConnection(TestDbInfo.url)
     val modules = {
       def overridModule(m: Module, overriding: Module) = Modules.`override`(Seq(m): _*).`with`(overriding)
       val init = overridModule(TestModule(Some(dbInfo)), TestActorSystemModule())

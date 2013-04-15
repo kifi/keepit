@@ -83,6 +83,17 @@ trait DbRepos {
   def unscrapableRepo = inject[UnscrapableRepo]
 }
 
+object TestDbInfo {
+  val url = "jdbc:h2:mem:shoebox;USER=shoebox;MODE=MYSQL;MVCC=TRUE;DB_CLOSE_DELAY=-1"
+  val dbInfo = new DbInfo() {
+    //later on we can customize it by the application name
+    lazy val database = SlickDatabase.forURL(url = url)
+    lazy val driverName = H2.driverName
+//    lazy val database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
+//    lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
+  }
+}
+
 case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   def configure(): Unit = {
     val appScope = new AppScope
@@ -101,14 +112,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     listenerBinder.addBinding().to(classOf[SliderShownListener])
   }
 
-  private def dbInfoFromApplication(): DbInfo = new DbInfo() {
-    //later on we can customize it by the application name
-    lazy val database = SlickDatabase.forURL(
-      url = "jdbc:h2:mem:shoebox;USER=shoebox;MODE=MYSQL;MVCC=TRUE;DB_CLOSE_DELAY=-1")
-    lazy val driverName = H2.driverName
-//    lazy val database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
-//    lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
-  }
+  private def dbInfoFromApplication(): DbInfo = TestDbInfo.dbInfo
 
   @Provides
   @Singleton
