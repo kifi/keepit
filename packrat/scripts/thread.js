@@ -40,6 +40,8 @@ threadPane = function() {
         $container.closest(".kifi-pane-box").on("kifi:remove", function() {
           $sent.length = 0;
         });
+
+        emitRead(threadId, messages[messages.length - 1]);
       });
     },
     update: function(thread, message, userId) {
@@ -52,6 +54,7 @@ threadPane = function() {
           } else {
             $sent.append($m).layout()[0].scrollTop = 99999;  // should we compare timestamps and insert in order?
           }
+          emitRead(thread.id, message);
         });
       }
     }};
@@ -90,5 +93,9 @@ threadPane = function() {
     render("html/metro/message.html", m, function(html) {
       callback($(html).find("time").timeago().end());
     });
+  }
+
+  function emitRead(threadId, m) {
+    api.port.emit("set_message_read", {threadId: threadId, messageId: m.id, time: m.createdAt});
   }
 }();

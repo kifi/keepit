@@ -22,6 +22,7 @@ import com.keepit.common.db.slick.MySQL
 import com.keepit.common.db.slick.H2
 import com.keepit.common.db.slick.DataBaseComponent
 import play.api.Play.current
+import play.api.Play
 import net.spy.memcached.{ConnectionFactoryBuilder, AddrUtil, MemcachedClient}
 import net.spy.memcached.auth.{PlainCallbackHandler, AuthDescriptor}
 import com.keepit.inject.AppScoped
@@ -34,6 +35,8 @@ class MemcachedCacheModule() extends ScalaModule {
   @Singleton
   @Provides
   def spyMemcachedClient(): MemcachedClient = {
+    if (Play.isTest) throw new IllegalStateException("memecach client should not be loaded in test!")
+
     System.setProperty("net.spy.log.LoggerImpl", "com.keepit.common.cache.MemcachedSlf4JLogger")
 
     lazy val singleHost = current.configuration.getString("memcached.host").map(AddrUtil.getAddresses)
