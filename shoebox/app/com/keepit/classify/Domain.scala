@@ -51,7 +51,7 @@ class DomainRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) exte
 
   import db.Driver.Implicit._
 
-  override lazy val table = new RepoTable[Domain](db, "domain") {
+  override val table = new RepoTable[Domain](db, "domain") {
     def autoSensitive = column[Option[Boolean]]("auto_sensitive", O.Nullable)
     def manualSensitive = column[Option[Boolean]]("manual_sensitive", O.Nullable)
     def hostname = column[String]("hostname", O.NotNull)

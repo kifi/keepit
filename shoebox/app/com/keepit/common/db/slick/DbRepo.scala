@@ -27,7 +27,12 @@ trait RepoWithExternalId[M <: ModelWithExternalId[M]] { self: Repo[M] =>
   def getOpt(id: ExternalId[M])(implicit session: RSession): Option[M]
 }
 
-trait DbRepo[M <: Model[M]] extends Repo[M] {
+trait TableWithDDL {
+  def ddl: DDL
+  def tableName: String
+}
+
+trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
   import FortyTwoTypeMappers._
   val db: DataBaseComponent
   val clock: Clock
@@ -45,6 +50,12 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
   }
 
   protected def table: RepoTable[M]
+
+  //we must call the init after the underlying constructor finish defining its ddl.
+  def delayedInit(body: => Unit) = {
+    body
+    db.tableToInit(table)
+  }
 
   def descTable(): String = db.handle.withSession {
     table.ddl.createStatements mkString "\n"
@@ -89,7 +100,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] {
    * The toUpperCase is per an H2 "bug?"
    * http://stackoverflow.com/a/8722814/81698
    */
-  abstract class RepoTable[M <: Model[M]](db: DataBaseComponent, name: String) extends Table[M](db.entityName(name)) {
+  abstract class RepoTable[M <: Model[M]](db: DataBaseComponent, name: String) extends Table[M](db.entityName(name)) with TableWithDDL {
     import FortyTwoTypeMappers._
 
     implicit val idMapper = new BaseTypeMapper[Id[M]] {

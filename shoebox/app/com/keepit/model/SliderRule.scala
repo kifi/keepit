@@ -54,7 +54,7 @@ class SliderRuleRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock)
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[SliderRule](db, "slider_rule") {
+  override val table = new RepoTable[SliderRule](db, "slider_rule") {
     def groupName = column[String]("group_name", O.NotNull)
     def name = column[String]("name", O.NotNull)
     def parameters = column[JsArray]("parameters", O.Nullable)

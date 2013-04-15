@@ -64,7 +64,7 @@ class URLRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extend
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[URL](db, "url") {
+  override val table = new RepoTable[URL](db, "url") {
     def url = column[String]("url", O.NotNull)
     def domain = column[String]("domain", O.Nullable)
     def normalizedUriId = column[Id[NormalizedURI]]("normalized_uri_id", O.NotNull)

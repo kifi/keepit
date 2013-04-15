@@ -53,8 +53,7 @@ object ApplicationBuild extends Build {
       "de.l3s.boilerpipe" % "boilerpipe" % "1.2.0",
       "org.jsoup" % "jsoup" % "1.7.1",
       "spy" % "spymemcached" % "2.8.1",
-      "com.typesafe.slick" %% "slick" % "1.0.0",
-      "com.typesafe.slick" %% "slick-testkit" % "1.0.0"
+      "com.typesafe.slick" %% "slick" % "1.0.0"
     ) map (_.excludeAll(ExclusionRule(organization = "com.cedarsoft")))
 
     val main = play.Project(appName, appVersion, appDependencies).settings(

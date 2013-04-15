@@ -38,7 +38,7 @@ class ArticleSearchResultRefRepoImpl @Inject() (val db: DataBaseComponent, val c
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[ArticleSearchResultRef](db, "article_search_result") with ExternalIdColumn[ArticleSearchResultRef] {
+  override val table = new RepoTable[ArticleSearchResultRef](db, "article_search_result") with ExternalIdColumn[ArticleSearchResultRef] {
     def last = column[ExternalId[ArticleSearchResultRef]]("last", O.Nullable)
     def myTotal = column[Int]("my_total", O.NotNull)
     def friendsTotal = column[Int]("friends_total", O.NotNull)

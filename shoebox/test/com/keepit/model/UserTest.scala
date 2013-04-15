@@ -13,24 +13,23 @@ import com.keepit.common.cache.{FortyTwoCachePlugin, FortyTwoCache}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db._
 
-class UserRepoTest extends Specification with DbRepos {
+class UserRepoTest extends Specification with TestDBRunner {
 
   "UserRepo" should {
     "Use the cache" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
 
-        val userRepo = inject[UserRepoImpl]
-        userRepo.idCache.get(UserIdKey(Id[User](1))).isDefined === false
-
+      val userRepoImpl = userRepo.asInstanceOf[UserRepoImpl]
         inject[Database].readWrite { implicit session =>
+          userRepoImpl.idCache.get(UserIdKey(Id[User](1))).isDefined === false
           val user = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
 
-          userRepo.idCache.get(UserIdKey(Id[User](1))).get === user
+          userRepoImpl.idCache.get(UserIdKey(Id[User](1))).get === user
 
           val updatedUser = userRepo.save(user.copy(lastName = "NotMyLastName"))
 
-          userRepo.idCache.get(UserIdKey(Id[User](1))).get !== user
-          userRepo.idCache.get(UserIdKey(Id[User](1))).get === updatedUser
+          userRepoImpl.idCache.get(UserIdKey(Id[User](1))).get !== user
+          userRepoImpl.idCache.get(UserIdKey(Id[User](1))).get === updatedUser
         }
       }
     }

@@ -16,7 +16,7 @@ import scala.concurrent.duration._
 
 @ImplementedBy(classOf[BabysitterImpl])
 trait Babysitter {
-  def watch[A](timeout: BabysitterTimeout)(block: => A)(implicit app: Application): A
+  def watch[A](timeout: BabysitterTimeout)(block: => A): A
 }
 
 case class BabysitterTimeout(warnTimeout: FiniteDuration, errorTimeout: FiniteDuration)
@@ -25,7 +25,7 @@ class BabysitterImpl @Inject() (
     clock: Clock,
     healthcheckPlugin: HealthcheckPlugin,
     scheduler: Scheduler) extends Babysitter with Logging {
-  def watch[A](timeout: BabysitterTimeout)(block: => A)(implicit app: Application): A = {
+  def watch[A](timeout: BabysitterTimeout)(block: => A): A = {
     val startTime = clock.now
     val e = new Exception("Babysitter error timeout after %s millis".format(timeout.errorTimeout.toMillis))
     val pointer = new AtomicReference[ExternalId[HealthcheckError]]()

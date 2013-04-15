@@ -31,6 +31,7 @@ import com.keepit.model.UserRepo
 import com.keepit.model.NormalizedURIRepo
 import com.keepit.common.time.Clock
 import com.google.inject.Provider
+import play.api.Play
 
 class CommonModule extends ScalaModule with Logging {
 
@@ -112,7 +113,8 @@ class CommonModule extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def actorPluginProvider: ActorPlugin = new ActorPlugin("shoebox-actor-system")
+  def actorPluginProvider: ActorPlugin =
+    new ActorPlugin(ActorSystem("shoebox-actor-system", Play.current.configuration.underlying, Play.current.classloader))
 
   @Provides
   def httpClientProvider: HttpClient = new HttpClientImpl()

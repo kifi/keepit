@@ -47,7 +47,7 @@ class URLPatternRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock,
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[URLPattern](db, "url_pattern") {
+  override val table = new RepoTable[URLPattern](db, "url_pattern") {
     def pattern = column[String]("pattern", O.NotNull)
     def example = column[String]("example", O.Nullable)
     def * = id.? ~ pattern ~ example.? ~ createdAt ~ updatedAt ~ state <> (URLPattern, URLPattern.unapply _)

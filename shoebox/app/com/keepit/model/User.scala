@@ -67,7 +67,7 @@ class UserRepoImpl @Inject() (
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[User](db, "user") with ExternalIdColumn[User] {
+  override val table = new RepoTable[User](db, "user") with ExternalIdColumn[User] {
     def firstName = column[String]("first_name", O.NotNull)
     def lastName = column[String]("last_name", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state <> (User, User.unapply _)
