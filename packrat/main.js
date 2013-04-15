@@ -33,11 +33,11 @@ function ajax(method, uri, data, done, fail) {  // method and uri are required
         }
       }
     }
-    uri = uri + (uri.indexOf("?") < 0 ? "?" : "&") + a.join("&").replace(/%20/g, "+");
+    uri += (~uri.indexOf("?") ? "&" : "?") + a.join("&").replace(/%20/g, "+");
     data = null;
   }
 
-  api.request(method, uri, data, done, fail);
+  api.request(method, "http://" + getServer() + uri, data, done, fail);
 }
 
 // ===== Event logging
@@ -50,7 +50,7 @@ function logEvent(eventFamily, eventName, metaData, prevEvents) {
     return;
   }
   var ev = {
-    installId: getConfigs().kifi_installation_id, // ExternalId[KifiInstallation]
+    installId: getStored("kifi_installation_id"), // ExternalId[KifiInstallation]
     eventFamily: eventFamily, // Category (see eventFamilies)
     eventName: eventName}; // Any key for this event
   if (metaData) {
@@ -239,34 +239,34 @@ api.port.on({
   get_keeps: searchOnServer,
   get_chatter: function(data, respond) {
     api.log("[get_chatter]", data.ids);
-    ajax("GET", "http://" + getConfigs().server + "/search/chatter", {ids: data.ids.join(".")}, respond);
+    ajax("GET", "/search/chatter", {ids: data.ids.join(".")}, respond);
     return true;
   },
   get_num_mutual_keeps: function(data, respond) {
     api.log("[get_num_mutual_keeps]", data.id);
-    ajax("GET", "http://" + getConfigs().server + "/bookmarks/mutual/" + data.id, respond);
+    ajax("GET", "/bookmarks/mutual/" + data.id, respond);
     return true;
   },
   add_bookmarks: function(data, respond) {
-    getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
+    getBookmarkFolderInfo(getStored("bookmark_id"), function(info) {
       addKeep(info, data, respond);
     });
     return true;
   },
   unkeep: function(_, respond, tab) {
-    getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
+    getBookmarkFolderInfo(getStored("bookmark_id"), function(info) {
       removeKeep(info, tab.url, respond);
     });
     return true;
   },
   set_private: function(data, respond, tab) {
-    getBookmarkFolderInfo(getConfigs().bookmark_id, function(info) {
+    getBookmarkFolderInfo(getStored("bookmark_id"), function(info) {
       setPrivate(info, tab.url, data, respond);
     });
     return true;
   },
   follow: function(data, respond, tab) {
-    ajax("POST", "http://" + getConfigs().server + "/comments/" + (data ? "follow" : "unfollow"), {url: tab.url}, function(o) {
+    ajax("POST", "/comments/" + (data ? "follow" : "unfollow"), {url: tab.url}, function(o) {
       api.log("[follow] resp:", o);
     });
   },
@@ -296,24 +296,24 @@ api.port.on({
     return true;
 
     function getSliderInfo() {
-      ajax("GET", "http://" + getConfigs().server + "/users/slider", {url: tab.url}, function(o) {
+      ajax("GET", "/users/slider", {url: tab.url}, function(o) {
         o.session = session;
         respond(o);
       });
     }
   },
   get_slider_updates: function(_, respond, tab) {
-    ajax("GET", "http://" + getConfigs().server + "/users/slider/updates", {url: tab.url}, respond);
+    ajax("GET", "/users/slider/updates", {url: tab.url}, respond);
     return true;
   },
   suppress_on_site: function(data, _, tab) {
-    ajax("POST", "http://" + getConfigs().server + "/users/slider/suppress", {url: tab.url, suppress: data});
+    ajax("POST", "/users/slider/suppress", {url: tab.url, suppress: data});
   },
   log_event: function(data) {
     logEvent.apply(null, data);
   },
   get_comments: function(data, respond, tab) {
-    ajax("GET", "http://" + getConfigs().server +
+    ajax("GET",
       (data.kind == "public" ? "/comments" : "/messages/threads") +
       (data.commentId ? "/" + data.commentId : "?url=" + encodeURIComponent(tab.url)),
       function(o) {
@@ -357,7 +357,7 @@ api.port.on({
     return true;
   },
   delete_comment: function(id, respond) {
-    ajax("POST", "http://" + getConfigs().server + "/comments/" + id + "/remove", function(o) {
+    ajax("POST", "/comments/" + id + "/remove", function(o) {
       api.log("[deleteComment] response:", o);
       respond(o);
     });
@@ -440,7 +440,8 @@ function createDeepLinkListener(link, linkTabId, respond) {
       return;
     }
     if (linkTabId == tab.id) {
-      var hasForwarded = tab.url.indexOf(getConfigs().server + "/r/") < 0 && tab.url.indexOf("dev.ezkeep.com") < 0;
+      // uncomment second clause below to develop /r/ page using production deep links
+      var hasForwarded = tab.url.indexOf(getServer() + "/r/") < 0 /* && tab.url.indexOf("dev.ezkeep.com") < 0 */;
       if (hasForwarded) {
         api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, link.locator);
         api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: link.locator, metro: session.experiments.indexOf("metro") >= 0});
@@ -629,7 +630,7 @@ function removeKeep(bmInfo, url, respond) {
     });
   });
 
-  ajax("POST", "http://" + getConfigs().server + "/bookmarks/remove", {url: url}, function(o) {
+  ajax("POST", "/bookmarks/remove", {url: url}, function(o) {
     api.log("[removeKeep] response:", o);
     respond(o);
   });
@@ -648,7 +649,7 @@ function setPrivate(bmInfo, url, priv, respond) {
     });
   });
 
-  ajax("POST", "http://" + getConfigs().server + "/bookmarks/private", {url: url, private: priv}, function(o) {
+  ajax("POST", "/bookmarks/private", {url: url, private: priv}, function(o) {
     api.log("[setPrivate] response:", o);
     respond(o);
   });
@@ -656,7 +657,7 @@ function setPrivate(bmInfo, url, priv, respond) {
 
 function postComment(request, respond) {
   api.log("[postComment] req:", request);
-  ajax("POST", "http://" + getConfigs().server + "/comments/add", {
+  ajax("POST", "/comments/add", {
       url: request.url,
       title: request.title,
       text: request.text,
@@ -679,8 +680,7 @@ function searchOnServer(request, respond) {
     return;
   }
 
-  var config = getConfigs();
-  ajax("GET", "http://" + config.server + "/search", {
+  ajax("GET", "/search", {
       q: request.query,
       f: request.filter === "a" ? null : request.filter,
       maxHits: request.lastUUID ? 5 : api.prefs.get("maxResults"),
@@ -690,7 +690,7 @@ function searchOnServer(request, respond) {
     function(resp) {
       api.log("[searchOnServer] response:", resp);
       resp.session = session;
-      resp.server = config.server;
+      resp.server = getServer();
       resp.showScores = api.prefs.get("showScores");
       respond(resp);
     });
@@ -739,7 +739,7 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
   api.log("[postBookmarks]");
   supplyBookmarks(function(bookmarks) {
     api.log("[postBookmarks] bookmarks:", bookmarks);
-    ajax("POST", "http://" + getConfigs().server + "/bookmarks/add", {
+    ajax("POST", "/bookmarks/add", {
         bookmarks: bookmarks,
         source: bookmarkSource},
       function(o) {
@@ -843,23 +843,20 @@ function getFullyQualifiedKey(key) {
   return (api.prefs.get("env") || "production") + "_" + key;
 }
 
-function removeFromConfigs(key) {
-  delete api.storage[getFullyQualifiedKey(key)];
+function getServer() {
+  return api.prefs.get("env") === "development" ? "dev.ezkeep.com:9000" : "keepitfindit.com";
 }
 
-function setConfigs(key, value) {
-  var prev = api.storage[getFullyQualifiedKey(key)];
+function getStored(key) {
+  return api.storage[getFullyQualifiedKey(key)];
+}
+
+function store(key, value) {
+  var qKey = getFullyQualifiedKey(key), prev = api.storage[qKey];
   if (value != null && prev !== String(value)) {
-    api.log("[setConfigs]", key, " = ", value, " (was ", prev, ")");
-    api.storage[getFullyQualifiedKey(key)] = value;
+    api.log("[store] %s = %s (was %s)", key, value, prev);
+    api.storage[qKey] = value;
   }
-}
-
-function getConfigs() {
-  return {
-    "server": api.prefs.get("env") === "development" ? "dev.ezkeep.com:9000" : "keepitfindit.com",
-    "kifi_installation_id": api.storage[getFullyQualifiedKey("kifi_installation_id")],
-    "bookmark_id": api.storage[getFullyQualifiedKey("bookmark_id")]};
 }
 
 api.on.install.add(function() {
@@ -874,7 +871,7 @@ api.on.update.add(function() {
 var session, socket;
 
 function authenticate(callback) {
-  var config = getConfigs(), dev = api.prefs.get("env") === "development";
+  var dev = api.prefs.get("env") === "development";
   if (dev) {
     openFacebookConnect();
   } else {
@@ -882,8 +879,8 @@ function authenticate(callback) {
   }
 
   function startSession(onFail) {
-    ajax("POST", "http://" + config.server + "/kifi/start", {
-      installation: config.kifi_installation_id,
+    ajax("POST", "/kifi/start", {
+      installation: getStored("kifi_installation_id"),
       version: api.version,
       agent: api.browserVersion},
     function done(data) {
@@ -891,19 +888,17 @@ function authenticate(callback) {
       logEvent("extension", "authenticated");
 
       session = compilePatterns(data);
-      socket = api.socket.open(
-        (api.prefs.get("env") === "development" ? "ws://" : "wss://") + getConfigs().server + "/ext/ws",
-        socketHandlers);
+      socket = api.socket.open((dev ? "ws://" : "wss://") + getServer() + "/ext/ws", socketHandlers);
       socket.send(["get_notifications", 10]);
       socket.send(["get_last_notify_read_time"]);
       socket.send(["get_friends"]);
       logEvent.catchUp();
 
-      setConfigs("kifi_installation_id", data.installationId);
+      store("kifi_installation_id", data.installationId);
 
       // Locate or create KeepIt bookmark folder.
-      getBookmarkFolderInfo(config.bookmark_id, function(info) {
-        setConfigs("bookmark_id", info.keepItId);
+      getBookmarkFolderInfo(getStored("bookmark_id"), function(info) {
+        store("bookmark_id", info.keepItId);
       });
 
       callback();
@@ -919,13 +914,14 @@ function authenticate(callback) {
 
   function openFacebookConnect() {
     api.log("[openFacebookConnect]");
+    var server = getServer();
     api.popup.open({
       name: "kifi-authenticate",
-      url: "http://" + config.server + "/authenticate/facebook",
+      url: "http://" + server + "/authenticate/facebook",
       width: 1020,
       height: 530}, {
       navigate: function(url) {
-        if (url == "http://" + config.server + "/#_=_") {
+        if (url == "http://" + server + "/#_=_") {
           api.log("[openFacebookConnect] closing popup");
           this.close();
           startSession();
@@ -945,7 +941,7 @@ function deauthenticate(callback) {
   // TODO: make all page icons faint?
   api.popup.open({
     name: "kifi-deauthenticate",
-    url: "http://" + getConfigs().server + "/session/end",
+    url: "http://" + getServer() + "/session/end",
     width: 200,
     height: 100})
   callback();
