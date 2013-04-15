@@ -39,7 +39,7 @@ slider2 = function() {
         // "sensitive": o.sensitive,
         // "site": location.hostname,
         // "neverOnSite": o.neverOnSite,
-        "noticesCount": o.counts.n,
+        "noticesCount": -o.counts.n,
         "commentsUnread": o.counts.c < 0,
         "commentCount": Math.abs(o.counts.c),
         "messagesUnread": o.counts.m < 0,
