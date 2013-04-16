@@ -161,10 +161,10 @@ class AdminUserController @Inject() (
 
   def changeState(userId: Id[User], state: String) = AdminJsonAction { request =>
     val userState = state match {
-      case "active" => UserStates.ACTIVE
-      case "inactive" => UserStates.INACTIVE
-      case "blocked" => UserStates.BLOCKED
-      case "pending" => UserStates.PENDING
+      case UserStates.ACTIVE.value => UserStates.ACTIVE
+      case UserStates.INACTIVE.value => UserStates.INACTIVE
+      case UserStates.BLOCKED.value => UserStates.BLOCKED
+      case UserStates.PENDING.value => UserStates.PENDING
     }
 
     db.readWrite(implicit s => userRepo.save(userRepo.get(userId).withState(userState)))

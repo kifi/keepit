@@ -61,30 +61,33 @@ $(function() {
     ];
 	
 	
-	$( ".invite_field" ).each(function(){
+	$.getJSON("/user/all-connections", function(connections) {
+		$( ".invite_field" ).each(function(){
 
-		$(this).autocomplete({
-			minLength: 0,
-			source: users,
-			focus: function( event, ui ) {
-				$(this).val( ui.item.label );
-				return false;
-			},
-			select: function( event, ui ) {
-				$(this).val( ui.item.label ).siblings(".invite_btn").fadeIn(250);
-				return false;
-			},
-			response: function( event, ui ) {
-				$(this).siblings(".invite_btn").fadeOut(250);
-			}
-		}).data( "ui-autocomplete" )._renderItem = function( ul, item ) {
-			return $( "<li>" )
-			.addClass(item.status)
-			.append( "<a><img src= 'images/autocomplete/" + item.image + "'><span class='name'>" + item.label + "</span>" + "<span class='status'>" + item.status + "</span></a>" )
-			.appendTo( ul );
-		};
+			$(this).autocomplete({
+				minLength: 0,
+				source: connections,
+				focus: function( event, ui ) {
+					$(this).val( ui.item.label );
+					return false;
+				},
+				select: function( event, ui ) {
+					$(this).val( ui.item.label ).siblings(".invite_btn").fadeIn(250);
+					return false;
+				},
+				response: function( event, ui ) {
+					$(this).siblings(".invite_btn").fadeOut(250);
+				}
+			}).data( "ui-autocomplete" )._renderItem = function( ul, item ) {
+				return $( "<li>" )
+				.addClass(item.status)
+				.append( "<a><img src= 'images/autocomplete/" + item.image + "'><span class='name'>" + item.label + "</span>" + "<span class='status'>" + item.status + "</span></a>" )
+				.appendTo( ul );
+			};
 
+		});
 	});
+
 	
 	/* checkbox */
 	
@@ -106,9 +109,9 @@ $(function() {
 		$this.text(newText).toggleClass("confirm");
 		
 		if($this.hasClass("confirm")){
-			$("#email").removeAttr("disabled").trigger("focus");
+			$('#email').prop('disabled', false).trigger("focus");
 		} else {
-			$("#email").attr("disabled", "disabled");
+			$('#email').prop('disabled', true)
 		}
 		
 	});
@@ -117,18 +120,18 @@ $(function() {
 	
 	(function emailWidth(){
 		var $email = $("#email"), $width = $("#email_width");
-        $width.text($email.val()) ; 
-        $inputSize = $width.width() ; 
-        $email.css("width", $inputSize) ;		
+        $width.text($email.val());
+        $inputSize = $width.width();
+        $email.css("width", $inputSize);		
 		
 		$email.on("keypress",function(e) {
 			if (e.which !== 0 && e.charCode !== 0) { // only characters
 				var c = String.fromCharCode(e.keyCode|e.charCode);
-				$width.text($(this).val() + c) ; 
-				$inputSize = $width.width() ; 
-				$(this).css("width", $inputSize) ;
+				$width.text($(this).val() + c); 
+				$inputSize = $width.width(); 
+				$(this).css("width", $inputSize);
 			 }
-		}) ;
+		});
 		
 	})();
 	

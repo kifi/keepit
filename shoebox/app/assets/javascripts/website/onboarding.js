@@ -27,64 +27,7 @@ $(function() {
   $("textarea, input").blur(function() {
       if ($.trim(this.value) == ''){ this.value = (this.defaultValue ? this.defaultValue : ''); }
   });
-  
-  
-  //autocomplete
-  
 
-  
-  var users = [
-      {
-        value: "danny-blumenfeld",
-    label: "Danny Blumenfeld",
-        image: "danny.jpg",
-    status: ""
-      },
-      {
-        value: "dana-blumenfeld",
-    label: "Dana Blumenfeld",
-        image: "dana.jpg",
-    status: "joined"
-      },
-      {
-        value: "dandrew-conner",
-    label: "Dandrew Conner",
-        image: "dandrew.jpg",
-    status: ""
-      },
-      {
-        value: "dtamila-stavinsky",
-    label: "Dtamila Stavinsky",
-        image: "dtamila.jpg",
-    status: ""
-      }   
-    ];
-  
-  
-  $( ".invite_field" ).each(function(){
-
-    $(this).autocomplete({
-      minLength: 0,
-      source: users,
-      focus: function( event, ui ) {
-        $(this).val( ui.item.label );
-        return false;
-      },
-      select: function( event, ui ) {
-        $(this).val( ui.item.label ).siblings(".invite_btn").fadeIn(250);
-        return false;
-      },
-      response: function( event, ui ) {
-        $(this).siblings(".invite_btn").fadeOut(250);
-      }
-    }).data( "ui-autocomplete" )._renderItem = function( ul, item ) {
-      return $( "<li>" )
-      .addClass(item.status)
-      .append( "<a><img src= 'images/autocomplete/" + item.image + "'><span class='name'>" + item.label + "</span>" + "<span class='status'>" + item.status + "</span></a>" )
-      .appendTo( ul );
-    };
-
-  });
   
   /* checkbox */
   
@@ -105,39 +48,22 @@ $(function() {
   
   
   $("#change_email").on("click", function(){
-    var $this = $(this).find('#change_email_link'), newText = $this.data("text");
-    $this.data("text", $this.text());
-    $this.text(newText).toggleClass("confirm");
-    
-    var $email = $("#email")
-    if($this.hasClass("confirm")){
-      $email.removeAttr("disabled").trigger("focus").css({"background":"#fff", "border": "1px #333"});
+    var $button = $(this);
+    $button.text("Saved!");
 
-    } else {
-      $email.attr("disabled", "disabled").css({"background":"", "border": ""});
-    }
+    $.post('/user/update-email', JSON.stringify({"email": $("#email").val()}))
+    .always(function() {
+      setTimeout(function() {
+        console.log("what")
+        $button.text("Save email address");
+      }, 3000);
+    });
+    
   });
   
-  // adjust input
   
-  (function emailWidth(){
-    var $email = $("#email"), $width = $("#email_width");
-        $width.text($email.val()) ; 
-        $inputSize = $width.width() ; 
-        $email.css("width", $inputSize) ;   
-    
-    $email.on("keypress",function(e) {
-      if(e.charCode == 13) {
-        $("#change_email").click();
-      } else if (e.which !== 0 && e.charCode !== 0) { // only characters
-        var c = String.fromCharCode(e.keyCode|e.charCode);
-        $width.text($(this).val() + c) ; 
-        $inputSize = $width.width() + 10; 
-        $(this).css("width", $inputSize) ;
-       }
-    }) ;
-    
-  })();
+
+
 
 });//end jQuery
 

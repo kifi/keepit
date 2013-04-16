@@ -94,14 +94,20 @@ class BrowserExtensionController(actionAuthenticator: ActionAuthenticator) exten
 
 class WebsiteController(actionAuthenticator: ActionAuthenticator) extends Controller with Logging {
   
+  def AuthenticatedJsonAction(allowPending: Boolean)(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] =
+    AuthenticatedJsonAction(allowPending, parse.anyContent)(action)
+
+  def AuthenticatedJsonToJsonAction(allowPending: Boolean)(action: AuthenticatedRequest[JsValue] => Result): Action[JsValue] =
+    AuthenticatedJsonAction(allowPending, parse.tolerantJson)(action)
+  
   def AuthenticatedJsonAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] =
-    AuthenticatedJsonAction(parse.anyContent)(action)
+    AuthenticatedJsonAction(false, parse.anyContent)(action)
 
   def AuthenticatedJsonToJsonAction(action: AuthenticatedRequest[JsValue] => Result): Action[JsValue] =
-    AuthenticatedJsonAction(parse.tolerantJson)(action)
+    AuthenticatedJsonAction(false, parse.tolerantJson)(action)
 
-  def AuthenticatedJsonAction[T](bodyParser: BodyParser[T])(action: AuthenticatedRequest[T] => Result): Action[T] = Action(bodyParser) { request =>
-    actionAuthenticator.authenticatedAction(true, false, bodyParser, action)(request) match {
+  def AuthenticatedJsonAction[T](allowPending: Boolean, bodyParser: BodyParser[T])(action: AuthenticatedRequest[T] => Result): Action[T] = Action(bodyParser) { request =>
+    actionAuthenticator.authenticatedAction(false, allowPending, bodyParser, action)(request) match {
       case r: PlainResult => r.as(ContentTypes.JSON)
       case any => any
     }

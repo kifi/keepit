@@ -1,6 +1,6 @@
-@(user: User, friendsOnKifi: Set[ExternalId[User]])
+@(user: User, friendsOnKifi: Set[ExternalId[User]], invites: Seq[Option[com.keepit.controllers.website.BasicUserInvitation]], invitesLeft: Int, invitesSent: Int, invitesAccepted: Int)
 
-@views.html.website.helper.main(title = "Installing Kifi", scripts = Seq("website/onboarding", "jquery-ui-autocomplete")) {
+@views.html.website.helper.main(title = "Invite friends to Kifi", scripts = Seq("website/onboarding", "jquery-ui-autocomplete", "website/inviteFriends")) {
   <div class="user_avatar">
   <img src="@com.keepit.controllers.assets.routes.UserPictureController.get(112, user.externalId)" width="112" height="112">
   </div>
@@ -29,71 +29,45 @@
 
   <section id="invites">
   <ul class="invites_status clearfix">
-      <li>Invites Left <span class="amount">6</span></li>
-        <li>Invites Sent <span class="amount blue_bg">4</span></li>
-        <li>Invites Accepted <span class="amount green_bg">1</span></li>
-    </ul>
+    <li>Invites Left <span class="amount">@invitesLeft</span></li>
+    <li>Invites Sent <span class="amount blue_bg">@invitesSent</span></li>
+    <li>Invites Accepted <span class="amount green_bg">@invitesAccepted</span></li>
+  </ul>
     
     <div class="invites_list clearfix">
+      @for(row <- 0 to 1) {
       <ul>
-          <li class="waiting clearfix">
-              <div class="avatar">
-                  <img src="images/fb_friend_invite1.jpg" width="75" height="75">
+        @for(invite <- invites.drop(row * math.ceil(invites.length / 2.0).toInt).take(math.ceil(invites.length / 2.0).toInt)) {
+          @if(invite.isDefined) {
+            <li class="invite-@invite.get.state.value clearfix">
+              <img src="@invite.get.picture" width="75" height="75" class="avatar">
+              <div class="avatar_info">
+                <div class="name">@invite.get.name</div>
+                <div class="status">
+                  @{invite.get.state.value match {
+                    case "active" => "Invited"
+                    case "accepted" => "Waiting for approval"
+                    case "admin_rejected" => "Rejected"
+                    case "joined" => "Joined!"
+                  }}
                 </div>
-                <div class="avatar_info">
-                    <div class="name">Dandrew Conner</div>
-                    <div class="status">Invited - waiting approval</div>
-                </div>
+
+              </div>
             </li>
-          <li class="joined clearfix">
-              <div class="avatar">
-                  <img src="images/fb_friend_invite2.jpg" width="75" height="75">
-                </div>
-                <div class="avatar_info">                            
-                  <div class="name">Yasuhiro Matsuda</div>
-                  <div class="status">Joined</div>
-                </div>
+          } else {
+            <li class="clearfix">
+              <img src="@routes.Assets.at("images/default_avatar.png")" width="75" height="75" class="avatar">
+              <div class="avatar_info">
+                <input type="text" class="invite_field" value="Select a facebook friend to invite">
+                <input type="hidden" value="" class="invited_id">
+                <div class="btn blue small invite_btn">Invite</a>
+              </div>
             </li>
-          <li class="rejected clearfix">
-              <div class="avatar">
-                  <img src="images/fb_friend_invite3.jpg" width="75" height="75">
-                </div>
-                <div class="avatar_info">                            
-                  <div class="name">Ori Zaltzman</div>
-                  <div class="status">Not Approved</div>
-                  <a class="btn small red reset">Reset</a>
-                </div>
-            </li>
-        </ul>
-      <ul>
-          <li class="waiting clearfix">
-              <div class="avatar">
-                  <img src="images/fb_friend_invite4.jpg" width="75" height="75">
-                </div>
-                <div class="avatar_info">                            
-                  <div class="name">Tamila Stavinsky </div>
-                  <div class="status">Invited - waiting approval</div>
-                </div>
-            </li>
-          <li class="clearfix">
-              <div class="avatar">
-                  <img src="@routes.Assets.at("images/default_avatar.png")" width="75" height="75">
-                </div>
-                <div class="avatar_info">                             
-                  <input type="text" class="invite_field" value="Select a facebook friend to invite">
-                    <a href="#" class="btn blue small invite_btn">Invite</a>
-                </div>
-            </li>
-          <li class="clearfix">
-              <div class="avatar">
-                  <img src="@routes.Assets.at("images/default_avatar.png")" width="75" height="75">
-                </div>
-                <div class="avatar_info">                             
-                  <input class="invite_field" type="text" value="Select a facebook friend to invite">
-                    <a href="#" class="btn blue small invite_btn">Invite</a>
-                </div>
-            </li>
-        </ul>
+          }
+        }
+      </ul>
+      }
+      
         
     </div>
   </section>
