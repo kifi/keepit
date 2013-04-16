@@ -309,11 +309,12 @@ class DailyTotalUsersRepo @Inject() (store: MongoEventStore, db: Database) exten
       val conn = session.conn
       val st = conn.createStatement()
       val sql =
-        """
+        s"""
           select count(*) as sum, CONCAT(YEAR(created_at), "-", MONTH(created_at), "-", DAY(created_at)) as day
           from user
-          where created_at > STR_TO_DATE("%s","%%Y-%%m-%%d") and created_at < STR_TO_DATE("%s","%%Y-%%m-%%d") group by day;
-        """.format(startDate.toStandardDateString, endDate.toStandardDateString)
+          where created_at > ${db.dialect.stringToDay(startDate.toStandardDateString)} and
+                created_at < ${db.dialect.stringToDay(endDate.toStandardDateString)} group by day;
+        """
       val rs = st.executeQuery(sql)
       while (rs.next) {
         val day = parseStandardDate(rs.getString("day")).toDateTimeAtStartOfDay
@@ -335,11 +336,13 @@ class DailyPrivateKeepsRepo @Inject() (store: MongoEventStore, db: Database) ext
       val conn = session.conn
       val st = conn.createStatement()
       val sql =
-        """
+        s"""
           select count(*) as sum, CONCAT(YEAR(created_at), "-", MONTH(created_at), "-", DAY(created_at)) as day
           from bookmark
-          where source="HOVER_KEEP" and is_private=true and created_at > STR_TO_DATE("%s","%%Y-%%m-%%d") and created_at < STR_TO_DATE("%s","%%Y-%%m-%%d") group by day;
-        """.format(startDate.toStandardDateString, endDate.toStandardDateString)
+          where source="HOVER_KEEP" and is_private=true and
+          created_at > ${db.dialect.stringToDay(startDate.toStandardDateString)} and
+          created_at < ${db.dialect.stringToDay(endDate.toStandardDateString)} group by day;
+        """
       val rs = st.executeQuery(sql)
       while (rs.next) {
         val day = parseStandardDate(rs.getString("day")).toDateTimeAtStartOfDay
@@ -361,11 +364,13 @@ class DailyPublicKeepsRepo @Inject() (store: MongoEventStore, db: Database) exte
       val conn = session.conn
       val st = conn.createStatement()
       val sql =
-        """
+        s"""
           select count(*) as sum, CONCAT(YEAR(created_at), "-", MONTH(created_at), "-", DAY(created_at)) as day
           from bookmark
-          where source="HOVER_KEEP" and is_private=false and created_at > STR_TO_DATE("%s","%%Y-%%m-%%d") and created_at < STR_TO_DATE("%s","%%Y-%%m-%%d") group by day;
-        """.format(startDate.toStandardDateString, endDate.toStandardDateString)
+          where source="HOVER_KEEP" and is_private=false and
+          created_at > ${db.dialect.stringToDay(startDate.toStandardDateString)} and
+          created_at < ${db.dialect.stringToDay(endDate.toStandardDateString)} group by day;
+        """
       val rs = st.executeQuery(sql)
       while (rs.next) {
         val day = parseStandardDate(rs.getString("day")).toDateTimeAtStartOfDay
@@ -387,11 +392,13 @@ class DailyNewThreadRepo @Inject() (store: MongoEventStore, db: Database) extend
       val conn = session.conn
       val st = conn.createStatement()
       val sql =
-        """
+        s"""
           select count(*) as sum, CONCAT(YEAR(created_at), '-', MONTH(created_at), '-', DAY(created_at)) as day
           from comment
-          where permissions='message' and parent is null and created_at > STR_TO_DATE("%s","%%Y-%%m-%%d") and created_at < STR_TO_DATE("%s","%%Y-%%m-%%d") group by day;
-        """.format(startDate.toStandardDateString, endDate.toStandardDateString)
+          where permissions='message' and parent is null and
+          created_at > ${db.dialect.stringToDay(startDate.toStandardDateString)} and
+          created_at < ${db.dialect.stringToDay(endDate.toStandardDateString)} group by day;
+        """
       val rs = st.executeQuery(sql)
       while (rs.next) {
         val day = parseStandardDate(rs.getString("day")).toDateTimeAtStartOfDay
