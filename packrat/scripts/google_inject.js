@@ -163,6 +163,17 @@ api.log("[google_inject]");
         "kifiResultsClicked": clicks.kifi,
         "googleResultsClicked": clicks.google});
     }
+  }).on("kifiunload", function f(e) {
+    if (e.lifeId !== lifeId) {
+      api.log("[google_inject] end life:", lifeId);
+      $(window).off("hashchange unload kifiunload");
+      observer.disconnect();
+      $q.off("input");
+      $qf.off("submit");
+      clearTimeout(idleTimer);
+      $res.remove();
+      $res.length = 0;
+    }
   });
 
   var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
@@ -184,19 +195,6 @@ api.log("[google_inject]");
   });
   observer.observe(document.getElementById("main"), {childList: true, subtree: true});  // TODO: optimize away subtree
 
-  window.addEventListener("kifiunload", function f(e) {
-    if (e.lifeId !== lifeId) {
-      api.log("[google_inject] end life:", lifeId);
-      window.removeEventListener("kifiunload", f);
-      $(window).off("hashchange unload");
-      observer.disconnect();
-      $q.off("input");
-      $qf.off("submit");
-      clearTimeout(idleTimer);
-      $res.remove();
-      $res.length = 0;
-    }
-  });
 
   /*******************************************************/
 
