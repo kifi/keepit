@@ -443,9 +443,7 @@ api.port.on({
         api.tabs.emit(tab, "open_slider_to", {
           force: true,
           trigger: "deepLink",
-          locator: data.locator,
-          metro: session.experiments.indexOf("metro") >= 0
-        });
+          locator: data.locator});
       } else {
         createDeepLinkListener(data, tab.id);
       }
@@ -487,22 +485,19 @@ function createDeepLinkListener(link, linkTabId, respond) {
       var hasForwarded = tab.url.indexOf(getServer() + "/r/") < 0 /* && tab.url.indexOf("dev.ezkeep.com") < 0 */;
       if (hasForwarded) {
         api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, link.locator);
-        api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: link.locator, metro: session.experiments.indexOf("metro") >= 0});
+        api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: link.locator});
         api.tabs.on.ready.remove(deepLinkListener);
-        return;
       }
     }
   });
 }
 
 function initTab(tab, o) {  // o is pageData[tab.nUri]
-  var metro = session.experiments.indexOf("metro") >= 0;
   o.counts = {
     n: -notifications.filter(function(n) {return new Date(n.time) > notificationsRead.time}).length,
     c: commentCount(o),
     m: messageCount(o)};
   var data = {
-    metro: metro,
     kept: !!o.kept,
     private: o.kept == "private",
     keepers: o.keepers,
@@ -519,10 +514,10 @@ function initTab(tab, o) {  // o is pageData[tab.nUri]
     ids.forEach(function(id) {
       socket.send(["get_thread", id]);
     });
-  } else if (session.rules.rules.comment && o.counts.c < 0 && (metro || !o.neverOnSite)) {  // unread comment(s)
+  } else if (session.rules.rules.comment && o.counts.c < 0 && !o.neverOnSite) {  // unread comment(s)
     data.trigger = "comment";
     data.locator = "/comments";
-  } else if (!o.kept && (metro || !o.neverOnSite) && (!o.sensitive || !session.rules.rules.sensitive)) {
+  } else if (!o.kept && !o.neverOnSite && (!o.sensitive || !session.rules.rules.sensitive)) {
     var url = tab.url;
     if (session.rules.rules.url && session.patterns.some(function(re) {return re.test(url)})) {
       api.log("[initTab]", tab.id, "restricted");
@@ -534,7 +529,7 @@ function initTab(tab, o) {  // o is pageData[tab.nUri]
           scroll: session.rules.rules.scroll,
           viewport: session.rules.rules.viewport};
       }
-      tab.autoShowSec = (session.rules.rules[!metro && o.keepers ? "friendKept" : "focus"] || [])[0];
+      tab.autoShowSec = (session.rules.rules.focus || 0)[0];
       if (tab.autoShowSec != null && api.tabs.isFocused(tab)) {
         scheduleAutoShow(tab);
       }
