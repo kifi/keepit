@@ -261,6 +261,19 @@ exports.storage = require("sdk/simple-storage").storage;
 
 const hostRe = /^https?:\/\/[^\/]*/;
 exports.tabs = {
+  select: function(tabId) {
+    exports.log("[api.tabs.select]", tabId);
+    tabsById[tabId].activate();
+  },
+  open: function(url, callback) {
+    exports.log("[api.tabs.open]", url);
+    tabs.open({
+      url: url,
+      onOpen: function (tab) {
+        callback(tab.id);
+      }
+    });
+  },
   each: function(callback) {
     for each (let page in pages) {
       if (/^https?:/.test(page.url)) callback(page);

@@ -507,8 +507,8 @@ slider2 = function() {
       });
     },
     counts: function(o) {
-      info.counts = o;
       if (!$slider) return;
+      info.counts = o;
       var $btns = $slider.find(".kifi-slider2-dock-btn");
       [[".kifi-slider2-notices", o.n],
        [".kifi-slider2-comments", o.c],
@@ -524,6 +524,14 @@ slider2 = function() {
   return {
     show: function(info, trigger, locator) {  // trigger is for the event log (e.g. "auto", "key", "icon")
       showSlider(info, trigger, locator);
+    },
+    openDeepLink: function(info, trigger, locator) {
+      api.log("[openDeepLink]", locator)
+      if ($slider) {
+        openDeepLink(locator);
+      } else {
+        showSlider(info, trigger, locator);
+      }
     },
     shown: function() {
       return !!lastShownAt;
