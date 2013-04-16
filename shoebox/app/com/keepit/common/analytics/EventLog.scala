@@ -74,9 +74,9 @@ case class Event(
   serverVersion: String
 )
 
-class EventRepo @Inject() (s3EventStore: S3EventStore, mongoEventStore: MongoEventStore) {
+class EventRepo @Inject() (eventStore: EventStore, mongoEventStore: MongoEventStore) {
   def persistToS3(event: Event): Event = {
-    s3EventStore += (event.externalId -> event)
+    eventStore += (event.externalId -> event)
     event
   }
   def persistToMongo(event: Event): Event = mongoEventStore.save(event)

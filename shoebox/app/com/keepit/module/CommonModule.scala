@@ -148,7 +148,7 @@ class CommonModule extends ScalaModule with Logging {
     current.configuration.getString("mongo.events.server").map { server =>
       val mongoConn = MongoConnection(server)
       val mongoDB = mongoConn(current.configuration.getString("mongo.events.database").getOrElse("events"))
-      new MongoEventStoreImpl(mongoDB)
+      new MongoS3EventStoreImpl(mongoDB)
     }.get
   }
 
