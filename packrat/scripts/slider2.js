@@ -116,7 +116,8 @@ slider2 = function() {
               fadesOut: true,
               create: function(callback) {
                 var i = $a.prevAll(".kifi-slider2-keeper").length;
-                var friend = $a.closest(".kifi-slider2-tip").data("keepers")[i];
+                var friend = ($a.closest(".kifi-slider2-tip").data("keepers") || [])[i];
+                if (!friend) return;
                 render("html/friend_card.html", {
                   name: friend.firstName + " " + friend.lastName,
                   facebookId: friend.facebookId,
