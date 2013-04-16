@@ -134,7 +134,11 @@ api.log("[google_inject]");
       if (resp.hits.length) {
         logEvent("search", "kifiAtLeastOneResult", {"query": q, "filter": f, "queryUUID": resp.uuid, "experimentId": resp.experimentId});
         loadChatter(response.hits.slice());
-        prefetchMore();
+        if (resp.show) {
+          prefetchMore();
+        } else {
+          $res.data("prefetch", true);
+        }
       }
     });
 
@@ -259,7 +263,11 @@ api.log("[google_inject]");
       $res.find("#kifi-res-list,.kifi-res-end").toggle(200);
       $res.find(".kifi-res-filter-keeps").fadeToggle(200);
       $res.find(".kifi-res-filters-x:visible").click();
-      $(this).toggleClass("kifi-collapsed").delay(200);
+      $(this).toggleClass("kifi-collapsed");
+      if ($res.data("prefetch")) {
+        $res.removeData("prefetch");
+        prefetchMore();
+      }
     }).on("click", ".kifi-res-filter-keeps", function() {
       var $f = $res.find(".kifi-res-filters");
       if ($f.is(":animated")) return;
