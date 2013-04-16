@@ -13,11 +13,8 @@ var injected, t0 = +new Date;
   var info, openTo, rules = 0, tile, count;
 
   document.addEventListener("keydown", function(e) {
-    if (e.shiftKey && (e.metaKey || e.ctrlKey) && e.keyCode == 75 && !info.metro) {  // cmd-shift-K or ctrl-shift-K
-      withSlider(function() {
-        slider.toggle("key");
-      });
-      return false;
+    if (e.shiftKey && (e.metaKey || e.ctrlKey) && e.keyCode == 75) {  // cmd-shift-K or ctrl-shift-K
+      // TODO: new keyboard shortcuts https://app.asana.com/0/2456298849186/4781971153773
     }
   });
 
@@ -56,15 +53,14 @@ var injected, t0 = +new Date;
       if (openTo) {
         o.locator = openTo.locator;
         o.trigger = openTo.trigger;
+        o.force = openTo.force;
         openTo = null;
       }
       rules = o.rules || 0;
-      if (o.metro) {
-        if (!tile) {
-          insertTile(o);
-        }
-        updateCount(o.counts);
+      if (!tile) {
+        insertTile(o);
       }
+      updateCount(o.counts);
       if (o.locator) {
         openSlider(o);
       } else if (rules.scroll) {
@@ -72,22 +68,16 @@ var injected, t0 = +new Date;
       }
     },
     open_slider_to: function(o) {
-      if (o.metro && !info) {
+      if (!info) {
         openTo = o;
       } else {
         openSlider(o);
       }
     },
     button_click: function() {
-      if (info.metro) {
-        withSlider2(function() {
-          slider2.toggle(info, "button");
-        });
-      } else {
-        withSlider(function() {
-          slider.toggle("button");
-        });
-      }
+      withSlider2(function() {
+        slider2.toggle(info, "button");
+      });
     },
     auto_show: autoShow.bind(null, "auto"),
     counts: updateCount});
@@ -95,29 +85,17 @@ var injected, t0 = +new Date;
   api.port.emit("init_slider_please");
 
   function autoShow(trigger) {
-    var width;
-    if (rules.viewport && !info.metro && (width = viewportEl.clientWidth) < rules.viewport[0]) {
-      api.log("[autoShow] viewport too narrow:", width, "<", rules.viewport[0]);
-    } else {
-      openSlider({trigger: trigger});
-    }
+    openSlider({trigger: trigger});
   }
 
   function openSlider(o) {
-    if (info.metro) {
-      withSlider2(function() {
+    withSlider2(function() {
+      if (o.force) {
+        slider2.openDeepLink(info, o.trigger, o.locator);
+      } else {
         slider2.shown() || slider2.show(info, o.trigger, o.locator);
-      });
-    } else {
-      withSlider(function() {
-        slider.shown() || slider.show(o.trigger, o.locator);
-      });
-    }
-  }
-
-  function withSlider(callback) {
-    document.removeEventListener("scroll", onScrollMaybeShow);
-    api.require("scripts/slider.js", callback);
+      }
+    });
   }
 
   function withSlider2(callback) {

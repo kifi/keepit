@@ -63,12 +63,12 @@ private[mail] case class ProcessMail(mail: ElectronicMail, sender: MailSenderPlu
 
 private[mail] class MailSenderActor @Inject() (
     healthcheckPlugin: HealthcheckPlugin,
-    sendgridMailProvider: SendgridMailProvider)
+    mailProvider: MailProvider)
   extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
     case ProcessOutbox(sender) => sender.processOutbox()
-    case ProcessMail(mail, sender) => sendgridMailProvider.sendMailToSendgrid(mail)
+    case ProcessMail(mail, sender) => mailProvider.sendMail(mail)
     case unknown => throw new Exception("unknown message: %s".format(unknown))
   }
 }

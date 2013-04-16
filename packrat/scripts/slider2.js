@@ -407,8 +407,6 @@ slider2 = function() {
         api.port.emit("session", function(session) {
           api.require("scripts/comments.js", function() {
             commentsPane.render($box.find(".kifi-pane-tall"), comments, session);
-            var lastCom = comments[comments.length - 1];
-            api.port.emit("set_comment_read", {id: lastCom.id, time: lastCom.createdAt});
           });
         });
       });
@@ -429,8 +427,6 @@ slider2 = function() {
         api.port.emit("session", function(session) {
           api.require("scripts/thread.js", function() {
             threadPane.render($tall, th.id, th.messages, session);
-            var lastMsg = th.messages[th.messages.length - 1];
-            api.port.emit("set_message_read", {threadId: th.id, messageId: lastMsg.id, time: lastMsg.createdAt});
           });
         });
       });
@@ -501,15 +497,18 @@ slider2 = function() {
         (commentsPane.update || api.noop)(comment, session.userId);
       });
     },
+    thread_info: function(o) {
+      (threadsPane.update || api.noop)(o.thread, o.read);
+    },
     message: function(o) {
       api.port.emit("session", function(session) {
-        (threadsPane.update || api.noop)(o.thread);
+        (threadsPane.update || api.noop)(o.thread, o.read);
         (threadPane.update || api.noop)(o.thread, o.message, session.userId);
       });
     },
     counts: function(o) {
-      info.counts = o;
       if (!$slider) return;
+      info.counts = o;
       var $btns = $slider.find(".kifi-slider2-dock-btn");
       [[".kifi-slider2-notices", o.n],
        [".kifi-slider2-comments", o.c],
@@ -525,6 +524,14 @@ slider2 = function() {
   return {
     show: function(info, trigger, locator) {  // trigger is for the event log (e.g. "auto", "key", "icon")
       showSlider(info, trigger, locator);
+    },
+    openDeepLink: function(info, trigger, locator) {
+      api.log("[openDeepLink]", locator)
+      if ($slider) {
+        openDeepLink(locator);
+      } else {
+        showSlider(info, trigger, locator);
+      }
     },
     shown: function() {
       return !!lastShownAt;

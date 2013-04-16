@@ -469,6 +469,14 @@ api = function() {
     },
     storage: localStorage,
     tabs: {
+      select: function(tabId) {
+        chrome.tabs.update(tabId, { active: true });
+      },
+      open: function(url, callback) {
+        chrome.tabs.create({ url: url }, function (tab) {
+          callback(tab.id);
+        });
+      },
       each: function(callback) {
         for (var id in pages) {
           var page = pages[id];

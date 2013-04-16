@@ -219,14 +219,14 @@ const socketHandlers = {
         d.threads[i] = th;
         var messages = d.messages[th.id];
         if (messages && !messages.some(hasId(message.id))) {  // sent messages come via POST resp and socket
-          messages.push(message);
+          messages.push(message);  // should we maintain chronological order?
         }
       } else {
-        d.threads.push(th);
+        d.threads.push(th);  // should we maintain chronological order?
         d.messages[th.id] = [message];
       }
       d.tabs.forEach(function(tab) {
-        api.tabs.emit(tab, "message", {thread: th, message: message});
+        api.tabs.emit(tab, "message", {thread: th, message: message, read: d.lastMessageRead[th.id]});
         tellTabsIfCountChanged(d, "m", messageCount(d));
       });
     }
@@ -237,7 +237,7 @@ const socketHandlers = {
     if (d) {
       d.lastMessageRead[threadId] = new Date(time);
       d.tabs.forEach(function(tab) {
-        // api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages});  // TODO: reflect read state in threads view
+        api.tabs.emit(tab, "thread_info", {thread: d.threads.filter(hasId(threadId))[0], read: d.lastMessageRead[threadId]});
         tellTabsIfCountChanged(d, "m", messageCount(d));
       });
     }
@@ -435,6 +435,26 @@ api.port.on({
   get_friends: function(_, respond) {
     respond(friends);
   },
+  open_deep_link: function(data, _, tab) {
+    var uriData = pageData[data.nUri];
+    if (uriData) {
+      var tab = tab.nUri == data.nUri ? tab : uriData.tabs[0];
+      if (tab.ready) {
+        api.tabs.emit(tab, "open_slider_to", {
+          force: true,
+          trigger: "deepLink",
+          locator: data.locator});
+      } else {
+        createDeepLinkListener(data, tab.id);
+      }
+      api.tabs.select(tab.id);
+    } else {
+      api.tabs.open(data.nUri, function (tabId) {
+        createDeepLinkListener(data, tabId);
+      });
+      return true;
+    }
+  },
   add_deep_link_listener: function(data, respond, tab) {
     createDeepLinkListener(data, tab.id, respond);
     return true;
@@ -465,22 +485,19 @@ function createDeepLinkListener(link, linkTabId, respond) {
       var hasForwarded = tab.url.indexOf(getServer() + "/r/") < 0 /* && tab.url.indexOf("dev.ezkeep.com") < 0 */;
       if (hasForwarded) {
         api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, link.locator);
-        api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: link.locator, metro: session.experiments.indexOf("metro") >= 0});
+        api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: link.locator});
         api.tabs.on.ready.remove(deepLinkListener);
-        return;
       }
     }
   });
 }
 
 function initTab(tab, o) {  // o is pageData[tab.nUri]
-  var metro = session.experiments.indexOf("metro") >= 0;
   o.counts = {
     n: -notifications.filter(function(n) {return new Date(n.time) > notificationsRead.time}).length,
     c: commentCount(o),
     m: messageCount(o)};
   var data = {
-    metro: metro,
     kept: !!o.kept,
     private: o.kept == "private",
     keepers: o.keepers,
@@ -497,10 +514,10 @@ function initTab(tab, o) {  // o is pageData[tab.nUri]
     ids.forEach(function(id) {
       socket.send(["get_thread", id]);
     });
-  } else if (session.rules.rules.comment && o.counts.c < 0 && (metro || !o.neverOnSite)) {  // unread comment(s)
+  } else if (session.rules.rules.comment && o.counts.c < 0 && !o.neverOnSite) {  // unread comment(s)
     data.trigger = "comment";
     data.locator = "/comments";
-  } else if (!o.kept && (metro || !o.neverOnSite) && (!o.sensitive || !session.rules.rules.sensitive)) {
+  } else if (!o.kept && !o.neverOnSite && (!o.sensitive || !session.rules.rules.sensitive)) {
     var url = tab.url;
     if (session.rules.rules.url && session.patterns.some(function(re) {return re.test(url)})) {
       api.log("[initTab]", tab.id, "restricted");
@@ -512,7 +529,7 @@ function initTab(tab, o) {  // o is pageData[tab.nUri]
           scroll: session.rules.rules.scroll,
           viewport: session.rules.rules.viewport};
       }
-      tab.autoShowSec = (session.rules.rules[!metro && o.keepers ? "friendKept" : "focus"] || [])[0];
+      tab.autoShowSec = (session.rules.rules.focus || 0)[0];
       if (tab.autoShowSec != null && api.tabs.isFocused(tab)) {
         scheduleAutoShow(tab);
       }

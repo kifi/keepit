@@ -53,8 +53,7 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
     case Some(t) =>
       causeStacktraceHead(depth, Option(t.getCause)) match {
         case Some(msg) => Some(msg)
-        case None =>
-          Some(t.getStackTrace().take(depth).mkString)
+        case None => Some(t.getStackTrace().take(depth).map(e => e.getClassName + e.getLineNumber).mkString(":"))
       }
   }
 
@@ -86,10 +85,7 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
         errorMessage.getOrElse(path.getOrElse(callType.toString()))
       case Some(t) =>
         val source = cause(t)
-        val message = source.getMessage() match {
-          case long if long.length > 12 => long.substring(0, 12) + "..."
-          case short => short
-        }
+        val message = source.getMessage().replaceAll("\\d", "*")
         s"${source.getClass().toString} : ${message}"
     }
   }
