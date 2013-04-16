@@ -10,7 +10,7 @@ jQuery.fn.layout = function() {
   return this.each(function() {this.clientHeight});  // forces layout
 };
 
-var commentsPane = 0, threadsPane = 0, threadPane = 0;  // set when api.require'd
+var generalPane = 0, commentsPane = 0, threadsPane = 0, threadPane = 0;  // set when api.require'd
 slider2 = function() {
   var $tile = $("#kifi-tile"), $slider, $pane, lastShownAt, info;
 
@@ -367,6 +367,12 @@ slider2 = function() {
           .on("click", ".kifi-pane-back", function() {
             showPane($(this).data("pane") || "general", true);
           })
+          .on("click", ".kifi-pane-head-settings,.kifi-pane-action", function() {
+            var $n = $pane.find(".kifi-not-done"), d = $n.data();
+            clearTimeout(d.t);
+            $n.remove().removeClass("kifi-showing").appendTo($pane).layout().addClass("kifi-showing");
+            d.t = setTimeout($n.removeClass.bind($n, "kifi-showing"), 1000);
+          })
           .on("kifi:show-pane", function(e, pane, paramsArg, populateArg) {
             showPane(pane, false, paramsArg, populateArg);
           })
@@ -395,6 +401,11 @@ slider2 = function() {
   }
 
   const populatePane = {
+    general: function($box) {
+      api.require("scripts/general.js", function() {
+        generalPane.render($box.find(".kifi-pane-tall"));
+      });
+    },
     notices: function($box) {
       api.port.emit("session", function (session) {
         api.require("scripts/notices.js", function() {
@@ -430,8 +441,7 @@ slider2 = function() {
           });
         });
       });
-    },
-    general: $.noop
+    }
   };
 
   function formatCountHtml(kept, numFriends, numOthers) {
