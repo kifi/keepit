@@ -525,9 +525,7 @@ function initTab(tab, o) {  // o is pageData[tab.nUri]
       api.log("[initTab]", tab.id, "shown before");
     } else {
       if (api.prefs.get("showSlider")) {
-        data.rules = { // only the relevant ones
-          scroll: session.rules.rules.scroll,
-          viewport: session.rules.rules.viewport};
+        data.rules = {scroll: session.rules.rules.scroll}; // only the relevant one(s)
       }
       tab.autoShowSec = (session.rules.rules.focus || 0)[0];
       if (tab.autoShowSec != null && api.tabs.isFocused(tab)) {

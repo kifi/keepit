@@ -1,7 +1,7 @@
 package com.keepit.common.db.slick
 
 import com.google.inject.Inject
-import com.keepit.common.db.{ DbSequence, DbInfo }
+import com.keepit.common.db.{ DbSequence, DbInfo, DatabaseDialect }
 import java.sql.{ PreparedStatement, Connection }
 import scala.collection.mutable
 import scala.slick.driver._
@@ -17,6 +17,7 @@ import scala.concurrent._
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
 trait DataBaseComponent {
   val Driver: ExtendedDriver
+  val dialect: DatabaseDialect[_]
   def dbInfo: DbInfo
   lazy val handle: SlickDatabase = dbInfo.database
 
@@ -33,6 +34,8 @@ class Database @Inject() (
   import DBSession._
 
   implicit val executionContext = system.dispatchers.lookup("db-thread-pool-dispatcher")
+
+  val dialect: DatabaseDialect[_] = db.dialect
 
   def readOnlyAsync[T](f: ROSession => T): Future[T] = future { readOnly(f) }
   def readWriteAsync[T](f: RWSession => T): Future[T] = future { readWrite(f) }
