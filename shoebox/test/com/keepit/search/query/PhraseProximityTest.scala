@@ -1,8 +1,6 @@
 package com.keepit.search.query
 
 import org.specs2.mutable.Specification
-import com.keepit.search.phrasedetector.PhraseHelper
-import com.keepit.search.phrasedetector.PhraseProximityQuery
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer
 import org.apache.lucene.util.Version
 import org.apache.lucene.index.IndexWriterConfig
@@ -19,27 +17,33 @@ import scala.collection.mutable.ArrayBuffer
 import org.apache.lucene.search.DocIdSetIterator
 
 class PhraseProximityTest extends Specification {
-  val terms = Array("machine", "learning", "and", "machine", "translation")
+  val terms = Array("machine", "learning", "and", "machine", "translation")             // "and" is first inserted, since we go through stand-alone terms first. (see PhraseHelper)
   val phrases = Set((0, 2), (3, 2))
   val phraseHelper = new PhraseHelper(terms, phrases)
   val gapPenalty = PhraseProximityQuery.gapPenalty
 
   "PhraseHelper" should {
     "correctly construct phraseMap" in {
-      phraseHelper.phraseMap === Map("machine learning" -> (0, 2), "and" -> (1, 1), "machine translation" -> (2, 2))            // (id, len)
+      phraseHelper.phraseMap === Map("machine learning" -> (1, 2), "and" -> (0, 1), "machine translation" -> (2, 2))            // (id, len)
+
+      val terms2 = Array("computer", "software", "engineering")
+      val phrases2 = Set((0,2),(0,3),(1,2))                              // overlapping case: "computer software", "software engineering", "computer software engineering"
+      val phraseHelper2 = new PhraseHelper(terms2, phrases2)
+
+      phraseHelper2.phraseMap === Map("computer software" -> (0,2), "computer software engineering" -> (1, 3), "software engineering" -> (2, 2))
     }
 
     "correctly detect phrase locations" in {
       var pos = Array(5, 6, 7, 8, 9)
       var tokens = Array("machine", "learning", "and", "machine", "translation")
-      phraseHelper.getMatchedPhrases(pos, tokens) === Array((0, 2, 6), (1, 1, 7), (2, 2, 9))                                    // (id, len, endingPos)
+      phraseHelper.getMatchedPhrases(pos, tokens) === Array((1, 2, 6), (0, 1, 7), (2, 2, 9))                                    // (id, len, endingPos)
 
       pos = Array(4, 6, 7, 8, 9)
-      phraseHelper.getMatchedPhrases(pos, tokens) === Array((1, 1, 7), (2, 2, 9))
+      phraseHelper.getMatchedPhrases(pos, tokens) === Array((0, 1, 7), (2, 2, 9))
 
       pos = Array(4, 5, 6, 7)
       tokens = Array("learning", "and", "machine", "translation")
-      phraseHelper.getMatchedPhrases(pos, tokens) === Array((1, 1, 5), (2, 2, 7))
+      phraseHelper.getMatchedPhrases(pos, tokens) === Array((0, 1, 5), (2, 2, 7))
 
       pos = Array(1, 2, 3, 4)
       tokens = Array("machine", "machine", "translation", "learning")
@@ -48,12 +52,12 @@ class PhraseProximityTest extends Specification {
 
     "correctly compute scores" in {
 
-      var matches = Array((0, 2, 1), (1, 1, 2), (2, 2, 4))                                  // (machine learning)(and)(machine translation), 3 consecutive phrases
+      var matches = Array((1, 2, 1), (0, 1, 2), (2, 2, 4))                                  // (machine learning)(and)(machine translation), 3 consecutive phrases
       var score = phraseHelper.getMatchedScore(matches)
       var correct = 5 * (5 + 1) / 2.0f - 5 * (5 - 1) * gapPenalty / 2.0f                    // should match max possible score
       assert(math.abs(score - correct) < 1e-4)
 
-      matches = Array((1, 1, 2), (0, 2, 5), (0, 2, 12), (1, 1, 13), (2, 2, 15))             // add some confusion terms: (and)...(machine translation)......(machine learning)(and)(machine translation)
+      matches = Array((1, 1, 2), (1, 2, 5), (1, 2, 12), (0, 1, 13), (2, 2, 15))             // add some confusion terms: (and)...(machine learning)......(machine learning)(and)(machine translation)
       score = phraseHelper.getMatchedScore(matches)
       assert(math.abs(score - correct) < 1e-4)                                              // should still match max possible score
 
@@ -104,6 +108,7 @@ class PhraseProximityTest extends Specification {
     }
     indexReader.numDocs() === 5
     buf.size === 4
+//    buf.foreach{ case (doc, score) => println("doc " + doc + " score = " + score) }
     buf.sortBy(_._2).map(_._1) === Seq(3, 2, 1, 0)      // doc 0 is most relevant
   }
 

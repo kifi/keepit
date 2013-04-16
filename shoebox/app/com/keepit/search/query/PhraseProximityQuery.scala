@@ -1,4 +1,4 @@
-package com.keepit.search.phrasedetector
+package com.keepit.search.query
 
 import org.apache.lucene.index.Term
 import scala.collection.mutable.ListBuffer
@@ -22,6 +22,8 @@ import com.keepit.search.query.QueryUtil._
 import org.apache.lucene.util.PriorityQueue
 import scala.math._
 import java.util.Arrays
+import java.lang.{Float => JFloat}
+import java.util.{Set => JSet}
 
 case class TrieNode(nodeText: String, var children: Map[String, TrieNode], var endOfPhrase: Boolean) {
   def hasChild(text: String) = children.keySet.contains(text)
@@ -33,7 +35,7 @@ case class TrieNode(nodeText: String, var children: Map[String, TrieNode], var e
 class PhraseTrie(val root: TrieNode = TrieNode("", Map.empty[String, TrieNode], false)) {
   def addPhrase(subroot: TrieNode = root, phrase: List[String]): Unit = {
     if (phrase.size > 0) {
-      val text = phrase.head.toLowerCase.trim
+      val text = phrase.head
       if (!subroot.hasChild(text)) subroot.addChild(text)
       if (phrase.size == 1) subroot.children(text).endOfPhrase = true
       else addPhrase(subroot.children(text), phrase.tail)
@@ -44,33 +46,21 @@ class PhraseTrie(val root: TrieNode = TrieNode("", Map.empty[String, TrieNode], 
 // phrases: (pos, len) pairs. We assume this comes from PhraseDetector and assume
 // these pairs are compatible with term array. (i.e., no out of index problem)
 class PhraseHelper(terms: Seq[String], phrases: Set[(Int, Int)]) {
-  val termTexts = terms.map(term => term.toLowerCase.trim)
-  // 0: not in phrase, 1: part of phrase, 2: head of phrase
   val inPhrase = {
     val inPhrase = new Array[Int](terms.size)
-    phrases.foreach { case (pos, len) => (pos until pos + len).foreach(i => if (i == pos) inPhrase(i) = 2 else inPhrase(i) = 1) }
+    phrases.foreach { case (pos, len) => (pos until pos + len).foreach(i => inPhrase(i) = 1) }
     inPhrase
   }
 
   val phraseMap = {
-    var phraseId = Map.empty[String, (Int, Int)] // (Int,Int) = (phrase id, phrase len)
+    var phraseId = Map.empty[String, (Int, Int)]
     var cnt = 0
-    var i = 0
-    while (i < inPhrase.size) {
-      if (inPhrase(i) == 0 && !phraseId.keySet.contains(termTexts(i))) {
-        phraseId += termTexts(i) -> (cnt, 1); cnt += 1; i += 1 // single term "phrase"
-      } else if (inPhrase(i) == 2) {
-        var phrase = termTexts(i)
-        var len = 1
-        i += 1
-        while (i < inPhrase.size && inPhrase(i) == 1) {
-          phrase = phrase + " " + termTexts(i)
-          len += 1
-          i += 1
-        }
-        phraseId += phrase -> (cnt, len)
-        cnt += 1
-      }
+    val nonPhraseIdx = for( i <- 0 until inPhrase.size ; if ( inPhrase(i) == 0 )) yield i
+    nonPhraseIdx.foreach{ i => if (!phraseId.contains(terms(i))) phraseId += terms(i) -> (cnt, 1); cnt += 1; }
+    phrases.foreach{ case (pos, len) => {
+       val phrase = terms.slice(pos, pos + len).mkString(" ")
+       if (!phraseId.contains(phrase)) { phraseId += phrase -> (cnt, len); cnt += 1; }
+     }
     }
     phraseId
   }
