@@ -109,7 +109,7 @@ class MainSearcher(
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
 
-    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost)
+    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
 
@@ -264,7 +264,7 @@ class MainSearcher(
 
   def explain(queryString: String, uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
     val lang = Lang("en") // TODO: detect
-    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost)
+    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
 
