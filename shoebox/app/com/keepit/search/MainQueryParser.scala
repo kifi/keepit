@@ -91,7 +91,7 @@ class MainQueryParser(
           phraseProxQ.add( PhraseProximityQuery(getStemmedTerms("ts"), phrases))
           phraseProxQ.add( PhraseProximityQuery(getStemmedTerms("title_stemmed"), phrases))
           auxQueries += phraseProxQ
-          auxStrengths += proximityBoost
+          auxStrengths += phraseProximityBoost
         } else if (numStemmedTerms > 1 && proximityBoost > 0.0f) {
           val proxQ = new DisjunctionMaxQuery(0.0f)
           proxQ.add(ProximityQuery(getStemmedTerms("cs")))
