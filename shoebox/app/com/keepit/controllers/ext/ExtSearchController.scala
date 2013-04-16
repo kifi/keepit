@@ -39,6 +39,7 @@ case class PersonalSearchResultPacket(
   query: String,
   hits: Seq[PersonalSearchResult],
   mayHaveMoreHits: Boolean,
+  show: Boolean,
   experimentId: Option[Id[SearchConfigExperiment]],
   context: String)
 
@@ -138,7 +139,11 @@ class ExtSearchController @Inject() (
     log.debug(hits mkString "\n")
 
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
-    PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, experimentId, filter)
+    PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, isToShow(res), experimentId, filter)
+  }
+  
+  private[ext] def isToShow(res: ArticleSearchResult): Boolean = {
+    res.svVariance < 0.18
   }
 
   private[ext] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {

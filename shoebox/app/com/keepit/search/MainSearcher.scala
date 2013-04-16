@@ -59,6 +59,7 @@ class MainSearcher(
   val similarity = Similarity(config.asString("similarity"))
   val enableCoordinator = config.asBoolean("enableCoordinator")
   val phraseBoost = config.asFloat("phraseBoost")
+  val phraseProximityBoost = config.asFloat("phraseProximityBoost")
   val siteBoost = config.asFloat("siteBoost")
   val minMyBookmarks = config.asInt("minMyBookmarks")
   val myBookmarkBoost = config.asFloat("myBookmarkBoost")
@@ -170,7 +171,7 @@ class MainSearcher(
       val score = max(myHits.highScore, friendsHits.highScore)
       if (score < 0.0f) 1.0f else score
     }
-    
+
     var threshold = highScore * tailCutting
 
     if (myHits.size > 0) {
