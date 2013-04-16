@@ -45,7 +45,7 @@ class S3Module() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def eventStore(amazonS3Client: AmazonS3): S3EventStore = {
+  def eventStore(amazonS3Client: AmazonS3): EventStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.event.bucket").get)
     new S3EventStoreImpl(bucketName, amazonS3Client)
   }
