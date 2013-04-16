@@ -60,6 +60,7 @@ function convertDraftToText(html) {
     .replace(/<\/div><div>/gi, '\n')
     .replace(/<div\s*[\/]?>/gi, '\n')
     .replace(/<\/div>/gi, '')
+    .replace(/\u200b/g, '')  // zero-width spaces (we insert one as a webkit focus bug workaround)
     .replace(/<a [^>]*\bhref="x-kifi-sel:([^"]*)"[^>]*>(.*?)<\/a>/gi, function($0, $1, $2) {
       return "[" + $2.replace(/\]/g, "\\]") + "](x-kifi-sel:" + $1.replace(/\)/g, "\\)") + ")";
     });
