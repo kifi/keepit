@@ -480,9 +480,9 @@ slider2 = function() {
     api.port.emit.apply(api.port, kArr);
   }
 
-  function receiveData(type, prop, data, respond) {  // prop might be omitted
-    api.log("[receiveData]", arguments);
-    if (arguments.length < 4) {
+  function receiveData(type, prop, data) {  // prop might be omitted
+    api.log("[receiveData]", type, prop, data != null ? data : "");
+    if (typeof prop != "string" || !/^[a-z]+$/i.test(prop)) {
       data = prop, prop = null;
     }
     var arg = data[prop], key = prop ? type + "/" + arg : type;
