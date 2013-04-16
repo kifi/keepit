@@ -18,24 +18,26 @@ import org.joda.time._
 
 class DatabaseDialectTest extends Specification {
 
+  val dec_20_2013 = new DateTime(2013, 12, 20, 0, 0, 0, zones.PT)
+
   "MySqlDatabaseDialect" should {
 
     "stringToDay to string" in {
-      MySqlDatabaseDialect.day(new DateTime(2013, 12, 20, 0, 0, 0, zones.PT)) === """STR_TO_DATE('2013-12-20', '%Y-%m-%d')"""
+      MySqlDatabaseDialect.day(dec_20_2013) === """STR_TO_DATE('2013-12-20', '%Y-%m-%d')"""
     }
   }
 
   "H2DatabaseDialect" should {
 
     "stringToDay to string" in {
-      H2DatabaseDialect.day(new DateTime(2013, 12, 20, 0, 0, 0, zones.PT)) === """PARSEDATETIME('2013-12-20', 'y-M-d')"""
+      H2DatabaseDialect.day(dec_20_2013) === """PARSEDATETIME('2013-12-20', 'y-M-d')"""
     }
 
     "stringToDay to db" in {
       running(new EmptyApplication()) {
         inject[Database].readWrite { implicit s =>
           val st = s.conn.createStatement()
-          val sql = s"""select DATEADD('MONTH', 1, ${H2DatabaseDialect.day(new DateTime(2013, 12, 20, 0, 0, 0))}) as day from dual"""
+          val sql = s"""select DATEADD('MONTH', 1, ${H2DatabaseDialect.day(dec_20_2013)}) as day from dual"""
           sql === """select DATEADD('MONTH', 1, PARSEDATETIME('2013-12-20', 'y-M-d')) as day from dual"""
           val rs = st.executeQuery(sql)
           rs.next
