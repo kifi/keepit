@@ -15,9 +15,7 @@ import java.io.{InputStream, ByteArrayInputStream, ByteArrayOutputStream, Object
 import java.lang.UnsupportedOperationException
 import com.amazonaws.services.s3.model.AmazonS3Exception
 import com.amazonaws.services.s3.model.S3Object
-import com.keepit.common.store.ObjectStore
-import com.keepit.common.store.S3ObjectStore
-import com.keepit.common.store.S3Bucket
+import com.keepit.common.store._
 import play.api.libs.json.Format
 import com.keepit.serializer.ArticleSearchResultSerializer
 import com.keepit.common.db.ExternalId
@@ -28,3 +26,5 @@ trait ArticleSearchResultStore extends ObjectStore[ExternalId[ArticleSearchResul
 
 class S3ArticleSearchResultStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val formatter: Format[ArticleSearchResult] = new ArticleSearchResultSerializer())
   extends S3ObjectStore[ExternalId[ArticleSearchResultRef], ArticleSearchResult] with ArticleSearchResultStore
+
+class InMemoryArticleSearchResultStoreImpl extends InMemoryObjectStore[ExternalId[ArticleSearchResultRef], ArticleSearchResult] with ArticleSearchResultStore
