@@ -475,7 +475,6 @@ slider2 = function() {
   function requireData(key, callback) {
     var kArr = key.split("/");
     var arr = dataCallbacks[key] = dataCallbacks[key] || [];
-    api.log("[requireData] key:", key, "callback:", typeof callback);
     arr.push([kArr[1], callback]);
 
     api.port.emit.apply(api.port, kArr);
