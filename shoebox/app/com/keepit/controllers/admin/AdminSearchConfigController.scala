@@ -29,15 +29,14 @@ class AdminSearchConfigController @Inject() (
   userWithSocialRepo: UserWithSocialRepo,
   userRepo: UserRepo,
   configManager: SearchConfigManager,
+  searchClient: SearchServiceClient,
   store: MongoEventStore)
     extends AdminController(actionAuthenticator) {
 
   def showUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val user = db.readOnly { implicit s =>
-      userWithSocialRepo.toUserWithSocial(userRepo.get(userId))
+    Async {
+      searchClient.showUserConfig(userId).map{ html => Ok(html) }
     }
-    val configs = configManager.getUserConfig(userId).iterator.toSeq.sortBy(_._1)
-    Ok(html.admin.searchConfig(user, configs))
   }
 
   def setUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
@@ -45,19 +44,20 @@ class AdminSearchConfigController @Inject() (
       case Some(req) => req.map(r => (r._1 -> r._2.head))
       case None => throw new Exception("whoops")
     }
-
-    val config = configManager.getUserConfig(userId)
-    configManager.setUserConfig(userId, config(form))
-    Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(userId))
+    Async {
+      searchClient.setUserConfig(userId, form).map{ r =>
+        Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(userId))
+      }
+    }
   }
 
   def resetUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    configManager.resetUserConfig(userId)
-    Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(userId))
+    Async {
+      searchClient.resetUserConfig(userId).map{ r =>
+        Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(userId))
+      }
+    }
   }
-
-  def allConfigParams(userId: Id[User]): Seq[(String, String)] =
-    configManager.getUserConfig(userId).iterator.toSeq.sortBy(_._1)
 
   def getExperiments = AdminHtmlAction { implicit request =>
     val experiments = configManager.getExperiments
