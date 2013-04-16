@@ -312,8 +312,8 @@ class DailyTotalUsersRepo @Inject() (store: MongoEventStore, db: Database) exten
         s"""
           select count(*) as sum, CONCAT(YEAR(created_at), "-", MONTH(created_at), "-", DAY(created_at)) as day
           from user
-          where created_at > ${db.dialect.stringToDay(startDate.toStandardDateString)} and
-                created_at < ${db.dialect.stringToDay(endDate.toStandardDateString)} group by day;
+          where created_at > ${db.dialect.day(startDate)} and
+                created_at < ${db.dialect.day(endDate)} group by day;
         """
       val rs = st.executeQuery(sql)
       while (rs.next) {
@@ -340,8 +340,8 @@ class DailyPrivateKeepsRepo @Inject() (store: MongoEventStore, db: Database) ext
           select count(*) as sum, CONCAT(YEAR(created_at), "-", MONTH(created_at), "-", DAY(created_at)) as day
           from bookmark
           where source="HOVER_KEEP" and is_private=true and
-          created_at > ${db.dialect.stringToDay(startDate.toStandardDateString)} and
-          created_at < ${db.dialect.stringToDay(endDate.toStandardDateString)} group by day;
+          created_at > ${db.dialect.day(startDate)} and
+          created_at < ${db.dialect.day(endDate)} group by day;
         """
       val rs = st.executeQuery(sql)
       while (rs.next) {
@@ -368,8 +368,8 @@ class DailyPublicKeepsRepo @Inject() (store: MongoEventStore, db: Database) exte
           select count(*) as sum, CONCAT(YEAR(created_at), "-", MONTH(created_at), "-", DAY(created_at)) as day
           from bookmark
           where source="HOVER_KEEP" and is_private=false and
-          created_at > ${db.dialect.stringToDay(startDate.toStandardDateString)} and
-          created_at < ${db.dialect.stringToDay(endDate.toStandardDateString)} group by day;
+          created_at > ${db.dialect.day(startDate)} and
+          created_at < ${db.dialect.day(endDate)} group by day;
         """
       val rs = st.executeQuery(sql)
       while (rs.next) {
@@ -396,8 +396,8 @@ class DailyNewThreadRepo @Inject() (store: MongoEventStore, db: Database) extend
           select count(*) as sum, CONCAT(YEAR(created_at), '-', MONTH(created_at), '-', DAY(created_at)) as day
           from comment
           where permissions='message' and parent is null and
-          created_at > ${db.dialect.stringToDay(startDate.toStandardDateString)} and
-          created_at < ${db.dialect.stringToDay(endDate.toStandardDateString)} group by day;
+          created_at > ${db.dialect.day(startDate)} and
+          created_at < ${db.dialect.day(endDate)} group by day;
         """
       val rs = st.executeQuery(sql)
       while (rs.next) {

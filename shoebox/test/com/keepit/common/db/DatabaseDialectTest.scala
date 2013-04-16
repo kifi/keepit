@@ -14,27 +14,28 @@ import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
 import scala.collection.mutable.{Map => MutableMap}
+import org.joda.time._
 
 class DatabaseDialectTest extends Specification {
 
   "MySqlDatabaseDialect" should {
 
     "stringToDay to string" in {
-      MySqlDatabaseDialect.stringToDay("2013-12-20") === """STR_TO_DATE('2013-12-20', '%Y-%m-%d')"""
+      MySqlDatabaseDialect.day(new DateTime(2013, 12, 20, 0, 0, 0)) === """STR_TO_DATE('2013-12-20', '%Y-%m-%d')"""
     }
   }
 
   "H2DatabaseDialect" should {
 
     "stringToDay to string" in {
-      H2DatabaseDialect.stringToDay("2013-12-20") === """PARSEDATETIME('2013-12-20', 'y-M-d')"""
+      H2DatabaseDialect.day(new DateTime(2013, 12, 20, 0, 0, 0)) === """PARSEDATETIME('2013-12-20', 'y-M-d')"""
     }
 
     "stringToDay to db" in {
       running(new EmptyApplication()) {
         inject[Database].readWrite { implicit s =>
           val st = s.conn.createStatement()
-          val sql = s"""select DATEADD('MONTH', 1, ${H2DatabaseDialect.stringToDay("2013-12-20")}) as day from dual"""
+          val sql = s"""select DATEADD('MONTH', 1, ${H2DatabaseDialect.day(new DateTime(2013, 12, 20, 0, 0, 0))}) as day from dual"""
           sql === """select DATEADD('MONTH', 1, PARSEDATETIME('2013-12-20', 'y-M-d')) as day from dual"""
           val rs = st.executeQuery(sql)
           rs.next
