@@ -26,7 +26,7 @@ import com.keepit.common.social.FakeSecureSocialUserServiceModule
 import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.store.FakeStoreModule
 import com.keepit.common.time._
-import com.keepit.dev.{SearchDevGlobal, ShoeboxDevGlobal, DevGlobal}
+import com.keepit.dev.{SearchDevGlobal, ShoeboxDevGlobal, DevGlobal, S3DevModule}
 import com.keepit.inject._
 import com.keepit.model.SocialConnection
 import com.keepit.model.SocialUserInfo
@@ -57,6 +57,7 @@ class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplica
   def withTestActorSystem(system: ActorSystem) = overrideWith(TestActorSystemModule(system))
   def withFakePersistEvent() = overrideWith(FakePersistEventModule())
   def withFakeCache() = overrideWith(FakeCacheModule())
+  def withS3DevModule() = overrideWith(new S3DevModule())
 
   def overrideWith(model: Module): TestApplication =
     new TestApplication(new TestGlobal(Modules.`override`(global.modules: _*).`with`(model)))
