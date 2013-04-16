@@ -481,10 +481,10 @@ slider2 = function() {
   }
 
   function receiveData(type, prop, data) {  // prop might be omitted
-    api.log("[receiveData]", type, prop, data != null ? data : "");
-    if (typeof prop != "string" || !/^[a-z]+$/i.test(prop)) {
+    if (data === undefined) {
       data = prop, prop = null;
     }
+    api.log("[receiveData]", type, prop, data);
     var arg = data[prop], key = prop ? type + "/" + arg : type;
     for (var i = 0, callbacks = dataCallbacks[key] || 0; i < callbacks.length; i++) {
       var cb = callbacks[i];
