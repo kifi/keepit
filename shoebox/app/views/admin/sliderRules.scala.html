@@ -7,7 +7,7 @@
 @admin("Slider Rules", stylesheets = List("admin_slider")) {
 <h3>Rules for Automatically Showing the Slider</h3>
 
-<div><span class="label">Note:</span> Changes take effect immediately (next page load) for all kifi users when you click <b>Save</b> below.</div>
+<div><span class="label">Note:</span> Changes take effect immediately for all kifi users when you click <b>Save</b> below.</div>
 
 <form class="slider-rules" action="@com.keepit.controllers.admin.routes.SliderAdminController.saveRules" method="POST">
   <input type="hidden" name="group" value="@groupName">
@@ -60,16 +60,6 @@
       <td>kept
       <td>
     <tr>
-      <td>@checkbox("viewport")
-      <td class="n">
-      <td>small viewport
-      <td>
-        <span class="input-append">
-          <input type="number" name="viewportParams" value="@rules("viewport").parameters.get(0)" min="0" step="10">
-          <span class="add-on">px</span>
-        </span>
-        <span class="help-inline">min width</span>
-    <tr>
       <td>@checkbox("scroll")
       <td class="y">
       <td>scrolled on page
@@ -85,16 +75,6 @@
           </span>
           <span class="help-inline">of page revealed</span>
         </div>
-    <tr>
-      <td>@checkbox("friendKept")
-      <td class="y">
-      <td>on page friend kept
-      <td>
-        <span class="input-append">
-          <input type="number" name="friendKeptParams" value="@rules("friendKept").parameters.get(0)" min="0">
-          <span class="add-on">sec</span>
-        </span>
-        <span class="help-inline">consecutive focus</span>
     <tr>
       <td>@checkbox("focus")
       <td class="y">
