@@ -14,6 +14,7 @@ import com.keepit.search.query.QueryHash
 object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
+      "phraseProximityBoost" -> "0.5",
       "phraseBoost" -> "0.5",
       "siteBoost" -> "2.0",
       "enableCoordinator" -> "true",
@@ -38,6 +39,7 @@ object SearchConfig {
     )
   private[this] val descriptions =
     Map[String, String](
+      "phraseProximityBoost" -> "boost value for phrase proximity",
       "phraseBoost" -> "boost value for the detected phrase",
       "siteBoost" -> "boost value for matching website names and domains",
       "enableCoordinator" -> "enables the IDF based coordinator",
