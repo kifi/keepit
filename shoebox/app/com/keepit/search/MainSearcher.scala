@@ -11,7 +11,7 @@ import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
 import org.apache.lucene.util.PriorityQueue
-import com.keepit.search.query.{TopLevelQuery,QueryUtil}
+import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
 import com.keepit.common.time._
@@ -59,6 +59,7 @@ class MainSearcher(
   val similarity = Similarity(config.asString("similarity"))
   val enableCoordinator = config.asBoolean("enableCoordinator")
   val phraseBoost = config.asFloat("phraseBoost")
+  val phraseProximityBoost = config.asFloat("phraseProximityBoost")
   val siteBoost = config.asFloat("siteBoost")
   val minMyBookmarks = config.asInt("minMyBookmarks")
   val myBookmarkBoost = config.asFloat("myBookmarkBoost")
@@ -108,7 +109,7 @@ class MainSearcher(
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
 
-    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost)
+    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
 
@@ -166,7 +167,10 @@ class MainSearcher(
     val hits = createQueue(numHitsToReturn)
 
     // global high score excluding others (an orphan uri sometimes makes results disappear)
-    val highScore = max(myHits.highScore, friendsHits.highScore)
+    val highScore = {
+      val score = max(myHits.highScore, friendsHits.highScore)
+      if (score < 0.0f) 1.0f else score
+    }
 
     var threshold = highScore * tailCutting
 
@@ -260,7 +264,7 @@ class MainSearcher(
 
   def explain(queryString: String, uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
     val lang = Lang("en") // TODO: detect
-    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost)
+    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
 

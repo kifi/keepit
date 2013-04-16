@@ -10,14 +10,11 @@ var injected, t0 = +new Date;
 !function() {
   api.log("host:", location.hostname);
   var viewportEl = document[document.compatMode === "CSS1Compat" ? "documentElement" : "body"];
-  var info, openTo, rules = 0, tile, count;
+  var info, openTo, rules = {}, tile, count;
 
   document.addEventListener("keydown", function(e) {
-    if (e.shiftKey && (e.metaKey || e.ctrlKey) && e.keyCode == 75 && !info.metro) {  // cmd-shift-K or ctrl-shift-K
-      withSlider(function() {
-        slider.toggle("key");
-      });
-      return false;
+    if (e.shiftKey && (e.metaKey || e.ctrlKey) && e.keyCode == 75) {  // cmd-shift-K or ctrl-shift-K
+      // TODO: new keyboard shortcuts https://app.asana.com/0/2456298849186/4781971153773
     }
   });
 
@@ -56,12 +53,14 @@ var injected, t0 = +new Date;
       if (openTo) {
         o.locator = openTo.locator;
         o.trigger = openTo.trigger;
+        o.force = openTo.force;
         openTo = null;
       }
       rules = o.rules || 0;
-      if (o.metro) {
+      if (!tile) {
         insertTile(o);
       }
+      updateCount(o.counts);
       if (o.locator) {
         openSlider(o);
       } else if (rules.scroll) {
@@ -69,22 +68,16 @@ var injected, t0 = +new Date;
       }
     },
     open_slider_to: function(o) {
-      if (o.metro && !info) {
+      if (!info) {
         openTo = o;
       } else {
         openSlider(o);
       }
     },
     button_click: function() {
-      if (info.metro) {
-        withSlider2(function() {
-          slider2.toggle(info, "button");
-        });
-      } else {
-        withSlider(function() {
-          slider.toggle("button");
-        });
-      }
+      withSlider2(function() {
+        slider2.toggle(info, "button");
+      });
     },
     auto_show: autoShow.bind(null, "auto"),
     counts: updateCount});
@@ -92,29 +85,17 @@ var injected, t0 = +new Date;
   api.port.emit("init_slider_please");
 
   function autoShow(trigger) {
-    var width;
-    if (rules.viewport && !info.metro && (width = viewportEl.clientWidth) < rules.viewport[0]) {
-      api.log("[autoShow] viewport too narrow:", width, "<", rules.viewport[0]);
-    } else {
-      openSlider({trigger: trigger});
-    }
+    openSlider({trigger: trigger});
   }
 
   function openSlider(o) {
-    if (info.metro) {
-      withSlider2(function() {
+    withSlider2(function() {
+      if (o.force) {
+        slider2.openDeepLink(info, o.trigger, o.locator);
+      } else {
         slider2.shown() || slider2.show(info, o.trigger, o.locator);
-      });
-    } else {
-      withSlider(function() {
-        slider.shown() || slider.show(o.trigger, o.locator);
-      });
-    }
-  }
-
-  function withSlider(callback) {
-    document.removeEventListener("scroll", onScrollMaybeShow);
-    api.require("scripts/slider.js", callback);
+      }
+    });
   }
 
   function withSlider2(callback) {
@@ -133,7 +114,6 @@ var injected, t0 = +new Date;
     tile.innerHTML = "<div class=kifi-tile-transparent style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>";
     count = document.createElement("span");
     count.className = "kifi-count";
-    updateCount(o.counts);
     document.documentElement.appendChild(tile);
     tile.addEventListener("mouseover", function() {
       withSlider2(function() {
@@ -150,16 +130,20 @@ var injected, t0 = +new Date;
     });
   }
 
-  function updateCount(o) {
-    var u = o.unreadNotices + o.unreadComments + o.unreadMessages;
-    var n = o.numComments + o.numMessages;
-    if (u || n) {
-      count.textContent = u || n;
-      count.classList[u ? "add" : "remove"]("kifi-unread");
-      (u ? tile : tile.firstChild).appendChild(count);
+  function updateCount(counts) {
+    if (!count) return;
+    var n = 0;
+    for (var i in counts) {
+      var c = counts[i];  // negative means unread
+      n = (c < 0 ? Math.min(n, 0) : n) + (n < 0 ? Math.min(c, 0) : c);
+    }
+    if (n) {
+      count.textContent = Math.abs(n);
+      count.classList[n < 0 ? "add" : "remove"]("kifi-unread");
+      (n < 0 ? tile : tile.firstChild).appendChild(count);
     } else if (count.parentNode) {
       count.parentNode.removeChild(count);
     }
-    tile.classList[u || n ? "add" : "remove"]("kifi-with-count");
+    tile.classList[n ? "add" : "remove"]("kifi-with-count");
   }
 }();

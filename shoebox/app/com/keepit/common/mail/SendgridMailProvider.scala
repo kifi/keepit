@@ -22,13 +22,9 @@ import play.api.Play
 import play.api.Play.current
 import play.api.http.ContentTypes
 
-object SendgridMailProvider {
-  val KIFI_MAIL_ID = "kifi-mail-id"
-  val MESSAGE_ID = "Message-ID"
-}
-
 @Singleton
-class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo, healthcheck: HealthcheckPlugin) extends Logging {
+class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo, healthcheck: HealthcheckPlugin)
+  extends MailProvider with Logging {
 
   private class SMTPAuthenticator extends Authenticator {
     override def getPasswordAuthentication(): PasswordAuthentication = {
@@ -61,7 +57,7 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
   def createTransport(): Transport = {
     val transport = mailSession.getTransport()
     def externalIdFromTransportEvent(e: TransportEvent) =
-      ExternalId[ElectronicMail](e.getMessage().getHeader(SendgridMailProvider.KIFI_MAIL_ID)(0))
+      ExternalId[ElectronicMail](e.getMessage().getHeader(MailProvider.KIFI_MAIL_ID)(0))
 
     transport.addTransportListener(new TransportListener() {
       def messageDelivered(e: TransportEvent): Unit = {
@@ -109,12 +105,12 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
   /**
    * Please see http://sendgrid.com/docs/API%20Reference/SMTP%20API/index.html for docs
    */
-  def sendMailToSendgrid(mail: ElectronicMail): Unit = {
+  def sendMail(mail: ElectronicMail): ElectronicMail = {
     val message = createMessage(mail)
     val transport = getLiveTransport()
     try {
       transport.sendMessage(message, message.getRecipients(Message.RecipientType.TO))
-      val messageId = message.getHeader(SendgridMailProvider.MESSAGE_ID)(0).trim
+      val messageId = message.getHeader(MailProvider.MESSAGE_ID)(0).trim
       log.info("mail %s sent with new Message-ID: %s".format(mail.externalId, messageId))
       db.readWrite { implicit s =>
         mailRepo.save(mail.sent("message sent", ElectronicMailMessageId.fromEmailHeader(messageId)))
@@ -128,7 +124,7 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
 
   private def createMessage(mail: ElectronicMail) = {
     val message = new MimeMessage(mailSession)
-    message.setHeader(SendgridMailProvider.KIFI_MAIL_ID, mail.externalId.id)
+    message.setHeader(MailProvider.KIFI_MAIL_ID, mail.externalId.id)
     for (id <- mail.inReplyTo) {
       message.setHeader("In-Reply-To", id.toEmailHeader)
       message.setHeader("References", id.toEmailHeader)
@@ -143,7 +139,7 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
 
     multipart.addBodyPart(part1)
     multipart.addBodyPart(part2)
- 
+
     val uniqueArgs = "unique_args" -> JsObject(List("mail_id" -> JsString(mail.externalId.id)))
     message.setHeader("X-SMTPAPI", JsObject(List("category" -> JsString(mail.category.category), uniqueArgs)).toString)
 

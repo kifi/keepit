@@ -11,52 +11,55 @@
 threadPane = function() {
   var $sent = $();
   return {
-    render: function($container, threadId, messages, userId) {
+    render: function($container, threadId, messages, session) {
       messages.forEach(function(m) {
-        m.isLoggedInUser = m.user.id == userId;
+        m.isLoggedInUser = m.user.id == session.userId;
       });
-  // ---> TODO: indent properly (postponed to make code review easier)
-  render("html/metro/messages.html", {
-    formatMessage: getTextFormatter,
-    formatLocalDate: getLocalDateFormatter,
-    formatIsoDate: getIsoDateFormatter,
-    messages: messages,
-    draftPlaceholder: "Type a message…",
-    submitButtonLabel: "Send",
-    snapshotUri: api.url("images/snapshot.png")
-  }, {
-    message: "message.html",
-    compose: "compose.html"
-  }, function(html) {
-    $(html).prependTo($container)
-    .on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
-    .on("click", "a[href^='x-kifi-sel:']", function(e) {
-      e.preventDefault();
-    })
-    .on("kifi:compose-submit", sendReply.bind(null, $container, threadId))
-    .find("time").timeago();
+      render("html/metro/messages.html", {
+        formatMessage: getTextFormatter,
+        formatLocalDate: getLocalDateFormatter,
+        messages: messages,
+        draftPlaceholder: "Type a message…",
+        submitButtonLabel: "Send",
+        snapshotUri: api.url("images/snapshot.png")
+      }, {
+        message: "message.html",
+        compose: "compose.html"
+      }, function(html) {
+        $(html).prependTo($container)
+        .on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
+        .on("click", "a[href^='x-kifi-sel:']", function(e) {
+          e.preventDefault();
+        })
+        .on("kifi:compose-submit", sendReply.bind(null, $container, threadId, session))
+        .find("time").timeago();
 
-    attachComposeBindings($container, "message");
+        attachComposeBindings($container, "message");
 
-    $sent = $container.find(".kifi-messages-sent").data("threadId", threadId);
-    $container.closest(".kifi-pane-box").on("kifi:remove", function() {
-      $sent.length = 0;
-    });
-  });
-  // --->
+        $sent = $container.find(".kifi-messages-sent").data("threadId", threadId);
+        $container.closest(".kifi-pane-box").on("kifi:remove", function() {
+          $sent.length = 0;
+        });
+
+        if (messages.length) emitRead(threadId, messages[messages.length - 1]);
+      });
     },
     update: function(thread, message, userId) {
-      if ($sent.length &&
-          $sent.data("threadId") == thread.id &&
-          !$sent.children("[data-id=" + message.id + "]").length) {  // sent messages come via POST resp and socket
+      if ($sent.length && $sent.data("threadId") == thread.id) {
         message.isLoggedInUser = message.user.id == userId;
         renderMessage(message, function($m) {
-          $sent.append($m).layout()[0].scrollTop = 99999;  // should we compare timestamps and insert in order?
+          var $old;
+          if (message.isLoggedInUser && ($old = $sent.children("[data-id=]").first()).length) {
+            $old.replaceWith($m);
+          } else {
+            $sent.append($m).layout()[0].scrollTop = 99999;  // should we compare timestamps and insert in order?
+          }
+          emitRead(thread.id, message);
         });
       }
     }};
 
-  function sendReply($container, threadId, e, text, recipientIds) {
+  function sendReply($container, threadId, session, e, text, recipientIds) {
     // logEvent("keeper", "reply");
     api.port.emit("post_comment", {
       "url": document.URL,
@@ -67,20 +70,32 @@ threadPane = function() {
       "parent": threadId
     }, function(response) {
       api.log("[sendReply] resp:", response);
-      response.message.isLoggedInUser = true;
-      renderMessage(response.message, function($m) {
-        $sent.append($m).layout()[0].scrollTop = 99999;
-        $container.find(".kifi-compose-draft").empty().blur();
-      });
+    });
+    renderMessage({
+      id: "",
+      createdAt: new Date().toISOString(),
+      text: text,
+      user: {
+        id: session.userId,
+        firstName: session.name,
+        lastName: "",
+        facebookId: session.facebookId
+      },
+      isLoggedInUser: true
+    }, function($m) {
+      $sent.append($m).layout()[0].scrollTop = 99999;
     });
   }
 
   function renderMessage(m, callback) {
     m.formatMessage = getTextFormatter;
     m.formatLocalDate = getLocalDateFormatter;
-    m.formatIsoDate = getIsoDateFormatter;
     render("html/metro/message.html", m, function(html) {
       callback($(html).find("time").timeago().end());
     });
+  }
+
+  function emitRead(threadId, m) {
+    api.port.emit("set_message_read", {threadId: threadId, messageId: m.id, time: m.createdAt});
   }
 }();

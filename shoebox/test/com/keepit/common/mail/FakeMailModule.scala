@@ -22,6 +22,13 @@ class FakeOutbox(val mails: MutableList[ElectronicMail] = MutableList()) {
   def apply(i: Int) = mails(i)
 }
 
+class FakeMailProvider(emails: FakeOutbox) extends MailProvider {
+  def sendMail(mail: ElectronicMail): ElectronicMail = {
+    emails.add(mail)
+    mail
+  }
+}
+
 case class FakeMailModule() extends ScalaModule {
 
   override def configure(): Unit = {
@@ -38,4 +45,7 @@ case class FakeMailModule() extends ScalaModule {
       }
     }
   }
+
+  @Provides
+  def fakeMailProvider(emails: FakeOutbox): MailProvider = new FakeMailProvider(emails)
 }

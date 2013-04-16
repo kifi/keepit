@@ -34,13 +34,11 @@ api = function() {
           var kind = msg[1], handler = handlers[kind];
           if (handler) {
             var data = msg[2];
-            api.log("[onMessage] handling:", kind, data);
+            api.log("[onMessage]", kind, data != null ? data : "");
             try {
-              return handler(data, respond);
+              handler(data);
             } catch (e) {
               api.log.error(e, "onMessage");
-            } finally {
-              api.log("[onMessage] done:", kind, data);
             }
           }
         }

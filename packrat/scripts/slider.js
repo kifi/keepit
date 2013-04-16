@@ -453,7 +453,6 @@ slider = function() {
       },
       formatComments: getTextFormatter,
       formatLocalDate: getLocalDateFormatter,
-      formatIsoDate: getIsoDateFormatter,
       comments: visibleComments,
       showControlBar: type == "public",
       following: following,
@@ -518,7 +517,7 @@ slider = function() {
             recipientText = displayedRecipients[0];
           } else if (l == 2) {
             recipientText = displayedRecipients[0] + " and " + displayedRecipients[1];
-          } else if (l == 3 || l == 4)
+          } else if (l == 3 || l == 4) {
             recipientText = displayedRecipients.slice(0, l - 1).join(", ") + " and " + displayedRecipients[l - 1];
           } else {
             recipientText = displayedRecipients.slice(0, 3).join(", ");
@@ -713,7 +712,6 @@ slider = function() {
         newComment.isLoggedInUser = true;
         params["formatComments"] = getTextFormatter;
         params["formatLocalDate"] = getLocalDateFormatter;
-        params["formatIsoDate"] = getIsoDateFormatter;
 
         badGlobalState["updates"].publicCount++;
         badGlobalState["updates"].countSum++;
@@ -780,7 +778,6 @@ slider = function() {
         newComment.message.isLoggedInUser = true;
         params["formatComments"] = getTextFormatter;
         params["formatLocalDate"] = getLocalDateFormatter;
-        params["formatIsoDate"] = getIsoDateFormatter;
 
         render("html/comments/comment.html", params, function(html) {
           //drawCommentView(html, session, type);

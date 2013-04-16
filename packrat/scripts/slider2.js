@@ -10,7 +10,7 @@ jQuery.fn.layout = function() {
   return this.each(function() {this.clientHeight});  // forces layout
 };
 
-var commentsPane = 0, threadsPane = 0, threadPane = 0;  // set when api.require'd
+var generalPane = 0, commentsPane = 0, threadsPane = 0, threadPane = 0;  // set when api.require'd
 slider2 = function() {
   var $tile = $("#kifi-tile"), $slider, $pane, lastShownAt, info;
 
@@ -39,11 +39,11 @@ slider2 = function() {
         // "sensitive": o.sensitive,
         // "site": location.hostname,
         // "neverOnSite": o.neverOnSite,
-        "numComments": o.counts.numComments,
-        "numMessages": o.counts.numMessages,
-        "newComments": o.counts.unreadComments,
-        "newMessages": o.counts.unreadMessages,
-        "newNotices": o.counts.unreadNotices,
+        "noticesCount": -o.counts.n,
+        "commentsUnread": o.counts.c < 0,
+        "commentCount": Math.abs(o.counts.c),
+        "messagesUnread": o.counts.m < 0,
+        "messageCount": Math.abs(o.counts.m),
         // "connected_networks": api.url("images/networks.png")
       }, function(html) {
         if ($slider) {
@@ -116,7 +116,8 @@ slider2 = function() {
               fadesOut: true,
               create: function(callback) {
                 var i = $a.prevAll(".kifi-slider2-keeper").length;
-                var friend = $a.closest(".kifi-slider2-tip").data("keepers")[i];
+                var friend = ($a.closest(".kifi-slider2-tip").data("keepers") || [])[i];
+                if (!friend) return;
                 render("html/friend_card.html", {
                   name: friend.firstName + " " + friend.lastName,
                   facebookId: friend.facebookId,
@@ -334,8 +335,9 @@ slider2 = function() {
         var $new = $(html).css({left: back ? 0 : d, width: w}).appendTo($boxes);
         $boxes.layout().css("transform", "translate(" + (back ? 0 : -d) + "px,0)")
         .on("transitionend webkitTransitionEnd", function() {
-          $old.trigger("kifi:remove").remove();
-          $new.detach().css({left: "", width: ""}).appendTo($cubby);
+          $old.triggerHandler("kifi:remove");
+          $old.remove();
+          $new.detach().css({left: "", width: ""}).appendTo($cubby).data("shown", true).triggerHandler("kifi:shown");
           $boxes.remove();
           $cubby.css("overflow", "");
         });
@@ -353,6 +355,10 @@ slider2 = function() {
         function(html) {
           var $html = $("html").addClass("kifi-pane-parent");
           $pane = $(html).data("pane", pane).appendTo($html).layout()
+          .on("transitionend webkitTransitionEnd", function f(e) {
+            $pane.off("transitionend webkitTransitionEnd", f);
+            $box.data("shown", true).triggerHandler("kifi:shown");
+          })
           .on("keydown", ".kifi-pane-search", function(e) {
             var q;
             if (e.which == 13 && (q = this.value.trim())) {
@@ -362,6 +368,12 @@ slider2 = function() {
           .on("click", ".kifi-pane-back", function() {
             showPane($(this).data("pane") || "general", true);
           })
+          .on("click", ".kifi-pane-head-settings,.kifi-pane-action", function() {
+            var $n = $pane.find(".kifi-not-done"), d = $n.data();
+            clearTimeout(d.t);
+            $n.remove().removeClass("kifi-showing").appendTo($pane).layout().addClass("kifi-showing");
+            d.t = setTimeout($n.removeClass.bind($n, "kifi-showing"), 1000);
+          })
           .on("kifi:show-pane", function(e, pane, paramsArg, populateArg) {
             showPane(pane, false, paramsArg, populateArg);
           })
@@ -369,7 +381,8 @@ slider2 = function() {
             e.stopPropagation();
           });
           $html.addClass("kifi-with-pane");
-          populatePane[pane]($pane.find(".kifi-pane-box"), populateArg);
+          var $box = $pane.find(".kifi-pane-box");
+          populatePane[pane]($box, populateArg);
         });
       });
     }
@@ -379,7 +392,8 @@ slider2 = function() {
     api.log("[hidePane]");
     $pane.on("transitionend webkitTransitionEnd", function(e) {
       if (e.target.classList.contains("kifi-pane")) {
-        $(e.target).find(".kifi-pane-box").trigger("kifi:remove").end().remove();
+        $(e.target).find(".kifi-pane-box").triggerHandler("kifi:remove");
+        $(e.target).remove();
         $html.removeClass("kifi-pane-parent");
       }
     });
@@ -388,6 +402,11 @@ slider2 = function() {
   }
 
   const populatePane = {
+    general: function($box) {
+      api.require("scripts/general.js", function() {
+        generalPane.render($box.find(".kifi-pane-tall"));
+      });
+    },
     notices: function($box) {
       api.port.emit("session", function (session) {
         api.require("scripts/notices.js", function() {
@@ -399,18 +418,16 @@ slider2 = function() {
       requireData("comments", function(comments) {
         api.port.emit("session", function(session) {
           api.require("scripts/comments.js", function() {
-            commentsPane.render($box.find(".kifi-pane-tall"), comments, session.userId, ~session.experiments.indexOf("admin"));
-            var lastCom = comments[comments.length - 1];
-            api.port.emit("set_comment_read", {id: lastCom.id, time: lastCom.createdAt});
+            commentsPane.render($box.find(".kifi-pane-tall"), comments, session);
           });
         });
       });
     },
     threads: function($box) {
-      requireData("threads", function(threads) {
+      requireData("threads", function(o) {
         api.require("scripts/threads.js", function() {
-          threadsPane.render($box.find(".kifi-pane-tall"), threads);
-          threads.forEach(function(th) {
+          threadsPane.render($box.find(".kifi-pane-tall"), o);
+          o.threads.forEach(function(th) {
             requireData("thread/" + th.id, api.noop);  // preloading
           });
         });
@@ -421,14 +438,11 @@ slider2 = function() {
       requireData("thread/" + threadId, function(th) {
         api.port.emit("session", function(session) {
           api.require("scripts/thread.js", function() {
-            threadPane.render($tall, th.id, th.messages, session.userId);
-            var lastMsg = th.messages[th.messages.length - 1];
-            api.port.emit("set_message_read", {threadId: th.id, messageId: lastMsg.id, time: lastMsg.createdAt});
+            threadPane.render($tall, th.id, th.messages, session);
           });
         });
       });
-    },
-    general: $.noop
+    }
   };
 
   function formatCountHtml(kept, numFriends, numOthers) {
@@ -467,11 +481,11 @@ slider2 = function() {
     api.port.emit.apply(api.port, kArr);
   }
 
-  function receiveData(type, prop, data, respond) {  // prop might be omitted
-    api.log("[receiveData]", arguments);
-    if (arguments.length < 4) {
+  function receiveData(type, prop, data) {  // prop might be omitted
+    if (data === undefined) {
       data = prop, prop = null;
     }
+    api.log("[receiveData]", type, prop, data);
     var arg = data[prop], key = prop ? type + "/" + arg : type;
     for (var i = 0, callbacks = dataCallbacks[key] || 0; i < callbacks.length; i++) {
       var cb = callbacks[i];
@@ -494,23 +508,26 @@ slider2 = function() {
         (commentsPane.update || api.noop)(comment, session.userId);
       });
     },
+    thread_info: function(o) {
+      (threadsPane.update || api.noop)(o.thread, o.read);
+    },
     message: function(o) {
       api.port.emit("session", function(session) {
-        (threadsPane.update || api.noop)(o.thread);
+        (threadsPane.update || api.noop)(o.thread, o.read);
         (threadPane.update || api.noop)(o.thread, o.message, session.userId);
       });
     },
     counts: function(o) {
-      info.counts = o;
       if (!$slider) return;
+      info.counts = o;
       var $btns = $slider.find(".kifi-slider2-dock-btn");
-      [[".kifi-slider2-notices", o.unreadNotices],
-       [".kifi-slider2-comments", o.unreadComments, o.numComments],
-       [".kifi-slider2-threads", o.unreadMessages, o.numMessages]].forEach(function(a) {
+      [[".kifi-slider2-notices", o.n],
+       [".kifi-slider2-comments", o.c],
+       [".kifi-slider2-threads", o.m]].forEach(function(a) {
         $btns.filter(a[0]).find(".kifi-count")
-          .toggleClass("kifi-unread", !!a[1])
-          .text(a[1] || a[2] || "")
-          .css("display", a[1] || a[2] ? "" : "none");
+          .toggleClass("kifi-unread", a[1] < 0)
+          .text(Math.abs(a[1]) || "")
+          .css("display", a[1] ? "" : "none");
       });
     }});
 
@@ -518,6 +535,14 @@ slider2 = function() {
   return {
     show: function(info, trigger, locator) {  // trigger is for the event log (e.g. "auto", "key", "icon")
       showSlider(info, trigger, locator);
+    },
+    openDeepLink: function(info, trigger, locator) {
+      api.log("[openDeepLink]", locator)
+      if ($slider) {
+        openDeepLink(locator);
+      } else {
+        showSlider(info, trigger, locator);
+      }
     },
     shown: function() {
       return !!lastShownAt;

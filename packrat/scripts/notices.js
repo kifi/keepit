@@ -6,7 +6,10 @@
 var renderNotices;
 
 (function () {
-  const NOTICE_TYPES = ["message", "comment"]; // TODO: make templates for other notice types
+  const NOTICE_TYPES = { // map of available notice types to deep link
+    "comment": "/comments",
+    "message": "/messages"
+  };
   const SCROLL_DISTANCE = 40; // pixels from the bottom scrolled to get more
   const MAX_NOTIFICATIONS = 100; // maximum number of notifications
   const NEW_FADE_TIMEOUT = 1000; // number of ms to wait before starting to fade
@@ -43,11 +46,12 @@ var renderNotices;
       });
       requestNotices();
 
-      $notifyPane.on('click', '.kifi-notice', function(e) {
-        var url = $(this).find('.kifi-link').attr('href');
-        if (url) {
-          window.open(url,'_blank');
-        }
+      $notifyPane.on('click', '.kifi-notice', function() {
+        var data = $(this).data();
+        api.port.emit("open_deep_link", {
+          nUri: data.details.page,
+          locator: NOTICE_TYPES[data.category] + "/" + data.details.id
+        });
         return false;
       });
     });
@@ -78,16 +82,16 @@ var renderNotices;
     var renderedNotices = [];
     var done = 0;
     $.each(notices, function (i, notice) {
-      if (~NOTICE_TYPES.indexOf(notice.category)) {
+      if (notice.category in NOTICE_TYPES) {
         var authors = notice.details.authors || [notice.details.author]
         render("html/metro/notice_" + notice.category + ".html", $.extend({
           formatMessage: getSnippetFormatter,
           formatLocalDate: getLocalDateFormatter,
-          formatIsoDate: getIsoDateFormatter,
           avatar: authors[0].avatar,
           formattedAuthor: formatAuthorNames(authors)
         }, notice), function (html) {
-          renderedNotices[i] = $(html).toggleClass('kifi-notice-new', i < numUnread);
+          renderedNotices[i] =
+            $(html).toggleClass('kifi-notice-new', i < numUnread).data(notice);
           if (++done == notices.length) {
             $notifyPane.html(renderedNotices);
             $notifyPane.find("time").timeago();

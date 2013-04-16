@@ -132,7 +132,7 @@ class ExtStreamController @Inject() (
               channel.push(Json.arr(requestId.toLong, nUri))
               channel.push(Json.arr("uri_1", nUri, keeperInfoLoader.load1(userId, nUri)))
               channel.push(Json.arr("uri_2", nUri, keeperInfoLoader.load2(userId, nUri)))
-              },
+            },
             "unsubscribe_uri" -> { case JsString(url) +: _ =>
               val nUri = URINormalizer.normalize(url)
               subscriptions.get(nUri).foreach(_.unsubscribe())
@@ -263,7 +263,7 @@ class ExtStreamController @Inject() (
         case _ => None
       }) foreach { _ =>
         val nUri = normUriRepo.get(parent.uriId)
-        userChannel.push(userId, Json.arr("message_read", nUri.url, parent.externalId.id, message.externalId.id))
+        userChannel.push(userId, Json.arr("message_read", nUri.url, parent.externalId.id, message.createdAt))
         userNotificationRepo.getWithCommentId(userId, message.id.get) foreach { n =>
           val vn = userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
           userChannel.push(userId, Json.arr("notifications", Seq(SendableNotification.fromUserNotification(vn))))
@@ -283,7 +283,7 @@ class ExtStreamController @Inject() (
         case _ => None
       }) foreach { _ =>
         val nUri = normUriRepo.get(comment.uriId)
-        userChannel.push(userId, Json.arr("comment_read", nUri.url, comment.externalId.id))
+        userChannel.push(userId, Json.arr("comment_read", nUri.url, comment.createdAt))
 
         val commentIds = commentRepo.getPublicIdsCreatedBefore(nUri.id.get, comment.createdAt) :+ comment.id.get
         val notifications = userNotificationRepo.getWithCommentIds(userId, commentIds, setCommentReadExcludeStates) map { n =>

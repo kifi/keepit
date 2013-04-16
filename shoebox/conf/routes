@@ -181,6 +181,7 @@ GET     /admin/messages/:page       @com.keepit.controllers.admin.AdminCommentCo
 GET     /admin/searchConfig/:id     @com.keepit.controllers.admin.AdminSearchConfigController.showUserConfig(id: Id[User])
 POST    /admin/searchConfig/:id/set   @com.keepit.controllers.admin.AdminSearchConfigController.setUserConfig(id: Id[User])
 GET     /admin/searchConfig/:id/reset @com.keepit.controllers.admin.AdminSearchConfigController.resetUserConfig(id: Id[User])
+
 GET     /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchConfigController.getExperiments
 POST    /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchConfigController.addNewExperiment
 POST    /admin/searchExperiments/delete    @com.keepit.controllers.admin.AdminSearchConfigController.deleteExperiment
@@ -242,6 +243,9 @@ POST    /internal/search/spell/buildDict       @com.keepit.controllers.search.Sp
 GET     /internal/search/spell/buildStatus     @com.keepit.controllers.search.SpellCorrectorController.getBuildStatus()
 GET     /internal/search/spell/make-correction     @com.keepit.controllers.search.SpellCorrectorController.correctSpelling(query: String)
 
+GET     /internal/searchConfig/:id        @com.keepit.controllers.search.SearchConfigController.showUserConfig(id: Id[User])
+POST    /internal/searchConfig/:id/set    @com.keepit.controllers.search.SearchConfigController.setUserConfig(id: Id[User])
+GET     /internal/searchConfig/:id/reset  @com.keepit.controllers.search.SearchConfigController.resetUserConfig(id: Id[User])
 
 GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.SearchController.friendMapJson(userId: Id[User], query: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 GET     /internal/search/search/rankVsScoreJson @com.keepit.controllers.search.SearchController.rankVsScoreJson(query: Option[String] ?= None)

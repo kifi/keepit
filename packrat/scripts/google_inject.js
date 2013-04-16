@@ -163,6 +163,17 @@ api.log("[google_inject]");
         "kifiResultsClicked": clicks.kifi,
         "googleResultsClicked": clicks.google});
     }
+  }).on("kifiunload", function f(e) {
+    if (e.lifeId !== lifeId) {
+      api.log("[google_inject] end life:", lifeId);
+      $(window).off("hashchange unload kifiunload");
+      observer.disconnect();
+      $q.off("input");
+      $qf.off("submit");
+      clearTimeout(idleTimer);
+      $res.remove();
+      $res.length = 0;
+    }
   });
 
   var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
@@ -184,19 +195,6 @@ api.log("[google_inject]");
   });
   observer.observe(document.getElementById("main"), {childList: true, subtree: true});  // TODO: optimize away subtree
 
-  window.addEventListener("kifiunload", function f(e) {
-    if (e.lifeId !== lifeId) {
-      api.log("[google_inject] end life:", lifeId);
-      window.removeEventListener("kifiunload", f);
-      $(window).off("hashchange unload");
-      observer.disconnect();
-      $q.off("input");
-      $qf.off("submit");
-      clearTimeout(idleTimer);
-      $res.remove();
-      $res.length = 0;
-    }
-  });
 
   /*******************************************************/
 
@@ -387,7 +385,10 @@ api.log("[google_inject]");
   }
 
   function appendResults() {
+    $res.find(".kifi-res-title").toggleClass("kifi-collapsed", !response.show);
+    $res.find(".kifi-res-filter-keeps")[response.show ? "show" : "hide"]();
     render("html/search/google_hits.html", {
+        show: response.show,
         results: response.hits,
         anyResults: response.hits.length > 0,
         session: response.session,
@@ -475,7 +476,7 @@ api.log("[google_inject]");
     hit.displayUrl = displayURLFormatter(hit.bookmark.url);
     // api.log("[processHit] hit url:", hit.bookmark.url, "displayed as:", hit.displayUrl);
 
-    hit.bookmark.title = boldSearchTerms(hit.bookmark.title, response.query);
+    hit.bookmark.title = boldSearchTerms(hit.bookmark.title || hit.displayUrl, response.query);
 
     if (response.showScores === true) {
       hit.displayScore = "[" + Math.round(hit.score * 100) / 100 + "] ";
