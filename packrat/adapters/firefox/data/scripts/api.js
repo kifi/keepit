@@ -41,6 +41,7 @@ api = function() {
       }
       console.log("'" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "'", args.join(" "));
     },
+    noop: function() {},
     port: {
       emit: function(type, data, callback) {
         if (!callback && typeof data == "function") {
