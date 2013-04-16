@@ -10,7 +10,7 @@ var injected, t0 = +new Date;
 !function() {
   api.log("host:", location.hostname);
   var viewportEl = document[document.compatMode === "CSS1Compat" ? "documentElement" : "body"];
-  var info, openTo, rules = 0, tile, count;
+  var info, openTo, rules = {}, tile, count;
 
   document.addEventListener("keydown", function(e) {
     if (e.shiftKey && (e.metaKey || e.ctrlKey) && e.keyCode == 75) {  // cmd-shift-K or ctrl-shift-K
