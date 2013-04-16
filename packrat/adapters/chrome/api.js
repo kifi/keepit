@@ -63,8 +63,8 @@ api = function() {
         dispatch.call(api.tabs.on.blur, lastPage);
       } else if (lastPage.id) {
         // Chrome Instant search feature sometimes silently destroys chrome://newtab tabs (crbug.com/88458)
-        chrome.tabs.get(lastPage.id, function(tab) {
-          if (!tab) {
+        chrome.tabs.query({windowId: info.windowId}, function(tabs) {
+          if (!tabs.some(function(tab) {return tab.id === lastPage.id})) {
             api.log("[onActivated] freeing lost tab page:", lastPage.id, lastPage.url);
             delete pages[lastPage.id];
           }
@@ -184,7 +184,7 @@ api = function() {
     if (msg === "api:dom_ready") {
       if (page) {
         injectContentScripts(page);
-      } else {
+      } else if (tab.windowId !== chrome.windows.WINDOW_ID_NONE) {  // Chrome Instant results disappear quickly
         chrome.windows.get(tab.windowId, function(win) {
           if (win && win.type == "normal") {
             api.log.error(Error("no page for " + tabId), "api:dom_ready");
