@@ -45,22 +45,17 @@ class S3Module() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def eventStore(amazonS3Client: AmazonS3): S3EventStore = {
+  def eventStore(amazonS3Client: AmazonS3): EventStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.event.bucket").get)
     new S3EventStoreImpl(bucketName, amazonS3Client)
   }
 
   @Singleton
   @Provides
-  def reportStore(amazonS3Client: AmazonS3): ReportStore =
-    current.configuration.getString("amazon.s3.report.bucket") match {
-      case Some(name) =>
-        val bucketName = S3Bucket(name)
-        new S3ReportStoreImpl(bucketName, amazonS3Client)
-      case None =>
-        println(">> Using an InMemoryReportStoreImpl instead of a S3ReportStoreImpl")
-        new InMemoryReportStoreImpl()
-    }
+  def reportStore(amazonS3Client: AmazonS3): ReportStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.report.bucket").get)
+    new S3ReportStoreImpl(bucketName, amazonS3Client)
+  }
 
   @Singleton
   @Provides

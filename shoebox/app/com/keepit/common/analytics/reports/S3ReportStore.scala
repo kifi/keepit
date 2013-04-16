@@ -14,9 +14,7 @@ import java.io.{InputStream, ByteArrayInputStream, ByteArrayOutputStream, Object
 import java.lang.UnsupportedOperationException
 import com.amazonaws.services.s3.model.AmazonS3Exception
 import com.amazonaws.services.s3.model.S3Object
-import com.keepit.common.store.ObjectStore
-import com.keepit.common.store.S3ObjectStore
-import com.keepit.common.store.S3Bucket
+import com.keepit.common.store._
 import play.api.libs.json.Format
 import com.keepit.common.store.InMemoryObjectStore
 

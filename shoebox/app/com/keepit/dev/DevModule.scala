@@ -2,7 +2,8 @@ package com.keepit.dev
 
 import java.io.File
 import com.google.common.io.Files
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.util.Modules
+import com.google.inject.{Provides, Singleton, Provider}
 import com.keepit.classify.DomainTagImportSettings
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.actor.{ActorFactory, ActorPlugin}
@@ -27,7 +28,6 @@ import org.apache.lucene.util.Version
 import com.keepit.model.UserRepo
 import com.keepit.common.time.Clock
 import com.keepit.common.controller.FortyTwoServices
-import com.google.inject.Provider
 
 
 class ShoeboxDevModule extends ScalaModule with Logging {
@@ -183,9 +183,9 @@ class DevCommonModule extends ScalaModule with Logging {
     current.configuration.getString("mongo.events.server").map { server =>
       val mongoConn = MongoConnection(server)
       val mongoDB = mongoConn(current.configuration.getString("mongo.events.database").getOrElse("events"))
-      new MongoEventStoreImpl(mongoDB)
+      new MongoS3EventStoreImpl(mongoDB)
     }.getOrElse {
-      new FakeMongoEventStoreImpl()
+      new FakeMongoS3EventStoreImpl()
     }
   }
 
@@ -196,7 +196,7 @@ class DevCommonModule extends ScalaModule with Logging {
 
 class DevModule extends ScalaModule with Logging {
   def configure() {
-    install(new DevCommonModule)
+    install(Modules.`override`(new DevCommonModule).`with`(new S3DevModule))
     install(new ShoeboxDevModule)
     install(new SearchDevModule)
   }
