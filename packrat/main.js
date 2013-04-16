@@ -114,7 +114,7 @@ const socketHandlers = {
   },
   url_patterns: function(patterns) {
     api.log("[socket:url_patterns]", patterns);
-    urlPatterns = compilePattners(patterns);
+    urlPatterns = compilePatterns(patterns);
   },
   uri_1: function(uri, o) {
     api.log("[socket:uri_1]", o);
