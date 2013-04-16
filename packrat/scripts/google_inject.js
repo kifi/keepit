@@ -385,7 +385,11 @@ api.log("[google_inject]");
   }
 
   function appendResults() {
+    if (!response.show) {
+      $res.addClass("kifi-collapsed").find(".kifi-res-filter-keeps").hide();
+    }
     render("html/search/google_hits.html", {
+        show: response.show,
         results: response.hits,
         anyResults: response.hits.length > 0,
         session: response.session,
