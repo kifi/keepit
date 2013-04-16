@@ -66,7 +66,7 @@ commentsPane = function() {
           $posted.length = 0;
         });
 
-        emitRead(comments[comments.length - 1]);
+        if (comments.length) emitRead(comments[comments.length - 1]);
       });
     },
     update: function(comment, userId) {
