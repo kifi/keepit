@@ -2,12 +2,10 @@ function attachComposeBindings($c, composeTypeName) {
   var $f = $c.find(".kifi-compose");
   var $t = $f.find(".kifi-compose-to");
   var $d = $f.find(".kifi-compose-draft");
-  var $p = $d.find(".kifi-placeholder");
 
-  $d.focus(function() {  // TODO: reinstate pull request 1292 after Chrome 28 reaches Stable channel
-    if ($p[0].parentNode) {
-      $p.detach();
-      // detaching destroys the selection if it was in the placeholder
+  $d.focus(function() {
+    if (this.classList.contains("kifi-empty")) {  // webkit workaround (can ditch when Chrome 27/28 ? goes stable)
+      this.textContent = "\u200b";  // zero-width space
       var r = document.createRange();
       r.selectNodeContents(this);
       r.collapse(false);
@@ -20,8 +18,10 @@ function attachComposeBindings($c, composeTypeName) {
     $("<input style=position:fixed;top:999%>").appendTo("html").each(function() {this.setSelectionRange(0,0)}).remove();
 
     if (!convertDraftToText($d.html())) {
-      $d.empty().append($p);
+      $d.empty().addClass("kifi-empty");
     }
+  }).click(function() {
+    this.focus();  // needed in Firefox for clicks on ::before placeholder text
   }).keydown(function(e) {
     if (e.which == 13 && e.metaKey) { // ⌘-Enter
       $f.submit();
