@@ -41,7 +41,7 @@ threadPane = function() {
           $sent.length = 0;
         });
 
-        emitRead(threadId, messages[messages.length - 1]);
+        if (messages.length) emitRead(threadId, messages[messages.length - 1]);
       });
     },
     update: function(thread, message, userId) {
