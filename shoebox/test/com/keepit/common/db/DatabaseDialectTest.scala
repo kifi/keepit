@@ -21,14 +21,14 @@ class DatabaseDialectTest extends Specification {
   "MySqlDatabaseDialect" should {
 
     "stringToDay to string" in {
-      MySqlDatabaseDialect.day(new DateTime(2013, 12, 20, 0, 0, 0)) === """STR_TO_DATE('2013-12-20', '%Y-%m-%d')"""
+      MySqlDatabaseDialect.day(new DateTime(2013, 12, 20, 0, 0, 0, zones.PT)) === """STR_TO_DATE('2013-12-20', '%Y-%m-%d')"""
     }
   }
 
   "H2DatabaseDialect" should {
 
     "stringToDay to string" in {
-      H2DatabaseDialect.day(new DateTime(2013, 12, 20, 0, 0, 0)) === """PARSEDATETIME('2013-12-20', 'y-M-d')"""
+      H2DatabaseDialect.day(new DateTime(2013, 12, 20, 0, 0, 0, zones.PT)) === """PARSEDATETIME('2013-12-20', 'y-M-d')"""
     }
 
     "stringToDay to db" in {
