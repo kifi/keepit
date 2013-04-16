@@ -110,7 +110,7 @@ class PhraseProximityTest extends Specification {
     indexReader.numDocs() === 6
     buf.size === 5
     buf.sortBy(_._2).map(_._1) === Seq(4, 3, 2, 1, 0)      // doc 0 is most relevant
-    assert( math.abs( buf(0)._2 - 1.0f) < 1e-4)            // doc 0 should be assigned max possible score
+    assert(math.abs(buf(0)._2 - 1.0f) < 1e-4)            // doc 0 should be assigned max possible score
     buf(4)._2 === 0.0f                                     // doc 4 contains key words, not the entire phrase. Its score should be 0.0
   }
 

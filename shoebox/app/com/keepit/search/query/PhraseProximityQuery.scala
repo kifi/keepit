@@ -24,6 +24,7 @@ import scala.math._
 import java.util.Arrays
 import java.lang.{Float => JFloat}
 import java.util.{Set => JSet}
+import scala.collection.mutable.ArrayBuffer
 
 case class TrieNode(nodeText: String, var children: Map[String, TrieNode], var endOfPhrase: Boolean) {
   def hasChild(text: String) = children.keySet.contains(text)
@@ -256,6 +257,8 @@ class PhraseProximityScorer(weight: PhraseProximityWeight, tps: Array[DocAndPosi
   private[this] var scoredDoc = -1
   private[this] val numTerms = tps.size
   private[this] val weightVal = weight.getWeightValue
+  private[this] var termPos = new ArrayBuffer[Int]()
+  private[this] var termTexts = new ArrayBuffer[String]()
 
   private[this] def gapPenalty(distance: Int) = PhraseProximityQuery.gapPenalty * distance.toFloat
 
@@ -270,8 +273,8 @@ class PhraseProximityScorer(weight: PhraseProximityWeight, tps: Array[DocAndPosi
   override def score(): Float = {
 
     val doc = curDoc
-    var termPos = new ListBuffer[Int]()
-    var termTexts = new ListBuffer[String]()
+    termPos.clear()
+    termTexts.clear()
     if (scoredDoc != doc) {
       var top = pq.top
       // if term still have positions left in this doc
