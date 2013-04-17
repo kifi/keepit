@@ -86,21 +86,25 @@ class ActionAuthenticator @Inject() (
     }
 
   private[controller] def authenticatedAction[T](
-    apiClient: Boolean,
-    allowPending: Boolean,
-    bodyParser: BodyParser[T],
-    onAuthenticated: AuthenticatedRequest[T] => Result,
-    onUnauthenticated: Request[T] => Result): Action[T] = {
-    SecuredAction(apiClient, bodyParser)( onAuthenticated = authenticatedHandler(apiClient, allowPending)(onAuthenticated), onUnauthenticated = onUnauthenticated)
+      apiClient: Boolean,
+      allowPending: Boolean,
+      bodyParser: BodyParser[T],
+      onAuthenticated: AuthenticatedRequest[T] => Result,
+      onUnauthenticated: Request[T] => Result): Action[T] = UserAwareAction(bodyParser) { request =>
+    request.user match {
+      case Some(user) =>
+        authenticatedHandler(apiClient, allowPending)(onAuthenticated)(SecuredRequest(user, request))
+      case None =>
+        onUnauthenticated(request)
+    }
   }
 
   private[controller] def authenticatedAction[T](
-    apiClient: Boolean,
-    allowPending: Boolean,
-    bodyParser: BodyParser[T],
-    onAuthenticated: AuthenticatedRequest[T] => Result): Action[T] = {
-    SecuredAction(apiClient, bodyParser)( onAuthenticated = authenticatedHandler(apiClient, allowPending)(onAuthenticated))
-  }
+      apiClient: Boolean,
+      allowPending: Boolean,
+      bodyParser: BodyParser[T],
+      onAuthenticated: AuthenticatedRequest[T] => Result): Action[T] =
+    SecuredAction(apiClient, None, bodyParser)(authenticatedHandler(apiClient, allowPending)(onAuthenticated))
 
   private[controller] def isAdmin(experiments: Seq[State[ExperimentType]]) = experiments.find(e => e == ExperimentTypes.ADMIN).isDefined
 
@@ -108,7 +112,7 @@ class ActionAuthenticator @Inject() (
     userExperimentRepo.hasExperiment(userId, ExperimentTypes.ADMIN)
   }
 
-  private def executeAction[T](action: AuthenticatedRequest[T] => Result, userId: Id[User], socialUser: SocialUser,
+  private def executeAction[T](action: AuthenticatedRequest[T] => Result, userId: Id[User], identity: Identity,
       experiments: Seq[State[ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]],
       newSession: Session, request: Request[T], adminUserId: Option[Id[User]] = None, allowPending: Boolean) = {
     val user = db.readOnly(implicit s => userRepo.get(userId))
@@ -120,7 +124,7 @@ class ActionAuthenticator @Inject() (
       val cleanedSesison = newSession - IdentityProvider.SessionId + ("server_version" -> fortyTwoServices.currentVersion.value)
       log.debug("sending response with new session [%s] of user id: %s".format(cleanedSesison, userId))
       try {
-        action(AuthenticatedRequest[T](socialUser, userId, user, request, experiments, kifiInstallationId, adminUserId)) match {
+        action(AuthenticatedRequest[T](identity, userId, user, request, experiments, kifiInstallationId, adminUserId)) match {
           case r: PlainResult => r.withSession(newSession)
           case any: Result => any
         }

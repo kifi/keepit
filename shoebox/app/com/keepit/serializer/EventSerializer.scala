@@ -1,15 +1,12 @@
 package com.keepit.serializer
 
-import com.keepit.common.db.{Id, ExternalId, State}
+import com.keepit.common.db.ExternalId
 import com.keepit.common.time._
-import securesocial.core._
-import securesocial.core.AuthenticationMethod._
 import play.api.libs.json._
 import com.keepit.common.analytics._
 import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.commons.conversions.scala._
 import com.keepit.model._
-import com.mongodb.BasicDBObject
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.DateTime
 
