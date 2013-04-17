@@ -303,14 +303,6 @@ api.port.on({
   set_page_icon: function(data, _, tab) {
     setIcon(tab, data);
   },
-  init_slider_please: function(_, _, tab) {
-    var emission = tab.emitOnReady;
-    if (session && emission) {
-      api.log("[init_slider_please] %i emitting %s", tab.id, emission[0]);
-      api.tabs.emit(tab, emission[0], emission[1]);
-      delete tab.emitOnReady;
-    }
-  },
   get_slider_info: function(data, respond, tab) {
     if (session) {
       getSliderInfo();
@@ -840,7 +832,7 @@ api.tabs.on.ready.add(function(tab) {
 
   var emission = tab.emitOnReady;
   if (emission) {
-    api.log("[tabs.on.ready] emitting: %i %o", tab.id, emission);
+    api.log("[tabs.on.ready] emitting: %i %o", tab.id, emission[0]);
     api.tabs.emit(tab, emission[0], emission[1]);
     delete tab.emitOnReady;
   }

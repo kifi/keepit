@@ -82,8 +82,6 @@ var injected, t0 = +new Date;
     auto_show: autoShow.bind(null, "auto"),
     counts: updateCount});
 
-  api.port.emit("init_slider_please");
-
   function autoShow(trigger) {
     openSlider({trigger: trigger});
   }
