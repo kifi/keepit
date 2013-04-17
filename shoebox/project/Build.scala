@@ -45,6 +45,7 @@ object ApplicationBuild extends Build {
       "org.apache.httpcomponents" % "httpclient" % "4.2.1",
       "org.apache.tika" % "tika-parsers" % "1.3",
       "org.apache.commons" % "commons-math3" % "3.1.1",
+      "org.apache.zookeeper" % "zookeeper" % "3.4.5",
       "com.cybozu.labs" % "langdetect" % "1.1-20120112",
       "org.mindrot" % "jbcrypt" % "0.3m",
       "com.amazonaws" % "aws-java-sdk" % "1.3.20",
@@ -55,7 +56,13 @@ object ApplicationBuild extends Build {
       "spy" % "spymemcached" % "2.8.1",
       "com.typesafe.slick" %% "slick" % "1.0.0",
       "com.typesafe.slick" %% "slick-testkit" % "1.0.0"
-    ) map (_.excludeAll(ExclusionRule(organization = "com.cedarsoft")))
+    ) map (_.excludeAll(
+      ExclusionRule(organization = "com.cedarsoft"),
+      ExclusionRule(organization = "javax.jms"),
+      ExclusionRule(organization = "com.sun.jdmk"),
+      ExclusionRule(organization = "com.sun.jmx"),
+      ExclusionRule(organization = "org.jboss.netty")
+    ))
 
     val main = play.Project(appName, appVersion, appDependencies).settings(
       scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls","-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds","-language:existentials", "-language:experimental.macros"),
