@@ -29,7 +29,7 @@ class QueryParserTest extends Specification {
 
   private trait QueryParserScope extends Scope {
     val analyzer = new org.apache.lucene.analysis.standard.StandardAnalyzer(org.apache.lucene.util.Version.LUCENE_41) //DefaultAnalyzer.forParsing(Lang("en"))
-    val parser = new QueryParser(analyzer, None) with DefaultSyntax
+    val parser = new QueryParser(analyzer, analyzer) with DefaultSyntax
   }
 
   "QueryParser" should {

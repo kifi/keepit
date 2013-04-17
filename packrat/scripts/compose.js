@@ -57,7 +57,7 @@ function attachComposeBindings($c, composeTypeName) {
   $f.submit(function(e) {
     e.preventDefault();
     var text;
-    if ($p[0].parentNode || !(text = convertDraftToText($d.html()))) {
+    if ($d.hasClass("kifi-empty") || !(text = convertDraftToText($d.html()))) {
       $d.focus();
       return;
     }
