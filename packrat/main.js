@@ -228,6 +228,12 @@ const socketHandlers = {
         d.threads.push(th);  // should we maintain chronological order?
         d.messages[th.id] = [message];
       }
+      if (message.user.id == session.userId) {
+        var t = new Date(message.createdAt);
+        if (t > (d.lastMessageRead[th.id] || 0)) {
+          d.lastMessageRead[th.id] = t;
+        }
+      }
       d.tabs.forEach(function(tab) {
         api.tabs.emit(tab, "message", {thread: th, message: message, read: d.lastMessageRead[th.id]});
         tellTabsIfCountChanged(d, "m", messageCount(d));
