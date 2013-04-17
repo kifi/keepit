@@ -1,8 +1,36 @@
 // API for content scripts
 
 api = function() {
-  var msgListeners = [];
-  var api = {
+  var msgHandlers = [], callbacks = {}, nextCallbackId = 1;
+
+  var port = chrome.runtime.connect({name: ""});
+  port.onMessage.addListener(function(msg) {
+    var kind = msg[0];
+    if (kind == "api:respond") {
+      var id = msg[1], cb = callbacks[id];
+      if (cb) {
+        delete callbacks[id];
+        cb(msg[2]);
+      }
+    } else {
+      var data = msg[1];
+      api.log("[onMessage]", kind, data != null ? data : "");
+      for (var i in msgHandlers) {
+        var handler = msgHandlers[i][kind];
+        handler && handler(data);
+      }
+    }
+  });
+  port.onDisconnect.addListener(function() {
+    api.log("[onDisconnect]");
+    api.port = {emit: api.noop};
+    for (var i in api.onEnd) {
+      api.onEnd[i]();
+    }
+    api.onEnd.length = msgHandlers.length = 0;
+  });
+
+  return {  // TODO: indent below
   load: function(path, callback) {
     var req = new XMLHttpRequest();
     req.open("GET", api.url(path), true);
@@ -13,36 +41,26 @@ api = function() {
     };
     req.send(null);
   },
-  log: function(message) {
+  log: function() {
     var d = new Date, ds = d.toString();
     arguments[0] = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] " + arguments[0];
     console.log.apply(console, arguments);
   },
   noop: function() {},
+  onEnd: [],
   port: {
     emit: function(type, data, callback) {
       if (!callback && typeof data == "function") {
         callback = data, data = null;
       }
-      chrome.extension.sendMessage([type, data], callback || api.noop);
+      if (callback) {
+        var callbackId = nextCallbackId++;
+        callbacks[callbackId] = callback;
+      }
+      port.postMessage([type, data, callbackId]);
     },
     on: function(handlers) {
-      msgListeners.push(f);
-      chrome.extension.onMessage.addListener(f);
-      function f(msg, sender, respond) {
-        if (msg && msg.length && msg[0] === lifeId) {
-          var kind = msg[1], handler = handlers[kind];
-          if (handler) {
-            var data = msg[2];
-            api.log("[onMessage]", kind, data != null ? data : "");
-            try {
-              handler(data);
-            } catch (e) {
-              api.log.error(e, "onMessage");
-            }
-          }
-        }
-      }
+      msgHandlers.push(handlers);
     }},
   require: function(path, callback) {
     if (injected[path]) {
@@ -51,25 +69,5 @@ api = function() {
       api.port.emit("api:require", path, callback);
     }
   },
-  url: chrome.extension.getURL.bind(chrome.extension)};
-
-  api.log.error = function(exception, context) {
-    console.error((context ? "[" + context + "] " : "") + exception);
-    console.error(exception.stack);
-  };
-
-  window.addEventListener("kifiunload", function f(e) {
-    if (e.lifeId !== lifeId) {
-      api.log("\u2205 end life:", lifeId);
-      window.removeEventListener("kifiunload", f);
-      msgListeners.forEach(function(ml) {
-        chrome.extension.onMessage.removeListener(ml);
-      });
-      api.port.emit = api.noop;
-    }
-  });
-
-  return api;
+  url: chrome.runtime.getURL};
 }();
-
-api.log("\u2058 new life:", lifeId);
