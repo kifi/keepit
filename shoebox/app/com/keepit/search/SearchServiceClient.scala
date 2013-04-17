@@ -16,6 +16,7 @@ trait SearchServiceClient extends ServiceClient {
 
   def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isUserKeep: Boolean): Future[Unit]
   def updateURIGraph(): Future[Int]
+  def reindexURIGraph(): Future[Unit]
   def index(): Future[Int]
   def reindex(): Future[Unit]
   def articleIndexInfo(): Future[ArticleIndexInfo]
@@ -53,6 +54,10 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
 
   def updateURIGraph(): Future[Int] = {
     call(routes.URIGraphController.updateURIGraph()).map(r => (r.json \ "users").as[Int])
+  }
+  
+  def reindexURIGraph(): Future[Unit] = {
+    call(routes.URIGraphController.reindex()).map(r => ())
   }
 
   def index(): Future[Int] = {
