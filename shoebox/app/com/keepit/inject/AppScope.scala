@@ -76,28 +76,31 @@ class AppScope extends Scope with Logging {
     new Provider[T] {
       def get: T = {
         log.debug(s"requesting for $key")
-        if (stopped || stopping) throw new IllegalStateException(s"requesting for $key (pre lock) while the scope stopped=$stopped, stopping=$stopping")
-        val instance = appScope synchronized {
-          if (stopped || stopping) throw new IllegalStateException(s"requesting for $key (in lock) while the scope stopped=$stopped, stopping=$stopping")
+        val instance = {
           instances.get(key) match {
             case Some(inst) =>
               log.debug(s"returning existing instance of ${inst.getClass().getName()}")
               inst.asInstanceOf[T]
             case None =>
-              val inst = unscoped.get()
-              log.debug(s"creating new instance of ${inst.getClass().getName()}")
-              // if this instance is a plugin, start it and add to the list of plugins
-              inst match {
-                case plugin: Plugin =>
-                  started match {
-                    case true => startPlugin(plugin)
-                    case false => pluginsToStart = plugin :: pluginsToStart
-                  }
-                case _ =>
+              if (stopped || stopping) throw new IllegalStateException(s"requesting for $key (pre lock) while the scope stopped=$stopped, stopping=$stopping")
+              appScope synchronized {
+                if (stopped || stopping) throw new IllegalStateException(s"requesting for $key (in lock) while the scope stopped=$stopped, stopping=$stopping")
+                val inst = unscoped.get()
+                log.debug(s"created new instance of ${inst.getClass().getName()}")
+
+                // if this instance is a plugin, start it and add to the list of plugins
+                inst match {
+                  case plugin: Plugin =>
+                    started match {
+                      case true => startPlugin(plugin)
+                      case false => pluginsToStart = plugin :: pluginsToStart
+                    }
+                  case _ =>
+                }
+                instances += key -> inst
+                log.debug(s"returning initiated instance of ${inst.getClass().getName()}")
+                inst
               }
-              instances += key -> inst
-              log.debug(s"returning initiated instance of ${inst.getClass().getName()}")
-              inst
           }
         }
         log.debug(s"instance of key $key is $instance")
