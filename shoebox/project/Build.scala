@@ -34,6 +34,7 @@ object ApplicationBuild extends Build {
 
     val appDependencies = Seq(
       jdbc,
+      "securesocial" %% "securesocial" % "master-SNAPSHOT",
       "mysql" % "mysql-connector-java" % "5.1.10",
       "org.clapper" %% "grizzled-slf4j" % "1.0.1",
       "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
@@ -68,12 +69,11 @@ object ApplicationBuild extends Build {
       ),
 
       resolvers ++= Seq(
+        //used for securesocial
+        Resolver.url("sbt-plugin-snapshots",
+          new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
         "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
         "kevoree Repository" at "http://maven2.kevoree.org/release/",
-        //used for securesocial
-        "jBCrypt Repository" at "http://repo1.maven.org/maven2/org/",
-        "boilerpipe Repository" at "http://boilerpipe.googlecode.com/svn/repo/",
-        "Spy Repository" at "http://files.couchbase.com/maven2",
         //for org.mongodb#casb
         "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
         "releases"  at "https://oss.sonatype.org/content/groups/scala-tools"

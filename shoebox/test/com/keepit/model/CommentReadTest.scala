@@ -139,12 +139,11 @@ class CommentReadTest extends Specification with DbRepos {
         import com.keepit.common.time._
         val (user1, user2, uri1, uri2, comment1, comment2, comment3, msg1, msg2, msg3, msg4) = setup()
 
+        val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
+          tokenType = None, expiresIn = None, refreshToken = None)
+        val su = SocialUser(UserId("111", "facebook"), "A", "1", "A 1", Some("a1@gmail.com"),
+          Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None, Some(oAuth2Info), None)
         db.readWrite { implicit s =>
-
-          val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
-            tokenType = None, expiresIn = None, refreshToken = None)
-          val su = SocialUser(UserId("111", "facebook"), "A 1", Some("a1@gmail.com"),
-            Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, true, None, Some(oAuth2Info), None)
           val sui = socialUserInfoRepo.save(SocialUserInfo(
             userId = user1.id, fullName = "A 1", socialId = SocialId("111"), networkType = FACEBOOK,
             credentials = Some(su)))
@@ -163,9 +162,8 @@ class CommentReadTest extends Specification with DbRepos {
         }
 
 
-        val fakeRequest = FakeRequest().withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook")
+        val fakeRequest = FakeRequest().withCookies(Authenticator.create(su).right.get.toCookie)
         val authRequest = AuthenticatedRequest(null, user1.id.get, user1, fakeRequest)
-        authRequest.session.get(SecureSocial.ProviderKey) === Some("facebook")
         val result = inject[ExtCommentController].getMessageThread(externalId)(authRequest)
         status(result) must equalTo(OK)
 

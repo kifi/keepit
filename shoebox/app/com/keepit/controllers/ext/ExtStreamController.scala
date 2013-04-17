@@ -24,7 +24,7 @@ import play.api.libs.json.Json
 import play.api.mvc.RequestHeader
 import play.api.mvc.WebSocket
 import play.api.mvc.WebSocket.FrameFormatter
-import securesocial.core._
+import securesocial.core.{UserService, SecureSocial}
 import com.keepit.common.db.Id
 import com.keepit.common.db.State
 import scala.util.Random
@@ -71,10 +71,10 @@ class ExtStreamController @Inject() (
      * WebSockets cannot use these, so I've implemented what I need below.
      */
     for (
-      userId <- request.session.get(SecureSocial.UserKey);
-      providerId <- request.session.get(SecureSocial.ProviderKey);
-      secSocialUser <- UserService.find(UserId(userId, providerId))
+      auth <- SecureSocial.authenticatorFromRequest(request);
+      secSocialUser <- UserService.find(auth.userId)
     ) yield {
+
       val impersonatedUserIdOpt: Option[ExternalId[User]] = ImpersonateCookie.decodeFromCookie(request.cookies.get(ImpersonateCookie.COOKIE_NAME))
 
       db.readOnly { implicit session =>
@@ -144,7 +144,7 @@ class ExtStreamController @Inject() (
             "get_friends" -> { _ =>
               channel.push(Json.arr("friends", getFriends(userId)))
             },
-            "get_comments" -> { case JsNumber(requestId) +: JsString(url) +: _ =>// unused, remove soon
+            "get_comments" -> { case JsNumber(requestId) +: JsString(url) +: _ => // unused, remove soon
               channel.push(Json.arr(requestId.toLong, paneData.getComments(userId, url)))
             },
             "get_message_threads" -> { case JsNumber(requestId) +: JsString(url) +: _ =>     // unused, remove soon
