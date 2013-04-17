@@ -142,6 +142,7 @@ POST     /admin/search/spell/buildDict         @com.keepit.controllers.admin.Adm
 GET     /admin/search/spell        @com.keepit.controllers.admin.AdminSpellCorrectorController.spellController
 GET     /admin/search/spell/test-correct  @com.keepit.controllers.admin.AdminSpellCorrectorController.correctSpelling(query: String)
 
+GET     /admin/uriGraph/reindex     @com.keepit.controllers.admin.AdminURIGraphController.reindex
 GET     /admin/uriGraph/load        @com.keepit.controllers.admin.AdminURIGraphController.load
 GET     /admin/uriGraph/update/:userId @com.keepit.controllers.admin.AdminURIGraphController.update(userId: Id[User])
 GET     /admin/uriGraph/dumpDoc/:userId  @com.keepit.controllers.admin.AdminURIGraphController.dumpLuceneDocument(userId: Id[User])
@@ -165,6 +166,7 @@ GET     /admin/social_user/:id/refresh @com.keepit.controllers.admin.AdminSocial
 GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUserController.resetSocialUser(id: Id[SocialUserInfo])
 
 GET     /admin/server               @com.keepit.common.healthcheck.AdminHealthController.serviceView()
+GET     /admin/ec2-instance         @com.keepit.controllers.admin.AmazonInstanceController.instanceInfo()
 
 GET     /admin/emails/comment       @com.keepit.controllers.admin.AdminEmailPreviewController.newComment
 GET     /admin/emails/message       @com.keepit.controllers.admin.AdminEmailPreviewController.newMessage

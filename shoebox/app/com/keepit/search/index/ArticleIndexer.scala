@@ -90,24 +90,19 @@ class ArticleIndexer (
           doc.add(buildKeywordField("tl", titleLang.lang))
 
           val titleAnalyzer = DefaultAnalyzer.forIndexing(titleLang)
+          val titleAnalyzerWithStemmer = DefaultAnalyzer.forIndexingWithStemmer(titleLang)
           val contentAnalyzer = DefaultAnalyzer.forIndexing(contentLang)
-          val title = buildTextField("t", article.title, titleAnalyzer)
-          val content = buildTextField("c", article.content, contentAnalyzer)
-          doc.add(title)
-          doc.add(content)
+          val contentAnalyzerWithStemmer = DefaultAnalyzer.forIndexingWithStemmer(contentLang)
 
-          DefaultAnalyzer.forIndexingWithStemmer(titleLang).foreach{ analyzer =>
-            doc.add(buildTextField("ts", article.title, analyzer))
-          }
-          DefaultAnalyzer.forIndexingWithStemmer(contentLang).foreach{ analyzer =>
-            doc.add(buildTextField("cs", article.content, analyzer))
-          }
+          doc.add(buildTextField("t", article.title, titleAnalyzer))
+          doc.add(buildTextField("ts", article.title, titleAnalyzerWithStemmer))
 
-          val titleTS = titleAnalyzer.tokenStream("t", article.title)
-          val contentTS = contentAnalyzer.tokenStream("c", article.content)
+          doc.add(buildTextField("c", article.content, contentAnalyzer))
+          doc.add(buildTextField("cs", article.content, contentAnalyzerWithStemmer))
+          
           val builder = new SemanticVectorBuilder(60)
-          builder.load(titleTS)
-          builder.load(contentTS)
+          builder.load(titleAnalyzerWithStemmer.tokenStream("t", article.title))
+          builder.load(contentAnalyzerWithStemmer.tokenStream("c", article.content))
           doc.add(buildDocSemanticVectorField("docSv", builder))
           doc.add(buildSemanticVectorField("sv", builder))
 

@@ -15,7 +15,7 @@ object QueryHash {
 
     if (queryText != null && queryText.trim.length != 0) {
       // use the minimum parser to avoid expansions etc.
-      val parser = new QueryParser(analyzer, None) with DefaultSyntax
+      val parser = new QueryParser(analyzer, analyzer) with DefaultSyntax
       parser.parse(queryText).foreach{ query => hash.update(query.toString) }
     }
 

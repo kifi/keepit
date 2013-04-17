@@ -35,6 +35,14 @@ class AdminURIGraphController @Inject()(
     }
   }
 
+  def reindex = AdminHtmlAction { implicit request =>
+    Async {
+      searchClient.reindexURIGraph().map { cnt =>
+        Ok("reindexinf started")
+      }
+    }
+  }
+
   def dumpLuceneDocument(id: Id[User]) =  AdminHtmlAction { implicit request =>
     Async {
       searchClient.dumpLuceneURIGraph(id).map(Ok(_))

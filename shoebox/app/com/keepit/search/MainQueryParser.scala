@@ -29,7 +29,7 @@ import com.keepit.search.query.PhraseProximityQuery
 
 class MainQueryParser(
   analyzer: Analyzer,
-  stemmingAnalyzer: Option[Analyzer],
+  stemmingAnalyzer: Analyzer,
   baseBoost: Float,
   proximityBoost: Float,
   semanticBoost: Float,

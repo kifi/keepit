@@ -119,14 +119,14 @@ object DefaultAnalyzer {
   def forIndexing: Analyzer = forIndexing(Lang("en"))
   def forIndexing(lang: Lang): Analyzer = getAnalyzer(lang).withFilter[DotDecompounder]
 
-  def forIndexingWithStemmer: Option[Analyzer] = forIndexingWithStemmer(Lang("en"))
-  def forIndexingWithStemmer(lang: Lang): Option[Analyzer] = getAnalyzerWithStemmer(lang)
+  def forIndexingWithStemmer: Analyzer = forIndexingWithStemmer(Lang("en"))
+  def forIndexingWithStemmer(lang: Lang): Analyzer = getAnalyzerWithStemmer(lang).getOrElse(forIndexing(lang))
 
   def forParsing: Analyzer = forParsing(Lang("en"))
   def forParsing(lang: Lang): Analyzer = getAnalyzer(lang)
 
-  def forParsingWithStemmer: Option[Analyzer] = forParsingWithStemmer(Lang("en"))
-  def forParsingWithStemmer(lang: Lang): Option[Analyzer] = getAnalyzerWithStemmer(lang)
+  def forParsingWithStemmer: Analyzer = forParsingWithStemmer(Lang("en"))
+  def forParsingWithStemmer(lang: Lang): Analyzer = getAnalyzerWithStemmer(lang).getOrElse(forParsing(lang))
 }
 
 class DefaultTokenizerFactory extends TokenizerFactory {
