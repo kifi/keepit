@@ -58,8 +58,8 @@ class HomeController @Inject() (db: Database,
       }
     }
   }, unauthenticatedAction = { implicit request =>
-    Ok
-    //Ok(views.html.website.welcome()) // disabled for now
+    if(Play.isDev) Ok(views.html.website.welcome())
+    else Ok // disabled for now
   })
   
   def pendingHome()(implicit request: AuthenticatedRequest[AnyContent]) = {
