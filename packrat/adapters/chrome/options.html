@@ -1,14 +1,17 @@
 <!doctype html>
 <title>KiFi Extension Options</title>
 <style>
+h1 { margin: 10px; font-size: 20px; }
+select { position: absolute; top: -35px; right: 0; display: none }
 fieldset,
 #session {
   margin: 10px;
   border: 2px groove threedface;
   padding: 6px 12px 10px;
-  width: 400px;
+  width: 360px;
+  position: relative;
 }
-input:not([type]) {width: 4ex}
+input[type=text] {width: 2.5ex; text-align: center; padding-left: 0; padding-right: 0}
 label>input[type=checkbox],
 label>input[type=radio],
 label>span {vertical-align: text-bottom}
@@ -28,17 +31,16 @@ button {padding: 4px 10px; margin-top: 6px}
 #name {margin: 3px 0 10px}
 </style>
 
+<h1>KiFi Extension Options</h1>
+
 <fieldset>
-  Environment:
-    <label><input type="radio" name="env" value="production"> <span>Production</span></label>
-    <label><input type="radio" name="env" value="development"> <span>Development</span></label><br>
-  <label><input type="checkbox" id="show-slider" name="show_slider"> <span>Show Slider Automatically</span></label><br>
-  <label>
-    Max Search Results:
-    <input id="max-results" name="max_results">
-  </label><br>
-  <label><input type="checkbox" id="show-scores" name="show_scores"> <span>Show Search Result Scores</span></label><br>
-  <button id="save">Save</button>
+  <select name="env">
+    <option value="production">Production</option>
+    <option value="development">Development</option>
+  </select>
+  <label><input type="checkbox" name="show_slider"> <span>Show Slider Automatically</span></label><br>
+  <label><input type="text" name="max_results"> Max Search Results</label><br>
+  <label><input type="checkbox" name="show_scores"> <span>Show Search Result Scores</span></label><br>
 </fieldset>
 
 <div id="session">
