@@ -56,12 +56,14 @@
             </li>
           } else {
             <li class="clearfix">
-              <img src="@routes.Assets.at("images/default_avatar.png")" width="75" height="75" class="avatar">
-              <div class="avatar_info">
-                <input type="text" class="invite_field" value="Select a facebook friend to invite">
-                <input type="hidden" value="" class="invited_id">
-                <div class="btn blue small invite_btn">Invite</a>
-              </div>
+              <form action="@com.keepit.controllers.website.routes.HomeController.inviteConnection" method="POST">
+                <img src="@routes.Assets.at("images/default_avatar.png")" width="75" height="75" class="avatar">
+                <div class="avatar_info">
+                  <input type="text" class="invite_field" value="Select a facebook friend to invite">
+                  <input type="hidden" value="" name="fullSocialId" class="invited_id">
+                  <div class="btn blue small invite_btn">Invite</a>
+                </div>
+              </form>
             </li>
           }
         }
