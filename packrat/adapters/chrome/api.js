@@ -176,7 +176,7 @@ api = function() {
   });
 
   var portHandlers;
-  chrome.extension.onMessage.addListener(function(msg, sender, respond) {
+  chrome.runtime.onMessage.addListener(function(msg, sender, respond) {
     var tab = sender.tab, tabId = tab && tab.id, page = pages[tabId];
     if (tab && page && tab.url !== page.url) {
       api.log.error(Error("url mismatch:\n" + tab.url + "\n" + page.url), "onMessage");

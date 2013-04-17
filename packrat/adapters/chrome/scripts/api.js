@@ -24,11 +24,11 @@ api = function() {
       if (!callback && typeof data == "function") {
         callback = data, data = null;
       }
-      chrome.extension.sendMessage([type, data], callback || api.noop);
+      chrome.runtime.sendMessage([type, data], callback || api.noop);
     },
     on: function(handlers) {
       msgListeners.push(f);
-      chrome.extension.onMessage.addListener(f);
+      chrome.runtime.onMessage.addListener(f);
       function f(msg, sender, respond) {
         if (msg && msg.length && msg[0] === lifeId) {
           var kind = msg[1], handler = handlers[kind];
@@ -51,7 +51,7 @@ api = function() {
       api.port.emit("api:require", path, callback);
     }
   },
-  url: chrome.extension.getURL.bind(chrome.extension)};
+  url: chrome.runtime.getURL.bind(chrome.runtime)};
 
   api.log.error = function(exception, context) {
     console.error((context ? "[" + context + "] " : "") + exception);
@@ -63,7 +63,7 @@ api = function() {
       api.log("\u2205 end life:", lifeId);
       window.removeEventListener("kifiunload", f);
       msgListeners.forEach(function(ml) {
-        chrome.extension.onMessage.removeListener(ml);
+        chrome.runtime.onMessage.removeListener(ml);
       });
       api.port.emit = api.noop;
     }
