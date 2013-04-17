@@ -95,9 +95,9 @@ class ArticleIndexer (
           val contentAnalyzerWithStemmer = DefaultAnalyzer.forIndexingWithStemmer(contentLang)
 
           doc.add(buildTextField("t", article.title, titleAnalyzer))
-          doc.add(buildTextField("c", article.content, contentAnalyzer))
-
           doc.add(buildTextField("ts", article.title, titleAnalyzerWithStemmer))
+
+          doc.add(buildTextField("c", article.content, contentAnalyzer))
           doc.add(buildTextField("cs", article.content, contentAnalyzerWithStemmer))
           
           val builder = new SemanticVectorBuilder(60)
