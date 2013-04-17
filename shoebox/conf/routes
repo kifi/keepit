@@ -165,6 +165,7 @@ GET     /admin/social_user/:id/refresh @com.keepit.controllers.admin.AdminSocial
 GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUserController.resetSocialUser(id: Id[SocialUserInfo])
 
 GET     /admin/server               @com.keepit.common.healthcheck.AdminHealthController.serviceView()
+GET     /admin/ec2-instance         @com.keepit.controllers.admin.AmazonInstanceController.instanceInfo()
 
 GET     /admin/emails/comment       @com.keepit.controllers.admin.AdminEmailPreviewController.newComment
 GET     /admin/emails/message       @com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
