@@ -244,7 +244,7 @@ object BooleanScorer {
 
     val mainScorer =
       if (required.length > 0 && optional.length > 0) {
-        new BooleanScorer(weight, conjunction(), disjunction(), threshold, requiredValue + optionalValue)
+        new BooleanScorer(weight, conjunction(), disjunction(), threshold, requiredValue + optionalValue, required.length + optional.length)
       } else if (required.length > 0){
         conjunction()
       } else if (optional.length > 0) {
@@ -255,8 +255,11 @@ object BooleanScorer {
   }
 }
 
-class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: BooleanOrScorer, threshold: Float, val value: Float) extends Scorer(weight) with Coordinator {
+class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: BooleanOrScorer, threshold: Float, maxOverlapValue: Float, numSubScores: Int) extends Scorer(weight) with Coordinator {
 
+  private[this] val overlapValueUnit = maxOverlapValue / numSubScores
+  private[this] val maxOptionalOverlapValue = maxOverlapValue - required.value
+  
   private[this] var doc = -1
   private[this] var scoredDoc = -1
   private[this] var scoreValue = 0.0f
@@ -292,7 +295,7 @@ class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: Boolea
 
   override def freq(): Int = 1
 
-  override def coord = (required.value + optional.value)/value
+  override def coord = overlapValueUnit / (overlapValueUnit + (maxOptionalOverlapValue - optional.value))
 }
 
 class BooleanAndScorer(weight: Weight, val coordFactor: Float, scorers: Array[Scorer], val value: Float) extends Scorer(weight) with Coordinator {
