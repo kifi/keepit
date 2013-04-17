@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The code was originally taken from https://github.com/twitter/scala-zookeeper-client/blob/master/src/main/scala/com/twitter/zookeeper/ZooKeeperClient.scala
- * It was banded by twitter in favor of https://github.com/twitter/util/tree/master/util-zk
+ * It was abandoned by twitter in favor of https://github.com/twitter/util/tree/master/util-zk
  */
 class ZooKeeperClient(servers: String, sessionTimeout: Int, basePath : String,
                       watcher: Option[ZooKeeperClient => Unit]) extends Logging {
