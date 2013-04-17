@@ -7,7 +7,7 @@ api = function() {
     var cb = callbacks[callbackId];
     if (cb) {
       delete callbacks[callbackId];
-      cb[0](response);
+      cb(response);
     }
   }
 
@@ -19,9 +19,8 @@ api = function() {
       el.innerHTML = css;
       (document.head || document.body).appendChild(el);
     });
-    var result;
     scripts.forEach(function(js) {
-      result = window.eval(js);
+      window.eval(js);
     });
     invokeCallback(callbackId);
   });
@@ -49,7 +48,7 @@ api = function() {
         }
         if (callback) {
           var callbackId = nextCallbackId++;
-          callbacks[callbackId] = [callback, +new Date];
+          callbacks[callbackId] = callback;
         }
         self.port.emit(type, data, callbackId);
       },
@@ -62,15 +61,10 @@ api = function() {
       }},
     require: function(path, callback) {
       var callbackId = nextCallbackId++;
-      callbacks[callbackId] = [callback, +new Date];
+      callbacks[callbackId] = callback;
       self.port.emit("api:require", path, callbackId);
     },
     url: function(path) {
       return self.options.dataUriPrefix + path;
     }};
 }();
-
-api.log.error = function(exception, context) {
-  console.error((context ? "[" + context + "] " : "") + exception);
-  console.error(exception.stack);
-};
