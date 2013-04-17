@@ -48,7 +48,7 @@ class LineIndexReaderTest extends Specification {
         lines += line
       }
       val doc = new Document()
-      doc.add(lineFieldBuilder.buildLineField("B", lines, (f, t) => Some(indexingAnalyzer.tokenStream(f, new StringReader(t)))))
+      doc.add(lineFieldBuilder.buildLineField("B", lines, (f, t) => indexingAnalyzer.tokenStream(f, new StringReader(t))))
       writer.addDocument(doc)
     }
     writer.commit()

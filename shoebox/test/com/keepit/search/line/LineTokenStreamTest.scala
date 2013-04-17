@@ -18,7 +18,7 @@ class LineTokenStreamTest extends Specification {
   val analyzer = new WhitespaceAnalyzer(Version.LUCENE_41)
   "LineTokenStream" should {
     "tokenize strings aligning the position according to the line number" in {
-      val ts = new LineTokenStream("B", Seq((0, "a b c"), (1, "d"), (2, "e f")), (f, t) => Some(analyzer.tokenStream(f, new StringReader(t))))
+      val ts = new LineTokenStream("B", Seq((0, "a b c"), (1, "d"), (2, "e f")), (f, t) => analyzer.tokenStream(f, new StringReader(t)))
       val expected = Array((1, "a"), (2, "b"), (3, "c"), (2049, "d"), (4097, "e"), (4098, "f"))
       val charAttr = ts.getAttribute(classOf[CharTermAttribute])
       val posIncrAttr = ts.getAttribute(classOf[PositionIncrementAttribute])
@@ -33,7 +33,7 @@ class LineTokenStreamTest extends Specification {
 
     "cap the position" in {
       val longText = (1 to 3000).map(_.toString).mkString(" ")
-      val ts = new LineTokenStream("B", Seq((0, longText)), (f, t) => Some(analyzer.tokenStream(f, new StringReader(t))))
+      val ts = new LineTokenStream("B", Seq((0, longText)), (f, t) => analyzer.tokenStream(f, new StringReader(t)))
       val posIncrAttr = ts.getAttribute(classOf[PositionIncrementAttribute])
       var curPos = 0
       var count = 0
@@ -47,7 +47,7 @@ class LineTokenStreamTest extends Specification {
 
     "maintain gaps between lines" in {
       val longText = (1 to 5000).map(_.toString).mkString(" ")
-      val ts = new LineTokenStream("B", Seq((0, longText), (1, longText), (2, longText)), (f, t) => Some(analyzer.tokenStream(f, new StringReader(t))))
+      val ts = new LineTokenStream("B", Seq((0, longText), (1, longText), (2, longText)), (f, t) => analyzer.tokenStream(f, new StringReader(t)))
       val posIncrAttr = ts.getAttribute(classOf[PositionIncrementAttribute])
       var curPos = 0
       var count = 0
