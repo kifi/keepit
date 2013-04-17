@@ -88,7 +88,9 @@ class ExtCommentController @Inject() (
 
       val parentIdOpt = parent match {
         case "" => None
-        case id => commentRepo.get(ExternalId[Comment](id)).id
+        case id =>
+          val parent = commentRepo.get(ExternalId[Comment](id))
+          Some(parent.parent.getOrElse(parent.id.get))
       }
 
       val url: URL = urlRepo.save(urlRepo.get(urlStr).getOrElse(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
