@@ -126,7 +126,7 @@ class PhraseHelper(terms: Seq[String], phrases: Set[(Int, Int)]) {
           if (i == id) {
             ls(i) = (runLen - phraseLen) * phraseLen + localPhraseScore(phraseLen)      // first summand comes from 'run length growth bonus' (if current phrase is consecutive to the previous phrase)
           } else {
-            ls(i) = max(ls(i) - (lastPos - lp(i)) * PhraseProximityQuery.gapPenalty * phraseLenMap(i), 0.0f)    // each term in the phrase decays. so multiply by pl(i)
+            ls(i) = max(ls(i) - (lastPos - lp(i)) * PhraseProximityQuery.gapPenalty * phraseLenMap(i), 0.0f)    // each term in the phrase decays. so multiply by phraseLenMap(i)
             lp(i) = lastPos
           }
           localSum += ls(i)
