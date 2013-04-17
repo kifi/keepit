@@ -70,34 +70,49 @@ class AppScope extends Scope with Logging {
     }
   }
 
+  private def createInstance[T](key: Key[T], unscoped: Provider[T]) = {
+    if (stopped || stopping)
+      throw new IllegalStateException(s"requesting for $key (in lock) while the scope stopped=$stopped, stopping=$stopping")
+    val inst = unscoped.get()
+    log.debug(s"created new instance of ${inst.getClass().getName()}")
+
+    // if this instance is a plugin, start it and add to the list of plugins
+    startIfPlugin(inst)
+    instances += key -> inst
+    log.debug(s"returning initiated instance of ${inst.getClass().getName()}")
+    inst
+  }
+
+  private def startIfPlugin(instance: Any) =
+    instance match {
+      case plugin: Plugin =>
+        started match {
+          case true => startPlugin(plugin)
+          case false => pluginsToStart = plugin :: pluginsToStart
+        }
+      case _ =>
+    }
+
   def scope[T](key: Key[T], unscoped: Provider[T]): Provider[T] = {
     val appScope = this
     // return a provider that always gives the same instance
     new Provider[T] {
       def get: T = {
         log.debug(s"requesting for $key")
-        if (stopped || stopping) throw new IllegalStateException(s"requesting for $key (pre lock) while the scope stopped=$stopped, stopping=$stopping")
-        val instance = appScope synchronized {
-          if (stopped || stopping) throw new IllegalStateException(s"requesting for $key (in lock) while the scope stopped=$stopped, stopping=$stopping")
+        val instance = {
           instances.get(key) match {
             case Some(inst) =>
-              log.debug(s"returning existing instance of ${inst.getClass().getName()}")
               inst.asInstanceOf[T]
             case None =>
-              val inst = unscoped.get()
-              log.debug(s"creating new instance of ${inst.getClass().getName()}")
-              // if this instance is a plugin, start it and add to the list of plugins
-              inst match {
-                case plugin: Plugin =>
-                  started match {
-                    case true => startPlugin(plugin)
-                    case false => pluginsToStart = plugin :: pluginsToStart
-                  }
-                case _ =>
+              appScope synchronized {
+                //double check, it may have been initialized already
+                instances.get(key) match {
+                  case Some(inst) =>
+                    inst.asInstanceOf[T]
+                  case None =>
+                    createInstance(key, unscoped)
+                }
               }
-              instances += key -> inst
-              log.debug(s"returning initiated instance of ${inst.getClass().getName()}")
-              inst
           }
         }
         log.debug(s"instance of key $key is $instance")

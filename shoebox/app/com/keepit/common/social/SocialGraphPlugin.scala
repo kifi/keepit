@@ -58,12 +58,15 @@ private[social] class SocialGraphActor @Inject() (
           "social user info's credentials are not defined: %s".format(socialUserInfo))
         log.info("fetching raw info for %s".format(socialUserInfo))
         val rawInfo = graph.fetchSocialUserRawInfo(socialUserInfo)
+        
+        socialUserImportEmail.importEmail(socialUserInfo.userId.get, rawInfo.jsons)
+                
         log.info("fetched raw info %s for %s".format(rawInfo, socialUserInfo))
         socialUserRawInfoStore += (socialUserInfo.id.get -> rawInfo)
 
         socialUserImportFriends.importFriends(rawInfo.jsons)
         val connections = socialUserCreateConnections.createConnections(socialUserInfo, rawInfo.jsons)
-        socialUserImportEmail.importEmail(socialUserInfo.userId.get, rawInfo.jsons)
+
         db.readWrite { implicit c =>
           socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
         }

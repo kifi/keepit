@@ -52,6 +52,14 @@ trait SecureSocial extends Controller with Logging {
     }.as(JSON)
   }
 
+  private def redirectToLoginPage[A] = { implicit request: Request[A] =>
+    log.info("request.uri = %s".format(request.uri))
+    Redirect(routes.LoginPage.login()).flashing("error" -> Messages("securesocial.loginRequired")).withSession(
+      session + (SecureSocial.OriginalUrlKey -> request.uri)
+    )
+  }
+
+
   /**
    * A secured action.  If there is no user in the session the request is redirected
    * to the login page
@@ -62,12 +70,12 @@ trait SecureSocial extends Controller with Logging {
    * @tparam A
    * @return
    */
-  def SecuredAction[A](apiClient: Boolean, p: BodyParser[A])(f: SecuredRequest[A] => Result) = Action(p) {
+  def SecuredAction[A](apiClient: Boolean, p: BodyParser[A])(onAuthenticated: SecuredRequest[A] => Result, onUnauthenticated: Request[A] => Result = redirectToLoginPage) = Action(p) {
     implicit request => {
       log.debug("secured access (api=%s) to %s by %s".format(apiClient, request.path, request.agent))
       SecureSocial.userFromSession(request).map { userId =>
         UserService.find(userId).map { user =>
-          f(SecuredRequest(user, request))
+          onAuthenticated(SecuredRequest(user, request))
         }.getOrElse {
           // there is no user in the backing store matching the credentials sent by the client.
           // we need to remove the credentials from the session
@@ -84,7 +92,6 @@ trait SecureSocial extends Controller with Logging {
           }
         }
       }.getOrElse {
-        log.info("Anonymous user trying to access : '%s'".format(request.uri))
         if ( apiClient ) {
           log.info("apiClientForbidden - anonymous user from %s to %s. user [%s], profider [%s]".format(
               request.agent, request.path,
@@ -92,10 +99,7 @@ trait SecureSocial extends Controller with Logging {
               request.session.get(SecureSocial.ProviderKey).getOrElse("NO PROVIDER ID")))
           apiClientForbidden(request)
         } else {
-          log.info("request.uri = %s".format(request.uri))
-          Redirect(routes.LoginPage.login()).flashing("error" -> Messages("securesocial.loginRequired")).withSession(
-            session + (SecureSocial.OriginalUrlKey -> request.uri)
-          )
+          onUnauthenticated(request)
         }
       }
     }
@@ -107,8 +111,8 @@ trait SecureSocial extends Controller with Logging {
    * @param f
    * @return
    */
-  def SecuredAction(apiClient: Boolean = false)(f: SecuredRequest[AnyContent] => Result): Action[AnyContent] = {
-    SecuredAction(apiClient, parse.anyContent)(f)
+  def SecuredAction(apiClient: Boolean = false)(onAuthenticated: SecuredRequest[AnyContent] => Result)(onUnauthenticated: Request[AnyContent] => Result = redirectToLoginPage): Action[AnyContent] = {
+    SecuredAction(apiClient, parse.anyContent)(onAuthenticated, onUnauthenticated)
   }
 
   /**

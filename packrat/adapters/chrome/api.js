@@ -1,8 +1,6 @@
 // API for main.js
 
 api = function() {
-  var t0 = +new Date;
-
   function dispatch() {
     var args = arguments;
     this.forEach(function(f) {f.apply(null, args)});
@@ -114,7 +112,7 @@ api = function() {
             dispatch.call(api.tabs.on.complete, page);
           }
         } else {
-          api.log.error(Error("no page for " + tabId), "onUpdated");
+          api.log("#800", "[onUpdated] %i no page", tabId);
         }
       }
     }
@@ -175,51 +173,71 @@ api = function() {
     });
   });
 
-  var portHandlers;
-  chrome.extension.onMessage.addListener(function(msg, sender, respond) {
-    var tab = sender.tab, tabId = tab && tab.id, page = pages[tabId];
-    if (tab && page && tab.url !== page.url) {
-      api.log.error(Error("url mismatch:\n" + tab.url + "\n" + page.url), "onMessage");
+  var ports = {}, portHandlers;
+  chrome.runtime.onConnect.addListener(function(port) {
+    var tab = port.sender.tab;
+    if (port.sender.id === chrome.runtime.id) {
+      api.log("[onConnect]", tab.id, tab.url);
+      if (ports[tab.id]) {
+        api.log("#a00", "[onConnect] %i disconnecting prev port", tab.id);
+        ports[tab.id].disconnect();
+      }
+      ports[tab.id] = port;
+      port.onMessage.addListener(function(msg) {
+        var kind = msg[0], data = msg[1], callbackId = msg[2];
+        if (kind == "api:require") {
+          injectWithDeps(tab.id, data, port.postMessage.bind(port, ["api:respond", callbackId]));
+        } else if (portHandlers) {
+          var handler = portHandlers[kind];
+          if (handler) {
+            var page = pages[tab.id];
+            if (page) {
+              if (tab.url !== page.url) {
+                api.log("#a00", "[onMessage] %i url mismatch:\n%s\n%s", tab.id, tab.url, page.url);
+              }
+              api.log("#0a0", "[onMessage]", tab.id, kind, data != null ? data : "");
+              handler(data, function(response) {
+                port.postMessage(["api:respond", callbackId, response]);
+              }, page);
+            } else {
+              api.log("#a00", "[api:dom_ready] no page for " + tab.id + " at " + tab.url);
+            }
+          } else {
+            api.log("#a00", "[onMessage] ignoring:", kind, "from:", tab.id);
+          }
+        }
+      });
+      port.onDisconnect.addListener(function() {
+        api.log("[onDisconnect]");
+        delete ports[tab.id];
+      });
     }
-    if (msg === "api:dom_ready") {
+  });
+
+  chrome.runtime.onMessage.addListener(function(msg, sender) {
+    var tab = sender.tab;
+    if (sender.id === chrome.runtime.id && tab && /^https?:/.test(tab.url) && msg === "api:dom_ready") {
+      var page = pages[tab.id];
       if (page) {
+        if (tab.url === page.url) {
+          api.log("[api:dom_ready]", tab.id, tab.url);
+        } else {
+          api.log("#a00", "[api:dom_ready] %i url mismatch:\n%s\n%s", tab.id, tab.url, page.url);
+        }
         injectContentScripts(page);
       } else if (tab.windowId !== chrome.windows.WINDOW_ID_NONE) {  // Chrome Instant results disappear quickly
         chrome.windows.get(tab.windowId, function(win) {
           if (win && win.type == "normal") {
-            api.log.error(Error("no page for " + tabId), "api:dom_ready");
+            api.log("#a00", "[api:dom_ready] no page for " + tab.id + " at " + tab.url);
           }
         });
-      }
-    } else if (msg[0] === "api:require") {
-      if (tab) {
-        injectWithDeps(tab.id, msg[1], respond);
-        return true;
-      }
-    } else if (portHandlers) {
-      var handler = portHandlers[msg[0]];
-      if (handler) {
-        api.log("#0a0", "[onMessage] %i %s %o", tabId, msg[0], msg[1]);
-        try {
-          return handler(msg[1], respond, page);
-        } catch (e) {
-          api.log.error(e);
-        }
-      } else {
-        api.log("#c00", "[onMessage] ignoring:", msg, "from:", tabId);
       }
     }
   });
 
   function injectContentScripts(page, suppressOnReady) {
     if (page.injecting || page.ready) return;
-
     page.injecting = true;
-
-    // for ignoring messages from future updates/installs/reloads of this extension
-    chrome.tabs.executeScript(page.id, {
-      code: "lifeId=" + t0 + ";!function(e){e.initEvent('kifiunload');e.lifeId=lifeId;dispatchEvent(e)}(document.createEvent('Event'))",
-      runAt: "document_start"});
 
     for (var i = 0, n = 0, N = 0; i < meta.contentScripts.length; i++) {
       var cs = meta.contentScripts[i];
@@ -279,7 +297,7 @@ api = function() {
   }
 
   var hostRe = /^https?:\/\/[^\/]*/, hexRe = /^#[0-9a-f]{3}$/i;
-  var api = {
+  return {
     bookmarks: {
       create: function(parentId, name, url, callback) {
         chrome.bookmarks.create({parentId: parentId, title: name, url: url}, callback);
@@ -492,10 +510,13 @@ api = function() {
       emit: function(tab, type, data) {
         var currTab = pages[tab.id];
         if (tab === currTab || currTab && currTab.url.match(hostRe)[0] == tab.url.match(hostRe)[0]) {
-          api.log("#0c0", "[api.tabs.emit] %i %s %o", tab.id, type, data);
-          chrome.tabs.sendMessage(tab.id, [t0, type, data]);
+          var port = ports[tab.id];
+          if (port) {
+            api.log("#0c0", "[api.tabs.emit] %i %s %o", tab.id, type, data);
+            port.postMessage([type, data]);
+          }
         } else {
-          api.log("[api.tabs.emit] SUPPRESSED %i %s navigated: %s -> %s", tab.id, type, tab.url, currTab && currTab.url);
+          api.log("#a00", "[api.tabs.emit] suppressed %i %s navigated: %s -> %s", tab.id, type, tab.url, currTab && currTab.url);
         }
       },
       get: function(tabId) {
@@ -513,11 +534,4 @@ api = function() {
         unload: new Listeners}},
     timers: window,
     version: chrome.app.getDetails().version};
-
-  api.log.error = function(exception, context) {
-    var d = new Date, ds = d.toString();
-    console.error("[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "]" + (context ? "[" + context + "] " : ""), exception.message, exception.stack);
-  };
-
-  return api;
 }();

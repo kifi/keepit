@@ -63,8 +63,7 @@ class ActionAuthenticator @Inject() (
 
   private def getExperiments(userId: Id[User])(implicit session: RSession): Seq[State[ExperimentType]] = userExperimentRepo.getUserExperiments(userId)
 
-  private[controller] def authenticatedAction[T](bodyParser: BodyParser[T])(isApi: Boolean, action: AuthenticatedRequest[T] => Result): Action[T] = {
-    SecuredAction(isApi, bodyParser) { implicit request =>
+  private def authenticatedHandler[T](apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Result) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
       val userIdOpt = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map{id => Id[User](id.toLong)}
       val impersonatedUserIdOpt: Option[ExternalId[User]] = ImpersonateCookie.decodeFromCookie(request.cookies.get(ImpersonateCookie.COOKIE_NAME))
       val kifiInstallationId: Option[ExternalId[KifiInstallation]] = KifiInstallationCookie.decodeFromCookie(request.cookies.get(KifiInstallationCookie.COOKIE_NAME))
@@ -80,11 +79,27 @@ class ActionAuthenticator @Inject() (
             (getExperiments(impUserId), impSocialUserInfo.credentials.get, impUserId)
           }
           log.info("[IMPERSONATOR] admin user %s is impersonating user %s with request %s".format(userId, impSocialUser, request.request.path))
-          executeAction(action, impUserId, impSocialUser, impExperiments, kifiInstallationId, newSession, request.request, Some(userId))
+          executeAction(authAction, impUserId, impSocialUser, impExperiments, kifiInstallationId, newSession, request.request, Some(userId), allowPending)
         case None =>
-          executeAction(action, userId, socialUser, experiments, kifiInstallationId, newSession, request.request)
+          executeAction(authAction, userId, socialUser, experiments, kifiInstallationId, newSession, request.request, None, allowPending)
       }
     }
+
+  private[controller] def authenticatedAction[T](
+    apiClient: Boolean,
+    allowPending: Boolean,
+    bodyParser: BodyParser[T],
+    onAuthenticated: AuthenticatedRequest[T] => Result,
+    onUnauthenticated: Request[T] => Result): Action[T] = {
+    SecuredAction(apiClient, bodyParser)( onAuthenticated = authenticatedHandler(apiClient, allowPending)(onAuthenticated), onUnauthenticated = onUnauthenticated)
+  }
+
+  private[controller] def authenticatedAction[T](
+    apiClient: Boolean,
+    allowPending: Boolean,
+    bodyParser: BodyParser[T],
+    onAuthenticated: AuthenticatedRequest[T] => Result): Action[T] = {
+    SecuredAction(apiClient, bodyParser)( onAuthenticated = authenticatedHandler(apiClient, allowPending)(onAuthenticated))
   }
 
   private[controller] def isAdmin(experiments: Seq[State[ExperimentType]]) = experiments.find(e => e == ExperimentTypes.ADMIN).isDefined
@@ -95,8 +110,9 @@ class ActionAuthenticator @Inject() (
 
   private def executeAction[T](action: AuthenticatedRequest[T] => Result, userId: Id[User], socialUser: SocialUser,
       experiments: Seq[State[ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]],
-      newSession: Session, request: Request[T], adminUserId: Option[Id[User]] = None) = {
-    if (experiments.contains(ExperimentTypes.BLOCK)) {
+      newSession: Session, request: Request[T], adminUserId: Option[Id[User]] = None, allowPending: Boolean) = {
+    val user = db.readOnly(implicit s => userRepo.get(userId))
+    if (experiments.contains(ExperimentTypes.BLOCK) || user.state == UserStates.BLOCKED || user.state == UserStates.INACTIVE || (!allowPending && user.state == UserStates.PENDING)) {
       val message = "user %s access is forbidden".format(userId)
       log.warn(message)
       Forbidden(message)
@@ -104,7 +120,7 @@ class ActionAuthenticator @Inject() (
       val cleanedSesison = newSession - IdentityProvider.SessionId + ("server_version" -> fortyTwoServices.currentVersion.value)
       log.debug("sending response with new session [%s] of user id: %s".format(cleanedSesison, userId))
       try {
-        action(AuthenticatedRequest[T](socialUser, userId, request, experiments, kifiInstallationId, adminUserId)) match {
+        action(AuthenticatedRequest[T](socialUser, userId, user, request, experiments, kifiInstallationId, adminUserId)) match {
           case r: PlainResult => r.withSession(newSession)
           case any: Result => any
         }
