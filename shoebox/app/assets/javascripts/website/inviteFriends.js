@@ -12,7 +12,7 @@ $(function() {
         })
         .fail(function(e) {
           var msg = JSON.parse(e.responseText).invitation;
-          var $alreadyInvited = $this.parents(".avatar_info").append('<div class="status invite-already">' + msg + '</div>')
+          var $alreadyInvited = $this.parents(".avatar_info").append('<div class="invite-already">' + msg + '</div>')
           setTimeout(function() {
             $alreadyInvited.find('.invite-already').fadeOut();
           }, 2000);

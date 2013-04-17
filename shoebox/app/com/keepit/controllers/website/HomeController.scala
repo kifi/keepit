@@ -88,7 +88,7 @@ class HomeController @Inject() (db: Database,
     }
     
     val (invites, invitesLeft, invitesSent, invitesAccepted) = db.readOnly { implicit session =>
-      val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(18)
+      val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(6)
       val currentInvitations = invitationRepo.getByUser(request.user.id.get).map{ s => 
         val socialUser = socialUserRepo.get(s.recipientSocialUserId)
         Some(BasicUserInvitation(
@@ -118,7 +118,7 @@ class HomeController @Inject() (db: Database,
         invitationRepo.getByRecipient(socialUserInfo.id.get) match {
           case Some(alreadyInvited) => BadRequest(Json.obj("invitation" -> "Already Invited"))
           case None =>
-            val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(18)
+            val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(6)
             val currentInvitations = invitationRepo.getByUser(request.user.id.get).map{ s => 
               val socialUser = socialUserRepo.get(s.recipientSocialUserId)
               Some(BasicUserInvitation(
