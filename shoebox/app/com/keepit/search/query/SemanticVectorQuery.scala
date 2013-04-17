@@ -50,27 +50,29 @@ class SemanticVectorQuery(val terms: Set[Term]) extends Query {
 
 class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) extends Weight {
 
-  private[this] var termList = {
-    val terms = query.terms
-    terms.foldLeft(List.empty[(Term, SemanticVector, Float)]){ (list, term) =>
+  private[this] var value = 0.0f
+
+  private[this] val (termList, idfSum) = {
+    var sum = 0.0f
+    val terms = query.terms.toList.map{ term =>
       val vector = searcher.getSemanticVector(term)
       val idf = searcher.idf(term)
-      (term, vector, idf)::list
+      sum += idf
+      (term, vector, idf)
     }
+    (terms, sum)
   }
 
   override def getQuery() = query
   override def scoresDocsOutOfOrder() = false
 
   override def getValueForNormalization() = {
-    val sum = termList.foldLeft(0.0f){ case (sum, (_, _, idf)) => sum + idf * idf }
-    val value = query.getBoost()
-    (sum * value * value)
+    val boost = query.getBoost()
+    boost * boost
   }
 
   override def normalize(norm: Float, topLevelBoost: Float) {
-    val n = norm * topLevelBoost
-    termList = termList.map{ case (term, vector, idf) => (term, vector, idf * n) }
+    value = query.getBoost * norm * topLevelBoost / idfSum
   }
 
   override def explain(context: AtomicReaderContext, doc: Int) = {
@@ -84,8 +86,8 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
       result.setValue(sc.score)
       result.setMatch(true)
 
-      termList.map{ case (term, vector, value) =>
-        explainTerm(term, reader, vector, value, doc) match {
+      termList.map{ case (term, vector, idf) =>
+        explainTerm(term, reader, vector, idf * value, doc) match {
           case Some(detail) => result.addDetail(detail)
           case None =>
         }
@@ -98,16 +100,16 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
     result
   }
 
-  private def explainTerm(term: Term, reader: AtomicReader, vector: SemanticVector, value: Float, doc: Int): Option[Explanation] = {
+  private def explainTerm(term: Term, reader: AtomicReader, vector: SemanticVector, weight: Float, doc: Int): Option[Explanation] = {
     Option(reader.termPositionsEnum(term)).flatMap{ tp =>
-      val dv = new DocAndVector(tp, vector, value)
+      val dv = new DocAndVector(tp, vector, weight)
       dv.fetchDoc(doc)
-      if (dv.doc == doc && value > 0.0f) {
+      if (dv.doc == doc && weight > 0.0f) {
         val sc = dv.scoreAndNext()
         val expl = new ComplexExplanation()
         expl.setDescription("term(%s)".format(term.toString))
-        expl.addDetail(new Explanation(sc/value, "similarity"))
-        expl.addDetail(new Explanation(value, "boost"))
+        expl.addDetail(new Explanation(sc/weight, "similarity"))
+        expl.addDetail(new Explanation(weight, "boost"))
         expl.setValue(sc)
         Some(expl)
       } else {
@@ -117,8 +119,8 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
   }
 
   override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
-    val davs = termList.flatMap{ case (term, vector, value) =>
-      Option(termPositionsEnum(context, term, acceptDocs)).map{ tp => new DocAndVector(tp, vector, value) }
+    val davs = termList.flatMap{ case (term, vector, idf) =>
+      Option(termPositionsEnum(context, term, acceptDocs)).map{ tp => new DocAndVector(tp, vector, idf * value) }
     }
 
     if (!davs.isEmpty) {
