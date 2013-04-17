@@ -1,0 +1,36 @@
+@(amazonInstanceInfo: com.keepit.common.amazon.AmazonInstanceInfo)
+
+@admin("EC2 instance: " + amazonInstanceInfo.instanceId) {
+   <table class="table table-bordered">
+      <tr>
+        <th>Instance</th><td><a href="https://console.aws.amazon.com/ec2/home?region=@{amazonInstanceInfo.availabilityZone}#s=Instances">@{amazonInstanceInfo.instanceId}</a></td>
+      </tr>
+      <tr>
+        <th>Local Hostname</th><td>@{amazonInstanceInfo.localHostname}</td>
+      </tr>
+      <tr>
+        <th>Public Hostname</th><td>@{amazonInstanceInfo.publicHostname}</td>
+      </tr>
+      <tr>
+        <th>Local IP</th><td>@{amazonInstanceInfo.localIp}</td>
+      </tr>
+      <tr>
+        <th>Public IP</th><td>@{amazonInstanceInfo.publicIp}</td>
+      </tr>
+      <tr>
+        <th>Instance Type</th><td><a href="http://aws.amazon.com/ec2/instance-types/">@{amazonInstanceInfo.instanceType}</a></td>
+      </tr>
+      <tr>
+        <th>AvailabilityZone</th><td><a href="http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html">@{amazonInstanceInfo.availabilityZone}</a></td>
+      </tr>
+      <tr>
+        <th>Security Groups</th><td>@{amazonInstanceInfo.securityGroups}</td>
+      </tr>
+      <tr>
+        <th>Ami Id</th><td>@{amazonInstanceInfo.amiId}</td>
+      </tr>
+      <tr>
+        <th>Ami Launch Index</th><td>@{amazonInstanceInfo.amiLaunchIndex}</td>
+      </tr>
+  </table>
+}
