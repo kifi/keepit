@@ -53,7 +53,7 @@ class ExtEventController @Inject() (
     Ok(JsObject(Seq("stored" -> JsString("ok"))))
   }
 
-  private def createEventsFromPayload(params: JsValue, userId: Id[User]) = {
+  private[ext] def createEventsFromPayload(params: JsValue, userId: Id[User]) = {
     val logRecievedTime = currentDateTime
 
     val (user, experiments) = db.readOnly { implicit session =>

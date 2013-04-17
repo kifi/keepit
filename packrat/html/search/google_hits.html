@@ -1,5 +1,5 @@
 {{#anyResults}}
-  <ol id="kifi-res-list">
+  <ol id="kifi-res-list"{{^show}} style="display:none"{{/show}}>
   {{#results}}
     {{>google_hit}}
   {{/results}}
@@ -9,7 +9,7 @@
   <div id="kifi-res-list" class="kifi-res-none">Sorry, no keeps match this filter.</div>
 {{/anyResults}}
 
-<div class="kifi-res-end" style="background:url({{endBgUrl}}) center bottom no-repeat">
+<div class="kifi-res-end" style="background:url({{endBgUrl}}) center bottom no-repeat{{^show}};display:none{{/show}}">
 {{#mayHaveMore}}
   <div class="kifi-res-more">More trusted results <span class="kifi-res-more-arrow">&raquo;</span></div>
 {{/mayHaveMore}}
