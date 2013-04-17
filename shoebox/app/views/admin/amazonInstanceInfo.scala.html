@@ -3,7 +3,7 @@
 @admin("EC2 instance: " + amazonInstanceInfo.instanceId) {
    <table class="table table-bordered">
       <tr>
-        <th>Instance</th><td>@{amazonInstanceInfo.instanceId}</td>
+        <th>Instance</th><td><a href="https://console.aws.amazon.com/ec2/home?region=@{amazonInstanceInfo.availabilityZone}#s=Instances">@{amazonInstanceInfo.instanceId}</a></td>
       </tr>
       <tr>
         <th>Local Hostname</th><td>@{amazonInstanceInfo.localHostname}</td>
@@ -18,10 +18,10 @@
         <th>Public IP</th><td>@{amazonInstanceInfo.publicIp}</td>
       </tr>
       <tr>
-        <th>Instance Type</th><td>@{amazonInstanceInfo.instanceType}</td>
+        <th>Instance Type</th><td><a href="http://aws.amazon.com/ec2/instance-types/">@{amazonInstanceInfo.instanceType}</a></td>
       </tr>
       <tr>
-        <th>AvailabilityZone</th><td>@{amazonInstanceInfo.availabilityZone}</td>
+        <th>AvailabilityZone</th><td><a href="http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html">@{amazonInstanceInfo.availabilityZone}</a></td>
       </tr>
       <tr>
         <th>Security Groups</th><td>@{amazonInstanceInfo.securityGroups}</td>
