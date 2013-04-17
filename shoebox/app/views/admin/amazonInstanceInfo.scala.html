@@ -1,0 +1,36 @@
+@(amazonInstanceInfo: com.keepit.common.controller.AmazonInstanceInfo)
+
+@admin("EC2 instance: " + amazonInstanceInfo.instanceId) {
+   <table class="table table-bordered">
+      <tr>
+        <th>Instance</th><td>@{amazonInstanceInfo.instanceId}</td>
+      </tr>
+      <tr>
+        <th>Local Hostname</th><td>@{amazonInstanceInfo.localHostname}</td>
+      </tr>
+      <tr>
+        <th>Public Hostname</th><td>@{amazonInstanceInfo.publicHostname}</td>
+      </tr>
+      <tr>
+        <th>Local IP</th><td>@{amazonInstanceInfo.localIp}</td>
+      </tr>
+      <tr>
+        <th>Public IP</th><td>@{amazonInstanceInfo.publicIp}</td>
+      </tr>
+      <tr>
+        <th>Instance Type</th><td>@{amazonInstanceInfo.instanceType}</td>
+      </tr>
+      <tr>
+        <th>AvailabilityZone</th><td>@{amazonInstanceInfo.availabilityZone}</td>
+      </tr>
+      <tr>
+        <th>Security Groups</th><td>@{amazonInstanceInfo.securityGroups}</td>
+      </tr>
+      <tr>
+        <th>Ami Id</th><td>@{amazonInstanceInfo.amiId}</td>
+      </tr>
+      <tr>
+        <th>Ami Launch Index</th><td>@{amazonInstanceInfo.amiLaunchIndex}</td>
+      </tr>
+  </table>
+}
