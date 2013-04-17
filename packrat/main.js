@@ -300,6 +300,10 @@ api.port.on({
   set_prefs: function(data) {
     api.prefs.set(data);
   },
+  set_env: function(env) {
+    api.prefs.set("env", env);
+    chrome.runtime.reload();
+  },
   set_page_icon: function(data, _, tab) {
     setIcon(tab, data);
   },
