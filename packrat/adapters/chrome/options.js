@@ -8,7 +8,7 @@ $(function() {
   port.postMessage(["get_prefs",,0]);
   function init(o) {
     console.log("[init] prefs:", o.prefs);
-    $env.find("[value=" + o.prefs.env + "]").prop("checked", true);
+    $env.find("[value=" + o.prefs.env + "]").prop("selected", true);
     $showSlider.prop("checked", o.prefs.showSlider);
     $maxResults.val(o.prefs.maxResults).data("val", o.prefs.maxResults);
     $showScores.prop("checked", o.prefs.showScores);
