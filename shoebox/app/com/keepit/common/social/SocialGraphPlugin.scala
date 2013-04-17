@@ -56,12 +56,9 @@ private[social] class SocialGraphActor @Inject() (
       try {
         require(socialUserInfo.credentials.isDefined,
           "social user info's credentials are not defined: %s".format(socialUserInfo))
-        log.info("fetching raw info for %s".format(socialUserInfo))
         val rawInfo = graph.fetchSocialUserRawInfo(socialUserInfo)
         
         socialUserImportEmail.importEmail(socialUserInfo.userId.get, rawInfo.jsons)
-                
-        log.info("fetched raw info %s for %s".format(rawInfo, socialUserInfo))
         socialUserRawInfoStore += (socialUserInfo.id.get -> rawInfo)
 
         socialUserImportFriends.importFriends(rawInfo.jsons)

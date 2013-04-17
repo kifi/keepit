@@ -153,11 +153,23 @@ class HomeController @Inject() (db: Database,
   }
   
   def acceptInvite(id: ExternalId[Invitation]) = Action {
-    Ok
+    db.readOnly { implicit session =>
+      val invitation = invitationRepo.getOpt(id)
+      invitation match {
+        case Some(invite) if invite.state == InvitationStates.ACTIVE =>
+          val socialUser = socialUserInfoRepo.get(invitation.get.recipientSocialUserId)
+          Ok(views.html.website.welcome(Some(id), Some(socialUser)))
+        case _ =>
+          Redirect(routes.HomeController.home)
+      }
+    }
   }
   
   def confirmInvite(id: ExternalId[Invitation]) = Action {
-    Ok
+    val invite = db.readWrite { implicit session =>
+      invitationRepo.save(invitationRepo.get(id).copy(state = InvitationStates.ACTIVE))
+    }
+    Redirect(routes.HomeController.invite)
   }
 
   def gettingStarted = AuthenticatedHtmlAction { implicit request =>
