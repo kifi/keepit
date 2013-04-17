@@ -40,7 +40,7 @@ class SecureSocialUserPlugin @Inject() (
         None
       case Some(user) =>
         log.debug("User found: %s for %s".format(user, id))
-        Some(user.credentials.getOrElse(throw new Exception("user [%s] does not have credentials".format(user))))
+        user.credentials
     }
 
   def save(socialUser: SocialUser): Unit = db.readWrite { implicit s =>
@@ -60,7 +60,8 @@ class SecureSocialUserPlugin @Inject() (
     log.debug("creating new user for %s".format(displayName))
     val nameParts = displayName.split(' ')
     User(firstName = nameParts(0),
-        lastName = nameParts.tail.mkString(" ")
+        lastName = nameParts.tail.mkString(" "),
+        state = UserStates.PENDING
     )
   }
 
