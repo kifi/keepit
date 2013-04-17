@@ -5,17 +5,17 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.LargeString._
 import com.keepit.model.{Comment, NormalizedURI, User}
 import views.html
-
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.google.inject.{Inject, Singleton, Provider}
+import com.keepit.model.UserStates
 
 @Singleton
 class AdminEmailPreviewController @Inject() (
   actionAuthenticator: ActionAuthenticator)
     extends AdminController(actionAuthenticator) {
 
-  val sender = User(firstName = "Jared", lastName = "Jacobs")
-  val recipient = User(firstName = "Eishay", lastName = "Smith")
+  val sender = User(firstName = "Jared", lastName = "Jacobs", state = UserStates.ACTIVE)
+  val recipient = User(firstName = "Eishay", lastName = "Smith", state = UserStates.ACTIVE)
   val uri = NormalizedURI(title = Some("New Balance Minimus"), url = "http://www.newbalance.com/NB-Minimus/minimus,default,pg.html", urlHash = "")
 
   def newMessage = AdminHtmlAction { implicit request =>
