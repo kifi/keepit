@@ -1,5 +1,5 @@
 $(function() {
-  chrome.extension.sendMessage(["get_prefs"], function init(o) {
+  chrome.runtime.sendMessage(["get_prefs"], function init(o) {
     console.log("[init] prefs:", o.prefs);
     $("[name=env][value=" + o.prefs.env + "]").prop("checked", true);
     $("#show-slider").prop("checked", o.prefs.showSlider);
@@ -8,7 +8,7 @@ $(function() {
     showSession(o.session);
   });
   $("#save").click(function() {
-    chrome.extension.sendMessage(["set_prefs", {
+    chrome.runtime.sendMessage(["set_prefs", {
       env: $("input[name=env][value=development]").is(":checked") ? "development" : "production",
       showSlider: $("#show-slider").is(":checked"),
       maxResults: $("#max-results").val(),
@@ -17,13 +17,13 @@ $(function() {
   });
   $("#log-out").click(function(e) {
     e.preventDefault();
-    chrome.extension.sendMessage(["log_out"], function() {
+    chrome.runtime.sendMessage(["log_out"], function() {
       showSession();
     });
   });
   $("#log-in").click(function(e) {
     e.preventDefault();
-    chrome.extension.sendMessage(["log_in"], function(session) {
+    chrome.runtime.sendMessage(["log_in"], function(session) {
       showSession(session);
     });
   });

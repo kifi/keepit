@@ -7,7 +7,7 @@ api = function() {
     var cb = callbacks[callbackId];
     if (cb) {
       delete callbacks[callbackId];
-      cb[0](response);
+      cb(response);
     }
   }
 
@@ -19,9 +19,8 @@ api = function() {
       el.innerHTML = css;
       (document.head || document.body).appendChild(el);
     });
-    var result;
     scripts.forEach(function(js) {
-      result = window.eval(js);
+      window.eval(js);
     });
     invokeCallback(callbackId);
   });
@@ -42,6 +41,7 @@ api = function() {
       console.log("'" + ds.substr(0,2) + ds.substr(15,9) + "." + String(+d).substr(10) + "'", args.join(" "));
     },
     noop: function() {},
+    onEnd: [],  // TODO: find an event that will allows us to invoke these
     port: {
       emit: function(type, data, callback) {
         if (!callback && typeof data == "function") {
@@ -49,7 +49,7 @@ api = function() {
         }
         if (callback) {
           var callbackId = nextCallbackId++;
-          callbacks[callbackId] = [callback, +new Date];
+          callbacks[callbackId] = callback;
         }
         self.port.emit(type, data, callbackId);
       },
@@ -62,15 +62,10 @@ api = function() {
       }},
     require: function(path, callback) {
       var callbackId = nextCallbackId++;
-      callbacks[callbackId] = [callback, +new Date];
+      callbacks[callbackId] = callback;
       self.port.emit("api:require", path, callbackId);
     },
     url: function(path) {
       return self.options.dataUriPrefix + path;
     }};
 }();
-
-api.log.error = function(exception, context) {
-  console.error((context ? "[" + context + "] " : "") + exception);
-  console.error(exception.stack);
-};

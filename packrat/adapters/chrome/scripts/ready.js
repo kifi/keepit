@@ -1,1 +1,1 @@
-chrome.extension.sendMessage("api:dom_ready");
+chrome.runtime.sendMessage("api:dom_ready");
