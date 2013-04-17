@@ -11,7 +11,7 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import scala.collection.mutable.ArrayBuffer
 
-abstract class QueryParser(protected val defaultAnalyzer: Analyzer, protected val stemmingAnalyzer: Option[Analyzer]) {
+abstract class QueryParser(protected val defaultAnalyzer: Analyzer, protected val stemmingAnalyzer: Analyzer) {
 
   val fields: Set[String]
 
@@ -32,7 +32,7 @@ abstract class QueryParser(protected val defaultAnalyzer: Analyzer, protected va
   }
 
   def getStemmedFieldQuery(field: String, queryText: String): Option[Query] = {
-    stemmingAnalyzer.flatMap{ stemmingAnalyzer => getFieldQuery(field, queryText, false, stemmingAnalyzer) }
+    getFieldQuery(field, queryText, false, stemmingAnalyzer)
   }
 
 

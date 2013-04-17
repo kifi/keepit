@@ -16,7 +16,7 @@ import org.apache.lucene.util.Version
 
 trait PhraseFieldBuilder {
   def buildPhraseField(fieldName: String, text: String, lang: Lang) = {
-    val analyzer = DefaultAnalyzer.forIndexingWithStemmer(lang).getOrElse(DefaultAnalyzer.forIndexing(lang))
+    val analyzer = DefaultAnalyzer.forIndexingWithStemmer(lang)
     new Field(fieldName, new PhraseTokenStream(fieldName, text, analyzer), Indexable.textFieldTypeNoNorm)
   }
 }

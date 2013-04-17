@@ -19,7 +19,7 @@ class DefaultAnalyzerTest extends Specification {
 
   implicit def toReader(str: String): Reader = new StringReader(str)
   val analyzer = DefaultAnalyzer.forIndexing
-  val analyzerWithStemmer = DefaultAnalyzer.forIndexingWithStemmer.get
+  val analyzerWithStemmer = DefaultAnalyzer.forIndexingWithStemmer
 
   "DefaultAnalyzer" should {
     "tokenize a string nicely" in {
@@ -69,7 +69,7 @@ class DefaultAnalyzerTest extends Specification {
     }
 
     "tokenize a word with apostrophe as one word in query parsing (the possesive should be removed)" in {
-      toTokenList(DefaultAnalyzer.forParsingWithStemmer.get.tokenStream("b", "O'Reilly's books")) ===
+      toTokenList(DefaultAnalyzer.forParsingWithStemmer.tokenStream("b", "O'Reilly's books")) ===
         List(Token("<ALPHANUM>", "o'reilly", 1),
              Token("<ALPHANUM>", "book", 1))
     }
