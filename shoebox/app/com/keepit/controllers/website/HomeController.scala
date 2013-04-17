@@ -16,6 +16,8 @@ import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.common.db.State
 import com.keepit.common.social._
 import play.api.libs.json._
+import com.keepit.common.db.ExternalId
+import com.keepit.common.db.slick.DBSession.RSession
 
 case class BasicUserInvitation(name: String, picture: String, state: State[Invitation]) 
 
@@ -108,11 +110,20 @@ class HomeController @Inject() (db: Database,
     Ok(views.html.website.inviteFriends(request.user, friendsOnKifi, invites, invitesLeft, invitesSent, invitesAccepted))
   }
   
-  def inviteConnection = AuthenticatedJsonToJsonAction { implicit request =>
-    val fullSocialId = (request.body \ "socialId").as[String].split("/").toSeq
+  private def fbInviteUrl(invite: Invitation)(implicit session: RSession) = {
+    val identity = socialUserInfoRepo.get(invite.recipientSocialUserId)
+    s"https://www.facebook.com/dialog/send?app_id=104629159695560&name=You're%20invited%20to%20try%20KiFi!&picture=http://keepitfindit.com/assets/images/logo2.png&link=https://www.keepitfindit.com/invite/${invite.externalId.id}&description=Hey%20${identity.fullName}!%20You're%20invited%20to%20join%20KiFi.%20Click%20here%20to%20sign%20up&redirect_uri=https://www.keepitfindit.com/invite/confirm/${invite.externalId}&to=${identity.socialId.id}"
+  }
+  
+  def inviteConnection = AuthenticatedHtmlAction { implicit request =>
+    val fullSocialId = request.request.body.asFormUrlEncoded match {
+      case Some(form) =>
+        form.get("fullSocialId").map(_.head).getOrElse("").split("/")
+      case None => Array()
+    }
     db.readWrite { implicit session =>
       if(fullSocialId.size != 2) {
-        BadRequest
+        Redirect(routes.HomeController.invite)
       } else {
         val socialUserInfo = socialUserInfoRepo.get(SocialId(fullSocialId(1)), SocialNetworks.FACEBOOK)
         invitationRepo.getByRecipient(socialUserInfo.id.get) match {
@@ -131,16 +142,22 @@ class HomeController @Inject() (db: Database,
             val invites = currentInvitations ++ Seq.fill(left)(None)
             
             if(left > 0) {
-              invitationRepo.save(Invitation(senderUserId = request.user.id.get, recipientSocialUserId = socialUserInfo.id.get))
-              Ok(Json.obj("invitation" -> "success"))
+              val invite = invitationRepo.save(Invitation(senderUserId = request.user.id.get, recipientSocialUserId = socialUserInfo.id.get, state = InvitationStates.INACTIVE))
+              Redirect(fbInviteUrl(invite))
             } else {
-              BadRequest("No remaining invites")
+              Redirect(routes.HomeController.invite)
             }
         }
       }
     }
-    
-
+  }
+  
+  def acceptInvite(id: ExternalId[Invitation]) = Action {
+    Ok
+  }
+  
+  def confirmInvite(id: ExternalId[Invitation]) = Action {
+    Ok
   }
 
   def gettingStarted = AuthenticatedHtmlAction { implicit request =>
