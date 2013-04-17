@@ -104,16 +104,17 @@ class AdminEventController @Inject() (
     // TODO: stop doing this when we have a large number of users
     val userMap: Map[Id[User], User] =
       getIncludedUsers().map(user => user.id.get -> user).toMap
+    val userIds = userMap.keys.toSet
     val (activeUsers1Wk, inactiveUsers1Wk, b1w, c1w) = db.readOnly { implicit session =>
-      val b = queryUserIds("bookmark", Weeks.ONE)
-      val c = queryUserIds("comment", Weeks.ONE)
+      val b = queryUserIds("bookmark", Weeks.ONE).filter(userIds.contains)
+      val c = queryUserIds("comment", Weeks.ONE).filter(userIds.contains)
       val active = (b ++ c).map(userMap.get(_).get)
       val notActive = userMap.values.toSet -- active
       (active, notActive, b.size, c.size)
     }
     val (activeUsers1Mo, inactiveUsers1Mo, b1m, c1m) = db.readOnly { implicit session=>
-      val b = queryUserIds("bookmark", Months.ONE)
-      val c = queryUserIds("comment", Months.ONE)
+      val b = queryUserIds("bookmark", Months.ONE).filter(userIds.contains)
+      val c = queryUserIds("comment", Months.ONE).filter(userIds.contains)
       val active = (b ++ c).map(userMap.get(_).get)
       val notActive = userMap.values.toSet -- active
       (active, notActive, b.size, c.size)
