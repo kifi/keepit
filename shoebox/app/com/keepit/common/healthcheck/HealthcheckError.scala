@@ -69,8 +69,9 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
       case None =>
         "[No Cause]"
       case Some(t) =>
+        s"""<span style="color:green; font-size: 14px; font-style: bold;">${t.toString}</span>""" +
         (t.getStackTrace() map formatStackElement mkString "\n<br/> &nbsp; ") +
-        s"""\n<br/> &nbsp; <span style="color:red; font-size: 13px; font-style: bold;">Cause:</span> ${causeString(Option(t.getCause))}"""
+        s"""\n<br/> &nbsp; <span style="color:red; font-size: 13px; font-style: bold;">Cause:</span>\n<br/>${causeString(Option(t.getCause))}"""
     }
     causeString(error)
   }
@@ -97,8 +98,7 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
     }
     (error map (e => causeString(error))).getOrElse(errorMessage.getOrElse(this.toString))
   }
-
-  def toHtml: String = {
+ def toHtml: String = {
     val message = new StringBuilder("%s: [%s] Error during call of type %s".format(createdAt, id, callType))
     method.map { m =>
       message ++= s"""<br/><b>http method</b> <span style="color:blue; font-size: 13px; font-style: italic;">[$m]</span>"""
@@ -110,18 +110,10 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
       message ++= s"""<br/><b>error message</b> <span style="color:red; font-size: 13px; font-style: italic;">[${em.replaceAll("\n", "\n<br/>")}]</span>"""
     }
     error.map { e =>
-      message ++= "<br/><b>Exception %s stack trace: \n</b><br/>".format(e.toString())
+      message ++= "<br/><b>Exception stack trace:\n</b><br/>"
       message ++= stackTraceHtml
-      causeDisplay(e)
     }
 
-    def causeDisplay(e: Throwable): Unit = {
-      Option(e.getCause) map { cause =>
-        message ++= "<br/>from cause: %s\n<br/>".format(cause.toString)
-        message ++= (cause.getStackTrace() mkString "\n<br/> &nbsp; ")
-        causeDisplay(cause)
-      }
-    }
     message.toString()
   }
 }
