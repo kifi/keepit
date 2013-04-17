@@ -118,6 +118,7 @@ POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.ScraperControl
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.ScraperController.handleDuplicates
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
+GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
 GET     /admin/article/sequenceNumber @com.keepit.controllers.admin.AdminArticleIndexerController.getSequenceNumber
 GET     /admin/article/index/:state @com.keepit.controllers.admin.AdminArticleIndexerController.indexByState(state: State[NormalizedURI])
 GET     /admin/article/indexInfo    @com.keepit.controllers.admin.AdminArticleIndexerController.indexInfo

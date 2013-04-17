@@ -27,6 +27,14 @@ class AdminArticleIndexerController @Inject()(
     }
   }
 
+  def reindex = AdminHtmlAction { implicit request =>
+    Async {
+      searchClient.reindex().map { r =>
+        Ok("reindexing started")
+      }
+    }
+  }
+
   def indexByState(state: State[NormalizedURI]) = AdminHtmlAction { implicit request =>
     transitionByAdmin(state -> Set(SCRAPED, SCRAPE_FAILED)) { newState =>
       db.readWrite { implicit s =>
