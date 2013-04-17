@@ -45,8 +45,8 @@ class FacebookSocialGraphTest extends Specification with DbRepos {
         
         val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
           tokenType = None, expiresIn = None, refreshToken = None)
-        val socialUser = SocialUser(UserId("100004067535411", "facebook"), "Boaz Tal", Some("boaz.tal@gmail.com"),
-          Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, true, None, Some(oAuth2Info), None)
+        val socialUser = SocialUser(UserId("100004067535411", "facebook"), "Boaz", "Tal", "Boaz Tal", Some("boaz.tal@gmail.com"),
+          Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None, Some(oAuth2Info), None)
 
         val user = inject[Database].readWrite { implicit s =>
           userRepo.save(User(firstName = "Eishay", lastName = "Smith"))

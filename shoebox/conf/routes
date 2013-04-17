@@ -23,8 +23,8 @@ GET     /logout                     securesocial.controllers.LoginPage.logout
 GET     /sign-up                     @com.keepit.controllers.website.OnboardingController.signup
 
 # Relevant when we support traditional user signups:
-GET     /register                   securesocial.controllers.Registration.signUp
-POST    /register                   securesocial.controllers.Registration.handleSignUp
+GET     /register                   securesocial.controllers.Registration.signUp(token: String)
+POST    /register                   securesocial.controllers.Registration.handleSignUp(token: String)
 
 ##########################################
 # Web API
@@ -37,8 +37,8 @@ POST    /user/update-email          @com.keepit.controllers.website.UserControll
 POST    /invite                     @com.keepit.controllers.website.HomeController.inviteConnection
 
 # OAuth provider entry points (e.g. "facebook")
-GET     /authenticate/:provider     securesocial.controllers.LoginPage.authenticate(provider)
-POST    /authenticate/:provider     securesocial.controllers.LoginPage.authenticateByPost(provider)
+GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
+POST    /authenticate/:provider     securesocial.controllers.ProviderController.authenticateByPost(provider)
 
 ##########################################
 # External Services API

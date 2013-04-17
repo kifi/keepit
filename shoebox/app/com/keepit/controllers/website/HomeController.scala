@@ -169,7 +169,7 @@ class HomeController @Inject() (db: Database,
   def userIsAllowed(user: User, experiments: Seq[State[ExperimentType]]) = {
     Play.isDev || experiments.contains(ExperimentTypes.ADMIN)
   }
-  
+
   private def inviteFacebookUser(id: String) = {
     
   }
