@@ -7,11 +7,13 @@
 ##########################################
 
 GET     /                           @com.keepit.controllers.website.HomeController.home
-GET     /invite                     @com.keepit.controllers.website.HomeController.invite
 GET     /gettingStarted             @com.keepit.controllers.website.HomeController.gettingStarted
 
-GET     /sign-up/tos             @com.keepit.controllers.website.OnboardingController.tos
-POST    /sign-up/tos             @com.keepit.controllers.website.OnboardingController.tosAccept
+GET     /invite                     @com.keepit.controllers.website.HomeController.invite
+GET     /invite/:id                 @com.keepit.controllers.website.HomeController.acceptInvite(id: ExternalId[Invitation])
+GET     /invite/confirm/:id         @com.keepit.controllers.website.HomeController.confirmInvite(id: ExternalId[Invitation])
+GET     /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tos
+POST    /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tosAccept
 
 GET     /giveMeA200                 @com.keepit.controllers.website.HomeController.giveMeA200
 

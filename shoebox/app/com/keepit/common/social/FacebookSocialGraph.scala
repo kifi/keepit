@@ -14,7 +14,6 @@ class FacebookSocialGraph @Inject() (httpClient: HttpClient) extends Logging {
 
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): SocialUserRawInfo = {
     val jsons = fetchJsons(url(socialUserInfo.socialId, getAccessToken(socialUserInfo)))
-    log.info("fetched json of %s:\n%s".format(socialUserInfo, jsons mkString "\n---------------------------------------\n"))
     val json = jsons.head
     SocialUserRawInfo(
         socialUserInfo.userId,

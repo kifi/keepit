@@ -4,21 +4,8 @@ $(function() {
 
     $("#invites").on("click", ".invite_btn", function() {
       $this = $(this);
-      $.post("/invite", JSON.stringify({ socialId: $this.siblings(".invited_id").val() }))
-        .done(function() {
-          $this.parents("li").addClass("invite-active");
-          var name = $this.siblings('.invite_field').val();
-          $this.parents(".avatar_info").html('<div class="name">' + name + '</div><div class="status">Invited</div>');
-        })
-        .fail(function(e) {
-          var msg = JSON.parse(e.responseText).invitation;
-          var $alreadyInvited = $this.parents(".avatar_info").append('<div class="invite-already">' + msg + '</div>')
-          setTimeout(function() {
-            $alreadyInvited.find('.invite-already').fadeOut();
-          }, 2000);
-        });
-      $(this).fadeOut();
-
+      $this.fadeOut();
+      $this.parents("form").submit();
       return false;
     });
 
