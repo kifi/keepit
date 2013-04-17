@@ -21,23 +21,21 @@ object LuceneExplanationExtractor {
   def extractNamedScores(e: Explanation) = {
     var namedScores = Map.empty[String, Float]
     if (e != null) {
-      var queue = Queue.empty[Explanation]
+      val queue = Queue.empty[Explanation]
       queue += e
       while (queue.size > 0) {
         val node = queue.dequeue()
-         // println(node.getDescription() + " childern size = " + node.getDetails().size)
         extractName(node.getDescription()).foreach { name =>
           // if we have seen this namedScore before, overwrite it if current value is bigger.
-          // Taking the max makes sense for DisjunctionMaxQuery. Since we don't have many named scores
-          // in the tree, this is not a problem.
+          // This makes sense for DisjunctionMaxQuery. Since we don't have many named scores
+          // in the tree, this is not a problem for now.
           // TODO: make this more robust
 
           val s = namedScores.getOrElse(name, 0.0f) max node.getValue
           namedScores += name -> s
         }
-        println(namedScores)
         if (node.getDetails() != null) {
-          node.getDetails().foreach(nd => if (nd != null) queue += nd)
+          queue ++= node.getDetails.filter(_ != null)
         }
       }
     }
