@@ -10,23 +10,25 @@ import org.apache.lucene.document.TextField
 object LineField {
   val MAX_POSITION_PER_LINE = 2048
   val LINE_GAP = 3
+
+  val emptyTokenStream = new TokenStream {
+    override def incrementToken() = false
+  }
+
 }
 
 trait LineFieldBuilder {
-  def buildLineField(fieldName: String, lines: Seq[(Int, String)], tokenStreamFunc: (String, String)=>Option[TokenStream], fieldType: FieldType = TextField.TYPE_NOT_STORED) = {
+  def buildLineField(fieldName: String, lines: Seq[(Int, String)], tokenStreamFunc: (String, String)=>TokenStream, fieldType: FieldType = TextField.TYPE_NOT_STORED) = {
     new Field(fieldName, new LineTokenStream(fieldName, lines, tokenStreamFunc), fieldType)
   }
 }
 
-class LineTokenStream(fieldName: String, lines: Seq[(Int, String)], tokenStreamFunc: (String, String)=>Option[TokenStream]) extends TokenStream {
+class LineTokenStream(fieldName: String, lines: Seq[(Int, String)], tokenStreamFunc: (String, String)=>TokenStream) extends TokenStream {
   private[this] val termAttr = addAttribute(classOf[CharTermAttribute])
   private[this] val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
   private[this] val lineIter = lines.sortBy(_._1).iterator
 
-  private[this] val emptyTokenStream = new TokenStream {
-    override def incrementToken() = false
-  }
-  private[this] var baseTokenStream = emptyTokenStream
+  private[this] var baseTokenStream = LineField.emptyTokenStream
 
   private[this] var gap = 0
   private[this] var curPos = 0
@@ -47,7 +49,7 @@ class LineTokenStream(fieldName: String, lines: Seq[(Int, String)], tokenStreamF
       val (lineStart, lineEnd) = lineRange(lineNo)
       incr = lineStart - curPos
       posLimit = lineEnd - 1
-      baseTokenStream = tokenStreamFunc(fieldName, text).getOrElse(emptyTokenStream)
+      baseTokenStream = tokenStreamFunc(fieldName, text)
       baseTokenStream.reset
       baseTermAttr =
         if (baseTokenStream.hasAttribute(classOf[CharTermAttribute])) {
