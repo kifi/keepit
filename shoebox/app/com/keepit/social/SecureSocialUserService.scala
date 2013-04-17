@@ -12,6 +12,8 @@ import com.keepit.inject._
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.{SocialId, SocialNetworks, SocialNetworkType}
 import com.google.inject.{Inject, Singleton}
+import play.api.Play
+import play.api.Play.current
 
 class SecureSocialUserService(implicit val application: Application) extends UserServicePlugin(application) {
   lazy val injector = application.global.asInstanceOf[FortyTwoGlobal].injector
@@ -61,7 +63,7 @@ class SecureSocialUserPlugin @Inject() (
     val nameParts = displayName.split(' ')
     User(firstName = nameParts(0),
         lastName = nameParts.tail.mkString(" "),
-        state = UserStates.PENDING
+        state = if(Play.isDev) UserStates.ACTIVE else UserStates.PENDING
     )
   }
 
