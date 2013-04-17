@@ -24,7 +24,7 @@ case class User(
   externalId: ExternalId[User] = ExternalId(),
   firstName: String,
   lastName: String,
-  state: State[User]
+  state: State[User] = UserStates.ACTIVE
 ) extends ModelWithExternalId[User] {
   def withId(id: Id[User]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
