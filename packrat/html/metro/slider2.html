@@ -6,21 +6,15 @@
   </span>
   <span class="kifi-slider2-dock">
     <span class="kifi-slider2-dock-btn kifi-slider2-notices" style="background-image:url({{bgUrl}})" data-pane="notices">
-      {{#noticesCount}}
-      <span class="kifi-count kifi-unread">{{noticesCount}}</span>
-      {{/noticesCount}}
+      <span class="kifi-count kifi-unread"{{^noticesCount}} style="display:none"{{/noticesCount}}>{{noticesCount}}</span>
     </span>
     <span class="kifi-slider2-dock-sep"></span>
     <span class="kifi-slider2-dock-btn kifi-slider2-comments" style="background-image:url({{bgUrl}})" data-pane="comments">
-      {{#commentCount}}
-      <span class="kifi-count{{#commentsUnread}} kifi-unread{{/commentsUnread}}">{{commentCount}}</span>
-      {{/commentCount}}
+      <span class="kifi-count{{#commentsUnread}} kifi-unread{{/commentsUnread}}"{{^commentCount}} style="display:none"{{/commentCount}}>{{commentCount}}</span>
     </span>
     <span class="kifi-slider2-dock-sep"></span>
     <span class="kifi-slider2-dock-btn kifi-slider2-threads" style="background-image:url({{bgUrl}})" data-pane="threads">
-      {{#messageCount}}
-      <span class="kifi-count{{#messagesUnread}} kifi-unread{{/messagesUnread}}">{{messageCount}}</span>
-      {{/messageCount}}
+      <span class="kifi-count{{#messagesUnread}} kifi-unread{{/messagesUnread}}"{{^messageCount}} style="display:none"{{/messageCount}}>{{messageCount}}</span>
     </span>
     <span class="kifi-slider2-dock-sep"></span>
     <span class="kifi-slider2-dock-btn kifi-slider2-general" style="background-image:url({{bgUrl}})" data-pane="general"></span>
