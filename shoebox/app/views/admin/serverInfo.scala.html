@@ -1,5 +1,5 @@
-@(currentService: com.keepit.common.controller.ServiceType,
-  currentVersion: com.keepit.common.controller.ServiceVersion,
+@(currentService: com.keepit.common.service.ServiceType,
+  currentVersion: com.keepit.common.service.ServiceVersion,
   compilationTime: String, started: String, errorCount: Int,
   recentErrors: Seq[com.keepit.common.healthcheck.HealthcheckError],
   cacheStats: Seq[(String, Int, Int, Int)], totalHits: Int, totalMisses: Int, totalSets: Int)

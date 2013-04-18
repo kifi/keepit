@@ -1,7 +1,7 @@
 package com.keepit.common.healthcheck
 
 import com.keepit.common.time.RichDateTime
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.cache.CacheStatistics
 
 import scala.util.Random

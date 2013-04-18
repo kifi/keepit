@@ -1,6 +1,6 @@
 package com.keepit.search
 
-import com.keepit.common.controller.{ServiceClient, ServiceType}
+import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.db.Id
 import com.keepit.common.net.HttpClient
 import com.keepit.controllers.search._
@@ -55,7 +55,7 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
   def updateURIGraph(): Future[Int] = {
     call(routes.URIGraphController.updateURIGraph()).map(r => (r.json \ "users").as[Int])
   }
-  
+
   def reindexURIGraph(): Future[Unit] = {
     call(routes.URIGraphController.reindex()).map(r => ())
   }
@@ -133,11 +133,11 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
   def showUserConfig(id: Id[User]): Future[Html] = {
     call(routes.SearchConfigController.showUserConfig(id)).map(r => Html(r.body))
   }
-  
+
   def setUserConfig(id: Id[User], params: Map[String, String]): Future[Unit] = {
     call(routes.SearchConfigController.setUserConfig(id), Json.toJson(params)).map(r => ())
   }
-  
+
   def resetUserConfig(id: Id[User]): Future[Unit] = {
     call(routes.SearchConfigController.resetUserConfig(id)).map(r => ())
   }

@@ -21,7 +21,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.logging._
 import com.keepit.common.net.URINormalizer
 import com.keepit.common.db.{State, Id}
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.ThreadInfoRepo
 import com.keepit.serializer.ThreadInfoSerializer._
 

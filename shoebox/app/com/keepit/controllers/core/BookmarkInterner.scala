@@ -13,7 +13,7 @@ import play.api.libs.json._
 
 import com.keepit.common.analytics.ActivityStream
 import com.keepit.common.time._
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 
 import com.google.inject.{Inject, Singleton}
 
