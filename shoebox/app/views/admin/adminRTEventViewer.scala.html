@@ -4,9 +4,9 @@
 @admin("What's Happening on Kifi?", stylesheets = List("admin_activity")) {
 
 <h3 id="metrics">
-  Total keeps: <span id="total-keeps">0</span>, 
-  total Kifi clicked: <span id="total-kifi-clicked">0</span>, 
-  total Google clicked: <span id="total-google-clicked">0</span>. 
+  Total keeps: <span id="total-keeps">0</span>,
+  total Kifi clicked: <span id="total-kifi-clicked">0</span>,
+  total Google clicked: <span id="total-google-clicked">0</span>.
   Running for <span id="total-time">00:00:00</span>.
 </h3>
 
@@ -17,7 +17,7 @@
     </tr>
   </thead>
   <tbody id="event_body">
-    
+
   </tbody>
 </table>
 
@@ -39,7 +39,6 @@
 
     var WS = window['MozWebSocket'] ? MozWebSocket : WebSocket
     var wsLocation = "@com.keepit.controllers.admin.routes.AdminEventController.eventStream.webSocketURL()"
-    //var wsLocation = "wss://keepitfindit.com/admin/realtime/event/stream"
 
 
     var startWS = function(location) {
@@ -72,7 +71,7 @@
     }
 
     var totalKeeps = 0, totalKifiClicks = 0, totalGoogleClicks = 0
-    
+
     var receiveEvent = function(event) {
       var data = JSON.parse(event.data)
 
@@ -121,7 +120,7 @@
 
     startWS(wsLocation)
 
-      
+
   });
 </script>
 
