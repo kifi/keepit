@@ -28,7 +28,7 @@ import org.apache.lucene.store.{Directory, MMapDirectory, RAMDirectory}
 import org.apache.lucene.util.Version
 import com.keepit.model.UserRepo
 import com.keepit.common.time.Clock
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 
 
 class ShoeboxDevModule extends ScalaModule with Logging {

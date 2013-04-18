@@ -37,7 +37,7 @@ import com.keepit.serializer.SendableNotificationSerializer.sendableNotification
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Seq[State[ExperimentType]], adminUserId: Option[Id[User]])
 

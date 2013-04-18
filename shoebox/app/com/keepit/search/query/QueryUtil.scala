@@ -22,7 +22,7 @@ import org.apache.lucene.util.BytesRef
 import org.apache.lucene.search.DocIdSetIterator
 
 object QueryUtil extends Logging {
-
+  
   def getTerms(fieldName: String, query: Query): Set[Term] = {
     getTerms(query).filter{ _.field() == fieldName }
   }
@@ -51,7 +51,7 @@ object QueryUtil extends Logging {
   }
   private def fromConditionalQuery(query: ConditionalQuery) = getTerms(query.source) ++ getTerms(query.condition)
   private def fromProximityQuery(query: ProximityQuery) = query.terms.toSet
-  private def fromSemanticVectorQuery(query: SemanticVectorQuery) = query.terms
+  private def fromSemanticVectorQuery(query: SemanticVectorQuery) = query.terms.toSet
   private def fromOtherQuery(query: Query) = {
     try {
       val terms = new JHashSet[Term]()

@@ -11,7 +11,7 @@ import com.keepit.common.mail.PostOffice
 import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.ElectronicMail
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.time._
@@ -86,7 +86,8 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
       case Some(t) =>
         val source = cause(t)
         val message = source.getMessage().replaceAll("\\d", "*")
-        s"${source.getClass().toString} : ${message}"
+        val shortMessage = if (message.length > 59) message.substring(0, 60) else message
+        s"${source.getClass().toString} : $shortMessage..."
     }
   }
 
