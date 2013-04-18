@@ -79,13 +79,7 @@ function attachComposeBindings($c, composeTypeName) {
       if (selector) {
         $d.append(" <a href='x-kifi-sel:" + selector.replace("'", "&#39;") + "'>look here</a>");
       }
-      $d.focus();
-      var r = document.createRange();
-      r.selectNodeContents($d[0]);
-      r.collapse(false);
-      var s = window.getSelection();
-      s.removeAllRanges();
-      s.addRange(r);
+      $d.removeClass("kifi-empty").focus();  // TODO: preserve insertion point & selection
     });
   })
   .find(".kifi-compose-submit")
