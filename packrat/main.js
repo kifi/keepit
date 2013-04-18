@@ -121,6 +121,7 @@ const socketHandlers = {
     var d = pageData[uri];
     if (d) {
       d.kept = o.kept;
+      d.neverOnSite = o.neverOnSite;
       d.sensitive = o.sensitive;
       d.tabs.forEach(function(tab) {
         setIcon(tab, d.kept);
@@ -132,7 +133,6 @@ const socketHandlers = {
     var d = pageData[uri];
     if (d) {
       d.shown = o.shown;
-      d.neverOnSite = o.neverOnSite;
       d.keepers = o.keepers || [];
       d.keeps = o.keeps || 0;
       d.following = o.following;
@@ -189,8 +189,8 @@ const socketHandlers = {
       d.comments.push(c);
       d.tabs.forEach(function(tab) {
         api.tabs.emit(tab, "comment", c);
-        tellTabsIfCountChanged(d, "c", commentCount(d));
       });
+      tellTabsIfCountChanged(d, "c", commentCount(d));
     }
   },
   comment_read: function(nUri, time) {
@@ -236,8 +236,8 @@ const socketHandlers = {
       }
       d.tabs.forEach(function(tab) {
         api.tabs.emit(tab, "message", {thread: th, message: message, read: d.lastMessageRead[th.id]});
-        tellTabsIfCountChanged(d, "m", messageCount(d));
       });
+      tellTabsIfCountChanged(d, "m", messageCount(d));
     }
   },
   message_read: function(nUri, threadId, time) {
@@ -247,8 +247,8 @@ const socketHandlers = {
       d.lastMessageRead[threadId] = new Date(time);
       d.tabs.forEach(function(tab) {
         api.tabs.emit(tab, "thread_info", {thread: d.threads.filter(hasId(threadId))[0], read: d.lastMessageRead[threadId]});
-        tellTabsIfCountChanged(d, "m", messageCount(d));
       });
+      tellTabsIfCountChanged(d, "m", messageCount(d));
     }
   },
 };
@@ -313,73 +313,25 @@ api.port.on({
   set_page_icon: function(data, _, tab) {
     setIcon(tab, data);
   },
-  get_slider_info: function(data, respond, tab) {
-    if (session) {
-      getSliderInfo();
-    } else {
-      authenticate(getSliderInfo);
-    }
-    return true;
-
-    function getSliderInfo() {
-      ajax("GET", "/users/slider", {url: tab.url}, function(o) {
-        o.session = session;
-        respond(o);
-      });
-    }
-  },
-  get_slider_updates: function(_, respond, tab) {
-    ajax("GET", "/users/slider/updates", {url: tab.url}, respond);
-    return true;
-  },
   suppress_on_site: function(data, _, tab) {
     ajax("POST", "/users/slider/suppress", {url: tab.url, suppress: data});
   },
   log_event: function(data) {
     logEvent.apply(null, data);
   },
-  get_comments: function(data, respond, tab) {
-    ajax("GET",
-      (data.kind == "public" ? "/comments" : "/messages/threads") +
-      (data.commentId ? "/" + data.commentId : "?url=" + encodeURIComponent(tab.url)),
+  post_comment: function(data, respond, tab) {
+    api.log("[postComment]", data);
+    ajax("POST", "/comments/add", {
+        url: data.url,
+        title: data.title,
+        text: data.text,
+        permissions: data.permissions,
+        parent: data.parent,
+        recipients: data.recipients},
       function(o) {
-        o.session = session;
+        api.log("[postComment] resp:", o);
         respond(o);
       });
-    return true;
-  },
-  post_comment: function(data, respond, tab) {
-    postComment(data, function(o) {
-      var d = pageData[tab.nUri];
-      if (data.permissions == "public") {
-        d.comments.push({
-          "id": o.commentId,
-          "createdAt": o.createdAt,
-          "text": data.text,
-          "user": {
-            "id": session.userId,
-            "firstName": session.name,
-            "lastName": "",
-            "facebookId": session.facebookId
-          }});
-      } else if (data.permissions == "message") {
-        var threadId = data.parent;
-        d.threads.forEach(function(th) {
-          if (th.id == threadId) {
-            th.messageCount++;
-            th.messageTimes[o.message.id] = o.message.createdAt;
-            th.lastCommentedAt = o.message.createdAt;
-            th.digest = o.message.text;
-          }
-        });
-        if (d.messages[threadId]) {
-          d.messages[threadId].push(o.message);
-        } else {
-          d.messages[threadId] = [o.message];
-        }
-      }
-      respond(o);
-    });
     return true;
   },
   delete_comment: function(id, respond) {
@@ -392,14 +344,20 @@ api.port.on({
   set_comment_read: function(o, _, tab) {
     var d = pageData[tab.nUri], time = new Date(o.time);
     if (!d || time > d.lastCommentRead) {
-      if (d) d.lastCommentRead = time;
+      if (d) {
+        d.lastCommentRead = time;
+        tellTabsIfCountChanged(d, "c", commentCount(d));
+      }
       socket.send(["set_comment_read", o.id]);
     }
   },
   set_message_read: function(o, _, tab) {
     var d = pageData[tab.nUri], time = new Date(o.time);
     if (!d || time > (d.lastMessageRead[o.threadId] || 0)) {
-      if (d) d.lastMessageRead[o.threadId] = time;
+      if (d) {
+        d.lastMessageRead[o.threadId] = time;
+        tellTabsIfCountChanged(d, "m", messageCount(d));
+      }
       socket.send(["set_message_read", o.messageId]);
     }
   },
@@ -715,22 +673,6 @@ function setPrivate(bmInfo, url, priv, respond) {
     api.log("[setPrivate] response:", o);
     respond(o);
   });
-}
-
-function postComment(request, respond) {
-  api.log("[postComment] req:", request);
-  ajax("POST", "/comments/add", {
-      url: request.url,
-      title: request.title,
-      text: request.text,
-      permissions: request.permissions,
-      parent: request.parent,
-      recipients: request.recipients},
-    function(o) {
-      api.log("[postComment] resp:", o);
-      o.session = session;
-      respond(o);
-    });
 }
 
 function searchOnServer(request, respond) {

@@ -53,7 +53,6 @@ GET     /admin/healthcheck/isHealthy    @com.keepit.common.healthcheck.WebsiteHe
 ##########################################
 
 POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksController.addBookmarks
-GET     /bookmarks/check            @com.keepit.controllers.ext.ExtBookmarksController.checkIfExists(uri: String)
 POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
 POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updatePrivacy()
 GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksController.getNumMutualKeeps(id: ExternalId[User])
@@ -69,9 +68,7 @@ POST    /comments/unfollow          @com.keepit.controllers.ext.ExtCommentContro
 GET     /messages/threads/:id       @com.keepit.controllers.ext.ExtCommentController.getMessageThread(id: ExternalId[Comment])
 GET     /messages/threads           @com.keepit.controllers.ext.ExtCommentController.getMessageThreadList(url: String)
 
-GET     /users/slider               @com.keepit.controllers.ext.ExtUserController.getSliderInfo(url: String)
 POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
-GET     /users/slider/updates       @com.keepit.controllers.ext.ExtCommentController.getUpdates(url: String)
 
 GET     /users/friends              @com.keepit.controllers.ext.ExtUserController.getSocialConnections()
 

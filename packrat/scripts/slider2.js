@@ -29,16 +29,12 @@ slider2 = function() {
     lastShownAt = +new Date;
 
     render("html/metro/slider2.html", {
-        // "logo": api.url('images/kifilogo.png'),
-        // "arrow": api.url('images/triangle_down.31x16.png'),
         // "profilepic": o.session.avatarUrl,
         // "name": o.session.name,
         "bgUrl": api.url("images/metro/slider.png"),
         "isKept": o.kept,
         "isPrivate": o.private,
         // "sensitive": o.sensitive,
-        // "site": location.hostname,
-        // "neverOnSite": o.neverOnSite,
         "noticesCount": -o.counts.n,
         "commentsUnread": o.counts.c < 0,
         "commentCount": Math.abs(o.counts.c),
@@ -347,6 +343,8 @@ slider2 = function() {
     } else {
       api.require("styles/metro/pane.css", function() {
         render("html/metro/pane.html", $.extend(params, {
+          site: location.hostname,
+          neverOnSite: info.neverOnSite,
           kifiLogoUrl: api.url("images/kifi_logo.png"),
           gearUrl: api.url("images/metro/gear.png")
         }), {
@@ -368,7 +366,47 @@ slider2 = function() {
           .on("click", ".kifi-pane-back", function() {
             showPane($(this).data("pane") || "general", true);
           })
-          .on("click", ".kifi-pane-head-settings,.kifi-pane-action", function() {
+          .on("mousedown", ".kifi-pane-head-settings", function(e) {
+            e.preventDefault();
+            var $sett = $(this).addClass("kifi-active");
+            var $menu = $sett.next(".kifi-pane-head-settings-menu").fadeIn(50);
+            var $hide = $menu.find(".kifi-pane-settings-hide")
+              .on("mouseenter", enterItem)
+              .on("mouseleave", leaveItem);
+            document.addEventListener("mousedown", docMouseDown, true);
+            $menu.data("docMouseDown", docMouseDown).on("kifi:hide", hide);
+            // .kifi-hover class needed because :hover does not work during drag
+            function enterItem() { $(this).addClass("kifi-hover"); }
+            function leaveItem() { $(this).removeClass("kifi-hover"); }
+            function docMouseDown(e) {
+              if (!$menu[0].contains(e.target)) {
+                $menu.triggerHandler("kifi:hide");
+                if ($sett[0] === e.target) {
+                  e.stopPropagation();
+                }
+              }
+            }
+            function hide() {
+              document.removeEventListener("mousedown", docMouseDown, true);
+              $sett.removeClass("kifi-active");
+              $hide.off("mouseenter", enterItem)
+                  .off("mouseleave", leaveItem);
+              $menu.off("kifi:hide", hide).fadeOut(50, function() {
+                $menu.find(".kifi-hover").removeClass("kifi-hover");
+              });
+            }
+          })
+          .on("mouseup", ".kifi-pane-settings-hide", function(e) {
+            e.preventDefault();
+            var $hide = $(this).toggleClass("kifi-checked");
+            var checked = $hide.hasClass("kifi-checked");
+            $tile.toggle(!checked);
+            api.port.emit("suppress_on_site", checked);
+            setTimeout(function() {
+              $hide.closest(".kifi-pane-head-settings-menu").triggerHandler("kifi:hide");
+            }, 150);
+          })
+          .on("click", ".kifi-pane-action", function() {
             var $n = $pane.find(".kifi-not-done"), d = $n.data();
             clearTimeout(d.t);
             $n.remove().removeClass("kifi-showing").appendTo($pane).layout().addClass("kifi-showing");

@@ -11,7 +11,7 @@ import com.google.inject.util.Modules
 import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
 import com.keepit.common.analytics._
 import com.keepit.common.cache.{HashMapMemoryCache, FortyTwoCachePlugin}
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.db.DbInfo
 import com.keepit.common.db.SlickModule
 import com.keepit.common.db.slick._
@@ -76,6 +76,9 @@ trait DbRepos {
   def uriRepo = inject[NormalizedURIRepo]
   def urlRepo = inject[URLRepo]
   def bookmarkRepo = inject[BookmarkRepo]
+  def commentRepo = inject[CommentRepo]
+  def commentReadRepo = inject[CommentReadRepo]
+  def commentRecipientRepo = inject[CommentRecipientRepo]
   def socialUserInfoRepo = inject[SocialUserInfoRepo]
   def installationRepo = inject[KifiInstallationRepo]
   def userExperimentRepo = inject[UserExperimentRepo]

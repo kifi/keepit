@@ -1,5 +1,6 @@
 package com.keepit.common.controller
 
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._

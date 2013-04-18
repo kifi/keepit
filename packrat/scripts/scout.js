@@ -119,11 +119,13 @@ var injected, t0 = +new Date;
       });
     });
     api.require("styles/metro/tile.css", function() {
-      tile.style.display = "";
-      if (o.keepers.length && !o.kept) {
-        withSlider2(function() {
-          setTimeout(slider2.showKeepersFor.bind(slider2, o, tile, 2000), 3000);
-        });
+      if (!o.neverOnSite && !o.sensitive) {
+        tile.style.display = "";
+        if (o.keepers.length && !o.kept) {
+          withSlider2(function() {
+            setTimeout(slider2.showKeepersFor.bind(slider2, o, tile, 2000), 3000);
+          });
+        }
       }
     });
   }

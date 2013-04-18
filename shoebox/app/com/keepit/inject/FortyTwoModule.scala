@@ -4,7 +4,7 @@ import scala.slick.session.{Database => SlickDatabase}
 import com.tzavellas.sse.guice.ScalaModule
 import com.google.inject.{Provides, Inject, Singleton, Provider}
 import com.keepit.common.time._
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 import org.joda.time.{DateTime, LocalDate}
 import akka.actor.ActorSystem
 import akka.actor.Scheduler

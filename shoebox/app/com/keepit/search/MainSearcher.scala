@@ -15,7 +15,7 @@ import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
 import com.keepit.common.time._
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 import play.api.libs.json._
 import java.util.UUID
 import scala.math._

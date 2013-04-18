@@ -3,7 +3,7 @@ package com.keepit
 import java.util.concurrent.atomic.AtomicBoolean
 
 import com.google.inject.{Stage, Guice, Module, Injector}
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.controller.ReportedException
 import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.HealthcheckError

@@ -2,7 +2,7 @@ package com.keepit.common.analytics
 
 import org.joda.time.DateTime
 
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.State
 import com.keepit.common.time._

@@ -1,4 +1,4 @@
-package com.keepit.common.controller
+package com.keepit.common.service
 
 import com.keepit.common.time._
 import play.api.Play.current
