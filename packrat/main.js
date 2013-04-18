@@ -41,7 +41,7 @@ function ajax(method, uri, data, done, fail) {  // method and uri are required
     data = null;
   }
 
-  api.request(method, getServer() + uri, data, done, fail);
+  api.request(method, apiBaseUri() + uri, data, done, fail);
 }
 
 // ===== Event logging
@@ -445,7 +445,7 @@ function createDeepLinkListener(link, linkTabId, respond) {
     }
     if (linkTabId == tab.id) {
       // uncomment second clause below to develop /r/ page using production deep links
-      var hasForwarded = new Regexp("^" + getServer() + "/r/", "").test(tab.url) /* && tab.url.indexOf("dev.ezkeep.com") < 0 */;
+      var hasForwarded = new Regexp("^" + webBaseUri() + "/r/", "").test(tab.url) /* && tab.url.indexOf("dev.ezkeep.com") < 0 */;
       if (hasForwarded) {
         api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, link.locator);
         api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: link.locator});
@@ -694,7 +694,7 @@ function searchOnServer(request, respond) {
     function(resp) {
       api.log("[searchOnServer] response:", resp);
       resp.session = session;
-      resp.server = getServer();
+      resp.webBaseUri = webBaseUri();
       resp.showScores = api.prefs.get("showScores");
       respond(resp);
     });
@@ -847,8 +847,12 @@ function getFullyQualifiedKey(key) {
   return (api.prefs.get("env") || "production") + "_" + key;
 }
 
-function getServer() {
-  return api.prefs.get("env") === "development" ? "http://dev.ezkeep.com:9000" : "https://keepitfindit.com";
+function apiBaseUri() {
+  return api.prefs.get("env") === "development" ? "http://dev.ezkeep.com:9000" : "https://api.kifi.com";
+}
+
+function webBaseUri() {
+  return api.prefs.get("env") === "development" ? "http://dev.ezkeep.com:9000" : "https://www.kifi.com";
 }
 
 function getStored(key) {
@@ -892,7 +896,7 @@ function authenticate(callback) {
       logEvent("extension", "authenticated");
 
       session = data;
-      socket = api.socket.open(getServer().replace(/^http/, "ws") + "/ext/ws", socketHandlers);
+      socket = api.socket.open(apiBaseUri().replace(/^http/, "ws") + "/ext/ws", socketHandlers);
       socket.send(["get_notifications", 10]);
       socket.send(["get_last_notify_read_time"]);
       socket.send(["get_friends"]);
@@ -923,14 +927,14 @@ function authenticate(callback) {
 
   function openFacebookConnect() {
     api.log("[openFacebookConnect]");
-    var server = getServer();
+    var baseUri = webBaseUri();
     api.popup.open({
       name: "kifi-authenticate",
-      url: server + "/authenticate/facebook",
+      url: baseUri + "/authenticate/facebook",
       width: 1020,
       height: 530}, {
       navigate: function(url) {
-        if (url == server + "/#_=_") {
+        if (url == baseUri + "/#_=_") {
           api.log("[openFacebookConnect] closing popup");
           this.close();
           startSession();
@@ -950,7 +954,7 @@ function deauthenticate(callback) {
   // TODO: make all page icons faint?
   api.popup.open({
     name: "kifi-deauthenticate",
-    url: getServer() + "/session/end",
+    url: webBaseUri() + "/session/end",
     width: 200,
     height: 100})
   callback();
