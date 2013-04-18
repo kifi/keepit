@@ -189,8 +189,8 @@ const socketHandlers = {
       d.comments.push(c);
       d.tabs.forEach(function(tab) {
         api.tabs.emit(tab, "comment", c);
-        tellTabsIfCountChanged(d, "c", commentCount(d));
       });
+      tellTabsIfCountChanged(d, "c", commentCount(d));
     }
   },
   comment_read: function(nUri, time) {
@@ -236,8 +236,8 @@ const socketHandlers = {
       }
       d.tabs.forEach(function(tab) {
         api.tabs.emit(tab, "message", {thread: th, message: message, read: d.lastMessageRead[th.id]});
-        tellTabsIfCountChanged(d, "m", messageCount(d));
       });
+      tellTabsIfCountChanged(d, "m", messageCount(d));
     }
   },
   message_read: function(nUri, threadId, time) {
@@ -247,8 +247,8 @@ const socketHandlers = {
       d.lastMessageRead[threadId] = new Date(time);
       d.tabs.forEach(function(tab) {
         api.tabs.emit(tab, "thread_info", {thread: d.threads.filter(hasId(threadId))[0], read: d.lastMessageRead[threadId]});
-        tellTabsIfCountChanged(d, "m", messageCount(d));
       });
+      tellTabsIfCountChanged(d, "m", messageCount(d));
     }
   },
 };
@@ -392,14 +392,20 @@ api.port.on({
   set_comment_read: function(o, _, tab) {
     var d = pageData[tab.nUri], time = new Date(o.time);
     if (!d || time > d.lastCommentRead) {
-      if (d) d.lastCommentRead = time;
+      if (d) {
+        d.lastCommentRead = time;
+        tellTabsIfCountChanged(d, "c", commentCount(d));
+      }
       socket.send(["set_comment_read", o.id]);
     }
   },
   set_message_read: function(o, _, tab) {
     var d = pageData[tab.nUri], time = new Date(o.time);
     if (!d || time > (d.lastMessageRead[o.threadId] || 0)) {
-      if (d) d.lastMessageRead[o.threadId] = time;
+      if (d) {
+        d.lastMessageRead[o.threadId] = time;
+        tellTabsIfCountChanged(d, "m", messageCount(d));
+      }
       socket.send(["set_message_read", o.messageId]);
     }
   },
