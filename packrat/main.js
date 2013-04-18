@@ -41,7 +41,7 @@ function ajax(method, uri, data, done, fail) {  // method and uri are required
     data = null;
   }
 
-  api.request(method, "http://" + getServer() + uri, data, done, fail);
+  api.request(method, getServer() + uri, data, done, fail);
 }
 
 // ===== Event logging
@@ -455,7 +455,7 @@ function createDeepLinkListener(link, linkTabId, respond) {
     }
     if (linkTabId == tab.id) {
       // uncomment second clause below to develop /r/ page using production deep links
-      var hasForwarded = tab.url.indexOf(getServer() + "/r/") < 0 /* && tab.url.indexOf("dev.ezkeep.com") < 0 */;
+      var hasForwarded = new Regexp("^" + getServer() + "/r/", "").test(tab.url) /* && tab.url.indexOf("dev.ezkeep.com") < 0 */;
       if (hasForwarded) {
         api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, link.locator);
         api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: link.locator});
@@ -858,7 +858,7 @@ function getFullyQualifiedKey(key) {
 }
 
 function getServer() {
-  return api.prefs.get("env") === "development" ? "dev.ezkeep.com:9000" : "keepitfindit.com";
+  return api.prefs.get("env") === "development" ? "http://dev.ezkeep.com:9000" : "https://keepitfindit.com";
 }
 
 function getStored(key) {
@@ -902,7 +902,7 @@ function authenticate(callback) {
       logEvent("extension", "authenticated");
 
       session = data;
-      socket = api.socket.open((dev ? "ws://" : "wss://") + getServer() + "/ext/ws", socketHandlers);
+      socket = api.socket.open(getServer().replace(/^http/, "ws") + "/ext/ws", socketHandlers);
       socket.send(["get_notifications", 10]);
       socket.send(["get_last_notify_read_time"]);
       socket.send(["get_friends"]);
@@ -936,11 +936,11 @@ function authenticate(callback) {
     var server = getServer();
     api.popup.open({
       name: "kifi-authenticate",
-      url: "http://" + server + "/authenticate/facebook",
+      url: server + "/authenticate/facebook",
       width: 1020,
       height: 530}, {
       navigate: function(url) {
-        if (url == "http://" + server + "/#_=_") {
+        if (url == server + "/#_=_") {
           api.log("[openFacebookConnect] closing popup");
           this.close();
           startSession();
@@ -960,7 +960,7 @@ function deauthenticate(callback) {
   // TODO: make all page icons faint?
   api.popup.open({
     name: "kifi-deauthenticate",
-    url: "http://" + getServer() + "/session/end",
+    url: getServer() + "/session/end",
     width: 200,
     height: 100})
   callback();
