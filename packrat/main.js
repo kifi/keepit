@@ -263,8 +263,8 @@ api.port.on({
     return true;
   },
   log_out: function(_, respond) {
-    deauthenticate(respond);
-    return true;
+    deauthenticate();
+    respond();
   },
   get_keeps: searchOnServer,
   get_chatter: function(data, respond) {
@@ -939,7 +939,7 @@ function authenticate(callback) {
   }
 }
 
-function deauthenticate(callback) {
+function deauthenticate() {
   api.log("[deauthenticate]");
   session = null;
   if (socket) {
@@ -953,7 +953,6 @@ function deauthenticate(callback) {
     url: getServer() + "/session/end",
     width: 200,
     height: 100})
-  callback();
 }
 
 // ===== Main (executed upon install, reinstall, update, reenable, and browser start)
