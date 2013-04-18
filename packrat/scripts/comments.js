@@ -36,6 +36,8 @@ commentsPane = function() {
         .on("kifi:compose-submit", submitComment.bind(null, $container, session))
         .find("time").timeago();
 
+        $posted = $container.find(".kifi-comments-posted");
+
         if (~session.experiments.indexOf("admin")) {
           $posted.on("mouseenter", ".kifi-comment-posted", function() {
             if (this.lastChild.className != "kifi-comment-x") {
@@ -61,7 +63,6 @@ commentsPane = function() {
 
         attachComposeBindings($container, "comment");
 
-        $posted = $container.find(".kifi-comments-posted");
         $container.closest(".kifi-pane-box").on("kifi:remove", function() {
           $posted.length = 0;
         });
