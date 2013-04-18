@@ -14,13 +14,14 @@ GET     /invite                     @com.keepit.controllers.website.InviteContro
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
 GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id: ExternalId[Invitation])
+GET     /sign-up                     @com.keepit.controllers.website.OnboardingController.signup(inviteId: String ?= "")
 GET     /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tos
 POST    /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tosAccept
 
 GET     /login                      securesocial.controllers.ProviderController.authenticate(provider = "facebook")
+GET     /login/social               securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
 
-GET     /sign-up                     @com.keepit.controllers.website.OnboardingController.signup(inviteId: String ?= "")
 
 # Relevant when we support traditional user signups:
 GET     /register                   securesocial.controllers.Registration.signUp(token: String)

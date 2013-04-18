@@ -67,10 +67,12 @@ class InviteController @Inject() (db: Database,
       Redirect(routes.HomeController.home())
     }
   }
-  
+    
+  private val url = current.configuration.getString("application.baseUrl")
+  private val appId = current.configuration.getString("securesocial.facebook.clientId")
   private def fbInviteUrl(invite: Invitation)(implicit session: RSession) = {
     val identity = socialUserInfoRepo.get(invite.recipientSocialUserId)
-    s"https://www.facebook.com/dialog/send?app_id=104629159695560&name=You're%20invited%20to%20try%20KiFi!&picture=http://keepitfindit.com/assets/images/logo2.png&link=https://www.keepitfindit.com/invite/${invite.externalId.id}&description=Hey%20${identity.fullName}!%20You're%20invited%20to%20join%20KiFi.%20Click%20here%20to%20sign%20up&redirect_uri=https://www.keepitfindit.com/invite/confirm/${invite.externalId}&to=${identity.socialId.id}"
+    s"https://www.facebook.com/dialog/send?app_id=$appId&name=You're%20invited%20to%20try%20KiFi!&picture=https://www.kifi.com/assets/images/kifi-fb-square.png&link=$url/invite/${invite.externalId.id}&description=Hey%20${identity.fullName}!%20You're%20invited%20to%20join%20KiFi.%20Click%20here%20to%20sign%20up&redirect_uri=$url/invite/confirm/${invite.externalId}&to=${identity.socialId.id}"
   }
   
   def inviteConnection = AuthenticatedHtmlAction { implicit request =>
