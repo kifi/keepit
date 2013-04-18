@@ -26,13 +26,13 @@ import com.keepit.common.social.ThreadInfoRepo
 import com.keepit.serializer.ThreadInfoSerializer._
 
 case class CommentDetails(
-  id: String,
+  id: String,              // ExternalId[Comment]
   author: BasicUser,
   recipient: BasicUser,
-  url: String,
-  page: String,
-  title: String,
-  text: String,
+  url: String,             // DeepLink.url (containing /r/)
+  page: String,            // NormalizedURI.url
+  title: String,           // Comment.pageTitle
+  text: String,            // Comment.text
   createdAt: DateTime,
   newCount: Int,
   totalCount: Int,
@@ -40,13 +40,13 @@ case class CommentDetails(
 )
 
 case class MessageDetails(
-  id: String,
+  id: String,              // ExternalId[Comment] of the message
   authors: Seq[BasicUser],
   recipient: BasicUser,
-  url: Option[String],
-  page: Option[String],
-  title: Option[String],
-  text: String,
+  url: Option[String],     // DeepLink.url (containing /r/)
+  page: Option[String],    // NormalizedURI.url
+  title: Option[String],   // Comment.pageTitle
+  text: String,            // Comment.text
   createdAt: DateTime,
   hasParent: Boolean,
   newCount: Int,
