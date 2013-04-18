@@ -12,6 +12,7 @@ import play.api._
 import com.keepit.model._
 import com.keepit.common.db.slick._
 import com.keepit.common.controller.ActionAuthenticator
+import com.keepit.common.db.ExternalId
 
 import com.google.inject.{Inject, Singleton}
 
@@ -20,6 +21,7 @@ class OnboardingController @Inject() (db: Database,
   userRepo: UserRepo,
   userValueRepo: UserValueRepo,
   socialConnectionRepo: SocialConnectionRepo,
+  invitationRepo: InvitationRepo,
   actionAuthenticator: ActionAuthenticator)
     extends WebsiteController(actionAuthenticator) {
 
@@ -48,7 +50,17 @@ class OnboardingController @Inject() (db: Database,
     Redirect(routes.HomeController.home())
   })
 
-  def signup = Action { implicit request =>
+  def signup(inviteId: String = "") = Action { implicit request =>
+    if(inviteId != "") {
+      val id = ExternalId[Invitation](inviteId)
+      db.readWrite { implicit session =>
+        invitationRepo.getOpt(id) match {
+          case Some(invite) =>
+            invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
+          case None => 
+        }
+      }
+    }
     Redirect(securesocial.controllers.routes.LoginPage.login)
   }
 }

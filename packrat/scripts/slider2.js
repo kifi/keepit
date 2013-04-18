@@ -29,8 +29,6 @@ slider2 = function() {
     lastShownAt = +new Date;
 
     render("html/metro/slider2.html", {
-        // "logo": api.url('images/kifilogo.png'),
-        // "arrow": api.url('images/triangle_down.31x16.png'),
         // "profilepic": o.session.avatarUrl,
         // "name": o.session.name,
         "bgUrl": api.url("images/metro/slider.png"),

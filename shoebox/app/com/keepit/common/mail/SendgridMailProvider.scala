@@ -34,7 +34,7 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
     }
   }
 
-  lazy val mailSession: Session = {
+  private lazy val mailSession: Session = {
     val props = new Properties()
     props.put("mail.transport.protocol", "smtp")
     props.put("mail.smtp.host", "smtp.sendgrid.net")
@@ -86,7 +86,7 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
     transport
   }
 
-  var transportOpt: Option[Transport] = Some(createTransport())
+  private var transportOpt: Option[Transport] = None
 
   def getLiveTransport(): Transport = transportOpt match {
     case Some(transport) =>

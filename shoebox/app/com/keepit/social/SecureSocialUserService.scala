@@ -1,19 +1,30 @@
 package com.keepit.social
 
+import scala.Some
+
 import com.google.inject.{Inject, Singleton}
 import com.keepit.FortyTwoGlobal
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.SocialGraphPlugin
-import com.keepit.common.social.{SocialId, SocialNetworks, SocialNetworkType}
+import com.keepit.common.social.SocialId
+import com.keepit.common.social.{SocialNetworks, SocialNetworkType}
 import com.keepit.inject._
+import com.keepit.model.SocialUserInfo
+import com.keepit.model.User
 import com.keepit.model._
 
 import play.api.Application
 import play.api.Play
 import play.api.Play.current
+import securesocial.core.UserId
+import securesocial.core._
 import securesocial.core.providers.Token
-import securesocial.core.{UserServicePlugin, UserId, SocialUser, Identity, UserService}
+
+class SecureSocialIdGenerator(app: Application) extends IdGenerator(app) {
+  def generate: String = ExternalId[String]().toString
+}
 
 class SecureSocialUserService(implicit val application: Application) extends UserServicePlugin(application) {
   lazy val global = application.global.asInstanceOf[FortyTwoGlobal]
