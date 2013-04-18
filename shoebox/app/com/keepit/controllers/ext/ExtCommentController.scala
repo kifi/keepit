@@ -153,27 +153,6 @@ class ExtCommentController @Inject() (
     }
   }
 
-  def getUpdates(url: String) = AuthenticatedJsonAction { request =>
-    val (messageCount, publicCount) = db.readOnly { implicit s =>
-
-      normalizedURIRepo.getByNormalizedUrl(url) map {uri =>
-        val uriId = uri.id.get
-        val userId = request.userId
-
-        val messageCount = commentRepo.getMessagesWithChildrenCount(uriId, userId)
-        val publicCount = commentRepo.getPublicCount(uriId)
-
-        (messageCount, publicCount)
-      } getOrElse (0, 0)
-    }
-
-    Ok(JsObject(List(
-        "publicCount" -> JsNumber(publicCount),
-        "messageCount" -> JsNumber(messageCount),
-        "countSum" -> JsNumber(publicCount + messageCount)
-    )))
-  }
-
   def getComments(url: String) = AuthenticatedJsonAction { request =>
     val comments = paneDetails.getComments(request.userId, url)
 
