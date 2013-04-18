@@ -19,16 +19,17 @@ class AppScope extends Scope with Logging {
   private var stopping = false
   private var stopped = false
 
-  private var app: Application = _
   private var plugins: List[Plugin] = Nil
   private[inject] var pluginsToStart: List[Plugin] = Nil
   private var instances: Map[Key[_], Any] = Map.empty
 
-  def onStart(app: Application): Unit = synchronized {
+  private var app: Application = _
+
+  def onStart(app: Application): Unit = {
     println(s"[$identifier] scope starting...")
     require(!started, "AppScope has already been started")
     this.app = app
-    pluginsToStart foreach startPlugin
+    pluginsToStart foreach { p => startPlugin(p) }
     pluginsToStart = Nil
     started = true
   }
@@ -42,7 +43,8 @@ class AppScope extends Scope with Logging {
     plugins = plugin :: plugins
   }
 
-  def onStop(app: Application): Unit = synchronized {
+  def onStop(app: Application): Unit = {
+    val appScope = this
     stopping = true
     println(s"[$identifier] scope stopping...")
     if(!started) {
