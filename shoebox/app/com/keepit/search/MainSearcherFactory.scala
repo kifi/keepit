@@ -19,7 +19,7 @@ import com.keepit.inject._
 import com.keepit.common.analytics.PersistEventPlugin
 import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.common.time._
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 
 
 @Singleton

@@ -1,6 +1,6 @@
 package com.keepit.shoebox
 
-import com.keepit.common.controller.{ServiceClient, ServiceType}
+import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.net.HttpClient
 
 trait ShoeboxServiceClient extends ServiceClient {

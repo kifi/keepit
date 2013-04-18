@@ -17,7 +17,7 @@ import com.keepit.common.analytics._
 import com.keepit.model.UserRepo
 import com.keepit.model.NormalizedURIRepo
 import com.keepit.common.time.Clock
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 
 class ShoeboxModule() extends ScalaModule with Logging {
   def configure(): Unit = {
