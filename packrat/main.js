@@ -313,25 +313,6 @@ api.port.on({
   set_page_icon: function(data, _, tab) {
     setIcon(tab, data);
   },
-  get_slider_info: function(data, respond, tab) {
-    if (session) {
-      getSliderInfo();
-    } else {
-      authenticate(getSliderInfo);
-    }
-    return true;
-
-    function getSliderInfo() {
-      ajax("GET", "/users/slider", {url: tab.url}, function(o) {
-        o.session = session;
-        respond(o);
-      });
-    }
-  },
-  get_slider_updates: function(_, respond, tab) {
-    ajax("GET", "/users/slider/updates", {url: tab.url}, respond);
-    return true;
-  },
   suppress_on_site: function(data, _, tab) {
     ajax("POST", "/users/slider/suppress", {url: tab.url, suppress: data});
   },
