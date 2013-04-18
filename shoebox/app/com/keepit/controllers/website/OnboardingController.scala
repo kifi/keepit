@@ -61,6 +61,6 @@ class OnboardingController @Inject() (db: Database,
         }
       }
     }
-    Redirect(securesocial.controllers.routes.LoginPage.login)
+    Redirect("/login")
   }
 }
