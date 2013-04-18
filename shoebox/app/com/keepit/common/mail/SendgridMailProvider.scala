@@ -86,7 +86,7 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
     transport
   }
 
-  private lazy var transportOpt: Option[Transport] = Some(createTransport())
+  private var transportOpt: Option[Transport] = None
 
   def getLiveTransport(): Transport = transportOpt match {
     case Some(transport) =>
