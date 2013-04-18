@@ -19,8 +19,7 @@ import com.keepit.common.healthcheck.BabysitterTimeout
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.keepit.common.healthcheck.{Babysitter, BabysitterImpl}
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.FakeMailModule
-import com.keepit.common.mail.{FakeMailToKeepPlugin, MailToKeepPlugin}
+import com.keepit.common.mail.{FakeMailToKeepPlugin, MailToKeepPlugin, FakeMailModule, MailSenderPlugin, ElectronicMail}
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSecureSocialUserServiceModule
 import com.keepit.common.social.SocialGraphPlugin
@@ -109,6 +108,14 @@ case class TestModule() extends ScalaModule {
   @Provides
   @Singleton
   def fakeClock: FakeClock = new FakeClock()
+
+  @Provides
+  @Singleton
+  def mailSenderPlugin: MailSenderPlugin = new MailSenderPlugin {
+    def processMail(mail: ElectronicMail) = throw new Exception("Should not attempt to use mail plugin in test")
+    def processOutbox() = throw new Exception("Should not attempt to use mail plugin in test")
+  }
+
 
   @Provides
   @Singleton
