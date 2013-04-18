@@ -349,37 +349,18 @@ api.port.on({
     return true;
   },
   post_comment: function(data, respond, tab) {
-    postComment(data, function(o) {
-      var d = pageData[tab.nUri];
-      if (data.permissions == "public") {
-        d.comments.push({
-          "id": o.commentId,
-          "createdAt": o.createdAt,
-          "text": data.text,
-          "user": {
-            "id": session.userId,
-            "firstName": session.name,
-            "lastName": "",
-            "facebookId": session.facebookId
-          }});
-      } else if (data.permissions == "message") {
-        var threadId = data.parent;
-        d.threads.forEach(function(th) {
-          if (th.id == threadId) {
-            th.messageCount++;
-            th.messageTimes[o.message.id] = o.message.createdAt;
-            th.lastCommentedAt = o.message.createdAt;
-            th.digest = o.message.text;
-          }
-        });
-        if (d.messages[threadId]) {
-          d.messages[threadId].push(o.message);
-        } else {
-          d.messages[threadId] = [o.message];
-        }
-      }
-      respond(o);
-    });
+    api.log("[postComment]", data);
+    ajax("POST", "/comments/add", {
+        url: data.url,
+        title: data.title,
+        text: data.text,
+        permissions: data.permissions,
+        parent: data.parent,
+        recipients: data.recipients},
+      function(o) {
+        api.log("[postComment] resp:", o);
+        respond(o);
+      });
     return true;
   },
   delete_comment: function(id, respond) {
@@ -721,22 +702,6 @@ function setPrivate(bmInfo, url, priv, respond) {
     api.log("[setPrivate] response:", o);
     respond(o);
   });
-}
-
-function postComment(request, respond) {
-  api.log("[postComment] req:", request);
-  ajax("POST", "/comments/add", {
-      url: request.url,
-      title: request.title,
-      text: request.text,
-      permissions: request.permissions,
-      parent: request.parent,
-      recipients: request.recipients},
-    function(o) {
-      api.log("[postComment] resp:", o);
-      o.session = session;
-      respond(o);
-    });
 }
 
 function searchOnServer(request, respond) {
