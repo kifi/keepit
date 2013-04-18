@@ -21,29 +21,6 @@ class ZooKeeperClient(servers: String, sessionTimeout: Int, basePath : String,
   @volatile private var zk : ZooKeeper = null
   connect()
 
-  def this(servers: String, sessionTimeout: Int, basePath : String) =
-    this(servers, sessionTimeout, basePath, None)
-
-  def this(servers: String, sessionTimeout: Int, basePath : String, watcher: ZooKeeperClient => Unit) =
-    this(servers, sessionTimeout, basePath, Some(watcher))
-
-  def this(servers: String) =
-    this(servers, 3000, "", None)
-
-  def this(servers: String, watcher: ZooKeeperClient => Unit) =
-    this(servers, 3000, "", Some(watcher))
-
-  def this(config: ZookeeperClientConfig, watcher: Option[ZooKeeperClient => Unit]) = {
-    this(config.hostList,
-         config.sessionTimeout,
-         config.basePath,
-         watcher)
-  }
-
-  def this(config: ZookeeperClientConfig) ={
-    this(config, None)
-  }
-
   def getHandle() : ZooKeeper = zk
 
   /**
@@ -158,7 +135,7 @@ class ZooKeeperClient(servers: String, sessionTimeout: Int, basePath : String,
    * None and will track the node's re-creation with an existence watch.
    */
   def watchNode(node : String, onDataChanged : Option[Array[Byte]] => Unit) {
-    log.debug("sWatching node $node")
+    log.debug(s"Watching node $node")
     val path = makeNodePath(node)
     def updateData {
       try {
