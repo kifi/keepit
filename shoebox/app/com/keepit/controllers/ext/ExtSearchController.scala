@@ -143,7 +143,7 @@ class ExtSearchController @Inject() (
   }
   
   private[ext] def isToShow(res: ArticleSearchResult): Boolean = {
-    res.svVariance < 0.18
+    res.svVariance < 0.17
   }
 
   private[ext] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {
