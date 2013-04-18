@@ -133,14 +133,14 @@ api.log("[google_inject]");
       logEvent("search", "kifiLoaded", {"query": q, "filter": f, "queryUUID": resp.uuid});
       if (resp.hits.length) {
         logEvent("search", "kifiAtLeastOneResult", {"query": q, "filter": f, "queryUUID": resp.uuid, "experimentId": resp.experimentId});
-        var f = function(hits) {
+        var onShow = function(hits) {
           loadChatter(hits);
           prefetchMore();
         }.bind(null, response.hits.slice());
         if (resp.show) {
-          f();
+          onShow();
         } else {
-          $res.data("onShow", f);
+          $res.data("onShow", onShow);
         }
       }
     });
@@ -266,10 +266,10 @@ api.log("[google_inject]");
       $res.find(".kifi-res-filter-keeps").fadeToggle(200);
       $res.find(".kifi-res-filters-x:visible").click();
       $(this).toggleClass("kifi-collapsed");
-      var f = $res.data("onShow");
-      if (f) {
+      var onShow = $res.data("onShow");
+      if (onShow) {
         $res.removeData("onShow");
-        f();
+        onShow();
       }
     }).on("click", ".kifi-res-filter-keeps", function() {
       var $f = $res.find(".kifi-res-filters");
