@@ -139,7 +139,7 @@ class ExtSearchController @Inject() (
     log.debug(hits mkString "\n")
 
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
-    PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, (isDefaultFilter || isToShow(res)), experimentId, filter)
+    PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, (!isDefaultFilter || isToShow(res)), experimentId, filter)
   }
   
   private[ext] def isToShow(res: ArticleSearchResult): Boolean = {
