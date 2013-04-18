@@ -1,20 +1,22 @@
-@(title: String, scripts: Seq[String] = Nil, stylesheets: List[String] = Nil, hiddenElements: Seq[String] = Nil)(content: Html)
+@(title: String, scripts: Seq[String] = Nil, stylesheets: List[String] = Nil, hiddenElements: Seq[String] = Nil, head: Html = Html(""))(content: Html)
 
 
-@base(title, stylesheets) {
+@base(title, stylesheets, head) {
     @if(!hiddenElements.contains("header")) {
     <header id="header">
       <div class="wrap clearfix">
           <a id="logo" href="/"><img src="@routes.Assets.at("images/logo.png")" width="203" height="48"></a>
+            @if(!hiddenElements.contains("nav")) {
             <nav class="main_nav" id="main_nav">
                 <ul>
                     <li class="current"><a href="/">Home</a></li>
-                    @if(!hiddenElements.contains("inviteFriends")) {
+                    <!--@if(!hiddenElements.contains("inviteFriends")) {
                     <li><a href="/invite">Invite friends to private beta</a></li>
-                    }
+                    }-->
                     <li><a href="/logout">Log out</a></li>
                 </ul>
             </nav>
+            }
         </div>
     </header>
     }

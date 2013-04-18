@@ -60,10 +60,6 @@ $(function() {
     });
     
   });
-  
-  
-
-
 
 });//end jQuery
 

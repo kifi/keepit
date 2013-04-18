@@ -7,17 +7,17 @@
 ##########################################
 
 GET     /                           @com.keepit.controllers.website.HomeController.home
-GET     /gettingStarted             @com.keepit.controllers.website.HomeController.gettingStarted
+GET     /install                    @com.keepit.controllers.website.HomeController.install
+GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 
-GET     /invite                     @com.keepit.controllers.website.HomeController.invite
-GET     /invite/:id                 @com.keepit.controllers.website.HomeController.acceptInvite(id: ExternalId[Invitation])
-GET     /invite/confirm/:id         @com.keepit.controllers.website.HomeController.confirmInvite(id: ExternalId[Invitation])
+GET     /invite                     @com.keepit.controllers.website.InviteController.invite
+POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
+GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
+GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id: ExternalId[Invitation])
 GET     /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tos
 POST    /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tosAccept
 
-GET     /giveMeA200                 @com.keepit.controllers.website.HomeController.giveMeA200
-
-GET     /login                      securesocial.controllers.LoginPage.login
+GET     /login                      securesocial.controllers.ProviderController.authenticate(provider = "facebook")
 GET     /logout                     securesocial.controllers.LoginPage.logout
 
 GET     /sign-up                     @com.keepit.controllers.website.OnboardingController.signup(inviteId: String ?= "")
@@ -34,7 +34,6 @@ GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkContr
 
 GET     /user/all-connections       @com.keepit.controllers.website.UserController.getAllConnections()
 POST    /user/update-email          @com.keepit.controllers.website.UserController.updateEmail
-POST    /invite                     @com.keepit.controllers.website.HomeController.inviteConnection
 
 # OAuth provider entry points (e.g. "facebook")
 GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)

@@ -46,8 +46,8 @@ if [ "$1" == "package" ]; then
 
   cd out
   cfx xpi --pkgdir=firefox \
-    --update-link=https://www.keepitfindit.com/install/kifi-beta.xpi \
-    --update-url=https://www.keepitfindit.com/install/kifi-beta.update.rdf > /dev/null
+    --update-link=https://www.keepitfindit.com/assets/plugins/kifi-beta.xpi \
+    --update-url=https://www.keepitfindit.com/assets/plugins/kifi-beta.update.rdf > /dev/null
   cd - > /dev/null
 
   find out -d 1
