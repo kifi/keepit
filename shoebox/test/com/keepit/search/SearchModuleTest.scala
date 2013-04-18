@@ -13,7 +13,7 @@ import com.keepit.common.analytics.EventListenerPlugin
 import com.keepit.common.analytics.EventRepo
 import com.keepit.FortyTwoGlobal
 import scala.collection.JavaConversions._
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor,AlertingActor}
 import com.keepit.common.analytics.EventHelper
 import net.spy.memcached.MemcachedClient
 
@@ -33,11 +33,13 @@ class SearchModuleTest extends Specification with Logging {
         for (c <- classes) inject(classType[Controller](c), current)
         val injector = current.global.asInstanceOf[FortyTwoGlobal].injector
         val bindings = injector.getAllBindings()
-        val exclude: Set[Class[_]] = Set(
-          classOf[FortyTwoActor], classOf[MemcachedClient])
+        val exclude: Set[Class[_]] = Set(classOf[FortyTwoActor], classOf[AlertingActor], classOf[MemcachedClient])
         bindings.keySet() filter { key =>
           val klazz = key.getTypeLiteral.getRawType
-          !exclude.contains(klazz) && !exclude.contains(klazz.getSuperclass)
+          val fail = exclude exists { badKalazz =>
+            badKalazz.isAssignableFrom(klazz)
+          }
+          !fail
         } foreach { key =>
           injector.getInstance(key)
         }

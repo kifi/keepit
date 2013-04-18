@@ -1,7 +1,7 @@
 package com.keepit.shoebox
 
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor,AlertingActor}
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.MailToKeepServerSettings
@@ -33,11 +33,14 @@ class ShoeboxModuleTest extends Specification with Logging {
         val injector = current.global.asInstanceOf[FortyTwoGlobal].injector
         val bindings = injector.getAllBindings
         val exclude: Set[Class[_]] = Set(
-          classOf[FortyTwoActor], classOf[MailToKeepServerSettings], classOf[ResultClickTracker],
+          classOf[FortyTwoActor], classOf[AlertingActor], classOf[MailToKeepServerSettings], classOf[ResultClickTracker],
           classOf[MemcachedClient])
         bindings.keySet() filter { key =>
           val klazz = key.getTypeLiteral.getRawType
-          !exclude.contains(klazz) && !exclude.contains(klazz.getSuperclass)
+          val fail = exclude exists { badKalazz =>
+            badKalazz.isAssignableFrom(klazz)
+          }
+          !fail
         } foreach { key =>
           injector.getInstance(key)
         }

@@ -386,7 +386,8 @@ class SocialNetworkTypeMapperDelegate(profile: BasicProfile) extends StringMappe
 //       SocialNetworkType -> String
 //************************************
 class SocialUserMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[SocialUser](profile) {
-  def zero = SocialUser(id = UserId("", ""), displayName = "", email = None, avatarUrl = None, authMethod = AuthenticationMethod.OAuth2)
+  def zero = new SocialUser(id = UserId("", ""), firstName = "", lastName = "",
+    fullName = "", authMethod = AuthenticationMethod.OAuth2, email = None, avatarUrl = None)
   def sourceToDest(socialUser: SocialUser) = SocialUserSerializer.userSerializer.writes(socialUser).toString
   def safeDestToSource(str: String) = SocialUserSerializer.userSerializer.reads(Json.parse(str)).get
 }

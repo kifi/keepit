@@ -172,11 +172,13 @@ class PhraseProximityWeight(query: PhraseProximityQuery) extends Weight {
   override def scoresDocsOutOfOrder() = false
 
   override def getValueForNormalization() = {
-    value = query.getBoost()
-    value * value
+    val boost = query.getBoost()
+    boost * boost
   }
 
-  override def normalize(norm: Float, topLevelBoost: Float) { value *= (norm * topLevelBoost) }
+  override def normalize(norm: Float, topLevelBoost: Float) {
+    value = query.getBoost * norm * topLevelBoost
+  }
 
   override def explain(context: AtomicReaderContext, doc: Int) = {
     val sc = scorer(context, true, false, context.reader.getLiveDocs);

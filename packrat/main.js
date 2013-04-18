@@ -228,6 +228,12 @@ const socketHandlers = {
         d.threads.push(th);  // should we maintain chronological order?
         d.messages[th.id] = [message];
       }
+      if (message.user.id == session.userId) {
+        var t = new Date(message.createdAt);
+        if (t > (d.lastMessageRead[th.id] || 0)) {
+          d.lastMessageRead[th.id] = t;
+        }
+      }
       d.tabs.forEach(function(tab) {
         api.tabs.emit(tab, "message", {thread: th, message: message, read: d.lastMessageRead[th.id]});
         tellTabsIfCountChanged(d, "m", messageCount(d));
@@ -300,16 +306,12 @@ api.port.on({
   set_prefs: function(data) {
     api.prefs.set(data);
   },
+  set_env: function(env) {
+    api.prefs.set("env", env);
+    chrome.runtime.reload();
+  },
   set_page_icon: function(data, _, tab) {
     setIcon(tab, data);
-  },
-  init_slider_please: function(_, _, tab) {
-    var emission = tab.emitOnReady;
-    if (session && emission) {
-      api.log("[init_slider_please] %i emitting %s", tab.id, emission[0]);
-      api.tabs.emit(tab, emission[0], emission[1]);
-      delete tab.emitOnReady;
-    }
   },
   get_slider_info: function(data, respond, tab) {
     if (session) {
@@ -840,7 +842,7 @@ api.tabs.on.ready.add(function(tab) {
 
   var emission = tab.emitOnReady;
   if (emission) {
-    api.log("[tabs.on.ready] emitting: %i %o", tab.id, emission);
+    api.log("[tabs.on.ready] emitting: %i %o", tab.id, emission[0]);
     api.tabs.emit(tab, emission[0], emission[1]);
     delete tab.emitOnReady;
   }

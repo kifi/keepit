@@ -8,6 +8,8 @@ import play.api.Mode.Test
 
 case class TestGlobal(modules: Module*) extends FortyTwoGlobal(Test) {
 
+  override val initialized = true
+
   override lazy val injector: Injector = Guice.createInjector(modules: _*)
 
 }

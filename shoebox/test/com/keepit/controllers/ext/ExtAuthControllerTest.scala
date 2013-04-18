@@ -20,10 +20,20 @@ import com.keepit.test.FakeClock
 import com.keepit.social.SecureSocialUserService
 import com.keepit.common.controller.AuthenticatedRequest
 
-import securesocial.core.{SecureSocial, UserService, OAuth2Info, SocialUser, UserId, AuthenticationMethod}
+import securesocial.core._
 
 import org.joda.time.LocalDate
 import org.joda.time.DateTime
+import play.api.libs.json.JsArray
+import com.keepit.common.controller.AuthenticatedRequest
+import play.api.libs.json.JsString
+import scala.Some
+import securesocial.core.UserId
+import com.keepit.model.User
+import securesocial.core.OAuth2Info
+import com.keepit.model.SocialUserInfo
+import play.api.libs.json.JsObject
+import com.keepit.common.social.SocialId
 
 class ExtAuthControllerTest extends Specification with DbRepos {
 
@@ -34,23 +44,23 @@ class ExtAuthControllerTest extends Specification with DbRepos {
         val today = now.toDateTime
         inject[FakeClock].push(today)
 
+        val oAuth2Info = OAuth2Info(accessToken = "A",
+          tokenType = None, expiresIn = None, refreshToken = None)
+        val su = SocialUser(UserId("111", "facebook"), "A", "1", "A 1", Some("a1@gmail.com"),
+          Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None, Some(oAuth2Info), None)
         val user = db.readWrite {implicit s =>
           val user = userRepo.save(User(createdAt = now.minusDays(3), firstName = "A", lastName = "1"))
-
-          val oAuth2Info = OAuth2Info(accessToken = "A",
-            tokenType = None, expiresIn = None, refreshToken = None)
-          val su = SocialUser(UserId("111", "facebook"), "A 1", Some("a1@gmail.com"),
-            Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, true, None, Some(oAuth2Info), None)
           val sui = socialUserInfoRepo.save(SocialUserInfo(
               userId = user.id, fullName = "A 1", socialId = SocialId("111"), networkType = FACEBOOK,
               credentials = Some(su)))
           user
         }
 
+        val cookie = Authenticator.create(su).right.get.toCookie
         //first round
-        val fakeRequest1 = FakeRequest().
-            withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook").
-            withBody[JsValue](JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"))))
+        val fakeRequest1 = FakeRequest()
+            .withCookies(cookie)
+            .withBody[JsValue](JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"))))
         val authRequest1 = AuthenticatedRequest(null, user.id.get, user, fakeRequest1)
         val result1 = inject[ExtAuthController].start(authRequest1)
         status(result1) must equalTo(OK)
@@ -71,9 +81,10 @@ class ExtAuthControllerTest extends Specification with DbRepos {
         json1 \ "patterns" must beAnInstanceOf[JsArray]
 
         //second round
-        val fakeRequest2 = FakeRequest().
-            withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook").
-            withBody[JsValue](JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"), "installation" -> JsString(kifiInstallation1.externalId.id))))
+        val fakeRequest2 = FakeRequest()
+            .withCookies(cookie)
+            .withBody[JsValue](JsObject(Seq("agent" -> JsString("crome agent"), "version" -> JsString("1.1.1"),
+              "installation" -> JsString(kifiInstallation1.externalId.id))))
         val authRequest2 = AuthenticatedRequest(null, user.id.get, user, fakeRequest2)
         val result2 = inject[ExtAuthController].start(authRequest2)
         status(result2) must equalTo(OK)

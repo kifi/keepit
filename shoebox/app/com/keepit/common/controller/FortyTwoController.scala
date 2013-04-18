@@ -29,7 +29,7 @@ import com.google.inject.{Inject, Singleton}
 case class ReportedException(val id: ExternalId[HealthcheckError], val cause: Throwable) extends Exception(id.toString, cause)
 
 case class AuthenticatedRequest[T](
-    socialUser: SocialUser,
+    identity: Identity,
     userId: Id[User],
     user: User,
     request: Request[T],

@@ -41,7 +41,10 @@ class SocialUserInfoSerializer extends Format[SocialUserInfo] {
         case n: JsObject => Some(SocialUserSerializer.userSerializer.reads(n).get)
         case n: JsValue => None
       },
-      lastGraphRefresh = (json \ "lastGraphRefresh").asOpt[DateTime]
+      lastGraphRefresh = (json \ "lastGraphRefresh") match {
+        case JsNull | JsUndefined(_) => None
+        case v => Some(v.as[DateTime])
+      }
     ))
 
   def writesSeq(infos: Seq[SocialUserInfo]): JsValue =

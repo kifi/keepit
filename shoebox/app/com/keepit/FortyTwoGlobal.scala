@@ -24,6 +24,9 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
 
   private val creatingInjector = new AtomicBoolean(false)
 
+  private val _initialized = new AtomicBoolean(false)
+  def initialized = _initialized.get
+
   /**
    * While executing the code block that return the injector,
    * we found few times that one of the injected components was using inject[Foo] during their construction
@@ -37,12 +40,14 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
   */
   lazy val injector: Injector = {
     if (creatingInjector.getAndSet(true)) throw new Exception("Injector is being created!")
-    mode match {
+    val injector = mode match {
       case Mode.Dev => Guice.createInjector(Stage.DEVELOPMENT, modules: _*)
       case Mode.Prod => Guice.createInjector(Stage.PRODUCTION, modules: _*)
       case Mode.Test => Guice.createInjector(Stage.DEVELOPMENT, modules: _*)
       case m => throw new IllegalStateException(s"Unknown mode $m")
     }
+    _initialized.set(true)
+    injector
   }
 
   override def getControllerInstance[A](clazz: Class[A]) = try {
