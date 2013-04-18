@@ -86,7 +86,8 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
       case Some(t) =>
         val source = cause(t)
         val message = source.getMessage().replaceAll("\\d", "*")
-        s"${source.getClass().toString} : ${message.substring(0, 60)}..."
+        val shortMessage = if (message.length > 59) message.substring(0, 60) else message
+        s"${source.getClass().toString} : $shortMessage..."
     }
   }
 
