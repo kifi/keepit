@@ -121,6 +121,7 @@ const socketHandlers = {
     var d = pageData[uri];
     if (d) {
       d.kept = o.kept;
+      d.neverOnSite = o.neverOnSite;
       d.sensitive = o.sensitive;
       d.tabs.forEach(function(tab) {
         setIcon(tab, d.kept);
@@ -132,7 +133,6 @@ const socketHandlers = {
     var d = pageData[uri];
     if (d) {
       d.shown = o.shown;
-      d.neverOnSite = o.neverOnSite;
       d.keepers = o.keepers || [];
       d.keeps = o.keeps || 0;
       d.following = o.following;
