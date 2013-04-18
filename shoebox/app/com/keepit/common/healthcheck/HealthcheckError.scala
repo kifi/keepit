@@ -13,7 +13,6 @@ import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.controller.FortyTwoServices
 import com.keepit.common.time._
-import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.time._
 import com.keepit.common.plugin.SchedulingPlugin
