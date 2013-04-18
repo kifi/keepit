@@ -68,8 +68,8 @@ class InviteController @Inject() (db: Database,
     }
   }
     
-  private val url = current.configuration.getString("application.baseUrl")
-  private val appId = current.configuration.getString("securesocial.facebook.clientId")
+  private val url = current.configuration.getString("application.baseUrl").get
+  private val appId = current.configuration.getString("securesocial.facebook.clientId").get
   private def fbInviteUrl(invite: Invitation)(implicit session: RSession) = {
     val identity = socialUserInfoRepo.get(invite.recipientSocialUserId)
     s"https://www.facebook.com/dialog/send?app_id=$appId&name=You're%20invited%20to%20try%20KiFi!&picture=https://www.kifi.com/assets/images/kifi-fb-square.png&link=$url/invite/${invite.externalId.id}&description=Hey%20${identity.fullName}!%20You're%20invited%20to%20join%20KiFi.%20Click%20here%20to%20sign%20up&redirect_uri=$url/invite/confirm/${invite.externalId}&to=${identity.socialId.id}"
@@ -87,7 +87,13 @@ class InviteController @Inject() (db: Database,
       } else {
         val socialUserInfo = socialUserInfoRepo.get(SocialId(fullSocialId(1)), SocialNetworks.FACEBOOK)
         invitationRepo.getByRecipient(socialUserInfo.id.get) match {
-          case Some(alreadyInvited) => BadRequest(Json.obj("invitation" -> "Already Invited"))
+          case Some(alreadyInvited) =>
+            if(alreadyInvited.senderUserId == request.user.id.get) {
+              Redirect(fbInviteUrl(alreadyInvited))
+            }
+            else {
+              Redirect(routes.InviteController.invite)
+            }
           case None =>
             val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(6)
             val currentInvitations = invitationRepo.getByUser(request.user.id.get).map{ s => 
