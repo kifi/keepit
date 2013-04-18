@@ -14,7 +14,7 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.time._
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
 import com.keepit.search.{ SearchServiceClient, ArticleSearchResultRef, BrowsingHistoryTracker, ClickHistoryTracker }
 import com.keepit.common.akka.FortyTwoActor

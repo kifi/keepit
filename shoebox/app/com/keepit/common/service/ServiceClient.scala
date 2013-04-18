@@ -1,4 +1,4 @@
-package com.keepit.common.controller
+package com.keepit.common.service
 
 import scala.concurrent.Future
 

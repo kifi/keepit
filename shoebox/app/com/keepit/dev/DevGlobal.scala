@@ -2,8 +2,8 @@ package com.keepit.dev
 
 import com.google.inject.util.Modules
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.controller.FortyTwoServices
-import com.keepit.common.controller.ServiceType
+import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.service.ServiceType
 import com.keepit.module.CommonModule
 import com.keepit.search.{SearchServices, SearchModule}
 import com.keepit.shoebox.{ShoeboxServices, ShoeboxModule}

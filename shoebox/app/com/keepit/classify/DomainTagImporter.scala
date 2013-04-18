@@ -17,7 +17,7 @@ import org.joda.time.format.DateTimeFormat
 
 import com.google.inject.{Provider, ImplementedBy, Inject}
 
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
