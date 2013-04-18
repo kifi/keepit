@@ -25,10 +25,11 @@ import scala.collection.JavaConversions._
 import scala.math._
 
 object SemanticVectorQuery {
-  def apply(fieldName: String, terms: Set[Term]) = new SemanticVectorQuery(terms.map{ term => new Term(fieldName, term.text) })
+  def apply(fieldName: String, terms: Iterable[Term]) = new SemanticVectorQuery(terms.map{ term => new Term(fieldName, term.text) })
+  def apply(terms: Iterable[Term]) = new SemanticVectorQuery(terms)
 }
 
-class SemanticVectorQuery(val terms: Set[Term]) extends Query {
+class SemanticVectorQuery(val terms: Iterable[Term]) extends Query {
 
   override def createWeight(searcher: IndexSearcher): Weight = {
     new SemanticVectorWeight(this, searcher.asInstanceOf[Searcher])
