@@ -135,7 +135,7 @@ class ZooKeeperClient(servers: String, sessionTimeout: Int, basePath : String,
    * None and will track the node's re-creation with an existence watch.
    */
   def watchNode(node : String, onDataChanged : Option[Array[Byte]] => Unit) {
-    log.debug("sWatching node $node")
+    log.debug(s"Watching node $node")
     val path = makeNodePath(node)
     def updateData {
       try {
