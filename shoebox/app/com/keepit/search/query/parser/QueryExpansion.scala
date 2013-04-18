@@ -62,10 +62,6 @@ trait QueryExpansion extends QueryParser {
       }
     }
 
-    def saveStemmedTerms(query: Query, parent: Query) {
-      stemmedTerms ++= getTermSeq("ts", query)
-    }
-
     val disjunct = new DisjunctionMaxQuery(0.5f)
 
     super.getFieldQuery("t", queryText, quoted).foreach{ query =>
@@ -75,9 +71,9 @@ trait QueryExpansion extends QueryParser {
       addSiteQuery(disjunct, query)
     }
 
-    if(!quoted) {
-      getStemmedFieldQuery("ts", queryText).foreach{ query =>
-        saveStemmedTerms(query, disjunct)
+    getStemmedFieldQuery("ts", queryText).foreach{ query =>
+      stemmedTerms ++= getTermSeq("ts", query)
+      if(!quoted) {
         disjunct.add(query)
         disjunct.add(copyFieldQuery(query, "cs"))
         disjunct.add(copyFieldQuery(query, "title_stemmed"))
