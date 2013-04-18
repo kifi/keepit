@@ -1,4 +1,4 @@
-@(title: String, stylesheets: List[String] = Nil)(content: Html)
+@(title: String, stylesheets: List[String] = Nil, head: Html = Html(""))(content: Html)
 
 
 <!DOCTYPE html>
@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="@routes.Assets.at("stylesheets/" + stylesheet + ".css")">
 }
 <link href='http://fonts.googleapis.com/css?family=Lato:400,700' rel='stylesheet' type='text/css'>
+@head
 
 </head>
 
