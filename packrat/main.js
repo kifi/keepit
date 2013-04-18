@@ -319,16 +319,6 @@ api.port.on({
   log_event: function(data) {
     logEvent.apply(null, data);
   },
-  get_comments: function(data, respond, tab) {
-    ajax("GET",
-      (data.kind == "public" ? "/comments" : "/messages/threads") +
-      (data.commentId ? "/" + data.commentId : "?url=" + encodeURIComponent(tab.url)),
-      function(o) {
-        o.session = session;
-        respond(o);
-      });
-    return true;
-  },
   post_comment: function(data, respond, tab) {
     api.log("[postComment]", data);
     ajax("POST", "/comments/add", {
