@@ -78,6 +78,7 @@ trait DbRepos {
   def bookmarkRepo = inject[BookmarkRepo]
   def commentRepo = inject[CommentRepo]
   def commentReadRepo = inject[CommentReadRepo]
+  def commentRecipientRepo = inject[CommentRecipientRepo]
   def socialUserInfoRepo = inject[SocialUserInfoRepo]
   def installationRepo = inject[KifiInstallationRepo]
   def userExperimentRepo = inject[UserExperimentRepo]
