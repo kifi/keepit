@@ -523,6 +523,17 @@ function initTab(tab, o) {  // o is pageData[tab.nUri]
   }
 }
 
+function noticeCount() {  // notifications only count if neither seen nor visited (e.g. triggering message read)
+  for (var n = 0, i = 0; i < notifications.length; i++) {
+    if (new Date(notifications[n].time) <= notificationsRead.time) {
+      break;
+    } else if (notifications[n].state == "delivered") {
+      n++;
+    }
+  }
+  return n;
+}
+
 function commentCount(d) {  // comments only count as unread if by a friend. negative means unread.
   return -d.comments.filter(function(c) {
       return friendsById[c.user.id] && new Date(c.createdAt) > d.lastCommoentRead;
@@ -554,11 +565,8 @@ function unreadThreadIds(threads, readTimes) {
   }).map(function(t) {return t.id});
 }
 
-function countUnreadNotifications() {
-  for (var n = 0; n < notifications.length; n++) {
-    if (new Date(notifications[n].time) <= notificationsRead.time) break;
-  }
-  notificationsRead.unread = n;
+function tellTabsNoticeCountIfChanged() {
+  var n = notificationsRead.unread = noticeCount();
   api.tabs.eachSelected(function(tab) {
     var d = pageData[tab.nUri];
     if (d && d.counts && d.counts.n != -n) {
@@ -712,7 +720,7 @@ function searchOnServer(request, respond) {
     function(resp) {
       api.log("[searchOnServer] response:", resp);
       resp.session = session;
-      resp.webBaseUri = webBaseUri();
+      resp.admBaseUri = admBaseUri();
       resp.showScores = api.prefs.get("showScores");
       respond(resp);
     });
@@ -861,16 +869,15 @@ function hasId(id) {
   return function(o) {return o.id == id};
 }
 
+function devUriOr(uri) {
+  return api.prefs.get("env") === "development" ? "http://dev.ezkeep.com:9000" : uri;
+}
+var apiBaseUri = devUriOr.bind(0, "https://api.kifi.com");
+var webBaseUri = devUriOr.bind(0, "https://www.kifi.com");
+var admBaseUri = devUriOr.bind(0, "https://admin.kifi.com");
+
 function getFullyQualifiedKey(key) {
   return (api.prefs.get("env") || "production") + "_" + key;
-}
-
-function apiBaseUri() {
-  return api.prefs.get("env") === "development" ? "http://dev.ezkeep.com:9000" : "https://api.kifi.com";
-}
-
-function webBaseUri() {
-  return api.prefs.get("env") === "development" ? "http://dev.ezkeep.com:9000" : "https://www.kifi.com";
 }
 
 function getStored(key) {

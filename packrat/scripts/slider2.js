@@ -66,7 +66,9 @@ slider2 = function() {
 
           // attach event bindings
           $slider.mouseout(function(e) {
+            api.log("[$slider.mouseout]", e);
             if (!$pane) {
+              api.log("[$slider.mouseout]", e);
               if (e.relatedTarget) {
                 if ($slider && !$slider[0].contains(e.relatedTarget)) {
                   api.log("[slider.mouseout]");
