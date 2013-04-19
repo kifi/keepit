@@ -210,6 +210,10 @@ POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseControll
 POST    /admin/phrases/refresh      @com.keepit.controllers.admin.PhraseController.refreshPhrases
 POST    /admin/phrases/save         @com.keepit.controllers.admin.PhraseController.savePhrases
 
+GET     /admin/invites              @com.keepit.controllers.admin.AdminInvitationController.displayInvitations(page: Int ?= 0, show: String ?= "all")
+POST    /admin/invites              @com.keepit.controllers.admin.AdminInvitationController.acceptUser(id: Id[SocialUserInfo])
+
+
 # Using a get so we can invoke from browser and have it take care of the auth part
 GET     /admin/healthcheck/error    @com.keepit.common.healthcheck.AdminHealthController.causeError()
 GET     /admin/healthcheck/emailErrors    @com.keepit.common.healthcheck.AdminHealthController.reportErrors()
