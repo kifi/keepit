@@ -210,9 +210,17 @@ hr { border: none; background: #e5e5e5; height: 5px; margin: 30px 0; }
 
 .install_extensions p { margin-bottom: 4px; }
 
-.install_extensions .container { width: 234px; text-align: center; }
+.install_extensions .container { text-align: center; }
 
-.install_extensions .btn blue { width: 184px; }
+.install_extensions .btn blue { width: 284px; }
+
+#chrome-install, #firefox-install { display: none; cursor: pointer; }
+#other-install { display: none; }
+
+.install_extensions .small {
+  font-size: 12px;
+  text-align: center;
+}
 
 .how_to{ padding-top:30px;}
 
@@ -263,9 +271,35 @@ hr { border: none; background: #e5e5e5; height: 5px; margin: 30px 0; }
 
 .invites_list .invite_field { -webkit-box-sizing: border-box; -moz-box-sizing: border-box; box-sizing: border-box; width: 100%; background: #fff; padding: 7px; border: none; font-size: 18px; color: #3ea9f5; list-style-type: none; text-indent: 0px; padding-right: 0px; }
 
+.invites_list .invite_field:disabled { background: #eee; color: #aaa; }
+
 .invites_list .reset, .invites_list .invite_btn { cursor: pointer; position: absolute; right: 0; bottom: 0; margin: 0; }
 
-.invites_list .invite_btn{ display:none;}
+.invites_list .invite_btn{ display:none; }
+
+.alreadyinvited {
+  background-color:#FFFFFF;
+  border:1px solid #999999;
+  cursor:default;
+  display:none;
+  margin-top: 15px;
+  position:absolute;
+  text-align: center;
+  width:300px;
+  z-index:50;
+  padding: 25px 25px 20px;
+  top:55%;
+  left:40%;
+}
+
+.alreadyinvited.div {
+  border-bottom: 1px solid #EFEFEF;
+  margin: 8px 0;
+  padding-bottom: 8px;
+}
+.alreadyinvited .btn {
+  cursor: pointer;
+}
 
 .change_email_link { font-size: 14px; margin-left: 5px; color: #515051; }
 

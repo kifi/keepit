@@ -106,7 +106,7 @@ class AdminUserController @Inject() (
     }
 
     val users = db.readOnly { implicit s =>
-      userRepo.all map userStatistics
+      userRepo.allExcluding(UserStates.PENDING).map(userStatistics)
     }
     Ok(html.admin.users(users))
   }
