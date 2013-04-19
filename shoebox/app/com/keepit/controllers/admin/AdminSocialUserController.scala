@@ -21,8 +21,6 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.logging.Logging
 import com.keepit.model.User
 import com.keepit.model._
-import com.keepit.serializer.UserWithSocialSerializer._
-import com.keepit.serializer.UserWithSocialSerializer
 
 import play.api.http.ContentTypes
 import securesocial.core._
