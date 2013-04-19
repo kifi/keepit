@@ -70,6 +70,7 @@ class HomeController @Inject() (db: Database,
         invitationRepo.getByRecipient(su.id.get) match {
           case Some(invite) =>
             invitationRepo.save(invite.withState(InvitationStates.JOINED))
+          case None =>  
         }
       }
     }
