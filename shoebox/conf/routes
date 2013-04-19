@@ -112,7 +112,6 @@ GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarks
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Bookmark])
 POST    /admin/bookmarks/rescrape   @com.keepit.controllers.admin.AdminBookmarksController.rescrape
 POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
-GET     /admin/bookmarks/all        @com.keepit.controllers.admin.AdminBookmarksController.all
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Bookmark])
 
 GET     /admin/scrape               @com.keepit.controllers.admin.ScraperController.scrape
