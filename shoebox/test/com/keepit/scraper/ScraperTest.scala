@@ -299,7 +299,7 @@ class ScraperTest extends Specification {
       inject[ScrapeInfoRepo], inject[NormalizedURIRepo], inject[HealthcheckPlugin],
       inject[BookmarkRepo], inject[UnscrapableRepo]) {
       override protected def getExtractor(url: String): Extractor = {
-        new TikaBasedExtractor(url, 10000) {
+        new TikaBasedExtractor(url, 10000, None) {
           protected def getContentHandler = new BodyContentHandler(output)
         }
       }

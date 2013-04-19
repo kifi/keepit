@@ -6,6 +6,7 @@ import com.keepit.common.net.URI
 import com.keepit.scraper.Scraper
 import org.apache.tika.sax.ContentHandlerDecorator
 import org.apache.tika.parser.html.DefaultHtmlMapper
+import org.apache.tika.parser.html.HtmlMapper
 import org.xml.sax.Attributes
 import org.xml.sax.ContentHandler
 
@@ -17,12 +18,28 @@ object YoutubeExtractorFactory extends ExtractorFactory {
       case _ => false
     }
   }
-  def apply(uri: URI) = new YoutubeExtractor(uri.toString, Scraper.maxContentChars)
+  def apply(uri: URI) = new YoutubeExtractor(uri.toString, Scraper.maxContentChars, htmlMapper)
+
+  private val htmlMapper = Some(
+    new DefaultHtmlMapper {
+      override def mapSafeElement(name: String) = {
+        name.toLowerCase match {
+          case "div" => "div"
+          case _ =>super.mapSafeElement(name)
+        }
+      }
+      override def mapSafeAttribute(elementName: String, attributeName: String) = {
+        (elementName.toLowerCase, attributeName.toLowerCase) match {
+          case ("div", "class") => "class"
+          case _ => super.mapSafeAttribute(elementName, attributeName)
+        }
+      }
+    }
+  )
 }
 
-class YoutubeExtractor(url: String, maxContentChars: Int) extends TikaBasedExtractor(url, maxContentChars) with Logging {
+class YoutubeExtractor(url: String, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends TikaBasedExtractor(url, maxContentChars, htmlMapper) {
   protected def getContentHandler = new YoutubeHandler(output)
-  override protected def getHtmlMapper = Some(YoutubeHtmlMapper)
 
   override def getContent() = {
     val buf = new StringBuilder
@@ -71,20 +88,3 @@ class YoutubeHandler(handler: ContentHandler) extends ContentHandlerDecorator(ha
     }
   }
 }
-
-object YoutubeHtmlMapper extends DefaultHtmlMapper {
-  override def mapSafeElement(name: String) = {
-    name.toLowerCase match {
-      case "div" => "div"
-      case _ =>super.mapSafeElement(name)
-    }
-  }
-
-  override def mapSafeAttribute(elementName: String, attributeName: String) = {
-    (elementName.toLowerCase, attributeName.toLowerCase) match {
-      case ("div", "class") => "class"
-      case _ => super.mapSafeAttribute(elementName, attributeName)
-    }
-  }
-}
-
