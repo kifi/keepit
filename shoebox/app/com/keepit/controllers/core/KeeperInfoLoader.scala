@@ -5,12 +5,12 @@ import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.net.URI
-import com.keepit.common.social.{CommentWithBasicUser, ThreadInfo, UserWithSocial, UserWithSocialRepo}
+import com.keepit.common.social.{BasicUser, BasicUserRepo, CommentWithBasicUser, ThreadInfo, UserWithSocial}
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
+import com.keepit.serializer.BasicUserSerializer.basicUserSerializer
 import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
-import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import play.api.libs.json._
@@ -33,7 +33,7 @@ object KeeperInfo1 {
 
 case class KeeperInfo2(  // supplemental information
     shown: Boolean,
-    keepers: Seq[UserWithSocial],
+    keepers: Seq[BasicUser],
     keeps: Int,
     following: Boolean,
     comments: Seq[CommentWithBasicUser],
@@ -47,7 +47,7 @@ object KeeperInfo2 {
     def writes(o: KeeperInfo2): JsValue =
       JsObject(Seq[Option[(String, JsValue)]](
         if (o.shown) Some("shown" -> JsBoolean(true)) else None,
-        if (o.keepers.nonEmpty) Some("keepers" -> userWithSocialSerializer.writes(o.keepers)) else None,
+        if (o.keepers.nonEmpty) Some("keepers" -> basicUserSerializer.writes(o.keepers)) else None,
         if (o.keeps > 0) Some("keeps" -> JsNumber(o.keeps)) else None,
         if (o.following) Some("following" -> JsBoolean(true)) else None,
         if (o.comments.nonEmpty) Some("comments" -> commentWithBasicUserSerializer.writes(o.comments)) else None,
@@ -72,7 +72,7 @@ class KeeperInfoLoader @Inject() (
     commentReadRepo: CommentReadRepo,
     paneDetails: PaneDetails,
     domainClassifier: DomainClassifier,
-    userWithSocialRepo: UserWithSocialRepo,
+    basicUserRepo: BasicUserRepo,
     historyTracker: SliderHistoryTracker,
     searchClient: SearchServiceClient) {
 
@@ -116,10 +116,10 @@ class KeeperInfoLoader @Inject() (
     }
     val (keepers, keeps) = nUri map { uri =>
       val sharingUserInfo = Await.result(searchClient.sharingUserInfo(userId, uri.id.get), Duration.Inf)
-      val socialUsers = db.readOnly { implicit session =>
-        sharingUserInfo.sharingUserIds.map(u => userWithSocialRepo.toUserWithSocial(userRepo.get(u))).toSeq
+      val keepers = db.readOnly { implicit session =>
+        sharingUserInfo.sharingUserIds.map(basicUserRepo.load).toSeq
       }
-      (socialUsers, sharingUserInfo.keepersEdgeSetSize)
+      (keepers, sharingUserInfo.keepersEdgeSetSize)
     } getOrElse (Nil, 0)
 
     KeeperInfo2(shown, keepers, keeps, following, comments, threads, lastCommentRead, lastMessageRead)

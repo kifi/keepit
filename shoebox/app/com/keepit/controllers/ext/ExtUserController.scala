@@ -6,7 +6,6 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.net.URI
 import com.keepit.model._
-import com.keepit.serializer.UserWithSocialSerializer._
 import com.keepit.serializer.BasicUserSerializer
 import com.keepit.common.social._
 import com.keepit.search.graph.URIGraph
