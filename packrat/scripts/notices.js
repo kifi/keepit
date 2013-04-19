@@ -17,12 +17,13 @@ var renderNotices;
   var numShown = 10;
   var numRequested = numShown;
   api.port.on({
-    notifications: function (data) {
-      var notices = data.notifications.slice(0, Math.max(numRequested, data.numUnread));
+    notifications: function(data) {
+      var timeLastSeen = new Date(data.timeLastSeen);
+      var notices = data.notifications.slice(0, Math.max(numRequested, data.newIdxs[data.newIdxs.length - 1] || 0));
       var $notifyPane = $(".kifi-notices");
       if ($notifyPane.length) {
-        getRenderedNotices(notices, data.numUnread, $notifyPane, function () {
-          if (notices.length && new Date(notices[0].time) > new Date(data.lastRead)) {
+        getRenderedNotices(notices, data.newIdxs, $notifyPane, function () {
+          if (notices.length && new Date(notices[0].time) > timeLastSeen) {
             api.port.emit("notifications_read", notices[0].time);
           }
           numShown = numRequested = notices.length;
@@ -78,7 +79,7 @@ var renderNotices;
     }
   }
 
-  function getRenderedNotices(notices, numUnread, $notifyPane, callback) {
+  function getRenderedNotices(notices, newIdxs, $notifyPane, callback) {
     var renderedNotices = [];
     var done = 0;
     $.each(notices, function (i, notice) {
@@ -90,8 +91,7 @@ var renderNotices;
           avatar: authors[0].avatar,
           formattedAuthor: formatAuthorNames(authors)
         }, notice), function (html) {
-          renderedNotices[i] =
-            $(html).toggleClass('kifi-notice-new', i < numUnread).data(notice);
+          renderedNotices[i] = $(html).toggleClass("kifi-notice-new", newIdxs.indexOf(i) >= 0).data(notice);
           if (++done == notices.length) {
             $notifyPane.html(renderedNotices);
             $notifyPane.find("time").timeago();

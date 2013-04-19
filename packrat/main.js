@@ -4,7 +4,8 @@ var api = api || require("./api");
 
 var pageData = {};
 var notifications = [];
-var notificationsRead = {};
+var newNotificationIdxs = [];  // derived
+var timeNotificationsLastSeen = 0;
 var friends = [];
 var friendsById = {};
 var rules = {};
@@ -13,7 +14,8 @@ var urlPatterns = [];
 function clearDataCache() {
   pageData = {};
   notifications = [];
-  notificationsRead = {};
+  newNotificationIdxs = [];
+  timeNotificationsLastSeen = 0;
   friends = [];
   friendsById = {};
   rules = {};
@@ -175,12 +177,14 @@ const socketHandlers = {
     notifications.sort(function(a, b) {
       return new Date(b.time) - new Date(a.time);
     });
+    identifyNewNotices();
     emitNotifications();
   },
   last_notify_read_time: function(t) {
     api.log("[socket:last_notify_read_time]", t);
-    notificationsRead.time = new Date(t);
-    countUnreadNotifications();
+    timeNotificationsLastSeen = new Date(t);
+    identifyNewNotices();
+    tellTabsNoticeCountIfChanged();
   },
   comment: function(nUri, c) {
     api.log("[socket:comment]", c);
@@ -350,20 +354,24 @@ api.port.on({
   set_comment_read: function(o, _, tab) {
     var d = pageData[tab.nUri], time = new Date(o.time);
     if (!d || time > d.lastCommentRead) {
+      markNewNotificeVisited("comment", o.id);
       if (d) {
         d.lastCommentRead = time;
-        tellTabsIfCountChanged(d, "c", commentCount(d));
+        tellTabsIfCountChanged(d, "c", commentCount(d));  // tabs at this uri
       }
+      tellTabsNoticeCountIfChanged();  // visible tabs
       socket.send(["set_comment_read", o.id]);
     }
   },
   set_message_read: function(o, _, tab) {
     var d = pageData[tab.nUri], time = new Date(o.time);
     if (!d || time > (d.lastMessageRead[o.threadId] || 0)) {
+      markNewNoticeVisited("message", o.messageId);
       if (d) {
         d.lastMessageRead[o.threadId] = time;
-        tellTabsIfCountChanged(d, "m", messageCount(d));
+        tellTabsIfCountChanged(d, "m", messageCount(d));  // tabs at this uri
       }
+      tellTabsNoticeCountIfChanged();  // visible tabs
       socket.send(["set_message_read", o.messageId]);
     }
   },
@@ -443,14 +451,37 @@ api.port.on({
 });
 
 function emitNotifications() {
-  countUnreadNotifications();
+  tellTabsNoticeCountIfChanged();
   api.tabs.eachSelected(function(tab) {
     api.tabs.emit(tab, "notifications", {
       notifications: notifications,
-      numUnread: notificationsRead.unread,
-      lastRead: notificationsRead.time
-    });
+      newIdxs: newNotificationIdxs,
+      timeLastSeen: timeNotificationsLastSeen});
   });
+}
+
+function identifyNewNotices() {
+  newNotificationIdxs.length = 0;
+  for (var i = 0; i < notifications.length; i++) {
+    if (new Date(notifications[i].time) <= timeNotificationsLastSeen) {
+      break;
+    } else if (notifications[i].state == "delivered") {
+      newNotificationIdxs.push(i);
+    }
+  }
+}
+
+function markNewNoticeVisited(category, itemId) {
+  for (var i = 0, j; i < newNotificationIdxs.length; i++) {
+    j = newNotificationIdxs[i];
+    if (notifications[j].details.id == itemId &&
+        notifications[j].category == category &&
+        notifications[j].state != "visited") {
+      notifications[j].state = "visited";
+      newNotificationIdxs.splice(i, 1);
+      break;
+    }
+  }
 }
 
 function createDeepLinkListener(locator, tabId) {
@@ -475,7 +506,7 @@ function createDeepLinkListener(locator, tabId) {
 
 function initTab(tab, o) {  // o is pageData[tab.nUri]
   o.counts = {
-    n: -notifications.filter(function(n) {return new Date(n.time) > notificationsRead.time}).length,
+    n: -newNotificationIdxs.length,
     c: commentCount(o),
     m: messageCount(o)};
   var data = {
@@ -529,7 +560,7 @@ function commentCount(d) {  // comments only count as unread if by a friend. neg
     }).length || d.comments.length;
 }
 
-function messageCount(d) {
+function messageCount(d) {  // negative means unread
   var n = 0, nUnr = 0;
   for (var i = 0; i < d.threads.length; i++) {
     var th = d.threads[i], thReadTime = new Date(d.lastMessageRead[th.id] || 0);
@@ -554,15 +585,12 @@ function unreadThreadIds(threads, readTimes) {
   }).map(function(t) {return t.id});
 }
 
-function countUnreadNotifications() {
-  for (var n = 0; n < notifications.length; n++) {
-    if (new Date(notifications[n].time) <= notificationsRead.time) break;
-  }
-  notificationsRead.unread = n;
+function tellTabsNoticeCountIfChanged() {
+  var n = -newNotificationIdxs.length;
   api.tabs.eachSelected(function(tab) {
     var d = pageData[tab.nUri];
-    if (d && d.counts && d.counts.n != -n) {
-      d.counts.n = -n;
+    if (d && d.counts && d.counts.n != n) {
+      d.counts.n = n;
       api.tabs.emit(tab, "counts", d.counts);
     }
   });
@@ -571,6 +599,7 @@ function countUnreadNotifications() {
 function tellTabsIfCountChanged(d, key, count) {
   if (d.counts[key] != count) {
     d.counts[key] = count;
+    d.counts.n = -newNotificationIdxs.length;
     d.tabs.forEach(function(tab) {
       api.tabs.emit(tab, "counts", d.counts);
     });

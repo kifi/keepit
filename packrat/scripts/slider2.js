@@ -29,6 +29,7 @@ slider2 = function() {
     $pane && $pane.remove();
     $slider && $slider.remove();
     $tile.remove();
+    $("html").removeClass("kifi-with-pane kifi-pane-parent");
   });
 
   function showSlider(o, trigger, locator) {
