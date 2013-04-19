@@ -27,7 +27,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with DbRepos {
         }
         val authenticator = plugin.find(id.id).right.get.get
         authenticator.expired === false
-        authenticator.expirationDate === new DateTime("2020-10-20")
+        authenticator.expirationDate.getMillis === new DateTime("2020-10-20").getMillis
         authenticator.userId === UserId("gm", "facebook")
       }
     }
@@ -42,7 +42,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with DbRepos {
         }
         val authenticator = plugin.find(id.id).right.get.get
         authenticator.expired === false
-        authenticator.expirationDate === new DateTime("2020-10-20")
+        authenticator.expirationDate.getMillis === new DateTime("2020-10-20").getMillis
         authenticator.userId === UserId("gm", "facebook")
         plugin.delete(id.id)
         plugin.find(id.id) === Right(None)
