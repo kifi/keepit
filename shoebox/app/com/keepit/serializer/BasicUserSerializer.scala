@@ -24,8 +24,8 @@ class BasicUserSerializer extends Format[BasicUser] {
       "avatar" -> basicUser.avatar,
       "facebookId" -> basicUser.facebookId)
 
-  def writes(users: Seq[BasicUser]): JsValue =
-    JsArray(users map BasicUserSerializer.basicUserSerializer.writes)
+  def writes(basicUsers: Seq[BasicUser]): JsValue =
+    JsArray(basicUsers map writes)
 }
 
 object BasicUserSerializer {
