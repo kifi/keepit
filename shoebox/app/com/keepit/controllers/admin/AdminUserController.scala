@@ -43,6 +43,7 @@ class AdminUserController @Inject() (
     socialGraphPlugin: SocialGraphPlugin,
     searchClient: SearchServiceClient,
     userChannel: UserChannel,
+    userValueRepo: UserValueRepo,
     clock: Clock
   ) extends AdminController(actionAuthenticator) {
 
@@ -71,14 +72,15 @@ class AdminUserController @Inject() (
   }
 
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val (user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations) = db.readOnly {implicit s =>
+    val (user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites) = db.readOnly {implicit s =>
       val userWithSocial = userWithSocialRepo.toUserWithSocial(userRepo.get(userId))
       val bookmarks = bookmarkRepo.getByUser(userId)
       val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
       val socialConnections = socialConnectionRepo.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
       val fortyTwoConnections = (socialConnectionRepo.getFortyTwoUserConnections(userId) map (userRepo.get(_)) map userWithSocialRepo.toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
       val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
-      (userWithSocial, (bookmarks, uris).zipped.toList.seq, socialConnections, fortyTwoConnections, kifiInstallations)
+      val allowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").getOrElse("6").toInt
+      (userWithSocial, (bookmarks, uris).zipped.toList.seq, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites)
     }
     // above needs slicking.
     val historyUpdateCount = db.readOnly { implicit session =>
@@ -96,7 +98,7 @@ class AdminUserController @Inject() (
       }
     }
 
-    Ok(html.admin.user(user, bookmarks.size, filteredBookmarks.getOrElse(bookmarks), socialConnections, fortyTwoConnections, kifiInstallations, historyUpdateCount, bookmarkSearch))
+    Ok(html.admin.user(user, bookmarks.size, filteredBookmarks.getOrElse(bookmarks), socialConnections, fortyTwoConnections, kifiInstallations, historyUpdateCount, bookmarkSearch, allowedInvites))
   }
 
   def usersView = AdminHtmlAction { implicit request =>
@@ -143,6 +145,14 @@ class AdminUserController @Inject() (
     }
 
     Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
+  }
+  
+  def setInvitesCount(userId: Id[User]) = AdminHtmlAction { implicit request =>
+    val count = request.request.body.asFormUrlEncoded.get("allowedInvites").headOption.getOrElse("6")
+    db.readWrite{ implicit session =>
+      userValueRepo.setValue(userId, "availableInvites", count)
+    }
+    Redirect(routes.AdminUserController.userView(userId))
   }
 
   def addExperiment(userId: Id[User], experiment: String) = AdminJsonAction { request =>
