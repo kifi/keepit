@@ -30,7 +30,7 @@ case class Invitation(
 ) extends ModelWithExternalId[Invitation] {
   def withId(id: Id[Invitation]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-
+  def withState(state: State[Invitation]) = copy(state = state)
 }
 
 @ImplementedBy(classOf[InvitationRepoImpl])
