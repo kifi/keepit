@@ -45,18 +45,24 @@ $(function() {
   $("#agree_btn").on("click", function() {
     $("#agree_form").submit();
   });
+
+  $("#email_display").click(function() {
+    $(this).hide();
+    $("#email_input").show();
+  });
   
   
   $("#change_email").on("click", function(){
     var $button = $(this);
     $button.text("Saved!");
 
-    $.post('/user/update-email', JSON.stringify({"email": $("#email").val()}))
+    var email = $("#email").val();
+
+    $.post('/user/update-email', JSON.stringify({"email": email}))
     .always(function() {
-      setTimeout(function() {
-        console.log("what")
-        $button.text("Save email address");
-      }, 3000);
+      $("#email_input").hide();
+      $(".email_address").text(email)
+      $("#email_display").show();
     });
     
   });
