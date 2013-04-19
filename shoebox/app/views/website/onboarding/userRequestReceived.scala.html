@@ -12,15 +12,14 @@
         
     </header>
   
-    <p>We are reviewing requests and adding beta users every day.
-    @if(email.isDefined) {
-      Feel free to update the email address we have for you, and we'll send you instructions when we have room.
-    } else {
-      Leave your email address and we'll send you instructions when we have room.
-    }</p>
-    <div>
-      <input id="email" type="text" class="blue keep_text" value="@if(email.isDefined){@email}" placeholder="your email address" autocomplete="off"> <span id="change_email" class="btn blue">Save email address</span>
+    <p>When your request is approved, an email will be sent to:</p>
+    <div id="email_input"@if(!email.isDefined){ style="display:none"}>
+      <input id="email" type="text" class="blue keep_text" value="@if(email.isDefined){@email}" placeholder="Please type in your email address" autocomplete="off"> <span id="change_email" class="btn blue">Save</span>
     </div>
+    <div id="email_display"@if(email.isDefined){ style="display:none"}>
+      <p><span class="email_address">@email.get</span> <span class="change_email_link">(Change email)</span></p>
+    </div>
+    <p>We are constantly reviewing requests and apologize for the wait.</p>
     <span id="email_width"></span>
 
     @if(friendsOnKifi.nonEmpty) {
