@@ -100,7 +100,7 @@ case class TestModule() extends ScalaModule {
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
 
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
-    listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
+    listenerBinder.addBinding().to(classOf[ResultClickedListener])
     listenerBinder.addBinding().to(classOf[UsefulPageListener])
     listenerBinder.addBinding().to(classOf[SliderShownListener])
   }
