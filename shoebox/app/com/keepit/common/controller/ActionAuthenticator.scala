@@ -100,7 +100,8 @@ class ActionAuthenticator @Inject() (
       bodyParser = bodyParser,
       onAuthenticated = onAuthenticated,
       onUnauthenticated = { implicit request =>
-        Redirect("/login").flashing("error" -> Messages("securesocial.loginRequired")).withSession(
+        if(apiClient) Forbidden
+        else Redirect("/login").flashing("error" -> Messages("securesocial.loginRequired")).withSession(
           session + (SecureSocial.OriginalUrlKey -> request.uri)
         )
       })
