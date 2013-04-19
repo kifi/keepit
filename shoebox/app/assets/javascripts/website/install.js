@@ -21,7 +21,7 @@ $(function() {
         $this.text("Installed. Preparing extension now...");
       }, function(e) {
         errorCount = errorCount+1;
-        if(errorCount < 2) {
+        if(errorCount < 4) {
           $this.text("Hrm, there's a problem. Try again?");
         } else {
           $this.hide();
