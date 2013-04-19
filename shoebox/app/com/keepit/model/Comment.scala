@@ -49,14 +49,12 @@ trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
   def all(permissions: State[CommentPermission])(implicit session: RSession): Seq[Comment]
   def all(permissions: State[CommentPermission], userId: Id[User])(implicit session: RSession): Seq[Comment]
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment]
-  def getChildCount(commentId: Id[Comment])(implicit session: RSession): Int
   def getPublic(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment]
   def getPublicIdsByConnection(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Id[Comment]]
   def getLastPublicIdByConnection(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[Id[Comment]]
   def getPublicCount(uriId: Id[NormalizedURI])(implicit session: RSession): Int
   def getPrivate(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
   def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment]
-  def getMessagesWithChildrenCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Int
   def getMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
   def count(permissions: State[CommentPermission] = CommentPermissions.PUBLIC)(implicit session: RSession): Int
   def page(page: Int, size: Int, permissions: State[CommentPermission])(implicit session: RSession): Seq[Comment]
@@ -74,22 +72,12 @@ class CommentCountUriIdCache @Inject() (val repo: FortyTwoCachePlugin) extends F
   def deserialize(obj: Any): Int = obj.asInstanceOf[Int]
   def serialize(count: Int) = count
 }
-case class MessageWithChildrenCountUriIdUserIdKey(normUriId: Id[NormalizedURI], userId: Id[User]) extends Key[Int] {
-  val namespace = "comment_by_normurlid_userid"
-  def toKey(): String = normUriId.id.toString + "_" + userId.id.toString
-}
-class MessageWithChildrenCountUriIdUserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[MessageWithChildrenCountUriIdUserIdKey, Int] {
-  val ttl = 1 hour
-  def deserialize(obj: Any): Int = obj.asInstanceOf[Int]
-  def serialize(count: Int) = count
-}
 
 @Singleton
 class CommentRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   val commentCountCache: CommentCountUriIdCache,
-  val messageWithChildrenCountCache: MessageWithChildrenCountUriIdUserIdCache,
   socialConnectionRepoImpl: SocialConnectionRepoImpl,
   commentRecipientRepoImpl: CommentRecipientRepoImpl)
     extends DbRepo[Comment] with CommentRepo with ExternalIdColumnDbFunction[Comment] {
@@ -114,12 +102,6 @@ class CommentRepoImpl @Inject() (
       case CommentPermissions.PUBLIC =>
         commentCountCache.remove(CommentCountUriIdKey(comment.uriId))
       case CommentPermissions.MESSAGE =>
-        val comments = (comment.id :: comment.parent :: Nil).flatten
-        val parentUserId = comment.parent.map(get(_).userId)
-        val usersToInvalidate = (Some(comment.userId) :: parentUserId :: Nil).flatten ++ comments.flatMap(commentRecipientRepoImpl.getByComment(_).map(_.userId).flatten)
-        usersToInvalidate foreach { user =>
-          messageWithChildrenCountCache.remove(MessageWithChildrenCountUriIdUserIdKey(comment.uriId, user))
-        }
       case CommentPermissions.PRIVATE =>
     }
     comment
@@ -133,9 +115,6 @@ class CommentRepoImpl @Inject() (
 
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment] =
     (for(b <- table if b.uriId === uriId && b.state === CommentStates.ACTIVE) yield b).list
-
-  def getChildCount(commentId: Id[Comment])(implicit session: RSession): Int =
-    Query((for(b <- table if b.parent === commentId && b.state === CommentStates.ACTIVE) yield b.id).countDistinct).first
 
   def getPublic(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment] =
     (for {
@@ -181,14 +160,6 @@ class CommentRepoImpl @Inject() (
       c <- table if (c.uriId === uriId && c.userId === userId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)
     } yield (c.*)
     (q1.list ++ q2.list).toSet.toSeq
-  }
-
-  def getMessagesWithChildrenCount(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Int = {
-    messageWithChildrenCountCache.getOrElse(MessageWithChildrenCountUriIdUserIdKey(uriId, userId)) {
-      val comments = getMessages(uriId, userId)
-      val childrenCounts: Seq[Int] = (comments.toList map {c => getChildCount(c.id.get).toInt})
-      childrenCounts.foldLeft(0)((sum, count) => sum + count) + comments.size
-    }
   }
 
   def count(permissions: State[CommentPermission])(implicit session: RSession): Int =

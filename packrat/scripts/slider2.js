@@ -10,11 +10,12 @@ jQuery.fn.layout = function() {
   return this.each(function() {this.clientHeight});  // forces layout
 };
 
-var generalPane = 0, commentsPane = 0, threadsPane = 0, threadPane = 0;  // set when api.require'd
+const noPane = {update: $.noop};
+var generalPane, commentsPane = noPane, threadsPane = noPane, threadPane = noPane;  // set when api.require'd
 slider2 = function() {
   var $tile = $("#kifi-tile"), $slider, $pane, lastShownAt, info;
 
-  key("esc", function() {
+  key("esc", "slider2", function() {
     if ($pane) {
       hidePane();
     } else if ($slider) {
@@ -22,9 +23,18 @@ slider2 = function() {
     }
   });
 
+  api.onEnd.push(function() {
+    api.log("[slider2:onEnd]");
+    key.deleteScope("slider2");
+    $pane && $pane.remove();
+    $slider && $slider.remove();
+    $tile.remove();
+  });
+
   function showSlider(o, trigger, locator) {
     info = o = info || o;  // ignore o after first call (may be out of date) TODO: trust cached state from main.js
-    api.log("slider info:", o);
+    api.log("[showSlider]", o);
+    key.setScope("slider2");
 
     lastShownAt = +new Date;
 
@@ -186,6 +196,7 @@ slider2 = function() {
   // trigger is for the event log (e.g. "key", "icon")
   function hideSlider(trigger) {
     idleTimer.kill();
+    key.setScope();
     $slider.addClass("kifi-hiding").on("transitionend webkitTransitionEnd", function(e) {
       if (e.target.classList.contains("kifi-slider2") && e.originalEvent.propertyName == "opacity") {
         $(e.target).remove();
@@ -542,16 +553,16 @@ slider2 = function() {
     thread: receiveData.bind(null, "thread", "id"),
     comment: function(comment) {
       api.port.emit("session", function(session) {
-        (commentsPane.update || api.noop)(comment, session.userId);
+        commentsPane.update(comment, session.userId);
       });
     },
     thread_info: function(o) {
-      (threadsPane.update || api.noop)(o.thread, o.read);
+      threadsPane.update(o.thread, o.read);
     },
     message: function(o) {
       api.port.emit("session", function(session) {
-        (threadsPane.update || api.noop)(o.thread, o.read);
-        (threadPane.update || api.noop)(o.thread, o.message, session.userId);
+        threadsPane.update(o.thread, o.read);
+        threadPane.update(o.thread, o.message, session.userId);
       });
     },
     counts: function(o) {

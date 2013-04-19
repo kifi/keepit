@@ -41,9 +41,9 @@ html { overflow-y: scroll; }
 
 body { font: 16px/1.5 Lato, Arial, Helvetica, sans-serif; background: url(../images/bg.png) #f5f5f5; color: #515051; text-align: left; }
 
-a, .play_video, .ui-autocomplete li { -webkit-transition: all 0.2s ease-out; -moz-transition: all 0.2s ease-out; -o-transition: all 0.2s ease-out; transition: all 0.2s ease-out; }
+a, .play_video, .ui-autocomplete li { -webkit-transition: all 0.1s ease-out; -moz-transition: all 0.1s ease-out; -o-transition: all 0.1s ease-out; transition: all 0.1s ease-out; }
 
-a:active { -webkit-transition: all 0.05s ease-out; -moz-transition: all 0.05s ease-out; -o-transition: all 0.05s ease-out; transition: all 0.05s ease-out; }
+a:active {  }
 
 a { color: #1c92e6; }
 
@@ -85,7 +85,7 @@ h3 { font-size: 26px; margin-bottom: 8px; }
 
 h4 { font-size: 26px; margin-bottom: 8px; }
 
-p { margin-bottom: 15px; line-height: 1.4; }
+p { line-height: 1.4; margin: .75em 0; }
 
 .blue { color: #1C92E6; }
 
@@ -124,7 +124,7 @@ hr { border: none; background: #e5e5e5; height: 5px; margin: 30px 0; }
 
 .mobile { display: none; }
 
-.wrap { position: relative; margin: 0 auto; max-width: 980px; }
+.wrap { margin: 0 auto; max-width: 980px; }
 
 #header { padding: 25px 0 0; z-index: 20000; }
 
@@ -156,7 +156,7 @@ hr { border: none; background: #e5e5e5; height: 5px; margin: 30px 0; }
 
 .content p .small { font-size: 14px; }
 
-.content_header { padding-top: 14px; margin-bottom: 50px; position: relative; }
+.content_header { padding-top: 14px; margin-bottom: 10px; position: relative; }
 
 .content_header h2 { margin-bottom: 10px; }
 
@@ -188,13 +188,19 @@ hr { border: none; background: #e5e5e5; height: 5px; margin: 30px 0; }
 
 .fb_friends_large { padding-top: 40px; }
 
-.links_list li{ margin-bottom:2px;}
+.links_list li{ margin-bottom:2px; list-style-type: none; }
 
 .links_list li a { display: block; padding: 8px 5px; font-size: 26px; line-height: 1.2;}
 
 .links_list li a:hover, .links_list li a:active { background: #caeaff; color: #3ea9f5; }
 
-.welcome { padding-top: 100px }
+.welcome {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin: -220px 0 0 -375px;
+  width: 750px;
+}
 
 .welcome .logo2{ vertical-align:baseline; margin:0 5px;}
 
@@ -260,9 +266,13 @@ hr { border: none; background: #e5e5e5; height: 5px; margin: 30px 0; }
 
 .invites_list .invite_btn{ display:none;}
 
-#email{ background:#fff; font-size:22px; padding: 4px; margin-right: 4px; width:260px; color: #000000;}
+.change_email_link { font-size: 14px; margin-left: 5px; color: #515051; }
 
-#change_email{ cursor:pointer; display: inline-block; width:200px; height:39px; line-height: 39px; padding: 0px;}
+#email_display { color: #3ea9f5; cursor: pointer; }
+
+#email{ background:#fff; font-size:16px; line-height: 22px; padding: 5px 4px 4px; margin-right: 4px; width:260px; color: #3ea9f5;}
+
+#change_email{ cursor:pointer; display: inline-block; width:70px; height:35px; line-height: 35px; padding: 0px; border-radius: 2px;}
 
 
 /* autocomoplete css */
@@ -372,11 +382,20 @@ hr { border: none; background: #e5e5e5; height: 5px; margin: 30px 0; }
 
 #footer .wrap { border-top: 5px solid #e5e5e5; }
 
-#footer .copy { margin-top: 9px; line-height: 26px; }
+#footer .copy {
+  position: relative;
+  margin-top: 9px;
+  line-height: 26px;
+  float: left;
+}
 
 #footer .divider { color: #c2c2c2; display: inline-block; margin: 0 8px; }
 
-#footer .social { position: absolute; right: 0; top: 9px; }
+#footer .social {
+  position: relative;
+  float: right;
+  top: 9px;
+}
 
 #footer.join { margin-top: 50px; }
 
@@ -440,9 +459,9 @@ html { overflow: auto; }
 
 #footer .copy { margin: 4px 0; }
 }
- @media screen and (max-width: 599px) {
+ @media screen and (max-width: 740px) {
 
-h1, h2 { font-size: 26px; }
+h1, h2 { font-size: 32px; }
 
 h3 { font-size: 20px; }
 
@@ -468,14 +487,16 @@ h3 { font-size: 20px; }
 
 .invites_status .amount{ text-indent:0; position:absolute; right:10px; top:5px;}
 
-.links_list li a{ padding:5px; font-size:18px;}
+.links_list li a{ padding:5px; font-size:18px; }
 
 .invites_list .invite_field{ font-size:15px;}
 
 }
- @media screen and (max-width: 320px) {
+ @media screen and (max-width: 530px) {
+
+   h1, h2 { font-size: 24px; }
    
-   .welcome_btn a.btn.big{ display:block; padding:0;}
+   .welcome_btn a.btn.big{ font-size:20px; padding:0 10px;}
    
    #agree_btn .btn{ font-size: 26px;}
    
