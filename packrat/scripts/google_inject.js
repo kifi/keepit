@@ -390,7 +390,7 @@ api.log("[google_inject]");
           }, callback);
         }});
     }).on("click", ".kifi-chatter-deeplink", function() {
-      api.port.emit("add_deep_link_listener", {locator: $(this).data("locator")});
+      api.port.emit("add_deep_link_listener", $(this).data("locator"));
       location.href = $(this).closest("li.g").find("h3.r a")[0].href;
     });
   }

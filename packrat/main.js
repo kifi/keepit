@@ -206,9 +206,15 @@ const socketHandlers = {
     var d = pageData[th.uri];
     if (d && d.messages) {
       d.messages[th.id] = th.messages;
-      d.tabs.forEach(function(tab) {
-        api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages});
-      });
+      if (d.threadCallbacks) {
+        for (var i = 0; i < d.threadCallbacks.length; i++) {
+          var cb = d.threadCallbacks[i];
+          if (th.id == cb.id || th.messages.some(hasId(cb.id))) {
+            cb.respond({id: th.id, messages: th.messages});
+            d.threadCallbacks.splice(i--, 1);
+          }
+        }
+      }
     }
   },
   message: function(nUri, th, message) {
@@ -361,24 +367,37 @@ api.port.on({
       socket.send(["set_message_read", o.messageId]);
     }
   },
-  comments: function(_, _, tab) {
+  comments: function(_, respond, tab) {
     var d = pageData[tab.nUri];
     if (d && d.comments) {
-      api.tabs.emit(tab, "comments", d.comments);
+      respond(d.comments);
     }
   },
-  threads: function(_, _, tab) {
+  threads: function(_, respond, tab) {
     var d = pageData[tab.nUri];
     if (d && d.threads) {
-      api.tabs.emit(tab, "threads", {threads: d.threads, read: d.lastMessageRead});
+      respond({threads: d.threads, read: d.lastMessageRead});
     }
   },
-  thread: function(id, _, tab) {
+  thread: function(data, respond, tab) {  // data.id may be id of any message (not necessarily parent)
     var d = pageData[tab.nUri];
-    if (d && d.messages[id]) {
-      api.tabs.emit(tab, "thread", {id: id, messages: d.messages[id]});
-    } else {
-      socket.send(["get_thread", id]);
+    if (d) {
+      var th = d.threads.filter(function(t) {return t.id == data.id || t.messageTimes[data.id]})[0];
+      if (th && d.messages[th.id]) {
+        if (data.respond) {
+          respond({id: th.id, messages: d.messages[th.id]});
+        }
+      } else {
+        var id = (th || data).id;
+        socket.send(["get_thread", id]);
+        if (data.respond) {
+          if (!d.threadCallbacks) {
+            d.threadCallbacks = [];
+          }
+          d.threadCallbacks.push({id: id, respond: respond});
+          return true;
+        }
+      }
     }
   },
   notifications: function(howMany, tab) {
@@ -408,19 +427,18 @@ api.port.on({
           trigger: "deepLink",
           locator: data.locator});
       } else {
-        createDeepLinkListener(data, tab.id);
+        createDeepLinkListener(data.locator, tab.id);
       }
       api.tabs.select(tab.id);
     } else {
-      api.tabs.open(data.nUri, function (tabId) {
-        createDeepLinkListener(data, tabId);
+      api.tabs.open(data.nUri, function(tabId) {
+        createDeepLinkListener(data.locator, tabId);
       });
       return true;
     }
   },
-  add_deep_link_listener: function(data, respond, tab) {
-    createDeepLinkListener(data, tab.id, respond);
-    return true;
+  add_deep_link_listener: function(locator, _, tab) {
+    createDeepLinkListener(locator, tab.id);
   }
 });
 
@@ -435,7 +453,7 @@ function emitNotifications() {
   });
 }
 
-function createDeepLinkListener(link, linkTabId, respond) {
+function createDeepLinkListener(locator, tabId) {
   var createdTime = new Date;
   api.tabs.on.ready.add(function deepLinkListener(tab) {
     if (new Date - createdTime > 15000) {
@@ -443,12 +461,12 @@ function createDeepLinkListener(link, linkTabId, respond) {
       api.log("[createDeepLinkListener] Listener timed out.");
       return;
     }
-    if (linkTabId == tab.id) {
+    if (tab.id == tabId) {
       // uncomment second clause below to develop /r/ page using production deep links
       var hasForwarded = new Regexp("^" + getServer() + "/r/", "").test(tab.url) /* && tab.url.indexOf("dev.ezkeep.com") < 0 */;
       if (hasForwarded) {
-        api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, link.locator);
-        api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: link.locator});
+        api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, locator);
+        api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: locator});
         api.tabs.on.ready.remove(deepLinkListener);
       }
     }
@@ -898,7 +916,7 @@ function authenticate(callback) {
       socket.send(["get_friends"]);
       logEvent.catchUp();
 
-      rules = data.rules;
+      rules = data.rules.rules;
       urlPatterns = compilePatterns(data.patterns);
       store("kifi_installation_id", data.installationId);
       delete session.rules;
