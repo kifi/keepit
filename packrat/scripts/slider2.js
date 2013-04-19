@@ -10,7 +10,8 @@ jQuery.fn.layout = function() {
   return this.each(function() {this.clientHeight});  // forces layout
 };
 
-var generalPane = 0, commentsPane = 0, threadsPane = 0, threadPane = 0;  // set when api.require'd
+const noPane = {update: $.noop};
+var generalPane, commentsPane = noPane, threadsPane = noPane, threadPane = noPane;  // set when api.require'd
 slider2 = function() {
   var $tile = $("#kifi-tile"), $slider, $pane, lastShownAt, info;
 
@@ -542,16 +543,16 @@ slider2 = function() {
     thread: receiveData.bind(null, "thread", "id"),
     comment: function(comment) {
       api.port.emit("session", function(session) {
-        (commentsPane.update || api.noop)(comment, session.userId);
+        commentsPane.update(comment, session.userId);
       });
     },
     thread_info: function(o) {
-      (threadsPane.update || api.noop)(o.thread, o.read);
+      threadsPane.update(o.thread, o.read);
     },
     message: function(o) {
       api.port.emit("session", function(session) {
-        (threadsPane.update || api.noop)(o.thread, o.read);
-        (threadPane.update || api.noop)(o.thread, o.message, session.userId);
+        threadsPane.update(o.thread, o.read);
+        threadPane.update(o.thread, o.message, session.userId);
       });
     },
     counts: function(o) {
