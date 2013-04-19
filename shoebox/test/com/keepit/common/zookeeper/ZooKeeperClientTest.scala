@@ -44,5 +44,36 @@ class ZooKeeperClientTest extends Specification {
       zk.set("/test-node", "baz".getBytes)
       zk.delete("/test-node")
     }
+    "monitor node children" in {
+      val zk = new ZooKeeperClient("localhost", 2000, "/discovery",
+                      Some({zk1 => println(s"in callback, got $zk1")}))
+      zk.create("/parent", null, CreateMode.PERSISTENT)
+      zk.watchChildren("/parent", { (children : Seq[String]) =>
+        println("Children: %s".format(children.mkString(", ")))
+      })
+      zk.create("/parent/child1", null, CreateMode.PERSISTENT)
+      zk.create("/parent/child2", null, CreateMode.PERSISTENT)
+      zk.delete("/parent/child1")
+      zk.create("/parent/child3", null, CreateMode.PERSISTENT)
+      zk.deleteRecursive("/parent")
+    }
+    "For a given node, automatically maintain a map from the node's children to the each child's data" in {
+      val zk = new ZooKeeperClient("localhost", 2000, "/discovery",
+                      Some({zk1 => println(s"in callback, got $zk1")}))
+      val childMap = collection.mutable.Map[String, String]()
+
+      zk.create("/parent", null, CreateMode.PERSISTENT)
+      zk.watchChildrenWithData("/parent", childMap, {data => new String(data)})
+
+      zk.create("/parent/a", "foo".getBytes, CreateMode.PERSISTENT)
+      zk.create("/parent/b", "bar".getBytes, CreateMode.PERSISTENT)
+      println("child map: %s".format(childMap)) // NOTE: real code should synchronize access on childMap
+
+      zk.delete("/parent/a")
+      zk.set("/parent/b", "bar2".getBytes)
+      zk.create("/parent/c", "baz".getBytes, CreateMode.PERSISTENT)
+      println("child map: %s".format(childMap)) // NOTE: real code should synchronize access on childMap
+
+    }
   }
 }
