@@ -72,6 +72,7 @@ trait DbRepos {
   import play.api.Play.current
 
   def db = inject[Database]
+  def userSessionRepo = inject[UserSessionRepo]
   def userRepo = inject[UserRepo]
   def uriRepo = inject[NormalizedURIRepo]
   def urlRepo = inject[URLRepo]

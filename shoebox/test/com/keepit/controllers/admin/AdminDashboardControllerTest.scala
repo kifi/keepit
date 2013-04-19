@@ -7,7 +7,7 @@ import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworks.FACEBOOK
 import com.keepit.common.time._
-import com.keepit.inject._
+import com.keepit.inject.inject
 import com.keepit.model.ExperimentTypes.ADMIN
 import com.keepit.model.SocialUserInfo
 import com.keepit.model.User
@@ -48,7 +48,7 @@ class AdminDashboardControllerTest extends Specification with DbRepos {
         val cookie = Authenticator.create(su).right.get.toCookie
         val fakeRequest = FakeRequest().withCookies(cookie)
         val authRequest = AuthenticatedRequest(null, u1.id.get, u1, fakeRequest)
-        inject[FakeClock].push(now)
+        inject[FakeClock].push(now).push(now)
         val result = inject[AdminDashboardController].usersByDate(authRequest)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
