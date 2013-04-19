@@ -5,7 +5,8 @@
   fortyTwoConnections: Seq[UserWithSocial],
   kifiInstallations: Seq[KifiInstallation],
   historyUpdateCount: Int,
-  bookmarkSearch: Option[String])
+  bookmarkSearch: Option[String],
+  allowedInvites: Int)
 
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
   <a data-hover="tooltip" title="@userWithSocial.user.firstName @userWithSocial.user.lastName+" class="name_tooltip_link" href="http://www.facebook.com/@userWithSocial.socialUserInfo.socialId.id" target="_blank">
@@ -45,6 +46,15 @@
         <td>
           <form action="@com.keepit.controllers.admin.routes.AdminUserController.updateUser(userWithSocial.user.id.get)" method="POST" class="form-inline">
             <input type="text" name="emails" value="@{userWithSocial.emails.map(_.address).mkString(",")}">
+            <input type="submit" value="Save">
+          </form>
+        </td>
+      </tr>
+      <tr>
+        <th>Allowed Invites</th>
+        <td>
+          <form action="@com.keepit.controllers.admin.routes.AdminUserController.setInvitesCount(userWithSocial.user.id.get)" class="form-inline" method="POST">
+            <input type="text" name="allowedInvites" value="@allowedInvites">
             <input type="submit" value="Save">
           </form>
         </td>
