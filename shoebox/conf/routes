@@ -154,6 +154,7 @@ POST    /admin/user/:id/experiment/:exp  @com.keepit.controllers.admin.AdminUser
 DELETE  /admin/user/:id/experiment/:exp  @com.keepit.controllers.admin.AdminUserController.removeExperiment(id: Id[User], exp: String)
 POST    /admin/user/:id/state/:state  @com.keepit.controllers.admin.AdminUserController.changeState(id: Id[User], state: String)
 POST    /admin/user/:id/update      @com.keepit.controllers.admin.AdminUserController.updateUser(id: Id[User])
+POST    /admin/user/:id/setInvitesCount      @com.keepit.controllers.admin.AdminUserController.setInvitesCount(id: Id[User])
 GET     /admin/user/:id/social_users/refresh @com.keepit.controllers.admin.AdminUserController.refreshAllSocialInfo(id: Id[User])
 POST    /admin/user/:id/impersonate @com.keepit.controllers.admin.AdminAuthController.impersonate(id: Id[User])
 POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
