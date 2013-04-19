@@ -133,14 +133,14 @@ api.log("[google_inject]");
       logEvent("search", "kifiLoaded", {"query": q, "filter": f, "queryUUID": resp.uuid});
       if (resp.hits.length) {
         logEvent("search", "kifiAtLeastOneResult", {"query": q, "filter": f, "queryUUID": resp.uuid, "experimentId": resp.experimentId});
-        var f = function(hits) {
+        var onShow = function(hits) {
           loadChatter(hits);
           prefetchMore();
         }.bind(null, response.hits.slice());
         if (resp.show) {
-          f();
+          onShow();
         } else {
-          $res.data("onShow", f);
+          $res.data("onShow", onShow);
         }
       }
     });
@@ -266,10 +266,10 @@ api.log("[google_inject]");
       $res.find(".kifi-res-filter-keeps").fadeToggle(200);
       $res.find(".kifi-res-filters-x:visible").click();
       $(this).toggleClass("kifi-collapsed");
-      var f = $res.data("onShow");
-      if (f) {
+      var onShow = $res.data("onShow");
+      if (onShow) {
         $res.removeData("onShow");
-        f();
+        onShow();
       }
     }).on("click", ".kifi-res-filter-keeps", function() {
       var $f = $res.find(".kifi-res-filters");
@@ -350,7 +350,7 @@ api.log("[google_inject]");
       $res.find(".kifi-res-filter[data-filter=a]").click();
     }).on("click", ".kifi-res-debug", function(e) {
       e.stopPropagation();
-      location.href = "https://" + response.server + "/admin/search/results/" + response.uuid;
+      location.href = response.webBaseUri + "/admin/search/results/" + response.uuid;
     }).on("mouseenter", ".kifi-face.kifi-friend", function() {
       var $a = $(this).showHover({
         hideDelay: 600,
@@ -390,7 +390,7 @@ api.log("[google_inject]");
           }, callback);
         }});
     }).on("click", ".kifi-chatter-deeplink", function() {
-      api.port.emit("add_deep_link_listener", {locator: $(this).data("locator")});
+      api.port.emit("add_deep_link_listener", $(this).data("locator"));
       location.href = $(this).closest("li.g").find("h3.r a")[0].href;
     });
   }
@@ -416,7 +416,7 @@ api.log("[google_inject]");
 
   function loadChatter(hits) {
     if (!hits.length) return;
-    api.port.emit("get_chatter", {ids: hits.map(function(h) {return h.bookmark.externalId})}, function gotChatter(counts) {
+    api.port.emit("get_chatter", {ids: hits.map(function(h) {return h.bookmark.id})}, function gotChatter(counts) {
       api.log("[gotChatter]", counts);
       var bgImg = "url(" + api.url("images/chatter.png") + ")";
       for (var id in counts) {

@@ -7,7 +7,7 @@ import com.google.inject.Inject
 import play.api.libs.json._
 
 object FacebookSocialGraph {
-  val FULL_PROFILE = "link,name,first_name,middle_name,last_name,location,locale,gender,username,languages,third_party_id,installed,timezone,updated_time,verified,bio,birthday,devices,education,email,picture,significant_other,website,work"
+  val FULL_PROFILE = "name,first_name,middle_name,last_name,gender,username,languages,installed,devices,email,picture"
 }
 
 class FacebookSocialGraph @Inject() (httpClient: HttpClient) extends Logging {

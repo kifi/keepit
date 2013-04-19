@@ -13,7 +13,7 @@ import com.keepit.model._
 import com.keepit.common.db._
 import play.api.Play.current
 import com.keepit.inject.inject
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 
 class EventListenerTest extends Specification with DbRepos {
 
@@ -42,7 +42,9 @@ class EventListenerTest extends Specification with DbRepos {
         }
         val (user2, result) = db.readWrite {implicit s =>
           listener.searchParser(user.externalId,
-            JsObject(Seq("url" -> JsString("http://google.com/"), "query" -> JsString("potatoes"))))
+            JsObject(Seq("url" -> JsString("http://google.com/"), "query" -> JsString("potatoes"))),
+            "kifiResultClicked"
+          )
         }
 
         user2.id === user.id
@@ -61,10 +63,12 @@ class EventListenerTest extends Specification with DbRepos {
 
         val unrelatedEvent = Events.userEvent(EventFamilies.SEARCH,"someOtherEvent", user, Seq(), "", JsObject(Seq()), Seq())
 
-        val event = Events.userEvent(EventFamilies.SEARCH,"kifiResultClicked", user, Seq(), "", JsObject(Seq()), Seq())
+        val kifiEvent = Events.userEvent(EventFamilies.SEARCH,"kifiResultClicked", user, Seq(), "", JsObject(Seq()), Seq())
+        val googleEvent = Events.userEvent(EventFamilies.SEARCH,"googleResultClicked", user, Seq(), "", JsObject(Seq()), Seq())
 
         inject[EventHelper].matchEvent(unrelatedEvent) === Seq()
-        inject[EventHelper].matchEvent(event) === Seq("KifiResultClickedListener")
+        inject[EventHelper].matchEvent(kifiEvent) === Seq("ResultClickedListener")
+        inject[EventHelper].matchEvent(googleEvent) === Seq("ResultClickedListener")
       }
     }
 

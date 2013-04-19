@@ -45,8 +45,9 @@
                 <div class="name">@invite.get.name</div>
                 <div class="status">
                   @{invite.get.state.value match {
-                    case "active" => "Invited"
-                    case "accepted" => "Waiting for approval"
+                    case "active" => "Invitation sent"
+                    case "accepted" => "Accepted your invitation, waiting on approval"
+                    case "admin_accepted" => "Approved, hasn't joined yet"
                     case "admin_rejected" => "Rejected"
                     case "joined" => "Joined!"
                   }}
@@ -56,7 +57,7 @@
             </li>
           } else {
             <li class="clearfix">
-              <form action="@com.keepit.controllers.website.routes.HomeController.inviteConnection" method="POST">
+              <form action="@com.keepit.controllers.website.routes.InviteController.inviteConnection" method="POST">
                 <img src="@routes.Assets.at("images/default_avatar.png")" width="75" height="75" class="avatar">
                 <div class="avatar_info">
                   <input type="text" class="invite_field" value="Select a facebook friend to invite">

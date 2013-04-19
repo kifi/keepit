@@ -11,7 +11,7 @@ import com.keepit.common.mail.PostOffice
 import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.ElectronicMail
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.time._
@@ -65,12 +65,15 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
 
   lazy val stackTraceHtml: String = {
     def causeString(throwableOptions: Option[Throwable]): String = throwableOptions match {
-      case None =>
-        "[No Cause]"
+      case None => "--"
+      case Some(t) if (t.getStackTrace().exists({e =>
+        e.getClassName.contains("play.api.Application") && e.getMethodName.contains("handleError")
+      })) => causeString(Option(t.getCause))
       case Some(t) =>
-        s"""<span style="color:green; font-size: 14px; font-style: bold;">${t.toString}</span>""" +
-        (t.getStackTrace() map formatStackElement mkString "\n<br/> &nbsp; ") +
-        s"""\n<br/> &nbsp; <span style="color:red; font-size: 13px; font-style: bold;">Cause:</span>\n<br/>${causeString(Option(t.getCause))}"""
+        s"""<span style="color:red; font-size: 13px; font-style: bold;">Cause:</span><br/>
+            <span style="color:green; font-size: 16px; font-style: bold;">${t.toString}</span>\n<br/>
+            ${(t.getStackTrace() map formatStackElement mkString "\n<br/> ")}<br/>
+            ${causeString(Option(t.getCause))}"""
     }
     causeString(error)
   }
@@ -86,7 +89,8 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
       case Some(t) =>
         val source = cause(t)
         val message = source.getMessage().replaceAll("\\d", "*")
-        s"${source.getClass().toString} : ${message}"
+        val shortMessage = if (message.length > 59) message.substring(0, 60) else message
+        s"${source.getClass().toString} : $shortMessage..."
     }
   }
 

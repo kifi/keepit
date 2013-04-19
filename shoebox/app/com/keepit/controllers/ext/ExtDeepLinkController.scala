@@ -12,7 +12,6 @@ import play.api.http.ContentTypes
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
-import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
 import java.sql.Connection
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.Hit
@@ -46,12 +45,10 @@ class ExtDeepLinkController @Inject() (
           case Some(recip) if request.userId != recip =>
             Forbidden
           case _ =>
-            val uri = deep.uriId.map(uri => db.readOnly { implicit session =>
-              normalizedURIRepo.get(uri).url
-            }) getOrElse ("")
-            val locator = deep.deepLocator.value
-            val isSecure = deep.recipientUserId.isDefined
-            Ok(views.html.deeplink(uri, locator, isSecure))
+            val nUri = db.readOnly { implicit session =>
+              normalizedURIRepo.get(deep.uriId.get)
+            }
+            Ok(views.html.deeplink(nUri.url, deep.deepLocator.value))
         }
       case None =>
         NotFound

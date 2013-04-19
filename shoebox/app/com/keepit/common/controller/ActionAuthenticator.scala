@@ -1,31 +1,21 @@
 package com.keepit.common.controller
 
+import com.google.inject.{Inject, Singleton}
+import com.keepit.common.controller.FortyTwoCookies.{ImpersonateCookie, KifiInstallationCookie}
 import com.keepit.common.db._
-import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
+import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.Healthcheck
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social._
 import com.keepit.model._
-import com.keepit.common.controller.FortyTwoCookies.{ImpersonateCookie, KifiInstallationCookie}
 
-import play.api._
-import play.api.Play.current
-import play.api.data.Forms._
-import play.api.data.validation.Constraints._
-import play.api.http.ContentTypes
-import play.api.libs.json.JsValue
+import play.api.i18n.Messages
 import play.api.mvc._
-import play.api.libs.iteratee._
-import play.api.libs.iteratee.Input._
-import play.api.libs.iteratee.Parsing._
-import play.api.libs.json._
-import play.api.mvc.Results.InternalServerError
 import securesocial.core._
-
-import com.google.inject.{Inject, Singleton}
 
 object ActionAuthenticator {
   val FORTYTWO_USER_ID = "fortytwo_user_id"
@@ -104,7 +94,16 @@ class ActionAuthenticator @Inject() (
       allowPending: Boolean,
       bodyParser: BodyParser[T],
       onAuthenticated: AuthenticatedRequest[T] => Result): Action[T] =
-    SecuredAction(apiClient, None, bodyParser)(authenticatedHandler(apiClient, allowPending)(onAuthenticated))
+    authenticatedAction(
+      apiClient = apiClient,
+      allowPending = allowPending,
+      bodyParser = bodyParser,
+      onAuthenticated = onAuthenticated,
+      onUnauthenticated = { implicit request =>
+        Redirect("/login").flashing("error" -> Messages("securesocial.loginRequired")).withSession(
+          session + (SecureSocial.OriginalUrlKey -> request.uri)
+        )
+      })
 
   private[controller] def isAdmin(experiments: Seq[State[ExperimentType]]) = experiments.find(e => e == ExperimentTypes.ADMIN).isDefined
 

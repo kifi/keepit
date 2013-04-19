@@ -11,7 +11,7 @@ import com.keepit.common.mail.PostOffice
 import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.ElectronicMail
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.time._

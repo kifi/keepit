@@ -11,7 +11,7 @@ import com.google.inject.util.Modules
 import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
 import com.keepit.common.analytics._
 import com.keepit.common.cache.{HashMapMemoryCache, FortyTwoCachePlugin}
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.db.DbInfo
 import com.keepit.common.db.SlickModule
 import com.keepit.common.db.slick._
@@ -72,10 +72,14 @@ trait DbRepos {
   import play.api.Play.current
 
   def db = inject[Database]
+  def userSessionRepo = inject[UserSessionRepo]
   def userRepo = inject[UserRepo]
   def uriRepo = inject[NormalizedURIRepo]
   def urlRepo = inject[URLRepo]
   def bookmarkRepo = inject[BookmarkRepo]
+  def commentRepo = inject[CommentRepo]
+  def commentReadRepo = inject[CommentReadRepo]
+  def commentRecipientRepo = inject[CommentRecipientRepo]
   def socialUserInfoRepo = inject[SocialUserInfoRepo]
   def installationRepo = inject[KifiInstallationRepo]
   def userExperimentRepo = inject[UserExperimentRepo]
@@ -100,7 +104,7 @@ case class TestModule() extends ScalaModule {
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
 
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
-    listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
+    listenerBinder.addBinding().to(classOf[ResultClickedListener])
     listenerBinder.addBinding().to(classOf[UsefulPageListener])
     listenerBinder.addBinding().to(classOf[SliderShownListener])
   }

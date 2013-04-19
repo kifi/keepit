@@ -14,7 +14,6 @@ import com.keepit.common.social._
 import com.keepit.model._
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
-import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
 import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import play.api.http.ContentTypes
@@ -151,27 +150,6 @@ class ExtCommentController @Inject() (
         Unauthorized("ADMIN")
       }
     }
-  }
-
-  def getUpdates(url: String) = AuthenticatedJsonAction { request =>
-    val (messageCount, publicCount) = db.readOnly { implicit s =>
-
-      normalizedURIRepo.getByNormalizedUrl(url) map {uri =>
-        val uriId = uri.id.get
-        val userId = request.userId
-
-        val messageCount = commentRepo.getMessagesWithChildrenCount(uriId, userId)
-        val publicCount = commentRepo.getPublicCount(uriId)
-
-        (messageCount, publicCount)
-      } getOrElse (0, 0)
-    }
-
-    Ok(JsObject(List(
-        "publicCount" -> JsNumber(publicCount),
-        "messageCount" -> JsNumber(messageCount),
-        "countSum" -> JsNumber(publicCount + messageCount)
-    )))
   }
 
   def getComments(url: String) = AuthenticatedJsonAction { request =>

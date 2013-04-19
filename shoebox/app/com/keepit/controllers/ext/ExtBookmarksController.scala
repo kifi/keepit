@@ -7,13 +7,11 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.controllers.core.BookmarkInterner
-import com.keepit.controllers.core.SliderInfoLoader
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.serializer.BookmarkSerializer
-import com.keepit.serializer.UserWithSocialSerializer._
-import play.api.libs.json._
 import com.keepit.serializer.BasicUserSerializer
+import com.keepit.serializer.BookmarkSerializer
+import play.api.libs.json._
 
 @Singleton
 class ExtBookmarksController @Inject() (
@@ -24,33 +22,8 @@ class ExtBookmarksController @Inject() (
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
   searchClient: SearchServiceClient,
-  healthcheck: HealthcheckPlugin,
-  sliderInfoLoader: SliderInfoLoader)
+  healthcheck: HealthcheckPlugin)
     extends BrowserExtensionController(actionAuthenticator) {
-
-  def checkIfExists(uri: String) = AuthenticatedJsonAction { request =>
-    val userId = request.userId
-
-    val sliderInfo = sliderInfoLoader.initialLoad(userId, uri)
-
-    type wrapped = Option[(String, JsValue)]
-    val result: Seq[wrapped] = Seq(
-      Some("kept" -> JsBoolean(sliderInfo.bookmark.isDefined)),
-      sliderInfo.bookmark.map(_.isPrivate) match { case Some(true) => Some("private" -> JsBoolean(true)); case _ => None },
-      sliderInfo.socialUsers match { case Nil => None; case _ => Some("keptByAnyFriends" -> JsBoolean(true)) }, // TODO: remove
-      sliderInfo.socialUsers match { case Nil => None; case u => Some("keepers" -> BasicUserSerializer.basicUserSerializer.writes(u)) },
-      sliderInfo.numKeeps match { case 0 => None; case n => Some("keeps" -> JsNumber(n)) },
-      sliderInfo.numComments match { case 0 => None; case n => Some("numComments" -> JsNumber(n)) },
-      sliderInfo.numUnreadComments match { case 0 => None; case n => Some("unreadComments" -> JsNumber(n)) },
-      sliderInfo.numMessages match { case 0 => None; case n => Some("numMessages" -> JsNumber(n)) },
-      sliderInfo.numUnreadMessages match { case 0 => None; case n => Some("unreadMessages" -> JsNumber(n)) },
-      sliderInfo.sensitive.flatMap { s => if (s) Some("sensitive" -> JsBoolean(true)) else None },
-      sliderInfo.neverOnSite.map { _ => "neverOnSite" -> JsBoolean(true) },
-      sliderInfo.locator.map { s => "locator" -> JsString(s.value) },
-      sliderInfo.shown.map { "shown" -> JsBoolean(_) })
-
-    Ok(JsObject(result.flatten))
-  }
 
   def remove() = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]

@@ -7,20 +7,21 @@
 ##########################################
 
 GET     /                           @com.keepit.controllers.website.HomeController.home
-GET     /gettingStarted             @com.keepit.controllers.website.HomeController.gettingStarted
+GET     /install                    @com.keepit.controllers.website.HomeController.install
+GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 
-GET     /invite                     @com.keepit.controllers.website.HomeController.invite
-GET     /invite/:id                 @com.keepit.controllers.website.HomeController.acceptInvite(id: ExternalId[Invitation])
-GET     /invite/confirm/:id         @com.keepit.controllers.website.HomeController.confirmInvite(id: ExternalId[Invitation])
+GET     /invite                     @com.keepit.controllers.website.InviteController.invite
+POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
+GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
+GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id: ExternalId[Invitation])
+GET     /sign-up                     @com.keepit.controllers.website.OnboardingController.signup(inviteId: String ?= "")
 GET     /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tos
 POST    /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tosAccept
 
-GET     /giveMeA200                 @com.keepit.controllers.website.HomeController.giveMeA200
-
-GET     /login                      securesocial.controllers.LoginPage.login
+GET     /login                      securesocial.controllers.ProviderController.authenticate(provider = "facebook")
+GET     /login/social               securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
 
-GET     /sign-up                     @com.keepit.controllers.website.OnboardingController.signup(inviteId: String ?= "")
 
 # Relevant when we support traditional user signups:
 GET     /register                   securesocial.controllers.Registration.signUp(token: String)
@@ -34,7 +35,6 @@ GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkContr
 
 GET     /user/all-connections       @com.keepit.controllers.website.UserController.getAllConnections()
 POST    /user/update-email          @com.keepit.controllers.website.UserController.updateEmail
-POST    /invite                     @com.keepit.controllers.website.HomeController.inviteConnection
 
 # OAuth provider entry points (e.g. "facebook")
 GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
@@ -54,7 +54,6 @@ GET     /admin/healthcheck/isHealthy    @com.keepit.common.healthcheck.WebsiteHe
 ##########################################
 
 POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksController.addBookmarks
-GET     /bookmarks/check            @com.keepit.controllers.ext.ExtBookmarksController.checkIfExists(uri: String)
 POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
 POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updatePrivacy()
 GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksController.getNumMutualKeeps(id: ExternalId[User])
@@ -70,9 +69,7 @@ POST    /comments/unfollow          @com.keepit.controllers.ext.ExtCommentContro
 GET     /messages/threads/:id       @com.keepit.controllers.ext.ExtCommentController.getMessageThread(id: ExternalId[Comment])
 GET     /messages/threads           @com.keepit.controllers.ext.ExtCommentController.getMessageThreadList(url: String)
 
-GET     /users/slider               @com.keepit.controllers.ext.ExtUserController.getSliderInfo(url: String)
 POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
-GET     /users/slider/updates       @com.keepit.controllers.ext.ExtCommentController.getUpdates(url: String)
 
 GET     /users/friends              @com.keepit.controllers.ext.ExtUserController.getSocialConnections()
 
@@ -115,7 +112,6 @@ GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarks
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Bookmark])
 POST    /admin/bookmarks/rescrape   @com.keepit.controllers.admin.AdminBookmarksController.rescrape
 POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
-GET     /admin/bookmarks/all        @com.keepit.controllers.admin.AdminBookmarksController.all
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Bookmark])
 
 GET     /admin/scrape               @com.keepit.controllers.admin.ScraperController.scrape
@@ -212,6 +208,10 @@ GET     /admin/phrases              @com.keepit.controllers.admin.PhraseControll
 POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseController.addPhrase
 POST    /admin/phrases/refresh      @com.keepit.controllers.admin.PhraseController.refreshPhrases
 POST    /admin/phrases/save         @com.keepit.controllers.admin.PhraseController.savePhrases
+
+GET     /admin/invites              @com.keepit.controllers.admin.AdminInvitationController.displayInvitations(page: Int ?= 0, show: String ?= "all")
+POST    /admin/invites              @com.keepit.controllers.admin.AdminInvitationController.acceptUser(id: Id[SocialUserInfo])
+
 
 # Using a get so we can invoke from browser and have it take care of the auth part
 GET     /admin/healthcheck/error    @com.keepit.common.healthcheck.AdminHealthController.causeError()

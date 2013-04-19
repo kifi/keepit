@@ -41,7 +41,7 @@ function ajax(method, uri, data, done, fail) {  // method and uri are required
     data = null;
   }
 
-  api.request(method, "http://" + getServer() + uri, data, done, fail);
+  api.request(method, apiBaseUri() + uri, data, done, fail);
 }
 
 // ===== Event logging
@@ -121,6 +121,7 @@ const socketHandlers = {
     var d = pageData[uri];
     if (d) {
       d.kept = o.kept;
+      d.neverOnSite = o.neverOnSite;
       d.sensitive = o.sensitive;
       d.tabs.forEach(function(tab) {
         setIcon(tab, d.kept);
@@ -132,7 +133,6 @@ const socketHandlers = {
     var d = pageData[uri];
     if (d) {
       d.shown = o.shown;
-      d.neverOnSite = o.neverOnSite;
       d.keepers = o.keepers || [];
       d.keeps = o.keeps || 0;
       d.following = o.following;
@@ -189,8 +189,8 @@ const socketHandlers = {
       d.comments.push(c);
       d.tabs.forEach(function(tab) {
         api.tabs.emit(tab, "comment", c);
-        tellTabsIfCountChanged(d, "c", commentCount(d));
       });
+      tellTabsIfCountChanged(d, "c", commentCount(d));
     }
   },
   comment_read: function(nUri, time) {
@@ -206,9 +206,15 @@ const socketHandlers = {
     var d = pageData[th.uri];
     if (d && d.messages) {
       d.messages[th.id] = th.messages;
-      d.tabs.forEach(function(tab) {
-        api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages});
-      });
+      if (d.threadCallbacks) {
+        for (var i = 0; i < d.threadCallbacks.length; i++) {
+          var cb = d.threadCallbacks[i];
+          if (th.id == cb.id || th.messages.some(hasId(cb.id))) {
+            cb.respond({id: th.id, messages: th.messages});
+            d.threadCallbacks.splice(i--, 1);
+          }
+        }
+      }
     }
   },
   message: function(nUri, th, message) {
@@ -236,8 +242,8 @@ const socketHandlers = {
       }
       d.tabs.forEach(function(tab) {
         api.tabs.emit(tab, "message", {thread: th, message: message, read: d.lastMessageRead[th.id]});
-        tellTabsIfCountChanged(d, "m", messageCount(d));
       });
+      tellTabsIfCountChanged(d, "m", messageCount(d));
     }
   },
   message_read: function(nUri, threadId, time) {
@@ -247,8 +253,8 @@ const socketHandlers = {
       d.lastMessageRead[threadId] = new Date(time);
       d.tabs.forEach(function(tab) {
         api.tabs.emit(tab, "thread_info", {thread: d.threads.filter(hasId(threadId))[0], read: d.lastMessageRead[threadId]});
-        tellTabsIfCountChanged(d, "m", messageCount(d));
       });
+      tellTabsIfCountChanged(d, "m", messageCount(d));
     }
   },
 };
@@ -263,8 +269,8 @@ api.port.on({
     return true;
   },
   log_out: function(_, respond) {
-    deauthenticate(respond);
-    return true;
+    deauthenticate();
+    respond();
   },
   get_keeps: searchOnServer,
   get_chatter: function(data, respond) {
@@ -313,73 +319,25 @@ api.port.on({
   set_page_icon: function(data, _, tab) {
     setIcon(tab, data);
   },
-  get_slider_info: function(data, respond, tab) {
-    if (session) {
-      getSliderInfo();
-    } else {
-      authenticate(getSliderInfo);
-    }
-    return true;
-
-    function getSliderInfo() {
-      ajax("GET", "/users/slider", {url: tab.url}, function(o) {
-        o.session = session;
-        respond(o);
-      });
-    }
-  },
-  get_slider_updates: function(_, respond, tab) {
-    ajax("GET", "/users/slider/updates", {url: tab.url}, respond);
-    return true;
-  },
   suppress_on_site: function(data, _, tab) {
     ajax("POST", "/users/slider/suppress", {url: tab.url, suppress: data});
   },
   log_event: function(data) {
     logEvent.apply(null, data);
   },
-  get_comments: function(data, respond, tab) {
-    ajax("GET",
-      (data.kind == "public" ? "/comments" : "/messages/threads") +
-      (data.commentId ? "/" + data.commentId : "?url=" + encodeURIComponent(tab.url)),
+  post_comment: function(data, respond, tab) {
+    api.log("[postComment]", data);
+    ajax("POST", "/comments/add", {
+        url: data.url,
+        title: data.title,
+        text: data.text,
+        permissions: data.permissions,
+        parent: data.parent,
+        recipients: data.recipients},
       function(o) {
-        o.session = session;
+        api.log("[postComment] resp:", o);
         respond(o);
       });
-    return true;
-  },
-  post_comment: function(data, respond, tab) {
-    postComment(data, function(o) {
-      var d = pageData[tab.nUri];
-      if (data.permissions == "public") {
-        d.comments.push({
-          "id": o.commentId,
-          "createdAt": o.createdAt,
-          "text": data.text,
-          "user": {
-            "id": session.userId,
-            "firstName": session.name,
-            "lastName": "",
-            "facebookId": session.facebookId
-          }});
-      } else if (data.permissions == "message") {
-        var threadId = data.parent;
-        d.threads.forEach(function(th) {
-          if (th.id == threadId) {
-            th.messageCount++;
-            th.messageTimes[o.message.id] = o.message.createdAt;
-            th.lastCommentedAt = o.message.createdAt;
-            th.digest = o.message.text;
-          }
-        });
-        if (d.messages[threadId]) {
-          d.messages[threadId].push(o.message);
-        } else {
-          d.messages[threadId] = [o.message];
-        }
-      }
-      respond(o);
-    });
     return true;
   },
   delete_comment: function(id, respond) {
@@ -392,35 +350,54 @@ api.port.on({
   set_comment_read: function(o, _, tab) {
     var d = pageData[tab.nUri], time = new Date(o.time);
     if (!d || time > d.lastCommentRead) {
-      if (d) d.lastCommentRead = time;
+      if (d) {
+        d.lastCommentRead = time;
+        tellTabsIfCountChanged(d, "c", commentCount(d));
+      }
       socket.send(["set_comment_read", o.id]);
     }
   },
   set_message_read: function(o, _, tab) {
     var d = pageData[tab.nUri], time = new Date(o.time);
     if (!d || time > (d.lastMessageRead[o.threadId] || 0)) {
-      if (d) d.lastMessageRead[o.threadId] = time;
+      if (d) {
+        d.lastMessageRead[o.threadId] = time;
+        tellTabsIfCountChanged(d, "m", messageCount(d));
+      }
       socket.send(["set_message_read", o.messageId]);
     }
   },
-  comments: function(_, _, tab) {
+  comments: function(_, respond, tab) {
     var d = pageData[tab.nUri];
     if (d && d.comments) {
-      api.tabs.emit(tab, "comments", d.comments);
+      respond(d.comments);
     }
   },
-  threads: function(_, _, tab) {
+  threads: function(_, respond, tab) {
     var d = pageData[tab.nUri];
     if (d && d.threads) {
-      api.tabs.emit(tab, "threads", {threads: d.threads, read: d.lastMessageRead});
+      respond({threads: d.threads, read: d.lastMessageRead});
     }
   },
-  thread: function(id, _, tab) {
+  thread: function(data, respond, tab) {  // data.id may be id of any message (not necessarily parent)
     var d = pageData[tab.nUri];
-    if (d && d.messages[id]) {
-      api.tabs.emit(tab, "thread", {id: id, messages: d.messages[id]});
-    } else {
-      socket.send(["get_thread", id]);
+    if (d) {
+      var th = d.threads.filter(function(t) {return t.id == data.id || t.messageTimes[data.id]})[0];
+      if (th && d.messages[th.id]) {
+        if (data.respond) {
+          respond({id: th.id, messages: d.messages[th.id]});
+        }
+      } else {
+        var id = (th || data).id;
+        socket.send(["get_thread", id]);
+        if (data.respond) {
+          if (!d.threadCallbacks) {
+            d.threadCallbacks = [];
+          }
+          d.threadCallbacks.push({id: id, respond: respond});
+          return true;
+        }
+      }
     }
   },
   notifications: function(howMany, tab) {
@@ -450,19 +427,18 @@ api.port.on({
           trigger: "deepLink",
           locator: data.locator});
       } else {
-        createDeepLinkListener(data, tab.id);
+        createDeepLinkListener(data.locator, tab.id);
       }
       api.tabs.select(tab.id);
     } else {
-      api.tabs.open(data.nUri, function (tabId) {
-        createDeepLinkListener(data, tabId);
+      api.tabs.open(data.nUri, function(tabId) {
+        createDeepLinkListener(data.locator, tabId);
       });
       return true;
     }
   },
-  add_deep_link_listener: function(data, respond, tab) {
-    createDeepLinkListener(data, tab.id, respond);
-    return true;
+  add_deep_link_listener: function(locator, _, tab) {
+    createDeepLinkListener(locator, tab.id);
   }
 });
 
@@ -477,7 +453,7 @@ function emitNotifications() {
   });
 }
 
-function createDeepLinkListener(link, linkTabId, respond) {
+function createDeepLinkListener(locator, tabId) {
   var createdTime = new Date;
   api.tabs.on.ready.add(function deepLinkListener(tab) {
     if (new Date - createdTime > 15000) {
@@ -485,12 +461,12 @@ function createDeepLinkListener(link, linkTabId, respond) {
       api.log("[createDeepLinkListener] Listener timed out.");
       return;
     }
-    if (linkTabId == tab.id) {
+    if (tab.id == tabId) {
       // uncomment second clause below to develop /r/ page using production deep links
-      var hasForwarded = tab.url.indexOf(getServer() + "/r/") < 0 /* && tab.url.indexOf("dev.ezkeep.com") < 0 */;
+      var hasForwarded = new Regexp("^" + webBaseUri() + "/r/", "").test(tab.url) /* && tab.url.indexOf("dev.ezkeep.com") < 0 */;
       if (hasForwarded) {
-        api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, link.locator);
-        api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: link.locator});
+        api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, locator);
+        api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: locator});
         api.tabs.on.ready.remove(deepLinkListener);
       }
     }
@@ -717,22 +693,6 @@ function setPrivate(bmInfo, url, priv, respond) {
   });
 }
 
-function postComment(request, respond) {
-  api.log("[postComment] req:", request);
-  ajax("POST", "/comments/add", {
-      url: request.url,
-      title: request.title,
-      text: request.text,
-      permissions: request.permissions,
-      parent: request.parent,
-      recipients: request.recipients},
-    function(o) {
-      api.log("[postComment] resp:", o);
-      o.session = session;
-      respond(o);
-    });
-}
-
 function searchOnServer(request, respond) {
   logEvent("search", "newSearch", {query: request.query, filter: request.filter});
 
@@ -752,7 +712,7 @@ function searchOnServer(request, respond) {
     function(resp) {
       api.log("[searchOnServer] response:", resp);
       resp.session = session;
-      resp.server = getServer();
+      resp.webBaseUri = webBaseUri();
       resp.showScores = api.prefs.get("showScores");
       respond(resp);
     });
@@ -905,8 +865,12 @@ function getFullyQualifiedKey(key) {
   return (api.prefs.get("env") || "production") + "_" + key;
 }
 
-function getServer() {
-  return api.prefs.get("env") === "development" ? "dev.ezkeep.com:9000" : "keepitfindit.com";
+function apiBaseUri() {
+  return api.prefs.get("env") === "development" ? "http://dev.ezkeep.com:9000" : "https://api.kifi.com";
+}
+
+function webBaseUri() {
+  return api.prefs.get("env") === "development" ? "http://dev.ezkeep.com:9000" : "https://www.kifi.com";
 }
 
 function getStored(key) {
@@ -950,13 +914,13 @@ function authenticate(callback) {
       logEvent("extension", "authenticated");
 
       session = data;
-      socket = api.socket.open((dev ? "ws://" : "wss://") + getServer() + "/ext/ws", socketHandlers);
+      socket = api.socket.open(apiBaseUri().replace(/^http/, "ws") + "/ext/ws", socketHandlers);
       socket.send(["get_notifications", 10]);
       socket.send(["get_last_notify_read_time"]);
       socket.send(["get_friends"]);
       logEvent.catchUp();
 
-      rules = data.rules;
+      rules = data.rules.rules;
       urlPatterns = compilePatterns(data.patterns);
       store("kifi_installation_id", data.installationId);
       delete session.rules;
@@ -981,14 +945,14 @@ function authenticate(callback) {
 
   function openFacebookConnect() {
     api.log("[openFacebookConnect]");
-    var server = getServer();
+    var baseUri = webBaseUri();
     api.popup.open({
       name: "kifi-authenticate",
-      url: "http://" + server + "/authenticate/facebook",
+      url: baseUri + "/authenticate/facebook",
       width: 1020,
       height: 530}, {
       navigate: function(url) {
-        if (url == "http://" + server + "/#_=_") {
+        if (url == baseUri + "/#_=_") {
           api.log("[openFacebookConnect] closing popup");
           this.close();
           startSession();
@@ -997,7 +961,7 @@ function authenticate(callback) {
   }
 }
 
-function deauthenticate(callback) {
+function deauthenticate() {
   api.log("[deauthenticate]");
   session = null;
   if (socket) {
@@ -1008,10 +972,9 @@ function deauthenticate(callback) {
   // TODO: make all page icons faint?
   api.popup.open({
     name: "kifi-deauthenticate",
-    url: "http://" + getServer() + "/session/end",
+    url: webBaseUri() + "/session/end",
     width: 200,
     height: 100})
-  callback();
 }
 
 // ===== Main (executed upon install, reinstall, update, reenable, and browser start)

@@ -16,7 +16,7 @@ import java.security.MessageDigest
 import scala.collection.mutable
 import play.api.mvc.QueryStringBindable
 import play.api.mvc.JavascriptLitteral
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 
 
 case class Invitation(
@@ -30,7 +30,7 @@ case class Invitation(
 ) extends ModelWithExternalId[Invitation] {
   def withId(id: Id[Invitation]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-  
+  def withState(state: State[Invitation]) = copy(state = state)
 }
 
 @ImplementedBy(classOf[InvitationRepoImpl])
@@ -55,7 +55,7 @@ class InvitationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock)
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Invitation] =
     (for(b <- table if b.senderUserId === userId && b.state =!= InvitationStates.INACTIVE) yield b).list
-    
+
   def getByRecipient(socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Option[Invitation] = {
     (for(b <- table if b.recipientSocialUserId === socialUserInfoId) yield b).take(1).firstOption
   }
@@ -65,5 +65,6 @@ class InvitationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock)
 object InvitationStates extends States[Invitation] {
   val ACCEPTED = State[Invitation]("accepted")
   val ADMIN_REJECTED = State[Invitation]("admin_rejected")
+  val ADMIN_ACCEPTED = State[Invitation]("admin_accepted")
   val JOINED = State[Invitation]("joined")
 }

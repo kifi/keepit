@@ -10,11 +10,12 @@ jQuery.fn.layout = function() {
   return this.each(function() {this.clientHeight});  // forces layout
 };
 
-var generalPane = 0, commentsPane = 0, threadsPane = 0, threadPane = 0;  // set when api.require'd
+const noPane = {update: $.noop};
+var generalPane, commentsPane = noPane, threadsPane = noPane, threadPane = noPane;  // set when api.require'd
 slider2 = function() {
   var $tile = $("#kifi-tile"), $slider, $pane, lastShownAt, info;
 
-  key("esc", function() {
+  key("esc", "slider2", function() {
     if ($pane) {
       hidePane();
     } else if ($slider) {
@@ -22,9 +23,18 @@ slider2 = function() {
     }
   });
 
+  api.onEnd.push(function() {
+    api.log("[slider2:onEnd]");
+    key.deleteScope("slider2");
+    $pane && $pane.remove();
+    $slider && $slider.remove();
+    $tile.remove();
+  });
+
   function showSlider(o, trigger, locator) {
     info = o = info || o;  // ignore o after first call (may be out of date) TODO: trust cached state from main.js
-    api.log("slider info:", o);
+    api.log("[showSlider]", o);
+    key.setScope("slider2");
 
     lastShownAt = +new Date;
 
@@ -35,8 +45,6 @@ slider2 = function() {
         "isKept": o.kept,
         "isPrivate": o.private,
         // "sensitive": o.sensitive,
-        // "site": location.hostname,
-        // "neverOnSite": o.neverOnSite,
         "noticesCount": -o.counts.n,
         "commentsUnread": o.counts.c < 0,
         "commentCount": Math.abs(o.counts.c),
@@ -188,6 +196,7 @@ slider2 = function() {
   // trigger is for the event log (e.g. "key", "icon")
   function hideSlider(trigger) {
     idleTimer.kill();
+    key.setScope();
     $slider.addClass("kifi-hiding").on("transitionend webkitTransitionEnd", function(e) {
       if (e.target.classList.contains("kifi-slider2") && e.originalEvent.propertyName == "opacity") {
         $(e.target).remove();
@@ -289,9 +298,10 @@ slider2 = function() {
     var loc = locator.split("/");
     switch (loc[1]) {
       case "messages":
-        if (loc[2]) {
-          requireData("thread/" + loc[2], function(th) {
-            showPane("thread", false, th.messages[0].recipients, loc[2]);
+        if (loc[2]) {  // loc[2] can be id of any message (not necessarily a parent)
+          api.log("[openDeepLink] requiring thread for recipients");
+          api.port.emit("thread", {id: loc[2], respond: true}, function(th) {
+            showPane("thread", false, th.messages[0].recipients, th.id);
           });
         } else {
           showPane("threads");
@@ -345,6 +355,8 @@ slider2 = function() {
     } else {
       api.require("styles/metro/pane.css", function() {
         render("html/metro/pane.html", $.extend(params, {
+          site: location.hostname,
+          neverOnSite: info.neverOnSite,
           kifiLogoUrl: api.url("images/kifi_logo.png"),
           gearUrl: api.url("images/metro/gear.png")
         }), {
@@ -366,7 +378,47 @@ slider2 = function() {
           .on("click", ".kifi-pane-back", function() {
             showPane($(this).data("pane") || "general", true);
           })
-          .on("click", ".kifi-pane-head-settings,.kifi-pane-action", function() {
+          .on("mousedown", ".kifi-pane-head-settings", function(e) {
+            e.preventDefault();
+            var $sett = $(this).addClass("kifi-active");
+            var $menu = $sett.next(".kifi-pane-head-settings-menu").fadeIn(50);
+            var $hide = $menu.find(".kifi-pane-settings-hide")
+              .on("mouseenter", enterItem)
+              .on("mouseleave", leaveItem);
+            document.addEventListener("mousedown", docMouseDown, true);
+            $menu.data("docMouseDown", docMouseDown).on("kifi:hide", hide);
+            // .kifi-hover class needed because :hover does not work during drag
+            function enterItem() { $(this).addClass("kifi-hover"); }
+            function leaveItem() { $(this).removeClass("kifi-hover"); }
+            function docMouseDown(e) {
+              if (!$menu[0].contains(e.target)) {
+                $menu.triggerHandler("kifi:hide");
+                if ($sett[0] === e.target) {
+                  e.stopPropagation();
+                }
+              }
+            }
+            function hide() {
+              document.removeEventListener("mousedown", docMouseDown, true);
+              $sett.removeClass("kifi-active");
+              $hide.off("mouseenter", enterItem)
+                  .off("mouseleave", leaveItem);
+              $menu.off("kifi:hide", hide).fadeOut(50, function() {
+                $menu.find(".kifi-hover").removeClass("kifi-hover");
+              });
+            }
+          })
+          .on("mouseup", ".kifi-pane-settings-hide", function(e) {
+            e.preventDefault();
+            var $hide = $(this).toggleClass("kifi-checked");
+            var checked = $hide.hasClass("kifi-checked");
+            $tile.toggle(!checked);
+            api.port.emit("suppress_on_site", checked);
+            setTimeout(function() {
+              $hide.closest(".kifi-pane-head-settings-menu").triggerHandler("kifi:hide");
+            }, 150);
+          })
+          .on("click", ".kifi-pane-action", function() {
             var $n = $pane.find(".kifi-not-done"), d = $n.data();
             clearTimeout(d.t);
             $n.remove().removeClass("kifi-showing").appendTo($pane).layout().addClass("kifi-showing");
@@ -406,14 +458,14 @@ slider2 = function() {
       });
     },
     notices: function($box) {
-      api.port.emit("session", function (session) {
+      api.port.emit("session", function(session) {
         api.require("scripts/notices.js", function() {
           renderNotices($box.find(".kifi-pane-tall"));
         });
       });
     },
     comments: function($box) {
-      requireData("comments", function(comments) {
+      api.port.emit("comments", function(comments) {
         api.port.emit("session", function(session) {
           api.require("scripts/comments.js", function() {
             commentsPane.render($box.find(".kifi-pane-tall"), comments, session);
@@ -422,18 +474,19 @@ slider2 = function() {
       });
     },
     threads: function($box) {
-      requireData("threads", function(o) {
+      api.port.emit("threads", function(o) {
         api.require("scripts/threads.js", function() {
           threadsPane.render($box.find(".kifi-pane-tall"), o);
           o.threads.forEach(function(th) {
-            requireData("thread/" + th.id, api.noop);  // preloading
+            api.port.emit("thread", {id: th.id});  // preloading
           });
         });
       });
     },
     thread: function($box, threadId) {
       var $tall = $box.find(".kifi-pane-tall").css("margin-top", $box.find(".kifi-thread-who").outerHeight());
-      requireData("thread/" + threadId, function(th) {
+      api.log("[populatePane] requiring thread for messages");
+      api.port.emit("thread", {id: threadId, respond: true}, function(th) {
         api.port.emit("session", function(session) {
           api.require("scripts/thread.js", function() {
             threadPane.render($tall, th.id, th.messages, session);
@@ -470,48 +523,19 @@ slider2 = function() {
     return arr;
   }
 
-  const dataCallbacks = {};
-  function requireData(key, callback) {
-    var kArr = key.split("/");
-    var arr = dataCallbacks[key] = dataCallbacks[key] || [];
-    arr.push([kArr[1], callback]);
-
-    api.port.emit.apply(api.port, kArr);
-  }
-
-  function receiveData(type, prop, data) {  // prop might be omitted
-    if (data === undefined) {
-      data = prop, prop = null;
-    }
-    var arg = data[prop], key = prop ? type + "/" + arg : type;
-    for (var i = 0, callbacks = dataCallbacks[key] || 0; i < callbacks.length; i++) {
-      var cb = callbacks[i];
-      if (cb[0] == arg) {
-        cb[1](data);
-        callbacks.splice(i--, 1);
-      }
-    }
-    if (!callbacks.length) {
-      delete dataCallbacks[key];
-    }
-  }
-
   api.port.on({
-    comments: receiveData.bind(null, "comments"),
-    threads: receiveData.bind(null, "threads"),
-    thread: receiveData.bind(null, "thread", "id"),
     comment: function(comment) {
       api.port.emit("session", function(session) {
-        (commentsPane.update || api.noop)(comment, session.userId);
+        commentsPane.update(comment, session.userId);
       });
     },
     thread_info: function(o) {
-      (threadsPane.update || api.noop)(o.thread, o.read);
+      threadsPane.update(o.thread, o.read);
     },
     message: function(o) {
       api.port.emit("session", function(session) {
-        (threadsPane.update || api.noop)(o.thread, o.read);
-        (threadPane.update || api.noop)(o.thread, o.message, session.userId);
+        threadsPane.update(o.thread, o.read);
+        threadPane.update(o.thread, o.message, session.userId);
       });
     },
     counts: function(o) {

@@ -1,21 +1,18 @@
 @(id: Option[ExternalId[Invitation]] = None, socialUser: Option[SocialUserInfo] = None)
 
-@helper.main(title = "Welcome to Kifi!", hiddenElements = Seq("header")) {
+@helper.main(title = "Welcome to Kifi!", scripts = Seq("website/welcome"), hiddenElements = Seq("header")) {
   <section class="content clearfix text_center welcome">
-    <h1>
-    @if(socialUser.isDefined) {
-      Hi @socialUser.get.fullName!<br>
-    }Welcome to the <img src="@routes.Assets.at("images/logo2.png")" width="103" height="58" class="logo2"> private beta!</h1>
+    <h1>Welcome to the <img src="@routes.Assets.at("images/logo2.png")" width="103" height="58" class="logo2"> private beta!</h1>
 
     <p>KiFi is still in stealth-mode and is open for<br>beta tester upon invitation only.</p>
 
     <div class="welcome_btn">
       @if(id.isDefined) {
-        <a href="@com.keepit.controllers.website.routes.OnboardingController.signup(id.get.id)" class="btn blue big">Let me in</a>
+        <a href="@com.keepit.controllers.website.routes.OnboardingController.signup(id.get.id)" class="btn blue big">@if(socialUser.isDefined) {It's me, @socialUser.get.fullName. } else {}Let me in!</a>
       } else {
-        <a href="@com.keepit.controllers.website.routes.OnboardingController.signup()" class="btn blue big">Let me in</a>
+        <a href="@com.keepit.controllers.website.routes.OnboardingController.signup()" class="btn blue big">Let me in!</a>
       }
-        <div class="powered">Powered by facebook connect</div>
+        <div class="powered">Powered by Facebook Connect</div>
     </div>
   </section>
 }

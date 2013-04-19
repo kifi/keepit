@@ -1,13 +1,11 @@
 package com.keepit.controllers.ext
 
-import com.keepit.controllers.core.SliderInfoLoader
 import com.keepit.classify.{Domain, DomainClassifier, DomainRepo, DomainStates}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.net.URI
 import com.keepit.model._
-import com.keepit.serializer.UserWithSocialSerializer._
 import com.keepit.serializer.BasicUserSerializer
 import com.keepit.common.social._
 import com.keepit.search.graph.URIGraph
@@ -33,22 +31,8 @@ class ExtUserController @Inject() (
   userToDomainRepo: UserToDomainRepo,
   socialConnectionRepo: SocialConnectionRepo,
   userRepo: UserRepo,
-  basicUserRepo: BasicUserRepo,
-  sliderInfoLoader: SliderInfoLoader)
+  basicUserRepo: BasicUserRepo)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
-
-  def getSliderInfo(url: String) = AuthenticatedJsonAction { request =>
-    val sliderInfo = sliderInfoLoader.load(request.userId, url)
-    Ok(Json.obj(
-        "kept" -> sliderInfo.bookmark.isDefined,
-        "private" -> JsBoolean(sliderInfo.bookmark.map(_.isPrivate).getOrElse(false)),
-        "following" -> sliderInfo.following,
-        "friends" -> sliderInfo.socialUsers.map(BasicUserSerializer.basicUserSerializer.writes),
-        "numComments" -> sliderInfo.numComments,
-        "numMessages" -> sliderInfo.numMessages,
-        "neverOnSite" -> sliderInfo.neverOnSite.isDefined,
-        "sensitive" -> JsBoolean(sliderInfo.sensitive.getOrElse(false))))
-  }
 
   def suppressSliderForSite() = AuthenticatedJsonToJsonAction { request =>
     val json = request.body

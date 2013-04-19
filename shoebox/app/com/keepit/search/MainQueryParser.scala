@@ -63,8 +63,7 @@ class MainQueryParser(
 
   override def parse(queryText: CharSequence) = {
     super.parse(queryText).map{ query =>
-      val terms = getTerms(query)
-      if (terms.size <= 0) query
+      if (numStemmedTerms <= 0) query
       else {
         query.setBoost(baseBoost)
 
@@ -79,7 +78,7 @@ class MainQueryParser(
         val auxStrengths = ArrayBuffer.empty[Float]
 
         if (semanticBoost > 0.0f) {
-          val svq = SemanticVectorQuery("sv", terms)
+          val svq = SemanticVectorQuery(getStemmedTerms("sv"))
           auxQueries += svq
           auxStrengths += semanticBoost
         }

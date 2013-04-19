@@ -99,7 +99,7 @@ class ExtSearchController @Inject() (
 
       searchRes
     }
-    val res = toPersonalSearchResultPacket(userId, searchRes, config, experimentId)
+    val res = toPersonalSearchResultPacket(userId, searchRes, config, searchFilter.isDefault, experimentId)
     reportArticleSearchResult(searchRes)
 
     Ok(RPS.resSerializer.writes(res)).as(ContentTypes.JSON)
@@ -117,7 +117,7 @@ class ExtSearchController @Inject() (
   }
 
   private[ext] def toPersonalSearchResultPacket(userId: Id[User],
-      res: ArticleSearchResult, config: SearchConfig, experimentId: Option[Id[SearchConfigExperiment]]): PersonalSearchResultPacket = {
+      res: ArticleSearchResult, config: SearchConfig, isDefaultFilter: Boolean, experimentId: Option[Id[SearchConfigExperiment]]): PersonalSearchResultPacket = {
 
     val doParallel = util.Random.nextBoolean
 
@@ -139,11 +139,11 @@ class ExtSearchController @Inject() (
     log.debug(hits mkString "\n")
 
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
-    PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, isToShow(res), experimentId, filter)
+    PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, (!isDefaultFilter || isToShow(res)), experimentId, filter)
   }
   
   private[ext] def isToShow(res: ArticleSearchResult): Boolean = {
-    res.svVariance < 0.18
+    res.svVariance < 0.17
   }
 
   private[ext] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {

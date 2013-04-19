@@ -85,7 +85,7 @@ exports.on = {
   startup: new Listeners};
 
 // Call handlers for load reason async (after main.js has finished).
-timers.setTimeout(dispatch.bind(exports.on[exports.loadReason]), 0);
+timers.setTimeout(dispatch.bind(exports.on[exports.loadReason] || []), 0);
 
 exports.popup = {
   open: function(options, handlers) {
