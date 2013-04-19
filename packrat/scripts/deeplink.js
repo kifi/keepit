@@ -1,4 +1,4 @@
-// @match /^https?:\/\/(dev\.ezkeep\.com:9000|(www\.)?keepitfindit.com)\/r\/.*/
+// @match /^https?:\/\/(dev\.ezkeep\.com:9000|(www\.)?(kifi|keepitfindit)\.com)\/r\/.*/
 // @require scripts/api.js
 
 !function() {
