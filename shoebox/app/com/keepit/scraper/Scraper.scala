@@ -145,12 +145,12 @@ class Scraper @Inject() (
           }.getOrElse(throw new Exception("failed to find a extractor factory"))
         case Failure(_) =>
           log.warn("uri parsing failed: [%s]".format(url))
-          new DefaultExtractor(url, Scraper.maxContentChars)
+          DefaultExtractorFactory(url)
       }
     } catch {
       case e: Throwable =>
           log.warn("uri parsing failed: [%s][%s]".format(url, e.toString))
-          new DefaultExtractor(url, Scraper.maxContentChars)
+          DefaultExtractorFactory(url)
     }
   }
 
