@@ -70,4 +70,5 @@
   margin: 6px 0;
   font-size: 13px;
   color: #3a3c3d;
+  word-wrap: break-word;
 }
