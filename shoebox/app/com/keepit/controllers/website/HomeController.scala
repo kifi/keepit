@@ -50,6 +50,19 @@ class HomeController @Inject() (db: Database,
   
   def pendingHome()(implicit request: AuthenticatedRequest[AnyContent]) = {
     val user = request.user
+    val anyPendingInvite = db.readOnly { implicit s =>
+      socialUserRepo.getByUser(user.id.get) map { su =>
+        invitationRepo.getByRecipient(su.id.get)
+      } flatten
+    }
+    if(anyPendingInvite.nonEmpty) {
+      db.readWrite { implicit session =>
+        anyPendingInvite.map { invite =>
+          if(invite.state == InvitationStates.ACTIVE)
+            invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
+        }
+      }
+    }
     val name = s"${user.firstName} ${user.lastName}"
     val (email, friendsOnKifi) = db.readOnly { implicit session =>
       val email = emailRepo.getByUser(user.id.get).headOption.map(_.address)
