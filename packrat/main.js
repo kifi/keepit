@@ -357,8 +357,9 @@ api.port.on({
       markNewNotificeVisited("comment", o.id);
       if (d) {
         d.lastCommentRead = time;
-        tellTabsIfCountChanged(d, "c", commentCount(d));
+        tellTabsIfCountChanged(d, "c", commentCount(d));  // tabs at this uri
       }
+      tellTabsNoticeCountIfChanged();  // visible tabs
       socket.send(["set_comment_read", o.id]);
     }
   },
@@ -368,8 +369,9 @@ api.port.on({
       markNewNoticeVisited("message", o.messageId);
       if (d) {
         d.lastMessageRead[o.threadId] = time;
-        tellTabsIfCountChanged(d, "m", messageCount(d));
+        tellTabsIfCountChanged(d, "m", messageCount(d));  // tabs at this uri
       }
+      tellTabsNoticeCountIfChanged();  // visible tabs
       socket.send(["set_message_read", o.messageId]);
     }
   },
