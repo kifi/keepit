@@ -23,6 +23,7 @@ class UserController @Inject() (db: Database,
   userValueRepo: UserValueRepo,
   socialConnectionRepo: SocialConnectionRepo,
   socialUserRepo: SocialUserInfoRepo,
+  invitationRepo: InvitationRepo,
   actionAuthenticator: ActionAuthenticator)
     extends WebsiteController(actionAuthenticator) {
   
@@ -44,16 +45,25 @@ class UserController @Inject() (db: Database,
     
     val connections = db.readOnly { implicit conn =>
       socialUserRepo.getByUser(request.user.id.get) map { su =>
-        socialConnectionRepo.getSocialUserConnections(su.id.get)
+        socialConnectionRepo.getSocialUserConnections(su.id.get) map { suc =>
+          
+          val status = if(suc.userId.isDefined) "joined"
+            else {
+              val existingInvite = invitationRepo.getByRecipient(suc.id.get)
+              if(existingInvite.isDefined) "invited"
+              else ""
+            }
+          (suc, status)
+        }
       }
     } flatten
     
     Ok(JsArray(connections.map { conn =>
       Json.obj(
-        "label" -> conn.fullName,
-        "image" -> s"https://graph.facebook.com/${conn.socialId.id}/picture?type=square&width=75&height=75", // we need a generic profile picture route for non-users
-        "value" -> (conn.networkType + "/" + conn.socialId.id),
-        "status" -> ""
+        "label" -> conn._1.fullName,
+        "image" -> s"https://graph.facebook.com/${conn._1.socialId.id}/picture?type=square&width=75&height=75", // we need a generic profile picture route for non-users
+        "value" -> (conn._1.networkType + "/" + conn._1.socialId.id),
+        "status" -> conn._2
       )
     }))
 
