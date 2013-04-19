@@ -12,7 +12,6 @@ class CommentWithBasicUserSerializer extends Writes[CommentWithBasicUser] {
   def writes(commentWithBasicUser: CommentWithBasicUser): JsValue =
     Json.obj(
       "id" -> commentWithBasicUser.comment.externalId.id,
-      "externalId" -> commentWithBasicUser.comment.externalId.id,  // TODO: remove after metro launch
       "createdAt" -> commentWithBasicUser.comment.createdAt,
       "text" -> JsString(commentWithBasicUser.comment.text),
       "user" -> commentWithBasicUser.user,
