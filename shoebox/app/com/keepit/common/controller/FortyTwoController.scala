@@ -43,7 +43,7 @@ class AdminController(actionAuthenticator: ActionAuthenticator) extends Controll
   def AdminHtmlAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] = AdminAction(false, action)
 
   def AdminJsonAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] = Action(parse.anyContent) { request =>
-    AdminAction(true, action)(request) match {
+    AdminAction(false, action)(request) match {
       case r: PlainResult => r.as(ContentTypes.JSON)
       case any: Result => any
     }
