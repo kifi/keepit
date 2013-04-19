@@ -143,15 +143,6 @@ class ExtStreamController @Inject() (
             "get_friends" -> { _ =>
               channel.push(Json.arr("friends", getFriends(userId)))
             },
-            "get_comments" -> { case JsNumber(requestId) +: JsString(url) +: _ => // unused, remove soon
-              channel.push(Json.arr(requestId.toLong, paneData.getComments(userId, url)))
-            },
-            "get_message_threads" -> { case JsNumber(requestId) +: JsString(url) +: _ =>     // unused, remove soon
-              channel.push(Json.arr(requestId.toLong, paneData.getMessageThreadList(userId, url)))
-            },
-            "get_message_thread" -> { case JsNumber(requestId) +: JsString(threadId) +: _ =>  // unused, remove soon
-              channel.push(Json.arr(requestId.toLong, paneData.getMessageThread(userId, ExternalId[Comment](threadId))))
-            },
             "get_thread" -> { case JsString(threadId) +: _ =>
               channel.push(Json.arr("thread", paneData.getMessageThread(ExternalId[Comment](threadId)) match { case (nUri, msgs) =>
                 Json.obj("id" -> threadId, "uri" -> nUri.url, "messages" -> msgs)
