@@ -109,11 +109,6 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  def all = AdminHtmlAction { request =>
-    val bookmarks = db.readOnly(implicit session => bookmarkRepo.all)
-    Ok(JsArray(bookmarks map BookmarkSerializer.bookmarkSerializer.writes _))
-  }
-
   def bookmarksView(page: Int = 0) = AdminHtmlAction { request =>
     val PAGE_SIZE = 50
 
