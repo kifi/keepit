@@ -298,9 +298,10 @@ slider2 = function() {
     var loc = locator.split("/");
     switch (loc[1]) {
       case "messages":
-        if (loc[2]) {
-          requireData("thread/" + loc[2], function(th) {
-            showPane("thread", false, th.messages[0].recipients, loc[2]);
+        if (loc[2]) {  // loc[2] can be id of any message (not necessarily a parent)
+          api.log("[openDeepLink] requiring thread for recipients");
+          api.port.emit("thread", {id: loc[2], respond: true}, function(th) {
+            showPane("thread", false, th.messages[0].recipients, th.id);
           });
         } else {
           showPane("threads");
@@ -457,14 +458,14 @@ slider2 = function() {
       });
     },
     notices: function($box) {
-      api.port.emit("session", function (session) {
+      api.port.emit("session", function(session) {
         api.require("scripts/notices.js", function() {
           renderNotices($box.find(".kifi-pane-tall"));
         });
       });
     },
     comments: function($box) {
-      requireData("comments", function(comments) {
+      api.port.emit("comments", function(comments) {
         api.port.emit("session", function(session) {
           api.require("scripts/comments.js", function() {
             commentsPane.render($box.find(".kifi-pane-tall"), comments, session);
@@ -473,18 +474,19 @@ slider2 = function() {
       });
     },
     threads: function($box) {
-      requireData("threads", function(o) {
+      api.port.emit("threads", function(o) {
         api.require("scripts/threads.js", function() {
           threadsPane.render($box.find(".kifi-pane-tall"), o);
           o.threads.forEach(function(th) {
-            requireData("thread/" + th.id, api.noop);  // preloading
+            api.port.emit("thread", {id: th.id});  // preloading
           });
         });
       });
     },
     thread: function($box, threadId) {
       var $tall = $box.find(".kifi-pane-tall").css("margin-top", $box.find(".kifi-thread-who").outerHeight());
-      requireData("thread/" + threadId, function(th) {
+      api.log("[populatePane] requiring thread for messages");
+      api.port.emit("thread", {id: threadId, respond: true}, function(th) {
         api.port.emit("session", function(session) {
           api.require("scripts/thread.js", function() {
             threadPane.render($tall, th.id, th.messages, session);
@@ -521,36 +523,7 @@ slider2 = function() {
     return arr;
   }
 
-  const dataCallbacks = {};
-  function requireData(key, callback) {
-    var kArr = key.split("/");
-    var arr = dataCallbacks[key] = dataCallbacks[key] || [];
-    arr.push([kArr[1], callback]);
-
-    api.port.emit.apply(api.port, kArr);
-  }
-
-  function receiveData(type, prop, data) {  // prop might be omitted
-    if (data === undefined) {
-      data = prop, prop = null;
-    }
-    var arg = data[prop], key = prop ? type + "/" + arg : type;
-    for (var i = 0, callbacks = dataCallbacks[key] || 0; i < callbacks.length; i++) {
-      var cb = callbacks[i];
-      if (cb[0] == arg) {
-        cb[1](data);
-        callbacks.splice(i--, 1);
-      }
-    }
-    if (!callbacks.length) {
-      delete dataCallbacks[key];
-    }
-  }
-
   api.port.on({
-    comments: receiveData.bind(null, "comments"),
-    threads: receiveData.bind(null, "threads"),
-    thread: receiveData.bind(null, "thread", "id"),
     comment: function(comment) {
       api.port.emit("session", function(session) {
         commentsPane.update(comment, session.userId);

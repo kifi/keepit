@@ -45,8 +45,9 @@
                 <div class="name">@invite.get.name</div>
                 <div class="status">
                   @{invite.get.state.value match {
-                    case "active" => "Invited"
-                    case "accepted" => "Waiting for approval"
+                    case "active" => "Invitation sent"
+                    case "accepted" => "Accepted your invitation, waiting on approval"
+                    case "admin_accepted" => "Approved, hasn't joined yet"
                     case "admin_rejected" => "Rejected"
                     case "joined" => "Joined!"
                   }}

@@ -30,7 +30,7 @@ case class Invitation(
 ) extends ModelWithExternalId[Invitation] {
   def withId(id: Id[Invitation]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-
+  def withState(state: State[Invitation]) = copy(state = state)
 }
 
 @ImplementedBy(classOf[InvitationRepoImpl])
@@ -65,5 +65,6 @@ class InvitationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock)
 object InvitationStates extends States[Invitation] {
   val ACCEPTED = State[Invitation]("accepted")
   val ADMIN_REJECTED = State[Invitation]("admin_rejected")
+  val ADMIN_ACCEPTED = State[Invitation]("admin_accepted")
   val JOINED = State[Invitation]("joined")
 }

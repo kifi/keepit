@@ -1,7 +1,5 @@
 package com.keepit.social
 
-import scala.Some
-
 import com.google.inject.{Inject, Singleton}
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.db.ExternalId
@@ -9,21 +7,84 @@ import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.social.SocialId
-import com.keepit.common.social.{SocialNetworks, SocialNetworkType}
+import com.keepit.common.social.SocialNetworkType
 import com.keepit.inject._
-import com.keepit.model.SocialUserInfo
-import com.keepit.model.User
 import com.keepit.model._
-
 import play.api.Application
 import play.api.Play
 import play.api.Play.current
-import securesocial.core.UserId
 import securesocial.core._
 import securesocial.core.providers.Token
 
 class SecureSocialIdGenerator(app: Application) extends IdGenerator(app) {
   def generate: String = ExternalId[String]().toString
+}
+
+class SecureSocialAuthenticatorStore(app: Application) extends AuthenticatorStore(app) {
+  lazy val global = app.global.asInstanceOf[FortyTwoGlobal]
+  def proxy: Option[SecureSocialAuthenticatorPlugin] = {
+    if (global.initialized) {
+      val injector = new RichInjector(global.injector)
+      Some(new SecureSocialAuthenticatorPlugin(
+        injector.inject[Database], injector.inject[SocialUserInfoRepo], injector.inject[UserSessionRepo], app))
+    } else None
+  }
+  def save(authenticator: Authenticator): Either[Error, Unit] = proxy.get.save(authenticator)
+  def find(id: String): Either[Error, Option[Authenticator]] = proxy.get.find(id)
+  def delete(id: String): Either[Error, Unit] = proxy.get.delete(id)
+}
+
+@AppScoped
+class SecureSocialAuthenticatorPlugin @Inject()(
+  db: Database,
+  socialUserInfoRepo: SocialUserInfoRepo,
+  sessionRepo: UserSessionRepo,
+  app: Application) extends AuthenticatorStore(app) {
+  private def sessionFromAuthenticator(authenticator: Authenticator): UserSession = {
+    val (socialId, provider) = (SocialId(authenticator.userId.id), SocialNetworkType(authenticator.userId.providerId))
+    val userId = db.readOnly { implicit s => socialUserInfoRepo.get(socialId, provider).userId }
+    UserSession(
+      userId = userId,
+      externalId = ExternalId[UserSession](authenticator.id),
+      socialId = socialId,
+      provider = provider,
+      expires = authenticator.expirationDate,
+      state = if (authenticator.isValid) UserSessionStates.ACTIVE else UserSessionStates.INACTIVE
+    )
+  }
+  private def authenticatorFromSession(session: UserSession): Authenticator = Authenticator(
+    id = session.externalId.id,
+    userId = UserId(session.socialId.id, session.provider.name),
+    creationDate = session.createdAt,
+    lastUsed = session.updatedAt,
+    expirationDate = session.expires
+  )
+
+  def save(authenticator: Authenticator): Either[Error, Unit] = {
+    val session = db.readWrite { implicit s =>
+      val newSession = sessionFromAuthenticator(authenticator)
+      val maybeOldSession = sessionRepo.getOpt(newSession.externalId)
+      sessionRepo.save(newSession.copy(
+        id = maybeOldSession.map(_.id.get),
+        createdAt = maybeOldSession.map(_.createdAt).getOrElse(newSession.createdAt)
+      ))
+    }
+    Right(authenticatorFromSession(session))
+  }
+  def find(id: String): Either[Error, Option[Authenticator]] = Right {
+    db.readOnly { implicit s =>
+      sessionRepo.getOpt(ExternalId[UserSession](id))
+    }.collect {
+      case s if s.isValid => authenticatorFromSession(s)
+    }
+  }
+  def delete(id: String): Either[Error, Unit] = Right {
+    db.readWrite { implicit s =>
+      sessionRepo.getOpt(ExternalId[UserSession](id)).foreach { session =>
+        sessionRepo.save(session invalidated)
+      }
+    }
+  }
 }
 
 class SecureSocialUserService(implicit val application: Application) extends UserServicePlugin(application) {
@@ -54,12 +115,9 @@ class SecureSocialUserPlugin @Inject() (
     userRepo: UserRepo)
   extends UserService with Logging {
 
-  /**
-   * Assuming for now that there is only facebook
-   */
   def find(id: UserId): Option[SocialUser] =
     db.readOnly { implicit s =>
-      socialUserInfoRepo.getOpt(SocialId(id.id), SocialNetworks.FACEBOOK)
+      socialUserInfoRepo.getOpt(SocialId(id.id), SocialNetworkType(id.providerId))
     } match {
       case None =>
         log.debug("No SocialUserInfo found for %s".format(id))
@@ -73,9 +131,10 @@ class SecureSocialUserPlugin @Inject() (
     val socialUser = SocialUser(identity)
     //todo(eishay) take the network type from the socialUser
     log.debug("persisting social user %s".format(socialUser))
-    val socialUserInfo = socialUserInfoRepo.save(
-      internUser(SocialId(socialUser.id.id), SocialNetworks.FACEBOOK, socialUser).withCredentials(socialUser))
-    require(socialUserInfo.credentials.isDefined, "social user info's credentias is not defined: %s".format(socialUserInfo))
+    val socialUserInfo = socialUserInfoRepo.save(internUser(
+      SocialId(socialUser.id.id), SocialNetworkType(socialUser.id.providerId), socialUser).withCredentials(socialUser))
+    require(socialUserInfo.credentials.isDefined,
+      "social user info's credentials is not defined: %s".format(socialUserInfo))
     require(socialUserInfo.userId.isDefined, "social user id  is not defined: %s".format(socialUserInfo))
     if (socialUserInfo.state != SocialUserInfoStates.FETCHED_USING_SELF) {
       socialGraphPlugin.asyncFetch(socialUserInfo)
@@ -90,7 +149,7 @@ class SecureSocialUserPlugin @Inject() (
     val nameParts = displayName.split(' ')
     User(firstName = nameParts(0),
         lastName = nameParts.tail.mkString(" "),
-        state = if(Play.isDev) UserStates.PENDING else UserStates.PENDING
+        state = if(Play.isDev) UserStates.ACTIVE else UserStates.PENDING
     )
   }
 
@@ -107,7 +166,7 @@ class SecureSocialUserPlugin @Inject() (
         val user = userRepo.save(createUser(socialUser.fullName))
         log.debug("creating new SocialUserInfo for %s".format(user))
         val userInfo = SocialUserInfo(userId = Some(user.id.get),//verify saved
-            socialId = socialId, networkType = SocialNetworks.FACEBOOK,
+            socialId = socialId, networkType = socialNetworkType,
             fullName = socialUser.fullName, credentials = Some(socialUser))
         log.debug("SocialUserInfo created is %s".format(userInfo))
         userInfo

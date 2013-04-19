@@ -27,7 +27,6 @@ class HomeController @Inject() (db: Database,
   emailRepo: EmailAddressRepo,
   socialConnectionRepo: SocialConnectionRepo,
   invitationRepo: InvitationRepo,
-  socialUserInfoRepo: SocialUserInfoRepo,
   actionAuthenticator: ActionAuthenticator)
     extends WebsiteController(actionAuthenticator) {
 
@@ -46,8 +45,7 @@ class HomeController @Inject() (db: Database,
       Ok(views.html.website.userHome(request.user, friendsOnKifi))
     }
   }, unauthenticatedAction = { implicit request =>
-    if(Play.isDev) Ok(views.html.website.welcome())
-    else Ok // disabled for now
+    Ok(views.html.website.welcome())
   })
   
   def pendingHome()(implicit request: AuthenticatedRequest[AnyContent]) = {
@@ -67,7 +65,15 @@ class HomeController @Inject() (db: Database,
   }
 
   def install = AuthenticatedHtmlAction { implicit request =>
-    
+    db.readWrite { implicit session =>
+      socialUserRepo.getByUser(request.user.id.get) map { su =>
+        invitationRepo.getByRecipient(su.id.get) match {
+          case Some(invite) =>
+            invitationRepo.save(invite.withState(InvitationStates.JOINED))
+          case None =>  
+        }
+      }
+    }
     Ok(views.html.website.install(request.user))
   }
   

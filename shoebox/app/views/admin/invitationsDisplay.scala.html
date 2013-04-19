@@ -1,0 +1,73 @@
+@(invitesWithSocial: Seq[(Invitation, SocialUserInfo, User)], page: Int, count: Int, numPages: Int, showing: String = "all")
+
+@pagination(page: Int, pageCount: Int) = {
+  <div class="pagination pagination-centered pagination-mini">
+    <ul>
+      <li>
+        @if(page > 0) {
+          <a href="@com.keepit.controllers.admin.routes.AdminInvitationController.displayInvitations(page - 1)">
+        } else {
+         <a href="#">
+        }
+        Prev
+        </a>
+      </li>
+      @for(i <- 0 to (pageCount - 1)) {
+        @if(i == page) {
+          <li class="disabled">
+            <a href="@com.keepit.controllers.admin.routes.AdminInvitationController.displayInvitations(i)">@{i + 1}</a>
+          </li>
+        } else {
+          <li class="active">
+            <a href="@com.keepit.controllers.admin.routes.AdminInvitationController.displayInvitations(i)">@{i + 1}</a>
+          </li>
+        }
+      }
+      <li>
+        @if(count > 0) {
+          <a href="@com.keepit.controllers.admin.routes.AdminInvitationController.displayInvitations(page + 1)">
+        } else {
+         <a href="#">
+        }
+        Next
+        </a>
+      </li>
+    </ul>
+  </div>
+}
+
+@admin("Invitations") {
+  @pagination(page, numPages)
+
+    <table class="table table-condensed table-striped">
+      <thead>
+        <tr>
+          <th>Name
+          <th>Invited by
+          <th>Date invited
+          <th>State
+          <th>Action!
+      </thead>
+      @for(invite <- invitesWithSocial) {
+      <tr>
+        <td><a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(invite._2.id.get)">@invite._2.fullName</a>
+        <td><a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(invite._3.id.get)">@invite._3.firstName @invite._3.lastName</a>
+        <td>@adminHelper.dateTimeDisplay(invite._1.createdAt)
+        <td>@invite._1.state
+        <td>
+          @if(invite._1.state == InvitationStates.ACCEPTED) { 
+              <form class="form-inline" action="@com.keepit.controllers.admin.routes.AdminInvitationController.acceptUser(invite._2.id.get)" method="POST">
+                <button type="submit" class="btn">Accept</button>
+              </form>
+          }
+        </td>
+      }
+    </table>
+    
+  @pagination(page, numPages)
+
+<script>
+$(function() { $("form").submit(function() { $(this).find("button[type=submit]").button("loading"); }); });
+</script>
+
+}

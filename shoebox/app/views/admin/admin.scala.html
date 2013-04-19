@@ -37,8 +37,13 @@
 		    <ul class="nav">
 		      <li><a href="@com.keepit.controllers.admin.routes.AdminDashboardController.index">Dashboard</a>
 		      <li><a href="@com.keepit.controllers.admin.routes.AdminBookmarksController.bookmarksView(0)">Keeps</a>
-		      <li><a href="@com.keepit.controllers.admin.routes.AdminUserController.usersView">Users</a>
-		      <li><a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUsersView(0)">Social Users</a>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" href="#">Users</a>
+            <ul class="dropdown-menu" role="menu">
+              <li><a href="@com.keepit.controllers.admin.routes.AdminUserController.usersView">All Users</a>
+              <li><a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUsersView(0)">Social Users</a>
+              <li><a href="@com.keepit.controllers.admin.routes.AdminInvitationController.displayInvitations()">Invitations</a>
+            </ul>
 		      <li><a href="@com.keepit.controllers.admin.routes.AdminCommentController.followsView">Follows</a>
 		      <li><a href="@com.keepit.controllers.admin.routes.AdminCommentController.commentsView(0)">Comments</a>
 		      <li><a href="@com.keepit.controllers.admin.routes.AdminCommentController.messagesView(0)">Messages</a>

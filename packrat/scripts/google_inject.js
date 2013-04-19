@@ -350,7 +350,7 @@ api.log("[google_inject]");
       $res.find(".kifi-res-filter[data-filter=a]").click();
     }).on("click", ".kifi-res-debug", function(e) {
       e.stopPropagation();
-      location.href = response.server + "/admin/search/results/" + response.uuid;
+      location.href = response.webBaseUri + "/admin/search/results/" + response.uuid;
     }).on("mouseenter", ".kifi-face.kifi-friend", function() {
       var $a = $(this).showHover({
         hideDelay: 600,
@@ -390,7 +390,7 @@ api.log("[google_inject]");
           }, callback);
         }});
     }).on("click", ".kifi-chatter-deeplink", function() {
-      api.port.emit("add_deep_link_listener", {locator: $(this).data("locator")});
+      api.port.emit("add_deep_link_listener", $(this).data("locator"));
       location.href = $(this).closest("li.g").find("h3.r a")[0].href;
     });
   }
