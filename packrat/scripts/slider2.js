@@ -15,7 +15,7 @@ var generalPane, commentsPane = noPane, threadsPane = noPane, threadPane = noPan
 slider2 = function() {
   var $tile = $("#kifi-tile"), $slider, $pane, lastShownAt, info;
 
-  key("esc", function() {
+  key("esc", "slider2", function() {
     if ($pane) {
       hidePane();
     } else if ($slider) {
@@ -23,9 +23,18 @@ slider2 = function() {
     }
   });
 
+  api.onEnd.push(function() {
+    api.log("[slider2:onEnd]");
+    key.deleteScope("slider2");
+    $pane && $pane.remove();
+    $slider && $slider.remove();
+    $tile.remove();
+  });
+
   function showSlider(o, trigger, locator) {
     info = o = info || o;  // ignore o after first call (may be out of date) TODO: trust cached state from main.js
-    api.log("slider info:", o);
+    api.log("[showSlider]", o);
+    key.setScope("slider2");
 
     lastShownAt = +new Date;
 
@@ -187,6 +196,7 @@ slider2 = function() {
   // trigger is for the event log (e.g. "key", "icon")
   function hideSlider(trigger) {
     idleTimer.kill();
+    key.setScope();
     $slider.addClass("kifi-hiding").on("transitionend webkitTransitionEnd", function(e) {
       if (e.target.classList.contains("kifi-slider2") && e.originalEvent.propertyName == "opacity") {
         $(e.target).remove();
