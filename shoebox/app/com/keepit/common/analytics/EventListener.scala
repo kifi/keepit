@@ -11,6 +11,9 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.logging.Logging
+import com.keepit.common.net.URI
+import com.keepit.common.net.Host
 import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.time._
@@ -27,7 +30,7 @@ import com.google.inject.Provider
 abstract class EventListenerPlugin(
     userRepo: UserRepo,
     normalizedURIRepo: NormalizedURIRepo)
-  extends SchedulingPlugin {
+  extends SchedulingPlugin with Logging {
 
   def onEvent: PartialFunction[Event, Unit]
 
@@ -39,15 +42,48 @@ abstract class EventListenerPlugin(
     queryUUID: Option[ExternalId[ArticleSearchResultRef]]
   )
 
-  def searchParser(externalUser: ExternalId[User], json: JsObject)(implicit s: RSession) = {
+  def searchParser(externalUser: ExternalId[User], json: JsObject, eventName: String)(implicit s: RSession) = {
     val query = (json \ "query").asOpt[String].getOrElse("")
-    val url = (json \ "url").asOpt[String].getOrElse("")
+    val url: String = getDestinationURL(json, eventName).getOrElse("")
     val user = userRepo.get(externalUser)
     val normUrl = normalizedURIRepo.getByNormalizedUrl(url)
-    val rank = (json \ "whichResult").asOpt[Int].getOrElse(-1)
+    val rank = getRank(json, eventName)
     val queryUUID = ExternalId.asOpt[ArticleSearchResultRef]((json \ "queryUUID").asOpt[String].getOrElse(""))
     (user, SearchMeta(query, url, normUrl, rank, queryUUID))
   }
+
+  private def getRank(json: JsObject, eventName: String): Int = {
+    eventName match {
+      case SearchEventName.kifiResultClicked => (json \ "whichResult").asOpt[Int].getOrElse(0)
+      case _ => 0
+    }
+  }
+
+  private def getDestinationURL(json: JsObject, eventName: String): Option[String] = {
+    val urlOpt = (json \ "url").asOpt[String]
+    eventName match {
+      case SearchEventName.googleResultClicked => urlOpt.flatMap{ url => getDestinationFromGoogleURL(url) }
+      case _ => urlOpt
+    }
+  }
+
+  private def getDestinationFromGoogleURL(url: String): Option[String] = {
+    val urlOpt = url match {
+      case URI(_, _, Some(Host("com", "google", _*)), _, Some("/url"), Some(query), _) =>
+        query.params.find(_.name == "url").flatMap{ _.decodedValue }
+      case _ =>
+        None
+    }
+    if (!urlOpt.isDefined) log.error(s"failed to extract the destination URL from: ${url}")
+    urlOpt
+  }
+}
+
+object SearchEventName {
+  val kifiResultClicked = "kifiResultClicked"
+  val googleResultClicked = "googleResultClicked"
+
+  val validEventNames = Set(kifiResultClicked, googleResultClicked)
 }
 
 @Singleton
@@ -77,7 +113,7 @@ class EventHelperActor @Inject() (
 }
 
 @Singleton
-class KifiResultClickedListener @Inject() (
+class ResultClickedListener @Inject() (
     userRepo: UserRepo,
     normalizedURIRepo: NormalizedURIRepo,
     searchServiceClient: SearchServiceClient,
@@ -86,14 +122,20 @@ class KifiResultClickedListener @Inject() (
     bookmarkRepo: BookmarkRepo)
   extends EventListenerPlugin(userRepo, normalizedURIRepo) {
 
+  import SearchEventName._
+
   def onEvent: PartialFunction[Event, Unit] = {
-    case Event(_, UserEventMetadata(EventFamilies.SEARCH, "kifiResultClicked", externalUser, _, experiments, metaData, _), _, _) =>
+    case Event(_, UserEventMetadata(EventFamilies.SEARCH, eventName, externalUser, _, experiments, metaData, _), _, _)
+         if validEventNames.contains(eventName) =>
       val (user, meta, bookmark) = db.readOnly { implicit s =>
-        val (user, meta) = searchParser(externalUser, metaData)
+        val (user, meta) = searchParser(externalUser, metaData, eventName)
         val bookmark = meta.normUrl.map(n => bookmarkRepo.getByUriAndUser(n.id.get, user.id.get)).flatten
         (user, meta, bookmark)
       }
-      meta.normUrl.foreach { n =>
+      meta.normUrl.filter{ n =>
+        // exclude an uri not kept by any user. uri is not kept if either active or inactive.
+        (n.state != NormalizedURIStates.ACTIVE && n.state != NormalizedURIStates.INACTIVE)
+      }.foreach{ n =>
         searchServiceClient.logResultClicked(user.id.get, meta.query, n.id.get, meta.rank, !bookmark.isEmpty)
         clickHistoryTracker.add(user.id.get, n.id.get)
       }
