@@ -50,7 +50,7 @@ class UserController @Inject() (db: Database,
           val status = if(suc.userId.isDefined) "joined"
             else {
               val existingInvite = invitationRepo.getByRecipient(suc.id.get)
-              if(existingInvite.isDefined) "invited"
+              if(existingInvite.isDefined && existingInvite.get.state != InvitationStates.INACTIVE) "invited"
               else ""
             }
           (suc, status)

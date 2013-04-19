@@ -1,12 +1,28 @@
 $(function() {
+  $(".invite_field:not(:first)").prop("disabled", "true");
+
+  $(".invite_field").val("Select a facebook friend to invite");
+
+  function hideAlreadyInvited() {
+    $(".alreadyinvited").fadeOut();    
+  }
+
+    $(".close").click(function() {
+      hideAlreadyInvited();
+      return false;
+    });
 
   $.getJSON("/user/all-connections", function(connections) {
 
     $("#invites").on("click", ".invite_btn", function() {
       $this = $(this);
-      $this.fadeOut();
+      $this.text("Inviting...");
       $this.parents("form").submit();
       return false;
+    });
+
+    $("body").click(function() {
+      hideAlreadyInvited();
     });
 
     $(".invite_field").each(function(){
@@ -19,13 +35,23 @@ $(function() {
           return false;
         },
         select: function( event, ui ) {
-          $this = $(this);
-          $this.val( ui.item.label ).siblings(".invite_btn").fadeIn(250);
-          $this.parent().siblings(".avatar").attr("src", ui.item.image);
+          if(ui.item.status != "") {
+            console.log(this, $this, $this.val())
+            $this = $(this);
+            $this.siblings(".invited_id").val("");
+            $this.val("");
+            $(".alreadyinvited").fadeIn();
+            return false;
+          } else {
+            $this = $(this).blur();
+            $this.val( ui.item.label ).siblings(".invite_btn").fadeIn(250);
+            $this.parent().siblings(".avatar").attr("src", ui.item.image);
 
-          var $invited = $this.siblings(".invited_id")
-          $invited.val(ui.item.value);
-          return false;
+            var $invited = $this.siblings(".invited_id")
+            $invited.val(ui.item.value);
+            return false;
+          }
+
         },
         response: function( event, ui ) {
           $this = $(this);
