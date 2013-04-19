@@ -20,6 +20,8 @@ import org.apache.lucene.search.Explanation
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import com.keepit.common.time._
 import scala.collection.mutable.Map
+import com.keepit.search.query.IdSetFilter
+import org.apache.lucene.search.FilteredQuery
 
 case class BasicQueryInfo(
   queryUUID: ExternalId[ArticleSearchResultRef],
@@ -72,7 +74,24 @@ case class SearchStatistics(
 
 
 @Singleton
-class SearchStatisticsExtractor @Inject() (queryUUID: ExternalId[ArticleSearchResultRef],
+class SearchStatisticsExtractorFactory @Inject() (
+  db: Database, userRepo: UserRepo, socialConnectionRepo: SocialConnectionRepo, uriGraph: URIGraph,
+  articleIndexer: ArticleIndexer, searchConfigManager: SearchConfigManager, mainSearcherFactory: MainSearcherFactory, parserFactory: MainQueryParserFactory,
+  browsingHistoryTracker: BrowsingHistoryTracker, clickHistoryTracker: ClickHistoryTracker, resultClickTracker: ResultClickTracker){
+
+  def apply(queryUUID: ExternalId[ArticleSearchResultRef],
+  queryString: String, userId: Id[User], uriIds: Set[Id[NormalizedURI]], uriClickInfoMap: Map[Id[NormalizedURI], UriClickInfo]) = {
+
+    new SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
+  queryString: String, userId: Id[User], uriIds: Set[Id[NormalizedURI]], uriClickInfoMap,
+  db: Database, userRepo: UserRepo, socialConnectionRepo: SocialConnectionRepo, uriGraph: URIGraph,
+  articleIndexer: ArticleIndexer, searchConfigManager: SearchConfigManager, mainSearcherFactory: MainSearcherFactory, parserFactory: MainQueryParserFactory,
+  browsingHistoryTracker: BrowsingHistoryTracker, clickHistoryTracker: ClickHistoryTracker, resultClickTracker: ResultClickTracker)
+  }
+}
+
+
+class SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
   queryString: String, userId: Id[User], uriIds: Set[Id[NormalizedURI]], uriClickInfoMap: Map[Id[NormalizedURI], UriClickInfo],
   db: Database, userRepo: UserRepo, socialConnectionRepo: SocialConnectionRepo, uriGraph: URIGraph,
   articleIndexer: ArticleIndexer, searchConfigManager: SearchConfigManager, mainSearcherFactory: MainSearcherFactory, parserFactory: MainQueryParserFactory,
@@ -146,7 +165,7 @@ class SearchStatisticsExtractor @Inject() (queryUUID: ExternalId[ArticleSearchRe
  *
  * TODO: more elegant solution ?
  */
-class SearchStatisticsHelperSearcher @Inject() (queryString: String, userId: Id[User], targetUriIds: Set[Id[NormalizedURI]],
+class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], targetUriIds: Set[Id[NormalizedURI]],
   db: Database, userRepo: UserRepo, socialConnectionRepo: SocialConnectionRepo, uriGraph: URIGraph,
   articleIndexer: ArticleIndexer, searchConfigManager: SearchConfigManager, mainSearcherFactory: MainSearcherFactory, parserFactory: MainQueryParserFactory,
   browsingHistoryTracker: BrowsingHistoryTracker, clickHistoryTracker: ClickHistoryTracker, resultClickTracker: ResultClickTracker) {
@@ -255,9 +274,11 @@ class SearchStatisticsHelperSearcher @Inject() (queryString: String, userId: Id[
   def getUriInfo() = {
 
     var uriInfoMap = Map.empty[Id[NormalizedURI], UriInfo]
+    val idsetFilter = new IdSetFilter(targetUriIds.map{ normalizedId => normalizedId.id})
 
     parsedQuery.map { articleQuery =>
-      val personalizedSearcher = getPersonalizedSearcher(articleQuery)
+      val filteredQuery = new FilteredQuery(articleQuery, idsetFilter)
+      val personalizedSearcher = getPersonalizedSearcher(filteredQuery)
       personalizedSearcher.setSimilarity(similarity)
       personalizedSearcher.doSearch(articleQuery) { (scorer, mapper) =>
         var doc = scorer.nextDoc()
@@ -275,8 +296,6 @@ class SearchStatisticsHelperSearcher @Inject() (queryString: String, userId: Id[
             val textScore = scorer.score()
 
             val (sharingUsers, effectiveSharingSize) = findSharingUsers(normalizedId)
-
-
             val totalCounts = getPublicBookmarkCount(id)
             val bookmarkSize = if (!searchFilter.includeOthers) {
               if (isBookmark) effectiveSharingSize + 1 else effectiveSharingSize
@@ -290,7 +309,7 @@ class SearchStatisticsHelperSearcher @Inject() (queryString: String, userId: Id[
             uriInfoMap += normalizedId -> UriInfo(normalizedId, textScore, bookmarkScore, recencyScore,
               clickBoost, isBookmark, isPrivate, friendsKeepsCount, totalCounts)
           }
-          doc = scorer.nextDoc() // faster move? jump to next uriId?
+          doc = scorer.nextDoc()
         }
       }
     }

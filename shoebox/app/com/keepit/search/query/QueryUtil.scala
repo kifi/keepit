@@ -10,6 +10,7 @@ import org.apache.lucene.index.Term
 import org.apache.lucene.index.ReaderUtil
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.search.FilteredQuery
 import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
@@ -22,7 +23,7 @@ import org.apache.lucene.util.BytesRef
 import org.apache.lucene.search.DocIdSetIterator
 
 object QueryUtil extends Logging {
-  
+
   def getTerms(fieldName: String, query: Query): Set[Term] = {
     getTerms(query).filter{ _.field() == fieldName }
   }
@@ -39,6 +40,7 @@ object QueryUtil extends Logging {
       case q: ConditionalQuery => fromConditionalQuery(q)
       case q: ProximityQuery => fromProximityQuery(q)
       case q: SemanticVectorQuery => fromSemanticVectorQuery(q)
+      case q: FilteredQuery => getTerms(q.getQuery)
       case q: Query => fromOtherQuery(q)
       case null => Set.empty[Term]
     }
