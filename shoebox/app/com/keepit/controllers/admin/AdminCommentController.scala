@@ -14,9 +14,6 @@ import com.keepit.common.social._
 import com.keepit.model._
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
-import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
-import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
-import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import play.api.http.ContentTypes
 import play.api.libs.concurrent.Akka
 import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
@@ -24,7 +21,6 @@ import play.api.mvc.Action
 import play.api.mvc.Controller
 import securesocial.core.SecureSocial
 import securesocial.core.java.SecureSocial.SecuredAction
-import com.keepit.common.social.ThreadInfo
 import com.keepit.common.healthcheck.BabysitterTimeout
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
