@@ -12,7 +12,6 @@ import play.api.http.ContentTypes
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
-import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
 import java.sql.Connection
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.Hit
