@@ -149,7 +149,7 @@ class SecureSocialUserPlugin @Inject() (
     val nameParts = displayName.split(' ')
     User(firstName = nameParts(0),
         lastName = nameParts.tail.mkString(" "),
-        state = if(Play.isDev) UserStates.PENDING else UserStates.PENDING
+        state = if(Play.isDev) UserStates.ACTIVE else UserStates.PENDING
     )
   }
 
