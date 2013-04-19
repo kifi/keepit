@@ -82,11 +82,9 @@ class SearchStatisticsExtractorFactory @Inject() (
   def apply(queryUUID: ExternalId[ArticleSearchResultRef],
   queryString: String, userId: Id[User], uriIds: Set[Id[NormalizedURI]], uriClickInfoMap: Map[Id[NormalizedURI], UriClickInfo]) = {
 
-    new SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
-  queryString: String, userId: Id[User], uriIds: Set[Id[NormalizedURI]], uriClickInfoMap,
-  db: Database, userRepo: UserRepo, socialConnectionRepo: SocialConnectionRepo, uriGraph: URIGraph,
-  articleIndexer: ArticleIndexer, searchConfigManager: SearchConfigManager, mainSearcherFactory: MainSearcherFactory, parserFactory: MainQueryParserFactory,
-  browsingHistoryTracker: BrowsingHistoryTracker, clickHistoryTracker: ClickHistoryTracker, resultClickTracker: ResultClickTracker)
+    new SearchStatisticsExtractor (queryUUID, queryString, userId, uriIds, uriClickInfoMap,
+  db, userRepo, socialConnectionRepo, uriGraph, articleIndexer, searchConfigManager, mainSearcherFactory, parserFactory,
+  browsingHistoryTracker, clickHistoryTracker, resultClickTracker)
   }
 }
 
