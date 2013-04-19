@@ -45,8 +45,7 @@ class HomeController @Inject() (db: Database,
       Ok(views.html.website.userHome(request.user, friendsOnKifi))
     }
   }, unauthenticatedAction = { implicit request =>
-    if(Play.isDev) Ok(views.html.website.welcome())
-    else Ok // disabled for now
+    Ok(views.html.website.welcome())
   })
   
   def pendingHome()(implicit request: AuthenticatedRequest[AnyContent]) = {
