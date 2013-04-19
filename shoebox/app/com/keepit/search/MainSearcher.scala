@@ -20,6 +20,7 @@ import play.api.libs.json._
 import java.util.UUID
 import scala.math._
 import org.joda.time.DateTime
+import com.keepit.serializer.SearchResultInfoSerializer
 
 
 class MainSearcher(
@@ -235,8 +236,11 @@ class MainSearcher(
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
 
     val searchResultUuid = ExternalId[ArticleSearchResultRef]()
+    val searchResultInfo = SearchResultInfo(myHits.size, friendsHits.size, othersHits.size, svVar, svExistVar)
+    val searchResultJson = SearchResultInfoSerializer.serializer.writes(searchResultInfo)
+    val metaData = Json.obj("queryUUID" -> JsString(searchResultUuid.id), "searchResultInfo" -> searchResultJson)
 
-    val metaData = JsObject( Seq("queryUUID"->JsString(searchResultUuid.id), "svVariance"-> JsNumber(svVar), "svExistenceVar" -> JsNumber(svExistVar) ))
+//    val metaData = JsObject( Seq("queryUUID"->JsString(searchResultUuid.id), "svVariance"-> JsNumber(svVar), "svExistenceVar" -> JsNumber(svExistVar) ))
     persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData))
 
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit),
