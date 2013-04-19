@@ -712,7 +712,7 @@ function searchOnServer(request, respond) {
     function(resp) {
       api.log("[searchOnServer] response:", resp);
       resp.session = session;
-      resp.webBaseUri = webBaseUri();
+      resp.admBaseUri = admBaseUri();
       resp.showScores = api.prefs.get("showScores");
       respond(resp);
     });
@@ -861,16 +861,15 @@ function hasId(id) {
   return function(o) {return o.id == id};
 }
 
+function devUriOr(uri) {
+  return api.prefs.get("env") === "development" ? "http://dev.ezkeep.com:9000" : uri;
+}
+var apiBaseUri = devUriOr.bind(0, "https://api.kifi.com");
+var webBaseUri = devUriOr.bind(0, "https://www.kifi.com");
+var admBaseUri = devUriOr.bind(0, "https://admin.kifi.com");
+
 function getFullyQualifiedKey(key) {
   return (api.prefs.get("env") || "production") + "_" + key;
-}
-
-function apiBaseUri() {
-  return api.prefs.get("env") === "development" ? "http://dev.ezkeep.com:9000" : "https://api.kifi.com";
-}
-
-function webBaseUri() {
-  return api.prefs.get("env") === "development" ? "http://dev.ezkeep.com:9000" : "https://www.kifi.com";
 }
 
 function getStored(key) {
