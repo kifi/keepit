@@ -35,6 +35,7 @@ case class User(
 
 @ImplementedBy(classOf[UserRepoImpl])
 trait UserRepo extends Repo[User] with ExternalIdColumnFunction[User] {
+  def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User]
 }
 
 case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
@@ -75,6 +76,9 @@ class UserRepoImpl @Inject() (
     def lastName = column[String]("last_name", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state <> (User, User.unapply _)
   }
+
+  def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User] =
+    (for (u <- table if !(u.state inSet excludeStates)) yield u).list
 
   override def invalidateCache(user: User)(implicit session: RSession) = {
     externalIdCache.set(UserExternalIdKey(user.externalId), user)
