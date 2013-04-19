@@ -65,5 +65,6 @@ class InvitationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock)
 object InvitationStates extends States[Invitation] {
   val ACCEPTED = State[Invitation]("accepted")
   val ADMIN_REJECTED = State[Invitation]("admin_rejected")
+  val ADMIN_ACCEPTED = State[Invitation]("admin_accepted")
   val JOINED = State[Invitation]("joined")
 }
