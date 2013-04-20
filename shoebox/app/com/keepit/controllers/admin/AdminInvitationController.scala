@@ -27,38 +27,35 @@ class AdminInvitationController @Inject() (
   val pageSize = 50
 
   def displayInvitations(page: Int = 0, showing: String = "all") = AdminHtmlAction{ implicit request =>
-    val (invitesWithSocial, count) = db.readOnly { implicit session =>
+    val showState = showing.toLowerCase match {
+      case InvitationStates.ACCEPTED.value => Some(InvitationStates.ACCEPTED)
+      case InvitationStates.ADMIN_ACCEPTED.value => Some(InvitationStates.ADMIN_ACCEPTED)
+      case InvitationStates.ADMIN_REJECTED.value => Some(InvitationStates.ADMIN_REJECTED)
+      case InvitationStates.JOINED.value => Some(InvitationStates.JOINED)
+      case InvitationStates.ACTIVE.value => Some(InvitationStates.ACTIVE)
+      case InvitationStates.INACTIVE.value => Some(InvitationStates.INACTIVE)
+      case "all" => None
+    }
+    val (invitesWithSocial, count) = db.readWrite { implicit session =>
       val count = invitationRepo.count
-      val invitesWithSocial = invitationRepo.page(page, pageSize) map { invite =>
-        (invite, socialUserRepo.get(invite.recipientSocialUserId), userRepo.get(invite.senderUserId))
+      val invitesWithSocial = invitationRepo.invitationsPage(page, pageSize, showState) map {
+        case (invite, sui) => (invite.map(i => (i, userRepo.get(i.senderUserId))), sui)
       }
       (invitesWithSocial, count)
     }
-    val numPages = (count / pageSize).toInt
+    val numPages = (count / pageSize)
     Ok(html.admin.invitationsDisplay(invitesWithSocial, page, count, numPages, showing))
   }
-
-//  def addPhrase = AdminHtmlAction{ implicit request =>
-//    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
-//    val phrase = body.get("phrase").get
-//    val lang = body.get("lang").get
-//    val source = body.get("source").get
-//
-//    db.readWrite { implicit session =>
-//      phraseRepo.save(Phrase(phrase = phrase, lang = Lang(lang), source = source))
-//    }
-//    Redirect(com.keepit.controllers.admin.routes.PhraseController.displayPhrases())
-//  }
 
   def acceptUser(id: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
     val result = db.readWrite { implicit session =>
       val socialUser = socialUserRepo.get(id)
       val userOpt = socialUser.userId.map(userRepo.get)
       val inviteOpt = invitationRepo.getByRecipient(id)
-      for(user <- userOpt; invite <- inviteOpt) yield {
-        (userRepo.save(user.withState(UserStates.ACTIVE)), 
-        invitationRepo.save(invite.withState(InvitationStates.ADMIN_ACCEPTED)))
-      }
+      for (user <- userOpt) yield (
+        userRepo.save(user.withState(UserStates.ACTIVE)),
+        inviteOpt.map { inv => invitationRepo.save(inv.withState(InvitationStates.ADMIN_ACCEPTED)) }
+      )
     }
     
     if(result.isDefined) {
