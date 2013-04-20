@@ -17,7 +17,8 @@ import scala.collection.mutable
 import play.api.mvc.QueryStringBindable
 import play.api.mvc.JavascriptLitteral
 import com.keepit.common.service.FortyTwoServices
-
+import scala.slick.lifted.BaseTypeMapper
+import scala.slick.driver.BasicProfile
 
 case class Invitation(
   id: Option[Id[Invitation]] = None,
@@ -35,12 +36,19 @@ case class Invitation(
 
 @ImplementedBy(classOf[InvitationRepoImpl])
 trait InvitationRepo extends Repo[Invitation] with ExternalIdColumnFunction[Invitation] {
+  def invitationsPage(page: Int = 0, size: Int = 20, showState: Option[State[Invitation]] = None)
+    (implicit session: RSession): Seq[(Option[Invitation], SocialUserInfo)]
   def getByUser(urlId: Id[User])(implicit session: RSession): Seq[Invitation]
   def getByRecipient(socialUserInfoId: Id[SocialUserInfo])(implicit session: RSession): Option[Invitation]
 }
 
 @Singleton
-class InvitationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[Invitation] with InvitationRepo with ExternalIdColumnDbFunction[Invitation] {
+class InvitationRepoImpl @Inject() (
+    val db: DataBaseComponent,
+    val userRepo: UserRepoImpl,
+    val socialUserInfoRepo: SocialUserInfoRepoImpl,
+    val clock: Clock)
+  extends DbRepo[Invitation] with InvitationRepo with ExternalIdColumnDbFunction[Invitation] {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
@@ -51,6 +59,37 @@ class InvitationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock)
     def recipientSocialUserId = column[Id[SocialUserInfo]]("recipient_social_user_id", O.NotNull)
 
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ senderUserId ~ recipientSocialUserId ~ state <> (Invitation, Invitation.unapply _)
+  }
+
+  private implicit val userIdTypeMapper = userRepo.idMapper
+  private implicit val userStateMapper = userRepo.stateTypeMapper
+
+  def invitationsPage(page: Int = 0, size: Int = 20, showState: Option[State[Invitation]] = None)
+      (implicit session: RSession): Seq[(Option[Invitation], SocialUserInfo)] = {
+    val showPending = !showState.exists(_ != InvitationStates.ACCEPTED)
+    val s: String =
+      s"""
+        | select
+        |   invitation.id as invitation_id, social_user_info.id as social_user_id
+        | from social_user_info
+        |   left join user on user.id = social_user_info.user_id
+        |   left join invitation on invitation.recipient_social_user_id = social_user_info.id
+        | where
+        |   (user.state = 'pending' and $showPending) or
+        |   (invitation.id is not null and (invitation.state = '${showState.orNull}' or ${showState.isEmpty}))
+        | limit $size
+        | offset ${size * page};
+      """.stripMargin
+    val rs = session.getPreparedStatement(s).executeQuery()
+    val results = new mutable.ArrayBuffer[(Option[Id[Invitation]], Id[SocialUserInfo])]
+    while (rs.next()) {
+      results += Option(rs.getLong("invitation_id")).filterNot(_ => rs.wasNull()).map(Id[Invitation]) ->
+          Id[SocialUserInfo](rs.getLong("social_user_id"))
+    }
+    results.map {
+      case (Some(invId), suid) => (Some(get(invId)), socialUserInfoRepo.get(suid))
+      case (None, suid) => (None, socialUserInfoRepo.get(suid))
+    }
   }
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Invitation] =
