@@ -106,9 +106,13 @@ class InviteController @Inject() (db: Database,
             }
             val left = totalAllowedInvites - currentInvitations.length
             val invites = currentInvitations ++ Seq.fill(left)(None)
-            
+
             if(left > 0) {
-              val invite = invitationRepo.save(Invitation(senderUserId = request.user.id.get, recipientSocialUserId = socialUserInfo.id.get, state = InvitationStates.INACTIVE))
+              val invite = invitationRepo.save(Invitation(
+                senderUserId = Some(request.user.id.get),
+                recipientSocialUserId = socialUserInfo.id.get,
+                state = InvitationStates.INACTIVE
+              ))
               Redirect(fbInviteUrl(invite))
             } else {
               Redirect(routes.InviteController.invite)

@@ -36,10 +36,10 @@ class AdminInvitationController @Inject() (
       case InvitationStates.INACTIVE.value => Some(InvitationStates.INACTIVE)
       case "all" => None
     }
-    val (invitesWithSocial, count) = db.readWrite { implicit session =>
+    val (invitesWithSocial, count) = db.readOnly { implicit session =>
       val count = invitationRepo.count
       val invitesWithSocial = invitationRepo.invitationsPage(page, pageSize, showState) map {
-        case (invite, sui) => (invite.map(i => (i, userRepo.get(i.senderUserId))), sui)
+        case (invite, sui) => (invite.map(i => (i, i.senderUserId.map(userRepo.get))), sui)
       }
       (invitesWithSocial, count)
     }
@@ -50,12 +50,14 @@ class AdminInvitationController @Inject() (
   def acceptUser(id: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
     val result = db.readWrite { implicit session =>
       val socialUser = socialUserRepo.get(id)
-      val userOpt = socialUser.userId.map(userRepo.get)
-      val inviteOpt = invitationRepo.getByRecipient(id)
-      for (user <- userOpt) yield (
-        userRepo.save(user.withState(UserStates.ACTIVE)),
-        inviteOpt.map { inv => invitationRepo.save(inv.withState(InvitationStates.ADMIN_ACCEPTED)) }
-      )
+      for (user <- socialUser.userId.map(userRepo.get)) yield {
+        val invite = invitationRepo.getByRecipient(id).getOrElse(invitationRepo.save(Invitation(
+          senderUserId = None,
+          recipientSocialUserId = socialUser.id.get
+        )))
+        (userRepo.save(user.withState(UserStates.ACTIVE)),
+          invitationRepo.save(invite.withState(InvitationStates.ADMIN_ACCEPTED)))
+      }
     }
     
     if(result.isDefined) {
