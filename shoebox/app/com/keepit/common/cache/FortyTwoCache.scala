@@ -7,6 +7,7 @@ import play.api.Play.current
 import scala.collection.mutable
 import play.api.libs.json._
 import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
 
 @Singleton
 class CacheStatistics {
@@ -29,6 +30,9 @@ class CacheStatistics {
 // Abstraction around play2-memcached plugin
 trait FortyTwoCachePlugin extends SchedulingPlugin {
   val stats: CacheStatistics
+
+  private[cache] def onError(error: HealthcheckError) {}
+
   def get(key: String): Option[Any]
   def remove(key: String): Unit
   def set(key: String, value: Any, expiration: Int = 0): Unit
@@ -37,9 +41,16 @@ trait FortyTwoCachePlugin extends SchedulingPlugin {
 }
 
 @Singleton
-class MemcachedCache @Inject() (val cache: MemcachedPlugin, val stats: CacheStatistics) extends FortyTwoCachePlugin {
+class MemcachedCache @Inject() (
+  val cache: MemcachedPlugin,
+  val stats: CacheStatistics,
+  val healthcheck: HealthcheckPlugin) extends FortyTwoCachePlugin {
   def get(key: String): Option[Any] =
     cache.api.get(key)
+
+  override def onError(he: HealthcheckError) {
+    healthcheck.addError(he)
+  }
 
   def remove(key: String) {
     cache.api.remove(key)
@@ -55,10 +66,16 @@ class MemcachedCache @Inject() (val cache: MemcachedPlugin, val stats: CacheStat
 }
 
 @Singleton
-class InMemoryCache @Inject() (val stats: CacheStatistics) extends FortyTwoCachePlugin {
+class InMemoryCache @Inject() (
+  val stats: CacheStatistics,
+  val healthcheck: HealthcheckPlugin) extends FortyTwoCachePlugin {
 
   import play.api.Play
   import play.api.cache.{EhCachePlugin, Cache}
+
+  override def onError(he: HealthcheckError) {
+    healthcheck.addError(he)
+  }
 
   def get(key: String): Option[Any] =
     Cache.get(key)
@@ -76,7 +93,8 @@ class InMemoryCache @Inject() (val stats: CacheStatistics) extends FortyTwoCache
 }
 
 @Singleton
-class HashMapMemoryCache @Inject() (val stats: CacheStatistics) extends FortyTwoCachePlugin {
+class HashMapMemoryCache @Inject() (
+  val stats: CacheStatistics) extends FortyTwoCachePlugin {
 
   val cache = mutable.HashMap[String, Any]()
 
@@ -132,30 +150,52 @@ trait ObjectCache[K <: Key[T], T] {
 trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
   val repo: FortyTwoCachePlugin
   def get(key: K): Option[T] = {
-    val objOpt = repo.get(key.toString).map(deserialize)
-    objOpt match {
-      case Some(_) => repo.stats.incrHits(key.getClass.getSimpleName)
-      case None => repo.stats.incrMisses(key.getClass.getSimpleName)
+    val value = try repo.get(key.toString) catch {
+      case e: Throwable =>
+        repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
+          errorMessage = Some(s"Failed fetching key $key from cache")))
+        None
     }
-    objOpt
-  }
-  def set(key: K, value: T): T = {
-    val properlyBoxed = serialize(value) match {
-      case x: java.lang.Byte => x.byteValue()
-      case x: java.lang.Short => x.shortValue()
-      case x: java.lang.Integer => x.intValue()
-      case x: java.lang.Long => x.longValue()
-      case x: java.lang.Float => x.floatValue()
-      case x: java.lang.Double => x.doubleValue()
-      case x: java.lang.Character => x.charValue()
-      case x: java.lang.Boolean => x.booleanValue()
-      case x: scala.Array[_] => x
-      case x: JsValue => Json.stringify(x)
-      case x: String => x
+    try {
+      val objOpt = value.map(deserialize)
+      objOpt match {
+        case Some(_) => repo.stats.incrHits(key.getClass.getSimpleName)
+        case None => repo.stats.incrMisses(key.getClass.getSimpleName)
+      }
+      objOpt
+    } catch {
+      case e: Throwable =>
+        repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
+          errorMessage = Some(s"Failed deserializing key $key from cache, got raw value $value")))
+        remove(key)
+        None
     }
-    repo.set(key.toString, properlyBoxed, ttl.toSeconds.toInt)
-    repo.stats.incrSets(key.getClass.getSimpleName)
-    value
   }
+
+  def set(key: K, value: T): T =
+    try {
+      val properlyBoxed = serialize(value) match {
+        case x: java.lang.Byte => x.byteValue()
+        case x: java.lang.Short => x.shortValue()
+        case x: java.lang.Integer => x.intValue()
+        case x: java.lang.Long => x.longValue()
+        case x: java.lang.Float => x.floatValue()
+        case x: java.lang.Double => x.doubleValue()
+        case x: java.lang.Character => x.charValue()
+        case x: java.lang.Boolean => x.booleanValue()
+        case x: scala.Array[_] => x
+        case x: JsValue => Json.stringify(x)
+        case x: String => x
+      }
+      repo.set(key.toString, properlyBoxed, ttl.toSeconds.toInt)
+      repo.stats.incrSets(key.getClass.getSimpleName)
+      value
+    } catch {
+      case e: Throwable =>
+        repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
+          errorMessage = Some(s"Failed setting key $key in cache")))
+        value
+    }
+
   def remove(key: K) { repo.remove(key.toString) }
 }
