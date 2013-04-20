@@ -28,7 +28,7 @@ import securesocial.core.{UserService, SecureSocial}
 import com.keepit.common.db.Id
 import com.keepit.common.db.State
 import scala.util.Random
-import com.keepit.controllers.core.{PaneDetails, KeeperInfoLoader}
+import com.keepit.controllers.core.KeeperInfoLoader
 import com.keepit.serializer.BasicUserSerializer.basicUserSerializer
 import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
@@ -59,7 +59,7 @@ class ExtStreamController @Inject() (
   commentRepo: CommentRepo,
   commentReadRepo: CommentReadRepo,
   normUriRepo: NormalizedURIRepo,
-  paneData: PaneDetails,
+  commentWithBasicUserRepo: CommentWithBasicUserRepo,
   eventHelper: EventHelper,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
@@ -144,7 +144,7 @@ class ExtStreamController @Inject() (
               channel.push(Json.arr("friends", getFriends(userId)))
             },
             "get_thread" -> { case JsString(threadId) +: _ =>
-              channel.push(Json.arr("thread", paneData.getMessageThread(ExternalId[Comment](threadId)) match { case (nUri, msgs) =>
+              channel.push(Json.arr("thread", getMessageThread(ExternalId[Comment](threadId)) match { case (nUri, msgs) =>
                 Json.obj("id" -> threadId, "uri" -> nUri.url, "messages" -> msgs)
               }))
             },
@@ -239,6 +239,15 @@ class ExtStreamController @Inject() (
     log.debug("Created new event: %s".format(event))
     persistEventPlugin.persist(event)
     eventHelper.newEvent(event)
+  }
+
+  private def getMessageThread(messageId: ExternalId[Comment]): (NormalizedURI, Seq[CommentWithBasicUser]) = {
+    db.readOnly { implicit session =>
+      val message = commentRepo.get(messageId)
+      val parent = message.parent.map(commentRepo.get).getOrElse(message)
+      val messages = parent +: commentRepo.getChildren(parent.id.get) map commentWithBasicUserRepo.load
+      (normUriRepo.get(parent.uriId), messages)
+    }
   }
 
   private def setMessageRead(userId: Id[User], messageExtId: ExternalId[Comment]) {
