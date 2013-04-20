@@ -102,11 +102,12 @@ class KeeperInfoLoader @Inject() (
           val shown = historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id)
           val following = followRepo.get(userId, uri.id.get).isDefined
           val comments = commentRepo.getPublic(uri.id.get).map(commentWithBasicUserRepo.load)
-          val threads = commentRepo.getMessages(uri.id.get, userId).map(threadInfoRepo.load(_, Some(userId))).reverse
+          val parentMessages = commentRepo.getParentMessages(uri.id.get, userId)
+          val threads = parentMessages.map(threadInfoRepo.load(_, Some(userId))).reverse
           val lastCommentRead = commentReadRepo.getByUserAndUri(userId, uri.id.get) map { cr =>
             commentRepo.get(cr.lastReadId).createdAt
           }
-          val lastMessageRead = commentRepo.getMessages(uri.id.get, userId).map { th =>
+          val lastMessageRead = parentMessages.map { th =>
             commentReadRepo.getByUserAndParent(userId, th.id.get).map { cr =>
               val m = if (cr.lastReadId == th.id.get) th else commentRepo.get(cr.lastReadId)
               (th.externalId -> m.createdAt)

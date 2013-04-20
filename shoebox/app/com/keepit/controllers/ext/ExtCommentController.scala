@@ -60,7 +60,7 @@ class ExtCommentController @Inject() (
     val counts = db.readOnly { implicit s =>
       nUriExtIds.map { extId =>
         val id = normalizedURIRepo.get(extId).id.get
-        extId -> (commentRepo.getPublicCount(id), commentRepo.getMessages(id, request.userId).size)
+        extId -> (commentRepo.getPublicCount(id), commentRepo.getParentMessages(id, request.userId).size)
       }
     }
     Ok(JsObject(counts.map { case (id, n) => id.id -> JsArray(Seq(JsNumber(n._1), JsNumber(n._2))) }))

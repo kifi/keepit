@@ -55,7 +55,7 @@ trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
   def getPublicCount(uriId: Id[NormalizedURI])(implicit session: RSession): Int
   def getPrivate(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
   def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment]
-  def getMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
+  def getParentMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
   def count(permissions: State[CommentPermission] = CommentPermissions.PUBLIC)(implicit session: RSession): Int
   def page(page: Int, size: Int, permissions: State[CommentPermission])(implicit session: RSession): Seq[Comment]
   def getParticipantsUserIds(commentId: Id[Comment])(implicit session: RSession): Set[Id[User]]
@@ -119,7 +119,7 @@ class CommentRepoImpl @Inject() (
   def getPublic(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Comment] =
     (for {
       b <- table if b.uriId === uriId && b.permissions === CommentPermissions.PUBLIC && b.parent.isNull && b.state === CommentStates.ACTIVE
-    } yield b).list
+    } yield b).sortBy(_.createdAt asc).list
 
   def getPublicIdsByConnection(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Id[Comment]] = {
     val friends = socialConnectionRepoImpl.getFortyTwoUserConnections(userId)
@@ -149,9 +149,9 @@ class CommentRepoImpl @Inject() (
     } yield b).list
 
   def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment] =
-    (for(b <- table if b.parent === commentId && b.state === CommentStates.ACTIVE) yield b).list
+    (for(b <- table if b.parent === commentId && b.state === CommentStates.ACTIVE) yield b).sortBy(_.createdAt asc).list
 
-  def getMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment] = {
+  def getParentMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment] = {
     val q1 = for {
       (c, cr) <- table innerJoin commentRecipientRepoImpl.table on (_.id is _.commentId) if (c.uriId === uriId && cr.userId === userId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)
     } yield (c.*)
