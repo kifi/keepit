@@ -136,7 +136,6 @@ class CommentRepoImpl @Inject() (
     }
   }
 
-
   def getPublicCount(uriId: Id[NormalizedURI])(implicit session: RSession): Int =
     commentCountCache.getOrElse(CommentCountUriIdKey(uriId)) {
       Query((for {
@@ -195,4 +194,13 @@ object CommentPermissions {
   val PRIVATE = State[CommentPermission]("private")
   val MESSAGE = State[CommentPermission]("message")
   val PUBLIC  = State[CommentPermission]("public")
+}
+
+@Singleton
+class CommentFormatter {
+  private val lookHereLinkRe = """(\[(?:\\\]|[^\]])*\])\(x-kifi-sel:(?:\\\)|[^)])*\)""".r
+
+  // e.g. """hey [look here](x-kifi-sel:body>div#page.watch>div:nth-child(4\)>div#watch7)""" => "hey [look here]"
+  def toPlainText(text: String): String =
+    lookHereLinkRe.replaceAllIn(text, m => m.group(1).replaceAll("""\\(.)""", "$1"))
 }
