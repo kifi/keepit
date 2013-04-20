@@ -10,7 +10,7 @@ object SemanticVariance {
    * vects: a collection of 128-bit vectors. We measure the variance of each bit,
    * and take the average. This measures overall randomness of input semantic vectors.
    */
-  def avgBitVariance(vects: Iterable[SemanticVector]): Float = {
+  def avgBitVariance(vects: Iterable[SemanticVector], numMissing: Int): Float = {
     val vectsCnt = vects.size
     if (vectsCnt > 0) {
       val composer = new SemanticVectorComposer
@@ -19,9 +19,9 @@ object SemanticVariance {
       var sumOfVar = 0.0f
       var i = 0
       while (i < SemanticVector.vectorSize) {
-        val c = composer.getCount(i)
-        val p = (c.toFloat / vectsCnt.toFloat)  // empirical probability that position i takes value 1
-        sumOfVar += p * (1 - p)                 // variance of Bernoulli distribution.
+        val c = composer.getCount(i).toFloat + numMissing.toFloat * 0.5f
+        val p = (c / (vectsCnt + numMissing).toFloat)  // empirical probability that position i takes value 1
+        sumOfVar += p * (1 - p)                        // variance of Bernoulli distribution.
         i += 1
       }
       sumOfVar / SemanticVector.vectorSize.toFloat
@@ -46,7 +46,8 @@ object SemanticVariance {
   def svVariance(query: Option[Query], hitList: List[MutableArticleHit], articleSearcher: Searcher, uriGraphSearcher: URIGraphSearcher) = {
     val svSearcher = new SemanticVectorSearcher(articleSearcher, uriGraphSearcher)
     val uriIds = hitList.map(_.id).toSet
-    var existCnt = List.empty[Int]							// for each sv, we count how many docs contain it
+    val hitSize = uriIds.size
+    var existCnt = List.empty[Int] // for each sv, we count how many docs contain it
     val variance = query.map { q =>
       val terms = QueryUtil.getTerms("sv", q)
       var s = 0.0f
@@ -56,11 +57,8 @@ object SemanticVariance {
         existCnt = sv.size::existCnt
         // semantic vector v of terms will be concatenated from semantic vector v_i from each term
         // avg bit variance of v is the avg of avgBitVariance of each v_i
-        if (!sv.isEmpty) {
-          cnt += 1
-          s += avgBitVariance(sv)
-        }
-
+        s += avgBitVariance(sv, hitSize - sv.size)
+        cnt += 1
       }
       if (cnt > 0) s / cnt.toFloat else -1.0f
     }
