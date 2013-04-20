@@ -156,7 +156,6 @@ class PhraseProximityQuery(val terms: Seq[Term], val phrases: Set[(Int, Int)]) e
     case _ => false
   }
   override def hashCode(): Int = terms.hashCode + phrases.hashCode + JFloat.floatToRawIntBits(getBoost())
-  override def canEqual(other: Any) = other.isInstanceOf[PhraseProximityQuery]
 }
 
 class PhraseProximityWeight(query: PhraseProximityQuery) extends Weight {
