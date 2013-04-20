@@ -1,4 +1,4 @@
-@(invitesWithSocial: Seq[(Option[(Invitation, User)], SocialUserInfo)],
+@(invitesWithSocial: Seq[(Option[(Invitation, Option[User])], SocialUserInfo)],
     page: Int, count: Int, numPages: Int, showing: String = "all")
 @import com.keepit.model.InvitationStates
 
@@ -64,7 +64,7 @@
       <tr>
         <td><a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(socialUserInfo.id.get)">@socialUserInfo.fullName</a>
         <td>
-          @maybeInviteWithUser.map { case (_, user) =>
+          @maybeInviteWithUser.collect { case (_, Some(user)) =>
             <a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get)">@user.firstName @user.lastName</a>
           }.getOrElse { - }
         <td>

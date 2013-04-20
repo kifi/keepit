@@ -25,7 +25,7 @@ case class Invitation(
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   externalId: ExternalId[Invitation] = ExternalId(),
-  senderUserId: Id[User],
+  senderUserId: Option[Id[User]],
   recipientSocialUserId: Id[SocialUserInfo],
   state: State[Invitation] = InvitationStates.ACTIVE
 ) extends ModelWithExternalId[Invitation] {
@@ -50,12 +50,11 @@ class InvitationRepoImpl @Inject() (
     val clock: Clock)
   extends DbRepo[Invitation] with InvitationRepo with ExternalIdColumnDbFunction[Invitation] {
   import FortyTwoTypeMappers._
-  import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
 
   override lazy val table = new RepoTable[Invitation](db, "invitation") with ExternalIdColumn[Invitation] {
-    def senderUserId = column[Id[User]]("sender_user_id", O.NotNull)
+    def senderUserId = column[Option[Id[User]]]("sender_user_id", O.NotNull)
     def recipientSocialUserId = column[Id[SocialUserInfo]]("recipient_social_user_id", O.NotNull)
 
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ senderUserId ~ recipientSocialUserId ~ state <> (Invitation, Invitation.unapply _)
