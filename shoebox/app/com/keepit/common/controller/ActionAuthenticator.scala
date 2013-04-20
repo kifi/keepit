@@ -15,6 +15,7 @@ import com.keepit.model._
 
 import play.api.i18n.Messages
 import play.api.mvc._
+import play.api.libs.json.JsNumber
 import securesocial.core._
 
 object ActionAuthenticator {
@@ -100,9 +101,13 @@ class ActionAuthenticator @Inject() (
       bodyParser = bodyParser,
       onAuthenticated = onAuthenticated,
       onUnauthenticated = { implicit request =>
-        Redirect("/login").flashing("error" -> Messages("securesocial.loginRequired")).withSession(
-          session + (SecureSocial.OriginalUrlKey -> request.uri)
-        )
+        if (apiClient) {
+          Forbidden(JsNumber(0))
+        } else {
+          Redirect("/login")
+            .flashing("error" -> Messages("securesocial.loginRequired"))
+            .withSession(session + (SecureSocial.OriginalUrlKey -> request.uri))
+        }
       })
 
   private[controller] def isAdmin(experiments: Seq[State[ExperimentType]]) = experiments.find(e => e == ExperimentTypes.ADMIN).isDefined

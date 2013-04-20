@@ -51,16 +51,6 @@ class OnboardingController @Inject() (db: Database,
   })
 
   def signup(inviteId: String = "") = Action { implicit request =>
-    if(inviteId != "") {
-      val id = ExternalId[Invitation](inviteId)
-      db.readWrite { implicit session =>
-        invitationRepo.getOpt(id) match {
-          case Some(invite) =>
-            invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
-          case None => 
-        }
-      }
-    }
     Redirect("/login")
   }
 }

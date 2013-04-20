@@ -4,16 +4,28 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.scraper.Scraper
 import org.apache.tika.parser.html.BoilerpipeContentHandler
+import org.apache.tika.parser.html.DefaultHtmlMapper
+import org.apache.tika.parser.html.HtmlMapper
 import org.apache.tika.sax.ContentHandlerDecorator
 import org.xml.sax.Attributes
 import org.xml.sax.ContentHandler
 
 object DefaultExtractorFactory extends ExtractorFactory {
   def isDefinedAt(uri: URI) = true
-      def apply(uri: URI) = new DefaultExtractor(uri.toString, Scraper.maxContentChars)
+  def apply(uri: URI) = new DefaultExtractor(uri.toString, Scraper.maxContentChars, htmlMapper)
+  def apply(url: String) = new DefaultExtractor(url, Scraper.maxContentChars, htmlMapper)
+
+  private val htmlMapper = Some(new DefaultHtmlMapper {
+    override def mapSafeElement(name: String) = {
+      name.toLowerCase match {
+        case "option" => "option"
+        case _ =>super.mapSafeElement(name)
+      }
+    }
+  })
 }
 
-class DefaultExtractor(url: String, maxContentChars: Int) extends TikaBasedExtractor(url, maxContentChars) with Logging {
+class DefaultExtractor(url: String, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends TikaBasedExtractor(url, maxContentChars, htmlMapper) {
   protected def getContentHandler = new DefaultContentHandler(new BoilerpipeContentHandler(output))
 }
 

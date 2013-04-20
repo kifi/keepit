@@ -9,6 +9,9 @@ import com.keepit.search.phrasedetector.PhraseImporter
 import com.keepit.search.{SearchServiceClient, Lang}
 import views.html
 import com.keepit.model._
+import com.keepit.common.mail.PostOffice
+import com.keepit.common.mail.ElectronicMail
+import com.keepit.common.mail.EmailAddresses
 
 @Singleton
 class AdminInvitationController @Inject() (
@@ -16,6 +19,8 @@ class AdminInvitationController @Inject() (
   db: Database,
   invitationRepo: InvitationRepo,
   socialUserRepo: SocialUserInfoRepo,
+  emailAddressRepo: EmailAddressRepo,
+  postOffice: PostOffice,
   userRepo: UserRepo)
     extends AdminController(actionAuthenticator) {
 
@@ -57,10 +62,27 @@ class AdminInvitationController @Inject() (
     }
     
     if(result.isDefined) {
-      // SEND EMAIL!
+      notifyAcceptedUser(result.get._1.id.get)
       Redirect(routes.AdminInvitationController.displayInvitations())
     } else {
       Redirect(routes.AdminInvitationController.displayInvitations()).flashing("error" -> "Invalid!")
+    }
+  }
+  
+  private def notifyAcceptedUser(userId: Id[User]) = {
+    db.readOnly { implicit session =>
+      val user = userRepo.get(userId)
+      val addrs = emailAddressRepo.getByUser(userId)
+      for(address <- addrs) {
+        postOffice.sendMail(ElectronicMail(
+            senderUserId = None,
+            from = EmailAddresses.CONGRATS,
+            fromName = Some("KiFi Team"),
+            to = address,
+            subject = "Congrats! You're in the KiFi Private Beta",
+            htmlBody = views.html.email.invitationAccept(user).body,
+            category = PostOffice.Categories.INVITATION))
+        }
     }
   }
 }

@@ -17,7 +17,7 @@ import org.xml.sax.Attributes
 import org.xml.sax.ContentHandler
 import org.xml.sax.SAXException
 
-abstract class TikaBasedExtractor(url: String, maxContentChars: Int) extends Extractor with Logging {
+abstract class TikaBasedExtractor(url: String, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends Extractor with Logging {
 
   protected val output = new WriteOutContentHandler(maxContentChars)
   protected val metadata = new Metadata()
@@ -33,7 +33,7 @@ abstract class TikaBasedExtractor(url: String, maxContentChars: Int) extends Ext
     }
   }
 
-  protected def getHtmlMapper: Option[HtmlMapper] = None
+  protected def getHtmlMapper: Option[HtmlMapper] = htmlMapper
 
   def process(input: HttpInputStream){
     val context = new ParseContext()
