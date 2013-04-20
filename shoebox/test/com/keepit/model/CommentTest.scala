@@ -137,6 +137,14 @@ class CommentTest extends Specification with DbRepos {
         }
       }
     }
+
+    "format comment text markdown as plain text" in {
+      running(new EmptyApplication()) {  // TODO: no need for a Play application
+        inject[CommentFormatter].toPlainText("[hi there](x-kifi-sel:body>foo.bar#there)") === "[hi there]"
+        inject[CommentFormatter].toPlainText("A [hi there](x-kifi-sel:foo.bar#there) B") === "A [hi there] B"
+        inject[CommentFormatter].toPlainText("(A) [hi there](x-kifi-sel:foo.bar#there:nth-child(2\\)>a:nth-child(1\\)) [B] C") === "(A) [hi there] [B] C"
+      }
+    }
   }
 
 }

@@ -96,11 +96,6 @@ class CommentControllerTest extends Specification with DbRepos {
         mail.senderUserId.get === comment.userId
         mail.subject === "Andrew Conner sent you a message using KiFi"
         mail.htmlBody.value must contain("""Public Comment [look here] on Google1""")
-
-        // TODO(jared): add back where the code was moved to
-        // replaceLookHereLinks("[hi there](x-kifi-sel:body>foo.bar#there)") === "[hi there]"
-        // replaceLookHereLinks("A [hi there](x-kifi-sel:foo.bar#there) B") === "A [hi there] B"
-        // replaceLookHereLinks("(A) [hi there](x-kifi-sel:foo.bar#there:nth-child(2\\)>a:nth-child(1\\)) [B] C") === "(A) [hi there] [B] C"
       }
     }
   }
