@@ -494,7 +494,7 @@ function createDeepLinkListener(locator, tabId) {
     }
     if (tab.id == tabId) {
       // uncomment second clause below to develop /r/ page using production deep links
-      var hasForwarded = new Regexp("^" + webBaseUri() + "/r/", "").test(tab.url) /* && tab.url.indexOf("dev.ezkeep.com") < 0 */;
+      var hasForwarded = !(new RegExp("^" + webBaseUri() + "/r/", "").test(tab.url)) /* && tab.url.indexOf("dev.ezkeep.com") < 0 */;
       if (hasForwarded) {
         api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, locator);
         api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: locator});
