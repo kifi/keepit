@@ -13,7 +13,6 @@ class ThreadInfoSerializer extends Writes[ThreadInfo] {
   def writes(o: ThreadInfo): JsValue =
     Json.obj(
       "id" -> o.externalId.id,
-      "externalId" -> o.externalId.id,  // TODO: deprecate, eliminate
       "recipients" -> o.recipients,
       "digest" -> o.digest,
       "messageCount" -> o.messageCount,

@@ -9,7 +9,7 @@ import play.api.libs.json._
 class BasicUserSerializer extends Format[BasicUser] {
   def reads(json: JsValue): JsResult[BasicUser] =
     JsSuccess(BasicUser(
-      externalId = ExternalId[User]((json \ "externalId").as[String]),  // TODO: read "id" or else "externalId"
+      externalId = ExternalId[User]((json \ "id").as[String]),
       firstName = (json \ "firstName").as[String],
       lastName = (json \ "lastName").as[String],
       avatar = (json \ "avatar").as[String],
@@ -18,14 +18,13 @@ class BasicUserSerializer extends Format[BasicUser] {
   def writes(basicUser: BasicUser): JsValue =
     Json.obj(
       "id" -> basicUser.externalId.id,
-      "externalId" -> basicUser.externalId.id,  // TODO: deprecate, eliminate
       "firstName" -> basicUser.firstName,
       "lastName" -> basicUser.lastName,
       "avatar" -> basicUser.avatar,
       "facebookId" -> basicUser.facebookId)
 
-  def writes(users: Seq[BasicUser]): JsValue =
-    JsArray(users map BasicUserSerializer.basicUserSerializer.writes)
+  def writes(basicUsers: Seq[BasicUser]): JsValue =
+    JsArray(basicUsers map writes)
 }
 
 object BasicUserSerializer {

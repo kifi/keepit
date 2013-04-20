@@ -14,9 +14,7 @@ import com.keepit.common.social._
 import com.keepit.model._
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.index.ArticleIndexer
-import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
 import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
-import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import play.api.http.ContentTypes
 import play.api.libs.concurrent.Akka
 import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
@@ -33,7 +31,6 @@ import org.joda.time.DateTime
 import com.keepit.common.analytics.ActivityStream
 import views.html
 import com.keepit.realtime.UserNotifier
-import com.keepit.controllers.core.PaneDetails
 import scala.concurrent.future
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -49,15 +46,13 @@ class ExtCommentController @Inject() (
   userRepo: UserRepo,
   userExperimentRepo: UserExperimentRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
-  CommentWithBasicUserRepo: CommentWithBasicUserRepo,
+  commentWithBasicUserRepo: CommentWithBasicUserRepo,
   followRepo: FollowRepo,
-  threadInfoRepo: ThreadInfoRepo,
   emailAddressRepo: EmailAddressRepo,
   deepLinkRepo: DeepLinkRepo,
   postOffice: PostOffice,
   activityStream: ActivityStream,
-  userNotifier: UserNotifier,
-  paneDetails: PaneDetails)
+  userNotifier: UserNotifier)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def getCounts(ids: String) = AuthenticatedJsonAction { request =>
@@ -65,7 +60,7 @@ class ExtCommentController @Inject() (
     val counts = db.readOnly { implicit s =>
       nUriExtIds.map { extId =>
         val id = normalizedURIRepo.get(extId).id.get
-        extId -> (commentRepo.getPublicCount(id), commentRepo.getMessages(id, request.userId).size)
+        extId -> (commentRepo.getPublicCount(id), commentRepo.getParentMessages(id, request.userId).size)
       }
     }
     Ok(JsObject(counts.map { case (id, n) => id.id -> JsArray(Seq(JsNumber(n._1), JsNumber(n._2))) }))
@@ -133,7 +128,7 @@ class ExtCommentController @Inject() (
 
     comment.permissions match {
       case CommentPermissions.MESSAGE =>
-        val message = db.readOnly(implicit s => CommentWithBasicUserRepo.load(comment))
+        val message = db.readOnly(implicit s => commentWithBasicUserRepo.load(comment))
         Ok(Json.obj("message" -> commentWithBasicUserSerializer.writes(message)))
       case _ =>
         Ok(Json.obj("commentId" -> comment.externalId.id, "createdAt" -> JsString(comment.createdAt.toString)))
@@ -151,24 +146,6 @@ class ExtCommentController @Inject() (
         Unauthorized("ADMIN")
       }
     }
-  }
-
-  def getComments(url: String) = AuthenticatedJsonAction { request =>
-    val comments = paneDetails.getComments(request.userId, url)
-
-    Ok(commentWithBasicUserSerializer.writes(CommentPermissions.PUBLIC -> comments))
-  }
-
-  def getMessageThreadList(url: String) = AuthenticatedJsonAction { request =>
-    val comments = paneDetails.getMessageThreadList(request.userId, url)
-
-    Ok(threadInfoSerializer.writes(CommentPermissions.MESSAGE -> comments))
-  }
-
-  def getMessageThread(commentId: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
-    val messages = paneDetails.getMessageThread(request.userId, commentId)
-
-    Ok(commentWithBasicUserSerializer.writes(CommentPermissions.MESSAGE -> messages))
   }
 
   def startFollowing() = AuthenticatedJsonToJsonAction { request =>
@@ -229,12 +206,6 @@ class ExtCommentController @Inject() (
     } flatten
   }
 
-  private def publicComments(normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit session: RSession) =
-    commentRepo.getPublic(normalizedURI.id.get)
-
-  private def messageComments(userId: Id[User], normalizedURI: NormalizedURI, includeReplies: Boolean = false)(implicit session: RSession) =
-    commentRepo.getMessages(normalizedURI.id.get, userId)
-
   private[controllers] def notifyRecipients(comment: Comment): Unit = {
     comment.permissions match {
       case CommentPermissions.PUBLIC =>
@@ -245,11 +216,6 @@ class ExtCommentController @Inject() (
         log.error("unsupported comment type for email %s".format(unsupported))
     }
   }
-
-  //e.g. [look here](x-kifi-sel:body>div#page.watch>div:nth-child(4\)>div#watch7-video-container)
-  def replaceLookHereLinks(text: String): String =
-    """\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:(?:\\\)|[^)])*\)""".r.replaceAllIn(
-        text, m => "[" + m.group(1).replaceAll("""\\(.)""", "$1") + "]")
 
   private def addToActivityStream(comment: Comment) = {
     val (user, social, uri) = db.readOnly { implicit session =>

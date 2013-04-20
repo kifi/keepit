@@ -5,12 +5,14 @@ import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.net.URI
-import com.keepit.common.social.{CommentWithBasicUser, ThreadInfo, UserWithSocial, UserWithSocialRepo}
+import com.keepit.common.social.{BasicUser, BasicUserRepo}
+import com.keepit.common.social.{CommentWithBasicUser, CommentWithBasicUserRepo}
+import com.keepit.common.social.{ThreadInfo, ThreadInfoRepo}
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
+import com.keepit.serializer.BasicUserSerializer.basicUserSerializer
 import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
-import com.keepit.serializer.UserWithSocialSerializer.userWithSocialSerializer
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import play.api.libs.json._
@@ -33,7 +35,7 @@ object KeeperInfo1 {
 
 case class KeeperInfo2(  // supplemental information
     shown: Boolean,
-    keepers: Seq[UserWithSocial],
+    keepers: Seq[BasicUser],
     keeps: Int,
     following: Boolean,
     comments: Seq[CommentWithBasicUser],
@@ -47,7 +49,7 @@ object KeeperInfo2 {
     def writes(o: KeeperInfo2): JsValue =
       JsObject(Seq[Option[(String, JsValue)]](
         if (o.shown) Some("shown" -> JsBoolean(true)) else None,
-        if (o.keepers.nonEmpty) Some("keepers" -> userWithSocialSerializer.writes(o.keepers)) else None,
+        if (o.keepers.nonEmpty) Some("keepers" -> basicUserSerializer.writes(o.keepers)) else None,
         if (o.keeps > 0) Some("keeps" -> JsNumber(o.keeps)) else None,
         if (o.following) Some("following" -> JsBoolean(true)) else None,
         if (o.comments.nonEmpty) Some("comments" -> commentWithBasicUserSerializer.writes(o.comments)) else None,
@@ -70,9 +72,10 @@ class KeeperInfoLoader @Inject() (
     bookmarkRepo: BookmarkRepo,
     commentRepo: CommentRepo,
     commentReadRepo: CommentReadRepo,
-    paneDetails: PaneDetails,
+    commentWithBasicUserRepo: CommentWithBasicUserRepo,
+    threadInfoRepo: ThreadInfoRepo,
     domainClassifier: DomainClassifier,
-    userWithSocialRepo: UserWithSocialRepo,
+    basicUserRepo: BasicUserRepo,
     historyTracker: SliderHistoryTracker,
     searchClient: SearchServiceClient) {
 
@@ -98,12 +101,13 @@ class KeeperInfoLoader @Inject() (
         case Some(uri) =>
           val shown = historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id)
           val following = followRepo.get(userId, uri.id.get).isDefined
-          val comments = paneDetails.getComments(uri.id.get)
-          val threads = paneDetails.getMessageThreadList(userId, uri.id.get)
+          val comments = commentRepo.getPublic(uri.id.get).map(commentWithBasicUserRepo.load)
+          val parentMessages = commentRepo.getParentMessages(uri.id.get, userId)
+          val threads = parentMessages.map(threadInfoRepo.load(_, Some(userId))).reverse
           val lastCommentRead = commentReadRepo.getByUserAndUri(userId, uri.id.get) map { cr =>
             commentRepo.get(cr.lastReadId).createdAt
           }
-          val lastMessageRead = commentRepo.getMessages(uri.id.get, userId).map { th =>
+          val lastMessageRead = parentMessages.map { th =>
             commentReadRepo.getByUserAndParent(userId, th.id.get).map { cr =>
               val m = if (cr.lastReadId == th.id.get) th else commentRepo.get(cr.lastReadId)
               (th.externalId -> m.createdAt)
@@ -116,10 +120,10 @@ class KeeperInfoLoader @Inject() (
     }
     val (keepers, keeps) = nUri map { uri =>
       val sharingUserInfo = Await.result(searchClient.sharingUserInfo(userId, uri.id.get), Duration.Inf)
-      val socialUsers = db.readOnly { implicit session =>
-        sharingUserInfo.sharingUserIds.map(u => userWithSocialRepo.toUserWithSocial(userRepo.get(u))).toSeq
+      val keepers = db.readOnly { implicit session =>
+        sharingUserInfo.sharingUserIds.map(basicUserRepo.load).toSeq
       }
-      (socialUsers, sharingUserInfo.keepersEdgeSetSize)
+      (keepers, sharingUserInfo.keepersEdgeSetSize)
     } getOrElse (Nil, 0)
 
     KeeperInfo2(shown, keepers, keeps, following, comments, threads, lastCommentRead, lastMessageRead)

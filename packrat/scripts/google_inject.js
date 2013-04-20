@@ -350,7 +350,7 @@ api.log("[google_inject]");
       $res.find(".kifi-res-filter[data-filter=a]").click();
     }).on("click", ".kifi-res-debug", function(e) {
       e.stopPropagation();
-      location.href = response.webBaseUri + "/admin/search/results/" + response.uuid;
+      location.href = response.admBaseUri + "/admin/search/results/" + response.uuid;
     }).on("mouseenter", ".kifi-face.kifi-friend", function() {
       var $a = $(this).showHover({
         hideDelay: 600,
@@ -409,14 +409,14 @@ api.log("[google_inject]");
       }, {
         google_hit: "google_hit.html"
       }, function(html) {
-        $res.append(html).toggleClass("kifi-debug", !!response.showScores);
+        $res.append(html).toggleClass("kifi-debug", response.session.experiments.indexOf("admin") >= 0);
         api.log("[appendResults] done");
       });
   }
 
   function loadChatter(hits) {
     if (!hits.length) return;
-    api.port.emit("get_chatter", {ids: hits.map(function(h) {return h.bookmark.externalId})}, function gotChatter(counts) {
+    api.port.emit("get_chatter", {ids: hits.map(function(h) {return h.bookmark.id})}, function gotChatter(counts) {
       api.log("[gotChatter]", counts);
       var bgImg = "url(" + api.url("images/chatter.png") + ")";
       for (var id in counts) {

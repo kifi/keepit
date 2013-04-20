@@ -10,18 +10,23 @@ object SemanticVariance {
    * vects: a collection of 128-bit vectors. We measure the variance of each bit,
    * and take the average. This measures overall randomness of input semantic vectors.
    */
-  def avgBitVariance(vects: Iterable[SemanticVector]) = {
-    if (vects.size > 0) {
+  def avgBitVariance(vects: Iterable[SemanticVector], numMissing: Int): Float = {
+    val vectsCnt = vects.size
+    if (vectsCnt > 0) {
       val composer = new SemanticVectorComposer
       vects.foreach(composer.add(_, 1))
 
-      // qs.vec(i) + 0.5 = empirical probability that position i takes value 1.
-      val qs = composer.getQuasiSketch
-      val prob = for (i <- 0 until qs.vec.length) yield (qs.vec(i) + 0.5f)
-      val sumOfVar = prob.foldLeft(0.0f)((sum: Float, p: Float) => sum + p * (1 - p)) // variance of Bernoulli distribution.
-      Some(sumOfVar / qs.vec.length)
+      var sumOfVar = 0.0f
+      var i = 0
+      while (i < SemanticVector.vectorSize) {
+        val c = composer.getCount(i).toFloat + numMissing.toFloat * 0.5f
+        val p = (c / (vectsCnt + numMissing).toFloat)  // empirical probability that position i takes value 1
+        sumOfVar += p * (1 - p)                        // variance of Bernoulli distribution.
+        i += 1
+      }
+      sumOfVar / SemanticVector.vectorSize.toFloat
     } else {
-      None
+      0.5f * 0.5f
     }
   }
 
@@ -41,22 +46,19 @@ object SemanticVariance {
   def svVariance(query: Option[Query], hitList: List[MutableArticleHit], articleSearcher: Searcher, uriGraphSearcher: URIGraphSearcher) = {
     val svSearcher = new SemanticVectorSearcher(articleSearcher, uriGraphSearcher)
     val uriIds = hitList.map(_.id).toSet
-    var existCnt = List.empty[Int]							// for each sv, we count how many docs contain it
+    val hitSize = uriIds.size
+    var existCnt = List.empty[Int] // for each sv, we count how many docs contain it
     val variance = query.map { q =>
       val terms = QueryUtil.getTerms("sv", q)
       var s = 0.0f
       var cnt = 0
       for (term <- terms) {
-        val sv = svSearcher.getSemanticVectors(term, uriIds).collect { case (id, vec) => vec }
+        val sv = svSearcher.getSemanticVectors(term, uriIds).values
         existCnt = sv.size::existCnt
         // semantic vector v of terms will be concatenated from semantic vector v_i from each term
         // avg bit variance of v is the avg of avgBitVariance of each v_i
-        val variance = avgBitVariance(sv)
-        variance match {
-          case Some(v) => { cnt += 1; s += v }
-          case None => None
-        }
-
+        s += avgBitVariance(sv, hitSize - sv.size)
+        cnt += 1
       }
       if (cnt > 0) s / cnt.toFloat else -1.0f
     }

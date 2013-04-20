@@ -1,8 +1,8 @@
 {
-  "name": "Kifi Beta",
-  "version": "2.3.13",
+  "name": "KiFi Beta",
+  "version": "2.3.17",
   "manifest_version": 2,
-  "description": "Keep it, Find it!",
+  "description": "KiFi Private Beta",
   "icons": {
     "48": "icons/kifi.48.png",
     "128": "icons/kifi.128.png",

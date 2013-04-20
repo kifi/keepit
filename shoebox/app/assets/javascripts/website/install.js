@@ -8,6 +8,7 @@ $(function() {
   } else {
     $("#other-install").show();
     $(".install_extensions").hide();
+    $("#install_extensions_title").hide();
   }
 
   if(isChrome) {

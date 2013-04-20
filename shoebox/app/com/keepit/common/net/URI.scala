@@ -243,4 +243,6 @@ case class Param(name: String, value: Option[String]) {
   override def toString() = {
     if (value.isDefined) (name + "=" + value.get) else name
   }
+  
+  def decodedValue: Option[String] = value.map{ v => java.net.URLDecoder.decode(v, "UTF-8") }
 }
