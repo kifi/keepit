@@ -130,10 +130,10 @@ class CommentTest extends Specification with DbRepos {
         val (user1, user2, uri1, uri2, msg3) = setup()
         inject[Database].readOnly {implicit s =>
           val repo = commentRepo
-          repo.getMessages(uri1.id.get, user1.id.get).length === 2
-          repo.getMessages(uri1.id.get, user2.id.get).length === 3
-          repo.getMessages(uri2.id.get, user1.id.get).length === 0
-          repo.getMessages(uri2.id.get, user2.id.get).length === 0
+          repo.getParentMessages(uri1.id.get, user1.id.get).length === 2
+          repo.getParentMessages(uri1.id.get, user2.id.get).length === 3
+          repo.getParentMessages(uri2.id.get, user1.id.get).length === 0
+          repo.getParentMessages(uri2.id.get, user2.id.get).length === 0
         }
       }
     }
