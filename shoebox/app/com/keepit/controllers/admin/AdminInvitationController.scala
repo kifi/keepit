@@ -81,7 +81,7 @@ class AdminInvitationController @Inject() (
             to = address,
             subject = "Congrats! You're in the KiFi Private Beta",
             htmlBody = views.html.email.invitationAccept(user).body,
-            category = PostOffice.Categories.COMMENT))
+            category = PostOffice.Categories.INVITATION))
         }
     }
   }
