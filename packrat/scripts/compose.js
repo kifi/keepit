@@ -23,7 +23,7 @@ function attachComposeBindings($c, composeTypeName) {
   }).click(function() {
     this.focus();  // needed in Firefox for clicks on ::before placeholder text
   }).keydown(function(e) {
-    if (e.which == 13 && e.metaKey) { // ⌘-Enter
+    if (e.which == 13 && (e.metaKey || e.ctrlKey)) { // ⌘-Enter
       $f.submit();
     }
   }).on("input", function() {
