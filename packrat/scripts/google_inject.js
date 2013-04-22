@@ -166,13 +166,15 @@ api.log("[google_inject]");
     search();  // needed for switch from shopping to web search, for example
   }).on("unload", function() {
     if (response.query === query && new Date - tKifiResultsShown > 2000) {
+      var kifiShownURIs = $.makeArray($("#kifi-res-list li.g .r a").map(function(i,el) { return $(el).attr('href'); }));
       logEvent("search", "searchUnload", {
         "query": response.query,
         "queryUUID": response.uuid,
         "kifiResultsClicked": clicks.kifi,
         "googleResultsClicked": clicks.google,
-        "kifiClickedURI": clicks.kifiURI,
-        "googleClickedURI": clicks.googleURI});
+        "kifiShownURIs": kifiShownURIs,
+        "kifiClickedURIs": clicks.kifiURI,
+        "googleClickedURIs": clicks.googleURI});
     }
   });
 
