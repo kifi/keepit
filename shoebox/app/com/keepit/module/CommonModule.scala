@@ -10,14 +10,12 @@ import com.keepit.common.actor.ActorFactory
 import com.keepit.common.actor.ActorPlugin
 import com.keepit.common.analytics._
 import com.keepit.common.cache.MemcachedCacheModule
-import com.keepit.common.controller._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{HealthcheckHost, HealthcheckPluginImpl, HealthcheckPlugin, HealthcheckActor}
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{MailSenderPluginImpl, MailSenderPlugin, PostOffice}
 import com.keepit.common.net.HttpClient
 import com.keepit.common.net.HttpClientImpl
-import com.keepit.common.social.{SocialGraphPluginImpl, SocialGraphPlugin}
 import com.keepit.inject.{FortyTwoModule, AppScoped}
 import com.keepit.model.{UserExperimentRepo, SliderHistoryTracker, SliderHistoryRepo, BrowsingHistoryRepo, ClickHistoryRepo}
 import com.keepit.scraper.ScraperConfig
@@ -42,7 +40,6 @@ class CommonModule extends ScalaModule with Logging {
 
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
-    bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
 
     bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped]
 
