@@ -24,7 +24,7 @@ api.log("[google_inject]");
   var query = "";         // latest search query
   var response = {};      // latest kifi results received
   var showMoreOnArrival;
-  var clicks = {kifi: 0, google: 0};
+  var clicks = {kifi: 0, google: 0, kifiURI: [], googleURI: []};
 
   // "main" div seems to always stay in the page, so only need to bind listener once.
   // TODO: move this code lower, so it runs after we initiate the first search
@@ -36,6 +36,8 @@ api.log("[google_inject]");
     var isKifi = $li[0].parentNode === $kifiRes[0];
 
     clicks[isKifi ? "kifi" : "google"]++;
+
+    clicks[isKifi ? "kifiURI" : "googleURI"].push(href);
 
     if (href && resIdx >= 0) {
       logEvent("search", isKifi ? "kifiResultClicked" : "googleResultClicked",
@@ -167,11 +169,15 @@ api.log("[google_inject]");
     search();  // needed for switch from shopping to web search, for example
   }).on("unload", function() {
     if (response.query === query && new Date - tKifiResultsShown > 2000) {
+      var kifiShownURIs = $.makeArray($("#kifi-res-list li.g .r a").map(function(i,el) { return $(el).attr('href'); }));
       logEvent("search", "searchUnload", {
         "query": response.query,
         "queryUUID": response.uuid,
         "kifiResultsClicked": clicks.kifi,
-        "googleResultsClicked": clicks.google});
+        "googleResultsClicked": clicks.google,
+        "kifiShownURIs": kifiShownURIs,
+        "kifiClickedURIs": clicks.kifiURI,
+        "googleClickedURIs": clicks.googleURI});
     }
   });
 
