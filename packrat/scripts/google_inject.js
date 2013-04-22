@@ -72,7 +72,8 @@ api.log("[google_inject]");
 
   var isVertical;
   function checkSearchType() {
-    var isV = ~document.URL.indexOf("tbm=");
+    var hash = location.hash, qs = /[#&]q=/.test(hash) ? hash : location.search;
+    var isV = /[?#&]tbm=/.test(qs);
     if (isV !== isVertical) {
       api.log("[checkSearchType] search type:", isV ? "vertical" : "web");
       isVertical = isV;
@@ -176,6 +177,7 @@ api.log("[google_inject]");
 
   var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
   var observer = new MutationObserver(function onMutation(mutations) {
+    if (isVertical) return;
     for (var i = 0; i < mutations.length; i++) {
       for (var j = 0, nodes = mutations[i].addedNodes; j < nodes.length; j++) {
         if (nodes[j].id === "ires") {
