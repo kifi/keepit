@@ -1005,11 +1005,22 @@ function deauthenticate() {
     height: 100})
 }
 
-// ===== Main (executed upon install, reinstall, update, reenable, and browser start)
+// ===== Main, executed upon install (or reinstall), update, re-enable, and browser start
 
 logEvent("extension", "started");
 
 authenticate(function() {
   api.log("[main] authenticated");
+
+  if (api.loadReason == "install") {
+    api.log("[main] fresh install");
+    var tab = api.tabs.anyAt(webBaseUri() + "/install");
+    if (tab) {
+      api.tabs.navigate(tab.id, webBaseUri() + "/getting-started");
+    } else {
+      api.tabs.open(webBaseUri() + "/getting-started");
+    }
+  }
+
   api.tabs.eachSelected(subscribe);
 });
