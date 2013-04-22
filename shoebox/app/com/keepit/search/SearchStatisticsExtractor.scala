@@ -151,6 +151,23 @@ class SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
 }
 
 
+object TrainingDataLabeler {
+  private val topNkifi = 2      // at most the top 2 kifi results would be labeled as negative samples
+  private def kifiHasUri(uri: Id[NormalizedURI]) = false        // TODO
+
+  def getLabeledData(kifiClicked: Seq[Id[NormalizedURI]], googleClicked: Seq[Id[NormalizedURI]], kifiShown: Seq[Id[NormalizedURI]]) = {
+    var data = Map.empty[Id[NormalizedURI], (Boolean, Boolean)]         // (isPositive, isCorrectlyRanked)
+    if (kifiClicked.size > 0) {
+      kifiClicked.foreach( uri => data += uri -> (true, true))
+    } else {
+      val isCorrectlyRanked = googleClicked.forall(uri => !kifiHasUri(uri) || kifiShown.contains(uri))    // this is false, if there exists a clicked google uri, indexed by kifi, and kifi didn't show it to user
+      kifiShown.take(topNkifi).foreach( uri => if (!googleClicked.contains(uri)) data += uri -> (false, isCorrectlyRanked))
+    }
+    data
+  }
+}
+
+
 /**
  * many codes in this class are taken from MainSearcher and ExtSearchController.
  * Unfortunately, we have to do some duplicated computations.
