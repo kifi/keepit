@@ -502,44 +502,20 @@ api.log("[google_inject]");
       hit.displayScore = "[" + Math.round(hit.score * 100) / 100 + "] ";
     }
 
-    hit.countText = "";
+    var numOthers = hit.count - hit.users.length - (hit.isMyBookmark ? 1 : 0);
+    hit.countText = formatCountHtml(
+      hit.isMyBookmark,
+      hit.isPrivate ? " <span class=kifi-res-private>Private</span>" : "",
+      hit.users.length ? "<a class=kifi-res-friends href=javascript:>" + plural(hit.users.length, "friend") + "</a>" : "",
+      numOthers ? plural(numOthers, "other") : "");
+  }
 
-    var numFriends = hit.users.length;
-    var friendsLink = numFriends ? "<a class=kifi-res-friends href=javascript:>" + plural(numFriends, "friend") + "</a>" : "";
-
-    hit.count = hit.count - hit.users.length - (hit.isMyBookmark ? 1 : 0);
-
-    // Awful decision tree. Got a better way?
-    if (hit.isMyBookmark) { // you
-      var priv = hit.isPrivate ? " <span class=kifi-res-private>Private</span>" : "";
-      if (numFriends == 0) { // no friends
-        if (hit.count > 0) { // others
-          hit.countText = "You" + priv + " + " + plural(hit.count, "other") + " kept this";
-        } else { // no others
-          hit.countText = "You kept this" + priv;
-        }
-      } else { // numFriends > 0
-        if (hit.count > 0) { // others
-          hit.countText = "You" + priv + " + " + friendsLink + " + " + plural(hit.count, "other") + " kept this";
-        } else { // no others
-          hit.countText = "You" + priv + " + " + friendsLink + " kept this";
-        }
-      }
-    } else { // not you
-      if (numFriends == 0) { // no friends
-        if (hit.count > 0) { // others
-          hit.countText = plural(hit.count, "other") + " kept this";
-        } else { // no others (should never get here)
-          hit.countText = "No one kept this";
-        }
-      } else { // numFriends > 0
-        if (hit.count > 0) { // others
-          hit.countText = friendsLink + " + " + plural(hit.count, "other") + " kept this";
-        } else { // no others
-          hit.countText = friendsLink + " kept this";
-        }
-      }
-    }
+  function formatCountHtml(kept, priv, friends, others) {
+    return kept && !friends && !others ?
+      "You kept this" + priv :
+      [kept ? "You" + priv : "", friends, others]
+        .filter(function(v) {return v})
+        .join(" + ") + " kept this";
   }
 
   function plural(n, term) {
