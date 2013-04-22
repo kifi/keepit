@@ -455,7 +455,7 @@ slider2 = function() {
   const populatePane = {
     general: function($box) {
       api.require("scripts/general.js", function() {
-        generalPane.render($box.find(".kifi-pane-tall"));
+        generalPane.render($box);
       });
     },
     notices: function($box) {
