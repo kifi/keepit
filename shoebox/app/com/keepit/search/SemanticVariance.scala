@@ -60,7 +60,7 @@ object SemanticVariance {
         s += avgBitVariance(sv, hitSize - sv.size)
         cnt += 1
       }
-      if (cnt == 1) 0.0f else if (cnt > 1) s / cnt.toFloat else -1.0f
+      if (hitSize == 1) 0.0f else if (cnt > 1) s / cnt.toFloat else -1.0f
     }
     val existVar =  existenceVariance(existCnt, uriIds.size)
     (variance.getOrElse(-1.0f), existVar)
