@@ -6,6 +6,7 @@ import com.keepit.search.query.QueryUtil._
 import org.apache.lucene.index.AtomicReader
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.index.DocsAndPositionsEnum
+import org.apache.lucene.index.FilterAtomicReader.FilterDocsAndPositionsEnum
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.Query
@@ -17,6 +18,7 @@ import org.apache.lucene.search.Explanation
 import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.similarities.Similarity
 import org.apache.lucene.util.Bits
+import org.apache.lucene.util.BytesRef
 import org.apache.lucene.util.PriorityQueue
 import org.apache.lucene.util.ToStringUtils
 import java.util.{Set => JSet}
@@ -25,11 +27,11 @@ import scala.collection.JavaConversions._
 import scala.math._
 
 object SemanticVectorQuery {
-  def apply(fieldName: String, terms: Iterable[Term]) = new SemanticVectorQuery(terms.map{ term => new Term(fieldName, term.text) })
-  def apply(terms: Iterable[Term]) = new SemanticVectorQuery(terms)
+//  def apply(fieldName: String, terms: Iterable[Term]) = new SemanticVectorQuery(terms.map{ term => new Term(fieldName, term.text) })
+  def apply(terms: Iterable[Term], fallbackField: String) = new SemanticVectorQuery(terms, fallbackField)
 }
 
-class SemanticVectorQuery(val terms: Iterable[Term]) extends Query {
+class SemanticVectorQuery(val terms: Iterable[Term], val fallbackField: String) extends Query {
 
   override def createWeight(searcher: IndexSearcher): Weight = {
     new SemanticVectorWeight(this, searcher.asInstanceOf[Searcher])
@@ -39,14 +41,16 @@ class SemanticVectorQuery(val terms: Iterable[Term]) extends Query {
 
   override def extractTerms(out: JSet[Term]): Unit = out.addAll(terms)
 
-  override def toString(s: String) = "semanticvector(%s)%s".format(terms.mkString(","),ToStringUtils.boost(getBoost()))
+  override def toString(s: String) = {
+    "semanticvector(%s|%s)%s".format(terms.mkString(","), fallbackField, ToStringUtils.boost(getBoost()))
+  }
 
   override def equals(obj: Any): Boolean = obj match {
-    case svq: SemanticVectorQuery => (terms == svq.terms && getBoost() == svq.getBoost())
+    case svq: SemanticVectorQuery => (terms == svq.terms && fallbackField == svq.fallbackField && getBoost() == svq.getBoost())
     case _ => false
   }
 
-  override def hashCode(): Int = terms.hashCode() + JFloat.floatToRawIntBits(getBoost())
+  override def hashCode(): Int = terms.hashCode() + fallbackField.hashCode() + JFloat.floatToRawIntBits(getBoost())
 }
 
 class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) extends Weight {
@@ -59,7 +63,7 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
       val vector = searcher.getSemanticVector(term)
       val idf = searcher.idf(term)
       sum += idf
-      (term, vector, idf)
+      (term, new Term(query.fallbackField, term.text), vector, idf)
     }
     (terms, sum)
   }
@@ -87,8 +91,8 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
       result.setValue(sc.score)
       result.setMatch(true)
 
-      termList.map{ case (term, vector, idf) =>
-        explainTerm(term, reader, vector, idf * value, doc) match {
+      termList.map{ case (term, _, vector, idf) =>
+        explainTerm(context, term, vector, idf * value, doc) match {
           case Some(detail) => result.addDetail(detail)
           case None =>
         }
@@ -101,8 +105,8 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
     result
   }
 
-  private def explainTerm(term: Term, reader: AtomicReader, vector: SemanticVector, weight: Float, doc: Int): Option[Explanation] = {
-    Option(reader.termPositionsEnum(term)).flatMap{ tp =>
+  private def explainTerm(context: AtomicReaderContext, term: Term, vector: SemanticVector, weight: Float, doc: Int): Option[Explanation] = {
+    Option(getDocsAndPositionsEnum(context, term, new Term(query.fallbackField, term.text()), context.reader.getLiveDocs)).flatMap{ tp =>
       val dv = new DocAndVector(tp, vector, weight)
       dv.fetchDoc(doc)
       if (dv.doc == doc && weight > 0.0f) {
@@ -120,8 +124,8 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
   }
 
   override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
-    val davs = termList.flatMap{ case (term, vector, idf) =>
-      Option(termPositionsEnum(context, term, acceptDocs)).map{ tp => new DocAndVector(tp, vector, idf * value) }
+    val davs = termList.flatMap{ case (primaryTerm, secondaryTerm, vector, idf) =>
+      Option(getDocsAndPositionsEnum(context, primaryTerm, secondaryTerm, acceptDocs)).map{ tp => new DocAndVector(tp, vector, idf * value) }
     }
 
     if (!davs.isEmpty) {
@@ -130,6 +134,59 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
       QueryUtil.emptyScorer(this)
     }
   }
+
+  private def getDocsAndPositionsEnum(context: AtomicReaderContext, primaryTerm: Term, secondaryTerm: Term, acceptDocs: Bits) = {
+    val primary = termPositionsEnum(context, primaryTerm, acceptDocs)
+    val secondary = termPositionsEnum(context, secondaryTerm, acceptDocs)
+
+    if (primary == null) secondary
+    else if (secondary == null) primary
+    else {
+      new DocsAndPositionsEnumWithFallback(primary, secondary)
+    }
+  }
+
+  private def getFallbackDocsAndPositionsEnum(context: AtomicReaderContext, term: Term, acceptDocs: Bits) = {
+    val tp = termPositionsEnum(context, term, acceptDocs)
+    if (tp != null) {
+      val sv = searcher.getSemanticVector(term)
+      val payload = new BytesRef(sv.bytes, 0, sv.bytes.length)
+      new FilterDocsAndPositionsEnum(tp) {
+        override def getPayload(): BytesRef = payload
+      }
+    } else null
+  }
+}
+
+private[query] final class DocsAndPositionsEnumWithFallback(primary: DocsAndPositionsEnum, secondary: DocsAndPositionsEnum) extends DocsAndPositionsEnum {
+  var doc = -1
+  private var docPri = -1
+  private var docSec = -1
+
+  override def docID(): Int = doc
+
+  override def nextDoc(): Int = {
+    doc = doc + 1
+    if (docPri < doc) docPri = primary.advance(doc)
+    if (docSec < doc) docSec = secondary.advance(doc)
+    doc = min(docPri, docSec)
+    doc
+  }
+
+  override def advance(target: Int): Int = {
+    doc = if (doc < target) target else doc + 1
+    if (docPri <= target) docPri = primary.advance(doc)
+    if (docSec <= target) docSec = secondary.advance(doc)
+    doc = min(docPri, docSec)
+    doc
+  }
+
+  private def tp: DocsAndPositionsEnum = if (doc == docPri) primary else secondary
+  override def freq(): Int = tp.freq()
+  override def nextPosition(): Int = tp.nextPosition()
+  override def getPayload(): BytesRef = tp.getPayload()
+  override def startOffset() = -1
+  override def endOffset() = -1
 }
 
 private[query] final class DocAndVector(tp: DocsAndPositionsEnum, vector: SemanticVector, weight: Float) {
