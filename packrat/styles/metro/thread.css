@@ -52,6 +52,9 @@ img.kifi-message-pic.kifi-self {
   line-height: 16px;
   color: #444;
 }
+.kifi-message-body p a[href] {
+  text-decoration: underline;
+}
 .kifi-message-sent::after {
   content: " ";
   display: block;

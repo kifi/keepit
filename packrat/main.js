@@ -494,7 +494,7 @@ function createDeepLinkListener(locator, tabId) {
     }
     if (tab.id == tabId) {
       // uncomment second clause below to develop /r/ page using production deep links
-      var hasForwarded = new Regexp("^" + webBaseUri() + "/r/", "").test(tab.url) /* && tab.url.indexOf("dev.ezkeep.com") < 0 */;
+      var hasForwarded = !(new RegExp("^" + webBaseUri() + "/r/", "").test(tab.url)) /* && tab.url.indexOf("dev.ezkeep.com") < 0 */;
       if (hasForwarded) {
         api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, locator);
         api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: locator});
@@ -1005,11 +1005,22 @@ function deauthenticate() {
     height: 100})
 }
 
-// ===== Main (executed upon install, reinstall, update, reenable, and browser start)
+// ===== Main, executed upon install (or reinstall), update, re-enable, and browser start
 
 logEvent("extension", "started");
 
 authenticate(function() {
   api.log("[main] authenticated");
+
+  if (api.loadReason == "install") {
+    api.log("[main] fresh install");
+    var tab = api.tabs.anyAt(webBaseUri() + "/install");
+    if (tab) {
+      api.tabs.navigate(tab.id, webBaseUri() + "/getting-started");
+    } else {
+      api.tabs.open(webBaseUri() + "/getting-started");
+    }
+  }
+
   api.tabs.eachSelected(subscribe);
 });
