@@ -44,16 +44,18 @@ api.log("[google_inject]");
   });
 
   var keyTimer, idleTimer, tQuery = +new Date, tGoogleResultsShown = tQuery, tKifiResultsReceived, tKifiResultsShown;
-  var $q = $("#gbqfq").on("input", function() {  // stable identifier: "Google Bar Query Form Query"
+  var $q = $("#gbqfq,#lst-ib").on("input", onInput);  // stable identifier: "Google Bar Query Form Query"
+  function onInput() {
     tQuery = +new Date;
     clearTimeout(keyTimer);
     keyTimer = setTimeout(search, 120);  // enough of a delay that we won't search after *every* keystroke (similar to Google's behavior)
-  });
-  var $qf = $("#gbqf").submit(function() {  // stable identifier: "Google Bar Query Form"
+  }
+  var $qf = $("#gbqf,#tsf").submit(onSubmit);  // stable identifier: "Google Bar Query Form"
+  function onSubmit() {
     tQuery = +new Date;
     clearTimeout(keyTimer);
     search();  // immediate search
-  });
+  }
 
   function onIdle() {
     logEvent("search", "dustSettled", {
@@ -187,6 +189,11 @@ api.log("[google_inject]");
           search();  // prediction may have changed
         }
       }
+    }
+    if (!$q.length || !document.contains($q[0])) {  // for #lst-ib (e.g. google.co.il)
+      $q.remove(); $qf.remove();
+      $q = $($q.selector).on("input", onInput);
+      $qf = $($qf.selector).submit(onSubmit);
     }
   });
   observer.observe(document.getElementById("main"), {childList: true, subtree: true});  // TODO: optimize away subtree
