@@ -27,6 +27,8 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
 
   def idf(term: Term) = getSimilarity.asInstanceOf[TFIDFSimilarity]idf(indexReader.docFreq(term), indexReader.maxDoc)
 
+  private[this] var svMap = Map.empty[Term, SemanticVector]
+
   // search: hits are ordered by score
   def search(query: Query): Seq[Hit] = {
     val hitBuf = new ArrayBuffer[Hit]()
@@ -103,10 +105,15 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
   }
 
   def getSemanticVector(term: Term) = {
-    val composer = getSemanticVectorComposer(term)
-
-    if (composer.numInputs > 0) composer.getSemanticVector
-    else SemanticVector.vectorize(SemanticVector.getSeed(term.text))
+    svMap.getOrElse(term, {
+      val composer = getSemanticVectorComposer(term)
+      val sv = {
+        if (composer.numInputs > 0) composer.getSemanticVector
+        else SemanticVector.vectorize(SemanticVector.getSeed(term.text))
+      }
+      svMap += (term -> sv)
+      sv
+    })
   }
 
   def getSemanticVector(terms: Set[Term]) = {
