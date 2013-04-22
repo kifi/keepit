@@ -25,7 +25,6 @@ const windows = require("sdk/windows").browserWindows;
 const tabs = require("sdk/tabs");
 const privateMode = require("sdk/private-browsing");
 
-var topTabWin = windows.activeWindow;
 const pages = {}, workers = {}, tabsById = {};  // all by tab.id
 function createPage(tab) {
   if (!tab || !tab.id) throw Error(tab ? "tab without id" : "tab required");
@@ -261,6 +260,13 @@ exports.storage = require("sdk/simple-storage").storage;
 
 const hostRe = /^https?:\/\/[^\/]*/;
 exports.tabs = {
+  anyAt: function(url) {
+    for each (let page in pages) {
+      if (page.url == url) {
+        return page;
+      }
+    }
+  },
   select: function(tabId) {
     exports.log("[api.tabs.select]", tabId);
     tabsById[tabId].activate();
@@ -269,8 +275,8 @@ exports.tabs = {
     exports.log("[api.tabs.open]", url);
     tabs.open({
       url: url,
-      onOpen: function (tab) {
-        callback(tab.id);
+      onOpen: function(tab) {
+        callback && callback(tab.id);
       }
     });
   },
@@ -302,6 +308,15 @@ exports.tabs = {
   isFocused: function(page) {
     var tab = tabsById[page.id], win = tab.window;
     return win === windows.activeWindow && tab === win.tabs.activeTab;
+  },
+  navigate: function(tabId, url) {
+    var tab = tabsById[tabId], win;
+    if (tab) {
+      tab.url = url;
+      win = tab.window;
+      if (tab != win.activeTab) tab.activate();
+      if (win != windows.activeWindow) win.activate();
+    }
   },
   on: {
     focus: new Listeners,
@@ -378,9 +393,6 @@ windows
   removeFromWindow(win);
 })
 .on("activate", function(win) {
-  if (win.tabs.activeTab) {  // TODO: better detection of a window's tab support (popups have activeTab)
-    topTabWin = win;
-  }
   var page = pages[win.tabs.activeTab.id];
   if (page && /^https?:/.test(page.url)) {
     dispatch.call(exports.tabs.on.focus, page);

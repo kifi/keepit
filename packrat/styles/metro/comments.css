@@ -58,6 +58,9 @@ img.kifi-comment-pic.kifi-self {
   line-height: 16px;
   color: #444;
 }
+.kifi-comment-posted p a[href] {
+  text-decoration: underline;
+}
 .kifi-comment-posted::after {
   content: " ";
   display: block;
