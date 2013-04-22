@@ -27,7 +27,6 @@ import scala.collection.JavaConversions._
 import scala.math._
 
 object SemanticVectorQuery {
-//  def apply(fieldName: String, terms: Iterable[Term]) = new SemanticVectorQuery(terms.map{ term => new Term(fieldName, term.text) })
   def apply(terms: Iterable[Term], fallbackField: String) = new SemanticVectorQuery(terms, fallbackField)
 }
 
