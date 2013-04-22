@@ -1,6 +1,7 @@
 package com.keepit.search.index
 
 import com.keepit.common.db.Id
+import com.keepit.common.logging.Logging
 import com.keepit.model.User
 import com.keepit.search.SemanticVectorComposer
 import com.keepit.search.SemanticVector
@@ -36,7 +37,7 @@ object PersonalizedSearcher {
 class PersonalizedSearcher(override val indexReader: WrappedIndexReader, ids: Set[Long],
                            browsingFilter: MultiHashFilter, clickFilter: MultiHashFilter,
                            svWeightMyBookMarks: Int, svWeightBrowsingHistory: Int, svWeightClickHistory: Int)
-extends Searcher(indexReader) {
+extends Searcher(indexReader) with Logging {
   override protected def getSemanticVectorComposer(term: Term) = {
     val subReaders = indexReader.wrappedSubReaders
     val composer = new SemanticVectorComposer
@@ -57,12 +58,15 @@ extends Searcher(indexReader) {
           }
           if (weight > 0) {
             var freq = tp.freq()
-            while (freq > 0) {
-              freq -= 1
+            if (freq > 0) {
               tp.nextPosition()
               val payload = tp.getPayload()
-              vector.set(payload.bytes, payload.offset, payload.length)
-              composer.add(vector, weight)
+              if (payload != null) {
+                vector.set(payload.bytes, payload.offset, payload.length)
+                composer.add(vector, weight)
+              } else {
+                log.error(s"payload is missing: term=${term.toString}")
+              }
             }
           }
         }
