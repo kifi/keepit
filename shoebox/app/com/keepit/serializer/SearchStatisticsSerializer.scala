@@ -11,7 +11,7 @@ import com.keepit.model.NormalizedURI
 import com.keepit.search.SearchResultInfo
 import com.keepit.search.LuceneScores
 import com.keepit.search.SearchStatistics
-import com.keepit.search.UriClickInfo
+import com.keepit.search.UriLabel
 
 class BasicQueryInfoSerializer extends Format[BasicQueryInfo] {
   def writes(info: BasicQueryInfo): JsValue = {
@@ -63,23 +63,23 @@ object UriInfoSerializer {
   implicit val serializer = new UriInfoSerializer
 }
 
-class UriClickInfoSerializer extends Format[UriClickInfo] {
-  def writes(info: UriClickInfo): JsValue = {
+class UriLabelSerializer extends Format[UriLabel] {
+  def writes(info: UriLabel): JsValue = {
     Json.obj("clicked" -> JsBoolean(info.clicked),
-        "incorrectlyRanked" -> JsBoolean(info.incorrectlyRanked)
+        "isCorrectlyRanked" -> JsBoolean(info.isCorrectlyRanked)
     )
   }
 
-  def reads(json: JsValue): JsResult[UriClickInfo] = {
-      JsSuccess(UriClickInfo(
+  def reads(json: JsValue): JsResult[UriLabel] = {
+      JsSuccess(UriLabel(
           clicked = (json \ "clicked").asOpt[Boolean].get,
-          incorrectlyRanked = (json \ "incorrectlyRanked").asOpt[Boolean].get
+          isCorrectlyRanked = (json \ "isCorrectlyRanked").asOpt[Boolean].get
       ))
     }
 }
 
-object UriClickInfoSerializer {
-  implicit val serializer = new UriClickInfoSerializer
+object UriLabelSerializer {
+  implicit val serializer = new UriLabelSerializer
 }
 
 
@@ -133,7 +133,7 @@ class SearchStatisticsSerializer extends Format[SearchStatistics] {
   def writes(stat: SearchStatistics): JsValue = {
     Json.obj("basicQueryInfo" -> BasicQueryInfoSerializer.serializer.writes(stat.basicQueryInfo),
       "uriInfo" -> UriInfoSerializer.serializer.writes(stat.uriInfo),
-      "uriClickInfo" -> UriClickInfoSerializer.serializer.writes(stat.uriClickInfo),
+      "uriLabel" -> UriLabelSerializer.serializer.writes(stat.uriLabel),
       "searchResultInfo" -> SearchResultInfoSerializer.serializer.writes(stat.searchResultInfo),
       "luceneScores" -> LuceneScoresSerializer.serializer.writes(stat.luceneScores))
   }
@@ -141,10 +141,10 @@ class SearchStatisticsSerializer extends Format[SearchStatistics] {
   def reads(json: JsValue): JsResult[SearchStatistics] = {
     val basicQueryInfo = BasicQueryInfoSerializer.serializer.reads(json \ "basicQueryInfo").get
     val uriInfo = UriInfoSerializer.serializer.reads(json \ "uriInfo").get
-    val uriClickInfo = UriClickInfoSerializer.serializer.reads(json \ "uriClickInfo").get
+    val uriLabel = UriLabelSerializer.serializer.reads(json \ "uriLabel").get
     val searchResultInfo = SearchResultInfoSerializer.serializer.reads(json \ "searchResultInfo").get
     val luceneScores = LuceneScoresSerializer.serializer.reads(json \ "luceneScores").get
-    JsSuccess(SearchStatistics(basicQueryInfo, uriInfo, uriClickInfo, searchResultInfo, luceneScores))
+    JsSuccess(SearchStatistics(basicQueryInfo, uriInfo, uriLabel, searchResultInfo, luceneScores))
   }
 }
 
