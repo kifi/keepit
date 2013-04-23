@@ -81,19 +81,18 @@ class ExtCommentController @Inject() (
       val userId = request.userId
       val uri = normalizedURIRepo.save(normalizedURIRepo.getByNormalizedUrl(urlStr).getOrElse(NormalizedURIFactory(url = urlStr)))
 
-      val parentIdOpt = parent match {
-        case "" => None
-        case id =>
-          val parent = commentRepo.get(ExternalId[Comment](id))
-          Some(parent.parent.getOrElse(parent.id.get))
-      }
-
       val url: URL = urlRepo.save(urlRepo.get(urlStr).getOrElse(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
 
       permissions.toLowerCase match {
         case "message" =>
+          val parentIdOpt = parent match {
+            case "" => commentRepo.getParentByUriRecipients(uri.id.get, userId, recipientUsers(recipients).map(_.id.get))
+            case id =>
+              val parent = commentRepo.get(ExternalId[Comment](id))
+              Some(parent.parent.getOrElse(parent.id.get))
+          }
           val newComment = commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.MESSAGE, parent = parentIdOpt))
-          createRecipients(newComment.id.get, recipients, parentIdOpt)
+          createCommentRecipients(newComment.id.get, recipients, parentIdOpt)
 
           val newCommentRead = commentReadRepo.getByUserAndParent(userId, parentIdOpt.getOrElse(newComment.id.get)) match {
             case Some(commentRead) => // existing CommentRead entry for this message thread
@@ -180,30 +179,23 @@ class ExtCommentController @Inject() (
 
   // Given a list of comma separated external user ids, side effects and creates all the necessary recipients
   // For comments with a parent comment, adds recipients to parent comment instead.
-  private def createRecipients(commentId: Id[Comment], recipients: String, parentIdOpt: Option[Id[Comment]])(implicit session: RWSession) = {
-    recipients.split(",").map(_.trim()).map { recipientId =>
-      // Split incoming list of externalIds
-      try {
-        userRepo.getOpt(ExternalId[User](recipientId)) match {
-          case Some(recipientUser) =>
-            log.info("Adding recipient %s to new comment %s".format(recipientUser.id.get, commentId))
-            // When comment is a reply (has a parent), add recipient to parent if does not exist. Else, add to comment.
-            parentIdOpt match {
-              case Some(parentId) =>
-                Some(commentRecipientRepo.save(CommentRecipient(commentId = parentId, userId = recipientUser.id)))
-              case None =>
-                Some(commentRecipientRepo.save(CommentRecipient(commentId = commentId, userId = recipientUser.id)))
-            }
-          case None =>
-            // TODO: Add social User and email recipients as well
-            log.info("Ignoring recipient %s for comment %s. User does not exist.".format(recipientId, commentId))
-            None
-        }
+  private def createCommentRecipients(commentId: Id[Comment], recipients: String, parentIdOpt: Option[Id[Comment]])(implicit session: RWSession) = {
+    recipientUsers(recipients) map { recipientUser =>
+      log.info("Adding recipient %s to new comment %s".format(recipientUser.id.get, commentId))
+      // When comment is a reply (has a parent), add recipient to parent if does not exist. Else, add to comment.
+      parentIdOpt match {
+        case Some(parentId) =>
+          Some(commentRecipientRepo.save(CommentRecipient(commentId = parentId, userId = recipientUser.id)))
+        case None =>
+          Some(commentRecipientRepo.save(CommentRecipient(commentId = commentId, userId = recipientUser.id)))
       }
-      catch {
-        case e: Throwable => None // It throws an exception if it fails ExternalId[User]. Just return None.
-      }
-    } flatten
+    }
+  }
+  
+  private def recipientUsers(recipientString: String)(implicit session: RWSession) = {
+    (recipientString.split(",").map(_.trim()).map { recipientId =>
+      userRepo.getOpt(ExternalId[User](recipientId))
+    } flatten).toSet
   }
 
   private[controllers] def notifyRecipients(comment: Comment): Unit = {

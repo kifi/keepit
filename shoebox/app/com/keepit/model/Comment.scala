@@ -56,6 +56,7 @@ trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
   def getPrivate(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
   def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment]
   def getParentMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
+  def getParentByUriRecipients(normUri: Id[NormalizedURI], userId: Id[User], recipients: Set[Id[User]])(implicit session: RSession): Option[Id[Comment]]
   def count(permissions: State[CommentPermission] = CommentPermissions.PUBLIC)(implicit session: RSession): Int
   def page(page: Int, size: Int, permissions: State[CommentPermission])(implicit session: RSession): Seq[Comment]
   def getParticipantsUserIds(commentId: Id[Comment])(implicit session: RSession): Set[Id[User]]
@@ -159,6 +160,40 @@ class CommentRepoImpl @Inject() (
       c <- table if (c.uriId === uriId && c.userId === userId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)
     } yield (c.*)
     (q1.list ++ q2.list).toSet.toSeq
+  }
+  
+  def getParentByUriRecipients(normUri: Id[NormalizedURI], userId: Id[User], recipients: Set[Id[User]])(implicit session: RSession): Option[Id[Comment]] = {
+      val conn = session.conn
+      val st = conn.createStatement()
+      
+      // It's possible to write the following query using 2 joins and a union, but it's very difficult to follow.
+      // The explain of this is quite clean and is easier to read, in my opinion. Suggestions welcome. Basically:
+      //  1) get all threads that the user has access to (they are the creator, and they are a recipient) for this URI
+      //  2) get all comment_recipients of these (#1) threads
+      //  3) with #2, union all threads that the user created for this URI
+      // This yields (userId,commentId) pairs.
+      val sql =
+        s"""
+          (select comment_id as id, user_id from comment_recipient /* #2 */
+            join (
+              /* #1 */
+              select distinct c.id from comment c join comment_recipient cr on cr.comment_id = c.id
+              where (cr.user_id = ${userId.id} or c.user_id = ${userId.id}) and c.parent is null
+                and c.normalized_uri_id = ${normUri.id}
+            ) threads on threads.id = comment_recipient.comment_id
+          ) union /* #3 */
+          (select id, user_id from comment c where c.user_id = ${userId.id} and c.parent is null and c.normalized_uri_id = ${normUri.id});
+        """
+      val rs = st.executeQuery(sql)
+      val threadUserIdPairs = Iterator.continually((rs, rs.next)).takeWhile(_._2).map(_._1).map { result =>
+        val commentId = Id[Comment](result.getLong("id"))
+        val userId = Id[User](result.getLong("user_id"))
+        (commentId, userId)
+      }.toSet
+      
+      val candidates = recipients.map { recipient => threadUserIdPairs.filter(_._2 == recipient).map(_._1) }
+      
+      candidates.foldLeft(candidates.head)( (a,b) => a.intersect(b) ).headOption
   }
 
   def count(permissions: State[CommentPermission])(implicit session: RSession): Int =
