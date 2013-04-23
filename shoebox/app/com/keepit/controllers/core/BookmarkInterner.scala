@@ -37,37 +37,40 @@ class BookmarkInterner @Inject() (
     case e: Throwable => throw new Exception("can't figure what to do with %s".format(e))
   }
 
+  private def findUri(url: String, title: Option[String]) = db.readWrite(attempts = 2) { implicit s =>
+    uriRepo.getByNormalizedUrl(url) match {
+      case Some(uri) if uri.state == NormalizedURIStates.ACTIVE | uri.state == NormalizedURIStates.INACTIVE =>
+        (uriRepo.save(uri.withState(NormalizedURIStates.SCRAPE_WANTED)), true)
+      case Some(uri) => (uri, false)
+      case None => (createNewURI(title, url), true)
+    }
+  }
+
+  private def internBookmark(uri: NormalizedURI, user: User, isPrivate: Boolean, experiments: Seq[State[ExperimentType]],
+      installationId: Option[ExternalId[KifiInstallation]], source: BookmarkSource, title: Option[String], url: String) = {
+    db.readWrite(attempts = 2) { implicit s =>
+      bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get) match {
+        case Some(bookmark) if bookmark.isActive => Some(bookmark) // TODO: verify isPrivate?
+        case Some(bookmark) => Some(bookmarkRepo.save(bookmark.withActive(true).withPrivate(isPrivate)))
+        case None =>
+          Events.userEvent(EventFamilies.SLIDER, "newKeep", user, experiments, installationId.map(_.id).getOrElse(""), JsObject(Seq("source" -> JsString(source.value))))
+          val urlObj = urlRepo.get(url).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
+          Some(bookmarkRepo.save(
+            BookmarkFactory(uri, user.id.get, title orElse uri.title, urlObj, source, isPrivate, installationId)))
+      }
+    }
+  }
+
   private def internBookmark(json: JsObject, user: User, experiments: Seq[State[ExperimentType]], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): Option[Bookmark] = {
     val title = (json \ "title").asOpt[String]
     val url = (json \ "url").as[String]
     val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
-
     if (!url.toLowerCase.startsWith("javascript:")) {
       log.debug("interning bookmark %s with title [%s]".format(json, title))
-      val (uri, needsToScrape) = db.readWrite(attempts = 2) { implicit s =>
-        uriRepo.getByNormalizedUrl(url) match {
-          case Some(uri) if uri.state == NormalizedURIStates.ACTIVE | uri.state == NormalizedURIStates.INACTIVE =>
-            (uriRepo.save(uri.withState(NormalizedURIStates.SCRAPE_WANTED)), true)
-          case Some(uri) => (uri, false)
-          case None => (createNewURI(title, url), true)
-        }
-      }
+      val (uri, needsToScrape) = findUri(url, title)
       if (needsToScrape) scraper.asyncScrape(uri)
-
-      val bookmark = db.readWrite(attempts = 2) { implicit s =>
-        bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get) match {
-          case Some(bookmark) if bookmark.isActive => Some(bookmark) // TODO: verify isPrivate?
-          case Some(bookmark) => Some(bookmarkRepo.save(bookmark.withActive(true).withPrivate(isPrivate)))
-          case None =>
-            Events.userEvent(EventFamilies.SLIDER, "newKeep", user, experiments, installationId.map(_.id).getOrElse(""), JsObject(Seq("source" -> JsString(source.value))))
-            val urlObj = urlRepo.get(url).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
-            Some(bookmarkRepo.save(
-              BookmarkFactory(uri, user.id.get, title orElse uri.title, urlObj, source, isPrivate, installationId)))
-        }
-      }
+      val bookmark = internBookmark(uri, user, isPrivate, experiments, installationId, source, title, url)
       if(bookmark.isDefined) addToActivityStream(user, bookmark.get)
-
-      bookmark.foreach { b => log.info(db.readWrite { implicit s => bookmarkRepo.get(b.id.get) }.toString) }
       bookmark
     } else {
       None
