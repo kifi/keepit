@@ -244,7 +244,7 @@ a.kifi-pane-back:active {
   border-top: 1px solid #2c3e50;
   line-height: 38px;
 }
-.kifi-pane-kept-y,
+span.kifi-pane-kept-y,
 .kifi-pane-kept.kifi-kept .kifi-pane-kept-n {
   display: none;
 }

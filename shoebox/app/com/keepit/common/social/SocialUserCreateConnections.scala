@@ -26,33 +26,34 @@ class SocialUserCreateConnections @Inject() (
 	  createConnectionsFromJson(socialUserInfo, parentJson)
   }
 
-  def createConnectionsFromJson(socialUserInfo: SocialUserInfo, parentJson: Seq[JsValue]): Seq[SocialConnection] =
-  {
-    log.info("looking for new (or reactive) connections for user %s".format(socialUserInfo.fullName))
-
+  private def extractFriendsWithConnections(socialUserInfo: SocialUserInfo, parentJson: Seq[JsValue]): Seq[(SocialUserInfo, Option[SocialConnection])] = {
     implicit val timeout = BabysitterTimeout(30 seconds, 2 minutes)
-
-    db.readWrite { implicit s =>
-      parentJson flatMap extractFriends map extractSocialId map { socialRepo.get(_, SocialNetworks.FACEBOOK)
+    db.readOnly { implicit s =>
+      parentJson flatMap extractFriends map extractSocialId map {
+        socialRepo.get(_, SocialNetworks.FACEBOOK)
       } map { sui =>
-        connectionRepo.getConnectionOpt(socialUserInfo.id.get, sui.id.get) match {
-          case Some(c) => {
-            if (c.state != SocialConnectionStates.ACTIVE) {
-              log.debug("activate connection between %s and %s".format(c.socialUser1, c.socialUser2))
+        (sui, connectionRepo.getConnectionOpt(socialUserInfo.id.get, sui.id.get))
+      }
+    }
+  }
+
+  private def createConnectionsFromJson(socialUserInfo: SocialUserInfo, parentJson: Seq[JsValue]): Seq[SocialConnection] = {
+    log.info(s"looking for new (or reactive) connections for user ${socialUserInfo.fullName}")
+    extractFriendsWithConnections(socialUserInfo, parentJson) map {
+      case (friend, Some(c)) =>
+        c.state match {
+          case SocialConnectionStates.ACTIVE => c
+          case _ =>
+            log.debug(s"activate connection between ${c.socialUser1} and ${c.socialUser2}")
+            db.readWrite { implicit s =>
               connectionRepo.save(c.withState(SocialConnectionStates.ACTIVE))
             }
-            else
-            {
-              log.debug("connection between %s and %s is already active".format(c.socialUser1, c.socialUser2))
-              c
-            }
-          }
-          case None => {
-            log.debug("a new connection was created  between %s and %s".format(socialUserInfo.id.get, sui.id.get))
-            connectionRepo.save(SocialConnection(socialUser1 = socialUserInfo.id.get, socialUser2 = sui.id.get))
-          }
         }
-      }
+      case (friend, None) =>
+        log.debug(s"a new connection was created between ${socialUserInfo} and friend.id.get")
+        db.readWrite { implicit s =>
+          connectionRepo.save(SocialConnection(socialUser1 = socialUserInfo.id.get, socialUser2 = friend.id.get))
+        }
     }
   }
 

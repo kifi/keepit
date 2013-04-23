@@ -487,12 +487,20 @@ api = function() {
     },
     storage: localStorage,
     tabs: {
+      anyAt: function(url) {
+        for (var id in pages) {
+          var page = pages[id];
+          if (page.url == url) {
+            return page;
+          }
+        }
+      },
       select: function(tabId) {
-        chrome.tabs.update(tabId, { active: true });
+        chrome.tabs.update(tabId, {active: true});
       },
       open: function(url, callback) {
-        chrome.tabs.create({ url: url }, function (tab) {
-          callback(tab.id);
+        chrome.tabs.create({url: url}, function(tab) {
+          callback && callback(tab.id);
         });
       },
       each: function(callback) {
@@ -524,6 +532,11 @@ api = function() {
       },
       isFocused: function(tab) {
         return selectedTabPages[focusedWinId] === tab;
+      },
+      navigate: function(tabId, url) {
+        chrome.tabs.update(tabId, {url: url, active: true}, function(tab) {
+          if (tab) chrome.windows.update(tab.windowId, {focused: true});
+        });
       },
       on: {
         focus: new Listeners,
