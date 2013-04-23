@@ -15,7 +15,7 @@ import org.apache.zookeeper.CreateMode
 
 class ZooKeeperClientTest extends Specification {
 
-  //args(skipAll = true)
+  args(skipAll = true)
 
   "zookeeper" should {
     "connect to server and create paths" in {
