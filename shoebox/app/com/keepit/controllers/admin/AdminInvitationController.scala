@@ -52,6 +52,7 @@ class AdminInvitationController @Inject() (
       val socialUser = socialUserRepo.get(id)
       for (user <- socialUser.userId.map(userRepo.get)) yield {
         val invite = invitationRepo.getByRecipient(id).getOrElse(invitationRepo.save(Invitation(
+          createdAt = user.createdAt,
           senderUserId = None,
           recipientSocialUserId = socialUser.id.get
         )))
@@ -67,8 +68,28 @@ class AdminInvitationController @Inject() (
       Redirect(routes.AdminInvitationController.displayInvitations()).flashing("error" -> "Invalid!")
     }
   }
+
+  def rejectUser(id: Id[SocialUserInfo]) = AdminHtmlAction { implicit request =>
+    val result = db.readWrite { implicit session =>
+      val socialUser = socialUserRepo.get(id)
+      for (user <- socialUser.userId.map(userRepo.get)) yield {
+        val invite = invitationRepo.getByRecipient(id).getOrElse(invitationRepo.save(Invitation(
+          createdAt = user.createdAt,
+          senderUserId = None,
+          recipientSocialUserId = socialUser.id.get
+        )))
+        (user, invitationRepo.save(invite.withState(InvitationStates.ADMIN_REJECTED)))
+      }
+    }
+
+    if (result.isDefined) {
+      Redirect(routes.AdminInvitationController.displayInvitations())
+    } else {
+      Redirect(routes.AdminInvitationController.displayInvitations()).flashing("error" -> "Invalid!")
+    }
+  }
   
-  private def notifyAcceptedUser(userId: Id[User]) = {
+  private def notifyAcceptedUser(userId: Id[User]) {
     db.readOnly { implicit session =>
       val user = userRepo.get(userId)
       val addrs = emailAddressRepo.getByUser(userId)

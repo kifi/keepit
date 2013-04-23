@@ -77,8 +77,15 @@
           }.getOrElse { accepted }
         <td>
           @if(maybeInviteWithUser.isEmpty || maybeInviteWithUser.exists(_._1.state == InvitationStates.ACCEPTED)) {
-          <form class="form-inline" action="@com.keepit.controllers.admin.routes.AdminInvitationController.acceptUser(socialUserInfo.id.get)" method="POST">
+          <form class="form-inline"
+            style="display:inline"
+            action="@com.keepit.controllers.admin.routes.AdminInvitationController.acceptUser(socialUserInfo.id.get)" method="POST">
             <button type="submit" class="btn">Accept</button>
+          </form>
+          <form class="form-inline"
+            style="display:inline"
+            action="@com.keepit.controllers.admin.routes.AdminInvitationController.rejectUser(socialUserInfo.id.get)" method="POST">
+            <button type="submit" class="btn">Reject</button>
           </form>
           }
         </td>
