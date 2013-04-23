@@ -38,15 +38,26 @@
   </div>
 }
 
+@stateDisplay(state: State[Invitation]) = {
+  @{state match {
+    case InvitationStates.INACTIVE => "inactive"
+    case InvitationStates.ACTIVE => "pending user acceptance"
+    case InvitationStates.ACCEPTED => "pending admin approval"
+    case InvitationStates.ADMIN_ACCEPTED => "admin accepted"
+    case InvitationStates.ADMIN_REJECTED => "admin rejected"
+    case InvitationStates.JOINED => "user joined"
+  }}
+}
+
 @admin("Invitations") {
   @pagination(page, numPages)
 
     <p>Show state:
     <select id="state" value="@showing">
-    <option>all</option>
-    @for(state <- Seq(InvitationStates.ACTIVE, InvitationStates.INACTIVE, InvitationStates.ACCEPTED,
+    <option value="all">all</option>
+    @for(state <- Seq(InvitationStates.INACTIVE, InvitationStates.ACTIVE, InvitationStates.ACCEPTED,
         InvitationStates.ADMIN_ACCEPTED, InvitationStates.ADMIN_REJECTED, InvitationStates.JOINED)) {
-        <option value="@state.value" @if(state.value == showing) { selected }>@state.value</option>
+        <option value="@state.value" @if(state.value == showing) { selected }>@stateDisplay(state)</option>
     }
     </select>
     </p>
@@ -73,8 +84,8 @@
           }.getOrElse { - }
         <td>
           @maybeInviteWithUser.map { case (invite, _) =>
-              @invite.state
-          }.getOrElse { accepted }
+              @stateDisplay(invite.state)
+          }.getOrElse { @stateDisplay(InvitationStates.ACCEPTED) }
         <td>
           @if(maybeInviteWithUser.isEmpty || maybeInviteWithUser.exists(_._1.state == InvitationStates.ACCEPTED)) {
           <form class="form-inline"
