@@ -24,7 +24,7 @@ api.log("[google_inject]");
   var query = "";         // latest search query
   var response = {};      // latest kifi results received
   var showMoreOnArrival;
-  var clicks = {kifi: 0, google: 0, kifiURI: [], googleURI: []};
+  var clicks = {kifi: [], google: []};  // clicked result link hrefs
 
   // "main" div seems to always stay in the page, so only need to bind listener once.
   // TODO: move this code lower, so it runs after we initiate the first search
@@ -35,9 +35,7 @@ api.log("[google_inject]");
     var resIdx = $li.parent().children("li.g").index($li);
     var isKifi = $li[0].parentNode === $kifiRes[0];
 
-    clicks[isKifi ? "kifi" : "google"]++;
-
-    clicks[isKifi ? "kifiURI" : "googleURI"].push(href);
+    clicks[isKifi ? "kifi" : "google"].push(href);
 
     if (href && resIdx >= 0) {
       logEvent("search", isKifi ? "kifiResultClicked" : "googleResultClicked",
@@ -119,16 +117,16 @@ api.log("[google_inject]");
       response.filter = f;
       response.hits.forEach(processHit);
       if (!newFilter) {
-        clicks.kifi = clicks.google = 0;
+        clicks.kifi.length = clicks.google.length = 0;
       }
 
       var ires = document.getElementById("ires");
       if (ires) {
-        response.shown = true;
+        resp.shown = true;
         tKifiResultsShown = +new Date;
       }
 
-      if (response.hits.length || f) {  // we show a "no results match filter" message if filtering
+      if (resp.hits.length || f) {  // we show a "no results match filter" message if filtering
         appendResults();
         $res.show().insertBefore(ires);
       } else {
@@ -139,9 +137,10 @@ api.log("[google_inject]");
       if (resp.hits.length) {
         logEvent("search", "kifiAtLeastOneResult", {"query": q, "filter": f, "queryUUID": resp.uuid, "experimentId": resp.experimentId});
         var onShow = function(hits) {
+          resp.expanded = true;
           loadChatter(hits);
           prefetchMore();
-        }.bind(null, response.hits.slice());
+        }.bind(null, resp.hits.slice());
         if (resp.show) {
           onShow();
         } else {
@@ -167,17 +166,16 @@ api.log("[google_inject]");
     api.log("[hashchange]");
     checkSearchType();
     search();  // needed for switch from shopping to web search, for example
-  }).on("unload", function() {
+  }).on("beforeunload", function(e) {
     if (response.query === query && new Date - tKifiResultsShown > 2000) {
-      var kifiShownURIs = $.makeArray($("#kifi-res-list li.g .r a").map(function(i,el) { return $(el).attr('href'); }));
       logEvent("search", "searchUnload", {
         "query": response.query,
         "queryUUID": response.uuid,
-        "kifiResultsClicked": clicks.kifi,
-        "googleResultsClicked": clicks.google,
-        "kifiShownURIs": kifiShownURIs,
-        "kifiClickedURIs": clicks.kifiURI,
-        "googleClickedURIs": clicks.googleURI});
+        "kifiResultsClicked": clicks.kifi.length,
+        "googleResultsClicked": clicks.google.length,
+        "kifiShownURIs": resp.expanded ? resp.hits.map(function(hit) {return hit.bookmark.url}) : [],
+        "kifiClickedURIs": clicks.kifi,
+        "googleClickedURIs": clicks.google});
     }
   });
 
