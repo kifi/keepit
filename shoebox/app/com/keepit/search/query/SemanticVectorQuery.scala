@@ -136,7 +136,8 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
 
   private def getDocsAndPositionsEnum(context: AtomicReaderContext, primaryTerm: Term, secondaryTerm: Term, acceptDocs: Bits) = {
     val primary = termPositionsEnum(context, primaryTerm, acceptDocs)
-    val secondary = termPositionsEnum(context, secondaryTerm, acceptDocs)
+    val defaultSV = searcher.getSemanticVector(primaryTerm) // use the query's sv as a default
+    val secondary = getFallbackDocsAndPositionsEnum(context, secondaryTerm, defaultSV, acceptDocs)
 
     if (primary == null) secondary
     else if (secondary == null) primary
@@ -145,10 +146,9 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
     }
   }
 
-  private def getFallbackDocsAndPositionsEnum(context: AtomicReaderContext, term: Term, acceptDocs: Bits) = {
+  private def getFallbackDocsAndPositionsEnum(context: AtomicReaderContext, term: Term, sv: SemanticVector, acceptDocs: Bits) = {
     val tp = termPositionsEnum(context, term, acceptDocs)
     if (tp != null) {
-      val sv = searcher.getSemanticVector(term)
       val payload = new BytesRef(sv.bytes, 0, sv.bytes.length)
       new FilterDocsAndPositionsEnum(tp) {
         override def getPayload(): BytesRef = payload
@@ -159,28 +159,28 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
 
 private[query] final class DocsAndPositionsEnumWithFallback(primary: DocsAndPositionsEnum, secondary: DocsAndPositionsEnum) extends DocsAndPositionsEnum {
   var doc = -1
-  private var docPri = -1
-  private var docSec = -1
+  private var docPrimary = -1
+  private var docSecondary = -1
 
   override def docID(): Int = doc
 
   override def nextDoc(): Int = {
     doc = doc + 1
-    if (docPri < doc) docPri = primary.advance(doc)
-    if (docSec < doc) docSec = secondary.advance(doc)
-    doc = min(docPri, docSec)
+    if (docPrimary < doc) docPrimary = primary.advance(doc)
+    if (docSecondary < doc) docSecondary = secondary.advance(doc)
+    doc = min(docPrimary, docSecondary)
     doc
   }
 
   override def advance(target: Int): Int = {
     doc = if (doc < target) target else doc + 1
-    if (docPri <= target) docPri = primary.advance(doc)
-    if (docSec <= target) docSec = secondary.advance(doc)
-    doc = min(docPri, docSec)
+    if (docPrimary <= target) docPrimary = primary.advance(doc)
+    if (docSecondary <= target) docSecondary = secondary.advance(doc)
+    doc = min(docPrimary, docSecondary)
     doc
   }
 
-  private def tp: DocsAndPositionsEnum = if (doc == docPri) primary else secondary
+  private def tp: DocsAndPositionsEnum = if (doc == docPrimary) primary else secondary
   override def freq(): Int = tp.freq()
   override def nextPosition(): Int = tp.nextPosition()
   override def getPayload(): BytesRef = tp.getPayload()
