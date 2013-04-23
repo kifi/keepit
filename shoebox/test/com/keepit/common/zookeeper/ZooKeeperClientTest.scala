@@ -17,7 +17,7 @@ import scala.util.{Random, Try}
 
 class ZooKeeperClientTest extends Specification {
 
-  args(skipAll = true)
+  //args(skipAll = true)
 
   def withClient[T](block: ZooKeeperClient => T)(implicit path: Path = Path("/test" + Random.nextLong.abs), cleanup: Boolean = true): T = {
     println(s"starting test with root path $path")
