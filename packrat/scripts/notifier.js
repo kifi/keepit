@@ -19,8 +19,11 @@ var notifier = {
           sticky: false,
           showForMs: 15000,
           clickAction: function() {
-            var win = window.open(details.url, "_blank");
-            win.focus();
+            api.port.emit("open_deep_link", {
+              nUri: data.details.page,
+              locator: "/comments/" + data.details.id
+            });
+            return false;
           }
         });
         break;
@@ -34,8 +37,11 @@ var notifier = {
           sticky: false,
           showForMs: 15000,
           clickAction: function() {
-            var win = window.open(details.url, "_blank");
-            win.focus();
+            api.port.emit("open_deep_link", {
+              nUri: data.details.page,
+              locator: "/messages/" + data.details.id
+            });
+            return false;
           }
         });
         break;
