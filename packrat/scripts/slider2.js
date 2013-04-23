@@ -2,7 +2,6 @@
 // @require styles/friend_card.css
 // @require scripts/lib/jquery-1.8.2.min.js
 // @require scripts/lib/jquery-showhover.js
-// @require scripts/lib/keymaster.min.js
 // @require scripts/lib/mustache-0.7.1.min.js
 // @require scripts/render.js
 
@@ -15,27 +14,32 @@ var generalPane, commentsPane = noPane, threadsPane = noPane, threadPane = noPan
 slider2 = function() {
   var $tile = $("#kifi-tile"), $slider, $pane, lastShownAt, info;
 
-  key("esc", "slider2", function() {
-    if ($pane) {
-      hidePane();
-    } else if ($slider) {
-      hideSlider("esc");
+  document.addEventListener("keydown", onKeyDown, true);
+  function onKeyDown(e) {
+    if (e.keyCode == 27 && !e.metaKey && !e.ctrlKey && !e.shiftKey) {  // esc
+      var escHandler = $(document).data("esc");
+      if (escHandler) {
+        escHandler();
+      } else if ($pane) {
+        hidePane();
+      } else if ($slider) {
+        hideSlider("esc");
+      }
     }
-  });
+  }
 
   api.onEnd.push(function() {
     api.log("[slider2:onEnd]");
-    key.deleteScope("slider2");
     $pane && $pane.remove();
     $slider && $slider.remove();
     $tile.remove();
     $("html").removeClass("kifi-with-pane kifi-pane-parent");
+    document.removeEventListener("keydown", onKeyDown, true);
   });
 
   function showSlider(o, trigger, locator) {
     info = o = info || o;  // ignore o after first call (may be out of date) TODO: trust cached state from main.js
     api.log("[showSlider]", o);
-    key.setScope("slider2");
 
     lastShownAt = +new Date;
 
@@ -197,7 +201,6 @@ slider2 = function() {
   // trigger is for the event log (e.g. "key", "icon")
   function hideSlider(trigger) {
     idleTimer.kill();
-    key.setScope();
     $slider.addClass("kifi-hiding").on("transitionend webkitTransitionEnd", function(e) {
       if (e.target.classList.contains("kifi-slider2") && e.originalEvent.propertyName == "opacity") {
         $(e.target).remove();

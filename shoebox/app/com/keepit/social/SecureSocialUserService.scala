@@ -111,9 +111,15 @@ class SecureSocialUserService(implicit val application: Application) extends Use
 class SecureSocialUserPlugin @Inject() (
     db: Database,
     socialUserInfoRepo: SocialUserInfoRepo,
-    socialGraphPlugin: SocialGraphPlugin,
     userRepo: UserRepo)
   extends UserService with Logging {
+
+  private var maybeSocialGraphPlugin: Option[SocialGraphPlugin] = None
+
+  @Inject(optional = true)
+  def setSocialGraphPlugin(sgp: SocialGraphPlugin) {
+    maybeSocialGraphPlugin = Some(sgp)
+  }
 
   def find(id: UserId): Option[SocialUser] =
     db.readOnly { implicit s =>
@@ -129,18 +135,16 @@ class SecureSocialUserPlugin @Inject() (
 
   def save(identity: Identity): SocialUser = db.readWrite { implicit s =>
     val socialUser = SocialUser(identity)
-    //todo(eishay) take the network type from the socialUser
     log.debug("persisting social user %s".format(socialUser))
     val socialUserInfo = socialUserInfoRepo.save(internUser(
       SocialId(socialUser.id.id), SocialNetworkType(socialUser.id.providerId), socialUser).withCredentials(socialUser))
     require(socialUserInfo.credentials.isDefined,
       "social user info's credentials is not defined: %s".format(socialUserInfo))
     require(socialUserInfo.userId.isDefined, "social user id  is not defined: %s".format(socialUserInfo))
-    if (socialUserInfo.state != SocialUserInfoStates.FETCHED_USING_SELF) {
-      socialGraphPlugin.asyncFetch(socialUserInfo)
+    for (sgp <- maybeSocialGraphPlugin if socialUserInfo.state != SocialUserInfoStates.FETCHED_USING_SELF) {
+      sgp.asyncFetch(socialUserInfo)
     }
     log.debug("persisting %s into %s".format(socialUser, socialUserInfo))
-
     socialUser
   }
 

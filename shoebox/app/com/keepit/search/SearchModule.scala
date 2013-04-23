@@ -1,26 +1,28 @@
 package com.keepit.search
 
+import java.io.File
+
+import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.store.{Directory, MMapDirectory}
 import org.apache.lucene.util.Version
+
 import com.google.inject.{Provides, Singleton}
-import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.inject.AppScoped
-import com.keepit.common.healthcheck.HealthcheckPlugin
-import com.keepit.model.{PhraseRepo, NormalizedURIRepo}
+import com.keepit.model._
 import com.keepit.scraper.{ScraperPluginImpl, ScraperPlugin}
+import com.keepit.search.graph.URIGraphDecoders
+import com.keepit.search.graph.URIGraphImpl
 import com.keepit.search.graph.{URIGraphPluginImpl, URIGraphPlugin, URIGraph}
+import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.{ArticleIndexerPluginImpl, ArticleIndexerPlugin, ArticleIndexer}
 import com.keepit.search.phrasedetector.PhraseIndexer
+import com.keepit.search.query.parser.SpellCorrector
 import com.tzavellas.sse.guice.ScalaModule
-import java.io.File
-import org.apache.lucene.store.{Directory, MMapDirectory}
+
 import play.api.Play.current
-import com.keepit.search.graph.URIGraphDecoders
-import org.apache.lucene.index.IndexWriterConfig
-import com.keepit.search.graph.URIGraphImpl
-import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.model.BookmarkRepo
 
 class SearchModule() extends ScalaModule with Logging {
 
