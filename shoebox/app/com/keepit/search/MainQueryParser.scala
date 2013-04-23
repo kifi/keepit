@@ -78,7 +78,7 @@ class MainQueryParser(
         val auxStrengths = ArrayBuffer.empty[Float]
 
         if (semanticBoost > 0.0f) {
-          val svq = SemanticVectorQuery(getStemmedTerms("sv"), "title_stemmed")
+          val svq = SemanticVectorQuery(getStemmedTerms("sv"), fallbackField = "title_stemmed")
           auxQueries += svq
           auxStrengths += semanticBoost
         }
