@@ -4,10 +4,14 @@ import com.keepit.common.time._
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.net.HttpClient
 
+case class AmazonInstanceId(id: String) extends AnyVal {
+  override def toString(): String = id
+}
+
 @Singleton
 class AmazonInstanceInfo @Inject() (httpClient: HttpClient) {
   private val metadataUrl: String = "http://169.254.169.254/latest/meta-data/"
-  lazy val instanceId: String = httpClient.get(metadataUrl + "instance-id").body
+  lazy val instanceId: AmazonInstanceId = AmazonInstanceId(httpClient.get(metadataUrl + "instance-id").body)
   lazy val localHostname: String = httpClient.get(metadataUrl + "local-hostname").body
   lazy val publicHostname: String = httpClient.get(metadataUrl + "public-hostname").body
   lazy val localIp: String = httpClient.get(metadataUrl + "local-ipv4").body

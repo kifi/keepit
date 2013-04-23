@@ -8,7 +8,7 @@ import com.keepit.classify.DomainTagImportSettings
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.actor.{ActorFactory, ActorPlugin}
 import com.keepit.common.analytics._
-import com.keepit.common.amazon.AmazonInstanceInfo
+import com.keepit.common.amazon.{AmazonInstanceInfo, AmazonInstanceId}
 import com.keepit.common.cache._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -62,7 +62,7 @@ class ShoeboxDevModule extends ScalaModule with Logging {
   @Provides
   def amazonInstanceInfo: AmazonInstanceInfo = {
     new AmazonInstanceInfo(null) {
-      override lazy val instanceId = "i-f168c1a8"
+      override lazy val instanceId = AmazonInstanceId("i-f168c1a8")
       override lazy val localHostname = "ip-10-160-95-26.us-west-1.compute.internal"
       override lazy val publicHostname = "ec2-50-18-183-73.us-west-1.compute.amazonaws.com"
       override lazy val localIp = "10.160.95.26"
