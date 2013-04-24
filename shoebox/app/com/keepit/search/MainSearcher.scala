@@ -116,7 +116,7 @@ class MainSearcher(
 
     val parsedQuery = parser.parse(queryString)
 
-    parsedQuery.map{ articleQuery =>
+    val personalizedSearcher = parsedQuery.map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
       val personalizedSearcher = getPersonalizedSearcher(articleQuery)
@@ -141,9 +141,10 @@ class MainSearcher(
           doc = scorer.nextDoc()
         }
       }
+      personalizedSearcher
     }
 
-    (myHits, friendsHits, othersHits, parsedQuery)
+    (myHits, friendsHits, othersHits, parsedQuery, personalizedSearcher)
   }
 
   def search(queryString: String, numHitsToReturn: Int, lastUUID: Option[ExternalId[ArticleSearchResultRef]], filter: SearchFilter = SearchFilter.default()): ArticleSearchResult = {
@@ -151,12 +152,18 @@ class MainSearcher(
     implicit val lang = Lang("en") // TODO: detect
     val now = currentDateTime
     val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost)
-    val (myHits, friendsHits, othersHits, parsedQuery) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts) match {
-      case (myHits, friendsHits, othersHits, parsedQuery) => {
-        if ( myHits.size() + friendsHits.size() + othersHits.size() > 0 ) (myHits, friendsHits, othersHits, parsedQuery)
+    val (myHits, friendsHits, othersHits, parsedQuery, personalizedSearcher) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts) match {
+      case (myHits, friendsHits, othersHits, parsedQuery, personalizedSearcher) => {
+        if ( myHits.size() + friendsHits.size() + othersHits.size() > 0 ) (myHits, friendsHits, othersHits, parsedQuery, personalizedSearcher)
         else {
-          val alternative = try { spellCorrector.getAlternativeQuery(queryString) } catch { case e: Exception => log.error("unexpected SpellCorrector error" ); queryString }
-          if (alternative.trim == queryString.trim)	(myHits, friendsHits, othersHits, parsedQuery)
+          val alternative = try {
+            spellCorrector.getAlternativeQuery(queryString)
+          } catch {
+            case e: Exception =>
+              log.error("unexpected SpellCorrector error" )
+              queryString
+          }
+          if (alternative.trim == queryString.trim)	(myHits, friendsHits, othersHits, parsedQuery, personalizedSearcher)
           else searchText(alternative, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
         }
       }
@@ -233,7 +240,7 @@ class MainSearcher(
     hitList.foreach{ h => if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id) }
 
     val newIdFilter = filter.idFilter ++ hitList.map(_.id)
-    val (svVar,svExistVar) = SemanticVariance.svVariance(parsedQuery, hitList, this.articleSearcher, this.uriGraphSearcher);								// compute sv variance. may need to record the time elapsed.
+    val (svVar,svExistVar) = SemanticVariance.svVariance(parsedQuery, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
 
     val searchResultUuid = ExternalId[ArticleSearchResultRef]()
