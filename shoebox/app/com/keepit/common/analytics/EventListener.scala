@@ -196,13 +196,15 @@ class SearchUnloadListenerImpl @Inject() (
   normalizedURIRepo: NormalizedURIRepo,
   persistEventProvider: Provider[PersistEventPlugin],
   store: MongoEventStore,
-  sseFactory: SearchStatisticsExtractorFactory,
+  searchClient: SearchServiceClient,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
   extends SearchUnloadListener(userRepo, normalizedURIRepo) {
 
   def onEvent: PartialFunction[Event, Unit] = {
+
     case Event(_, UserEventMetadata(EventFamilies.SEARCH, "searchUnload", extUserId, _, _, metaData, _), _, _) => {
+
       val kifiClicks = (metaData \ "kifiResultsClicked").asOpt[Int].getOrElse(-1)
       val googleClicks = (metaData \ "googleResultsClicked").asOpt[Int].getOrElse(-1)
 
@@ -222,46 +224,9 @@ class SearchUnloadListenerImpl @Inject() (
           (userId, kifiClickedIds, googleClickedIds, kifiShownIds)
         }
 
-        val data = TrainingDataLabeler.getLabeledData(kifiClickedIds, googleClickedIds, kifiShownIds)
-        val uriLabel = data.foldLeft(Map.empty[Id[NormalizedURI], UriLabel]) {
-          case (m, (id, (isClicked, isCorrectlyRanked))) => m + (id -> UriLabel(isClicked, isCorrectlyRanked))
-        }
-
-        //      val q = MongoSelector(EventFamilies.SERVER_SEARCH).withEventName("search_return_hits").withMetaData("queryUUID", uuid)
-        //
-        //      val searchResultInfo = store.find(q).map{ dbo =>
-        //        val data = EventSerializer.eventSerializer.mongoReads(dbo).get.metaData
-        //        val json = (data.metaData \ "searchResultInfo")
-        //        val searchResultInfo = SearchResultInfoSerializer.serializer.reads(json)
-        //        searchResultInfo
-        //      }
-
-        val sse = sseFactory(ExternalId[ArticleSearchResultRef](uuid), queryString, userId, kifiClickedIds.toSet, uriLabel)
-
-        val searchStatistics = sse.getSearchStatistics(uriLabel.keySet)
-
-        for (ss <- searchStatistics) {
-          val event = Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_statistics", SearchStatisticsSerializer.serializer.writes(ss._2).as[JsObject])
-          persistEventProvider.get.persist(event)
-        }
-
+        searchClient.persistSearchStatistics(uuid, queryString, userId, kifiClickedIds, googleClickedIds, kifiShownIds)
       }
 
-      //      store.find(q).map { dbo =>
-      //        val data = EventSerializer.eventSerializer.mongoReads(dbo).get.metaData
-      //        val json = (data.metaData \ "searchResultInfo")
-      //        val searchResultInfo = SearchResultInfoSerializer.serializer.reads(json)
-      //
-      //
-      //        val svVar = (data.metaData \ "svVariance").asOpt[Double].getOrElse(-1.0) // retrieve the related semantic variance
-      //        val newMetaData = Json.obj("queryUUID" -> uuid,
-      //          "svVariance" -> svVar,
-      //          "kifiResultsClicked" -> kifiClicks,
-      //          "googleResultsClicked" -> googleClicks)
-      //
-      //        val event = Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_statistics", newMetaData)
-      //        persistEventProvider.get.persist(event)
-      //      }
     }
   }
 }
@@ -269,7 +234,7 @@ class SearchUnloadListenerImpl @Inject() (
 class FakeSearchUnloadListenerImpl @Inject() (userRepo: UserRepo, normalizedURIRepo: NormalizedURIRepo) extends SearchUnloadListener(userRepo, normalizedURIRepo) {
   def onEvent: PartialFunction[Event, Unit] = {
     case event @ Event(_, UserEventMetadata(EventFamilies.SEARCH, "searchUnload", _, _, _, metaData, _), _, _) =>
-    println("\n\n serchUnload!!! \n\n")
+
   }
 }
 

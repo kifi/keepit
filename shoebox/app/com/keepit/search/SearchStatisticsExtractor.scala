@@ -85,7 +85,7 @@ class SearchStatisticsExtractorFactory @Inject() (
   browsingHistoryTracker: BrowsingHistoryTracker, clickHistoryTracker: ClickHistoryTracker, resultClickTracker: ResultClickTracker, store: MongoEventStore){
 
   def apply(queryUUID: ExternalId[ArticleSearchResultRef],
-  queryString: String, userId: Id[User], uriIds: Set[Id[NormalizedURI]], uriLabelMap: scala.collection.immutable.Map[Id[NormalizedURI], UriLabel]) = {
+  queryString: String, userId: Id[User], uriIds: Seq[Id[NormalizedURI]], uriLabelMap: scala.collection.immutable.Map[Id[NormalizedURI], UriLabel]) = {
 
     new SearchStatisticsExtractor (queryUUID, queryString, userId, uriIds, uriLabelMap,
   db, userRepo, socialConnectionRepo, uriGraph, articleIndexer, searchConfigManager, mainSearcherFactory, parserFactory,
@@ -95,7 +95,7 @@ class SearchStatisticsExtractorFactory @Inject() (
 
 
 class SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
-  queryString: String, userId: Id[User], uriIds: Set[Id[NormalizedURI]], uriLabelMap: scala.collection.immutable.Map[Id[NormalizedURI], UriLabel],
+  queryString: String, userId: Id[User], uriIds: Seq[Id[NormalizedURI]], uriLabelMap: scala.collection.immutable.Map[Id[NormalizedURI], UriLabel],
   db: Database, userRepo: UserRepo, socialConnectionRepo: SocialConnectionRepo, uriGraph: URIGraph,
   articleIndexer: ArticleIndexer, searchConfigManager: SearchConfigManager, mainSearcherFactory: MainSearcherFactory, parserFactory: MainQueryParserFactory,
   browsingHistoryTracker: BrowsingHistoryTracker, clickHistoryTracker: ClickHistoryTracker, resultClickTracker: ResultClickTracker, store: MongoEventStore) {
@@ -120,15 +120,13 @@ class SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
 
   private def getUriLabel(uriId: Id[NormalizedURI]) = uriLabelMap(uriId)
 
-  // get from Mongo. All UriIds share same info here
   private def getSearchResultInfo = {
      val q = MongoSelector(EventFamilies.SERVER_SEARCH).withEventName("search_return_hits").withMetaData("queryUUID", queryUUID.id.toString)
 
       val searchResultInfo = store.find(q).map{ dbo =>
         val data = EventSerializer.eventSerializer.mongoReads(dbo).get.metaData
         val json = (data.metaData \ "searchResultInfo")
-        val searchResultInfo = SearchResultInfoSerializer.serializer.reads(json).get
-        searchResultInfo
+        SearchResultInfoSerializer.serializer.reads(json).get
       }
       if (searchResultInfo.nonEmpty) searchResultInfo.next else SearchResultInfo(-1, -1, -1, -1.0f, -1.0f)
   }
@@ -167,13 +165,12 @@ class SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
 object TrainingDataLabeler {
   private val topNkifi = 2      // at most the top 2 kifi results would be labeled as negative samples
 
-  // NOTE: not all google clicked urls have normalizedURIs
   def getLabeledData(kifiClicked: Seq[Id[NormalizedURI]], googleClicked: Seq[Id[NormalizedURI]], kifiShown: Seq[Id[NormalizedURI]]) = {
     var data = Map.empty[Id[NormalizedURI], (Boolean, Boolean)]         // (isPositive, isCorrectlyRanked)
     if (kifiClicked.nonEmpty) {
       kifiClicked.foreach( uri => data += uri -> (true, true))
     } else {
-      val isCorrectlyRanked = googleClicked.exists(uri => kifiShown.contains(uri))
+      val isCorrectlyRanked = googleClicked.isEmpty || googleClicked.exists(uri => kifiShown.contains(uri))         // true if the clicked google uri is not indexed, or it was shown to the user
       kifiShown.take(topNkifi).foreach( uri => if (!googleClicked.contains(uri)) data += uri -> (false, isCorrectlyRanked))
     }
     data
@@ -193,7 +190,7 @@ object TrainingDataLabeler {
  *
  * TODO: more elegant solution ?
  */
-class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], targetUriIds: Set[Id[NormalizedURI]],
+class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], targetUriIds: Seq[Id[NormalizedURI]],
   db: Database, userRepo: UserRepo, socialConnectionRepo: SocialConnectionRepo, uriGraph: URIGraph,
   articleIndexer: ArticleIndexer, searchConfigManager: SearchConfigManager, mainSearcherFactory: MainSearcherFactory, parserFactory: MainQueryParserFactory,
   browsingHistoryTracker: BrowsingHistoryTracker, clickHistoryTracker: ClickHistoryTracker, resultClickTracker: ResultClickTracker) {
@@ -302,7 +299,7 @@ class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], tar
   def getUriInfo() = {
 
     var uriInfoMap = Map.empty[Id[NormalizedURI], UriInfo]
-    val idsetFilter = new IdSetFilter(targetUriIds.map{ normalizedId => normalizedId.id})
+    val idsetFilter = new IdSetFilter(targetUriIds.map{ normalizedId => normalizedId.id}.toSet)
 
     parsedQuery.map { articleQuery =>
       val filteredQuery = new FilteredQuery(articleQuery, idsetFilter)

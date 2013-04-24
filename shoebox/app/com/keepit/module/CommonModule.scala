@@ -58,10 +58,10 @@ class CommonModule extends ScalaModule with Logging {
     normalizedURIRepo: NormalizedURIRepo,
     persistEventProvider: Provider[PersistEventPlugin],
     store: MongoEventStore,
-    sseFactory: SearchStatisticsExtractorFactory,
+    searchClient: SearchServiceClient,
     clock: Clock,
     fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
-    new SearchUnloadListenerImpl(db, userRepo, normalizedURIRepo, persistEventProvider, store, sseFactory, clock, fortyTwoServices)
+    new SearchUnloadListenerImpl(db, userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, clock, fortyTwoServices)
   }
 
   @Singleton

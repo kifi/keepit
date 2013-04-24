@@ -29,7 +29,7 @@ import org.apache.lucene.util.Version
 import com.keepit.model.UserRepo
 import com.keepit.common.time.Clock
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.search.SearchStatisticsExtractorFactory
+import com.keepit.search.SearchServiceClient
 
 
 class ShoeboxDevModule extends ScalaModule with Logging {
@@ -43,12 +43,12 @@ class ShoeboxDevModule extends ScalaModule with Logging {
     normalizedURIRepo: NormalizedURIRepo,
     persistEventProvider: Provider[PersistEventPlugin],
     store: MongoEventStore,
-    sseFactory: SearchStatisticsExtractorFactory,
+    searchClient: SearchServiceClient,
     clock: Clock,
     fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
     val isEnabled = current.configuration.getBoolean("event-listener.searchUnload").getOrElse(false)
     if(isEnabled) {
-      new SearchUnloadListenerImpl(db, userRepo, normalizedURIRepo, persistEventProvider, store, sseFactory, clock, fortyTwoServices)
+      new SearchUnloadListenerImpl(db,userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, clock, fortyTwoServices)
     }
     else {
       new FakeSearchUnloadListenerImpl(userRepo, normalizedURIRepo)
