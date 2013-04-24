@@ -39,7 +39,7 @@ slider2 = function() {
 
   function createSlider(callback) {
     var kept = $tile[0].dataset.kept;
-    var counts = JSON.parse($tile[0].dataset.counts);
+    var counts = JSON.parse($tile[0].dataset.counts || '{"n":0,"c":0,"m":0}');
     api.log("[createSlider] kept:", kept || "no", "counts:", counts);
 
     render("html/metro/slider2.html", {
