@@ -110,7 +110,7 @@ class ActionAuthenticator @Inject() (
         }
       })
 
-  private[controller] def isAdmin(experiments: Seq[State[ExperimentType]]) = experiments.find(e => e == ExperimentTypes.ADMIN).isDefined
+  private[controller] def isAdmin(experiments: Seq[State[ExperimentType]]) = experiments.contains(ExperimentTypes.ADMIN)
 
   private[controller] def isAdmin(userId: Id[User]) = db.readOnly { implicit session =>
     userExperimentRepo.hasExperiment(userId, ExperimentTypes.ADMIN)

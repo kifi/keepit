@@ -37,7 +37,9 @@ class HomeController @Inject() (db: Database,
         } flatten
       }
       
-      Ok(views.html.website.userHome(request.user, friendsOnKifi))
+      val userCanInvite = request.experimants.contains(ExperimentTypes.ADMIN) || request.experimants.contains(ExperimentTypes.CAN_INVITE)
+      
+      Ok(views.html.website.userHome(request.user, friendsOnKifi, userCanInvite))
     }
   }, unauthenticatedAction = { implicit request =>
     Ok(views.html.website.welcome())
@@ -99,12 +101,6 @@ class HomeController @Inject() (db: Database,
   }
   
   def gettingStarted = AuthenticatedHtmlAction { implicit request =>
-    
     Ok(views.html.website.gettingStarted(request.user))
-  }
-  
-  // temporary during development:
-  def userIsAllowed(user: User, experiments: Seq[State[ExperimentType]]) = {
-    Play.isDev || experiments.contains(ExperimentTypes.ADMIN)
   }
 }
