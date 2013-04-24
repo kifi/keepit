@@ -1,11 +1,10 @@
 import sbt._
 import Keys._
 import play.Project._
-import scala.sys.process._
 import java.io.PrintWriter
 import java.io.File
 import java.util.Locale
-import org.joda.time.{DateTime, DateTimeZone, LocalDate, LocalTime}
+import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.DateTimeFormat
 import com.typesafe.sbteclipse.core.EclipsePlugin.EclipseKeys
 
@@ -41,9 +40,9 @@ object ApplicationBuild extends Build {
       "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
       "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2",
-      "org.apache.lucene" % "lucene-core" % "4.2.0",
-      "org.apache.lucene" % "lucene-analyzers-common" % "4.2.0",
-      "org.apache.lucene" % "lucene-suggest" % "4.2.0",
+      "org.apache.lucene" % "lucene-core" % "4.2.1",
+      "org.apache.lucene" % "lucene-analyzers-common" % "4.2.1",
+      "org.apache.lucene" % "lucene-suggest" % "4.2.1",
       "org.apache.httpcomponents" % "httpclient" % "4.2.1",
       "org.apache.tika" % "tika-parsers" % "1.3",
       "org.apache.commons" % "commons-math3" % "3.1.1",
@@ -53,7 +52,6 @@ object ApplicationBuild extends Build {
       "com.amazonaws" % "aws-java-sdk" % "1.3.20",
       "javax.mail" % "mail" % "1.4.5",
       "org.mongodb" %% "casbah" % "2.5.0",
-      "de.l3s.boilerpipe" % "boilerpipe" % "1.2.0",
       "org.jsoup" % "jsoup" % "1.7.1",
       "spy" % "spymemcached" % "2.8.12",
       "com.typesafe.slick" %% "slick" % "1.0.0",

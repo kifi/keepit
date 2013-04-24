@@ -32,6 +32,7 @@ import com.keepit.model.SocialUserInfo
 import com.keepit.model._
 import com.keepit.search._
 import com.keepit.search.index.FakePhraseIndexerModule
+import com.keepit.scraper._
 import com.tzavellas.sse.guice.ScalaModule
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
@@ -47,6 +48,7 @@ class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplica
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
   def withFakeMail() = overrideWith(FakeMailModule())
   def withFakeHealthcheck() = overrideWith(FakeHealthcheckModule())
+  def withFakeScraper() = overrideWith(FakeScraperModule())
   def withFakeScheduler() = overrideWith(FakeSchedulerModule())
   def withFakeHttpClient() = overrideWith(FakeHttpClientModule())
   def withFakeStore() = overrideWith(FakeStoreModule())
@@ -181,6 +183,18 @@ case class FakeCacheModule() extends ScalaModule {
   override def configure() {
     bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
   }
+}
+
+case class FakeScraperModule() extends ScalaModule {
+  override def configure() {
+    bind[ScraperPlugin].to[FakeScraperPlugin]
+  }
+}
+
+class FakeScraperPlugin() extends ScraperPlugin {
+  def scrape() = Seq()
+  def asyncScrape(uri: NormalizedURI) =
+    future { throw new Exception("Not Implemented") }
 }
 
 case class TestActorSystemModule(system: ActorSystem) extends ScalaModule {
