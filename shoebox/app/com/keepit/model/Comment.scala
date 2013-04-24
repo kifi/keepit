@@ -178,24 +178,29 @@ class CommentRepoImpl @Inject() (
        */
       val sql =
         s"""
-          select c.user_id as author, cr.user_id as recipient, c.id as comment_id 
-          from comment_recipient cr
-          join comment c on (c.id = cr.comment_id)
-          where (cr.user_id IN($recipientIn) or c.user_id IN($recipientIn)) and c.normalized_uri_id = ${normUri.id} and c.parent is null;
+          select c.id, c.user_id, group_concat(r.user_id) user_ids
+            from comment c, comment_recipient r
+           where c.id = r.comment_id
+              and c.permissions = 'message'
+              and c.parent is null 
+              and c.normalized_uri_id = ${normUri.id}
+              and c.user_id in ($recipientIn)
+           group by c.id
+          having count(r.id) = ${recipients.size - 1};
         """
       val rs = st.executeQuery(sql)
-      val threadToUserIds = Iterator.continually((rs, rs.next)).takeWhile(_._2).map(_._1).map { result =>
-        val author = Id[User](result.getLong("author"))
-        val recipient = Id[User](result.getLong("recipient"))
-        val commentId = Id[Comment](result.getLong("comment_id"))
-        
-        Set((commentId, author), (commentId, recipient))
-      }.toSet.flatten.groupBy {
-        case (key, value) => key
-      }.map(a => a._1 -> a._2.map(_._2))
+      val threads = Iterator.continually((rs, rs.next)).takeWhile(_._2).map(_._1).map { result =>
+        val authorId = Id[User](result.getLong("user_id"))
+        val threadRecipients = result.getString("user_ids").split(",").map(u => Id[User](u.toLong)).toSet
+        val commentId = Id[Comment](result.getLong("id"))
+                
+        if(threadRecipients + authorId == recipients)
+          Some(commentId)
+        else
+          None
+      }.toSeq.flatten
       
-      val candidates = threadToUserIds.filter { case (comment, userSet) => userSet == recipients }
-      candidates.map(_._1).headOption
+      threads.sortWith((a,b) => a.id < b.id).headOption
   }
 
   def count(permissions: State[CommentPermission])(implicit session: RSession): Int =
