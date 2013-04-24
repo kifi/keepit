@@ -80,18 +80,20 @@ class KeeperInfoLoader @Inject() (
     searchClient: SearchServiceClient) {
 
   def load1(userId: Id[User], normalizedUri: String): KeeperInfo1 = {
-    db.readOnly { implicit session =>
+    val (domain, bookmark, neverOnSite, host) = db.readOnly { implicit session =>
       val bookmark: Option[Bookmark] = normalizedURIRepo.getByNormalizedUri(normalizedUri).flatMap { uri =>
         bookmarkRepo.getByUriAndUser(uri.id.get, userId)
       }
       val host: Option[String] = URI.parse(normalizedUri).get.host.map(_.name)
       val domain: Option[Domain] = host.flatMap(domainRepo.get(_))
-      val neverOnSite: Boolean = domain.map { dom =>
+      val neverOnSite1: Boolean = domain.map { dom =>
         userToDomainRepo.exists(userId, dom.id.get, UserToDomainKinds.NEVER_SHOW)
       }.getOrElse(false)
-      val sensitive = domain.flatMap(_.sensitive).orElse(host.flatMap(domainClassifier.isSensitive(_).right.toOption))
-      KeeperInfo1(bookmark.map { b => if (b.isPrivate) "private" else "public" }, neverOnSite, sensitive.getOrElse(false))
+      (domain, bookmark, neverOnSite1, host)
     }
+   
+    val sensitive = domain.flatMap(_.sensitive).orElse(host.flatMap(domainClassifier.isSensitive(_).right.toOption))
+    KeeperInfo1(bookmark.map { b => if (b.isPrivate) "private" else "public" }, neverOnSite, sensitive.getOrElse(false))
   }
 
   def load2(userId: Id[User], normalizedUri: String): KeeperInfo2 = {
