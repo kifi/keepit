@@ -17,7 +17,6 @@ import java.util.concurrent.TimeUnit
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 
-import com.keepit.scraper.ScraperPlugin
 import com.keepit.model._
 import com.keepit.search.ArticleStore
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}

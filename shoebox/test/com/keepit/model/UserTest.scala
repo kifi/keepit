@@ -22,7 +22,7 @@ class UserRepoTest extends Specification with DbRepos {
         val userRepo = inject[UserRepoImpl]
         userRepo.idCache.get(UserIdKey(Id[User](1))).isDefined === false
 
-        inject[Database].readWrite { implicit session =>
+        db.readWrite { implicit session =>
           val user = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
 
           userRepo.idCache.get(UserIdKey(Id[User](1))).get === user
