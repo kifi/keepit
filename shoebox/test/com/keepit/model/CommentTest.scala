@@ -153,21 +153,21 @@ class CommentTest extends Specification with DbRepos {
           val user3 = userRepo.save(User(firstName = "Bob", lastName = "Fred"))
           val user4 = userRepo.save(User(firstName = "Wilma", lastName = "Schoshlatski"))
           
-          commentRepo.getParentByUriRecipients(uri1.id.get, Set(user1.id.get, user4.id.get)) === None
-          commentRepo.getParentByUriRecipients(uri1.id.get, Set(user1.id.get, user2.id.get)) === msg1.id
-          commentRepo.getParentByUriRecipients(uri1.id.get, Set(user2.id.get, user1.id.get)) === msg1.id
-          commentRepo.getParentByUriRecipients(uri2.id.get, Set(user1.id.get, user2.id.get)) === msg2.id
+          commentRepo.getParentByUriParticipants(uri1.id.get, Set(user1.id.get, user4.id.get)) === None
+          commentRepo.getParentByUriParticipants(uri1.id.get, Set(user1.id.get, user2.id.get)) === msg1.id
+          commentRepo.getParentByUriParticipants(uri1.id.get, Set(user2.id.get, user1.id.get)) === msg1.id
+          commentRepo.getParentByUriParticipants(uri2.id.get, Set(user1.id.get, user2.id.get)) === msg2.id
           
-          commentRepo.getParentByUriRecipients(uri1.id.get, Set(user1.id.get, user2.id.get, user3.id.get)) === None
+          commentRepo.getParentByUriParticipants(uri1.id.get, Set(user1.id.get, user2.id.get, user3.id.get)) === None
           val msg4 = commentRepo.save(Comment(uriId = uri1.id.get, userId = user2.id.get, pageTitle = uri1.title.get, text = "Conversation on Google3", permissions = CommentPermissions.MESSAGE))
           commentRecipientRepo.save(CommentRecipient(commentId = msg4.id.get, userId = Some(user1.id.get)))
           commentRecipientRepo.save(CommentRecipient(commentId = msg4.id.get, userId = Some(user3.id.get)))
 
-          commentRepo.getParentByUriRecipients(uri1.id.get, Set(user1.id.get, user2.id.get, user3.id.get)) === msg4.id
+          commentRepo.getParentByUriParticipants(uri1.id.get, Set(user1.id.get, user2.id.get, user3.id.get)) === msg4.id
           
-          commentRepo.getParentByUriRecipients(uri1.id.get, Set(user1.id.get, user2.id.get)) === msg1.id
-          commentRepo.getParentByUriRecipients(uri1.id.get, Set(user3.id.get, user1.id.get)) === None
-          commentRepo.getParentByUriRecipients(uri1.id.get, Set(user2.id.get, user3.id.get)) === None
+          commentRepo.getParentByUriParticipants(uri1.id.get, Set(user1.id.get, user2.id.get)) === msg1.id
+          commentRepo.getParentByUriParticipants(uri1.id.get, Set(user3.id.get, user1.id.get)) === None
+          commentRepo.getParentByUriParticipants(uri1.id.get, Set(user2.id.get, user3.id.get)) === None
         }
       }
     }

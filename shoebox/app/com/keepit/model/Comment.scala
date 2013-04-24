@@ -56,7 +56,7 @@ trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
   def getPrivate(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
   def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment]
   def getParentMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
-  def getParentByUriRecipients(normUri: Id[NormalizedURI], recipients: Set[Id[User]])(implicit session: RSession): Option[Id[Comment]]
+  def getParentByUriParticipants(normUri: Id[NormalizedURI], recipients: Set[Id[User]])(implicit session: RSession): Option[Id[Comment]]
   def count(permissions: State[CommentPermission] = CommentPermissions.PUBLIC)(implicit session: RSession): Int
   def page(page: Int, size: Int, permissions: State[CommentPermission])(implicit session: RSession): Seq[Comment]
   def getParticipantsUserIds(commentId: Id[Comment])(implicit session: RSession): Set[Id[User]]
@@ -162,7 +162,7 @@ class CommentRepoImpl @Inject() (
     (q1.list ++ q2.list).toSet.toSeq
   }
   
-  def getParentByUriRecipients(normUri: Id[NormalizedURI], recipients: Set[Id[User]])(implicit session: RSession): Option[Id[Comment]] = {
+  def getParentByUriParticipants(normUri: Id[NormalizedURI], recipients: Set[Id[User]])(implicit session: RSession): Option[Id[Comment]] = {
       val conn = session.conn
       val st = conn.createStatement()
       

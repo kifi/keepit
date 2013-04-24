@@ -87,7 +87,7 @@ class ExtCommentController @Inject() (
         case "message" =>
           val recipientUserIds = recipientUsers(recipients).map(_.id.get)
           val parentIdOpt = parent match {
-            case "" => commentRepo.getParentByUriRecipients(uri.id.get, recipientUserIds + userId)
+            case "" => commentRepo.getParentByUriParticipants(uri.id.get, recipientUserIds + userId)
             case id =>
               val parent = commentRepo.get(ExternalId[Comment](id))
               Some(parent.parent.getOrElse(parent.id.get))
