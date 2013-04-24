@@ -98,7 +98,7 @@ class SecureSocialAuthenticatorPlugin @Inject()(
   }
 }
 
-class SecureSocialUserService(val application: Application) extends UserServicePlugin(application) {
+class SecureSocialUserService(implicit val application: Application) extends UserServicePlugin(application) {
   lazy val global = application.global.asInstanceOf[FortyTwoGlobal]
   lazy val injector = new RichInjector(global.injector)
   lazy val healthCheckPlugin = injector.inject[HealthcheckPlugin]
