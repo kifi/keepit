@@ -85,22 +85,22 @@ class SearchStatisticsExtractorFactory @Inject() (
   browsingHistoryTracker: BrowsingHistoryTracker, clickHistoryTracker: ClickHistoryTracker, resultClickTracker: ResultClickTracker, store: MongoEventStore){
 
   def apply(queryUUID: ExternalId[ArticleSearchResultRef],
-  queryString: String, userId: Id[User], uriIds: Seq[Id[NormalizedURI]], uriLabelMap: scala.collection.immutable.Map[Id[NormalizedURI], UriLabel]) = {
+  queryString: String, userId: Id[User], uriLabelMap: scala.collection.immutable.Map[Id[NormalizedURI], UriLabel]) = {
 
-    new SearchStatisticsExtractor (queryUUID, queryString, userId, uriIds, uriLabelMap,
+    new SearchStatisticsExtractor (queryUUID, queryString, userId, uriLabelMap,
   db, userRepo, socialConnectionRepo, uriGraph, articleIndexer, searchConfigManager, mainSearcherFactory, parserFactory,
   browsingHistoryTracker, clickHistoryTracker, resultClickTracker, store)
   }
 }
 
-
+// uriLabelMap contains the uris of interest
 class SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
-  queryString: String, userId: Id[User], uriIds: Seq[Id[NormalizedURI]], uriLabelMap: scala.collection.immutable.Map[Id[NormalizedURI], UriLabel],
+  queryString: String, userId: Id[User], uriLabelMap: scala.collection.immutable.Map[Id[NormalizedURI], UriLabel],
   db: Database, userRepo: UserRepo, socialConnectionRepo: SocialConnectionRepo, uriGraph: URIGraph,
   articleIndexer: ArticleIndexer, searchConfigManager: SearchConfigManager, mainSearcherFactory: MainSearcherFactory, parserFactory: MainQueryParserFactory,
   browsingHistoryTracker: BrowsingHistoryTracker, clickHistoryTracker: ClickHistoryTracker, resultClickTracker: ResultClickTracker, store: MongoEventStore) {
 
-  val searcher = new SearchStatisticsHelperSearcher(queryString, userId, uriIds, db, userRepo, socialConnectionRepo, uriGraph,
+  val searcher = new SearchStatisticsHelperSearcher(queryString, userId, uriLabelMap.keySet.toSeq, db, userRepo, socialConnectionRepo, uriGraph,
       articleIndexer, searchConfigManager, mainSearcherFactory, parserFactory,
       browsingHistoryTracker, clickHistoryTracker, resultClickTracker)
 
