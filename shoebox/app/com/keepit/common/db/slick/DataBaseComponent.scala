@@ -13,6 +13,7 @@ import scala.util.Success
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import akka.actor.ActorSystem
 import scala.concurrent._
+import scala.util.DynamicVariable
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
 trait DataBaseComponent {
@@ -24,6 +25,18 @@ trait DataBaseComponent {
   def getSequence(name: String): DbSequence
 
   def entityName(name: String): String = name
+}
+
+class InSessionException(message: String) extends Exception(message)
+
+object DatabaseSessionLock {
+  private val inSession = new DynamicVariable[Boolean](false)
+  def enteringSession[T](f: => T) = {
+    if (DatabaseSessionLock.inSession.value) throw new InSessionException("already in a DB session!")
+    val res = inSession.withValue(true) { f }
+    if (DatabaseSessionLock.inSession.value) throw new IllegalStateException("expected inSession to return false")
+    res
+  }
 }
 
 class Database @Inject() (
@@ -41,12 +54,12 @@ class Database @Inject() (
   def readWriteAsync[T](f: RWSession => T): Future[T] = future { readWrite(f) }
   def readWriteAsync[T](attempts: Int)(f: RWSession => T): Future[T] = future { readWrite(attempts)(f) }
 
-  def readOnly[T](f: ROSession => T): T = {
+  def readOnly[T](f: ROSession => T): T = DatabaseSessionLock.enteringSession {
     val s = db.handle.createSession.forParameters(rsConcurrency = ResultSetConcurrency.ReadOnly)
     try { f(new ROSession(s)) } finally s.close()
   }
 
-  def readWrite[T](f: RWSession => T): T = {
+  def readWrite[T](f: RWSession => T): T = DatabaseSessionLock.enteringSession {
     val s = db.handle.createSession.forParameters(rsConcurrency = ResultSetConcurrency.Updatable)
     try {
       s.withTransaction {
