@@ -11,7 +11,7 @@ import com.keepit.model.NormalizedURI
 import com.keepit.search.SearchResultInfo
 import com.keepit.search.LuceneScores
 import com.keepit.search.SearchStatistics
-import com.keepit.search.UriClickInfo
+import com.keepit.search.UriLabel
 
 class SearchStatisticsSerializerTest extends Specification {
   "SearchStatistics Serializer" should {
@@ -23,13 +23,13 @@ class SearchStatisticsSerializerTest extends Specification {
         recencyScore = 4.0f, clickBoost = 5.0f, isMyBookmark = false, isPrivate = false,
         friendsKeepsCount = 1, totalCounts = 7)
 
-      val uriClickInfo = UriClickInfo(true, false)
+      val uriLabel = UriLabel(true, false)
 
       val sInfo = SearchResultInfo(myHits = 3, friendsHits = 5, othersHits = 7, svVariance = 0.18f, svExistenceVar = 0.34f)
 
       val lscore = LuceneScores(multiplicativeBoost = 0.12f, additiveBoost = 0.23f, percentMatch = 0.34f, semanticVector = 0.45f, phraseProximity = 0.56f)
 
-      val searchStat = SearchStatistics(qInfo, uriInfo, uriClickInfo, sInfo, lscore)
+      val searchStat = SearchStatistics(qInfo, uriInfo, uriLabel, sInfo, lscore)
 
       val json = SearchStatisticsSerializer.serializer.writes(searchStat)
       SearchStatisticsSerializer.serializer.reads(json).get === searchStat
