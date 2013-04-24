@@ -85,14 +85,16 @@ class ExtCommentController @Inject() (
 
       permissions.toLowerCase match {
         case "message" =>
+          val recipientUserIds = recipientUsers(recipients).map(_.id.get)
           val parentIdOpt = parent match {
-            case "" => commentRepo.getParentByUriRecipients(uri.id.get, recipientUsers(recipients).map(_.id.get) + userId)
+            case "" => commentRepo.getParentByUriRecipients(uri.id.get, recipientUserIds + userId)
             case id =>
               val parent = commentRepo.get(ExternalId[Comment](id))
               Some(parent.parent.getOrElse(parent.id.get))
           }
           val newComment = commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.MESSAGE, parent = parentIdOpt))
-          createCommentRecipients(newComment.id.get, recipients, parentIdOpt)
+          if(parentIdOpt.isEmpty)
+            createCommentRecipients(newComment.id.get, recipientUserIds)
 
           val newCommentRead = commentReadRepo.getByUserAndParent(userId, parentIdOpt.getOrElse(newComment.id.get)) match {
             case Some(commentRead) => // existing CommentRead entry for this message thread
@@ -177,22 +179,13 @@ class ExtCommentController @Inject() (
     Ok(JsObject(Seq("following" -> JsBoolean(false))))
   }
 
-  // Given a list of comma separated external user ids, side effects and creates all the necessary recipients
-  // For comments with a parent comment, adds recipients to parent comment instead.
-  private def createCommentRecipients(commentId: Id[Comment], recipients: String, parentIdOpt: Option[Id[Comment]])(implicit session: RWSession) = {
-    recipientUsers(recipients) map { recipientUser =>
-      log.info("Adding recipient %s to new comment %s".format(recipientUser.id.get, commentId))
-      // When comment is a reply (has a parent), add recipient to parent if does not exist. Else, add to comment.
-      parentIdOpt match {
-        case Some(parentId) =>
-          Some(commentRecipientRepo.save(CommentRecipient(commentId = parentId, userId = recipientUser.id)))
-        case None =>
-          Some(commentRecipientRepo.save(CommentRecipient(commentId = commentId, userId = recipientUser.id)))
-      }
+  private def createCommentRecipients(parentId: Id[Comment], recipients: Set[Id[User]])(implicit session: RWSession) = {
+    recipients map { recipientUser =>
+      Some(commentRecipientRepo.save(CommentRecipient(commentId = parentId, userId = Some(recipientUser))))
     }
   }
   
-  private def recipientUsers(recipientString: String)(implicit session: RWSession) = {
+  private def recipientUsers(recipientString: String)(implicit session: RSession) = {
     (recipientString.split(",").map(_.trim()).map { recipientId =>
       userRepo.getOpt(ExternalId[User](recipientId))
     } flatten).toSet
