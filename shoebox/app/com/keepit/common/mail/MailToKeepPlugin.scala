@@ -136,7 +136,7 @@ class MailToKeepActor @Inject() (
       to = new EmailAddressHolder {
         val address = messageParser.getAddr(newMessage.getRecipients(RecipientType.TO).head)
       },
-      subject = newMessage.getSubject,
+      subject = Option(newMessage.getSubject).getOrElse(""),
       htmlBody = htmlBody,
       inReplyTo = newMessage.getHeader("In-Reply-To").headOption.map(ElectronicMailMessageId.fromEmailHeader),
       category = PostOffice.Categories.EMAIL_KEEP

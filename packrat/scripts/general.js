@@ -1,8 +1,13 @@
 // @require scripts/api.js
+// @require scripts/render.js
 
 generalPane = {
-  render: function($box, o) {
+  render: function($box, params) {
     // $box.on("click", ".kifi-pane-action", function() {});
+
+    render("html/metro/general.html", params, function(html) {
+      $box.find(".kifi-pane-actions").before(html);
+    });
 
     if ($box.data("shown")) {
       setFocus($box);
