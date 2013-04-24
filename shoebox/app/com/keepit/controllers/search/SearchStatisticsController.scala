@@ -47,7 +47,8 @@ class SearchStatisticsController @Inject() (db: Database,
       case (m, (id, (isClicked, isCorrectlyRanked))) => m + (id -> UriLabel(isClicked, isCorrectlyRanked))
     }
 
-    val sse = sseFactory.get.apply(ExternalId[ArticleSearchResultRef](queryUUID), queryString, Id[User](userId), kifiClicked, uriLabel)
+    // uriLabel's keys are the uris of interest: if kifiClicked is non-empty, this is the same as kifiClicked
+    val sse = sseFactory.get.apply(ExternalId[ArticleSearchResultRef](queryUUID), queryString, Id[User](userId), uriLabel.keySet.toSeq, uriLabel)
     val searchStatistics = sse.getSearchStatistics(uriLabel.keySet)
 
     for (ss <- searchStatistics) {

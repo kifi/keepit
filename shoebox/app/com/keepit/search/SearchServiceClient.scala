@@ -54,7 +54,7 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
     val json = Json.toJson(ResultClicked(userId, query, uriId, rank, isKeep))
     call(routes.SearchEventController.logResultClicked(), json).map(_ => Unit)
   }
-//private implicit val uriIdFormat = Id.format[NormalizedURI]
+
   def persistSearchStatistics(queryUUID: String, queryString: String, userId: Id[User], kifiClicked: Seq[Id[NormalizedURI]], googleClicked: Seq[Id[NormalizedURI]], kifiShown: Seq[Id[NormalizedURI]]): Future[Unit] = {
     val json = Json.obj("queryUUID" -> queryUUID,
         "query" -> queryString,
