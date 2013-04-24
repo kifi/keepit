@@ -179,7 +179,7 @@ slider2 = function() {
     });
   }
 
-  function showSlider(trigger) {
+  function showSlider(trigger, callback) {
     api.log("[showSlider]", trigger);
 
     lastShownAt = +new Date;
@@ -194,6 +194,8 @@ slider2 = function() {
 
       logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0), url: document.URL});
       api.port.emit("keeper_shown");
+
+      callback && callback();
     });
   }
 
@@ -558,8 +560,9 @@ slider2 = function() {
         if (trigger == "tile") {
           showSlider(trigger);
         } else if (!lastShownAt) { // auto-show only if not already shown
-          showSlider(trigger);
-          idleTimer.start(5000);
+          showSlider(trigger, function() {
+            idleTimer.start(5000);
+          });
         }
       }
     },
