@@ -22,12 +22,14 @@ api = function() {
     if (/^https?:/.test(tab.url)) {
       if (page.complete) {
         injectContentScripts(page, suppressOnReady);
+        dispatch.call(api.tabs.on.complete, page);
       } else if (tab.status === "loading") {
-        // we might want to dispatch on.loading here.
+        dispatch.call(api.tabs.on.loading, page);
         chrome.tabs.executeScript(tab.id, {code: "document.readyState", runAt: "document_start"}, function(arr) {
           page.complete = arr && arr[0] === "complete";
           if (page.complete || arr && arr[0] === "interactive") {
             injectContentScripts(page, suppressOnReady);
+            dispatch.call(api.tabs.on.complete, page);
           }
         });
       }
@@ -77,8 +79,10 @@ api = function() {
       } else {
         // selectedTabPages[info.windowId] = page = pages[info.tabId] = {id: info.tabId};
         chrome.tabs.get(info.tabId, function(tab) {
-          if (/^https?:\/\/www.google.com\/webhp\?sourceid=chrome-instant&/.test(tab && tab.url)) {  // TODO: support all Google domains/locales
-            api.log("[onActivated] Instant results page:", tab.id, "url:", tab.url);
+          if (!pages[tab.id]) {
+            // We preloaded a different page, which was swapped out
+            // Chrome didn't call onUpdated so we should load now
+            api.log("[onActivated] Creating page:", tab.id, "url:", tab.url);
             createPageAndInjectContentScripts(tab);
           }
         });
