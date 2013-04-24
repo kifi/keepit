@@ -8,30 +8,118 @@ function logEvent() {  // parameters defined in main.js
 var injected, t0 = +new Date;
 
 !function() {
-  api.log("host:", location.hostname);
-  var viewportEl = document[document.compatMode === "CSS1Compat" ? "documentElement" : "body"];
-  var info, openTo, rules = {}, tile, count;
+  api.log("[scout]", location.hostname);
+  var tile, tileCount, onScroll;
 
-  document.addEventListener("keydown", function(e) {
-    if (e.shiftKey && (e.metaKey || e.ctrlKey) && e.keyCode == 75) {  // cmd-shift-K or ctrl-shift-K
-      // TODO: new keyboard shortcuts https://app.asana.com/0/2456298849186/4781971153773
+  api.port.on({
+    show_notification: function(n) {
+      api.require("scripts/notifier.js", function() {
+        notifier.show(n);
+      });
+    },
+    open_to: function(o) {
+      keeper("showPane", o.trigger, o.locator);
+    },
+    button_click: keeper.bind(null, "togglePane", "button"),
+    auto_show: keeper.bind(null, "show", "auto"),
+    kept: function(o) {
+      if (!tile) {
+        insertTile(o.hide);
+      }
+      if (o.kept) {
+        tile.dataset.kept = o.kept;
+      } else {
+        delete tile.dataset.kept;
+      }
+    },
+    keepers: function(o) {
+      setTimeout(keeper.bind(null, "showKeepers", o.keepers, o.otherKeeps), 3000);
+    },
+    counts: function(counts) {
+      if (!tileCount) return;
+      var n = 0;
+      for (var i in counts) {
+        var c = counts[i];  // negative means unread
+        n = (c < 0 ? Math.min(n, 0) : n) + (n < 0 ? Math.min(c, 0) : c);
+      }
+      if (n) {
+        tileCount.textContent = Math.abs(n);
+        tileCount.classList[n < 0 ? "add" : "remove"]("kifi-unread");
+        (n < 0 ? tile : tile.firstChild).appendChild(tileCount);
+      } else if (tileCount.parentNode) {
+        tileCount.parentNode.removeChild(tileCount);
+      }
+      tile.classList[n ? "add" : "remove"]("kifi-with-count");
+      tile.dataset.counts = JSON.stringify(counts);
+    },
+    scroll_rule: function(r) {
+      if (!onScroll) {
+        var lastScrollTime = 0;
+        document.addEventListener("scroll", onScroll = function(e) {
+          var t = e.timeStamp || +new Date;
+          if (t - lastScrollTime > 100) {  // throttling to avoid measuring DOM too freq
+            lastScrollTime = t;
+            var hPage = document.body.scrollHeight;
+            var hViewport = document[document.compatMode === "CSS1Compat" ? "documentElement" : "body"].clientHeight;
+            var hSeen = window.pageYOffset + hViewport;
+            api.log("[onScroll]", Math.round(hSeen / hPage * 10000) / 100, ">", r[1], "% and", hPage, ">", r[0] * hViewport, "?");
+            if (hPage > r[0] * hViewport && hSeen > (r[1] / 100) * hPage) {
+              api.log("[onScroll] showing");
+              keeper("show", "scroll");
+            }
+          }
+        });
+      }
     }
   });
 
-  function onScrollMaybeShow(e) {
-    var t = e.timeStamp || +new Date;
-    if (t - (onScrollMaybeShow.t || 0) > 100) {  // throttling to avoid measuring DOM too freq
-      onScrollMaybeShow.t = t;
-      var hPage = document.body.scrollHeight;
-      var hViewport = viewportEl.clientHeight;
-      var hSeen = window.pageYOffset + hViewport;
-      api.log("[onScrollMaybeShow]", Math.round(hSeen / hPage * 10000) / 100, ">", rules.scroll[1], "% and",
-        hPage, ">", rules.scroll[0] * hViewport, "?");
-      if (hPage > rules.scroll[0] * hViewport && hSeen > (rules.scroll[1] / 100) * hPage) {
-        api.log("[onScrollMaybeShow] showing");
-        autoShow("scroll");
+  document.addEventListener("keydown", function(e) {
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey) {
+      switch (e.keyCode) {
+      case 75: // ⌘-shift-k, ctrl-shift-k
+        if (tile && tile.dataset.kept) {
+          api.port.emit("unkeep");
+          delete tile.dataset.kept;
+        } else {
+          api.port.emit("keep", {url: document.URL, title: document.title, how: "public"});
+          if (tile) tile.dataset.kept = "public";
+        }
+        return false;
+      case 79: // ⌘-shift-o, ctrl-shift-o
+        keeper("togglePane", "key");
+        return false;
       }
     }
+  }, true);
+
+  function keeper() {  // gateway to slider2.js
+    var args = Array.prototype.slice.apply(arguments), name = args.shift();
+    if (onScroll && name != "showKeepers") {
+      document.removeEventListener("scroll", onScroll);
+      onScroll = null;
+    }
+    api.require("scripts/slider2.js", function() {
+      slider2[name].apply(slider2, args);
+    });
+  }
+
+  function insertTile(hide) {
+    while (tile = document.getElementById("kifi-tile")) {
+      tile.parentNode.removeChild(tile);
+    }
+    tile = document.createElement("div");
+    tile.id = "kifi-tile";
+    tile.style.display = "none";
+    tile.innerHTML = "<div class=kifi-tile-transparent style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>";
+    tileCount = document.createElement("span");
+    tileCount.className = "kifi-count";
+    document.documentElement.appendChild(tile);
+    tile.addEventListener("mouseover", keeper.bind(null, "show", "tile"));
+    api.require("styles/metro/tile.css", function() {
+      if (!hide) {
+        tile.style.display = "";
+      }
+    });
   }
 
   setTimeout(function checkIfUseful() {
@@ -42,108 +130,14 @@ var injected, t0 = +new Date;
     }
   }, 60000);
 
-  api.port.on({
-    show_notification: function(data) {
-      api.require("scripts/notifier.js", function() {
-        notifier.show(data);
-      });
-    },
-    init_slider: function(o) {  // may be called multiple times due to in-page navigation (e.g. hashchange, popstate)
-      info = o;
-      if (openTo) {
-        o.locator = openTo.locator;
-        o.trigger = openTo.trigger;
-        o.force = openTo.force;
-        openTo = null;
-      }
-      rules = o.rules || 0;
-      if (!tile) {
-        insertTile(o);
-      }
-      updateCount(o.counts);
-      if (o.locator) {
-        openSlider(o);
-      } else if (rules.scroll) {
-        document.addEventListener("scroll", onScrollMaybeShow);
-      }
-    },
-    open_slider_to: function(o) {
-      if (!info) {
-        openTo = o;
-      } else {
-        openSlider(o);
-      }
-    },
-    button_click: function() {
-      withSlider2(function() {
-        slider2.toggle(info, "button");
-      });
-    },
-    auto_show: autoShow.bind(null, "auto"),
-    counts: updateCount});
-
-  function autoShow(trigger) {
-    openSlider({trigger: trigger});
-  }
-
-  function openSlider(o) {
-    withSlider2(function() {
-      if (o.force) {
-        slider2.openDeepLink(info, o.trigger, o.locator);
-      } else {
-        slider2.shown() || slider2.show(info, o.trigger, o.locator);
-      }
-    });
-  }
-
-  function withSlider2(callback) {
-    document.removeEventListener("scroll", onScrollMaybeShow);
-    api.require("scripts/slider2.js", callback);
-  }
-
-  function insertTile(o) {
-    while (tile = document.getElementById("kifi-tile")) {
+  api.onEnd.push(function() {
+    if (onScroll) {
+      document.removeEventListener("scroll", onScroll);
+      onScroll = null;
+    }
+    if (tile) {
       tile.parentNode.removeChild(tile);
+      tile = tileCount = null;
     }
-    tile = document.createElement("div");
-    tile.id = "kifi-tile";
-    tile.className = o.kept ? "kifi-kept" : "";
-    tile.style.display = "none";
-    tile.innerHTML = "<div class=kifi-tile-transparent style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>";
-    count = document.createElement("span");
-    count.className = "kifi-count";
-    document.documentElement.appendChild(tile);
-    tile.addEventListener("mouseover", function() {
-      withSlider2(function() {
-        slider2.show(info, "tile");
-      });
-    });
-    api.require("styles/metro/tile.css", function() {
-      if (!o.neverOnSite && !o.sensitive) {
-        tile.style.display = "";
-        if (o.keepers.length && !o.kept) {
-          withSlider2(function() {
-            setTimeout(slider2.showKeepersFor.bind(slider2, o, tile, 2000), 3000);
-          });
-        }
-      }
-    });
-  }
-
-  function updateCount(counts) {
-    if (!count) return;
-    var n = 0;
-    for (var i in counts) {
-      var c = counts[i];  // negative means unread
-      n = (c < 0 ? Math.min(n, 0) : n) + (n < 0 ? Math.min(c, 0) : c);
-    }
-    if (n) {
-      count.textContent = Math.abs(n);
-      count.classList[n < 0 ? "add" : "remove"]("kifi-unread");
-      (n < 0 ? tile : tile.firstChild).appendChild(count);
-    } else if (count.parentNode) {
-      count.parentNode.removeChild(count);
-    }
-    tile.classList[n ? "add" : "remove"]("kifi-with-count");
-  }
+  });
 }();
