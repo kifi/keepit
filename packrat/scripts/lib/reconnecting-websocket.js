@@ -1,6 +1,6 @@
 function ReconnectingWebSocket(url, onmessage) {
-  const wordRe = /\w+/, minRetryConnectDelayMs = 300, maxRetryConnectDelayMs = 5000;
-  var ws, self = this, buffer = [], closed, retryConnectDelayMs = minRetryConnectDelayMs;
+  const wordRe = /\w+/, minRetryConnectDelayMs = 300, maxRetryConnectDelayMs = 5000, idlePingDelayMs = 30000;
+  var ws, self = this, buffer = [], closed, t, retryConnectDelayMs = minRetryConnectDelayMs;
 
   connect();
 
@@ -27,7 +27,7 @@ function ReconnectingWebSocket(url, onmessage) {
     api.log("#0bf", "[RWS.connect]");
 
     ws = new WebSocket(url);
-    var t = setTimeout(onConnectTimeout.bind(null, ws), 5000);
+    t = setTimeout(onConnectTimeout.bind(null, ws), 5000);
 
     ws.onopen = function() {
       api.log("#0bf", "[RWS.onopen]");
@@ -46,30 +46,49 @@ function ReconnectingWebSocket(url, onmessage) {
       }
     };
 
-    ws.onmessage = function(e) {
-      if (e.data === '["hi"]') {
-        api.log("#0bf", "[RWS.onmessage]", e.data);
-        clearTimeout(t);
-        ws.greeted = true;
-        ws.onmessage = onmessage.bind(self);
-        retryConnectDelayMs = minRetryConnectDelayMs;
-        while (buffer.length) {
-          var a = buffer.shift();
-          api.log("#0bf", "[RWS] sending, buffered for %i ms: %s", new Date - a[1], (wordRe.exec(a[0]) || a)[0]);
-          ws.send(a[0]);
-        }
-      } else if (e.data === '["denied"]') {
-        api.log("#a00", "[RWS.onmessage]", e.data);
-      } else {
-        api.log("#a00", "[RWS.onmessage] relaying");
-        onmessage.call(self, e);
+    ws.onmessage = onMessage1;
+  }
+
+  function onMessage1(e) {
+    if (e.data === '["hi"]') {
+      api.log("#0bf", "[RWS.onMessage1]", e.data);
+      ws.greeted = true;
+      ws.onmessage = onMessageN;
+      retryConnectDelayMs = minRetryConnectDelayMs;
+      while (buffer.length) {
+        var a = buffer.shift();
+        api.log("#0bf", "[RWS] sending, buffered for %i ms: %s", new Date - a[1], (wordRe.exec(a[0]) || a)[0]);
+        ws.send(a[0]);
       }
-    };
+    } else if (e.data === '["denied"]') {
+      api.log("#a00", "[RWS.onMessage1]", e.data);
+    } else {
+      api.log("#a00", "[RWS.onMessage1] relaying");
+      onmessage.call(self, e);
+    }
+    clearTimeout(t);
+    t = setTimeout(ping, idlePingDelayMs);
+  }
+
+  function onMessageN(e) {
+    if (e.data === '["pong"]') {
+      api.log("#0ac", "[RWS.pong]");
+    } else {
+      onmessage.call(self, e);
+    }
+    clearTimeout(t);
+    t = setTimeout(ping, idlePingDelayMs);
   }
 
   function onConnectTimeout(ws) {
     api.log("#0bf", "[RWS.onConnectTimeout]");
     ws.onerror = function() {};
     ws.close();
+  }
+
+  function ping() {
+    api.log("#0bf", "[RWS.ping]");
+    self.send('["ping"]');
+    t = setTimeout(onConnectTimeout.bind(null, ws), 2000);
   }
 }
