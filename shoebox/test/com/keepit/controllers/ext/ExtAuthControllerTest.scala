@@ -39,7 +39,7 @@ class ExtAuthControllerTest extends Specification with DbRepos {
 
   "ExtAuthController" should {
     "start" in {
-      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeHealthcheck()) {
+      running(new EmptyApplication().withFakeSecureSocialUserService()) {
         val now = new DateTime(2012, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         val today = now.toDateTime
         inject[FakeClock].push(today)

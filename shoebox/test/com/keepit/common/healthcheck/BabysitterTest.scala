@@ -27,7 +27,7 @@ class BabysitterTest extends Specification {
 
   "Babysitter" should {
     "do nothing if code executes quickly" in {
-      running(new EmptyApplication().withFakeHealthcheck().withRealBabysitter().withFakeScheduler()) {
+      running(new EmptyApplication().withRealBabysitter().withFakeScheduler()) {
 
         inject[Babysitter].watch(BabysitterTimeout(Duration(1, "seconds"), Duration(1, "seconds"))) {
           // So fast!

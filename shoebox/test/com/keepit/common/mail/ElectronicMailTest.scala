@@ -17,9 +17,9 @@ class ElectronicMailTest extends Specification {
 
   "ElectronicMail" should {
     "user filters" in {
-      running(new ShoeboxApplication().withFakeHealthcheck().withFakeMail()) {
+      running(new ShoeboxApplication().withFakeMail()) {
         val repo = inject[ElectronicMailRepo]
-        inject[Database].readWrite { implicit s => 
+        inject[Database].readWrite { implicit s =>
           repo.save(ElectronicMail(from = EmailAddresses.TEAM, to = EmailAddresses.ENG, subject = "foo 1", htmlBody = "body", category = PostOffice.Categories.HEALTHCHECK))
           repo.save(ElectronicMail(from = EmailAddresses.TEAM, to = EmailAddresses.TEAM, subject = "foo 2", htmlBody = "body", category = PostOffice.Categories.HEALTHCHECK))
           repo.save(ElectronicMail(from = EmailAddresses.TEAM, to = EmailAddresses.EISHAY, subject = "foo 3", htmlBody = "body", category = PostOffice.Categories.HEALTHCHECK))
