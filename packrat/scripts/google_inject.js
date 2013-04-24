@@ -505,12 +505,12 @@ api.log("[google_inject]");
     hit.displayScore = response.showScores === true ? "[" + Math.round(hit.score * 100) / 100 + "] " : "";
 
     var fil = response.filter || "", ids = fil.length > 1 ? fil.split(".") : null;
-    hit.displaySelf = fil != "f" && !ids;
+    hit.displaySelf = fil != "f" && !ids && hit.isMyBookmark;
     hit.displayUsers = fil == "m" ? [] :
       ids ? hit.users.filter(function(u) {return ~ids.indexOf(u.id)}) :
       hit.users;
 
-    var numOthers = hit.count - hit.users.length - (hit.isMyBookmark ? 1 : 0);
+    var numOthers = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
     hit.whoKeptHtml = formatCountHtml(
       hit.isMyBookmark,
       hit.isPrivate ? " <span class=kifi-res-private>Private</span>" : "",
