@@ -35,7 +35,7 @@ class EventListenerTest extends Specification with DbRepos {
 
   "EventHelper" should {
     "parse search events" in {
-      running(new EmptyApplication().withFakeHealthcheck()) {
+      running(new EmptyApplication()) {
         val (normUrlId, url, user, bookmark) = setup()
         val listener = new EventListenerPlugin(inject[UserRepo], inject[NormalizedURIRepo]) {
          def onEvent: PartialFunction[Event,Unit] = { case _ => }
@@ -56,7 +56,7 @@ class EventListenerTest extends Specification with DbRepos {
 
   "EventListener" should {
     "process events" in {
-      running(new EmptyApplication().withFakeHealthcheck()) {
+      running(new EmptyApplication()) {
         val (normUrlId, url, user, bookmark) = setup()
         implicit val clock = inject[Clock]
         implicit val fortyTwoServices = inject[FortyTwoServices]
