@@ -78,7 +78,7 @@ class SecureSocialAuthenticatorPlugin @Inject()(
     val externalIdOpt = try {
       Some(ExternalId[UserSession](id))
     } catch {
-      case ex: Exception => None
+      case ex: Throwable => None
     }
     
     externalIdOpt.map{ externalId =>
