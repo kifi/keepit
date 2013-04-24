@@ -142,9 +142,12 @@ private[classify] class DomainTagImportActor @Inject() (
     case RemoveTag(tagName) =>
       try {
         val result: Option[DomainTag] = withSensitivityUpdate {
-          db.readWrite { implicit s =>
-            tagRepo.get(tagName, excludeState = None).map { tag =>
-              applyTagToDomains(tagName, Seq())
+          val tagOpt = db.readWrite { implicit s =>
+            tagRepo.get(tagName, excludeState = None)
+          }
+          tagOpt.map { tag =>
+            applyTagToDomains(tagName, Seq())
+            db.readWrite { implicit s =>
               tagRepo.save(tag.withState(DomainTagStates.INACTIVE))
             }
           }
