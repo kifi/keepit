@@ -18,6 +18,25 @@ import play.api.libs.json.Json
 class BookmarkInternerTest extends Specification with DbRepos {
 
   "BookmarkInterner" should {
+    "persist bookmark" in {
+      running(new EmptyApplication().withFakeHealthcheck().withFakeScraper()) {
+        val user = db.readWrite { implicit db =>
+          userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
+        }
+        db.readWrite { implicit db =>
+          userRepo.get(user.id.get) === user
+          val bookmarkInterner = inject[BookmarkInterner]
+          val bookmarks = bookmarkInterner.internBookmarks(Json.obj(
+              "url" -> "http://42go.com",
+              "isPrivate" -> true
+            ), user, Seq(), "EMAIL")
+          bookmarks.size === 1
+          bookmarkRepo.get(bookmarks.head.id.get) === bookmarks.head
+          bookmarkRepo.all.size === 1
+        }
+      }
+    }
+
     "persist bookmarks" in {
       running(new EmptyApplication().withFakeHealthcheck().withFakeScraper()) {
         val user = db.readWrite { implicit db =>
@@ -26,11 +45,15 @@ class BookmarkInternerTest extends Specification with DbRepos {
         db.readWrite { implicit db =>
           userRepo.get(user.id.get) === user
           val bookmarkInterner = inject[BookmarkInterner]
-          val bookmark = bookmarkInterner.internBookmarks(Json.obj(
+          val bookmarks = bookmarkInterner.internBookmarks(Json.arr(Json.obj(
               "url" -> "http://42go.com",
               "isPrivate" -> true
-            ), user, Seq(), "EMAIL").head
-          bookmarkRepo.get(bookmark.id.get) === bookmark
+            ), Json.obj(
+              "url" -> "http://kifi.com",
+              "isPrivate" -> false
+            )), user, Seq(), "EMAIL")
+          bookmarks.size === 2
+          bookmarkRepo.all.size === 2
         }
       }
     }
