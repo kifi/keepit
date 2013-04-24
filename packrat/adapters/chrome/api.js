@@ -87,10 +87,7 @@ api = function() {
     if (selectedTabIds[tab.windowId]) {  // window is "normal"
       if (change.status === "loading") {
         onRemoved(tabId);
-        var page = createPage(tab);
-        if (selectedTabIds[tab.windowId] === tabId && /^https?:/.test(page.url)) {
-          dispatch.call(api.tabs.on.focus, page);
-        }
+        createPage(tab);
       }
       // would be nice to get "interactive" too. see http://crbug.com/169070
       if (change.status === "complete") {
