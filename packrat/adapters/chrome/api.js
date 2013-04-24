@@ -6,28 +6,38 @@ api = function() {
     this.forEach(function(f) {f.apply(null, args)});
   }
 
-  function newPage(tab) {
-    return {
+  function createPage(tab, skipOnLoading) {
+    var page = pages[tab.id] = {
       id: tab.id,
       url: tab.url,
       ready: undefined,  // ready state not known
       complete: tab.status === "complete"};
+    if (tab.active) {
+      selectedTabIds[tab.windowId] = tab.id;
+    }
+    if (!skipOnLoading && /^https?:/.test(tab.url)) {
+      dispatch.call(api.tabs.on.loading, page);
+    }
+    return page;
   }
 
-  function createPageAndInjectContentScripts(tab, suppressOnReady) {
-    var page = pages[tab.id] = newPage(tab);
-    if (tab.active) {
-      selectedTabPages[tab.windowId] = page;
-    }
+  function createPageAndInjectContentScripts(tab, skipHandlers) {
+    var page = createPage(tab, skipHandlers);
     if (/^https?:/.test(tab.url)) {
       if (page.complete) {
-        injectContentScripts(page, suppressOnReady);
+        injectContentScripts(page, skipHandlers);
+        if (!skipHandlers) {
+          dispatch.call(api.tabs.on.complete, page);
+        }
       } else if (tab.status === "loading") {
         // we might want to dispatch on.loading here.
         chrome.tabs.executeScript(tab.id, {code: "document.readyState", runAt: "document_start"}, function(arr) {
           page.complete = arr && arr[0] === "complete";
           if (page.complete || arr && arr[0] === "interactive") {
-            injectContentScripts(page, suppressOnReady);
+            injectContentScripts(page, skipHandlers);
+          }
+          if (page.complete && !skipHandlers) {
+            dispatch.call(api.tabs.on.complete, page);
           }
         });
       }
@@ -53,53 +63,33 @@ api = function() {
     }
   });
 
+  chrome.tabs.onCreated.addListener(function(tab) {
+    api.log("#666", "[tabs.onCreated]", tab.id, tab.url);
+  });
+
   chrome.tabs.onActivated.addListener(function(info) {
-    api.log("[onActivated] tab info:", info);
-    var lastPage = selectedTabPages[info.windowId];
-    if (lastPage) { // ignore popups, etc.
-      if (/^https?:/.test(lastPage.url)) {
-        dispatch.call(api.tabs.on.blur, lastPage);
-      } else if (lastPage.id) {
-        // Chrome Instant search feature sometimes silently destroys chrome://newtab tabs (crbug.com/88458)
-        chrome.tabs.query({windowId: info.windowId}, function(tabs) {
-          if (!tabs.some(function(tab) {return tab.id === lastPage.id})) {
-            api.log("[onActivated] freeing lost tab page:", lastPage.id, lastPage.url);
-            delete pages[lastPage.id];
-          }
-        });
+    api.log("#666", "[tabs.onActivated] tab info:", info);
+    var prevPage = pages[selectedTabIds[info.windowId]];
+    if (prevPage) { // ignore popups, etc.
+      selectedTabIds[info.windowId] = info.tabId;
+      if (/^https?:/.test(prevPage.url)) {
+        dispatch.call(api.tabs.on.blur, prevPage);
       }
       var page = pages[info.tabId];
-      if (page) {
-        selectedTabPages[info.windowId] = page;
-        if (/^https?:/.test(page.url)) {
-          dispatch.call(api.tabs.on.focus, page);
-        }
-      } else {
-        // selectedTabPages[info.windowId] = page = pages[info.tabId] = {id: info.tabId};
-        chrome.tabs.get(info.tabId, function(tab) {
-          if (/^https?:\/\/www.google.com\/webhp\?sourceid=chrome-instant&/.test(tab && tab.url)) {  // TODO: support all Google domains/locales
-            api.log("[onActivated] Instant results page:", tab.id, "url:", tab.url);
-            createPageAndInjectContentScripts(tab);
-          }
-        });
+      if (page && /^https?:/.test(page.url)) {
+        dispatch.call(api.tabs.on.focus, page);
       }
     }
   });
 
   chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
-    api.log("#666", "[onUpdated] %i change: %o", tabId, change);
-    if (selectedTabPages[tab.windowId]) {  // window is "normal"
+    api.log("#666", "[tabs.onUpdated] %i change: %o", tabId, change);
+    if (selectedTabIds[tab.windowId]) {  // window is "normal"
       if (change.status === "loading") {
-        var page = pages[tabId];
-        if (page && /^https?:/.test(page.url)) {
-          dispatch.call(api.tabs.on.unload, page);
-        }
-        page = pages[tabId] = newPage(tab);
-        if (tab.active) {
-          selectedTabPages[tab.windowId] = page;
-        }
-        if (/^https?:/.test(page.url)) {
-          dispatch.call(api.tabs.on.loading, page);
+        onRemoved(tabId);
+        var page = createPage(tab);
+        if (selectedTabIds[tab.windowId] === tabId && /^https?:/.test(page.url)) {
+          dispatch.call(api.tabs.on.focus, page);
         }
       }
       // would be nice to get "interactive" too. see http://crbug.com/169070
@@ -118,7 +108,20 @@ api = function() {
     }
   });
 
-  chrome.tabs.onRemoved.addListener(function(tabId) {
+  chrome.tabs.onReplaced.addListener(function(newTabId, oldTabId) {
+    api.log("#666", "[tabs.onReplaced]", oldTabId, "->", newTabId);
+    onRemoved(oldTabId);
+    chrome.tabs.get(newTabId, function(tab) {
+      if (tab) {
+        createPageAndInjectContentScripts(tab);
+      } else {
+        api.log("#800", "[onReplaced] %i no tab", newTabId);
+      }
+    });
+  });
+
+  chrome.tabs.onRemoved.addListener(onRemoved);
+  function onRemoved(tabId) {
     var page = pages[tabId];
     if (page) {
       delete pages[tabId];
@@ -126,22 +129,16 @@ api = function() {
         dispatch.call(api.tabs.on.unload, page);
       }
     }
-  });
+  }
 
   chrome.windows.onCreated.addListener(function(win) {
     if (win.type === "normal") {
-      selectedTabPages[win.id] = {};
+      selectedTabIds[win.id] = -1;  // indicates that the window is normal (supports tabs)
     }
   });
 
   chrome.windows.onRemoved.addListener(function(winId) {
-    delete selectedTabPages[winId];
-  });
-
-  chrome.tabs.onReplaced.addListener(function (addedId, removedId) {
-    api.log("[onReplaced]", addedId, removedId)
-    dispatch.call(api.tabs.on.unload, pages[removedId]);
-    delete pages[removedId];
+    delete selectedTabIds[winId];
   });
 
   var focusedWinId, topNormalWinId;
@@ -152,17 +149,17 @@ api = function() {
   chrome.windows.onFocusChanged.addListener(function(winId) {
     api.log("[onFocusChanged] win %o -> %o", focusedWinId, winId);
     if (focusedWinId > 0) {
-      var page = selectedTabPages[focusedWinId];
+      var page = pages[selectedTabIds[focusedWinId]];
       if (page && /^https?:/.test(page.url)) {
         dispatch.call(api.tabs.on.blur, page);
       }
     }
     focusedWinId = winId;
     if (winId !== chrome.windows.WINDOW_ID_NONE) {
-      if (selectedTabPages[winId]) {
+      if (selectedTabIds[winId]) {  // "normal" window
         topNormalWinId = winId;
       }
-      var page = selectedTabPages[winId];
+      var page = pages[selectedTabIds[winId]];
       if (page && /^https?:/.test(page.url)) {
         dispatch.call(api.tabs.on.focus, page);
       }
@@ -170,7 +167,7 @@ api = function() {
   });
 
   var pages = {};  // by tab.id
-  var selectedTabPages = {};  // in "normal" windows only, by window.id (allows us to avoid some async chrome API calls)
+  var selectedTabIds = {};  // in "normal" windows only, by window.id (allows us to avoid some async chrome API calls)
   chrome.tabs.query({windowType: "normal"}, function(tabs) {
     tabs.forEach(function(tab) {
       if (!pages[tab.id]) {
@@ -231,17 +228,17 @@ api = function() {
           api.log("#a00", "[api:dom_ready] %i url mismatch:\n%s\n%s", tab.id, tab.url, page.url);
         }
         injectContentScripts(page);
-      } else if (tab.windowId !== chrome.windows.WINDOW_ID_NONE) {  // Chrome Instant results disappear quickly
+      } else if (tab.windowId !== chrome.windows.WINDOW_ID_NONE) {  // e.g. instant results (sometimes)
         chrome.windows.get(tab.windowId, function(win) {
           if (win && win.type == "normal") {
-            api.log("#a00", "[api:dom_ready] no page for " + tab.id + " at " + tab.url);
+            api.log("#a00", "[api:dom_ready] no page for", tab.id, tab.url);
           }
         });
       }
     }
   });
 
-  function injectContentScripts(page, suppressOnReady) {
+  function injectContentScripts(page, skipOnReady) {
     if (page.injecting || page.ready) return;
     page.injecting = true;
 
@@ -261,7 +258,7 @@ api = function() {
     function done() {
       page.ready = true;
       delete page.injecting;
-      if (!suppressOnReady) {
+      if (!skipOnReady) {
         dispatch.call(api.tabs.on.ready, page);
       }
     }
@@ -350,10 +347,10 @@ api = function() {
           chrome.pageAction.show(tab.id);
         }
       }},
-    // internal: {
-    //   pages: pages,
-    //   selectedTabPages: selectedTabPages
-    // },
+    inspect: {
+      pages: pages,
+      selectedTabIds: selectedTabIds
+    },
     loadReason: "enable",  // assuming "enable" by elimination
     log: function() {
       var d = new Date, ds = d.toString(), t = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] ";
@@ -516,8 +513,8 @@ api = function() {
         }
       },
       eachSelected: function(callback) {
-        for (var id in selectedTabPages) {
-          var page = selectedTabPages[id];
+        for (var winId in selectedTabIds) {
+          var page = pages[selectedTabIds[winId]];
           if (/^https?:/.test(page.url)) callback(page);
         }
       },
@@ -537,7 +534,7 @@ api = function() {
         return pages[tabId];
       },
       isFocused: function(tab) {
-        return selectedTabPages[focusedWinId] === tab;
+        return selectedTabIds[focusedWinId] === tab.id;
       },
       navigate: function(tabId, url) {
         chrome.tabs.update(tabId, {url: url, active: true}, function(tab) {
