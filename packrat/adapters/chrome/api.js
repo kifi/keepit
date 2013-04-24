@@ -138,6 +138,12 @@ api = function() {
     delete selectedTabPages[winId];
   });
 
+  chrome.tabs.onReplaced.addListener(function (addedId, removedId) {
+    api.log("[onReplaced]", addedId, removedId)
+    dispatch.call(api.tabs.on.unload, pages[removedId]);
+    delete pages[removedId];
+  });
+
   var focusedWinId, topNormalWinId;
   chrome.windows.getLastFocused(null, function(win) {
     focusedWinId = win.focused ? win.id : chrome.windows.WINDOW_ID_NONE;
