@@ -56,6 +56,7 @@ trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
   def getPrivate(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
   def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment]
   def getParentMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
+  def getParentByUriParticipants(normUri: Id[NormalizedURI], recipients: Set[Id[User]])(implicit session: RSession): Option[Id[Comment]]
   def count(permissions: State[CommentPermission] = CommentPermissions.PUBLIC)(implicit session: RSession): Int
   def page(page: Int, size: Int, permissions: State[CommentPermission])(implicit session: RSession): Seq[Comment]
   def getParticipantsUserIds(commentId: Id[Comment])(implicit session: RSession): Set[Id[User]]
@@ -159,6 +160,35 @@ class CommentRepoImpl @Inject() (
       c <- table if (c.uriId === uriId && c.userId === userId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)
     } yield (c.*)
     (q1.list ++ q2.list).toSet.toSeq
+  }
+  
+  def getParentByUriParticipants(normUri: Id[NormalizedURI], recipients: Set[Id[User]])(implicit session: RSession): Option[Id[Comment]] = {
+      val conn = session.conn
+      val st = conn.createStatement()
+      
+      val recipientIn = recipients.map(_.id).mkString(",")
+      val recipientLength = recipients.size - 1 // there is one less CommentRecipient due to the author
+
+      val sql =
+        s"""
+          select c.id as id from comment c, comment_recipient r
+          where c.id = r.comment_id 
+            and c.permissions = 'message'
+            and c.parent is null
+            and c.normalized_uri_id = ${normUri.id}
+            and c.user_id in ($recipientIn)
+          group by c.id
+          having count(*) = $recipientLength
+            and sum(r.user_id in ($recipientIn)) = $recipientLength
+          order by id limit 1;
+        """
+      val rs = st.executeQuery(sql)
+      
+      if(rs.next) {
+        Some(Id[Comment](rs.getLong("id")))
+      } else {
+        None
+      }
   }
 
   def count(permissions: State[CommentPermission])(implicit session: RSession): Int =
