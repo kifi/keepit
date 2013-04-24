@@ -39,12 +39,12 @@ class BookmarkInterner @Inject() (
     case e: Throwable => throw new Exception("can't figure what to do with %s".format(e))
   }
 
-  private def findUri(url: String, title: Option[String]) = db.readWrite(attempts = 2) { implicit s =>
+  private def findUri(url: String, title: Option[String]): NormalizedURI = db.readWrite(attempts = 2) { implicit s =>
     uriRepo.getByNormalizedUrl(url) match {
       case Some(uri) if uri.state == NormalizedURIStates.ACTIVE | uri.state == NormalizedURIStates.INACTIVE =>
-        (uriRepo.save(uri.withState(NormalizedURIStates.SCRAPE_WANTED)), true)
-      case Some(uri) => (uri, false)
-      case None => (createNewURI(title, url), true)
+        uriRepo.save(uri.withState(NormalizedURIStates.SCRAPE_WANTED))
+      case Some(uri) => uri
+      case None => createNewURI(title, url)
     }
   }
 
@@ -69,8 +69,8 @@ class BookmarkInterner @Inject() (
       val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
       if (!url.toLowerCase.startsWith("javascript:")) {
         log.debug("interning bookmark %s with title [%s]".format(json, title))
-        val (uri, needsToScrape) = findUri(url, title)
-        if (needsToScrape) scraper.asyncScrape(uri)
+        val uri = findUri(url, title)
+        if (uri.state == NormalizedURIStates.SCRAPE_WANTED) scraper.asyncScrape(uri)
         val bookmark = internBookmark(uri, user, isPrivate, experiments, installationId, source, title, url)
         if(bookmark.isDefined) addToActivityStream(user, bookmark.get)
         bookmark

@@ -60,7 +60,7 @@ class BookmarkInternerTest extends Specification with DbRepos {
     }
   }
 
-  "persist bookmarks whit one bad url" in {
+  "persist bookmarks with one bad url" in {
     running(new EmptyApplication().withFakeHealthcheck().withFakeScraper()) {
       val user = db.readWrite { implicit db =>
         userRepo.save(User(firstName = "Shanee", lastName = "Smith"))

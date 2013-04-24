@@ -32,7 +32,7 @@ import com.google.inject.{Inject, ImplementedBy, Singleton}
 
 case class URISearchResults(uri: NormalizedURI, score: Float)
 
-case class NormalizedURI  (
+case class NormalizedURI (
   id: Option[Id[NormalizedURI]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
