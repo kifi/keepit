@@ -510,7 +510,7 @@ api.log("[google_inject]");
       ids ? hit.users.filter(function(u) {return ~ids.indexOf(u.id)}) :
       hit.users;
 
-    var numOthers = hit.count - hit.users.length - (hit.isMyBookmark ? 1 : 0);
+    var numOthers = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
     hit.whoKeptHtml = formatCountHtml(
       hit.isMyBookmark,
       hit.isPrivate ? " <span class=kifi-res-private>Private</span>" : "",
