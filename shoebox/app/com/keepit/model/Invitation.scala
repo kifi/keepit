@@ -68,7 +68,7 @@ class InvitationRepoImpl @Inject() (
         | WHERE
         |   (user.state = 'pending' AND $showPending) OR
         |   (invitation.id IS NOT NULL AND (invitation.state = '${showState.orNull}' OR ${showState.isEmpty}))
-        | ORDER BY invitation.updated_at DESC, user.created_at DESC
+        | ORDER BY invitation.created_at DESC, user.created_at DESC
         | LIMIT $size
         | OFFSET ${size * page};
       """.stripMargin

@@ -63,57 +63,6 @@ class SemanticVectorSearcher(articleSearcher: Searcher, uriGraphSearcher: URIGra
     }
   }
 
-  /**
-   * Given a term and a set of documents, we find the semantic vector for each
-   * (term, document) pair.
-   * Note: this may return empty map
-   */
-  def getSemanticVectors(term: Term, uriIds:Set[Long]): Map[Long, SemanticVector] = {
-
-    val subReaders = indexReader.wrappedSubReaders
-    var sv = Map[Long, SemanticVector]()
-    var i = 0
-
-    var docsToRead = uriIds.size // for early stop: don't need to go through every subreader
-    val filter = new IdSetFilter(uriIds)
-    
-    while (i < subReaders.length && docsToRead > 0) {
-      val subReader = subReaders(i)
-      val docIdSet = filter.getDocIdSet(subReader.getContext, subReader.getLiveDocs)
-      if (docIdSet != null) {
-        val tp = subReader.termPositionsEnum(term)
-        val iter = docIdSet.iterator
-
-        def next(): Int = {
-          var doc = iter.nextDoc()
-          while (iter.docID != tp.docID) {
-            doc = if (iter.docID < tp.docID) iter.advance(tp.docID) else tp.advance(iter.docID)
-          }
-          doc
-        }
-        
-        if (iter != null && tp != null) {
-          val mapper = subReader.getIdMapper
-
-          while (next() < NO_MORE_DOCS) {
-            docsToRead -= 1
-            val id = mapper.getId(tp.docID)
-            val vector = new SemanticVector(new Array[Byte](SemanticVector.arraySize))
-            if (tp.freq() > 0){
-              tp.nextPosition()
-              val payload = tp.getPayload()
-              vector.set(payload.bytes, payload.offset, payload.length)
-              sv += (id -> vector)
-            }
-          }
-        }
-      }
-      i += 1
-    }
-    sv
-  }
-
-
   def getTerms(query: String, lang: Lang): Array[Term] = {
     val analyzer = DefaultAnalyzer.forParsingWithStemmer(lang)
     val ts = analyzer.tokenStream("b", new StringReader(query))
