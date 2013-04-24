@@ -55,21 +55,19 @@ class HomeController @Inject() (db: Database,
         ))
       }
     }
-    if(anyPendingInvite.nonEmpty) {
-      db.readWrite { implicit session =>
-        anyPendingInvite.map { case (su, invite) =>
-          if(invite.state == InvitationStates.ACTIVE) {
-            invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
-            postOffice.sendMail(ElectronicMail(
-              senderUserId = None,
-              from = EmailAddresses.NOTIFICATIONS,
-              fromName = Some("Invitations"),
-              to = EmailAddresses.INVITATION,
-              subject = s"${su.fullName} wants to be let in!",
-              htmlBody = s"Go to https://admin.kifi.com/admin/invites to accept or reject this user.",
-              category = PostOffice.Categories.ADMIN))
-          }
+    for ((su, invite) <- anyPendingInvite) {
+      if (invite.state == InvitationStates.ACTIVE) {
+        db.readWrite { implicit s =>
+          invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
         }
+        postOffice.sendMail(ElectronicMail(
+          senderUserId = None,
+          from = EmailAddresses.NOTIFICATIONS,
+          fromName = Some("Invitations"),
+          to = EmailAddresses.INVITATION,
+          subject = s"${su.fullName} wants to be let in!",
+          htmlBody = s"Go to https://admin.kifi.com/admin/invites to accept or reject this user.",
+          category = PostOffice.Categories.ADMIN))
       }
     }
     val (email, friendsOnKifi) = db.readOnly { implicit session =>
