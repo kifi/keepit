@@ -167,40 +167,28 @@ class CommentRepoImpl @Inject() (
       val st = conn.createStatement()
       
       val recipientIn = recipients.map(_.id).mkString(",")
-      
-      /*
-       * To save you from having to decipher below, the algorithm:
-       *  1) Get all the (author, recipient, commentId)s for a given URI where the author or recipient is one of `recipients`
-       *  2) Built a set of (user, commentId) from (1), including both the author and recipient. Authors will be duplicated, so use sets.
-       *  3) Convert to a Map from commentId -> Set(userIds). i.e., for every commentId, the set of recipients
-       *  4) Filter (3) by threads with a recipient set that are the same as `recipients`
-       *  5) Grab the first
-       */
+      val recipientLength = recipients.size - 1 // there is one less CommentRecipient due to the author
+
       val sql =
         s"""
-          select c.id, c.user_id, group_concat(r.user_id) user_ids
-            from comment c, comment_recipient r
-           where c.id = r.comment_id
-              and c.permissions = 'message'
-              and c.parent is null 
-              and c.normalized_uri_id = ${normUri.id}
-              and c.user_id in ($recipientIn)
-           group by c.id
-          having count(r.id) = ${recipients.size - 1};
+          select c.id as id from comment c, comment_recipient r
+          where c.id = r.comment_id 
+            and c.permissions = 'message'
+            and c.parent is null
+            and c.normalized_uri_id = ${normUri.id}
+            and c.user_id in ($recipientIn)
+          group by c.id
+          having count(*) = $recipientLength
+            and sum(r.user_id in ($recipientIn)) = $recipientLength
+          order by id limit 1;
         """
       val rs = st.executeQuery(sql)
-      val threads = Iterator.continually((rs, rs.next)).takeWhile(_._2).map(_._1).map { result =>
-        val authorId = Id[User](result.getLong("user_id"))
-        val threadRecipients = result.getString("user_ids").split(",").map(u => Id[User](u.toLong)).toSet
-        val commentId = Id[Comment](result.getLong("id"))
-                
-        if(threadRecipients + authorId == recipients)
-          Some(commentId)
-        else
-          None
-      }.toSeq.flatten
       
-      threads.sortWith((a,b) => a.id < b.id).headOption
+      if(rs.next) {
+        Some(Id[Comment](rs.getLong("id")))
+      } else {
+        None
+      }
   }
 
   def count(permissions: State[CommentPermission])(implicit session: RSession): Int =
