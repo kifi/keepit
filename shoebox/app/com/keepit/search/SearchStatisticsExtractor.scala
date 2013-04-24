@@ -299,7 +299,7 @@ class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], tar
   def getUriInfo() = {
 
     var uriInfoMap = Map.empty[Id[NormalizedURI], UriInfo]
-    val idsetFilter = new IdSetFilter(targetUriIds.map{ normalizedId => normalizedId.id}.toSet)
+    val idsetFilter = new IdSetFilter(targetUriIds.map{_.id}.toSet)
 
     parsedQuery.map { articleQuery =>
       val filteredQuery = new FilteredQuery(articleQuery, idsetFilter)
