@@ -20,17 +20,13 @@
   text-align: left;
   direction: ltr;
   z-index: 2147483639;
-}
-.kifi-pane,
-.kifi-pane-parent.kifi-with-pane .kifi-slider2 {
   -webkit-transition: right .25s ease-in;
   transition: right .25s ease-in;
 }
 .kifi-pane-parent.kifi-with-pane .kifi-pane {
   right: 0;
 }
-.kifi-pane-parent.kifi-with-pane.kifi-snapshot-mode .kifi-pane,
-.kifi-pane-parent.kifi-with-pane.kifi-snapshot-mode .kifi-slider2 {
+.kifi-pane-parent.kifi-with-pane.kifi-snapshot-mode .kifi-pane {
   right: -322px;
 }
 
