@@ -188,7 +188,7 @@ class ExtStreamController @Inject() (
             subscriptions = Map.empty
           }
 
-          (iteratee, enumerator)
+          (iteratee, Enumerator(Json.arr("hi")) >>> enumerator)
 
         case None =>
           log.info("Disconnecting anonymous user")
