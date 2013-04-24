@@ -179,15 +179,15 @@ class ExtCommentController @Inject() (
     Ok(JsObject(Seq("following" -> JsBoolean(false))))
   }
 
-  private def createCommentRecipients(parentId: Id[Comment], recipients: Set[Id[User]])(implicit session: RWSession) = {
-    recipients map { recipientUser =>
-      Some(commentRecipientRepo.save(CommentRecipient(commentId = parentId, userId = Some(recipientUser))))
+  private def createCommentRecipients(parentId: Id[Comment], recipients: Set[Id[User]])(implicit session: RWSession)  {
+    recipients foreach { recipientUser =>
+      commentRecipientRepo.save(CommentRecipient(commentId = parentId, userId = Some(recipientUser)))
     }
   }
   
   private def recipientUsers(recipientString: String)(implicit session: RSession) = {
-    (recipientString.split(",").map(_.trim()).map { recipientId =>
-      userRepo.getOpt(ExternalId[User](recipientId))
+    (recipientString.split(",").map { recipientId =>
+      userRepo.getOpt(ExternalId[User](recipientId.trim))
     } flatten).toSet
   }
 
