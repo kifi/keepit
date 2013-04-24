@@ -24,13 +24,13 @@ class BookmarkInternerTest extends Specification with DbRepos {
         val user = db.readWrite { implicit db =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
+        val bookmarkInterner = inject[BookmarkInterner]
+        val bookmarks = bookmarkInterner.internBookmarks(Json.obj(
+            "url" -> "http://42go.com",
+            "isPrivate" -> true
+          ), user, Seq(), "EMAIL")
         db.readWrite { implicit db =>
           userRepo.get(user.id.get) === user
-          val bookmarkInterner = inject[BookmarkInterner]
-          val bookmarks = bookmarkInterner.internBookmarks(Json.obj(
-              "url" -> "http://42go.com",
-              "isPrivate" -> true
-            ), user, Seq(), "EMAIL")
           bookmarks.size === 1
           bookmarkRepo.get(bookmarks.head.id.get) === bookmarks.head
           bookmarkRepo.all.size === 1
@@ -43,16 +43,16 @@ class BookmarkInternerTest extends Specification with DbRepos {
         val user = db.readWrite { implicit db =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
+        val bookmarkInterner = inject[BookmarkInterner]
+        val bookmarks = bookmarkInterner.internBookmarks(Json.arr(Json.obj(
+            "url" -> "http://42go.com",
+            "isPrivate" -> true
+          ), Json.obj(
+            "url" -> "http://kifi.com",
+            "isPrivate" -> false
+          )), user, Seq(), "EMAIL")
         db.readWrite { implicit db =>
           userRepo.get(user.id.get) === user
-          val bookmarkInterner = inject[BookmarkInterner]
-          val bookmarks = bookmarkInterner.internBookmarks(Json.arr(Json.obj(
-              "url" -> "http://42go.com",
-              "isPrivate" -> true
-            ), Json.obj(
-              "url" -> "http://kifi.com",
-              "isPrivate" -> false
-            )), user, Seq(), "EMAIL")
           bookmarks.size === 2
           bookmarkRepo.all.size === 2
         }
@@ -67,19 +67,18 @@ class BookmarkInternerTest extends Specification with DbRepos {
       }
       val fakeHealthcheck = inject[FakeHealthcheck]
       fakeHealthcheck.errorCount() === 0
+      val bookmarkInterner = inject[BookmarkInterner]
+      val bookmarks = bookmarkInterner.internBookmarks(Json.arr(Json.obj(
+          "url" -> "http://42go.com",
+          "isPrivate" -> true
+        ), Json.obj(
+          "url" -> ("http://kifi.com/" + List.fill(300)("this_is_a_very_long_url/").mkString),
+          "isPrivate" -> false
+        ), Json.obj(
+          "url" -> "http://kifi.com",
+          "isPrivate" -> true
+        )), user, Seq(), "EMAIL")
       db.readWrite { implicit db =>
-        userRepo.get(user.id.get) === user
-        val bookmarkInterner = inject[BookmarkInterner]
-        val bookmarks = bookmarkInterner.internBookmarks(Json.arr(Json.obj(
-            "url" -> "http://42go.com",
-            "isPrivate" -> true
-          ), Json.obj(
-            "url" -> ("http://kifi.com/" + List.fill(300)("this_is_a_very_long_url/").mkString),
-            "isPrivate" -> false
-          ), Json.obj(
-            "url" -> "http://kifi.com",
-            "isPrivate" -> true
-          )), user, Seq(), "EMAIL")
         bookmarks.size === 2
         bookmarkRepo.all.size === 2
       }

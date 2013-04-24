@@ -67,7 +67,7 @@ class SpellCorrectorImpl(spellIndexDirectory: Directory, articleIndexDirectory: 
 
   // TODO: return more suggestions. Choose best suggestion based on surrounding text
   def getSimilarTerm(termText: String) = {
-    spellChecker.suggestSimilar(termText, 1)
+    spellChecker.suggestSimilar(termText, 1, 0.8f)
   }
 }
 
