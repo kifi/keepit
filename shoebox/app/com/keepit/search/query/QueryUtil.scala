@@ -33,28 +33,6 @@ object QueryUtil extends Logging {
   }
 
   def getTerms(query: Query): Set[Term] = {
-    query match {
-      case q: TermQuery => fromTermQuery(q)
-      case q: PhraseQuery => fromPhraseQuery(q)
-      case q: BooleanQuery => fromBooleanQuery(q)
-      case q: ConditionalQuery => fromConditionalQuery(q)
-      case q: ProximityQuery => fromProximityQuery(q)
-      case q: SemanticVectorQuery => fromSemanticVectorQuery(q)
-      case q: FilteredQuery => getTerms(q.getQuery)
-      case q: Query => fromOtherQuery(q)
-      case null => Set.empty[Term]
-    }
-  }
-
-  private def fromTermQuery(query: TermQuery) = Set(query.getTerm)
-  private def fromPhraseQuery(query: PhraseQuery) = query.getTerms().toSet
-  private def fromBooleanQuery(query: BooleanQuery) = {
-    query.getClauses.foldLeft(Set.empty[Term]){ (s, c) => if (!c.isProhibited) s ++ getTerms(c.getQuery) else s }
-  }
-  private def fromConditionalQuery(query: ConditionalQuery) = getTerms(query.source) ++ getTerms(query.condition)
-  private def fromProximityQuery(query: ProximityQuery) = query.terms.toSet
-  private def fromSemanticVectorQuery(query: SemanticVectorQuery) = query.terms.toSet
-  private def fromOtherQuery(query: Query) = {
     try {
       val terms = new JHashSet[Term]()
       query.extractTerms(terms)
