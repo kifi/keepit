@@ -127,6 +127,13 @@ const socketHandlers = {
       d.sensitive = o.sensitive;
       d.tabs.forEach(function(tab) {
         setIcon(tab, d.kept);
+
+        var keptData = {kept: o.kept, hide: o.neverOnSite || (o.sensitive && rules.sensitive)};
+        if (tab.ready) {
+          api.tabs.emit(tab, "kept", keptData);
+        } else {
+          (tab.toEmit = tab.toEmit || []).push(["kept", keptData]);
+        }
       });
     }
   },
@@ -137,6 +144,7 @@ const socketHandlers = {
       d.shown = o.shown;
       d.keepers = o.keepers || [];
       d.keeps = o.keeps || 0;
+      d.otherKeeps = d.keeps - d.keepers.length - (d.kept == "public" ? 1 : 0);
       d.following = o.following;
       d.comments = o.comments || [];
       d.threads = o.threads || [];
@@ -146,6 +154,10 @@ const socketHandlers = {
       for (var k in o.lastMessageRead) {
         d.lastMessageRead[k] = new Date(o.lastMessageRead[k]);
       }
+      d.counts = {
+        n: -newNotificationIdxs.length,
+        c: commentCount(d),
+        m: messageCount(d)};
       d.tabs.forEach(function(tab) {
         initTab(tab, d);
       });
@@ -282,28 +294,73 @@ api.port.on({
     ajax("GET", "/search/chatter", {ids: data.ids.join(".")}, respond);
     return true;
   },
+  get_keepers: function(_, respond, tab) {
+    api.log("[get_keepers]", tab.id);
+    var d = pageData[tab.nUri];
+    respond({kept: d.kept, keepers: d.keepers, otherKeeps: d.otherKeeps});
+  },
   get_num_mutual_keeps: function(data, respond) {
     api.log("[get_num_mutual_keeps]", data.id);
     ajax("GET", "/bookmarks/mutual/" + data.id, respond);
     return true;
   },
-  add_bookmarks: function(data, respond) {
-    getBookmarkFolderInfo(getStored("bookmark_id"), function(info) {
-      addKeep(info, data, respond);
+  keep: function(data, _, tab) {
+    api.log("[keep]", data);
+    var priv = data.how == "private";
+    getBookmarkFolderInfo(getStored("bookmark_id"), function(bmInfo) {
+      api.bookmarks.create(bmInfo[priv ? "privateId" : "publicId"], data.title, data.url, function(bm) {
+        bm.isPrivate = priv;
+        postBookmarks(function(f) {f([bm])}, "HOVER_KEEP");
+      });
     });
-    return true;
+    pageData[tab.nUri].tabs.forEach(function(tab) {
+      api.log("[keep]", tab.id, data.how);
+      setIcon(tab, data.how);
+      api.tabs.emit(tab, "kept", {kept: data.how});
+    });
   },
-  unkeep: function(_, respond, tab) {
-    getBookmarkFolderInfo(getStored("bookmark_id"), function(info) {
-      removeKeep(info, tab.url, respond);
+  unkeep: function(_, _, tab) {
+    api.log("[unkeep]", tab.url);
+    getBookmarkFolderInfo(getStored("bookmark_id"), function(bmInfo) {
+      api.bookmarks.search(tab.url, function(bm) {
+        bm.forEach(function(bm) {
+          if (bm.url === tab.url && (bm.parentId == bmInfo.publicId || bm.parentId == bmInfo.privateId)) {
+            api.bookmarks.remove(bm.id);
+          }
+        });
+      });
     });
-    return true;
+    ajax("POST", "/bookmarks/remove", {url: tab.url}, function(o) {
+      api.log("[unkeep] response:", o);
+    });
+    pageData[tab.nUri].tabs.forEach(function(tab) {
+      api.log("[unkeep]", tab.id);
+      setIcon(tab, false);
+      api.tabs.emit(tab, "kept", {kept: null});
+    });
   },
-  set_private: function(data, respond, tab) {
-    getBookmarkFolderInfo(getStored("bookmark_id"), function(info) {
-      setPrivate(info, tab.url, data, respond);
+  set_private: function(priv, _, tab) {
+    api.log("[setPrivate]", tab.url, priv);
+    getBookmarkFolderInfo(getStored("bookmark_id"), function(bmInfo) {
+      var newParentId = bmInfo[priv ? "privateId" : "publicId"];
+      var oldParentId = bmInfo[priv ? "publicId" : "privateId"];
+      api.bookmarks.search(url, function(bm) {
+        bm.forEach(function(bm) {
+          if (bm.url === url && bm.parentId == oldParentId) {
+            api.bookmarks.move(bm.id, newParentId);
+          }
+        });
+      });
     });
-    return true;
+    ajax("POST", "/bookmarks/private", {url: tab.url, private: priv}, function(o) {
+      api.log("[setPrivate] response:", o);
+    });
+    pageData[tab.nUri].tabs.forEach(function(tab) {
+      api.tabs.emit("kept", {kept: priv ? "private" : "public"});
+    });
+  },
+  keeper_shown: function(_, _, tab) {
+    (pageData[tab.nUri] || {}).shown = true;  // server already notified via event log
   },
   follow: function(data, respond, tab) {
     ajax("POST", "/comments/" + (data ? "follow" : "unfollow"), {url: tab.url}, function(o) {
@@ -320,11 +377,12 @@ api.port.on({
     api.prefs.set("env", env);
     chrome.runtime.reload();
   },
-  set_page_icon: function(data, _, tab) {
-    setIcon(tab, data);
-  },
   suppress_on_site: function(data, _, tab) {
     ajax("POST", "/users/slider/suppress", {url: tab.url, suppress: data});
+    pageData[tab.nUri].neverOnSite = !!data;
+  },
+  get_suppressed: function(_, respond, tab) {
+    respond(pageData[tab.nUri].neverOnSite);
   },
   log_event: function(data) {
     logEvent.apply(null, data);
@@ -430,10 +488,7 @@ api.port.on({
     if (uriData) {
       var tab = tab.nUri == data.nUri ? tab : uriData.tabs[0];
       if (tab.ready) {
-        api.tabs.emit(tab, "open_slider_to", {
-          force: true,
-          trigger: "deepLink",
-          locator: data.locator});
+        api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: data.locator});
       } else {
         createDeepLinkListener(data.locator, tab.id);
       }
@@ -497,60 +552,64 @@ function createDeepLinkListener(locator, tabId) {
       var hasForwarded = !(new RegExp("^" + webBaseUri() + "/r/", "").test(tab.url)) /* && tab.url.indexOf("dev.ezkeep.com") < 0 */;
       if (hasForwarded) {
         api.log("[createDeepLinkListener] Sending deep link to tab " + tab.id, locator);
-        api.tabs.emit(tab, "open_slider_to", {trigger: "deepLink", locator: locator});
+        api.tabs.emit(tab, "open_to", {trigger: "deepLink", locator: locator});
         api.tabs.on.ready.remove(deepLinkListener);
       }
     }
   });
 }
 
-function initTab(tab, o) {  // o is pageData[tab.nUri]
-  o.counts = {
-    n: -newNotificationIdxs.length,
-    c: commentCount(o),
-    m: messageCount(o)};
-  var data = {
-    kept: !!o.kept,
-    private: o.kept == "private",
-    keepers: o.keepers,
-    keeps: o.keeps,
-    otherKeeps: o.keeps - o.keepers.length - (o.kept == "public" ? 1 : 0),
-    sensitive: !!o.sensitive,
-    neverOnSite: !!o.neverOnSite,
-    counts: o.counts};
+function initTab(tab, d) {  // d is pageData[tab.nUri]
+  api.log("[initTab] %i %o", tab.id, d);
 
-  if (rules.message && o.counts.m < 0) {  // unread message(s)
-    var ids = unreadThreadIds(o.threads, o.lastMessageRead);
-    data.trigger = "message";
-    data.locator = "/messages" + (ids.length > 1 ? "" : "/" + ids[0]);
+  api.tabs.emit(tab, "counts", d.counts);
+
+  if (rules.message && d.counts.m < 0) {  // open immediately to unread message(s)
+    var ids = unreadThreadIds(d.threads, d.lastMessageRead);
+    var toData = {trigger: "message", locator: "/messages" + (ids.length > 1 ? "" : "/" + ids[0])};
+    if (tab.ready) {
+      api.tabs.emit(tab, "open_to", toData);
+    } else {
+      (tab.toEmit = tab.toEmit || []).push(["open_to", toData]);
+    }
     ids.forEach(function(id) {
       socket.send(["get_thread", id]);
     });
-  } else if (rules.comment && o.counts.c < 0 && !o.neverOnSite) {  // unread comment(s)
-    data.trigger = "comment";
-    data.locator = "/comments";
-  } else if (!o.kept && !o.neverOnSite && (!o.sensitive || !rules.sensitive)) {
+
+  } else if (rules.comment && d.counts.c < 0 && !d.neverOnSite) {  // open immediately to unread comment(s)
+    var toData = {trigger: "comment", locator: "/comments"};
+    if (tab.ready) {
+      api.tabs.emit(tab, "open_to", toData);
+    } else {
+      (tab.toEmit = tab.toEmit || []).push(["open_to", toData]);
+    }
+
+  } else if (!d.kept && !d.neverOnSite && (!d.sensitive || !rules.sensitive)) {  // auto-engagement
     var url = tab.url;
     if (rules.url && urlPatterns.some(function(re) {return re.test(url)})) {
       api.log("[initTab]", tab.id, "restricted");
-    } else if (rules.shown && o.shown) {
+    } else if (rules.shown && d.shown) {
       api.log("[initTab]", tab.id, "shown before");
     } else {
       if (api.prefs.get("showSlider")) {
-        data.rules = {scroll: rules.scroll}; // only the relevant one(s)
+        if (tab.ready) {
+          api.tabs.emit(tab, "scroll_rule", rules.scroll);
+        } else {
+          (tab.toEmit = tab.toEmit || []).push(["scroll_rule", rules.scroll]);
+        }
       }
-      tab.autoShowSec = (rules.focus || 0)[0];
+      tab.autoShowSec = (rules.focus || [])[0];
       if (tab.autoShowSec != null && api.tabs.isFocused(tab)) {
         scheduleAutoShow(tab);
       }
-    }
-  }
 
-  api.log("[initTab] %i %o", tab.id, data);
-  if (tab.ready) {
-    api.tabs.emit(tab, "init_slider", data);
-  } else {
-    tab.emitOnReady = ["init_slider", data];
+      var keeperData = {keepers: d.keepers, otherKeeps: d.otherKeeps};
+      if (tab.ready) {
+        api.tabs.emit(tab, "keepers", keeperData);
+      } else {
+        (tab.toEmit = tab.toEmit || []).push(["keepers", keeperData]);
+      }
+    }
   }
 }
 
@@ -672,56 +731,6 @@ function getBookmarkFolderInfo(keepItBookmarkId, callback) {
   }
 }
 
-function addKeep(bmInfo, req, respond) {
-  api.log("[addKeep] private: " + !!req.private + ", title: " + req.title);
-  api.bookmarks.create(bmInfo[req.private ? "privateId" : "publicId"], req.title, req.url, function(bm) {
-    respond(bm);
-    bm.isPrivate = !!req.private;
-    postBookmarks(function(f) {f([bm])}, "HOVER_KEEP");
-  });
-}
-
-function removeKeep(bmInfo, url, respond) {
-  api.log("[removeKeep] url:", url);
-
-  if (!session) {
-    api.log("[removeKeep] no session");
-    return;
-  }
-
-  api.bookmarks.search(url, function(bm) {
-    bm.forEach(function(bm) {
-      if (bm.url === url && (bm.parentId == bmInfo.publicId || bm.parentId == bmInfo.privateId)) {
-        api.bookmarks.remove(bm.id);
-      }
-    });
-  });
-
-  ajax("POST", "/bookmarks/remove", {url: url}, function(o) {
-    api.log("[removeKeep] response:", o);
-    respond(o);
-  });
-}
-
-function setPrivate(bmInfo, url, priv, respond) {
-  api.log("[setPrivate]", url, priv);
-
-  var newParentId = priv ? bmInfo.privateId : bmInfo.publicId;
-  var oldParentId = priv ? bmInfo.publicId : bmInfo.privateId;
-  api.bookmarks.search(url, function(bm) {
-    bm.forEach(function(bm) {
-      if (bm.url === url && bm.parentId == oldParentId) {
-        api.bookmarks.move(bm.id, newParentId);
-      }
-    });
-  });
-
-  ajax("POST", "/bookmarks/private", {url: url, private: priv}, function(o) {
-    api.log("[setPrivate] response:", o);
-    respond(o);
-  });
-}
-
 function searchOnServer(request, respond) {
   logEvent("search", "newSearch", {query: request.query, filter: request.filter});
 
@@ -829,12 +838,11 @@ api.tabs.on.ready.add(function(tab) {
   api.log("#b8a", "[tabs.on.ready] %i %o", tab.id, tab);
   logEvent("extension", "pageLoad");
 
-  var emission = tab.emitOnReady;
-  if (emission) {
+  (tab.toEmit || []).forEach(function(emission) {
     api.log("[tabs.on.ready] emitting: %i %o", tab.id, emission[0]);
     api.tabs.emit(tab, emission[0], emission[1]);
-    delete tab.emitOnReady;
-  }
+  });
+  delete tab.toEmit;
 });
 
 api.tabs.on.complete.add(function(tab) {
@@ -872,7 +880,7 @@ function scheduleAutoShow(tab) {
           api.tabs.emit(tab, "auto_show");
         } else {
           api.log("[scheduleAutoShow:1] fired but tab not ready:", tab.id);
-          tab.emitOnReady = ["auto_show"];
+          (tab.toEmit = tab.toEmit || []).push(["auto_show"]);
         }
       }
     }, tab.autoShowSec * 1000);

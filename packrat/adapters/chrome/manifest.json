@@ -1,6 +1,6 @@
 {
   "name": "KiFi Beta",
-  "version": "2.3.20",
+  "version": "2.3.21",
   "manifest_version": 2,
   "description": "KiFi Private Beta",
   "icons": {
@@ -53,6 +53,7 @@
     "html/metro/notice_message.html",
     "html/metro/notices.html",
     "html/metro/compose.html",
+    "html/metro/general.html",
     "html/metro/keepers.html",
     "html/metro/message.html",
     "html/metro/messages.html",
