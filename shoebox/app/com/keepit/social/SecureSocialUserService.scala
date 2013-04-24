@@ -24,12 +24,17 @@ class SecureSocialIdGenerator(app: Application) extends IdGenerator(app) {
 
 class SecureSocialAuthenticatorStore(app: Application) extends AuthenticatorStore(app) {
   lazy val global = app.global.asInstanceOf[FortyTwoGlobal]
+  lazy val plugin = {
+    val injector = new RichInjector(global.injector)
+    new SecureSocialAuthenticatorPlugin(
+      injector.inject[Database],
+      injector.inject[SocialUserInfoRepo],
+      injector.inject[UserSessionRepo],
+      injector.inject[HealthcheckPlugin],
+      app)
+  }
   def proxy: Option[SecureSocialAuthenticatorPlugin] = {
-    if (global.initialized) {
-      val injector = new RichInjector(global.injector)
-      Some(new SecureSocialAuthenticatorPlugin(
-        injector.inject[Database], injector.inject[SocialUserInfoRepo], injector.inject[UserSessionRepo], app))
-    } else None
+    if (global.initialized) Some(plugin) else None
   }
   def save(authenticator: Authenticator): Either[Error, Unit] = proxy.get.save(authenticator)
   def find(id: String): Either[Error, Option[Authenticator]] = proxy.get.find(id)
@@ -41,7 +46,15 @@ class SecureSocialAuthenticatorPlugin @Inject()(
   db: Database,
   socialUserInfoRepo: SocialUserInfoRepo,
   sessionRepo: UserSessionRepo,
+  healthcheckPlugin: HealthcheckPlugin,
   app: Application) extends AuthenticatorStore(app) {
+
+  private def reportExceptions[T](f: => T): Either[Error, T] =
+    try Right(f) catch { case ex: Throwable =>
+      healthcheckPlugin.addError(
+        HealthcheckError(error = Some(ex), method = None, path = None, callType = Healthcheck.INTERNAL))
+      Left(new Error(ex))
+    }
 
   private def sessionFromAuthenticator(authenticator: Authenticator): UserSession = {
     val (socialId, provider) = (SocialId(authenticator.userId.id), SocialNetworkType(authenticator.userId.providerId))
@@ -63,7 +76,7 @@ class SecureSocialAuthenticatorPlugin @Inject()(
     expirationDate = session.expires
   )
 
-  def save(authenticator: Authenticator): Either[Error, Unit] = {
+  def save(authenticator: Authenticator): Either[Error, Unit] = reportExceptions {
     val newSession = sessionFromAuthenticator(authenticator)
     val session = db.readWrite { implicit s =>
       val maybeOldSession = sessionRepo.getOpt(newSession.externalId)
@@ -72,9 +85,9 @@ class SecureSocialAuthenticatorPlugin @Inject()(
         createdAt = maybeOldSession.map(_.createdAt).getOrElse(newSession.createdAt)
       ))
     }
-    Right(authenticatorFromSession(session))
+    authenticatorFromSession(session)
   }
-  def find(id: String): Either[Error, Option[Authenticator]] = Right {
+  def find(id: String): Either[Error, Option[Authenticator]] = reportExceptions {
     val externalIdOpt = try {
       Some(ExternalId[UserSession](id))
     } catch {
@@ -89,7 +102,7 @@ class SecureSocialAuthenticatorPlugin @Inject()(
       }
     } flatten
   }
-  def delete(id: String): Either[Error, Unit] = Right {
+  def delete(id: String): Either[Error, Unit] = reportExceptions {
     db.readWrite { implicit s =>
       sessionRepo.getOpt(ExternalId[UserSession](id)).foreach { session =>
         sessionRepo.save(session invalidated)
@@ -100,9 +113,7 @@ class SecureSocialAuthenticatorPlugin @Inject()(
 
 class SecureSocialUserService(implicit val application: Application) extends UserServicePlugin(application) {
   lazy val global = application.global.asInstanceOf[FortyTwoGlobal]
-  lazy val injector = new RichInjector(global.injector)
-  lazy val healthCheckPlugin = injector.inject[HealthcheckPlugin]
-  
+
   def proxy: Option[SecureSocialUserPlugin] = {
     // Play will try to initialize this plugin before FortyTwoGlobal is fully initialized. This will cause
     // FortyTwoGlobal to attempt to initialize AppScope in multiple threads, causing deadlock. This allows us to wait
@@ -115,28 +126,27 @@ class SecureSocialUserService(implicit val application: Application) extends Use
 
   def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser] =
     proxy.get.findByEmailAndProvider(email, providerId)
-  def save(token: Token) = reportExceptions { proxy.get.save(token) }
-  def findToken(token: String) = reportExceptions(proxy.get.findToken(token))
-  def deleteToken(uuid: String) = reportExceptions { proxy.get.deleteToken(uuid) }
-  def deleteExpiredTokens() = reportExceptions { proxy.foreach(_.deleteExpiredTokens()) }
+  def save(token: Token) = proxy.get.save(token)
+  def findToken(token: String) = proxy.get.findToken(token)
+  def deleteToken(uuid: String) = proxy.get.deleteToken(uuid)
+  def deleteExpiredTokens() = proxy.foreach(_.deleteExpiredTokens())
 
-  private def reportExceptions[T](f: => T): T = {
-    try {
-      f
-    } catch {
-      case ex: Throwable =>
-        healthCheckPlugin.addError(HealthcheckError(error = Some(ex), method = None, path = None, callType = Healthcheck.INTERNAL))
-        throw ex
-    }
-  }
 }
 
 @Singleton
 class SecureSocialUserPlugin @Inject() (
     db: Database,
     socialUserInfoRepo: SocialUserInfoRepo,
-    userRepo: UserRepo)
+    userRepo: UserRepo,
+    healthcheckPlugin: HealthcheckPlugin)
   extends UserService with Logging {
+
+  private def reportExceptions[T](f: => T): T =
+    try f catch { case ex: Throwable =>
+      healthcheckPlugin.addError(
+        HealthcheckError(error = Some(ex), method = None, path = None, callType = Healthcheck.INTERNAL))
+      throw ex
+    }
 
   private var maybeSocialGraphPlugin: Option[SocialGraphPlugin] = None
 
@@ -145,7 +155,7 @@ class SecureSocialUserPlugin @Inject() (
     maybeSocialGraphPlugin = Some(sgp)
   }
 
-  def find(id: UserId): Option[SocialUser] =
+  def find(id: UserId): Option[SocialUser] = reportExceptions {
     db.readOnly { implicit s =>
       socialUserInfoRepo.getOpt(SocialId(id.id), SocialNetworkType(id.providerId))
     } match {
@@ -156,20 +166,23 @@ class SecureSocialUserPlugin @Inject() (
         log.debug("User found: %s for %s".format(user, id))
         user.credentials
     }
+  }
 
-  def save(identity: Identity): SocialUser = db.readWrite { implicit s =>
-    val socialUser = SocialUser(identity)
-    log.debug("persisting social user %s".format(socialUser))
-    val socialUserInfo = socialUserInfoRepo.save(internUser(
-      SocialId(socialUser.id.id), SocialNetworkType(socialUser.id.providerId), socialUser).withCredentials(socialUser))
-    require(socialUserInfo.credentials.isDefined,
-      "social user info's credentials is not defined: %s".format(socialUserInfo))
-    require(socialUserInfo.userId.isDefined, "social user id  is not defined: %s".format(socialUserInfo))
-    for (sgp <- maybeSocialGraphPlugin if socialUserInfo.state != SocialUserInfoStates.FETCHED_USING_SELF) {
-      sgp.asyncFetch(socialUserInfo)
+  def save(identity: Identity): SocialUser = reportExceptions {
+    db.readWrite { implicit s =>
+      val socialUser = SocialUser(identity)
+      log.debug("persisting social user %s".format(socialUser))
+      val socialUserInfo = socialUserInfoRepo.save(internUser(
+        SocialId(socialUser.id.id), SocialNetworkType(socialUser.id.providerId), socialUser).withCredentials(socialUser))
+      require(socialUserInfo.credentials.isDefined,
+        "social user info's credentials is not defined: %s".format(socialUserInfo))
+      require(socialUserInfo.userId.isDefined, "social user id  is not defined: %s".format(socialUserInfo))
+      for (sgp <- maybeSocialGraphPlugin if socialUserInfo.state != SocialUserInfoStates.FETCHED_USING_SELF) {
+        sgp.asyncFetch(socialUserInfo)
+      }
+      log.debug("persisting %s into %s".format(socialUser, socialUserInfo))
+      socialUser
     }
-    log.debug("persisting %s into %s".format(socialUser, socialUserInfo))
-    socialUser
   }
 
   private def createUser(displayName: String): User = {
@@ -181,7 +194,8 @@ class SecureSocialUserPlugin @Inject() (
     )
   }
 
-  private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser)(implicit session: RWSession): SocialUserInfo = {
+  private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType,
+      socialUser: SocialUser)(implicit session: RWSession): SocialUserInfo = {
     socialUserInfoRepo.getOpt(socialId, socialNetworkType) match {
       case Some(socialUserInfo) if (!socialUserInfo.userId.isEmpty) =>
         socialUserInfo
