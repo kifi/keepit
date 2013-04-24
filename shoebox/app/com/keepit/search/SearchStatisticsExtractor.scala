@@ -27,6 +27,7 @@ import com.keepit.common.analytics.MongoSelector
 import com.keepit.common.analytics.EventFamilies
 import com.keepit.serializer.EventSerializer
 import com.keepit.serializer.SearchResultInfoSerializer
+import com.keepit.common.logging.Logging
 
 case class BasicQueryInfo(
   queryUUID: ExternalId[ArticleSearchResultRef],
@@ -98,13 +99,14 @@ class SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
   queryString: String, userId: Id[User], uriLabelMap: scala.collection.immutable.Map[Id[NormalizedURI], UriLabel],
   db: Database, userRepo: UserRepo, socialConnectionRepo: SocialConnectionRepo, uriGraph: URIGraph,
   articleIndexer: ArticleIndexer, searchConfigManager: SearchConfigManager, mainSearcherFactory: MainSearcherFactory, parserFactory: MainQueryParserFactory,
-  browsingHistoryTracker: BrowsingHistoryTracker, clickHistoryTracker: ClickHistoryTracker, resultClickTracker: ResultClickTracker, store: MongoEventStore) {
+  browsingHistoryTracker: BrowsingHistoryTracker, clickHistoryTracker: ClickHistoryTracker, resultClickTracker: ResultClickTracker, store: MongoEventStore) extends Logging{
 
   val searcher = new SearchStatisticsHelperSearcher(queryString, userId, uriLabelMap.keySet.toSeq, db, userRepo, socialConnectionRepo, uriGraph,
       articleIndexer, searchConfigManager, mainSearcherFactory, parserFactory,
       browsingHistoryTracker, clickHistoryTracker, resultClickTracker)
 
   private def getLuceneExplain(uriId: Id[NormalizedURI]) = {
+    log.info("getting lucene explanation for uriId: " + uriId.id)
     searcher.parsedQuery.map{ query =>
       val personalizedSearcher = searcher.getPersonalizedSearcher(query)
       personalizedSearcher.setSimilarity(searcher.similarity)
@@ -193,7 +195,7 @@ object TrainingDataLabeler {
 class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], targetUriIds: Seq[Id[NormalizedURI]],
   db: Database, userRepo: UserRepo, socialConnectionRepo: SocialConnectionRepo, uriGraph: URIGraph,
   articleIndexer: ArticleIndexer, searchConfigManager: SearchConfigManager, mainSearcherFactory: MainSearcherFactory, parserFactory: MainQueryParserFactory,
-  browsingHistoryTracker: BrowsingHistoryTracker, clickHistoryTracker: ClickHistoryTracker, resultClickTracker: ResultClickTracker) {
+  browsingHistoryTracker: BrowsingHistoryTracker, clickHistoryTracker: ClickHistoryTracker, resultClickTracker: ResultClickTracker) extends Logging{
 
   val currentTime = currentDateTime.getMillis()
   val (config, experimentId) = searchConfigManager.getConfig(userId, queryString)
@@ -297,7 +299,7 @@ class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], tar
   }
 
   def getUriInfo() = {
-
+    log.info("start fetching uri info ...")
     var uriInfoMap = Map.empty[Id[NormalizedURI], UriInfo]
     val idsetFilter = new IdSetFilter(targetUriIds.map{_.id}.toSet)
 
@@ -338,6 +340,7 @@ class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], tar
         }
       }
     }
+    log.info("uri info fetched !!!")
     uriInfoMap
   }
 
