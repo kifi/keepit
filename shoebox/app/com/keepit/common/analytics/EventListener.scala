@@ -218,9 +218,9 @@ class SearchUnloadListenerImpl @Inject() (
 
         val (userId, kifiClickedIds, kifiShownIds, googleClickedIds) = db.readOnly { implicit s =>
           val userId = userRepo.get(extUserId).id.get
-          val kifiClickedIds = kifiClickedUris.map { normalizedURIRepo.getByNormalizedUrl(_) }.filter(_ != None).map(_.get.id).filter(_ != None).map(_.get)
-          val googleClickedIds = googleUris.map { normalizedURIRepo.getByNormalizedUrl(_) }.filter(_ != None).map(_.get.id).filter(_ != None).map(_.get)
-          val kifiShownIds = kifiShownUris.map { normalizedURIRepo.getByNormalizedUrl(_) }.filter(_ != None).map(_.get.id).filter(_ != None).map(_.get)
+          val kifiClickedIds = kifiClickedUris.flatMap{ normalizedURIRepo.getByNormalizedUrl(_) }.flatMap(_.id)
+          val googleClickedIds = googleUris.flatMap{ normalizedURIRepo.getByNormalizedUrl(_) }.flatMap(_.id)
+          val kifiShownIds = kifiShownUris.flatMap{ normalizedURIRepo.getByNormalizedUrl(_) }.flatMap(_.id)
           (userId, kifiClickedIds, googleClickedIds, kifiShownIds)
         }
 
