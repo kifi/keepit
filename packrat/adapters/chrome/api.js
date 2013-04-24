@@ -110,6 +110,9 @@ api = function() {
     onRemoved(oldTabId);
     chrome.tabs.get(newTabId, function(tab) {
       if (tab) {
+        if (selectedTabIds[tab.windowId] === oldTabId) {
+          selectedTabIds[tab.windowId] = newTabId;
+        }
         createPageAndInjectContentScripts(tab);
       } else {
         api.log("#800", "[onReplaced] %i no tab", newTabId);
