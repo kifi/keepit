@@ -40,6 +40,7 @@ class SecureSocialAuthenticatorPlugin @Inject()(
   socialUserInfoRepo: SocialUserInfoRepo,
   sessionRepo: UserSessionRepo,
   app: Application) extends AuthenticatorStore(app) {
+
   private def sessionFromAuthenticator(authenticator: Authenticator): UserSession = {
     val (socialId, provider) = (SocialId(authenticator.userId.id), SocialNetworkType(authenticator.userId.providerId))
     val userId = db.readOnly { implicit s => socialUserInfoRepo.get(socialId, provider).userId }
@@ -61,8 +62,8 @@ class SecureSocialAuthenticatorPlugin @Inject()(
   )
 
   def save(authenticator: Authenticator): Either[Error, Unit] = {
+    val newSession = sessionFromAuthenticator(authenticator)
     val session = db.readWrite { implicit s =>
-      val newSession = sessionFromAuthenticator(authenticator)
       val maybeOldSession = sessionRepo.getOpt(newSession.externalId)
       sessionRepo.save(newSession.copy(
         id = maybeOldSession.map(_.id.get),
