@@ -505,7 +505,7 @@ api.log("[google_inject]");
     hit.displayScore = response.showScores === true ? "[" + Math.round(hit.score * 100) / 100 + "] " : "";
 
     var fil = response.filter || "", ids = fil.length > 1 ? fil.split(".") : null;
-    hit.displaySelf = fil != "f" && !ids;
+    hit.displaySelf = fil != "f" && !ids && hit.isMyBookmark;
     hit.displayUsers = fil == "m" ? [] :
       ids ? hit.users.filter(function(u) {return ~ids.indexOf(u.id)}) :
       hit.users;
