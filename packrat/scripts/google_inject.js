@@ -173,7 +173,7 @@ api.log("[google_inject]");
         "queryUUID": response.uuid,
         "kifiResultsClicked": clicks.kifi.length,
         "googleResultsClicked": clicks.google.length,
-        "kifiShownURIs": resp.expanded ? resp.hits.map(function(hit) {return hit.bookmark.url}) : [],
+        "kifiShownURIs": response.expanded ? response.hits.map(function(hit) {return hit.bookmark.url}) : [],
         "kifiClickedURIs": clicks.kifi,
         "googleClickedURIs": clicks.google});
     }
