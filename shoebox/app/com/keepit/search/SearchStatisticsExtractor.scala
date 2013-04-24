@@ -164,16 +164,19 @@ class SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
 }
 
 
-object TrainingDataLabeler {
+object TrainingDataLabeler extends Logging{
   private val topNkifi = 2      // at most the top 2 kifi results would be labeled as negative samples
 
   def getLabeledData(kifiClicked: Seq[Id[NormalizedURI]], googleClicked: Seq[Id[NormalizedURI]], kifiShown: Seq[Id[NormalizedURI]]) = {
     var data = Map.empty[Id[NormalizedURI], (Boolean, Boolean)]         // (isPositive, isCorrectlyRanked)
+    log.info("collecting training data ...")
     if (kifiClicked.nonEmpty) {
       kifiClicked.foreach( uri => data += uri -> (true, true))
+      log.info("positive data collected !!!")
     } else {
       val isCorrectlyRanked = googleClicked.isEmpty || googleClicked.exists(uri => kifiShown.contains(uri))         // true if the clicked google uri is not indexed, or it was shown to the user
       kifiShown.take(topNkifi).foreach( uri => if (!googleClicked.contains(uri)) data += uri -> (false, isCorrectlyRanked))
+      if (data.nonEmpty) log.info("negative data collected !!!")
     }
     data
   }
