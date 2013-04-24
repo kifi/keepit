@@ -14,6 +14,7 @@ import com.keepit.model._
 import com.keepit.common.db.slick._
 import org.apache.zookeeper.CreateMode
 import play.api.libs.json.Json
+import com.keepit.common.healthcheck._
 
 class BookmarkInternerTest extends Specification with DbRepos {
 
@@ -56,6 +57,33 @@ class BookmarkInternerTest extends Specification with DbRepos {
           bookmarkRepo.all.size === 2
         }
       }
+    }
+  }
+
+  "persist bookmarks whit one bad url" in {
+    running(new EmptyApplication().withFakeHealthcheck().withFakeScraper()) {
+      val user = db.readWrite { implicit db =>
+        userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
+      }
+      val fakeHealthcheck = inject[FakeHealthcheck]
+      fakeHealthcheck.errorCount() === 0
+      db.readWrite { implicit db =>
+        userRepo.get(user.id.get) === user
+        val bookmarkInterner = inject[BookmarkInterner]
+        val bookmarks = bookmarkInterner.internBookmarks(Json.arr(Json.obj(
+            "url" -> "http://42go.com",
+            "isPrivate" -> true
+          ), Json.obj(
+            "url" -> ("http://kifi.com/" + List.fill(300)("this_is_a_very_long_url/").mkString),
+            "isPrivate" -> false
+          ), Json.obj(
+            "url" -> "http://kifi.com",
+            "isPrivate" -> true
+          )), user, Seq(), "EMAIL")
+        bookmarks.size === 2
+        bookmarkRepo.all.size === 2
+      }
+      fakeHealthcheck.errorCount() === 1
     }
   }
 

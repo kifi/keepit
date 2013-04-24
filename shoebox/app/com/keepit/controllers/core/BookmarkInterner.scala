@@ -8,6 +8,7 @@ import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.logging.Logging
+import com.keepit.common.healthcheck._
 
 import play.api.libs.json._
 
@@ -26,6 +27,7 @@ class BookmarkInterner @Inject() (
   urlRepo: URLRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   activityStream: ActivityStream,
+  healthcheckPlugin: HealthcheckPlugin,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends Logging {
@@ -61,21 +63,27 @@ class BookmarkInterner @Inject() (
     }
   }
 
-  private def internBookmark(json: JsObject, user: User, experiments: Seq[State[ExperimentType]], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): Option[Bookmark] = {
-    val title = (json \ "title").asOpt[String]
-    val url = (json \ "url").as[String]
-    val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
-    if (!url.toLowerCase.startsWith("javascript:")) {
-      log.debug("interning bookmark %s with title [%s]".format(json, title))
-      val (uri, needsToScrape) = findUri(url, title)
-      if (needsToScrape) scraper.asyncScrape(uri)
-      val bookmark = internBookmark(uri, user, isPrivate, experiments, installationId, source, title, url)
-      if(bookmark.isDefined) addToActivityStream(user, bookmark.get)
-      bookmark
-    } else {
-      None
+  private def internBookmark(json: JsObject, user: User, experiments: Seq[State[ExperimentType]], source: BookmarkSource, installationId: Option[ExternalId[KifiInstallation]] = None): Option[Bookmark] = try {
+      val title = (json \ "title").asOpt[String]
+      val url = (json \ "url").as[String]
+      val isPrivate = (json \ "isPrivate").asOpt[Boolean].getOrElse(true)
+      if (!url.toLowerCase.startsWith("javascript:")) {
+        log.debug("interning bookmark %s with title [%s]".format(json, title))
+        val (uri, needsToScrape) = findUri(url, title)
+        if (needsToScrape) scraper.asyncScrape(uri)
+        val bookmark = internBookmark(uri, user, isPrivate, experiments, installationId, source, title, url)
+        if(bookmark.isDefined) addToActivityStream(user, bookmark.get)
+        bookmark
+      } else {
+        None
+      }
+    } catch {
+      case e: Exception =>
+        //note that at this point we continue on. we don't want to mess the upload of entire user bookmarks because of one bad bookmark.
+        healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.API,
+          Some(s"Exception while loading one of the bookmarks of user $user: ${e.getMessage} from json: $json source: $source")))
+        None
     }
-  }
 
   private def createNewURI(title: Option[String], url: String)(implicit session: RWSession) =
     uriRepo.save(NormalizedURIFactory(title = title, url = url, state = NormalizedURIStates.SCRAPE_WANTED))

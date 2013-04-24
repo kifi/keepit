@@ -46,8 +46,11 @@ case class URL (
 }
 
 object URLFactory {
-  def apply(url: String, normalizedUriId: Id[NormalizedURI]) =
+  val MAX_URL_SIZE = 3072
+  def apply(url: String, normalizedUriId: Id[NormalizedURI]) = {
+    if (url.size > MAX_URL_SIZE) throw new Exception(s"url size is ${url.size} which exceeds $MAX_URL_SIZE: $url")
     URL(url = url, normalizedUriId = normalizedUriId, domain = URI.parse(url).toOption.flatMap(_.host).map(_.name))
+  }
 }
 
 @ImplementedBy(classOf[URLRepoImpl])
