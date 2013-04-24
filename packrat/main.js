@@ -127,13 +127,7 @@ const socketHandlers = {
       d.sensitive = o.sensitive;
       d.tabs.forEach(function(tab) {
         setIcon(tab, d.kept);
-
-        var keptData = {kept: o.kept, hide: o.neverOnSite || (o.sensitive && rules.sensitive)};
-        if (tab.ready) {
-          api.tabs.emit(tab, "kept", keptData);
-        } else {
-          (tab.toEmit = tab.toEmit || []).push(["kept", keptData]);
-        }
+        sendKept(tab, d);
       });
     }
   },
@@ -314,7 +308,6 @@ api.port.on({
       });
     });
     pageData[tab.nUri].tabs.forEach(function(tab) {
-      api.log("[keep]", tab.id, data.how);
       setIcon(tab, data.how);
       api.tabs.emit(tab, "kept", {kept: data.how});
     });
@@ -334,7 +327,6 @@ api.port.on({
       api.log("[unkeep] response:", o);
     });
     pageData[tab.nUri].tabs.forEach(function(tab) {
-      api.log("[unkeep]", tab.id);
       setIcon(tab, false);
       api.tabs.emit(tab, "kept", {kept: null});
     });
@@ -344,9 +336,9 @@ api.port.on({
     getBookmarkFolderInfo(getStored("bookmark_id"), function(bmInfo) {
       var newParentId = bmInfo[priv ? "privateId" : "publicId"];
       var oldParentId = bmInfo[priv ? "publicId" : "privateId"];
-      api.bookmarks.search(url, function(bm) {
+      api.bookmarks.search(tab.url, function(bm) {
         bm.forEach(function(bm) {
-          if (bm.url === url && bm.parentId == oldParentId) {
+          if (bm.url === tab.url && bm.parentId == oldParentId) {
             api.bookmarks.move(bm.id, newParentId);
           }
         });
@@ -770,6 +762,7 @@ function subscribe(tab) {
     if (d && d.counts) {  // optimization: page url is normalized and page is open elsewhere
       finish(tab.url);
       setIcon(tab, d.kept);
+      sendKept(tab, d);
       initTab(tab, d);
     } else if (socket) {
       socket.send(["subscribe_uri", tab.url], function(uri) {
@@ -793,6 +786,15 @@ function subscribe(tab) {
 function setIcon(tab, kept) {
   api.log("[setIcon] tab:", tab.id, "kept:", kept);
   api.icon.set(tab, kept ? "icons/kept.png" : "icons/keep.png");
+}
+
+function sendKept(tab, d) {
+  var keptData = {kept: d.kept, hide: d.neverOnSite || (d.sensitive && rules.sensitive)};
+  if (tab.ready) {
+    api.tabs.emit(tab, "kept", keptData);
+  } else {
+    (tab.toEmit = tab.toEmit || []).push(["kept", keptData]);
+  }
 }
 
 function postBookmarks(supplyBookmarks, bookmarkSource) {
