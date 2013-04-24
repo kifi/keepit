@@ -56,7 +56,7 @@ trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
   def getPrivate(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
   def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment]
   def getParentMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
-  def getParentByUriRecipients(normUri: Id[NormalizedURI], userId: Id[User], recipients: Set[Id[User]])(implicit session: RSession): Option[Id[Comment]]
+  def getParentByUriRecipients(normUri: Id[NormalizedURI], recipients: Set[Id[User]])(implicit session: RSession): Option[Id[Comment]]
   def count(permissions: State[CommentPermission] = CommentPermissions.PUBLIC)(implicit session: RSession): Int
   def page(page: Int, size: Int, permissions: State[CommentPermission])(implicit session: RSession): Seq[Comment]
   def getParticipantsUserIds(commentId: Id[Comment])(implicit session: RSession): Set[Id[User]]
@@ -166,8 +166,7 @@ class CommentRepoImpl @Inject() (
       val conn = session.conn
       val st = conn.createStatement()
       
-      val allRecipients = (recipients + userId)
-      val recipientIn = allRecipients.map(_.id).mkString(",")
+      val recipientIn = recipients.map(_.id).mkString(",")
       val sql =
         s"""
           select c.user_id as author, cr.user_id as recipient, c.id as comment_id 
@@ -186,7 +185,7 @@ class CommentRepoImpl @Inject() (
         case (key, value) => key
       }.map(a => a._1 -> a._2.map(_._2))
       
-      val candidates = threadToUserIds.filter { case (comment, userSet) => userSet == allRecipients }
+      val candidates = threadToUserIds.filter { case (comment, userSet) => userSet == recipients }
       candidates.map(_._1).headOption
   }
 
