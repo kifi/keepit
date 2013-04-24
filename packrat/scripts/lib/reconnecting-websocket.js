@@ -7,7 +7,7 @@ function ReconnectingWebSocket(url, onmessage) {
   this.send = function(data) {
     if (closed) {
       throw "closed, try back tomorrow";
-    } else if (ws && ws.readyState == WebSocket.OPEN) {
+    } else if (ws && ws.greeted && ws.readyState == WebSocket.OPEN) {
       ws.send(data);
     } else {
       buffer.push([data, +new Date]);
@@ -30,12 +30,9 @@ function ReconnectingWebSocket(url, onmessage) {
     var t = setTimeout(onConnectTimeout.bind(null, ws), 5000);
 
     ws.onopen = function() {
+      api.log("#0bf", "[RWS.onopen]");
       clearTimeout(t);
-      while (buffer.length) {
-        var a = buffer.shift();
-        api.log("#0bf", "[RWS.onopen] sending, buffered for %i ms: %s", new Date - a[1], (wordRe.exec(a[0]) || a)[0]);
-        ws.send(a[0]);
-      }
+      t = setTimeout(onConnectTimeout.bind(null, ws), 2000);
     };
 
     ws.onclose = function(e) {
@@ -49,7 +46,25 @@ function ReconnectingWebSocket(url, onmessage) {
       }
     };
 
-    ws.onmessage = onmessage.bind(self);
+    ws.onmessage = function(e) {
+      if (e.data === '["hi"]') {
+        api.log("#0bf", "[RWS.onmessage]", e.data);
+        clearTimeout(t);
+        ws.greeted = true;
+        ws.onmessage = onmessage.bind(self);
+        retryConnectDelayMs = minRetryConnectDelayMs;
+        while (buffer.length) {
+          var a = buffer.shift();
+          api.log("#0bf", "[RWS] sending, buffered for %i ms: %s", new Date - a[1], (wordRe.exec(a[0]) || a)[0]);
+          ws.send(a[0]);
+        }
+      } else if (e.data === '["denied"]') {
+        api.log("#a00", "[RWS.onmessage]", e.data);
+      } else {
+        api.log("#a00", "[RWS.onmessage] relaying");
+        onmessage.call(self, e);
+      }
+    };
   }
 
   function onConnectTimeout(ws) {
