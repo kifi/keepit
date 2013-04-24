@@ -167,6 +167,15 @@ class CommentRepoImpl @Inject() (
       val st = conn.createStatement()
       
       val recipientIn = recipients.map(_.id).mkString(",")
+      
+      /*
+       * To save you from having to decipher below, the algorithm:
+       *  1) Get all the (author, recipient, commentId)s for a given URI where the author or recipient is one of `recipients`
+       *  2) Built a set of (user, commentId) from (1), including both the author and recipient. Authors will be duplicated, so use sets.
+       *  3) Convert to a Map from commentId -> Set(userIds). i.e., for every commentId, the set of recipients
+       *  4) Filter (3) by threads with a recipient set that are the same as `recipients`
+       *  5) Grab the first
+       */
       val sql =
         s"""
           select c.user_id as author, cr.user_id as recipient, c.id as comment_id 

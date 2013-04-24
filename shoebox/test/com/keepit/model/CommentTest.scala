@@ -164,7 +164,6 @@ class CommentTest extends Specification with DbRepos {
           commentRecipientRepo.save(CommentRecipient(commentId = msg4.id.get, userId = Some(user3.id.get)))
 
           commentRepo.getParentByUriRecipients(uri1.id.get, Set(user1.id.get, user2.id.get, user3.id.get)) === msg4.id
-          commentRepo.getParentByUriRecipients(uri1.id.get, Set(user3.id.get, user2.id.get, user1.id.get)) === msg4.id
           
           commentRepo.getParentByUriRecipients(uri1.id.get, Set(user1.id.get, user2.id.get)) === msg1.id
           commentRepo.getParentByUriRecipients(uri1.id.get, Set(user3.id.get, user1.id.get)) === None
