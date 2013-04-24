@@ -162,38 +162,32 @@ class CommentRepoImpl @Inject() (
     (q1.list ++ q2.list).toSet.toSeq
   }
   
-  def getParentByUriRecipients(normUri: Id[NormalizedURI], userId: Id[User], recipients: Set[Id[User]])(implicit session: RSession): Option[Id[Comment]] = {
+  def getParentByUriRecipients(normUri: Id[NormalizedURI], recipients: Set[Id[User]])(implicit session: RSession): Option[Id[Comment]] = {
       val conn = session.conn
       val st = conn.createStatement()
       
-      // It's possible to write the following query using 2 joins and a union, but it's very difficult to follow.
-      // The explain of this is quite clean and is easier to read, in my opinion. Suggestions welcome. Basically:
-      //  1) get all threads that the user has access to (they are the creator, and they are a recipient) for this URI
-      //  2) get all comment_recipients of these (#1) threads
-      //  3) with #2, union all threads that the user created for this URI
-      // This yields (userId,commentId) pairs.
+      val allRecipients = (recipients + userId)
+      val recipientIn = allRecipients.map(_.id).mkString(",")
       val sql =
         s"""
-          (select comment_id as id, user_id from comment_recipient /* #2 */
-            join (
-              /* #1 */
-              select distinct c.id from comment c join comment_recipient cr on cr.comment_id = c.id
-              where (cr.user_id = ${userId.id} or c.user_id = ${userId.id}) and c.parent is null
-                and c.normalized_uri_id = ${normUri.id}
-            ) threads on threads.id = comment_recipient.comment_id
-          ) union /* #3 */
-          (select id, user_id from comment c where c.user_id = ${userId.id} and c.parent is null and c.normalized_uri_id = ${normUri.id});
+          select c.user_id as author, cr.user_id as recipient, c.id as comment_id 
+          from comment_recipient cr
+          join comment c on (c.id = cr.comment_id)
+          where (cr.user_id IN($recipientIn) or c.user_id IN($recipientIn)) and c.normalized_uri_id = ${normUri.id} and c.parent is null;
         """
       val rs = st.executeQuery(sql)
-      val threadUserIdPairs = Iterator.continually((rs, rs.next)).takeWhile(_._2).map(_._1).map { result =>
-        val commentId = Id[Comment](result.getLong("id"))
-        val userId = Id[User](result.getLong("user_id"))
-        (commentId, userId)
-      }.toSet
+      val threadToUserIds = Iterator.continually((rs, rs.next)).takeWhile(_._2).map(_._1).map { result =>
+        val author = Id[User](result.getLong("author"))
+        val recipient = Id[User](result.getLong("recipient"))
+        val commentId = Id[Comment](result.getLong("comment_id"))
+        
+        Set((commentId, author), (commentId, recipient))
+      }.toSet.flatten.groupBy {
+        case (key, value) => key
+      }.map(a => a._1 -> a._2.map(_._2))
       
-      val candidates = recipients.map { recipient => threadUserIdPairs.filter(_._2 == recipient).map(_._1) }
-      
-      candidates.foldLeft(candidates.head)( (a,b) => a.intersect(b) ).headOption
+      val candidates = threadToUserIds.filter { case (comment, userSet) => userSet == allRecipients }
+      candidates.map(_._1).headOption
   }
 
   def count(permissions: State[CommentPermission])(implicit session: RSession): Int =

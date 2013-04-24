@@ -41,19 +41,19 @@ class CommentTest extends Specification with DbRepos {
       // Messages
       val msg1 = commentRepo.save(Comment(uriId = uri1.id.get, userId = user1.id.get, pageTitle = uri1.title.get, text = "Conversation on Google1", permissions = CommentPermissions.MESSAGE))
       commentRecipientRepo.save(CommentRecipient(commentId = msg1.id.get, userId = Some(user2.id.get)))
-      val msg2 = commentRepo.save(Comment(uriId = uri1.id.get, userId = user2.id.get, pageTitle = uri1.title.get, text = "Conversation on Google2", permissions = CommentPermissions.MESSAGE))
+      val msg2 = commentRepo.save(Comment(uriId = uri2.id.get, userId = user2.id.get, pageTitle = uri1.title.get, text = "Conversation on Google2", permissions = CommentPermissions.MESSAGE))
       commentRecipientRepo.save(CommentRecipient(commentId = msg2.id.get, userId = Some(user1.id.get)))
       val msg3 = commentRepo.save(Comment(uriId = uri1.id.get, userId = user2.id.get, pageTitle = uri1.title.get, text = "Conversation on Google3", permissions = CommentPermissions.MESSAGE))
       val msg4 = commentRepo.save(Comment(uriId = uri1.id.get, userId = user1.id.get, pageTitle = uri1.title.get, text = "Conversation on Google4", permissions = CommentPermissions.MESSAGE, parent = msg3.id))
 
-      (user1, user2, uri1, uri2, msg3)
+      (user1, user2, uri1, uri2, msg1, msg2, msg3)
     }
   }
 
   "Comment" should {
     "use caching for counts (with proper invalidation)" in {
       running(new EmptyApplication()) {
-        val (user1, user2, uri1, uri2, msg3) = setup()
+        val (user1, user2, uri1, uri2, msg1, msg2, msg3) = setup()
         val repo = commentRepo.asInstanceOf[CommentRepoImpl]
 
         repo.commentCountCache.get(CommentCountUriIdKey(uri1.id.get)) must beNone
@@ -72,7 +72,7 @@ class CommentTest extends Specification with DbRepos {
     }
     "give all comments by friends" in {
       running(new EmptyApplication()) {
-        val (user1, user2, uri1, uri2, msg3) = setup()
+        val (user1, user2, uri1, uri2, msg1, msg2, msg3) = setup()
 
         inject[Database].readWrite { implicit s =>
           val user3 = userRepo.save(User(firstName = "Other", lastName = "User"))
@@ -99,7 +99,7 @@ class CommentTest extends Specification with DbRepos {
     }
     "add comments" in {
       running(new EmptyApplication()) {
-        val (user1, user2, uri1, uri2, msg3) = setup()
+        val (user1, user2, uri1, uri2, msg1, msg2, msg3) = setup()
         inject[Database].readOnly {implicit s =>
           commentRepo.all().length === 9
         }
@@ -116,7 +116,7 @@ class CommentTest extends Specification with DbRepos {
     }
     "count and load public comments by URI" in {
       running(new EmptyApplication()) {
-        val (user1, user2, uri1, uri2, msg3) = setup()
+        val (user1, user2, uri1, uri2, msg1, msg2, msg3) = setup()
         inject[Database].readOnly {implicit s =>
           commentRepo.getPublicCount(uri1.id.get) === 2
           commentRepo.getPublicCount(uri2.id.get) === 1
@@ -127,13 +127,13 @@ class CommentTest extends Specification with DbRepos {
     }
     "count and load messages by URI and UserId" in {
       running(new EmptyApplication()) {
-        val (user1, user2, uri1, uri2, msg3) = setup()
+        val (user1, user2, uri1, uri2, msg1, msg2, msg3) = setup()
         inject[Database].readOnly {implicit s =>
           val repo = commentRepo
-          repo.getParentMessages(uri1.id.get, user1.id.get).length === 2
-          repo.getParentMessages(uri1.id.get, user2.id.get).length === 3
-          repo.getParentMessages(uri2.id.get, user1.id.get).length === 0
-          repo.getParentMessages(uri2.id.get, user2.id.get).length === 0
+          repo.getParentMessages(uri1.id.get, user1.id.get).length === 1
+          repo.getParentMessages(uri1.id.get, user2.id.get).length === 2
+          repo.getParentMessages(uri2.id.get, user1.id.get).length === 1
+          repo.getParentMessages(uri2.id.get, user2.id.get).length === 1
         }
       }
     }
@@ -143,6 +143,33 @@ class CommentTest extends Specification with DbRepos {
         inject[CommentFormatter].toPlainText("[hi there](x-kifi-sel:body>foo.bar#there)") === "[hi there]"
         inject[CommentFormatter].toPlainText("A [hi there](x-kifi-sel:foo.bar#there) B") === "A [hi there] B"
         inject[CommentFormatter].toPlainText("(A) [hi there](x-kifi-sel:foo.bar#there:nth-child(2\\)>a:nth-child(1\\)) [B] C") === "(A) [hi there] [B] C"
+      }
+    }
+    
+    "give the parent id for a list of recipients" in {
+      running(new EmptyApplication()) {
+        val (user1, user2, uri1, uri2, msg1, msg2, msg3) = setup()
+        db.readWrite { implicit session =>
+          val user3 = userRepo.save(User(firstName = "Bob", lastName = "Fred"))
+          val user4 = userRepo.save(User(firstName = "Wilma", lastName = "Schoshlatski"))
+          
+          commentRepo.getParentByUriRecipients(uri1.id.get, user1.id.get, Set(user4.id.get)) === None
+          commentRepo.getParentByUriRecipients(uri1.id.get, user1.id.get, Set(user2.id.get)) === msg1.id
+          commentRepo.getParentByUriRecipients(uri1.id.get, user2.id.get, Set(user1.id.get)) === msg1.id
+          commentRepo.getParentByUriRecipients(uri2.id.get, user1.id.get, Set(user2.id.get)) === msg2.id
+          
+          commentRepo.getParentByUriRecipients(uri1.id.get, user1.id.get, Set(user2.id.get, user3.id.get)) === None
+          val msg4 = commentRepo.save(Comment(uriId = uri1.id.get, userId = user2.id.get, pageTitle = uri1.title.get, text = "Conversation on Google3", permissions = CommentPermissions.MESSAGE))
+          commentRecipientRepo.save(CommentRecipient(commentId = msg4.id.get, userId = Some(user1.id.get)))
+          commentRecipientRepo.save(CommentRecipient(commentId = msg4.id.get, userId = Some(user3.id.get)))
+
+          commentRepo.getParentByUriRecipients(uri1.id.get, user1.id.get, Set(user2.id.get, user3.id.get)) === msg4.id
+          commentRepo.getParentByUriRecipients(uri1.id.get, user3.id.get, Set(user2.id.get, user1.id.get)) === msg4.id
+          
+          commentRepo.getParentByUriRecipients(uri1.id.get, user1.id.get, Set(user2.id.get)) === msg1.id
+          commentRepo.getParentByUriRecipients(uri1.id.get, user3.id.get, Set(user1.id.get)) === None
+          commentRepo.getParentByUriRecipients(uri1.id.get, user2.id.get, Set(user3.id.get)) === None
+        }
       }
     }
   }
