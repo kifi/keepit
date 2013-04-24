@@ -60,7 +60,7 @@ object SemanticVariance {
           var sv = svMap.values
           if (!missing.isEmpty) {
             val defaultSV = searcher.getSemanticVector(term)
-            sv ++= searcher.filterByTerm(missing, new Term("title_stemmed", term.text)).map{ id => defaultSV }
+            sv ++= searcher.filterByTerm(missing, new Term("title_stemmed", term.text)).iterator.map{ id => defaultSV }
           }
 
           existCnt = sv.size::existCnt
