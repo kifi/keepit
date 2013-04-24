@@ -4,6 +4,7 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.social.SocialId
@@ -15,6 +16,7 @@ import play.api.Play
 import play.api.Play.current
 import securesocial.core._
 import securesocial.core.providers.Token
+import com.keepit.common.healthcheck._
 
 class SecureSocialIdGenerator(app: Application) extends IdGenerator(app) {
   def generate: String = ExternalId[String]().toString
@@ -73,11 +75,19 @@ class SecureSocialAuthenticatorPlugin @Inject()(
     Right(authenticatorFromSession(session))
   }
   def find(id: String): Either[Error, Option[Authenticator]] = Right {
-    db.readOnly { implicit s =>
-      sessionRepo.getOpt(ExternalId[UserSession](id))
-    }.collect {
-      case s if s.isValid => authenticatorFromSession(s)
+    val externalIdOpt = try {
+      Some(ExternalId[UserSession](id))
+    } catch {
+      case ex: Exception => None
     }
+    
+    externalIdOpt.map{ externalId =>
+      db.readOnly { implicit s =>
+        sessionRepo.getOpt(externalId)
+      } collect {
+        case s if s.isValid => authenticatorFromSession(s)
+      }
+    } flatten
   }
   def delete(id: String): Either[Error, Unit] = Right {
     db.readWrite { implicit s =>
@@ -88,8 +98,11 @@ class SecureSocialAuthenticatorPlugin @Inject()(
   }
 }
 
-class SecureSocialUserService(implicit val application: Application) extends UserServicePlugin(application) {
+class SecureSocialUserService(val application: Application) extends UserServicePlugin(application) {
   lazy val global = application.global.asInstanceOf[FortyTwoGlobal]
+  lazy val injector = new RichInjector(global.injector)
+  lazy val healthCheckPlugin = injector.inject[HealthcheckPlugin]
+  
   def proxy: Option[SecureSocialUserPlugin] = {
     // Play will try to initialize this plugin before FortyTwoGlobal is fully initialized. This will cause
     // FortyTwoGlobal to attempt to initialize AppScope in multiple threads, causing deadlock. This allows us to wait
@@ -102,10 +115,20 @@ class SecureSocialUserService(implicit val application: Application) extends Use
 
   def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser] =
     proxy.get.findByEmailAndProvider(email, providerId)
-  def save(token: Token) { proxy.get.save(token) }
-  def findToken(token: String) = proxy.get.findToken(token)
-  def deleteToken(uuid: String) { proxy.get.deleteToken(uuid) }
-  def deleteExpiredTokens() { proxy.foreach(_.deleteExpiredTokens()) }
+  def save(token: Token) = reportExceptions { proxy.get.save(token) }
+  def findToken(token: String) = reportExceptions(proxy.get.findToken(token))
+  def deleteToken(uuid: String) = reportExceptions { proxy.get.deleteToken(uuid) }
+  def deleteExpiredTokens() = reportExceptions { proxy.foreach(_.deleteExpiredTokens()) }
+
+  private def reportExceptions[T](f: => T): T = {
+    try {
+      f
+    } catch {
+      case ex: Throwable =>
+        healthCheckPlugin.addError(HealthcheckError(error = Some(ex), method = None, path = None, callType = Healthcheck.INTERNAL))
+        throw ex
+    }
+  }
 }
 
 @Singleton
@@ -158,7 +181,7 @@ class SecureSocialUserPlugin @Inject() (
     )
   }
 
-  private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser): SocialUserInfo = db.readWrite { implicit s =>
+  private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser)(implicit session: RWSession): SocialUserInfo = {
     socialUserInfoRepo.getOpt(socialId, socialNetworkType) match {
       case Some(socialUserInfo) if (!socialUserInfo.userId.isEmpty) =>
         socialUserInfo
