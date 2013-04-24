@@ -33,8 +33,7 @@ object DatabaseSessionLock {
   private val inSession = new DynamicVariable[Boolean](false)
   def enteringSession[T](f: => T) = {
     if (DatabaseSessionLock.inSession.value) throw new InSessionException("already in a DB session!")
-    val res = inSession.withValue(true) { f }
-    res
+    inSession.withValue(true) { f }
   }
 }
 
