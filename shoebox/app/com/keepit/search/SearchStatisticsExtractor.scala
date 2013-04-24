@@ -169,11 +169,12 @@ object TrainingDataLabeler extends Logging{
 
   def getLabeledData(kifiClicked: Seq[Id[NormalizedURI]], googleClicked: Seq[Id[NormalizedURI]], kifiShown: Seq[Id[NormalizedURI]]) = {
     var data = Map.empty[Id[NormalizedURI], (Boolean, Boolean)]         // (isPositive, isCorrectlyRanked)
-    log.info("collecting training data ...")
+    log.info(s"collecting training data ... num of kifi clicks: ${kifiClicked.size}, num of googleNormUri: ${googleClicked.size}, num of kifiShown: ${kifiShown.size}")
     if (kifiClicked.nonEmpty) {
       kifiClicked.foreach( uri => data += uri -> (true, true))
       log.info("positive data collected !!!")
     } else {
+      log.info("maybe there are negatvie data...")
       val isCorrectlyRanked = googleClicked.isEmpty || googleClicked.exists(uri => kifiShown.contains(uri))         // true if the clicked google uri is not indexed, or it was shown to the user
       kifiShown.take(topNkifi).foreach( uri => if (!googleClicked.contains(uri)) data += uri -> (false, isCorrectlyRanked))
       if (data.nonEmpty) log.info("negative data collected !!!")
