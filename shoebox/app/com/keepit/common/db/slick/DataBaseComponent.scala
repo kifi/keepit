@@ -34,7 +34,6 @@ object DatabaseSessionLock {
   def enteringSession[T](f: => T) = {
     if (DatabaseSessionLock.inSession.value) throw new InSessionException("already in a DB session!")
     val res = inSession.withValue(true) { f }
-    if (DatabaseSessionLock.inSession.value) throw new IllegalStateException("expected inSession to return false")
     res
   }
 }
