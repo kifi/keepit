@@ -595,11 +595,13 @@ function initTab(tab, d) {  // d is pageData[tab.nUri]
         scheduleAutoShow(tab);
       }
 
-      var keeperData = {keepers: d.keepers, otherKeeps: d.otherKeeps};
-      if (tab.ready) {
-        api.tabs.emit(tab, "keepers", keeperData);
-      } else {
-        (tab.toEmit = tab.toEmit || []).push(["keepers", keeperData]);
+      if (d.keepers.length) {
+        var keeperData = {keepers: d.keepers, otherKeeps: d.otherKeeps};
+        if (tab.ready) {
+          api.tabs.emit(tab, "keepers", keeperData);
+        } else {
+          (tab.toEmit = tab.toEmit || []).push(["keepers", keeperData]);
+        }
       }
     }
   }

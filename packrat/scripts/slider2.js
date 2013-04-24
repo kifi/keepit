@@ -345,6 +345,7 @@ slider2 = function() {
             $pane.off("transitionend webkitTransitionEnd", f);
             $box.data("shown", true).triggerHandler("kifi:shown");
             if (!bringSlider) $pane.append($slider);
+            $tile.show();  // in case hidden
           })
           .on("keydown", ".kifi-pane-search", function(e) {
             var q;
