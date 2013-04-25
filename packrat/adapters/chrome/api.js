@@ -511,7 +511,7 @@ api = function() {
       eachSelected: function(callback) {
         for (var winId in selectedTabIds) {
           var page = pages[selectedTabIds[winId]];
-          if (/^https?:/.test(page.url)) callback(page);
+          if (page && /^https?:/.test(page.url)) callback(page);
         }
       },
       emit: function(tab, type, data) {
