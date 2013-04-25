@@ -3,7 +3,7 @@ package com.keepit.common.db.slick
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.{DbSequence, SequenceNumber, DbInfo, H2DatabaseDialect}
 import scala.slick.driver.H2Driver
-import scala.collection.mutable.HashMap
+import scala.collection.concurrent.TrieMap
 import scala.slick.lifted.DDL
 
 trait TableInitListener {
@@ -15,7 +15,7 @@ class H2(val dbInfo: DbInfo)
     extends DataBaseComponent {
   println("initiating H2 driver")
   val Driver = H2Driver
-  val tablesToInit = new HashMap[String, TableWithDDL]
+  val tablesToInit = new TrieMap[String, TableWithDDL]
   var initListener: Option[TableInitListener] = None
 
   //first initiation of the table if they where loaded staticly by the injector before the db was initiated
