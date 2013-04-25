@@ -36,13 +36,13 @@ class HomeController @Inject() (db: Database,
           else None
         } flatten
       }
-      
+
       Ok(views.html.website.userHome(request.user, friendsOnKifi))
     }
   }, unauthenticatedAction = { implicit request =>
     Ok(views.html.website.welcome())
   })
-  
+
   def pendingHome()(implicit request: AuthenticatedRequest[AnyContent]) = {
     val user = request.user
     val anyPendingInvite = db.readOnly { implicit s =>
@@ -59,15 +59,15 @@ class HomeController @Inject() (db: Database,
       if (invite.state == InvitationStates.ACTIVE) {
         db.readWrite { implicit s =>
           invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
+          postOffice.sendMail(ElectronicMail(
+            senderUserId = None,
+            from = EmailAddresses.NOTIFICATIONS,
+            fromName = Some("Invitations"),
+            to = EmailAddresses.INVITATION,
+            subject = s"${su.fullName} wants to be let in!",
+            htmlBody = s"Go to https://admin.kifi.com/admin/invites to accept or reject this user.",
+            category = PostOffice.Categories.ADMIN))
         }
-        postOffice.sendMail(ElectronicMail(
-          senderUserId = None,
-          from = EmailAddresses.NOTIFICATIONS,
-          fromName = Some("Invitations"),
-          to = EmailAddresses.INVITATION,
-          subject = s"${su.fullName} wants to be let in!",
-          htmlBody = s"Go to https://admin.kifi.com/admin/invites to accept or reject this user.",
-          category = PostOffice.Categories.ADMIN))
       }
     }
     val (email, friendsOnKifi) = db.readOnly { implicit session =>
@@ -77,7 +77,7 @@ class HomeController @Inject() (db: Database,
         if(user.state == UserStates.ACTIVE) Some(user.externalId)
         else None
       } flatten
-  
+
       (email, friendsOnKifi)
     }
     Ok(views.html.website.onboarding.userRequestReceived(user, email, friendsOnKifi))
@@ -89,18 +89,18 @@ class HomeController @Inject() (db: Database,
         invitationRepo.getByRecipient(su.id.get) match {
           case Some(invite) =>
             invitationRepo.save(invite.withState(InvitationStates.JOINED))
-          case None =>  
+          case None =>
         }
       }
     }
     Ok(views.html.website.install(request.user))
   }
-  
+
   def gettingStarted = AuthenticatedHtmlAction { implicit request =>
-    
+
     Ok(views.html.website.gettingStarted(request.user))
   }
-  
+
   // temporary during development:
   def userIsAllowed(user: User, experiments: Seq[State[ExperimentType]]) = {
     Play.isDev || experiments.contains(ExperimentTypes.ADMIN)

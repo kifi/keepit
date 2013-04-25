@@ -130,9 +130,9 @@ class CommonModule extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def healthcheckProvider(actorFactory: ActorFactory[HealthcheckActor], postOffice: PostOffice,
+  def healthcheckProvider(actorFactory: ActorFactory[HealthcheckActor], db: Database, postOffice: PostOffice,
       services: FortyTwoServices, host: HealthcheckHost): HealthcheckPlugin = {
-    new HealthcheckPluginImpl(actorFactory, services, postOffice, host)
+    new HealthcheckPluginImpl(actorFactory, services, postOffice, host, db)
   }
 
   @Singleton
@@ -145,7 +145,8 @@ class CommonModule extends ScalaModule with Logging {
     new HttpFetcherImpl(
       userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1309.0 Safari/537.17",
       connectionTimeout = 30000,
-      soTimeOut = 30000
+      soTimeOut = 30000,
+      trustBlindly = true
     )
   }
 
