@@ -70,7 +70,7 @@ class ExtCommentController @Inject() (
     val o = request.body
     val (urlStr, title, text) = (
       (o \ "url").as[String],
-      (o \ "title") match { case JsString(s) => s; case _ => ""},
+      (o \ "title").as[String],
       (o \ "text").as[String].trim)
 
     val comment = postComment(request.user.id.get, urlStr, title, text)
@@ -98,7 +98,7 @@ class ExtCommentController @Inject() (
     future {
       userNotifier.comment(comment)
     } onFailure { case e =>
-      log.error("Could not persist emails for comment %s".format(comment.id.get), e)
+      log.error("Could not notify users for comment %s".format(comment.id.get), e)
     }
     
     comment
@@ -108,9 +108,9 @@ class ExtCommentController @Inject() (
     val o = request.body
     val (urlStr, title, text, recipients) = (
       (o \ "url").as[String],
-      (o \ "title") match { case JsString(s) => s; case _ => ""},
+      (o \ "title").as[String],
       (o \ "text").as[String].trim,
-      (o \ "recipients") match { case JsString(s) => s; case _ => ""})
+      (o \ "recipients").as[Seq[String]])
       
     val newMessage = sendMessage(request.user.id.get, urlStr, title, text, recipients)
     
@@ -118,14 +118,14 @@ class ExtCommentController @Inject() (
     Ok(Json.obj("message" -> commentWithBasicUserSerializer.writes(message)))
   }
   
-  private[ext] def sendMessage(userId: Id[User], urlStr: String, title: String, text: String, recipients: String): Comment = {
+  private[ext] def sendMessage(userId: Id[User], urlStr: String, title: String, text: String, recipients: Seq[String]): Comment = {
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
     val (uri, url, recipientUserIds, existingParentOpt) = db.readWrite { implicit s =>
       val uri = normalizedURIRepo.save(normalizedURIRepo.getByNormalizedUrl(urlStr).getOrElse(NormalizedURIFactory(url = urlStr)))
 
       val url: URL = urlRepo.save(urlRepo.get(urlStr).getOrElse(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
 
-      val recipientUserIds = recipients.split(",").map{id => userRepo.get(ExternalId[User](id)).id.get}.toSet
+      val recipientUserIds = recipients.map{id => userRepo.get(ExternalId[User](id)).id.get}.toSet
       val existingParentOpt = commentRepo.getParentByUriParticipants(uri.id.get, recipientUserIds + userId)
       
       (uri, url, recipientUserIds, existingParentOpt)
@@ -161,7 +161,7 @@ class ExtCommentController @Inject() (
           future {
             notifyRecipients(message)
           } onFailure { case e =>
-            log.error("Could not persist emails for comment %s".format(message.id.get), e)
+            log.error("Could not notify for new message %s".format(message.id.get), e)
           }
           
           message
@@ -174,7 +174,7 @@ class ExtCommentController @Inject() (
     val o = request.body
     val (urlStr, title, text) = (
       (o \ "url").as[String],
-      (o \ "title") match { case JsString(s) => s; case _ => ""},
+      (o \ "title").as[String],
       (o \ "text").as[String].trim
     )
     
@@ -221,7 +221,7 @@ class ExtCommentController @Inject() (
     future {
       notifyRecipients(messageReply)
     } onFailure { case e =>
-      log.error("Could not persist emails for comment %s".format(messageReply.id.get), e)
+      log.error("Could not notify for message reply %s".format(messageReply.id.get), e)
     }
     
     messageReply

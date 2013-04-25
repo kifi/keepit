@@ -147,7 +147,7 @@ class InviteController @Inject() (db: Database,
     }
   }
   
-  def userCanInvite(experiments: Seq[State[ExperimentType]]) = {
-    Play.isDev || experiments.contains(ExperimentTypes.ADMIN) || experiments.contains(ExperimentTypes.CAN_INVITE)
+  def userCanInvite(experiments: Set[State[ExperimentType]]) = {
+    Play.isDev || (experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.CAN_INVITE) nonEmpty)
   }
 }

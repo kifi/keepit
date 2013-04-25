@@ -64,7 +64,7 @@ class UserExperimentCache @Inject()(val repo: FortyTwoCachePlugin)
 
 @ImplementedBy(classOf[UserExperimentRepoImpl])
 trait UserExperimentRepo extends Repo[UserExperiment] {
-  def getUserExperiments(userId: Id[User])(implicit session: RSession): Seq[State[ExperimentType]]
+  def getUserExperiments(userId: Id[User])(implicit session: RSession): Set[State[ExperimentType]]
   def get(userId: Id[User], experiment: State[ExperimentType],
       excludeState: Option[State[UserExperiment]] = Some(UserExperimentStates.INACTIVE))
       (implicit session: RSession): Option[UserExperiment]
@@ -90,10 +90,10 @@ class UserExperimentRepoImpl @Inject()(
         UserExperiment.unapply _)
   }
 
-  def getUserExperiments(userId: Id[User])(implicit session: RSession): Seq[State[ExperimentType]] = {
+  def getUserExperiments(userId: Id[User])(implicit session: RSession): Set[State[ExperimentType]] = {
     userExperimentCache.getOrElse(UserExperimentUserIdKey(userId)) {
       (for(f <- table if f.userId === userId && f.state === UserExperimentStates.ACTIVE) yield f.experimentType).list
-    }
+    } toSet
   }
 
   def get(userId: Id[User], experimentType: State[ExperimentType],
