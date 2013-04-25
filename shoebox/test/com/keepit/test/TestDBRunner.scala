@@ -42,15 +42,14 @@ trait TestDBRunner extends TestInjector {
 
   def withDB[T](overrideingModules: Module*)(f: RichInjector => T) = {
     withInjector(overrideingModules: _*) { implicit injector =>
-      val db = inject[DataBaseComponent]
       val h2 = inject[DataBaseComponent].asInstanceOf[H2]
       h2.initListener = Some(new TableInitListener {
-        def init(table: TableWithDDL) = initTable(db, table)
+        def init(table: TableWithDDL) = executeTableDDL(h2, table)
       })
       try {
         (f(injector))
       } finally {
-        readWrite(db) { implicit session =>
+        readWrite(h2) { implicit session =>
           val conn = session.conn
 //          conn.createStatement().execute("SET REFERENTIAL_INTEGRITY FALSE")
 //          h2.tablesToInit.values foreach { table =>
@@ -63,7 +62,7 @@ trait TestDBRunner extends TestInjector {
     }
   }
 
-  private def readWrite[T](db: DataBaseComponent)(f: RWSession => T) = {
+  private def readWrite[T](db: H2)(f: RWSession => T) = {
     val s = db.handle.createSession.forParameters(rsConcurrency = ResultSetConcurrency.Updatable)
     try {
       s.withTransaction {
@@ -72,7 +71,7 @@ trait TestDBRunner extends TestInjector {
     } finally s.close()
   }
 
-  def initTable(db: DataBaseComponent, table: TableWithDDL): Unit = {
+  def executeTableDDL(db: H2, table: TableWithDDL): Unit = {
     println(s"initiating table [${table.tableName}]")
     readWrite(db) { implicit session =>
       try {
