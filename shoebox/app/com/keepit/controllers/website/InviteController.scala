@@ -34,7 +34,7 @@ class InviteController @Inject() (db: Database,
     extends WebsiteController(actionAuthenticator) {
 
   def invite = AuthenticatedHtmlAction { implicit request =>
-    if(userIsAllowed(request.user, request.experimants)) {
+    if(userCanInvite(request.experimants)) {
       val friendsOnKifi = db.readOnly { implicit session =>
         socialConnectionRepo.getFortyTwoUserConnections(request.user.id.get).map { u =>
           val user = userRepo.get(u)
@@ -147,7 +147,7 @@ class InviteController @Inject() (db: Database,
     }
   }
   
-  def userIsAllowed(user: User, experiments: Seq[State[ExperimentType]]) = {
-    Play.isDev || experiments.contains(ExperimentTypes.ADMIN)
+  def userCanInvite(experiments: Set[State[ExperimentType]]) = {
+    Play.isDev || (experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.CAN_INVITE) nonEmpty)
   }
 }

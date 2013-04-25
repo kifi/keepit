@@ -63,6 +63,10 @@ POST    /comments/:id/remove        @com.keepit.controllers.ext.ExtCommentContro
 POST    /comments/follow            @com.keepit.controllers.ext.ExtCommentController.startFollowing()
 POST    /comments/unfollow          @com.keepit.controllers.ext.ExtCommentController.stopFollowing()
 
+POST    /comments                   @com.keepit.controllers.ext.ExtCommentController.postCommentAction()
+POST    /messages                   @com.keepit.controllers.ext.ExtCommentController.sendMessageAction()
+POST    /messages/:parentId         @com.keepit.controllers.ext.ExtCommentController.sendMessageReplyAction(parentId: ExternalId[Comment])
+
 POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
 
 POST    /users/events               @com.keepit.controllers.ext.ExtEventController.logUserEvents

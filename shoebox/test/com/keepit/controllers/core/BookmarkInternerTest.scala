@@ -28,7 +28,7 @@ class BookmarkInternerTest extends Specification with DbRepos {
         val bookmarks = bookmarkInterner.internBookmarks(Json.obj(
             "url" -> "http://42go.com",
             "isPrivate" -> true
-          ), user, Seq(), "EMAIL")
+          ), user, Set(), "EMAIL")
         db.readWrite { implicit db =>
           userRepo.get(user.id.get) === user
           bookmarks.size === 1
@@ -50,7 +50,7 @@ class BookmarkInternerTest extends Specification with DbRepos {
           ), Json.obj(
             "url" -> "http://kifi.com",
             "isPrivate" -> false
-          )), user, Seq(), "EMAIL")
+          )), user, Set(), "EMAIL")
         db.readWrite { implicit db =>
           userRepo.get(user.id.get) === user
           bookmarks.size === 2
@@ -77,7 +77,7 @@ class BookmarkInternerTest extends Specification with DbRepos {
         ), Json.obj(
           "url" -> "http://kifi.com",
           "isPrivate" -> true
-        )), user, Seq(), "EMAIL")
+        )), user, Set(), "EMAIL")
       db.readWrite { implicit db =>
         bookmarks.size === 2
         bookmarkRepo.all.size === 2

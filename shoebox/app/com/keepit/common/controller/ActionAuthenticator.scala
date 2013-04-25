@@ -52,7 +52,7 @@ class ActionAuthenticator @Inject() (
     (userId, getExperiments(userId))
   }
 
-  private def getExperiments(userId: Id[User])(implicit session: RSession): Seq[State[ExperimentType]] = userExperimentRepo.getUserExperiments(userId)
+  private def getExperiments(userId: Id[User])(implicit session: RSession): Set[State[ExperimentType]] = userExperimentRepo.getUserExperiments(userId)
 
   private def authenticatedHandler[T](apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Result) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
       val userIdOpt = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map{id => Id[User](id.toLong)}
@@ -110,14 +110,14 @@ class ActionAuthenticator @Inject() (
         }
       })
 
-  private[controller] def isAdmin(experiments: Seq[State[ExperimentType]]) = experiments.find(e => e == ExperimentTypes.ADMIN).isDefined
+  private[controller] def isAdmin(experiments: Set[State[ExperimentType]]) = experiments.contains(ExperimentTypes.ADMIN)
 
   private[controller] def isAdmin(userId: Id[User]) = db.readOnly { implicit session =>
     userExperimentRepo.hasExperiment(userId, ExperimentTypes.ADMIN)
   }
 
   private def executeAction[T](action: AuthenticatedRequest[T] => Result, userId: Id[User], identity: Identity,
-      experiments: Seq[State[ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]],
+      experiments: Set[State[ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]],
       newSession: Session, request: Request[T], adminUserId: Option[Id[User]] = None, allowPending: Boolean) = {
     val user = db.readOnly(implicit s => userRepo.get(userId))
     if (experiments.contains(ExperimentTypes.BLOCK) || user.state == UserStates.BLOCKED || user.state == UserStates.INACTIVE || (!allowPending && user.state == UserStates.PENDING)) {

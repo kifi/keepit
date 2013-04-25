@@ -64,7 +64,7 @@ trait EventMetadata {
   val prevEvents: Seq[ExternalId[Event]]
 }
 
-case class UserEventMetadata(eventFamily: EventFamily, eventName: String, userId: ExternalId[User], installId: String, userExperiments: Seq[State[ExperimentType]], metaData: JsObject, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
+case class UserEventMetadata(eventFamily: EventFamily, eventName: String, userId: ExternalId[User], installId: String, userExperiments: Set[State[ExperimentType]], metaData: JsObject, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
 case class ServerEventMetadata(eventFamily: EventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]]) extends EventMetadata
 
 case class Event(
@@ -89,17 +89,17 @@ class EventRepo @Inject() (eventStore: EventStore, mongoEventStore: MongoEventSt
 object Events {
   def serverVersion(implicit fortyTwoServices: FortyTwoServices) = fortyTwoServices.currentService + ":" + fortyTwoServices.currentVersion
 
-  def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Seq[State[ExperimentType]],
-      installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil) (implicit clock: Clock, fortyTwoServices: FortyTwoServices) =
+  def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Set[State[ExperimentType]],
+      installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil)(implicit clock: Clock, fortyTwoServices: FortyTwoServices) =
     Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData, prevEvents), createdAt = clock.now,
       serverVersion = serverVersion(fortyTwoServices))
 
-  def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Seq[State[ExperimentType]],
-      installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]], createdAt: DateTime) (implicit clock: Clock, fortyTwoServices: FortyTwoServices) =
+  def userEvent(eventFamily: EventFamily, eventName: String, user: User, experiments: Set[State[ExperimentType]],
+      installId: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]], createdAt: DateTime)(implicit clock: Clock, fortyTwoServices: FortyTwoServices) =
     Event(metaData = UserEventMetadata(eventFamily, eventName, user.externalId, installId, experiments, metaData, prevEvents), createdAt = createdAt,
       serverVersion = serverVersion(fortyTwoServices))
 
-  def serverEvent(eventFamily: EventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil)  (implicit clock: Clock, fortyTwoServices: FortyTwoServices) =
+  def serverEvent(eventFamily: EventFamily, eventName: String, metaData: JsObject, prevEvents: Seq[ExternalId[Event]] = Nil)(implicit clock: Clock, fortyTwoServices: FortyTwoServices) =
     Event(metaData = ServerEventMetadata(eventFamily, eventName, metaData, prevEvents), createdAt = clock.now,
       serverVersion = serverVersion(fortyTwoServices))
 }

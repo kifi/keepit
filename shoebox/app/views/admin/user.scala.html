@@ -63,7 +63,7 @@
         <th>Experiments</th>
         <td id="experiments" class="form-inline">
           @for(exp <- Seq(ExperimentTypes.ADMIN, ExperimentTypes.BLOCK,
-              ExperimentTypes.NO_SEARCH_EXPERIMENTS, ExperimentTypes.INACTIVE)) {
+              ExperimentTypes.NO_SEARCH_EXPERIMENTS, ExperimentTypes.INACTIVE, ExperimentTypes.CAN_INVITE)) {
             <label class="checkbox">
               <input type="checkbox" data-exp="@exp.value" @if(userWithSocial.experiments.contains(exp)) {checked}>@exp.value
             </label>

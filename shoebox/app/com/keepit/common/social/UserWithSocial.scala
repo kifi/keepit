@@ -6,7 +6,7 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
 import com.keepit.common.db.State
 
-case class UserWithSocial(user: User, socialUserInfo: SocialUserInfo, bookmarksCount: Int, emails: Seq[EmailAddress], experiments: Seq[State[ExperimentType]])
+case class UserWithSocial(user: User, socialUserInfo: SocialUserInfo, bookmarksCount: Int, emails: Seq[EmailAddress], experiments: Set[State[ExperimentType]])
 
 class UserWithSocialRepo @Inject() (
     socialUserInfoRepo: SocialUserInfoRepo,
