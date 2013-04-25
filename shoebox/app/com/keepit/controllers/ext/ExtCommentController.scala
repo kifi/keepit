@@ -81,9 +81,7 @@ class ExtCommentController @Inject() (
   private[ext] def postComment(userId: Id[User], urlStr: String, title: String, text: String): Comment = {
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
     val comment = db.readWrite {implicit s =>
-      val uri = normalizedURIRepo.save(normalizedURIRepo.getByNormalizedUrl(urlStr).getOrElse(NormalizedURIFactory(url = urlStr)))
-
-      val url: URL = urlRepo.save(urlRepo.get(urlStr).getOrElse(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
+      val (uri, url) = getOrCreateUriAndUrl(urlStr)
 
       val newComment = commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PUBLIC, parent = None))
       commentReadRepo.save(commentReadRepo.getByUserAndUri(userId, uri.id.get) match {
@@ -121,10 +119,8 @@ class ExtCommentController @Inject() (
   private[ext] def sendMessage(userId: Id[User], urlStr: String, title: String, text: String, recipients: Seq[String]): Comment = {
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
     val (uri, url, recipientUserIds, existingParentOpt) = db.readWrite { implicit s =>
-      val uri = normalizedURIRepo.save(normalizedURIRepo.getByNormalizedUrl(urlStr).getOrElse(NormalizedURIFactory(url = urlStr)))
-
-      val url: URL = urlRepo.save(urlRepo.get(urlStr).getOrElse(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
-
+      val (uri, url) = getOrCreateUriAndUrl(urlStr)
+      
       val recipientUserIds = recipients.map{id => userRepo.get(ExternalId[User](id)).id.get}.toSet
       val existingParentOpt = commentRepo.getParentByUriParticipants(uri.id.get, recipientUserIds + userId)
       
@@ -190,10 +186,8 @@ class ExtCommentController @Inject() (
 
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
     val messageReply = db.readWrite {implicit s =>
-      val uri = normalizedURIRepo.save(normalizedURIRepo.getByNormalizedUrl(urlStr).getOrElse(NormalizedURIFactory(url = urlStr)))
-
-      val url: URL = urlRepo.save(urlRepo.get(urlStr).getOrElse(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
-
+      val (uri, url) = getOrCreateUriAndUrl(urlStr)
+      
       val parent = commentRepo.get(parentId)
       val realParentId = parent.parent.getOrElse(parent.id.get)
       
@@ -208,8 +202,7 @@ class ExtCommentController @Inject() (
       )
 
       val newCommentRead = commentReadRepo.getByUserAndParent(userId, realParentId) match {
-        case Some(commentRead) => // existing CommentRead entry for this message thread
-          assert(commentRead.parentId.isDefined)
+        case Some(commentRead) =>
           commentRead.withLastReadId(newMessageReply.id.get)
         case None =>
           CommentRead(userId = userId, uriId = uri.id.get, parentId = Some(realParentId), lastReadId = newMessageReply.id.get)
@@ -227,7 +220,12 @@ class ExtCommentController @Inject() (
     messageReply
   }
   
-  
+  private def getOrCreateUriAndUrl(urlStr: String)(implicit session: RWSession): (NormalizedURI, URL) = {
+    val uri = normalizedURIRepo.getByNormalizedUrl(urlStr).getOrElse(normalizedURIRepo.save(NormalizedURIFactory(url = urlStr)))
+    val url: URL = urlRepo.get(urlStr).getOrElse(urlRepo.save(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
+    
+    (uri, url)
+  }
 
   /* depricated, remove after all clients are updated to 2.3.24 */
   def createComment() = AuthenticatedJsonToJsonAction { request =>
