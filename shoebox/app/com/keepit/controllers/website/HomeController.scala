@@ -64,8 +64,9 @@ class HomeController @Inject() (db: Database,
             from = EmailAddresses.NOTIFICATIONS,
             fromName = Some("Invitations"),
             to = EmailAddresses.INVITATION,
-            subject = s"${su.fullName} wants to be let in!",
-            htmlBody = s"Go to https://admin.kifi.com/admin/invites to accept or reject this user.",
+            subject = s"""${su.fullName} wants to be let in!""",
+            htmlBody = s"""<a href="https://admin.kifi.com/admin/user/${user.id}">${su.fullName}</a> wants to be let in!\n<br/>
+                           Go to the <a href="https://admin.kifi.com/admin/invites?show=accepted">admin invitation page</a> to accept or reject this user.""",
             category = PostOffice.Categories.ADMIN))
         }
       }
