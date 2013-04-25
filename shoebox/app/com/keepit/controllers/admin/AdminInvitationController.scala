@@ -60,7 +60,7 @@ class AdminInvitationController @Inject() (
           invitationRepo.save(invite.withState(InvitationStates.ADMIN_ACCEPTED)))
       }
     }
-    
+
     if(result.isDefined) {
       notifyAcceptedUser(result.get._1.id.get)
       Redirect(routes.AdminInvitationController.displayInvitations())
@@ -88,21 +88,22 @@ class AdminInvitationController @Inject() (
       Redirect(routes.AdminInvitationController.displayInvitations()).flashing("error" -> "Invalid!")
     }
   }
-  
+
   private def notifyAcceptedUser(userId: Id[User]) {
-    db.readOnly { implicit session =>
+    val (user, addrs) = db.readOnly { implicit session =>
       val user = userRepo.get(userId)
       val addrs = emailAddressRepo.getByUser(userId)
-      for(address <- addrs) {
-        postOffice.sendMail(ElectronicMail(
-            senderUserId = None,
-            from = EmailAddresses.CONGRATS,
-            fromName = Some("KiFi Team"),
-            to = address,
-            subject = "Congrats! You're in the KiFi Private Beta",
-            htmlBody = views.html.email.invitationAccept(user).body,
-            category = PostOffice.Categories.INVITATION))
-        }
+      (user, addrs)
+    }
+    for(address <- addrs) {
+      postOffice.sendMail(ElectronicMail(
+        senderUserId = None,
+        from = EmailAddresses.CONGRATS,
+        fromName = Some("KiFi Team"),
+        to = address,
+        subject = "Congrats! You're in the KiFi Private Beta",
+        htmlBody = views.html.email.invitationAccept(user).body,
+        category = PostOffice.Categories.INVITATION))
     }
   }
 }
