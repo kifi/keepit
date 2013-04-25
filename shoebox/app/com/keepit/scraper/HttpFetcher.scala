@@ -3,9 +3,14 @@ package com.keepit.scraper
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import org.joda.time.DateTime
+import org.apache.http.auth.AuthScope
+import org.apache.http.auth.UsernamePasswordCredentials
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.entity.GzipDecompressingEntity
 import org.apache.http.client.params.ClientPNames
+import org.apache.http.conn.scheme.PlainSocketFactory
+import org.apache.http.conn.scheme.Scheme
+import org.apache.http.conn.scheme.SchemeRegistry
 import org.apache.http.HttpHeaders.{CONTENT_TYPE, IF_MODIFIED_SINCE, LOCATION}
 import org.apache.http._
 import org.apache.http.impl.client.DefaultHttpClient
@@ -18,19 +23,22 @@ import org.apache.http.protocol.BasicHttpContext
 import org.apache.http.protocol.HttpContext
 import org.apache.http.util.EntityUtils
 import java.io.{InputStream, IOException}
-import java.net.URL
 import scala.util.Try
-import org.apache.http.conn.params.ConnRoutePNames
-import org.apache.http.auth.AuthScope
-import org.apache.http.auth.UsernamePasswordCredentials
 
 trait HttpFetcher {
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None)(f: HttpInputStream => Unit): HttpFetchStatus
   def close()
 }
 
-class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int) extends HttpFetcher with Logging {
-  val cm = new PoolingClientConnectionManager
+class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int, trustBlindly: Boolean) extends HttpFetcher with Logging {
+  val cm = if (trustBlindly) {
+    val registry = new SchemeRegistry
+    registry.register(new Scheme("http", 80, PlainSocketFactory.getSocketFactory()))
+    registry.register(new Scheme("https", 443, UnsafeSSLSocketFactory()))
+    new PoolingClientConnectionManager(registry)
+  } else {
+    new PoolingClientConnectionManager
+  }
   cm.setMaxTotal(100)
 
   val httpParams = new BasicHttpParams
@@ -38,9 +46,6 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int)
   HttpConnectionParams.setSoTimeout(httpParams, soTimeOut)
   HttpProtocolParams.setUserAgent(httpParams, userAgent)
   val httpClient = new DefaultHttpClient(cm, httpParams)
-
-  val proxyCm = new PoolingClientConnectionManager
-  proxyCm.setMaxTotal(100)
 
   // track redirects
   val interceptor = new HttpResponseInterceptor() {
