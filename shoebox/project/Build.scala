@@ -43,7 +43,7 @@ object ApplicationBuild extends Build {
       "org.apache.lucene" % "lucene-core" % "4.2.1",
       "org.apache.lucene" % "lucene-analyzers-common" % "4.2.1",
       "org.apache.lucene" % "lucene-suggest" % "4.2.1",
-      "org.apache.httpcomponents" % "httpclient" % "4.2.1",
+      "org.apache.httpcomponents" % "httpclient" % "4.2.4",
       "org.apache.tika" % "tika-parsers" % "1.3",
       "org.apache.commons" % "commons-math3" % "3.1.1",
       "org.apache.zookeeper" % "zookeeper" % "3.4.5",

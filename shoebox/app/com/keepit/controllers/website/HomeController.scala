@@ -36,7 +36,7 @@ class HomeController @Inject() (db: Database,
           else None
         } flatten
       }
-      
+
       val userCanInvite = request.experimants.contains(ExperimentTypes.ADMIN) || request.experimants.contains(ExperimentTypes.CAN_INVITE)
       
       Ok(views.html.website.userHome(request.user, friendsOnKifi, userCanInvite))
@@ -44,7 +44,7 @@ class HomeController @Inject() (db: Database,
   }, unauthenticatedAction = { implicit request =>
     Ok(views.html.website.welcome())
   })
-  
+
   def pendingHome()(implicit request: AuthenticatedRequest[AnyContent]) = {
     val user = request.user
     val anyPendingInvite = db.readOnly { implicit s =>
@@ -57,20 +57,18 @@ class HomeController @Inject() (db: Database,
         ))
       }
     }
-    if(anyPendingInvite.nonEmpty) {
-      db.readWrite { implicit session =>
-        anyPendingInvite.map { case (su, invite) =>
-          if(invite.state == InvitationStates.ACTIVE) {
-            invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
-            postOffice.sendMail(ElectronicMail(
-              senderUserId = None,
-              from = EmailAddresses.NOTIFICATIONS,
-              fromName = Some("Invitations"),
-              to = EmailAddresses.INVITATION,
-              subject = s"${su.fullName} wants to be let in!",
-              htmlBody = s"Go to https://admin.kifi.com/admin/invites to accept or reject this user.",
-              category = PostOffice.Categories.ADMIN))
-          }
+    for ((su, invite) <- anyPendingInvite) {
+      if (invite.state == InvitationStates.ACTIVE) {
+        db.readWrite { implicit s =>
+          invitationRepo.save(invite.copy(state = InvitationStates.ACCEPTED))
+          postOffice.sendMail(ElectronicMail(
+            senderUserId = None,
+            from = EmailAddresses.NOTIFICATIONS,
+            fromName = Some("Invitations"),
+            to = EmailAddresses.INVITATION,
+            subject = s"${su.fullName} wants to be let in!",
+            htmlBody = s"Go to https://admin.kifi.com/admin/invites to accept or reject this user.",
+            category = PostOffice.Categories.ADMIN))
         }
       }
     }
@@ -81,7 +79,7 @@ class HomeController @Inject() (db: Database,
         if(user.state == UserStates.ACTIVE) Some(user.externalId)
         else None
       } flatten
-  
+
       (email, friendsOnKifi)
     }
     Ok(views.html.website.onboarding.userRequestReceived(user, email, friendsOnKifi))
@@ -93,13 +91,13 @@ class HomeController @Inject() (db: Database,
         invitationRepo.getByRecipient(su.id.get) match {
           case Some(invite) =>
             invitationRepo.save(invite.withState(InvitationStates.JOINED))
-          case None =>  
+          case None =>
         }
       }
     }
     Ok(views.html.website.install(request.user))
   }
-  
+
   def gettingStarted = AuthenticatedHtmlAction { implicit request =>
     Ok(views.html.website.gettingStarted(request.user))
   }

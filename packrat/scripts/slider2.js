@@ -12,7 +12,7 @@ jQuery.fn.layout = function() {
 const noPane = {update: $.noop};
 var generalPane, commentsPane = noPane, threadsPane = noPane, threadPane = noPane;  // set when api.require'd
 slider2 = function() {
-  var $tile = $("#kifi-tile"), $slider, $pane, lastShownAt;
+  var $slider, $pane, lastShownAt;
 
   document.addEventListener("keydown", onKeyDown, true);
   function onKeyDown(e) {
@@ -32,14 +32,14 @@ slider2 = function() {
     api.log("[slider2:onEnd]");
     $pane && $pane.remove();
     $slider && $slider.remove();
-    $tile.remove();
+    $(tile).remove();
     $("html").removeClass("kifi-with-pane kifi-pane-parent");
     document.removeEventListener("keydown", onKeyDown, true);
   });
 
   function createSlider(callback) {
-    var kept = $tile[0].dataset.kept;
-    var counts = JSON.parse($tile[0].dataset.counts || '{"n":0,"c":0,"m":0}');
+    var kept = tile && tile.dataset.kept;
+    var counts = JSON.parse(tile && tile.dataset.counts || '{"n":0,"c":0,"m":0}');
     api.log("[createSlider] kept:", kept || "no", "counts:", counts);
 
     render("html/metro/slider2.html", {
@@ -174,7 +174,7 @@ slider2 = function() {
           showPane(pane);
         }
       });
-      $tile.addClass("kifi-behind-slider");
+      $(tile).addClass("kifi-behind-slider");
       callback();
     });
   }
@@ -205,7 +205,7 @@ slider2 = function() {
     $slider.addClass("kifi-hiding").on("transitionend webkitTransitionEnd", function(e) {
       if (e.target.classList.contains("kifi-slider2") && e.originalEvent.propertyName == "opacity") {
         $(e.target).remove();
-        $tile.removeClass("kifi-behind-slider");
+        $(tile).removeClass("kifi-behind-slider");
       }
     });
     $slider = null;
@@ -345,6 +345,7 @@ slider2 = function() {
             $pane.off("transitionend webkitTransitionEnd", f);
             $box.data("shown", true).triggerHandler("kifi:shown");
             if (!bringSlider) $pane.append($slider);
+            $(tile).show();  // in case hidden
           })
           .on("keydown", ".kifi-pane-search", function(e) {
             var q;
@@ -392,7 +393,7 @@ slider2 = function() {
             e.preventDefault();
             var $hide = $(this).toggleClass("kifi-checked");
             var checked = $hide.hasClass("kifi-checked");
-            $tile.toggle(!checked);
+            $(tile).toggle(!checked);
             api.port.emit("suppress_on_site", checked);
             setTimeout(function() {
               if (checked) {
@@ -428,7 +429,7 @@ slider2 = function() {
       $slider.appendTo("html").layout();
     } else {
       $slider = null;
-      $tile.removeClass("kifi-behind-slider");
+      $(tile).removeClass("kifi-behind-slider");
     }
     $pane.on("transitionend webkitTransitionEnd", function(e) {
       if (e.target.classList.contains("kifi-pane")) {
@@ -581,7 +582,7 @@ slider2 = function() {
     },
     showKeepers: function(keepers, otherKeeps) {
       if (lastShownAt) return;
-      $tile.showHover({
+      var $tile = $(tile).showHover({
         reuse: false,
         showDelay: 0,
         hideDelay: 1e9,

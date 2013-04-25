@@ -91,33 +91,37 @@ class KeeperInfoLoader @Inject() (
       }.getOrElse(false)
       (domain, bookmark, neverOnSite1, host)
     }
-   
+
     val sensitive = domain.flatMap(_.sensitive).orElse(host.flatMap(domainClassifier.isSensitive(_).right.toOption))
     KeeperInfo1(bookmark.map { b => if (b.isPrivate) "private" else "public" }, neverOnSite, sensitive.getOrElse(false))
   }
 
   def load2(userId: Id[User], normalizedUri: String): KeeperInfo2 = {
-    val (nUri, shown, following, comments, threads, lastCommentRead, lastMessageRead) = db.readOnly { implicit session =>
-      val nUri = normalizedURIRepo.getByNormalizedUri(normalizedUri)
+    val (nUri, shown, following, comments, threads, lastCommentRead, lastMessageRead) = {
+      val nUri = db.readOnly { implicit s => normalizedURIRepo.getByNormalizedUri(normalizedUri) }
       nUri match {
         case Some(uri) =>
           val shown = historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id)
-          val following = followRepo.get(userId, uri.id.get).isDefined
-          val comments = commentRepo.getPublic(uri.id.get).map(commentWithBasicUserRepo.load)
-          val parentMessages = commentRepo.getParentMessages(uri.id.get, userId)
-          val threads = parentMessages.map(threadInfoRepo.load(_, Some(userId))).reverse
-          val lastCommentRead = commentReadRepo.getByUserAndUri(userId, uri.id.get) map { cr =>
-            commentRepo.get(cr.lastReadId).createdAt
+          val (following, comments, threads, lastCommentRead, lastMessageRead) = db.readOnly { implicit s =>
+            val parentMessages = commentRepo.getParentMessages(uri.id.get, userId)
+            (
+              followRepo.get(userId, uri.id.get).isDefined,
+              commentRepo.getPublic(uri.id.get).map(commentWithBasicUserRepo.load),
+              parentMessages.map(threadInfoRepo.load(_, Some(userId))).sortBy(_.lastCommentedAt),
+              commentReadRepo.getByUserAndUri(userId, uri.id.get) map { cr =>
+                commentRepo.get(cr.lastReadId).createdAt
+              },
+              parentMessages.map { th =>
+                commentReadRepo.getByUserAndParent(userId, th.id.get).map { cr =>
+                  val m = if (cr.lastReadId == th.id.get) th else commentRepo.get(cr.lastReadId)
+                  (th.externalId -> m.createdAt)
+                }
+              }.flatten.toMap
+            )
           }
-          val lastMessageRead = parentMessages.map { th =>
-            commentReadRepo.getByUserAndParent(userId, th.id.get).map { cr =>
-              val m = if (cr.lastReadId == th.id.get) th else commentRepo.get(cr.lastReadId)
-              (th.externalId -> m.createdAt)
-            }
-          }.flatten.toMap
           (nUri, shown, following, comments, threads, lastCommentRead, lastMessageRead)
         case None =>
-          (None, false, false, Nil, Nil, None, Map[ExternalId[Comment], DateTime]())
+          (None, false, false, Nil, Nil, None, Map.empty[ExternalId[Comment], DateTime])
       }
     }
     val (keepers, keeps) = nUri map { uri =>

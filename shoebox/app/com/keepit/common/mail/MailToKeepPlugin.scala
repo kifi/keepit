@@ -51,6 +51,7 @@ class MailToKeepActor @Inject() (
     persistEventPlugin: PersistEventPlugin,
     postOffice: PostOffice,
     messageParser: MailToKeepMessageParser,
+    db: Database,
     implicit private val clock: Clock,
     implicit private val fortyTwoServices: FortyTwoServices
   ) extends FortyTwoActor(healthcheckPlugin) with Logging {
@@ -129,18 +130,20 @@ class MailToKeepActor @Inject() (
   }
 
   private def sendReply(message: javax.mail.Message, htmlBody: String) {
-    val newMessage = message.reply(false)
-    postOffice.sendMail(ElectronicMail(
-      from = EmailAddresses.NOTIFICATIONS,
-      fromName = Some("Kifi Elves"),
-      to = new EmailAddressHolder {
-        val address = messageParser.getAddr(newMessage.getRecipients(RecipientType.TO).head)
-      },
-      subject = Option(newMessage.getSubject).getOrElse(""),
-      htmlBody = htmlBody,
-      inReplyTo = newMessage.getHeader("In-Reply-To").headOption.map(ElectronicMailMessageId.fromEmailHeader),
-      category = PostOffice.Categories.EMAIL_KEEP
-    ))
+    db.readWrite { implicit s =>
+      val newMessage = message.reply(false)
+      postOffice.sendMail(ElectronicMail(
+        from = EmailAddresses.NOTIFICATIONS,
+        fromName = Some("Kifi Elves"),
+        to = new EmailAddressHolder {
+          val address = messageParser.getAddr(newMessage.getRecipients(RecipientType.TO).head)
+        },
+        subject = Option(newMessage.getSubject).getOrElse(""),
+        htmlBody = htmlBody,
+        inReplyTo = newMessage.getHeader("In-Reply-To").headOption.map(ElectronicMailMessageId.fromEmailHeader),
+        category = PostOffice.Categories.EMAIL_KEEP
+      ))
+    }
   }
 }
 

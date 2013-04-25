@@ -106,7 +106,6 @@ class SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
       browsingHistoryTracker, clickHistoryTracker, resultClickTracker)
 
   private def getLuceneExplain(uriId: Id[NormalizedURI]) = {
-    log.info("getting lucene explanation for uriId: " + uriId.id)
     searcher.parsedQuery.map{ query =>
       val personalizedSearcher = searcher.getPersonalizedSearcher(query)
       personalizedSearcher.setSimilarity(searcher.similarity)
@@ -118,7 +117,7 @@ class SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
 
   private def getBasicQueryInfo = BasicQueryInfo(queryUUID, queryString, userId)
 
-  private def getUriInfo(uriId: Id[NormalizedURI]) = uriInfoMap(uriId)
+  private def getUriInfo(uriId: Id[NormalizedURI]) = uriInfoMap.getOrElse(uriId, { log.warn(s"uriId ${uriId.id} not found by searcher !!! "); UriInfo(uriId, -1.0f, -1.0f, -1.0f, -1.0f, false, false, -1, -1) })
 
   private def getUriLabel(uriId: Id[NormalizedURI]) = uriLabelMap(uriId)
 
@@ -169,14 +168,13 @@ object TrainingDataLabeler extends Logging{
 
   def getLabeledData(kifiClicked: Seq[Id[NormalizedURI]], googleClicked: Seq[Id[NormalizedURI]], kifiShown: Seq[Id[NormalizedURI]]) = {
     var data = Map.empty[Id[NormalizedURI], (Boolean, Boolean)]         // (isPositive, isCorrectlyRanked)
-    log.info("collecting training data ...")
     if (kifiClicked.nonEmpty) {
       kifiClicked.foreach( uri => data += uri -> (true, true))
-      log.info("positive data collected !!!")
+      log.info("positive data collected")
     } else {
       val isCorrectlyRanked = googleClicked.isEmpty || googleClicked.exists(uri => kifiShown.contains(uri))         // true if the clicked google uri is not indexed, or it was shown to the user
       kifiShown.take(topNkifi).foreach( uri => if (!googleClicked.contains(uri)) data += uri -> (false, isCorrectlyRanked))
-      if (data.nonEmpty) log.info("negative data collected !!!")
+      if (data.nonEmpty) log.info("negative data collected")
     }
     data
   }
@@ -302,7 +300,6 @@ class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], tar
   }
 
   def getUriInfo() = {
-    log.info("start fetching uri info ...")
     var uriInfoMap = Map.empty[Id[NormalizedURI], UriInfo]
     val idsetFilter = new IdSetFilter(targetUriIds.map{_.id}.toSet)
 
@@ -343,7 +340,6 @@ class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], tar
         }
       }
     }
-    log.info("uri info fetched !!!")
     uriInfoMap
   }
 

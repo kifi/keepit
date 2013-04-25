@@ -228,12 +228,8 @@ api = function() {
           api.log("#a00", "[api:dom_ready] %i url mismatch:\n%s\n%s", tab.id, tab.url, page.url);
         }
         injectContentScripts(page);
-      } else if (tab.windowId !== chrome.windows.WINDOW_ID_NONE) {  // e.g. instant results (sometimes)
-        chrome.windows.get(tab.windowId, function(win) {
-          if (win && win.type == "normal") {
-            api.log("#a00", "[api:dom_ready] no page for", tab.id, tab.url);
-          }
-        });
+      } else if (selectedTabIds[tab.windowId]) {  // normal win
+        api.log("#a00", "[api:dom_ready] no page for", tab.id, tab.url);
       }
     }
   });
@@ -452,23 +448,23 @@ api = function() {
             if (id > 0) {
               var cb = callbacks[id];
               if (cb) {
-                api.log("#0ac", "[socket.receive] calling back after", new Date - cb[1], "ms:", id);
+                api.log("#0ac", "[socket.receive] response", id, "(after", new Date - cb[1], "ms)");
                 delete callbacks[id];
                 cb[0].apply(null, msg);
               } else {
-                api.log("#0ac", "[socket.receive] ignoring, no callback", [id].concat(msg));
+                api.log("#0ac", "[socket.receive] ignoring", [id].concat(msg));
               }
             } else {
               var handler = handlers[id];
               if (handler) {
-                api.log("#0ac", "[socket.receive] invoking handler", id);
+                api.log("#0ac", "[socket.receive] handling", id);
                 handler.apply(null, msg);
               } else {
-                api.log("#0ac", "[socket.receive] ignoring, no handler", [id].concat(msg));
+                api.log("#0ac", "[socket.receive] ignoring", [id].concat(msg));
               }
             }
           } else {
-            api.log("#0ac", "[socket.receive] ignoring (not array):", msg);
+            api.log("#0ac", "[socket.receive] ignoring", msg);
           }
         });
         return {

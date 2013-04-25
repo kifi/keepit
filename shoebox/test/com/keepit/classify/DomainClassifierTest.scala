@@ -26,7 +26,7 @@ class DomainClassifierTest extends TestKit(ActorSystem()) with Specification wit
 
   "The domain classifier" should {
     "use imported classifications and not fetch for known domains" in {
-      running(new DevApplication().withFakeMail().withFakePersistEvent().withFakeHealthcheck().withFakeHttpClient()
+      running(new DevApplication().withFakeMail().withFakePersistEvent().withFakeHttpClient()
           .withTestActorSystem(system)) {
         val classifier = inject[DomainClassifierImpl]
         val tagRepo = inject[DomainTagRepo]
@@ -50,7 +50,7 @@ class DomainClassifierTest extends TestKit(ActorSystem()) with Specification wit
       }
     }
     "fetch if necessary" in {
-      running(new DevApplication().withFakeMail().withFakePersistEvent().withFakeHealthcheck()
+      running(new DevApplication().withFakeMail().withFakePersistEvent()
           .withTestActorSystem(system)
           .overrideWith(new FortyTwoModule {
             override def configure() {

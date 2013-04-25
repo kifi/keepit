@@ -4,6 +4,7 @@ import org.joda.time.DateTime
 import org.specs2.mutable._
 
 import com.keepit.common.db.ExternalId
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.social.{SocialNetworks, SocialId}
 import com.keepit.inject.inject
 import com.keepit.model.{User, SocialUserInfo, UserSession}
@@ -14,10 +15,12 @@ import play.api.test.Helpers._
 import securesocial.core.{Authenticator, UserId}
 
 class SecureSocialAuthenticatorPluginTest extends Specification with DbRepos {
+  def healthcheckPlugin = inject[HealthcheckPlugin]
   "SecureSocialAuthenticatorPlugin" should {
     "find existing user sessions" in {
       running(new EmptyApplication()) {
-        val plugin = new SecureSocialAuthenticatorPlugin(db, socialUserInfoRepo, userSessionRepo, current)
+        val plugin =
+          new SecureSocialAuthenticatorPlugin(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
         val id = ExternalId[UserSession]()
         plugin.find(id.id) === Right(None)
         db.readWrite { implicit s =>
@@ -33,7 +36,8 @@ class SecureSocialAuthenticatorPluginTest extends Specification with DbRepos {
     }
     "not find deleted sessions" in {
       running(new EmptyApplication()) {
-        val plugin = new SecureSocialAuthenticatorPlugin(db, socialUserInfoRepo, userSessionRepo, current)
+        val plugin =
+          new SecureSocialAuthenticatorPlugin(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
         val id = ExternalId[UserSession]()
         db.readWrite { implicit s =>
           userSessionRepo.save(UserSession(
@@ -52,7 +56,8 @@ class SecureSocialAuthenticatorPluginTest extends Specification with DbRepos {
       running(new EmptyApplication()) {
         inject[FakeClock].push(new DateTime("2015-01-01"))
 
-        val plugin = new SecureSocialAuthenticatorPlugin(db, socialUserInfoRepo, userSessionRepo, current)
+        val plugin =
+          new SecureSocialAuthenticatorPlugin(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
         val id = ExternalId[UserSession]()
         db.readWrite { implicit s =>
           userSessionRepo.save(UserSession(
@@ -64,7 +69,8 @@ class SecureSocialAuthenticatorPluginTest extends Specification with DbRepos {
     }
     "associate with the correct user" in {
       running(new EmptyApplication()) {
-        val plugin = new SecureSocialAuthenticatorPlugin(db, socialUserInfoRepo, userSessionRepo, current)
+        val plugin =
+          new SecureSocialAuthenticatorPlugin(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
         val id = ExternalId[UserSession]()
         val socialId = SocialId("gm")
         val provider = SocialNetworks.FACEBOOK

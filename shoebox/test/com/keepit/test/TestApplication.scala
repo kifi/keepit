@@ -15,9 +15,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.db.DbInfo
 import com.keepit.common.db.SlickModule
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.BabysitterTimeout
-import com.keepit.common.healthcheck.FakeHealthcheckModule
-import com.keepit.common.healthcheck.{Babysitter, BabysitterImpl}
+import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{FakeMailToKeepPlugin, MailToKeepPlugin, FakeMailModule, MailSenderPlugin, ElectronicMail}
 import com.keepit.common.net.FakeHttpClientModule
@@ -47,7 +45,6 @@ import scala.slick.session.{Database => SlickDatabase}
 class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplication() {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
   def withFakeMail() = overrideWith(FakeMailModule())
-  def withFakeHealthcheck() = overrideWith(FakeHealthcheckModule())
   def withFakeScraper() = overrideWith(FakeScraperModule())
   def withFakeScheduler() = overrideWith(FakeSchedulerModule())
   def withFakeHttpClient() = overrideWith(FakeHttpClientModule())
@@ -104,6 +101,7 @@ case class TestModule() extends ScalaModule {
     bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
     bind[MailToKeepPlugin].to[FakeMailToKeepPlugin]
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
+    bind[HealthcheckPlugin].to[FakeHealthcheck]
 
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
     listenerBinder.addBinding().to(classOf[ResultClickedListener])

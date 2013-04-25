@@ -20,7 +20,7 @@ class BookmarkInternerTest extends Specification with DbRepos {
 
   "BookmarkInterner" should {
     "persist bookmark" in {
-      running(new EmptyApplication().withFakeHealthcheck().withFakeScraper()) {
+      running(new EmptyApplication().withFakeScraper()) {
         val user = db.readWrite { implicit db =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
@@ -39,7 +39,7 @@ class BookmarkInternerTest extends Specification with DbRepos {
     }
 
     "persist bookmarks" in {
-      running(new EmptyApplication().withFakeHealthcheck().withFakeScraper()) {
+      running(new EmptyApplication().withFakeScraper()) {
         val user = db.readWrite { implicit db =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
@@ -61,7 +61,7 @@ class BookmarkInternerTest extends Specification with DbRepos {
   }
 
   "persist bookmarks with one bad url" in {
-    running(new EmptyApplication().withFakeHealthcheck().withFakeScraper()) {
+    running(new EmptyApplication().withFakeScraper()) {
       val user = db.readWrite { implicit db =>
         userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
       }
