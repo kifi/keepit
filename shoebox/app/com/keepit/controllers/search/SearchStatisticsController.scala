@@ -50,14 +50,11 @@ class SearchStatisticsController @Inject() (db: Database,
       }
 
       val sse = sseFactory.get.apply(ExternalId[ArticleSearchResultRef](queryUUID), queryString, Id[User](userId), uriLabel)
-      log.info("search statistics controller: fetching data ...")
       val searchStatistics = sse.getSearchStatistics(uriLabel.keySet)
-      log.info("search statistics controller: fetched all data !!! start persisting data ...")
       for (ss <- searchStatistics) {
         val event = Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_statistics", SearchStatisticsSerializer.serializer.writes(ss._2).as[JsObject])
         persistEventProvider.get.persist(event)
       }
-      log.info("search statistics controller: all data persisted !!!")
     }
     Ok("search statistics persisted")
 
