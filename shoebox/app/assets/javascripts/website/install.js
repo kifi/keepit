@@ -2,7 +2,14 @@ $(function() {
   var isChrome = !!(window.chrome && chrome.webstore && chrome.webstore.install);
   var isFirefox = ('MozBoxSizing' in document.documentElement.style) || navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
 
-  if(isChrome || isFirefox) {
+  // if we can't grab the version, default to allowing the user through
+  var browserVersion = navigator.userAgent.match(/(opera|chrome|safari|firefox|msie)\/?\s*(\.?\d*)/i)[2] || 999;
+
+  if ((isChrome && browserVersion < 25) || (isFirefox && browserVersion < 19)) {
+    $("#old-install").show();
+    $(".install_extensions").hide();
+    $("#install_extensions_title").hide();
+  } if (isChrome || isFirefox) {
     $("#other-install").hide();
     $(".install_extensions").show();
   } else {
@@ -11,7 +18,7 @@ $(function() {
     $("#install_extensions_title").hide();
   }
 
-  if(isChrome) {
+  if (isChrome) {
     $("#chrome-install").show();
     var errorCount = 0;
     $("#chrome-install").click(function() {
@@ -22,7 +29,7 @@ $(function() {
         $this.text("Installed. Preparing extension now...");
       }, function(e) {
         errorCount = errorCount+1;
-        if(errorCount < 4) {
+        if (errorCount < 4) {
           $this.text("Hrm, there's a problem. Try again?");
         } else {
           $this.hide();
@@ -30,7 +37,7 @@ $(function() {
         }
       })
     });
-  } else if(isFirefox) {
+  } else if (isFirefox) {
     $("#firefox-install").show();
     $("#firefox-install").click(function() {
       $(this).text("Installing...");
