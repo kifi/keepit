@@ -452,23 +452,23 @@ api = function() {
             if (id > 0) {
               var cb = callbacks[id];
               if (cb) {
-                api.log("#0ac", "[socket.receive] calling back after", new Date - cb[1], "ms:", id);
+                api.log("#0ac", "[socket.receive] response", id, "(after", new Date - cb[1], "ms)");
                 delete callbacks[id];
                 cb[0].apply(null, msg);
               } else {
-                api.log("#0ac", "[socket.receive] ignoring, no callback", [id].concat(msg));
+                api.log("#0ac", "[socket.receive] ignoring", [id].concat(msg));
               }
             } else {
               var handler = handlers[id];
               if (handler) {
-                api.log("#0ac", "[socket.receive] invoking handler", id);
+                api.log("#0ac", "[socket.receive] handling", id);
                 handler.apply(null, msg);
               } else {
-                api.log("#0ac", "[socket.receive] ignoring, no handler", [id].concat(msg));
+                api.log("#0ac", "[socket.receive] ignoring", [id].concat(msg));
               }
             }
           } else {
-            api.log("#0ac", "[socket.receive] ignoring (not array):", msg);
+            api.log("#0ac", "[socket.receive] ignoring", msg);
           }
         });
         return {
