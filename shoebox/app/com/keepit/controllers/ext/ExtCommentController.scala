@@ -83,7 +83,10 @@ class ExtCommentController @Inject() (
     val comment = db.readWrite {implicit s =>
       val (uri, url) = getOrCreateUriAndUrl(urlStr)
 
-      val newComment = commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PUBLIC, parent = None))
+      val newComment = commentRepo.save(
+          Comment(uriId = uri.id.get, urlId = url.id, userId = userId, 
+              pageTitle = title, text = LargeString(text), 
+              permissions = CommentPermissions.PUBLIC, parent = None))
       commentReadRepo.save(commentReadRepo.getByUserAndUri(userId, uri.id.get) match {
         case Some(commentRead) => // existing CommentRead entry for this message thread
           commentRead.withLastReadId(newComment.id.get)
@@ -232,7 +235,7 @@ class ExtCommentController @Inject() (
     (uri, url)
   }
 
-  /* depricated, remove after all clients are updated to 2.3.24 */
+  /* deprecated, remove after all clients are updated to 2.3.24 */
   def createComment() = AuthenticatedJsonToJsonAction { request =>
     val o = request.body
     val (urlStr, title, text, permissions, recipients, parent) = (
