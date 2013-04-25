@@ -175,13 +175,16 @@ class MainSearcher(
 
     val hits = createQueue(numHitsToReturn)
 
-    // global high score excluding others (an orphan uri sometimes makes results disappear)
-    val highScore = {
-      val score = max(myHits.highScore, friendsHits.highScore)
-      if (score < 0.0f) 1.0f else score
+    // compute high score excluding others (an orphan uri sometimes makes results disappear)
+    // and others high score (used for tailcutting of others hits)
+    val (highScore, othersHighScore) = {
+      var highScore = max(myHits.highScore, friendsHits.highScore)
+      val othersHighScore = max(othersHits.highScore, highScore)
+      if (highScore < 0.0f) highScore = othersHighScore
+      (highScore, othersHighScore)
     }
 
-    var threshold = highScore * tailCutting
+    val threshold = highScore * tailCutting
 
     if (myHits.size > 0) {
       myHits.toRankedIterator.map{ case (h, rank) =>
@@ -219,12 +222,13 @@ class MainSearcher(
     }
 
     if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers) {
+      val othersThreshold = othersHighScore * tailCutting
       val queue = createQueue(numHitsToReturn - hits.size)
       othersHits.toRankedIterator.map{ case (h, rank) =>
         h.score = h.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
         h
       }.takeWhile{
-        h => h.score > threshold
+        h => h.score > othersThreshold
       }.foreach{ h =>
         h.bookmarkCount = getPublicBookmarkCount(h.id) // TODO: revisit this later. We probably want the private count.
         if (h.bookmarkCount > 0) {
