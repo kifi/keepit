@@ -95,6 +95,9 @@ object ApplicationBuild extends Build {
       ),
 
       libraryDependencies ++= Seq(
+        // updating bonecp, trying to resolve "Timed out waiting for a free available connection" exception
+        // http://stackoverflow.com/a/15500442/81698
+        "com.jolbox" % "bonecp" % "0.8.0-rc1",
         "com.google.inject" % "guice" % "3.0",
         "com.google.inject.extensions" % "guice-multibindings" % "3.0",
         "com.tzavellas" % "sse-guice" % "0.7.1"
