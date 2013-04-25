@@ -91,7 +91,7 @@ class KeeperInfoLoader @Inject() (
       }.getOrElse(false)
       (domain, bookmark, neverOnSite1, host)
     }
-   
+
     val sensitive = domain.flatMap(_.sensitive).orElse(host.flatMap(domainClassifier.isSensitive(_).right.toOption))
     KeeperInfo1(bookmark.map { b => if (b.isPrivate) "private" else "public" }, neverOnSite, sensitive.getOrElse(false))
   }
@@ -102,13 +102,12 @@ class KeeperInfoLoader @Inject() (
       nUri match {
         case Some(uri) =>
           val shown = historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id)
-          val (following, comments, threads, lastCommentRead, lastMessageRead) = db.readOnly {
-            implicit s =>
+          val (following, comments, threads, lastCommentRead, lastMessageRead) = db.readOnly { implicit s =>
             val parentMessages = commentRepo.getParentMessages(uri.id.get, userId)
             (
               followRepo.get(userId, uri.id.get).isDefined,
               commentRepo.getPublic(uri.id.get).map(commentWithBasicUserRepo.load),
-              parentMessages.map(threadInfoRepo.load(_, Some(userId))).reverse,
+              parentMessages.map(threadInfoRepo.load(_, Some(userId))).sortBy(_.lastCommentedAt),
               commentReadRepo.getByUserAndUri(userId, uri.id.get) map { cr =>
                 commentRepo.get(cr.lastReadId).createdAt
               },
@@ -122,7 +121,7 @@ class KeeperInfoLoader @Inject() (
           }
           (nUri, shown, following, comments, threads, lastCommentRead, lastMessageRead)
         case None =>
-          (None, false, false, Nil, Nil, None, Map[ExternalId[Comment], DateTime]())
+          (None, false, false, Nil, Nil, None, Map.empty[ExternalId[Comment], DateTime])
       }
     }
     val (keepers, keeps) = nUri map { uri =>
