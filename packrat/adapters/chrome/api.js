@@ -228,12 +228,8 @@ api = function() {
           api.log("#a00", "[api:dom_ready] %i url mismatch:\n%s\n%s", tab.id, tab.url, page.url);
         }
         injectContentScripts(page);
-      } else if (tab.windowId !== chrome.windows.WINDOW_ID_NONE) {  // e.g. instant results (sometimes)
-        chrome.windows.get(tab.windowId, function(win) {
-          if (win && win.type == "normal") {
-            api.log("#a00", "[api:dom_ready] no page for", tab.id, tab.url);
-          }
-        });
+      } else if (selectedTabIds[tab.windowId]) {  // normal win
+        api.log("#a00", "[api:dom_ready] no page for", tab.id, tab.url);
       }
     }
   });

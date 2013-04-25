@@ -1,16 +1,10 @@
 package com.keepit.common.mail
 
-import com.tzavellas.sse.guice.ScalaModule
-import com.google.inject._
-import com.google.inject.binder._
-import akka.actor.Actor._
-import akka.actor._
-import scala.concurrent.Await
-import akka.pattern.ask
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.Play.current
-import play.api.Configuration
 import scala.collection.mutable.MutableList
+
+import com.google.inject._
+import com.keepit.common.db.slick.DBSession.RWSession
+import com.tzavellas.sse.guice.ScalaModule
 
 class FakeOutbox(val mails: MutableList[ElectronicMail] = MutableList()) {
   def add(email: ElectronicMail): ElectronicMail = {
@@ -38,7 +32,7 @@ case class FakeMailModule() extends ScalaModule {
   @Provides
   def postOfficeProvider(emails: FakeOutbox): PostOffice = {
     new PostOffice() {
-      def sendMail(mail: ElectronicMail): ElectronicMail = {
+      def sendMail(mail: ElectronicMail)(implicit s: RWSession): ElectronicMail = {
         val sent = mail.prepareToSend().sent("fake sent", ElectronicMailMessageId("475082848.3.1353745094337.JavaMail.eishay@eishay-mbp.local"))
         emails.add(sent)
         sent
