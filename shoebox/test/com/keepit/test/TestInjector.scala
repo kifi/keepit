@@ -13,18 +13,21 @@ import com.keepit.common.db.slick.Database
 import com.google.inject.Module
 import com.keepit.inject.RichInjector
 import java.sql.DriverManager
+import java.sql._
+import javax.sql._
+import akka.actor.ActorSystem
 
 trait TestInjector {
 
   def inject[A](implicit m: Manifest[A], injector: RichInjector): A = injector.inject[A]
 
   def withInjector[T](overrideingModules: Module*)(f: RichInjector => T) = {
-    Class.forName("org.h2.Driver")
     def dbInfo: DbInfo = TestDbInfo.dbInfo
+    DriverManager.registerDriver(new play.utils.ProxyDriver(Class.forName("org.h2.Driver").newInstance.asInstanceOf[Driver]))
 //    val conn = DriverManager.getConnection(TestDbInfo.url)
     val modules = {
       def overridModule(m: Module, overriding: Module) = Modules.`override`(Seq(m): _*).`with`(overriding)
-      val init = overridModule(TestModule(Some(dbInfo)), TestActorSystemModule())
+      val init = overridModule(TestModule(Some(dbInfo)), TestActorSystemModule(ActorSystem()))
       overrideingModules.foldLeft(init)((init, over) => overridModule(init, over))
     }
 

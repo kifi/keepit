@@ -1,0 +1,35 @@
+@(user: User)
+
+@views.html.website.helper.main(title = "Getting started with KiFi") {
+  <div class="user_avatar">
+  <img src="@com.keepit.controllers.assets.routes.UserPictureController.get(112, user.externalId)" width="112" height="112">
+  </div>
+
+  <section class="content clearfix">
+    <header class="content_header">
+        <!--<div class="watch_video">
+          <span>Watch a video</span>
+            <div class="video_thumb">
+              <img src="@routes.Assets.at("images/video_thumb.jpg")" width="138" height="85">
+                <div class="play_video" data-popup="video"></div>
+            </div>
+        </div>-->
+
+        <h2>Yay @user.firstName, you’re in!</h2>
+        <h3>Welcome to the KiFi Private Beta</h3>                    
+    </header>        
+
+    <h2 class="blue text_center">You're all set. Using KiFi is super simple!</h2>
+
+    <div class="how_to clearfix">
+      <div class="container left">
+          <h3>Simply browse to any page and keep it using the KiFi Keeper</h3>
+          <img src="@routes.Assets.at("images/how_to1.jpg")" width="301" height="233"> 
+        </div>
+      <div class="container right">
+          <h3>Easily find your and your friends' keeps by searching Google</h3>
+          <img src="@routes.Assets.at("images/how_to2.jpg")" width="301" height="233"> 
+        </div>                    
+    </div> 
+  </section>
+}

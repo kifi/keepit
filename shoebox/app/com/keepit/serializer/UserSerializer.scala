@@ -17,7 +17,8 @@ class UserSerializer extends Format[User] {
       "updatedAt" -> Json.toJson(user.updatedAt),
       "externalId" -> JsString(user.externalId.id),
       "firstName"  -> JsString(user.firstName),
-      "lastName"  -> JsString(user.lastName)
+      "lastName"  -> JsString(user.lastName),
+      "state" -> JsString(user.state.value)
     ))
 
   def reads(json: JsValue): JsResult[User] = 
@@ -27,7 +28,8 @@ class UserSerializer extends Format[User] {
       updatedAt = (json \ "updatedAt").as[DateTime],
       externalId = ExternalId[User]((json \ "externalId").as[String]),
       firstName = (json \ "firstName").as[String],
-      lastName = (json \ "lastName").as[String]
+      lastName = (json \ "lastName").as[String],
+      state = State[User]((json \ "state").as[String])
     ))
 }
 

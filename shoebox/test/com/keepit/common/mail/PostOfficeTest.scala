@@ -13,7 +13,7 @@ class PostOfficeTest extends Specification {
 
   "PostOffice" should {
     "persist and load email" in {
-      running(new ShoeboxApplication().withFakeHealthcheck().withFakeMail()) {
+      running(new ShoeboxApplication().withFakeMail()) {
         val mail1 = inject[PostOffice].sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.TEAM, subject = "foo 1", htmlBody = "some body in html 1", category = PostOffice.Categories.HEALTHCHECK))
         val outbox = inject[FakeOutbox]
         outbox.size === 1

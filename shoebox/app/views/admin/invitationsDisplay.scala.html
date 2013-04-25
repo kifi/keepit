@@ -1,0 +1,118 @@
+@(invitesWithSocial: Seq[(Option[(Invitation, Option[User])], SocialUserInfo)],
+    page: Int, count: Int, numPages: Int, showing: String = "all")
+@import com.keepit.model.InvitationStates
+
+@pagination(page: Int, pageCount: Int) = {
+  <div class="pagination pagination-centered pagination-mini">
+    <ul>
+      <li>
+        @if(page > 0) {
+          <a href="@com.keepit.controllers.admin.routes.AdminInvitationController.displayInvitations(page - 1, showing)">
+        } else {
+         <a href="#">
+        }
+        Prev
+        </a>
+      </li>
+      @for(i <- 0 to (pageCount - 1)) {
+        @if(i == page) {
+          <li class="disabled">
+            <a href="@com.keepit.controllers.admin.routes.AdminInvitationController.displayInvitations(i, showing)">@{i + 1}</a>
+          </li>
+        } else {
+          <li class="active">
+            <a href="@com.keepit.controllers.admin.routes.AdminInvitationController.displayInvitations(i, showing)">@{i + 1}</a>
+          </li>
+        }
+      }
+      <li>
+        @if(count > 0) {
+          <a href="@com.keepit.controllers.admin.routes.AdminInvitationController.displayInvitations(page + 1, showing)">
+        } else {
+         <a href="#">
+        }
+        Next
+        </a>
+      </li>
+    </ul>
+  </div>
+}
+
+@stateDisplay(state: State[Invitation]) = {
+  @{state match {
+    case InvitationStates.INACTIVE => "inactive"
+    case InvitationStates.ACTIVE => "pending user acceptance"
+    case InvitationStates.ACCEPTED => "pending admin approval"
+    case InvitationStates.ADMIN_ACCEPTED => "admin accepted"
+    case InvitationStates.ADMIN_REJECTED => "admin rejected"
+    case InvitationStates.JOINED => "user joined"
+  }}
+}
+
+@admin("Invitations") {
+  @pagination(page, numPages)
+
+    <p>Show state:
+    <select id="state" value="@showing">
+    <option value="all">all</option>
+    @for(state <- Seq(InvitationStates.INACTIVE, InvitationStates.ACTIVE, InvitationStates.ACCEPTED,
+        InvitationStates.ADMIN_ACCEPTED, InvitationStates.ADMIN_REJECTED, InvitationStates.JOINED)) {
+        <option value="@state.value" @if(state.value == showing) { selected }>@stateDisplay(state)</option>
+    }
+    </select>
+    </p>
+
+    <table class="table table-condensed table-striped">
+      <thead>
+        <tr>
+          <th>Name
+          <th>Invited by
+          <th>Date invited
+          <th>State
+          <th>Action!
+      </thead>
+      @for((maybeInviteWithUser, socialUserInfo) <- invitesWithSocial) {
+      <tr>
+        <td><a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(socialUserInfo.id.get)">@socialUserInfo.fullName</a>
+        <td>
+          @maybeInviteWithUser.collect { case (_, Some(user)) =>
+            <a href="@com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get)">@user.firstName @user.lastName</a>
+          }.getOrElse { - }
+        <td>
+          @maybeInviteWithUser.map { case (invite, _) =>
+            @adminHelper.dateTimeDisplay(invite.createdAt)
+          }.getOrElse { - }
+        <td>
+          @maybeInviteWithUser.map { case (invite, _) =>
+              @stateDisplay(invite.state)
+          }.getOrElse { @stateDisplay(InvitationStates.ACCEPTED) }
+        <td>
+          @if(maybeInviteWithUser.isEmpty || maybeInviteWithUser.exists(_._1.state == InvitationStates.ACCEPTED)) {
+          <form class="form-inline"
+            style="display:inline"
+            action="@com.keepit.controllers.admin.routes.AdminInvitationController.acceptUser(socialUserInfo.id.get)" method="POST">
+            <button type="submit" class="btn">Accept</button>
+          </form>
+          <form class="form-inline"
+            style="display:inline"
+            action="@com.keepit.controllers.admin.routes.AdminInvitationController.rejectUser(socialUserInfo.id.get)" method="POST">
+            <button type="submit" class="btn">Reject</button>
+          </form>
+          }
+        </td>
+      }
+    </table>
+    
+  @pagination(page, numPages)
+
+<script>
+$(function() {
+  $("#state").change(function () {
+    var s = '@com.keepit.controllers.admin.routes.AdminInvitationController.displayInvitations(page, "____")';
+    window.location = s.replace(/____/, $(this).val()).replace(/&amp;/gi, '&');
+  });
+  $("form").submit(function() { $(this).find("button[type=submit]").button("loading"); });
+});
+</script>
+
+}

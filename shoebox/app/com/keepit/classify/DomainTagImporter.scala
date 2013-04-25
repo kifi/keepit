@@ -17,7 +17,7 @@ import org.joda.time.format.DateTimeFormat
 
 import com.google.inject.{Provider, ImplementedBy, Inject}
 
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
@@ -142,9 +142,12 @@ private[classify] class DomainTagImportActor @Inject() (
     case RemoveTag(tagName) =>
       try {
         val result: Option[DomainTag] = withSensitivityUpdate {
-          db.readWrite { implicit s =>
-            tagRepo.get(tagName, excludeState = None).map { tag =>
-              applyTagToDomains(tagName, Seq())
+          val tagOpt = db.readWrite { implicit s =>
+            tagRepo.get(tagName, excludeState = None)
+          }
+          tagOpt.map { tag =>
+            applyTagToDomains(tagName, Seq())
+            db.readWrite { implicit s =>
               tagRepo.save(tag.withState(DomainTagStates.INACTIVE))
             }
           }

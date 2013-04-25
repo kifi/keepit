@@ -1,11 +1,10 @@
 import sbt._
 import Keys._
 import play.Project._
-import scala.sys.process._
 import java.io.PrintWriter
 import java.io.File
 import java.util.Locale
-import org.joda.time.{DateTime, DateTimeZone, LocalDate, LocalTime}
+import org.joda.time.{DateTime, DateTimeZone}
 import org.joda.time.format.DateTimeFormat
 import com.typesafe.sbteclipse.core.EclipsePlugin.EclipseKeys
 
@@ -34,27 +33,36 @@ object ApplicationBuild extends Build {
 
     val appDependencies = Seq(
       jdbc,
+      "securesocial" %% "securesocial" % "master-SNAPSHOT",
+      "com.github.mumoshu" %% "play2-memcached" % "0.3.0.1",
       "mysql" % "mysql-connector-java" % "5.1.10",
       "org.clapper" %% "grizzled-slf4j" % "1.0.1",
-      "com.typesafe.akka" % "akka-testkit" % "2.0.2",
+      "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
       "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2",
-      "org.apache.lucene" % "lucene-core" % "4.2.0",
-      "org.apache.lucene" % "lucene-analyzers-common" % "4.2.0",
-      "org.apache.lucene" % "lucene-suggest" % "4.2.0",
-      "org.apache.httpcomponents" % "httpclient" % "4.2.1",
+      "org.apache.lucene" % "lucene-core" % "4.2.1",
+      "org.apache.lucene" % "lucene-analyzers-common" % "4.2.1",
+      "org.apache.lucene" % "lucene-suggest" % "4.2.1",
+      "org.apache.httpcomponents" % "httpclient" % "4.2.4",
       "org.apache.tika" % "tika-parsers" % "1.3",
       "org.apache.commons" % "commons-math3" % "3.1.1",
+      "org.apache.zookeeper" % "zookeeper" % "3.4.5",
       "com.cybozu.labs" % "langdetect" % "1.1-20120112",
       "org.mindrot" % "jbcrypt" % "0.3m",
       "com.amazonaws" % "aws-java-sdk" % "1.3.20",
       "javax.mail" % "mail" % "1.4.5",
       "org.mongodb" %% "casbah" % "2.5.0",
-      "de.l3s.boilerpipe" % "boilerpipe" % "1.2.0",
       "org.jsoup" % "jsoup" % "1.7.1",
-      "spy" % "spymemcached" % "2.8.1",
-      "com.typesafe.slick" %% "slick" % "1.0.0"
-    ) map (_.excludeAll(ExclusionRule(organization = "com.cedarsoft")))
+      "spy" % "spymemcached" % "2.8.12",
+      "com.typesafe.slick" %% "slick" % "1.0.0",
+      "com.typesafe.slick" %% "slick-testkit" % "1.0.0"
+    ) map (_.excludeAll(
+      ExclusionRule(organization = "com.cedarsoft"),
+      ExclusionRule(organization = "javax.jms"),
+      ExclusionRule(organization = "com.sun.jdmk"),
+      ExclusionRule(organization = "com.sun.jmx"),
+      ExclusionRule(organization = "org.jboss.netty")
+    ))
 
     val main = play.Project(appName, appVersion, appDependencies).settings(
       scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls","-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds","-language:existentials", "-language:experimental.macros"),
@@ -67,12 +75,12 @@ object ApplicationBuild extends Build {
       ),
 
       resolvers ++= Seq(
+        //used for securesocial
+        "Spy Repository" at "http://files.couchbase.com/maven2",
+        Resolver.url("sbt-plugin-snapshots",
+          new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
         "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
         "kevoree Repository" at "http://maven2.kevoree.org/release/",
-        //used for securesocial
-        "jBCrypt Repository" at "http://repo1.maven.org/maven2/org/",
-        "boilerpipe Repository" at "http://boilerpipe.googlecode.com/svn/repo/",
-        "Spy Repository" at "http://files.couchbase.com/maven2",
         //for org.mongodb#casb
         "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
         "releases"  at "https://oss.sonatype.org/content/groups/scala-tools"

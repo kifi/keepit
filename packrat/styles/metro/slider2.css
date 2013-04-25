@@ -99,7 +99,7 @@
   font: 12px "Helvetica Neue",arial,sans-serif;
   direction: ltr;
 }
-.kifi-slider2.kifi-visible {
+.kifi-slider2.kifi-wide {
   width: 322px;
   -webkit-transition: width 100ms ease-out;
   transition: width 100ms ease-out;
@@ -113,6 +113,9 @@
   opacity: 0;
   -webkit-transition: width 100ms ease-in, opacity 60ms ease-in 40ms;
   transition: width 100ms ease-in, opacity 60ms ease-in 40ms;
+}
+.kifi-pane .kifi-slider2 {
+  position: absolute;
 }
 .kifi-slider2-x {
   position: absolute;
@@ -184,7 +187,7 @@
   background: #1f2b39;
 }
 .kifi-unkept .kifi-slider2-keep-btn::before {
-  content: "keep";
+  content: "keep it";
 }
 .kifi-public .kifi-slider2-keep-btn,
 .kifi-private .kifi-slider2-keep-btn,

@@ -28,7 +28,7 @@ class BabysitterTest extends Specification with TestInjector {
 
   "Babysitter" should {
     "do nothing if code executes quickly" in {
-      withInjector(FakeHealthcheckModule(), BabysitterModule(), FakeSchedulerModule())  { implicit injector =>
+      withInjector(BabysitterModule(), FakeSchedulerModule())  { implicit injector =>
         inject[Babysitter].watch(BabysitterTimeout(Duration(1, "seconds"), Duration(1, "seconds"))) {
           // So fast!
         }

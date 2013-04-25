@@ -1,0 +1,39 @@
+@(user: User, email: Option[String], friendsOnKifi: Set[ExternalId[User]])
+
+@views.html.website.helper.main(title = "You're signed up for Kifi!", scripts = Seq("website/onboarding"), hiddenElements = Seq("nav")) {
+  <div class="user_avatar">
+    <img src="@com.keepit.controllers.assets.routes.UserPictureController.get(112, user.externalId)" width="112" height="112">
+  </div>
+
+  <section class="content clearfix">
+    <header class="content_header">
+        <h2>Hi, @user.firstName @user.lastName</h2>
+        <h3>You're on the list!</h3>
+        
+    </header>
+  
+    <p>When your request is approved, an email will be sent to:</p>
+    <div id="email_input"@if(email.isDefined){ style="display:none"}>
+      <input id="email" type="text" class="blue keep_text" value="@if(email.isDefined){@email}" placeholder="Please type in your email address" autocomplete="off"> <span id="change_email" class="btn blue">Save</span>
+    </div>
+    <div id="email_display"@if(!email.isDefined){ style="display:none"}>
+      <p><span class="email_address">@if(email.isDefined){@email.get}</span> <span class="change_email_link">(Change email)</span></p>
+    </div>
+    <p>We are constantly reviewing requests and apologize for the wait.</p>
+    <span id="email_width"></span>
+
+    @if(friendsOnKifi.nonEmpty) {
+      <div class="fb_friends_large clearfix">
+        <p>@friendsOnKifi.size of your friends @if(friendsOnKifi.size==1){is}else{are} already in the KiFi private beta</p>
+        <div class="friends">
+          @for(friend <- friendsOnKifi.take(7)) {
+            <a href="#"><img src="@com.keepit.controllers.assets.routes.UserPictureController.get(66, friend)" width="66" height="66"></a>
+          }
+          @if(friendsOnKifi.size > 7) {
+            <a href="#"><span class="more_friends">+@{friendsOnKifi.size-7}</span></a>
+          }
+        </div>
+      </div>
+    }
+  </section>
+}

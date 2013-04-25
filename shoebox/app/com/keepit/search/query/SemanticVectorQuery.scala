@@ -6,6 +6,7 @@ import com.keepit.search.query.QueryUtil._
 import org.apache.lucene.index.AtomicReader
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.index.DocsAndPositionsEnum
+import org.apache.lucene.index.FilterAtomicReader.FilterDocsAndPositionsEnum
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.Query
@@ -17,6 +18,7 @@ import org.apache.lucene.search.Explanation
 import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.similarities.Similarity
 import org.apache.lucene.util.Bits
+import org.apache.lucene.util.BytesRef
 import org.apache.lucene.util.PriorityQueue
 import org.apache.lucene.util.ToStringUtils
 import java.util.{Set => JSet}
@@ -25,10 +27,10 @@ import scala.collection.JavaConversions._
 import scala.math._
 
 object SemanticVectorQuery {
-  def apply(fieldName: String, terms: Set[Term]) = new SemanticVectorQuery(terms.map{ term => new Term(fieldName, term.text) })
+  def apply(terms: Iterable[Term], fallbackField: String) = new SemanticVectorQuery(terms, fallbackField)
 }
 
-class SemanticVectorQuery(val terms: Set[Term]) extends Query {
+class SemanticVectorQuery(val terms: Iterable[Term], val fallbackField: String) extends Query {
 
   override def createWeight(searcher: IndexSearcher): Weight = {
     new SemanticVectorWeight(this, searcher.asInstanceOf[Searcher])
@@ -38,39 +40,43 @@ class SemanticVectorQuery(val terms: Set[Term]) extends Query {
 
   override def extractTerms(out: JSet[Term]): Unit = out.addAll(terms)
 
-  override def toString(s: String) = "semanticvector(%s)%s".format(terms.mkString(","),ToStringUtils.boost(getBoost()))
+  override def toString(s: String) = {
+    "semanticvector(%s|%s)%s".format(terms.mkString(","), fallbackField, ToStringUtils.boost(getBoost()))
+  }
 
   override def equals(obj: Any): Boolean = obj match {
-    case svq: SemanticVectorQuery => (terms == svq.terms && getBoost() == svq.getBoost())
+    case svq: SemanticVectorQuery => (terms == svq.terms && fallbackField == svq.fallbackField && getBoost() == svq.getBoost())
     case _ => false
   }
 
-  override def hashCode(): Int = terms.hashCode() + JFloat.floatToRawIntBits(getBoost())
+  override def hashCode(): Int = terms.hashCode() + fallbackField.hashCode() + JFloat.floatToRawIntBits(getBoost())
 }
 
 class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) extends Weight {
 
-  private[this] var termList = {
-    val terms = query.terms
-    terms.foldLeft(List.empty[(Term, SemanticVector, Float)]){ (list, term) =>
+  private[this] var value = 0.0f
+
+  private[this] val (termList, idfSum) = {
+    var sum = 0.0f
+    val terms = query.terms.toList.map{ term =>
       val vector = searcher.getSemanticVector(term)
       val idf = searcher.idf(term)
-      (term, vector, idf)::list
+      sum += idf
+      (term, new Term(query.fallbackField, term.text), vector, idf)
     }
+    (terms, sum)
   }
 
   override def getQuery() = query
   override def scoresDocsOutOfOrder() = false
 
   override def getValueForNormalization() = {
-    val sum = termList.foldLeft(0.0f){ case (sum, (_, _, idf)) => sum + idf * idf }
-    val value = query.getBoost()
-    (sum * value * value)
+    val boost = query.getBoost()
+    boost * boost
   }
 
   override def normalize(norm: Float, topLevelBoost: Float) {
-    val n = norm * topLevelBoost
-    termList = termList.map{ case (term, vector, idf) => (term, vector, idf * n) }
+    value = query.getBoost * norm * topLevelBoost / idfSum
   }
 
   override def explain(context: AtomicReaderContext, doc: Int) = {
@@ -84,8 +90,8 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
       result.setValue(sc.score)
       result.setMatch(true)
 
-      termList.map{ case (term, vector, value) =>
-        explainTerm(term, reader, vector, value, doc) match {
+      termList.map{ case (term, _, vector, idf) =>
+        explainTerm(context, term, vector, idf * value, doc) match {
           case Some(detail) => result.addDetail(detail)
           case None =>
         }
@@ -98,16 +104,16 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
     result
   }
 
-  private def explainTerm(term: Term, reader: AtomicReader, vector: SemanticVector, value: Float, doc: Int): Option[Explanation] = {
-    Option(reader.termPositionsEnum(term)).flatMap{ tp =>
-      val dv = new DocAndVector(tp, vector, value)
+  private def explainTerm(context: AtomicReaderContext, term: Term, vector: SemanticVector, weight: Float, doc: Int): Option[Explanation] = {
+    Option(searcher.getSemanticVectorEnum(context, term, new Term(query.fallbackField, term.text()), context.reader.getLiveDocs)).flatMap{ tp =>
+      val dv = new DocAndVector(tp, vector, weight)
       dv.fetchDoc(doc)
-      if (dv.doc == doc && value > 0.0f) {
+      if (dv.doc == doc && weight > 0.0f) {
         val sc = dv.scoreAndNext()
         val expl = new ComplexExplanation()
         expl.setDescription("term(%s)".format(term.toString))
-        expl.addDetail(new Explanation(sc/value, "similarity"))
-        expl.addDetail(new Explanation(value, "boost"))
+        expl.addDetail(new Explanation(sc/weight, "similarity"))
+        expl.addDetail(new Explanation(weight, "boost"))
         expl.setValue(sc)
         Some(expl)
       } else {
@@ -117,8 +123,8 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
   }
 
   override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, acceptDocs: Bits): Scorer = {
-    val davs = termList.flatMap{ case (term, vector, value) =>
-      Option(termPositionsEnum(context, term, acceptDocs)).map{ tp => new DocAndVector(tp, vector, value) }
+    val davs = termList.flatMap{ case (primaryTerm, secondaryTerm, vector, idf) =>
+      Option(searcher.getSemanticVectorEnum(context, primaryTerm, secondaryTerm, acceptDocs)).map{ tp => new DocAndVector(tp, vector, idf * value) }
     }
 
     if (!davs.isEmpty) {

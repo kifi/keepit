@@ -7,22 +7,38 @@
 ##########################################
 
 GET     /                           @com.keepit.controllers.website.HomeController.home
-GET     /giveMeA200                 @com.keepit.controllers.website.HomeController.giveMeA200
+GET     /install                    @com.keepit.controllers.website.HomeController.install
+GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 
-GET     /login                      securesocial.controllers.LoginPage.login
+GET     /invite                     @com.keepit.controllers.website.InviteController.invite
+POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
+GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
+GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id: ExternalId[Invitation])
+GET     /sign-up                     @com.keepit.controllers.website.OnboardingController.signup(inviteId: String ?= "")
+GET     /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tos
+POST    /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tosAccept
+
+GET     /login                      securesocial.controllers.ProviderController.authenticate(provider = "facebook")
+GET     /login/social               securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
 
-GET     /signup                     securesocial.controllers.Registration.signUp
-POST    /signup                     securesocial.controllers.Registration.handleSignUp
+
+# Relevant when we support traditional user signups:
+GET     /register                   securesocial.controllers.Registration.signUp(token: String)
+POST    /register                   securesocial.controllers.Registration.handleSignUp(token: String)
 
 ##########################################
 # Web API
 ##########################################
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
 
+
+GET     /user/all-connections       @com.keepit.controllers.website.UserController.getAllConnections()
+POST    /user/update-email          @com.keepit.controllers.website.UserController.updateEmail
+
 # OAuth provider entry points (e.g. "facebook")
-GET     /authenticate/:provider     securesocial.controllers.LoginPage.authenticate(provider)
-POST    /authenticate/:provider     securesocial.controllers.LoginPage.authenticateByPost(provider)
+GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
+POST    /authenticate/:provider     securesocial.controllers.ProviderController.authenticateByPost(provider)
 
 ##########################################
 # External Services API
@@ -38,30 +54,18 @@ GET     /admin/healthcheck/isHealthy    @com.keepit.common.healthcheck.WebsiteHe
 ##########################################
 
 POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksController.addBookmarks
-GET     /bookmarks/check            @com.keepit.controllers.ext.ExtBookmarksController.checkIfExists(uri: String)
 POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
 POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updatePrivacy()
 GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksController.getNumMutualKeeps(id: ExternalId[User])
 
-GET     /comments                   @com.keepit.controllers.ext.ExtCommentController.getComments(url: String)
-GET     /comments/public            @com.keepit.controllers.ext.ExtCommentController.getComments(url: String)
-# TODO: delete redundant /comments/public route above after all extensions reach 2.2.49
 POST    /comments/add               @com.keepit.controllers.ext.ExtCommentController.createComment()
 POST    /comments/:id/remove        @com.keepit.controllers.ext.ExtCommentController.removeComment(id: ExternalId[Comment])
 POST    /comments/follow            @com.keepit.controllers.ext.ExtCommentController.startFollowing()
 POST    /comments/unfollow          @com.keepit.controllers.ext.ExtCommentController.stopFollowing()
 
-GET     /messages/threads/:id       @com.keepit.controllers.ext.ExtCommentController.getMessageThread(id: ExternalId[Comment])
-GET     /messages/threads           @com.keepit.controllers.ext.ExtCommentController.getMessageThreadList(url: String)
-
-GET     /users/slider               @com.keepit.controllers.ext.ExtUserController.getSliderInfo(url: String)
 POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
-GET     /users/slider/updates       @com.keepit.controllers.ext.ExtCommentController.getUpdates(url: String)
-
-GET     /users/friends              @com.keepit.controllers.ext.ExtUserController.getSocialConnections()
 
 POST    /users/events               @com.keepit.controllers.ext.ExtEventController.logUserEvents
-
 
 GET     /users/picture/$width<[0-9]{2,3}>/:id       @com.keepit.controllers.assets.UserPictureController.get(width: Int, id: ExternalId[User])
 
@@ -69,7 +73,6 @@ GET     /search                     @com.keepit.controllers.ext.ExtSearchControl
 GET     /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts(ids: String)
 
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
-GET     /welcome                    @com.keepit.controllers.ext.ExtAuthController.welcome
 GET     /whois                      @com.keepit.controllers.ext.ExtAuthController.whois
 GET     /session/end                @com.keepit.controllers.ext.ExtAuthController.logOut
 
@@ -100,7 +103,6 @@ GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarks
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Bookmark])
 POST    /admin/bookmarks/rescrape   @com.keepit.controllers.admin.AdminBookmarksController.rescrape
 POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
-GET     /admin/bookmarks/all        @com.keepit.controllers.admin.AdminBookmarksController.all
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Bookmark])
 
 GET     /admin/scrape               @com.keepit.controllers.admin.ScraperController.scrape
@@ -118,6 +120,7 @@ POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.ScraperControl
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.ScraperController.handleDuplicates
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
+GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
 GET     /admin/article/sequenceNumber @com.keepit.controllers.admin.AdminArticleIndexerController.getSequenceNumber
 GET     /admin/article/index/:state @com.keepit.controllers.admin.AdminArticleIndexerController.indexByState(state: State[NormalizedURI])
 GET     /admin/article/indexInfo    @com.keepit.controllers.admin.AdminArticleIndexerController.indexInfo
@@ -128,6 +131,7 @@ POST     /admin/search/spell/buildDict         @com.keepit.controllers.admin.Adm
 GET     /admin/search/spell        @com.keepit.controllers.admin.AdminSpellCorrectorController.spellController
 GET     /admin/search/spell/test-correct  @com.keepit.controllers.admin.AdminSpellCorrectorController.correctSpelling(query: String)
 
+GET     /admin/uriGraph/reindex     @com.keepit.controllers.admin.AdminURIGraphController.reindex
 GET     /admin/uriGraph/load        @com.keepit.controllers.admin.AdminURIGraphController.load
 GET     /admin/uriGraph/update/:userId @com.keepit.controllers.admin.AdminURIGraphController.update(userId: Id[User])
 GET     /admin/uriGraph/dumpDoc/:userId  @com.keepit.controllers.admin.AdminURIGraphController.dumpLuceneDocument(userId: Id[User])
@@ -138,7 +142,9 @@ POST    /admin/user/:id             @com.keepit.controllers.admin.AdminUserContr
 GET     /admin/user/:id/more-info   @com.keepit.controllers.admin.AdminUserController.moreUserInfoView(id: Id[User])
 POST    /admin/user/:id/experiment/:exp  @com.keepit.controllers.admin.AdminUserController.addExperiment(id: Id[User], exp: String)
 DELETE  /admin/user/:id/experiment/:exp  @com.keepit.controllers.admin.AdminUserController.removeExperiment(id: Id[User], exp: String)
+POST    /admin/user/:id/state/:state  @com.keepit.controllers.admin.AdminUserController.changeState(id: Id[User], state: String)
 POST    /admin/user/:id/update      @com.keepit.controllers.admin.AdminUserController.updateUser(id: Id[User])
+POST    /admin/user/:id/setInvitesCount      @com.keepit.controllers.admin.AdminUserController.setInvitesCount(id: Id[User])
 GET     /admin/user/:id/social_users/refresh @com.keepit.controllers.admin.AdminUserController.refreshAllSocialInfo(id: Id[User])
 POST    /admin/user/:id/impersonate @com.keepit.controllers.admin.AdminAuthController.impersonate(id: Id[User])
 POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
@@ -150,6 +156,7 @@ GET     /admin/social_user/:id/refresh @com.keepit.controllers.admin.AdminSocial
 GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUserController.resetSocialUser(id: Id[SocialUserInfo])
 
 GET     /admin/server               @com.keepit.common.healthcheck.AdminHealthController.serviceView()
+GET     /admin/ec2-instance         @com.keepit.controllers.admin.AmazonInstanceController.instanceInfo()
 
 GET     /admin/emails/comment       @com.keepit.controllers.admin.AdminEmailPreviewController.newComment
 GET     /admin/emails/message       @com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
@@ -167,6 +174,7 @@ GET     /admin/messages/:page       @com.keepit.controllers.admin.AdminCommentCo
 GET     /admin/searchConfig/:id     @com.keepit.controllers.admin.AdminSearchConfigController.showUserConfig(id: Id[User])
 POST    /admin/searchConfig/:id/set   @com.keepit.controllers.admin.AdminSearchConfigController.setUserConfig(id: Id[User])
 GET     /admin/searchConfig/:id/reset @com.keepit.controllers.admin.AdminSearchConfigController.resetUserConfig(id: Id[User])
+
 GET     /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchConfigController.getExperiments
 POST    /admin/searchExperiments    @com.keepit.controllers.admin.AdminSearchConfigController.addNewExperiment
 POST    /admin/searchExperiments/delete    @com.keepit.controllers.admin.AdminSearchConfigController.deleteExperiment
@@ -192,6 +200,11 @@ GET     /admin/phrases              @com.keepit.controllers.admin.PhraseControll
 POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseController.addPhrase
 POST    /admin/phrases/refresh      @com.keepit.controllers.admin.PhraseController.refreshPhrases
 POST    /admin/phrases/save         @com.keepit.controllers.admin.PhraseController.savePhrases
+
+GET     /admin/invites              @com.keepit.controllers.admin.AdminInvitationController.displayInvitations(page: Int ?= 0, show: String ?= "all")
+POST    /admin/invites/accept       @com.keepit.controllers.admin.AdminInvitationController.acceptUser(id: Id[SocialUserInfo])
+POST    /admin/invites/reject       @com.keepit.controllers.admin.AdminInvitationController.rejectUser(id: Id[SocialUserInfo])
+
 
 # Using a get so we can invoke from browser and have it take care of the auth part
 GET     /admin/healthcheck/error    @com.keepit.common.healthcheck.AdminHealthController.causeError()
@@ -228,6 +241,11 @@ POST    /internal/search/spell/buildDict       @com.keepit.controllers.search.Sp
 GET     /internal/search/spell/buildStatus     @com.keepit.controllers.search.SpellCorrectorController.getBuildStatus()
 GET     /internal/search/spell/make-correction     @com.keepit.controllers.search.SpellCorrectorController.correctSpelling(query: String)
 
+POST    /internal/search/persistSearchStatistics @com.keepit.controllers.search.SearchStatisticsController.persistSearchStatistics
+
+GET     /internal/searchConfig/:id        @com.keepit.controllers.search.SearchConfigController.showUserConfig(id: Id[User])
+POST    /internal/searchConfig/:id/set    @com.keepit.controllers.search.SearchConfigController.setUserConfig(id: Id[User])
+GET     /internal/searchConfig/:id/reset  @com.keepit.controllers.search.SearchConfigController.resetUserConfig(id: Id[User])
 
 GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.SearchController.friendMapJson(userId: Id[User], query: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 GET     /internal/search/search/rankVsScoreJson @com.keepit.controllers.search.SearchController.rankVsScoreJson(query: Option[String] ?= None)

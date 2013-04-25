@@ -24,7 +24,7 @@ api.log("[google_inject]");
   var query = "";         // latest search query
   var response = {};      // latest kifi results received
   var showMoreOnArrival;
-  var clicks = {kifi: 0, google: 0};
+  var clicks = {kifi: [], google: []};  // clicked result link hrefs
 
   // "main" div seems to always stay in the page, so only need to bind listener once.
   // TODO: move this code lower, so it runs after we initiate the first search
@@ -35,7 +35,7 @@ api.log("[google_inject]");
     var resIdx = $li.parent().children("li.g").index($li);
     var isKifi = $li[0].parentNode === $kifiRes[0];
 
-    clicks[isKifi ? "kifi" : "google"]++;
+    clicks[isKifi ? "kifi" : "google"].push(href);
 
     if (href && resIdx >= 0) {
       logEvent("search", isKifi ? "kifiResultClicked" : "googleResultClicked",
@@ -44,16 +44,18 @@ api.log("[google_inject]");
   });
 
   var keyTimer, idleTimer, tQuery = +new Date, tGoogleResultsShown = tQuery, tKifiResultsReceived, tKifiResultsShown;
-  var $q = $("#gbqfq").on("input", function() {  // stable identifier: "Google Bar Query Form Query"
+  var $q = $("#gbqfq,#lst-ib").on("input", onInput);  // stable identifier: "Google Bar Query Form Query"
+  function onInput() {
     tQuery = +new Date;
     clearTimeout(keyTimer);
     keyTimer = setTimeout(search, 120);  // enough of a delay that we won't search after *every* keystroke (similar to Google's behavior)
-  });
-  var $qf = $("#gbqf").submit(function() {  // stable identifier: "Google Bar Query Form"
+  }
+  var $qf = $("#gbqf,#tsf").submit(onSubmit);  // stable identifier: "Google Bar Query Form"
+  function onSubmit() {
     tQuery = +new Date;
     clearTimeout(keyTimer);
     search();  // immediate search
-  });
+  }
 
   function onIdle() {
     logEvent("search", "dustSettled", {
@@ -70,7 +72,8 @@ api.log("[google_inject]");
 
   var isVertical;
   function checkSearchType() {
-    var isV = ~document.URL.indexOf("tbm=");
+    var hash = location.hash, qs = /[#&]q=/.test(hash) ? hash : location.search;
+    var isV = /[?#&]tbm=/.test(qs);
     if (isV !== isVertical) {
       api.log("[checkSearchType] search type:", isV ? "vertical" : "web");
       isVertical = isV;
@@ -111,19 +114,19 @@ api.log("[google_inject]");
 
       $resList.remove(); // remove any old results
       response = resp;
-      response.hits.forEach(processHit);
       response.filter = f;
+      response.hits.forEach(processHit);
       if (!newFilter) {
-        clicks.kifi = clicks.google = 0;
+        clicks.kifi.length = clicks.google.length = 0;
       }
 
       var ires = document.getElementById("ires");
       if (ires) {
-        response.shown = true;
+        resp.shown = true;
         tKifiResultsShown = +new Date;
       }
 
-      if (response.hits.length || f) {  // we show a "no results match filter" message if filtering
+      if (resp.hits.length || f) {  // we show a "no results match filter" message if filtering
         appendResults();
         $res.show().insertBefore(ires);
       } else {
@@ -133,8 +136,16 @@ api.log("[google_inject]");
       logEvent("search", "kifiLoaded", {"query": q, "filter": f, "queryUUID": resp.uuid});
       if (resp.hits.length) {
         logEvent("search", "kifiAtLeastOneResult", {"query": q, "filter": f, "queryUUID": resp.uuid, "experimentId": resp.experimentId});
-        loadChatter(response.hits.slice());
-        prefetchMore();
+        var onShow = function(hits) {
+          resp.expanded = true;
+          loadChatter(hits);
+          prefetchMore();
+        }.bind(null, resp.hits.slice());
+        if (resp.show) {
+          onShow();
+        } else {
+          $res.data("onShow", onShow);
+        }
       }
     });
 
@@ -155,18 +166,22 @@ api.log("[google_inject]");
     api.log("[hashchange]");
     checkSearchType();
     search();  // needed for switch from shopping to web search, for example
-  }).on("unload", function() {
+  }).on("beforeunload", function(e) {
     if (response.query === query && new Date - tKifiResultsShown > 2000) {
       logEvent("search", "searchUnload", {
         "query": response.query,
         "queryUUID": response.uuid,
-        "kifiResultsClicked": clicks.kifi,
-        "googleResultsClicked": clicks.google});
+        "kifiResultsClicked": clicks.kifi.length,
+        "googleResultsClicked": clicks.google.length,
+        "kifiShownURIs": response.expanded ? response.hits.map(function(hit) {return hit.bookmark.url}) : [],
+        "kifiClickedURIs": clicks.kifi,
+        "googleClickedURIs": clicks.google});
     }
   });
 
   var MutationObserver = window.MutationObserver || window.WebKitMutationObserver || window.MozMutationObserver;
   var observer = new MutationObserver(function onMutation(mutations) {
+    if (isVertical) return;
     for (var i = 0; i < mutations.length; i++) {
       for (var j = 0, nodes = mutations[i].addedNodes; j < nodes.length; j++) {
         if (nodes[j].id === "ires") {
@@ -181,21 +196,23 @@ api.log("[google_inject]");
         }
       }
     }
+    if (!$q.length || !document.contains($q[0])) {  // for #lst-ib (e.g. google.co.il)
+      $q.remove(); $qf.remove();
+      $q = $($q.selector).on("input", onInput);
+      $qf = $($qf.selector).submit(onSubmit);
+    }
   });
   observer.observe(document.getElementById("main"), {childList: true, subtree: true});  // TODO: optimize away subtree
 
-  window.addEventListener("kifiunload", function f(e) {
-    if (e.lifeId !== lifeId) {
-      api.log("[google_inject] end life:", lifeId);
-      window.removeEventListener("kifiunload", f);
-      $(window).off("hashchange unload");
-      observer.disconnect();
-      $q.off("input");
-      $qf.off("submit");
-      clearTimeout(idleTimer);
-      $res.remove();
-      $res.length = 0;
-    }
+  api.onEnd.push(function() {
+    api.log("[google_inject:onEnd]");
+    $(window).off("hashchange unload");
+    observer.disconnect();
+    $q.off("input");
+    $qf.off("submit");
+    clearTimeout(idleTimer);
+    $res.remove();
+    $res.length = 0;
   });
 
   /*******************************************************/
@@ -261,7 +278,12 @@ api.log("[google_inject]");
       $res.find("#kifi-res-list,.kifi-res-end").toggle(200);
       $res.find(".kifi-res-filter-keeps").fadeToggle(200);
       $res.find(".kifi-res-filters-x:visible").click();
-      $(this).toggleClass("kifi-collapsed").delay(200);
+      $(this).toggleClass("kifi-collapsed");
+      var onShow = $res.data("onShow");
+      if (onShow) {
+        $res.removeData("onShow");
+        onShow();
+      }
     }).on("click", ".kifi-res-filter-keeps", function() {
       var $f = $res.find(".kifi-res-filters");
       if ($f.is(":animated")) return;
@@ -341,7 +363,7 @@ api.log("[google_inject]");
       $res.find(".kifi-res-filter[data-filter=a]").click();
     }).on("click", ".kifi-res-debug", function(e) {
       e.stopPropagation();
-      location.href = "https://" + response.server + "/admin/search/results/" + response.uuid;
+      location.href = response.admBaseUri + "/admin/search/results/" + response.uuid;
     }).on("mouseenter", ".kifi-face.kifi-friend", function() {
       var $a = $(this).showHover({
         hideDelay: 600,
@@ -381,13 +403,16 @@ api.log("[google_inject]");
           }, callback);
         }});
     }).on("click", ".kifi-chatter-deeplink", function() {
-      api.port.emit("add_deep_link_listener", {locator: $(this).data("locator")});
+      api.port.emit("add_deep_link_listener", $(this).data("locator"));
       location.href = $(this).closest("li.g").find("h3.r a")[0].href;
     });
   }
 
   function appendResults() {
+    $res.find(".kifi-res-title").toggleClass("kifi-collapsed", !response.show);
+    $res.find(".kifi-res-filter-keeps")[response.show ? "show" : "hide"]();
     render("html/search/google_hits.html", {
+        show: response.show,
         results: response.hits,
         anyResults: response.hits.length > 0,
         session: response.session,
@@ -397,14 +422,14 @@ api.log("[google_inject]");
       }, {
         google_hit: "google_hit.html"
       }, function(html) {
-        $res.append(html).toggleClass("kifi-debug", !!response.showScores);
+        $res.append(html).toggleClass("kifi-debug", response.session.experiments.indexOf("admin") >= 0);
         api.log("[appendResults] done");
       });
   }
 
   function loadChatter(hits) {
     if (!hits.length) return;
-    api.port.emit("get_chatter", {ids: hits.map(function(h) {return h.bookmark.externalId})}, function gotChatter(counts) {
+    api.port.emit("get_chatter", {ids: hits.map(function(h) {return h.bookmark.id})}, function gotChatter(counts) {
       api.log("[gotChatter]", counts);
       var bgImg = "url(" + api.url("images/chatter.png") + ")";
       for (var id in counts) {
@@ -419,23 +444,26 @@ api.log("[google_inject]");
 
   function prefetchMore() {
     if (response.mayHaveMore) {
+      var origResp = response;
       api.port.emit("get_keeps", {
         "query": response.query,
         "filter": response.filter,
         "lastUUID": response.uuid,
         "context": response.context
       }, function onPrefetchResponse(resp) {
-        api.log("[onPrefetchResponse]", resp);
-        resp.hits.forEach(processHit);
+        if (response === origResp) {
+          api.log("[onPrefetchResponse]", resp);
+          resp.hits.forEach(processHit);
 
-        response.nextHits = resp.hits;
-        response.nextUUID = resp.uuid;
-        response.nextContext = resp.context;
-        response.mayHaveMore = resp.mayHaveMore;
-        if (showMoreOnArrival) {
-          showMoreOnArrival = false;
-          renderMore();
-          prefetchMore();
+          response.nextHits = resp.hits;
+          response.nextUUID = resp.uuid;
+          response.nextContext = resp.context;
+          response.mayHaveMore = resp.mayHaveMore;
+          if (showMoreOnArrival) {
+            showMoreOnArrival = false;
+            renderMore();
+            prefetchMore();
+          }
         }
       });
     }
@@ -473,52 +501,29 @@ api.log("[google_inject]");
 
   function processHit(hit) {
     hit.displayUrl = displayURLFormatter(hit.bookmark.url);
-    // api.log("[processHit] hit url:", hit.bookmark.url, "displayed as:", hit.displayUrl);
+    hit.displayTitle = boldSearchTerms(hit.bookmark.title, response.query) || hit.displayUrl;
+    hit.displayScore = response.showScores === true ? "[" + Math.round(hit.score * 100) / 100 + "] " : "";
 
-    hit.bookmark.title = boldSearchTerms(hit.bookmark.title, response.query);
+    var fil = response.filter || "", ids = fil.length > 1 ? fil.split(".") : null;
+    hit.displaySelf = fil != "f" && !ids && hit.isMyBookmark;
+    hit.displayUsers = fil == "m" ? [] :
+      ids ? hit.users.filter(function(u) {return ~ids.indexOf(u.id)}) :
+      hit.users;
 
-    if (response.showScores === true) {
-      hit.displayScore = "[" + Math.round(hit.score * 100) / 100 + "] ";
-    }
+    var numOthers = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
+    hit.whoKeptHtml = formatCountHtml(
+      hit.isMyBookmark,
+      hit.isPrivate ? " <span class=kifi-res-private>Private</span>" : "",
+      hit.users.length ? "<a class=kifi-res-friends href=javascript:>" + plural(hit.users.length, "friend") + "</a>" : "",
+      numOthers ? plural(numOthers, "other") : "");
+  }
 
-    hit.countText = "";
-
-    var numFriends = hit.users.length;
-    var friendsLink = numFriends ? "<a class=kifi-res-friends href=javascript:>" + plural(numFriends, "friend") + "</a>" : "";
-
-    hit.count = hit.count - hit.users.length - (hit.isMyBookmark ? 1 : 0);
-
-    // Awful decision tree. Got a better way?
-    if (hit.isMyBookmark) { // you
-      var priv = hit.isPrivate ? " <span class=kifi-res-private>Private</span>" : "";
-      if (numFriends == 0) { // no friends
-        if (hit.count > 0) { // others
-          hit.countText = "You" + priv + " + " + plural(hit.count, "other") + " kept this";
-        } else { // no others
-          hit.countText = "You kept this" + priv;
-        }
-      } else { // numFriends > 0
-        if (hit.count > 0) { // others
-          hit.countText = "You" + priv + " + " + friendsLink + " + " + plural(hit.count, "other") + " kept this";
-        } else { // no others
-          hit.countText = "You" + priv + " + " + friendsLink + " kept this";
-        }
-      }
-    } else { // not you
-      if (numFriends == 0) { // no friends
-        if (hit.count > 0) { // others
-          hit.countText = plural(hit.count, "other") + " kept this";
-        } else { // no others (should never get here)
-          hit.countText = "No one kept this";
-        }
-      } else { // numFriends > 0
-        if (hit.count > 0) { // others
-          hit.countText = friendsLink + " + " + plural(hit.count, "other") + " kept this";
-        } else { // no others
-          hit.countText = friendsLink + " kept this";
-        }
-      }
-    }
+  function formatCountHtml(kept, priv, friends, others) {
+    return kept && !friends && !others ?
+      "You kept this" + priv :
+      [kept ? "You" + priv : "", friends, others]
+        .filter(function(v) {return v})
+        .join(" + ") + " kept this";
   }
 
   function plural(n, term) {

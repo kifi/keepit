@@ -6,6 +6,7 @@ import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.Searcher
 import com.keepit.search.graph.URIGraphSearcher
+import com.keepit.search.query.IdSetFilter
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
@@ -62,50 +63,8 @@ class SemanticVectorSearcher(articleSearcher: Searcher, uriGraphSearcher: URIGra
     }
   }
 
-  /**
-   * Given a term and a set of documents, we find the semantic vector for each
-   * (term, document) pair.
-   * Note: this may return empty map
-   */
-  def getSemanticVectors(term: Term, uriIds:Set[Long]): Map[Long, SemanticVector] = {
-
-    val subReaders = indexReader.wrappedSubReaders
-    var sv = Map[Long, SemanticVector]();
-    var i = 0
-
-    var earlyStop = false
-    var docsRead = 0
-    var docsToRead = uriIds.size
-
-    while (i < subReaders.length && !earlyStop) {
-      val subReader = subReaders(i)
-      val idMapper = subReader.getIdMapper
-      val tp = subReader.termPositionsEnum(term)
-      if (tp != null) {
-        // iterate over docs containing this term
-        while (tp.nextDoc < NO_MORE_DOCS) {
-          val id = idMapper.getId(tp.docID())
-          if (uriIds.contains(id)) {
-            docsRead += 1
-            earlyStop = (docsRead == docsToRead)							// early stop: don't need to go through every subreader
-            var vector = new SemanticVector(new Array[Byte](SemanticVector.arraySize))
-            if (tp.freq() > 0){
-              tp.nextPosition()
-              val payload = tp.getPayload()
-              vector.set(payload.bytes, payload.offset, payload.length)
-              sv += (id -> vector)
-            }
-          }
-        }
-      }
-      i += 1
-    }
-    sv
-  }
-
-
   def getTerms(query: String, lang: Lang): Array[Term] = {
-    val analyzer = DefaultAnalyzer.forParsingWithStemmer(lang).getOrElse(DefaultAnalyzer.forParsing(lang))
+    val analyzer = DefaultAnalyzer.forParsingWithStemmer(lang)
     val ts = analyzer.tokenStream("b", new StringReader(query))
     val termAttr = ts.getAttribute(classOf[CharTermAttribute])
     val buf = new ArrayBuffer[Term]

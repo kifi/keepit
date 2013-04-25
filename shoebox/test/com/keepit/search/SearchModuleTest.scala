@@ -13,8 +13,9 @@ import com.keepit.common.analytics.EventListenerPlugin
 import com.keepit.common.analytics.EventRepo
 import com.keepit.FortyTwoGlobal
 import scala.collection.JavaConversions._
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.{FortyTwoActor,AlertingActor}
 import com.keepit.common.analytics.EventHelper
+import net.spy.memcached.MemcachedClient
 
 class SearchModuleTest extends Specification with Logging {
 
@@ -24,7 +25,7 @@ class SearchModuleTest extends Specification with Logging {
 
   "Module" should {
     "instantiate controllers" in {
-      running(new SearchApplication().withFakeHealthcheck().withFakeMail()) {
+      running(new SearchApplication().withFakeMail().withFakeCache().withS3DevModule()) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {
           case (_, _, ClassRoute(className)) => Class.forName(className)
@@ -32,9 +33,13 @@ class SearchModuleTest extends Specification with Logging {
         for (c <- classes) inject(classType[Controller](c), current)
         val injector = current.global.asInstanceOf[FortyTwoGlobal].injector
         val bindings = injector.getAllBindings()
+        val exclude: Set[Class[_]] = Set(classOf[FortyTwoActor], classOf[AlertingActor], classOf[MemcachedClient])
         bindings.keySet() filter { key =>
-          val superClass = key.getTypeLiteral().getRawType().getSuperclass()
-          superClass != classOf[FortyTwoActor]
+          val klazz = key.getTypeLiteral.getRawType
+          val fail = exclude exists { badKalazz =>
+            badKalazz.isAssignableFrom(klazz)
+          }
+          !fail
         } foreach { key =>
           injector.getInstance(key)
         }

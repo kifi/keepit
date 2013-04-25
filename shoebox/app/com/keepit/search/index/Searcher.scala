@@ -2,9 +2,13 @@ package com.keepit.search.index
 
 import com.keepit.search.SemanticVector
 import com.keepit.search.SemanticVectorComposer
+import com.keepit.search.query.IdSetFilter
+import com.keepit.search.query.QueryUtil._
 import org.apache.lucene.index.AtomicReader
 import org.apache.lucene.index.AtomicReaderContext
 import org.apache.lucene.index.DirectoryReader
+import org.apache.lucene.index.DocsAndPositionsEnum
+import org.apache.lucene.index.FilterAtomicReader.FilterDocsAndPositionsEnum
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.SegmentReader
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
@@ -13,19 +17,55 @@ import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.similarities.TFIDFSimilarity
+import org.apache.lucene.util.Bits
+import org.apache.lucene.util.BytesRef
 import org.apache.lucene.util.PriorityQueue
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
+import scala.math._
 
 
 object Searcher {
   def apply(indexReader: DirectoryReader) = new Searcher(WrappedIndexReader(indexReader))
   def reopen(oldSearcher: Searcher) = new Searcher(WrappedIndexReader.reopen(oldSearcher.indexReader))
+
+  private[search] class FallbackDocsAndPositionsEnum(primary: DocsAndPositionsEnum, secondary: DocsAndPositionsEnum) extends DocsAndPositionsEnum {
+    private[this] var doc = -1
+    private[this] var docPrimary = -1
+    private[this] var docSecondary = -1
+
+    override def docID(): Int = doc
+
+    override def nextDoc(): Int = {
+      doc = doc + 1
+      if (docPrimary < doc) docPrimary = primary.advance(doc)
+      if (docSecondary < doc) docSecondary = secondary.advance(doc)
+      doc = min(docPrimary, docSecondary)
+      doc
+    }
+
+    override def advance(target: Int): Int = {
+      doc = if (doc < target) target else doc + 1
+      if (docPrimary <= target) docPrimary = primary.advance(doc)
+      if (docSecondary <= target) docSecondary = secondary.advance(doc)
+      doc = min(docPrimary, docSecondary)
+      doc
+    }
+
+    private def tp: DocsAndPositionsEnum = if (doc == docPrimary) primary else secondary
+    override def freq(): Int = tp.freq()
+    override def nextPosition(): Int = tp.nextPosition()
+    override def getPayload(): BytesRef = tp.getPayload()
+    override def startOffset() = -1
+    override def endOffset() = -1
+  }
 }
 
 class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexReader) {
 
   def idf(term: Term) = getSimilarity.asInstanceOf[TFIDFSimilarity]idf(indexReader.docFreq(term), indexReader.maxDoc)
+
+  private[this] var svMap = Map.empty[Term, SemanticVector]
 
   // search: hits are ordered by score
   def search(query: Query): Seq[Hit] = {
@@ -103,10 +143,15 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
   }
 
   def getSemanticVector(term: Term) = {
-    val composer = getSemanticVectorComposer(term)
-
-    if (composer.numInputs > 0) composer.getSemanticVector
-    else SemanticVector.vectorize(SemanticVector.getSeed(term.text))
+    svMap.getOrElse(term, {
+      val composer = getSemanticVectorComposer(term)
+      val sv = {
+        if (composer.numInputs > 0) composer.getSemanticVector
+        else SemanticVector.vectorize(SemanticVector.getSeed(term.text))
+      }
+      svMap += (term -> sv)
+      sv
+    })
   }
 
   def getSemanticVector(terms: Set[Term]) = {
@@ -119,6 +164,114 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     SemanticVector.vectorize(sketch)
   }
 
+  def getSemanticVectorEnum(context: AtomicReaderContext, primaryTerm: Term, secondaryTerm: Term, acceptDocs: Bits) = {
+    val primary = termPositionsEnum(context, primaryTerm, acceptDocs)
+    val defaultSV = getSemanticVector(primaryTerm) // use the query's sv as a default
+    val secondary = getFallbackSemanticVectorEnum(context, secondaryTerm, defaultSV, acceptDocs)
+
+    if (primary == null) secondary
+    else if (secondary == null) primary
+    else {
+      new Searcher.FallbackDocsAndPositionsEnum(primary, secondary)
+    }
+  }
+
+  private def getFallbackSemanticVectorEnum(context: AtomicReaderContext, term: Term, sv: SemanticVector, acceptDocs: Bits): DocsAndPositionsEnum = {
+    val tp = termPositionsEnum(context, term, acceptDocs)
+    if (tp != null) {
+      val payload = new BytesRef(sv.bytes, 0, sv.bytes.length)
+      new FilterDocsAndPositionsEnum(tp) {
+        override def getPayload(): BytesRef = payload
+      }
+    } else null
+  }
+
+  /**
+   * Given a term and a set of documents, we find the semantic vector for each
+   * (term, document) pair.
+   * Note: this may return empty map
+   */
+  def getSemanticVectors(term: Term, uriIds:Set[Long]): Map[Long, SemanticVector] = {
+
+    val subReaders = indexReader.wrappedSubReaders
+    var sv = Map[Long, SemanticVector]()
+    var i = 0
+
+    var idsToCheck = uriIds.size // for early stop: don't need to go through every subreader
+    val filter = new IdSetFilter(uriIds)
+
+    while (i < subReaders.length && idsToCheck > 0) {
+      val subReader = subReaders(i)
+      val docIdSet = filter.getDocIdSet(subReader.getContext, subReader.getLiveDocs)
+      if (docIdSet != null) {
+        val tp = subReader.termPositionsEnum(term)
+        val iter = docIdSet.iterator
+
+        def next(): Int = {
+          var doc = iter.nextDoc()
+          while (iter.docID != tp.docID) {
+            doc = if (iter.docID < tp.docID) iter.advance(tp.docID) else tp.advance(iter.docID)
+          }
+          doc
+        }
+
+        if (iter != null && tp != null) {
+          val mapper = subReader.getIdMapper
+
+          while (next() < NO_MORE_DOCS) {
+            idsToCheck -= 1
+            val id = mapper.getId(tp.docID)
+            val vector = new SemanticVector(new Array[Byte](SemanticVector.arraySize))
+            if (tp.freq() > 0){
+              tp.nextPosition()
+              val payload = tp.getPayload()
+              vector.set(payload.bytes, payload.offset, payload.length)
+              sv += (id -> vector)
+            }
+          }
+        }
+      }
+      i += 1
+    }
+    sv
+  }
+
+  def filterByTerm(uriIds: Set[Long], term: Term): Set[Long] = {
+    val subReaders = indexReader.wrappedSubReaders
+    var res = Set[Long]()
+
+    var idsToCheck = uriIds.size // for early stop: don't need to go through every subreader
+    val filter = new IdSetFilter(uriIds)
+
+    var i = 0
+    while (i < subReaders.length && idsToCheck > 0) {
+      val subReader = subReaders(i)
+      val docIdSet = filter.getDocIdSet(subReader.getContext, subReader.getLiveDocs)
+      if (docIdSet != null) {
+        val tp = subReader.termPositionsEnum(term)
+        val iter = docIdSet.iterator
+
+        def next(): Int = {
+          var doc = iter.nextDoc()
+          while (iter.docID != tp.docID) {
+            doc = if (iter.docID < tp.docID) iter.advance(tp.docID) else tp.advance(iter.docID)
+          }
+          doc
+        }
+
+        if (iter != null && tp != null) {
+          val mapper = subReader.getIdMapper
+
+          while (next() < NO_MORE_DOCS) {
+            idsToCheck -= 1
+            res += mapper.getId(tp.docID)
+          }
+        }
+      }
+      i += 1
+    }
+    res
+  }
   def getHitQueue(size: Int) = new HitQueue(size)
 }
 

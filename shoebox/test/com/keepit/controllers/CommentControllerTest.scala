@@ -1,79 +1,71 @@
 package com.keepit.controllers
 
-import com.keepit.controllers.ext.ExtCommentController
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
+import org.joda.time.DateTime
+import org.specs2.mutable.Specification
+
 import com.keepit.common.mail.FakeOutbox
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworks.FACEBOOK
 import com.keepit.common.time._
+import com.keepit.controllers.ext.ExtCommentController
 import com.keepit.inject._
 import com.keepit.model._
-import com.keepit.model.ExperimentTypes.ADMIN
+import com.keepit.test.DbRepos
 import com.keepit.test.EmptyApplication
 import com.keepit.test.FakeClock
-import com.keepit.test.DbRepos
-
-import org.specs2.mutable.Specification
 
 import play.api.Play.current
-import play.api.libs.json.{Json, JsArray, JsBoolean, JsObject, JsString, JsValue}
-import play.api.mvc._
-import play.api.test.Helpers._
+import play.api.libs.json.JsObject
+import play.api.libs.json.JsString
 import play.api.test.FakeRequest
-import play.api.test.FakeHeaders
-
-import securesocial.core.SecureSocial
-import securesocial.core.OAuth2Info
-import securesocial.core.SocialUser
-import securesocial.core.UserId
-import securesocial.core.AuthenticationMethod
-import org.joda.time.DateTime
+import play.api.test.Helpers._
+import securesocial.core._
 
 class CommentControllerTest extends Specification with DbRepos {
 
   "CommentController" should {
 
     "follow and unfollow" in {
-      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeHealthcheck().withFakeMail()) {
+      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeMail()) {
         val now = new DateTime(2012, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         val today = now.toDateTime
         inject[FakeClock].push(today)
 
-        val user = db.readWrite { implicit s =>
+        val oAuth2Info = OAuth2Info(accessToken = "A", tokenType = None, expiresIn = None, refreshToken = None)
+        val su = SocialUser(UserId("111", "facebook"), "A", "1", "A 1", Some("a1@gmail.com"),
+          Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None, Some(oAuth2Info), None)
+        db.readWrite { implicit s =>
           val user = userRepo.save(User(createdAt = now.minusDays(3), firstName = "A", lastName = "1"))
-          val oAuth2Info = OAuth2Info(accessToken = "A", tokenType = None, expiresIn = None, refreshToken = None)
-          val su = SocialUser(UserId("111", "facebook"), "A 1", Some("a1@gmail.com"),
-            Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, true, None, Some(oAuth2Info), None)
           val sui = socialUserInfoRepo.save(SocialUserInfo(
               userId = user.id, fullName = "A 1", socialId = SocialId("111"), networkType = FACEBOOK,
               credentials = Some(su)))
           user
         }
 
+        val cookie = Authenticator.create(su).right.get.toCookie
         val request1 = FakeRequest("POST", "/comments/follow")
-          .withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook")
+          .withCookies(cookie)
           .withJsonBody(JsObject(Seq("url" -> JsString("http://www.42go.com"))))
         val result1 = route(request1).get
         status(result1) === OK
         contentAsString(result1) === """{"following":true}"""
 
         val request2 = FakeRequest("POST", "/comments/unfollow")
-          .withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook")
+          .withCookies(cookie)
           .withJsonBody(JsObject(Seq("url" -> JsString("http://www.42go.com"))))
         val result2 = route(request2).get
         status(result2) === OK
         contentAsString(result2) === """{"following":false}"""
 
         val request3 = FakeRequest("POST", "/comments/follow")
-          .withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook")
+          .withCookies(cookie)
           .withJsonBody(JsObject(Seq("url" -> JsString("http://www.42go.com"))))
         val result3 = route(request3).get
         status(result3) === OK
         contentAsString(result3) === """{"following":true}"""
 
         val request4 = FakeRequest("POST", "/comments/follow")
-          .withSession(SecureSocial.UserKey -> "111", SecureSocial.ProviderKey -> "facebook")
+          .withCookies(cookie)
           .withJsonBody(JsObject(Seq("url" -> JsString("http://www.42go.com"))))
         val result4 = route(request4).get
         status(result4) === OK
@@ -81,7 +73,7 @@ class CommentControllerTest extends Specification with DbRepos {
     }
 
     "persist comment emails" in {
-      running(new EmptyApplication().withFakeHealthcheck().withFakeMail()) {
+      running(new EmptyApplication().withFakeMail()) {
         val comment = db.readWrite { implicit s =>
           val userRepo = inject[UserRepo]
           val emailRepo = inject[EmailAddressRepo]
@@ -104,10 +96,6 @@ class CommentControllerTest extends Specification with DbRepos {
         mail.senderUserId.get === comment.userId
         mail.subject === "Andrew Conner sent you a message using KiFi"
         mail.htmlBody.value must contain("""Public Comment [look here] on Google1""")
-
-        extCommentController.replaceLookHereLinks("[hi there](x-kifi-sel:body>foo.bar#there)") === "[hi there]"
-        extCommentController.replaceLookHereLinks("A [hi there](x-kifi-sel:foo.bar#there) B") === "A [hi there] B"
-        extCommentController.replaceLookHereLinks("(A) [hi there](x-kifi-sel:foo.bar#there:nth-child(2\\)>a:nth-child(1\\)) [B] C") === "(A) [hi there] [B] C"
       }
     }
   }

@@ -20,6 +20,7 @@ import com.keepit.search.index.DocUtil
 import com.keepit.search.index.FieldDecoder
 import com.keepit.search.index.{DefaultAnalyzer, Indexable, Indexer, IndexError}
 import com.keepit.search.index.Indexable.IteratorTokenStream
+import com.keepit.search.line.LineField
 import com.keepit.search.line.LineFieldBuilder
 
 object URIGraphDecoders {
@@ -119,22 +120,21 @@ class URIGraphImpl(
       val langMap = buildLangMap(bookmarks, Lang("en")) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
       val langs = buildBookmarkTitleField(URIGraphDecoders.langField, uriList, bookmarks){ (fieldName, text) =>
         val lang = langMap.getOrElse(text, Lang("en"))
-        Some(new IteratorTokenStream(Some(lang.lang).iterator, (s: String) => s))
+        new IteratorTokenStream(Some(lang.lang).iterator, (s: String) => s)
       }
 
       val title = buildBookmarkTitleField(URIGraphDecoders.titleField, uriList, bookmarks){ (fieldName, text) =>
         val lang = langMap.getOrElse(text, Lang("en"))
         val analyzer = DefaultAnalyzer.forIndexing(lang)
-        Some(analyzer.tokenStream(fieldName, new StringReader(text)))
+        analyzer.tokenStream(fieldName, new StringReader(text))
       }
       doc.add(usr)
       doc.add(uri)
       doc.add(title)
       val titleStemmed = buildBookmarkTitleField(URIGraphDecoders.stemmedField, uriList, bookmarks){ (fieldName, text) =>
         val lang = langMap.getOrElse(text, Lang("en"))
-        DefaultAnalyzer.forIndexingWithStemmer(lang).map{ analyzer =>
-          analyzer.tokenStream(fieldName, new StringReader(text))
-        }
+        val analyzer = DefaultAnalyzer.forIndexingWithStemmer(lang)
+        analyzer.tokenStream(fieldName, new StringReader(text))
       }
       doc.add(titleStemmed)
       doc.add(buildBookmarkSiteField(URIGraphDecoders.siteField, uriList, bookmarks))
@@ -155,7 +155,7 @@ class URIGraphImpl(
       }
     }
 
-    def buildBookmarkTitleField(fieldName: String, uriList: URIList, bookmarks: Seq[Bookmark])(tokenStreamFunc: (String, String)=>Option[TokenStream]) = {
+    def buildBookmarkTitleField(fieldName: String, uriList: URIList, bookmarks: Seq[Bookmark])(tokenStreamFunc: (String, String)=>TokenStream) = {
       val titleMap = bookmarks.foldLeft(Map.empty[Long,String]){ (m, b) => m + (b.uriId.id -> b.title.getOrElse("")) }
 
       val publicList = uriList.publicList
@@ -195,8 +195,8 @@ class URIGraphImpl(
       buildLineField(fieldName, domains, (fieldName, url) =>
         URI.parse(url).toOption.flatMap(_.host) match {
           case Some(Host(domain @ _*)) =>
-            Some(new IteratorTokenStream((1 to domain.size).iterator, (n: Int) => domain.take(n).reverse.mkString(".")))
-          case _ => None
+            new IteratorTokenStream((1 to domain.size).iterator, (n: Int) => domain.take(n).reverse.mkString("."))
+          case _ => LineField.emptyTokenStream
         }
       )
     }

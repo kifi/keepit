@@ -9,7 +9,9 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import com.google.inject.Singleton
 
+@Singleton
 case class FakeHealthcheck() extends HealthcheckPlugin {
 
   val _errors = MutableList[HealthcheckError]()

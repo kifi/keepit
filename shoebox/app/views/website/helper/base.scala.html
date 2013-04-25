@@ -1,0 +1,50 @@
+@(title: String, stylesheets: List[String] = Nil, head: Html = Html(""))(content: Html)
+
+
+<!DOCTYPE html>
+<!--[if lt IE 7 ]> <html class="ie ltie7 ltie8 ltie9" lang="en"> <![endif]-->
+<!--[if IE 7 ]>    <html class="ie ie7 ltie8 ltie9" lang="en"> <![endif]-->
+<!--[if IE 8 ]>    <html class="ie ie8 ltie9" lang="en"> <![endif]-->
+<!--[if IE 9 ]>    <html class="ie ie9 ltie10" lang="en"> <![endif]-->
+<!--[if gt IE 9]><!--> <html lang="en" class=""> <!--<![endif]-->
+
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta name="keywords" content=""/>
+<meta name="description" content=""/>
+<meta name="viewport" content="width=device-width">
+<title>@title</title>
+<link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/kifi-favi-50.png")">
+
+<!--[if lt IE 9]><script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+
+<!--[if ie 9]><style type="text/css" media="screen">.filter{behavior: url(ie9-gradient-fix.htc);}</style><![endif]-->
+
+@for(stylesheet <- "common" :: stylesheets) {
+  <link rel="stylesheet" href="@routes.Assets.at("stylesheets/" + stylesheet + ".css")">
+}
+<link href='//fonts.googleapis.com/css?family=Lato:400,700' rel='stylesheet' type='text/css'>
+@head
+
+</head>
+
+<body>
+  
+@content
+
+
+<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-39789396-1']);
+  _gaq.push(['_setDomainName', 'kifi.com']);
+  _gaq.push(['_trackPageview']);
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+</script>
+
+</body>
+</html>

@@ -2,12 +2,10 @@ function attachComposeBindings($c, composeTypeName) {
   var $f = $c.find(".kifi-compose");
   var $t = $f.find(".kifi-compose-to");
   var $d = $f.find(".kifi-compose-draft");
-  var $p = $d.find(".kifi-placeholder");
 
-  $d.focus(function() {  // TODO: reinstate pull request 1292 after Chrome 28 reaches Stable channel
-    if ($p[0].parentNode) {
-      $p.detach();
-      // detaching destroys the selection if it was in the placeholder
+  $d.focus(function() {
+    if (this.classList.contains("kifi-empty")) {  // webkit workaround (can ditch when Chrome 27/28 ? goes stable)
+      this.textContent = "\u200b";  // zero-width space
       var r = document.createRange();
       r.selectNodeContents(this);
       r.collapse(false);
@@ -20,10 +18,12 @@ function attachComposeBindings($c, composeTypeName) {
     $("<input style=position:fixed;top:999%>").appendTo("html").each(function() {this.setSelectionRange(0,0)}).remove();
 
     if (!convertDraftToText($d.html())) {
-      $d.empty().append($p);
+      $d.empty().addClass("kifi-empty");
     }
+  }).click(function() {
+    this.focus();  // needed in Firefox for clicks on ::before placeholder text
   }).keydown(function(e) {
-    if (e.which == 13 && e.metaKey) { // ⌘-Enter
+    if (e.which == 13 && (e.metaKey || e.ctrlKey)) { // ⌘-Enter
       $f.submit();
     }
   }).on("input", function() {
@@ -50,16 +50,14 @@ function attachComposeBindings($c, composeTypeName) {
         tokenValue: "id",
         theme: "KiFi",
         zindex: 2147483641});
-      $("#token-input-kifi-compose-to").focus();
+      $t.data("friends", friends);
     });
-  } else {
-    $d.focus();
   }
 
   $f.submit(function(e) {
     e.preventDefault();
     var text;
-    if ($p[0].parentNode || !(text = convertDraftToText($d.html()))) {
+    if ($d.hasClass("kifi-empty") || !(text = convertDraftToText($d.html()))) {
       $d.focus();
       return;
     }
@@ -72,7 +70,7 @@ function attachComposeBindings($c, composeTypeName) {
       }
       args.push(recipients.map(function(r) {return r.id}).join(","));
     }
-    $d.trigger("kifi:compose-submit", args);
+    $d.empty().trigger("kifi:compose-submit", args).focus();
     var $submit = $f.find(".kifi-compose-submit").addClass("kifi-active");
     setTimeout($submit.removeClass.bind($submit, "kifi-active"), 10);
   })
@@ -81,13 +79,7 @@ function attachComposeBindings($c, composeTypeName) {
       if (selector) {
         $d.append(" <a href='x-kifi-sel:" + selector.replace("'", "&#39;") + "'>look here</a>");
       }
-      $d.focus();
-      var r = document.createRange();
-      r.selectNodeContents($d[0]);
-      r.collapse(false);
-      var s = window.getSelection();
-      s.removeAllRanges();
-      s.addRange(r);
+      $d.removeClass("kifi-empty").focus();  // TODO: preserve insertion point & selection
     });
   })
   .find(".kifi-compose-submit")
@@ -101,13 +93,30 @@ function attachComposeBindings($c, composeTypeName) {
   });
 
   var hOld, elAbove = $f[0].previousElementSibling;
-  updateMaxHeight();
+  elAbove.clientHeight, updateMaxHeight();
 
   $(window).on("resize", updateMaxHeight);
 
-  $c.closest(".kifi-pane-box").on("kifi:remove", function() {
+  $c.closest(".kifi-pane-box")
+  .on("kifi:shown", setFocus)
+  .on("kifi:remove", function() {
     $(window).off("resize", updateMaxHeight);
+  }).each(function() {
+    if ($(this).data("shown")) {
+      setFocus();
+    }
   });
+
+  function setFocus() {
+    api.log("[setFocus]");
+    if ($t.length) {
+      if (!$f.find("#token-input-kifi-compose-to").focus().length) {
+        setTimeout(setFocus, 100);
+      }
+    } else {
+      $d.focus();
+    }
+  }
 
   function updateMaxHeight() {
     var hNew = Math.max(0, $c[0].offsetHeight - $f[0].offsetHeight);

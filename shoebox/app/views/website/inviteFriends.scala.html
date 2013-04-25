@@ -1,0 +1,84 @@
+@(user: User, friendsOnKifi: Set[ExternalId[User]], invites: Seq[Option[com.keepit.controllers.website.BasicUserInvitation]], invitesLeft: Int, invitesSent: Int, invitesAccepted: Int)
+
+@views.html.website.helper.main(title = "Invite friends to Kifi", scripts = Seq("website/onboarding", "jquery-ui-autocomplete", "website/inviteFriends")) {
+  <div class="user_avatar">
+  <img src="@com.keepit.controllers.assets.routes.UserPictureController.get(112, user.externalId)" width="112" height="112">
+  </div>
+
+  <section class="content clearfix">
+  <header class="content_header">
+        <h2>Hi, @user.firstName</h2>
+        <h3 class="blue">You can invite some facebook friends to the KiFi private beta</h3>
+        
+        @if(friendsOnKifi.nonEmpty) {
+          <div class="fb_friends_small clearfix">
+            <h4>Your facebook friends using KiFi: @friendsOnKifi.size</h4>
+            <div class="friends">
+              @for(friend <- friendsOnKifi.take(7)) {
+                <a href="#"><img src="@com.keepit.controllers.assets.routes.UserPictureController.get(30, friend)" width="30" height="30"></a>
+              }
+              @if(friendsOnKifi.size > 7) {
+                <a href="#"><span class="more_friends">+@{friendsOnKifi.size-7}</span></a>
+              }
+            </div>
+          </div>
+        }
+
+    </header>
+  </section>
+
+  <section id="invites">
+  <ul class="invites_status clearfix">
+    <li>Invites Left <span class="amount">@invitesLeft</span></li>
+    <li>Invites Sent <span class="amount blue_bg">@invitesSent</span></li>
+    <li>Invites Accepted <span class="amount green_bg">@invitesAccepted</span></li>
+  </ul>
+  
+  <div class="alreadyinvited">
+    <p>This user has already been invited!</p>
+    <div class="btn blue small close">Ok</div>
+  </div>
+    
+    <div class="invites_list clearfix">
+      @for(row <- 0 to 1) {
+      <ul>
+        @for(invite <- invites.drop(row * math.ceil(invites.length / 2.0).toInt).take(math.ceil(invites.length / 2.0).toInt)) {
+          @if(invite.isDefined) {
+            <li class="invite-@invite.get.state.value clearfix">
+              <img src="@invite.get.picture" width="75" height="75" class="avatar">
+              <div class="avatar_info">
+                <div class="name">@invite.get.name</div>
+                <div class="status">
+                  @{invite.get.state.value match {
+                    case "active" => "Invitation sent"
+                    case "accepted" => "Accepted your invitation, waiting on approval"
+                    case "admin_accepted" => "Approved, hasn't joined yet"
+                    case "admin_rejected" => "Rejected"
+                    case "joined" => "Joined!"
+                  }}
+                </div>
+
+              </div>
+            </li>
+          } else {
+            <li class="clearfix">
+              <form action="@com.keepit.controllers.website.routes.InviteController.inviteConnection" method="POST">
+                <img src="@routes.Assets.at("images/default_avatar.png")" width="75" height="75" class="avatar">
+                <div class="avatar_info">
+                  <input type="text" class="invite_field" value="Select a facebook friend to invite">
+                  <input type="hidden" value="" name="fullSocialId" class="invited_id">
+                  <div class="btn blue small invite_btn">Invite</a>
+                </div>
+              </form>
+            </li>
+          }
+        }
+      </ul>
+      }
+      
+        
+    </div>
+  </section>
+
+
+}

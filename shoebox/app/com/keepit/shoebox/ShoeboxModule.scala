@@ -1,32 +1,27 @@
 package com.keepit.shoebox
 
 import com.google.common.io.Files
-import com.google.inject.Provides
-import com.google.inject.Singleton
+import com.google.inject.{Provider, Provides, Singleton}
 import com.keepit.classify.DomainTagImportSettings
 import com.keepit.common.analytics.reports._
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{MailToKeepPlugin, MailToKeepPluginImpl, MailToKeepServerSettings}
-import com.keepit.common.social.{SocialGraphRefresherImpl, SocialGraphRefresher}
+import com.keepit.common.social.{SocialGraphPluginImpl, SocialGraphPlugin, SocialGraphRefresherImpl, SocialGraphRefresher}
 import com.keepit.inject.AppScoped
 import com.keepit.scraper._
 import com.tzavellas.sse.guice.ScalaModule
+
 import play.api.Play.current
-import com.google.inject.multibindings.Multibinder
-import com.keepit.common.analytics._
-import com.keepit.model.UserRepo
-import com.keepit.model.NormalizedURIRepo
-import com.keepit.common.time.Clock
-import com.keepit.common.controller.FortyTwoServices
 
 class ShoeboxModule() extends ScalaModule with Logging {
-  def configure(): Unit = {
+  def configure() {
     println("configuring ShoeboxModule")
     bind[SocialGraphRefresher].to[SocialGraphRefresherImpl].in[AppScoped]
     bind[ReportBuilderPlugin].to[ReportBuilderPluginImpl].in[AppScoped]
     bind[DataIntegrityPlugin].to[DataIntegrityPluginImpl].in[AppScoped]
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
     bind[MailToKeepPlugin].to[MailToKeepPluginImpl].in[AppScoped]
+    bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
   }
 
   @Singleton

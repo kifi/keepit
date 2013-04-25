@@ -10,6 +10,9 @@ import com.keepit.test._
 import play.api.Play.current
 import play.api.test.Helpers._
 import securesocial.core._
+import com.keepit.common.db.Id
+import com.keepit.serializer.SocialUserInfoSerializer
+import play.api.libs.json.JsObject
 
 class SocialUserInfoTest extends Specification with TestDBRunner {
 
@@ -17,8 +20,9 @@ class SocialUserInfoTest extends Specification with TestDBRunner {
     db.readWrite { implicit s =>
       val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
                                   tokenType = None, expiresIn = None, refreshToken = None)
-      val socialUser = SocialUser(UserId("100004067535411", "facebook"), "Boaz Tal", Some("boaz.tal@gmail.com"),
-        Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, true, None, Some(oAuth2Info), None)
+      val socialUser = SocialUser(UserId("100004067535411", "facebook"),"Boaz", "Tal", "Boaz Tal",
+        Some("boaz.tal@gmail.com"), Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None,
+        Some(oAuth2Info), None)
 
       val user = userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
 
@@ -37,6 +41,47 @@ class SocialUserInfoTest extends Specification with TestDBRunner {
   }
 
   "SocialUserInfo" should {
+
+    "serialize properly" in {
+      val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
+        tokenType = None, expiresIn = None, refreshToken = None)
+      val socialUser = SocialUser(UserId("100004067535411", "facebook"),"Boaz", "Tal", "Boaz Tal",
+        Some("boaz.tal@gmail.com"), Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None,
+        Some(oAuth2Info), None)
+      val sui = SocialUserInfo(userId = Option(Id(1)), fullName = "Eishay Smith", state = SocialUserInfoStates.CREATED,
+        socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser))
+      val json = SocialUserInfoSerializer.socialUserInfoSerializer.writes(sui)
+      val deserialized = SocialUserInfoSerializer.socialUserInfoSerializer.reads(json).get
+      deserialized === sui
+    }
+
+    "serialize properly with null lastGraphRefresh" in {
+      val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
+        tokenType = None, expiresIn = None, refreshToken = None)
+      val socialUser = SocialUser(UserId("100004067535411", "facebook"),"Boaz", "Tal", "Boaz Tal",
+        Some("boaz.tal@gmail.com"), Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None,
+        Some(oAuth2Info), None)
+      val sui = SocialUserInfo(userId = Option(Id(1)), fullName = "Eishay Smith", state = SocialUserInfoStates.CREATED,
+        socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser),
+        lastGraphRefresh = None)
+      val json = SocialUserInfoSerializer.socialUserInfoSerializer.writes(sui)
+      val deserialized = SocialUserInfoSerializer.socialUserInfoSerializer.reads(json).get
+      deserialized === sui
+    }
+
+    "serialize properly with no lastGraphRefresh" in {
+      val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
+        tokenType = None, expiresIn = None, refreshToken = None)
+      val socialUser = SocialUser(UserId("100004067535411", "facebook"),"Boaz", "Tal", "Boaz Tal",
+        Some("boaz.tal@gmail.com"), Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None,
+        Some(oAuth2Info), None)
+      val sui = SocialUserInfo(userId = Option(Id(1)), fullName = "Eishay Smith", state = SocialUserInfoStates.CREATED,
+        socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser),
+        lastGraphRefresh = None)
+      val json = SocialUserInfoSerializer.socialUserInfoSerializer.writes(sui).as[JsObject] - "lastGraphRefresh"
+      val deserialized = SocialUserInfoSerializer.socialUserInfoSerializer.reads(json).get
+      deserialized === sui
+    }
 
     "use cache properly" in {
       withDB() { implicit injector =>

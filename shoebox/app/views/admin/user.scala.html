@@ -5,7 +5,8 @@
   fortyTwoConnections: Seq[UserWithSocial],
   kifiInstallations: Seq[KifiInstallation],
   historyUpdateCount: Int,
-  bookmarkSearch: Option[String])
+  bookmarkSearch: Option[String],
+  allowedInvites: Int)
 
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
   <a data-hover="tooltip" title="@userWithSocial.user.firstName @userWithSocial.user.lastName+" class="name_tooltip_link" href="http://www.facebook.com/@userWithSocial.socialUserInfo.socialId.id" target="_blank">
@@ -50,14 +51,33 @@
         </td>
       </tr>
       <tr>
+        <th>Allowed Invites</th>
+        <td>
+          <form action="@com.keepit.controllers.admin.routes.AdminUserController.setInvitesCount(userWithSocial.user.id.get)" class="form-inline" method="POST">
+            <input type="text" name="allowedInvites" value="@allowedInvites">
+            <input type="submit" value="Save">
+          </form>
+        </td>
+      </tr>
+      <tr>
         <th>Experiments</th>
         <td id="experiments" class="form-inline">
-          @for(exp <- Seq(ExperimentTypes.ADMIN, ExperimentTypes.BLOCK, ExperimentTypes.METRO,
-              ExperimentTypes.NO_SEARCH_EXPERIMENTS)) {
+          @for(exp <- Seq(ExperimentTypes.ADMIN, ExperimentTypes.BLOCK,
+              ExperimentTypes.NO_SEARCH_EXPERIMENTS, ExperimentTypes.INACTIVE)) {
             <label class="checkbox">
               <input type="checkbox" data-exp="@exp.value" @if(userWithSocial.experiments.contains(exp)) {checked}>@exp.value
             </label>
           }
+        </td>
+      </tr>
+      <tr>
+        <th>State</th>
+        <td class="form-inline">
+          <select id="state">
+          @for(state <- Seq(UserStates.ACTIVE, UserStates.INACTIVE, UserStates.PENDING, UserStates.BLOCKED)) {
+            <option  @if(userWithSocial.user.state.value == state.value){selected}>@state.value</option>
+          }
+          </select>
         </td>
       </tr>
       <tr>
@@ -155,14 +175,24 @@
       location.href="@com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(userWithSocial.user.id.get)"
     }
     $(function() {
+      $("#state").change(function() {
+        var $td = $(this).closest("td");
+        var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
+          $.post('@com.keepit.controllers.admin.routes.AdminUserController.changeState(userWithSocial.user.id.get, "____")'.replace("____", $(this).val()))
+            .done(function () {
+              $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
+            });
+      });
+
       $("#experiments").on("click", "input", function() {
         var $td = $(this).closest("#experiments");
         var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
         if (this.checked) {
-          $.post('@com.keepit.controllers.admin.routes.AdminUserController.addExperiment(userWithSocial.user.id.get, "~")'.replace("~", $(this).data("exp")))
+          console.log($(this).data("exp"))
+          $.post('@com.keepit.controllers.admin.routes.AdminUserController.addExperiment(userWithSocial.user.id.get, "____")'.replace("____", $(this).data("exp")))
             .done(done).fail(fail);
         } else {
-          $.ajax('@com.keepit.controllers.admin.routes.AdminUserController.removeExperiment(userWithSocial.user.id.get, "~")'.replace("~", $(this).data("exp")),
+          $.ajax('@com.keepit.controllers.admin.routes.AdminUserController.removeExperiment(userWithSocial.user.id.get, "____")'.replace("____", $(this).data("exp")),
             {type: "DELETE"}).done(done).fail(fail);
         }
         function done() {

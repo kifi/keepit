@@ -2,7 +2,7 @@ package com.keepit.common.analytics
 
 import org.joda.time.DateTime
 
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.State
 import com.keepit.common.time._
@@ -74,9 +74,9 @@ case class Event(
   serverVersion: String
 )
 
-class EventRepo @Inject() (s3EventStore: S3EventStore, mongoEventStore: MongoEventStore) {
+class EventRepo @Inject() (eventStore: EventStore, mongoEventStore: MongoEventStore) {
   def persistToS3(event: Event): Event = {
-    s3EventStore += (event.externalId -> event)
+    eventStore += (event.externalId -> event)
     event
   }
   def persistToMongo(event: Event): Event = mongoEventStore.save(event)

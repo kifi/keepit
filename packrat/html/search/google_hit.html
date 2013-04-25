@@ -1,6 +1,6 @@
 <li class="g">
   <div class="vsc">
-    <h3 class="r"><a href="{{bookmark.url}}">{{{bookmark.title}}}</a></h3>
+    <h3 class="r"><a href="{{bookmark.url}}">{{{displayTitle}}}</a></h3>
     <div class="vspib" aria-label="Result details" role="button" tabindex="0"></div>
     <div class="s">
       <div class="f kv">
@@ -9,16 +9,16 @@
     </div>
   </div>
   <!--n-->
-  <div class="kifi-who" id="kifi-who-{{bookmark.externalId}}">
-    {{#isMyBookmark}}
-      <img class="kifi-face kifi-self{{^users}} kifi-only{{/users}}" src="{{session.avatarUrl}}" alt="You!" title="You! You look great!">
-    {{/isMyBookmark}}
-    {{#users}}
+  <div class="kifi-who" id="kifi-who-{{bookmark.id}}">
+    {{#displaySelf}}
+      <img class="kifi-face kifi-self{{^displayUsers}} kifi-only{{/displayUsers}}" src="{{session.avatarUrl}}" alt="You!" title="You! You look great!">
+    {{/displaySelf}}
+    {{#displayUsers}}
       <a class="kifi-face kifi-friend" href="javascript:" style="background-image:url(//graph.facebook.com/{{facebookId}}/picture?type=square)"></a>
-    {{/users}}
-    {{^isMyBookmark}}{{^users}}
+    {{/displayUsers}}
+    {{^displaySelf}}{{^displayUsers}}
       <img class="kifi-globe" src="{{globeUrl}}">
-    {{/users}}{{/isMyBookmark}}
-    <span class="kifi-who-text">{{{countText}}}</span>
+    {{/displayUsers}}{{/displaySelf}}
+    <span class="kifi-who-text">{{{whoKeptHtml}}}</span>
   </div>
 </li>

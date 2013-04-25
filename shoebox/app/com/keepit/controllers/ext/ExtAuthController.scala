@@ -1,21 +1,5 @@
 package com.keepit.controllers.ext
 
-/**
- * Copyright 2012 Jorge Aliss (jaliss at gmail dot com) - twitter: @jaliss
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 import play.api.mvc.{Action, Controller}
 import play.api.i18n.Messages
 import securesocial.core._
@@ -50,8 +34,8 @@ class ExtAuthController @Inject() (
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
   def start = AuthenticatedJsonToJsonAction { implicit request =>
     val userId = request.userId
-    val socialUser = request.socialUser
-    log.info(s"start id: $userId, facebook id: ${socialUser.id}")
+    val identity = request.identity
+    log.info(s"start id: $userId, facebook id: ${identity.id}")
 
     val json = request.body
     val (userAgent, version, installationIdOpt) =
@@ -92,10 +76,10 @@ class ExtAuthController @Inject() (
     }
 
     Ok(Json.obj(
-      "avatarUrl" -> socialUser.avatarUrl.get,
-      "name" -> socialUser.displayName,
-      "facebookId" -> socialUser.id.id,
-      "provider" -> socialUser.id.providerId,
+      "avatarUrl" -> identity.avatarUrl.get,
+      "name" -> identity.fullName,
+      "facebookId" -> identity.id.id,
+      "provider" -> identity.id.providerId,
       "userId" -> user.externalId.id,
       "installationId" -> installation.externalId.id,
       "experiments" -> experiments,
@@ -106,13 +90,13 @@ class ExtAuthController @Inject() (
 
   // where SecureSocial sends users if it can't figure out the right place (see securesocial.conf)
   def welcome = AuthenticatedJsonAction { implicit request =>
-    log.debug("in welcome. with user : [ %s ]".format(request.socialUser))
+    log.debug("in welcome. with user : [ %s ]".format(request.identity))
     Redirect(com.keepit.controllers.website.routes.HomeController.home())
   }
 
   // TODO: Fix logOut. ActionAuthenticator currently sets a new session cookie after this action clears it.
   def logOut = AuthenticatedHtmlAction { implicit request =>
-    Ok(views.html.logOut(Some(request.socialUser))).withNewSession
+    Ok(views.html.logOut(Some(request.identity))).withNewSession
   }
 
   def whois = AuthenticatedJsonAction { request =>

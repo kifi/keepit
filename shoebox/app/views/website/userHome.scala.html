@@ -1,0 +1,36 @@
+@(user: User, friendsOnKifi: Set[ExternalId[User]])
+
+@helper.main(title = "Kifi Home") {
+  <div class="user_avatar">
+    <img src="@com.keepit.controllers.assets.routes.UserPictureController.get(112, user.externalId)" width="112" height="112">
+  </div>
+
+  <section class="content clearfix">
+    <header class="content_header">
+        <h2>Hi, @user.firstName</h2>
+        <h3>Welcome to your KiFi Private beta page</h3>
+        @if(friendsOnKifi.nonEmpty) {
+          <div class="fb_friends_small clearfix">
+            <h4>Your facebook friends using KiFi: @friendsOnKifi.size</h4>
+            <div class="friends">
+              @for(friend <- friendsOnKifi.take(7)) {
+                <a href="#"><img src="@com.keepit.controllers.assets.routes.UserPictureController.get(30, friend)" width="30" height="30"></a>
+              }
+              @if(friendsOnKifi.size > 7) {
+                <a href="#"><span class="more_friends">+@{friendsOnKifi.size-7}</span></a>
+              }
+            </div>
+          </div>
+        }
+    </header>
+
+    <h2>What would you like to do today?</h2>
+
+    <ul class="links_list">
+      <!--<li><a href="/invite">Invite friends to the Private beta</a></li>-->
+      <li><a href="/install">Install the KiFi extension on this computer</a></li>
+      <li><a href="mailto:feedback@@kifi.com">Send Feedback</a></li>
+      <li><a href="http://www.42go.com/team.html">I want to know more about you guys</a></li>
+    </ul>
+  </section>
+}

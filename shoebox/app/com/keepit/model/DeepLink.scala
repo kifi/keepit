@@ -16,7 +16,7 @@ import java.security.MessageDigest
 import scala.collection.mutable
 import play.api.mvc.QueryStringBindable
 import play.api.mvc.JavascriptLitteral
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 
 case class DeepLinkToken(value: String)
 object DeepLinkToken {

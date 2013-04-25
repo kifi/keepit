@@ -287,5 +287,7 @@ class SemanticVectorComposer {
     sketch
   }
 
+  def getCount(i: Int): Int = counters(i)
+
   def numInputs = cnt
 }

@@ -10,6 +10,7 @@ import org.apache.lucene.index.Term
 import org.apache.lucene.index.ReaderUtil
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.search.FilteredQuery
 import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
@@ -32,27 +33,6 @@ object QueryUtil extends Logging {
   }
 
   def getTerms(query: Query): Set[Term] = {
-    query match {
-      case q: TermQuery => fromTermQuery(q)
-      case q: PhraseQuery => fromPhraseQuery(q)
-      case q: BooleanQuery => fromBooleanQuery(q)
-      case q: ConditionalQuery => fromConditionalQuery(q)
-      case q: ProximityQuery => fromProximityQuery(q)
-      case q: SemanticVectorQuery => fromSemanticVectorQuery(q)
-      case q: Query => fromOtherQuery(q)
-      case null => Set.empty[Term]
-    }
-  }
-
-  private def fromTermQuery(query: TermQuery) = Set(query.getTerm)
-  private def fromPhraseQuery(query: PhraseQuery) = query.getTerms().toSet
-  private def fromBooleanQuery(query: BooleanQuery) = {
-    query.getClauses.foldLeft(Set.empty[Term]){ (s, c) => if (!c.isProhibited) s ++ getTerms(c.getQuery) else s }
-  }
-  private def fromConditionalQuery(query: ConditionalQuery) = getTerms(query.source) ++ getTerms(query.condition)
-  private def fromProximityQuery(query: ProximityQuery) = query.terms.toSet
-  private def fromSemanticVectorQuery(query: SemanticVectorQuery) = query.terms
-  private def fromOtherQuery(query: Query) = {
     try {
       val terms = new JHashSet[Term]()
       query.extractTerms(terms)

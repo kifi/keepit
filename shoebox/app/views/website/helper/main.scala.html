@@ -1,0 +1,52 @@
+@(title: String, scripts: Seq[String] = Nil, stylesheets: List[String] = Nil, hiddenElements: Seq[String] = Nil, head: Html = Html(""))(content: Html)
+
+
+@base(title, stylesheets, head) {
+    @if(!hiddenElements.contains("header")) {
+    <header id="header">
+      <div class="wrap clearfix">
+          <a id="logo" href="/"><img src="@routes.Assets.at("images/logo.png")" width="203" height="48"></a>
+            @if(!hiddenElements.contains("nav")) {
+            <nav class="main_nav" id="main_nav">
+                <ul>
+                    <li class="current"><a href="/">Home</a></li>
+                    <!--@if(!hiddenElements.contains("inviteFriends")) {
+                    <li><a href="/invite">Invite friends to private beta</a></li>
+                    }-->
+                    <li><a href="/logout">Log out</a></li>
+                </ul>
+            </nav>
+            }
+        </div>
+    </header>
+    }
+    
+    <div id="primary">
+        <div class="content-wrap">
+          @content
+        </div>
+    </div>
+
+    <footer id="footer">
+      <div class="wrap">
+          <p class="copy">&copy; FortyTwo Inc 2013 <span class="divider">&bull;</span><a href="mailto:towel@@42go.com">Contact Us</a></p>
+            <div class="social">
+                <a href="https://www.facebook.com/pages/FortyTwo-Inc/296283190485254" target="_blank" class="icon facebook"></a>
+                <a href="http://www.linkedin.com/company/2759913" target="_blank" class="icon linkedin"></a>
+                <a href="https://twitter.com/42eng" target="_blank" class="icon twitter"></a>
+                <!--<a href="#" target="_blank" class="icon pinterest"></a>-->
+            </div>
+      </div>
+    </footer>
+
+  @defining(if (play.api.Play.isDev(play.api.Play.current)) ".js" else ".min.js") { ext =>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script>window.jQuery || document.write("<script src='@routes.Assets.at("javascripts/jquery-1.9.1" + ext)'>\x3C/script>")</script>
+    @for(script <- scripts) {
+      <script src="@routes.Assets.at("javascripts/" + script + ext)"></script>
+    }
+  }
+}
+
+</body>
+</html>

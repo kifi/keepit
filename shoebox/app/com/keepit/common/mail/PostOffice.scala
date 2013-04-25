@@ -42,20 +42,22 @@ object PostOffice {
     val MESSAGE = ElectronicMailCategory("MESSAGE")
     val ADMIN = ElectronicMailCategory("ADMIN")
     val EMAIL_KEEP = ElectronicMailCategory("EMAIL_KEEP")
+    val INVITATION = ElectronicMailCategory("INVITATION")
   }
 
   val BODY_MAX_SIZE = 524288
 }
 
-class PostOfficeImpl @Inject() (db: Database, mailRepo: ElectronicMailRepo, healthcheck: HealthcheckPlugin, mailer: MailSenderPlugin) extends PostOffice with Logging {
+class PostOfficeImpl @Inject() (
+    db: Database,
+    mailRepo: ElectronicMailRepo,
+    mailer: MailSenderPlugin)
+  extends PostOffice with Logging {
 
   def sendMail(mail: ElectronicMail): ElectronicMail = {
     val prepared = db.readWrite { implicit s =>
-      val newMail = if(mail.htmlBody.value.size > PostOffice.BODY_MAX_SIZE || (mail.textBody.isDefined && mail.textBody.get.value.size > 524288)) {
-        val newMail = mail.copy(htmlBody = mail.htmlBody.value.take(PostOffice.BODY_MAX_SIZE), textBody = mail.textBody.map(_.value.take(PostOffice.BODY_MAX_SIZE)))
-        val ex = new Exception("PostOffice attempted to send an email (%s) longer than %s bytes. Too big!".format(newMail.externalId, PostOffice.BODY_MAX_SIZE))
-        healthcheck.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
-        mailRepo.save(newMail)
+      val newMail: ElectronicMail = if(mail.htmlBody.value.size > PostOffice.BODY_MAX_SIZE || (mail.textBody.isDefined && mail.textBody.get.value.size > PostOffice.BODY_MAX_SIZE)) {
+        throw new Exception(s"PostOffice attempted to send an email (${mail.externalId}) longer than ${PostOffice.BODY_MAX_SIZE} bytes. Too big!")
       } else {
         mailRepo.save(mail)
       }

@@ -12,7 +12,6 @@ import com.keepit.search.query.ProximityQuery
 import com.keepit.search.query.QueryUtil._
 import com.keepit.search.query.SemanticVectorQuery
 import com.keepit.search.query.SiteQuery
-import com.keepit.search.query.TopLevelQuery
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.BooleanClause.Occur
@@ -26,14 +25,16 @@ import scala.collection.mutable.ArrayBuffer
 import com.keepit.search.query.AdditiveBoostQuery
 import com.keepit.search.query.MultiplicativeBoostQuery
 import com.keepit.search.query.BoostQuery
+import com.keepit.search.query.PhraseProximityQuery
 
 class MainQueryParser(
   analyzer: Analyzer,
-  stemmingAnalyzer: Option[Analyzer],
+  stemmingAnalyzer: Analyzer,
   baseBoost: Float,
   proximityBoost: Float,
   semanticBoost: Float,
   phraseBoost: Float,
+  phraseProximityBoost: Float,
   override val siteBoost: Float,
   phraseDetector: PhraseDetector
 ) extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with PercentMatch with QueryExpansion {
@@ -62,14 +63,14 @@ class MainQueryParser(
 
   override def parse(queryText: CharSequence) = {
     super.parse(queryText).map{ query =>
-      val terms = getTerms(query)
-      if (terms.size <= 0) query
+      if (numStemmedTerms <= 0) query
       else {
         query.setBoost(baseBoost)
 
         val textQuery = query match {
-          case query: BooleanQuery if (phraseBoost > 0.0f) =>
+          case query: BooleanQuery if (phraseBoost > 0.0f) => {
             createPhraseQueries(query).map{ q => new AdditiveBoostQuery(query, Array[Query](q)) }.getOrElse(query)
+          }
           case _ => query
         }
 
@@ -77,12 +78,20 @@ class MainQueryParser(
         val auxStrengths = ArrayBuffer.empty[Float]
 
         if (semanticBoost > 0.0f) {
-          val svq = SemanticVectorQuery("sv", terms)
+          val svq = SemanticVectorQuery(getStemmedTerms("sv"), fallbackField = "title_stemmed")
           auxQueries += svq
           auxStrengths += semanticBoost
         }
 
-        if (numStemmedTerms > 1 && proximityBoost > 0.0f) {
+        val phrases = phraseDetector.detectAll(getStemmedTermArray)
+        if (phrases.size > 0 && phraseProximityBoost > 0.0f) {
+          val phraseProxQ = new DisjunctionMaxQuery(0.0f)
+          phraseProxQ.add( PhraseProximityQuery(getStemmedTerms("cs"), phrases))
+          phraseProxQ.add( PhraseProximityQuery(getStemmedTerms("ts"), phrases))
+          phraseProxQ.add( PhraseProximityQuery(getStemmedTerms("title_stemmed"), phrases))
+          auxQueries += phraseProxQ
+          auxStrengths += phraseProximityBoost
+        } else if (numStemmedTerms > 1 && proximityBoost > 0.0f) {
           val proxQ = new DisjunctionMaxQuery(0.0f)
           proxQ.add(ProximityQuery(getStemmedTerms("cs")))
           proxQ.add(ProximityQuery(getStemmedTerms("ts")))

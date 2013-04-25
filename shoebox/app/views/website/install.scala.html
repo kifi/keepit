@@ -1,0 +1,37 @@
+@(user: User)
+
+@views.html.website.helper.main(title = "Getting started with KiFi", scripts = Seq("website/install"), hiddenElements = Seq("inviteFriends"), head = Html("""
+  <link rel="chrome-webstore-item" href="https://chrome.google.com/webstore/detail/fpjooibalklfinmkiodaamcckfbcjhin">
+""")) {
+  <div class="user_avatar">
+  <img src="@com.keepit.controllers.assets.routes.UserPictureController.get(112, user.externalId)" width="112" height="112">
+  </div>
+
+  <section class="content clearfix">
+    <header class="content_header">
+        <!--<div class="watch_video">
+          <span>Watch a video</span>
+            <div class="video_thumb">
+              <img src="@routes.Assets.at("images/video_thumb.jpg")" width="138" height="85">
+                <div class="play_video" data-popup="video"></div>
+            </div>
+        </div>-->
+
+        <h2>Yay @user.firstName, you’re in!</h2>
+        <h3>Welcome to the KiFi Private Beta</h3>
+    </header>
+
+    <h2 id="install_extensions_title" class="blue text_center">Start using KiFi by installing<br>the browser extension</h2>
+
+    <div class="install_extensions clearfix">
+      <div class="container">
+        <span class="btn blue " id="chrome-install">Install Google Chrome Extension</span>
+        <span class="btn blue " id="firefox-install">Install Firefox Extension</span>
+      </div>
+      <p class="small">We currently support Google Chrome and Firefox, and are adding other browsers soon.</p>
+    </div>
+    <div id="other-install">
+      <h3>We currently support <a href="https://www.google.com/intl/en/chrome/browser/">Google Chrome</a> and <a href="http://www.mozilla.org/en-US/firefox/new/">Firefox</a>, and are working hard to add other browsers.</h3>
+    </div>
+  </section>
+}

@@ -26,11 +26,11 @@
   background-repeat: no-repeat;
   opacity: .4;
 }
-.kifi-kept .kifi-tile-transparent {
+#kifi-tile[data-kept] .kifi-tile-transparent {
   background-color: #0a5aab;
   background-image: none !important;
 }
-.kifi-kept .kifi-tile-transparent::before {
+#kifi-tile[data-kept] .kifi-tile-transparent::before {
   content: "kept";
   position: absolute;
   top: 0;

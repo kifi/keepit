@@ -7,6 +7,10 @@
   font-family: "Helvetica Neue",arial,sans-serif;
 }
 
+.kifi-with-pane #kifi-notify-notice-wrapper {
+  right: 342px;
+}
+
 #kifi-notify-notice-wrapper .kifi-notify-item-wrapper {
 	position: relative;
 	margin: 0 0 10px;

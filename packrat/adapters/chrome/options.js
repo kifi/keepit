@@ -1,31 +1,45 @@
 $(function() {
-  chrome.extension.sendMessage(["get_prefs"], function init(o) {
-    console.log("[init] prefs:", o.prefs);
-    $("[name=env][value=" + o.prefs.env + "]").prop("checked", true);
-    $("#show-slider").prop("checked", o.prefs.showSlider);
-    $("#max-results").val(o.prefs.maxResults);
-    $("#show-scores").prop("checked", o.prefs.showScores);
-    showSession(o.session);
+  var port = chrome.runtime.connect({name: ""});
+  port.onMessage.addListener(function(msg) {
+    if (msg[0] == "api:respond") {
+      [init, showSession][msg[1]](msg[2]);
+    }
   });
-  $("#save").click(function() {
-    chrome.extension.sendMessage(["set_prefs", {
-      env: $("input[name=env][value=development]").is(":checked") ? "development" : "production",
-      showSlider: $("#show-slider").is(":checked"),
-      maxResults: $("#max-results").val(),
-      showScores: $("#show-scores").is(":checked")}]);
-    window.close();
+  port.postMessage(["get_prefs",,0]);
+  function init(o) {
+    console.log("[init] prefs:", o.prefs);
+    $env.find("[value=" + o.prefs.env + "]").prop("selected", true);
+    $showSlider.prop("checked", o.prefs.showSlider);
+    $maxResults.val(o.prefs.maxResults).data("val", o.prefs.maxResults);
+    $showScores.prop("checked", o.prefs.showScores);
+    showSession(o.session);
+  }
+  var $env = $(chrome.runtime.id === "fpjooibalklfinmkiodaamcckfbcjhin" ? null : "select").show().change(function() {
+    port.postMessage(["set_env", this.value]);
+  });
+  var $showSlider = $("[name=show_slider]").click(function() {
+    port.postMessage(["set_prefs", {showSlider: this.checked}]);
+  });
+  var $maxResults = $("[name=max_results]").on("input", function() {
+    var n = +this.value.trim();
+    if (n) {
+      n = Math.round(Math.max(1, Math.min(9, n)));
+      port.postMessage(["set_prefs", {maxResults: n}]);
+      $maxResults.data("val", n);
+    }
+  }).blur(function() {
+    this.value = $maxResults.data("val");
+  });
+  var $showScores = $("[name=show_scores]").click(function() {
+    port.postMessage(["set_prefs", {showScores: this.checked}]);
   });
   $("#log-out").click(function(e) {
     e.preventDefault();
-    chrome.extension.sendMessage(["log_out"], function() {
-      showSession();
-    });
+    port.postMessage(["log_out",,1]);
   });
   $("#log-in").click(function(e) {
     e.preventDefault();
-    chrome.extension.sendMessage(["log_in"], function(session) {
-      showSession(session);
-    });
+    port.postMessage(["log_in",,1]);
   });
   function showSession(session) {
     console.log("[showSession] session:", session);

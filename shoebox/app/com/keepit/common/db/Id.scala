@@ -8,10 +8,8 @@ case class Id[T](id: Long) {
 }
 
 object Id {
-  def format[T]: Format[Id[T]] = new Format[Id[T]] {
-    def reads(json: JsValue): JsResult[Id[T]] = __.read[Long].reads(json).map(Id(_))
-    def writes(o: Id[T]): JsValue = JsNumber(o.id)
-  }
+  def format[T]: Format[Id[T]] =
+    Format(__.read[Long].map(Id(_)), new Writes[Id[T]]{ def writes(o: Id[T]) = JsNumber(o.id) })
 
   implicit def queryStringBinder[T](implicit longBinder: QueryStringBindable[Long]) = new QueryStringBindable[Id[T]] {
     override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, Id[T]]] = {

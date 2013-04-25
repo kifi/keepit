@@ -16,7 +16,7 @@ import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.model.{EmailAddressRepo, User, UserRepo}
 import com.keepit.common.time._
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 
 import javax.mail.Message.RecipientType
 import javax.mail._
@@ -136,7 +136,7 @@ class MailToKeepActor @Inject() (
       to = new EmailAddressHolder {
         val address = messageParser.getAddr(newMessage.getRecipients(RecipientType.TO).head)
       },
-      subject = newMessage.getSubject,
+      subject = Option(newMessage.getSubject).getOrElse(""),
       htmlBody = htmlBody,
       inReplyTo = newMessage.getHeader("In-Reply-To").headOption.map(ElectronicMailMessageId.fromEmailHeader),
       category = PostOffice.Categories.EMAIL_KEEP

@@ -20,17 +20,13 @@
   text-align: left;
   direction: ltr;
   z-index: 2147483639;
-}
-.kifi-pane,
-.kifi-pane-parent.kifi-with-pane .kifi-slider2 {
   -webkit-transition: right .25s ease-in;
   transition: right .25s ease-in;
 }
 .kifi-pane-parent.kifi-with-pane .kifi-pane {
   right: 0;
 }
-.kifi-pane-parent.kifi-with-pane.kifi-snapshot-mode .kifi-pane,
-.kifi-pane-parent.kifi-with-pane.kifi-snapshot-mode .kifi-slider2 {
+.kifi-pane-parent.kifi-with-pane.kifi-snapshot-mode .kifi-pane {
   right: -322px;
 }
 
@@ -73,9 +69,47 @@ a.kifi-pane-head-settings {
 a.kifi-pane-head-settings:hover {
   background-color: #374d63;
 }
-a.kifi-pane-head-settings:active {
+a.kifi-pane-head-settings:active,
+a.kifi-pane-head-settings.kifi-active {
   background-color: #324559;
 }
+div.kifi-pane-head-settings-menu {
+  position: absolute;
+  width: auto;
+  right: 6px;
+  top: 39px;
+  white-space: nowrap;
+  background: white;
+  padding: 3px 0;
+  font-size: 12px;
+  line-height: 1;
+  box-shadow: 0 3px 6px 0 rgba(0,0,0,.3);
+  display: none;
+  user-select: none;
+}
+.kifi-pane-settings-hide {
+  padding: 6px 10px 6px 6px;
+  border: 1px solid transparent;
+}
+.kifi-pane-settings-hide:hover,
+.kifi-pane-settings-hide.kifi-hover {
+  background: -moz-linear-gradient(top, #6389f8, #1f60f6);
+  background: -webkit-linear-gradient(#6389f8, #1f60f6);
+  background: linear-gradient(#6389f8, #1f60f6);
+  border-top-color: #5980ef;
+  border-bottom-color: #0a54ec;
+  color: #fff;
+  cursor: pointer;
+}
+.kifi-pane-settings-hide::before {
+  content: "\2713";
+  margin-right: 3px;
+  visibility: hidden;
+}
+.kifi-pane-settings-hide.kifi-checked::before {
+  visibility: visible;
+}
+
 .kifi-pane input[type=text].kifi-pane-search {
   margin: 0;
   width: 100%;
@@ -162,6 +196,26 @@ a.kifi-pane-back:active {
   bottom: 0;
   height: auto;
 }
+.kifi-not-done {
+  position: absolute;
+  left: 5%;
+  width: 90%;
+  top: -70px;
+  height: 70px;
+  line-height: 70px;
+  font-size: 16px;
+  text-align: center;
+  background: #faeec7;
+  border: 1px solid #aa9962;
+  border-top: none;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  -webkit-transition: top .1s ease-in-out;
+  transition: top .1s ease-in-out;
+}
+.kifi-not-done.kifi-showing {
+  top: 0;
+}
 
 /* general pane */
 .kifi-pane-general {
@@ -186,7 +240,7 @@ a.kifi-pane-back:active {
   border-top: 1px solid #2c3e50;
   line-height: 38px;
 }
-.kifi-pane-kept-y,
+span.kifi-pane-kept-y,
 .kifi-pane-kept.kifi-kept .kifi-pane-kept-n {
   display: none;
 }

@@ -21,18 +21,18 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.logging._
 import com.keepit.common.net.URINormalizer
 import com.keepit.common.db.{State, Id}
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.ThreadInfoRepo
 import com.keepit.serializer.ThreadInfoSerializer._
 
 case class CommentDetails(
-  id: String,
+  id: String,              // ExternalId[Comment]
   author: BasicUser,
   recipient: BasicUser,
-  url: String,
-  page: String,
-  title: String,
-  text: String,
+  url: String,             // DeepLink.url (containing /r/)
+  page: String,            // NormalizedURI.url
+  title: String,           // Comment.pageTitle
+  text: String,            // Comment.text
   createdAt: DateTime,
   newCount: Int,
   totalCount: Int,
@@ -40,13 +40,13 @@ case class CommentDetails(
 )
 
 case class MessageDetails(
-  id: String,
+  id: String,              // ExternalId[Comment] of the message
   authors: Seq[BasicUser],
   recipient: BasicUser,
-  url: Option[String],
-  page: Option[String],
-  title: Option[String],
-  text: String,
+  url: Option[String],     // DeepLink.url (containing /r/)
+  page: Option[String],    // NormalizedURI.url
+  title: Option[String],   // Comment.pageTitle
+  text: String,            // Comment.text
   createdAt: DateTime,
   hasParent: Boolean,
   newCount: Int,
@@ -90,6 +90,7 @@ class UserNotifier @Inject() (
   basicUserRepo: BasicUserRepo,
   commentRepo: CommentRepo,
   commentRecipientRepo: CommentRecipientRepo,
+  commentFormatter: CommentFormatter,
   userNotifyRepo: UserNotificationRepo,
   notificationBroadcast: NotificationBroadcaster,
   commentWithBasicUserRepo: CommentWithBasicUserRepo,
@@ -169,7 +170,7 @@ class UserNotifier @Inject() (
           from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
           to = addr,
           subject = "%s %s commented on a page you are following".format(author.firstName, author.lastName),
-          htmlBody = replaceLookHereLinks(views.html.email.newComment(author, recipient, details.url, details.title, details.text).body),
+          htmlBody = views.html.email.newComment(author, recipient, details.url, details.title, commentFormatter.toPlainText(details.text)).body,
           category = PostOffice.Categories.COMMENT))
     }
   }
@@ -182,10 +183,10 @@ class UserNotifier @Inject() (
           from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
           to = addr,
           subject = "%s %s sent you a message using KiFi".format(author.firstName, author.lastName),
-          htmlBody = replaceLookHereLinks(
-            views.html.email.newMessage(
-              author, recipient, details.url.getOrElse(""), details.title.getOrElse("No title"), details.text, details.hasParent)
-            .body),
+          htmlBody = views.html.email.newMessage(
+              author, recipient, details.url.getOrElse(""), details.title.getOrElse("No title"),
+              commentFormatter.toPlainText(details.text), details.hasParent)
+            .body,
           category = PostOffice.Categories.COMMENT))
     }
   }
@@ -263,11 +264,5 @@ class UserNotifier @Inject() (
 
     generatedSet.toMap
   }
-
-
-  private val lookHereLinkRe = """\[((?:\\\]|[^\]])*)\]\(x-kifi-sel:(?:\\\)|[^)])*\)""".r
-  //e.g. [look here](x-kifi-sel:body>div#page.watch>div:nth-child(4\)>div#watch7-video-container)
-  private def replaceLookHereLinks(text: String): String =
-    lookHereLinkRe.replaceAllIn(text, m => "[" + m.group(1).replaceAll("""\\(.)""", "$1") + "]")
 
 }

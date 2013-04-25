@@ -11,15 +11,16 @@ import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Explanation
 import org.apache.lucene.util.PriorityQueue
-import com.keepit.search.query.{TopLevelQuery,QueryUtil}
+import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
 import com.keepit.common.time._
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 import play.api.libs.json._
 import java.util.UUID
 import scala.math._
 import org.joda.time.DateTime
+import com.keepit.serializer.SearchResultInfoSerializer
 
 
 class MainSearcher(
@@ -59,6 +60,7 @@ class MainSearcher(
   val similarity = Similarity(config.asString("similarity"))
   val enableCoordinator = config.asBoolean("enableCoordinator")
   val phraseBoost = config.asFloat("phraseBoost")
+  val phraseProximityBoost = config.asFloat("phraseProximityBoost")
   val siteBoost = config.asFloat("siteBoost")
   val minMyBookmarks = config.asInt("minMyBookmarks")
   val myBookmarkBoost = config.asFloat("myBookmarkBoost")
@@ -108,13 +110,13 @@ class MainSearcher(
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
 
-    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost)
+    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
 
     val parsedQuery = parser.parse(queryString)
 
-    parsedQuery.map{ articleQuery =>
+    val personalizedSearcher = parsedQuery.map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
       val personalizedSearcher = getPersonalizedSearcher(articleQuery)
@@ -139,9 +141,10 @@ class MainSearcher(
           doc = scorer.nextDoc()
         }
       }
+      personalizedSearcher
     }
 
-    (myHits, friendsHits, othersHits, parsedQuery)
+    (myHits, friendsHits, othersHits, parsedQuery, personalizedSearcher)
   }
 
   def search(queryString: String, numHitsToReturn: Int, lastUUID: Option[ExternalId[ArticleSearchResultRef]], filter: SearchFilter = SearchFilter.default()): ArticleSearchResult = {
@@ -149,12 +152,18 @@ class MainSearcher(
     implicit val lang = Lang("en") // TODO: detect
     val now = currentDateTime
     val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost)
-    val (myHits, friendsHits, othersHits, parsedQuery) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts) match {
-      case (myHits, friendsHits, othersHits, parsedQuery) => {
-        if ( myHits.size() + friendsHits.size() + othersHits.size() > 0 ) (myHits, friendsHits, othersHits, parsedQuery)
+    val (myHits, friendsHits, othersHits, parsedQuery, personalizedSearcher) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts) match {
+      case (myHits, friendsHits, othersHits, parsedQuery, personalizedSearcher) => {
+        if ( myHits.size() + friendsHits.size() + othersHits.size() > 0 ) (myHits, friendsHits, othersHits, parsedQuery, personalizedSearcher)
         else {
-          val alternative = try { spellCorrector.getAlternativeQuery(queryString) } catch { case e: Exception => log.error("unexpected SpellCorrector error" ); queryString }
-          if (alternative.trim == queryString.trim)	(myHits, friendsHits, othersHits, parsedQuery)
+          val alternative = try {
+            spellCorrector.getAlternativeQuery(queryString)
+          } catch {
+            case e: Exception =>
+              log.error("unexpected SpellCorrector error" )
+              queryString
+          }
+          if (alternative.trim == queryString.trim)	(myHits, friendsHits, othersHits, parsedQuery, personalizedSearcher)
           else searchText(alternative, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
         }
       }
@@ -162,11 +171,15 @@ class MainSearcher(
 
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
+    val othersTotal = othersHits.totalHits
 
     val hits = createQueue(numHitsToReturn)
 
     // global high score excluding others (an orphan uri sometimes makes results disappear)
-    val highScore = max(myHits.highScore, friendsHits.highScore)
+    val highScore = {
+      val score = max(myHits.highScore, friendsHits.highScore)
+      if (score < 0.0f) 1.0f else score
+    }
 
     var threshold = highScore * tailCutting
 
@@ -227,12 +240,14 @@ class MainSearcher(
     hitList.foreach{ h => if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id) }
 
     val newIdFilter = filter.idFilter ++ hitList.map(_.id)
-    val (svVar,svExistVar) = SemanticVariance.svVariance(parsedQuery, hitList, this.articleSearcher, this.uriGraphSearcher);								// compute sv variance. may need to record the time elapsed.
+    val (svVar,svExistVar) = SemanticVariance.svVariance(parsedQuery, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
 
     val searchResultUuid = ExternalId[ArticleSearchResultRef]()
+    val searchResultInfo = SearchResultInfo(myTotal, friendsTotal, othersTotal, svVar, svExistVar)
+    val searchResultJson = SearchResultInfoSerializer.serializer.writes(searchResultInfo)
+    val metaData = Json.obj("queryUUID" -> JsString(searchResultUuid.id), "searchResultInfo" -> searchResultJson)
 
-    val metaData = JsObject( Seq("queryUUID"->JsString(searchResultUuid.id), "svVariance"-> JsNumber(svVar), "svExistenceVar" -> JsNumber(svExistVar) ))
     persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData))
 
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit),
@@ -260,7 +275,7 @@ class MainSearcher(
 
   def explain(queryString: String, uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
     val lang = Lang("en") // TODO: detect
-    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, siteBoost)
+    val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
 

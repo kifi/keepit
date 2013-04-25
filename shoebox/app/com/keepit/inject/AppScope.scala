@@ -19,16 +19,17 @@ class AppScope extends Scope with Logging {
   private var stopping = false
   private var stopped = false
 
-  private var app: Application = _
   private var plugins: List[Plugin] = Nil
   private[inject] var pluginsToStart: List[Plugin] = Nil
   private var instances: Map[Key[_], Any] = Map.empty
 
-  def onStart(app: Application): Unit = synchronized {
+  private var app: Application = _
+
+  def onStart(app: Application): Unit = {
     println(s"[$identifier] scope starting...")
     require(!started, "AppScope has already been started")
     this.app = app
-    pluginsToStart foreach startPlugin
+    pluginsToStart foreach { p => startPlugin(p) }
     pluginsToStart = Nil
     started = true
   }
@@ -42,7 +43,8 @@ class AppScope extends Scope with Logging {
     plugins = plugin :: plugins
   }
 
-  def onStop(app: Application): Unit = synchronized {
+  def onStop(app: Application): Unit = {
+    val appScope = this
     stopping = true
     println(s"[$identifier] scope stopping...")
     if(!started) {
@@ -70,37 +72,52 @@ class AppScope extends Scope with Logging {
     }
   }
 
+  private def createInstance[T](key: Key[T], unscoped: Provider[T]) = {
+    if (stopped || stopping)
+      throw new IllegalStateException(s"requesting for $key (in lock) while the scope stopped=$stopped, stopping=$stopping")
+    val inst = unscoped.get()
+    log.debug(s"created new instance of ${inst.getClass().getName()}")
+
+    // if this instance is a plugin, start it and add to the list of plugins
+    startIfPlugin(inst)
+    instances += key -> inst
+    log.debug(s"returning initiated instance of ${inst.getClass().getName()}")
+    inst
+  }
+
+  private def startIfPlugin(instance: Any) =
+    instance match {
+      case plugin: Plugin =>
+        started match {
+          case true => startPlugin(plugin)
+          case false => pluginsToStart = plugin :: pluginsToStart
+        }
+      case _ =>
+    }
+
   def scope[T](key: Key[T], unscoped: Provider[T]): Provider[T] = {
     val appScope = this
     // return a provider that always gives the same instance
     new Provider[T] {
       def get: T = {
-        log.info(s"requesting for $key")
-        if (stopped || stopping) throw new IllegalStateException(s"requesting for $key (pre lock) while the scope stopped=$stopped, stopping=$stopping")
-        val instance = appScope synchronized {
-          if (stopped || stopping) throw new IllegalStateException(s"requesting for $key (in lock) while the scope stopped=$stopped, stopping=$stopping")
+        log.debug(s"requesting for $key")
+        val instance = {
           instances.get(key) match {
             case Some(inst) =>
-              log.info(s"returning existing instance of ${inst.getClass().getName()}")
               inst.asInstanceOf[T]
             case None =>
-              val inst = unscoped.get()
-              log.info(s"creating new instance of ${inst.getClass().getName()}")
-              // if this instance is a plugin, start it and add to the list of plugins
-              inst match {
-                case plugin: Plugin =>
-                  started match {
-                    case true => startPlugin(plugin)
-                    case false => pluginsToStart = plugin :: pluginsToStart
-                  }
-                case _ =>
+              appScope synchronized {
+                //double check, it may have been initialized already
+                instances.get(key) match {
+                  case Some(inst) =>
+                    inst.asInstanceOf[T]
+                  case None =>
+                    createInstance(key, unscoped)
+                }
               }
-              instances += key -> inst
-              log.info(s"returning initiated instance of ${inst.getClass().getName()}")
-              inst
           }
         }
-        log.info(s"instance of key $key is $instance")
+        log.debug(s"instance of key $key is $instance")
         instance
       }
     }

@@ -1,7 +1,7 @@
 package com.keepit.common.db.slick
 
 import com.keepit.common.db.slick.DBSession.RWSession
-import com.keepit.common.db.{DbSequence, SequenceNumber, DbInfo}
+import com.keepit.common.db.{DbSequence, SequenceNumber, DbInfo, H2DatabaseDialect}
 import scala.slick.driver.H2Driver
 import scala.collection.mutable.HashMap
 import scala.slick.lifted.DDL
@@ -20,6 +20,7 @@ class H2(val dbInfo: DbInfo)
 
   //first initiation of the table if they where loaded staticly by the injector before the db was initiated
   tablesToInit.values foreach initTable
+  val dialect = H2DatabaseDialect
 
   def getSequence(name: String): DbSequence = new DbSequence(name) {
     def incrementAndGet()(implicit sess: RWSession): SequenceNumber = {

@@ -1,28 +1,7 @@
 <div class="kifi-pane-box kifi-pane-general">
   <div class="kifi-pane-page-title">{{title}}</div>
   <div class="kifi-pane-page-url">{{url}}</div>
-  <div class="kifi-pane-kept{{#kept}} kifi-kept{{/kept}}">
-    <span class="kifi-pane-kept-n">You haven’t kept this</span>
-    <span class="kifi-pane-kept-y">You kept this</span>
-  </div>
-  {{#keepersCaptionHtml}}
-  <div class="kifi-pane-kept-by">
-    <div class="kifi-pane-keepers">
-    {{#keepers}}
-      <a class="kifi-pane-keeper" href="javascript:" style="background-image:url(https://graph.facebook.com/{{facebookId}}/picture?type=square)"></a>
-    {{/keepers}}
-    </div>
-    <div class="kifi-pane-keepers-caption">
-      {{{keepersCaptionHtml}}} kept this
-    </div>
-  </div>
-  {{/keepersCaptionHtml}}
-  <div class="kifi-pane-in-collections">
-    In collections:
-    <div class="kifi-pane-in-collections-list kifi-none">
-      none
-    </div>
-  </div>
+
   <div class="kifi-pane-actions">
     <a class="kifi-pane-action" href="javascript:">Add a note</a>
     <a class="kifi-pane-action" href="javascript:">Keep to a collection</a>

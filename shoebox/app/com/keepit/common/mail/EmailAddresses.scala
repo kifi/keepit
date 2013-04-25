@@ -12,10 +12,14 @@ object EmailAddresses {
   case object NOTIFICATIONS extends SystemEmailAddress("notifications@42go.com")
   case object ENG extends SystemEmailAddress("eng@42go.com")
   case object EISHAY extends SystemEmailAddress("eishay@42go.com")
+  case object DANNY extends SystemEmailAddress("danny@42go.com")
+  case object EFFI extends SystemEmailAddress("effi@42go.com")
+  case object INVITATION extends SystemEmailAddress("invitation@42go.com")
   case object YASUHIRO extends SystemEmailAddress("yasuhiro@42go.com")
   case object ANDREW extends SystemEmailAddress("andrew@42go.com")
   case object JARED extends SystemEmailAddress("jared@42go.com")
   case object GREG extends SystemEmailAddress("greg@42go.com")
+  case object CONGRATS extends SystemEmailAddress("congrats@kifi.com")
 
   def apply(email: String): SystemEmailAddress = email match {
     case TEAM.address => TEAM
@@ -27,5 +31,6 @@ object EmailAddresses {
     case ANDREW.address => ANDREW
     case JARED.address => JARED
     case GREG.address => GREG
+    case CONGRATS.address => CONGRATS
   }
 }

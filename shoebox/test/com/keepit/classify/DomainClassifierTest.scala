@@ -1,11 +1,11 @@
 package com.keepit.classify
 
 import scala.concurrent.Await
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 import java.util.concurrent.TimeUnit
 
-import org.specs2.execute.SkipException
 import org.specs2.mutable.Specification
 
 import com.keepit.common.db.slick.Database
@@ -13,28 +13,35 @@ import com.keepit.common.net.{HttpClient, FakeHttpClient}
 import com.keepit.inject._
 import com.keepit.test.{DevApplication, DbRepos}
 
+import akka.actor.ActorSystem
+import akka.testkit.TestKit
 import play.api.Play.current
 import play.api.test.Helpers.running
 
-class DomainClassifierTest extends Specification with DbRepos {
+class DomainClassifierTest extends TestKit(ActorSystem()) with Specification with DbRepos {
+
+  private def await[T](f: Future[T]): T = {
+    Await.result(f, pairIntToDuration(100, TimeUnit.MILLISECONDS))
+  }
+
   "The domain classifier" should {
     "use imported classifications and not fetch for known domains" in {
-      throw new SkipException(skipped)
-      running(new DevApplication().withFakeMail().withFakePersistEvent().withFakeHealthcheck().withFakeHttpClient()) {
+      running(new DevApplication().withFakeMail().withFakePersistEvent().withFakeHttpClient()
+          .withTestActorSystem(system)) {
         val classifier = inject[DomainClassifierImpl]
         val tagRepo = inject[DomainTagRepo]
         val importer = inject[DomainTagImporterImpl]
+
         inject[Database].readWrite { implicit s =>
           tagRepo.save(DomainTag(name = DomainTagName("Search Engines"), sensitive = Some(false)))
           tagRepo.save(DomainTag(name = DomainTagName("Technology and computers"), sensitive = Some(false)))
           tagRepo.save(DomainTag(name = DomainTagName("Porn"), sensitive = Some(true)))
+        }
 
-          Seq(
-            importer.applyTagToDomains(DomainTagName("search engines"), Seq("google.com", "yahoo.com")),
-            importer.applyTagToDomains(DomainTagName("Technology and Computers"), Seq("42go.com", "google.com")),
-            importer.applyTagToDomains(DomainTagName("Porn"), Seq("playboy.com"))
-          )
-        }.foreach { Await.result(_, pairIntToDuration(100, TimeUnit.SECONDS) ) }
+        Seq(importer.applyTagToDomains(DomainTagName("search engines"), Seq("google.com", "yahoo.com")),
+          importer.applyTagToDomains(DomainTagName("Technology and Computers"), Seq("42go.com", "google.com")),
+          importer.applyTagToDomains(DomainTagName("Porn"), Seq("playboy.com"))
+        ) foreach await
 
         classifier.isSensitive("google.com") === Right(false)
         classifier.isSensitive("yahoo.com") === Right(false)
@@ -43,8 +50,8 @@ class DomainClassifierTest extends Specification with DbRepos {
       }
     }
     "fetch if necessary" in {
-      throw new SkipException(skipped)
-      running(new DevApplication().withFakeMail().withFakePersistEvent().withFakeHealthcheck()
+      running(new DevApplication().withFakeMail().withFakePersistEvent()
+          .withTestActorSystem(system)
           .overrideWith(new FortyTwoModule {
             override def configure() {
               bind[HttpClient].toInstance(new FakeHttpClient(Some({
@@ -81,9 +88,7 @@ class DomainClassifierTest extends Specification with DbRepos {
           classifier.isSensitive("addepar.com").left.get,
           classifier.isSensitive("playboy.com").left.get,
           classifier.isSensitive("porn.com").left.get
-        ).foreach { future =>
-          Await.result(future, pairIntToDuration(100, TimeUnit.MILLISECONDS))
-        }
+        ) foreach await
 
         classifier.isSensitive("www.yahoo.com") === Right(false)
         classifier.isSensitive("yahoo.com") === Right(false)

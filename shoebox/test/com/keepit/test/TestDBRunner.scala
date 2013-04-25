@@ -1,7 +1,7 @@
 package com.keepit.test
 
 import com.google.inject.Injector
-import scala.slick.session.{Database => SlickDatabase}
+import scala.slick.session.{ Database => SlickDatabase, Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability }
 import com.keepit.common.db.DbInfo
 import com.google.inject.Guice
 import com.keepit.common.db.slick.H2
@@ -13,6 +13,7 @@ import com.keepit.common.db.slick.Database
 import com.google.inject.Module
 import com.keepit.inject.RichInjector
 import com.keepit.common.db.slick.DataBaseComponent
+import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.TableInitListener
 import com.keepit.common.db.slick.TableWithDDL
 import com.keepit.model.UserRepo
@@ -30,7 +31,6 @@ trait TestDBRunner extends TestInjector {
 
   def db(implicit injector: RichInjector): Database = inject[Database]
 
-  var userRepoInit = false
   def userRepo(implicit injector: RichInjector) = inject[UserRepo]
   def uriRepo(implicit injector: RichInjector) = inject[NormalizedURIRepo]
   def urlRepo(implicit injector: RichInjector) = inject[URLRepo]
@@ -43,7 +43,7 @@ trait TestDBRunner extends TestInjector {
 
   def withDB[T](overrideingModules: Module*)(f: RichInjector => T) = {
     withInjector(overrideingModules: _*) { implicit injector =>
-      val db = inject[Database]
+      val db = inject[DataBaseComponent]
       val h2 = inject[DataBaseComponent].asInstanceOf[H2]
       h2.initListener = Some(new TableInitListener {
         def init(table: TableWithDDL) = initTable(db, table)
@@ -51,7 +51,7 @@ trait TestDBRunner extends TestInjector {
       try {
         (f(injector))
       } finally {
-        db.readWrite { implicit session =>
+        readWrite(db) { implicit session =>
           val conn = session.conn
 //          conn.createStatement().execute("SET REFERENTIAL_INTEGRITY FALSE")
 //          h2.tablesToInit.values foreach { table =>
@@ -64,9 +64,18 @@ trait TestDBRunner extends TestInjector {
     }
   }
 
-  def initTable(db: Database, table: TableWithDDL): Unit = {
+  private def readWrite[T](db: DataBaseComponent)(f: RWSession => T) = {
+    val s = db.handle.createSession.forParameters(rsConcurrency = ResultSetConcurrency.Updatable)
+    try {
+      s.withTransaction {
+        f(new RWSession(s))
+      }
+    } finally s.close()
+  }
+
+  def initTable(db: DataBaseComponent, table: TableWithDDL): Unit = {
     println(s"initiating table [${table.tableName}]")
-    db.readWrite { implicit session =>
+    readWrite(db) { implicit session =>
       try {
         val ddl = table.ddl
         for (s <- ddl.createStatements) {

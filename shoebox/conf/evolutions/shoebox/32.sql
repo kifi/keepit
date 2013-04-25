@@ -20,9 +20,7 @@ INSERT INTO slider_rule (group_name, name, parameters, state, created_at, update
     ('default', 'sensitive', null, 'active', now(), now()),
     ('default', 'url', null, 'active', now(), now()),
     ('default', 'shown', null, 'active', now(), now()),
-    ('default', 'viewport', '[800]', 'active', now(), now()),
     ('default', 'scroll', '[2,80]', 'active', now(), now()),
-    ('default', 'friendKept', '[10]', 'active', now(), now()),
     ('default', 'focus', '[30]', 'active', now(), now());
 
 INSERT INTO evolutions (name, description) VALUES ('32.sql', 'adding slider rule tables');

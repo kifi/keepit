@@ -11,9 +11,8 @@ import com.keepit.common.mail.PostOffice
 import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.ElectronicMail
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
-import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.time._
 import com.keepit.common.plugin.SchedulingPlugin
@@ -53,8 +52,7 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
     case Some(t) =>
       causeStacktraceHead(depth, Option(t.getCause)) match {
         case Some(msg) => Some(msg)
-        case None =>
-          Some(t.getStackTrace().take(depth).mkString)
+        case None => Some(t.getStackTrace().take(depth).map(e => e.getClassName + e.getLineNumber).mkString(":"))
       }
   }
 
@@ -67,11 +65,15 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
 
   lazy val stackTraceHtml: String = {
     def causeString(throwableOptions: Option[Throwable]): String = throwableOptions match {
-      case None =>
-        "[No Cause]"
+      case None => "--"
+      case Some(t) if (t.getStackTrace().exists({e =>
+        e.getClassName.contains("play.api.Application") && e.getMethodName.contains("handleError")
+      })) => causeString(Option(t.getCause))
       case Some(t) =>
-        (t.getStackTrace() map formatStackElement mkString "\n<br/> &nbsp; ") +
-        s"""\n<br/> &nbsp; <span style="color:red; font-size: 13px; font-style: bold;">Cause:</span> ${causeString(Option(t.getCause))}"""
+        s"""<span style="color:red; font-size: 13px; font-style: bold;">Cause:</span><br/>
+            <span style="color:green; font-size: 16px; font-style: bold;">${t.toString}</span>\n<br/>
+            ${(t.getStackTrace() map formatStackElement mkString "\n<br/> ")}<br/>
+            ${causeString(Option(t.getCause))}"""
     }
     causeString(error)
   }
@@ -86,11 +88,9 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
         errorMessage.getOrElse(path.getOrElse(callType.toString()))
       case Some(t) =>
         val source = cause(t)
-        val message = source.getMessage() match {
-          case long if long.length > 12 => long.substring(0, 12) + "..."
-          case short => short
-        }
-        s"${source.getClass().toString} : ${message}"
+        val message = source.getMessage().replaceAll("\\d", "*")
+        val shortMessage = if (message.length > 59) message.substring(0, 60) else message
+        s"${source.getClass().toString} : $shortMessage..."
     }
   }
 
@@ -101,8 +101,7 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
     }
     (error map (e => causeString(error))).getOrElse(errorMessage.getOrElse(this.toString))
   }
-
-  def toHtml: String = {
+ def toHtml: String = {
     val message = new StringBuilder("%s: [%s] Error during call of type %s".format(createdAt, id, callType))
     method.map { m =>
       message ++= s"""<br/><b>http method</b> <span style="color:blue; font-size: 13px; font-style: italic;">[$m]</span>"""
@@ -114,18 +113,10 @@ case class HealthcheckError(error: Option[Throwable] = None, method: Option[Stri
       message ++= s"""<br/><b>error message</b> <span style="color:red; font-size: 13px; font-style: italic;">[${em.replaceAll("\n", "\n<br/>")}]</span>"""
     }
     error.map { e =>
-      message ++= "<br/><b>Exception %s stack trace: \n</b><br/>".format(e.toString())
+      message ++= "<br/><b>Exception stack trace:\n</b><br/>"
       message ++= stackTraceHtml
-      causeDisplay(e)
     }
 
-    def causeDisplay(e: Throwable): Unit = {
-      Option(e.getCause) map { cause =>
-        message ++= "<br/>from cause: %s\n<br/>".format(cause.toString)
-        message ++= (cause.getStackTrace() mkString "\n<br/> &nbsp; ")
-        causeDisplay(cause)
-      }
-    }
     message.toString()
   }
 }

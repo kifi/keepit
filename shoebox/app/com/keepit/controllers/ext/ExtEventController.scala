@@ -14,7 +14,6 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.db._
 import com.keepit.model._
-import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
 import java.sql.Connection
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.Hit
@@ -27,7 +26,7 @@ import com.keepit.common.analytics._
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.common.analytics.reports._
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 
 import com.google.inject.{Inject, Singleton}
 
@@ -53,7 +52,7 @@ class ExtEventController @Inject() (
     Ok(JsObject(Seq("stored" -> JsString("ok"))))
   }
 
-  private def createEventsFromPayload(params: JsValue, userId: Id[User]) = {
+  private[ext] def createEventsFromPayload(params: JsValue, userId: Id[User]) = {
     val logRecievedTime = currentDateTime
 
     val (user, experiments) = db.readOnly { implicit session =>

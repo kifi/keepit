@@ -30,13 +30,16 @@ case class User(
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withName(firstName: String, lastName: String) = copy(firstName = firstName, lastName = lastName)
   def withExternalId(id: ExternalId[User]) = copy(externalId = id)
+  def withState(state: State[User]) = copy(state = state)
 }
 
 @ImplementedBy(classOf[UserRepoImpl])
 trait UserRepo extends Repo[User] with ExternalIdColumnFunction[User] {
+  def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User]
 }
 
 case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
+  override val version = 2
   val namespace = "user_by_externalId"
   def toKey(): String = externalId.id
 }
@@ -46,6 +49,7 @@ class UserExternalIdCache @Inject() (val repo: FortyTwoCachePlugin) extends Fort
   def serialize(user: User) = UserSerializer.userSerializer.writes(user)
 }
 case class UserIdKey(id: Id[User]) extends Key[User] {
+  override val version = 2
   val namespace = "user_by_id"
   def toKey(): String = id.id.toString
 }
@@ -73,6 +77,9 @@ class UserRepoImpl @Inject() (
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state <> (User, User.unapply _)
   }
 
+  def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User] =
+    (for (u <- table if !(u.state inSet excludeStates)) yield u).list
+
   override def invalidateCache(user: User)(implicit session: RSession) = {
     externalIdCache.set(UserExternalIdKey(user.externalId), user)
     user.id match {
@@ -96,4 +103,7 @@ class UserRepoImpl @Inject() (
 
 }
 
-object UserStates extends States[User]
+object UserStates extends States[User] {
+  val PENDING = State[User]("pending")
+  val BLOCKED = State[User]("blocked")
+}

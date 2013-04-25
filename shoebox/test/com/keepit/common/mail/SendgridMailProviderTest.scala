@@ -16,7 +16,7 @@ class SendgridMailProviderTest extends Specification {
 
   "SendgridMailProvider" should {
     "send email" in {
-      running(new ShoeboxApplication().withFakeHealthcheck()) {
+      running(new ShoeboxApplication()) {
         val mail = inject[Database].readWrite { implicit s =>
           inject[ElectronicMailRepo].save(ElectronicMail(
               from = EmailAddresses.ENG,

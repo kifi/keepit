@@ -11,7 +11,6 @@ class BookmarkSerializer extends Writes[Bookmark] {
   def writes(bookmark: Bookmark): JsValue =
     JsObject(Seq(
       "id" -> JsString(bookmark.externalId.toString),
-      "externalId" -> JsString(bookmark.externalId.toString),  // TODO: deprecate, eliminate
       "title" -> bookmark.title.map(JsString).getOrElse(JsNull),
       "url" -> JsString(bookmark.url),
       "isPrivate" -> JsBoolean(bookmark.isPrivate),

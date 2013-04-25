@@ -1,5 +1,9 @@
 package com.keepit.controllers.admin
 
+import scala.collection.mutable
+
+import org.joda.time.{Months, ReadablePeriod, Weeks}
+
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.analytics._
 import com.keepit.common.analytics.reports._
@@ -8,14 +12,13 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
-import com.keepit.model.{UserRepo, User}
+import com.keepit.model._
 import com.keepit.search.SearchConfigManager
-import org.joda.time.{Months, ReadablePeriod, Weeks}
+
 import play.api.data.Forms._
 import play.api.data._
 import play.api.libs.json._
 import play.api.mvc._
-import scala.collection.mutable
 import views.html
 
 case class ActivityData(
@@ -35,6 +38,8 @@ class AdminEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   userRepo: UserRepo,
+  userExperimentRepo: UserExperimentRepo,
+  emailRepo: EmailAddressRepo,
   searchConfigManager: SearchConfigManager,
   rb: ReportBuilderPlugin,
   reportStore: ReportStore,
@@ -74,6 +79,15 @@ class AdminEventController @Inject() (
     Ok(report.toCSV)
   }
 
+  private def getIncludedUsers(): Seq[User] = {
+    val excludedExperiments = Seq(ExperimentTypes.BLOCK, ExperimentTypes.FAKE, ExperimentTypes.INACTIVE)
+    db.readOnly { implicit s =>
+      userRepo.all()
+        .filter(_.state == UserStates.ACTIVE)
+        .filterNot(u => userExperimentRepo.getUserExperiments(u.id.get).exists(excludedExperiments.contains))
+    }
+  }
+
   private def getActivityData(): ActivityData = {
     def queryUserIds(table: String, ago: ReadablePeriod)
         (implicit s: RSession): Set[Id[User]] = {
@@ -89,17 +103,18 @@ class AdminEventController @Inject() (
 
     // TODO: stop doing this when we have a large number of users
     val userMap: Map[Id[User], User] =
-      db.readOnly { implicit s => userRepo.all() }.map(user => user.id.get -> user).toMap
+      getIncludedUsers().map(user => user.id.get -> user).toMap
+    val userIds = userMap.keys.toSet
     val (activeUsers1Wk, inactiveUsers1Wk, b1w, c1w) = db.readOnly { implicit session =>
-      val b = queryUserIds("bookmark", Weeks.ONE)
-      val c = queryUserIds("comment", Weeks.ONE)
+      val b = queryUserIds("bookmark", Weeks.ONE).filter(userIds.contains)
+      val c = queryUserIds("comment", Weeks.ONE).filter(userIds.contains)
       val active = (b ++ c).map(userMap.get(_).get)
       val notActive = userMap.values.toSet -- active
       (active, notActive, b.size, c.size)
     }
     val (activeUsers1Mo, inactiveUsers1Mo, b1m, c1m) = db.readOnly { implicit session=>
-      val b = queryUserIds("bookmark", Months.ONE)
-      val c = queryUserIds("comment", Months.ONE)
+      val b = queryUserIds("bookmark", Months.ONE).filter(userIds.contains)
+      val c = queryUserIds("comment", Months.ONE).filter(userIds.contains)
       val active = (b ++ c).map(userMap.get(_).get)
       val notActive = userMap.values.toSet -- active
       (active, notActive, b.size, c.size)
@@ -110,13 +125,16 @@ class AdminEventController @Inject() (
 
   def activityDataAsCsv() = AdminCsvAction("user_activity_data.csv") { request =>
     val activityData = getActivityData()
-    val header = Seq("Name", "active past 7 days", "active past 30 days").mkString(",")
-    val users = db.readOnly { implicit s => userRepo.all() }.toSeq.sortBy(u => s"${u.lastName}, ${u.firstName}")
-    val csvString = header + users.map { user =>
-      Seq(s"${user.firstName} ${user.lastName}",
+    val header = Seq("Name", "Email", "active past 7 days", "active past 30 days").mkString(",")
+    val includedUsers = getIncludedUsers()
+    val users = db.readOnly { implicit s =>
+      includedUsers.map { u => (u, emailRepo.getByUser(u.id.get)) }
+    }.toSeq.sortBy(u => s"${u._1.lastName}, ${u._1.firstName}")
+    val csvString = header + users.map { case (user, emails) =>
+      Seq(s"${user.firstName} ${user.lastName}", emails.map(_.address).mkString("; "),
         if (activityData.activeUsers1Wk.contains(user)) "yes" else "no",
         if (activityData.activeUsers1Mo.contains(user)) "yes" else "no"
-      ).mkString(",")
+      ).map(_.replace("\"", "\"\"")).mkString("\"","\",\"", "\"")
     }.mkString("\n", "\n", "\n")
     Ok(csvString)
   }

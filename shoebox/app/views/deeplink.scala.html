@@ -1,6 +1,6 @@
-@(uri: String, locator: String, isSecure: Boolean)
+@(uri: String, locator: String)
 <!doctype html>
-<html data-kifi-deep-link='{"locator":"@locator","uri":"@uri","isSecure":@isSecure}'>
+<html data-kifi-deep-link='{"locator":"@locator"}'>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
   setTimeout(function() {

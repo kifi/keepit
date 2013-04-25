@@ -13,7 +13,7 @@ import com.keepit.model._
 import com.keepit.common.db._
 import play.api.Play.current
 import com.keepit.inject.inject
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 
 class EventListenerTest extends Specification with DbRepos {
 
@@ -35,14 +35,16 @@ class EventListenerTest extends Specification with DbRepos {
 
   "EventHelper" should {
     "parse search events" in {
-      running(new EmptyApplication().withFakeHealthcheck()) {
+      running(new EmptyApplication()) {
         val (normUrlId, url, user, bookmark) = setup()
         val listener = new EventListenerPlugin(inject[UserRepo], inject[NormalizedURIRepo]) {
          def onEvent: PartialFunction[Event,Unit] = { case _ => }
         }
         val (user2, result) = db.readWrite {implicit s =>
           listener.searchParser(user.externalId,
-            JsObject(Seq("url" -> JsString("http://google.com/"), "query" -> JsString("potatoes"))))
+            JsObject(Seq("url" -> JsString("http://google.com/"), "query" -> JsString("potatoes"))),
+            "kifiResultClicked"
+          )
         }
 
         user2.id === user.id
@@ -54,17 +56,19 @@ class EventListenerTest extends Specification with DbRepos {
 
   "EventListener" should {
     "process events" in {
-      running(new EmptyApplication().withFakeHealthcheck()) {
+      running(new EmptyApplication()) {
         val (normUrlId, url, user, bookmark) = setup()
         implicit val clock = inject[Clock]
         implicit val fortyTwoServices = inject[FortyTwoServices]
 
         val unrelatedEvent = Events.userEvent(EventFamilies.SEARCH,"someOtherEvent", user, Seq(), "", JsObject(Seq()), Seq())
 
-        val event = Events.userEvent(EventFamilies.SEARCH,"kifiResultClicked", user, Seq(), "", JsObject(Seq()), Seq())
+        val kifiEvent = Events.userEvent(EventFamilies.SEARCH,"kifiResultClicked", user, Seq(), "", JsObject(Seq()), Seq())
+        val googleEvent = Events.userEvent(EventFamilies.SEARCH,"googleResultClicked", user, Seq(), "", JsObject(Seq()), Seq())
 
         inject[EventHelper].matchEvent(unrelatedEvent) === Seq()
-        inject[EventHelper].matchEvent(event) === Seq("KifiResultClickedListener")
+        inject[EventHelper].matchEvent(kifiEvent) === Seq("ResultClickedListener")
+        inject[EventHelper].matchEvent(googleEvent) === Seq("ResultClickedListener")
       }
     }
 

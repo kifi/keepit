@@ -11,13 +11,12 @@ import com.keepit.common.mail.PostOffice
 import com.keepit.common.mail.SystemEmailAddress
 import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.ElectronicMail
-import com.keepit.common.controller.FortyTwoServices
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
-import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.time._
 import com.keepit.common.plugin.SchedulingPlugin
-import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.akka.AlertingActor
 
 import play.api.templates.Html
 import akka.util.Timeout
@@ -72,11 +71,12 @@ case class HealthcheckErrorHistory(signature: HealthcheckErrorSignature, count: 
 }
 
 class HealthcheckActor @Inject() (
-    healthcheckPlugin: HealthcheckPlugin,
     postOffice: PostOffice,
     services: FortyTwoServices,
     host: HealthcheckHost)
-  extends FortyTwoActor(healthcheckPlugin) with Logging {
+  extends AlertingActor {
+
+  def alert(reason: Throwable, message: Option[Any]) = self ! error(reason, message)
 
   private val errors: MMap[HealthcheckErrorSignature, HealthcheckErrorHistory] = new MMap()
 

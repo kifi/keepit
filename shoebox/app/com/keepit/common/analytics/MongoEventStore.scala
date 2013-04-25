@@ -86,7 +86,7 @@ trait MongoEventStore {
   def find(collection: String, mongoSelector: MongoSelector): Iterator[DBObject]
 }
 
-class MongoEventStoreImpl(val mongoDB: MongoDB) extends MongoEventStore with Logging {
+class MongoS3EventStoreImpl(val mongoDB: MongoDB) extends MongoEventStore with Logging {
   RegisterJodaTimeConversionHelpers()
   implicit def MongoSelectorToDBObject(m: MongoSelector): DBObject = m.build
 
@@ -155,7 +155,7 @@ class MongoEventStoreImpl(val mongoDB: MongoDB) extends MongoEventStore with Log
   private def dbObjectToEvent(o: DBObject): Event = EventSerializer.eventSerializer.mongoReads(o).get
 }
 
-class FakeMongoEventStoreImpl() extends MongoEventStore with Logging {
+class FakeMongoS3EventStoreImpl() extends MongoEventStore with Logging {
   def save(event: Event): Event = {
     log.info("Saving event: %s".format(event.toString))
     event

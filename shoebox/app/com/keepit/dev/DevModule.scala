@@ -2,11 +2,13 @@ package com.keepit.dev
 
 import java.io.File
 import com.google.common.io.Files
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.util.Modules
+import com.google.inject.{Provides, Singleton, Provider}
 import com.keepit.classify.DomainTagImportSettings
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.actor.{ActorFactory, ActorPlugin}
 import com.keepit.common.analytics._
+import com.keepit.common.amazon.{AmazonInstanceInfo, AmazonInstanceId}
 import com.keepit.common.cache._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -26,10 +28,11 @@ import org.apache.lucene.store.{Directory, MMapDirectory, RAMDirectory}
 import org.apache.lucene.util.Version
 import com.keepit.model.UserRepo
 import com.keepit.common.time.Clock
-import com.keepit.common.controller.FortyTwoServices
 import com.google.inject.Provider
 import akka.actor.ActorSystem
 import play.api.Play
+import com.keepit.search.SearchServiceClient
+import com.keepit.common.service.{FortyTwoServices, IpAddress}
 
 
 class ShoeboxDevModule extends ScalaModule with Logging {
@@ -38,15 +41,17 @@ class ShoeboxDevModule extends ScalaModule with Logging {
   @Singleton
   @Provides
   def searchUnloadProvider(
+    db: Database,
     userRepo: UserRepo,
     normalizedURIRepo: NormalizedURIRepo,
     persistEventProvider: Provider[PersistEventPlugin],
     store: MongoEventStore,
+    searchClient: SearchServiceClient,
     clock: Clock,
     fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
     val isEnabled = current.configuration.getBoolean("event-listener.searchUnload").getOrElse(false)
     if(isEnabled) {
-      new SearchUnloadListenerImpl(userRepo, normalizedURIRepo, persistEventProvider, store, clock, fortyTwoServices)
+      new SearchUnloadListenerImpl(db,userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, clock, fortyTwoServices)
     }
     else {
       new FakeSearchUnloadListenerImpl(userRepo, normalizedURIRepo)
@@ -57,6 +62,23 @@ class ShoeboxDevModule extends ScalaModule with Logging {
   @Provides
   def domainTagImportSettings: DomainTagImportSettings = {
     DomainTagImportSettings(localDir = Files.createTempDir().getAbsolutePath, url = "http://localhost:8000/42.zip")
+  }
+
+  @Singleton
+  @Provides
+  def amazonInstanceInfo: AmazonInstanceInfo = {
+    new AmazonInstanceInfo(null) {
+      override lazy val instanceId = AmazonInstanceId("i-f168c1a8")
+      override lazy val localHostname = "ip-10-160-95-26.us-west-1.compute.internal"
+      override lazy val publicHostname = "ec2-50-18-183-73.us-west-1.compute.amazonaws.com"
+      override lazy val localIp = IpAddress("10.160.95.26")
+      override lazy val publicIp = IpAddress("50.18.183.73")
+      override lazy val instanceType = "c1.medium"
+      override lazy val availabilityZone = "us-west-1b"
+      override lazy val securityGroups = "default"
+      override lazy val amiId = "ami-1bf9de5e"
+      override lazy val amiLaunchIndex = "0"
+    }
   }
 
   @Provides
@@ -185,9 +207,9 @@ class DevCommonModule extends ScalaModule with Logging {
     current.configuration.getString("mongo.events.server").map { server =>
       val mongoConn = MongoConnection(server)
       val mongoDB = mongoConn(current.configuration.getString("mongo.events.database").getOrElse("events"))
-      new MongoEventStoreImpl(mongoDB)
+      new MongoS3EventStoreImpl(mongoDB)
     }.getOrElse {
-      new FakeMongoEventStoreImpl()
+      new FakeMongoS3EventStoreImpl()
     }
   }
 
@@ -199,7 +221,7 @@ class DevCommonModule extends ScalaModule with Logging {
 
 class DevModule extends ScalaModule with Logging {
   def configure() {
-    install(new DevCommonModule)
+    install(Modules.`override`(new DevCommonModule).`with`(new S3DevModule))
     install(new ShoeboxDevModule)
     install(new SearchDevModule)
   }

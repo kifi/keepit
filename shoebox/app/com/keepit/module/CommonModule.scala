@@ -5,18 +5,17 @@ import java.net.InetAddress
 import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.google.inject.multibindings.Multibinder
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.actor.ActorPlugin
 import com.keepit.common.analytics._
 import com.keepit.common.cache.MemcachedCacheModule
-import com.keepit.common.controller._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{HealthcheckHost, HealthcheckPluginImpl, HealthcheckPlugin, HealthcheckActor}
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{MailSenderPluginImpl, MailSenderPlugin, PostOffice}
 import com.keepit.common.net.HttpClient
 import com.keepit.common.net.HttpClientImpl
-import com.keepit.common.social.{SocialGraphPluginImpl, SocialGraphPlugin}
 import com.keepit.inject.{FortyTwoModule, AppScoped}
 import com.keepit.model.{UserExperimentRepo, SliderHistoryTracker, SliderHistoryRepo, BrowsingHistoryRepo, ClickHistoryRepo}
 import com.keepit.scraper.ScraperConfig
@@ -32,6 +31,7 @@ import com.keepit.model.NormalizedURIRepo
 import com.keepit.common.time.Clock
 import com.google.inject.Provider
 import play.api.Play
+import play.api.Mode.Mode
 
 class CommonModule extends ScalaModule with Logging {
 
@@ -42,12 +42,11 @@ class CommonModule extends ScalaModule with Logging {
 
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
-    bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
 
     bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped]
 
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
-    listenerBinder.addBinding().to(classOf[KifiResultClickedListener])
+    listenerBinder.addBinding().to(classOf[ResultClickedListener])
     listenerBinder.addBinding().to(classOf[UsefulPageListener])
     listenerBinder.addBinding().to(classOf[SliderShownListener])
     listenerBinder.addBinding().to(classOf[SearchUnloadListener])
@@ -56,13 +55,15 @@ class CommonModule extends ScalaModule with Logging {
   @Singleton
   @Provides
   def searchUnloadProvider(
+    db: Database,
     userRepo: UserRepo,
     normalizedURIRepo: NormalizedURIRepo,
     persistEventProvider: Provider[PersistEventPlugin],
     store: MongoEventStore,
+    searchClient: SearchServiceClient,
     clock: Clock,
     fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
-    new SearchUnloadListenerImpl(userRepo, normalizedURIRepo, persistEventProvider, store, clock, fortyTwoServices)
+    new SearchUnloadListenerImpl(db, userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, clock, fortyTwoServices)
   }
 
   @Singleton
@@ -72,6 +73,10 @@ class CommonModule extends ScalaModule with Logging {
     val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
     new SearchConfigManager(optFile, expRepo, userExpRepo, db)
   }
+
+  @Singleton
+  @Provides
+  def playMode: Mode = current.mode
 
   @Singleton
   @Provides
@@ -150,7 +155,7 @@ class CommonModule extends ScalaModule with Logging {
     current.configuration.getString("mongo.events.server").map { server =>
       val mongoConn = MongoConnection(server)
       val mongoDB = mongoConn(current.configuration.getString("mongo.events.database").getOrElse("events"))
-      new MongoEventStoreImpl(mongoDB)
+      new MongoS3EventStoreImpl(mongoDB)
     }.get
   }
 
