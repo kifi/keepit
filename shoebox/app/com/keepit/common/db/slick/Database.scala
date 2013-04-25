@@ -2,7 +2,6 @@ package com.keepit.common.db.slick
 
 import com.google.inject.{Inject, Provider}
 import com.keepit.common.db.{ DbSequence, DbInfo, DatabaseDialect }
-import java.sql.{ PreparedStatement, Connection }
 import scala.collection.mutable
 import scala.slick.driver._
 import scala.slick.session.{ Database => SlickDatabase, Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability }
