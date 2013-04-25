@@ -48,7 +48,7 @@ class DuplicateDocumentRepoImpl @Inject() (val db: DataBaseComponent, val clock:
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[DuplicateDocument](db, "duplicate_document") {
+  override val table = new RepoTable[DuplicateDocument](db, "duplicate_document") {
     def uri1Id = column[Id[NormalizedURI]]("uri1_id", O.NotNull)
     def uri2Id = column[Id[NormalizedURI]]("uri2_id", O.NotNull)
     def percentMatch = column[Double]("percent_match", O.NotNull)

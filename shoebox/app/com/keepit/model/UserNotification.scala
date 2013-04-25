@@ -50,7 +50,7 @@ class UserNotificationRepoImpl @Inject() (
   import DBSession._
   import FortyTwoTypeMappers._
 
-  override lazy val table = new RepoTable[UserNotification](db, "user_notification") with ExternalIdColumn[UserNotification] {
+  override val table = new RepoTable[UserNotification](db, "user_notification") with ExternalIdColumn[UserNotification] {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def category = column[UserNotificationCategory]("category", O.NotNull)
     def details = column[UserNotificationDetails]("details", O.NotNull)

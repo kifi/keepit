@@ -14,9 +14,9 @@ import com.keepit.common.db.Id
 import com.keepit.serializer.SocialUserInfoSerializer
 import play.api.libs.json.JsObject
 
-class SocialUserInfoTest extends Specification with DbRepos {
+class SocialUserInfoTest extends Specification with TestDBRunner {
 
-  def setup(): User = {
+  def setup()(implicit injector: RichInjector): User = {
     db.readWrite { implicit s =>
       val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
                                   tokenType = None, expiresIn = None, refreshToken = None)
@@ -84,7 +84,7 @@ class SocialUserInfoTest extends Specification with DbRepos {
     }
 
     "use cache properly" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
         val user = setup()
         db.readWrite { implicit c =>
           def isInCache =
@@ -101,7 +101,7 @@ class SocialUserInfoTest extends Specification with DbRepos {
     }
 
     "get pages" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
         setup()
         val page0 = db.readOnly { implicit c =>
           socialUserInfoRepo.page(0, 2)
@@ -117,7 +117,7 @@ class SocialUserInfoTest extends Specification with DbRepos {
     }
 
     "get large page" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
         setup()
         val page0 = db.readOnly { implicit s =>
           socialUserInfoRepo.page(0, 2000)
@@ -127,7 +127,7 @@ class SocialUserInfoTest extends Specification with DbRepos {
     }
 
     "get larger page" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
         setup()
         val page0 = db.readOnly { implicit s =>
           socialUserInfoRepo.page(0, 4)
@@ -142,7 +142,7 @@ class SocialUserInfoTest extends Specification with DbRepos {
     }
 
     "import friends" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
 
         val none_unprocessed = db.readOnly { implicit s =>
           socialUserInfoRepo.getUnprocessed()
@@ -151,7 +151,7 @@ class SocialUserInfoTest extends Specification with DbRepos {
         none_unprocessed.size === 0
 
         setup()
-        val unprocessed = db.readOnly { implicit s => 
+        val unprocessed = db.readOnly { implicit s =>
           socialUserInfoRepo.getUnprocessed()
         }
 

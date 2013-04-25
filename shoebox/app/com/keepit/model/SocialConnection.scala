@@ -46,7 +46,7 @@ class SocialConnectionRepoImpl @Inject() (
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[SocialConnection](db, "social_connection") {
+  override val table = new RepoTable[SocialConnection](db, "social_connection") {
     def socialUser1 = column[Id[SocialUserInfo]]("social_user_1", O.NotNull)
     def socialUser2 = column[Id[SocialUserInfo]]("social_user_2", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ socialUser1 ~ socialUser2 ~ state <> (SocialConnection, SocialConnection.unapply _)

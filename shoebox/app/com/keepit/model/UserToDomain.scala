@@ -55,7 +55,7 @@ class UserToDomainRepoImpl @Inject()(
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
-  override lazy val table = new RepoTable[UserToDomain](db, "user_to_domain") {
+  override val table = new RepoTable[UserToDomain](db, "user_to_domain") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def domainId = column[Id[Domain]]("domain_id", O.NotNull)
     def kind = column[State[UserToDomainKind]]("kind", O.NotNull)

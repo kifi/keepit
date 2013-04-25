@@ -81,7 +81,7 @@ class UserExperimentRepoImpl @Inject()(
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
-  override lazy val table = new RepoTable[UserExperiment](db, "user_experiment") {
+  override val table = new RepoTable[UserExperiment](db, "user_experiment") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def experimentType = column[State[ExperimentType]]("experiment_type", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ experimentType ~ state <> (UserExperiment,

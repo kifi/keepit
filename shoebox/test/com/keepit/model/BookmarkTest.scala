@@ -16,14 +16,15 @@ import play.api.Play.current
 import play.api.test._
 import play.api.test.Helpers._
 
-class BookmarkTest extends Specification with DbRepos {
+class BookmarkTest extends Specification with TestDBRunner {
 
-  def setup() = {
+  def setup()(implicit injector: RichInjector) = {
     val t1 = new DateTime(2012, 2, 14, 21, 59, 0, 0, PT)
     val t2 = new DateTime(2012, 3, 22, 14, 30, 0, 0, PT)
 
     db.readWrite {implicit s =>
-
+      s.withPreparedStatement("CREATE SEQUENCE normalized_uri_sequence;")(_.execute)
+      s.withPreparedStatement("CREATE SEQUENCE bookmark_sequence;")(_.execute)
       val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
       val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2))
 
@@ -49,7 +50,7 @@ class BookmarkTest extends Specification with DbRepos {
 
   "Bookmark" should {
     "load all" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
         val (user1, user2, uri1, uri2) = setup()
         val cxAll = db.readOnly {implicit s =>
           bookmarkRepo.all
@@ -60,7 +61,7 @@ class BookmarkTest extends Specification with DbRepos {
       }
     }
     "load by user" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
         val (user1, user2, uri1, uri2) = setup()
         db.readOnly {implicit s =>
           bookmarkRepo.getByUser(user1.id.get).map(_.title) === Seq(Some("G1"), Some("A1"))
@@ -69,7 +70,7 @@ class BookmarkTest extends Specification with DbRepos {
       }
     }
     "load by uri" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
         val (user1, user2, uri1, uri2) = setup()
         db.readOnly {implicit s =>
           bookmarkRepo.getByUri(uri1.id.get).map(_.title) === Seq(Some("G1"), None)
@@ -78,7 +79,7 @@ class BookmarkTest extends Specification with DbRepos {
       }
     }
     "count all" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
         val (user1, user2, uri1, uri2) = setup()
         db.readOnly {implicit s =>
           bookmarkRepo.count(s) === 3
@@ -86,7 +87,7 @@ class BookmarkTest extends Specification with DbRepos {
       }
     }
     "count by user" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
         val (user1, user2, uri1, uri2) = setup()
         db.readOnly {implicit s =>
           bookmarkRepo.count(user1.id.get) === 2
@@ -95,7 +96,7 @@ class BookmarkTest extends Specification with DbRepos {
       }
     }
     "count mutual keeps" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
         val (user1, user2, uri1, uri2) = setup()
         db.readOnly {implicit s =>
           bookmarkRepo.getNumMutual(user1.id.get, user2.id.get) === 1
@@ -104,5 +105,4 @@ class BookmarkTest extends Specification with DbRepos {
       }
     }
   }
-
 }

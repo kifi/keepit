@@ -49,7 +49,7 @@ class CommentReadRepoImpl @Inject() (
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[CommentRead](db, "comment_read") {
+  override val table = new RepoTable[CommentRead](db, "comment_read") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def parentId = column[Id[Comment]]("parent_id", O.Nullable)
