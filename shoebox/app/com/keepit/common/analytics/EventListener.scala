@@ -213,18 +213,16 @@ class SearchUnloadListenerImpl @Inject() (
         val googleUris = (metaData \ "googleClickedURIs").asOpt[Seq[String]].getOrElse(Seq.empty[String])
         val kifiClickedUris = (metaData \ "kifiClickedURIs").asOpt[Seq[String]].getOrElse(Seq.empty[String])
         val kifiShownUris = (metaData \ "kifiShownURIs").asOpt[Seq[String]].getOrElse(Seq.empty[String])
-        log.info(s"\n\n search unload!!! \n google urls: ${googleUris.size}, kifiClickedUrls: ${kifiClickedUris.size}, kifiShownUris: ${kifiShownUris.size}")
         val uuid = (metaData \ "queryUUID").asOpt[String].get
         val queryString = (metaData \ "query").asOpt[String].get
 
-        val (userId, kifiClickedIds, kifiShownIds, googleClickedIds) = db.readOnly { implicit s =>
+        val (userId, kifiClickedIds, googleClickedIds, kifiShownIds) = db.readOnly { implicit s =>
           val userId = userRepo.get(extUserId).id.get
           val kifiClickedIds = kifiClickedUris.flatMap{ normalizedURIRepo.getByNormalizedUrl(_) }.flatMap(_.id)
           val googleClickedIds = googleUris.flatMap{ normalizedURIRepo.getByNormalizedUrl(_) }.flatMap(_.id)
           val kifiShownIds = kifiShownUris.flatMap{ normalizedURIRepo.getByNormalizedUrl(_) }.flatMap(_.id)
           (userId, kifiClickedIds, googleClickedIds, kifiShownIds)
         }
-        log.info(s"\n google normal uris: ${googleClickedIds.size}, kifi clicked normal uris ${kifiClickedIds.size}, kifiShownUris: ${kifiShownIds.size}")
 
         searchClient.persistSearchStatistics(uuid, queryString, userId, kifiClickedIds, googleClickedIds, kifiShownIds)
       }
