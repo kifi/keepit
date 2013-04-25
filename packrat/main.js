@@ -255,6 +255,7 @@ const socketHandlers = {
       }
       // ensure marked read if from this user
       if (message.user.id == session.userId) {
+        t = new Date(message.createdAt);
         if (t > (d.lastMessageRead[th.id] || 0)) {
           d.lastMessageRead[th.id] = t;
         }
