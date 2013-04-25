@@ -65,7 +65,93 @@ class ExtCommentController @Inject() (
     }
     Ok(JsObject(counts.map { case (id, n) => id.id -> JsArray(Seq(JsNumber(n._1), JsNumber(n._2))) }))
   }
+  
+  def postComment() = AuthenticatedJsonToJsonAction { request =>
+    val o = request.body
+    val (urlStr, title, text) = (
+      (o \ "url").as[String],
+      (o \ "title") match { case JsString(s) => s; case _ => ""},
+      (o \ "text").as[String].trim)
 
+    if (text.isEmpty) throw new Exception("Empty comments are not allowed")
+    val comment = db.readWrite {implicit s =>
+      val userId = request.userId
+      val uri = normalizedURIRepo.save(normalizedURIRepo.getByNormalizedUrl(urlStr).getOrElse(NormalizedURIFactory(url = urlStr)))
+
+      val url: URL = urlRepo.save(urlRepo.get(urlStr).getOrElse(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
+
+      val newComment = commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PUBLIC, parent = None))
+      commentReadRepo.save(commentReadRepo.getByUserAndUri(userId, uri.id.get) match {
+        case Some(commentRead) => // existing CommentRead entry for this message thread
+          commentRead.withLastReadId(newComment.id.get)
+        case None =>
+          CommentRead(userId = userId, uriId = uri.id.get, lastReadId = newComment.id.get)
+      })
+      newComment
+    }
+
+    future {
+      userNotifier.comment(comment)
+    } onFailure { case e =>
+      log.error("Could not persist emails for comment %s".format(comment.id.get), e)
+    }
+
+    Ok(Json.obj("commentId" -> comment.externalId.id, "createdAt" -> JsString(comment.createdAt.toString)))
+  }
+  
+  def sendMessage() = AuthenticatedJsonToJsonAction { request =>
+    val o = request.body
+    val (urlStr, title, text, parent) = (
+      (o \ "url").as[String],
+      (o \ "title") match { case JsString(s) => s; case _ => ""},
+      (o \ "text").as[String].trim,
+      (o \ "recipients") match { case JsString(s) => s; case _ => ""})
+
+    if (text.isEmpty) throw new Exception("Empty comments are not allowed")
+    val comment = db.readWrite {implicit s =>
+      val userId = request.userId
+      val uri = normalizedURIRepo.save(normalizedURIRepo.getByNormalizedUrl(urlStr).getOrElse(NormalizedURIFactory(url = urlStr)))
+
+      val url: URL = urlRepo.save(urlRepo.get(urlStr).getOrElse(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
+
+      val recipientUserIds = recipientUsers(recipients).map(_.id.get)
+      val parentIdOpt = parent match {
+        case "" => commentRepo.getParentByUriParticipants(uri.id.get, recipientUserIds + userId)
+        case id =>
+          val parent = commentRepo.get(ExternalId[Comment](id))
+          Some(parent.parent.getOrElse(parent.id.get))
+      }
+      val newComment = commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.MESSAGE, parent = parentIdOpt))
+      if(parentIdOpt.isEmpty)
+        createCommentRecipients(newComment.id.get, recipientUserIds)
+
+      val newCommentRead = commentReadRepo.getByUserAndParent(userId, parentIdOpt.getOrElse(newComment.id.get)) match {
+        case Some(commentRead) => // existing CommentRead entry for this message thread
+          assert(commentRead.parentId.isDefined)
+          commentRead.withLastReadId(newComment.id.get)
+        case None =>
+          CommentRead(userId = userId, uriId = uri.id.get, parentId = Some(parentIdOpt.getOrElse(newComment.id.get)), lastReadId = newComment.id.get)
+      }
+      commentReadRepo.save(newCommentRead)
+      newComment
+    }
+
+    future {
+      notifyRecipients(comment)
+    } onFailure { case e =>
+      log.error("Could not persist emails for comment %s".format(comment.id.get), e)
+    }
+
+    comment.permissions match {
+      case CommentPermissions.MESSAGE =>
+        val message = db.readOnly(implicit s => commentWithBasicUserRepo.load(comment))
+        Ok(Json.obj("message" -> commentWithBasicUserSerializer.writes(message)))
+      case _ =>
+        Ok(Json.obj("commentId" -> comment.externalId.id, "createdAt" -> JsString(comment.createdAt.toString)))
+    }
+  }
+
+  /* depricated, remove after all clients are updated to 2.3.24 */
   def createComment() = AuthenticatedJsonToJsonAction { request =>
     val o = request.body
     val (urlStr, title, text, permissions, recipients, parent) = (
@@ -124,8 +210,6 @@ class ExtCommentController @Inject() (
     } onFailure { case e =>
       log.error("Could not persist emails for comment %s".format(comment.id.get), e)
     }
-
-    addToActivityStream(comment)
 
     comment.permissions match {
       case CommentPermissions.MESSAGE =>
@@ -200,34 +284,5 @@ class ExtCommentController @Inject() (
       case unsupported =>
         log.error("unsupported comment type for email %s".format(unsupported))
     }
-  }
-
-  private def addToActivityStream(comment: Comment) = {
-    val (user, social, uri) = db.readOnly { implicit session =>
-      val user = userRepo.get(comment.userId)
-      val social = socialUserInfoRepo.getByUser(user.id.get).headOption.map(_.socialId.id).getOrElse("")
-      val uri = normalizedURIRepo.get(comment.uriId)
-
-      (user, social, uri)
-    }
-
-    val json = Json.obj(
-      "user" -> Json.obj(
-        "id" -> user.id.get.id,
-        "name" -> s"${user.firstName} ${user.lastName}",
-        "avatar" -> s"https://graph.facebook.com/${social}/picture?height=150&width=150"),
-      "comment" -> Json.obj(
-        "id" -> comment.id.get.id,
-        "text" -> comment.text.toString,
-        "title" -> comment.pageTitle,
-        "uri" -> uri.url)
-    )
-
-    val kind = comment.permissions match {
-      case CommentPermissions.PUBLIC => "comment"
-      case CommentPermissions.MESSAGE => "message"
-    }
-
-    activityStream.streamActivity(kind, json)
   }
 }
