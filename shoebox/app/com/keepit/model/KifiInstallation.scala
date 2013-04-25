@@ -104,7 +104,7 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[KifiInstallation](db, "kifi_installation") with ExternalIdColumn[KifiInstallation] {
+  override val table = new RepoTable[KifiInstallation](db, "kifi_installation") with ExternalIdColumn[KifiInstallation] {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def version = column[KifiVersion]("version", O.NotNull)
     def userAgent = column[UserAgent]("user_agent", O.NotNull)

@@ -140,6 +140,15 @@ class ExtStreamController @Inject() (
             "log_event" -> { case JsObject(pairs) +: _ =>
               logEvent(streamSession, JsObject(pairs))
             },
+            "get_rules" -> { case JsString(version) +: _ =>
+              db.readOnly { implicit s =>
+                val group = sliderRuleRepo.getGroup("default")
+                if (version != group.version) {
+                  channel.push(Json.arr("slider_rules", group.compactJson));
+                  channel.push(Json.arr("url_patterns", urlPatternRepo.getActivePatterns()));
+                }
+              }
+            },
             "get_friends" -> { _ =>
               channel.push(Json.arr("friends", getFriends(userId)))
             },
@@ -177,7 +186,6 @@ class ExtStreamController @Inject() (
             })
 
           val iteratee = asyncIteratee { jsArr =>
-            log.info("WS just received: " + jsArr)
             Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
               handler(jsArr.value.tail)
             } getOrElse {

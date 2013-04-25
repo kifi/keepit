@@ -28,6 +28,9 @@ import org.apache.lucene.store.{Directory, MMapDirectory, RAMDirectory}
 import org.apache.lucene.util.Version
 import com.keepit.model.UserRepo
 import com.keepit.common.time.Clock
+import com.google.inject.Provider
+import akka.actor.ActorSystem
+import play.api.Play
 import com.keepit.search.SearchServiceClient
 import com.keepit.common.service.{FortyTwoServices, IpAddress}
 
@@ -212,7 +215,8 @@ class DevCommonModule extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def actorPluginProvider: ActorPlugin = new ActorPlugin("shoebox-dev-actor-system")
+  def actorPluginProvider: ActorPlugin =
+    new ActorPlugin(ActorSystem("shoebox-dev-actor-system", Play.current.configuration.underlying, Play.current.classloader))
 }
 
 class DevModule extends ScalaModule with Logging {

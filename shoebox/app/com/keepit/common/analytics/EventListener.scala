@@ -199,7 +199,7 @@ class SearchUnloadListenerImpl @Inject() (
   searchClient: SearchServiceClient,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
-  extends SearchUnloadListener(userRepo, normalizedURIRepo) {
+  extends SearchUnloadListener(userRepo, normalizedURIRepo) with Logging {
 
   def onEvent: PartialFunction[Event, Unit] = {
 
@@ -216,7 +216,7 @@ class SearchUnloadListenerImpl @Inject() (
         val uuid = (metaData \ "queryUUID").asOpt[String].get
         val queryString = (metaData \ "query").asOpt[String].get
 
-        val (userId, kifiClickedIds, kifiShownIds, googleClickedIds) = db.readOnly { implicit s =>
+        val (userId, kifiClickedIds, googleClickedIds, kifiShownIds) = db.readOnly { implicit s =>
           val userId = userRepo.get(extUserId).id.get
           val kifiClickedIds = kifiClickedUris.flatMap{ normalizedURIRepo.getByNormalizedUrl(_) }.flatMap(_.id)
           val googleClickedIds = googleUris.flatMap{ normalizedURIRepo.getByNormalizedUrl(_) }.flatMap(_.id)

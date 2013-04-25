@@ -96,7 +96,7 @@ class SearchConfigExperimentRepoImpl @Inject()(
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
-  override lazy val table = new RepoTable[SearchConfigExperiment](db, "search_config_experiment") {
+  override val table = new RepoTable[SearchConfigExperiment](db, "search_config_experiment") {
     def weight = column[Double]("weight", O.NotNull)
     def description = column[String]("description", O.NotNull)
     def config = column[SearchConfig]("config", O.NotNull)
