@@ -75,7 +75,7 @@ class ExtCommentController @Inject() (
 
     val comment = postComment(request.user.id.get, urlStr, title, text)
 
-    Ok(Json.obj("commentId" -> comment.externalId.id, "createdAt" -> JsString(comment.createdAt.toString)))
+    Ok(Json.obj("id" -> comment.externalId.id, "createdAt" -> JsString(comment.createdAt.toString)))
   }
   
   private[ext] def postComment(userId: Id[User], urlStr: String, title: String, text: String): Comment = {
@@ -112,8 +112,12 @@ class ExtCommentController @Inject() (
       
     val newMessage = sendMessage(request.user.id.get, urlStr, title, text, recipients)
     
-    val message = db.readOnly(implicit s => commentWithBasicUserRepo.load(newMessage))
-    Ok(Json.obj("message" -> commentWithBasicUserSerializer.writes(message)))
+    // Until we're sure that the parentId is correct, we'll double check it rather than echo parentExtId
+    val parentId = newMessage.parent match {
+      case Some(parent) => JsString(db.readOnly(commentRepo.get(parent)(_)).externalId.id)
+      case None => JsNull
+    }
+    Ok(Json.obj("message" -> Json.obj("id" -> newMessage.externalId.id, "parentId" -> parentId, "createdAt" -> newMessage.createdAt)))
   }
   
   private[ext] def sendMessage(userId: Id[User], urlStr: String, title: String, text: String, recipients: Seq[String]): Comment = {
@@ -178,8 +182,9 @@ class ExtCommentController @Inject() (
       
     val newMessage = sendMessageReply(request.user.id.get, urlStr, title, text, parentId)
     
-    val message = db.readOnly(implicit s => commentWithBasicUserRepo.load(newMessage))
-    Ok(Json.obj("message" -> commentWithBasicUserSerializer.writes(message)))
+    // Until we're sure that the parentId is correct, we'll double check it rather than echo parentExtId
+    val parent = db.readOnly(commentRepo.get(newMessage.parent.get)(_))
+    Ok(Json.obj("message" -> Json.obj("id" -> newMessage.externalId.id, "parentId" -> parent.externalId.id, "createdAt" -> newMessage.createdAt)))
   }
   
   private[ext] def sendMessageReply(userId: Id[User], urlStr: String, title: String, text: String, parentId: Id[Comment]): Comment = {
