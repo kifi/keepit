@@ -231,21 +231,30 @@ const socketHandlers = {
     api.log("[socket:message]", nUri, th, message);
     var d = pageData[nUri];
     if (d && d.threads) {
+      // remove old copy of thread
       for (var i = 0, n = d.threads.length; i < n; i++) {
-        if (d.threads[i].id == th.id) break;
+        if (d.threads[i].id == th.id) {
+          d.threads.splice(i, 1);
+          break;
+        }
       }
-      if (i < n) {
-        d.threads[i] = th;
+      // insert thread in chronological order
+      var t = new Date(th.lastCommentedAt);
+      for (i = d.threads.length; i > 0 && new Date(d.threads[i-1].lastCommentedAt) > t; i--);
+      d.threads.splice(i, 0, th);
+      // insert message in chronological order
+      if (th.messageCount > 1) {
         var messages = d.messages[th.id];
-        if (messages && !messages.some(hasId(message.id))) {  // sent messages come via POST resp and socket
-          messages.push(message);  // should we maintain chronological order?
+        if (messages) {
+          t = new Date(message.createdAt);
+          for (i = messages.length; i > 0 && new Date(messages[i-1].createdAt) > t; i--);
+          messages.splice(i, 0, message);
         }
       } else {
-        d.threads.push(th);  // should we maintain chronological order?
         d.messages[th.id] = [message];
       }
+      // ensure marked read if from this user
       if (message.user.id == session.userId) {
-        var t = new Date(message.createdAt);
         if (t > (d.lastMessageRead[th.id] || 0)) {
           d.lastMessageRead[th.id] = t;
         }

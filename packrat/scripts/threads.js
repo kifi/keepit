@@ -61,8 +61,20 @@ threadsPane = function() {
         renderThread(thread, function($th) {
           var $old = $list.children("[data-id=" + thread.id + "],[data-id=]").first();
           if ($old.length) {
-            $old.replaceWith($th);
-          } else {
+            var $thBelow = $old.nextAll(".kifi-thread");  // TODO: compare timestamps
+            if (!$thBelow.length) {
+              $old.replaceWith($th);
+            } else {  // animate moving it down
+              var ms = 150 + 50 * $thBelow.length, $last = $thBelow.last();
+              var h = $old.outerHeight(true), top1 = $old[0].offsetTop, top2 = $last[0].offsetTop;
+              $th.css({position: "absolute", left: 0, top: top1, width: "100%", marginTop: 0})
+              .insertAfter($last).animate({top: top2}, ms, function() {
+                $th.css({position: "", left: "", top: "", width: "", marginTop: ""})
+              });
+              $("<div>", {height: h}).replaceAll($old).slideUp(ms, remove);
+              $("<div>", {height: 0}).insertAfter($last).animate({height: h}, ms, remove);
+            }
+          } else {  // TODO: animate in from side? move others up first, and scroll down.
             $list.append($th).layout()[0].scrollTop = 99999;
           }
         });
@@ -116,5 +128,9 @@ threadsPane = function() {
       n++;
     }
     return -nUnr || n;
+  }
+
+  function remove() {
+    $(this).remove();
   }
 }();
