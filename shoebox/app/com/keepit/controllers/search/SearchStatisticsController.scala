@@ -55,6 +55,7 @@ class SearchStatisticsController @Inject() (db: Database,
         val event = Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_statistics", SearchStatisticsSerializer.serializer.writes(ss._2).as[JsObject])
         persistEventProvider.get.persist(event)
       }
+      log.info("search statistics persisted")
     }
     Ok("search statistics persisted")
 
