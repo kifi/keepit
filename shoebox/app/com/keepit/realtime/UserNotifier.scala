@@ -161,7 +161,7 @@ class UserNotifier @Inject() (
     }
   }
 
-  private def notifyCommentByEmail(recipient: User, details: CommentDetails)(implicit session: RSession) = {
+  private def notifyCommentByEmail(recipient: User, details: CommentDetails)(implicit session: RWSession) {
     val author = userRepo.get(details.author.externalId)
     val addrs = emailAddressRepo.getByUser(recipient.id.get)
     for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
@@ -174,7 +174,7 @@ class UserNotifier @Inject() (
           category = PostOffice.Categories.COMMENT))
     }
   }
-  private def notifyMessageByEmail(recipient: User, details: MessageDetails)(implicit session: RSession) = {
+  private def notifyMessageByEmail(recipient: User, details: MessageDetails)(implicit session: RWSession) {
     val author = userRepo.get(details.authors.head.externalId)
     val addrs = emailAddressRepo.getByUser(recipient.id.get)
     for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
