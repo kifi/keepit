@@ -5,11 +5,11 @@ function logEvent() {  // parameters defined in main.js
   api.port.emit("log_event", Array.prototype.slice.call(arguments));
 }
 
-var injected, t0 = +new Date;
+var injected, t0 = +new Date, tile;
 
 !function() {
   api.log("[scout]", location.hostname);
-  var tile, tileCount, onScroll;
+  var tileCount, onScroll;
 
   api.port.on({
     show_notification: function(n) {
