@@ -106,7 +106,6 @@ class SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
       browsingHistoryTracker, clickHistoryTracker, resultClickTracker)
 
   private def getLuceneExplain(uriId: Id[NormalizedURI]) = {
-    log.info("getting lucene explanation for uriId: " + uriId.id)
     searcher.parsedQuery.map{ query =>
       val personalizedSearcher = searcher.getPersonalizedSearcher(query)
       personalizedSearcher.setSimilarity(searcher.similarity)
@@ -169,15 +168,11 @@ object TrainingDataLabeler extends Logging{
 
   def getLabeledData(kifiClicked: Seq[Id[NormalizedURI]], googleClicked: Seq[Id[NormalizedURI]], kifiShown: Seq[Id[NormalizedURI]]) = {
     var data = Map.empty[Id[NormalizedURI], (Boolean, Boolean)]         // (isPositive, isCorrectlyRanked)
-    log.info(s"collecting training data ... num of kifi clicks: ${kifiClicked.size}, num of googleNormUri: ${googleClicked.size}, num of kifiShown: ${kifiShown.size}")
     if (kifiClicked.nonEmpty) {
       kifiClicked.foreach( uri => data += uri -> (true, true))
-      log.info("positive data collected !!!")
     } else {
-      log.info("maybe there are negatvie data...")
       val isCorrectlyRanked = googleClicked.isEmpty || googleClicked.exists(uri => kifiShown.contains(uri))         // true if the clicked google uri is not indexed, or it was shown to the user
       kifiShown.take(topNkifi).foreach( uri => if (!googleClicked.contains(uri)) data += uri -> (false, isCorrectlyRanked))
-      if (data.nonEmpty) log.info("negative data collected !!!")
     }
     data
   }
@@ -303,7 +298,6 @@ class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], tar
   }
 
   def getUriInfo() = {
-    log.info("start fetching uri info ...")
     var uriInfoMap = Map.empty[Id[NormalizedURI], UriInfo]
     val idsetFilter = new IdSetFilter(targetUriIds.map{_.id}.toSet)
 
@@ -344,7 +338,6 @@ class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], tar
         }
       }
     }
-    log.info("uri info fetched !!!")
     uriInfoMap
   }
 
