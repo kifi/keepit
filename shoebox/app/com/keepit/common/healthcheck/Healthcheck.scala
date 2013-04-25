@@ -8,6 +8,7 @@ import com.google.inject.Inject
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.akka.AlertingActor
 import com.keepit.common.db.slick.Database
+import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.PostOffice
@@ -114,7 +115,7 @@ class HealthcheckPluginImpl @Inject() (
     postOffice: PostOffice,
     host: HealthcheckHost,
     db: Database)
-  extends HealthcheckPlugin {
+  extends HealthcheckPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)
 
@@ -135,6 +136,7 @@ class HealthcheckPluginImpl @Inject() (
   def reportErrors(): Unit = actor ! ReportErrorsAction
 
   def addError(error: HealthcheckError): HealthcheckError = {
+    log.error(s"Healthcheck logged error: ${error}")
     actor ! error
     error
   }
