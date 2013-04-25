@@ -38,7 +38,7 @@ import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import com.keepit.common.service.FortyTwoServices
 
-case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Seq[State[ExperimentType]], adminUserId: Option[Id[User]])
+case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]])
 
 @Singleton
 class ExtStreamController @Inject() (

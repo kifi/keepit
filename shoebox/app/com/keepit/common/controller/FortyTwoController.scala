@@ -33,7 +33,7 @@ case class AuthenticatedRequest[T](
     userId: Id[User],
     user: User,
     request: Request[T],
-    experimants: Seq[State[ExperimentType]] = Nil,
+    experimants: Set[State[ExperimentType]] = Set(),
     kifiInstallationId: Option[ExternalId[KifiInstallation]] = None,
     adminUserId: Option[Id[User]] = None)
   extends WrappedRequest(request)

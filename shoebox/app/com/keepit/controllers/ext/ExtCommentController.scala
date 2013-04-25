@@ -65,7 +65,177 @@ class ExtCommentController @Inject() (
     }
     Ok(JsObject(counts.map { case (id, n) => id.id -> JsArray(Seq(JsNumber(n._1), JsNumber(n._2))) }))
   }
+  
+  def postCommentAction() = AuthenticatedJsonToJsonAction { request =>
+    val o = request.body
+    val (urlStr, title, text) = (
+      (o \ "url").as[String],
+      (o \ "title").as[String],
+      (o \ "text").as[String].trim)
 
+    val comment = postComment(request.user.id.get, urlStr, title, text)
+
+    Ok(Json.obj("id" -> comment.externalId.id, "createdAt" -> JsString(comment.createdAt.toString)))
+  }
+  
+  private[ext] def postComment(userId: Id[User], urlStr: String, title: String, text: String): Comment = {
+    if (text.isEmpty) throw new Exception("Empty comments are not allowed")
+    val comment = db.readWrite {implicit s =>
+      val (uri, url) = getOrCreateUriAndUrl(urlStr)
+
+      val newComment = commentRepo.save(
+          Comment(uriId = uri.id.get, urlId = url.id, userId = userId, 
+              pageTitle = title, text = LargeString(text), 
+              permissions = CommentPermissions.PUBLIC, parent = None))
+      commentReadRepo.save(commentReadRepo.getByUserAndUri(userId, uri.id.get) match {
+        case Some(commentRead) => // existing CommentRead entry for this message thread
+          commentRead.withLastReadId(newComment.id.get)
+        case None =>
+          CommentRead(userId = userId, uriId = uri.id.get, lastReadId = newComment.id.get)
+      })
+      newComment
+    }
+
+    future {
+      userNotifier.comment(comment)
+    } onFailure { case e =>
+      log.error("Could not notify users for comment %s".format(comment.id.get), e)
+    }
+    
+    comment
+  }
+  
+  def sendMessageAction() = AuthenticatedJsonToJsonAction { request =>
+    val o = request.body
+    val (urlStr, title, text, recipients) = (
+      (o \ "url").as[String],
+      (o \ "title").as[String],
+      (o \ "text").as[String].trim,
+      (o \ "recipients").as[Seq[String]])
+      
+    val newMessage = sendMessage(request.user.id.get, urlStr, title, text, recipients)
+    
+    // Until we're sure that the parentId is correct, we'll double check it rather than echo parentExtId
+    val parentId = newMessage.parent match {
+      case Some(parent) => JsString(db.readOnly(commentRepo.get(parent)(_)).externalId.id)
+      case None => JsNull
+    }
+    Ok(Json.obj("message" -> Json.obj("id" -> newMessage.externalId.id, "parentId" -> parentId, "createdAt" -> newMessage.createdAt)))
+  }
+  
+  private[ext] def sendMessage(userId: Id[User], urlStr: String, title: String, text: String, recipients: Seq[String]): Comment = {
+    if (text.isEmpty) throw new Exception("Empty comments are not allowed")
+    val (uri, url, recipientUserIds, existingParentOpt) = db.readWrite { implicit s =>
+      val (uri, url) = getOrCreateUriAndUrl(urlStr)
+      
+      val recipientUserIds = recipients.map{id => userRepo.get(ExternalId[User](id)).id.get}.toSet
+      val existingParentOpt = commentRepo.getParentByUriParticipants(uri.id.get, recipientUserIds + userId)
+      
+      (uri, url, recipientUserIds, existingParentOpt)
+    }
+      
+    existingParentOpt match {
+      case Some(parentId) =>
+        sendMessageReply(userId, urlStr, title, text, parentId)
+      case None =>
+        db.readWrite { implicit s =>
+          val message = commentRepo.save(Comment(
+            uriId = uri.id.get,
+            urlId = url.id,
+            userId = userId,
+            pageTitle = title,
+            text = LargeString(text),
+            permissions = CommentPermissions.MESSAGE,
+            parent = None)
+          )
+          recipientUserIds foreach { userId =>
+            commentRecipientRepo.save(CommentRecipient(commentId = message.id.get, userId = Some(userId)))
+          }
+          
+          val newCommentRead = commentReadRepo.getByUserAndParent(userId, message.id.get) match {
+            case Some(commentRead) => // existing CommentRead entry for this message thread
+              assert(commentRead.parentId.isDefined)
+              commentRead.withLastReadId(message.id.get)
+            case None =>
+              CommentRead(userId = userId, uriId = uri.id.get, parentId = Some(message.id.get), lastReadId = message.id.get)
+          }
+          commentReadRepo.save(newCommentRead)
+    
+          future {
+            notifyRecipients(message)
+          } onFailure { case e =>
+            log.error("Could not notify for new message %s".format(message.id.get), e)
+          }
+          
+          message
+        }
+        
+    }
+  }
+  
+  def sendMessageReplyAction(parentExtId: ExternalId[Comment]) = AuthenticatedJsonToJsonAction { request =>
+    val o = request.body
+    val (urlStr, title, text) = (
+      (o \ "url").as[String],
+      (o \ "title").as[String],
+      (o \ "text").as[String].trim
+    )
+    
+    val parentId = db.readOnly(commentRepo.get(parentExtId)(_)).id.get
+      
+    val newMessage = sendMessageReply(request.user.id.get, urlStr, title, text, parentId)
+    
+    // Until we're sure that the parentId is correct, we'll double check it rather than echo parentExtId
+    val parent = db.readOnly(commentRepo.get(newMessage.parent.get)(_))
+    Ok(Json.obj("message" -> Json.obj("id" -> newMessage.externalId.id, "parentId" -> parent.externalId.id, "createdAt" -> newMessage.createdAt)))
+  }
+  
+  private[ext] def sendMessageReply(userId: Id[User], urlStr: String, title: String, text: String, parentId: Id[Comment]): Comment = {
+
+    if (text.isEmpty) throw new Exception("Empty comments are not allowed")
+    val messageReply = db.readWrite {implicit s =>
+      val (uri, url) = getOrCreateUriAndUrl(urlStr)
+      
+      val parent = commentRepo.get(parentId)
+      val realParentId = parent.parent.getOrElse(parent.id.get)
+      
+      val newMessageReply = commentRepo.save(Comment(
+        uriId = uri.id.get,
+        urlId = url.id,
+        userId = userId,
+        pageTitle = title,
+        text = LargeString(text),
+        permissions = CommentPermissions.MESSAGE,
+        parent = Some(realParentId))
+      )
+
+      val newCommentRead = commentReadRepo.getByUserAndParent(userId, realParentId) match {
+        case Some(commentRead) =>
+          commentRead.withLastReadId(newMessageReply.id.get)
+        case None =>
+          CommentRead(userId = userId, uriId = uri.id.get, parentId = Some(realParentId), lastReadId = newMessageReply.id.get)
+      }
+      commentReadRepo.save(newCommentRead)
+      newMessageReply
+    }
+
+    future {
+      notifyRecipients(messageReply)
+    } onFailure { case e =>
+      log.error("Could not notify for message reply %s".format(messageReply.id.get), e)
+    }
+    
+    messageReply
+  }
+  
+  private def getOrCreateUriAndUrl(urlStr: String)(implicit session: RWSession): (NormalizedURI, URL) = {
+    val uri = normalizedURIRepo.getByNormalizedUrl(urlStr).getOrElse(normalizedURIRepo.save(NormalizedURIFactory(url = urlStr)))
+    val url: URL = urlRepo.get(urlStr).getOrElse(urlRepo.save(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
+    
+    (uri, url)
+  }
+
+  /* deprecated, remove after all clients are updated to 2.3.24 */
   def createComment() = AuthenticatedJsonToJsonAction { request =>
     val o = request.body
     val (urlStr, title, text, permissions, recipients, parent) = (
@@ -143,8 +313,6 @@ class ExtCommentController @Inject() (
       log.error("Could not persist emails for comment %s".format(comment.id.get), e)
     }
 
-    addToActivityStream(comment)
-
     comment.permissions match {
       case CommentPermissions.MESSAGE =>
         val message = db.readOnly(implicit s => commentWithBasicUserRepo.load(comment))
@@ -206,34 +374,5 @@ class ExtCommentController @Inject() (
       case unsupported =>
         log.error("unsupported comment type for email %s".format(unsupported))
     }
-  }
-
-  private def addToActivityStream(comment: Comment) = {
-    val (user, social, uri) = db.readOnly { implicit session =>
-      val user = userRepo.get(comment.userId)
-      val social = socialUserInfoRepo.getByUser(user.id.get).headOption.map(_.socialId.id).getOrElse("")
-      val uri = normalizedURIRepo.get(comment.uriId)
-
-      (user, social, uri)
-    }
-
-    val json = Json.obj(
-      "user" -> Json.obj(
-        "id" -> user.id.get.id,
-        "name" -> s"${user.firstName} ${user.lastName}",
-        "avatar" -> s"https://graph.facebook.com/${social}/picture?height=150&width=150"),
-      "comment" -> Json.obj(
-        "id" -> comment.id.get.id,
-        "text" -> comment.text.toString,
-        "title" -> comment.pageTitle,
-        "uri" -> uri.url)
-    )
-
-    val kind = comment.permissions match {
-      case CommentPermissions.PUBLIC => "comment"
-      case CommentPermissions.MESSAGE => "message"
-    }
-
-    activityStream.streamActivity(kind, json)
   }
 }

@@ -61,10 +61,10 @@ class EventListenerTest extends Specification with DbRepos {
         implicit val clock = inject[Clock]
         implicit val fortyTwoServices = inject[FortyTwoServices]
 
-        val unrelatedEvent = Events.userEvent(EventFamilies.SEARCH,"someOtherEvent", user, Seq(), "", JsObject(Seq()), Seq())
+        val unrelatedEvent = Events.userEvent(EventFamilies.SEARCH,"someOtherEvent", user, Set(), "", JsObject(Seq()), Seq())
 
-        val kifiEvent = Events.userEvent(EventFamilies.SEARCH,"kifiResultClicked", user, Seq(), "", JsObject(Seq()), Seq())
-        val googleEvent = Events.userEvent(EventFamilies.SEARCH,"googleResultClicked", user, Seq(), "", JsObject(Seq()), Seq())
+        val kifiEvent = Events.userEvent(EventFamilies.SEARCH,"kifiResultClicked", user, Set(), "", JsObject(Seq()), Seq())
+        val googleEvent = Events.userEvent(EventFamilies.SEARCH,"googleResultClicked", user, Set(), "", JsObject(Seq()), Seq())
 
         inject[EventHelper].matchEvent(unrelatedEvent) === Seq()
         inject[EventHelper].matchEvent(kifiEvent) === Seq("ResultClickedListener")

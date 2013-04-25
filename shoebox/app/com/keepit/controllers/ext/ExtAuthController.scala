@@ -69,7 +69,7 @@ class ExtAuthController @Inject() (
         case Some(install) =>
           install
       }
-      val experiments: Seq[String] = userExperimentRepo.getUserExperiments(user.id.get).map(_.value)
+      val experiments: Set[String] = userExperimentRepo.getUserExperiments(user.id.get).map(_.value)
       val sliderRuleGroup: SliderRuleGroup = sliderRuleRepo.getGroup("default")
       val urlPatterns: Seq[String] = urlPatternRepo.getActivePatterns
       (user, installation, experiments, sliderRuleGroup, urlPatterns)
