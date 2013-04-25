@@ -8,7 +8,6 @@ import com.keepit.common.db.slick.H2
 import com.google.inject.Stage
 import com.google.inject.util.Modules
 import scala.slick.lifted.DDL
-import com.keepit.inject.RichInjector
 import com.keepit.common.db.slick.Database
 import com.google.inject.Module
 import com.keepit.inject.RichInjector

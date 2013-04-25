@@ -11,10 +11,19 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.test._
+import com.keepit.inject.RichInjector
 
-class NormalizedURITest extends Specification with DbRepos {
+class NormalizedURITest extends Specification with TestDBRunner {
 
-  def setup() = {
+  def initDbSequence()(implicit injector: RichInjector) = {
+    db.readWrite {implicit s =>
+      s.withPreparedStatement("CREATE SEQUENCE normalized_uri_sequence;")(_.execute)
+      s.withPreparedStatement("CREATE SEQUENCE bookmark_sequence;")(_.execute)
+    }
+  }
+
+  def setup()(implicit injector: RichInjector) = {
+    initDbSequence()
     db.readWrite {implicit s =>
       uriRepo.count === 0 //making sure the db is clean, we had some strange failures
       userRepo.count === 0 //making sure the db is clean
@@ -32,7 +41,7 @@ class NormalizedURITest extends Specification with DbRepos {
 
   "bookmark pagination" should {
     "get all" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
           bookmarkRepo.page(0, 10).size === 3
@@ -40,7 +49,7 @@ class NormalizedURITest extends Specification with DbRepos {
       }
     }
     "get first" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
           bookmarkRepo.page(0, 2).size === 2
@@ -48,7 +57,7 @@ class NormalizedURITest extends Specification with DbRepos {
       }
     }
     "get last" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
           bookmarkRepo.page(1, 2).size === 1
@@ -56,7 +65,7 @@ class NormalizedURITest extends Specification with DbRepos {
       }
     }
     "get none" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
           bookmarkRepo.page(2, 2).size === 0
@@ -67,7 +76,7 @@ class NormalizedURITest extends Specification with DbRepos {
 
   "get by state" should {
     "search gets nothing" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
           var uris = uriRepo.getByState(NormalizedURIStates.ACTIVE)
@@ -87,7 +96,7 @@ class NormalizedURITest extends Specification with DbRepos {
 
   "NormalizedURIs search by url" should {
     "search gets nothing" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
           uriRepo.getByNormalizedUrl("http://www.keepit.com/med") === None
@@ -95,7 +104,7 @@ class NormalizedURITest extends Specification with DbRepos {
       }
     }
     "search gets short" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
           val all = uriRepo.all
@@ -106,7 +115,7 @@ class NormalizedURITest extends Specification with DbRepos {
       }
     }
     "search gets long" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
           uriRepo.getByNormalizedUrl("http://www.keepit.com/long").get.url === "http://www.keepit.com/long"
@@ -117,7 +126,8 @@ class NormalizedURITest extends Specification with DbRepos {
 
   "NormalizedURIs get created url" should {
     "search gets nothing" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
+        initDbSequence()
       	db.readWrite { implicit s =>
       	  val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith"))
       	  val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown"))
@@ -130,7 +140,8 @@ class NormalizedURITest extends Specification with DbRepos {
       }
     }
     "search gets short" in {
-      running(new EmptyApplication()) {
+      withDB() { implicit injector =>
+        initDbSequence()
       	db.readWrite { implicit s =>
       	  uriRepo.all.size === 0 //making sure the db is clean, trying to understand some strange failures we got
       	  val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith"))
@@ -148,7 +159,7 @@ class NormalizedURITest extends Specification with DbRepos {
     }
   }
 
-  def createUri(title: String, url: String, state: State[NormalizedURI] = NormalizedURIStates.ACTIVE)(implicit session: RWSession) = {
+  def createUri(title: String, url: String, state: State[NormalizedURI] = NormalizedURIStates.ACTIVE)(implicit session: RWSession, injector: RichInjector) = {
     val uri = NormalizedURIFactory(title = title, url = url, state = state)
     try {
       uriRepo.save(uri)
