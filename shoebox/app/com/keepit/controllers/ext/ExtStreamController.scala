@@ -140,10 +140,13 @@ class ExtStreamController @Inject() (
             "log_event" -> { case JsObject(pairs) +: _ =>
               logEvent(streamSession, JsObject(pairs))
             },
-            "get_rules" -> { _ =>
+            "get_rules" -> { case JsString(version) +: _ =>
               db.readOnly { implicit s =>
-                channel.push(Json.arr("slider_rules", sliderRuleRepo.getGroup("default").compactJson));
-                channel.push(Json.arr("url_patterns", urlPatternRepo.getActivePatterns()));
+                val group = sliderRuleRepo.getGroup("default")
+                if (version != group.version) {
+                  channel.push(Json.arr("slider_rules", group.compactJson));
+                  channel.push(Json.arr("url_patterns", urlPatternRepo.getActivePatterns()));
+                }
               }
             },
             "get_friends" -> { _ =>
