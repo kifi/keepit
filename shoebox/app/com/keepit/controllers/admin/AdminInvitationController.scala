@@ -90,20 +90,18 @@ class AdminInvitationController @Inject() (
   }
 
   private def notifyAcceptedUser(userId: Id[User]) {
-    val (user, addrs) = db.readOnly { implicit session =>
+    db.readWrite { implicit session =>
       val user = userRepo.get(userId)
-      val addrs = emailAddressRepo.getByUser(userId)
-      (user, addrs)
-    }
-    for(address <- addrs) {
-      postOffice.sendMail(ElectronicMail(
-        senderUserId = None,
-        from = EmailAddresses.CONGRATS,
-        fromName = Some("KiFi Team"),
-        to = address,
-        subject = "Congrats! You're in the KiFi Private Beta",
-        htmlBody = views.html.email.invitationAccept(user).body,
-        category = PostOffice.Categories.INVITATION))
+      for (address <- emailAddressRepo.getByUser(userId)) {
+        postOffice.sendMail(ElectronicMail(
+          senderUserId = None,
+          from = EmailAddresses.CONGRATS,
+          fromName = Some("KiFi Team"),
+          to = address,
+          subject = "Congrats! You're in the KiFi Private Beta",
+          htmlBody = views.html.email.invitationAccept(user).body,
+          category = PostOffice.Categories.INVITATION))
+      }
     }
   }
 }
