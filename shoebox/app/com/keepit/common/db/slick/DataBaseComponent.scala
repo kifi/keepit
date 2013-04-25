@@ -24,16 +24,13 @@ trait DataBaseComponent {
   val Driver: ExtendedDriver
   val dialect: DatabaseDialect[_]
   def dbInfo: DbInfo
-  lazy val handle: SlickDatabase = {
-    println("initiating DB handle")
-    dbInfo.database
-  }
+  lazy val handle: SlickDatabase = dbInfo.database
 
   def getSequence(name: String): DbSequence
 
   def entityName(name: String): String = name
 
-  def initTable(table: TableWithDDL): Unit = ???
+  def initTable(table: TableWithDDL): Unit = {}
 }
 
 class InSessionException(message: String) extends Exception(message)
