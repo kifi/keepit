@@ -24,10 +24,7 @@ trait DataBaseComponent {
   val Driver: ExtendedDriver
   val dialect: DatabaseDialect[_]
   def dbInfo: DbInfo
-  lazy val handle: SlickDatabase = {
-    println("initiating DB handle")
-    dbInfo.database
-  }
+  lazy val handle: SlickDatabase = dbInfo.database
 
   def getSequence(name: String): DbSequence
 
