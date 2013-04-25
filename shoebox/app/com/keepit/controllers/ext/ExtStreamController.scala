@@ -177,7 +177,6 @@ class ExtStreamController @Inject() (
             })
 
           val iteratee = asyncIteratee { jsArr =>
-            log.info("WS just received: " + jsArr)
             Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
               handler(jsArr.value.tail)
             } getOrElse {
