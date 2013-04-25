@@ -33,7 +33,7 @@ trait DataBaseComponent {
 
   def entityName(name: String): String = name
 
-  def tableToInit(table: TableWithDDL): Unit = ???
+  def initTable(table: TableWithDDL): Unit = ???
 }
 
 class InSessionException(message: String) extends Exception(message)

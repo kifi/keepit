@@ -54,7 +54,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
   //we must call the init after the underlying constructor finish defining its ddl.
   def delayedInit(body: => Unit) = {
     body
-    db.tableToInit(table)
+    db.initTable(table)
   }
 
   def descTable(): String = db.handle.withSession {

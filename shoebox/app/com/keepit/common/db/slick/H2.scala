@@ -19,7 +19,7 @@ class H2(val dbInfo: DbInfo)
   var initListener: Option[TableInitListener] = None
 
   //first initiation of the table if they where loaded staticly by the injector before the db was initiated
-  tablesToInit.values foreach initTable
+  tablesToInit.values foreach initTableNow
   val dialect = H2DatabaseDialect
 
   def getSequence(name: String): DbSequence = new DbSequence(name) {
@@ -33,15 +33,15 @@ class H2(val dbInfo: DbInfo)
 
   override def entityName(name: String): String = name.toUpperCase()
 
-  override def tableToInit(table: TableWithDDL) {
+  override def initTable(table: TableWithDDL) {
     if (!tablesToInit.contains(table.tableName)) {
       tablesToInit(table.tableName) = table
       //after the db has been initiated we would like to initiate tables as they come through
-      initTable(table)
+      initTableNow(table)
     }
   }
 
-  private def initTable(table: TableWithDDL) = initListener map {listener =>
+  private def initTableNow(table: TableWithDDL) = initListener map {listener =>
     listener.init(table)
   }
 
