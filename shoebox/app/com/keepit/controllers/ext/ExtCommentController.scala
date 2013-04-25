@@ -85,17 +85,28 @@ class ExtCommentController @Inject() (
 
       permissions.toLowerCase match {
         case "message" =>
-          val recipientUserIds = recipientUsers(recipients).map(_.id.get)
-          val parentIdOpt = parent match {
-            case "" => commentRepo.getParentByUriParticipants(uri.id.get, recipientUserIds + userId)
+          val (parentIdOpt, recipientUserIds) = parent match {
+            case "" =>
+              val recipientUserIds = recipients.split(",").map{id => userRepo.get(ExternalId[User](id)).id.get}.toSet
+              val parentIdOpt = commentRepo.getParentByUriParticipants(uri.id.get, recipientUserIds + userId)
+              (parentIdOpt, recipientUserIds)
             case id =>
               val parent = commentRepo.get(ExternalId[Comment](id))
-              Some(parent.parent.getOrElse(parent.id.get))
+              (Some(parent.parent.getOrElse(parent.id.get)), Nil)
           }
-          val newComment = commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id,  userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.MESSAGE, parent = parentIdOpt))
-          if(parentIdOpt.isEmpty)
-            createCommentRecipients(newComment.id.get, recipientUserIds)
-
+          val newComment = commentRepo.save(Comment(
+            uriId = uri.id.get,
+            urlId = url.id,
+            userId = userId,
+            pageTitle = title,
+            text = LargeString(text),
+            permissions = CommentPermissions.MESSAGE,
+            parent = parentIdOpt))
+          if (parentIdOpt.isEmpty) {
+            recipientUserIds foreach { userId =>
+              commentRecipientRepo.save(CommentRecipient(commentId = newComment.id.get, userId = Some(userId)))
+            }
+          }
           val newCommentRead = commentReadRepo.getByUserAndParent(userId, parentIdOpt.getOrElse(newComment.id.get)) match {
             case Some(commentRead) => // existing CommentRead entry for this message thread
               assert(commentRead.parentId.isDefined)
@@ -106,7 +117,14 @@ class ExtCommentController @Inject() (
           commentReadRepo.save(newCommentRead)
           newComment
         case "public" | "" =>
-          val newComment = commentRepo.save(Comment(uriId = uri.id.get, urlId = url.id, userId = userId, pageTitle = title, text = LargeString(text), permissions = CommentPermissions.PUBLIC, parent = None))
+          val newComment = commentRepo.save(Comment(
+            uriId = uri.id.get,
+            urlId = url.id,
+            userId = userId,
+            pageTitle = title,
+            text = LargeString(text),
+            permissions = CommentPermissions.PUBLIC,
+            parent = None))
           commentReadRepo.save(commentReadRepo.getByUserAndUri(userId, uri.id.get) match {
             case Some(commentRead) => // existing CommentRead entry for this message thread
               commentRead.withLastReadId(newComment.id.get)
@@ -177,18 +195,6 @@ class ExtCommentController @Inject() (
     }
 
     Ok(JsObject(Seq("following" -> JsBoolean(false))))
-  }
-
-  private def createCommentRecipients(parentId: Id[Comment], recipients: Set[Id[User]])(implicit session: RWSession)  {
-    recipients foreach { recipientUser =>
-      commentRecipientRepo.save(CommentRecipient(commentId = parentId, userId = Some(recipientUser)))
-    }
-  }
-  
-  private def recipientUsers(recipientString: String)(implicit session: RSession) = {
-    (recipientString.split(",").map { recipientId =>
-      userRepo.getOpt(ExternalId[User](recipientId.trim))
-    } flatten).toSet
   }
 
   private[controllers] def notifyRecipients(comment: Comment): Unit = {
