@@ -38,7 +38,7 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[EmailAddress](db, "email_address") {
+  override val table = new RepoTable[EmailAddress](db, "email_address") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def address = column[String]("address", O.NotNull)
     def verifiedAt = column[DateTime]("verified_at", O.NotNull)

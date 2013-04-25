@@ -41,7 +41,7 @@ class DomainToTagRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock)
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
-  override lazy val table = new RepoTable[DomainToTag](db, "domain_to_tag") {
+  override val table = new RepoTable[DomainToTag](db, "domain_to_tag") {
     def domainId = column[Id[Domain]]("domain_id", O.NotNull)
     def tagId = column[Id[DomainTag]]("tag_id", O.NotNull)
     def * = id.? ~ domainId ~ tagId ~ state ~ createdAt ~ updatedAt <> (DomainToTag, DomainToTag.unapply _)

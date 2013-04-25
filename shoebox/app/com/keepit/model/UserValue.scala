@@ -64,7 +64,7 @@ class UserValueRepoImpl @Inject() (
   import DBSession._
   import scala.util.matching.Regex
 
-  override lazy val table = new RepoTable[UserValue](db, "user_value") {
+  override val table = new RepoTable[UserValue](db, "user_value") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def value = column[LargeString]("value", O.NotNull)
     def name = column[String]("name", O.NotNull)

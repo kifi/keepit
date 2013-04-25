@@ -64,7 +64,7 @@ class UnscrapableRepoImpl @Inject() (
   import DBSession._
   import scala.util.matching.Regex
 
-  override lazy val table = new RepoTable[Unscrapable](db, "unscrapable") {
+  override val table = new RepoTable[Unscrapable](db, "unscrapable") {
     def pattern = column[String]("pattern", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ pattern ~ state <> (Unscrapable, Unscrapable.unapply _)
   }

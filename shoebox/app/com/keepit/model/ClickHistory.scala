@@ -56,7 +56,7 @@ class ClickHistoryRepoImpl @Inject() (
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[ClickHistory](db, "click_history") {
+  override val table = new RepoTable[ClickHistory](db, "click_history") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def tableSize = column[Int]("table_size", O.NotNull)
     def filter = column[Array[Byte]]("filter", O.NotNull)

@@ -46,7 +46,7 @@ class SlickTest extends Specification {
             def apply(profile: BasicProfile) = new IdMapperDelegate[Bar](profile)
           }
 
-          override lazy val table = new RepoTable[Bar](db, "foo") {
+          override val table = new RepoTable[Bar](db, "foo") {
             def name = column[String]("name")
             def * = id.? ~ name <> (Bar, Bar.unapply _)
           }
@@ -207,7 +207,7 @@ class SlickTest extends Specification {
             def apply(profile: BasicProfile) = new IdMapperDelegate[Bar](profile)
           }
 
-          override lazy val table = new RepoTable[Bar](db, "foo") with ExternalIdColumn[Bar] {
+          override val table = new RepoTable[Bar](db, "foo") with ExternalIdColumn[Bar] {
             def name = column[String]("name")
             def * = id.? ~ externalId ~ name <> (Bar, Bar.unapply _)
           }

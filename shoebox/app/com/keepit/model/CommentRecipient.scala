@@ -50,7 +50,7 @@ class CommentRecipientRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[CommentRecipient](db, "comment_recipient") {
+  override val table = new RepoTable[CommentRecipient](db, "comment_recipient") {
     def commentId = column[Id[Comment]]("comment_id", O.NotNull)
     def userId = column[Id[User]]("user_id", O.Nullable)
     def socialUserId = column[Id[SocialUserInfo]]("social_user_id", O.Nullable)

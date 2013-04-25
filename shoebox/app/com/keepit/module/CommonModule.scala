@@ -30,6 +30,8 @@ import com.keepit.model.UserRepo
 import com.keepit.model.NormalizedURIRepo
 import com.keepit.common.time.Clock
 import com.google.inject.Provider
+import play.api.Play
+import play.api.Mode.Mode
 
 class CommonModule extends ScalaModule with Logging {
 
@@ -74,6 +76,10 @@ class CommonModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
+  def playMode: Mode = current.mode
+
+  @Singleton
+  @Provides
   def resultClickTracker: ResultClickTracker = {
     val conf = current.configuration.getConfig("result-click-tracker").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
@@ -112,7 +118,8 @@ class CommonModule extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def actorPluginProvider: ActorPlugin = new ActorPlugin("shoebox-actor-system")
+  def actorPluginProvider: ActorPlugin =
+    new ActorPlugin(ActorSystem("shoebox-actor-system", Play.current.configuration.underlying, Play.current.classloader))
 
   @Provides
   def httpClientProvider: HttpClient = new HttpClientImpl()

@@ -13,21 +13,27 @@ import scala.util.Success
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import akka.actor.ActorSystem
 import scala.concurrent._
+import scala.slick.lifted.DDL
 import scala.util.DynamicVariable
 import com.keepit.common.healthcheck._
-import play.api.Play.current
-import play.api.Play
+import play.api.Mode.Mode
+import play.api.Mode.Test
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
 trait DataBaseComponent {
   val Driver: ExtendedDriver
   val dialect: DatabaseDialect[_]
   def dbInfo: DbInfo
-  lazy val handle: SlickDatabase = dbInfo.database
+  lazy val handle: SlickDatabase = {
+    println("initiating DB handle")
+    dbInfo.database
+  }
 
   def getSequence(name: String): DbSequence
 
   def entityName(name: String): String = name
+
+  def initTable(table: TableWithDDL): Unit = ???
 }
 
 class InSessionException(message: String) extends Exception(message)
@@ -39,7 +45,8 @@ object DatabaseSessionLock {
 class Database @Inject() (
     val db: DataBaseComponent,
     val system: ActorSystem,
-    val healthcheckPlugin: Provider[HealthcheckPlugin]
+    val healthcheckPlugin: Provider[HealthcheckPlugin],
+    val playMode: Mode
   ) extends Logging {
 
   import DBSession._
@@ -52,7 +59,7 @@ class Database @Inject() (
     if (DatabaseSessionLock.inSession.value) {
       val message = "already in a DB session!"
       healthcheckPlugin.get.addError(HealthcheckError(Some(new InSessionException(message)), None, None, Healthcheck.INTERNAL, Some(message)))
-      if (Play.isTest) throw new InSessionException("already in a DB session!")
+      if (playMode == Test) throw new InSessionException("already in a DB session!")
     }
     DatabaseSessionLock.inSession.withValue(true) { f }
   }
