@@ -38,7 +38,7 @@ slider2 = function() {
   });
 
   function createSlider(callback) {
-    var kept = $tile[0].dataset.kept;
+    var kept = tile && tile.dataset.kept;
     var counts = JSON.parse(tile && tile.dataset.counts || '{"n":0,"c":0,"m":0}');
     api.log("[createSlider] kept:", kept || "no", "counts:", counts);
 
