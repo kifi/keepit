@@ -16,7 +16,6 @@ import scala.slick.lifted.DDL
 
 class SlickModule(dbInfo: DbInfo) extends ScalaModule {
   def configure(): Unit = {
-    println("configuring SlickModule")
     //see http://stackoverflow.com/questions/6271435/guice-and-scala-injection-on-generics-dependencies
     bind[Database].in(classOf[Singleton])
     lazy val db = dbInfo.driverName match {

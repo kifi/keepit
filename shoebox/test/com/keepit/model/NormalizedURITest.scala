@@ -15,15 +15,7 @@ import com.keepit.inject.RichInjector
 
 class NormalizedURITest extends Specification with TestDBRunner {
 
-  def initDbSequence()(implicit injector: RichInjector) = {
-    db.readWrite {implicit s =>
-      s.withPreparedStatement("CREATE SEQUENCE normalized_uri_sequence;")(_.execute)
-      s.withPreparedStatement("CREATE SEQUENCE bookmark_sequence;")(_.execute)
-    }
-  }
-
   def setup()(implicit injector: RichInjector) = {
-    initDbSequence()
     db.readWrite {implicit s =>
       uriRepo.count === 0 //making sure the db is clean, we had some strange failures
       userRepo.count === 0 //making sure the db is clean
@@ -127,8 +119,7 @@ class NormalizedURITest extends Specification with TestDBRunner {
   "NormalizedURIs get created url" should {
     "search gets nothing" in {
       withDB() { implicit injector =>
-        initDbSequence()
-      	db.readWrite { implicit s =>
+        db.readWrite { implicit s =>
       	  val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith"))
       	  val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown"))
       	  val uri1 = createUri(title = "short title", url = "http://www.keepit.com/short", state = NormalizedURIStates.INACTIVE)
@@ -141,8 +132,7 @@ class NormalizedURITest extends Specification with TestDBRunner {
     }
     "search gets short" in {
       withDB() { implicit injector =>
-        initDbSequence()
-      	db.readWrite { implicit s =>
+        db.readWrite { implicit s =>
       	  uriRepo.all.size === 0 //making sure the db is clean, trying to understand some strange failures we got
       	  val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith"))
       	  val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown"))

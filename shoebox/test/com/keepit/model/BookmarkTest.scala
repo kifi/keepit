@@ -23,8 +23,6 @@ class BookmarkTest extends Specification with TestDBRunner {
     val t2 = new DateTime(2012, 3, 22, 14, 30, 0, 0, PT)
 
     db.readWrite {implicit s =>
-      s.withPreparedStatement("CREATE SEQUENCE normalized_uri_sequence;")(_.execute)
-      s.withPreparedStatement("CREATE SEQUENCE bookmark_sequence;")(_.execute)
       val user1 = userRepo.save(User(firstName = "Andrew", lastName = "C", createdAt = t1))
       val user2 = userRepo.save(User(firstName = "Eishay", lastName = "S", createdAt = t2))
 
