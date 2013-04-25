@@ -62,7 +62,10 @@ class UrlController @Inject() (
   def renormalize(readOnly: Boolean = true, domain: Option[String] = None) = AdminHtmlAction { implicit request =>
     Akka.future {
       val result = doRenormalize(readOnly, domain).replaceAll("\n","\n<br>")
-      postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = "Renormalization Report", htmlBody = result, category = PostOffice.Categories.ADMIN))
+      db.readWrite { implicit s =>
+        postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
+         subject = "Renormalization Report", htmlBody = result, category = PostOffice.Categories.ADMIN))
+      }
     }
     Ok("Started! Will email %s".format(EmailAddresses.ENG))
   }
