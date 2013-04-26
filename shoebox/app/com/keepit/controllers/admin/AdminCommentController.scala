@@ -88,7 +88,10 @@ class AdminCommentController @Inject() (
 
     log.info(s"[thread grandfathering] started grandfathering for ${userIds.size} users")
     val updatedCounts = userIds map { userId =>
-      commentRepoImpl.grandfatherSplitConversations(userId)
+      db.readWrite { implicit session =>
+        // separate db connections to prevent a long-running read-write mysteriously disappearing
+        commentRepoImpl.grandfatherSplitConversations(userId)
+      }
     }
 
     val updatedThreads = updatedCounts.map(_._1).sum
