@@ -166,8 +166,8 @@ api = function() {
     }
   });
 
-  var pages = {};  // by tab.id
-  var selectedTabIds = {};  // in "normal" windows only, by window.id (allows us to avoid some async chrome API calls)
+  const pages = {};  // by tab.id
+  const selectedTabIds = {};  // in "normal" windows only, by window.id (allows us to avoid some async chrome API calls)
   chrome.tabs.query({windowType: "normal"}, function(tabs) {
     tabs.forEach(function(tab) {
       if (!pages[tab.id]) {
@@ -176,7 +176,15 @@ api = function() {
     });
   });
 
-  var ports = {}, portHandlers;
+  const ports = {}, portHandlers = {
+    "api:reload": function() {
+      if (chrome.runtime.id !== "fpjooibalklfinmkiodaamcckfbcjhin") {  // dev only
+        chrome.runtime.reload();
+      }
+    },
+    "api:require": function(data, respond, tab) {
+      injectWithDeps(tab.id, data, respond);
+    }};
   chrome.runtime.onConnect.addListener(function(port) {
     var tab = port.sender.tab;
     if (port.sender.id === chrome.runtime.id) {
@@ -188,26 +196,22 @@ api = function() {
       ports[tab.id] = port;
       port.onMessage.addListener(function(msg) {
         var kind = msg[0], data = msg[1], callbackId = msg[2];
-        if (kind == "api:require") {
-          injectWithDeps(tab.id, data, port.postMessage.bind(port, ["api:respond", callbackId]));
-        } else if (portHandlers) {
-          var handler = portHandlers[kind];
-          if (handler) {
-            var page = pages[tab.id];
-            if (page) {
-              if (tab.url !== page.url) {
-                api.log("#a00", "[onMessage] %i url mismatch:\n%s\n%s", tab.id, tab.url, page.url);
-              }
-              api.log("#0a0", "[onMessage]", tab.id, kind, data != null ? data : "");
-              handler(data, function(response) {
-                port.postMessage(["api:respond", callbackId, response]);
-              }, page);
-            } else {
-              api.log("#a00", "[api:dom_ready] no page for " + tab.id + " at " + tab.url);
+        var handler = portHandlers[kind];
+        if (handler) {
+          var page = pages[tab.id];
+          if (page) {
+            if (tab.url !== page.url) {
+              api.log("#a00", "[onMessage] %i %s mismatch:\n%s\n%s", tab.id, kind, tab.url, page.url);
             }
+            api.log("#0a0", "[onMessage]", tab.id, kind, data != null ? data : "");
+            handler(data, function(response) {
+              port.postMessage(["api:respond", callbackId, response]);
+            }, page);
           } else {
-            api.log("#a00", "[onMessage] ignoring:", kind, "from:", tab.id);
+            api.log("#a00", "[onMessage]", tab.id, kind, "ignored, no page", tab.url);
           }
+        } else {
+          api.log("#a00", "[onMessage]", tab.id, kind, "ignored");
         }
       });
       port.onDisconnect.addListener(function() {
@@ -391,8 +395,10 @@ api = function() {
       }},
     port: {
       on: function(handlers) {
-        if (portHandlers) throw Error("api.port.on already called");
-        portHandlers = handlers;
+        for (var k in handlers) {
+          if (portHandlers[k]) throw Error(k + " handler already defined");
+          portHandlers[k] = handlers[k];
+        }
       }
     },
     prefs: {
