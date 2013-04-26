@@ -88,11 +88,11 @@ var injected, t0 = +new Date, tile, paneHistory;
           if (tile) tile.dataset.kept = "public";
         }
         break;
+      case 76: // l
+        api.port.emit("api:reload");
+        break;
       case 79: // o
         keeper("togglePane", "key");
-        break;
-      case 82: // r
-        api.port.emit("api:reload");
         break;
       }
     }
