@@ -4,20 +4,18 @@ import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-import java.net.URLEncoder
+import java.net.{ConnectException, URLEncoder}
 import java.security.MessageDigest
 import java.util.UUID
 
 import com.coremedia.iso.Hex.encodeHex
 import com.google.inject.{Inject, ImplementedBy}
-
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.slick.Database
-import com.keepit.common.net.HttpClient
 import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.net.HttpClient
 
-import akka.actor.{Props, ActorSystem}
 import akka.pattern.ask
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -35,13 +33,21 @@ private[classify] class DomainClassificationActor @Inject() (
 
   private final val KEY = "42go42"
 
+  private val servers = Seq("thor.komodia.com", "optimus.komodia.com", "rodimus.komodia.com")
+
   private def getTagNames(url: String): Future[Seq[DomainTagName]] = {
+    servers.tail.foldLeft(getTagNames(servers.head, url))((result, nextServer) => result recoverWith {
+      case _: ConnectException => getTagNames(nextServer, url)
+    })
+  }
+
+  private def getTagNames(server: String, url: String): Future[Seq[DomainTagName]] = {
     // see http://www.komodia.com/wiki/index.php/URL_server_protocol
     val md = MessageDigest.getInstance("MD5")
     val guid = UUID.randomUUID.toString.toUpperCase
     val id = encodeHex(md.digest((KEY + guid + KEY).getBytes("UTF-8"))).toLowerCase
     val encodedUrl = URLEncoder.encode(url, "UTF-8")
-    client.getFuture(s"http://thor.komodia.com/url.php?version=w11&guid=$guid&id=$id&url=$encodedUrl").map { resp =>
+    client.getFuture(s"http://$server/url.php?version=w11&guid=$guid&id=$id&url=$encodedUrl").map { resp =>
       (resp.body.split("~", 2).toList match {
         case ("FM" | "FR") :: tagString :: Nil =>
           // response is comma separated, but includes commas inside parentheses
