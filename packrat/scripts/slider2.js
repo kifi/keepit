@@ -9,10 +9,11 @@ jQuery.fn.layout = function() {
   return this.each(function() {this.clientHeight});  // forces layout
 };
 
-const noPane = {update: $.noop};
-var generalPane, commentsPane = noPane, threadsPane = noPane, threadPane = noPane;  // set when api.require'd
+var generalPane, commentsPane, threadsPane, threadPane;  // stubs
+generalPane = commentsPane = threadsPane = threadPane = {update: $.noop};
+
 slider2 = function() {
-  var $slider, $pane, paneHistory, lastShownAt;
+  var $slider, $pane, lastShownAt;
 
   document.addEventListener("keydown", onKeyDown, true);
   function onKeyDown(e) {
