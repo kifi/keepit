@@ -8,6 +8,7 @@ import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 abstract class IdMapper {
   def getId(docid: Int): Long
   def getDocId(id: Long): Int
+  def maxDoc(): Int
 }
 
 object ArrayIdMapper {
@@ -37,6 +38,7 @@ class ArrayIdMapper(idArray: Array[Long]) extends IdMapper {
 
   def getId(docid: Int) = idArray(docid) // no range check done for performance
   def getDocId(id: Long) = reserveMapper(id)
+  def maxDoc(): Int = idArray.length
 }
 
 class ReverseArrayMapper(ids: Array[Long], indexes: Array[Int], sz: Int, bucketStart: Array[Int], bitmaps: Array[Long], chains: Array[Long]) {
