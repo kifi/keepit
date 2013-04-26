@@ -30,7 +30,8 @@ class ExtAuthController @Inject() (
   installationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
   sliderRuleRepo: SliderRuleRepo,
-  userExperimentRepo: UserExperimentRepo)
+  userExperimentRepo: UserExperimentRepo,
+  kifiInstallationCookie: KifiInstallationCookie)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
   def start = AuthenticatedJsonToJsonAction { implicit request =>
     val userId = request.userId
@@ -85,7 +86,7 @@ class ExtAuthController @Inject() (
       "experiments" -> experiments,
       "rules" -> sliderRuleGroup.compactJson,
       "patterns" -> urlPatterns))
-    .withCookies(KifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
+    .withCookies(kifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
   }
 
   // where SecureSocial sends users if it can't figure out the right place (see securesocial.conf)

@@ -29,7 +29,9 @@ class ActionAuthenticator @Inject() (
   userExperimentRepo: UserExperimentRepo,
   userRepo: UserRepo,
   fortyTwoServices: FortyTwoServices,
-  healthcheckPlugin: HealthcheckPlugin)
+  healthcheckPlugin: HealthcheckPlugin,
+  impersonateCookie: ImpersonateCookie,
+  kifiInstallationCookie: KifiInstallationCookie)
     extends SecureSocial with Logging {
 
   private def loadUserId(userIdOpt: Option[Id[User]], socialId: SocialId)(implicit session: RSession) = {
@@ -56,8 +58,8 @@ class ActionAuthenticator @Inject() (
 
   private def authenticatedHandler[T](apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Result) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
       val userIdOpt = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map{id => Id[User](id.toLong)}
-      val impersonatedUserIdOpt: Option[ExternalId[User]] = ImpersonateCookie.decodeFromCookie(request.cookies.get(ImpersonateCookie.COOKIE_NAME))
-      val kifiInstallationId: Option[ExternalId[KifiInstallation]] = KifiInstallationCookie.decodeFromCookie(request.cookies.get(KifiInstallationCookie.COOKIE_NAME))
+      val impersonatedUserIdOpt: Option[ExternalId[User]] = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
+      val kifiInstallationId: Option[ExternalId[KifiInstallation]] = kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
       val socialUser = request.user
       val (userId, experiments) = loadUserContext(userIdOpt, SocialId(socialUser.id.id))
       val newSession = session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString)

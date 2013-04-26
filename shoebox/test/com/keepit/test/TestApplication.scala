@@ -15,6 +15,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.db.DbInfo
 import com.keepit.common.db.SlickModule
 import com.keepit.common.db.slick._
+import com.keepit.common.controller.FortyTwoCookies._
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{FakeMailToKeepPlugin, MailToKeepPlugin, FakeMailModule, MailSenderPlugin, ElectronicMail}
@@ -135,6 +136,13 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     def processOutbox() = throw new Exception("Should not attempt to use mail plugin in test")
   }
 
+  @Singleton
+  @Provides
+  def kifiInstallationCookie: KifiInstallationCookie = new KifiInstallationCookie(Some("test.com"))
+
+  @Singleton
+  @Provides
+  def impersonateCookie: ImpersonateCookie = new ImpersonateCookie(Some("test.com"))
 
   @Provides
   @Singleton

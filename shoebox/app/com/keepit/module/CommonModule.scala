@@ -13,6 +13,7 @@ import com.keepit.common.cache.MemcachedCacheModule
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{HealthcheckHost, HealthcheckPluginImpl, HealthcheckPlugin, HealthcheckActor}
 import com.keepit.common.logging.Logging
+import com.keepit.common.controller.FortyTwoCookies._
 import com.keepit.common.mail.{MailSenderPluginImpl, MailSenderPlugin, PostOffice}
 import com.keepit.common.net.HttpClient
 import com.keepit.common.net.HttpClientImpl
@@ -77,6 +78,14 @@ class CommonModule extends ScalaModule with Logging {
   @Singleton
   @Provides
   def playMode: Mode = current.mode
+
+  @Singleton
+  @Provides
+  def kifiInstallationCookie: KifiInstallationCookie = new KifiInstallationCookie(current.configuration.getString("session.domain"))
+
+  @Singleton
+  @Provides
+  def impersonateCookie: ImpersonateCookie = new ImpersonateCookie(current.configuration.getString("session.domain"))
 
   @Singleton
   @Provides
