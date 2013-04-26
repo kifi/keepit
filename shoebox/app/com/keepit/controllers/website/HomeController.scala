@@ -38,7 +38,7 @@ class HomeController @Inject() (db: Database,
       }
 
       val userCanInvite = request.experimants & Set(ExperimentTypes.ADMIN, ExperimentTypes.CAN_INVITE) nonEmpty
-      
+
       Ok(views.html.website.userHome(request.user, friendsOnKifi, userCanInvite))
     }
   }, unauthenticatedAction = { implicit request =>
@@ -67,7 +67,7 @@ class HomeController @Inject() (db: Database,
             fromName = Some("Invitations"),
             to = EmailAddresses.INVITATION,
             subject = s"""${su.fullName} wants to be let in!""",
-            htmlBody = s"""<a href="https://admin.kifi.com/admin/user/${user.id}">${su.fullName}</a> wants to be let in!\n<br/>
+            htmlBody = s"""<a href="https://admin.kifi.com/admin/user/${user.id.get}">${su.fullName}</a> wants to be let in!\n<br/>
                            Go to the <a href="https://admin.kifi.com/admin/invites?show=accepted">admin invitation page</a> to accept or reject this user.""",
             category = PostOffice.Categories.ADMIN))
         }
