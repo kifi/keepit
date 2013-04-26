@@ -37,6 +37,11 @@ threadPane = function() {
         attachComposeBindings($container, "message");
 
         $sent = $container.find(".kifi-messages-sent").data("threadId", threadId);
+        $container.closest(".kifi-pane-box").on("kifi:remove", function() {
+          if (this.contains($sent[0])) {
+            $sent = $();
+          }
+        });
 
         if (messages.length) emitRead(threadId, messages[messages.length - 1]);
       });

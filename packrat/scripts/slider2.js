@@ -12,7 +12,7 @@ jQuery.fn.layout = function() {
 const noPane = {update: $.noop};
 var generalPane, commentsPane = noPane, threadsPane = noPane, threadPane = noPane;  // set when api.require'd
 slider2 = function() {
-  var $slider, $pane, lastShownAt;
+  var $slider, $pane, paneHistory, lastShownAt;
 
   document.addEventListener("keydown", onKeyDown, true);
   function onKeyDown(e) {
@@ -162,16 +162,16 @@ slider2 = function() {
           hidePane(true);
         }
       }).on("click", ".kifi-slider2-dock-btn", function() {
-        var pane = $(this).data("pane");
+        var locator = this.dataset.loc;
         if ($pane) {
-          if (pane == $pane.data("pane")) {
+          if (locator == paneHistory[0]) {
             hidePane(true);
           } else {
-            showPane(pane);
+            showPane(locator);
           }
         } else if (!$("html").hasClass("kifi-pane-parent")) { // ensure it's finished hiding
           idleTimer.kill();
-          showPane(pane);
+          showPane(locator);
         }
       });
       $(tile).addClass("kifi-behind-slider");
@@ -271,41 +271,45 @@ slider2 = function() {
     if ($pane) $pane.find(".kifi-pane-kept").toggleClass("kifi-kept", !!how);
   }
 
-  function openDeepLink(locator) {
-    var loc = locator.split("/");
-    if (loc[1] == "messages") {
-      if (loc[2]) {  // loc[2] can be id of any message (not necessarily a parent)
-        api.log("[openDeepLink] requiring thread for recipients");
-        api.port.emit("thread", {id: loc[2], respond: true}, function(th) {
-          showPane("thread", false, th.messages[0].recipients, th.id);
-        });
-      } else {
-        showPane("threads");
-      }
-    } else {
-      showPane(loc[1]);  // comments, general
-    }
+  function toPaneName(locator) {
+    var name = locator.match(/[a-z]+\/?/)[0];
+    return {messages: "threads", "messages/": "thread"}[name] || name;
   }
 
-  const createPaneTemplateParams = {
-    general: function() {
-      return {
-        title: document.title,
-        url: location.href};
+  const createTemplateParams = {
+    general: function(cb) {
+      cb({title: document.title, url: document.URL});
     },
-    thread: function(recipients) {
-      return {
-        recipients: recipients,
-        numRecipients: recipients.length > 1 ? recipients.length : null};
-    }
-  };
+    thread: function(cb, locator, recipients) {
+      var id = locator.split("/")[2];  // can be id of any message (assumed to be parent if recipients provided)
+      if (recipients) {
+        respond(recipients, locator);
+      } else {
+        api.log("[createTemplateParams] getting thread for recipients");
+        api.port.emit("thread", {id: id, respond: true}, function(th) {
+          respond(th.messages[0].recipients, "/messages/" + th.id);
+        });
+      }
+      function respond(r, canonicalLocator) {
+        cb({recipients: r, numRecipients: r.length > 1 ? r.length : null}, canonicalLocator);
+      }
+    }};
 
-  function showPane(pane, back, paramsArg, populateArg) {
-    api.log("[showPane]", pane, back ? "back" : "");
-    var params = (createPaneTemplateParams[pane] || Object)(paramsArg);
+  function showPane(locator, back, paramsArg) {
+    api.log("[showPane]", locator, back ? "back" : "");
+    var pane = toPaneName(locator);
+    (createTemplateParams[pane] || function(cb) {cb()})(function(params, canonicalLocator) {
+      var loc = canonicalLocator || locator;
+      if (loc !== (paneHistory && paneHistory[0])) {
+        showPane2(loc, back, pane, params);
+      }
+    }, locator, paramsArg);
+  }
+
+  function showPane2(locator, back, pane, params) {  // only called by showPane
+    api.log("[showPane2]", locator, pane);
     if ($pane) {
       render("html/metro/pane_" + pane + ".html", params, function(html) {
-        back = back || pane == "general";
         var $cubby = $pane.find(".kifi-pane-cubby"), w = $cubby[0].offsetWidth, d = w + 6;
         var $boxes = $("<div class=kifi-pane-boxes>").css({
           width: w + d,
@@ -320,10 +324,16 @@ slider2 = function() {
           $boxes.remove();
           $cubby.css("overflow", "");
         });
-        $pane.data("pane", pane);
-        populatePane[pane]($new, populateArg);
+        if (back) {
+          paneHistory.shift();
+          paneHistory[0] = locator;  // usually unnecessary (already the same)
+        } else {
+          paneHistory.unshift(locator);
+        }
+        populatePane[pane]($new, locator);
       });
     } else {
+      paneHistory = [locator];
       var bringSlider = !$slider;
       if (bringSlider) {
         createSlider(function() {
@@ -340,7 +350,7 @@ slider2 = function() {
         },
         function(html) {
           var $html = $("html").addClass("kifi-pane-parent");
-          $pane = $(html).data("pane", pane).append(bringSlider ? $slider : null).appendTo($html).layout()
+          $pane = $(html).append(bringSlider ? $slider : null).appendTo($html).layout()
           .on("transitionend webkitTransitionEnd", function f(e) {
             $pane.off("transitionend webkitTransitionEnd", f);
             $box.data("shown", true).triggerHandler("kifi:shown");
@@ -354,7 +364,7 @@ slider2 = function() {
             }
           })
           .on("click", ".kifi-pane-back", function() {
-            showPane($(this).data("pane") || "general", true);
+            showPane(paneHistory[1] || this.dataset.loc || "/general", true);
           })
           .on("mousedown", ".kifi-pane-head-settings", function(e) {
             e.preventDefault();
@@ -409,15 +419,15 @@ slider2 = function() {
             $n.remove().removeClass("kifi-showing").appendTo($pane).layout().addClass("kifi-showing");
             d.t = setTimeout($n.removeClass.bind($n, "kifi-showing"), 1000);
           })
-          .on("kifi:show-pane", function(e, pane, paramsArg, populateArg) {
-            showPane(pane, false, paramsArg, populateArg);
+          .on("kifi:show-pane", function(e, loc, paramsArg) {
+            showPane(loc, false, paramsArg);
           })
           .on("mousedown click keydown keypress keyup", function(e) {
             e.stopPropagation();
           });
           $html.addClass("kifi-with-pane");
           var $box = $pane.find(".kifi-pane-box");
-          populatePane[pane]($box, populateArg);
+          populatePane[pane]($box, locator);
         });
       });
     }
@@ -439,7 +449,7 @@ slider2 = function() {
         $html.removeClass("kifi-pane-parent");
       }
     });
-    $pane = null;
+    $pane = paneHistory = null;
     var $html = $("html").removeClass("kifi-with-pane");
   }
 
@@ -480,9 +490,10 @@ slider2 = function() {
         });
       });
     },
-    thread: function($box, threadId) {
+    thread: function($box, locator) {
       var $tall = $box.find(".kifi-pane-tall").css("margin-top", $box.find(".kifi-thread-who").outerHeight());
-      api.log("[populatePane] requiring thread for messages");
+      var threadId = locator.split("/")[2];
+      api.log("[populatePane] getting thread for messages", threadId);
       api.port.emit("thread", {id: threadId, respond: true}, function(th) {
         api.port.emit("session", function(session) {
           api.require("scripts/thread.js", function() {
@@ -569,7 +580,7 @@ slider2 = function() {
     },
     showPane: function(trigger, locator) {
       api.log("[showPane]", trigger, locator);
-      openDeepLink(locator);
+      showPane(locator);
     },
     togglePane: function(trigger) {
       if ($pane) {
@@ -577,7 +588,7 @@ slider2 = function() {
         hidePane();
       } else {
         api.log("[togglePane] showing");
-        showPane("general");
+        showPane("/general");
       }
     },
     showKeepers: function(keepers, otherKeeps) {
