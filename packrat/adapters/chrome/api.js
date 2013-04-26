@@ -445,9 +445,9 @@ api = function() {
       xhr.send(data);
     },
     socket: {
-      open: function(url, handlers) {
+      open: function(url, handlers, onConnect) {
         var callbacks = {}, nextCallbackId = 1;  // TODO: garbage collect old uncalled callbacks
-        var socket = new ReconnectingWebSocket(url, function(e) {
+        var rws = new ReconnectingWebSocket(url, function receive(e) {
           var msg = JSON.parse(e.data);
           if (Array.isArray(msg)) {
             var id = msg.shift();
@@ -472,8 +472,12 @@ api = function() {
           } else {
             api.log("#0ac", "[socket.receive] ignoring", msg);
           }
+        }, function() {
+          socket.seq++;
+          onConnect();
         });
-        return {
+        var socket = {
+          seq: 0,
           send: function(arr, callback) {
             if (callback) {
               var id = nextCallbackId++;
@@ -481,13 +485,14 @@ api = function() {
               arr.splice(1, 0, id);
             }
             api.log("#0ac", "[socket.send]", arr);
-            socket.send(JSON.stringify(arr));
+            rws.send(JSON.stringify(arr));
           },
           close: function() {
-            socket.close();
+            rws.close();
             this.send = this.close = api.noop;
           }
         };
+        return socket;
       }
     },
     storage: localStorage,

@@ -1,4 +1,4 @@
-function ReconnectingWebSocket(url, onmessage) {
+function ReconnectingWebSocket(url, onMessage, onConnect) {
   const wordRe = /\w+/, minRetryConnectDelayMs = 300, maxRetryConnectDelayMs = 5000, idlePingDelayMs = 30000;
   var ws, self = this, buffer = [], closed, t, retryConnectDelayMs = minRetryConnectDelayMs;
 
@@ -55,6 +55,7 @@ function ReconnectingWebSocket(url, onmessage) {
       ws.greeted = true;
       ws.onmessage = onMessageN;
       retryConnectDelayMs = minRetryConnectDelayMs;
+      onConnect();
       while (buffer.length) {
         var a = buffer.shift();
         api.log("#0bf", "[RWS] sending, buffered for %i ms: %s", new Date - a[1], (wordRe.exec(a[0]) || a)[0]);
@@ -64,7 +65,7 @@ function ReconnectingWebSocket(url, onmessage) {
       api.log("#a00", "[RWS.onMessage1]", e.data);
     } else {
       api.log("#a00", "[RWS.onMessage1] relaying");
-      onmessage.call(self, e);
+      onMessage.call(self, e);
     }
     clearTimeout(t);
     t = setTimeout(ping, idlePingDelayMs);

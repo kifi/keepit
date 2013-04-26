@@ -8,7 +8,7 @@ var newNotificationIdxs = [];  // derived
 var timeNotificationsLastSeen = 0;
 var friends = [];
 var friendsById = {};
-var rules = {};
+var ruleSet = {};
 var urlPatterns = [];
 
 function clearDataCache() {
@@ -18,7 +18,7 @@ function clearDataCache() {
   timeNotificationsLastSeen = 0;
   friends = [];
   friendsById = {};
-  rules = {};
+  ruleSet = {};
   urlPatterns = [];
 }
 
@@ -112,7 +112,7 @@ const socketHandlers = {
   },
   slider_rules: function(o) {
     api.log("[socket:slider_rules]", o);
-    rules = o.rules;
+    ruleSet = o;
   },
   url_patterns: function(patterns) {
     api.log("[socket:url_patterns]", patterns);
@@ -559,11 +559,13 @@ function createDeepLinkListener(locator, tabId) {
 }
 
 function initTab(tab, d) {  // d is pageData[tab.nUri]
-  api.log("[initTab] %i %o", tab.id, d);
+  api.log("[initTab]", tab.id, "inited:", tab.inited);
 
   api.tabs.emit(tab, "counts", d.counts);
+  if (tab.inited) return;
+  tab.inited = true;
 
-  if (rules.message && d.counts.m < 0) {  // open immediately to unread message(s)
+  if (ruleSet.rules.message && d.counts.m < 0) {  // open immediately to unread message(s)
     var ids = unreadThreadIds(d.threads, d.lastMessageRead);
     var toData = {trigger: "message", locator: "/messages" + (ids.length > 1 ? "" : "/" + ids[0])};
     if (tab.ready) {
@@ -575,7 +577,7 @@ function initTab(tab, d) {  // d is pageData[tab.nUri]
       socket.send(["get_thread", id]);
     });
 
-  } else if (rules.comment && d.counts.c < 0 && !d.neverOnSite) {  // open immediately to unread comment(s)
+  } else if (ruleSet.rules.comment && d.counts.c < 0 && !d.neverOnSite) {  // open immediately to unread comment(s)
     var toData = {trigger: "comment", locator: "/comments"};
     if (tab.ready) {
       api.tabs.emit(tab, "open_to", toData);
@@ -583,21 +585,21 @@ function initTab(tab, d) {  // d is pageData[tab.nUri]
       (tab.toEmit = tab.toEmit || []).push(["open_to", toData]);
     }
 
-  } else if (!d.kept && !d.neverOnSite && (!d.sensitive || !rules.sensitive)) {  // auto-engagement
+  } else if (!d.kept && !d.neverOnSite && (!d.sensitive || !ruleSet.rules.sensitive)) {  // auto-engagement
     var url = tab.url;
-    if (rules.url && urlPatterns.some(function(re) {return re.test(url)})) {
+    if (ruleSet.rules.url && urlPatterns.some(function(re) {return re.test(url)})) {
       api.log("[initTab]", tab.id, "restricted");
-    } else if (rules.shown && d.shown) {
+    } else if (ruleSet.rules.shown && d.shown) {
       api.log("[initTab]", tab.id, "shown before");
     } else {
       if (api.prefs.get("showSlider")) {
         if (tab.ready) {
-          api.tabs.emit(tab, "scroll_rule", rules.scroll);
+          api.tabs.emit(tab, "scroll_rule", ruleSet.rules.scroll);
         } else {
-          (tab.toEmit = tab.toEmit || []).push(["scroll_rule", rules.scroll]);
+          (tab.toEmit = tab.toEmit || []).push(["scroll_rule", ruleSet.rules.scroll]);
         }
       }
-      tab.autoShowSec = (rules.focus || [])[0];
+      tab.autoShowSec = (ruleSet.rules.focus || [])[0];
       if (tab.autoShowSec != null && api.tabs.isFocused(tab)) {
         scheduleAutoShow(tab);
       }
@@ -758,27 +760,32 @@ function searchOnServer(request, respond) {
   return true;
 }
 
-// Kifi icon in location bar
+// kifi icon in location bar
 api.icon.on.click.add(function(tab) {
   api.tabs.emit(tab, "button_click");
 });
 
 function subscribe(tab) {
+  api.log("[subscribe] %i %s %s", tab.id, tab.url, tab.icon);
   if (!tab.icon) {
-    api.log("[subscribe] %i %s %s", tab.id, tab.url, tab.icon);
     api.icon.set(tab, "icons/keep.faint.png");
-    var d = pageData[tab.url];
-    if (d && d.counts) {  // optimization: page url is normalized and page is open elsewhere
-      finish(tab.url);
+  }
+  var d = pageData[tab.url];
+  if (d && d.seq == socket.seq) {  // optimization: page url is normalized and page is open elsewhere
+    finish(tab.url);
+    if (d.hasOwnProperty("kept")) {
       setIcon(tab, d.kept);
       sendKept(tab, d);
-      initTab(tab, d);
-    } else if (socket) {
-      socket.send(["subscribe_uri", tab.url], function(uri) {
-        d = pageData[uri] = pageData[uri] || {tabs: []};
-        finish(uri);
-      });
+      if (d.counts) {
+        initTab(tab, d);
+      }
     }
+  } else if (socket) {
+    socket.send(["subscribe_uri", tab.url], function(uri) {
+      d = pageData[uri] = pageData[uri] || {tabs: []};
+      d.seq = socket.seq;
+      finish(uri);
+    });
   }
   function finish(uri) {
     tab.nUri = uri;
@@ -788,7 +795,7 @@ function subscribe(tab) {
       }
     }
     d.tabs.push(tab);
-    api.log("[subscribe:finish] %i page data: %o", tab.id, d);
+    api.log("[subscribe:finish]", tab.id);
   }
 }
 
@@ -798,7 +805,7 @@ function setIcon(tab, kept) {
 }
 
 function sendKept(tab, d) {
-  var keptData = {kept: d.kept, hide: d.neverOnSite || (d.sensitive && rules.sensitive)};
+  var keptData = {kept: d.kept, hide: d.neverOnSite || (d.sensitive && ruleSet.rules.sensitive)};
   if (tab.ready) {
     api.tabs.emit(tab, "kept", keptData);
   } else {
@@ -961,13 +968,18 @@ function authenticate(callback) {
       logEvent("extension", "authenticated");
 
       session = data;
-      socket = api.socket.open(apiBaseUri().replace(/^http/, "ws") + "/ext/ws", socketHandlers);
-      socket.send(["get_notifications", 10]);
-      socket.send(["get_last_notify_read_time"]);
-      socket.send(["get_friends"]);
+      socket = api.socket.open(apiBaseUri().replace(/^http/, "ws") + "/ext/ws", socketHandlers, function() {
+        socket.send(["get_notifications", 10]);  // TODO: optimize by getting only newer than X when seq > 1
+        socket.send(["get_last_notify_read_time"]);
+        socket.send(["get_friends"]);  // TODO: optimize seq > 1 case
+        if (socket.seq > 1) {  // reconnected
+          socket.send(["get_rules", ruleSet.version]);
+          api.tabs.eachSelected(subscribe);
+        }
+      });
       logEvent.catchUp();
 
-      rules = data.rules.rules;
+      ruleSet = data.rules;
       urlPatterns = compilePatterns(data.patterns);
       store("kifi_installation_id", data.installationId);
       delete session.rules;
