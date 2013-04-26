@@ -67,7 +67,7 @@ class ExtErrorReportControllerTest extends Specification with DbRepos {
         status(result) must equalTo(OK)
         val json = Json.parse(contentAsString(result)).asInstanceOf[JsObject]
         val errorExtId = fakeHealthcheck.errors()(0).id
-        json \ "error-id" === JsString(errorExtId.id)
+        json \ "errorId" === JsString(errorExtId.id)
       }
     }
   }

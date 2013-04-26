@@ -35,7 +35,7 @@ class ExtErrorReportController @Inject() (
           s": $message")
       )
     )
-    Ok(JsObject(Seq("error-id" -> JsString(errorReport.id.id))))
+    Ok(JsObject(Seq("errorId" -> JsString(errorReport.id.id))))
   }
 
   def addUnauthenticatedErrorReport = Action(parse.tolerantJson) { request =>
@@ -45,6 +45,6 @@ class ExtErrorReportController @Inject() (
       callType = Healthcheck.EXTENSION,
       errorMessage = Some(s"error of unauthenticated user: $message")
     ))
-    Ok(JsObject(Seq("error-id" -> JsString(errorReport.id.id)))).as(ContentTypes.JSON)
+    Ok(JsObject(Seq("errorId" -> JsString(errorReport.id.id)))).as(ContentTypes.JSON)
   }
 }
