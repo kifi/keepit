@@ -13,7 +13,7 @@ var injected, t0 = +new Date, tile, paneHistory;
 
   api.port.on({
     show_notification: function(n) {
-      if (!paneHistory || paneHistory[0] !== "/messages/" + (n.details.parentId || n.details.id)) {
+      if (!paneHistory || paneHistory[0] != n.details.locator) {
         api.require("scripts/notifier.js", function() {
           notifier.show(n);
         });

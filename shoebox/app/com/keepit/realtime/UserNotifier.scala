@@ -29,6 +29,7 @@ case class CommentDetails(
   id: String,               // ExternalId[Comment]
   author: BasicUser,
   recipient: BasicUser,
+  locator: String,          // DeepLink.deepLocator
   url: String,              // DeepLink.url (containing /r/)
   page: String,             // NormalizedURI.url
   title: String,            // Comment.pageTitle
@@ -41,12 +42,13 @@ case class CommentDetails(
 
 case class MessageDetails(
   id: String,               // ExternalId[Comment] of the message
-  parentId: Option[String], // ExternalId[Comment] of the parent message
+  hasParent: Boolean,
   authors: Seq[BasicUser],
   recipient: BasicUser,
-  url: Option[String],      // DeepLink.url (containing /r/)
-  page: Option[String],     // NormalizedURI.url
-  title: Option[String],    // Comment.pageTitle
+  locator: String,          // DeepLink.deepLocator
+  url: String,              // DeepLink.url (containing /r/)
+  page: String,             // NormalizedURI.url
+  title: String,            // Comment.pageTitle
   text: String,             // Comment.text
   createdAt: DateTime,
   newCount: Int,
@@ -184,8 +186,8 @@ class UserNotifier @Inject() (
           to = addr,
           subject = "%s %s sent you a message using KiFi".format(author.firstName, author.lastName),
           htmlBody = views.html.email.newMessage(
-              author, recipient, details.url.getOrElse(""), details.title.getOrElse("No title"),
-              commentFormatter.toPlainText(details.text), details.parentId.isDefined)
+              author, recipient, details.url, details.title,
+              commentFormatter.toPlainText(details.text), details.hasParent)
             .body,
           category = PostOffice.Categories.COMMENT))
     }
@@ -204,11 +206,12 @@ class UserNotifier @Inject() (
           recipientUserId = Some(userId),
           uriId = Some(comment.uriId),
           urlId = comment.urlId,
-          deepLocator = DeepLocator.ofComment(comment)))
+          deepLocator = DeepLocator.ofCommentList))
       new CommentDetails(
         comment.externalId.id,
         basicUserRepo.load(comment.userId),
         basicUserRepo.load(userId),
+        deepLink.deepLocator.value,
         deepLink.url,
         URINormalizer.normalize(uri.url),
         comment.pageTitle,
@@ -249,12 +252,13 @@ class UserNotifier @Inject() (
           deepLocator = DeepLocator.ofMessageThread(parent)))
       (userId, (lastNotice.map(_.id.get) -> new MessageDetails(
         message.externalId.id,
-        message.parent.map(_ => thread.last.externalId.id),
+        message.parent.isDefined,
         authors,
         basicUserRepo.load(userId),
-        Some(deepLink.url),
-        Some(URINormalizer.normalize(uri.url)),
-        Some(message.pageTitle),
+        deepLink.deepLocator.value,
+        deepLink.url,
+        URINormalizer.normalize(uri.url),
+        message.pageTitle,
         message.text,
         message.createdAt,
         1,

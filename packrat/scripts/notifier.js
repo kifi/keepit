@@ -19,9 +19,7 @@ var notifier = {
           sticky: false,
           showForMs: 15000,
           clickAction: function() {
-            api.port.emit("open_deep_link", {
-              nUri: o.page,
-              locator: "/comments/" + o.id});
+            api.port.emit("open_deep_link", {nUri: o.page, locator: o.locator});
             return false;
           }
         });
@@ -36,9 +34,7 @@ var notifier = {
           sticky: false,
           showForMs: 15000,
           clickAction: function() {
-            api.port.emit("open_deep_link", {
-              nUri: o.page,
-              locator: "/messages/" + (o.parentId || o.id)});
+            api.port.emit("open_deep_link", {nUri: o.page, locator: o.locator});
             return false;
           }
         });
