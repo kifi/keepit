@@ -40,7 +40,7 @@ class ExtAuthController @Inject() (
 
     val json = request.body
     val (userAgent, version, installationIdOpt) =
-      (UserAgent((json \ "agent").as[String]),
+      (UserAgent.fromString((json \ "agent").as[String]),
        KifiVersion((json \ "version").as[String]),
        (json \ "installation").asOpt[String].flatMap { id =>
          val kiId = ExternalId.asOpt[KifiInstallation](id)
