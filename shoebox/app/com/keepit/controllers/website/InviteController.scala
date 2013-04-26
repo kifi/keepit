@@ -27,7 +27,7 @@ class InviteController @Inject() (db: Database,
   userValueRepo: UserValueRepo,
   socialUserRepo: SocialUserInfoRepo,
   emailRepo: EmailAddressRepo,
-  socialConnectionRepo: SocialConnectionRepo,
+  userConnectionRepo: UserConnectionRepo,
   invitationRepo: InvitationRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   actionAuthenticator: ActionAuthenticator)
@@ -36,7 +36,7 @@ class InviteController @Inject() (db: Database,
   def invite = AuthenticatedHtmlAction { implicit request =>
     if(userCanInvite(request.experiments)) {
       val friendsOnKifi = db.readOnly { implicit session =>
-        socialConnectionRepo.getFortyTwoUserConnections(request.user.id.get).map { u =>
+        userConnectionRepo.getConnectedUsers(request.user.id.get).map { u =>
           val user = userRepo.get(u)
           if(user.state == UserStates.ACTIVE) Some(user.externalId)
           else None

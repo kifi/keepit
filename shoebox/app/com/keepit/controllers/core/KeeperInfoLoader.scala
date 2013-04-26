@@ -66,7 +66,6 @@ class KeeperInfoLoader @Inject() (
     normalizedURIRepo: NormalizedURIRepo,
     domainRepo: DomainRepo,
     userToDomainRepo: UserToDomainRepo,
-    socialConnectionRepo: SocialConnectionRepo,
     userRepo: UserRepo,
     followRepo: FollowRepo,
     bookmarkRepo: BookmarkRepo,

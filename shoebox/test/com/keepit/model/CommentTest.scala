@@ -1,22 +1,13 @@
 package com.keepit.model
 
 import org.specs2.mutable._
+
+import com.keepit.common.db.LargeString._
+import com.keepit.common.db.slick._
+import com.keepit.inject._
 import com.keepit.test.{DbRepos, EmptyApplication}
 
 import play.api.Play.current
-import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.inject._
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.db.LargeString._
-import com.keepit.common.social.SocialId
-import com.keepit.common.social.SocialNetworks
-
-import securesocial.core._
-
-import play.api.Play.current
-import play.api.test._
 import play.api.test.Helpers._
 
 class CommentTest extends Specification with DbRepos {
@@ -80,12 +71,7 @@ class CommentTest extends Specification with DbRepos {
           commentRepo.getLastPublicIdByConnection(user1.id.get, uri1.id.get).isEmpty === true
           commentRepo.getLastPublicIdByConnection(user2.id.get, uri1.id.get).isEmpty === true
           commentRepo.getLastPublicIdByConnection(user3.id.get, uri1.id.get).isEmpty === true
-
-          val socialUserInfoRepo = inject[SocialUserInfoRepo]
-          val socialUser1 = socialUserInfoRepo.save(SocialUserInfo(userId = user1.id, fullName = "Andrew Conner", socialId = SocialId("1111111"), networkType = SocialNetworks.FACEBOOK))
-          val socialUser2 = socialUserInfoRepo.save(SocialUserInfo(userId = user2.id, fullName = "Eishay Smith", socialId = SocialId("2222222"), networkType = SocialNetworks.FACEBOOK))
-          val socialConnRepo = inject[SocialConnectionRepo]
-          socialConnRepo.save(SocialConnection(socialUser1 = socialUser1.id.get, socialUser2 = socialUser2.id.get))
+          userConnRepo.save(UserConnection(user1 = user1.id.get, user2 = user2.id.get))
 
           commentRepo.getLastPublicIdByConnection(user1.id.get, uri1.id.get).size === 1
           commentRepo.getLastPublicIdByConnection(user2.id.get, uri1.id.get).size === 1
@@ -145,26 +131,26 @@ class CommentTest extends Specification with DbRepos {
         inject[CommentFormatter].toPlainText("(A) [hi there](x-kifi-sel:foo.bar#there:nth-child(2\\)>a:nth-child(1\\)) [B] C") === "(A) [hi there] [B] C"
       }
     }
-    
+
     "give the parent id for a list of recipients" in {
       running(new EmptyApplication()) {
         val (user1, user2, uri1, uri2, msg1, msg2, msg3) = setup()
         db.readWrite { implicit session =>
           val user3 = userRepo.save(User(firstName = "Bob", lastName = "Fred"))
           val user4 = userRepo.save(User(firstName = "Wilma", lastName = "Schoshlatski"))
-          
+
           commentRepo.getParentByUriParticipants(uri1.id.get, Set(user1.id.get, user4.id.get)) === None
           commentRepo.getParentByUriParticipants(uri1.id.get, Set(user1.id.get, user2.id.get)) === msg1.id
           commentRepo.getParentByUriParticipants(uri1.id.get, Set(user2.id.get, user1.id.get)) === msg1.id
           commentRepo.getParentByUriParticipants(uri2.id.get, Set(user1.id.get, user2.id.get)) === msg2.id
-          
+
           commentRepo.getParentByUriParticipants(uri1.id.get, Set(user1.id.get, user2.id.get, user3.id.get)) === None
           val msg4 = commentRepo.save(Comment(uriId = uri1.id.get, userId = user2.id.get, pageTitle = uri1.title.get, text = "Conversation on Google3", permissions = CommentPermissions.MESSAGE))
           commentRecipientRepo.save(CommentRecipient(commentId = msg4.id.get, userId = Some(user1.id.get)))
           commentRecipientRepo.save(CommentRecipient(commentId = msg4.id.get, userId = Some(user3.id.get)))
 
           commentRepo.getParentByUriParticipants(uri1.id.get, Set(user1.id.get, user2.id.get, user3.id.get)) === msg4.id
-          
+
           commentRepo.getParentByUriParticipants(uri1.id.get, Set(user1.id.get, user2.id.get)) === msg1.id
           commentRepo.getParentByUriParticipants(uri1.id.get, Set(user3.id.get, user1.id.get)) === None
           commentRepo.getParentByUriParticipants(uri1.id.get, Set(user2.id.get, user3.id.get)) === None

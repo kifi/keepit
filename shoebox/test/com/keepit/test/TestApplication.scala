@@ -79,6 +79,7 @@ trait DbRepos {
   def db = inject[Database]
   def userSessionRepo = inject[UserSessionRepo]
   def userRepo = inject[UserRepo]
+  def userConnRepo = inject[UserConnectionRepo]
   def uriRepo = inject[NormalizedURIRepo]
   def urlRepo = inject[URLRepo]
   def bookmarkRepo = inject[BookmarkRepo]

@@ -1,35 +1,22 @@
 package com.keepit.controllers.ext
 
-import play.api.data._
-import play.api._
-import play.api.data.Forms._
-import play.api.data.validation.Constraints._
-import play.api.libs.ws.WS
-import play.api.mvc._
-import play.api.http.ContentTypes
-import play.api.Play.current
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.model._
-import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
-import java.sql.Connection
-import com.keepit.common.logging.Logging
-import com.keepit.search.index.ArticleIndexer
-import com.keepit.search.index.Hit
-import com.keepit.search.graph._
-import com.keepit.search._
-import com.keepit.common.social.UserWithSocial
-import com.keepit.search.ArticleSearchResultStore
-import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.common.performance._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.future
 import scala.util.Try
-import views.html
+
 import com.google.inject.{Inject, Singleton}
+import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.db._
+import com.keepit.common.db.slick.DBSession._
+import com.keepit.common.db.slick._
+import com.keepit.common.performance._
 import com.keepit.common.social.BasicUser
 import com.keepit.common.social.BasicUserRepo
-import scala.concurrent.future
-import scala.concurrent.ExecutionContext.Implicits.global
+import com.keepit.model._
+import com.keepit.search._
+import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
+
+import play.api.http.ContentTypes
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchHit(id: Id[NormalizedURI], externalId: ExternalId[NormalizedURI], title: Option[String], url: String)
@@ -48,7 +35,7 @@ class ExtSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   userRepo: UserRepo,
-  socialConnectionRepo: SocialConnectionRepo,
+  userConnectionRepo: UserConnectionRepo,
   searchConfigManager: SearchConfigManager,
   mainSearcherFactory: MainSearcherFactory,
   articleSearchResultStore: ArticleSearchResultStore,
@@ -70,7 +57,7 @@ class ExtSearchController @Inject() (
     val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
     val (friendIds, searchFilter) = time("search-connections") {
       db.readOnly { implicit s =>
-        val friendIds = socialConnectionRepo.getFortyTwoUserConnections(userId)
+        val friendIds = userConnectionRepo.getConnectedUsers(userId)
         val searchFilter = filter match {
           case Some("m") =>
             SearchFilter.mine(idFilter)

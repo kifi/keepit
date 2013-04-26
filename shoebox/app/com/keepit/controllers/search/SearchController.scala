@@ -20,7 +20,7 @@ import views.html
 
 class SearchController @Inject()(
     db: Database,
-    socialConnectionRepo: SocialConnectionRepo,
+    userConnectionRepo: UserConnectionRepo,
     searchConfigManager: SearchConfigManager,
     userRepo: UserRepo,
     bookmarkRepo: BookmarkRepo,
@@ -36,7 +36,7 @@ class SearchController @Inject()(
 
   def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
     val friendIds = db.readOnly { implicit s =>
-      socialConnectionRepo.getFortyTwoUserConnections(userId)
+      userConnectionRepo.getConnectedUsers(userId)
     }
     val (config, _) = searchConfigManager.getConfig(userId, query)
 
@@ -78,7 +78,7 @@ class SearchController @Inject()(
     val data = new ArrayBuffer[JsArray]
     q.foreach{ q =>
       val friendIds = db.readOnly { implicit s =>
-        socialConnectionRepo.getFortyTwoUserConnections(userId)
+        userConnectionRepo.getConnectedUsers(userId)
       }
       val allUserIds = (friendIds + userId).toArray
 
