@@ -300,7 +300,7 @@ api.port.on({
   },
   get_keepers: function(_, respond, tab) {
     api.log("[get_keepers]", tab.id);
-    var d = pageData[tab.nUri];
+    var d = pageData[tab.nUri] || {};
     respond({kept: d.kept, keepers: d.keepers || [], otherKeeps: d.otherKeeps || 0});
   },
   get_num_mutual_keeps: function(data, respond) {
