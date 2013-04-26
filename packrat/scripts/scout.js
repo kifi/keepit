@@ -5,7 +5,7 @@ function logEvent() {  // parameters defined in main.js
   api.port.emit("log_event", Array.prototype.slice.call(arguments));
 }
 
-var injected, t0 = +new Date, tile;
+var injected, t0 = +new Date, tile, paneHistory;
 
 !function() {
   api.log("[scout]", location.hostname);
@@ -13,9 +13,11 @@ var injected, t0 = +new Date, tile;
 
   api.port.on({
     show_notification: function(n) {
-      api.require("scripts/notifier.js", function() {
-        notifier.show(n);
-      });
+      if (!paneHistory || paneHistory[0] != n.details.locator) {
+        api.require("scripts/notifier.js", function() {
+          notifier.show(n);
+        });
+      }
     },
     open_to: function(o) {
       keeper("showPane", o.trigger, o.locator);

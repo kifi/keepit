@@ -7,56 +7,50 @@
 
 var notifier = {
   show: function(data) {
-    var details = data.details;
+    var o = data.details;
     switch (data.category) {
       case "comment":
         KifiNotification.add({
-          title: details.author.firstName + " " + details.author.lastName,
+          title: o.author.firstName + " " + o.author.lastName,
           subtitle: "Wrote a new KiFi Comment",
-          contentHtml: details.text,
-          link: details.title,
-          image: details.author.avatar,
+          contentHtml: o.text,
+          link: o.title,
+          image: o.author.avatar,
           sticky: false,
           showForMs: 15000,
           clickAction: function() {
-            api.port.emit("open_deep_link", {
-              nUri: data.details.page,
-              locator: "/comments/" + data.details.id
-            });
+            api.port.emit("open_deep_link", {nUri: o.page, locator: o.locator});
             return false;
           }
         });
         break;
       case "message":
         KifiNotification.add({
-          title: details.authors[0].firstName + " " + details.authors[0].lastName,
+          title: o.authors[0].firstName + " " + o.authors[0].lastName,
           subtitle: "Sent you a new KiFi Message",
-          contentHtml: details.text,
-          link: details.title,
-          image: details.authors[0].avatar,
+          contentHtml: o.text,
+          link: o.title,
+          image: o.authors[0].avatar,
           sticky: false,
           showForMs: 15000,
           clickAction: function() {
-            api.port.emit("open_deep_link", {
-              nUri: data.details.page,
-              locator: "/messages/" + data.details.id
-            });
+            api.port.emit("open_deep_link", {nUri: o.page, locator: o.locator});
             return false;
           }
         });
         break;
       case "server_generated":
         KifiNotification.add({
-          title: details.title,
-          subtitle: details.subtitle,
-          contentHtml: details.bodyHtml,
-          link: details.linkText,
-          image: details.image,
-          sticky: details.sticky || false,
-          showForMs: details.showForMs || 15000,
+          title: o.title,
+          subtitle: o.subtitle,
+          contentHtml: o.bodyHtml,
+          link: o.linkText,
+          image: o.image,
+          sticky: o.sticky || false,
+          showForMs: o.showForMs || 15000,
           clickAction: function() {
-            if (details.url) {
-              var win = window.open(details.url, "_blank");
+            if (o.url) {
+              var win = window.open(o.url, "_blank");
               win.focus();
             }
           }
