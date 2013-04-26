@@ -32,6 +32,12 @@ class BrowserExtensionController(actionAuthenticator: ActionAuthenticator) exten
     }
   }
 
+  def JsonToJsonAction(authenticatedAction: AuthenticatedRequest[JsValue] => Result, unauthenticatedAction: Request[JsValue] => Result): Action[JsValue] =
+    JsonToJsonAction(false)(authenticatedAction, unauthenticatedAction)
+
+  def JsonToJsonAction(allowPending: Boolean)(authenticatedAction: AuthenticatedRequest[JsValue] => Result, unauthenticatedAction: Request[JsValue] => Result): Action[JsValue] =
+    actionAuthenticator.authenticatedAction(false, allowPending, parse.tolerantJson, authenticatedAction, unauthenticatedAction)
+
   def AuthenticatedHtmlAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] =
     actionAuthenticator.authenticatedAction(false, false, parse.anyContent, action)
 }

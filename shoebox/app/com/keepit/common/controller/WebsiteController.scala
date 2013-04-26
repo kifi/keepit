@@ -48,4 +48,5 @@ class WebsiteController(actionAuthenticator: ActionAuthenticator) extends Contro
 
   def HtmlAction(allowPending: Boolean)(authenticatedAction: AuthenticatedRequest[AnyContent] => Result, unauthenticatedAction: Request[AnyContent] => Result): Action[AnyContent] =
     actionAuthenticator.authenticatedAction(false, allowPending, parse.anyContent, authenticatedAction, unauthenticatedAction)
+
 }
