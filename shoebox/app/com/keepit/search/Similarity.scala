@@ -28,7 +28,7 @@ object Similarity extends Logging {
       val df = termStats.docFreq
       val docCount = collectionStats.docCount
       val numDocs = if (docCount < 0) collectionStats.maxDoc else docCount
-      new Explanation(idf(df, numDocs), s"idf(docFreq=${df}, numDocs=${numDocs}")
+      new Explanation(idf(df, numDocs), s"idf(docFreq=${df}, numDocs=${numDocs})")
     }
   }
 
