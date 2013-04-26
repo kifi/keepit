@@ -24,7 +24,6 @@ trait TestInjector {
   def withInjector[T](overridingModules: Module*)(f: RichInjector => T) = {
     def dbInfo: DbInfo = TestDbInfo.dbInfo
     DriverManager.registerDriver(new play.utils.ProxyDriver(Class.forName("org.h2.Driver").newInstance.asInstanceOf[Driver]))
-//    val conn = DriverManager.getConnection(TestDbInfo.url)
     val modules = {
       def overrideModule(m: Module, overriding: Module) = Modules.`override`(Seq(m): _*).`with`(overriding)
       val init = overrideModule(TestModule(Some(dbInfo)), TestActorSystemModule(ActorSystem()))

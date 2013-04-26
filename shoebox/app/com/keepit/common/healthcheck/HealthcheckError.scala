@@ -33,9 +33,14 @@ import scala.concurrent.duration._
 
 case class HealthcheckErrorSignature(value: String) extends AnyVal
 
-case class HealthcheckError(error: Option[Throwable] = None, method: Option[String] = None,
-    path: Option[String] = None, callType: CallType, errorMessage: Option[String] = None,
-    id: ExternalId[HealthcheckError] = ExternalId(), createdAt: DateTime = currentDateTime) {
+case class HealthcheckError(
+  error: Option[Throwable] = None,
+  method: Option[String] = None,
+  path: Option[String] = None,
+  callType: CallType,
+  errorMessage: Option[String] = None,
+  id: ExternalId[HealthcheckError] = ExternalId(),
+  createdAt: DateTime = currentDateTime) {
 
   lazy val signature: HealthcheckErrorSignature = {
     val permText: String =

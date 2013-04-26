@@ -61,6 +61,7 @@ class ExtStreamController @Inject() (
   normUriRepo: NormalizedURIRepo,
   commentWithBasicUserRepo: CommentWithBasicUserRepo,
   eventHelper: EventHelper,
+  impersonateCookie: ImpersonateCookie,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
@@ -74,7 +75,7 @@ class ExtStreamController @Inject() (
       secSocialUser <- UserService.find(auth.userId)
     ) yield {
 
-      val impersonatedUserIdOpt: Option[ExternalId[User]] = ImpersonateCookie.decodeFromCookie(request.cookies.get(ImpersonateCookie.COOKIE_NAME))
+      val impersonatedUserIdOpt: Option[ExternalId[User]] = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
 
       db.readOnly { implicit session =>
         val socialUser = socialUserInfoRepo.get(SocialId(secSocialUser.id.id), SocialNetworks.FACEBOOK)

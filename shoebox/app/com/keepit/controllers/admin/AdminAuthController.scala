@@ -25,11 +25,12 @@ import com.google.inject.{Inject, Singleton}
 class AdminAuthController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
-  userRepo: UserRepo)
+  userRepo: UserRepo,
+  impersonateCookie: ImpersonateCookie)
     extends AdminController(actionAuthenticator) {
 
   def unimpersonate = AdminJsonAction { request =>
-    Ok(Json.obj("userId" -> request.userId.toString)).discardingCookies(ImpersonateCookie.discard)
+    Ok(Json.obj("userId" -> request.userId.toString)).discardingCookies(impersonateCookie.discard)
   }
 
   def impersonate(id: Id[User]) = AdminJsonAction { request =>
@@ -37,6 +38,6 @@ class AdminAuthController @Inject() (
       userRepo.get(id)
     }
     log.info("impersonating user %s".format(user)) //todo(eishay) add event & email
-    Ok(Json.obj("userId" -> id.toString)).withCookies(ImpersonateCookie.encodeAsCookie(Some(user.externalId)))
+    Ok(Json.obj("userId" -> id.toString)).withCookies(impersonateCookie.encodeAsCookie(Some(user.externalId)))
   }
 }

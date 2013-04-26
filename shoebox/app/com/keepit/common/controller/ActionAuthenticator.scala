@@ -18,6 +18,18 @@ import play.api.mvc._
 import play.api.libs.json.JsNumber
 import securesocial.core._
 
+case class ReportedException(val id: ExternalId[HealthcheckError], val cause: Throwable) extends Exception(id.toString, cause)
+
+case class AuthenticatedRequest[T](
+    identity: Identity,
+    userId: Id[User],
+    user: User,
+    request: Request[T],
+    experiments: Set[State[ExperimentType]] = Set(),
+    kifiInstallationId: Option[ExternalId[KifiInstallation]] = None,
+    adminUserId: Option[Id[User]] = None)
+  extends WrappedRequest(request)
+
 object ActionAuthenticator {
   val FORTYTWO_USER_ID = "fortytwo_user_id"
 }
@@ -29,7 +41,9 @@ class ActionAuthenticator @Inject() (
   userExperimentRepo: UserExperimentRepo,
   userRepo: UserRepo,
   fortyTwoServices: FortyTwoServices,
-  healthcheckPlugin: HealthcheckPlugin)
+  healthcheckPlugin: HealthcheckPlugin,
+  impersonateCookie: ImpersonateCookie,
+  kifiInstallationCookie: KifiInstallationCookie)
     extends SecureSocial with Logging {
 
   private def loadUserId(userIdOpt: Option[Id[User]], socialId: SocialId)(implicit session: RSession) = {
@@ -56,8 +70,8 @@ class ActionAuthenticator @Inject() (
 
   private def authenticatedHandler[T](apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Result) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
       val userIdOpt = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map{id => Id[User](id.toLong)}
-      val impersonatedUserIdOpt: Option[ExternalId[User]] = ImpersonateCookie.decodeFromCookie(request.cookies.get(ImpersonateCookie.COOKIE_NAME))
-      val kifiInstallationId: Option[ExternalId[KifiInstallation]] = KifiInstallationCookie.decodeFromCookie(request.cookies.get(KifiInstallationCookie.COOKIE_NAME))
+      val impersonatedUserIdOpt: Option[ExternalId[User]] = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
+      val kifiInstallationId: Option[ExternalId[KifiInstallation]] = kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
       val socialUser = request.user
       val (userId, experiments) = loadUserContext(userIdOpt, SocialId(socialUser.id.id))
       val newSession = session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString)
@@ -120,7 +134,10 @@ class ActionAuthenticator @Inject() (
       experiments: Set[State[ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]],
       newSession: Session, request: Request[T], adminUserId: Option[Id[User]] = None, allowPending: Boolean) = {
     val user = db.readOnly(implicit s => userRepo.get(userId))
-    if (experiments.contains(ExperimentTypes.BLOCK) || user.state == UserStates.BLOCKED || user.state == UserStates.INACTIVE || (!allowPending && user.state == UserStates.PENDING)) {
+    if (experiments.contains(ExperimentTypes.BLOCK) ||
+        user.state == UserStates.BLOCKED ||
+        user.state == UserStates.INACTIVE ||
+        (!allowPending && user.state == UserStates.PENDING)) {
       val message = "user %s access is forbidden".format(userId)
       log.warn(message)
       Forbidden(message)

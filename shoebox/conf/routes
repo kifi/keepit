@@ -51,7 +51,7 @@ GET     /admin/healthcheck/isHealthy    @com.keepit.common.healthcheck.WebsiteHe
 
 ##########################################
 # Extension API
-########################################## 
+##########################################
 
 POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksController.addBookmarks
 POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
@@ -70,6 +70,7 @@ POST    /messages/:parentId         @com.keepit.controllers.ext.ExtCommentContro
 POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
 
 POST    /users/events               @com.keepit.controllers.ext.ExtEventController.logUserEvents
+POST    /error/report               @com.keepit.controllers.ext.ExtErrorReportController.addErrorReport
 
 GET     /users/picture/$width<[0-9]{2,3}>/:id       @com.keepit.controllers.assets.UserPictureController.get(width: Int, id: ExternalId[User])
 
