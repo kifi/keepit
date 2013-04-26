@@ -19,7 +19,8 @@ import org.xml.sax.SAXException
 
 abstract class TikaBasedExtractor(url: String, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends Extractor with Logging {
 
-  protected val output = new WriteOutContentHandler(maxContentChars)
+  protected val output = new TextOutputContentHandler(maxContentChars)
+
   protected val metadata = new Metadata()
 
   protected def getContentHandler: ContentHandler
