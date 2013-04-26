@@ -34,6 +34,7 @@ class AdminCommentController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   commentRepo: CommentRepo,
+  commentRepoImpl: CommentRepoImpl, // andrew: remove after grandfathering runs
   commentRecipientRepo: CommentRecipientRepo,
   normalizedURIRepo: NormalizedURIRepo,
   userWithSocialRepo: UserWithSocialRepo,
@@ -80,5 +81,19 @@ class AdminCommentController @Inject() (
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt
     Ok(html.admin.messages(uriAndUsers, page, count, pageCount))
+  }
+
+  def grandfatherDuplicateThreads = AdminHtmlAction { request =>
+    val userIds = db.readOnly(userRepo.all(_)).map(_.id.get)
+
+    log.info(s"[thread grandfathering] started grandfathering for ${userIds.size} users")
+    val updatedCounts = userIds map { userId =>
+      commentRepoImpl.grandfatherSplitConversations(userId)
+    }
+
+    val updatedThreads = updatedCounts.map(_._1).sum
+    val updatedReplies = updatedCounts.map(_._2).sum
+
+    log.info(s"[thread grandfathering] finished grandfathering. $updatedThreads updated threads, $updatedReplies updated replies.")
   }
 }

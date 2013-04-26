@@ -191,6 +191,28 @@ class CommentRepoImpl @Inject() (
       }
   }
 
+  def grandfatherSplitConversations(authorId: Id[User])(implicit session: RWSession): (Int, Int) = {
+    log.info(s"[thread grandfathering] running for author $authorId")
+    var threadsUpdated = 0
+    var repliesUpdated = 0
+
+    val threadsByAuthor = (for (b <- table if b.userId === authorId) yield b).list
+    threadsByAuthor map { thread =>
+      val recipients = commentRecipientRepoImpl.getByComment(thread.id.get).map(_.userId.get).toSet + authorId
+      val realParent = getParentByUriParticipants(thread.uriId, recipients)
+      if(realParent.id.get.id != thread.id.get.id) {
+        log.info(s"[thread grandfathering] detected duplicate thread. ${thread.id.get.id} should be ${realParent.id.get.id}")
+        threadsUpdated += 1
+        save(thread.copy(parent = realParent.id.get))
+        getChildren(thread.id.get) map { reply =>
+          repliesUpdated += 1
+          save(reply.copy(parent = realParent.id.get))
+        }
+      }
+    }
+    (threadsUpdated, repliesUpdated)
+  }
+
   def count(permissions: State[CommentPermission])(implicit session: RSession): Int =
     Query((for {
       b <- table if b.permissions === permissions && b.state === CommentStates.ACTIVE
