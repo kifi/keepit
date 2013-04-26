@@ -75,10 +75,11 @@ var injected, t0 = +new Date, tile, paneHistory;
     }
   });
 
-  document.addEventListener("keydown", function(e) {
-    if ((e.metaKey || e.ctrlKey) && e.shiftKey) {
+  document.addEventListener("keydown", onKeyDown, true);
+  function onKeyDown(e) {
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey) {  // ⌘-shift-[key], ctrl-shift-[key]
       switch (e.keyCode) {
-      case 75: // ⌘-shift-k, ctrl-shift-k
+      case 75: // k
         if (tile && tile.dataset.kept) {
           api.port.emit("unkeep");
           delete tile.dataset.kept;
@@ -86,13 +87,16 @@ var injected, t0 = +new Date, tile, paneHistory;
           api.port.emit("keep", {url: document.URL, title: document.title, how: "public"});
           if (tile) tile.dataset.kept = "public";
         }
-        return false;
-      case 79: // ⌘-shift-o, ctrl-shift-o
+        break;
+      case 79: // o
         keeper("togglePane", "key");
-        return false;
+        break;
+      case 82: // r
+        api.port.emit("api:reload");
+        break;
       }
     }
-  }, true);
+  }
 
   function keeper() {  // gateway to slider2.js
     var args = Array.prototype.slice.apply(arguments), name = args.shift();
@@ -133,6 +137,7 @@ var injected, t0 = +new Date, tile, paneHistory;
   }, 60000);
 
   api.onEnd.push(function() {
+    document.removeEventListener("keydown", onKeyDown, true);
     if (onScroll) {
       document.removeEventListener("scroll", onScroll);
       onScroll = null;
