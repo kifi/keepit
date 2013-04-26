@@ -5,11 +5,13 @@ function dispatch() {
   this.forEach(function(f) {f.apply(null, args)});
 }
 
-function extend(a, b) {
-  for (var k in b) {
-    a[k] = b[k];
+function markInjected(inj, o) {
+  for each (let arr in o) {
+    for each (let path in arr) {
+      inj[path] = true;
+    }
   }
-  return a;
+  return inj;
 }
 
 // TODO: load some of these APIs on demand instead of up front
@@ -471,7 +473,7 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
         if (privateMode.isPrivate(worker.tab)) return;
         let tab = worker.tab, page = pages[tab.id];
         exports.log("[onAttach]", tab.id, this.contentScriptFile, tab.url, page);
-        let injected = extend({}, o.injected);
+        let injected = markInjected({}, o);
         let pw = workers[tab.id];
         pw.push(worker);
         worker.on("pageshow", function() {
@@ -505,6 +507,7 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
         worker.port.on("api:require", function(path, callbackId) {
           var o = deps(path, injected);
           exports.log("[api:require] tab:", tab.id, o);
+          markInjected(injected, o);
           worker.port.emit("api:inject", o.styles.map(load), o.scripts.map(load), callbackId);
         });
       }});
