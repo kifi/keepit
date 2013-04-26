@@ -31,30 +31,33 @@ import java.util.Comparator
 import java.util.{Iterator=>JIterator}
 import org.apache.lucene.util.FixedBitSet
 
-class CachingIndexReader(val index: CachedIndex, numOfDocs: Int, liveDocs: FixedBitSet = null) extends AtomicReader with Logging {
+class CachingIndexReader(val index: CachedIndex, liveDocs: FixedBitSet = null) extends AtomicReader with Logging {
 
   def split(remappers: Map[String, DocIdRemapper]): Map[String, CachingIndexReader] = {
     val (subReaders, remainder) = remappers.foldLeft((Map.empty[String, CachingIndexReader], index)){ case ((subReaders, index), (name, remapper)) =>
-      var remapped = new CachedIndex
-      var remainder = new CachedIndex
+      val numDocsRemapped = remapper.numDocsRemapped
+      val numDocsRemained = index.numDocs - numDocsRemapped
+
+      var remapped = new CachedIndex(remapper.maxDoc, numDocsRemapped)
+      var remainder = new CachedIndex(maxDoc, numDocsRemained)
       index.foreach{ (f, t, l) =>
         val (list1, list2) = l.split(remapper)
         remapped += (f, t, list1)
         remainder += (f, t, list2)
       }
-      (subReaders + (name -> new CachingIndexReader(remapped, -1)), remainder)
+      (subReaders + (name -> new CachingIndexReader(remapped)), remainder)
     }
     if (remainder.isEmpty) {
       subReaders
     } else {
       val bits = new FixedBitSet(maxDoc)
       remainder.foreach{ (_, _, list) =>  list.dlist.foreach{ case (d, _) => bits.set(d) } }
-      subReaders + ("" -> new CachingIndexReader(remainder, maxDoc, bits))
+      subReaders + ("" -> new CachingIndexReader(remainder, bits))
     }
   }
 
-  override def numDocs() = if (liveDocs == null) numOfDocs else liveDocs.cardinality
-  override def maxDoc() = numOfDocs
+  override def numDocs() = index.numDocs
+  override def maxDoc() = index.maxDoc
 
   override def fields() = index.fields
 
@@ -120,14 +123,14 @@ class InvertedListBuilder() {
   def build = if (isEmpty) EmptyInvertedList else new InvertedList(buf.sortBy(_._1).toArray)
 }
 
-class CachedIndex(invertedLists: SortedMap[String, SortedMap[BytesRef, InvertedList]]) {
-  def this() = this(SortedMap.empty[String, SortedMap[BytesRef, InvertedList]])
+class CachedIndex(invertedLists: SortedMap[String, SortedMap[BytesRef, InvertedList]], val maxDoc: Int, val numDocs: Int) {
+  def this(maxDoc: Int, numDocs: Int) = this(SortedMap.empty[String, SortedMap[BytesRef, InvertedList]], maxDoc, numDocs)
 
   def isEmpty = invertedLists.isEmpty
 
   def +(field: String, text: BytesRef, list: InvertedList) = {
     val terms = invertedLists.getOrElse(field, SortedMap.empty[BytesRef, InvertedList])
-    new CachedIndex(invertedLists + (field -> (terms + (text -> list))))
+    new CachedIndex(invertedLists + (field -> (terms + (text -> list))), maxDoc, numDocs)
   }
 
   def foreach(f: (String, BytesRef, InvertedList) => Unit) = {
@@ -153,7 +156,7 @@ class CachedIndex(invertedLists: SortedMap[String, SortedMap[BytesRef, InvertedL
 
     override def terms(field: String): Terms = {
       invertedLists.get(field) match {
-        case Some(termSet) => new CachedTerms(termSet)
+        case Some(termSet) => new CachedTerms(termSet, numDocs)
         case _ => null
       }
     }
@@ -164,7 +167,7 @@ class CachedIndex(invertedLists: SortedMap[String, SortedMap[BytesRef, InvertedL
   override def toString() = s"CachedIndex(${invertedLists.toString})"
 }
 
-class CachedTerms(termMap: SortedMap[BytesRef, InvertedList]) extends Terms {
+class CachedTerms(termMap: SortedMap[BytesRef, InvertedList], numDocs: Int) extends Terms {
   override def iterator(reuse: TermsEnum): TermsEnum = {
     new CachedTermsEnum(termMap: SortedMap[BytesRef, InvertedList])
   }
@@ -179,9 +182,7 @@ class CachedTerms(termMap: SortedMap[BytesRef, InvertedList]) extends Terms {
     termMap.values.foldLeft(0L){ (sum, list) => sum + list.docFreq.toLong }
   }
 
-  override def getDocCount(): Int = {
-    termMap.values.foldLeft(Set.empty[Int]){ (s, list) => s ++ list.iterator.map(_._1).toSet }.size
-  }
+  override def getDocCount(): Int = numDocs
 
   override def hasOffsets() = false
 
