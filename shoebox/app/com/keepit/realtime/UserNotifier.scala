@@ -26,32 +26,32 @@ import com.keepit.common.social.ThreadInfoRepo
 import com.keepit.serializer.ThreadInfoSerializer._
 
 case class CommentDetails(
-  id: String,              // ExternalId[Comment]
+  id: String,               // ExternalId[Comment]
   author: BasicUser,
   recipient: BasicUser,
-  url: String,             // DeepLink.url (containing /r/)
-  page: String,            // NormalizedURI.url
-  title: String,           // Comment.pageTitle
-  text: String,            // Comment.text
+  url: String,              // DeepLink.url (containing /r/)
+  page: String,             // NormalizedURI.url
+  title: String,            // Comment.pageTitle
+  text: String,             // Comment.text
   createdAt: DateTime,
   newCount: Int,
   totalCount: Int,
-  subsumes: Option[String] // Option[ExternalId[UserNotification]]
+  subsumes: Option[String]  // Option[ExternalId[UserNotification]]
 )
 
 case class MessageDetails(
-  id: String,              // ExternalId[Comment] of the message
+  id: String,               // ExternalId[Comment] of the message
+  parentId: Option[String], // ExternalId[Comment] of the parent message
   authors: Seq[BasicUser],
   recipient: BasicUser,
-  url: Option[String],     // DeepLink.url (containing /r/)
-  page: Option[String],    // NormalizedURI.url
-  title: Option[String],   // Comment.pageTitle
-  text: String,            // Comment.text
+  url: Option[String],      // DeepLink.url (containing /r/)
+  page: Option[String],     // NormalizedURI.url
+  title: Option[String],    // Comment.pageTitle
+  text: String,             // Comment.text
   createdAt: DateTime,
-  hasParent: Boolean,
   newCount: Int,
   totalCount: Int,
-  subsumes: Option[String] // Option[ExternalId[UserNotification]]
+  subsumes: Option[String]  // Option[ExternalId[UserNotification]]
 )
 
 case class SendableNotification(
@@ -185,7 +185,7 @@ class UserNotifier @Inject() (
           subject = "%s %s sent you a message using KiFi".format(author.firstName, author.lastName),
           htmlBody = views.html.email.newMessage(
               author, recipient, details.url.getOrElse(""), details.title.getOrElse("No title"),
-              commentFormatter.toPlainText(details.text), details.hasParent)
+              commentFormatter.toPlainText(details.text), details.parentId.isDefined)
             .body,
           category = PostOffice.Categories.COMMENT))
     }
@@ -249,6 +249,7 @@ class UserNotifier @Inject() (
           deepLocator = DeepLocator.ofMessageThread(parent)))
       (userId, (lastNotice.map(_.id.get) -> new MessageDetails(
         message.externalId.id,
+        message.parent.map(_ => thread.last.externalId.id),
         authors,
         basicUserRepo.load(userId),
         Some(deepLink.url),
@@ -256,7 +257,6 @@ class UserNotifier @Inject() (
         Some(message.pageTitle),
         message.text,
         message.createdAt,
-        message.parent.isDefined,
         1,
         thread.size,
         lastNotice.map(_.externalId.id))))
