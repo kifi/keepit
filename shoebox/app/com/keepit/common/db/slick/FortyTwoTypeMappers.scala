@@ -11,6 +11,7 @@ import com.keepit.common.mail._
 import com.keepit.common.social.SocialId
 import com.keepit.common.social._
 import com.keepit.common.time._
+import com.keepit.common.net.UserAgent
 import com.keepit.model._
 import com.keepit.search.ArticleSearchResultRef
 import com.keepit.search.Lang
