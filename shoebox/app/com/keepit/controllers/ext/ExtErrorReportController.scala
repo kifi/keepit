@@ -31,7 +31,7 @@ class ExtErrorReportController @Inject() (
       HealthcheckError(error = None,
         callType = Healthcheck.EXTENSION,
         errorMessage = Some(s"error on user ${request.userId} extension installation id ${request.kifiInstallationId}" +
-          s" using experimants [${request.experimants.mkString(",")}]" +
+          s" using experiments [${request.experiments.mkString(",")}]" +
           s": $message")
       )
     )

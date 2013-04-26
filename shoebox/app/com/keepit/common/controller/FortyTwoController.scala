@@ -33,7 +33,7 @@ case class AuthenticatedRequest[T](
     userId: Id[User],
     user: User,
     request: Request[T],
-    experimants: Set[State[ExperimentType]] = Set(),
+    experiments: Set[State[ExperimentType]] = Set(),
     kifiInstallationId: Option[ExternalId[KifiInstallation]] = None,
     adminUserId: Option[Id[User]] = None)
   extends WrappedRequest(request)
@@ -93,13 +93,13 @@ class BrowserExtensionController(actionAuthenticator: ActionAuthenticator) exten
 }
 
 class WebsiteController(actionAuthenticator: ActionAuthenticator) extends Controller with Logging {
-  
+
   def AuthenticatedJsonAction(allowPending: Boolean)(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] =
     AuthenticatedJsonAction(allowPending, parse.anyContent)(action)
 
   def AuthenticatedJsonToJsonAction(allowPending: Boolean)(action: AuthenticatedRequest[JsValue] => Result): Action[JsValue] =
     AuthenticatedJsonAction(allowPending, parse.tolerantJson)(action)
-  
+
   def AuthenticatedJsonAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] =
     AuthenticatedJsonAction(false, parse.anyContent)(action)
 
@@ -112,7 +112,7 @@ class WebsiteController(actionAuthenticator: ActionAuthenticator) extends Contro
       case any => any
     }
   }
-  
+
   def AuthenticatedHtmlAction(action: AuthenticatedRequest[AnyContent] => Result): Action[AnyContent] =
     actionAuthenticator.authenticatedAction(false, false, parse.anyContent, action)
 

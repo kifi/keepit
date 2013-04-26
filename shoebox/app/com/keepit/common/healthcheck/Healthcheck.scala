@@ -31,7 +31,7 @@ object Healthcheck {
   case object FACEBOOK extends CallType
   case object BOOTSTRAP extends CallType
   case object INTERNAL extends CallType
-  case object EXTERNTION extends CallType
+  case object EXTENSION extends CallType
 }
 
 case object ReportErrorsAction

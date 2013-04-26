@@ -37,7 +37,7 @@ class HomeController @Inject() (db: Database,
         } flatten
       }
 
-      val userCanInvite = request.experimants & Set(ExperimentTypes.ADMIN, ExperimentTypes.CAN_INVITE) nonEmpty
+      val userCanInvite = request.experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.CAN_INVITE) nonEmpty
 
       Ok(views.html.website.userHome(request.user, friendsOnKifi, userCanInvite))
     }
