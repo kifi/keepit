@@ -29,7 +29,7 @@ class ExtErrorReportController @Inject() (
     val message = (json \ "message").as[String]
     val errorReport = healthcheck.addError(
       HealthcheckError(error = None,
-        callType = Healthcheck.EXTERNTION,
+        callType = Healthcheck.EXTENSION,
         errorMessage = Some(s"error on user ${request.userId} extension installation id ${request.kifiInstallationId}" +
           s" using experimants [${request.experimants.mkString(",")}]" +
           s": $message")
@@ -42,7 +42,7 @@ class ExtErrorReportController @Inject() (
     val json = request.body
     val message = (json \ "message").as[String]
     val errorReport = healthcheck.addError(HealthcheckError(error = None,
-      callType = Healthcheck.EXTERNTION,
+      callType = Healthcheck.EXTENSION,
       errorMessage = Some(s"error of unauthenticated user: $message")
     ))
     Ok(JsObject(Seq("error-id" -> JsString(errorReport.id.id)))).as(ContentTypes.JSON)
