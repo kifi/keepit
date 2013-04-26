@@ -53,7 +53,7 @@ if [ "$1" == "package" ]; then
   find out -d 1
 
   if [ "$2" == "deploy" ]; then
-    echo -e "\nDeploying Firefox extension to keepitfindit.com"
+    echo -e "\nDeploying Firefox extension to kifi.com"
     scp out/kifi-beta.xpi fortytwo@marvin.keep42.com:
     scp out/kifi-beta.update.rdf fortytwo@marvin.keep42.com:
     ssh fortytwo@marvin.keep42.com scp kifi-beta.* b01:www-install/
