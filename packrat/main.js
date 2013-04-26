@@ -459,10 +459,7 @@ api.port.on({
         var id = (th || data).id;
         socket.send(["get_thread", id]);
         if (data.respond) {
-          if (!d.threadCallbacks) {
-            d.threadCallbacks = [];
-          }
-          d.threadCallbacks.push({id: id, respond: respond});
+          (d.threadCallbacks = d.threadCallbacks || []).push({id: id, respond: respond});
           return true;
         }
       }

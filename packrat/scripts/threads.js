@@ -40,7 +40,7 @@ threadsPane = function() {
           var $th = $(this), id = $th.data("id");
           var recipients = $th.data("recipients") ||
             o.threads.filter(function(t) {return t.id == id})[0].recipients;
-          $th.closest(".kifi-pane").triggerHandler("kifi:show-pane", ["thread", recipients, id])
+          $th.closest(".kifi-pane").triggerHandler("kifi:show-pane", ["/messages/" + id, recipients])
         })
         .on("kifi:compose-submit", sendMessage.bind(null, $container))
         .find("time").timeago();
