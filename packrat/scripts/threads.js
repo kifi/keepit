@@ -55,10 +55,7 @@ threadsPane = function() {
     },
     update: function(thread, readTime) {
       if ($list.length) {
-        var n = messageCount(thread, new Date(readTime || 0));
-        thread.messageCount = Math.abs(n);
-        thread.messagesUnread = n < 0;
-        renderThread(thread, function($th) {
+        renderThread(thread, readTime, function($th) {
           var $old = $list.children("[data-id=" + thread.id + "],[data-id=]").first();
           if ($old.length) {
             var $thBelow = $old.nextAll(".kifi-thread");  // TODO: compare timestamps
@@ -79,6 +76,18 @@ threadsPane = function() {
           }
         });
       }
+    },
+    updateAll: function(threads, readTimes, userId) {
+      var arr = new Array(threads.length), n = 0;
+      threads.forEach(function(th, i) {
+        renderThread(th, readTimes[th.id], function($th) {
+          arr[i] = $th;
+          if (++n == arr.length) {
+            $list.children(".kifi-thread").remove().end()
+              .append(arr).layout()[0].scrollTop = 99999;
+          }
+        });
+      })
     }};
 
   function sendMessage($container, e, text, recipientIds) {
@@ -96,24 +105,27 @@ threadsPane = function() {
       o[f.id] = f;
       return o;
     }, {});
+    var now = new Date().toISOString();
     renderThread({
       id: "",
-      lastCommentedAt: new Date().toISOString(),
+      lastCommentedAt: now,
       recipients: recipientIds.split(",").map(function(id) {return friends[id]}),
-      messageCount: 1,
-      messagesUnread: false,
-      digest: text
-    }, function($th) {
+      digest: text,
+      messageTimes: {"": now}
+    }, now, function($th) {
       $list.append($th).layout()[0].scrollTop = 99999;
       $container.find(".kifi-compose-draft").empty().blur();
       $container.find(".kifi-compose-to").tokenInput("clear");
     });
   }
 
-  function renderThread(th, callback) {
+  function renderThread(th, readTime, callback) {
+    var n = messageCount(th, new Date(readTime || 0));
+    th.messageCount = Math.abs(n);
+    th.messagesUnread = n < 0;
+    th.recipientsPictured = th.recipients.slice(0, 4);
     th.formatSnippet = getSnippetFormatter;
     th.formatLocalDate = getLocalDateFormatter;
-    th.recipientsPictured = th.recipients.slice(0, 4);
     render("html/metro/thread.html", th, function(html) {
       callback($(html).data("recipients", th.recipients).find("time").timeago().end());
     });
