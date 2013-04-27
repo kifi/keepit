@@ -274,7 +274,7 @@ slider2 = function() {
 
   function toPaneName(locator) {
     var name = locator.match(/[a-z]+\/?/)[0];
-    return {messages: "threads", "messages/": "thread"}[name] || name;
+    return {messages: "threads", "messages/": "thread", "comments/": "comments"}[name] || name;
   }
 
   const createTemplateParams = {
