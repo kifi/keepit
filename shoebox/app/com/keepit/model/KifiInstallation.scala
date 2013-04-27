@@ -31,6 +31,7 @@ case class KifiVersion(major: Int, minor: Int, patch: Int, tag: String = "") ext
     Seq(major,minor,patch).mkString(".") + (if(tag != "") "-" + tag else "")
   }
 }
+
 object KifiVersion extends Logging {
   private val R = """(\d{1,3})\.(\d{1,3})\.(\d{1,3})(?:-([a-zA-Z0-9-])+)?""".r
 
