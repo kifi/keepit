@@ -299,7 +299,7 @@ api = function() {
     }
   }
 
-  var hostRe = /^https?:\/\/[^\/]*/, hexRe = /^#[0-9a-f]{3}$/i;
+  const hostRe = /^https?:\/\/[^\/]*/, hexRe = /^#[0-9a-f]{3}$/i;
   return {
     bookmarks: {
       create: function(parentId, name, url, callback) {
@@ -454,7 +454,7 @@ api = function() {
             if (id > 0) {
               var cb = callbacks[id];
               if (cb) {
-                api.log("#0ac", "[socket.receive] response", id, "(after", new Date - cb[1], "ms)");
+                api.log("#0ac", "[socket.receive] response", id, "(" + (new Date - cb[1]) +  "ms)");
                 delete callbacks[id];
                 cb[0].apply(null, msg);
               } else {

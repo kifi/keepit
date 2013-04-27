@@ -133,8 +133,9 @@ const socketHandlers = {
   },
   uri_2: function(uri, o) {
     api.log("[socket:uri_2]", o);
-    var d = pageData[uri];
+    var d = pageData[uri], dPrev, i;
     if (d) {
+      dPrev = clone(d);
       d.shown = o.shown;
       d.keepers = o.keepers || [];
       d.keeps = o.keeps || 0;
@@ -143,11 +144,8 @@ const socketHandlers = {
       d.comments = o.comments || [];
       d.threads = o.threads || [];
       d.messages = {};
-      d.lastCommentRead = new Date(o.lastCommentRead || 0);
-      d.lastMessageRead = {};
-      for (var k in o.lastMessageRead) {
-        d.lastMessageRead[k] = new Date(o.lastMessageRead[k]);
-      }
+      d.lastCommentRead = o.lastCommentRead;
+      d.lastMessageRead = o.lastMessageRead;
       d.counts = {
         n: -newNotificationIdxs.length,
         c: commentCount(d),
@@ -155,6 +153,42 @@ const socketHandlers = {
       d.tabs.forEach(function(tab) {
         initTab(tab, d);
       });
+
+      // send tabs any missed updates
+      if (dPrev.comments) {
+        for (i = dPrev.comments.length; i < d.comments.length; i++) {  // TODO: combine if more than one
+          d.tabs.forEach(function(tab) {
+            api.tabs.emit(tab, "comment", {comment: d.comments[i], userId: session.userId});
+          });
+        }
+      }
+      if (dPrev.threads) {
+        var threadsWithNewMessages = [];
+        d.threads.forEach(function(th) {
+          var thPrev = dPrev.threads.filter(hasId(th.id))[0];
+          var numNew = th.messageCount - (thPrev && thPrev.messageCount || 0);
+          if (numNew) {
+            socket.send(["get_thread", th.id]);
+            (d.threadCallbacks = d.threadCallbacks || []).push({id: th.id, respond: function(th) {
+              d.tabs.forEach(function(tab) {
+                // TODO: may want to special case (numNew == 1) for an animation
+                api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages, userId: session.userId});
+              });
+            }});
+            threadsWithNewMessages.push(th);
+          }
+        });
+        if (threadsWithNewMessages.length == 1) {
+          var th = threadsWithNewMessages[0];
+          d.tabs.forEach(function(tab) {
+            api.tabs.emit(tab, "thread_info", {thread: th, read: d.lastMessageRead[th.id]});
+          });
+        } else if (threadsWithNewMessages.length > 1) {
+          d.tabs.forEach(function(tab) {
+            api.tabs.emit(tab, "threads", {threads: d.threads, readTimes: d.lastMessageRead, userId: session.userId});
+          });
+        }
+      }
     }
   },
   notification: function(notification) {
@@ -198,7 +232,7 @@ const socketHandlers = {
     if (d && d.comments) {
       d.comments.push(c);
       d.tabs.forEach(function(tab) {
-        api.tabs.emit(tab, "comment", c);
+        api.tabs.emit(tab, "comment", {comment: c, userId: session.userId});
       });
       tellTabsIfCountChanged(d, "c", commentCount(d));
     }
@@ -207,7 +241,7 @@ const socketHandlers = {
     api.log("[socket:comment_read]", nUri, time);
     var d = pageData[nUri];
     if (d) {
-      d.lastCommentRead = new Date(time);
+      d.lastCommentRead = time;
       tellTabsIfCountChanged(d, "c", commentCount(d));
     }
   },
@@ -255,13 +289,12 @@ const socketHandlers = {
       }
       // ensure marked read if from this user
       if (message.user.id == session.userId) {
-        t = new Date(message.createdAt);
-        if (t > (d.lastMessageRead[th.id] || 0)) {
-          d.lastMessageRead[th.id] = t;
+        if (new Date(message.createdAt) > new Date(d.lastMessageRead[th.id] || 0)) {
+          d.lastMessageRead[th.id] = message.createdAt;
         }
       }
       d.tabs.forEach(function(tab) {
-        api.tabs.emit(tab, "message", {thread: th, message: message, read: d.lastMessageRead[th.id]});
+        api.tabs.emit(tab, "message", {thread: th, message: message, read: d.lastMessageRead[th.id], userId: session.userId});
       });
       tellTabsIfCountChanged(d, "m", messageCount(d));
     }
@@ -270,7 +303,7 @@ const socketHandlers = {
     api.log("[socket:message_read]", nUri, threadId, time);
     var d = pageData[nUri];
     if (d) {
-      d.lastMessageRead[threadId] = new Date(time);
+      d.lastMessageRead[threadId] = time;
       d.tabs.forEach(function(tab) {
         api.tabs.emit(tab, "thread_info", {thread: d.threads.filter(hasId(threadId))[0], read: d.lastMessageRead[threadId]});
       });
@@ -412,11 +445,11 @@ api.port.on({
     return true;
   },
   set_comment_read: function(o, _, tab) {
-    var d = pageData[tab.nUri], time = new Date(o.time);
-    if (!d || time > d.lastCommentRead) {
-      markNewNotificeVisited("comment", o.id);
+    var d = pageData[tab.nUri];
+    if (!d || new Date(o.time) > new Date(d.lastCommentRead)) {
+      markNewNoticeVisited("comment", o.id);
       if (d) {
-        d.lastCommentRead = time;
+        d.lastCommentRead = o.time;
         tellTabsIfCountChanged(d, "c", commentCount(d));  // tabs at this uri
       }
       tellTabsNoticeCountIfChanged();  // visible tabs
@@ -424,11 +457,11 @@ api.port.on({
     }
   },
   set_message_read: function(o, _, tab) {
-    var d = pageData[tab.nUri], time = new Date(o.time);
-    if (!d || time > (d.lastMessageRead[o.threadId] || 0)) {
+    var d = pageData[tab.nUri];
+    if (!d || new Date(o.time) > new Date(d.lastMessageRead[o.threadId] || 0)) {
       markNewNoticeVisited("message", o.messageId);
       if (d) {
-        d.lastMessageRead[o.threadId] = time;
+        d.lastMessageRead[o.threadId] = o.time;
         tellTabsIfCountChanged(d, "m", messageCount(d));  // tabs at this uri
       }
       tellTabsNoticeCountIfChanged();  // visible tabs
@@ -770,15 +803,21 @@ function subscribe(tab) {
   if (!tab.icon) {
     api.icon.set(tab, "icons/keep.faint.png");
   }
-  var d = pageData[tab.url];
-  if (d && d.seq == socket.seq) {  // optimization: page url is normalized and page is open elsewhere
-    finish(tab.url);
-    if (d.hasOwnProperty("kept")) {
-      setIcon(tab, d.kept);
-      sendKept(tab, d);
-      if (d.counts) {
-        initTab(tab, d);
-      }
+  var d = pageData[tab.nUri || tab.url];
+  if (d && d.seq == socket.seq) {  // no need to ask server again
+    if (tab.seq == socket.seq) {  // tab is up-to-date
+      api.tabs.emit(tab, "counts", d.counts);
+    } else {
+      finish(tab.nUri || tab.url);
+      if (d.hasOwnProperty("kept")) {
+        if (tab.seq != d.seq) {
+          setIcon(tab, d.kept);
+          sendKept(tab, d);
+          if (d.counts) {
+            initTab(tab, d);
+          } // else wait for uri_2
+        }
+      } // else wait for uri_1
     }
   } else if (socket) {
     socket.send(["subscribe_uri", tab.url], function(uri) {
@@ -789,6 +828,7 @@ function subscribe(tab) {
   }
   function finish(uri) {
     tab.nUri = uri;
+    tab.seq = d.seq;
     for (var i = 0; i < d.tabs.length; i++) {
       if (d.tabs[i].id == tab.id) {
         d.tabs.splice(i--, 1);
@@ -826,18 +866,21 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
   });
 }
 
+function clone(o) {
+  var c = {};
+  for (var k in o) {
+    c[k] = o[k];
+  }
+  return c;
+}
+
 // ===== Browser event listeners
 
 api.tabs.on.focus.add(function(tab) {
   api.log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab);
+  subscribe(tab);
   if (tab.autoShowSec != null && !tab.autoShowTimer) {
     scheduleAutoShow(tab);
-  } else {
-    subscribe(tab);
-  }
-  var d = pageData[tab.nUri];
-  if (d && d.counts) {
-    api.tabs.emit(tab, "counts", d.counts);
   }
 });
 

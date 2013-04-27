@@ -27,14 +27,13 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
     api.log("#0bf", "[RWS.connect]");
 
     ws = new WebSocket(url);
-    t = setTimeout(onConnectTimeout.bind(null, ws), 5000);
+    t = setTimeout(onConnectTimeout.bind(null, ws), 25000);
 
     ws.onopen = function() {
       api.log("#0bf", "[RWS.onopen]");
       clearTimeout(t);
       t = setTimeout(onConnectTimeout.bind(null, ws), 2000);
     };
-
     ws.onclose = function(e) {
       api.log("#0bf", "[RWS.onclose] %o buffer: %o", e, buffer);
       clearTimeout(t);
@@ -45,8 +44,12 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
         retryConnectDelayMs = Math.min(maxRetryConnectDelayMs, retryConnectDelayMs * 1.5);
       }
     };
-
+    ws.onerror = onError;
     ws.onmessage = onMessage1;
+  }
+
+  function onError(e) {
+    api.log("#a00", "[RWS.onerror]", e);
   }
 
   function onMessage1(e) {
@@ -75,15 +78,14 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
     if (e.data === '["pong"]') {
       api.log("#0ac", "[RWS.pong]");
     } else {
-      onmessage.call(self, e);
+      onMessage.call(self, e);
     }
     clearTimeout(t);
     t = setTimeout(ping, idlePingDelayMs);
   }
 
   function onConnectTimeout(ws) {
-    api.log("#0bf", "[RWS.onConnectTimeout]");
-    ws.onerror = function() {};
+    api.log("#0bf", "[RWS.onConnectTimeout]", ws.readyState);
     ws.close();
   }
 
