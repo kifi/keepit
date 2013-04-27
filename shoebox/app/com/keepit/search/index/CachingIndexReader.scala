@@ -155,10 +155,8 @@ class CachedIndex(invertedLists: SortedMap[String, SortedMap[BytesRef, InvertedL
     override def iterator(): JIterator[String] = invertedLists.keySet.iterator
 
     override def terms(field: String): Terms = {
-      invertedLists.get(field) match {
-        case Some(termSet) => new CachedTerms(termSet, numDocs)
-        case _ => null
-      }
+      val termSet = invertedLists.getOrElse(field, SortedMap.empty[BytesRef, InvertedList])
+      new CachedTerms(termSet, numDocs)
     }
 
     override def size() = invertedLists.size
@@ -269,7 +267,6 @@ class CachedDocsAndPositionsEnum(list: InvertedList) extends DocsAndPositionsEnu
       docid
     }
   }
-
 
   override def advance(target: Int): Int = {
     do { nextDoc() } while (docid < target)
