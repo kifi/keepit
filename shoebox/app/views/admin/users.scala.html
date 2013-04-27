@@ -1,5 +1,13 @@
 @(userStatisticsList: Seq[com.keepit.controllers.admin.UserStatistics])
 
+@kifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
+  <ul>
+    @for(installation <- kifiInstallations) {
+      <li>@{installation.version}; @{installation.userAgent.userAgent} - @{installation.userAgent.name}:@{installation.userAgent.version} @{installation.userAgent.operatingSystemName}</li>
+    }
+  </ul>
+}
+
 @admin("All " + userStatisticsList.size + " Users") {
   <table class="table table-bordered">
     <tr>
@@ -21,11 +29,11 @@
       <td>@adminHelper.dateDisplay(userStatistics.user.createdAt)</td>
       <td><a href='mailto:@{userStatistics.userWithSocial.emails.map(_.address).mkString(",")}'>@{userStatistics.userWithSocial.emails.map(_.address).mkString(", ")}</a></td>
       <td>@userStatistics.userWithSocial.experiments.mkString(", ")</td>
-      <td>@userStatistics.kifiInstallations.map(_.version).mkString(", ")</td>
+      <td>@kifiInstallations(userStatistics.kifiInstallations)</td>
     </tr>
   }
   </table>
-  
+
   <h2>Global notification</h2>
   <form class="form-horizontal" action="@com.keepit.controllers.admin.routes.AdminUserController.sendNotificationToAllUsers()" method="POST">
     <div class="control-group">

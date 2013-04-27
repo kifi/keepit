@@ -415,9 +415,9 @@ class KifiVersionMapperDelegate(profile: BasicProfile) extends StringMapperDeleg
 //       UserAgent -> String
 //************************************
 class UserAgentMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[UserAgent](profile) {
-  def zero = UserAgent("")
+  def zero = UserAgent.fromString("")
   def sourceToDest(value: UserAgent) = value.userAgent
-  def safeDestToSource(str: String) = UserAgent(str)
+  def safeDestToSource(str: String) = UserAgent.fromString(str)
 }
 
 //************************************
