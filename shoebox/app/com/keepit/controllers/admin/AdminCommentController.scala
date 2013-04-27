@@ -84,7 +84,7 @@ class AdminCommentController @Inject() (
   }
 
   def grandfatherDuplicateThreads = AdminHtmlAction { request =>
-    val userIds = db.readOnly(userRepo.all(_)).map(_.id.get)
+    val userIds = db.readOnly(implicit s => userRepo.all).map(_.id.get)
 
     log.info(s"[thread grandfathering] started grandfathering for ${userIds.size} users")
     val updatedCounts = userIds map { userId =>
@@ -98,5 +98,6 @@ class AdminCommentController @Inject() (
     val updatedReplies = updatedCounts.map(_._2).sum
 
     log.info(s"[thread grandfathering] finished grandfathering. $updatedThreads updated threads, $updatedReplies updated replies.")
+    Ok
   }
 }

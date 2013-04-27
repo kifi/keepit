@@ -18,8 +18,8 @@ import com.keepit.common.cache._
 
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
-
 import collection.SeqProxy
+import com.keepit.common.logging._
 
 
 case class Comment(
@@ -81,7 +81,7 @@ class CommentRepoImpl @Inject() (
   val commentCountCache: CommentCountUriIdCache,
   socialConnectionRepoImpl: SocialConnectionRepoImpl,
   commentRecipientRepoImpl: CommentRecipientRepoImpl)
-    extends DbRepo[Comment] with CommentRepo with ExternalIdColumnDbFunction[Comment] {
+    extends DbRepo[Comment] with CommentRepo with ExternalIdColumnDbFunction[Comment] with Logging {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
@@ -199,15 +199,18 @@ class CommentRepoImpl @Inject() (
     val threadsByAuthor = (for (b <- table if b.userId === authorId) yield b).list
     threadsByAuthor map { thread =>
       val recipients = commentRecipientRepoImpl.getByComment(thread.id.get).map(_.userId.get).toSet + authorId
-      val realParent = getParentByUriParticipants(thread.uriId, recipients)
-      if(realParent.id.get.id != thread.id.get.id) {
+      val realParentId = getParentByUriParticipants(thread.uriId, recipients)
+      if (realParentId.isDefined && 
+          thread.id.get.id != realParentId.get.id && 
+          (thread.parent.isEmpty || thread.parent.get.id != realParentId.get.id)) {
+        val realParent = get(realParentId.get)
         log.info(s"[thread grandfathering] detected duplicate thread. ${thread.id.get.id} should be ${realParent.id.get.id}")
         threadsUpdated += 1
-        save(thread.copy(parent = realParent.id.get))
         getChildren(thread.id.get) map { reply =>
           repliesUpdated += 1
-          save(reply.copy(parent = realParent.id.get))
+          save(reply.copy(parent = realParent.id))
         }
+        save(thread.copy(parent = realParent.id))
       }
     }
     (threadsUpdated, repliesUpdated)
