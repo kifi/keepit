@@ -1,4 +1,4 @@
-function ReconnectingWebSocket(url, onmessage) {
+function ReconnectingWebSocket(url, onMessage, onConnect) {
   const wordRe = /\w+/, minRetryConnectDelayMs = 300, maxRetryConnectDelayMs = 5000, idlePingDelayMs = 30000;
   var ws, self = this, buffer = [], closed, t, retryConnectDelayMs = minRetryConnectDelayMs;
 
@@ -27,14 +27,13 @@ function ReconnectingWebSocket(url, onmessage) {
     api.log("#0bf", "[RWS.connect]");
 
     ws = new WebSocket(url);
-    t = setTimeout(onConnectTimeout.bind(null, ws), 5000);
+    t = setTimeout(onConnectTimeout.bind(null, ws), 25000);
 
     ws.onopen = function() {
       api.log("#0bf", "[RWS.onopen]");
       clearTimeout(t);
       t = setTimeout(onConnectTimeout.bind(null, ws), 2000);
     };
-
     ws.onclose = function(e) {
       api.log("#0bf", "[RWS.onclose] %o buffer: %o", e, buffer);
       clearTimeout(t);
@@ -45,8 +44,12 @@ function ReconnectingWebSocket(url, onmessage) {
         retryConnectDelayMs = Math.min(maxRetryConnectDelayMs, retryConnectDelayMs * 1.5);
       }
     };
-
+    ws.onerror = onError;
     ws.onmessage = onMessage1;
+  }
+
+  function onError(e) {
+    api.log("#a00", "[RWS.onerror]", e);
   }
 
   function onMessage1(e) {
@@ -55,6 +58,7 @@ function ReconnectingWebSocket(url, onmessage) {
       ws.greeted = true;
       ws.onmessage = onMessageN;
       retryConnectDelayMs = minRetryConnectDelayMs;
+      onConnect();
       while (buffer.length) {
         var a = buffer.shift();
         api.log("#0bf", "[RWS] sending, buffered for %i ms: %s", new Date - a[1], (wordRe.exec(a[0]) || a)[0]);
@@ -64,7 +68,7 @@ function ReconnectingWebSocket(url, onmessage) {
       api.log("#a00", "[RWS.onMessage1]", e.data);
     } else {
       api.log("#a00", "[RWS.onMessage1] relaying");
-      onmessage.call(self, e);
+      onMessage.call(self, e);
     }
     clearTimeout(t);
     t = setTimeout(ping, idlePingDelayMs);
@@ -74,15 +78,14 @@ function ReconnectingWebSocket(url, onmessage) {
     if (e.data === '["pong"]') {
       api.log("#0ac", "[RWS.pong]");
     } else {
-      onmessage.call(self, e);
+      onMessage.call(self, e);
     }
     clearTimeout(t);
     t = setTimeout(ping, idlePingDelayMs);
   }
 
   function onConnectTimeout(ws) {
-    api.log("#0bf", "[RWS.onConnectTimeout]");
-    ws.onerror = function() {};
+    api.log("#0bf", "[RWS.onConnectTimeout]", ws.readyState);
     ws.close();
   }
 
