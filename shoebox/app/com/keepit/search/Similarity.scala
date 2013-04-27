@@ -27,7 +27,7 @@ object Similarity extends Logging {
     override def idfExplain(collectionStats: CollectionStatistics, termStats: TermStatistics): Explanation = {
       val df = termStats.docFreq
       val docCount = collectionStats.docCount
-      val numDocs = if (docCount < 0) collectionStats.maxDoc else docCount
+      val numDocs = if (docCount <= 0) collectionStats.maxDoc else docCount
       new Explanation(idf(df, numDocs), s"idf(docFreq=${df}, numDocs=${numDocs})")
     }
   }

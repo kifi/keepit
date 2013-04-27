@@ -27,7 +27,7 @@ class DocIdRemapperWithDeletionCheck(srcMapper: IdMapper, dstMapper: IdMapper, l
   def numDocsRemapped(): Int = {
     var numRemapped = 0
     var docid = 0
-    var srcMaxDoc = srcMapper.maxDoc
+    val srcMaxDoc = srcMapper.maxDoc
     while (docid < srcMaxDoc) {
       val newDocId = dstMapper.getDocId(srcMapper.getId(docid))
       if (newDocId >= 0 && liveDocs.get(newDocId)) numRemapped += 1
@@ -45,7 +45,7 @@ class DocIdRemapperNoDeletionCheck(srcMapper: IdMapper, dstMapper: IdMapper) ext
   def numDocsRemapped(): Int = {
     var numRemapped = 0
     var docid = 0
-    var srcMaxDoc = srcMapper.maxDoc
+    val srcMaxDoc = srcMapper.maxDoc
     while (docid < srcMaxDoc) {
       if (dstMapper.getDocId(srcMapper.getId(docid)) >= 0) numRemapped += 1
       docid += 1
