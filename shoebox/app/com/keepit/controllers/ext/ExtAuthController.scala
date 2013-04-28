@@ -33,6 +33,7 @@ class ExtAuthController @Inject() (
   userExperimentRepo: UserExperimentRepo,
   kifiInstallationCookie: KifiInstallationCookie)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
+
   def start = AuthenticatedJsonToJsonAction { implicit request =>
     val userId = request.userId
     val identity = request.identity
@@ -40,7 +41,7 @@ class ExtAuthController @Inject() (
 
     val json = request.body
     val (userAgent, version, installationIdOpt) =
-      (UserAgent((json \ "agent").as[String]),
+      (UserAgent.fromString((json \ "agent").as[String]),
        KifiVersion((json \ "version").as[String]),
        (json \ "installation").asOpt[String].flatMap { id =>
          val kiId = ExternalId.asOpt[KifiInstallation](id)
