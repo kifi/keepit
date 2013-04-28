@@ -19,7 +19,7 @@ class HomeController @Inject() (db: Database,
   userValueRepo: UserValueRepo,
   socialUserRepo: SocialUserInfoRepo,
   emailRepo: EmailAddressRepo,
-  socialConnectionRepo: SocialConnectionRepo,
+  userConnectionRepo: UserConnectionRepo,
   invitationRepo: InvitationRepo,
   actionAuthenticator: ActionAuthenticator,
   postOffice: PostOffice)
@@ -30,14 +30,14 @@ class HomeController @Inject() (db: Database,
     if(request.user.state == UserStates.PENDING) { pendingHome() }
     else {
       val friendsOnKifi = db.readOnly { implicit session =>
-        socialConnectionRepo.getFortyTwoUserConnections(request.user.id.get).map { u =>
+        userConnectionRepo.getConnectedUsers(request.user.id.get).map { u =>
           val user = userRepo.get(u)
           if(user.state == UserStates.ACTIVE) Some(user.externalId)
           else None
         } flatten
       }
 
-      val userCanInvite = request.experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.CAN_INVITE) nonEmpty
+      val userCanInvite = (request.experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.CAN_INVITE)).nonEmpty
 
       Ok(views.html.website.userHome(request.user, friendsOnKifi, userCanInvite))
     }
@@ -75,11 +75,11 @@ class HomeController @Inject() (db: Database,
     }
     val (email, friendsOnKifi) = db.readOnly { implicit session =>
       val email = emailRepo.getByUser(user.id.get).headOption.map(_.address)
-      val friendsOnKifi = socialConnectionRepo.getFortyTwoUserConnections(user.id.get).map { u =>
+      val friendsOnKifi = userConnectionRepo.getConnectedUsers(user.id.get).map { u =>
         val user = userRepo.get(u)
         if(user.state == UserStates.ACTIVE) Some(user.externalId)
         else None
-      } flatten
+      }.flatten
 
       (email, friendsOnKifi)
     }

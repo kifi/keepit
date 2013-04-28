@@ -36,6 +36,7 @@ class AdminUserController @Inject() (
     socialUserRawInfoStore: SocialUserRawInfoStore,
     bookmarkRepo: BookmarkRepo,
     socialConnectionRepo: SocialConnectionRepo,
+    userConnectionRepo: UserConnectionRepo,
     kifiInstallationRepo: KifiInstallationRepo,
     browsingHistoryRepo: BrowsingHistoryRepo,
     emailRepo: EmailAddressRepo,
@@ -77,7 +78,9 @@ class AdminUserController @Inject() (
       val bookmarks = bookmarkRepo.getByUser(userId)
       val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
       val socialConnections = socialConnectionRepo.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
-      val fortyTwoConnections = (socialConnectionRepo.getFortyTwoUserConnections(userId) map (userRepo.get(_)) map userWithSocialRepo.toUserWithSocial toSeq).sortWith((a,b) => a.socialUserInfo.fullName < b.socialUserInfo.fullName)
+      val fortyTwoConnections = userConnectionRepo.getConnectedUsers(userId).map { userId =>
+        userWithSocialRepo.toUserWithSocial(userRepo.get(userId))
+      }.toSeq.sortBy(_.socialUserInfo.fullName)
       val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
       val allowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").getOrElse("6").toInt
       (userWithSocial, (bookmarks, uris).zipped.toList.seq, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites)
@@ -146,7 +149,7 @@ class AdminUserController @Inject() (
 
     Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
   }
-  
+
   def setInvitesCount(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val count = request.request.body.asFormUrlEncoded.get("allowedInvites").headOption.getOrElse("6")
     db.readWrite{ implicit session =>

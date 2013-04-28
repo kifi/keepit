@@ -6,9 +6,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.logging.Logging
-import com.keepit.common.social.SocialGraphPlugin
-import com.keepit.common.social.SocialId
-import com.keepit.common.social.SocialNetworkType
+import com.keepit.common.social.{UserConnectionCreator, SocialGraphPlugin, SocialId, SocialNetworkType}
 import com.keepit.inject._
 import com.keepit.model._
 import play.api.Application
@@ -93,7 +91,7 @@ class SecureSocialAuthenticatorPlugin @Inject()(
     } catch {
       case ex: Throwable => None
     }
-    
+
     externalIdOpt.map{ externalId =>
       db.readOnly { implicit s =>
         sessionRepo.getOpt(externalId)

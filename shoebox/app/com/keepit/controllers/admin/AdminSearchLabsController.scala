@@ -15,7 +15,6 @@ class AdminSearchLabsController @Inject() (
   db: Database,
   searchConfigManager: SearchConfigManager,
   normalizedURIRepo: NormalizedURIRepo,
-  socialConnectionRepo: SocialConnectionRepo,
   userRepo: UserRepo,
   searchClient: SearchServiceClient)
     extends AdminController(actionAuthenticator) {

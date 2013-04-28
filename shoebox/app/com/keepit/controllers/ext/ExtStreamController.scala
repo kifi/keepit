@@ -5,18 +5,14 @@ import com.keepit.common.controller._
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.common.logging.Logging
 import com.keepit.common.net.URINormalizer
 import com.keepit.common.social._
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.realtime._
-import java.util.UUID
-import com.google.inject.ImplementedBy
 import com.google.inject.Inject
 import com.google.inject.Singleton
 import play.api.libs.iteratee.Concurrent
-import play.api.libs.iteratee.Concurrent.{ Channel => PlayChannel }
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.json._
@@ -45,7 +41,7 @@ class ExtStreamController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   socialUserInfoRepo: SocialUserInfoRepo,
-  socialConnectionRepo: SocialConnectionRepo,
+  userConnectionRepo: UserConnectionRepo,
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   experimentRepo: UserExperimentRepo,
@@ -220,7 +216,7 @@ class ExtStreamController @Inject() (
 
   private def getFriends(userId: Id[User]): Set[BasicUser] = {
     db.readOnly { implicit s =>
-      socialConnectionRepo.getFortyTwoUserConnections(userId).map(basicUserRepo.load)
+      userConnectionRepo.getConnectedUsers(userId).map(basicUserRepo.load)
     }
   }
 
