@@ -30,7 +30,7 @@ private[social] class SocialGraphActor @Inject() (
     socialUserRawInfoStore: SocialUserRawInfoStore,
     socialUserImportFriends: SocialUserImportFriends,
     socialUserImportEmail: SocialUserImportEmail,
-    socialUserCreateConnections: SocialUserCreateConnections)
+    socialUserCreateConnections: UserConnectionCreator)
   extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
@@ -57,7 +57,7 @@ private[social] class SocialGraphActor @Inject() (
         require(socialUserInfo.credentials.isDefined,
           "social user info's credentials are not defined: %s".format(socialUserInfo))
         val rawInfo = graph.fetchSocialUserRawInfo(socialUserInfo)
-        
+
         socialUserImportEmail.importEmail(socialUserInfo.userId.get, rawInfo.jsons)
         socialUserRawInfoStore += (socialUserInfo.id.get -> rawInfo)
 
