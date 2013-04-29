@@ -337,7 +337,6 @@ api = function() {
       },
       remove: chrome.bookmarks.remove.bind(chrome.bookmarks),
       search: chrome.bookmarks.search.bind(chrome.bookmarks)},
-    browserVersion: navigator.userAgent.replace(/^.*(Chrom[ei][^ ]*).*$/, "$1"),
     icon: {
       on: {click: new Listeners},
       set: function(tab, path) {

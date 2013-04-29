@@ -1005,7 +1005,7 @@ function authenticate(callback) {
     ajax("POST", "/kifi/start", {
       installation: getStored("kifi_installation_id"),
       version: api.version,
-      agent: api.browserVersion},
+      agent: navigator.userAgent},
     function done(data) {
       api.log("[startSession] reason: %s session: %o", api.loadReason, data);
       logEvent("extension", "authenticated");
