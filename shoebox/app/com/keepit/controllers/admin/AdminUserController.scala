@@ -14,7 +14,7 @@ import views.html
 import play.api.data._
 import play.api.data.Forms._
 import com.keepit.realtime.UserChannel
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
@@ -220,7 +220,7 @@ class AdminUserController @Inject() (
 
     val json = Json.arr(
       "notify", Json.obj(
-        "createdAt" -> clock.now,
+        "createdAt" -> clock.now(),
         "category" -> "server_generated",
         "details" -> Json.obj(
           "title" -> title,
