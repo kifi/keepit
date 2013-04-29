@@ -1,6 +1,6 @@
 package com.keepit.common.db
 
-import com.keepit.common.time.Clock
+import com.keepit.common.time._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.test._
@@ -57,7 +57,7 @@ class SlickStandaloneTest extends Specification with TestDBRunner {
       }
 
       withDB() { implicit injector =>
-        val repo: BarRepoImpl = new BarRepoImpl(db.db, new Clock())
+        val repo: BarRepoImpl = new BarRepoImpl(db.db, new SystemClock())
         2 == 2
         db.readWrite{ implicit session =>
           val fooA = repo.save(Bar(name = "A"))
