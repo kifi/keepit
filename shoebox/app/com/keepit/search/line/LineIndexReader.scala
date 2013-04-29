@@ -16,7 +16,7 @@ import scala.collection.SortedMap
 object LineIndexReader {
 
   def apply(indexReader: AtomicReader, userDocId: Int, terms: Set[Term], numLines: Int) = {
-    val index = terms.foldLeft(new CachedIndex){ (index, term) =>
+    val index = terms.foldLeft(new CachedIndex(numLines, numLines)){ (index, term) =>
       val field = term.field
       val text = term.bytes
       val tp = indexReader.termPositionsEnum(term)
@@ -43,6 +43,6 @@ object LineIndexReader {
         index
       }
     }
-    new CachingIndexReader(index, numLines)
+    new CachingIndexReader(index)
   }
 }

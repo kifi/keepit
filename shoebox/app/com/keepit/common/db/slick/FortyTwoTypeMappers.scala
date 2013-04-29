@@ -11,6 +11,7 @@ import com.keepit.common.mail._
 import com.keepit.common.social.SocialId
 import com.keepit.common.social._
 import com.keepit.common.time._
+import com.keepit.common.net.UserAgent
 import com.keepit.model._
 import com.keepit.search.ArticleSearchResultRef
 import com.keepit.search.Lang
@@ -414,9 +415,9 @@ class KifiVersionMapperDelegate(profile: BasicProfile) extends StringMapperDeleg
 //       UserAgent -> String
 //************************************
 class UserAgentMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[UserAgent](profile) {
-  def zero = UserAgent("")
+  def zero = UserAgent.fromString("")
   def sourceToDest(value: UserAgent) = value.userAgent
-  def safeDestToSource(str: String) = UserAgent(str)
+  def safeDestToSource(str: String) = UserAgent.fromString(str)
 }
 
 //************************************

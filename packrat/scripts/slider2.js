@@ -274,7 +274,7 @@ slider2 = function() {
 
   function toPaneName(locator) {
     var name = locator.match(/[a-z]+\/?/)[0];
-    return {messages: "threads", "messages/": "thread"}[name] || name;
+    return {messages: "threads", "messages/": "thread", "comments/": "comments"}[name] || name;
   }
 
   const createTemplateParams = {
@@ -536,19 +536,21 @@ slider2 = function() {
     kept: function(o) {
       if ($slider) updateKeptDom($slider.find(".kifi-slider2-keep"), o.kept);
     },
-    comment: function(comment) {
-      api.port.emit("session", function(session) {
-        commentsPane.update(comment, session.userId);
-      });
+    comment: function(o) {
+      commentsPane.update(o.comment, o.userId);
     },
     thread_info: function(o) {
       threadsPane.update(o.thread, o.read);
     },
+    threads: function(o) {
+      threadsPane.updateAll(o.threads, o.readTimes, o.userId);
+    },
     message: function(o) {
-      api.port.emit("session", function(session) {
-        threadsPane.update(o.thread, o.read);
-        threadPane.update(o.thread, o.message, session.userId);
-      });
+      threadsPane.update(o.thread, o.read);
+      threadPane.update(o.thread, o.message, o.userId);
+    },
+    thread: function(o) {
+      threadPane.updateAll(o.id, o.messages, o.userId);
     },
     counts: function(o) {
       if (!$slider) return;

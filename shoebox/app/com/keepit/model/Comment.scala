@@ -79,7 +79,7 @@ class CommentRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   val commentCountCache: CommentCountUriIdCache,
-  socialConnectionRepoImpl: SocialConnectionRepoImpl,
+  userConnectionRepo: UserConnectionRepo,
   commentRecipientRepoImpl: CommentRecipientRepoImpl)
     extends DbRepo[Comment] with CommentRepo with ExternalIdColumnDbFunction[Comment] with Logging {
   import FortyTwoTypeMappers._
@@ -123,7 +123,7 @@ class CommentRepoImpl @Inject() (
     } yield b).sortBy(_.createdAt asc).list
 
   def getPublicIdsByConnection(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Id[Comment]] = {
-    val friends = socialConnectionRepoImpl.getFortyTwoUserConnections(userId)
+    val friends = userConnectionRepo.getConnectedUsers(userId)
     val commentsOnPage = (for {
       c <- table  if c.uriId === uriId && c.permissions === CommentPermissions.PUBLIC && c.state === CommentStates.ACTIVE
     } yield c).list
@@ -161,18 +161,18 @@ class CommentRepoImpl @Inject() (
     } yield (c.*)
     (q1.list ++ q2.list).toSet.toSeq
   }
-  
+
   def getParentByUriParticipants(normUri: Id[NormalizedURI], recipients: Set[Id[User]])(implicit session: RSession): Option[Id[Comment]] = {
       val conn = session.conn
       val st = conn.createStatement()
-      
+
       val recipientIn = recipients.map(_.id).mkString(",")
       val recipientLength = recipients.size - 1 // there is one less CommentRecipient due to the author
 
       val sql =
         s"""
           select c.id as id from comment c, comment_recipient r
-          where c.id = r.comment_id 
+          where c.id = r.comment_id
             and c.permissions = 'message'
             and c.parent is null
             and c.normalized_uri_id = ${normUri.id}
@@ -183,7 +183,7 @@ class CommentRepoImpl @Inject() (
           order by id limit 1;
         """
       val rs = st.executeQuery(sql)
-      
+
       if(rs.next) {
         Some(Id[Comment](rs.getLong("id")))
       } else {

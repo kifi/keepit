@@ -77,6 +77,9 @@ extends MultiReader(wrappedSubReaders.map{ _.asInstanceOf[IndexReader] }.toArray
         }
         -1
       }
+
+      lazy private[this] val maxDocSum = wrappedSubReaders.map(_.maxDoc).sum
+      def maxDoc():Int = maxDocSum
     }
   }
 

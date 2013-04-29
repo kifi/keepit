@@ -2,6 +2,7 @@ package com.keepit.model
 
 import org.specs2.mutable._
 
+import com.keepit.common.net.UserAgent
 import com.keepit.common.db._
 import com.keepit.common.time.zones.PT
 import com.keepit.test._

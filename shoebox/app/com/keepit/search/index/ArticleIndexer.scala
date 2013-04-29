@@ -94,15 +94,20 @@ class ArticleIndexer (
           val contentAnalyzer = DefaultAnalyzer.forIndexing(contentLang)
           val contentAnalyzerWithStemmer = DefaultAnalyzer.forIndexingWithStemmer(contentLang)
 
+          val descriptionAndContent = article.description match {
+            case Some(desc) => desc + "\n\n" + article.content
+            case None => article.content
+          }
+
           doc.add(buildTextField("t", article.title, titleAnalyzer))
           doc.add(buildTextField("ts", article.title, titleAnalyzerWithStemmer))
 
-          doc.add(buildTextField("c", article.content, contentAnalyzer))
-          doc.add(buildTextField("cs", article.content, contentAnalyzerWithStemmer))
-          
+          doc.add(buildTextField("c", descriptionAndContent, contentAnalyzer))
+          doc.add(buildTextField("cs", descriptionAndContent, contentAnalyzerWithStemmer))
+
           val builder = new SemanticVectorBuilder(60)
           builder.load(titleAnalyzerWithStemmer.tokenStream("t", article.title))
-          builder.load(contentAnalyzerWithStemmer.tokenStream("c", article.content))
+          builder.load(contentAnalyzerWithStemmer.tokenStream("c", descriptionAndContent))
           doc.add(buildDocSemanticVectorField("docSv", builder))
           doc.add(buildSemanticVectorField("sv", builder))
 

@@ -35,7 +35,6 @@ function createPage(tab) {
 }
 
 exports.bookmarks = require("./bookmarks");
-exports.browserVersion = xulApp.name + "/" + xulApp.version;
 
 exports.icon = {
   on: {click: new Listeners},
@@ -182,13 +181,32 @@ exports.request = function(method, url, data, done, fail) {
   require("sdk/request").Request(options)[method.toLowerCase()]();
 };
 
-var socketPage, socketHandlers = [,];
+var socketPage, sockets = [,];
 var socketCallbacks = {}, nextSocketCallbackId = 1;  // TODO: garbage collect old uncalled callbacks
 exports.socket = {
-  open: function(url, handlers) {
-    socketHandlers.push(handlers);
-    var socketId = socketHandlers.length - 1;
+  open: function(url, handlers, onConnect) {
+    var socketId = sockets.length, socket = {
+      seq: 0,
+      send: function(arr, callback) {
+        if (callback) {
+          var id = nextSocketCallbackId++;
+          socketCallbacks[id] = callback;
+          arr.splice(1, 0, id);
+        }
+        socketPage.port.emit("socket_send", socketId, arr);
+      },
+      close: function() {
+        exports.log("[api.socket.close]", socketId);
+        delete sockets[socketId];
+        socketPage.port.emit("close_socket", socketId);
+        if (!sockets.some(function(h) {return h})) {
+          socketPage.destroy();
+          socketPage = null;
+        }
+        this.send = this.close = exports.noop;
+      }};
     exports.log("[api.socket.open]", socketId, url);
+    sockets.push({socket: socket, handlers: handlers, onConnect: onConnect});
     if (socketPage) {
       socketPage.port.emit("open_socket", socketId, url);
     } else {
@@ -200,28 +218,23 @@ exports.socket = {
         contentScriptOptions: {socketId: socketId, url: url},
         contentURL: data.url("html/workers/socket.html")
       });
+      socketPage.port.on("socket_connect", onSocketConnect);
       socketPage.port.on("socket_message", onSocketMessage);
     }
-    return {
-      send: function(arr, callback) {
-        if (callback) {
-          var id = nextSocketCallbackId++;
-          socketCallbacks[id] = callback;
-          arr.splice(1, 0, id);
-        }
-        socketPage.port.emit("socket_send", socketId, arr);
-      },
-      close: function() {
-        exports.log("[api.socket.close]", socketId);
-        delete socketHandlers[socketId];
-        socketPage.port.emit("close_socket", socketId);
-        if (!socketHandlers.some(function(h) {return h})) {
-          socketPage.destroy();
-          socketPage = null;
-        }
-        this.send = this.close = exports.noop;
-      }
-    };
+    return socket;
+  }
+}
+function onSocketConnect(socketId) {
+  var socket = sockets[socketId];
+  if (socket) {
+    socket.socket.seq++;
+    try {
+      socket.onConnect();
+    } catch (e) {
+      exports.log.error("onSocketConnect:" + socketId, e);
+    }
+  } else {
+    exports.log("[onSocketConnect] Ignoring, no socket", socketId);
   }
 }
 function onSocketMessage(socketId, data) {
@@ -238,23 +251,23 @@ function onSocketMessage(socketId, data) {
           exports.log("[api.socket.receive] Ignoring, no callback", id, msg);
         }
       } else {
-        var handlers = socketHandlers[socketId];
-        if (handlers) {
-          var handler = handlers[id];
+        var socket = sockets[socketId];
+        if (socket) {
+          var handler = socket.handlers[id];
           if (handler) {
             handler.apply(null, msg);
           } else {
             exports.log("[api.socket.receive] Ignoring, no handler", id, msg);
           }
         } else {
-          exports.log("[api.socket.receive] Ignoring, no handlers", socketId, id, msg);
+          exports.log("[api.socket.receive] Ignoring, no socket", socketId, id, msg);
         }
       }
     } else {
       exports.log("[api.socket.receive] Ignoring, not array", msg);
     }
   } catch (e) {
-    exports.log.error("[api.socket.receive]", e);
+    exports.log.error("api.socket.receive:" + socketId + ":" + data, e);
   }
 }
 

@@ -4,7 +4,7 @@ import org.specs2.mutable._
 import com.keepit.test.EmptyApplication
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworks
-import com.keepit.common.social.SocialUserCreateConnections
+import com.keepit.common.social.UserConnectionCreator
 import com.keepit.inject._
 import play.api.Play.current
 import play.api.test._
@@ -33,7 +33,7 @@ class SocialConnectionTest extends Specification {
 
         val socialRepo = inject[SocialUserInfoRepo]
         val connectionRepo = inject[SocialConnectionRepo]
-        val connections = inject[SocialUserCreateConnections]
+        val connections = inject[UserConnectionCreator]
         val userRepo = inject[UserRepo]
 
         val eishaySocialUserInfo = inject[Database].readWrite{ implicit s =>
@@ -127,8 +127,8 @@ class SocialConnectionTest extends Specification {
           users
         }
 
-        inject[SocialUserCreateConnections].createConnections(eishaySocialUserInfo, Seq(eishayJson))
-        inject[SocialUserCreateConnections].createConnections(andrewSocialUserInfo, Seq(andrewJson))
+        inject[UserConnectionCreator].createConnections(eishaySocialUserInfo, Seq(eishayJson))
+        inject[UserConnectionCreator].createConnections(andrewSocialUserInfo, Seq(andrewJson))
 
         val connectionRepo = inject[SocialConnectionRepo]
 
@@ -170,7 +170,7 @@ class SocialConnectionTest extends Specification {
 
         val socialRepo = inject[SocialUserInfoRepo]
         val connectionRepo = inject[SocialConnectionRepo]
-        val connections = inject[SocialUserCreateConnections]
+        val connections = inject[UserConnectionCreator]
         val userRepo = inject[UserRepo]
         val eishaySocialUserInfo = inject[Database].readWrite{ implicit s =>
           val info = socialRepo.save(SocialUserInfo(fullName = "Eishay Smith", socialId = SocialId("646386018"), networkType = SocialNetworks.FACEBOOK))
@@ -194,7 +194,7 @@ class SocialConnectionTest extends Specification {
           users
         }
 
-        inject[SocialUserCreateConnections].createConnections(eishaySocialUserInfo, Seq(eishay1Json, eishay2Json))
+        inject[UserConnectionCreator].createConnections(eishaySocialUserInfo, Seq(eishay1Json, eishay2Json))
 
         val eishayFortyTwoConnection = inject[Database].readOnly{ implicit s =>
           connectionRepo.all.size === 12

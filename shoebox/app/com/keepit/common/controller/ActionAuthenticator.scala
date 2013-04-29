@@ -43,10 +43,11 @@ class ActionAuthenticator @Inject() (
   fortyTwoServices: FortyTwoServices,
   healthcheckPlugin: HealthcheckPlugin,
   impersonateCookie: ImpersonateCookie,
+  connectionUpdater: ConnectionUpdater,
   kifiInstallationCookie: KifiInstallationCookie)
     extends SecureSocial with Logging {
 
-  private def loadUserId(userIdOpt: Option[Id[User]], socialId: SocialId)(implicit session: RSession) = {
+  private def loadUserId(userIdOpt: Option[Id[User]], socialId: SocialId)(implicit session: RSession): Id[User] = {
     userIdOpt match {
       case None =>
         val socialUser = socialUserInfoRepo.get(socialId, SocialNetworks.FACEBOOK)
@@ -61,9 +62,15 @@ class ActionAuthenticator @Inject() (
     }
   }
 
-  private def loadUserContext(userIdOpt: Option[Id[User]], socialId: SocialId) = db.readOnly{ implicit session =>
-    val userId = loadUserId(userIdOpt, socialId)
-    (userId, getExperiments(userId))
+  private def loadUserContext(userIdOpt: Option[Id[User]], socialId: SocialId): (Id[User], Set[State[ExperimentType]]) = {
+    val (userId, experiments) = db.readOnly { implicit session =>
+      val userId = loadUserId(userIdOpt, socialId)
+      (userId, getExperiments(userId))
+    }
+    // for migration to new UserConnection
+    connectionUpdater.updateConnectionsIfNecessary(userId)
+    //
+    (userId, experiments)
   }
 
   private def getExperiments(userId: Id[User])(implicit session: RSession): Set[State[ExperimentType]] = userExperimentRepo.getUserExperiments(userId)

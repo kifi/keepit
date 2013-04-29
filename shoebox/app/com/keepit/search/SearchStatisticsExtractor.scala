@@ -6,7 +6,7 @@ import com.keepit.model.User
 import com.keepit.model.NormalizedURI
 import com.keepit.search.query.LuceneScoreNames
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.model.SocialConnectionRepo
+import com.keepit.model.UserConnectionRepo
 import com.keepit.common.db.slick.Database
 import scala.util.Try
 import scala.math._
@@ -81,7 +81,7 @@ case class SearchStatistics(
 
 @Singleton
 class SearchStatisticsExtractorFactory @Inject() (
-  db: Database, userRepo: UserRepo, socialConnectionRepo: SocialConnectionRepo, uriGraph: URIGraph,
+  db: Database, userRepo: UserRepo, userConnectionRepo: UserConnectionRepo, uriGraph: URIGraph,
   articleIndexer: ArticleIndexer, searchConfigManager: SearchConfigManager, mainSearcherFactory: MainSearcherFactory, parserFactory: MainQueryParserFactory,
   browsingHistoryTracker: BrowsingHistoryTracker, clickHistoryTracker: ClickHistoryTracker, resultClickTracker: ResultClickTracker, store: MongoEventStore){
 
@@ -89,7 +89,7 @@ class SearchStatisticsExtractorFactory @Inject() (
   queryString: String, userId: Id[User], uriLabelMap: scala.collection.immutable.Map[Id[NormalizedURI], UriLabel]) = {
 
     new SearchStatisticsExtractor (queryUUID, queryString, userId, uriLabelMap,
-  db, userRepo, socialConnectionRepo, uriGraph, articleIndexer, searchConfigManager, mainSearcherFactory, parserFactory,
+  db, userRepo, userConnectionRepo, uriGraph, articleIndexer, searchConfigManager, mainSearcherFactory, parserFactory,
   browsingHistoryTracker, clickHistoryTracker, resultClickTracker, store)
   }
 }
@@ -97,13 +97,14 @@ class SearchStatisticsExtractorFactory @Inject() (
 // uriLabelMap contains the uris of interest
 class SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
   queryString: String, userId: Id[User], uriLabelMap: scala.collection.immutable.Map[Id[NormalizedURI], UriLabel],
-  db: Database, userRepo: UserRepo, socialConnectionRepo: SocialConnectionRepo, uriGraph: URIGraph,
+  db: Database, userRepo: UserRepo, userConnectionRepo: UserConnectionRepo, uriGraph: URIGraph,
   articleIndexer: ArticleIndexer, searchConfigManager: SearchConfigManager, mainSearcherFactory: MainSearcherFactory, parserFactory: MainQueryParserFactory,
   browsingHistoryTracker: BrowsingHistoryTracker, clickHistoryTracker: ClickHistoryTracker, resultClickTracker: ResultClickTracker, store: MongoEventStore) extends Logging{
 
-  val searcher = new SearchStatisticsHelperSearcher(queryString, userId, uriLabelMap.keySet.toSeq, db, userRepo, socialConnectionRepo, uriGraph,
-      articleIndexer, searchConfigManager, mainSearcherFactory, parserFactory,
-      browsingHistoryTracker, clickHistoryTracker, resultClickTracker)
+  val searcher = new SearchStatisticsHelperSearcher(queryString, userId, uriLabelMap.keySet.toSeq, db, userRepo,
+    userConnectionRepo, uriGraph,
+    articleIndexer, searchConfigManager, mainSearcherFactory, parserFactory,
+    browsingHistoryTracker, clickHistoryTracker, resultClickTracker)
 
   private def getLuceneExplain(uriId: Id[NormalizedURI]) = {
     searcher.parsedQuery.map{ query =>
@@ -194,7 +195,7 @@ object TrainingDataLabeler extends Logging{
  * TODO: more elegant solution ?
  */
 class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], targetUriIds: Seq[Id[NormalizedURI]],
-  db: Database, userRepo: UserRepo, socialConnectionRepo: SocialConnectionRepo, uriGraph: URIGraph,
+  db: Database, userRepo: UserRepo, userConnectionRepo: UserConnectionRepo, uriGraph: URIGraph,
   articleIndexer: ArticleIndexer, searchConfigManager: SearchConfigManager, mainSearcherFactory: MainSearcherFactory, parserFactory: MainQueryParserFactory,
   browsingHistoryTracker: BrowsingHistoryTracker, clickHistoryTracker: ClickHistoryTracker, resultClickTracker: ResultClickTracker) extends Logging{
 
@@ -223,7 +224,7 @@ class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], tar
 
   val (friendIds, searchFilter) = {
     db.readOnly { implicit s =>
-      val friendIds = socialConnectionRepo.getFortyTwoUserConnections(userId)
+      val friendIds = userConnectionRepo.getConnectedUsers(userId)
       val searchFilter = filter match {
         case Some("m") =>
           SearchFilter.mine(idFilter)

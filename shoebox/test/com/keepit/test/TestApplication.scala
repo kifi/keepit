@@ -79,6 +79,7 @@ trait DbRepos {
   def db = inject[Database]
   def userSessionRepo = inject[UserSessionRepo]
   def userRepo = inject[UserRepo]
+  def userConnRepo = inject[UserConnectionRepo]
   def uriRepo = inject[NormalizedURIRepo]
   def urlRepo = inject[URLRepo]
   def bookmarkRepo = inject[BookmarkRepo]
@@ -176,24 +177,29 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   def fortyTwoServices(clock: Clock): FortyTwoServices = FortyTwoServices(clock)
 }
 
+/**
+ * A fake clock allows you to control the time returned by Clocks in tests.
+ *
+ * If you know how many times the underlying code will call getMillis(), you can push() times onto the stack to have
+ * their values returned. You can also completely override the time function by calling setTimeFunction().
+ */
 class FakeClock extends Clock with Logging {
-  val stack = MutableStack[DateTime]()
-
-  def push(t : DateTime): FakeClock = { stack push t; this }
-  def push(d : LocalDate): FakeClock = { stack push d.toDateTimeAtStartOfDay(clockZone); this }
-
-  override def today: LocalDate = this.now.toLocalDate
-  override def now: DateTime = {
+  private val stack = MutableStack[Long]()
+  private var timeFunction: () => Long = () => {
     if (stack.isEmpty) {
-      val nowTime = super.now
-      log.debug(s"FakeClock is retuning real now value: $nowTime")
-      nowTime
+      val nowTime = new DateTime(System.currentTimeMillis())
+      log.info(s"FakeClock is retuning real now value: $nowTime")
+      nowTime.getMillis
     } else {
-      val fakeNowTime = stack.pop
-      log.debug(s"FakeClock is retuning fake now value: $fakeNowTime")
-      fakeNowTime
+      val fakeNowTime = new DateTime(stack.pop())
+      log.info(s"FakeClock is retuning fake now value: $fakeNowTime")
+      fakeNowTime.getMillis
     }
   }
+
+  def push(t : DateTime): FakeClock = { stack push t.getMillis; this }
+  def setTimeFunction(timeFunction: () => Long) { this.timeFunction = timeFunction }
+  override def getMillis(): Long = timeFunction()
 }
 
 class FakeSocialGraphPlugin extends SocialGraphPlugin {
