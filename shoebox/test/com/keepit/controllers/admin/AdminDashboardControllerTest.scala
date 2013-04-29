@@ -48,7 +48,8 @@ class AdminDashboardControllerTest extends Specification with DbRepos {
         val cookie = Authenticator.create(su).right.get.toCookie
         val fakeRequest = FakeRequest().withCookies(cookie)
         val authRequest = AuthenticatedRequest(null, u1.id.get, u1, fakeRequest)
-        inject[FakeClock].push(now).push(now)
+        // TODO(greg): FakeClock should not require knowledge of the underlying code
+        inject[FakeClock].push(now).push(now).push(now).push(now)
         val result = inject[AdminDashboardController].usersByDate(authRequest)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
