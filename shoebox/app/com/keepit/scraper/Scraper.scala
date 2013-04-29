@@ -117,6 +117,7 @@ class Scraper @Inject() (
         val article = Article(
             id = uri.id.get,
             title = uri.title.getOrElse(""),
+            description = None,
             content = "",
             scrapedAt = currentDateTime,
             httpContentType = None,
@@ -142,7 +143,7 @@ class Scraper @Inject() (
         case Success(uri) =>
           Extractor.factories.find(_.isDefinedAt(uri)).map{ f =>
             f.apply(uri)
-          }.getOrElse(throw new Exception("failed to find a extractor factory"))
+          }.getOrElse(throw new Exception("failed to find an extractor factory"))
         case Failure(_) =>
           log.warn("uri parsing failed: [%s]".format(url))
           DefaultExtractorFactory(url)
@@ -189,8 +190,9 @@ class Scraper @Inject() (
             NotScrapable(fetchStatus.destinationUrl)
           } else {
             val content = extractor.getContent
-            val title = extractor.getMetadata("title").getOrElse("")
-            val signature = computeSignature(title, content)
+            val title = getTitle(extractor)
+            val description = getDescription(extractor)
+            val signature = computeSignature(title, description.getOrElse(""), content)
 
             // now detect the document change
             val docChanged = signature.similarTo(Signature(info.signature)) < (1.0d - config.changeThreshold * (config.minInterval / info.interval))
@@ -199,10 +201,14 @@ class Scraper @Inject() (
             if (!docChanged && normalizedUri.state != NormalizedURIStates.SCRAPE_WANTED) {
               NotModified
             } else {
-              val contentLang = LangDetector.detect(content)
+              val contentLang = description match {
+                case Some(desc) => LangDetector.detect(content + " " + desc)
+                case None => LangDetector.detect(content)
+              }
               val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
               Scraped(Article(id = normalizedUri.id.get,
                               title = title,
+                              description = description,
                               content = content,
                               scrapedAt = currentDateTime,
                               httpContentType = extractor.getMetadata("Content-Type"),
@@ -223,6 +229,13 @@ class Scraper @Inject() (
     } catch {
       case e: Throwable => Error(-1, "fetch failed: %s".format(e.toString))
     }
+  }
+
+  private[this] def getTitle(x: Extractor): String = {
+    x.getMetadata("title").getOrElse("")
+  }
+  private[this] def getDescription(x: Extractor): Option[String] = {
+    x.getMetadata("description").orElse(x.getMetadata("Description")).orElse(x.getMetadata("DESCRIPTION"))
   }
 
   private[this] def computeSignature(fields: String*) = fields.foldLeft(new SignatureBuilder){ (builder, text) => builder.add(text) }.build
