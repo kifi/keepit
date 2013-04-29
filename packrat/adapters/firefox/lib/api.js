@@ -35,7 +35,6 @@ function createPage(tab) {
 }
 
 exports.bookmarks = require("./bookmarks");
-exports.browserVersion = xulApp.name + "/" + xulApp.version;
 
 exports.icon = {
   on: {click: new Listeners},
