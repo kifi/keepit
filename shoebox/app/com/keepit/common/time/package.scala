@@ -1,6 +1,6 @@
 package com.keepit.common
 
-import com.google.inject.Singleton
+import com.google.inject.{ImplementedBy, Singleton}
 import java.util.Locale
 import org.joda.time.{DateTime, DateTimeZone, LocalDate, LocalTime}
 import org.joda.time.format._
@@ -60,12 +60,19 @@ package object time {
    * For example, if a repo need a clock to time the update time of an entity then it should not use a DateTime that it got while
    * instantiating, it should use a clock and ask it each time for a new timestamp.
    * Avoiding the time object injection would help us avoid these very hard to spot bugs.
-  */
+   */
+  @ImplementedBy(classOf[SystemClock])
+  trait Clock {
+    def getMillis(): Long
+
+    final def today()(implicit zone: DateTimeZone): LocalDate = new LocalDate(getMillis(), zone)
+    final def now()(implicit zone: DateTimeZone): DateTime = new DateTime(getMillis(), zone)
+  }
+
+
   @Singleton
-  class Clock() {
-    val clockZone: DateTimeZone = DEFAULT_DATE_TIME_ZONE
-    def today: LocalDate = new LocalDate(clockZone)
-    def now: DateTime = new DateTime(clockZone)
+  class SystemClock() extends Clock {
+    def getMillis(): Long = System.currentTimeMillis()
   }
 
   implicit val localDateOrdering = new Ordering[LocalDate] {
