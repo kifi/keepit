@@ -16,7 +16,7 @@ import com.keepit.common.mail._
 import com.keepit.inject._
 import com.keepit.model.{PhraseRepo, BookmarkRepo, NormalizedURIRepo}
 import com.keepit.search.{ArticleStore, ResultClickTracker}
-import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphDecoders}
+import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphFields}
 import com.keepit.search.index.{ArticleIndexer, DefaultAnalyzer}
 import com.keepit.search.phrasedetector.PhraseIndexer
 import com.keepit.search.query.parser.{FakeSpellCorrector, SpellCorrector}
@@ -168,7 +168,7 @@ class SearchDevModule extends ScalaModule with Logging {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new URIGraphImpl(dir, config, URIGraphDecoders.decoders(), bookmarkRepo, db)
+    new URIGraphImpl(dir, config, URIGraphFields.decoders(), bookmarkRepo, db)
   }
 
   @Singleton
