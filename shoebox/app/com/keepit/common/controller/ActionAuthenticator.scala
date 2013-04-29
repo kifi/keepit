@@ -68,7 +68,7 @@ class ActionAuthenticator @Inject() (
       (userId, getExperiments(userId))
     }
     // for migration to new UserConnection
-    if (connectionCreator.getConnectionsLastUpdated(userId).isDefined) {
+    if (connectionCreator.getConnectionsLastUpdated(userId).isEmpty) {
       connectionCreator.updateUserConnections(userId)
     }
     //
