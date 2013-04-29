@@ -48,12 +48,14 @@ class SocialUserCreateConnections @Inject() (
             db.readWrite { implicit s =>
               connectionRepo.save(c.withState(SocialConnectionStates.ACTIVE))
             }
+            // send new connection to both users
         }
       case (friend, None) =>
         log.debug(s"a new connection was created between ${socialUserInfo} and friend.id.get")
         db.readWrite { implicit s =>
           connectionRepo.save(SocialConnection(socialUser1 = socialUserInfo.id.get, socialUser2 = friend.id.get))
         }
+        // send new connection to both users
     }
   }
 
@@ -74,6 +76,7 @@ class SocialUserCreateConnections @Inject() (
               if (c.state != SocialConnectionStates.INACTIVE){
                 log.info("connection is disabled")
             	  connectionRepo.save(c.withState(SocialConnectionStates.INACTIVE))
+                // send connection removal to both users
               }
               else {
                 log.info("connection is already disabled")
