@@ -28,6 +28,7 @@ import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.Version
 import java.io.StringReader
 import org.apache.lucene.index.AtomicReader
+import com.keepit.search.Lang
 
 class LineIndexReaderTest extends Specification {
 
@@ -41,14 +42,16 @@ class LineIndexReaderTest extends Specification {
     val lineFieldBuilder = new LineFieldBuilder {}
     val writer = new IndexWriter(ramDir, config)
     (0 until 3).foreach{ d =>
-      val lines = new ArrayBuffer[(Int, String)]
+      val lines = new ArrayBuffer[(Int, String, Lang)]
       (0 until 3).foreach{ l =>
-        val line = (l, "d%d l%d t%d%d %s %s".format(d, l, d, l, " x"*(1 + (l + d)%3), " y"*(4 - (l + d)%3)))
+        val line = (l, "d%d l%d t%d%d %s %s".format(d, l, d, l, " x"*(1 + (l + d)%3), " y"*(4 - (l + d)%3)), Lang("en"))
         //println(line)
         lines += line
       }
       val doc = new Document()
-      doc.add(lineFieldBuilder.buildLineField("B", lines, (f, t) => indexingAnalyzer.tokenStream(f, new StringReader(t))))
+      doc.add(lineFieldBuilder.buildLineField("B", lines){ (f, t, l) =>
+        indexingAnalyzer.tokenStream(f, new StringReader(t))
+      })
       writer.addDocument(doc)
     }
     writer.commit()

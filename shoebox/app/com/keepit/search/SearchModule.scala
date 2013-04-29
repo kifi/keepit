@@ -13,7 +13,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.inject.AppScoped
 import com.keepit.model._
 import com.keepit.scraper.{ScraperPluginImpl, ScraperPlugin}
-import com.keepit.search.graph.URIGraphDecoders
+import com.keepit.search.graph.URIGraphFields
 import com.keepit.search.graph.URIGraphImpl
 import com.keepit.search.graph.{URIGraphPluginImpl, URIGraphPlugin, URIGraph}
 import com.keepit.search.index.DefaultAnalyzer
@@ -62,7 +62,7 @@ class SearchModule() extends ScalaModule with Logging {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new URIGraphImpl(dir, config, URIGraphDecoders.decoders(), bookmarkRepo, db)
+    new URIGraphImpl(dir, config, URIGraphFields.decoders(), bookmarkRepo, db)
   }
 
   @Singleton
