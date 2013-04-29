@@ -43,7 +43,7 @@ class ActionAuthenticator @Inject() (
   fortyTwoServices: FortyTwoServices,
   healthcheckPlugin: HealthcheckPlugin,
   impersonateCookie: ImpersonateCookie,
-  connectionCreator: UserConnectionCreator,
+  connectionUpdater: ConnectionUpdater,
   kifiInstallationCookie: KifiInstallationCookie)
     extends SecureSocial with Logging {
 
@@ -68,9 +68,7 @@ class ActionAuthenticator @Inject() (
       (userId, getExperiments(userId))
     }
     // for migration to new UserConnection
-    if (connectionCreator.getConnectionsLastUpdated(userId).isEmpty) {
-      connectionCreator.updateUserConnections(userId)
-    }
+    connectionUpdater.updateConnectionsIfNecessary(userId)
     //
     (userId, experiments)
   }

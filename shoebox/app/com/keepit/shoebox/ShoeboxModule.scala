@@ -1,12 +1,13 @@
 package com.keepit.shoebox
 
 import com.google.common.io.Files
-import com.google.inject.{Provider, Provides, Singleton}
+import com.google.inject.{Provides, Singleton}
 import com.keepit.classify.DomainTagImportSettings
 import com.keepit.common.analytics.reports._
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{MailToKeepPlugin, MailToKeepPluginImpl, MailToKeepServerSettings}
-import com.keepit.common.social.{SocialGraphPluginImpl, SocialGraphPlugin, SocialGraphRefresherImpl, SocialGraphRefresher}
+import com.keepit.common.mail.MailToKeepServerSettings
+import com.keepit.common.mail.{MailToKeepPlugin, MailToKeepPluginImpl}
+import com.keepit.common.social._
 import com.keepit.inject.AppScoped
 import com.keepit.scraper._
 import com.tzavellas.sse.guice.ScalaModule
@@ -22,6 +23,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
     bind[MailToKeepPlugin].to[MailToKeepPluginImpl].in[AppScoped]
     bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
+    bind[ConnectionUpdater].to[UserConnectionCreator]
   }
 
   @Singleton

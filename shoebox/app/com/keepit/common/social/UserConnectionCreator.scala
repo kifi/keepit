@@ -4,7 +4,7 @@ import scala.concurrent.duration._
 
 import org.joda.time.DateTime
 
-import com.google.inject.Inject
+import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.BabysitterTimeout
@@ -18,6 +18,15 @@ object UserConnectionCreator {
   private val UpdatedUserConnectionsKey = "updated_user_connections"
 }
 
+@ImplementedBy(classOf[NoOpConnectionUpdater])
+trait ConnectionUpdater {
+  def updateConnectionsIfNecessary(userId: Id[User])
+}
+
+class NoOpConnectionUpdater extends ConnectionUpdater {
+  def updateConnectionsIfNecessary(userId: Id[User]) {}
+}
+
 class UserConnectionCreator @Inject() (
     db: Database,
     socialRepo: SocialUserInfoRepo,
@@ -25,13 +34,19 @@ class UserConnectionCreator @Inject() (
     userConnectionRepo: UserConnectionRepo,
     userValueRepo: UserValueRepo,
     clock: Clock)
-  extends Logging {
+  extends ConnectionUpdater with Logging {
 
   def createConnections(socialUserInfo: SocialUserInfo, parentJson: Seq[JsValue]): Seq[SocialConnection] = {
     disableConnectionsNotInJson(socialUserInfo, parentJson)
     val socialConnections = createConnectionsFromJson(socialUserInfo, parentJson)
     socialUserInfo.userId.map(updateUserConnections)
     socialConnections
+  }
+
+  def updateConnectionsIfNecessary(userId: Id[User]) {
+    if (getConnectionsLastUpdated(userId).isEmpty) {
+      updateUserConnections(userId)
+    }
   }
 
   def getConnectionsLastUpdated(userId: Id[User]): Option[DateTime] = db.readOnly { implicit s =>
