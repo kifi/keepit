@@ -501,7 +501,7 @@ api.log("[google_inject]");
 
   function processHit(hit) {
     hit.displayUrl = displayURLFormatter(hit.bookmark.url);
-    hit.displayTitle = boldSearchTerms(hit.bookmark.title, response.query) || hit.displayUrl;
+    hit.displayTitle = boldSearchTerms(hit.bookmark.title || "", response.query) || hit.displayUrl;
     hit.displayScore = response.showScores === true ? "[" + Math.round(hit.score * 100) / 100 + "] " : "";
 
     var fil = response.filter || "", ids = fil.length > 1 ? fil.split(".") : null;
