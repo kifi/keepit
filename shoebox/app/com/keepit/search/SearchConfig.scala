@@ -50,7 +50,6 @@ object SearchConfig {
       "maxResultClickBoost" -> "boosting by recent result clicks",
       "minMyBookmarks" -> "the minimum number of my bookmarks in a search result",
       "myBookmarkBoost" -> "importance of my bookmark",
-      "personalTitleBoost" -> "boosting the personal bookmark title score when there is no match in the article",
       "sharingBoostInNetwork" -> "importance of the number of friends sharing the bookmark",
       "sharingBoostOutOfNetwork" -> "importance of the number of others sharing the bookmark",
       "percentMatch" -> "the minimum percentage of search terms have to match (weighted by IDF)",
