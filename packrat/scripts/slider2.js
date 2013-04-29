@@ -352,10 +352,9 @@ slider2 = function() {
         function(html) {
           var $html = $("html").addClass("kifi-pane-parent");
           $pane = $(html).append(bringSlider ? $slider : null).appendTo($html).layout()
-          .on("transitionend webkitTransitionEnd", function f(e) {
-            $pane.off("transitionend webkitTransitionEnd", f);
+          .on("transitionend webkitTransitionEnd", function onPaneShown(e) {
+            $pane.off("transitionend webkitTransitionEnd", onPaneShown);
             $box.data("shown", true).triggerHandler("kifi:shown");
-            if (!bringSlider) $pane.append($slider);
             $(tile).show();  // in case hidden
           })
           .on("keydown", ".kifi-pane-search", function(e) {
@@ -439,10 +438,13 @@ slider2 = function() {
     if (leaveSlider) {
       $slider.appendTo("html").layout();
     } else {
+      $slider.appendTo($pane);
       $slider = null;
       $(tile).removeClass("kifi-behind-slider");
     }
-    $pane.on("transitionend webkitTransitionEnd", function(e) {
+    $pane
+    .off("transitionend webkitTransitionEnd") // onPaneShown
+    .on("transitionend webkitTransitionEnd", function(e) {
       if (e.target.classList.contains("kifi-pane")) {
         var $pane = $(e.target);
         $pane.find(".kifi-pane-box").triggerHandler("kifi:remove");
