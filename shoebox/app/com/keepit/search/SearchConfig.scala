@@ -16,7 +16,7 @@ object SearchConfig {
     Map[String, String](
       "phraseProximityBoost" -> "0.95",     // could be too aggressive?
       "phraseBoost" -> "0.5",
-      "siteBoost" -> "2.0",
+      "siteBoost" -> "1.0",
       "enableCoordinator" -> "true",
       "similarity" -> "default",
       "svWeightMyBookMarks" -> "1",
@@ -50,7 +50,6 @@ object SearchConfig {
       "maxResultClickBoost" -> "boosting by recent result clicks",
       "minMyBookmarks" -> "the minimum number of my bookmarks in a search result",
       "myBookmarkBoost" -> "importance of my bookmark",
-      "personalTitleBoost" -> "boosting the personal bookmark title score when there is no match in the article",
       "sharingBoostInNetwork" -> "importance of the number of friends sharing the bookmark",
       "sharingBoostOutOfNetwork" -> "importance of the number of others sharing the bookmark",
       "percentMatch" -> "the minimum percentage of search terms have to match (weighted by IDF)",

@@ -6,6 +6,7 @@ import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import org.apache.lucene.document.FieldType
 import org.apache.lucene.document.TextField
+import com.keepit.search.Lang
 
 object LineField {
   val MAX_POSITION_PER_LINE = 2048
@@ -18,12 +19,12 @@ object LineField {
 }
 
 trait LineFieldBuilder {
-  def buildLineField(fieldName: String, lines: Seq[(Int, String)], tokenStreamFunc: (String, String)=>TokenStream, fieldType: FieldType = TextField.TYPE_NOT_STORED) = {
+  def buildLineField(fieldName: String, lines: Seq[(Int, String, Lang)], fieldType: FieldType = TextField.TYPE_NOT_STORED)(tokenStreamFunc: (String, String, Lang)=>TokenStream): Field = {
     new Field(fieldName, new LineTokenStream(fieldName, lines, tokenStreamFunc), fieldType)
   }
 }
 
-class LineTokenStream(fieldName: String, lines: Seq[(Int, String)], tokenStreamFunc: (String, String)=>TokenStream) extends TokenStream {
+class LineTokenStream(fieldName: String, lines: Seq[(Int, String, Lang)], tokenStreamFunc: (String, String, Lang)=>TokenStream) extends TokenStream {
   private[this] val termAttr = addAttribute(classOf[CharTermAttribute])
   private[this] val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
   private[this] val lineIter = lines.sortBy(_._1).iterator
@@ -45,11 +46,11 @@ class LineTokenStream(fieldName: String, lines: Seq[(Int, String)], tokenStreamF
     var incr = 0
     var moreToken = baseTokenStream.incrementToken()
     while (!moreToken && lineIter.hasNext) {
-      val (lineNo, text) = lineIter.next
+      val (lineNo, text, lang) = lineIter.next
       val (lineStart, lineEnd) = lineRange(lineNo)
       incr = lineStart - curPos
       posLimit = lineEnd - 1
-      baseTokenStream = tokenStreamFunc(fieldName, text)
+      baseTokenStream = tokenStreamFunc(fieldName, text, lang)
       baseTokenStream.reset
       baseTermAttr =
         if (baseTokenStream.hasAttribute(classOf[CharTermAttribute])) {

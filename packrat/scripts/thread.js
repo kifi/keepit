@@ -53,7 +53,7 @@ threadPane = function() {
           if (message.isLoggedInUser && ($old = $sent.children("[data-id=]").first()).length) {
             $old.replaceWith($m);
           } else {
-            $sent.append($m).layout()[0].scrollTop = 99999;  // should we compare timestamps and insert in order?
+            $sent.append($m).scrollToBottom();  // should we compare timestamps and insert in order?
           }
           emitRead(threadId, message);
         });
@@ -67,7 +67,7 @@ threadPane = function() {
             arr[i] = $m;
             if (++n == arr.length) {
               $sent.children(".kifi-message-sent").remove().end()
-                .append(arr).layout()[0].scrollTop = 99999;
+                .append(arr).scrollToBottom();
               emitRead(threadId, messages[messages.length - 1]);
             }
           });
@@ -98,7 +98,7 @@ threadPane = function() {
         facebookId: session.facebookId
       }
     }, session.userId, function($m) {
-      $sent.append($m).layout()[0].scrollTop = 99999;
+      $sent.append($m).scrollToBottom();
     });
   }
 
