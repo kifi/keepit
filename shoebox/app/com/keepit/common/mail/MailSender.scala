@@ -30,45 +30,44 @@ import com.google.inject.Inject
 import scala.concurrent.duration._
 
 trait MailSenderPlugin extends SchedulingPlugin {
-  def processMail(mail: ElectronicMail) : Unit
+  def processMail(mailId: Id[ElectronicMail]) : Unit
   def processOutbox(): Unit
 }
 
-class MailSenderPluginImpl @Inject() (
-    actorFactory: ActorFactory[MailSenderActor],
-    db: Database,
-    mailRepo: ElectronicMailRepo)
+class MailSenderPluginImpl @Inject() (actorFactory: ActorFactory[MailSenderActor])
   extends Logging with MailSenderPlugin {
 
-  override def processMail(mail: ElectronicMail): Unit = actor ! ProcessMail(mail, this)
-
   private lazy val actor = actorFactory.get()
+
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actorFactory.system, 5 seconds, 5 seconds, actor, ProcessOutbox(this))
+    scheduleTask(actorFactory.system, 5 seconds, 5 seconds, actor, ProcessOutbox)
   }
 
-  override def processOutbox(): Unit = {
-    db.readOnly { implicit s =>
-      mailRepo.outbox
-    } foreach { mail =>
-      processMail(mail)
-    }
-  }
+  override def processOutbox(): Unit = actor ! ProcessOutbox
+  override def processMail(mailId: Id[ElectronicMail]): Unit = actor ! ProcessMail(mailId)
 }
 
-private[mail] case class ProcessOutbox(sender: MailSenderPlugin)
-private[mail] case class ProcessMail(mail: ElectronicMail, sender: MailSenderPlugin)
+private[mail] case class ProcessOutbox()
+private[mail] case class ProcessMail(mailId: Id[ElectronicMail])
 
 private[mail] class MailSenderActor @Inject() (
+    db: Database,
+    mailRepo: ElectronicMailRepo,
     healthcheckPlugin: HealthcheckPlugin,
     mailProvider: MailProvider)
   extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
-    case ProcessOutbox(sender) => sender.processOutbox()
-    case ProcessMail(mail, sender) => mailProvider.sendMail(mail)
+    case ProcessOutbox =>   {
+      db.readOnly { implicit s =>
+        mailRepo.outbox()
+      } foreach { mail =>
+        self ! ProcessMail(mail)
+      }
+    }
+    case ProcessMail(mailId) => mailProvider.sendMail(mailId)
     case unknown => throw new Exception("unknown message: %s".format(unknown))
   }
 }

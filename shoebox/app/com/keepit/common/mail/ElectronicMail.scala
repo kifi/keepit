@@ -47,6 +47,8 @@ case class ElectronicMail (
   def withId(id: Id[ElectronicMail]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 
+  def isReadyToSent: Boolean = state == ElectronicMailStates.READY_TO_SEND
+
   def prepareToSend(): ElectronicMail = state match {
     case ElectronicMailStates.PREPARING => copy(state = ElectronicMailStates.READY_TO_SEND)
     case _ => throw new Exception("mail %s in bad state, can't prepare to send".format(this))
@@ -65,7 +67,7 @@ case class ElectronicMail (
 
 @ImplementedBy(classOf[ElectronicMailRepoImpl])
 trait ElectronicMailRepo extends Repo[ElectronicMail] with ExternalIdColumnFunction[ElectronicMail] {
-  def outbox()(implicit session: RSession): Seq[ElectronicMail]
+  def outbox()(implicit session: RSession): Seq[Id[ElectronicMail]]
   def forSender(senderId: Id[User])(implicit session: RSession): Seq[ElectronicMail]
   def forRecipient(mailAddresses: Seq[String])(implicit session: RSession): Seq[ElectronicMail]
   def count(filterRecipeintNot: EmailAddressHolder)(implicit session: RSession): Int
@@ -97,8 +99,8 @@ class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cl
         (ElectronicMail, ElectronicMail.unapply _)
   }
 
-  def outbox()(implicit session: RSession): Seq[ElectronicMail] =
-    (for (t <- table if t.state === ElectronicMailStates.READY_TO_SEND ) yield t).list()
+  def outbox()(implicit session: RSession): Seq[Id[ElectronicMail]] =
+    (for (t <- table if t.state === ElectronicMailStates.READY_TO_SEND ) yield t.id).list()
 
   def forSender(senderId: Id[User])(implicit session: RSession): Seq[ElectronicMail] =
     (for (t <- table if t.senderUserId === senderId ) yield t).list()
