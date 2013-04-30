@@ -62,6 +62,7 @@ class URIGraphTest extends Specification with DbRepos {
         id = normalizedUriId,
         title = title,
         description = None,
+        media = None,
         content = content,
         scrapedAt = currentDateTime,
         httpContentType = Some("text/html"),
