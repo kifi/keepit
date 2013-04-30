@@ -34,7 +34,6 @@ class AdminCommentController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   commentRepo: CommentRepo,
-  commentRepoImpl: CommentRepoImpl, // andrew: remove after grandfathering runs
   commentRecipientRepo: CommentRecipientRepo,
   normalizedURIRepo: NormalizedURIRepo,
   userWithSocialRepo: UserWithSocialRepo,
