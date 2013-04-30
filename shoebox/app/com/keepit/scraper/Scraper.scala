@@ -13,6 +13,7 @@ import com.keepit.scraper.extractor.DefaultExtractor
 import com.keepit.scraper.extractor.DefaultExtractorFactory
 import com.keepit.scraper.extractor.Extractor
 import com.keepit.scraper.extractor.YoutubeExtractorFactory
+import com.keepit.scraper.util.OpenGraph
 import com.keepit.search.LangDetector
 import com.google.inject.Inject
 import org.apache.http.HttpStatus
@@ -118,6 +119,7 @@ class Scraper @Inject() (
             id = uri.id.get,
             title = uri.title.getOrElse(""),
             description = None,
+            media = None,
             content = "",
             scrapedAt = currentDateTime,
             httpContentType = None,
@@ -192,6 +194,7 @@ class Scraper @Inject() (
             val content = extractor.getContent
             val title = getTitle(extractor)
             val description = getDescription(extractor)
+            val media = getMediaTypeString(extractor)
             val signature = computeSignature(title, description.getOrElse(""), content)
 
             // now detect the document change
@@ -209,6 +212,7 @@ class Scraper @Inject() (
               Scraped(Article(id = normalizedUri.id.get,
                               title = title,
                               description = description,
+                              media = media,
                               content = content,
                               scrapedAt = currentDateTime,
                               httpContentType = extractor.getMetadata("Content-Type"),
@@ -237,6 +241,7 @@ class Scraper @Inject() (
   private[this] def getDescription(x: Extractor): Option[String] = {
     x.getMetadata("description").orElse(x.getMetadata("Description")).orElse(x.getMetadata("DESCRIPTION"))
   }
+  private[this] def getMediaTypeString(x: Extractor): Option[String] = OpenGraph.getMediaTypeString(x)
 
   private[this] def computeSignature(fields: String*) = fields.foldLeft(new SignatureBuilder){ (builder, text) => builder.add(text) }.build
 
