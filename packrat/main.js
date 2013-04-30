@@ -343,13 +343,12 @@ api.port.on({
   },
   keep: function(data, _, tab) {
     api.log("[keep]", data);
-    var priv = data.how == "private";
-    getBookmarkFolderInfo(getStored("bookmark_id"), function(bmInfo) {
-      api.bookmarks.create(bmInfo[priv ? "privateId" : "publicId"], data.title, data.url, function(bm) {
-        bm.isPrivate = priv;
-        postBookmarks(function(f) {f([bm])}, "HOVER_KEEP");
-      });
-    });
+    var bm = {
+      title: data.title,
+      url: data.url,
+      isPrivate: data.how == "private"
+    }
+    postBookmarks(function(f) {f([bm])}, "HOVER_KEEP");
     pageData[tab.nUri].tabs.forEach(function(tab) {
       setIcon(tab, data.how);
       api.tabs.emit(tab, "kept", {kept: data.how});
