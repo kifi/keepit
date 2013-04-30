@@ -176,8 +176,6 @@ GET     /admin/comments/:page       @com.keepit.controllers.admin.AdminCommentCo
 GET     /admin/messages             @com.keepit.controllers.admin.AdminCommentController.messagesViewFirstPage
 GET     /admin/messages/:page       @com.keepit.controllers.admin.AdminCommentController.messagesView(page: Int)
 
-POST     /admin/comment/grandfatherThreads    @com.keepit.controllers.admin.AdminCommentController.grandfatherDuplicateThreads(safeMode: Boolean ?= true)
-
 GET     /admin/searchConfig/:id     @com.keepit.controllers.admin.AdminSearchConfigController.showUserConfig(id: Id[User])
 POST    /admin/searchConfig/:id/set   @com.keepit.controllers.admin.AdminSearchConfigController.setUserConfig(id: Id[User])
 GET     /admin/searchConfig/:id/reset @com.keepit.controllers.admin.AdminSearchConfigController.resetUserConfig(id: Id[User])
