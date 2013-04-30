@@ -83,14 +83,14 @@ class AdminCommentController @Inject() (
     Ok(html.admin.messages(uriAndUsers, page, count, pageCount))
   }
 
-  def grandfatherDuplicateThreads = AdminHtmlAction { request =>
+  def grandfatherDuplicateThreads(safeMode: Boolean) = AdminHtmlAction { request =>
     val userIds = db.readOnly(implicit s => userRepo.all).map(_.id.get)
 
     log.info(s"[thread grandfathering] started grandfathering for ${userIds.size} users")
     val updatedCounts = userIds map { userId =>
       db.readWrite { implicit session =>
         // separate db connections to prevent a long-running read-write mysteriously disappearing
-        commentRepoImpl.grandfatherSplitConversations(userId)
+        commentRepoImpl.grandfatherSplitConversations(userId, safeMode)
       }
     }
 

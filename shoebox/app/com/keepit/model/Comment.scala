@@ -191,15 +191,15 @@ class CommentRepoImpl @Inject() (
       }
   }
 
-  def grandfatherSplitConversations(authorId: Id[User])(implicit session: RWSession): (Int, Int) = {
+  def grandfatherSplitConversations(authorId: Id[User], saveMode: Boolean = true)(implicit session: RWSession): (Int, Int) = {
     log.info(s"[thread grandfathering] running for author $authorId")
     var threadsUpdated = 0
     var repliesUpdated = 0
 
-    val threadsByAuthor = (for (b <- table if b.userId === authorId) yield b).list
+    val threadsByAuthor = (for (b <- table if b.userId === authorId && b.permissions === CommentPermissions.MESSAGE && b.parent.isNull) yield b).list
     threadsByAuthor map { thread =>
-      val recipients = commentRecipientRepoImpl.getByComment(thread.id.get).map(_.userId.get).toSet + authorId
-      val realParentId = getParentByUriParticipants(thread.uriId, recipients)
+      val recipients = commentRecipientRepoImpl.getByComment(thread.id.get)
+      val realParentId = getParentByUriParticipants(thread.uriId, (recipients.map(_.userId.get).toSet + authorId))
       if (realParentId.isDefined && 
           thread.id.get.id != realParentId.get.id && 
           (thread.parent.isEmpty || thread.parent.get.id != realParentId.get.id)) {
@@ -208,9 +208,12 @@ class CommentRepoImpl @Inject() (
         threadsUpdated += 1
         getChildren(thread.id.get) map { reply =>
           repliesUpdated += 1
-          save(reply.copy(parent = realParent.id))
+          if(!saveMode) save(reply.copy(parent = realParent.id))
         }
-        save(thread.copy(parent = realParent.id))
+        if(!saveMode) save(thread.copy(parent = realParent.id))
+        recipients.map { recipient =>
+          if(!saveMode) commentRecipientRepoImpl.save(recipient.withState(CommentRecipientStates.INACTIVE))
+        }
       }
     }
     (threadsUpdated, repliesUpdated)
