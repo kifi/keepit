@@ -22,6 +22,24 @@ function clearDataCache() {
   urlPatterns = [];
 }
 
+function PageData() {
+  this.tabs = [];
+  this.on2Callbacks = [];
+}
+PageData.prototype = {
+  on2: function(cb) {
+    if (this.counts) {
+      cb();
+    } else {
+      this.on2Callbacks.push(cb);
+    }
+  },
+  dispatchOn2: function() {
+    while (this.on2Callbacks.length) {
+      this.on2Callbacks.shift()();
+    }
+  }};
+
 // ===== Server requests
 
 function ajax(method, uri, data, done, fail) {  // method and uri are required
@@ -153,6 +171,7 @@ const socketHandlers = {
       d.tabs.forEach(function(tab) {
         initTab(tab, d);
       });
+      d.dispatchOn2();
 
       // send tabs any missed updates
       if (dPrev.comments) {
@@ -470,19 +489,19 @@ api.port.on({
   },
   comments: function(_, respond, tab) {
     var d = pageData[tab.nUri];
-    if (d && d.comments) {
+    if (d) d.on2(function() {
       respond(d.comments);
-    }
+    });
   },
   threads: function(_, respond, tab) {
     var d = pageData[tab.nUri];
-    if (d && d.threads) {
+    if (d) d.on2(function() {
       respond({threads: d.threads, read: d.lastMessageRead});
-    }
+    });
   },
   thread: function(data, respond, tab) {  // data.id may be id of any message (not necessarily parent)
     var d = pageData[tab.nUri];
-    if (d) {
+    if (d) d.on2(function() {
       var th = d.threads.filter(function(t) {return t.id == data.id || t.messageTimes[data.id]})[0];
       if (th && d.messages[th.id]) {
         if (data.respond) {
@@ -496,7 +515,7 @@ api.port.on({
           return true;
         }
       }
-    }
+    });
   },
   notifications: function(howMany, tab) {
     if (howMany > notifications.length) {
@@ -822,7 +841,7 @@ function subscribe(tab) {
     }
   } else if (socket) {
     socket.send(["subscribe_uri", tab.url], function(uri) {
-      d = pageData[uri] = pageData[uri] || {tabs: []};
+      d = pageData[uri] = pageData[uri] || new PageData;
       d.seq = socket.seq;
       finish(uri);
     });
