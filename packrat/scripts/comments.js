@@ -78,7 +78,7 @@ commentsPane = function() {
           if (comment.isLoggedInUser && ($old = $posted.children("[data-id=]").first()).length) {
             $old.replaceWith($c);
           } else {
-            $posted.append($c).layout()[0].scrollTop = 99999;  // should we compare timestamps and insert in order?
+            $posted.append($c).scrollToBottom();  // should we compare timestamps and insert in order?
           }
           emitRead(comment);
         });
@@ -107,7 +107,7 @@ commentsPane = function() {
       "isLoggedInUser": true,
       "id": ""
     }, function($c) {
-      $posted.append($c).layout()[0].scrollTop = 99999;
+      $posted.append($c).scrollToBottom();
     });
   }
 

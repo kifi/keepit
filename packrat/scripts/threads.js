@@ -72,7 +72,7 @@ threadsPane = function() {
               $("<div>", {height: 0}).insertAfter($last).animate({height: h}, ms, remove);
             }
           } else {  // TODO: animate in from side? move others up first, and scroll down.
-            $list.append($th).layout()[0].scrollTop = 99999;
+            $list.append($th).scrollToBottom();
           }
         });
       }
@@ -84,7 +84,7 @@ threadsPane = function() {
           arr[i] = $th;
           if (++n == arr.length) {
             $list.children(".kifi-thread").remove().end()
-              .append(arr).layout()[0].scrollTop = 99999;
+              .append(arr).scrollToBottom();
           }
         });
       })
@@ -113,7 +113,7 @@ threadsPane = function() {
       digest: text,
       messageTimes: {"": now}
     }, now, function($th) {
-      $list.append($th).layout()[0].scrollTop = 99999;
+      $list.append($th).scrollToBottom();
       $container.find(".kifi-compose-draft").empty().blur();
       $container.find(".kifi-compose-to").tokenInput("clear");
     });

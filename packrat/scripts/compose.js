@@ -124,7 +124,11 @@ function attachComposeBindings($c, composeTypeName) {
       api.log("[updateMaxHeight]", hOld, "->", hNew);
       var scrollTop = elAbove.scrollTop;
       elAbove.style.maxHeight = hNew + "px";
-      elAbove.scrollTop = hOld == null ? 9999 : Math.max(0, scrollTop + hOld - hNew);
+      if (hOld) {
+        elAbove.scrollTop = Math.max(0, scrollTop + hOld - hNew);
+      } else {
+        $(elAbove).scrollToBottom();
+      }
       hOld = hNew;
     }
   }
