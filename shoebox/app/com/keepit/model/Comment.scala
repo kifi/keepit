@@ -18,8 +18,8 @@ import com.keepit.common.cache._
 
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
-
 import collection.SeqProxy
+import com.keepit.common.logging._
 
 
 case class Comment(
@@ -81,7 +81,7 @@ class CommentRepoImpl @Inject() (
   val commentCountCache: CommentCountUriIdCache,
   userConnectionRepo: UserConnectionRepo,
   commentRecipientRepoImpl: CommentRecipientRepoImpl)
-    extends DbRepo[Comment] with CommentRepo with ExternalIdColumnDbFunction[Comment] {
+    extends DbRepo[Comment] with CommentRepo with ExternalIdColumnDbFunction[Comment] with Logging {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
@@ -189,6 +189,34 @@ class CommentRepoImpl @Inject() (
       } else {
         None
       }
+  }
+
+  def grandfatherSplitConversations(authorId: Id[User], saveMode: Boolean = true)(implicit session: RWSession): (Int, Int) = {
+    log.info(s"[thread grandfathering] running for author $authorId")
+    var threadsUpdated = 0
+    var repliesUpdated = 0
+
+    val threadsByAuthor = (for (b <- table if b.userId === authorId && b.permissions === CommentPermissions.MESSAGE && b.parent.isNull) yield b).list
+    threadsByAuthor map { thread =>
+      val recipients = commentRecipientRepoImpl.getByComment(thread.id.get)
+      val realParentId = getParentByUriParticipants(thread.uriId, (recipients.map(_.userId.get).toSet + authorId))
+      if (realParentId.isDefined && 
+          thread.id.get.id != realParentId.get.id && 
+          (thread.parent.isEmpty || thread.parent.get.id != realParentId.get.id)) {
+        val realParent = get(realParentId.get)
+        log.info(s"[thread grandfathering] detected duplicate thread. ${thread.id.get.id} should be ${realParent.id.get.id}")
+        threadsUpdated += 1
+        getChildren(thread.id.get) map { reply =>
+          repliesUpdated += 1
+          if(!saveMode) save(reply.copy(parent = realParent.id))
+        }
+        if(!saveMode) save(thread.copy(parent = realParent.id))
+        recipients.map { recipient =>
+          if(!saveMode) commentRecipientRepoImpl.save(recipient.withState(CommentRecipientStates.INACTIVE))
+        }
+      }
+    }
+    (threadsUpdated, repliesUpdated)
   }
 
   def count(permissions: State[CommentPermission])(implicit session: RSession): Int =
