@@ -63,33 +63,20 @@ var renderNotices;
     api.port.emit("notifications", numRequested);
   }
 
-  function formatAuthorNames(authors) {
-    var names = authors.length > 1 ?
-      authors.map(function (a) { return a.firstName; }) :
-      [authors[0].firstName + " " + authors[0].lastName];
-    names = names.map(function (n) {
-      return $('<span class="kifi-author-name">').text(n).wrapAll('<span>').parent().html();
-    });
-    if (names.length == 1) {
-      return names[0];
-    } else if (names.length <= 3) {
-      return names.slice(0, names.length - 1).join(", ") + " and " + names[names.length - 1];
-    } else {
-      return names.slice(0, 2).join(", ") + " and " + (names.length - 2) + " others";
-    }
-  }
-
   function getRenderedNotices(notices, newIdxs, $notifyPane, callback) {
     var renderedNotices = [];
     var done = 0;
     $.each(notices, function (i, notice) {
       if (notice.category in NOTICE_TYPES) {
-        var authors = notice.details.authors || [notice.details.author]
+        var authors = notice.details.authors || [notice.details.author], nAuthors = authors.length;
         render("html/metro/notice_" + notice.category + ".html", $.extend({
           formatMessage: getSnippetFormatter,
           formatLocalDate: getLocalDateFormatter,
           avatar: authors[0].avatar,
-          formattedAuthor: formatAuthorNames(authors)
+          oneAuthor: nAuthors == 1,
+          twoAuthors: nAuthors == 2,
+          threeAuthors: nAuthors == 3,
+          moreAuthors: nAuthors > 3 ? nAuthors - 2 : 0
         }, notice), function (html) {
           renderedNotices[i] = $(html).toggleClass("kifi-notice-new", newIdxs.indexOf(i) >= 0).data(notice);
           if (++done == notices.length) {
