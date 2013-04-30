@@ -5,8 +5,19 @@
 // @require scripts/lib/mustache-0.7.1.min.js
 // @require scripts/render.js
 
-jQuery.fn.layout = function() {
+$.fn.layout = function() {
   return this.each(function() {this.clientHeight});  // forces layout
+};
+$.fn.scrollToBottom = function() {
+  return this.each(function() {
+    var cH = this.clientHeight, sH = this.scrollHeight;
+    if (cH < sH) {
+      var sT = this.scrollTop, d = sH - sT - cH;
+      if (d > 0) {
+        $(this).animate({scrollTop: "+=" + d}, 40 * Math.log(d));
+      }
+    }
+  });
 };
 
 var generalPane, commentsPane, threadsPane, threadPane;  // stubs
