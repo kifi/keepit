@@ -22,7 +22,7 @@ class BasicQueryInfoSerializer extends Format[BasicQueryInfo] {
 
   def reads(json: JsValue): JsResult[BasicQueryInfo] = {
     JsSuccess(BasicQueryInfo(
-      queryUUID = ExternalId[ArticleSearchResultRef]((json \ "queryUUID").asOpt[String].getOrElse("")),
+      queryUUID = ExternalId[ArticleSearchResultRef]((json \ "queryUUID").asOpt[String].getOrElse("00000000-0000-0000-0000-000000000000")),
       queryString = (json \ "queryString").asOpt[String].getOrElse(""),
       userId = Id[User]((json \ "userId").asOpt[String].getOrElse("0").toLong)))
   }
