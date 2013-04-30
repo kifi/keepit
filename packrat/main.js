@@ -163,7 +163,7 @@ const socketHandlers = {
       d.threads = o.threads || [];
       d.messages = {};
       d.lastCommentRead = o.lastCommentRead;
-      d.lastMessageRead = o.lastMessageRead;
+      d.lastMessageRead = o.lastMessageRead || {};
       d.counts = {
         n: -newNotificationIdxs.length,
         c: commentCount(d),

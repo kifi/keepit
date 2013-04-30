@@ -34,6 +34,7 @@ html.kifi-pane-parent {
   position: relative;
   width: auto;
   min-width: 0;
+  min-height: 100%;
   margin-right: 0;
   -webkit-transition: margin-right .25s ease-in;
   transition: margin-right .25s ease-in;
