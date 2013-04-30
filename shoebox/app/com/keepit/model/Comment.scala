@@ -191,34 +191,6 @@ class CommentRepoImpl @Inject() (
       }
   }
 
-  def grandfatherSplitConversations(authorId: Id[User], saveMode: Boolean = true)(implicit session: RWSession): (Int, Int) = {
-    log.info(s"[thread grandfathering] running for author $authorId")
-    var threadsUpdated = 0
-    var repliesUpdated = 0
-
-    val threadsByAuthor = (for (b <- table if b.userId === authorId && b.permissions === CommentPermissions.MESSAGE && b.parent.isNull) yield b).list
-    threadsByAuthor map { thread =>
-      val recipients = commentRecipientRepoImpl.getByComment(thread.id.get)
-      val realParentId = getParentByUriParticipants(thread.uriId, (recipients.map(_.userId.get).toSet + authorId))
-      if (realParentId.isDefined && 
-          thread.id.get.id != realParentId.get.id && 
-          (thread.parent.isEmpty || thread.parent.get.id != realParentId.get.id)) {
-        val realParent = get(realParentId.get)
-        log.info(s"[thread grandfathering] detected duplicate thread. ${thread.id.get.id} should be ${realParent.id.get.id}")
-        threadsUpdated += 1
-        getChildren(thread.id.get) map { reply =>
-          repliesUpdated += 1
-          if(!saveMode) save(reply.copy(parent = realParent.id))
-        }
-        if(!saveMode) save(thread.copy(parent = realParent.id))
-        recipients.map { recipient =>
-          if(!saveMode) commentRecipientRepoImpl.save(recipient.withState(CommentRecipientStates.INACTIVE))
-        }
-      }
-    }
-    (threadsUpdated, repliesUpdated)
-  }
-
   def count(permissions: State[CommentPermission])(implicit session: RSession): Int =
     Query((for {
       b <- table if b.permissions === permissions && b.state === CommentStates.ACTIVE
