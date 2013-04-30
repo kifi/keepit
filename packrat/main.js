@@ -807,9 +807,10 @@ function subscribe(tab) {
     if (tab.seq == socket.seq) {  // tab is up-to-date
       api.tabs.emit(tab, "counts", d.counts);
     } else {
+      var tabUpToDate = tab.seq == d.seq;
       finish(tab.nUri || tab.url);
       if (d.hasOwnProperty("kept")) {
-        if (tab.seq != d.seq) {
+        if (!tabUpToDate) {
           setIcon(tab, d.kept);
           sendKept(tab, d);
           if (d.counts) {
