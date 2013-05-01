@@ -362,13 +362,12 @@ api.port.on({
   },
   keep: function(data, _, tab) {
     api.log("[keep]", data);
-    var priv = data.how == "private";
-    getBookmarkFolderInfo(getStored("bookmark_id"), function(bmInfo) {
-      api.bookmarks.create(bmInfo[priv ? "privateId" : "publicId"], data.title, data.url, function(bm) {
-        bm.isPrivate = priv;
-        postBookmarks(function(f) {f([bm])}, "HOVER_KEEP");
-      });
-    });
+    var bm = {
+      title: data.title,
+      url: data.url,
+      isPrivate: data.how == "private"
+    }
+    postBookmarks(function(f) {f([bm])}, "HOVER_KEEP");
     pageData[tab.nUri].tabs.forEach(function(tab) {
       setIcon(tab, data.how);
       api.tabs.emit(tab, "kept", {kept: data.how});
@@ -376,15 +375,6 @@ api.port.on({
   },
   unkeep: function(_, _, tab) {
     api.log("[unkeep]", tab.url);
-    getBookmarkFolderInfo(getStored("bookmark_id"), function(bmInfo) {
-      api.bookmarks.search(tab.url, function(bm) {
-        bm.forEach(function(bm) {
-          if (bm.url === tab.url && (bm.parentId == bmInfo.publicId || bm.parentId == bmInfo.privateId)) {
-            api.bookmarks.remove(bm.id);
-          }
-        });
-      });
-    });
     ajax("POST", "/bookmarks/remove", {url: tab.url}, function(o) {
       api.log("[unkeep] response:", o);
     });
@@ -395,17 +385,6 @@ api.port.on({
   },
   set_private: function(priv, _, tab) {
     api.log("[setPrivate]", tab.url, priv);
-    getBookmarkFolderInfo(getStored("bookmark_id"), function(bmInfo) {
-      var newParentId = bmInfo[priv ? "privateId" : "publicId"];
-      var oldParentId = bmInfo[priv ? "publicId" : "privateId"];
-      api.bookmarks.search(tab.url, function(bm) {
-        bm.forEach(function(bm) {
-          if (bm.url === tab.url && bm.parentId == oldParentId) {
-            api.bookmarks.move(bm.id, newParentId);
-          }
-        });
-      });
-    });
     ajax("POST", "/bookmarks/private", {url: tab.url, private: priv}, function(o) {
       api.log("[setPrivate] response:", o);
     });
@@ -720,72 +699,6 @@ function tellTabsIfCountChanged(d, key, count) {
   }
 }
 
-// Finds KiFi bookmark folder by id (if provided) or by name in the Bookmarks Bar,
-// or else creates it there. Ensures that it has "public" and "private" subfolders.
-// Passes an object with the three folder ids to the callback.
-function getBookmarkFolderInfo(keepItBookmarkId, callback) {
-  api.log("[getBookmarkFolderInfo]");
-
-  if (keepItBookmarkId) {
-    api.bookmarks.get(keepItBookmarkId, function(bm) {
-      if (bm) {
-        // We created this bookmark folder. We continue to use it even if user has moved it or renamed it.
-        ensurePublicPrivate(bm);
-      } else {
-        findOrCreateKeepIt();
-      }
-    });
-  } else {
-    findOrCreateKeepIt();
-  }
-
-  function findOrCreateKeepIt() {
-    api.bookmarks.getBarFolder(function(bar) {
-      api.bookmarks.getChildren(bar.id, function(bm) {
-        var keepIt = bm.filter(function(bm) { return bm.title == "KeepIt" });
-        if (keepIt.length) {
-          ensurePublicPrivate(keepIt[0]);
-        } else {
-          api.bookmarks.createFolder(bar.id, "KeepIt", function(bm) {
-            ensurePublicPrivate(bm);
-          });
-        }
-      });
-    });
-  }
-
-  function ensurePublicPrivate(keepIt) {
-    api.bookmarks.getChildren(keepIt.id, function(children) {
-      var bm = children.filter(function(bm) { return bm.title == "public" });
-      if (bm.length) {
-        ensurePrivate({keepItId: keepIt.id, publicId: bm[0].id}, children);
-      } else {
-        api.bookmarks.createFolder(keepIt.id, "public", function(bm) {
-          ensurePrivate({keepItId: keepIt.id, publicId: bm.id}, children);
-        });
-      }
-    });
-  }
-
-  function ensurePrivate(info, children) {
-    var bm = children.filter(function(bm) { return bm.title == "private" });
-    if (bm.length) {
-      info.privateId = bm[0].id;
-      done(info);
-    } else {
-      api.bookmarks.createFolder(info.keepItId, "private", function(bm) {
-        info.privateId = bm.id;
-        done(info);
-      });
-    }
-  }
-
-  function done(info) {
-    api.log("[getBookmarkFolderInfo] done");
-    callback(info);
-  }
-}
-
 function searchOnServer(request, respond) {
   logEvent("search", "newSearch", {query: request.query, filter: request.filter});
 
@@ -1047,11 +960,6 @@ function authenticate(callback) {
       delete session.rules;
       delete session.patterns;
       delete session.installationId;
-
-      // Locate or create KeepIt bookmark folder.
-      getBookmarkFolderInfo(getStored("bookmark_id"), function(info) {
-        store("bookmark_id", info.keepItId);
-      });
 
       callback();
 
