@@ -105,20 +105,25 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
   /**
    * Please see http://sendgrid.com/docs/API%20Reference/SMTP%20API/index.html for docs
    */
-  def sendMail(mail: ElectronicMail): ElectronicMail = {
-    val message = createMessage(mail)
-    val transport = getLiveTransport()
-    try {
-      transport.sendMessage(message, message.getRecipients(Message.RecipientType.TO))
-      val messageId = message.getHeader(MailProvider.MESSAGE_ID)(0).trim
-      log.info("mail %s sent with new Message-ID: %s".format(mail.externalId, messageId))
-      db.readWrite { implicit s =>
-        mailRepo.save(mail.sent("message sent", ElectronicMailMessageId.fromEmailHeader(messageId)))
+  def sendMail(mailId: Id[ElectronicMail]): Unit = {
+    val mail = db.readOnly { implicit s =>
+      mailRepo.get(mailId)
+    }
+    if (mail.isReadyToSend) {
+      val message = createMessage(mail)
+      val transport = getLiveTransport()
+      try {
+        transport.sendMessage(message, message.getRecipients(Message.RecipientType.TO))
+        val messageId = message.getHeader(MailProvider.MESSAGE_ID)(0).trim
+        log.info("mail %s sent with new Message-ID: %s".format(mail.externalId, messageId))
+        db.readWrite { implicit s =>
+          mailRepo.save(mail.sent("message sent", ElectronicMailMessageId.fromEmailHeader(messageId)))
+        }
+      } catch {
+        case e: Throwable =>
+          log.error(e.toString)
+          mailError(mail, e.toString(), transport)
       }
-    } catch {
-      case e: Throwable =>
-        log.error(e.toString)
-        mailError(mail, e.toString(), transport)
     }
   }
 
