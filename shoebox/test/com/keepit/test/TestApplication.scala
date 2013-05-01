@@ -116,6 +116,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     bind[MailToKeepPlugin].to[FakeMailToKeepPlugin]
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
     bind[HealthcheckPlugin].to[FakeHealthcheck]
+    bind[SlickSessionProvider].to[TestSlickSessionProvider]
 
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
     listenerBinder.addBinding().to(classOf[ResultClickedListener])
