@@ -47,7 +47,7 @@ case class ElectronicMail (
   def withId(id: Id[ElectronicMail]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 
-  def isReadyToSent: Boolean = state == ElectronicMailStates.READY_TO_SEND
+  def isReadyToSend: Boolean = state == ElectronicMailStates.READY_TO_SEND
 
   def prepareToSend(): ElectronicMail = state match {
     case ElectronicMailStates.PREPARING => copy(state = ElectronicMailStates.READY_TO_SEND)

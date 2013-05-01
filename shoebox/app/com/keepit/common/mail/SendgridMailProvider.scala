@@ -109,7 +109,7 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
     val mail = db.readOnly { implicit s =>
       mailRepo.get(mailId)
     }
-    if (mail.isReadyToSent) {
+    if (mail.isReadyToSend) {
       val message = createMessage(mail)
       val transport = getLiveTransport()
       try {
