@@ -9,22 +9,28 @@ import com.keepit.test._
 import play.api.Play.current
 import play.api.test.Helpers._
 
-class PostOfficeTest extends Specification {
+class PostOfficeTest extends Specification with TestDBRunner {
 
   "PostOffice" should {
     "persist and load email" in {
-      running(new ShoeboxApplication().withFakeMail()) {
-        inject[Database].readWrite { implicit s =>
+      withDB(FakeMailModule()) { implicit injector =>
+        val (mail1, outbox) = db.readWrite { implicit s =>
           val mail1 = inject[PostOffice].sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.TEAM, subject = "foo 1", htmlBody = "some body in html 1", category = PostOffice.Categories.HEALTHCHECK))
-          val outbox = inject[FakeOutbox]
+          (mail1, inject[FakeOutbox])
+        }
+        db.readOnly { implicit s =>
           outbox.size === 1
-          outbox(0).externalId === mail1.externalId
-          outbox(0).htmlBody === mail1.htmlBody
-          val mail2 = inject[PostOffice].sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.TEAM, subject = "foo 2", htmlBody = "some body in html 2", category = PostOffice.Categories.HEALTHCHECK))
+          outbox(0) === mail1.id.get
+          electronicMailRepo.get(outbox(0)).htmlBody === mail1.htmlBody
+        }
+        val mail2 = db.readWrite { implicit s =>
+          inject[PostOffice].sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.TEAM, subject = "foo 2", htmlBody = "some body in html 2", category = PostOffice.Categories.HEALTHCHECK))
+        }
+        db.readOnly { implicit s =>
           outbox.size === 2
-          outbox(1).externalId === mail2.externalId
-          outbox(0).htmlBody === mail1.htmlBody
-          outbox(1).htmlBody === mail2.htmlBody
+          outbox(1) === mail2.id.get
+          electronicMailRepo.get(outbox(0)).htmlBody === mail1.htmlBody
+          electronicMailRepo.get(outbox(1)).htmlBody === mail2.htmlBody
         }
       }
     }

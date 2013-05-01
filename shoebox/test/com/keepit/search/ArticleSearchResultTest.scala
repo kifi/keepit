@@ -25,7 +25,7 @@ class ArticleSearchResultTest extends Specification with DbRepos {
          val res = ArticleSearchResult(
               last = Some(ExternalId[ArticleSearchResultRef]()),
               query = "scala query",
-              hits = Seq(ArticleHit(Id[NormalizedURI](1), 0.1F, true, false, Set(Id[User](33)), 42)),
+              hits = Seq(ArticleHit(Id[NormalizedURI](1), 0.1F, true, false, Seq(Id[User](33)), 42)),
               myTotal = 4242,
               friendsTotal = 3232,
               mayHaveMoreHits = true,
@@ -51,7 +51,7 @@ class ArticleSearchResultTest extends Specification with DbRepos {
          val res = ArticleSearchResult(
               last = Some(ExternalId[ArticleSearchResultRef]()),
               query = "scala query",
-              hits = Seq(ArticleHit(Id[NormalizedURI](1), 0.1F, true, false, Set(Id[User](33)), 42)),
+              hits = Seq(ArticleHit(Id[NormalizedURI](1), 0.1F, true, false, Seq(Id[User](33)), 42)),
               myTotal = 4242,
               friendsTotal = 3232,
               mayHaveMoreHits = true,

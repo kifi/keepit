@@ -1,5 +1,6 @@
 package com.keepit.common.mail
 
+import com.keepit.common.db._
 import com.google.inject.ImplementedBy
 
 object MailProvider {
@@ -9,5 +10,5 @@ object MailProvider {
 
 @ImplementedBy(classOf[SendgridMailProvider])
 trait MailProvider {
-  def sendMail(mail: ElectronicMail): ElectronicMail
+  def sendMail(mailId: Id[ElectronicMail]): Unit
 }

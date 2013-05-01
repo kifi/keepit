@@ -4,6 +4,10 @@ import org.specs2.mutable.Specification
 
 class UserAgentTest extends Specification {
   "User Agent" should {
+    "don't parse old agent" in {
+      val str = "Chrome/26.0.1410.65"
+      UserAgent.fromString(str) === UserAgent(str, "", "" ,"", "", "")
+    }
     "parse browser versions FF Mac" in {
       val str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:20.0) Gecko/20100101 Firefox/20.0"
       UserAgent.fromString(str) === UserAgent(str, "Firefox", "OS X" ,"OS X 10.8 Mountain Lion", "Browser", "20.0")

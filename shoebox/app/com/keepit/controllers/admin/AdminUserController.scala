@@ -45,12 +45,12 @@ class AdminUserController @Inject() (
     searchClient: SearchServiceClient,
     userChannel: UserChannel,
     userValueRepo: UserValueRepo,
-    clock: Clock
-  ) extends AdminController(actionAuthenticator) {
+    clock: Clock) extends AdminController(actionAuthenticator) {
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val (user, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails) = db.readOnly { implicit s =>
-      val userWithSocial = userWithSocialRepo.toUserWithSocial(userRepo.get(userId))
+      val user = userRepo.get(userId)
+      val userWithSocial = userWithSocialRepo.toUserWithSocial(user)
       val socialUserInfos = socialUserInfoRepo.getByUser(userWithSocial.user.id.get)
       val follows = followRepo.getByUser(userId) map {f => normalizedURIRepo.get(f.uriId)}
       val comments = commentRepo.all(CommentPermissions.PUBLIC, userId) map {c =>
@@ -62,7 +62,8 @@ class AdminUserController @Inject() (
         })
       }
       val sentElectronicMails = mailRepo.forSender(userId)
-      val mailAddresses = userWithSocialRepo.toUserWithSocial(userRepo.get(userId)).emails.map(_.address)
+      val emails = emailRepo.getByUser(userId)
+      val mailAddresses = emails.map(_.address)
       val receivedElectronicMails = mailRepo.forRecipient(mailAddresses)
       (userWithSocial, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails)
     }
@@ -73,8 +74,9 @@ class AdminUserController @Inject() (
   }
 
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val (user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites) = db.readOnly {implicit s =>
-      val userWithSocial = userWithSocialRepo.toUserWithSocial(userRepo.get(userId))
+    val (user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails) = db.readOnly {implicit s =>
+      val user = userRepo.get(userId)
+      val userWithSocial = userWithSocialRepo.toUserWithSocial(user)
       val bookmarks = bookmarkRepo.getByUser(userId)
       val uris = bookmarks map (_.uriId) map normalizedURIRepo.get
       val socialConnections = socialConnectionRepo.getUserConnections(userId).sortWith((a,b) => a.fullName < b.fullName)
@@ -83,7 +85,8 @@ class AdminUserController @Inject() (
       }.toSeq.sortBy(_.socialUserInfo.fullName)
       val kifiInstallations = kifiInstallationRepo.all(userId).sortWith((a,b) => a.updatedAt.isBefore(b.updatedAt))
       val allowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").getOrElse("6").toInt
-      (userWithSocial, (bookmarks, uris).zipped.toList.seq, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites)
+      val emails = emailRepo.getByUser(user.id.get)
+      (userWithSocial, (bookmarks, uris).zipped.toList.seq, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails)
     }
     // above needs slicking.
     val historyUpdateCount = db.readOnly { implicit session =>
@@ -101,7 +104,7 @@ class AdminUserController @Inject() (
       }
     }
 
-    Ok(html.admin.user(user, bookmarks.size, filteredBookmarks.getOrElse(bookmarks), socialConnections, fortyTwoConnections, kifiInstallations, historyUpdateCount, bookmarkSearch, allowedInvites))
+    Ok(html.admin.user(user, bookmarks.size, filteredBookmarks.getOrElse(bookmarks), socialConnections, fortyTwoConnections, kifiInstallations, historyUpdateCount, bookmarkSearch, allowedInvites, emails))
   }
 
   def usersView = AdminHtmlAction { implicit request =>

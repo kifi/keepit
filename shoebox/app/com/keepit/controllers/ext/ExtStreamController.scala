@@ -174,6 +174,17 @@ class ExtStreamController @Inject() (
                   math.max(db.readOnly(implicit s => userNotificationRepo.getUnreadCount(userId)), howMany.toInt)
                 else howMany.toInt
               channel.push(Json.arr("notifications", getNotifications(userId, createdBefore, toFetch)))
+              // TODO: replace above code with the following code when createdBefore param is no longer passed
+              // val notices = db.readOnly(implicit s => userNotificationRepo.getAllUnreadOrUpTo(userId, howMany.toInt))
+              // channel.push(Json.arr("notifications", notices.map(SendableNotification.fromUserNotification)))
+            },
+            "get_missed_notifications" -> { case JsString(time) +: _ =>
+              val notices = db.readOnly(implicit s => userNotificationRepo.getCreatedAfter(userId, parseStandardTime(time)))
+              channel.push(Json.arr("missed_notifications", notices.map(SendableNotification.fromUserNotification)))
+            },
+            "get_old_notifications" -> { case JsNumber(requestId) +: JsString(time) +: JsNumber(howMany) +: _ =>
+              val notices = db.readOnly(implicit s => userNotificationRepo.getCreatedBefore(userId, parseStandardTime(time), howMany.toInt))
+              channel.push(Json.arr(requestId.toLong, notices.map(SendableNotification.fromUserNotification)))
             },
             "set_message_read" -> { case JsString(messageId) +: _ =>
               setMessageRead(userId, ExternalId[Comment](messageId))
@@ -243,7 +254,6 @@ class ExtStreamController @Inject() (
     val event = Events.userEvent(eventFamily, eventName, user, session.experiments, installId, metaData, prevEvents, eventTime)
     log.debug("Created new event: %s".format(event))
     persistEventPlugin.persist(event)
-    eventHelper.newEvent(event)
   }
 
   private def getMessageThread(messageId: ExternalId[Comment]): (NormalizedURI, Seq[CommentWithBasicUser]) = {

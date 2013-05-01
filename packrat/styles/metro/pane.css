@@ -14,7 +14,7 @@
   bottom: 0;
   left: auto;
   width: 322px;
-  height: 100%;
+  height: auto;
   background: #34495e;
   font: 12px "Helvetica Neue",arial,sans-serif;
   text-align: left;
@@ -34,6 +34,7 @@ html.kifi-pane-parent {
   position: relative;
   width: auto;
   min-width: 0;
+  min-height: 100%;
   margin-right: 0;
   -webkit-transition: margin-right .25s ease-in;
   transition: margin-right .25s ease-in;

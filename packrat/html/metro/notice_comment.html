@@ -1,7 +1,7 @@
-<div class="kifi-notice kifi-notice-comment kifi-notice-state-{{state}}" data-id="{{id}}">
-  <img class="kifi-notice-avatar" src="{{avatar}}">
+<div class="kifi-notice kifi-notice-comment kifi-notice-state-{{state}}{{#isNew}} kifi-notice-new{{/isNew}}" data-id="{{id}}" data-uri="{{details.page}}" data-locator="{{details.locator}}">
+  <img class="kifi-notice-avatar" src="{{details.author.avatar}}">
   <div class="kifi-notice-name">
-    {{{formattedAuthor}}}
+    <span class="kifi-author-name">{{details.author.firstName}} {{details.author.lastName}}</span>
   </div>
   <div class="kifi-notice-action">
   	 Comment

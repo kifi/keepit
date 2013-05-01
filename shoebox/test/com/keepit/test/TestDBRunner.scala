@@ -1,30 +1,15 @@
 package com.keepit.test
 
-import com.google.inject.Injector
 import scala.slick.session.{ Database => SlickDatabase, Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability }
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.DbInfo
-import com.google.inject.Guice
-import com.keepit.common.db.slick.H2
-import com.google.inject.Stage
 import com.google.inject.util.Modules
 import scala.slick.lifted.DDL
-import com.keepit.common.db.slick.Database
-import com.google.inject.Module
+import com.google.inject.{Module, Injector}
+import com.keepit.common.db.slick._
+import com.keepit.common.mail._
+import com.keepit.model._
 import com.keepit.inject.RichInjector
-import com.keepit.common.db.slick.DataBaseComponent
-import com.keepit.common.db.slick.DBSession.RWSession
-import com.keepit.common.db.slick.TableInitListener
-import com.keepit.common.db.slick.TableWithDDL
-import com.keepit.model.UserRepo
-import com.keepit.model.SocialUserInfoRepo
-import com.keepit.model.UnscrapableRepo
-import com.keepit.model.URLRepo
-import com.keepit.model.EmailAddressRepo
-import com.keepit.model.KifiInstallationRepo
-import com.keepit.model.NormalizedURIRepo
-import com.keepit.model.BookmarkRepo
-import com.keepit.model.UserExperimentRepo
-import com.keepit.model.UserRepoImpl
 
 trait TestDBRunner extends TestInjector {
 
@@ -39,6 +24,7 @@ trait TestDBRunner extends TestInjector {
   def userExperimentRepo(implicit injector: RichInjector) = inject[UserExperimentRepo]
   def emailAddressRepo(implicit injector: RichInjector) = inject[EmailAddressRepo]
   def unscrapableRepo(implicit injector: RichInjector) = inject[UnscrapableRepo]
+  def electronicMailRepo(implicit injector: RichInjector) = inject[ElectronicMailRepo]
 
   def withDB[T](overridingModules: Module*)(f: RichInjector => T) = {
     withInjector(overridingModules: _*) { implicit injector =>

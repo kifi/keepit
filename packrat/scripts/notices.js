@@ -3,38 +3,66 @@
 // @require scripts/api.js
 // @require scripts/lib/jquery.timeago.js
 
-var renderNotices;
-
-(function () {
-  const NOTICE_TYPES = { // map of available notice types to deep link
-    "comment": "/comments",
-    "message": "/messages"
-  };
+var renderNotices = function() {
   const SCROLL_DISTANCE = 40; // pixels from the bottom scrolled to get more
   const MAX_NOTIFICATIONS = 100; // maximum number of notifications
   const NEW_FADE_TIMEOUT = 1000; // number of ms to wait before starting to fade
   const NEW_FADE_DURATION = 3000; // length of the fade
   var numShown = 10;
   var numRequested = numShown;
+
+  var templates = {};
+  api.load("html/metro/notice_comment.html", function(tmpl) {templates.comment = tmpl});
+  api.load("html/metro/notice_message.html", function(tmpl) {templates.message = tmpl});
+
   api.port.on({
     notifications: function(data) {
+      var $notifyPane = $(".kifi-notices");
+      if (!$notifyPane.length) return;
       var timeLastSeen = new Date(data.timeLastSeen);
       var notices = data.notifications.slice(0, Math.max(numRequested, data.newIdxs[data.newIdxs.length - 1] || 0));
-      var $notifyPane = $(".kifi-notices");
-      if ($notifyPane.length) {
-        getRenderedNotices(notices, data.newIdxs, $notifyPane, function () {
-          if (notices.length && new Date(notices[0].time) > timeLastSeen) {
-            api.port.emit("notifications_read", notices[0].time);
-          }
-          numShown = numRequested = notices.length;
-        });
+      var noticesHtml = notices.map(function(notice, i) {
+        notice.isNew = data.newIdxs.indexOf(i) >= 0;
+        notice.formatMessage = getSnippetFormatter;
+        notice.formatLocalDate = getLocalDateFormatter;
+        switch (notice.category) {
+        case "comment":
+          break;
+        case "message":
+          var nAuthors = notice.details.authors.length;
+          notice.oneAuthor = nAuthors == 1;
+          notice.twoAuthors = nAuthors == 2;
+          notice.threeAuthors = nAuthors == 3;
+          notice.moreAuthors = nAuthors > 3 ? nAuthors - 2 : 0;
+          break;
+        default:
+          api.log("#a00", "[notifications] unrecognized category", notice.category);
+          return "";
+        }
+        return Mustache.render(templates[notice.category], notice);
+      }).join("");
+
+      $notifyPane.html(noticesHtml).find("time").timeago();
+
+      var $newNotices = $notifyPane.find(".kifi-notice-new")
+        .css("transition", "background " + NEW_FADE_DURATION + "ms ease");
+      setTimeout(function() {
+        $newNotices.removeClass("kifi-notice-new");
+        setTimeout(function() {
+          $newNotices.css("transition", "");
+        }, NEW_FADE_DURATION);
+      }, NEW_FADE_TIMEOUT);
+
+      if (notices.length && new Date(notices[0].time) > timeLastSeen) {
+        api.port.emit("notifications_read", notices[0].time);
       }
+      numShown = numRequested = notices.length;
     }
   });
 
   $(document).on("visibilitychange webkitvisibilitychange", requestNotices);
 
-  renderNotices = function($container) {
+  return function($container) {
     render("html/metro/notices.html", {}, function (html) {
       var $notifyPane = $(html).appendTo($container);
       $notifyPane.scroll(function() {
@@ -48,68 +76,13 @@ var renderNotices;
       requestNotices();
 
       $notifyPane.on('click', '.kifi-notice', function() {
-        var data = $(this).data();
-        api.port.emit("open_deep_link", {
-          nUri: data.details.page,
-          locator: NOTICE_TYPES[data.category] + "/" + data.details.id
-        });
+        api.port.emit("open_deep_link", {nUri: this.dataset.uri, locator: this.dataset.locator});
         return false;
       });
     });
   };
 
-
   function requestNotices() {
     api.port.emit("notifications", numRequested);
   }
-
-  function formatAuthorNames(authors) {
-    var names = authors.length > 1 ?
-      authors.map(function (a) { return a.firstName; }) :
-      [authors[0].firstName + " " + authors[0].lastName];
-    names = names.map(function (n) {
-      return $('<span class="kifi-author-name">').text(n).wrapAll('<span>').parent().html();
-    });
-    if (names.length == 1) {
-      return names[0];
-    } else if (names.length <= 3) {
-      return names.slice(0, names.length - 1).join(", ") + " and " + names[names.length - 1];
-    } else {
-      return names.slice(0, 2).join(", ") + " and " + (names.length - 2) + " others";
-    }
-  }
-
-  function getRenderedNotices(notices, newIdxs, $notifyPane, callback) {
-    var renderedNotices = [];
-    var done = 0;
-    $.each(notices, function (i, notice) {
-      if (notice.category in NOTICE_TYPES) {
-        var authors = notice.details.authors || [notice.details.author]
-        render("html/metro/notice_" + notice.category + ".html", $.extend({
-          formatMessage: getSnippetFormatter,
-          formatLocalDate: getLocalDateFormatter,
-          avatar: authors[0].avatar,
-          formattedAuthor: formatAuthorNames(authors)
-        }, notice), function (html) {
-          renderedNotices[i] = $(html).toggleClass("kifi-notice-new", newIdxs.indexOf(i) >= 0).data(notice);
-          if (++done == notices.length) {
-            $notifyPane.html(renderedNotices);
-            $notifyPane.find("time").timeago();
-            var $newNotices = $notifyPane.find(".kifi-notice-new").css({
-              transition: 'background ' + NEW_FADE_DURATION + 'ms ease',
-            });
-            setTimeout(function () {
-              $newNotices.removeClass('kifi-notice-new');
-              setTimeout(function() {
-                $newNotices.css({ transition: 'background 0s ease' });
-              }, NEW_FADE_DURATION);
-            }, NEW_FADE_TIMEOUT);
-            callback();
-          }
-        });
-      } else {
-        api.log("[getRenderedNotices] unrecognized category " + notice.category)
-      }
-    });
-  }
-})();
+}();

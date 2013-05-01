@@ -19,13 +19,14 @@ object UserAgent extends Logging {
   private lazy val parser = UADetectorServiceFactory.getResourceModuleParser()
 
   def fromString(userAgent: String): UserAgent = {
+    def normalize(str: String) = if (str == "unknown") "" else str
     val agent: SFUserAgent = parser.parse(userAgent)
     UserAgent(trim(userAgent),
-      agent.getName,
-      agent.getOperatingSystem.getFamilyName,
-      agent.getOperatingSystem.getName,
-      agent.getTypeName,
-      agent.getVersionNumber.toVersionString)
+      normalize(agent.getName),
+      normalize(agent.getOperatingSystem.getFamilyName),
+      normalize(agent.getOperatingSystem.getName),
+      normalize(agent.getTypeName),
+      normalize(agent.getVersionNumber.toVersionString))
   }
 
   private def trim(str: String) = if(str.length > MAX_USER_AGENT_LENGTH) {

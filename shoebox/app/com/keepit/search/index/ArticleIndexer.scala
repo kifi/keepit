@@ -8,6 +8,7 @@ import com.keepit.common.net.Host
 import com.keepit.common.net.URI
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
+import com.keepit.search.Article
 import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
 import java.io.StringReader
@@ -80,6 +81,17 @@ class ArticleIndexer (
   ) extends Indexable[NormalizedURI] {
     implicit def toReader(text: String) = new StringReader(text)
 
+    private def enrichedContent(article: Article): String = {
+      val c = article.description match {
+        case Some(desc) => desc + "\n\n" + article.content
+        case None => article.content
+      }
+      article.media match {
+        case Some(media) => c + media
+        case None => c
+      }
+    }
+
     override def buildDocument = {
       val doc = super.buildDocument
       articleStore.get(uri.id.get) match {
@@ -94,7 +106,7 @@ class ArticleIndexer (
           val contentAnalyzer = DefaultAnalyzer.forIndexing(contentLang)
           val contentAnalyzerWithStemmer = DefaultAnalyzer.forIndexingWithStemmer(contentLang)
 
-          val descriptionAndContent = article.description match {
+          val content = article.description match {
             case Some(desc) => desc + "\n\n" + article.content
             case None => article.content
           }
@@ -102,12 +114,12 @@ class ArticleIndexer (
           doc.add(buildTextField("t", article.title, titleAnalyzer))
           doc.add(buildTextField("ts", article.title, titleAnalyzerWithStemmer))
 
-          doc.add(buildTextField("c", descriptionAndContent, contentAnalyzer))
-          doc.add(buildTextField("cs", descriptionAndContent, contentAnalyzerWithStemmer))
+          doc.add(buildTextField("c", content, contentAnalyzer))
+          doc.add(buildTextField("cs", content, contentAnalyzerWithStemmer))
 
           val builder = new SemanticVectorBuilder(60)
           builder.load(titleAnalyzerWithStemmer.tokenStream("t", article.title))
-          builder.load(contentAnalyzerWithStemmer.tokenStream("c", descriptionAndContent))
+          builder.load(contentAnalyzerWithStemmer.tokenStream("c", content))
           doc.add(buildDocSemanticVectorField("docSv", builder))
           doc.add(buildSemanticVectorField("sv", builder))
 
@@ -117,6 +129,11 @@ class ArticleIndexer (
               doc.add(buildIteratorField("site", (1 to domain.size).iterator){ n => domain.take(n).reverse.mkString(".") })
               doc.add(buildIteratorField("site_keywords", (0 until domain.size).iterator)(domain))
             case _ =>
+          }
+
+          // media keyword field
+          article.media.foreach{ media =>
+            doc.add(buildTextField("media", media, DefaultAnalyzer.defaultAnalyzer))
           }
 
           doc

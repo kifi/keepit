@@ -12,8 +12,7 @@ import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
 import com.keepit.common.analytics._
 import com.keepit.common.cache.{HashMapMemoryCache, FortyTwoCachePlugin}
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.db.DbInfo
-import com.keepit.common.db.SlickModule
+import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.controller.FortyTwoCookies._
 import com.keepit.common.healthcheck._
@@ -117,6 +116,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     bind[MailToKeepPlugin].to[FakeMailToKeepPlugin]
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
     bind[HealthcheckPlugin].to[FakeHealthcheck]
+    bind[SlickSessionProvider].to[TestSlickSessionProvider]
 
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
     listenerBinder.addBinding().to(classOf[ResultClickedListener])
@@ -133,7 +133,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   @Provides
   @Singleton
   def mailSenderPlugin: MailSenderPlugin = new MailSenderPlugin {
-    def processMail(mail: ElectronicMail) = throw new Exception("Should not attempt to use mail plugin in test")
+    def processMail(mailId: Id[ElectronicMail]) = throw new Exception("Should not attempt to use mail plugin in test")
     def processOutbox() = throw new Exception("Should not attempt to use mail plugin in test")
   }
 

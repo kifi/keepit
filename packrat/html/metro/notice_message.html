@@ -1,7 +1,22 @@
-<div class="kifi-notice kifi-notice-message kifi-notice-state-{{state}}" data-id="{{id}}">
-  <img class="kifi-notice-avatar" src="{{avatar}}">
+<div class="kifi-notice kifi-notice-message kifi-notice-state-{{state}}{{#isNew}} kifi-notice-new{{/isNew}}" data-id="{{id}}" data-uri="{{details.page}}" data-locator="{{details.locator}}">
+  <img class="kifi-notice-avatar" src="{{details.authors.0.avatar}}">
   <div class="kifi-notice-name">
-    {{{formattedAuthor}}}
+    {{#oneAuthor}}
+      <span class="kifi-author-name">{{details.authors.0.firstName}} {{details.authors.0.lastName}}</span>
+    {{/oneAuthor}}
+    {{#twoAuthors}}
+      <span class="kifi-author-name">{{details.authors.0.firstName}}</span> and
+      <span class="kifi-author-name">{{details.authors.1.firstName}}</span>
+    {{/twoAuthors}}
+    {{#threeAuthors}}
+      <span class="kifi-author-name">{{details.authors.0.firstName}}</span>,
+      <span class="kifi-author-name">{{details.authors.1.firstName}}</span> and
+      <span class="kifi-author-name">{{details.authors.2.firstName}}</span>
+    {{/threeAuthors}}
+    {{#moreAuthors}}
+      <span class="kifi-author-name">{{details.authors.0.firstName}}</span>,
+      <span class="kifi-author-name">{{details.authors.1.firstName}}</span> and {{moreAuthors}} others
+    {{/moreAuthors}}
   </div>
   <div class="kifi-notice-action">
   	 Message
