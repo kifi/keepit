@@ -175,6 +175,7 @@ GET     /admin/comments             @com.keepit.controllers.admin.AdminCommentCo
 GET     /admin/comments/:page       @com.keepit.controllers.admin.AdminCommentController.commentsView(page: Int)
 GET     /admin/messages             @com.keepit.controllers.admin.AdminCommentController.messagesViewFirstPage
 GET     /admin/messages/:page       @com.keepit.controllers.admin.AdminCommentController.messagesView(page: Int)
+GET     /admin/notify/rebuild       @com.keepit.controllers.admin.AdminCommentController.recreateMessages()
 
 GET     /admin/searchConfig/:id     @com.keepit.controllers.admin.AdminSearchConfigController.showUserConfig(id: Id[User])
 POST    /admin/searchConfig/:id/set   @com.keepit.controllers.admin.AdminSearchConfigController.setUserConfig(id: Id[User])
