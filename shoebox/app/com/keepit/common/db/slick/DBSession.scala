@@ -15,15 +15,17 @@ import akka.actor.ActorSystem
 import scala.concurrent._
 
 object DBSession {
-  abstract class SessionWrapper(val session: Session) extends Session {
+  abstract class SessionWrapper(_session: => Session) extends Session {
+    lazy val session = _session
+
     def conn: Connection = session.conn
     def metaData = session.metaData
     def capabilities = session.capabilities
     override def resultSetType = session.resultSetType
     override def resultSetConcurrency = session.resultSetConcurrency
     override def resultSetHoldability = session.resultSetHoldability
-    def close() = throw new UnsupportedOperationException
-    def rollback() = session.rollback
+    def close() { throw new UnsupportedOperationException }
+    def rollback() { session.rollback() }
     def withTransaction[T](f: => T): T = session.withTransaction(f)
 
     private val statementCache = new mutable.HashMap[String, PreparedStatement]
@@ -34,8 +36,8 @@ object DBSession {
       rsHoldability: ResultSetHoldability = resultSetHoldability) = throw new UnsupportedOperationException
   }
 
-  abstract class RSession(roSession: Session) extends SessionWrapper(roSession)
-  class ROSession(roSession: Session) extends RSession(roSession)
+  abstract class RSession(roSession: => Session) extends SessionWrapper(roSession)
+  class ROSession(roSession: => Session) extends RSession(roSession)
   class RWSession(rwSession: Session) extends RSession(rwSession)
 
   implicit def roToSession(roSession: ROSession): Session = roSession.session
