@@ -3,7 +3,7 @@
 @kifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
   <ul>
     @for(installation <- kifiInstallations) {
-      <li>@{installation.version}; @{installation.userAgent.userAgent} - @{installation.userAgent.name}:@{installation.userAgent.version} @{installation.userAgent.operatingSystemName}</li>
+      <li>@{installation.version}; @{installation.userAgent.name} (ver: @{installation.userAgent.version}) on @{installation.userAgent.operatingSystemName}</li>
     }
   </ul>
 }
