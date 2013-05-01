@@ -1,5 +1,5 @@
-<div class="kifi-notice kifi-notice-message kifi-notice-state-{{state}}" data-id="{{id}}">
-  <img class="kifi-notice-avatar" src="{{avatar}}">
+<div class="kifi-notice kifi-notice-message kifi-notice-state-{{state}}{{#isNew}} kifi-notice-new{{/isNew}}" data-id="{{id}}" data-uri="{{details.page}}" data-locator="{{details.locator}}">
+  <img class="kifi-notice-avatar" src="{{details.authors.0.avatar}}">
   <div class="kifi-notice-name">
     {{#oneAuthor}}
       <span class="kifi-author-name">{{details.authors.0.firstName}} {{details.authors.0.lastName}}</span>
