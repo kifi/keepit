@@ -174,6 +174,14 @@ class ExtStreamController @Inject() (
                   math.max(db.readOnly(implicit s => userNotificationRepo.getUnreadCount(userId)), howMany.toInt)
                 else howMany.toInt
               channel.push(Json.arr("notifications", getNotifications(userId, createdBefore, toFetch)))
+              // TODO: replace above code with the following code when createdBefore param is no longer passed
+              // val notices = db.readOnly(implicit s => userNotificationRepo.getAllUnreadOrUpTo(userId, howMany.toInt))
+              // channel.push(Json.arr("notifications", notices.map(SendableNotification.fromUserNotification)))
+            },
+            "get_old_notifications" -> { case JsNumber(requestId) +: JsString(time) +: JsNumber(howMany) +: _ =>
+              // TODO: rename getWithUserId => getCreatedBefore and make DateTime arg not an Option
+              val notices = db.readOnly(implicit s => userNotificationRepo.getWithUserId(userId, Some(parseStandardTime(time)), howMany.toInt))
+              channel.push(Json.arr(requestId.toLong, notices.map(SendableNotification.fromUserNotification)))
             },
             "set_message_read" -> { case JsString(messageId) +: _ =>
               setMessageRead(userId, ExternalId[Comment](messageId))
