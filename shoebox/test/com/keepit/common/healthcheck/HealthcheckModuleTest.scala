@@ -18,13 +18,13 @@ class HealthcheckModuleTest extends Specification {
         val mail1 = inject[HealthcheckPlugin].reportStart()
         val outbox1 = inject[FakeOutbox]
         outbox1.size === 1
-        outbox1(0).externalId === mail1.externalId
+        outbox1(0) === mail1.id.get
         mail1.subject.endsWith("started") === true
 
         val mail2 = inject[HealthcheckPlugin].reportStop()
         val outbox2 = inject[FakeOutbox]
         outbox2.size === 2
-        outbox2(1).externalId === mail2.externalId
+        outbox2(1) === mail2.id.get
         mail2.subject.endsWith("stopped") === true
       }
     }
