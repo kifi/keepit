@@ -444,7 +444,7 @@ class MutableArticleHit(var id: Long, var score: Float, var isMyBookmark: Boolea
     bookmarkCount = newBookmarkCount
   }
   def toArticleHit(friendStats: FriendStats) = {
-    val sortedUsers = users.toSeq.sortBy{ id => friendStats.score(id) }
+    val sortedUsers = users.toSeq.sortBy{ id => - friendStats.score(id) }
     ArticleHit(Id[NormalizedURI](id), score, isMyBookmark, isPrivate, sortedUsers, bookmarkCount)
   }
 }
