@@ -60,8 +60,8 @@ class UserNotificationRepoImpl @Inject() (
   }
 
   def getWithUserId(userId: Id[User], createdBefore: Option[DateTime], howMany: Int = 10, excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED))(implicit session: RSession): Seq[UserNotification] = {
-    (for(b <- table if b.userId === userId && !b.state.inSet(excludeStates) && b.createdAt <= createdBefore.getOrElse(END_OF_TIME)) yield b)
-      .sortBy(_.id desc)
+    (for(b <- table if b.userId === userId && !b.state.inSet(excludeStates) && b.createdAt < createdBefore.getOrElse(END_OF_TIME)) yield b)
+      .sortBy(n => (n.createdAt/*, n.id*/) desc)  // TODO: fix compile error when using id as secondary sort criterion
       .take(howMany).list
   }
 
