@@ -560,7 +560,7 @@ slider2 = function() {
     },
     message: function(o) {
       threadsPane.update(o.thread, o.read);
-      threadPane.update(o.thread, o.message, o.userId);
+      threadPane.update(o.thread.id, o.message, o.userId);
     },
     thread: function(o) {
       threadPane.updateAll(o.id, o.messages, o.userId);
