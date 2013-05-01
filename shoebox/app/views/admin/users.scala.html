@@ -16,7 +16,6 @@
       <th>User</th>
       <th># of bookmarks</th>
       <th>Date joined</th>
-      <th>Emails</th>
       <th>Experiments</th>
       <th>Version</th>
     </tr>
@@ -27,7 +26,6 @@
       <td>@adminHelper.userDisplay(userStatistics.userWithSocial.user, userStatistics.userWithSocial.socialUserInfo)</td>
       <td>@userStatistics.userWithSocial.bookmarksCount</td>
       <td>@adminHelper.dateDisplay(userStatistics.user.createdAt)</td>
-      <td><a href='mailto:@{userStatistics.userWithSocial.emails.map(_.address).mkString(",")}'>@{userStatistics.userWithSocial.emails.map(_.address).mkString(", ")}</a></td>
       <td>@userStatistics.userWithSocial.experiments.mkString(", ")</td>
       <td>@kifiInstallations(userStatistics.kifiInstallations)</td>
     </tr>
@@ -76,14 +74,4 @@
       </div>
     </div>
   </form>
-
-  <h3>
-    User's email
-  </h3>
-  <a href='mailto:@{userStatisticsList.map(_.userWithSocial.emails.map(_.address)).flatten.mkString(",")}'>All Mails</a>
-  <ol>
-    @for(emailString <- userStatisticsList.map(_.userWithSocial.emails.map(_.address)).flatten.toSeq) {
-      <li><a href='mailto:@emailString'>@emailString</a></li>
-    }
-  </ol>
 }
