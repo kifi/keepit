@@ -39,7 +39,7 @@ class ExtAuthControllerTest extends Specification with DbRepos {
 
   "ExtAuthController" should {
     "start" in {
-      running(new EmptyApplication().withFakeSecureSocialUserService()) {
+      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeStore()) {
         val now = new DateTime(2012, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         val today = now.toDateTime
         inject[FakeClock].push(today)
@@ -70,7 +70,6 @@ class ExtAuthControllerTest extends Specification with DbRepos {
           all.head
         }
         val json1 = Json.parse(contentAsString(result1)).asInstanceOf[JsObject]
-        json1 \ "avatarUrl" === JsString("http://www.fb.com/me")
         json1 \ "name" === JsString("A 1")
         json1 \ "facebookId" === JsString("111")
         json1 \ "provider" === JsString("facebook")

@@ -1,15 +1,21 @@
 package com.keepit.common.store
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.concurrent.promise
+import scala.util.{Success, Failure}
+
+import org.joda.time.Weeks
+
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.model.{PutObjectResult, ObjectMetadata}
-import com.google.inject.Inject
-import com.google.inject.Singleton
+import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.controller.ActionAuthenticator
-import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.{HealthcheckPlugin, Healthcheck}
+import com.keepit.common.logging.Logging
 import com.keepit.common.social.SocialNetworks
 import com.keepit.common.time._
 import com.keepit.common.time.parseStandardTime
@@ -17,15 +23,17 @@ import com.keepit.model.SocialUserInfo
 import com.keepit.model.SocialUserInfoRepo
 import com.keepit.model.User
 import com.keepit.model.UserValueRepo
-import org.joda.time.Weeks
+
 import play.api.libs.ws.WS
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-import scala.concurrent.promise
-import scala.util.{Success, Failure}
+
+@ImplementedBy(classOf[S3ImageStoreImpl])
+trait S3ImageStore {
+  def cdnBase: String
+  def getPictureUrl(width: Int, user: User): Future[String]
+}
 
 @Singleton
-class S3ImageStore @Inject() (
+class S3ImageStoreImpl @Inject() (
     actionAuthenticator: ActionAuthenticator,
     db: Database,
     userValueRepo: UserValueRepo,
@@ -33,8 +41,8 @@ class S3ImageStore @Inject() (
     s3Client: AmazonS3,
     suiRepo: SocialUserInfoRepo,
     healthcheckPlugin: HealthcheckPlugin,
-    clock: Clock)
-    extends WebsiteController(actionAuthenticator) {
+    clock: Clock
+  ) extends S3ImageStore with Logging {
 
   private val UserPictureLastUpdatedKey = "user_picture_last_updated"
   private val ExpirationTime = Weeks.ONE
