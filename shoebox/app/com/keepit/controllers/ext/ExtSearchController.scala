@@ -140,7 +140,7 @@ class ExtSearchController @Inject() (
 
     val good = topUriIds.exists(id => classifier.classify(id))
 
-    (res.svVariance < 0.17) && (maxTextScore > 0.01f) && good
+    (res.svVariance < 0.17) && (maxTextScore > 0.04f) && good
   }
 
   private[ext] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {
