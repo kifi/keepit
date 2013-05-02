@@ -131,7 +131,7 @@ slider2 = function() {
             if (!friend) return;
             render("html/friend_card.html", {
               name: friend.firstName + " " + friend.lastName,
-              facebookId: friend.facebookId,
+              id: friend.id,
               iconsUrl: api.url("images/social_icons.png")
             }, callback);
             api.port.emit("get_num_mutual_keeps", {id: friend.id}, function gotNumMutualKeeps(o) {
