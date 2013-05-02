@@ -9,7 +9,7 @@ import com.keepit.common.analytics._
 import com.keepit.common.analytics.reports._
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.{InMemorySocialUserRawInfoStoreImpl, SocialUserRawInfoStore}
-import com.keepit.common.store.S3Bucket
+import com.keepit.common.store.{S3ImageConfig, S3Bucket}
 import com.keepit.search._
 import com.tzavellas.sse.guice.ScalaModule
 
@@ -60,5 +60,16 @@ class S3DevModule() extends ScalaModule with Logging {
       case Some(name) => new S3Module().reportStore(amazonS3ClientProvider.get)
       case None => new InMemoryReportStoreImpl()
     }
+
+  @Singleton
+  @Provides
+  def s3ImageConfig: S3ImageConfig = {
+    val bucket = current.configuration.getString("cdn.bucket")
+    val base = current.configuration.getString("cdn.base")
+    S3ImageConfig(
+      if (base.isDefined) bucket.get else "",
+      base.getOrElse("http://dev.ezkeep.com:9000"),
+      base.isEmpty)
+  }
 
 }

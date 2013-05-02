@@ -20,9 +20,9 @@ class UserPictureController @Inject() (
   imageStore: S3ImageStore)
   extends WebsiteController(actionAuthenticator) {
 
-  def get(width: Int, userExternalId: ExternalId[User]) = Action { implicit request =>
-    db.readOnly { implicit s => userRepo.getOpt(userExternalId) } map { user =>
-      imageStore.getPictureUrl(width, user)
+  def get(size: Int, id: ExternalId[User]) = Action { request =>
+    db.readOnly { implicit s => userRepo.getOpt(id) } map { user =>
+      imageStore.getPictureUrl(size, user)
     } map { futureImage =>
       Async {
         futureImage map { Redirect(_) }
