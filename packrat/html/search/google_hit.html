@@ -11,10 +11,10 @@
   <!--n-->
   <div class="kifi-who" id="kifi-who-{{bookmark.id}}">
     {{#displaySelf}}
-      <img class="kifi-face kifi-self{{^displayUsers}} kifi-only{{/displayUsers}}" src="{{session.avatarUrl}}" alt="You!" title="You! You look great!">
+      <img class="kifi-face kifi-self{{^displayUsers}} kifi-only{{/displayUsers}}" src="{{cdnBase}}/users/{{id}}/pics/100/0.jpg" alt="You!" title="You! You look great!">
     {{/displaySelf}}
     {{#displayUsers}}
-      <a class="kifi-face kifi-friend" href="javascript:" style="background-image:url(//graph.facebook.com/{{facebookId}}/picture?type=square)"></a>
+      <a class="kifi-face kifi-friend" href="javascript:" style="background-image:url({{cdnBase}}/users/{{id}}/pics/100/0.jpg)"></a>
     {{/displayUsers}}
     {{^displaySelf}}{{^displayUsers}}
       <img class="kifi-globe" src="{{globeUrl}}">
