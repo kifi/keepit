@@ -115,6 +115,8 @@ class UserNotifier @Inject() (
       commentDetails.map { commentDetail =>
         val user = userRepo.get(commentDetail.recipient.externalId)
         val userNotification = userNotifyRepo.save(UserNotification(
+          createdAt = comment.createdAt,
+          updatedAt = comment.createdAt,
           userId = user.id.get,
           category = UserNotificationCategories.COMMENT,
           details = UserNotificationDetails(Json.toJson(commentDetail)),
@@ -142,6 +144,8 @@ class UserNotifier @Inject() (
       createMessageDetails(message, thread) map { case (userId, (lastNoticeId, messageDetail)) =>
         val user = userRepo.get(userId)
         val userNotification = userNotifyRepo.save(UserNotification(
+          createdAt = message.createdAt,
+          updatedAt = message.createdAt,
           userId = userId,
           category = UserNotificationCategories.MESSAGE,
           details = UserNotificationDetails(Json.toJson(messageDetail)),
