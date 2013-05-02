@@ -10,6 +10,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.store.S3ImageStore
 import com.keepit.model._
+import scala.concurrent.Future
 
 import play.api.mvc.Action
 
@@ -35,11 +36,15 @@ class UserPictureController @Inject() (
   }
 
   def update() = Action { request =>
-    Ok((for {
-      user <- db.readOnly { implicit s => userRepo.allExcluding(UserStates.INACTIVE) }
-    } yield {
-      val socialUser = db.readOnly { implicit s => suiRepo.getByUser(user.id.get) }.head
-      Try(imageStore.updatePicture(socialUser, user.externalId)).map(_ => socialUser.socialId)
-    }).mkString(","))
+    Async {
+      Future.sequence(for {
+        user <- db.readOnly { implicit s => userRepo.allExcluding(UserStates.INACTIVE) }
+      } yield {
+        val socialUser = db.readOnly { implicit s => suiRepo.getByUser(user.id.get) }.head
+        imageStore.updatePicture(socialUser, user.externalId).map(_ => socialUser.socialId)
+      }).map { results =>
+        Ok(results.mkString(","))
+      }
+    }
   }
 }
