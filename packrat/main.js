@@ -128,6 +128,14 @@ const socketHandlers = {
       friendsById[f.id] = f;
     }
   },
+  new_friends: function(fr) {
+    api.log("[socket:new_friends]", fr);
+    for (var i = 0; i < fr.length; i++) {
+      var f = fr[i];
+      friends.push(f)
+      friendsById[f.id] = f;
+    }
+  },
   slider_rules: function(o) {
     api.log("[socket:slider_rules]", o);
     ruleSet = o;
