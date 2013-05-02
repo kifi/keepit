@@ -1,7 +1,6 @@
 package com.keepit.model
 
 import org.joda.time.DateTime
-
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db.Id
 import com.keepit.common.db.Model
@@ -15,6 +14,10 @@ import com.keepit.common.db.slick.FortyTwoTypeMappers
 import com.keepit.common.db.slick.Repo
 import com.keepit.common.time._
 import com.keepit.common.time.currentDateTime
+import com.keepit.realtime.UserChannel
+import play.api.libs.json.Json
+import com.keepit.common.social.BasicUserRepo
+import com.keepit.serializer.BasicUserSerializer.basicUserSerializer
 
 case class UserConnection(
     id: Option[Id[UserConnection]] = None,
@@ -40,7 +43,9 @@ trait UserConnectionRepo extends Repo[UserConnection] {
 @Singleton
 class UserConnectionRepoImpl @Inject() (
     val db: DataBaseComponent,
-    val clock: Clock)
+    val clock: Clock,
+    userChannel: UserChannel,
+    basicUserRepo: BasicUserRepo)
     extends DbRepo[UserConnection] with UserConnectionRepo {
 
   import DBSession._
@@ -80,6 +85,11 @@ class UserConnectionRepoImpl @Inject() (
       ((for (c <- table if c.user1 === userId) yield c.user2) union
         (for (c <- table if c.user2 === userId) yield c.user1)).list.toSet
     }
+    if(toInsert.nonEmpty) userChannel.push(userId, Json.arr("new_friends", toInsert.map(basicUserRepo.load)))
+    toInsert.foreach { connId =>
+      userChannel.push(connId, Json.arr("new_friends", Set(basicUserRepo.load(userId))))
+    }
+    
     table.insertAll(toInsert.map(connId => UserConnection(user1 = userId, user2 = connId)).toSeq: _*)
   }
 }
