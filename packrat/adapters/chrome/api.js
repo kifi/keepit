@@ -252,6 +252,9 @@ api = function() {
         N++;
         injectWithDeps(page.id, cs[0], function() {
           if (++n === N) {
+            if (localStorage[":env"] == "development") {
+              chrome.tabs.executeScript(tab.id, {code: "api.dev=1", runAt: "document_start"}, api.noop);
+            }
             done();
           }
         });
