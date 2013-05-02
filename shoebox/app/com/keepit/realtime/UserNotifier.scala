@@ -155,26 +155,80 @@ class UserNotifier @Inject() (
     }
   }
 
-  def recreateMessages()(implicit session: RWSession) = {
-    userNotifyRepo.all.filter(notice => notice.state != UserNotificationStates.SUBSUMED && notice.category == UserNotificationCategories.MESSAGE) map { notice =>
-      val recipient = userRepo.get(notice.userId)
-      val message = commentRepo.get(notice.commentId.get)
+  def recreateMessageDetails(safeMode: Boolean)(implicit session: RWSession) = {
+    userNotifyRepo.allActive(UserNotificationCategories.MESSAGE) map { notice =>
+      try {
+        val recipient = userRepo.get(notice.userId)
+        val message = commentRepo.get(notice.commentId.get)
 
-      val deepLinkUrl = (notice.details.payload \ "url").as[String]
-      val deepLinkLocator = (notice.details.payload \ "locator").as[String]
-      val page = (notice.details.payload \ "page").as[String]
-      val lastNoticeExtId = (notice.details.payload \ "subsumes").asOpt[String].map(ExternalId[UserNotification])
-      
-      val parent = message.parent.map(commentRepo.get).getOrElse(message)
-      val thread = if (message eq parent) Seq(message) else (parent +: commentRepo.getChildren(parent.id.get)).reverse
-      
-      val messageDetail = createMessageDetail(message, notice.userId, DeepLocator(deepLinkLocator), deepLinkUrl, page, thread, lastNoticeExtId)
-      val json = Json.toJson(messageDetail)
-      if(json == notice.details.payload) {
-        log.info(s"Updating ${notice.id}")
-    	userNotifyRepo.save(notice.copy(details = UserNotificationDetails(Json.toJson(messageDetail))))
+        val deepLinkUrl = (notice.details.payload \ "url").as[String]
+        val deepLinkLocator = (notice.details.payload \ "locator").asOpt[String].getOrElse {
+          // We haven't always had this field. When it's missing, we need to find it.
+          val token = deepLinkUrl.split("/").last
+          deepLinkRepo.getByToken(DeepLinkToken(token)).map(_.deepLocator.value).get
+        }
+        val page = (notice.details.payload \ "page").as[String]
+
+        val lastNoticeExtId = notice.subsumedId.map(userNotifyRepo.get(_).externalId)
+
+        val parent = message.parent.map(commentRepo.get).getOrElse(message)
+        val thread = if (message eq parent) Seq(message) else (parent +: commentRepo.getChildren(parent.id.get)).reverse
+
+        val messageDetail = createMessageDetail(message, notice.userId, DeepLocator(deepLinkLocator), deepLinkUrl, page, thread, lastNoticeExtId)
+        val json = Json.toJson(messageDetail)
+        if (json != notice.details.payload) {
+          log.info(s"Updating ${notice.id} (message, safeMode: $safeMode).\n-Old details-\n${notice.details.payload}\n-New details-\n$json")
+          if (!safeMode) userNotifyRepo.save(notice.copy(details = UserNotificationDetails(json)))
+        }
+      } catch {
+        case ex: Throwable =>
+          log.warn(s"[recreateDetail] Error: Could not recreate message notice ${notice.id}", ex)
       }
+
     }
+  }
+
+  def recreateCommentDetails(safeMode: Boolean)(implicit session: RWSession) = {
+    userNotifyRepo.allActive(UserNotificationCategories.COMMENT) map { notice =>
+      try {
+        val comment = commentRepo.get(notice.commentId.get)
+        val author = userRepo.get(comment.userId)
+        val uri = normalizedURIRepo.get(comment.uriId)
+        val userId = notice.userId
+        val recipient = userRepo.get(userId)
+        val deepLinkUrl = (notice.details.payload \ "url").as[String]
+        val deepLinkLocator = (notice.details.payload \ "locator").asOpt[String].getOrElse {
+          // We haven't always had this field. When it's missing, we need to find it.
+          val token = deepLinkUrl.split("/").last
+          deepLinkRepo.getByToken(DeepLinkToken(token)).map(_.deepLocator.value).get
+        }
+        val commentDetail = new CommentDetails(
+          comment.externalId.id,
+          basicUserRepo.load(comment.userId),
+          basicUserRepo.load(userId),
+          deepLinkLocator,
+          deepLinkUrl,
+          URINormalizer.normalize(uri.url),
+          comment.pageTitle,
+          comment.text,
+          comment.createdAt,
+          0, 0, None)
+        val json = Json.toJson(commentDetail)
+        if (json != notice.details.payload) {
+          log.info(s"[recreateDetail] Updating ${notice.id} (comment, safeMode: $safeMode).\n-Old details-\n${notice.details.payload}\n-New details-\n$json")
+          if (!safeMode) userNotifyRepo.save(notice.copy(details = UserNotificationDetails(json)))
+        }
+      } catch {
+        case ex: Throwable =>
+          log.warn(s"[recreateDetail] Error: Could not recreate comment notice ${notice.id}", ex)
+      }
+
+    }
+  }
+  
+  def recreateAllActiveDetails(safeMode: Boolean)(implicit session: RWSession) = {
+    recreateMessageDetails(safeMode)
+    recreateCommentDetails(safeMode)
   }
 
   private def notifyCommentByEmail(recipient: User, details: CommentDetails)(implicit session: RWSession) {

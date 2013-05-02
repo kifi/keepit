@@ -32,6 +32,7 @@ case class UserNotification(
 
 @ImplementedBy(classOf[UserNotificationRepoImpl])
 trait UserNotificationRepo extends Repo[UserNotification] with ExternalIdColumnFunction[UserNotification]  {
+  def allActive(category: UserNotificationCategory)(implicit session: RSession): Seq[UserNotification]
   def getWithUserId(userId: Id[User], lastTime: Option[DateTime], howMany: Int = 10, excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED))(implicit session: RSession): Seq[UserNotification]
   def getWithCommentId(userId: Id[User], commentId: Id[Comment], excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED))(implicit session: RSession): Option[UserNotification]
   def getWithCommentIds(userId: Id[User], commentIds: Traversable[Id[Comment]], excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED))(implicit session: RSession): Seq[UserNotification]
@@ -58,6 +59,9 @@ class UserNotificationRepoImpl @Inject() (
     def subsumedId = column[Id[UserNotification]]("subsumed_id", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ externalId ~ category ~ details ~ commentId.? ~ subsumedId.? ~ state <> (UserNotification, UserNotification.unapply _)
   }
+  
+  def allActive(category: UserNotificationCategory)(implicit session: RSession): Seq[UserNotification] =
+    (for (b <- table if b.state =!= UserNotificationStates.SUBSUMED && b.state =!= UserNotificationStates.INACTIVE && b.category === category) yield b).list
 
   def getWithUserId(userId: Id[User], createdBefore: Option[DateTime], howMany: Int = 10, excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED))(implicit session: RSession): Seq[UserNotification] = {
     (for(b <- table if b.userId === userId && !b.state.inSet(excludeStates) && b.createdAt <= createdBefore.getOrElse(END_OF_TIME)) yield b)
