@@ -75,7 +75,6 @@ class ExtAuthController @Inject() (
     val avatarUrl = imageStore.getPictureUrl(200, user).value.flatMap(_.toOption).orElse(identity.avatarUrl)
     Ok(Json.obj(
       "avatarUrl" -> avatarUrl,
-      "cdnBase" -> imageStore.cdnBase,
       "name" -> identity.fullName,
       "facebookId" -> identity.id.id,
       "provider" -> identity.id.providerId,
