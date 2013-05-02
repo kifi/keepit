@@ -184,17 +184,17 @@ class PhraseProximityWeight(query: PhraseProximityQuery) extends Weight {
   override def explain(context: AtomicReaderContext, doc: Int) = {
     val sc = scorer(context, true, false, context.reader.getLiveDocs);
     val exists = (sc != null && sc.advance(doc) == doc);
-
+    val phrases = phraseHelper.phraseMap.keySet.mkString("[", " ; ", "]")
     val result = new ComplexExplanation()
     if (exists) {
-      result.setDescription("phrase proximity(%s), product of:".format(query.terms.mkString(",")))
+      result.setDescription("phrase proximity(%s, %s), product of:".format(query.terms.mkString(","), phrases))
       val proxScore = sc.score
       result.setValue(proxScore)
       result.setMatch(true)
       result.addDetail(new Explanation(proxScore / value, "phrase proximity score"))
       result.addDetail(new Explanation(value, "weight value"))
     } else {
-      result.setDescription("phrase proximity(%s), doesn't match id %d".format(query.terms.mkString(","), doc))
+      result.setDescription("phrase proximity(%s, %s), doesn't match id %d".format(query.terms.mkString(","), phrases, doc))
       result.setValue(0)
       result.setMatch(false)
     }
