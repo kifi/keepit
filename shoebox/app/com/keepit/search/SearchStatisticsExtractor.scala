@@ -114,7 +114,7 @@ class SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
     }
   }
 
-  val uriInfoMap = searcher.getUriInfo
+  lazy val uriInfoMap = searcher.getUriInfo
 
   private def getBasicQueryInfo = BasicQueryInfo(queryUUID, queryString, userId)
 
@@ -133,7 +133,7 @@ class SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
       if (searchResultInfo.nonEmpty) searchResultInfo.next else SearchResultInfo(-1, -1, -1, -1.0f, -1.0f)
   }
 
-  private def getLuceneScores(uriId: Id[NormalizedURI]) = {
+  def getLuceneScores(uriId: Id[NormalizedURI]) = {
     val explain = getLuceneExplain(uriId)
     explain match {
       case Some(e) => {

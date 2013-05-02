@@ -43,7 +43,8 @@ class ExtSearchController @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   bookmarkRepo: BookmarkRepo,
   uriRepo: NormalizedURIRepo,
-  basicUserRepo: BasicUserRepo)
+  basicUserRepo: BasicUserRepo,
+  srcFactory: SearchResultClassifierFactory)
     extends BrowserExtensionController(actionAuthenticator) with SearchServiceController {
 
   def search(query: String, filter: Option[String], maxHits: Int, lastUUIDStr: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
@@ -126,16 +127,20 @@ class ExtSearchController @Inject() (
     log.debug(hits mkString "\n")
 
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
-    PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, (!isDefaultFilter || isToShow(res)), experimentId, filter)
+    PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, (!isDefaultFilter || isToShow(userId, res)), experimentId, filter)
   }
 
-  private[ext] def isToShow(res: ArticleSearchResult): Boolean = {
+  private[ext] def isToShow(userId: Id[User], res: ArticleSearchResult): Boolean = {
     var maxTextScore = 0.0f
     res.scorings.foreach{ s =>
       if (s.textScore > maxTextScore) maxTextScore = s.textScore
     }
+    val topUriIds = res.hits.take(3).map{hit => hit.uriId}
+    val classifier = srcFactory.apply(res.uuid, res.query, userId, topUriIds)
 
-    (res.svVariance < 0.17) && (maxTextScore > 0.01f)
+    val good = topUriIds.exists(id => classifier.classify(id))
+
+    (res.svVariance < 0.17) && (maxTextScore > 0.01f) && good
   }
 
   private[ext] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {
