@@ -17,7 +17,7 @@ var notifier = {
           link: o.title,
           image: o.author.avatar,
           sticky: false,
-          showForMs: 15000,
+          showForMs: 60000,
           clickAction: function() {
             api.port.emit("open_deep_link", {nUri: o.page, locator: o.locator});
             return false;
@@ -32,7 +32,7 @@ var notifier = {
           link: o.title,
           image: o.authors[0].avatar,
           sticky: false,
-          showForMs: 15000,
+          showForMs: 60000,
           clickAction: function() {
             api.port.emit("open_deep_link", {nUri: o.page, locator: o.locator});
             return false;
@@ -47,7 +47,7 @@ var notifier = {
           link: o.linkText,
           image: o.image,
           sticky: o.sticky || false,
-          showForMs: o.showForMs || 15000,
+          showForMs: o.showForMs || 60000,
           clickAction: function() {
             if (o.url) {
               var win = window.open(o.url, "_blank");
