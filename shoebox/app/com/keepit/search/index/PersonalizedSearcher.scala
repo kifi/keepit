@@ -20,6 +20,7 @@ import org.apache.lucene.util.PriorityQueue
 import scala.collection.mutable.ArrayBuffer
 
 object PersonalizedSearcher {
+  private val scale = 100
   def apply(userId: Id[User],
             indexReader: WrappedIndexReader,
             myUris: Set[Long],
@@ -32,7 +33,7 @@ object PersonalizedSearcher {
     new PersonalizedSearcher(indexReader, myUris, friendUris,
                              browsingHistoryTracker.getMultiHashFilter(userId),
                              clickHistoryTracker.getMultiHashFilter(userId),
-                             svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory)
+                             svWeightMyBookMarks * scale, svWeightBrowsingHistory * scale, svWeightClickHistory * scale)
   }
 
   def apply(searcher: Searcher, ids: Set[Long]) = {
@@ -70,7 +71,7 @@ object PersonalizedSearcher {
 
 class PersonalizedSearcher(override val indexReader: WrappedIndexReader, myUris: Set[Long], friendUris: Set[Long],
                            browsingFilter: MultiHashFilter, clickFilter: MultiHashFilter,
-                           svWeightMyBookMarks: Int, svWeightBrowsingHistory: Int, svWeightClickHistory: Int)
+                           scaledWeightMyBookMarks: Int, scaledWeightBrowsingHistory: Int, scaledWeightClickHistory: Int)
 extends Searcher(indexReader) with Logging {
   import PersonalizedSearcher._
 
@@ -80,6 +81,7 @@ extends Searcher(indexReader) with Logging {
     val composer = new SemanticVectorComposer
     val vector = new SemanticVector(new Array[Byte](SemanticVector.arraySize))
     var i = 0
+    var cnt = 0
     while (i < subReaders.length) {
       val subReader = subReaders(i)
       val idMapper = subReader.getIdMapper
@@ -88,15 +90,16 @@ extends Searcher(indexReader) with Logging {
         while (tp.nextDoc() < NO_MORE_DOCS) {
           val id = idMapper.getId(tp.docID())
           val weight = {
-            if (clickFilter.mayContain(id)) svWeightClickHistory
-            else if (browsingFilter.mayContain(id)) svWeightBrowsingHistory
-            else if (myUris.contains(id)) svWeightMyBookMarks
+            if (clickFilter.mayContain(id)) scaledWeightClickHistory
+            else if (browsingFilter.mayContain(id)) scaledWeightBrowsingHistory
+            else if (myUris.contains(id)) scaledWeightMyBookMarks
             else {
               if (friendUris.contains(id)) sampler.put(id)
               0
             }
           }
           if (weight > 0) {
+            cnt += 1
             var freq = tp.freq()
             if (freq > 0) {
               tp.nextPosition()
@@ -113,15 +116,18 @@ extends Searcher(indexReader) with Logging {
       }
       i += 1
     }
-    if (composer.numInputs < 3) {
-      addSampledSemanticVectors(composer, sampler, term)
+    val samples = sampler.getIdSet
+    val sampleSize = samples.size
+    if (cnt < 3 && sampleSize > 0) {
+      val weight = composer.numInputs / sampleSize
+      addSampledSemanticVectors(composer, samples, term, if (weight > 0) weight else 1)
     }
     composer
   }
 
-  private def addSampledSemanticVectors(composer: SemanticVectorComposer, sampler: IdSampler, term: Term) {
-    val filter = new IdSetFilter(sampler.getIdSet)
-    var idsToCheck = sampler.size // for early stop: don't need to go through every subreader
+  private def addSampledSemanticVectors(composer: SemanticVectorComposer, samples: Set[Long], term: Term, weight: Int) {
+    val filter = new IdSetFilter(samples)
+    var idsToCheck = samples.size // for early stop: don't need to go through every subreader
 
     val subReaders = indexReader.wrappedSubReaders
     val vector = new SemanticVector(new Array[Byte](SemanticVector.arraySize))
@@ -139,7 +145,7 @@ extends Searcher(indexReader) with Logging {
               val payload = tp.getPayload()
               if (payload != null) {
                 vector.set(payload.bytes, payload.offset, payload.length)
-                composer.add(vector, svWeightMyBookMarks)
+                composer.add(vector, weight)
               } else {
                 log.error(s"payload is missing: term=${term.toString}")
               }
