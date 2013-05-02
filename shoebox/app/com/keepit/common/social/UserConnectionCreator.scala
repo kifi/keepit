@@ -11,6 +11,9 @@ import com.keepit.common.healthcheck.BabysitterTimeout
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.realtime.UserChannel
+import play.api.libs.json.Json
+import com.keepit.serializer.BasicUserSerializer.basicUserSerializer
 
 import play.api.libs.json.{JsArray, JsValue}
 
@@ -33,7 +36,9 @@ class UserConnectionCreator @Inject() (
     socialConnectionRepo: SocialConnectionRepo,
     userConnectionRepo: UserConnectionRepo,
     userValueRepo: UserValueRepo,
-    clock: Clock)
+    clock: Clock,
+    userChannel: UserChannel,
+    basicUserRepo: BasicUserRepo)
   extends ConnectionUpdater with Logging {
 
   def createConnections(socialUserInfo: SocialUserInfo, parentJson: Seq[JsValue]): Seq[SocialConnection] = {
@@ -57,7 +62,14 @@ class UserConnectionCreator @Inject() (
     db.readWrite { implicit s =>
       val existingConnections = userConnectionRepo.getConnectedUsers(userId)
       val updatedConnections = socialConnectionRepo.getFortyTwoUserConnections(userId)
+      
       userConnectionRepo.removeConnections(userId, existingConnections diff updatedConnections)
+      
+      val newConnections = existingConnections diff updatedConnections
+      if (newConnections.nonEmpty) userChannel.push(userId, Json.arr("new_friends", newConnections.map(basicUserRepo.load)))
+      newConnections.foreach { connId =>
+        userChannel.push(connId, Json.arr("new_friends", Set(basicUserRepo.load(userId))))
+      }
       userConnectionRepo.addConnections(userId, updatedConnections diff existingConnections)
       userValueRepo.setValue(userId, UserConnectionCreator.UpdatedUserConnectionsKey, clock.now.toStandardTimeString)
     }
