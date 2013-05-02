@@ -1,8 +1,6 @@
 $(function() {
   var main = chrome.extension.getBackgroundPage(), api = main.api, env = api.prefs.get("env");
 
-  console.log("pref:", api.prefs.get("maxResults"));
-
   $(chrome.runtime.id === "fpjooibalklfinmkiodaamcckfbcjhin" ? null : "select").show()
   .find("[value=" + env + "]").prop("selected", true).end()
   .change(function() {
