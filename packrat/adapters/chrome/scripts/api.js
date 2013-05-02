@@ -8,6 +8,7 @@ api = function() {
     var kind = msg[0];
     if (kind == "api:respond") {
       var id = msg[1], cb = callbacks[id];
+      api.log("[onMessage] response:", msg[2] != null ? msg[2] : "");
       if (cb) {
         delete callbacks[id];
         cb(msg[2]);

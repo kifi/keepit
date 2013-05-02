@@ -25,6 +25,7 @@ var renderNotices = function() {
         notice.isNew = data.newIdxs.indexOf(i) >= 0;
         notice.formatMessage = getSnippetFormatter;
         notice.formatLocalDate = getLocalDateFormatter;
+        notice.cdnBase = cdnBase;
         switch (notice.category) {
         case "comment":
           break;

@@ -1,4 +1,5 @@
 $(function() {
+  var cdnBase;
   var port = chrome.runtime.connect({name: ""});
   port.onMessage.addListener(function(msg) {
     if (msg[0] == "api:respond") {
@@ -12,6 +13,9 @@ $(function() {
     $showSlider.prop("checked", o.prefs.showSlider);
     $maxResults.val(o.prefs.maxResults).data("val", o.prefs.maxResults);
     $showScores.prop("checked", o.prefs.showScores);
+    cdnBase = o.prefs.env == "development" ?
+      "http://dev.ezkeep.com:9000" : // http://d1scct5mnc9d9m.cloudfront.net
+      "http://djty7jcqog9qu.cloudfront.net";
     showSession(o.session);
   }
   var $env = $(chrome.runtime.id === "fpjooibalklfinmkiodaamcckfbcjhin" ? null : "select").show().change(function() {
