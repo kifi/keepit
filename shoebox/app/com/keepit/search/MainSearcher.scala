@@ -87,12 +87,12 @@ class MainSearcher(
   private[this] val friendEdgeSet = uriGraphSearcher.getUserToUserEdgeSet(userId, friendIds)
   private[this] val filteredFriendEdgeSet = if (customFilterOn) uriGraphSearcher.getUserToUserEdgeSet(userId, filteredFriendIds) else friendEdgeSet
 
+  private def findSharingUsers(id: Id[NormalizedURI]): Set[Id[User]] = {
+    uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet
+  }
 
-
-  def findSharingUsers(id: Id[NormalizedURI]) = {
-    val sharingUsers = uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet
-    val effectiveSharingSize = if (customFilterOn) filter.filterFriends(sharingUsers).size else sharingUsers.size
-    (sharingUsers, effectiveSharingSize)
+  private def findEffectiveSharingSize(sharingUsers: Set[Id[User]]): Int = {
+    if (customFilterOn) filter.filterFriends(sharingUsers).size else sharingUsers.size
   }
 
   def getPersonalizedSearcher(query: Query) = {
@@ -185,38 +185,56 @@ class MainSearcher(
     }
 
     val threshold = highScore * tailCutting
+    val friendStats = FriendStats(friendIds)
+    var numCollectStats = 10
 
     if (myHits.size > 0) {
-      myHits.toRankedIterator.map{ case (h, rank) =>
-        h.score = h.score * dampFunc(rank, dampingHalfDecayMine) // damping the scores by rank
-        h
-      }.takeWhile{ h =>
-        h.score > threshold
-      }.foreach{ h =>
+      myHits.toRankedIterator.forall{ case (h, rank) =>
         val id = Id[NormalizedURI](h.id)
-        val (sharingUsers, effectiveSharingSize) = findSharingUsers(id)
-        h.users = sharingUsers
-        h.scoring = new Scoring(h.score, h.score / highScore, bookmarkScore(effectiveSharingSize + 1), recencyScore(myUriEdges.getCreatedAt(id)))
-        h.score = h.scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost)
-        hits.insert(h)
+        val sharingUsers = findSharingUsers(id)
+
+        if (numCollectStats > 0 && sharingUsers.size > 0) {
+          friendStats.add(sharingUsers, h.score)
+          numCollectStats -= 1
+        }
+
+        val score = h.score * dampFunc(rank, dampingHalfDecayMine) // damping the scores by rank
+
+        if (score > threshold) {
+          h.users = sharingUsers
+          h.scoring = new Scoring(score, score / highScore, bookmarkScore(findEffectiveSharingSize(sharingUsers) + 1), recencyScore(myUriEdges.getCreatedAt(id)))
+          h.score = h.scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost)
+          hits.insert(h)
+          true
+        } else {
+          numCollectStats > 0
+        }
       }
     }
 
     if (friendsHits.size > 0 && filter.includeFriends) {
       val queue = createQueue(numHitsToReturn - min(minMyBookmarks, hits.size))
       hits.drop(hits.size - minMyBookmarks).foreach{ h => queue.insert(h) }
-      friendsHits.toRankedIterator.map{ case (h, rank) =>
-        h.score = h.score * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank
-        h
-      }.takeWhile{ h =>
-        h.score > threshold
-      }.foreach{ h =>
+
+      friendsHits.toRankedIterator.forall{ case (h, rank) =>
         val id = Id[NormalizedURI](h.id)
-        val (sharingUsers, effectiveSharingSize) = findSharingUsers(id)
-        h.users = sharingUsers
-        h.scoring = new Scoring(h.score, h.score / highScore, bookmarkScore(effectiveSharingSize), 0.0f)
-        h.score = h.scoring.score(1.0f, sharingBoostInNetwork, recencyBoost)
-        queue.insert(h)
+        val sharingUsers = findSharingUsers(id)
+
+        if (numCollectStats > 0) {
+          friendStats.add(sharingUsers, h.score)
+          numCollectStats -= 1
+        }
+
+        val score = h.score * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank
+        if (score > threshold) {
+          h.users = sharingUsers
+          h.scoring = new Scoring(score, score / highScore, bookmarkScore(findEffectiveSharingSize(sharingUsers)), 0.0f)
+          h.score = h.scoring.score(1.0f, sharingBoostInNetwork, recencyBoost)
+          queue.insert(h)
+          true
+        } else {
+          numCollectStats > 0
+        }
       }
       queue.foreach{ h => hits.insert(h) }
     }
@@ -224,17 +242,19 @@ class MainSearcher(
     if (hits.size < numHitsToReturn && othersHits.size > 0 && filter.includeOthers) {
       val othersThreshold = othersHighScore * tailCutting
       val queue = createQueue(numHitsToReturn - hits.size)
-      othersHits.toRankedIterator.map{ case (h, rank) =>
-        h.score = h.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
-        h
-      }.takeWhile{
-        h => h.score > othersThreshold
-      }.foreach{ h =>
-        h.bookmarkCount = getPublicBookmarkCount(h.id) // TODO: revisit this later. We probably want the private count.
-        if (h.bookmarkCount > 0) {
-          h.scoring = new Scoring(h.score, h.score / highScore, bookmarkScore(h.bookmarkCount), 0.0f)
-          h.score = h.scoring.score(1.0f, sharingBoostOutOfNetwork, recencyBoost)
-          queue.insert(h)
+
+      othersHits.toRankedIterator.forall{ case (h, rank) =>
+        val score = h.score * dampFunc(rank, dampingHalfDecayOthers) // damping the scores by rank
+        if (score > othersThreshold) {
+          h.bookmarkCount = getPublicBookmarkCount(h.id) // TODO: revisit this later. We probably want the private count.
+          if (h.bookmarkCount > 0) {
+            h.scoring = new Scoring(score, score / highScore, bookmarkScore(h.bookmarkCount), 0.0f)
+            h.score = h.scoring.score(1.0f, sharingBoostOutOfNetwork, recencyBoost)
+            queue.insert(h)
+          }
+          true
+        } else {
+          false
         }
       }
       queue.foreach{ h => hits.insert(h) }
@@ -254,7 +274,7 @@ class MainSearcher(
 
     persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData))
 
-    ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit),
+    ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
         myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt,
         (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = svExistVar)
   }
@@ -359,7 +379,7 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit](sz) {
   }
 }
 
-case class ArticleHit(uriId: Id[NormalizedURI], score: Float, isMyBookmark: Boolean, isPrivate: Boolean, users: Set[Id[User]], bookmarkCount: Int)
+case class ArticleHit(uriId: Id[NormalizedURI], score: Float, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[Id[User]], bookmarkCount: Int)
 
 case class ArticleSearchResult(
   last: Option[ExternalId[ArticleSearchResultRef]], // uuid of the last search. the frontend is responsible for tracking, this is meant for sessionization.
@@ -423,5 +443,8 @@ class MutableArticleHit(var id: Long, var score: Float, var isMyBookmark: Boolea
     users = newUsers
     bookmarkCount = newBookmarkCount
   }
-  def toArticleHit = ArticleHit(Id[NormalizedURI](id), score, isMyBookmark, isPrivate, users, bookmarkCount)
+  def toArticleHit(friendStats: FriendStats) = {
+    val sortedUsers = users.toSeq.sortBy{ id => - friendStats.score(id) }
+    ArticleHit(Id[NormalizedURI](id), score, isMyBookmark, isPrivate, sortedUsers, bookmarkCount)
+  }
 }

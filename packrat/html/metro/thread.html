@@ -1,7 +1,7 @@
 <div class="kifi-thread" data-id="{{id}}">
   <div class="kifi-thread-pics">
     {{#recipientsPictured}}
-    <img class="kifi-thread-pic" src="//graph.facebook.com/{{facebookId}}/picture?width=100&amp;height=100" alt="{{firstName}} {{lastName}}">
+    <img class="kifi-thread-pic" src="{{cdnBase}}/users/{{id}}/pics/100/0.jpg" alt="{{firstName}} {{lastName}}">
     {{/recipientsPictured}}
     <span class="kifi-thread-msg-count{{#messagesUnread}} kifi-unread{{/messagesUnread}}">{{messageCount}}</span>
   </div>

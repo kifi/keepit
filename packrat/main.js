@@ -16,6 +16,7 @@ var friends = [];
 var friendsById = {};
 var ruleSet = {};
 var urlPatterns = [];
+var cdnBase;
 
 function clearDataCache() {
   pageData = {};
@@ -132,6 +133,14 @@ const socketHandlers = {
     friendsById = {};
     for (var i = 0; i < fr.length; i++) {
       var f = fr[i];
+      friendsById[f.id] = f;
+    }
+  },
+  new_friends: function(fr) {
+    api.log("[socket:new_friends]", fr);
+    for (var i = 0; i < fr.length; i++) {
+      var f = fr[i];
+      friends.push(f)
       friendsById[f.id] = f;
     }
   },
@@ -604,6 +613,9 @@ api.port.on({
   },
   add_deep_link_listener: function(locator, _, tab) {
     createDeepLinkListener(locator, tab.id);
+  },
+  get_cdn_base: function(_, respond) {
+    respond(cdnBase);
   }
 });
 
@@ -1053,6 +1065,7 @@ function authenticate(callback) {
       logEvent.catchUp();
 
       ruleSet = data.rules;
+      cdnBase = data.cdnBase;
       urlPatterns = compilePatterns(data.patterns);
       store("kifi_installation_id", data.installationId);
       delete session.rules;
