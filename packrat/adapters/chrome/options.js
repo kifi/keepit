@@ -45,7 +45,7 @@ $(function() {
     console.log("[showSession] session:", session);
     $("#avatar").remove();
     if (session) {
-      $("#name").text(session.name).before("<img id=avatar src='" + session.avatarUrl + "'>");
+      $("#name").text(session.name).before("<img id=avatar src='" + cdnBase + "/users/" + session.userId + "/pics/100/0.jpg'>");
     }
     $("#session").attr("class", session ? "valid" : "none");
   }

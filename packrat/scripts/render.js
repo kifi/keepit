@@ -1,3 +1,7 @@
+api.port.emit('get_cdn_base', function (base) {
+  render.cdnBase = base;
+});
+
 function render(path, params, partialPaths, callback) {
   // sort out partialPaths and callback (both optional)
   if (!callback && typeof partialPaths == "function") {
@@ -7,6 +11,7 @@ function render(path, params, partialPaths, callback) {
 
   loadPartials(path.replace(/[^\/]*$/, ""), partialPaths || {}, function(partials) {
     loadFile(path, function(template) {
+      params = $.extend({ cdnBase: render.cdnBase }, params);
       callback(Mustache.render(template, params, partials));
     });
   });

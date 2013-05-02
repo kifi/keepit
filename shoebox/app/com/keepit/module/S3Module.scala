@@ -60,9 +60,9 @@ class S3Module() extends ScalaModule with Logging {
   @Singleton
   @Provides
   def s3ImageConfig: S3ImageConfig = {
-    S3ImageConfig(
-      current.configuration.getString("amazon.s3.images.bucket").get,
-      current.configuration.getString("amazon.s3.images.cloudfront").get)
+    val bucket = current.configuration.getString("cdn.bucket")
+    val base = current.configuration.getString("cdn.base")
+    S3ImageConfig(bucket.get, base.get)
   }
 
   @Singleton
