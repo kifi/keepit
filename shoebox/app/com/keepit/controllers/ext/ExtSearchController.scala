@@ -135,7 +135,7 @@ class ExtSearchController @Inject() (
     res.scorings.foreach{ s =>
       if (s.textScore > maxTextScore) maxTextScore = s.textScore
     }
-    val topUriIds = res.hits.take(3).map{hit => hit.uriId}
+    val topUriIds = res.hits.take(3).map{_.uriId}
     val classifier = srcFactory.apply(res.uuid, res.query, userId, topUriIds)
 
     val good = topUriIds.exists(id => classifier.classify(id))
