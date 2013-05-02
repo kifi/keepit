@@ -8,8 +8,11 @@ import com.keepit.search.index.Searcher
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.ReaderUtil
-import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.BooleanQuery
+import org.apache.lucene.search.DocIdSet
+import org.apache.lucene.search.DocIdSetIterator
+import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
+import org.apache.lucene.search.Filter
 import org.apache.lucene.search.FilteredQuery
 import org.apache.lucene.search.PhraseQuery
 import org.apache.lucene.search.Query
@@ -17,10 +20,9 @@ import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.Weight
 import org.apache.lucene.util.Bits
+import org.apache.lucene.util.BytesRef
 import java.util.{HashSet => JHashSet}
 import scala.collection.JavaConversions._
-import org.apache.lucene.util.BytesRef
-import org.apache.lucene.search.DocIdSetIterator
 
 object QueryUtil extends Logging {
 
@@ -126,6 +128,36 @@ object QueryUtil extends Logging {
       }
     }
     return null
+  }
+
+  def filteredTermPositionsEnum(tp: DocsAndPositionsEnum, docIdSet: DocIdSet): DocsAndPositionsEnum = {
+    if (docIdSet == null || tp == null) return null
+
+    val iter = docIdSet.iterator()
+    if (iter == null) return null
+
+    new DocsAndPositionsEnum {
+      override def docID() = tp.docID()
+      override def freq() = tp.freq()
+      override def nextDoc(): Int = {
+        iter.nextDoc()
+        join()
+      }
+      override def advance(did: Int): Int = {
+        iter.advance(did)
+        join()
+      }
+      private def join(): Int = {
+        while (iter.docID != tp.docID) {
+          if (iter.docID < tp.docID) iter.advance(tp.docID) else tp.advance(iter.docID)
+        }
+        iter.docID
+      }
+      override def nextPosition(): Int = tp.nextPosition()
+      override def startOffset(): Int = tp.startOffset()
+      override def endOffset(): Int = tp.endOffset()
+      override def getPayload(): BytesRef = tp.getPayload()
+    }
   }
 
   object EmptyDocsAndPositionsEnum extends DocsAndPositionsEnum {

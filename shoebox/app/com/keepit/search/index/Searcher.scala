@@ -204,21 +204,10 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
       val subReader = subReaders(i)
       val docIdSet = filter.getDocIdSet(subReader.getContext, subReader.getLiveDocs)
       if (docIdSet != null) {
-        val tp = subReader.termPositionsEnum(term)
-        val iter = docIdSet.iterator
-
-        def next(): Int = {
-          var doc = iter.nextDoc()
-          while (iter.docID != tp.docID) {
-            doc = if (iter.docID < tp.docID) iter.advance(tp.docID) else tp.advance(iter.docID)
-          }
-          doc
-        }
-
-        if (iter != null && tp != null) {
+        val tp = filteredTermPositionsEnum(subReader.termPositionsEnum(term), docIdSet)
+        if (tp != null) {
           val mapper = subReader.getIdMapper
-
-          while (next() < NO_MORE_DOCS) {
+          while (tp.nextDoc() < NO_MORE_DOCS) {
             idsToCheck -= 1
             val id = mapper.getId(tp.docID)
             val vector = new SemanticVector(new Array[Byte](SemanticVector.arraySize))
@@ -248,21 +237,11 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
       val subReader = subReaders(i)
       val docIdSet = filter.getDocIdSet(subReader.getContext, subReader.getLiveDocs)
       if (docIdSet != null) {
-        val tp = subReader.termPositionsEnum(term)
-        val iter = docIdSet.iterator
-
-        def next(): Int = {
-          var doc = iter.nextDoc()
-          while (iter.docID != tp.docID) {
-            doc = if (iter.docID < tp.docID) iter.advance(tp.docID) else tp.advance(iter.docID)
-          }
-          doc
-        }
-
-        if (iter != null && tp != null) {
+        val tp = filteredTermPositionsEnum(subReader.termPositionsEnum(term), docIdSet)
+        if (tp != null) {
           val mapper = subReader.getIdMapper
 
-          while (next() < NO_MORE_DOCS) {
+          while (tp.nextDoc() < NO_MORE_DOCS) {
             idsToCheck -= 1
             res += mapper.getId(tp.docID)
           }

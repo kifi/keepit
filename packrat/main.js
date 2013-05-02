@@ -16,7 +16,6 @@ var friends = [];
 var friendsById = {};
 var ruleSet = {};
 var urlPatterns = [];
-var cdnBase;
 
 function clearDataCache() {
   pageData = {};
@@ -613,9 +612,6 @@ api.port.on({
   },
   add_deep_link_listener: function(locator, _, tab) {
     createDeepLinkListener(locator, tab.id);
-  },
-  get_cdn_base: function(_, respond) {
-    respond(cdnBase);
   }
 });
 
@@ -1065,7 +1061,6 @@ function authenticate(callback) {
       logEvent.catchUp();
 
       ruleSet = data.rules;
-      cdnBase = data.cdnBase;
       urlPatterns = compilePatterns(data.patterns);
       store("kifi_installation_id", data.installationId);
       delete session.rules;

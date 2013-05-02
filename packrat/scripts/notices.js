@@ -71,6 +71,7 @@ noticesPane = function() {
     notice.isVisited = notice.state == "visited";
     notice.formatMessage = getSnippetFormatter;
     notice.formatLocalDate = getLocalDateFormatter;
+    notice.cdnBase = cdnBase;
     switch (notice.category) {
     case "comment":
       break;
