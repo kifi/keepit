@@ -116,9 +116,11 @@ class PhraseHelper(terms: Seq[String], phrases: Set[(Int, Int)]) {
     var prevPos = -1
     var runLen = 0
     var localSum = 0.0f
+    var lastId = -1
     matches.foreach {
       case (id, phraseLen, lastPos) =>
-        if (lastPos == prevPos + phraseLen) runLen += phraseLen else runLen = phraseLen
+        if (lastPos == prevPos + phraseLen && id != lastId) runLen += phraseLen else runLen = phraseLen
+        lastId = id
         lp(id) = lastPos
         prevPos = lastPos
         localSum = 0.0f
