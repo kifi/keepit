@@ -132,6 +132,7 @@ const socketHandlers = {
     api.log("[socket:new_friends]", fr);
     for (var i = 0; i < fr.length; i++) {
       var f = fr[i];
+      friends.push(f)
       friendsById[f.id] = f;
     }
   },
