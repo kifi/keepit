@@ -133,6 +133,8 @@ class SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
       if (searchResultInfo.nonEmpty) searchResultInfo.next else SearchResultInfo(-1, -1, -1, -1.0f, -1.0f)
   }
 
+  def getClickBoost = searcher.getClickBoost(userId, queryString)
+
   def getLuceneScores(uriId: Id[NormalizedURI]) = {
     val explain = getLuceneExplain(uriId)
     explain match {
@@ -343,5 +345,7 @@ class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], tar
     }
     uriInfoMap
   }
+
+  def getClickBoost(userId: Id[User], queryString: String) = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost)
 
 }
