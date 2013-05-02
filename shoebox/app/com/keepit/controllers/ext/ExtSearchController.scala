@@ -3,7 +3,6 @@ package com.keepit.controllers.ext
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.future
 import scala.util.Try
-
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.db._
@@ -12,11 +11,13 @@ import com.keepit.common.db.slick._
 import com.keepit.common.performance._
 import com.keepit.common.social.BasicUser
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.time._
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
 import com.keepit.search._
 import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
-
 import play.api.http.ContentTypes
+import com.keepit.common.logging.Logging
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchHit(id: Id[NormalizedURI], externalId: ExternalId[NormalizedURI], title: Option[String], url: String)
@@ -45,7 +46,9 @@ class ExtSearchController @Inject() (
   uriRepo: NormalizedURIRepo,
   basicUserRepo: BasicUserRepo,
   srcFactory: SearchResultClassifierFactory)
-    extends BrowserExtensionController(actionAuthenticator) with SearchServiceController {
+  (implicit private val clock: Clock,
+    private val fortyTwoServices: FortyTwoServices)
+    extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging{
 
   def search(query: String, filter: Option[String], maxHits: Int, lastUUIDStr: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
     val lastUUID = lastUUIDStr.flatMap{
@@ -135,12 +138,17 @@ class ExtSearchController @Inject() (
     res.scorings.foreach{ s =>
       if (s.textScore > maxTextScore) maxTextScore = s.textScore
     }
+
+    val tic = currentDateTime.getMillis()
+
     val topUriIds = res.hits.take(3).map{_.uriId}
     val classifier = srcFactory.apply(res.uuid, res.query, userId, topUriIds)
-
     val good = topUriIds.exists(id => classifier.classify(id))
 
-    (res.svVariance < 0.17) && (maxTextScore > 0.01f) && good
+    val millisPassed = currentDateTime.getMillis() - tic
+    log.info("search result classifier: used %d milliseconds".format(millisPassed))
+
+    (res.svVariance < 0.17) && (maxTextScore > 0.04f) && good
   }
 
   private[ext] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {
