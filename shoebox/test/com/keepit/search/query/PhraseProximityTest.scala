@@ -65,6 +65,17 @@ class PhraseProximityTest extends Specification {
       score = phraseHelper.getMatchedScore(matches)
       assert(score == 0)
     }
+
+    "not extend running length if adjacent phrases are the same" in {
+      val terms2 = Array("machine", "learning")
+      val phrases2 = Set((0,2))
+      val phraseHelper2 = new PhraseHelper(terms2, phrases2)
+
+      val matches = Array( (0, 2, 1), (0, 2, 3), (0, 2, 5))                                 // "machine learning machine learning machine learning"
+      val score = phraseHelper.getMatchedScore(matches)
+      val correct = 2 * (2 + 1) / 2.0f - 2 * (2 - 1) * gapPenalty / 2.0f
+      assert(math.abs(score - correct) < 1e-4)
+    }
   }
 
   val analyzer = new WhitespaceAnalyzer(Version.LUCENE_41)
