@@ -375,16 +375,6 @@ const socketHandlers = {
 // ===== Handling messages from content scripts or other extension pages
 
 api.port.on({
-  log_in: function(_, respond) {
-    authenticate(function() {
-      respond(session);
-    });
-    return true;
-  },
-  log_out: function(_, respond) {
-    deauthenticate();
-    respond();
-  },
   get_keeps: searchOnServer,
   get_chatter: function(data, respond) {
     api.log("[get_chatter]", data.ids);
@@ -440,16 +430,6 @@ api.port.on({
     ajax("POST", "/comments/" + (data ? "follow" : "unfollow"), {url: tab.url}, function(o) {
       api.log("[follow] resp:", o);
     });
-  },
-  get_prefs: function(_, respond) {
-    respond({session: session, prefs: api.prefs.get("env", "showSlider", "maxResults", "showScores")});
-  },
-  set_prefs: function(data) {
-    api.prefs.set(data);
-  },
-  set_env: function(env) {
-    api.prefs.set("env", env);
-    chrome.runtime.reload();
   },
   suppress_on_site: function(data, _, tab) {
     ajax("POST", "/users/slider/suppress", {url: tab.url, suppress: data});
