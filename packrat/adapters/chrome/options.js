@@ -1,56 +1,54 @@
 $(function() {
-  var cdnBase;
-  var port = chrome.runtime.connect({name: ""});
-  port.onMessage.addListener(function(msg) {
-    if (msg[0] == "api:respond") {
-      [init, showSession][msg[1]](msg[2]);
-    }
+  var main = chrome.extension.getBackgroundPage(), api = main.api, env = api.prefs.get("env");
+
+  console.log("pref:", api.prefs.get("maxResults"));
+
+  $(chrome.runtime.id === "fpjooibalklfinmkiodaamcckfbcjhin" ? null : "select").show()
+  .find("[value=" + env + "]").prop("selected", true).end()
+  .change(function() {
+    api.prefs.set("env", this.value);
+    chrome.runtime.reload();
   });
-  port.postMessage(["get_prefs",,0]);
-  function init(o) {
-    console.log("[init] prefs:", o.prefs);
-    $env.find("[value=" + o.prefs.env + "]").prop("selected", true);
-    $showSlider.prop("checked", o.prefs.showSlider);
-    $maxResults.val(o.prefs.maxResults).data("val", o.prefs.maxResults);
-    $showScores.prop("checked", o.prefs.showScores);
-    cdnBase = o.prefs.env == "development" ?
-      "http://dev.ezkeep.com:9000" : // http://d1scct5mnc9d9m.cloudfront.net
-      "http://djty7jcqog9qu.cloudfront.net";
-    showSession(o.session);
-  }
-  var $env = $(chrome.runtime.id === "fpjooibalklfinmkiodaamcckfbcjhin" ? null : "select").show().change(function() {
-    port.postMessage(["set_env", this.value]);
+
+  $("[name=show_slider]").prop("checked", api.prefs.get("showSlider")).click(function() {
+    api.prefs.set("showSlider", this.checked);
   });
-  var $showSlider = $("[name=show_slider]").click(function() {
-    port.postMessage(["set_prefs", {showSlider: this.checked}]);
-  });
-  var $maxResults = $("[name=max_results]").on("input", function() {
+  $("[name=max_results]").val(api.prefs.get("maxResults")).data("val", api.prefs.get("maxResults"))
+  .on("input", function() {
     var n = +this.value.trim();
     if (n) {
       n = Math.round(Math.max(1, Math.min(9, n)));
-      port.postMessage(["set_prefs", {maxResults: n}]);
-      $maxResults.data("val", n);
+      api.prefs.set("maxResults", n);
+      $(this).data("val", n);
     }
   }).blur(function() {
-    this.value = $maxResults.data("val");
+    this.value = $(this).data("val");
   });
-  var $showScores = $("[name=show_scores]").click(function() {
-    port.postMessage(["set_prefs", {showScores: this.checked}]);
+  $("[name=show_scores]").prop("checked", api.prefs.get("showScores")).click(function() {
+    api.prefs.set("showScores", this.checked);
   });
+
   $("#log-out").click(function(e) {
     e.preventDefault();
-    port.postMessage(["log_out",,1]);
+    main.deauthenticate();
+    showSession();
   });
   $("#log-in").click(function(e) {
     e.preventDefault();
-    port.postMessage(["log_in",,1]);
+    main.authenticate(showSession);
   });
-  function showSession(session) {
-    console.log("[showSession] session:", session);
-    $("#avatar").remove();
-    if (session) {
-      $("#name").text(session.name).before("<img id=avatar src='" + cdnBase + "/users/" + session.userId + "/pics/100/0.jpg'>");
+
+  function showSession() {
+    var s = main.session;
+    console.log("[showSession] session:", s);
+    if (s) {
+      var cdnBase = env == "development" ?
+        "dev.ezkeep.com:9000" : //d1scct5mnc9d9m.cloudfront.net
+        "djty7jcqog9qu.cloudfront.net";
+      $("#name").text(s.name);
+      $("#identity").css("backgroundImage", "url(http://" + cdnBase + "/users/" + s.userId + "/pics/100/0.jpg)");
     }
-    $("#session").attr("class", session ? "valid" : "none");
+    $("#session").attr("class", s ? "valid" : "none");
   }
+  showSession();
 });
