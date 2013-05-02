@@ -1,4 +1,4 @@
-<div class="kifi-notice kifi-notice-message kifi-notice-state-{{state}}{{#isNew}} kifi-notice-new{{/isNew}}" data-id="{{id}}" data-uri="{{details.page}}" data-locator="{{details.locator}}">
+<div class="kifi-notice kifi-notice-message{{#isVisited}} kifi-notice-visited{{/isVisited}}{{#isNew}} kifi-notice-new{{/isNew}}" data-id="{{id}}" data-uri="{{details.page}}" data-locator="{{details.locator}}" data-created-at="{{details.createdAt}}">
   <img class="kifi-notice-avatar" src="{{details.authors.0.avatar}}">
   <div class="kifi-notice-name">
     {{#oneAuthor}}
