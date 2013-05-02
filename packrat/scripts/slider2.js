@@ -377,6 +377,18 @@ slider2 = function() {
           .on("click", ".kifi-pane-back", function() {
             showPane(paneHistory[1] || this.dataset.loc || "/general", true);
           })
+          .on("click", ".kifi-pane-head-feedback", function(e) {
+            e.preventDefault();
+            var width = 700;
+            var height = 400;
+            var left = (screen.width/2)-(width/2);
+            var top = (screen.height/2)-(height/2);
+            window.open(
+              "https://www.kifi.com/feedback/form",
+              "kifi-feedback",
+              "width="+width+",height="+height+",resizable,top="+top+", left="+left
+            );
+          })
           .on("mousedown", ".kifi-pane-head-settings", function(e) {
             e.preventDefault();
             var $sett = $(this).addClass("kifi-active");
