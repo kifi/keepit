@@ -21,8 +21,8 @@ class SearchResultClassifierFactory @Inject() (sseFactory: Provider[SearchStatis
 
 class SearchResultClassifier(sse: SearchStatisticsExtractor){
   def classify(uriId: Id[NormalizedURI]) = {
-    val uriInfo = sse.getUriInfo(uriId)
+    val clickBoosts = sse.getClickBoost
     val score = sse.getLuceneScores(uriId)
-    if (score.semanticVector >= 0.3f || uriInfo.clickBoost > 2.5f) true else false
+    if (score.semanticVector >= 0.3f || clickBoosts(uriId.id) > 2.5f) true else false
   }
 }
