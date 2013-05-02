@@ -777,7 +777,7 @@ function unreadThreadIds(threads, readTimes) {
         return true;
       }
     }
-  }).map(function(t) {return t.id});
+  }).map(getId);
 }
 
 function tellTabsNoticeCountIfChanged() {
@@ -994,7 +994,7 @@ function hasId(id) {
   return function(o) {return o.id == id};
 }
 
-function id(o) {
+function getId(o) {
   return o.id;
 }
 
