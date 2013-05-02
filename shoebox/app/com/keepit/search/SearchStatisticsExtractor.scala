@@ -118,7 +118,7 @@ class SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
 
   private def getBasicQueryInfo = BasicQueryInfo(queryUUID, queryString, userId)
 
-  private def getUriInfo(uriId: Id[NormalizedURI]) = uriInfoMap.getOrElse(uriId, { log.warn(s"uriId ${uriId.id} not found by searcher !!! "); UriInfo(uriId, -1.0f, -1.0f, -1.0f, -1.0f, false, false, -1, -1) })
+  def getUriInfo(uriId: Id[NormalizedURI]) = uriInfoMap.getOrElse(uriId, { log.warn(s"uriId ${uriId.id} not found by searcher !!! "); UriInfo(uriId, -1.0f, -1.0f, -1.0f, -1.0f, false, false, -1, -1) })
 
   private def getUriLabel(uriId: Id[NormalizedURI]) = uriLabelMap(uriId)
 
