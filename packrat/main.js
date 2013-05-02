@@ -1,22 +1,28 @@
 var api = api || require("./api");
 
+const NOTIFICATION_BATCH_SIZE = 10;  // also in notices.js
+
+var tabsShowingNotificationsPane = [];
+var notificationsCallbacks = [];
+
 // ===== Cached data from server
 
 var pageData = {};
-var notifications = [];
+var notifications;  // [] would mean user has none
 var newNotificationIdxs = [];  // derived
-var timeNotificationsLastSeen = 0;
+var timeNotificationsLastSeen = new Date(0);
+var haveAllNotifications;  // inferred
 var friends = [];
 var friendsById = {};
 var ruleSet = {};
 var urlPatterns = [];
-var cdnBase;
 
 function clearDataCache() {
   pageData = {};
-  notifications = [];
+  notifications = null;
   newNotificationIdxs = [];
-  timeNotificationsLastSeen = 0;
+  timeNotificationsLastSeen = new Date(0);
+  haveAllNotifications = false;
   friends = [];
   friendsById = {};
   ruleSet = {};
@@ -219,40 +225,56 @@ const socketHandlers = {
       }
     }
   },
-  notification: function(notification) {
-    api.log("[socket:notification]", notification);
-    api.tabs.eachSelected(function(tab) {
-      api.tabs.emit(tab, "show_notification", notification);
-    });
-    socketHandlers.notifications([notification]);
-  },
-  notifications: function(arr) {
+  notifications: function(arr) {  // initial load of notifications
     api.log("[socket:notifications]", arr);
-    var idToNotif = {};
-    notifications.concat(arr).forEach(function(n) {
-      idToNotif[n.id] = n;
-    });
-    notifications.length = 0;
-    for (var id in idToNotif) {
-      var subsumes = idToNotif[id].details.subsumes;
-      if (subsumes) {
-        delete idToNotif[subsumes];
+    if (!notifications) {
+      notifications = arr;
+      haveAllNotifications = arr.length < NOTIFICATION_BATCH_SIZE;
+      identifyNewNotices();
+      while (notificationsCallbacks.length) {
+        notificationsCallbacks.shift()();
+      }
+      tellTabsNoticeCountIfChanged();
+    }
+  },
+  notification: function(n) {  // a new notification (real-time)
+    api.log("[socket:notification]", n);
+    if (insertNewNotification(n)) {
+      identifyNewNotices();
+      var told = {};
+      api.tabs.eachSelected(tellTab);
+      tabsShowingNotificationsPane.forEach(tellTab);
+      tellTabsNoticeCountIfChanged();
+    }
+    function tellTab(tab) {
+      if (told[tab.id]) return;
+      told[tab.id] = true;
+      api.tabs.emit(tab, "new_notification", n);
+    }
+  },
+  missed_notifications: function(arr) {
+    api.log("[socket:missed_notifications]", arr);
+    for (var i = arr.length - 1; ~i; i--) {
+      if (!insertNewNotification(arr[i])) {
+        arr.splice(i, 1);
       }
     }
-    for (var id in idToNotif) {
-      notifications.push(idToNotif[id]);
+    if (arr.length) {
+      identifyNewNotices();
+      tabsShowingNotificationsPane.forEach(function(tab) {
+        api.tabs.emit(tab, "missed_notifications", arr);
+      });
+      tellTabsNoticeCountIfChanged();
     }
-    notifications.sort(function(a, b) {
-      return new Date(b.time) - new Date(a.time);
-    });
-    identifyNewNotices();
-    emitNotifications();
   },
   last_notify_read_time: function(t) {
     api.log("[socket:last_notify_read_time]", t);
-    timeNotificationsLastSeen = new Date(t);
-    identifyNewNotices();
-    tellTabsNoticeCountIfChanged();
+    var time = new Date(t);
+    if (time > timeNotificationsLastSeen) {
+      timeNotificationsLastSeen = time;
+      identifyNewNotices();
+      tellTabsNoticeCountIfChanged();
+    }
   },
   comment: function(nUri, c) {
     api.log("[socket:comment]", c);
@@ -265,13 +287,18 @@ const socketHandlers = {
       tellTabsIfCountChanged(d, "c", commentCount(d));
     }
   },
-  comment_read: function(nUri, time) {
+  comment_read: function(nUri, time, id) {
     api.log("[socket:comment_read]", nUri, time);
     var d = pageData[nUri];
-    if (d) {
-      d.lastCommentRead = time;
-      tellTabsIfCountChanged(d, "c", commentCount(d));
-    }
+    // TODO: uncomment optimization below after past data inconsistencies are repaired or no longer a concern
+    //if (!d || d.lastCommentRead != time) {
+      markNoticesVisited("comment", nUri, id, time);
+      if (d) {
+        d.lastCommentRead = time;
+        tellTabsIfCountChanged(d, "c", commentCount(d));
+      }
+      tellTabsNoticeCountIfChanged();
+    //}
   },
   thread: function(th) {
     api.log("[socket:thread]", th);
@@ -327,16 +354,21 @@ const socketHandlers = {
       tellTabsIfCountChanged(d, "m", messageCount(d));
     }
   },
-  message_read: function(nUri, threadId, time) {
+  message_read: function(nUri, threadId, time, messageId) {
     api.log("[socket:message_read]", nUri, threadId, time);
     var d = pageData[nUri];
-    if (d) {
-      d.lastMessageRead[threadId] = time;
-      d.tabs.forEach(function(tab) {
-        api.tabs.emit(tab, "thread_info", {thread: d.threads.filter(hasId(threadId))[0], read: d.lastMessageRead[threadId]});
-      });
-      tellTabsIfCountChanged(d, "m", messageCount(d));
-    }
+    // TODO: uncomment optimization below after past data inconsistencies are repaired or no longer a concern
+    //if (!d || !d.lastMessageRead || d.lastMessageRead[threadId] != time) {
+      markNoticesVisited("message", nUri, messageId, time, "/messages/" + threadId);
+      if (d) {
+        d.lastMessageRead[threadId] = time;
+        d.tabs.forEach(function(tab) {
+          api.tabs.emit(tab, "thread_info", {thread: d.threads.filter(hasId(threadId))[0], read: d.lastMessageRead[threadId]});
+        });
+        tellTabsIfCountChanged(d, "m", messageCount(d));
+      }
+      tellTabsNoticeCountIfChanged();
+    //}
   },
 };
 
@@ -453,27 +485,29 @@ api.port.on({
   },
   set_comment_read: function(o, _, tab) {
     var d = pageData[tab.nUri];
-    if (!d || new Date(o.time) > new Date(d.lastCommentRead)) {
-      markNewNoticeVisited("comment", o.id);
+    // TODO: uncomment optimization below after past data inconsistencies are repaired or no longer a concern
+    //if (!d || new Date(o.time) > new Date(d.lastCommentRead)) {
+      markNoticesVisited("comment", tab.nUri, o.id, o.time);
       if (d) {
         d.lastCommentRead = o.time;
         tellTabsIfCountChanged(d, "c", commentCount(d));  // tabs at this uri
       }
       tellTabsNoticeCountIfChanged();  // visible tabs
       socket.send(["set_comment_read", o.id]);
-    }
+    //}
   },
   set_message_read: function(o, _, tab) {
     var d = pageData[tab.nUri];
-    if (!d || new Date(o.time) > new Date(d.lastMessageRead[o.threadId] || 0)) {
-      markNewNoticeVisited("message", o.messageId);
+    // TODO: uncomment optimization below after past data inconsistencies are repaired or no longer a concern
+    //if (!d || new Date(o.time) > new Date(d.lastMessageRead[o.threadId] || 0)) {
+      markNoticesVisited("message", tab.nUri, o.messageId, o.time, "/messages/" + o.threadId);
       if (d) {
         d.lastMessageRead[o.threadId] = o.time;
         tellTabsIfCountChanged(d, "m", messageCount(d));  // tabs at this uri
       }
       tellTabsNoticeCountIfChanged();  // visible tabs
       socket.send(["set_message_read", o.messageId]);
-    }
+    //}
   },
   comments: function(_, respond, tab) {
     var d = pageData[tab.nUri];
@@ -505,16 +539,53 @@ api.port.on({
       }
     });
   },
-  notifications: function(howMany, tab) {
-    if (howMany > notifications.length) {
-      var oldest = (notifications[notifications.length-1] || {}).time;
-      socket.send(["get_notifications", howMany - notifications.length, oldest]);
+  notifications: function(_, respond) {
+    if (notifications) {
+      reply();
     } else {
-      emitNotifications();
+      notificationsCallbacks.push(reply);
+    }
+    function reply() {
+      respond({
+        notifications: notifications.slice(0, NOTIFICATION_BATCH_SIZE),
+        newIdxs: newNotificationIdxs,
+        timeLastSeen: timeNotificationsLastSeen.toISOString()});
     }
   },
-  notifications_read: function(time) {
-    socket.send(["set_last_notify_read_time", time]);
+  old_notifications: function(timeStr, respond) {
+    var time = new Date(timeStr);
+    var n = notifications.length, oldest = notifications[n-1];
+    if (new Date(oldest.time) < time || haveAllNotifications) {
+      for (var i = n - 1; i && new Date(notifications[i-1].time) < time; i--);
+      respond(notifications.slice(i, NOTIFICATION_BATCH_SIZE));
+    } else {
+      socket.send(["get_old_notifications", timeStr, NOTIFICATION_BATCH_SIZE], function(arr) {
+        if (notifications[notifications.length - 1] === oldest) {
+          notifications.push.apply(notifications, arr);
+          if (arr.length < NOTIFICATION_BATCH_SIZE) {
+            haveAllNotifications = true;
+          }
+        }
+        respond(arr);
+      });
+    }
+  },
+  notifications_pane: function(showing, _, tab) {
+    for (var i = 0; i < tabsShowingNotificationsPane.length; i++) {
+      if (tabsShowingNotificationsPane[i].id === tab.id) {
+        tabsShowingNotificationsPane.splice(i--, 1);
+      }
+    }
+    if (showing) tabsShowingNotificationsPane.push(tab);
+  },
+  notifications_read: function(t) {
+    var time = new Date(t);
+    if (time > timeNotificationsLastSeen) {
+      timeNotificationsLastSeen = time;
+      identifyNewNotices();
+      tellTabsNoticeCountIfChanged();
+      socket.send(["set_last_notify_read_time", t]);
+    }
   },
   session: function(_, respond) {
     respond(session);
@@ -541,44 +612,59 @@ api.port.on({
   },
   add_deep_link_listener: function(locator, _, tab) {
     createDeepLinkListener(locator, tab.id);
-  },
-  get_cdn_base: function(_, respond) {
-    respond(cdnBase);
   }
 });
 
-function emitNotifications() {
-  tellTabsNoticeCountIfChanged();
-  api.tabs.eachSelected(function(tab) {
-    api.tabs.emit(tab, "notifications", {
-      notifications: notifications,
-      newIdxs: newNotificationIdxs,
-      timeLastSeen: timeNotificationsLastSeen});
-  });
+function insertNewNotification(n) {
+  if (!notifications) return false;
+  var time = new Date(n.time);
+  for (var i = 0; i < notifications.length; i++) {
+    if (new Date(notifications[i].time) <= time) {
+      if (notifications[i].id == n.id) return false;
+      break;
+    }
+  }
+  notifications.splice(i, 0, n);
+  if (n.details.subsumes) {
+    for (i++; i < notifications.length; i++) {
+      if (notifications[i].id == n.details.subsumes) {
+        notifications.splice(i, 1);
+        break;
+      }
+    }
+  }
+  return true;
 }
 
 function identifyNewNotices() {
   newNotificationIdxs.length = 0;
+  if (!notifications) return;
   for (var i = 0; i < notifications.length; i++) {
     if (new Date(notifications[i].time) <= timeNotificationsLastSeen) {
       break;
-    } else if (notifications[i].state == "delivered") {
+    } else if (notifications[i].state != "visited") {
       newNotificationIdxs.push(i);
     }
   }
 }
 
-function markNewNoticeVisited(category, itemId) {
-  for (var i = 0, j; i < newNotificationIdxs.length; i++) {
-    j = newNotificationIdxs[i];
-    if (notifications[j].details.id == itemId &&
-        notifications[j].category == category &&
-        notifications[j].state != "visited") {
-      notifications[j].state = "visited";
-      newNotificationIdxs.splice(i, 1);
-      break;
+// id is of last read comment/message. locator not passed in the comments case.
+function markNoticesVisited(category, nUri, id, timeStr, locator) {
+  var time = new Date(timeStr);
+  notifications.forEach(function(n, i) {
+    if (n.details.page == nUri &&
+        n.category == category &&
+        (!locator || n.details.locator == locator) &&
+        (n.details.id == id || new Date(n.time) <= time) &&
+        n.state != "visited") {
+      n.state = "visited";
+      var j = newNotificationIdxs.indexOf(i);
+      if (~j) newNotificationIdxs.splice(j, 1);
     }
-  }
+  });
+  tabsShowingNotificationsPane.forEach(function(tab) {
+    api.tabs.emit(tab, "notices_visited", {category: category, nUri: nUri, time: timeStr, locator: locator});
+  });
 }
 
 function createDeepLinkListener(locator, tabId) {
@@ -687,7 +773,7 @@ function unreadThreadIds(threads, readTimes) {
         return true;
       }
     }
-  }).map(function(t) {return t.id});
+  }).map(getId);
 }
 
 function tellTabsNoticeCountIfChanged() {
@@ -904,6 +990,10 @@ function hasId(id) {
   return function(o) {return o.id == id};
 }
 
+function getId(o) {
+  return o.id;
+}
+
 function devUriOr(uri) {
   return api.prefs.get("env") === "development" ? "http://dev.ezkeep.com:9000" : uri;
 }
@@ -955,9 +1045,13 @@ function authenticate(callback) {
       logEvent("extension", "authenticated");
 
       session = data;
-      socket = api.socket.open(apiBaseUri().replace(/^http/, "ws") + "/ext/ws", socketHandlers, function() {
-        socket.send(["get_notifications", 10]);  // TODO: optimize by getting only newer than X when seq > 1
+      socket = api.socket.open(apiBaseUri().replace(/^http/, "ws") + "/ext/ws", socketHandlers, function onConnect() {
         socket.send(["get_last_notify_read_time"]);
+        if (!notifications) {
+          socket.send(["get_notifications", NOTIFICATION_BATCH_SIZE]);
+        } else {
+          socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
+        }
         socket.send(["get_friends"]);  // TODO: optimize seq > 1 case
         if (socket.seq > 1) {  // reconnected
           socket.send(["get_rules", ruleSet.version]);
@@ -967,7 +1061,6 @@ function authenticate(callback) {
       logEvent.catchUp();
 
       ruleSet = data.rules;
-      cdnBase = data.cdnBase;
       urlPatterns = compilePatterns(data.patterns);
       store("kifi_installation_id", data.installationId);
       delete session.rules;
