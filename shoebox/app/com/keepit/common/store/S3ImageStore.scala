@@ -29,6 +29,7 @@ import play.api.libs.ws.WS
 @ImplementedBy(classOf[S3ImageStoreImpl])
 trait S3ImageStore {
   def getPictureUrl(width: Int, user: User): Future[String]
+  def updatePicture(sui: SocialUserInfo, externalId: ExternalId[User]): Future[Seq[PutObjectResult]]
 }
 
 @Singleton
@@ -74,7 +75,7 @@ class S3ImageStoreImpl @Inject() (
     s"https://graph.facebook.com/${sui.socialId.id}/picture?width=$size&height=$size"
   }
 
-  private def updatePicture(sui: SocialUserInfo, externalId: ExternalId[User]): Future[Seq[PutObjectResult]] = {
+  def updatePicture(sui: SocialUserInfo, externalId: ExternalId[User]): Future[Seq[PutObjectResult]] = {
     val future = Future.sequence(for {
       size <- S3ImageConfig.ImageSizes
       userId <- sui.userId

@@ -1,6 +1,7 @@
 package com.keepit.controllers.assets
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.Try
 
 import com.google.inject.Inject
 import com.google.inject.Singleton
@@ -16,6 +17,7 @@ import play.api.mvc.Action
 class UserPictureController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
+  suiRepo: SocialUserInfoRepo,
   userRepo: UserRepo,
   imageStore: S3ImageStore)
   extends WebsiteController(actionAuthenticator) {
@@ -30,5 +32,14 @@ class UserPictureController @Inject() (
     } getOrElse {
       NotFound("Cannot find user!")
     }
+  }
+
+  def update() = Action { request =>
+    Ok((for {
+      user <- db.readOnly { implicit s => userRepo.allExcluding(UserStates.INACTIVE) }
+    } yield {
+      val socialUser = db.readOnly { implicit s => suiRepo.getByUser(user.id.get) }.head
+      Try(imageStore.updatePicture(socialUser, user.externalId)).map(_ => socialUser.socialId)
+    }).mkString(","))
   }
 }
