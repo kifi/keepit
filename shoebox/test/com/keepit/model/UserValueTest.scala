@@ -3,10 +3,8 @@ package com.keepit.model
 import org.specs2.mutable._
 
 import com.keepit.common.db._
-import com.keepit.common.time.zones.PT
-import com.keepit.test._
-import com.google.inject.{ Inject, ImplementedBy, Singleton }
 import com.keepit.inject._
+import com.keepit.test._
 
 import play.api.Play.current
 import play.api.test.Helpers._
@@ -19,7 +17,7 @@ class UserValueTest extends Specification with DbRepos {
         val userValueRepo = inject[UserValueRepoImpl]
         userValueRepo.valueCache.get(UserValueKey(Id[User](1), "test")).isDefined === false
 
-        db.readWrite { implicit session =>
+        val (user1, uv) = db.readWrite { implicit session =>
           val user1 = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
           userValueRepo.getValue(user1.id.get, "test").isDefined === false
 
@@ -30,6 +28,21 @@ class UserValueTest extends Specification with DbRepos {
 
           userValueRepo.save(userValueRepo.get(uv.id.get).withState(UserValueStates.INACTIVE))
           userValueRepo.valueCache.get(UserValueKey(user1.id.get, "test")).isDefined === false
+
+          (user1, uv)
+        }
+
+        db.readWrite { implicit s =>
+          userValueRepo.save(uv.withState(UserValueStates.ACTIVE))
+        }
+
+        inject[TestSlickSessionProvider].doWithoutCreatingSessions {
+          db.readOnly { implicit s => userValueRepo.getValue(user1.id.get, "test1") }
+        } should throwAn[IllegalStateException]
+
+        db.readOnly { implicit s => userValueRepo.getValue(user1.id.get, "test") } === Some("this right here!")
+        inject[TestSlickSessionProvider].doWithoutCreatingSessions {
+          db.readOnly { implicit s => userValueRepo.getValue(user1.id.get, "test") } === Some("this right here!")
         }
       }
     }
