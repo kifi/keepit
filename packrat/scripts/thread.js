@@ -75,18 +75,16 @@ threadPane = function() {
       }
     }};
 
-  function sendReply($container, threadId, session, e, text, recipientIds) {
+  function sendReply($container, threadId, session, e, text) {
     // logEvent("keeper", "reply");
-    api.port.emit("post_comment", {
-      "url": document.URL,
-      "title": document.title,
-      "text": text,
-      "permissions": "message",
-      "recipients": recipientIds,
-      "parent": threadId
-    }, function(response) {
-      api.log("[sendReply] resp:", response);
-    });
+    api.port.emit("send_reply", {
+        url: document.URL,
+        title: document.title,
+        text: text,
+        threadId: threadId},
+      function(resp) {
+        api.log("[sendReply] resp:", resp);
+      });
     renderMessage({
       id: "",
       createdAt: new Date().toISOString(),
@@ -94,9 +92,7 @@ threadPane = function() {
       user: {
         id: session.userId,
         firstName: session.name,
-        lastName: "",
-        facebookId: session.facebookId
-      }
+        lastName: ""}
     }, session.userId, function($m) {
       $sent.append($m).scrollToBottom();
     });

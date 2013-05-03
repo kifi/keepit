@@ -68,7 +68,7 @@ function attachComposeBindings($c, composeTypeName) {
         $f.find("#token-input-kifi-compose-to").focus();
         return;
       }
-      args.push(recipients.map(function(r) {return r.id}).join(","));
+      args.push(recipients.map(function(r) {return r.id}));
     }
     $d.empty().trigger("kifi:compose-submit", args).focus();
     var $submit = $f.find(".kifi-compose-submit").addClass("kifi-active");
