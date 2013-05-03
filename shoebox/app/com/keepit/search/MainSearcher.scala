@@ -119,6 +119,9 @@ class MainSearcher(
     val personalizedSearcher = parsedQuery.map{ articleQuery =>
       log.debug("articleQuery: %s".format(articleQuery.toString))
 
+      val namedQueryContext = parser.namedQueryContext
+      val semanticVectorScoreAccessor = namedQueryContext.getScoreAccessor("semantic vector")
+
       val personalizedSearcher = getPersonalizedSearcher(articleQuery)
       personalizedSearcher.setSimilarity(similarity)
       personalizedSearcher.doSearch(articleQuery){ (scorer, mapper) =>
@@ -128,6 +131,7 @@ class MainSearcher(
           if (!idFilter.contains(id)) {
             val clickBoost = clickBoosts(id)
             val score = scorer.score()
+            val semanticScore = semanticVectorScoreAccessor.getScore(doc)
             if (friendlyUris.contains(id)) {
               if (myUris.contains(id)) {
                 myHits.insert(id, score * clickBoost, true, !myPublicUris.contains(id))
@@ -140,6 +144,7 @@ class MainSearcher(
           }
           doc = scorer.nextDoc()
         }
+        namedQueryContext.reset()
       }
       personalizedSearcher
     }

@@ -26,6 +26,8 @@ import com.keepit.search.query.AdditiveBoostQuery
 import com.keepit.search.query.MultiplicativeBoostQuery
 import com.keepit.search.query.BoostQuery
 import com.keepit.search.query.PhraseProximityQuery
+import com.keepit.search.query.NamedQueryContext
+import com.keepit.search.query.NamedQuery
 
 class MainQueryParser(
   analyzer: Analyzer,
@@ -38,6 +40,8 @@ class MainQueryParser(
   override val siteBoost: Float,
   phraseDetector: PhraseDetector
 ) extends QueryParser(analyzer, stemmingAnalyzer) with DefaultSyntax with PercentMatch with QueryExpansion {
+
+  val namedQueryContext = new NamedQueryContext
 
   private def createPhraseQueries(query: BooleanQuery): Option[Query] = {
     var phraseQueries = new BooleanQuery(true)
@@ -61,7 +65,9 @@ class MainQueryParser(
     }
   }
 
-  override def parse(queryText: CharSequence) = {
+  private def namedQuery(name: String, query: Query) = new NamedQuery(name, query, namedQueryContext)
+
+  override def parse(queryText: CharSequence): Option[Query] = {
     super.parse(queryText).map{ query =>
       if (numStemmedTerms <= 0) query
       else {
@@ -79,7 +85,7 @@ class MainQueryParser(
 
         if (semanticBoost > 0.0f) {
           val svq = SemanticVectorQuery(getStemmedTerms("sv"), fallbackField = "title_stemmed")
-          auxQueries += svq
+          auxQueries += namedQuery("semantic vector", svq)
           auxStrengths += semanticBoost
         }
 
@@ -89,14 +95,14 @@ class MainQueryParser(
           phraseProxQ.add( PhraseProximityQuery(getStemmedTerms("cs"), phrases))
           phraseProxQ.add( PhraseProximityQuery(getStemmedTerms("ts"), phrases))
           phraseProxQ.add( PhraseProximityQuery(getStemmedTerms("title_stemmed"), phrases))
-          auxQueries += phraseProxQ
+          auxQueries += namedQuery("proximity", phraseProxQ)
           auxStrengths += phraseProximityBoost
         } else if (numStemmedTerms > 1 && proximityBoost > 0.0f) {
           val proxQ = new DisjunctionMaxQuery(0.0f)
           proxQ.add(ProximityQuery(getStemmedTerms("cs")))
           proxQ.add(ProximityQuery(getStemmedTerms("ts")))
           proxQ.add(ProximityQuery(getStemmedTerms("title_stemmed")))
-          auxQueries += proxQ
+          auxQueries += namedQuery("proximity", proxQ)
           auxStrengths += proximityBoost
         }
 
