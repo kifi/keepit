@@ -271,13 +271,15 @@ class MainSearcher(
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
 
     // simple classifier
-    val tic = currentDateTime.getMillis()
-    val isGood = (parsedQuery, personalizedSearcher) match {
-      case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(query.get, hitList, clickBoosts, searcher.get)
-      case _ => true
-    }
-    val show = (svVar < 0.17f) && isGood
 
+    val tic = currentDateTime.getMillis()
+    val show = if (svVar > 0.17f) false else {
+      val isGood = (parsedQuery, personalizedSearcher) match {
+        case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(query.get, hitList, clickBoosts, searcher.get)
+        case _ => true
+      }
+      isGood
+    }
     val elapsed = currentDateTime.getMillis() - tic
     log.info("classifier time used: %d, queryString = %s".format(elapsed, queryString))
 
@@ -295,15 +297,19 @@ class MainSearcher(
 
 
   private def classify(parsedQuery: Query, hitList: List[MutableArticleHit], clickBoosts: ResultClickTracker.ResultClickBoosts, personalizedSearcher: PersonalizedSearcher) = {
-    def classify(uriId: Id[NormalizedURI]) = {
-      val explain = personalizedSearcher.explain(parsedQuery, uriId.id)
-      val scores = LuceneExplanationExtractor.extractNamedScores(explain)
-      val semanticScore = scores.getOrElse(LuceneScoreNames.SEMANTIC_VECTOR, -1.0f)
-      val textScore = scores.getOrElse(LuceneScoreNames.MULTIPLICATIVE_BOOST, -1.0f)
-      log.info("document id = %d, textScore = %f, semanticScore = %f".format(uriId.id, textScore, semanticScore))
-      if ( (textScore > 0.04f && semanticScore >= 0.3f) || clickBoosts(uriId.id) > 2.0f ) true else false
+    def classify(hit: MutableArticleHit) = {
+      if (clickBoosts(hit.id) > 2.0f) true
+      else {
+        if (hit.scoring.textScore < 0.04f) false
+        else {
+          val explain = personalizedSearcher.explain(parsedQuery, hit.id)
+          val scores = LuceneExplanationExtractor.extractNamedScores(explain)
+          val semanticScore = scores.getOrElse(LuceneScoreNames.SEMANTIC_VECTOR, -1.0f)
+          semanticScore >= 0.3f
+        }
+      }
     }
-    hitList.take(3).exists(id => classify(Id[NormalizedURI](id.id)))
+    hitList.take(3).exists(classify(_))
   }
 
 
