@@ -21,6 +21,8 @@ import java.util.UUID
 import scala.math._
 import org.joda.time.DateTime
 import com.keepit.serializer.SearchResultInfoSerializer
+import com.keepit.search.query.LuceneExplanationExtractor
+import com.keepit.search.query.LuceneScoreNames
 
 
 class MainSearcher(
@@ -265,7 +267,19 @@ class MainSearcher(
 
     val newIdFilter = filter.idFilter ++ hitList.map(_.id)
     val (svVar,svExistVar) = SemanticVariance.svVariance(parsedQuery, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
+
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
+
+    // simple classifier
+    val tic = currentDateTime.getMillis()
+    val isGood = (parsedQuery, personalizedSearcher) match {
+      case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(query.get, hitList, clickBoosts, searcher.get)
+      case _ => true
+    }
+    val show = (svVar < 0.17f) && isGood
+
+    val elapsed = currentDateTime.getMillis() - tic
+    log.info("classifier time used: %d, queryString = %s".format(elapsed, queryString))
 
     val searchResultUuid = ExternalId[ArticleSearchResultRef]()
     val searchResultInfo = SearchResultInfo(myTotal, friendsTotal, othersTotal, svVar, svExistVar)
@@ -276,7 +290,20 @@ class MainSearcher(
 
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
         myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt,
-        (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = svExistVar)
+        (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = svExistVar, toShow = show)
+  }
+
+
+  private def classify(parsedQuery: Query, hitList: List[MutableArticleHit], clickBoosts: ResultClickTracker.ResultClickBoosts, personalizedSearcher: PersonalizedSearcher) = {
+    def classify(uriId: Id[NormalizedURI]) = {
+      val explain = personalizedSearcher.explain(parsedQuery, uriId.id)
+      val scores = LuceneExplanationExtractor.extractNamedScores(explain)
+      val semanticScore = scores.getOrElse(LuceneScoreNames.SEMANTIC_VECTOR, -1.0f)
+      val textScore = scores.getOrElse(LuceneScoreNames.MULTIPLICATIVE_BOOST, -1.0f)
+      log.info("document id = %d, textScore = %f, semanticScore = %f".format(uriId.id, textScore, semanticScore))
+      if ( (textScore > 0.04f && semanticScore >= 0.3f) || clickBoosts(uriId.id) > 2.0f ) true else false
+    }
+    hitList.take(3).exists(id => classify(Id[NormalizedURI](id.id)))
   }
 
 
@@ -395,7 +422,8 @@ case class ArticleSearchResult(
   uuid: ExternalId[ArticleSearchResultRef] = ExternalId(),
   time: DateTime = currentDateTime,
   svVariance: Float = -1.0f,			// semantic vector variance
-  svExistenceVar: Float = -1.0f
+  svExistenceVar: Float = -1.0f,
+  toShow: Boolean = true
 )
 
 
