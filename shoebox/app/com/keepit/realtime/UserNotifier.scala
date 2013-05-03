@@ -24,6 +24,9 @@ import com.keepit.common.db.{ State, Id }
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.ThreadInfoRepo
 import com.keepit.serializer.ThreadInfoSerializer._
+import com.keepit.common.healthcheck._
+import com.keepit.common.akka._
+import com.keepit.common.time._
 
 case class CommentDetails(
   id: String, // ExternalId[Comment]
@@ -120,9 +123,9 @@ class UserNotifier @Inject() (
           commentId = comment.id,
           subsumedId = None))
         notificationBroadcast.push(userNotification)
-        notifyCommentByEmail(user, commentDetail)
+        //notifyCommentByEmail(user, commentDetail)
 
-        userNotifyRepo.save(userNotification.withState(UserNotificationStates.DELIVERED))
+        //userNotifyRepo.save(userNotification.withState(UserNotificationStates.DELIVERED))
       }
     }
   }
@@ -147,10 +150,10 @@ class UserNotifier @Inject() (
             notificationBroadcast.push(userNotification)
           } else {
             log.info(s"Sending email because ${userNotification.userId} is not connected.")
-            notifyMessageByEmail(user, messageDetails)
+            //notifyMessageByEmail(user, messageDetails)
           }
 
-          userNotifyRepo.save(userNotification.withState(UserNotificationStates.DELIVERED))
+          //userNotifyRepo.save(userNotification.withState(UserNotificationStates.DELIVERED))
       }
     }
   }
@@ -229,37 +232,6 @@ class UserNotifier @Inject() (
   def recreateAllActiveDetails(safeMode: Boolean)(implicit session: RWSession) = {
     recreateMessageDetails(safeMode)
     recreateCommentDetails(safeMode)
-  }
-
-  private def notifyCommentByEmail(recipient: User, details: CommentDetails)(implicit session: RWSession) {
-    val author = userRepo.get(details.author.externalId)
-    val addrs = emailAddressRepo.getByUser(recipient.id.get)
-    for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
-      postOffice.sendMail(ElectronicMail(
-        senderUserId = author.id,
-        from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
-        to = addr,
-        subject = "%s %s commented on a page you are following".format(author.firstName, author.lastName),
-        htmlBody = views.html.email.newComment(author, recipient, details.url, details.title, commentFormatter.toPlainText(details.text)).body,
-        category = PostOffice.Categories.COMMENT))
-    }
-  }
-  private def notifyMessageByEmail(recipient: User, details: MessageDetails)(implicit session: RWSession) {
-
-    val author = userRepo.get(details.authors.head.externalId)
-    val addrs = emailAddressRepo.getByUser(recipient.id.get)
-    for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
-      postOffice.sendMail(ElectronicMail(
-        senderUserId = author.id,
-        from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
-        to = addr,
-        subject = "%s %s sent you a message using KiFi".format(author.firstName, author.lastName),
-        htmlBody = views.html.email.newMessage(
-          author, recipient, details.url, details.title,
-          commentFormatter.toPlainText(details.text), details.hasParent)
-          .body,
-        category = PostOffice.Categories.COMMENT))
-    }
   }
 
   private def createCommentDetails(comment: Comment)(implicit session: RWSession): Set[CommentDetails] = {
@@ -355,3 +327,65 @@ class UserNotifier @Inject() (
   }
 
 }
+
+case object SendEmails
+case class MessageNotification(message: Comment, notice: UserNotification)
+case class CommentNotification(message: Comment, notice: UserNotification)
+
+class UserEmailNotifierActor(
+  healthcheck: HealthcheckPlugin,
+  userRepo: UserRepo,
+  emailAddressRepo: EmailAddressRepo,
+  postOffice: PostOffice,
+  commentFormatter: CommentFormatter,
+  userNotifyRepo: UserNotificationRepo,
+  clock: Clock,
+  commentRepo: CommentRepo,
+  db: Database) extends FortyTwoActor(healthcheck) {
+  
+  def receive = {
+    case SendEmails =>
+      db.readOnly { implicit session =>
+        userNotifyRepo.allUndelivered(clock.now.minusMinutes(5)) foreach { notice =>
+        notice.category match {
+          case UserNotificationCategories.MESSAGE =>
+            val message = commentRepo(notice.commentId.get)
+          case UserNotificationCategories.COMMENT =>
+        }
+      }
+    case notice: UserNotification =>
+
+  }
+  
+  private def notifyCommentByEmail(recipient: User, details: CommentDetails)(implicit session: RWSession) {
+    val author = userRepo.get(details.author.externalId)
+    val addrs = emailAddressRepo.getByUser(recipient.id.get)
+    for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
+      postOffice.sendMail(ElectronicMail(
+        senderUserId = author.id,
+        from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
+        to = addr,
+        subject = "%s %s commented on a page you are following".format(author.firstName, author.lastName),
+        htmlBody = views.html.email.newComment(author, recipient, details.url, details.title, commentFormatter.toPlainText(details.text)).body,
+        category = PostOffice.Categories.COMMENT))
+    }
+  }
+  private def notifyMessageByEmail(recipient: User, details: MessageDetails)(implicit session: RWSession) {
+
+    val author = userRepo.get(details.authors.head.externalId)
+    val addrs = emailAddressRepo.getByUser(recipient.id.get)
+    for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
+      postOffice.sendMail(ElectronicMail(
+        senderUserId = author.id,
+        from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
+        to = addr,
+        subject = "%s %s sent you a message using KiFi".format(author.firstName, author.lastName),
+        htmlBody = views.html.email.newMessage(
+          author, recipient, details.url, details.title,
+          commentFormatter.toPlainText(details.text), details.hasParent)
+          .body,
+        category = PostOffice.Categories.COMMENT))
+    }
+  }
+}
+
