@@ -21,6 +21,8 @@ import java.util.UUID
 import scala.math._
 import org.joda.time.DateTime
 import com.keepit.serializer.SearchResultInfoSerializer
+import com.keepit.search.query.LuceneExplanationExtractor
+import com.keepit.search.query.LuceneScoreNames
 
 
 class MainSearcher(
@@ -270,7 +272,21 @@ class MainSearcher(
 
     val newIdFilter = filter.idFilter ++ hitList.map(_.id)
     val (svVar,svExistVar) = SemanticVariance.svVariance(parsedQuery, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
+
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
+
+    // simple classifier
+
+    val tic = currentDateTime.getMillis()
+    val show = if (svVar > 0.17f) false else {
+      val isGood = (parsedQuery, personalizedSearcher) match {
+        case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(query.get, hitList, clickBoosts, searcher.get)
+        case _ => true
+      }
+      isGood
+    }
+    val elapsed = currentDateTime.getMillis() - tic
+    log.info("classifier time used: %d, queryString = %s".format(elapsed, queryString))
 
     val searchResultUuid = ExternalId[ArticleSearchResultRef]()
     val searchResultInfo = SearchResultInfo(myTotal, friendsTotal, othersTotal, svVar, svExistVar)
@@ -281,10 +297,20 @@ class MainSearcher(
 
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
         myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt,
-        (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = svExistVar)
+        (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = svExistVar, toShow = show)
   }
 
-
+  private def classify(parsedQuery: Query, hitList: List[MutableArticleHit], clickBoosts: ResultClickTracker.ResultClickBoosts, personalizedSearcher: PersonalizedSearcher) = {
+    def classify(hit: MutableArticleHit) = {
+      clickBoosts(hit.id) > 2.0f || (hit.scoring.textScore >= 0.04f && {
+        val explain = personalizedSearcher.explain(parsedQuery, hit.id)
+        val scores = LuceneExplanationExtractor.extractNamedScores(explain)
+        val semanticScore = scores.getOrElse(LuceneScoreNames.SEMANTIC_VECTOR, -1.0f)
+        semanticScore >= 0.3f
+      })
+    }
+    hitList.take(3).exists(classify(_))
+  }
 
   private def getPublicBookmarkCount(id: Long) = {
     uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).size
@@ -400,7 +426,8 @@ case class ArticleSearchResult(
   uuid: ExternalId[ArticleSearchResultRef] = ExternalId(),
   time: DateTime = currentDateTime,
   svVariance: Float = -1.0f,			// semantic vector variance
-  svExistenceVar: Float = -1.0f
+  svExistenceVar: Float = -1.0f,
+  toShow: Boolean = true
 )
 
 

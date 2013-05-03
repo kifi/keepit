@@ -11,8 +11,8 @@ import com.keepit.common.social._
 import com.keepit.inject.AppScoped
 import com.keepit.scraper._
 import com.tzavellas.sse.guice.ScalaModule
-
 import play.api.Play.current
+import com.keepit.common.crypto._
 
 class ShoeboxModule() extends ScalaModule with Logging {
   def configure() {
@@ -41,6 +41,19 @@ class ShoeboxModule() extends ScalaModule with Logging {
     val server = current.configuration.getString("mailtokeep.server").getOrElse("imap.gmail.com")
     val protocol = current.configuration.getString("mailtokeep.protocol").getOrElse("imaps")
     MailToKeepServerSettings(username = username, password = password, server = server, protocol = protocol)
+  }
+
+  @Singleton
+  @Provides
+  def userVoiceSSOTokenGenerator: UserVoiceTokenGenerator = {
+    current.configuration.getString("userVoiceSSOToken") match {
+      case Some(sso) =>
+        new UserVoiceTokenGenerator {
+          def createSSOToken(userId: String, displayName: String, email: String, avatarUrl: String): UserVoiceSSOToken =
+            UserVoiceSSOToken(sso)
+        }
+      case None => new UserVoiceTokenGeneratorImpl()
+    }
   }
 
 }
