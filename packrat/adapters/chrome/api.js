@@ -178,7 +178,7 @@ api = function() {
 
   const ports = {}, portHandlers = {
     "api:reload": function() {
-      if (chrome.runtime.id !== "fpjooibalklfinmkiodaamcckfbcjhin") {  // dev only
+      if (!api.isPackaged()) {
         chrome.runtime.reload();
       }
     },
@@ -356,6 +356,9 @@ api = function() {
     inspect: {
       pages: pages,
       selectedTabIds: selectedTabIds
+    },
+    isPackaged: function() {
+      return !!chrome.runtime.getManifest().update_url;
     },
     loadReason: "enable",  // assuming "enable" by elimination
     log: function() {

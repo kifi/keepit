@@ -1,7 +1,7 @@
 $(function() {
   var main = chrome.extension.getBackgroundPage(), api = main.api, env = api.prefs.get("env");
 
-  $(chrome.runtime.id === "fpjooibalklfinmkiodaamcckfbcjhin" ? null : "select").show()
+  $(api.isPackaged() ? null : "select").show()
   .find("[value=" + env + "]").prop("selected", true).end()
   .change(function() {
     api.prefs.set("env", this.value);
