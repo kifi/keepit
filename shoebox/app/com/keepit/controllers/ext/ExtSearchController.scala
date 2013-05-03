@@ -145,7 +145,6 @@ class ExtSearchController @Inject() (
       val topUriIds = res.hits.take(3).map { _.uriId }
       val classifier = srcFactory.apply(res.uuid, res.query, userId, topUriIds)
       val good = topUriIds.exists(id => classifier.classify(id))
-
       val millisPassed = currentDateTime.getMillis() - tic
       log.info("search result classifier: used %d milliseconds".format(millisPassed))
       good
