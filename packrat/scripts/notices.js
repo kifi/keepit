@@ -29,10 +29,9 @@ noticesPane = function() {
 
   return {
     render: function($container, notices, newIdxs, timeLastSeen) {
-      timeOfOldest = notices[notices.length - 1].time;
       render("html/metro/notices.html", {}, function(html) {
         $notices = $(html)
-          .html(notices.map(function(n, i) {return renderNotice(n, newIdxs.indexOf(i) >= 0)}).join(""))
+          .append(notices.map(function(n, i) {return renderNotice(n, newIdxs.indexOf(i) >= 0)}).join(""))
           .appendTo($container);
         $notices.find("time").timeago();
 
