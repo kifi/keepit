@@ -13,6 +13,7 @@ import com.keepit.scraper._
 import com.tzavellas.sse.guice.ScalaModule
 import play.api.Play.current
 import com.keepit.common.crypto._
+import com.keepit.realtime._
 
 class ShoeboxModule() extends ScalaModule with Logging {
   def configure() {
@@ -23,6 +24,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
     bind[MailToKeepPlugin].to[MailToKeepPluginImpl].in[AppScoped]
     bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
+    bind[UserEmailNotifierPlugin].to[UserEmailNotifierPluginImpl].in[AppScoped]
     bind[ConnectionUpdater].to[UserConnectionCreator]
   }
 
