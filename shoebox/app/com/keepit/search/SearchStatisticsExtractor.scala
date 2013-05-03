@@ -114,11 +114,11 @@ class SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
     }
   }
 
-  val uriInfoMap = searcher.getUriInfo
+  lazy val uriInfoMap = searcher.getUriInfo
 
   private def getBasicQueryInfo = BasicQueryInfo(queryUUID, queryString, userId)
 
-  private def getUriInfo(uriId: Id[NormalizedURI]) = uriInfoMap.getOrElse(uriId, { log.warn(s"uriId ${uriId.id} not found by searcher !!! "); UriInfo(uriId, -1.0f, -1.0f, -1.0f, -1.0f, false, false, -1, -1) })
+  def getUriInfo(uriId: Id[NormalizedURI]) = uriInfoMap.getOrElse(uriId, { log.warn(s"uriId ${uriId.id} not found by searcher !!! "); UriInfo(uriId, -1.0f, -1.0f, -1.0f, -1.0f, false, false, -1, -1) })
 
   private def getUriLabel(uriId: Id[NormalizedURI]) = uriLabelMap(uriId)
 
@@ -133,7 +133,9 @@ class SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
       if (searchResultInfo.nonEmpty) searchResultInfo.next else SearchResultInfo(-1, -1, -1, -1.0f, -1.0f)
   }
 
-  private def getLuceneScores(uriId: Id[NormalizedURI]) = {
+  def getClickBoost = searcher.getClickBoost(userId, queryString)
+
+  def getLuceneScores(uriId: Id[NormalizedURI]) = {
     val explain = getLuceneExplain(uriId)
     explain match {
       case Some(e) => {
@@ -279,7 +281,7 @@ class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], tar
       case None =>
         articleSearcher.indexReader
     }
-    PersonalizedSearcher(userId, indexReader, myUris, browsingHistoryTracker, clickHistoryTracker, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory)
+    PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryTracker, clickHistoryTracker, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory)
   }
 
   //===================== preparation done ===========================//
@@ -343,5 +345,7 @@ class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], tar
     }
     uriInfoMap
   }
+
+  def getClickBoost(userId: Id[User], queryString: String) = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost)
 
 }

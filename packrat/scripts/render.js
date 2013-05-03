@@ -1,3 +1,7 @@
+var cdnBase = api.dev ?
+  "http://dev.ezkeep.com:9000" : //d1scct5mnc9d9m.cloudfront.net
+  "//djty7jcqog9qu.cloudfront.net";
+
 function render(path, params, partialPaths, callback) {
   // sort out partialPaths and callback (both optional)
   if (!callback && typeof partialPaths == "function") {
@@ -7,6 +11,7 @@ function render(path, params, partialPaths, callback) {
 
   loadPartials(path.replace(/[^\/]*$/, ""), partialPaths || {}, function(partials) {
     loadFile(path, function(template) {
+      params = $.extend({cdnBase: cdnBase}, params);
       callback(Mustache.render(template, params, partials));
     });
   });

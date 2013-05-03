@@ -1,7 +1,6 @@
 package com.keepit.model
 
 import org.joda.time.DateTime
-
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db.Id
 import com.keepit.common.db.Model
@@ -80,6 +79,7 @@ class UserConnectionRepoImpl @Inject() (
       ((for (c <- table if c.user1 === userId) yield c.user2) union
         (for (c <- table if c.user2 === userId) yield c.user1)).list.toSet
     }
+    
     table.insertAll(toInsert.map(connId => UserConnection(user1 = userId, user2 = connId)).toSeq: _*)
   }
 }
