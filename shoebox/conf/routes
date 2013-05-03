@@ -18,6 +18,9 @@ GET     /sign-up                    @com.keepit.controllers.website.OnboardingCo
 GET     /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tos
 POST    /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tosAccept
 
+GET     /feedback                   @com.keepit.controllers.website.FeedbackController.feedback
+GET     /feedback/form              @com.keepit.controllers.website.FeedbackController.feedbackForm
+
 GET     /login                      securesocial.controllers.ProviderController.authenticate(provider = "facebook")
 GET     /login/social               securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout

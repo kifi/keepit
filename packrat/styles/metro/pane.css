@@ -58,6 +58,23 @@ html.kifi-pane-parent.kifi-with-pane.kifi-snapshot-mode {
   border: 0;
   padding: 0;
 }
+a.kifi-pane-head-feedback {
+  float: right;
+  width: 77px;
+  height: 20px;
+  margin: 5px 5px 0 0;
+  border-radius: 3px;
+  background-color: #6fa6ef;
+  text-align: center;
+  color: #fafafa !important; /* necessary because of a CSS reset we use on all a elements */
+  padding-top: 8px;
+}
+a.kifi-pane-head-feedback:hover {
+  background-color: #679ade;
+}
+a.kifi-pane-head-feedback:active {
+  background-color: #5580b8;
+}
 a.kifi-pane-head-settings {
   float: right;
   width: 40px;
