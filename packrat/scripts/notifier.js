@@ -15,7 +15,7 @@ var notifier = {
           subtitle: "Wrote a new KiFi Comment",
           contentHtml: o.text,
           link: o.title,
-          image: o.author.avatar,
+          image: cdnBase + "/users/" + o.author.id + "/pics/100/0.jpg",
           sticky: false,
           showForMs: 60000,
           clickAction: function() {
@@ -30,7 +30,7 @@ var notifier = {
           subtitle: "Sent you a new KiFi Message",
           contentHtml: o.text,
           link: o.title,
-          image: o.authors[0].avatar,
+          image: cdnBase + "/users/" + o.authors[0].id + "/pics/100/0.jpg",
           sticky: false,
           showForMs: 60000,
           clickAction: function() {
