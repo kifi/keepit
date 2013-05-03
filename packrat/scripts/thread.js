@@ -92,9 +92,7 @@ threadPane = function() {
       user: {
         id: session.userId,
         firstName: session.name,
-        lastName: "",
-        facebookId: session.facebookId
-      }
+        lastName: ""}
     }, session.userId, function($m) {
       $sent.append($m).scrollToBottom();
     });
