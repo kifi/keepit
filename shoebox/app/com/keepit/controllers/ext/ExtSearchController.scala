@@ -130,28 +130,28 @@ class ExtSearchController @Inject() (
     log.debug(hits mkString "\n")
 
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
-    PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, (!isDefaultFilter || isToShow(userId, res)), experimentId, filter)
+    PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), experimentId, filter)
   }
 
-  private[ext] def isToShow(userId: Id[User], res: ArticleSearchResult): Boolean = {
-    var maxTextScore = 0.0f
-    res.scorings.foreach{ s =>
-      if (s.textScore > maxTextScore) maxTextScore = s.textScore
-    }
-
-    if (res.svVariance < 0.17 && maxTextScore > 0.04f) {
-      val tic = currentDateTime.getMillis()
-
-      val topUriIds = res.hits.take(3).map { _.uriId }
-      val classifier = srcFactory.apply(res.uuid, res.query, userId, topUriIds)
-      val good = topUriIds.exists(id => classifier.classify(id))
-      val millisPassed = currentDateTime.getMillis() - tic
-      log.info("search result classifier: used %d milliseconds".format(millisPassed))
-      good
-    } else {
-      false
-    }
-  }
+//  private[ext] def isToShow(userId: Id[User], res: ArticleSearchResult): Boolean = {
+//    var maxTextScore = 0.0f
+//    res.scorings.foreach{ s =>
+//      if (s.textScore > maxTextScore) maxTextScore = s.textScore
+//    }
+//
+//    if (res.svVariance < 0.17 && maxTextScore > 0.04f) {
+//      val tic = currentDateTime.getMillis()
+//
+//      val topUriIds = res.hits.take(3).map { _.uriId }
+//      val classifier = srcFactory.apply(res.uuid, res.query, userId, topUriIds)
+//      val good = topUriIds.exists(id => classifier.classify(id))
+//      val millisPassed = currentDateTime.getMillis() - tic
+//      log.info("search result classifier: used %d milliseconds".format(millisPassed))
+//      good
+//    } else {
+//      false
+//    }
+//  }
 
   private[ext] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {
     val uri = uriRepo.get(res.uriId)
