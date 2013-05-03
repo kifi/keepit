@@ -26,8 +26,6 @@ class FeedbackController @Inject() (
   userVoiceTokenGenerator: UserVoiceTokenGenerator)
   extends WebsiteController(actionAuthenticator) {
   
-  //  "{\"trusted\":true,\"guid\":\""+"1"+"\",\"display_name\":\""+"KiFi support"+"\",\"email\":\""+"uservoice@42go.com"+"\",\"avatar_url\":\""+"https://www.kifi.com/assets/images/logo2.png"+"\"}";
-
   def feedbackForm = HtmlAction(true)(authenticatedAction = { request =>
     val email = db.readOnly(emailAddressRepo.getByUser(request.user.id.get)(_)).last.address
     val picUrlFut = s3ImageStore.getPictureUrl(50, request.user)
