@@ -88,13 +88,12 @@ commentsPane = function() {
   function submitComment($container, session, e, text) {
     logEvent("slider", "comment");
     api.port.emit("post_comment", {
-      "url": document.URL,
-      "title": document.title,
-      "text": text,
-      "permissions": "public"
-    }, function(response) {
-      api.log("[submitComment] resp:", response);
-    });
+        url: document.URL,
+        title: document.title,
+        text: text},
+      function(resp) {
+        api.log("[submitComment] resp:", resp);
+      });
     renderComment({
       "createdAt": new Date().toISOString(),
       "text": text,
