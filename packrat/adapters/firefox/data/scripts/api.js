@@ -26,6 +26,7 @@ api = function() {
   });
 
   return {
+    dev: self.options.dev,
     load: function(path, callback) {
       api.port.emit("api:load", path, callback);
     },

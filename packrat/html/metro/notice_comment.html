@@ -1,5 +1,5 @@
-<div class="kifi-notice kifi-notice-comment kifi-notice-state-{{state}}{{#isNew}} kifi-notice-new{{/isNew}}" data-id="{{id}}" data-uri="{{details.page}}" data-locator="{{details.locator}}">
-  <img class="kifi-notice-avatar" src="{{details.author.avatar}}">
+<div class="kifi-notice kifi-notice-comment{{#isVisited}} kifi-notice-visited{{/isVisited}}{{#isNew}} kifi-notice-new{{/isNew}}" data-id="{{id}}" data-uri="{{details.page}}" data-locator="{{details.locator}}" data-created-at="{{details.createdAt}}">
+  <img class="kifi-notice-avatar" src="{{cdnBase}}/users/{{details.author.id}}/pics/100/0.jpg">
   <div class="kifi-notice-name">
     <span class="kifi-author-name">{{details.author.firstName}} {{details.author.lastName}}</span>
   </div>

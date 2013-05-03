@@ -281,7 +281,7 @@ class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], tar
       case None =>
         articleSearcher.indexReader
     }
-    PersonalizedSearcher(userId, indexReader, myUris, browsingHistoryTracker, clickHistoryTracker, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory)
+    PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryTracker, clickHistoryTracker, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory)
   }
 
   //===================== preparation done ===========================//

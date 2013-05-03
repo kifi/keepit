@@ -20,8 +20,8 @@ $.fn.scrollToBottom = function() {
   });
 };
 
-var generalPane, commentsPane, threadsPane, threadPane;  // stubs
-generalPane = commentsPane = threadsPane = threadPane = {update: $.noop};
+var generalPane, noticesPane, commentsPane, threadsPane, threadPane;  // stubs
+generalPane = noticesPane = commentsPane = threadsPane = threadPane = {update: $.noop};
 
 slider2 = function() {
   var $slider, $pane, lastShownAt;
@@ -52,7 +52,7 @@ slider2 = function() {
   function createSlider(callback) {
     var kept = tile && tile.dataset.kept;
     var counts = JSON.parse(tile && tile.dataset.counts || '{"n":0,"c":0,"m":0}');
-    api.log("[createSlider] kept:", kept || "no", "counts:", counts);
+    api.log("[createSlider] kept: %s counts: %o", kept || "no", counts);
 
     render("html/metro/slider2.html", {
       "bgUrl": api.url("images/metro/slider.png"),
@@ -131,7 +131,7 @@ slider2 = function() {
             if (!friend) return;
             render("html/friend_card.html", {
               name: friend.firstName + " " + friend.lastName,
-              facebookId: friend.facebookId,
+              id: friend.id,
               iconsUrl: api.url("images/social_icons.png")
             }, callback);
             api.port.emit("get_num_mutual_keeps", {id: friend.id}, function gotNumMutualKeeps(o) {
@@ -491,9 +491,9 @@ slider2 = function() {
       });
     },
     notices: function($box) {
-      api.port.emit("session", function(session) {
+      api.port.emit("notifications", function(o) {
         api.require("scripts/notices.js", function() {
-          renderNotices($box.find(".kifi-pane-tall"));
+          noticesPane.render($box.find(".kifi-pane-tall"), o.notifications, o.newIdxs, o.timeLastSeen);
         });
       });
     },
@@ -560,6 +560,15 @@ slider2 = function() {
   api.port.on({
     kept: function(o) {
       if ($slider) updateKeptDom($slider.find(".kifi-slider2-keep"), o.kept);
+    },
+    new_notification: function(n) {
+      noticesPane.update([n]);
+    },
+    missed_notifications: function(arr) {
+      noticesPane.update(arr);
+    },
+    notifications_visited: function(o) {
+      noticesPane.update(o);
     },
     comment: function(o) {
       commentsPane.update(o.comment, o.userId);

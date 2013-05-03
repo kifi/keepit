@@ -275,14 +275,14 @@ class ExtStreamController @Inject() (
         case None =>
           Some(commentReadRepo.save(CommentRead(userId = userId, uriId = parent.uriId, parentId = parent.id, lastReadId = message.id.get)))
         case _ => None
-      }) foreach { _ =>
+      }) //foreach { _ =>  // TODO: uncomment after past data inconsistencies are all repaired or no longer a concern
         val nUri = normUriRepo.get(parent.uriId)
-        userChannel.push(userId, Json.arr("message_read", nUri.url, parent.externalId.id, message.createdAt))
+        userChannel.push(userId, Json.arr("message_read", nUri.url, parent.externalId.id, message.createdAt, message.externalId.id))
         userNotificationRepo.getWithCommentId(userId, message.id.get) foreach { n =>
           val vn = userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
           userChannel.push(userId, Json.arr("notifications", Seq(SendableNotification.fromUserNotification(vn))))
         }
-      }
+      //}
     }
   }
 
@@ -295,16 +295,16 @@ class ExtStreamController @Inject() (
         case None =>
           Some(commentReadRepo.save(CommentRead(userId = userId, uriId = comment.uriId, lastReadId = comment.id.get)))
         case _ => None
-      }) foreach { _ =>
+      }) //foreach { _ =>  // TODO: uncomment after past data inconsistencies are all repaired or no longer a concern
         val nUri = normUriRepo.get(comment.uriId)
-        userChannel.push(userId, Json.arr("comment_read", nUri.url, comment.createdAt))
+        userChannel.push(userId, Json.arr("comment_read", nUri.url, comment.createdAt, comment.externalId.id))
 
         val commentIds = commentRepo.getPublicIdsCreatedBefore(nUri.id.get, comment.createdAt) :+ comment.id.get
         val notifications = userNotificationRepo.getWithCommentIds(userId, commentIds, setCommentReadExcludeStates) map { n =>
           userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
         }
         userChannel.push(userId, Json.arr("notifications", notifications map SendableNotification.fromUserNotification))
-      }
+      //}
     }
   }
   private val setCommentReadExcludeStates = Set(
