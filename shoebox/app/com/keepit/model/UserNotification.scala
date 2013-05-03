@@ -33,7 +33,6 @@ case class UserNotification(
 @ImplementedBy(classOf[UserNotificationRepoImpl])
 trait UserNotificationRepo extends Repo[UserNotification] with ExternalIdColumnFunction[UserNotification]  {
   def allActive(category: UserNotificationCategory)(implicit session: RSession): Seq[UserNotification]
-  def allUndelivered(before: DateTime)(implicit session: RSession): Seq[UserNotification]
   def getCreatedAfter(userId: Id[User], time: DateTime, excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED))(implicit session: RSession): Seq[UserNotification]
   def getCreatedBefore(userId: Id[User], time: DateTime, howMany: Int, excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED))(implicit session: RSession): Seq[UserNotification]
   def getWithUserId(userId: Id[User], lastTime: Option[DateTime], howMany: Int = 10, excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED))(implicit session: RSession): Seq[UserNotification]
@@ -65,9 +64,6 @@ class UserNotificationRepoImpl @Inject() (
   
   def allActive(category: UserNotificationCategory)(implicit session: RSession): Seq[UserNotification] =
     (for (b <- table if b.state =!= UserNotificationStates.SUBSUMED && b.state =!= UserNotificationStates.INACTIVE && b.category === category) yield b).list
-
-  def allUndelivered(before: DateTime)(implicit session: RSession): Seq[UserNotification] =
-    (for (b <- table if b.state === UserNotificationStates.UNDELIVERED && b.createdAt < before) yield b).list
 
   def getCreatedAfter(userId: Id[User], time: DateTime, excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED))(implicit session: RSession): Seq[UserNotification] = {
     (for (n <- table if n.userId === userId && !n.state.inSet(excludeStates) && n.createdAt > time) yield n)
