@@ -22,20 +22,20 @@ class FeedbackController @Inject() (
   db: Database,
   actionAuthenticator: ActionAuthenticator,
   emailAddressRepo: EmailAddressRepo,
-  s3ImageStore: S3ImageStore)
+  s3ImageStore: S3ImageStore,
+  userVoiceTokenGenerator: UserVoiceTokenGenerator)
   extends WebsiteController(actionAuthenticator) {
   
-  val kifiSupportAdminSSOToken = "NlgyPs4QVFlkHr3uHe5tHhTUDVrvQWib1uLaIZBBCIzzaBElFbN%2F%2F0aJ5OJx5h9aEUKxckwutXE8lq4nEpFlHeRzynSQnzfZkcA5WwMSIVoUMJSaqUEf6wnqHvsCOrHmz2telYhLNc3X8CmOOB5dcr6noq%2B3pNSZUgacF454CMjA4IycQPHd9w63SOd8fj%2BAPtgZpKdtk78HwYAmNOcdvw%3D%3D"
+  //  "{\"trusted\":true,\"guid\":\""+"1"+"\",\"display_name\":\""+"KiFi support"+"\",\"email\":\""+"uservoice@42go.com"+"\",\"avatar_url\":\""+"https://www.kifi.com/assets/images/logo2.png"+"\"}";
 
   def feedbackForm = HtmlAction(true)(authenticatedAction = { request =>
     val email = db.readOnly(emailAddressRepo.getByUser(request.user.id.get)(_)).last.address
-    val avatarFut = s3ImageStore.getPictureUrl(50, request.user)
+    val picUrlFut = s3ImageStore.getPictureUrl(50, request.user)
 
     Async {
-      avatarFut map { avatar =>
-        val ssoToken = if(Play.isDev) kifiSupportAdminSSOToken 
-          else UserVoiceTokenGenerator.createSSOToken(request.user.id.get.id.toString, s"${request.user.firstName} ${request.user.lastName}", email, avatar)
-        Ok(views.html.website.feedback(Some(ssoToken)))
+      picUrlFut map { avatar =>
+        val ssoToken = userVoiceTokenGenerator.createSSOToken(request.user.id.get.id.toString, s"${request.user.firstName} ${request.user.lastName}", email, avatar)
+        Ok(views.html.website.feedback(Some(ssoToken.value)))
       }
     }
   }, unauthenticatedAction = { request =>
@@ -48,10 +48,8 @@ class FeedbackController @Inject() (
 
     Async {
       avatarFut map { avatar =>
-        // This is a generated token that is pre-authorized for the KiFi support user
-        val ssoToken = if(Play.isDev) kifiSupportAdminSSOToken 
-          else UserVoiceTokenGenerator.createSSOToken(request.user.id.get.id.toString, s"${request.user.firstName} ${request.user.lastName}", email, avatar)
-        Redirect("http://kifi.uservoice.com?sso=" + ssoToken)
+        val ssoToken = userVoiceTokenGenerator.createSSOToken(request.user.id.get.id.toString, s"${request.user.firstName} ${request.user.lastName}", email, avatar)
+        Redirect("http://kifi.uservoice.com?sso=" + ssoToken.value)
       }
     }
   }, unauthenticatedAction = { request =>

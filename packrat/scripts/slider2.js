@@ -381,13 +381,13 @@ slider2 = function() {
             e.preventDefault();
             var width = 700;
             var height = 400;
-            var left = (screen.width/2)-(width/2);
-            var top = (screen.height/2)-(height/2);
+            var left = (screen.width - width)/2;
+            var top = (screen.height - height)/2;
+            console.log(this.href)
             window.open(
               "https://www.kifi.com/feedback/form",
               "kifi-feedback",
-              "width="+width+",height="+height+",resizable,top="+top+", left="+left
-            );
+              "width="+width+",height="+height+",resizable,top="+top+",left="+left);
           })
           .on("mousedown", ".kifi-pane-head-settings", function(e) {
             e.preventDefault();
