@@ -297,7 +297,7 @@ class MainSearcher(
 
   private def classify(parsedQuery: Query, hitList: List[MutableArticleHit], clickBoosts: ResultClickTracker.ResultClickBoosts, personalizedSearcher: PersonalizedSearcher) = {
     def classify(hit: MutableArticleHit) = {
-      clickBoosts(hit.id) > 2.0f || (hit.scoring.textScore < 0.04f && {
+      clickBoosts(hit.id) > 2.0f || (hit.scoring.textScore >= 0.04f && {
         val explain = personalizedSearcher.explain(parsedQuery, hit.id)
         val scores = LuceneExplanationExtractor.extractNamedScores(explain)
         val semanticScore = scores.getOrElse(LuceneScoreNames.SEMANTIC_VECTOR, -1.0f)
