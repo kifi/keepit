@@ -295,24 +295,17 @@ class MainSearcher(
         (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = svExistVar, toShow = show)
   }
 
-
   private def classify(parsedQuery: Query, hitList: List[MutableArticleHit], clickBoosts: ResultClickTracker.ResultClickBoosts, personalizedSearcher: PersonalizedSearcher) = {
     def classify(hit: MutableArticleHit) = {
-      if (clickBoosts(hit.id) > 2.0f) true
-      else {
-        if (hit.scoring.textScore < 0.04f) false
-        else {
-          val explain = personalizedSearcher.explain(parsedQuery, hit.id)
-          val scores = LuceneExplanationExtractor.extractNamedScores(explain)
-          val semanticScore = scores.getOrElse(LuceneScoreNames.SEMANTIC_VECTOR, -1.0f)
-          semanticScore >= 0.3f
-        }
-      }
+      clickBoosts(hit.id) > 2.0f || (hit.scoring.textScore < 0.04f && {
+        val explain = personalizedSearcher.explain(parsedQuery, hit.id)
+        val scores = LuceneExplanationExtractor.extractNamedScores(explain)
+        val semanticScore = scores.getOrElse(LuceneScoreNames.SEMANTIC_VECTOR, -1.0f)
+        semanticScore >= 0.3f
+      })
     }
     hitList.take(3).exists(classify(_))
   }
-
-
 
   private def getPublicBookmarkCount(id: Long) = {
     uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)).size
