@@ -95,19 +95,17 @@ commentsPane = function() {
         api.log("[submitComment] resp:", resp);
       });
     renderComment({
-      "createdAt": new Date().toISOString(),
-      "text": text,
-      "user": {
-        "id": session.userId,
-        "firstName": session.name,
-        "lastName": "",
-        "facebookId": session.facebookId
-      },
-      "isLoggedInUser": true,
-      "id": ""
-    }, function($c) {
-      $posted.append($c).scrollToBottom();
-    });
+        createdAt: new Date().toISOString(),
+        text: text,
+        user: {
+          id: session.userId,
+          firstName: session.name,
+          lastName: ""},
+        isLoggedInUser: true,
+        id: ""},
+      function($c) {
+        $posted.append($c).scrollToBottom();
+      });
   }
 
   function renderComment(c, callback) {
