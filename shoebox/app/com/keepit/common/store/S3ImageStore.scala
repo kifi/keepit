@@ -28,6 +28,7 @@ import play.api.libs.ws.WS
 
 @ImplementedBy(classOf[S3ImageStoreImpl])
 trait S3ImageStore {
+  def config: S3ImageConfig
   def getPictureUrl(width: Int, user: User): Future[String]
   def updatePicture(sui: SocialUserInfo, externalId: ExternalId[User]): Future[Seq[PutObjectResult]]
 }
