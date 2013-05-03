@@ -4,21 +4,28 @@
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
+div.kifi-notices-none {
+  margin: 10px 12px;
+  display: none;
+}
+div.kifi-notices-none:only-child {
+  display: block;
+}
 .kifi-notice {
   position: relative;
   border-bottom: 1px solid #d2d2d2;
   padding: 10px 12px 10px 58px;
   min-height: 10px;
+  cursor: pointer;
   background: #e5ebf1;
 }
 .kifi-notice:hover {
-  cursor: pointer;
   background: #dfe7ef;
 }
-.kifi-notice-state-visited {
+.kifi-notice-visited {
   background: #fefefe;
 }
-.kifi-notice-state-visited:hover {
+.kifi-notice-visited:hover {
   background: #f8fafd;
 }
 .kifi-notice-new,

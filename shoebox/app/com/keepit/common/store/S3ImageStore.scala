@@ -28,8 +28,8 @@ import play.api.libs.ws.WS
 
 @ImplementedBy(classOf[S3ImageStoreImpl])
 trait S3ImageStore {
-  def cdnBase: String
   def getPictureUrl(width: Int, user: User): Future[String]
+  def updatePicture(sui: SocialUserInfo, externalId: ExternalId[User]): Future[Seq[PutObjectResult]]
 }
 
 @Singleton
@@ -37,17 +37,15 @@ class S3ImageStoreImpl @Inject() (
     actionAuthenticator: ActionAuthenticator,
     db: Database,
     userValueRepo: UserValueRepo,
-    config: S3ImageConfig,
     s3Client: AmazonS3,
     suiRepo: SocialUserInfoRepo,
     healthcheckPlugin: HealthcheckPlugin,
-    clock: Clock
+    clock: Clock,
+    val config: S3ImageConfig
   ) extends S3ImageStore with Logging {
 
   private val UserPictureLastUpdatedKey = "user_picture_last_updated"
   private val ExpirationTime = Weeks.ONE
-
-  val cdnBase: String = config.cdnBase
 
   def getPictureUrl(width: Int, user: User): Future[String] = {
     val sui = db.readOnly { implicit s => suiRepo.getByUser(user.id.get).head }
@@ -77,7 +75,7 @@ class S3ImageStoreImpl @Inject() (
     s"https://graph.facebook.com/${sui.socialId.id}/picture?width=$size&height=$size"
   }
 
-  private def updatePicture(sui: SocialUserInfo, externalId: ExternalId[User]): Future[Seq[PutObjectResult]] = {
+  def updatePicture(sui: SocialUserInfo, externalId: ExternalId[User]): Future[Seq[PutObjectResult]] = {
     val future = Future.sequence(for {
       size <- S3ImageConfig.ImageSizes
       userId <- sui.userId

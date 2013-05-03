@@ -12,7 +12,7 @@ var injected, t0 = +new Date, tile, paneHistory;
   var tileCount, onScroll;
 
   api.port.on({
-    show_notification: function(n) {
+    new_notification: function(n) {
       if (!paneHistory || paneHistory[0] != n.details.locator) {
         api.require("scripts/notifier.js", function() {
           notifier.show(n);
