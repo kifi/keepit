@@ -1,6 +1,5 @@
 package com.keepit.common.store
 
-import scala.concurrent.Future
 import scala.concurrent.duration._
 
 import com.google.inject.Inject
@@ -15,10 +14,8 @@ import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.model.{UserStates, UserRepo, User}
 
 import akka.actor.ActorSystem
-import akka.pattern.ask
 import play.api.Plugin
 import play.api.http.Status.OK
-import akka.actor.Status.Failure
 
 sealed abstract class ImageDataIntegrityMessage
 case object VerifyAllPictures extends ImageDataIntegrityMessage
@@ -67,7 +64,7 @@ private[store] class ImageDataIntegrityActor @Inject() (
   private def findPictures(id: ExternalId[User]): Seq[ImageResponseInfo] = {
     val urls: Seq[(String, String)] = S3ImageConfig.ImageSizes map { size =>
       (s"http://s3.amazonaws.com/${store.config.bucketName}/users/$id/pics/$size/0.jpg",
-          store.config.avatarUrlByExternalId(size, id))
+          store.config.avatarUrlByExternalId(size, id, Some("http")))
     }
      for ((s3url, cfUrl) <- urls) yield {
       httpClient.get(s3url) match {
