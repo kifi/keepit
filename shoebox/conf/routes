@@ -14,7 +14,7 @@ GET     /invite                     @com.keepit.controllers.website.InviteContro
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
 GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id: ExternalId[Invitation])
-GET     /sign-up                     @com.keepit.controllers.website.OnboardingController.signup(inviteId: String ?= "")
+GET     /sign-up                    @com.keepit.controllers.website.OnboardingController.signup(inviteId: String ?= "")
 GET     /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tos
 POST    /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tosAccept
 
@@ -177,7 +177,7 @@ GET     /admin/comments             @com.keepit.controllers.admin.AdminCommentCo
 GET     /admin/comments/:page       @com.keepit.controllers.admin.AdminCommentController.commentsView(page: Int)
 GET     /admin/messages             @com.keepit.controllers.admin.AdminCommentController.messagesViewFirstPage
 GET     /admin/messages/:page       @com.keepit.controllers.admin.AdminCommentController.messagesView(page: Int)
-POST     /admin/notify/rebuild       @com.keepit.controllers.admin.AdminCommentController.recreateMessages(safeMode: Boolean ?= true)
+POST    /admin/notify/rebuild       @com.keepit.controllers.admin.AdminCommentController.recreateNotificationDetails(safeMode: Boolean ?= true)
 
 GET     /admin/searchConfig/:id     @com.keepit.controllers.admin.AdminSearchConfigController.showUserConfig(id: Id[User])
 POST    /admin/searchConfig/:id/set   @com.keepit.controllers.admin.AdminSearchConfigController.setUserConfig(id: Id[User])

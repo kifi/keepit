@@ -328,7 +328,13 @@ class UserNotifier @Inject() (
     generatedSet
   }
 
-  private def createMessageDetail(message: Comment, userId: Id[User], deepLocator: DeepLocator, deepLinkUrl: String, page: String, thread: Seq[Comment], lastNoticeExtId: Option[ExternalId[UserNotification]])(implicit session: RWSession): MessageDetails = {
+  private def createMessageDetail(
+    message: Comment, userId: Id[User],
+    deepLocator: DeepLocator,
+    deepLinkUrl: String,
+    page: String,
+    thread: Seq[Comment],
+    lastNoticeExtId: Option[ExternalId[UserNotification]])(implicit session: RWSession): MessageDetails = {
     val recentAuthors = thread.filter(c => c.userId != userId).map(_.userId).distinct.take(5)
     val authors = recentAuthors.map(basicUserRepo.load)
 

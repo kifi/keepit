@@ -84,7 +84,7 @@ class AdminCommentController @Inject() (
     Ok(html.admin.messages(uriAndUsers, page, count, pageCount))
   }
   
-  def recreateMessages(safeMode: Boolean) = AdminHtmlAction { request =>
+  def recreateNotificationDetails(safeMode: Boolean) = AdminHtmlAction { request =>
     db.readWrite { implicit session =>
       userNotifier.recreateAllActiveDetails(safeMode)
     }
