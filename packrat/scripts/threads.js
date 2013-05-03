@@ -92,15 +92,14 @@ threadsPane = function() {
 
   function sendMessage($container, e, text, recipientIds) {
     // logEvent("slider", "comment");
-    api.port.emit("post_comment", {
-      "url": document.URL,
-      "title": document.title,
-      "text": text,
-      "permissions": "message",
-      "recipients": recipientIds
-    }, function(resp) {
-      api.log("[sendMessage] resp:", resp);
-    });
+    api.port.emit("send_message", {
+        url: document.URL,
+        title: document.title,
+        text: text,
+        recipients: recipientIds},
+      function(resp) {
+        api.log("[sendMessage] resp:", resp);
+      });
     var friends = $container.find(".kifi-compose-to").data("friends").reduce(function(o, f) {
       o[f.id] = f;
       return o;
@@ -109,7 +108,7 @@ threadsPane = function() {
     renderThread({
       id: "",
       lastCommentedAt: now,
-      recipients: recipientIds.split(",").map(function(id) {return friends[id]}),
+      recipients: recipientIds.map(function(id) {return friends[id]}),
       digest: text,
       messageTimes: {"": now}
     }, now, function($th) {

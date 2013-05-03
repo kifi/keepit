@@ -379,7 +379,6 @@ api.port.on({
   get_chatter: function(data, respond) {
     api.log("[get_chatter]", data.ids);
     ajax("GET", "/search/chatter", {ids: data.ids.join(".")}, respond);
-    return true;
   },
   get_keepers: function(_, respond, tab) {
     api.log("[get_keepers]", tab.id);
@@ -389,7 +388,6 @@ api.port.on({
   get_num_mutual_keeps: function(data, respond) {
     api.log("[get_num_mutual_keeps]", data.id);
     ajax("GET", "/bookmarks/mutual/" + data.id, respond);
-    return true;
   },
   keep: function(data, _, tab) {
     api.log("[keep]", data);
@@ -441,27 +439,34 @@ api.port.on({
   log_event: function(data) {
     logEvent.apply(null, data);
   },
-  post_comment: function(data, respond, tab) {
-    api.log("[postComment]", data);
-    ajax("POST", "/comments/add", {
-        url: data.url,
-        title: data.title,
-        text: data.text,
-        permissions: data.permissions,
-        parent: data.parent,
-        recipients: data.recipients},
-      function(o) {
-        api.log("[postComment] resp:", o);
-        respond(o);
-      });
-    return true;
+  post_comment: function(data, respond) {
+    api.log("[post_comment]", data);
+    ajax("POST", "/comments", data, function(o) {
+      api.log("[post_comment] resp:", o);
+      respond(o);
+    });
+  },
+  send_message: function(data, respond) {
+    api.log("[send_message]", data);
+    ajax("POST", "/messages", data, function(o) {
+      api.log("[send_message] resp:", o);
+      respond(o);
+    });
+  },
+  send_reply: function(data, respond) {
+    api.log("[send_reply]", data);
+    var id = data.threadId;
+    delete data.threadId;
+    ajax("POST", "/messages/" + id, data, function(o) {
+      api.log("[send_reply] resp:", o);
+      respond(o);
+    });
   },
   delete_comment: function(id, respond) {
     ajax("POST", "/comments/" + id + "/remove", function(o) {
       api.log("[deleteComment] response:", o);
       respond(o);
     });
-    return true;
   },
   set_comment_read: function(o, _, tab) {
     var d = pageData[tab.nUri];
@@ -514,7 +519,6 @@ api.port.on({
         socket.send(["get_thread", id]);
         if (data.respond) {
           (d.threadCallbacks = d.threadCallbacks || []).push({id: id, respond: respond});
-          return true;
         }
       }
     });
@@ -587,7 +591,6 @@ api.port.on({
       api.tabs.open(data.nUri, function(tabId) {
         createDeepLinkListener(data.locator, tabId);
       });
-      return true;
     }
   },
   add_deep_link_listener: function(locator, _, tab) {
