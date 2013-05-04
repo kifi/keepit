@@ -114,7 +114,7 @@ class UserEmailNotifierActor @Inject() (
       }
 
       val authors = entireThread.filter(c => c.userId != userId)
-        .map(_.userId).distinct
+        .map(_.userId).distinct.reverse
         .map { id =>
           val user = userRepo.get(id)
           user.firstName + " " + user.lastName
