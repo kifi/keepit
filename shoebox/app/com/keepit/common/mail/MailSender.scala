@@ -1,37 +1,18 @@
 package com.keepit.common.mail
 
-import com.keepit.model.EmailAddress
-import play.api.templates.Html
-import play.api.libs.ws.WS
-import play.api.libs.json._
-import play.api.libs.ws._
-
-import com.keepit.common.healthcheck.HealthcheckPlugin
-import com.keepit.common.actor.ActorFactory
-import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError}
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.common.akka.FortyTwoActor
-import com.keepit.common.plugin.SchedulingPlugin
-import com.keepit.common.net.ClientResponse
-
-import akka.actor.ActorSystem
-import akka.actor.Actor
-import akka.actor.Props
-import akka.actor.Props
-import play.api.libs.concurrent.Execution.Implicits._
-import akka.actor.ActorRef
-import akka.actor.Cancellable
-import play.api.libs.concurrent.Promise
-import java.util.concurrent.TimeUnit
-import com.google.inject.Provider
-import com.google.inject.Inject
 import scala.concurrent.duration._
 
+import com.google.inject.Inject
+import com.keepit.common.actor.ActorFactory
+import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.logging.Logging
+import com.keepit.common.plugin.SchedulingPlugin
+
 trait MailSenderPlugin extends SchedulingPlugin {
-  def processMail(mailId: Id[ElectronicMail]) : Unit
-  def processOutbox(): Unit
+  def processMail(mail: ElectronicMail)
+  def processOutbox()
 }
 
 class MailSenderPluginImpl @Inject() (actorFactory: ActorFactory[MailSenderActor])
@@ -45,12 +26,13 @@ class MailSenderPluginImpl @Inject() (actorFactory: ActorFactory[MailSenderActor
     scheduleTask(actorFactory.system, 5 seconds, 5 seconds, actor, ProcessOutbox)
   }
 
-  override def processOutbox(): Unit = actor ! ProcessOutbox
-  override def processMail(mailId: Id[ElectronicMail]): Unit = actor ! ProcessMail(mailId)
+  override def processOutbox() { actor ! ProcessOutbox }
+  override def processMail(mail: ElectronicMail) { actor ! ProcessMail(mail) }
 }
 
 private[mail] case class ProcessOutbox()
-private[mail] case class ProcessMail(mailId: Id[ElectronicMail])
+private[mail] case class ProcessMail(mailId: ElectronicMail)
+
 
 private[mail] class MailSenderActor @Inject() (
     db: Database,
@@ -60,14 +42,13 @@ private[mail] class MailSenderActor @Inject() (
   extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
-    case ProcessOutbox =>   {
+    case ProcessOutbox =>
       db.readOnly { implicit s =>
-        mailRepo.outbox()
+        mailRepo.outbox() map mailRepo.get
       } foreach { mail =>
         self ! ProcessMail(mail)
       }
-    }
-    case ProcessMail(mailId) => mailProvider.sendMail(mailId)
+    case ProcessMail(mail) => mailProvider.sendMail(mail)
     case unknown => throw new Exception("unknown message: %s".format(unknown))
   }
 }

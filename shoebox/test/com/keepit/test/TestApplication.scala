@@ -133,7 +133,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   @Provides
   @Singleton
   def mailSenderPlugin: MailSenderPlugin = new MailSenderPlugin {
-    def processMail(mailId: Id[ElectronicMail]) = throw new Exception("Should not attempt to use mail plugin in test")
+    def processMail(mailId: ElectronicMail) = throw new Exception("Should not attempt to use mail plugin in test")
     def processOutbox() = throw new Exception("Should not attempt to use mail plugin in test")
   }
 
@@ -188,11 +188,11 @@ class FakeClock extends Clock with Logging {
   private var timeFunction: () => Long = () => {
     if (stack.isEmpty) {
       val nowTime = new DateTime(System.currentTimeMillis())
-      log.info(s"FakeClock is retuning real now value: $nowTime")
+      log.debug(s"FakeClock is retuning real now value: $nowTime")
       nowTime.getMillis
     } else {
       val fakeNowTime = new DateTime(stack.pop())
-      log.info(s"FakeClock is retuning fake now value: $fakeNowTime")
+      log.debug(s"FakeClock is retuning fake now value: $fakeNowTime")
       fakeNowTime.getMillis
     }
   }
