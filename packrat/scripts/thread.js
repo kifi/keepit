@@ -43,15 +43,16 @@ threadPane = function() {
           }
         });
 
-        if (messages.length) emitRead(threadId, messages[messages.length - 1]);
-
         // It's important that we check the buffer after rendering the messages, to avoid creating a window
         // of time during which we might miss an incoming message on this thread.
         if (buffer.threadId == threadId && !messages.some(function(m) {return m.id == buffer.message.id})) {
+          messages.push(buffer.message);
           renderMessage(buffer.message, session.userId, function($m) {
             $sent.append($m).scrollToBottom();
           });
         }
+
+        if (messages.length) emitRead(threadId, messages[messages.length - 1]);
       });
     },
     update: function(threadId, message, userId) {
