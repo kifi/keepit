@@ -9,7 +9,7 @@
 // @require scripts/snapshot.js
 
 threadPane = function() {
-  var $sent = $();
+  var $sent = $(), buffer = {};
   return {
     render: function($container, threadId, messages, session) {
       messages.forEach(function(m) {
@@ -44,6 +44,14 @@ threadPane = function() {
         });
 
         if (messages.length) emitRead(threadId, messages[messages.length - 1]);
+
+        // It's important that we check the buffer after rendering the messages, to avoid creating a window
+        // of time during which we might miss an incoming message on this thread.
+        if (buffer.threadId == threadId && !messages.some(function(m) {return m.id == buffer.message.id})) {
+          renderMessage(buffer.message, session.userId, function($m) {
+            $sent.append($m).scrollToBottom();
+          });
+        }
       });
     },
     update: function(threadId, message, userId) {
@@ -57,6 +65,9 @@ threadPane = function() {
           }
           emitRead(threadId, message);
         });
+      } else {
+        buffer.threadId = threadId;
+        buffer.message = message;
       }
     },
     updateAll: function(threadId, messages, userId) {
