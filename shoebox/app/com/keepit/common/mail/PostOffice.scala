@@ -35,7 +35,7 @@ class PostOfficeImpl @Inject() (
       } else {
         mailRepo.save(mail.prepareToSend())
       }
-    mailer.processMail(prepared.id.get)
+    mailer.processMail(prepared)
     prepared
   }
 }
