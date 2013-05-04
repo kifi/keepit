@@ -21,7 +21,7 @@ $.fn.scrollToBottom = function() {
 };
 
 var generalPane, noticesPane, commentsPane, threadsPane, threadPane;  // stubs
-generalPane = noticesPane = commentsPane = threadsPane = threadPane = {update: $.noop};
+generalPane = noticesPane = commentsPane = threadsPane = threadPane = {update: $.noop, updateAll: $.noop};
 
 slider2 = function() {
   var $slider, $pane, lastShownAt;
@@ -520,9 +520,9 @@ slider2 = function() {
       var $tall = $box.find(".kifi-pane-tall").css("margin-top", $box.find(".kifi-thread-who").outerHeight());
       var threadId = locator.split("/")[2];
       api.log("[populatePane] getting thread for messages", threadId);
-      api.port.emit("thread", {id: threadId, respond: true}, function(th) {
-        api.port.emit("session", function(session) {
-          api.require("scripts/thread.js", function() {
+      api.require("scripts/thread.js", function() {
+        api.port.emit("thread", {id: threadId, respond: true}, function(th) {
+          api.port.emit("session", function(session) {
             threadPane.render($tall, th.id, th.messages, session);
           });
         });
