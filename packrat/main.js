@@ -290,7 +290,7 @@ const socketHandlers = {
   comment_read: function(nUri, time, id) {
     api.log("[socket:comment_read]", nUri, time);
     var d = pageData[nUri];
-    if (!d || new Date(d.lastCommentRead) < new Date(time)) {
+    if (!d || new Date(d.lastCommentRead || 0) < new Date(time)) {
       markNoticesVisited("comment", nUri, id, time);
       if (d) {
         d.lastCommentRead = time;
@@ -356,7 +356,7 @@ const socketHandlers = {
   message_read: function(nUri, threadId, time, messageId) {
     api.log("[socket:message_read]", nUri, threadId, time);
     var d = pageData[nUri];
-    if (!d || !d.lastMessageRead || d.lastMessageRead[threadId] != time) {
+    if (!d || !d.lastMessageRead || new Date(d.lastMessageRead[threadId] || 0) < new Date(time)) {
       markNoticesVisited("message", nUri, messageId, time, "/messages/" + threadId);
       if (d) {
         d.lastMessageRead[threadId] = time;
