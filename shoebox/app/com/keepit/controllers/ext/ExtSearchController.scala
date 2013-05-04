@@ -108,7 +108,7 @@ class ExtSearchController @Inject() (
 
     val t4 = currentDateTime.getMillis()
 
-    val timeLimit = 250
+    val timeLimit = 500
     if (t4 - t1 > timeLimit && t4 - fortyTwoServices.started.getMillis() > 1000*60*5) {
       val msg = "search time exceeds limit! searchUUID = %s , Limit time = %d, total search time = %d, pre-search time = %d, main-search time = %d, post-search time = %d".format(searchRes.uuid.id, t4 - t1, timeLimit, t2 - t1, t3 - t2, t4 - t3)
       healthcheckPlugin.addError(HealthcheckError(errorMessage = Some("msg"), callType = INTERNAL))
