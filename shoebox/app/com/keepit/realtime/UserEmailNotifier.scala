@@ -54,7 +54,9 @@ class UserEmailNotifierActor @Inject() (
   def receive = {
     case SendEmails =>
       db.readOnly { implicit session =>
+        log.info("Checking for notification emails to send")
         userNotifyRepo.allUndelivered(clock.now.minusMinutes(5)) foreach { notice =>
+          log.info(s"Need to send email for id ${notice.id}")
           notice.category match {
             case UserNotificationCategories.MESSAGE =>
               self ! MessageNotification(notice)
@@ -64,6 +66,7 @@ class UserEmailNotifierActor @Inject() (
         }
       }
     case MessageNotification(notice) =>
+      log.info(s"Message notification (${notice.id})")
       val message = db.readOnly(commentRepo.get(notice.commentId.get)(_))
       messageDetailsFormat.reads(notice.details.payload) match {
         case details: JsSuccess[MessageDetails] =>
@@ -95,7 +98,7 @@ class UserEmailNotifierActor @Inject() (
         category = PostOffice.Categories.COMMENT))
     }*/
   }
-  
+
   private def notifyMessageByEmail(userId: Id[User], message: Comment, notice: UserNotification, details: MessageDetails) {
 
     val (recipient, authors, unreadMessages, addrs) = db.readOnly { implicit session =>
@@ -112,11 +115,11 @@ class UserEmailNotifierActor @Inject() (
 
       val authors = entireThread.filter(c => c.userId != userId)
         .map(_.userId).distinct
-        .map{ id =>
+        .map { id =>
           val user = userRepo.get(id)
           user.firstName + " " + user.lastName
-        } mkString(", ")
-        
+        } mkString (", ")
+
       val unreadMessages = (lastReadIdOpt match {
         case Some(lastReadId) =>
           entireThread.filter(c => c.id.get.id > lastReadId.id)
@@ -135,13 +138,18 @@ class UserEmailNotifierActor @Inject() (
     */
 
     db.readWrite { implicit session =>
-      if(unreadMessages.nonEmpty) {
+      log.info(s"Sending email for (${notice.id})")
+      log.info(unreadMessages.toString)
+      log.info(addrs.toString)
+      val emailBody = views.html.email.unreadMessages(recipient, authors, unreadMessages, details).body
+      log.info(emailBody)
+      if (unreadMessages.nonEmpty) {
         for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
           postOffice.sendMail(ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS, fromName = Some("KiFi"),
             to = addr,
             subject = s"KiFi conversation on ${details.title}",
-            htmlBody = views.html.email.unreadMessages(recipient, authors, unreadMessages, details).body,
+            htmlBody = emailBody,
             category = PostOffice.Categories.COMMENT))
         }
       }
@@ -155,7 +163,7 @@ trait UserEmailNotifierPlugin extends SchedulingPlugin {
 }
 
 class UserEmailNotifierPluginImpl @Inject() (
-    actorFactory: ActorFactory[UserEmailNotifierActor])
+  actorFactory: ActorFactory[UserEmailNotifierActor])
   extends UserEmailNotifierPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 second)
@@ -168,7 +176,7 @@ class UserEmailNotifierPluginImpl @Inject() (
     scheduleTask(actorFactory.system, 30 seconds, 1 minutes, actor, SendEmails)
   }
 
-  override def sendEmails()  {
+  override def sendEmails() {
     actor ! SendEmails
   }
 }
