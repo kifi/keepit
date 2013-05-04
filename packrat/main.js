@@ -290,15 +290,14 @@ const socketHandlers = {
   comment_read: function(nUri, time, id) {
     api.log("[socket:comment_read]", nUri, time);
     var d = pageData[nUri];
-    // TODO: uncomment optimization below after past data inconsistencies are repaired or no longer a concern
-    //if (!d || d.lastCommentRead != time) {
+    if (!d || new Date(d.lastCommentRead) < new Date(time)) {
       markNoticesVisited("comment", nUri, id, time);
       if (d) {
         d.lastCommentRead = time;
         tellTabsIfCountChanged(d, "c", commentCount(d));
       }
       tellTabsNoticeCountIfChanged();
-    //}
+    }
   },
   thread: function(th) {
     api.log("[socket:thread]", th);
@@ -357,8 +356,7 @@ const socketHandlers = {
   message_read: function(nUri, threadId, time, messageId) {
     api.log("[socket:message_read]", nUri, threadId, time);
     var d = pageData[nUri];
-    // TODO: uncomment optimization below after past data inconsistencies are repaired or no longer a concern
-    //if (!d || !d.lastMessageRead || d.lastMessageRead[threadId] != time) {
+    if (!d || !d.lastMessageRead || d.lastMessageRead[threadId] != time) {
       markNoticesVisited("message", nUri, messageId, time, "/messages/" + threadId);
       if (d) {
         d.lastMessageRead[threadId] = time;
@@ -368,7 +366,7 @@ const socketHandlers = {
         tellTabsIfCountChanged(d, "m", messageCount(d));
       }
       tellTabsNoticeCountIfChanged();
-    //}
+    }
   },
 };
 
@@ -470,8 +468,7 @@ api.port.on({
   },
   set_comment_read: function(o, _, tab) {
     var d = pageData[tab.nUri];
-    // TODO: uncomment optimization below after past data inconsistencies are repaired or no longer a concern
-    //if (!d || new Date(o.time) > new Date(d.lastCommentRead)) {
+    if (!d || new Date(o.time) > new Date(d.lastCommentRead)) {
       markNoticesVisited("comment", tab.nUri, o.id, o.time);
       if (d) {
         d.lastCommentRead = o.time;
@@ -479,12 +476,11 @@ api.port.on({
       }
       tellTabsNoticeCountIfChanged();  // visible tabs
       socket.send(["set_comment_read", o.id]);
-    //}
+    }
   },
   set_message_read: function(o, _, tab) {
     var d = pageData[tab.nUri];
-    // TODO: uncomment optimization below after past data inconsistencies are repaired or no longer a concern
-    //if (!d || new Date(o.time) > new Date(d.lastMessageRead[o.threadId] || 0)) {
+    if (!d || new Date(o.time) > new Date(d.lastMessageRead[o.threadId] || 0)) {
       markNoticesVisited("message", tab.nUri, o.messageId, o.time, "/messages/" + o.threadId);
       if (d) {
         d.lastMessageRead[o.threadId] = o.time;
@@ -492,7 +488,7 @@ api.port.on({
       }
       tellTabsNoticeCountIfChanged();  // visible tabs
       socket.send(["set_message_read", o.messageId]);
-    //}
+    }
   },
   comments: function(_, respond, tab) {
     var d = pageData[tab.nUri];
