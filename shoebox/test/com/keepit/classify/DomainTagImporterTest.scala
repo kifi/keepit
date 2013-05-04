@@ -1,11 +1,5 @@
 package com.keepit.classify
 
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
-
-import java.util.concurrent.TimeUnit
-
-import org.specs2.execute.SkipException
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick.Database
@@ -18,10 +12,6 @@ import play.api.Play.current
 import play.api.test.Helpers._
 
 class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification {
-
-  private def await[T](f: Future[T]): T = {
-    Await.result(f, pairIntToDuration(100, TimeUnit.MILLISECONDS))
-  }
 
   "The domain tag importer" should {
     "load domain sensitivity from a map of tags to domains" in {
@@ -37,17 +27,11 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification {
           tagRepo.save(DomainTag(name = DomainTagName("t3"), sensitive = Option(true)))
         }
 
-        Seq(
-          domainTagImporter.applyTagToDomains(
-            DomainTagName("t1"), Seq("cnn.com", "yahoo.com", "google.com")),
-          domainTagImporter.applyTagToDomains(
-            DomainTagName("t2"), Seq("cnn.com", "amazon.com", "apple.com")),
-          domainTagImporter.applyTagToDomains(
-            DomainTagName("t3"), Seq("apple.com", "42go.com", "methvin.net")),
-          // add a new tag (unknown sensitivity)
-          domainTagImporter.applyTagToDomains(
-            DomainTagName("t4"), Seq("42go.com", "amazon.com", "wikipedia.org"))
-        ) foreach await
+        domainTagImporter.applyTagToDomains(DomainTagName("t1"), Seq("cnn.com", "yahoo.com", "google.com"))
+        domainTagImporter.applyTagToDomains(DomainTagName("t2"), Seq("cnn.com", "amazon.com", "apple.com"))
+        domainTagImporter.applyTagToDomains(DomainTagName("t3"), Seq("apple.com", "42go.com", "methvin.net"))
+        // add a new tag (unknown sensitivity)
+        domainTagImporter.applyTagToDomains(DomainTagName("t4"), Seq("42go.com", "amazon.com", "wikipedia.org"))
 
         db.readWrite { implicit s =>
           Seq("apple.com", "amazon.com", "google.com", "methvin.net", "42go.com", "wikipedia.org")
@@ -76,18 +60,12 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification {
           tagRepo.save(DomainTag(name = DomainTagName("t3"), sensitive = Some(true)))
         }
 
-        Seq(
-          domainTagImporter.applyTagToDomains(
-            DomainTagName("t1"), Seq("cnn.com", "yahoo.com", "google.com")),
-          domainTagImporter.applyTagToDomains(
-            DomainTagName("t2"), Seq("cnn.com", "amazon.com", "apple.com")),
-          domainTagImporter.applyTagToDomains(
-            DomainTagName("t2"), Seq("cnn.com", "amazon.com", "apple.com")),
-          domainTagImporter.applyTagToDomains(
-            DomainTagName("t3"), Seq("apple.com", "42go.com", "methvin.net")),
-          // remove a tag
-          domainTagImporter.removeTag(DomainTagName("t3"))
-        ) foreach await
+        domainTagImporter.applyTagToDomains(DomainTagName("t1"), Seq("cnn.com", "yahoo.com", "google.com"))
+        domainTagImporter.applyTagToDomains(DomainTagName("t2"), Seq("cnn.com", "amazon.com", "apple.com"))
+        domainTagImporter.applyTagToDomains(DomainTagName("t2"), Seq("cnn.com", "amazon.com", "apple.com"))
+        domainTagImporter.applyTagToDomains(DomainTagName("t3"), Seq("apple.com", "42go.com", "methvin.net"))
+        // remove a tag
+        domainTagImporter.removeTag(DomainTagName("t3"))
 
         db.readWrite { implicit s =>
           Seq("apple.com", "amazon.com", "google.com", "methvin.net", "42go.com")
@@ -115,8 +93,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification {
           tagRepo.save(DomainTag(name = DomainTagName("stuff"), sensitive = None))
         }
 
-        await(domainTagImporter.applyTagToDomains(
-            DomainTagName("things"), Set("cnn.com", "yahoo.com", "google.com").toSeq))
+        domainTagImporter.applyTagToDomains(DomainTagName("things"), Set("cnn.com", "yahoo.com", "google.com").toSeq)
         db.readWrite { implicit s =>
           Seq("cnn.com", "yahoo.com", "google.com")
             .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].calculateSensitivity)
@@ -126,8 +103,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification {
           domainRepo.get("cnn.com").get.sensitive === Some(true)
         }
 
-        await(domainTagImporter.applyTagToDomains(
-            DomainTagName("stuff"), Set("apple.com", "microsoft.com", "cnn.com").toSeq))
+        domainTagImporter.applyTagToDomains(DomainTagName("stuff"), Set("apple.com", "microsoft.com", "cnn.com").toSeq)
         db.readWrite { implicit s =>
           Seq("apple.com", "microsoft.com", "cnn.com")
               .map(domainRepo.get(_).get).map(inject[SensitivityUpdater].calculateSensitivity)
