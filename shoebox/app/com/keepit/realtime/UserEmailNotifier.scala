@@ -30,6 +30,7 @@ import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.common.actor.ActorFactory
 import akka.util.Timeout
 import scala.concurrent.duration._
+import com.keepit.common.store.S3ImageStore
 
 case object SendEmails
 case class MessageNotification(notice: UserNotification)
@@ -46,7 +47,8 @@ class UserEmailNotifierActor @Inject() (
   commentRepo: CommentRepo,
   commentReadRepo: CommentReadRepo,
   db: Database,
-  userExperimentRepo: UserExperimentRepo) extends FortyTwoActor(healthcheck) with Logging {
+  userExperimentRepo: UserExperimentRepo,
+  s3ImageStore: S3ImageStore) extends FortyTwoActor(healthcheck) with Logging {
 
   implicit val basicUserFormat = BasicUserSerializer.basicUserSerializer
   implicit val commentDetailsFormat = Json.format[CommentDetails]
@@ -138,13 +140,14 @@ class UserEmailNotifierActor @Inject() (
       if (unreadMessages.nonEmpty && experiments.contains(ExperimentTypes.ADMIN)) {
         log.info(s"Sending email for (${notice.id.get})")
         val emailBody = views.html.email.unreadMessages(recipient, authors, unreadMessages, details).body
-        
+        val textBody = views.html.email.unreadMessagesPlain(recipient, authors, unreadMessages, details).body
         for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
           postOffice.sendMail(ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS, fromName = Some("KiFi"),
             to = addr,
             subject = s"KiFi conversation on ${details.title}",
             htmlBody = emailBody,
+            textBody = Some(textBody),
             category = PostOffice.Categories.COMMENT))
         }
       }
