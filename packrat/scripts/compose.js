@@ -5,7 +5,7 @@ function attachComposeBindings($c, composeTypeName) {
   var defaultText = $d.data("default");
 
   $d.focus(function() {
-    if (this.classList.contains("kifi-empty")) {  // webkit workaround (can ditch when Chrome 27/28 ? goes stable)
+    if ($f.hasClass("kifi-empty")) {  // webkit workaround (can ditch when Chrome 27/28 ? goes stable)
       this.textContent = "\u200b";  // zero-width space
       var r = document.createRange();
       r.selectNodeContents(this);
@@ -28,9 +28,11 @@ function attachComposeBindings($c, composeTypeName) {
 
     if (!convertDraftToText($d.html())) {
       if (defaultText && $t.tokenInput("get").length) {
-        $d.removeClass("kifi-empty").text(defaultText);
+        $f.removeClass("kifi-empty");
+        $d.text(defaultText);
       } else {
-        $d.empty().addClass("kifi-empty");
+        $d.empty();
+        $f.addClass("kifi-empty");
       }
     }
   }).mousedown(function() {
@@ -48,7 +50,7 @@ function attachComposeBindings($c, composeTypeName) {
     }
   }).on("input", function() {
     updateMaxHeight();
-    this.classList[this.firstElementChild === this.lastElementChild && !this.textContent ? "add" : "remove"]("kifi-empty");
+    $f[0].classList[this.firstElementChild === this.lastElementChild && !this.textContent ? "add" : "remove"]("kifi-empty");
   }).on("transitionend webkitTransitionEnd", function() {
     updateMaxHeight();
     $c.css("overflow", "");
@@ -75,12 +77,14 @@ function attachComposeBindings($c, composeTypeName) {
         zindex: 2147483641,
         onAdd: function() {
           if (defaultText && !$d.text()) {
-            $d.removeClass("kifi-empty").text(defaultText);
+            $f.removeClass("kifi-empty");
+            $d.text(defaultText);
           }
         },
         onDelete: function() {
           if (defaultText && !$t.tokenInput("get").length && $d.text() == defaultText) {
-            $d.empty().addClass("kifi-empty");
+            $d.empty();
+            $f.addClass("kifi-empty");
           }
         }});
       $t.data("friends", friends);
@@ -90,7 +94,7 @@ function attachComposeBindings($c, composeTypeName) {
   $f.submit(function(e) {
     e.preventDefault();
     var text;
-    if ($d.hasClass("kifi-empty") || !(text = convertDraftToText($d.html()))) {
+    if ($f.hasClass("kifi-empty") || !(text = convertDraftToText($d.html()))) {
       $d.focus();
       return;
     }
@@ -112,7 +116,8 @@ function attachComposeBindings($c, composeTypeName) {
       if (selector) {
         $d.append(" <a href='x-kifi-sel:" + selector.replace("'", "&#39;") + "'>look here</a>");
       }
-      $d.removeClass("kifi-empty").focus();  // TODO: preserve insertion point & selection
+      $f.removeClass("kifi-empty");
+      $d.focus();  // TODO: preserve insertion point & selection
     });
   })
   .find(".kifi-compose-submit")

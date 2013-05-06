@@ -1,10 +1,11 @@
-<form class="kifi-compose">
+<form class="kifi-compose kifi-empty">
   {{#showTo}}
   <input type="text" class="kifi-compose-to" id="kifi-compose-to" placeholder="To">
   {{/showTo}}
-  <div class="kifi-compose-draft kifi-empty" contenteditable data-placeholder="{{draftPlaceholder}}" data-default="{{draftDefault}}"></div>
+  <div class="kifi-compose-draft" contenteditable data-placeholder="{{draftPlaceholder}}" data-default="{{draftDefault}}"></div>
   <div class="kifi-compose-bar">
-    <a href="javascript:" class="kifi-compose-snapshot" style="background-image:url({{snapshotUri}})" tabindex="-1"></a>
+    <a class="kifi-compose-snapshot" href="javascript:" style="background-image:url({{snapshotUri}})" tabindex="-1"></a>
+    <span class="kifi-compose-tip">Tab + Enter to submit</span>
     <a href="javascript:" class="kifi-compose-submit" tabindex="0">{{submitButtonLabel}}</a>
   </div>
 </form>
