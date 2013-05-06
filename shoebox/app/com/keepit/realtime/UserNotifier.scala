@@ -8,8 +8,7 @@ import com.keepit.common.mail.EmailAddresses
 import com.keepit.serializer.CommentWithBasicUserSerializer._
 import com.keepit.common.social.CommentWithBasicUserRepo
 import com.keepit.common.db.slick.DBSession._
-import play.api.libs.json.JsObject
-import play.api.libs.json.Json
+import play.api.libs.json._
 import com.keepit.common.social.BasicUser
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.serializer.BasicUserSerializer
@@ -24,6 +23,9 @@ import com.keepit.common.db.{ State, Id }
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.ThreadInfoRepo
 import com.keepit.serializer.ThreadInfoSerializer._
+import com.keepit.common.healthcheck._
+import com.keepit.common.akka._
+import com.keepit.common.time._
 
 case class CommentDetails(
   id: String, // ExternalId[Comment]
@@ -120,9 +122,9 @@ class UserNotifier @Inject() (
           commentId = comment.id,
           subsumedId = None))
         notificationBroadcast.push(userNotification)
-        notifyCommentByEmail(user, commentDetail)
+        //notifyCommentByEmail(user, commentDetail)
 
-        userNotifyRepo.save(userNotification.withState(UserNotificationStates.DELIVERED))
+        //userNotifyRepo.save(userNotification.withState(UserNotificationStates.DELIVERED))
       }
     }
   }
@@ -147,10 +149,10 @@ class UserNotifier @Inject() (
             notificationBroadcast.push(userNotification)
           } else {
             log.info(s"Sending email because ${userNotification.userId} is not connected.")
-            notifyMessageByEmail(user, messageDetails)
+            //notifyMessageByEmail(user, messageDetails)
           }
 
-          userNotifyRepo.save(userNotification.withState(UserNotificationStates.DELIVERED))
+        //userNotifyRepo.save(userNotification.withState(UserNotificationStates.DELIVERED))
       }
     }
   }
@@ -225,41 +227,10 @@ class UserNotifier @Inject() (
 
     }
   }
-  
+
   def recreateAllActiveDetails(safeMode: Boolean)(implicit session: RWSession) = {
     recreateMessageDetails(safeMode)
     recreateCommentDetails(safeMode)
-  }
-
-  private def notifyCommentByEmail(recipient: User, details: CommentDetails)(implicit session: RWSession) {
-    val author = userRepo.get(details.author.externalId)
-    val addrs = emailAddressRepo.getByUser(recipient.id.get)
-    for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
-      postOffice.sendMail(ElectronicMail(
-        senderUserId = author.id,
-        from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
-        to = addr,
-        subject = "%s %s commented on a page you are following".format(author.firstName, author.lastName),
-        htmlBody = views.html.email.newComment(author, recipient, details.url, details.title, commentFormatter.toPlainText(details.text)).body,
-        category = PostOffice.Categories.COMMENT))
-    }
-  }
-  private def notifyMessageByEmail(recipient: User, details: MessageDetails)(implicit session: RWSession) {
-
-    val author = userRepo.get(details.authors.head.externalId)
-    val addrs = emailAddressRepo.getByUser(recipient.id.get)
-    for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
-      postOffice.sendMail(ElectronicMail(
-        senderUserId = author.id,
-        from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
-        to = addr,
-        subject = "%s %s sent you a message using KiFi".format(author.firstName, author.lastName),
-        htmlBody = views.html.email.newMessage(
-          author, recipient, details.url, details.title,
-          commentFormatter.toPlainText(details.text), details.hasParent)
-          .body,
-        category = PostOffice.Categories.COMMENT))
-    }
   }
 
   private def createCommentDetails(comment: Comment)(implicit session: RWSession): Set[CommentDetails] = {

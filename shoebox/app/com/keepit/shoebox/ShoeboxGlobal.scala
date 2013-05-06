@@ -13,6 +13,7 @@ import com.keepit.module.CommonModule
 import com.keepit.scraper._
 import play.api.Mode._
 import play.api._
+import com.keepit.realtime.UserEmailNotifierPlugin
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 
@@ -39,6 +40,7 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.inject[ReportBuilderPlugin].enabled)
     require(injector.inject[DataIntegrityPlugin].enabled)
     require(injector.inject[FortyTwoCachePlugin].enabled)
+    require(injector.inject[UserEmailNotifierPlugin].enabled)
     require(injector.inject[ImageDataIntegrityPlugin].enabled)
   }
 }
