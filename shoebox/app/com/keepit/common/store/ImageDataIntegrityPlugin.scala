@@ -24,9 +24,12 @@ private[store] class ImageDataIntegrityActor @Inject() (
     db: Database,
     userRepo: UserRepo,
     store: S3ImageStore,
-    httpClient: HttpClient,
+    client: HttpClient,
     healthcheckPlugin: HealthcheckPlugin
   ) extends FortyTwoActor(healthcheckPlugin) with Logging {
+
+  private val httpClient: HttpClient = client.longTimeout()
+
   def receive = {
     case VerifyAllPictures =>
       if (store.config.isLocal) {
