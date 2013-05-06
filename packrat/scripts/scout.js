@@ -1,5 +1,6 @@
 // @match /^https?:\/\/[^\/]*\/.*/
 // @require scripts/api.js
+// loaded on every page, so no more dependencies
 
 function logEvent() {  // parameters defined in main.js
   api.port.emit("log_event", Array.prototype.slice.call(arguments));
