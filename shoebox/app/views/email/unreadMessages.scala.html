@@ -30,8 +30,8 @@
 &#13;
 			<div style="max-width: 600px; margin: 0 auto; padding: 5px;  display: block;">&#13;
 			<table style="margin: 0;  padding: 0; width: 100%;"><tr style="margin: 0;  padding: 0;"><td style="margin: 0;  padding: 0;">&#13;
-						<h4 style="font-size: 23px; font-weight: 500; line-height: 1.1; font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif; margin: 0 0 5px; color: #000; padding: 0;">Hi @recipient.firstName @recipient.lastName,</h4>&#13;
-						<p style="font-size: 14px; font-weight: normal; line-height: 1.4;  margin: 5px 0; padding: 0;">There are <strong style="margin: 0;  padding: 0;">@unreadMessages.size unread messages in a conversation between @authors and you on "@details.title"</strong>.</p>&#13;
+						<h4 style="font-size: 16px; font-weight: 500; line-height: 1.4; font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif; margin: 0 0 5px; color: #000; padding: 0;">Hi @recipient.firstName @recipient.lastName,</h4>&#13;
+						<p style="font-size: 14px; font-weight: normal; line-height: 1.4;  margin: 5px 0; padding: 0;">There are @unreadMessages.size unread messages in a conversation between <b>@authors.split(",").mkString("</b>, <b>")</b> and you on "<a href="@details.url">@details.title</a>".</p>&#13;
 						<p style="font-size: 14px; font-weight: normal; line-height: 1.6;  margin: 5px 0; padding: 0;">Here's what you missed:</p>&#13;
 						<table style="margin: 0;  padding: 0 0 0 10px; width: 100%;">&#13;
 						  @for(message <- unreadMessages) {
