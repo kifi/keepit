@@ -8,15 +8,21 @@ form.kifi-compose {
   border-radius: 0;
   background-color: #fff;
   padding: 5px;
-  min-height: 40px;
+  min-height: 26px;
   max-height: 145px;
   overflow: auto;
   outline: none;
   box-shadow: none;
   cursor: text; /* ff */
+  -webkit-transition: 160ms cubic-bezier(.405,-.375,.630,1.260) min-height;
+  transition: 160ms cubic-bezier(.405,-.375,.630,1.260) min-height;
 }
 .kifi-pane-tall-bottom .kifi-compose-draft[contenteditable]:first-child {
   border-radius: 3px 3px 0 0;
+}
+.kifi-pane-tall-bottom .kifi-compose-draft[contenteditable]:focus,
+.kifi-pane-tall-bottom .kifi-compose-draft[contenteditable]:not(.kifi-empty) {
+  min-height: 40px;
 }
 .kifi-pane-tall-bottom .kifi-compose-draft[contenteditable].kifi-empty::before {
   content: attr(data-placeholder);
