@@ -815,7 +815,9 @@ function subscribe(tab) {
   var d = pageData[tab.nUri || tab.url];
   if (d && d.seq == socket.seq) {  // no need to ask server again
     if (tab.seq == socket.seq) {  // tab is up-to-date
-      api.tabs.emit(tab, "counts", d.counts);
+      if (d.counts) {
+        api.tabs.emit(tab, "counts", d.counts);
+      }
     } else {
       var tabUpToDate = tab.seq == d.seq;
       finish(tab.nUri || tab.url);
