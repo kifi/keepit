@@ -281,6 +281,8 @@ class MainSearcher(
 
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
 
+    log.info(s"main search time: $millisPassed milliseconds")
+
     // simple classifier
     val show = if (svVar > 0.17f) false else {
       val isGood = (parsedQuery, personalizedSearcher) match {
