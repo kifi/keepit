@@ -833,6 +833,7 @@ function subscribe(tab) {
     }
   } else if (socket) {
     socket.send(["subscribe_uri", tab.url], function(uri) {
+      if (api.tabs.get(tab.id).url != tab.url) return;
       d = pageData[uri] = pageData[uri] || new PageData;
       d.seq = socket.seq;
       finish(uri);
