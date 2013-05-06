@@ -30,7 +30,6 @@ import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.common.actor.ActorFactory
 import akka.util.Timeout
 import scala.concurrent.duration._
-import com.keepit.common.store.S3ImageStore
 
 case object SendEmails
 case class MessageNotification(notice: UserNotification)
@@ -47,8 +46,7 @@ class UserEmailNotifierActor @Inject() (
   commentRepo: CommentRepo,
   commentReadRepo: CommentReadRepo,
   db: Database,
-  userExperimentRepo: UserExperimentRepo,
-  s3ImageStore: S3ImageStore) extends FortyTwoActor(healthcheck) with Logging {
+  userExperimentRepo: UserExperimentRepo) extends FortyTwoActor(healthcheck) with Logging {
 
   implicit val basicUserFormat = BasicUserSerializer.basicUserSerializer
   implicit val commentDetailsFormat = Json.format[CommentDetails]
