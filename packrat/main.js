@@ -669,6 +669,7 @@ function createDeepLinkListener(locator, tabId) {
 function initTab(tab, d) {  // d is pageData[tab.nUri]
   api.log("[initTab]", tab.id, "inited:", tab.inited);
 
+  api.log("[initTab] counts", d.counts);
   api.tabs.emit(tab, "counts", d.counts);
   if (tab.inited) return;
   tab.inited = true;
@@ -760,6 +761,7 @@ function tellTabsNoticeCountIfChanged() {
   api.tabs.eachSelected(function(tab) {
     var d = pageData[tab.nUri];
     if (d && d.counts && d.counts.n != n) {
+      api.log("[tellTabsNoticeCountIfChanged]", JSON.stringify(d.counts), n);
       d.counts.n = n;
       api.tabs.emit(tab, "counts", d.counts);
     }
@@ -768,6 +770,7 @@ function tellTabsNoticeCountIfChanged() {
 
 function tellTabsIfCountChanged(d, key, count) {
   if (d.counts[key] != count) {
+    api.log("[tellTabsIfCountChanged]", JSON.stringify(d.counts), key, count);
     d.counts[key] = count;
     d.counts.n = -newNotificationIdxs.length;
     d.tabs.forEach(function(tab) {
@@ -815,6 +818,7 @@ function subscribe(tab) {
   var d = pageData[tab.nUri || tab.url];
   if (d && d.seq == socket.seq) {  // no need to ask server again
     if (tab.seq == socket.seq) {  // tab is up-to-date
+      api.log("[subscribe] counts", d.counts);
       api.tabs.emit(tab, "counts", d.counts);
     } else {
       var tabUpToDate = tab.seq == d.seq;
