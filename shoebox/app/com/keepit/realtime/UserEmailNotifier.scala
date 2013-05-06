@@ -45,7 +45,8 @@ class UserEmailNotifierActor @Inject() (
   clock: Clock,
   commentRepo: CommentRepo,
   commentReadRepo: CommentReadRepo,
-  db: Database) extends FortyTwoActor(healthcheck) with Logging {
+  db: Database,
+  userExperimentRepo: UserExperimentRepo) extends FortyTwoActor(healthcheck) with Logging {
 
   implicit val basicUserFormat = BasicUserSerializer.basicUserSerializer
   implicit val commentDetailsFormat = Json.format[CommentDetails]
@@ -101,7 +102,7 @@ class UserEmailNotifierActor @Inject() (
 
   private def notifyMessageByEmail(userId: Id[User], message: Comment, notice: UserNotification, details: MessageDetails) {
 
-    val (recipient, authors, unreadMessages, addrs) = db.readOnly { implicit session =>
+    val (recipient, authors, unreadMessages, addrs, experiments) = db.readOnly { implicit session =>
       val recipient = userRepo.get(userId)
       val addrs = emailAddressRepo.getByUser(recipient.id.get)
 
@@ -129,7 +130,7 @@ class UserEmailNotifierActor @Inject() (
         val user = userRepo.get(msg.userId)
         (user.firstName + " " + user.lastName, user.externalId.id, commentFormatter.toPlainText(msg.text))
       }
-      (recipient, authors, unreadMessages, addrs)
+      (recipient, authors, unreadMessages, addrs, userExperimentRepo.getUserExperiments(userId))
     }
 
     /*
@@ -138,12 +139,10 @@ class UserEmailNotifierActor @Inject() (
     */
 
     db.readWrite { implicit session =>
-      log.info(s"Sending email for (${notice.id})")
-      log.info(unreadMessages.toString)
-      log.info(addrs.toString)
-      val emailBody = views.html.email.unreadMessages(recipient, authors, unreadMessages, details).body
-      log.info(emailBody)
-      if (unreadMessages.nonEmpty) {
+      if (unreadMessages.nonEmpty && experiments.contains(ExperimentTypes.ADMIN)) {
+        log.info(s"Sending email for (${notice.id.get})")
+        val emailBody = views.html.email.unreadMessages(recipient, authors, unreadMessages, details).body
+        
         for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
           postOffice.sendMail(ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS, fromName = Some("KiFi"),
@@ -173,7 +172,7 @@ class UserEmailNotifierPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting UserEmailNotifierPluginImpl")
-    scheduleTask(actorFactory.system, 30 seconds, 1 minutes, actor, SendEmails)
+    scheduleTask(actorFactory.system, 30 seconds, 2 minutes, actor, SendEmails)
   }
 
   override def sendEmails() {
