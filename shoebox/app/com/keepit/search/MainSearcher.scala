@@ -282,8 +282,6 @@ class MainSearcher(
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
 
     // simple classifier
-
-    val tic = currentDateTime.getMillis()
     val show = if (svVar > 0.17f) false else {
       val isGood = (parsedQuery, personalizedSearcher) match {
         case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(query.get, hitList, clickBoosts, searcher.get)
@@ -291,15 +289,17 @@ class MainSearcher(
       }
       isGood
     }
-    val elapsed = currentDateTime.getMillis() - tic
-    log.info("classifier time used: %d, queryString = %s".format(elapsed, queryString))
+
+    val tic = currentDateTime.getMillis()
 
     val searchResultUuid = ExternalId[ArticleSearchResultRef]()
     val searchResultInfo = SearchResultInfo(myTotal, friendsTotal, othersTotal, svVar, svExistVar)
     val searchResultJson = SearchResultInfoSerializer.serializer.writes(searchResultInfo)
     val metaData = Json.obj("queryUUID" -> JsString(searchResultUuid.id), "searchResultInfo" -> searchResultJson)
-
     persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData))
+
+    val elapsed = currentDateTime.getMillis() - tic
+    log.info("search persist time used: %d".format(elapsed))
 
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
         myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt,
