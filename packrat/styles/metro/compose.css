@@ -2,29 +2,35 @@ form.kifi-compose {
   margin: 0;
   padding: 14px 6px 10px;
 }
-.kifi-pane-tall-bottom .kifi-compose-draft[contenteditable] {
+.kifi-compose .kifi-compose-draft[contenteditable] {
   border: 1px solid #d2d2d2;
   border-bottom: none;
   border-radius: 0;
   background-color: #fff;
   padding: 5px;
-  min-height: 40px;
+  min-height: 26px;
   max-height: 145px;
   overflow: auto;
   outline: none;
   box-shadow: none;
   cursor: text; /* ff */
+  -webkit-transition: 160ms cubic-bezier(.405,-.375,.630,1.260) min-height;
+  transition: 160ms cubic-bezier(.405,-.375,.630,1.260) min-height;
 }
-.kifi-pane-tall-bottom .kifi-compose-draft[contenteditable]:first-child {
+.kifi-compose .kifi-compose-draft[contenteditable]:first-child {
   border-radius: 3px 3px 0 0;
 }
-.kifi-pane-tall-bottom .kifi-compose-draft[contenteditable].kifi-empty::before {
+.kifi-compose .kifi-compose-draft[contenteditable]:focus,
+.kifi-compose:not(.kifi-empty) .kifi-compose-draft[contenteditable] {
+  min-height: 40px;
+}
+.kifi-compose.kifi-empty .kifi-compose-draft[contenteditable]::before {
   content: attr(data-placeholder);
   position: absolute;
   font: inherit;
   color: #a9a9a9;
 }
-.kifi-pane-tall-bottom .kifi-compose-draft[contenteditable] a[href] {
+.kifi-compose .kifi-compose-draft[contenteditable] a[href] {
   text-decoration: underline;
 }
 .kifi-compose-bar {
@@ -52,6 +58,14 @@ a.kifi-compose-snapshot:hover {
 }
 a.kifi-compose-snapshot:active {
   background-position: -40px 0;
+}
+span.kifi-compose-tip {
+  color: #999;
+  font-size: 11px;
+  margin-right: 12px;
+}
+.kifi-compose.kifi-empty .kifi-compose-tip {
+  display: none;
 }
 a.kifi-compose-submit {
   display: inline-block;
