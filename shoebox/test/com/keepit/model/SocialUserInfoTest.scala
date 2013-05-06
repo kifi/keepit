@@ -2,17 +2,15 @@ package com.keepit.model
 
 import org.specs2.mutable._
 
+import com.keepit.common.db.{TestSlickSessionProvider, Id}
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworks
 import com.keepit.inject._
+import com.keepit.serializer.SocialUserInfoSerializer
 import com.keepit.test._
 
-import play.api.Play.current
-import play.api.test.Helpers._
-import securesocial.core._
-import com.keepit.common.db.Id
-import com.keepit.serializer.SocialUserInfoSerializer
 import play.api.libs.json.JsObject
+import securesocial.core._
 
 class SocialUserInfoTest extends Specification with TestDBRunner {
 
@@ -97,6 +95,11 @@ class SocialUserInfoTest extends Specification with TestDBRunner {
           isInCache === true
           newSocialUser.fullName === "John Smith"
         }
+        db.readOnly { implicit s => socialUserInfoRepo.get(SocialId("eishay"), SocialNetworks.FACEBOOK) }
+        val socialUserOpt = inject[TestSlickSessionProvider].doWithoutCreatingSessions {
+          db.readOnly { implicit s => socialUserInfoRepo.getOpt(SocialId("eishay"), SocialNetworks.FACEBOOK) }
+        }
+        socialUserOpt.map(_.fullName) must beSome("John Smith")
       }
     }
 
