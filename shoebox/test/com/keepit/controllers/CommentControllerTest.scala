@@ -96,7 +96,7 @@ class CommentControllerTest extends Specification with DbRepos {
         // Need to use synchronous actors to test this. 
         /*val mails = inject[FakeOutbox]
         mails.size === 1
-        val mail = db.readWrite { implicit s => inject[ElectronicMailRepo].get(mails.head) }
+        val mail = mails.head
         mail.senderUserId.get === comment.userId
         mail.subject === "Andrew Conner sent you a message using KiFi"
         mail.htmlBody.value must contain("""Public Comment [look here] on Google1""")*/

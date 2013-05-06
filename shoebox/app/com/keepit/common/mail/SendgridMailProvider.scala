@@ -105,10 +105,7 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
   /**
    * Please see http://sendgrid.com/docs/API%20Reference/SMTP%20API/index.html for docs
    */
-  def sendMail(mailId: Id[ElectronicMail]): Unit = {
-    val mail = db.readOnly { implicit s =>
-      mailRepo.get(mailId)
-    }
+  def sendMail(mail: ElectronicMail) {
     if (mail.isReadyToSend) {
       val message = createMessage(mail)
       val transport = getLiveTransport()

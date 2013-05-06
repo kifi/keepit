@@ -25,6 +25,7 @@ threadsPane = function() {
         threads: o.threads,
         showTo: true,
         draftPlaceholder: "Type a message…",
+        draftDefault: "Check this out.",
         submitButtonLabel: "Send",
         snapshotUri: api.url("images/snapshot.png")
       }, {
@@ -91,7 +92,7 @@ threadsPane = function() {
     }};
 
   function sendMessage($container, e, text, recipientIds) {
-    // logEvent("slider", "comment");
+    // logEvent("slider", "message");
     api.port.emit("send_message", {
         url: document.URL,
         title: document.title,
@@ -99,23 +100,14 @@ threadsPane = function() {
         recipients: recipientIds},
       function(resp) {
         api.log("[sendMessage] resp:", resp);
+        var friends = $container.find(".kifi-compose-to").data("friends").reduce(function(o, f) {
+          o[f.id] = f;
+          return o;
+        }, {});
+        var recipients = recipientIds.map(function(id) {return friends[id]});
+        var locator = "/messages/" + (resp.parentId || resp.id);
+        $container.closest(".kifi-pane").triggerHandler("kifi:show-pane", [locator, recipients]);
       });
-    var friends = $container.find(".kifi-compose-to").data("friends").reduce(function(o, f) {
-      o[f.id] = f;
-      return o;
-    }, {});
-    var now = new Date().toISOString();
-    renderThread({
-      id: "",
-      lastCommentedAt: now,
-      recipients: recipientIds.map(function(id) {return friends[id]}),
-      digest: text,
-      messageTimes: {"": now}
-    }, now, function($th) {
-      $list.append($th).scrollToBottom();
-      $container.find(".kifi-compose-draft").empty().blur();
-      $container.find(".kifi-compose-to").tokenInput("clear");
-    });
   }
 
   function renderThread(th, readTime, callback) {

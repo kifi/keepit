@@ -28,16 +28,14 @@ class PostOfficeImpl @Inject() (
   extends PostOffice with Logging {
 
   def sendMail(mail: ElectronicMail)(implicit session: RWSession): ElectronicMail = {
-    val prepared = {
-      val newMail: ElectronicMail = if(mail.htmlBody.value.size > PostOffice.BODY_MAX_SIZE ||
-                                      (mail.textBody.isDefined && mail.textBody.get.value.size > PostOffice.BODY_MAX_SIZE)) {
+    val prepared =
+      if (mail.htmlBody.value.size > PostOffice.BODY_MAX_SIZE ||
+        mail.textBody.isDefined && mail.textBody.get.value.size > PostOffice.BODY_MAX_SIZE) {
         throw new Exception(s"PostOffice attempted to send an email (${mail.externalId}) longer than ${PostOffice.BODY_MAX_SIZE} bytes. Too big!")
       } else {
-        mailRepo.save(mail)
+        mailRepo.save(mail.prepareToSend())
       }
-      newMail.prepareToSend()
-    }
-    mailer.processMail(prepared.id.get)
+    mailer.processMail(prepared)
     prepared
   }
 }
