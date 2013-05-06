@@ -1,27 +1,21 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.inject._
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.time._
-import com.keepit.common.crypto._
-import com.keepit.serializer.{SocialUserInfoSerializer, SocialUserSerializer}
-import java.security.SecureRandom
-import java.sql.Connection
-import org.joda.time.DateTime
-import play.api._
-import securesocial.core.SocialUser
-import play.api.libs.json._
-import com.keepit.common.social.SocialNetworkType
-import com.keepit.common.social.SocialNetworks
-import com.keepit.common.social.SocialUserRawInfo
-import com.keepit.common.social.SocialNetworks
-import com.keepit.common.social.SocialId
-import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
-import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
+
+import org.joda.time.DateTime
+
+import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
+import com.keepit.common.db._
+import com.keepit.common.db.slick.DBSession._
+import com.keepit.common.db.slick._
+import com.keepit.common.social.SocialId
+import com.keepit.common.social.SocialNetworkType
+import com.keepit.common.time._
+import com.keepit.serializer.SocialUserInfoSerializer
+
+import play.api.libs.json._
+import securesocial.core.SocialUser
 
 case class SocialUserInfo(
   id: Option[Id[SocialUserInfo]] = None,
@@ -81,10 +75,10 @@ class SocialUserInfoRepoImpl @Inject() (
   val userCache: SocialUserInfoUserCache,
   val networkCache: SocialUserInfoNetworkCache)
     extends DbRepo[SocialUserInfo] with SocialUserInfoRepo {
-  import FortyTwoTypeMappers._
-  import scala.slick.lifted.Query
-  import db.Driver.Implicit._
+
   import DBSession._
+  import FortyTwoTypeMappers._
+  import db.Driver.Implicit._
 
   override val table = new RepoTable[SocialUserInfo](db, "social_user_info") {
     def userId = column[Id[User]]("user_id", O.Nullable)
@@ -125,7 +119,10 @@ class SocialUserInfoRepoImpl @Inject() (
 
 
   def getOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUserInfo] =
-    (for(f <- table if f.socialId === id && f.networkType === networkType) yield f).firstOption
+    networkCache.getOrElseOpt(SocialUserInfoNetworkKey(networkType, id)) {
+      (for(f <- table if f.socialId === id && f.networkType === networkType) yield f).firstOption
+    }
+
 }
 
 object SocialUserInfoStates {
