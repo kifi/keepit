@@ -2,6 +2,7 @@ function attachComposeBindings($c, composeTypeName) {
   var $f = $c.find(".kifi-compose");
   var $t = $f.find(".kifi-compose-to");
   var $d = $f.find(".kifi-compose-draft");
+  var defaultText = $d.data("default");
 
   $d.focus(function() {
     if (this.classList.contains("kifi-empty")) {  // webkit workaround (can ditch when Chrome 27/28 ? goes stable)
@@ -12,16 +13,34 @@ function attachComposeBindings($c, composeTypeName) {
       var sel = window.getSelection();
       sel.removeAllRanges();
       sel.addRange(r);
+    } else if (defaultText && $d.text() == defaultText) {
+      var r = document.createRange();
+      r.selectNodeContents(this);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(r);
+      $(this).data("preventNextMouseUp", true); // mouseup clears selection
     }
   }).blur(function() {
     // wkb.ug/112854 crbug.com/222546
     $("<input style=position:fixed;top:999%>").appendTo("html").each(function() {this.setSelectionRange(0,0)}).remove();
 
     if (!convertDraftToText($d.html())) {
-      $d.empty().addClass("kifi-empty");
+      if (defaultText && $t.tokenInput("get").length) {
+        $d.removeClass("kifi-empty").text(defaultText);
+      } else {
+        $d.empty().addClass("kifi-empty");
+      }
     }
+  }).mousedown(function() {
+    $(this).removeData("preventNextMouseUp");
   }).click(function() {
     this.focus();  // needed in Firefox for clicks on ::before placeholder text
+  }).mouseup(function(e) {
+    if ($(this).data("preventNextMouseUp")) {
+      $(this).removeData("preventNextMouseUp");
+      e.preventDefault();
+    }
   }).keydown(function(e) {
     if (e.which == 13 && (e.metaKey || e.ctrlKey)) { // ⌘-Enter
       $f.submit();
@@ -49,7 +68,17 @@ function attachComposeBindings($c, composeTypeName) {
         allowTabOut: true,
         tokenValue: "id",
         theme: "KiFi",
-        zindex: 2147483641});
+        zindex: 2147483641,
+        onAdd: function() {
+          if (defaultText && !$d.text()) {
+            $d.removeClass("kifi-empty").text(defaultText);
+          }
+        },
+        onDelete: function() {
+          if (defaultText && !$t.tokenInput("get").length && $d.text() == defaultText) {
+            $d.empty().addClass("kifi-empty");
+          }
+        }});
       $t.data("friends", friends);
     });
   }
@@ -68,7 +97,7 @@ function attachComposeBindings($c, composeTypeName) {
         $f.find("#token-input-kifi-compose-to").focus();
         return;
       }
-      args.push(recipients.map(function(r) {return r.id}).join(","));
+      args.push(recipients.map(function(r) {return r.id}));
     }
     $d.empty().trigger("kifi:compose-submit", args).focus();
     var $submit = $f.find(".kifi-compose-submit").addClass("kifi-active");

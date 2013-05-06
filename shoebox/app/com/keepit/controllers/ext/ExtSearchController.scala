@@ -18,6 +18,10 @@ import com.keepit.search._
 import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
 import play.api.http.ContentTypes
 import com.keepit.common.logging.Logging
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.common.healthcheck.Healthcheck.INTERNAL
+
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchHit(id: Id[NormalizedURI], externalId: ExternalId[NormalizedURI], title: Option[String], url: String)
@@ -45,12 +49,16 @@ class ExtSearchController @Inject() (
   bookmarkRepo: BookmarkRepo,
   uriRepo: NormalizedURIRepo,
   basicUserRepo: BasicUserRepo,
-  srcFactory: SearchResultClassifierFactory)
+  srcFactory: SearchResultClassifierFactory,
+  healthcheckPlugin: HealthcheckPlugin)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging{
 
   def search(query: String, filter: Option[String], maxHits: Int, lastUUIDStr: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
+
+    val t1 = currentDateTime.getMillis()
+
     val lastUUID = lastUUIDStr.flatMap{
       case "" => None
       case str => Some(ExternalId[ArticleSearchResultRef](str))
@@ -79,6 +87,8 @@ class ExtSearchController @Inject() (
 
     val (config, experimentId) = searchConfigManager.getConfig(userId, query)
 
+    val t2 = currentDateTime.getMillis()
+
     val searchRes = time("search-searching") {
       val searcher = mainSearcherFactory(userId, friendIds, searchFilter, config)
       val searchRes = if (maxHits > 0) {
@@ -90,8 +100,19 @@ class ExtSearchController @Inject() (
 
       searchRes
     }
+
+    val t3 = currentDateTime.getMillis()
+
     val res = toPersonalSearchResultPacket(userId, searchRes, config, searchFilter.isDefault, experimentId)
     reportArticleSearchResult(searchRes)
+
+    val t4 = currentDateTime.getMillis()
+
+    val timeLimit = 2000
+    if (t4 - t1 > timeLimit && t4 - fortyTwoServices.started.getMillis() > 1000*60*5) {
+      val msg = "search time exceeds limit! searchUUID = %s , Limit time = %d, total search time = %d, pre-search time = %d, main-search time = %d, post-search time = %d".format(searchRes.uuid.id, timeLimit, t4 - t1, t2 - t1, t3 - t2, t4 - t3)
+      healthcheckPlugin.addError(HealthcheckError(errorMessage = Some(msg), callType = INTERNAL))
+    }
 
     Ok(RPS.resSerializer.writes(res)).as(ContentTypes.JSON)
   }
@@ -132,26 +153,6 @@ class ExtSearchController @Inject() (
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
     PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), experimentId, filter)
   }
-
-//  private[ext] def isToShow(userId: Id[User], res: ArticleSearchResult): Boolean = {
-//    var maxTextScore = 0.0f
-//    res.scorings.foreach{ s =>
-//      if (s.textScore > maxTextScore) maxTextScore = s.textScore
-//    }
-//
-//    if (res.svVariance < 0.17 && maxTextScore > 0.04f) {
-//      val tic = currentDateTime.getMillis()
-//
-//      val topUriIds = res.hits.take(3).map { _.uriId }
-//      val classifier = srcFactory.apply(res.uuid, res.query, userId, topUriIds)
-//      val good = topUriIds.exists(id => classifier.classify(id))
-//      val millisPassed = currentDateTime.getMillis() - tic
-//      log.info("search result classifier: used %d milliseconds".format(millisPassed))
-//      good
-//    } else {
-//      false
-//    }
-//  }
 
   private[ext] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {
     val uri = uriRepo.get(res.uriId)
