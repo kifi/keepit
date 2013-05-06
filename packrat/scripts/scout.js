@@ -91,8 +91,11 @@ var injected, t0 = +new Date, tile, paneHistory;
       case 76: // l
         api.port.emit("api:reload");
         break;
+      case 77: // m
+        keeper("togglePane", "key", "/messages");
+        break;
       case 79: // o
-        keeper("togglePane", "key");
+        keeper("togglePane", "key", "/general");
         break;
       }
     }
