@@ -134,7 +134,7 @@ class ExtCommentController @Inject() (
         val (message, parent) = sendMessageReply(userId, urlStr, title, text, parentId)
         (message, Some(parent))
       case None =>
-        db.readWrite { implicit s =>
+        val message = db.readWrite { implicit s =>
           val message = commentRepo.save(Comment(
             uriId = uri.id.get,
             urlId = url.id,
@@ -146,24 +146,16 @@ class ExtCommentController @Inject() (
           recipientUserIds foreach { userId =>
             commentRecipientRepo.save(CommentRecipient(commentId = message.id.get, userId = Some(userId)))
           }
-
-          val newCommentRead = commentReadRepo.getByUserAndParent(userId, message.id.get) match {
-            case Some(commentRead) => // existing CommentRead entry for this message thread
-              assert(commentRead.parentId.isDefined)
-              commentRead.withLastReadId(message.id.get)
-            case None =>
-              CommentRead(userId = userId, uriId = uri.id.get, parentId = Some(message.id.get), lastReadId = message.id.get)
-          }
-          commentReadRepo.save(newCommentRead)
-
-          future {
-            notifyRecipients(message)
-          } onFailure { case e =>
-            log.error("Could not notify for new message %s".format(message.id.get), e)
-          }
-
-          (message, None)
+          commentReadRepo.save(
+            CommentRead(userId = userId, uriId = uri.id.get, parentId = Some(message.id.get), lastReadId = message.id.get))
+          message
         }
+        future {  // important that this is spawned only *after* above read/write transaction committed
+          notifyRecipients(message)
+        } onFailure { case e =>
+          log.error("Could not notify for new message %s".format(message.id.get), e)
+        }
+        (message, None)
     }
   }
 
@@ -182,7 +174,7 @@ class ExtCommentController @Inject() (
 
   private[ext] def sendMessageReply(userId: Id[User], urlStr: String, title: String, text: String, requestedParentId: Id[Comment]): (Comment, Comment) = {
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
-    db.readWrite { implicit s =>
+    val (message, parent) = db.readWrite { implicit s =>
       val (uri, url) = getOrCreateUriAndUrl(urlStr)
 
       val reqParent = commentRepo.get(requestedParentId)
@@ -203,14 +195,16 @@ class ExtCommentController @Inject() (
           CommentRead(userId = userId, uriId = uri.id.get, parentId = parent.id, lastReadId = message.id.get)
       })
 
-      future {
-        notifyRecipients(message)
-      } onFailure { case e =>
-        log.error("Could not notify for message reply %s".format(message.id.get), e)
-      }
-
       (message, parent)
     }
+
+    future {  // important that this is spawned only *after* above read/write transaction committed
+      notifyRecipients(message)
+    } onFailure { case e =>
+      log.error("Could not notify for message reply %s".format(message.id.get), e)
+    }
+
+    (message, parent)
   }
 
   private def getOrCreateUriAndUrl(urlStr: String)(implicit session: RWSession): (NormalizedURI, URL) = {
