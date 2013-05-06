@@ -619,13 +619,13 @@ slider2 = function() {
       api.log("[showPane]", trigger, locator);
       showPane(locator);
     },
-    togglePane: function(trigger) {
-      if ($pane) {
-        api.log("[togglePane] hiding");
+    togglePane: function(trigger, locator) {
+      if ($pane && (!locator || paneHistory[0] == locator)) {
+        api.log("[togglePane] hiding", locator || "");
         hidePane();
       } else {
-        api.log("[togglePane] showing");
-        showPane("/general");
+        api.log("[togglePane] showing", locator || "");
+        showPane(locator || "/general");
       }
     },
     showKeepers: function(keepers, otherKeeps) {
