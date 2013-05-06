@@ -42,11 +42,6 @@ class DefaultContentHandler(handler: ContentHandler, metadata: Metadata) extends
     super.startDocument()
   }
 
-  // enable boilerpipe only for HTML
-  Option(metadata.get("Content-Type")).foreach{ contentType =>
-    if (contentType startsWith "text/html") setContentHandler(new BoilerpipeContentHandler(handler))
-  }
-
   // anchor tag
   private[this] var inAnchor = false
   private def startAnchor(uri: String, localName: String, qName: String, atts: Attributes) = {
