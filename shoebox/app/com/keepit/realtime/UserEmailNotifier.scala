@@ -135,7 +135,7 @@ class UserEmailNotifierActor @Inject() (
     }
 
     db.readWrite { implicit session =>
-      if (unreadMessages.nonEmpty && experiments.contains(ExperimentTypes.ADMIN)) {
+      if (unreadMessages.nonEmpty && experiments.contains(ExperimentTypes.ADMIN) && userId.id != 9) {
         log.info(s"Sending email for (${notice.id.get})")
         val emailBody = views.html.email.unreadMessages(recipient, authors, unreadMessages, details).body
         val textBody = views.html.email.unreadMessagesPlain(recipient, authors, unreadMessages, details).body
