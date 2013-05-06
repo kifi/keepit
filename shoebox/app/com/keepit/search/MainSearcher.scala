@@ -89,6 +89,9 @@ class MainSearcher(
   private[this] val friendEdgeSet = uriGraphSearcher.getUserToUserEdgeSet(userId, friendIds)
   private[this] val filteredFriendEdgeSet = if (customFilterOn) uriGraphSearcher.getUserToUserEdgeSet(userId, filteredFriendIds) else friendEdgeSet
 
+  val preparationTime = currentDateTime.getMillis() - currentTime
+  log.info(s"mainSearcher preparation time: $preparationTime milliseconds")
+
   private def findSharingUsers(id: Id[NormalizedURI]): Set[Id[User]] = {
     uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet
   }
@@ -98,12 +101,15 @@ class MainSearcher(
   }
 
   def getPersonalizedSearcher(query: Query) = {
+    val tic = currentDateTime.getMillis()
     val indexReader = uriGraphSearcher.openPersonalIndex(userId, query) match {
       case Some((personalReader, personalIdMapper)) =>
         articleSearcher.indexReader.add(personalReader, personalIdMapper)
       case None =>
         articleSearcher.indexReader
     }
+    val elapse = currentDateTime.getMillis() - tic
+    log.info(s"time to get personalized searcher: $elapse milliseconds")
     PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryTracker, clickHistoryTracker, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory)
   }
 
@@ -133,15 +139,15 @@ class MainSearcher(
           if (!idFilter.contains(id)) {
             val clickBoost = clickBoosts(id)
             val score = scorer.score()
-            val semanticScore = semanticVectorScoreAccessor.getScore(doc)
+            val newSemanticScore = semanticVectorScoreAccessor.getScore(doc)
             if (friendlyUris.contains(id)) {
               if (myUris.contains(id)) {
-                myHits.insert(id, score * clickBoost, true, !myPublicUris.contains(id))
+                myHits.insert(id, score * clickBoost, true, !myPublicUris.contains(id), semanticScore = newSemanticScore)
               } else {
-                friendsHits.insert(id, score * clickBoost, false, false)
+                friendsHits.insert(id, score * clickBoost, false, false, semanticScore = newSemanticScore)
               }
             } else if (filter.includeOthers) {
-              othersHits.insert(id, score * clickBoost, false, false)
+              othersHits.insert(id, score * clickBoost, false, false, semanticScore = newSemanticScore)
             }
           }
           doc = scorer.nextDoc()
@@ -302,12 +308,7 @@ class MainSearcher(
 
   private def classify(parsedQuery: Query, hitList: List[MutableArticleHit], clickBoosts: ResultClickTracker.ResultClickBoosts, personalizedSearcher: PersonalizedSearcher) = {
     def classify(hit: MutableArticleHit) = {
-      clickBoosts(hit.id) > 2.0f || (hit.scoring.textScore >= 0.04f && {
-        val explain = personalizedSearcher.explain(parsedQuery, hit.id)
-        val scores = LuceneExplanationExtractor.extractNamedScores(explain)
-        val semanticScore = scores.getOrElse(LuceneScoreNames.SEMANTIC_VECTOR, -1.0f)
-        semanticScore >= 0.3f
-      })
+      clickBoosts(hit.id) > 2.0f || (hit.scoring.textScore >= 0.04f && hit.semanticScore >= 0.3f)
     }
     hitList.take(3).exists(classify(_))
   }
@@ -353,9 +354,9 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit](sz) {
 
   var overflow: MutableArticleHit = null // sorry about the null, but this is necessary to work with lucene's priority queue efficiently
 
-  def insert(id: Long, score: Float, isMyBookmark: Boolean, isPrivate: Boolean, friends: Set[Id[User]] = NO_FRIEND_IDS, bookmarkCount: Int = 0) {
-    if (overflow == null) overflow = new MutableArticleHit(id, score, isMyBookmark, isPrivate, friends, bookmarkCount, null)
-    else overflow(id, score, isMyBookmark, isPrivate, friends, bookmarkCount)
+  def insert(id: Long, score: Float, isMyBookmark: Boolean, isPrivate: Boolean, friends: Set[Id[User]] = NO_FRIEND_IDS, bookmarkCount: Int = 0, semanticScore: Float) {
+    if (overflow == null) overflow = new MutableArticleHit(id, score, isMyBookmark, isPrivate, friends, bookmarkCount, null, semanticScore)
+    else overflow(id, score, isMyBookmark, isPrivate, friends, bookmarkCount, semanticScore)
 
     if (score > highScore) highScore = score
 
@@ -466,14 +467,15 @@ class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmark
 }
 
 // mutable hit object for efficiency
-class MutableArticleHit(var id: Long, var score: Float, var isMyBookmark: Boolean, var isPrivate: Boolean, var users: Set[Id[User]], var bookmarkCount: Int, var scoring: Scoring) {
-  def apply(newId: Long, newScore: Float, newIsMyBookmark: Boolean, newIsPrivate: Boolean, newUsers: Set[Id[User]], newBookmarkCount: Int) = {
+class MutableArticleHit(var id: Long, var score: Float, var isMyBookmark: Boolean, var isPrivate: Boolean, var users: Set[Id[User]], var bookmarkCount: Int, var scoring: Scoring, var semanticScore: Float) {
+  def apply(newId: Long, newScore: Float, newIsMyBookmark: Boolean, newIsPrivate: Boolean, newUsers: Set[Id[User]], newBookmarkCount: Int, newSemanticScore: Float) = {
     id = newId
     score = newScore
     isMyBookmark = newIsMyBookmark
     isPrivate = newIsPrivate
     users = newUsers
     bookmarkCount = newBookmarkCount
+    semanticScore = newSemanticScore
   }
   def toArticleHit(friendStats: FriendStats) = {
     val sortedUsers = users.toSeq.sortBy{ id => - friendStats.score(id) }
