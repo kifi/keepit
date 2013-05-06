@@ -18,7 +18,7 @@
 				&#13;
 				<div style="max-width: 600px; margin: 0 auto; padding: 5px;  display: block;">&#13;
 				<table bgcolor="#224c67" style="margin: 0;  padding: 0; width: 100%;"><tr style="margin: 0;  padding: 0;"><td style="margin: 0;  padding: 0;">&#13;
-							<div style="font-size: 16px; overflow: hidden; *display: inline; white-space: nowrap;  margin: 0 0 0 8px; padding: 0; color: #44aaf2; display: inline-block; height: 22px; zoom: 1; width: 39px;"><img src="logo.png" alt="KiFi" title="KiFi" height="22" style="max-width: 100%;  margin: 0; padding: 0;" /></div>&#13;
+							<div style="font-size: 16px; overflow: hidden; *display: inline; white-space: nowrap;  margin: 0 0 0 8px; padding: 0; color: #44aaf2; display: inline-block; height: 22px; zoom: 1; width: 39px;"><img src="https://www.kifi.com/assets/images/logo2.png" alt="KiFi" title="KiFi" height="22" style="max-width: 100%;  margin: 0; padding: 0;" /></div>&#13;
 							<span style="font-size: 14px;  margin: 0 0 0 4px; color: #fafafa; padding: 0;">Keep it. Find it.</span></td>&#13;
 						<td align="right" style="margin: 0;  padding: 0;"><a href="@details.url" style="font-size: 14px; margin: 4px 8px 4px 0px; text-transform: none; background-color: #44aaf2;  padding: 4px 0 0; text-decoration: none; color: #fafafa; display: block; height: 20px; text-align: center; border-radius: 3px; width: 55px;">Visit</a></td>&#13;
 					</tr></table></div>&#13;
@@ -31,46 +31,22 @@
 			<div style="max-width: 600px; margin: 0 auto; padding: 5px;  display: block;">&#13;
 			<table style="margin: 0;  padding: 0; width: 100%;"><tr style="margin: 0;  padding: 0;"><td style="margin: 0;  padding: 0;">&#13;
 						<h4 style="font-size: 23px; font-weight: 500; line-height: 1.1; font-family: 'HelveticaNeue-Light', 'Helvetica Neue Light', 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif; margin: 0 0 5px; color: #000; padding: 0;">Hi @recipient.firstName @recipient.lastName,</h4>&#13;
-						<p style="font-size: 17px; font-weight: normal; line-height: 1.2;  margin: 5px 0; padding: 0;">There are <strong style="margin: 0;  padding: 0;">@unreadMessages.size unread messages in a conversation between @authors and you on "@details.title"</strong>.</p>&#13;
+						<p style="font-size: 14px; font-weight: normal; line-height: 1.4;  margin: 5px 0; padding: 0;">There are <strong style="margin: 0;  padding: 0;">@unreadMessages.size unread messages in a conversation between @authors and you on "@details.title"</strong>.</p>&#13;
 						<p style="font-size: 14px; font-weight: normal; line-height: 1.6;  margin: 5px 0; padding: 0;">Here's what you missed:</p>&#13;
 						<table style="margin: 0;  padding: 0 0 0 10px; width: 100%;">&#13;
 						  @for(message <- unreadMessages) {
 						    <tr style="padding:5px 10px 5px; background-color:#FFF;">
 									<td width="0%" style="margin: 0;  padding: 0;"><img src="https://www.kifi.com/users/@message._2/pics/112/0.jpg" width="30" style="max-width: 100%;  margin: 0; padding: 10px 0 0;" /></td>&#13;
 									<td width="92%" style="margin: 0;  padding: 10px 0 0;"><span style="margin: 0; font-size: 14px; font-weight: bold;  padding: 0;">@message._1</span>&#13;
-									<p style="font-size: 14px; font-weight: normal; line-height: 1.6;  margin: 5px 0; padding: 0;">@message._3</p></td>&#13;
+									<p style="font-size: 14px; font-weight: normal; line-height: 1.4;  margin: 5px 0; padding: 0;">@message._3</p></td>&#13;
 								</tr>
 								&#13;
 						  }&#13;
 						</table><a href="@details.url" style="font-size: 14px; margin: 20px auto 0px; text-transform: none; background-color: #44aaf2; padding: 0; line-height: 30px;  text-decoration: none; color: #fafafa; display: block; text-align: center; border-radius: 3px; width: 50%;">Visit the page</a>&#13;
 						&#13;
-						<p style="font-size: 14px; font-weight: normal; line-height: 1.6;  margin: 5px 0; padding: 0;"><br style="margin: 0;  padding: 0;" />With lots and lots of &hearts;, <br style="margin: 0;  padding: 0;" />the KiFi elves<br style="margin: 0;  padding: 0;" /></p>&#13;
-&#13;
-						&#13;
-						<p style="font-weight: normal; font-size: 14px; margin: 5px 0; background-color: #ECF8FF;  line-height: 1.6; padding: 15px;">&#13;
-							We've recently opened up a site for your KiFi feedback and ideas! <a href="https://www.kifi.com/feedback" style="font-weight: bold;  margin: 0; color: #2BA6CB; padding: 0;">Take me there &raquo;</a>	&#13;
-						</p>					&#13;
-						&#13;
 					</td>&#13;
 				</tr></table></div>&#13;
 									&#13;
-		</td>&#13;
-		<td style="margin: 0;  padding: 0;"></td>&#13;
-	</tr></table><table style="clear: both !important; margin: 0; padding: 0;  width: 100%;"><tr style="margin: 0;  padding: 0;"><td style="margin: 0;  padding: 0;"></td>&#13;
-		<td style="max-width: 600px !important; clear: both !important; margin: 0 auto; padding: 0;  display: block !important;">&#13;
-			&#13;
-				&#13;
-				<div style="max-width: 600px; margin: 0 auto; padding: 5px;  display: block;">&#13;
-				<table style="margin: 0;  padding: 0; width: 100%;"><tr style="margin: 0;  padding: 0;"><td align="center" style="margin: 0;  padding: 0;">&#13;
-						<p style="font-size: 14px; font-weight: normal; line-height: 1.6;  margin: 5px 0; padding: 0;">&#13;
-						  <strong style="margin: 0;  padding: 0;">Connect with us:</strong>&#13;
-							<a href="https://www.facebook.com/pages/FortyTwo-Inc/296283190485254" style="font-size: 12px; font-weight: bold; margin: 0 0 10px; padding: 3px 7px; background-color: #3B5998 !important;  text-decoration: none; color: #FFF !important; display: inline; text-align: center; width: 100px;">Facebook</a>&#13;
-							<a href="https://twitter.com/42eng" style="font-size: 12px; font-weight: bold; margin: 0 0 10px; padding: 3px 7px; background-color: #1daced !important;  text-decoration: none; color: #FFF !important; display: inline; text-align: center; width: 100px;">Twitter</a>&#13;
-							<a href="https://www.kifi.com/feedback" style="font-size: 12px; font-weight: bold; margin: 0 0 10px; padding: 3px 7px; background-color: #55a203 !important;  text-decoration: none; color: #FFF !important; display: inline; text-align: center; width: 100px;">Feedback</a>&#13;
-						</p>&#13;
-					</td>&#13;
-				</tr></table></div>&#13;
-				&#13;
 		</td>&#13;
 		<td style="margin: 0;  padding: 0;"></td>&#13;
 	</tr></table></body>
