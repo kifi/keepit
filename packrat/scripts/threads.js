@@ -25,6 +25,7 @@ threadsPane = function() {
         threads: o.threads,
         showTo: true,
         draftPlaceholder: "Type a message…",
+        draftDefault: "Check this out.",
         submitButtonLabel: "Send",
         snapshotUri: api.url("images/snapshot.png")
       }, {
