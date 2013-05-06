@@ -19,6 +19,7 @@ function attachComposeBindings($c, composeTypeName) {
       var sel = window.getSelection();
       sel.removeAllRanges();
       sel.addRange(r);
+      $(this).data("preventNextMouseUp", true); // mouseup clears selection
     }
   }).blur(function() {
     // wkb.ug/112854 crbug.com/222546
@@ -31,8 +32,15 @@ function attachComposeBindings($c, composeTypeName) {
         $d.empty().addClass("kifi-empty");
       }
     }
+  }).mousedown(function() {
+    $(this).removeData("preventNextMouseUp");
   }).click(function() {
     this.focus();  // needed in Firefox for clicks on ::before placeholder text
+  }).mouseup(function(e) {
+    if ($(this).data("preventNextMouseUp")) {
+      $(this).removeData("preventNextMouseUp");
+      e.preventDefault();
+    }
   }).keydown(function(e) {
     if (e.which == 13 && (e.metaKey || e.ctrlKey)) { // ⌘-Enter
       $f.submit();
