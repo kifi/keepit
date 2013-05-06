@@ -82,7 +82,7 @@ class ClientResponseImpl(val request: WSRequestHolder, val response: Response) e
       throw new Exception("Error getting response. Response status is %s, request was: %s".format(response.status, request.url))
   } else this
 
-  override def status: Int = verify().response.status
+  override def status: Int = response.status
 
   override def body: String = verify().response.body
 
