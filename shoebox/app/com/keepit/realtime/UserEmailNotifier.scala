@@ -69,7 +69,7 @@ class UserEmailNotifierActor @Inject() (
     case MessageNotification(notice) =>
       log.info(s"Message notification (${notice.id})")
       val message = db.readOnly(commentRepo.get(notice.commentId.get)(_))
-      messageDetailsFormat.reads(notice.details.payload) match {
+      Json.fromJson[MessageDetails](notice.details.payload) match {
         case details: JsSuccess[MessageDetails] =>
           notifyMessageByEmail(notice.userId, message, notice, details.value)
         case error: JsError =>

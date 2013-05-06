@@ -7,6 +7,8 @@ import org.joda.time.format._
 import play.api.libs.json.{JsValue, Format}
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsString
+import play.api.libs.json.JsError
+import play.api.libs.json.JsPath
 
 package object time {
   object zones {
@@ -45,7 +47,14 @@ package object time {
   val STANDARD_DATE_FORMAT = ISODateTimeFormat.date.withLocale(Locale.ENGLISH).withZone(zones.PT)
 
   implicit val DateTimeJsonFormat: Format[DateTime] = new Format[DateTime] {
-    def reads(json: JsValue) = JsSuccess(parseStandardTime(json.as[String]))
+    def reads(json: JsValue) = try {
+      json.asOpt[String] match {
+        case Some(timeStr) => JsSuccess(parseStandardTime(timeStr))
+        case None => JsSuccess(new DateTime(json.as[Long]))
+      }
+    } catch {
+      case ex: Throwable => JsError(s"Could not deserialize time $json")
+    }
     def writes(o: DateTime) = JsString(o.toStandardTimeString)
   }
 
