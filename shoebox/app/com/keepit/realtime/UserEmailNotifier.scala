@@ -87,6 +87,7 @@ class UserEmailNotifierActor @Inject() (
   }
 
   private def notifyCommentByEmail(userId: Id[User], message: Comment, details: CommentDetails) {
+    // Disabled for now. Simple to implement, but needs a design / spec.
     /*val author = userRepo.get(details.author.externalId)
     val addrs = emailAddressRepo.getByUser(recipient.id.get)
     for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
@@ -132,11 +133,6 @@ class UserEmailNotifierActor @Inject() (
       }
       (recipient, authors, unreadMessages, addrs, userExperimentRepo.getUserExperiments(userId))
     }
-
-    /*
-            author, recipient, details.url, details.title,
-            commentFormatter.toPlainText(details.text), details.hasParent
-    */
 
     db.readWrite { implicit session =>
       if (unreadMessages.nonEmpty && experiments.contains(ExperimentTypes.ADMIN)) {
