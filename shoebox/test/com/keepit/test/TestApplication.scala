@@ -21,7 +21,7 @@ import com.keepit.common.mail.{FakeMailToKeepPlugin, MailToKeepPlugin, FakeMailM
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.social.FakeSecureSocialUserServiceModule
 import com.keepit.common.social.SocialGraphPlugin
-import com.keepit.common.store.FakeStoreModule
+import com.keepit.common.store.FakeS3StoreModule
 import com.keepit.common.time._
 import com.keepit.dev.{SearchDevGlobal, ShoeboxDevGlobal, DevGlobal, S3DevModule}
 import com.keepit.inject._
@@ -53,7 +53,8 @@ class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplica
   def withFakeScraper() = overrideWith(FakeScraperModule())
   def withFakeScheduler() = overrideWith(FakeSchedulerModule())
   def withFakeHttpClient() = overrideWith(FakeHttpClientModule())
-  def withFakeStore() = overrideWith(FakeStoreModule())
+  def withFakeStore() = overrideWith(FakeS3StoreModule())
+  def withFakeHealthcheck() = overrideWith(FakeHealthcheckModule())
   def withRealBabysitter() = overrideWith(BabysitterModule())
   def withFakeSecureSocialUserService() = overrideWith(FakeSecureSocialUserServiceModule())
   def withFakePhraseIndexer() = overrideWith(FakePhraseIndexerModule())
@@ -229,6 +230,12 @@ case class TestActorSystemModule(system: ActorSystem) extends ScalaModule {
   override def configure(): Unit = {
     bind[ActorSystem].toInstance(system)
     bind[ActorBuilder].to[TestActorBuilderImpl]
+  }
+}
+
+case class FakeHealthcheckModule() extends ScalaModule {
+  override def configure(): Unit = {
+    bind[HealthcheckPlugin].to[FakeHealthcheck]
   }
 }
 

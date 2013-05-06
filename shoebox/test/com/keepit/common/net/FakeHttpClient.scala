@@ -4,7 +4,9 @@ import scala.concurrent._
 
 import play.api.libs.json._
 
-class FakeHttpClient(requestToResponse: Option[PartialFunction[String, String]] = None) extends HttpClient {
+class FakeHttpClient(
+    requestToResponse: Option[PartialFunction[String, FakeClientResponse]] = None
+  ) extends HttpClient {
 
   override def get(url: String): ClientResponse = assertUrl(url)
 
@@ -18,10 +20,9 @@ class FakeHttpClient(requestToResponse: Option[PartialFunction[String, String]] 
 
   protected def assertUrl(url: String): ClientResponse = {
     callCount += 1
-    val rtr: PartialFunction[String, String] = requestToResponse.getOrElse({ case _ => "" })
-    new FakeClientResponse(rtr.lift(url).getOrElse {
-      throw new Exception(s"url [$url] did not match")
-    })
+    val rtr: PartialFunction[String, FakeClientResponse] =
+      requestToResponse.getOrElse({ case _: String => FakeClientResponse("") })
+    rtr.lift(url).getOrElse(throw new Exception(s"url [$url] did not match"))
   }
 
   override def longTimeout(): HttpClient = this
@@ -31,7 +32,7 @@ class FakeHttpClient(requestToResponse: Option[PartialFunction[String, String]] 
   override def withHeaders(hdrs: (String, String)*): HttpClient = throw new Exception("not supported")
 }
 
-class FakeHttpPostClient(requestToResponse: Option[PartialFunction[String, String]],
+class FakeHttpPostClient(requestToResponse: Option[PartialFunction[String, FakeClientResponse]],
                      assertion: String => Unit) extends FakeHttpClient(requestToResponse) {
   override def post(url: String, body: JsValue): ClientResponse = {
     assertion(body.toString())
@@ -40,10 +41,11 @@ class FakeHttpPostClient(requestToResponse: Option[PartialFunction[String, Strin
   override def get(url: String): ClientResponse = throw new Exception("this is a POST client")
 }
 
-class FakeClientResponse(expectedResponse: String) extends ClientResponse {
-
+case class FakeClientResponse(expectedResponse: String, override val status: Int = 200) extends ClientResponse {
   override def body: String = expectedResponse
   override def json: JsValue = Json.parse(expectedResponse)
-  override def status: Int = 200
+}
 
+object FakeClientResponse {
+  implicit def stringToFakeResponse(s: String): FakeClientResponse = FakeClientResponse(s)
 }

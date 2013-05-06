@@ -8,6 +8,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.MailToKeepServerSettings
 import com.keepit.common.mail.{MailToKeepPlugin, MailToKeepPluginImpl}
 import com.keepit.common.social._
+import com.keepit.common.store.{ImageDataIntegrityPluginImpl, ImageDataIntegrityPlugin}
 import com.keepit.inject.AppScoped
 import com.keepit.scraper._
 import com.tzavellas.sse.guice.ScalaModule
@@ -24,6 +25,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
     bind[MailToKeepPlugin].to[MailToKeepPluginImpl].in[AppScoped]
     bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
     bind[ConnectionUpdater].to[UserConnectionCreator]
+    bind[ImageDataIntegrityPlugin].to[ImageDataIntegrityPluginImpl].in[AppScoped]
   }
 
   @Singleton

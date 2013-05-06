@@ -8,6 +8,7 @@ import com.keepit.common.healthcheck._
 import com.keepit.common.mail.{MailToKeepPlugin, MailSenderPlugin}
 import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.social.SocialGraphRefresher
+import com.keepit.common.store.ImageDataIntegrityPlugin
 import com.keepit.module.CommonModule
 import com.keepit.scraper._
 import play.api.Mode._
@@ -38,5 +39,6 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.inject[ReportBuilderPlugin].enabled)
     require(injector.inject[DataIntegrityPlugin].enabled)
     require(injector.inject[FortyTwoCachePlugin].enabled)
+    require(injector.inject[ImageDataIntegrityPlugin].enabled)
   }
 }
