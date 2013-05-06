@@ -299,7 +299,7 @@ class MainSearcher(
     persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData))
 
     val elapsed = currentDateTime.getMillis() - tic
-    log.info("search persist time used: %d".format(elapsed))
+    log.info("search persist time used: %d milliseconds".format(elapsed))
 
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
         myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt,
