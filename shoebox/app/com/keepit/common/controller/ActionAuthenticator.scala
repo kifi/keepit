@@ -103,12 +103,13 @@ class ActionAuthenticator @Inject() (
       bodyParser: BodyParser[T],
       onAuthenticated: AuthenticatedRequest[T] => Result,
       onUnauthenticated: Request[T] => Result): Action[T] = UserAwareAction(bodyParser) { request =>
-    request.user match {
+    val result = request.user match {
       case Some(user) =>
         authenticatedHandler(apiClient, allowPending)(onAuthenticated)(SecuredRequest(user, request))
       case None =>
         onUnauthenticated(request)
     }
+    result.withHeaders("Access-Control-Allow-Origin" -> "http://dev.ezkeep.com")
   }
 
   private[controller] def authenticatedAction[T](
