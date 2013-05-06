@@ -90,7 +90,7 @@ class ExtSearchController @Inject() (
     val t2 = currentDateTime.getMillis()
 
     val searchRes = time("search-searching") {
-      val searcher = mainSearcherFactory(userId, friendIds, searchFilter, config)
+      val searcher = time("search-factory") { mainSearcherFactory(userId, friendIds, searchFilter, config) }
       val searchRes = if (maxHits > 0) {
         searcher.search(query, maxHits, lastUUID, searchFilter)
       } else {
