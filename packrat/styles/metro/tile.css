@@ -1,6 +1,6 @@
 #kifi-tile {
   position: fixed;
-  z-index: 2147483639;
+  z-index: 999999999991;
   bottom: 6px;
   right: 6px;
   left: auto;
