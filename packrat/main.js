@@ -801,36 +801,26 @@ function subscribe(tab) {
     api.icon.set(tab, "icons/keep.faint.png");
   }
   var d = pageData[tab.nUri || tab.url];
-  api.log("[subscribe] HERE");
   if (d && d.seq == socket.seq) {  // no need to ask server again
-    api.log("[subscribe] HERE 1");
     if (tab.seq == socket.seq) {  // tab is up-to-date
-      api.log("[subscribe] HERE 2");
       if (d.counts) {
-        api.log("[subscribe] HERE 3");
         api.tabs.emit(tab, "counts", d.counts);
       }
     } else {
-      api.log("[subscribe] HERE 4");
       var tabUpToDate = tab.seq == d.seq;
       finish(tab.nUri || tab.url);
       if (d.hasOwnProperty("kept")) {
-        api.log("[subscribe] HERE 5");
         if (!tabUpToDate) {
-          api.log("[subscribe] HERE 6");
           setIcon(tab, d.kept);
           sendKept(tab, d);
           if (d.counts) {
-            api.log("[subscribe] HERE 7");
             initTab(tab, d);
           } // else wait for uri_2
         }
       } // else wait for uri_1
     }
   } else if (socket) {
-    api.log("[subscribe] HERE 8");
     socket.send(["subscribe_uri", tab.url], function(uri) {
-      api.log("[subscribe] HERE 9");
       if (api.tabs.get(tab.id).url != tab.url) return;
       d = pageData[uri] = pageData[uri] || new PageData;
       d.seq = socket.seq;
