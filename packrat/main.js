@@ -389,11 +389,11 @@ api.port.on({
   },
   keep: function(data, _, tab) {
     api.log("[keep]", data);
+    (pageData[tab.nUri] || {}).kept = data.how;
     var bm = {
       title: data.title,
       url: data.url,
-      isPrivate: data.how == "private"
-    }
+      isPrivate: data.how == "private"};
     postBookmarks(function(f) {f([bm])}, "HOVER_KEEP");
     pageData[tab.nUri].tabs.forEach(function(tab) {
       setIcon(tab, data.how);
@@ -402,6 +402,7 @@ api.port.on({
   },
   unkeep: function(_, _, tab) {
     api.log("[unkeep]", tab.url);
+    delete (pageData[tab.nUri] || {}).kept;
     ajax("POST", "/bookmarks/remove", {url: tab.url}, function(o) {
       api.log("[unkeep] response:", o);
     });
