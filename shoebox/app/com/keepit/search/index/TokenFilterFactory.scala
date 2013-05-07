@@ -143,7 +143,7 @@ extends TokenFilter(new ElisionFilter(tokenStream, FrenchAnalyzer.DEFAULT_ARTICL
   override def incrementToken() = input.incrementToken()
 }
 
-class DotDecompounder(tokenStream: TokenStream) extends TokenFilter(tokenStream) {
+class SymbolDecompounder(tokenStream: TokenStream) extends TokenFilter(tokenStream) {
   val termAttr = addAttribute(classOf[CharTermAttribute])
   val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
   val typeAttr = tokenStream.getAttribute(classOf[TypeAttribute]).asInstanceOf[TypeAttributeImpl]
@@ -173,9 +173,9 @@ class DotDecompounder(tokenStream: TokenStream) extends TokenFilter(tokenStream)
 
   private def getConstituent {
     var i = tokenStart
-    while (i < bufLen && buffer(i) != '.') i += 1
+    while (i < bufLen && buffer(i) != '.' && buffer(i) != '_') i += 1
     termAttr.copyBuffer(buffer, tokenStart, i - tokenStart)
-    tokenStart = (i + 1) // skip dot
+    tokenStart = (i + 1) // skip symbol
   }
 
   private def findDotCompound(): Boolean = {
@@ -184,19 +184,17 @@ class DotDecompounder(tokenStream: TokenStream) extends TokenFilter(tokenStream)
     val src = termAttr.buffer
     val len = termAttr.length
 
-    var dotCnt = 0
+    var cnt = 0
     var i = 0
     while (i < len) {
-      if (src(i) == '.') dotCnt += 1
+      if (src(i) == '.' || src(i) == '_') cnt += 1
       i += 1
     }
 
-    if (dotCnt == 0 || dotCnt == len/2) {
+    if (cnt == 0 || cnt == len/2) {
       false // regular word or acronym
     } else {
       if (tokenType(typeAttr) == alphanum) {
-        i = 0
-        while (i < len && src(i) != '.') i += 1
 
         if (buffer.length < src.length) buffer = new Array[Char](src.length) // resize buffer
         Array.copy(src, 0, buffer, 0, len)
