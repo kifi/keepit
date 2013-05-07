@@ -98,26 +98,30 @@ slider2 = function() {
         if (e.target !== this) {
           this.classList.add("kifi-hoverless");
         }
-        if ((e.target === this || e.target.parentNode === this) && !$pane) {
+        if (e.target === this || e.target.parentNode === this) {
           var btn = this;
           api.port.emit("get_keepers", function(o) {
-            if ((o.keepers.length || o.otherKeeps) && !$pane) {
+            if (o.keepers.length || o.otherKeeps) {
               $(btn).showHover({
                 reuse: false,
-                showDelay: 250,
+                showDelay: $pane ? 500 : 250,
                 hideDelay: 800,
                 fadesOut: true,
                 recovery: Infinity,
-                create: function(callback) {
+                create: function(cb) {
                   render("html/metro/keepers.html", {
                     link: true,
                     keepers: pick(o.keepers, 8),
                     anyKeepers: o.keepers.length,
                     captionHtml: formatCountHtml(o.kept, o.keepers.length, o.otherKeeps)
                   }, function(html) {
-                    callback($("<div class=kifi-slider2-tip>").html(html).data("keepers", o.keepers));
+                    cb($("<div class=kifi-slider2-tip>").html(html).data("keepers", o.keepers), positionIt);
                   });
                 }});
+              function positionIt(w) {  // centered, or right-aligned if that would go off edge of page
+                var r1 = btn.getBoundingClientRect(), r2 = $slider[0].getBoundingClientRect();
+                this.style.right = Math.max((r1.width - w) / 2, r1.right - r2.right + 6) + "px";
+              }
             }
           });
         }
@@ -148,10 +152,10 @@ slider2 = function() {
           }
         }, true);
       }).on("mouseenter", ".kifi-slider2-lock", function(e) {
-        if ($pane || e.target !== this) return;
+        if (e.target !== this) return;
         $(this).showHover({
           reuse: false,
-          showDelay: 250,
+          showDelay: $pane ? 500 : 250,
           fadesOut: true,
           recovery: Infinity,
           create: function(callback) {
@@ -169,6 +173,15 @@ slider2 = function() {
         } else {
           togglePrivate(el);
         }
+      }).on("mouseenter", ".kifi-slider2-x", function() {
+        $(this).showHover({
+          reuse: true,
+          showDelay: 500,
+          fadesOut: true,
+          recovery: Infinity,
+          create: function(cb) {
+            cb("<div class=kifi-slider2-tip>Hide KiFi (Esc)</div>");
+          }});
       }).on("click", ".kifi-slider2-x", function() {
         if ($pane) {
           hidePane(true);
