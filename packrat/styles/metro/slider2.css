@@ -91,7 +91,7 @@
 
 .kifi-slider2 {
   position: fixed;
-  z-index: 2147483640;
+  z-index: 999999999992;
   bottom: 0;
   right: 0;
   height: 68px;
