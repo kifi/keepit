@@ -107,19 +107,22 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
    */
   def sendMail(mail: ElectronicMail) {
     if (mail.isReadyToSend) {
-      val message = createMessage(mail)
-      val transport = getLiveTransport()
-      try {
-        transport.sendMessage(message, message.getRecipients(Message.RecipientType.TO))
-        val messageId = message.getHeader(MailProvider.MESSAGE_ID)(0).trim
-        log.info("mail %s sent with new Message-ID: %s".format(mail.externalId, messageId))
-        db.readWrite { implicit s =>
-          mailRepo.save(mail.sent("message sent", ElectronicMailMessageId.fromEmailHeader(messageId)))
+      val checkAgain = db.readOnly(mailRepo.get(mail.id.get)(_)).isReadyToSend
+      if(checkAgain) {
+        val message = createMessage(mail)
+        val transport = getLiveTransport()
+        try {
+          transport.sendMessage(message, message.getRecipients(Message.RecipientType.TO))
+          val messageId = message.getHeader(MailProvider.MESSAGE_ID)(0).trim
+          log.info("mail %s sent with new Message-ID: %s".format(mail.externalId, messageId))
+          db.readWrite { implicit s =>
+            mailRepo.save(mail.sent("message sent", ElectronicMailMessageId.fromEmailHeader(messageId)))
+          }
+        } catch {
+          case e: Throwable =>
+            log.error(e.toString)
+            mailError(mail, e.toString(), transport)
         }
-      } catch {
-        case e: Throwable =>
-          log.error(e.toString)
-          mailError(mail, e.toString(), transport)
       }
     }
   }
