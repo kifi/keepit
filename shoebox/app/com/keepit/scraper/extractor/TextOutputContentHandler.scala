@@ -36,7 +36,8 @@ class DehyphenatingTextOutputContentHandler(handler: ContentHandler) extends Tex
   private[this] val buf = new Array[Char](1000)
   private[this] var bufLen = 0
   private[this] var lastChar: Char = 0
-  private[this] var hyphenation = false
+  private[this] var hyphenFound = false
+  private[this] var newlineFound = false
 
   private[this] def flushBuf() {
     if (bufLen > 0) {
@@ -62,24 +63,29 @@ class DehyphenatingTextOutputContentHandler(handler: ContentHandler) extends Tex
     var end = start + length
     while (ptr < end) {
       val c = ch(ptr)
-      if (hyphenation) {
+      if (hyphenFound) {
         // if newline or space, this may be a hyphenation
         if (c == '\n' || c.isSpaceChar) {
           // but, if the buffer is full, we give up.
           if (isBufFull) {
             flushBuf()
-            hyphenation = false
+            hyphenFound = false
+            newlineFound = false
+          } else if (c == '\n') {
+            newlineFound = true
           }
         } else {
-          // if the current char is not a letter, this was not a hyphenation, flush buffered chars,
+          // if the current char is not a letter and there was no newline between hyphen and this char,
+          // this is not a hyphenation, flush buffered chars
           // otherwise, empty the buffer (dehyphenation)
-          if (!c.isLetter) flushBuf() else emptyBuf()
-          hyphenation = false
+          if (!c.isLetter || !newlineFound) flushBuf() else emptyBuf()
+          hyphenFound = false
+          newlineFound = false
         }
       } else {
         if (c == '-' && lastChar.isLetter) {
           flushBuf()
-          hyphenation = true
+          hyphenFound = true
         } else if (isBufFull) {
           flushBuf()
         }
