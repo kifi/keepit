@@ -174,7 +174,7 @@ slider2 = function() {
           togglePrivate(el);
         }
       }).on("mouseenter", ".kifi-slider2-x", function() {
-        $(this).showHover({
+        $(this).css("overflow", "visible").showHover({
           reuse: true,
           showDelay: 500,
           fadesOut: true,
@@ -470,6 +470,7 @@ slider2 = function() {
     api.log("[hidePane]");
     if (leaveSlider) {
       $slider.appendTo("html").layout();
+      $slider.find(".kifi-slider2-x").css("overflow", "");
     } else {
       $slider.appendTo($pane);
       $slider = null;
