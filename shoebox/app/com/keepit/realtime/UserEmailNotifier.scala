@@ -113,14 +113,13 @@ class UserEmailNotifierActor @Inject() (
       val entireThread = {
         if (message eq parent) Seq(message)
         else (parent +: commentRepo.getChildren(parent.id.get)).reverse
-      }
+      }.reverse
 
       val authors = entireThread.filter(c => c.userId != userId)
-        .map(_.userId).distinct.reverse
+        .map(_.userId).distinct
         .map { id =>
-          val user = userRepo.get(id)
-          user.firstName + " " + user.lastName
-        } mkString (", ")
+          userRepo.get(id)
+        }
 
       val unreadMessages = (lastReadIdOpt match {
         case Some(lastReadId) =>
@@ -135,15 +134,20 @@ class UserEmailNotifierActor @Inject() (
     }
 
     db.readWrite { implicit session =>
-      if (unreadMessages.nonEmpty && experiments.contains(ExperimentTypes.ADMIN) && userId.id != 9) {
+      if (unreadMessages.nonEmpty && experiments.contains(ExperimentTypes.ADMIN)) {
         log.info(s"Sending email for (${notice.id.get})")
-        val emailBody = views.html.email.unreadMessages(recipient, authors, unreadMessages, details).body
-        val textBody = views.html.email.unreadMessagesPlain(recipient, authors, unreadMessages, details).body
+        val authorFirstLast = authors.map(user => user.firstName + " " + user.lastName)
+        val authorFirst = authors.map(_.firstName).mkString(", ")
+        val formattedTitle = if(details.title.length > 97) details.title.take(97) + "..." else details.title
+        
+        val emailBody = views.html.email.unreadMessages(recipient, authorFirstLast, unreadMessages, details).body
+        val textBody = views.html.email.unreadMessagesPlain(recipient, authorFirstLast, unreadMessages, details).body
+        
         for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
           postOffice.sendMail(ElectronicMail(
-            from = EmailAddresses.NOTIFICATIONS, fromName = Some("KiFi"),
+            from = EmailAddresses.NOTIFICATIONS, fromName = Some("KiFi Notifications"),
             to = addr,
-            subject = s"KiFi conversation on ${details.title}",
+            subject = s"KiFi conversation on $formattedTitle with $authorFirst",
             htmlBody = emailBody,
             textBody = Some(textBody),
             category = PostOffice.Categories.COMMENT))
