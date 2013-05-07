@@ -107,7 +107,7 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
    */
   def sendMail(mail: ElectronicMail) {
     if (mail.isReadyToSend) {
-      val checkAgain = db.readOnly(mailRepo.get(mail.id.get)(_)).isReadyToSend
+      val checkAgain = db.readOnly(mailRepo.getOpt(mail.id.get)(_)).map(_.isReadyToSend).getOrElse(false)
       if(checkAgain) {
         val message = createMessage(mail)
         val transport = getLiveTransport()
