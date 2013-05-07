@@ -398,9 +398,8 @@ slider2 = function() {
             e.preventDefault();
             var width = 700;
             var height = 400;
-            var left = (screen.width - width)/2;
-            var top = (screen.height - height)/2;
-            console.log(this.href)
+            var left = (screen.width - width) / 2;
+            var top = (screen.height - height) / 2;
             window.open(
               "https://www.kifi.com/feedback/form",
               "kifi-feedback",

@@ -11,6 +11,7 @@ var pageData = {};
 var notifications;  // [] would mean user has none
 var newNotificationIdxs = [];  // derived
 var timeNotificationsLastSeen = new Date(0);
+var numNotificationsNotVisited = 0;
 var haveAllNotifications;  // inferred
 var friends = [];
 var friendsById = {};
@@ -22,6 +23,7 @@ function clearDataCache() {
   notifications = null;
   newNotificationIdxs = [];
   timeNotificationsLastSeen = new Date(0);
+  numNotificationsNotVisited = 0;
   haveAllNotifications = false;
   friends = [];
   friendsById = {};
@@ -180,7 +182,7 @@ const socketHandlers = {
       d.lastCommentRead = o.lastCommentRead;
       d.lastMessageRead = o.lastMessageRead || {};
       d.counts = {
-        n: -newNotificationIdxs.length,
+        n: -numNotificationsNotVisited,
         c: commentCount(d),
         m: messageCount(d)};
       d.tabs.forEach(function(tab) {
@@ -230,6 +232,7 @@ const socketHandlers = {
     if (!notifications) {
       notifications = arr;
       haveAllNotifications = arr.length < NOTIFICATION_BATCH_SIZE;
+      numNotificationsNotVisited = arr.filter(notVisited).length;
       identifyNewNotices();
       while (notificationsCallbacks.length) {
         notificationsCallbacks.shift()();
@@ -543,6 +546,7 @@ api.port.on({
       socket.send(["get_old_notifications", timeStr, NOTIFICATION_BATCH_SIZE], function(arr) {
         if (notifications[notifications.length - 1] === oldest) {
           notifications.push.apply(notifications, arr);
+          numNotificationsNotVisited += arr.filter(notVisited).length;
           if (arr.length < NOTIFICATION_BATCH_SIZE) {
             haveAllNotifications = true;
           }
@@ -605,10 +609,13 @@ function insertNewNotification(n) {
     }
   }
   notifications.splice(i, 0, n);
+  numNotificationsNotVisited += n.state != "visited";
   if (n.details.subsumes) {
     for (i++; i < notifications.length; i++) {
-      if (notifications[i].id == n.details.subsumes) {
+      var n2 = notifications[i];
+      if (n2.id == n.details.subsumes) {
         notifications.splice(i, 1);
+        numNotificationsNotVisited -= n2.state != "visited";
         break;
       }
     }
@@ -757,11 +764,10 @@ function unreadThreadIds(threads, readTimes) {
 }
 
 function tellTabsNoticeCountIfChanged() {
-  var n = -newNotificationIdxs.length;
   api.tabs.eachSelected(function(tab) {
     var d = pageData[tab.nUri];
-    if (d && d.counts && d.counts.n != n) {
-      d.counts.n = n;
+    if (d && d.counts && d.counts.n != -numNotificationsNotVisited) {
+      d.counts.n = -numNotificationsNotVisited;
       api.tabs.emit(tab, "counts", d.counts);
     }
   });
@@ -770,7 +776,7 @@ function tellTabsNoticeCountIfChanged() {
 function tellTabsIfCountChanged(d, key, count) {
   if (d.counts[key] != count) {
     d.counts[key] = count;
-    d.counts.n = -newNotificationIdxs.length;
+    d.counts.n = -numNotificationsNotVisited;
     d.tabs.forEach(function(tab) {
       api.tabs.emit(tab, "counts", d.counts);
     });
@@ -975,6 +981,10 @@ function hasId(id) {
 
 function getId(o) {
   return o.id;
+}
+
+function notVisited(n) {
+  return n.state != "visited";
 }
 
 function devUriOr(uri) {
