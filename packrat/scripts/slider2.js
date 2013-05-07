@@ -378,7 +378,7 @@ slider2 = function() {
           } else {
             $pane.insertBefore($slider);
           }
-          $pane.layout();
+          $pane.layout()
           .on("transitionend webkitTransitionEnd", function onPaneShown(e) {
             $pane.off("transitionend webkitTransitionEnd", onPaneShown);
             $box.data("shown", true).triggerHandler("kifi:shown");
