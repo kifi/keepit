@@ -117,7 +117,7 @@ class UserEmailNotifierActor @Inject() (
       }.reverse
       
       val otherParticipants = {
-        val others = ((message.userId +: commentRecipientRepo.getByComment(parent.id.get).map(_.userId.get)).toSet - userId)
+        val others = ((parent.userId +: commentRecipientRepo.getByComment(parent.id.get).map(_.userId.get)).toSet - userId)
         others.map(userRepo.get).toSeq
       }
       
@@ -142,6 +142,8 @@ class UserEmailNotifierActor @Inject() (
         
         val emailBody = views.html.email.unreadMessages(recipient, authorFirstLast, unreadMessages, details).body
         val textBody = views.html.email.unreadMessagesPlain(recipient, authorFirstLast, unreadMessages, details).body
+        
+        val p = addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)
         
         for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
           postOffice.sendMail(ElectronicMail(
