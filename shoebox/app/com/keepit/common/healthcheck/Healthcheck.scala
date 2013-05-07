@@ -143,14 +143,18 @@ class HealthcheckPluginImpl @Inject() (
   }
 
   override def reportStart() = db.readWrite { implicit s =>
-    val subject = "Service %s [%s] started".format(services.currentService, services.currentVersion)
-    val message = Html("Started at %s on %s. Service compiled at %s".format(currentDateTime, host, services.compilationTime))
-    postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = subject, htmlBody = message.body, category = PostOffice.Categories.HEALTHCHECK))
+    val subject = s"Service ${services.currentService} started"
+    val message = Html(s"Service version ${services.currentVersion} started at ${currentDateTime} on $host. Service compiled at ${services.compilationTime}")
+    postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
+        subject = subject, htmlBody = message.body,
+        category = PostOffice.Categories.HEALTHCHECK))
   }
 
   override def reportStop() = db.readWrite { implicit s =>
-    val subject = "Service %s [%s] stopped".format(services.currentService, services.currentVersion)
-    val message = Html("Stopped at %s on %s. Service compiled at %s".format(currentDateTime, host, services.compilationTime))
-    postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG, subject = subject, htmlBody = message.body, category = PostOffice.Categories.HEALTHCHECK))
+    val subject = s"Service ${services.currentService} stopped"
+    val message = Html(s"Service version ${services.currentVersion} stopped at ${currentDateTime} on $host. Service compiled at ${services.compilationTime}")
+    postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
+        subject = subject, htmlBody = message.body,
+        category = PostOffice.Categories.HEALTHCHECK))
   }
 }
