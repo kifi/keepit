@@ -11,7 +11,6 @@ import com.keepit.common.db.slick.DBSession._
 import play.api.libs.json._
 import com.keepit.common.social.BasicUser
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.serializer.BasicUserSerializer
 import com.keepit.model.UserNotificationDetails
 import org.joda.time.DateTime
 import com.keepit.model.UserNotificationDetails
@@ -49,7 +48,6 @@ class UserEmailNotifierActor @Inject() (
   commentRecipientRepo: CommentRecipientRepo,
   userExperimentRepo: UserExperimentRepo) extends FortyTwoActor(healthcheck) with Logging {
 
-  implicit val basicUserFormat = BasicUserSerializer.basicUserSerializer
   implicit val commentDetailsFormat = Json.format[CommentDetails]
   implicit val messageDetailsFormat = Json.format[MessageDetails]
 
@@ -115,12 +113,12 @@ class UserEmailNotifierActor @Inject() (
         if (message eq parent) Seq(message)
         else (parent +: commentRepo.getChildren(parent.id.get)).reverse
       }.reverse
-      
+
       val otherParticipants = {
         val others = ((parent.userId +: commentRecipientRepo.getByComment(parent.id.get).map(_.userId.get)).toSet - userId)
         others.map(userRepo.get).toSeq
       }
-      
+
       val unreadMessages = (lastReadIdOpt match {
         case Some(lastReadId) =>
           entireThread.filter(c => c.id.get.id > lastReadId.id)
@@ -139,12 +137,12 @@ class UserEmailNotifierActor @Inject() (
         val authorFirstLast = otherParticipants.map(user => user.firstName + " " + user.lastName).sorted
         val authorFirst = otherParticipants.map(_.firstName).sorted.mkString(", ")
         val formattedTitle = if(details.title.length > 50) details.title.take(50) + "..." else details.title
-        
+
         val emailBody = views.html.email.unreadMessages(recipient, authorFirstLast, unreadMessages, details).body
         val textBody = views.html.email.unreadMessagesPlain(recipient, authorFirstLast, unreadMessages, details).body
-        
+
         val p = addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)
-        
+
         for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
           postOffice.sendMail(ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS, fromName = Some("KiFi Notifications"),

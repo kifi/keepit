@@ -37,6 +37,7 @@ GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkContr
 GET     /keeps/all                  @com.keepit.controllers.website.BookmarksController.allKeeps()
 GET     /keeps/count                @com.keepit.controllers.website.BookmarksController.numKeeps()
 
+GET     /user/me                    @com.keepit.controllers.website.UserController.currentUser()
 GET     /user/connections           @com.keepit.controllers.website.UserController.connections()
 GET     /user/all-connections       @com.keepit.controllers.website.UserController.getAllConnections()
 POST    /user/update-email          @com.keepit.controllers.website.UserController.updateEmail
