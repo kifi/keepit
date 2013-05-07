@@ -263,10 +263,9 @@ class ExtStreamController @Inject() (
       }) //foreach { _ =>  // TODO: uncomment after past data inconsistencies are all repaired or no longer a concern
         val nUri = normUriRepo.get(parent.uriId)
         userChannel.push(userId, Json.arr("message_read", nUri.url, parent.externalId.id, message.createdAt, message.externalId.id))
-        userNotificationRepo.getWithCommentId(userId, message.id.get) foreach { n =>
-          val vn = userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
-          userChannel.push(userId, Json.arr("notifications", Seq(SendableNotification.fromUserNotification(vn))))
-        }
+
+        val messageIds = commentRepo.getMessageIdsCreatedBefore(nUri.id.get, parent.id.get, message.createdAt) :+ message.id.get
+        userNotificationRepo.markVisited(userId, messageIds)
       //}
     }
   }
@@ -285,16 +284,8 @@ class ExtStreamController @Inject() (
         userChannel.push(userId, Json.arr("comment_read", nUri.url, comment.createdAt, comment.externalId.id))
 
         val commentIds = commentRepo.getPublicIdsCreatedBefore(nUri.id.get, comment.createdAt) :+ comment.id.get
-        val notifications = userNotificationRepo.getWithCommentIds(userId, commentIds, setCommentReadExcludeStates) map { n =>
-          userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
-        }
-        userChannel.push(userId, Json.arr("notifications", notifications map SendableNotification.fromUserNotification))
+        userNotificationRepo.markVisited(userId, commentIds)
       //}
     }
   }
-  private val setCommentReadExcludeStates = Set(
-    UserNotificationStates.INACTIVE,
-    UserNotificationStates.VISITED,
-    UserNotificationStates.SUBSUMED)
-
 }
