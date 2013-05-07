@@ -372,7 +372,13 @@ slider2 = function() {
         },
         function(html) {
           var $html = $("html").addClass("kifi-pane-parent");
-          $pane = $(html).append(bringSlider ? $slider : null).insertBefore($slider).layout()
+          $pane = $(html);
+          if (bringSlider) {
+            $pane.append($slider).appendTo($html);
+          } else {
+            $pane.insertBefore($slider);
+          }
+          $pane.layout()
           .on("transitionend webkitTransitionEnd", function onPaneShown(e) {
             $pane.off("transitionend webkitTransitionEnd", onPaneShown);
             $box.data("shown", true).triggerHandler("kifi:shown");
