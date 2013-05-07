@@ -1,23 +1,11 @@
-@(recipient: User, authors: String, unreadMessages: Seq[(String,String,String)], details: com.keepit.realtime.MessageDetails)
+@(recipient: User, authors: Seq[String], unreadMessages: Seq[(String,String,String)], details: com.keepit.realtime.MessageDetails)
 Hi @recipient.firstName @recipient.lastName,
 
 There are @unreadMessages.size unread messages in a
-conversation between @authors and you on "@details.title".
+conversation between @authors.mkString(", ") and you on "@details.title".
 
 Here's what you missed:
 @for(message <- unreadMessages) {
 @message._1: @message._3
 }
-Visit the page ( @details.url )
-
-With lots and lots of <3,
-the KiFi elves
-
----------------------------------
-We've recently opened up a site for your KiFi feedback and
-ideas! https://www.kifi.com/feedback
-
-Connect with us:
-Facebook ( https://www.facebook.com/pages/FortyTwo-Inc/296283190485254 )
-Twitter ( https://twitter.com/42eng )
-Feedback ( https://www.kifi.com/feedback )
+Visit the page at: @details.url
