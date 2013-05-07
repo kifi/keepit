@@ -683,23 +683,13 @@ function initTab(tab, d) {  // d is pageData[tab.nUri]
 
   if (ruleSet.rules.message && d.counts.m < 0) {  // open immediately to unread message(s)
     var ids = unreadThreadIds(d.threads, d.lastMessageRead);
-    var toData = {trigger: "message", locator: "/messages" + (ids.length > 1 ? "" : "/" + ids[0])};
-    if (tab.ready) {
-      api.tabs.emit(tab, "open_to", toData);
-    } else {
-      (tab.toEmit = tab.toEmit || []).push(["open_to", toData]);
-    }
+    api.tabs.emit(tab, "open_to", {trigger: "message", locator: "/messages" + (ids.length > 1 ? "" : "/" + ids[0])});
     ids.forEach(function(id) {
       socket.send(["get_thread", id]);
     });
 
   } else if (ruleSet.rules.comment && d.counts.c < 0 && !d.neverOnSite) {  // open immediately to unread comment(s)
-    var toData = {trigger: "comment", locator: "/comments"};
-    if (tab.ready) {
-      api.tabs.emit(tab, "open_to", toData);
-    } else {
-      (tab.toEmit = tab.toEmit || []).push(["open_to", toData]);
-    }
+    api.tabs.emit(tab, "open_to", {trigger: "comment", locator: "/comments"});
 
   } else if (!d.kept && !d.neverOnSite && (!d.sensitive || !ruleSet.rules.sensitive)) {  // auto-engagement
     var url = tab.url;
@@ -709,11 +699,7 @@ function initTab(tab, d) {  // d is pageData[tab.nUri]
       api.log("[initTab]", tab.id, "shown before");
     } else {
       if (api.prefs.get("showSlider")) {
-        if (tab.ready) {
-          api.tabs.emit(tab, "scroll_rule", ruleSet.rules.scroll);
-        } else {
-          (tab.toEmit = tab.toEmit || []).push(["scroll_rule", ruleSet.rules.scroll]);
-        }
+        api.tabs.emit(tab, "scroll_rule", ruleSet.rules.scroll);
       }
       tab.autoShowSec = (ruleSet.rules.focus || [])[0];
       if (tab.autoShowSec != null && api.tabs.isFocused(tab)) {
@@ -721,12 +707,7 @@ function initTab(tab, d) {  // d is pageData[tab.nUri]
       }
 
       if (d.keepers.length) {
-        var keeperData = {keepers: d.keepers, otherKeeps: d.otherKeeps};
-        if (tab.ready) {
-          api.tabs.emit(tab, "keepers", keeperData);
-        } else {
-          (tab.toEmit = tab.toEmit || []).push(["keepers", keeperData]);
-        }
+        api.tabs.emit(tab, "keepers", {keepers: d.keepers, otherKeeps: d.otherKeeps});
       }
     }
   }
@@ -865,12 +846,7 @@ function setIcon(tab, kept) {
 }
 
 function sendKept(tab, d) {
-  var keptData = {kept: d.kept, hide: d.neverOnSite || (d.sensitive && ruleSet.rules.sensitive)};
-  if (tab.ready) {
-    api.tabs.emit(tab, "kept", keptData);
-  } else {
-    (tab.toEmit = tab.toEmit || []).push(["kept", keptData]);
-  }
+  api.tabs.emit(tab, "kept", {kept: d.kept, hide: d.neverOnSite || (d.sensitive && ruleSet.rules.sensitive)});
 }
 
 function postBookmarks(supplyBookmarks, bookmarkSource) {
@@ -918,12 +894,6 @@ api.tabs.on.loading.add(function(tab) {
 api.tabs.on.ready.add(function(tab) {
   api.log("#b8a", "[tabs.on.ready] %i %o", tab.id, tab);
   logEvent("extension", "pageLoad");
-
-  (tab.toEmit || []).forEach(function(emission) {
-    api.log("[tabs.on.ready] emitting: %i %o", tab.id, emission[0]);
-    api.tabs.emit(tab, emission[0], emission[1]);
-  });
-  delete tab.toEmit;
 });
 
 api.tabs.on.complete.add(function(tab) {
@@ -952,17 +922,12 @@ function scheduleAutoShow(tab) {
   api.log("[scheduleAutoShow] scheduling tab:", tab.id);
   // Note: Caller should verify that tab.url is not kept and that the tab is still at tab.url.
   if (api.prefs.get("showSlider")) {
-    tab.autoShowTimer = api.timers.setTimeout(function() {
+    tab.autoShowTimer = api.timers.setTimeout(function autoShow() {
       delete tab.autoShowSec;
       delete tab.autoShowTimer;
       if (api.prefs.get("showSlider")) {
-        if (tab.ready) {
-          api.log("[scheduleAutoShow:1] fired for tab:", tab.id);
-          api.tabs.emit(tab, "auto_show");
-        } else {
-          api.log("[scheduleAutoShow:1] fired but tab not ready:", tab.id);
-          (tab.toEmit = tab.toEmit || []).push(["auto_show"]);
-        }
+        api.log("[autoShow]", tab.id);
+        api.tabs.emit(tab, "auto_show");
       }
     }, tab.autoShowSec * 1000);
   }
