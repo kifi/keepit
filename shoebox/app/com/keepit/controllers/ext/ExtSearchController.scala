@@ -137,21 +137,16 @@ class ExtSearchController @Inject() (
   private[ext] def toPersonalSearchResultPacket(userId: Id[User],
       res: ArticleSearchResult, config: SearchConfig, isDefaultFilter: Boolean, experimentId: Option[Id[SearchConfigExperiment]]): PersonalSearchResultPacket = {
 
-    val doParallel = false // util.Random.nextBoolean
-
-    val hits = if(doParallel) {
-      time(s"search-personal-result-parallel-${res.hits.size}") {
-        res.hits.par.map { hit =>
-          db.readOnly { implicit s =>
-            toPersonalSearchResult(userId, hit)
-          }
-        } seq
-      }
-    } else {
-      time(s"search-personal-result-${res.hits.size}") {
-        db.readOnly { implicit s =>
-          res.hits.map(toPersonalSearchResult(userId, _))
-        }
+    
+    val hits = time(s"search-personal-result-${res.hits.size}") {
+      db.readOnly { implicit s =>
+        val t0 = currentDateTime.getMillis()
+        val users = res.hits.map(_.users).flatten.distinct.map(u => u -> basicUserRepo.load(u)).toMap
+        log.info(s"search-personal-a: ${currentDateTime.getMillis()-t0}")
+        val t1 = currentDateTime.getMillis()
+        val h = res.hits.map(toPersonalSearchResult(userId, users, _))
+        log.info(s"search-personal-d: ${currentDateTime.getMillis()-t1}")
+        h
       }
     }
     log.debug(hits mkString "\n")
@@ -160,10 +155,14 @@ class ExtSearchController @Inject() (
     PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), experimentId, filter)
   }
 
-  private[ext] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {
+  private[ext] def toPersonalSearchResult(userId: Id[User], allUsers: Map[Id[User], BasicUser], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {
+    val t0 = currentDateTime.getMillis()
     val uri = uriRepo.get(res.uriId)
+    log.info(s"search-personal-b: ${currentDateTime.getMillis()-t0}")
+    val t1 = currentDateTime.getMillis()
     val bookmark = if (res.isMyBookmark) bookmarkRepo.getByUriAndUser(uri.id.get, userId) else None
-    val users = res.users.toSeq.map(basicUserRepo.load)
+    log.info(s"search-personal-c: ${currentDateTime.getMillis()-t1}")
+    val users = res.users.map(allUsers)
     PersonalSearchResult(
       toPersonalSearchHit(uri, bookmark), res.bookmarkCount, res.isMyBookmark,
       bookmark.map(_.isPrivate).getOrElse(false), users, res.score)
