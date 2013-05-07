@@ -136,11 +136,12 @@ class UserEmailNotifierActor @Inject() (
     db.readWrite { implicit session =>
       if (unreadMessages.nonEmpty && experiments.contains(ExperimentTypes.ADMIN) && userId.id != 9) {
         log.info(s"Sending email for (${notice.id.get})")
-        val authorFirstLast = authors.map(user => user.firstName + " " + user.lastName).mkString(", ")
+        val authorFirstLast = authors.map(user => user.firstName + " " + user.lastName)
         val authorFirst = authors.map(_.firstName).mkString(", ")
+        val formattedTitle = if(details.title.length > 97) details.title.take(97) + "..." else details.title
+        
         val emailBody = views.html.email.unreadMessages(recipient, authorFirstLast, unreadMessages, details).body
         val textBody = views.html.email.unreadMessagesPlain(recipient, authorFirstLast, unreadMessages, details).body
-        val formattedTitle = if(details.title.length > 97) details.title.take(97) + "..." else details.title
         
         for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
           postOffice.sendMail(ElectronicMail(

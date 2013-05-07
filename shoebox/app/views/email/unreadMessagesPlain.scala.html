@@ -1,8 +1,8 @@
-@(recipient: User, authors: String, unreadMessages: Seq[(String,String,String)], details: com.keepit.realtime.MessageDetails)
+@(recipient: User, authors: Seq[String], unreadMessages: Seq[(String,String,String)], details: com.keepit.realtime.MessageDetails)
 Hi @recipient.firstName @recipient.lastName,
 
 There are @unreadMessages.size unread messages in a
-conversation between @authors and you on "@details.title".
+conversation between @authors.mkString(", ") and you on "@details.title".
 
 Here's what you missed:
 @for(message <- unreadMessages) {
