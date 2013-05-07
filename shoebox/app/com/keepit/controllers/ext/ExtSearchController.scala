@@ -137,7 +137,7 @@ class ExtSearchController @Inject() (
   private[ext] def toPersonalSearchResultPacket(userId: Id[User],
       res: ArticleSearchResult, config: SearchConfig, isDefaultFilter: Boolean, experimentId: Option[Id[SearchConfigExperiment]]): PersonalSearchResultPacket = {
 
-    val doParallel = util.Random.nextBoolean
+    val doParallel = false // util.Random.nextBoolean
 
     val hits = if(doParallel) {
       time(s"search-personal-result-parallel-${res.hits.size}") {
