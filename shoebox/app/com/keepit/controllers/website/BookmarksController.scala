@@ -23,8 +23,7 @@ class BookmarksController @Inject() (
       "title" -> bookmark.title,
       "url" -> bookmark.url,
       "isPrivate" -> bookmark.isPrivate,
-      "createdAt" -> bookmark.createdAt,
-      "state" -> bookmark.state.value
+      "createdAt" -> bookmark.createdAt
     )
   }
 

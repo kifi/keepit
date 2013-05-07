@@ -16,7 +16,7 @@ class UserWithSocialRepo @Inject() (
   def toUserWithSocial(user: User)(implicit s: RSession) = {
     val socialInfos = socialUserInfoRepo.getByUser(user.id.get)
     if (socialInfos.size != 1) throw new Exception(s"Expected to have exactly one social info for user $user, got $socialInfos")
-    val bookmarksCount = bookmarkRepo.count(user.id.get)
+    val bookmarksCount = bookmarkRepo.getCountByUser(user.id.get)
     val experiments = userExperimentRepo.getUserExperiments(user.id.get)
     UserWithSocial(user, socialInfos.head, bookmarksCount, experiments)
   }

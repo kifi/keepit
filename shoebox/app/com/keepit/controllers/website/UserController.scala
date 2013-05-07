@@ -25,10 +25,7 @@ class UserController @Inject() (db: Database,
     def writes(u: User) = Json.obj(
       "id" -> u.externalId.id,
       "firstName" -> u.firstName,
-      "lastName" -> u.lastName,
-      "createdAt" -> u.createdAt,
-      "updatedAt" -> u.updatedAt,
-      "state" -> u.state.value
+      "lastName" -> u.lastName
     )
   }
 
