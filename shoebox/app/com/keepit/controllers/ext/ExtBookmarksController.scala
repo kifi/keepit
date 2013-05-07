@@ -9,7 +9,6 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.serializer.BasicUserSerializer
 import com.keepit.serializer.BookmarkSerializer
 import play.api.libs.json._
 

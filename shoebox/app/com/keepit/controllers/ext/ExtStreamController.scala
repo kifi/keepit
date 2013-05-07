@@ -25,7 +25,6 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.State
 import scala.util.Random
 import com.keepit.controllers.core.KeeperInfoLoader
-import com.keepit.serializer.BasicUserSerializer.basicUserSerializer
 import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import com.keepit.serializer.SendableNotificationSerializer.sendableNotificationSerializer

@@ -4,6 +4,7 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick._
+import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.model._
 
@@ -11,7 +12,7 @@ import play.api.libs.json._
 
 @Singleton
 class UserController @Inject() (db: Database,
-  userRepo: UserRepo,
+  basicUserRepo: BasicUserRepo,
   userConnectionRepo: UserConnectionRepo,
   emailRepo: EmailAddressRepo,
   userValueRepo: UserValueRepo,
@@ -21,21 +22,16 @@ class UserController @Inject() (db: Database,
   actionAuthenticator: ActionAuthenticator)
     extends WebsiteController(actionAuthenticator) {
 
-  implicit def writesUser = new Writes[User] {
-    def writes(u: User) = Json.obj(
-      "id" -> u.externalId.id,
-      "firstName" -> u.firstName,
-      "lastName" -> u.lastName
-    )
-  }
-
   def connections() = AuthenticatedJsonAction { request =>
     Ok(Json.obj(
-      "user" -> request.user,
       "connections" -> db.readOnly { implicit s =>
-        userConnectionRepo.getConnectedUsers(request.userId).map(userRepo.get).toSeq
+        userConnectionRepo.getConnectedUsers(request.userId).map(basicUserRepo.load).toSeq
       }
     ))
+  }
+
+  def currentUser() = AuthenticatedJsonAction { request =>
+    Ok(Json.toJson(db.readOnly { implicit s => basicUserRepo.load(request.userId) }))
   }
 
   def updateEmail() = AuthenticatedJsonToJsonAction(true) { request =>

@@ -13,7 +13,6 @@ import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.realtime.UserChannel
 import play.api.libs.json.Json
-import com.keepit.serializer.BasicUserSerializer.basicUserSerializer
 
 import play.api.libs.json.{JsArray, JsValue}
 
@@ -62,9 +61,9 @@ class UserConnectionCreator @Inject() (
     db.readWrite { implicit s =>
       val existingConnections = userConnectionRepo.getConnectedUsers(userId)
       val updatedConnections = socialConnectionRepo.getFortyTwoUserConnections(userId)
-      
+
       userConnectionRepo.removeConnections(userId, existingConnections diff updatedConnections)
-      
+
       val newConnections = updatedConnections diff existingConnections
       if (newConnections.nonEmpty) userChannel.push(userId, Json.arr("new_friends", newConnections.map(basicUserRepo.load)))
       newConnections.foreach { connId =>
