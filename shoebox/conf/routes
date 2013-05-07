@@ -25,7 +25,6 @@ GET     /login                      securesocial.controllers.ProviderController.
 GET     /login/social               securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
 
-
 # Relevant when we support traditional user signups:
 GET     /register                   securesocial.controllers.Registration.signUp(token: String)
 POST    /register                   securesocial.controllers.Registration.handleSignUp(token: String)
@@ -35,7 +34,10 @@ POST    /register                   securesocial.controllers.Registration.handle
 ##########################################
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
 
+GET     /keeps/all                  @com.keepit.controllers.website.BookmarksController.allKeeps()
+GET     /keeps/count                @com.keepit.controllers.website.BookmarksController.numKeeps()
 
+GET     /user/connections           @com.keepit.controllers.website.UserController.connections()
 GET     /user/all-connections       @com.keepit.controllers.website.UserController.getAllConnections()
 POST    /user/update-email          @com.keepit.controllers.website.UserController.updateEmail
 
