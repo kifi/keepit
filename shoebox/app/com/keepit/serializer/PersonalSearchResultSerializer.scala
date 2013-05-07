@@ -13,7 +13,7 @@ class PersonalSearchResultSerializer extends Writes[PersonalSearchResult] with L
       JsObject(List(
         "count" -> JsString(res.count.toString()),
         "bookmark" -> PersonalSearchHitSerializer.hitSerializer.writes(res.hit),
-        "users" -> BasicUserSerializer.basicUserSerializer.writes(res.users),
+        "users" -> Json.toJson(res.users),
         "score" -> JsNumber(res.score),
         "isMyBookmark" -> JsBoolean(res.isMyBookmark),
         "isPrivate" -> JsBoolean(res.isPrivate)

@@ -18,9 +18,8 @@ import com.keepit.search._
 import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
 import play.api.http.ContentTypes
 import com.keepit.common.logging.Logging
-import com.keepit.common.healthcheck.HealthcheckPlugin
-import com.keepit.common.healthcheck.HealthcheckError
-import com.keepit.common.healthcheck.Healthcheck.INTERNAL
+import com.keepit.common.healthcheck.{HealthcheckPlugin, HealthcheckError}
+import com.keepit.common.healthcheck.Healthcheck.SEARCH
 
 
 //note: users.size != count if some users has the bookmark marked as private
@@ -90,7 +89,7 @@ class ExtSearchController @Inject() (
     val t2 = currentDateTime.getMillis()
 
     val searchRes = time("search-searching") {
-      val searcher = mainSearcherFactory(userId, friendIds, searchFilter, config)
+      val searcher = time("search-factory") { mainSearcherFactory(userId, friendIds, searchFilter, config) }
       val searchRes = if (maxHits > 0) {
         searcher.search(query, maxHits, lastUUID, searchFilter)
       } else {
@@ -111,12 +110,18 @@ class ExtSearchController @Inject() (
     val timeLimit = 1000
     // search is a little slow after service restart. allow some grace period
     if (t4 - t1 > timeLimit && t4 - fortyTwoServices.started.getMillis() > 1000*60*8) {
-      val msg = "search time exceeds limit! searchUUID = %s , Limit time = %d, total search time = %d, pre-search time = %d, main-search time = %d, post-search time = %d".format(searchRes.uuid.id, timeLimit, t4 - t1, t2 - t1, t3 - t2, t4 - t3)
-      healthcheckPlugin.addError(HealthcheckError(errorMessage = Some(msg), callType = INTERNAL))
+      val total = t4 - t1
+      val msg = s"search time exceeds limit! searchUUID = ${searchRes.uuid.id}, Limit time = $timeLimit, total search time = $total, pre-search time = ${t2 - t1}, main-search time = ${t3 - t2}, post-search time = ${t4 - t3}"
+      healthcheckPlugin.addError(HealthcheckError(
+        error = Some(new SearchTimeExceedsLimit(timeLimit, total)),
+        errorMessage = Some(msg),
+        callType = SEARCH))
     }
 
     Ok(RPS.resSerializer.writes(res)).as(ContentTypes.JSON)
   }
+
+  class SearchTimeExceedsLimit(timeout: Int, actual: Long) extends Exception(s"Timeout ${timeout}ms, actual ${actual}ms")
 
   private def reportArticleSearchResult(res: ArticleSearchResult) {
     future {
@@ -131,6 +136,7 @@ class ExtSearchController @Inject() (
 
   private[ext] def toPersonalSearchResultPacket(userId: Id[User],
       res: ArticleSearchResult, config: SearchConfig, isDefaultFilter: Boolean, experimentId: Option[Id[SearchConfigExperiment]]): PersonalSearchResultPacket = {
+
     
     val hits = time(s"search-personal-result-${res.hits.size}") {
       db.readOnly { implicit s =>

@@ -2,7 +2,9 @@ package com.keepit.common.social
 
 import com.keepit.common.social.SocialNetworks.FACEBOOK
 
-case class SocialId(id: String)
+case class SocialId(id: String) {
+  override def toString = id
+}
 
 sealed abstract class SocialNetworkType(val name: String)
 

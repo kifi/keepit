@@ -7,7 +7,6 @@ import play.api.libs.json._
 import com.keepit.common.social.CommentWithBasicUser
 import com.keepit.common.db.State
 import com.keepit.common.social.ThreadInfo
-import com.keepit.serializer.BasicUserSerializer.basicUserSerializer
 
 class ThreadInfoSerializer extends Writes[ThreadInfo] {
   def writes(o: ThreadInfo): JsValue =

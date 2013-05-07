@@ -39,12 +39,14 @@ object YoutubeExtractorFactory extends ExtractorFactory {
 }
 
 class YoutubeExtractor(url: String, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends TikaBasedExtractor(url, maxContentChars, htmlMapper) {
-  protected def getContentHandler = new YoutubeHandler(output)
+  protected def getContentHandler = new YoutubeHandler(new TextOutputContentHandler(output))
 
   override def getContent() = {
     val buf = new StringBuilder
     buf.append(getMetadata("title").getOrElse(""))
+    buf.append('\n')
     buf.append(getMetadata("description").getOrElse(""))
+    buf.append('\n')
     buf.append(output.toString)
     buf.toString
   }

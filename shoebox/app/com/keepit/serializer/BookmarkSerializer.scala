@@ -15,14 +15,6 @@ class BookmarkSerializer extends Writes[Bookmark] {
       "url" -> JsString(bookmark.url),
       "isPrivate" -> JsBoolean(bookmark.isPrivate),
       "state" -> JsString(bookmark.state.toString)))
-
-  def writes(bookmarks: List[Bookmark]): JsValue =
-    JsArray(bookmarks map { bookmark =>
-      JsObject(Seq(
-        "bookmarkId" -> JsNumber(bookmark.id.get.id),
-        "bookmarkObject" -> writes(bookmark)))
-    })
-
 }
 
 object BookmarkSerializer {

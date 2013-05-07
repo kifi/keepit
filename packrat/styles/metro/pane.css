@@ -19,7 +19,7 @@
   font: 12px "Helvetica Neue",arial,sans-serif;
   text-align: left;
   direction: ltr;
-  z-index: 2147483639;
+  z-index: 999999999991;
   -webkit-transition: right .25s ease-in;
   transition: right .25s ease-in;
 }

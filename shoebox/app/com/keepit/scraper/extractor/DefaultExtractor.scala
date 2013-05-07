@@ -3,6 +3,7 @@ package com.keepit.scraper.extractor
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.scraper.Scraper
+import org.apache.tika.metadata.Metadata
 import org.apache.tika.parser.html.BoilerpipeContentHandler
 import org.apache.tika.parser.html.DefaultHtmlMapper
 import org.apache.tika.parser.html.HtmlMapper
@@ -26,10 +27,22 @@ object DefaultExtractorFactory extends ExtractorFactory {
 }
 
 class DefaultExtractor(url: String, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends TikaBasedExtractor(url, maxContentChars, htmlMapper) {
-  protected def getContentHandler = new DefaultContentHandler(new BoilerpipeContentHandler(output))
+  protected def getContentHandler = new DefaultContentHandler(output, metadata)
 }
 
-class DefaultContentHandler(handler: ContentHandler) extends ContentHandlerDecorator(handler) {
+class DefaultContentHandler(handler: ContentHandler, metadata: Metadata) extends ContentHandlerDecorator(handler) {
+
+  override def startDocument() {
+    // enable boilerpipe only for HTML
+    Option(metadata.get("Content-Type")).foreach{ contentType =>
+      if (contentType startsWith "text/html") {
+        setContentHandler(new BoilerpipeContentHandler(new TextOutputContentHandler(handler)))
+      } else {
+        setContentHandler(new DehyphenatingTextOutputContentHandler(handler))
+      }
+    }
+    super.startDocument()
+  }
 
   // anchor tag
   private[this] var inAnchor = false
@@ -79,7 +92,7 @@ class DefaultContentHandler(handler: ContentHandler) extends ContentHandlerDecor
   override def characters(ch: Array[Char], start: Int, length: Int) {
     //ignore text options (drop down menu, etc.)
     if (!inOption) {
-      handler.characters(ch, start, length)
+      super.characters(ch, start, length)
     }
   }
 }
