@@ -117,7 +117,7 @@ object DefaultAnalyzer {
   private def getAnalyzerWithStemmer(lang: Lang): Option[Analyzer] = langAnalyzerWithStemmer.get(lang.lang)
 
   def forIndexing: Analyzer = forIndexing(Lang("en"))
-  def forIndexing(lang: Lang): Analyzer = getAnalyzer(lang).withFilter[DotDecompounder]
+  def forIndexing(lang: Lang): Analyzer = getAnalyzer(lang).withFilter[SymbolDecompounder]
 
   def forIndexingWithStemmer: Analyzer = forIndexingWithStemmer(Lang("en"))
   def forIndexingWithStemmer(lang: Lang): Analyzer = getAnalyzerWithStemmer(lang).getOrElse(forIndexing(lang))
