@@ -27,8 +27,6 @@ trait SearchServices { self: FortyTwoGlobal =>
   def startSearchServices() {
     require(injector.inject[ArticleIndexerPlugin].enabled)
     require(injector.inject[URIGraphPlugin].enabled)
-    require(injector.inject[MailSenderPlugin].enabled)
-    injector.inject[MailSenderPlugin].processOutbox()
     require(injector.inject[HealthcheckPlugin].enabled)
     require(injector.inject[PersistEventPlugin].enabled)
     require(injector.inject[FortyTwoCachePlugin].enabled)
