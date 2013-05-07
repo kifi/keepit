@@ -11,7 +11,6 @@ import com.keepit.common.db.slick.DBSession._
 import play.api.libs.json._
 import com.keepit.common.social.BasicUser
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.serializer.BasicUserSerializer
 import com.keepit.model.UserNotificationDetails
 import org.joda.time.DateTime
 import com.keepit.model.UserNotificationDetails
@@ -103,7 +102,6 @@ class UserNotifier @Inject() (
   threadInfoRepo: ThreadInfoRepo,
   implicit val fortyTwoServices: FortyTwoServices) extends Logging {
 
-  implicit val basicUserFormat = BasicUserSerializer.basicUserSerializer
   implicit val commentDetailsFormat = Json.format[CommentDetails]
   implicit val messageDetailsFormat = Json.format[MessageDetails]
 
@@ -234,8 +232,6 @@ class UserNotifier @Inject() (
   }
 
   private def createCommentDetails(comment: Comment)(implicit session: RWSession): Set[CommentDetails] = {
-    implicit val bus = BasicUserSerializer.basicUserSerializer
-
     val author = userRepo.get(comment.userId)
     val uri = normalizedURIRepo.get(comment.uriId)
     val follows = followRepo.getByUri(uri.id.get)
@@ -262,8 +258,6 @@ class UserNotifier @Inject() (
   }
 
   private def createMessageUserNotifications(message: Comment, thread: Seq[Comment])(implicit session: RWSession): Set[(User, MessageDetails, UserNotification)] = {
-    implicit val bus = BasicUserSerializer.basicUserSerializer
-
     val author = userRepo.get(message.userId)
     val uri = normalizedURIRepo.get(message.uriId)
     val participants = commentRepo.getParticipantsUserIds(message.id.get)

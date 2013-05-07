@@ -372,6 +372,7 @@ api.log("[google_inject]");
           var i = $a.closest("li.g").prevAll("li.g").length, j = $a.prevAll(".kifi-friend").length;
           var friend = response.hits[i].users[j];
           render("html/friend_card.html", {
+            networkIds: friend.networkIds,
             name: friend.firstName + " " + friend.lastName,
             id: friend.id,
             iconsUrl: api.url("images/social_icons.png")
