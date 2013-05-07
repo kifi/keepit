@@ -68,6 +68,7 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark]
   def getByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark]
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Bookmark]
+  def getCountByUser(userId: Id[User])(implicit session: RSession): Int
   def getUsersChanged(num: SequenceNumber)(implicit session: RSession): Seq[(Id[User], SequenceNumber)]
   def count(userId: Id[User])(implicit session: RSession): Int
   def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int
@@ -141,6 +142,10 @@ class BookmarkRepoImpl @Inject() (
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).list
+
+  def getCountByUser(userId: Id[User])(implicit session: RSession): Int =
+    Query((for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).length)
+      .firstOption.getOrElse(0)
 
   def getUsersChanged(num: SequenceNumber)(implicit session: RSession): Seq[(Id[User], SequenceNumber)] =
     (for (b <- table if b.seq > num) yield b).groupBy(_.userId).map{ case (u, b) => (u -> b.map(_.seq).max.get) }.sortBy(_._2).list
