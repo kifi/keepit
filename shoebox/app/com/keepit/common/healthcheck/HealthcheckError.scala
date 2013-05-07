@@ -88,13 +88,17 @@ case class HealthcheckError(
       case None => t
       case Some(c) => cause(c)
     }
+    def displayMessage(str: String) = {
+      val digitless = str.replaceAll("\\d", "*")
+      if (digitless.length > 59) digitless.substring(0, 60) else digitless
+    }
     error match {
       case None =>
-        errorMessage.getOrElse(path.getOrElse(callType.toString()))
+        val message = errorMessage.getOrElse(path.getOrElse(callType.toString()))
+        displayMessage(message)
       case Some(t) =>
         val source = cause(t)
-        val message = source.getMessage().replaceAll("\\d", "*")
-        val shortMessage = if (message.length > 59) message.substring(0, 60) else message
+        val shortMessage = displayMessage(source.getMessage())
         s"${source.getClass().toString} : $shortMessage..."
     }
   }
