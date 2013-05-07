@@ -163,19 +163,9 @@ class ExtStreamController @Inject() (
               }
               channel.push(Json.arr("last_notify_read_time", setLastNotifyTime(userId, time).toStandardTimeString))
             },
-            "get_notifications" -> { case JsNumber(howMany) +: params =>
-              val createdBefore = params match {
-                case JsString(time) +: _ => Some(parseStandardTime(time))
-                case _ => None
-              }
-              val toFetch =
-                if (createdBefore.isEmpty)
-                  math.max(db.readOnly(implicit s => userNotificationRepo.getUnreadCount(userId)), howMany.toInt)
-                else howMany.toInt
-              channel.push(Json.arr("notifications", getNotifications(userId, createdBefore, toFetch)))
-              // TODO: replace above code with the following code when createdBefore param is no longer passed
-              // val notices = db.readOnly(implicit s => userNotificationRepo.getAllUnreadOrUpTo(userId, howMany.toInt))
-              // channel.push(Json.arr("notifications", notices.map(SendableNotification.fromUserNotification)))
+            "get_notifications" -> { case JsNumber(howMany) +: _ =>
+              val notices = db.readOnly(implicit s => userNotificationRepo.getAllUnreadOrUpTo(userId, howMany.toInt))
+              channel.push(Json.arr("notifications", notices.map(SendableNotification.fromUserNotification)))
             },
             "get_missed_notifications" -> { case JsString(time) +: _ =>
               val notices = db.readOnly(implicit s => userNotificationRepo.getCreatedAfter(userId, parseStandardTime(time)))
