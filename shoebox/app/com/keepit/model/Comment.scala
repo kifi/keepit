@@ -62,6 +62,7 @@ trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
   def getParticipantsUserIds(commentId: Id[Comment])(implicit session: RSession): Set[Id[User]]
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Comment]
   def getPublicIdsCreatedBefore(uriId: Id[NormalizedURI], time: DateTime)(implicit session: RSession): Seq[Id[Comment]]
+  def getMessageIdsCreatedBefore(uriId: Id[NormalizedURI], parentId: Id[Comment], time: DateTime)(implicit session: RSession): Seq[Id[Comment]]
 }
 
 case class CommentCountUriIdKey(normUriId: Id[NormalizedURI]) extends Key[Int] {
@@ -214,6 +215,9 @@ class CommentRepoImpl @Inject() (
 
   def getPublicIdsCreatedBefore(uriId: Id[NormalizedURI], time: DateTime)(implicit session: RSession): Seq[Id[Comment]] =
     (for(b <- table if b.uriId === uriId && b.permissions === CommentPermissions.PUBLIC && b.createdAt < time) yield b.id).list
+
+  def getMessageIdsCreatedBefore(uriId: Id[NormalizedURI], parentId: Id[Comment], time: DateTime)(implicit session: RSession): Seq[Id[Comment]] =
+    (for(c <- table if c.uriId === uriId && c.permissions === CommentPermissions.MESSAGE && (c.id === parentId || c.parent === parentId) && c.createdAt < time) yield c.id).list
 }
 
 object CommentStates extends States[Comment]

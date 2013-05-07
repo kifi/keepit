@@ -41,6 +41,7 @@ trait UserNotificationRepo extends Repo[UserNotification] with ExternalIdColumnF
   def getWithCommentIds(userId: Id[User], commentIds: Traversable[Id[Comment]], excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED))(implicit session: RSession): Seq[UserNotification]
   def getLastReadTime(userId: Id[User])(implicit session: RSession): DateTime
   def setLastReadTime(userId: Id[User], time: DateTime)(implicit session: RWSession): DateTime
+  def markVisited(userId: Id[User], commentIds: Traversable[Id[Comment]], excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED, UserNotificationStates.VISITED))(implicit session: RWSession): Int
 }
 
 @Singleton
@@ -98,10 +99,9 @@ class UserNotificationRepoImpl @Inject() (
   def getLastReadTime(userId: Id[User])(implicit session: RSession): DateTime =
     userValueRepo.getValue(userId, "notificationLastRead").map(parseStandardTime).getOrElse(START_OF_TIME)
 
-  def getUnreadCount(userId: Id[User])(implicit session: RSession): Int = {
-    val lastRead = userValueRepo.getValue(userId, "notificationLastRead").map(parseStandardTime).getOrElse(START_OF_TIME)
-    Query((for (b <- table if b.userId === userId && b.state === UserNotificationStates.UNDELIVERED && b.createdAt > lastRead) yield b).length).first
-  }
+  def markVisited(userId: Id[User], commentIds: Traversable[Id[Comment]], excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED, UserNotificationStates.VISITED))(implicit session: RWSession): Int =
+    (for(n <- table if n.userId === userId && !n.state.inSet(excludeStates) && n.commentId.inSet(commentIds)) yield n.state)
+      .update(UserNotificationStates.VISITED)
 }
 
 object UserNotificationStates {
