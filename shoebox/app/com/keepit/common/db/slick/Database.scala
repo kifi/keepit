@@ -56,7 +56,9 @@ class Database @Inject() (
   def enteringSession[T](f: => T) = {
     if (DatabaseSessionLock.inSession.value) {
       val message = "already in a DB session!"
+      log.warn("Already in a DB session!", new InSessionException(message))
       //healthcheckPlugin.get.addError(HealthcheckError(Some(new InSessionException(message)), None, None, Healthcheck.INTERNAL, Some(message)))
+      
       if (playMode == Test) throw new InSessionException("already in a DB session!")
     }
     DatabaseSessionLock.inSession.withValue(true) { f }
