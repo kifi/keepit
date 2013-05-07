@@ -218,6 +218,18 @@ api = function() {
         api.log("[onDisconnect]");
         delete ports[tab.id];
       });
+
+      var page = pages[tab.id];
+      if (page && page.toEmit) {
+        if (tab.url !== page.url) {
+          api.log("#a00", "[onConnect] %i mismatch:\n%s\n%s", tab.id, tab.url, page.url);
+        }
+        page.toEmit.forEach(function emit(m) {
+          api.log("#0c0", "[onConnect:emit] %i %s %o", tab.id, m[0], m[1] != null ? m[1] : "");
+          port.postMessage(m);
+        });
+        delete page.toEmit;
+      }
     }
   });
 
@@ -541,6 +553,8 @@ api = function() {
           if (port) {
             api.log("#0c0", "[api.tabs.emit] %i %s %o", tab.id, type, data);
             port.postMessage([type, data]);
+          } else {
+            (currTab.toEmit || (currTab.toEmit = [])).push([type, data]);
           }
         } else {
           api.log("#a00", "[api.tabs.emit] suppressed %i %s navigated: %s -> %s", tab.id, type, tab.url, currTab && currTab.url);

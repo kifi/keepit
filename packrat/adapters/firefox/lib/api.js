@@ -309,10 +309,14 @@ exports.tabs = {
   emit: function(tab, type, data) {
     var currTab = pages[tab.id];
     if (tab === currTab || currTab && currTab.url.match(hostRe)[0] == tab.url.match(hostRe)[0]) {
-      exports.log("[api.tabs.emit] tab:", tab.id, "type:", type, "data:", data, "url:", tab.url);
-      workers[tab.id].forEach(function(worker) {
-        worker.port.emit(type, data);
-      });
+      if (currTab.ready) {
+        exports.log("[api.tabs.emit] tab:", tab.id, "type:", type, "data:", data, "url:", tab.url);
+        workers[tab.id].forEach(function(worker) {
+          worker.port.emit(type, data);
+        });
+      } else {
+        (currTab.toEmit || (currTab.toEmit = [])).push([type, data]);
+      }
     } else {
       exports.log("[api.tabs.emit] SUPPRESSED tab:", tab.id, "type:", type, "navigated:", tab.url, "->", currTab && currTab.url);
     }
@@ -497,6 +501,13 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
             //  2. certain calls from content scripts fail if page is not yet visible
             //     (see https://bugzilla.mozilla.org/show_bug.cgi?id=766088#c2)
             page.ready = true;
+
+            (page.toEmit || []).forEach(function emit(m) {
+              exports.log("[pageshow:emit]", tab.id, m[0], m[1] != null ? m[1] : "");
+              worker.port.emit.apply(worker.port, m);
+            });
+            delete page.toEmit;
+
             dispatch.call(exports.tabs.on.ready, page);  // must run only once per page, not per content script on page
           }
         }).on("pagehide", function() {
