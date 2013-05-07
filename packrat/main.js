@@ -645,6 +645,7 @@ function markNoticesVisited(category, nUri, id, timeStr, locator) {
         (n.details.id == id || new Date(n.time) <= time) &&
         n.state != "visited") {
       n.state = "visited";
+      numNotificationsNotVisited--;
       var j = newNotificationIdxs.indexOf(i);
       if (~j) newNotificationIdxs.splice(j, 1);
     }
