@@ -164,7 +164,7 @@ class ExtStreamController @Inject() (
               channel.push(Json.arr("last_notify_read_time", setLastNotifyTime(userId, time).toStandardTimeString))
             },
             "get_notifications" -> { case JsNumber(howMany) +: _ =>
-              val notices = db.readOnly(implicit s => userNotificationRepo.getAllUnreadOrUpTo(userId, howMany.toInt))
+              val notices = db.readOnly(implicit s => userNotificationRepo.getLatestFor(userId, howMany.toInt))
               channel.push(Json.arr("notifications", notices.map(SendableNotification.fromUserNotification)))
             },
             "get_missed_notifications" -> { case JsString(time) +: _ =>
@@ -226,10 +226,6 @@ class ExtStreamController @Inject() (
 
   private def setLastNotifyTime(userId: Id[User], time: DateTime): DateTime = {
     db.readWrite(implicit s => userNotificationRepo.setLastReadTime(userId, time))
-  }
-
-  private def getNotifications(userId: Id[User], createdBefore: Option[DateTime], howMany: Int): Seq[SendableNotification] = {
-    db.readOnly(implicit s => userNotificationRepo.getWithUserId(userId, createdBefore, howMany)).map(n => SendableNotification.fromUserNotification(n))
   }
 
   private def logEvent(session: StreamSession, o: JsObject) {
