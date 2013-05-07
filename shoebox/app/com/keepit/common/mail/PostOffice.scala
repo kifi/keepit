@@ -22,9 +22,7 @@ object PostOffice {
   val BODY_MAX_SIZE = 524288
 }
 
-class PostOfficeImpl @Inject() (
-    mailRepo: ElectronicMailRepo,
-    mailer: MailSenderPlugin)
+class PostOfficeImpl @Inject() (mailRepo: ElectronicMailRepo)
   extends PostOffice with Logging {
 
   def sendMail(mail: ElectronicMail)(implicit session: RWSession): ElectronicMail = {
@@ -35,7 +33,6 @@ class PostOfficeImpl @Inject() (
       } else {
         mailRepo.save(mail.prepareToSend())
       }
-    mailer.processMail(prepared)
     prepared
   }
 }
