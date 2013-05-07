@@ -46,6 +46,7 @@ class UserEmailNotifierActor @Inject() (
   commentRepo: CommentRepo,
   commentReadRepo: CommentReadRepo,
   db: Database,
+  commentRecipientRepo: CommentRecipientRepo,
   userExperimentRepo: UserExperimentRepo) extends FortyTwoActor(healthcheck) with Logging {
 
   implicit val basicUserFormat = BasicUserSerializer.basicUserSerializer
@@ -69,7 +70,7 @@ class UserEmailNotifierActor @Inject() (
     case MessageNotification(notice) =>
       log.info(s"Message notification (${notice.id})")
       val message = db.readOnly(commentRepo.get(notice.commentId.get)(_))
-      messageDetailsFormat.reads(notice.details.payload) match {
+      Json.fromJson[MessageDetails](notice.details.payload) match {
         case details: JsSuccess[MessageDetails] =>
           notifyMessageByEmail(notice.userId, message, notice, details.value)
         case error: JsError =>
@@ -103,7 +104,7 @@ class UserEmailNotifierActor @Inject() (
 
   private def notifyMessageByEmail(userId: Id[User], message: Comment, notice: UserNotification, details: MessageDetails) {
 
-    val (recipient, authors, unreadMessages, addrs, experiments) = db.readOnly { implicit session =>
+    val (recipient, otherParticipants, unreadMessages, addrs, experiments) = db.readOnly { implicit session =>
       val recipient = userRepo.get(userId)
       val addrs = emailAddressRepo.getByUser(recipient.id.get)
 
@@ -113,15 +114,13 @@ class UserEmailNotifierActor @Inject() (
       val entireThread = {
         if (message eq parent) Seq(message)
         else (parent +: commentRepo.getChildren(parent.id.get)).reverse
+      }.reverse
+      
+      val otherParticipants = {
+        val others = ((message.userId +: commentRecipientRepo.getByComment(parent.id.get).map(_.userId.get)).toSet - userId)
+        others.map(userRepo.get).toSeq
       }
-
-      val authors = entireThread.filter(c => c.userId != userId)
-        .map(_.userId).distinct.reverse
-        .map { id =>
-          val user = userRepo.get(id)
-          user.firstName + " " + user.lastName
-        } mkString (", ")
-
+      
       val unreadMessages = (lastReadIdOpt match {
         case Some(lastReadId) =>
           entireThread.filter(c => c.id.get.id > lastReadId.id)
@@ -131,19 +130,24 @@ class UserEmailNotifierActor @Inject() (
         val user = userRepo.get(msg.userId)
         (user.firstName + " " + user.lastName, user.externalId.id, commentFormatter.toPlainText(msg.text))
       }
-      (recipient, authors, unreadMessages, addrs, userExperimentRepo.getUserExperiments(userId))
+      (recipient, otherParticipants, unreadMessages, addrs, userExperimentRepo.getUserExperiments(userId))
     }
 
     db.readWrite { implicit session =>
       if (unreadMessages.nonEmpty && experiments.contains(ExperimentTypes.ADMIN)) {
         log.info(s"Sending email for (${notice.id.get})")
-        val emailBody = views.html.email.unreadMessages(recipient, authors, unreadMessages, details).body
-        val textBody = views.html.email.unreadMessagesPlain(recipient, authors, unreadMessages, details).body
+        val authorFirstLast = otherParticipants.map(user => user.firstName + " " + user.lastName).sorted
+        val authorFirst = otherParticipants.map(_.firstName).sorted.mkString(", ")
+        val formattedTitle = if(details.title.length > 50) details.title.take(50) + "..." else details.title
+        
+        val emailBody = views.html.email.unreadMessages(recipient, authorFirstLast, unreadMessages, details).body
+        val textBody = views.html.email.unreadMessagesPlain(recipient, authorFirstLast, unreadMessages, details).body
+        
         for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
           postOffice.sendMail(ElectronicMail(
-            from = EmailAddresses.NOTIFICATIONS, fromName = Some("KiFi"),
+            from = EmailAddresses.NOTIFICATIONS, fromName = Some("KiFi Notifications"),
             to = addr,
-            subject = s"KiFi conversation on ${details.title}",
+            subject = s"""New messages on "${formattedTitle}" with $authorFirst""",
             htmlBody = emailBody,
             textBody = Some(textBody),
             category = PostOffice.Categories.COMMENT))
