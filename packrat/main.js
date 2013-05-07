@@ -541,7 +541,7 @@ api.port.on({
     var n = notifications.length, oldest = notifications[n-1];
     if (new Date(oldest.time) < time || haveAllNotifications) {
       for (var i = n - 1; i && new Date(notifications[i-1].time) < time; i--);
-      respond(notifications.slice(i, NOTIFICATION_BATCH_SIZE));
+      respond(notifications.slice(i, i + NOTIFICATION_BATCH_SIZE));
     } else {
       socket.send(["get_old_notifications", timeStr, NOTIFICATION_BATCH_SIZE], function(arr) {
         if (notifications[notifications.length - 1] === oldest) {
