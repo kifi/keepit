@@ -101,15 +101,12 @@ class MainSearcher(
   }
 
   def getPersonalizedSearcher(query: Query) = {
-    val tic = currentDateTime.getMillis()
     val indexReader = uriGraphSearcher.openPersonalIndex(userId, query) match {
       case Some((personalReader, personalIdMapper)) =>
         articleSearcher.indexReader.add(personalReader, personalIdMapper)
       case None =>
         articleSearcher.indexReader
     }
-    val elapse = currentDateTime.getMillis() - tic
-    log.info(s"time to get personalized searcher: $elapse milliseconds")
     PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryTracker, clickHistoryTracker, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory)
   }
 
@@ -177,7 +174,7 @@ class MainSearcher(
               queryString
           }
           if (alternative.trim == queryString.trim)	(myHits, friendsHits, othersHits, parsedQuery, personalizedSearcher)
-          else searchText(alternative, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
+          else { log.info("spell correction was made"); searchText(alternative, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts) }
         }
       }
     }
@@ -281,7 +278,7 @@ class MainSearcher(
 
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
 
-    log.info(s"main search time: $millisPassed milliseconds")
+    log.info(s"queryString length: ${queryString.size}, main search time: $millisPassed milliseconds")
 
     // simple classifier
     val show = if (svVar > 0.17f) false else {
@@ -292,16 +289,11 @@ class MainSearcher(
       isGood
     }
 
-    val tic = currentDateTime.getMillis()
-
     val searchResultUuid = ExternalId[ArticleSearchResultRef]()
     val searchResultInfo = SearchResultInfo(myTotal, friendsTotal, othersTotal, svVar, svExistVar)
     val searchResultJson = SearchResultInfoSerializer.serializer.writes(searchResultInfo)
     val metaData = Json.obj("queryUUID" -> JsString(searchResultUuid.id), "searchResultInfo" -> searchResultJson)
     persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData))
-
-    val elapsed = currentDateTime.getMillis() - tic
-    log.info("search persist time used: %d milliseconds".format(elapsed))
 
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
         myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt,

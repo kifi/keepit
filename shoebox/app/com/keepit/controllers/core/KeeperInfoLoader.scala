@@ -10,7 +10,6 @@ import com.keepit.common.social.{CommentWithBasicUser, CommentWithBasicUserRepo}
 import com.keepit.common.social.{ThreadInfo, ThreadInfoRepo}
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.serializer.BasicUserSerializer.basicUserSerializer
 import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import scala.concurrent.Await
@@ -49,7 +48,7 @@ object KeeperInfo2 {
     def writes(o: KeeperInfo2): JsValue =
       JsObject(Seq[Option[(String, JsValue)]](
         if (o.shown) Some("shown" -> JsBoolean(true)) else None,
-        if (o.keepers.nonEmpty) Some("keepers" -> basicUserSerializer.writes(o.keepers)) else None,
+        if (o.keepers.nonEmpty) Some("keepers" -> Json.toJson(o.keepers)) else None,
         if (o.keeps > 0) Some("keeps" -> JsNumber(o.keeps)) else None,
         if (o.following) Some("following" -> JsBoolean(true)) else None,
         if (o.comments.nonEmpty) Some("comments" -> commentWithBasicUserSerializer.writes(o.comments)) else None,

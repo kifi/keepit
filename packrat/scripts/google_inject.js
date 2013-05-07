@@ -48,7 +48,7 @@ api.log("[google_inject]");
   function onInput() {
     tQuery = +new Date;
     clearTimeout(keyTimer);
-    keyTimer = setTimeout(search, 120);  // enough of a delay that we won't search after *every* keystroke (similar to Google's behavior)
+    keyTimer = setTimeout(search, 250);  // enough of a delay that we won't search after *every* keystroke (similar to Google's behavior)
   }
   var $qf = $("#gbqf,#tsf").submit(onSubmit);  // stable identifier: "Google Bar Query Form"
   function onSubmit() {
@@ -372,6 +372,7 @@ api.log("[google_inject]");
           var i = $a.closest("li.g").prevAll("li.g").length, j = $a.prevAll(".kifi-friend").length;
           var friend = response.hits[i].users[j];
           render("html/friend_card.html", {
+            networkIds: friend.networkIds,
             name: friend.firstName + " " + friend.lastName,
             id: friend.id,
             iconsUrl: api.url("images/social_icons.png")

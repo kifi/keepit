@@ -134,6 +134,7 @@ slider2 = function() {
             var friend = ($a.closest(".kifi-slider2-tip").data("keepers") || [])[i];
             if (!friend) return;
             render("html/friend_card.html", {
+              networkIds: friend.networkIds,
               name: friend.firstName + " " + friend.lastName,
               id: friend.id,
               iconsUrl: api.url("images/social_icons.png")

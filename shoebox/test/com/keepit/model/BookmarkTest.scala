@@ -88,8 +88,8 @@ class BookmarkTest extends Specification with TestDBRunner {
       withDB() { implicit injector =>
         val (user1, user2, uri1, uri2) = setup()
         db.readOnly {implicit s =>
-          bookmarkRepo.count(user1.id.get) === 2
-          bookmarkRepo.count(user2.id.get) === 1
+          bookmarkRepo.getCountByUser(user1.id.get) === 2
+          bookmarkRepo.getCountByUser(user2.id.get) === 1
         }
       }
     }
