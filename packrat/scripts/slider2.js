@@ -174,7 +174,7 @@ slider2 = function() {
           togglePrivate(el);
         }
       }).on("mouseenter", ".kifi-slider2-x", function() {
-        $(this).showHover({
+        $(this).css("overflow", "visible").showHover({
           reuse: true,
           showDelay: 500,
           fadesOut: true,
@@ -372,7 +372,13 @@ slider2 = function() {
         },
         function(html) {
           var $html = $("html").addClass("kifi-pane-parent");
-          $pane = $(html).append(bringSlider ? $slider : null).insertBefore($slider).layout()
+          $pane = $(html);
+          if (bringSlider) {
+            $pane.append($slider).appendTo($html);
+          } else {
+            $pane.insertBefore($slider);
+          }
+          $pane.layout();
           .on("transitionend webkitTransitionEnd", function onPaneShown(e) {
             $pane.off("transitionend webkitTransitionEnd", onPaneShown);
             $box.data("shown", true).triggerHandler("kifi:shown");
@@ -470,6 +476,7 @@ slider2 = function() {
     api.log("[hidePane]");
     if (leaveSlider) {
       $slider.appendTo("html").layout();
+      $slider.find(".kifi-slider2-x").css("overflow", "");
     } else {
       $slider.appendTo($pane);
       $slider = null;
