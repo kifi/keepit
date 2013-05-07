@@ -134,7 +134,7 @@ class UserEmailNotifierActor @Inject() (
     }
 
     db.readWrite { implicit session =>
-      if (unreadMessages.nonEmpty && experiments.contains(ExperimentTypes.ADMIN) && userId.id != 9) {
+      if (unreadMessages.nonEmpty && experiments.contains(ExperimentTypes.ADMIN)) {
         log.info(s"Sending email for (${notice.id.get})")
         val authorFirstLast = authors.map(user => user.firstName + " " + user.lastName)
         val authorFirst = authors.map(_.firstName).mkString(", ")

@@ -21,8 +21,8 @@
 							<span style="font-size: 14px;  margin: 0 0 0 4px; color: #fafafa; padding: 0;">Keep it. Find it.</span></td>&#13;&#13;
 					</tr>
 					<tr style="margin: 0;  padding: 0;" bgcolor="#eeeef5" border:0;><td style="margin: 0;  padding: 3px;">
-						<h4 style="font-size: 14px; font-weight: 400; line-height: 1.4; font-family: 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif; margin: 0 0 5px; color: #000; padding: 0;">Hi @recipient.firstName @recipient.lastName,</h4>&#13;
-						<p style="font-size: 14px; font-weight: normal; line-height: 1.4;  margin: 5px 0; padding: 0;">There are @unreadMessages.size unread messages in a conversation between <b>@Html(authors.mkString("</b>, <b>"))</b> and you on "<a href="@details.url">@details.title</a>".</p>&#13;
+						<h4 style="font-size: 14px; font-weight: 400; line-height: 1.4; font-family: 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif; margin: 5px 5px 5px; color: #000; padding: 0;">Hi @recipient.firstName @recipient.lastName,</h4>&#13;
+						<p style="font-size: 14px; font-weight: normal; line-height: 1.4;  margin: 5px; padding: 0;">There are @unreadMessages.size unread messages in a conversation between <b>@Html(authors.mkString("</b>, <b>"))</b> and you on "<a href="@details.url">@details.title</a>".</p>&#13;
 					</td></tr>
 					</table></div>&#13;
 				&#13;
@@ -33,11 +33,11 @@
 &#13;
 			<div style="max-width: 600px; margin: 0 auto; padding: 0px;  display: block;">&#13;
 			<table style="margin: 0;  padding: 0; width: 100%; background-color: #fff"><tr style="margin: 0;  padding: 0;"><td style="margin: 0;  padding: 0; font-family: 'Helvetica Neue', 'Helvetica', Helvetica;">&#13;
-						<p style="font-size: 14px; font-weight: normal; line-height: 1.6; margin: 5px 0; padding: 0;">Here's what you missed:</p>&#13;
+						<p style="font-size: 14px; font-weight: normal; line-height: 1.6; margin: 5px 0; padding: 0; color:#666;">Here's what you missed:</p>&#13;
 						<table style="margin: 0;  padding: 0 0 0 10px; width: 100%;">&#13;
 						  @for(message <- unreadMessages) {
 						    <tr style="padding:5px 10px 5px; background-color:#FFF;">
-									<td width="0%" style="margin: 0;  padding: 0;"><img src="https://www.kifi.com/users/@message._2/pics/112/0.jpg" width="30" style="max-width: 100%;  margin: 0; padding: 10px 0 0;" /></td>&#13;
+									<td width="0%" style="margin: 0;  padding: 0;"><img src="https://www.kifi.com/users/@message._2/pics/112/0.jpg" width="30" style="max-width: 100%;  margin: 0; vertical-align: top; padding: 8px 0 0;" /></td>&#13;
 									<td width="92%" style="margin: 0;  padding: 10px 0 0;"><span style="margin: 0; font-size: 14px; font-weight: bold;  padding: 0;">@message._1</span>&#13;
 									<p style="font-size: 14px; font-weight: normal; line-height: 1.4;  margin: 5px 0; padding: 0;">@message._3</p></td>&#13;
 								</tr>
