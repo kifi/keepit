@@ -126,7 +126,7 @@
   border-radius: 5px;
   background-position: 0 999px;
   background-repeat: no-repeat;
-/* overflow: hidden; */
+  overflow: hidden;
   cursor: pointer;
   -webkit-transition: width .25s ease-in;
   transition: width .25s ease-in;
