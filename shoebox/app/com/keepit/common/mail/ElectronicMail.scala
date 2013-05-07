@@ -67,6 +67,7 @@ case class ElectronicMail (
 
 @ImplementedBy(classOf[ElectronicMailRepoImpl])
 trait ElectronicMailRepo extends Repo[ElectronicMail] with ExternalIdColumnFunction[ElectronicMail] {
+  def getOpt(id: Id[ElectronicMail])(implicit session: RSession): Option[ElectronicMail]
   def outbox()(implicit session: RSession): Seq[Id[ElectronicMail]]
   def forSender(senderId: Id[User])(implicit session: RSession): Seq[ElectronicMail]
   def forRecipient(mailAddresses: Seq[String])(implicit session: RSession): Seq[ElectronicMail]
@@ -98,6 +99,8 @@ class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cl
         htmlBody ~ textBody.? ~ responseMessage.? ~ timeSubmitted.? ~ messageId.? ~ inReplyTo.? ~ category <>
         (ElectronicMail, ElectronicMail.unapply _)
   }
+  
+  def getOpt(id: Id[ElectronicMail])(implicit session: RSession): Option[ElectronicMail] = (for(f <- table if f.id is id) yield f).firstOption
 
   def outbox()(implicit session: RSession): Seq[Id[ElectronicMail]] =
     (for (t <- table if t.state === ElectronicMailStates.READY_TO_SEND ) yield t.id).list()
