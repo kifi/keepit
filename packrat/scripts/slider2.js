@@ -178,10 +178,7 @@ slider2 = function() {
           reuse: true,
           showDelay: 500,
           fadesOut: true,
-          recovery: Infinity,
-          create: function(cb) {
-            cb("<div class=kifi-slider2-tip>Hide KiFi (Esc)</div>");
-          }});
+          recovery: Infinity});
       }).on("click", ".kifi-slider2-x", function() {
         if ($pane) {
           hidePane(true);

@@ -31,7 +31,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
     init: function(opts) {
       var $a = $(this), data = $a.data("hover");
       opts = $.extend({
-          create: $.noop,
+          create: createFromDataAttr,
           showDelay: 100,
           hideDelay: 0,
           recovery: 160,  // ms since last show before click will be honored
@@ -142,5 +142,9 @@ home-grown at FortyTwo, not intended for distribution (yet)
   // Returns whether (x, y) is left of the line between (x1, y1) and (x2, y2).
   function leftOf(x, y, x1, y1, x2, y2) {
     return (x2 - x1) * (y - y1) > (y2 - y1) * (x - x1);
+  }
+
+  function createFromDataAttr(cb) {
+    cb($("<div>", {"class": this.dataset.tipClass, "html": this.dataset.tipHtml}));
   }
 }(jQuery);
