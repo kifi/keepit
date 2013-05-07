@@ -140,8 +140,13 @@ class ExtSearchController @Inject() (
     
     val hits = time(s"search-personal-result-${res.hits.size}") {
       db.readOnly { implicit s =>
+        val t0 = currentDateTime.getMillis()
         val users = res.hits.map(_.users).flatten.distinct.map(u => u -> basicUserRepo.load(u)).toMap
-        res.hits.map(toPersonalSearchResult(userId, users, _))
+        log.info(s"search-personal-a: ${currentDateTime.getMillis()-t0}")
+        val t1 = currentDateTime.getMillis()
+        val h = res.hits.map(toPersonalSearchResult(userId, users, _))
+        log.info(s"search-personal-d: ${currentDateTime.getMillis()-t1}")
+        h
       }
     }
     log.debug(hits mkString "\n")
@@ -151,8 +156,12 @@ class ExtSearchController @Inject() (
   }
 
   private[ext] def toPersonalSearchResult(userId: Id[User], allUsers: Map[Id[User], BasicUser], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {
+    val t0 = currentDateTime.getMillis()
     val uri = uriRepo.get(res.uriId)
+    log.info(s"search-personal-b: ${currentDateTime.getMillis()-t0}")
+    val t1 = currentDateTime.getMillis()
     val bookmark = if (res.isMyBookmark) bookmarkRepo.getByUriAndUser(uri.id.get, userId) else None
+    log.info(s"search-personal-c: ${currentDateTime.getMillis()-t1}")
     val users = res.users.map(allUsers)
     PersonalSearchResult(
       toPersonalSearchHit(uri, bookmark), res.bookmarkCount, res.isMyBookmark,
