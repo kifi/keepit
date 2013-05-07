@@ -74,7 +74,7 @@ function attachComposeBindings($c, composeTypeName) {
         allowTabOut: true,
         tokenValue: "id",
         theme: "KiFi",
-        zindex: 2147483641,
+        zindex: 999999999992,
         onAdd: function() {
           if (defaultText && !$d.text()) {
             $f.removeClass("kifi-empty");
