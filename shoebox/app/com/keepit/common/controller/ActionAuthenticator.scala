@@ -9,13 +9,14 @@ import com.keepit.common.healthcheck.Healthcheck
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.URI
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social._
 import com.keepit.model._
 
 import play.api.i18n.Messages
-import play.api.mvc._
 import play.api.libs.json.JsNumber
+import play.api.mvc._
 import securesocial.core._
 
 case class ReportedException(val id: ExternalId[HealthcheckError], val cause: Throwable) extends Exception(id.toString, cause)
@@ -109,7 +110,15 @@ class ActionAuthenticator @Inject() (
       case None =>
         onUnauthenticated(request)
     }
-    result.withHeaders("Access-Control-Allow-Origin" -> "http://dev.ezkeep.com")
+    request.headers.get("Origin").filter { uri =>
+      val host = URI.parse(uri).toOption.flatMap(_.host).map(_.toString).getOrElse("")
+      host.endsWith("ezkeep.com") || host.endsWith("kifi.com")
+    }.map { h =>
+      result.withHeaders(
+        "Access-Control-Allow-Origin" -> h,
+        "Access-Control-Allow-Credentials" -> "true"
+      )
+    }.getOrElse(result)
   }
 
   private[controller] def authenticatedAction[T](
