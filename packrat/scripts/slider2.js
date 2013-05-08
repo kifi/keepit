@@ -669,6 +669,6 @@ slider2 = function() {
             callback($("<div class=kifi-slider2-tip>").html(html));
           });
         }});
-      setTimeout($tile.triggerHandler.bind($tile, "click.showHover"), 2000);
+      setTimeout($tile.triggerHandler.bind($tile, "click.showHover"), 2500);
     }};
 }();
