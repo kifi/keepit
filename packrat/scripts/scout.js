@@ -42,13 +42,11 @@ var injected, t0 = +new Date, tile, paneHistory;
       if (!tileCount) return;
       var n = 0;
       for (var i in counts) {
-        var c = counts[i];  // negative means unread
-        n = (c < 0 ? Math.min(n, 0) : n) + (n < 0 ? Math.min(c, 0) : c);
+        n += counts[i];
       }
       if (n) {
-        tileCount.textContent = Math.abs(n);
-        tileCount.classList[n < 0 ? "add" : "remove"]("kifi-unread");
-        (n < 0 ? tile : tile.firstChild).appendChild(tileCount);
+        tileCount.textContent = n;
+        tile.appendChild(tileCount);
       } else if (tileCount.parentNode) {
         tileCount.parentNode.removeChild(tileCount);
       }

@@ -43,26 +43,17 @@
 
 .kifi-count,
 .kifi-slider2 .kifi-count {
-  display: none;
+  display: inline-block;
   position: relative;
   top: -12px;
   -moz-box-sizing: content-box;
   box-sizing: content-box;
   min-width: 20px;
   border-radius: 15px;
-  background: #263f5c padding-box;
+  background: #e74c3c padding-box;
   color: #fff;
   font-size: 10px;
   line-height: 20px;
-}
-.kifi-count.kifi-unread {
-  display: inline-block;
-  background-color: #e74c3c;
-}
-.kifi-tile-transparent .kifi-count {
-  border: 3px solid;
-  border-color: transparent #fff #fff;
-  top: -15px;
 }
 #kifi-tile.kifi-behind-slider .kifi-count {
   display: none;

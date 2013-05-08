@@ -58,11 +58,9 @@ slider2 = function() {
       "bgUrl": api.url("images/metro/slider.png"),
       "isKept": kept,
       "isPrivate": kept == "private",
-      "noticesCount": -counts.n,
-      "commentsUnread": counts.c < 0,
-      "commentCount": Math.abs(counts.c),
-      "messagesUnread": counts.m < 0,
-      "messageCount": Math.abs(counts.m)
+      "noticesCount": counts.n,
+      "commentCount": counts.c,
+      "messageCount": counts.m
     }, function(html) {
       // attach event bindings
       $slider = $(html)
@@ -610,8 +608,7 @@ slider2 = function() {
        [".kifi-slider2-comments", o.c],
        [".kifi-slider2-threads", o.m]].forEach(function(a) {
         $btns.filter(a[0]).find(".kifi-count")
-          .toggleClass("kifi-unread", a[1] < 0)
-          .text(Math.abs(a[1]) || "")
+          .text(a[1] || "")
           .css("display", a[1] ? "" : "none");
       });
     }});

@@ -182,7 +182,7 @@ const socketHandlers = {
       d.lastCommentRead = o.lastCommentRead;
       d.lastMessageRead = o.lastMessageRead || {};
       d.counts = {
-        n: -numNotificationsNotVisited,
+        n: numNotificationsNotVisited,
         c: commentCount(d),
         m: messageCount(d)};
       d.tabs.forEach(function(tab) {
@@ -682,14 +682,14 @@ function initTab(tab, d) {  // d is pageData[tab.nUri]
   if (tab.inited) return;
   tab.inited = true;
 
-  if (ruleSet.rules.message && d.counts.m < 0) {  // open immediately to unread message(s)
+  if (ruleSet.rules.message && d.counts.m) {  // open immediately to unread message(s)
     var ids = unreadThreadIds(d.threads, d.lastMessageRead);
     api.tabs.emit(tab, "open_to", {trigger: "message", locator: "/messages" + (ids.length > 1 ? "" : "/" + ids[0])});
     ids.forEach(function(id) {
       socket.send(["get_thread", id]);
     });
 
-  } else if (ruleSet.rules.comment && d.counts.c < 0 && !d.neverOnSite) {  // open immediately to unread comment(s)
+  } else if (ruleSet.rules.comment && d.counts.c && !d.neverOnSite) {  // open immediately to unread comment(s)
     api.tabs.emit(tab, "open_to", {trigger: "comment", locator: "/comments"});
 
   } else if (!d.kept && !d.neverOnSite && (!d.sensitive || !ruleSet.rules.sensitive)) {  // auto-engagement
@@ -714,24 +714,22 @@ function initTab(tab, d) {  // d is pageData[tab.nUri]
   }
 }
 
-function commentCount(d) {  // comments only count as unread if by a friend. negative means unread.
-  return -d.comments.filter(function(c) {
-      return friendsById[c.user.id] && new Date(c.createdAt) > d.lastCommoentRead;
-    }).length || d.comments.length;
+function commentCount(d) {  // comments only count as unread if by a friend
+  var t = new Date(d.lastCommentRead || 0);
+  return d.comments.filter(function(c) {return friendsById[c.user.id] && new Date(c.createdAt) > t}).length;
 }
 
-function messageCount(d) {  // negative means unread
-  var n = 0, nUnr = 0;
+function messageCount(d) {
+  var n = 0;
   for (var i = 0; i < d.threads.length; i++) {
     var th = d.threads[i], thReadTime = new Date(d.lastMessageRead[th.id] || 0);
-    n += th.messageCount;
     for (var id in th.messageTimes) {
       if (new Date(th.messageTimes[id]) > thReadTime) {
-        nUnr++;
+        n++;
       }
     }
   }
-  return -nUnr || n;
+  return n;
 }
 
 function unreadThreadIds(threads, readTimes) {
@@ -748,8 +746,8 @@ function unreadThreadIds(threads, readTimes) {
 function tellTabsNoticeCountIfChanged() {
   api.tabs.eachSelected(function(tab) {
     var d = pageData[tab.nUri];
-    if (d && d.counts && d.counts.n != -numNotificationsNotVisited) {
-      d.counts.n = -numNotificationsNotVisited;
+    if (d && d.counts && d.counts.n != numNotificationsNotVisited) {
+      d.counts.n = numNotificationsNotVisited;
       api.tabs.emit(tab, "counts", d.counts);
     }
   });
@@ -758,7 +756,7 @@ function tellTabsNoticeCountIfChanged() {
 function tellTabsIfCountChanged(d, key, count) {
   if (d.counts[key] != count) {
     d.counts[key] = count;
-    d.counts.n = -numNotificationsNotVisited;
+    d.counts.n = numNotificationsNotVisited;
     d.tabs.forEach(function(tab) {
       api.tabs.emit(tab, "counts", d.counts);
     });
