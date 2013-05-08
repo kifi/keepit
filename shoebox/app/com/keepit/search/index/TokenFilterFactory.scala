@@ -155,30 +155,33 @@ class SymbolDecompounder(tokenStream: TokenStream) extends TokenFilter(tokenStre
 
   val alphanum = "<ALPHANUM>"
 
-  override def incrementToken() = {
-    if (bufLen - tokenStart > 0) { // has more chars in buffer
-      getConstituent
-      posIncrAttr.setPositionIncrement(1)
-      true
-    }
-    else {
-      if (tokenStream.incrementToken) {
-        if (findDotCompound()) getConstituent
-        true
-      } else {
-        false
+  override def incrementToken() : Boolean = {
+    while (bufLen - tokenStart > 0) { // has more chars in buffer
+      if (getConstituent) {
+        posIncrAttr.setPositionIncrement(1)
+        return true
       }
     }
+    if (tokenStream.incrementToken) {
+      if (findCompound()) incrementToken() else true
+    } else {
+      false
+    }
   }
 
-  private def getConstituent {
+  private def getConstituent = {
     var i = tokenStart
+    var hasToken = false
     while (i < bufLen && buffer(i) != '.' && buffer(i) != '_') i += 1
-    termAttr.copyBuffer(buffer, tokenStart, i - tokenStart)
+    if ( i - tokenStart > 0) {
+      termAttr.copyBuffer(buffer, tokenStart, i - tokenStart)
+      hasToken = true
+    }
     tokenStart = (i + 1) // skip symbol
+    hasToken
   }
 
-  private def findDotCompound(): Boolean = {
+  private def findCompound(): Boolean = {
     tokenStart = 0
     bufLen = 0
     val src = termAttr.buffer
@@ -191,7 +194,7 @@ class SymbolDecompounder(tokenStream: TokenStream) extends TokenFilter(tokenStre
       i += 1
     }
 
-    if (cnt == 0 || cnt == len/2) {
+    if (cnt == 0 || cnt == len/2 || cnt == len) {
       false // regular word or acronym
     } else {
       if (tokenType(typeAttr) == alphanum) {
