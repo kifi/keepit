@@ -55,7 +55,7 @@ slider2 = function() {
     api.log("[createSlider] kept: %s counts: %o", kept || "no", counts);
 
     render("html/metro/slider2.html", {
-      "bgUrl": api.url("images/metro/slider.png"),
+      "bgDir": api.url("images/keeper"),
       "isKept": kept,
       "isPrivate": kept == "private",
       "noticesCount": counts.n,
