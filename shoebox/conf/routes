@@ -34,13 +34,14 @@ POST    /register                   securesocial.controllers.Registration.handle
 ##########################################
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
 
-GET     /keeps/all                  @com.keepit.controllers.website.BookmarksController.allKeeps()
-GET     /keeps/count                @com.keepit.controllers.website.BookmarksController.numKeeps()
+GET     /site/keeps/all             @com.keepit.controllers.website.BookmarksController.allKeeps()
+GET     /site/keeps/mutual/:id      @com.keepit.controllers.website.BookmarksController.mutualKeeps(id: ExternalId[User])
+GET     /site/keeps/count           @com.keepit.controllers.website.BookmarksController.numKeeps()
 
-GET     /user/me                    @com.keepit.controllers.website.UserController.currentUser()
-GET     /user/connections           @com.keepit.controllers.website.UserController.connections()
-GET     /user/all-connections       @com.keepit.controllers.website.UserController.getAllConnections()
-POST    /user/update-email          @com.keepit.controllers.website.UserController.updateEmail
+GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
+GET     /site/user/connections      @com.keepit.controllers.website.UserController.connections()
+GET     /site/user/all-connections  @com.keepit.controllers.website.UserController.getAllConnections()
+POST    /site/user/update-email     @com.keepit.controllers.website.UserController.updateEmail
 
 # OAuth provider entry points (e.g. "facebook")
 GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
