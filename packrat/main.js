@@ -227,12 +227,12 @@ const socketHandlers = {
       }
     }
   },
-  notifications: function(arr) {  // initial load of notifications
-    api.log("[socket:notifications]", arr);
+  notifications: function(arr, numNotVisited) {  // initial load of notifications
+    api.log("[socket:notifications]", arr, numNotVisited);
     if (!notifications) {
       notifications = arr;
       haveAllNotifications = arr.length < NOTIFICATION_BATCH_SIZE;
-      numNotificationsNotVisited = arr.filter(notVisited).length;
+      numNotificationsNotVisited = numNotVisited;
       identifyNewNotices();
       while (notificationsCallbacks.length) {
         notificationsCallbacks.shift()();
@@ -546,7 +546,6 @@ api.port.on({
       socket.send(["get_old_notifications", timeStr, NOTIFICATION_BATCH_SIZE], function(arr) {
         if (notifications[notifications.length - 1] === oldest) {
           notifications.push.apply(notifications, arr);
-          numNotificationsNotVisited += arr.filter(notVisited).length;
           if (arr.length < NOTIFICATION_BATCH_SIZE) {
             haveAllNotifications = true;
           }
@@ -651,7 +650,7 @@ function markNoticesVisited(category, nUri, id, timeStr, locator) {
     }
   });
   tabsShowingNotificationsPane.forEach(function(tab) {
-    api.tabs.emit(tab, "notices_visited", {category: category, nUri: nUri, time: timeStr, locator: locator});
+    api.tabs.emit(tab, "notifications_visited", {category: category, nUri: nUri, time: timeStr, locator: locator});
   });
 }
 
@@ -803,6 +802,7 @@ function subscribe(tab) {
   if (d && d.seq == socket.seq) {  // no need to ask server again
     if (tab.seq == socket.seq) {  // tab is up-to-date
       if (d.counts) {
+        d.counts.n = numNotificationsNotVisited;
         api.tabs.emit(tab, "counts", d.counts);
       }
     } else {
@@ -945,10 +945,6 @@ function hasId(id) {
 
 function getId(o) {
   return o.id;
-}
-
-function notVisited(n) {
-  return n.state != "visited";
 }
 
 function devUriOr(uri) {
