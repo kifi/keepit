@@ -39,6 +39,7 @@ trait UserNotificationRepo extends Repo[UserNotification] with ExternalIdColumnF
   def getCreatedBefore(userId: Id[User], time: DateTime, howMany: Int, excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED))(implicit session: RSession): Seq[UserNotification]
   def getWithCommentId(userId: Id[User], commentId: Id[Comment], excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED))(implicit session: RSession): Option[UserNotification]
   def getWithCommentIds(userId: Id[User], commentIds: Traversable[Id[Comment]], excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED))(implicit session: RSession): Seq[UserNotification]
+  def getUnvisitedCount(userId: Id[User])(implicit session: RSession): Int
   def getLastReadTime(userId: Id[User])(implicit session: RSession): DateTime
   def setLastReadTime(userId: Id[User], time: DateTime)(implicit session: RWSession): DateTime
   def markVisited(userId: Id[User], commentIds: Traversable[Id[Comment]], excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED, UserNotificationStates.VISITED))(implicit session: RWSession): Int
@@ -92,6 +93,9 @@ class UserNotificationRepoImpl @Inject() (
 
   def getWithCommentIds(userId: Id[User], commentIds: Traversable[Id[Comment]], excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED))(implicit session: RSession): Seq[UserNotification] =
     (for(b <- table if b.userId === userId && !b.state.inSet(excludeStates) && b.commentId.inSet(commentIds)) yield b).list
+
+  def getUnvisitedCount(userId: Id[User])(implicit session: RSession): Int =
+    Query((for (n <- table if n.userId === userId && n.state.inSet(Set(UserNotificationStates.UNDELIVERED, UserNotificationStates.DELIVERED))) yield n).length).first
 
   def setLastReadTime(userId: Id[User], time: DateTime)(implicit session: RWSession): DateTime =
     parseStandardTime(userValueRepo.setValue(userId, "notificationLastRead", time.toStandardTimeString))
