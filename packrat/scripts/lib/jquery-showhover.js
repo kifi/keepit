@@ -38,7 +38,9 @@ home-grown at FortyTwo, not intended for distribution (yet)
           reuse: true},
         typeof opts === "function" ? {create: opts} : opts);
       if (data) {
-        onMouseEnter(opts.showDelay);
+        if (!data.fading) {
+          onMouseEnter(opts.showDelay);
+        }
       } else {
         var t0 = +new Date;
         $a.data("hover", data = {lastShowTime: 0});
@@ -103,18 +105,19 @@ home-grown at FortyTwo, not intended for distribution (yet)
       function hide() {
         $a.removeClass("kifi-hover-showing");
         if (opts.fadesOut) {
+          data.fading = true;
           data.$h.on("transitionend webkitTransitionEnd", function f(e) {
             if (e.originalEvent.propertyName === "opacity") {
+              delete data.fading;
               data.$h.off("transitionend webkitTransitionEnd", f);
-              if (!$a.hasClass("kifi-hover-showing")) {
-                finishHiding();
-              }
+              finishHiding();
             }
           });
         } else {
           finishHiding();
         }
         function finishHiding() {
+          clearTimeout(data.t);
           if (opts.reuse) {
             data.$h.detach();
           } else {
@@ -134,7 +137,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
     },
     destroy: function() {
       var $a = $(this);
-      $(($a.data("hover") || 0).$h).remove();
+      $(($a.data("hover") || {}).$h).remove();
       $a.unbind(".showHover").removeData("hover");
     }
   };

@@ -108,10 +108,27 @@ function attachComposeBindings($c, composeTypeName) {
       args.push(recipients.map(function(r) {return r.id}));
     }
     $d.empty().trigger("kifi:compose-submit", args).focus();
+    $f.addClass("kifi-empty");
     var $submit = $f.find(".kifi-compose-submit").addClass("kifi-active");
     setTimeout($submit.removeClass.bind($submit, "kifi-active"), 10);
   })
+  .on("mouseenter", ".kifi-compose-snapshot", function(e) {
+    if (e.target !== this) return;
+    $(this).showHover({
+      showDelay: 500,
+      fadesOut: true,
+      recovery: Infinity,
+      create: function(cb) {
+        render("html/keeper/titled_tip.html", {
+          title: "Microfind",
+          html: "Click to mark something on<br>the page and reference it in<br>your " + composeTypeName + "."
+        }, function(html) {
+          cb(html, function(w) {this.style.left = 21 - w / 2 + "px"});
+        });
+      }});
+  })
   .on("click", ".kifi-compose-snapshot", function() {
+    $(this).showHover("destroy");
     snapshot.take(composeTypeName, function(selector) {
       if (selector) {
         $d.append(" <a href='x-kifi-sel:" + selector.replace("'", "&#39;") + "'>look here</a>");

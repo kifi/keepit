@@ -98,6 +98,7 @@ slider2 = function() {
         }
         this.classList.add("kifi-hoverless");
       }).on("mouseover", ".kifi-slider2-keep-btn", function(e) {
+        api.log("[mouseover]", e);
         if (e.target !== this) {
           this.classList.add("kifi-hoverless");
         }
@@ -107,7 +108,7 @@ slider2 = function() {
             $(btn).showHover({
               reuse: false,
               showDelay: $pane ? 500 : 250,
-              hideDelay: 800,
+              hideDelay: o.keepers.length ? 800 : 0,
               fadesOut: true,
               recovery: Infinity,
               create: function(cb) {
