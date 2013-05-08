@@ -154,14 +154,12 @@ class ExtStreamController @Inject() (
               }))
             },
             "get_last_notify_read_time" -> { _ =>
-              channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(userId).toStandardTimeString))
+              val t = db.readOnly(implicit s => userNotificationRepo.getLastReadTime(userId))
+              channel.push(Json.arr("last_notify_read_time", t.toStandardTimeString))
             },
-            "set_last_notify_read_time" -> { data =>
-              val time = data match {
-                case JsString(dateTime) +: _ => parseStandardTime(dateTime)
-                case _ => clock.now
-              }
-              channel.push(Json.arr("last_notify_read_time", setLastNotifyTime(userId, time).toStandardTimeString))
+            "set_last_notify_read_time" -> { case JsString(time) +: _ =>
+              val t = db.readWrite(implicit s => userNotificationRepo.setLastReadTime(userId, parseStandardTime(time)))
+              channel.push(Json.arr("last_notify_read_time", t.toStandardTimeString))
             },
             "get_notifications" -> { case JsNumber(howMany) +: _ =>
               val notices = db.readOnly(implicit s => userNotificationRepo.getLatestFor(userId, howMany.toInt))
@@ -218,14 +216,6 @@ class ExtStreamController @Inject() (
     db.readOnly { implicit s =>
       userConnectionRepo.getConnectedUsers(userId).map(basicUserRepo.load)
     }
-  }
-
-  private def getLastNotifyTime(userId: Id[User]): DateTime = {
-    db.readOnly(implicit s => userNotificationRepo.getLastReadTime(userId))
-  }
-
-  private def setLastNotifyTime(userId: Id[User], time: DateTime): DateTime = {
-    db.readWrite(implicit s => userNotificationRepo.setLastReadTime(userId, time))
   }
 
   private def logEvent(session: StreamSession, o: JsObject) {
