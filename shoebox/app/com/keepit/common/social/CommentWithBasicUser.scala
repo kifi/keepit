@@ -12,7 +12,6 @@ import com.keepit.common.cache._
 import scala.concurrent.duration._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
-import play.api.libs.json._
 
 case class CommentWithBasicUser(user: BasicUser, comment: Comment, recipients: Seq[BasicUser])
 

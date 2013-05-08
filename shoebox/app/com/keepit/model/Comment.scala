@@ -53,7 +53,6 @@ object Comment {
   implicit val userExternalIdFormat = ExternalId.format[User]
   implicit val commentExternalIdFormat = ExternalId.format[Comment]
   implicit val idFormat = Id.format[Comment]
-  implicit val statePermFormat = State.format[CommentPermission]
   
   implicit val commentFormat = (
       (__ \ 'id).formatNullable(Id.format[Comment]) and
