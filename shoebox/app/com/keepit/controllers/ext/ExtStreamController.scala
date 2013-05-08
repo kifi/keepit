@@ -162,8 +162,11 @@ class ExtStreamController @Inject() (
               channel.push(Json.arr("last_notify_read_time", t.toStandardTimeString))
             },
             "get_notifications" -> { case JsNumber(howMany) +: _ =>
-              val notices = db.readOnly(implicit s => userNotificationRepo.getLatestFor(userId, howMany.toInt))
-              channel.push(Json.arr("notifications", notices.map(SendableNotification.fromUserNotification)))
+              val (notices, unvisited) = db.readOnly { implicit s =>
+                (userNotificationRepo.getLatestFor(userId, howMany.toInt),
+                 userNotificationRepo.getUnvisitedCount(userId))
+              }
+              channel.push(Json.arr("notifications", notices.map(SendableNotification.fromUserNotification), unvisited))
             },
             "get_missed_notifications" -> { case JsString(time) +: _ =>
               val notices = db.readOnly(implicit s => userNotificationRepo.getCreatedAfter(userId, parseStandardTime(time)))
