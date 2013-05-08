@@ -228,7 +228,7 @@ const socketHandlers = {
     }
   },
   notifications: function(arr, numNotVisited) {  // initial load of notifications
-    api.log("[socket:notifications]", arr);
+    api.log("[socket:notifications]", arr, numNotVisited);
     if (!notifications) {
       notifications = arr;
       haveAllNotifications = arr.length < NOTIFICATION_BATCH_SIZE;
@@ -650,7 +650,7 @@ function markNoticesVisited(category, nUri, id, timeStr, locator) {
     }
   });
   tabsShowingNotificationsPane.forEach(function(tab) {
-    api.tabs.emit(tab, "notices_visited", {category: category, nUri: nUri, time: timeStr, locator: locator});
+    api.tabs.emit(tab, "notifications_visited", {category: category, nUri: nUri, time: timeStr, locator: locator});
   });
 }
 
@@ -802,6 +802,7 @@ function subscribe(tab) {
   if (d && d.seq == socket.seq) {  // no need to ask server again
     if (tab.seq == socket.seq) {  // tab is up-to-date
       if (d.counts) {
+        d.counts.n = numNotificationsNotVisited;
         api.tabs.emit(tab, "counts", d.counts);
       }
     } else {
