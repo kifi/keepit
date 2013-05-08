@@ -105,7 +105,7 @@ noticesPane = function() {
     var time = new Date(timeStr);
     $notices.find(".kifi-notice-" + category + ":not(.kifi-notice-visited)").each(function() {
       if (this.dataset.uri == nUri &&
-          new Date(this.dataset.createdAt) <= time &&
+          dateWithoutMs(this.dataset.createdAt) <= time &&
           (!locator || this.dataset.locator == locator)) {
         this.classList.add("kifi-notice-visited");
       }
@@ -139,5 +139,11 @@ noticesPane = function() {
         });
       }
     }
+  }
+
+  function dateWithoutMs(t) { // until db has ms precision
+    var d = new Date(t);
+    d.setMilliseconds(0);
+    return d;
   }
 }();
