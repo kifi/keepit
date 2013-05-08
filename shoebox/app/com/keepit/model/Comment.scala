@@ -155,12 +155,13 @@ class CommentRepoImpl @Inject() (
 
   def getParentMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment] = {
     val q1 = for {
-      (c, cr) <- table innerJoin commentRecipientRepoImpl.table on (_.id is _.commentId) if (c.uriId === uriId && cr.userId === userId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)
+      c <- table if (c.uriId === uriId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)
+      cr <- commentRecipientRepoImpl.table if (c.id === cr.commentId && cr.userId === userId)
     } yield (c.*)
     val q2 = for {
       c <- table if (c.uriId === uriId && c.userId === userId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)
     } yield (c.*)
-    (q1.list ++ q2.list).toSet.toSeq
+    (q1.list ++ q2.list).toSeq
   }
 
   def getParentByUriParticipants(normUri: Id[NormalizedURI], recipients: Set[Id[User]])(implicit session: RSession): Option[Id[Comment]] = {
