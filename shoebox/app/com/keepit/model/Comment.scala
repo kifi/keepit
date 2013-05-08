@@ -161,7 +161,7 @@ class CommentRepoImpl @Inject() (
     val q2 = for {
       c <- table if (c.uriId === uriId && c.userId === userId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)
     } yield (c.*)
-    (q1 union q2).list.distinct
+    (q1 union q2).list
   }
 
   def getParentByUriParticipants(normUri: Id[NormalizedURI], recipients: Set[Id[User]])(implicit session: RSession): Option[Id[Comment]] = {
