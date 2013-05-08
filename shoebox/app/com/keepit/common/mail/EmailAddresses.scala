@@ -9,7 +9,7 @@ sealed abstract class SystemEmailAddress(val address: String) extends EmailAddre
 object EmailAddresses {
   case object TEAM extends SystemEmailAddress("team@42go.com")
   case object SUPPORT extends SystemEmailAddress("support@42go.com")
-  case object NOTIFICATIONS extends SystemEmailAddress("notifications@42go.com")
+  case object NOTIFICATIONS extends SystemEmailAddress("notifications@kifi.com")
   case object ENG extends SystemEmailAddress("eng@42go.com")
   case object EISHAY extends SystemEmailAddress("eishay@42go.com")
   case object DANNY extends SystemEmailAddress("danny@42go.com")
