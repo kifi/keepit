@@ -78,7 +78,7 @@ class Database @Inject() (
     }
     try f(new ROSession(s)) catch {
       case ex: java.sql.SQLException =>
-        if(ex.getMessage.trim == "Timed out waiting for a free available connection.") {
+        if(ex.getMessage != null && ex.getMessage.trim == "Timed out waiting for a free available connection.") {
           liftToTimedOutException(ex)
         }
         else throw ex
@@ -93,7 +93,7 @@ class Database @Inject() (
       }
     } catch {
       case ex: java.sql.SQLException =>
-        if(ex.getMessage.trim == "Timed out waiting for a free available connection.") {
+        if(ex.getMessage != null && ex.getMessage.trim == "Timed out waiting for a free available connection.") {
           liftToTimedOutException(ex)
         }
         else throw ex
