@@ -79,17 +79,7 @@ class Database @Inject() (
     try f(new ROSession(s)) catch {
       case ex: java.sql.SQLException =>
         if(ex.getMessage.trim == "Timed out waiting for a free available connection.") {
-          import scala.collection.JavaConversions._
-          val msg = new StringBuilder()
-          msg ++= " " * 60 // to fix an issue with the title
-          Thread.getAllStackTraces() foreach { case (thread, stack) =>
-            msg ++= s"<br><br>\n<h3>${thread.getName()} (${thread.getState})</h3>\n"
-            msg ++= (stack.map { s =>
-              val isDb = s.getClassName == this.getClass.getName
-              (if(isDb) "<b>" else "") + s"    ${s.getClassName}.${s.getMethodName} (${s.getFileName}:${s.getLineNumber})" + (if(isDb) "</b>" else "")
-            } mkString("<br>\n"))
-          }
-          throw new TimedOutWaitingForConnectionException(msg.toString)
+          liftToTimedOutException(ex)
         }
         else throw ex
     } finally if (initialized) s.close()
@@ -101,6 +91,12 @@ class Database @Inject() (
       s.withTransaction {
         f(new RWSession(s))
       }
+    } catch {
+      case ex: java.sql.SQLException =>
+        if(ex.getMessage.trim == "Timed out waiting for a free available connection.") {
+          liftToTimedOutException(ex)
+        }
+        else throw ex
     } finally s.close()
   }
 
@@ -113,6 +109,20 @@ class Database @Inject() (
       }
     }
     readWrite(f)
+  }
+  
+  private def liftToTimedOutException(ex: java.sql.SQLException) = {
+    import scala.collection.JavaConversions._
+    val msg = new StringBuilder()
+    msg ++= " " * 60 // to fix an issue with the title
+    Thread.getAllStackTraces() foreach { case (thread, stack) =>
+      msg ++= s"<br><br>\n<h3>${thread.getName()} (${thread.getState})</h3>\n"
+      msg ++= (stack.map { s =>
+        val isDb = s.getClassName == this.getClass.getName
+        (if(isDb) "<b>" else "") + s"    ${s.getClassName}.${s.getMethodName} (${s.getFileName}:${s.getLineNumber})" + (if(isDb) "</b>" else "")
+      } mkString("<br>\n"))
+    }
+    throw new TimedOutWaitingForConnectionException(msg.toString)
   }
 }
 
