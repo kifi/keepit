@@ -85,7 +85,8 @@ class Database @Inject() (
           Thread.getAllStackTraces() foreach { case (thread, stack) =>
             msg ++= s"<br><br>\n<h3>${thread.getName()} (${thread.getState})</h3>\n"
             msg ++= (stack.map { s =>
-              s"    ${s.getClassName}.${s.getMethodName} (${s.getFileName}:${s.getLineNumber})"
+              val isDb = s.getClassName == this.getClass.getName
+              (if(isDb) "<b>" else "") + s"    ${s.getClassName}.${s.getMethodName} (${s.getFileName}:${s.getLineNumber})" + (if(isDb) "</b>" else "")
             } mkString("<br>\n"))
           }
           throw new TimedOutWaitingForConnectionException(msg.toString)
