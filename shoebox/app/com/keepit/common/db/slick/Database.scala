@@ -17,6 +17,7 @@ import play.api.Mode.Mode
 import play.api.Mode.Test
 
 class InSessionException(message: String) extends Exception(message)
+class TimedOutWaitingForConnectionException(message: String) extends Exception(message)
 
 object DatabaseSessionLock {
   val inSession = new DynamicVariable[Boolean](false)
@@ -71,10 +72,26 @@ class Database @Inject() (
   def readOnly[T](f: ROSession => T): T = enteringSession {
     var initialized = false
     lazy val s = {
+      val sesh = sessionProvider.createReadOnlySession(db.handle)
       initialized = true
-      sessionProvider.createReadOnlySession(db.handle)
+      sesh
     }
-    try f(new ROSession(s)) finally if (initialized) s.close()
+    try f(new ROSession(s)) catch {
+      case ex: java.sql.SQLException =>
+        if(ex.getMessage.trim == "Timed out waiting for a free available connection.") {
+          import scala.collection.JavaConversions._
+          val msg = new StringBuilder()
+          msg ++= " " * 60 // to fix an issue with the title
+          Thread.getAllStackTraces() foreach { case (thread, stack) =>
+            msg ++= s"<br><br>\n<h3>${thread.getName()} (${thread.getState})</h3>\n"
+            msg ++= (stack.map { s =>
+              s"    ${s.getClassName}.${s.getMethodName} (${s.getFileName}:${s.getLineNumber})"
+            } mkString("<br>\n"))
+          }
+          throw new TimedOutWaitingForConnectionException(msg.toString)
+        }
+        else throw ex
+    } finally if (initialized) s.close()
   }
 
   def readWrite[T](f: RWSession => T): T = enteringSession {
