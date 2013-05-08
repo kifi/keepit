@@ -5,18 +5,18 @@
     <span class="kifi-slider2-lock" style="background-image:url({{bgUrl}})"></span>
   </span>
   <span class="kifi-slider2-dock">
-    <span class="kifi-slider2-dock-btn kifi-slider2-notices" style="background-image:url({{bgUrl}})" data-loc="/notices">
+    <span class="kifi-slider2-dock-btn kifi-slider2-notices{{#atNotices}} kifi-at{{/atNotices}}" style="background-image:url({{bgUrl}})" data-loc="/notices">
       <span class="kifi-count"{{^noticesCount}} style="display:none"{{/noticesCount}}>{{noticesCount}}</span>
     </span>
     <span class="kifi-slider2-dock-sep"></span>
-    <span class="kifi-slider2-dock-btn kifi-slider2-comments" style="background-image:url({{bgUrl}})" data-loc="/comments">
+    <span class="kifi-slider2-dock-btn kifi-slider2-comments{{#atComments}} kifi-at{{/atComments}}" style="background-image:url({{bgUrl}})" data-loc="/comments">
       <span class="kifi-count"{{^commentCount}} style="display:none"{{/commentCount}}>{{commentCount}}</span>
     </span>
     <span class="kifi-slider2-dock-sep"></span>
-    <span class="kifi-slider2-dock-btn kifi-slider2-threads" style="background-image:url({{bgUrl}})" data-loc="/messages">
+    <span class="kifi-slider2-dock-btn kifi-slider2-messages{{#atMessages}} kifi-at{{/atMessages}}" style="background-image:url({{bgUrl}})" data-loc="/messages">
       <span class="kifi-count"{{^messageCount}} style="display:none"{{/messageCount}}>{{messageCount}}</span>
     </span>
     <span class="kifi-slider2-dock-sep"></span>
-    <span class="kifi-slider2-dock-btn kifi-slider2-general" style="background-image:url({{bgUrl}})" data-loc="/general"></span>
+    <span class="kifi-slider2-dock-btn kifi-slider2-general{{#atGeneral}} kifi-at{{/atGeneral}}" style="background-image:url({{bgUrl}})" data-loc="/general"></span>
   </span>
 </div>

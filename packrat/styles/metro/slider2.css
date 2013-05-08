@@ -385,8 +385,9 @@ a.kifi-slider2-keeper {
   background-color: #7492af;
 }
 .kifi-slider2-x:active,
-.kifi-slider2-dock-btn:active {
-  background-color: #627b94;
+.kifi-slider2-dock-btn:active,
+.kifi-slider2-dock-btn.kifi-at {
+  background-color: #5e778f;
 }
 .kifi-slider2-dock-btn:first-child {
   border-top-left-radius: inherit;
@@ -416,7 +417,7 @@ a.kifi-slider2-keeper {
   width: 17px;
   left: 12px;
 }
-.kifi-slider2-dock-btn.kifi-slider2-threads::before {
+.kifi-slider2-dock-btn.kifi-slider2-messages::before {
   background-position: -31px 0;
   width: 22px;
   left: 10px;
