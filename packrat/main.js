@@ -227,12 +227,12 @@ const socketHandlers = {
       }
     }
   },
-  notifications: function(arr) {  // initial load of notifications
+  notifications: function(arr, numNotVisited) {  // initial load of notifications
     api.log("[socket:notifications]", arr);
     if (!notifications) {
       notifications = arr;
       haveAllNotifications = arr.length < NOTIFICATION_BATCH_SIZE;
-      numNotificationsNotVisited = arr.filter(notVisited).length;
+      numNotificationsNotVisited = numNotVisited;
       identifyNewNotices();
       while (notificationsCallbacks.length) {
         notificationsCallbacks.shift()();
@@ -546,7 +546,6 @@ api.port.on({
       socket.send(["get_old_notifications", timeStr, NOTIFICATION_BATCH_SIZE], function(arr) {
         if (notifications[notifications.length - 1] === oldest) {
           notifications.push.apply(notifications, arr);
-          numNotificationsNotVisited += arr.filter(notVisited).length;
           if (arr.length < NOTIFICATION_BATCH_SIZE) {
             haveAllNotifications = true;
           }
@@ -945,10 +944,6 @@ function hasId(id) {
 
 function getId(o) {
   return o.id;
-}
-
-function notVisited(n) {
-  return n.state != "visited";
 }
 
 function devUriOr(uri) {
