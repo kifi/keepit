@@ -27,8 +27,8 @@ import akka.pattern.ask
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
 import org.joda.time.DateTime
-import scala.concurrent.{Future, Await}
-import com.google.inject.{Inject, Provider}
+import scala.concurrent.{ Future, Await }
+import com.google.inject.{ Inject, Provider }
 import scala.concurrent.duration._
 
 case class HealthcheckErrorSignature(value: String) extends AnyVal
@@ -45,9 +45,9 @@ case class HealthcheckError(
   lazy val signature: HealthcheckErrorSignature = {
     val permText: String =
       causeStacktraceHead(4).getOrElse(errorMessage.getOrElse("")) +
-      path.getOrElse("") +
-      method.getOrElse("") +
-      callType.toString
+        path.getOrElse("") +
+        method.getOrElse("") +
+        callType.toString
     val binaryHash = MessageDigest.getInstance("MD5").digest(permText.getBytes("UTF-8"))
     HealthcheckErrorSignature(new String(new Base64().encode(binaryHash), "UTF-8"))
   }
@@ -71,7 +71,7 @@ case class HealthcheckError(
   lazy val stackTraceHtml: String = {
     def causeString(throwableOptions: Option[Throwable]): String = throwableOptions match {
       case None => "--"
-      case Some(t) if (t.getStackTrace().exists({e =>
+      case Some(t) if (t.getStackTrace().exists({ e =>
         e.getClassName.contains("play.api.Application") && e.getMethodName.contains("handleError")
       })) => causeString(Option(t.getCause))
       case Some(t) =>
@@ -110,7 +110,7 @@ case class HealthcheckError(
     }
     (error map (e => causeString(error))).getOrElse(errorMessage.getOrElse(this.toString))
   }
- def toHtml: String = {
+  def toHtml: String = {
     val message = new StringBuilder("%s: [%s] Error during call of type %s".format(createdAt, id, callType))
     method.map { m =>
       message ++= s"""<br/><b>http method</b> <span style="color:blue; font-size: 13px; font-style: italic;">[$m]</span>"""
