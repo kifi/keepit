@@ -49,18 +49,22 @@ slider2 = function() {
     document.removeEventListener("keydown", onKeyDown, true);
   });
 
-  function createSlider(callback) {
+  function createSlider(callback, locator) {
     var kept = tile && tile.dataset.kept;
     var counts = JSON.parse(tile && tile.dataset.counts || '{"n":0,"c":0,"m":0}');
     api.log("[createSlider] kept: %s counts: %o", kept || "no", counts);
 
     render("html/metro/slider2.html", {
-      "bgUrl": api.url("images/metro/slider.png"),
+      "bgDir": api.url("images/keeper"),
       "isKept": kept,
       "isPrivate": kept == "private",
       "noticesCount": counts.n,
       "commentCount": counts.c,
-      "messageCount": counts.m
+      "messageCount": counts.m,
+      "atNotices": "/notices" == locator,
+      "atComments": "/comments" == locator,
+      "atMessages": /^\/messages/.test(locator),
+      "atGeneral": "/general" == locator
     }, function(html) {
       // attach event bindings
       $slider = $(html)
@@ -330,6 +334,8 @@ slider2 = function() {
   function showPane2(locator, back, pane, params) {  // only called by showPane
     api.log("[showPane2]", locator, pane);
     if ($pane) {
+      $slider.find(".kifi-at").removeClass("kifi-at").end()
+        .find(".kifi-slider2-" + locator.split("/")[1]).addClass("kifi-at");
       render("html/metro/pane_" + pane + ".html", params, function(html) {
         var $cubby = $pane.find(".kifi-pane-cubby"), w = $cubby[0].offsetWidth, d = w + 6;
         var $boxes = $("<div class=kifi-pane-boxes>").css({
@@ -359,7 +365,9 @@ slider2 = function() {
       if (bringSlider) {
         createSlider(function() {
           $slider.addClass("kifi-wide");
-        });
+        }, locator);
+      } else {
+        $slider.find(".kifi-slider2-" + locator.split("/")[1]).addClass("kifi-at");
       }
       api.require("styles/metro/pane.css", function() {
         render("html/metro/pane.html", $.extend(params, {
@@ -474,6 +482,7 @@ slider2 = function() {
     api.log("[hidePane]");
     if (leaveSlider) {
       $slider.appendTo("html").layout();
+      $slider.find(".kifi-at").removeClass("kifi-at");
       $slider.find(".kifi-slider2-x").css("overflow", "");
     } else {
       $slider.appendTo($pane);
@@ -606,7 +615,7 @@ slider2 = function() {
       var $btns = $slider.find(".kifi-slider2-dock-btn");
       [[".kifi-slider2-notices", o.n],
        [".kifi-slider2-comments", o.c],
-       [".kifi-slider2-threads", o.m]].forEach(function(a) {
+       [".kifi-slider2-messages", o.m]].forEach(function(a) {
         $btns.filter(a[0]).find(".kifi-count")
           .text(a[1] || "")
           .css("display", a[1] ? "" : "none");

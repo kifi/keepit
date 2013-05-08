@@ -1,6 +1,6 @@
 {
   "name": "KiFi Beta",
-  "version": "2.3.54",
+  "version": "2.3.55",
   "manifest_version": 2,
   "description": "KiFi Private Beta",
   "icons": {
@@ -37,9 +37,13 @@
     "images/snapshot.png",
     "images/social_icons.png",
     "images/metro/gear.png",
-    "images/metro/slider.png",
-    "images/metro/tile_kept.png",
     "images/metro/tile_logo.png",
+    "images/keeper/comments.png",
+    "images/keeper/general.png",
+    "images/keeper/lock.png",
+    "images/keeper/messages.png",
+    "images/keeper/notices.png",
+    "images/keeper/x.png",
     "images/results/dropbox.png",
     "images/results/facebook.png",
     "images/results/gdocs.gif",

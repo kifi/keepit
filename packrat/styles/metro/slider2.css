@@ -124,7 +124,8 @@
   height: 42px;
   width: 0;
   border-radius: 5px;
-  background-position: 0 999px;
+  background-position: 8px 15px;
+  background-size: auto 13px;
   background-repeat: no-repeat;
   overflow: hidden;
   cursor: pointer;
@@ -133,18 +134,6 @@
 }
 .kifi-with-pane .kifi-slider2-x {
   width: 29px;
-}
-.kifi-slider2-x::before {
-  content: " ";
-  position: absolute;
-  top: 15px;
-  left: 8px;
-  height: 13px;
-  width: 13px;
-  background-image: inherit;
-  background-size: auto 17px;
-  background-repeat: no-repeat;
-  background-position: -71px 0;
 }
 .kifi-slider2-x .kifi-slider2-tip {
   right: 0;
@@ -276,9 +265,8 @@
   width: 7px;
   height: 9px;
   background-image: inherit;
-  background-size: auto 17px;
+  background-size: auto 9px;
   background-repeat: no-repeat;
-  background-position: -84px 0;
   font-size: 0;
   opacity: .4;
 }
@@ -369,12 +357,27 @@ a.kifi-slider2-keeper {
   display: inline-block !important;
   height: 42px;
   width: 42px;
-  background-position: 0 999px;
   background-repeat: no-repeat;
   text-align: center;
   vertical-align: top;
   cursor: pointer;
   position: relative;
+}
+.kifi-slider2-dock-btn.kifi-slider2-notices {
+  background-size: auto 16px;
+  background-position: 15px 14px;
+}
+.kifi-slider2-dock-btn.kifi-slider2-comments {
+  background-size: auto 16px;
+  background-position: 12px 15px;
+}
+.kifi-slider2-dock-btn.kifi-slider2-messages {
+  background-size: auto 17px;
+  background-position: 10px 15px;
+}
+.kifi-slider2-dock-btn.kifi-slider2-general {
+  background-size: auto 14px;
+  background-position: 12px 15px;
 }
 .kifi-slider2-x,
 .kifi-slider2-dock-btn {
@@ -385,8 +388,9 @@ a.kifi-slider2-keeper {
   background-color: #7492af;
 }
 .kifi-slider2-x:active,
-.kifi-slider2-dock-btn:active {
-  background-color: #627b94;
+.kifi-slider2-dock-btn:active,
+.kifi-slider2-dock-btn.kifi-at {
+  background-color: #5e778f;
 }
 .kifi-slider2-dock-btn:first-child {
   border-top-left-radius: inherit;
@@ -395,36 +399,6 @@ a.kifi-slider2-keeper {
 .kifi-slider2-dock-btn:last-child {
   border-top-right-radius: inherit;
   border-bottom-right-radius: inherit;
-}
-.kifi-slider2-dock-btn::before {
-  content: " ";
-  position: absolute;
-  top: 15px;
-  background-image: inherit;
-  background-size: auto 17px;
-  background-repeat: no-repeat;
-  height: 17px;
-}
-.kifi-slider2-dock-btn.kifi-slider2-notices::before {
-  background-position: 0 0;
-  width: 14px;
-  left: 15px;
-  top: 14px;
-}
-.kifi-slider2-dock-btn.kifi-slider2-comments::before {
-  background-position: -14px 0;
-  width: 17px;
-  left: 12px;
-}
-.kifi-slider2-dock-btn.kifi-slider2-threads::before {
-  background-position: -31px 0;
-  width: 22px;
-  left: 10px;
-}
-.kifi-slider2-dock-btn.kifi-slider2-general::before {
-  background-position: -53px 0;
-  width: 18px;
-  left: 12px;
 }
 .kifi-slider2.kifi-growing .kifi-count,
 .kifi-slider2.kifi-hiding .kifi-count {

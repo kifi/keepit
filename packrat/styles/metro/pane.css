@@ -186,11 +186,12 @@ a.kifi-pane-back {
   color: #fff !important;
 }
 .kifi-pane-title {
-  float: right;
+  text-align: center;
 }
 a.kifi-pane-back {
-  display: inline-block;
-  padding-right: 18px;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 a.kifi-pane-back:hover {
   text-decoration: none;
