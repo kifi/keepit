@@ -69,10 +69,11 @@ api = function() {
 
   chrome.tabs.onActivated.addListener(function(info) {
     api.log("#666", "[tabs.onActivated] tab info:", info);
-    var prevPage = pages[selectedTabIds[info.windowId]];
-    if (prevPage) { // ignore popups, etc.
+    var prevPageId = selectedTabIds[info.windowId];
+    if (prevPageId) { // ignore popups, etc.
       selectedTabIds[info.windowId] = info.tabId;
-      if (/^https?:/.test(prevPage.url)) {
+      var prevPage = pages[prevPageId];
+      if (prevPage && /^https?:/.test(prevPage.url)) {
         dispatch.call(api.tabs.on.blur, prevPage);
       }
       var page = pages[info.tabId];
