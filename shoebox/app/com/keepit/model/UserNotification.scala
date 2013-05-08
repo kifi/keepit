@@ -100,8 +100,8 @@ class UserNotificationRepoImpl @Inject() (
     userValueRepo.getValue(userId, "notificationLastRead").map(parseStandardTime).getOrElse(START_OF_TIME)
 
   def markVisited(userId: Id[User], commentIds: Traversable[Id[Comment]], excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED, UserNotificationStates.VISITED))(implicit session: RWSession): Int =
-    (for(n <- table if n.userId === userId && !n.state.inSet(excludeStates) && n.commentId.inSet(commentIds)) yield n.state)
-      .update(UserNotificationStates.VISITED)
+    (for(n <- table if n.userId === userId && !n.state.inSet(excludeStates) && n.commentId.inSet(commentIds)) yield n.state ~ n.updatedAt)
+      .update((UserNotificationStates.VISITED, currentDateTime))
 }
 
 object UserNotificationStates {
