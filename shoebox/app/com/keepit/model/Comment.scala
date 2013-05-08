@@ -15,11 +15,12 @@ import play.api.libs.json._
 import com.keepit.inject._
 import com.keepit.common.healthcheck._
 import com.keepit.common.cache._
-
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
 import collection.SeqProxy
 import com.keepit.common.logging._
+import com.keepit.common.social.CommentWithBasicUserCache
+import com.keepit.common.social.CommentWithBasicUserKey
 
 
 case class Comment(
@@ -42,6 +43,32 @@ case class Comment(
   def withUrlId(urlId: Id[URL]): Comment = copy(urlId = Some(urlId))
   def withNormUriId(normUriId: Id[NormalizedURI]): Comment = copy(uriId = normUriId)
   def isActive: Boolean = state == CommentStates.ACTIVE
+}
+
+object Comment {
+  import play.api.libs.functional.syntax._
+  import play.api.libs.json._
+  import com.keepit.common.db.Id
+
+  implicit val userExternalIdFormat = ExternalId.format[User]
+  implicit val commentExternalIdFormat = ExternalId.format[Comment]
+  implicit val idFormat = Id.format[Comment]
+  implicit val statePermFormat = State.format[CommentPermission]
+  
+  implicit val commentFormat = (
+      (__ \ 'id).formatNullable(Id.format[Comment]) and
+      (__ \ 'createdAt).format[DateTime] and
+      (__ \ 'updatedAt).format[DateTime] and
+      (__ \ 'externalId).format(ExternalId.format[Comment]) and
+      (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+      (__ \ 'urlId).formatNullable(Id.format[URL]) and
+      (__ \ 'userId).format(Id.format[User]) and
+      (__ \ 'text).format(LargeString.format) and
+      (__ \ 'pageTitle).format[String] and
+      (__ \ 'parent).formatNullable(Id.format[Comment]) and
+      (__ \ 'permissions).format(State.format[CommentPermission]) and
+      (__ \ 'state).format(State.format[Comment])
+  )(Comment.apply, unlift(Comment.unapply))
 }
 
 @ImplementedBy(classOf[CommentRepoImpl])
@@ -80,6 +107,7 @@ class CommentRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   val commentCountCache: CommentCountUriIdCache,
+  commentWithBasicUserCache: CommentWithBasicUserCache,
   userConnectionRepo: UserConnectionRepo,
   commentRecipientRepoImpl: CommentRecipientRepoImpl)
     extends DbRepo[Comment] with CommentRepo with ExternalIdColumnDbFunction[Comment] with Logging {
@@ -96,7 +124,7 @@ class CommentRepoImpl @Inject() (
     def pageTitle = column[String]("page_title", O.NotNull)
     def parent = column[Id[Comment]]("parent", O.Nullable)
     def permissions = column[State[CommentPermission]]("permissions", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ uriId ~ urlId.? ~ userId ~ text ~ pageTitle ~ parent.? ~ permissions ~ state <> (Comment, Comment.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ uriId ~ urlId.? ~ userId ~ text ~ pageTitle ~ parent.? ~ permissions ~ state <> (Comment.apply _, Comment.unapply _)
   }
 
   override def invalidateCache(comment: Comment)(implicit session: RSession) = {
@@ -106,6 +134,7 @@ class CommentRepoImpl @Inject() (
       case CommentPermissions.MESSAGE =>
       case CommentPermissions.PRIVATE =>
     }
+    commentWithBasicUserCache.remove(CommentWithBasicUserKey(comment.id.get))
     comment
   }
 

@@ -198,4 +198,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
     }
 
   def remove(key: K) { repo.remove(key.toString) }
+  
+  def parseJson(obj: Any)(implicit formatter: Format[T]): T = 
+    Json.fromJson[T](Json.parse(obj.asInstanceOf[String]).asInstanceOf[JsObject]).get
 }

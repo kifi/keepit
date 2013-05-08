@@ -44,9 +44,10 @@ case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
 
 class BasicUserUserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[BasicUserUserIdKey, BasicUser] {
   val ttl = 7 days
-  def deserialize(obj: Any): BasicUser = Json.fromJson[BasicUser](Json.parse(obj.asInstanceOf[String]).asInstanceOf[JsObject]).get
+  def deserialize(obj: Any): BasicUser = parseJson(obj)
   def serialize(basicUser: BasicUser) = Json.toJson(basicUser)
   // TODO(andrew): Invalidate cache. More tricky on this multi-object cache. Right now, the data doesn't change. When we go multi-network, it will.
+  // Also affected: CommentWithBasicUser
 }
 
 class BasicUserRepo @Inject() (socialUserRepo: SocialUserInfoRepo, userRepo: UserRepo, userCache: BasicUserUserIdCache){
