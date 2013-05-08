@@ -38,7 +38,9 @@ home-grown at FortyTwo, not intended for distribution (yet)
           reuse: true},
         typeof opts === "function" ? {create: opts} : opts);
       if (data) {
-        onMouseEnter(opts.showDelay);
+        if (!data.fading) {
+          onMouseEnter(opts.showDelay);
+        }
       } else {
         var t0 = +new Date;
         $a.data("hover", data = {lastShowTime: 0});
@@ -54,10 +56,12 @@ home-grown at FortyTwo, not intended for distribution (yet)
           onMouseEnter(Math.max(0, opts.showDelay - (new Date - t0)));
         }));
         $a.on("mouseout.showHover", function(e) {
+          api.log("[mouseout.showHover]", e);
           if (!e.relatedTarget || !this.contains(e.relatedTarget)) {
             onMouseLeave(opts.hideDelay, e);
           }
         }).on("click.showHover", function(e) {
+          api.log("[click.showHover]", e);
           if (!data.$h[0].contains(e.target) && (e.isTrigger || new Date - data.lastShowTime > opts.recovery)) {
             if ($a.hasClass("kifi-hover-showing")) {
               onMouseLeave();
@@ -68,6 +72,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
         });
       }
       function onMouseEnter(ms) {
+        api.log("[onMouseEnter]", ms);
         data.inEither = true;
         clearTimeout(data.t);
         if (ms) {
@@ -77,6 +82,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
         }
       }
       function onMouseLeave(ms, e) {
+        api.log("[onMouseLeave]", ms, e);
         data.inEither = false;
         clearTimeout(data.t);
         if (ms && between(e.clientX, e.clientY)) {
@@ -87,6 +93,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
         }
       }
       function onMouseMove(e) {
+        api.log("[onMouseMove]", e);
         if (!between(e.clientX, e.clientY)) {
           if (!data.inEither) {
             clearTimeout(data.t);
@@ -103,21 +110,25 @@ home-grown at FortyTwo, not intended for distribution (yet)
       function hide() {
         $a.removeClass("kifi-hover-showing");
         if (opts.fadesOut) {
+          data.fading = true;
           data.$h.on("transitionend webkitTransitionEnd", function f(e) {
+            api.log("[hide] transitionend", e);
             if (e.originalEvent.propertyName === "opacity") {
+              delete data.fading;
               data.$h.off("transitionend webkitTransitionEnd", f);
-              if (!$a.hasClass("kifi-hover-showing")) {
-                finishHiding();
-              }
+              finishHiding();
             }
           });
         } else {
           finishHiding();
         }
         function finishHiding() {
+          clearTimeout(data.t);
           if (opts.reuse) {
+            api.log("[finishHiding] HERE 1");
             data.$h.detach();
           } else {
+            api.log("[finishHiding] HERE 2");
             $a.showHover("destroy");
           }
           $a.trigger("hover:hide");
@@ -134,7 +145,8 @@ home-grown at FortyTwo, not intended for distribution (yet)
     },
     destroy: function() {
       var $a = $(this);
-      $(($a.data("hover") || 0).$h).remove();
+      api.log("[destroy]", this, $a.data());
+      $(($a.data("hover") || {}).$h).remove();
       $a.unbind(".showHover").removeData("hover");
     }
   };

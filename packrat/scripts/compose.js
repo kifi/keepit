@@ -115,7 +115,6 @@ function attachComposeBindings($c, composeTypeName) {
   .on("mouseenter", ".kifi-compose-snapshot", function(e) {
     if (e.target !== this) return;
     $(this).showHover({
-      reuse: false,
       showDelay: 500,
       fadesOut: true,
       recovery: Infinity,
