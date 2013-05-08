@@ -79,7 +79,7 @@ class Database @Inject() (
     try f(new ROSession(s)) catch {
       case ex: java.sql.SQLException =>
         if(ex.getMessage != null && ex.getMessage.trim == "Timed out waiting for a free available connection.") {
-          liftToTimedOutException(ex)
+          liftToTimedOutException(ex) 
         }
         else throw ex
     } finally if (initialized) s.close()
