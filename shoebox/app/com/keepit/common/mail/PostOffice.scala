@@ -19,7 +19,7 @@ object PostOffice {
     val INVITATION = ElectronicMailCategory("INVITATION")
   }
 
-  val BODY_MAX_SIZE = 524288
+  val BODY_MAX_SIZE = 1048576
 }
 
 class PostOfficeImpl @Inject() (mailRepo: ElectronicMailRepo)
@@ -29,7 +29,9 @@ class PostOfficeImpl @Inject() (mailRepo: ElectronicMailRepo)
     val prepared =
       if (mail.htmlBody.value.size > PostOffice.BODY_MAX_SIZE ||
         mail.textBody.isDefined && mail.textBody.get.value.size > PostOffice.BODY_MAX_SIZE) {
-        throw new Exception(s"PostOffice attempted to send an email (${mail.externalId}) longer than ${PostOffice.BODY_MAX_SIZE} bytes. Too big!")
+        log.warn(s"PostOffice attempted to send an email (${mail.externalId}) longer than ${PostOffice.BODY_MAX_SIZE} bytes. Too big!")
+        mailRepo.save(mail.copy(
+          htmlBody = mail.htmlBody.value.take(PostOffice.BODY_MAX_SIZE - 20) + "<br>\n<br>\n(snip)").prepareToSend())
       } else {
         mailRepo.save(mail.prepareToSend())
       }
