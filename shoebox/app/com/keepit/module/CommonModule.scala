@@ -131,7 +131,7 @@ class CommonModule extends ScalaModule with Logging {
     new ActorPlugin(ActorSystem("shoebox-actor-system", Play.current.configuration.underlying, Play.current.classloader))
 
   @Provides
-  def httpClientProvider: HttpClient = new HttpClientImpl()
+  def httpClientProvider(healthcheckPlugin: HealthcheckPlugin): HttpClient = new HttpClientImpl(healthcheckPlugin = healthcheckPlugin)
 
   @Provides
   @AppScoped
