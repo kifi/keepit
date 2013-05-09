@@ -53,7 +53,7 @@ case class SendHealthcheckMail(history: HealthcheckErrorHistory, host: Healthche
   private def sendRegularMail(db: Database, postOffice: PostOffice, services: FortyTwoServices) {
     db.readWrite { implicit s =>
       val subject = s"ERROR: [${services.currentService}/$host] ${history.lastError.subjectName}"
-      val body = views.html.email.healthcheckMail(history).body
+      val body = views.html.email.healthcheckMail(history, services.started.toStandardTimeString).body
       postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
         subject = subject, htmlBody = body, category = PostOffice.Categories.HEALTHCHECK))
     }

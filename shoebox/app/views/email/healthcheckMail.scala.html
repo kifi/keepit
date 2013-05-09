@@ -1,4 +1,4 @@
-@(history: com.keepit.common.healthcheck.HealthcheckErrorHistory)
+@(history: com.keepit.common.healthcheck.HealthcheckErrorHistory, startedAt: String)
 
 @quote(daQuote: com.keepit.common.admin.DouglasAdamsQuote) = {
   <br>
@@ -19,6 +19,7 @@
     <li><b>Total Errors since start:</b> @{history.count}</li>
     <li><b>Total Errors since last alert:</b> @{history.countSinceLastAlert}</li>
     <li><b>Signature:</b> @{history.signature.value}</li>
+    <li><b>Server started at:</b> @startedAt</li>
   </ul>
 </p>
 </div>
