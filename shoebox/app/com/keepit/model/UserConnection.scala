@@ -14,6 +14,12 @@ import com.keepit.common.db.slick.FortyTwoTypeMappers
 import com.keepit.common.db.slick.Repo
 import com.keepit.common.time._
 import com.keepit.common.time.currentDateTime
+import com.keepit.common.cache.Key
+import com.keepit.common.cache.FortyTwoCachePlugin
+import com.keepit.common.cache.FortyTwoCache
+import scala.concurrent.duration._
+import play.api.libs.json.Json
+
 
 case class UserConnection(
     id: Option[Id[UserConnection]] = None,
@@ -36,15 +42,34 @@ trait UserConnectionRepo extends Repo[UserConnection] {
   def removeConnections(userId: Id[User], users: Set[Id[User]])(implicit session: RWSession): Int
 }
 
+case class UserConnectionKey(userId: Id[User]) extends Key[Set[Id[User]]] {
+  val namespace = "user_connection_key"
+  def toKey(): String = userId.id.toString
+}
+
+class UserConnectionIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[UserConnectionKey, Set[Id[User]]] {
+  val ttl = 7 days
+  def deserialize(obj: Any): Set[Id[User]] = {
+    val arr = obj.asInstanceOf[Array[Long]].toSet
+    arr.map(Id[User](_))
+  }
+  def serialize(value: Set[Id[User]]) = value.map(_.id).toArray
+}
+
 @Singleton
 class UserConnectionRepoImpl @Inject() (
     val db: DataBaseComponent,
-    val clock: Clock)
+    val clock: Clock,
+    val userConnCache: UserConnectionIdCache)
     extends DbRepo[UserConnection] with UserConnectionRepo {
 
   import DBSession._
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
+
+  def invalidateCache(userId: Id[User]) = {
+    userConnCache.remove(UserConnectionKey(userId))
+  }
 
   override val table = new RepoTable[UserConnection](db, "user_connection") {
     def user1 = column[Id[User]]("user_1", O.NotNull)
@@ -55,12 +80,16 @@ class UserConnectionRepoImpl @Inject() (
   def getConnectionOpt(u1: Id[User], u2: Id[User])(implicit session: RSession): Option[UserConnection] =
     (for (c <- table if c.user1 === u1 && c.user2 === u2 || c.user2 === u1 && c.user1 === u2) yield c).firstOption
 
-  def getConnectedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]] =
+  def getConnectedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]] = userConnCache.getOrElse(UserConnectionKey(id)){
     ((for (c <- table if c.user1 === id && c.state === UserConnectionStates.ACTIVE) yield c.user2) union
         (for (c <- table if c.user2 === id && c.state === UserConnectionStates.ACTIVE) yield c.user1))
         .list.toSet
+  }
 
   def removeConnections(userId: Id[User], users: Set[Id[User]])(implicit session: RWSession): Int = {
+    invalidateCache(userId)
+    users.foreach(invalidateCache(_))
+
     (for {
       c <- table if
         c.user2 === userId && c.user1.inSet(users) ||
@@ -79,7 +108,10 @@ class UserConnectionRepoImpl @Inject() (
       ((for (c <- table if c.user1 === userId) yield c.user2) union
         (for (c <- table if c.user2 === userId) yield c.user1)).list.toSet
     }
-    
+
+    invalidateCache(userId)
+    users.foreach(invalidateCache(_))
+
     table.insertAll(toInsert.map(connId => UserConnection(user1 = userId, user2 = connId)).toSeq: _*)
   }
 }
