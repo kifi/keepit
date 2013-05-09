@@ -101,6 +101,7 @@ function stopServiceProcess {
    return 1; }
  
 function startService {
+  if [ "$(whoami)" != $serviceUser ]; then echo -n "Service must be started by '$serviceUser'"; RETVAL=0; return 0; fi
    getServicePID
    if [ $? -eq 0 ]; then echo -n "$serviceName is already running"; RETVAL=0; return 0; fi
    echo -n "Starting $serviceName   "
@@ -111,6 +112,7 @@ function startService {
    return 0; }
  
 function stopService {
+  if [ "$(whoami)" != $serviceUser ]; then echo -n "Service must be stopped by '$serviceUser'"; RETVAL=0; return 0; fi
    getServicePID
    if [ $? -ne 0 ]; then echo -n "$serviceName is not running"; RETVAL=0; echo ""; return 0; fi
    echo -n "Stopping $serviceName   "
