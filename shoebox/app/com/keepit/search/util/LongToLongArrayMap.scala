@@ -22,13 +22,16 @@ abstract class LongToLongArrayMap(k: Array[Long], v: Array[Long]) extends Map[Lo
 }
 
 object LongToLongArrayMap {
+
   def fromSorted(k: Array[Long], v: Array[Long]): Map[Long, Long] = {
     new  LongToLongArrayMap(k, v) {
 
       override def get(key: Long): Option[Long] = {
         val index = Arrays.binarySearch(k, key)
-       if (index >= 0) Some(v(index)) else None
+        if (index >= 0) Some(v(index)) else None
       }
+
+      override def contains(key: Long): Boolean = (Arrays.binarySearch(k, key) >= 0)
 
       override def keySet = LongArraySet.fromSorted(k)
     }
@@ -42,6 +45,8 @@ object LongToLongArrayMap {
         val index = mapper(key)
         if (index >= 0) Some(v(index)) else None
       }
+
+      override def contains(key: Long): Boolean = (mapper(key) >= 0)
 
       override def keySet = LongArraySet.from(k, mapper)
     }
