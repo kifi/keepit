@@ -71,6 +71,12 @@ class UserConnectionRepoImpl @Inject() (
     userConnCache.remove(UserConnectionKey(userId))
   }
 
+  override def invalidateCache(conn: UserConnection)(implicit session: RSession): UserConnection = {
+    userConnCache.remove(UserConnectionKey(conn.user1))
+    userConnCache.remove(UserConnectionKey(conn.user2))
+    conn
+  }
+
   override val table = new RepoTable[UserConnection](db, "user_connection") {
     def user1 = column[Id[User]]("user_1", O.NotNull)
     def user2 = column[Id[User]]("user_2", O.NotNull)
@@ -87,8 +93,7 @@ class UserConnectionRepoImpl @Inject() (
   }
 
   def removeConnections(userId: Id[User], users: Set[Id[User]])(implicit session: RWSession): Int = {
-    invalidateCache(userId)
-    users.foreach(invalidateCache(_))
+    (users + userId) foreach invalidateCache
 
     (for {
       c <- table if
@@ -109,9 +114,7 @@ class UserConnectionRepoImpl @Inject() (
         (for (c <- table if c.user2 === userId) yield c.user1)).list.toSet
     }
 
-    invalidateCache(userId)
-    users.foreach(invalidateCache(_))
-
+    (users + userId) foreach invalidateCache
     table.insertAll(toInsert.map(connId => UserConnection(user1 = userId, user2 = connId)).toSeq: _*)
   }
 }
