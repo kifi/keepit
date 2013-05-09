@@ -1,8 +1,11 @@
 package com.keepit.test
 
-import akka.actor.ActorSystem
-import akka.actor.Cancellable
-import akka.actor.Scheduler
+import scala.collection.mutable.{Stack => MutableStack}
+import scala.concurrent._
+import scala.slick.session.{Database => SlickDatabase}
+
+import org.joda.time.{ReadablePeriod, DateTime}
+
 import com.google.inject.Module
 import com.google.inject.Provides
 import com.google.inject.Singleton
@@ -11,41 +14,33 @@ import com.google.inject.util.Modules
 import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
 import com.keepit.common.analytics._
 import com.keepit.common.cache.{HashMapMemoryCache, FortyTwoCachePlugin}
-import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.controller.FortyTwoCookies._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.controller.FortyTwoCookies._
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{FakeMailToKeepPlugin, MailToKeepPlugin, FakeMailModule, MailSenderPlugin, ElectronicMail}
 import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.FakeSecureSocialUserServiceModule
 import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.store.FakeS3StoreModule
 import com.keepit.common.time._
 import com.keepit.dev.{SearchDevGlobal, ShoeboxDevGlobal, DevGlobal, S3DevModule}
 import com.keepit.inject._
-import com.keepit.model.SocialConnection
-import com.keepit.model.SocialUserInfo
 import com.keepit.model._
+import com.keepit.scraper._
 import com.keepit.search._
 import com.keepit.search.index.FakePhraseIndexerModule
-import com.keepit.scraper._
 import com.tzavellas.sse.guice.ScalaModule
-import org.joda.time.DateTime
-import org.joda.time.LocalDate
-import play.api.Application
-import play.api.Play
+
+import akka.actor.ActorSystem
+import akka.actor.Cancellable
+import akka.actor.Scheduler
 import play.api.Mode.Mode
 import play.api.Mode.Test
-import play.api.db.DB
+import play.api.Play
 import play.api.libs.concurrent.Execution.Implicits._
-import scala.collection.mutable.{Stack => MutableStack}
-import scala.concurrent._
-import scala.slick.session.{Database => SlickDatabase}
-import com.keepit.search.index.FakePhraseIndexerModule
-import com.google.inject.Provider
-import com.keepit.search.index.FakePhraseIndexerModule
 
 class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplication() {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
@@ -90,6 +85,7 @@ trait DbRepos {
   def installationRepo = inject[KifiInstallationRepo]
   def userExperimentRepo = inject[UserExperimentRepo]
   def emailAddressRepo = inject[EmailAddressRepo]
+  def invitationRepo = inject[InvitationRepo]
   def unscrapableRepo = inject[UnscrapableRepo]
 }
 
@@ -196,6 +192,16 @@ class FakeClock extends Clock with Logging {
       log.debug(s"FakeClock is retuning fake now value: $fakeNowTime")
       fakeNowTime.getMillis
     }
+  }
+
+  def +=(p: ReadablePeriod) {
+    val oldTimeFunction = timeFunction
+    timeFunction = { () => new DateTime(oldTimeFunction()).plus(p).getMillis }
+  }
+
+  def -=(p: ReadablePeriod) {
+    val oldTimeFunction = timeFunction
+    timeFunction = { () => new DateTime(oldTimeFunction()).minus(p).getMillis }
   }
 
   def push(t : DateTime): FakeClock = { stack push t.getMillis; this }
