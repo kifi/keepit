@@ -109,7 +109,6 @@ slider2 = function() {
               reuse: false,
               showDelay: $pane ? 500 : 250,
               hideDelay: o.keepers.length ? 800 : 0,
-              fadesOut: true,
               recovery: Infinity,
               create: function(cb) {
                 if (o.keepers.length) {
@@ -140,7 +139,6 @@ slider2 = function() {
       }).on("mouseenter", ".kifi-slider2-keeper", function() {
         var $a = $(this).showHover({
           hideDelay: 600,
-          fadesOut: true,
           create: function(callback) {
             var i = $a.prevAll(".kifi-slider2-keeper").length;
             var friend = ($a.closest(".kifi-slider2-tip").data("keepers") || [])[i];
@@ -169,7 +167,6 @@ slider2 = function() {
         $(this).showHover({
           reuse: false,
           showDelay: $pane ? 500 : 250,
-          fadesOut: true,
           recovery: Infinity,
           create: function(cb) {
             var kept = !this.parentNode.classList.contains("kifi-unkept");
@@ -199,7 +196,6 @@ slider2 = function() {
         $(this).css("overflow", "visible").showHover({
           reuse: true,
           showDelay: 500,
-          fadesOut: true,
           recovery: Infinity});
       }).on("click", ".kifi-slider2-x", function() {
         if ($pane) {
@@ -210,7 +206,6 @@ slider2 = function() {
         $(this).showHover({
           reuse: false,
           showDelay: $pane ? 500 : 250,
-          fadesOut: true,
           recovery: Infinity,
           create: function(cb) {
             var tip = {
@@ -695,7 +690,6 @@ slider2 = function() {
         reuse: false,
         showDelay: 0,
         hideDelay: 1e9,
-        fadesOut: true,
         recovery: Infinity,
         create: function(callback) {
           // TODO: preload friend pictures
