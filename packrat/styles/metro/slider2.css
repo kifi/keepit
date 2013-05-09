@@ -441,6 +441,14 @@ a.kifi-slider2-keeper {
   -webkit-transition-duration: 50ms;
   transition-duration: 50ms;
 }
+.kifi-slider2-tip-below {
+  bottom: auto;
+  top: 100%;
+  margin-bottom: 0;
+  margin-top: 20px;
+  -webkit-transform: translate(0,-2px);
+  transform: translate(0,-2px);
+}
 .kifi-slider2-tip::before {
   content: " ";
   position: absolute;
@@ -452,6 +460,11 @@ a.kifi-slider2-keeper {
   border-style: solid;
   border-width: 8px 8px 0;
   border-color: rgba(53,60,67,.9) transparent;
+}
+.kifi-slider2-tip-below::before {
+  top: auto;
+  bottom: 100%;
+  border-width: 0 8px 8px;
 }
 .kifi-titled-tip {
   margin-top: 4px;

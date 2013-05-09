@@ -49,14 +49,22 @@ html.kifi-pane-parent.kifi-with-pane.kifi-snapshot-mode {
   height: 39px;
   background: #2c3e50;
 }
-.kifi-pane-head-logo {
-  position: relative;
-  top: 10px;
-  left: 19px;
+a.kifi-pane-head-logo {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 10px 14px 11px 13px;
+  -moz-box-sizing: content-box;
+  box-sizing: content-box;
+  width: 31px;
   height: 18px;
-  width: auto;
-  border: 0;
-  padding: 0;
+  background-size: auto 18px;
+  background-origin: content-box;
+  background-repeat: no-repeat;
+  position: relative;
+}
+a.kifi-pane-head-logo .kifi-slider2-tip-below {
+  left: -24px;
+  margin-top: 10px;
 }
 a.kifi-pane-head-feedback {
   float: right;
@@ -68,12 +76,18 @@ a.kifi-pane-head-feedback {
   text-align: center;
   color: #fafafa !important; /* necessary because of a CSS reset we use on all a elements */
   padding-top: 8px;
+  position: relative;
+  z-index: 1;
 }
 a.kifi-pane-head-feedback:hover {
   background-color: #679ade;
 }
 a.kifi-pane-head-feedback:active {
   background-color: #5580b8;
+}
+a.kifi-pane-head-feedback .kifi-slider2-tip-below {
+  right: -44px;
+  margin-top: 10px;
 }
 a.kifi-pane-head-settings {
   float: right;
@@ -83,13 +97,26 @@ a.kifi-pane-head-settings {
   background-size: 16px;
   background-position: 12px 12px;
   background-repeat: no-repeat;
+  position: relative;
+  z-index: 1;
 }
+a.kifi-pane-head-logo:hover,
 a.kifi-pane-head-settings:hover {
   background-color: #374d63;
 }
+a.kifi-pane-head-logo:active,
 a.kifi-pane-head-settings:active,
 a.kifi-pane-head-settings.kifi-active {
   background-color: #324559;
+}
+a.kifi-pane-head-settings .kifi-slider2-tip-below {
+  left: auto;
+  right: 0;
+  margin-top: 10px;
+}
+a.kifi-pane-head-settings .kifi-slider2-tip-below::before {
+  left: auto;
+  right: 13px;
 }
 div.kifi-pane-head-settings-menu {
   position: absolute;
