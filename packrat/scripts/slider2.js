@@ -150,9 +150,6 @@ slider2 = function() {
               id: friend.id,
               iconsUrl: api.url("images/social_icons.png")
             }, callback);
-            api.port.emit("get_num_mutual_keeps", {id: friend.id}, function gotNumMutualKeeps(o) {
-              $a.find(".kifi-kcard-mutual").text(plural(o.n, "mutual keep"));
-            });
           }});
       }).on("mouseout", ".kifi-slider2-keep-btn", function() {
         this.classList.remove("kifi-hoverless");
