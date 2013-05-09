@@ -52,6 +52,7 @@ a.kifi-compose-snapshot {
   background-repeat: no-repeat;
   -webkit-transition: none;
   transition: none;
+  outline: none; /* for tooltip */
 }
 a.kifi-compose-snapshot:hover {
   background-position: -20px 0;
