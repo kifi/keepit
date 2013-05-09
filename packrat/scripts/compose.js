@@ -116,8 +116,7 @@ function attachComposeBindings($c, composeTypeName) {
     if (e.target !== this) return;
     $(this).showHover({
       showDelay: 500,
-      fadesOut: true,
-      recovery: Infinity,
+      click: "hide",
       create: function(cb) {
         render("html/keeper/titled_tip.html", {
           title: "Microfind",
@@ -128,7 +127,6 @@ function attachComposeBindings($c, composeTypeName) {
       }});
   })
   .on("click", ".kifi-compose-snapshot", function() {
-    $(this).showHover("destroy");
     snapshot.take(composeTypeName, function(selector) {
       if (selector) {
         $d.append(" <a href='x-kifi-sel:" + selector.replace("'", "&#39;") + "'>look here</a>");
