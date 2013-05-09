@@ -34,13 +34,10 @@ home-grown at FortyTwo, not intended for distribution (yet)
           create: createFromDataAttr,
           showDelay: 100,
           hideDelay: 0,
-          recovery: 160,  // ms since last show before click will be honored
           reuse: true},
         typeof opts === "function" ? {create: opts} : opts);
       if (data) {
-        if (!data.fading) {
-          onMouseEnter(opts.showDelay);
-        }
+        onMouseEnter(opts.showDelay);
       } else {
         var t0 = +new Date;
         $a.data("hover", data = {lastShowTime: 0});
@@ -53,48 +50,55 @@ home-grown at FortyTwo, not intended for distribution (yet)
             useSize.call($h[0], r.width, r.height);
           }
           data.$h = $h;
-          onMouseEnter(Math.max(0, opts.showDelay - (new Date - t0)));
+          onMouseEnter(opts.showDelay - (new Date - t0));
         }));
         $a.on("mouseout.showHover", function(e) {
           if (!e.relatedTarget || !this.contains(e.relatedTarget)) {
             onMouseLeave(opts.hideDelay, e);
           }
-        }).on("click.showHover", function(e) {
-          if (!data.$h[0].contains(e.target) && (e.isTrigger || new Date - data.lastShowTime > opts.recovery)) {
+        });
+        if (opts.click) $a.on("click.showHover", function(e) {
+          if (data.$h[0].contains(e.target) || data.fadingOut) return;
+          if (opts.click == "hide") {
+            hide();
+          } else if (opts.click == "toggle" && (e.isTrigger || new Date - data.lastShowTime > 160)) {
             if ($a.hasClass("kifi-hover-showing")) {
-              onMouseLeave();
+              hide();
             } else {
-              onMouseEnter(0);
+              show();
             }
           }
         });
       }
       function onMouseEnter(ms) {
         data.inEither = true;
-        clearTimeout(data.t);
-        if (ms) {
-          data.t = setTimeout(show, ms);
-        } else {
-          show();
+        if (!$a.hasClass("kifi-hover-showing") && !data.fadingOut) {
+          clearTimeout(data.hide), delete data.hide;
+          if (ms > 0) {
+            data.show = setTimeout(show, ms);
+          } else {
+            show();
+          }
         }
       }
       function onMouseLeave(ms, e) {
         data.inEither = false;
-        clearTimeout(data.t);
-        if (ms && between(e.clientX, e.clientY)) {
-          document.addEventListener("mousemove", onMouseMove, true);
-          data.t = setTimeout(hide, ms);
-        } else {
-          hide();
+        if (!data.fadingOut) {
+          clearTimeout(data.show), delete data.show;
+          if (ms && between(e.clientX, e.clientY)) {
+            document.addEventListener("mousemove", onMouseMove, true);
+            data.hide = setTimeout(hide, ms);
+          } else {
+            hide();
+          }
         }
       }
       function onMouseMove(e) {
         if (!between(e.clientX, e.clientY)) {
-          if (!data.inEither) {
-            clearTimeout(data.t);
+          document.removeEventListener("mousemove", onMouseMove, true);
+          if (!data.inEither && !data.fadingOut) {
             hide();
           }
-          document.removeEventListener("mousemove", onMouseMove, true);
         }
       }
       function show() {
@@ -104,17 +108,18 @@ home-grown at FortyTwo, not intended for distribution (yet)
       }
       function hide() {
         $a.removeClass("kifi-hover-showing");
-        data.fading = true;
-        data.$h.on("transitionend webkitTransitionEnd", function f(e) {
+        clearTimeout(data.show || data.hide);
+        delete data.show, delete data.hide;
+        data.fadingOut = true;
+        data.$h.on("transitionend webkitTransitionEnd", function end(e) {
           if (e.originalEvent.propertyName === "opacity") {
-            clearTimeout(data.t);
-            delete data.t;
-            delete data.fading;
-            data.$h.off("transitionend webkitTransitionEnd", f);
+            delete data.fadingOut;
+            data.$h.off("transitionend webkitTransitionEnd", end);
             if (opts.reuse) {
               data.$h.detach();
             } else {
-              $a.showHover("destroy");
+              data.$h.remove();
+              $a.unbind(".showHover").removeData("hover");
             }
             $a.trigger("hover:hide");
           }
@@ -128,11 +133,6 @@ home-grown at FortyTwo, not intended for distribution (yet)
           !leftOf(x, y, rH.left, rH.bottom, rT.left, rT.top) &&
           leftOf(x, y, rH.right, rH.bottom, rT.right, rT.top);
       }
-    },
-    destroy: function() {
-      var $a = $(this);
-      $(($a.data("hover") || {}).$h).remove();
-      $a.unbind(".showHover").removeData("hover");
     }
   };
 
