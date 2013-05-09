@@ -22,13 +22,13 @@ home-grown at FortyTwo, not intended for distribution (yet)
         $.error("jQuery.showHover has no method '" +  method + "'");
       }
     } else {
-      methods.init.apply(this[0], arguments);
+      methods.enter.apply(this[0], arguments);
     }
     return this;
   }
 
   var methods = {
-    init: function(opts) {
+    enter: function(opts) {
       var $a = $(this), data = $a.data("hover");
       opts = $.extend({
           create: createFromDataAttr,
@@ -37,7 +37,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
           reuse: true},
         typeof opts === "function" ? {create: opts} : opts);
       if (data) {
-        onMouseEnter(opts.showDelay);
+        onEnter(opts.showDelay);
       } else {
         var t0 = +new Date;
         $a.data("hover", data = {lastShowTime: 0});
@@ -50,7 +50,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
             useSize.call($h[0], r.width, r.height);
           }
           data.$h = $h;
-          onMouseEnter(opts.showDelay - (new Date - t0));
+          onEnter(opts.showDelay - (new Date - t0));
         }));
         $a.on("mouseout.showHover", function(e) {
           if (!e.relatedTarget || !this.contains(e.relatedTarget)) {
@@ -70,10 +70,9 @@ home-grown at FortyTwo, not intended for distribution (yet)
           }
         });
       }
-      function onMouseEnter(ms) {
-        data.inEither = true;
+      function onEnter(ms) {
+        clearTimeout(data.hide), delete data.hide;
         if (!$a.hasClass("kifi-hover-showing") && !data.fadingOut) {
-          clearTimeout(data.hide), delete data.hide;
           if (ms > 0) {
             data.show = setTimeout(show, ms);
           } else {
@@ -82,31 +81,41 @@ home-grown at FortyTwo, not intended for distribution (yet)
         }
       }
       function onMouseLeave(ms, e) {
-        data.inEither = false;
-        if (!data.fadingOut) {
-          clearTimeout(data.show), delete data.show;
+        clearTimeout(data.show), delete data.show;
+        if ($a.hasClass("kifi-hover-showing")) {
           if (ms && between(e.clientX, e.clientY)) {
-            document.addEventListener("mousemove", onMouseMove, true);
+            document.addEventListener("mousemove", onMouseMoveMaybeHide, true);
+            $a.on("mouseover.showHover", onMouseOverDoNotHide);
             data.hide = setTimeout(hide, ms);
           } else {
             hide();
           }
         }
       }
-      function onMouseMove(e) {
+      function onMouseMoveMaybeHide(e) {
         if (!between(e.clientX, e.clientY)) {
-          document.removeEventListener("mousemove", onMouseMove, true);
-          if (!data.inEither && !data.fadingOut) {
-            hide();
-          }
+          document.removeEventListener("mousemove", onMouseMoveMaybeHide, true);
+          $a.off("mouseover", onMouseOverDoNotHide);
+          hide();
         }
       }
+      function onMouseOverDoNotHide(e) {
+        document.removeEventListener("mousemove", onMouseMoveMaybeHide, true);
+        $a.off("mouseover", onMouseOverDoNotHide);
+        clearTimeout(data.hide), delete data.hide;
+      }
       function show() {
+        delete data.show;
+        if ($a.hasClass("kifi-hover-showing") || data.fadingOut) return;
         data.$h.appendTo($a).each(function(){this.offsetHeight});
         $a.addClass("kifi-hover-showing");
         data.lastShowTime = +new Date;
       }
       function hide() {
+        if (!$a.hasClass("kifi-hover-showing")) {
+          delete data.hide;
+          return;
+        }
         $a.removeClass("kifi-hover-showing");
         clearTimeout(data.show || data.hide);
         delete data.show, delete data.hide;
@@ -127,7 +136,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
       }
       // Returns whether the viewport coords (x, y) are in the trapezoid between the top edge
       // of hover trigger element and the bottom edge of the hover element.
-      function between(x, y) {  // TODO: fix "Cannot read property '0' of undefined" from onMouseLeave (from keeper)
+      function between(x, y) {
         var rT = $a[0].getBoundingClientRect(), rH = data.$h[0].getBoundingClientRect();
         return y >= rH.bottom && y <= rT.top &&
           !leftOf(x, y, rH.left, rH.bottom, rT.left, rT.top) &&

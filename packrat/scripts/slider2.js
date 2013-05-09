@@ -101,7 +101,7 @@ slider2 = function() {
         if (e.target !== this) {
           this.classList.add("kifi-hoverless");
         }
-        if (e.target === this || e.target.parentNode === this) {
+        if (e.target === this) {
           var btn = this;
           api.port.emit("get_keepers", function(o) {
             $(btn).showHover({
@@ -176,9 +176,9 @@ slider2 = function() {
               "Make Private" :
               "Make Public";
             var html = !kept ?
-              "Keeping this privately allows you to<br>find this page easily without letting<br>anyone know you kept it." : publicly ?
+              "Keeping this privately allows you<br>to find this page easily without<br>letting anyone know you kept it." : publicly ?
               "This keep is public. Making it private<br>allows you to find it easily without<br>letting anyone know you kept it." :
-              "This keep is private. Making it public<br>allows your friends to discover that<br>you kept it.";
+              "This keep is private. Making it<br>public allows your friends to<br>discover that you kept it.";
             render("html/keeper/titled_tip.html", {title: title, html: html}, function(html) {
               cb(html, function(w) {this.style.left = 8 - w / 2 + "px"});
             });
