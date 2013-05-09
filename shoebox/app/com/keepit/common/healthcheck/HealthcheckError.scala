@@ -89,12 +89,7 @@ case class HealthcheckError(
       case Some(c) => cause(c)
     }
     def displayMessage(str: String) = {
-      if(str != null) {
-        val digitless = str.replaceAll("\\d", "*").replaceAll("\n"," ")
-        if (digitless.length > 59) digitless.substring(0, 60) else digitless
-      } else {
-        ""
-      }
+      Option(str).getOrElse("").replaceAll("\\d", "*").take(60)
     }
     error match {
       case None =>
