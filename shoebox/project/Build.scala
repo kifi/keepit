@@ -103,7 +103,7 @@ object ApplicationBuild extends Build {
         "com.tzavellas" % "sse-guice" % "0.7.1"
       ),
 
-      javaOptions in test ++= Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=512m", "-agentpath:/opt/yjp/bin/linux-x86-64/libyjpagent.so=port=4242,dir=~/profiles,logdir=~/log"),
+      javaOptions in test ++= Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=512m"),
 
       parallelExecution in Test := true,
 
