@@ -1,0 +1,7 @@
+@(history: com.keepit.common.healthcheck.HealthcheckErrorHistory)
+
+@Html(history.lastError.titleHtml)
+Signature: @{history.signature.value}
+
+-------
+@Html(history.lastError.toHtml)
