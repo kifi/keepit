@@ -419,14 +419,21 @@ slider2 = function() {
             $box.data("shown", true).triggerHandler("kifi:shown");
             $(tile).show();  // in case hidden
           })
-          .on("keydown", ".kifi-pane-search", function(e) {
-            var q;
-            if (e.which == 13 && (q = this.value.trim())) {
-              window.open("https://www.google.com/search?q=" + encodeURIComponent(q).replace(/%20/g, "+"));
-            }
+          .on("mouseover", ".kifi-pane-head-logo", function() {
+            $(this).showHover({showDelay: 700, reuse: true, click: "hide"});
           })
-          .on("click", ".kifi-pane-back", function() {
-            showPane(paneHistory[1] || this.dataset.loc || "/general", true);
+          .on("mouseover", ".kifi-pane-head-feedback", function() {
+            $(this).showHover({
+              showDelay: 700,
+              reuse: true,
+              click: "hide",
+              create: function(cb) {
+                render("html/keeper/titled_tip.html", {
+                  dir: "below",
+                  title: "Give Us Feedback",
+                  html: "Tell us your ideas for KiFi<br>or report an issue."
+                }, cb);
+              }});
           })
           .on("click", ".kifi-pane-head-feedback", function(e) {
             e.preventDefault();
@@ -438,6 +445,20 @@ slider2 = function() {
               "https://www.kifi.com/feedback/form",
               "kifi-feedback",
               "width="+width+",height="+height+",resizable,top="+top+",left="+left);
+          })
+          .on("mouseover", ".kifi-pane-head-settings", function() {
+            if (this.classList.contains("kifi-active")) return;
+            $(this).showHover({
+              showDelay: 700,
+              reuse: true,
+              click: "hide",
+              create: function(cb) {
+                render("html/keeper/titled_tip.html", {
+                  dir: "below",
+                  title: "Settings",
+                  html: "Customize your KiFi<br>experience."
+                }, cb);
+              }});
           })
           .on("mousedown", ".kifi-pane-head-settings", function(e) {
             e.preventDefault();
@@ -485,6 +506,15 @@ slider2 = function() {
                 $hide.closest(".kifi-pane-head-settings-menu").triggerHandler("kifi:hide");
               }
             }, 150);
+          })
+          .on("keydown", ".kifi-pane-search", function(e) {
+            var q;
+            if (e.which == 13 && (q = this.value.trim())) {
+              window.open("https://www.google.com/search?q=" + encodeURIComponent(q).replace(/%20/g, "+"));
+            }
+          })
+          .on("click", ".kifi-pane-back", function() {
+            showPane(paneHistory[1] || this.dataset.loc || "/general", true);
           })
           .on("click", ".kifi-pane-action", function() {
             var $n = $pane.find(".kifi-not-done"), d = $n.data();

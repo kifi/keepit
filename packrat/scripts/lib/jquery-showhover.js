@@ -57,7 +57,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
             onMouseLeave(opts.hideDelay, e);
           }
         });
-        if (opts.click) $a.on("click.showHover", function(e) {
+        if (opts.click) $a.on("mousedown.showHover", function(e) {
           if (data.$h[0].contains(e.target) || data.fadingOut) return;
           if (opts.click == "hide") {
             hide();
