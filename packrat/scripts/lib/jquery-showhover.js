@@ -104,27 +104,21 @@ home-grown at FortyTwo, not intended for distribution (yet)
       }
       function hide() {
         $a.removeClass("kifi-hover-showing");
-        if (opts.fadesOut) {
-          data.fading = true;
-          data.$h.on("transitionend webkitTransitionEnd", function f(e) {
-            if (e.originalEvent.propertyName === "opacity") {
-              delete data.fading;
-              data.$h.off("transitionend webkitTransitionEnd", f);
-              finishHiding();
+        data.fading = true;
+        data.$h.on("transitionend webkitTransitionEnd", function f(e) {
+          if (e.originalEvent.propertyName === "opacity") {
+            clearTimeout(data.t);
+            delete data.t;
+            delete data.fading;
+            data.$h.off("transitionend webkitTransitionEnd", f);
+            if (opts.reuse) {
+              data.$h.detach();
+            } else {
+              $a.showHover("destroy");
             }
-          });
-        } else {
-          finishHiding();
-        }
-        function finishHiding() {
-          clearTimeout(data.t);
-          if (opts.reuse) {
-            data.$h.detach();
-          } else {
-            $a.showHover("destroy");
+            $a.trigger("hover:hide");
           }
-          $a.trigger("hover:hide");
-        }
+        });
       }
       // Returns whether the viewport coords (x, y) are in the trapezoid between the top edge
       // of hover trigger element and the bottom edge of the hover element.
