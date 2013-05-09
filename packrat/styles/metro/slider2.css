@@ -307,28 +307,33 @@ a.kifi-slider2-keeper {
 }
 .kifi-slider2-keeper .kifi-kcard {
   bottom: 50px;
-  right: -34px;
+  right: -6px;
   direction: ltr;
 }
 .kifi-slider2-keeper:first-child .kifi-kcard::before,
 .kifi-slider2-keeper:first-child .kifi-kcard::after {
   left: auto;
-  right: 43px;
+  right: 15px;
 }
 .kifi-slider2-keeper:nth-child(2) .kifi-kcard::before,
 .kifi-slider2-keeper:nth-child(2) .kifi-kcard::after {
   left: auto;
-  right: 80px;
+  right: 52px;
 }
 .kifi-slider2-keeper:nth-child(3) .kifi-kcard::before,
 .kifi-slider2-keeper:nth-child(3) .kifi-kcard::after {
   left: auto;
-  right: 117px;
+  right: 89px;
 }
-.kifi-slider2-keeper:nth-child(n+4) {
+.kifi-slider2-keeper:nth-child(4) .kifi-kcard::before,
+.kifi-slider2-keeper:nth-child(4) .kifi-kcard::after {
+  left: auto;
+  right: 126px;
+}
+.kifi-slider2-keeper:nth-child(n+5) {
   position: relative;
 }
-.kifi-slider2-keeper:nth-child(n+4) .kifi-kcard {
+.kifi-slider2-keeper:nth-child(n+5) .kifi-kcard {
   right: -134px;
 }
 .kifi-slider2-keepers-caption {
