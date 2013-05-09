@@ -117,7 +117,7 @@ slider2 = function() {
                     anyKeepers: o.keepers.length,
                     captionHtml: formatCountHtml(o.kept, o.keepers.length, o.otherKeeps)
                   }, function(html) {
-                    cb($("<div class=kifi-slider2-tip>").html(html).data("keepers", o.keepers), positionIt);
+                    cb($(html).data("keepers", o.keepers), positionIt);
                   });
                 } else {
                   render("html/keeper/titled_tip.html", {
@@ -140,16 +140,15 @@ slider2 = function() {
           showDelay: 100,
           hideDelay: 600,
           click: "toggle",
-          create: function(callback) {
-            var i = $a.prevAll(".kifi-slider2-keeper").length;
-            var friend = ($a.closest(".kifi-slider2-tip").data("keepers") || [])[i];
+          create: function(cb) {
+            var friend = $a.closest(".kifi-slider2-tip").data("keepers").filter(hasId($a.data("id")))[0];
             if (!friend) return;
             render("html/friend_card.html", {
               networkIds: friend.networkIds,
               name: friend.firstName + " " + friend.lastName,
               id: friend.id,
               iconsUrl: api.url("images/social_icons.png")
-            }, callback);
+            }, cb);
           }});
       }).on("mouseout", ".kifi-slider2-keep-btn", function() {
         this.classList.remove("kifi-hoverless");
@@ -610,6 +609,10 @@ slider2 = function() {
     return arr;
   }
 
+  function hasId(id) {
+    return function(o) {return o.id == id};
+  }
+
   api.port.on({
     kept: function(o) {
       if ($slider) updateKeptDom($slider.find(".kifi-slider2-keep"), o.kept);
@@ -687,15 +690,13 @@ slider2 = function() {
         showDelay: 0,
         hideDelay: 1e9,
         click: "hide",
-        create: function(callback) {
+        create: function(cb) {
           // TODO: preload friend pictures
           render("html/metro/keepers.html", {
             keepers: pick(keepers, 8),
             anyKeepers: keepers.length,
             captionHtml: formatCountHtml(0, keepers.length, otherKeeps)
-          }, function(html) {
-            callback($("<div class=kifi-slider2-tip>").html(html));
-          });
+          }, cb);
         }});
       setTimeout($tile.triggerHandler.bind($tile, "click.showHover"), 2500);
     }};
