@@ -48,8 +48,7 @@ case class UserConnectionKey(userId: Id[User]) extends Key[Set[Id[User]]] {
 }
 
 class UserConnectionIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[UserConnectionKey, Set[Id[User]]] {
-  implicit val idFormater = Id.format[User]
-  val ttl = 4 hours
+  val ttl = 7 days
   def deserialize(obj: Any): Set[Id[User]] = {
     val arr = obj.asInstanceOf[Array[Long]].toSet
     arr.map(Id[User](_))
