@@ -6,6 +6,10 @@ function logEvent() {  // parameters defined in main.js
   api.port.emit("log_event", Array.prototype.slice.call(arguments));
 }
 
+window.onerror = function (message, url, lineNo) {
+  api.port.emit("report_error", { message: message, url: url, lineNo: lineNo });
+};
+
 var injected, t0 = +new Date, tile, paneHistory;
 
 !function() {

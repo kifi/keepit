@@ -30,7 +30,8 @@ class ExtErrorReportController @Inject() (
     val errorReport = healthcheck.addError(
       HealthcheckError(error = None,
         callType = Healthcheck.EXTENSION,
-        errorMessage = Some(s"error on user ${request.userId} extension installation id ${request.kifiInstallationId}" +
+        errorMessage = Some(
+          s"error on user ${request.userId} extension installation id ${request.kifiInstallationId.getOrElse("")}" +
           s" using experiments [${request.experiments.mkString(",")}]" +
           s": $message")
       )
