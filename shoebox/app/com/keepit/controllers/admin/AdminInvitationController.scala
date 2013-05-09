@@ -4,14 +4,10 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{PhraseStates, PhraseRepo, Phrase}
-import com.keepit.search.phrasedetector.PhraseImporter
-import com.keepit.search.{SearchServiceClient, Lang}
-import views.html
+import com.keepit.common.mail.InvitationMailPlugin
 import com.keepit.model._
-import com.keepit.common.mail.PostOffice
-import com.keepit.common.mail.ElectronicMail
-import com.keepit.common.mail.EmailAddresses
+
+import views.html
 
 @Singleton
 class AdminInvitationController @Inject() (
@@ -19,8 +15,7 @@ class AdminInvitationController @Inject() (
   db: Database,
   invitationRepo: InvitationRepo,
   socialUserRepo: SocialUserInfoRepo,
-  emailAddressRepo: EmailAddressRepo,
-  postOffice: PostOffice,
+  invitationMailPlugin: InvitationMailPlugin,
   userRepo: UserRepo)
     extends AdminController(actionAuthenticator) {
 
@@ -90,18 +85,6 @@ class AdminInvitationController @Inject() (
   }
 
   private def notifyAcceptedUser(userId: Id[User]) {
-    db.readWrite { implicit session =>
-      val user = userRepo.get(userId)
-      for (address <- emailAddressRepo.getByUser(userId)) {
-        postOffice.sendMail(ElectronicMail(
-          senderUserId = None,
-          from = EmailAddresses.CONGRATS,
-          fromName = Some("KiFi Team"),
-          to = address,
-          subject = "Congrats! You're in the KiFi Private Beta",
-          htmlBody = views.html.email.invitationAccept(user).body,
-          category = PostOffice.Categories.INVITATION))
-      }
-    }
+    invitationMailPlugin.notifyAcceptedUser(userId)
   }
 }

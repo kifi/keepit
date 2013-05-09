@@ -4,17 +4,17 @@ import com.google.common.io.Files
 import com.google.inject.{Provides, Singleton}
 import com.keepit.classify.DomainTagImportSettings
 import com.keepit.common.analytics.reports._
+import com.keepit.common.crypto._
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.MailToKeepServerSettings
-import com.keepit.common.mail.{MailToKeepPlugin, MailToKeepPluginImpl}
+import com.keepit.common.mail._
 import com.keepit.common.social._
 import com.keepit.common.store.{ImageDataIntegrityPluginImpl, ImageDataIntegrityPlugin}
 import com.keepit.inject.AppScoped
+import com.keepit.realtime._
 import com.keepit.scraper._
 import com.tzavellas.sse.guice.ScalaModule
+
 import play.api.Play.current
-import com.keepit.common.crypto._
-import com.keepit.realtime._
 
 class ShoeboxModule() extends ScalaModule with Logging {
   def configure() {
@@ -28,6 +28,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
     bind[UserEmailNotifierPlugin].to[UserEmailNotifierPluginImpl].in[AppScoped]
     bind[ConnectionUpdater].to[UserConnectionCreator]
     bind[ImageDataIntegrityPlugin].to[ImageDataIntegrityPluginImpl].in[AppScoped]
+    bind[InvitationMailPlugin].to[InvitationMailPluginImpl].in[AppScoped]
   }
 
   @Singleton

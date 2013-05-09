@@ -26,6 +26,7 @@ case class Invitation(
 
 @ImplementedBy(classOf[InvitationRepoImpl])
 trait InvitationRepo extends Repo[Invitation] with ExternalIdColumnFunction[Invitation] {
+  def getAdminAccepted()(implicit session: RSession): Seq[Invitation]
   def invitationsPage(page: Int = 0, size: Int = 20, showState: Option[State[Invitation]] = None)
     (implicit session: RSession): Seq[(Option[Invitation], SocialUserInfo)]
   def getByUser(urlId: Id[User])(implicit session: RSession): Seq[Invitation]
@@ -83,6 +84,10 @@ class InvitationRepoImpl @Inject() (
       case (None, suid) => (None, socialUserInfoRepo.get(suid))
     }
   }
+
+  // get invitations accepted by admin but not joined
+  def getAdminAccepted()(implicit session: RSession): Seq[Invitation] =
+    (for (i <- table if i.state === InvitationStates.ADMIN_ACCEPTED) yield i).list
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Invitation] =
     (for(b <- table if b.senderUserId === userId && b.state =!= InvitationStates.INACTIVE) yield b).list
