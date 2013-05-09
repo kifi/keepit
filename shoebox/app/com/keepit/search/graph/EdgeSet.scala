@@ -37,10 +37,7 @@ object EdgeSetUtil {
   }
 }
 
-class MaterializedEdgeSet[S,D](override val sourceId: Id[S], override val destIdSet: Set[Id[D]]) extends EdgeSet[S, D] {
-
-  def destIdLongSet = destIdSet.map(_.id)
-  def size = destIdSet.size
+abstract class MaterializedEdgeSet[S,D](override val sourceId: Id[S]) extends EdgeSet[S, D] {
 
   private[this] var cache: (Searcher, Array[Int]) = (null, null)
 

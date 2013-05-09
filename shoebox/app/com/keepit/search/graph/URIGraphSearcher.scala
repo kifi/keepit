@@ -11,6 +11,8 @@ import com.keepit.search.index.Searcher
 import com.keepit.search.index.WrappedSubReader
 import com.keepit.search.line.LineIndexReader
 import com.keepit.search.query.QueryUtil
+import com.keepit.search.util.LongArraySet
+import com.keepit.search.util.LongToLongArrayMap
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator
@@ -30,10 +32,9 @@ class URIGraphSearcher(searcher: Searcher) {
     val sourceDocId = reader.getIdMapper.getDocId(sourceId.id)
     val uriIdSet = getURIList(sourceDocId) match {
       case Some(uriList) =>
-        if (publicOnly) uriList.publicList.map(id => new Id[NormalizedURI](id)).toSet
-        else (uriList.publicList.map(id => new Id[NormalizedURI](id)).toSet ++
-              uriList.privateList.map(id => new Id[NormalizedURI](id)).toSet)
-      case None => Set.empty[Id[NormalizedURI]]
+        if (publicOnly) LongArraySet.fromSorted(uriList.publicList)
+        else LongArraySet.from(uriList.publicList ++ uriList.privateList)
+      case None => Set.empty[Long]
     }
     new UserToUriEdgeSet(sourceId, uriIdSet)
   }
@@ -42,16 +43,12 @@ class URIGraphSearcher(searcher: Searcher) {
     val sourceDocId = reader.getIdMapper.getDocId(sourceId.id)
     val uriIdMap = getURIList(sourceDocId) match {
       case Some(uriList) =>
-        var m = uriList.publicList.zip(uriList.publicCreatedAt).foldLeft(Map.empty[Id[NormalizedURI], Long]) {
-          case (m, (id, createdAt)) => m + (Id[NormalizedURI](id) -> createdAt)
-        }
-        if (publicOnly) m
+        if (publicOnly) LongToLongArrayMap.fromSorted(uriList.publicList, uriList.publicCreatedAt)
         else {
-          uriList.privateList.zip(uriList.privateCreatedAt).foldLeft(m) {
-            case (m, (id, createdAt)) => m + (Id[NormalizedURI](id) -> createdAt)
-          }
+          LongToLongArrayMap.from(uriList.publicList ++ uriList.privateList,
+                                  uriList.publicCreatedAt ++ uriList.privateCreatedAt)
         }
-      case None => Map.empty[Id[NormalizedURI], Long]
+      case None => Map.empty[Long, Long]
     }
     new UserToUriEdgeSetWithCreatedAt(sourceId, uriIdMap)
   }
@@ -140,14 +137,24 @@ class URIGraphSearcher(searcher: Searcher) {
   }
 }
 
-class UserToUserEdgeSet(sourceId: Id[User], destIdSet: Set[Id[User]]) extends MaterializedEdgeSet[User, User](sourceId, destIdSet)
+class UserToUserEdgeSet(sourceId: Id[User], override val destIdSet: Set[Id[User]]) extends MaterializedEdgeSet[User, User](sourceId) {
+  override lazy val destIdLongSet: Set[Long] = destIdSet.map(_.id)
+  def size = destIdSet.size
+}
 
-class UserToUriEdgeSet(sourceId: Id[User], destIdSet: Set[Id[NormalizedURI]]) extends MaterializedEdgeSet[User, NormalizedURI](sourceId, destIdSet)
+class UserToUriEdgeSet(sourceId: Id[User], override val destIdLongSet: Set[Long]) extends MaterializedEdgeSet[User, NormalizedURI](sourceId) {
+  override lazy val destIdSet: Set[Id[NormalizedURI]] = destIdLongSet.map(Id[NormalizedURI](_))
+  def size = destIdLongSet.size
+}
 
-class UserToUriEdgeSetWithCreatedAt(sourceId: Id[User], destIdMap: Map[Id[NormalizedURI], Long])
-  extends MaterializedEdgeSet[User, NormalizedURI](sourceId, destIdMap.keySet) {
+class UserToUriEdgeSetWithCreatedAt(sourceId: Id[User], destIdMap: Map[Long, Long])
+  extends MaterializedEdgeSet[User, NormalizedURI](sourceId) {
 
-  def getCreatedAt(id: Id[NormalizedURI]): Long = URIList.unitToMillis(destIdMap.get(id).getOrElse(0L))
+  override lazy val destIdLongSet: Set[Long] = destIdMap.keySet
+  override lazy val destIdSet: Set[Id[NormalizedURI]] = destIdLongSet.map(new Id[NormalizedURI](_))
+  def size = destIdMap.size
+
+  def getCreatedAt(id: Id[NormalizedURI]): Long = URIList.unitToMillis(destIdMap.get(id.id).getOrElse(0L))
 }
 
 class UriToUserEdgeSet(sourceId: Id[NormalizedURI], searcher: Searcher) extends LuceneBackedEdgeSet[NormalizedURI, User](sourceId, searcher) {
