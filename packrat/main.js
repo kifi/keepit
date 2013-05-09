@@ -386,10 +386,6 @@ api.port.on({
     var d = pageData[tab.nUri] || {};
     respond({kept: d.kept, keepers: d.keepers || [], otherKeeps: d.otherKeeps || 0});
   },
-  get_num_mutual_keeps: function(data, respond) {
-    api.log("[get_num_mutual_keeps]", data.id);
-    ajax("GET", "/bookmarks/mutual/" + data.id, respond);
-  },
   keep: function(data, _, tab) {
     api.log("[keep]", data);
     (pageData[tab.nUri] || {}).kept = data.how;
