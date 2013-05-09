@@ -3,7 +3,7 @@ package com.keepit.social
 import org.joda.time.DateTime
 import org.specs2.mutable._
 
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{TestSlickSessionProvider, ExternalId}
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.social.{SocialNetworks, SocialId}
 import com.keepit.inject.inject
@@ -67,7 +67,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with DbRepos {
         plugin.find(id.id).right.get === None
       }
     }
-    "associate with the correct user" in {
+    "associate with the correct user and save the session when needed" in {
       running(new EmptyApplication()) {
         val plugin =
           new SecureSocialAuthenticatorPlugin(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
@@ -85,6 +85,10 @@ class SecureSocialAuthenticatorPluginTest extends Specification with DbRepos {
         val authenticator = plugin.find(id.id).right.get.get
         authenticator.userId.id === socialId.id
         authenticator.userId.providerId === provider.name
+        inject[TestSlickSessionProvider].doWithoutCreatingSessions {
+          // we should have an old session in the cache and we shouldn't care about updating the last used time
+          plugin.save(authenticator.copy(lastUsed = authenticator.lastUsed.plusDays(1)))
+        }
         db.readOnly { implicit s =>
           userSessionRepo.get(id).userId.get === user.id.get
         }
