@@ -106,7 +106,7 @@ slider2 = function() {
           api.port.emit("get_keepers", function(o) {
             $(btn).showHover({
               reuse: false,
-              showDelay: $pane ? 500 : 250,
+              showDelay: 700,
               hideDelay: o.keepers.length ? 800 : 0,
               click: "hide",
               create: function(cb) {
@@ -137,6 +137,7 @@ slider2 = function() {
         }
       }).on("mouseenter", ".kifi-slider2-keeper", function() {
         var $a = $(this).showHover({
+          showDelay: 100,
           hideDelay: 600,
           click: "toggle",
           create: function(callback) {
@@ -166,7 +167,7 @@ slider2 = function() {
         if (e.target !== this) return;
         $(this).showHover({
           reuse: false,
-          showDelay: $pane ? 500 : 250,
+          showDelay: 700,
           click: "hide",
           create: function(cb) {
             var kept = !this.parentNode.classList.contains("kifi-unkept");
@@ -194,7 +195,7 @@ slider2 = function() {
       }).on("mouseenter", ".kifi-slider2-x", function() {
         $(this).css("overflow", "visible").showHover({
           reuse: true,
-          showDelay: 500,
+          showDelay: 700,
           click: "hide"});
       }).on("click", ".kifi-slider2-x", function() {
         if ($pane) {
@@ -204,7 +205,7 @@ slider2 = function() {
         if (e.target !== this) return;
         $(this).showHover({
           reuse: false,
-          showDelay: $pane ? 500 : 250,
+          showDelay: 700,
           click: "hide",
           create: function(cb) {
             var tip = {
@@ -688,6 +689,7 @@ slider2 = function() {
         reuse: false,
         showDelay: 0,
         hideDelay: 1e9,
+        click: "hide",
         create: function(callback) {
           // TODO: preload friend pictures
           render("html/metro/keepers.html", {
