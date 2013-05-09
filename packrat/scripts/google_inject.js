@@ -367,6 +367,7 @@ api.log("[google_inject]");
     }).on("mouseenter", ".kifi-face.kifi-friend", function() {
       var $a = $(this).showHover({
         hideDelay: 600,
+        click: "toggle",
         create: function(callback) {
           var i = $a.closest("li.g").prevAll("li.g").length, j = $a.prevAll(".kifi-friend").length;
           var friend = response.hits[i].users[j];
@@ -383,6 +384,7 @@ api.log("[google_inject]");
     }).on("mouseenter", ".kifi-res-friends", function(e) {
       if (e.target !== this) return;
       var $a = $(this).showHover({
+        click: "toggle",
         create: function(callback) {
           var i = $a.closest("li.g").prevAll("li.g").length;
           render("html/search/friends.html", {friends: response.hits[i].users}, function(html) {
@@ -392,6 +394,7 @@ api.log("[google_inject]");
     }).on("mouseenter", ".kifi-chatter", function() {
       var $ch = $(this).showHover({
         hideDelay: 600,
+        click: "toggle",
         create: function(callback) {
           var n = $ch.data("n");
           render("html/search/chatter.html", {
