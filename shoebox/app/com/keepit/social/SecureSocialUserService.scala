@@ -3,18 +3,19 @@ package com.keepit.social
 import com.google.inject.{Inject, Singleton}
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.db.ExternalId
-import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
+import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
-import com.keepit.common.social.{UserConnectionCreator, SocialGraphPlugin, SocialId, SocialNetworkType}
+import com.keepit.common.social.{SocialGraphPlugin, SocialId, SocialNetworkType}
 import com.keepit.inject._
 import com.keepit.model._
+
 import play.api.Application
 import play.api.Play
 import play.api.Play.current
 import securesocial.core._
 import securesocial.core.providers.Token
-import com.keepit.common.healthcheck._
 
 class SecureSocialIdGenerator(app: Application) extends IdGenerator(app) {
   def generate: String = ExternalId[String]().toString
@@ -74,16 +75,31 @@ class SecureSocialAuthenticatorPlugin @Inject()(
     expirationDate = session.expires
   )
 
+  private def needsUpdate(oldSession: UserSession, newSession: UserSession): Boolean = {
+    // We only want to save if we actually changed something. SecureSocial likes to "touch" the session to update the
+    // last used time, but we're not using that right now. If we eventually do want to keep track of the last used
+    // time, we should try to avoid writing to the database every time.
+    oldSession.copy(
+      updatedAt = newSession.updatedAt,
+      createdAt = newSession.createdAt,
+      id = newSession.id) != newSession
+  }
+
   def save(authenticator: Authenticator): Either[Error, Unit] = reportExceptions {
     val newSession = sessionFromAuthenticator(authenticator)
-    val session = db.readWrite { implicit s =>
-      val maybeOldSession = sessionRepo.getOpt(newSession.externalId)
-      sessionRepo.save(newSession.copy(
-        id = maybeOldSession.map(_.id.get),
-        createdAt = maybeOldSession.map(_.createdAt).getOrElse(newSession.createdAt)
-      ))
+    authenticatorFromSession {
+      val oldSessionOpt = db.readOnly { implicit s => sessionRepo.getOpt(newSession.externalId) }
+      if (oldSessionOpt.exists(!needsUpdate(_, newSession))) {
+        oldSessionOpt.get
+      } else {
+        db.readWrite { implicit s =>
+          sessionRepo.save(newSession.copy(
+            id = oldSessionOpt.map(_.id.get),
+            createdAt = oldSessionOpt.map(_.createdAt).getOrElse(newSession.createdAt)
+          ))
+        }
+      }
     }
-    authenticatorFromSession(session)
   }
   def find(id: String): Either[Error, Option[Authenticator]] = reportExceptions {
     val externalIdOpt = try {
