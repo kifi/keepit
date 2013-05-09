@@ -39,7 +39,7 @@
 .kifi-kcard::after {
   margin-left: -8px;
   border-width: 8px;
-  border-top-color: #f2f2f2;
+  border-top-color: #fff;
 }
 .kifi-kcard .kifi-kcard-top {
   display: table;
