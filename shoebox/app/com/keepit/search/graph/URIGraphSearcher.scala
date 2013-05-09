@@ -33,7 +33,7 @@ class URIGraphSearcher(searcher: Searcher) {
     val uriIdSet = getURIList(sourceDocId) match {
       case Some(uriList) =>
         if (publicOnly) LongArraySet.fromSorted(uriList.publicList)
-        else LongArraySet.from(uriList.publicList ++ uriList.privateList)
+        else LongArraySet.from(concat(uriList.publicList, uriList.privateList))
       case None => Set.empty[Long]
     }
     new UserToUriEdgeSet(sourceId, uriIdSet)
@@ -45,8 +45,8 @@ class URIGraphSearcher(searcher: Searcher) {
       case Some(uriList) =>
         if (publicOnly) LongToLongArrayMap.fromSorted(uriList.publicList, uriList.publicCreatedAt)
         else {
-          LongToLongArrayMap.from(uriList.publicList ++ uriList.privateList,
-                                  uriList.publicCreatedAt ++ uriList.privateCreatedAt)
+          LongToLongArrayMap.from(concat(uriList.publicList, uriList.privateList),
+                                  concat(uriList.publicCreatedAt, uriList.privateCreatedAt))
         }
       case None => Map.empty[Long, Long]
     }
@@ -132,8 +132,29 @@ class URIGraphSearcher(searcher: Searcher) {
 
     getURIList(userDocId).map{ uriList =>
       val terms = QueryUtil.getTerms(query)
-      (getIndexReader(userDocId, uriList, terms), new ArrayIdMapper(uriList.publicList ++ uriList.privateList))
+      (getIndexReader(userDocId, uriList, terms), new ArrayIdMapper(concat(uriList.publicList, uriList.privateList)))
     }
+  }
+
+  private def concat(a: Array[Long], b: Array[Long]): Array[Long] = {
+    val ret = new Array[Long](a.length + b.length)
+    System.arraycopy(a, 0, ret, 0, a.length)
+    System.arraycopy(b, 0, ret, a.length, b.length)
+    ret
+  }
+
+  private def concatAll(a: Array[Long]*): Array[Long] =  {
+    val size = if (a.length > 0) a.map{ _.length }.sum else 0
+    val ret = new Array[Long](size)
+    var offset = 0
+    var i = 0
+    while (i < a.length) {
+      val len = a(i).length
+      System.arraycopy(a(i), 0, ret, offset, len)
+      offset += len
+      i += 1
+    }
+    ret
   }
 }
 
