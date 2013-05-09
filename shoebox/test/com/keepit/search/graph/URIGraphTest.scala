@@ -73,6 +73,24 @@ class URIGraphTest extends Specification with DbRepos {
         contentLang = Some(Lang("en")))
   }
 
+  private def mkBookmarks(expectedUriToUserEdges: List[(NormalizedURI, List[User])], mixPrivate: Boolean = false): List[Bookmark] = {
+    db.readWrite { implicit s =>
+      expectedUriToUserEdges.flatMap{ case (uri, users) =>
+        users.map { user =>
+          val url1 = urlRepo.get(uri.url).getOrElse( urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+          bookmarkRepo.save(BookmarkFactory(
+            uri = uri,
+            userId = user.id.get,
+            title = uri.title,
+            url = url1,
+            source = BookmarkSource("test"),
+            isPrivate = mixPrivate && ((uri.id.get.id + user.id.get.id) % 2 == 0),
+            kifiInstallation = None))
+        }
+      }
+    }
+  }
+
   class Searchable(uriGraphSearcher: URIGraphSearcher) {
     def search(user: Id[User], query: Query): Map[Long, Float] = {
       var result = Map.empty[Long,Float]
@@ -123,14 +141,8 @@ class URIGraphTest extends Specification with DbRepos {
       running(new EmptyApplication()) {
         val (users, uris) = setupDB
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
-        val bookmarks = db.readWrite { implicit s =>
-          expectedUriToUserEdges.flatMap{ case (uri, users) =>
-            users.map { user =>
-              val url1 = urlRepo.get(uri.url).getOrElse( urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-              bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1, uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")))
-            }
-          }
-        }
+        val bookmarks = mkBookmarks(expectedUriToUserEdges)
+
         val graphDir = new RAMDirectory
         val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
         val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db)
@@ -147,15 +159,7 @@ class URIGraphTest extends Specification with DbRepos {
         val store = setupArticleStore(uris)
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
-
-        val bookmarks = db.readWrite { implicit s =>
-          expectedUriToUserEdges.flatMap{ case (uri, users) =>
-            users.map { user =>
-              val url1 = urlRepo.get(uri.url).getOrElse( urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-              bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1, uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")))
-            }
-          }
-        }
+        val bookmarks = mkBookmarks(expectedUriToUserEdges)
 
         val graphDir = new RAMDirectory
         val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
@@ -180,15 +184,7 @@ class URIGraphTest extends Specification with DbRepos {
         val store = setupArticleStore(uris)
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
-
-        val bookmarks = db.readWrite { implicit s =>
-          expectedUriToUserEdges.flatMap{ case (uri, users) =>
-            users.map{ user =>
-              val url1 = urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-              bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1, uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")))
-            }
-          }
-        }
+        val bookmarks = mkBookmarks(expectedUriToUserEdges, mixPrivate = true)
 
         val graphDir = new RAMDirectory
         val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
@@ -200,8 +196,12 @@ class URIGraphTest extends Specification with DbRepos {
         val expectedUserIdToUriIdEdges = bookmarks.groupBy(_.userId).map{ case (userId, bookmarks) => (userId, bookmarks.map(_.uriId)) }
         expectedUserIdToUriIdEdges.map{ case (userId, uriIds) =>
           val expected = uriIds.toSet
-          val answer = searcher.getUserToUriEdgeSet(userId).destIdSet
+          val answer = searcher.getUserToUriEdgeSet(userId, publicOnly = false).destIdSet
           answer === expected
+
+          val expectedPublicOnly = uriIds.filterNot{ uriId => (uriId.id + userId.id) % 2 == 0 }.toSet
+          val answerPublicOnly = searcher.getUserToUriEdgeSet(userId, publicOnly = true).destIdSet
+          answerPublicOnly === expectedPublicOnly
         }
 
         graph.numDocs === users.size
@@ -214,15 +214,7 @@ class URIGraphTest extends Specification with DbRepos {
         val store = setupArticleStore(uris)
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
-
-        val bookmarks = db.readWrite { implicit s =>
-          expectedUriToUserEdges.flatMap{ case (uri, users) =>
-            users.map{ user =>
-              val url1 = urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-              bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1, uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")))
-            }
-          }
-        }
+        val bookmarks = mkBookmarks(expectedUriToUserEdges)
 
         val graphDir = new RAMDirectory
         val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
