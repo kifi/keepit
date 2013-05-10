@@ -1,6 +1,5 @@
 .kifi-messages-sent {
-  margin: 0 12px;
-  padding-top: 10px;
+  padding: 10px 12px 0;
   overflow-y: auto;
   max-height: 0;
   -moz-box-sizing: border-box;
