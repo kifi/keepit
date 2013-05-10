@@ -686,6 +686,16 @@ function createDeepLinkListener(locator, tabId) {
   });
 }
 
+
+
+function kifiLoginListener(tab) {
+  // check to see if this is the home page, if so try authenticating again if we don't have an installation
+  if (tab.url.replace(/\/#.*$/, "") === webBaseUri() && !getStored("kifi_installation_id")) {
+    doAuth();
+  }
+}
+api.tabs.on.ready.add(kifiLoginListener);
+
 function initTab(tab, d) {  // d is pageData[tab.nUri]
   api.log("[initTab]", tab.id, "inited:", tab.inited);
 
@@ -998,7 +1008,18 @@ function authenticate(callback) {
   if (dev) {
     openFacebookConnect();
   } else {
-    startSession(openFacebookConnect);
+    startSession(function () {
+      if (getStored("kifi_installation_id")) {
+        openFacebookConnect();
+      } else {
+        var tab = api.tabs.anyAt(webBaseUri() + "/");
+        if (tab) {
+          api.tabs.select(tab.id);
+        } else {
+          api.tabs.open(webBaseUri());
+        }
+      }
+    });
   }
 
   function startSession(onFail) {
@@ -1081,21 +1102,24 @@ function deauthenticate() {
 
 logEvent("extension", "started");
 
-authenticate(function() {
-  api.log("[main] authenticated");
+function doAuth() {
+  authenticate(function() {
+    api.log("[main] authenticated");
 
-  if (api.loadReason == "install") {
-    api.log("[main] fresh install");
-    var tab = api.tabs.anyAt(webBaseUri() + "/install");
-    if (tab) {
-      api.tabs.navigate(tab.id, webBaseUri() + "/getting-started");
-    } else {
-      api.tabs.open(webBaseUri() + "/getting-started");
+    if (api.loadReason == "install") {
+      api.log("[main] fresh install");
+      var tab = api.tabs.anyAt(webBaseUri() + "/install");
+      if (tab) {
+        api.tabs.navigate(tab.id, webBaseUri() + "/getting-started");
+      } else {
+        api.tabs.open(webBaseUri() + "/getting-started");
+      }
     }
-  }
-
-  api.tabs.eachSelected(subscribe);
-});
+    api.tabs.on.ready.remove(kifiLoginListener);
+    api.tabs.eachSelected(subscribe);
+  });
+}
+doAuth();
 
 // Global error logging
 
