@@ -34,6 +34,7 @@ case class ElectronicMail (
   from: SystemEmailAddress,
   fromName: Option[String] = None,
   to: EmailAddressHolder,
+  cc: Seq[EmailAddressHolder] = List[EmailAddressHolder](),
   subject: String,
   state: State[ElectronicMail] = ElectronicMailStates.PREPARING,
   htmlBody: LargeString,
@@ -87,6 +88,7 @@ class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cl
     def from = column[SystemEmailAddress]("from_addr", O.NotNull)
     def fromName = column[String]("from_name", O.Nullable)
     def to = column[EmailAddressHolder]("to_addr", O.Nullable)
+    def cc = column[Seq[EmailAddressHolder]]("cc_addr", O.Nullable)
     def subject = column[String]("subject", O.Nullable)
     def htmlBody = column[LargeString]("html_body", O.NotNull)
     def textBody = column[LargeString]("text_body", O.Nullable)
@@ -95,11 +97,11 @@ class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cl
     def messageId = column[ElectronicMailMessageId]("message_id", O.Nullable)
     def inReplyTo = column[ElectronicMailMessageId]("in_reply_to", O.Nullable)
     def category = column[ElectronicMailCategory]("category", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ senderUserId.? ~ from ~ fromName.? ~ to ~ subject ~ state ~
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ senderUserId.? ~ from ~ fromName.? ~ to ~ cc ~ subject ~ state ~
         htmlBody ~ textBody.? ~ responseMessage.? ~ timeSubmitted.? ~ messageId.? ~ inReplyTo.? ~ category <>
         (ElectronicMail, ElectronicMail.unapply _)
   }
-  
+
   def getOpt(id: Id[ElectronicMail])(implicit session: RSession): Option[ElectronicMail] = (for(f <- table if f.id is id) yield f).firstOption
 
   def outbox()(implicit session: RSession): Seq[Id[ElectronicMail]] =
