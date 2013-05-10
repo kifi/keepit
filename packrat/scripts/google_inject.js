@@ -310,7 +310,7 @@ api.log("[google_inject]");
         $res.find(".kifi-res-filter-custom").slideUp(200, function() {
           var $in = $res.find("#kifi-res-filter-cust");
           if ($in.tokenInput) {
-            $in.tokenInput("clear");
+            $in.tokenInput("destroy");
           }
         });
         search(null, f);
