@@ -16,7 +16,7 @@ done
 
 cd out/chrome/scripts
 for f in $(find * -type f); do
-  echo "//@ sourceURL="$f >> $f
+  echo "//@ sourceURL=http://kifi/"$f >> $f
 done
 cd -
 
