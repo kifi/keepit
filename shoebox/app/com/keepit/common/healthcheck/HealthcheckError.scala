@@ -85,9 +85,10 @@ case class HealthcheckError(
       case None => t
       case Some(c) => cause(c)
     }
-    def displayMessage(str: String) = {
-      Option(str).getOrElse("").replaceAll("\\d", "*").take(60)
-    }
+
+    def displayMessage(str: String) =
+      ExternalId.UUIDPattern.replaceAllIn(Option(str).getOrElse(""), "********-****-****-****-************")
+        .replaceAll("\\d", "*").take(60)
     error match {
       case None =>
         val message = errorMessage.getOrElse(path.getOrElse(callType.toString()))
