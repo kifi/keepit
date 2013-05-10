@@ -1,5 +1,5 @@
 .kifi-threads-list {
-  margin: 0 6px;
+  padding: 0 6px;
   overflow-y: auto;
   max-height: 0;
   -moz-box-sizing: border-box;
