@@ -4,8 +4,6 @@ import com.keepit.classify.DomainTag
 import com.keepit.classify.DomainToTag
 import com.keepit.classify.{DomainTagName, Domain}
 import com.keepit.common.db._
-import com.keepit.common.mail.ElectronicMailCategory
-import com.keepit.common.mail.ElectronicMailMessageId
 import com.keepit.common.db.{Id, State, Model, ExternalId, LargeString}
 import com.keepit.common.mail._
 import com.keepit.common.social.SocialId
@@ -165,6 +163,10 @@ object FortyTwoTypeMappers {
 
   implicit object EmailAddressHolderTypeMapper extends BaseTypeMapper[EmailAddressHolder] {
     def apply(profile: BasicProfile) = new EmailAddressHolderMapperDelegate(profile)
+  }
+
+  implicit object EmailAddressHolderListTypeMapper extends BaseTypeMapper[Seq[EmailAddressHolder]] {
+    def apply(profile: BasicProfile) = new EmailAddressHolderSeqMapperDelegate(profile)
   }
 
   implicit object BookmarkSourceHistoryTypeMapper extends BaseTypeMapper[BookmarkSource] {
@@ -451,9 +453,21 @@ class SystemEmailAddressMapperDelegate(profile: BasicProfile) extends StringMapp
 //       EmailAddressHolder -> String
 //************************************
 class EmailAddressHolderMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[EmailAddressHolder](profile) {
-  def zero = new EmailAddressHolder(){val address = ""}
+  def zero = new GenericEmailAddress("")
   def sourceToDest(value: EmailAddressHolder) = value.address
-  def safeDestToSource(str: String) = new EmailAddressHolder(){val address = str}
+  def safeDestToSource(str: String) = new GenericEmailAddress(str.trim)
+}
+
+//************************************
+//       Seq[EmailAddressHolder] -> String
+//************************************
+class EmailAddressHolderSeqMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[Seq[EmailAddressHolder]](profile) {
+  def zero = Seq[EmailAddressHolder]()
+  def sourceToDest(value: Seq[EmailAddressHolder]) = value map {e => e.address} mkString(",")
+  def safeDestToSource(str: String) = str.trim match {
+    case "" => zero
+    case trimmed => trimmed.split(",") map { addr => new GenericEmailAddress(addr.trim) }
+  }
 }
 
 //************************************
