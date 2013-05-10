@@ -20,7 +20,7 @@ class ElectronicMailTest extends Specification with TestDBRunner {
       withDB(FakeMailModule()) { implicit injector =>
         val mails = db.readWrite { implicit s =>
           val mails = ElectronicMail(from = EmailAddresses.TEAM, to = EmailAddresses.ENG, subject = "foo 1", htmlBody = "body", category = PostOffice.Categories.HEALTHCHECK) ::
-                      ElectronicMail(from = EmailAddresses.TEAM, to = EmailAddresses.TEAM, subject = "foo 2", htmlBody = "body", category = PostOffice.Categories.HEALTHCHECK) ::
+                      ElectronicMail(from = EmailAddresses.TEAM, to = EmailAddresses.TEAM, cc = EmailAddresses.EISHAY :: EmailAddresses.JARED :: Nil, subject = "foo 2", htmlBody = "body 2", textBody = Some("other"), category = PostOffice.Categories.HEALTHCHECK) ::
                       ElectronicMail(from = EmailAddresses.TEAM, to = EmailAddresses.EISHAY, subject = "foo 3", htmlBody = "body", category = PostOffice.Categories.HEALTHCHECK) ::
                       Nil
           mails map {mail => electronicMailRepo.save(mail) }
