@@ -154,6 +154,9 @@ function attachComposeBindings($c, composeTypeName) {
   .on("kifi:shown", setFocus)
   .on("kifi:remove", function() {
     $(window).off("resize", updateMaxHeight);
+    if ($t.length) {
+      $t.tokenInput("destroy");
+    }
   }).each(function() {
     if ($(this).data("shown")) {
       setFocus();
