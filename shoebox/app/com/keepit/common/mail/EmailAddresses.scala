@@ -23,8 +23,12 @@ object EmailAddresses {
   case object ANDREW extends SystemEmailAddress("andrew@42go.com")
   case object JARED extends SystemEmailAddress("jared@42go.com")
   case object GREG extends SystemEmailAddress("greg@42go.com")
+  case object YINGJIE extends SystemEmailAddress("yingjie@42go.com")
+  case object LEO extends SystemEmailAddress("leo@42go.com")
   case object CONGRATS extends SystemEmailAddress("congrats@kifi.com")
   case object ASANA_PROD_HEALTH extends SystemEmailAddress("x+5363166029963@mail.asana.com")
+
+  val ENG_EMAILS = EISHAY :: YASUHIRO :: JARED :: GREG :: ANDREW :: YINGJIE :: LEO :: Nil
 
   def apply(email: String): SystemEmailAddress = email match {
     case TEAM.address => TEAM
