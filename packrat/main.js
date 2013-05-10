@@ -1106,5 +1106,8 @@ function reportError(errMsg, url, lineNo) {
   });
 }
 
-window.onerror = reportError;
+try {
+  // TODO: make error handler work correctly in Firefox
+  window.onerror = reportError;
+} catch (_) {}
 

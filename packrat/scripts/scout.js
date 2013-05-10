@@ -15,7 +15,6 @@ var injected, t0 = +new Date, tile, paneHistory;
 !function() {
   api.log("[scout]", location.hostname);
   var tileCount, onScroll;
-
   api.port.on({
     new_notification: function(n) {
       if (n.state != "visited" && (!paneHistory || paneHistory[0] != n.details.locator)) {
