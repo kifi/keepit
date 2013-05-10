@@ -1,15 +1,19 @@
 package com.keepit.model
 
+import scala.collection.mutable
+import scala.slick.lifted.Query
+
+import org.joda.time.DateTime
+
 import com.google.inject.{ Inject, ImplementedBy, Singleton }
 import com.keepit.common.db._
-import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.time._
-import org.joda.time.DateTime
-import play.api.libs.json.JsValue
+import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.common.time.Clock
-import scala.slick.lifted.Query
+import com.keepit.common.time._
+
+import play.api.libs.json.JsValue
 
 case class UserNotificationDetails(payload: JsValue) extends AnyVal
 
@@ -32,6 +36,7 @@ case class UserNotification(
 
 @ImplementedBy(classOf[UserNotificationRepoImpl])
 trait UserNotificationRepo extends Repo[UserNotification] with ExternalIdColumnFunction[UserNotification]  {
+  def getUnvisitedNotificationsWithCommentRead()(implicit s: RSession): Seq[UserNotification]
   def allActive(category: UserNotificationCategory)(implicit session: RSession): Seq[UserNotification]
   def allUndelivered(before: DateTime)(implicit session: RSession): Seq[UserNotification]
   def getLatestFor(userId: Id[User], howMany: Int = 10, excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED))(implicit session: RSession): Seq[UserNotification]
@@ -51,9 +56,10 @@ class UserNotificationRepoImpl @Inject() (
   val clock: Clock,
   userValueRepo: UserValueRepo)
     extends DbRepo[UserNotification] with UserNotificationRepo with ExternalIdColumnDbFunction[UserNotification] with Logging {
-  import db.Driver.Implicit._
+
   import DBSession._
   import FortyTwoTypeMappers._
+  import db.Driver.Implicit._
 
   override val table = new RepoTable[UserNotification](db, "user_notification") with ExternalIdColumn[UserNotification] {
     def userId = column[Id[User]]("user_id", O.NotNull)
@@ -62,6 +68,28 @@ class UserNotificationRepoImpl @Inject() (
     def commentId = column[Id[Comment]]("comment_id", O.Nullable)
     def subsumedId = column[Id[UserNotification]]("subsumed_id", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ externalId ~ category ~ details ~ commentId.? ~ subsumedId.? ~ state <> (UserNotification, UserNotification.unapply _)
+  }
+
+  def getUnvisitedNotificationsWithCommentRead()(implicit s: RSession): Seq[UserNotification] = {
+    import UserNotificationCategories._
+    import UserNotificationStates._
+    val idQuery =
+      s"""
+        |SELECT DISTINCT n.id AS id
+        |FROM user_notification n, comment m, comment_read r
+        |WHERE n.state NOT IN ('$SUBSUMED','$VISITED','$INACTIVE')
+        |  AND n.category = '$MESSAGE'
+        |  AND m.id = n.comment_id
+        |  AND (m.id = r.parent_id OR m.parent = r.parent_id)
+        |  AND r.user_id = n.user_id
+        |  AND r.last_read_id >= n.comment_id;
+      """.stripMargin
+    val rs = s.getPreparedStatement(idQuery).executeQuery()
+    try {
+      val ids = mutable.ArrayBuffer[Id[UserNotification]]()
+      while (rs.next()) { ids += Id(rs.getLong("id")) }
+      ids.map(get)
+    } finally rs.close()
   }
 
   def allActive(category: UserNotificationCategory)(implicit session: RSession): Seq[UserNotification] =
@@ -116,7 +144,9 @@ object UserNotificationStates {
   val SUBSUMED = State[UserNotification]("subsumed")
 }
 
-case class UserNotificationCategory(name: String) extends AnyVal
+case class UserNotificationCategory(name: String) extends AnyVal {
+  override def toString = name
+}
 
 object UserNotificationCategories {
   val COMMENT = UserNotificationCategory("comment")
