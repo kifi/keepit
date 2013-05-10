@@ -14,6 +14,12 @@ for d in html icons images scripts styles; do
   cp -R $d out/firefox/data/
 done
 
+cd out/chrome/scripts
+for f in $(find * -type f); do
+  echo "//@ sourceURL="$f >> $f
+done
+cd -
+
 cp main.js out/chrome/
 cp main.js out/firefox/lib/
 

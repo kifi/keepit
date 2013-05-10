@@ -604,6 +604,17 @@ function insertNewNotification(n) {
     }
   }
   notifications.splice(i, 0, n);
+
+  if (n.state != "visited") {  // may have been visited before arrival
+    var d = pageData[n.details.page];
+    var timeLastRead =
+      n.category == "comment" ? d && d.lastCommentRead :
+      n.category == "message" ? d && d.lastMessageRead[n.details.locator.split("/")[2]] : 0;
+    if (new Date(n.details.createdAt) <= new Date(timeLastRead || 0)) {
+      n.state = "visited";
+    }
+  }
+
   numNotificationsNotVisited += n.state != "visited";
   if (n.details.subsumes) {
     for (i++; i < notifications.length; i++) {
