@@ -112,13 +112,10 @@ home-grown at FortyTwo, not intended for distribution (yet)
         data.lastShowTime = +new Date;
       }
       function hide() {
-        if (!$a.hasClass("kifi-hover-showing")) {
-          delete data.hide;
-          return;
-        }
-        $a.removeClass("kifi-hover-showing");
         clearTimeout(data.show || data.hide);
         delete data.show, delete data.hide;
+        if (!$a.hasClass("kifi-hover-showing")) return;
+        $a.removeClass("kifi-hover-showing");
         data.fadingOut = true;
         data.$h.on("transitionend webkitTransitionEnd", function end(e) {
           if (e.originalEvent.propertyName === "opacity") {
