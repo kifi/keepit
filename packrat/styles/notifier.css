@@ -39,12 +39,19 @@
 }
 #kifi-notify-notice-wrapper .kifi-notify-close {
 	position: absolute;
-	top: 5px;
-	right: 3px;
+	top: 6px;
+	right: 6px;
   color: #ddd;
 	cursor: pointer;
 	width: 15px;
 	height: 15px;
+  text-align: center;
+  line-height:15px;
+}
+#kifi-notify-notice-wrapper .kifi-notify-close:hover {
+  color: #333;
+  background-color:#ddd;
+  border-radius: 10px;
 }
 
 #kifi-notify-notice-wrapper .kifi-notify-title {
