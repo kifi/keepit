@@ -45,9 +45,9 @@ case class HealthcheckHost(host: String) extends AnyVal {
 
 case class SendHealthcheckMail(history: HealthcheckErrorHistory, host: HealthcheckHost) {
 
-  def sendMail(db: Database, postOffice: PostOffice, services: FortyTwoServices) = (history.count == 1) match {
-    case true => sendAsanaMail(db, postOffice, services)
-    case false => sendRegularMail(db, postOffice, services)
+  def sendMail(db: Database, postOffice: PostOffice, services: FortyTwoServices) = {
+    if (history.count == 1) sendAsanaMail(db, postOffice, services)
+    sendRegularMail(db, postOffice, services)
   }
 
   private def sendRegularMail(db: Database, postOffice: PostOffice, services: FortyTwoServices) {
@@ -64,7 +64,7 @@ case class SendHealthcheckMail(history: HealthcheckErrorHistory, host: Healthche
       val subject = s"[${services.currentService}/$host] ${history.lastError.subjectName}"
       val body = views.html.email.healthcheckAsanaMail(history).body
       postOffice.sendMail(ElectronicMail(from = EmailAddresses.EISHAY, to = EmailAddresses.ASANA_PROD_HEALTH,
-        subject = subject, htmlBody = body, category = PostOffice.Categories.ASANA_HEALTHCHECK))
+        subject = subject, htmlBody = body, textBody = Some(body), category = PostOffice.Categories.ASANA_HEALTHCHECK))
     }
   }
 }
