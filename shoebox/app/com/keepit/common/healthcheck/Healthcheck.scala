@@ -54,7 +54,7 @@ case class SendHealthcheckMail(history: HealthcheckErrorHistory, host: Healthche
     db.readWrite { implicit s =>
       val subject = s"ERROR: [${services.currentService}/$host] ${history.lastError.subjectName}"
       val body = views.html.email.healthcheckMail(history, services.started.toStandardTimeString).body
-      postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
+      postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = body, category = PostOffice.Categories.HEALTHCHECK))
     }
   }
@@ -65,7 +65,7 @@ case class SendHealthcheckMail(history: HealthcheckErrorHistory, host: Healthche
       val body = views.html.email.healthcheckAsanaMail(history).body
       postOffice.sendMail(ElectronicMail(
         from = EmailAddresses.EISHAY,
-        to = EmailAddresses.ASANA_PROD_HEALTH,
+        to = List(EmailAddresses.ASANA_PROD_HEALTH),
         cc = EmailAddresses.ENG_EMAILS,
         subject = subject, htmlBody = body, textBody = Some(body), category = PostOffice.Categories.ASANA_HEALTHCHECK))
     }
@@ -163,7 +163,7 @@ class HealthcheckPluginImpl @Inject() (
   override def reportStart() = db.readWrite { implicit s =>
     val subject = s"Service ${services.currentService} started"
     val message = Html(s"Service version ${services.currentVersion} started at ${currentDateTime} on $host. Service compiled at ${services.compilationTime}")
-    postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
+    postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
         category = PostOffice.Categories.HEALTHCHECK))
   }
@@ -171,7 +171,7 @@ class HealthcheckPluginImpl @Inject() (
   override def reportStop() = db.readWrite { implicit s =>
     val subject = s"Service ${services.currentService} stopped"
     val message = Html(s"Service version ${services.currentVersion} stopped at ${currentDateTime} on $host. Service compiled at ${services.compilationTime}")
-    postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
+    postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
         category = PostOffice.Categories.HEALTHCHECK))
   }

@@ -48,7 +48,7 @@ class AdminUserController @Inject() (
     clock: Clock) extends AdminController(actionAuthenticator) {
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    val (user, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails) = db.readOnly { implicit s =>
+    val (user, socialUserInfos, follows, comments, messages, sentElectronicMails) = db.readOnly { implicit s =>
       val user = userRepo.get(userId)
       val userWithSocial = userWithSocialRepo.toUserWithSocial(user)
       val socialUserInfos = socialUserInfoRepo.getByUser(userWithSocial.user.id.get)
@@ -62,15 +62,12 @@ class AdminUserController @Inject() (
         })
       }
       val sentElectronicMails = mailRepo.forSender(userId)
-      val emails = emailRepo.getByUser(userId)
-      val mailAddresses = emails.map(_.address)
-      val receivedElectronicMails = mailRepo.forRecipient(mailAddresses)
-      (userWithSocial, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails)
+      (userWithSocial, socialUserInfos, follows, comments, messages, sentElectronicMails)
     }
     val rawInfos = socialUserInfos map {info =>
       socialUserRawInfoStore.get(info.id.get)
     }
-    Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, follows, comments, messages, sentElectronicMails, receivedElectronicMails))
+    Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, follows, comments, messages, sentElectronicMails))
   }
 
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>

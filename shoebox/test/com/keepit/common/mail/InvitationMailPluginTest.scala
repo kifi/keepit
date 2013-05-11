@@ -29,7 +29,7 @@ class InvitationMailPluginTest extends TestKit(ActorSystem()) with Specification
         }
         plugin.notifyAcceptedUser(user.id.get)
         val mail = fakeOutbox.mails.head
-        mail.to.address === addr.address
+        mail.to(0).address === addr.address
         mail.from.address === EmailAddresses.CONGRATS.address
         mail.subject must not startWith("Reminder")
       }
@@ -75,18 +75,18 @@ class InvitationMailPluginTest extends TestKit(ActorSystem()) with Specification
         clock += Days.TWO
 
         plugin.resendNotifications()
-        val mail = fakeOutbox.mails.find (_.to.address == "andrew@smith.org")
+        val mail = fakeOutbox.mails.find (_.to(0).address == "andrew@smith.org")
         mail must beSome
         mail.get.subject must startWith("Reminder")
-        fakeOutbox.mails.exists(_.to.address == "greg@conner.org") must beFalse
+        fakeOutbox.mails.exists(_.to(0).address == "greg@conner.org") must beFalse
 
         fakeOutbox.mails.clear()
 
         clock += Days.TWO
 
         plugin.resendNotifications()
-        fakeOutbox.mails.exists(_.to.address == "andrew@smith.org") must beFalse
-        fakeOutbox.mails.exists(_.to.address == "greg@conner.org") must beTrue
+        fakeOutbox.mails.exists(_.to(0).address == "andrew@smith.org") must beFalse
+        fakeOutbox.mails.exists(_.to(0).address == "greg@conner.org") must beTrue
 
         fakeOutbox.mails.clear()
         db.readWrite { implicit s =>

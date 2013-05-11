@@ -33,7 +33,7 @@ case class ElectronicMail (
   senderUserId: Option[Id[User]] = None,
   from: SystemEmailAddress,
   fromName: Option[String] = None,
-  to: EmailAddressHolder,
+  to: Seq[EmailAddressHolder] = List[EmailAddressHolder](),
   cc: Seq[EmailAddressHolder] = List[EmailAddressHolder](),
   subject: String,
   state: State[ElectronicMail] = ElectronicMailStates.PREPARING,
@@ -71,9 +71,6 @@ trait ElectronicMailRepo extends Repo[ElectronicMail] with ExternalIdColumnFunct
   def getOpt(id: Id[ElectronicMail])(implicit session: RSession): Option[ElectronicMail]
   def outbox()(implicit session: RSession): Seq[Id[ElectronicMail]]
   def forSender(senderId: Id[User])(implicit session: RSession): Seq[ElectronicMail]
-  def forRecipient(mailAddresses: Seq[String])(implicit session: RSession): Seq[ElectronicMail]
-  def count(filterRecipeintNot: EmailAddressHolder)(implicit session: RSession): Int
-  def page(page: Int, size: Int, filterRecipeintNot: EmailAddressHolder)(implicit session: RSession): Seq[ElectronicMail]
 }
 
 @Singleton
@@ -87,7 +84,7 @@ class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cl
     def senderUserId = column[Id[User]]("user_id", O.Nullable)
     def from = column[SystemEmailAddress]("from_addr", O.NotNull)
     def fromName = column[String]("from_name", O.Nullable)
-    def to = column[EmailAddressHolder]("to_addr", O.Nullable)
+    def to = column[Seq[EmailAddressHolder]]("to_addr", O.Nullable)
     def cc = column[Seq[EmailAddressHolder]]("cc_addr", O.Nullable)
     def subject = column[String]("subject", O.Nullable)
     def htmlBody = column[LargeString]("html_body", O.NotNull)
@@ -109,18 +106,6 @@ class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cl
 
   def forSender(senderId: Id[User])(implicit session: RSession): Seq[ElectronicMail] =
     (for (t <- table if t.senderUserId === senderId ) yield t).list()
-
-  def forRecipient(mailAddresses: Seq[String])(implicit session: RSession): Seq[ElectronicMail] =
-    mailAddresses.map {str => new EmailAddressHolder(){val address = str}} match {
-      case Nil => Nil
-      case addrs => (for (t <- table if t.to inSet addrs ) yield t).list()
-    }
-
-  def count(filterRecipeintNot: EmailAddressHolder)(implicit session: RSession): Int =
-    Query((for (t <- table if t.to =!= filterRecipeintNot) yield t.id).countDistinct).first
-
-  def page(page: Int, size: Int, filterRecipeintNot: EmailAddressHolder)(implicit session: RSession): Seq[ElectronicMail] =
-    (for ( t <- table if t.to =!= filterRecipeintNot ) yield t).sortBy(_.id desc).drop(page * size).take(size).list
 }
 
 object ElectronicMailStates {
