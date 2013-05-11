@@ -7,7 +7,10 @@ function logEvent() {  // parameters defined in main.js
 }
 
 window.onerror = function (message, url, lineNo) {
-  api.port.emit("report_error", { message: message, url: url, lineNo: lineNo });
+  if (!/https?\:/.test(url)) {
+    // this is probably from extension code, not from the website we're running this on
+    api.port.emit("report_error", { message: message, url: url, lineNo: lineNo });
+  }
 };
 
 var injected, t0 = +new Date, tile, paneHistory;
