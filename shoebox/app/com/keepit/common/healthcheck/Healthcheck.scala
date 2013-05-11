@@ -65,7 +65,7 @@ case class SendHealthcheckMail(history: HealthcheckErrorHistory, host: Healthche
       val body = views.html.email.healthcheckAsanaMail(history).body
       postOffice.sendMail(ElectronicMail(
         from = EmailAddresses.EISHAY,
-        to = List(EmailAddresses.ASANA_PROD_HEALTH),
+        to = EmailAddresses.ASANA_PROD_HEALTH::EmailAddresses.EISHAY::Nil,
         cc = EmailAddresses.ENG_EMAILS,
         subject = subject, htmlBody = body, textBody = Some(body), category = PostOffice.Categories.ASANA_HEALTHCHECK))
     }
