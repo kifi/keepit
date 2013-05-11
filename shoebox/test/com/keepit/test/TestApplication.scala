@@ -87,6 +87,7 @@ trait DbRepos {
   def emailAddressRepo = inject[EmailAddressRepo]
   def invitationRepo = inject[InvitationRepo]
   def unscrapableRepo = inject[UnscrapableRepo]
+  def notificationRepo = inject[UserNotificationRepo]
 }
 
 object TestDbInfo {

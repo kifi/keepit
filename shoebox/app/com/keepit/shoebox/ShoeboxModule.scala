@@ -29,6 +29,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
     bind[ConnectionUpdater].to[UserConnectionCreator]
     bind[ImageDataIntegrityPlugin].to[ImageDataIntegrityPluginImpl].in[AppScoped]
     bind[InvitationMailPlugin].to[InvitationMailPluginImpl].in[AppScoped]
+    bind[NotificationConsistencyChecker].to[NotificationConsistencyCheckerImpl].in[AppScoped]
   }
 
   @Singleton
