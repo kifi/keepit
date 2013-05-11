@@ -119,6 +119,7 @@ var injected, t0 = +new Date, tile, paneHistory;
       tile.parentNode.removeChild(tile);
     }
     tile = document.createElement("div");
+
     tile.id = "kifi-tile";
     tile.style.display = "none";
     tile.innerHTML = "<div class=kifi-tile-transparent style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>";
