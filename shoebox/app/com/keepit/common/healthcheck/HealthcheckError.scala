@@ -1,47 +1,38 @@
 package com.keepit.common.healthcheck
 
-
-import com.keepit.common.actor.ActorFactory
-import com.keepit.common.healthcheck.Healthcheck._
-import com.keepit.common.db.ExternalId
-import com.keepit.common.mail._
-import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.time._
-import com.keepit.common.plugin.SchedulingPlugin
-import com.keepit.common.akka.FortyTwoActor
+import java.security.MessageDigest
 
 import org.apache.commons.codec.binary.Base64
 import org.joda.time.DateTime
-import java.security.MessageDigest
-import com.google.inject.{ Inject, Provider }
 
-import akka.util.Timeout
-import akka.actor._
-import akka.actor.Actor._
-import akka.pattern.ask
-
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.templates.Html
-import play.api.libs.concurrent._
-
-import scala.concurrent.{ Future, Await }
-import scala.concurrent.duration._
-import scala.collection.mutable.MutableList
+import com.keepit.common.db.ExternalId
+import com.keepit.common.healthcheck.Healthcheck._
+import com.keepit.common.time._
 
 case class HealthcheckErrorSignature(value: String) extends AnyVal
+
+// This allows you to separate the message from any user-specific info we're collecting
+case class ErrorMessage(message: String, additionalInfo: Option[String] = None) {
+  override def toString = (Seq(message) ++ additionalInfo).mkString("\n")
+}
+
+object ErrorMessage {
+  implicit def toErrorMessage(message: String): ErrorMessage = ErrorMessage(message)
+  implicit def fromErrorMessage(message: ErrorMessage): String = message.toString
+}
 
 case class HealthcheckError(
   error: Option[Throwable] = None,
   method: Option[String] = None,
   path: Option[String] = None,
   callType: CallType,
-  errorMessage: Option[String] = None,
+  errorMessage: Option[ErrorMessage] = None,
   id: ExternalId[HealthcheckError] = ExternalId(),
   createdAt: DateTime = currentDateTime) {
 
   lazy val signature: HealthcheckErrorSignature = {
     val permText: String =
-      causeStacktraceHead(4).getOrElse(errorMessage.getOrElse("")) +
+      causeStacktraceHead(4).getOrElse(errorMessage.map(_.message).getOrElse("")) +
         path.getOrElse("") +
         method.getOrElse("") +
         callType.toString
@@ -81,7 +72,7 @@ case class HealthcheckError(
   }
 
   lazy val subjectName: String = {
-    def cause(t: Throwable): Throwable = Option(t.getCause()) match {
+    def cause(t: Throwable): Throwable = Option(t.getCause) match {
       case None => t
       case Some(c) => cause(c)
     }
@@ -91,12 +82,12 @@ case class HealthcheckError(
         .replaceAll("\\d", "*").take(60)
     error match {
       case None =>
-        val message = errorMessage.getOrElse(path.getOrElse(callType.toString()))
+        val message = errorMessage.map(_.message).getOrElse(path.getOrElse(callType.toString()))
         displayMessage(message)
       case Some(t) =>
         val source = cause(t)
-        val shortMessage = displayMessage(source.getMessage())
-        s"${source.getClass().toString} : $shortMessage..."
+        val shortMessage = displayMessage(source.getMessage)
+        s"${source.getClass.toString} : $shortMessage..."
     }
   }
 
@@ -105,7 +96,7 @@ case class HealthcheckError(
       case None => "[No Cause]"
       case Some(t) => s"""${t.getClass.getName}: ${t.getMessage}\n<br/> &nbsp; <span style="color:red; font-size: 13px; font-style: bold;">Cause:</span> ${causeString(Option(t.getCause))}"""
     }
-    (error map (e => causeString(error))).getOrElse(errorMessage.getOrElse(this.toString))
+    (error map (e => causeString(error))).getOrElse(errorMessage.getOrElse(this).toString)
   }
   def toHtml: String = {
     val message = new StringBuilder("%s: [%s] Error during call of type %s".format(createdAt, id, callType))
