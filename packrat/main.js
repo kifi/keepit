@@ -593,7 +593,6 @@ api.port.on({
     createDeepLinkListener(locator, tab.id);
   },
   report_error: function(data, _, tag) {
-    api.log('Logging error from content script:', data);
     reportError(data.message, data.url, data.lineNo);
   }
 });
@@ -1099,6 +1098,11 @@ authenticate(function() {
 // Global error logging
 
 function reportError(errMsg, url, lineNo) {
+  api.log('Reporting error "%s" in %s line %s', errMsg, url, lineNo);
+  if (!api.isPackaged()) {
+    // Don't report errors on development (unpacked) extensions
+    return;
+  }
   ajax("POST", "/error/report", {
     message: 'Error ' + errMsg + ' at ' + url + ' line ' + lineNo
   }, function () {
