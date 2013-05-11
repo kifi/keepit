@@ -45,9 +45,12 @@ case class HealthcheckHost(host: String) extends AnyVal {
 
 case class SendHealthcheckMail(history: HealthcheckErrorHistory, host: HealthcheckHost) {
 
-  def sendMail(db: Database, postOffice: PostOffice, services: FortyTwoServices) = {
+  def sendMail(db: Database, postOffice: PostOffice, services: FortyTwoServices) {
     if (history.count == 1) sendAsanaMail(db, postOffice, services)
-    sendRegularMail(db, postOffice, services)
+    if (history.lastError.callType != Healthcheck.EXTENSION || history.count == 1) {
+      // TODO: fix extension error spam
+      sendRegularMail(db, postOffice, services)
+    }
   }
 
   private def sendRegularMail(db: Database, postOffice: PostOffice, services: FortyTwoServices) {
