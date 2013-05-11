@@ -1104,7 +1104,7 @@ function reportError(errMsg, url, lineNo) {
     return;
   }
   ajax("POST", "/error/report", {
-    message: 'Error ' + errMsg + ' at ' + url + ' line ' + lineNo
+    message: errMsg + ' at ' + url + ' line ' + lineNo
   }, function () {
     api.log('Logged error "%s" in %s line %s', errMsg, url, lineNo);
   });
