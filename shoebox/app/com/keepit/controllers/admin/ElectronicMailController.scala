@@ -23,8 +23,8 @@ class ElectronicMailController @Inject() (
   def electronicMailsView(page: Int = 0) = AdminHtmlAction { request =>
     val PAGE_SIZE = 200
     val (count, electronicMails) = db.readOnly { implicit s =>
-      val electronicMails = repo.page(page, PAGE_SIZE, filterRecipeintNot = EmailAddresses.ENG)
-      val count = repo.count(filterRecipeintNot = EmailAddresses.ENG)
+      val electronicMails = repo.page(page, PAGE_SIZE)
+      val count = repo.count(s)
       (count, electronicMails)
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt

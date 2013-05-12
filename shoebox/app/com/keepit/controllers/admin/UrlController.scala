@@ -63,7 +63,7 @@ class UrlController @Inject() (
     Akka.future {
       val result = doRenormalize(readOnly, domain).replaceAll("\n","\n<br>")
       db.readWrite { implicit s =>
-        postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
+        postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
          subject = "Renormalization Report", htmlBody = result, category = PostOffice.Categories.ADMIN))
       }
     }

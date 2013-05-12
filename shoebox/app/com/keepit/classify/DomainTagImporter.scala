@@ -88,7 +88,7 @@ private[classify] class DomainTagImportActor @Inject() (
           persistEvent(IMPORT_START, JsObject(Seq()))
           val startTime = currentDateTime
           db.readWrite { implicit s =>
-            postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
+            postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
               subject = "Domain import started", htmlBody = s"Domain import started at $startTime",
               category = PostOffice.Categories.ADMIN))
           }
@@ -124,7 +124,7 @@ private[classify] class DomainTagImportActor @Inject() (
           )))
           val endTime = currentDateTime
           db.readWrite { implicit s =>
-            postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
+            postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
               subject = "Domain import finished",
               htmlBody =
                   s"Domain import started at $startTime and completed successfully at $endTime " +

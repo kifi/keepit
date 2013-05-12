@@ -4,8 +4,7 @@
   follows: Seq[NormalizedURI],
   comments: Seq[(NormalizedURI, Comment)],
   messages: Seq[(NormalizedURI, Comment, Seq[UserWithSocial])],
-  sentElectronicMails: Seq[com.keepit.common.mail.ElectronicMail],
-  receivedElectronicMails: Seq[com.keepit.common.mail.ElectronicMail])
+  sentElectronicMails: Seq[com.keepit.common.mail.ElectronicMail])
 
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
   <span style="margin:2px">
@@ -135,7 +134,7 @@
     <tr>
       <td rowspan="2">@{i+1}</td>
       <td>@electronicMail.fromName</td>
-      <td>@electronicMail.to.address</td>
+      <td>@{electronicMail.to map {a => a.address} mkString(",")}</td>
       <td>@electronicMail.subject</td>
       <td>@adminHelper.dateTimeDisplay(electronicMail.createdAt)</td>
     </tr>
@@ -144,28 +143,4 @@
     </tr>
   }
   </table>
-
-   <h2>User had received @receivedElectronicMails.size emails</h2>
-   <table class="table table-bordered">
-    <tr>
-      <th>#</th>
-      <th>From</th>
-      <th>To</th>
-      <th>Subject</th>
-      <th>Creation</th>
-    </tr>
-  @for((electronicMail, i) <- receivedElectronicMails.zipWithIndex) {
-    <tr>
-      <td rowspan="2">@{i+1}</td>
-      <td>@electronicMail.fromName</td>
-      <td>@electronicMail.to.address</td>
-      <td>@electronicMail.subject</td>
-      <td>@adminHelper.dateTimeDisplay(electronicMail.createdAt)</td>
-    </tr>
-    <tr>
-      <td colspan="4">@electronicMail.htmlBody</td>
-    </tr>
-  }
-  </table>
-
 }

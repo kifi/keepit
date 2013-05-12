@@ -146,7 +146,7 @@ class UserEmailNotifierActor @Inject() (
         for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
           postOffice.sendMail(ElectronicMail(
             from = EmailAddresses.NOTIFICATIONS, fromName = Some("KiFi Notifications"),
-            to = addr,
+            to = List(addr),
             subject = s"""New messages on "${formattedTitle}" with $authorFirst""",
             htmlBody = emailBody,
             textBody = Some(textBody),
