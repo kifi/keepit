@@ -62,13 +62,16 @@ case class SendHealthcheckMail(history: HealthcheckErrorHistory, host: Healthche
 
   private def sendAsanaMail(db: Database, postOffice: PostOffice, services: FortyTwoServices) {
     db.readWrite { implicit s =>
+      val started = services.started.toStandardTimeString
       val subject = s"[${services.currentService}/$host] ${history.lastError.subjectName}"
-      val body = views.html.email.healthcheckAsanaMail(history).body
       postOffice.sendMail(ElectronicMail(
         from = EmailAddresses.EISHAY,
         to = EmailAddresses.ASANA_PROD_HEALTH::EmailAddresses.EISHAY::Nil,
         cc = EmailAddresses.ENG_EMAILS,
-        subject = subject, htmlBody = body, textBody = Some(body), category = PostOffice.Categories.ASANA_HEALTHCHECK))
+        subject = subject,
+        htmlBody = views.html.email.healthcheckMail(history, started).body,
+        textBody = Some(views.html.email.healthcheckAsanaMail(history, started).body),
+        category = PostOffice.Categories.ASANA_HEALTHCHECK))
     }
   }
 }
