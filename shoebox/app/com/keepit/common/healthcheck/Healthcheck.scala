@@ -53,8 +53,8 @@ case class SendHealthcheckMail(history: HealthcheckErrorHistory, host: Healthche
 
   private def sendRegularMail(db: Database, postOffice: PostOffice, services: FortyTwoServices) {
     db.readWrite { implicit s =>
-      val subject = s"ERROR: [${services.currentService}/$host] ${history.lastError.subjectName}"
-      val body = views.html.email.healthcheckMail(history, services.started.toStandardTimeString).body
+      val subject = s"[REPEATING ERROR][${services.currentService}] ${history.lastError.subjectName}"
+      val body = views.html.email.healthcheckMail(history, services.started.toStandardTimeString, host.host).body
       postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = body, category = PostOffice.Categories.HEALTHCHECK))
     }
@@ -63,14 +63,14 @@ case class SendHealthcheckMail(history: HealthcheckErrorHistory, host: Healthche
   private def sendAsanaMail(db: Database, postOffice: PostOffice, services: FortyTwoServices) {
     db.readWrite { implicit s =>
       val started = services.started.toStandardTimeString
-      val subject = s"[${services.currentService}/$host] ${history.lastError.subjectName}"
+      val subject = s"[${services.currentService}] ${history.lastError.subjectName}"
       postOffice.sendMail(ElectronicMail(
         from = EmailAddresses.EISHAY,
         to = EmailAddresses.ASANA_PROD_HEALTH::EmailAddresses.EISHAY::Nil,
         cc = EmailAddresses.ENG_EMAILS,
         subject = subject,
-        htmlBody = views.html.email.healthcheckMail(history, started).body,
-        textBody = Some(views.html.email.healthcheckAsanaMail(history, started).body),
+        htmlBody = views.html.email.healthcheckMail(history, started, host.host).body,
+        textBody = Some(views.html.email.healthcheckAsanaMail(history, started, host.host).body),
         category = PostOffice.Categories.ASANA_HEALTHCHECK))
     }
   }
