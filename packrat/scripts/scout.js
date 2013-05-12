@@ -7,7 +7,10 @@ function logEvent() {  // parameters defined in main.js
 }
 
 window.onerror = function (message, url, lineNo) {
-  api.port.emit("report_error", { message: message, url: url, lineNo: lineNo });
+  if (!/https?\:/.test(url)) {
+    // this is probably from extension code, not from the website we're running this on
+    api.port.emit("report_error", { message: message, url: url, lineNo: lineNo });
+  }
 };
 
 var injected, t0 = +new Date, tile, paneHistory;
@@ -15,7 +18,6 @@ var injected, t0 = +new Date, tile, paneHistory;
 !function() {
   api.log("[scout]", location.hostname);
   var tileCount, onScroll;
-
   api.port.on({
     new_notification: function(n) {
       if (n.state != "visited" && (!paneHistory || paneHistory[0] != n.details.locator)) {
@@ -120,6 +122,7 @@ var injected, t0 = +new Date, tile, paneHistory;
       tile.parentNode.removeChild(tile);
     }
     tile = document.createElement("div");
+
     tile.id = "kifi-tile";
     tile.style.display = "none";
     tile.innerHTML = "<div class=kifi-tile-transparent style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>";

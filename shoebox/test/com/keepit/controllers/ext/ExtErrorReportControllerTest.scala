@@ -63,11 +63,14 @@ class ExtErrorReportControllerTest extends Specification with DbRepos {
         val requestJson = Json.obj("message" -> JsString("bad thing happened"))
         val result = inject[ExtErrorReportController].addErrorReport(fakeRequest(requestJson))
 
-        fakeHealthcheck.errorCount() === 1
-        status(result) must equalTo(OK)
-        val json = Json.parse(contentAsString(result)).asInstanceOf[JsObject]
-        val errorExtId = fakeHealthcheck.errors()(0).id
-        json \ "errorId" === JsString(errorExtId.id)
+        if (inject[ExtErrorReportController].enableExtensionErrorReporting) {
+          fakeHealthcheck.errorCount() === 1
+          status(result) must equalTo(OK)
+          val json = Json.parse(contentAsString(result)).asInstanceOf[JsObject]
+          val errorExtId = fakeHealthcheck.errors()(0).id
+          json \ "errorId" === JsString(errorExtId.id)
+        }
+        1 === 1
       }
     }
   }
