@@ -66,7 +66,7 @@ private[mail] class InvitationMailActor @Inject() (
           senderUserId = None,
           from = EmailAddresses.CONGRATS,
           fromName = Some("KiFi Team"),
-          to = address,
+          to = List(address),
           subject = subject,
           htmlBody = body(user),
           category = PostOffice.Categories.INVITATION))

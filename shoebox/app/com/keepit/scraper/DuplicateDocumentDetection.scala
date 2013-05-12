@@ -110,7 +110,7 @@ class DuplicateDocumentDetection @Inject() (
 
      val toAddr = if (play.api.Play.isDev) EmailAddresses.ANDREW else EmailAddresses.ENG
      db.readWrite { implicit s =>
-       postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = toAddr, subject = "Duplication Report",
+       postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(toAddr), subject = "Duplication Report",
         htmlBody = result, category = PostOffice.Categories.ADMIN))
      }
    }

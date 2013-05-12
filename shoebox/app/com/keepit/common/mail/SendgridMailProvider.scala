@@ -43,7 +43,7 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
 
     val auth = new SMTPAuthenticator()
     val mailSession = Session.getInstance(props, auth)
-//    mailSession.setDebug(log.isDebugEnabled)
+    mailSession.setDebug(log.isDebugEnabled)
     mailSession.setDebug(true)
     mailSession
   }
@@ -153,13 +153,13 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
     val fromName: String = mail.fromName.getOrElse(mail.from.address)
     message.setFrom(new InternetAddress(mail.from.address, fromName, "UTF-8"))
 
-    val recipientAddr = Play.isProd match {
-      case true => mail.to.address
-      case false => System.getProperty("user.name") + "+test_to@42go.com"
+    val recipientAddr: Array[Address] = Play.isProd match {
+      case true => (mail.to map { e => new InternetAddress(e.address) }).toArray
+      case false => Array(new InternetAddress(System.getProperty("user.name") + "+test_to@42go.com"))
     }
     message.setSubject(mail.subject)
-    message.addRecipient(Message.RecipientType.TO, new InternetAddress(recipientAddr))
-    if (!mail.cc.isEmpty && !Play.isProd) {
+    message.addRecipients(Message.RecipientType.TO, recipientAddr)
+    if (!mail.cc.isEmpty) {
       val recipientCCAddr: Array[Address] = Play.isProd match {
         case true => (mail.cc map { e => new InternetAddress(e.address) }).toArray
         case false => Array(new InternetAddress(System.getProperty("user.name") + "+test_cc@42go.com"))
