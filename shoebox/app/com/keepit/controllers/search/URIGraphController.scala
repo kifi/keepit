@@ -54,7 +54,7 @@ class URIGraphController @Inject()(
 
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]) = Action { implicit request =>
     val friendIds = db.readOnly { implicit s => connectionRepo.getConnectedUsers(userId) }
-    val searcher = uriGraph.getURIGraphSearcher
+    val searcher = uriGraph.getURIGraphSearcher(None)
     val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
     val keepersEdgeSet = searcher.getUriToUserEdgeSet(uriId)
     val sharingUserIds = searcher.intersect(friendEdgeSet, keepersEdgeSet).destIdSet - userId

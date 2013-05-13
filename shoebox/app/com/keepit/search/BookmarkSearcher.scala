@@ -24,11 +24,11 @@ import scala.math._
 class BookmarkSearcher(userId: Id[User], articleSearcher: Searcher, uriGraphSearcher: URIGraphSearcher) extends Logging {
   val currentTime = currentDateTime.getMillis()
 
-  val myUriEdges = uriGraphSearcher.getUserToUriEdgeSetWithCreatedAt(userId, publicOnly = false)
+  val myUriEdges = uriGraphSearcher.myUriEdgeSet
   val myUris = myUriEdges.destIdLongSet
 
   def getSearcher(query: Query) = {
-    val indexReader = uriGraphSearcher.openPersonalIndex(userId, query) match {
+    val indexReader = uriGraphSearcher.openPersonalIndex(query) match {
       case Some((personalReader, personalIdMapper)) =>
         articleSearcher.indexReader.add(personalReader, personalIdMapper)
       case None =>

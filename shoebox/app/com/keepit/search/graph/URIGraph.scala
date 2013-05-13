@@ -25,6 +25,8 @@ import com.keepit.search.line.LineFieldBuilder
 
 object URIGraphFields {
   val userField = "usr"
+  val publicListField = "public_list"
+  val privateListField = "private_list"
   val uriField = "uri"
   val titleField = "title"
   val stemmedField = "title_stemmed"
@@ -33,6 +35,8 @@ object URIGraphFields {
 
   def decoders() = Map(
     userField -> DocUtil.URIListDecoder,
+    publicListField -> DocUtil.URIListDecoder,
+    privateListField -> DocUtil.URIListDecoder,
     titleField -> DocUtil.LineFieldDecoder,
     stemmedField -> DocUtil.LineFieldDecoder,
     siteField -> DocUtil.LineFieldDecoder,
@@ -42,7 +46,7 @@ object URIGraphFields {
 
 trait URIGraph {
   def update(): Int
-  def getURIGraphSearcher(): URIGraphSearcher
+  def getURIGraphSearcher(userId: Option[Id[User]] = None): URIGraphSearcher
   def close(): Unit
 
   private[search] def sequenceNumber: SequenceNumber
@@ -90,7 +94,7 @@ class URIGraphImpl(
     }
   }
 
-  def getURIGraphSearcher() = new URIGraphSearcher(searcher)
+  def getURIGraphSearcher(userId: Option[Id[User]]) = new URIGraphSearcher(searcher, userId)
 
   def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber)): URIListIndexable = {
     val (userId, seq) = userIdAndSequenceNumber
@@ -112,14 +116,17 @@ class URIGraphImpl(
 
     override def buildDocument = {
       val doc = super.buildDocument
-      val uriListBytes = URIList.toByteArray(bookmarks)
-      val usr = buildURIListField(uriListBytes)
+      val (publicListBytes, privateListBytes) = URIList.toByteArrays(bookmarks)
+      val publicListField = buildURIListField(URIGraphFields.publicListField, publicListBytes)
+      val privateListField = buildURIListField(URIGraphFields.privateListField, privateListBytes)
       val uri = buildURIIdField(bookmarks)
-      doc.add(usr)
+      doc.add(publicListField)
+      doc.add(privateListField)
       doc.add(uri)
 
-      val uriList = new URIList(uriListBytes)
-      val titles = buildBookmarkTitleList(uriList, bookmarks, Lang("en")) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
+      val publicList = URIList(publicListBytes)
+      val privateList = URIList(privateListBytes)
+      val titles = buildBookmarkTitleList(publicList.ids, privateList.ids, bookmarks, Lang("en")) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
 
       val title = buildLineField(URIGraphFields.titleField, titles){ (fieldName, text, lang) =>
         val analyzer = DefaultAnalyzer.forIndexing(lang)
@@ -133,7 +140,7 @@ class URIGraphImpl(
       }
       doc.add(titleStemmed)
 
-      val bookmarkURLs = buildBookmarkURLList(uriList, bookmarks)
+      val bookmarkURLs = buildBookmarkURLList(publicList.ids, privateList.ids, bookmarks)
 
       val siteField = buildLineField(URIGraphFields.siteField, bookmarkURLs){ (fieldName, url, lang) =>
         URI.parse(url).toOption.flatMap(_.host) match {
@@ -156,50 +163,44 @@ class URIGraphImpl(
       doc
     }
 
-    private def buildURIListField(uriListBytes: Array[Byte]) = {
-      new BinaryDocValuesField(URIGraphFields.userField, new BytesRef(uriListBytes))
+    private def buildURIListField(field: String, uriListBytes: Array[Byte]) = {
+      new BinaryDocValuesField(field, new BytesRef(uriListBytes))
     }
 
     private def buildURIIdField(bookmarks: Seq[Bookmark]) = {
       buildIteratorField(URIGraphFields.uriField, bookmarks.iterator.filter(bm => !bm.isPrivate)){ bm => bm.uriId.toString }
     }
 
-    private def buildBookmarkTitleList(uriList: URIList, bookmarks: Seq[Bookmark], preferedLang: Lang): ArrayBuffer[(Int, String, Lang)] = {
+    private def buildBookmarkTitleList(publicIds: Array[Long], privateIds: Array[Long], bookmarks: Seq[Bookmark], preferedLang: Lang): ArrayBuffer[(Int, String, Lang)] = {
       val titleMap = bookmarks.foldLeft(Map.empty[Long, (String, Lang)]){ (m, b) =>
         val text = b.title.getOrElse("")
         m + (b.uriId.id -> (text, LangDetector.detect(text, preferedLang)))
       }
 
-      val publicList = uriList.publicList
-      val privateList = uriList.privateList
-
       var lineNo = 0
       var titles = new ArrayBuffer[(Int, String, Lang)]
-      publicList.foreach{ uriId =>
+      publicIds.foreach{ uriId =>
         titleMap.get(uriId).foreach{ case (title, lang) => titles += ((lineNo, title, lang)) }
         lineNo += 1
       }
-      privateList.foreach{ uriId =>
+      privateIds.foreach{ uriId =>
         titleMap.get(uriId).foreach{ case (title, lang) => titles += ((lineNo, title, lang)) }
         lineNo += 1
       }
       titles
     }
 
-    private def buildBookmarkURLList(uriList: URIList, bookmarks: Seq[Bookmark]): ArrayBuffer[(Int, String, Lang)] = {
+    private def buildBookmarkURLList(publicIds: Array[Long], privateIds: Array[Long], bookmarks: Seq[Bookmark]): ArrayBuffer[(Int, String, Lang)] = {
       val urlMap = bookmarks.foldLeft(Map.empty[Long,String]){ (m, b) => m + (b.uriId.id -> b.url) }
-
-      val publicList = uriList.publicList
-      val privateList = uriList.privateList
 
       var lineNo = 0
       var sites = new ArrayBuffer[(Int, String, Lang)]
       val en = LangDetector.en
-      publicList.foreach{ uriId =>
+      publicIds.foreach{ uriId =>
         urlMap.get(uriId).foreach{ site => sites += ((lineNo, site, en)) }
         lineNo += 1
       }
-      privateList.foreach{ uriId =>
+      privateIds.foreach{ uriId =>
         urlMap.get(uriId).foreach{ site => sites += ((lineNo, site, en)) }
         lineNo += 1
       }
