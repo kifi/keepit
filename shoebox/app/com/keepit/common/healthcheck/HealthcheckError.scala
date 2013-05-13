@@ -59,7 +59,8 @@ case class HealthcheckError(
   private def ignoreAnonfun(klazz: String) = klazz.replaceAll("""\$\$anonfun.*""", "[a]")
 
   private def formatStackElementText(e: StackTraceElement) = {
-    s"${if(e.getClassName.startsWith("com.keepit")) "*" else " "}${e.getFileName}[${e.getLineNumber}]${e.getMethodName}"
+    val methodName = e.getMethodName.replaceAll(""".*\$\$""", "")
+    s"${if(e.getClassName.startsWith("com.keepit")) "*" else " "}${e.getFileName}[${e.getLineNumber}]$methodName"
   }
 
   def stackTrace(html: Boolean): String = {
