@@ -20,35 +20,75 @@ import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.util.BytesRef
 
-class URIGraphSearcher(searcher: Searcher) {
+class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) {
+  case class UserInfo(id: Id[User], docId: Int, publicList: URIList, privateList: URIList)
 
   def reader: WrappedSubReader = searcher.indexReader.asAtomicReader
+
+  private[this] lazy val myInfo: Option[UserInfo] = {
+    myUserId.map{ id =>
+      val docid = reader.getIdMapper.getDocId(id.id)
+      UserInfo(id, docid, getURIList(publicListField, docid), getURIList(publicListField, docid))
+    }
+  }
+
+  lazy val myUriEdgeSetOpt: Option[UserToUriEdgeSetWithCreatedAt] = {
+    myInfo.map{ u =>
+      val uriIdMap = LongToLongArrayMap.from(concat(u.publicList.ids, u.privateList.ids),
+                                             concat(u.publicList.createdAt, u.privateList.createdAt))
+      new UserToUriEdgeSetWithCreatedAt(u.id, uriIdMap)
+    }
+  }
+
+  lazy val myPublicUriEdgeSetOpt: Option[UserToUriEdgeSetWithCreatedAt] = {
+    myInfo.map{ u =>
+      val uriIdMap = LongToLongArrayMap.fromSorted(u.publicList.ids, u.publicList.createdAt)
+      new UserToUriEdgeSetWithCreatedAt(u.id, uriIdMap)
+    }
+  }
+
+  def myUriEdgeSet: UserToUriEdgeSetWithCreatedAt = {
+    myUriEdgeSetOpt.getOrElse{ throw new Exception("search user was not set") }
+  }
+
+  def myPublicUriEdgeSet: UserToUriEdgeSetWithCreatedAt = {
+    myPublicUriEdgeSetOpt.getOrElse{ throw new Exception("search user was not set") }
+  }
 
   def getUserToUserEdgeSet(sourceId: Id[User], destIdSet: Set[Id[User]]) = new UserToUserEdgeSet(sourceId, destIdSet)
 
   def getUriToUserEdgeSet(sourceId: Id[NormalizedURI]) = new UriToUserEdgeSet(sourceId, searcher)
 
-  def getUserToUriEdgeSet(sourceId: Id[User], publicOnly: Boolean = true) = {
+  def getUserToUriEdgeSet(sourceId: Id[User], publicOnly: Boolean = true): UserToUriEdgeSet = {
     val sourceDocId = reader.getIdMapper.getDocId(sourceId.id)
-    val uriIdSet = getURIList(sourceDocId) match {
-      case Some(uriList) =>
-        if (publicOnly) LongArraySet.fromSorted(uriList.publicList)
-        else LongArraySet.from(concat(uriList.publicList, uriList.privateList))
-      case None => Set.empty[Long]
+    val publicList = getURIList(publicListField, sourceDocId)
+    val privateList = if (publicOnly) None else Some(getURIList(privateListField, sourceDocId))
+    val uriIdSet = privateList match {
+      case Some(privateList) =>
+        if (publicList.size > 0) {
+          LongArraySet.from(concat(publicList.ids, privateList.ids))
+        } else {
+          LongArraySet.fromSorted(privateList.ids)
+        }
+      case None => LongArraySet.fromSorted(publicList.ids)
     }
     new UserToUriEdgeSet(sourceId, uriIdSet)
   }
 
-  def getUserToUriEdgeSetWithCreatedAt(sourceId: Id[User], publicOnly: Boolean = true) = {
+  def getUserToUriEdgeSetWithCreatedAt(sourceId: Id[User], publicOnly: Boolean = true): UserToUriEdgeSetWithCreatedAt = {
     val sourceDocId = reader.getIdMapper.getDocId(sourceId.id)
-    val uriIdMap = getURIList(sourceDocId) match {
-      case Some(uriList) =>
-        if (publicOnly) LongToLongArrayMap.fromSorted(uriList.publicList, uriList.publicCreatedAt)
-        else {
-          LongToLongArrayMap.from(concat(uriList.publicList, uriList.privateList),
-                                  concat(uriList.publicCreatedAt, uriList.privateCreatedAt))
+    val publicList = getURIList(publicListField, sourceDocId)
+    val privateList = if (publicOnly) None else Some(getURIList(privateListField, sourceDocId))
+    val uriIdMap = privateList match {
+      case Some(privateList) =>
+        if (publicList.size > 0) {
+          LongToLongArrayMap.from(concat(publicList.ids, privateList.ids),
+                                  concat(publicList.createdAt, privateList.createdAt))
+        } else {
+          LongToLongArrayMap.fromSorted(privateList.ids, privateList.createdAt)
         }
-      case None => Map.empty[Long, Long]
+      case None =>
+        LongToLongArrayMap.fromSorted(publicList.ids, publicList.createdAt)
     }
     new UserToUriEdgeSetWithCreatedAt(sourceId, uriIdMap)
   }
@@ -106,33 +146,43 @@ class URIGraphSearcher(searcher: Searcher) {
     di != NO_MORE_DOCS
   }
 
-  private def getURIList(userDocId: Int): Option[URIList] = {
+  private def getURIList(field: String, userDocId: Int): URIList = {
     var uriList: Option[URIList] = None
 
     if (userDocId >= 0) {
-      var docValues = reader.getBinaryDocValues(userField)
+      var docValues = reader.getBinaryDocValues(field)
       var ref = new BytesRef()
       if (docValues != null) {
         docValues.get(userDocId, ref)
         if (ref.length > 0) {
-          uriList = Some(new URIList(ref.bytes, ref.offset, ref.length))
+          return URIList(ref.bytes, ref.offset, ref.length)
+        }
+      } else {
+        // backward compatibility
+        var docValues = reader.getBinaryDocValues(userField)
+        var ref = new BytesRef()
+        if (docValues != null) {
+          docValues.get(userDocId, ref)
+          if (ref.length > 0) {
+            val old = URIList(ref.bytes, ref.offset, ref.length).asInstanceOf[URIListOld]
+            if (field == publicListField) return old
+            else return old.getPrivateURIList
+          }
         }
       }
     }
-    uriList
+    URIList.empty
   }
 
-  private def getIndexReader(userDocId: Int, uriList: URIList, terms: Set[Term]) = {
-    val numDocs = uriList.publicListSize + uriList.privateListSize
+  private def getIndexReader(userDocId: Int, terms: Set[Term]) = {
+    val numDocs = myInfo.get.publicList.size + myInfo.get.privateList.size
     LineIndexReader(reader, userDocId, terms, numDocs)
   }
 
-  def openPersonalIndex(user: Id[User], query: Query): Option[(CachingIndexReader, IdMapper)] = {
-    val userDocId = reader.getIdMapper.getDocId(user.id)
-
-    getURIList(userDocId).map{ uriList =>
-      val terms = QueryUtil.getTerms(query)
-      (getIndexReader(userDocId, uriList, terms), new ArrayIdMapper(concat(uriList.publicList, uriList.privateList)))
+  def openPersonalIndex(query: Query): Option[(CachingIndexReader, IdMapper)] = {
+    val terms = QueryUtil.getTerms(query)
+    myInfo.map{ u =>
+      (getIndexReader(u.docId, terms), new ArrayIdMapper(concat(u.publicList.ids, u.privateList.ids)))
     }
   }
 

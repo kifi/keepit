@@ -72,9 +72,9 @@ class MainSearcher(
   val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.001f
 
   // initialize user's social graph info
-  private[this] val myUriEdges = uriGraphSearcher.getUserToUriEdgeSetWithCreatedAt(userId, publicOnly = false)
+  private[this] val myUriEdges = uriGraphSearcher.myUriEdgeSet
   private[this] val myUris = myUriEdges.destIdLongSet
-  private[this] val myPublicUris = uriGraphSearcher.getUserToUriEdgeSet(userId, publicOnly = true).destIdLongSet
+  private[this] val myPublicUris = uriGraphSearcher.myPublicUriEdgeSet.destIdLongSet
   private[this] val filteredFriendIds = filter.filterFriends(friendIds)
   private[this] val friendUris = filteredFriendIds.foldLeft(Set.empty[Long]){ (s, f) =>
     s ++ uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).destIdLongSet
@@ -101,7 +101,7 @@ class MainSearcher(
   }
 
   def getPersonalizedSearcher(query: Query) = {
-    val indexReader = uriGraphSearcher.openPersonalIndex(userId, query) match {
+    val indexReader = uriGraphSearcher.openPersonalIndex(query) match {
       case Some((personalReader, personalIdMapper)) =>
         articleSearcher.indexReader.add(personalReader, personalIdMapper)
       case None =>
