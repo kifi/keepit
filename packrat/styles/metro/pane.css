@@ -78,6 +78,7 @@ a.kifi-pane-head-feedback {
   padding-top: 8px;
   position: relative;
   z-index: 1;
+  line-height: 12px;
 }
 a.kifi-pane-head-feedback:hover {
   background-color: #679ade;
