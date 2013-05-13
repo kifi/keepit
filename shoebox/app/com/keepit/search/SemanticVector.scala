@@ -254,12 +254,13 @@ class SemanticVectorComposer {
   private[this] var cnt = 0
   private[this] val counters = new Array[Int](vectorSize)
 
-  def add(sv: SemanticVector, weight: Int) = {
-    val vector = sv.bytes
+  def add(sv: SemanticVector, weight: Int): SemanticVectorComposer = add(sv.bytes, 0, sv.bytes.length, weight)
+
+  def add(vector: Array[Byte], offset: Int, length: Int, weight: Int): SemanticVectorComposer = {
     var i = 0
     var b = 0
-    while (i < vector.length) {
-      val b = vector(i)
+    while (i < length) {
+      val b = vector(i + offset)
       val j = i * 8
       counters(j    ) += ((b >> 7) & 0x1) * weight
       counters(j + 1) += ((b >> 6) & 0x1) * weight
