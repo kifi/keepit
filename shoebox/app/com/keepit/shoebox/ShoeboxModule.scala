@@ -1,13 +1,16 @@
 package com.keepit.shoebox
 
 import com.google.common.io.Files
-import com.google.inject.{Provider, Provides, Singleton}
+import com.google.inject.{Provides, Singleton}
 import com.keepit.classify.DomainTagImportSettings
 import com.keepit.common.analytics.reports._
+import com.keepit.common.crypto._
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{MailToKeepPlugin, MailToKeepPluginImpl, MailToKeepServerSettings}
-import com.keepit.common.social.{SocialGraphPluginImpl, SocialGraphPlugin, SocialGraphRefresherImpl, SocialGraphRefresher}
+import com.keepit.common.mail._
+import com.keepit.common.social._
+import com.keepit.common.store.{ImageDataIntegrityPluginImpl, ImageDataIntegrityPlugin}
 import com.keepit.inject.AppScoped
+import com.keepit.realtime._
 import com.keepit.scraper._
 import com.tzavellas.sse.guice.ScalaModule
 
@@ -22,6 +25,11 @@ class ShoeboxModule() extends ScalaModule with Logging {
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
     bind[MailToKeepPlugin].to[MailToKeepPluginImpl].in[AppScoped]
     bind[SocialGraphPlugin].to[SocialGraphPluginImpl].in[AppScoped]
+    bind[UserEmailNotifierPlugin].to[UserEmailNotifierPluginImpl].in[AppScoped]
+    bind[ConnectionUpdater].to[UserConnectionCreator]
+    bind[ImageDataIntegrityPlugin].to[ImageDataIntegrityPluginImpl].in[AppScoped]
+    bind[InvitationMailPlugin].to[InvitationMailPluginImpl].in[AppScoped]
+    bind[NotificationConsistencyChecker].to[NotificationConsistencyCheckerImpl].in[AppScoped]
   }
 
   @Singleton
@@ -39,6 +47,19 @@ class ShoeboxModule() extends ScalaModule with Logging {
     val server = current.configuration.getString("mailtokeep.server").getOrElse("imap.gmail.com")
     val protocol = current.configuration.getString("mailtokeep.protocol").getOrElse("imaps")
     MailToKeepServerSettings(username = username, password = password, server = server, protocol = protocol)
+  }
+
+  @Singleton
+  @Provides
+  def userVoiceSSOTokenGenerator: UserVoiceTokenGenerator = {
+    current.configuration.getString("userVoiceSSOToken") match {
+      case Some(sso) =>
+        new UserVoiceTokenGenerator {
+          def createSSOToken(userId: String, displayName: String, email: String, avatarUrl: String): UserVoiceSSOToken =
+            UserVoiceSSOToken(sso)
+        }
+      case None => new UserVoiceTokenGeneratorImpl()
+    }
   }
 
 }

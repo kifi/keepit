@@ -13,12 +13,16 @@
      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
    </encoder>
   </appender>
+  <appender name="ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+    <appender-ref ref="FILE" />
+  </appender>
 
   <logger name="com.mysql" level="ERROR"/>
+  <logger name="com.jolbox.bonecp" level="TRACE"/>
   <logger name="com.ning.http" level="INFO"/>
   <logger name="securesocial.core" level="DEBUG"/>
 
   <root level="INFO">
-    <appender-ref ref="FILE" />
+    <appender-ref ref="ASYNC" />
   </root>
 </configuration>

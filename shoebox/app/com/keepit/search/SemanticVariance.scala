@@ -53,23 +53,22 @@ object SemanticVariance {
       personalizedSearcher.map{ searcher =>
         val terms = QueryUtil.getTerms("sv", q)
         var s = 0.0f
-        var cnt = 0
         for (term <- terms) {
           val svMap = searcher.getSemanticVectors(term, uriIds)
           val missing = uriIds -- svMap.keySet
           var sv = svMap.values
           if (!missing.isEmpty) {
             val defaultSV = searcher.getSemanticVector(term)
-            sv ++= searcher.filterByTerm(missing, new Term("title_stemmed", term.text)).map{ id => defaultSV }
+            sv ++= searcher.filterByTerm(missing, new Term("title_stemmed", term.text)).iterator.map{ id => defaultSV }
           }
 
           existCnt = sv.size::existCnt
           // semantic vector v of terms will be concatenated from semantic vector v_i from each term
           // avg bit variance of v is the avg of avgBitVariance of each v_i
           s += avgBitVariance(sv, numMissing = (hitSize - sv.size))
-          cnt += 1
         }
-        if (hitSize == 1) 0.0f else if (cnt > 0) s / cnt.toFloat else -1.0f
+        val cnt = terms.size
+        if (cnt > 0) s / cnt.toFloat else -1.0f
       }
     }
     val existVar =  existenceVariance(existCnt, uriIds.size)

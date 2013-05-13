@@ -10,7 +10,7 @@ import com.keepit.common.analytics.reports._
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.S3SocialUserRawInfoStoreImpl
 import com.keepit.common.social.SocialUserRawInfoStore
-import com.keepit.common.store.S3Bucket
+import com.keepit.common.store.{S3ImageConfig, S3Bucket}
 import com.keepit.search._
 import com.tzavellas.sse.guice.ScalaModule
 
@@ -55,6 +55,14 @@ class S3Module() extends ScalaModule with Logging {
   def reportStore(amazonS3Client: AmazonS3): ReportStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.report.bucket").get)
     new S3ReportStoreImpl(bucketName, amazonS3Client)
+  }
+
+  @Singleton
+  @Provides
+  def s3ImageConfig: S3ImageConfig = {
+    val bucket = current.configuration.getString("cdn.bucket")
+    val base = current.configuration.getString("cdn.base")
+    S3ImageConfig(bucket.get, base.get)
   }
 
   @Singleton

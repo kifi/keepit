@@ -1,0 +1,8 @@
+@(history: com.keepit.common.healthcheck.HealthcheckErrorHistory, startedAt: String, server: String)
+
+@Html(history.lastError.titleText)
+* Signature: @{history.signature.value}
+* Server: @server
+* Server started at: @startedAt
+-------
+@Html(history.lastError.toText)

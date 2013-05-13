@@ -1,25 +1,16 @@
 package com.keepit.controllers.ext
 
-import play.api.mvc.{Action, Controller}
-import play.api.i18n.Messages
-import securesocial.core._
-import play.api.{Play, Logger}
-import Play.current
-import play.api.mvc.{CookieBaker, Session}
-import play.api.data._
-import play.api.data.Forms._
-import play.api.data.validation.Constraints._
-import play.api.libs.json.Json
-import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
-import com.keepit.common.db._
-import com.keepit.common.social.{SocialId, SocialNetworks}
-import com.keepit.common.net._
-import com.keepit.model._
-import com.keepit.common.healthcheck._
-import com.keepit.common.db.slick._
-
 import com.google.inject.{Inject, Singleton}
+import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
+import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck._
+import com.keepit.common.net._
+import com.keepit.common.store.S3ImageStore
+import com.keepit.model._
+
+import play.api.libs.json.Json
 
 @Singleton
 class ExtAuthController @Inject() (
@@ -30,8 +21,11 @@ class ExtAuthController @Inject() (
   installationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
   sliderRuleRepo: SliderRuleRepo,
-  userExperimentRepo: UserExperimentRepo)
+  userExperimentRepo: UserExperimentRepo,
+  kifiInstallationCookie: KifiInstallationCookie,
+  imageStore: S3ImageStore)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
+
   def start = AuthenticatedJsonToJsonAction { implicit request =>
     val userId = request.userId
     val identity = request.identity
@@ -39,7 +33,7 @@ class ExtAuthController @Inject() (
 
     val json = request.body
     val (userAgent, version, installationIdOpt) =
-      (UserAgent((json \ "agent").as[String]),
+      (UserAgent.fromString(request.headers.get("user-agent").getOrElse("")),
        KifiVersion((json \ "version").as[String]),
        (json \ "installation").asOpt[String].flatMap { id =>
          val kiId = ExternalId.asOpt[KifiInstallation](id)
@@ -69,14 +63,18 @@ class ExtAuthController @Inject() (
         case Some(install) =>
           install
       }
-      val experiments: Seq[String] = userExperimentRepo.getUserExperiments(user.id.get).map(_.value)
+      val experiments: Set[String] = userExperimentRepo.getUserExperiments(user.id.get).map(_.value)
       val sliderRuleGroup: SliderRuleGroup = sliderRuleRepo.getGroup("default")
       val urlPatterns: Seq[String] = urlPatternRepo.getActivePatterns
       (user, installation, experiments, sliderRuleGroup, urlPatterns)
     }
 
+    // Get this user's avatarUrl from the image store.
+    // This will make sure we load the user's picture if it doesn't exist or is out of date.
+    // TODO(greg): Remove avatarUrl, but make sure we're still refreshing the picture URLs on extension load
+    val avatarUrl = imageStore.getPictureUrl(200, user).value.flatMap(_.toOption).orElse(identity.avatarUrl)
     Ok(Json.obj(
-      "avatarUrl" -> identity.avatarUrl.get,
+      "avatarUrl" -> avatarUrl,
       "name" -> identity.fullName,
       "facebookId" -> identity.id.id,
       "provider" -> identity.id.providerId,
@@ -84,8 +82,8 @@ class ExtAuthController @Inject() (
       "installationId" -> installation.externalId.id,
       "experiments" -> experiments,
       "rules" -> sliderRuleGroup.compactJson,
-      "patterns" -> urlPatterns))
-    .withCookies(KifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
+      "patterns" -> urlPatterns
+    )).withCookies(kifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
   }
 
   // where SecureSocial sends users if it can't figure out the right place (see securesocial.conf)

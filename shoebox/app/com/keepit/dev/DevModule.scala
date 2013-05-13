@@ -16,7 +16,7 @@ import com.keepit.common.mail._
 import com.keepit.inject._
 import com.keepit.model.{PhraseRepo, BookmarkRepo, NormalizedURIRepo}
 import com.keepit.search.{ArticleStore, ResultClickTracker}
-import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphDecoders}
+import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphFields}
 import com.keepit.search.index.{ArticleIndexer, DefaultAnalyzer}
 import com.keepit.search.phrasedetector.PhraseIndexer
 import com.keepit.search.query.parser.{FakeSpellCorrector, SpellCorrector}
@@ -28,6 +28,10 @@ import org.apache.lucene.store.{Directory, MMapDirectory, RAMDirectory}
 import org.apache.lucene.util.Version
 import com.keepit.model.UserRepo
 import com.keepit.common.time.Clock
+import com.google.inject.Provider
+import akka.actor.ActorSystem
+import play.api.Play
+import com.keepit.search.SearchServiceClient
 import com.keepit.common.service.{FortyTwoServices, IpAddress}
 
 
@@ -37,15 +41,17 @@ class ShoeboxDevModule extends ScalaModule with Logging {
   @Singleton
   @Provides
   def searchUnloadProvider(
+    db: Database,
     userRepo: UserRepo,
     normalizedURIRepo: NormalizedURIRepo,
     persistEventProvider: Provider[PersistEventPlugin],
     store: MongoEventStore,
+    searchClient: SearchServiceClient,
     clock: Clock,
     fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
     val isEnabled = current.configuration.getBoolean("event-listener.searchUnload").getOrElse(false)
     if(isEnabled) {
-      new SearchUnloadListenerImpl(userRepo, normalizedURIRepo, persistEventProvider, store, clock, fortyTwoServices)
+      new SearchUnloadListenerImpl(db,userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, clock, fortyTwoServices)
     }
     else {
       new FakeSearchUnloadListenerImpl(userRepo, normalizedURIRepo)
@@ -162,7 +168,7 @@ class SearchDevModule extends ScalaModule with Logging {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new URIGraphImpl(dir, config, URIGraphDecoders.decoders(), bookmarkRepo, db)
+    new URIGraphImpl(dir, config, URIGraphFields.decoders(), bookmarkRepo, db)
   }
 
   @Singleton
@@ -209,7 +215,8 @@ class DevCommonModule extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def actorPluginProvider: ActorPlugin = new ActorPlugin("shoebox-dev-actor-system")
+  def actorPluginProvider: ActorPlugin =
+    new ActorPlugin(ActorSystem("shoebox-dev-actor-system", Play.current.configuration.underlying, Play.current.classloader))
 }
 
 class DevModule extends ScalaModule with Logging {

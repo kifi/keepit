@@ -4,7 +4,7 @@ $(function() {
   $(".invite_field").val("Select a facebook friend to invite");
 
   function hideAlreadyInvited() {
-    $(".alreadyinvited").fadeOut();    
+    $(".alreadyinvited").fadeOut();
   }
 
     $(".close").click(function() {
@@ -12,7 +12,7 @@ $(function() {
       return false;
     });
 
-  $.getJSON("/user/all-connections", function(connections) {
+  $.getJSON("/site/user/all-connections", function(connections) {
 
     $("#invites").on("click", ".invite_btn", function() {
       $this = $(this);

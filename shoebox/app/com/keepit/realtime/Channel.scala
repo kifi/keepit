@@ -146,9 +146,7 @@ abstract class ChannelManagerImpl[T](name: String, creator: T => Channel) extend
   }
 
   def push(id: T, msg: JsArray): Int = {
-    log.info("Pushing to " + name + " : " + id + ":\n" + msg)
     val res = find(id).map(_.push(msg)).getOrElse(0)
-    log.info("Pushed to " + name + " : " + id + ":\n" + msg)
     res
   }
 

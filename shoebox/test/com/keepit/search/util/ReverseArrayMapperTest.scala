@@ -1,19 +1,10 @@
-package com.keepit.search.index
-
-import com.keepit.test.EmptyApplication
-import com.keepit.search.Lang
+package com.keepit.search.util
 import org.specs2.mutable._
-import play.api.Play.current
-import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
-import com.keepit.search.graph.UserToUserEdgeSet
-import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.util.Version
-import org.apache.lucene.search.Query
 import scala.util.Random
 
-class IdMapperTest extends Specification {
+class ReverseArrayMapperTest extends Specification {
   val rnd = new Random
 
   "ReverseArrayMapper" should {
@@ -42,7 +33,7 @@ class IdMapperTest extends Specification {
       }
 
       Seq(0.7, 0.9, 1.0, 2.0, 8.0).forall { f =>
-        val revMapper = ReverseArrayMapper(data, f)
+        val revMapper = ReverseArrayMapper(data, f, -1L)
         i = 0
         while (i < data.length) {
           revMapper(data(i)) === i
@@ -78,7 +69,7 @@ class IdMapperTest extends Specification {
         }
       }
 
-      val revMapper = ReverseArrayMapper(data, 1.0)
+      val revMapper = ReverseArrayMapper(data, 1.0, -1L)
       i = 0
       while (i < data.length) {
         val v = data(i)

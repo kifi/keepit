@@ -9,14 +9,27 @@ import com.keepit.common.healthcheck.Healthcheck
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.URI
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social._
 import com.keepit.model._
 
 import play.api.i18n.Messages
-import play.api.mvc._
 import play.api.libs.json.JsNumber
+import play.api.mvc._
 import securesocial.core._
+
+case class ReportedException(val id: ExternalId[HealthcheckError], val cause: Throwable) extends Exception(id.toString, cause)
+
+case class AuthenticatedRequest[T](
+    identity: Identity,
+    userId: Id[User],
+    user: User,
+    request: Request[T],
+    experiments: Set[State[ExperimentType]] = Set(),
+    kifiInstallationId: Option[ExternalId[KifiInstallation]] = None,
+    adminUserId: Option[Id[User]] = None)
+  extends WrappedRequest(request)
 
 object ActionAuthenticator {
   val FORTYTWO_USER_ID = "fortytwo_user_id"
@@ -29,10 +42,13 @@ class ActionAuthenticator @Inject() (
   userExperimentRepo: UserExperimentRepo,
   userRepo: UserRepo,
   fortyTwoServices: FortyTwoServices,
-  healthcheckPlugin: HealthcheckPlugin)
+  healthcheckPlugin: HealthcheckPlugin,
+  impersonateCookie: ImpersonateCookie,
+  connectionUpdater: ConnectionUpdater,
+  kifiInstallationCookie: KifiInstallationCookie)
     extends SecureSocial with Logging {
 
-  private def loadUserId(userIdOpt: Option[Id[User]], socialId: SocialId)(implicit session: RSession) = {
+  private def loadUserId(userIdOpt: Option[Id[User]], socialId: SocialId)(implicit session: RSession): Id[User] = {
     userIdOpt match {
       case None =>
         val socialUser = socialUserInfoRepo.get(socialId, SocialNetworks.FACEBOOK)
@@ -47,17 +63,23 @@ class ActionAuthenticator @Inject() (
     }
   }
 
-  private def loadUserContext(userIdOpt: Option[Id[User]], socialId: SocialId) = db.readOnly{ implicit session =>
-    val userId = loadUserId(userIdOpt, socialId)
-    (userId, getExperiments(userId))
+  private def loadUserContext(userIdOpt: Option[Id[User]], socialId: SocialId): (Id[User], Set[State[ExperimentType]]) = {
+    val (userId, experiments) = db.readOnly { implicit session =>
+      val userId = loadUserId(userIdOpt, socialId)
+      (userId, getExperiments(userId))
+    }
+    // for migration to new UserConnection
+    connectionUpdater.updateConnectionsIfNecessary(userId)
+    //
+    (userId, experiments)
   }
 
-  private def getExperiments(userId: Id[User])(implicit session: RSession): Seq[State[ExperimentType]] = userExperimentRepo.getUserExperiments(userId)
+  private def getExperiments(userId: Id[User])(implicit session: RSession): Set[State[ExperimentType]] = userExperimentRepo.getUserExperiments(userId)
 
   private def authenticatedHandler[T](apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Result) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
       val userIdOpt = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map{id => Id[User](id.toLong)}
-      val impersonatedUserIdOpt: Option[ExternalId[User]] = ImpersonateCookie.decodeFromCookie(request.cookies.get(ImpersonateCookie.COOKIE_NAME))
-      val kifiInstallationId: Option[ExternalId[KifiInstallation]] = KifiInstallationCookie.decodeFromCookie(request.cookies.get(KifiInstallationCookie.COOKIE_NAME))
+      val impersonatedUserIdOpt: Option[ExternalId[User]] = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
+      val kifiInstallationId: Option[ExternalId[KifiInstallation]] = kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
       val socialUser = request.user
       val (userId, experiments) = loadUserContext(userIdOpt, SocialId(socialUser.id.id))
       val newSession = session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString)
@@ -82,12 +104,21 @@ class ActionAuthenticator @Inject() (
       bodyParser: BodyParser[T],
       onAuthenticated: AuthenticatedRequest[T] => Result,
       onUnauthenticated: Request[T] => Result): Action[T] = UserAwareAction(bodyParser) { request =>
-    request.user match {
+    val result = request.user match {
       case Some(user) =>
         authenticatedHandler(apiClient, allowPending)(onAuthenticated)(SecuredRequest(user, request))
       case None =>
         onUnauthenticated(request)
     }
+    request.headers.get("Origin").filter { uri =>
+      val host = URI.parse(uri).toOption.flatMap(_.host).map(_.toString).getOrElse("")
+      host.endsWith("ezkeep.com") || host.endsWith("kifi.com")
+    }.map { h =>
+      result.withHeaders(
+        "Access-Control-Allow-Origin" -> h,
+        "Access-Control-Allow-Credentials" -> "true"
+      )
+    }.getOrElse(result)
   }
 
   private[controller] def authenticatedAction[T](
@@ -110,17 +141,20 @@ class ActionAuthenticator @Inject() (
         }
       })
 
-  private[controller] def isAdmin(experiments: Seq[State[ExperimentType]]) = experiments.find(e => e == ExperimentTypes.ADMIN).isDefined
+  private[controller] def isAdmin(experiments: Set[State[ExperimentType]]) = experiments.contains(ExperimentTypes.ADMIN)
 
   private[controller] def isAdmin(userId: Id[User]) = db.readOnly { implicit session =>
     userExperimentRepo.hasExperiment(userId, ExperimentTypes.ADMIN)
   }
 
   private def executeAction[T](action: AuthenticatedRequest[T] => Result, userId: Id[User], identity: Identity,
-      experiments: Seq[State[ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]],
+      experiments: Set[State[ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]],
       newSession: Session, request: Request[T], adminUserId: Option[Id[User]] = None, allowPending: Boolean) = {
     val user = db.readOnly(implicit s => userRepo.get(userId))
-    if (experiments.contains(ExperimentTypes.BLOCK) || user.state == UserStates.BLOCKED || user.state == UserStates.INACTIVE || (!allowPending && user.state == UserStates.PENDING)) {
+    if (experiments.contains(ExperimentTypes.BLOCK) ||
+        user.state == UserStates.BLOCKED ||
+        user.state == UserStates.INACTIVE ||
+        (!allowPending && user.state == UserStates.PENDING)) {
       val message = "user %s access is forbidden".format(userId)
       log.warn(message)
       Forbidden(message)

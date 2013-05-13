@@ -5,18 +5,14 @@ import com.keepit.common.controller._
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.common.logging.Logging
 import com.keepit.common.net.URINormalizer
 import com.keepit.common.social._
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.realtime._
-import java.util.UUID
-import com.google.inject.ImplementedBy
 import com.google.inject.Inject
 import com.google.inject.Singleton
 import play.api.libs.iteratee.Concurrent
-import play.api.libs.iteratee.Concurrent.{ Channel => PlayChannel }
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.json._
@@ -29,7 +25,6 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.State
 import scala.util.Random
 import com.keepit.controllers.core.KeeperInfoLoader
-import com.keepit.serializer.BasicUserSerializer.basicUserSerializer
 import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import com.keepit.serializer.SendableNotificationSerializer.sendableNotificationSerializer
@@ -38,14 +33,14 @@ import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import com.keepit.common.service.FortyTwoServices
 
-case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Seq[State[ExperimentType]], adminUserId: Option[Id[User]])
+case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]])
 
 @Singleton
 class ExtStreamController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   socialUserInfoRepo: SocialUserInfoRepo,
-  socialConnectionRepo: SocialConnectionRepo,
+  userConnectionRepo: UserConnectionRepo,
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   experimentRepo: UserExperimentRepo,
@@ -61,6 +56,7 @@ class ExtStreamController @Inject() (
   normUriRepo: NormalizedURIRepo,
   commentWithBasicUserRepo: CommentWithBasicUserRepo,
   eventHelper: EventHelper,
+  impersonateCookie: ImpersonateCookie,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
@@ -74,7 +70,7 @@ class ExtStreamController @Inject() (
       secSocialUser <- UserService.find(auth.userId)
     ) yield {
 
-      val impersonatedUserIdOpt: Option[ExternalId[User]] = ImpersonateCookie.decodeFromCookie(request.cookies.get(ImpersonateCookie.COOKIE_NAME))
+      val impersonatedUserIdOpt: Option[ExternalId[User]] = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
 
       db.readOnly { implicit session =>
         val socialUser = socialUserInfoRepo.get(SocialId(secSocialUser.id.id), SocialNetworks.FACEBOOK)
@@ -140,6 +136,15 @@ class ExtStreamController @Inject() (
             "log_event" -> { case JsObject(pairs) +: _ =>
               logEvent(streamSession, JsObject(pairs))
             },
+            "get_rules" -> { case JsString(version) +: _ =>
+              db.readOnly { implicit s =>
+                val group = sliderRuleRepo.getGroup("default")
+                if (version != group.version) {
+                  channel.push(Json.arr("slider_rules", group.compactJson));
+                  channel.push(Json.arr("url_patterns", urlPatternRepo.getActivePatterns()));
+                }
+              }
+            },
             "get_friends" -> { _ =>
               channel.push(Json.arr("friends", getFriends(userId)))
             },
@@ -149,25 +154,27 @@ class ExtStreamController @Inject() (
               }))
             },
             "get_last_notify_read_time" -> { _ =>
-              channel.push(Json.arr("last_notify_read_time", getLastNotifyTime(userId).toStandardTimeString))
+              val t = db.readOnly(implicit s => userNotificationRepo.getLastReadTime(userId))
+              channel.push(Json.arr("last_notify_read_time", t.toStandardTimeString))
             },
-            "set_last_notify_read_time" -> { data =>
-              val time = data match {
-                case JsString(dateTime) +: _ => parseStandardTime(dateTime)
-                case _ => clock.now
-              }
-              channel.push(Json.arr("last_notify_read_time", setLastNotifyTime(userId, time).toStandardTimeString))
+            "set_last_notify_read_time" -> { case JsString(time) +: _ =>
+              val t = db.readWrite(implicit s => userNotificationRepo.setLastReadTime(userId, parseStandardTime(time)))
+              channel.push(Json.arr("last_notify_read_time", t.toStandardTimeString))
             },
-            "get_notifications" -> { case JsNumber(howMany) +: params =>
-              val createdBefore = params match {
-                case JsString(time) +: _ => Some(parseStandardTime(time))
-                case _ => None
+            "get_notifications" -> { case JsNumber(howMany) +: _ =>
+              val (notices, unvisited) = db.readOnly { implicit s =>
+                (userNotificationRepo.getLatestFor(userId, howMany.toInt),
+                 userNotificationRepo.getUnvisitedCount(userId))
               }
-              val toFetch =
-                if (createdBefore.isEmpty)
-                  math.max(db.readOnly(implicit s => userNotificationRepo.getUnreadCount(userId)), howMany.toInt)
-                else howMany.toInt
-              channel.push(Json.arr("notifications", getNotifications(userId, createdBefore, toFetch)))
+              channel.push(Json.arr("notifications", notices.map(SendableNotification.fromUserNotification), unvisited))
+            },
+            "get_missed_notifications" -> { case JsString(time) +: _ =>
+              val notices = db.readOnly(implicit s => userNotificationRepo.getCreatedAfter(userId, parseStandardTime(time)))
+              channel.push(Json.arr("missed_notifications", notices.map(SendableNotification.fromUserNotification)))
+            },
+            "get_old_notifications" -> { case JsNumber(requestId) +: JsString(time) +: JsNumber(howMany) +: _ =>
+              val notices = db.readOnly(implicit s => userNotificationRepo.getCreatedBefore(userId, parseStandardTime(time), howMany.toInt))
+              channel.push(Json.arr(requestId.toLong, notices.map(SendableNotification.fromUserNotification)))
             },
             "set_message_read" -> { case JsString(messageId) +: _ =>
               setMessageRead(userId, ExternalId[Comment](messageId))
@@ -177,7 +184,6 @@ class ExtStreamController @Inject() (
             })
 
           val iteratee = asyncIteratee { jsArr =>
-            log.info("WS just received: " + jsArr)
             Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
               handler(jsArr.value.tail)
             } getOrElse {
@@ -188,7 +194,7 @@ class ExtStreamController @Inject() (
             subscriptions = Map.empty
           }
 
-          (iteratee, enumerator)
+          (iteratee, Enumerator(Json.arr("hi")) >>> enumerator)
 
         case None =>
           log.info("Disconnecting anonymous user")
@@ -211,20 +217,8 @@ class ExtStreamController @Inject() (
 
   private def getFriends(userId: Id[User]): Set[BasicUser] = {
     db.readOnly { implicit s =>
-      socialConnectionRepo.getFortyTwoUserConnections(userId).map(basicUserRepo.load)
+      userConnectionRepo.getConnectedUsers(userId).map(basicUserRepo.load)
     }
-  }
-
-  private def getLastNotifyTime(userId: Id[User]): DateTime = {
-    db.readOnly(implicit s => userNotificationRepo.getLastReadTime(userId))
-  }
-
-  private def setLastNotifyTime(userId: Id[User], time: DateTime): DateTime = {
-    db.readWrite(implicit s => userNotificationRepo.setLastReadTime(userId, time))
-  }
-
-  private def getNotifications(userId: Id[User], createdBefore: Option[DateTime], howMany: Int): Seq[SendableNotification] = {
-    db.readOnly(implicit s => userNotificationRepo.getWithUserId(userId, createdBefore, howMany)).map(n => SendableNotification.fromUserNotification(n))
   }
 
   private def logEvent(session: StreamSession, o: JsObject) {
@@ -238,7 +232,6 @@ class ExtStreamController @Inject() (
     val event = Events.userEvent(eventFamily, eventName, user, session.experiments, installId, metaData, prevEvents, eventTime)
     log.debug("Created new event: %s".format(event))
     persistEventPlugin.persist(event)
-    eventHelper.newEvent(event)
   }
 
   private def getMessageThread(messageId: ExternalId[Comment]): (NormalizedURI, Seq[CommentWithBasicUser]) = {
@@ -260,14 +253,13 @@ class ExtStreamController @Inject() (
         case None =>
           Some(commentReadRepo.save(CommentRead(userId = userId, uriId = parent.uriId, parentId = parent.id, lastReadId = message.id.get)))
         case _ => None
-      }) foreach { _ =>
+      }) //foreach { _ =>  // TODO: uncomment after past data inconsistencies are all repaired or no longer a concern
         val nUri = normUriRepo.get(parent.uriId)
-        userChannel.push(userId, Json.arr("message_read", nUri.url, parent.externalId.id, message.createdAt))
-        userNotificationRepo.getWithCommentId(userId, message.id.get) foreach { n =>
-          val vn = userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
-          userChannel.push(userId, Json.arr("notifications", Seq(SendableNotification.fromUserNotification(vn))))
-        }
-      }
+        userChannel.push(userId, Json.arr("message_read", nUri.url, parent.externalId.id, message.createdAt, message.externalId.id))
+
+        val messageIds = commentRepo.getMessageIdsCreatedBefore(nUri.id.get, parent.id.get, message.createdAt) :+ message.id.get
+        userNotificationRepo.markVisited(userId, messageIds)
+      //}
     }
   }
 
@@ -280,21 +272,13 @@ class ExtStreamController @Inject() (
         case None =>
           Some(commentReadRepo.save(CommentRead(userId = userId, uriId = comment.uriId, lastReadId = comment.id.get)))
         case _ => None
-      }) foreach { _ =>
+      }) //foreach { _ =>  // TODO: uncomment after past data inconsistencies are all repaired or no longer a concern
         val nUri = normUriRepo.get(comment.uriId)
-        userChannel.push(userId, Json.arr("comment_read", nUri.url, comment.createdAt))
+        userChannel.push(userId, Json.arr("comment_read", nUri.url, comment.createdAt, comment.externalId.id))
 
         val commentIds = commentRepo.getPublicIdsCreatedBefore(nUri.id.get, comment.createdAt) :+ comment.id.get
-        val notifications = userNotificationRepo.getWithCommentIds(userId, commentIds, setCommentReadExcludeStates) map { n =>
-          userNotificationRepo.save(n.withState(UserNotificationStates.VISITED))
-        }
-        userChannel.push(userId, Json.arr("notifications", notifications map SendableNotification.fromUserNotification))
-      }
+        userNotificationRepo.markVisited(userId, commentIds)
+      //}
     }
   }
-  private val setCommentReadExcludeStates = Set(
-    UserNotificationStates.INACTIVE,
-    UserNotificationStates.VISITED,
-    UserNotificationStates.SUBSUMED)
-
 }

@@ -9,5 +9,5 @@ object MailProvider {
 
 @ImplementedBy(classOf[SendgridMailProvider])
 trait MailProvider {
-  def sendMail(mail: ElectronicMail): ElectronicMail
+  def sendMail(mail: ElectronicMail)
 }

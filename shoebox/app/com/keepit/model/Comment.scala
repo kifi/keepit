@@ -15,11 +15,12 @@ import play.api.libs.json._
 import com.keepit.inject._
 import com.keepit.common.healthcheck._
 import com.keepit.common.cache._
-
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
-
 import collection.SeqProxy
+import com.keepit.common.logging._
+import com.keepit.common.social.CommentWithBasicUserCache
+import com.keepit.common.social.CommentWithBasicUserKey
 
 
 case class Comment(
@@ -44,6 +45,31 @@ case class Comment(
   def isActive: Boolean = state == CommentStates.ACTIVE
 }
 
+object Comment {
+  import play.api.libs.functional.syntax._
+  import play.api.libs.json._
+  import com.keepit.common.db.Id
+
+  implicit val userExternalIdFormat = ExternalId.format[User]
+  implicit val commentExternalIdFormat = ExternalId.format[Comment]
+  implicit val idFormat = Id.format[Comment]
+  
+  implicit val commentFormat = (
+      (__ \ 'id).formatNullable(Id.format[Comment]) and
+      (__ \ 'createdAt).format[DateTime] and
+      (__ \ 'updatedAt).format[DateTime] and
+      (__ \ 'externalId).format(ExternalId.format[Comment]) and
+      (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+      (__ \ 'urlId).formatNullable(Id.format[URL]) and
+      (__ \ 'userId).format(Id.format[User]) and
+      (__ \ 'text).format(LargeString.format) and
+      (__ \ 'pageTitle).format[String] and
+      (__ \ 'parent).formatNullable(Id.format[Comment]) and
+      (__ \ 'permissions).format(State.format[CommentPermission]) and
+      (__ \ 'state).format(State.format[Comment])
+  )(Comment.apply, unlift(Comment.unapply))
+}
+
 @ImplementedBy(classOf[CommentRepoImpl])
 trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
   def all(permissions: State[CommentPermission])(implicit session: RSession): Seq[Comment]
@@ -56,11 +82,13 @@ trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
   def getPrivate(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
   def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment]
   def getParentMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment]
+  def getParentByUriParticipants(normUri: Id[NormalizedURI], recipients: Set[Id[User]])(implicit session: RSession): Option[Id[Comment]]
   def count(permissions: State[CommentPermission] = CommentPermissions.PUBLIC)(implicit session: RSession): Int
   def page(page: Int, size: Int, permissions: State[CommentPermission])(implicit session: RSession): Seq[Comment]
   def getParticipantsUserIds(commentId: Id[Comment])(implicit session: RSession): Set[Id[User]]
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Comment]
   def getPublicIdsCreatedBefore(uriId: Id[NormalizedURI], time: DateTime)(implicit session: RSession): Seq[Id[Comment]]
+  def getMessageIdsCreatedBefore(uriId: Id[NormalizedURI], parentId: Id[Comment], time: DateTime)(implicit session: RSession): Seq[Id[Comment]]
 }
 
 case class CommentCountUriIdKey(normUriId: Id[NormalizedURI]) extends Key[Int] {
@@ -78,15 +106,16 @@ class CommentRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   val commentCountCache: CommentCountUriIdCache,
-  socialConnectionRepoImpl: SocialConnectionRepoImpl,
+  commentWithBasicUserCache: CommentWithBasicUserCache,
+  userConnectionRepo: UserConnectionRepo,
   commentRecipientRepoImpl: CommentRecipientRepoImpl)
-    extends DbRepo[Comment] with CommentRepo with ExternalIdColumnDbFunction[Comment] {
+    extends DbRepo[Comment] with CommentRepo with ExternalIdColumnDbFunction[Comment] with Logging {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[Comment](db, "comment") with ExternalIdColumn[Comment] {
+  override val table = new RepoTable[Comment](db, "comment") with ExternalIdColumn[Comment] {
     def uriId = column[Id[NormalizedURI]]("normalized_uri_id", O.NotNull)
     def urlId = column[Id[URL]]("url_id", O.Nullable)
     def userId = column[Id[User]]("user_id", O.Nullable)
@@ -94,7 +123,7 @@ class CommentRepoImpl @Inject() (
     def pageTitle = column[String]("page_title", O.NotNull)
     def parent = column[Id[Comment]]("parent", O.Nullable)
     def permissions = column[State[CommentPermission]]("permissions", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ uriId ~ urlId.? ~ userId ~ text ~ pageTitle ~ parent.? ~ permissions ~ state <> (Comment, Comment.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ uriId ~ urlId.? ~ userId ~ text ~ pageTitle ~ parent.? ~ permissions ~ state <> (Comment.apply _, Comment.unapply _)
   }
 
   override def invalidateCache(comment: Comment)(implicit session: RSession) = {
@@ -104,6 +133,7 @@ class CommentRepoImpl @Inject() (
       case CommentPermissions.MESSAGE =>
       case CommentPermissions.PRIVATE =>
     }
+    commentWithBasicUserCache.remove(CommentWithBasicUserKey(comment.id.get))
     comment
   }
 
@@ -122,7 +152,7 @@ class CommentRepoImpl @Inject() (
     } yield b).sortBy(_.createdAt asc).list
 
   def getPublicIdsByConnection(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Id[Comment]] = {
-    val friends = socialConnectionRepoImpl.getFortyTwoUserConnections(userId)
+    val friends = userConnectionRepo.getConnectedUsers(userId)
     val commentsOnPage = (for {
       c <- table  if c.uriId === uriId && c.permissions === CommentPermissions.PUBLIC && c.state === CommentStates.ACTIVE
     } yield c).list
@@ -153,12 +183,42 @@ class CommentRepoImpl @Inject() (
 
   def getParentMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment] = {
     val q1 = for {
-      (c, cr) <- table innerJoin commentRecipientRepoImpl.table on (_.id is _.commentId) if (c.uriId === uriId && cr.userId === userId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)
+      c <- table if (c.uriId === uriId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)
+      cr <- commentRecipientRepoImpl.table if (c.id === cr.commentId && cr.userId === userId)
     } yield (c.*)
     val q2 = for {
       c <- table if (c.uriId === uriId && c.userId === userId && c.permissions === CommentPermissions.MESSAGE && c.parent.isNull)
     } yield (c.*)
-    (q1.list ++ q2.list).toSet.toSeq
+    (q1 union q2).list
+  }
+
+  def getParentByUriParticipants(normUri: Id[NormalizedURI], recipients: Set[Id[User]])(implicit session: RSession): Option[Id[Comment]] = {
+      val conn = session.conn
+      val st = conn.createStatement()
+
+      val recipientIn = recipients.map(_.id).mkString(",")
+      val recipientLength = recipients.size - 1 // there is one less CommentRecipient due to the author
+
+      val sql =
+        s"""
+          select c.id as id from comment c, comment_recipient r
+          where c.id = r.comment_id
+            and c.permissions = 'message'
+            and c.parent is null
+            and c.normalized_uri_id = ${normUri.id}
+            and c.user_id in ($recipientIn)
+          group by c.id
+          having count(*) = $recipientLength
+            and sum(r.user_id in ($recipientIn)) = $recipientLength
+          order by id limit 1;
+        """
+      val rs = st.executeQuery(sql)
+
+      if(rs.next) {
+        Some(Id[Comment](rs.getLong("id")))
+      } else {
+        None
+      }
   }
 
   def count(permissions: State[CommentPermission])(implicit session: RSession): Int =
@@ -184,6 +244,9 @@ class CommentRepoImpl @Inject() (
 
   def getPublicIdsCreatedBefore(uriId: Id[NormalizedURI], time: DateTime)(implicit session: RSession): Seq[Id[Comment]] =
     (for(b <- table if b.uriId === uriId && b.permissions === CommentPermissions.PUBLIC && b.createdAt < time) yield b.id).list
+
+  def getMessageIdsCreatedBefore(uriId: Id[NormalizedURI], parentId: Id[Comment], time: DateTime)(implicit session: RSession): Seq[Id[Comment]] =
+    (for(c <- table if c.uriId === uriId && c.permissions === CommentPermissions.MESSAGE && (c.id === parentId || c.parent === parentId) && c.createdAt < time) yield c.id).list
 }
 
 object CommentStates extends States[Comment]

@@ -9,7 +9,7 @@
 // @require scripts/snapshot.js
 
 threadPane = function() {
-  var $sent = $();
+  var $sent = $(), buffer = {};
   return {
     render: function($container, threadId, messages, session) {
       messages.forEach(function(m) {
@@ -38,39 +38,65 @@ threadPane = function() {
 
         $sent = $container.find(".kifi-messages-sent").data("threadId", threadId);
         $container.closest(".kifi-pane-box").on("kifi:remove", function() {
-          $sent.length = 0;
+          if (this.contains($sent[0])) {
+            $sent = $();
+          }
         });
+
+        // It's important that we check the buffer after rendering the messages, to avoid creating a window
+        // of time during which we might miss an incoming message on this thread.
+        if (buffer.threadId == threadId && !messages.some(function(m) {return m.id == buffer.message.id})) {
+          messages.push(buffer.message);
+          renderMessage(buffer.message, session.userId, function($m) {
+            $sent.append($m).scrollToBottom();
+          });
+        }
 
         if (messages.length) emitRead(threadId, messages[messages.length - 1]);
       });
     },
-    update: function(thread, message, userId) {
-      if ($sent.length && $sent.data("threadId") == thread.id) {
-        message.isLoggedInUser = message.user.id == userId;
-        renderMessage(message, function($m) {
+    update: function(threadId, message, userId) {
+      if ($sent.length && $sent.data("threadId") == threadId) {
+        renderMessage(message, userId, function($m) {
           var $old;
           if (message.isLoggedInUser && ($old = $sent.children("[data-id=]").first()).length) {
             $old.replaceWith($m);
           } else {
-            $sent.append($m).layout()[0].scrollTop = 99999;  // should we compare timestamps and insert in order?
+            $sent.append($m).scrollToBottom();  // should we compare timestamps and insert in order?
           }
-          emitRead(thread.id, message);
+          emitRead(threadId, message);
         });
+      } else {
+        buffer.threadId = threadId;
+        buffer.message = message;
+      }
+    },
+    updateAll: function(threadId, messages, userId) {
+      if ($sent.length && $sent.data("threadId") == threadId) {
+        var arr = new Array(messages.length), n = 0;
+        messages.forEach(function(m, i) {
+          renderMessage(m, userId, function($m) {
+            arr[i] = $m;
+            if (++n == arr.length) {
+              $sent.children(".kifi-message-sent").remove().end()
+                .append(arr).scrollToBottom();
+              emitRead(threadId, messages[messages.length - 1]);
+            }
+          });
+        })
       }
     }};
 
-  function sendReply($container, threadId, session, e, text, recipientIds) {
+  function sendReply($container, threadId, session, e, text) {
     // logEvent("keeper", "reply");
-    api.port.emit("post_comment", {
-      "url": document.URL,
-      "title": document.title,
-      "text": text,
-      "permissions": "message",
-      "recipients": recipientIds,
-      "parent": threadId
-    }, function(response) {
-      api.log("[sendReply] resp:", response);
-    });
+    api.port.emit("send_reply", {
+        url: document.URL,
+        title: document.title,
+        text: text,
+        threadId: threadId},
+      function(resp) {
+        api.log("[sendReply] resp:", resp);
+      });
     renderMessage({
       id: "",
       createdAt: new Date().toISOString(),
@@ -78,18 +104,16 @@ threadPane = function() {
       user: {
         id: session.userId,
         firstName: session.name,
-        lastName: "",
-        facebookId: session.facebookId
-      },
-      isLoggedInUser: true
-    }, function($m) {
-      $sent.append($m).layout()[0].scrollTop = 99999;
+        lastName: ""}
+    }, session.userId, function($m) {
+      $sent.append($m).scrollToBottom();
     });
   }
 
-  function renderMessage(m, callback) {
+  function renderMessage(m, userId, callback) {
     m.formatMessage = getTextFormatter;
     m.formatLocalDate = getLocalDateFormatter;
+    m.isLoggedInUser = m.user.id == userId;
     render("html/metro/message.html", m, function(html) {
       callback($(html).find("time").timeago().end());
     });

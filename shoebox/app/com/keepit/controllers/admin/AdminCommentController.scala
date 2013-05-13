@@ -28,6 +28,7 @@ import com.keepit.common.time._
 import org.joda.time.DateTime
 import com.keepit.common.analytics.ActivityStream
 import views.html
+import com.keepit.realtime.UserNotifier
 
 @Singleton
 class AdminCommentController @Inject() (
@@ -38,7 +39,8 @@ class AdminCommentController @Inject() (
   normalizedURIRepo: NormalizedURIRepo,
   userWithSocialRepo: UserWithSocialRepo,
   followRepo: FollowRepo,
-  userRepo: UserRepo)
+  userRepo: UserRepo,
+  userNotifier: UserNotifier)
     extends AdminController(actionAuthenticator) {
 
   def followsView = AdminHtmlAction { implicit request =>
@@ -80,5 +82,12 @@ class AdminCommentController @Inject() (
     }
     val pageCount: Int = (count / PAGE_SIZE + 1).toInt
     Ok(html.admin.messages(uriAndUsers, page, count, pageCount))
+  }
+  
+  def recreateNotificationDetails(safeMode: Boolean) = AdminHtmlAction { request =>
+    db.readWrite { implicit session =>
+      userNotifier.recreateAllActiveDetails(safeMode)
+    }
+    Ok
   }
 }

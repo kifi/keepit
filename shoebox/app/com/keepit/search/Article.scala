@@ -8,6 +8,8 @@ case class Article(
     id: Id[NormalizedURI],
     title: String,
     content: String,
+    description: Option[String],
+    media: Option[String],
     scrapedAt: DateTime,
     httpContentType: Option[String], // from http header
     httpOriginalContentCharset: Option[String], // from EntityUtils.getContentCharSet

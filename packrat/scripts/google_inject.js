@@ -48,7 +48,7 @@ api.log("[google_inject]");
   function onInput() {
     tQuery = +new Date;
     clearTimeout(keyTimer);
-    keyTimer = setTimeout(search, 120);  // enough of a delay that we won't search after *every* keystroke (similar to Google's behavior)
+    keyTimer = setTimeout(search, 250);  // enough of a delay that we won't search after *every* keystroke (similar to Google's behavior)
   }
   var $qf = $("#gbqf,#tsf").submit(onSubmit);  // stable identifier: "Google Bar Query Form"
   function onSubmit() {
@@ -173,7 +173,7 @@ api.log("[google_inject]");
         "queryUUID": response.uuid,
         "kifiResultsClicked": clicks.kifi.length,
         "googleResultsClicked": clicks.google.length,
-        "kifiShownURIs": resp.expanded ? resp.hits.map(function(hit) {return hit.bookmark.url}) : [],
+        "kifiShownURIs": response.expanded ? response.hits.map(function(hit) {return hit.bookmark.url}) : [],
         "kifiClickedURIs": clicks.kifi,
         "googleClickedURIs": clicks.google});
     }
@@ -310,7 +310,7 @@ api.log("[google_inject]");
         $res.find(".kifi-res-filter-custom").slideUp(200, function() {
           var $in = $res.find("#kifi-res-filter-cust");
           if ($in.tokenInput) {
-            $in.tokenInput("clear");
+            $in.tokenInput("destroy");
           }
         });
         search(null, f);
@@ -367,23 +367,21 @@ api.log("[google_inject]");
     }).on("mouseenter", ".kifi-face.kifi-friend", function() {
       var $a = $(this).showHover({
         hideDelay: 600,
-        fadesOut: true,
+        click: "toggle",
         create: function(callback) {
           var i = $a.closest("li.g").prevAll("li.g").length, j = $a.prevAll(".kifi-friend").length;
           var friend = response.hits[i].users[j];
           render("html/friend_card.html", {
+            networkIds: friend.networkIds,
             name: friend.firstName + " " + friend.lastName,
-            facebookId: friend.facebookId,
+            id: friend.id,
             iconsUrl: api.url("images/social_icons.png")
           }, callback);
-          api.port.emit("get_num_mutual_keeps", {id: friend.id}, function gotNumMutualKeeps(o) {
-            $a.find(".kifi-kcard-mutual").text(plural(o.n, "mutual keep"));
-          });
         }});
     }).on("mouseenter", ".kifi-res-friends", function(e) {
       if (e.target !== this) return;
       var $a = $(this).showHover({
-        fadesOut: true,
+        click: "toggle",
         create: function(callback) {
           var i = $a.closest("li.g").prevAll("li.g").length;
           render("html/search/friends.html", {friends: response.hits[i].users}, function(html) {
@@ -393,7 +391,7 @@ api.log("[google_inject]");
     }).on("mouseenter", ".kifi-chatter", function() {
       var $ch = $(this).showHover({
         hideDelay: 600,
-        fadesOut: true,
+        click: "toggle",
         create: function(callback) {
           var n = $ch.data("n");
           render("html/search/chatter.html", {
@@ -501,16 +499,16 @@ api.log("[google_inject]");
 
   function processHit(hit) {
     hit.displayUrl = displayURLFormatter(hit.bookmark.url);
-    hit.displayTitle = boldSearchTerms(hit.bookmark.title, response.query) || hit.displayUrl;
+    hit.displayTitle = boldSearchTerms(hit.bookmark.title || "", response.query) || hit.displayUrl;
     hit.displayScore = response.showScores === true ? "[" + Math.round(hit.score * 100) / 100 + "] " : "";
 
     var fil = response.filter || "", ids = fil.length > 1 ? fil.split(".") : null;
-    hit.displaySelf = fil != "f" && !ids;
+    hit.displaySelf = fil != "f" && !ids && hit.isMyBookmark;
     hit.displayUsers = fil == "m" ? [] :
       ids ? hit.users.filter(function(u) {return ~ids.indexOf(u.id)}) :
       hit.users;
 
-    var numOthers = hit.count - hit.users.length - (hit.isMyBookmark ? 1 : 0);
+    var numOthers = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
     hit.whoKeptHtml = formatCountHtml(
       hit.isMyBookmark,
       hit.isPrivate ? " <span class=kifi-res-private>Private</span>" : "",

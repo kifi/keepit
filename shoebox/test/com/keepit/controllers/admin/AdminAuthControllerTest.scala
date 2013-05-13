@@ -22,7 +22,7 @@ class AdminAuthControllerTest extends Specification with DbRepos {
   //todo(eishay) refactor commonalities out of this one and AdminDashboardController to make this test easy to write
   "AdminAuthController" should {
     "impersonate" in {
-      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeHealthcheck()) {
+      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeStore()) {
         val su1 = SocialUser(UserId("111", "facebook"), "A", "1", "A 1", Some("a1@gmail.com"),
           Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None, Some(OAuth2Info(accessToken = "A")), None)
         val su2 = SocialUser(UserId("222", "facebook"), "B", "1", "B 1", Some("b1@gmail.com"),
@@ -45,9 +45,10 @@ class AdminAuthControllerTest extends Specification with DbRepos {
         val startResult = route(startRequest).get
         status(startResult) must equalTo(200)
         val sessionCookie = session(startResult)
+        val impersonateCookie = inject[ImpersonateCookie]
         sessionCookie(ActionAuthenticator.FORTYTWO_USER_ID) === admin.id.get.toString
-        cookies(startResult).get(ImpersonateCookie.COOKIE_NAME) === None
-        cookies(startResult).get(KifiInstallationCookie.COOKIE_NAME) !== None
+        cookies(startResult).get(impersonateCookie.COOKIE_NAME) === None
+        cookies(startResult).get(inject[KifiInstallationCookie].COOKIE_NAME) !== None
 
         val whoisRequest1 = FakeRequest("GET", "/whois").withCookies(cookie1)
         val whoisResult1 = route(whoisRequest1).get
@@ -65,20 +66,20 @@ class AdminAuthControllerTest extends Specification with DbRepos {
         val impersonateResult = route(impersonateRequest).get
         val imprSessionCookie = session(impersonateResult)
         imprSessionCookie(ActionAuthenticator.FORTYTWO_USER_ID) === admin.id.get.toString
-        ImpersonateCookie.decodeFromCookie(cookies(impersonateResult).get(ImpersonateCookie.COOKIE_NAME)) === Some(impersonate.externalId)
+        impersonateCookie.decodeFromCookie(cookies(impersonateResult).get(impersonateCookie.COOKIE_NAME)) === Some(impersonate.externalId)
 
         val whoisRequest2 = FakeRequest("GET", "/whois")
-            .withCookies(cookie1, cookies(impersonateResult)(ImpersonateCookie.COOKIE_NAME))
+            .withCookies(cookie1, cookies(impersonateResult)(impersonateCookie.COOKIE_NAME))
         val whoisResult2 = route(whoisRequest2).get
         (Json.parse(contentAsString(whoisResult2)) \ "externalUserId").as[String] === impersonate.externalId.toString
 
         val unimpersonateRequest = FakeRequest("POST", "/admin/unimpersonate")
             .withCookies(cookie1)
         val unimpersonateResult = route(unimpersonateRequest).get
-        ImpersonateCookie.decodeFromCookie(cookies(unimpersonateResult).get(ImpersonateCookie.COOKIE_NAME)) === None
+        impersonateCookie.decodeFromCookie(cookies(unimpersonateResult).get(impersonateCookie.COOKIE_NAME)) === None
 
         val whoisRequest3 = FakeRequest("GET", "/whois")
-            .withCookies(cookie1, cookies(unimpersonateResult)(ImpersonateCookie.COOKIE_NAME))
+            .withCookies(cookie1, cookies(unimpersonateResult)(impersonateCookie.COOKIE_NAME))
         val whoisResult3 = route(whoisRequest3).get
         (Json.parse(contentAsString(whoisResult3)) \ "externalUserId").as[String] === admin.externalId.toString
 

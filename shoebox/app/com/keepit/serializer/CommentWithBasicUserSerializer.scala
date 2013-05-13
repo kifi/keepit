@@ -5,7 +5,6 @@ import com.keepit.common.time._
 import com.keepit.common.social.CommentWithBasicUser
 import com.keepit.common.db.State
 import com.keepit.model._
-import com.keepit.serializer.BasicUserSerializer.basicUserSerializer
 import play.api.libs.json._
 
 class CommentWithBasicUserSerializer extends Writes[CommentWithBasicUser] {

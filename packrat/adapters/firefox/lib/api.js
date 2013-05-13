@@ -5,11 +5,13 @@ function dispatch() {
   this.forEach(function(f) {f.apply(null, args)});
 }
 
-function extend(a, b) {
-  for (var k in b) {
-    a[k] = b[k];
+function markInjected(inj, o) {
+  for each (let arr in o) {
+    for each (let path in arr) {
+      inj[path] = true;
+    }
   }
-  return a;
+  return inj;
 }
 
 // TODO: load some of these APIs on demand instead of up front
@@ -33,7 +35,6 @@ function createPage(tab) {
 }
 
 exports.bookmarks = require("./bookmarks");
-exports.browserVersion = xulApp.name + "/" + xulApp.version;
 
 exports.icon = {
   on: {click: new Listeners},
@@ -180,13 +181,32 @@ exports.request = function(method, url, data, done, fail) {
   require("sdk/request").Request(options)[method.toLowerCase()]();
 };
 
-var socketPage, socketHandlers = [,];
+var socketPage, sockets = [,];
 var socketCallbacks = {}, nextSocketCallbackId = 1;  // TODO: garbage collect old uncalled callbacks
 exports.socket = {
-  open: function(url, handlers) {
-    socketHandlers.push(handlers);
-    var socketId = socketHandlers.length - 1;
+  open: function(url, handlers, onConnect) {
+    var socketId = sockets.length, socket = {
+      seq: 0,
+      send: function(arr, callback) {
+        if (callback) {
+          var id = nextSocketCallbackId++;
+          socketCallbacks[id] = callback;
+          arr.splice(1, 0, id);
+        }
+        socketPage.port.emit("socket_send", socketId, arr);
+      },
+      close: function() {
+        exports.log("[api.socket.close]", socketId);
+        delete sockets[socketId];
+        socketPage.port.emit("close_socket", socketId);
+        if (!sockets.some(function(h) {return h})) {
+          socketPage.destroy();
+          socketPage = null;
+        }
+        this.send = this.close = exports.noop;
+      }};
     exports.log("[api.socket.open]", socketId, url);
+    sockets.push({socket: socket, handlers: handlers, onConnect: onConnect});
     if (socketPage) {
       socketPage.port.emit("open_socket", socketId, url);
     } else {
@@ -198,28 +218,23 @@ exports.socket = {
         contentScriptOptions: {socketId: socketId, url: url},
         contentURL: data.url("html/workers/socket.html")
       });
+      socketPage.port.on("socket_connect", onSocketConnect);
       socketPage.port.on("socket_message", onSocketMessage);
     }
-    return {
-      send: function(arr, callback) {
-        if (callback) {
-          var id = nextSocketCallbackId++;
-          socketCallbacks[id] = callback;
-          arr.splice(1, 0, id);
-        }
-        socketPage.port.emit("socket_send", socketId, arr);
-      },
-      close: function() {
-        exports.log("[api.socket.close]", socketId);
-        delete socketHandlers[socketId];
-        socketPage.port.emit("close_socket", socketId);
-        if (!socketHandlers.some(function(h) {return h})) {
-          socketPage.destroy();
-          socketPage = null;
-        }
-        this.send = this.close = exports.noop;
-      }
-    };
+    return socket;
+  }
+}
+function onSocketConnect(socketId) {
+  var socket = sockets[socketId];
+  if (socket) {
+    socket.socket.seq++;
+    try {
+      socket.onConnect();
+    } catch (e) {
+      exports.log.error("onSocketConnect:" + socketId, e);
+    }
+  } else {
+    exports.log("[onSocketConnect] Ignoring, no socket", socketId);
   }
 }
 function onSocketMessage(socketId, data) {
@@ -236,23 +251,23 @@ function onSocketMessage(socketId, data) {
           exports.log("[api.socket.receive] Ignoring, no callback", id, msg);
         }
       } else {
-        var handlers = socketHandlers[socketId];
-        if (handlers) {
-          var handler = handlers[id];
+        var socket = sockets[socketId];
+        if (socket) {
+          var handler = socket.handlers[id];
           if (handler) {
             handler.apply(null, msg);
           } else {
             exports.log("[api.socket.receive] Ignoring, no handler", id, msg);
           }
         } else {
-          exports.log("[api.socket.receive] Ignoring, no handlers", socketId, id, msg);
+          exports.log("[api.socket.receive] Ignoring, no socket", socketId, id, msg);
         }
       }
     } else {
       exports.log("[api.socket.receive] Ignoring, not array", msg);
     }
   } catch (e) {
-    exports.log.error("[api.socket.receive]", e);
+    exports.log.error("api.socket.receive:" + socketId + ":" + data, e);
   }
 }
 
@@ -294,10 +309,14 @@ exports.tabs = {
   emit: function(tab, type, data) {
     var currTab = pages[tab.id];
     if (tab === currTab || currTab && currTab.url.match(hostRe)[0] == tab.url.match(hostRe)[0]) {
-      exports.log("[api.tabs.emit] tab:", tab.id, "type:", type, "data:", data, "url:", tab.url);
-      workers[tab.id].forEach(function(worker) {
-        worker.port.emit(type, data);
-      });
+      if (currTab.ready) {
+        exports.log("[api.tabs.emit] tab:", tab.id, "type:", type, "data:", data, "url:", tab.url);
+        workers[tab.id].forEach(function(worker) {
+          worker.port.emit(type, data);
+        });
+      } else {
+        (currTab.toEmit || (currTab.toEmit = [])).push([type, data]);
+      }
     } else {
       exports.log("[api.tabs.emit] SUPPRESSED tab:", tab.id, "type:", type, "navigated:", tab.url, "->", currTab && currTab.url);
     }
@@ -465,13 +484,13 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
       contentStyleFile: o.styles.map(url),
       contentScriptFile: o.scripts.map(url),
       contentScriptWhen: "ready",
-      contentScriptOptions: {dataUriPrefix: url("")},
+      contentScriptOptions: {dataUriPrefix: url(""), dev: prefs.env == "development"},
       attachTo: ["existing", "top"],
       onAttach: function(worker) {
         if (privateMode.isPrivate(worker.tab)) return;
         let tab = worker.tab, page = pages[tab.id];
         exports.log("[onAttach]", tab.id, this.contentScriptFile, tab.url, page);
-        let injected = extend({}, o.injected);
+        let injected = markInjected({}, o);
         let pw = workers[tab.id];
         pw.push(worker);
         worker.on("pageshow", function() {
@@ -482,6 +501,13 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
             //  2. certain calls from content scripts fail if page is not yet visible
             //     (see https://bugzilla.mozilla.org/show_bug.cgi?id=766088#c2)
             page.ready = true;
+
+            (page.toEmit || []).forEach(function emit(m) {
+              exports.log("[pageshow:emit]", tab.id, m[0], m[1] != null ? m[1] : "");
+              worker.port.emit.apply(worker.port, m);
+            });
+            delete page.toEmit;
+
             dispatch.call(exports.tabs.on.ready, page);  // must run only once per page, not per content script on page
           }
         }).on("pagehide", function() {
@@ -505,6 +531,7 @@ timers.setTimeout(function() {  // async to allow main.js to complete (so portHa
         worker.port.on("api:require", function(path, callbackId) {
           var o = deps(path, injected);
           exports.log("[api:require] tab:", tab.id, o);
+          markInjected(injected, o);
           worker.port.emit("api:inject", o.styles.map(load), o.scripts.map(load), callbackId);
         });
       }});

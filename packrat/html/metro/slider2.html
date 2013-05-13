@@ -1,22 +1,22 @@
 <div class="kifi-slider2">
-  <span class="kifi-slider2-x" style="background-image:url({{bgUrl}})"></span>
+  <span class="kifi-slider2-x" style="background-image:url({{bgDir}}/x.png)" data-tip-html="Hide KiFi (Esc)" data-tip-class="kifi-slider2-tip"></span>
   <span class="kifi-slider2-keep {{#isKept}}{{#isPrivate}}kifi-private{{/isPrivate}}{{^isPrivate}}kifi-public{{/isPrivate}}{{/isKept}}{{^isKept}}kifi-unkept{{/isKept}}">
     <span class="kifi-slider2-keep-btn kifi-hoverless"></span>
-    <span class="kifi-slider2-lock" style="background-image:url({{bgUrl}})"></span>
+    <span class="kifi-slider2-lock" style="background-image:url({{bgDir}}/lock.png)"></span>
   </span>
   <span class="kifi-slider2-dock">
-    <span class="kifi-slider2-dock-btn kifi-slider2-notices" style="background-image:url({{bgUrl}})" data-pane="notices">
-      <span class="kifi-count kifi-unread"{{^noticesCount}} style="display:none"{{/noticesCount}}>{{noticesCount}}</span>
+    <span class="kifi-slider2-dock-btn kifi-slider2-notices{{#atNotices}} kifi-at{{/atNotices}}" style="background-image:url({{bgDir}}/notices.png)" data-loc="/notices">
+      <span class="kifi-count"{{^noticesCount}} style="display:none"{{/noticesCount}}>{{noticesCount}}</span>
     </span>
     <span class="kifi-slider2-dock-sep"></span>
-    <span class="kifi-slider2-dock-btn kifi-slider2-comments" style="background-image:url({{bgUrl}})" data-pane="comments">
-      <span class="kifi-count{{#commentsUnread}} kifi-unread{{/commentsUnread}}"{{^commentCount}} style="display:none"{{/commentCount}}>{{commentCount}}</span>
+    <span class="kifi-slider2-dock-btn kifi-slider2-comments{{#atComments}} kifi-at{{/atComments}}" style="background-image:url({{bgDir}}/comments.png)" data-loc="/comments">
+      <span class="kifi-count"{{^commentCount}} style="display:none"{{/commentCount}}>{{commentCount}}</span>
     </span>
     <span class="kifi-slider2-dock-sep"></span>
-    <span class="kifi-slider2-dock-btn kifi-slider2-threads" style="background-image:url({{bgUrl}})" data-pane="threads">
-      <span class="kifi-count{{#messagesUnread}} kifi-unread{{/messagesUnread}}"{{^messageCount}} style="display:none"{{/messageCount}}>{{messageCount}}</span>
+    <span class="kifi-slider2-dock-btn kifi-slider2-messages{{#atMessages}} kifi-at{{/atMessages}}" style="background-image:url({{bgDir}}/messages.png)" data-loc="/messages">
+      <span class="kifi-count"{{^messageCount}} style="display:none"{{/messageCount}}>{{messageCount}}</span>
     </span>
     <span class="kifi-slider2-dock-sep"></span>
-    <span class="kifi-slider2-dock-btn kifi-slider2-general" style="background-image:url({{bgUrl}})" data-pane="general"></span>
+    <span class="kifi-slider2-dock-btn kifi-slider2-general{{#atGeneral}} kifi-at{{/atGeneral}}" style="background-image:url({{bgDir}}/general.png)" data-loc="/general"></span>
   </span>
 </div>

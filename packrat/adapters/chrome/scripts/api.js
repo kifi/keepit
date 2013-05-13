@@ -1,6 +1,6 @@
 // API for content scripts
 
-api = function() {
+var api = function() {
   var msgHandlers = [], callbacks = {}, nextCallbackId = 1;
 
   var port = chrome.runtime.connect({name: ""});
@@ -8,6 +8,7 @@ api = function() {
     var kind = msg[0];
     if (kind == "api:respond") {
       var id = msg[1], cb = callbacks[id];
+      api.log("[onMessage] response:", msg[2] != null ? msg[2] : "");
       if (cb) {
         delete callbacks[id];
         cb(msg[2]);
@@ -41,7 +42,7 @@ api = function() {
     };
     req.send(null);
   },
-  log: function() {
+  log: api && api.log || function() {
     var d = new Date, ds = d.toString();
     arguments[0] = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] " + arguments[0];
     console.log.apply(console, arguments);

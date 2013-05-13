@@ -2,13 +2,13 @@
     "name": "kifi-beta",
     "license": "MPL 2.0",
     "author": "FortyTwo Inc.",
-    "homepage": "http://www.keepitfindit.com/",
-    "version": "2.3.20",
-    "fullName": "Keep It, Find It!",
+    "homepage": "https://www.kifi.com/",
+    "version": "2.3.67",
+    "fullName": "KiFi Private Beta",
     "id": "kifi@42go.com",
     "icon": "data/icons/kifi.48.png",
     "icon64": "data/icons/kifi.64.png",
-    "description": "The answer to life, the universe, and everything.",
+    "description": "This extension is currently in a private beta. To sign up, please visit https://www.kifi.com.",
     "preferences": [
         {
             "title": "Environment",

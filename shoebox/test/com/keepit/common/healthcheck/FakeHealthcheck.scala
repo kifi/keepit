@@ -9,7 +9,9 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import com.google.inject.Singleton
 
+@Singleton
 case class FakeHealthcheck() extends HealthcheckPlugin {
 
   val _errors = MutableList[HealthcheckError]()
@@ -27,6 +29,6 @@ case class FakeHealthcheck() extends HealthcheckPlugin {
     error
   }
 
-  def reportStart(): ElectronicMail = ElectronicMail(from = ENG, to = ENG, subject = "start", htmlBody = "", category = PostOffice.Categories.HEALTHCHECK)
-  def reportStop(): ElectronicMail = ElectronicMail(from = ENG, to = ENG, subject = "stop", htmlBody = "", category = PostOffice.Categories.HEALTHCHECK)
+  def reportStart(): ElectronicMail = ElectronicMail(from = ENG, to = List(ENG), subject = "start", htmlBody = "", category = PostOffice.Categories.HEALTHCHECK)
+  def reportStop(): ElectronicMail = ElectronicMail(from = ENG, to = List(ENG), subject = "stop", htmlBody = "", category = PostOffice.Categories.HEALTHCHECK)
 }

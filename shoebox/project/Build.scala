@@ -40,10 +40,12 @@ object ApplicationBuild extends Build {
       "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
       "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2",
+      "edu.stanford.nlp" % "stanford-corenlp" % "1.3.5",
+      "edu.stanford.nlp.models" % "stanford-corenlp-models" % "1.3.5" from "http://scalasbt.artifactoryonline.com/scalasbt/repo/edu/stanford/nlp/stanford-corenlp/1.3.5/stanford-corenlp-1.3.5-models.jar",
       "org.apache.lucene" % "lucene-core" % "4.2.1",
       "org.apache.lucene" % "lucene-analyzers-common" % "4.2.1",
       "org.apache.lucene" % "lucene-suggest" % "4.2.1",
-      "org.apache.httpcomponents" % "httpclient" % "4.2.1",
+      "org.apache.httpcomponents" % "httpclient" % "4.2.4",
       "org.apache.tika" % "tika-parsers" % "1.3",
       "org.apache.commons" % "commons-math3" % "3.1.1",
       "org.apache.zookeeper" % "zookeeper" % "3.4.5",
@@ -55,7 +57,8 @@ object ApplicationBuild extends Build {
       "org.jsoup" % "jsoup" % "1.7.1",
       "spy" % "spymemcached" % "2.8.12",
       "com.typesafe.slick" %% "slick" % "1.0.0",
-      "com.typesafe.slick" %% "slick-testkit" % "1.0.0"
+      "com.typesafe.slick" %% "slick-testkit" % "1.0.0",
+      "net.sf.uadetector" % "uadetector-resources" % "2013.02"
     ) map (_.excludeAll(
       ExclusionRule(organization = "com.cedarsoft"),
       ExclusionRule(organization = "javax.jms"),
@@ -95,6 +98,8 @@ object ApplicationBuild extends Build {
       ),
 
       libraryDependencies ++= Seq(
+        // updating bonecp, trying to resolve "Timed out waiting for a free available connection" exception
+        // http://stackoverflow.com/a/15500442/81698
         "com.google.inject" % "guice" % "3.0",
         "com.google.inject.extensions" % "guice-multibindings" % "3.0",
         "com.tzavellas" % "sse-guice" % "0.7.1"

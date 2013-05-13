@@ -32,7 +32,7 @@ import com.google.inject.{Inject, ImplementedBy, Singleton}
 
 case class URISearchResults(uri: NormalizedURI, score: Float)
 
-case class NormalizedURI  (
+case class NormalizedURI (
   id: Option[Id[NormalizedURI]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
@@ -83,7 +83,7 @@ class NormalizedURIRepoImpl @Inject() (
 
   private val sequence = db.getSequence("normalized_uri_sequence")
 
-  override lazy val table = new RepoTable[NormalizedURI](db, "normalized_uri") with ExternalIdColumn[NormalizedURI] {
+  override val table = new RepoTable[NormalizedURI](db, "normalized_uri") with ExternalIdColumn[NormalizedURI] {
     def title = column[String]("title")
     def url = column[String]("url", O.NotNull)
     def urlHash = column[String]("url_hash", O.NotNull)
@@ -178,6 +178,7 @@ object NormalizedURIFactory {
 
   def apply(title: Option[String], url: String, state: State[NormalizedURI]): NormalizedURI = {
     val normalized = normalize(url)
+    if (normalized.size > URLFactory.MAX_URL_SIZE) throw new Exception(s"url size is ${normalized.size} which exceeds ${URLFactory.MAX_URL_SIZE}: $normalized")
     NormalizedURI(title = title, url = normalized, urlHash = hashUrl(normalized), state = state)
   }
 

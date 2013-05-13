@@ -13,6 +13,7 @@ import com.keepit.common.cache.MemcachedCacheModule
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{HealthcheckHost, HealthcheckPluginImpl, HealthcheckPlugin, HealthcheckActor}
 import com.keepit.common.logging.Logging
+import com.keepit.common.controller.FortyTwoCookies._
 import com.keepit.common.mail.{MailSenderPluginImpl, MailSenderPlugin, PostOffice}
 import com.keepit.common.net.HttpClient
 import com.keepit.common.net.HttpClientImpl
@@ -30,6 +31,8 @@ import com.keepit.model.UserRepo
 import com.keepit.model.NormalizedURIRepo
 import com.keepit.common.time.Clock
 import com.google.inject.Provider
+import play.api.Play
+import play.api.Mode.Mode
 
 class CommonModule extends ScalaModule with Logging {
 
@@ -53,13 +56,15 @@ class CommonModule extends ScalaModule with Logging {
   @Singleton
   @Provides
   def searchUnloadProvider(
+    db: Database,
     userRepo: UserRepo,
     normalizedURIRepo: NormalizedURIRepo,
     persistEventProvider: Provider[PersistEventPlugin],
     store: MongoEventStore,
+    searchClient: SearchServiceClient,
     clock: Clock,
     fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
-    new SearchUnloadListenerImpl(userRepo, normalizedURIRepo, persistEventProvider, store, clock, fortyTwoServices)
+    new SearchUnloadListenerImpl(db, userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, clock, fortyTwoServices)
   }
 
   @Singleton
@@ -69,6 +74,18 @@ class CommonModule extends ScalaModule with Logging {
     val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
     new SearchConfigManager(optFile, expRepo, userExpRepo, db)
   }
+
+  @Singleton
+  @Provides
+  def playMode: Mode = current.mode
+
+  @Singleton
+  @Provides
+  def kifiInstallationCookie: KifiInstallationCookie = new KifiInstallationCookie(current.configuration.getString("session.domain"))
+
+  @Singleton
+  @Provides
+  def impersonateCookie: ImpersonateCookie = new ImpersonateCookie(current.configuration.getString("session.domain"))
 
   @Singleton
   @Provides
@@ -110,10 +127,11 @@ class CommonModule extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def actorPluginProvider: ActorPlugin = new ActorPlugin("shoebox-actor-system")
+  def actorPluginProvider: ActorPlugin =
+    new ActorPlugin(ActorSystem("shoebox-actor-system", Play.current.configuration.underlying, Play.current.classloader))
 
   @Provides
-  def httpClientProvider: HttpClient = new HttpClientImpl()
+  def httpClientProvider(healthcheckPlugin: HealthcheckPlugin): HttpClient = new HttpClientImpl(healthcheckPlugin = healthcheckPlugin)
 
   @Provides
   @AppScoped
@@ -121,9 +139,9 @@ class CommonModule extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def healthcheckProvider(actorFactory: ActorFactory[HealthcheckActor], postOffice: PostOffice,
+  def healthcheckProvider(actorFactory: ActorFactory[HealthcheckActor], db: Database, postOffice: PostOffice,
       services: FortyTwoServices, host: HealthcheckHost): HealthcheckPlugin = {
-    new HealthcheckPluginImpl(actorFactory, services, postOffice, host)
+    new HealthcheckPluginImpl(actorFactory, services, postOffice, host, db)
   }
 
   @Singleton
@@ -136,7 +154,8 @@ class CommonModule extends ScalaModule with Logging {
     new HttpFetcherImpl(
       userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_2) AppleWebKit/537.17 (KHTML, like Gecko) Chrome/24.0.1309.0 Safari/537.17",
       connectionTimeout = 30000,
-      soTimeOut = 30000
+      soTimeOut = 30000,
+      trustBlindly = true
     )
   }
 

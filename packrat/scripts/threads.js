@@ -25,6 +25,7 @@ threadsPane = function() {
         threads: o.threads,
         showTo: true,
         draftPlaceholder: "Type a message…",
+        draftDefault: "Check this out.",
         submitButtonLabel: "Send",
         snapshotUri: api.url("images/snapshot.png")
       }, {
@@ -40,7 +41,7 @@ threadsPane = function() {
           var $th = $(this), id = $th.data("id");
           var recipients = $th.data("recipients") ||
             o.threads.filter(function(t) {return t.id == id})[0].recipients;
-          $th.closest(".kifi-pane").triggerHandler("kifi:show-pane", ["thread", recipients, id])
+          $th.closest(".kifi-pane").triggerHandler("kifi:show-pane", ["/messages/" + id, recipients])
         })
         .on("kifi:compose-submit", sendMessage.bind(null, $container))
         .find("time").timeago();
@@ -55,53 +56,67 @@ threadsPane = function() {
     },
     update: function(thread, readTime) {
       if ($list.length) {
-        var n = messageCount(thread, new Date(readTime || 0));
-        thread.messageCount = Math.abs(n);
-        thread.messagesUnread = n < 0;
-        renderThread(thread, function($th) {
+        renderThread(thread, readTime, function($th) {
           var $old = $list.children("[data-id=" + thread.id + "],[data-id=]").first();
           if ($old.length) {
-            $old.replaceWith($th);
-          } else {
-            $list.append($th).layout()[0].scrollTop = 99999;
+            var $thBelow = $old.nextAll(".kifi-thread");  // TODO: compare timestamps
+            if (!$thBelow.length) {
+              $old.replaceWith($th);
+            } else {  // animate moving it down
+              var ms = 150 + 50 * $thBelow.length, $last = $thBelow.last();
+              var h = $old.outerHeight(true), top1 = $old[0].offsetTop, top2 = $last[0].offsetTop;
+              $th.css({position: "absolute", left: 0, top: top1, width: "100%", marginTop: 0})
+              .insertAfter($last).animate({top: top2}, ms, function() {
+                $th.css({position: "", left: "", top: "", width: "", marginTop: ""})
+              });
+              $("<div>", {height: h}).replaceAll($old).slideUp(ms, remove);
+              $("<div>", {height: 0}).insertAfter($last).animate({height: h}, ms, remove);
+            }
+          } else {  // TODO: animate in from side? move others up first, and scroll down.
+            $list.append($th).scrollToBottom();
           }
         });
       }
+    },
+    updateAll: function(threads, readTimes, userId) {
+      var arr = new Array(threads.length), n = 0;
+      threads.forEach(function(th, i) {
+        renderThread(th, readTimes[th.id], function($th) {
+          arr[i] = $th;
+          if (++n == arr.length) {
+            $list.children(".kifi-thread").remove().end()
+              .append(arr).scrollToBottom();
+          }
+        });
+      })
     }};
 
   function sendMessage($container, e, text, recipientIds) {
-    // logEvent("slider", "comment");
-    api.port.emit("post_comment", {
-      "url": document.URL,
-      "title": document.title,
-      "text": text,
-      "permissions": "message",
-      "recipients": recipientIds
-    }, function(resp) {
-      api.log("[sendMessage] resp:", resp);
-    });
-    var friends = $container.find(".kifi-compose-to").data("friends").reduce(function(o, f) {
-      o[f.id] = f;
-      return o;
-    }, {});
-    renderThread({
-      id: "",
-      lastCommentedAt: new Date().toISOString(),
-      recipients: recipientIds.split(",").map(function(id) {return friends[id]}),
-      messageCount: 1,
-      messagesUnread: false,
-      digest: text
-    }, function($th) {
-      $list.append($th).layout()[0].scrollTop = 99999;
-      $container.find(".kifi-compose-draft").empty().blur();
-      $container.find(".kifi-compose-to").tokenInput("clear");
-    });
+    // logEvent("slider", "message");
+    api.port.emit("send_message", {
+        url: document.URL,
+        title: document.title,
+        text: text,
+        recipients: recipientIds},
+      function(resp) {
+        api.log("[sendMessage] resp:", resp);
+        var friends = $container.find(".kifi-compose-to").data("friends").reduce(function(o, f) {
+          o[f.id] = f;
+          return o;
+        }, {});
+        var recipients = recipientIds.map(function(id) {return friends[id]});
+        var locator = "/messages/" + (resp.parentId || resp.id);
+        $container.closest(".kifi-pane").triggerHandler("kifi:show-pane", [locator, recipients]);
+      });
   }
 
-  function renderThread(th, callback) {
+  function renderThread(th, readTime, callback) {
+    var n = messageCount(th, new Date(readTime || 0));
+    th.messageCount = Math.abs(n);
+    th.messagesUnread = n < 0;
+    th.recipientsPictured = th.recipients.slice(0, 4);
     th.formatSnippet = getSnippetFormatter;
     th.formatLocalDate = getLocalDateFormatter;
-    th.recipientsPictured = th.recipients.slice(0, 4);
     render("html/metro/thread.html", th, function(html) {
       callback($(html).data("recipients", th.recipients).find("time").timeago().end());
     });
@@ -116,5 +131,9 @@ threadsPane = function() {
       n++;
     }
     return -nUnr || n;
+  }
+
+  function remove() {
+    $(this).remove();
   }
 }();

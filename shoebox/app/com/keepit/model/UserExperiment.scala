@@ -33,6 +33,7 @@ object ExperimentTypes {
   val BLOCK = State[ExperimentType]("block")
   val INACTIVE = State[ExperimentType]("inactive")
   val NO_SEARCH_EXPERIMENTS = State[ExperimentType]("no search experiments")
+  val CAN_INVITE = State[ExperimentType]("can invite")
 
   def apply(str: String): State[ExperimentType] = str.toLowerCase.trim match {
     case ADMIN.value => ADMIN
@@ -40,6 +41,7 @@ object ExperimentTypes {
     case FAKE.value => FAKE
     case INACTIVE.value => INACTIVE
     case NO_SEARCH_EXPERIMENTS.value => NO_SEARCH_EXPERIMENTS
+    case CAN_INVITE.value => CAN_INVITE
   }
 }
 
@@ -62,7 +64,7 @@ class UserExperimentCache @Inject()(val repo: FortyTwoCachePlugin)
 
 @ImplementedBy(classOf[UserExperimentRepoImpl])
 trait UserExperimentRepo extends Repo[UserExperiment] {
-  def getUserExperiments(userId: Id[User])(implicit session: RSession): Seq[State[ExperimentType]]
+  def getUserExperiments(userId: Id[User])(implicit session: RSession): Set[State[ExperimentType]]
   def get(userId: Id[User], experiment: State[ExperimentType],
       excludeState: Option[State[UserExperiment]] = Some(UserExperimentStates.INACTIVE))
       (implicit session: RSession): Option[UserExperiment]
@@ -81,17 +83,17 @@ class UserExperimentRepoImpl @Inject()(
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
-  override lazy val table = new RepoTable[UserExperiment](db, "user_experiment") {
+  override val table = new RepoTable[UserExperiment](db, "user_experiment") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def experimentType = column[State[ExperimentType]]("experiment_type", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ experimentType ~ state <> (UserExperiment,
         UserExperiment.unapply _)
   }
 
-  def getUserExperiments(userId: Id[User])(implicit session: RSession): Seq[State[ExperimentType]] = {
+  def getUserExperiments(userId: Id[User])(implicit session: RSession): Set[State[ExperimentType]] = {
     userExperimentCache.getOrElse(UserExperimentUserIdKey(userId)) {
       (for(f <- table if f.userId === userId && f.state === UserExperimentStates.ACTIVE) yield f.experimentType).list
-    }
+    } toSet
   }
 
   def get(userId: Id[User], experimentType: State[ExperimentType],

@@ -24,10 +24,10 @@ class AdminDashboardControllerTest extends Specification with DbRepos {
 
   "AdminDashboardController" should {
     "get users by date as JSON" in {
-      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeHealthcheck()) {
+      running(new EmptyApplication().withFakeSecureSocialUserService()) {
 
         val now = new DateTime(2012, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
-        inject[FakeClock].push(now)
+        inject[FakeClock].setTimeFunction(() => now.getMillis)
 
         val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
           tokenType = None, expiresIn = None, refreshToken = None)
@@ -48,7 +48,6 @@ class AdminDashboardControllerTest extends Specification with DbRepos {
         val cookie = Authenticator.create(su).right.get.toCookie
         val fakeRequest = FakeRequest().withCookies(cookie)
         val authRequest = AuthenticatedRequest(null, u1.id.get, u1, fakeRequest)
-        inject[FakeClock].push(now).push(now)
         val result = inject[AdminDashboardController].usersByDate(authRequest)
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")

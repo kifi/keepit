@@ -14,6 +14,8 @@ import com.keepit.search.langdetector.LangDetectException
 object LangDetector extends Logging {
   initialize
 
+  val en = Lang("en")
+
   private def initialize {
     // find profile resources in Cybozu langdetect jar file. This is not a standard way to load profiles.
     var path = classOf[com.cybozu.labs.langdetect.DetectorFactory].getResource("DetectorFactory.class").toString

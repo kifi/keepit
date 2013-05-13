@@ -26,10 +26,8 @@ object DeepLinkToken {
 case class DeepLocator(value: String)
 object DeepLocator {
   def ofMessageThread(message: Comment) = DeepLocator("/messages/%s".format(message.externalId))
-  def ofMessageThreadList = DeepLocator("/messages/")
-  def ofComment(comment: Comment) = DeepLocator("/comments/%s".format(comment.externalId))
-  def ofCommentList = DeepLocator("/comments/")
-  def ofSlider = DeepLocator("/default")
+  def ofMessageThreadList = DeepLocator("/messages")
+  def ofCommentList = DeepLocator("/comments")
 }
 
 case class DeepLink(
@@ -68,7 +66,7 @@ class DeepLinkRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) e
   import db.Driver.Implicit._
   import DBSession._
 
-  override lazy val table = new RepoTable[DeepLink](db, "deep_link") {
+  override val table = new RepoTable[DeepLink](db, "deep_link") {
     def initatorUserId = column[Id[User]]("initiator_user_id")
     def recipientUserId = column[Id[User]]("recipient_user_id")
     def uriId = column[Id[NormalizedURI]]("uri_id")

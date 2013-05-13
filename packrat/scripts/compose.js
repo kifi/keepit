@@ -2,9 +2,10 @@ function attachComposeBindings($c, composeTypeName) {
   var $f = $c.find(".kifi-compose");
   var $t = $f.find(".kifi-compose-to");
   var $d = $f.find(".kifi-compose-draft");
+  var defaultText = $d.data("default");
 
   $d.focus(function() {
-    if (this.classList.contains("kifi-empty")) {  // webkit workaround (can ditch when Chrome 27/28 ? goes stable)
+    if ($f.hasClass("kifi-empty")) {  // webkit workaround (can ditch when Chrome 27/28 ? goes stable)
       this.textContent = "\u200b";  // zero-width space
       var r = document.createRange();
       r.selectNodeContents(this);
@@ -12,23 +13,47 @@ function attachComposeBindings($c, composeTypeName) {
       var sel = window.getSelection();
       sel.removeAllRanges();
       sel.addRange(r);
+    } else if (defaultText && $d.text() == defaultText) {
+      var r = document.createRange();
+      r.selectNodeContents(this);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(r);
+      $(this).data("preventNextMouseUp", true); // mouseup clears selection
     }
+    $c.css("overflow", "hidden");
   }).blur(function() {
     // wkb.ug/112854 crbug.com/222546
     $("<input style=position:fixed;top:999%>").appendTo("html").each(function() {this.setSelectionRange(0,0)}).remove();
 
     if (!convertDraftToText($d.html())) {
-      $d.empty().addClass("kifi-empty");
+      if (defaultText && $t.tokenInput("get").length) {
+        $f.removeClass("kifi-empty");
+        $d.text(defaultText);
+      } else {
+        $d.empty();
+        $f.addClass("kifi-empty");
+      }
     }
+  }).mousedown(function() {
+    $(this).removeData("preventNextMouseUp");
   }).click(function() {
     this.focus();  // needed in Firefox for clicks on ::before placeholder text
+  }).mouseup(function(e) {
+    if ($(this).data("preventNextMouseUp")) {
+      $(this).removeData("preventNextMouseUp");
+      e.preventDefault();
+    }
   }).keydown(function(e) {
     if (e.which == 13 && (e.metaKey || e.ctrlKey)) { // ⌘-Enter
       $f.submit();
     }
   }).on("input", function() {
     updateMaxHeight();
-    this.classList[this.firstElementChild === this.lastElementChild && !this.textContent ? "add" : "remove"]("kifi-empty");
+    $f[0].classList[this.firstElementChild === this.lastElementChild && !this.textContent ? "add" : "remove"]("kifi-empty");
+  }).on("transitionend webkitTransitionEnd", function() {
+    updateMaxHeight();
+    $c.css("overflow", "");
   });
 
   if ($t.length) {
@@ -49,7 +74,19 @@ function attachComposeBindings($c, composeTypeName) {
         allowTabOut: true,
         tokenValue: "id",
         theme: "KiFi",
-        zindex: 2147483641});
+        zindex: 999999999992,
+        onAdd: function() {
+          if (defaultText && !$d.text()) {
+            $f.removeClass("kifi-empty");
+            $d.text(defaultText);
+          }
+        },
+        onDelete: function() {
+          if (defaultText && !$t.tokenInput("get").length && $d.text() == defaultText) {
+            $d.empty();
+            $f.addClass("kifi-empty");
+          }
+        }});
       $t.data("friends", friends);
     });
   }
@@ -57,7 +94,7 @@ function attachComposeBindings($c, composeTypeName) {
   $f.submit(function(e) {
     e.preventDefault();
     var text;
-    if ($d.hasClass("kifi-empty") || !(text = convertDraftToText($d.html()))) {
+    if ($f.hasClass("kifi-empty") || !(text = convertDraftToText($d.html()))) {
       $d.focus();
       return;
     }
@@ -68,18 +105,34 @@ function attachComposeBindings($c, composeTypeName) {
         $f.find("#token-input-kifi-compose-to").focus();
         return;
       }
-      args.push(recipients.map(function(r) {return r.id}).join(","));
+      args.push(recipients.map(function(r) {return r.id}));
     }
     $d.empty().trigger("kifi:compose-submit", args).focus();
+    $f.addClass("kifi-empty");
     var $submit = $f.find(".kifi-compose-submit").addClass("kifi-active");
     setTimeout($submit.removeClass.bind($submit, "kifi-active"), 10);
+  })
+  .on("mouseenter", ".kifi-compose-snapshot", function(e) {
+    if (e.target !== this) return;
+    $(this).showHover({
+      showDelay: 500,
+      click: "hide",
+      create: function(cb) {
+        render("html/keeper/titled_tip.html", {
+          title: "Microfind",
+          html: "Click to mark something on<br>the page and reference it in<br>your " + composeTypeName + "."
+        }, function(html) {
+          cb(html, function(w) {this.style.left = 21 - w / 2 + "px"});
+        });
+      }});
   })
   .on("click", ".kifi-compose-snapshot", function() {
     snapshot.take(composeTypeName, function(selector) {
       if (selector) {
         $d.append(" <a href='x-kifi-sel:" + selector.replace("'", "&#39;") + "'>look here</a>");
       }
-      $d.removeClass("kifi-empty").focus();  // TODO: preserve insertion point & selection
+      $f.removeClass("kifi-empty");
+      $d.focus();  // TODO: preserve insertion point & selection
     });
   })
   .find(".kifi-compose-submit")
@@ -101,6 +154,9 @@ function attachComposeBindings($c, composeTypeName) {
   .on("kifi:shown", setFocus)
   .on("kifi:remove", function() {
     $(window).off("resize", updateMaxHeight);
+    if ($t.length) {
+      $t.tokenInput("destroy");
+    }
   }).each(function() {
     if ($(this).data("shown")) {
       setFocus();
@@ -124,7 +180,11 @@ function attachComposeBindings($c, composeTypeName) {
       api.log("[updateMaxHeight]", hOld, "->", hNew);
       var scrollTop = elAbove.scrollTop;
       elAbove.style.maxHeight = hNew + "px";
-      elAbove.scrollTop = hOld == null ? 9999 : Math.max(0, scrollTop + hOld - hNew);
+      if (hOld) {
+        elAbove.scrollTop = Math.max(0, scrollTop + hOld - hNew);
+      } else {
+        $(elAbove).scrollToBottom();
+      }
       hOld = hNew;
     }
   }

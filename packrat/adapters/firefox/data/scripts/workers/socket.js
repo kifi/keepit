@@ -21,6 +21,8 @@ function openSocket(socketId, url) {
   api.log("[worker:openSocket]", socketId, url);
   sockets[socketId] = new ReconnectingWebSocket(url, function(e) {
     self.port.emit("socket_message", socketId, e.data);
+  }, function() {
+    self.port.emit("socket_connect", socketId);
   });
 }
 

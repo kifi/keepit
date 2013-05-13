@@ -14,7 +14,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 import java.util.concurrent.TimeUnit
 import com.keepit.common.db._
 
-import com.keepit.scraper.ScraperPlugin
 import com.keepit.search.ArticleStore
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.time._

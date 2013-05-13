@@ -116,9 +116,11 @@ class PhraseHelper(terms: Seq[String], phrases: Set[(Int, Int)]) {
     var prevPos = -1
     var runLen = 0
     var localSum = 0.0f
+    var lastId = -1
     matches.foreach {
       case (id, phraseLen, lastPos) =>
-        if (lastPos == prevPos + phraseLen) runLen += phraseLen else runLen = phraseLen
+        if (lastPos == prevPos + phraseLen && id != lastId) runLen += phraseLen else runLen = phraseLen
+        lastId = id
         lp(id) = lastPos
         prevPos = lastPos
         localSum = 0.0f
@@ -182,17 +184,17 @@ class PhraseProximityWeight(query: PhraseProximityQuery) extends Weight {
   override def explain(context: AtomicReaderContext, doc: Int) = {
     val sc = scorer(context, true, false, context.reader.getLiveDocs);
     val exists = (sc != null && sc.advance(doc) == doc);
-
+    val phrases = phraseHelper.phraseMap.keySet.mkString("[", " ; ", "]")
     val result = new ComplexExplanation()
     if (exists) {
-      result.setDescription("phrase proximity(%s), product of:".format(query.terms.mkString(",")))
+      result.setDescription("phrase proximity(%s, %s), product of:".format(query.terms.mkString(","), phrases))
       val proxScore = sc.score
       result.setValue(proxScore)
       result.setMatch(true)
       result.addDetail(new Explanation(proxScore / value, "phrase proximity score"))
       result.addDetail(new Explanation(value, "weight value"))
     } else {
-      result.setDescription("phrase proximity(%s), doesn't match id %d".format(query.terms.mkString(","), doc))
+      result.setDescription("phrase proximity(%s, %s), doesn't match id %d".format(query.terms.mkString(","), phrases, doc))
       result.setValue(0)
       result.setMatch(false)
     }

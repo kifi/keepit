@@ -1,9 +1,10 @@
 .kifi-threads-list {
-  margin: 0 6px;
+  padding: 0 6px;
   overflow-y: auto;
   max-height: 0;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
+  position: relative;
 }
 div.kifi-threads-none {
   display: none;
@@ -19,6 +20,8 @@ div.kifi-threads-none:only-child {
   background-color: #efefef;
   position: relative;
   cursor: pointer;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
 }
 .kifi-thread time {
   position: absolute;

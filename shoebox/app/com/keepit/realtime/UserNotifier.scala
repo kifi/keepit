@@ -8,59 +8,61 @@ import com.keepit.common.mail.EmailAddresses
 import com.keepit.serializer.CommentWithBasicUserSerializer._
 import com.keepit.common.social.CommentWithBasicUserRepo
 import com.keepit.common.db.slick.DBSession._
-import play.api.libs.json.JsObject
-import play.api.libs.json.Json
+import play.api.libs.json._
 import com.keepit.common.social.BasicUser
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.serializer.BasicUserSerializer
 import com.keepit.model.UserNotificationDetails
 import org.joda.time.DateTime
 import com.keepit.model.UserNotificationDetails
-import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.google.inject.{ Inject, ImplementedBy, Singleton }
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging._
 import com.keepit.common.net.URINormalizer
-import com.keepit.common.db.{State, Id}
+import com.keepit.common.db.{ State, Id }
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.ThreadInfoRepo
 import com.keepit.serializer.ThreadInfoSerializer._
+import com.keepit.common.healthcheck._
+import com.keepit.common.akka._
+import com.keepit.common.time._
 
 case class CommentDetails(
-  id: String,              // ExternalId[Comment]
+  id: String, // ExternalId[Comment]
   author: BasicUser,
   recipient: BasicUser,
-  url: String,             // DeepLink.url (containing /r/)
-  page: String,            // NormalizedURI.url
-  title: String,           // Comment.pageTitle
-  text: String,            // Comment.text
+  locator: String, // DeepLink.deepLocator
+  url: String, // DeepLink.url (containing /r/)
+  page: String, // NormalizedURI.url
+  title: String, // Comment.pageTitle
+  text: String, // Comment.text
   createdAt: DateTime,
   newCount: Int,
   totalCount: Int,
   subsumes: Option[String] // Option[ExternalId[UserNotification]]
-)
+  )
 
 case class MessageDetails(
-  id: String,              // ExternalId[Comment] of the message
+  id: String, // ExternalId[Comment] of the message
+  hasParent: Boolean,
   authors: Seq[BasicUser],
   recipient: BasicUser,
-  url: Option[String],     // DeepLink.url (containing /r/)
-  page: Option[String],    // NormalizedURI.url
-  title: Option[String],   // Comment.pageTitle
-  text: String,            // Comment.text
+  locator: String, // DeepLink.deepLocator
+  url: String, // DeepLink.url (containing /r/)
+  page: String, // NormalizedURI.url
+  title: String, // Comment.pageTitle
+  text: String, // Comment.text
   createdAt: DateTime,
-  hasParent: Boolean,
   newCount: Int,
   totalCount: Int,
   subsumes: Option[String] // Option[ExternalId[UserNotification]]
-)
+  )
 
 case class SendableNotification(
   id: ExternalId[UserNotification],
   time: DateTime,
   category: UserNotificationCategory,
   details: UserNotificationDetails,
-  state: State[UserNotification]
-)
+  state: State[UserNotification])
 
 object SendableNotification {
   def fromUserNotification(notify: UserNotification) = {
@@ -100,7 +102,6 @@ class UserNotifier @Inject() (
   threadInfoRepo: ThreadInfoRepo,
   implicit val fortyTwoServices: FortyTwoServices) extends Logging {
 
-  implicit val basicUserFormat = BasicUserSerializer.basicUserSerializer
   implicit val commentDetailsFormat = Json.format[CommentDetails]
   implicit val messageDetailsFormat = Json.format[MessageDetails]
 
@@ -117,12 +118,11 @@ class UserNotifier @Inject() (
           category = UserNotificationCategories.COMMENT,
           details = UserNotificationDetails(Json.toJson(commentDetail)),
           commentId = comment.id,
-          subsumedId = None
-        ))
+          subsumedId = None))
         notificationBroadcast.push(userNotification)
-        notifyCommentByEmail(user, commentDetail)
+        //notifyCommentByEmail(user, commentDetail)
 
-        userNotifyRepo.save(userNotification.withState(UserNotificationStates.DELIVERED))
+        //userNotifyRepo.save(userNotification.withState(UserNotificationStates.DELIVERED))
       }
     }
   }
@@ -137,91 +137,127 @@ class UserNotifier @Inject() (
 
       val thread = if (message eq parent) Seq(message) else (parent +: commentRepo.getChildren(parent.id.get)).reverse
 
-      createMessageDetails(message, thread) map { case (userId, (lastNoticeId, messageDetail)) =>
-        val user = userRepo.get(userId)
-        val userNotification = userNotifyRepo.save(UserNotification(
-          userId = userId,
-          category = UserNotificationCategories.MESSAGE,
-          details = UserNotificationDetails(Json.toJson(messageDetail)),
-          commentId = message.id,
-          subsumedId = lastNoticeId))
+      createMessageUserNotifications(message, thread) map {
+        case (user, messageDetails, userNotification) =>
 
-        if (userChannel.isConnected(userId)) {
-          log.info(s"Sending notification because $userId is connected.")
+          if (userChannel.isConnected(userNotification.userId)) {
+            log.info(s"Sending notification because ${userNotification.userId} is connected.")
 
-          userChannel.push(userId, messageJson)
-          notificationBroadcast.push(userNotification)
-        } else {
-          log.info(s"Sending email because $userId is not connected.")
-          notifyMessageByEmail(user, messageDetail)
-        }
+            userChannel.push(userNotification.userId, messageJson)
+            notificationBroadcast.push(userNotification)
+          } else {
+            log.info(s"Sending email because ${userNotification.userId} is not connected.")
+            //notifyMessageByEmail(user, messageDetails)
+          }
 
-        userNotifyRepo.save(userNotification.withState(UserNotificationStates.DELIVERED))
+        //userNotifyRepo.save(userNotification.withState(UserNotificationStates.DELIVERED))
       }
     }
   }
 
-  private def notifyCommentByEmail(recipient: User, details: CommentDetails)(implicit session: RSession) = {
-    val author = userRepo.get(details.author.externalId)
-    val addrs = emailAddressRepo.getByUser(recipient.id.get)
-    for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
-      postOffice.sendMail(ElectronicMail(
-          senderUserId = author.id,
-          from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
-          to = addr,
-          subject = "%s %s commented on a page you are following".format(author.firstName, author.lastName),
-          htmlBody = views.html.email.newComment(author, recipient, details.url, details.title, commentFormatter.toPlainText(details.text)).body,
-          category = PostOffice.Categories.COMMENT))
+  def recreateMessageDetails(safeMode: Boolean)(implicit session: RWSession) = {
+    userNotifyRepo.allActive(UserNotificationCategories.MESSAGE) map { notice =>
+      try {
+        val recipient = userRepo.get(notice.userId)
+        val message = commentRepo.get(notice.commentId.get)
+
+        val deepLinkUrl = (notice.details.payload \ "url").as[String]
+        val deepLinkLocator = (notice.details.payload \ "locator").asOpt[String].getOrElse {
+          // We haven't always had this field. When it's missing, we need to find it.
+          val token = deepLinkUrl.split("/").last
+          deepLinkRepo.getByToken(DeepLinkToken(token)).map(_.deepLocator.value).get
+        }
+        val page = (notice.details.payload \ "page").as[String]
+
+        val lastNoticeExtId = notice.subsumedId.map(userNotifyRepo.get(_).externalId)
+
+        val parent = message.parent.map(commentRepo.get).getOrElse(message)
+        val thread = if (message eq parent) Seq(message) else (parent +: commentRepo.getChildren(parent.id.get)).reverse
+
+        val messageDetail = createMessageDetail(message, notice.userId, DeepLocator(deepLinkLocator), deepLinkUrl, page, thread, lastNoticeExtId)
+        val json = Json.toJson(messageDetail)
+        if (json != notice.details.payload) {
+          log.info(s"Updating ${notice.id} (message, safeMode: $safeMode).\n-Old details-\n${notice.details.payload}\n-New details-\n$json")
+          if (!safeMode) userNotifyRepo.save(notice.copy(details = UserNotificationDetails(json)))
+        }
+      } catch {
+        case ex: Throwable =>
+          log.warn(s"[recreateDetail] Error: Could not recreate message notice ${notice.id}", ex)
+      }
+
     }
   }
-  private def notifyMessageByEmail(recipient: User, details: MessageDetails)(implicit session: RSession) = {
-    val author = userRepo.get(details.authors.head.externalId)
-    val addrs = emailAddressRepo.getByUser(recipient.id.get)
-    for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
-      postOffice.sendMail(ElectronicMail(
-          senderUserId = author.id,
-          from = EmailAddresses.NOTIFICATIONS, fromName = Some("%s %s via Kifi".format(author.firstName, author.lastName)),
-          to = addr,
-          subject = "%s %s sent you a message using KiFi".format(author.firstName, author.lastName),
-          htmlBody = views.html.email.newMessage(
-              author, recipient, details.url.getOrElse(""), details.title.getOrElse("No title"),
-              commentFormatter.toPlainText(details.text), details.hasParent)
-            .body,
-          category = PostOffice.Categories.COMMENT))
+
+  def recreateCommentDetails(safeMode: Boolean)(implicit session: RWSession) = {
+    userNotifyRepo.allActive(UserNotificationCategories.COMMENT) map { notice =>
+      try {
+        val comment = commentRepo.get(notice.commentId.get)
+        val author = userRepo.get(comment.userId)
+        val uri = normalizedURIRepo.get(comment.uriId)
+        val userId = notice.userId
+        val recipient = userRepo.get(userId)
+        val deepLinkUrl = (notice.details.payload \ "url").as[String]
+        val deepLinkLocator = (notice.details.payload \ "locator").asOpt[String].getOrElse {
+          // We haven't always had this field. When it's missing, we need to find it.
+          val token = deepLinkUrl.split("/").last
+          deepLinkRepo.getByToken(DeepLinkToken(token)).map(_.deepLocator.value).get
+        }
+        val commentDetail = new CommentDetails(
+          comment.externalId.id,
+          basicUserRepo.load(comment.userId),
+          basicUserRepo.load(userId),
+          deepLinkLocator,
+          deepLinkUrl,
+          URINormalizer.normalize(uri.url),
+          comment.pageTitle,
+          comment.text,
+          comment.createdAt,
+          0, 0, None)
+        val json = Json.toJson(commentDetail)
+        if (json != notice.details.payload) {
+          log.info(s"[recreateDetail] Updating ${notice.id} (comment, safeMode: $safeMode).\n-Old details-\n${notice.details.payload}\n-New details-\n$json")
+          if (!safeMode) userNotifyRepo.save(notice.copy(details = UserNotificationDetails(json)))
+        }
+      } catch {
+        case ex: Throwable =>
+          log.warn(s"[recreateDetail] Error: Could not recreate comment notice ${notice.id}", ex)
+      }
+
     }
+  }
+
+  def recreateAllActiveDetails(safeMode: Boolean)(implicit session: RWSession) = {
+    recreateMessageDetails(safeMode)
+    recreateCommentDetails(safeMode)
   }
 
   private def createCommentDetails(comment: Comment)(implicit session: RWSession): Set[CommentDetails] = {
-    implicit val bus = BasicUserSerializer.basicUserSerializer
-
     val author = userRepo.get(comment.userId)
     val uri = normalizedURIRepo.get(comment.uriId)
     val follows = followRepo.getByUri(uri.id.get)
     for (userId <- follows.map(_.userId).toSet - comment.userId) yield {
       val recipient = userRepo.get(userId)
       val deepLink = deepLinkRepo.save(DeepLink(
-          initatorUserId = Option(comment.userId),
-          recipientUserId = Some(userId),
-          uriId = Some(comment.uriId),
-          urlId = comment.urlId,
-          deepLocator = DeepLocator.ofComment(comment)))
+        initatorUserId = Option(comment.userId),
+        recipientUserId = Some(userId),
+        uriId = Some(comment.uriId),
+        urlId = comment.urlId,
+        deepLocator = DeepLocator.ofCommentList))
       new CommentDetails(
         comment.externalId.id,
         basicUserRepo.load(comment.userId),
         basicUserRepo.load(userId),
+        deepLink.deepLocator.value,
         deepLink.url,
         URINormalizer.normalize(uri.url),
         comment.pageTitle,
         comment.text,
         comment.createdAt,
-        0,0, None)
+        0, 0, None)
     }
   }
 
-  private def createMessageDetails(message: Comment, thread: Seq[Comment])(implicit session: RWSession):
-      Map[Id[User], (Option[Id[UserNotification]], MessageDetails)] = {
-    implicit val bus = BasicUserSerializer.basicUserSerializer
-
+  private def createMessageUserNotifications(message: Comment, thread: Seq[Comment])(implicit session: RWSession): Set[(User, MessageDetails, UserNotification)] = {
     val author = userRepo.get(message.userId)
     val uri = normalizedURIRepo.get(message.uriId)
     val participants = commentRepo.getParticipantsUserIds(message.id.get)
@@ -229,11 +265,7 @@ class UserNotifier @Inject() (
 
     val generatedSet = for (userId <- participants - author.id.get) yield {
 
-      val recentAuthors = thread.filter(c => c.userId != userId).map(_.userId).distinct.take(5)
-      val authors = recentAuthors.map(basicUserRepo.load)
-
       val lastNotifiedMessage = thread.find(c => c.id != message.id && c.userId != userId)
-
       val lastNotice = lastNotifiedMessage flatMap { lastMsg =>
         userNotifyRepo.getWithCommentId(userId, lastMsg.id.get) map { oldNotice =>
           userNotifyRepo.save(oldNotice.withState(UserNotificationStates.SUBSUMED))
@@ -242,27 +274,49 @@ class UserNotifier @Inject() (
 
       val recipient = userRepo.get(userId)
       val deepLink = deepLinkRepo.save(DeepLink(
-          initatorUserId = Option(message.userId),
-          recipientUserId = Some(userId),
-          uriId = Some(message.uriId),
-          urlId = message.urlId,
-          deepLocator = DeepLocator.ofMessageThread(parent)))
-      (userId, (lastNotice.map(_.id.get) -> new MessageDetails(
-        message.externalId.id,
-        authors,
-        basicUserRepo.load(userId),
-        Some(deepLink.url),
-        Some(URINormalizer.normalize(uri.url)),
-        Some(message.pageTitle),
-        message.text,
-        message.createdAt,
-        message.parent.isDefined,
-        1,
-        thread.size,
-        lastNotice.map(_.externalId.id))))
-    }
+        initatorUserId = Option(message.userId),
+        recipientUserId = Some(userId),
+        uriId = Some(message.uriId),
+        urlId = message.urlId,
+        deepLocator = DeepLocator.ofMessageThread(parent)))
 
-    generatedSet.toMap
+      val messageDetail = createMessageDetail(message, userId, deepLink.deepLocator, deepLink.url, uri.url, thread, lastNotice.map(_.externalId))
+
+      val user = userRepo.get(userId)
+      (recipient, messageDetail, userNotifyRepo.save(UserNotification(
+        userId = userId,
+        category = UserNotificationCategories.MESSAGE,
+        details = UserNotificationDetails(Json.toJson(messageDetail)),
+        commentId = message.id,
+        subsumedId = lastNotice.map(_.id.get))))
+    }
+    generatedSet
+  }
+
+  private def createMessageDetail(
+    message: Comment, userId: Id[User],
+    deepLocator: DeepLocator,
+    deepLinkUrl: String,
+    page: String,
+    thread: Seq[Comment],
+    lastNoticeExtId: Option[ExternalId[UserNotification]])(implicit session: RWSession): MessageDetails = {
+    val recentAuthors = thread.filter(c => c.userId != userId).map(_.userId).distinct.take(5)
+    val authors = recentAuthors.map(basicUserRepo.load)
+
+    new MessageDetails(
+      message.externalId.id,
+      message.parent.isDefined,
+      authors,
+      basicUserRepo.load(userId),
+      deepLocator.value,
+      deepLinkUrl,
+      URINormalizer.normalize(page),
+      message.pageTitle,
+      message.text,
+      message.createdAt,
+      1,
+      thread.size,
+      lastNoticeExtId.map(_.id))
   }
 
 }

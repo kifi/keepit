@@ -1,11 +1,5 @@
 package com.keepit.classify
 
-import scala.concurrent.Await
-import scala.concurrent.Future
-import scala.concurrent.duration._
-
-import java.util.concurrent.TimeUnit
-
 import org.specs2.mutable.Specification
 
 import com.keepit.common.db.slick.Database
@@ -20,13 +14,9 @@ import play.api.test.Helpers.running
 
 class DomainClassifierTest extends TestKit(ActorSystem()) with Specification with DbRepos {
 
-  private def await[T](f: Future[T]): T = {
-    Await.result(f, pairIntToDuration(100, TimeUnit.MILLISECONDS))
-  }
-
   "The domain classifier" should {
     "use imported classifications and not fetch for known domains" in {
-      running(new DevApplication().withFakeMail().withFakePersistEvent().withFakeHealthcheck().withFakeHttpClient()
+      running(new DevApplication().withFakeMail().withFakePersistEvent().withFakeHttpClient()
           .withTestActorSystem(system)) {
         val classifier = inject[DomainClassifierImpl]
         val tagRepo = inject[DomainTagRepo]
@@ -38,10 +28,9 @@ class DomainClassifierTest extends TestKit(ActorSystem()) with Specification wit
           tagRepo.save(DomainTag(name = DomainTagName("Porn"), sensitive = Some(true)))
         }
 
-        Seq(importer.applyTagToDomains(DomainTagName("search engines"), Seq("google.com", "yahoo.com")),
-          importer.applyTagToDomains(DomainTagName("Technology and Computers"), Seq("42go.com", "google.com")),
-          importer.applyTagToDomains(DomainTagName("Porn"), Seq("playboy.com"))
-        ) foreach await
+        importer.applyTagToDomains(DomainTagName("search engines"), Seq("google.com", "yahoo.com"))
+        importer.applyTagToDomains(DomainTagName("Technology and Computers"), Seq("42go.com", "google.com"))
+        importer.applyTagToDomains(DomainTagName("Porn"), Seq("playboy.com"))
 
         classifier.isSensitive("google.com") === Right(false)
         classifier.isSensitive("yahoo.com") === Right(false)
@@ -50,7 +39,7 @@ class DomainClassifierTest extends TestKit(ActorSystem()) with Specification wit
       }
     }
     "fetch if necessary" in {
-      running(new DevApplication().withFakeMail().withFakePersistEvent().withFakeHealthcheck()
+      running(new DevApplication().withFakeMail().withFakePersistEvent()
           .withTestActorSystem(system)
           .overrideWith(new FortyTwoModule {
             override def configure() {
@@ -79,16 +68,14 @@ class DomainClassifierTest extends TestKit(ActorSystem()) with Specification wit
 
         classifier.isSensitive("google.com") === Right(false)
 
-        Seq(
-          classifier.isSensitive("yahoo.com").left.get,
-          classifier.isSensitive("zdnet.com").left.get,
-          classifier.isSensitive("schwab.com").left.get,
-          classifier.isSensitive("hover.com").left.get,
-          classifier.isSensitive("42go.com").left.get,
-          classifier.isSensitive("addepar.com").left.get,
-          classifier.isSensitive("playboy.com").left.get,
-          classifier.isSensitive("porn.com").left.get
-        ) foreach await
+        classifier.isSensitive("yahoo.com").left.get
+        classifier.isSensitive("zdnet.com").left.get
+        classifier.isSensitive("schwab.com").left.get
+        classifier.isSensitive("hover.com").left.get
+        classifier.isSensitive("42go.com").left.get
+        classifier.isSensitive("addepar.com").left.get
+        classifier.isSensitive("playboy.com").left.get
+        classifier.isSensitive("porn.com").left.get
 
         classifier.isSensitive("www.yahoo.com") === Right(false)
         classifier.isSensitive("yahoo.com") === Right(false)

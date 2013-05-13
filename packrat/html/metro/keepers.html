@@ -1,13 +1,15 @@
+<div class="kifi-slider2-tip">
 {{#anyKeepers}}
 <div class="kifi-slider2-keepers-intro">
   Kept by:
 </div>
 <div class="kifi-slider2-keepers">
 {{#keepers}}
-  <a class="kifi-slider2-keeper"{{#link}} href="javascript:"{{/link}} style="background-image:url(https://graph.facebook.com/{{facebookId}}/picture?type=square)"></a>
+  <a class="kifi-slider2-keeper"{{#link}} href="javascript:"{{/link}} style="background-image:url({{cdnBase}}/users/{{id}}/pics/100/0.jpg)" data-id="{{id}}"></a>
 {{/keepers}}
 </div>
 {{/anyKeepers}}
 <div class="kifi-slider2-keepers-caption">
   {{{captionHtml}}}{{^anyKeepers}} kept this{{/anyKeepers}}
+</div>
 </div>

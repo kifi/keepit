@@ -2,29 +2,35 @@ form.kifi-compose {
   margin: 0;
   padding: 14px 6px 10px;
 }
-.kifi-pane-tall-bottom .kifi-compose-draft[contenteditable] {
+.kifi-compose .kifi-compose-draft[contenteditable] {
   border: 1px solid #d2d2d2;
   border-bottom: none;
   border-radius: 0;
   background-color: #fff;
   padding: 5px;
-  min-height: 40px;
+  min-height: 26px;
   max-height: 145px;
   overflow: auto;
   outline: none;
   box-shadow: none;
   cursor: text; /* ff */
+  -webkit-transition: 160ms cubic-bezier(.405,-.375,.630,1.260) min-height;
+  transition: 160ms cubic-bezier(.405,-.375,.630,1.260) min-height;
 }
-.kifi-pane-tall-bottom .kifi-compose-draft[contenteditable]:first-child {
+.kifi-compose .kifi-compose-draft[contenteditable]:first-child {
   border-radius: 3px 3px 0 0;
 }
-.kifi-pane-tall-bottom .kifi-compose-draft[contenteditable].kifi-empty::before {
+.kifi-compose .kifi-compose-draft[contenteditable]:focus,
+.kifi-compose:not(.kifi-empty) .kifi-compose-draft[contenteditable] {
+  min-height: 40px;
+}
+.kifi-compose.kifi-empty .kifi-compose-draft[contenteditable]::before {
   content: attr(data-placeholder);
   position: absolute;
   font: inherit;
   color: #a9a9a9;
 }
-.kifi-pane-tall-bottom .kifi-compose-draft[contenteditable] a[href] {
+.kifi-compose .kifi-compose-draft[contenteditable] a[href] {
   text-decoration: underline;
 }
 .kifi-compose-bar {
@@ -46,6 +52,7 @@ a.kifi-compose-snapshot {
   background-repeat: no-repeat;
   -webkit-transition: none;
   transition: none;
+  outline: none; /* for tooltip */
 }
 a.kifi-compose-snapshot:hover {
   background-position: -20px 0;
@@ -53,7 +60,15 @@ a.kifi-compose-snapshot:hover {
 a.kifi-compose-snapshot:active {
   background-position: -40px 0;
 }
-a.kifi-compose-submit {
+span.kifi-compose-tip {
+  color: #999;
+  font-size: 11px;
+  margin-right: 12px;
+}
+.kifi-compose.kifi-empty .kifi-compose-tip {
+  display: none;
+}
+a.kifi-compose-submit[href] {
   display: inline-block;
   padding: 0 18px;
   background-color: #bdc3c7;
@@ -77,7 +92,7 @@ body.kifi-snapshot-root {
 }
 div.kifi-snapshot-glass {
   position: absolute;
-  z-index: 2147483639;
+  z-index: 999999999991;
   top: 0;
   left: 0;
   bottom: 0;
@@ -88,7 +103,7 @@ div.kifi-snapshot-glass {
 div.kifi-snapshot-shade {
   background-color: rgba(0,0,0,.4);
   position: absolute;
-  z-index: 2147483639;
+  z-index: 999999999991;
   cursor: crosshair;
 }
 div.kifi-snapshot-shade-t { left: 0; right: 0; top: 0; bottom: 0; }
@@ -98,7 +113,7 @@ div.kifi-snapshot-shade-r { right: 0; }
 
 div.kifi-snapshot-bar-wrap {
   position: fixed;
-  z-index: 2147483639;
+  z-index: 999999999991;
   left: 0;
   right: 0;
   bottom: 80px;
@@ -129,7 +144,7 @@ div.kifi-snapshot-bar-wrap {
 }
 div.kifi-snapshot-highlight {
   position: absolute;
-  z-index: 2147483641;
+  z-index: 999999999993;
   background: rgba(255,255,0,.15);
   border: 3px solid rgba(255,255,0,.7);
   border-radius: 6px;

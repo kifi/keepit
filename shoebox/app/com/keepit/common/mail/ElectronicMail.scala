@@ -33,7 +33,8 @@ case class ElectronicMail (
   senderUserId: Option[Id[User]] = None,
   from: SystemEmailAddress,
   fromName: Option[String] = None,
-  to: EmailAddressHolder,
+  to: Seq[EmailAddressHolder] = List[EmailAddressHolder](),
+  cc: Seq[EmailAddressHolder] = List[EmailAddressHolder](),
   subject: String,
   state: State[ElectronicMail] = ElectronicMailStates.PREPARING,
   htmlBody: LargeString,
@@ -46,6 +47,8 @@ case class ElectronicMail (
 ) extends ModelWithExternalId[ElectronicMail] {
   def withId(id: Id[ElectronicMail]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+
+  def isReadyToSend: Boolean = state == ElectronicMailStates.READY_TO_SEND
 
   def prepareToSend(): ElectronicMail = state match {
     case ElectronicMailStates.PREPARING => copy(state = ElectronicMailStates.READY_TO_SEND)
@@ -65,11 +68,9 @@ case class ElectronicMail (
 
 @ImplementedBy(classOf[ElectronicMailRepoImpl])
 trait ElectronicMailRepo extends Repo[ElectronicMail] with ExternalIdColumnFunction[ElectronicMail] {
-  def outbox()(implicit session: RSession): Seq[ElectronicMail]
+  def getOpt(id: Id[ElectronicMail])(implicit session: RSession): Option[ElectronicMail]
+  def outbox()(implicit session: RSession): Seq[Id[ElectronicMail]]
   def forSender(senderId: Id[User])(implicit session: RSession): Seq[ElectronicMail]
-  def forRecipient(mailAddresses: Seq[String])(implicit session: RSession): Seq[ElectronicMail]
-  def count(filterRecipeintNot: EmailAddressHolder)(implicit session: RSession): Int
-  def page(page: Int, size: Int, filterRecipeintNot: EmailAddressHolder)(implicit session: RSession): Seq[ElectronicMail]
 }
 
 @Singleton
@@ -79,11 +80,12 @@ class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cl
   import scala.slick.lifted.Query
   import DBSession._
 
-  override lazy val table = new RepoTable[ElectronicMail](db, "electronic_mail") with ExternalIdColumn[ElectronicMail] {
+  override val table = new RepoTable[ElectronicMail](db, "electronic_mail") with ExternalIdColumn[ElectronicMail] {
     def senderUserId = column[Id[User]]("user_id", O.Nullable)
     def from = column[SystemEmailAddress]("from_addr", O.NotNull)
     def fromName = column[String]("from_name", O.Nullable)
-    def to = column[EmailAddressHolder]("to_addr", O.Nullable)
+    def to = column[Seq[EmailAddressHolder]]("to_addr", O.Nullable)
+    def cc = column[Seq[EmailAddressHolder]]("cc_addr", O.Nullable)
     def subject = column[String]("subject", O.Nullable)
     def htmlBody = column[LargeString]("html_body", O.NotNull)
     def textBody = column[LargeString]("text_body", O.Nullable)
@@ -92,28 +94,18 @@ class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cl
     def messageId = column[ElectronicMailMessageId]("message_id", O.Nullable)
     def inReplyTo = column[ElectronicMailMessageId]("in_reply_to", O.Nullable)
     def category = column[ElectronicMailCategory]("category", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ senderUserId.? ~ from ~ fromName.? ~ to ~ subject ~ state ~
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ senderUserId.? ~ from ~ fromName.? ~ to ~ cc ~ subject ~ state ~
         htmlBody ~ textBody.? ~ responseMessage.? ~ timeSubmitted.? ~ messageId.? ~ inReplyTo.? ~ category <>
         (ElectronicMail, ElectronicMail.unapply _)
   }
 
-  def outbox()(implicit session: RSession): Seq[ElectronicMail] =
-    (for (t <- table if t.state === ElectronicMailStates.READY_TO_SEND ) yield t).list()
+  def getOpt(id: Id[ElectronicMail])(implicit session: RSession): Option[ElectronicMail] = (for(f <- table if f.id is id) yield f).firstOption
+
+  def outbox()(implicit session: RSession): Seq[Id[ElectronicMail]] =
+    (for (t <- table if t.state === ElectronicMailStates.READY_TO_SEND ) yield t.id).list()
 
   def forSender(senderId: Id[User])(implicit session: RSession): Seq[ElectronicMail] =
     (for (t <- table if t.senderUserId === senderId ) yield t).list()
-
-  def forRecipient(mailAddresses: Seq[String])(implicit session: RSession): Seq[ElectronicMail] =
-    mailAddresses.map {str => new EmailAddressHolder(){val address = str}} match {
-      case Nil => Nil
-      case addrs => (for (t <- table if t.to inSet addrs ) yield t).list()
-    }
-
-  def count(filterRecipeintNot: EmailAddressHolder)(implicit session: RSession): Int =
-    Query((for (t <- table if t.to =!= filterRecipeintNot) yield t.id).countDistinct).first
-
-  def page(page: Int, size: Int, filterRecipeintNot: EmailAddressHolder)(implicit session: RSession): Seq[ElectronicMail] =
-    (for ( t <- table if t.to =!= filterRecipeintNot ) yield t).sortBy(_.id desc).drop(page * size).take(size).list
 }
 
 object ElectronicMailStates {

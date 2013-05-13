@@ -51,6 +51,7 @@ class MailToKeepActor @Inject() (
     persistEventPlugin: PersistEventPlugin,
     postOffice: PostOffice,
     messageParser: MailToKeepMessageParser,
+    db: Database,
     implicit private val clock: Clock,
     implicit private val fortyTwoServices: FortyTwoServices
   ) extends FortyTwoActor(healthcheckPlugin) with Logging {
@@ -103,7 +104,7 @@ class MailToKeepActor @Inject() (
                   val bookmark = bookmarkInterner.internBookmarks(Json.obj(
                     "url" -> uri.toString,
                     "isPrivate" -> (keepType == KeepType.Private)
-                  ), user, Seq(), "EMAIL").head
+                  ), user, Set(), "EMAIL").head
                   log.info(s"created bookmark from email with id ${bookmark.id.get}")
                   val event = Events.serverEvent(EventFamilies.GENERIC_SERVER, "email_keep", Json.obj(
                     "user_id" -> user.id.get.id,
@@ -129,18 +130,20 @@ class MailToKeepActor @Inject() (
   }
 
   private def sendReply(message: javax.mail.Message, htmlBody: String) {
-    val newMessage = message.reply(false)
-    postOffice.sendMail(ElectronicMail(
-      from = EmailAddresses.NOTIFICATIONS,
-      fromName = Some("Kifi Elves"),
-      to = new EmailAddressHolder {
-        val address = messageParser.getAddr(newMessage.getRecipients(RecipientType.TO).head)
-      },
-      subject = newMessage.getSubject,
-      htmlBody = htmlBody,
-      inReplyTo = newMessage.getHeader("In-Reply-To").headOption.map(ElectronicMailMessageId.fromEmailHeader),
-      category = PostOffice.Categories.EMAIL_KEEP
-    ))
+    db.readWrite { implicit s =>
+      val newMessage = message.reply(false)
+      postOffice.sendMail(ElectronicMail(
+        from = EmailAddresses.NOTIFICATIONS,
+        fromName = Some("Kifi Elves"),
+        to = List(new EmailAddressHolder {
+          val address = messageParser.getAddr(newMessage.getRecipients(RecipientType.TO).head)
+        }),
+        subject = Option(newMessage.getSubject).getOrElse(""),
+        htmlBody = htmlBody,
+        inReplyTo = newMessage.getHeader("In-Reply-To").headOption.map(ElectronicMailMessageId.fromEmailHeader),
+        category = PostOffice.Categories.EMAIL_KEEP
+      ))
+    }
   }
 }
 

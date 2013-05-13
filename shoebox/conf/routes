@@ -14,14 +14,16 @@ GET     /invite                     @com.keepit.controllers.website.InviteContro
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
 GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id: ExternalId[Invitation])
-GET     /sign-up                     @com.keepit.controllers.website.OnboardingController.signup(inviteId: String ?= "")
+GET     /sign-up                    @com.keepit.controllers.website.OnboardingController.signup(inviteId: String ?= "")
 GET     /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tos
 POST    /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tosAccept
+
+GET     /feedback                   @com.keepit.controllers.website.FeedbackController.feedback
+GET     /feedback/form              @com.keepit.controllers.website.FeedbackController.feedbackForm
 
 GET     /login                      securesocial.controllers.ProviderController.authenticate(provider = "facebook")
 GET     /login/social               securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
-
 
 # Relevant when we support traditional user signups:
 GET     /register                   securesocial.controllers.Registration.signUp(token: String)
@@ -32,9 +34,14 @@ POST    /register                   securesocial.controllers.Registration.handle
 ##########################################
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
 
+GET     /site/keeps/all             @com.keepit.controllers.website.BookmarksController.allKeeps()
+GET     /site/keeps/mutual/:id      @com.keepit.controllers.website.BookmarksController.mutualKeeps(id: ExternalId[User])
+GET     /site/keeps/count           @com.keepit.controllers.website.BookmarksController.numKeeps()
 
-GET     /user/all-connections       @com.keepit.controllers.website.UserController.getAllConnections()
-POST    /user/update-email          @com.keepit.controllers.website.UserController.updateEmail
+GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
+GET     /site/user/connections      @com.keepit.controllers.website.UserController.connections()
+GET     /site/user/all-connections  @com.keepit.controllers.website.UserController.getAllConnections()
+POST    /site/user/update-email     @com.keepit.controllers.website.UserController.updateEmail
 
 # OAuth provider entry points (e.g. "facebook")
 GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
@@ -63,11 +70,18 @@ POST    /comments/:id/remove        @com.keepit.controllers.ext.ExtCommentContro
 POST    /comments/follow            @com.keepit.controllers.ext.ExtCommentController.startFollowing()
 POST    /comments/unfollow          @com.keepit.controllers.ext.ExtCommentController.stopFollowing()
 
+POST    /comments                   @com.keepit.controllers.ext.ExtCommentController.postCommentAction()
+POST    /messages                   @com.keepit.controllers.ext.ExtCommentController.sendMessageAction()
+POST    /messages/:parentId         @com.keepit.controllers.ext.ExtCommentController.sendMessageReplyAction(parentId: ExternalId[Comment])
+
 POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
 
 POST    /users/events               @com.keepit.controllers.ext.ExtEventController.logUserEvents
+POST    /error/report               @com.keepit.controllers.ext.ExtErrorReportController.addErrorReport
 
-GET     /users/picture/$width<[0-9]{2,3}>/:id       @com.keepit.controllers.assets.UserPictureController.get(width: Int, id: ExternalId[User])
+# This should match the output format of S3ImageConfig#keyByExternalId
+GET     /users/:id/pics/:size/0.jpg @com.keepit.controllers.assets.UserPictureController.get(size: Int, id: ExternalId[User])
+POST    /users/pics/update      @com.keepit.controllers.assets.UserPictureController.update()
 
 GET     /search                     @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None)
 GET     /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts(ids: String)
@@ -170,6 +184,7 @@ GET     /admin/comments             @com.keepit.controllers.admin.AdminCommentCo
 GET     /admin/comments/:page       @com.keepit.controllers.admin.AdminCommentController.commentsView(page: Int)
 GET     /admin/messages             @com.keepit.controllers.admin.AdminCommentController.messagesViewFirstPage
 GET     /admin/messages/:page       @com.keepit.controllers.admin.AdminCommentController.messagesView(page: Int)
+POST    /admin/notify/rebuild       @com.keepit.controllers.admin.AdminCommentController.recreateNotificationDetails(safeMode: Boolean ?= true)
 
 GET     /admin/searchConfig/:id     @com.keepit.controllers.admin.AdminSearchConfigController.showUserConfig(id: Id[User])
 POST    /admin/searchConfig/:id/set   @com.keepit.controllers.admin.AdminSearchConfigController.setUserConfig(id: Id[User])
@@ -240,6 +255,8 @@ GET     /internal/search/search/explainResult  @com.keepit.controllers.search.Se
 POST    /internal/search/spell/buildDict       @com.keepit.controllers.search.SpellCorrectorController.buildDictionary()
 GET     /internal/search/spell/buildStatus     @com.keepit.controllers.search.SpellCorrectorController.getBuildStatus()
 GET     /internal/search/spell/make-correction     @com.keepit.controllers.search.SpellCorrectorController.correctSpelling(query: String)
+
+POST    /internal/search/persistSearchStatistics @com.keepit.controllers.search.SearchStatisticsController.persistSearchStatistics
 
 GET     /internal/searchConfig/:id        @com.keepit.controllers.search.SearchConfigController.showUserConfig(id: Id[User])
 POST    /internal/searchConfig/:id/set    @com.keepit.controllers.search.SearchConfigController.setUserConfig(id: Id[User])

@@ -1,7 +1,6 @@
 package com.keepit.common.analytics.reports
 
 import org.joda.time._
-
 import com.google.inject.Inject
 import com.keepit.common.analytics._
 import com.keepit.common.db.slick.Database
@@ -10,6 +9,7 @@ import com.keepit.common.time._
 import com.keepit.search.SearchConfigExperiment
 import com.mongodb.casbah.Imports._
 import com.keepit.serializer.EventSerializer
+import com.keepit.serializer.SearchStatisticsSerializer
 
 object Parsers {
   type ParsedDBObject = (DateTime, Map[String, ValueOrdering])
@@ -605,20 +605,58 @@ class DailySearchStatisticsReportRepo @Inject() (store: MongoEventStore) extends
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SERVER_SEARCH).withEventName("search_statistics")
     val cursor = store.find(selector)
-    val rows = cursor.map { iter =>
+    val rows = cursor.flatMap { iter =>
       val data = EventSerializer.eventSerializer.mongoReads(iter).get
       val dateTime = data.createdAt
       val meta = data.metaData.metaData
-      val uuid = (meta \ "queryUUID").asOpt[String].getOrElse("")
-      val variance = (meta \ "svVariance").asOpt[Double].getOrElse(-1.0).toString
-      val kifiClicks = (meta \ "kifiResultsClicked").asOpt[Int].getOrElse(-1).toString
-      val googleClicks = (meta \ "googleResultsClicked").asOpt[Int].getOrElse(-1).toString
-      ReportRow(dateTime, Map(
-        "queryUUID" -> ValueOrdering(uuid, 10),
-        "svVariance" -> ValueOrdering(variance, 20),
-        "kifiClicks" -> ValueOrdering(kifiClicks, 30),
-        "googleClicks" -> ValueOrdering(googleClicks, 40)))
+
+      try {
+        val searchStat = SearchStatisticsSerializer.serializer.reads(meta).get
+        val qInfo = searchStat.basicQueryInfo
+        val uriInfo = searchStat.uriInfo
+        val lscores = searchStat.luceneScores
+        val sInfo = searchStat.searchResultInfo
+        val label = searchStat.uriLabel
+
+        implicit def intToString(x: Int) = x.toString
+        implicit def longToString(x: Long) = x.toString
+        implicit def floatToString(x: Float) = x.toString
+        implicit def boolToString(x: Boolean) = x.toString
+
+        Some(ReportRow(dateTime, Map(
+          "queryUUID" -> ValueOrdering(qInfo.queryUUID.id, 10),
+          "queryString" -> ValueOrdering(qInfo.queryString, 11),
+          "userId" -> ValueOrdering(qInfo.userId.id, 12),
+
+          "uriId" -> ValueOrdering(uriInfo.uriId.id, 20),
+          "textScore" -> ValueOrdering(uriInfo.textScore, 21),
+          "bookmarkScore" -> ValueOrdering(uriInfo.bookmarkScore, 22),
+          "recencyScore" -> ValueOrdering(uriInfo.recencyScore, 23),
+          "clickBoost" -> ValueOrdering(uriInfo.clickBoost, 24),
+          "isMyBookmark" -> ValueOrdering(uriInfo.isMyBookmark, 25),
+          "isPrivate" -> ValueOrdering(uriInfo.isPrivate, 26),
+          "friendsKeepsCount" -> ValueOrdering(uriInfo.friendsKeepsCount, 27),
+          "totalCounts" -> ValueOrdering(uriInfo.totalCounts, 28),
+
+          "multiplicativeBoost" -> ValueOrdering(lscores.multiplicativeBoost, 30),
+          "additiveBoost" -> ValueOrdering(lscores.additiveBoost, 31),
+          "percentMatch" -> ValueOrdering(lscores.percentMatch, 32),
+          "semanticVector" -> ValueOrdering(lscores.semanticVector, 33),
+          "phraseProximity" -> ValueOrdering(lscores.phraseProximity, 34),
+
+          "myHits" -> ValueOrdering(sInfo.myHits, 40),
+          "friendsHits" -> ValueOrdering(sInfo.friendsHits, 41),
+          "othersHits" -> ValueOrdering(sInfo.othersHits, 42),
+          "svVariance" -> ValueOrdering(sInfo.svVariance, 43),
+          "svExistenceVar" -> ValueOrdering(sInfo.svExistenceVar, 44),
+
+          "clicked" -> ValueOrdering(label.clicked, 50),
+          "isCorrectlyRanked" -> ValueOrdering(label.isCorrectlyRanked, 51))))
+      } catch {
+        case e: Exception => None // serialization error.
+      }
     }.toList
+
     Report(reportName = reportName, reportVersion = reportVersion, list = rows)
   }
 }

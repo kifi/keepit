@@ -50,7 +50,7 @@
     <tr>
       <td rowspan="2">@{i+1}</td>
       <td>@electronicMail.fromName</td>
-      <td>@electronicMail.to.address</td>
+      <td>@{electronicMail.to.map(a => a.address).mkString(",")}</td>
       <td>@electronicMail.subject</td>
       <td>@adminHelper.dateTimeDisplay(electronicMail.createdAt)</td>
     </tr>

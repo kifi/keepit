@@ -3,13 +3,14 @@ package com.keepit.social
 import com.google.inject.{Inject, Singleton}
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.db.ExternalId
+import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
-import com.keepit.common.social.SocialGraphPlugin
-import com.keepit.common.social.SocialId
-import com.keepit.common.social.SocialNetworkType
+import com.keepit.common.social.{SocialGraphPlugin, SocialId, SocialNetworkType}
 import com.keepit.inject._
 import com.keepit.model._
+
 import play.api.Application
 import play.api.Play
 import play.api.Play.current
@@ -22,12 +23,17 @@ class SecureSocialIdGenerator(app: Application) extends IdGenerator(app) {
 
 class SecureSocialAuthenticatorStore(app: Application) extends AuthenticatorStore(app) {
   lazy val global = app.global.asInstanceOf[FortyTwoGlobal]
+  lazy val plugin = {
+    val injector = new RichInjector(global.injector)
+    new SecureSocialAuthenticatorPlugin(
+      injector.inject[Database],
+      injector.inject[SocialUserInfoRepo],
+      injector.inject[UserSessionRepo],
+      injector.inject[HealthcheckPlugin],
+      app)
+  }
   def proxy: Option[SecureSocialAuthenticatorPlugin] = {
-    if (global.initialized) {
-      val injector = new RichInjector(global.injector)
-      Some(new SecureSocialAuthenticatorPlugin(
-        injector.inject[Database], injector.inject[SocialUserInfoRepo], injector.inject[UserSessionRepo], app))
-    } else None
+    if (global.initialized) Some(plugin) else None
   }
   def save(authenticator: Authenticator): Either[Error, Unit] = proxy.get.save(authenticator)
   def find(id: String): Either[Error, Option[Authenticator]] = proxy.get.find(id)
@@ -39,7 +45,16 @@ class SecureSocialAuthenticatorPlugin @Inject()(
   db: Database,
   socialUserInfoRepo: SocialUserInfoRepo,
   sessionRepo: UserSessionRepo,
+  healthcheckPlugin: HealthcheckPlugin,
   app: Application) extends AuthenticatorStore(app) {
+
+  private def reportExceptions[T](f: => T): Either[Error, T] =
+    try Right(f) catch { case ex: Throwable =>
+      healthcheckPlugin.addError(
+        HealthcheckError(error = Some(ex), method = None, path = None, callType = Healthcheck.INTERNAL))
+      Left(new Error(ex))
+    }
+
   private def sessionFromAuthenticator(authenticator: Authenticator): UserSession = {
     val (socialId, provider) = (SocialId(authenticator.userId.id), SocialNetworkType(authenticator.userId.providerId))
     val userId = db.readOnly { implicit s => socialUserInfoRepo.get(socialId, provider).userId }
@@ -60,25 +75,48 @@ class SecureSocialAuthenticatorPlugin @Inject()(
     expirationDate = session.expires
   )
 
-  def save(authenticator: Authenticator): Either[Error, Unit] = {
-    val session = db.readWrite { implicit s =>
-      val newSession = sessionFromAuthenticator(authenticator)
-      val maybeOldSession = sessionRepo.getOpt(newSession.externalId)
-      sessionRepo.save(newSession.copy(
-        id = maybeOldSession.map(_.id.get),
-        createdAt = maybeOldSession.map(_.createdAt).getOrElse(newSession.createdAt)
-      ))
-    }
-    Right(authenticatorFromSession(session))
+  private def needsUpdate(oldSession: UserSession, newSession: UserSession): Boolean = {
+    // We only want to save if we actually changed something. SecureSocial likes to "touch" the session to update the
+    // last used time, but we're not using that right now. If we eventually do want to keep track of the last used
+    // time, we should try to avoid writing to the database every time.
+    oldSession.copy(
+      updatedAt = newSession.updatedAt,
+      createdAt = newSession.createdAt,
+      id = newSession.id) != newSession
   }
-  def find(id: String): Either[Error, Option[Authenticator]] = Right {
-    db.readOnly { implicit s =>
-      sessionRepo.getOpt(ExternalId[UserSession](id))
-    }.collect {
-      case s if s.isValid => authenticatorFromSession(s)
+
+  def save(authenticator: Authenticator): Either[Error, Unit] = reportExceptions {
+    val newSession = sessionFromAuthenticator(authenticator)
+    authenticatorFromSession {
+      val oldSessionOpt = db.readOnly { implicit s => sessionRepo.getOpt(newSession.externalId) }
+      if (oldSessionOpt.exists(!needsUpdate(_, newSession))) {
+        oldSessionOpt.get
+      } else {
+        db.readWrite { implicit s =>
+          sessionRepo.save(newSession.copy(
+            id = oldSessionOpt.map(_.id.get),
+            createdAt = oldSessionOpt.map(_.createdAt).getOrElse(newSession.createdAt)
+          ))
+        }
+      }
     }
   }
-  def delete(id: String): Either[Error, Unit] = Right {
+  def find(id: String): Either[Error, Option[Authenticator]] = reportExceptions {
+    val externalIdOpt = try {
+      Some(ExternalId[UserSession](id))
+    } catch {
+      case ex: Throwable => None
+    }
+
+    externalIdOpt.map{ externalId =>
+      db.readOnly { implicit s =>
+        sessionRepo.getOpt(externalId)
+      } collect {
+        case s if s.isValid => authenticatorFromSession(s)
+      }
+    } flatten
+  }
+  def delete(id: String): Either[Error, Unit] = reportExceptions {
     db.readWrite { implicit s =>
       sessionRepo.getOpt(ExternalId[UserSession](id)).foreach { session =>
         sessionRepo.save(session invalidated)
@@ -89,6 +127,7 @@ class SecureSocialAuthenticatorPlugin @Inject()(
 
 class SecureSocialUserService(implicit val application: Application) extends UserServicePlugin(application) {
   lazy val global = application.global.asInstanceOf[FortyTwoGlobal]
+
   def proxy: Option[SecureSocialUserPlugin] = {
     // Play will try to initialize this plugin before FortyTwoGlobal is fully initialized. This will cause
     // FortyTwoGlobal to attempt to initialize AppScope in multiple threads, causing deadlock. This allows us to wait
@@ -101,18 +140,27 @@ class SecureSocialUserService(implicit val application: Application) extends Use
 
   def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser] =
     proxy.get.findByEmailAndProvider(email, providerId)
-  def save(token: Token) { proxy.get.save(token) }
+  def save(token: Token) = proxy.get.save(token)
   def findToken(token: String) = proxy.get.findToken(token)
-  def deleteToken(uuid: String) { proxy.get.deleteToken(uuid) }
-  def deleteExpiredTokens() { proxy.foreach(_.deleteExpiredTokens()) }
+  def deleteToken(uuid: String) = proxy.get.deleteToken(uuid)
+  def deleteExpiredTokens() = proxy.foreach(_.deleteExpiredTokens())
+
 }
 
 @Singleton
 class SecureSocialUserPlugin @Inject() (
     db: Database,
     socialUserInfoRepo: SocialUserInfoRepo,
-    userRepo: UserRepo)
+    userRepo: UserRepo,
+    healthcheckPlugin: HealthcheckPlugin)
   extends UserService with Logging {
+
+  private def reportExceptions[T](f: => T): T =
+    try f catch { case ex: Throwable =>
+      healthcheckPlugin.addError(
+        HealthcheckError(error = Some(ex), method = None, path = None, callType = Healthcheck.INTERNAL))
+      throw ex
+    }
 
   private var maybeSocialGraphPlugin: Option[SocialGraphPlugin] = None
 
@@ -121,7 +169,7 @@ class SecureSocialUserPlugin @Inject() (
     maybeSocialGraphPlugin = Some(sgp)
   }
 
-  def find(id: UserId): Option[SocialUser] =
+  def find(id: UserId): Option[SocialUser] = reportExceptions {
     db.readOnly { implicit s =>
       socialUserInfoRepo.getOpt(SocialId(id.id), SocialNetworkType(id.providerId))
     } match {
@@ -132,20 +180,23 @@ class SecureSocialUserPlugin @Inject() (
         log.debug("User found: %s for %s".format(user, id))
         user.credentials
     }
+  }
 
-  def save(identity: Identity): SocialUser = db.readWrite { implicit s =>
-    val socialUser = SocialUser(identity)
-    log.debug("persisting social user %s".format(socialUser))
-    val socialUserInfo = socialUserInfoRepo.save(internUser(
-      SocialId(socialUser.id.id), SocialNetworkType(socialUser.id.providerId), socialUser).withCredentials(socialUser))
-    require(socialUserInfo.credentials.isDefined,
-      "social user info's credentials is not defined: %s".format(socialUserInfo))
-    require(socialUserInfo.userId.isDefined, "social user id  is not defined: %s".format(socialUserInfo))
-    for (sgp <- maybeSocialGraphPlugin if socialUserInfo.state != SocialUserInfoStates.FETCHED_USING_SELF) {
-      sgp.asyncFetch(socialUserInfo)
+  def save(identity: Identity): SocialUser = reportExceptions {
+    db.readWrite { implicit s =>
+      val socialUser = SocialUser(identity)
+      log.debug("persisting social user %s".format(socialUser))
+      val socialUserInfo = socialUserInfoRepo.save(internUser(
+        SocialId(socialUser.id.id), SocialNetworkType(socialUser.id.providerId), socialUser).withCredentials(socialUser))
+      require(socialUserInfo.credentials.isDefined,
+        "social user info's credentials is not defined: %s".format(socialUserInfo))
+      require(socialUserInfo.userId.isDefined, "social user id  is not defined: %s".format(socialUserInfo))
+      for (sgp <- maybeSocialGraphPlugin if socialUserInfo.state != SocialUserInfoStates.FETCHED_USING_SELF) {
+        sgp.asyncFetch(socialUserInfo)
+      }
+      log.debug("persisting %s into %s".format(socialUser, socialUserInfo))
+      socialUser
     }
-    log.debug("persisting %s into %s".format(socialUser, socialUserInfo))
-    socialUser
   }
 
   private def createUser(displayName: String): User = {
@@ -157,7 +208,8 @@ class SecureSocialUserPlugin @Inject() (
     )
   }
 
-  private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType, socialUser: SocialUser): SocialUserInfo = db.readWrite { implicit s =>
+  private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType,
+      socialUser: SocialUser)(implicit session: RWSession): SocialUserInfo = {
     socialUserInfoRepo.getOpt(socialId, socialNetworkType) match {
       case Some(socialUserInfo) if (!socialUserInfo.userId.isEmpty) =>
         socialUserInfo

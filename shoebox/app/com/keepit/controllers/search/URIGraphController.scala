@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{SequenceNumber, Id}
-import com.keepit.model.{NormalizedURI, SocialConnectionRepo, BookmarkRepo, User}
+import com.keepit.model.{NormalizedURI, UserConnectionRepo, BookmarkRepo, User}
 import com.keepit.search.graph.{URIGraphImpl, URIGraph, URIGraphPlugin}
 import com.keepit.search.index.Indexer.CommitData
 import org.apache.lucene.document.Document
@@ -34,7 +34,7 @@ class URIGraphController @Inject()(
     db: Database,
     uriGraphPlugin: URIGraphPlugin,
     bookmarkRepo: BookmarkRepo,
-    socialConnectionRepo: SocialConnectionRepo,
+    connectionRepo: UserConnectionRepo,
     uriGraph: URIGraph) extends SearchServiceController {
 
   import URIGraphJson._
@@ -53,8 +53,8 @@ class URIGraphController @Inject()(
   }
 
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]) = Action { implicit request =>
-    val friendIds = db.readOnly { implicit s => socialConnectionRepo.getFortyTwoUserConnections(userId) }
-    val searcher = uriGraph.getURIGraphSearcher
+    val friendIds = db.readOnly { implicit s => connectionRepo.getConnectedUsers(userId) }
+    val searcher = uriGraph.getURIGraphSearcher(None)
     val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
     val keepersEdgeSet = searcher.getUriToUserEdgeSet(uriId)
     val sharingUserIds = searcher.intersect(friendEdgeSet, keepersEdgeSet).destIdSet - userId

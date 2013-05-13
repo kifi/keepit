@@ -5,7 +5,7 @@ import util.{Failure, Success}
 
 object URINormalizer extends Logging {
 
-  val normalizers = Seq(AmazonNormalizer, GoogleNormalizer, RemoveWWWNormalizer, DefaultNormalizer)
+  val normalizers = Seq(AmazonNormalizer, GoogleNormalizer, YoutubeNormalizer, RemoveWWWNormalizer, DefaultNormalizer)
 
   def normalize(uriString: String) = {
     URI.parse(uriString) match {

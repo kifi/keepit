@@ -18,6 +18,12 @@
         <th>Article title</th><td>@article.title</td>
       </tr>
       <tr>
+        <th>Article description</th><td>@article.description.getOrElse("")</td>
+      </tr>
+      <tr>
+        <th>Article media</th><td>@article.media.getOrElse("")</td>
+      </tr>
+      <tr>
         <th>Http ContentType</th><td>@article.httpContentType</td>
       </tr>
       <tr>

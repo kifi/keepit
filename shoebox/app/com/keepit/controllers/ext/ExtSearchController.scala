@@ -1,35 +1,26 @@
 package com.keepit.controllers.ext
 
-import play.api.data._
-import play.api._
-import play.api.data.Forms._
-import play.api.data.validation.Constraints._
-import play.api.libs.ws.WS
-import play.api.mvc._
-import play.api.http.ContentTypes
-import play.api.Play.current
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.model._
-import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
-import java.sql.Connection
-import com.keepit.common.logging.Logging
-import com.keepit.search.index.ArticleIndexer
-import com.keepit.search.index.Hit
-import com.keepit.search.graph._
-import com.keepit.search._
-import com.keepit.common.social.UserWithSocial
-import com.keepit.search.ArticleSearchResultStore
-import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.common.performance._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.future
 import scala.util.Try
-import views.html
 import com.google.inject.{Inject, Singleton}
+import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.db._
+import com.keepit.common.db.slick.DBSession._
+import com.keepit.common.db.slick._
+import com.keepit.common.performance._
 import com.keepit.common.social.BasicUser
 import com.keepit.common.social.BasicUserRepo
-import scala.concurrent.future
-import scala.concurrent.ExecutionContext.Implicits.global
+import com.keepit.common.time._
+import com.keepit.common.service.FortyTwoServices
+import com.keepit.model._
+import com.keepit.search._
+import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
+import play.api.http.ContentTypes
+import com.keepit.common.logging.Logging
+import com.keepit.common.healthcheck.{HealthcheckPlugin, HealthcheckError}
+import com.keepit.common.healthcheck.Healthcheck.SEARCH
+
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchHit(id: Id[NormalizedURI], externalId: ExternalId[NormalizedURI], title: Option[String], url: String)
@@ -48,7 +39,7 @@ class ExtSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   userRepo: UserRepo,
-  socialConnectionRepo: SocialConnectionRepo,
+  userConnectionRepo: UserConnectionRepo,
   searchConfigManager: SearchConfigManager,
   mainSearcherFactory: MainSearcherFactory,
   articleSearchResultStore: ArticleSearchResultStore,
@@ -56,10 +47,17 @@ class ExtSearchController @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   bookmarkRepo: BookmarkRepo,
   uriRepo: NormalizedURIRepo,
-  basicUserRepo: BasicUserRepo)
-    extends BrowserExtensionController(actionAuthenticator) with SearchServiceController {
+  basicUserRepo: BasicUserRepo,
+  srcFactory: SearchResultClassifierFactory,
+  healthcheckPlugin: HealthcheckPlugin)
+  (implicit private val clock: Clock,
+    private val fortyTwoServices: FortyTwoServices)
+    extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging{
 
   def search(query: String, filter: Option[String], maxHits: Int, lastUUIDStr: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
+
+    val t1 = currentDateTime.getMillis()
+
     val lastUUID = lastUUIDStr.flatMap{
       case "" => None
       case str => Some(ExternalId[ArticleSearchResultRef](str))
@@ -70,7 +68,7 @@ class ExtSearchController @Inject() (
     val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
     val (friendIds, searchFilter) = time("search-connections") {
       db.readOnly { implicit s =>
-        val friendIds = socialConnectionRepo.getFortyTwoUserConnections(userId)
+        val friendIds = userConnectionRepo.getConnectedUsers(userId)
         val searchFilter = filter match {
           case Some("m") =>
             SearchFilter.mine(idFilter)
@@ -88,8 +86,10 @@ class ExtSearchController @Inject() (
 
     val (config, experimentId) = searchConfigManager.getConfig(userId, query)
 
+    val t2 = currentDateTime.getMillis()
+
     val searchRes = time("search-searching") {
-      val searcher = mainSearcherFactory(userId, friendIds, searchFilter, config)
+      val searcher = time("search-factory") { mainSearcherFactory(userId, friendIds, searchFilter, config) }
       val searchRes = if (maxHits > 0) {
         searcher.search(query, maxHits, lastUUID, searchFilter)
       } else {
@@ -99,11 +99,29 @@ class ExtSearchController @Inject() (
 
       searchRes
     }
+
+    val t3 = currentDateTime.getMillis()
+
     val res = toPersonalSearchResultPacket(userId, searchRes, config, searchFilter.isDefault, experimentId)
     reportArticleSearchResult(searchRes)
 
+    val t4 = currentDateTime.getMillis()
+
+    val timeLimit = 1000
+    // search is a little slow after service restart. allow some grace period
+    if (t4 - t1 > timeLimit && t4 - fortyTwoServices.started.getMillis() > 1000*60*8) {
+      val total = t4 - t1
+      val msg = s"search time exceeds limit! searchUUID = ${searchRes.uuid.id}, Limit time = $timeLimit, total search time = $total, pre-search time = ${t2 - t1}, main-search time = ${t3 - t2}, post-search time = ${t4 - t3}"
+      healthcheckPlugin.addError(HealthcheckError(
+        error = Some(new SearchTimeExceedsLimit(timeLimit, total)),
+        errorMessage = Some(msg),
+        callType = SEARCH))
+    }
+
     Ok(RPS.resSerializer.writes(res)).as(ContentTypes.JSON)
   }
+
+  class SearchTimeExceedsLimit(timeout: Int, actual: Long) extends Exception(s"Timeout ${timeout}ms, actual ${actual}ms")
 
   private def reportArticleSearchResult(res: ArticleSearchResult) {
     future {
@@ -119,42 +137,32 @@ class ExtSearchController @Inject() (
   private[ext] def toPersonalSearchResultPacket(userId: Id[User],
       res: ArticleSearchResult, config: SearchConfig, isDefaultFilter: Boolean, experimentId: Option[Id[SearchConfigExperiment]]): PersonalSearchResultPacket = {
 
-    val doParallel = util.Random.nextBoolean
-
-    val hits = if(doParallel) {
-      time(s"search-personal-result-parallel-${res.hits.size}") {
-        res.hits.par.map { hit =>
-          db.readOnly { implicit s =>
-            toPersonalSearchResult(userId, hit)
-          }
-        } seq
-      }
-    } else {
-      time(s"search-personal-result-${res.hits.size}") {
-        db.readOnly { implicit s =>
-          res.hits.map(toPersonalSearchResult(userId, _))
-        }
+    
+    val hits = time(s"search-personal-result-${res.hits.size}") {
+      db.readOnly { implicit s =>
+        val t0 = currentDateTime.getMillis()
+        val users = res.hits.map(_.users).flatten.distinct.map(u => u -> basicUserRepo.load(u)).toMap
+        log.info(s"search-personal-a: ${currentDateTime.getMillis()-t0}")
+        val t1 = currentDateTime.getMillis()
+        val h = res.hits.map(toPersonalSearchResult(userId, users, _))
+        log.info(s"search-personal-d: ${currentDateTime.getMillis()-t1}")
+        h
       }
     }
     log.debug(hits mkString "\n")
 
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
-    PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, (!isDefaultFilter || isToShow(res)), experimentId, filter)
+    PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), experimentId, filter)
   }
 
-  private[ext] def isToShow(res: ArticleSearchResult): Boolean = {
-    var maxTextScore = 0.0f
-    res.scorings.foreach{ s =>
-      if (s.textScore > maxTextScore) maxTextScore = s.textScore
-    }
-
-    (res.svVariance < 0.17) && (maxTextScore > 0.01f)
-  }
-
-  private[ext] def toPersonalSearchResult(userId: Id[User], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {
+  private[ext] def toPersonalSearchResult(userId: Id[User], allUsers: Map[Id[User], BasicUser], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {
+    val t0 = currentDateTime.getMillis()
     val uri = uriRepo.get(res.uriId)
+    log.info(s"search-personal-b: ${currentDateTime.getMillis()-t0}")
+    val t1 = currentDateTime.getMillis()
     val bookmark = if (res.isMyBookmark) bookmarkRepo.getByUriAndUser(uri.id.get, userId) else None
-    val users = res.users.toSeq.map(basicUserRepo.load)
+    log.info(s"search-personal-c: ${currentDateTime.getMillis()-t1}")
+    val users = res.users.map(allUsers)
     PersonalSearchResult(
       toPersonalSearchHit(uri, bookmark), res.bookmarkCount, res.isMyBookmark,
       bookmark.map(_.isPrivate).getOrElse(false), users, res.score)

@@ -1,24 +1,19 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.controller.WebsiteController
-import com.keepit.common.logging.Logging
-
-import play.api.Play.current
-import play.api.data.Forms._
-import play.api.data.validation.Constraints._
-import play.api.http.ContentTypes
-import play.api.mvc._
-import play.api._
-import play.api.libs.json._
-import com.keepit.model._
-import com.keepit.common.db.slick._
-import com.keepit.common.controller.ActionAuthenticator
-
 import com.google.inject.{Inject, Singleton}
+import com.keepit.common.controller.ActionAuthenticator
+import com.keepit.common.controller.WebsiteController
+import com.keepit.common.db.slick._
+import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.time._
+import com.keepit.model._
+
+import play.api.libs.json._
 
 @Singleton
 class UserController @Inject() (db: Database,
-  userRepo: UserRepo,
+  basicUserRepo: BasicUserRepo,
+  userConnectionRepo: UserConnectionRepo,
   emailRepo: EmailAddressRepo,
   userValueRepo: UserValueRepo,
   socialConnectionRepo: SocialConnectionRepo,
@@ -26,7 +21,19 @@ class UserController @Inject() (db: Database,
   invitationRepo: InvitationRepo,
   actionAuthenticator: ActionAuthenticator)
     extends WebsiteController(actionAuthenticator) {
-  
+
+  def connections() = AuthenticatedJsonAction { request =>
+    Ok(Json.obj(
+      "connections" -> db.readOnly { implicit s =>
+        userConnectionRepo.getConnectedUsers(request.userId).map(basicUserRepo.load).toSeq
+      }
+    ))
+  }
+
+  def currentUser() = AuthenticatedJsonAction { request =>
+    Ok(Json.toJson(db.readOnly { implicit s => basicUserRepo.load(request.userId) }))
+  }
+
   def updateEmail() = AuthenticatedJsonToJsonAction(true) { request =>
     val o = request.request.body
     val email = (o \ "email").as[String]
@@ -40,13 +47,13 @@ class UserController @Inject() (db: Database,
     }
     Ok
   }
-  
+
   def getAllConnections = AuthenticatedJsonAction { request =>
-    
+
     val connections = db.readOnly { implicit conn =>
       socialUserRepo.getByUser(request.user.id.get) map { su =>
         socialConnectionRepo.getSocialUserConnections(su.id.get) map { suc =>
-          
+
           val status = if(suc.userId.isDefined) "joined"
             else {
               val existingInvite = invitationRepo.getByRecipient(suc.id.get)
@@ -57,7 +64,7 @@ class UserController @Inject() (db: Database,
         }
       }
     } flatten
-    
+
     Ok(JsArray(connections.map { conn =>
       Json.obj(
         "label" -> conn._1.fullName,

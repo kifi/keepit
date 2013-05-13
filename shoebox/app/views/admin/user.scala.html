@@ -6,7 +6,8 @@
   kifiInstallations: Seq[KifiInstallation],
   historyUpdateCount: Int,
   bookmarkSearch: Option[String],
-  allowedInvites: Int)
+  allowedInvites: Int,
+  emails: Seq[EmailAddress])
 
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
   <a data-hover="tooltip" title="@userWithSocial.user.firstName @userWithSocial.user.lastName+" class="name_tooltip_link" href="http://www.facebook.com/@userWithSocial.socialUserInfo.socialId.id" target="_blank">
@@ -45,7 +46,7 @@
         <th>Email</th>
         <td>
           <form action="@com.keepit.controllers.admin.routes.AdminUserController.updateUser(userWithSocial.user.id.get)" method="POST" class="form-inline">
-            <input type="text" name="emails" value="@{userWithSocial.emails.map(_.address).mkString(",")}">
+            <input type="text" name="emails" value="@{emails.map(_.address).mkString(",")}">
             <input type="submit" value="Save">
           </form>
         </td>
@@ -63,7 +64,7 @@
         <th>Experiments</th>
         <td id="experiments" class="form-inline">
           @for(exp <- Seq(ExperimentTypes.ADMIN, ExperimentTypes.BLOCK,
-              ExperimentTypes.NO_SEARCH_EXPERIMENTS, ExperimentTypes.INACTIVE)) {
+              ExperimentTypes.NO_SEARCH_EXPERIMENTS, ExperimentTypes.INACTIVE, ExperimentTypes.CAN_INVITE)) {
             <label class="checkbox">
               <input type="checkbox" data-exp="@exp.value" @if(userWithSocial.experiments.contains(exp)) {checked}>@exp.value
             </label>
@@ -178,7 +179,7 @@
       $("#state").change(function() {
         var $td = $(this).closest("td");
         var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
-          $.post('@com.keepit.controllers.admin.routes.AdminUserController.changeState(userWithSocial.user.id.get, "~")'.replace("~", $(this).val()))
+          $.post('@com.keepit.controllers.admin.routes.AdminUserController.changeState(userWithSocial.user.id.get, "____")'.replace("____", $(this).val()))
             .done(function () {
               $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
             });
@@ -188,10 +189,11 @@
         var $td = $(this).closest("#experiments");
         var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);
         if (this.checked) {
-          $.post('@com.keepit.controllers.admin.routes.AdminUserController.addExperiment(userWithSocial.user.id.get, "~")'.replace("~", $(this).data("exp")))
+          console.log($(this).data("exp"))
+          $.post('@com.keepit.controllers.admin.routes.AdminUserController.addExperiment(userWithSocial.user.id.get, "____")'.replace("____", $(this).data("exp")))
             .done(done).fail(fail);
         } else {
-          $.ajax('@com.keepit.controllers.admin.routes.AdminUserController.removeExperiment(userWithSocial.user.id.get, "~")'.replace("~", $(this).data("exp")),
+          $.ajax('@com.keepit.controllers.admin.routes.AdminUserController.removeExperiment(userWithSocial.user.id.get, "____")'.replace("____", $(this).data("exp")),
             {type: "DELETE"}).done(done).fail(fail);
         }
         function done() {

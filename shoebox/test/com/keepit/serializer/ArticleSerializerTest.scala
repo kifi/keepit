@@ -20,6 +20,8 @@ class ArticleSerializerTest extends Specification {
       val article = Article(
           id = Id(22),
           title = "my title",
+          description = Some("my description"),
+          media = Some("my media"),
           content = "my content",
           scrapedAt = currentDateTime,
           httpContentType = Some("text/html"),
@@ -39,6 +41,8 @@ class ArticleSerializerTest extends Specification {
       val article = Article(
           id = Id(22),
           title = "my title",
+          description = None,
+          media = None,
           content = """my content
           has few lines in it
           and "some qoutes"

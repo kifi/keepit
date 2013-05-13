@@ -24,7 +24,6 @@ import com.keepit.model._
 
 import play.api.http.ContentTypes
 import securesocial.core._
-import com.keepit.scraper.ScraperPlugin
 import com.keepit.common.social.{SocialGraphPlugin, UserWithSocial}
 import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}

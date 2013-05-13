@@ -1,8 +1,11 @@
 package com.keepit.test
 
-import akka.actor.ActorSystem
-import akka.actor.Cancellable
-import akka.actor.Scheduler
+import scala.collection.mutable.{Stack => MutableStack}
+import scala.concurrent._
+import scala.slick.session.{Database => SlickDatabase}
+
+import org.joda.time.{ReadablePeriod, DateTime}
+
 import com.google.inject.Module
 import com.google.inject.Provides
 import com.google.inject.Singleton
@@ -11,45 +14,42 @@ import com.google.inject.util.Modules
 import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
 import com.keepit.common.analytics._
 import com.keepit.common.cache.{HashMapMemoryCache, FortyTwoCachePlugin}
-import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.db.DbInfo
-import com.keepit.common.db.SlickModule
+import com.keepit.common.controller.FortyTwoCookies._
+import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.BabysitterTimeout
-import com.keepit.common.healthcheck.FakeHealthcheckModule
-import com.keepit.common.healthcheck.{Babysitter, BabysitterImpl}
+import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{FakeMailToKeepPlugin, MailToKeepPlugin, FakeMailModule, MailSenderPlugin, ElectronicMail}
 import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.FakeSecureSocialUserServiceModule
 import com.keepit.common.social.SocialGraphPlugin
-import com.keepit.common.store.FakeStoreModule
+import com.keepit.common.store.FakeS3StoreModule
 import com.keepit.common.time._
 import com.keepit.dev.{SearchDevGlobal, ShoeboxDevGlobal, DevGlobal, S3DevModule}
 import com.keepit.inject._
-import com.keepit.model.SocialConnection
-import com.keepit.model.SocialUserInfo
 import com.keepit.model._
+import com.keepit.scraper._
 import com.keepit.search._
 import com.keepit.search.index.FakePhraseIndexerModule
 import com.tzavellas.sse.guice.ScalaModule
-import org.joda.time.DateTime
-import org.joda.time.LocalDate
-import play.api.Application
+
+import akka.actor.ActorSystem
+import akka.actor.Cancellable
+import akka.actor.Scheduler
+import play.api.Mode.Mode
+import play.api.Mode.Test
 import play.api.Play
-import play.api.db.DB
 import play.api.libs.concurrent.Execution.Implicits._
-import scala.collection.mutable.{Stack => MutableStack}
-import scala.concurrent._
-import scala.slick.session.{Database => SlickDatabase}
 
 class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplication() {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
   def withFakeMail() = overrideWith(FakeMailModule())
-  def withFakeHealthcheck() = overrideWith(FakeHealthcheckModule())
+  def withFakeScraper() = overrideWith(FakeScraperModule())
   def withFakeScheduler() = overrideWith(FakeSchedulerModule())
   def withFakeHttpClient() = overrideWith(FakeHttpClientModule())
-  def withFakeStore() = overrideWith(FakeStoreModule())
+  def withFakeStore() = overrideWith(FakeS3StoreModule())
+  def withFakeHealthcheck() = overrideWith(FakeHealthcheckModule())
   def withRealBabysitter() = overrideWith(BabysitterModule())
   def withFakeSecureSocialUserService() = overrideWith(FakeSecureSocialUserServiceModule())
   def withFakePhraseIndexer() = overrideWith(FakePhraseIndexerModule())
@@ -74,6 +74,7 @@ trait DbRepos {
   def db = inject[Database]
   def userSessionRepo = inject[UserSessionRepo]
   def userRepo = inject[UserRepo]
+  def userConnRepo = inject[UserConnectionRepo]
   def uriRepo = inject[NormalizedURIRepo]
   def urlRepo = inject[URLRepo]
   def bookmarkRepo = inject[BookmarkRepo]
@@ -84,30 +85,44 @@ trait DbRepos {
   def installationRepo = inject[KifiInstallationRepo]
   def userExperimentRepo = inject[UserExperimentRepo]
   def emailAddressRepo = inject[EmailAddressRepo]
+  def invitationRepo = inject[InvitationRepo]
   def unscrapableRepo = inject[UnscrapableRepo]
+  def notificationRepo = inject[UserNotificationRepo]
 }
 
-case class TestModule() extends ScalaModule {
+object TestDbInfo {
+  val url = "jdbc:h2:mem:shoebox;USER=shoebox;MODE=MYSQL;MVCC=TRUE;DB_CLOSE_DELAY=-1"
+  val dbInfo = new DbInfo() {
+    //later on we can customize it by the application name
+    lazy val database = SlickDatabase.forURL(url = url)
+    lazy val driverName = H2.driverName
+//    lazy val database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
+//    lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
+  }
+}
+
+case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   def configure(): Unit = {
     val appScope = new AppScope
     bindScope(classOf[AppScoped], appScope)
     bind[AppScope].toInstance(appScope)
+    bind[Mode].toInstance(Test)
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[Babysitter].to[FakeBabysitter]
-    install(new SlickModule(new DbInfo() {
-      //later on we can customize it by the application name
-      lazy val database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
-      lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
-    }))
+    install(new SlickModule(dbInfo.getOrElse(dbInfoFromApplication)))
     bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
     bind[MailToKeepPlugin].to[FakeMailToKeepPlugin]
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
+    bind[HealthcheckPlugin].to[FakeHealthcheck]
+    bind[SlickSessionProvider].to[TestSlickSessionProvider]
 
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
     listenerBinder.addBinding().to(classOf[ResultClickedListener])
     listenerBinder.addBinding().to(classOf[UsefulPageListener])
     listenerBinder.addBinding().to(classOf[SliderShownListener])
   }
+
+  private def dbInfoFromApplication(): DbInfo = TestDbInfo.dbInfo
 
   @Provides
   @Singleton
@@ -116,10 +131,17 @@ case class TestModule() extends ScalaModule {
   @Provides
   @Singleton
   def mailSenderPlugin: MailSenderPlugin = new MailSenderPlugin {
-    def processMail(mail: ElectronicMail) = throw new Exception("Should not attempt to use mail plugin in test")
+    def processMail(mailId: ElectronicMail) = throw new Exception("Should not attempt to use mail plugin in test")
     def processOutbox() = throw new Exception("Should not attempt to use mail plugin in test")
   }
 
+  @Singleton
+  @Provides
+  def kifiInstallationCookie: KifiInstallationCookie = new KifiInstallationCookie(Some("test.com"))
+
+  @Singleton
+  @Provides
+  def impersonateCookie: ImpersonateCookie = new ImpersonateCookie(Some("test.com"))
 
   @Provides
   @Singleton
@@ -145,31 +167,47 @@ case class TestModule() extends ScalaModule {
 
   @Provides
   @AppScoped
-  def actorPluginProvider: ActorPlugin = new ActorPlugin("shoebox-test-actor-system")
+  def actorPluginProvider: ActorPlugin =
+    new ActorPlugin(ActorSystem("shoebox-test-actor-system", Play.current.configuration.underlying, Play.current.classloader))
 
   @Provides
   @Singleton
   def fortyTwoServices(clock: Clock): FortyTwoServices = FortyTwoServices(clock)
 }
 
+/**
+ * A fake clock allows you to control the time returned by Clocks in tests.
+ *
+ * If you know how many times the underlying code will call getMillis(), you can push() times onto the stack to have
+ * their values returned. You can also completely override the time function by calling setTimeFunction().
+ */
 class FakeClock extends Clock with Logging {
-  val stack = MutableStack[DateTime]()
-
-  def push(t : DateTime): FakeClock = { stack push t; this }
-  def push(d : LocalDate): FakeClock = { stack push d.toDateTimeAtStartOfDay(clockZone); this }
-
-  override def today: LocalDate = this.now.toLocalDate
-  override def now: DateTime = {
+  private val stack = MutableStack[Long]()
+  private var timeFunction: () => Long = () => {
     if (stack.isEmpty) {
-      val nowTime = super.now
+      val nowTime = new DateTime(System.currentTimeMillis())
       log.debug(s"FakeClock is retuning real now value: $nowTime")
-      nowTime
+      nowTime.getMillis
     } else {
-      val fakeNowTime = stack.pop
+      val fakeNowTime = new DateTime(stack.pop())
       log.debug(s"FakeClock is retuning fake now value: $fakeNowTime")
-      fakeNowTime
+      fakeNowTime.getMillis
     }
   }
+
+  def +=(p: ReadablePeriod) {
+    val oldTimeFunction = timeFunction
+    timeFunction = { () => new DateTime(oldTimeFunction()).plus(p).getMillis }
+  }
+
+  def -=(p: ReadablePeriod) {
+    val oldTimeFunction = timeFunction
+    timeFunction = { () => new DateTime(oldTimeFunction()).minus(p).getMillis }
+  }
+
+  def push(t : DateTime): FakeClock = { stack push t.getMillis; this }
+  def setTimeFunction(timeFunction: () => Long) { this.timeFunction = timeFunction }
+  override def getMillis(): Long = timeFunction()
 }
 
 class FakeSocialGraphPlugin extends SocialGraphPlugin {
@@ -183,10 +221,28 @@ case class FakeCacheModule() extends ScalaModule {
   }
 }
 
+case class FakeScraperModule() extends ScalaModule {
+  override def configure() {
+    bind[ScraperPlugin].to[FakeScraperPlugin]
+  }
+}
+
+class FakeScraperPlugin() extends ScraperPlugin {
+  def scrape() = Seq()
+  def asyncScrape(uri: NormalizedURI) =
+    future { throw new Exception("Not Implemented") }
+}
+
 case class TestActorSystemModule(system: ActorSystem) extends ScalaModule {
   override def configure(): Unit = {
     bind[ActorSystem].toInstance(system)
     bind[ActorBuilder].to[TestActorBuilderImpl]
+  }
+}
+
+case class FakeHealthcheckModule() extends ScalaModule {
+  override def configure(): Unit = {
+    bind[HealthcheckPlugin].to[FakeHealthcheck]
   }
 }
 
@@ -203,7 +259,7 @@ case class BabysitterModule() extends ScalaModule {
 }
 
 class FakeBabysitter extends Babysitter {
-  def watch[A](timeout: BabysitterTimeout)(block: => A)(implicit app: Application): A = {
+  def watch[A](timeout: BabysitterTimeout)(block: => A): A = {
     block
   }
 }

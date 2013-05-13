@@ -1,0 +1,54 @@
+@(recipient: User, authors: Seq[String], unreadMessages: Seq[(String,String,String)], details: com.keepit.realtime.MessageDetails)
+
+@{
+/* Use http://premailer.dialect.ca/ to create this built email */
+}
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns="http://www.w3.org/1999/xhtml" style="margin: 0; font-family: 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif; padding: 0;">
+  <head>
+    <meta name="viewport" content="width=device-width" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>ZURBemails</title>
+  </head>
+  <body bgcolor="#FFFFFF" style="margin: 0; -webkit-text-size-adjust: none;  padding: 0; height: 100%; -webkit-font-smoothing: antialiased; width: 100% !important;">&#13;
+&#13;
+&#13;
+<table bgcolor="#FFFFFF" style="margin: 0;  padding: 0; width: 100%;"><tr style="margin: 0;  padding: 0;"><td style="margin: 0;  padding: 0;"></td>&#13;
+		<td style="max-width: 600px !important; clear: both !important; margin: 0 auto; padding: 0; display: block !important;">&#13;
+				<div style="max-width: 600px; margin: 0 auto; padding: 0px;  display: block;">&#13;
+				<table cellspacing="0" style="margin: 0;  padding: 0; width: 100%; border:0;"><tr style="background-color:#224c67;margin: 0;  padding: 0; border:0;"><td style="margin: 0; padding: 3px; border:0;">&#13;
+							<div style="font-size: 16px; overflow: hidden; *display: inline; white-space: nowrap;  margin: 0 0 0 8px; padding: 0; color: #44aaf2; display: inline-block; height: 22px; zoom: 1; width: 39px;"><img src="https://www.kifi.com/assets/images/logo2.png" alt="KiFi" title="KiFi" height="22" style="max-width: 100%; margin: 0; padding: 0;" /></div>&#13;
+							<span style="font-size: 14px;  margin: 0 0 0 4px; color: #fafafa; padding: 0;">Keep it. Find it.</span></td>&#13;&#13;
+					</tr>
+					<tr style="margin: 0;  padding: 0;" bgcolor="#eeeef5" border:0;><td style="margin: 0;  padding: 3px;">
+						<h4 style="font-size: 14px; font-weight: 400; line-height: 1.4; font-family: 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif; margin: 5px 5px 5px; color: #000; padding: 0;">Hi @recipient.firstName @recipient.lastName,</h4>&#13;
+						<p style="font-size: 14px; font-weight: normal; line-height: 1.4;  margin: 5px; padding: 0;">There are @unreadMessages.size unread messages in a conversation between <b>@Html(authors.mkString("</b>, <b>"))</b> and you on "<a href="@details.url">@details.title</a>".</p>&#13;
+					</td></tr>
+					</table></div>&#13;
+				&#13;
+		</td>&#13;
+		<td style="margin: 0;  padding: 0;"></td>&#13;
+	</tr></table><table style="margin: 0;  padding: 0; width: 100%;"><tr style="margin: 0;  padding: 0;"><td style="margin: 0;  padding: 0;"></td>&#13;
+		<td bgcolor="#FFFFFF" style="max-width: 600px !important; clear: both !important; margin: 0 auto; padding: 0;  display: block !important;">&#13;
+&#13;
+			<div style="max-width: 600px; margin: 0 auto; padding: 0px;  display: block;">&#13;
+			<table style="margin: 0;  padding: 0; width: 100%; background-color: #fff"><tr style="margin: 0;  padding: 0;"><td style="margin: 0;  padding: 0; font-family: 'Helvetica Neue', 'Helvetica', Helvetica;">&#13;
+						<p style="font-size: 14px; font-weight: normal; line-height: 1.6; margin: 5px 0; padding: 0; color:#666;">Here's what you missed:</p>&#13;
+						<table style="margin: 0; padding: 0 0 0 10px; width: 100%;">&#13;
+						  @for(message <- unreadMessages) {
+						    <tr style="padding:5px 10px 5px; background-color:#FFF;">
+									<td width="0%" style="margin: 0; vertical-align: top; padding: 0;"><img src="https://www.kifi.com/users/@message._2/pics/112/0.jpg" width="30" style="max-width: 100%;  margin: 0; padding: 8px 0 0;" /></td>&#13;
+									<td width="92%" style="margin: 0;  padding: 0px 0 0;"><span style="margin: 0; font-size: 14px; font-weight: bold;  padding: 0;">@message._1</span>&#13;
+									<p style="font-size: 14px; font-weight: normal; line-height: 1.4;  margin: 5px 0; padding: 0;">@message._3</p></td>&#13;
+								</tr>
+								&#13;
+						  }&#13;
+						</table><a href="@details.url" style="font-size: 14px; margin: 20px auto 0px; text-transform: none; background-color: #44aaf2; padding: 0; line-height: 30px;  text-decoration: none; color: #fafafa; display: block; text-align: center; border-radius: 3px; width: 50%;">Visit the page</a>&#13;
+						&#13;
+					</td>&#13;
+				</tr></table></div>&#13;
+									&#13;
+		</td>&#13;
+		<td style="margin: 0;  padding: 0;"></td>&#13;
+	</tr></table></body>
+</html>

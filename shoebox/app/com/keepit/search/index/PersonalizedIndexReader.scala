@@ -30,12 +30,12 @@ class PersonalizedIndexReader(mainReader: AtomicReader, personalReader: CachingI
   private[this] val mainFields: Fields = mainReader.fields
   private[this] val personalFields: Fields = personalReader.fields
   private[this] val fieldToFields: Map[String, Fields] = {
-    val m = mainFields.iterator.foldLeft(Map.empty[String, Fields]){ (m, f) => m + (f -> mainFields) }
-    personalFields.iterator.foldLeft(m){ (m, f) => m + (f -> personalFields) }
+    val m = personalFields.iterator.foldLeft(Map.empty[String, Fields]){ (m, f) => m + (f -> personalFields) }
+    mainFields.iterator.foldLeft(m){ (m, f) => m + (f -> mainFields) }
   }
   private[this] lazy val fieldToFieldInfo: Map[String, FieldInfo] = {
-    val m = mainReader.getFieldInfos.iterator.foldLeft(Map.empty[String, FieldInfo]){ (m, fi) => m + (fi.name -> fi) }
-    personalReader.getFieldInfos.iterator.foldLeft(m){ (m, fi) => m + (fi.name -> fi) }
+    val m = personalReader.getFieldInfos.iterator.foldLeft(Map.empty[String, FieldInfo]){ (m, fi) => m + (fi.name -> fi) }
+    mainReader.getFieldInfos.iterator.foldLeft(m){ (m, fi) => m + (fi.name -> fi) }
   }
 
   override def numDocs() = mainReader.numDocs

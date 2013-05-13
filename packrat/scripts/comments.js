@@ -78,7 +78,7 @@ commentsPane = function() {
           if (comment.isLoggedInUser && ($old = $posted.children("[data-id=]").first()).length) {
             $old.replaceWith($c);
           } else {
-            $posted.append($c).layout()[0].scrollTop = 99999;  // should we compare timestamps and insert in order?
+            $posted.append($c).scrollToBottom();  // should we compare timestamps and insert in order?
           }
           emitRead(comment);
         });
@@ -88,27 +88,24 @@ commentsPane = function() {
   function submitComment($container, session, e, text) {
     logEvent("slider", "comment");
     api.port.emit("post_comment", {
-      "url": document.URL,
-      "title": document.title,
-      "text": text,
-      "permissions": "public"
-    }, function(response) {
-      api.log("[submitComment] resp:", response);
-    });
+        url: document.URL,
+        title: document.title,
+        text: text},
+      function(resp) {
+        api.log("[submitComment] resp:", resp);
+      });
     renderComment({
-      "createdAt": new Date().toISOString(),
-      "text": text,
-      "user": {
-        "id": session.userId,
-        "firstName": session.name,
-        "lastName": "",
-        "facebookId": session.facebookId
-      },
-      "isLoggedInUser": true,
-      "id": ""
-    }, function($c) {
-      $posted.append($c).layout()[0].scrollTop = 99999;
-    });
+        createdAt: new Date().toISOString(),
+        text: text,
+        user: {
+          id: session.userId,
+          firstName: session.name,
+          lastName: ""},
+        isLoggedInUser: true,
+        id: ""},
+      function($c) {
+        $posted.append($c).scrollToBottom();
+      });
   }
 
   function renderComment(c, callback) {

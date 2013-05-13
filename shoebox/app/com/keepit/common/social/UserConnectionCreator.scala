@@ -1,29 +1,78 @@
 package com.keepit.common.social
 
-import com.google.inject.Inject
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.logging.Logging
-import com.keepit.model._
-import com.keepit.common.healthcheck.BabysitterTimeout
-import com.keepit.common.db.slick.Database
-import play.api.Play.current
-import play.api.libs.json.{JsArray, JsValue}
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.iteratee._
-import play.api.libs.concurrent._
 import scala.concurrent.duration._
 
-class SocialUserCreateConnections @Inject() (
+import org.joda.time.DateTime
+
+import com.google.inject.{ImplementedBy, Inject}
+import com.keepit.common.db.Id
+import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.BabysitterTimeout
+import com.keepit.common.logging.Logging
+import com.keepit.common.time._
+import com.keepit.model._
+import com.keepit.realtime.UserChannel
+import play.api.libs.json.Json
+
+import play.api.libs.json.{JsArray, JsValue}
+
+object UserConnectionCreator {
+  private val UpdatedUserConnectionsKey = "updated_user_connections"
+}
+
+@ImplementedBy(classOf[NoOpConnectionUpdater])
+trait ConnectionUpdater {
+  def updateConnectionsIfNecessary(userId: Id[User])
+}
+
+class NoOpConnectionUpdater extends ConnectionUpdater {
+  def updateConnectionsIfNecessary(userId: Id[User]) {}
+}
+
+class UserConnectionCreator @Inject() (
     db: Database,
     socialRepo: SocialUserInfoRepo,
-    connectionRepo: SocialConnectionRepo)
-  extends Logging {
+    socialConnectionRepo: SocialConnectionRepo,
+    userConnectionRepo: UserConnectionRepo,
+    userValueRepo: UserValueRepo,
+    clock: Clock,
+    userChannel: UserChannel,
+    basicUserRepo: BasicUserRepo)
+  extends ConnectionUpdater with Logging {
 
   def createConnections(socialUserInfo: SocialUserInfo, parentJson: Seq[JsValue]): Seq[SocialConnection] = {
-	  disableConnectionsNotInJson(socialUserInfo, parentJson)
-	  createConnectionsFromJson(socialUserInfo, parentJson)
+    disableConnectionsNotInJson(socialUserInfo, parentJson)
+    val socialConnections = createConnectionsFromJson(socialUserInfo, parentJson)
+    socialUserInfo.userId.map(updateUserConnections)
+    socialConnections
+  }
+
+  def updateConnectionsIfNecessary(userId: Id[User]) {
+    if (getConnectionsLastUpdated(userId).isEmpty) {
+      updateUserConnections(userId)
+    }
+  }
+
+  def getConnectionsLastUpdated(userId: Id[User]): Option[DateTime] = db.readOnly { implicit s =>
+    userValueRepo.getValue(userId, UserConnectionCreator.UpdatedUserConnectionsKey) map parseStandardTime
+  }
+
+  def updateUserConnections(userId: Id[User]) {
+    db.readWrite { implicit s =>
+      val existingConnections = userConnectionRepo.getConnectedUsers(userId)
+      val updatedConnections = socialConnectionRepo.getFortyTwoUserConnections(userId)
+
+      userConnectionRepo.removeConnections(userId, existingConnections diff updatedConnections)
+
+      val newConnections = updatedConnections diff existingConnections
+      if (newConnections.nonEmpty) userChannel.push(userId, Json.arr("new_friends", newConnections.map(basicUserRepo.load)))
+      newConnections.foreach { connId =>
+        log.info("Sending new connection to user $connId (to $userId)")
+        userChannel.push(connId, Json.arr("new_friends", Set(basicUserRepo.load(userId))))
+      }
+      userConnectionRepo.addConnections(userId, newConnections)
+      userValueRepo.setValue(userId, UserConnectionCreator.UpdatedUserConnectionsKey, clock.now.toStandardTimeString)
+    }
   }
 
   private def extractFriendsWithConnections(socialUserInfo: SocialUserInfo, parentJson: Seq[JsValue]): Seq[(SocialUserInfo, Option[SocialConnection])] = {
@@ -32,7 +81,7 @@ class SocialUserCreateConnections @Inject() (
       parentJson flatMap extractFriends map extractSocialId map {
         socialRepo.get(_, SocialNetworks.FACEBOOK)
       } map { sui =>
-        (sui, connectionRepo.getConnectionOpt(socialUserInfo.id.get, sui.id.get))
+        (sui, socialConnectionRepo.getConnectionOpt(socialUserInfo.id.get, sui.id.get))
       }
     }
   }
@@ -46,13 +95,13 @@ class SocialUserCreateConnections @Inject() (
           case _ =>
             log.debug(s"activate connection between ${c.socialUser1} and ${c.socialUser2}")
             db.readWrite { implicit s =>
-              connectionRepo.save(c.withState(SocialConnectionStates.ACTIVE))
+              socialConnectionRepo.save(c.withState(SocialConnectionStates.ACTIVE))
             }
         }
       case (friend, None) =>
         log.debug(s"a new connection was created between ${socialUserInfo} and friend.id.get")
         db.readWrite { implicit s =>
-          connectionRepo.save(SocialConnection(socialUser1 = socialUserInfo.id.get, socialUser2 = friend.id.get))
+          socialConnectionRepo.save(SocialConnection(socialUser1 = socialUserInfo.id.get, socialUser2 = friend.id.get))
         }
     }
   }
@@ -61,7 +110,7 @@ class SocialUserCreateConnections @Inject() (
     log.info("looking for connections to disable for user %s".format(socialUserInfo.fullName))
     db.readWrite { implicit s =>
       val socialUserInfoForAllFriendsIds = parentJson flatMap extractFriends map extractSocialId
-	    val existingSocialUserInfoIds = connectionRepo.getUserConnections(socialUserInfo.userId.get).toSeq map {sui => sui.socialId}
+	    val existingSocialUserInfoIds = socialConnectionRepo.getUserConnections(socialUserInfo.userId.get).toSeq map {sui => sui.socialId}
 	    log.debug("socialUserInfoForAllFriendsIds = %s".format(socialUserInfoForAllFriendsIds))
 	    log.debug("existingSocialUserInfoIds = %s".format(existingSocialUserInfoIds))
 	    log.info("size of diff =%s".format((existingSocialUserInfoIds diff socialUserInfoForAllFriendsIds).length))
@@ -69,11 +118,11 @@ class SocialUserCreateConnections @Inject() (
 	      socialId => {
 	        val friendSocialUserInfoId = socialRepo.get(socialId, SocialNetworks.FACEBOOK).id.get
 		      log.info("about to disbale connection between %s and for socialId = %s".format(socialUserInfo.id.get,friendSocialUserInfoId ));
-	        connectionRepo.getConnectionOpt(socialUserInfo.id.get, friendSocialUserInfoId) match {
+	        socialConnectionRepo.getConnectionOpt(socialUserInfo.id.get, friendSocialUserInfoId) match {
             case Some(c) => {
               if (c.state != SocialConnectionStates.INACTIVE){
                 log.info("connection is disabled")
-            	  connectionRepo.save(c.withState(SocialConnectionStates.INACTIVE))
+            	  socialConnectionRepo.save(c.withState(SocialConnectionStates.INACTIVE))
               }
               else {
                 log.info("connection is already disabled")

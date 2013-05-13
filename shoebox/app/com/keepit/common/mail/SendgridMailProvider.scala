@@ -43,7 +43,7 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
 
     val auth = new SMTPAuthenticator()
     val mailSession = Session.getInstance(props, auth)
-//    mailSession.setDebug(log.isDebugEnabled)
+    mailSession.setDebug(log.isDebugEnabled)
     mailSession.setDebug(true)
     mailSession
   }
@@ -105,20 +105,25 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
   /**
    * Please see http://sendgrid.com/docs/API%20Reference/SMTP%20API/index.html for docs
    */
-  def sendMail(mail: ElectronicMail): ElectronicMail = {
-    val message = createMessage(mail)
-    val transport = getLiveTransport()
-    try {
-      transport.sendMessage(message, message.getRecipients(Message.RecipientType.TO))
-      val messageId = message.getHeader(MailProvider.MESSAGE_ID)(0).trim
-      log.info("mail %s sent with new Message-ID: %s".format(mail.externalId, messageId))
-      db.readWrite { implicit s =>
-        mailRepo.save(mail.sent("message sent", ElectronicMailMessageId.fromEmailHeader(messageId)))
+  def sendMail(mail: ElectronicMail) {
+    if (mail.isReadyToSend) {
+      val checkAgain = db.readOnly(mailRepo.getOpt(mail.id.get)(_)).map(_.isReadyToSend).getOrElse(false)
+      if(checkAgain) {
+        val message = createMessage(mail)
+        val transport = getLiveTransport()
+        try {
+          transport.sendMessage(message, message.getRecipients(Message.RecipientType.TO))
+          val messageId = message.getHeader(MailProvider.MESSAGE_ID)(0).trim
+          log.info("mail %s sent with new Message-ID: %s".format(mail.externalId, messageId))
+          db.readWrite { implicit s =>
+            mailRepo.save(mail.sent("message sent", ElectronicMailMessageId.fromEmailHeader(messageId)))
+          }
+        } catch {
+          case e: Throwable =>
+            log.error(e.toString)
+            mailError(mail, e.toString(), transport)
+        }
       }
-    } catch {
-      case e: Throwable =>
-        log.error(e.toString)
-        mailError(mail, e.toString(), transport)
     }
   }
 
@@ -148,12 +153,19 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
     val fromName: String = mail.fromName.getOrElse(mail.from.address)
     message.setFrom(new InternetAddress(mail.from.address, fromName, "UTF-8"))
 
-    val recipientAddr = Play.isProd match {
-      case true => mail.to.address
-      case false => System.getProperty("user.name") + "@42go.com"
+    val recipientAddr: Array[Address] = Play.isProd match {
+      case true => (mail.to map { e => new InternetAddress(e.address) }).toArray
+      case false => Array(new InternetAddress(System.getProperty("user.name") + "+test_to@42go.com"))
     }
     message.setSubject(mail.subject)
-    message.addRecipient(Message.RecipientType.TO, new InternetAddress(recipientAddr))
+    message.addRecipients(Message.RecipientType.TO, recipientAddr)
+    if (!mail.cc.isEmpty) {
+      val recipientCCAddr: Array[Address] = Play.isProd match {
+        case true => (mail.cc map { e => new InternetAddress(e.address) }).toArray
+        case false => Array(new InternetAddress(System.getProperty("user.name") + "+test_cc@42go.com"))
+      }
+      message.addRecipients(Message.RecipientType.CC, recipientCCAddr)
+    }
     message
   }
 

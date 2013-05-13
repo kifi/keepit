@@ -87,9 +87,11 @@ private[classify] class DomainTagImportActor @Inject() (
         WS.url(settings.url).get().onSuccess { case res =>
           persistEvent(IMPORT_START, JsObject(Seq()))
           val startTime = currentDateTime
-          postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
-            subject = "Domain import started", htmlBody = s"Domain import started at $startTime",
-            category = PostOffice.Categories.ADMIN))
+          db.readWrite { implicit s =>
+            postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+              subject = "Domain import started", htmlBody = s"Domain import started at $startTime",
+              category = PostOffice.Categories.ADMIN))
+          }
           val s = new FileOutputStream(outputPath)
           try {
             IOUtils.copy(res.getAHCResponse.getResponseBodyAsStream, s)
@@ -121,13 +123,15 @@ private[classify] class DomainTagImportActor @Inject() (
             "totalDomains" -> JsNumber(total)
           )))
           val endTime = currentDateTime
-          postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = EmailAddresses.ENG,
-            subject = "Domain import finished",
-            htmlBody =
-                s"Domain import started at $startTime and completed successfully at $endTime " +
-                s"with $added domain-tag pairs added, $removed domain-tag pairs removed, " +
-                s"and $total total domain-tag pairs.",
-            category = PostOffice.Categories.ADMIN))
+          db.readWrite { implicit s =>
+            postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+              subject = "Domain import finished",
+              htmlBody =
+                  s"Domain import started at $startTime and completed successfully at $endTime " +
+                  s"with $added domain-tag pairs added, $removed domain-tag pairs removed, " +
+                  s"and $total total domain-tag pairs.",
+              category = PostOffice.Categories.ADMIN))
+          }
         }
       } catch {
         case e: Exception => failWithException(IMPORT_FAILURE, e)
@@ -142,9 +146,12 @@ private[classify] class DomainTagImportActor @Inject() (
     case RemoveTag(tagName) =>
       try {
         val result: Option[DomainTag] = withSensitivityUpdate {
-          db.readWrite { implicit s =>
-            tagRepo.get(tagName, excludeState = None).map { tag =>
-              applyTagToDomains(tagName, Seq())
+          val tagOpt = db.readWrite { implicit s =>
+            tagRepo.get(tagName, excludeState = None)
+          }
+          tagOpt.map { tag =>
+            applyTagToDomains(tagName, Seq())
+            db.readWrite { implicit s =>
               tagRepo.save(tag.withState(DomainTagStates.INACTIVE))
             }
           }

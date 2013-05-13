@@ -1,6 +1,6 @@
 <div class="kifi-kcard">
   <div class="kifi-kcard-top">
-    <img class="kifi-kcard-pic" src="https://graph.facebook.com/{{facebookId}}/picture?width=200&amp;height=200">
+    <img class="kifi-kcard-pic" src="{{cdnBase}}/users/{{id}}/pics/200/0.jpg">
     <div class="kifi-kcard-info">
       <div class="kifi-kcard-name">{{name}}</div>
       <div class="kifi-kcard-label">Relevant interests:</div>
@@ -9,15 +9,11 @@
       </div>
       <div class="kifi-kcard-label">Connected to you through:</div>
       <div class="kifi-kcard-networks">
-        <a class="kifi-kcard-nw kifi-kcard-nw-fb" style="background-image:url({{iconsUrl}})" href="http://www.facebook.com/{{facebookId}}"></a>
+        <a class="kifi-kcard-nw kifi-kcard-nw-fb" style="background-image:url({{iconsUrl}})" href="http://www.facebook.com/{{networkIds.facebook}}"></a>
         <a class="kifi-kcard-nw kifi-kcard-nw-in" style="background-image:url({{iconsUrl}})"></a>
         <a class="kifi-kcard-nw kifi-kcard-nw-tw" style="background-image:url({{iconsUrl}})"></a>
         <a class="kifi-kcard-nw kifi-kcard-nw-pn" style="background-image:url({{iconsUrl}})"></a>
       </div>
     </div>
-  </div>
-  <div class="kifi-kcard-bottom">
-    <span class="kifi-kcard-mutual"></span>
-    <span class="kifi-kcard-button kifi-kcard-view-keeps">View keeps</span>
   </div>
 </div>

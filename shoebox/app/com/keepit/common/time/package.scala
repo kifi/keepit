@@ -1,12 +1,14 @@
 package com.keepit.common
 
-import com.google.inject.Singleton
+import com.google.inject.{ImplementedBy, Singleton}
 import java.util.Locale
 import org.joda.time.{DateTime, DateTimeZone, LocalDate, LocalTime}
 import org.joda.time.format._
 import play.api.libs.json.{JsValue, Format}
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsString
+import play.api.libs.json.JsError
+import play.api.libs.json.JsPath
 
 package object time {
   object zones {
@@ -45,7 +47,14 @@ package object time {
   val STANDARD_DATE_FORMAT = ISODateTimeFormat.date.withLocale(Locale.ENGLISH).withZone(zones.PT)
 
   implicit val DateTimeJsonFormat: Format[DateTime] = new Format[DateTime] {
-    def reads(json: JsValue) = JsSuccess(parseStandardTime(json.as[String]))
+    def reads(json: JsValue) = try {
+      json.asOpt[String] match {
+        case Some(timeStr) => JsSuccess(parseStandardTime(timeStr))
+        case None => JsSuccess(new DateTime(json.as[Long]))
+      }
+    } catch {
+      case ex: Throwable => JsError(s"Could not deserialize time $json")
+    }
     def writes(o: DateTime) = JsString(o.toStandardTimeString)
   }
 
@@ -60,12 +69,19 @@ package object time {
    * For example, if a repo need a clock to time the update time of an entity then it should not use a DateTime that it got while
    * instantiating, it should use a clock and ask it each time for a new timestamp.
    * Avoiding the time object injection would help us avoid these very hard to spot bugs.
-  */
+   */
+  @ImplementedBy(classOf[SystemClock])
+  trait Clock {
+    def getMillis(): Long
+
+    final def today()(implicit zone: DateTimeZone): LocalDate = new LocalDate(getMillis(), zone)
+    final def now()(implicit zone: DateTimeZone): DateTime = new DateTime(getMillis(), zone)
+  }
+
+
   @Singleton
-  class Clock() {
-    val clockZone: DateTimeZone = DEFAULT_DATE_TIME_ZONE
-    def today: LocalDate = new LocalDate(clockZone)
-    def now: DateTime = new DateTime(clockZone)
+  class SystemClock() extends Clock {
+    def getMillis(): Long = System.currentTimeMillis()
   }
 
   implicit val localDateOrdering = new Ordering[LocalDate] {

@@ -9,7 +9,6 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.serializer.BasicUserSerializer
 import com.keepit.serializer.BookmarkSerializer
 import play.api.libs.json._
 
@@ -68,7 +67,7 @@ class ExtBookmarksController @Inject() (
       case Some("PLUGIN_START") => Forbidden
       case _ =>
         log.info("adding bookmarks of user %s".format(userId))
-        val experiments = request.experimants
+        val experiments = request.experiments
         val user = db.readOnly { implicit s => userRepo.get(userId) }
         bookmarkManager.internBookmarks(json \ "bookmarks", user, experiments, BookmarkSource(bookmarkSource.getOrElse("UNKNOWN")), installationId)
         searchClient.updateURIGraph()
