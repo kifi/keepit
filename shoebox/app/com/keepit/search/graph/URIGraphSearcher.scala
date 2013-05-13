@@ -147,12 +147,10 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) {
   }
 
   private def getURIList(field: String, userDocId: Int): URIList = {
-    var uriList: Option[URIList] = None
-
     if (userDocId >= 0) {
       var docValues = reader.getBinaryDocValues(field)
-      var ref = new BytesRef()
       if (docValues != null) {
+        var ref = new BytesRef()
         docValues.get(userDocId, ref)
         if (ref.length > 0) {
           return URIList(ref.bytes, ref.offset, ref.length)
@@ -160,8 +158,8 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) {
       } else {
         // backward compatibility
         var docValues = reader.getBinaryDocValues(userField)
-        var ref = new BytesRef()
         if (docValues != null) {
+          var ref = new BytesRef()
           docValues.get(userDocId, ref)
           if (ref.length > 0) {
             val old = URIList(ref.bytes, ref.offset, ref.length).asInstanceOf[URIListOld]
