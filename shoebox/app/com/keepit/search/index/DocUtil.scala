@@ -71,7 +71,7 @@ object DocUtil {
   object IdValueFieldDecoder extends FieldDecoder
 
   object URIListDecoder extends FieldDecoder {
-    override def decodePayload(payload: BytesRef) = {
+    override def apply(indexableField: IndexableField): String = {
       var seqno = -1
       def toString(ids: Array[Long], timestamps: Array[Long]) = {
         ids.zip(timestamps).map{ case (id, timestamp) =>
@@ -79,9 +79,8 @@ object DocUtil {
           "#%d: %d [%s]".format(seqno, id, new DateTime(URIList.unitToMillis(timestamp), DEFAULT_DATE_TIME_ZONE).toStandardTimeString)
         }.mkString(", ")
       }
-      val payloadBuffer = new Array[Byte](payload.length)
-      System.arraycopy(payload.bytes, payload.offset, payloadBuffer, 0, payload.length)
-      val uriList = URIList(payloadBuffer)
+      val payload = indexableField.binaryValue
+      val uriList = URIList(payload.bytes, payload.offset, payload.length)
       val printable = toString(uriList.ids, uriList.createdAt)
       "version=%d [%s]".format(uriList.version, printable)
     }

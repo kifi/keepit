@@ -28,7 +28,7 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) {
   private[this] lazy val myInfo: Option[UserInfo] = {
     myUserId.map{ id =>
       val docid = reader.getIdMapper.getDocId(id.id)
-      UserInfo(id, docid, getURIList(publicListField, docid), getURIList(publicListField, docid))
+      UserInfo(id, docid, getURIList(publicListField, docid), getURIList(privateListField, docid))
     }
   }
 
