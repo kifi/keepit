@@ -25,6 +25,9 @@ $(function() {
   $("[name=show_scores]").prop("checked", api.prefs.get("showScores")).click(function() {
     api.prefs.set("showScores", this.checked);
   });
+  $("[name=suppress_log]").prop("checked", api.prefs.get("suppressLog")).click(function() {
+    api.prefs.set("suppressLog", this.checked);
+  });
 
   $("#log-out").click(function(e) {
     e.preventDefault();
