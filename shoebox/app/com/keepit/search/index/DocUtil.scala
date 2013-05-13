@@ -81,10 +81,9 @@ object DocUtil {
       }
       val payloadBuffer = new Array[Byte](payload.length)
       System.arraycopy(payload.bytes, payload.offset, payloadBuffer, 0, payload.length)
-      val uriList = new URIList(payloadBuffer)
-      val publicList = toString(uriList.publicList, uriList.publicCreatedAt)
-      val privateList = toString(uriList.privateList, uriList.privateCreatedAt)
-      "public[%s] private[%s]".format(publicList, privateList)
+      val uriList = URIList(payloadBuffer)
+      val printable = toString(uriList.ids, uriList.createdAt)
+      "version=%d [%s]".format(uriList.version, printable)
     }
   }
 
