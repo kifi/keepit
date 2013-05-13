@@ -1,6 +1,6 @@
 var api = api || require("./api");
 
-const NOTIFICATION_BATCH_SIZE = 10;  // also in notices.js
+const NOTIFICATION_BATCH_SIZE = 10;
 
 var tabsShowingNotificationsPane = [];
 var notificationsCallbacks = [];
