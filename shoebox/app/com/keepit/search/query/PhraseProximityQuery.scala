@@ -57,7 +57,12 @@ class PhraseHelper(terms: Seq[String], phrases: Set[(Int, Int)]) {
     var phraseId = Map.empty[String, (Int, Int)]
     var cnt = 0
     val nonPhraseIdx = for( i <- 0 until inPhrase.size ; if ( inPhrase(i) == 0 )) yield i
-    nonPhraseIdx.foreach{ i => if (!phraseId.contains(terms(i))) phraseId += terms(i) -> (cnt, 1); cnt += 1; }
+    nonPhraseIdx.foreach{ i =>
+      if (!phraseId.contains(terms(i))) {
+        phraseId += terms(i) -> (cnt, 1)
+        cnt += 1
+      }
+    }
     phrases.foreach{ case (pos, len) => {
        val phrase = terms.slice(pos, pos + len).mkString(" ")
        if (!phraseId.contains(phrase)) { phraseId += phrase -> (cnt, len); cnt += 1; }
