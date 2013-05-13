@@ -1,6 +1,6 @@
 var api = api || require("./api");
 
-const NOTIFICATION_BATCH_SIZE = 10;  // also in notices.js
+const NOTIFICATION_BATCH_SIZE = 10;
 
 var tabsShowingNotificationsPane = [];
 var notificationsCallbacks = [];
@@ -535,9 +535,11 @@ api.port.on({
   old_notifications: function(timeStr, respond) {
     var time = new Date(timeStr);
     var n = notifications.length, oldest = notifications[n-1];
-    if (new Date(oldest.time) < time || haveAllNotifications) {
+    if (new Date(oldest.time) < time) {
       for (var i = n - 1; i && new Date(notifications[i-1].time) < time; i--);
       respond(notifications.slice(i, i + NOTIFICATION_BATCH_SIZE));
+    } else if (haveAllNotifications) {
+      respond([]);
     } else {
       socket.send(["get_old_notifications", timeStr, NOTIFICATION_BATCH_SIZE], function(arr) {
         if (notifications[notifications.length - 1] === oldest) {

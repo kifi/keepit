@@ -16,7 +16,6 @@
 // (TBD whether focus is also required).
 
 noticesPane = function() {
-  const NOTIFICATION_BATCH_SIZE = 10;  // how many are requested at once (also in main.js)
   const PIXELS_FROM_BOTTOM = 40; // load more notifications when this many pixels from the bottom
   const NEW_FADE_TIMEOUT = 1000; // number of ms to wait before starting to fade
   const NEW_FADE_DURATION = 3000; // length of the fade
@@ -38,10 +37,7 @@ noticesPane = function() {
         $notices.on("click", ".kifi-notice", function() {
           api.port.emit("open_deep_link", {nUri: this.dataset.uri, locator: this.dataset.locator});
           return false;
-        });
-        if (notices.length >= NOTIFICATION_BATCH_SIZE) {  // might be more
-          $notices.scroll(onScroll);
-        }
+        }).scroll(onScroll);
 
         fadeOutNew($notices.find(".kifi-notice-new"));
 
@@ -129,10 +125,11 @@ noticesPane = function() {
         $oldest.data("lastOlderReqTime", now);
         api.port.emit("old_notifications", $oldest.find("time").attr("datetime"), function(notices) {
           if ($notices) {
-            $(notices.map(function(n) {return renderNotice(n, false)}).join(""))
-              .find("time").timeago().end()
-              .appendTo($notices);
-            if (notices.length < NOTIFICATION_BATCH_SIZE) {
+            if (notices.length) {
+              $(notices.map(function(n) {return renderNotice(n, false)}).join(""))
+                .find("time").timeago().end()
+                .appendTo($notices);
+            } else {
               $notices.off("scroll", onScroll);  // got 'em all
             }
           }
