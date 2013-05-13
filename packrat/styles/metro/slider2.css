@@ -94,10 +94,18 @@
   z-index: 999999999992;
   bottom: 0;
   right: 0;
-  height: 68px;
+  height: 54px;
   width: 142px;
   font: 12px "Helvetica Neue",arial,sans-serif;
   direction: ltr;
+}
+.kifi-slider2:hover {
+  border: 14px solid transparent;
+  border-right: none;
+  margin: -14px 0;
+}
+.kifi-with-pane .kifi-slider2:hover {
+  border-left: none;
 }
 .kifi-slider2.kifi-wide {
   width: 322px;
