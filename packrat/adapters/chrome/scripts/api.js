@@ -1,6 +1,6 @@
 // API for content scripts
 
-api = function() {
+var api = function() {
   var msgHandlers = [], callbacks = {}, nextCallbackId = 1;
 
   var port = chrome.runtime.connect({name: ""});
@@ -42,7 +42,7 @@ api = function() {
     };
     req.send(null);
   },
-  log: function() {
+  log: api && api.log || function() {
     var d = new Date, ds = d.toString();
     arguments[0] = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] " + arguments[0];
     console.log.apply(console, arguments);
