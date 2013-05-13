@@ -259,6 +259,9 @@ api = function() {
     }
     page.injecting = true;
 
+    if (api.prefs.get("suppressLog")) {
+      chrome.tabs.executeScript(page.id, {code: "var api=api||{};api.log=function(){}", runAt: "document_start"}, api.noop);
+    }
     for (var i = 0, n = 0, N = 0; i < meta.contentScripts.length; i++) {
       var cs = meta.contentScripts[i];
       if (cs[1].test(page.url)) {
