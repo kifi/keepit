@@ -79,9 +79,9 @@ extends Searcher(indexReader) with Logging {
     val sampler = new IdSampler(64, term.hashCode.toLong)
     val subReaders = indexReader.wrappedSubReaders
     val composer = new SemanticVectorComposer
-    val vector = new SemanticVector(new Array[Byte](SemanticVector.arraySize))
     var i = 0
     var cnt = 0
+    val minMyCount = 3
     while (i < subReaders.length) {
       val subReader = subReaders(i)
       val idMapper = subReader.getIdMapper
@@ -94,7 +94,7 @@ extends Searcher(indexReader) with Logging {
             else if (browsingFilter.mayContain(id)) scaledWeightBrowsingHistory
             else if (myUris.contains(id)) scaledWeightMyBookMarks
             else {
-              if (friendUris.contains(id)) sampler.put(id)
+              if (cnt < minMyCount && friendUris.contains(id)) sampler.put(id)
               0
             }
           }
@@ -105,8 +105,7 @@ extends Searcher(indexReader) with Logging {
               tp.nextPosition()
               val payload = tp.getPayload()
               if (payload != null) {
-                vector.set(payload.bytes, payload.offset, payload.length)
-                composer.add(vector, weight)
+                composer.add(payload.bytes, payload.offset, payload.length, weight)
               } else {
                 log.error(s"payload is missing: term=${term.toString}")
               }
@@ -118,7 +117,7 @@ extends Searcher(indexReader) with Logging {
     }
     val samples = sampler.getIdSet
     val sampleSize = samples.size
-    if (cnt < 3 && sampleSize > 0) {
+    if (cnt < minMyCount && sampleSize > 0) {
       val weight = composer.numInputs / sampleSize
       addSampledSemanticVectors(composer, samples, term, if (weight > 0) weight else 1)
     }
@@ -130,7 +129,6 @@ extends Searcher(indexReader) with Logging {
     var idsToCheck = samples.size // for early stop: don't need to go through every subreader
 
     val subReaders = indexReader.wrappedSubReaders
-    val vector = new SemanticVector(new Array[Byte](SemanticVector.arraySize))
     var i = 0
     while (i < subReaders.length && idsToCheck > 0) {
       val subReader = subReaders(i)
@@ -144,8 +142,7 @@ extends Searcher(indexReader) with Logging {
               tp.nextPosition()
               val payload = tp.getPayload()
               if (payload != null) {
-                vector.set(payload.bytes, payload.offset, payload.length)
-                composer.add(vector, weight)
+                composer.add(payload.bytes, payload.offset, payload.length, weight)
               } else {
                 log.error(s"payload is missing: term=${term.toString}")
               }
