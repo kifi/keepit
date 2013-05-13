@@ -40,7 +40,7 @@ object ApplicationBuild extends Build {
       "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
       "org.kevoree.extra.xmpp.lib" % "smack" % "3.2.2",
-      "edu.stanford.nlp" % "stanford-corenlp" % "1.3.5" artifacts (Artifact("stanford-corenlp", "models"), Artifact("stanford-corenlp")),
+      "edu.stanford.nlp" % "stanford-corenlp" % "1.3.5", //artifacts (Artifact("stanford-corenlp", "models"), Artifact("stanford-corenlp")),
       "org.apache.lucene" % "lucene-core" % "4.2.1",
       "org.apache.lucene" % "lucene-analyzers-common" % "4.2.1",
       "org.apache.lucene" % "lucene-suggest" % "4.2.1",
