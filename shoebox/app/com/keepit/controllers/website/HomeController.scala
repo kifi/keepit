@@ -27,13 +27,9 @@ class HomeController @Inject() (db: Database,
 
   def kifiSite(path: String) = AuthenticatedHtmlAction { implicit request =>
     if (request.experiments.contains(ExperimentTypes.ADMIN) || Play.isDev) {
-      val file = Play.getFile(s"/public/site/$path")
-      if (file.exists) {
-        SimpleResult(
-          header = ResponseHeader(OK),
-          body = Enumerator.fromFile(file)
-        )
-      } else NotFound
+      Play.resourceAsStream(s"public/site/$path") map { stream =>
+        SimpleResult(header = ResponseHeader(OK), body = Enumerator.fromStream(stream))
+      } getOrElse NotFound
     } else NotFound
   }
 
