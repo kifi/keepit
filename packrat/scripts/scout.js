@@ -20,7 +20,8 @@ var injected, t0 = +new Date, tile, paneHistory;
   var tileCount, onScroll;
   api.port.on({
     new_notification: function(n) {
-      if (n.state != "visited" && (!paneHistory || paneHistory[0] != n.details.locator)) {
+      if (n.state != "visited" &&
+          (!paneHistory || (paneHistory[0] != n.details.locator && paneHistory[0] != "/notices")) {
         api.require("scripts/notifier.js", function() {
           notifier.show(n);
         });
@@ -33,7 +34,7 @@ var injected, t0 = +new Date, tile, paneHistory;
     auto_show: keeper.bind(null, "show", "auto"),
     kept: function(o) {
       if (!tile) {
-        insertTile(o.hide);
+        insertTile(o.hide, o.position);
       }
       if (o.kept) {
         tile.dataset.kept = o.kept;
@@ -117,24 +118,48 @@ var injected, t0 = +new Date, tile, paneHistory;
     });
   }
 
-  function insertTile(hide) {
+  function insertTile(hide, pos) {
     while (tile = document.getElementById("kifi-tile")) {
       tile.parentNode.removeChild(tile);
     }
     tile = document.createElement("div");
-
     tile.id = "kifi-tile";
     tile.style.display = "none";
+    if (pos) {
+      tile.style.top = pos.top ? pos.top + "px" : "auto";
+      tile.style.bottom = pos.bottom ? pos.bottom + "px" : "auto";
+      tile.dataset.pos = JSON.stringify(pos);
+    }
     tile.innerHTML = "<div class=kifi-tile-transparent style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>";
     tileCount = document.createElement("span");
     tileCount.className = "kifi-count";
     document.documentElement.appendChild(tile);
     tile.addEventListener("mouseover", keeper.bind(null, "show", "tile"));
+    window.addEventListener("resize", onResize);
     api.require("styles/metro/tile.css", function() {
       if (!hide) {
         tile.style.display = "";
       }
     });
+  }
+
+  function onResize() {  // goal: keep tile in window  // TODO: fix this!
+    var pos = tile.dataset.pos;
+    if (!pos) return;
+    pos = JSON.parse(pos);
+    var r = tile.getBoundingClientRect(), h = window.innerHeight;
+    const m = 6;  // margin: 6px (faster not to measure)
+    if (pos.bottom) {
+      var bot = Math.max(0, Math.min(pos.bottom, h - r.height - m - m));
+      if (r.bottom != bot) {
+        tile.style.bottom = bot + "px";
+      }
+    } else if (pos.top) {
+      var top = Math.max(0, Math.min(pos.top, h - r.height - m - m));
+      if (r.top != top) {
+        tile.style.top = top + "px";
+      }
+    }
   }
 
   setTimeout(function checkIfUseful() {
