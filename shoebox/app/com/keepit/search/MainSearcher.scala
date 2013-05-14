@@ -303,7 +303,7 @@ class MainSearcher(
 
   private def classify(parsedQuery: Query, hitList: List[MutableArticleHit], clickBoosts: ResultClickTracker.ResultClickBoosts, personalizedSearcher: PersonalizedSearcher) = {
     def classify(hit: MutableArticleHit) = {
-      clickBoosts(hit.id) > 1.25f || (hit.scoring.textScore >= 0.04f && hit.semanticScore >= 0.28f)
+      clickBoosts(hit.id) > 1.25f || hit.scoring.recencyScore > 0.25f || hit.scoring.textScore > 0.7f || (hit.scoring.textScore >= 0.04f && hit.semanticScore >= 0.28f)
     }
     hitList.take(3).exists(classify(_))
   }
