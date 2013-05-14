@@ -95,6 +95,10 @@ GET     /ext/ws                     @com.keepit.controllers.ext.ExtStreamControl
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
 
+# Temporary hack for kifi.com site before we fully integrate it with Play!
+GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html")
+GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSite(path: String)
+
 ##########################################
 # Admin
 ##########################################
