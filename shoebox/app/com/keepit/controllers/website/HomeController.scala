@@ -7,6 +7,7 @@ import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick._
 import com.keepit.common.mail.{EmailAddresses, ElectronicMail, PostOffice}
 import com.keepit.model._
+import com.keepit.common.mail.EmailAddresses
 
 import play.api.Play.current
 import play.api._
@@ -22,7 +23,8 @@ class HomeController @Inject() (db: Database,
   userConnectionRepo: UserConnectionRepo,
   invitationRepo: InvitationRepo,
   actionAuthenticator: ActionAuthenticator,
-  postOffice: PostOffice)
+  postOffice: PostOffice,
+  emailAddressRepo: EmailAddressRepo)
   extends WebsiteController(actionAuthenticator) {
 
   def kifiSite(path: String) = AuthenticatedHtmlAction { implicit request =>
@@ -100,7 +102,23 @@ class HomeController @Inject() (db: Database,
       socialUserRepo.getByUser(request.user.id.get) map { su =>
         invitationRepo.getByRecipient(su.id.get) match {
           case Some(invite) =>
-            invitationRepo.save(invite.withState(InvitationStates.JOINED))
+            if(invite.state != InvitationStates.JOINED) {
+              invitationRepo.save(invite.withState(InvitationStates.JOINED))
+              invite.senderUserId match {
+                case Some(senderUserId) =>
+                  for (address <- emailAddressRepo.getByUser(senderUserId)) {
+                    postOffice.sendMail(ElectronicMail(
+                      senderUserId = None,
+                      from = EmailAddresses.CONGRATS,
+                      fromName = Some("KiFi Team"),
+                      to = List(address),
+                      subject = s"@request.user.firstName @request.user.lastName joined KiFi!",
+                      htmlBody = views.html.email.invitationAccept(request.user).body,
+                      category = PostOffice.Categories.INVITATION))
+                  }
+                case None => 
+              }
+            }
           case None =>
         }
       }
