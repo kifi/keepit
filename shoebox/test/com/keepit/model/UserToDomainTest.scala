@@ -27,9 +27,9 @@ class UserToDomainTest extends Specification with DbRepos {
           val d1 = inject[DomainRepo].save(Domain(hostname = "outlook.com"))
           val d2 = inject[DomainRepo].save(Domain(hostname = "audible.com"))
           (u1, u2, d1, d2,
-           repo.save(UserToDomain(None, u1.id.get, d1.id.get, UserToDomainKinds.NEVER_SHOW)),
-           repo.save(UserToDomain(None, u1.id.get, d2.id.get, UserToDomainKinds.NEVER_SHOW)),
-           repo.save(UserToDomain(None, u2.id.get, d2.id.get, UserToDomainKinds.NEVER_SHOW)))
+           repo.save(UserToDomain(None, u1.id.get, d1.id.get, UserToDomainKinds.NEVER_SHOW, None)),
+           repo.save(UserToDomain(None, u1.id.get, d2.id.get, UserToDomainKinds.NEVER_SHOW, None)),
+           repo.save(UserToDomain(None, u2.id.get, d2.id.get, UserToDomainKinds.NEVER_SHOW, None)))
         }
 
         inject[Database].readOnly{ implicit session =>
