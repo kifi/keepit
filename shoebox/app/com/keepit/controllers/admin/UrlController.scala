@@ -61,10 +61,14 @@ class UrlController @Inject() (
 
   def renormalize(readOnly: Boolean = true, domain: Option[String] = None) = AdminHtmlAction { implicit request =>
     Akka.future {
-      val result = doRenormalize(readOnly, domain).replaceAll("\n","\n<br>")
-      db.readWrite { implicit s =>
-        postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
-         subject = "Renormalization Report", htmlBody = result, category = PostOffice.Categories.ADMIN))
+      try {
+        val result = doRenormalize(readOnly, domain).replaceAll("\n","\n<br>")
+        db.readWrite { implicit s =>
+          postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+           subject = "Renormalization Report", htmlBody = result, category = PostOffice.Categories.ADMIN))
+        }
+      } catch {
+        case ex: Throwable => log.error(ex.getMessage, ex)
       }
     }
     Ok("Started! Will email %s".format(EmailAddresses.ENG))
@@ -75,7 +79,11 @@ class UrlController @Inject() (
     val changedURIs = scala.collection.mutable.MutableList[ChangedNormURI]()
     val (urlsSize, changes) = db.readWrite {implicit session =>
 
-      val urls = urlRepo.all
+      val urls = domain match {
+        case Some(domainStr) => urlRepo.getByDomain(domainStr)
+        case None => urlRepo.all
+      }
+
       val urlsSize = urls.size
       val changes = scala.collection.mutable.Map[String, Int]()
 
@@ -95,7 +103,7 @@ class UrlController @Inject() (
             }
 
             changes += (("url", 0))
-            if(url.normalizedUriId != normalizedUri.id.get.id) {
+            if(normalizedUri.id.isEmpty || url.normalizedUriId.id != normalizedUri.id.get.id) {
               changes("url") += 1
               if(!readOnly) {
                 urlRepo.save(url.withNormUriId(normalizedUri.id.get).withHistory(URLHistory(clock.now, normalizedUri.id.get,reason)))
@@ -104,7 +112,7 @@ class UrlController @Inject() (
 
             changes += (("bookmark", 0))
             bookmarkRepo.getByUrlId(url.id.get) map { s =>
-              if(s.uriId.id != normalizedUri.id.get.id) {
+              if(normalizedUri.id.isEmpty || s.uriId.id != normalizedUri.id.get.id) {
                 changes("bookmark") += 1
                 if(!readOnly) {
                   bookmarkRepo.save(s.withNormUriId(normalizedUri.id.get))
@@ -114,7 +122,7 @@ class UrlController @Inject() (
 
             changes += (("comment", 0))
             commentRepo.getByUrlId(url.id.get) map { s =>
-              if(s.uriId.id != normalizedUri.id.get.id) {
+              if(normalizedUri.id.isEmpty || s.uriId.id != normalizedUri.id.get.id) {
                 changes("comment") += 1
                 if(!readOnly) {
                   commentRepo.save(s.withNormUriId(normalizedUri.id.get))
@@ -124,7 +132,7 @@ class UrlController @Inject() (
 
             changes += (("deeplink", 0))
             deepLinkRepo.getByUrl(url.id.get) map { s =>
-              if(s.uriId.get.id != normalizedUri.id.get.id) {
+              if(normalizedUri.id.isEmpty || s.uriId.get.id != normalizedUri.id.get.id) {
                 changes("deeplink") += 1
                 if(!readOnly) {
                   deepLinkRepo.save(s.withNormUriId(normalizedUri.id.get))
@@ -134,7 +142,7 @@ class UrlController @Inject() (
 
             changes += (("follow", 0))
             followRepo.getByUrl(url.id.get, excludeState = None) map { s =>
-              if(s.uriId.id != normalizedUri.id.get.id) {
+              if(normalizedUri.id.isEmpty || s.uriId.id != normalizedUri.id.get.id) {
                 changes("follow") += 1
                 if(!readOnly) {
                   followRepo.save(s.withNormUriId(normalizedUri.id.get))
@@ -149,7 +157,7 @@ class UrlController @Inject() (
       (urlsSize, changes)
     }
 
-    "%s urls processed, %s changes.<br>\n<br>\n%s".format(urlsSize, changes.size, changes)
+    "%s urls processed, changes:<br>\n<br>\n%s".format(urlsSize, changes)
   }
 
 }

@@ -85,7 +85,7 @@ private[classify] class DomainClassificationActor @Inject() (
         }
         db.readWrite { implicit s =>
           val existingTagRelationships = domainToTagRepo.getByDomain(domain.id.get, excludeState = None)
-          for (r <- existingTagRelationships.toSeq if r.state != DomainToTagStates.ACTIVE) {
+          for (r <- existingTagRelationships if r.state != DomainToTagStates.ACTIVE && tagIds.contains(r.tagId)) {
             domainToTagRepo.save(r.withState(DomainToTagStates.ACTIVE))
           }
           domainToTagRepo.insertAll((tagIds -- existingTagRelationships.map(_.tagId)).map { tagId =>
