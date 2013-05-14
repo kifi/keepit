@@ -77,7 +77,7 @@ class OrphanCleaner @Inject() (
     if (!readOnly) {
       log.info(s"Changing ${changedNuris.size} NormalizedURIs.")
       changedNuris foreach { nuri =>
-        nuriRepo.save(nuri.withState(NormalizedURIStates.ACTIVE))
+        nuriRepo.save(nuri.withState(NormalizedURIStates.INACTIVE))
       }
     } else {
       log.info(s"Would have changed ${changedNuris.size} NormalizedURIs.")
