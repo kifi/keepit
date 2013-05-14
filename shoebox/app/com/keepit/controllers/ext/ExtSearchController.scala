@@ -87,9 +87,10 @@ class ExtSearchController @Inject() (
     val (config, experimentId) = searchConfigManager.getConfig(userId, query)
 
     val t2 = currentDateTime.getMillis()
-
+    var t3 = 0L
     val searchRes = time("search-searching") {
       val searcher = time("search-factory") { mainSearcherFactory(userId, friendIds, searchFilter, config) }
+      t3 = currentDateTime.getMillis()
       val searchRes = if (maxHits > 0) {
         searcher.search(query, maxHits, lastUUID, searchFilter)
       } else {
@@ -100,18 +101,20 @@ class ExtSearchController @Inject() (
       searchRes
     }
 
-    val t3 = currentDateTime.getMillis()
+    val t4 = currentDateTime.getMillis()
 
     val res = toPersonalSearchResultPacket(userId, searchRes, config, searchFilter.isDefault, experimentId)
     reportArticleSearchResult(searchRes)
 
-    val t4 = currentDateTime.getMillis()
-
+    val t5 = currentDateTime.getMillis()
+    val total = t5 - t1
+    log.info(s"total search time = $total, pre-search time = ${t2 - t1}, search-factory time = ${t3 - t2}, main-search time = ${t4 - t3}, post-search time = ${t5 - t4}")
     val timeLimit = 1000
     // search is a little slow after service restart. allow some grace period
-    if (t4 - t1 > timeLimit && t4 - fortyTwoServices.started.getMillis() > 1000*60*8) {
-      val total = t4 - t1
-      val msg = s"search time exceeds limit! searchUUID = ${searchRes.uuid.id}, Limit time = $timeLimit, total search time = $total, pre-search time = ${t2 - t1}, main-search time = ${t3 - t2}, post-search time = ${t4 - t3}"
+    if (total > timeLimit && t5 - fortyTwoServices.started.getMillis() > 1000*60*8) {
+      val link = "https://admin.kifi.com/admin/search/results/" + searchRes.uuid.id
+      val msg = s"search time exceeds limit! searchUUID = ${searchRes.uuid.id}, Limit time = $timeLimit, total search time = $total, pre-search time = ${t2 - t1}, search-factory time = ${t3 - t2}, main-search time = ${t4 - t3}, post-search time = ${t5 - t4}." +
+      		"More details at ${link}"
       healthcheckPlugin.addError(HealthcheckError(
         error = Some(new SearchTimeExceedsLimit(timeLimit, total)),
         errorMessage = Some(msg),
@@ -137,7 +140,7 @@ class ExtSearchController @Inject() (
   private[ext] def toPersonalSearchResultPacket(userId: Id[User],
       res: ArticleSearchResult, config: SearchConfig, isDefaultFilter: Boolean, experimentId: Option[Id[SearchConfigExperiment]]): PersonalSearchResultPacket = {
 
-    
+
     val hits = time(s"search-personal-result-${res.hits.size}") {
       db.readOnly { implicit s =>
         val t0 = currentDateTime.getMillis()
