@@ -49,7 +49,7 @@ object WrappedIndexReader {
 class WrappedIndexReader(val inner: DirectoryReader, val wrappedSubReaders: Array[WrappedSubReader])
 extends MultiReader(wrappedSubReaders.map{ _.asInstanceOf[IndexReader] }.toArray, false) {
 
-  def getIdMapper: IdMapper = {
+  private[this] lazy val idMapper: IdMapper = {
     new IdMapper {
       def getId(docid: Int): Long = {
         var base = 0
@@ -82,6 +82,8 @@ extends MultiReader(wrappedSubReaders.map{ _.asInstanceOf[IndexReader] }.toArray
       def maxDoc():Int = maxDocSum
     }
   }
+
+  def getIdMapper: IdMapper = idMapper
 
   def asAtomicReader: WrappedSubReader = new WrappedSubReader("", SlowCompositeReaderWrapper.wrap(this), getIdMapper)
 
