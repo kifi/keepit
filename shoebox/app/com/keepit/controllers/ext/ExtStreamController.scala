@@ -1,5 +1,6 @@
 package com.keepit.controllers.ext
 
+import com.keepit.classify.{Domain, DomainRepo, DomainStates}
 import com.keepit.common.analytics._
 import com.keepit.common.controller._
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
@@ -46,6 +47,7 @@ class ExtStreamController @Inject() (
   experimentRepo: UserExperimentRepo,
   userChannel: UserChannel,
   uriChannel: UriChannel,
+  userToDomainRepo: UserToDomainRepo,
   userNotificationRepo: UserNotificationRepo,
   persistEventPlugin: PersistEventPlugin,
   keeperInfoLoader: KeeperInfoLoader,
@@ -54,6 +56,7 @@ class ExtStreamController @Inject() (
   commentRepo: CommentRepo,
   commentReadRepo: CommentReadRepo,
   normUriRepo: NormalizedURIRepo,
+  domainRepo: DomainRepo,
   commentWithBasicUserRepo: CommentWithBasicUserRepo,
   eventHelper: EventHelper,
   impersonateCookie: ImpersonateCookie,
@@ -181,6 +184,9 @@ class ExtStreamController @Inject() (
             },
             "set_comment_read" -> { case JsString(commentId) +: _ =>
               setCommentRead(userId, ExternalId[Comment](commentId))
+            },
+            "set_keeper_position" -> { case JsString(host) +: JsObject(pos) +: _ =>
+              setKeeperPosition(userId, host, JsObject(pos))
             })
 
           val iteratee = asyncIteratee { jsArr =>
@@ -279,6 +285,23 @@ class ExtStreamController @Inject() (
         val commentIds = commentRepo.getPublicIdsCreatedBefore(nUri.id.get, comment.createdAt) :+ comment.id.get
         userNotificationRepo.markVisited(userId, commentIds)
       //}
+    }
+  }
+
+  private def setKeeperPosition(userId: Id[User], host: String, pos: JsObject) {
+    db.readWrite { implicit s =>
+      val domain = domainRepo.get(host, excludeState = None) match {
+        case Some(d) if d.state != DomainStates.ACTIVE => domainRepo.save(d.withState(DomainStates.ACTIVE))
+        case Some(d) => d
+        case None => domainRepo.save(Domain(hostname = host))
+      }
+      userToDomainRepo.get(userId, domain.id.get, UserToDomainKinds.KEEPER_POSITION, excludeState = None) match {
+        case Some(p) if p.state != UserToDomainStates.ACTIVE || p.value.get != pos =>
+          userToDomainRepo.save(p.withState(UserToDomainStates.ACTIVE).withValue(Some(pos)))
+        case Some(p) => p
+        case None =>
+          userToDomainRepo.save(UserToDomain(None, userId, domain.id.get, UserToDomainKinds.KEEPER_POSITION, Some(pos)))
+      }
     }
   }
 }

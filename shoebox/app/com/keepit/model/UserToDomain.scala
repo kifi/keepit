@@ -9,11 +9,14 @@ import com.keepit.common.db.{Id, Model, State, States}
 import com.keepit.common.time._
 import com.keepit.classify.Domain
 
+import play.api.libs.json.JsValue
+
 case class UserToDomain(
   id: Option[Id[UserToDomain]] = None,
   userId: Id[User],
   domainId: Id[Domain],
   kind: State[UserToDomainKind],
+  value: Option[JsValue],
   state: State[UserToDomain] = UserToDomainStates.ACTIVE,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime
@@ -21,6 +24,7 @@ case class UserToDomain(
   def withId(id: Id[UserToDomain]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[UserToDomain]) = this.copy(state = state)
+  def withValue(value: Option[JsValue]) = this.copy(value = value)
   def isActive = state == UserToDomainStates.ACTIVE
 }
 
@@ -28,6 +32,7 @@ sealed case class UserToDomainKind(val value: String)
 
 object UserToDomainKinds {
   val NEVER_SHOW = State[UserToDomainKind]("never_show")
+  val KEEPER_POSITION = State[UserToDomainKind]("keeper_position")
 
   def apply(str: String): State[UserToDomainKind] = str.toLowerCase.trim match {
     case NEVER_SHOW.value => NEVER_SHOW
@@ -59,7 +64,8 @@ class UserToDomainRepoImpl @Inject()(
     def userId = column[Id[User]]("user_id", O.NotNull)
     def domainId = column[Id[Domain]]("domain_id", O.NotNull)
     def kind = column[State[UserToDomainKind]]("kind", O.NotNull)
-    def * = id.? ~ userId ~ domainId ~ kind ~ state ~ createdAt ~ updatedAt <> (UserToDomain, UserToDomain.unapply _)
+    def value = column[Option[JsValue]]("value", O.Nullable)
+    def * = id.? ~ userId ~ domainId ~ kind ~ value ~ state ~ createdAt ~ updatedAt <> (UserToDomain, UserToDomain.unapply _)
   }
 
   def get(userId: Id[User], domainId: Id[Domain], kind: State[UserToDomainKind],
