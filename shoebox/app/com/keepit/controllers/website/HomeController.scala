@@ -4,7 +4,6 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.common.controller.WebsiteController
-import com.keepit.common.db.State
 import com.keepit.common.db.slick._
 import com.keepit.common.mail.{EmailAddresses, ElectronicMail, PostOffice}
 import com.keepit.model._
@@ -12,6 +11,7 @@ import com.keepit.common.mail.EmailAddresses
 
 import play.api.Play.current
 import play.api._
+import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
 
 @Singleton
@@ -24,8 +24,16 @@ class HomeController @Inject() (db: Database,
   invitationRepo: InvitationRepo,
   actionAuthenticator: ActionAuthenticator,
   postOffice: PostOffice,
-  emailAddressRepo: EmailAddressRepo)
-    extends WebsiteController(actionAuthenticator) {
+  emailAddressRepo: EmailAddressRepo
+  extends WebsiteController(actionAuthenticator) {
+
+  def kifiSite(path: String) = AuthenticatedHtmlAction { implicit request =>
+    if (request.experiments.contains(ExperimentTypes.ADMIN) || Play.isDev) {
+      Play.resourceAsStream(s"public/site/$path") map { stream =>
+        SimpleResult(header = ResponseHeader(OK), body = Enumerator.fromStream(stream))
+      } getOrElse NotFound
+    } else NotFound
+  }
 
   def home = HtmlAction(true)(authenticatedAction = { implicit request =>
 
@@ -36,12 +44,13 @@ class HomeController @Inject() (db: Database,
           val user = userRepo.get(u)
           if(user.state == UserStates.ACTIVE) Some(user.externalId)
           else None
-        } flatten
+        }.flatten
       }
 
       val userCanInvite = (request.experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.CAN_INVITE)).nonEmpty
+      val userCanSeeKifiSite = (request.experiments & Set(ExperimentTypes.ADMIN)).nonEmpty || Play.isDev
 
-      Ok(views.html.website.userHome(request.user, friendsOnKifi, userCanInvite))
+      Ok(views.html.website.userHome(request.user, friendsOnKifi, userCanInvite, userCanSeeKifiSite))
     }
   }, unauthenticatedAction = { implicit request =>
     Ok(views.html.website.welcome())

@@ -19,9 +19,6 @@ import com.keepit.serializer.{URLHistorySerializer => URLHS, SocialUserSerialize
 import java.sql.{Timestamp, Clob, Blob}
 import javax.sql.rowset.serial.{SerialBlob, SerialClob}
 import org.joda.time.DateTime
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsString
 import play.api.libs.json._
 import scala.Some
 import scala.slick.driver._
@@ -205,6 +202,10 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new JsArrayMapperDelegate(profile)
   }
 
+  implicit object JsValueTypeMapper extends BaseTypeMapper[JsValue] {
+    def apply(profile: BasicProfile) = new JsValueMapperDelegate(profile)
+  }
+
   implicit object SearchConfigTypeMapper extends BaseTypeMapper[SearchConfig] {
     def apply(profile: BasicProfile) = new SearchConfigMapperDelegate(profile)
   }
@@ -333,7 +334,16 @@ class DeepLinkTokenMapperDelegate[T](profile: BasicProfile) extends StringMapper
 class JsArrayMapperDelegate[T](profile: BasicProfile) extends StringMapperDelegate[JsArray](profile) {
   def zero = JsArray()
   def sourceToDest(value: JsArray): String = Json.stringify(value)
-  def safeDestToSource(str: String): JsArray = Json.parse(str).asInstanceOf[JsArray]
+  def safeDestToSource(str: String): JsArray = Json.parse(str).as[JsArray]
+}
+
+//************************************
+//       JsValue -> String
+//************************************
+class JsValueMapperDelegate[T](profile: BasicProfile) extends StringMapperDelegate[JsValue](profile) {
+  def zero = JsNull
+  def sourceToDest(value: JsValue): String = Json.stringify(value)
+  def safeDestToSource(str: String): JsValue = Json.parse(str)
 }
 
 //************************************

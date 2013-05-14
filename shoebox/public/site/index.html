@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title></title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width">
+        <link rel="stylesheet" href="css/main.css">
+        <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+        <script src="js/tempo.min.js"></script>
+    </head>
+    <body>
+        <!--[if lt IE 7]>
+            <p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
+        <![endif]-->
+        
+        <div class="header-wrapper">
+          <header class="centered">
+               <a href="/"><img class="logo" src="img/kifi-logo.png" alt="KiFi"/></a>
+               <nav>
+                <a href="" class="invite">Invite</a><a href="https://www.kifi.com/feedback/form" target="_blank" class="feedback">Feedback</a>
+               </nav>
+          </header>
+        </div>
+
+        <div class="container centered">
+          <aside class="right">
+            	<h2>Filter Results By:</h2>
+		<label>Keepers:</label>
+		<div class="custom-select">
+			<select name="keepers">
+				<option value="f">Friends</option>
+				<option value="m">Only Me</option>
+				<option value="c">Custom</option>
+			</select>
+		</div>
+		<textarea id="custom-keepers" rows="1"></textarea>
+          </aside>
+
+          <aside class="left">
+		<div class="large-avatar"><div class="name">Loading...</div></div>
+            	<h3 class="active my-keeps"><a href="javascript: populateMyKeeps();"> My Keeps	<span class="right light"></span></a></h3>
+          </aside>
+          
+          <section class="main">
+          </section>
+
+
+          <footer>
+          </footer>
+
+        </div> <!-- /container -->
+
+	    <div class="search">
+	      <input class="search" type="text" placeholder="Search all keeps"/>
+		<h1>My Keeps</h1>
+		<div class="num-results">Showing <span>0</span> keeps</div>
+	    </div>
+	<div class="scrollable">
+		<ol id="search-results">
+		    <li data-template class="keep {% if isMyBookmark %}mine{% endif %}">
+			<a class="long-text" href="{{bookmark.url}}" target="_blank" title="{{bookmark.title}}">{{bookmark.title}}</a>
+			<span class="fs9 green long-text" title="{{bookmark.url}}">{{bookmark.url}}</span>
+			<div class="bottom">
+				<img class="small-avatar" data-template-for="users" src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}" title="{{firstName}} {{lastName}}"/> 
+				<span class="fs9 gray"> {% if isMyBookmark %}You{% endif %}{% if users.length > 0 && isMyBookmark %} + {% endif %}{% if users.length > 0 %} {{users.length}} friend{% endif %}{% if users.length > 1 %}s{% endif %} kept this {% if isPrivate %} <img src="img/private.png"/> Private {% endif %}</span>
+				<div class="clearfix"></div>
+			</div>
+		    </li>
+		    <li data-template-fallback>Sorry, JavaScript required!</li>
+		</ol>
+		<ol id="my-keeps">
+		    <li data-template class="keep mine" data-created={{createdAt}}>
+			<a class="long-text" href="{{url}}" target="_blank" title="{{title}}">{{title}}</a>
+			<span class="fs9 green long-text" title="{{url}}">{{url}}</span>
+			<div class="bottom">
+				<span class="fs9 gray"> You kept this {% if isPrivate %} <img src="img/private.png"/> Private {% endif %}</span>
+				<div class="clearfix"></div>
+			</div>
+		    </li>
+		    <li data-template-fallback>Sorry, JavaScript required!</li>
+		</ol>
+		<div class="loading"><img src="img/loading.gif"/></div>
+	</div>
+
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+        <script>window.jQuery || document.write('<script src="js/jquery-1.9.1.min.js"><\/script>')</script>
+        <script src="js/jquery.sticky.js"></script>
+        <script src="js/textext.1.3.1.min.js"></script>
+        <script src="js/main.js"></script>
+        <script>
+            var _gaq=[['_setAccount','UA-XXXXX-X'],['_trackPageview']];
+            (function(d,t){var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
+            g.src=('https:'==location.protocol?'//ssl':'//www')+'.google-analytics.com/ga.js';
+            s.parentNode.insertBefore(g,s)}(document,'script'));
+        </script>
+    </body>
+</html>
