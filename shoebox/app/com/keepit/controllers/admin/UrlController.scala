@@ -75,7 +75,11 @@ class UrlController @Inject() (
     val changedURIs = scala.collection.mutable.MutableList[ChangedNormURI]()
     val (urlsSize, changes) = db.readWrite {implicit session =>
 
-      val urls = urlRepo.all
+      val urls = domain match {
+        case Some(domainStr) => urlRepo.getByDomain(domainStr)
+        case None => urlRepo.all
+      }
+
       val urlsSize = urls.size
       val changes = scala.collection.mutable.Map[String, Int]()
 
