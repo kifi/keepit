@@ -24,7 +24,7 @@ class HomeController @Inject() (db: Database,
   invitationRepo: InvitationRepo,
   actionAuthenticator: ActionAuthenticator,
   postOffice: PostOffice,
-  emailAddressRepo: EmailAddressRepo
+  emailAddressRepo: EmailAddressRepo)
   extends WebsiteController(actionAuthenticator) {
 
   def kifiSite(path: String) = AuthenticatedHtmlAction { implicit request =>
