@@ -14,9 +14,9 @@ object FriendStats{
 class FriendStats(mapper: IdMapper) {
   val scores = new Array[Float](mapper.maxDoc)
 
-  def add(ids: Set[Id[User]], score: Float) {
-    ids.foreach{ id =>
-      val i = mapper.getDocId(id.id)
+  def add(friendIds: Set[Long], score: Float) {
+    friendIds.foreach{ id =>
+      val i = mapper.getDocId(id) // index into the friend id array
       if (i >= 0) scores(i) += score
     }
   }
