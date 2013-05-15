@@ -1,6 +1,7 @@
 package com.keepit.search.graph
 
 import com.keepit.common.db.Id
+import com.keepit.common.logging.Logging
 import com.keepit.model.{NormalizedURI, User}
 import com.keepit.search.graph.URIGraphFields._
 import com.keepit.search.index.ArrayIdMapper
@@ -20,10 +21,11 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.util.BytesRef
 import scala.collection.mutable.ArrayBuffer
 
-class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) {
+class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) extends Logging {
+
   case class UserInfo(id: Id[User], docId: Int, publicList: URIList, privateList: URIList)
 
-  def reader: WrappedSubReader = searcher.indexReader.asAtomicReader
+  private[this] val reader: WrappedSubReader = searcher.indexReader.asAtomicReader
 
   private[this] lazy val myInfo: Option[UserInfo] = {
     myUserId.map{ id =>
@@ -175,15 +177,15 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) {
     URIList.empty
   }
 
-  private def getIndexReader(userDocId: Int, terms: Set[Term]) = {
-    val numDocs = myInfo.get.publicList.size + myInfo.get.privateList.size
-    LineIndexReader(reader, userDocId, terms, numDocs)
-  }
-
   def openPersonalIndex(query: Query): Option[(CachingIndexReader, IdMapper)] = {
     val terms = QueryUtil.getTerms(query)
     myInfo.map{ u =>
-      (getIndexReader(u.docId, terms), new ArrayIdMapper(concat(u.publicList.ids, u.privateList.ids)))
+      val numDocs = myInfo.get.publicList.size + myInfo.get.privateList.size
+      val ids = concat(u.publicList.ids, u.privateList.ids)
+
+      if (numDocs != ids.length) log.error(s"numDocs=$numDocs ids.length${ids.length} publicList.size=${u.publicList.size} privateList.size=${u.privateList.size}")
+
+      (LineIndexReader(reader, u.docId, terms, numDocs), new ArrayIdMapper(ids))
     }
   }
 
