@@ -156,10 +156,10 @@ form.kifi-compose input[type=text] { /* either input */
   height: auto;
   min-height: 0;
   margin: 0;
-  border: none;
+  border: none !important;
   background-color: #fff;
   font: inherit;
-  box-shadow: none;
+  box-shadow: none !important;
 }
 form.kifi-compose input[type=text].kifi-compose-to, /* initial input */
 form.kifi-compose ul.token-input-list-KiFi {
