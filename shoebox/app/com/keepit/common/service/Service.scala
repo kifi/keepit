@@ -8,6 +8,7 @@ import org.joda.time.DateTimeZone
 import org.joda.time.format.DateTimeFormat
 import java.util.Locale
 import play.api.Mode
+import play.api.libs.json._
 
 case class ServiceVersion(val value: String) {
   override def toString(): String = value
@@ -20,6 +21,18 @@ object ServiceType {
   case object SEARCH extends ServiceType("SEARCH")
   case object DEV_MODE extends ServiceType("DEV_MODE")
   case object TEST_MODE extends ServiceType("TEST_MODE")
+
+  def fromString(str: String) = str match {
+    case SHOEBOX.name => SHOEBOX
+    case SEARCH.name => SEARCH
+    case DEV_MODE.name => DEV_MODE
+    case TEST_MODE.name => TEST_MODE
+  }
+
+  def format[T]: Format[ServiceType] = Format(
+    __.read[String].map(fromString),
+    new Writes[ServiceType]{ def writes(o: ServiceType) = JsString(o.name)}
+  )
 }
 
 case class FortyTwoServices(clock: Clock) {

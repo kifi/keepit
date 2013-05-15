@@ -8,6 +8,7 @@ import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 import org.apache.commons.codec.binary.Base64
 
+import com.keepit.common.strings._
 
 case class AESKey(bytes: Array[Byte]) {
   override def toString = AES.toBase64(bytes)
@@ -20,8 +21,6 @@ object AESKey {
 }
 
 object AES extends CryptoSupport {
-
-  val ENCODING = "UTF-8"
 
   val ALGORITHM = "AES"
   val TRANSFORMATION = "AES/CTR/NoPadding"
@@ -77,8 +76,7 @@ object AES extends CryptoSupport {
 
     val cipher = Cipher.getInstance(TRANSFORMATION)
     cipher.init(Cipher.DECRYPT_MODE, keySpec, new IvParameterSpec(iv))
-    val plainBytes = cipher.doFinal(cipherBytes)
-    new String(plainBytes, ENCODING)
+    cipher.doFinal(cipherBytes)
   }
 
   private def hmac(key: Array[Byte], message: Array[Byte]): Array[Byte] = {
