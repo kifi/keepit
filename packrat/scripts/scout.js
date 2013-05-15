@@ -34,7 +34,7 @@ var injected, t0 = +new Date, tile, paneHistory;
     auto_show: keeper.bind(null, "show", "auto"),
     kept: function(o) {
       if (!tile) {
-        insertTile(o.hide);
+        insertTile(o.hide, o.position);
       }
       if (o.kept) {
         tile.dataset.kept = o.kept;
@@ -118,24 +118,58 @@ var injected, t0 = +new Date, tile, paneHistory;
     });
   }
 
-  function insertTile(hide) {
+  function insertTile(hide, pos) {
     while (tile = document.getElementById("kifi-tile")) {
       tile.parentNode.removeChild(tile);
     }
     tile = document.createElement("div");
-
     tile.id = "kifi-tile";
     tile.style.display = "none";
+    if (pos) {
+      tile.style.top = pos.top >= 0 ? pos.top + "px" : "auto";
+      tile.style.bottom = pos.bottom >= 0 ? pos.bottom + "px" : "auto";
+      tile.dataset.pos = JSON.stringify(pos);
+      positionTile(pos);
+    }
     tile.innerHTML = "<div class=kifi-tile-transparent style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>";
     tileCount = document.createElement("span");
     tileCount.className = "kifi-count";
     document.documentElement.appendChild(tile);
-    tile.addEventListener("mouseover", keeper.bind(null, "show", "tile"));
+    tile.addEventListener("mouseover", function(e) {
+      if (e.target === this ||
+          e.target.parentNode === this && (e.target.classList.contains("kifi-tile-transparent") || e.target.classList.contains("kifi-count"))) {
+        keeper("show", "tile");
+      }
+    });
+    tile["kifi:position"] = positionTile;
+    window.addEventListener("resize", onResize);
     api.require("styles/metro/tile.css", function() {
       if (!hide) {
         tile.style.display = "";
       }
     });
+  }
+
+  function onResize() {
+    if (paneHistory) return;
+    clearTimeout(onResize.t);  // throttling tile repositioning
+    onResize.t = setTimeout(positionTile, 50);
+  }
+
+  function positionTile(pos) { // goal: as close to target position as possible while still in window
+    pos = pos || JSON.parse(tile.dataset.pos || 0);
+    if (!pos) return;
+    var maxPos = window.innerHeight - 54;  // height (42) + margin-top (6) + margin-bottom (6)
+    if (pos.bottom >= 0) {
+      setTileVertOffset(pos.bottom - Math.max(0, Math.min(pos.bottom, maxPos)));
+    } else if (pos.top >= 0) {
+      setTileVertOffset(Math.max(0, Math.min(pos.top, maxPos)) - pos.top);
+    }
+  }
+
+  function setTileVertOffset(px) {
+    api.log("[setTileVertOffset] px:", px);
+    tile.style["transform" in tile.style ? "transform" : "webkitTransform"] = "translate(0," + px + "px)";
   }
 
   setTimeout(function checkIfUseful() {
