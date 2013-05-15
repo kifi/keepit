@@ -119,6 +119,7 @@ slider2 = function() {
           var btn = this;
           api.port.emit("get_keepers", function(o) {
             $(btn).showHover({
+              eventTime: e.timeStamp,
               reuse: false,
               showDelay: 700,
               hideDelay: o.keepers.length ? 800 : 0,
