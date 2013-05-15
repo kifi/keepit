@@ -187,7 +187,11 @@ object URINormalizer extends Logging {
       uri match {
         case URI(scheme, userInfo, host, port, path, query, _) if query.isDefined => {
           (path, query.getOrElse("").toString) match {
-            case (Some("/profile/view"), profile(_, id, _)) => URI(scheme, userInfo, normalize(host), port, path, Some(Query("id="+ id)), None).toString
+            case (Some("/profile/view"), profile(_, id, _)) => {
+              val s = URI(scheme, userInfo, normalize(host), port, path, Some(Query("id="+ id)), None).toString
+              log.info("\n\n ============= linkedin normalizer gives uri: " + s)
+              s
+            }
             case _ => DefaultNormalizer(uri)
           }
         }
