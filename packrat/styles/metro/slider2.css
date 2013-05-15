@@ -11,6 +11,7 @@
   font-size: inherit;
   font-weight: inherit;
   background: transparent;
+  color: inherit;
   border: none;
   margin: 0;
   padding: 0;
@@ -26,6 +27,10 @@
   user-select: auto;
   -webkit-transition: none;
   transition: none;
+}
+.kifi-slider2,
+.kifi-pane {
+  color: #000;
 }
 .kifi-slider2 div,
 .kifi-pane div {
