@@ -238,10 +238,14 @@ div.token-input-dropdown-KiFi {
   overflow: hidden;
   cursor: default;
   font: 12px "Helvetica Neue",arial,sans-serif;
+  color: #000;
+  -moz-box-sizing: content-box;
+  box-sizing: content-box;
 }
 div.token-input-dropdown-KiFi p {
   margin: 0 !important;
   padding: 5px;
+  font: inherit;
   font-weight: bold;
   color: #777;
 }
@@ -250,6 +254,8 @@ div.token-input-dropdown-KiFi ul {
   float: none;
   margin: 0 !important;
   padding: 0 !important;
+  font: inherit;
+  color: inherit;
 }
 div.token-input-dropdown-KiFi ul li {
   background: #fff;
@@ -260,6 +266,12 @@ div.token-input-dropdown-KiFi ul li {
   list-style-type: none;
   text-align: left;
   font: inherit;
+  color: inherit;
+}
+div.token-input-dropdown-KiFi ul li b {
+  font: inherit;
+  font-weight: bold;
+  color: inherit;
 }
 div.token-input-dropdown-KiFi ul li.token-input-dropdown-item-KiFi,
 div.token-input-dropdown-KiFi ul li.token-input-dropdown-item2-KiFi {
