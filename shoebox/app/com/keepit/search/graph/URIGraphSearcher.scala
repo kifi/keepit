@@ -1,8 +1,8 @@
 package com.keepit.search.graph
 
 import com.keepit.common.db.Id
+import com.keepit.common.logging.Logging
 import com.keepit.model.{NormalizedURI, User}
-import com.keepit.search.graph.EdgeSetUtil._
 import com.keepit.search.graph.URIGraphFields._
 import com.keepit.search.index.ArrayIdMapper
 import com.keepit.search.index.CachingIndexReader
@@ -19,11 +19,13 @@ import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.util.BytesRef
+import scala.collection.mutable.ArrayBuffer
 
-class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) {
+class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) extends Logging {
+
   case class UserInfo(id: Id[User], docId: Int, publicList: URIList, privateList: URIList)
 
-  def reader: WrappedSubReader = searcher.indexReader.asAtomicReader
+  private[this] val reader: WrappedSubReader = searcher.indexReader.asAtomicReader
 
   private[this] lazy val myInfo: Option[UserInfo] = {
     myUserId.map{ id =>
@@ -36,14 +38,14 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) {
     myInfo.map{ u =>
       val uriIdMap = LongToLongArrayMap.from(concat(u.publicList.ids, u.privateList.ids),
                                              concat(u.publicList.createdAt, u.privateList.createdAt))
-      new UserToUriEdgeSetWithCreatedAt(u.id, uriIdMap)
+      UserToUriEdgeSetWithCreatedAt(u.id, uriIdMap)
     }
   }
 
   lazy val myPublicUriEdgeSetOpt: Option[UserToUriEdgeSetWithCreatedAt] = {
     myInfo.map{ u =>
       val uriIdMap = LongToLongArrayMap.fromSorted(u.publicList.ids, u.publicList.createdAt)
-      new UserToUriEdgeSetWithCreatedAt(u.id, uriIdMap)
+      UserToUriEdgeSetWithCreatedAt(u.id, uriIdMap)
     }
   }
 
@@ -55,9 +57,9 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) {
     myPublicUriEdgeSetOpt.getOrElse{ throw new Exception("search user was not set") }
   }
 
-  def getUserToUserEdgeSet(sourceId: Id[User], destIdSet: Set[Id[User]]) = new UserToUserEdgeSet(sourceId, destIdSet)
+  def getUserToUserEdgeSet(sourceId: Id[User], destIdSet: Set[Id[User]]) = UserToUserEdgeSet(sourceId, destIdSet)
 
-  def getUriToUserEdgeSet(sourceId: Id[NormalizedURI]) = new UriToUserEdgeSet(sourceId, searcher)
+  def getUriToUserEdgeSet(sourceId: Id[NormalizedURI]) = UriToUserEdgeSet(sourceId, searcher)
 
   def getUserToUriEdgeSet(sourceId: Id[User], publicOnly: Boolean = true): UserToUriEdgeSet = {
     val sourceDocId = reader.getIdMapper.getDocId(sourceId.id)
@@ -72,7 +74,7 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) {
         }
       case None => LongArraySet.fromSorted(publicList.ids)
     }
-    new UserToUriEdgeSet(sourceId, uriIdSet)
+    UserToUriEdgeSet(sourceId, uriIdSet)
   }
 
   def getUserToUriEdgeSetWithCreatedAt(sourceId: Id[User], publicOnly: Boolean = true): UserToUriEdgeSetWithCreatedAt = {
@@ -90,14 +92,15 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) {
       case None =>
         LongToLongArrayMap.fromSorted(publicList.ids, publicList.createdAt)
     }
-    new UserToUriEdgeSetWithCreatedAt(sourceId, uriIdMap)
+    UserToUriEdgeSetWithCreatedAt(sourceId, uriIdMap)
   }
 
   def intersect(friends: UserToUserEdgeSet, bookmarkUsers: UriToUserEdgeSet): UserToUserEdgeSet = {
+    val intersection = new ArrayBuffer[Int]
     val iter = intersect(friends.getDestDocIdSetIterator(searcher), bookmarkUsers.getDestDocIdSetIterator(searcher))
-    val idMapper = searcher.indexReader.getIdMapper
-    val destIdSet = iter.map{ idMapper.getId(_) }.map{ new Id[User](_) }.toSet
-    new UserToUserEdgeSet(friends.sourceId, destIdSet)
+
+    while (iter.nextDoc != NO_MORE_DOCS) intersection += iter.docID
+    UserToUserEdgeSet(friends.sourceId, searcher, intersection.toArray)
   }
 
   def intersect(i: DocIdSetIterator, j: DocIdSetIterator): DocIdSetIterator = {
@@ -111,7 +114,8 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) {
           if (di < dj) di = i.advance(dj)
           else dj = j.advance(di)
         }
-        i.docID()
+        curDoc = i.docID()
+        curDoc
       }
       def advance(target: Int) = {
         var di = i.advance(target)
@@ -120,7 +124,8 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) {
           if (di < dj) di = i.advance(dj)
           else dj = j.advance(di)
         }
-        i.docID()
+        curDoc = i.docID()
+        curDoc
       }
     }
   }
@@ -172,15 +177,15 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) {
     URIList.empty
   }
 
-  private def getIndexReader(userDocId: Int, terms: Set[Term]) = {
-    val numDocs = myInfo.get.publicList.size + myInfo.get.privateList.size
-    LineIndexReader(reader, userDocId, terms, numDocs)
-  }
-
   def openPersonalIndex(query: Query): Option[(CachingIndexReader, IdMapper)] = {
     val terms = QueryUtil.getTerms(query)
     myInfo.map{ u =>
-      (getIndexReader(u.docId, terms), new ArrayIdMapper(concat(u.publicList.ids, u.privateList.ids)))
+      val numDocs = myInfo.get.publicList.size + myInfo.get.privateList.size
+      val ids = concat(u.publicList.ids, u.privateList.ids)
+
+      if (numDocs != ids.length) log.error(s"numDocs=$numDocs ids.length${ids.length} publicList.size=${u.publicList.size} privateList.size=${u.privateList.size}")
+
+      (LineIndexReader(reader, u.docId, terms, numDocs), new ArrayIdMapper(ids))
     }
   }
 
@@ -190,43 +195,52 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) {
     System.arraycopy(b, 0, ret, a.length, b.length)
     ret
   }
+}
 
-  private def concatAll(a: Array[Long]*): Array[Long] =  {
-    val size = if (a.length > 0) a.map{ _.length }.sum else 0
-    val ret = new Array[Long](size)
-    var offset = 0
-    var i = 0
-    while (i < a.length) {
-      val len = a(i).length
-      System.arraycopy(a(i), 0, ret, offset, len)
-      offset += len
-      i += 1
+abstract class UserToUserEdgeSet(override val sourceId: Id[User]) extends EdgeSet[User, User]
+
+object UserToUserEdgeSet{
+  def apply(sourceId: Id[User], destIds: Set[Id[User]]): UserToUserEdgeSet = {
+    new UserToUserEdgeSet(sourceId) with IdSetEdgeSet[User, User] {
+      override def destIdSet: Set[Id[User]] = destIds
     }
-    ret
+  }
+
+  def apply(sourceId: Id[User], currentSearcher: Searcher, destIds: Array[Int]): UserToUserEdgeSet = {
+    new UserToUserEdgeSet(sourceId) with DocIdSetEdgeSet[User, User] {
+      override val docids: Array[Int] = destIds
+      override val searcher: Searcher = currentSearcher
+    }
   }
 }
 
-class UserToUserEdgeSet(sourceId: Id[User], override val destIdSet: Set[Id[User]]) extends MaterializedEdgeSet[User, User](sourceId) {
-  override lazy val destIdLongSet: Set[Long] = destIdSet.map(_.id)
-  def size = destIdSet.size
+abstract class UserToUriEdgeSet(override val sourceId: Id[User]) extends EdgeSet[User, NormalizedURI]
+
+object UserToUriEdgeSet {
+  def apply(sourceId: Id[User], destIds: Set[Long]): UserToUriEdgeSet = {
+    new UserToUriEdgeSet(sourceId) with LongSetEdgeSet[User, NormalizedURI] {
+      override def destIdLongSet: Set[Long] = destIds
+    }
+  }
 }
 
-class UserToUriEdgeSet(sourceId: Id[User], override val destIdLongSet: Set[Long]) extends MaterializedEdgeSet[User, NormalizedURI](sourceId) {
-  override lazy val destIdSet: Set[Id[NormalizedURI]] = destIdLongSet.map(Id[NormalizedURI](_))
-  def size = destIdLongSet.size
+abstract class UserToUriEdgeSetWithCreatedAt(override val sourceId: Id[User]) extends EdgeSet[User, NormalizedURI] with CreatedAt[NormalizedURI]
+
+object UserToUriEdgeSetWithCreatedAt {
+  def apply(sourceId: Id[User], map: Map[Long, Long]): UserToUriEdgeSetWithCreatedAt = {
+    new UserToUriEdgeSetWithCreatedAt(sourceId) with LongToLongMapEdgeSetWithCreatedAt[User, NormalizedURI] {
+      override val destIdMap: Map[Long, Long] = map
+    }
+  }
 }
 
-class UserToUriEdgeSetWithCreatedAt(sourceId: Id[User], destIdMap: Map[Long, Long])
-  extends MaterializedEdgeSet[User, NormalizedURI](sourceId) {
+abstract class UriToUserEdgeSet(override val sourceId: Id[NormalizedURI]) extends EdgeSet[NormalizedURI, User]
 
-  override lazy val destIdLongSet: Set[Long] = destIdMap.keySet
-  override lazy val destIdSet: Set[Id[NormalizedURI]] = destIdLongSet.map(new Id[NormalizedURI](_))
-  def size = destIdMap.size
-
-  def getCreatedAt(id: Id[NormalizedURI]): Long = URIList.unitToMillis(destIdMap.get(id.id).getOrElse(0L))
-}
-
-class UriToUserEdgeSet(sourceId: Id[NormalizedURI], searcher: Searcher) extends LuceneBackedEdgeSet[NormalizedURI, User](sourceId, searcher) {
-  def toId(id: Long) = new Id[User](id)
-  def createSourceTerm = new Term(uriField, sourceId.toString)
+object UriToUserEdgeSet {
+  def apply(sourceId: Id[NormalizedURI], currentSearcher: Searcher): UriToUserEdgeSet = {
+    new UriToUserEdgeSet(sourceId) with LuceneBackedEdgeSet[NormalizedURI, User] {
+      override val searcher: Searcher = currentSearcher
+      override def createSourceTerm = new Term(uriField, sourceId.toString)
+    }
+  }
 }

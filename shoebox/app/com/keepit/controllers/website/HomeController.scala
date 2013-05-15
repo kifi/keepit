@@ -4,13 +4,14 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.common.controller.WebsiteController
-import com.keepit.common.db.State
 import com.keepit.common.db.slick._
 import com.keepit.common.mail.{EmailAddresses, ElectronicMail, PostOffice}
 import com.keepit.model._
+import com.keepit.common.mail.EmailAddresses
 
 import play.api.Play.current
 import play.api._
+import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
 
 @Singleton
@@ -22,8 +23,17 @@ class HomeController @Inject() (db: Database,
   userConnectionRepo: UserConnectionRepo,
   invitationRepo: InvitationRepo,
   actionAuthenticator: ActionAuthenticator,
-  postOffice: PostOffice)
-    extends WebsiteController(actionAuthenticator) {
+  postOffice: PostOffice,
+  emailAddressRepo: EmailAddressRepo)
+  extends WebsiteController(actionAuthenticator) {
+
+  def kifiSite(path: String) = AuthenticatedHtmlAction { implicit request =>
+    if (request.experiments.contains(ExperimentTypes.ADMIN) || Play.isDev) {
+      Play.resourceAsStream(s"public/site/$path") map { stream =>
+        SimpleResult(header = ResponseHeader(OK), body = Enumerator.fromStream(stream))
+      } getOrElse NotFound
+    } else NotFound
+  }
 
   def home = HtmlAction(true)(authenticatedAction = { implicit request =>
 
@@ -34,12 +44,13 @@ class HomeController @Inject() (db: Database,
           val user = userRepo.get(u)
           if(user.state == UserStates.ACTIVE) Some(user.externalId)
           else None
-        } flatten
+        }.flatten
       }
 
       val userCanInvite = (request.experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.CAN_INVITE)).nonEmpty
+      val userCanSeeKifiSite = (request.experiments & Set(ExperimentTypes.ADMIN)).nonEmpty || Play.isDev
 
-      Ok(views.html.website.userHome(request.user, friendsOnKifi, userCanInvite))
+      Ok(views.html.website.userHome(request.user, friendsOnKifi, userCanInvite, userCanSeeKifiSite))
     }
   }, unauthenticatedAction = { implicit request =>
     Ok(views.html.website.welcome())
@@ -91,7 +102,23 @@ class HomeController @Inject() (db: Database,
       socialUserRepo.getByUser(request.user.id.get) map { su =>
         invitationRepo.getByRecipient(su.id.get) match {
           case Some(invite) =>
-            invitationRepo.save(invite.withState(InvitationStates.JOINED))
+            if(invite.state != InvitationStates.JOINED) {
+              invitationRepo.save(invite.withState(InvitationStates.JOINED))
+              invite.senderUserId match {
+                case Some(senderUserId) =>
+                  for (address <- emailAddressRepo.getByUser(senderUserId)) {
+                    postOffice.sendMail(ElectronicMail(
+                      senderUserId = None,
+                      from = EmailAddresses.CONGRATS,
+                      fromName = Some("KiFi Team"),
+                      to = List(address),
+                      subject = s"@request.user.firstName @request.user.lastName joined KiFi!",
+                      htmlBody = views.html.email.invitationAccept(request.user).body,
+                      category = PostOffice.Categories.INVITATION))
+                  }
+                case None => 
+              }
+            }
           case None =>
         }
       }

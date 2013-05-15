@@ -1,6 +1,7 @@
 package com.keepit.search
 
 import com.keepit.search.graph.URIGraphSearcher
+import com.keepit.search.graph.UserToUserEdgeSet
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.PersonalizedSearcher
 import com.keepit.common.db.{Id, ExternalId}
@@ -92,12 +93,12 @@ class MainSearcher(
   val preparationTime = currentDateTime.getMillis() - currentTime
   log.info(s"mainSearcher preparation time: $preparationTime milliseconds")
 
-  private def findSharingUsers(id: Id[NormalizedURI]): Set[Id[User]] = {
-    uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id)).destIdSet
+  private def findSharingUsers(id: Id[NormalizedURI]): UserToUserEdgeSet = {
+    uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id))
   }
 
-  private def findEffectiveSharingSize(sharingUsers: Set[Id[User]]): Int = {
-    if (customFilterOn) filter.filterFriends(sharingUsers).size else sharingUsers.size
+  private def findEffectiveSharingSize(sharingUsers: UserToUserEdgeSet): Int = {
+    if (customFilterOn) filter.filterFriends(sharingUsers.destIdSet).size else sharingUsers.size
   }
 
   def getPersonalizedSearcher(query: Query) = {
@@ -204,14 +205,14 @@ class MainSearcher(
         val sharingUsers = findSharingUsers(id)
 
         if (numCollectStats > 0 && sharingUsers.size > 0) {
-          friendStats.add(sharingUsers, h.score)
+          friendStats.add(sharingUsers.destIdLongSet, h.score)
           numCollectStats -= 1
         }
 
         val score = h.score * dampFunc(rank, dampingHalfDecayMine) // damping the scores by rank
 
         if (score > threshold) {
-          h.users = sharingUsers
+          h.users = sharingUsers.destIdSet
           h.scoring = new Scoring(score, score / highScore, bookmarkScore(findEffectiveSharingSize(sharingUsers) + 1), recencyScore(myUriEdges.getCreatedAt(id)))
           h.score = h.scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost)
           hits.insert(h)
@@ -231,13 +232,13 @@ class MainSearcher(
         val sharingUsers = findSharingUsers(id)
 
         if (numCollectStats > 0) {
-          friendStats.add(sharingUsers, h.score)
+          friendStats.add(sharingUsers.destIdLongSet, h.score)
           numCollectStats -= 1
         }
 
         val score = h.score * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank
         if (score > threshold) {
-          h.users = sharingUsers
+          h.users = sharingUsers.destIdSet
           h.scoring = new Scoring(score, score / highScore, bookmarkScore(findEffectiveSharingSize(sharingUsers)), 0.0f)
           h.score = h.scoring.score(1.0f, sharingBoostInNetwork, recencyBoost)
           queue.insert(h)
@@ -302,7 +303,7 @@ class MainSearcher(
 
   private def classify(parsedQuery: Query, hitList: List[MutableArticleHit], clickBoosts: ResultClickTracker.ResultClickBoosts, personalizedSearcher: PersonalizedSearcher) = {
     def classify(hit: MutableArticleHit) = {
-      clickBoosts(hit.id) > 1.25f || (hit.scoring.textScore >= 0.04f && hit.semanticScore >= 0.28f)
+      clickBoosts(hit.id) > 1.25f || hit.scoring.recencyScore > 0.25f || hit.scoring.textScore > 0.7f || (hit.scoring.textScore >= 0.04f && hit.semanticScore >= 0.28f)
     }
     hitList.take(3).exists(classify(_))
   }
