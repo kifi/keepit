@@ -111,6 +111,7 @@ class UrlController @Inject() (
             changes += (("url", 0))
             if(normalizedUri.id.isEmpty || url.normalizedUriId.id != normalizedUri.id.get.id) {
               changes("url") += 1
+              log.info("changes for url:" + changes("url"))
               if(!readOnly) {
                 urlRepo.save(url.withNormUriId(normalizedUri.id.get).withHistory(URLHistory(clock.now, normalizedUri.id.get,reason)))
               }
@@ -159,7 +160,7 @@ class UrlController @Inject() (
           case _ => // ignore
         }
       }
-
+      log.info(changes.toString)
       (urlsSize, changes)
     }
 
