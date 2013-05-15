@@ -1,6 +1,7 @@
 var api = api || require("./api");
 
 const NOTIFICATION_BATCH_SIZE = 10;
+const notificationNotVisited = /^(un)?delivered$/;
 
 var tabsShowingNotificationsPane = [];
 var notificationsCallbacks = [];
@@ -10,7 +11,7 @@ var notificationsCallbacks = [];
 var pageData = {};
 var notifications;  // [] would mean user has none
 var timeNotificationsLastSeen = new Date(0);
-var numNotificationsNotVisited = 0;
+var numNotificationsNotVisited = 0;  // may include some not yet loaded
 var haveAllNotifications;  // inferred
 var friends = [];
 var friendsById = {};
@@ -18,6 +19,7 @@ var ruleSet = {};
 var urlPatterns = [];
 
 function clearDataCache() {
+  api.log("[clearDataCache]");
   pageData = {};
   notifications = null;
   timeNotificationsLastSeen = new Date(0);
@@ -594,29 +596,38 @@ function insertNewNotification(n) {
   var time = new Date(n.time);
   for (var i = 0; i < notifications.length; i++) {
     if (new Date(notifications[i].time) <= time) {
-      if (notifications[i].id == n.id) return false;
+      if (notifications[i].id == n.id) {
+        return false;
+      }
       break;
     }
   }
   notifications.splice(i, 0, n);
 
-  if (n.state != "visited") {  // may have been visited before arrival
+  if (notificationNotVisited.test(n.state)) {  // may have been visited before arrival
     var d = pageData[n.details.page];
     var timeLastRead =
       n.category == "comment" ? d && d.lastCommentRead :
       n.category == "message" ? d && d.lastMessageRead[n.details.locator.split("/")[2]] : 0;
     if (new Date(n.details.createdAt) <= new Date(timeLastRead || 0)) {
       n.state = "visited";
+    } else {
+      numNotificationsNotVisited++;
     }
   }
 
-  numNotificationsNotVisited += n.state != "visited";
   if (n.details.subsumes) {
     for (i++; i < notifications.length; i++) {
       var n2 = notifications[i];
       if (n2.id == n.details.subsumes) {
         notifications.splice(i, 1);
-        numNotificationsNotVisited -= n2.state != "visited";
+        if (notificationNotVisited.test(n2.state)) {
+          if (numNotificationsNotVisited > 0) {
+            numNotificationsNotVisited--;
+          } else {
+            api.log("#a00", "[insertNewNotification] numNotificationsNotVisited accounting error", n, n2);
+          }
+        }
         break;
       }
     }
@@ -632,9 +643,13 @@ function markNoticesVisited(category, nUri, id, timeStr, locator) {
         n.category == category &&
         (!locator || n.details.locator == locator) &&
         (n.details.id == id || new Date(n.time) <= time) &&
-        n.state != "visited") {
+        notificationNotVisited.test(n.state)) {
       n.state = "visited";
-      numNotificationsNotVisited--;
+      if (numNotificationsNotVisited > 0) {
+        numNotificationsNotVisited--;
+      } else {
+        api.log("#a00", "[markNoticesVisited] numNotificationsNotVisited accounting error", n);
+      }
     }
   });
   tabsShowingNotificationsPane.forEach(function(tab) {
@@ -661,8 +676,6 @@ function createDeepLinkListener(locator, tabId) {
     }
   });
 }
-
-
 
 function kifiLoginListener(tab) {
   // check to see if this is the home page, if so try authenticating again if we don't have an installation
