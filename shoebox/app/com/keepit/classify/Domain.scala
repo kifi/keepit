@@ -28,9 +28,10 @@ case class Domain(
 }
 
 object Domain {
-  private val domainRegex = """^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9]+$""".r
+  private val DomainRegex = """^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9]+$""".r
+  private val MaxLength = 128
 
-  def isValid(s: String): Boolean = domainRegex.findFirstIn(s).isDefined
+  def isValid(s: String): Boolean = DomainRegex.findFirstIn(s).isDefined && s.length <= MaxLength
 }
 
 @ImplementedBy(classOf[DomainRepoImpl])

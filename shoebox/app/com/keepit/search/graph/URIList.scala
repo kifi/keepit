@@ -18,6 +18,7 @@ trait URIList {
 object URIList {
 
   val currentVersion = 3
+
   def apply(bytes: Array[Byte]): URIList = apply(bytes, 0, bytes.length)
 
   def apply(bytes: Array[Byte], offset: Int, length: Int): URIList = {
@@ -91,10 +92,14 @@ object URIList {
   def unitToMillis(units: Long) = units * TIME_UNIT
 
   def readList(in: InputStreamDataInput, length: Int): Array[Long] = {
-    val arr = new Array[Long](length)
+    readList(in, new Array[Long](length), 0, length)
+  }
+
+  def readList(in: InputStreamDataInput, arr: Array[Long], offset: Int, length: Int): Array[Long] = {
     var current = 0L;
-    var i = 0
-    while (i < length) {
+    var i = offset
+    val end = offset + length
+    while (i < end) {
       val id = current + in.readVLong
       arr(i) = id
       current = id
@@ -104,9 +109,13 @@ object URIList {
   }
 
   def readRawList(in: InputStreamDataInput, length: Int): Array[Long] = {
-    val arr = new Array[Long](length)
-    var i = 0
-    while (i < length) {
+    readRawList(in, new Array[Long](length), 0, length)
+  }
+
+  def readRawList(in: InputStreamDataInput, arr: Array[Long], offset: Int, length: Int): Array[Long] = {
+    var i = offset
+    val end = offset + length
+    while (i < end) {
       arr(i) = in.readVLong
       i += 1
     }
@@ -134,7 +143,7 @@ private[graph] class URIListV3(in: InputStreamDataInput) extends URIList with UR
   override def createdAt: Array[Long] = createdAtList
 
   private[this] val listSize = in.readVInt()
-  private[this] val idList: Array[Long] = URIList.readList(in, listSize)
+  private[this] lazy val idList: Array[Long] = URIList.readList(in, listSize)
   private[this] lazy val createdAtList: Array[Long] = loadRawListAfter(idList, listSize, in)
 }
 

@@ -20,7 +20,8 @@ var injected, t0 = +new Date, tile, paneHistory;
   var tileCount, onScroll;
   api.port.on({
     new_notification: function(n) {
-      if (n.state != "visited" && (!paneHistory || paneHistory[0] != n.details.locator)) {
+      if (n.state != "visited" &&
+          (!paneHistory || (paneHistory[0] != n.details.locator && paneHistory[0] != "/notices"))) {
         api.require("scripts/notifier.js", function() {
           notifier.show(n);
         });

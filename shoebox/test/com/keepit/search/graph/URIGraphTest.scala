@@ -225,7 +225,7 @@ class URIGraphTest extends Specification with DbRepos {
 
         users.sliding(3).foreach{ friends =>
           val friendIds = friends.map(_.id.get).toSet
-          val userToUserEdgeSet = new UserToUserEdgeSet(Id[User](1000), friendIds)
+          val userToUserEdgeSet = UserToUserEdgeSet(Id[User](1000), friendIds)
 
           expectedUriToUserEdges.map{ case (uri, users) =>
             val expected = (users.map(_.id.get).toSet intersect friendIds)
@@ -256,7 +256,7 @@ class URIGraphTest extends Specification with DbRepos {
 
         searcher.getUriToUserEdgeSet(Id[NormalizedURI](10000)).destIdSet.isEmpty === true
 
-        val emptyUserToUserEdgeSet = new UserToUserEdgeSet(Id[User](10000), Set())
+        val emptyUserToUserEdgeSet = UserToUserEdgeSet(Id[User](10000), Set.empty[Id[User]])
 
         emptyUserToUserEdgeSet.destIdSet.isEmpty === true
 
@@ -264,18 +264,23 @@ class URIGraphTest extends Specification with DbRepos {
 
         searcher.intersect(emptyUserToUserEdgeSet, searcher.getUriToUserEdgeSet(Id[NormalizedURI](10000))).destIdSet.isEmpty === true
 
-        val userToUserEdgeSet = new UserToUserEdgeSet(Id[User](10000), users.map(_.id.get).toSet)
+        val userToUserEdgeSet = UserToUserEdgeSet(Id[User](10000), users.map(_.id.get).toSet)
         searcher.intersect(userToUserEdgeSet, searcher.getUriToUserEdgeSet(Id[NormalizedURI](10000))).destIdSet.isEmpty === true
       }
     }
 
     "determine whether intersection is empty" in {
-      val searcher = new URIGraphSearcher(null, None)
-      searcher.intersectAny(new TestDocIdSetIterator(1, 2, 3), new TestDocIdSetIterator(2, 4, 6)) === true
-      searcher.intersectAny(new TestDocIdSetIterator(       ), new TestDocIdSetIterator(       )) === false
-      searcher.intersectAny(new TestDocIdSetIterator(       ), new TestDocIdSetIterator(2, 4, 6)) === false
-      searcher.intersectAny(new TestDocIdSetIterator(1, 2, 3), new TestDocIdSetIterator(       )) === false
-      searcher.intersectAny(new TestDocIdSetIterator(1, 3, 5), new TestDocIdSetIterator(2, 4, 6)) === false
+      running(new EmptyApplication()) {
+        val graphDir = new RAMDirectory
+        val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db)
+        val searcher = graph.getURIGraphSearcher()
+        searcher.intersectAny(new TestDocIdSetIterator(1, 2, 3), new TestDocIdSetIterator(2, 4, 6)) === true
+        searcher.intersectAny(new TestDocIdSetIterator(       ), new TestDocIdSetIterator(       )) === false
+        searcher.intersectAny(new TestDocIdSetIterator(       ), new TestDocIdSetIterator(2, 4, 6)) === false
+        searcher.intersectAny(new TestDocIdSetIterator(1, 2, 3), new TestDocIdSetIterator(       )) === false
+        searcher.intersectAny(new TestDocIdSetIterator(1, 3, 5), new TestDocIdSetIterator(2, 4, 6)) === false
+      }
     }
 
     "search personal bookmark titles" in {

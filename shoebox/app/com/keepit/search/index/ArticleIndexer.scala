@@ -87,7 +87,7 @@ class ArticleIndexer (
         case None => article.content
       }
       article.media match {
-        case Some(media) => c + media
+        case Some(media) => c + "\n\n" + media
         case None => c
       }
     }
