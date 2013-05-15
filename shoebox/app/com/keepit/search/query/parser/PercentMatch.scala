@@ -9,6 +9,7 @@ import org.apache.lucene.search.BooleanClause
 import org.apache.lucene.search.BooleanClause._
 import org.apache.lucene.analysis.Analyzer
 import scala.collection.mutable.ArrayBuffer
+import com.keepit.search.query.MediaQuery
 
 trait PercentMatch extends QueryParser {
 
@@ -23,19 +24,19 @@ trait PercentMatch extends QueryParser {
       val query = new BooleanQueryWithPercentMatch(false) // ignore disableCoord. we always enable coord and control the behavior thru a Similarity instance
       query.setPercentMatch(percentMatch)
 
-      val (siteClauses, otherClauses) = clauses.partition{ clause => clause.getQuery.isInstanceOf[SiteQuery] && !clause.isProhibited }
+      val (specialClauses, otherClauses) = clauses.partition{ clause => (clause.getQuery.isInstanceOf[SiteQuery] || clause.getQuery.isInstanceOf[MediaQuery]) && !clause.isProhibited }
       otherClauses.foreach{ clause => query.add(clause) }
 
-      val finalQuery = if (siteClauses.isEmpty) {
+      val finalQuery = if (specialClauses.isEmpty) {
         query
       } else {
-        val siteQuery = {
-          if (siteClauses.size == 1) siteClauses(0).getQuery
-          else siteClauses.foldLeft(new BooleanQuery(true)){ (bq, clause) => bq.add(clause.getQuery, Occur.MUST); bq }
+        val specialQuery = {
+          if (specialClauses.size == 1) specialClauses(0).getQuery
+          else specialClauses.foldLeft(new BooleanQuery(true)){ (bq, clause) => bq.add(clause.getQuery, Occur.MUST); bq }
         }
 
-        if (otherClauses.isEmpty) siteQuery
-        else new ConditionalQuery(query, siteQuery)
+        if (otherClauses.isEmpty) specialQuery
+        else new ConditionalQuery(query, specialQuery)
       }
       Option(finalQuery)
     }
