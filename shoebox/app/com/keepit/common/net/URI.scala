@@ -3,6 +3,7 @@ package com.keepit.common.net
 import scala.util.Try
 
 import com.keepit.common.logging.Logging
+import com.keepit.common.strings.ENCODING
 
 object URI extends Logging {
   def parse(uriString: String): Try[URI] = {
@@ -11,20 +12,18 @@ object URI extends Logging {
     }
   }
 
-  def apply(scheme: Option[String], userInfo: Option[String], host: Option[Host], port: Int, path: Option[String], query: Option[Query], fragment: Option[String]): URI = {
+  def apply(scheme: Option[String], userInfo: Option[String], host: Option[Host], port: Int, path: Option[String], query: Option[Query], fragment: Option[String]): URI =
     apply(None, scheme, userInfo, host, port, path, query, fragment)
-  }
 
-  def apply(raw: Option[String], scheme: Option[String], userInfo: Option[String], host: Option[Host], port: Int, path: Option[String], query: Option[Query], fragment: Option[String]): URI = {
+  def apply(raw: Option[String], scheme: Option[String], userInfo: Option[String], host: Option[Host], port: Int, path: Option[String], query: Option[Query], fragment: Option[String]): URI =
     new URI(raw, scheme, userInfo, host, port, path, query, fragment)
-  }
 
-  def unapply(uri: URI): Option[(Option[String], Option[String], Option[Host], Int, Option[String], Option[Query], Option[String])] = {
+  def unapply(uri: URI): Option[(Option[String], Option[String], Option[Host], Int, Option[String], Option[Query], Option[String])] =
     Some((uri.scheme, uri.userInfo, uri.host, uri.port, uri.path, uri.query, uri.fragment))
-  }
-  def unapply(uriString: String): Option[(Option[String], Option[String], Option[Host], Int, Option[String], Option[Query], Option[String])] = {
+
+  def unapply(uriString: String): Option[(Option[String], Option[String], Option[Host], Int, Option[String], Option[Query], Option[String])] =
     unapplyTry(uriString).toOption
-  }
+
   def unapplyTry(uriString: String): Try[(Option[String], Option[String], Option[Host], Int, Option[String], Option[Query], Option[String])] = Try {
     val uri = try {
       new java.net.URI(uriString).normalize()
@@ -44,11 +43,11 @@ object URI extends Logging {
 
   val authorityRe = """(?:([^@]*)@)?(.*?)(?::(\d{1,5}))?""".r
   val twoHexDigits = """\p{XDigit}\p{XDigit}""".r
-  val encodedPercent = java.net.URLEncoder.encode("%", "UTF-8")
+  val encodedPercent = java.net.URLEncoder.encode("%", ENCODING)
   val symbols = """'"`@$^()[]{}<>\| """  // note: may want to remove '@$() as java.net.URI doesn't require escaping them
   val symbolRe = ("[\\Q" + symbols + "\\E]").r
   val delimiters = "?#"
-  val encodingMap = (symbols ++ delimiters).map(c => c -> java.net.URLEncoder.encode(c.toString, "UTF-8")).toMap
+  val encodingMap: Map[Char, String] = (symbols ++ delimiters).map(c => c -> java.net.URLEncoder.encode(c.toString, ENCODING)).toMap
 
   def fixMalformedEscape(uriString: String) = {
     uriString.split("%", -1) match {
@@ -146,8 +145,8 @@ object URI extends Logging {
 
   def normalizeString(string: String, what: String) = {
     try {
-      val decoded = java.net.URLDecoder.decode(string.replace("+", "%20"), "UTF-8") // java URLDecoder does not replace "+" with a space
-      java.net.URLEncoder.encode(decoded, "UTF-8")
+      val decoded = java.net.URLDecoder.decode(string.replace("+", "%20"), ENCODING) // java URLDecoder does not replace "+" with a space
+      java.net.URLEncoder.encode(decoded, ENCODING)
     } catch {
       case e: Exception =>
         log.error("%s normalization failed: [%s]".format(what, string))
@@ -243,6 +242,6 @@ case class Param(name: String, value: Option[String]) {
   override def toString() = {
     if (value.isDefined) (name + "=" + value.get) else name
   }
-  
-  def decodedValue: Option[String] = value.map{ v => java.net.URLDecoder.decode(v, "UTF-8") }
+
+  def decodedValue: Option[String] = value.map{ v => java.net.URLDecoder.decode(v, ENCODING) }
 }

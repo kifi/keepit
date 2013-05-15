@@ -6,6 +6,7 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 import org.apache.commons.codec.binary.Base64
+import com.keepit.common.strings._
 
 object PBKDF2 extends CryptoSupport {
 
@@ -22,7 +23,7 @@ object PBKDF2 extends CryptoSupport {
    */
   def hash(password: String)(implicit random: SecureRandom): String = {
     val salt = randomBytes(SALT_SIZE)
-    val key = pbkdf2(password.getBytes("UTF-8"), salt, ITERATION_COUNT, HASH_SIZE, HMAC_ALGORITHM)
+    val key = pbkdf2(password, salt, ITERATION_COUNT, HASH_SIZE, HMAC_ALGORITHM)
     toBase64(salt ++ key)
   }
 
@@ -31,7 +32,7 @@ object PBKDF2 extends CryptoSupport {
    */
   def check(password: String, hash: String): Boolean = {
     val (salt, key) = fromBase64(hash).splitAt(SALT_SIZE)
-    val passwordKey = pbkdf2(password.getBytes("UTF-8"), salt, ITERATION_COUNT, HASH_SIZE, HMAC_ALGORITHM)
+    val passwordKey = pbkdf2(password, salt, ITERATION_COUNT, HASH_SIZE, HMAC_ALGORITHM)
     (passwordKey.toSeq == key.toSeq)
   }
 

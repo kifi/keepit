@@ -7,6 +7,7 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.healthcheck.Healthcheck
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.inject._
+import com.keepit.common.strings._
 
 import java.util.Properties
 import javax.mail._
@@ -151,7 +152,7 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
     message.setContent(multipart)
 
     val fromName: String = mail.fromName.getOrElse(mail.from.address)
-    message.setFrom(new InternetAddress(mail.from.address, fromName, "UTF-8"))
+    message.setFrom(new InternetAddress(mail.from.address, fromName, ENCODING))
 
     val recipientAddr: Array[Address] = Play.isProd match {
       case true => (mail.to map { e => new InternetAddress(e.address) }).toArray

@@ -8,6 +8,7 @@ import org.joda.time.DateTime
 import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.Healthcheck._
 import com.keepit.common.time._
+import com.keepit.common.strings._
 
 case class HealthcheckErrorSignature(value: String) extends AnyVal
 
@@ -36,8 +37,8 @@ case class HealthcheckError(
         path.getOrElse("") +
         method.getOrElse("") +
         callType.toString
-    val binaryHash = MessageDigest.getInstance("MD5").digest(permText.getBytes("UTF-8"))
-    HealthcheckErrorSignature(new String(new Base64().encode(binaryHash), "UTF-8"))
+    val binaryHash = MessageDigest.getInstance("MD5").digest(permText)
+    HealthcheckErrorSignature(new String(new Base64().encode(binaryHash), ENCODING))
   }
 
   def causeStacktraceHead(depth: Int, throwable: Option[Throwable] = error): Option[String] = throwable match {

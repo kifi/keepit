@@ -1,12 +1,19 @@
 package com.keepit.model
 
 import com.keepit.inject._
-import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import com.keepit.common.crypto._
+import com.keepit.common.strings._
+import com.keepit.common.logging.Logging
+import com.keepit.common.net.URINormalizer
+import com.keepit.common.net.URI
+import com.keepit.common.cache._
+import com.keepit.serializer.NormalizedURISerializer
+import com.keepit.model._
+
 import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
@@ -16,15 +23,6 @@ import play.api.libs.json._
 import java.security.MessageDigest
 import org.apache.commons.codec.binary.Base64
 import scala.collection.mutable
-import com.keepit.common.logging.Logging
-import com.keepit.common.net.URINormalizer
-import com.keepit.common.net.URI
-import com.keepit.common.cache._
-import com.keepit.serializer.NormalizedURISerializer
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.model._
-import com.keepit.common.db._
 import com.google.inject.Provider
 
 import scala.concurrent.duration._
@@ -185,8 +183,8 @@ object NormalizedURIFactory {
   def normalize(url: String) = URINormalizer.normalize(url)
 
   def hashUrl(normalizedUrl: String): String = {
-    val binaryHash = MessageDigest.getInstance("MD5").digest(normalizedUrl.getBytes("UTF-8"))
-    new String(new Base64().encode(binaryHash), "UTF-8")
+    val binaryHash = MessageDigest.getInstance("MD5").digest(normalizedUrl)
+    new String(new Base64().encode(binaryHash), ENCODING)
   }
 }
 
