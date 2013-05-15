@@ -111,8 +111,20 @@ trait IdSetEdgeSet[S, D] extends MaterializedEdgeSet[S, D] {
 }
 
 trait LongSetEdgeSet[S, D] extends MaterializedEdgeSet[S, D] {
+  protected val longArraySet: LongArraySet
+
+  override def destIdLongSet = longArraySet
   override lazy val destIdSet: Set[Id[D]] = destIdLongSet.map(Id[D](_))
-  override def size = destIdLongSet.size
+  override def size = longArraySet.size
+}
+
+trait LongSetEdgeSetWithCreatedAt[S, D] extends LongSetEdgeSet[S, D] with CreatedAt[D] {
+  protected def createdAt(idx: Int): Long
+
+  override def getCreatedAt(id: Id[D]): Long = {
+    val idx = longArraySet.findIndex(id.id)
+    if (idx >= 0) createdAt(idx) else 0
+  }
 }
 
 trait LongToLongMapEdgeSetWithCreatedAt[S, D] extends MaterializedEdgeSet[S, D] with CreatedAt[D] {
