@@ -31,6 +31,8 @@
 .kifi-slider2,
 .kifi-pane {
   color: #000;
+  -moz-box-sizing: content-box;
+  box-sizing: content-box;
 }
 .kifi-slider2 div,
 .kifi-pane div {
