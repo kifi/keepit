@@ -109,9 +109,13 @@ object URIList {
   }
 
   def readRawList(in: InputStreamDataInput, length: Int): Array[Long] = {
-    val arr = new Array[Long](length)
-    var i = 0
-    while (i < length) {
+    readRawList(in, new Array[Long](length), 0, length)
+  }
+
+  def readRawList(in: InputStreamDataInput, arr: Array[Long], offset: Int, length: Int): Array[Long] = {
+    var i = offset
+    val end = offset + length
+    while (i < end) {
       arr(i) = in.readVLong
       i += 1
     }

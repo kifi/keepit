@@ -1,5 +1,6 @@
 package com.keepit.search.line
 
+import com.keepit.common.logging.Logging
 import com.keepit.search.index.CachingIndexReader
 import com.keepit.search.index.CachedIndex
 import com.keepit.search.index.InvertedList
@@ -13,7 +14,7 @@ import scala.collection.mutable.ArrayBuffer
 import java.util.{Map=>JMap, Iterator=>JIterator, TreeMap=>JSortedMap, TreeSet=>JSortedSet}
 import scala.collection.SortedMap
 
-object LineIndexReader {
+object LineIndexReader extends Logging {
 
   def apply(indexReader: AtomicReader, userDocId: Int, terms: Set[Term], numLines: Int) = {
     val index = terms.foldLeft(new CachedIndex(numLines, numLines)){ (index, term) =>
@@ -37,6 +38,7 @@ object LineIndexReader {
           plist += (pos % LineField.MAX_POSITION_PER_LINE)
           i += 1
         }
+        if (curDoc >= numLines) log.error(s"curDoc=$curDoc numLines=$numLines")
         if (curDoc >= 0) invertedList.add(curDoc, plist.toArray)
         index + (field, text, invertedList.build)
       } else {
