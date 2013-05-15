@@ -251,6 +251,7 @@ a.kifi-pane-back:active {
 }
 .kifi-not-done {
   position: absolute;
+  z-index: 1;
   left: 5%;
   width: 90%;
   top: -70px;
