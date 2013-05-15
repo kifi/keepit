@@ -132,7 +132,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
         });
       }
       function isFadingOut() {  // recovers within .5 sec if property not cleared when done fading
-        return new Date - (data.fadeOutStartTime || 0) > 500;
+        return new Date - (data.fadeOutStartTime || 0) < 500;
       }
       // Returns whether the viewport coords (x, y) are in the trapezoid between the top edge
       // of hover trigger element and the bottom edge of the hover element.
