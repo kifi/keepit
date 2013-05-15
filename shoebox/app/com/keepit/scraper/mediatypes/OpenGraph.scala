@@ -1,10 +1,11 @@
-package com.keepit.scraper.util
+package com.keepit.scraper.mediatypes
 
-import com.keepit.scraper.extractor.Extractor
+object OpenGraph extends MediaTypes {
 
-object OpenGraph {
+  val typeMetadata = "og:type"
+
   // object types to string
-  private[this] val ogObjTypeMap: Map[String, Option[String]] = Map(
+  private[this] val objTypeMap: Map[String, Option[String]] = Map(
     "video.movie" -> Some("video movie"),
     "video.episode" -> Some("video episode"),
     "video.tv_show" -> Some("video tv show"),
@@ -21,14 +22,9 @@ object OpenGraph {
     "article" -> None,
     "profile" -> None
   )
+
   private[this] val punctPattern = """\p{Punct}""".r
-
-  private[this] def toMediaTypeString(t: String): Option[String] = {
-    ogObjTypeMap.getOrElse(t, Some(punctPattern.replaceAllIn(t, " ")))
-  }
-
-  def getMediaTypeString(x: Extractor): Option[String] = {
-    // extract open graph object type
-    x.getMetadata("og:type").flatMap(toMediaTypeString(_))
+  def toMediaTypeString(t: String): Option[String] = {
+    objTypeMap.getOrElse(t, Some(punctPattern.replaceAllIn(t, " ")))
   }
 }
