@@ -162,8 +162,8 @@ div.kifi-pane-head-settings-menu {
   height: auto;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-  border: 0 solid transparent;
-  border-width: 0 6px;
+  border: 0 solid transparent !important;
+  border-width: 0 6px !important;
   border-radius: 0;
   outline: none !important;
   box-shadow: none !important;
@@ -179,6 +179,12 @@ div.kifi-pane-head-settings-menu {
 }
 .kifi-pane input[type=text].kifi-pane-search:focus {
   background-color: #fff !important;
+}
+.kifi-pane input[type=text].kifi-pane-search::-moz-placeholder {
+  color: #a9a9a9 !important;
+}
+.kifi-pane input[type=text].kifi-pane-search::-webkit-input-placeholder {
+  color: #a9a9a9 !important;
 }
 
 /* shared */
