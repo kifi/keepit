@@ -9,7 +9,6 @@ var notificationsCallbacks = [];
 
 var pageData = {};
 var notifications;  // [] would mean user has none
-var newNotificationIdxs = [];  // derived
 var timeNotificationsLastSeen = new Date(0);
 var numNotificationsNotVisited = 0;
 var haveAllNotifications;  // inferred
@@ -21,7 +20,6 @@ var urlPatterns = [];
 function clearDataCache() {
   pageData = {};
   notifications = null;
-  newNotificationIdxs = [];
   timeNotificationsLastSeen = new Date(0);
   numNotificationsNotVisited = 0;
   haveAllNotifications = false;
@@ -233,7 +231,6 @@ const socketHandlers = {
       notifications = arr;
       haveAllNotifications = arr.length < NOTIFICATION_BATCH_SIZE;
       numNotificationsNotVisited = numNotVisited;
-      identifyNewNotices();
       while (notificationsCallbacks.length) {
         notificationsCallbacks.shift()();
       }
@@ -243,7 +240,6 @@ const socketHandlers = {
   notification: function(n) {  // a new notification (real-time)
     api.log("[socket:notification]", n);
     if (insertNewNotification(n)) {
-      identifyNewNotices();
       var told = {};
       api.tabs.eachSelected(tellTab);
       tabsShowingNotificationsPane.forEach(tellTab);
@@ -263,7 +259,6 @@ const socketHandlers = {
       }
     }
     if (arr.length) {
-      identifyNewNotices();
       tabsShowingNotificationsPane.forEach(function(tab) {
         api.tabs.emit(tab, "missed_notifications", arr);
       });
@@ -275,8 +270,6 @@ const socketHandlers = {
     var time = new Date(t);
     if (time > timeNotificationsLastSeen) {
       timeNotificationsLastSeen = time;
-      identifyNewNotices();
-      tellTabsNoticeCountIfChanged();
     }
   },
   comment: function(nUri, c) {
@@ -528,7 +521,6 @@ api.port.on({
     function reply() {
       respond({
         notifications: notifications.slice(0, NOTIFICATION_BATCH_SIZE),
-        newIdxs: newNotificationIdxs,
         timeLastSeen: timeNotificationsLastSeen.toISOString()});
     }
   },
@@ -564,8 +556,6 @@ api.port.on({
     var time = new Date(t);
     if (time > timeNotificationsLastSeen) {
       timeNotificationsLastSeen = time;
-      identifyNewNotices();
-      tellTabsNoticeCountIfChanged();
       socket.send(["set_last_notify_read_time", t]);
     }
   },
@@ -634,18 +624,6 @@ function insertNewNotification(n) {
   return true;
 }
 
-function identifyNewNotices() {
-  newNotificationIdxs.length = 0;
-  if (!notifications) return;
-  for (var i = 0; i < notifications.length; i++) {
-    if (new Date(notifications[i].time) <= timeNotificationsLastSeen) {
-      break;
-    } else if (notifications[i].state != "visited") {
-      newNotificationIdxs.push(i);
-    }
-  }
-}
-
 // id is of last read comment/message. locator not passed in the comments case.
 function markNoticesVisited(category, nUri, id, timeStr, locator) {
   var time = new Date(timeStr);
@@ -657,8 +635,6 @@ function markNoticesVisited(category, nUri, id, timeStr, locator) {
         n.state != "visited") {
       n.state = "visited";
       numNotificationsNotVisited--;
-      var j = newNotificationIdxs.indexOf(i);
-      if (~j) newNotificationIdxs.splice(j, 1);
     }
   });
   tabsShowingNotificationsPane.forEach(function(tab) {
