@@ -242,20 +242,20 @@ html>.kifi-slider2.kifi-wide {
 .kifi-private .kifi-slider2-keep-btn::before,
 .kifi-private .kifi-slider2-keep-btn.kifi-hoverless:hover::before {
   display: block;
-  margin-top: -5px;
+  line-height: 32px;
 }
 .kifi-private .kifi-slider2-keep-btn::after,
 .kifi-private .kifi-slider2-keep-btn.kifi-hoverless:hover::after {
   content: "(private)";
   display: block;
-  margin-top: -10px;
+  margin-top: -5px;
   font-size: 9px;
   line-height: 0;
 }
 .kifi-public .kifi-slider2-keep-btn:hover::before,
 .kifi-private .kifi-slider2-keep-btn:hover::before {
   content: "unkeep";
-  margin-top: 0;
+  line-height: 42px;
 }
 .kifi-private .kifi-slider2-keep-btn:hover::after {
   content: "";
@@ -449,7 +449,7 @@ a.kifi-slider2-keeper {
   bottom: 100%;
   width: auto;
   height: auto;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
   border-radius: 6px;
   padding: 8px 12px 10px;
   background-color: rgba(53,60,67,.9);
