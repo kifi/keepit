@@ -622,11 +622,7 @@ function insertNewNotification(n) {
       if (n2.id == n.details.subsumes) {
         notifications.splice(i, 1);
         if (notificationNotVisited.test(n2.state)) {
-          if (numNotificationsNotVisited > 0) {
-            numNotificationsNotVisited--;
-          } else {
-            api.log("#a00", "[insertNewNotification] numNotificationsNotVisited accounting error", n, n2);
-          }
+          decrementNumNotificationsNotVisited(n2);
         }
         break;
       }
@@ -645,16 +641,21 @@ function markNoticesVisited(category, nUri, id, timeStr, locator) {
         (n.details.id == id || new Date(n.time) <= time) &&
         notificationNotVisited.test(n.state)) {
       n.state = "visited";
-      if (numNotificationsNotVisited > 0) {
-        numNotificationsNotVisited--;
-      } else {
-        api.log("#a00", "[markNoticesVisited] numNotificationsNotVisited accounting error", n);
-      }
+      decrementNumNotificationsNotVisited(n);
     }
   });
   tabsShowingNotificationsPane.forEach(function(tab) {
     api.tabs.emit(tab, "notifications_visited", {category: category, nUri: nUri, time: timeStr, locator: locator});
   });
+}
+
+function decrementNumNotificationsNotVisited(n) {
+  if (numNotificationsNotVisited <= 0) {
+    api.log("#a00", "[decrementNumNotificationsNotVisited] error", numNotificationsNotVisited, n);
+  }
+  if (numNotificationsNotVisited > 0 || ~session.experiments.indexOf("admin")) {  // exposing -1 to admins to help debug
+    numNotificationsNotVisited--;
+  }
 }
 
 function createDeepLinkListener(locator, tabId) {
