@@ -104,6 +104,18 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new IdMapperDelegate[UserNotification](profile)
   }
 
+  implicit object BookmarkIdTypeMapper extends BaseTypeMapper[Id[Bookmark]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[Bookmark](profile)
+  }
+
+  implicit object KeepToCollectionIdTypeMapper extends BaseTypeMapper[Id[KeepToCollection]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[KeepToCollection](profile)
+  }
+
+  implicit object CollectionIdTypeMapper extends BaseTypeMapper[Id[Collection]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[Collection](profile)
+  }
+
   //States
   implicit object NormalizedURIStateTypeMapper extends BaseTypeMapper[State[NormalizedURI]] {
     def apply(profile: BasicProfile) = new StateMapperDelegate[NormalizedURI](profile)
