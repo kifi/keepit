@@ -86,6 +86,11 @@ class UrlController @Inject() (
 
       val urlsSize = urls.size
       val changes = scala.collection.mutable.Map[String, Int]()
+      changes += (("url", 0))
+      changes += (("bookmark", 0))
+      changes += (("comment", 0))
+      changes += (("deeplink", 0))
+      changes += (("follow", 0))
 
       urls map { url =>
         url.state match {
@@ -102,22 +107,13 @@ class UrlController @Inject() (
                   nuri}, URLHistoryCause.SPLIT)
             }
 
-            log.info("\n === original url = " + url.url)
-            log.info("\n === original url id = " + url.normalizedUriId.id)
-            log.info("\n === new uri = " + normalizedUri.url)
-            if (normalizedUri.id.isEmpty) log.info("new url id is empty")
-            else log.info("new url id = " + normalizedUri.id.get.id)
-
-            changes += (("url", 0))
             if(normalizedUri.id.isEmpty || url.normalizedUriId.id != normalizedUri.id.get.id) {
               changes("url") += 1
-              log.info("changes for url:" + changes("url"))
               if(!readOnly) {
                 urlRepo.save(url.withNormUriId(normalizedUri.id.get).withHistory(URLHistory(clock.now, normalizedUri.id.get,reason)))
               }
             }
 
-            changes += (("bookmark", 0))
             bookmarkRepo.getByUrlId(url.id.get) map { s =>
               if(normalizedUri.id.isEmpty || s.uriId.id != normalizedUri.id.get.id) {
                 changes("bookmark") += 1
@@ -127,7 +123,6 @@ class UrlController @Inject() (
               }
             }
 
-            changes += (("comment", 0))
             commentRepo.getByUrlId(url.id.get) map { s =>
               if(normalizedUri.id.isEmpty || s.uriId.id != normalizedUri.id.get.id) {
                 changes("comment") += 1
@@ -137,7 +132,6 @@ class UrlController @Inject() (
               }
             }
 
-            changes += (("deeplink", 0))
             deepLinkRepo.getByUrl(url.id.get) map { s =>
               if(normalizedUri.id.isEmpty || s.uriId.get.id != normalizedUri.id.get.id) {
                 changes("deeplink") += 1
@@ -147,7 +141,6 @@ class UrlController @Inject() (
               }
             }
 
-            changes += (("follow", 0))
             followRepo.getByUrl(url.id.get, excludeState = None) map { s =>
               if(normalizedUri.id.isEmpty || s.uriId.id != normalizedUri.id.get.id) {
                 changes("follow") += 1
@@ -160,7 +153,6 @@ class UrlController @Inject() (
           case _ => // ignore
         }
       }
-      log.info(changes.toString)
       (urlsSize, changes)
     }
 
