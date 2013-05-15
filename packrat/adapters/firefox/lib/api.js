@@ -52,6 +52,10 @@ function onIconClick(win) {
   dispatch.call(exports.icon.on.click, pages[win.tabs.activeTab.id]);
 }
 
+exports.isPackaged = function() {
+  return true; // TODO: detect development environment
+};
+
 exports.loadReason = {upgrade: "update", downgrade: "update"}[self.loadReason] || self.loadReason;
 
 const hexRe = /^#[0-9a-f]{3}$/i;
