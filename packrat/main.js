@@ -158,6 +158,7 @@ const socketHandlers = {
     var d = pageData[uri];
     if (d) {
       d.kept = o.kept;
+      d.position = o.position;
       d.neverOnSite = o.neverOnSite;
       d.sensitive = o.sensitive;
       d.tabs.forEach(function(tab) {
@@ -428,6 +429,15 @@ api.port.on({
   },
   get_suppressed: function(_, respond, tab) {
     respond(pageData[tab.nUri].neverOnSite);
+  },
+  set_keeper_pos: function(o, _, tab) {
+    const hostRe = /^https?:\/\/([^\/]*)/;
+    for (var nUri in pageData) {
+      if (nUri.match(hostRe)[1] == o.host) {
+        pageData[nUri].position = o.pos;
+      }
+    }
+    socket.send(["set_keeper_position", o.host, o.pos]);
   },
   log_event: function(data) {
     logEvent.apply(null, data);
@@ -857,7 +867,10 @@ function setIcon(tab, kept) {
 }
 
 function sendKept(tab, d) {
-  api.tabs.emit(tab, "kept", {kept: d.kept, hide: d.neverOnSite || (d.sensitive && ruleSet.rules.sensitive)});
+  api.tabs.emit(tab, "kept", {
+    kept: d.kept,
+    position: d.position,
+    hide: d.neverOnSite || ruleSet.rules.sensitive && d.sensitive});
 }
 
 function postBookmarks(supplyBookmarks, bookmarkSource) {

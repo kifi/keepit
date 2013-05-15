@@ -56,59 +56,63 @@
   cursor: pointer;
 }
 
-#kifi-tile .kifi-slider2-tip {
+#kifi-tile>.kifi-slider2-tip {
   right: 0;
   padding: 0 18px 3px;
   margin-bottom: 13px;
-  -webkit-transform: translate(0, 20px);
-  transform: translate(0, 20px);
+  -webkit-transform: translate(0,20px);
+  transform: translate(0,20px);
   -webkit-transition: opacity .8s ease-out, -webkit-transform .8s ease-out;
   transition: opacity .8s ease-out, -webkit-transform .8s ease-out, transform .8s ease-out;
 }
-#kifi-tile.kifi-hover-showing .kifi-slider2-tip {
+#kifi-tile.kifi-hover-showing>.kifi-slider2-tip {
   -webkit-transform: none;
   transform: none;
   -webkit-transition: opacity .5s ease-in, -webkit-transform .5s ease-out;
   transition: opacity .5s ease-in, -webkit-transform .5s ease-out, transform .5s ease-out;
 }
-#kifi-tile.kifi-with-count .kifi-slider2-tip {
+#kifi-tile.kifi-with-count>.kifi-slider2-tip {
   margin-bottom: 23px;
 }
-#kifi-tile .kifi-slider2-tip::before {
+#kifi-tile>.kifi-slider2-tip::before {
   left: auto;
   right: 13px;
 }
-#kifi-tile .kifi-slider2-tip::before {
+#kifi-tile>.kifi-slider2-tip::before {
   left: auto;
   right: 13px;
 }
-#kifi-tile .kifi-slider2-tip a.kifi-slider2-keeper {
+#kifi-tile>.kifi-slider2-tip a.kifi-slider2-keeper {
   cursor: default;
 }
-#kifi-tile.kifi-behind-slider .kifi-slider2-tip {
+#kifi-tile.kifi-with-slider>.kifi-slider2-tip {
   display: none;
 }
 
 .kifi-slider2 {
-  position: fixed;
-  z-index: 999999999992;
-  bottom: 0;
-  right: 0;
-  height: 54px;
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  height: 42px;
   width: 142px;
+  border: 6px solid transparent;
+  margin: -6px;
   font: 12px "Helvetica Neue",arial,sans-serif;
   direction: ltr;
 }
 .kifi-slider2:hover {
-  border: 14px solid transparent;
-  border-right: none;
-  margin: -14px 0;
+  border-width: 14px 6px 14px 14px;
+  margin: -14px -6px -14px -14px;
 }
-.kifi-with-pane .kifi-slider2:hover {
-  border-left: none;
+#kifi-tile .kifi-slider2 {
+  bottom: 0;
+  right: 0;
+}
+.kifi-pane .kifi-slider2:hover {
+  border-left-width: 6px;
 }
 .kifi-slider2.kifi-wide {
-  width: 322px;
+  width: 310px;
   -webkit-transition: width 100ms ease-out;
   transition: width 100ms ease-out;
 }
@@ -122,13 +126,16 @@
   -webkit-transition: width 100ms ease-in, opacity 60ms ease-in 40ms;
   transition: width 100ms ease-in, opacity 60ms ease-in 40ms;
 }
-.kifi-pane .kifi-slider2 {
-  position: absolute;
+html>.kifi-slider2.kifi-wide {
+  position: fixed;
+  z-index: 999999999991;
+  -webkit-transition: -webkit-transform .25s ease-out;
+  transition: -webkit-transform .25s ease-out, transform .25s ease-out;
 }
 .kifi-slider2-x {
   position: absolute;
-  bottom: 6px;
-  right: 6px;
+  bottom: 0;
+  right: 0;
   height: 42px;
   width: 0;
   border-radius: 5px;
@@ -153,20 +160,29 @@
 
 .kifi-slider2-keep {
   position: absolute;
-  bottom: 6px;
-  right: 6px;
+  bottom: 0;
+  right: 0;
   width: 136px;
   height: 42px;
   border-radius: 5px;
-  -webkit-transition: width .25s ease-in;
-  transition: width .25s ease-in;
 }
 .kifi-pane-parent .kifi-slider2-keep {
-  left: 180px;
+  left: 174px;
   right: auto;
 }
 .kifi-with-pane .kifi-slider2-keep {
   width: 104px;
+}
+.kifi-slider2-keep,
+.kifi-slider2-dock { /* width for .kifi-slider2-keep only */
+  -webkit-transition: width .25s ease-in, -webkit-transform 50ms ease-in, box-shadow 50ms ease-in;
+  transition: width .25s ease-in, -webkit-transform 50ms ease-in, transform 50ms ease-in, box-shadow 50ms ease-in;
+}
+#kifi-tile.ui-draggable .kifi-slider2-keep,
+#kifi-tile.ui-draggable .kifi-slider2-dock {
+  box-shadow: 0 8px 7px -4px rgba(0,0,0,.7);
+  -webkit-transform: translate(0,-4px);
+  transform: translate(0,-4px);
 }
 .kifi-slider2-keep-btn {
   position: absolute;
@@ -352,8 +368,8 @@ a.kifi-slider2-keeper {
 
 .kifi-slider2-dock {
   position: absolute;
-  bottom: 6px;
-  right: 145px;
+  bottom: 0;
+  right: 139px;
   width: 171px;
   height: 42px;
   background: #67829c;
@@ -478,4 +494,14 @@ a.kifi-slider2-keeper {
   margin-top: 4px;
   border-top: 1px solid #fff;
   padding-top: 6px;
+}
+
+.kifi-slider2-drag-glass {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 999999999993;
+  cursor: move;
 }
