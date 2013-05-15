@@ -106,7 +106,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
       }
       function show() {
         delete data.show;
-        if ($a.hasClass("kifi-hover-showing") || isfadingOut()) return;
+        if ($a.hasClass("kifi-hover-showing") || isFadingOut()) return;
         data.$h.appendTo($a).each(function(){this.offsetHeight});
         $a.addClass("kifi-hover-showing");
         data.lastShowTime = +new Date;
