@@ -15,6 +15,7 @@ import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.net.HttpClient
+import com.keepit.common.strings._
 
 import akka.pattern.ask
 import play.api.libs.concurrent.Execution.Implicits._
@@ -45,8 +46,9 @@ private[classify] class DomainClassificationActor @Inject() (
     // see http://www.komodia.com/wiki/index.php/URL_server_protocol
     val md = MessageDigest.getInstance("MD5")
     val guid = UUID.randomUUID.toString.toUpperCase
-    val id = encodeHex(md.digest((KEY + guid + KEY).getBytes("UTF-8"))).toLowerCase
-    val encodedUrl = URLEncoder.encode(url, "UTF-8")
+    val md5 = md.digest(KEY + guid + KEY)
+    val id = encodeHex(md5).toLowerCase
+    val encodedUrl = URLEncoder.encode(url, ENCODING)
     client.getFuture(s"http://$server/url.php?version=w11&guid=$guid&id=$id&url=$encodedUrl").map { resp =>
       (resp.body.split("~", 2).toList match {
         case ("FM" | "FR") :: tagString :: Nil =>
