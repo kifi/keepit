@@ -16,6 +16,8 @@ trait TestDBRunner extends TestInjector {
   def db(implicit injector: RichInjector): Database = inject[Database]
 
   def userRepo(implicit injector: RichInjector) = inject[UserRepo]
+  def keepToCollectionRepo(implicit injector: RichInjector) = inject[KeepToCollectionRepo]
+  def collectionRepo(implicit injector: RichInjector) = inject[CollectionRepo]
   def uriRepo(implicit injector: RichInjector) = inject[NormalizedURIRepo]
   def urlRepo(implicit injector: RichInjector) = inject[URLRepo]
   def bookmarkRepo(implicit injector: RichInjector) = inject[BookmarkRepo]
