@@ -53,6 +53,10 @@ class ScraperController @Inject() (
     Ok(html.admin.scrape(articles))
   }
 
+  def rescrapeByRegex(urlRegex: Option[String] = None) = AdminHtmlAction { implicit request =>
+    Ok("dummy rescraping started for " + urlRegex.getOrElse("empty urlRegex"))
+  }
+
   def scrapeByState(state: State[NormalizedURI]) = AdminHtmlAction { implicit request =>
     transitionByAdmin(state -> Set(ACTIVE)) { newState =>
       db.readWrite { implicit s =>
