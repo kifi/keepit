@@ -37,7 +37,11 @@ home-grown at FortyTwo, not intended for distribution (yet)
           reuse: true},
         typeof opts === "function" ? {create: opts} : opts);
       if (data) {
-        onEnter(opts.showDelay);
+        if (opts.eventTime <= data.leaveTime) {
+          api.log("[showHover.enter] already left");
+        } else {
+          onEnter(opts.showDelay);
+        }
       } else {
         var t0 = +new Date;
         $a.data("hover", data = {lastShowTime: 0});
@@ -82,6 +86,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
       }
       function onMouseLeave(ms, e) {
         clearTimeout(data.show), delete data.show;
+        data.leaveTime = e.timeStamp;
         if ($a.hasClass("kifi-hover-showing")) {
           if (ms && between(e.clientX, e.clientY)) {
             document.addEventListener("mousemove", onMouseMoveMaybeHide, true);
