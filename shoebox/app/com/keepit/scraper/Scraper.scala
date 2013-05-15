@@ -13,7 +13,9 @@ import com.keepit.scraper.extractor.DefaultExtractor
 import com.keepit.scraper.extractor.DefaultExtractorFactory
 import com.keepit.scraper.extractor.Extractor
 import com.keepit.scraper.extractor.YoutubeExtractorFactory
-import com.keepit.scraper.util.OpenGraph
+import com.keepit.scraper.mediatypes.MediaTypes
+import com.keepit.scraper.mediatypes.InternetMediaTypes
+import com.keepit.scraper.mediatypes.OpenGraph
 import com.keepit.search.LangDetector
 import com.google.inject.Inject
 import org.apache.http.HttpStatus
@@ -241,7 +243,7 @@ class Scraper @Inject() (
   private[this] def getDescription(x: Extractor): Option[String] = {
     x.getMetadata("description").orElse(x.getMetadata("Description")).orElse(x.getMetadata("DESCRIPTION"))
   }
-  private[this] def getMediaTypeString(x: Extractor): Option[String] = OpenGraph.getMediaTypeString(x)
+  private[this] def getMediaTypeString(x: Extractor): Option[String] = MediaTypes(x).getMediaTypeString(x)
 
   private[this] def computeSignature(fields: String*) = fields.foldLeft(new SignatureBuilder){ (builder, text) => builder.add(text) }.build
 

@@ -16,6 +16,7 @@ import org.apache.tika.sax.WriteOutContentHandler
 import org.xml.sax.Attributes
 import org.xml.sax.ContentHandler
 import org.xml.sax.SAXException
+import play.api.http.MimeTypes
 
 abstract class TikaBasedExtractor(url: String, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends Extractor with Logging {
 
@@ -27,7 +28,7 @@ abstract class TikaBasedExtractor(url: String, maxContentChars: Int, htmlMapper:
 
   protected def getParser(contentType: Option[String]): Parser = {
     contentType.flatMap{ contentType =>
-      if (contentType startsWith "text/html") Some(new HtmlParser())
+      if (contentType startsWith MimeTypes.HTML) Some(new HtmlParser())
       else None
     }.getOrElse{
       new AutoDetectParser(new DefaultDetector())
