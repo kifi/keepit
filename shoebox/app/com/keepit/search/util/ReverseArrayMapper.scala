@@ -52,6 +52,8 @@ class ReverseArrayMapper(ids: Array[Long], indexes: Array[Int], sz: Int, bucketS
       -1
     }
   }
+
+  def size = ids.length
 }
 
 object ReverseArrayMapper {
