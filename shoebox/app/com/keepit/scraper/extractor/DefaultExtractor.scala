@@ -10,6 +10,8 @@ import org.apache.tika.parser.html.HtmlMapper
 import org.apache.tika.sax.ContentHandlerDecorator
 import org.xml.sax.Attributes
 import org.xml.sax.ContentHandler
+import play.api.http.MimeTypes
+
 
 object DefaultExtractorFactory extends ExtractorFactory {
   def isDefinedAt(uri: URI) = true
@@ -35,7 +37,7 @@ class DefaultContentHandler(handler: ContentHandler, metadata: Metadata) extends
   override def startDocument() {
     // enable boilerpipe only for HTML
     Option(metadata.get("Content-Type")).foreach{ contentType =>
-      if (contentType startsWith "text/html") {
+      if (contentType startsWith MimeTypes.HTML) {
         setContentHandler(new BoilerpipeContentHandler(new TextOutputContentHandler(handler)))
       } else {
         setContentHandler(new DehyphenatingTextOutputContentHandler(handler))

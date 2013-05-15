@@ -64,3 +64,4 @@ shoebox/bin
 nohup.out
 shoebox/mem.h2.db
 shoebox/mem.trace.db
+.metadata/*
