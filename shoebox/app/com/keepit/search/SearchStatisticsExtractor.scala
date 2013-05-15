@@ -243,11 +243,11 @@ class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], tar
   }
 
  // val searcher = mainSearcherFactory(userId, friendIds, searchFilter, config)
-  val uriGraphSearcher = uriGraph.getURIGraphSearcher
+  val uriGraphSearcher = uriGraph.getURIGraphSearcher(Some(userId))
   val articleSearcher = articleIndexer.getSearcher
-  val myUriEdges = uriGraphSearcher.getUserToUriEdgeSetWithCreatedAt(userId, publicOnly = false)            // my keeps
+  val myUriEdges = uriGraphSearcher.myUriEdgeSet // my keeps
   val myUris = myUriEdges.destIdLongSet
-  val myPublicUris = uriGraphSearcher.getUserToUriEdgeSet(userId, publicOnly = true).destIdLongSet
+  val myPublicUris = uriGraphSearcher.myPublicUriEdgeSet.destIdLongSet
   val filteredFriendIds = searchFilter.filterFriends(friendIds)
   val friendUris = filteredFriendIds.foldLeft(Set.empty[Long]) { (s, f) =>
     s ++ uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).destIdLongSet
@@ -275,7 +275,7 @@ class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], tar
   }
 
   def getPersonalizedSearcher(query: Query) = {
-    val indexReader = uriGraphSearcher.openPersonalIndex(userId, query) match {
+    val indexReader = uriGraphSearcher.openPersonalIndex(query) match {
       case Some((personalReader, personalIdMapper)) =>
         articleSearcher.indexReader.add(personalReader, personalIdMapper)
       case None =>

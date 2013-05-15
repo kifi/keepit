@@ -634,7 +634,7 @@ slider2 = function() {
     notices: function($box) {
       api.port.emit("notifications", function(o) {
         api.require("scripts/notices.js", function() {
-          noticesPane.render($box.find(".kifi-pane-tall"), o.notifications, o.newIdxs, o.timeLastSeen);
+          noticesPane.render($box.find(".kifi-pane-tall"), o.notifications, o.timeLastSeen);
         });
       });
     },

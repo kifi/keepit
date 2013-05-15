@@ -89,6 +89,7 @@ class PhraseProximityTest extends Specification {
       "A book on statistics and machine translation",
       "A book on statistics and machine reading",
       "A book on machine statistical learning",
+      "dummy machine with another dummy, repetetion in word should not give exception",
       "A book")
     texts.foreach { text =>
       val doc = new Document()
@@ -118,11 +119,12 @@ class PhraseProximityTest extends Specification {
       buf += ((doc, scorer.score()))
       doc = scorer.nextDoc()
     }
-    indexReader.numDocs() === 6
-    buf.size === 5
-    buf.sortBy(_._2).map(_._1) === Seq(4, 3, 2, 1, 0)      // doc 0 is most relevant
+    indexReader.numDocs() === 7
+    buf.size === 6
+    buf.sortBy(_._2).map(_._1).drop(2) === Seq(3, 2, 1, 0)      // doc 0 is most relevant
     assert(math.abs(buf(0)._2 - 1.0f) < 1e-4)            // doc 0 should be assigned max possible score
     buf(4)._2 === 0.0f                                     // doc 4 contains key words, not the entire phrase. Its score should be 0.0
+    buf(5)._2 === 0.0f
   }
 
   "not return hits when no term and phrase" in {

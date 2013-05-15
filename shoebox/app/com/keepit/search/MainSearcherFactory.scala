@@ -38,7 +38,7 @@ class MainSearcherFactory @Inject() (
 
   def apply(userId: Id[User], friendIds: Set[Id[User]], filter: SearchFilter, config: SearchConfig) = {
     val articleSearcher = articleIndexer.getSearcher
-    val uriGraphSearcher = uriGraph.getURIGraphSearcher
+    val uriGraphSearcher = uriGraph.getURIGraphSearcher(Some(userId))
     new MainSearcher(
         userId,
         friendIds,
@@ -57,13 +57,13 @@ class MainSearcherFactory @Inject() (
 
   def bookmarkSearcher(userId: Id[User]) = {
     val articleSearcher = articleIndexer.getSearcher
-    val uriGraphSearcher = uriGraph.getURIGraphSearcher
+    val uriGraphSearcher = uriGraph.getURIGraphSearcher(Some(userId))
     new BookmarkSearcher(userId, articleSearcher, uriGraphSearcher)
   }
 
   def semanticVectorSearcher() = {
     val articleSearcher = articleIndexer.getSearcher
-    val uriGraphSearcher = uriGraph.getURIGraphSearcher
+    val uriGraphSearcher = uriGraph.getURIGraphSearcher()
     new SemanticVectorSearcher(articleSearcher, uriGraphSearcher)
   }
 }

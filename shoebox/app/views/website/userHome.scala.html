@@ -1,4 +1,4 @@
-@(user: User, friendsOnKifi: Set[ExternalId[User]], userCanInvite: Boolean)
+@(user: User, friendsOnKifi: Set[ExternalId[User]], userCanInvite: Boolean, userCanSeeKifiSite: Boolean)
 
 @helper.main(title = "Kifi Home") {
   <div class="user_avatar">
@@ -27,6 +27,7 @@
     <h2>What would you like to do today?</h2>
 
     <ul class="links_list">
+      @if(userCanSeeKifiSite) {<li><a href="/site/">View my keeps</a></li> }
       @if(userCanInvite) {<li><a href="/invite">Invite friends to the Private beta</a></li> }
       <li><a href="/install">Install the KiFi extension on this computer</a></li>
       <li><a href="mailto:feedback@@kifi.com">Send Feedback</a></li>

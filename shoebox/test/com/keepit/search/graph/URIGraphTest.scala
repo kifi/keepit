@@ -92,9 +92,9 @@ class URIGraphTest extends Specification with DbRepos {
   }
 
   class Searchable(uriGraphSearcher: URIGraphSearcher) {
-    def search(user: Id[User], query: Query): Map[Long, Float] = {
+    def search(query: Query): Map[Long, Float] = {
       var result = Map.empty[Long,Float]
-      uriGraphSearcher.openPersonalIndex(user, query) match {
+      uriGraphSearcher.openPersonalIndex(query) match {
         case Some((indexReader, idMapper)) =>
           val ir = new WrappedSubReader("", indexReader, idMapper)
           val searcher = new Searcher(new WrappedIndexReader(null, Array(ir)))
@@ -225,7 +225,7 @@ class URIGraphTest extends Specification with DbRepos {
 
         users.sliding(3).foreach{ friends =>
           val friendIds = friends.map(_.id.get).toSet
-          val userToUserEdgeSet = new UserToUserEdgeSet(Id[User](1000), friendIds)
+          val userToUserEdgeSet = UserToUserEdgeSet(Id[User](1000), friendIds)
 
           expectedUriToUserEdges.map{ case (uri, users) =>
             val expected = (users.map(_.id.get).toSet intersect friendIds)
@@ -256,7 +256,7 @@ class URIGraphTest extends Specification with DbRepos {
 
         searcher.getUriToUserEdgeSet(Id[NormalizedURI](10000)).destIdSet.isEmpty === true
 
-        val emptyUserToUserEdgeSet = new UserToUserEdgeSet(Id[User](10000), Set())
+        val emptyUserToUserEdgeSet = UserToUserEdgeSet(Id[User](10000), Set.empty[Id[User]])
 
         emptyUserToUserEdgeSet.destIdSet.isEmpty === true
 
@@ -264,18 +264,23 @@ class URIGraphTest extends Specification with DbRepos {
 
         searcher.intersect(emptyUserToUserEdgeSet, searcher.getUriToUserEdgeSet(Id[NormalizedURI](10000))).destIdSet.isEmpty === true
 
-        val userToUserEdgeSet = new UserToUserEdgeSet(Id[User](10000), users.map(_.id.get).toSet)
+        val userToUserEdgeSet = UserToUserEdgeSet(Id[User](10000), users.map(_.id.get).toSet)
         searcher.intersect(userToUserEdgeSet, searcher.getUriToUserEdgeSet(Id[NormalizedURI](10000))).destIdSet.isEmpty === true
       }
     }
 
     "determine whether intersection is empty" in {
-      val searcher = new URIGraphSearcher(null)
-      searcher.intersectAny(new TestDocIdSetIterator(1, 2, 3), new TestDocIdSetIterator(2, 4, 6)) === true
-      searcher.intersectAny(new TestDocIdSetIterator(       ), new TestDocIdSetIterator(       )) === false
-      searcher.intersectAny(new TestDocIdSetIterator(       ), new TestDocIdSetIterator(2, 4, 6)) === false
-      searcher.intersectAny(new TestDocIdSetIterator(1, 2, 3), new TestDocIdSetIterator(       )) === false
-      searcher.intersectAny(new TestDocIdSetIterator(1, 3, 5), new TestDocIdSetIterator(2, 4, 6)) === false
+      running(new EmptyApplication()) {
+        val graphDir = new RAMDirectory
+        val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db)
+        val searcher = graph.getURIGraphSearcher()
+        searcher.intersectAny(new TestDocIdSetIterator(1, 2, 3), new TestDocIdSetIterator(2, 4, 6)) === true
+        searcher.intersectAny(new TestDocIdSetIterator(       ), new TestDocIdSetIterator(       )) === false
+        searcher.intersectAny(new TestDocIdSetIterator(       ), new TestDocIdSetIterator(2, 4, 6)) === false
+        searcher.intersectAny(new TestDocIdSetIterator(1, 2, 3), new TestDocIdSetIterator(       )) === false
+        searcher.intersectAny(new TestDocIdSetIterator(1, 3, 5), new TestDocIdSetIterator(2, 4, 6)) === false
+      }
     }
 
     "search personal bookmark titles" in {
@@ -296,19 +301,21 @@ class URIGraphTest extends Specification with DbRepos {
         val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db)
         graph.update() === 2
 
-        val searcher = graph.getURIGraphSearcher()
         val personaltitle = new TermQuery(new Term(URIGraphFields.titleField, "personaltitle"))
         val bmt1 = new TermQuery(new Term(URIGraphFields.titleField, "bmt1"))
         val bmt2 = new TermQuery(new Term(URIGraphFields.titleField, "bmt2"))
 
-        searcher.search(users(0).id.get, personaltitle).keySet === Set(2L, 4L, 6L)
-        searcher.search(users(1).id.get, personaltitle).keySet === Set(1L, 3L, 5L)
+        val searcher0 = graph.getURIGraphSearcher(users(0).id)
+        val searcher1 = graph.getURIGraphSearcher(users(1).id)
 
-        searcher.search(users(0).id.get, bmt1).keySet === Set.empty[Long]
-        searcher.search(users(1).id.get, bmt1).keySet === Set(1L)
+        searcher0.search(personaltitle).keySet === Set(2L, 4L, 6L)
+        searcher1.search(personaltitle).keySet === Set(1L, 3L, 5L)
 
-        searcher.search(users(0).id.get, bmt2).keySet === Set(2L)
-        searcher.search(users(1).id.get, bmt2).keySet === Set.empty[Long]
+        searcher0.search(bmt1).keySet === Set.empty[Long]
+        searcher1.search(bmt1).keySet === Set(1L)
+
+        searcher0.search(bmt2).keySet === Set(2L)
+        searcher1.search(bmt2).keySet === Set.empty[Long]
       }
     }
 
@@ -330,30 +337,30 @@ class URIGraphTest extends Specification with DbRepos {
         val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db)
         graph.update() === 1
 
-        val searcher = graph.getURIGraphSearcher()
+        val searcher = graph.getURIGraphSearcher(users(0).id)
 
         def mkSiteQuery(site: String) = {
           new ConditionalQuery(new TermQuery(new Term("title", "personaltitle")), SiteQuery(site))
         }
 
         var site = mkSiteQuery("com")
-        searcher.search(users(0).id.get, site).keySet === Set(1L, 2L, 4L, 5L)
+        searcher.search(site).keySet === Set(1L, 2L, 4L, 5L)
 
 
         site = mkSiteQuery("keepit.com")
-        searcher.search(users(0).id.get, site).keySet === Set(1L, 2L)
+        searcher.search(site).keySet === Set(1L, 2L)
 
         site = mkSiteQuery("org")
-        searcher.search(users(0).id.get, site).keySet === Set(3L, 6L)
+        searcher.search(site).keySet === Set(3L, 6L)
 
         site = mkSiteQuery("findit.org")
-        searcher.search(users(0).id.get, site).keySet === Set(6L)
+        searcher.search(site).keySet === Set(6L)
 
         site = mkSiteQuery(".org")
-        searcher.search(users(0).id.get, site).keySet === Set(3L, 6L)
+        searcher.search(site).keySet === Set(3L, 6L)
 
         site = mkSiteQuery(".findit.org")
-        searcher.search(users(0).id.get, site).keySet === Set(6L)
+        searcher.search(site).keySet === Set(6L)
       }
     }
 
