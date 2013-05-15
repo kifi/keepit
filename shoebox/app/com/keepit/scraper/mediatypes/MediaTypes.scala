@@ -1,12 +1,13 @@
 package com.keepit.scraper.mediatypes
 
 import com.keepit.scraper.extractor.Extractor
+import play.api.http.MimeTypes
 
 object MediaTypes {
 
   def apply(x: Extractor): MediaTypes = {
     x.getMetadata("Content-Type") match {
-      case Some(httpContentType) => if (httpContentType startsWith "text/html") OpenGraph else InternetMediaTypes
+      case Some(httpContentType) if (httpContentType startsWith MimeTypes.HTML) => OpenGraph
       case _ => InternetMediaTypes
 
     }
