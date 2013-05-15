@@ -27,10 +27,13 @@ noticesPane = function() {
   var $notices;
 
   return {
-    render: function($container, notices, newIdxs, timeLastSeen) {
+    render: function($container, notices, timeLastSeen) {
+      timeLastSeen = new Date(timeLastSeen);
       render("html/metro/notices.html", {}, function(html) {
         $notices = $(html)
-          .append(notices.map(function(n, i) {return renderNotice(n, newIdxs.indexOf(i) >= 0)}).join(""))
+          .append(notices.map(function(n) {
+            return renderNotice(n, n.state != "visited" && new Date(n.time) > timeLastSeen);
+          }).join(""))
           .appendTo($container);
         $notices.find("time").timeago();
 
@@ -47,7 +50,7 @@ noticesPane = function() {
         });
         api.port.emit("notifications_pane", true);
 
-        if (notices.length && new Date(notices[0].time) > new Date(timeLastSeen)) {
+        if (notices.length && new Date(notices[0].time) > timeLastSeen) {
           api.port.emit("notifications_read", notices[0].time);
         }
       });
