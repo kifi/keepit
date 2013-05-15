@@ -68,9 +68,12 @@ slider2 = function() {
       "atGeneral": "/general" == locator
     }, function(html) {
       // attach event bindings
-      $slider = $(html)
-      .mouseout(function(e) {
-        if (!$pane) {
+      $slider = $(html);
+      var data = $slider.data();
+      $slider.mouseout(function(e) {
+        if (data.dragTimer) {
+          startDrag(data);
+        } else if (!$pane && !data.dragStarting && !data.$dragGlass) {
           if (e.relatedTarget) {
             if ($slider && !$slider[0].contains(e.relatedTarget)) {
               api.log("[slider.mouseout]");
@@ -87,6 +90,18 @@ slider2 = function() {
             }, true);
           }
         }
+      }).mousedown(function(e) {
+        if (e.which != 1 || $pane) return;
+        e.preventDefault();  // prevents selection and selection scrolling
+        data.dragTimer = setTimeout(startDrag.bind(null, data), 900);
+        data.mousedownEvent = e.originalEvent;
+      }).mouseup(function() {
+        if (data.dragTimer || data.dragStarting) {
+          api.log("[mouseup]");
+          clearTimeout(data.dragTimer), delete data.dragTimer;
+          delete data.dragStarting;
+        }
+        delete data.mousedownEvent;
       }).on("click", ".kifi-slider2-keep-btn", function(e) {
         if (e.target !== this) return;
         var el = this.parentNode;
@@ -97,7 +112,6 @@ slider2 = function() {
         }
         this.classList.add("kifi-hoverless");
       }).on("mouseover", ".kifi-slider2-keep-btn", function(e) {
-        api.log("[mouseover]", e);
         if (e.target !== this) {
           this.classList.add("kifi-hoverless");
         }
@@ -130,6 +144,7 @@ slider2 = function() {
                 }
               }});
             function positionIt(w) {  // centered, or right-aligned if that would go off edge of page
+              if (!$slider) return;
               var r1 = btn.getBoundingClientRect(), r2 = $slider[0].getBoundingClientRect();
               this.style.right = Math.max((r1.width - w) / 2, r1.right - r2.right + 6) + "px";
             }
@@ -227,7 +242,7 @@ slider2 = function() {
           showPane(locator);
         }
       });
-      $(tile).addClass("kifi-behind-slider");
+      $(tile).addClass("kifi-with-slider");
       callback();
     });
   }
@@ -236,9 +251,10 @@ slider2 = function() {
     api.log("[showSlider]", trigger);
 
     lastShownAt = +new Date;
+    $slider = $();  // creation in progress (prevents multiple)
 
     createSlider(function() {
-      $slider.appendTo("html").layout().addClass("kifi-wide kifi-growing")
+      $slider.appendTo(tile).layout().addClass("kifi-wide kifi-growing")
       .on("transitionend webkitTransitionEnd", function f(e) {
         if (e.target.classList.contains("kifi-slider2")) {
           $(e.target).off("transitionend webkitTransitionEnd", f).removeClass("kifi-growing");
@@ -255,14 +271,50 @@ slider2 = function() {
   // trigger is for the event log (e.g. "key", "icon")
   function hideSlider(trigger) {
     idleTimer.kill();
+    var sliderEl = $slider[0];
     $slider.addClass("kifi-hiding").on("transitionend webkitTransitionEnd", function(e) {
-      if (e.target.classList.contains("kifi-slider2") && e.originalEvent.propertyName == "opacity") {
-        $(e.target).remove();
-        $(tile).removeClass("kifi-behind-slider");
+      if (e.target === sliderEl && e.originalEvent.propertyName == "opacity") {
+        var css = JSON.parse(tile.dataset.pos || 0);
+        if (css && !tile.style.top && !tile.style.bottom) {
+          var y = css.top >= 0 ? window.innerHeight - css.top - 54 : (css.bottom || 0);
+          css.transition = "none";
+          css.transform = "translate(0," + y + "px)";
+          $(tile).removeClass("kifi-with-slider").css(css)
+          .layout().css({transition: "", "transition-duration": Math.min(1, 32 * Math.log(y)) + "ms"});
+          tile["kifi:position"]();
+          $(tile).on("transitionend webkitTransitionEnd", function end() {
+            $(this).off("transitionend webkitTransitionEnd", end).css("transition-duration", "");
+          });
+        }
+        $slider.remove(), $slider = null;
       }
     });
-    $slider = null;
     logEvent("slider", "sliderClosed", {trigger: trigger, shownForMs: String(new Date - lastShownAt)});
+  }
+
+  function startDrag(data) {
+    api.log("[startDrag]");
+    clearTimeout(data.dragTimer);
+    delete data.dragTimer;
+    data.dragStarting = true;
+    api.require("scripts/lib/jquery-ui-1.9.1.custom.min.js", function() {
+      if (data.dragStarting) {
+        delete data.dragStarting;
+        api.log("[startDrag] installing draggable");
+        data.$dragGlass = $("<div class=kifi-slider2-drag-glass>").appendTo("html");
+        $(tile).draggable({axis: "y", containment: "window", scroll: false, stop: function stopDrag() {
+          var r = tile.getBoundingClientRect(), fromBot = window.innerHeight - r.bottom;
+          var pos = r.top >= 0 && r.top < fromBot ? {top: r.top} : {bottom: Math.max(0, fromBot)};
+          api.log("[stopDrag] top:", r.top, "bot:", r.bottom, JSON.stringify(pos));
+          $(tile).draggable("destroy");
+          data.$dragGlass.remove();
+          delete data.$dragGlass;
+          tile.dataset.pos = JSON.stringify(pos);
+          $(tile).css($.extend({top: "auto", bottom: "auto"}, pos));
+          api.port.emit("set_keeper_pos", {host: location.hostname, pos: pos});
+        }})[0].dispatchEvent(data.mousedownEvent); // starts drag
+      }
+    });
   }
 
   var idleTimer = {
@@ -411,13 +463,20 @@ slider2 = function() {
           if (bringSlider) {
             $pane.append($slider).appendTo($html);
           } else {
-            $pane.insertBefore($slider);
+            $pane.appendTo($html);
+            $slider.detach()
+            .css("transform", "translate(0,-" + (window.innerHeight - tile.getBoundingClientRect().bottom) + "px)")
+            .insertAfter($pane).layout()
+            .css("transform", "");
+            $(tile).hide();
           }
           $pane.layout()
           .on("transitionend webkitTransitionEnd", function onPaneShown(e) {
             $pane.off("transitionend webkitTransitionEnd", onPaneShown);
+            if (!bringSlider) {
+              $slider.appendTo($pane);
+            }
             $box.data("shown", true).triggerHandler("kifi:shown");
-            $(tile).show();  // in case hidden
           })
           .on("mouseover", ".kifi-pane-head-logo", function() {
             $(this).showHover({showDelay: 700, reuse: true, click: "hide"});
@@ -538,14 +597,14 @@ slider2 = function() {
 
   function hidePane(leaveSlider) {
     api.log("[hidePane]");
+    $(tile).show();
     if (leaveSlider) {
-      $slider.appendTo("html").layout();
+      $(tile).css({top: "", bottom: "", transform: ""}).insertAfter($pane);
+      $slider.appendTo(tile).layout();
       $slider.find(".kifi-at").removeClass("kifi-at");
       $slider.find(".kifi-slider2-x").css("overflow", "");
     } else {
-      $slider.appendTo($pane);
       $slider = null;
-      $(tile).removeClass("kifi-behind-slider");
     }
     $pane
     .off("transitionend webkitTransitionEnd") // onPaneShown

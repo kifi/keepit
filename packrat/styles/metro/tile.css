@@ -1,17 +1,17 @@
 #kifi-tile {
   position: fixed;
   z-index: 999999999991;
-  bottom: 6px;
-  right: 6px;
+  bottom: 0;
+  right: 0;
   left: auto;
   top: auto;
   width: 42px;
   height: 42px;
+  border: 6px solid transparent;
   text-align: center;
   font-family: "Helvetica Neue",arial,sans-serif;
-}
-.kifi-with-pane #kifi-tile {
-  display: none;
+  -webkit-transition: -webkit-transform ease-in-out 90ms;
+  transition: -webkit-transform ease-in-out 90ms, transform ease-in-out 90ms;
 }
 .kifi-tile-transparent {
   position: absolute;
@@ -40,6 +40,9 @@
   font-size: 14px;
   line-height: 42px;
 }
+#kifi-tile.ui-draggable .kifi-tile-transparent {
+  display: none;
+}
 
 .kifi-count,
 .kifi-slider2 .kifi-count {
@@ -55,6 +58,6 @@
   font-size: 10px;
   line-height: 20px;
 }
-#kifi-tile.kifi-behind-slider .kifi-count {
+#kifi-tile.kifi-with-slider .kifi-count {
   display: none;
 }
