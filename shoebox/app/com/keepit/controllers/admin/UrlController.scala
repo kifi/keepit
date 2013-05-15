@@ -102,6 +102,12 @@ class UrlController @Inject() (
                   nuri}, URLHistoryCause.SPLIT)
             }
 
+            log.info("\n === original url = " + url.url)
+            log.info("\n === original url id = " + url.normalizedUriId.id)
+            log.info("\n === new uri = " + normalizedUri.url)
+            if (normalizedUri.id.isEmpty) log.info("new url id is empty")
+            else log.info("new url id = " + normalizedUri.id.get.id)
+
             changes += (("url", 0))
             if(normalizedUri.id.isEmpty || url.normalizedUriId.id != normalizedUri.id.get.id) {
               changes("url") += 1
