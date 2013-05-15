@@ -149,8 +149,8 @@ input#kifi-res-filter-cust { /* shown temporarily until $.tokenInput called */
 input#token-input-kifi-res-filter-cust {
   padding-top: 2px !important; /* FF */
 }
-input#kifi-res-filter-cust:-moz-placeholder,
-input#token-input-kifi-res-filter-cust:-moz-placeholder {
+input#kifi-res-filter-cust::-moz-placeholder,
+input#token-input-kifi-res-filter-cust::-moz-placeholder {
   color: #a9a9a9;
 }
 ul.token-input-list-googly {
