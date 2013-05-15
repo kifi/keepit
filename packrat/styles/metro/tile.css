@@ -60,6 +60,6 @@
   font-size: 10px;
   line-height: 20px;
 }
-#kifi-tile.kifi-with-slider .kifi-count {
+#kifi-tile.kifi-with-slider>.kifi-count {
   display: none;
 }
