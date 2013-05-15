@@ -68,7 +68,9 @@ object ApplicationBuild extends Build {
     ))
 
     val main = play.Project(appName, appVersion, appDependencies).settings(
-      scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls","-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds","-language:existentials", "-language:experimental.macros"),
+      scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
+        "-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds",
+        "-language:existentials", "-language:experimental.macros", "-Xmax-classfile-name", "140"),
       // add some imports to the routes file
       routesImport ++= Seq(
         "com.keepit.common.db.{ExternalId, Id, State}",
