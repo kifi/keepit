@@ -2,7 +2,9 @@ package com.keepit.common.store
 
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
+import com.keepit.common.strings._
 import com.keepit.inject._
+
 import com.amazonaws.auth._
 import com.amazonaws.services.s3._
 import com.amazonaws.services.s3.model.ObjectMetadata
@@ -10,10 +12,12 @@ import com.amazonaws.AmazonClientException
 import com.amazonaws.AmazonServiceException
 import com.amazonaws.services.s3.model.AmazonS3Exception
 import com.amazonaws.services.s3.model.S3Object
+
 import play.api.libs.json.Json
 import play.api.libs.json.Format
 import play.api.Play
 import play.api.Play.current
+
 import java.io.InputStream
 import java.io.ByteArrayInputStream
 
@@ -24,8 +28,6 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
   val bucketName: S3Bucket
   val amazonS3Client: AmazonS3
   val formatter: Format[B]
-
-  private val ENCODING = "UTF-8"
 
   implicit def bucketName(bucket: S3Bucket): String = bucket.name
 

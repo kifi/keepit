@@ -263,7 +263,7 @@ class ZooKeeperClient(servers: String, sessionTimeout: Int, val basePath : Path,
         for (child <- addedChildren) {
           // node is added via nodeChanged callback
           log.debug(s"Path $path: child $child added")
-          watchNode(Node("%s/%s".format(path.name, child.name)), nodeChanged(child))
+          watchNode(Node(s"${path.name}/${child.name}"), nodeChanged(child))
         }
       }
       for (child <- removedChildren) {
