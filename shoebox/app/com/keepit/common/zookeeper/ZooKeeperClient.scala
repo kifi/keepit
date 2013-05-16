@@ -1,5 +1,6 @@
 package com.keepit.common.zookeeper
 
+import com.google.inject.{Inject, Singleton, ImplementedBy}
 import java.util.{List => JList}
 import com.keepit.common.logging.Logging
 import scala.collection.JavaConversions._
@@ -15,20 +16,43 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 case class Path(name: String) extends AnyVal {
   override def toString = name
-  def asNode = Node(name)
+  def asNode: Node = Node(name)
 }
 
 case class Node(name: String) extends AnyVal {
   override def toString = name
-  def asPath = Path(name)
+  def asPath: Path = Path(name)
+}
+
+@ImplementedBy(classOf[ZooKeeperClientImpl])
+trait ZooKeeperClient {
+  def basePath: Path
+
+  def watchNode(node: Node, onDataChanged : Option[Array[Byte]] => Unit): Unit
+  def watchChildren(path: Path, updateChildren : Seq[Node] => Unit): Unit
+  def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T): Unit
+  def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T, notifier: Node => Unit): Unit
+
+  def create(path: Path, data: Array[Byte], createMode: CreateMode): Path
+  def createNode(node: Node, data: Array[Byte], createMode: CreateMode): Node
+  def createPath(path: Path): Path
+
+  def getChildren(path: Path): Seq[Node]
+  def get(node: Node): Array[Byte]
+
+  def set(node: Node, data: Array[Byte]): Unit
+
+  def delete(path: Path): Unit
+  def deleteNode(node: Node): Unit
+  def deleteRecursive(path: Path): Unit
 }
 
 /**
  * The code was originally taken from https://github.com/twitter/scala-zookeeper-client/blob/master/src/main/scala/com/twitter/zookeeper/ZooKeeperClient.scala
  * It was abandoned by twitter in favor of https://github.com/twitter/util/tree/master/util-zk
  */
-class ZooKeeperClient(servers: String, sessionTimeout: Int, val basePath : Path,
-                      watcher: Option[ZooKeeperClient => Unit]) extends Logging {
+class ZooKeeperClientImpl(servers: String, sessionTimeout: Int, val basePath : Path,
+                      watcher: Option[ZooKeeperClient => Unit]) extends ZooKeeperClient with Logging {
   @volatile private var zk : ZooKeeper = null
   connect()
 
@@ -115,7 +139,7 @@ class ZooKeeperClient(servers: String, sessionTimeout: Int, val basePath : Path,
   /**
    * ZooKeeper version of mkdir -p
    */
-  def createPath(path: Path) {
+  def createPath(path: Path): Path = {
     for (path <- subPaths(makeNodePath(path).asPath, '/')) {
       try {
         log.debug(s"Creating path in createPath: $path")
@@ -124,6 +148,7 @@ class ZooKeeperClient(servers: String, sessionTimeout: Int, val basePath : Path,
         case _: KeeperException.NodeExistsException => {} // ignore existing nodes
       }
     }
+    path
   }
 
   def get(node: Node): Array[Byte] = {
@@ -229,8 +254,7 @@ class ZooKeeperClient(servers: String, sessionTimeout: Int, val basePath : Path,
    * Watch a set of nodes with an explicit notifier. The notifier will be called whenever
    * the watchMap is modified
    */
-  def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T],
-                               deserialize: Array[Byte] => T, notifier: Node => Unit) {
+  def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T, notifier: Node => Unit) {
     watchChildrenWithData(path, watchMap, deserialize, Some(notifier))
   }
 

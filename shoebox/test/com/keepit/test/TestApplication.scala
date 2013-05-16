@@ -3,6 +3,8 @@ package com.keepit.test
 import scala.collection.mutable.{Stack => MutableStack}
 import scala.concurrent._
 import scala.slick.session.{Database => SlickDatabase}
+import scala.collection.mutable
+import scala.collection.immutable.Set
 
 import org.joda.time.{ReadablePeriod, DateTime}
 
@@ -11,6 +13,7 @@ import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.google.inject.multibindings.Multibinder
 import com.google.inject.util.Modules
+
 import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
 import com.keepit.common.analytics._
 import com.keepit.common.cache.{HashMapMemoryCache, FortyTwoCachePlugin}
@@ -26,19 +29,22 @@ import com.keepit.common.social.FakeSecureSocialUserServiceModule
 import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.store.FakeS3StoreModule
 import com.keepit.common.time._
+import com.keepit.common.zookeeper._
 import com.keepit.dev.{SearchDevGlobal, ShoeboxDevGlobal, DevGlobal, S3DevModule}
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.scraper._
 import com.keepit.search._
 import com.keepit.search.index.FakePhraseIndexerModule
+
 import com.tzavellas.sse.guice.ScalaModule
+import org.apache.zookeeper.CreateMode
 
 import akka.actor.ActorSystem
 import akka.actor.Cancellable
 import akka.actor.Scheduler
-import play.api.Mode.Mode
-import play.api.Mode.Test
+
+import play.api.Mode.{Mode, Test}
 import play.api.Play
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -127,6 +133,30 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   @Provides
   @Singleton
   def fakeClock: FakeClock = new FakeClock()
+
+  @Provides
+  @Singleton
+  def fakeZooKeeperClient: ZooKeeperClient = new ZooKeeperClient() {
+    val basePath = Path("")
+
+    def watchNode(node: Node, onDataChanged : Option[Array[Byte]] => Unit) {}
+    def watchChildren(path: Path, updateChildren : Seq[Node] => Unit) {}
+    def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T) {}
+    def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T, notifier: Node => Unit) {}
+
+    def create(path: Path, data: Array[Byte], createMode: CreateMode): Path = path
+    def createNode(node: Node, data: Array[Byte], createMode: CreateMode): Node = node
+    def createPath(path: Path): Path = path
+
+    def getChildren(path: Path): Seq[Node] = Nil
+    def get(node: Node): Array[Byte] = ???
+
+    def set(node: Node, data: Array[Byte]) {}
+
+    def delete(path: Path) {}
+    def deleteNode(node: Node) {}
+    def deleteRecursive(path: Path) {}
+  }
 
   @Provides
   @Singleton

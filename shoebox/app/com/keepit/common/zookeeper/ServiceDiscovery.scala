@@ -5,8 +5,10 @@ import com.keepit.common.strings._
 import com.keepit.common.service._
 import com.keepit.common.amazon._
 import play.api.libs.json._
+import com.google.inject.{Inject, Singleton}
 
-class ServiceDiscovery(zk: ZooKeeperClient) {
+@Singleton
+class ServiceDiscovery @Inject() (zk: ZooKeeperClient) {
 
   def watchNode(node: Node) {
     zk.watchNode(node, { (data : Option[Array[Byte]]) =>
@@ -26,5 +28,6 @@ class ServiceDiscovery(zk: ZooKeeperClient) {
   implicit val remoteServiceFormat = Json.format[RemoteService]
 
   def toRemoteService(data: Array[Byte]): RemoteService = Json.fromJson[RemoteService](Json.parse(data)).get
+  def fromRemoteService(remote: RemoteService): Array[Byte] = Json.toJson[RemoteService](remote).toString
 }
 
