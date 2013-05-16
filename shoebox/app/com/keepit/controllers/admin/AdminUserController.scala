@@ -45,6 +45,8 @@ class AdminUserController @Inject() (
     searchClient: SearchServiceClient,
     userChannel: UserChannel,
     userValueRepo: UserValueRepo,
+    collectionRepo: CollectionRepo,
+    keepToCollectionRepo: KeepToCollectionRepo,
     clock: Clock) extends AdminController(actionAuthenticator) {
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
@@ -70,6 +72,35 @@ class AdminUserController @Inject() (
     Ok(html.admin.moreUserInfo(user, rawInfos.flatten, socialUserInfos, follows, comments, messages, sentElectronicMails))
   }
 
+  def updateCollectionsForBookmark(id: Id[Bookmark]) = AdminHtmlAction { implicit request =>
+    request.request.body.asFormUrlEncoded.map { _.map(r => (r._1 -> r._2.head)) }.map { map =>
+      val collectionNames = map.get("collections").getOrElse("").split(",").map(_.trim).filterNot(_.isEmpty)
+      val collections = db.readWrite { implicit s =>
+        val bookmark = bookmarkRepo.get(id)
+        val userId = bookmark.userId
+        val existing = keepToCollectionRepo.getByBookmark(id, excludeState = None).map(k => k.collectionId -> k).toMap
+        val colls = collectionNames.map { name =>
+          val collection = collectionRepo.getByUserAndName(userId, name, excludeState = None) match {
+            case Some(coll) if coll.isActive => coll
+            case Some(coll) => collectionRepo.save(coll.copy(state = CollectionStates.ACTIVE))
+            case None => collectionRepo.save(Collection(userId = userId, name = name))
+          }
+          existing.get(collection.id.get) match {
+            case Some(ktc) if ktc.isActive => ktc
+            case Some(ktc) => keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
+            case None => keepToCollectionRepo.save(KeepToCollection(bookmarkId = id, collectionId = collection.id.get))
+          }
+          collection
+        }
+        (existing -- colls.map(_.id.get)).values.foreach { ktc =>
+          keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+        }
+        colls.map(_.name)
+      }
+      Ok(Json.obj("collections" -> collections))
+    } getOrElse BadRequest
+  }
+
   def userView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val (user, bookmarks, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails) = db.readOnly {implicit s =>
       val user = userRepo.get(userId)
@@ -93,15 +124,29 @@ class AdminUserController @Inject() (
     val form = request.request.body.asFormUrlEncoded.map{ req => req.map(r => (r._1 -> r._2.head)) }
 
     val bookmarkSearch = form.flatMap{ _.get("bookmarkSearch") }
-    val filteredBookmarks = bookmarkSearch.map{ query =>
-      if (query.trim.length == 0) bookmarks
-      else {
+    val collectionFilter = form.flatMap(_.get("collectionFilter")).collect {
+      case cid if cid.toLong > 0 => Id[Collection](cid.toLong)
+    }
+    val bookmarkFilter = collectionFilter.map { collId =>
+      db.readOnly { implicit s => keepToCollectionRepo.getBookmarksInCollection(collId) }
+    }
+    val filteredBookmarks = db.readOnly { implicit s =>
+      val query = bookmarkSearch.getOrElse("")
+      (if (query.trim.length == 0) {
+        bookmarks
+      } else {
         val uris = Await.result(searchClient.searchKeeps(userId, query), Duration.Inf)
         bookmarks.filter{ case (b, u) => uris.contains(u.id.get) }
+      }) collect {
+        case (mark, uri) if bookmarkFilter.isEmpty || bookmarkFilter.get.contains(mark.id.get) =>
+          val colls = keepToCollectionRepo.getCollectionsForBookmark(mark.id.get).map(collectionRepo.get).map(_.name)
+          (mark, uri, colls)
       }
     }
+    val collections = db.readOnly { implicit s => collectionRepo.getByUser(userId) }
 
-    Ok(html.admin.user(user, bookmarks.size, filteredBookmarks.getOrElse(bookmarks), socialConnections, fortyTwoConnections, kifiInstallations, historyUpdateCount, bookmarkSearch, allowedInvites, emails))
+    Ok(html.admin.user(user, bookmarks.size, filteredBookmarks, socialConnections, fortyTwoConnections,
+      kifiInstallations, historyUpdateCount, bookmarkSearch, allowedInvites, emails, collections, collectionFilter))
   }
 
   def usersView = AdminHtmlAction { implicit request =>

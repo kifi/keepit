@@ -1,5 +1,6 @@
 package com.keepit.common.zookeeper
 
+import com.google.inject.{Inject, Singleton, ImplementedBy}
 import java.util.{List => JList}
 import com.keepit.common.logging.Logging
 import scala.collection.JavaConversions._
@@ -13,22 +14,45 @@ import org.apache.zookeeper.Watcher.Event.KeeperState
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.atomic.AtomicBoolean
 
-case class Path(name: String) extends AnyVal {
+case class Path(name: String, withBase: Boolean = false) {
   override def toString = name
-  def asNode = Node(name)
+  def asNode: Node = Node(name, withBase)
 }
 
-case class Node(name: String) extends AnyVal {
+case class Node(name: String, withBase: Boolean = false) {
   override def toString = name
-  def asPath = Path(name)
+  def asPath: Path = Path(name, withBase)
+}
+
+@ImplementedBy(classOf[ZooKeeperClientImpl])
+trait ZooKeeperClient {
+  def basePath: Path
+
+  def watchNode(node: Node, onDataChanged : Option[Array[Byte]] => Unit): Unit
+  def watchChildren(path: Path, updateChildren : Seq[Node] => Unit): Unit
+  def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T): Unit
+  def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T, notifier: Node => Unit): Unit
+
+  def create(path: Path, data: Array[Byte], createMode: CreateMode): Path
+  def createNode(node: Node, data: Array[Byte], createMode: CreateMode): Node
+  def createPath(path: Path): Path
+
+  def getChildren(path: Path): Seq[Node]
+  def get(node: Node): Array[Byte]
+
+  def set(node: Node, data: Array[Byte]): Unit
+
+  def delete(path: Path): Unit
+  def deleteNode(node: Node): Unit
+  def deleteRecursive(path: Path): Unit
 }
 
 /**
  * The code was originally taken from https://github.com/twitter/scala-zookeeper-client/blob/master/src/main/scala/com/twitter/zookeeper/ZooKeeperClient.scala
  * It was abandoned by twitter in favor of https://github.com/twitter/util/tree/master/util-zk
  */
-class ZooKeeperClient(servers: String, sessionTimeout: Int, val basePath : Path,
-                      watcher: Option[ZooKeeperClient => Unit]) extends Logging {
+class ZooKeeperClientImpl(servers: String, sessionTimeout: Int, val basePath : Path,
+                      watcher: Option[ZooKeeperClient => Unit]) extends ZooKeeperClient with Logging {
   @volatile private var zk : ZooKeeper = null
   connect()
 
@@ -91,7 +115,10 @@ class ZooKeeperClient(servers: String, sessionTimeout: Int, val basePath : Path,
     paths.reverse
   }
 
-  private def makeNodePath(path: Path) = Node("%s/%s".format(basePath, path.name).replaceAll("//", "/"))
+  private def makeNodePath(path: Path): Node = path.withBase match {
+    case false => Node("%s/%s".format(basePath, path.name).replaceAll("//", "/"), true)
+    case true => path.asNode
+  }
 
   def getChildren(path: Path): Seq[Node] = {
     zk.getChildren(makeNodePath(path).name, false)
@@ -105,9 +132,8 @@ class ZooKeeperClient(servers: String, sessionTimeout: Int, val basePath : Path,
     result.getVersion >= 0
   }
 
-  def create(path: Path, data: Array[Byte], createMode: CreateMode): Path = {
-    Path(zk.create(makeNodePath(path).name, data, Ids.OPEN_ACL_UNSAFE, createMode))
-  }
+  def create(path: Path, data: Array[Byte], createMode: CreateMode): Path =
+    Path(zk.create(makeNodePath(path).name, data, Ids.OPEN_ACL_UNSAFE, createMode), true)
 
   def createNode(node: Node, data: Array[Byte], createMode: CreateMode): Node =
     create(node.asPath, data, createMode).asNode
@@ -115,7 +141,7 @@ class ZooKeeperClient(servers: String, sessionTimeout: Int, val basePath : Path,
   /**
    * ZooKeeper version of mkdir -p
    */
-  def createPath(path: Path) {
+  def createPath(path: Path): Path = {
     for (path <- subPaths(makeNodePath(path).asPath, '/')) {
       try {
         log.debug(s"Creating path in createPath: $path")
@@ -124,19 +150,14 @@ class ZooKeeperClient(servers: String, sessionTimeout: Int, val basePath : Path,
         case _: KeeperException.NodeExistsException => {} // ignore existing nodes
       }
     }
+    path
   }
 
-  def get(node: Node): Array[Byte] = {
-    zk.getData(makeNodePath(node.asPath).name, false, null)
-  }
+  def get(node: Node): Array[Byte] = zk.getData(makeNodePath(node.asPath).name, false, null)
 
-  def set(node: Node, data: Array[Byte]) {
-    zk.setData(makeNodePath(node.asPath).name, data, -1)
-  }
+  def set(node: Node, data: Array[Byte]): Unit = zk.setData(makeNodePath(node.asPath).name, data, -1)
 
-  def delete(path: Path): Unit = {
-    zk.delete(makeNodePath(path).name, -1)
-  }
+  def delete(path: Path): Unit = zk.delete(makeNodePath(path).name, -1)
 
   def deleteNode(node: Node): Unit = delete(node.asPath)
 
@@ -221,18 +242,15 @@ class ZooKeeperClient(servers: String, sessionTimeout: Int, val basePath : Path,
    * WARNING: watchMap must be thread-safe. Writing is synchronized on the watchMap. Readers MUST
    * also synchronize on the watchMap for safety.
    */
-  def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T) {
+  def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T): Unit =
     watchChildrenWithData(path, watchMap, deserialize, None)
-  }
 
   /**
    * Watch a set of nodes with an explicit notifier. The notifier will be called whenever
    * the watchMap is modified
    */
-  def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T],
-                               deserialize: Array[Byte] => T, notifier: Node => Unit) {
+  def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T, notifier: Node => Unit): Unit =
     watchChildrenWithData(path, watchMap, deserialize, Some(notifier))
-  }
 
   private def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T],
                                        deserialize: Array[Byte] => T, notifier: Option[Node => Unit]) {
@@ -263,7 +281,7 @@ class ZooKeeperClient(servers: String, sessionTimeout: Int, val basePath : Path,
         for (child <- addedChildren) {
           // node is added via nodeChanged callback
           log.debug(s"Path $path: child $child added")
-          watchNode(Node("%s/%s".format(path.name, child.name)), nodeChanged(child))
+          watchNode(Node(s"${path.name}/${child.name}"), nodeChanged(child))
         }
       }
       for (child <- removedChildren) {

@@ -23,37 +23,25 @@ import scala.collection.mutable.ArrayBuffer
 
 class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) extends Logging {
 
-  case class UserInfo(id: Id[User], docId: Int, publicList: URIList, privateList: URIList)
-
   private[this] val reader: WrappedSubReader = searcher.indexReader.asAtomicReader
 
   private[this] lazy val myInfo: Option[UserInfo] = {
     myUserId.map{ id =>
       val docid = reader.getIdMapper.getDocId(id.id)
-      UserInfo(id, docid, getURIList(publicListField, docid), getURIList(privateListField, docid))
+      val publicList = getURIList(publicListField, docid)
+      val privateList = getURIList(privateListField, docid)
+      new UserInfo(id, docid, publicList, privateList)
     }
   }
 
-  lazy val myUriEdgeSetOpt: Option[UserToUriEdgeSetWithCreatedAt] = {
-    myInfo.map{ u =>
-      val uriIdMap = LongToLongArrayMap.from(concat(u.publicList.ids, u.privateList.ids),
-                                             concat(u.publicList.createdAt, u.privateList.createdAt))
-      UserToUriEdgeSetWithCreatedAt(u.id, uriIdMap)
-    }
-  }
+  lazy val myUriEdgeSetOpt: Option[UserToUriEdgeSet] = myInfo.map(UserToUriEdgeSet(_))
+  lazy val myPublicUriEdgeSetOpt: Option[UserToUriEdgeSet] = myInfo.map(UserToUriEdgeSet(_))
 
-  lazy val myPublicUriEdgeSetOpt: Option[UserToUriEdgeSetWithCreatedAt] = {
-    myInfo.map{ u =>
-      val uriIdMap = LongToLongArrayMap.fromSorted(u.publicList.ids, u.publicList.createdAt)
-      UserToUriEdgeSetWithCreatedAt(u.id, uriIdMap)
-    }
-  }
-
-  def myUriEdgeSet: UserToUriEdgeSetWithCreatedAt = {
+  def myUriEdgeSet: UserToUriEdgeSet = {
     myUriEdgeSetOpt.getOrElse{ throw new Exception("search user was not set") }
   }
 
-  def myPublicUriEdgeSet: UserToUriEdgeSetWithCreatedAt = {
+  def myPublicUriEdgeSet: UserToUriEdgeSet = {
     myPublicUriEdgeSetOpt.getOrElse{ throw new Exception("search user was not set") }
   }
 
@@ -65,34 +53,15 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) extends L
     val sourceDocId = reader.getIdMapper.getDocId(sourceId.id)
     val publicList = getURIList(publicListField, sourceDocId)
     val privateList = if (publicOnly) None else Some(getURIList(privateListField, sourceDocId))
-    val uriIdSet = privateList match {
+    privateList match {
       case Some(privateList) =>
         if (publicList.size > 0) {
-          LongArraySet.from(concat(publicList.ids, privateList.ids))
+          UserToUriEdgeSet(sourceId, publicList, privateList)
         } else {
-          LongArraySet.fromSorted(privateList.ids)
+          UserToUriEdgeSet(sourceId, privateList)
         }
-      case None => LongArraySet.fromSorted(publicList.ids)
+      case None => UserToUriEdgeSet(sourceId, publicList)
     }
-    UserToUriEdgeSet(sourceId, uriIdSet)
-  }
-
-  def getUserToUriEdgeSetWithCreatedAt(sourceId: Id[User], publicOnly: Boolean = true): UserToUriEdgeSetWithCreatedAt = {
-    val sourceDocId = reader.getIdMapper.getDocId(sourceId.id)
-    val publicList = getURIList(publicListField, sourceDocId)
-    val privateList = if (publicOnly) None else Some(getURIList(privateListField, sourceDocId))
-    val uriIdMap = privateList match {
-      case Some(privateList) =>
-        if (publicList.size > 0) {
-          LongToLongArrayMap.from(concat(publicList.ids, privateList.ids),
-                                  concat(publicList.createdAt, privateList.createdAt))
-        } else {
-          LongToLongArrayMap.fromSorted(privateList.ids, privateList.createdAt)
-        }
-      case None =>
-        LongToLongArrayMap.fromSorted(publicList.ids, publicList.createdAt)
-    }
-    UserToUriEdgeSetWithCreatedAt(sourceId, uriIdMap)
   }
 
   def intersect(friends: UserToUserEdgeSet, bookmarkUsers: UriToUserEdgeSet): UserToUserEdgeSet = {
@@ -180,14 +149,25 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) extends L
   def openPersonalIndex(query: Query): Option[(CachingIndexReader, IdMapper)] = {
     val terms = QueryUtil.getTerms(query)
     myInfo.map{ u =>
-      val numDocs = myInfo.get.publicList.size + myInfo.get.privateList.size
-      val ids = concat(u.publicList.ids, u.privateList.ids)
+      if (u.mapper.maxDoc != u.uriIdArray.length)
+        log.error(s"mapper.maxDocs=${u.mapper.maxDoc} ids.length=${u.uriIdArray.length} publicList.size=${u.publicList.size} privateList.size=${u.privateList.size}")
 
-      if (numDocs != ids.length) log.error(s"numDocs=$numDocs ids.length${ids.length} publicList.size=${u.publicList.size} privateList.size=${u.privateList.size}")
-
-      (LineIndexReader(reader, u.docId, terms, numDocs), new ArrayIdMapper(ids))
+      (LineIndexReader(reader, u.docId, terms, u.uriIdArray.length), u.mapper)
     }
   }
+}
+
+class UserInfo(val id: Id[User], val docId: Int, val publicList: URIList, val privateList: URIList) {
+  val uriIdArray: Array[Long] = {
+    val publicIds = publicList.ids
+    val privateIds = privateList.ids
+
+    if (publicIds.length == 0) privateIds
+    else if (privateIds.length == 0) publicIds
+    else concat(publicIds, privateIds)
+  }
+
+  val mapper: ArrayIdMapper = new ArrayIdMapper(uriIdArray)
 
   private def concat(a: Array[Long], b: Array[Long]): Array[Long] = {
     val ret = new Array[Long](a.length + b.length)
@@ -214,23 +194,61 @@ object UserToUserEdgeSet{
   }
 }
 
-abstract class UserToUriEdgeSet(override val sourceId: Id[User]) extends EdgeSet[User, NormalizedURI]
+abstract class UserToUriEdgeSet(override val sourceId: Id[User]) extends EdgeSet[User, NormalizedURI] with CreatedAt[NormalizedURI]
 
 object UserToUriEdgeSet {
-  def apply(sourceId: Id[User], destIds: Set[Long]): UserToUriEdgeSet = {
-    new UserToUriEdgeSet(sourceId) with LongSetEdgeSet[User, NormalizedURI] {
-      override def destIdLongSet: Set[Long] = destIds
+  def apply(sourceId: Id[User], uriList: URIList): UserToUriEdgeSet = {
+    val set = LongArraySet.fromSorted(uriList.ids)
+
+    new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithCreatedAt[User, NormalizedURI] {
+      override protected val longArraySet = set
+      override protected def createdAt(idx:Int): Long = {
+        URIList.unitToMillis(uriList.createdAt(idx))
+      }
     }
   }
-}
 
-abstract class UserToUriEdgeSetWithCreatedAt(override val sourceId: Id[User]) extends EdgeSet[User, NormalizedURI] with CreatedAt[NormalizedURI]
+  def apply(sourceId: Id[User], publicList: URIList, privateList: URIList): UserToUriEdgeSet = {
+    val publicIds = publicList.ids
+    val privateIds = privateList.ids
 
-object UserToUriEdgeSetWithCreatedAt {
-  def apply(sourceId: Id[User], map: Map[Long, Long]): UserToUriEdgeSetWithCreatedAt = {
-    new UserToUriEdgeSetWithCreatedAt(sourceId) with LongToLongMapEdgeSetWithCreatedAt[User, NormalizedURI] {
-      override val destIdMap: Map[Long, Long] = map
+    if (publicIds.length == 0) apply(sourceId, privateList)
+    else if (privateIds.length == 0) apply(sourceId, publicList)
+    else {
+      val set = LongArraySet.from(concat(publicIds, privateIds))
+      val pubListSize = publicIds.length
+
+      new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithCreatedAt[User, NormalizedURI] {
+        override protected val longArraySet = set
+        override protected def createdAt(idx:Int): Long = {
+          val datetime = if (idx < pubListSize) publicList.createdAt(idx) else privateList.createdAt(idx - pubListSize)
+          URIList.unitToMillis(datetime)
+        }
+      }
     }
+  }
+
+  def apply(myInfo: UserInfo): UserToUriEdgeSet = {
+    val sourceId: Id[User] = myInfo.id
+    val publicList = myInfo.publicList
+    val privateList = myInfo.privateList
+    val set = LongArraySet.from(myInfo.uriIdArray, myInfo.mapper.reserveMapper)
+
+    val pubListSize = publicList.size
+    new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithCreatedAt[User, NormalizedURI] {
+      override protected val longArraySet = set
+      override protected def createdAt(idx:Int) = {
+        val datetime = if (idx < pubListSize) publicList.createdAt(idx) else privateList.createdAt(idx - pubListSize)
+        URIList.unitToMillis(datetime)
+      }
+    }
+  }
+
+  private def concat(a: Array[Long], b: Array[Long]): Array[Long] = {
+    val ret = new Array[Long](a.length + b.length)
+    System.arraycopy(a, 0, ret, 0, a.length)
+    System.arraycopy(b, 0, ret, a.length, b.length)
+    ret
   }
 }
 

@@ -10,6 +10,7 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.DisjunctionMaxQuery
 import scala.collection.mutable.ArrayBuffer
+import com.keepit.search.query.MediaQuery
 
 trait QueryExpansion extends QueryParser {
 
@@ -36,6 +37,7 @@ trait QueryExpansion extends QueryParser {
   override def getFieldQuery(field: String, queryText: String, quoted: Boolean): Option[Query] = {
     field.toLowerCase match {
       case "site" => getSiteQuery(queryText)
+      case "media" => Option(MediaQuery(queryText))
       case _ => getTextQuery(queryText, quoted)
     }
   }

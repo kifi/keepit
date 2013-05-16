@@ -119,6 +119,7 @@ slider2 = function() {
           var btn = this;
           api.port.emit("get_keepers", function(o) {
             $(btn).showHover({
+              eventTime: e.timeStamp,
               reuse: false,
               showDelay: 700,
               hideDelay: o.keepers.length ? 800 : 0,
@@ -274,12 +275,13 @@ slider2 = function() {
     var sliderEl = $slider[0];
     $slider.addClass("kifi-hiding").on("transitionend webkitTransitionEnd", function(e) {
       if (e.target === sliderEl && e.originalEvent.propertyName == "opacity") {
+        tile.classList.remove("kifi-with-slider");
         var css = JSON.parse(tile.dataset.pos || 0);
         if (css && !tile.style.top && !tile.style.bottom) {
           var y = css.top >= 0 ? window.innerHeight - css.top - 54 : (css.bottom || 0);
           css.transition = "none";
           css.transform = "translate(0," + y + "px)";
-          $(tile).removeClass("kifi-with-slider").css(css)
+          $(tile).css(css)
           .layout().css({transition: "", "transition-duration": Math.min(1, 32 * Math.log(y)) + "ms"});
           tile["kifi:position"]();
           $(tile).on("transitionend webkitTransitionEnd", function end() {

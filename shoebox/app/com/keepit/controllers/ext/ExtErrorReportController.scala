@@ -11,7 +11,7 @@ import play.api.libs.json._
 @Singleton
 class ExtErrorReportController @Inject() (
   actionAuthenticator: ActionAuthenticator,
-    healthcheck: HealthcheckPlugin)
+  healthcheck: HealthcheckPlugin)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   val enableExtensionErrorReporting = false

@@ -5,10 +5,13 @@ import java.io.Reader
 import java.lang.{Double => JDouble}
 import java.util.jar.JarFile
 import java.util.{HashMap => JHashMap}
+
 import scala.collection.JavaConversions._
+
 import com.keepit.common.logging.Logging
 import com.keepit.search.langdetector.DetectorFactory
 import com.keepit.search.langdetector.LangDetectException
+import com.keepit.common.strings._
 
 
 object LangDetector extends Logging {
@@ -24,7 +27,7 @@ object LangDetector extends Logging {
     log.debug("loading language detection profiles from %s".format(path))
     val jarFile = new JarFile(path)
     val profiles = jarFile.entries.filter{ _.getName.startsWith("profiles/") }.map{ entry =>
-      val reader = new InputStreamReader(jarFile.getInputStream(entry), "UTF-8")
+      val reader = new InputStreamReader(jarFile.getInputStream(entry), ENCODING)
       readerToString(reader) // this should never fail. if fails, lang-detect won't work correctly. let it throw exception.
     }.toList
     DetectorFactory.loadProfile(profiles)

@@ -37,7 +37,11 @@ home-grown at FortyTwo, not intended for distribution (yet)
           reuse: true},
         typeof opts === "function" ? {create: opts} : opts);
       if (data) {
-        onEnter(opts.showDelay);
+        if (opts.eventTime <= data.leaveTime) {
+          api.log("[showHover.enter] already left");
+        } else {
+          onEnter(opts.showDelay);
+        }
       } else {
         var t0 = +new Date;
         $a.data("hover", data = {lastShowTime: 0});
@@ -58,7 +62,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
           }
         });
         if (opts.click) $a.on("mousedown.showHover", function(e) {
-          if (data.$h[0].contains(e.target) || data.fadingOut) return;
+          if (data.$h[0].contains(e.target) || isFadingOut()) return;
           if (opts.click == "hide") {
             hide();
           } else if (opts.click == "toggle" && (e.isTrigger || new Date - data.lastShowTime > 160)) {
@@ -72,7 +76,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
       }
       function onEnter(ms) {
         clearTimeout(data.hide), delete data.hide;
-        if (!$a.hasClass("kifi-hover-showing") && !data.fadingOut) {
+        if (!$a.hasClass("kifi-hover-showing") && !isFadingOut()) {
           if (ms > 0) {
             data.show = setTimeout(show, ms);
           } else {
@@ -82,6 +86,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
       }
       function onMouseLeave(ms, e) {
         clearTimeout(data.show), delete data.show;
+        data.leaveTime = e.timeStamp;
         if ($a.hasClass("kifi-hover-showing")) {
           if (ms && between(e.clientX, e.clientY)) {
             document.addEventListener("mousemove", onMouseMoveMaybeHide, true);
@@ -106,7 +111,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
       }
       function show() {
         delete data.show;
-        if ($a.hasClass("kifi-hover-showing") || data.fadingOut) return;
+        if ($a.hasClass("kifi-hover-showing") || isFadingOut()) return;
         data.$h.appendTo($a).each(function(){this.offsetHeight});
         $a.addClass("kifi-hover-showing");
         data.lastShowTime = +new Date;
@@ -116,10 +121,10 @@ home-grown at FortyTwo, not intended for distribution (yet)
         delete data.show, delete data.hide;
         if (!$a.hasClass("kifi-hover-showing")) return;
         $a.removeClass("kifi-hover-showing");
-        data.fadingOut = true;
+        data.fadeOutStartTime = +new Date;
         data.$h.on("transitionend webkitTransitionEnd", function end(e) {
           if (e.originalEvent.propertyName === "opacity") {
-            delete data.fadingOut;
+            delete data.fadeOutStartTime;
             data.$h.off("transitionend webkitTransitionEnd", end);
             if (opts.reuse) {
               data.$h.detach();
@@ -130,6 +135,9 @@ home-grown at FortyTwo, not intended for distribution (yet)
             $a.trigger("hover:hide");
           }
         });
+      }
+      function isFadingOut() {  // recovers within .5 sec if property not cleared when done fading
+        return new Date - (data.fadeOutStartTime || 0) < 500;
       }
       // Returns whether the viewport coords (x, y) are in the trapezoid between the top edge
       // of hover trigger element and the bottom edge of the hover element.
