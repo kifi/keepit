@@ -16,6 +16,7 @@ case class KeepToCollection(
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime
   ) extends Model[KeepToCollection] {
+  def isActive: Boolean = state == KeepToCollectionStates.ACTIVE
   def withId(id: Id[KeepToCollection]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }
@@ -24,6 +25,12 @@ case class KeepToCollection(
 trait KeepToCollectionRepo extends Repo[KeepToCollection] {
   def getCollectionsForBookmark(bookmarkId: Id[Bookmark])(implicit session: RSession): Seq[Id[Collection]]
   def getBookmarksInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[Id[Bookmark]]
+  def getByBookmark(keepId: Id[Bookmark],
+      excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))
+      (implicit session: RSession): Seq[KeepToCollection]
+  def getByCollection(collId: Id[Collection],
+      excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))
+      (implicit session: RSession): Seq[KeepToCollection]
 }
 
 @Singleton
@@ -50,6 +57,15 @@ class KeepToCollectionRepoImpl @Inject() (
     (for (c <- table if c.collectionId === collectionId && c.state === KeepToCollectionStates.ACTIVE)
       yield c.bookmarkId).list
 
+  def getByBookmark(keepId: Id[Bookmark],
+      excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))
+      (implicit session: RSession): Seq[KeepToCollection] =
+    (for (c <- table if c.bookmarkId === keepId && c.state =!= excludeState.getOrElse(null)) yield c).list
+
+  def getByCollection(collId: Id[Collection],
+      excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))
+      (implicit session: RSession): Seq[KeepToCollection] =
+    (for (c <- table if c.collectionId === collId && c.state =!= excludeState.getOrElse(null)) yield c).list
 }
 
 object KeepToCollectionStates extends States[KeepToCollection]
