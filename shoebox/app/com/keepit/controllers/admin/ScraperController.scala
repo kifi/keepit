@@ -57,16 +57,6 @@ class ScraperController @Inject() (
     Ok("dummy rescraping started for " + urlRegex.getOrElse("empty urlRegex"))
   }
 
-  def scrapeByState(state: State[NormalizedURI]) = AdminHtmlAction { implicit request =>
-    transitionByAdmin(state -> Set(ACTIVE)) { newState =>
-      db.readWrite { implicit s =>
-        normalizedURIRepo.getByState(state).foreach{ uri => normalizedURIRepo.save(uri.withState(newState)) }
-      }
-      val articles = scraper.scrape()
-      Ok(html.admin.scrape(articles))
-    }
-  }
-
   def getScraped(id: Id[NormalizedURI]) = AdminHtmlAction { implicit request =>
     val article = articleStore.get(id).get
     val (uri, info) = db.readOnly { implicit s =>
