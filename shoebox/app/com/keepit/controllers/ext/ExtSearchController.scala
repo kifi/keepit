@@ -174,7 +174,7 @@ class ExtSearchController @Inject() (
     PersonalSearchResult(toPersonalSearchHit(uri, bookmark),
                          res.bookmarkCount,
                          res.isMyBookmark,
-                         bookmark.map(_.isPrivate).getOrElse(false),
+                         bookmark.exists(_.isPrivate),
                          users,
                          res.score,
                          isNew)
