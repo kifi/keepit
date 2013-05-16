@@ -36,6 +36,7 @@ var searchContext = null;
 var connections = {};
 var connectionNames = [];
 var myAvatar = '';
+var searchTimeout;
 
 $.ajaxSetup({
     xhrFields: {
@@ -178,7 +179,10 @@ $(document)
 			}
 		});
 		$('input.search')
-			.on('keyup',function() {doSearch(null)}) // instant search
+			.on('keyup',function() {
+					clearTimeout(searchTimeout);
+					searchTimeout = setTimeout('doSearch(null)', 200);
+				}) // instant search
 			.on('focus',function() {$('.active').removeClass('active'); $(this).addClass('active')});
 
 
