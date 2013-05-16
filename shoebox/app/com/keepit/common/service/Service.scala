@@ -1,13 +1,14 @@
 package com.keepit.common.service
 
+import java.net.URL
 import com.keepit.common.time._
-import play.api.Play.current
 import play.api.Play
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
 import org.joda.time.format.DateTimeFormat
 import java.util.Locale
 import play.api.Mode
+import play.api.Mode._
 import play.api.libs.json._
 
 case class ServiceVersion(val value: String) {
@@ -35,7 +36,11 @@ object ServiceType {
   )
 }
 
-case class FortyTwoServices(clock: Clock) {
+class FortyTwoServices(
+  clock: Clock,
+  playMode: Mode,
+  compilationTimeFile: Option[URL],
+  currentVersionFile: Option[URL]) {
 
   val started = clock.now
 
@@ -45,21 +50,21 @@ case class FortyTwoServices(clock: Clock) {
     ServiceType.SEARCH.name -> ServiceType.SEARCH
   )
 
-  lazy val currentService: ServiceType = current.mode match {
+  lazy val currentService: ServiceType = playMode match {
     case Mode.Test => ServiceType.TEST_MODE
     case Mode.Dev => ServiceType.DEV_MODE
     case Mode.Prod => serviceByCode(Play.current.configuration.getString("application.name").get)
   }
 
-  lazy val currentVersion: ServiceVersion = current.mode match {
+  lazy val currentVersion: ServiceVersion = playMode match {
     case Mode.Test => ServiceVersion("Test mode service")
-    case _ => ServiceVersion(io.Source.fromURL(Play.resource("app_version.txt").get).mkString)
+    case _ => ServiceVersion(io.Source.fromURL(currentVersionFile.get).mkString)
   }
 
-  lazy val compilationTime: DateTime = current.mode match {
+  lazy val compilationTime: DateTime = playMode match {
     case Mode.Test => currentDateTime
     case _ =>
-      val timeStr = io.Source.fromURL(Play.resource("app_compilation_date.txt").get).mkString
+      val timeStr = io.Source.fromURL(compilationTimeFile.get).mkString
 	  DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss Z").withLocale(Locale.ENGLISH).withZone(zones.PT).parseDateTime(timeStr)
   }
 

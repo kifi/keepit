@@ -11,6 +11,7 @@ import akka.actor.Scheduler
 import com.keepit.common.db.SlickModule
 import com.keepit.common.db.DbInfo
 import play.api.Play
+import play.api.Play.current
 import play.api.db.DB
 
 class FortyTwoModule() extends ScalaModule {
@@ -29,12 +30,15 @@ class FortyTwoModule() extends ScalaModule {
 
   @Provides
   @Singleton
-  def fortyTwoServices(clock: Clock): FortyTwoServices = FortyTwoServices(clock)
+  def fortyTwoServices(clock: Clock): FortyTwoServices =
+    new FortyTwoServices(
+      clock,
+      current.mode,
+      Play.resource("app_compilation_date.txt"),
+      Play.resource("app_version.txt"))
 
   @Provides
   @AppScoped
-  def schedulerProvider(system: ActorSystem): Scheduler = {
-    system.scheduler
-  }
+  def schedulerProvider(system: ActorSystem): Scheduler = system.scheduler
 
 }
