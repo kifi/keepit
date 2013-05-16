@@ -112,8 +112,8 @@ class HomeController @Inject() (db: Database,
                       from = EmailAddresses.CONGRATS,
                       fromName = Some("KiFi Team"),
                       to = List(address),
-                      subject = s"@request.user.firstName @request.user.lastName joined KiFi!",
-                      htmlBody = views.html.email.invitationAccept(request.user).body,
+                      subject = s"${request.user.firstName} ${request.user.lastName} joined KiFi!",
+                      htmlBody = views.html.email.invitationFriendJoined(request.user).body,
                       category = PostOffice.Categories.INVITATION))
                   }
                 case None => 
