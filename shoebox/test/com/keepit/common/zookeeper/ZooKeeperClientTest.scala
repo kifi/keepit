@@ -83,9 +83,9 @@ class ZooKeeperClientTest extends Specification {
         zk.watchChildren(parent, { (children : Seq[Node]) =>
           println("Service Instances: %s".format(children.mkString(", ")))
         })
-        println(zk.createNode(Node("/parent/child1"), null, EPHEMERAL_SEQUENTIAL))
-        println(zk.createNode(Node("/parent/child2"), null, EPHEMERAL_SEQUENTIAL))
-        println(zk.createNode(Node("/parent/child3"), null, EPHEMERAL_SEQUENTIAL))
+        println("new node: " + zk.createNode(Node("/parent/child1"), null, EPHEMERAL_SEQUENTIAL))
+        println("new node: " + zk.createNode(Node("/parent/child2"), null, EPHEMERAL_SEQUENTIAL))
+        println("new node: " + zk.createNode(Node("/parent/child3"), null, EPHEMERAL_SEQUENTIAL))
         zk.getChildren(parent).size === 3
 
         zk.create(Path("other"), null, PERSISTENT)
