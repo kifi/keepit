@@ -61,6 +61,7 @@ class ConditionalWeight(query: ConditionalQuery, searcher: Searcher) extends Wei
 
   override def normalize(norm: Float, topLevelBoost: Float) {
     sourceWeight.normalize(norm, topLevelBoost * query.getBoost())
+    conditionWeight.normalize(norm, topLevelBoost * query.getBoost())
   }
 
   override def explain(context: AtomicReaderContext, doc: Int) = {
