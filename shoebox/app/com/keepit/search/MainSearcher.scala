@@ -24,6 +24,7 @@ import org.joda.time.DateTime
 import com.keepit.serializer.SearchResultInfoSerializer
 import com.keepit.search.query.LuceneExplanationExtractor
 import com.keepit.search.query.LuceneScoreNames
+import com.keepit.search.graph.UserToUriEdgeSet
 
 
 class MainSearcher(
@@ -51,6 +52,7 @@ class MainSearcher(
   val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
   val percentMatch = config.asFloat("percentMatch")
   val recencyBoost = config.asFloat("recencyBoost")
+  val newContentBoost = config.asFloat("newContentBoost")
   val halfDecayMillis = config.asFloat("halfDecayHours") * (60.0f * 60.0f * 1000.0f) // hours to millis
   val proximityBoost = config.asFloat("proximityBoost")
   val semanticBoost = config.asFloat("semanticBoost")
@@ -77,11 +79,12 @@ class MainSearcher(
   private[this] val myUris = myUriEdges.destIdLongSet
   private[this] val myPublicUris = uriGraphSearcher.myPublicUriEdgeSet.destIdLongSet
   private[this] val filteredFriendIds = filter.filterFriends(friendIds)
-  private[this] val friendUris = filteredFriendIds.foldLeft(Set.empty[Long]){ (s, f) =>
-    s ++ uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).destIdLongSet
+  private[this] val friendsUriEdgeSetMap = filteredFriendIds.foldLeft(Map.empty[Long, UserToUriEdgeSet]){ (m, f) =>
+    m + (f.id -> uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true))
   }
+  private[this] val friendUris = friendsUriEdgeSetMap.values.foldLeft(Set.empty[Long]){ (s, e) => s ++ e.destIdLongSet }
   private[this] val friendlyUris = {
-    if (filter.includeMine) myUris ++ friendUris
+    if (filter.includeMine) friendUris ++ myUris
     else if (filter.includeShared) friendUris
     else friendUris -- myUris // friends only
   }
@@ -205,7 +208,10 @@ class MainSearcher(
         val sharingUsers = findSharingUsers(id)
 
         if (numCollectStats > 0 && sharingUsers.size > 0) {
-          friendStats.add(sharingUsers.destIdLongSet, h.score)
+          val createdAt = myUriEdges.getCreatedAt(h.id)
+          val sharingUserIdSet = sharingUsers.destIdLongSet
+          val introducedAt = sharingUserIdSet.map{ f => friendsUriEdgeSetMap(f).getCreatedAt(h.id) }.min // oldest keep time
+          friendStats.add(sharingUserIdSet, h.score)
           numCollectStats -= 1
         }
 
@@ -227,26 +233,39 @@ class MainSearcher(
       val queue = createQueue(numHitsToReturn - min(minMyBookmarks, hits.size))
       hits.drop(hits.size - minMyBookmarks).foreach{ h => queue.insert(h) }
 
+      var newContent: Option[MutableArticleHit] = None // hold a document most recently introduced to the network
+      var newContentScore = 0.5f // one day
       friendsHits.toRankedIterator.forall{ case (h, rank) =>
         val id = Id[NormalizedURI](h.id)
         val sharingUsers = findSharingUsers(id)
 
+        var recencyScoreVal = 0.0f
         if (numCollectStats > 0) {
-          friendStats.add(sharingUsers.destIdLongSet, h.score)
+          val sharingUserIdSet = sharingUsers.destIdLongSet
+          val introducedAt = sharingUserIdSet.map{ f => friendsUriEdgeSetMap(f).getCreatedAt(h.id) }.min // oldest keep time
+          recencyScoreVal = recencyScore(introducedAt)
+          friendStats.add(sharingUserIdSet, h.score)
           numCollectStats -= 1
         }
 
         val score = h.score * dampFunc(rank, dampingHalfDecayFriends) // damping the scores by rank
         if (score > threshold) {
           h.users = sharingUsers.destIdSet
-          h.scoring = new Scoring(score, score / highScore, bookmarkScore(findEffectiveSharingSize(sharingUsers)), 0.0f)
-          h.score = h.scoring.score(1.0f, sharingBoostInNetwork, recencyBoost)
+          h.scoring = new Scoring(score, score / highScore, bookmarkScore(findEffectiveSharingSize(sharingUsers)), recencyScoreVal)
+          h.score = h.scoring.score(1.0f, sharingBoostInNetwork, newContentBoost)
           queue.insert(h)
           true
         } else {
+          if (recencyScoreVal > newContentScore) {
+            newContent = Some(h)
+            newContentScore = recencyScoreVal
+          }
           numCollectStats > 0
         }
       }
+      // insert a new content if any
+      newContent.foreach{ queue.insert(_) }
+
       queue.foreach{ h => hits.insert(h) }
     }
 

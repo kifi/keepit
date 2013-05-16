@@ -24,7 +24,7 @@ import com.keepit.common.healthcheck.Healthcheck.SEARCH
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchHit(id: Id[NormalizedURI], externalId: ExternalId[NormalizedURI], title: Option[String], url: String)
-case class PersonalSearchResult(hit: PersonalSearchHit, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[BasicUser], score: Float)
+case class PersonalSearchResult(hit: PersonalSearchHit, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[BasicUser], score: Float, isNew: Boolean)
 case class PersonalSearchResultPacket(
   uuid: ExternalId[ArticleSearchResultRef],
   query: String,
@@ -147,7 +147,7 @@ class ExtSearchController @Inject() (
         val users = res.hits.map(_.users).flatten.distinct.map(u => u -> basicUserRepo.load(u)).toMap
         log.info(s"search-personal-a: ${currentDateTime.getMillis()-t0}")
         val t1 = currentDateTime.getMillis()
-        val h = res.hits.map(toPersonalSearchResult(userId, users, _))
+        val h = res.hits.zip(res.scorings).map{ case (hit, scoring) => toPersonalSearchResult(userId, users, hit, scoring) }
         log.info(s"search-personal-d: ${currentDateTime.getMillis()-t1}")
         h
       }
@@ -158,7 +158,7 @@ class ExtSearchController @Inject() (
     PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), experimentId, filter)
   }
 
-  private[ext] def toPersonalSearchResult(userId: Id[User], allUsers: Map[Id[User], BasicUser], res: ArticleHit)(implicit session: RSession): PersonalSearchResult = {
+  private[ext] def toPersonalSearchResult(userId: Id[User], allUsers: Map[Id[User], BasicUser], res: ArticleHit, scoring: Scoring)(implicit session: RSession): PersonalSearchResult = {
     val t0 = currentDateTime.getMillis()
     val uri = uriRepo.get(res.uriId)
     log.info(s"search-personal-b: ${currentDateTime.getMillis()-t0}")
@@ -166,9 +166,18 @@ class ExtSearchController @Inject() (
     val bookmark = if (res.isMyBookmark) bookmarkRepo.getByUriAndUser(uri.id.get, userId) else None
     log.info(s"search-personal-c: ${currentDateTime.getMillis()-t1}")
     val users = res.users.map(allUsers)
-    PersonalSearchResult(
-      toPersonalSearchHit(uri, bookmark), res.bookmarkCount, res.isMyBookmark,
-      bookmark.map(_.isPrivate).getOrElse(false), users, res.score)
+
+    // we mark the friend keep "isNew" if recencyScore > 0.5 which means the oldest create time on the hits is
+    // within the halfDecay period. recencyScore is always zero for others' keep.
+    val isNew = (!res.isMyBookmark && scoring.recencyScore > 0.5f)
+
+    PersonalSearchResult(toPersonalSearchHit(uri, bookmark),
+                         res.bookmarkCount,
+                         res.isMyBookmark,
+                         bookmark.map(_.isPrivate).getOrElse(false),
+                         users,
+                         res.score,
+                         isNew)
   }
 
   private[ext] def toPersonalSearchHit(uri: NormalizedURI, bookmark: Option[Bookmark]) = {

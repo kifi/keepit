@@ -60,7 +60,8 @@ trait EdgeSet[S,D] {
 }
 
 trait CreatedAt[D] {
-  def getCreatedAt(id: Id[D]): Long
+  def getCreatedAt(id: Id[D]): Long = getCreatedAt(id.id)
+  def getCreatedAt(id: Long): Long
 }
 
 trait MaterializedEdgeSet[S,D] extends EdgeSet[S, D] {
@@ -121,8 +122,9 @@ trait LongSetEdgeSet[S, D] extends MaterializedEdgeSet[S, D] {
 trait LongSetEdgeSetWithCreatedAt[S, D] extends LongSetEdgeSet[S, D] with CreatedAt[D] {
   protected def createdAt(idx: Int): Long
 
-  override def getCreatedAt(id: Id[D]): Long = {
-    val idx = longArraySet.findIndex(id.id)
+  override def getCreatedAt(id: Id[D]): Long = getCreatedAt(id.id)
+  override def getCreatedAt(id: Long): Long = {
+    val idx = longArraySet.findIndex(id)
     if (idx >= 0) createdAt(idx) else 0
   }
 }
@@ -134,7 +136,7 @@ trait LongToLongMapEdgeSetWithCreatedAt[S, D] extends MaterializedEdgeSet[S, D] 
   override lazy val destIdSet: Set[Id[D]] = destIdLongSet.map(new Id[D](_))
 
   override def size = destIdMap.size
-  override def getCreatedAt(id: Id[D]): Long = URIList.unitToMillis(destIdMap.get(id.id).getOrElse(0L))
+  override def getCreatedAt(id: Long): Long = URIList.unitToMillis(destIdMap.get(id).getOrElse(0L))
 }
 
 trait DocIdSetEdgeSet[S, D] extends EdgeSet[S, D] {
