@@ -29,5 +29,17 @@ class ServiceDiscoveryTest extends Specification with TestInjector {
         deserialized === service
       }
     }
+
+    "register" in {
+      withInjector()  { implicit injector =>
+        val services = inject[FortyTwoServices]
+        val service = RemoteService(AmazonInstanceId("id"), ServiceStatus.UP, IpAddress("1.1.1.1"), services.currentService)
+        val basePath = Path("/test" + Random.nextLong.abs)
+        val zk = new ZooKeeperClientImpl("localhost", 2000, basePath, Some({zk1 => println(s"in callback, got $zk1")}))
+        val discovery = new ServiceDiscovery(zk, services)
+        val node = discovery.register()
+        node.name === s"""${basePath.name}/services/TEST_MODE/TEST_MODE_0000000000"""
+      }
+    }
   }
 }

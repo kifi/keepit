@@ -129,9 +129,8 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int, val basePath : P
     result.getVersion >= 0
   }
 
-  def create(path: Path, data: Array[Byte], createMode: CreateMode): Path = {
+  def create(path: Path, data: Array[Byte], createMode: CreateMode): Path =
     Path(zk.create(makeNodePath(path).name, data, Ids.OPEN_ACL_UNSAFE, createMode))
-  }
 
   def createNode(node: Node, data: Array[Byte], createMode: CreateMode): Node =
     create(node.asPath, data, createMode).asNode
@@ -151,17 +150,11 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int, val basePath : P
     path
   }
 
-  def get(node: Node): Array[Byte] = {
-    zk.getData(makeNodePath(node.asPath).name, false, null)
-  }
+  def get(node: Node): Array[Byte] = zk.getData(makeNodePath(node.asPath).name, false, null)
 
-  def set(node: Node, data: Array[Byte]) {
-    zk.setData(makeNodePath(node.asPath).name, data, -1)
-  }
+  def set(node: Node, data: Array[Byte]): Unit = zk.setData(makeNodePath(node.asPath).name, data, -1)
 
-  def delete(path: Path): Unit = {
-    zk.delete(makeNodePath(path).name, -1)
-  }
+  def delete(path: Path): Unit = zk.delete(makeNodePath(path).name, -1)
 
   def deleteNode(node: Node): Unit = delete(node.asPath)
 
@@ -246,17 +239,15 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int, val basePath : P
    * WARNING: watchMap must be thread-safe. Writing is synchronized on the watchMap. Readers MUST
    * also synchronize on the watchMap for safety.
    */
-  def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T) {
+  def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T): Unit =
     watchChildrenWithData(path, watchMap, deserialize, None)
-  }
 
   /**
    * Watch a set of nodes with an explicit notifier. The notifier will be called whenever
    * the watchMap is modified
    */
-  def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T, notifier: Node => Unit) {
+  def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T, notifier: Node => Unit): Unit =
     watchChildrenWithData(path, watchMap, deserialize, Some(notifier))
-  }
 
   private def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T],
                                        deserialize: Array[Byte] => T, notifier: Option[Node => Unit]) {
