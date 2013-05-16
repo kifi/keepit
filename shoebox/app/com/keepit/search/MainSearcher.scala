@@ -264,6 +264,9 @@ class MainSearcher(
           true
         } else {
           if (recencyScoreVal > newContentScore) {
+            h.users = sharingUsers.destIdSet
+            h.scoring = new Scoring(score, score / highScore, bookmarkScore(sharingScore(sharingUsers, normalizedFriendStats)), recencyScoreVal)
+            h.score = h.scoring.score(1.0f, sharingBoostInNetwork, newContentBoost)
             newContent = Some(h)
             newContentScore = recencyScoreVal
           }
