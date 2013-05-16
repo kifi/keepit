@@ -69,7 +69,7 @@ class SocialUserImportFriends @Inject() (
 
   private def extractFriends(parentJson: JsValue): Seq[JsValue] = (parentJson \\ "data").head.asInstanceOf[JsArray].value
 
-  private def createSocialUserInfo(friend: JsValue): (SocialUserInfo, JsValue) = (SocialUserInfo(fullName = (friend \ "name").as[String], socialId = SocialId((friend \ "id").as[String]),
+  private def createSocialUserInfo(friend: JsValue): (SocialUserInfo, JsValue) = (SocialUserInfo(fullName = (friend \ "name").asOpt[String].getOrElse(""), socialId = SocialId((friend \ "id").as[String]),
                                                 networkType = SocialNetworks.FACEBOOK, state = SocialUserInfoStates.FETCHED_USING_FRIEND), friend)
 
   private def createSocialUserRawInfo(socialUserInfo: SocialUserInfo, friend: JsValue) = SocialUserRawInfo(socialUserInfo = socialUserInfo, json = friend)
