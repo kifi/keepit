@@ -30,7 +30,8 @@ div.kifi-comments-none:only-child {
   color: #a9a9a9;
   display: none;
 }
-.kifi-comment-posted:hover time {
+.kifi-comment-posted:hover time,
+.kifi-comments-posted-inner:not(:hover) .kifi-comment-posted:last-child time {
   display: block;
 }
 img.kifi-comment-pic {
