@@ -147,7 +147,7 @@ class ExtSearchController @Inject() (
         val users = res.hits.map(_.users).flatten.distinct.map(u => u -> basicUserRepo.load(u)).toMap
         log.info(s"search-personal-a: ${currentDateTime.getMillis()-t0}")
         val t1 = currentDateTime.getMillis()
-        val h = res.hits.zip(res.scorings).map{ case (hit, scoring) => toPersonalSearchResult(userId, users, hit, scoring) }
+        val h = (res.hits zip res.scorings).map{ case (hit, scoring) => toPersonalSearchResult(userId, users, hit, scoring) }
         log.info(s"search-personal-d: ${currentDateTime.getMillis()-t1}")
         h
       }

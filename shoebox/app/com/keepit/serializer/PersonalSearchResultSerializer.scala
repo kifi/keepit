@@ -16,8 +16,7 @@ class PersonalSearchResultSerializer extends Writes[PersonalSearchResult] with L
         "users" -> Json.toJson(res.users),
         "score" -> JsNumber(res.score),
         "isMyBookmark" -> JsBoolean(res.isMyBookmark),
-        "isPrivate" -> JsBoolean(res.isPrivate),
-        "isNew" -> JsBoolean(res.isNew)
+        "isPrivate" -> JsBoolean(res.isPrivate)
       ))
     } catch {
       case e: Throwable =>
