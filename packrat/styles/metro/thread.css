@@ -1,5 +1,5 @@
 .kifi-messages-sent {
-  padding: 10px 12px 0;
+  padding: 10px 12px 4px;
   overflow-y: auto;
   max-height: 0;
   -moz-box-sizing: border-box;
@@ -24,7 +24,8 @@
   color: #a9a9a9;
   display: none;
 }
-.kifi-message-sent:hover time {
+.kifi-message-sent:hover time,
+.kifi-messages-sent-inner:not(:hover) .kifi-message-sent:last-child time {
   display: block;
 }
 img.kifi-message-pic {
