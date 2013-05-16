@@ -37,10 +37,27 @@ class ServiceDiscoveryTest extends Specification with TestInjector {
         val services = inject[FortyTwoServices]
         val service = RemoteService(AmazonInstanceId("id"), ServiceStatus.UP, IpAddress("1.1.1.1"), services.currentService)
         val basePath = Path("/test" + Random.nextLong.abs)
-        val zk = new ZooKeeperClientImpl("localhost", 2000, basePath, Some({zk1 => println(s"in callback, got $zk1")}))
-        val discovery = new ServiceDiscovery(zk, services)
-        val node = discovery.register()
-        node.name === s"""${basePath.name}/services/TEST_MODE/TEST_MODE_0000000000"""
+        val zk = new ZooKeeperClientImpl("localhost", 2000, basePath,
+          Some({zk1 => println(s"in callback, got $zk1")}))
+        try {
+          val discovery = new ServiceDiscovery(zk, services)
+          zk.watchChildren(Path("/services/TEST_MODE"), { (children : Seq[Node]) =>
+            println("Service Instances ----------- : %s".format(children.mkString(", ")))
+          })
+          val path = zk.createPath(Path(s"/services/TEST_MODE"))
+          val firstNode = zk.createNode(Node("/services/TEST_MODE/TEST_MODE_"), null, EPHEMERAL_SEQUENTIAL)
+          val registeredNode = discovery.register()
+          registeredNode.name === s"""${basePath.name}/services/TEST_MODE/TEST_MODE_0000000001"""
+          println("new node: " + zk.createNode(Node("/services/TEST_MODE/TEST_MODE_"), null, EPHEMERAL_SEQUENTIAL))
+          println("sleeping")
+          println(zk.getChildren(Path("/services/TEST_MODE")) mkString ",")
+          zk.getChildren(Path("/services/TEST_MODE")).size === 3
+          discovery.isLeader() === false
+          zk.deleteNode(firstNode)
+          discovery.isLeader() === true
+        } finally {
+          zk.close()
+        }
       }
     }
   }
