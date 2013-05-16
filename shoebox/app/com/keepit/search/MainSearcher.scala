@@ -237,7 +237,7 @@ class MainSearcher(
 
     if (friendsHits.size > 0 && filter.includeFriends) {
       val queue = createQueue(numHitsToReturn - min(minMyBookmarks, hits.size))
-      hits.drop(hits.size - minMyBookmarks).foreach{ h => queue.insert(h) }
+      hits.discharge(hits.size - minMyBookmarks).foreach{ h => queue.insert(h) }
 
       val normalizedFriendStats = friendStats.normalize
       var newContent: Option[MutableArticleHit] = None // hold a document most recently introduced to the network
@@ -418,14 +418,14 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit](sz) {
     }
   }
 
-  def drop(n: Int): List[MutableArticleHit] = {
+  def discharge(n: Int): List[MutableArticleHit] = {
     var i = 0
-    var dropped: List[MutableArticleHit] = Nil
+    var discharged: List[MutableArticleHit] = Nil
     while (i < n && size > 0) {
-      dropped = pop() :: dropped
+      discharged = pop() :: discharged
       i += 1
     }
-    dropped
+    discharged
   }
 
   def reset() {
