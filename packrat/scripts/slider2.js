@@ -19,6 +19,26 @@ $.fn.scrollToBottom = function() {
     }
   });
 };
+!function() {
+  $.fn.scrollable = function() {
+    return this.each(function() {
+      var data = $(this).data(), el;
+      for (el = this; !data.elAbove; el = el.parentNode) {
+        data.elAbove = el.previousElementSibling;
+      }
+      for (el = this; !data.elBelow; el = el.parentNode) {
+        data.elBelow = el.nextElementSibling;
+      }
+      data.elAbove.classList.add("kifi-scrollable-above");
+      data.elBelow.classList.add("kifi-scrollable-below");
+    }).scroll(onScroll);
+  };
+  function onScroll() {
+    var sT = this.scrollTop, sH = this.scrollHeight, oH = this.offsetHeight, data = $(this).data();
+    data.elAbove.classList[sT > 0 ? "add" : "remove"]("kifi-can-scroll");
+    data.elBelow.classList[sT < sH - oH ? "add" : "remove"]("kifi-can-scroll");
+  }
+}();
 
 const CO_KEY = /^Mac/.test(navigator.platform) ? "⌘" : "Ctrl";
 var generalPane, noticesPane, commentsPane, threadsPane, threadPane;  // stubs
