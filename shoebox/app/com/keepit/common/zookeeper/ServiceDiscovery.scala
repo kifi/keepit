@@ -15,14 +15,27 @@ class ServiceDiscovery @Inject() (zk: ZooKeeperClient, services: FortyTwoService
   val serviceType = services.currentService
   val myServicePath = Path(s"/services/${serviceType.name}")
   val myServiceNodeMaster = Node(s"${myServicePath.name}/${serviceType.name}_")
+  var myNode: Option[Node] = None
+  def myId: Option[Long] = myNode map extractId
+  def extractId(node: Node) = {
+    node.name.substring(node.name.lastIndexOf('_') + 1).toLong
+  }
 
   def register(): Node = {
     val path = zk.createPath(myServicePath)
     zk.watchChildren(path, { (children : Seq[Node]) =>
-      log.info(s"""services in my cluster: ${children.mkString(", ")}""")
+      println(s"""services in my cluster: ${children.mkString(", ")}""")
     })
-    zk.createNode(myServiceNodeMaster, null, EPHEMERAL_SEQUENTIAL)
+    myNode = Some(zk.createNode(myServiceNodeMaster, null, EPHEMERAL_SEQUENTIAL))
+    myNode.get
   }
+
+  def isLeader(): Boolean = myId map { id =>
+    val siblings = zk.getChildren(myServicePath)
+    val siblingsIds = siblings map extractId
+    val minId = siblingsIds.min
+    minId == id
+  } getOrElse (throw new IllegalStateException("service did not register yet"))
 
   def watchNode(node: Node) {
     zk.watchNode(node, { (data : Option[Array[Byte]]) =>
