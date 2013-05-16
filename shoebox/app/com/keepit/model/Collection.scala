@@ -19,12 +19,15 @@ case class Collection(
   ) extends ModelWithExternalId[Collection] {
   def withId(id: Id[Collection]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
+  def isActive: Boolean = state == CollectionStates.ACTIVE
 }
 
 @ImplementedBy(classOf[CollectionRepoImpl])
 trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] {
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Collection]
-  def getByUserAndName(userId: Id[User], name: String)(implicit session: RSession): Option[Collection]
+  def getByUserAndName(userId: Id[User], name: String,
+      excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
+      (implicit session: RSession): Option[Collection]
 }
 
 @Singleton
@@ -46,9 +49,11 @@ class CollectionRepoImpl @Inject() (
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Collection] =
     (for (c <- table if c.userId === userId && c.state === CollectionStates.ACTIVE) yield c).list
 
-  def getByUserAndName(userId: Id[User], name: String)(implicit session: RSession): Option[Collection] =
+  def getByUserAndName(userId: Id[User], name: String,
+      excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
+      (implicit session: RSession): Option[Collection] =
     (for (c <- table if c.userId === userId && c.name === name
-        && c.state === CollectionStates.ACTIVE) yield c).firstOption
+        && c.state =!= excludeState.getOrElse(null)) yield c).firstOption
 }
 
 object CollectionStates extends States[Collection]
