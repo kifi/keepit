@@ -68,6 +68,7 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark]
   def getByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark]
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Bookmark]
+  def getByUserPage(userId: Id[User], pageNum: Int, pageSize: Int)(implicit session: RSession): Seq[Bookmark]
   def getCountByUser(userId: Id[User])(implicit session: RSession): Int
   def getUsersChanged(num: SequenceNumber)(implicit session: RSession): Seq[(Id[User], SequenceNumber)]
   def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int
@@ -141,6 +142,10 @@ class BookmarkRepoImpl @Inject() (
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).list
+
+  def getByUserPage(userId: Id[User], pageNum: Int, pageSize: Int)(implicit session: RSession): Seq[Bookmark] =
+    (for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b)
+        .sortBy(_.createdAt desc).drop(pageNum * pageSize).take(pageSize).list
 
   def getCountByUser(userId: Id[User])(implicit session: RSession): Int =
     Query((for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).length).first

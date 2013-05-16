@@ -29,9 +29,11 @@ class BookmarksController @Inject() (
     )
   }
 
-  def allKeeps() = AuthenticatedJsonAction { request =>
+  def allKeeps(pageNum: Int, pageSize: Int) = AuthenticatedJsonAction { request =>
     Ok(Json.obj(
-      "keeps" -> db.readOnly { implicit s => bookmarkRepo.getByUser(request.userId).sortBy(_.createdAt).reverse }
+      "keeps" -> db.readOnly { implicit s =>
+        bookmarkRepo.getByUserPage(request.userId, pageNum, pageSize)
+      }
     ))
   }
 
