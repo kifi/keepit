@@ -27,7 +27,7 @@ var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPL
 var searchTemplate = Tempo.prepare("search-results").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
 					hideLoading();
 					$('#search-results .keep .bottom').each(function() {
-						$(this).find('img').prependTo($(this));
+						$(this).find('img.small-avatar').prependTo($(this));
 					});
 					$('#search-results .keep.mine .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myAvatar + '"/>');
 					$('div.search .num-results span').text($('#search-results .keep').length);
