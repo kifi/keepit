@@ -27,16 +27,17 @@ class SocialUserImportFriendsTest extends Specification {
     "import friends" in {
       running(new EmptyApplication().withFakeStore) {
         val graphs = List(
-            ("facebook_graph_andrew_min.json", 7, "Kristen Lynch"),
-            ("facebook_graph_eishay_super_min.json", 5, "Igor Perisic")
+            ("facebook_graph_andrew_min.json", 7),
+            ("facebook_graph_eishay_super_min.json", 5),
+            ("facebook_graph_shawn.json", 82)
         )
-        graphs map { case (filename, numOfFriends, firstFriend) => testFacebookGraph(filename, numOfFriends, firstFriend) }
+        graphs map { case (filename, numOfFriends) => testFacebookGraph(filename, numOfFriends) }
 
       }
     }
   }
 
-  def testFacebookGraph(jsonFilename: String, numOfFriends: Int, firstFriend: String) = {
+  def testFacebookGraph(jsonFilename: String, numOfFriends: Int) = {
     val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format(jsonFilename))).mkString)
     val rawFriends = inject[SocialUserImportFriends].importFriends(Seq(json))
     val store = inject[SocialUserRawInfoStore].asInstanceOf[Map[Id[SocialUserInfo], SocialUserRawInfo]]

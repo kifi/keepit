@@ -34,7 +34,7 @@ POST    /register                   securesocial.controllers.Registration.handle
 ##########################################
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
 
-GET     /site/keeps/all             @com.keepit.controllers.website.BookmarksController.allKeeps()
+GET     /site/keeps/all             @com.keepit.controllers.website.BookmarksController.allKeeps(before: Option[String] = None, count: Int ?= Integer.MAX_VALUE)
 GET     /site/keeps/mutual/:id      @com.keepit.controllers.website.BookmarksController.mutualKeeps(id: ExternalId[User])
 GET     /site/keeps/count           @com.keepit.controllers.website.BookmarksController.numKeeps()
 
@@ -124,7 +124,6 @@ POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarks
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Bookmark])
 
 GET     /admin/scrape               @com.keepit.controllers.admin.ScraperController.scrape
-GET     /admin/scrape/:state        @com.keepit.controllers.admin.ScraperController.scrapeByState(state: State[NormalizedURI])
 GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperController.getScraped(uriId: Id[NormalizedURI])
 GET    /admin/rescrape/byRegex     @com.keepit.controllers.admin.ScraperController.rescrapeByRegex(urlRegex: Option[String] ?= None)
 
