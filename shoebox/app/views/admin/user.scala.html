@@ -1,13 +1,15 @@
 @(userWithSocial: UserWithSocial,
   totalBookmarks: Int,
-  bookmarks: Seq[(Bookmark, NormalizedURI)],
+  bookmarks: Seq[(Bookmark, NormalizedURI, Seq[String])],
   socialConnections: Seq[SocialUserInfo],
   fortyTwoConnections: Seq[UserWithSocial],
   kifiInstallations: Seq[KifiInstallation],
   historyUpdateCount: Int,
   bookmarkSearch: Option[String],
   allowedInvites: Int,
-  emails: Seq[EmailAddress])
+  emails: Seq[EmailAddress],
+  collections: Seq[Collection],
+  collectionFilter: Option[Id[Collection]])
 
 @userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
   <a data-hover="tooltip" title="@userWithSocial.user.firstName @userWithSocial.user.lastName+" class="name_tooltip_link" href="http://www.facebook.com/@userWithSocial.socialUserInfo.socialId.id" target="_blank">
@@ -123,6 +125,12 @@
     } else {
       <input type="text" name="bookmarkSearch" placeholder="query"/>
     }
+    <select name="collectionFilter">
+      <option value="-1">All collections</option>
+    @for(c <- collections) {
+      <option value="@c.id.get" @if(collectionFilter == c.id) { selected }>@c.name</option>
+    }
+    </select>
     <input type="submit" value="Search"/>
   </form>
   <form class="navbar-form" action="@com.keepit.controllers.admin.routes.AdminBookmarksController.updateBookmarks()"
@@ -135,11 +143,12 @@
 		      <th>Private</th>
 		      <th>Active</th>
 		      <th>Bookmark</th>
-		      <th>Source</th>
+              <th>Collections</th>
+              <th>Source</th>
           <th>Created At</th>
           <th>State</th>
 		    </tr>
-			 @for(((bookmark, uri), i) <- bookmarks.zipWithIndex) {
+			 @for(((bookmark, uri, collections), i) <- bookmarks.zipWithIndex) {
 			   <tr>
 		        <td>@{i+1}</td>
 		        <td><span class="badge">@bookmark.id.get.id</span></td>
@@ -152,7 +161,8 @@
 							<center><input type="checkbox" id="active_@bookmark.id.get.id" name="active_@{bookmark.id.get.id}" value="1" @if(bookmark.state.value == "active") {checked="checked"}"></input></center>
 		        </td>
 		        <td>@adminHelper.bookmarkDisplay(bookmark)</td>
-		        <td>@bookmark.source</td>
+                <td><div class="collections" data-id="@bookmark.id.get.id">@{collections.mkString(", ")}</div></td>
+                <td>@bookmark.source</td>
             <td>@adminHelper.dateTimeDisplay(bookmark.createdAt)</td>
             <td>@adminHelper.uriStateDisplay(uri)</td>
 			   </tr>
@@ -176,6 +186,31 @@
       location.href="@com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(userWithSocial.user.id.get)"
     }
     $(function() {
+      $('.table').on('click', 'div.collections', function () {
+        var $input = $('<input type="text">').addClass('collections').val($(this).text());
+        $(this).hide().parent().append($input);
+        $input.focus();
+      });
+      $('.table').on('change', 'input.collections', function () {
+        var $div = $(this).parent().find('div.collections');
+        var $td = $div.closest("td");
+        var $sp = $("<img src='/assets/images/spinner.15.gif'>").appendTo($td);
+        var bookmarkId = $div.data("id");
+        $.post('@com.keepit.controllers.admin.routes.AdminUserController.updateCollectionsForBookmark(Id(-1))'
+            .replace('-1', bookmarkId), { collections: $(this).val() }).done(done).fail(fail);
+        function done(data) {
+          $div.text(data.collections.join(", ")).show();
+          $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
+        }
+        function fail() {
+          $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
+        }
+        return false;
+      });
+      $('.table').on('blur', 'input.collections', function () {
+        $(this).parent().find('.collections').show();
+        $(this).remove();
+      });
       $("#state").change(function() {
         var $td = $(this).closest("td");
         var $sp = $("<img src=/assets/images/spinner.15.gif>").appendTo($td);

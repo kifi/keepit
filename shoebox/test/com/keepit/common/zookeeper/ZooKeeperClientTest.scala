@@ -21,8 +21,7 @@ class ZooKeeperClientTest extends Specification {
 
   def withClient[T](block: ZooKeeperClient => T)(implicit path: Path = Path("/test" + Random.nextLong.abs), cleanup: Boolean = true): T = {
     println(s"starting test with root path $path")
-    val zk = new ZooKeeperClient("localhost", 2000, path,
-                    Some({zk1 => println(s"in callback, got $zk1")}))
+    val zk = new ZooKeeperClientImpl("localhost", 2000, path, Some( {zk1 => println(s"in callback, got $zk1")} ))
     try {
       zk.createPath(path)
       block(zk)
@@ -84,9 +83,9 @@ class ZooKeeperClientTest extends Specification {
         zk.watchChildren(parent, { (children : Seq[Node]) =>
           println("Service Instances: %s".format(children.mkString(", ")))
         })
-        println(zk.createNode(Node("/parent/child1"), null, EPHEMERAL_SEQUENTIAL))
-        println(zk.createNode(Node("/parent/child2"), null, EPHEMERAL_SEQUENTIAL))
-        println(zk.createNode(Node("/parent/child3"), null, EPHEMERAL_SEQUENTIAL))
+        println("new node: " + zk.createNode(Node("/parent/child1"), null, EPHEMERAL_SEQUENTIAL))
+        println("new node: " + zk.createNode(Node("/parent/child2"), null, EPHEMERAL_SEQUENTIAL))
+        println("new node: " + zk.createNode(Node("/parent/child3"), null, EPHEMERAL_SEQUENTIAL))
         zk.getChildren(parent).size === 3
 
         zk.create(Path("other"), null, PERSISTENT)
