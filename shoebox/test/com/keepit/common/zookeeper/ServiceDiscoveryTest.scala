@@ -19,6 +19,8 @@ import scala.util.{Random, Try}
 
 class ServiceDiscoveryTest extends Specification with TestInjector {
 
+  args(skipAll = true)
+
   "discovery" should {
     "serialize" in {
       withInjector()  { implicit injector =>
