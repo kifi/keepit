@@ -21,7 +21,7 @@ class ZooKeeperClientTest extends Specification {
 
   def withClient[T](block: ZooKeeperClient => T)(implicit path: Path = Path("/test" + Random.nextLong.abs), cleanup: Boolean = true): T = {
     println(s"starting test with root path $path")
-    val zk = new ZooKeeperClient("localhost", 2000, path,
+    val zk = new ZooKeeperClientImpl("localhost", 2000, path,
                     Some({zk1 => println(s"in callback, got $zk1")}))
     try {
       zk.createPath(path)
