@@ -24,9 +24,8 @@ import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{FakeMailToKeepPlugin, MailToKeepPlugin, FakeMailModule, MailSenderPlugin, ElectronicMail}
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.social.FakeSecureSocialUserServiceModule
-import com.keepit.common.social.SocialGraphPlugin
+import com.keepit.common.service._
+import com.keepit.common.social._
 import com.keepit.common.store.FakeS3StoreModule
 import com.keepit.common.time._
 import com.keepit.common.zookeeper._
@@ -46,6 +45,7 @@ import akka.actor.Scheduler
 
 import play.api.Mode.{Mode, Test}
 import play.api.Play
+import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 
 class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplication() {
@@ -202,7 +202,10 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Provides
   @Singleton
-  def fortyTwoServices(clock: Clock): FortyTwoServices = FortyTwoServices(clock)
+  def fortyTwoServices(clock: Clock): FortyTwoServices = new FortyTwoServices(clock, Test, None, None) {
+    override lazy val currentVersion: ServiceVersion = ServiceVersion("0.0.0")
+    override lazy val compilationTime: DateTime = currentDateTime
+  }
 }
 
 /**
