@@ -85,7 +85,7 @@ function doSearch(context) {
 	$('aside.right').show();
 	showLoading();
 	$.getJSON(urlSearch, 
-		{maxHits: 50
+		{maxHits: 30
 		,f: $('select[name="keepers"]').val() == 'c' ? $('#custom-keepers').textext()[0].tags().tagElements().find('.text-label').map(function(){return connections[$(this).text()]}).get().join('.') : $('select[name="keepers"]').val()
 		,q: $('input.search').val()
 		,context: context
@@ -120,7 +120,7 @@ function populateMyKeeps() {
 $(document)
 	.on('keypress', function(e) {if (!$(e.target).is('textarea')) $('input.search').focus() }) // auto focus on search field when starting to type anywhere on the document
 	.on('scroll',function() { // infinite scroll
-		if (searchContext != null && !isLoading() && ($(window).scrollTop() + $(window).height())/ $(document).height() > .9) // scrolled down more than %90
+		if (searchContext != null && !isLoading() && ($(window).scrollTop() + $(window).height())/ $(document).height() > .75) // scrolled down more than %75
 			doSearch(searchContext);
 	})
 	.ready(function() {
@@ -183,7 +183,7 @@ $(document)
 					clearTimeout(searchTimeout);
 					searchTimeout = setTimeout('doSearch(null)', 200);
 				}) // instant search
-			.on('focus',function() {$('.active').removeClass('active'); $(this).addClass('active')});
+			.on('focus',function() {$('.active').removeClass('active'); $(this).parent().addClass('active')});
 
 
 	});
