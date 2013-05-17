@@ -67,7 +67,7 @@ trait ScrapeInfoRepo extends Repo[ScrapeInfo] {
   def allActive(implicit session: RSession): Seq[ScrapeInfo]
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Option[ScrapeInfo]
   def getOverdueList(limit: Int = -1, due: DateTime = currentDateTime)(implicit session: RSession): Seq[ScrapeInfo]
-  def setNextScrapeByRegex(urlRegex: String, within: Double, failureLimit: Int = 0)(implicit session: RSession): Int
+  def setForRescrapeByRegex(urlRegex: String, within: Double, failureLimit: Int = 0)(implicit session: RSession): Int
 }
 
 @Singleton
@@ -108,7 +108,7 @@ class ScrapeInfoRepoImpl @Inject() (
     (if (limit > 0) q.take(limit) else q).list
   }
 
-  def setNextScrapeByRegex(urlRegex: String, withinHours: Double, failureLimit: Int = 0)(implicit session: RSession): Int = {
+  def setForRescrapeByRegex(urlRegex: String, withinHours: Double, failureLimit: Int = 0)(implicit session: RSession): Int = {
     val now = currentDateTime
     val withinSeconds = withinHours * 60.0d * 60.0d
     var updateCount = 0
@@ -117,7 +117,7 @@ class ScrapeInfoRepoImpl @Inject() (
                         && (normUriRepo.get.table.where(u => (u.id is s.uriId) && (u.url like urlRegex))).exists
       ) yield s
     ).mutate {r =>
-      r.row = r.row.copy(nextScrape = now.plusSeconds((scala.math.random * withinSeconds).toInt))
+      r.row = r.row.copy(nextScrape = now.plusSeconds((scala.math.random * withinSeconds).toInt), signature = "")
       updateCount += 1
       }
     updateCount

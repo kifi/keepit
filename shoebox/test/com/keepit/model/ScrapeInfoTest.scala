@@ -22,13 +22,13 @@ class ScrapeInfoTest extends Specification with DbRepos {
       val uri6 = uriRepo.save(NormalizedURIFactory("BBC Feynman Archive", "http://www.bbc.co.uk/archive/feynman/"))
       val uri7 = uriRepo.save(NormalizedURIFactory("Learn French in One Word", "http://www.youtube.com/watch?v=GSeaDQ6sPs0"))
 
-      val info1 = scrapeInfoRepo.save(ScrapeInfo(uriId = uri1.id.get, nextScrape = END_OF_TIME, state = ScrapeInfoStates.ACTIVE))
-      val info2 = scrapeInfoRepo.save(ScrapeInfo(uriId = uri2.id.get, nextScrape = END_OF_TIME, state = ScrapeInfoStates.ACTIVE))
-      val info3 = scrapeInfoRepo.save(ScrapeInfo(uriId = uri3.id.get, nextScrape = END_OF_TIME, state = ScrapeInfoStates.ACTIVE))
-      val info4 = scrapeInfoRepo.save(ScrapeInfo(uriId = uri4.id.get, nextScrape = END_OF_TIME, state = ScrapeInfoStates.ACTIVE))
-      val info5 = scrapeInfoRepo.save(ScrapeInfo(uriId = uri5.id.get, nextScrape = END_OF_TIME, state = ScrapeInfoStates.INACTIVE))
-      val info6 = scrapeInfoRepo.save(ScrapeInfo(uriId = uri6.id.get, nextScrape = END_OF_TIME, state = ScrapeInfoStates.ACTIVE))
-      val info7 = scrapeInfoRepo.save(ScrapeInfo(uriId = uri7.id.get, nextScrape = END_OF_TIME, state = ScrapeInfoStates.ACTIVE))
+      val info1 = scrapeInfoRepo.save(ScrapeInfo(uriId = uri1.id.get, nextScrape = END_OF_TIME, state = ScrapeInfoStates.ACTIVE, signature = "nonempty"))
+      val info2 = scrapeInfoRepo.save(ScrapeInfo(uriId = uri2.id.get, nextScrape = END_OF_TIME, state = ScrapeInfoStates.ACTIVE, signature = "nonempty"))
+      val info3 = scrapeInfoRepo.save(ScrapeInfo(uriId = uri3.id.get, nextScrape = END_OF_TIME, state = ScrapeInfoStates.ACTIVE, signature = "nonempty"))
+      val info4 = scrapeInfoRepo.save(ScrapeInfo(uriId = uri4.id.get, nextScrape = END_OF_TIME, state = ScrapeInfoStates.ACTIVE, signature = "nonempty"))
+      val info5 = scrapeInfoRepo.save(ScrapeInfo(uriId = uri5.id.get, nextScrape = END_OF_TIME, state = ScrapeInfoStates.INACTIVE, signature = "nonempty"))
+      val info6 = scrapeInfoRepo.save(ScrapeInfo(uriId = uri6.id.get, nextScrape = END_OF_TIME, state = ScrapeInfoStates.ACTIVE, signature = "nonempty"))
+      val info7 = scrapeInfoRepo.save(ScrapeInfo(uriId = uri7.id.get, nextScrape = END_OF_TIME, state = ScrapeInfoStates.ACTIVE, signature = "nonempty"))
 
       (uri1, uri2, uri3, uri4, uri5, uri6, uri7, info1, info2, info3, info4, info5, info6, info7)
     }
@@ -42,14 +42,24 @@ class ScrapeInfoTest extends Specification with DbRepos {
 
         inject[Database].readWrite {implicit s =>
 
-          scrapeInfoRepo.setNextScrapeByRegex("%.pdf", 4) === 2
-          scrapeInfoRepo.getByUri(uri1.id.get).get.nextScrape isAfter currentDateTime.plusHours(4)
-          scrapeInfoRepo.getByUri(uri2.id.get).get.nextScrape isAfter currentDateTime.plusHours(4)
-          scrapeInfoRepo.getByUri(uri3.id.get).get.nextScrape isBefore currentDateTime.plusHours(4)
-          scrapeInfoRepo.getByUri(uri4.id.get).get.nextScrape isBefore currentDateTime.plusHours(4)
-          scrapeInfoRepo.getByUri(uri5.id.get).get.nextScrape isAfter currentDateTime.plusHours(4)
-          scrapeInfoRepo.getByUri(uri6.id.get).get.nextScrape isAfter currentDateTime.plusHours(4)
-          scrapeInfoRepo.getByUri(uri7.id.get).get.nextScrape isAfter currentDateTime.plusHours(4)
+          scrapeInfoRepo.setForRescrapeByRegex("%.pdf", 4) === 2
+          val deadline = currentDateTime.plusHours(4)
+
+          (scrapeInfoRepo.getByUri(uri1.id.get).get.nextScrape isBefore deadline) === false
+          (scrapeInfoRepo.getByUri(uri2.id.get).get.nextScrape isBefore deadline) === false
+          (scrapeInfoRepo.getByUri(uri3.id.get).get.nextScrape isBefore deadline) === true
+          (scrapeInfoRepo.getByUri(uri4.id.get).get.nextScrape isBefore deadline) === true
+          (scrapeInfoRepo.getByUri(uri5.id.get).get.nextScrape isBefore deadline) === false
+          (scrapeInfoRepo.getByUri(uri6.id.get).get.nextScrape isBefore deadline) === false
+          (scrapeInfoRepo.getByUri(uri7.id.get).get.nextScrape isBefore deadline) === false
+
+          (scrapeInfoRepo.getByUri(uri1.id.get).get.signature) must not beEmpty;
+          (scrapeInfoRepo.getByUri(uri2.id.get).get.signature) must not beEmpty;
+          (scrapeInfoRepo.getByUri(uri3.id.get).get.signature) must beEmpty;
+          (scrapeInfoRepo.getByUri(uri4.id.get).get.signature) must beEmpty;
+          (scrapeInfoRepo.getByUri(uri5.id.get).get.signature) must not beEmpty;
+          (scrapeInfoRepo.getByUri(uri6.id.get).get.signature) must not beEmpty;
+          (scrapeInfoRepo.getByUri(uri7.id.get).get.signature) must not beEmpty;
         }
 
       }

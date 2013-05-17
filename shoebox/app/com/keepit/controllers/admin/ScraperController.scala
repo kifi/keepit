@@ -55,7 +55,7 @@ class ScraperController @Inject() (
 
   def rescrapeByRegex(urlRegex: String, withinHours: Double) = AdminHtmlAction { implicit request =>
     val count = db.readWrite { implicit session =>
-      scrapeInfoRepo.setNextScrapeByRegex(urlRegex, withinHours)
+      scrapeInfoRepo.setForRescrapeByRegex(urlRegex, withinHours)
     }
     Ok("Next scraping set within %s hours for %s pages matching %s".format(withinHours,count,urlRegex))
   }
