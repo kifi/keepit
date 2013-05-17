@@ -19,6 +19,26 @@ $.fn.scrollToBottom = function() {
     }
   });
 };
+!function() {
+  $.fn.scrollable = function() {
+    return this.each(function() {
+      var data = $(this).data(), el;
+      for (el = this; !data.elAbove; el = el.parentNode) {
+        data.elAbove = el.previousElementSibling;
+      }
+      for (el = this; !data.elBelow; el = el.parentNode) {
+        data.elBelow = el.nextElementSibling;
+      }
+      data.elAbove.classList.add("kifi-scrollable-above");
+      data.elBelow.classList.add("kifi-scrollable-below");
+    }).scroll(onScroll);
+  };
+  function onScroll() {
+    var sT = this.scrollTop, sH = this.scrollHeight, oH = this.offsetHeight, data = $(this).data();
+    data.elAbove.classList[sT > 0 ? "add" : "remove"]("kifi-can-scroll");
+    data.elBelow.classList[sT < sH - oH ? "add" : "remove"]("kifi-can-scroll");
+  }
+}();
 
 const CO_KEY = /^Mac/.test(navigator.platform) ? "⌘" : "Ctrl";
 var generalPane, noticesPane, commentsPane, threadsPane, threadPane;  // stubs
@@ -419,18 +439,19 @@ slider2 = function() {
       $slider.find(".kifi-at").removeClass("kifi-at").end()
         .find(".kifi-slider2-" + locator.split("/")[1]).addClass("kifi-at");
       render("html/metro/pane_" + pane + ".html", params, function(html) {
-        var $cubby = $pane.find(".kifi-pane-cubby"), w = $cubby[0].offsetWidth, d = w + 6;
-        var $boxes = $("<div class=kifi-pane-boxes>").css({
-          width: w + d,
-          transform: "translate(" + (back ? -d : 0) + "px,0)"}).appendTo($cubby.css("overflow", "hidden"));
-        var $old = $cubby.find(".kifi-pane-box").css({left: back ? d : 0, width: w}).appendTo($boxes);
-        var $new = $(html).css({left: back ? 0 : d, width: w}).appendTo($boxes);
-        $boxes.layout().css("transform", "translate(" + (back ? 0 : -d) + "px,0)")
-        .on("transitionend webkitTransitionEnd", function() {
+        var $cubby = $pane.find(".kifi-pane-cubby").css("overflow", "hidden");
+        var $cart = $cubby.find(".kifi-pane-box-cart").addClass(back ? "kifi-back" : "kifi-forward");
+        var $old = $cart.find(".kifi-pane-box");
+        var $new = $(html)[back ? "prependTo" : "appendTo"]($cart).layout();
+        $cart.addClass("kifi-animated").layout().addClass("kifi-roll")
+        .on("transitionend webkitTransitionEnd", function end(e) {
+          if (e.target !== this) return;
+          if (!back) $cart.removeClass("kifi-animated kifi-back kifi-forward");
           $old.triggerHandler("kifi:remove");
           $old.remove();
-          $new.detach().css({left: "", width: ""}).appendTo($cubby).data("shown", true).triggerHandler("kifi:shown");
-          $boxes.remove();
+          $new.data("shown", true).triggerHandler("kifi:shown");
+          $cart.removeClass("kifi-roll kifi-animated kifi-back kifi-forward")
+            .off("transitionend webkitTransitionEnd", end);
           $cubby.css("overflow", "");
         });
         if (back) {

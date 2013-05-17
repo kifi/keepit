@@ -1,8 +1,10 @@
 <div class="kifi-pane-tall-bottom">
   <div class="kifi-messages-sent">
-    {{#messages}}
-      {{>message}}
-    {{/messages}}
+    <div class="kifi-messages-sent-inner">
+      {{#messages}}
+        {{>message}}
+      {{/messages}}
+    </div>
   </div>
   {{>compose}}
 </div>

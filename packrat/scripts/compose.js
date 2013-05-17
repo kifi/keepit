@@ -146,7 +146,8 @@ function attachComposeBindings($c, composeTypeName) {
   });
 
   var hOld, elAbove = $f[0].previousElementSibling;
-  elAbove.clientHeight, updateMaxHeight();
+  $(elAbove).scrollable().layout();
+  updateMaxHeight();
 
   $(window).on("resize", updateMaxHeight);
 
@@ -156,10 +157,6 @@ function attachComposeBindings($c, composeTypeName) {
     $(window).off("resize", updateMaxHeight);
     if ($t.length) {
       $t.tokenInput("destroy");
-    }
-  }).each(function() {
-    if ($(this).data("shown")) {
-      setFocus();
     }
   });
 
@@ -183,7 +180,7 @@ function attachComposeBindings($c, composeTypeName) {
       if (hOld) {
         elAbove.scrollTop = Math.max(0, scrollTop + hOld - hNew);
       } else {
-        $(elAbove).scrollToBottom();
+        elAbove.scrollTop = 99999;
       }
       hOld = hNew;
     }

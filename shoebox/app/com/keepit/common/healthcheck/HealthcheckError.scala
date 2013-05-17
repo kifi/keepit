@@ -38,7 +38,7 @@ case class HealthcheckError(
         method.getOrElse("") +
         callType.toString
     val binaryHash = MessageDigest.getInstance("MD5").digest(permText)
-    HealthcheckErrorSignature(new String(new Base64().encode(binaryHash), ENCODING))
+    HealthcheckErrorSignature(new String(new Base64().encode(binaryHash), UTF8))
   }
 
   def causeStacktraceHead(depth: Int, throwable: Option[Throwable] = error): Option[String] = throwable match {

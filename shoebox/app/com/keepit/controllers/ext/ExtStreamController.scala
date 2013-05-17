@@ -33,6 +33,7 @@ import org.joda.time.DateTime
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import com.keepit.common.service.FortyTwoServices
+import org.mindrot.jbcrypt.BCrypt
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]])
 
@@ -64,6 +65,31 @@ class ExtStreamController @Inject() (
   implicit private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
   private def authenticate(request: RequestHeader): Option[StreamSession] = {
+    // Backdoor for mobile development
+    val backdoorAuth = (for (
+      key <- request.getQueryString("key");
+      userIdStr <- request.getQueryString("userId")
+    ) yield {
+      try {
+        val userId = Id[User](userIdStr.toInt)
+        val keyValid = BCrypt.checkpw(userId + "DQVXJwAZYuQ3rUo75ltbglBK", key)
+        if(keyValid) {
+          val (socialUser, experiments) = db.readOnly { implicit session =>
+            val socialUser = socialUserInfoRepo.getByUser(userId).head
+            val experiments = experimentRepo.getUserExperiments(userId)
+            (socialUser, experiments)
+          }
+          Some(StreamSession(userId, socialUser, experiments, None))
+        }
+        else None
+      } catch {
+        case ex: Throwable => None // bad inputs
+      }
+    }).flatten
+    
+    if(backdoorAuth.isDefined)
+      return backdoorAuth // This is very temporary, sorry for the return.
+        
     /*
      * Unfortunately, everything related to existing secured actions intimately deals with Action, Request, Result, etc.
      * WebSockets cannot use these, so I've implemented what I need below.

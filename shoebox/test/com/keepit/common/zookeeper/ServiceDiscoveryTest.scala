@@ -25,7 +25,7 @@ class ServiceDiscoveryTest extends Specification with TestInjector {
     "serialize" in {
       withInjector()  { implicit injector =>
         val service = RemoteService(AmazonInstanceId("id"), ServiceStatus.UP, IpAddress("1.1.1.1"), ServiceType.DEV_MODE)
-        val discovery = inject[ServiceDiscovery]
+        val discovery = inject[ServiceDiscoveryImpl]
         val bytes = discovery.fromRemoteService(service)
         val deserialized = discovery.toRemoteService(bytes)
         deserialized === service
@@ -40,7 +40,7 @@ class ServiceDiscoveryTest extends Specification with TestInjector {
         val zk = new ZooKeeperClientImpl("localhost", 2000, basePath,
           Some({zk1 => println(s"in callback, got $zk1")}))
         try {
-          val discovery = new ServiceDiscovery(zk, services)
+          val discovery: ServiceDiscovery = new ServiceDiscoveryImpl(zk, services)
           zk.watchChildren(Path("/services/TEST_MODE"), { (children : Seq[Node]) =>
             println("Service Instances ----------- : %s".format(children.mkString(", ")))
           })

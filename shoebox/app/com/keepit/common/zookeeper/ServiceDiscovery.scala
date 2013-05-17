@@ -9,22 +9,28 @@ import play.api.libs.json._
 import com.google.inject.{Inject, Singleton}
 import org.apache.zookeeper.CreateMode._
 
+trait ServiceDiscovery {
+  def register(): Node
+  def isLeader(): Boolean
+}
+
 @Singleton
-class ServiceDiscovery @Inject() (zk: ZooKeeperClient, services: FortyTwoServices) extends Logging {
+class ServiceDiscoveryImpl @Inject() (
+    zk: ZooKeeperClient,
+    services: FortyTwoServices)
+  extends ServiceDiscovery with Logging {
 
   val serviceType = services.currentService
   val myServicePath = Path(s"/services/${serviceType.name}")
   val myServiceNodeMaster = Node(s"${myServicePath.name}/${serviceType.name}_")
   var myNode: Option[Node] = None
   def myId: Option[Long] = myNode map extractId
-  def extractId(node: Node) = {
-    node.name.substring(node.name.lastIndexOf('_') + 1).toLong
-  }
+  def extractId(node: Node) = node.name.substring(node.name.lastIndexOf('_') + 1).toLong
 
   def register(): Node = {
     val path = zk.createPath(myServicePath)
     zk.watchChildren(path, { (children : Seq[Node]) =>
-      println(s"""services in my cluster: ${children.mkString(", ")}""")
+      log.debug(s"""services in my cluster: ${children.mkString(", ")}""")
     })
     myNode = Some(zk.createNode(myServiceNodeMaster, null, EPHEMERAL_SEQUENTIAL))
     myNode.get

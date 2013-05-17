@@ -34,7 +34,7 @@ POST    /register                   securesocial.controllers.Registration.handle
 ##########################################
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
 
-GET     /site/keeps/all             @com.keepit.controllers.website.BookmarksController.allKeeps()
+GET     /site/keeps/all             @com.keepit.controllers.website.BookmarksController.allKeeps(before: Option[String], count: Int ?= Integer.MAX_VALUE)
 GET     /site/keeps/mutual/:id      @com.keepit.controllers.website.BookmarksController.mutualKeeps(id: ExternalId[User])
 GET     /site/keeps/count           @com.keepit.controllers.website.BookmarksController.numKeeps()
 
@@ -241,7 +241,7 @@ GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLab
 POST    /internal/search/events/resultClicked @com.keepit.controllers.search.SearchEventController.logResultClicked()
 
 GET     /internal/search/uriGraph/info         @com.keepit.controllers.search.URIGraphController.indexInfo()
-GET     /internal/search/uriGraph/sharingUserInfo @com.keepit.controllers.search.URIGraphController.sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI])
+GET     /internal/search/uriGraph/sharingUserInfo @com.keepit.controllers.search.URIGraphController.sharingUserInfo(userId: Id[User], uriIds: String)
 POST    /internal/search/uriGraph/update       @com.keepit.controllers.search.URIGraphController.updateURIGraph()
 POST    /internal/search/uriGraph/reindex      @com.keepit.controllers.search.URIGraphController.reindex()
 POST    /internal/search/uriGraph/dumpDoc/:id  @com.keepit.controllers.search.URIGraphController.dumpLuceneDocument(id: Id[User])

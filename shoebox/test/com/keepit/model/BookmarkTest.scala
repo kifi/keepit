@@ -47,6 +47,19 @@ class BookmarkTest extends Specification with TestDBRunner {
   }
 
   "Bookmark" should {
+    "load my keeps in pages" in {
+      withDB() { implicit injector =>
+        val (user1, user2, uri1, uri2) = setup()
+        db.readOnly { implicit s =>
+          val marks = bookmarkRepo.getByUser(user1.id.get, None, 2)
+          marks.map(_.uriId) === Seq(uri2.id.get, uri1.id.get)
+          bookmarkRepo.getByUser(user1.id.get, Some(marks(0).externalId), 5).map(_.uriId) === Seq(uri1.id.get)
+          bookmarkRepo.getByUser(user1.id.get, Some(marks(1).externalId), 5) must beEmpty
+          bookmarkRepo.getByUser(user1.id.get, Some(marks(1).externalId), 5) must beEmpty
+          bookmarkRepo.getByUser(user1.id.get, None, 0) must beEmpty
+        }
+      }
+    }
     "load all" in {
       withDB() { implicit injector =>
         val (user1, user2, uri1, uri2) = setup()
