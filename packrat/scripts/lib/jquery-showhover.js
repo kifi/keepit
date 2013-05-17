@@ -123,7 +123,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
         $a.removeClass("kifi-hover-showing");
         data.fadeOutStartTime = +new Date;
         data.$h.on("transitionend webkitTransitionEnd", function end(e) {
-          if (e.originalEvent.propertyName === "opacity") {
+          if (e.target === this && e.originalEvent.propertyName === "opacity") {
             delete data.fadeOutStartTime;
             data.$h.off("transitionend webkitTransitionEnd", end);
             if (opts.reuse) {
