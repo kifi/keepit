@@ -5,6 +5,7 @@ import java.net.InetAddress
 import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.google.inject.multibindings.Multibinder
+import com.keepit.common.zookeeper._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.actor.ActorPlugin
@@ -51,6 +52,13 @@ class CommonModule extends ScalaModule with Logging {
     listenerBinder.addBinding().to(classOf[UsefulPageListener])
     listenerBinder.addBinding().to(classOf[SliderShownListener])
     listenerBinder.addBinding().to(classOf[SearchUnloadListener])
+  }
+
+  @Singleton
+  @Provides
+  def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
+    def register() = Node("me")
+    def isLeader() = true
   }
 
   @Singleton
