@@ -5,6 +5,7 @@ import com.google.common.io.Files
 import com.google.inject.util.Modules
 import com.google.inject.{Provides, Singleton, Provider}
 import com.keepit.classify.DomainTagImportSettings
+import com.keepit.common.zookeeper._
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.actor.{ActorFactory, ActorPlugin}
 import com.keepit.common.analytics._
@@ -37,6 +38,13 @@ import com.keepit.common.service.{FortyTwoServices, IpAddress}
 
 class ShoeboxDevModule extends ScalaModule with Logging {
   def configure() {}
+
+  @Singleton
+  @Provides
+  def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
+    def register() = Node("me")
+    def isLeader() = true
+  }
 
   @Singleton
   @Provides
