@@ -43,9 +43,9 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
       case (key, value) =>
         doWithS3Client("adding an item to S3Store"){ s3Client =>
           val metadata = new ObjectMetadata()
-          metadata.setContentEncoding(ENCODING)
+          metadata.setContentEncoding(UTF8)
           metadata.setContentType("application/json")
-          val content = formatter.writes(value).toString().getBytes(ENCODING)
+          val content = formatter.writes(value).toString().getBytes(UTF8)
           metadata.setContentLength(content.length)
           val inputStream = new ByteArrayInputStream(content)
           try {
@@ -94,7 +94,7 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
   private def extractValue(s3obj: S3Object) = {
     val is = s3obj.getObjectContent
     try {
-      val jsonString = scala.io.Source.fromInputStream(is, ENCODING).getLines().mkString("\n")
+      val jsonString = scala.io.Source.fromInputStream(is, UTF8).getLines().mkString("\n")
       val json = Json.parse(jsonString)
       formatter.reads(json).get
     } finally {

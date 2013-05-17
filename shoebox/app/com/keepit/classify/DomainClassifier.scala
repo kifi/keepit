@@ -48,7 +48,7 @@ private[classify] class DomainClassificationActor @Inject() (
     val guid = UUID.randomUUID.toString.toUpperCase
     val md5 = md.digest(KEY + guid + KEY)
     val id = encodeHex(md5).toLowerCase
-    val encodedUrl = URLEncoder.encode(url, ENCODING)
+    val encodedUrl = URLEncoder.encode(url, UTF8)
     client.getFuture(s"http://$server/url.php?version=w11&guid=$guid&id=$id&url=$encodedUrl").map { resp =>
       (resp.body.split("~", 2).toList match {
         case ("FM" | "FR") :: tagString :: Nil =>

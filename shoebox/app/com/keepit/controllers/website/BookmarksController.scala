@@ -5,7 +5,6 @@ import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
-import com.keepit.common.time._
 import com.keepit.model._
 
 import play.api.libs.json._
@@ -29,9 +28,12 @@ class BookmarksController @Inject() (
     )
   }
 
-  def allKeeps() = AuthenticatedJsonAction { request =>
+  def allKeeps(before: Option[String], count: Int) = AuthenticatedJsonAction { request =>
     Ok(Json.obj(
-      "keeps" -> db.readOnly { implicit s => bookmarkRepo.getByUser(request.userId).sortBy(_.createdAt).reverse }
+      "before" -> before,
+      "keeps" -> db.readOnly { implicit s =>
+        bookmarkRepo.getByUser(request.userId, before.map(ExternalId[Bookmark](_)), count)
+      }
     ))
   }
 
