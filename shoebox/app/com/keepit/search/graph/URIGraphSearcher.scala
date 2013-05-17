@@ -129,18 +129,6 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) extends L
         if (ref.length > 0) {
           return URIList(ref.bytes, ref.offset, ref.length)
         }
-      } else {
-        // backward compatibility
-        var docValues = reader.getBinaryDocValues(userField)
-        if (docValues != null) {
-          var ref = new BytesRef()
-          docValues.get(userDocId, ref)
-          if (ref.length > 0) {
-            val old = URIList(ref.bytes, ref.offset, ref.length).asInstanceOf[URIListOld]
-            if (field == publicListField) return old
-            else return old.getPrivateURIList
-          }
-        }
       }
     }
     URIList.empty
