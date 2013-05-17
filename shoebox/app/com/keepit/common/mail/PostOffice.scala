@@ -3,10 +3,14 @@ package com.keepit.common.mail
 import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.logging.Logging
+import com.keepit.shoebox.ShoeboxServiceClient
 
-@ImplementedBy(classOf[PostOfficeImpl])
-trait PostOffice {
+trait LocalPostOffice {
   def sendMail(mail: ElectronicMail)(implicit session: RWSession): ElectronicMail
+}
+
+trait RemotePostOffice {
+  def queueMail(mail: ElectronicMail): ElectronicMail
 }
 
 object PostOffice {
@@ -23,8 +27,17 @@ object PostOffice {
   val BODY_MAX_SIZE = 1048576
 }
 
-class PostOfficeImpl @Inject() (mailRepo: ElectronicMailRepo)
-  extends PostOffice with Logging {
+class RemotePostOfficeImpl @Inject() (shoeboxClient: ShoeboxServiceClient)
+  extends RemotePostOffice with Logging {
+
+  def queueMail(mail: ElectronicMail): ElectronicMail = {
+    shoeboxClient.sendMail(mail)
+    mail
+  }
+}
+
+class ShoeboxPostOfficeImpl @Inject() (mailRepo: ElectronicMailRepo)
+  extends LocalPostOffice with Logging {
 
   def sendMail(mail: ElectronicMail)(implicit session: RWSession): ElectronicMail = {
     val prepared =

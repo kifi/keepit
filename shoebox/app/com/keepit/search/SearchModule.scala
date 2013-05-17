@@ -1,11 +1,9 @@
 package com.keepit.search
 
 import java.io.File
-
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.{Directory, MMapDirectory}
 import org.apache.lucene.util.Version
-
 import com.google.inject.{Provides, Singleton}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckPlugin
@@ -21,8 +19,9 @@ import com.keepit.search.index.{ArticleIndexerPluginImpl, ArticleIndexerPlugin, 
 import com.keepit.search.phrasedetector.PhraseIndexer
 import com.keepit.search.query.parser.SpellCorrector
 import com.tzavellas.sse.guice.ScalaModule
-
 import play.api.Play.current
+import com.keepit.common.mail.PostOfficeImpl
+import com.keepit.common.mail.PostOffice
 
 class SearchModule() extends ScalaModule with Logging {
 
@@ -30,6 +29,7 @@ class SearchModule() extends ScalaModule with Logging {
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
+    bind[PostOffice].to[PostOfficeImpl]
   }
 
   private def getDirectory(maybeDir: Option[String]): Directory = {

@@ -241,6 +241,7 @@ GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLab
 #INTERNAL ROUTES/Shoebox
 GET     /internal/shoebox/database/getNormalizedURI  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURI(id: Long)
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs
+POST     /internal/shoebox/database/sendMail           @com.keepit.controllers.shoebox.ShoeboxController.sendMail
 
 
 
