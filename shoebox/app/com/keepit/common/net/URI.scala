@@ -3,7 +3,7 @@ package com.keepit.common.net
 import scala.util.Try
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.strings.ENCODING
+import com.keepit.common.strings.UTF8
 
 object URI extends Logging {
   def parse(uriString: String): Try[URI] = {
@@ -43,11 +43,11 @@ object URI extends Logging {
 
   val authorityRe = """(?:([^@]*)@)?(.*?)(?::(\d{1,5}))?""".r
   val twoHexDigits = """\p{XDigit}\p{XDigit}""".r
-  val encodedPercent = java.net.URLEncoder.encode("%", ENCODING)
+  val encodedPercent = java.net.URLEncoder.encode("%", UTF8)
   val symbols = """'"`@$^()[]{}<>\| """  // note: may want to remove '@$() as java.net.URI doesn't require escaping them
   val symbolRe = ("[\\Q" + symbols + "\\E]").r
   val delimiters = "?#"
-  val encodingMap: Map[Char, String] = (symbols ++ delimiters).map(c => c -> java.net.URLEncoder.encode(c.toString, ENCODING)).toMap
+  val encodingMap: Map[Char, String] = (symbols ++ delimiters).map(c => c -> java.net.URLEncoder.encode(c.toString, UTF8)).toMap
 
   def fixMalformedEscape(uriString: String) = {
     uriString.split("%", -1) match {
@@ -145,8 +145,8 @@ object URI extends Logging {
 
   def normalizeString(string: String, what: String) = {
     try {
-      val decoded = java.net.URLDecoder.decode(string.replace("+", "%20"), ENCODING) // java URLDecoder does not replace "+" with a space
-      java.net.URLEncoder.encode(decoded, ENCODING)
+      val decoded = java.net.URLDecoder.decode(string.replace("+", "%20"), UTF8) // java URLDecoder does not replace "+" with a space
+      java.net.URLEncoder.encode(decoded, UTF8)
     } catch {
       case e: Exception =>
         log.error("%s normalization failed: [%s]".format(what, string))
@@ -243,5 +243,5 @@ case class Param(name: String, value: Option[String]) {
     if (value.isDefined) (name + "=" + value.get) else name
   }
 
-  def decodedValue: Option[String] = value.map{ v => java.net.URLDecoder.decode(v, ENCODING) }
+  def decodedValue: Option[String] = value.map{ v => java.net.URLDecoder.decode(v, UTF8) }
 }
