@@ -17,7 +17,7 @@ import org.joda.time.DateTime
 class SliderHistoryBinarySerializer extends BinaryFormat with Logging {
 
   def writes(history: SliderHistory): Array[Byte] = {
-    val json = historyJsonWrites(history).toString.getBytes(ENCODING)
+    val json = historyJsonWrites(history).toString.getBytes(UTF8)
     val filter = history.filter
 
     assume(filter.size == history.tableSize, "Filter is not tableSize: %s != %s".format(filter.size, history.tableSize))
@@ -62,7 +62,7 @@ class SliderHistoryBinarySerializer extends BinaryFormat with Logging {
     val readBytes = inStream.read(filterBytes, 0, filterSize)
     assume(filterSize == readBytes, "Incorrectly sized filter input in SliderHistory parsing. %s != %s".format(filterSize, readBytes))
 
-    val historyNoFilter = historyJsonReads(Json.parse(new String(jsonBytes, ENCODING)))
+    val historyNoFilter = historyJsonReads(Json.parse(new String(jsonBytes, UTF8)))
 
     assume(historyNoFilter.tableSize == filterSize, "Filter size is not tableSize, %s != %s".format(historyNoFilter.tableSize, filterSize))
 

@@ -60,6 +60,7 @@
   color: -moz-hyperlinktext;
   text-decoration: none;
   font-weight: inherit;
+  border: none;
   cursor: pointer;
 }
 

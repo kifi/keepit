@@ -52,7 +52,7 @@ object AES extends CryptoSupport {
     val iv = randomBytes(IV_LENGTH)
     val cipher = Cipher.getInstance(TRANSFORMATION)
     cipher.init(Cipher.ENCRYPT_MODE, keySpec, new IvParameterSpec(iv))
-    val cipherBytes = cipher.doFinal(message.getBytes(ENCODING))
+    val cipherBytes = cipher.doFinal(message.getBytes(UTF8))
 
     val encrypted = iv ++ cipherBytes
     val mac = hmac(key.bytes, encrypted)

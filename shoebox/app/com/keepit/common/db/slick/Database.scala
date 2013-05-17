@@ -59,7 +59,7 @@ class Database @Inject() (
       val message = "already in a DB session!"
       log.warn("Already in a DB session!", new InSessionException(message))
       //healthcheckPlugin.get.addError(HealthcheckError(Some(new InSessionException(message)), None, None, Healthcheck.INTERNAL, Some(message)))
-      
+
       if (playMode == Test) throw new InSessionException("already in a DB session!")
     }
     DatabaseSessionLock.inSession.withValue(true) { f }
@@ -70,19 +70,18 @@ class Database @Inject() (
   def readWriteAsync[T](attempts: Int)(f: RWSession => T): Future[T] = future { readWrite(attempts)(f) }
 
   def readOnly[T](f: ROSession => T): T = enteringSession {
-    var initialized = false
-    lazy val s = {
-      val sesh = sessionProvider.createReadOnlySession(db.handle)
-      initialized = true
-      sesh
-    }
-    try f(new ROSession(s)) catch {
+    var s: Option[Session] = None
+    val ro = new ROSession({
+      s = Some(sessionProvider.createReadOnlySession(db.handle))
+      s.get
+    })
+    try f(ro) catch {
       case ex: java.sql.SQLException =>
         if(ex.getMessage != null && ex.getMessage.trim == "Timed out waiting for a free available connection.") {
           liftToTimedOutException(ex)
         }
         else throw ex
-    } finally if (initialized) s.close()
+    } finally s.foreach(_.close())
   }
 
   def readWrite[T](f: RWSession => T): T = enteringSession {
@@ -110,7 +109,7 @@ class Database @Inject() (
     }
     readWrite(f)
   }
-  
+
   private def liftToTimedOutException(ex: java.sql.SQLException) = {
     import scala.collection.JavaConversions._
     val msg = new StringBuilder()

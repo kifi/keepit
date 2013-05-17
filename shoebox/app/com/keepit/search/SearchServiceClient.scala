@@ -24,6 +24,7 @@ trait SearchServiceClient extends ServiceClient {
   def articleIndexerSequenceNumber(): Future[Int]
   def uriGraphIndexInfo(): Future[URIGraphIndexInfo]
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo]
+  def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]]
   def refreshSearcher(): Future[Unit]
   def refreshPhrases(): Future[Unit]
   def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]]
@@ -90,7 +91,15 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
   }
 
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] = {
-    call(routes.URIGraphController.sharingUserInfo(userId, uriId)).map(r => Json.fromJson[SharingUserInfo](r.json).get)
+    call(routes.URIGraphController.sharingUserInfo(userId, uriId.id.toString)) map { r =>
+      Json.fromJson[Seq[SharingUserInfo]](r.json).get.head
+    }
+  }
+
+  def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]] = {
+    call(routes.URIGraphController.sharingUserInfo(userId, uriIds.map(_.id).mkString(","))) map { r =>
+      Json.fromJson[Seq[SharingUserInfo]](r.json).get
+    }
   }
 
   def articleIndexerSequenceNumber(): Future[Int] = {
