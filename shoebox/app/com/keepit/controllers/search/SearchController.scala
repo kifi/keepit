@@ -17,6 +17,9 @@ import play.api.mvc.Action
 import scala.collection.mutable.ArrayBuffer
 import scala.math.{abs, sqrt}
 import views.html
+import com.keepit.shoebox.ShoeboxServiceClient
+import scala.concurrent.ExecutionContext.Implicits.global
+
 
 class SearchController @Inject()(
     db: Database,
@@ -25,7 +28,8 @@ class SearchController @Inject()(
     userRepo: UserRepo,
     bookmarkRepo: BookmarkRepo,
     normUriRepo: NormalizedURIRepo,
-    searcherFactory: MainSearcherFactory
+    searcherFactory: MainSearcherFactory,
+    shoeboxClient: ShoeboxServiceClient
   ) extends SearchServiceController {
 
   def searchKeeps(userId: Id[User], query: String) = Action { request =>
@@ -59,19 +63,38 @@ class SearchController @Inject()(
       friendsHits.foreach{ h => hits.insertWithOverflow(new MutableHit(h.id, h.score))}
       othersHits.foreach{ h => hits.insertWithOverflow(new MutableHit(h.id, h.score))}
     }
-    val data = db.readOnly { implicit s =>
-      var data = List.empty[JsArray]
-      while (hits.size > 0) {
-        val top = hits.top
-        val uri = normUriRepo.get(Id[NormalizedURI](top.id))
-        var title = uri.title.map(_.trim).getOrElse("")
-        if (title == "") title = uri.url
-        data = JsArray(Seq(JsNumber(hits.size), JsNumber(top.score), JsString(title)))::data
-        hits.pop
+
+    val N = hits.size
+    val hitIdAndScore = (0 until N).map { i => val top = hits.pop; (top.id, top.score) }
+    val data = new Array[JsArray](N)
+    Async {
+      shoeboxClient.getNormalizedURIs(hitIdAndScore.map { _._1 }).map { uris =>
+        for (i <- 0 until N) {
+          val rank = N - i
+          val score = hitIdAndScore(i)._2
+          var title = uris(i).title.map(_.trim).getOrElse("")
+          if (title == "") title = uris(i).url
+          data(i) = JsArray(Seq(JsNumber(rank), JsNumber(score), JsString(title)))
+        }
+        Ok(JsArray(data))
       }
-      data
     }
-    Ok(JsArray(data))
+
+
+
+//    val data = db.readOnly { implicit s =>
+//      var data = List.empty[JsArray]
+//      while (hits.size > 0) {
+//        val top = hits.top
+//        val uri = normUriRepo.get(Id[NormalizedURI](top.id))
+//        var title = uri.title.map(_.trim).getOrElse("")
+//        if (title == "") title = uri.url
+//        data = JsArray(Seq(JsNumber(hits.size), JsNumber(top.score), JsString(title)))::data
+//        hits.pop
+//      }
+//      data
+//    }
+
   }
 
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]) = Action { implicit request =>

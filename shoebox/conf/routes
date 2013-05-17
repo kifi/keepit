@@ -34,7 +34,7 @@ POST    /register                   securesocial.controllers.Registration.handle
 ##########################################
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
 
-GET     /site/keeps/all             @com.keepit.controllers.website.BookmarksController.allKeeps()
+GET     /site/keeps/all             @com.keepit.controllers.website.BookmarksController.allKeeps(before: Option[String] = None, count: Int ?= Integer.MAX_VALUE)
 GET     /site/keeps/mutual/:id      @com.keepit.controllers.website.BookmarksController.mutualKeeps(id: ExternalId[User])
 GET     /site/keeps/count           @com.keepit.controllers.website.BookmarksController.numKeeps()
 
@@ -237,7 +237,14 @@ GET     /admin/labs/rankVsScore.json @com.keepit.controllers.admin.AdminSearchLa
 GET     /admin/labs/friendMap       @com.keepit.controllers.admin.AdminSearchLabsController.friendMap(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLabsController.friendMapJson(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 
-# INTERNAL ROUTES
+
+#INTERNAL ROUTES/Shoebox
+GET     /internal/shoebox/database/getNormalizedURI  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURI(id: Long)
+GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs
+
+
+
+# INTERNAL ROUTES/Search
 POST    /internal/search/events/resultClicked @com.keepit.controllers.search.SearchEventController.logResultClicked()
 
 GET     /internal/search/uriGraph/info         @com.keepit.controllers.search.URIGraphController.indexInfo()
