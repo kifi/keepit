@@ -148,19 +148,15 @@ function attachComposeBindings($c, composeTypeName) {
   var hOld, elAbove = $f[0].previousElementSibling;
   $(elAbove).scrollable().layout();
   updateMaxHeight();
+  setFocus();
 
   $(window).on("resize", updateMaxHeight);
 
   $c.closest(".kifi-pane-box")
-  .on("kifi:shown", setFocus)
   .on("kifi:remove", function() {
     $(window).off("resize", updateMaxHeight);
     if ($t.length) {
       $t.tokenInput("destroy");
-    }
-  }).each(function() {
-    if ($(this).data("shown")) {
-      setFocus();
     }
   });
 
