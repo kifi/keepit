@@ -184,7 +184,7 @@ object NormalizedURIFactory {
 
   def hashUrl(normalizedUrl: String): String = {
     val binaryHash = MessageDigest.getInstance("MD5").digest(normalizedUrl)
-    new String(new Base64().encode(binaryHash), ENCODING)
+    new String(new Base64().encode(binaryHash), UTF8)
   }
 }
 
