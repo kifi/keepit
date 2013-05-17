@@ -29,7 +29,6 @@ import com.keepit.controllers.core.KeeperInfoLoader
 import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import com.keepit.serializer.SendableNotificationSerializer.sendableNotificationSerializer
-import org.joda.time.DateTime
 import play.api.libs.concurrent.Akka
 import play.api.Play.current
 import com.keepit.common.service.FortyTwoServices
@@ -86,10 +85,10 @@ class ExtStreamController @Inject() (
         case ex: Throwable => None // bad inputs
       }
     }).flatten
-    
+
     if(backdoorAuth.isDefined)
       return backdoorAuth // This is very temporary, sorry for the return.
-        
+
     /*
      * Unfortunately, everything related to existing secured actions intimately deals with Action, Request, Result, etc.
      * WebSockets cannot use these, so I've implemented what I need below.
@@ -205,6 +204,9 @@ class ExtStreamController @Inject() (
               val notices = db.readOnly(implicit s => userNotificationRepo.getCreatedBefore(userId, parseStandardTime(time), howMany.toInt))
               channel.push(Json.arr(requestId.toLong, notices.map(SendableNotification.fromUserNotification)))
             },
+            "set_all_notifications_visited" -> { case JsString(notifId) +: _ =>
+              setAllNotificationsVisited(userId, ExternalId[UserNotification](notifId))
+            },
             "set_message_read" -> { case JsString(messageId) +: _ =>
               setMessageRead(userId, ExternalId[Comment](messageId))
             },
@@ -222,7 +224,7 @@ class ExtStreamController @Inject() (
               log.warn("WS no handler for: " + jsArr)
             }
           }.mapDone { _ =>
-            subscriptions.map(_._2.unsubscribe)
+            subscriptions.map(_._2.unsubscribe())
             subscriptions = Map.empty
           }
 
@@ -253,6 +255,28 @@ class ExtStreamController @Inject() (
     }
   }
 
+  private def setAllNotificationsVisited(userId: Id[User], lastId: ExternalId[UserNotification]) {
+    import UserNotificationStates._
+    import UserNotificationCategories._
+    db.readWrite { implicit s =>
+      val lastNotification = userNotificationRepo.get(lastId)
+      val excluded = Set(INACTIVE, SUBSUMED, VISITED)
+      val notificationsToVisit = (if (excluded contains lastNotification.state) Set(lastNotification) else Set()) ++
+          userNotificationRepo.getCreatedBefore(userId, lastNotification.createdAt, Integer.MAX_VALUE, excluded)
+      for (notification <- notificationsToVisit) {
+        for (cid <- notification.commentId) {
+          val comment = commentRepo.get(cid)
+          notification.category match {
+            case MESSAGE => setMessageRead(userId, comment, quietly = true)
+            case COMMENT => setCommentRead(userId, comment, quietly = true)
+            case _ => // when we add other types of notifications mark them read here
+          }
+        }
+      }
+      userChannel.push(userId, Json.arr("all_notifications_visited", lastId.id, lastNotification.createdAt))
+    }
+  }
+
   private def logEvent(session: StreamSession, o: JsObject) {
     val eventTime = clock.now.minusMillis((o \ "msAgo").asOpt[Int].getOrElse(0))
     val eventFamily = EventFamilies((o \ "eventFamily").as[String])
@@ -276,8 +300,15 @@ class ExtStreamController @Inject() (
   }
 
   private def setMessageRead(userId: Id[User], messageExtId: ExternalId[Comment]) {
+    setMessageRead(userId, db.readOnly { implicit s => commentRepo.get(messageExtId) })
+  }
+
+  private def setCommentRead(userId: Id[User], commentExtId: ExternalId[Comment]) {
+    setCommentRead(userId, db.readOnly { implicit s => commentRepo.get(commentExtId) })
+  }
+
+  private def setMessageRead(userId: Id[User], message: Comment, quietly: Boolean = false) {
     db.readWrite { implicit session =>
-      val message = commentRepo.get(messageExtId)
       val parent = message.parent.map(commentRepo.get).getOrElse(message)
       (commentReadRepo.getByUserAndParent(userId, parent.id.get) match {
         case Some(cr) if cr.lastReadId != message.id.get =>
@@ -287,7 +318,9 @@ class ExtStreamController @Inject() (
         case _ => None
       }) //foreach { _ =>  // TODO: uncomment after past data inconsistencies are all repaired or no longer a concern
         val nUri = normUriRepo.get(parent.uriId)
-        userChannel.push(userId, Json.arr("message_read", nUri.url, parent.externalId.id, message.createdAt, message.externalId.id))
+        if (!quietly) {
+          userChannel.push(userId, Json.arr("message_read", nUri.url, parent.externalId.id, message.createdAt, message.externalId.id))
+        }
 
         val messageIds = commentRepo.getMessageIdsCreatedBefore(nUri.id.get, parent.id.get, message.createdAt) :+ message.id.get
         userNotificationRepo.markVisited(userId, messageIds)
@@ -295,9 +328,8 @@ class ExtStreamController @Inject() (
     }
   }
 
-  private def setCommentRead(userId: Id[User], commentExtId: ExternalId[Comment]) {
+  private def setCommentRead(userId: Id[User], comment: Comment, quietly: Boolean = false) {
     db.readWrite { implicit session =>
-      val comment = commentRepo.get(commentExtId)
       (commentReadRepo.getByUserAndUri(userId, comment.uriId) match {
         case Some(cr) if cr.lastReadId != comment.id.get =>
           Some(commentReadRepo.save(cr.withLastReadId(comment.id.get)))
@@ -306,7 +338,10 @@ class ExtStreamController @Inject() (
         case _ => None
       }) //foreach { _ =>  // TODO: uncomment after past data inconsistencies are all repaired or no longer a concern
         val nUri = normUriRepo.get(comment.uriId)
-        userChannel.push(userId, Json.arr("comment_read", nUri.url, comment.createdAt, comment.externalId.id))
+
+        if (!quietly) {
+          userChannel.push(userId, Json.arr("comment_read", nUri.url, comment.createdAt, comment.externalId.id))
+        }
 
         val commentIds = commentRepo.getPublicIdsCreatedBefore(nUri.id.get, comment.createdAt) :+ comment.id.get
         userNotificationRepo.markVisited(userId, commentIds)
