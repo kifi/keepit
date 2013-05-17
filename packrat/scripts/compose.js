@@ -158,10 +158,6 @@ function attachComposeBindings($c, composeTypeName) {
     if ($t.length) {
       $t.tokenInput("destroy");
     }
-  }).each(function() {
-    if ($(this).data("shown")) {
-      setFocus();
-    }
   });
 
   function setFocus() {
