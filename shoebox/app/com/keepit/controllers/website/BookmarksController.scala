@@ -42,11 +42,11 @@ class BookmarksController @Inject() (
       val keeps = db.readOnly { implicit s =>
         bookmarkRepo.getByUser(request.userId, before.map(ExternalId[Bookmark](_)), count)
       }
-      val sharingInfoFutures = keeps map { keep => searchClient.sharingUserInfo(request.userId, keep.uriId) }
-      Future.sequence(sharingInfoFutures) map { infos =>
-        db.readOnly { implicit s =>
-          (keeps zip infos).map { case (keep, info) => (keep, info.sharingUserIds.map(basicUserRepo.load)) }
+      searchClient.sharingUserInfo(request.userId, keeps.map(_.uriId)) map { infos =>
+        val idToBasicUser = db.readOnly { implicit s =>
+          infos.flatMap(_.sharingUserIds).distinct.map(id => id -> basicUserRepo.load(id)).toMap
         }
+        (keeps zip infos).map { case (keep, info) => (keep, info.sharingUserIds map idToBasicUser) }
       } map { keepsWithKeepers =>
         Ok(Json.obj(
           "before" -> before,
