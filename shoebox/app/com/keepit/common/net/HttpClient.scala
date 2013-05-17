@@ -17,14 +17,16 @@ import com.keepit.common.healthcheck.Healthcheck
 case class NonOKResponseException(message: String) extends Exception(message)
 
 trait HttpClient {
+  
+  val defaultOnFailure: PartialFunction[(String, Throwable), Unit]
 
-  def get(url: String, onFailure: PartialFunction[Throwable, Unit]): ClientResponse
+  def get(url: String, onFailure: => PartialFunction[(String, Throwable), Unit] = defaultOnFailure): ClientResponse
 
-  def getFuture(url: String, onFailure: PartialFunction[Throwable, Unit]): Future[ClientResponse]
+  def getFuture(url: String, onFailure: => PartialFunction[(String, Throwable), Unit] = defaultOnFailure): Future[ClientResponse]
 
-  def post(url: String, body: JsValue, onFailure: PartialFunction[Throwable, Unit]): ClientResponse
+  def post(url: String, body: JsValue, onFailure: => PartialFunction[(String, Throwable), Unit] = defaultOnFailure): ClientResponse
 
-  def postFuture(url: String, body: JsValue, onFailure: PartialFunction[Throwable, Unit]): Future[ClientResponse]
+  def postFuture(url: String, body: JsValue, onFailure: => PartialFunction[(String, Throwable), Unit] = defaultOnFailure): Future[ClientResponse]
 
   def longTimeout(): HttpClient
 
@@ -35,7 +37,7 @@ case class HttpClientImpl(val timeout: Long = 2, val timeoutUnit: TimeUnit = Tim
 
   implicit val duration = Duration(timeout, timeoutUnit)
   
-  private val defaultOnFailure: PartialFunction[(String, Throwable), Unit] = {
+  override val defaultOnFailure: PartialFunction[(String, Throwable), Unit] = {
     case (url, cause: ConnectException) =>
       val ex = new ConnectException(s"${cause.getMessage}. Requesting $url.").initCause(cause)
       healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
