@@ -20,6 +20,12 @@ trait HttpClient {
   
   val defaultOnFailure: String => PartialFunction[Throwable, Unit]
   
+  val ignoreConnectionFailure: String => PartialFunction[Throwable, Unit] = {
+    s: String => {
+      case ex: Throwable => 
+    }
+  }
+  
   def get(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse
 
   def getFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse]
@@ -35,6 +41,8 @@ trait HttpClient {
 
 case class HttpClientImpl(val timeout: Long = 2, val timeoutUnit: TimeUnit = TimeUnit.SECONDS, val headers: Seq[(String, String)] = List(), healthcheckPlugin: HealthcheckPlugin) extends HttpClient {
 
+  private val validResponseClass = 2
+  
   implicit val duration = Duration(timeout, timeoutUnit)
   
   override val defaultOnFailure: String => PartialFunction[Throwable, Unit] = { url =>
@@ -54,7 +62,7 @@ case class HttpClientImpl(val timeout: Long = 2, val timeoutUnit: TimeUnit = Tim
     val request = req(url)
     val startedAt = System.currentTimeMillis()
     val result = request.get().map { response =>
-      if(response.status != Http.Status.OK) {
+      if(response.status / 100 != validResponseClass) {
         val ex = new NonOKResponseException(s"Requesting $url, got a ${response.status}. Body: ${response.body}")
         healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
       }
@@ -70,7 +78,7 @@ case class HttpClientImpl(val timeout: Long = 2, val timeoutUnit: TimeUnit = Tim
     val request = req(url)
     val startedAt = System.currentTimeMillis()
     val result = request.post(body).map { response =>
-      if(response.status != Http.Status.OK) {
+      if(response.status / 100 != validResponseClass) {
         val ex = new NonOKResponseException(s"Requesting $url, got a ${response.status}. Body: ${response.body}")
         healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
       }
@@ -94,9 +102,11 @@ trait ClientResponse {
 }
 
 class ClientResponseImpl(val request: WSRequestHolder, val response: Response) extends ClientResponse {
+  
+  private val validResponseClass = 2
 
-  private def verify(): ClientResponseImpl = if (response.status != Http.Status.OK) {
-      throw new Exception("Error getting response. Response status is %s, request was: %s".format(response.status, request.url))
+  private def verify(): ClientResponseImpl = if (response.status / 100 != validResponseClass) {
+      throw new NonOKResponseException("Error getting response. Response status is %s, request was: %s".format(response.status, request.url))
   } else this
 
   override def status: Int = response.status
