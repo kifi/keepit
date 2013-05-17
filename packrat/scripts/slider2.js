@@ -446,7 +446,6 @@ slider2 = function() {
         $cart.addClass("kifi-animated").layout().addClass("kifi-roll")
         .on("transitionend webkitTransitionEnd", function end(e) {
           if (e.target !== this) return;
-          api.log("[end]", e);
           if (!back) $cart.removeClass("kifi-animated kifi-back kifi-forward");
           $old.triggerHandler("kifi:remove");
           $old.remove();
