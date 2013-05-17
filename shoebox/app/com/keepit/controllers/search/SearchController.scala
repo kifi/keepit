@@ -74,27 +74,11 @@ class SearchController @Inject()(
           val score = hitIdAndScore(i)._2
           var title = uris(i).title.map(_.trim).getOrElse("")
           if (title == "") title = uris(i).url
-          data(i) = JsArray(Seq(JsNumber(rank), JsNumber(score), JsString(title)))
+          data(N - 1 - i) = JsArray(Seq(JsNumber(rank), JsNumber(score), JsString(title)))          // Note: reverse ordering
         }
         Ok(JsArray(data))
       }
     }
-
-
-
-//    val data = db.readOnly { implicit s =>
-//      var data = List.empty[JsArray]
-//      while (hits.size > 0) {
-//        val top = hits.top
-//        val uri = normUriRepo.get(Id[NormalizedURI](top.id))
-//        var title = uri.title.map(_.trim).getOrElse("")
-//        if (title == "") title = uri.url
-//        data = JsArray(Seq(JsNumber(hits.size), JsNumber(top.score), JsString(title)))::data
-//        hits.pop
-//      }
-//      data
-//    }
-
   }
 
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]) = Action { implicit request =>

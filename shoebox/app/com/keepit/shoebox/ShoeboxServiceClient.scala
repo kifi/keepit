@@ -7,10 +7,18 @@ import com.keepit.model._
 import scala.concurrent.Future
 import com.keepit.controllers.shoebox._
 import com.keepit.controllers.shoebox.ShoeboxController
-import com.keepit.serializer.NormalizedURISerializer
+import com.keepit.serializer._
 import play.api.libs.json.{JsArray, JsValue, Json}
 import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.json.JsNumber
+import play.api.libs.json.JsNull
+import play.api.libs.json.JsValue
+import play.api.mvc.Action
+import scala.concurrent.ExecutionContext.Implicits.global
+
+import com.google.inject.Singleton
+import com.google.inject.Inject
+
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -18,8 +26,11 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUser(id: Id[User]): Future[User]
   def getNormalizedURI(id: Long) : Future[NormalizedURI]
   def getNormalizedURIs(ids: Seq[Long]): Future[Seq[NormalizedURI]]
+  def addBrowsingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit
 }
-class ShoeboxServiceClientImpl(override val host: String, override val port: Int, override val httpClient: HttpClient)
+
+
+class ShoeboxServiceClientImpl @Inject() (override val host: String, override val port: Int, override val httpClient: HttpClient)
     extends ShoeboxServiceClient {
   def getUser(id: Id[User]): Future[User] = {
     //call(routes.ShoeboxController.getUser(id)).map(r => UserSerializer.userSerializer.reads(r.json))
@@ -35,6 +46,10 @@ class ShoeboxServiceClientImpl(override val host: String, override val port: Int
     call(routes.ShoeboxController.getNormalizedURIs, idJarray).map { r =>
       r.json.as[JsArray].value.map(js => NormalizedURISerializer.normalizedURISerializer.reads(js).get)
     }
+  }
+
+  def addBrowsingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit = {
+      call(routes.ShoeboxController.addBrowsingHistory(userId, uriId, tableSize, numHashFuncs, minHits))
   }
 }
 

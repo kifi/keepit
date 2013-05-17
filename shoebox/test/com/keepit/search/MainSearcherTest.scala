@@ -31,6 +31,7 @@ import org.apache.lucene.store.{Directory, MMapDirectory, RAMDirectory}
 import org.apache.lucene.util.Version
 import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphFields}
 import org.apache.lucene.util.Version
+import com.keepit.shoebox.ShoeboxServiceClient
 
 class MainSearcherTest extends Specification with DbRepos {
 
@@ -53,7 +54,7 @@ class MainSearcherTest extends Specification with DbRepos {
         uriGraph,
         new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer())),
         resultClickTracker,
-        new BrowsingHistoryTracker(3067, 2, 1, inject[BrowsingHistoryRepo], inject[Database]),
+        new BrowsingHistoryTracker(3067, 2, 1, inject[BrowsingHistoryRepo], inject[Database], inject[ShoeboxServiceClient]),
         new ClickHistoryTracker(307, 2, 1, inject[ClickHistoryRepo], inject[Database]),
         inject[FakePersistEventPluginImpl],
         inject[FakeSpellCorrector],

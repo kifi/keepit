@@ -33,6 +33,7 @@ import com.keepit.common.time.Clock
 import com.google.inject.Provider
 import play.api.Play
 import play.api.Mode.Mode
+import com.google.inject.Inject
 
 class CommonModule extends ScalaModule with Logging {
 
@@ -116,13 +117,13 @@ class CommonModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database): BrowsingHistoryTracker = {
+  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient): BrowsingHistoryTracker = {
     val conf = current.configuration.getConfig("browsing-history-tracker").get
     val filterSize = conf.getInt("filterSize").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val minHits = conf.getInt("minHits").get
 
-    new BrowsingHistoryTracker(filterSize, numHashFuncs, minHits, browsingHistoryRepo, db)
+    new BrowsingHistoryTracker(filterSize, numHashFuncs, minHits, browsingHistoryRepo, db, shoeboxClient)
   }
 
   @Provides
