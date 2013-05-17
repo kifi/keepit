@@ -62,8 +62,31 @@ aside.left .large-avatar .name {color: #ffffff; background: #204b69; text-align:
 aside.right label {display: block}
 aside.right select {padding: 5px;}
 span.right {float: right}
-input.search {font-size: 1.6em; padding: 10px 50px 10px 100px; width: 550px; border: none; background: #eeeeee url('../img/search.png') 0 50% no-repeat;}
-input.search.active {background-image: url('../img/search-active.png')}
+input.search {z-index: 1; position: relative; font-size: 1.6em; padding: 10px 50px 10px 100px; width: 550px; border: none; background: url('../img/search.png') 20px 50% no-repeat}
+
+div.search-wrapper {position: relative; background: #eeeeee; overflow: hidden;}
+div.search-wrapper:before {
+	content:'';
+	position: absolute;
+	top: 5px;
+	left: 30px;
+	width: 80px; 
+   height: 80px; 
+   background: #b6c3cc;
+   /* Rotate */
+   -webkit-transform: rotate(-45deg);
+   -moz-transform: rotate(-45deg);
+   -ms-transform: rotate(-45deg);
+   -o-transform: rotate(-45deg);
+   transform: rotate(-45deg);
+   /* Rotate Origin */
+   -webkit-transform-origin: 0 100%;
+   -moz-transform-origin: 0 100%;
+   -ms-transform-origin: 0 100%;
+   -o-transform-origin: 0 100%;
+   transform-origin: 0 100%;
+}
+div.search-wrapper.active:before {background: #3da9f5}
 .long-text { display: block; white-space: nowrap; overflow: hidden; text-overflow:    ellipsis;}
 ol {list-style: none; padding: 0; margin: 0}
 .small-avatar {max-width: 30px; max-height: 30px;}
