@@ -18,13 +18,13 @@ case class NonOKResponseException(message: String) extends Exception(message)
 
 trait HttpClient {
 
-  def get(url: String): ClientResponse
+  def get(url: String, onFailure: PartialFunction[Throwable, Unit]): ClientResponse
 
-  def getFuture(url: String): Future[ClientResponse]
+  def getFuture(url: String, onFailure: PartialFunction[Throwable, Unit]): Future[ClientResponse]
 
-  def post(url: String, body: JsValue): ClientResponse
+  def post(url: String, body: JsValue, onFailure: PartialFunction[Throwable, Unit]): ClientResponse
 
-  def postFuture(url: String, body: JsValue): Future[ClientResponse]
+  def postFuture(url: String, body: JsValue, onFailure: PartialFunction[Throwable, Unit]): Future[ClientResponse]
 
   def longTimeout(): HttpClient
 
@@ -34,12 +34,19 @@ trait HttpClient {
 case class HttpClientImpl(val timeout: Long = 2, val timeoutUnit: TimeUnit = TimeUnit.SECONDS, val headers: Seq[(String, String)] = List(), healthcheckPlugin: HealthcheckPlugin) extends HttpClient {
 
   implicit val duration = Duration(timeout, timeoutUnit)
+  
+  private val defaultOnFailure: PartialFunction[(String, Throwable), Unit] = {
+    case (url, cause: ConnectException) =>
+      val ex = new ConnectException(s"${cause.getMessage}. Requesting $url.").initCause(cause)
+      healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+  }
+
 
   def withHeaders(hdrs: (String, String)*): HttpClient = this.copy(headers = headers ++ hdrs)
 
-  def get(url: String): ClientResponse = await(getFuture(url))
+  def get(url: String, onFailure: => PartialFunction[(String, Throwable), Unit] = defaultOnFailure): ClientResponse = await(getFuture(url, onFailure))
 
-  def getFuture(url: String): Future[ClientResponse] = {
+  def getFuture(url: String, onFailure: => PartialFunction[(String, Throwable), Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
     val startedAt = System.currentTimeMillis()
     val result = request.get().map { response =>
@@ -50,17 +57,15 @@ case class HttpClientImpl(val timeout: Long = 2, val timeoutUnit: TimeUnit = Tim
       res(request, response)
     }
     result.onFailure {
-      case cause: ConnectException =>
-        val duration = System.currentTimeMillis() - startedAt
-        val ex = new ConnectException(s"${cause.getMessage} (took $duration ms). Requesting $url.").initCause(cause)
-        healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+      case ex: Throwable =>
+        if(onFailure.isDefinedAt(url,ex)) onFailure(url, ex)
     }
     result
   }
 
-  def post(url: String, body: JsValue): ClientResponse = await(postFuture(url, body))
+  def post(url: String, body: JsValue, onFailure: => PartialFunction[(String, Throwable), Unit] = defaultOnFailure): ClientResponse = await(postFuture(url, body, onFailure))
 
-  def postFuture(url: String, body: JsValue): Future[ClientResponse] = {
+  def postFuture(url: String, body: JsValue, onFailure: => PartialFunction[(String, Throwable), Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
     val startedAt = System.currentTimeMillis()
     val result = request.post(body).map { response =>
@@ -71,10 +76,8 @@ case class HttpClientImpl(val timeout: Long = 2, val timeoutUnit: TimeUnit = Tim
       res(request, response)
     }
     result.onFailure {
-      case cause: ConnectException =>
-        val duration = System.currentTimeMillis() - startedAt
-        val ex = new ConnectException(s"${cause.getMessage} (took $duration ms). Requesting $url with body $body.").initCause(cause)
-        healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+      case ex: Throwable =>
+        if(onFailure.isDefinedAt(url,ex)) onFailure(url, ex)
     }
     result
   }
