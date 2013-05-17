@@ -67,6 +67,7 @@ trait ScrapeInfoRepo extends Repo[ScrapeInfo] {
   def allActive(implicit session: RSession): Seq[ScrapeInfo]
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Option[ScrapeInfo]
   def getOverdueList(limit: Int = -1, due: DateTime = currentDateTime)(implicit session: RSession): Seq[ScrapeInfo]
+  def setNextScrapeByRegex(urlRegex: String, within: Double, failureLimit: Int = 0)(implicit session: RSession): Int
 }
 
 @Singleton
@@ -106,6 +107,24 @@ class ScrapeInfoRepoImpl @Inject() (
     val q = (for(f <- table if f.nextScrape <= due && f.state === ScrapeInfoStates.ACTIVE) yield f).sortBy(_.nextScrape)
     (if (limit > 0) q.take(limit) else q).list
   }
+
+  def setNextScrapeByRegex(urlRegex: String, withinHours: Double, failureLimit: Int = 0)(implicit session: RSession): Int = {
+    val now = currentDateTime
+    val withinSeconds = withinHours * 60.0d * 60.0d
+    var updateCount = 0
+    (for (s <- table if (s.state is ScrapeInfoStates.ACTIVE)
+                        && (s.failures <= failureLimit)
+                        && (normUriRepo.get.table.where(u => (u.id is s.uriId) && (u.url like urlRegex))).exists
+      ) yield s
+    ).mutate {r =>
+      r.row = r.row.copy(nextScrape = now.plusSeconds((scala.math.random * withinSeconds).toInt))
+      updateCount += 1
+      }
+    updateCount
+
+
+  }
+
 }
 
 object ScrapeInfoStates extends States[ScrapeInfo]

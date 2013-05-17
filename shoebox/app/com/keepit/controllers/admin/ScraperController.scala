@@ -53,8 +53,11 @@ class ScraperController @Inject() (
     Ok(html.admin.scrape(articles))
   }
 
-  def rescrapeByRegex(urlRegex: Option[String] = None) = AdminHtmlAction { implicit request =>
-    Ok("dummy rescraping started for " + urlRegex.getOrElse("empty urlRegex"))
+  def rescrapeByRegex(urlRegex: String, withinHours: Double) = AdminHtmlAction { implicit request =>
+    val count = db.readWrite { implicit session =>
+      scrapeInfoRepo.setNextScrapeByRegex(urlRegex, withinHours)
+    }
+    Ok("Next scraping set within %s hours for %s pages matching %s".format(withinHours,count,urlRegex))
   }
 
   def getScraped(id: Id[NormalizedURI]) = AdminHtmlAction { implicit request =>
