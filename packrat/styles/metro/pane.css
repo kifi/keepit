@@ -194,23 +194,40 @@ div.kifi-pane-head-settings-menu {
   bottom: 54px;
   left: 6px;
   right: 6px;
+  width: 310px;
 }
-.kifi-pane-boxes {
+.kifi-pane-box-cart {
   position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
-  -webkit-transition: -webkit-transform ease-in-out .15s;
-  transition: -webkit-transform ease-in-out .15s, transform ease-in-out .15s;
+  width: 100%;
+}
+.kifi-pane-box-cart.kifi-forward,
+.kifi-pane-box-cart.kifi-back {
+  width: 626px; /* 310 + 6 + 310 */
+}
+.kifi-pane-box-cart.kifi-animated {
+  -webkit-transition: -webkit-transform ease-in-out .2s;
+  transition: -webkit-transform ease-in-out .2s, transform ease-in-out .2s;
+}
+.kifi-pane-box-cart.kifi-back:not(.kifi-roll),
+.kifi-pane-box-cart.kifi-roll.kifi-forward {
+  -webkit-transform: translate(-316px,0);
+  transform: translate(-316px,0);
 }
 .kifi-pane-box {
   position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
-  width: 100%;
+  width: 310px;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
+}
+.kifi-pane-box-cart.kifi-back .kifi-pane-box:last-child,
+.kifi-pane-box-cart.kifi-forward .kifi-pane-box:nth-child(2) {
+  left: 316px;
 }
 .kifi-pane-title,
 a.kifi-pane-back {
@@ -223,6 +240,7 @@ a.kifi-pane-back {
   text-align: center;
 }
 .kifi-pane-title.kifi-scrollable-above {
+  background-color: #34495e;
   position: relative;
   z-index: 1;
 }
@@ -233,6 +251,7 @@ a.kifi-pane-back {
   position: absolute;
   top: 0;
   left: 0;
+  z-index: 2;
 }
 a.kifi-pane-back:hover {
   text-decoration: none;
