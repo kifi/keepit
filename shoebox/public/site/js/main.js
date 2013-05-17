@@ -27,7 +27,7 @@ var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPL
 var searchTemplate = Tempo.prepare("search-results").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
 					hideLoading();
 					$('#search-results .keep .bottom').each(function() {
-						$(this).find('img').prependTo($(this));
+						$(this).find('img.small-avatar').prependTo($(this));
 					});
 					$('#search-results .keep.mine .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myAvatar + '"/>');
 					$('div.search .num-results span').text($('#search-results .keep').length);
@@ -36,6 +36,7 @@ var searchContext = null;
 var connections = {};
 var connectionNames = [];
 var myAvatar = '';
+var searchTimeout;
 
 $.ajaxSetup({
     xhrFields: {
@@ -84,7 +85,7 @@ function doSearch(context) {
 	$('aside.right').show();
 	showLoading();
 	$.getJSON(urlSearch, 
-		{maxHits: 50
+		{maxHits: 30
 		,f: $('select[name="keepers"]').val() == 'c' ? $('#custom-keepers').textext()[0].tags().tagElements().find('.text-label').map(function(){return connections[$(this).text()]}).get().join('.') : $('select[name="keepers"]').val()
 		,q: $('input.search').val()
 		,context: context
@@ -119,7 +120,7 @@ function populateMyKeeps() {
 $(document)
 	.on('keypress', function(e) {if (!$(e.target).is('textarea')) $('input.search').focus() }) // auto focus on search field when starting to type anywhere on the document
 	.on('scroll',function() { // infinite scroll
-		if (searchContext != null && !isLoading() && ($(window).scrollTop() + $(window).height())/ $(document).height() > .9) // scrolled down more than %90
+		if (searchContext != null && !isLoading() && ($(window).scrollTop() + $(window).height())/ $(document).height() > .75) // scrolled down more than %75
 			doSearch(searchContext);
 	})
 	.ready(function() {
@@ -178,8 +179,11 @@ $(document)
 			}
 		});
 		$('input.search')
-			.on('keyup',function() {doSearch(null)}) // instant search
-			.on('focus',function() {$('.active').removeClass('active'); $(this).addClass('active')});
+			.on('keyup',function() {
+					clearTimeout(searchTimeout);
+					searchTimeout = setTimeout('doSearch(null)', 200);
+				}) // instant search
+			.on('focus',function() {$('.active').removeClass('active'); $(this).parent().addClass('active')});
 
 
 	});
