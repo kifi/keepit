@@ -10,25 +10,13 @@ home-grown at FortyTwo, not intended for distribution (yet)
 // recovery period during which clicks are ignored after each show.
 
 !function($) {
-  $.fn.showHover = function(method) {
-    if (this.length > 1) {
-      $.error("jQuery.showHover invoked on " + this.length + " elements");
-    }
-    if (typeof method === "string") {
-      var f = methods[method];
-      if (f) {
-        f.apply(this[0], Array.prototype.slice.call(arguments, 1));
-      } else {
-        $.error("jQuery.showHover has no method '" +  method + "'");
-      }
-    } else {
-      methods.enter.apply(this[0], arguments);
-    }
-    return this;
-  }
+  $.fn.showHover = function(opts) {
+    return this.each(function() {
+      enter.call(this, opts);
+    });
+  };
 
-  var methods = {
-    enter: function(opts) {
+  function enter(opts) {
       var $a = $(this), data = $a.data("hover");
       opts = $.extend({
           create: createFromDataAttr,
@@ -147,8 +135,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
           !leftOf(x, y, rH.left, rH.bottom, rT.left, rT.top) &&
           leftOf(x, y, rH.right, rH.bottom, rT.right, rT.top);
       }
-    }
-  };
+  }
 
   // Returns whether (x, y) is left of the line between (x1, y1) and (x2, y2).
   function leftOf(x, y, x1, y1, x2, y2) {
