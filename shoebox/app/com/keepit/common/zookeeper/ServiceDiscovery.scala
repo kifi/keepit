@@ -17,14 +17,12 @@ class ServiceDiscovery @Inject() (zk: ZooKeeperClient, services: FortyTwoService
   val myServiceNodeMaster = Node(s"${myServicePath.name}/${serviceType.name}_")
   var myNode: Option[Node] = None
   def myId: Option[Long] = myNode map extractId
-  def extractId(node: Node) = {
-    node.name.substring(node.name.lastIndexOf('_') + 1).toLong
-  }
+  def extractId(node: Node) = node.name.substring(node.name.lastIndexOf('_') + 1).toLong
 
   def register(): Node = {
     val path = zk.createPath(myServicePath)
     zk.watchChildren(path, { (children : Seq[Node]) =>
-      println(s"""services in my cluster: ${children.mkString(", ")}""")
+      log.debug(s"""services in my cluster: ${children.mkString(", ")}""")
     })
     myNode = Some(zk.createNode(myServiceNodeMaster, null, EPHEMERAL_SEQUENTIAL))
     myNode.get

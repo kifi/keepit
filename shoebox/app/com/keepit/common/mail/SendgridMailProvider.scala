@@ -152,7 +152,7 @@ class SendgridMailProvider @Inject() (db: Database, mailRepo: ElectronicMailRepo
     message.setContent(multipart)
 
     val fromName: String = mail.fromName.getOrElse(mail.from.address)
-    message.setFrom(new InternetAddress(mail.from.address, fromName, ENCODING))
+    message.setFrom(new InternetAddress(mail.from.address, fromName, UTF8))
 
     val recipientAddr: Array[Address] = Play.isProd match {
       case true => (mail.to map { e => new InternetAddress(e.address) }).toArray

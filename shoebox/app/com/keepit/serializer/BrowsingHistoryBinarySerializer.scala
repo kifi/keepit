@@ -21,7 +21,7 @@ trait BinaryFormat {
 class BrowsingHistoryBinarySerializer extends BinaryFormat with Logging {
 
   def writes(history: BrowsingHistory): Array[Byte] = {
-    val json = historyJsonWrites(history).toString.getBytes(ENCODING)
+    val json = historyJsonWrites(history).toString.getBytes(UTF8)
     val filter = history.filter
 
     assume(filter.size == history.tableSize, "Filter is not tableSize: %s != %s".format(filter.size, history.tableSize))
@@ -66,7 +66,7 @@ class BrowsingHistoryBinarySerializer extends BinaryFormat with Logging {
     val readBytes = inStream.read(filterBytes, 0, filterSize)
     assume(filterSize == readBytes, "Incorrectly sized filter input in BrowsingHistory parsing. %s != %s".format(filterSize, readBytes))
 
-    val historyNoFilter = historyJsonReads(Json.parse(new String(jsonBytes, ENCODING)))
+    val historyNoFilter = historyJsonReads(Json.parse(new String(jsonBytes, UTF8)))
 
     assume(historyNoFilter.tableSize == filterSize, "Filter size is not tableSize, %s != %s".format(historyNoFilter.tableSize, filterSize))
 
