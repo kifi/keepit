@@ -148,7 +148,6 @@ slider2 = function() {
                   render("html/metro/keepers.html", {
                     link: true,
                     keepers: pick(o.keepers, 8),
-                    anyKeepers: o.keepers.length,
                     captionHtml: formatCountHtml(o.kept, o.keepers.length, o.otherKeeps)
                   }, function(html) {
                     cb($(html).data("keepers", o.keepers), positionIt);
@@ -799,7 +798,6 @@ slider2 = function() {
           // TODO: preload friend pictures
           render("html/metro/keepers.html", {
             keepers: pick(keepers, 8),
-            anyKeepers: keepers.length,
             captionHtml: formatCountHtml(0, keepers.length, otherKeeps)
           }, cb);
         }});
