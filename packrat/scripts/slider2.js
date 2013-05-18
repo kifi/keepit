@@ -140,7 +140,6 @@ slider2 = function() {
           api.port.emit("get_keepers", function(o) {
             $(btn).showHover({
               eventTime: e.timeStamp,
-              reuse: false,
               showDelay: 700,
               hideDelay: o.keepers.length ? 800 : 0,
               click: "hide",
@@ -198,7 +197,6 @@ slider2 = function() {
       }).on("mouseenter", ".kifi-slider2-lock", function(e) {
         if (e.target !== this) return;
         $(this).showHover({
-          reuse: false,
           showDelay: 700,
           click: "hide",
           create: function(cb) {
@@ -226,7 +224,6 @@ slider2 = function() {
         }
       }).on("mouseenter", ".kifi-slider2-x", function() {
         $(this).css("overflow", "visible").showHover({
-          reuse: true,
           showDelay: 700,
           click: "hide"});
       }).on("click", ".kifi-slider2-x", function() {
@@ -236,7 +233,6 @@ slider2 = function() {
       }).on("mouseenter", ".kifi-slider2-dock-btn", function(e) {
         if (e.target !== this) return;
         $(this).showHover({
-          reuse: false,
           showDelay: 700,
           click: "hide",
           create: function(cb) {
@@ -502,12 +498,11 @@ slider2 = function() {
             $box.data("shown", true).triggerHandler("kifi:shown");
           })
           .on("mouseover", ".kifi-pane-head-logo", function() {
-            $(this).showHover({showDelay: 700, reuse: true, click: "hide"});
+            $(this).showHover({showDelay: 700, click: "hide"});
           })
           .on("mouseover", ".kifi-pane-head-feedback", function() {
             $(this).showHover({
               showDelay: 700,
-              reuse: true,
               click: "hide",
               create: function(cb) {
                 render("html/keeper/titled_tip.html", {
@@ -532,7 +527,6 @@ slider2 = function() {
             if (this.classList.contains("kifi-active")) return;
             $(this).showHover({
               showDelay: 700,
-              reuse: true,
               click: "hide",
               create: function(cb) {
                 render("html/keeper/titled_tip.html", {
@@ -798,7 +792,6 @@ slider2 = function() {
     showKeepers: function(keepers, otherKeeps) {
       if (lastShownAt) return;
       var $tile = $(tile).showHover({
-        reuse: false,
         showDelay: 0,
         hideDelay: 1e9,
         click: "hide",

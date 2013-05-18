@@ -21,8 +21,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
       opts = $.extend({
           create: createFromDataAttr,
           showDelay: 100,
-          hideDelay: 0,
-          reuse: true},
+          hideDelay: 0},
         typeof opts === "function" ? {create: opts} : opts);
       if (data) {
         if (opts.eventTime <= data.leaveTime) {
@@ -105,22 +104,18 @@ home-grown at FortyTwo, not intended for distribution (yet)
         data.lastShowTime = +new Date;
       }
       function hide() {
+        api.log("[hide]");
         clearTimeout(data.show || data.hide);
         delete data.show, delete data.hide;
         if (!$a.hasClass("kifi-hover-showing")) return;
+        api.log("[hide] really");
         $a.removeClass("kifi-hover-showing");
         data.fadeOutStartTime = +new Date;
         data.$h.on("transitionend webkitTransitionEnd", function end(e) {
           if (e.target === this && e.originalEvent.propertyName === "opacity") {
             delete data.fadeOutStartTime;
-            data.$h.off("transitionend webkitTransitionEnd", end);
-            if (opts.reuse) {
-              data.$h.detach();
-            } else {
-              data.$h.remove();
-              $a.unbind(".showHover").removeData("hover");
-            }
-            $a.trigger("hover:hide");
+            data.$h.off("transitionend webkitTransitionEnd", end).remove();
+            $a.unbind(".showHover").removeData("hover").trigger("hover:hide");
           }
         });
       }
