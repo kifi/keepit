@@ -122,9 +122,17 @@ div.loading {text-align: center; display: none;}
 	aside.left {width: 17%}
 	aside.right {width: 20%}
 	section.main {width: 54%}
-	div.search, div.scrollable {width: 54%; padding: 50px 2%; left: 18%; }
-	div.search {padding: 30px 2% 0 2%;}
+	div.search, div.scrollable {width: 54%; padding: 50px 2%; left: 18%; margin-left: 0}
+	div.search {padding: 30px 2% 0 2%; }
 	input.search {width: 70%}
 	div.custom-select { width: 90%}
 	aside.right textarea {width: 200px}
+}
+@media all and (max-width: 1024px) {
+	aside.left {width: 150px; }
+	aside.right {width: 200px;  padding: 10px}
+	section.main {width: 580px}
+	div.search {width: 580px;  left: 160px; margin-left: 0}
+	div.scrollable {width: 850px; background: transparent; padding-left: 160px; left: 0}
+	body {overflow-x: hidden;}
 }

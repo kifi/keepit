@@ -6,21 +6,20 @@ var urlConnections = 'https://api.kifi.com/site/user/connections';
 
 var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
 				hideLoading();
-				$('#my-keeps .keep .bottom').prepend('<img class="small-avatar" src="' + myAvatar + '"/>');
+				$('#my-keeps .keep .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myAvatar + '"/>');
 
 				// insert time sections
 				var currentDate = new Date();
-				var today = false, yesterday = false, week = false, older = false;
 				$('#my-keeps .keep').each(function() {
 					var age = daysBetween(new Date(Date.parse($(this).data('created'))), currentDate);
-					if (!today && age <= 1) {
-						$(this).before('<li class="search-section">Today</li>'); today = true;
-					} else if (!yesterday && age > 1 && age <= 2) {
-						$(this).before('<li class="search-section">Yesderday</li>'); yesterday = true;
-					} else if (!week && age > 2 && age <= 7) {
-						$(this).before('<li class="search-section">Past Week</li>'); week = true;
-					} else if (!older && age > 7) {
-						$(this).before('<li class="search-section">Older</li>'); older = true;
+					if ($('#my-keeps li.search-section.today').length == 0 && age <= 1) {
+						$(this).before('<li class="search-section today">Today</li>'); 
+					} else if ($('#my-keeps li.search-section.yesterday').length == 0  && age > 1 && age <= 2) {
+						$(this).before('<li class="search-section yesterday">Yesderday</li>'); 
+					} else if ($('#my-keeps li.search-section.week').length == 0  && age > 2 && age <= 7) {
+						$(this).before('<li class="search-section week">Past Week</li>'); 
+					} else if ($('#my-keeps li.search-section.older').length == 0  && age > 7) {
+						$(this).before('<li class="search-section older">Older</li>'); 
 					}
 				});
 			});
@@ -37,6 +36,7 @@ var connections = {};
 var connectionNames = [];
 var myAvatar = '';
 var searchTimeout;
+var lastKeep= null;
 
 $.ajaxSetup({
     xhrFields: {
@@ -80,6 +80,7 @@ function isLoading() {
 function doSearch(context) {
 	$('#my-keeps .search-section').remove();
 	keepsTemplate.clear();
+	lastKeep = null;
 	$('.search h1').hide();
 	$('.search .num-results').show();
 	$('aside.right').show();
@@ -103,25 +104,44 @@ function doSearch(context) {
 }
 
 function populateMyKeeps() {
-	$('.active').removeClass('active');
-	$('aside.left h3.my-keeps').addClass('active');
-	searchTemplate.clear();
-	searchContext = null;
-	$('aside.right').hide();
-	$('.search h1').show();
-	$('.search .num-results').hide();
-	$('#my-keeps .search-section').remove();
+	var params = {count: 30};
+	if (lastKeep == null) {
+		$('.active').removeClass('active');
+		$('aside.left h3.my-keeps').addClass('active');
+		searchTemplate.clear();
+		searchContext = null;
+		$('aside.right').hide();
+		$('.search h1').show();
+		$('.search .num-results').hide();
+		$('#my-keeps .search-section').remove();
+	} else {
+		params.before = lastKeep;
+	}
 	showLoading();
-	$.getJSON(urlMyKeeps, function(data) {
-		keepsTemplate.render(data.keeps);
-	});
+	console.log("Fetching 30 keep before " + lastKeep);
+	$.getJSON(urlMyKeeps, params, 
+		function(data) {
+			if (data.keeps.length == 0) { // end of results
+				lastKeep = null; hideLoading(); return true;
+			} else if (lastKeep == null) {
+				keepsTemplate.render(data.keeps);				
+			} else {
+				keepsTemplate.append(data.keeps);				
+			}
+			lastKeep = data.keeps[data.keeps.length - 1].id;
+		});
 }
 
 $(document)
 	.on('keypress', function(e) {if (!$(e.target).is('textarea')) $('input.search').focus() }) // auto focus on search field when starting to type anywhere on the document
 	.on('scroll',function() { // infinite scroll
-		if (searchContext != null && !isLoading() && ($(window).scrollTop() + $(window).height())/ $(document).height() > .75) // scrolled down more than %75
-			doSearch(searchContext);
+		if (!isLoading() && ($(window).scrollTop() + $(window).height())/ $(document).height() > .75) //  scrolled down more than %75
+		{
+			if (lastKeep != null ) // scroll keeps
+				populateMyKeeps();
+			else if (searchContext != null ) //
+				doSearch(searchContext);	
+		}
 	})
 	.ready(function() {
 		// populate number of my keeps 
