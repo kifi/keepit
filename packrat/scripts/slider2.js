@@ -134,24 +134,20 @@ slider2 = function() {
       }).on("mouseover", ".kifi-slider2-keep-btn", function(e) {
         if (e.target !== this) {
           this.classList.add("kifi-hoverless");
-        }
-        if (e.target === this) {
+        } else {
           var btn = this;
-          api.port.emit("get_keepers", function(o) {
-            $(btn).showHover({
-              eventTime: e.timeStamp,
-              showDelay: 700,
-              hideDelay: o.keepers.length ? 800 : 0,
-              click: "hide",
-              create: function(cb) {
+          $(btn).showHover({
+            showDelay: 700,
+            click: "hide",
+            create: function(cb) {
+              api.port.emit("get_keepers", function(o) {
                 if (o.keepers.length) {
                   render("html/metro/keepers.html", {
                     link: true,
                     keepers: pick(o.keepers, 8),
-                    anyKeepers: o.keepers.length,
                     captionHtml: formatCountHtml(o.kept, o.keepers.length, o.otherKeeps)
                   }, function(html) {
-                    cb($(html).data("keepers", o.keepers), positionIt);
+                    cb($(html).data("keepers", o.keepers), positionIt, {hideDelay: 800});
                   });
                 } else {
                   render("html/keeper/titled_tip.html", {
@@ -162,13 +158,14 @@ slider2 = function() {
                     cb(html, positionIt);
                   });
                 }
-              }});
-            function positionIt(w) {  // centered, or right-aligned if that would go off edge of page
-              if (!$slider) return;
-              var r1 = btn.getBoundingClientRect(), r2 = $slider[0].getBoundingClientRect();
-              this.style.right = Math.max((r1.width - w) / 2, r1.right - r2.right + 6) + "px";
-            }
-          });
+                function positionIt(w) {  // centered, or right-aligned if that would go off edge of page
+                  if (!$slider) return;
+                  var r1 = btn.getBoundingClientRect(), r2 = $slider[0].getBoundingClientRect();
+                  this.style.right = Math.max((r1.width - w) / 2, r1.right - r2.right + 6) + "px";
+                }
+              });
+            }});
+
         }
       }).on("mouseenter", ".kifi-slider2-keeper", function() {
         var $a = $(this).showHover({
@@ -799,7 +796,6 @@ slider2 = function() {
           // TODO: preload friend pictures
           render("html/metro/keepers.html", {
             keepers: pick(keepers, 8),
-            anyKeepers: keepers.length,
             captionHtml: formatCountHtml(0, keepers.length, otherKeeps)
           }, cb);
         }});
