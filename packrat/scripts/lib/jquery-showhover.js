@@ -104,11 +104,9 @@ home-grown at FortyTwo, not intended for distribution (yet)
         data.lastShowTime = +new Date;
       }
       function hide() {
-        api.log("[hide]");
         clearTimeout(data.show || data.hide);
         delete data.show, delete data.hide;
         if (!$a.hasClass("kifi-hover-showing")) return;
-        api.log("[hide] really");
         $a.removeClass("kifi-hover-showing");
         data.fadeOutStartTime = +new Date;
         data.$h.on("transitionend webkitTransitionEnd", function end(e) {
