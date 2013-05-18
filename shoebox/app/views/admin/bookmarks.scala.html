@@ -1,4 +1,4 @@
-@(bookmarksAndUsers: Seq[((User, SocialUserInfo), (Bookmark, NormalizedURI, Option[ScrapeInfo]))], page: Int, count: Long, pageCount: Int)
+@(bookmarksAndUsers: Seq[((User, SocialUserInfo), (Bookmark, NormalizedURI, Option[ScrapeInfo]))], page: Int, count: Long, pageCount: Int)(implicit flash: Flash)
 @import com.keepit.model.NormalizedURIStates._
 @import com.keepit.controllers.admin.routes
 
@@ -49,9 +49,36 @@
 }
 
 @admin(count + " Total Keeps") {
-  <h2>showing @bookmarksAndUsers.size (page @{page + 1})</h2>
-  @pagination(page, pageCount)
-  <table class="table table-bordered">
+
+  <div class = "container">
+
+    <form class="form-horizontal" action="@com.keepit.controllers.admin.routes.ScraperController.rescrapeByRegex()" method = "GET" style = "float:right;" align="right">
+      <div class="control-group">
+        <div class="controls">
+          <input type="text" name="urlRegex" placeholder="Url pattern e.g %.pdf">
+        </div>
+      </div>
+      <div class="control-group">
+        <div class="controls">
+          <input type="number" min="0" name="withinHours" placeholder="Within 8 hours">
+        </div>
+
+      </div>
+      <div class="control-group">
+        <button type="submit" class="btn">Rescrape</button>
+      </div>
+      <div class="text-success" align = "right">
+        @flash.get("rescrape").getOrElse("")
+      </div>
+    </form>
+
+    <h2>showing @bookmarksAndUsers.size (page @{page + 1})</h2>
+
+  </div>
+
+@pagination(page, pageCount)
+
+  <table class="table table-bordered" style = "clear: both">
     <tr>
       <th>#</th>
       <th>User</th>
