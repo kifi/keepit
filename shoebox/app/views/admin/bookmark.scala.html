@@ -35,7 +35,7 @@
        button.val("Scraping...");
        $.ajax({
          type: "POST",
-         url: "/bookmarks/rescrape",
+         url: "/admin/bookmarks/rescrape",
          contentType: "application/json; charset=utf-8",
          data: JSON.stringify({ id: @bookmark.id.get.id }),
          complete: function (jqXHR, status) {
