@@ -76,4 +76,14 @@ class ShoeboxController @Inject() (
     Ok("browsing history added")
   }
 
+  // this is not quite right yet (need new bookmark serializer).
+  // This function is not used yet, just a placeholder.
+  def getBookmarks(userId: Long) = Action { reqeust =>
+    val bookmarks = db.readOnly { implicit session =>
+      bookmarkRepo.getByUser(Id[User](userId))
+    }.map{BookmarkSerializer.bookmarkSerializer.writes}
+
+    Ok(JsArray(bookmarks))
+  }
+
 }

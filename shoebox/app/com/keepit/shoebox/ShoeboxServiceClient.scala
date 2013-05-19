@@ -4,7 +4,7 @@ import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.net.HttpClient
 import com.keepit.common.db.Id
 import com.keepit.model._
-import scala.concurrent.Future
+import scala.concurrent.{Future, promise}
 import com.keepit.controllers.shoebox._
 import com.keepit.controllers.shoebox.ShoeboxController
 import com.keepit.serializer._
@@ -27,10 +27,13 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getNormalizedURI(id: Long) : Future[NormalizedURI]
   def getNormalizedURIs(ids: Seq[Long]): Future[Seq[NormalizedURI]]
   def addBrowsingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit
+  def getBookmark(userId: Long): Future[Bookmark]
 }
 
+case class ShoeboxCacheProvider @Inject() (
+    uriIdCache: NormalizedURICache)
 
-class ShoeboxServiceClientImpl @Inject() (override val host: String, override val port: Int, override val httpClient: HttpClient)
+class ShoeboxServiceClientImpl @Inject() (override val host: String, override val port: Int, override val httpClient: HttpClient, cacheProvider: ShoeboxCacheProvider)
     extends ShoeboxServiceClient {
   def getUser(id: Id[User]): Future[User] = {
     //call(routes.ShoeboxController.getUser(id)).map(r => UserSerializer.userSerializer.reads(r.json))
@@ -38,7 +41,10 @@ class ShoeboxServiceClientImpl @Inject() (override val host: String, override va
   }
 
   def getNormalizedURI(id: Long) : Future[NormalizedURI] = {
-    call(routes.ShoeboxController.getNormalizedURI(id)).map(r => NormalizedURISerializer.normalizedURISerializer.reads(r.json).get)
+    cacheProvider.uriIdCache.get(NormalizedURIKey(Id[NormalizedURI](id))) match {
+      case Some(uri) =>  promise[NormalizedURI]().success(uri).future
+      case None => call(routes.ShoeboxController.getNormalizedURI(id)).map(r => NormalizedURISerializer.normalizedURISerializer.reads(r.json).get)
+    }
   }
 
   def getNormalizedURIs(ids: Seq[Long]): Future[Seq[NormalizedURI]] = {
@@ -50,6 +56,10 @@ class ShoeboxServiceClientImpl @Inject() (override val host: String, override va
 
   def addBrowsingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit = {
       call(routes.ShoeboxController.addBrowsingHistory(userId, uriId, tableSize, numHashFuncs, minHits))
+  }
+
+  def getBookmark(userId: Long): Future[Bookmark] = {
+    ???
   }
 }
 

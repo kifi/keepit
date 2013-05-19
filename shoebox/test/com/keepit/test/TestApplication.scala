@@ -44,6 +44,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.net.HttpClient
 import com.keepit.shoebox.ShoeboxServiceClientImpl
+import com.keepit.shoebox.ShoeboxCacheProvider
 
 class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplication() {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
@@ -181,7 +182,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Singleton
   @Provides
-  def shoeboxServiceClient: ShoeboxServiceClient = new ShoeboxServiceClientImpl(null, -1, null)
+  def shoeboxServiceClient: ShoeboxServiceClient = new ShoeboxServiceClientImpl(null, -1, null, inject[ShoeboxCacheProvider])
 
 
   @Provides

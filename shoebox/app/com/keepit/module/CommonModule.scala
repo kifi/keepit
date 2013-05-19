@@ -35,6 +35,7 @@ import com.google.inject.Provider
 import play.api.Play
 import play.api.Mode.Mode
 import com.google.inject.Inject
+import com.keepit.shoebox.ShoeboxCacheProvider
 
 class CommonModule extends ScalaModule with Logging {
 
@@ -200,10 +201,10 @@ class CommonModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def shoeboxServiceClient(client: HttpClient): ShoeboxServiceClient = {
+  def shoeboxServiceClient (client: HttpClient, cacheProvider: ShoeboxCacheProvider): ShoeboxServiceClient = {
     new ShoeboxServiceClientImpl(
       current.configuration.getString("service.shoebox.host").get,
       current.configuration.getInt("service.shoebox.port").get,
-      client)
+      client, cacheProvider)
   }
 }
