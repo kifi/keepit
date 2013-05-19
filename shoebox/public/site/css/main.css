@@ -25,8 +25,8 @@ img {vertical-align: middle; border: 0px}
 label, span.light {color: #628196}
 .fs9 {font-size: .8em}
 a {color: #0074c5; text-decoration: none}
-div.header-wrapper {position: fixed; z-index: 10; background: #41667f; width: 100%}
-header { width: 1260px; background: #204b69; height: 48px; padding: 0px; position: relative; left: 50%; margin-left: -630px; text-align: left}
+div.header-wrapper {position: fixed; z-index: 10; background: #204b69; width: 100%}
+header { width: 1260px;  height: 48px; padding: 0px; position: relative; left: 50%; margin-left: -630px; text-align: left}
 .centered {width: 1260px; text-align: left; margin: 0 auto;}
 header .logo {margin: 6px 15px}
 nav {float: right}
