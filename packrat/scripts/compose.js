@@ -112,19 +112,18 @@ function attachComposeBindings($c, composeTypeName) {
     var $submit = $f.find(".kifi-compose-submit").addClass("kifi-active");
     setTimeout($submit.removeClass.bind($submit, "kifi-active"), 10);
   })
-  .on("mouseenter", ".kifi-compose-snapshot", function(e) {
-    if (e.target !== this) return;
-    $(this).showHover({
-      showDelay: 500,
-      click: "hide",
-      create: function(cb) {
-        render("html/keeper/titled_tip.html", {
-          title: "Microfind",
-          html: "Click to mark something on<br>the page and reference it in<br>your " + composeTypeName + "."
-        }, function(html) {
-          cb(html, function(w) {this.style.left = 21 - w / 2 + "px"});
-        });
-      }});
+  .bindHover(".kifi-compose-snapshot", function(configureHover) {
+    render("html/keeper/titled_tip.html", {
+      title: "Microfind",
+      html: "Click to mark something on<br>the page and reference it in<br>your " + composeTypeName + "."
+    }, function(html) {
+      configureHover(html, {
+        showDelay: 500,
+        click: "hide",
+        position: function(w) {
+          this.style.left = 21 - w / 2 + "px";
+        }});
+    });
   })
   .on("click", ".kifi-compose-snapshot", function() {
     snapshot.take(composeTypeName, function(selector) {
