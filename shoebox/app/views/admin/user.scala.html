@@ -191,6 +191,12 @@
         $(this).hide().parent().append($input);
         $input.focus();
       });
+      $('.table').on('keydown', 'input.collections', function (e) {
+        if (e.keyCode === 13) {
+          e.preventDefault();
+          $(this).blur();
+        }
+      });
       $('.table').on('change', 'input.collections', function () {
         var $div = $(this).parent().find('div.collections');
         var $td = $div.closest("td");
