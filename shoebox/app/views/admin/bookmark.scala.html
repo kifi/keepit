@@ -1,5 +1,7 @@
 @(userWithSocial: UserWithSocial, bookmark: Bookmark, normalizedUri: NormalizedURI, scrapeInfo: Option[ScrapeInfo])
 
+@import com.keepit.controllers.admin.routes
+
 @admin("Bookmark: " + bookmark.title.getOrElse("")) {
    <table class="table table-bordered">
       <tr>
@@ -35,7 +37,7 @@
        button.val("Scraping...");
        $.ajax({
          type: "POST",
-         url: "/admin/bookmarks/rescrape",
+         url: "@com.keepit.controllers.admin.routes.AdminBookmarksController.rescrape",
          contentType: "application/json; charset=utf-8",
          data: JSON.stringify({ id: @bookmark.id.get.id }),
          complete: function (jqXHR, status) {
