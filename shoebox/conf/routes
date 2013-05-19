@@ -125,7 +125,6 @@ POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarks
 
 GET     /admin/scrape               @com.keepit.controllers.admin.ScraperController.scrape
 GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperController.getScraped(uriId: Id[NormalizedURI])
-GET     /admin/rescrape             @com.keepit.controllers.admin.ScraperController.rescrapeByRegex(urlRegex: String ?= "", withinHours: Int ?= 8)
 
 GET     /admin/data/integrity       @com.keepit.controllers.admin.ScraperController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
 GET     /admin/data/dupe            @com.keepit.controllers.admin.ScraperController.duplicateDocumentDetection
@@ -146,8 +145,11 @@ GET     /admin/article/refreshSearcher @com.keepit.controllers.admin.AdminArticl
 GET     /admin/article/dumpDoc/:uriId  @com.keepit.controllers.admin.AdminArticleIndexerController.dumpLuceneDocument(uriId: Id[NormalizedURI])
 
 POST     /admin/search/spell/buildDict         @com.keepit.controllers.admin.AdminSpellCorrectorController.buildDictionary
-GET     /admin/search/spell        @com.keepit.controllers.admin.AdminSpellCorrectorController.spellController
+GET     /admin/search/spell         @com.keepit.controllers.admin.AdminSpellCorrectorController.spellController
 GET     /admin/search/spell/test-correct  @com.keepit.controllers.admin.AdminSpellCorrectorController.correctSpelling(query: String)
+GET     /admin/search/scrape        @com.keepit.controllers.admin.ScraperController.searchScraper
+GET     /admin/search/scrape/regex  @com.keepit.controllers.admin.ScraperController.rescrapeByRegex(urlRegex: String ?= "", withinHours: Int ?= 8)
+
 
 GET     /admin/uriGraph/reindex     @com.keepit.controllers.admin.AdminURIGraphController.reindex
 GET     /admin/uriGraph/load        @com.keepit.controllers.admin.AdminURIGraphController.load
