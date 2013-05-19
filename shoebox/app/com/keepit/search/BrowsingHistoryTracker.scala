@@ -9,11 +9,13 @@ import com.keepit.model.BrowsingHistory
 import com.keepit.common.db.slick._
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.google.inject.Inject
+import com.keepit.common.logging.Logging
 
 class BrowsingHistoryTracker @Inject() (tableSize: Int, numHashFuncs: Int, minHits: Int,
-    browsingHistoryRepo: BrowsingHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient) {
+    browsingHistoryRepo: BrowsingHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient) extends Logging{
 
   def add(userId: Id[User], uriId: Id[NormalizedURI]) = {
+    log.info(s"add browsing history for user = ${userId.id}, uriId = ${uriId.id}")
     shoeboxClient.addBrowsingHistory(userId.id, uriId.id, tableSize, numHashFuncs, minHits)
   }
 
