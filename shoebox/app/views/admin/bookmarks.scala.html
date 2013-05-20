@@ -49,9 +49,12 @@
 }
 
 @admin(count + " Total Keeps") {
-  <h2>showing @bookmarksAndUsers.size (page @{page + 1})</h2>
-  @pagination(page, pageCount)
-  <table class="table table-bordered">
+
+    <h2>showing @bookmarksAndUsers.size (page @{page + 1})</h2>
+
+@pagination(page, pageCount)
+
+  <table class="table table-bordered" style = "clear: both">
     <tr>
       <th>#</th>
       <th>User</th>
