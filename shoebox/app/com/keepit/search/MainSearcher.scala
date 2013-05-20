@@ -148,12 +148,12 @@ class MainSearcher(
             val newSemanticScore = semanticVectorScoreAccessor.getScore(doc)
             if (friendlyUris.contains(id)) {
               if (myUris.contains(id)) {
-                myHits.insert(id, score * clickBoost, true, !myPublicUris.contains(id), semanticScore = newSemanticScore)
+                myHits.insert(id, score * clickBoost, score, newSemanticScore, true, !myPublicUris.contains(id))
               } else {
-                friendsHits.insert(id, score * clickBoost, false, false, semanticScore = newSemanticScore)
+                friendsHits.insert(id, score * clickBoost, score, newSemanticScore, false, false)
               }
             } else if (filter.includeOthers) {
-              othersHits.insert(id, score * clickBoost, false, false, semanticScore = newSemanticScore)
+              othersHits.insert(id, score * clickBoost, score, newSemanticScore, false, false)
             }
           }
           doc = scorer.nextDoc()
@@ -205,7 +205,7 @@ class MainSearcher(
 
     val threshold = highScore * tailCutting
     val friendStats = FriendStats(friendIds)
-    var numCollectStats = 10
+    var numCollectStats = 20
 
     if (myHits.size > 0) {
       myHits.toRankedIterator.forall{ case (h, rank) =>
@@ -235,12 +235,13 @@ class MainSearcher(
       }
     }
 
+    var newContent: Option[MutableArticleHit] = None // hold a document most recently introduced to the network
+
     if (friendsHits.size > 0 && filter.includeFriends) {
       val queue = createQueue(numHitsToReturn - min(minMyBookmarks, hits.size))
       hits.discharge(hits.size - minMyBookmarks).foreach{ h => queue.insert(h) }
 
       val normalizedFriendStats = friendStats.normalize
-      var newContent: Option[MutableArticleHit] = None // hold a document most recently introduced to the network
       var newContentScore = 0.5f // one day
       friendsHits.toRankedIterator.forall{ case (h, rank) =>
         val id = Id[NormalizedURI](h.id)
@@ -273,9 +274,6 @@ class MainSearcher(
           numCollectStats > 0
         }
       }
-      // insert a new content if any
-      newContent.foreach{ queue.insert(_) }
-
       queue.foreach{ h => hits.insert(h) }
     }
 
@@ -300,11 +298,17 @@ class MainSearcher(
       queue.foreach{ h => hits.insert(h) }
     }
 
-    val hitList = hits.toSortedList
+    var hitList = hits.toSortedList
     hitList.foreach{ h => if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id) }
 
-    val newIdFilter = filter.idFilter ++ hitList.map(_.id)
     val (svVar,svExistVar) = SemanticVariance.svVariance(parsedQuery, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
+
+    // inject a new content if any
+    if (newContent.nonEmpty) {
+      hitList = (hitList.take(numHitsToReturn - 1) :+ newContent.get)
+    }
+
+    val newIdFilter = filter.idFilter ++ hitList.map(_.id)
 
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
 
@@ -313,7 +317,7 @@ class MainSearcher(
     // simple classifier
     val show = if (svVar > 0.17f) false else {
       val isGood = (parsedQuery, personalizedSearcher) match {
-        case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(query.get, hitList, clickBoosts, searcher.get)
+        case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(query.get, hitList, searcher.get)
         case _ => true
       }
       isGood
@@ -330,9 +334,9 @@ class MainSearcher(
         (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = svExistVar, toShow = show)
   }
 
-  private def classify(parsedQuery: Query, hitList: List[MutableArticleHit], clickBoosts: ResultClickTracker.ResultClickBoosts, personalizedSearcher: PersonalizedSearcher) = {
+  private def classify(parsedQuery: Query, hitList: List[MutableArticleHit], personalizedSearcher: PersonalizedSearcher) = {
     def classify(hit: MutableArticleHit) = {
-      clickBoosts(hit.id) > 1.25f || hit.scoring.recencyScore > 0.25f || hit.scoring.textScore > 0.7f || (hit.scoring.textScore >= 0.04f && hit.semanticScore >= 0.28f)
+      (hit.score/hit.luceneScore) > 1.25f || hit.scoring.recencyScore > 0.25f || hit.scoring.textScore > 0.7f || (hit.scoring.textScore >= 0.04f && hit.semanticScore >= 0.28f)
     }
     hitList.take(3).exists(classify(_))
   }
@@ -378,9 +382,9 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit](sz) {
 
   var overflow: MutableArticleHit = null // sorry about the null, but this is necessary to work with lucene's priority queue efficiently
 
-  def insert(id: Long, score: Float, isMyBookmark: Boolean, isPrivate: Boolean, friends: Set[Id[User]] = NO_FRIEND_IDS, bookmarkCount: Int = 0, semanticScore: Float) {
-    if (overflow == null) overflow = new MutableArticleHit(id, score, isMyBookmark, isPrivate, friends, bookmarkCount, null, semanticScore)
-    else overflow(id, score, isMyBookmark, isPrivate, friends, bookmarkCount, semanticScore)
+  def insert(id: Long, score: Float, textScore: Float, semanticScore: Float, isMyBookmark: Boolean, isPrivate: Boolean, friends: Set[Id[User]] = NO_FRIEND_IDS, bookmarkCount: Int = 0) {
+    if (overflow == null) overflow = new MutableArticleHit(id, score, textScore, semanticScore, isMyBookmark, isPrivate, friends, bookmarkCount, null)
+    else overflow(id, score, textScore, semanticScore, isMyBookmark, isPrivate, friends, bookmarkCount)
 
     if (score > highScore) highScore = score
 
@@ -491,15 +495,16 @@ class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmark
 }
 
 // mutable hit object for efficiency
-class MutableArticleHit(var id: Long, var score: Float, var isMyBookmark: Boolean, var isPrivate: Boolean, var users: Set[Id[User]], var bookmarkCount: Int, var scoring: Scoring, var semanticScore: Float) {
-  def apply(newId: Long, newScore: Float, newIsMyBookmark: Boolean, newIsPrivate: Boolean, newUsers: Set[Id[User]], newBookmarkCount: Int, newSemanticScore: Float) = {
+class MutableArticleHit(var id: Long, var score: Float, var luceneScore: Float, var semanticScore: Float, var isMyBookmark: Boolean, var isPrivate: Boolean, var users: Set[Id[User]], var bookmarkCount: Int, var scoring: Scoring) {
+  def apply(newId: Long, newScore: Float, newTextScore: Float, newSemanticScore: Float, newIsMyBookmark: Boolean, newIsPrivate: Boolean, newUsers: Set[Id[User]], newBookmarkCount: Int) = {
     id = newId
     score = newScore
+    luceneScore = newTextScore
+    semanticScore = newSemanticScore
     isMyBookmark = newIsMyBookmark
     isPrivate = newIsPrivate
     users = newUsers
     bookmarkCount = newBookmarkCount
-    semanticScore = newSemanticScore
   }
   def toArticleHit(friendStats: FriendStats) = {
     val sortedUsers = users.toSeq.sortBy{ id => - friendStats.score(id) }
