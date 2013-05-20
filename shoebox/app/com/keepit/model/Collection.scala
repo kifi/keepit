@@ -30,6 +30,7 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
       excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
       (implicit session: RSession): Option[Collection]
   def getUsersChanged(num: SequenceNumber)(implicit session: RSession): Seq[(Id[User], SequenceNumber)]
+  def updateSequenceNumber(modelId: Id[Collection])(implicit session: RWSession)
 }
 
 @Singleton
@@ -60,9 +61,13 @@ class CollectionRepoImpl @Inject() (
     (for (c <- table if c.userId === userId && c.name === name
         && c.state =!= excludeState.getOrElse(null)) yield c).firstOption
 
-  override def save(model: Collection)(implicit session: RWSession) = {
+  override def save(model: Collection)(implicit session: RWSession): Collection = {
     val newModel = model.copy(seq = sequence.incrementAndGet())
     super.save(newModel)
+  }
+
+  def updateSequenceNumber(modelId: Id[Collection])(implicit session: RWSession) {
+    (for (c <- table if c.id === modelId) yield c.seq).update(sequence.incrementAndGet())
   }
 
   def getUsersChanged(num: SequenceNumber)(implicit session: RSession): Seq[(Id[User], SequenceNumber)] =
