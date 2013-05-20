@@ -9,7 +9,7 @@
 // @require scripts/snapshot.js
 
 threadPane = function() {
-  var $sent = $(), buffer = {};
+  var $scroller = $(), $holder = $(), buffer = {};
   return {
     render: function($container, threadId, messages, session) {
       messages.forEach(function(m) {
@@ -36,10 +36,11 @@ threadPane = function() {
 
         attachComposeBindings($container, "message");
 
-        $sent = $container.find(".kifi-messages-sent").data("threadId", threadId);
+        $scroller = $container.find(".kifi-messages-sent");
+        $holder = $scroller.find(".kifi-messages-sent-inner").data("threadId", threadId);
         $container.closest(".kifi-pane-box").on("kifi:remove", function() {
-          if (this.contains($sent[0])) {
-            $sent = $();
+          if ($holder.length && this.contains($holder[0])) {
+            $scroller = $holder = $();
           }
         });
 
@@ -48,7 +49,8 @@ threadPane = function() {
         if (buffer.threadId == threadId && !messages.some(function(m) {return m.id == buffer.message.id})) {
           messages.push(buffer.message);
           renderMessage(buffer.message, session.userId, function($m) {
-            $sent.append($m).scrollToBottom();
+            $holder.append($m);
+            $scroller.scrollToBottom();
           });
         }
 
@@ -56,13 +58,14 @@ threadPane = function() {
       });
     },
     update: function(threadId, message, userId) {
-      if ($sent.length && $sent.data("threadId") == threadId) {
+      if ($holder.length && $holder.data("threadId") == threadId) {
         renderMessage(message, userId, function($m) {
           var $old;
-          if (message.isLoggedInUser && ($old = $sent.children("[data-id=]").first()).length) {
+          if (message.isLoggedInUser && ($old = $holder.find(".kifi-message-sent[data-id=]").first()).length) {
             $old.replaceWith($m);
           } else {
-            $sent.append($m).scrollToBottom();  // should we compare timestamps and insert in order?
+            $holder.append($m);  // should we compare timestamps and insert in order?
+            $scroller.scrollToBottom();
           }
           emitRead(threadId, message);
         });
@@ -72,14 +75,14 @@ threadPane = function() {
       }
     },
     updateAll: function(threadId, messages, userId) {
-      if ($sent.length && $sent.data("threadId") == threadId) {
+      if ($holder.length && $holder.data("threadId") == threadId) {
         var arr = new Array(messages.length), n = 0;
         messages.forEach(function(m, i) {
           renderMessage(m, userId, function($m) {
             arr[i] = $m;
             if (++n == arr.length) {
-              $sent.children(".kifi-message-sent").remove().end()
-                .append(arr).scrollToBottom();
+              $holder.find(".kifi-message-sent").remove().end().append(arr);
+              $scroller.scrollToBottom();
               emitRead(threadId, messages[messages.length - 1]);
             }
           });
@@ -106,7 +109,8 @@ threadPane = function() {
         firstName: session.name,
         lastName: ""}
     }, session.userId, function($m) {
-      $sent.append($m).scrollToBottom();
+      $holder.append($m);
+      $scroller.scrollToBottom();
     });
   }
 
