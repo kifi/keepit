@@ -24,10 +24,10 @@ noticesPane = function() {
   api.load("html/metro/notice_comment.html", function(tmpl) {templates.comment = tmpl});
   api.load("html/metro/notice_message.html", function(tmpl) {templates.message = tmpl});
 
-  var $notices;
+  var $notices, $markAll;
 
   return {
-    render: function($container, notices, timeLastSeen) {
+    render: function($container, notices, timeLastSeen, numNotVisited) {
       timeLastSeen = new Date(timeLastSeen);
       render("html/metro/notices.html", {}, function(html) {
         $notices = $(html)
@@ -44,11 +44,17 @@ noticesPane = function() {
 
         fadeOutNew($notices.find(".kifi-notice-new"));
 
-        $container.closest(".kifi-pane-box").on("kifi:remove", function() {
+        var $box = $container.closest(".kifi-pane-box").on("kifi:remove", function() {
           $notices = null;
           api.port.emit("notifications_pane", false);
         });
         api.port.emit("notifications_pane", true);
+
+        $markAll = $box.find(".kifi-pane-mark-notices-read").click(function() {
+          var data = $notices.find(".kifi-notice").data();
+          api.port.emit("all_notifications_visited", data.id, data.createdAt);
+          // not updating DOM until response received due to bulk nature of action
+        }).toggle(numNotVisited > 0);
 
         if (notices.length && new Date(notices[0].time) > timeLastSeen) {
           api.port.emit("notifications_read", notices[0].time);
@@ -59,8 +65,16 @@ noticesPane = function() {
       if (!$notices) return;
       if (Array.isArray(a)) {
         showNew(a);
+        if (a.some(function(n) {return /^(un)?delivered$/.test(n.state)})) {
+          $markAll.show();
+        }
       } else {
-        markVisited(a.category, a.nUri, a.time, a.locator);
+        if (a.locator) {
+          markVisited(a.category, a.nUri, a.time, a.locator);
+        } else {
+          markAllVisited(a.id, a.time);
+        }
+        $markAll.toggle(a.numNotVisited > 0);
       }
     }};
 
@@ -100,12 +114,21 @@ noticesPane = function() {
     api.port.emit("notifications_read", notices[0].time);
   }
 
-  function markVisited(category, nUri, timeStr, locator) {
+  function markVisited(category, nUri, timeStr, locator, numNotVisited) {
     var time = new Date(timeStr);
     $notices.find(".kifi-notice-" + category + ":not(.kifi-notice-visited)").each(function() {
       if (this.dataset.uri == nUri &&
           dateWithoutMs(this.dataset.createdAt) <= time &&
           (!locator || this.dataset.locator == locator)) {
+        this.classList.add("kifi-notice-visited");
+      }
+    });
+  }
+
+  function markAllVisited(id, timeStr, numNotVisited) {
+    var time = new Date(timeStr);
+    $notices.find(".kifi-notice:not(.kifi-notice-visited)").each(function() {
+      if (id == this.dataset.id || dateWithoutMs(this.dataset.createdAt) <= time) {
         this.classList.add("kifi-notice-visited");
       }
     });

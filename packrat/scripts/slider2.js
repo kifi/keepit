@@ -632,7 +632,7 @@ slider2 = function() {
     notices: function($box) {
       api.port.emit("notifications", function(o) {
         api.require("scripts/notices.js", function() {
-          noticesPane.render($box.find(".kifi-pane-tall"), o.notifications, o.timeLastSeen);
+          noticesPane.render($box.find(".kifi-pane-tall"), o.notifications, o.timeLastSeen, o.numNotVisited);
         });
       });
     },
@@ -711,6 +711,9 @@ slider2 = function() {
       noticesPane.update(arr);
     },
     notifications_visited: function(o) {
+      noticesPane.update(o);
+    },
+    all_notifications_visited: function(o) {
       noticesPane.update(o);
     },
     comment: function(o) {
