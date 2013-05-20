@@ -30,7 +30,6 @@ trait SearchServiceClient extends ServiceClient {
   def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]]
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI]): Future[Html]
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray]
-  def rankVsScoreJson(q: Option[String] = None): Future[JsArray]
   def buildSpellCorrectorDictionary(): Future[Unit]
   def getSpellCorrectorStatus(): Future[Boolean]
   def correctSpelling(text: String): Future[String]
@@ -126,10 +125,6 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
 
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray] = {
     call(routes.SearchController.friendMapJson(userId, q, minKeeps)).map(_.json.as[JsArray])
-  }
-
-  def rankVsScoreJson(q: Option[String] = None): Future[JsArray] = {
-    call(routes.SearchController.rankVsScoreJson(q)).map(_.json.as[JsArray])
   }
 
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html] = {

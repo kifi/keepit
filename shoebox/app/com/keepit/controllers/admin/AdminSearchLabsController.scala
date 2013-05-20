@@ -19,15 +19,6 @@ class AdminSearchLabsController @Inject() (
   searchClient: SearchServiceClient)
     extends AdminController(actionAuthenticator) {
 
-  def rankVsScore(q: Option[String] = None) = AdminHtmlAction { implicit request =>
-    Ok(html.labs.rankVsScore(q))
-  }
-  def rankVsScoreJson(q: Option[String] = None) = AdminJsonAction { implicit request =>
-    Async {
-      searchClient.rankVsScoreJson(q).map { json => Ok(JsObject(Seq("data" -> json))) }
-    }
-  }
-
   def friendMap(q: Option[String] = None, minKeeps: Option[Int] = None) = AdminHtmlAction { implicit request =>
     Ok(html.labs.friendMap(q, minKeeps))
   }

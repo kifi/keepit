@@ -5,15 +5,12 @@ import scala.concurrent._
 import scala.slick.session.{Database => SlickDatabase}
 import scala.collection.mutable
 import scala.collection.immutable.Set
-
 import org.joda.time.{ReadablePeriod, DateTime}
-
 import com.google.inject.Module
 import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.google.inject.multibindings.Multibinder
 import com.google.inject.util.Modules
-
 import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
 import com.keepit.common.analytics._
 import com.keepit.common.cache.{HashMapMemoryCache, FortyTwoCachePlugin}
@@ -35,18 +32,19 @@ import com.keepit.model._
 import com.keepit.scraper._
 import com.keepit.search._
 import com.keepit.search.index.FakePhraseIndexerModule
-
 import com.tzavellas.sse.guice.ScalaModule
 import org.apache.zookeeper.CreateMode
-
 import akka.actor.ActorSystem
 import akka.actor.Cancellable
 import akka.actor.Scheduler
-
 import play.api.Mode.{Mode, Test}
 import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.common.net.HttpClient
+import com.keepit.shoebox.ShoeboxServiceClientImpl
+import com.keepit.shoebox.ShoeboxCacheProvider
 
 class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplication() {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
@@ -183,10 +181,15 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   def sliderHistoryTracker(sliderHistoryRepo: SliderHistoryRepo, db: Database): SliderHistoryTracker =
     new SliderHistoryTracker(sliderHistoryRepo, db, -1, -1, -1)
 
+  @Singleton
+  @Provides
+  def shoeboxServiceClient: ShoeboxServiceClient = new ShoeboxServiceClientImpl(null, -1, null, inject[ShoeboxCacheProvider])
+
+
   @Provides
   @Singleton
-  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database): BrowsingHistoryTracker =
-    new BrowsingHistoryTracker(-1, -1, -1, browsingHistoryRepo, db)
+  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient): BrowsingHistoryTracker =
+    new BrowsingHistoryTracker(-1, -1, -1, browsingHistoryRepo, db, shoeboxClient)
 
   @Provides
   @Singleton
