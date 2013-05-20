@@ -108,12 +108,24 @@ class ShoeboxController @Inject() (
 
   // this is not quite right yet (need new bookmark serializer).
   // This function is not used yet, just a placeholder.
-  def getBookmarks(userId: Long) = Action { reqeust =>
+  def getBookmarks(userId: Long) = Action { request =>
     val bookmarks = db.readOnly { implicit session =>
       bookmarkRepo.getByUser(Id[User](userId))
     }.map{BookmarkSerializer.bookmarkSerializer.writes}
 
     Ok(JsArray(bookmarks))
+  }
+
+  def getUsers = Action(parse.json) { request =>
+        val json = request.body
+        val ids = json.as[JsArray].value.map(id => id.asInstanceOf[Id[User]])
+        val users = db.readOnly { implicit s =>
+          ids.map{id =>
+            val user = userRepo.get(id)
+            UserSerializer.userSerializer.writes(user)
+          }
+        }
+        Ok(JsArray(users))
   }
 
 }

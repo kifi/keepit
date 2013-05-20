@@ -23,7 +23,7 @@ import com.google.inject.Inject
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
 
-  def getUser(id: Id[User]): Future[User]
+  def getUsers(ids: Seq[Id[User]]): Future[Seq[User]]
   def getNormalizedURI(id: Long) : Future[NormalizedURI]
   def getNormalizedURIs(ids: Seq[Long]): Future[Seq[NormalizedURI]]
   def addBrowsingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit
@@ -36,9 +36,12 @@ case class ShoeboxCacheProvider @Inject() (
 
 class ShoeboxServiceClientImpl @Inject() (override val host: String, override val port: Int, override val httpClient: HttpClient, cacheProvider: ShoeboxCacheProvider)
     extends ShoeboxServiceClient {
-  def getUser(id: Id[User]): Future[User] = {
-    //call(routes.ShoeboxController.getUser(id)).map(r => UserSerializer.userSerializer.reads(r.json))
-    ???
+
+  def getUsers(ids: Seq[Id[User]]): Future[Seq[User]] = {
+    val idJarray = JsArray(ids.map(id => JsNumber(id.asInstanceOf[Long])))
+    call(routes.ShoeboxController.getUsers, idJarray).map {r =>
+      r.json.as[JsArray].value.map(js => UserSerializer.userSerializer.reads(js).get)
+    }
   }
 
   def getNormalizedURI(id: Long) : Future[NormalizedURI] = {

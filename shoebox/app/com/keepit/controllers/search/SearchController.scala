@@ -19,6 +19,7 @@ import scala.math.{abs, sqrt}
 import views.html
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.ExecutionContext.Implicits.global
+import com.keepit.model.User
 
 
 class SearchController @Inject()(
@@ -92,10 +93,15 @@ class SearchController @Inject()(
             if (n == 0 || n.isNaN()) 1.0 else n
           }
 
-          db.readOnly { implicit s =>
-            (0 until size).map{ i =>
-              val user = userRepo.get(userIndex(i))
-              data += JsArray(Seq(JsNumber(x(i)/norm), JsNumber(y(i)/norm), JsString("%s %s".format(user.firstName, user.lastName))))
+          val positionMap = (0 until size).foldLeft(Map.empty[Id[User],(Double,Double)]){ (m,i) =>
+            m + (userIndex(i) -> (x(i)/norm, y(i)/norm))
+          }
+
+          val usersFuture = shoeboxClient.getUsers(userIndex)
+          usersFuture.foreach { users =>
+            users.foreach { user =>
+              val (px,py) = positionMap(user.id.get)
+              data += JsArray(Seq(JsNumber(px), JsNumber(py), JsString("%s %s".format(user.firstName, user.lastName))))
             }
           }
         } catch {
