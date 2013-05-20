@@ -25,9 +25,8 @@ object URIList {
     val in = new InputStreamDataInput(new ByteArrayInputStream(bytes, offset, length))
     val version = in.readByte()
     version match {
-      case 2 => new URIListOld(in)
       case 3 => new URIListV3(in)
-      case _ => throw new URIGraphUnknownVersionException("network payload version=%d".format(version))
+      case _ => throw new URIGraphUnsupportedVersionException("version=%d".format(version))
     }
   }
 
@@ -145,29 +144,4 @@ private[graph] class URIListV3(in: InputStreamDataInput) extends URIList with UR
   private[this] val listSize = in.readVInt()
   private[this] lazy val idList: Array[Long] = URIList.readList(in, listSize)
   private[this] lazy val createdAtList: Array[Long] = loadRawListAfter(idList, listSize, in)
-}
-
-private[graph] class URIListOld(in: InputStreamDataInput) extends URIList with URIListLazyLoading {
-
-  override val version: Int = 2
-  override def size: Int = publicListSize
-  override def ids: Array[Long] = publicList
-  override def createdAt: Array[Long] = publicCreatedAt
-
-  def getPrivateURIList: URIList = {
-    new URIList {
-      override val version: Int = 2
-      override def size = privateListSize
-      override def ids = privateList
-      override def createdAt = privateCreatedAt
-    }
-  }
-
-  val publicListSize = in.readVInt()
-  val privateListSize = in.readVInt()
-
-  val publicList: Array[Long] = URIList.readList(in, publicListSize)
-  lazy val privateList = loadListAfter(publicList, privateListSize, in)
-  lazy val publicCreatedAt = loadRawListAfter(privateList, publicListSize, in)
-  lazy val privateCreatedAt = loadRawListAfter(publicCreatedAt, privateListSize, in)
 }

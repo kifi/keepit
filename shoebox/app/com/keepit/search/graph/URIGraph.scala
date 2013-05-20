@@ -46,6 +46,7 @@ object URIGraphFields {
 
 trait URIGraph {
   def update(): Int
+  def update(userId: Id[User]): Int
   def getURIGraphSearcher(userId: Option[Id[User]] = None): URIGraphSearcher
   def close(): Unit
 
@@ -77,13 +78,18 @@ class URIGraphImpl(
     cnt
   }
 
-  def update(): Int = {
+  def update(): Int = update{
+    db.readOnly { implicit s =>
+      bookmarkRepo.getUsersChanged(sequenceNumber)
+    }
+  }
+
+  def update(userId: Id[User]): Int = update{ Seq((userId, SequenceNumber.ZERO)) }
+
+  private def update(usersChanged: => Seq[(Id[User], SequenceNumber)]): Int = {
     log.info("updating URIGraph")
     try {
       var cnt = 0
-      val usersChanged = db.readOnly { implicit s =>
-        bookmarkRepo.getUsersChanged(sequenceNumber)
-      }
       indexDocuments(usersChanged.iterator.map(buildIndexable), commitBatchSize){ commitBatch =>
         cnt += commitCallback(commitBatch)
       }
@@ -210,5 +216,5 @@ class URIGraphImpl(
   }
 }
 
-class URIGraphUnknownVersionException(msg: String) extends Exception(msg)
+class URIGraphUnsupportedVersionException(msg: String) extends Exception(msg)
 
