@@ -84,6 +84,23 @@ class CollectionTest extends Specification with TestDBRunner {
         }
       }
     }
+    "update sequence number when keeps are added or removed" in {
+      withDB() { implicit injector =>
+        val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
+        val newSeqNum = db.readWrite { implicit s =>
+          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll1.id.get))
+          val n = collectionRepo.get(coll1.id.get).seq.value
+          n must be > coll1.seq.value
+          n must be > coll2.seq.value
+          n
+        }
+        db.readWrite { implicit s =>
+          keepToCollectionRepo.save(KeepToCollection(
+            bookmarkId = bookmark1.id.get, collectionId = coll1.id.get, state = KeepToCollectionStates.INACTIVE))
+          collectionRepo.get(coll1.id.get).seq.value must be > newSeqNum
+        }
+      }
+    }
     "ignore case in getting elements and for uniqueness" in {
       running(new EmptyApplication) {
         // TODO: figure out why this works but not withDB()

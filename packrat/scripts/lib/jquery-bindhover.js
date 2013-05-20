@@ -16,11 +16,11 @@ home-grown at FortyTwo, not intended for distribution (yet)
     return this.on("mouseover.bindHover", selector, function(e) {
       if (e.relatedTarget && this.contains(e.relatedTarget)) return;
       var $a = $(this), data = getOrCreateData($a);
+      data.mouseoverTimeStamp = e.timeStamp || +new Date;
+      data.mouseoverEl = e.target;
       if (!data.$h) {  // fresh start
-        data.mouseoverTimeStamp = e.timeStamp;
         createHover($a, data, create);
       } else { // hover currently showing or at least initiated
-        data.mouseoverTimeStamp = e.timeStamp;
         if (data.opts && data.opts.hideDelay) {
           clearTimeout(data.hide), delete data.hide;
           document.removeEventListener("mousemove", data.move, true);
@@ -31,7 +31,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
       if (e.relatedTarget && this.contains(e.relatedTarget)) return;
       var $a = $(this), data = getOrCreateData($a);
       clearTimeout(data.show), delete data.show;
-      data.mouseoutTimeStamp = e.timeStamp;
+      data.mouseoutTimeStamp = e.timeStamp || +new Date;
       if ($a.hasClass("kifi-hover-showing")) {
         if (data.opts && data.opts.hideDelay && between(this, data.$h[0], e.clientX, e.clientY)) {
           data.hide = setTimeout(hide.bind(this), data.opts.hideDelay);
@@ -46,7 +46,6 @@ home-grown at FortyTwo, not intended for distribution (yet)
     }).on("mousedown.bindHover", selector, function(e) {
       var $a = $(this), data = getOrCreateData($a);
       if (!data.opts || !data.opts.click || data.$h && data.$h[0].contains(e.target) || isFadingOut(data)) return;
-      //data.mousedownTimeStamp = e.timeStamp;
       if (data.opts.click == "hide") {
         hide.call(this);
       } else if (data.opts.click == "toggle") {
@@ -116,7 +115,10 @@ home-grown at FortyTwo, not intended for distribution (yet)
           delete data.fadeOutStartTime;
           data.$h.off("transitionend webkitTransitionEnd", end).remove();
           delete data.$h;
-          $a.trigger("hover:hide");
+          if (data.mouseoverTimeStamp > data.mouseoutTimeStamp && this.contains(data.mouseoverEl)) {
+            api.log("[bindHover.hide:transitionend] faking mouseout");
+            $a.trigger($.Event("mouseout", {relatedTarget: document}));
+          }
         }
       });
     } else if (!isFadingOut(data)) {
