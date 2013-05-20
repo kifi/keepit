@@ -35,6 +35,7 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
 
 @Singleton
 class KeepToCollectionRepoImpl @Inject() (
+  collectionRepo: CollectionRepo,
   val db: DataBaseComponent,
   val clock: Clock)
   extends DbRepo[KeepToCollection] with KeepToCollectionRepo {
@@ -66,6 +67,11 @@ class KeepToCollectionRepoImpl @Inject() (
       excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))
       (implicit session: RSession): Seq[KeepToCollection] =
     (for (c <- table if c.collectionId === collId && c.state =!= excludeState.getOrElse(null)) yield c).list
+
+  override def save(model: KeepToCollection)(implicit session: RWSession): KeepToCollection = {
+    collectionRepo.updateSequenceNumber(model.collectionId)
+    super.save(model)
+  }
 }
 
 object KeepToCollectionStates extends States[KeepToCollection]
