@@ -53,8 +53,17 @@ class ScraperController @Inject() (
     Ok(html.admin.scrape(articles))
   }
 
-  def rescrapeByRegex(urlRegex: Option[String] = None) = AdminHtmlAction { implicit request =>
-    Ok("dummy rescraping started for " + urlRegex.getOrElse("empty urlRegex"))
+  def searchScraper = AdminHtmlAction {implicit request =>
+    Ok(html.admin.searchScraper())
+  }
+
+  def rescrapeByRegex(urlRegex: String, withinHours: Int) = AdminHtmlAction { implicit request =>
+    val updateCount = db.readWrite { implicit session =>
+      scrapeInfoRepo.setForRescrapeByRegex(urlRegex, withinHours)
+    }
+    Redirect(com.keepit.controllers.admin.routes.ScraperController.searchScraper).flashing(
+        "success" -> "%s page(s) matching %s to be rescraped within %s hour(s). ".format(updateCount,urlRegex,withinHours)
+      )
   }
 
   def getScraped(id: Id[NormalizedURI]) = AdminHtmlAction { implicit request =>

@@ -94,6 +94,7 @@ trait DbRepos {
   def invitationRepo = inject[InvitationRepo]
   def unscrapableRepo = inject[UnscrapableRepo]
   def notificationRepo = inject[UserNotificationRepo]
+  def scrapeInfoRepo = inject[ScrapeInfoRepo]
 }
 
 object TestDbInfo {

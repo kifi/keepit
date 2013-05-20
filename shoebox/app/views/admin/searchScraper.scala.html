@@ -1,0 +1,17 @@
+@()(implicit flash: Flash)
+
+@import com.keepit.controllers.admin.routes
+
+@admin("Scraper") {
+
+<h2>Rescrape Documents</h2>
+
+<form class="form-horizontal" action="@com.keepit.controllers.admin.routes.ScraperController.rescrapeByRegex()" method = "GET">
+      <input type="text" name="urlRegex" placeholder="Url pattern e.g %.pdf">
+      <input type="number" min="0" name="withinHours" placeholder="Within 8 hours">
+    <button type="submit" class="btn">Rescrape</button>
+  <div class="text-success">
+    @flash.get("success").getOrElse("")
+  </div>
+</form>
+}
