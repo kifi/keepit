@@ -19,6 +19,8 @@ import com.keepit.model.User
 import com.keepit.search.MultiHashFilter
 import play.api.libs.json.JsNull
 import com.keepit.model.BrowsingHistory
+import com.keepit.model.ClickHistoryRepo
+import com.keepit.model.ClickHistory
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -26,6 +28,7 @@ class ShoeboxController @Inject() (
   userRepo: UserRepo,
   bookmarkRepo: BookmarkRepo,
   browsingHistoryRepo: BrowsingHistoryRepo,
+  clickingHistoryRepo: ClickHistoryRepo,
   normUriRepo: NormalizedURIRepo)
   extends ShoeboxServiceController with Logging {
 
@@ -74,6 +77,33 @@ class ShoeboxController @Inject() (
     }
 
     Ok("browsing history added")
+  }
+
+  private def getMultiHashFilterForClickingHistory(userId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int) = {
+    db.readOnly { implicit session =>
+      clickingHistoryRepo.getByUserId(Id[User](userId)) match {
+        case Some(clickingHistory) =>
+          new MultiHashFilter(clickingHistory.tableSize, clickingHistory.filter, clickingHistory.numHashFuncs, clickingHistory.minHits)
+        case None =>
+          val filter = MultiHashFilter(tableSize, numHashFuncs, minHits)
+          filter
+      }
+    }
+  }
+
+  def addClickingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int) = Action { request =>
+    val filter = getMultiHashFilterForClickingHistory(userId, tableSize, numHashFuncs, minHits)
+    filter.put(uriId)
+
+    db.readWrite { implicit session =>
+      clickingHistoryRepo.save(clickingHistoryRepo.getByUserId(Id[User](userId)) match {
+        case Some(bh) =>
+          bh.withFilter(filter.getFilter)
+        case None =>
+          ClickHistory(userId = Id[User](userId), tableSize = tableSize, filter = filter.getFilter, numHashFuncs = numHashFuncs, minHits = minHits)
+      })
+    }
+    Ok("clicking history added")
   }
 
   // this is not quite right yet (need new bookmark serializer).

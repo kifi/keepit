@@ -55,7 +55,7 @@ class MainSearcherTest extends Specification with DbRepos {
         new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer())),
         resultClickTracker,
         new BrowsingHistoryTracker(3067, 2, 1, inject[BrowsingHistoryRepo], inject[Database], inject[ShoeboxServiceClient]),
-        new ClickHistoryTracker(307, 2, 1, inject[ClickHistoryRepo], inject[Database]),
+        new ClickHistoryTracker(307, 2, 1, inject[ClickHistoryRepo], inject[Database], inject[ShoeboxServiceClient]),
         inject[FakePersistEventPluginImpl],
         inject[FakeSpellCorrector],
         clock,

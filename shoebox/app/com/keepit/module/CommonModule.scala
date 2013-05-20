@@ -115,13 +115,13 @@ class CommonModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def clickHistoryTracker(repo: ClickHistoryRepo, db: Database): ClickHistoryTracker = {
+  def clickHistoryTracker(repo: ClickHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient): ClickHistoryTracker = {
     val conf = current.configuration.getConfig("click-history-tracker").get
     val filterSize = conf.getInt("filterSize").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val minHits = conf.getInt("minHits").get
 
-    new ClickHistoryTracker(filterSize, numHashFuncs, minHits, repo, db)
+    new ClickHistoryTracker(filterSize, numHashFuncs, minHits, repo, db, shoeboxClient)
   }
 
   @Singleton

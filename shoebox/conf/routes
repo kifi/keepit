@@ -244,6 +244,7 @@ GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLab
 GET     /internal/shoebox/database/getNormalizedURI  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURI(id: Long)
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs
 POST     /internal/shoebox/database/addBrowsingHistory @com.keepit.controllers.shoebox.ShoeboxController.addBrowsingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int)
+POST    /internal/shoebox/database/addClickingHistory @com.keepit.controllers.shoebox.ShoeboxController.addClickingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int)
 GET     /internal/shoebox/database/addBrowsingHistory @com.keepit.controllers.shoebox.ShoeboxController.getBookmarks(userId: Long)
 
 
