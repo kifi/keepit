@@ -146,7 +146,7 @@ $(document)
 				doSearch(searchContext);	
 		}
 	})
-	.ready(function() {
+	.ready(function() {		
 		// populate number of my keeps 
 		$.getJSON(urlMyKeepsCount, function(data) {
 			$('aside.left .my-keeps span').text(data.numKeeps);
