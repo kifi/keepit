@@ -67,9 +67,7 @@ class ArticleIndexer @Inject() (
 
   def buildIndexable(id: Id[NormalizedURI]): ArticleIndexable = {
     val uri = Await.result(shoeboxClient.getNormalizedURI(id.id), 5 seconds)
-    // val uri = db.readOnly { implicit c => repo.get(id) }
     buildIndexable(uri)
-
   }
 
   def buildIndexable(uri: NormalizedURI): ArticleIndexable = {
