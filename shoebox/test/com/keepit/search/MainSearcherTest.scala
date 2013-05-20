@@ -31,6 +31,7 @@ import org.apache.lucene.store.{Directory, MMapDirectory, RAMDirectory}
 import org.apache.lucene.util.Version
 import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphFields}
 import org.apache.lucene.util.Version
+import com.keepit.shoebox.ShoeboxServiceClient
 
 class MainSearcherTest extends Specification with DbRepos {
 
@@ -44,7 +45,7 @@ class MainSearcherTest extends Specification with DbRepos {
 
   def initIndexes(store: ArticleStore) = {
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    val articleIndexer = new ArticleIndexer(new RAMDirectory, config, store, db, inject[NormalizedURIRepo], null)
+    val articleIndexer = new ArticleIndexer(new RAMDirectory, config, store, db, inject[NormalizedURIRepo], null, inject[ShoeboxServiceClient])
     val uriGraph = new URIGraphImpl(new RAMDirectory, config, URIGraphFields.decoders(), bookmarkRepo, db)
     implicit val clock = inject[Clock]
     implicit val fortyTwoServices = inject[FortyTwoServices]
@@ -53,7 +54,7 @@ class MainSearcherTest extends Specification with DbRepos {
         uriGraph,
         new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer())),
         resultClickTracker,
-        new BrowsingHistoryTracker(3067, 2, 1, inject[BrowsingHistoryRepo], inject[Database]),
+        new BrowsingHistoryTracker(3067, 2, 1, inject[BrowsingHistoryRepo], inject[Database], inject[ShoeboxServiceClient]),
         new ClickHistoryTracker(307, 2, 1, inject[ClickHistoryRepo], inject[Database]),
         inject[FakePersistEventPluginImpl],
         inject[FakeSpellCorrector],

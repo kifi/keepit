@@ -234,12 +234,22 @@ GET     /admin/healthcheck/emailErrors    @com.keepit.common.healthcheck.AdminHe
 GET     /admin/healthcheck/errors   @com.keepit.common.healthcheck.AdminHealthController.getErrors()
 GET     /admin/healthcheck/resetErrorCount    @com.keepit.common.healthcheck.AdminHealthController.resetErrorCount()
 
-GET     /admin/labs/rankVsScore     @com.keepit.controllers.admin.AdminSearchLabsController.rankVsScore(q: Option[String] ?= None)
-GET     /admin/labs/rankVsScore.json @com.keepit.controllers.admin.AdminSearchLabsController.rankVsScoreJson(q: Option[String] ?= None)
 GET     /admin/labs/friendMap       @com.keepit.controllers.admin.AdminSearchLabsController.friendMap(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLabsController.friendMapJson(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 
-# INTERNAL ROUTES
+##########################################
+#INTERNAL ROUTES/Shoebox
+##########################################
+
+GET     /internal/shoebox/database/getNormalizedURI  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURI(id: Long)
+GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs
+POST     /internal/shoebox/database/addBrowsingHistory @com.keepit.controllers.shoebox.ShoeboxController.addBrowsingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int)
+GET     /internal/shoebox/database/addBrowsingHistory @com.keepit.controllers.shoebox.ShoeboxController.getBookmarks(userId: Long)
+
+
+
+
+# INTERNAL ROUTES/Search
 POST    /internal/search/events/resultClicked @com.keepit.controllers.search.SearchEventController.logResultClicked()
 
 GET     /internal/search/uriGraph/info         @com.keepit.controllers.search.URIGraphController.indexInfo()
@@ -270,4 +280,3 @@ POST    /internal/searchConfig/:id/set    @com.keepit.controllers.search.SearchC
 GET     /internal/searchConfig/:id/reset  @com.keepit.controllers.search.SearchConfigController.resetUserConfig(id: Id[User])
 
 GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.SearchController.friendMapJson(userId: Id[User], query: Option[String] ?= None, minKeeps: Option[Int] ?= None)
-GET     /internal/search/search/rankVsScoreJson @com.keepit.controllers.search.SearchController.rankVsScoreJson(query: Option[String] ?= None)
