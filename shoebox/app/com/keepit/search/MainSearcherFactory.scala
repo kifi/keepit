@@ -1,6 +1,7 @@
 package com.keepit.search
 
 import com.keepit.search.graph.URIGraph
+import com.keepit.search.graph.URIGraphUnsupportedVersionException
 import com.keepit.search.graph.URIList
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.PersonalizedSearcher
@@ -34,11 +35,21 @@ class MainSearcherFactory @Inject() (
     spellCorrector: SpellCorrector,
     implicit private val clock: Clock,
     implicit private val fortyTwoServices: FortyTwoServices
- ) {
+ ) extends Logging {
 
   def apply(userId: Id[User], friendIds: Set[Id[User]], filter: SearchFilter, config: SearchConfig) = {
     val articleSearcher = articleIndexer.getSearcher
-    val uriGraphSearcher = uriGraph.getURIGraphSearcher(Some(userId))
+    val uriGraphSearcher = {
+      try {
+        uriGraph.getURIGraphSearcher(Some(userId))
+      } catch {
+        case e: URIGraphUnsupportedVersionException =>
+          // self healing, just in case
+          log.warn("fixing graph data", e)
+          uriGraph.update(userId)
+          uriGraph.getURIGraphSearcher(Some(userId))
+      }
+    }
     new MainSearcher(
         userId,
         friendIds,
