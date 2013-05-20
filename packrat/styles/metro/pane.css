@@ -49,7 +49,7 @@ html.kifi-pane-parent.kifi-with-pane.kifi-snapshot-mode {
   height: 39px;
   background: #2c3e50;
   position: relative;
-  z-index: 2;
+  z-index: 3;
 }
 a.kifi-pane-head-logo {
   display: inline-block;

@@ -1,3 +1,21 @@
+a.kifi-pane-mark-notices-read {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  padding: 0 12px;
+  font-size: 12px;
+  line-height: 40px;
+  color: #fff !important;
+  display: none;
+}
+a.kifi-pane-mark-notices-read:hover {
+  text-decoration: none;
+  background-color: #67829c;
+}
+a.kifi-pane-mark-notices-read:active {
+  background-color: #607991;
+}
 .kifi-notices {
   overflow-y: auto;
   max-height: 100%;
