@@ -83,7 +83,8 @@
 					<img class="small-avatar" data-template-for="users"
 						src="img/clock.png"
 						data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
-						title="{{firstName}} {{lastName}}" /> <span class="fs9 gray">
+						title="{{firstName}} {{lastName}}" /> 
+					<span class="fs9 gray">
 						{% if isMyBookmark %}You{% endif %}{% if users.length > 0 && isMyBookmark %} + {% endif %}{% if users.length > 0 %}{{users.length}} friend{% endif %}{% if users.length > 1 %}s{% endif %} kept this {% if isPrivate %} <img src="img/private.png" /> Private {% endif %}
 					</span>
 					<div class="clearfix"></div>
@@ -97,7 +98,11 @@
 				title="{{title}}">{{title}}</a> <span class="fs9 green long-text"
 				title="{{url}}">{{url}}</span>
 				<div class="bottom">
-					<span class="fs9 gray"> You kept this {% if isPrivate %} <img
+					<img class="small-avatar" data-template-for="keepers"
+						src="img/clock.png"
+						data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
+						title="{{firstName}} {{lastName}}" /> 
+					<span class="fs9 gray"> You {% if keepers.length > 0 %} + {{keepers.length}} friend{% endif %}{% if keepers.length > 1 %}s{% endif %} kept this {% if isPrivate %} <img
 						src="img/private.png" /> Private {% endif %}
 					</span>
 					<div class="clearfix"></div>
