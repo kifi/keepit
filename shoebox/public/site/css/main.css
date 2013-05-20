@@ -25,8 +25,8 @@ img {vertical-align: middle; border: 0px}
 label, span.light {color: #628196}
 .fs9 {font-size: .8em}
 a {color: #0074c5; text-decoration: none}
-div.header-wrapper {position: fixed; z-index: 10; background: #41667f; width: 100%}
-header { width: 1260px; background: #204b69; height: 48px; padding: 0px; position: relative; left: 50%; margin-left: -630px; text-align: left}
+div.header-wrapper {position: fixed; z-index: 10; background: #204b69; width: 100%}
+header { width: 1260px;  height: 48px; padding: 0px; position: relative; left: 50%; margin-left: -630px; text-align: left}
 .centered {width: 1260px; text-align: left; margin: 0 auto;}
 header .logo {margin: 6px 15px}
 nav {float: right}
@@ -122,9 +122,17 @@ div.loading {text-align: center; display: none;}
 	aside.left {width: 17%}
 	aside.right {width: 20%}
 	section.main {width: 54%}
-	div.search, div.scrollable {width: 54%; padding: 50px 2%; left: 18%; }
-	div.search {padding: 30px 2% 0 2%;}
+	div.search, div.scrollable {width: 54%; padding: 50px 2%; left: 18%; margin-left: 0}
+	div.search {padding: 30px 2% 0 2%; }
 	input.search {width: 70%}
 	div.custom-select { width: 90%}
 	aside.right textarea {width: 200px}
+}
+@media all and (max-width: 1024px) {
+	aside.left {width: 150px; }
+	aside.right {width: 200px;  padding: 10px}
+	section.main {width: 580px}
+	div.search {width: 580px;  left: 160px; margin-left: 0}
+	div.scrollable {width: 850px; background: transparent; padding-left: 160px; left: 0}
+	body {overflow-x: hidden;}
 }
