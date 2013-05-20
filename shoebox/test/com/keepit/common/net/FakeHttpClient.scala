@@ -1,16 +1,18 @@
 package com.keepit.common.net
 
 import scala.concurrent._
-
 import play.api.libs.json._
+import java.net.ConnectException
 
 class FakeHttpClient(
     requestToResponse: Option[PartialFunction[String, FakeClientResponse]] = None
   ) extends HttpClient {
+  
+  override val defaultOnFailure = ignoreConnectionFailure
 
-  override def get(url: String): ClientResponse = assertUrl(url)
+  override def get(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = assertUrl(url)
 
-  override def post(url: String, body: JsValue): ClientResponse = throw new Exception("this is a GET client")
+  override def post(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = throw new Exception("this is a GET client")
   def posting(payload: String): FakeHttpPostClient = new FakeHttpPostClient(requestToResponse, {body =>
     if(payload != body.toString()) throw new Exception("expected %s doesn't match payload %s".format(payload, body))
   })
@@ -27,18 +29,18 @@ class FakeHttpClient(
 
   override def longTimeout(): HttpClient = this
 
-  override def postFuture(url: String, body: JsValue): Future[ClientResponse] = Future.successful { post(url, body) }
-  override def getFuture(url: String): Future[ClientResponse] = Future.successful { get(url) }
+  override def postFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = Future.successful { post(url, body) }
+  override def getFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = Future.successful { get(url) }
   override def withHeaders(hdrs: (String, String)*): HttpClient = throw new Exception("not supported")
 }
 
 class FakeHttpPostClient(requestToResponse: Option[PartialFunction[String, FakeClientResponse]],
                      assertion: String => Unit) extends FakeHttpClient(requestToResponse) {
-  override def post(url: String, body: JsValue): ClientResponse = {
+  override def post(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = {
     assertion(body.toString())
     assertUrl(url)
   }
-  override def get(url: String): ClientResponse = throw new Exception("this is a POST client")
+  override def get(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = throw new Exception("this is a POST client")
 }
 
 case class FakeClientResponse(expectedResponse: String, override val status: Int = 200) extends ClientResponse {

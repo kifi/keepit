@@ -52,13 +52,20 @@ class URIGraphController @Inject()(
     }
   }
 
-  def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]) = Action { implicit request =>
+  private def getSharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo] = {
     val friendIds = db.readOnly { implicit s => connectionRepo.getConnectedUsers(userId) }
     val searcher = uriGraph.getURIGraphSearcher(None)
     val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
-    val keepersEdgeSet = searcher.getUriToUserEdgeSet(uriId)
-    val sharingUserIds = searcher.intersect(friendEdgeSet, keepersEdgeSet).destIdSet - userId
-    Ok(Json.toJson(SharingUserInfo(sharingUserIds, keepersEdgeSet.size)))
+    uriIds.map { uriId =>
+      val keepersEdgeSet = searcher.getUriToUserEdgeSet(uriId)
+      val sharingUserIds = searcher.intersect(friendEdgeSet, keepersEdgeSet).destIdSet - userId
+      SharingUserInfo(sharingUserIds, keepersEdgeSet.size)
+    }
+  }
+
+  def sharingUserInfo(userId: Id[User], uriIds: String) = Action { implicit request =>
+    val ids = uriIds.split(",").map(_.trim).collect { case idStr if !idStr.isEmpty => Id[NormalizedURI](idStr.toLong) }
+    Ok(Json.toJson(getSharingUserInfo(userId, ids)))
   }
 
   def indexInfo = Action { implicit request =>

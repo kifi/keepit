@@ -22,7 +22,7 @@
         <![endif]-->
 
 	<div class="header-wrapper">
-		<header class="centered">
+		<header>
 			<a href="/"><img class="logo" src="img/kifi-logo.png" alt="KiFi" /></a>
 			<nav>
 				<a href="" class="invite">Invite</a><a
@@ -81,7 +81,8 @@
 				class="fs9 green long-text" title="{{bookmark.url}}">{{bookmark.url}}</span>
 				<div class="bottom">
 					<img class="small-avatar" data-template-for="users"
-						src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
+						src="img/clock.png"
+						data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
 						title="{{firstName}} {{lastName}}" /> <span class="fs9 gray">
 						{% if isMyBookmark %}You{% endif %}{% if users.length > 0 && isMyBookmark %} + {% endif %}{% if users.length > 0 %}{{users.length}} friend{% endif %}{% if users.length > 1 %}s{% endif %} kept this {% if isPrivate %} <img src="img/private.png" /> Private {% endif %}
 					</span>

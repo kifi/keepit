@@ -9,8 +9,16 @@ import play.api.libs.json._
 import com.google.inject.{Inject, Singleton}
 import org.apache.zookeeper.CreateMode._
 
+trait ServiceDiscovery {
+  def register(): Node
+  def isLeader(): Boolean
+}
+
 @Singleton
-class ServiceDiscovery @Inject() (zk: ZooKeeperClient, services: FortyTwoServices) extends Logging {
+class ServiceDiscoveryImpl @Inject() (
+    zk: ZooKeeperClient,
+    services: FortyTwoServices)
+  extends ServiceDiscovery with Logging {
 
   val serviceType = services.currentService
   val myServicePath = Path(s"/services/${serviceType.name}")

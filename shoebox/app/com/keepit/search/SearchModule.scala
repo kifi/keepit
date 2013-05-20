@@ -8,7 +8,7 @@ import com.google.inject.{Provides, Singleton}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
-import com.keepit.inject.AppScoped
+import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.scraper.{ScraperPluginImpl, ScraperPlugin}
 import com.keepit.search.graph.URIGraphFields
@@ -18,6 +18,7 @@ import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.{ArticleIndexerPluginImpl, ArticleIndexerPlugin, ArticleIndexer}
 import com.keepit.search.phrasedetector.PhraseIndexer
 import com.keepit.search.query.parser.SpellCorrector
+import com.keepit.shoebox.ShoeboxServiceClient
 import com.tzavellas.sse.guice.ScalaModule
 import play.api.Play.current
 import com.keepit.common.mail.PostOfficeImpl
@@ -47,11 +48,11 @@ class SearchModule() extends ScalaModule with Logging {
   @Singleton
   @Provides
   def articleIndexer(articleStore: ArticleStore, uriGraph: URIGraph, db: Database,
-    repo: NormalizedURIRepo, healthcheckPlugin: HealthcheckPlugin): ArticleIndexer = {
+    repo: NormalizedURIRepo, healthcheckPlugin: HealthcheckPlugin, shoeboxClient: ShoeboxServiceClient): ArticleIndexer = {
     val dir = getDirectory(current.configuration.getString("index.article.directory"))
     log.info(s"storing search index in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new ArticleIndexer(dir, config, articleStore, db, repo, healthcheckPlugin)
+    new ArticleIndexer(dir, config, articleStore, db, repo, healthcheckPlugin, shoeboxClient)
   }
 
 

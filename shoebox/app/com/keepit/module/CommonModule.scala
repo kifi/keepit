@@ -5,6 +5,7 @@ import java.net.InetAddress
 import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.google.inject.multibindings.Multibinder
+import com.keepit.common.zookeeper._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.actor.ActorPlugin
@@ -33,6 +34,8 @@ import com.keepit.common.time.Clock
 import com.google.inject.Provider
 import play.api.Play
 import play.api.Mode.Mode
+import com.google.inject.Inject
+import com.keepit.shoebox.ShoeboxCacheProvider
 
 class CommonModule extends ScalaModule with Logging {
 
@@ -51,6 +54,13 @@ class CommonModule extends ScalaModule with Logging {
     listenerBinder.addBinding().to(classOf[UsefulPageListener])
     listenerBinder.addBinding().to(classOf[SliderShownListener])
     listenerBinder.addBinding().to(classOf[SearchUnloadListener])
+  }
+
+  @Singleton
+  @Provides
+  def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
+    def register() = Node("me")
+    def isLeader() = true
   }
 
   @Singleton
@@ -105,24 +115,24 @@ class CommonModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def clickHistoryTracker(repo: ClickHistoryRepo, db: Database): ClickHistoryTracker = {
+  def clickHistoryTracker(repo: ClickHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient): ClickHistoryTracker = {
     val conf = current.configuration.getConfig("click-history-tracker").get
     val filterSize = conf.getInt("filterSize").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val minHits = conf.getInt("minHits").get
 
-    new ClickHistoryTracker(filterSize, numHashFuncs, minHits, repo, db)
+    new ClickHistoryTracker(filterSize, numHashFuncs, minHits, repo, db, shoeboxClient)
   }
 
   @Singleton
   @Provides
-  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database): BrowsingHistoryTracker = {
+  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient): BrowsingHistoryTracker = {
     val conf = current.configuration.getConfig("browsing-history-tracker").get
     val filterSize = conf.getInt("filterSize").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val minHits = conf.getInt("minHits").get
 
-    new BrowsingHistoryTracker(filterSize, numHashFuncs, minHits, browsingHistoryRepo, db)
+    new BrowsingHistoryTracker(filterSize, numHashFuncs, minHits, browsingHistoryRepo, db, shoeboxClient)
   }
 
   @Provides
@@ -191,10 +201,10 @@ class CommonModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def shoeboxServiceClient(client: HttpClient): ShoeboxServiceClient = {
+  def shoeboxServiceClient (client: HttpClient, cacheProvider: ShoeboxCacheProvider): ShoeboxServiceClient = {
     new ShoeboxServiceClientImpl(
       current.configuration.getString("service.shoebox.host").get,
       current.configuration.getInt("service.shoebox.port").get,
-      client)
+      client, cacheProvider)
   }
 }

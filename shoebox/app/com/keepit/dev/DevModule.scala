@@ -5,6 +5,7 @@ import com.google.common.io.Files
 import com.google.inject.util.Modules
 import com.google.inject.{Provides, Singleton, Provider}
 import com.keepit.classify.DomainTagImportSettings
+import com.keepit.common.zookeeper._
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.actor.{ActorFactory, ActorPlugin}
 import com.keepit.common.analytics._
@@ -33,10 +34,18 @@ import akka.actor.ActorSystem
 import play.api.Play
 import com.keepit.search.SearchServiceClient
 import com.keepit.common.service.{FortyTwoServices, IpAddress}
+import com.keepit.shoebox.ShoeboxServiceClient
 
 
 class ShoeboxDevModule extends ScalaModule with Logging {
   def configure() {}
+
+  @Singleton
+  @Provides
+  def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
+    def register() = Node("me")
+    def isLeader() = true
+  }
 
   @Singleton
   @Provides
@@ -153,12 +162,12 @@ class SearchDevModule extends ScalaModule with Logging {
   @Singleton
   @Provides
   def articleIndexer(articleStore: ArticleStore, uriGraph: URIGraph, db: Database,
-    repo: NormalizedURIRepo, healthcheckPlugin: HealthcheckPlugin): ArticleIndexer = {
+    repo: NormalizedURIRepo, healthcheckPlugin: HealthcheckPlugin, shoeboxClient: ShoeboxServiceClient): ArticleIndexer = {
     val dir = getDirectory(current.configuration.getString("index.article.directory"))
     log.info(s"storing search index in $dir")
 
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new ArticleIndexer(dir, config, articleStore, db, repo, healthcheckPlugin)
+    new ArticleIndexer(dir, config, articleStore, db, repo, healthcheckPlugin, shoeboxClient)
   }
 
   @Singleton

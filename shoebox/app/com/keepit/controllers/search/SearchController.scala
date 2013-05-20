@@ -50,53 +50,6 @@ class SearchController @Inject()(
     Ok(html.admin.explainResult(query, userId, uriId, explanation))
   }
 
-  def rankVsScoreJson(q: Option[String] = None) = Action {
-    val topN = 50
-    val fakeUserId = Id[User](-1)
-    val config = searchConfigManager.defaultConfig
-    val searcher = searcherFactory(fakeUserId, Set.empty[Id[User]], SearchFilter.default(), config)
-    val hits = new HitQueue(topN)
-    val nullClickBoost = new ResultClickBoosts{ def apply(value: Long) = 1.0f }
-    q.foreach{ query =>
-      val (myHits, friendsHits, othersHits, _, _) = searcher.searchText(query, 20, nullClickBoost)(Lang("en"))
-      myHits.foreach{ h => hits.insertWithOverflow(new MutableHit(h.id, h.score))}
-      friendsHits.foreach{ h => hits.insertWithOverflow(new MutableHit(h.id, h.score))}
-      othersHits.foreach{ h => hits.insertWithOverflow(new MutableHit(h.id, h.score))}
-    }
-
-    val N = hits.size
-    val hitIdAndScore = (0 until N).map { i => val top = hits.pop; (top.id, top.score) }
-    val data = new Array[JsArray](N)
-    Async {
-      shoeboxClient.getNormalizedURIs(hitIdAndScore.map { _._1 }).map { uris =>
-        for (i <- 0 until N) {
-          val rank = N - i
-          val score = hitIdAndScore(i)._2
-          var title = uris(i).title.map(_.trim).getOrElse("")
-          if (title == "") title = uris(i).url
-          data(i) = JsArray(Seq(JsNumber(rank), JsNumber(score), JsString(title)))
-        }
-        Ok(JsArray(data))
-      }
-    }
-
-
-
-//    val data = db.readOnly { implicit s =>
-//      var data = List.empty[JsArray]
-//      while (hits.size > 0) {
-//        val top = hits.top
-//        val uri = normUriRepo.get(Id[NormalizedURI](top.id))
-//        var title = uri.title.map(_.trim).getOrElse("")
-//        if (title == "") title = uri.url
-//        data = JsArray(Seq(JsNumber(hits.size), JsNumber(top.score), JsString(title)))::data
-//        hits.pop
-//      }
-//      data
-//    }
-
-  }
-
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]) = Action { implicit request =>
     val data = new ArrayBuffer[JsArray]
     q.foreach{ q =>

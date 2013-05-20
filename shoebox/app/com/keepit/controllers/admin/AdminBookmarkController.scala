@@ -109,7 +109,7 @@ class AdminBookmarksController @Inject() (
     }
   }
 
-  def bookmarksView(page: Int = 0) = AdminHtmlAction { request =>
+  def bookmarksView(page: Int = 0) = AdminHtmlAction { implicit request =>
     val PAGE_SIZE = 50
 
     val userMap = new MutableMap[Id[User], User] with SynchronizedMap[Id[User], User]
