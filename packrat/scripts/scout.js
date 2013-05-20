@@ -157,7 +157,7 @@ var injected, t0 = +new Date, tile, paneHistory;
   }
 
   function positionTile(pos) { // goal: as close to target position as possible while still in window
-    pos = pos || JSON.parse(tile.dataset.pos || 0);
+    pos = pos || JSON.parse(tile && tile.dataset.pos || 0);
     if (!pos) return;
     var maxPos = window.innerHeight - 54;  // height (42) + margin-top (6) + margin-bottom (6)
     if (pos.bottom >= 0) {
