@@ -782,6 +782,6 @@ slider2 = function() {
         });
       });
       $tile.triggerHandler("mouseover.bindHover");
-      setTimeout($tile.triggerHandler.bind($tile, "click.bindHover"), 2500);
+      setTimeout($tile.triggerHandler.bind($tile, "mousedown.bindHover"), 2500);
     }};
 }();
