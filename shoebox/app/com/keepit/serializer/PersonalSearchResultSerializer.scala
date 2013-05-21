@@ -11,7 +11,7 @@ class PersonalSearchResultSerializer extends Writes[PersonalSearchResult] with L
   def writes(res: PersonalSearchResult): JsValue =
     try {
       JsObject(List(
-        "count" -> JsString(res.count.toString()),
+        "count" -> JsNumber(res.count),
         "bookmark" -> PersonalSearchHitSerializer.hitSerializer.writes(res.hit),
         "users" -> Json.toJson(res.users),
         "score" -> JsNumber(res.score),
