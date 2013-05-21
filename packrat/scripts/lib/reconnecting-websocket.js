@@ -20,32 +20,38 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
       if (ws) {
         ws.close();
       }
+      window.removeEventListener("offline", onOffline);
     }
   };
 
+  window.addEventListener("offline", onOffline); // fires in Chrome when WiFi conn lost or changed
+
   function connect() {
     api.log("#0bf", "[RWS.connect]");
-
     ws = new WebSocket(url);
-    t = setTimeout(onConnectTimeout.bind(null, ws), 25000);
-
-    ws.onopen = function() {
-      api.log("#0bf", "[RWS.onopen]");
-      clearTimeout(t);
-      t = setTimeout(onConnectTimeout.bind(null, ws), 2000);
-    };
-    ws.onclose = function(e) {
-      api.log("#0bf", "[RWS.onclose] %o buffer: %o", e, buffer);
-      clearTimeout(t);
-      ws = null;
-      if (!closed) {
-        api.log("#0bf", "[RWS.onclose] will reconnect in %i ms", retryConnectDelayMs);
-        t = setTimeout(connect, retryConnectDelayMs);
-        retryConnectDelayMs = Math.min(maxRetryConnectDelayMs, retryConnectDelayMs * 1.5);
-      }
-    };
+    ws.onopen = onOpen;
+    ws.onclose = onClose;
     ws.onerror = onError;
     ws.onmessage = onMessage1;
+    t = setTimeout(onConnectTimeout.bind(null, ws), 25000);
+  }
+
+  function onOpen() {
+    api.log("#0bf", "[RWS.onopen]");
+    clearTimeout(t);
+    t = setTimeout(onConnectTimeout.bind(null, ws), 2000);
+  }
+
+  function onClose(e) {
+    if (this !== ws) return;
+    api.log("#0bf", "[RWS.onclose] %o buffer: %o", e, buffer);
+    clearTimeout(t);
+    ws = null;
+    if (!closed) {
+      api.log("#0bf", "[RWS.onclose] will reconnect in %i ms", retryConnectDelayMs);
+      t = setTimeout(connect, retryConnectDelayMs);
+      retryConnectDelayMs = Math.min(maxRetryConnectDelayMs, retryConnectDelayMs * 1.5);
+    }
   }
 
   function onError(e) {
@@ -85,8 +91,17 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
   }
 
   function onConnectTimeout(ws) {
-    api.log("#0bf", "[RWS.onConnectTimeout]", ws.readyState);
+    api.log("#0bf", "[RWS.onConnectTimeout] readyState:", ws.readyState);
     ws.close();
+    clearTimeout(t);
+    t = setTimeout(onClose.bind(ws), 1000);  // browser might not fire close event for 60+ sec
+  }
+
+  function onOffline() {
+    api.log("#0bf", "[RWS.onOffline] readyState:", ws.readyState);
+    ws.close();
+    clearTimeout(t);
+    t = setTimeout(onClose.bind(ws), 1000);
   }
 
   function ping() {

@@ -39,7 +39,7 @@ var injected, t0 = +new Date, tile, paneHistory;
       if (o.kept) {
         tile.dataset.kept = o.kept;
       } else {
-        delete tile.dataset.kept;
+        tile.removeAttribute("data-kept");
       }
     },
     keepers: function(o) {
@@ -88,7 +88,7 @@ var injected, t0 = +new Date, tile, paneHistory;
       case 75: // k
         if (tile && tile.dataset.kept) {
           api.port.emit("unkeep");
-          delete tile.dataset.kept;
+          tile.removeAttribute("data-kept");  // delete .dataset.kept fails in FF 21
         } else {
           api.port.emit("keep", {url: document.URL, title: document.title, how: "public"});
           if (tile) tile.dataset.kept = "public";
@@ -131,13 +131,15 @@ var injected, t0 = +new Date, tile, paneHistory;
       tile.dataset.pos = JSON.stringify(pos);
       positionTile(pos);
     }
-    tile.innerHTML = "<div class=kifi-tile-transparent style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>";
+    tile.innerHTML =
+      "<div class=kifi-tile-keep style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>" +
+      "<div class=kifi-tile-kept></div>";
     tileCount = document.createElement("span");
     tileCount.className = "kifi-count";
     document.documentElement.appendChild(tile);
     tile.addEventListener("mouseover", function(e) {
       if (e.target === this ||
-          e.target.parentNode === this && (e.target.classList.contains("kifi-tile-transparent") || e.target.classList.contains("kifi-count"))) {
+          e.target.parentNode === this && !e.target.classList.contains("kifi-slider2") && !e.target.classList.contains("kifi-slider2-tip")) {
         keeper("show", "tile");
       }
     });
@@ -157,7 +159,7 @@ var injected, t0 = +new Date, tile, paneHistory;
   }
 
   function positionTile(pos) { // goal: as close to target position as possible while still in window
-    pos = pos || JSON.parse(tile.dataset.pos || 0);
+    pos = pos || JSON.parse(tile && tile.dataset.pos || 0);
     if (!pos) return;
     var maxPos = window.innerHeight - 54;  // height (42) + margin-top (6) + margin-bottom (6)
     if (pos.bottom >= 0) {

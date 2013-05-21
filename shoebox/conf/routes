@@ -125,7 +125,6 @@ POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarks
 
 GET     /admin/scrape               @com.keepit.controllers.admin.ScraperController.scrape
 GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperController.getScraped(uriId: Id[NormalizedURI])
-GET    /admin/rescrape/byRegex     @com.keepit.controllers.admin.ScraperController.rescrapeByRegex(urlRegex: Option[String] ?= None)
 
 GET     /admin/data/integrity       @com.keepit.controllers.admin.ScraperController.documentIntegrity(page: Int ?= 0, size: Int ?= 50)
 GET     /admin/data/dupe            @com.keepit.controllers.admin.ScraperController.duplicateDocumentDetection
@@ -146,8 +145,11 @@ GET     /admin/article/refreshSearcher @com.keepit.controllers.admin.AdminArticl
 GET     /admin/article/dumpDoc/:uriId  @com.keepit.controllers.admin.AdminArticleIndexerController.dumpLuceneDocument(uriId: Id[NormalizedURI])
 
 POST     /admin/search/spell/buildDict         @com.keepit.controllers.admin.AdminSpellCorrectorController.buildDictionary
-GET     /admin/search/spell        @com.keepit.controllers.admin.AdminSpellCorrectorController.spellController
+GET     /admin/search/spell         @com.keepit.controllers.admin.AdminSpellCorrectorController.spellController
 GET     /admin/search/spell/test-correct  @com.keepit.controllers.admin.AdminSpellCorrectorController.correctSpelling(query: String)
+GET     /admin/search/scrape        @com.keepit.controllers.admin.ScraperController.searchScraper
+GET     /admin/search/scrape/regex  @com.keepit.controllers.admin.ScraperController.rescrapeByRegex(urlRegex: String ?= "", withinHours: Int ?= 8)
+
 
 GET     /admin/uriGraph/reindex     @com.keepit.controllers.admin.AdminURIGraphController.reindex
 GET     /admin/uriGraph/load        @com.keepit.controllers.admin.AdminURIGraphController.load
@@ -232,12 +234,25 @@ GET     /admin/healthcheck/emailErrors    @com.keepit.common.healthcheck.AdminHe
 GET     /admin/healthcheck/errors   @com.keepit.common.healthcheck.AdminHealthController.getErrors()
 GET     /admin/healthcheck/resetErrorCount    @com.keepit.common.healthcheck.AdminHealthController.resetErrorCount()
 
-GET     /admin/labs/rankVsScore     @com.keepit.controllers.admin.AdminSearchLabsController.rankVsScore(q: Option[String] ?= None)
-GET     /admin/labs/rankVsScore.json @com.keepit.controllers.admin.AdminSearchLabsController.rankVsScoreJson(q: Option[String] ?= None)
 GET     /admin/labs/friendMap       @com.keepit.controllers.admin.AdminSearchLabsController.friendMap(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLabsController.friendMapJson(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 
-# INTERNAL ROUTES
+##########################################
+#INTERNAL ROUTES/Shoebox
+##########################################
+
+GET     /internal/shoebox/database/getNormalizedURI  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURI(id: Long)
+GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs
+GET     /internal/shoebox/database/getUsers           @com.keepit.controllers.shoebox.ShoeboxController.getUsers
+GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.shoebox.ShoeboxController.getConnectedUsers(userId: Long)
+POST     /internal/shoebox/database/addBrowsingHistory @com.keepit.controllers.shoebox.ShoeboxController.addBrowsingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int)
+POST    /internal/shoebox/database/addClickingHistory @com.keepit.controllers.shoebox.ShoeboxController.addClickingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int)
+GET     /internal/shoebox/database/addBrowsingHistory @com.keepit.controllers.shoebox.ShoeboxController.getBookmarks(userId: Long)
+
+
+
+
+# INTERNAL ROUTES/Search
 POST    /internal/search/events/resultClicked @com.keepit.controllers.search.SearchEventController.logResultClicked()
 
 GET     /internal/search/uriGraph/info         @com.keepit.controllers.search.URIGraphController.indexInfo()
@@ -268,4 +283,3 @@ POST    /internal/searchConfig/:id/set    @com.keepit.controllers.search.SearchC
 GET     /internal/searchConfig/:id/reset  @com.keepit.controllers.search.SearchConfigController.resetUserConfig(id: Id[User])
 
 GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.SearchController.friendMapJson(userId: Id[User], query: Option[String] ?= None, minKeeps: Option[Int] ?= None)
-GET     /internal/search/search/rankVsScoreJson @com.keepit.controllers.search.SearchController.rankVsScoreJson(query: Option[String] ?= None)

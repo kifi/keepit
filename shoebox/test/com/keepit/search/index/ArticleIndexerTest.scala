@@ -10,6 +10,7 @@ import com.keepit.search.Lang
 import com.keepit.search.MainQueryParserFactory
 import com.keepit.search.phrasedetector._
 import com.keepit.test._
+import com.keepit.inject._
 import org.specs2.mutable._
 import play.api.Play.current
 import play.api.libs.json.Json
@@ -20,6 +21,7 @@ import play.api.test.Helpers._
 import scala.collection.JavaConversions._
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
+import com.keepit.shoebox.ShoeboxServiceClient
 
 class ArticleIndexerTest extends Specification with DbRepos {
 
@@ -29,7 +31,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
     val uriIdArray = new Array[Long](3)
     val parserFactory = new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()))
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    var indexer = new ArticleIndexer(ramDir, config, store, db, uriRepo, null)
+    var indexer = new ArticleIndexer(ramDir, config, store, db, uriRepo, null, inject[ShoeboxServiceClient])
 
     var (uri1, uri2, uri3) = db.readWrite { implicit s =>
       val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith"))
@@ -112,7 +114,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
       indexer.sequenceNumber.value === currentSeqNum
       indexer.numDocs === 3
 
-      indexer = new ArticleIndexer(ramDir, config, store, db, uriRepo, null)
+      indexer = new ArticleIndexer(ramDir, config, store, db, uriRepo, null, inject[ShoeboxServiceClient])
       indexer.sequenceNumber.value === currentSeqNum
     })
 

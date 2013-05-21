@@ -1,6 +1,8 @@
 package com.keepit.search
 
+import com.keepit.search.graph.EdgeAccessor
 import com.keepit.search.graph.URIGraphSearcher
+import com.keepit.search.graph.UserToUriEdgeSet
 import com.keepit.search.graph.UserToUserEdgeSet
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.PersonalizedSearcher
@@ -24,7 +26,6 @@ import org.joda.time.DateTime
 import com.keepit.serializer.SearchResultInfoSerializer
 import com.keepit.search.query.LuceneExplanationExtractor
 import com.keepit.search.query.LuceneScoreNames
-import com.keepit.search.graph.UserToUriEdgeSet
 
 
 class MainSearcher(
@@ -77,12 +78,12 @@ class MainSearcher(
   // initialize user's social graph info
   private[this] val myUriEdges = uriGraphSearcher.myUriEdgeSet
   private[this] val myUris = myUriEdges.destIdLongSet
-  private[this] val myPublicUris = uriGraphSearcher.myPublicUriEdgeSet.destIdLongSet
+  private[this] val myUriEdgeAccessor = myUriEdges.accessor
   private[this] val filteredFriendIds = filter.filterFriends(friendIds)
-  private[this] val friendsUriEdgeSetMap = friendIds.foldLeft(Map.empty[Long, UserToUriEdgeSet]){ (m, f) =>
-    m + (f.id -> uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true))
+  private[this] val friendsUriEdgeAccessors = friendIds.foldLeft(Map.empty[Long, EdgeAccessor[User, NormalizedURI]]){ (m, f) =>
+    m + (f.id -> uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).accessor)
   }
-  private[this] val friendUris = filteredFriendIds.foldLeft(Set.empty[Long]){ (s, f) => s ++ friendsUriEdgeSetMap(f.id).destIdLongSet }
+  private[this] val friendUris = filteredFriendIds.foldLeft(Set.empty[Long]){ (s, f) => s ++ friendsUriEdgeAccessors(f.id).edgeSet.destIdLongSet }
   private[this] val friendlyUris = {
     if (filter.includeMine) friendUris ++ myUris
     else if (filter.includeShared) friendUris
@@ -96,8 +97,8 @@ class MainSearcher(
   val preparationTime = currentDateTime.getMillis() - currentTime
   log.info(s"mainSearcher preparation time: $preparationTime milliseconds")
 
-  private def findSharingUsers(id: Id[NormalizedURI]): UserToUserEdgeSet = {
-    uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id))
+  private def findSharingUsers(id: Long): UserToUserEdgeSet = {
+    uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)))
   }
 
   private def sharingScore(sharingUsers: UserToUserEdgeSet): Float = {
@@ -147,13 +148,13 @@ class MainSearcher(
             val score = scorer.score()
             val newSemanticScore = semanticVectorScoreAccessor.getScore(doc)
             if (friendlyUris.contains(id)) {
-              if (myUris.contains(id)) {
-                myHits.insert(id, score * clickBoost, true, !myPublicUris.contains(id), semanticScore = newSemanticScore)
+              if (myUriEdgeAccessor.seek(id)) {
+                myHits.insert(id, score * clickBoost, score, newSemanticScore, true, !myUriEdgeAccessor.isPublic)
               } else {
-                friendsHits.insert(id, score * clickBoost, false, false, semanticScore = newSemanticScore)
+                friendsHits.insert(id, score * clickBoost, score, newSemanticScore, false, false)
               }
             } else if (filter.includeOthers) {
-              othersHits.insert(id, score * clickBoost, false, false, semanticScore = newSemanticScore)
+              othersHits.insert(id, score * clickBoost, score, newSemanticScore, false, false)
             }
           }
           doc = scorer.nextDoc()
@@ -205,17 +206,16 @@ class MainSearcher(
 
     val threshold = highScore * tailCutting
     val friendStats = FriendStats(friendIds)
-    var numCollectStats = 10
+    var numCollectStats = 20
 
     if (myHits.size > 0) {
       myHits.toRankedIterator.forall{ case (h, rank) =>
-        val id = Id[NormalizedURI](h.id)
-        val sharingUsers = findSharingUsers(id)
+        val sharingUsers = findSharingUsers(h.id)
 
         if (numCollectStats > 0 && sharingUsers.size > 0) {
-          val createdAt = myUriEdges.getCreatedAt(h.id)
+          val createdAt = myUriEdgeAccessor.getCreatedAt(h.id)
           val sharingUserIdSet = sharingUsers.destIdLongSet
-          val earlyKeepersUserIdSet = sharingUserIdSet.filter{ f => friendsUriEdgeSetMap(f).getCreatedAt(h.id) < createdAt }
+          val earlyKeepersUserIdSet = sharingUserIdSet.filter{ f => friendsUriEdgeAccessors(f).getCreatedAt(h.id) < createdAt }
           friendStats.add(sharingUserIdSet, h.score)
           friendStats.add(earlyKeepersUserIdSet, h.score * 0.5f)
           numCollectStats -= 1
@@ -225,7 +225,7 @@ class MainSearcher(
 
         if (score > threshold) {
           h.users = sharingUsers.destIdSet
-          h.scoring = new Scoring(score, score / highScore, bookmarkScore(sharingScore(sharingUsers) + 1.0f), recencyScore(myUriEdges.getCreatedAt(id)))
+          h.scoring = new Scoring(score, score / highScore, bookmarkScore(sharingScore(sharingUsers) + 1.0f), recencyScore(myUriEdgeAccessor.getCreatedAt(h.id)))
           h.score = h.scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost)
           hits.insert(h)
           true
@@ -235,21 +235,21 @@ class MainSearcher(
       }
     }
 
+    var newContent: Option[MutableArticleHit] = None // hold a document most recently introduced to the network
+
     if (friendsHits.size > 0 && filter.includeFriends) {
       val queue = createQueue(numHitsToReturn - min(minMyBookmarks, hits.size))
       hits.discharge(hits.size - minMyBookmarks).foreach{ h => queue.insert(h) }
 
       val normalizedFriendStats = friendStats.normalize
-      var newContent: Option[MutableArticleHit] = None // hold a document most recently introduced to the network
       var newContentScore = 0.5f // one day
       friendsHits.toRankedIterator.forall{ case (h, rank) =>
-        val id = Id[NormalizedURI](h.id)
-        val sharingUsers = findSharingUsers(id)
+        val sharingUsers = findSharingUsers(h.id)
 
         var recencyScoreVal = 0.0f
         if (numCollectStats > 0) {
           val sharingUserIdSet = sharingUsers.destIdLongSet
-          val introducedAt = sharingUserIdSet.map{ f => friendsUriEdgeSetMap(f).getCreatedAt(h.id) }.min // oldest keep time
+          val introducedAt = sharingUserIdSet.map{ f => friendsUriEdgeAccessors(f).getCreatedAt(h.id) }.min // oldest keep time
           recencyScoreVal = recencyScore(introducedAt)
           friendStats.add(sharingUserIdSet, h.score)
           numCollectStats -= 1
@@ -273,9 +273,6 @@ class MainSearcher(
           numCollectStats > 0
         }
       }
-      // insert a new content if any
-      newContent.foreach{ queue.insert(_) }
-
       queue.foreach{ h => hits.insert(h) }
     }
 
@@ -300,11 +297,18 @@ class MainSearcher(
       queue.foreach{ h => hits.insert(h) }
     }
 
-    val hitList = hits.toSortedList
+    var hitList = hits.toSortedList
     hitList.foreach{ h => if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id) }
 
-    val newIdFilter = filter.idFilter ++ hitList.map(_.id)
     val (svVar,svExistVar) = SemanticVariance.svVariance(parsedQuery, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
+
+    // inject a new content if any
+    newContent.foreach { h =>
+      if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id)
+      hitList = (hitList.take(numHitsToReturn - 1) :+ h)
+    }
+
+    val newIdFilter = filter.idFilter ++ hitList.map(_.id)
 
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
 
@@ -313,7 +317,7 @@ class MainSearcher(
     // simple classifier
     val show = if (svVar > 0.17f) false else {
       val isGood = (parsedQuery, personalizedSearcher) match {
-        case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(query.get, hitList, clickBoosts, searcher.get)
+        case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(query.get, hitList, searcher.get)
         case _ => true
       }
       isGood
@@ -330,9 +334,9 @@ class MainSearcher(
         (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = svExistVar, toShow = show)
   }
 
-  private def classify(parsedQuery: Query, hitList: List[MutableArticleHit], clickBoosts: ResultClickTracker.ResultClickBoosts, personalizedSearcher: PersonalizedSearcher) = {
+  private def classify(parsedQuery: Query, hitList: List[MutableArticleHit], personalizedSearcher: PersonalizedSearcher) = {
     def classify(hit: MutableArticleHit) = {
-      clickBoosts(hit.id) > 1.25f || hit.scoring.recencyScore > 0.25f || hit.scoring.textScore > 0.7f || (hit.scoring.textScore >= 0.04f && hit.semanticScore >= 0.28f)
+      (hit.score/hit.luceneScore) > 1.25f || hit.scoring.recencyScore > 0.25f || hit.scoring.textScore > 0.7f || (hit.scoring.textScore >= 0.04f && hit.semanticScore >= 0.28f)
     }
     hitList.take(3).exists(classify(_))
   }
@@ -378,9 +382,9 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit](sz) {
 
   var overflow: MutableArticleHit = null // sorry about the null, but this is necessary to work with lucene's priority queue efficiently
 
-  def insert(id: Long, score: Float, isMyBookmark: Boolean, isPrivate: Boolean, friends: Set[Id[User]] = NO_FRIEND_IDS, bookmarkCount: Int = 0, semanticScore: Float) {
-    if (overflow == null) overflow = new MutableArticleHit(id, score, isMyBookmark, isPrivate, friends, bookmarkCount, null, semanticScore)
-    else overflow(id, score, isMyBookmark, isPrivate, friends, bookmarkCount, semanticScore)
+  def insert(id: Long, score: Float, textScore: Float, semanticScore: Float, isMyBookmark: Boolean, isPrivate: Boolean, friends: Set[Id[User]] = NO_FRIEND_IDS, bookmarkCount: Int = 0) {
+    if (overflow == null) overflow = new MutableArticleHit(id, score, textScore, semanticScore, isMyBookmark, isPrivate, friends, bookmarkCount, null)
+    else overflow(id, score, textScore, semanticScore, isMyBookmark, isPrivate, friends, bookmarkCount)
 
     if (score > highScore) highScore = score
 
@@ -491,15 +495,16 @@ class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmark
 }
 
 // mutable hit object for efficiency
-class MutableArticleHit(var id: Long, var score: Float, var isMyBookmark: Boolean, var isPrivate: Boolean, var users: Set[Id[User]], var bookmarkCount: Int, var scoring: Scoring, var semanticScore: Float) {
-  def apply(newId: Long, newScore: Float, newIsMyBookmark: Boolean, newIsPrivate: Boolean, newUsers: Set[Id[User]], newBookmarkCount: Int, newSemanticScore: Float) = {
+class MutableArticleHit(var id: Long, var score: Float, var luceneScore: Float, var semanticScore: Float, var isMyBookmark: Boolean, var isPrivate: Boolean, var users: Set[Id[User]], var bookmarkCount: Int, var scoring: Scoring) {
+  def apply(newId: Long, newScore: Float, newTextScore: Float, newSemanticScore: Float, newIsMyBookmark: Boolean, newIsPrivate: Boolean, newUsers: Set[Id[User]], newBookmarkCount: Int) = {
     id = newId
     score = newScore
+    luceneScore = newTextScore
+    semanticScore = newSemanticScore
     isMyBookmark = newIsMyBookmark
     isPrivate = newIsPrivate
     users = newUsers
     bookmarkCount = newBookmarkCount
-    semanticScore = newSemanticScore
   }
   def toArticleHit(friendStats: FriendStats) = {
     val sortedUsers = users.toSeq.sortBy{ id => - friendStats.score(id) }

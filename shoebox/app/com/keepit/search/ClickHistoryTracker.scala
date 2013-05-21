@@ -7,20 +7,14 @@ import com.keepit.search.query.QueryHash
 import java.io.File
 import com.keepit.model.ClickHistory
 import com.keepit.common.db.slick._
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.common.logging.Logging
 
-class ClickHistoryTracker (tableSize: Int, numHashFuncs: Int, minHits: Int, repo: ClickHistoryRepo, db: Database) {
+class ClickHistoryTracker (tableSize: Int, numHashFuncs: Int, minHits: Int, repo: ClickHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient) extends Logging {
 
   def add(userId: Id[User], uriId: Id[NormalizedURI]) = {
-    val filter = getMultiHashFilter(userId)
-    filter.put(uriId.id)
-
-    db.readWrite { implicit session =>
-      repo.save(repo.getByUserId(userId) match {
-        case Some(h) => h.withFilter(filter.getFilter)
-        case None =>
-          ClickHistory(userId = userId, tableSize = tableSize, filter = filter.getFilter, numHashFuncs = numHashFuncs, minHits = minHits)
-      })
-    }
+    log.info(s"adding clicking browsing for userId = ${userId.id}, uriId = ${uriId.id}")
+    shoeboxClient.addClickingHistory(userId.id, uriId.id, tableSize, numHashFuncs, minHits)
   }
 
   def getMultiHashFilter(userId: Id[User]) = {

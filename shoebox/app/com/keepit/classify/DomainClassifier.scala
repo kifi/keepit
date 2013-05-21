@@ -16,6 +16,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.net.HttpClient
 import com.keepit.common.strings._
+import com.keepit.common.net.NonOKResponseException
 
 import akka.pattern.ask
 import play.api.libs.concurrent.Execution.Implicits._
@@ -39,6 +40,7 @@ private[classify] class DomainClassificationActor @Inject() (
   private def getTagNames(url: String): Future[Seq[DomainTagName]] = {
     servers.tail.foldLeft(getTagNames(servers.head, url))((result, nextServer) => result recoverWith {
       case _: ConnectException => getTagNames(nextServer, url)
+      case _: NonOKResponseException => getTagNames(nextServer, url)
     })
   }
 
@@ -49,7 +51,8 @@ private[classify] class DomainClassificationActor @Inject() (
     val md5 = md.digest(KEY + guid + KEY)
     val id = encodeHex(md5).toLowerCase
     val encodedUrl = URLEncoder.encode(url, UTF8)
-    client.getFuture(s"http://$server/url.php?version=w11&guid=$guid&id=$id&url=$encodedUrl").map { resp =>
+    
+    client.getFuture(s"http://$server/url.php?version=w11&guid=$guid&id=$id&url=$encodedUrl", client.ignoreConnectionFailure).map { resp =>
       (resp.body.split("~", 2).toList match {
         case ("FM" | "FR") :: tagString :: Nil =>
           // response is comma separated, but includes commas inside parentheses

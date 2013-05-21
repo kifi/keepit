@@ -275,6 +275,10 @@ const socketHandlers = {
       timeNotificationsLastSeen = time;
     }
   },
+  all_notifications_visited: function(id, time) {
+    api.log("[socket:all_notifications_visited]", id, time);
+    markAllNoticesVisited(id, time);
+  },
   comment: function(nUri, c) {
     api.log("[socket:comment]", c);
     var d = pageData[nUri];
@@ -412,7 +416,7 @@ api.port.on({
       api.log("[setPrivate] response:", o);
     });
     pageData[tab.nUri].tabs.forEach(function(tab) {
-      api.tabs.emit("kept", {kept: priv ? "private" : "public"});
+      api.tabs.emit(tab, "kept", {kept: priv ? "private" : "public"});
     });
   },
   keeper_shown: function(_, _, tab) {
@@ -533,7 +537,8 @@ api.port.on({
     function reply() {
       respond({
         notifications: notifications.slice(0, NOTIFICATION_BATCH_SIZE),
-        timeLastSeen: timeNotificationsLastSeen.toISOString()});
+        timeLastSeen: timeNotificationsLastSeen.toISOString(),
+        numNotVisited: numNotificationsNotVisited});
     }
   },
   old_notifications: function(timeStr, respond) {
@@ -570,6 +575,10 @@ api.port.on({
       timeNotificationsLastSeen = time;
       socket.send(["set_last_notify_read_time", t]);
     }
+  },
+  all_notifications_visited: function(id, time) {
+    markAllNoticesVisited(id, time);
+    socket.send(["set_all_notifications_visited", id]);
   },
   session: function(_, respond) {
     respond(session);
@@ -616,10 +625,7 @@ function insertNewNotification(n) {
 
   if (notificationNotVisited.test(n.state)) {  // may have been visited before arrival
     var d = pageData[n.details.page];
-    var timeLastRead =
-      n.category == "comment" ? d && d.lastCommentRead :
-      n.category == "message" ? d && d.lastMessageRead[n.details.locator.split("/")[2]] : 0;
-    if (new Date(n.details.createdAt) <= new Date(timeLastRead || 0)) {
+    if (d && new Date(n.details.createdAt) <= getTimeLastRead(n, d)) {
       n.state = "visited";
     } else {
       numNotificationsNotVisited++;
@@ -655,8 +661,46 @@ function markNoticesVisited(category, nUri, id, timeStr, locator) {
     }
   });
   tabsShowingNotificationsPane.forEach(function(tab) {
-    api.tabs.emit(tab, "notifications_visited", {category: category, nUri: nUri, time: timeStr, locator: locator});
+    api.tabs.emit(tab, "notifications_visited", {
+      category: category,
+      nUri: nUri,
+      time: timeStr,
+      locator: locator,
+      numNotVisited: numNotificationsNotVisited});
   });
+}
+
+function markAllNoticesVisited(id, timeStr) {  // id and time of most recent notification to mark
+  var time = new Date(timeStr);
+  for (var i = 0; i < notifications.length; i++) {
+    var n = notifications[i];
+    if ((n.id == id || new Date(n.time) <= time) && notificationNotVisited.test(n.state)) {
+      n.state = "visited";
+      var d = pageData[n.details.page];
+      if (d && new Date(n > getTimeLastRead(n, d))) {
+        switch (n.category) {
+          case "comment":
+            d.lastCommentRead = n.details.createdAt;
+            tellTabsIfCountChanged(d, "c", commentCount(d));  // tabs at this uri
+            break;
+          case "message":
+            d.lastMessageRead[n.details.locator.split("/")[2]] = n.details.createdAt;
+            tellTabsIfCountChanged(d, "m", messageCount(d));
+            break;
+        }
+      }
+    }
+  }
+  numNotificationsNotVisited = notifications.filter(function(n) {
+    return notificationNotVisited.test(n.state);
+  }).length;
+  tabsShowingNotificationsPane.forEach(function(tab) {
+    api.tabs.emit(tab, "all_notifications_visited", {
+      id: id,
+      time: timeStr,
+      numNotVisited: numNotificationsNotVisited});
+  });
+  tellTabsNoticeCountIfChanged();  // visible tabs
 }
 
 function decrementNumNotificationsNotVisited(n) {
@@ -666,6 +710,12 @@ function decrementNumNotificationsNotVisited(n) {
   if (numNotificationsNotVisited > 0 || ~session.experiments.indexOf("admin")) {  // exposing -1 to admins to help debug
     numNotificationsNotVisited--;
   }
+}
+
+function getTimeLastRead(n, d) {
+  return new Date(
+    n.category == "comment" ? d.lastCommentRead :
+    n.category == "message" ? d.lastMessageRead[n.details.locator.split("/")[2]] : 0);
 }
 
 function createDeepLinkListener(locator, tabId) {

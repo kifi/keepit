@@ -2,7 +2,7 @@
 // @require styles/google_inject.css
 // @require styles/friend_card.css
 // @require scripts/lib/jquery-1.8.2.min.js
-// @require scripts/lib/jquery-showhover.js
+// @require scripts/lib/jquery-bindhover.js
 // @require scripts/lib/mustache-0.7.1.min.js
 // @require scripts/api.js
 // @require scripts/render.js
@@ -364,42 +364,37 @@ api.log("[google_inject]");
     }).on("click", ".kifi-res-debug", function(e) {
       e.stopPropagation();
       location.href = response.admBaseUri + "/admin/search/results/" + response.uuid;
-    }).on("mouseenter", ".kifi-face.kifi-friend", function() {
-      var $a = $(this).showHover({
-        hideDelay: 600,
-        click: "toggle",
-        create: function(callback) {
-          var i = $a.closest("li.g").prevAll("li.g").length, j = $a.prevAll(".kifi-friend").length;
-          var friend = response.hits[i].users[j];
-          render("html/friend_card.html", {
-            networkIds: friend.networkIds,
-            name: friend.firstName + " " + friend.lastName,
-            id: friend.id,
-            iconsUrl: api.url("images/social_icons.png")
-          }, callback);
-        }});
-    }).on("mouseenter", ".kifi-res-friends", function(e) {
-      if (e.target !== this) return;
-      var $a = $(this).showHover({
-        click: "toggle",
-        create: function(callback) {
-          var i = $a.closest("li.g").prevAll("li.g").length;
-          render("html/search/friends.html", {friends: response.hits[i].users}, function(html) {
-            callback(html, function(w) {this.style.left = ($a[0].offsetWidth - w) / 2 + "px"});
-          });
-        }});
-    }).on("mouseenter", ".kifi-chatter", function() {
-      var $ch = $(this).showHover({
-        hideDelay: 600,
-        click: "toggle",
-        create: function(callback) {
-          var n = $ch.data("n");
-          render("html/search/chatter.html", {
-            numComments: n[0],
-            numMessages: n[1],
-            pluralize: function() {return pluralLambda}
-          }, callback);
-        }});
+    }).bindHover(".kifi-face.kifi-friend", function(configureHover) {
+      var $a = $(this);
+      var i = $a.closest("li.g").prevAll("li.g").length;
+      var j = $a.prevAll(".kifi-friend").length;
+      var friend = response.hits[i].users[j];
+      render("html/friend_card.html", {
+        networkIds: friend.networkIds,
+        name: friend.firstName + " " + friend.lastName,
+        id: friend.id,
+        iconsUrl: api.url("images/social_icons.png")
+      }, function(html) {
+        configureHover(html, {hideDelay: 600, click: "toggle"});
+      });
+    }).bindHover(".kifi-res-friends", function(configureHover) {
+      var $a = $(this), i = $a.closest("li.g").prevAll("li.g").length;
+      render("html/search/friends.html", {friends: response.hits[i].users}, function(html) {
+        configureHover(html, {
+          click: "toggle",
+          position: function(w) {
+            this.style.left = ($a[0].offsetWidth - w) / 2 + "px";
+          }});
+      });
+    }).bindHover(".kifi-chatter", function(configureHover) {
+      var n = $(this).data("n");
+      render("html/search/chatter.html", {
+        numComments: n[0],
+        numMessages: n[1],
+        pluralize: function() {return pluralLambda}
+      }, function(html) {
+        configureHover(html, {hideDelay: 600, click: "toggle"});
+      });
     }).on("click", ".kifi-chatter-deeplink", function() {
       api.port.emit("add_deep_link_listener", $(this).data("locator"));
       location.href = $(this).closest("li.g").find("h3.r a")[0].href;

@@ -46,6 +46,7 @@ object URIGraphFields {
 
 trait URIGraph {
   def update(): Int
+  def update(userId: Id[User]): Int
   def getURIGraphSearcher(userId: Option[Id[User]] = None): URIGraphSearcher
   def close(): Unit
 
@@ -77,13 +78,18 @@ class URIGraphImpl(
     cnt
   }
 
-  def update(): Int = {
+  def update(): Int = update{
+    db.readOnly { implicit s =>
+      bookmarkRepo.getUsersChanged(sequenceNumber)
+    }
+  }
+
+  def update(userId: Id[User]): Int = update{ Seq((userId, SequenceNumber.ZERO)) }
+
+  private def update(usersChanged: => Seq[(Id[User], SequenceNumber)]): Int = {
     log.info("updating URIGraph")
     try {
       var cnt = 0
-      val usersChanged = db.readOnly { implicit s =>
-        bookmarkRepo.getUsersChanged(sequenceNumber)
-      }
       indexDocuments(usersChanged.iterator.map(buildIndexable), commitBatchSize){ commitBatch =>
         cnt += commitCallback(commitBatch)
       }
@@ -119,13 +125,15 @@ class URIGraphImpl(
       val (publicListBytes, privateListBytes) = URIList.toByteArrays(bookmarks)
       val publicListField = buildURIListField(URIGraphFields.publicListField, publicListBytes)
       val privateListField = buildURIListField(URIGraphFields.privateListField, privateListBytes)
-      val uri = buildURIIdField(bookmarks)
-      doc.add(publicListField)
-      doc.add(privateListField)
-      doc.add(uri)
-
       val publicList = URIList(publicListBytes)
       val privateList = URIList(privateListBytes)
+
+      doc.add(publicListField)
+      doc.add(privateListField)
+
+      val uri = buildURIIdField(publicList)
+      doc.add(uri)
+
       val titles = buildBookmarkTitleList(publicList.ids, privateList.ids, bookmarks, Lang("en")) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
 
       val title = buildLineField(URIGraphFields.titleField, titles){ (fieldName, text, lang) =>
@@ -167,8 +175,8 @@ class URIGraphImpl(
       new BinaryDocValuesField(field, new BytesRef(uriListBytes))
     }
 
-    private def buildURIIdField(bookmarks: Seq[Bookmark]) = {
-      buildIteratorField(URIGraphFields.uriField, bookmarks.iterator.filter(bm => !bm.isPrivate)){ bm => bm.uriId.toString }
+    private def buildURIIdField(uriList: URIList) = {
+      buildIteratorField(URIGraphFields.uriField, uriList.ids.iterator){ uriId => uriId.toString }
     }
 
     private def buildBookmarkTitleList(publicIds: Array[Long], privateIds: Array[Long], bookmarks: Seq[Bookmark], preferedLang: Lang): ArrayBuffer[(Int, String, Lang)] = {
@@ -210,5 +218,5 @@ class URIGraphImpl(
   }
 }
 
-class URIGraphUnknownVersionException(msg: String) extends Exception(msg)
+class URIGraphUnsupportedVersionException(msg: String) extends Exception(msg)
 

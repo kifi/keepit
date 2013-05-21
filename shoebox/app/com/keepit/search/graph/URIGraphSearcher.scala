@@ -58,9 +58,9 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) extends L
         if (publicList.size > 0) {
           UserToUriEdgeSet(sourceId, publicList, privateList)
         } else {
-          UserToUriEdgeSet(sourceId, privateList)
+          UserToUriEdgeSet(sourceId, privateList, false)
         }
-      case None => UserToUriEdgeSet(sourceId, publicList)
+      case None => UserToUriEdgeSet(sourceId, publicList, true)
     }
   }
 
@@ -129,18 +129,6 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) extends L
         if (ref.length > 0) {
           return URIList(ref.bytes, ref.offset, ref.length)
         }
-      } else {
-        // backward compatibility
-        var docValues = reader.getBinaryDocValues(userField)
-        if (docValues != null) {
-          var ref = new BytesRef()
-          docValues.get(userDocId, ref)
-          if (ref.length > 0) {
-            val old = URIList(ref.bytes, ref.offset, ref.length).asInstanceOf[URIListOld]
-            if (field == publicListField) return old
-            else return old.getPrivateURIList
-          }
-        }
       }
     }
     URIList.empty
@@ -194,17 +182,19 @@ object UserToUserEdgeSet{
   }
 }
 
-abstract class UserToUriEdgeSet(override val sourceId: Id[User]) extends EdgeSet[User, NormalizedURI] with CreatedAt[NormalizedURI]
+abstract class UserToUriEdgeSet(override val sourceId: Id[User]) extends EdgeSet[User, NormalizedURI]
 
 object UserToUriEdgeSet {
-  def apply(sourceId: Id[User], uriList: URIList): UserToUriEdgeSet = {
+  def apply(sourceId: Id[User], uriList: URIList, isPublicEdgeSet: Boolean): UserToUriEdgeSet = {
     val set = LongArraySet.fromSorted(uriList.ids)
 
     new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithCreatedAt[User, NormalizedURI] {
       override protected val longArraySet = set
-      override protected def createdAt(idx:Int): Long = {
-        URIList.unitToMillis(uriList.createdAt(idx))
+      override protected def createdAtByIndex(idx:Int): Long = {
+        val datetime = uriList.createdAt(idx)
+        URIList.unitToMillis(datetime)
       }
+      override protected def isPublicByIndex(idx: Int): Boolean = isPublicEdgeSet
     }
   }
 
@@ -212,18 +202,19 @@ object UserToUriEdgeSet {
     val publicIds = publicList.ids
     val privateIds = privateList.ids
 
-    if (publicIds.length == 0) apply(sourceId, privateList)
-    else if (privateIds.length == 0) apply(sourceId, publicList)
+    if (publicIds.length == 0) apply(sourceId, privateList, false)
+    else if (privateIds.length == 0) apply(sourceId, publicList, true)
     else {
       val set = LongArraySet.from(concat(publicIds, privateIds))
       val pubListSize = publicIds.length
 
       new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithCreatedAt[User, NormalizedURI] {
         override protected val longArraySet = set
-        override protected def createdAt(idx:Int): Long = {
+        override protected def createdAtByIndex(idx:Int): Long = {
           val datetime = if (idx < pubListSize) publicList.createdAt(idx) else privateList.createdAt(idx - pubListSize)
           URIList.unitToMillis(datetime)
         }
+        override protected def isPublicByIndex(idx: Int): Boolean = (idx < pubListSize)
       }
     }
   }
@@ -237,10 +228,11 @@ object UserToUriEdgeSet {
     val pubListSize = publicList.size
     new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithCreatedAt[User, NormalizedURI] {
       override protected val longArraySet = set
-      override protected def createdAt(idx:Int) = {
+      override protected def createdAtByIndex(idx:Int): Long = {
         val datetime = if (idx < pubListSize) publicList.createdAt(idx) else privateList.createdAt(idx - pubListSize)
         URIList.unitToMillis(datetime)
       }
+      override protected def isPublicByIndex(idx: Int): Boolean = (idx < pubListSize)
     }
   }
 

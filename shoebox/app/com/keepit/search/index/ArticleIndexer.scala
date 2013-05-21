@@ -11,25 +11,31 @@ import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.Article
 import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
+import com.keepit.shoebox.ShoeboxServiceClient
 import java.io.StringReader
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.Version
 import com.keepit.search.SemanticVectorBuilder
 import com.google.inject.Inject
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import scala.util.{Success, Failure}
 
 object ArticleIndexer {
   private[this] val toBeDeletedStates = Set[State[NormalizedURI]](ACTIVE, INACTIVE, SCRAPE_WANTED, UNSCRAPABLE)
   def shouldDelete(uri: NormalizedURI): Boolean = toBeDeletedStates.contains(uri.state)
 }
 
-class ArticleIndexer (
+class ArticleIndexer @Inject() (
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
     articleStore: ArticleStore,
     db: Database,
     repo: NormalizedURIRepo,
-    healthcheckPlugin: HealthcheckPlugin)
+    healthcheckPlugin: HealthcheckPlugin,
+    shoeboxClient: ShoeboxServiceClient)
   extends Indexer[NormalizedURI](indexDirectory, indexWriterConfig) {
 
   val commitBatchSize = 100
@@ -60,7 +66,7 @@ class ArticleIndexer (
   }
 
   def buildIndexable(id: Id[NormalizedURI]): ArticleIndexable = {
-    val uri = db.readOnly { implicit c => repo.get(id) }
+    val uri = Await.result(shoeboxClient.getNormalizedURI(id.id), 5 seconds)
     buildIndexable(uri)
   }
 

@@ -17,15 +17,18 @@ import play.api.mvc.Action
 import scala.collection.mutable.ArrayBuffer
 import scala.math.{abs, sqrt}
 import views.html
+import com.keepit.shoebox.ShoeboxServiceClient
+import scala.concurrent.ExecutionContext.Implicits.global
+import com.keepit.model.User
+import scala.concurrent.Await
+import scala.concurrent.Future
+import scala.concurrent.duration._
+
 
 class SearchController @Inject()(
-    db: Database,
-    userConnectionRepo: UserConnectionRepo,
     searchConfigManager: SearchConfigManager,
-    userRepo: UserRepo,
-    bookmarkRepo: BookmarkRepo,
-    normUriRepo: NormalizedURIRepo,
-    searcherFactory: MainSearcherFactory
+    searcherFactory: MainSearcherFactory,
+    shoeboxClient: ShoeboxServiceClient
   ) extends SearchServiceController {
 
   def searchKeeps(userId: Id[User], query: String) = Action { request =>
@@ -35,51 +38,20 @@ class SearchController @Inject()(
   }
 
   def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
-    val friendIds = db.readOnly { implicit s =>
-      userConnectionRepo.getConnectedUsers(userId)
-    }
+    val friendIdsFuture = shoeboxClient.getConnectedUsers(userId.id)
+    val friendIds = Await.result(friendIdsFuture, 5 seconds)
     val (config, _) = searchConfigManager.getConfig(userId, query)
 
     val searcher = searcherFactory(userId, friendIds, SearchFilter.default(), config)
     val explanation = searcher.explain(query, uriId)
-
     Ok(html.admin.explainResult(query, userId, uriId, explanation))
-  }
-
-  def rankVsScoreJson(q: Option[String] = None) = Action {
-    val topN = 50
-    val fakeUserId = Id[User](-1)
-    val config = searchConfigManager.defaultConfig
-    val searcher = searcherFactory(fakeUserId, Set.empty[Id[User]], SearchFilter.default(), config)
-    val hits = new HitQueue(topN)
-    val nullClickBoost = new ResultClickBoosts{ def apply(value: Long) = 1.0f }
-    q.foreach{ query =>
-      val (myHits, friendsHits, othersHits, _, _) = searcher.searchText(query, 20, nullClickBoost)(Lang("en"))
-      myHits.foreach{ h => hits.insertWithOverflow(new MutableHit(h.id, h.score))}
-      friendsHits.foreach{ h => hits.insertWithOverflow(new MutableHit(h.id, h.score))}
-      othersHits.foreach{ h => hits.insertWithOverflow(new MutableHit(h.id, h.score))}
-    }
-    val data = db.readOnly { implicit s =>
-      var data = List.empty[JsArray]
-      while (hits.size > 0) {
-        val top = hits.top
-        val uri = normUriRepo.get(Id[NormalizedURI](top.id))
-        var title = uri.title.map(_.trim).getOrElse("")
-        if (title == "") title = uri.url
-        data = JsArray(Seq(JsNumber(hits.size), JsNumber(top.score), JsString(title)))::data
-        hits.pop
-      }
-      data
-    }
-    Ok(JsArray(data))
   }
 
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]) = Action { implicit request =>
     val data = new ArrayBuffer[JsArray]
     q.foreach{ q =>
-      val friendIds = db.readOnly { implicit s =>
-        userConnectionRepo.getConnectedUsers(userId)
-      }
+      val friendIdsFuture = shoeboxClient.getConnectedUsers(userId.id)
+      val friendIds = Await.result(friendIdsFuture, 5 seconds)
       val allUserIds = (friendIds + userId).toArray
 
       val searcher = searcherFactory.semanticVectorSearcher()
@@ -116,11 +88,14 @@ class SearchController @Inject()(
             if (n == 0 || n.isNaN()) 1.0 else n
           }
 
-          db.readOnly { implicit s =>
-            (0 until size).map{ i =>
-              val user = userRepo.get(userIndex(i))
-              data += JsArray(Seq(JsNumber(x(i)/norm), JsNumber(y(i)/norm), JsString("%s %s".format(user.firstName, user.lastName))))
-            }
+          val positionMap = (0 until size).foldLeft(Map.empty[Id[User],(Double,Double)]){ (m,i) =>
+            m + (userIndex(i) -> (x(i)/norm, y(i)/norm))
+          }
+
+          val usersFuture = shoeboxClient.getUsers(userIndex.map(_.id))
+          Await.result(usersFuture, 5 seconds).foreach { user =>
+              val (px,py) = positionMap(user.id.get)
+              data += JsArray(Seq(JsNumber(px), JsNumber(py), JsString("%s %s".format(user.firstName, user.lastName))))
           }
         } catch {
           case e: ArrayIndexOutOfBoundsException => // ignore. not enough eigenvectors
