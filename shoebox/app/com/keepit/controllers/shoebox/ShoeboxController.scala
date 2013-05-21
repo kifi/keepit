@@ -21,6 +21,8 @@ import play.api.libs.json.JsNull
 import com.keepit.model.BrowsingHistory
 import com.keepit.model.ClickHistoryRepo
 import com.keepit.model.ClickHistory
+import com.keepit.common.db.SequenceNumber
+import play.api.libs.json._
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -114,6 +116,15 @@ class ShoeboxController @Inject() (
     }.map{BookmarkSerializer.bookmarkSerializer.writes}
 
     Ok(JsArray(bookmarks))
+  }
+
+  def getUsersChanged(seqNum: Long) = Action { request =>
+    val changed = db.readOnly { implicit s =>
+      bookmarkRepo.getUsersChanged(SequenceNumber(seqNum))
+    } map{ case(userId, seqNum) =>
+      Json.obj( "id" -> userId.id, "seqNum" -> seqNum.value)
+    }
+    Ok(JsArray(changed))
   }
 
 }

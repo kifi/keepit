@@ -15,9 +15,9 @@ import play.api.libs.json.JsNull
 import play.api.libs.json.JsValue
 import play.api.mvc.Action
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import com.google.inject.Singleton
 import com.google.inject.Inject
+import com.keepit.common.db.SequenceNumber
 
 
 trait ShoeboxServiceClient extends ServiceClient {
@@ -29,6 +29,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def addBrowsingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit
   def addClickingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit
   def getBookmark(userId: Long): Future[Bookmark]
+  def getUsersChanged(seqNum: SequenceNumber): Future[Seq[(Id[User], SequenceNumber)]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -65,6 +66,16 @@ class ShoeboxServiceClientImpl @Inject() (override val host: String, override va
 
   def getBookmark(userId: Long): Future[Bookmark] = {
     ???
+  }
+
+  def getUsersChanged(seqNum: SequenceNumber): Future[Seq[(Id[User], SequenceNumber)]] = {
+    call(routes.ShoeboxController.getUsersChanged(seqNum.value)).map{ r =>
+      r.json.as[JsArray].value.map{ json =>
+        val id = (json \ "id").asOpt[Long].get
+        val seqNum = (json \ "seqNum").asOpt[Long].get
+        (Id[User](id), SequenceNumber(seqNum))
+      }
+    }
   }
 }
 

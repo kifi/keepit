@@ -61,7 +61,7 @@ class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplica
   def withFakePersistEvent() = overrideWith(FakePersistEventModule())
   def withFakeCache() = overrideWith(FakeCacheModule())
   def withS3DevModule() = overrideWith(new S3DevModule())
-
+  def withShoeboxServiceModule() = overrideWith(ShoeboxServiceModule())
   def overrideWith(model: Module): TestApplication =
     new TestApplication(new TestGlobal(Modules.`override`(global.modules: _*).`with`(model)))
 }
@@ -121,10 +121,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     bind[HealthcheckPlugin].to[FakeHealthcheck]
     bind[SlickSessionProvider].to[TestSlickSessionProvider]
 
-    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
-    listenerBinder.addBinding().to(classOf[ResultClickedListener])
-    listenerBinder.addBinding().to(classOf[UsefulPageListener])
-    listenerBinder.addBinding().to(classOf[SliderShownListener])
+
   }
 
   private def dbInfoFromApplication(): DbInfo = TestDbInfo.dbInfo
@@ -181,15 +178,9 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   def sliderHistoryTracker(sliderHistoryRepo: SliderHistoryRepo, db: Database): SliderHistoryTracker =
     new SliderHistoryTracker(sliderHistoryRepo, db, -1, -1, -1)
 
-  @Singleton
-  @Provides
-  def shoeboxServiceClient: ShoeboxServiceClient = new ShoeboxServiceClientImpl(null, -1, null, inject[ShoeboxCacheProvider])
 
 
-  @Provides
-  @Singleton
-  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient): BrowsingHistoryTracker =
-    new BrowsingHistoryTracker(-1, -1, -1, browsingHistoryRepo, db, shoeboxClient)
+
 
   @Provides
   @Singleton
@@ -268,6 +259,26 @@ class FakeScraperPlugin() extends ScraperPlugin {
   def scrape() = Seq()
   def asyncScrape(uri: NormalizedURI) =
     future { throw new Exception("Not Implemented") }
+}
+
+case class ShoeboxServiceModule() extends ScalaModule {
+  override def configure(): Unit = {
+    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
+    listenerBinder.addBinding().to(classOf[ResultClickedListener])
+    listenerBinder.addBinding().to(classOf[UsefulPageListener])
+    listenerBinder.addBinding().to(classOf[SliderShownListener])
+  }
+
+  @Singleton
+  @Provides
+  def shoeboxServiceClient(httpClient: HttpClient): ShoeboxServiceClient = new ShoeboxServiceClientImpl(null, -1, httpClient, inject[ShoeboxCacheProvider])
+
+  @Provides
+  @Singleton
+  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient): BrowsingHistoryTracker =
+    new BrowsingHistoryTracker(-1, -1, -1, browsingHistoryRepo, db, shoeboxClient)
+
+
 }
 
 case class TestActorSystemModule(system: ActorSystem) extends ScalaModule {

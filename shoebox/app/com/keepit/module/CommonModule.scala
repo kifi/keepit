@@ -50,9 +50,9 @@ class CommonModule extends ScalaModule with Logging {
     bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped]
 
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
-    listenerBinder.addBinding().to(classOf[ResultClickedListener])
-    listenerBinder.addBinding().to(classOf[UsefulPageListener])
-    listenerBinder.addBinding().to(classOf[SliderShownListener])
+//    listenerBinder.addBinding().to(classOf[ResultClickedListener])
+//    listenerBinder.addBinding().to(classOf[UsefulPageListener])
+//    listenerBinder.addBinding().to(classOf[SliderShownListener])
     listenerBinder.addBinding().to(classOf[SearchUnloadListener])
   }
 

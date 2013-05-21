@@ -22,6 +22,9 @@ import com.keepit.search.index.{DefaultAnalyzer, Indexable, Indexer, IndexError}
 import com.keepit.search.index.Indexable.IteratorTokenStream
 import com.keepit.search.line.LineField
 import com.keepit.search.line.LineFieldBuilder
+import com.keepit.shoebox.ShoeboxServiceClient
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 object URIGraphFields {
   val userField = "usr"
@@ -59,7 +62,8 @@ class URIGraphImpl(
     indexWriterConfig: IndexWriterConfig,
     decoders: Map[String, FieldDecoder],
     bookmarkRepo: BookmarkRepo,
-    db: Database)
+    db: Database,
+    shoeboxClient: ShoeboxServiceClient)
   extends Indexer[User](indexDirectory, indexWriterConfig, decoders) with URIGraph {
 
   val commitBatchSize = 100
@@ -79,9 +83,14 @@ class URIGraphImpl(
   }
 
   def update(): Int = update{
-    db.readOnly { implicit s =>
-      bookmarkRepo.getUsersChanged(sequenceNumber)
-    }
+    Await.result(shoeboxClient.getUsersChanged(sequenceNumber), 5 seconds)
+//    println("\n\n=====================\n\n")
+//    val rv = db.readOnly { implicit s =>
+//      bookmarkRepo.getUsersChanged(sequenceNumber)
+//    }
+//    println("seqNum = " + sequenceNumber.value)
+//    rv.foreach{case (id, seqNum) => println("userId = " + id.id, "seqNum = " + seqNum.value)}
+//    rv
   }
 
   def update(userId: Id[User]): Int = update{ Seq((userId, SequenceNumber.ZERO)) }
