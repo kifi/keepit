@@ -19,6 +19,12 @@ import com.keepit.search.MultiHashFilter
 import com.keepit.model.BrowsingHistory
 import com.keepit.model.ClickHistoryRepo
 import com.keepit.model.ClickHistory
+import com.keepit.common.mail.LocalPostOffice
+import play.api.libs.json.Json
+import com.keepit.common.mail.ElectronicMail
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.common.healthcheck.Healthcheck
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -27,11 +33,23 @@ class ShoeboxController @Inject() (
   bookmarkRepo: BookmarkRepo,
   browsingHistoryRepo: BrowsingHistoryRepo,
   clickingHistoryRepo: ClickHistoryRepo,
-  normUriRepo: NormalizedURIRepo)
+  normUriRepo: NormalizedURIRepo,
+  postOffice: LocalPostOffice,
+  healthcheckPlugin: HealthcheckPlugin)
   extends ShoeboxServiceController with Logging {
   
   def sendMail = Action(parse.json) { request =>
-    Ok("true")
+    Json.fromJson[ElectronicMail](request.body).asOpt match {
+      case Some(mail) =>
+        db.readWrite { implicit session =>
+          postOffice.sendMail(mail)
+        }
+        Ok("true")
+      case None =>
+        val e = new Exception("Unable to parse email")
+        healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some("Unable to parse: " + request.body.toString)))
+        Ok("false")
+    } 
   }
 
   def getNormalizedURI(id: Long) = Action {

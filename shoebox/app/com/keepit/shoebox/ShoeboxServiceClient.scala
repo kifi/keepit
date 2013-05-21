@@ -42,7 +42,7 @@ class ShoeboxServiceClientImpl @Inject() (override val host: String, override va
     extends ShoeboxServiceClient {
   
   def sendMail(email: ElectronicMail): Future[Boolean] = {
-    call(routes.ShoeboxController.sendMail()).map(r => r.body.toBoolean)
+    call(routes.ShoeboxController.sendMail(), Json.toJson(email)).map(r => r.body.toBoolean)
   }
 
   def getUsers(ids: Seq[Long]): Future[Seq[User]] = {
