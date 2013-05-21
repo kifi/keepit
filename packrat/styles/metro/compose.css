@@ -92,6 +92,7 @@ a.kifi-compose-submit.kifi-active {
 
 body.kifi-snapshot-root {
   position: relative; /* replace viewport as absolute positioning root */
+  overflow: visible;
 }
 div.kifi-snapshot-glass {
   position: absolute;
