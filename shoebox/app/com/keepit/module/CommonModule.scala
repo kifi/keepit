@@ -46,14 +46,6 @@ class CommonModule extends ScalaModule with Logging {
 
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
-
-    bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped]
-
-    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
-//    listenerBinder.addBinding().to(classOf[ResultClickedListener])
-//    listenerBinder.addBinding().to(classOf[UsefulPageListener])
-//    listenerBinder.addBinding().to(classOf[SliderShownListener])
-    listenerBinder.addBinding().to(classOf[SearchUnloadListener])
   }
 
   @Singleton
@@ -61,20 +53,6 @@ class CommonModule extends ScalaModule with Logging {
   def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
     def register() = Node("me")
     def isLeader() = true
-  }
-
-  @Singleton
-  @Provides
-  def searchUnloadProvider(
-    db: Database,
-    userRepo: UserRepo,
-    normalizedURIRepo: NormalizedURIRepo,
-    persistEventProvider: Provider[PersistEventPlugin],
-    store: MongoEventStore,
-    searchClient: SearchServiceClient,
-    clock: Clock,
-    fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
-    new SearchUnloadListenerImpl(db, userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, clock, fortyTwoServices)
   }
 
   @Singleton

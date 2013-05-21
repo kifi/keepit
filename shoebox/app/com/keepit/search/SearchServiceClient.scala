@@ -11,6 +11,7 @@ import play.api.templates.Html
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import play.api.libs.json.JsString
+import com.keepit.serializer.UriLabelSerializer
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -36,9 +37,7 @@ trait SearchServiceClient extends ServiceClient {
   def showUserConfig(id: Id[User]): Future[Html]
   def setUserConfig(id: Id[User], params: Map[String, String]): Future[Unit]
   def resetUserConfig(id: Id[User]): Future[Unit]
-
-  def persistSearchStatistics(queryUUID: String, queryString: String, id: Id[User], kifiClicked: Seq[Id[NormalizedURI]], googleClicked: Seq[Id[NormalizedURI]], kifiShown: Seq[Id[NormalizedURI]] ): Future[Unit]
-
+  def getSearchStatistics(queryUUID: String, queryString: String, userId: Id[User], labeledUris: Map[Id[NormalizedURI], UriLabel]): Future[JsArray]
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html]
   def dumpLuceneDocument(uri: Id[NormalizedURI]): Future[Html]
 }
@@ -55,15 +54,31 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
     call(routes.SearchEventController.logResultClicked(), json).map(_ => Unit)
   }
 
-  def persistSearchStatistics(queryUUID: String, queryString: String, userId: Id[User], kifiClicked: Seq[Id[NormalizedURI]], googleClicked: Seq[Id[NormalizedURI]], kifiShown: Seq[Id[NormalizedURI]]): Future[Unit] = {
-    val json = Json.obj("queryUUID" -> queryUUID,
-        "query" -> queryString,
+  def getSearchStatistics(queryUUID: String, queryString: String, userId: Id[User], labeledUris: Map[Id[NormalizedURI], UriLabel]): Future[JsArray] = {
+    val uriIds = labeledUris.map(_._1).map(id => id.id)
+    val uriLabels = labeledUris.map(_._2).map{label => UriLabelSerializer.serializer.writes(label)}
+    val json = Json.obj(
+        "queryUUID" -> queryUUID,
+        "queryString" -> queryString,
         "userId" -> userId.id,
-        "kifiClicked" -> kifiClicked.map{_.id},
-        "googleClicked" -> googleClicked.map{_.id},
-        "kifiShown" -> kifiShown.map{_.id})
-    call((routes.SearchStatisticsController.persistSearchStatistics), json).map{r => ()}
+        "uriIds" -> uriIds,
+        "uriLabels" -> uriLabels
+        )
+    call(routes.SearchStatisticsController.getSearchStatistics, json).map{
+        r => r.json.as[JsArray]
+    }
   }
+//
+//
+//  def persistSearchStatistics(queryUUID: String, queryString: String, userId: Id[User], kifiClicked: Seq[Id[NormalizedURI]], googleClicked: Seq[Id[NormalizedURI]], kifiShown: Seq[Id[NormalizedURI]]): Future[Unit] = {
+//    val json = Json.obj("queryUUID" -> queryUUID,
+//        "query" -> queryString,
+//        "userId" -> userId.id,
+//        "kifiClicked" -> kifiClicked.map{_.id},
+//        "googleClicked" -> googleClicked.map{_.id},
+//        "kifiShown" -> kifiShown.map{_.id})
+//    call((routes.SearchStatisticsController.persistSearchStatistics), json).map{r => ()}
+//  }
 
   def updateURIGraph(): Future[Int] = {
     call(routes.URIGraphController.updateURIGraph()).map(r => (r.json \ "users").as[Int])

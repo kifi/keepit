@@ -12,17 +12,19 @@ import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.serializer._
 import play.api.mvc.Action
-import play.api.libs.json.JsValue
-import play.api.libs.json.JsArray
 import com.keepit.model.BrowsingHistoryRepo
 import com.keepit.model.User
 import com.keepit.search.MultiHashFilter
-import play.api.libs.json.JsNull
 import com.keepit.model.BrowsingHistory
 import com.keepit.model.ClickHistoryRepo
 import com.keepit.model.ClickHistory
 import com.keepit.common.db.SequenceNumber
 import play.api.libs.json._
+import com.keepit.common.analytics.PersistEventPlugin
+import com.keepit.common.analytics.Events
+import com.keepit.common.analytics.EventFamilies
+import com.keepit.common.time._
+import com.keepit.common.service.FortyTwoServices
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -31,7 +33,11 @@ class ShoeboxController @Inject() (
   bookmarkRepo: BookmarkRepo,
   browsingHistoryRepo: BrowsingHistoryRepo,
   clickingHistoryRepo: ClickHistoryRepo,
-  normUriRepo: NormalizedURIRepo)
+  normUriRepo: NormalizedURIRepo,
+  persistEventPlugin: PersistEventPlugin)
+  (implicit private val clock: Clock,
+    private val fortyTwoServices: FortyTwoServices
+)
   extends ShoeboxServiceController with Logging {
 
   def getNormalizedURI(id: Long) = Action {
@@ -93,6 +99,17 @@ class ShoeboxController @Inject() (
     }
   }
 
+  def getClickedHistoryMutliHashFilterByteArray(userId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int) = {
+     db.readOnly { implicit session =>
+      clickingHistoryRepo.getByUserId(Id[User](userId)) match {
+        case Some(clickingHistory) => clickingHistory.filter
+        case None =>
+          val filter = MultiHashFilter(tableSize, numHashFuncs, minHits)
+          filter
+      }
+    }
+  }
+
   def addClickingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int) = Action { request =>
     val filter = getMultiHashFilterForClickingHistory(userId, tableSize, numHashFuncs, minHits)
     filter.put(uriId)
@@ -125,6 +142,12 @@ class ShoeboxController @Inject() (
       Json.obj( "id" -> userId.id, "seqNum" -> seqNum.value)
     }
     Ok(JsArray(changed))
+  }
+
+  def persistServerSearchEvent() = Action(parse.json) { request =>
+    val metaData = request.body
+    persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject]))
+    Ok("server search event persisted")
   }
 
 }

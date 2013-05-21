@@ -21,6 +21,7 @@ import com.keepit.common.analytics.PersistEventPlugin
 import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
+import com.keepit.shoebox.ShoeboxServiceClient
 
 
 @Singleton
@@ -31,7 +32,7 @@ class MainSearcherFactory @Inject() (
     resultClickTracker: ResultClickTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
     clickHistoryTracker: ClickHistoryTracker,
-    persistEventPlugin: PersistEventPlugin,
+    shoeboxClient: ShoeboxServiceClient,
     spellCorrector: SpellCorrector,
     implicit private val clock: Clock,
     implicit private val fortyTwoServices: FortyTwoServices
@@ -61,7 +62,7 @@ class MainSearcherFactory @Inject() (
         resultClickTracker,
         browsingHistoryTracker,
         clickHistoryTracker,
-        persistEventPlugin,
+        shoeboxClient,
         spellCorrector
     )
   }

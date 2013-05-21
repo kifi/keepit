@@ -35,6 +35,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.net.HttpClient
 import com.keepit.common.net.FakeHttpClient
 import play.api.libs.json.JsArray
+import com.keepit.common.net._
 
 class MainSearcherTest extends Specification with DbRepos {
 
@@ -59,7 +60,7 @@ class MainSearcherTest extends Specification with DbRepos {
         resultClickTracker,
         new BrowsingHistoryTracker(3067, 2, 1, inject[BrowsingHistoryRepo], inject[Database], inject[ShoeboxServiceClient]),
         new ClickHistoryTracker(307, 2, 1, inject[ClickHistoryRepo], inject[Database], inject[ShoeboxServiceClient]),
-        inject[FakePersistEventPluginImpl],
+        inject[ShoeboxServiceClient],
         inject[FakeSpellCorrector],
         clock,
         fortyTwoServices)
@@ -115,7 +116,9 @@ class MainSearcherTest extends Specification with DbRepos {
       running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
           .overrideWith(new FortyTwoModule {
             override def configure() {
-               bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
+               bind[HttpClient].toInstance(new FakeHttpPostClient(Some({
+                 case s if s.contains("/internal/shoebox/database/getUsersChanged") => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))
+                 case s if s.contains("/internal/shoebox/persistServerSearchEvent") => "ok" }), body => {} ))
             }
           })) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)

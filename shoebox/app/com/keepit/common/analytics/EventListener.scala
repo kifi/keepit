@@ -3,6 +3,7 @@ package com.keepit.common.analytics
 import play.api.libs.json.{ JsArray, JsBoolean, JsNumber, JsObject, JsString }
 import com.keepit.serializer.EventSerializer
 import scala.collection.JavaConversions._
+import scala.concurrent.ExecutionContext.Implicits.global
 import java.util.{ Set => JSet }
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.inject._
@@ -121,7 +122,6 @@ class ResultClickedListener @Inject() (
   userRepo: UserRepo,
   normalizedURIRepo: NormalizedURIRepo,
   searchServiceClient: SearchServiceClient,
-  clickHistoryTracker: ClickHistoryTracker,
   db: Database,
   bookmarkRepo: BookmarkRepo)
   extends EventListenerPlugin(userRepo, normalizedURIRepo) {
@@ -224,9 +224,21 @@ class SearchUnloadListenerImpl @Inject() (
           (userId, kifiClickedIds, googleClickedIds, kifiShownIds)
         }
 
-        searchClient.persistSearchStatistics(uuid, queryString, userId, kifiClickedIds, googleClickedIds, kifiShownIds)
+        val data = TrainingDataLabeler.getLabeledData(kifiClickedIds, googleClickedIds, kifiShownIds)
+        if (data.nonEmpty) {
+          val labeledUris = data.foldLeft(Map.empty[Id[NormalizedURI], UriLabel]) {
+            case (m, (id, (isClicked, isCorrectlyRanked))) => m + (id -> UriLabel(isClicked, isCorrectlyRanked))
+          }
+          searchClient.getSearchStatistics(uuid, queryString, userId, labeledUris).map { r =>
+            r.value.map { json =>
+              val event = Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_statistics", json.as[JsObject])
+              persistEventProvider.get.persist(event)
+            }
+          }
+          log.info("search statistics persisted")
+        }
+ //       searchClient.persistSearchStatistics(uuid, queryString, userId, kifiClickedIds, googleClickedIds, kifiShownIds)
       }
-
     }
   }
 }

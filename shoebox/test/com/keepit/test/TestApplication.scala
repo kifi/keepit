@@ -45,6 +45,8 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.net.HttpClient
 import com.keepit.shoebox.ShoeboxServiceClientImpl
 import com.keepit.shoebox.ShoeboxCacheProvider
+import com.keepit.shoebox.FakeShoeboxServiceClientImpl
+import com.google.inject.Provider
 
 class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplication() {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
@@ -263,15 +265,33 @@ class FakeScraperPlugin() extends ScraperPlugin {
 
 case class ShoeboxServiceModule() extends ScalaModule {
   override def configure(): Unit = {
-    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
-    listenerBinder.addBinding().to(classOf[ResultClickedListener])
-    listenerBinder.addBinding().to(classOf[UsefulPageListener])
-    listenerBinder.addBinding().to(classOf[SliderShownListener])
   }
 
   @Singleton
   @Provides
-  def shoeboxServiceClient(httpClient: HttpClient): ShoeboxServiceClient = new ShoeboxServiceClientImpl(null, -1, httpClient, inject[ShoeboxCacheProvider])
+  def FakeShoeboxServiceClientImpl(
+    cacheProvider: ShoeboxCacheProvider,
+    db: Database,
+    userConnectionRepo: UserConnectionRepo,
+    userRepo: UserRepo,
+    bookmarkRepo: BookmarkRepo,
+    browsingHistoryRepo: BrowsingHistoryRepo,
+    clickingHistoryRepo: ClickHistoryRepo,
+    normUriRepo: NormalizedURIRepo,
+    persistEventPluginProvider: Provider[PersistEventPlugin], clock: Clock,
+    fortyTwoServices: FortyTwoServices
+): ShoeboxServiceClient = new FakeShoeboxServiceClientImpl(
+    cacheProvider,
+    db,
+    userConnectionRepo,
+    userRepo,
+    bookmarkRepo,
+    browsingHistoryRepo,
+    clickingHistoryRepo,
+    normUriRepo,
+    persistEventPluginProvider.get,
+    clock,
+    fortyTwoServices)
 
   @Provides
   @Singleton

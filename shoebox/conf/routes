@@ -247,6 +247,7 @@ POST     /internal/shoebox/database/addBrowsingHistory @com.keepit.controllers.s
 POST    /internal/shoebox/database/addClickingHistory @com.keepit.controllers.shoebox.ShoeboxController.addClickingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int)
 GET     /internal/shoebox/database/addBrowsingHistory @com.keepit.controllers.shoebox.ShoeboxController.getBookmarks(userId: Long)
 GET     /internal/shoebox/database/getUsersChanged    @com.keepit.controllers.shoebox.ShoeboxController.getUsersChanged(seqNum: Long)
+POST    /internal/shoebox/persistServerSearchEvent    @com.keepit.controllers.shoebox.ShoeboxController.persistServerSearchEvent
 
 
 
@@ -275,7 +276,7 @@ POST    /internal/search/spell/buildDict       @com.keepit.controllers.search.Sp
 GET     /internal/search/spell/buildStatus     @com.keepit.controllers.search.SpellCorrectorController.getBuildStatus()
 GET     /internal/search/spell/make-correction     @com.keepit.controllers.search.SpellCorrectorController.correctSpelling(query: String)
 
-POST    /internal/search/persistSearchStatistics @com.keepit.controllers.search.SearchStatisticsController.persistSearchStatistics
+GET     /internal/search/getSearchStatistics     @com.keepit.controllers.search.SearchStatisticsController.getSearchStatistics
 
 GET     /internal/searchConfig/:id        @com.keepit.controllers.search.SearchConfigController.showUserConfig(id: Id[User])
 POST    /internal/searchConfig/:id/set    @com.keepit.controllers.search.SearchConfigController.setUserConfig(id: Id[User])

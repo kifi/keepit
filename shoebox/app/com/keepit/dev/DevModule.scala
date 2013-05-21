@@ -38,7 +38,9 @@ import com.keepit.shoebox.ShoeboxServiceClient
 
 
 class ShoeboxDevModule extends ScalaModule with Logging {
-  def configure() {}
+  def configure() {
+    bind[PersistEventPlugin].to[FakePersistEventPluginImpl].in[AppScoped]
+  }
 
   @Singleton
   @Provides
@@ -206,7 +208,6 @@ class SearchDevModule extends ScalaModule with Logging {
 
 class DevCommonModule extends ScalaModule with Logging {
   def configure() {
-    bind[PersistEventPlugin].to[FakePersistEventPluginImpl].in[AppScoped]
     bind[FortyTwoCachePlugin].to[InMemoryCache].in[AppScoped]
   }
 

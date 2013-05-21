@@ -18,7 +18,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import com.google.inject.Singleton
 import com.google.inject.Inject
 import com.keepit.common.db.SequenceNumber
-
+import play.api.libs.json.JsObject
+import com.keepit.common.db.slick.Database
+import com.keepit.search.MultiHashFilter
+import com.keepit.common.analytics.PersistEventPlugin
+import com.keepit.common.analytics.Events
+import com.keepit.common.analytics.EventFamilies
+import com.keepit.common.time._
+import com.keepit.common.service.FortyTwoServices
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -30,6 +37,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def addClickingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit
   def getBookmark(userId: Long): Future[Bookmark]
   def getUsersChanged(seqNum: SequenceNumber): Future[Seq[(Id[User], SequenceNumber)]]
+  def persistServerSearchEvent(metaData: JsObject): Unit
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -77,5 +85,128 @@ class ShoeboxServiceClientImpl @Inject() (override val host: String, override va
       }
     }
   }
+
+  def getClickHistoryMultiHashFilter(userId: Id[User]) = {
+
+  }
+
+  def persistServerSearchEvent(metaData: JsObject): Unit ={
+     call(routes.ShoeboxController.persistServerSearchEvent, metaData)
+  }
+
 }
 
+// code below should be sync with code in ShoeboxController
+class FakeShoeboxServiceClientImpl @Inject() (
+    cacheProvider: ShoeboxCacheProvider,
+    db: Database,
+    userConnectionRepo: UserConnectionRepo,
+    userRepo: UserRepo,
+    bookmarkRepo: BookmarkRepo,
+    browsingHistoryRepo: BrowsingHistoryRepo,
+    clickingHistoryRepo: ClickHistoryRepo,
+    normUriRepo: NormalizedURIRepo,
+    persistEventPlugin: PersistEventPlugin,
+    clock: Clock,
+    fortyTwoServices: FortyTwoServices
+)
+    extends ShoeboxServiceClient {
+  val host: String = ???
+  protected def httpClient: com.keepit.common.net.HttpClient = ???
+
+  def getUser(id: Id[User]): Future[User] = {
+    //call(routes.ShoeboxController.getUser(id)).map(r => UserSerializer.userSerializer.reads(r.json))
+    ???
+  }
+
+  def getNormalizedURI(id: Long): Future[NormalizedURI] = {
+    cacheProvider.uriIdCache.get(NormalizedURIKey(Id[NormalizedURI](id))) match {
+      case Some(uri) => promise[NormalizedURI]().success(uri).future
+      case None => {
+        val uri = db.readOnly { implicit s =>
+          normUriRepo.get(Id[NormalizedURI](id))
+        }
+        promise[NormalizedURI]().success(uri).future
+      }
+    }
+  }
+
+
+  def getNormalizedURIs(ids: Seq[Long]): Future[Seq[NormalizedURI]] = {
+     val uris = db.readOnly { implicit s =>
+         ids.map{ id => normUriRepo.get(Id[NormalizedURI](id))
+       }
+     }
+     promise[Seq[NormalizedURI]]().success(uris).future
+  }
+
+  def addBrowsingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit = {
+    def getMultiHashFilter(userId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int) = {
+      db.readOnly { implicit session =>
+        browsingHistoryRepo.getByUserId(Id[User](userId)) match {
+          case Some(browsingHistory) =>
+            new MultiHashFilter(browsingHistory.tableSize, browsingHistory.filter, browsingHistory.numHashFuncs, browsingHistory.minHits)
+          case None =>
+            val filter = MultiHashFilter(tableSize, numHashFuncs, minHits)
+            filter
+        }
+      }
+    }
+
+    val filter = getMultiHashFilter(userId, tableSize, numHashFuncs, minHits)
+    filter.put(uriId)
+
+    db.readWrite { implicit session =>
+      browsingHistoryRepo.save(browsingHistoryRepo.getByUserId(Id[User](userId)) match {
+        case Some(bh) =>
+          bh.withFilter(filter.getFilter)
+        case None =>
+          BrowsingHistory(userId = Id[User](userId), tableSize = tableSize, filter = filter.getFilter, numHashFuncs = numHashFuncs, minHits = minHits)
+      })
+    }
+
+  }
+
+  def addClickingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit = {
+    def getMultiHashFilter(userId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int) = {
+      db.readOnly { implicit session =>
+        clickingHistoryRepo.getByUserId(Id[User](userId)) match {
+          case Some(clickingHistory) =>
+            new MultiHashFilter(clickingHistory.tableSize, clickingHistory.filter, clickingHistory.numHashFuncs, clickingHistory.minHits)
+          case None =>
+            val filter = MultiHashFilter(tableSize, numHashFuncs, minHits)
+            filter
+        }
+      }
+    }
+
+    val filter = getMultiHashFilter(userId, tableSize, numHashFuncs, minHits)
+    filter.put(uriId)
+
+    db.readWrite { implicit session =>
+      clickingHistoryRepo.save(clickingHistoryRepo.getByUserId(Id[User](userId)) match {
+        case Some(bh) =>
+          bh.withFilter(filter.getFilter)
+        case None =>
+          ClickHistory(userId = Id[User](userId), tableSize = tableSize, filter = filter.getFilter, numHashFuncs = numHashFuncs, minHits = minHits)
+      })
+    }
+
+  }
+
+  def getBookmark(userId: Long): Future[Bookmark] = {
+    ???
+  }
+
+  def getUsersChanged(seqNum: SequenceNumber): Future[Seq[(Id[User], SequenceNumber)]] = {
+    val changed = db.readOnly { implicit s =>
+      bookmarkRepo.getUsersChanged(seqNum)
+    }
+    promise[Seq[(Id[User], SequenceNumber)]]().success(changed).future
+
+  }
+
+  def persistServerSearchEvent(metaData: JsObject): Unit ={
+    persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject])(clock, fortyTwoServices))
+  }
+}

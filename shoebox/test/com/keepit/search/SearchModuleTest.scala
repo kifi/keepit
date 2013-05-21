@@ -43,8 +43,8 @@ class SearchModuleTest extends Specification with Logging {
         } foreach { key =>
           injector.getInstance(key)
         }
-        inject[EventRepo]
-        inject[EventHelper]
+//        inject[EventRepo]
+//        inject[EventHelper]
         true
       }
     }

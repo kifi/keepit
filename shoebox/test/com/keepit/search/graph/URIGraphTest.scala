@@ -153,12 +153,7 @@ class URIGraphTest extends Specification with DbRepos {
 
   "URIGraph" should {
     "maintain a sequence number on bookmarks " in {
-     running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
-          .overrideWith(new FortyTwoModule {
-            override def configure() {
-              bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
-            }
-          }))
+     running(new DevApplication().withShoeboxServiceModule)
             {
         val (users, uris) = setupDB
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList

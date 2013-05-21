@@ -83,7 +83,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
   }
 
   "ArticleIndexer" should {
-    "index indexable URIs" in running(new DevApplication().withShoeboxServiceModule.withShoeboxServiceModule)(new IndexerScope {
+    "index indexable URIs" in running(new DevApplication().withShoeboxServiceModule)(new IndexerScope {
       db.readWrite { implicit s =>
         uri1 = uriRepo.save(uriRepo.get(uri1.id.get).withState(INACTIVE))
         uri2 = uriRepo.save(uriRepo.get(uri2.id.get).withState(INACTIVE))
