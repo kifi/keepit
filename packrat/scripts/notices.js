@@ -34,7 +34,8 @@ noticesPane = function() {
           .append(notices.map(function(n) {
             return renderNotice(n, n.state != "visited" && new Date(n.time) > timeLastSeen);
           }).join(""))
-          .appendTo($container);
+          .appendTo($container).after("<div>").scrollable();
+        $notices.triggerHandler("scroll");
         $notices.find("time").timeago();
 
         $notices.on("click", ".kifi-notice", function() {
