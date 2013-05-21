@@ -12,12 +12,10 @@ import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.serializer._
 import play.api.mvc.Action
-import play.api.libs.json.JsValue
-import play.api.libs.json.JsArray
+import play.api.libs.json.{JsNumber, JsValue, JsArray, JsNull}
 import com.keepit.model.BrowsingHistoryRepo
 import com.keepit.model.User
 import com.keepit.search.MultiHashFilter
-import play.api.libs.json.JsNull
 import com.keepit.model.BrowsingHistory
 import com.keepit.model.ClickHistoryRepo
 import com.keepit.model.ClickHistory
@@ -118,14 +116,23 @@ class ShoeboxController @Inject() (
 
   def getUsers = Action(parse.json) { request =>
         val json = request.body
-        val ids = json.as[JsArray].value.map(id => id.asInstanceOf[Id[User]])
+        val userIds = json.as[JsArray].value.map(id => id.asInstanceOf[Id[User]])
         val users = db.readOnly { implicit s =>
-          ids.map{id =>
-            val user = userRepo.get(id)
+          userIds.map{userId =>
+            val user = userRepo.get(userId)
             UserSerializer.userSerializer.writes(user)
           }
         }
         Ok(JsArray(users))
+  }
+
+  def getConnectedUsers(id : Long) = Action { request =>
+    val friendIds = db.readOnly { implicit s =>
+      val userId = id.asInstanceOf[Id[User]]
+      userConnectionRepo.getConnectedUsers(userId).toSeq
+        .map { id => JsNumber(id.asInstanceOf[Long]) }
+    }
+    Ok(JsArray(friendIds))
   }
 
 }
