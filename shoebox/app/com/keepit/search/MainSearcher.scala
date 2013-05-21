@@ -1,6 +1,8 @@
 package com.keepit.search
 
+import com.keepit.search.graph.EdgeAccessor
 import com.keepit.search.graph.URIGraphSearcher
+import com.keepit.search.graph.UserToUriEdgeSet
 import com.keepit.search.graph.UserToUserEdgeSet
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.PersonalizedSearcher
@@ -78,12 +80,12 @@ class MainSearcher(
   // initialize user's social graph info
   private[this] val myUriEdges = uriGraphSearcher.myUriEdgeSet
   private[this] val myUris = myUriEdges.destIdLongSet
-  private[this] val myPublicUris = uriGraphSearcher.myPublicUriEdgeSet.destIdLongSet
+  private[this] val myUriEdgeAccessor = myUriEdges.accessor
   private[this] val filteredFriendIds = filter.filterFriends(friendIds)
-  private[this] val friendsUriEdgeSetMap = friendIds.foldLeft(Map.empty[Long, UserToUriEdgeSet]){ (m, f) =>
-    m + (f.id -> uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true))
+  private[this] val friendsUriEdgeAccessors = friendIds.foldLeft(Map.empty[Long, EdgeAccessor[User, NormalizedURI]]){ (m, f) =>
+    m + (f.id -> uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).accessor)
   }
-  private[this] val friendUris = filteredFriendIds.foldLeft(Set.empty[Long]){ (s, f) => s ++ friendsUriEdgeSetMap(f.id).destIdLongSet }
+  private[this] val friendUris = filteredFriendIds.foldLeft(Set.empty[Long]){ (s, f) => s ++ friendsUriEdgeAccessors(f.id).edgeSet.destIdLongSet }
   private[this] val friendlyUris = {
     if (filter.includeMine) friendUris ++ myUris
     else if (filter.includeShared) friendUris
@@ -97,8 +99,8 @@ class MainSearcher(
   val preparationTime = currentDateTime.getMillis() - currentTime
   log.info(s"mainSearcher preparation time: $preparationTime milliseconds")
 
-  private def findSharingUsers(id: Id[NormalizedURI]): UserToUserEdgeSet = {
-    uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(id))
+  private def findSharingUsers(id: Long): UserToUserEdgeSet = {
+    uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)))
   }
 
   private def sharingScore(sharingUsers: UserToUserEdgeSet): Float = {
@@ -148,8 +150,8 @@ class MainSearcher(
             val score = scorer.score()
             val newSemanticScore = semanticVectorScoreAccessor.getScore(doc)
             if (friendlyUris.contains(id)) {
-              if (myUris.contains(id)) {
-                myHits.insert(id, score * clickBoost, score, newSemanticScore, true, !myPublicUris.contains(id))
+              if (myUriEdgeAccessor.seek(id)) {
+                myHits.insert(id, score * clickBoost, score, newSemanticScore, true, !myUriEdgeAccessor.isPublic)
               } else {
                 friendsHits.insert(id, score * clickBoost, score, newSemanticScore, false, false)
               }
@@ -210,13 +212,12 @@ class MainSearcher(
 
     if (myHits.size > 0) {
       myHits.toRankedIterator.forall{ case (h, rank) =>
-        val id = Id[NormalizedURI](h.id)
-        val sharingUsers = findSharingUsers(id)
+        val sharingUsers = findSharingUsers(h.id)
 
         if (numCollectStats > 0 && sharingUsers.size > 0) {
-          val createdAt = myUriEdges.getCreatedAt(h.id)
+          val createdAt = myUriEdgeAccessor.getCreatedAt(h.id)
           val sharingUserIdSet = sharingUsers.destIdLongSet
-          val earlyKeepersUserIdSet = sharingUserIdSet.filter{ f => friendsUriEdgeSetMap(f).getCreatedAt(h.id) < createdAt }
+          val earlyKeepersUserIdSet = sharingUserIdSet.filter{ f => friendsUriEdgeAccessors(f).getCreatedAt(h.id) < createdAt }
           friendStats.add(sharingUserIdSet, h.score)
           friendStats.add(earlyKeepersUserIdSet, h.score * 0.5f)
           numCollectStats -= 1
@@ -226,7 +227,7 @@ class MainSearcher(
 
         if (score > threshold) {
           h.users = sharingUsers.destIdSet
-          h.scoring = new Scoring(score, score / highScore, bookmarkScore(sharingScore(sharingUsers) + 1.0f), recencyScore(myUriEdges.getCreatedAt(id)))
+          h.scoring = new Scoring(score, score / highScore, bookmarkScore(sharingScore(sharingUsers) + 1.0f), recencyScore(myUriEdgeAccessor.getCreatedAt(h.id)))
           h.score = h.scoring.score(myBookmarkBoost, sharingBoostInNetwork, recencyBoost)
           hits.insert(h)
           true
@@ -245,13 +246,12 @@ class MainSearcher(
       val normalizedFriendStats = friendStats.normalize
       var newContentScore = 0.5f // one day
       friendsHits.toRankedIterator.forall{ case (h, rank) =>
-        val id = Id[NormalizedURI](h.id)
-        val sharingUsers = findSharingUsers(id)
+        val sharingUsers = findSharingUsers(h.id)
 
         var recencyScoreVal = 0.0f
         if (numCollectStats > 0) {
           val sharingUserIdSet = sharingUsers.destIdLongSet
-          val introducedAt = sharingUserIdSet.map{ f => friendsUriEdgeSetMap(f).getCreatedAt(h.id) }.min // oldest keep time
+          val introducedAt = sharingUserIdSet.map{ f => friendsUriEdgeAccessors(f).getCreatedAt(h.id) }.min // oldest keep time
           recencyScoreVal = recencyScore(introducedAt)
           friendStats.add(sharingUserIdSet, h.score)
           numCollectStats -= 1
@@ -305,8 +305,9 @@ class MainSearcher(
     val (svVar,svExistVar) = SemanticVariance.svVariance(parsedQuery, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
 
     // inject a new content if any
-    if (newContent.nonEmpty) {
-      hitList = (hitList.take(numHitsToReturn - 1) :+ newContent.get)
+    newContent.foreach { h =>
+      if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id)
+      hitList = (hitList.take(numHitsToReturn - 1) :+ h)
     }
 
     val newIdFilter = filter.idFilter ++ hitList.map(_.id)

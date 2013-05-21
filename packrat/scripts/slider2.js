@@ -96,7 +96,7 @@ slider2 = function() {
         } else if (!$pane && !data.dragStarting && !data.$dragGlass) {
           if (e.relatedTarget) {
             if ($slider && !$slider[0].contains(e.relatedTarget)) {
-              api.log("[slider.mouseout]");
+              api.log("[slider.mouseout] hiding");
               hideSlider("mouseout");
             }
           } else {  // out of window
@@ -124,16 +124,19 @@ slider2 = function() {
         delete data.mousedownEvent;
       }).on("click", ".kifi-slider2-keep-btn", function(e) {
         if (e.target !== this) return;
-        var el = this.parentNode;
-        if (el.classList.contains("kifi-unkept")) {
-          keepPage(el, "public");
-        } else {
-          unkeepPage(el);
-        }
+        keepPage("public");
         this.classList.add("kifi-hoverless");
-      }).on("mouseover", ".kifi-slider2-keep-btn>.kifi-slider2-tip", function() {
+      }).on("click", ".kifi-slider2-kept-btn", function(e) {
+        if (e.target !== this) return;
+        unkeepPage();
+        this.classList.add("kifi-hoverless");
+      }).on("mouseover", ".kifi-slider2-keep-card", function() {
+        if ($slider.hasClass("kifi-auto")) {
+          growSlider("kifi-auto", "kifi-wide");
+        }
+      }).on("mouseover", ".kifi-slider2-keep-btn>.kifi-slider2-tip,.kifi-slider2-kept-btn>.kifi-slider2-tip", function() {
         this.parentNode.classList.add("kifi-hoverless");
-      }).bindHover(".kifi-slider2-keep-btn", function(configureHover) {
+      }).bindHover(".kifi-slider2-keep-btn,.kifi-slider2-kept-btn", function(configureHover) {
         var btn = this;
         api.port.emit("get_keepers", function(o) {
           if (o.keepers.length) {
@@ -178,18 +181,12 @@ slider2 = function() {
         }, function(html) {
           configureHover(html, {showDelay: 100, hideDelay: 600, click: "toggle"});
         });
-      }).on("mouseout", ".kifi-slider2-keep-btn", function() {
+      }).on("mouseout", ".kifi-slider2-keep-btn,.kifi-slider2-kept-btn", function() {
         this.classList.remove("kifi-hoverless");
-      }).on("hover:hide", ".kifi-slider2-keep-btn", function() {
-        document.documentElement.addEventListener("mousemove", function f(e) {
-          this.removeEventListener("mousemove", f, true);
-          if ($slider && !$slider[0].contains(e.target)) {
-            hideSlider("mouseout");
-          }
-        }, true);
-      }).bindHover(".kifi-slider2-lock", function(configureHover) {
-        var kept = !this.parentNode.classList.contains("kifi-unkept");
-        var publicly = kept && this.parentNode.classList.contains("kifi-public");
+      }).bindHover(".kifi-slider2-keep-lock,.kifi-slider2-kept-lock", function(configureHover) {
+        var $card = $(this).closest(".kifi-slider2-keep-card");
+        var kept = !$card.hasClass("kifi-unkept");
+        var publicly = kept && $card.hasClass("kifi-public");
         var title = !kept ?
           "Keep Privately" : publicly ?
           "Make Private" :
@@ -206,14 +203,10 @@ slider2 = function() {
               this.style.left = 8 - w / 2 + "px";
             }});
         });
-      }).on("click", ".kifi-slider2-lock", function(e) {
-        if (e.target !== this) return;
-        var el = this.parentNode;
-        if (el.classList.contains("kifi-unkept")) {
-          keepPage(el, "private");
-        } else {
-          togglePrivate(el);
-        }
+      }).on("click", ".kifi-slider2-keep-lock", function(e) {
+        if (e.target === this) keepPage("private");
+      }).on("click", ".kifi-slider2-kept-lock", function(e) {
+        if (e.target === this) toggleKeep($(this).closest(".kifi-slider2-keep-card").hasClass("kifi-public") ? "private" : "public");
       }).bindHover(".kifi-slider2-x", function(configureHover) {
         this.style.overflow = "visible";
         configureHover({showDelay: 700, click: "hide"});
@@ -261,12 +254,7 @@ slider2 = function() {
     $slider = $();  // creation in progress (prevents multiple)
 
     createSlider(function() {
-      $slider.appendTo(tile).layout().addClass("kifi-wide kifi-growing")
-      .on("transitionend webkitTransitionEnd", function f(e) {
-        if (e.target.classList.contains("kifi-slider2")) {
-          $(e.target).off("transitionend webkitTransitionEnd", f).removeClass("kifi-growing");
-        }
-      });
+      $slider.appendTo(tile);
 
       logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0), url: document.URL});
       api.port.emit("keeper_shown");
@@ -275,13 +263,24 @@ slider2 = function() {
     });
   }
 
+  function growSlider(fromClass, toClass) {
+    $slider.addClass(fromClass).layout().addClass(toClass + " kifi-growing").removeClass(fromClass)
+    .on("transitionend webkitTransitionEnd", function f(e) {
+      if (e.target === this) {
+        $(this).off("transitionend webkitTransitionEnd", f).removeClass("kifi-growing");
+        $(tile).addClass("kifi-behind-slider");
+      }
+    });
+  }
+
   // trigger is for the event log (e.g. "key", "icon")
   function hideSlider(trigger) {
     idleTimer.kill();
     var sliderEl = $slider[0];
+    $(tile).removeClass("kifi-behind-slider");
     $slider.addClass("kifi-hiding").on("transitionend webkitTransitionEnd", function(e) {
       if (e.target === sliderEl && e.originalEvent.propertyName == "opacity") {
-        tile.classList.remove("kifi-with-slider");
+        $(tile).removeClass("kifi-with-slider");
         var css = JSON.parse(tile.dataset.pos || 0);
         if (css && !tile.style.top && !tile.style.bottom) {
           var y = css.top >= 0 ? window.innerHeight - css.top - 54 : (css.bottom || 0);
@@ -358,29 +357,28 @@ slider2 = function() {
       t.dead = true;
     }};
 
-  function keepPage(el, how) {
+  function keepPage(how) {
     api.log("[keepPage]", how);
-    updateKeptDom(el, how);
+    updateKeptDom(how);
     api.port.emit("keep", {url: document.URL, title: document.title, how: how});
     logEvent("slider", "keep", {isPrivate: how == "private"});
   }
 
-  function unkeepPage(el) {
+  function unkeepPage() {
     api.log("[unkeepPage]", document.URL);
-    updateKeptDom(el, "");
+    updateKeptDom("");
     api.port.emit("unkeep");
     logEvent("slider", "unkeep");
   }
 
-  function togglePrivate(el) {
-    var priv = el.classList.contains("kifi-public");
-    api.log("[togglePrivate]", priv);
-    updateKeptDom(el, priv ? "private" : "public");
-    api.port.emit("set_private", priv);
+  function toggleKeep(how) {
+    api.log("[toggleKeep]", how);
+    updateKeptDom(how);
+    api.port.emit("set_private", how == "private");
   }
 
-  function updateKeptDom(el, how) {
-    $(el).removeClass("kifi-unkept kifi-private kifi-public").addClass("kifi-" + (how || "unkept"));
+  function updateKeptDom(how) {
+    if ($slider) $slider.find(".kifi-slider2-keep-card").removeClass("kifi-unkept kifi-private kifi-public").addClass("kifi-" + (how || "unkept"));
     if ($pane) $pane.find(".kifi-pane-kept").toggleClass("kifi-kept", !!how);
   }
 
@@ -632,7 +630,7 @@ slider2 = function() {
     notices: function($box) {
       api.port.emit("notifications", function(o) {
         api.require("scripts/notices.js", function() {
-          noticesPane.render($box.find(".kifi-pane-tall"), o.notifications, o.timeLastSeen);
+          noticesPane.render($box.find(".kifi-pane-tall"), o.notifications, o.timeLastSeen, o.numNotVisited);
         });
       });
     },
@@ -702,7 +700,7 @@ slider2 = function() {
 
   api.port.on({
     kept: function(o) {
-      if ($slider) updateKeptDom($slider.find(".kifi-slider2-keep"), o.kept);
+      updateKeptDom(o.kept);
     },
     new_notification: function(n) {
       noticesPane.update([n]);
@@ -711,6 +709,9 @@ slider2 = function() {
       noticesPane.update(arr);
     },
     notifications_visited: function(o) {
+      noticesPane.update(o);
+    },
+    all_notifications_visited: function(o) {
       noticesPane.update(o);
     },
     comment: function(o) {
@@ -749,9 +750,10 @@ slider2 = function() {
       } else {
         api.log("[show]", trigger);
         if (trigger == "tile") {
-          showSlider(trigger);
+          showSlider(trigger, growSlider.bind(null, "", "kifi-wide"));
         } else if (!lastShownAt) { // auto-show only if not already shown
           showSlider(trigger, function() {
+            growSlider("kifi-tiny", "kifi-auto");
             idleTimer.start(5000);
           });
         }

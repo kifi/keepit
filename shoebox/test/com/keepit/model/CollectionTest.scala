@@ -1,16 +1,19 @@
 package com.keepit.model
 
+import java.sql.SQLException
+
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
 import com.keepit.FortyTwoGlobal
+import com.keepit.common.db.SequenceNumber
+import com.keepit.common.time._
 import com.keepit.common.time.zones.PT
 import com.keepit.inject._
 import com.keepit.test.{EmptyApplication, TestDBRunner}
 
 import play.api.Play.current
 import play.api.test.Helpers._
-import java.sql.SQLException
 
 class CollectionTest extends Specification with TestDBRunner {
 
@@ -45,7 +48,7 @@ class CollectionTest extends Specification with TestDBRunner {
     }
   }
 
-  "keeping to collections" should {
+  "collections" should {
     "work" in {
       withDB() { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
@@ -69,6 +72,37 @@ class CollectionTest extends Specification with TestDBRunner {
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = coll4.id.get))
           keepToCollectionRepo.getBookmarksInCollection(coll4.id.get).length === 1
           collectionRepo.getByUserAndName(user2.id.get, "Cooking") must beNone
+        }
+      }
+    }
+    "increment sequence number on save" in {
+      withDB() { implicit injector =>
+        val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
+        db.readWrite { implicit s =>
+          val n = collectionRepo.save(coll1.withUpdateTime(currentDateTime)).seq.value
+          n must be > coll1.seq.value
+          n must be > coll2.seq.value
+        }
+      }
+    }
+    "update sequence number when keeps are added or removed" in {
+      withDB() { implicit injector =>
+        val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
+        val newSeqNum = db.readWrite { implicit s =>
+          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll1.id.get))
+          val n = collectionRepo.get(coll1.id.get).seq.value
+          n must be > coll1.seq.value
+          n must be > coll2.seq.value
+          n
+        }
+        db.readWrite { implicit s =>
+          keepToCollectionRepo.save(KeepToCollection(
+            bookmarkId = bookmark1.id.get, collectionId = coll1.id.get, state = KeepToCollectionStates.INACTIVE))
+          collectionRepo.get(coll1.id.get).seq.value must be > newSeqNum
+        }
+
+        db.readOnly { implicit s =>
+          collectionRepo.getCollectionsChanged(SequenceNumber(newSeqNum)).map(_._1) === Seq(coll1.id.get)
         }
       }
     }
