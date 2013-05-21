@@ -213,12 +213,10 @@ html>.kifi-slider2.kifi-wide {
   width: 100%;
   height: 100%;
   border-radius: inherit;
-  -webkit-transform-style: preserve-3d;
-  transform-style: preserve-3d;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
-  -webkit-transition: -webkit-transform .25s ease-in-out;
-  transition: transform .25s ease-in-out;
+  -webkit-transition: -webkit-transform .25s ease-in-out, z-index .25s linear;
+  transition: transform .25s ease-in-out, z-index .25s linear;
 }
 .kifi-slider2-keep-card.kifi-private .kifi-slider2-keep-side,
 .kifi-slider2-keep-card.kifi-public .kifi-slider2-keep-side {
@@ -228,6 +226,11 @@ html>.kifi-slider2.kifi-wide {
 .kifi-slider2-keep-card.kifi-unkept .kifi-slider2-kept-side {
   -webkit-transform: rotateX(180deg);
   transform: rotateX(180deg);
+}
+.kifi-slider2-keep-card.kifi-private .kifi-slider2-kept-side,
+.kifi-slider2-keep-card.kifi-public .kifi-slider2-kept-side,
+.kifi-slider2-keep-card.kifi-unkept .kifi-slider2-keep-side {
+  z-index: 100;
 }
 .kifi-slider2-keep-btn,
 .kifi-slider2-kept-btn {
