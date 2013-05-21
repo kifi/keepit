@@ -22,6 +22,16 @@ a.kifi-pane-mark-notices-read:active {
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
+.kifi-pane-notices .kifi-scrollable-above.kifi-can-scroll {
+  box-shadow: 0 2px 3px 0 rgba(0,0,0,.2);
+}
+.kifi-notices+.kifi-scrollable-below {
+  height: 6px;
+  position: relative;
+}
+.kifi-notices+.kifi-scrollable-below.kifi-can-scroll {
+  box-shadow: 0 -2px 3px 0 rgba(0,0,0,.2);
+}
 div.kifi-notices-none {
   margin: 10px 12px;
   display: none;
