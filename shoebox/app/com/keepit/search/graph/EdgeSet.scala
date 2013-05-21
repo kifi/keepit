@@ -1,6 +1,7 @@
 package com.keepit.search.graph
 
 import com.keepit.common.db.Id
+import com.keepit.common.logging.Logging
 import com.keepit.search.index.IdMapper
 import com.keepit.search.index.Searcher
 import com.keepit.search.query.QueryUtil._
@@ -61,7 +62,7 @@ trait EdgeSet[S,D] {
   def accessor: EdgeAccessor[S, D] = new EdgeAccessor[S, D](this)
 }
 
-class EdgeAccessor[S, D](val edgeSet: EdgeSet[S, D]) {
+class EdgeAccessor[S, D](val edgeSet: EdgeSet[S, D]) extends Logging {
   protected var _destId: Long = -1L
 
   def seek(id: Id[D]): Boolean = seek(id.id)
@@ -76,7 +77,7 @@ class EdgeAccessor[S, D](val edgeSet: EdgeSet[S, D]) {
   def isPublic: Boolean = true
   def isPrivate: Boolean = false
 
-  def getCreatedAt(d: Long): Long = throw new UnsupportedOperationException
+  def getCreatedAt(id: Long): Long = throw new UnsupportedOperationException
 }
 
 trait MaterializedEdgeSet[S,D] extends EdgeSet[S, D] {
@@ -144,8 +145,8 @@ trait LongSetEdgeSet[S, D] extends MaterializedEdgeSet[S, D] {
 }
 
 trait LongSetEdgeSetWithCreatedAt[S, D] extends LongSetEdgeSet[S, D] {
-  protected def createdAtByIndex(idx:Int): Long
-  protected def isPublicByIndex(idx:Int): Boolean
+  protected def createdAtByIndex(idx: Int): Long
+  protected def isPublicByIndex(idx: Int): Boolean
 
   override def accessor: EdgeAccessor[S, D] = new EdgeAccessor[S, D](this) {
     protected var index: Int = -1
@@ -159,7 +160,15 @@ trait LongSetEdgeSetWithCreatedAt[S, D] extends LongSetEdgeSet[S, D] {
 
     override def getCreatedAt(id: Long): Long = {
       val idx = longArraySet.findIndex(id)
-      if (idx >= 0) createdAtByIndex(idx) else throw new NoSuchElementException(s"failed to find id: ${id}")
+      if (idx >= 0) {
+        createdAtByIndex(idx)
+      } else {
+        log.error(s"failed in getCreatedAt: src=${sourceId} dest=${id} idx=${idx}")
+        if (longArraySet.verify) {
+          if (longArraySet.iterator.forall(_ != id)) log.error(s"verified the data structure, but the key does not exists")
+        }
+        0L //throw new NoSuchElementException(s"failed to find id: ${id}")
+      }
     }
   }
 }

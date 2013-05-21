@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{SequenceNumber, Id}
-import com.keepit.model.{NormalizedURI, UserConnectionRepo, BookmarkRepo, User}
+import com.keepit.model.{NormalizedURI, BookmarkRepo, User}
 import com.keepit.search.graph.{URIGraphImpl, URIGraph, URIGraphPlugin}
 import com.keepit.search.index.Indexer.CommitData
 import org.apache.lucene.document.Document
@@ -12,6 +12,9 @@ import play.api.libs.json._
 import play.api.mvc.Action
 import scala.concurrent.ExecutionContext.Implicits.global
 import views.html
+import scala.concurrent.Await
+import com.keepit.shoebox.ShoeboxServiceClient
+import scala.concurrent.duration._
 
 case class URIGraphIndexInfo(
     sequenceNumber: Option[SequenceNumber],
@@ -34,7 +37,7 @@ class URIGraphController @Inject()(
     db: Database,
     uriGraphPlugin: URIGraphPlugin,
     bookmarkRepo: BookmarkRepo,
-    connectionRepo: UserConnectionRepo,
+    shoeboxClient: ShoeboxServiceClient,
     uriGraph: URIGraph) extends SearchServiceController {
 
   import URIGraphJson._
@@ -53,7 +56,8 @@ class URIGraphController @Inject()(
   }
 
   private def getSharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo] = {
-    val friendIds = db.readOnly { implicit s => connectionRepo.getConnectedUsers(userId) }
+    val friendIdsFuture = shoeboxClient.getConnectedUsers(userId.id)
+    val friendIds = Await.result(friendIdsFuture, 5 seconds)
     val searcher = uriGraph.getURIGraphSearcher(None)
     val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
     uriIds.map { uriId =>

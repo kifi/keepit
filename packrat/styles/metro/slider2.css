@@ -101,7 +101,7 @@
   bottom: 6px;
   right: 6px;
   height: 42px;
-  width: 142px;
+  width: 136px;
   border: 6px solid transparent;
   margin: -6px;
   font: 12px "Helvetica Neue",arial,sans-serif;
@@ -118,6 +118,14 @@
 .kifi-pane .kifi-slider2:hover {
   border-left-width: 6px;
 }
+.kifi-slider2.kifi-tiny {
+  width: 42px;
+}
+.kifi-slider2.kifi-auto {
+  width: 136px;
+  -webkit-transition: width 200ms ease-out;
+  transition: width 200ms ease-out;
+}
 .kifi-slider2.kifi-wide {
   width: 310px;
   -webkit-transition: width 100ms ease-out;
@@ -132,6 +140,10 @@
   opacity: 0;
   -webkit-transition: width 100ms ease-in, opacity 60ms ease-in 40ms;
   transition: width 100ms ease-in, opacity 60ms ease-in 40ms;
+}
+.kifi-slider2.kifi-hiding.kifi-auto {
+  -webkit-transition: width 200ms ease-in, opacity 120ms ease-in 80ms;
+  transition: width 200ms ease-in, opacity 120ms ease-in 80ms;
 }
 html>.kifi-slider2.kifi-wide {
   position: fixed;
@@ -384,6 +396,9 @@ a.kifi-slider2-keeper {
   font-size: 0;
   line-height: 0;
   text-align: right; /* keeps contents still during transition */
+}
+.kifi-slider2.kifi-auto .kifi-slider2-dock {
+  display: none;
 }
 .kifi-slider2-dock-btn {
   display: inline-block !important;
