@@ -164,6 +164,7 @@ trait LongSetEdgeSetWithCreatedAt[S, D] extends LongSetEdgeSet[S, D] {
         createdAtByIndex(idx)
       } else {
         log.error(s"failed in getCreatedAt: src=${sourceId} dest=${id}")
+        longArraySet.verify
         0L //throw new NoSuchElementException(s"failed to find id: ${id}")
       }
     }
