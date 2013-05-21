@@ -38,7 +38,7 @@ class SearchController @Inject()(
   }
 
   def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
-    val friendIdsFuture = shoeboxClient.getConnectedUsers(userId.id)
+    val friendIdsFuture = shoeboxClient.getConnectedUsers(userId)
     val friendIds = Await.result(friendIdsFuture, 5 seconds)
     val (config, _) = searchConfigManager.getConfig(userId, query)
 
@@ -50,7 +50,7 @@ class SearchController @Inject()(
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]) = Action { implicit request =>
     val data = new ArrayBuffer[JsArray]
     q.foreach{ q =>
-      val friendIdsFuture = shoeboxClient.getConnectedUsers(userId.id)
+      val friendIdsFuture = shoeboxClient.getConnectedUsers(userId)
       val friendIds = Await.result(friendIdsFuture, 5 seconds)
       val allUserIds = (friendIds + userId).toArray
 
@@ -92,7 +92,7 @@ class SearchController @Inject()(
             m + (userIndex(i) -> (x(i)/norm, y(i)/norm))
           }
 
-          val usersFuture = shoeboxClient.getUsers(userIndex.map(_.id))
+          val usersFuture = shoeboxClient.getUsers(userIndex)
           Await.result(usersFuture, 5 seconds).foreach { user =>
               val (px,py) = positionMap(user.id.get)
               data += JsArray(Seq(JsNumber(px), JsNumber(py), JsString("%s %s".format(user.firstName, user.lastName))))
