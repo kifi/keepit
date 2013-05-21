@@ -47,7 +47,7 @@ class ShoeboxServiceClientImpl @Inject() (override val host: String, override va
 
   def getConnectedUsers(id: Long): Future[Set[Id[User]]] = {
     call(routes.ShoeboxController.getConnectedUsers(id)).map {r =>
-      r.json.as[JsArray].value.map(_.asInstanceOf[Id[User]]).toSet
+      r.json.as[JsArray].value.map(jsv => Id[User](jsv.as[Long])).toSet
     }
   }
 

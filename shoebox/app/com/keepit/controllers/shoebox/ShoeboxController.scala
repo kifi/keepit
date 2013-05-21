@@ -116,7 +116,7 @@ class ShoeboxController @Inject() (
 
   def getUsers = Action(parse.json) { request =>
         val json = request.body
-        val userIds = json.as[JsArray].value.map(id => id.asInstanceOf[Id[User]])
+        val userIds = json.as[JsArray].value.map(id => Id[User](id.as[Long]))
         val users = db.readOnly { implicit s =>
           userIds.map{userId =>
             val user = userRepo.get(userId)
@@ -127,12 +127,11 @@ class ShoeboxController @Inject() (
   }
 
   def getConnectedUsers(id : Long) = Action { request =>
-    val friendIds = db.readOnly { implicit s =>
-      val userId = id.asInstanceOf[Id[User]]
-      userConnectionRepo.getConnectedUsers(userId).toSeq
-        .map { id => JsNumber(id.asInstanceOf[Long]) }
+    val ids = db.readOnly { implicit s =>
+      userConnectionRepo.getConnectedUsers(Id[User](id)).toSeq
+        .map { friendId => JsNumber(friendId.id) }
     }
-    Ok(JsArray(friendIds))
+    Ok(JsArray(ids))
   }
 
 }
