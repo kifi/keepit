@@ -19,15 +19,14 @@ import scala.math.{abs, sqrt}
 import views.html
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.ExecutionContext.Implicits.global
+import com.keepit.model.User
+import scala.concurrent.Await
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 
 class SearchController @Inject()(
-    db: Database,
-    userConnectionRepo: UserConnectionRepo,
     searchConfigManager: SearchConfigManager,
-    userRepo: UserRepo,
-    bookmarkRepo: BookmarkRepo,
-    normUriRepo: NormalizedURIRepo,
     searcherFactory: MainSearcherFactory,
     shoeboxClient: ShoeboxServiceClient
   ) extends SearchServiceController {
@@ -39,23 +38,20 @@ class SearchController @Inject()(
   }
 
   def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
-    val friendIds = db.readOnly { implicit s =>
-      userConnectionRepo.getConnectedUsers(userId)
-    }
+    val friendIdsFuture = shoeboxClient.getConnectedUsers(userId.id)
+    val friendIds = Await.result(friendIdsFuture, 5 seconds)
     val (config, _) = searchConfigManager.getConfig(userId, query)
 
     val searcher = searcherFactory(userId, friendIds, SearchFilter.default(), config)
     val explanation = searcher.explain(query, uriId)
-
     Ok(html.admin.explainResult(query, userId, uriId, explanation))
   }
 
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]) = Action { implicit request =>
     val data = new ArrayBuffer[JsArray]
     q.foreach{ q =>
-      val friendIds = db.readOnly { implicit s =>
-        userConnectionRepo.getConnectedUsers(userId)
-      }
+      val friendIdsFuture = shoeboxClient.getConnectedUsers(userId.id)
+      val friendIds = Await.result(friendIdsFuture, 5 seconds)
       val allUserIds = (friendIds + userId).toArray
 
       val searcher = searcherFactory.semanticVectorSearcher()
@@ -92,11 +88,14 @@ class SearchController @Inject()(
             if (n == 0 || n.isNaN()) 1.0 else n
           }
 
-          db.readOnly { implicit s =>
-            (0 until size).map{ i =>
-              val user = userRepo.get(userIndex(i))
-              data += JsArray(Seq(JsNumber(x(i)/norm), JsNumber(y(i)/norm), JsString("%s %s".format(user.firstName, user.lastName))))
-            }
+          val positionMap = (0 until size).foldLeft(Map.empty[Id[User],(Double,Double)]){ (m,i) =>
+            m + (userIndex(i) -> (x(i)/norm, y(i)/norm))
+          }
+
+          val usersFuture = shoeboxClient.getUsers(userIndex.map(_.id))
+          Await.result(usersFuture, 5 seconds).foreach { user =>
+              val (px,py) = positionMap(user.id.get)
+              data += JsArray(Seq(JsNumber(px), JsNumber(py), JsString("%s %s".format(user.firstName, user.lastName))))
           }
         } catch {
           case e: ArrayIndexOutOfBoundsException => // ignore. not enough eigenvectors
