@@ -23,14 +23,16 @@ import com.keepit.common.mail.ElectronicMail
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
-  
+
   def sendMail(email: ElectronicMail): Future[Boolean]
-  def getUser(id: Id[User]): Future[User]
+
+  def getUsers(ids: Seq[Long]): Future[Seq[User]]
   def getNormalizedURI(id: Long) : Future[NormalizedURI]
   def getNormalizedURIs(ids: Seq[Long]): Future[Seq[NormalizedURI]]
   def addBrowsingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit
   def addClickingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit
   def getBookmark(userId: Long): Future[Bookmark]
+  def getConnectedUsers(id: Long): Future[Set[Id[User]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -43,9 +45,17 @@ class ShoeboxServiceClientImpl @Inject() (override val host: String, override va
     call(routes.ShoeboxController.sendMail()).map(r => r.body.toBoolean)
   }
 
-  def getUser(id: Id[User]): Future[User] = {
-    //call(routes.ShoeboxController.getUser(id)).map(r => UserSerializer.userSerializer.reads(r.json))
-    ???
+  def getUsers(ids: Seq[Long]): Future[Seq[User]] = {
+    val idJarray = JsArray(ids.map(JsNumber(_)) )
+    call(routes.ShoeboxController.getUsers, idJarray).map {r =>
+      r.json.as[JsArray].value.map(js => UserSerializer.userSerializer.reads(js).get)
+    }
+  }
+
+  def getConnectedUsers(id: Long): Future[Set[Id[User]]] = {
+    call(routes.ShoeboxController.getConnectedUsers(id)).map {r =>
+      r.json.as[JsArray].value.map(jsv => Id[User](jsv.as[Long])).toSet
+    }
   }
 
   def getNormalizedURI(id: Long) : Future[NormalizedURI] = {
