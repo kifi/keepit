@@ -13,8 +13,12 @@ import com.keepit.inject.AppScoped
 import com.keepit.realtime._
 import com.keepit.scraper._
 import com.tzavellas.sse.guice.ScalaModule
-
 import play.api.Play.current
+import com.keepit.common.healthcheck.LocalHealthcheckMailSender
+import com.keepit.common.healthcheck.HealthcheckMailSender
+import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.HealthcheckMailSender
+import com.keepit.common.healthcheck.LocalHealthcheckMailSender
 
 class ShoeboxModule() extends ScalaModule with Logging {
   def configure() {
@@ -30,7 +34,8 @@ class ShoeboxModule() extends ScalaModule with Logging {
     bind[ImageDataIntegrityPlugin].to[ImageDataIntegrityPluginImpl].in[AppScoped]
     bind[InvitationMailPlugin].to[InvitationMailPluginImpl].in[AppScoped]
     bind[NotificationConsistencyChecker].to[NotificationConsistencyCheckerImpl].in[AppScoped]
-    bind[PostOffice].to[ShoeboxPostOfficeImpl]
+    bind[LocalPostOffice].to[ShoeboxPostOfficeImpl]
+    bind[HealthcheckMailSender].to[LocalHealthcheckMailSender]
   }
 
   @Singleton

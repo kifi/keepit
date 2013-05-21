@@ -4,6 +4,15 @@ import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.logging.Logging
 import com.keepit.shoebox.ShoeboxServiceClient
+import scala.collection.mutable.{Seq => MSeq}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.collection.mutable.Queue
+import akka.actor.Actor
+import scala.util.{Success, Failure}
+import com.keepit.common.actor.ActorFactory
+import com.keepit.common.plugin.SchedulingPlugin
+import scala.concurrent.duration._
+import akka.util.Timeout
 
 trait LocalPostOffice {
   def sendMail(mail: ElectronicMail)(implicit session: RWSession): ElectronicMail
@@ -27,14 +36,56 @@ object PostOffice {
   val BODY_MAX_SIZE = 1048576
 }
 
-class RemotePostOfficeImpl @Inject() (shoeboxClient: ShoeboxServiceClient)
-  extends RemotePostOffice with Logging {
+sealed trait PostOfficeMessage
+case class SendEmail(mail: ElectronicMail) extends PostOfficeMessage
+case class QueueEmail(mail: ElectronicMail) extends PostOfficeMessage
+case object SendQueuedEmails extends PostOfficeMessage
 
+class RemotePostOfficeActor @Inject() (shoeboxClient: ShoeboxServiceClient)
+  extends Actor { // we cannot use an AlertingActor, because this generated Healthcheck errors on failure
+  
+  val mailQueue = Queue[ElectronicMail]()
+  
+  def receive = {
+    case SendEmail(mail: ElectronicMail) =>
+      shoeboxClient.sendMail(mail) onComplete {
+        case Success(result)  => if(!result) self ! QueueEmail(mail)
+        case Failure(failure) => self ! QueueEmail(mail)
+      }
+    case QueueEmail(mail) =>
+      mailQueue.enqueue(mail)
+    case SendQueuedEmails =>
+      mailQueue.foreach( mail => self ! SendEmail(mail))
+  }
+}
+
+@ImplementedBy(classOf[RemotePostOfficePluginImpl])
+trait RemotePostOfficePlugin extends SchedulingPlugin {
+  def sendMail(mail: ElectronicMail): Unit
+}
+
+class RemotePostOfficePluginImpl @Inject() (actorFactory: ActorFactory[RemotePostOfficeActor])
+  extends RemotePostOfficePlugin with Logging {
+  implicit val actorTimeout = Timeout(5 seconds)
+  private lazy val actor = actorFactory.get()
+
+  override def enabled: Boolean = true
+  override def onStart() {
+     scheduleTask(actorFactory.system, 30 seconds, 3 minutes, actor, SendQueuedEmails)
+  }
+  def sendMail(mail: ElectronicMail) = actor ! SendEmail(mail)
+}
+
+class RemotePostOfficeImpl @Inject() (
+  remotePostOfficePlugin: RemotePostOfficePlugin)
+  extends RemotePostOffice with Logging {
+  
   def queueMail(mail: ElectronicMail): ElectronicMail = {
-    shoeboxClient.sendMail(mail)
+    remotePostOfficePlugin.sendMail(mail)
     mail
   }
 }
+
 
 class ShoeboxPostOfficeImpl @Inject() (mailRepo: ElectronicMailRepo)
   extends LocalPostOffice with Logging {

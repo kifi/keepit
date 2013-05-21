@@ -49,7 +49,7 @@ class MailToKeepActor @Inject() (
     settings: MailToKeepServerSettings,
     bookmarkInterner: BookmarkInterner,
     persistEventPlugin: PersistEventPlugin,
-    postOffice: PostOffice,
+    postOffice: LocalPostOffice,
     messageParser: MailToKeepMessageParser,
     db: Database,
     implicit private val clock: Clock,

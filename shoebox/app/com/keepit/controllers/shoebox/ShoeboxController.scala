@@ -31,6 +31,10 @@ class ShoeboxController @Inject() (
   clickingHistoryRepo: ClickHistoryRepo,
   normUriRepo: NormalizedURIRepo)
   extends ShoeboxServiceController with Logging {
+  
+  def sendMail = Action(parse.json) { request =>
+    Ok("true")
+  }
 
   def getNormalizedURI(id: Long) = Action {
     val uri = db.readOnly { implicit s =>
