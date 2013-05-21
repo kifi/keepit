@@ -26,7 +26,7 @@ object URIList {
     val version = in.readByte()
     version match {
       case 3 => new URIListV3(in)
-      case _ => throw new URIGraphUnsupportedVersionException("version=%d".format(version))
+      case _ => throw new URIGraphUnsupportedVersionException("URIlist version=%d".format(version))
     }
   }
 

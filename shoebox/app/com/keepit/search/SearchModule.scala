@@ -1,11 +1,9 @@
 package com.keepit.search
 
 import java.io.File
-
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.{Directory, MMapDirectory}
 import org.apache.lucene.util.Version
-
 import com.google.inject.{Provides, Singleton}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckPlugin
@@ -15,14 +13,13 @@ import com.keepit.model._
 import com.keepit.scraper.{ScraperPluginImpl, ScraperPlugin}
 import com.keepit.search.graph.URIGraphFields
 import com.keepit.search.graph.URIGraphImpl
-import com.keepit.search.graph.{URIGraphPluginImpl, URIGraphPlugin, URIGraph}
+import com.keepit.search.graph.{URIGraphPluginImpl, URIGraphPlugin, URIGraph, URIGraphIndexer}
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.{ArticleIndexerPluginImpl, ArticleIndexerPlugin, ArticleIndexer}
 import com.keepit.search.phrasedetector.PhraseIndexer
 import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.tzavellas.sse.guice.ScalaModule
-
 import play.api.Play.current
 
 class SearchModule() extends ScalaModule with Logging {
@@ -58,12 +55,15 @@ class SearchModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def uriGraph(bookmarkRepo: BookmarkRepo,
-    db: Database): URIGraph = {
+  def uriGraph(bookmarkRepo: BookmarkRepo, db: Database): URIGraph = {
+    new URIGraphImpl(uriGraphIndexer(bookmarkRepo, db))
+  }
+
+  private def uriGraphIndexer(bookmarkRepo: BookmarkRepo, db: Database): URIGraphIndexer = {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new URIGraphImpl(dir, config, URIGraphFields.decoders(), bookmarkRepo, db)
+    new URIGraphIndexer(dir, config, URIGraphFields.decoders(), bookmarkRepo, db)
   }
 
   @Singleton

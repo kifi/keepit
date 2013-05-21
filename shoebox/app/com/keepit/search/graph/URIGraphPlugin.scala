@@ -16,6 +16,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 case object Update
+case object Reindex
 
 private[graph] class URIGraphActor @Inject() (
     healthcheckPlugin: HealthcheckPlugin,
@@ -31,6 +32,9 @@ private[graph] class URIGraphActor @Inject() (
               errorMessage = Some("Error updating uri graph")))
           sender ! -1
       }
+    case Reindex =>
+      uriGraph.reindex()
+      self.forward(Update)
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
@@ -63,7 +67,6 @@ class URIGraphPluginImpl @Inject() (
   override def update(): Future[Int] = actor.ask(Update)(1 minutes).mapTo[Int]
 
   override def reindex() {
-    uriGraph.sequenceNumber = SequenceNumber.ZERO
-    actor ! Update
+    actor ! Reindex
   }
 }

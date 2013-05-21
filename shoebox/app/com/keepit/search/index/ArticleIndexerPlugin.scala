@@ -17,6 +17,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 case object Index
+case object Reindex
 
 private[index] class ArticleIndexerActor @Inject() (
     healthcheckPlugin: HealthcheckPlugin,
@@ -35,6 +36,9 @@ private[index] class ArticleIndexerActor @Inject() (
           healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH, errorMessage = Some("Error indexing articles")))
           sender ! -1
       }
+    case Reindex =>
+      articleIndexer.sequenceNumber = SequenceNumber.ZERO
+      self.forward(Index)
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
@@ -70,7 +74,6 @@ class ArticleIndexerPluginImpl @Inject() (
   }
 
   override def reindex() {
-    articleIndexer.sequenceNumber = SequenceNumber.ZERO
-    actor ! Index
+    actor ! Reindex
   }
 }

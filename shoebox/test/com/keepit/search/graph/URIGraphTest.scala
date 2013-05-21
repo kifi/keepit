@@ -91,6 +91,12 @@ class URIGraphTest extends Specification with DbRepos {
     }
   }
 
+  private def mkURIGraph(graphDir: RAMDirectory = new RAMDirectory): URIGraphImpl = {
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    val uriGraphIndexer = new URIGraphIndexer(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db)
+    new URIGraphImpl(uriGraphIndexer)
+  }
+
   class Searchable(uriGraphSearcher: URIGraphSearcher) {
     def search(query: Query): Map[Long, Float] = {
       var result = Map.empty[Long,Float]
@@ -144,13 +150,12 @@ class URIGraphTest extends Specification with DbRepos {
         val bookmarks = mkBookmarks(expectedUriToUserEdges)
 
         val graphDir = new RAMDirectory
-        val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db)
+        val graph = mkURIGraph(graphDir)
         graph.update() === users.size
-        graph.sequenceNumber.value === bookmarks.size
+        graph.uriGraphIndexer.sequenceNumber.value === bookmarks.size
         val config2 = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-        val graph2 = new URIGraphImpl(graphDir, config2, URIGraphFields.decoders(), bookmarkRepo, db)
-        graph2.sequenceNumber.value === bookmarks.size
+        val graph2 = mkURIGraph(graphDir)
+        graph2.uriGraphIndexer.sequenceNumber.value === bookmarks.size
       }
     }
     "generate UriToUsrEdgeSet" in {
@@ -160,10 +165,7 @@ class URIGraphTest extends Specification with DbRepos {
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = mkBookmarks(expectedUriToUserEdges)
-
-        val graphDir = new RAMDirectory
-        val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db)
+        val graph = mkURIGraph()
         graph.update() === users.size
 
         val searcher = graph.getURIGraphSearcher()
@@ -174,7 +176,7 @@ class URIGraphTest extends Specification with DbRepos {
           answer === expected
         }
 
-        graph.numDocs === users.size
+        graph.uriGraphIndexer.numDocs === users.size
       }
     }
 
@@ -185,10 +187,7 @@ class URIGraphTest extends Specification with DbRepos {
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = mkBookmarks(expectedUriToUserEdges, mixPrivate = true)
-
-        val graphDir = new RAMDirectory
-        val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db)
+        val graph = mkURIGraph()
         graph.update() === users.size
 
         val searcher = graph.getURIGraphSearcher()
@@ -204,7 +203,7 @@ class URIGraphTest extends Specification with DbRepos {
           answerPublicOnly === expectedPublicOnly
         }
 
-        graph.numDocs === users.size
+        graph.uriGraphIndexer.numDocs === users.size
       }
     }
 
@@ -215,10 +214,7 @@ class URIGraphTest extends Specification with DbRepos {
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = mkBookmarks(expectedUriToUserEdges)
-
-        val graphDir = new RAMDirectory
-        val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db)
+        val graph = mkURIGraph()
         graph.update() === users.size
 
         val searcher = graph.getURIGraphSearcher()
@@ -239,17 +235,14 @@ class URIGraphTest extends Specification with DbRepos {
           }
         }
 
-        graph.numDocs === users.size
+        graph.uriGraphIndexer.numDocs === users.size
       }
     }
 
     "intersect empty sets" in {
       running(new EmptyApplication()) {
         val (users, uris) = setupDB
-
-        val graphDir = new RAMDirectory
-        val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db)
+        val graph = mkURIGraph()
         val searcher = graph.getURIGraphSearcher()
 
         searcher.getUserToUriEdgeSet(Id[User](10000)).destIdSet.isEmpty === true
@@ -271,9 +264,7 @@ class URIGraphTest extends Specification with DbRepos {
 
     "determine whether intersection is empty" in {
       running(new EmptyApplication()) {
-        val graphDir = new RAMDirectory
-        val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db)
+        val graph = mkURIGraph()
         val searcher = graph.getURIGraphSearcher()
         searcher.intersectAny(new TestDocIdSetIterator(1, 2, 3), new TestDocIdSetIterator(2, 4, 6)) === true
         searcher.intersectAny(new TestDocIdSetIterator(       ), new TestDocIdSetIterator(       )) === false
@@ -295,10 +286,7 @@ class URIGraphTest extends Specification with DbRepos {
             bookmarkRepo.save(BookmarkFactory(title = ("personaltitle bmt"+uriId), url = url1,  uriId = uriId, userId = users((uriId.id % 2L).toInt).id.get, source = BookmarkSource("test")))
           }
         }
-
-        val graphDir = new RAMDirectory
-        val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db)
+        val graph = mkURIGraph()
         graph.update() === 2
 
         val personaltitle = new TermQuery(new Term(URIGraphFields.titleField, "personaltitle"))
@@ -331,10 +319,7 @@ class URIGraphTest extends Specification with DbRepos {
             bookmarkRepo.save(BookmarkFactory(title = ("personaltitle bmt"+uriId), url = url1,  uriId = uriId, userId = users(0).id.get, source = BookmarkSource("test")))
           }
         }
-
-        val graphDir = new RAMDirectory
-        val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db)
+        val graph = mkURIGraph()
         graph.update() === 1
 
         val searcher = graph.getURIGraphSearcher(users(0).id)
@@ -366,7 +351,6 @@ class URIGraphTest extends Specification with DbRepos {
 
     "dump Lucene Document" in {
       running(new EmptyApplication()) {
-        val ramDir = new RAMDirectory
         val store = new FakeArticleStore()
 
         val (user, uris, bookmarks) = db.readWrite { implicit s =>
@@ -387,10 +371,9 @@ class URIGraphTest extends Specification with DbRepos {
         }
         uris.foreach{ uri => store += (uri.id.get -> mkArticle(uri.id.get, "title", "content")) }
 
-        val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-        val indexer = new URIGraphImpl(ramDir, config, URIGraphFields.decoders(), bookmarkRepo, db)
-        val doc = indexer.buildIndexable(user.id.get, SequenceNumber.ZERO).buildDocument
-        doc.getFields.forall{ f => indexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
+        val graph = mkURIGraph()
+        val doc = graph.uriGraphIndexer.buildIndexable(user.id.get, SequenceNumber.ZERO).buildDocument
+        doc.getFields.forall{ f => graph.uriGraphIndexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
       }
     }
   }
