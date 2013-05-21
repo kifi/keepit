@@ -33,7 +33,70 @@
 	</div>
 
 	<div class="container centered">
-		<aside class="right">
+
+		<aside class="left sticky">
+			<div class="large-avatar">
+				<div class="name">Loading...</div>
+			</div>
+			<h3 class="active my-keeps">
+				<a href="javascript: populateMyKeeps();"> My Keeps <span
+					class="right light"></span></a>
+			</h3>
+		</aside>
+
+		<section class="main">
+			<div class="search sticky">
+				<div class="search-wrapper">
+					<input class="search" type="text" placeholder="Search all keeps" />
+				</div>
+				<h1>My Keeps</h1>
+				<div class="num-results">
+					Showing <span>0</span> keeps
+				</div>
+			</div>
+			<div class="scrollable">
+				<ol id="search-results">
+					<li data-template class="keep {% if isMyBookmark %}mine{% endif %}">
+						<a class="long-text" href="{{bookmark.url}}" target="_blank"
+						title="{{bookmark.title}}">{{bookmark.title}}</a> <span
+						class="fs9 green long-text" title="{{bookmark.url}}">{{bookmark.url}}</span>
+						<div class="bottom">
+							<img class="small-avatar" data-template-for="users"
+								src="img/clock.png"
+								data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
+								title="{{firstName}} {{lastName}}" /> 
+							<span class="fs9 gray">
+								{% if isMyBookmark %}You{% endif %}{% if users.length > 0 && isMyBookmark %} + {% endif %}{% if users.length > 0 %}{{users.length}} friend{% endif %}{% if users.length > 1 %}s{% endif %} kept this {% if isPrivate %} <img src="img/private.png" /> Private {% endif %}
+							</span>
+							<div class="clearfix"></div>
+						</div>
+					</li>
+					<li data-template-fallback>Sorry, JavaScript required!</li>
+				</ol>
+				<ol id="my-keeps">
+					<li data-template class="keep mine" data-created={{createdAt}}>
+						<a class="long-text" href="{{url}}" target="_blank"
+						title="{{title}}">{{title}}</a> <span class="fs9 green long-text"
+						title="{{url}}">{{url}}</span>
+						<div class="bottom">
+							<img class="small-avatar" data-template-for="keepers"
+								src="img/clock.png"
+								data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
+								title="{{firstName}} {{lastName}}" /> 
+							<span class="fs9 gray"> You {% if keepers.length > 0 %} + {{keepers.length}} friend{% endif %}{% if keepers.length > 1 %}s{% endif %} kept this {% if isPrivate %} <img
+								src="img/private.png" /> Private {% endif %}
+							</span>
+							<div class="clearfix"></div>
+						</div>
+					</li>
+					<li data-template-fallback>Sorry, JavaScript required!</li>
+				</ol>
+				<div class="loading">
+					<img src="img/loading.gif" />
+				</div>
+			</div>
+		</section>
+		<aside class="right sticky">
 			<h2>Filter Results By:</h2>
 			<label>Keepers:</label>
 			<div class="custom-select">
@@ -46,69 +109,11 @@
 			<textarea id="custom-keepers" rows="1"></textarea>
 		</aside>
 
-		<aside class="left">
-			<div class="large-avatar">
-				<div class="name">Loading...</div>
-			</div>
-			<h3 class="active my-keeps">
-				<a href="javascript: populateMyKeeps();"> My Keeps <span
-					class="right light"></span></a>
-			</h3>
-		</aside>
-
-		<section class="main"></section>
-
-
 		<footer> </footer>
 
 	</div>
 	<!-- /container -->
 
-	<div class="search">
-		<div class="search-wrapper">
-			<input class="search" type="text" placeholder="Search all keeps" />
-		</div>
-		<h1>My Keeps</h1>
-		<div class="num-results">
-			Showing <span>0</span> keeps
-		</div>
-	</div>
-	<div class="scrollable">
-		<ol id="search-results">
-			<li data-template class="keep {% if isMyBookmark %}mine{% endif %}">
-				<a class="long-text" href="{{bookmark.url}}" target="_blank"
-				title="{{bookmark.title}}">{{bookmark.title}}</a> <span
-				class="fs9 green long-text" title="{{bookmark.url}}">{{bookmark.url}}</span>
-				<div class="bottom">
-					<img class="small-avatar" data-template-for="users"
-						src="img/clock.png"
-						data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
-						title="{{firstName}} {{lastName}}" /> <span class="fs9 gray">
-						{% if isMyBookmark %}You{% endif %}{% if users.length > 0 && isMyBookmark %} + {% endif %}{% if users.length > 0 %}{{users.length}} friend{% endif %}{% if users.length > 1 %}s{% endif %} kept this {% if isPrivate %} <img src="img/private.png" /> Private {% endif %}
-					</span>
-					<div class="clearfix"></div>
-				</div>
-			</li>
-			<li data-template-fallback>Sorry, JavaScript required!</li>
-		</ol>
-		<ol id="my-keeps">
-			<li data-template class="keep mine" data-created={{createdAt}}>
-				<a class="long-text" href="{{url}}" target="_blank"
-				title="{{title}}">{{title}}</a> <span class="fs9 green long-text"
-				title="{{url}}">{{url}}</span>
-				<div class="bottom">
-					<span class="fs9 gray"> You kept this {% if isPrivate %} <img
-						src="img/private.png" /> Private {% endif %}
-					</span>
-					<div class="clearfix"></div>
-				</div>
-			</li>
-			<li data-template-fallback>Sorry, JavaScript required!</li>
-		</ol>
-		<div class="loading">
-			<img src="img/loading.gif" />
-		</div>
-	</div>
 
 	<script
 		src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
@@ -117,7 +122,6 @@
 				|| document
 						.write('<script src="js/jquery-1.9.1.min.js"><\/script>')
 	</script>
-	<script src="js/jquery.sticky.js"></script>
 	<script src="js/textext.1.3.1.min.js"></script>
 	<script src="js/main.js"></script>
 	<script>

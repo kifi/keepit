@@ -6,6 +6,9 @@ var urlConnections = 'https://api.kifi.com/site/user/connections';
 
 var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
 				hideLoading();
+				$('#my-keeps .keep .bottom').each(function() {
+					$(this).find('img.small-avatar').prependTo($(this));
+				});
 				$('#my-keeps .keep .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myAvatar + '"/>');
 
 				// insert time sections
@@ -135,7 +138,7 @@ function populateMyKeeps() {
 $(document)
 	.on('keypress', function(e) {if (!$(e.target).is('textarea')) $('input.search').focus() }) // auto focus on search field when starting to type anywhere on the document
 	.on('scroll',function() { // infinite scroll
-		if (!isLoading() && ($(window).scrollTop() + $(window).height())/ $(document).height() > .75) //  scrolled down more than %75
+		if (!isLoading() && $(document).height() - ($(window).scrollTop() + $(window).height()) < 300) //  scrolled down to less than 300px from the bottom
 		{
 			if (lastKeep != null ) // scroll keeps
 				populateMyKeeps();
@@ -143,7 +146,7 @@ $(document)
 				doSearch(searchContext);	
 		}
 	})
-	.ready(function() {
+	.ready(function() {		
 		// populate number of my keeps 
 		$.getJSON(urlMyKeepsCount, function(data) {
 			$('aside.left .my-keeps span').text(data.numKeeps);
@@ -201,7 +204,7 @@ $(document)
 		$('input.search')
 			.on('keyup',function() {
 					clearTimeout(searchTimeout);
-					searchTimeout = setTimeout('doSearch(null)', 200);
+					searchTimeout = setTimeout('doSearch(null)', 500);
 				}) // instant search
 			.on('focus',function() {$('.active').removeClass('active'); $(this).parent().addClass('active')});
 
