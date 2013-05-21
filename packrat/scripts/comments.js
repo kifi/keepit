@@ -9,7 +9,7 @@
 // @require scripts/snapshot.js
 
 commentsPane = function() {
-  var $posted = $();
+  var $scroller = $(), $holder = $();
   return {
     render: function($container, comments, session) {
       comments.forEach(function(c) {
@@ -36,10 +36,11 @@ commentsPane = function() {
         .on("kifi:compose-submit", submitComment.bind(null, $container, session))
         .find("time").timeago();
 
-        $posted = $container.find(".kifi-comments-posted");
+        $scroller = $container.find(".kifi-comments-posted");
+        $holder = $scroller.find(".kifi-comments-posted-inner");
 
         if (~session.experiments.indexOf("admin")) {
-          $posted.on("mouseenter", ".kifi-comment-posted", function() {
+          $holder.on("mouseenter", ".kifi-comment-posted", function() {
             if (this.lastChild.className != "kifi-comment-x") {
               $(this).append("<div class=kifi-comment-x>");
             }
@@ -64,21 +65,22 @@ commentsPane = function() {
         attachComposeBindings($container, "comment");
 
         $container.closest(".kifi-pane-box").on("kifi:remove", function() {
-          $posted.length = 0;
+          $scroller = $holder = $();
         });
 
         if (comments.length) emitRead(comments[comments.length - 1]);
       });
     },
     update: function(comment, userId) {
-      if ($posted.length) {
+      if ($scroller.length) {
         comment.isLoggedInUser = comment.user.id == userId;
         renderComment(comment, function($c) {
           var $old;
-          if (comment.isLoggedInUser && ($old = $posted.children("[data-id=]").first()).length) {
+          if (comment.isLoggedInUser && ($old = $holder.find(".kifi-comment-posted[data-id=]").first()).length) {
             $old.replaceWith($c);
           } else {
-            $posted.append($c).scrollToBottom();  // should we compare timestamps and insert in order?
+            $holder.append($c);  // should we compare timestamps and insert in order?
+            $scroller.scrollToBottom();
           }
           emitRead(comment);
         });
@@ -104,7 +106,8 @@ commentsPane = function() {
         isLoggedInUser: true,
         id: ""},
       function($c) {
-        $posted.append($c).scrollToBottom();
+        $holder.append($c);
+        $scroller.scrollToBottom();
       });
   }
 

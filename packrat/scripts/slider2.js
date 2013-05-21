@@ -96,7 +96,7 @@ slider2 = function() {
         } else if (!$pane && !data.dragStarting && !data.$dragGlass) {
           if (e.relatedTarget) {
             if ($slider && !$slider[0].contains(e.relatedTarget)) {
-              api.log("[slider.mouseout]");
+              api.log("[slider.mouseout] hiding");
               hideSlider("mouseout");
             }
           } else {  // out of window
@@ -131,6 +131,10 @@ slider2 = function() {
           unkeepPage(el);
         }
         this.classList.add("kifi-hoverless");
+      }).on("mouseover", ".kifi-slider2-keep", function() {
+        if ($slider.hasClass("kifi-auto")) {
+          growSlider("kifi-auto", "kifi-wide");
+        }
       }).on("mouseover", ".kifi-slider2-keep-btn>.kifi-slider2-tip", function() {
         this.parentNode.classList.add("kifi-hoverless");
       }).bindHover(".kifi-slider2-keep-btn", function(configureHover) {
@@ -180,13 +184,6 @@ slider2 = function() {
         });
       }).on("mouseout", ".kifi-slider2-keep-btn", function() {
         this.classList.remove("kifi-hoverless");
-      }).on("hover:hide", ".kifi-slider2-keep-btn", function() {
-        document.documentElement.addEventListener("mousemove", function f(e) {
-          this.removeEventListener("mousemove", f, true);
-          if ($slider && !$slider[0].contains(e.target)) {
-            hideSlider("mouseout");
-          }
-        }, true);
       }).bindHover(".kifi-slider2-lock", function(configureHover) {
         var kept = !this.parentNode.classList.contains("kifi-unkept");
         var publicly = kept && this.parentNode.classList.contains("kifi-public");
@@ -261,17 +258,21 @@ slider2 = function() {
     $slider = $();  // creation in progress (prevents multiple)
 
     createSlider(function() {
-      $slider.appendTo(tile).layout().addClass("kifi-wide kifi-growing")
-      .on("transitionend webkitTransitionEnd", function f(e) {
-        if (e.target.classList.contains("kifi-slider2")) {
-          $(e.target).off("transitionend webkitTransitionEnd", f).removeClass("kifi-growing");
-        }
-      });
+      $slider.appendTo(tile);
 
       logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0), url: document.URL});
       api.port.emit("keeper_shown");
 
       callback && callback();
+    });
+  }
+
+  function growSlider(fromClass, toClass) {
+    $slider.addClass(fromClass).layout().addClass(toClass + " kifi-growing").removeClass(fromClass)
+    .on("transitionend webkitTransitionEnd", function f(e) {
+      if (e.target === this) {
+        $(this).off("transitionend webkitTransitionEnd", f).removeClass("kifi-growing");
+      }
     });
   }
 
@@ -632,7 +633,7 @@ slider2 = function() {
     notices: function($box) {
       api.port.emit("notifications", function(o) {
         api.require("scripts/notices.js", function() {
-          noticesPane.render($box.find(".kifi-pane-tall"), o.notifications, o.timeLastSeen);
+          noticesPane.render($box.find(".kifi-pane-tall"), o.notifications, o.timeLastSeen, o.numNotVisited);
         });
       });
     },
@@ -713,6 +714,9 @@ slider2 = function() {
     notifications_visited: function(o) {
       noticesPane.update(o);
     },
+    all_notifications_visited: function(o) {
+      noticesPane.update(o);
+    },
     comment: function(o) {
       commentsPane.update(o.comment, o.userId);
     },
@@ -749,9 +753,10 @@ slider2 = function() {
       } else {
         api.log("[show]", trigger);
         if (trigger == "tile") {
-          showSlider(trigger);
+          showSlider(trigger, growSlider.bind(null, "", "kifi-wide"));
         } else if (!lastShownAt) { // auto-show only if not already shown
           showSlider(trigger, function() {
+            growSlider("kifi-tiny", "kifi-auto");
             idleTimer.start(5000);
           });
         }

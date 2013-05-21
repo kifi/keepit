@@ -57,11 +57,26 @@ trait EdgeSet[S,D] {
       }
     }
   }
+
+  def accessor: EdgeAccessor[S, D] = new EdgeAccessor[S, D](this)
 }
 
-trait CreatedAt[D] {
-  def getCreatedAt(id: Id[D]): Long = getCreatedAt(id.id)
-  def getCreatedAt(id: Long): Long
+class EdgeAccessor[S, D](val edgeSet: EdgeSet[S, D]) {
+  protected var _destId: Long = -1L
+
+  def seek(id: Id[D]): Boolean = seek(id.id)
+  def seek(id: Long): Boolean = {
+    _destId = id
+    edgeSet.destIdLongSet.contains(id)
+  }
+
+  def destId: Long = _destId
+
+  def createdAt: Long = throw new UnsupportedOperationException
+  def isPublic: Boolean = true
+  def isPrivate: Boolean = false
+
+  def getCreatedAt(d: Long): Long = throw new UnsupportedOperationException
 }
 
 trait MaterializedEdgeSet[S,D] extends EdgeSet[S, D] {
@@ -117,26 +132,36 @@ trait LongSetEdgeSet[S, D] extends MaterializedEdgeSet[S, D] {
   override def destIdLongSet = longArraySet
   override lazy val destIdSet: Set[Id[D]] = destIdLongSet.map(Id[D](_))
   override def size = longArraySet.size
-}
 
-trait LongSetEdgeSetWithCreatedAt[S, D] extends LongSetEdgeSet[S, D] with CreatedAt[D] {
-  protected def createdAt(idx: Int): Long
-
-  override def getCreatedAt(id: Id[D]): Long = getCreatedAt(id.id)
-  override def getCreatedAt(id: Long): Long = {
-    val idx = longArraySet.findIndex(id)
-    if (idx >= 0) createdAt(idx) else 0
+  override def accessor: EdgeAccessor[S, D] = new EdgeAccessor[S, D](this) {
+    protected var index: Int = -1
+    override def seek(id: Long) = {
+      _destId = id
+      index = longArraySet.findIndex(id)
+      index >= 0
+    }
   }
 }
 
-trait LongToLongMapEdgeSetWithCreatedAt[S, D] extends MaterializedEdgeSet[S, D] with CreatedAt[D] {
-  protected val destIdMap: Map[Long, Long]
+trait LongSetEdgeSetWithCreatedAt[S, D] extends LongSetEdgeSet[S, D] {
+  protected def createdAtByIndex(idx:Int): Long
+  protected def isPublicByIndex(idx:Int): Boolean
 
-  override lazy val destIdLongSet: Set[Long] = destIdMap.keySet
-  override lazy val destIdSet: Set[Id[D]] = destIdLongSet.map(new Id[D](_))
+  override def accessor: EdgeAccessor[S, D] = new EdgeAccessor[S, D](this) {
+    protected var index: Int = -1
+    override def seek(id: Long) = {
+      _destId = id
+      index = longArraySet.findIndex(id)
+      index >= 0
+    }
+    override def createdAt: Long = if (index >= 0) createdAtByIndex(index) else throw new IllegalStateException("accessor is not positioned")
+    override def isPublic: Boolean = if (index >= 0) isPublicByIndex(index) else throw new IllegalStateException("accessor is not positioned")
 
-  override def size = destIdMap.size
-  override def getCreatedAt(id: Long): Long = URIList.unitToMillis(destIdMap.get(id).getOrElse(0L))
+    override def getCreatedAt(id: Long): Long = {
+      val idx = longArraySet.findIndex(id)
+      if (idx >= 0) createdAtByIndex(idx) else throw new NoSuchElementException(s"failed to find id: ${id}")
+    }
+  }
 }
 
 trait DocIdSetEdgeSet[S, D] extends EdgeSet[S, D] {
