@@ -76,7 +76,7 @@ class EdgeAccessor[S, D](val edgeSet: EdgeSet[S, D]) {
   def isPublic: Boolean = true
   def isPrivate: Boolean = false
 
-  def getCreatedAt(d: Long): Long = throw new UnsupportedOperationException
+  def getCreatedAt(id: Long): Long = throw new UnsupportedOperationException
 }
 
 trait MaterializedEdgeSet[S,D] extends EdgeSet[S, D] {
@@ -159,7 +159,11 @@ trait LongSetEdgeSetWithCreatedAt[S, D] extends LongSetEdgeSet[S, D] {
 
     override def getCreatedAt(id: Long): Long = {
       val idx = longArraySet.findIndex(id)
-      if (idx >= 0) createdAtByIndex(idx) else throw new NoSuchElementException(s"failed to find id: ${id}")
+      if (idx >= 0) {
+        createdAtByIndex(idx)
+      } else {
+        0L //throw new NoSuchElementException(s"failed to find id: ${id}")
+      }
     }
   }
 }
