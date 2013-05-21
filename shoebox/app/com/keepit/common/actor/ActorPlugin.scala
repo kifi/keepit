@@ -14,7 +14,11 @@ import com.keepit.common.logging.Logging
  * Also serves as Provider[ActorSystem] so that guice can inject this actor system into
  * other services or plugins that need to use actors.
  */
-class ActorPlugin(system: ActorSystem) extends SchedulingPlugin with Provider[ActorSystem] with Logging {
+class ActorPlugin(
+    system: ActorSystem,
+    serviceDiscovery: ServiceDiscovery,
+    schedulingEnabled: SchedulingEnabled)
+  extends SchedulingPlugin with Provider[ActorSystem] with Logging {
 
   def get: ActorSystem = system
 

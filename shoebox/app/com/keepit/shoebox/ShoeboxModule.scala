@@ -3,6 +3,7 @@ package com.keepit.shoebox
 import com.google.common.io.Files
 import com.google.inject.{Provides, Singleton}
 import com.keepit.classify.DomainTagImportSettings
+import com.keepit.common.plugin._
 import com.keepit.common.analytics.reports._
 import com.keepit.common.crypto._
 import com.keepit.common.logging.Logging
@@ -31,6 +32,9 @@ class ShoeboxModule() extends ScalaModule with Logging {
     bind[InvitationMailPlugin].to[InvitationMailPluginImpl].in[AppScoped]
     bind[NotificationConsistencyChecker].to[NotificationConsistencyCheckerImpl].in[AppScoped]
   }
+
+  @Provides
+  def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.LeaderOnly
 
   @Singleton
   @Provides

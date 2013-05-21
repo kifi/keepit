@@ -131,6 +131,9 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   private def dbInfoFromApplication(): DbInfo = TestDbInfo.dbInfo
 
   @Provides
+  def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.Never
+
+  @Provides
   @Singleton
   def fakeClock: FakeClock = new FakeClock()
 

@@ -5,6 +5,7 @@ import com.google.common.io.Files
 import com.google.inject.util.Modules
 import com.google.inject.{Provides, Singleton, Provider}
 import com.keepit.classify.DomainTagImportSettings
+import com.keepit.common.plugin._
 import com.keepit.common.zookeeper._
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.actor.{ActorFactory, ActorPlugin}
@@ -38,6 +39,13 @@ import com.keepit.common.service.{FortyTwoServices, IpAddress}
 
 class ShoeboxDevModule extends ScalaModule with Logging {
   def configure() {}
+
+  @Provides
+  def globalSchedulingEnabled: SchedulingEnabled =
+    (current.configuration.getBoolean("scheduler.enabled").map {
+      case true => SchedulingEnabled.Never
+      case false => SchedulingEnabled.Always
+    }).getOrElse(SchedulingEnabled.Never)
 
   @Singleton
   @Provides
