@@ -1,6 +1,7 @@
 package com.keepit.search.graph
 
 import com.keepit.common.db.Id
+import com.keepit.common.logging.Logging
 import com.keepit.search.index.IdMapper
 import com.keepit.search.index.Searcher
 import com.keepit.search.query.QueryUtil._
@@ -61,7 +62,7 @@ trait EdgeSet[S,D] {
   def accessor: EdgeAccessor[S, D] = new EdgeAccessor[S, D](this)
 }
 
-class EdgeAccessor[S, D](val edgeSet: EdgeSet[S, D]) {
+class EdgeAccessor[S, D](val edgeSet: EdgeSet[S, D]) extends Logging {
   protected var _destId: Long = -1L
 
   def seek(id: Id[D]): Boolean = seek(id.id)
@@ -162,6 +163,7 @@ trait LongSetEdgeSetWithCreatedAt[S, D] extends LongSetEdgeSet[S, D] {
       if (idx >= 0) {
         createdAtByIndex(idx)
       } else {
+        log.error(s"failed in getCreatedAt: src=${sourceId} dest=${id}")
         0L //throw new NoSuchElementException(s"failed to find id: ${id}")
       }
     }
