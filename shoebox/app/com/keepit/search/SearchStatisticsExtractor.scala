@@ -196,7 +196,7 @@ object TrainingDataLabeler extends Logging{
  *
  * TODO: more elegant solution ?
  */
-class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], targetUriIds: Seq[Id[NormalizedURI]],
+class SearchStatisticsHelperSearcher(queryString: String, userId: Id[User], targetUriIds: Seq[Id[NormalizedURI]],
   db: Database, userRepo: UserRepo, userConnectionRepo: UserConnectionRepo, uriGraph: URIGraph,
   articleIndexer: ArticleIndexer, searchConfigManager: SearchConfigManager, mainSearcherFactory: MainSearcherFactory, parserFactory: MainQueryParserFactory,
   browsingHistoryTracker: BrowsingHistoryTracker, clickHistoryTracker: ClickHistoryTracker, resultClickTracker: ResultClickTracker) extends Logging{
@@ -247,13 +247,13 @@ class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], tar
   val articleSearcher = articleIndexer.getSearcher
   val myUriEdges = uriGraphSearcher.myUriEdgeSet // my keeps
   val myUris = myUriEdges.destIdLongSet
-  val myPublicUris = uriGraphSearcher.myPublicUriEdgeSet.destIdLongSet
+  val myUriEdgeAccessor = myUriEdges.accessor
   val filteredFriendIds = searchFilter.filterFriends(friendIds)
   val friendUris = filteredFriendIds.foldLeft(Set.empty[Long]) { (s, f) =>
     s ++ uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).destIdLongSet
   }
   val friendlyUris = {
-    if (searchFilter.includeMine) myUris ++ friendUris
+    if (searchFilter.includeMine) friendUris ++ myUris
     else if (searchFilter.includeShared) friendUris
     else friendUris -- myUris // friends only
   }
@@ -319,10 +319,10 @@ class SearchStatisticsHelperSearcher (queryString: String, userId: Id[User], tar
           if (!idFilter.contains(id) && targetUriIds.contains(normalizedId)) {
 
             val clickBoost = clickBoosts(id)
-            val isBookmark = myUris.contains(id)
-            val isPrivate = isBookmark && !myPublicUris.contains(id)
+            val isBookmark = myUriEdgeAccessor.seek(id)
+            val isPrivate = isBookmark && !myUriEdgeAccessor.isPublic
 
-            val recencyScore = if (isBookmark) getRecencyScore(myUriEdges.getCreatedAt(normalizedId)) else 0.0f
+            val recencyScore = if (isBookmark) getRecencyScore(myUriEdgeAccessor.createdAt) else 0.0f
             val textScore = scorer.score()
 
             val (sharingUsers, effectiveSharingSize) = findSharingUsers(normalizedId)
