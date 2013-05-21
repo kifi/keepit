@@ -145,8 +145,8 @@ trait LongSetEdgeSet[S, D] extends MaterializedEdgeSet[S, D] {
 }
 
 trait LongSetEdgeSetWithCreatedAt[S, D] extends LongSetEdgeSet[S, D] {
-  protected def createdAtByIndex(idx:Int): Long
-  protected def isPublicByIndex(idx:Int): Boolean
+  protected def createdAtByIndex(idx: Int): Long
+  protected def isPublicByIndex(idx: Int): Boolean
 
   override def accessor: EdgeAccessor[S, D] = new EdgeAccessor[S, D](this) {
     protected var index: Int = -1
@@ -163,8 +163,10 @@ trait LongSetEdgeSetWithCreatedAt[S, D] extends LongSetEdgeSet[S, D] {
       if (idx >= 0) {
         createdAtByIndex(idx)
       } else {
-        log.error(s"failed in getCreatedAt: src=${sourceId} dest=${id}")
-        longArraySet.verify
+        log.error(s"failed in getCreatedAt: src=${sourceId} dest=${id} idx=${idx}")
+        if (longArraySet.verify) {
+          if (longArraySet.iterator.forall(_ != id)) log.error(s"verified the data structure, but the key does not exists")
+        }
         0L //throw new NoSuchElementException(s"failed to find id: ${id}")
       }
     }
