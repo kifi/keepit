@@ -44,6 +44,8 @@ class ArticleIndexer @Inject() (
   def run(): Int = run(commitBatchSize, fetchSize)
 
   def run(commitBatchSize: Int, fetchSize: Int): Int = {
+    resetSequenceNumberIfReindex()
+
     log.info("starting a new indexing round")
     try {
       val uris = db.readOnly { implicit s =>
