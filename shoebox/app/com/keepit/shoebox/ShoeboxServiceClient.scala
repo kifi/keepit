@@ -10,8 +10,11 @@ import com.keepit.serializer._
 import play.api.libs.json.JsArray
 import scala.concurrent.ExecutionContext.Implicits.global
 
+import com.google.inject.Singleton
 import com.google.inject.Inject
-
+import scala.util.Success
+import scala.util.Failure
+import com.keepit.common.mail.ElectronicMail
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -20,6 +23,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]]
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
+  def sendMail(email: ElectronicMail): Future[Boolean]
   def addBrowsingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit
   def addClickingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit
   def getBookmark(userId: Long): Future[Bookmark]
@@ -30,6 +34,10 @@ case class ShoeboxCacheProvider @Inject() (
 
 class ShoeboxServiceClientImpl @Inject() (override val host: String, override val port: Int, override val httpClient: HttpClient, cacheProvider: ShoeboxCacheProvider)
     extends ShoeboxServiceClient {
+  
+  def sendMail(email: ElectronicMail): Future[Boolean] = {
+    call(routes.ShoeboxController.sendMail(), Json.toJson(email)).map(r => r.body.toBoolean)
+  }
 
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = {
     val query = userIds.mkString(",")

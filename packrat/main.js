@@ -416,7 +416,7 @@ api.port.on({
       api.log("[setPrivate] response:", o);
     });
     pageData[tab.nUri].tabs.forEach(function(tab) {
-      api.tabs.emit("kept", {kept: priv ? "private" : "public"});
+      api.tabs.emit(tab, "kept", {kept: priv ? "private" : "public"});
     });
   },
   keeper_shown: function(_, _, tab) {

@@ -74,9 +74,12 @@ span.kifi-compose-tip {
 a.kifi-compose-submit[href] {
   display: inline-block;
   padding: 0 18px;
-  background-color: #bdc3c7;
   color: #fff !important;
+  background-color: #4c8ffb;
   line-height: 28px;
+}
+.kifi-compose.kifi-empty a.kifi-compose-submit[href] {
+  background-color: #bdc3c7;
 }
 a.kifi-compose-submit:focus {
   outline: 1px dashed #aaa;
