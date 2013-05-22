@@ -83,7 +83,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
   }
 
   "ArticleIndexer" should {
-    "index indexable URIs" in running(new EmptyApplication())(new IndexerScope {
+    "index indexable URIs" in running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule())(new IndexerScope {
       db.readWrite { implicit s =>
         uri1 = uriRepo.save(uriRepo.get(uri1.id.get).withState(INACTIVE))
         uri2 = uriRepo.save(uriRepo.get(uri2.id.get).withState(INACTIVE))
@@ -118,7 +118,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
       indexer.sequenceNumber.value === currentSeqNum
     })
 
-    "search documents (hits in contents)" in running(new EmptyApplication())(new IndexerScope {
+    "search documents (hits in contents)" in running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule)(new IndexerScope {
       indexer.run()
 
       indexer.search("alldocs").size === 3
@@ -136,7 +136,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
       res.head.id === uriIdArray(2)
     })
 
-    "search documents (hits in titles)" in running(new EmptyApplication())(new IndexerScope {
+    "search documents (hits in titles)" in running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule)(new IndexerScope {
       indexer.run()
 
       var res = indexer.search("title1")
@@ -152,7 +152,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
       res.head.id === uriIdArray(2)
     })
 
-    "search documents (hits in contents and titles)" in running(new EmptyApplication())(new IndexerScope {
+    "search documents (hits in contents and titles)" in running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule)(new IndexerScope {
       indexer.run()
 
       var res = indexer.search("title1 alldocs")
@@ -168,7 +168,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
       res.head.id === uriIdArray(2)
     })
 
-    "search documents using stemming" in running(new EmptyApplication())(new IndexerScope {
+    "search documents using stemming" in running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule)(new IndexerScope {
       indexer.run()
 
       indexer.search("alldoc").size === 3
@@ -179,7 +179,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
       indexer.search("+body +soul").size === 3
     })
 
-    "limit the result by percentMatch" in running(new EmptyApplication())(new IndexerScope {
+    "limit the result by percentMatch" in running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule)(new IndexerScope {
       indexer.run()
 
       var res = indexer.search("title1 alldocs", percentMatch = 0.0f)
@@ -198,7 +198,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
       res.size === 0
     })
 
-    "limit the result by site" in running(new EmptyApplication())(new IndexerScope {
+    "limit the result by site" in running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule)(new IndexerScope {
       indexer.run()
 
       var res = indexer.search("alldocs")
@@ -229,7 +229,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
       res.size === 2
     })
 
-    "match on the URI" in running(new EmptyApplication())(new IndexerScope {
+    "match on the URI" in running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule)(new IndexerScope {
       indexer.run()
 
       var res = indexer.search("keepit")
@@ -242,7 +242,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
       res.size === 1
     })
 
-    "be able to dump Lucene Document" in running(new EmptyApplication())(new IndexerScope {
+    "be able to dump Lucene Document" in running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule)(new IndexerScope {
       indexer.run()
 
       store += (uri1.id.get -> mkArticle(uri1.id.get, "title1 titles", "content1 alldocs body soul"))
@@ -251,7 +251,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
       doc.getFields.forall{ f => indexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
     })
 
-    "delete documents with inactive, active, unscrapable, oe scrape_wanted state" in running(new EmptyApplication())(new IndexerScope {
+    "delete documents with inactive, active, unscrapable, oe scrape_wanted state" in running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule)(new IndexerScope {
       indexer.run()
       indexer.numDocs == 3
 

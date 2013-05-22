@@ -16,7 +16,7 @@ import org.apache.lucene.search.Explanation
 import org.apache.lucene.util.PriorityQueue
 import com.keepit.search.query.QueryUtil
 import com.keepit.search.query.parser.SpellCorrector
-import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
+import com.keepit.common.analytics.{EventFamilies, Events}
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import play.api.libs.json._
@@ -26,6 +26,10 @@ import org.joda.time.DateTime
 import com.keepit.serializer.SearchResultInfoSerializer
 import com.keepit.search.query.LuceneExplanationExtractor
 import com.keepit.search.query.LuceneScoreNames
+import com.keepit.search.graph.UserToUriEdgeSet
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.shoebox.ClickHistoryTracker
+import com.keepit.shoebox.BrowsingHistoryTracker
 
 
 class MainSearcher(
@@ -37,9 +41,9 @@ class MainSearcher(
     val uriGraphSearcher: URIGraphSearcher,
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
-    browsingHistoryTracker: BrowsingHistoryTracker,
-    clickHistoryTracker: ClickHistoryTracker,
-    persistEventPlugin: PersistEventPlugin,
+    browsingHistoryBuilder: BrowsingHistoryBuilder,
+    clickHistoryBuilder: ClickHistoryBuilder,
+    shoeboxClient: ShoeboxServiceClient,
     spellCorrector: SpellCorrector)
     (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
@@ -117,7 +121,7 @@ class MainSearcher(
       case None =>
         articleSearcher.indexReader
     }
-    PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryTracker, clickHistoryTracker, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory)
+    PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryBuilder, clickHistoryBuilder, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient)
   }
 
   def searchText(queryString: String, maxTextHitsPerCategory: Int, clickBoosts: ResultClickTracker.ResultClickBoosts)(implicit lang: Lang) = {
@@ -327,7 +331,7 @@ class MainSearcher(
     val searchResultInfo = SearchResultInfo(myTotal, friendsTotal, othersTotal, svVar, svExistVar)
     val searchResultJson = SearchResultInfoSerializer.serializer.writes(searchResultInfo)
     val metaData = Json.obj("queryUUID" -> JsString(searchResultUuid.id), "searchResultInfo" -> searchResultJson)
-    persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData))
+    shoeboxClient.persistServerSearchEvent(metaData)
 
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
         myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt,
