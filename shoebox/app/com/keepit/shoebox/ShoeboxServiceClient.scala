@@ -7,7 +7,7 @@ import com.keepit.model._
 import scala.concurrent.{Future, promise}
 import com.keepit.controllers.shoebox._
 import com.keepit.serializer._
-import play.api.libs.json.JsArray
+import play.api.libs.json._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import com.google.inject.Singleton

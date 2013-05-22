@@ -4,7 +4,6 @@ import scala.collection.mutable.{Stack => MutableStack}
 import scala.concurrent._
 import scala.slick.session.{Database => SlickDatabase}
 import scala.collection.mutable
-import scala.collection.immutable.Set
 import org.joda.time.{ReadablePeriod, DateTime}
 import com.google.inject.Module
 import com.google.inject.Provides
@@ -19,8 +18,8 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{FakeMailToKeepPlugin, MailToKeepPlugin, FakeMailModule, MailSenderPlugin, ElectronicMail}
-import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.mail._
+import com.keepit.common.net.{FakeHttpClientModule,HttpClient}
 import com.keepit.common.service._
 import com.keepit.common.social._
 import com.keepit.common.store.FakeS3StoreModule
@@ -42,7 +41,6 @@ import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.net.HttpClient
 import com.keepit.shoebox.ShoeboxServiceClientImpl
 import com.keepit.shoebox.ShoeboxCacheProvider
 
@@ -163,6 +161,10 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     def processMail(mailId: ElectronicMail) = throw new Exception("Should not attempt to use mail plugin in test")
     def processOutbox() = throw new Exception("Should not attempt to use mail plugin in test")
   }
+
+  @Provides
+  @Singleton
+  def localPostOffice(shoeboxPostOfficeImpl: ShoeboxPostOfficeImpl): LocalPostOffice = shoeboxPostOfficeImpl
 
   @Singleton
   @Provides
