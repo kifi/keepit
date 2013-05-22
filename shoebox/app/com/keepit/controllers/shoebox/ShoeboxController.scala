@@ -12,7 +12,7 @@ import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.serializer._
 import play.api.mvc.Action
-import play.api.libs.json.{JsNumber, JsValue, JsArray, JsNull}
+import play.api.libs.json.{JsNumber, JsValue, JsArray, JsNull, JsBoolean}
 import com.keepit.model.BrowsingHistoryRepo
 import com.keepit.model.User
 import com.keepit.search.MultiHashFilter
@@ -25,6 +25,12 @@ import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.Healthcheck
+import com.keepit.search.SearchConfigExperimentRepo
+import com.keepit.model.UserExperimentRepo
+import com.keepit.serializer.SearchConfigExperimentSerializer
+import com.keepit.search.SearchConfigExperiment
+import com.keepit.common.db.State
+import com.keepit.model.ExperimentType
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -34,10 +40,13 @@ class ShoeboxController @Inject() (
   browsingHistoryRepo: BrowsingHistoryRepo,
   clickingHistoryRepo: ClickHistoryRepo,
   normUriRepo: NormalizedURIRepo,
+  experimentRepo: SearchConfigExperimentRepo,
+  userExperimentRepo: UserExperimentRepo,
   postOffice: LocalPostOffice,
-  healthcheckPlugin: HealthcheckPlugin)
+  healthcheckPlugin: HealthcheckPlugin
+  )
   extends ShoeboxServiceController with Logging {
-  
+
   def sendMail = Action(parse.json) { request =>
     Json.fromJson[ElectronicMail](request.body).asOpt match {
       case Some(mail) =>
@@ -49,7 +58,7 @@ class ShoeboxController @Inject() (
         val e = new Exception("Unable to parse email")
         healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some("Unable to parse: " + request.body.toString)))
         Ok("false")
-    } 
+    }
   }
 
   def getNormalizedURI(id: Long) = Action {
@@ -156,4 +165,35 @@ class ShoeboxController @Inject() (
     Ok(JsArray(ids))
   }
 
+  def getActiveExperiments = Action { request =>
+    val exp = db.readOnly { implicit s => experimentRepo.getActive() }.map {
+      SearchConfigExperimentSerializer.serializer.writes(_)
+    }
+    Ok(JsArray(exp))
+  }
+
+  def getExperiments = Action { request =>
+    val exp = db.readOnly { implicit s => experimentRepo.getNotInactive() }.map {
+      SearchConfigExperimentSerializer.serializer.writes(_)
+    }
+    Ok(JsArray(exp))
+  }
+
+  def getExperiment(id: Id[SearchConfigExperiment]) = Action{ request =>
+    val exp = db.readOnly { implicit s => experimentRepo.get(id) }
+    Ok( SearchConfigExperimentSerializer.serializer.writes(exp))
+  }
+
+  def saveExperiment = Action(parse.json) { request =>
+    val exp = SearchConfigExperimentSerializer.serializer.reads(request.body).get
+    db.readWrite { implicit s => experimentRepo.save(exp) }
+    Ok("")
+  }
+
+  def hasExperiment(userId: Id[User], state: State[ExperimentType]) = Action { request =>
+     val has = db.readOnly { implicit s =>
+          userExperimentRepo.hasExperiment(userId, state)
+    }
+    Ok(JsBoolean(has))
+  }
 }
