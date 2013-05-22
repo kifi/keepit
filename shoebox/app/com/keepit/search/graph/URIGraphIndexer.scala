@@ -68,15 +68,20 @@ class URIGraphIndexer(
     cnt
   }
 
-  def update(): Int = update{
+  def update(): Int = {
     resetSequenceNumberIfReindex()
-
-    db.readOnly { implicit s =>
-      bookmarkRepo.getUsersChanged(sequenceNumber)
+    update {
+      db.readOnly { implicit s =>
+        bookmarkRepo.getUsersChanged(sequenceNumber)
+      }
     }
   }
 
-  def update(userId: Id[User]): Int = update{ Seq((userId, SequenceNumber.ZERO)) }
+  def update(userId: Id[User]): Int = {
+    update {
+      Seq((userId, SequenceNumber.ZERO))
+    }
+  }
 
   private def update(usersChanged: => Seq[(Id[User], SequenceNumber)]): Int = {
     log.info("updating URIGraph")

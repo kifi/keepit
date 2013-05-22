@@ -59,15 +59,21 @@ class CollectionIndexer(
     cnt
   }
 
-  def update(): Int = update{
-    db.readOnly { implicit s =>
-      collectionRepo.getCollectionsChanged(sequenceNumber)
+  def update(): Int = {
+    resetSequenceNumberIfReindex()
+    update {
+      db.readOnly { implicit s =>
+        collectionRepo.getCollectionsChanged(sequenceNumber)
+      }
     }
   }
 
-  def update(userId: Id[User]): Int = update {
-    db.readOnly { implicit s =>
-      collectionRepo.getByUser(userId).map{ collection => (collection.id.get, SequenceNumber.MinValue) }
+  def update(userId: Id[User]): Int = {
+    deleteDocuments(new Term(CollectionFields.userField, userId.toString), doCommit = false)
+    update {
+      db.readOnly { implicit s =>
+        collectionRepo.getByUser(userId).map{ collection => (collection.id.get, SequenceNumber.MinValue) }
+      }
     }
   }
 
@@ -110,6 +116,9 @@ class CollectionIndexer(
       val collList = URIList(collListBytes)
 
       doc.add(collListField)
+
+      val uri = buildURIIdField(collList)
+      doc.add(uri)
 
       val uri = buildURIIdField(collList)
       doc.add(uri)
