@@ -47,6 +47,9 @@ import com.keepit.shoebox.ShoeboxServiceClientImpl
 import com.keepit.shoebox.ShoeboxCacheProvider
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.google.inject.Provider
+import com.keepit.shoebox.ClickHistoryTracker
+import com.keepit.common.mail.FakeMailModule
+import com.keepit.shoebox.BrowsingHistoryTracker
 
 class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplication() {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
@@ -173,7 +176,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Provides
   @Singleton
-  def clickHistoryTracker(repo: ClickHistoryRepo, db: Database): ClickHistoryTracker = new ClickHistoryTracker(-1, -1, -1, repo, db, inject[ShoeboxServiceClient])
+  def clickHistoryTracker(repo: ClickHistoryRepo, db: Database): ClickHistoryTracker = new ClickHistoryTracker(-1, -1, -1, repo, db)
 
   @Provides
   @Singleton
@@ -289,14 +292,13 @@ case class ShoeboxServiceModule() extends ScalaModule {
     browsingHistoryRepo,
     clickingHistoryRepo,
     normUriRepo,
-    persistEventPluginProvider.get,
     clock,
     fortyTwoServices)
 
   @Provides
   @Singleton
   def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient): BrowsingHistoryTracker =
-    new BrowsingHistoryTracker(-1, -1, -1, browsingHistoryRepo, db, shoeboxClient)
+    new BrowsingHistoryTracker(-1, -1, -1, browsingHistoryRepo, db)
 
 
 }

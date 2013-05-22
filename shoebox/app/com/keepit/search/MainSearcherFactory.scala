@@ -22,6 +22,8 @@ import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.shoebox.ClickHistoryTracker
+import com.keepit.shoebox.BrowsingHistoryTracker
 
 
 @Singleton

@@ -33,8 +33,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUsers(ids: Seq[Long]): Future[Seq[User]]
   def getNormalizedURI(id: Long) : Future[NormalizedURI]
   def getNormalizedURIs(ids: Seq[Long]): Future[Seq[NormalizedURI]]
-  def addBrowsingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit
-  def addClickingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit
   def getBookmark(userId: Long): Future[Bookmark]
   def getConnectedUsers(id: Long): Future[Set[Id[User]]]
   def getUsersChanged(seqNum: SequenceNumber): Future[Seq[(Id[User], SequenceNumber)]]
@@ -44,7 +42,11 @@ trait ShoeboxServiceClient extends ServiceClient {
 case class ShoeboxCacheProvider @Inject() (
     uriIdCache: NormalizedURICache)
 
-class ShoeboxServiceClientImpl @Inject() (override val host: String, override val port: Int, override val httpClient: HttpClient, cacheProvider: ShoeboxCacheProvider)
+class ShoeboxServiceClientImpl @Inject() (
+  override val host: String,
+  override val port: Int,
+  override val httpClient: HttpClient,
+  cacheProvider: ShoeboxCacheProvider)
     extends ShoeboxServiceClient {
 
   def getUsers(ids: Seq[Long]): Future[Seq[User]] = {
@@ -74,12 +76,8 @@ class ShoeboxServiceClientImpl @Inject() (override val host: String, override va
     }
   }
 
-  def addBrowsingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit = {
-      call(routes.ShoeboxController.addBrowsingHistory(userId, uriId, tableSize, numHashFuncs, minHits))
-  }
-
-  def addClickingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit = {
-    call(routes.ShoeboxController.addClickingHistory(userId, uriId, tableSize, numHashFuncs, minHits))
+  def addBrowsingHistory(userId: Id[User], uriId: Id[NormalizedURI], tableSize: Int, numHashFuncs: Int, minHits: Int): Unit = {
+      call(routes.ShoeboxController.addBrowsingHistory(userId, uriId))
   }
 
   def getBookmark(userId: Long): Future[Bookmark] = {
@@ -116,12 +114,11 @@ class FakeShoeboxServiceClientImpl @Inject() (
     browsingHistoryRepo: BrowsingHistoryRepo,
     clickingHistoryRepo: ClickHistoryRepo,
     normUriRepo: NormalizedURIRepo,
-    persistEventPlugin: PersistEventPlugin,
     clock: Clock,
     fortyTwoServices: FortyTwoServices
 )
     extends ShoeboxServiceClient {
-  val host: String = ???
+  val host: String = ""
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   def getUser(id: Id[User]): Future[User] = {
@@ -150,60 +147,6 @@ class FakeShoeboxServiceClientImpl @Inject() (
      promise[Seq[NormalizedURI]]().success(uris).future
   }
 
-  def addBrowsingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit = {
-    def getMultiHashFilter(userId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int) = {
-      db.readOnly { implicit session =>
-        browsingHistoryRepo.getByUserId(Id[User](userId)) match {
-          case Some(browsingHistory) =>
-            new MultiHashFilter(browsingHistory.tableSize, browsingHistory.filter, browsingHistory.numHashFuncs, browsingHistory.minHits)
-          case None =>
-            val filter = MultiHashFilter(tableSize, numHashFuncs, minHits)
-            filter
-        }
-      }
-    }
-
-    val filter = getMultiHashFilter(userId, tableSize, numHashFuncs, minHits)
-    filter.put(uriId)
-
-    db.readWrite { implicit session =>
-      browsingHistoryRepo.save(browsingHistoryRepo.getByUserId(Id[User](userId)) match {
-        case Some(bh) =>
-          bh.withFilter(filter.getFilter)
-        case None =>
-          BrowsingHistory(userId = Id[User](userId), tableSize = tableSize, filter = filter.getFilter, numHashFuncs = numHashFuncs, minHits = minHits)
-      })
-    }
-
-  }
-
-  def addClickingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit = {
-    def getMultiHashFilter(userId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int) = {
-      db.readOnly { implicit session =>
-        clickingHistoryRepo.getByUserId(Id[User](userId)) match {
-          case Some(clickingHistory) =>
-            new MultiHashFilter(clickingHistory.tableSize, clickingHistory.filter, clickingHistory.numHashFuncs, clickingHistory.minHits)
-          case None =>
-            val filter = MultiHashFilter(tableSize, numHashFuncs, minHits)
-            filter
-        }
-      }
-    }
-
-    val filter = getMultiHashFilter(userId, tableSize, numHashFuncs, minHits)
-    filter.put(uriId)
-
-    db.readWrite { implicit session =>
-      clickingHistoryRepo.save(clickingHistoryRepo.getByUserId(Id[User](userId)) match {
-        case Some(bh) =>
-          bh.withFilter(filter.getFilter)
-        case None =>
-          ClickHistory(userId = Id[User](userId), tableSize = tableSize, filter = filter.getFilter, numHashFuncs = numHashFuncs, minHits = minHits)
-      })
-    }
-
-  }
-
   def getBookmark(userId: Long): Future[Bookmark] = {
     ???
   }
@@ -217,6 +160,9 @@ class FakeShoeboxServiceClientImpl @Inject() (
   }
 
   def persistServerSearchEvent(metaData: JsObject): Unit ={
-    persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject])(clock, fortyTwoServices))
+    //persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject])(clock, fortyTwoServices))
   }
+  
+  def getConnectedUsers(id: Long): scala.concurrent.Future[Set[com.keepit.common.db.Id[com.keepit.model.User]]] = ???
+  def getUsers(ids: Seq[Long]): scala.concurrent.Future[Seq[com.keepit.model.User]] = ???
 }

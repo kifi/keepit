@@ -36,6 +36,9 @@ import com.keepit.common.net.HttpClient
 import com.keepit.common.net.FakeHttpClient
 import play.api.libs.json.JsArray
 import com.keepit.common.net._
+import com.keepit.shoebox.ClickHistoryTracker
+import com.keepit.shoebox.BrowsingHistoryTracker
+import com.keepit.shoebox.ClickHistoryTracker
 
 class MainSearcherTest extends Specification with DbRepos {
 
@@ -58,8 +61,8 @@ class MainSearcherTest extends Specification with DbRepos {
         uriGraph,
         new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer())),
         resultClickTracker,
-        new BrowsingHistoryTracker(3067, 2, 1, inject[BrowsingHistoryRepo], inject[Database], inject[ShoeboxServiceClient]),
-        new ClickHistoryTracker(307, 2, 1, inject[ClickHistoryRepo], inject[Database], inject[ShoeboxServiceClient]),
+        new BrowsingHistoryTracker(3067, 2, 1, inject[BrowsingHistoryRepo], inject[Database]),
+        new ClickHistoryTracker(307, 2, 1, inject[ClickHistoryRepo], inject[Database]),
         inject[ShoeboxServiceClient],
         inject[FakeSpellCorrector],
         clock,

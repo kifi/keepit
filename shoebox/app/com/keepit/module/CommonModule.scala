@@ -36,6 +36,8 @@ import play.api.Play
 import play.api.Mode.Mode
 import com.google.inject.Inject
 import com.keepit.shoebox.ShoeboxCacheProvider
+import com.keepit.shoebox.ClickHistoryTracker
+import com.keepit.shoebox.BrowsingHistoryTracker
 
 class CommonModule extends ScalaModule with Logging {
 
@@ -99,7 +101,7 @@ class CommonModule extends ScalaModule with Logging {
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val minHits = conf.getInt("minHits").get
 
-    new ClickHistoryTracker(filterSize, numHashFuncs, minHits, repo, db, shoeboxClient)
+    new ClickHistoryTracker(filterSize, numHashFuncs, minHits, repo, db)
   }
 
   @Singleton
@@ -110,7 +112,7 @@ class CommonModule extends ScalaModule with Logging {
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val minHits = conf.getInt("minHits").get
 
-    new BrowsingHistoryTracker(filterSize, numHashFuncs, minHits, browsingHistoryRepo, db, shoeboxClient)
+    new BrowsingHistoryTracker(filterSize, numHashFuncs, minHits, browsingHistoryRepo, db)
   }
 
   @Provides

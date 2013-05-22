@@ -28,6 +28,9 @@ import com.keepit.common.analytics.EventFamilies
 import com.keepit.serializer.EventSerializer
 import com.keepit.serializer.SearchResultInfoSerializer
 import com.keepit.common.logging.Logging
+import com.keepit.shoebox.ClickHistoryTracker
+import com.keepit.shoebox.BrowsingHistoryTracker
+import com.keepit.shoebox.BrowsingHistoryTracker
 
 case class BasicQueryInfo(
   queryUUID: ExternalId[ArticleSearchResultRef],

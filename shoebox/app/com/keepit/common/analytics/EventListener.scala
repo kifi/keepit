@@ -20,7 +20,8 @@ import com.keepit.common.actor.ActorFactory
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
-import com.keepit.search.{ SearchServiceClient, ArticleSearchResultRef, BrowsingHistoryTracker, ClickHistoryTracker }
+import com.keepit.search.{ SearchServiceClient, ArticleSearchResultRef }
+import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.common.akka.FortyTwoActor
 import akka.actor.ActorSystem
 import akka.actor.Props
@@ -32,6 +33,7 @@ import com.keepit.search.TrainingDataLabeler
 import com.keepit.search.SearchStatisticsExtractorFactory
 import com.keepit.search.UriLabel
 import com.keepit.serializer.SearchStatisticsSerializer
+import com.keepit.shoebox.BrowsingHistoryTracker
 
 abstract class EventListenerPlugin(
   userRepo: UserRepo,
@@ -123,7 +125,8 @@ class ResultClickedListener @Inject() (
   normalizedURIRepo: NormalizedURIRepo,
   searchServiceClient: SearchServiceClient,
   db: Database,
-  bookmarkRepo: BookmarkRepo)
+  bookmarkRepo: BookmarkRepo,
+  clickHistoryTracker: ClickHistoryTracker)
   extends EventListenerPlugin(userRepo, normalizedURIRepo) {
 
   import SearchEventName._

@@ -28,6 +28,8 @@ import com.keepit.search.query.LuceneExplanationExtractor
 import com.keepit.search.query.LuceneScoreNames
 import com.keepit.search.graph.UserToUriEdgeSet
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.shoebox.ClickHistoryTracker
+import com.keepit.shoebox.BrowsingHistoryTracker
 
 
 class MainSearcher(

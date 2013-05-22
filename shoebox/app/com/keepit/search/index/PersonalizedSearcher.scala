@@ -5,8 +5,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model.User
 import com.keepit.search.SemanticVectorComposer
 import com.keepit.search.SemanticVector
-import com.keepit.search.BrowsingHistoryTracker
-import com.keepit.search.ClickHistoryTracker
+import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.search.MultiHashFilter
 import com.keepit.search.query.IdSetFilter
 import com.keepit.search.query.QueryUtil._
@@ -18,6 +17,7 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.util.PriorityQueue
 import scala.collection.mutable.ArrayBuffer
+import com.keepit.shoebox.BrowsingHistoryTracker
 
 object PersonalizedSearcher {
   private val scale = 100
