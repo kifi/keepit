@@ -208,6 +208,7 @@ class SearchDevModule extends ScalaModule with Logging {
 
 class DevCommonModule extends ScalaModule with Logging {
   def configure() {
+    install(new S3DevModule)
     bind[FortyTwoCachePlugin].to[InMemoryCache].in[AppScoped]
   }
 
@@ -231,7 +232,7 @@ class DevCommonModule extends ScalaModule with Logging {
 
 class DevModule extends ScalaModule with Logging {
   def configure() {
-    install(Modules.`override`(new DevCommonModule).`with`(new S3DevModule))
+    install(new DevCommonModule)
     install(new ShoeboxDevModule)
     install(new SearchDevModule)
   }
