@@ -17,10 +17,12 @@ import scala.math._
 import org.joda.time.DateTime
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.inject._
-import com.keepit.common.analytics.PersistEventPlugin
 import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.shoebox.ClickHistoryTracker
+import com.keepit.shoebox.BrowsingHistoryTracker
 
 
 @Singleton
@@ -29,9 +31,9 @@ class MainSearcherFactory @Inject() (
     uriGraph: URIGraph,
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
-    browsingHistoryTracker: BrowsingHistoryTracker,
-    clickHistoryTracker: ClickHistoryTracker,
-    persistEventPlugin: PersistEventPlugin,
+    browsingHistoryBuilder: BrowsingHistoryBuilder,
+    clickHistoryBuilder: ClickHistoryBuilder,
+    shoeboxClient: ShoeboxServiceClient,
     spellCorrector: SpellCorrector,
     implicit private val clock: Clock,
     implicit private val fortyTwoServices: FortyTwoServices
@@ -59,9 +61,9 @@ class MainSearcherFactory @Inject() (
         uriGraphSearcher,
         parserFactory,
         resultClickTracker,
-        browsingHistoryTracker,
-        clickHistoryTracker,
-        persistEventPlugin,
+        browsingHistoryBuilder,
+        clickHistoryBuilder,
+        shoeboxClient,
         spellCorrector
     )
   }

@@ -23,41 +23,23 @@ import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import play.api.mvc.Action
 import com.keepit.common.logging.Logging
+import play.api.libs.json.JsArray
+import com.keepit.serializer.UriLabelSerializer
 
-class SearchStatisticsController @Inject() (db: Database,
-  userRepo: UserRepo,
-  normalizedURIRepo: NormalizedURIRepo,
-  sseFactory: Provider[SearchStatisticsExtractorFactory],
-  persistEventProvider: Provider[PersistEventPlugin],
-  implicit private val clock: Clock,
-  implicit private val fortyTwoServices: FortyTwoServices)
+class SearchStatisticsController @Inject() (sseFactory: Provider[SearchStatisticsExtractorFactory])
   extends SearchServiceController with Logging{
 
-  def persistSearchStatistics() = Action(parse.json) { request =>
+  def getSearchStatistics() = Action(parse.json) { request =>
     val json = request.body
-
     val queryUUID = (json \ "queryUUID").as[String]
     val queryString = (json \ "query").as[String]
     val userId = (json \ "userId").as[Long]
-    val kifiClicked = (json \ "kifiClicked").as[Seq[Long]].map { id => Id[NormalizedURI](id) }
-    val googleClicked = (json \ "googleClicked").as[Seq[Long]].map { id => Id[NormalizedURI](id) }
-    val kifiShown = (json \ "kifiShown").as[Seq[Long]].map { id => Id[NormalizedURI](id) }
-
-    val data = TrainingDataLabeler.getLabeledData(kifiClicked, googleClicked, kifiShown)
-    if (data.nonEmpty) {
-      val uriLabel = data.foldLeft(Map.empty[Id[NormalizedURI], UriLabel]) {
-        case (m, (id, (isClicked, isCorrectlyRanked))) => m + (id -> UriLabel(isClicked, isCorrectlyRanked))
-      }
-
-      val sse = sseFactory.get.apply(ExternalId[ArticleSearchResultRef](queryUUID), queryString, Id[User](userId), uriLabel)
-      val searchStatistics = sse.getSearchStatistics(uriLabel.keySet)
-      for (ss <- searchStatistics) {
-        val event = Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_statistics", SearchStatisticsSerializer.serializer.writes(ss._2).as[JsObject])
-        persistEventProvider.get.persist(event)
-      }
-      log.info("search statistics persisted")
-    }
-    Ok("search statistics persisted")
-
+    val uriIds = (json \ "uriIds").as[JsArray].value.map{id => Id[NormalizedURI](id.asOpt[Long].get)}
+    val labels = (json \ "uriLabels").as[JsArray].value.map{js => UriLabelSerializer.serializer.reads(js).get}
+    val labeledUris = (uriIds zip labels).foldLeft(Map.empty[Id[NormalizedURI], UriLabel]){ case (m , pair) => m + (pair._1 -> pair._2) }
+    val sse = sseFactory.get.apply(ExternalId[ArticleSearchResultRef](queryUUID), queryString, Id[User](userId), labeledUris)
+    val searchStatistics = sse.getSearchStatistics(labeledUris.keySet)
+    val statistics = searchStatistics.map(_._2).map(x => SearchStatisticsSerializer.serializer.writes(x)).toList
+    Ok(JsArray(statistics))
   }
 }

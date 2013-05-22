@@ -62,11 +62,11 @@ class SearchModule() extends ScalaModule with Logging {
   @Singleton
   @Provides
   def uriGraph(bookmarkRepo: BookmarkRepo,
-    db: Database): URIGraph = {
+    db: Database, shoeboxClient: ShoeboxServiceClient): URIGraph = {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new URIGraphImpl(dir, config, URIGraphFields.decoders(), bookmarkRepo, db)
+    new URIGraphImpl(dir, config, URIGraphFields.decoders(), bookmarkRepo, db, shoeboxClient)
   }
 
   @Singleton
@@ -86,6 +86,28 @@ class SearchModule() extends ScalaModule with Logging {
     val spellDir = getDirectory(current.configuration.getString("index.spell.directory"))
     val articleDir = getDirectory(current.configuration.getString("index.article.directory"))
     SpellCorrector(spellDir, articleDir)
+  }
+  
+  @Singleton
+  @Provides
+  def clickHistoryBuilder: ClickHistoryBuilder = {
+    val conf = current.configuration.getConfig("click-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+    
+    new ClickHistoryBuilder(filterSize, numHashFuncs, minHits)
+  }
+  
+  @Singleton
+  @Provides
+  def browsingHistoryBuilder: BrowsingHistoryBuilder = {
+    val conf = current.configuration.getConfig("browsing-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+    
+    new BrowsingHistoryBuilder(filterSize, numHashFuncs, minHits)
   }
 
 }
