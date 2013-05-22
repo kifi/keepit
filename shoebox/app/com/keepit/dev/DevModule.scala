@@ -57,6 +57,12 @@ class ShoeboxDevModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
+  def schedulingProperties: SchedulingProperties = new SchedulingProperties() {
+    def allowSchecualing = true
+  }
+
+  @Singleton
+  @Provides
   def searchUnloadProvider(
     db: Database,
     userRepo: UserRepo,
@@ -65,13 +71,11 @@ class ShoeboxDevModule extends ScalaModule with Logging {
     store: MongoEventStore,
     searchClient: SearchServiceClient,
     clock: Clock,
-    fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
-    val isEnabled = current.configuration.getBoolean("event-listener.searchUnload").getOrElse(false)
-    if(isEnabled) {
-      new SearchUnloadListenerImpl(db,userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, clock, fortyTwoServices)
-    }
-    else {
-      new FakeSearchUnloadListenerImpl(userRepo, normalizedURIRepo)
+    fortyTwoServices: FortyTwoServices,
+    schedulingProperties: SchedulingProperties): SearchUnloadListener = {
+    current.configuration.getBoolean("event-listener.searchUnload").getOrElse(false) match {
+      case true =>  new SearchUnloadListenerImpl(db,userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, schedulingProperties, clock, fortyTwoServices)
+      case false => new FakeSearchUnloadListenerImpl(userRepo, normalizedURIRepo, schedulingProperties)
     }
   }
 
@@ -123,10 +127,12 @@ class ShoeboxDevModule extends ScalaModule with Logging {
   @AppScoped
   @Provides
   def mailToKeepPlugin(
-      actorFactory: ActorFactory[MailToKeepActor], mailToKeepServerSettings: Option[MailToKeepServerSettings]): MailToKeepPlugin = {
+      actorFactory: ActorFactory[MailToKeepActor],
+      mailToKeepServerSettings: Option[MailToKeepServerSettings],
+      schedulingProperties: SchedulingProperties): MailToKeepPlugin = {
     mailToKeepServerSettingsOpt match {
       case None => new FakeMailToKeepPlugin
-      case _ => new MailToKeepPluginImpl(actorFactory)
+      case _ => new MailToKeepPluginImpl(actorFactory, schedulingProperties)
     }
   }
 }

@@ -14,7 +14,7 @@ import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.PostOffice
 import com.keepit.common.mail.LocalPostOffice
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 
@@ -135,7 +135,7 @@ class HealthcheckActor @Inject() (
       }
       errors(signature) = history
     case email: ElectronicMail => emailSender.sendMail(email)
-    
+
     case m => throw new Exception("unknown message %s".format(m))
   }
 }

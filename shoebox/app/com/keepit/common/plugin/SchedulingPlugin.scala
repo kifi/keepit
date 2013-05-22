@@ -8,7 +8,7 @@ import akka.actor.{ActorSystem, Cancellable, ActorRef}
 import play.api.Plugin
 import play.api.Mode
 
-import com.google.inject.Inject
+import com.google.inject.{Inject, Singleton, ImplementedBy}
 
 sealed trait SchedulingEnabled
 
@@ -16,14 +16,6 @@ object SchedulingEnabled {
   case object Always extends SchedulingEnabled
   case object Never extends SchedulingEnabled
   case object LeaderOnly extends SchedulingEnabled
-}
-
-class SchedulingProperties @Inject() (serviceDiscovery: ServiceDiscovery, schedulingEnabled: SchedulingEnabled) {
-  def allowSchecualing = schedulingEnabled match {
-    case SchedulingEnabled.Always => true
-    case SchedulingEnabled.Never => false
-    case SchedulingEnabled.LeaderOnly => serviceDiscovery.isLeader()
-  }
 }
 
 trait SchedulingPlugin extends Plugin {

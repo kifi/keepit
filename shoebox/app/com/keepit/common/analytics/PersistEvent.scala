@@ -24,7 +24,7 @@ import akka.actor.Props
 
 import play.api.Play.current
 import com.keepit.common.akka.FortyTwoActor
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 
 case object Load
 case class Update(userId: Id[User])

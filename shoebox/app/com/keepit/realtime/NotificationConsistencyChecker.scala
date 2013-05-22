@@ -8,7 +8,7 @@ import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.model.UserNotificationRepo
 
 import akka.actor.ActorSystem
@@ -45,8 +45,10 @@ trait NotificationConsistencyChecker extends Plugin {
 
 class NotificationConsistencyCheckerImpl @Inject()(
     system: ActorSystem,
-    actorFactory: ActorFactory[NotificationConsistencyActor]
-    ) extends SchedulingPlugin with NotificationConsistencyChecker {
+    actorFactory: ActorFactory[NotificationConsistencyActor],
+    val schedulingProperties: SchedulingProperties)
+  extends SchedulingPlugin with NotificationConsistencyChecker {
+
   private lazy val actor = actorFactory.get()
 
   def verifyVisited() {

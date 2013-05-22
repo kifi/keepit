@@ -7,7 +7,7 @@ import com.google.inject.Key
 import com.tzavellas.sse.guice.ScalaModule
 import org.specs2.mutable.Specification
 import play.api.test._
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 
 class TestPlugin extends SchedulingPlugin {
   var started = false
@@ -62,7 +62,7 @@ class AppScopeTest extends Specification {
     "start and stop injected plugins" in {
       val app = FakeApplication()
       val scope = new AppScope
- 
+
       val pluginAPrestart = new PluginA
       val providerA = scope.scope(Key.get(classOf[PluginA]), provide(pluginAPrestart))
       val providerB = scope.scope(Key.get(classOf[PluginB]), provide(new PluginB))

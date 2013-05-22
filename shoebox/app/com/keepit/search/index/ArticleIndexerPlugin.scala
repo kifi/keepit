@@ -9,7 +9,7 @@ import com.keepit.common.actor.ActorFactory
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.inject._
 import play.api.Play.current
 import scala.concurrent.Await
@@ -46,7 +46,8 @@ trait ArticleIndexerPlugin extends SchedulingPlugin {
 
 class ArticleIndexerPluginImpl @Inject() (
     actorFactory: ActorFactory[ArticleIndexerActor],
-    articleIndexer: ArticleIndexer)
+    articleIndexer: ArticleIndexer,
+    val schedulingProperties: SchedulingProperties)
   extends ArticleIndexerPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)

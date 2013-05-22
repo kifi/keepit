@@ -8,7 +8,7 @@ import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.actor.ActorFactory
 import com.keepit.inject._
 import play.api.Play.current
@@ -42,7 +42,8 @@ trait URIGraphPlugin extends SchedulingPlugin {
 
 class URIGraphPluginImpl @Inject() (
     actorFactory: ActorFactory[URIGraphActor],
-    uriGraph: URIGraph)
+    uriGraph: URIGraph,
+    val schedulingProperties: SchedulingProperties)
   extends URIGraphPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)

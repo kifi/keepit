@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.model._
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.healthcheck.HealthcheckPlugin
 
@@ -15,7 +16,6 @@ import akka.util.Timeout
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
-import com.keepit.common.plugin.SchedulingPlugin
 import scala.util.{Try, Success, Failure}
 
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
@@ -84,7 +84,8 @@ trait SocialGraphPlugin extends SchedulingPlugin {
 }
 
 class SocialGraphPluginImpl @Inject() (
-    actorFactory: ActorFactory[SocialGraphActor])
+    actorFactory: ActorFactory[SocialGraphActor],
+    val schedulingProperties: SchedulingProperties)
   extends SocialGraphPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)

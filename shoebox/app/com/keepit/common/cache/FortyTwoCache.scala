@@ -6,7 +6,7 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Play.current
 import scala.collection.mutable
 import play.api.libs.json._
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
 
 @Singleton
@@ -198,7 +198,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
     }
 
   def remove(key: K) { repo.remove(key.toString) }
-  
-  def parseJson(obj: Any)(implicit formatter: Format[T]): T = 
+
+  def parseJson(obj: Any)(implicit formatter: Format[T]): T =
     Json.fromJson[T](Json.parse(obj.asInstanceOf[String]).asInstanceOf[JsValue]).get
 }

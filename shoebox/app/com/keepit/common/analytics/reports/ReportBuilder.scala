@@ -13,7 +13,7 @@ import com.keepit.search.{SearchConfigManager, SearchConfigExperiment}
 import akka.actor.ActorSystem
 import akka.actor.Cancellable
 import akka.actor.Props
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.analytics.MongoEventStore
 
 class ReportGroup(val name: String, val reports: Seq[ReportRepo])

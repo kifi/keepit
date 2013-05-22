@@ -12,7 +12,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.model.{EmailAddressRepo, User, UserRepo}
 import com.keepit.common.time._
@@ -206,7 +206,8 @@ trait MailToKeepPlugin extends SchedulingPlugin {
 }
 
 class MailToKeepPluginImpl @Inject()(
-  actorFactory: ActorFactory[MailToKeepActor]
+  actorFactory: ActorFactory[MailToKeepActor],
+  val schedulingProperties: SchedulingProperties
 ) extends MailToKeepPlugin with Logging {
 
   override def enabled: Boolean = true
