@@ -10,7 +10,6 @@
   border: 6px solid transparent;
   -moz-box-sizing: content-box;
   box-sizing: content-box;
-  text-align: center;
   font-family: "Helvetica Neue",arial,sans-serif;
   -webkit-transition: -webkit-transform ease-in-out 90ms;
   transition: -webkit-transform ease-in-out 90ms, transform ease-in-out 90ms;
@@ -46,6 +45,7 @@
   top: 0;
   left: 0;
   width: 100%;
+  text-align: center;
   color: #fff;
   font-size: 14px;
   line-height: 42px;
