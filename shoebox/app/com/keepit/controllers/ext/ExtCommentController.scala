@@ -9,7 +9,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.common.mail.{ElectronicMail, EmailAddresses, PostOffice}
+import com.keepit.common.mail.{ElectronicMail, EmailAddresses}
 import com.keepit.common.social._
 import com.keepit.model._
 import com.keepit.search.graph.URIGraph
@@ -50,7 +50,6 @@ class ExtCommentController @Inject() (
   followRepo: FollowRepo,
   emailAddressRepo: EmailAddressRepo,
   deepLinkRepo: DeepLinkRepo,
-  postOffice: PostOffice,
   activityStream: ActivityStream,
   userNotifier: UserNotifier)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {

@@ -7,7 +7,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import play.api.libs.concurrent.Akka
-import com.keepit.common.mail.{EmailAddresses, ElectronicMail, PostOffice}
+import com.keepit.common.mail.{EmailAddresses, ElectronicMail, PostOffice, LocalPostOffice}
 import play.api.Play.current
 import com.google.inject.Inject
 
@@ -15,7 +15,7 @@ class DuplicateDocumentDetection @Inject() (
     db: Database,
     scrapeInfoRepo: ScrapeInfoRepo,
     dupeRepo: DuplicateDocumentRepo,
-    postOffice: PostOffice)
+    postOffice: LocalPostOffice)
   extends Logging {
 
   // These will be removed when the unscrapeable documents are reprocessed

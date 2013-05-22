@@ -29,6 +29,7 @@ import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.common.actor.ActorFactory
 import akka.util.Timeout
 import scala.concurrent.duration._
+import com.keepit.common.mail.LocalPostOffice
 
 case object SendEmails
 case class MessageNotification(notice: UserNotification)
@@ -38,7 +39,7 @@ class UserEmailNotifierActor @Inject() (
   healthcheck: HealthcheckPlugin,
   userRepo: UserRepo,
   emailAddressRepo: EmailAddressRepo,
-  postOffice: PostOffice,
+  postOffice: LocalPostOffice,
   commentFormatter: CommentFormatter,
   userNotifyRepo: UserNotificationRepo,
   clock: Clock,

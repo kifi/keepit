@@ -21,7 +21,7 @@ private case object ResendNotifications
 
 private[mail] class InvitationMailActor @Inject() (
     db: Database,
-    postOffice: PostOffice,
+    postOffice: LocalPostOffice,
     suiRepo: SocialUserInfoRepo,
     userRepo: UserRepo,
     userValueRepo: UserValueRepo,
