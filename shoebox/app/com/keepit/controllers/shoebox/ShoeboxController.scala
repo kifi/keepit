@@ -12,7 +12,7 @@ import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.serializer._
 import play.api.mvc.Action
-import play.api.libs.json.{JsNumber, JsValue, JsArray, JsNull}
+import play.api.libs.json.{JsNumber, JsArray}
 import com.keepit.model.BrowsingHistoryRepo
 import com.keepit.model.User
 import com.keepit.search.MultiHashFilter

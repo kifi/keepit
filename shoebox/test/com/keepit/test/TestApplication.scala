@@ -183,8 +183,11 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Singleton
   @Provides
-  def shoeboxServiceClient: ShoeboxServiceClient = new ShoeboxServiceClientImpl(null, -1, null, inject[ShoeboxCacheProvider])
+  def shoeboxServiceClient(shoeboxCacheProvided: ShoeboxCacheProvider, httpClient: HttpClient): ShoeboxServiceClient = new ShoeboxServiceClientImpl(null, -1, httpClient,shoeboxCacheProvided)
 
+  @Singleton
+  @Provides
+  def httpClient(): HttpClient = null
 
   @Provides
   @Singleton

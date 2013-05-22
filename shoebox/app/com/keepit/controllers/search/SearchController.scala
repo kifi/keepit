@@ -18,7 +18,6 @@ import scala.collection.mutable.ArrayBuffer
 import scala.math.{abs, sqrt}
 import views.html
 import com.keepit.shoebox.ShoeboxServiceClient
-import scala.concurrent.ExecutionContext.Implicits.global
 import com.keepit.model.User
 import scala.concurrent.Await
 import scala.concurrent.Future

@@ -6,17 +6,10 @@ import com.keepit.common.db.Id
 import com.keepit.model._
 import scala.concurrent.{Future, promise}
 import com.keepit.controllers.shoebox._
-import com.keepit.controllers.shoebox.ShoeboxController
 import com.keepit.serializer._
-import play.api.libs.json.{JsArray, JsValue, Json}
-import scala.concurrent.ExecutionContext.Implicits.global
-import play.api.libs.json.JsNumber
-import play.api.libs.json.JsNull
-import play.api.libs.json.JsValue
-import play.api.mvc.Action
+import play.api.libs.json.JsArray
 import scala.concurrent.ExecutionContext.Implicits.global
 
-import com.google.inject.Singleton
 import com.google.inject.Inject
 
 
