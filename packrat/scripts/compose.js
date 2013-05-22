@@ -2,24 +2,28 @@ function attachComposeBindings($c, composeTypeName) {
   var $f = $c.find(".kifi-compose");
   var $t = $f.find(".kifi-compose-to");
   var $d = $f.find(".kifi-compose-draft");
-  var defaultText = $d.data("default");
+  var defaultText = $d.data("default");  // real text, not placeholder
 
   $d.focus(function() {
+    var r, sel = window.getSelection();
     if ($f.hasClass("kifi-empty")) {  // webkit workaround (can ditch when Chrome 27/28 ? goes stable)
       this.textContent = "\u200b";  // zero-width space
-      var r = document.createRange();
+      r = document.createRange();
       r.selectNodeContents(this);
       r.collapse(false);
-      var sel = window.getSelection();
       sel.removeAllRanges();
       sel.addRange(r);
     } else if (defaultText && $d.text() == defaultText) {
-      var r = document.createRange();
+      // select default text for easy replacement
+      r = document.createRange();
       r.selectNodeContents(this);
-      var sel = window.getSelection();
       sel.removeAllRanges();
       sel.addRange(r);
-      $(this).data("preventNextMouseUp", true); // mouseup clears selection
+      $(this).data("preventNextMouseUp", true); // to avoid clearing selection
+    } else if (r = $d.data("sel")) {
+      // restore previous selection
+      sel.removeAllRanges();
+      sel.addRange(r);
     }
   }).blur(function() {
     // wkb.ug/112854 crbug.com/222546
@@ -35,18 +39,22 @@ function attachComposeBindings($c, composeTypeName) {
       }
     }
   }).mousedown(function() {
-    $(this).removeData("preventNextMouseUp");
+    $d.removeData("preventNextMouseUp");
   }).click(function() {
     this.focus();  // needed in Firefox for clicks on ::before placeholder text
   }).mouseup(function(e) {
-    if ($(this).data("preventNextMouseUp")) {
-      $(this).removeData("preventNextMouseUp");
+    $d.data("sel", window.getSelection().getRangeAt(0));
+
+    if ($d.data("preventNextMouseUp")) {
+      $d.removeData("preventNextMouseUp");
       e.preventDefault();
     }
   }).keydown(function(e) {
     if (e.which == 13 && (e.metaKey || e.ctrlKey)) { // ⌘-Enter
       $f.submit();
     }
+  }).keyup(function() {
+    $d.data("sel", window.getSelection().getRangeAt(0));
   }).on("input", function() {
     updateMaxHeight();
     $f[0].classList[this.firstElementChild === this.lastElementChild && !this.textContent ? "add" : "remove"]("kifi-empty");
