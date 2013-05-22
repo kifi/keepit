@@ -50,6 +50,8 @@ import com.google.inject.Provider
 import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.shoebox.BrowsingHistoryTracker
+import com.keepit.classify.DomainTagImportSettings
+import play.api.libs.Files
 
 class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplication() {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
@@ -130,7 +132,13 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   }
 
   private def dbInfoFromApplication(): DbInfo = TestDbInfo.dbInfo
-
+  
+  @Singleton
+  @Provides
+  def domainTagImportSettings: DomainTagImportSettings = {
+    DomainTagImportSettings(localDir = "", url = "")
+  }
+  
   @Provides
   @Singleton
   def fakeClock: FakeClock = new FakeClock()
@@ -319,6 +327,9 @@ case class FakeHealthcheckModule() extends ScalaModule {
 case class FakePersistEventModule() extends ScalaModule {
   override def configure(): Unit = {
     bind[PersistEventPlugin].to[FakePersistEventPluginImpl]
+    
+    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
+
   }
 }
 
