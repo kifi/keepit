@@ -32,7 +32,7 @@ class SearchStatisticsController @Inject() (sseFactory: Provider[SearchStatistic
   def getSearchStatistics() = Action(parse.json) { request =>
     val json = request.body
     val queryUUID = (json \ "queryUUID").as[String]
-    val queryString = (json \ "query").as[String]
+    val queryString = (json \ "queryString").as[String]
     val userId = (json \ "userId").as[Long]
     val uriIds = (json \ "uriIds").as[JsArray].value.map{id => Id[NormalizedURI](id.asOpt[Long].get)}
     val labels = (json \ "uriLabels").as[JsArray].value.map{js => UriLabelSerializer.serializer.reads(js).get}
