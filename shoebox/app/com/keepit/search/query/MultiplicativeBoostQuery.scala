@@ -127,9 +127,9 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
 
 class MultiplicativeBoostScorer(weight: MultiplicativeBoostWeight, textScorer: Scorer with Coordinator, boosterScorers: Array[Scorer], boosterStrengths: Array[Float])
 extends Scorer(weight) with Coordinator with Logging {
-  protected var doc = -1
-  protected var scoredDoc = -1
-  protected var scr = 0.0f
+  private[this] var doc = -1
+  private[this] var scoredDoc = -1
+  private[this] var scr = 0.0f
 
   override def docID(): Int = doc
   override def nextDoc(): Int = {
