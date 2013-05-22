@@ -1,21 +1,18 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.time._
-import com.keepit.common.crypto._
-import com.keepit.common.cache._
-import java.security.SecureRandom
-import java.sql.Connection
-import org.joda.time.DateTime
-import play.api._
-import play.api.libs.json._
-import java.net.URI
-import java.security.MessageDigest
-import org.apache.commons.codec.binary.Base64
 import scala.concurrent.duration._
+
+import org.joda.time.DateTime
+
+import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.common.cache._
+import com.keepit.common.db._
+import com.keepit.common.db.slick.DBSession._
+import com.keepit.common.db.slick._
+import com.keepit.common.time._
+
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 case class BookmarkSource(value: String) {
   implicit def getValue = value
@@ -61,6 +58,26 @@ case class Bookmark(
   def isActive: Boolean = state == BookmarkStates.ACTIVE
 }
 
+object Bookmark {
+  implicit def bookmarkFormat = (
+    (__ \ 'id).formatNullable(Id.format[Bookmark]) and
+    (__ \ 'createdAt).format[DateTime] and
+    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'externalId).format(ExternalId.format[Bookmark]) and
+    (__ \ 'title).formatNullable[String] and
+    (__ \ 'uriId).format(Id.format[NormalizedURI]) and
+    (__ \ 'urlId).formatNullable(Id.format[URL]) and
+    (__ \ 'url).format[String] and
+    (__ \ 'bookmarkPath).formatNullable[String] and
+    (__ \ 'isPrivate).format[Boolean] and
+    (__ \ 'userId).format(Id.format[User]) and
+    (__ \ 'state).format(State.format[Bookmark]) and
+    (__ \ 'source).format[String].inmap(BookmarkSource.apply, unlift(BookmarkSource.unapply)) and
+    (__ \ 'kifiInstallation).formatNullable(ExternalId.format[KifiInstallation]) and
+    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
+  )(Bookmark.apply, unlift(Bookmark.unapply))
+}
+
 @ImplementedBy(classOf[BookmarkRepoImpl])
 trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark] {
   def allActive()(implicit session: RSession): Seq[Bookmark]
@@ -96,10 +113,11 @@ class BookmarkRepoImpl @Inject() (
   val clock: Clock,
   val countCache: BookmarkCountCache)
       extends DbRepo[Bookmark] with BookmarkRepo with ExternalIdColumnDbFunction[Bookmark] {
-  import FortyTwoTypeMappers._
-  import scala.slick.lifted.Query
-  import db.Driver.Implicit._
+
   import DBSession._
+  import FortyTwoTypeMappers._
+  import db.Driver.Implicit._
+  import scala.slick.lifted.Query
 
   private val sequence = db.getSequence("bookmark_sequence")
 
@@ -115,7 +133,7 @@ class BookmarkRepoImpl @Inject() (
     def kifiInstallation = column[ExternalId[KifiInstallation]]("kifi_installation", O.Nullable)
     def seq = column[SequenceNumber]("seq", O.Nullable)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title ~ uriId ~ urlId.? ~ url ~ bookmarkPath.? ~ isPrivate ~
-        userId ~ state ~ source ~ kifiInstallation.? ~ seq <> (Bookmark, Bookmark.unapply _)
+        userId ~ state ~ source ~ kifiInstallation.? ~ seq <> (Bookmark.apply _, Bookmark.unapply _)
   }
 
   override def invalidateCache(bookmark: Bookmark)(implicit session: RSession) = {
