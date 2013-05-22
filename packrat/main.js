@@ -477,7 +477,7 @@ api.port.on({
   },
   set_comment_read: function(o, _, tab) {
     var d = pageData[tab.nUri];
-    if (!d || new Date(o.time) > new Date(d.lastCommentRead)) {
+    if (!d || new Date(o.time) > new Date(d.lastCommentRead || 0)) {
       markNoticesVisited("comment", tab.nUri, o.id, o.time);
       if (d) {
         d.lastCommentRead = o.time;
