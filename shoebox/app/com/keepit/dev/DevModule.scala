@@ -39,7 +39,9 @@ import com.keepit.shoebox.ShoeboxServiceClient
 
 
 class ShoeboxDevModule extends ScalaModule with Logging {
-  def configure() {}
+  def configure() {
+    bind[PersistEventPlugin].to[FakePersistEventPluginImpl].in[AppScoped]
+  }
 
   @Provides
   def globalSchedulingEnabled: SchedulingEnabled =
@@ -187,11 +189,11 @@ class SearchDevModule extends ScalaModule with Logging {
   @Singleton
   @Provides
   def uriGraph(bookmarkRepo: BookmarkRepo,
-    db: Database): URIGraph = {
+    db: Database, shoeboxClient: ShoeboxServiceClient): URIGraph = {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new URIGraphImpl(dir, config, URIGraphFields.decoders(), bookmarkRepo, db)
+    new URIGraphImpl(dir, config, URIGraphFields.decoders(), bookmarkRepo, db, shoeboxClient)
   }
 
   @Singleton
@@ -220,7 +222,7 @@ class SearchDevModule extends ScalaModule with Logging {
 
 class DevCommonModule extends ScalaModule with Logging {
   def configure() {
-    bind[PersistEventPlugin].to[FakePersistEventPluginImpl].in[AppScoped]
+    install(new S3DevModule)
     bind[FortyTwoCachePlugin].to[InMemoryCache].in[AppScoped]
   }
 
@@ -244,7 +246,7 @@ class DevCommonModule extends ScalaModule with Logging {
 
 class DevModule extends ScalaModule with Logging {
   def configure() {
-    install(Modules.`override`(new DevCommonModule).`with`(new S3DevModule))
+    install(new DevCommonModule)
     install(new ShoeboxDevModule)
     install(new SearchDevModule)
   }

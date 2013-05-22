@@ -38,6 +38,8 @@ import play.api.Mode.Mode
 import com.google.inject.Inject
 import com.keepit.shoebox.ShoeboxCacheProvider
 import com.keepit.common.mail.LocalPostOffice
+import com.keepit.shoebox.ClickHistoryTracker
+import com.keepit.shoebox.BrowsingHistoryTracker
 
 class CommonModule extends ScalaModule with Logging {
 
@@ -48,14 +50,6 @@ class CommonModule extends ScalaModule with Logging {
 
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
-
-    bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped]
-
-    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
-    listenerBinder.addBinding().to(classOf[ResultClickedListener])
-    listenerBinder.addBinding().to(classOf[UsefulPageListener])
-    listenerBinder.addBinding().to(classOf[SliderShownListener])
-    listenerBinder.addBinding().to(classOf[SearchUnloadListener])
   }
 
   @Singleton
@@ -63,22 +57,6 @@ class CommonModule extends ScalaModule with Logging {
   def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
     def register() = Node("me")
     def isLeader() = true
-  }
-
-  @Singleton
-  @Provides
-  def searchUnloadProvider(
-    db: Database,
-    userRepo: UserRepo,
-    normalizedURIRepo: NormalizedURIRepo,
-    persistEventProvider: Provider[PersistEventPlugin],
-    store: MongoEventStore,
-    searchClient: SearchServiceClient,
-    schedulingProperties: SchedulingProperties,
-    clock: Clock,
-    fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
-    new SearchUnloadListenerImpl(db, userRepo, normalizedURIRepo, persistEventProvider, store, searchClient,
-        schedulingProperties, clock, fortyTwoServices)
   }
 
   @Singleton
@@ -115,28 +93,6 @@ class CommonModule extends ScalaModule with Logging {
       }
     }
     ResultClickTracker(dir, numHashFuncs, syncEvery)
-  }
-
-  @Singleton
-  @Provides
-  def clickHistoryTracker(repo: ClickHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient): ClickHistoryTracker = {
-    val conf = current.configuration.getConfig("click-history-tracker").get
-    val filterSize = conf.getInt("filterSize").get
-    val numHashFuncs = conf.getInt("numHashFuncs").get
-    val minHits = conf.getInt("minHits").get
-
-    new ClickHistoryTracker(filterSize, numHashFuncs, minHits, repo, db, shoeboxClient)
-  }
-
-  @Singleton
-  @Provides
-  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient): BrowsingHistoryTracker = {
-    val conf = current.configuration.getConfig("browsing-history-tracker").get
-    val filterSize = conf.getInt("filterSize").get
-    val numHashFuncs = conf.getInt("numHashFuncs").get
-    val minHits = conf.getInt("minHits").get
-
-    new BrowsingHistoryTracker(filterSize, numHashFuncs, minHits, browsingHistoryRepo, db, shoeboxClient)
   }
 
   @Provides

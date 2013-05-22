@@ -4,7 +4,6 @@ import scala.collection.mutable.{Stack => MutableStack}
 import scala.concurrent._
 import scala.slick.session.{Database => SlickDatabase}
 import scala.collection.mutable
-import scala.collection.immutable.Set
 import org.joda.time.{ReadablePeriod, DateTime}
 import com.google.inject.Module
 import com.google.inject.Provides
@@ -19,8 +18,8 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{FakeMailToKeepPlugin, MailToKeepPlugin, FakeMailModule, MailSenderPlugin, ElectronicMail}
-import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.mail._
+import com.keepit.common.net.{FakeHttpClientModule,HttpClient}
 import com.keepit.common.service._
 import com.keepit.common.social._
 import com.keepit.common.store.FakeS3StoreModule
@@ -42,9 +41,15 @@ import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.net.HttpClient
 import com.keepit.shoebox.ShoeboxServiceClientImpl
 import com.keepit.shoebox.ShoeboxCacheProvider
+import com.keepit.shoebox.FakeShoeboxServiceClientImpl
+import com.google.inject.Provider
+import com.keepit.shoebox.ClickHistoryTracker
+import com.keepit.common.mail.FakeMailModule
+import com.keepit.shoebox.BrowsingHistoryTracker
+import com.keepit.classify.DomainTagImportSettings
+import play.api.libs.Files
 
 class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplication() {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
@@ -61,7 +66,7 @@ class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplica
   def withFakePersistEvent() = overrideWith(FakePersistEventModule())
   def withFakeCache() = overrideWith(FakeCacheModule())
   def withS3DevModule() = overrideWith(new S3DevModule())
-
+  def withShoeboxServiceModule() = overrideWith(ShoeboxServiceModule())
   def overrideWith(model: Module): TestApplication =
     new TestApplication(new TestGlobal(Modules.`override`(global.modules: _*).`with`(model)))
 }
@@ -121,14 +126,17 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     bind[HealthcheckPlugin].to[FakeHealthcheck]
     bind[SlickSessionProvider].to[TestSlickSessionProvider]
 
-    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
-    listenerBinder.addBinding().to(classOf[ResultClickedListener])
-    listenerBinder.addBinding().to(classOf[UsefulPageListener])
-    listenerBinder.addBinding().to(classOf[SliderShownListener])
+
   }
 
   private def dbInfoFromApplication(): DbInfo = TestDbInfo.dbInfo
-
+  
+  @Singleton
+  @Provides
+  def domainTagImportSettings: DomainTagImportSettings = {
+    DomainTagImportSettings(localDir = "", url = "")
+  }
+  
   @Provides
   def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.Never
 
@@ -167,6 +175,10 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     def processOutbox() = throw new Exception("Should not attempt to use mail plugin in test")
   }
 
+  @Provides
+  @Singleton
+  def localPostOffice(shoeboxPostOfficeImpl: ShoeboxPostOfficeImpl): LocalPostOffice = shoeboxPostOfficeImpl
+
   @Singleton
   @Provides
   def kifiInstallationCookie: KifiInstallationCookie = new KifiInstallationCookie(Some("test.com"))
@@ -177,22 +189,16 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Provides
   @Singleton
-  def clickHistoryTracker(repo: ClickHistoryRepo, db: Database): ClickHistoryTracker = new ClickHistoryTracker(-1, -1, -1, repo, db, inject[ShoeboxServiceClient])
-
-  @Provides
-  @Singleton
   def sliderHistoryTracker(sliderHistoryRepo: SliderHistoryRepo, db: Database): SliderHistoryTracker =
     new SliderHistoryTracker(sliderHistoryRepo, db, -1, -1, -1)
 
   @Singleton
   @Provides
-  def shoeboxServiceClient(): ShoeboxServiceClient = new ShoeboxServiceClientImpl(null, -1, null, inject[ShoeboxCacheProvider])
+  def shoeboxServiceClient(shoeboxCacheProvided: ShoeboxCacheProvider, httpClient: HttpClient): ShoeboxServiceClient = new ShoeboxServiceClientImpl(null, -1, httpClient,shoeboxCacheProvided)
 
-
-  @Provides
   @Singleton
-  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient): BrowsingHistoryTracker =
-    new BrowsingHistoryTracker(-1, -1, -1, browsingHistoryRepo, db, shoeboxClient)
+  @Provides
+  def httpClient(): HttpClient = null
 
   @Provides
   @Singleton
@@ -273,6 +279,51 @@ class FakeScraperPlugin() extends ScraperPlugin {
     future { throw new Exception("Not Implemented") }
 }
 
+case class ShoeboxServiceModule() extends ScalaModule {
+  override def configure(): Unit = {
+  }
+
+  @Singleton
+  @Provides
+  def fakeShoeboxServiceClient(
+    cacheProvider: ShoeboxCacheProvider,
+    db: Database,
+    userConnectionRepo: UserConnectionRepo,
+    userRepo: UserRepo,
+    bookmarkRepo: BookmarkRepo,
+    browsingHistoryRepo: BrowsingHistoryRepo,
+    clickingHistoryRepo: ClickHistoryRepo,
+    normUriRepo: NormalizedURIRepo,
+    clickHistoryTracker: ClickHistoryTracker,
+    browsingHistoryTracker: BrowsingHistoryTracker,
+    persistEventPluginProvider: Provider[PersistEventPlugin], clock: Clock,
+    fortyTwoServices: FortyTwoServices
+  ): ShoeboxServiceClient = new FakeShoeboxServiceClientImpl(
+    cacheProvider,
+    db,
+    userConnectionRepo,
+    userRepo,
+    bookmarkRepo,
+    browsingHistoryRepo,
+    clickingHistoryRepo,
+    normUriRepo,
+    clickHistoryTracker,
+    browsingHistoryTracker,
+    clock,
+    fortyTwoServices)
+
+  @Provides
+  @Singleton
+  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database): BrowsingHistoryTracker =
+    new BrowsingHistoryTracker(3067, 2, 1, browsingHistoryRepo, db)
+
+  @Provides
+  @Singleton
+  def clickHistoryTracker(repo: ClickHistoryRepo, db: Database): ClickHistoryTracker =
+    new ClickHistoryTracker(307, 2, 1, repo, db)
+
+}
+
 case class TestActorSystemModule(system: ActorSystem) extends ScalaModule {
   override def configure(): Unit = {
     bind[ActorSystem].toInstance(system)
@@ -289,6 +340,9 @@ case class FakeHealthcheckModule() extends ScalaModule {
 case class FakePersistEventModule() extends ScalaModule {
   override def configure(): Unit = {
     bind[PersistEventPlugin].to[FakePersistEventPluginImpl]
+    
+    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
+
   }
 }
 

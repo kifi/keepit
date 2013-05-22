@@ -5,8 +5,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.model.User
 import com.keepit.search.SemanticVectorComposer
 import com.keepit.search.SemanticVector
-import com.keepit.search.BrowsingHistoryTracker
-import com.keepit.search.ClickHistoryTracker
 import com.keepit.search.MultiHashFilter
 import com.keepit.search.query.IdSetFilter
 import com.keepit.search.query.QueryUtil._
@@ -18,6 +16,13 @@ import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.util.PriorityQueue
 import scala.collection.mutable.ArrayBuffer
+import com.keepit.shoebox.BrowsingHistoryTracker
+import com.keepit.shoebox.ClickHistoryTracker
+import scala.concurrent.duration._
+import scala.concurrent.Await
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.search.BrowsingHistoryBuilder
+import com.keepit.search.ClickHistoryBuilder
 
 object PersonalizedSearcher {
   private val scale = 100
@@ -25,14 +30,19 @@ object PersonalizedSearcher {
             indexReader: WrappedIndexReader,
             myUris: Set[Long],
             friendUris: Set[Long],
-            browsingHistoryTracker: BrowsingHistoryTracker,
-            clickHistoryTracker: ClickHistoryTracker,
+            browsingHistoryBuilder: BrowsingHistoryBuilder,
+            clickHistoryBuilder: ClickHistoryBuilder,
             svWeightMyBookMarks: Int,
             svWeightBrowsingHistory: Int,
-            svWeightClickHistory: Int) = {
+            svWeightClickHistory: Int,
+            shoeboxServiceClient: ShoeboxServiceClient) = {
+    
+    val browsingHistoryFilter = Await.result(shoeboxServiceClient.getBrowsingHistoryFilter(userId), 4 second) // not good long term
+    val clickHistoryFilter = Await.result(shoeboxServiceClient.getClickHistoryFilter(userId), 4 second)
+
     new PersonalizedSearcher(indexReader, myUris, friendUris,
-                             browsingHistoryTracker.getMultiHashFilter(userId),
-                             clickHistoryTracker.getMultiHashFilter(userId),
+                             browsingHistoryBuilder.build(browsingHistoryFilter),
+                             clickHistoryBuilder.build(clickHistoryFilter),
                              svWeightMyBookMarks * scale, svWeightBrowsingHistory * scale, svWeightClickHistory * scale)
   }
 

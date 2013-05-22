@@ -18,8 +18,13 @@ import play.api.Play.current
 import com.keepit.common.healthcheck.LocalHealthcheckMailSender
 import com.keepit.common.healthcheck.HealthcheckMailSender
 import com.keepit.common.db.slick.Database
-import com.keepit.common.healthcheck.HealthcheckMailSender
-import com.keepit.common.healthcheck.LocalHealthcheckMailSender
+import com.keepit.model._
+import com.google.inject.Provider
+import com.keepit.search.SearchServiceClient
+import com.keepit.common.time.Clock
+import com.keepit.common.service.FortyTwoServices
+import com.google.inject.multibindings.Multibinder
+import com.keepit.common.analytics._
 
 class ShoeboxModule() extends ScalaModule with Logging {
   def configure() {
@@ -35,8 +40,29 @@ class ShoeboxModule() extends ScalaModule with Logging {
     bind[ImageDataIntegrityPlugin].to[ImageDataIntegrityPluginImpl].in[AppScoped]
     bind[InvitationMailPlugin].to[InvitationMailPluginImpl].in[AppScoped]
     bind[NotificationConsistencyChecker].to[NotificationConsistencyCheckerImpl].in[AppScoped]
-    bind[LocalPostOffice].to[ShoeboxPostOfficeImpl]
+
+bind[LocalPostOffice].to[ShoeboxPostOfficeImpl]
     bind[HealthcheckMailSender].to[LocalHealthcheckMailSender]
+    bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped]
+    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
+    listenerBinder.addBinding().to(classOf[ResultClickedListener])
+    listenerBinder.addBinding().to(classOf[UsefulPageListener])
+    listenerBinder.addBinding().to(classOf[SliderShownListener])
+    listenerBinder.addBinding().to(classOf[SearchUnloadListener])
+  }
+
+  @Singleton
+  @Provides
+  def searchUnloadProvider(
+    db: Database,
+    userRepo: UserRepo,
+    normalizedURIRepo: NormalizedURIRepo,
+    persistEventProvider: Provider[PersistEventPlugin],
+    store: MongoEventStore,
+    searchClient: SearchServiceClient,
+    clock: Clock,
+    fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
+    new SearchUnloadListenerImpl(db, userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, clock, fortyTwoServices)
   }
 
   @Provides
@@ -70,6 +96,29 @@ class ShoeboxModule() extends ScalaModule with Logging {
         }
       case None => new UserVoiceTokenGeneratorImpl()
     }
+  }
+  
+
+  @Singleton
+  @Provides
+  def clickHistoryTracker(repo: ClickHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient): ClickHistoryTracker = {
+    val conf = current.configuration.getConfig("click-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+
+    new ClickHistoryTracker(filterSize, numHashFuncs, minHits, repo, db)
+  }
+
+  @Singleton
+  @Provides
+  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient): BrowsingHistoryTracker = {
+    val conf = current.configuration.getConfig("browsing-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+
+    new BrowsingHistoryTracker(filterSize, numHashFuncs, minHits, browsingHistoryRepo, db)
   }
 
 }
