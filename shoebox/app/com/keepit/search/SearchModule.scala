@@ -21,6 +21,11 @@ import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.tzavellas.sse.guice.ScalaModule
 import play.api.Play.current
+import com.keepit.common.mail.PostOffice
+import com.keepit.common.mail.RemotePostOffice
+import com.keepit.common.mail.RemotePostOfficeImpl
+import com.keepit.common.healthcheck.RemoteHealthcheckMailSender
+import com.keepit.common.healthcheck.HealthcheckMailSender
 
 class SearchModule() extends ScalaModule with Logging {
 
@@ -28,6 +33,7 @@ class SearchModule() extends ScalaModule with Logging {
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
+    bind[RemotePostOffice].to[RemotePostOfficeImpl]
   }
 
   private def getDirectory(maybeDir: Option[String]): Directory = {

@@ -3,6 +3,7 @@ package com.keepit.realtime
 import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.mail.PostOffice
+import com.keepit.common.mail.LocalPostOffice
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.mail.EmailAddresses
 import com.keepit.serializer.CommentWithBasicUserSerializer._
@@ -88,7 +89,7 @@ class UserNotifier @Inject() (
   followRepo: FollowRepo,
   emailAddressRepo: EmailAddressRepo,
   deepLinkRepo: DeepLinkRepo,
-  postOffice: PostOffice,
+  postOffice: LocalPostOffice,
   basicUserRepo: BasicUserRepo,
   commentRepo: CommentRepo,
   commentRecipientRepo: CommentRecipientRepo,

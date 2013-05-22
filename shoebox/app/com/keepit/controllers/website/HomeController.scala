@@ -5,7 +5,7 @@ import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick._
-import com.keepit.common.mail.{EmailAddresses, ElectronicMail, PostOffice}
+import com.keepit.common.mail.{EmailAddresses, ElectronicMail, PostOffice, LocalPostOffice}
 import com.keepit.model._
 import com.keepit.common.mail.EmailAddresses
 
@@ -23,7 +23,7 @@ class HomeController @Inject() (db: Database,
   userConnectionRepo: UserConnectionRepo,
   invitationRepo: InvitationRepo,
   actionAuthenticator: ActionAuthenticator,
-  postOffice: PostOffice,
+  postOffice: LocalPostOffice,
   emailAddressRepo: EmailAddressRepo)
   extends WebsiteController(actionAuthenticator) {
 
