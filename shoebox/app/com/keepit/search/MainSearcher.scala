@@ -41,8 +41,8 @@ class MainSearcher(
     val uriGraphSearcher: URIGraphSearcher,
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
-    browsingHistoryTracker: BrowsingHistoryTracker,
-    clickHistoryTracker: ClickHistoryTracker,
+    browsingHistoryBuilder: BrowsingHistoryBuilder,
+    clickHistoryBuilder: ClickHistoryBuilder,
     shoeboxClient: ShoeboxServiceClient,
     spellCorrector: SpellCorrector)
     (implicit private val clock: Clock,
@@ -121,7 +121,7 @@ class MainSearcher(
       case None =>
         articleSearcher.indexReader
     }
-    PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryTracker, clickHistoryTracker, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory)
+    PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryBuilder, clickHistoryBuilder, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient)
   }
 
   def searchText(queryString: String, maxTextHitsPerCategory: Int, clickBoosts: ResultClickTracker.ResultClickBoosts)(implicit lang: Lang) = {

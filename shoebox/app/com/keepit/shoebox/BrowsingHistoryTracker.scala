@@ -11,7 +11,7 @@ import com.google.inject.Inject
 import com.keepit.common.logging.Logging
 import com.keepit.search.MultiHashFilter
 
-class BrowsingHistoryTracker @Inject() (tableSize: Int, numHashFuncs: Int, minHits: Int,
+class BrowsingHistoryTracker (tableSize: Int, numHashFuncs: Int, minHits: Int,
     browsingHistoryRepo: BrowsingHistoryRepo, db: Database) extends Logging{
 
   def add(userId: Id[User], uriId: Id[NormalizedURI]) = {

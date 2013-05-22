@@ -84,5 +84,27 @@ class SearchModule() extends ScalaModule with Logging {
     val articleDir = getDirectory(current.configuration.getString("index.article.directory"))
     SpellCorrector(spellDir, articleDir)
   }
+  
+  @Singleton
+  @Provides
+  def clickHistoryBuilder: ClickHistoryBuilder = {
+    val conf = current.configuration.getConfig("click-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+    
+    new ClickHistoryBuilder(filterSize, numHashFuncs, minHits)
+  }
+  
+  @Singleton
+  @Provides
+  def browsingHistoryBuilder: BrowsingHistoryBuilder = {
+    val conf = current.configuration.getConfig("browsing-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+    
+    new BrowsingHistoryBuilder(filterSize, numHashFuncs, minHits)
+  }
 
 }

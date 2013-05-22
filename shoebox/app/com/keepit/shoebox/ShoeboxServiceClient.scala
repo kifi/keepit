@@ -26,6 +26,7 @@ import com.keepit.common.analytics.Events
 import com.keepit.common.analytics.EventFamilies
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
+import scala.concurrent.Promise
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -37,6 +38,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getConnectedUsers(id: Long): Future[Set[Id[User]]]
   def getUsersChanged(seqNum: SequenceNumber): Future[Seq[(Id[User], SequenceNumber)]]
   def persistServerSearchEvent(metaData: JsObject): Unit
+  def getClickHistoryFilter(userId: Id[User]): Future[Array[Byte]]
+  def getBrowsingHistoryFilter(userId: Id[User]): Future[Array[Byte]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -76,10 +79,6 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def addBrowsingHistory(userId: Id[User], uriId: Id[NormalizedURI], tableSize: Int, numHashFuncs: Int, minHits: Int): Unit = {
-      call(routes.ShoeboxController.addBrowsingHistory(userId, uriId))
-  }
-
   def getBookmark(userId: Long): Future[Bookmark] = {
     ???
   }
@@ -94,8 +93,12 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getClickHistoryMultiHashFilter(userId: Id[User]) = {
+  def getClickHistoryFilter(userId: Id[User]): Future[Array[Byte]] = {
+    call(routes.ShoeboxController.getClickHistoryFilter(userId)).map(_.body.getBytes)
+  }
 
+  def getBrowsingHistoryFilter(userId: Id[User]): Future[Array[Byte]] = {
+    call(routes.ShoeboxController.getBrowsingHistoryFilter(userId)).map(_.body.getBytes)
   }
 
   def persistServerSearchEvent(metaData: JsObject): Unit ={
@@ -114,6 +117,8 @@ class FakeShoeboxServiceClientImpl @Inject() (
     browsingHistoryRepo: BrowsingHistoryRepo,
     clickingHistoryRepo: ClickHistoryRepo,
     normUriRepo: NormalizedURIRepo,
+    clickHistoryTracker: ClickHistoryTracker,
+    browsingHistoryTracker: BrowsingHistoryTracker,
     clock: Clock,
     fortyTwoServices: FortyTwoServices
 )
@@ -161,6 +166,14 @@ class FakeShoeboxServiceClientImpl @Inject() (
 
   def persistServerSearchEvent(metaData: JsObject): Unit ={
     //persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject])(clock, fortyTwoServices))
+  }
+  
+  def getClickHistoryFilter(userId: Id[User]) = {
+    Promise.successful(clickHistoryTracker.getMultiHashFilter(userId).getFilter).future
+  }
+
+  def getBrowsingHistoryFilter(userId: Id[User]) = {
+    Promise.successful(browsingHistoryTracker.getMultiHashFilter(userId).getFilter).future
   }
   
   def getConnectedUsers(id: Long): scala.concurrent.Future[Set[com.keepit.common.db.Id[com.keepit.model.User]]] = ???

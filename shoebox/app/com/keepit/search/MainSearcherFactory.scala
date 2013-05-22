@@ -32,8 +32,8 @@ class MainSearcherFactory @Inject() (
     uriGraph: URIGraph,
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
-    browsingHistoryTracker: BrowsingHistoryTracker,
-    clickHistoryTracker: ClickHistoryTracker,
+    browsingHistoryBuilder: BrowsingHistoryBuilder,
+    clickHistoryBuilder: ClickHistoryBuilder,
     shoeboxClient: ShoeboxServiceClient,
     spellCorrector: SpellCorrector,
     implicit private val clock: Clock,
@@ -62,8 +62,8 @@ class MainSearcherFactory @Inject() (
         uriGraphSearcher,
         parserFactory,
         resultClickTracker,
-        browsingHistoryTracker,
-        clickHistoryTracker,
+        browsingHistoryBuilder,
+        clickHistoryBuilder,
         shoeboxClient,
         spellCorrector
     )

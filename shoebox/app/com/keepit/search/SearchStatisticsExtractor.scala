@@ -31,6 +31,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.shoebox.BrowsingHistoryTracker
 import com.keepit.shoebox.BrowsingHistoryTracker
+import com.keepit.shoebox.ShoeboxServiceClient
 
 case class BasicQueryInfo(
   queryUUID: ExternalId[ArticleSearchResultRef],
@@ -86,14 +87,14 @@ case class SearchStatistics(
 class SearchStatisticsExtractorFactory @Inject() (
   db: Database, userRepo: UserRepo, userConnectionRepo: UserConnectionRepo, uriGraph: URIGraph,
   articleIndexer: ArticleIndexer, searchConfigManager: SearchConfigManager, mainSearcherFactory: MainSearcherFactory, parserFactory: MainQueryParserFactory,
-  browsingHistoryTracker: BrowsingHistoryTracker, clickHistoryTracker: ClickHistoryTracker, resultClickTracker: ResultClickTracker, store: MongoEventStore){
+  browsingHistoryBuilder: BrowsingHistoryBuilder, clickHistoryBuilder: ClickHistoryBuilder, resultClickTracker: ResultClickTracker, store: MongoEventStore, shoeboxServiceClient: ShoeboxServiceClient){
 
   def apply(queryUUID: ExternalId[ArticleSearchResultRef],
   queryString: String, userId: Id[User], uriLabelMap: scala.collection.immutable.Map[Id[NormalizedURI], UriLabel]) = {
 
     new SearchStatisticsExtractor (queryUUID, queryString, userId, uriLabelMap,
   db, userRepo, userConnectionRepo, uriGraph, articleIndexer, searchConfigManager, mainSearcherFactory, parserFactory,
-  browsingHistoryTracker, clickHistoryTracker, resultClickTracker, store)
+  browsingHistoryBuilder, clickHistoryBuilder, resultClickTracker, store, shoeboxServiceClient)
   }
 }
 
@@ -102,12 +103,12 @@ class SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
   queryString: String, userId: Id[User], uriLabelMap: scala.collection.immutable.Map[Id[NormalizedURI], UriLabel],
   db: Database, userRepo: UserRepo, userConnectionRepo: UserConnectionRepo, uriGraph: URIGraph,
   articleIndexer: ArticleIndexer, searchConfigManager: SearchConfigManager, mainSearcherFactory: MainSearcherFactory, parserFactory: MainQueryParserFactory,
-  browsingHistoryTracker: BrowsingHistoryTracker, clickHistoryTracker: ClickHistoryTracker, resultClickTracker: ResultClickTracker, store: MongoEventStore) extends Logging{
+  browsingHistoryBuilder: BrowsingHistoryBuilder, clickHistoryBuilder: ClickHistoryBuilder, resultClickTracker: ResultClickTracker, store: MongoEventStore, shoeboxServiceClient: ShoeboxServiceClient) extends Logging{
 
   val searcher = new SearchStatisticsHelperSearcher(queryString, userId, uriLabelMap.keySet.toSeq, db, userRepo,
     userConnectionRepo, uriGraph,
     articleIndexer, searchConfigManager, mainSearcherFactory, parserFactory,
-    browsingHistoryTracker, clickHistoryTracker, resultClickTracker)
+    browsingHistoryBuilder, clickHistoryBuilder, resultClickTracker, shoeboxServiceClient)
 
   private def getLuceneExplain(uriId: Id[NormalizedURI]) = {
     searcher.parsedQuery.map{ query =>
@@ -202,7 +203,7 @@ object TrainingDataLabeler extends Logging{
 class SearchStatisticsHelperSearcher(queryString: String, userId: Id[User], targetUriIds: Seq[Id[NormalizedURI]],
   db: Database, userRepo: UserRepo, userConnectionRepo: UserConnectionRepo, uriGraph: URIGraph,
   articleIndexer: ArticleIndexer, searchConfigManager: SearchConfigManager, mainSearcherFactory: MainSearcherFactory, parserFactory: MainQueryParserFactory,
-  browsingHistoryTracker: BrowsingHistoryTracker, clickHistoryTracker: ClickHistoryTracker, resultClickTracker: ResultClickTracker) extends Logging{
+  browsingHistoryBuilder: BrowsingHistoryBuilder, clickHistoryBuilder: ClickHistoryBuilder, resultClickTracker: ResultClickTracker, shoeboxServiceClient: ShoeboxServiceClient) extends Logging{
 
   val currentTime = currentDateTime.getMillis()
   val (config, experimentId) = searchConfigManager.getConfig(userId, queryString)
@@ -284,7 +285,7 @@ class SearchStatisticsHelperSearcher(queryString: String, userId: Id[User], targ
       case None =>
         articleSearcher.indexReader
     }
-    PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryTracker, clickHistoryTracker, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory)
+    PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryBuilder, clickHistoryBuilder, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxServiceClient)
   }
 
   //===================== preparation done ===========================//

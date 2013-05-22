@@ -176,16 +176,8 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Provides
   @Singleton
-  def clickHistoryTracker(repo: ClickHistoryRepo, db: Database): ClickHistoryTracker = new ClickHistoryTracker(-1, -1, -1, repo, db)
-
-  @Provides
-  @Singleton
   def sliderHistoryTracker(sliderHistoryRepo: SliderHistoryRepo, db: Database): SliderHistoryTracker =
     new SliderHistoryTracker(sliderHistoryRepo, db, -1, -1, -1)
-
-
-
-
 
   @Provides
   @Singleton
@@ -272,7 +264,7 @@ case class ShoeboxServiceModule() extends ScalaModule {
 
   @Singleton
   @Provides
-  def FakeShoeboxServiceClientImpl(
+  def fakeShoeboxServiceClient(
     cacheProvider: ShoeboxCacheProvider,
     db: Database,
     userConnectionRepo: UserConnectionRepo,
@@ -281,9 +273,11 @@ case class ShoeboxServiceModule() extends ScalaModule {
     browsingHistoryRepo: BrowsingHistoryRepo,
     clickingHistoryRepo: ClickHistoryRepo,
     normUriRepo: NormalizedURIRepo,
+    clickHistoryTracker: ClickHistoryTracker,
+    browsingHistoryTracker: BrowsingHistoryTracker,
     persistEventPluginProvider: Provider[PersistEventPlugin], clock: Clock,
     fortyTwoServices: FortyTwoServices
-): ShoeboxServiceClient = new FakeShoeboxServiceClientImpl(
+  ): ShoeboxServiceClient = new FakeShoeboxServiceClientImpl(
     cacheProvider,
     db,
     userConnectionRepo,
@@ -292,14 +286,20 @@ case class ShoeboxServiceModule() extends ScalaModule {
     browsingHistoryRepo,
     clickingHistoryRepo,
     normUriRepo,
+    clickHistoryTracker,
+    browsingHistoryTracker,
     clock,
     fortyTwoServices)
 
   @Provides
   @Singleton
-  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient): BrowsingHistoryTracker =
-    new BrowsingHistoryTracker(-1, -1, -1, browsingHistoryRepo, db)
+  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database): BrowsingHistoryTracker =
+    new BrowsingHistoryTracker(3067, 2, 1, browsingHistoryRepo, db)
 
+  @Provides
+  @Singleton
+  def clickHistoryTracker(repo: ClickHistoryRepo, db: Database): ClickHistoryTracker =
+    new ClickHistoryTracker(307, 2, 1, repo, db)
 
 }
 
