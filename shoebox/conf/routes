@@ -280,7 +280,7 @@ POST    /internal/search/spell/buildDict       @com.keepit.controllers.search.Sp
 GET     /internal/search/spell/buildStatus     @com.keepit.controllers.search.SpellCorrectorController.getBuildStatus()
 GET     /internal/search/spell/make-correction     @com.keepit.controllers.search.SpellCorrectorController.correctSpelling(query: String)
 
-GET     /internal/search/getSearchStatistics     @com.keepit.controllers.search.SearchStatisticsController.getSearchStatistics
+POST     /internal/search/getSearchStatistics     @com.keepit.controllers.search.SearchStatisticsController.getSearchStatistics
 
 GET     /internal/searchConfig/:id        @com.keepit.controllers.search.SearchConfigController.showUserConfig(id: Id[User])
 POST    /internal/searchConfig/:id/set    @com.keepit.controllers.search.SearchConfigController.setUserConfig(id: Id[User])
