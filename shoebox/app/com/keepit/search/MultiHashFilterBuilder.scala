@@ -11,5 +11,5 @@ trait MultiHashFilterBuilder {
     new MultiHashFilter(tableSize, filter, numHashFuncs, minHits)
 }
 
-class ClickHistoryBuilder @Inject() (val tableSize: Int, val numHashFuncs: Int, val minHits: Int) extends MultiHashFilterBuilder
-class BrowsingHistoryBuilder @Inject() (val tableSize: Int, val numHashFuncs: Int, val minHits: Int) extends MultiHashFilterBuilder
+class ClickHistoryBuilder (val tableSize: Int, val numHashFuncs: Int, val minHits: Int) extends MultiHashFilterBuilder
+class BrowsingHistoryBuilder (val tableSize: Int, val numHashFuncs: Int, val minHits: Int) extends MultiHashFilterBuilder

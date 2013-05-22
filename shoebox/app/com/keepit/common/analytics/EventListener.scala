@@ -240,7 +240,6 @@ class SearchUnloadListenerImpl @Inject() (
           }
           log.info("search statistics persisted")
         }
- //       searchClient.persistSearchStatistics(uuid, queryString, userId, kifiClickedIds, googleClickedIds, kifiShownIds)
       }
     }
   }

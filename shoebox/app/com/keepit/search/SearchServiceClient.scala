@@ -68,17 +68,6 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
         r => r.json.as[JsArray]
     }
   }
-//
-//
-//  def persistSearchStatistics(queryUUID: String, queryString: String, userId: Id[User], kifiClicked: Seq[Id[NormalizedURI]], googleClicked: Seq[Id[NormalizedURI]], kifiShown: Seq[Id[NormalizedURI]]): Future[Unit] = {
-//    val json = Json.obj("queryUUID" -> queryUUID,
-//        "query" -> queryString,
-//        "userId" -> userId.id,
-//        "kifiClicked" -> kifiClicked.map{_.id},
-//        "googleClicked" -> googleClicked.map{_.id},
-//        "kifiShown" -> kifiShown.map{_.id})
-//    call((routes.SearchStatisticsController.persistSearchStatistics), json).map{r => ()}
-//  }
 
   def updateURIGraph(): Future[Int] = {
     call(routes.URIGraphController.updateURIGraph()).map(r => (r.json \ "users").as[Int])

@@ -37,8 +37,8 @@ object PersonalizedSearcher {
             svWeightClickHistory: Int,
             shoeboxServiceClient: ShoeboxServiceClient) = {
     
-    val browsingHistoryFilter = Await.result(shoeboxServiceClient.getBrowsingHistoryFilter(userId), 2 second)
-    val clickHistoryFilter = Await.result(shoeboxServiceClient.getClickHistoryFilter(userId), 2 second)
+    val browsingHistoryFilter = Await.result(shoeboxServiceClient.getBrowsingHistoryFilter(userId), 4 second) // not good long term
+    val clickHistoryFilter = Await.result(shoeboxServiceClient.getClickHistoryFilter(userId), 4 second)
 
     new PersonalizedSearcher(indexReader, myUris, friendUris,
                              browsingHistoryBuilder.build(browsingHistoryFilter),
