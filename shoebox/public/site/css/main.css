@@ -21,6 +21,7 @@ a {color: #0074c5; text-decoration: none}
 select {background: #eeeeee; border: 0; -webkit-appearance: none; -moz-appearance: none; width: 110%}
 header { width: 1260px;  height: 48px; padding: 0px; position: relative; left: 50%; margin-left: -630px; text-align: left}
 nav {float: right}
+ol {list-style: none; padding: 0; margin: 0}
 ::-webkit-input-placeholder{ color: #b6c3cc;}
 :-moz-placeholder { color: #b6c3cc;}
 ::-moz-placeholder { color: #b6c3cc;}
@@ -40,8 +41,8 @@ nav a {color: #ffffff; font-size: 1.1em; display: inline-block; line-height: 48p
 nav a.invite{background: #7a8096 url(../img/invite.png) 15px 50% no-repeat; padding-left: 50px;}
 nav a.feedback {background: #27ae60}
 
-aside.left {width: 200px; height: 100%;  position:fixed; padding-right: 10px;}
-aside.right {width: 270px; padding: 20px; height: 100%; position: fixed; margin-left: 940px }
+aside.left {top: 48px; width: 200px; height: 100%;  position:fixed; padding-right: 10px;}
+aside.right {top: 48px; width: 270px; padding: 20px; height: 100%; position: fixed; margin-left: 940px }
 section.main {width: 700px; height: 100%; float: left; margin-left: 210px; background: #ffffff; }
 aside.right textarea {width: 265px; margin-top: 10px; background: transparent}
 div.custom-select {
@@ -94,14 +95,13 @@ div.search-wrapper:before {
 }
 div.search-wrapper.active:before {background: #3da9f5}
 .long-text { display: block; white-space: nowrap; overflow: hidden; text-overflow:    ellipsis;}
-ol {list-style: none; padding: 0; margin: 0}
 .small-avatar {max-width: 30px; max-height: 30px;}
 .keep {clear: left; padding: 10px; border-top: 1px solid #f9f9f9}
 .keep .small-avatar {vertical-align: bottom; float: left;}
 .keep .small-avatar.me {margin-right: 3px;}
 .keep .bottom {margin-top: 5px;}
 .keep .bottom span { float: left; margin-left: 10px}
-div.search {position: fixed; padding: 30px 20px 0px 20px; width: 660px; height: 110px; background: #ffffff; }
+div.search {position: fixed; top: 48px; padding: 30px 20px 0px 20px; width: 660px; height: 110px; background: #ffffff; }
 .kifi-pane-parent header {margin-left: -790px}
 
 div.search .num-results {display: none; font-size: .8em; color: #204b69; text-align: left; padding: 10px 0;}
@@ -126,7 +126,7 @@ div.loading {text-align: center; display: none;}
 	.centered, header {width: 100%}
 	.container, header {left: 0; margin-left: 0px}
 	aside.left {width: 17%}
-	aside.right {width: 20%; margin-left: 72%}
+	aside.right {width: 20%; margin-left: 76%}
 	section.main {width: 54%; margin-left: 18%}
 	div.scrollable { padding: 50px 20px; width: auto; left: 0; margin-left: 0}
 	div.search {padding: 30px 2% 0 2%; left: 18%; width: 50%;}
@@ -135,7 +135,7 @@ div.loading {text-align: center; display: none;}
 }
 @media all and (max-width: 1024px) {
 	aside.left {width: 150px; }
-	aside.right {width: 200px;  padding: 10px}
+	aside.right {width: 200px;  padding: 10px;}
 	section.main {width: 580px}
 	body {overflow-x: hidden;}
 }
