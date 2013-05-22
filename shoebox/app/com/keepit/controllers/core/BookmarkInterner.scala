@@ -51,7 +51,7 @@ class BookmarkInterner @Inject() (
   private def internBookmark(uri: NormalizedURI, user: User, isPrivate: Boolean, experiments: Set[State[ExperimentType]],
       installationId: Option[ExternalId[KifiInstallation]], source: BookmarkSource, title: Option[String], url: String) = {
     db.readWrite(attempts = 2) { implicit s =>
-      bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get) match {
+      bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get, excludeState = None) match {
         case Some(bookmark) if bookmark.isActive => Some(bookmark) // TODO: verify isPrivate?
         case Some(bookmark) => Some(bookmarkRepo.save(bookmark.withActive(true).withPrivate(isPrivate)))
         case None =>
