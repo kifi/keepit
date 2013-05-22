@@ -8,14 +8,18 @@ import play.api.test.Helpers.running
 import org.specs2.mutable.Specification
 import com.keepit.test.ShoeboxApplication
 import com.keepit.shoebox.ShoeboxModule
+import akka.testkit.TestKit
+import akka.actor.ActorSystem
 
-class HealthcheckModuleTest extends Specification {
-
+class HealthcheckModuleTest extends TestKit(ActorSystem()) with Specification {
+  args(skipAll = true)
+  
   "HealthcheckModule" should {
     "load" in {
-      running(new ShoeboxApplication().withFakeMail().withFakeCache()) {
+      running(new ShoeboxApplication().withFakeMail().withFakeCache().withTestActorSystem(system)) {
 
         val mail1 = inject[HealthcheckPlugin].reportStart()
+        
         val outbox1 = inject[FakeOutbox]
         outbox1.size === 1
         outbox1(0).id.get === mail1.id.get
