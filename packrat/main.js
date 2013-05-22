@@ -247,6 +247,7 @@ const socketHandlers = {
       api.tabs.eachSelected(tellTab);
       tabsShowingNotificationsPane.forEach(tellTab);
       tellTabsNoticeCountIfChanged();
+      api.play("media/notification.mp3");
     }
     function tellTab(tab) {
       if (told[tab.id]) return;
