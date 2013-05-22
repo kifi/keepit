@@ -58,31 +58,54 @@ class BookmarkInternerTest extends Specification with DbRepos {
         }
       }
     }
-  }
-
-  "persist bookmarks with one bad url" in {
-    running(new EmptyApplication().withFakeScraper()) {
-      val user = db.readWrite { implicit db =>
-        userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
+    "persist bookmarks with one bad url" in {
+      running(new EmptyApplication().withFakeScraper()) {
+        val user = db.readWrite { implicit db =>
+          userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
+        }
+        val fakeHealthcheck = inject[FakeHealthcheck]
+        fakeHealthcheck.errorCount() === 0
+        val bookmarkInterner = inject[BookmarkInterner]
+        val bookmarks = bookmarkInterner.internBookmarks(Json.arr(Json.obj(
+            "url" -> "http://42go.com",
+            "isPrivate" -> true
+          ), Json.obj(
+            "url" -> ("http://kifi.com/" + List.fill(300)("this_is_a_very_long_url/").mkString),
+            "isPrivate" -> false
+          ), Json.obj(
+            "url" -> "http://kifi.com",
+            "isPrivate" -> true
+          )), user, Set(), "EMAIL")
+        db.readWrite { implicit db =>
+          bookmarks.size === 2
+          bookmarkRepo.all.size === 2
+        }
+        fakeHealthcheck.errorCount() === 1
       }
-      val fakeHealthcheck = inject[FakeHealthcheck]
-      fakeHealthcheck.errorCount() === 0
-      val bookmarkInterner = inject[BookmarkInterner]
-      val bookmarks = bookmarkInterner.internBookmarks(Json.arr(Json.obj(
-          "url" -> "http://42go.com",
+    }
+    "reactivate inactive bookmarks for the same url" in {
+      running(new EmptyApplication().withFakeScraper()) {
+        val user = db.readWrite { implicit s =>
+          userRepo.save(User(firstName = "Greg", lastName = "Smith"))
+        }
+        val bookmarkInterner = inject[BookmarkInterner]
+        val initialBookmarks = bookmarkInterner.internBookmarks(Json.arr(Json.obj(
+          "url" -> "http://42go.com/",
           "isPrivate" -> true
-        ), Json.obj(
-          "url" -> ("http://kifi.com/" + List.fill(300)("this_is_a_very_long_url/").mkString),
-          "isPrivate" -> false
-        ), Json.obj(
-          "url" -> "http://kifi.com",
+        )), user, Set(), "HOVER_KEEP")
+        initialBookmarks.size === 1
+        db.readWrite { implicit s =>
+          bookmarkRepo.save(bookmarkRepo.getByUser(user.id.get).head.withActive(false))
+        }
+        val bookmarks = bookmarkInterner.internBookmarks(Json.arr(Json.obj(
+          "url" -> "http://42go.com/",
           "isPrivate" -> true
-        )), user, Set(), "EMAIL")
-      db.readWrite { implicit db =>
-        bookmarks.size === 2
-        bookmarkRepo.all.size === 2
+        )), user, Set(), "HOVER_KEEP")
+        db.readOnly { implicit s =>
+          bookmarks.size === 1
+          bookmarkRepo.all.size === 1
+        }
       }
-      fakeHealthcheck.errorCount() === 1
     }
   }
 
