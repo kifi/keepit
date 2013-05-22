@@ -60,9 +60,11 @@ bind[LocalPostOffice].to[ShoeboxPostOfficeImpl]
     persistEventProvider: Provider[PersistEventPlugin],
     store: MongoEventStore,
     searchClient: SearchServiceClient,
+    schedulingProperties: SchedulingProperties,
     clock: Clock,
     fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
-    new SearchUnloadListenerImpl(db, userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, clock, fortyTwoServices)
+    new SearchUnloadListenerImpl(db, userRepo, normalizedURIRepo, persistEventProvider, store,
+        searchClient, schedulingProperties, clock, fortyTwoServices)
   }
 
   @Provides
@@ -97,7 +99,7 @@ bind[LocalPostOffice].to[ShoeboxPostOfficeImpl]
       case None => new UserVoiceTokenGeneratorImpl()
     }
   }
-  
+
 
   @Singleton
   @Provides

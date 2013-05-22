@@ -110,8 +110,8 @@ class CommonModule extends ScalaModule with Logging {
   @Provides
   @AppScoped
   def healthcheckProvider(actorFactory: ActorFactory[HealthcheckActor], db: Database,
-      services: FortyTwoServices, host: HealthcheckHost): HealthcheckPlugin = {
-    new HealthcheckPluginImpl(actorFactory, services, host, db)
+      services: FortyTwoServices, host: HealthcheckHost, schedulingProperties: SchedulingProperties): HealthcheckPlugin = {
+    new HealthcheckPluginImpl(actorFactory, services, host, db, schedulingProperties)
   }
 
   @Singleton

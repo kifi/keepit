@@ -125,7 +125,8 @@ class ReportBuilderPluginImpl @Inject() (
   searchConfigManager: SearchConfigManager,
   reportStore: ReportStore,
   store: MongoEventStore,
-  dailyReports: DailyReports)
+  dailyReports: DailyReports,
+  val schedulingProperties: SchedulingProperties)
     extends Logging with ReportBuilderPlugin {
 
   def buildReport(startDate: DateTime, endDate: DateTime, report: ReportRepo): Unit = actor ! BuildReport(startDate, endDate, report)

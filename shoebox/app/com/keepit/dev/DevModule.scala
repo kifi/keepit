@@ -3,7 +3,7 @@ package com.keepit.dev
 import java.io.File
 import com.google.common.io.Files
 import com.google.inject.util.Modules
-import com.google.inject.{Provides, Singleton, Provider}
+import com.google.inject.{Provides, Singleton, Provider, Inject}
 import com.keepit.classify.DomainTagImportSettings
 import com.keepit.common.plugin._
 import com.keepit.common.zookeeper._
@@ -37,6 +37,17 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.common.service.{FortyTwoServices, IpAddress}
 import com.keepit.shoebox.ShoeboxServiceClient
 
+
+class FakePersistEventPluginImpl @Inject() (
+    system: ActorSystem, eventHelper: EventHelper, val schedulingProperties: SchedulingProperties) extends PersistEventPlugin with Logging {
+  def persist(event: Event): Unit = {
+    eventHelper.newEvent(event)
+    log.info("Fake persisting event %s".format(event.externalId))
+  }
+  def persist(events: Seq[Event]): Unit = {
+    log.info("Fake persisting events %s".format(events map (_.externalId) mkString(",")))
+  }
+}
 
 class ShoeboxDevModule extends ScalaModule with Logging {
   def configure() {
@@ -126,6 +137,12 @@ class ShoeboxDevModule extends ScalaModule with Logging {
   @Singleton
   def mailToKeepServerSettings: MailToKeepServerSettings = mailToKeepServerSettingsOpt.get
 
+  class FakeMailToKeepPlugin(val schedulingProperties: SchedulingProperties) extends MailToKeepPlugin with Logging {
+    def fetchNewKeeps() {
+      log.info("Fake fetching new keeps")
+    }
+  }
+
   @AppScoped
   @Provides
   def mailToKeepPlugin(
@@ -133,7 +150,7 @@ class ShoeboxDevModule extends ScalaModule with Logging {
       mailToKeepServerSettings: Option[MailToKeepServerSettings],
       schedulingProperties: SchedulingProperties): MailToKeepPlugin = {
     mailToKeepServerSettingsOpt match {
-      case None => new FakeMailToKeepPlugin
+      case None => new FakeMailToKeepPlugin(schedulingProperties)
       case _ => new MailToKeepPluginImpl(actorFactory, schedulingProperties)
     }
   }

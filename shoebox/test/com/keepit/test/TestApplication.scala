@@ -5,9 +5,7 @@ import scala.concurrent._
 import scala.slick.session.{Database => SlickDatabase}
 import scala.collection.mutable
 import org.joda.time.{ReadablePeriod, DateTime}
-import com.google.inject.Module
-import com.google.inject.Provides
-import com.google.inject.Singleton
+import com.google.inject._
 import com.google.inject.multibindings.Multibinder
 import com.google.inject.util.Modules
 import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
@@ -25,7 +23,7 @@ import com.keepit.common.social._
 import com.keepit.common.store.FakeS3StoreModule
 import com.keepit.common.time._
 import com.keepit.common.zookeeper._
-import com.keepit.dev.{SearchDevGlobal, ShoeboxDevGlobal, DevGlobal, S3DevModule}
+import com.keepit.dev.{SearchDevGlobal, ShoeboxDevGlobal, DevGlobal, S3DevModule, FakePersistEventPluginImpl}
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.scraper._
@@ -130,13 +128,13 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   }
 
   private def dbInfoFromApplication(): DbInfo = TestDbInfo.dbInfo
-  
+
   @Singleton
   @Provides
   def domainTagImportSettings: DomainTagImportSettings = {
     DomainTagImportSettings(localDir = "", url = "")
   }
-  
+
   @Provides
   def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.Never
 
@@ -340,7 +338,7 @@ case class FakeHealthcheckModule() extends ScalaModule {
 case class FakePersistEventModule() extends ScalaModule {
   override def configure(): Unit = {
     bind[PersistEventPlugin].to[FakePersistEventPluginImpl]
-    
+
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
 
   }
