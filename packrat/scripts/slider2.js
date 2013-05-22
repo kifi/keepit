@@ -439,6 +439,7 @@ slider2 = function() {
           $cart.removeClass("kifi-roll kifi-animated kifi-back kifi-forward")
             .off("transitionend webkitTransitionEnd", end);
           $cubby.css("overflow", "");
+          window.dispatchEvent(new Event("resize"));  // for other page scripts
         });
         if (back) {
           paneHistory.shift();
@@ -607,11 +608,12 @@ slider2 = function() {
     $pane
     .off("transitionend webkitTransitionEnd") // onPaneShown
     .on("transitionend webkitTransitionEnd", function(e) {
-      if (e.target.classList.contains("kifi-pane")) {
-        var $pane = $(e.target);
+      if (e.target === this) {
+        var $pane = $(this);
         $pane.find(".kifi-pane-box").triggerHandler("kifi:remove");
         $pane.remove();
         $html.removeClass("kifi-pane-parent");
+        window.dispatchEvent(new Event("resize"));  // for other page scripts
       }
     });
     $pane = paneHistory = null;
