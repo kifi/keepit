@@ -25,6 +25,8 @@ import com.keepit.common.time.Clock
 import com.keepit.common.service.FortyTwoServices
 import com.google.inject.multibindings.Multibinder
 import com.keepit.common.analytics._
+import com.keepit.common.net.HttpClient
+import com.keepit.search.SearchServiceClientImpl
 
 class ShoeboxModule() extends ScalaModule with Logging {
   def configure() {
@@ -41,7 +43,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
     bind[InvitationMailPlugin].to[InvitationMailPluginImpl].in[AppScoped]
     bind[NotificationConsistencyChecker].to[NotificationConsistencyCheckerImpl].in[AppScoped]
 
-bind[LocalPostOffice].to[ShoeboxPostOfficeImpl]
+    bind[LocalPostOffice].to[ShoeboxPostOfficeImpl]
     bind[HealthcheckMailSender].to[LocalHealthcheckMailSender]
     bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped]
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
@@ -103,7 +105,7 @@ bind[LocalPostOffice].to[ShoeboxPostOfficeImpl]
 
   @Singleton
   @Provides
-  def clickHistoryTracker(repo: ClickHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient): ClickHistoryTracker = {
+  def clickHistoryTracker(repo: ClickHistoryRepo, db: Database): ClickHistoryTracker = {
     val conf = current.configuration.getConfig("click-history-tracker").get
     val filterSize = conf.getInt("filterSize").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
@@ -114,13 +116,33 @@ bind[LocalPostOffice].to[ShoeboxPostOfficeImpl]
 
   @Singleton
   @Provides
-  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient): BrowsingHistoryTracker = {
+  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database): BrowsingHistoryTracker = {
     val conf = current.configuration.getConfig("browsing-history-tracker").get
     val filterSize = conf.getInt("filterSize").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val minHits = conf.getInt("minHits").get
 
     new BrowsingHistoryTracker(filterSize, numHashFuncs, minHits, browsingHistoryRepo, db)
+  }
+  
+  @Singleton
+  @Provides
+  def sliderHistoryTracker(sliderHistoryRepo: SliderHistoryRepo, db: Database): SliderHistoryTracker = {
+    val conf = current.configuration.getConfig("slider-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+
+    new SliderHistoryTracker(sliderHistoryRepo, db, filterSize, numHashFuncs, minHits)
+  }
+  
+  @Singleton
+  @Provides
+  def searchServiceClient(client: HttpClient): SearchServiceClient = {
+    new SearchServiceClientImpl(
+      current.configuration.getString("service.search.host").get,
+      current.configuration.getInt("service.search.port").get,
+      client)
   }
 
 }

@@ -61,14 +61,6 @@ class CommonModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def searchConfigManager(
-      expRepo: SearchConfigExperimentRepo, userExpRepo: UserExperimentRepo, db: Database): SearchConfigManager = {
-    val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
-    new SearchConfigManager(optFile, expRepo, userExpRepo, db)
-  }
-
-  @Singleton
-  @Provides
   def playMode: Mode = current.mode
 
   @Singleton
@@ -78,22 +70,6 @@ class CommonModule extends ScalaModule with Logging {
   @Singleton
   @Provides
   def impersonateCookie: ImpersonateCookie = new ImpersonateCookie(current.configuration.getString("session.domain"))
-
-  @Singleton
-  @Provides
-  def resultClickTracker: ResultClickTracker = {
-    val conf = current.configuration.getConfig("result-click-tracker").get
-    val numHashFuncs = conf.getInt("numHashFuncs").get
-    val syncEvery = conf.getInt("syncEvery").get
-    val dirPath = conf.getString("dir").get
-    val dir = new File(dirPath).getCanonicalFile()
-    if (!dir.exists()) {
-      if (!dir.mkdirs()) {
-        throw new Exception(s"could not create dir $dir")
-      }
-    }
-    ResultClickTracker(dir, numHashFuncs, syncEvery)
-  }
 
   @Provides
   @AppScoped
@@ -109,9 +85,9 @@ class CommonModule extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def healthcheckProvider(actorFactory: ActorFactory[HealthcheckActor], db: Database,
+  def healthcheckProvider(actorFactory: ActorFactory[HealthcheckActor],
       services: FortyTwoServices, host: HealthcheckHost, schedulingProperties: SchedulingProperties): HealthcheckPlugin = {
-    new HealthcheckPluginImpl(actorFactory, services, host, db, schedulingProperties)
+    new HealthcheckPluginImpl(actorFactory, services, host, schedulingProperties)
   }
 
   @Singleton
@@ -141,30 +117,10 @@ class CommonModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def sliderHistoryTracker(sliderHistoryRepo: SliderHistoryRepo, db: Database): SliderHistoryTracker = {
-    val conf = current.configuration.getConfig("slider-history-tracker").get
-    val filterSize = conf.getInt("filterSize").get
-    val numHashFuncs = conf.getInt("numHashFuncs").get
-    val minHits = conf.getInt("minHits").get
-
-    new SliderHistoryTracker(sliderHistoryRepo, db, filterSize, numHashFuncs, minHits)
-  }
-
-  @Singleton
-  @Provides
-  def searchServiceClient(client: HttpClient): SearchServiceClient = {
-    new SearchServiceClientImpl(
-      current.configuration.getString("service.search.host").get,
-      current.configuration.getInt("service.search.port").get,
-      client)
-  }
-
-  @Singleton
-  @Provides
-  def shoeboxServiceClient (client: HttpClient, cacheProvider: ShoeboxCacheProvider): ShoeboxServiceClient = {
-    new ShoeboxServiceClientImpl(
-      current.configuration.getString("service.shoebox.host").get,
-      current.configuration.getInt("service.shoebox.port").get,
-      client, cacheProvider)
+  def searchConfigManager(
+      expRepo: SearchConfigExperimentRepo, userExpRepo: UserExperimentRepo, db: Database): SearchConfigManager = {
+    // This is needed still by Shoebox because of reports. Need to split.
+    val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
+    new SearchConfigManager(optFile, expRepo, userExpRepo, db)
   }
 }
