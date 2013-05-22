@@ -47,6 +47,7 @@ object URIGraphFields {
 trait URIGraph {
   def update(): Int
   def update(userId: Id[User]): Int
+  def reindex(): Unit
   def getURIGraphSearcher(userId: Option[Id[User]] = None): URIGraphSearcher
   def close(): Unit
 
@@ -79,12 +80,14 @@ class URIGraphImpl(
   }
 
   def update(): Int = update{
+    resetSequenceNumberIfReindex()
+
     db.readOnly { implicit s =>
       bookmarkRepo.getUsersChanged(sequenceNumber)
     }
   }
 
-  def update(userId: Id[User]): Int = update{ Seq((userId, SequenceNumber.ZERO)) }
+  def update(userId: Id[User]): Int = update{ Seq((userId, SequenceNumber.MinValue)) }
 
   private def update(usersChanged: => Seq[(Id[User], SequenceNumber)]): Int = {
     log.info("updating URIGraph")

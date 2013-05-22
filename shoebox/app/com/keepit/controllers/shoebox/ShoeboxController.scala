@@ -68,12 +68,11 @@ class ShoeboxController @Inject() (
     Ok(NormalizedURISerializer.normalizedURISerializer.writes(uri))
   }
 
-  def getNormalizedURIs = Action(parse.json) { request =>
-     val json = request.body
-     val ids = json.as[JsArray].value.map( id => id.as[Long] )
+  def getNormalizedURIs(ids: String) = Action { request =>
+     val uriIds = ids.split(',').map(id => Id[NormalizedURI](id.toLong))
      val uris = db.readOnly { implicit s =>
-       ids.map{ id =>
-         val uri = normUriRepo.get(Id[NormalizedURI](id))
+       uriIds.map{ id =>
+         val uri = normUriRepo.get(id)
          NormalizedURISerializer.normalizedURISerializer.writes(uri)
        }
      }
@@ -145,9 +144,8 @@ class ShoeboxController @Inject() (
     Ok(JsArray(bookmarks))
   }
 
-  def getUsers = Action(parse.json) { request =>
-        val json = request.body
-        val userIds = json.as[JsArray].value.map(id => Id[User](id.as[Long]))
+  def getUsers(ids: String) = Action { request =>
+        val userIds = ids.split(',').map(id => Id[User](id.toLong))
         val users = db.readOnly { implicit s =>
           userIds.map{userId =>
             val user = userRepo.get(userId)

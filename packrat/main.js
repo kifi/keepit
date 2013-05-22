@@ -647,14 +647,15 @@ function insertNewNotification(n) {
   return true;
 }
 
-// id is of last read comment/message. locator not passed in the comments case.
+// id is of last read comment/message, timeStr is its createdAt time (not notification's).
+// locator not passed in the comments case.
 function markNoticesVisited(category, nUri, id, timeStr, locator) {
   var time = new Date(timeStr);
   notifications.forEach(function(n, i) {
     if (n.details.page == nUri &&
         n.category == category &&
         (!locator || n.details.locator == locator) &&
-        (n.details.id == id || new Date(n.time) <= time) &&
+        (n.details.id == id || new Date(n.details.createdAt) <= time) &&
         notificationNotVisited.test(n.state)) {
       n.state = "visited";
       decrementNumNotificationsNotVisited(n);
