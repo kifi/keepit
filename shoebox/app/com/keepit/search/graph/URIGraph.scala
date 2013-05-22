@@ -50,6 +50,7 @@ object URIGraphFields {
 trait URIGraph {
   def update(): Int
   def update(userId: Id[User]): Int
+  def reindex(): Unit
   def getURIGraphSearcher(userId: Option[Id[User]] = None): URIGraphSearcher
   def close(): Unit
 
@@ -83,17 +84,14 @@ class URIGraphImpl(
   }
 
   def update(): Int = update{
-    Await.result(shoeboxClient.getUsersChanged(sequenceNumber), 5 seconds)
-//    println("\n\n=====================\n\n")
-//    val rv = db.readOnly { implicit s =>
-//      bookmarkRepo.getUsersChanged(sequenceNumber)
-//    }
-//    println("seqNum = " + sequenceNumber.value)
-//    rv.foreach{case (id, seqNum) => println("userId = " + id.id, "seqNum = " + seqNum.value)}
-//    rv
+    resetSequenceNumberIfReindex()
+
+    db.readOnly { implicit s =>
+      bookmarkRepo.getUsersChanged(sequenceNumber)
+    }
   }
 
-  def update(userId: Id[User]): Int = update{ Seq((userId, SequenceNumber.ZERO)) }
+  def update(userId: Id[User]): Int = update{ Seq((userId, SequenceNumber.MinValue)) }
 
   private def update(usersChanged: => Seq[(Id[User], SequenceNumber)]): Int = {
     log.info("updating URIGraph")

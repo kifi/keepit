@@ -214,6 +214,7 @@ POST    /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminCon
 GET     /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminController.getDomainTags
 POST    /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminController.saveDomainTags
 GET     /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.getDomainOverrides
+GET     /admin/slider/classifications @com.keepit.controllers.admin.SliderAdminController.getClassifications(domain: Option[String])
 POST    /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.saveDomainOverrides
 POST    /admin/slider/domains/fetch @com.keepit.controllers.admin.SliderAdminController.refetchClassifications
 GET     /admin/slider/importEvents  @com.keepit.controllers.admin.SliderAdminController.getImportEvents
@@ -242,15 +243,15 @@ GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLab
 ##########################################
 
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURI(id: Long)
-GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs
-GET     /internal/shoebox/database/getUsers           @com.keepit.controllers.shoebox.ShoeboxController.getUsers
-GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.shoebox.ShoeboxController.getConnectedUsers(userId: Long)
+GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs(ids: String)
+GET     /internal/shoebox/database/getUsers           @com.keepit.controllers.shoebox.ShoeboxController.getUsers(ids: String)
+GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.shoebox.ShoeboxController.getConnectedUsers(userId: Id[User])
 GET     /internal/shoebox/tracker/browsingHistory     @com.keepit.controllers.shoebox.ShoeboxController.getBrowsingHistoryFilter(userId: Id[User])
 GET     /internal/shoebox/tracker/browsingHistory     @com.keepit.controllers.shoebox.ShoeboxController.getClickHistoryFilter(userId: Id[User])
 GET     /internal/shoebox/database/bookmark           @com.keepit.controllers.shoebox.ShoeboxController.getBookmarks(userId: Id[User])
 GET     /internal/shoebox/database/changedUser        @com.keepit.controllers.shoebox.ShoeboxController.getUsersChanged(seqNum: Long)
 POST    /internal/shoebox/persistServerSearchEvent    @com.keepit.controllers.shoebox.ShoeboxController.persistServerSearchEvent
-
+POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.shoebox.ShoeboxController.sendMail
 
 
 
@@ -273,6 +274,7 @@ POST    /internal/search/index/dumpDoc/:id     @com.keepit.controllers.search.Ar
 
 POST    /internal/search/search/keeps          @com.keepit.controllers.search.SearchController.searchKeeps(userId: Id[User], query: String)
 GET     /internal/search/search/explainResult  @com.keepit.controllers.search.SearchController.explain(query: String, userId: Id[User], uriId: Id[NormalizedURI])
+GET     /internal/search/search/causeError  @com.keepit.controllers.search.SearchController.causeError()
 
 POST    /internal/search/spell/buildDict       @com.keepit.controllers.search.SpellCorrectorController.buildDictionary()
 GET     /internal/search/spell/buildStatus     @com.keepit.controllers.search.SpellCorrectorController.getBuildStatus()

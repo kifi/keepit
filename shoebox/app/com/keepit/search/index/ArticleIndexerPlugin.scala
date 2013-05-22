@@ -70,7 +70,7 @@ class ArticleIndexerPluginImpl @Inject() (
   }
 
   override def reindex() {
-    articleIndexer.sequenceNumber = SequenceNumber.ZERO
+    articleIndexer.reindex()
     actor ! Index
   }
 }

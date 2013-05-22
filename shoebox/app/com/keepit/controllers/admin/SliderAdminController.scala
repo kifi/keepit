@@ -2,9 +2,11 @@ package com.keepit.controllers.admin
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.future
+import scala.concurrent.promise
 
 import org.joda.time._
 
+import com.google.inject.{Inject, Singleton}
 import com.keepit.classify._
 import com.keepit.common.analytics.{MongoEventStore, EventFamilies, MongoSelector}
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
@@ -16,13 +18,9 @@ import com.keepit.model.{URLPattern, URLPatternRepo, URLPatternStates}
 import com.keepit.realtime.UserChannel
 import com.mongodb.casbah.Imports._
 
-import play.api.Play.current
 import play.api.libs.json.{JsBoolean, JsArray, JsObject, Json}
 import play.api.mvc.Action
 import views.html
-
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.google.inject.{Inject, Singleton}
 
 @Singleton
 class SliderAdminController @Inject() (
@@ -31,6 +29,7 @@ class SliderAdminController @Inject() (
   sliderRuleRepo: SliderRuleRepo,
   urlPatternRepo: URLPatternRepo,
   domainTagRepo: DomainTagRepo,
+  domainClassifier: DomainClassifier,
   sensitivityUpdater: SensitivityUpdater,
   domainToTagRepo: DomainToTagRepo,
   domainRepo: DomainRepo,
@@ -102,6 +101,19 @@ class SliderAdminController @Inject() (
       domainTagRepo.all
     }
     Ok(html.admin.domainTags(tags))
+  }
+
+  def getClassifications(domain: Option[String]) = AdminHtmlAction { implicit request =>
+    Async {
+      domain.map(domainClassifier.fetchTags)
+        .getOrElse(promise[Seq[DomainTagName]].success(Seq()).future).map { tags =>
+        val tagPairs = tags.map { t =>
+          val tag = db.readOnly { implicit s => domainTagRepo.get(t) }
+          (t.name, tag.map(_.sensitive.getOrElse(false)))
+        }
+        Ok(html.admin.classifications(domain, tagPairs))
+      }
+    }
   }
 
   def saveDomainTags = AdminHtmlAction { implicit request =>

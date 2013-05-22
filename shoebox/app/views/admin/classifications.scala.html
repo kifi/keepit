@@ -1,0 +1,17 @@
+@(domain: Option[String], tags: Seq[(String, Option[Boolean])])
+
+@admin("Classifications", stylesheets = List("admin_slider")) {
+  <form action="" method="get">
+    <div><label>Domain: <input type="text" name="domain" value="@domain.getOrElse("")"></label></div>
+    <div><input type="submit" class="btn" value="Look up classifications"></div>
+  </form>
+  @for(d <- domain) {
+    <h3>tags for @d</h3>
+    <table class="table table-condensed table-striped">
+    <th>tag</th><th>sensitive</th>
+    @for((t, s) <- tags) {
+      <tr><td>@t</td><td>@s.map(_.toString).getOrElse("(none)")</td></tr>
+    }
+    </table>
+  }
+}

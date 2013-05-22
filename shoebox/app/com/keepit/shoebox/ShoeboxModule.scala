@@ -14,14 +14,16 @@ import com.keepit.realtime._
 import com.keepit.scraper._
 import com.tzavellas.sse.guice.ScalaModule
 import play.api.Play.current
-import com.google.inject.multibindings.Multibinder
-import com.keepit.common.analytics._
+import com.keepit.common.healthcheck.LocalHealthcheckMailSender
+import com.keepit.common.healthcheck.HealthcheckMailSender
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import com.google.inject.Provider
 import com.keepit.search.SearchServiceClient
 import com.keepit.common.time.Clock
 import com.keepit.common.service.FortyTwoServices
+import com.google.inject.multibindings.Multibinder
+import com.keepit.common.analytics._
 
 class ShoeboxModule() extends ScalaModule with Logging {
   def configure() {
@@ -38,6 +40,8 @@ class ShoeboxModule() extends ScalaModule with Logging {
     bind[InvitationMailPlugin].to[InvitationMailPluginImpl].in[AppScoped]
     bind[NotificationConsistencyChecker].to[NotificationConsistencyCheckerImpl].in[AppScoped]
 
+bind[LocalPostOffice].to[ShoeboxPostOfficeImpl]
+    bind[HealthcheckMailSender].to[LocalHealthcheckMailSender]
     bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped]
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
     listenerBinder.addBinding().to(classOf[ResultClickedListener])

@@ -12,7 +12,7 @@ import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import com.keepit.serializer._
 import play.api.mvc.Action
-import play.api.libs.json.{JsNumber, JsValue, JsArray, JsNull}
+import play.api.libs.json._
 import com.keepit.model.BrowsingHistoryRepo
 import com.keepit.model.User
 import com.keepit.search.MultiHashFilter
@@ -29,6 +29,13 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.shoebox.BrowsingHistoryTracker
 import com.keepit.model.NormalizedURI
+import com.keepit.common.mail.LocalPostOffice
+import play.api.libs.json.Json
+import com.keepit.common.mail.ElectronicMail
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.common.healthcheck.Healthcheck
+import com.keepit.model.NormalizedURIRepo
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -40,11 +47,27 @@ class ShoeboxController @Inject() (
   clickingHistoryRepo: ClickHistoryRepo,
   clickHistoryTracker: ClickHistoryTracker,
   normUriRepo: NormalizedURIRepo,
-  persistEventPlugin: PersistEventPlugin)
+  persistEventPlugin: PersistEventPlugin,
+  postOffice: LocalPostOffice,
+  healthcheckPlugin: HealthcheckPlugin)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
   extends ShoeboxServiceController with Logging {
+  
+  def sendMail = Action(parse.json) { request =>
+    Json.fromJson[ElectronicMail](request.body).asOpt match {
+      case Some(mail) =>
+        db.readWrite { implicit session =>
+          postOffice.sendMail(mail)
+        }
+        Ok("true")
+      case None =>
+        val e = new Exception("Unable to parse email")
+        healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some("Unable to parse: " + request.body.toString)))
+        Ok("false")
+    } 
+  }
 
   def getNormalizedURI(id: Long) = Action {
     val uri = db.readOnly { implicit s =>
@@ -53,12 +76,11 @@ class ShoeboxController @Inject() (
     Ok(NormalizedURISerializer.normalizedURISerializer.writes(uri))
   }
 
-  def getNormalizedURIs = Action(parse.json) { request =>
-     val json = request.body
-     val ids = json.as[JsArray].value.map( id => id.as[Long] )
+  def getNormalizedURIs(ids: String) = Action { request =>
+     val uriIds = ids.split(',').map(id => Id[NormalizedURI](id.toLong))
      val uris = db.readOnly { implicit s =>
-       ids.map{ id =>
-         val uri = normUriRepo.get(Id[NormalizedURI](id))
+       uriIds.map{ id =>
+         val uri = normUriRepo.get(id)
          NormalizedURISerializer.normalizedURISerializer.writes(uri)
        }
      }
@@ -107,9 +129,9 @@ class ShoeboxController @Inject() (
     persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject]))
     Ok("server search event persisted")
   }
-  def getUsers = Action(parse.json) { request =>
-        val json = request.body
-        val userIds = json.as[JsArray].value.map(id => Id[User](id.as[Long]))
+
+  def getUsers(ids: String) = Action { request =>
+        val userIds = ids.split(',').map(id => Id[User](id.toLong))
         val users = db.readOnly { implicit s =>
           userIds.map{userId =>
             val user = userRepo.get(userId)
@@ -119,9 +141,9 @@ class ShoeboxController @Inject() (
         Ok(JsArray(users))
   }
 
-  def getConnectedUsers(id : Long) = Action { request =>
+  def getConnectedUsers(id : Id[User]) = Action { request =>
     val ids = db.readOnly { implicit s =>
-      userConnectionRepo.getConnectedUsers(Id[User](id)).toSeq
+      userConnectionRepo.getConnectedUsers(id).toSeq
         .map { friendId => JsNumber(friendId.id) }
     }
     Ok(JsArray(ids))

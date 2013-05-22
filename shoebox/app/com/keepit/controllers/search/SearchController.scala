@@ -18,11 +18,11 @@ import scala.collection.mutable.ArrayBuffer
 import scala.math.{abs, sqrt}
 import views.html
 import com.keepit.shoebox.ShoeboxServiceClient
-import scala.concurrent.ExecutionContext.Implicits.global
 import com.keepit.model.User
 import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.Random
 
 
 class SearchController @Inject()(
@@ -38,7 +38,7 @@ class SearchController @Inject()(
   }
 
   def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
-    val friendIdsFuture = shoeboxClient.getConnectedUsers(userId.id)
+    val friendIdsFuture = shoeboxClient.getConnectedUsers(userId)
     val friendIds = Await.result(friendIdsFuture, 5 seconds)
     val (config, _) = searchConfigManager.getConfig(userId, query)
 
@@ -50,7 +50,7 @@ class SearchController @Inject()(
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]) = Action { implicit request =>
     val data = new ArrayBuffer[JsArray]
     q.foreach{ q =>
-      val friendIdsFuture = shoeboxClient.getConnectedUsers(userId.id)
+      val friendIdsFuture = shoeboxClient.getConnectedUsers(userId)
       val friendIds = Await.result(friendIdsFuture, 5 seconds)
       val allUserIds = (friendIds + userId).toArray
 
@@ -92,7 +92,7 @@ class SearchController @Inject()(
             m + (userIndex(i) -> (x(i)/norm, y(i)/norm))
           }
 
-          val usersFuture = shoeboxClient.getUsers(userIndex.map(_.id))
+          val usersFuture = shoeboxClient.getUsers(userIndex)
           Await.result(usersFuture, 5 seconds).foreach { user =>
               val (px,py) = positionMap(user.id.get)
               data += JsArray(Seq(JsNumber(px), JsNumber(py), JsString("%s %s".format(user.firstName, user.lastName))))
@@ -115,5 +115,16 @@ class SearchController @Inject()(
       }
     }
     (sqrt(s) / vectors1.length) - 1.0d - Double.MinPositiveValue
+  }
+  
+  //randomly creates one of two exceptions, each time with a random exception message
+  def causeError() = Action { implicit request =>
+    if (Random.nextBoolean) {
+      // throwing a X/0 exception. its a fixed stack exception with random message text
+      (Random.nextInt) / 0
+    }
+    // throwing an array out bound exception. its a fixed stack exception with random message text
+    (new Array[Int](1))(Random.nextInt + 1) = 1
+    Ok("You cannot see this :-P ")
   }
 }

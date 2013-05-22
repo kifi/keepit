@@ -308,18 +308,20 @@ slider2 = function() {
       if (data.dragStarting) {
         delete data.dragStarting;
         api.log("[startDrag] installing draggable");
-        data.$dragGlass = $("<div class=kifi-slider2-drag-glass>").appendTo("html");
-        $(tile).draggable({axis: "y", containment: "window", scroll: false, stop: function stopDrag() {
-          var r = tile.getBoundingClientRect(), fromBot = window.innerHeight - r.bottom;
-          var pos = r.top >= 0 && r.top < fromBot ? {top: r.top} : {bottom: Math.max(0, fromBot)};
-          api.log("[stopDrag] top:", r.top, "bot:", r.bottom, JSON.stringify(pos));
-          $(tile).draggable("destroy");
-          data.$dragGlass.remove();
-          delete data.$dragGlass;
-          tile.dataset.pos = JSON.stringify(pos);
-          $(tile).css($.extend({top: "auto", bottom: "auto"}, pos));
-          api.port.emit("set_keeper_pos", {host: location.hostname, pos: pos});
-        }})[0].dispatchEvent(data.mousedownEvent); // starts drag
+        data.$dragGlass = $("<div class=kifi-slider2-drag-glass>").mouseup(stopDrag).appendTo("html");
+        $(tile).draggable({axis: "y", containment: "window", scroll: false, stop: stopDrag})[0]
+          .dispatchEvent(data.mousedownEvent); // starts drag
+      }
+      function stopDrag() {
+        var r = tile.getBoundingClientRect(), fromBot = window.innerHeight - r.bottom;
+        var pos = r.top >= 0 && r.top < fromBot ? {top: r.top} : {bottom: Math.max(0, fromBot)};
+        api.log("[stopDrag] top:", r.top, "bot:", r.bottom, JSON.stringify(pos));
+        $(tile).draggable("destroy");
+        data.$dragGlass.remove();
+        delete data.$dragGlass;
+        tile.dataset.pos = JSON.stringify(pos);
+        $(tile).css($.extend({top: "auto", bottom: "auto"}, pos));
+        api.port.emit("set_keeper_pos", {host: location.hostname, pos: pos});
       }
     });
   }
@@ -437,6 +439,7 @@ slider2 = function() {
           $cart.removeClass("kifi-roll kifi-animated kifi-back kifi-forward")
             .off("transitionend webkitTransitionEnd", end);
           $cubby.css("overflow", "");
+          window.dispatchEvent(new Event("resize"));  // for other page scripts
         });
         if (back) {
           paneHistory.shift();
@@ -605,11 +608,12 @@ slider2 = function() {
     $pane
     .off("transitionend webkitTransitionEnd") // onPaneShown
     .on("transitionend webkitTransitionEnd", function(e) {
-      if (e.target.classList.contains("kifi-pane")) {
-        var $pane = $(e.target);
+      if (e.target === this) {
+        var $pane = $(this);
         $pane.find(".kifi-pane-box").triggerHandler("kifi:remove");
         $pane.remove();
         $html.removeClass("kifi-pane-parent");
+        window.dispatchEvent(new Event("resize"));  // for other page scripts
       }
     });
     $pane = paneHistory = null;

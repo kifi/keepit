@@ -25,7 +25,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{EmailAddresses, ElectronicMail, PostOffice}
+import com.keepit.common.mail.{EmailAddresses, ElectronicMail, LocalPostOffice, PostOffice}
 import com.keepit.common.time._
 
 import akka.actor.Status.Failure
@@ -63,7 +63,7 @@ private[classify] class DomainTagImportActor @Inject() (
   domainToTagRepo: DomainToTagRepo,
   persistEventPlugin: PersistEventPlugin,
   settings: DomainTagImportSettings,
-  postOffice: PostOffice,
+  postOffice: LocalPostOffice,
   healthcheckPlugin: HealthcheckPlugin,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends FortyTwoActor(healthcheckPlugin) with Logging {

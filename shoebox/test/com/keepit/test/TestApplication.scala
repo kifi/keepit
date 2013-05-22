@@ -4,7 +4,6 @@ import scala.collection.mutable.{Stack => MutableStack}
 import scala.concurrent._
 import scala.slick.session.{Database => SlickDatabase}
 import scala.collection.mutable
-import scala.collection.immutable.Set
 import org.joda.time.{ReadablePeriod, DateTime}
 import com.google.inject.Module
 import com.google.inject.Provides
@@ -19,8 +18,8 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
-import com.keepit.common.mail.{FakeMailToKeepPlugin, MailToKeepPlugin, FakeMailModule, MailSenderPlugin, ElectronicMail}
-import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.mail._
+import com.keepit.common.net.{FakeHttpClientModule,HttpClient}
 import com.keepit.common.service._
 import com.keepit.common.social._
 import com.keepit.common.store.FakeS3StoreModule
@@ -42,7 +41,6 @@ import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.net.HttpClient
 import com.keepit.shoebox.ShoeboxServiceClientImpl
 import com.keepit.shoebox.ShoeboxCacheProvider
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
@@ -174,6 +172,10 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     def processOutbox() = throw new Exception("Should not attempt to use mail plugin in test")
   }
 
+  @Provides
+  @Singleton
+  def localPostOffice(shoeboxPostOfficeImpl: ShoeboxPostOfficeImpl): LocalPostOffice = shoeboxPostOfficeImpl
+
   @Singleton
   @Provides
   def kifiInstallationCookie: KifiInstallationCookie = new KifiInstallationCookie(Some("test.com"))
@@ -186,6 +188,14 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   @Singleton
   def sliderHistoryTracker(sliderHistoryRepo: SliderHistoryRepo, db: Database): SliderHistoryTracker =
     new SliderHistoryTracker(sliderHistoryRepo, db, -1, -1, -1)
+
+  @Singleton
+  @Provides
+  def shoeboxServiceClient(shoeboxCacheProvided: ShoeboxCacheProvider, httpClient: HttpClient): ShoeboxServiceClient = new ShoeboxServiceClientImpl(null, -1, httpClient,shoeboxCacheProvided)
+
+  @Singleton
+  @Provides
+  def httpClient(): HttpClient = null
 
   @Provides
   @Singleton

@@ -36,6 +36,7 @@ import play.api.Play
 import play.api.Mode.Mode
 import com.google.inject.Inject
 import com.keepit.shoebox.ShoeboxCacheProvider
+import com.keepit.common.mail.LocalPostOffice
 import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.shoebox.BrowsingHistoryTracker
 
@@ -107,9 +108,9 @@ class CommonModule extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def healthcheckProvider(actorFactory: ActorFactory[HealthcheckActor], db: Database, postOffice: PostOffice,
+  def healthcheckProvider(actorFactory: ActorFactory[HealthcheckActor], db: Database,
       services: FortyTwoServices, host: HealthcheckHost): HealthcheckPlugin = {
-    new HealthcheckPluginImpl(actorFactory, services, postOffice, host, db)
+    new HealthcheckPluginImpl(actorFactory, services, host, db)
   }
 
   @Singleton
