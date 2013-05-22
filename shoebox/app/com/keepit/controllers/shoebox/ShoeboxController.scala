@@ -37,7 +37,7 @@ class ShoeboxController @Inject() (
   postOffice: LocalPostOffice,
   healthcheckPlugin: HealthcheckPlugin)
   extends ShoeboxServiceController with Logging {
-  
+
   def sendMail = Action(parse.json) { request =>
     Json.fromJson[ElectronicMail](request.body).asOpt match {
       case Some(mail) =>
@@ -49,7 +49,7 @@ class ShoeboxController @Inject() (
         val e = new Exception("Unable to parse email")
         healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some("Unable to parse: " + request.body.toString)))
         Ok("false")
-    } 
+    }
   }
 
   def getNormalizedURI(id: Long) = Action {
@@ -126,12 +126,10 @@ class ShoeboxController @Inject() (
     Ok("clicking history added")
   }
 
-  // this is not quite right yet (need new bookmark serializer).
-  // This function is not used yet, just a placeholder.
   def getBookmarks(userId: Long) = Action { request =>
     val bookmarks = db.readOnly { implicit session =>
       bookmarkRepo.getByUser(Id[User](userId))
-    }.map{BookmarkSerializer.bookmarkSerializer.writes}
+    }.map{BookmarkSerializer.fullBookmarkSerializer.writes(_)}
 
     Ok(JsArray(bookmarks))
   }

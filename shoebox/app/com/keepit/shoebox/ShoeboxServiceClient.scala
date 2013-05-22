@@ -31,7 +31,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getNormalizedURIs(ids: Seq[Long]): Future[Seq[NormalizedURI]]
   def addBrowsingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit
   def addClickingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit
-  def getBookmark(userId: Long): Future[Bookmark]
+  def getBookmark(userId: Long): Future[Seq[Bookmark]]
   def getConnectedUsers(id: Long): Future[Set[Id[User]]]
 }
 
@@ -40,7 +40,7 @@ case class ShoeboxCacheProvider @Inject() (
 
 class ShoeboxServiceClientImpl @Inject() (override val host: String, override val port: Int, override val httpClient: HttpClient, cacheProvider: ShoeboxCacheProvider)
     extends ShoeboxServiceClient {
-  
+
   def sendMail(email: ElectronicMail): Future[Boolean] = {
     call(routes.ShoeboxController.sendMail(), Json.toJson(email)).map(r => r.body.toBoolean)
   }
@@ -80,8 +80,10 @@ class ShoeboxServiceClientImpl @Inject() (override val host: String, override va
     call(routes.ShoeboxController.addClickingHistory(userId, uriId, tableSize, numHashFuncs, minHits))
   }
 
-  def getBookmark(userId: Long): Future[Bookmark] = {
-    ???
+  def getBookmark(userId: Long): Future[Seq[Bookmark]] = {
+    call(routes.ShoeboxController.getBookmarks(userId)).map{ r =>
+     r.json.as[JsArray].value.map{r => BookmarkSerializer.fullBookmarkSerializer.reads(r).get}
+    }
   }
 }
 
