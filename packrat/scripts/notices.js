@@ -116,7 +116,7 @@ noticesPane = function() {
   }
 
   function markVisited(category, nUri, timeStr, locator, numNotVisited) {
-    var time = new Date(timeStr);
+    var time = new Date(timeStr);  // event time, not notification time
     $notices.find(".kifi-notice-" + category + ":not(.kifi-notice-visited)").each(function() {
       if (this.dataset.uri == nUri &&
           dateWithoutMs(this.dataset.createdAt) <= time &&

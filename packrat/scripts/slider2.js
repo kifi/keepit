@@ -389,6 +389,11 @@ slider2 = function() {
     return {messages: "threads", "messages/": "thread", "comments/": "comments"}[name] || name;
   }
 
+  const paneIdxs = ["notices","comments","threads","thread","general"];
+  function toPaneIdx(name) {
+    return paneIdxs.indexOf(name);
+  }
+
   const createTemplateParams = {
     general: function(cb) {
       cb({title: document.title, url: document.URL});
@@ -422,17 +427,18 @@ slider2 = function() {
   function showPane2(locator, back, pane, params) {  // only called by showPane
     api.log("[showPane2]", locator, pane);
     if ($pane) {
+      var left = back || toPaneIdx(pane) < toPaneIdx(toPaneName(paneHistory[0]));
       $slider.find(".kifi-at").removeClass("kifi-at").end()
         .find(".kifi-slider2-" + locator.split("/")[1]).addClass("kifi-at");
       render("html/metro/pane_" + pane + ".html", params, function(html) {
         var $cubby = $pane.find(".kifi-pane-cubby").css("overflow", "hidden");
-        var $cart = $cubby.find(".kifi-pane-box-cart").addClass(back ? "kifi-back" : "kifi-forward");
+        var $cart = $cubby.find(".kifi-pane-box-cart").addClass(left ? "kifi-back" : "kifi-forward");
         var $old = $cart.find(".kifi-pane-box");
-        var $new = $(html)[back ? "prependTo" : "appendTo"]($cart).layout();
+        var $new = $(html)[left ? "prependTo" : "appendTo"]($cart).layout();
         $cart.addClass("kifi-animated").layout().addClass("kifi-roll")
         .on("transitionend webkitTransitionEnd", function end(e) {
           if (e.target !== this) return;
-          if (!back) $cart.removeClass("kifi-animated kifi-back kifi-forward");
+          if (!left) $cart.removeClass("kifi-animated kifi-back kifi-forward");
           $old.triggerHandler("kifi:remove");
           $old.remove();
           $new.data("shown", true).triggerHandler("kifi:shown");
