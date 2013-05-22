@@ -17,7 +17,6 @@ function markInjected(inj, o) {
 // TODO: load some of these APIs on demand instead of up front
 const self = require("sdk/self"), data = self.data, load = data.load.bind(data), url = data.url.bind(url);
 const timers = require("sdk/timers");
-const xulApp = require("sdk/system/xul-app");
 const { Ci, Cc } = require("chrome");
 const WM = Cc["@mozilla.org/appshell/window-mediator;1"].getService(Ci.nsIWindowMediator);
 const {deps} = require("./deps");
@@ -90,6 +89,13 @@ exports.on = {
 
 // Call handlers for load reason async (after main.js has finished).
 timers.setTimeout(dispatch.bind(exports.on[exports.loadReason] || []), 0);
+
+var nsISound, nsIIO;
+exports.play = function(path) {
+  nsISound = nsISound || Cc["@mozilla.org/sound;1"].createInstance(Ci.nsISound);
+  nsIIO = nsIIO || Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
+  sound.play(nsIIO.newURI(url(path), null, null));
+};
 
 exports.popup = {
   open: function(options, handlers) {
