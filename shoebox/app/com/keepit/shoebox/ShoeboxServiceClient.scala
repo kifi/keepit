@@ -1,31 +1,23 @@
 package com.keepit.shoebox
 
-import com.keepit.common.service.{ServiceClient, ServiceType}
-import com.keepit.common.net.HttpClient
-import com.keepit.common.db.Id
-import com.keepit.model._
-import scala.concurrent.{Future, promise}
-import com.keepit.controllers.shoebox._
-import com.keepit.controllers.shoebox.ShoeboxController
-import com.keepit.serializer._
-import play.api.libs.json._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.ExecutionContext.Implicits.global
-import com.google.inject.Singleton
-import com.google.inject.Inject
-import scala.util.Success
-import scala.util.Failure
-import com.keepit.common.mail.ElectronicMail
-import com.keepit.common.db.SequenceNumber
-import play.api.libs.json.JsObject
-import com.keepit.common.db.slick.Database
-import com.keepit.search.MultiHashFilter
-import com.keepit.common.analytics.PersistEventPlugin
-import com.keepit.common.analytics.Events
-import com.keepit.common.analytics.EventFamilies
-import com.keepit.common.time._
-import com.keepit.common.service.FortyTwoServices
 import scala.concurrent.Promise
+import scala.concurrent.{Future, promise}
+
+import com.google.inject.Inject
+import com.keepit.common.db.Id
+import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.slick.Database
+import com.keepit.common.mail.ElectronicMail
+import com.keepit.common.net.HttpClient
+import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.service.{ServiceClient, ServiceType}
+import com.keepit.common.time._
+import com.keepit.controllers.shoebox._
+import com.keepit.model._
+import com.keepit.serializer._
+
+import play.api.libs.json._
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -41,6 +33,9 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getClickHistoryFilter(userId: Id[User]): Future[Array[Byte]]
   def getBrowsingHistoryFilter(userId: Id[User]): Future[Array[Byte]]
   def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]]
+  def getBookmarksInCollection(id: Id[Collection]): Future[Seq[Bookmark]]
+  def getCollectionsChanged(seqNum: SequenceNumber): Future[Seq[(Id[Collection], Id[User], SequenceNumber)]]
+  def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -52,11 +47,11 @@ class ShoeboxServiceClientImpl @Inject() (
   override val httpClient: HttpClient,
   cacheProvider: ShoeboxCacheProvider)
     extends ShoeboxServiceClient {
-  
+
   def getBookmarks(userId: Id[User]): Future[Bookmark] = {
     ???
   }
-  
+
   def sendMail(email: ElectronicMail): Future[Boolean] = {
     call(routes.ShoeboxController.sendMail(), Json.toJson(email)).map(r => r.body.toBoolean)
   }
@@ -116,6 +111,24 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  def getCollectionsChanged(seqNum: SequenceNumber): Future[Seq[(Id[Collection], Id[User], SequenceNumber)]] = {
+    import com.keepit.controllers.shoebox.ShoeboxController.collectionTupleFormat
+    call(routes.ShoeboxController.getCollectionsChanged(seqNum.value)) map { r =>
+      Json.fromJson[Seq[(Id[Collection], Id[User], SequenceNumber)]](r.json).get
+    }
+  }
+
+  def getBookmarksInCollection(collectionId: Id[Collection]): Future[Seq[Bookmark]] = {
+    call(routes.ShoeboxController.getBookmarksInCollection(collectionId)) map { r =>
+      Json.fromJson[Seq[Bookmark]](r.json).get
+    }
+  }
+
+  def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]] = {
+    call(routes.ShoeboxController.getCollectionsByUser(userId)).map { r =>
+      Json.fromJson[Seq[Long]](r.json).get.map(Id[Collection](_))
+    }
+  }
 }
 
 // code below should be sync with code in ShoeboxController
@@ -178,7 +191,7 @@ class FakeShoeboxServiceClientImpl @Inject() (
   def persistServerSearchEvent(metaData: JsObject): Unit ={
     //persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject])(clock, fortyTwoServices))
   }
-  
+
   def getClickHistoryFilter(userId: Id[User]) = {
     Promise.successful(clickHistoryTracker.getMultiHashFilter(userId).getFilter).future
   }
@@ -186,9 +199,21 @@ class FakeShoeboxServiceClientImpl @Inject() (
   def getBrowsingHistoryFilter(userId: Id[User]) = {
     Promise.successful(browsingHistoryTracker.getMultiHashFilter(userId).getFilter).future
   }
-  
+
   def getConnectedUsers(id: Id[User]): scala.concurrent.Future[Set[com.keepit.common.db.Id[com.keepit.model.User]]] = ???
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = ???
   def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
   def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]] = ???
+
+  def getCollectionsChanged(seqNum: SequenceNumber): Future[Seq[(Id[Collection], Id[User], SequenceNumber)]] = {
+    Promise.successful(Seq()).future
+  }
+
+  def getBookmarksInCollection(collectionId: Id[Collection]): Future[Seq[Bookmark]] = {
+    Promise.successful(Seq()).future
+  }
+
+  def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]] = {
+    Promise.successful(Seq()).future
+  }
 }

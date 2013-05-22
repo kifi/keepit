@@ -1,32 +1,23 @@
 package com.keepit.controllers.shoebox
 
-import com.keepit.common.controller.ShoeboxServiceController
 import com.google.inject.Inject
-import com.keepit.model.UserRepo
-import com.keepit.model.BookmarkRepo
-import com.keepit.model.NormalizedURIRepo
-import com.keepit.common.db.slick.Database
-import com.keepit.model.UserConnectionRepo
-import com.keepit.common.logging.Logging
-import com.keepit.common.db.Id
-import com.keepit.model.NormalizedURI
-import com.keepit.serializer._
-import play.api.mvc.Action
-import play.api.libs.json._
-import com.keepit.model.BrowsingHistoryRepo
-import com.keepit.model.User
-import com.keepit.search.MultiHashFilter
-import com.keepit.model.BrowsingHistory
-import com.keepit.model.ClickHistoryRepo
-import com.keepit.model.ClickHistory
-import com.keepit.common.db.SequenceNumber
-import play.api.libs.json._
-import com.keepit.common.analytics.PersistEventPlugin
-import com.keepit.common.analytics.Events
 import com.keepit.common.analytics.EventFamilies
-import com.keepit.common.time._
+import com.keepit.common.analytics.Events
+import com.keepit.common.analytics.PersistEventPlugin
+import com.keepit.common.controller.ShoeboxServiceController
+import com.keepit.common.db.Id
+import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.Healthcheck
+import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.logging.Logging
+import com.keepit.common.mail.ElectronicMail
+import com.keepit.common.mail.LocalPostOffice
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.shoebox.ClickHistoryTracker
+import com.keepit.common.time._
+import com.keepit.model._
+import com.keepit.serializer._
 import com.keepit.shoebox.BrowsingHistoryTracker
 import com.keepit.model.NormalizedURI
 import com.keepit.common.mail.LocalPostOffice
@@ -37,6 +28,19 @@ import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.Healthcheck
 import com.keepit.model.NormalizedURIRepo
 import com.keepit.model.PhraseRepo
+import com.keepit.shoebox.ClickHistoryTracker
+
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
+import play.api.mvc.Action
+
+object ShoeboxController {
+  implicit val collectionTupleFormat = (
+    (__ \ 'collId).format(Id.format[Collection]) and
+    (__ \ 'userId).format(Id.format[User]) and
+    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
+  ).tupled
+}
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -51,12 +55,14 @@ class ShoeboxController @Inject() (
   persistEventPlugin: PersistEventPlugin,
   postOffice: LocalPostOffice,
   healthcheckPlugin: HealthcheckPlugin,
-  phraseRepo: PhraseRepo)
+  phraseRepo: PhraseRepo,
+  collectionRepo: CollectionRepo,
+  keepToCollectionRepo: KeepToCollectionRepo)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
   extends ShoeboxServiceController with Logging {
-  
+
   def sendMail = Action(parse.json) { request =>
     Json.fromJson[ElectronicMail](request.body).asOpt match {
       case Some(mail) =>
@@ -68,7 +74,7 @@ class ShoeboxController @Inject() (
         val e = new Exception("Unable to parse email")
         healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some("Unable to parse: " + request.body.toString)))
         Ok("false")
-    } 
+    }
   }
 
   def getNormalizedURI(id: Long) = Action {
@@ -159,4 +165,18 @@ class ShoeboxController @Inject() (
     Ok(JsArray(phrases))
   }
 
+  def getCollectionsByUser(userId: Id[User]) = Action { request =>
+    Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getByUser(userId).map(_.id.get.id) }))
+  }
+
+  def getCollectionsChanged(seqNum: Long) = Action { request =>
+    import ShoeboxController.collectionTupleFormat
+    Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getCollectionsChanged(SequenceNumber(seqNum)) }))
+  }
+
+  def getBookmarksInCollection(collectionId: Id[Collection]) = Action { request =>
+    Ok(Json.toJson(db.readOnly { implicit s =>
+      keepToCollectionRepo.getBookmarksInCollection(collectionId) map bookmarkRepo.get
+    }))
+  }
 }
