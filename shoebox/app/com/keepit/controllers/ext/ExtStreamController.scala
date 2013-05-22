@@ -261,7 +261,7 @@ class ExtStreamController @Inject() (
     db.readWrite { implicit s =>
       val lastNotification = userNotificationRepo.get(lastId)
       val excluded = Set(INACTIVE, SUBSUMED, VISITED)
-      val notificationsToVisit = (if (excluded contains lastNotification.state) Set(lastNotification) else Set()) ++
+      val notificationsToVisit = (if (excluded contains lastNotification.state) Set() else Set(lastNotification)) ++
           userNotificationRepo.getCreatedBefore(userId, lastNotification.createdAt, Integer.MAX_VALUE, excluded)
       for (notification <- notificationsToVisit) {
         for (cid <- notification.commentId) {
