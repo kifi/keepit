@@ -67,8 +67,8 @@ class ArticleIndexer @Inject() (
     }
   }
 
-  def buildIndexable(id: Id[NormalizedURI]): ArticleIndexable = {
-    val uri = Await.result(shoeboxClient.getNormalizedURI(id.id), 5 seconds)
+  def buildIndexable(uriId: Id[NormalizedURI]): ArticleIndexable = {
+    val uri = Await.result(shoeboxClient.getNormalizedURI(uriId), 5 seconds)
     buildIndexable(uri)
   }
 
