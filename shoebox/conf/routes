@@ -214,6 +214,7 @@ POST    /admin/slider/patterns      @com.keepit.controllers.admin.SliderAdminCon
 GET     /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminController.getDomainTags
 POST    /admin/slider/domainTags    @com.keepit.controllers.admin.SliderAdminController.saveDomainTags
 GET     /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.getDomainOverrides
+GET     /admin/slider/classifications @com.keepit.controllers.admin.SliderAdminController.getClassifications(domain: Option[String])
 POST    /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.saveDomainOverrides
 POST    /admin/slider/domains/fetch @com.keepit.controllers.admin.SliderAdminController.refetchClassifications
 GET     /admin/slider/importEvents  @com.keepit.controllers.admin.SliderAdminController.getImportEvents
