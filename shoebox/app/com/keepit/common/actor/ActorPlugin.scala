@@ -3,7 +3,7 @@ package com.keepit.common.actor
 import akka.actor.ActorSystem
 import com.google.inject.Provider
 import play.api.Play
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin._
 import com.keepit.common.logging.Logging
 
 /**
@@ -16,8 +16,7 @@ import com.keepit.common.logging.Logging
  */
 class ActorPlugin(
     system: ActorSystem,
-    serviceDiscovery: ServiceDiscovery,
-    schedulingEnabled: SchedulingEnabled)
+    val schedulingProperties: SchedulingProperties)
   extends SchedulingPlugin with Provider[ActorSystem] with Logging {
 
   def get: ActorSystem = system

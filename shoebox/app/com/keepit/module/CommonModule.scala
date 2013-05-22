@@ -5,6 +5,7 @@ import java.net.InetAddress
 import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.google.inject.multibindings.Multibinder
+import com.keepit.common.plugin._
 import com.keepit.common.zookeeper._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.actor.ActorFactory
@@ -137,8 +138,8 @@ class CommonModule extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def actorPluginProvider: ActorPlugin =
-    new ActorPlugin(ActorSystem("shoebox-actor-system", Play.current.configuration.underlying, Play.current.classloader))
+  def actorPluginProvider(schedulingProperties: SchedulingProperties): ActorPlugin =
+    new ActorPlugin(ActorSystem("shoebox-actor-system", Play.current.configuration.underlying, Play.current.classloader), schedulingProperties)
 
   @Provides
   def httpClientProvider(healthcheckPlugin: HealthcheckPlugin): HttpClient = new HttpClientImpl(healthcheckPlugin = healthcheckPlugin)
