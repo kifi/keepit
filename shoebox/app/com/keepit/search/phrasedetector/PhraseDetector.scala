@@ -2,30 +2,19 @@ package com.keepit.search.phrasedetector
 
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
-import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.model.{PhraseRepo, Phrase}
-import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.index.DocUtil
+import com.keepit.model.Phrase
 import com.keepit.search.index.Indexer
 import com.keepit.search.index.Indexable
-import com.keepit.search.index.FieldDecoder
 import com.keepit.search.Lang
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.DocsAndPositionsEnum
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.store.Directory
-import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.PriorityQueue
-import org.apache.lucene.util.Version
-import java.io.File
-import java.io.FileReader
-import java.io.LineNumberReader
-import java.io.IOException
-import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.google.inject.{Inject, Singleton}
 import scala.slick.util.CloseableIterator
-import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Await
@@ -124,7 +113,7 @@ class PhraseIndexerImpl(indexDirectory: Directory, indexWriterConfig: IndexWrite
         var page = 0
         private def update() = {
           if(cache.size <= 1) {
-              cache = cache ++ Await.result(shoeboxClient.getPhrasesByPage(page, BATCH_SIZE), 2 seconds).map(p => new PhraseIndexable(p.id.get, p.phrase, p.lang))
+              cache = cache ++ Await.result(shoeboxClient.getPhrasesByPage(page, BATCH_SIZE), 5 seconds).map(p => new PhraseIndexable(p.id.get, p.phrase, p.lang))
               page += 1
           }
         }

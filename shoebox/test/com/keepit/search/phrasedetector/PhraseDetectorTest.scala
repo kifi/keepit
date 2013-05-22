@@ -3,26 +3,24 @@ package com.keepit.search.phrasedetector
 import com.keepit.common.db.Id
 import com.keepit.search.Lang
 import com.keepit.search.index.DefaultAnalyzer
-import org.apache.lucene.index.Term
+import org.apache.lucene.index.{IndexWriterConfig, Term}
 import org.apache.lucene.store.RAMDirectory
 import org.specs2.mutable._
 import play.api.Play.current
-import play.api.libs.json.Json
-import play.api.test._
 import play.api.test.Helpers._
-import com.keepit.model.{PhraseRepo, Phrase}
+import com.keepit.model.Phrase
 import com.keepit.test.EmptyApplication
-import com.keepit.common.db.slick.Database
 import com.keepit.inject._
 import java.io.StringReader
+import com.keepit.shoebox.ShoeboxServiceClient
+import org.apache.lucene.util.Version
 
 class PhraseDetectorTest extends Specification {
 
   "PhraseDetectorTest" should {
     "detects phrases in input text" in {
         running(new EmptyApplication()) {
-        val ramDir = new RAMDirectory
-        val indexer = PhraseIndexer(new RAMDirectory(), inject[Database], inject[PhraseRepo])
+        val indexer = new PhraseIndexerImpl(new RAMDirectory(), new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[ShoeboxServiceClient])
         val lang = Lang("en")
         val phrases = List(
           "classroom project",

@@ -36,6 +36,7 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.Healthcheck
 import com.keepit.model.NormalizedURIRepo
+import com.keepit.model.PhraseRepo
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -49,7 +50,8 @@ class ShoeboxController @Inject() (
   normUriRepo: NormalizedURIRepo,
   persistEventPlugin: PersistEventPlugin,
   postOffice: LocalPostOffice,
-  healthcheckPlugin: HealthcheckPlugin)
+  healthcheckPlugin: HealthcheckPlugin,
+  phraseRepo: PhraseRepo)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
@@ -147,6 +149,14 @@ class ShoeboxController @Inject() (
         .map { friendId => JsNumber(friendId.id) }
     }
     Ok(JsArray(ids))
+  }
+
+  def getPhrasesByPage(page: Int, size: Int) = Action { request =>
+    val phrases = db.readOnly { implicit s =>
+      phraseRepo.page(page,size).map(PhraseSerializer.phraseSerializer.writes(_))
+    }
+
+    Ok(JsArray(phrases))
   }
 
 }

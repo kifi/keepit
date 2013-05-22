@@ -40,7 +40,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def persistServerSearchEvent(metaData: JsObject): Unit
   def getClickHistoryFilter(userId: Id[User]): Future[Array[Byte]]
   def getBrowsingHistoryFilter(userId: Id[User]): Future[Array[Byte]]
-  def getPhrasesByPage(page: Int, size: Int): Seq[Phrase]
+  def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -108,11 +108,12 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def persistServerSearchEvent(metaData: JsObject): Unit ={
      call(routes.ShoeboxController.persistServerSearchEvent, metaData)
+  }
+
   def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]] = {
     call(routes.ShoeboxController.getPhrasesByPage(page, size)).map { r =>
       r.json.as[JsArray].value.map(jsv => PhraseSerializer.phraseSerializer.reads(jsv).get)
-
-  }
+    }
   }
 
 }
@@ -189,4 +190,5 @@ class FakeShoeboxServiceClientImpl @Inject() (
   def getConnectedUsers(id: Id[User]): scala.concurrent.Future[Set[com.keepit.common.db.Id[com.keepit.model.User]]] = ???
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = ???
   def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
+  def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]] = ???
 }

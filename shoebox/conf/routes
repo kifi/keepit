@@ -252,7 +252,7 @@ GET     /internal/shoebox/database/bookmark           @com.keepit.controllers.sh
 GET     /internal/shoebox/database/changedUser        @com.keepit.controllers.shoebox.ShoeboxController.getUsersChanged(seqNum: Long)
 POST    /internal/shoebox/persistServerSearchEvent    @com.keepit.controllers.shoebox.ShoeboxController.persistServerSearchEvent
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.shoebox.ShoeboxController.sendMail
-GET     /internal/shoebox/database/getPhrasesByPage    @com.keepit.controllers.shoebox.ShoeboxController.getPhrasesByPage(page: Int, size: Int)
+GET     /internal/shoebox/database/getPhrasesByPage   @com.keepit.controllers.shoebox.ShoeboxController.getPhrasesByPage(page: Int, size: Int)
 
 
 
