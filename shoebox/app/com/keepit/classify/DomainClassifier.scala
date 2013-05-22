@@ -15,13 +15,14 @@ import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.net.HttpClient
-import com.keepit.common.strings._
 import com.keepit.common.net.NonOKResponseException
+import com.keepit.common.strings._
 
-import akka.pattern.ask
+import akka.pattern.{ask, pipe}
 import play.api.libs.concurrent.Execution.Implicits._
 
 private case class FetchDomainInfo(domain: String)
+private case class FetchTags(domain: String)
 
 private[classify] class DomainClassificationActor @Inject() (
   healthcheck: HealthcheckPlugin,
@@ -51,7 +52,7 @@ private[classify] class DomainClassificationActor @Inject() (
     val md5 = md.digest(KEY + guid + KEY)
     val id = encodeHex(md5).toLowerCase
     val encodedUrl = URLEncoder.encode(url, UTF8)
-    
+
     client.getFuture(s"http://$server/url.php?version=w11&guid=$guid&id=$id&url=$encodedUrl", client.ignoreConnectionFailure).map { resp =>
       (resp.body.split("~", 2).toList match {
         case ("FM" | "FR") :: tagString :: Nil =>
@@ -67,6 +68,8 @@ private[classify] class DomainClassificationActor @Inject() (
   }
 
   def receive = {
+    case FetchTags(hostname) =>
+      getTagNames(hostname) pipeTo sender
     case FetchDomainInfo(hostname) =>
       val domain = db.readWrite(attempts = 3) { implicit s =>
         domainRepo.get(hostname, excludeState = None) match {
@@ -108,6 +111,7 @@ private[classify] class DomainClassificationActor @Inject() (
 
 @ImplementedBy(classOf[DomainClassifierImpl])
 trait DomainClassifier {
+  def fetchTags(domain: String): Future[Seq[DomainTagName]]
   def isSensitive(domain: String): Either[Future[Boolean], Boolean]
 }
 
@@ -121,6 +125,10 @@ class DomainClassifierImpl @Inject()(
   private lazy val actor = actorFactory.get()
 
   private val splitPattern = """\.""".r
+
+  def fetchTags(domain: String): Future[Seq[DomainTagName]] = {
+    actor.ask(FetchTags(domain))(1 minute).mapTo[Seq[DomainTagName]]
+  }
 
   def isSensitive(hostname: String): Either[Future[Boolean], Boolean] = {
     val domainParts = splitPattern.split(hostname.toLowerCase).toSeq
