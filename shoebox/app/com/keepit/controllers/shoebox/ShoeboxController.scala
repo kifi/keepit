@@ -19,6 +19,7 @@ import com.keepit.search.MultiHashFilter
 import com.keepit.model.BrowsingHistory
 import com.keepit.model.ClickHistoryRepo
 import com.keepit.model.ClickHistory
+import com.keepit.common.db.SequenceNumber
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -132,6 +133,13 @@ class ShoeboxController @Inject() (
         .map { friendId => JsNumber(friendId.id) }
     }
     Ok(JsArray(ids))
+  }
+
+  def getIndexable(seqNum: Long, fetchSize: Int) = Action { request =>
+    val uris = db.readOnly { implicit s =>
+        normUriRepo.getIndexable(SequenceNumber(seqNum), fetchSize)
+      }.map{uri => NormalizedURISerializer.normalizedURISerializer.writes(uri)}
+    Ok(JsArray(uris))
   }
 
 }

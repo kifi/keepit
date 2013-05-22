@@ -46,9 +46,7 @@ class ArticleIndexer @Inject() (
   def run(commitBatchSize: Int, fetchSize: Int): Int = {
     log.info("starting a new indexing round")
     try {
-      val uris = db.readOnly { implicit s =>
-        repo.getIndexable(sequenceNumber, fetchSize)
-      }
+      val uris = Await.result(shoeboxClient.getIndexable(sequenceNumber.value, fetchSize), 5 seconds)
       var cnt = 0
       indexDocuments(uris.iterator.map(buildIndexable), commitBatchSize){ commitBatch =>
         val (errors, successes) = commitBatch.partition(_._2.isDefined)

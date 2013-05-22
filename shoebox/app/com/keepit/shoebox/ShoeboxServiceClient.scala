@@ -30,6 +30,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def addClickingHistory(userId: Long, uriId: Long, tableSize: Int, numHashFuncs: Int, minHits: Int): Unit
   def getBookmark(userId: Long): Future[Bookmark]
   def getConnectedUsers(id: Long): Future[Set[Id[User]]]
+  def getIndexable(seqNum: Long, fetchSize: Int): Future[Seq[NormalizedURI]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -76,5 +77,11 @@ class ShoeboxServiceClientImpl @Inject() (override val host: String, override va
   def getBookmark(userId: Long): Future[Bookmark] = {
     ???
   }
+
+   def getIndexable(seqNum: Long, fetchSize: Int): Future[Seq[NormalizedURI]] = {
+     call(routes.ShoeboxController.getIndexable(seqNum, fetchSize)).map{
+       r => r.json.as[JsArray].value.map(js => NormalizedURISerializer.normalizedURISerializer.reads(js).get)
+     }
+   }
 }
 
