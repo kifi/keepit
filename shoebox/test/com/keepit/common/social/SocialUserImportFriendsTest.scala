@@ -29,6 +29,7 @@ class SocialUserImportFriendsTest extends Specification {
         val graphs = List(
             ("facebook_graph_andrew_min.json", 7),
             ("facebook_graph_eishay_super_min.json", 5),
+            ("facebook_graph_eishay_no_friends.json", 0),
             ("facebook_graph_shawn.json", 82)
         )
         graphs map { case (filename, numOfFriends) => testFacebookGraph(filename, numOfFriends) }
