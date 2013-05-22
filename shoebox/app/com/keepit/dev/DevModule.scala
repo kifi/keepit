@@ -17,6 +17,8 @@ import com.keepit.common.mail._
 import com.keepit.inject._
 import com.keepit.model.{PhraseRepo, BookmarkRepo, NormalizedURIRepo}
 import com.keepit.search.{ArticleStore, ResultClickTracker}
+import com.keepit.search.graph.CollectionIndexer
+import com.keepit.search.graph.CollectionFields
 import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphFields, URIGraphIndexer}
 import com.keepit.search.index.{ArticleIndexer, DefaultAnalyzer}
 import com.keepit.search.phrasedetector.PhraseIndexer
@@ -27,6 +29,8 @@ import play.api.Play.current
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.{Directory, MMapDirectory, RAMDirectory}
 import org.apache.lucene.util.Version
+import com.keepit.model.CollectionRepo
+import com.keepit.model.KeepToCollectionRepo
 import com.keepit.model.UserRepo
 import com.keepit.common.time.Clock
 import com.google.inject.Provider
@@ -38,7 +42,9 @@ import com.keepit.shoebox.ShoeboxServiceClient
 
 
 class ShoeboxDevModule extends ScalaModule with Logging {
-  def configure() {}
+  def configure() {
+    bind[PersistEventPlugin].to[FakePersistEventPluginImpl].in[AppScoped]
+  }
 
   @Singleton
   @Provides
@@ -172,15 +178,22 @@ class SearchDevModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def uriGraph(bookmarkRepo: BookmarkRepo, db: Database): URIGraph = {
-    new URIGraphImpl(uriGraphIndexer(bookmarkRepo, db))
+  def uriGraph(bookmarkRepo: BookmarkRepo, db: Database, shoeboxClient: ShoeboxServiceClient): URIGraph = {
+    new URIGraphImpl(uriGraphIndexer(bookmarkRepo, db, shoeboxClient))
   }
 
-  private def uriGraphIndexer(bookmarkRepo: BookmarkRepo, db: Database): URIGraphIndexer = {
+  private def uriGraphIndexer(bookmarkRepo: BookmarkRepo, db: Database, shoeboxClient: ShoeboxServiceClient): URIGraphIndexer = {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new URIGraphIndexer(dir, config, URIGraphFields.decoders(), bookmarkRepo, db)
+    new URIGraphIndexer(dir, config, URIGraphFields.decoders(), bookmarkRepo, db, shoeboxClient)
+  }
+
+  private def collectionIndexer(collectionRepo: CollectionRepo, keepToCollectionRepo: KeepToCollectionRepo, bookmarkRepo: BookmarkRepo, db: Database, shoeboxClient: ShoeboxServiceClient): CollectionIndexer = {
+    val dir = getDirectory(current.configuration.getString("index.collection.directory"))
+    log.info(s"storing collection index in $dir")
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new CollectionIndexer(dir, config, CollectionFields.decoders(), collectionRepo, keepToCollectionRepo, bookmarkRepo, db, shoeboxClient)
   }
 
   @Singleton
@@ -209,7 +222,7 @@ class SearchDevModule extends ScalaModule with Logging {
 
 class DevCommonModule extends ScalaModule with Logging {
   def configure() {
-    bind[PersistEventPlugin].to[FakePersistEventPluginImpl].in[AppScoped]
+    install(new S3DevModule)
     bind[FortyTwoCachePlugin].to[InMemoryCache].in[AppScoped]
   }
 
@@ -233,7 +246,7 @@ class DevCommonModule extends ScalaModule with Logging {
 
 class DevModule extends ScalaModule with Logging {
   def configure() {
-    install(Modules.`override`(new DevCommonModule).`with`(new S3DevModule))
+    install(new DevCommonModule)
     install(new ShoeboxDevModule)
     install(new SearchDevModule)
   }

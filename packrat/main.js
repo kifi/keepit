@@ -477,7 +477,7 @@ api.port.on({
   },
   set_comment_read: function(o, _, tab) {
     var d = pageData[tab.nUri];
-    if (!d || new Date(o.time) > new Date(d.lastCommentRead)) {
+    if (!d || new Date(o.time) > new Date(d.lastCommentRead || 0)) {
       markNoticesVisited("comment", tab.nUri, o.id, o.time);
       if (d) {
         d.lastCommentRead = o.time;
@@ -647,14 +647,15 @@ function insertNewNotification(n) {
   return true;
 }
 
-// id is of last read comment/message. locator not passed in the comments case.
+// id is of last read comment/message, timeStr is its createdAt time (not notification's).
+// locator not passed in the comments case.
 function markNoticesVisited(category, nUri, id, timeStr, locator) {
   var time = new Date(timeStr);
   notifications.forEach(function(n, i) {
     if (n.details.page == nUri &&
         n.category == category &&
         (!locator || n.details.locator == locator) &&
-        (n.details.id == id || new Date(n.time) <= time) &&
+        (n.details.id == id || new Date(n.details.createdAt) <= time) &&
         notificationNotVisited.test(n.state)) {
       n.state = "visited";
       decrementNumNotificationsNotVisited(n);

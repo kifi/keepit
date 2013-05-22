@@ -15,7 +15,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification {
 
   "The domain tag importer" should {
     "load domain sensitivity from a map of tags to domains" in {
-      running(new DevApplication().withFakePersistEvent().withTestActorSystem(system)) {
+      running(new EmptyApplication().withFakePersistEvent().withTestActorSystem(system)) {
         val db = inject[Database]
         val tagRepo = inject[DomainTagRepo]
         val domainTagImporter = inject[DomainTagImporterImpl]

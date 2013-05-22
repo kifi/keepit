@@ -10,6 +10,7 @@ import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.test._
+import com.keepit.inject._
 import org.specs2.mutable._
 import play.api.Play.current
 import play.api.libs.json.Json
@@ -27,6 +28,10 @@ import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import com.keepit.search.index.{ArticleIndexer, DefaultAnalyzer}
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.common.net.HttpClient
+import com.keepit.common.net.FakeHttpClient
+import play.api.libs.json.JsArray
 
 class URIGraphTest extends Specification with DbRepos {
 
@@ -93,7 +98,7 @@ class URIGraphTest extends Specification with DbRepos {
 
   private def mkURIGraph(graphDir: RAMDirectory = new RAMDirectory): URIGraphImpl = {
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    val uriGraphIndexer = new URIGraphIndexer(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db)
+    val uriGraphIndexer = new URIGraphIndexer(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db, inject[ShoeboxServiceClient])
     new URIGraphImpl(uriGraphIndexer)
   }
 
@@ -142,9 +147,20 @@ class URIGraphTest extends Specification with DbRepos {
     }
   }
 
+  private def httpClientGetChangedUsers(seqNum: Long) = {
+                val changed = db.readOnly { implicit s =>
+                  bookmarkRepo.getUsersChanged(SequenceNumber(seqNum))
+                } map {
+                  case (userId, seqNum) =>
+                    Json.obj("id" -> userId.id, "seqNum" -> seqNum.value)
+                }
+                JsArray(changed)
+              }
+
   "URIGraph" should {
     "maintain a sequence number on bookmarks " in {
-      running(new EmptyApplication()) {
+     running(new DevApplication().withShoeboxServiceModule)
+            {
         val (users, uris) = setupDB
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = mkBookmarks(expectedUriToUserEdges)
@@ -159,7 +175,12 @@ class URIGraphTest extends Specification with DbRepos {
       }
     }
     "generate UriToUsrEdgeSet" in {
-      running(new EmptyApplication()) {
+      running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
+          .overrideWith(new FortyTwoModule {
+            override def configure() {
+               bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
+            }
+          })) {
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
 
@@ -181,7 +202,12 @@ class URIGraphTest extends Specification with DbRepos {
     }
 
     "generate UserToUriEdgeSet" in {
-      running(new EmptyApplication()) {
+      running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
+          .overrideWith(new FortyTwoModule {
+            override def configure() {
+              bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
+            }
+          })) {
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
 
@@ -208,7 +234,12 @@ class URIGraphTest extends Specification with DbRepos {
     }
 
     "intersect UserToUserEdgeSet and UriToUserEdgeSet" in {
-      running(new EmptyApplication()) {
+      running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
+          .overrideWith(new FortyTwoModule {
+            override def configure() {
+              bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
+            }
+          })) {
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
 
@@ -240,7 +271,12 @@ class URIGraphTest extends Specification with DbRepos {
     }
 
     "intersect empty sets" in {
-      running(new EmptyApplication()) {
+      running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
+          .overrideWith(new FortyTwoModule {
+            override def configure() {
+              bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
+            }
+          })) {
         val (users, uris) = setupDB
         val graph = mkURIGraph()
         val searcher = graph.getURIGraphSearcher()
@@ -263,7 +299,12 @@ class URIGraphTest extends Specification with DbRepos {
     }
 
     "determine whether intersection is empty" in {
-      running(new EmptyApplication()) {
+      running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
+          .overrideWith(new FortyTwoModule {
+            override def configure() {
+               bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
+            }
+          })) {
         val graph = mkURIGraph()
         val searcher = graph.getURIGraphSearcher()
         searcher.intersectAny(new TestDocIdSetIterator(1, 2, 3), new TestDocIdSetIterator(2, 4, 6)) === true
@@ -275,7 +316,12 @@ class URIGraphTest extends Specification with DbRepos {
     }
 
     "search personal bookmark titles" in {
-      running(new EmptyApplication()) {
+      running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
+          .overrideWith(new FortyTwoModule {
+            override def configure() {
+              bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
+            }
+          })) {
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
 
@@ -287,7 +333,6 @@ class URIGraphTest extends Specification with DbRepos {
           }
         }
         val graph = mkURIGraph()
-        graph.update() === 2
 
         val personaltitle = new TermQuery(new Term(URIGraphFields.titleField, "personaltitle"))
         val bmt1 = new TermQuery(new Term(URIGraphFields.titleField, "bmt1"))
@@ -308,7 +353,12 @@ class URIGraphTest extends Specification with DbRepos {
     }
 
     "search personal bookmark domains" in {
-      running(new EmptyApplication()) {
+       running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
+          .overrideWith(new FortyTwoModule {
+            override def configure() {
+              bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
+            }
+          })) {
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
 
@@ -350,7 +400,13 @@ class URIGraphTest extends Specification with DbRepos {
     }
 
     "dump Lucene Document" in {
-      running(new EmptyApplication()) {
+      running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
+          .overrideWith(new FortyTwoModule {
+            override def configure() {
+               bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
+            }
+          })) {
+        val ramDir = new RAMDirectory
         val store = new FakeArticleStore()
 
         val (user, uris, bookmarks) = db.readWrite { implicit s =>

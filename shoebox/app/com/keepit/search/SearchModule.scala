@@ -11,6 +11,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.scraper.{ScraperPluginImpl, ScraperPlugin}
+import com.keepit.search.graph.CollectionIndexer
+import com.keepit.search.graph.CollectionFields
 import com.keepit.search.graph.URIGraphFields
 import com.keepit.search.graph.URIGraphImpl
 import com.keepit.search.graph.{URIGraphPluginImpl, URIGraphPlugin, URIGraph, URIGraphIndexer}
@@ -61,15 +63,22 @@ class SearchModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def uriGraph(bookmarkRepo: BookmarkRepo, db: Database): URIGraph = {
-    new URIGraphImpl(uriGraphIndexer(bookmarkRepo, db))
+  def uriGraph(bookmarkRepo: BookmarkRepo, db: Database, shoeboxClient: ShoeboxServiceClient): URIGraph = {
+    new URIGraphImpl(uriGraphIndexer(bookmarkRepo, db, shoeboxClient))
   }
 
-  private def uriGraphIndexer(bookmarkRepo: BookmarkRepo, db: Database): URIGraphIndexer = {
+  private def uriGraphIndexer(bookmarkRepo: BookmarkRepo, db: Database, shoeboxClient: ShoeboxServiceClient): URIGraphIndexer = {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new URIGraphIndexer(dir, config, URIGraphFields.decoders(), bookmarkRepo, db)
+    new URIGraphIndexer(dir, config, URIGraphFields.decoders(), bookmarkRepo, db, shoeboxClient)
+  }
+
+  private def collectionIndexer(collectionRepo: CollectionRepo, keepToCollectionRepo: KeepToCollectionRepo, bookmarkRepo: BookmarkRepo, db: Database, shoeboxClient: ShoeboxServiceClient): CollectionIndexer = {
+    val dir = getDirectory(current.configuration.getString("index.collection.directory"))
+    log.info(s"storing collection index in $dir")
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new CollectionIndexer(dir, config, CollectionFields.decoders(), collectionRepo, keepToCollectionRepo, bookmarkRepo, db, shoeboxClient)
   }
 
   @Singleton
@@ -89,6 +98,28 @@ class SearchModule() extends ScalaModule with Logging {
     val spellDir = getDirectory(current.configuration.getString("index.spell.directory"))
     val articleDir = getDirectory(current.configuration.getString("index.article.directory"))
     SpellCorrector(spellDir, articleDir)
+  }
+
+  @Singleton
+  @Provides
+  def clickHistoryBuilder: ClickHistoryBuilder = {
+    val conf = current.configuration.getConfig("click-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+
+    new ClickHistoryBuilder(filterSize, numHashFuncs, minHits)
+  }
+
+  @Singleton
+  @Provides
+  def browsingHistoryBuilder: BrowsingHistoryBuilder = {
+    val conf = current.configuration.getConfig("browsing-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+
+    new BrowsingHistoryBuilder(filterSize, numHashFuncs, minHits)
   }
 
 }

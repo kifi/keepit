@@ -22,6 +22,7 @@ import com.keepit.search.index.{DefaultAnalyzer, Indexable, Indexer, IndexError}
 import com.keepit.search.index.Indexable.IteratorTokenStream
 import com.keepit.search.line.LineField
 import com.keepit.search.line.LineFieldBuilder
+import com.keepit.shoebox.ShoeboxServiceClient
 
 object CollectionFields {
   val userField = "coll_usr"
@@ -40,7 +41,8 @@ class CollectionIndexer(
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
     bookmarkRepo: BookmarkRepo,
-    db: Database)
+    db: Database,
+    shoeboxClient: ShoeboxServiceClient)
   extends Indexer[Collection](indexDirectory, indexWriterConfig, decoders) {
 
   val commitBatchSize = 100
@@ -72,12 +74,12 @@ class CollectionIndexer(
     deleteDocuments(new Term(CollectionFields.userField, userId.toString), doCommit = false)
     update {
       db.readOnly { implicit s =>
-        collectionRepo.getByUser(userId).map{ collection => (collection.id.get, SequenceNumber.MinValue) }
+        collectionRepo.getByUser(userId).map{ collection => (collection.id.get, userId, SequenceNumber.MinValue) }
       }
     }
   }
 
-  private def update(collectionsChanged: => Seq[(Id[Collection], SequenceNumber)]): Int = {
+  private def update(collectionsChanged: => Seq[(Id[Collection], Id[User], SequenceNumber)]): Int = {
     log.info("updating Collection")
     try {
       var cnt = 0
@@ -91,7 +93,7 @@ class CollectionIndexer(
     }
   }
 
-  def buildIndexable(collectionIdAndSequenceNumber: (Id[Collection], SequenceNumber)): CollectionListIndexable = {
+  def buildIndexable(collectionIdAndSequenceNumber: (Id[Collection], Id[User], SequenceNumber)): CollectionListIndexable = {
     val (collectionId, seq) = collectionIdAndSequenceNumber
     val bookmarks = db.readOnly { implicit session =>
       keepToCollectionRepo.getBookmarksInCollection(collectionId).map{ bookmarkRepo.get(_) }
@@ -99,6 +101,7 @@ class CollectionIndexer(
     new CollectionListIndexable(id = collectionId,
                                 sequenceNumber = seq,
                                 isDeleted = bookmarks.isEmpty,
+                                userId = userId,
                                 bookmarks = bookmarks)
   }
 
@@ -106,8 +109,9 @@ class CollectionIndexer(
     override val id: Id[Collection],
     override val sequenceNumber: SequenceNumber,
     override val isDeleted: Boolean,
+    val userId: Id[User],
     val bookmarks: Seq[Bookmark]
-  ) extends Indexable[Collection] with LineFieldBuilder {
+  ) extends Indexable[Collection] {
 
     override def buildDocument = {
       val doc = super.buildDocument
@@ -120,8 +124,8 @@ class CollectionIndexer(
       val uri = buildURIIdField(collList)
       doc.add(uri)
 
-      val uri = buildURIIdField(collList)
-      doc.add(uri)
+      val user = buildKeywordField(URIGraphFields.userField, userId.toString)
+      doc.add(user)
 
       doc
     }

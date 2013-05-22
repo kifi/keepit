@@ -33,7 +33,7 @@ class ShoeboxControllerTest extends Specification with DbRepos {
   "ShoeboxController" should {
 
     "return users from the database" in {
-        running(new EmptyApplication().withFakeHttpClient()) {
+        running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule().withFakeHttpClient()) {
           val (user1965,friends) = setup()
           val users = user1965::friends
           val shoeboxController = inject[ShoeboxController]
@@ -48,10 +48,10 @@ class ShoeboxControllerTest extends Specification with DbRepos {
 
 
     "return connected users' ids from the database" in {
-      running(new EmptyApplication().withFakeHttpClient()) {
+      running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule().withFakeHttpClient()) {
         val (user1965,friends) = setup()
         val shoeboxController = inject[ShoeboxController]
-        val result = shoeboxController.getConnectedUsers(user1965.id.get.id)(FakeRequest())
+        val result = shoeboxController.getConnectedUsers(user1965.id.get)(FakeRequest())
         status(result) must equalTo(OK);
         contentType(result) must beSome("application/json");
         contentAsString(result) must equalTo(JsArray(friends.map(friend => JsNumber(friend.id.get.id))).toString())

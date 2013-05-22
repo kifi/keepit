@@ -22,6 +22,7 @@ import com.keepit.search.index.{DefaultAnalyzer, Indexable, Indexer, IndexError}
 import com.keepit.search.index.Indexable.IteratorTokenStream
 import com.keepit.search.line.LineField
 import com.keepit.search.line.LineFieldBuilder
+import com.keepit.shoebox.ShoeboxServiceClient
 
 object URIGraphFields {
   val userField = "usr"
@@ -49,7 +50,8 @@ class URIGraphIndexer(
     indexWriterConfig: IndexWriterConfig,
     decoders: Map[String, FieldDecoder],
     bookmarkRepo: BookmarkRepo,
-    db: Database)
+    db: Database,
+    shoeboxClient: ShoeboxServiceClient)
   extends Indexer[User](indexDirectory, indexWriterConfig, decoders) {
 
   val commitBatchSize = 100
