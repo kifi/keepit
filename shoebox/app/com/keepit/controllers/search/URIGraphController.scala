@@ -56,7 +56,7 @@ class URIGraphController @Inject()(
   }
 
   private def getSharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo] = {
-    val friendIdsFuture = shoeboxClient.getConnectedUsers(userId.id)
+    val friendIdsFuture = shoeboxClient.getConnectedUsers(userId)
     val friendIds = Await.result(friendIdsFuture, 5 seconds)
     val searcher = uriGraph.getURIGraphSearcher(None)
     val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)

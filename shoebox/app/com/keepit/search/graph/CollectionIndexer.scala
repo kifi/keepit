@@ -65,7 +65,11 @@ class CollectionIndexer(
     }
   }
 
-//  def update(userId: Id[User]): Int = update{ Seq((userId, SequenceNumber.ZERO)) }
+  def update(userId: Id[User]): Int = update {
+    db.readOnly { implicit s =>
+      collectionRepo.getByUser(userId).map{ collection => (collection.id.get, SequenceNumber.MinValue) }
+    }
+  }
 
   private def update(collectionsChanged: => Seq[(Id[Collection], SequenceNumber)]): Int = {
     log.info("updating Collection")
@@ -76,23 +80,19 @@ class CollectionIndexer(
       }
       cnt
     } catch { case e: Throwable =>
-      log.error("error in URIGraph update", e)
+      log.error("error in Collection update", e)
       throw e
     }
   }
 
-  def reindex() {
-    sequenceNumber = SequenceNumber.ZERO
-  }
-
-  def buildIndexable(collIdAndSequenceNumber: (Id[Collection], SequenceNumber)): CollectionListIndexable = {
-    val (collId, seq) = collIdAndSequenceNumber
+  def buildIndexable(collectionIdAndSequenceNumber: (Id[Collection], SequenceNumber)): CollectionListIndexable = {
+    val (collectionId, seq) = collectionIdAndSequenceNumber
     val bookmarks = db.readOnly { implicit session =>
-      keepToCollectionRepo.getBookmarksInCollection(collId).map{ bookmarkRepo.get(_) }
+      keepToCollectionRepo.getBookmarksInCollection(collectionId).map{ bookmarkRepo.get(_) }
     }
-    new CollectionListIndexable(id = collId,
+    new CollectionListIndexable(id = collectionId,
                                 sequenceNumber = seq,
-                                isDeleted = false,
+                                isDeleted = bookmarks.isEmpty,
                                 bookmarks = bookmarks)
   }
 

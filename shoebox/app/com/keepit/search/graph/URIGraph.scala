@@ -6,8 +6,8 @@ import com.keepit.model._
 trait URIGraph {
   def update(): Int
   def update(userId: Id[User]): Int
-  def getURIGraphSearcher(userId: Option[Id[User]] = None): URIGraphSearcher
   def reindex(): Unit
+  def getURIGraphSearcher(userId: Option[Id[User]] = None): URIGraphSearcher
   def close(): Unit
 }
 

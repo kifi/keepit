@@ -69,6 +69,8 @@ class URIGraphIndexer(
   }
 
   def update(): Int = update{
+    resetSequenceNumberIfReindex()
+
     db.readOnly { implicit s =>
       bookmarkRepo.getUsersChanged(sequenceNumber)
     }
@@ -88,10 +90,6 @@ class URIGraphIndexer(
       log.error("error in URIGraph update", e)
       throw e
     }
-  }
-
-  def reindex() {
-    sequenceNumber = SequenceNumber.ZERO
   }
 
   def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber)): URIListIndexable = {
