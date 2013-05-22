@@ -21,7 +21,6 @@ function attachComposeBindings($c, composeTypeName) {
       sel.addRange(r);
       $(this).data("preventNextMouseUp", true); // mouseup clears selection
     }
-    $c.css("overflow", "hidden");
   }).blur(function() {
     // wkb.ug/112854 crbug.com/222546
     $("<input style=position:fixed;top:999%>").appendTo("html").each(function() {this.setSelectionRange(0,0)}).remove();
@@ -53,7 +52,6 @@ function attachComposeBindings($c, composeTypeName) {
     $f[0].classList[this.firstElementChild === this.lastElementChild && !this.textContent ? "add" : "remove"]("kifi-empty");
   }).on("transitionend webkitTransitionEnd", function() {
     updateMaxHeight();
-    $c.css("overflow", "");
   });
 
   if ($t.length) {
