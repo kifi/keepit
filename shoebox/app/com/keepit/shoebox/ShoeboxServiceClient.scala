@@ -15,13 +15,16 @@ import play.api.libs.json.JsNull
 import play.api.libs.json.JsValue
 import play.api.mvc.Action
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import com.google.inject.Singleton
 import com.google.inject.Inject
-
+import scala.util.Success
+import scala.util.Failure
+import com.keepit.common.mail.ElectronicMail
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
+
+  def sendMail(email: ElectronicMail): Future[Boolean]
 
   def getUsers(ids: Seq[Long]): Future[Seq[User]]
   def getNormalizedURI(id: Long) : Future[NormalizedURI]
@@ -37,6 +40,10 @@ case class ShoeboxCacheProvider @Inject() (
 
 class ShoeboxServiceClientImpl @Inject() (override val host: String, override val port: Int, override val httpClient: HttpClient, cacheProvider: ShoeboxCacheProvider)
     extends ShoeboxServiceClient {
+  
+  def sendMail(email: ElectronicMail): Future[Boolean] = {
+    call(routes.ShoeboxController.sendMail(), Json.toJson(email)).map(r => r.body.toBoolean)
+  }
 
   def getUsers(ids: Seq[Long]): Future[Seq[User]] = {
     val idJarray = JsArray(ids.map(JsNumber(_)) )

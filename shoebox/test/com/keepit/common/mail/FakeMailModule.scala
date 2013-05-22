@@ -25,8 +25,8 @@ case class FakeMailModule() extends ScalaModule {
   }
 
   @Provides
-  def postOfficeProvider(mailRepo: ElectronicMailRepo, emails: FakeOutbox): PostOffice = {
-    new PostOffice() {
+  def postOfficeProvider(mailRepo: ElectronicMailRepo, emails: FakeOutbox): LocalPostOffice = {
+    new LocalPostOffice() {
       def sendMail(mail: ElectronicMail)(implicit s: RWSession): ElectronicMail = {
         val saved = mailRepo.save(mail)
         saved.prepareToSend().sent("fake sent", ElectronicMailMessageId("475082848.3.1353745094337.JavaMail.eishay@eishay-mbp.local"))

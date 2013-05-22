@@ -33,8 +33,8 @@ case class ElectronicMail (
   senderUserId: Option[Id[User]] = None,
   from: SystemEmailAddress,
   fromName: Option[String] = None,
-  to: Seq[EmailAddressHolder] = List[EmailAddressHolder](),
-  cc: Seq[EmailAddressHolder] = List[EmailAddressHolder](),
+  to: Seq[EmailAddressHolder] = Seq[EmailAddressHolder](),
+  cc: Seq[EmailAddressHolder] = Seq[EmailAddressHolder](),
   subject: String,
   state: State[ElectronicMail] = ElectronicMailStates.PREPARING,
   htmlBody: LargeString,
@@ -64,6 +64,45 @@ case class ElectronicMail (
   }
 
   def errorSending(message: String): ElectronicMail = copy(state = ElectronicMailStates.ERROR_SENDING, responseMessage = Some(message), timeSubmitted = Some(currentDateTime))
+}
+
+object ElectronicMail {
+  import play.api.libs.functional.syntax._
+  import play.api.libs.json._
+  import com.keepit.common.db.Id
+
+  implicit val userExternalIdFormat = ExternalId.format[User]
+  implicit val emailExternalIdFormat = ExternalId.format[ElectronicMail]
+  implicit val idFormat = Id.format[ElectronicMail]
+  implicit val fromFormat: Format[SystemEmailAddress] = 
+    Format(__.read[String].map(s => EmailAddresses(s)), new Writes[SystemEmailAddress]{ def writes(o: SystemEmailAddress) = JsString(o.address) })
+  implicit val emailAddressHolderFormat: Format[EmailAddressHolder] = 
+    Format(__.read[String].map(s => GenericEmailAddress(s)), new Writes[EmailAddressHolder]{ def writes(o: EmailAddressHolder) = JsString(o.address) })
+  implicit val emailMessageIdFormat: Format[ElectronicMailMessageId] = 
+    Format(__.read[String].map(s => ElectronicMailMessageId(s)), new Writes[ElectronicMailMessageId]{ def writes(o: ElectronicMailMessageId) = JsString(o.id) })
+  implicit val emailCategoryFormat: Format[ElectronicMailCategory] = 
+    Format(__.read[String].map(s => ElectronicMailCategory(s)), new Writes[ElectronicMailCategory]{ def writes(o: ElectronicMailCategory) = JsString(o.category) })
+
+  implicit val emailFormat = (
+      (__ \ 'id).formatNullable(Id.format[ElectronicMail]) and
+      (__ \ 'createdAt).format[DateTime] and
+      (__ \ 'updatedAt).format[DateTime] and
+      (__ \ 'externalId).format(ExternalId.format[ElectronicMail]) and
+      (__ \ 'senderUserId).formatNullable(Id.format[User]) and
+      (__ \ 'from).format[SystemEmailAddress] and
+      (__ \ 'fromName).formatNullable[String] and
+      (__ \ 'to).format[Seq[EmailAddressHolder]] and
+      (__ \ 'cc).format[Seq[EmailAddressHolder]] and
+      (__ \ 'subject).format[String] and
+      (__ \ 'state).format(State.format[ElectronicMail]) and
+      (__ \ 'htmlBody).format[LargeString] and
+      (__ \ 'textBody).formatNullable[LargeString] and
+      (__ \ 'responseMessage).formatNullable[String] and
+      (__ \ 'timeSubmitted).formatNullable[DateTime] and
+      (__ \ 'messageId).formatNullable[ElectronicMailMessageId] and
+      (__ \ 'inReplyTo).formatNullable[ElectronicMailMessageId] and
+      (__ \ 'category).format[ElectronicMailCategory]
+  )(ElectronicMail.apply, unlift(ElectronicMail.unapply))
 }
 
 @ImplementedBy(classOf[ElectronicMailRepoImpl])
@@ -96,7 +135,7 @@ class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cl
     def category = column[ElectronicMailCategory]("category", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ senderUserId.? ~ from ~ fromName.? ~ to ~ cc ~ subject ~ state ~
         htmlBody ~ textBody.? ~ responseMessage.? ~ timeSubmitted.? ~ messageId.? ~ inReplyTo.? ~ category <>
-        (ElectronicMail, ElectronicMail.unapply _)
+        (ElectronicMail.apply _, ElectronicMail.unapply _)
   }
 
   def getOpt(id: Id[ElectronicMail])(implicit session: RSession): Option[ElectronicMail] = (for(f <- table if f.id is id) yield f).firstOption
