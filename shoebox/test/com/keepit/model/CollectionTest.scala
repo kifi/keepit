@@ -6,6 +6,7 @@ import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
 import com.keepit.FortyTwoGlobal
+import com.keepit.common.db.SequenceNumber
 import com.keepit.common.time._
 import com.keepit.common.time.zones.PT
 import com.keepit.inject._
@@ -98,6 +99,10 @@ class CollectionTest extends Specification with TestDBRunner {
           keepToCollectionRepo.save(KeepToCollection(
             bookmarkId = bookmark1.id.get, collectionId = coll1.id.get, state = KeepToCollectionStates.INACTIVE))
           collectionRepo.get(coll1.id.get).seq.value must be > newSeqNum
+        }
+
+        db.readOnly { implicit s =>
+          collectionRepo.getCollectionsChanged(SequenceNumber(newSeqNum)).map(_._1) === Seq(coll1.id.get)
         }
       }
     }
