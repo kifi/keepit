@@ -7,6 +7,7 @@ import org.apache.lucene.store.DataInput
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import scala.collection.mutable.ArrayBuffer
+import com.keepit.model.KeepToCollection
 
 trait URIList {
   val version: Int
@@ -47,9 +48,9 @@ object URIList {
 
     sortedBookmarks.headOption match {
       case Some(firstBookmark) =>
-        var prevUriId = firstBookmark.uriId
         if (firstBookmark.isPrivate) privateBookmarks += firstBookmark
         else publicBookmarks += firstBookmark
+        var prevUriId = firstBookmark.uriId
 
         sortedBookmarks.tail.foreach{ b =>
           if (b.uriId != prevUriId) {
@@ -60,10 +61,33 @@ object URIList {
         }
       case None =>
     }
-    (toByteArray(publicBookmarks), toByteArray(privateBookmarks))
+    (toByteArrayFromSorted(publicBookmarks), toByteArrayFromSorted(privateBookmarks))
   }
 
-  private def toByteArray(sortedBookmarks: Seq[Bookmark]): Array[Byte] = {
+  def toByteArray(bookmarks: Seq[Bookmark]): Array[Byte] = {
+    // sort bookmarks by uriid. if there are duplicate uriIds, take most recent one
+    val sortedBookmarks = bookmarks.sortWith{ (a, b) =>
+      (a.uriId.id < b.uriId.id) || (a.uriId.id == b.uriId.id && a.createdAt.getMillis > b.createdAt.getMillis)
+    }
+    val allBookmarks = new ArrayBuffer[Bookmark]
+
+    sortedBookmarks.headOption match {
+      case Some(firstBookmark) =>
+        allBookmarks += firstBookmark
+        var prevUriId = firstBookmark.uriId
+
+        allBookmarks.tail.foreach{ b =>
+          if (b.uriId != prevUriId) {
+            allBookmarks += b
+            prevUriId = b.uriId
+          }
+        }
+      case None =>
+    }
+    toByteArrayFromSorted(allBookmarks)
+  }
+
+  private def toByteArrayFromSorted(sortedBookmarks: Seq[Bookmark]): Array[Byte] = {
     val size = sortedBookmarks.size
     val baos = new ByteArrayOutputStream(size * 4)
     val out = new OutputStreamDataOutput(baos)
