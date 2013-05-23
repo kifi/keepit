@@ -76,7 +76,7 @@ a.kifi-pane-head-feedback {
   border-radius: 3px;
   background-color: #6fa6ef;
   text-align: center;
-  color: #fafafa !important; /* necessary because of a CSS reset we use on all a elements */
+  color: #fafafa !important;
   padding-top: 8px;
   position: relative;
   z-index: 1;
