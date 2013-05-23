@@ -8,6 +8,7 @@ import com.keepit.common.service.FortyTwoServices
 import scala.concurrent.{Future, Promise, promise}
 import com.google.inject.Inject
 import play.api.libs.json.JsObject
+import com.keepit.serializer.NormalizedURISerializer
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl @Inject() (
@@ -93,5 +94,12 @@ class FakeShoeboxServiceClientImpl @Inject() (
 
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]] = {
     Promise.successful(Seq()).future
+  }
+
+  def getIndexable(seqNum: Long, fetchSize: Int) : Future[Seq[NormalizedURI]] = {
+    val uris = db.readOnly { implicit s =>
+        normUriRepo.getIndexable(SequenceNumber(seqNum), fetchSize)
+      }
+    Promise.successful(uris).future
   }
 }

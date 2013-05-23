@@ -52,7 +52,7 @@ class MainSearcherTest extends Specification with DbRepos {
 
   def initIndexes(store: ArticleStore) = {
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    val articleIndexer = new ArticleIndexer(new RAMDirectory, config, store, db, inject[NormalizedURIRepo], null, inject[ShoeboxServiceClient])
+    val articleIndexer = new ArticleIndexer(new RAMDirectory, config, store, null, inject[ShoeboxServiceClient])
     val uriGraph = new URIGraphImpl(new RAMDirectory, config, URIGraphFields.decoders(), bookmarkRepo, db, inject[ShoeboxServiceClient])
     implicit val clock = inject[Clock]
     implicit val fortyTwoServices = inject[FortyTwoServices]

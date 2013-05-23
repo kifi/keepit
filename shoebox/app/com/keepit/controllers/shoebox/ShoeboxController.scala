@@ -33,6 +33,13 @@ import com.keepit.shoebox.ClickHistoryTracker
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.Action
+import com.keepit.model.BrowsingHistoryRepo
+import com.keepit.model.User
+import com.keepit.search.MultiHashFilter
+import com.keepit.model.BrowsingHistory
+import com.keepit.model.ClickHistoryRepo
+import com.keepit.model.ClickHistory
+import com.keepit.common.db.SequenceNumber
 
 object ShoeboxController {
   implicit val collectionTupleFormat = (
@@ -179,4 +186,13 @@ class ShoeboxController @Inject() (
       keepToCollectionRepo.getBookmarksInCollection(collectionId) map bookmarkRepo.get
     }))
   }
+
+
+  def getIndexable(seqNum: Long, fetchSize: Int) = Action { request =>
+    val uris = db.readOnly { implicit s =>
+        normUriRepo.getIndexable(SequenceNumber(seqNum), fetchSize)
+      }.map{uri => NormalizedURISerializer.normalizedURISerializer.writes(uri)}
+    Ok(JsArray(uris))
+  }
+
 }
