@@ -113,13 +113,12 @@ class CommonModule extends ScalaModule with Logging {
       new MongoS3EventStoreImpl(mongoDB)
     }.get
   }
-  
+
   @Singleton
   @Provides
-  def searchConfigManager(
-      expRepo: SearchConfigExperimentRepo, userExpRepo: UserExperimentRepo, db: Database): SearchConfigManager = {
+  def searchConfigManager(shoeboxClient: ShoeboxServiceClient): SearchConfigManager = {
     // This is needed still by Shoebox because of reports. Need to split.
     val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
-    new SearchConfigManager(optFile, expRepo, userExpRepo, db)
+    new SearchConfigManager(optFile, shoeboxClient)
   }
 }

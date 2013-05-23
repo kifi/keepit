@@ -131,13 +131,13 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   }
 
   private def dbInfoFromApplication(): DbInfo = TestDbInfo.dbInfo
-  
+
   @Singleton
   @Provides
   def domainTagImportSettings: DomainTagImportSettings = {
     DomainTagImportSettings(localDir = "", url = "")
   }
-  
+
   @Provides
   @Singleton
   def fakeClock: FakeClock = new FakeClock()
@@ -292,6 +292,8 @@ case class ShoeboxServiceModule() extends ScalaModule {
     browsingHistoryRepo: BrowsingHistoryRepo,
     clickingHistoryRepo: ClickHistoryRepo,
     normUriRepo: NormalizedURIRepo,
+    experimentRepo: SearchConfigExperimentRepo,
+    userExperimentRepo: UserExperimentRepo,
     clickHistoryTracker: ClickHistoryTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
     persistEventPluginProvider: Provider[PersistEventPlugin], clock: Clock,
@@ -305,6 +307,8 @@ case class ShoeboxServiceModule() extends ScalaModule {
     browsingHistoryRepo,
     clickingHistoryRepo,
     normUriRepo,
+    experimentRepo,
+    userExperimentRepo,
     clickHistoryTracker,
     browsingHistoryTracker,
     clock,
@@ -338,7 +342,7 @@ case class FakeHealthcheckModule() extends ScalaModule {
 case class FakePersistEventModule() extends ScalaModule {
   override def configure(): Unit = {
     bind[PersistEventPlugin].to[FakePersistEventPluginImpl]
-    
+
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
 
   }
