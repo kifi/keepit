@@ -15,7 +15,7 @@ object DefaultSyntax {
   val qualifierRegex = """([+-])[^\p{Zs}]""".r
   val fieldRegex = """(\w+):\p{Zs}*""".r
   val termRegex = """([^\p{Zs}]+)[\p{Zs}$]*""".r
-  val quotedTermRegex = """\"((([^\"])|(\"[^\p{Zs}]))*)\"([\p{Zs}]|$)""".r
+  val quotedTermRegex = """\"((([^\"])|(\"[^\p{Zs}]))*)\"([\p{Zs}$]*)""".r
   val endOfQueryRegex = """($)""".r
 
   case class QuerySpec(occur: Occur, field: String, term: String, quoted: Boolean)
