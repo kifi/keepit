@@ -217,8 +217,8 @@ slider2 = function() {
       }).bindHover(".kifi-slider2-dock-btn", function(configureHover) {
         var tip = {
           n: ["Notifications", "View all of your notifications.<br>Any new ones are highlighted."],
-          c: ["Comments", "View and post comments<br>about this page."],
-          m: ["Messages (" + CO_KEY + "+Shift+M)", "Send this page to friends<br>and start a discussion."],
+          c: ["Public Comments", "View and post comments<br>about this page."],
+          m: ["Private Messages (" + CO_KEY + "+Shift+M)", "Send this page to friends<br>and start a discussion."],
           g: ["More Options (" + CO_KEY + "+Shift+O)", "Take notes about this page,<br>keep to a collection, read it<br>later and more."]
         }[this.dataset.loc.substr(1,1)];
         render("html/keeper/titled_tip.html", {title: tip[0], html: tip[1]}, function(html) {
