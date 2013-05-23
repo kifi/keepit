@@ -22,6 +22,9 @@ import com.keepit.search.index.{DefaultAnalyzer, Indexable, Indexer, IndexError}
 import com.keepit.search.index.Indexable.IteratorTokenStream
 import com.keepit.search.line.LineField
 import com.keepit.search.line.LineFieldBuilder
+import com.keepit.shoebox.ShoeboxServiceClient
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 object URIGraphFields {
   val userField = "usr"
@@ -47,6 +50,7 @@ object URIGraphFields {
 trait URIGraph {
   def update(): Int
   def update(userId: Id[User]): Int
+  def reindex(): Unit
   def getURIGraphSearcher(userId: Option[Id[User]] = None): URIGraphSearcher
   def close(): Unit
 
@@ -58,8 +62,7 @@ class URIGraphImpl(
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
     decoders: Map[String, FieldDecoder],
-    bookmarkRepo: BookmarkRepo,
-    db: Database)
+    shoeboxClient: ShoeboxServiceClient)
   extends Indexer[User](indexDirectory, indexWriterConfig, decoders) with URIGraph {
 
   val commitBatchSize = 100
@@ -79,12 +82,11 @@ class URIGraphImpl(
   }
 
   def update(): Int = update{
-    db.readOnly { implicit s =>
-      bookmarkRepo.getUsersChanged(sequenceNumber)
-    }
+    resetSequenceNumberIfReindex()
+    Await.result(shoeboxClient.getUsersChanged(sequenceNumber), 5 seconds)
   }
 
-  def update(userId: Id[User]): Int = update{ Seq((userId, SequenceNumber.ZERO)) }
+  def update(userId: Id[User]): Int = update{ Seq((userId, SequenceNumber.MinValue)) }
 
   private def update(usersChanged: => Seq[(Id[User], SequenceNumber)]): Int = {
     log.info("updating URIGraph")
@@ -104,9 +106,7 @@ class URIGraphImpl(
 
   def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber)): URIListIndexable = {
     val (userId, seq) = userIdAndSequenceNumber
-    val bookmarks = db.readOnly { implicit session =>
-      bookmarkRepo.getByUser(userId)
-    }
+    val bookmarks = Await.result(shoeboxClient.getBookmarks(userId), 5 seconds)
     new URIListIndexable(id = userId,
                          sequenceNumber = seq,
                          isDeleted = false,

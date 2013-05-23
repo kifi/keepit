@@ -32,8 +32,6 @@ class ArticleIndexer @Inject() (
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
     articleStore: ArticleStore,
-    db: Database,
-    repo: NormalizedURIRepo,
     healthcheckPlugin: HealthcheckPlugin,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[NormalizedURI](indexDirectory, indexWriterConfig) {
@@ -44,11 +42,11 @@ class ArticleIndexer @Inject() (
   def run(): Int = run(commitBatchSize, fetchSize)
 
   def run(commitBatchSize: Int, fetchSize: Int): Int = {
+    resetSequenceNumberIfReindex()
+
     log.info("starting a new indexing round")
     try {
-      val uris = db.readOnly { implicit s =>
-        repo.getIndexable(sequenceNumber, fetchSize)
-      }
+      val uris = Await.result(shoeboxClient.getIndexable(sequenceNumber.value, fetchSize), 5 seconds)
       var cnt = 0
       indexDocuments(uris.iterator.map(buildIndexable), commitBatchSize){ commitBatch =>
         val (errors, successes) = commitBatch.partition(_._2.isDefined)
@@ -65,8 +63,8 @@ class ArticleIndexer @Inject() (
     }
   }
 
-  def buildIndexable(id: Id[NormalizedURI]): ArticleIndexable = {
-    val uri = Await.result(shoeboxClient.getNormalizedURI(id.id), 5 seconds)
+  def buildIndexable(uriId: Id[NormalizedURI]): ArticleIndexable = {
+    val uri = Await.result(shoeboxClient.getNormalizedURI(uriId), 5 seconds)
     buildIndexable(uri)
   }
 

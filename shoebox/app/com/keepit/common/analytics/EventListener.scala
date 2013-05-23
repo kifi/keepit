@@ -3,6 +3,7 @@ package com.keepit.common.analytics
 import play.api.libs.json.{ JsArray, JsBoolean, JsNumber, JsObject, JsString }
 import com.keepit.serializer.EventSerializer
 import scala.collection.JavaConversions._
+import scala.concurrent.ExecutionContext.Implicits.global
 import java.util.{ Set => JSet }
 import com.google.inject.{ Inject, Singleton }
 import com.keepit.inject._
@@ -19,7 +20,8 @@ import com.keepit.common.actor.ActorFactory
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
-import com.keepit.search.{ SearchServiceClient, ArticleSearchResultRef, BrowsingHistoryTracker, ClickHistoryTracker }
+import com.keepit.search.{ SearchServiceClient, ArticleSearchResultRef }
+import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.common.akka.FortyTwoActor
 import akka.actor.ActorSystem
 import akka.actor.Props
@@ -31,6 +33,7 @@ import com.keepit.search.TrainingDataLabeler
 import com.keepit.search.SearchStatisticsExtractorFactory
 import com.keepit.search.UriLabel
 import com.keepit.serializer.SearchStatisticsSerializer
+import com.keepit.shoebox.BrowsingHistoryTracker
 
 abstract class EventListenerPlugin(
   userRepo: UserRepo,
@@ -121,9 +124,9 @@ class ResultClickedListener @Inject() (
   userRepo: UserRepo,
   normalizedURIRepo: NormalizedURIRepo,
   searchServiceClient: SearchServiceClient,
-  clickHistoryTracker: ClickHistoryTracker,
   db: Database,
-  bookmarkRepo: BookmarkRepo)
+  bookmarkRepo: BookmarkRepo,
+  clickHistoryTracker: ClickHistoryTracker)
   extends EventListenerPlugin(userRepo, normalizedURIRepo) {
 
   import SearchEventName._
@@ -224,9 +227,20 @@ class SearchUnloadListenerImpl @Inject() (
           (userId, kifiClickedIds, googleClickedIds, kifiShownIds)
         }
 
-        searchClient.persistSearchStatistics(uuid, queryString, userId, kifiClickedIds, googleClickedIds, kifiShownIds)
+        val data = TrainingDataLabeler.getLabeledData(kifiClickedIds, googleClickedIds, kifiShownIds)
+        if (data.nonEmpty) {
+          val labeledUris = data.foldLeft(Map.empty[Id[NormalizedURI], UriLabel]) {
+            case (m, (id, (isClicked, isCorrectlyRanked))) => m + (id -> UriLabel(isClicked, isCorrectlyRanked))
+          }
+          searchClient.getSearchStatistics(uuid, queryString, userId, labeledUris).map { r =>
+            r.value.map { json =>
+              val event = Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_statistics", json.as[JsObject])
+              persistEventProvider.get.persist(event)
+            }
+          }
+          log.info("search statistics persisted")
+        }
       }
-
     }
   }
 }

@@ -393,6 +393,11 @@ api = function() {
       update: new Listeners,
       startup: new Listeners},
     noop: function() {},
+    play: function(path) {
+      var el = document.createElement("audio");
+      el.src = path;
+      el.play();
+    },
     popup: {
       open: function(options, handlers) {
         var popupWinId, popupTabId;

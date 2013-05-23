@@ -25,7 +25,7 @@ object DevGlobal extends FortyTwoGlobal(Dev) with ShoeboxServices with SearchSer
 
 object SearchDevGlobal extends FortyTwoGlobal(Dev) with SearchServices {
   override val modules =
-    Seq(Modules.`override`(new CommonModule, new SearchModule).`with`(Modules.`override`(new DevCommonModule).`with`(new S3DevModule), new SearchDevModule))
+    Seq(Modules.`override`(new CommonModule, new SearchModule).`with`(new DevCommonModule, new SearchDevModule))
 
   override def onStart(app: Application) {
     startSearchServices()
@@ -35,7 +35,7 @@ object SearchDevGlobal extends FortyTwoGlobal(Dev) with SearchServices {
 
 object ShoeboxDevGlobal extends FortyTwoGlobal(Dev) with ShoeboxServices {
   override val modules =
-    Seq(Modules.`override`(new CommonModule, new ShoeboxModule).`with`(Modules.`override`(new DevCommonModule).`with`(new S3DevModule), new ShoeboxDevModule))
+    Seq(Modules.`override`(new CommonModule, new ShoeboxModule).`with`(new DevCommonModule, new ShoeboxDevModule))
 
   override def onStart(app: Application) {
     startShoeboxServices()
