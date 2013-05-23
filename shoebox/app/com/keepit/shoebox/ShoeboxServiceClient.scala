@@ -38,7 +38,9 @@ trait ShoeboxServiceClient extends ServiceClient {
 }
 
 case class ShoeboxCacheProvider @Inject() (
-    uriIdCache: NormalizedURICache)
+    uriIdCache: NormalizedURICache,
+    clickHistoryCache: ClickHistoryUserIdCache,
+    browsingHistoryCache: BrowsingHistoryUserIdCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val host: String,
@@ -93,11 +95,17 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getClickHistoryFilter(userId: Id[User]): Future[Array[Byte]] = {
-    call(routes.ShoeboxController.getClickHistoryFilter(userId)).map(_.body.getBytes)
+    cacheProvider.clickHistoryCache.get(ClickHistoryUserIdKey(userId)) match {
+      case Some(clickHistory) => Promise.successful(clickHistory.filter).future
+      case None => call(routes.ShoeboxController.getClickHistoryFilter(userId)).map(_.body.getBytes)
+    }
   }
 
   def getBrowsingHistoryFilter(userId: Id[User]): Future[Array[Byte]] = {
-    call(routes.ShoeboxController.getBrowsingHistoryFilter(userId)).map(_.body.getBytes)
+    cacheProvider.browsingHistoryCache.get(BrowsingHistoryUserIdKey(userId)) match {
+      case Some(browsingHistory) => Promise.successful(browsingHistory.filter).future
+      case None => call(routes.ShoeboxController.getBrowsingHistoryFilter(userId)).map(_.body.getBytes)
+    }
   }
 
   def persistServerSearchEvent(metaData: JsObject): Unit ={
