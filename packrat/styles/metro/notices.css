@@ -95,7 +95,7 @@ div.kifi-notices-none:only-child {
 .kifi-notice-page a.kifi-link:visited,
 .kifi-notice-page a.kifi-link:active {
   display: block;
-  color: #97a1ac;
+  color: #97a1ac !important;
   width: 220px;
   text-overflow: ellipsis;
   white-space: nowrap;

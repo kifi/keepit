@@ -56,8 +56,8 @@
 .kifi-pane a:visited,
 .kifi-pane a:link:hover,
 .kifi-pane a:visited:hover {
-  color: -webkit-link;
-  color: -moz-hyperlinktext;
+  color: -webkit-link !important;
+  color: -moz-hyperlinktext !important;
   text-decoration: none;
   font-weight: inherit;
   border: none;
