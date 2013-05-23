@@ -1,6 +1,8 @@
 package com.keepit.search.graph
 
 import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.Await
+import scala.concurrent.duration._
 import java.io.StringReader
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.document.BinaryDocValuesField
@@ -48,11 +50,8 @@ object URIGraphFields {
 class URIGraphIndexer(
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
-    decoders: Map[String, FieldDecoder],
-    bookmarkRepo: BookmarkRepo,
-    db: Database,
     shoeboxClient: ShoeboxServiceClient)
-  extends Indexer[User](indexDirectory, indexWriterConfig, decoders) {
+  extends Indexer[User](indexDirectory, indexWriterConfig, URIGraphFields.decoders) {
 
   val commitBatchSize = 100
   val fetchSize = commitBatchSize * 3
@@ -73,9 +72,7 @@ class URIGraphIndexer(
   def update(): Int = {
     resetSequenceNumberIfReindex()
     update {
-      db.readOnly { implicit s =>
-        bookmarkRepo.getUsersChanged(sequenceNumber)
-      }
+      Await.result(shoeboxClient.getUsersChanged(sequenceNumber), 5 seconds)
     }
   }
 
@@ -101,9 +98,7 @@ class URIGraphIndexer(
 
   def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber)): URIListIndexable = {
     val (userId, seq) = userIdAndSequenceNumber
-    val bookmarks = db.readOnly { implicit session =>
-      bookmarkRepo.getByUser(userId)
-    }
+    val bookmarks = Await.result(shoeboxClient.getBookmarks(userId), 5 seconds)
     new URIListIndexable(id = userId,
                          sequenceNumber = seq,
                          isDeleted = false,

@@ -50,11 +50,13 @@ class MainSearcherTest extends Specification with DbRepos {
   }
 
   def initIndexes(store: ArticleStore) = {
-    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    val articleIndexer = new ArticleIndexer(new RAMDirectory, config, store, db, inject[NormalizedURIRepo], null, inject[ShoeboxServiceClient])
+    val articleConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    val graphConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    val collectConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    val articleIndexer = new ArticleIndexer(new RAMDirectory, articleConfig, store, null, inject[ShoeboxServiceClient])
     val uriGraph = new URIGraphImpl(
-        new URIGraphIndexer(new RAMDirectory, config, URIGraphFields.decoders(), bookmarkRepo, db, inject[ShoeboxServiceClient]),
-        new CollectionIndexer(new RAMDirectory, config, CollectionFields.decoders(), inject[CollectionRepo], inject[KeepToCollectionRepo], bookmarkRepo, db, inject[ShoeboxServiceClient]))
+        new URIGraphIndexer(new RAMDirectory, graphConfig, inject[ShoeboxServiceClient]),
+        new CollectionIndexer(new RAMDirectory, collectConfig, inject[ShoeboxServiceClient]))
     implicit val clock = inject[Clock]
     implicit val fortyTwoServices = inject[FortyTwoServices]
     val mainSearcherFactory = new MainSearcherFactory(

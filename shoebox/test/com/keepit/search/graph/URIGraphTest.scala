@@ -96,10 +96,11 @@ class URIGraphTest extends Specification with DbRepos {
     }
   }
 
-  private def mkURIGraph(graphDir: RAMDirectory = new RAMDirectory): URIGraphImpl = {
-    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    val uriGraphIndexer = new URIGraphIndexer(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db, inject[ShoeboxServiceClient])
-    val collectionIndexer = new CollectionIndexer(graphDir, config, URIGraphFields.decoders(), inject[CollectionRepo], inject[KeepToCollectionRepo], bookmarkRepo, db, inject[ShoeboxServiceClient])
+  private def mkURIGraph(graphDir: RAMDirectory = new RAMDirectory, collectionDir: RAMDirectory = new RAMDirectory): URIGraphImpl = {
+    val graphConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    val collectConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    val uriGraphIndexer = new URIGraphIndexer(graphDir, graphConfig, inject[ShoeboxServiceClient])
+    val collectionIndexer = new CollectionIndexer(collectionDir, collectConfig, inject[ShoeboxServiceClient])
     new URIGraphImpl(uriGraphIndexer, collectionIndexer)
   }
 

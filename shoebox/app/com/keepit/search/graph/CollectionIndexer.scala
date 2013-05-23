@@ -23,6 +23,8 @@ import com.keepit.search.index.Indexable.IteratorTokenStream
 import com.keepit.search.line.LineField
 import com.keepit.search.line.LineFieldBuilder
 import com.keepit.shoebox.ShoeboxServiceClient
+import scala.concurrent.duration._
+import scala.concurrent.Await
 
 object CollectionFields {
   val userField = "coll_usr"
@@ -37,13 +39,8 @@ object CollectionFields {
 class CollectionIndexer(
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
-    decoders: Map[String, FieldDecoder],
-    collectionRepo: CollectionRepo,
-    keepToCollectionRepo: KeepToCollectionRepo,
-    bookmarkRepo: BookmarkRepo,
-    db: Database,
     shoeboxClient: ShoeboxServiceClient)
-  extends Indexer[Collection](indexDirectory, indexWriterConfig, decoders) {
+  extends Indexer[Collection](indexDirectory, indexWriterConfig, CollectionFields.decoders) {
 
   val commitBatchSize = 100
   val fetchSize = commitBatchSize * 3
@@ -64,18 +61,14 @@ class CollectionIndexer(
   def update(): Int = {
     resetSequenceNumberIfReindex()
     update {
-      db.readOnly { implicit s =>
-        collectionRepo.getCollectionsChanged(sequenceNumber)
-      }
+      Await.result(shoeboxClient.getCollectionsChanged(sequenceNumber), 5 seconds)
     }
   }
 
   def update(userId: Id[User]): Int = {
     deleteDocuments(new Term(CollectionFields.userField, userId.toString), doCommit = false)
     update {
-      db.readOnly { implicit s =>
-        collectionRepo.getByUser(userId).map{ collection => (collection.id.get, userId, SequenceNumber.MinValue) }
-      }
+      Await.result(shoeboxClient.getCollectionsByUser(userId), 5 seconds).map{ collectionId => (collectionId, userId, SequenceNumber.MinValue) }
     }
   }
 
@@ -95,9 +88,7 @@ class CollectionIndexer(
 
   def buildIndexable(collectionIdAndSequenceNumber: (Id[Collection], Id[User], SequenceNumber)): CollectionListIndexable = {
     val (collectionId, userId, seq) = collectionIdAndSequenceNumber
-    val bookmarks = db.readOnly { implicit session =>
-      keepToCollectionRepo.getBookmarksInCollection(collectionId).map{ bookmarkRepo.get(_) }
-    }
+    val bookmarks = Await.result(shoeboxClient.getBookmarksInCollection(collectionId), 5 seconds)
     new CollectionListIndexable(id = collectionId,
                                 sequenceNumber = seq,
                                 isDeleted = bookmarks.isEmpty,

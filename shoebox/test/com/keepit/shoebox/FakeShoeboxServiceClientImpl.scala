@@ -8,6 +8,7 @@ import com.keepit.common.service.FortyTwoServices
 import scala.concurrent.{Future, Promise, promise}
 import com.google.inject.Inject
 import play.api.libs.json.JsObject
+import com.keepit.serializer.NormalizedURISerializer
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl @Inject() (
@@ -54,8 +55,11 @@ class FakeShoeboxServiceClientImpl @Inject() (
      promise[Seq[NormalizedURI]]().success(uris).future
   }
 
-  def getBookmarks(userId: Id[User]): Future[Bookmark] = {
-    ???
+  def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]] = {
+    val bookmarks = db.readOnly { implicit session =>
+      bookmarkRepo.getByUser(userId)
+    }
+    Promise.successful(bookmarks).future
   }
 
   def getUsersChanged(seqNum: SequenceNumber): Future[Seq[(Id[User], SequenceNumber)]] = {
@@ -81,6 +85,7 @@ class FakeShoeboxServiceClientImpl @Inject() (
   def getConnectedUsers(id: Id[User]): scala.concurrent.Future[Set[com.keepit.common.db.Id[com.keepit.model.User]]] = ???
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = ???
   def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
+  def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]] = Promise.successful(Seq()).future
 
   def getCollectionsChanged(seqNum: SequenceNumber): Future[Seq[(Id[Collection], Id[User], SequenceNumber)]] = {
     Promise.successful(Seq()).future
@@ -92,5 +97,12 @@ class FakeShoeboxServiceClientImpl @Inject() (
 
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]] = {
     Promise.successful(Seq()).future
+  }
+
+  def getIndexable(seqNum: Long, fetchSize: Int) : Future[Seq[NormalizedURI]] = {
+    val uris = db.readOnly { implicit s =>
+        normUriRepo.getIndexable(SequenceNumber(seqNum), fetchSize)
+      }
+    Promise.successful(uris).future
   }
 }

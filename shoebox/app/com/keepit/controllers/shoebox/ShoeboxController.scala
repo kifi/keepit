@@ -19,11 +19,27 @@ import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.serializer._
 import com.keepit.shoebox.BrowsingHistoryTracker
+import com.keepit.model.NormalizedURI
+import com.keepit.common.mail.LocalPostOffice
+import play.api.libs.json.Json
+import com.keepit.common.mail.ElectronicMail
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.common.healthcheck.Healthcheck
+import com.keepit.model.NormalizedURIRepo
+import com.keepit.model.PhraseRepo
 import com.keepit.shoebox.ClickHistoryTracker
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.Action
+import com.keepit.model.BrowsingHistoryRepo
+import com.keepit.model.User
+import com.keepit.search.MultiHashFilter
+import com.keepit.model.BrowsingHistory
+import com.keepit.model.ClickHistoryRepo
+import com.keepit.model.ClickHistory
+import com.keepit.common.db.SequenceNumber
 
 object ShoeboxController {
   implicit val collectionTupleFormat = (
@@ -45,9 +61,10 @@ class ShoeboxController @Inject() (
   normUriRepo: NormalizedURIRepo,
   persistEventPlugin: PersistEventPlugin,
   postOffice: LocalPostOffice,
+  healthcheckPlugin: HealthcheckPlugin,
+  phraseRepo: PhraseRepo,
   collectionRepo: CollectionRepo,
-  keepToCollectionRepo: KeepToCollectionRepo,
-  healthcheckPlugin: HealthcheckPlugin)
+  keepToCollectionRepo: KeepToCollectionRepo)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
@@ -103,13 +120,11 @@ class ShoeboxController @Inject() (
     Ok
   }
 
-  // this is not quite right yet (need new bookmark serializer).
-  // This function is not used yet, just a placeholder.
+
   def getBookmarks(userId: Id[User]) = Action { request =>
     val bookmarks = db.readOnly { implicit session =>
       bookmarkRepo.getByUser(userId)
-    }.map{BookmarkSerializer.bookmarkSerializer.writes}
-
+    }.map{BookmarkSerializer.fullBookmarkSerializer.writes(_)}
     Ok(JsArray(bookmarks))
   }
 
@@ -147,6 +162,14 @@ class ShoeboxController @Inject() (
     Ok(JsArray(ids))
   }
 
+  def getPhrasesByPage(page: Int, size: Int) = Action { request =>
+    val phrases = db.readOnly { implicit s =>
+      phraseRepo.page(page,size).map(PhraseSerializer.phraseSerializer.writes(_))
+    }
+
+    Ok(JsArray(phrases))
+  }
+
   def getCollectionsByUser(userId: Id[User]) = Action { request =>
     Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getByUser(userId).map(_.id.get.id) }))
   }
@@ -161,4 +184,13 @@ class ShoeboxController @Inject() (
       keepToCollectionRepo.getBookmarksInCollection(collectionId) map bookmarkRepo.get
     }))
   }
+
+
+  def getIndexable(seqNum: Long, fetchSize: Int) = Action { request =>
+    val uris = db.readOnly { implicit s =>
+        normUriRepo.getIndexable(SequenceNumber(seqNum), fetchSize)
+      }.map{uri => NormalizedURISerializer.normalizedURISerializer.writes(uri)}
+    Ok(JsArray(uris))
+  }
+
 }

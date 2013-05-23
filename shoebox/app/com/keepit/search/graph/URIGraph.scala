@@ -20,15 +20,19 @@ class URIGraphImpl @Inject()(
   ) extends URIGraph {
 
   def update(): Int = {
+    collectionIndexer.update()
     uriGraphIndexer.update()
   }
   def update(userId: Id[User]): Int = {
+    collectionIndexer.update(userId)
     uriGraphIndexer.update(userId)
   }
   def reindex() {
+    collectionIndexer.reindex()
     uriGraphIndexer.reindex()
   }
   def close() {
+    collectionIndexer.close()
     uriGraphIndexer.close()
   }
   def getURIGraphSearcher(userId: Option[Id[User]]): URIGraphSearcher = {
