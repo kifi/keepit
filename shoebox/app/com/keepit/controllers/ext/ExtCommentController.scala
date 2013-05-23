@@ -79,9 +79,8 @@ class ExtCommentController @Inject() (
 
   private[ext] def postComment(userId: Id[User], urlStr: String, title: String, text: String): Comment = {
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
-    val comment = db.readWrite {implicit s =>
-      val (uri, url) = getOrCreateUriAndUrl(urlStr)
-
+    val (uri, url) = getOrCreateUriAndUrl(urlStr)
+    val comment = db.readWrite { implicit s =>
       val newComment = commentRepo.save(
           Comment(uriId = uri.id.get, urlId = url.id, userId = userId,
               pageTitle = title, text = LargeString(text),
@@ -119,13 +118,11 @@ class ExtCommentController @Inject() (
 
   private[ext] def sendMessage(userId: Id[User], urlStr: String, title: String, text: String, recipients: Seq[String]): (Comment, Option[Comment]) = {
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
-    val (uri, url, recipientUserIds, parentIdOpt) = db.readWrite { implicit s =>
-      val (uri, url) = getOrCreateUriAndUrl(urlStr)
-
+    val (uri, url) = getOrCreateUriAndUrl(urlStr)
+    val (recipientUserIds, parentIdOpt) = db.readWrite { implicit s =>
       val recipientUserIds = recipients.map{id => userRepo.get(ExternalId[User](id)).id.get}.toSet
       val parentIdOpt = commentRepo.getParentByUriParticipants(uri.id.get, recipientUserIds + userId)
-
-      (uri, url, recipientUserIds, parentIdOpt)
+      (recipientUserIds, parentIdOpt)
     }
 
     parentIdOpt match {
@@ -173,9 +170,8 @@ class ExtCommentController @Inject() (
 
   private[ext] def sendMessageReply(userId: Id[User], urlStr: String, title: String, text: String, requestedParentId: Id[Comment]): (Comment, Comment) = {
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
+    val (uri, url) = getOrCreateUriAndUrl(urlStr)
     val (message, parent) = db.readWrite { implicit s =>
-      val (uri, url) = getOrCreateUriAndUrl(urlStr)
-
       val reqParent = commentRepo.get(requestedParentId)
       val parent = reqParent.parent.map(commentRepo.get).getOrElse(reqParent)
       val message = commentRepo.save(Comment(
@@ -206,10 +202,12 @@ class ExtCommentController @Inject() (
     (message, parent)
   }
 
-  private def getOrCreateUriAndUrl(urlStr: String)(implicit session: RWSession): (NormalizedURI, URL) = {
-    val uri = normalizedURIRepo.getByNormalizedUrl(urlStr).getOrElse(normalizedURIRepo.save(NormalizedURIFactory(url = urlStr)))
-    val url: URL = urlRepo.get(urlStr).getOrElse(urlRepo.save(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
-    (uri, url)
+  private def getOrCreateUriAndUrl(urlStr: String): (NormalizedURI, URL) = {
+    db.readWrite(attempts = 2) { implicit s =>
+      val uri = normalizedURIRepo.getByNormalizedUrl(urlStr).getOrElse(normalizedURIRepo.save(NormalizedURIFactory(url = urlStr)))
+      val url: URL = urlRepo.get(urlStr).getOrElse(urlRepo.save(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
+      (uri, url)
+    }
   }
 
   /* deprecated, remove after all clients are updated to 2.3.24 */
