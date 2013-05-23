@@ -29,6 +29,7 @@ import com.keepit.serializer.EventSerializer
 import com.keepit.serializer.SearchResultInfoSerializer
 import com.keepit.common.logging.Logging
 import com.keepit.shoebox.ShoeboxServiceClient
+import scala.concurrent.ExecutionContext.Implicits._
 
 case class BasicQueryInfo(
   queryUUID: ExternalId[ArticleSearchResultRef],
@@ -282,7 +283,10 @@ class SearchStatisticsHelperSearcher(queryString: String, userId: Id[User], targ
       case None =>
         articleSearcher.indexReader
     }
-    PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryBuilder, clickHistoryBuilder, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxServiceClient)
+    val browsingHistoryFuture = shoeboxServiceClient.getBrowsingHistoryFilter(userId).map(browsingHistoryBuilder.build)
+    val clickHistoryFilter = shoeboxServiceClient.getClickHistoryFilter(userId).map(clickHistoryBuilder.build)
+    
+    PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryFuture, clickHistoryFilter, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxServiceClient)
   }
 
   //===================== preparation done ===========================//

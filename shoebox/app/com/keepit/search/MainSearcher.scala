@@ -30,6 +30,7 @@ import com.keepit.search.graph.UserToUriEdgeSet
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.shoebox.BrowsingHistoryTracker
+import scala.concurrent.Future
 
 
 class MainSearcher(
@@ -41,8 +42,8 @@ class MainSearcher(
     val uriGraphSearcher: URIGraphSearcher,
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
-    browsingHistoryBuilder: BrowsingHistoryBuilder,
-    clickHistoryBuilder: ClickHistoryBuilder,
+    browsingHistoryFuture: Future[MultiHashFilter],
+    clickHistoryFuture: Future[MultiHashFilter],
     shoeboxClient: ShoeboxServiceClient,
     spellCorrector: SpellCorrector)
     (implicit private val clock: Clock,
@@ -121,7 +122,7 @@ class MainSearcher(
       case None =>
         articleSearcher.indexReader
     }
-    PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryBuilder, clickHistoryBuilder, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient)
+    PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryFuture, clickHistoryFuture, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient)
   }
 
   def searchText(queryString: String, maxTextHitsPerCategory: Int, clickBoosts: ResultClickTracker.ResultClickBoosts)(implicit lang: Lang) = {
