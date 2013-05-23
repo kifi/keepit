@@ -130,5 +130,6 @@ object SocialUserInfoStates {
   val FETCHED_USING_FRIEND = State[SocialUserInfo]("fetched_using_friend")
   val FETCHED_USING_SELF = State[SocialUserInfo]("fetched_using_self")
   val FETCH_FAIL = State[SocialUserInfo]("fetch_fail")
+  val APP_NOT_AUTHORIZED = State[SocialUserInfo]("app_not_authorized")
   val INACTIVE = State[SocialUserInfo]("inactive")
 }
