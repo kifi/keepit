@@ -23,7 +23,6 @@ import scala.util.Random
 import com.keepit.inject._
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
-import com.keepit.common.analytics.FakePersistEventPluginImpl
 import com.keepit.search.query.parser.FakeSpellCorrector
 import com.keepit.common.service.FortyTwoServices
 import org.apache.lucene.index.IndexWriterConfig

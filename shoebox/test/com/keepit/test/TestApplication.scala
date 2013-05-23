@@ -8,6 +8,7 @@ import org.joda.time.{ReadablePeriod, DateTime}
 import com.google.inject._
 import com.google.inject.multibindings.Multibinder
 import com.google.inject.util.Modules
+import com.keepit.common.plugin._
 import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
 import com.keepit.common.analytics._
 import com.keepit.common.cache.{HashMapMemoryCache, FortyTwoCachePlugin}
@@ -23,7 +24,7 @@ import com.keepit.common.social._
 import com.keepit.common.store.FakeS3StoreModule
 import com.keepit.common.time._
 import com.keepit.common.zookeeper._
-import com.keepit.dev.{SearchDevGlobal, ShoeboxDevGlobal, DevGlobal, S3DevModule, FakePersistEventPluginImpl}
+import com.keepit.dev._
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.scraper._
@@ -123,8 +124,6 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
     bind[HealthcheckPlugin].to[FakeHealthcheck]
     bind[SlickSessionProvider].to[TestSlickSessionProvider]
-
-
   }
 
   private def dbInfoFromApplication(): DbInfo = TestDbInfo.dbInfo
@@ -208,8 +207,9 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Provides
   @AppScoped
-  def actorPluginProvider: ActorPlugin =
-    new ActorPlugin(ActorSystem("shoebox-test-actor-system", Play.current.configuration.underlying, Play.current.classloader))
+  def actorPluginProvider(schedulingProperties: SchedulingProperties): ActorPlugin =
+    new ActorPlugin(ActorSystem("shoebox-test-actor-system", Play.current.configuration.underlying, Play.current.classloader),
+      schedulingProperties)
 
   @Provides
   @Singleton

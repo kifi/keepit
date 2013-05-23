@@ -1,5 +1,6 @@
 package com.keepit.common.healthcheck
 
+import com.keepit.common.plugin._
 import com.keepit.common.mail._
 import com.keepit.common.mail.EmailAddresses.ENG
 import akka.actor.Actor._
@@ -12,7 +13,7 @@ import scala.concurrent.duration._
 import com.google.inject.Singleton
 
 @Singleton
-case class FakeHealthcheck() extends HealthcheckPlugin {
+case class FakeHealthcheck(val schedulingProperties: SchedulingProperties) extends HealthcheckPlugin {
 
   val _errors = MutableList[HealthcheckError]()
 

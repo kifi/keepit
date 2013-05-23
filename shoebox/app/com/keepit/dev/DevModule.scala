@@ -137,12 +137,6 @@ class ShoeboxDevModule extends ScalaModule with Logging {
   @Singleton
   def mailToKeepServerSettings: MailToKeepServerSettings = mailToKeepServerSettingsOpt.get
 
-  class FakeMailToKeepPlugin(val schedulingProperties: SchedulingProperties) extends MailToKeepPlugin with Logging {
-    def fetchNewKeeps() {
-      log.info("Fake fetching new keeps")
-    }
-  }
-
   @AppScoped
   @Provides
   def mailToKeepPlugin(
@@ -155,6 +149,13 @@ class ShoeboxDevModule extends ScalaModule with Logging {
     }
   }
 }
+
+class FakeMailToKeepPlugin(val schedulingProperties: SchedulingProperties) extends MailToKeepPlugin with Logging {
+  def fetchNewKeeps() {
+    log.info("Fake fetching new keeps")
+  }
+}
+
 
 class SearchDevModule extends ScalaModule with Logging {
   def configure() {}
