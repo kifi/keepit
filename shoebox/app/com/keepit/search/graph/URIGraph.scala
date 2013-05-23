@@ -106,7 +106,7 @@ class URIGraphImpl(
 
   def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber)): URIListIndexable = {
     val (userId, seq) = userIdAndSequenceNumber
-    val bookmarks = Await.result(shoeboxClient.getBookmarks(userId), 5 seconds)
+    val bookmarks = Await.result(shoeboxClient.getBookmarks(userId), 180 seconds)
     new URIListIndexable(id = userId,
                          sequenceNumber = seq,
                          isDeleted = false,
