@@ -54,7 +54,7 @@ class MainSearcherFactory @Inject() (
     }
     
     val browsingHistoryFuture = shoeboxClient.getBrowsingHistoryFilter(userId).map(browsingHistoryBuilder.build)
-    val clickHistoryFilter = shoeboxClient.getClickHistoryFilter(userId).map(clickHistoryBuilder.build)
+    val clickHistoryFuture = shoeboxClient.getClickHistoryFilter(userId).map(clickHistoryBuilder.build)
 
     new MainSearcher(
         userId,
@@ -66,7 +66,7 @@ class MainSearcherFactory @Inject() (
         parserFactory,
         resultClickTracker,
         browsingHistoryFuture,
-        clickHistoryFilter,
+        clickHistoryFuture,
         shoeboxClient,
         spellCorrector
     )
