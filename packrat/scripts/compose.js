@@ -133,11 +133,53 @@ function attachComposeBindings($c, composeTypeName) {
   })
   .on("click", ".kifi-compose-snapshot", function() {
     snapshot.take(composeTypeName, function(selector) {
-      if (selector) {
-        $d.append(" <a href='x-kifi-sel:" + selector.replace("'", "&#39;") + "'>look here</a>");
-      }
+      $d.focus();
+      if (!selector) return;
       $f.removeClass("kifi-empty");
-      $d.focus();  // TODO: preserve insertion point & selection
+
+      // insert link
+      var r = $d.data("sel"), $a = $("<a>", {href: "x-kifi-sel:" + selector, text: "look here"}), pad = true;
+      if (r && r.startContainer === r.endContainer && !$(r.endContainer).closest("a").length) {
+        var par = r.endContainer, i = r.startOffset, j = r.endOffset;
+        if (par.nodeType == 3) {  // text
+          var s = par.textContent;
+          if (i < j) {
+            $a.text(s.substring(i, j));
+            pad = false;
+          }
+          $(par).replaceWith($a);
+          $a.before(s.substr(0, i))
+          $a.after(s.substr(j));
+        } else if (i == j || !r.cloneContents().querySelector("a")) {
+          var next = par.childNodes.item(j);
+          if (i < j) {
+            $a.empty().append(r.extractContents());
+            pad = false;
+          }
+          par.insertBefore($a[0], next);
+        }
+      }
+      if (!$a[0].parentNode) {
+        $d.append($a);
+      }
+
+      if (pad) {
+        var sib;
+        if ((sib = $a[0].previousSibling) && (sib.nodeType != 3 || !/[\s\u200b]$/.test(sib.nodeValue))) {
+          $a.before(" ");
+        }
+        if ((sib = $a[0].nextSibling) && (sib.nodeType != 3 || /^\S/.test(sib.nodeValue))) {
+          $a.after(" ");
+        }
+      }
+
+      // position caret immediately after link
+      r = r || document.createRange();
+      r.setStartAfter($a[0]);
+      r.collapse(true);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(r);
     });
   })
   .find(".kifi-compose-submit")
