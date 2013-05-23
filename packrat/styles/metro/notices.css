@@ -1,4 +1,4 @@
-a.kifi-pane-mark-notices-read {
+.kifi-pane a.kifi-pane-mark-notices-read[href] {
   position: absolute;
   top: 0;
   right: 0;
@@ -85,6 +85,18 @@ div.kifi-notices-none:only-child {
   font-size: 12px;
   margin: 2px 0 4px;
   color: #333;
+}
+.kifi-notice:not(.kifi-notice-visited) .kifi-notice-action::before {
+  content: " ";
+  background-color: #6fa6ef;
+  display: inline-block;
+  font: 0/0 serif;
+  height: 9px;
+  width: 9px;
+  border-radius: 5px;
+}
+.kifi-notice-message:not(.kifi-notice-visited) .kifi-notice-action::after {
+  content: " waiting";
 }
 .kifi-notice-page {
   font-size: 12px;
