@@ -7,8 +7,8 @@ import java.net.ConnectException
 class FakeHttpClient(
     requestToResponse: Option[PartialFunction[String, FakeClientResponse]] = None
   ) extends HttpClient {
-  
-  override val defaultOnFailure = ignoreConnectionFailure
+
+  override val defaultOnFailure = ignoreFailure
 
   override def get(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = assertUrl(url)
 
