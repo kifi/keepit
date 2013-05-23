@@ -10,6 +10,7 @@ import com.keepit.common.db.slick._
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
 import com.keepit.search.MultiHashFilter
+import com.keepit.model.BrowsingHistory
 
 class BrowsingHistoryTracker (tableSize: Int, numHashFuncs: Int, minHits: Int,
     browsingHistoryRepo: BrowsingHistoryRepo, db: Database) extends Logging{
@@ -28,13 +29,13 @@ class BrowsingHistoryTracker (tableSize: Int, numHashFuncs: Int, minHits: Int,
     }
   }
 
-  def getMultiHashFilter(userId: Id[User]): MultiHashFilter = {
+  def getMultiHashFilter(userId: Id[User]): MultiHashFilter[BrowsingHistory] = {
     db.readOnly { implicit session =>
       browsingHistoryRepo.getByUserId(userId) match {
         case Some(browsingHistory) =>
-          new MultiHashFilter(browsingHistory.tableSize, browsingHistory.filter, browsingHistory.numHashFuncs, browsingHistory.minHits)
+          new MultiHashFilter[BrowsingHistory](browsingHistory.tableSize, browsingHistory.filter, browsingHistory.numHashFuncs, browsingHistory.minHits)
         case None =>
-          val filter = MultiHashFilter(tableSize, numHashFuncs, minHits)
+          val filter = MultiHashFilter[BrowsingHistory](tableSize, numHashFuncs, minHits)
           filter
       }
     }

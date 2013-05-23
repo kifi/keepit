@@ -23,7 +23,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.shoebox.BrowsingHistoryTracker
-
+import scala.concurrent.ExecutionContext.Implicits._
 
 @Singleton
 class MainSearcherFactory @Inject() (
@@ -52,6 +52,10 @@ class MainSearcherFactory @Inject() (
           uriGraph.getURIGraphSearcher(Some(userId))
       }
     }
+    
+    val browsingHistoryFuture = shoeboxClient.getBrowsingHistoryFilter(userId).map(browsingHistoryBuilder.build)
+    val clickHistoryFuture = shoeboxClient.getClickHistoryFilter(userId).map(clickHistoryBuilder.build)
+
     new MainSearcher(
         userId,
         friendIds,
@@ -61,8 +65,8 @@ class MainSearcherFactory @Inject() (
         uriGraphSearcher,
         parserFactory,
         resultClickTracker,
-        browsingHistoryBuilder,
-        clickHistoryBuilder,
+        browsingHistoryFuture,
+        clickHistoryFuture,
         shoeboxClient,
         spellCorrector
     )
