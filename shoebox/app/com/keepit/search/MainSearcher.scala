@@ -42,8 +42,8 @@ class MainSearcher(
     val uriGraphSearcher: URIGraphSearcher,
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
-    browsingHistoryFuture: Future[MultiHashFilter],
-    clickHistoryFuture: Future[MultiHashFilter],
+    browsingHistoryFuture: Future[MultiHashFilter[BrowsingHistory]],
+    clickHistoryFuture: Future[MultiHashFilter[ClickHistory]],
     shoeboxClient: ShoeboxServiceClient,
     spellCorrector: SpellCorrector)
     (implicit private val clock: Clock,

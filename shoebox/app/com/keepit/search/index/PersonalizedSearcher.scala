@@ -24,6 +24,8 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.BrowsingHistoryBuilder
 import com.keepit.search.ClickHistoryBuilder
 import scala.concurrent.Future
+import com.keepit.model.BrowsingHistory
+import com.keepit.model.ClickHistory
 
 object PersonalizedSearcher {
   private val scale = 100
@@ -31,8 +33,8 @@ object PersonalizedSearcher {
             indexReader: WrappedIndexReader,
             myUris: Set[Long],
             friendUris: Set[Long],
-            browsingHistoryFuture: Future[MultiHashFilter],
-            clickHistoryFuture: Future[MultiHashFilter],
+            browsingHistoryFuture: Future[MultiHashFilter[BrowsingHistory]],
+            clickHistoryFuture: Future[MultiHashFilter[ClickHistory]],
             svWeightMyBookMarks: Int,
             svWeightBrowsingHistory: Int,
             svWeightClickHistory: Int,
@@ -81,7 +83,7 @@ object PersonalizedSearcher {
 }
 
 class PersonalizedSearcher(override val indexReader: WrappedIndexReader, myUris: Set[Long], friendUris: Set[Long],
-                           browsingFilter: MultiHashFilter, clickFilter: MultiHashFilter,
+                           browsingFilter: MultiHashFilter[BrowsingHistory], clickFilter: MultiHashFilter[ClickHistory],
                            scaledWeightMyBookMarks: Int, scaledWeightBrowsingHistory: Int, scaledWeightClickHistory: Int)
 extends Searcher(indexReader) with Logging {
   import PersonalizedSearcher._
