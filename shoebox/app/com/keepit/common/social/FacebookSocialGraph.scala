@@ -2,12 +2,16 @@ package com.keepit.common.social
 
 import com.keepit.common.net.HttpClient
 import com.keepit.common.logging.Logging
-import com.keepit.model.{User, SocialUserInfo}
+import com.keepit.model.SocialUserInfo
 import com.google.inject.Inject
 import play.api.libs.json._
 
 object FacebookSocialGraph {
   val FULL_PROFILE = "name,first_name,middle_name,last_name,gender,username,languages,installed,devices,email,picture"
+
+  object ErrorSubcodes {
+    val AppNotInstalled = 458
+  }
 }
 
 class FacebookSocialGraph @Inject() (httpClient: HttpClient) extends Logging {
@@ -40,7 +44,7 @@ class FacebookSocialGraph @Inject() (httpClient: HttpClient) extends Logging {
 
   def nextPageUrl(json: JsValue): Option[String] = (json \ "friends" \ "paging" \ "next").asOpt[String]
 
-  private def get(url: String): JsValue = httpClient.longTimeout.get(url).json
+  private def get(url: String): JsValue = httpClient.longTimeout.get(url, httpClient.ignoreFailure).json
 
   private def url(id: SocialId, accessToken: String) = "https://graph.facebook.com/%s?access_token=%s&fields=%s,friends.fields(%s)".format(
       id.id, accessToken, FacebookSocialGraph.FULL_PROFILE, FacebookSocialGraph.FULL_PROFILE)
