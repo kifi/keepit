@@ -1,11 +1,11 @@
 .kifi-pane a.kifi-pane-mark-notices-read[href] {
   position: absolute;
-  top: 0;
+  top: 8px;
   right: 0;
   z-index: 2;
-  padding: 0 12px;
+  padding: 0 10px;
   font-size: 12px;
-  line-height: 40px;
+  line-height: 26px;
   color: #fff !important;
   display: none;
 }

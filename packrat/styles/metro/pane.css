@@ -231,12 +231,10 @@ div.kifi-pane-head-settings-menu {
 .kifi-pane-box-cart.kifi-forward .kifi-pane-box:nth-child(2) {
   left: 316px;
 }
-.kifi-pane-title,
-.kifi-pane a.kifi-pane-back {
-  padding: 0 12px;
-  font-size: 12px;
+.kifi-pane-title {
+  font-size: 16px;
   line-height: 40px;
-  color: #fff !important;
+  color: #fff;
 }
 .kifi-pane-title {
   text-align: center;
@@ -249,18 +247,44 @@ div.kifi-pane-head-settings-menu {
 .kifi-pane-title.kifi-scrollable-above.kifi-can-scroll {
   box-shadow: 0 2px 3px -1px rgba(0,0,0,.3);
 }
-a.kifi-pane-back {
+.kifi-pane a.kifi-pane-back[href] {
   position: absolute;
-  top: 0;
-  left: 0;
+  top: 8px;
+  left: 8px;
   z-index: 2;
-}
-a.kifi-pane-back:hover {
-  text-decoration: none;
+  padding: 0 12px 0 3px;
+  font-size: 12px;
+  line-height: 26px;
+  color: #fff !important;
   background-color: #67829c;
+  text-decoration: none;
 }
-a.kifi-pane-back:active {
+.kifi-pane a.kifi-pane-back:hover {
+  background-color: #6c88a3;
+}
+.kifi-pane a.kifi-pane-back:active {
   background-color: #607991;
+}
+a.kifi-pane-back::before {
+  content: " ";
+  display: inline-block;
+  font-size: 0;
+  line-height: inherit;
+  vertical-align: bottom;
+  border-style: solid;
+  border-width: 13px 8px 13px 0;
+  border-color: transparent #67829c;
+  position: relative;
+  right: 11px;
+}
+a.kifi-pane-back:hover::before {
+  border-right-color: #6c88a3;
+}
+a.kifi-pane-back:active::before {
+  border-right-color: #607991;
+}
+a.kifi-pane-back::after {
+  content: "Back";
 }
 .kifi-pane-tall {
   position: absolute;
