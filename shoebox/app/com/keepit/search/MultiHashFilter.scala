@@ -8,18 +8,18 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.Id
 
 object MultiHashFilter {
-  def apply(tableSize: Int, numHashFuncs: Int, minHits: Int) = {
+  def apply[T](tableSize: Int, numHashFuncs: Int, minHits: Int) = {
     val filter = new Array[Byte](tableSize)
-    new MultiHashFilter(tableSize, filter, numHashFuncs, minHits)
+    new MultiHashFilter[T](tableSize, filter, numHashFuncs, minHits)
   }
 
-  val emptyFilter = new MultiHashFilter(0, Array.empty[Byte], 0, 0) {
+  def emptyFilter[T] = new MultiHashFilter[T](0, Array.empty[Byte], 0, 0) {
     override def put(key: Long) = throw new UnsupportedOperationException
     override def mayContain(key: Long) = false
   }
 }
 
-class MultiHashFilter(tableSize: Int, filter: Array[Byte], numHashFuncs: Int, minHits: Int) {
+class MultiHashFilter[T](tableSize: Int, filter: Array[Byte], numHashFuncs: Int, minHits: Int) {
 
   def getFilter = filter
 

@@ -53,7 +53,7 @@ private[classify] class DomainClassificationActor @Inject() (
     val id = encodeHex(md5).toLowerCase
     val encodedUrl = URLEncoder.encode(url, UTF8)
 
-    client.getFuture(s"http://$server/url.php?version=w11&guid=$guid&id=$id&url=$encodedUrl", client.ignoreConnectionFailure).map { resp =>
+    client.getFuture(s"http://$server/url.php?version=w11&guid=$guid&id=$id&url=$encodedUrl", client.ignoreFailure).map { resp =>
       (resp.body.split("~", 2).toList match {
         case ("FM" | "FR") :: tagString :: Nil =>
           // response is comma separated, but includes commas inside parentheses
