@@ -170,12 +170,7 @@ class URIGraphTest extends Specification with DbRepos {
       }
     }
     "generate UriToUsrEdgeSet" in {
-      running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
-          .overrideWith(new FortyTwoModule {
-            override def configure() {
-               bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
-            }
-          })) {
+      running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
 
@@ -200,12 +195,7 @@ class URIGraphTest extends Specification with DbRepos {
     }
 
     "generate UserToUriEdgeSet" in {
-      running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
-          .overrideWith(new FortyTwoModule {
-            override def configure() {
-              bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
-            }
-          })) {
+      running(new DevApplication().withShoeboxServiceModule){
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
 
@@ -235,12 +225,7 @@ class URIGraphTest extends Specification with DbRepos {
     }
 
     "intersect UserToUserEdgeSet and UriToUserEdgeSet" in {
-      running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
-          .overrideWith(new FortyTwoModule {
-            override def configure() {
-              bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
-            }
-          })) {
+      running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
 
@@ -275,12 +260,7 @@ class URIGraphTest extends Specification with DbRepos {
     }
 
     "intersect empty sets" in {
-      running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
-          .overrideWith(new FortyTwoModule {
-            override def configure() {
-              bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
-            }
-          })) {
+      running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
 
         val graphDir = new RAMDirectory
@@ -306,12 +286,7 @@ class URIGraphTest extends Specification with DbRepos {
     }
 
     "determine whether intersection is empty" in {
-      running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
-          .overrideWith(new FortyTwoModule {
-            override def configure() {
-               bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
-            }
-          })) {
+      running(new DevApplication().withShoeboxServiceModule) {
         val graphDir = new RAMDirectory
         val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
         val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db, inject[ShoeboxServiceClient])
@@ -325,12 +300,7 @@ class URIGraphTest extends Specification with DbRepos {
     }
 
     "search personal bookmark titles" in {
-      running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
-          .overrideWith(new FortyTwoModule {
-            override def configure() {
-              bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
-            }
-          })) {
+      running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
 
@@ -366,12 +336,7 @@ class URIGraphTest extends Specification with DbRepos {
     }
 
     "search personal bookmark domains" in {
-       running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
-          .overrideWith(new FortyTwoModule {
-            override def configure() {
-              bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
-            }
-          })) {
+       running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
 
@@ -416,12 +381,7 @@ class URIGraphTest extends Specification with DbRepos {
     }
 
     "dump Lucene Document" in {
-      running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
-          .overrideWith(new FortyTwoModule {
-            override def configure() {
-               bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
-            }
-          })) {
+      running(new DevApplication().withShoeboxServiceModule) {
         val ramDir = new RAMDirectory
         val store = new FakeArticleStore()
 

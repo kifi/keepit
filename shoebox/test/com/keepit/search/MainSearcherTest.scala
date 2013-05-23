@@ -115,14 +115,7 @@ class MainSearcherTest extends Specification with DbRepos {
 
   "MainSearcher" should {
     "search and categorize using social graph" in {
-      running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
-          .overrideWith(new FortyTwoModule {
-            override def configure() {
-               bind[HttpClient].toInstance(new FakeHttpPostClient(Some({
-                 case s if s.contains("/internal/shoebox/database/getUsersChanged") => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))
-                 case s if s.contains("/internal/shoebox/persistServerSearchEvent") => "ok" }), body => {} ))
-            }
-          })) {
+      running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         val bookmarks = db.readWrite { implicit s =>
@@ -181,12 +174,7 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "return a single list of hits" in {
-       running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
-          .overrideWith(new FortyTwoModule {
-            override def configure() {
-               bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
-            }
-          })) {
+       running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         val bookmarks = db.readWrite { implicit session =>
@@ -244,12 +232,7 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "search personal bookmark titles" in {
-            running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
-          .overrideWith(new FortyTwoModule {
-            override def configure() {
-               bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
-            }
-          })) {
+        running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         val bookmarks = db.readWrite {implicit s =>
@@ -312,12 +295,7 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "score using matches in a bookmark title and an article" in {
-            running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
-          .overrideWith(new FortyTwoModule {
-            override def configure() {
-               bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
-            }
-          })) {
+        running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         val bookmarks = db.readWrite { implicit s =>
@@ -352,12 +330,7 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "paginate" in {
-            running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
-          .overrideWith(new FortyTwoModule {
-            override def configure() {
-               bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
-            }
-          })) {
+        running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         val bookmarks = db.readWrite { implicit s =>
@@ -405,12 +378,7 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "boost recent bookmarks" in {
-            running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
-          .overrideWith(new FortyTwoModule {
-            override def configure() {
-               bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
-            }
-          })) {
+        running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 1, numUris = 5)
         val userId = users.head.id.get
         val now = currentDateTime
@@ -446,12 +414,7 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "be able to cut the long tail" in {
-            running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
-          .overrideWith(new FortyTwoModule {
-            override def configure() {
-               bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
-            }
-          })) {
+        running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 1, numUris = 10)
         val userId = users.head.id.get
 
@@ -492,12 +455,7 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "show own private bookmarks" in {
-            running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
-          .overrideWith(new FortyTwoModule {
-            override def configure() {
-               bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
-            }
-          })) {
+        running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
@@ -530,12 +488,7 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "not show friends private bookmarks" in {
-            running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
-          .overrideWith(new FortyTwoModule {
-            override def configure() {
-               bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
-            }
-          })) {
+        running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
@@ -572,12 +525,7 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "search hits using a stemmed word" in {
-            running(new DevApplication().withFakeHttpClient.withShoeboxServiceModule
-          .overrideWith(new FortyTwoModule {
-            override def configure() {
-               bind[HttpClient].toInstance(new FakeHttpClient(Some({case s => Json.stringify(httpClientGetChangedUsers(s.split("=")(1).toLong))})))
-            }
-          })) {
+        running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         val bookmarks = db.readWrite { implicit s =>
