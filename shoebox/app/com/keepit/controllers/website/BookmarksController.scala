@@ -37,19 +37,17 @@ class BookmarksController @Inject() (
     )
   }
 
-  def allKeeps(before: Option[String], count: Int) = AuthenticatedJsonAction { request =>
-    val badRequestOrMaybeBookmarkId = before match {
-      case Some(id) => db.readOnly { implicit s => ExternalId.asOpt[Bookmark](id).flatMap(bookmarkRepo.getOpt) } match {
-        case Some(b) => Right(Some(b.externalId))
-        case None => Left(BadRequest(Json.obj("error" -> "Bad Request: Invalid bookmark ID for before param")))
-      }
-      case None => Right(None)
-    }
-    badRequestOrMaybeBookmarkId match {
-      case Left(badRequest) => badRequest
-      case Right(maybeBookmarkId) => Async {
+  private def getBookmarkExternalId(id: String): Option[ExternalId[Bookmark]] = {
+    db.readOnly { implicit s => ExternalId.asOpt[Bookmark](id).flatMap(bookmarkRepo.getOpt) } map (_.externalId)
+  }
+
+  def allKeeps(before: Option[String], after: Option[String], count: Int) = AuthenticatedJsonAction { request =>
+    (before map getBookmarkExternalId, after map getBookmarkExternalId) match {
+      case (Some(None), _) => BadRequest(s"Invalid id for before: ${before.get}")
+      case (_, Some(None)) => BadRequest(s"Invalid id for after: ${after.get}")
+      case (beforeId, afterId) => Async {
         val keeps = db.readOnly { implicit s =>
-          bookmarkRepo.getByUser(request.userId, maybeBookmarkId, count)
+          bookmarkRepo.getByUser(request.userId, beforeId.flatten, afterId.flatten, count)
         }
         searchClient.sharingUserInfo(request.userId, keeps.map(_.uriId)) map { infos =>
           val idToBasicUser = db.readOnly { implicit s =>
@@ -59,6 +57,7 @@ class BookmarksController @Inject() (
         } map { keepsWithKeepers =>
           Ok(Json.obj(
             "before" -> before,
+            "after" -> after,
             "keeps" -> keepsWithKeepers
           ))
         }
