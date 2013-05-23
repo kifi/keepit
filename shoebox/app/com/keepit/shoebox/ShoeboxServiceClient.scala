@@ -18,6 +18,8 @@ import com.keepit.controllers.shoebox._
 import com.keepit.model._
 import com.keepit.serializer._
 import play.api.libs.json._
+import com.keepit.search.ActiveExperimentsCache
+import com.keepit.search.ActiveExperimentsKey
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -47,7 +49,9 @@ trait ShoeboxServiceClient extends ServiceClient {
 case class ShoeboxCacheProvider @Inject() (
     uriIdCache: NormalizedURICache,
     clickHistoryCache: ClickHistoryUserIdCache,
-    browsingHistoryCache: BrowsingHistoryUserIdCache)
+    browsingHistoryCache: BrowsingHistoryUserIdCache,
+    activeSearchConfigExperimentsCache: ActiveExperimentsCache,
+    userExperimentCache: UserExperimentCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val host: String,
@@ -142,9 +146,12 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getActiveExperiments: Future[Seq[SearchConfigExperiment]] ={
-    call(routes.ShoeboxController.getActiveExperiments).map{ r =>
-      r.json.as[JsArray].value.map{SearchConfigExperimentSerializer.serializer.reads(_).get}
+  def getActiveExperiments: Future[Seq[SearchConfigExperiment]] = {
+    cacheProvider.activeSearchConfigExperimentsCache.get(ActiveExperimentsKey) match {
+      case Some(exps) => Promise.successful(exps).future
+      case None => call(routes.ShoeboxController.getActiveExperiments).map { r =>
+        r.json.as[JsArray].value.map { SearchConfigExperimentSerializer.serializer.reads(_).get }
+      }
     }
   }
   def getExperiments: Future[Seq[SearchConfigExperiment]] = {
@@ -163,9 +170,13 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
   def hasExperiment(userId: Id[User], state: State[ExperimentType]): Future[Boolean] = {
-    call(routes.ShoeboxController.hasExperiment(userId, state)).map{ r =>
-      r.json.as[Boolean]
+    cacheProvider.userExperimentCache.get(UserExperimentUserIdKey(userId)) match {
+      case Some(expTypes) => Promise.successful(expTypes.contains(state)).future
+      case None => call(routes.ShoeboxController.hasExperiment(userId, state)).map { r =>
+        r.json.as[Boolean]
+      }
     }
+
   }
 
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]] = {

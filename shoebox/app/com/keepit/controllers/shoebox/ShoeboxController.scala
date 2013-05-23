@@ -72,7 +72,7 @@ class ShoeboxController @Inject() (
   clickingHistoryRepo: ClickHistoryRepo,
   clickHistoryTracker: ClickHistoryTracker,
   normUriRepo: NormalizedURIRepo,
-  experimentRepo: SearchConfigExperimentRepo,
+  searchConfigExperimentRepo: SearchConfigExperimentRepo,
   userExperimentRepo: UserExperimentRepo,
   persistEventPlugin: PersistEventPlugin,
   postOffice: LocalPostOffice,
@@ -178,27 +178,27 @@ class ShoeboxController @Inject() (
   }
 
   def getActiveExperiments = Action { request =>
-    val exp = db.readOnly { implicit s => experimentRepo.getActive() }.map {
+    val exp = db.readOnly { implicit s => searchConfigExperimentRepo.getActive() }.map {
       SearchConfigExperimentSerializer.serializer.writes(_)
     }
     Ok(JsArray(exp))
   }
 
   def getExperiments = Action { request =>
-    val exp = db.readOnly { implicit s => experimentRepo.getNotInactive() }.map {
+    val exp = db.readOnly { implicit s => searchConfigExperimentRepo.getNotInactive() }.map {
       SearchConfigExperimentSerializer.serializer.writes(_)
     }
     Ok(JsArray(exp))
   }
 
   def getExperiment(id: Id[SearchConfigExperiment]) = Action{ request =>
-    val exp = db.readOnly { implicit s => experimentRepo.get(id) }
+    val exp = db.readOnly { implicit s => searchConfigExperimentRepo.get(id) }
     Ok( SearchConfigExperimentSerializer.serializer.writes(exp))
   }
 
   def saveExperiment = Action(parse.json) { request =>
     val exp = SearchConfigExperimentSerializer.serializer.reads(request.body).get
-    val saved = db.readWrite { implicit s => experimentRepo.save(exp) }
+    val saved = db.readWrite { implicit s => searchConfigExperimentRepo.save(exp) }
     Ok(SearchConfigExperimentSerializer.serializer.writes(saved))
   }
 
