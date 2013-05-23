@@ -20,10 +20,26 @@ import play.api.http.ContentTypes
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.healthcheck.Healthcheck.SEARCH
+import com.keepit.shoebox.ShoeboxServiceClient
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 
 //note: users.size != count if some users has the bookmark marked as private
-case class PersonalSearchHit(id: Id[NormalizedURI], externalId: ExternalId[NormalizedURI], title: Option[String], url: String)
+case class PersonalSearchHit(id: Id[NormalizedURI], externalId: ExternalId[NormalizedURI], title: Option[String], url: String, isPrivate: Boolean)
+object PersonalSearchHit {
+  import play.api.libs.functional.syntax._
+  import play.api.libs.json._
+  
+  implicit val format = (
+    (__ \ 'id).format(Id.format[NormalizedURI]) and
+    (__ \ 'externalId).format(ExternalId.format[NormalizedURI]) and
+    (__ \ 'title).formatNullable[String] and
+    (__ \ 'url).format[String] and
+    (__ \ 'isPrivate).format[Boolean]
+  )(PersonalSearchHit.apply, unlift(PersonalSearchHit.unapply))
+}
+
 case class PersonalSearchResult(hit: PersonalSearchHit, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[BasicUser], score: Float, isNew: Boolean)
 case class PersonalSearchResultPacket(
   uuid: ExternalId[ArticleSearchResultRef],
@@ -49,7 +65,8 @@ class ExtSearchController @Inject() (
   uriRepo: NormalizedURIRepo,
   basicUserRepo: BasicUserRepo,
   srcFactory: SearchResultClassifierFactory,
-  healthcheckPlugin: HealthcheckPlugin)
+  healthcheckPlugin: HealthcheckPlugin,
+  shoeboxClient: ShoeboxServiceClient)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging{
@@ -140,53 +157,30 @@ class ExtSearchController @Inject() (
   private[ext] def toPersonalSearchResultPacket(userId: Id[User],
       res: ArticleSearchResult, config: SearchConfig, isDefaultFilter: Boolean, experimentId: Option[Id[SearchConfigExperiment]]): PersonalSearchResultPacket = {
 
-
-    val hits = time(s"search-personal-result-${res.hits.size}") {
-      db.readOnly { implicit s =>
-        val t0 = currentDateTime.getMillis()
-        val users = res.hits.map(_.users).flatten.distinct.map(u => u -> basicUserRepo.load(u)).toMap
-        log.info(s"search-personal-a: ${currentDateTime.getMillis()-t0}")
-        val t1 = currentDateTime.getMillis()
-        val h = (res.hits zip res.scorings).map{ case (hit, scoring) => toPersonalSearchResult(userId, users, hit, scoring) }
-        log.info(s"search-personal-d: ${currentDateTime.getMillis()-t1}")
-        h
-      }
-    }
-    log.debug(hits mkString "\n")
-
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
+    val hitsFuture = time(s"search-personal-result-${res.hits.size}") {
+      toPersonalSearchResult2(userId, res).map{r => log.debug(r.mkString("\n")); r}
+    }
+    
+    val hits = Await.result(hitsFuture, 5 seconds)
+    
     PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), experimentId, filter)
   }
-
-  private[ext] def toPersonalSearchResult(userId: Id[User], allUsers: Map[Id[User], BasicUser], res: ArticleHit, scoring: Scoring)(implicit session: RSession): PersonalSearchResult = {
-    val t0 = currentDateTime.getMillis()
-    val uri = uriRepo.get(res.uriId)
-    log.info(s"search-personal-b: ${currentDateTime.getMillis()-t0}")
-    val t1 = currentDateTime.getMillis()
-    val bookmark = if (res.isMyBookmark) bookmarkRepo.getByUriAndUser(uri.id.get, userId) else None
-    log.info(s"search-personal-c: ${currentDateTime.getMillis()-t1}")
-    val users = res.users.map(allUsers)
-
-    // we mark the friend keep "isNew" if recencyScore > 0.5 which means the oldest create time on the hits is
-    // within the halfDecay period. recencyScore is always zero for others' keep.
-    val isNew = (!res.isMyBookmark && scoring.recencyScore > 0.5f)
-
-    PersonalSearchResult(toPersonalSearchHit(uri, bookmark),
-                         res.bookmarkCount,
-                         res.isMyBookmark,
-                         bookmark.exists(_.isPrivate),
-                         users,
-                         res.score,
-                         isNew)
-  }
-
-  private[ext] def toPersonalSearchHit(uri: NormalizedURI, bookmark: Option[Bookmark]) = {
-    val (title, url) = bookmark match {
-      case Some(bookmark) => (bookmark.title, bookmark.url)
-      case None => (uri.title, uri.url)
+  
+  private[ext] def toPersonalSearchResult2(userId: Id[User], resultSet: ArticleSearchResult) = {
+    shoeboxClient.getPersonalSearchInfo(userId, resultSet).map { case (allUsers, personalSearchHits) =>
+      (resultSet.hits, resultSet.scorings, personalSearchHits).zipped.toSeq.map { case (hit, score, personalHit) =>
+        val users = hit.users.map(allUsers)
+        val isNew = (!hit.isMyBookmark && score.recencyScore > 0.5f)
+        PersonalSearchResult(personalHit,
+          hit.bookmarkCount,
+          hit.isMyBookmark,
+          personalHit.isPrivate,
+          users,
+          hit.score,
+          isNew)
+      }
     }
-
-    PersonalSearchHit(uri.id.get, uri.externalId, title, url)
   }
 
 }

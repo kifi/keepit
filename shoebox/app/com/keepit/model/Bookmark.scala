@@ -109,11 +109,23 @@ class BookmarkCountCache @Inject() (val repo: FortyTwoCachePlugin) extends Forty
   def serialize(count: Int) = count
 }
 
+case class BookmarkUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Bookmark] {
+  val namespace = "bookmark_uri_user"
+  def toKey(): String = uriId.id + "#" + userId.id
+}
+
+class BookmarkUriUserCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[BookmarkUriUserKey, Bookmark] {
+  val ttl = 7 days
+  def deserialize(obj: Any): Bookmark = parseJson(obj)
+  def serialize(bookmark: Bookmark) = Json.toJson(bookmark)
+}
+
 @Singleton
 class BookmarkRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
-  val countCache: BookmarkCountCache)
+  val countCache: BookmarkCountCache,
+  bookmarkUriUserCache: BookmarkUriUserCache)
       extends DbRepo[Bookmark] with BookmarkRepo with ExternalIdColumnDbFunction[Bookmark] {
 
   import DBSession._
@@ -140,6 +152,7 @@ class BookmarkRepoImpl @Inject() (
 
   override def invalidateCache(bookmark: Bookmark)(implicit session: RSession) = {
     countCache.remove(BookmarkCountKey())
+    bookmarkUriUserCache.set(BookmarkUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
     bookmark
   }
 
@@ -155,8 +168,10 @@ class BookmarkRepoImpl @Inject() (
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User],
       excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))
       (implicit session: RSession): Option[Bookmark] =
-    (for(b <- table if b.uriId === uriId && b.userId === userId && b.state =!= excludeState.getOrElse(null)) yield b)
-      .sortBy(_.state === BookmarkStates.INACTIVE).firstOption
+    bookmarkUriUserCache.getOrElseOpt(BookmarkUriUserKey(uriId, userId)) {
+      (for(b <- table if b.uriId === uriId && b.userId === userId && b.state =!= excludeState.getOrElse(null)) yield b)
+        .sortBy(_.state === BookmarkStates.INACTIVE).firstOption
+    }
 
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.uriId === uriId && b.state === BookmarkStates.ACTIVE) yield b).list

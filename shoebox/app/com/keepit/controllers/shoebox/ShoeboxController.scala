@@ -29,7 +29,6 @@ import com.keepit.common.healthcheck.Healthcheck
 import com.keepit.model.NormalizedURIRepo
 import com.keepit.model.PhraseRepo
 import com.keepit.shoebox.ClickHistoryTracker
-
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.Action
@@ -40,6 +39,9 @@ import com.keepit.model.BrowsingHistory
 import com.keepit.model.ClickHistoryRepo
 import com.keepit.model.ClickHistory
 import com.keepit.common.db.SequenceNumber
+import com.keepit.common.social.BasicUserRepo
+import com.keepit.controllers.ext.PersonalSearchHit
+import com.keepit.common.social.BasicUser
 
 object ShoeboxController {
   implicit val collectionTupleFormat = (
@@ -64,7 +66,8 @@ class ShoeboxController @Inject() (
   healthcheckPlugin: HealthcheckPlugin,
   phraseRepo: PhraseRepo,
   collectionRepo: CollectionRepo,
-  keepToCollectionRepo: KeepToCollectionRepo)
+  keepToCollectionRepo: KeepToCollectionRepo,
+  basicUserRepo: BasicUserRepo)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
@@ -124,8 +127,42 @@ class ShoeboxController @Inject() (
   def getBookmarks(userId: Id[User]) = Action { request =>
     val bookmarks = db.readOnly { implicit session =>
       bookmarkRepo.getByUser(userId)
-    }.map{BookmarkSerializer.fullBookmarkSerializer.writes(_)}
+    }.map(Json.toJson(_))
     Ok(JsArray(bookmarks))
+  }
+  
+  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]) = Action { request =>
+    val bookmark = db.readOnly { implicit session =>
+      bookmarkRepo.getByUriAndUser(uriId, userId)
+    }.map(Json.toJson(_)).getOrElse(JsNull)
+    Ok(bookmark)
+  }
+  
+  def getPersonalSearchInfo(userId: Id[User], allUsers: String, formattedHits: String) = Action { request =>
+    log.info(s"\n\n\n\n$userId  $allUsers  $formattedHits")
+    val (users, personalSearchHits) = db.readOnly { implicit session =>
+      val neededUsers = (allUsers.split(",").map({u => if(u == "") None else Some(u)}).flatten.map { u =>
+        val user = Id[User](u.toLong)
+        user.toString -> Json.toJson(basicUserRepo.load(user))
+      }).toSeq
+      val personalSearchHits = formattedHits.split(",").map({u => if(u == "") None else Some(u)}).flatten.map { hit =>
+        val param = hit.split(":").toSeq
+        val isMyBookmark = if(param.head == "1") true else false
+        val uriId = Id[NormalizedURI](param.tail.head.toLong)
+        val uri = normUriRepo.get(uriId)
+        
+        (if(isMyBookmark) bookmarkRepo.getByUriAndUser(uriId, userId) else None) match {
+          case Some(bmk) =>
+            PersonalSearchHit(uri.id.get, uri.externalId, bmk.title, bmk.url, bmk.isPrivate)
+          case None =>
+            val uri = normUriRepo.get(uriId)
+            PersonalSearchHit(uri.id.get, uri.externalId, uri.title, uri.url, false)
+        }
+      }
+      (neededUsers, personalSearchHits)
+    }
+
+    Ok(Json.obj("users" -> JsObject(users), "personalSearchHits" -> personalSearchHits))
   }
 
   def getUsersChanged(seqNum: Long) = Action { request =>

@@ -105,4 +105,7 @@ class FakeShoeboxServiceClientImpl @Inject() (
       }
     Promise.successful(uris).future
   }
+  
+  def getBookmarkByUriAndUser(uriId: com.keepit.common.db.Id[com.keepit.model.NormalizedURI],userId: com.keepit.common.db.Id[com.keepit.model.User]): scala.concurrent.Future[Option[com.keepit.model.Bookmark]] = ???
+  def getPersonalSearchInfo(userId: com.keepit.common.db.Id[com.keepit.model.User],resultSet: com.keepit.search.ArticleSearchResult): scala.concurrent.Future[(Map[com.keepit.common.db.Id[com.keepit.model.User],com.keepit.common.social.BasicUser], Seq[com.keepit.controllers.ext.PersonalSearchHit])] = ???
 }
