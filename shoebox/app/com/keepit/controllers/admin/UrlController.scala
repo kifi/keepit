@@ -41,7 +41,7 @@ class UrlController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   clock: Clock,
-  postOffice: PostOffice,
+  postOffice: LocalPostOffice,
   uriRepo: NormalizedURIRepo,
   urlRepo: URLRepo,
   userRepo: UserRepo,

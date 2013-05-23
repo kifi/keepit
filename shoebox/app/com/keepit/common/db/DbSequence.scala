@@ -25,6 +25,7 @@ case class SequenceNumber(value: Long) extends AnyVal with Ordered[SequenceNumbe
 
 object SequenceNumber {
   val ZERO = SequenceNumber(0)
+  val MinValue = SequenceNumber(Long.MinValue)
   implicit val sequenceNumberFormat = new Format[SequenceNumber] {
     def reads(json: JsValue): JsResult[SequenceNumber] = __.read[Long].reads(json).map(SequenceNumber(_))
     def writes(o: SequenceNumber): JsValue = JsNumber(o.value)

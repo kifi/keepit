@@ -44,6 +44,8 @@ class ArticleIndexer @Inject() (
   def run(): Int = run(commitBatchSize, fetchSize)
 
   def run(commitBatchSize: Int, fetchSize: Int): Int = {
+    resetSequenceNumberIfReindex()
+
     log.info("starting a new indexing round")
     try {
       val uris = Await.result(shoeboxClient.getIndexable(sequenceNumber.value, fetchSize), 5 seconds)
@@ -63,8 +65,8 @@ class ArticleIndexer @Inject() (
     }
   }
 
-  def buildIndexable(id: Id[NormalizedURI]): ArticleIndexable = {
-    val uri = Await.result(shoeboxClient.getNormalizedURI(id.id), 5 seconds)
+  def buildIndexable(uriId: Id[NormalizedURI]): ArticleIndexable = {
+    val uri = Await.result(shoeboxClient.getNormalizedURI(uriId), 5 seconds)
     buildIndexable(uri)
   }
 

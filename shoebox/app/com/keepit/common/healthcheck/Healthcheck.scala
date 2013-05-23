@@ -5,6 +5,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 import com.google.inject.Inject
+import com.google.inject.ImplementedBy
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.akka.AlertingActor
 import com.keepit.common.db.slick.Database
@@ -12,14 +13,17 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.PostOffice
+import com.keepit.common.mail.LocalPostOffice
 import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
+
 
 import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
 import play.api.templates.Html
+import com.keepit.common.mail.RemotePostOffice
 
 object Healthcheck {
 
@@ -43,28 +47,43 @@ case class HealthcheckHost(host: String) extends AnyVal {
   override def toString = host
 }
 
-case class SendHealthcheckMail(history: HealthcheckErrorHistory, host: HealthcheckHost) {
+@ImplementedBy(classOf[RemoteHealthcheckMailSender])
+trait HealthcheckMailSender {
+  def sendMail(email: ElectronicMail)
+}
 
-  def sendMail(db: Database, postOffice: PostOffice, services: FortyTwoServices) {
+class RemoteHealthcheckMailSender @Inject() (postOffice: RemotePostOffice) extends HealthcheckMailSender {
+  def sendMail(email: ElectronicMail) = postOffice.queueMail(email)
+}
+class LocalHealthcheckMailSender @Inject() (postOffice: LocalPostOffice, db: Database) extends HealthcheckMailSender {
+  def sendMail(email: ElectronicMail) = db.readWrite(postOffice.sendMail(email)(_))
+}
+
+class MailSender @Inject() (sender: HealthcheckMailSender) {
+  def sendMail(email: ElectronicMail) {
+    sender.sendMail(email)
+  }
+}
+
+class SendHealthcheckMail(history: HealthcheckErrorHistory, host: HealthcheckHost, sender: MailSender, services: FortyTwoServices) {
+
+  def sendMail() {
     if (history.lastError.callType == Healthcheck.EXTENSION) return
-    if (history.count == 1) sendAsanaMail(db, postOffice, services)
-    else sendRegularMail(db, postOffice, services)
+    if (history.count == 1) sendAsanaMail()
+    else sendRegularMail()
   }
 
-  private def sendRegularMail(db: Database, postOffice: PostOffice, services: FortyTwoServices) {
-    db.readWrite { implicit s =>
+  private def sendRegularMail() {
       val subject = s"[REPEATING ERROR][${services.currentService}] ${history.lastError.subjectName}"
       val body = views.html.email.healthcheckMail(history, services.started.toStandardTimeString, host.host).body
-      postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+      sender.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = body, category = PostOffice.Categories.HEALTHCHECK))
-    }
   }
 
-  private def sendAsanaMail(db: Database, postOffice: PostOffice, services: FortyTwoServices) {
-    db.readWrite { implicit s =>
+  private def sendAsanaMail() {
       val started = services.started.toStandardTimeString
       val subject = s"[${services.currentService}] ${history.lastError.subjectName}"
-      postOffice.sendMail(ElectronicMail(
+      sender.sendMail(ElectronicMail(
         from = EmailAddresses.EISHAY,
         to = EmailAddresses.ASANA_PROD_HEALTH::EmailAddresses.EISHAY::Nil,
         cc = EmailAddresses.ENG_EMAILS,
@@ -72,7 +91,6 @@ case class SendHealthcheckMail(history: HealthcheckErrorHistory, host: Healthche
         htmlBody = views.html.email.healthcheckMail(history, started, host.host).body,
         textBody = Some(views.html.email.healthcheckAsanaMail(history, started, host.host).body),
         category = PostOffice.Categories.ASANA_HEALTHCHECK))
-    }
   }
 }
 
@@ -85,10 +103,9 @@ case class HealthcheckErrorHistory(signature: HealthcheckErrorSignature, count: 
 }
 
 class HealthcheckActor @Inject() (
-    postOffice: PostOffice,
     services: FortyTwoServices,
     host: HealthcheckHost,
-    db: Database)
+    emailSender: MailSender)
   extends AlertingActor {
 
   def alert(reason: Throwable, message: Option[Any]) = self ! error(reason, message)
@@ -99,12 +116,11 @@ class HealthcheckActor @Inject() (
     case ReportErrorsAction =>
       errors.values filter { _.countSinceLastAlert > 0 } foreach { history =>
         errors(history.signature) = history.reset()
-        self ! SendHealthcheckMail(history, host)
+        new SendHealthcheckMail(history, host, emailSender, services).sendMail()
       }
     case GetErrors =>
       val lastErrors: Seq[HealthcheckError] = errors.values map {history => history.lastError} toSeq;
       sender ! lastErrors
-    case sendMail: SendHealthcheckMail => sendMail.sendMail(db, postOffice, services)
     case ErrorCount => sender ! errors.values.foldLeft(0)(_ + _.count)
     case ResetErrorCount => errors.clear()
     case error: HealthcheckError =>
@@ -112,12 +128,14 @@ class HealthcheckActor @Inject() (
       val history = errors.contains(signature) match {
         case false =>
           val newHistory = HealthcheckErrorHistory(signature, 1, 0, error)
-          self ! SendHealthcheckMail(newHistory, host)
+          new SendHealthcheckMail(newHistory, host, emailSender, services).sendMail()
           newHistory
         case true =>
           errors(signature).addError(error)
       }
       errors(signature) = history
+    case email: ElectronicMail => emailSender.sendMail(email)
+    
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
@@ -135,9 +153,7 @@ trait HealthcheckPlugin extends SchedulingPlugin {
 class HealthcheckPluginImpl @Inject() (
     actorFactory: ActorFactory[HealthcheckActor],
     services: FortyTwoServices,
-    postOffice: PostOffice,
-    host: HealthcheckHost,
-    db: Database)
+    host: HealthcheckHost)
   extends HealthcheckPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)
@@ -164,19 +180,23 @@ class HealthcheckPluginImpl @Inject() (
     error
   }
 
-  override def reportStart() = db.readWrite { implicit s =>
+  override def reportStart() = {
     val subject = s"Service ${services.currentService} started"
     val message = Html(s"Service version ${services.currentVersion} started at ${currentDateTime} on $host. Service compiled at ${services.compilationTime}")
-    postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+    val email = (ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
         category = PostOffice.Categories.HEALTHCHECK))
+    actor ! email
+    email
   }
 
-  override def reportStop() = db.readWrite { implicit s =>
+  override def reportStop() = {
     val subject = s"Service ${services.currentService} stopped"
     val message = Html(s"Service version ${services.currentVersion} stopped at ${currentDateTime} on $host. Service compiled at ${services.compilationTime}")
-    postOffice.sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
+    val email = (ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
         category = PostOffice.Categories.HEALTHCHECK))
+    actor ! email
+    email
   }
 }

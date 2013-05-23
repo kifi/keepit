@@ -33,7 +33,7 @@ class SearchModuleTest extends Specification with Logging {
         for (c <- classes) inject(classType[Controller](c), current)
         val injector = current.global.asInstanceOf[FortyTwoGlobal].injector
         val bindings = injector.getAllBindings()
-        val exclude: Set[Class[_]] = Set(classOf[FortyTwoActor], classOf[AlertingActor], classOf[MemcachedClient])
+        val exclude: Set[Class[_]] = Set(classOf[FortyTwoActor], classOf[AlertingActor], classOf[akka.actor.Actor], classOf[MemcachedClient])
         bindings.keySet() filter { key =>
           val klazz = key.getTypeLiteral.getRawType
           val fail = exclude exists { badKalazz =>
@@ -43,8 +43,8 @@ class SearchModuleTest extends Specification with Logging {
         } foreach { key =>
           injector.getInstance(key)
         }
-        inject[EventRepo]
-        inject[EventHelper]
+//        inject[EventRepo]
+//        inject[EventHelper]
         true
       }
     }

@@ -1,11 +1,9 @@
 package com.keepit.search
 
 import java.io.File
-
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.{Directory, MMapDirectory}
 import org.apache.lucene.util.Version
-
 import com.google.inject.{Provides, Singleton}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckPlugin
@@ -22,8 +20,15 @@ import com.keepit.search.phrasedetector.PhraseIndexer
 import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.tzavellas.sse.guice.ScalaModule
-
 import play.api.Play.current
+import com.keepit.common.mail.PostOffice
+import com.keepit.common.mail.RemotePostOffice
+import com.keepit.common.mail.RemotePostOfficeImpl
+import com.keepit.common.healthcheck.RemoteHealthcheckMailSender
+import com.keepit.common.healthcheck.HealthcheckMailSender
+import com.keepit.common.net.HttpClient
+import com.keepit.shoebox.ShoeboxCacheProvider
+import com.keepit.shoebox.ShoeboxServiceClientImpl
 
 class SearchModule() extends ScalaModule with Logging {
 
@@ -31,6 +36,7 @@ class SearchModule() extends ScalaModule with Logging {
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
+    bind[RemotePostOffice].to[RemotePostOfficeImpl]
   }
 
   private def getDirectory(maybeDir: Option[String]): Directory = {
@@ -59,11 +65,11 @@ class SearchModule() extends ScalaModule with Logging {
   @Singleton
   @Provides
   def uriGraph(bookmarkRepo: BookmarkRepo,
-    db: Database): URIGraph = {
+    db: Database, shoeboxClient: ShoeboxServiceClient): URIGraph = {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new URIGraphImpl(dir, config, URIGraphFields.decoders(), bookmarkRepo, db)
+    new URIGraphImpl(dir, config, URIGraphFields.decoders(), bookmarkRepo, db, shoeboxClient)
   }
 
   @Singleton
@@ -83,6 +89,53 @@ class SearchModule() extends ScalaModule with Logging {
     val spellDir = getDirectory(current.configuration.getString("index.spell.directory"))
     val articleDir = getDirectory(current.configuration.getString("index.article.directory"))
     SpellCorrector(spellDir, articleDir)
+  }
+  
+  @Singleton
+  @Provides
+  def clickHistoryBuilder: ClickHistoryBuilder = {
+    val conf = current.configuration.getConfig("click-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+    
+    new ClickHistoryBuilder(filterSize, numHashFuncs, minHits)
+  }
+  
+  @Singleton
+  @Provides
+  def browsingHistoryBuilder: BrowsingHistoryBuilder = {
+    val conf = current.configuration.getConfig("browsing-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+    
+    new BrowsingHistoryBuilder(filterSize, numHashFuncs, minHits)
+  }
+  
+  @Singleton
+  @Provides
+  def resultClickTracker: ResultClickTracker = {
+    val conf = current.configuration.getConfig("result-click-tracker").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val syncEvery = conf.getInt("syncEvery").get
+    val dirPath = conf.getString("dir").get
+    val dir = new File(dirPath).getCanonicalFile()
+    if (!dir.exists()) {
+      if (!dir.mkdirs()) {
+        throw new Exception(s"could not create dir $dir")
+      }
+    }
+    ResultClickTracker(dir, numHashFuncs, syncEvery)
+  }
+  
+  @Singleton
+  @Provides
+  def shoeboxServiceClient (client: HttpClient, cacheProvider: ShoeboxCacheProvider): ShoeboxServiceClient = {
+    new ShoeboxServiceClientImpl(
+      current.configuration.getString("service.shoebox.host").get,
+      current.configuration.getInt("service.shoebox.port").get,
+      client, cacheProvider)
   }
 
 }

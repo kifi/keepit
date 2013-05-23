@@ -135,9 +135,9 @@ class AdditiveBoostWeight(override val query: AdditiveBoostQuery, override val s
 
 class AdditiveBoostScorer(weight: AdditiveBoostWeight, textScorer: Scorer with Coordinator, boosterScorers: Array[Scorer])
 extends Scorer(weight) with Coordinator with Logging {
-  protected var doc = -1
-  protected var scoredDoc = -1
-  protected var scr = 0.0f
+  private[this] var doc = -1
+  private[this] var scoredDoc = -1
+  private[this] var scr = 0.0f
 
   override def docID(): Int = doc
   override def nextDoc(): Int = {

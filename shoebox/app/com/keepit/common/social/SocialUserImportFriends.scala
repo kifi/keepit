@@ -1,32 +1,13 @@
 package com.keepit.common.social
 
-import scala.collection.mutable.MutableList
-import com.keepit.search.ArticleStore
-import com.keepit.search.Article
-import com.keepit.model._
-import play.api.Plugin
-import play.api.templates.Html
-import akka.util.Timeout
-import akka.actor._
-import akka.actor.Actor._
-import akka.actor.ActorRef
-import play.api.libs.concurrent.Execution.Implicits._
-import akka.pattern.ask
-import scala.concurrent.Await
-import play.api.libs.concurrent._
-import org.joda.time.DateTime
-import com.google.inject.Provider
-import scala.collection.mutable.{Map => MutableMap}
-import com.keepit.common.db._
+import com.google.inject.Inject
 import com.keepit.common.db.slick._
+import com.keepit.common.logging.Logging
+import com.keepit.model._
+
 import play.api.Play
 import play.api.Play.current
-import play.api.libs.json.JsArray
-import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
-import play.api.libs.json.JsValue
-import java.sql.Connection
-import com.keepit.common.logging.Logging
-import com.google.inject.Inject
+import play.api.libs.json.{JsObject, JsArray, JsValue}
 
 class SocialUserImportFriends @Inject() (
     db: Database,
@@ -67,11 +48,21 @@ class SocialUserImportFriends @Inject() (
     }
   }
 
-  private def extractFriends(parentJson: JsValue): Seq[JsValue] = (parentJson \\ "data").head.asInstanceOf[JsArray].value
+  private def extractFriends(parentJson: JsValue): Seq[JsValue] =
+    (parentJson \\ "data").head match {
+      case JsArray(values) => values
+      case JsObject(Seq()) => Seq() // Workaround for bug in Facebook graph API when a user has no friends.
+    }
 
-  private def createSocialUserInfo(friend: JsValue): (SocialUserInfo, JsValue) = (SocialUserInfo(fullName = (friend \ "name").asOpt[String].getOrElse(""), socialId = SocialId((friend \ "id").as[String]),
-                                                networkType = SocialNetworks.FACEBOOK, state = SocialUserInfoStates.FETCHED_USING_FRIEND), friend)
+  private def createSocialUserInfo(friend: JsValue): (SocialUserInfo, JsValue) =
+    (SocialUserInfo(
+      fullName = (friend \ "name").asOpt[String].getOrElse(""),
+      socialId = SocialId((friend \ "id").as[String]),
+      networkType = SocialNetworks.FACEBOOK,
+      state = SocialUserInfoStates.FETCHED_USING_FRIEND
+    ), friend)
 
-  private def createSocialUserRawInfo(socialUserInfo: SocialUserInfo, friend: JsValue) = SocialUserRawInfo(socialUserInfo = socialUserInfo, json = friend)
+  private def createSocialUserRawInfo(socialUserInfo: SocialUserInfo, friend: JsValue) =
+    SocialUserRawInfo(socialUserInfo = socialUserInfo, json = friend)
 
 }

@@ -63,7 +63,7 @@ class URIGraphPluginImpl @Inject() (
   override def update(): Future[Int] = actor.ask(Update)(1 minutes).mapTo[Int]
 
   override def reindex() {
-    uriGraph.sequenceNumber = SequenceNumber.ZERO
+    uriGraph.reindex()
     actor ! Update
   }
 }

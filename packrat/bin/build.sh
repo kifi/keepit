@@ -9,7 +9,7 @@ cp -R adapters/firefox out/
 cp adapters/shared/*.js out/chrome/
 cp adapters/shared/*.js out/firefox/lib/
 
-for d in html icons images scripts styles; do
+for d in html icons images media scripts styles; do
   cp -R $d out/chrome/
   cp -R $d out/firefox/data/
 done

@@ -59,6 +59,15 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     _sequenceNumber = n
   }
 
+  private[this] var resetSequenceNumber = false
+  def reindex() { resetSequenceNumber = true }
+  protected def resetSequenceNumberIfReindex() {
+    if (resetSequenceNumber) {
+      resetSequenceNumber = false
+      sequenceNumber = SequenceNumber.MinValue
+    }
+  }
+
   def doWithIndexWriter(f: IndexWriter=>Unit) = {
     try {
       indexWriterLock.synchronized{ f(indexWriter) }

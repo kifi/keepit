@@ -128,6 +128,8 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) extends L
         docValues.get(userDocId, ref)
         if (ref.length > 0) {
           return URIList(ref.bytes, ref.offset, ref.length)
+        } else {
+          log.error(s"missing uri list data: ${field}")
         }
       }
     }
