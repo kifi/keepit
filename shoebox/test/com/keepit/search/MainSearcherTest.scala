@@ -36,9 +36,8 @@ import com.keepit.common.net.HttpClient
 import com.keepit.common.net.FakeHttpClient
 import play.api.libs.json.JsArray
 import com.keepit.common.net._
-import com.keepit.shoebox.ClickHistoryTracker
-import com.keepit.shoebox.BrowsingHistoryTracker
-import com.keepit.shoebox.ClickHistoryTracker
+import com.keepit.search.graph.CollectionIndexer
+import com.keepit.search.graph.CollectionFields
 
 class MainSearcherTest extends Specification with DbRepos {
 
@@ -53,7 +52,9 @@ class MainSearcherTest extends Specification with DbRepos {
   def initIndexes(store: ArticleStore) = {
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     val articleIndexer = new ArticleIndexer(new RAMDirectory, config, store, db, inject[NormalizedURIRepo], null, inject[ShoeboxServiceClient])
-    val uriGraph = new URIGraphImpl(new URIGraphIndexer(new RAMDirectory, config, URIGraphFields.decoders(), bookmarkRepo, db, inject[ShoeboxServiceClient]))
+    val uriGraph = new URIGraphImpl(
+        new URIGraphIndexer(new RAMDirectory, config, URIGraphFields.decoders(), bookmarkRepo, db, inject[ShoeboxServiceClient]),
+        new CollectionIndexer(new RAMDirectory, config, CollectionFields.decoders(), inject[CollectionRepo], inject[KeepToCollectionRepo], bookmarkRepo, db, inject[ShoeboxServiceClient]))
     implicit val clock = inject[Clock]
     implicit val fortyTwoServices = inject[FortyTwoServices]
     val mainSearcherFactory = new MainSearcherFactory(

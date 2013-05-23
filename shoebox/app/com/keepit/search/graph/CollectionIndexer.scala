@@ -94,7 +94,7 @@ class CollectionIndexer(
   }
 
   def buildIndexable(collectionIdAndSequenceNumber: (Id[Collection], Id[User], SequenceNumber)): CollectionListIndexable = {
-    val (collectionId, seq) = collectionIdAndSequenceNumber
+    val (collectionId, userId, seq) = collectionIdAndSequenceNumber
     val bookmarks = db.readOnly { implicit session =>
       keepToCollectionRepo.getBookmarksInCollection(collectionId).map{ bookmarkRepo.get(_) }
     }

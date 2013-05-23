@@ -178,18 +178,16 @@ class SearchDevModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def uriGraph(bookmarkRepo: BookmarkRepo, db: Database, shoeboxClient: ShoeboxServiceClient): URIGraph = {
-    new URIGraphImpl(uriGraphIndexer(bookmarkRepo, db, shoeboxClient))
-  }
-
-  private def uriGraphIndexer(bookmarkRepo: BookmarkRepo, db: Database, shoeboxClient: ShoeboxServiceClient): URIGraphIndexer = {
+  def uriGraphIndexer(bookmarkRepo: BookmarkRepo, db: Database, shoeboxClient: ShoeboxServiceClient): URIGraphIndexer = {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     new URIGraphIndexer(dir, config, URIGraphFields.decoders(), bookmarkRepo, db, shoeboxClient)
   }
 
-  private def collectionIndexer(collectionRepo: CollectionRepo, keepToCollectionRepo: KeepToCollectionRepo, bookmarkRepo: BookmarkRepo, db: Database, shoeboxClient: ShoeboxServiceClient): CollectionIndexer = {
+  @Singleton
+  @Provides
+  def collectionIndexer(collectionRepo: CollectionRepo, keepToCollectionRepo: KeepToCollectionRepo, bookmarkRepo: BookmarkRepo, db: Database, shoeboxClient: ShoeboxServiceClient): CollectionIndexer = {
     val dir = getDirectory(current.configuration.getString("index.collection.directory"))
     log.info(s"storing collection index in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)

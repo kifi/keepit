@@ -1,8 +1,10 @@
 package com.keepit.search.graph
 
+import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db._
 import com.keepit.model._
 
+@ImplementedBy(classOf[URIGraphImpl])
 trait URIGraph {
   def update(): Int
   def update(userId: Id[User]): Int
@@ -11,7 +13,12 @@ trait URIGraph {
   def close(): Unit
 }
 
-class URIGraphImpl(val uriGraphIndexer: URIGraphIndexer) extends URIGraph {
+@Singleton
+class URIGraphImpl @Inject()(
+    val uriGraphIndexer: URIGraphIndexer,
+    val collectionIndexer: CollectionIndexer
+  ) extends URIGraph {
+
   def update(): Int = {
     uriGraphIndexer.update()
   }

@@ -99,7 +99,8 @@ class URIGraphTest extends Specification with DbRepos {
   private def mkURIGraph(graphDir: RAMDirectory = new RAMDirectory): URIGraphImpl = {
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     val uriGraphIndexer = new URIGraphIndexer(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db, inject[ShoeboxServiceClient])
-    new URIGraphImpl(uriGraphIndexer)
+    val collectionIndexer = new CollectionIndexer(graphDir, config, URIGraphFields.decoders(), inject[CollectionRepo], inject[KeepToCollectionRepo], bookmarkRepo, db, inject[ShoeboxServiceClient])
+    new URIGraphImpl(uriGraphIndexer, collectionIndexer)
   }
 
   class Searchable(uriGraphSearcher: URIGraphSearcher) {
@@ -279,6 +280,8 @@ class URIGraphTest extends Specification with DbRepos {
           })) {
         val (users, uris) = setupDB
         val graph = mkURIGraph()
+        graph.update()
+
         val searcher = graph.getURIGraphSearcher()
 
         searcher.getUserToUriEdgeSet(Id[User](10000)).destIdSet.isEmpty === true
@@ -306,6 +309,8 @@ class URIGraphTest extends Specification with DbRepos {
             }
           })) {
         val graph = mkURIGraph()
+        graph.update()
+
         val searcher = graph.getURIGraphSearcher()
         searcher.intersectAny(new TestDocIdSetIterator(1, 2, 3), new TestDocIdSetIterator(2, 4, 6)) === true
         searcher.intersectAny(new TestDocIdSetIterator(       ), new TestDocIdSetIterator(       )) === false
@@ -333,6 +338,7 @@ class URIGraphTest extends Specification with DbRepos {
           }
         }
         val graph = mkURIGraph()
+        graph.update()
 
         val personaltitle = new TermQuery(new Term(URIGraphFields.titleField, "personaltitle"))
         val bmt1 = new TermQuery(new Term(URIGraphFields.titleField, "bmt1"))
