@@ -78,21 +78,7 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
 
   private val propertyFileName = "searchconfig.properties"
 
-  lazy val defaultConfig = {
-    configDir.flatMap{ dir =>
-      val file = new File(dir, propertyFileName)
-      if (file.exists()) {
-        val prop = new Properties()
-        prop.load(new FileInputStream(file))
-        val defaults = SearchConfig.defaultParams.foldLeft(Map.empty[String, String]){
-          case (m, (k, v)) => m + (k -> Option(prop.getProperty(k)).getOrElse(v))
-        }
-        Some(new SearchConfig(defaults))
-      } else {
-        None
-      }
-    }.getOrElse(new SearchConfig(SearchConfig.defaultParams))
-  }
+  lazy val defaultConfig = new SearchConfig(SearchConfig.defaultParams)
 
   def activeExperiments: Seq[SearchConfigExperiment] =
     Await.result(shoeboxClient.getActiveExperiments, 5 seconds)

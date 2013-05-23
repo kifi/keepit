@@ -37,6 +37,7 @@ trait SearchServiceClient extends ServiceClient {
   def showUserConfig(id: Id[User]): Future[Html]
   def setUserConfig(id: Id[User], params: Map[String, String]): Future[Unit]
   def resetUserConfig(id: Id[User]): Future[Unit]
+  def getSearchDefaultConfig: Future[SearchConfig]
   def getSearchStatistics(queryUUID: String, queryString: String, userId: Id[User], labeledUris: Map[Id[NormalizedURI], UriLabel]): Future[JsArray]
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html]
   def dumpLuceneDocument(uri: Id[NormalizedURI]): Future[Html]
@@ -161,5 +162,12 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
 
   def resetUserConfig(id: Id[User]): Future[Unit] = {
     call(routes.SearchConfigController.resetUserConfig(id)).map(r => ())
+  }
+
+  def getSearchDefaultConfig: Future[SearchConfig]  = {
+    call(routes.SearchConfigController.getSearchDefaultConfig).map{ r =>
+      val param = Json.fromJson[Map[String, String]](r.json).get
+      new SearchConfig(param)
+    }
   }
 }

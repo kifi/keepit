@@ -24,7 +24,8 @@ class ShoeboxModuleTest extends Specification with Logging {
 
   "Module" should {
     "instantiate controllers" in {
-      running(new ShoeboxApplication().withFakeMail().withFakeCache().withS3DevModule().withFakePersistEvent.withShoeboxServiceModule) {
+      running(new ShoeboxApplication().withFakeMail().withFakeCache()
+          .withS3DevModule().withFakePersistEvent.withShoeboxServiceModule.withSearchConfigModule) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {
           case (_, _, ClassRoute(className)) => Class.forName(className)

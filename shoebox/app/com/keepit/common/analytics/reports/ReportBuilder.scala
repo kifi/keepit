@@ -9,12 +9,14 @@ import com.google.inject.Inject
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.search.{SearchConfigManager, SearchConfigExperiment}
+import com.keepit.search.{SearchConfigExperiment}
 import akka.actor.ActorSystem
 import akka.actor.Cancellable
 import akka.actor.Props
 import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.common.analytics.MongoEventStore
+import com.keepit.search.SearchConfigExperimentRepo
+import com.keepit.common.db.slick.Database
 
 class ReportGroup(val name: String, val reports: Seq[ReportRepo])
 
@@ -122,7 +124,8 @@ trait ReportBuilderPlugin extends SchedulingPlugin {
 
 class ReportBuilderPluginImpl @Inject() (
   actorFactory: ActorFactory[ReportBuilderActor],
-  searchConfigManager: SearchConfigManager,
+  db: Database,
+  searchConfigExperimentRepo: SearchConfigExperimentRepo,
   reportStore: ReportStore,
   store: MongoEventStore,
   dailyReports: DailyReports)
@@ -141,7 +144,7 @@ class ReportBuilderPluginImpl @Inject() (
   override def reportCron(): Unit = {
     if (currentDateTime.hourOfDay().get() == 3) {// 3am PST
       actor ! BuildReports(defaultStartTime, defaultEndTime,
-        searchExperimentReports(searchConfigManager.activeExperiments))
+         searchExperimentReports(db.readOnly { implicit s => searchConfigExperimentRepo.getActive() }))
       actor ! BuildReports(defaultStartTime, defaultEndTime, dailyReports)
     }
   }
