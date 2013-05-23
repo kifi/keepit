@@ -16,7 +16,7 @@ import com.keepit.search.graph.URIGraphImpl
 import com.keepit.search.graph.{URIGraphPluginImpl, URIGraphPlugin, URIGraph}
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.{ArticleIndexerPluginImpl, ArticleIndexerPlugin, ArticleIndexer}
-import com.keepit.search.phrasedetector.PhraseIndexer
+import com.keepit.search.phrasedetector.{PhraseIndexerImpl, PhraseIndexer}
 import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.tzavellas.sse.guice.ScalaModule
@@ -73,13 +73,16 @@ class SearchModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def phraseIndexer(db: Database, phraseRepo: PhraseRepo): PhraseIndexer = {
+  def phraseIndexer(shoeboxClient: ShoeboxServiceClient): PhraseIndexer = {
     val dir = getDirectory(current.configuration.getString("index.phrase.directory"))
     val dataDir = current.configuration.getString("index.config").map{ path =>
       val configDir = new File(path).getCanonicalFile()
       new File(configDir, "phrase")
     }
-    PhraseIndexer(dir, db, phraseRepo)
+    val analyzer = DefaultAnalyzer.forIndexing
+    val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
+    new PhraseIndexerImpl(dir, config, shoeboxClient)
+
   }
 
   @Singleton

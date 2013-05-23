@@ -32,6 +32,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def persistServerSearchEvent(metaData: JsObject): Unit
   def getClickHistoryFilter(userId: Id[User]): Future[Array[Byte]]
   def getBrowsingHistoryFilter(userId: Id[User]): Future[Array[Byte]]
+  def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]]
   def getBookmarksInCollection(id: Id[Collection]): Future[Seq[Bookmark]]
   def getCollectionsChanged(seqNum: SequenceNumber): Future[Seq[(Id[Collection], Id[User], SequenceNumber)]]
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]]
@@ -112,6 +113,12 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def persistServerSearchEvent(metaData: JsObject): Unit ={
      call(routes.ShoeboxController.persistServerSearchEvent, metaData)
+  }
+
+  def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]] = {
+    call(routes.ShoeboxController.getPhrasesByPage(page, size)).map { r =>
+      r.json.as[JsArray].value.map(jsv => PhraseSerializer.phraseSerializer.reads(jsv).get)
+    }
   }
 
   def getCollectionsChanged(seqNum: SequenceNumber): Future[Seq[(Id[Collection], Id[User], SequenceNumber)]] = {

@@ -98,6 +98,7 @@ trait DbRepos {
   def unscrapableRepo = inject[UnscrapableRepo]
   def notificationRepo = inject[UserNotificationRepo]
   def scrapeInfoRepo = inject[ScrapeInfoRepo]
+  def phraseRepo = inject[PhraseRepo]
 }
 
 object TestDbInfo {

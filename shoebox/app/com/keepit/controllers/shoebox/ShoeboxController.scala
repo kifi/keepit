@@ -19,6 +19,15 @@ import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.serializer._
 import com.keepit.shoebox.BrowsingHistoryTracker
+import com.keepit.model.NormalizedURI
+import com.keepit.common.mail.LocalPostOffice
+import play.api.libs.json.Json
+import com.keepit.common.mail.ElectronicMail
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.common.healthcheck.Healthcheck
+import com.keepit.model.NormalizedURIRepo
+import com.keepit.model.PhraseRepo
 import com.keepit.shoebox.ClickHistoryTracker
 
 import play.api.libs.functional.syntax._
@@ -52,9 +61,10 @@ class ShoeboxController @Inject() (
   normUriRepo: NormalizedURIRepo,
   persistEventPlugin: PersistEventPlugin,
   postOffice: LocalPostOffice,
+  healthcheckPlugin: HealthcheckPlugin,
+  phraseRepo: PhraseRepo,
   collectionRepo: CollectionRepo,
-  keepToCollectionRepo: KeepToCollectionRepo,
-  healthcheckPlugin: HealthcheckPlugin)
+  keepToCollectionRepo: KeepToCollectionRepo)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
@@ -152,6 +162,14 @@ class ShoeboxController @Inject() (
         .map { friendId => JsNumber(friendId.id) }
     }
     Ok(JsArray(ids))
+  }
+
+  def getPhrasesByPage(page: Int, size: Int) = Action { request =>
+    val phrases = db.readOnly { implicit s =>
+      phraseRepo.page(page,size).map(PhraseSerializer.phraseSerializer.writes(_))
+    }
+
+    Ok(JsArray(phrases))
   }
 
   def getCollectionsByUser(userId: Id[User]) = Action { request =>

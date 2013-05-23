@@ -2,31 +2,23 @@ package com.keepit.search.phrasedetector
 
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
-import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
-import com.keepit.model.{PhraseRepo, Phrase}
-import com.keepit.search.index.DefaultAnalyzer
-import com.keepit.search.index.DocUtil
+import com.keepit.model.Phrase
 import com.keepit.search.index.Indexer
 import com.keepit.search.index.Indexable
-import com.keepit.search.index.FieldDecoder
 import com.keepit.search.Lang
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.DocsAndPositionsEnum
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.store.Directory
-import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.PriorityQueue
-import org.apache.lucene.util.Version
-import java.io.File
-import java.io.FileReader
-import java.io.LineNumberReader
-import java.io.IOException
-import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.google.inject.{Inject, Singleton}
 import scala.slick.util.CloseableIterator
-import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConversions._
+import com.keepit.shoebox.ShoeboxServiceClient
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 object PhraseDetector {
   val fieldName = "p"
@@ -105,23 +97,12 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
   }
 }
 
-
-object PhraseIndexer {
-  def apply(db: Database, phraseRepo: PhraseRepo): PhraseIndexer = apply(new RAMDirectory, db, phraseRepo)
-
-  def apply(indexDirectory: Directory, db: Database, phraseRepo: PhraseRepo): PhraseIndexer  = {
-    val analyzer = DefaultAnalyzer.forIndexing
-    val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
-    new PhraseIndexerImpl(indexDirectory, db, phraseRepo, config)
-  }
-}
-
 abstract class PhraseIndexer(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig) extends Indexer[Phrase](indexDirectory, indexWriterConfig) {
   def reload(): Unit
   def reload(indexableIterator: Iterator[PhraseIndexable], refresh: Boolean = true): Unit
 }
 
-class PhraseIndexerImpl(indexDirectory: Directory, db: Database, phraseRepo: PhraseRepo, indexWriterConfig: IndexWriterConfig) extends PhraseIndexer(indexDirectory, indexWriterConfig) with Logging  {
+class PhraseIndexerImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, shoeboxClient: ShoeboxServiceClient) extends PhraseIndexer(indexDirectory, indexWriterConfig) with Logging  {
 
   final val BATCH_SIZE = 200000
 
@@ -132,10 +113,8 @@ class PhraseIndexerImpl(indexDirectory: Directory, db: Database, phraseRepo: Phr
         var page = 0
         private def update() = {
           if(cache.size <= 1) {
-            db.readOnly { implicit session =>
-              cache = cache ++ phraseRepo.page(page, BATCH_SIZE).map(p => new PhraseIndexable(p.id.get, p.phrase, p.lang))
+              cache = cache ++ Await.result(shoeboxClient.getPhrasesByPage(page, BATCH_SIZE), 5 seconds).map(p => new PhraseIndexable(p.id.get, p.phrase, p.lang))
               page += 1
-            }
           }
         }
 
