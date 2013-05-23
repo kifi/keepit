@@ -114,11 +114,4 @@ class CommonModule extends ScalaModule with Logging {
     }.get
   }
 
-  @Singleton
-  @Provides
-  def searchConfigManager(shoeboxClient: ShoeboxServiceClient): SearchConfigManager = {
-    // This is needed still by Shoebox because of reports. Need to split.
-    val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
-    new SearchConfigManager(optFile, shoeboxClient)
-  }
 }

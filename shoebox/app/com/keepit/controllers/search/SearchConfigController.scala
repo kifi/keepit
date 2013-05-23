@@ -33,6 +33,10 @@ class SearchConfigController @Inject() (
   store: MongoEventStore)
     extends SearchServiceController {
 
+  def getSearchDefaultConfig = Action{ request =>
+    Ok(Json.toJson(configManager.defaultConfig.params))
+  }
+
   def showUserConfig(userId: Id[User]) = Action { implicit request =>
     val user = db.readOnly { implicit s =>
       userWithSocialRepo.toUserWithSocial(userRepo.get(userId))
