@@ -28,6 +28,9 @@ import com.keepit.common.mail.RemotePostOffice
 import com.keepit.common.mail.RemotePostOfficeImpl
 import com.keepit.common.healthcheck.RemoteHealthcheckMailSender
 import com.keepit.common.healthcheck.HealthcheckMailSender
+import com.keepit.common.net.HttpClient
+import com.keepit.shoebox.ShoeboxCacheProvider
+import com.keepit.shoebox.ShoeboxServiceClientImpl
 
 class SearchModule() extends ScalaModule with Logging {
 
@@ -117,6 +120,31 @@ class SearchModule() extends ScalaModule with Logging {
     val minHits = conf.getInt("minHits").get
 
     new BrowsingHistoryBuilder(filterSize, numHashFuncs, minHits)
+  }
+  
+  @Singleton
+  @Provides
+  def resultClickTracker: ResultClickTracker = {
+    val conf = current.configuration.getConfig("result-click-tracker").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val syncEvery = conf.getInt("syncEvery").get
+    val dirPath = conf.getString("dir").get
+    val dir = new File(dirPath).getCanonicalFile()
+    if (!dir.exists()) {
+      if (!dir.mkdirs()) {
+        throw new Exception(s"could not create dir $dir")
+      }
+    }
+    ResultClickTracker(dir, numHashFuncs, syncEvery)
+  }
+  
+  @Singleton
+  @Provides
+  def shoeboxServiceClient (client: HttpClient, cacheProvider: ShoeboxCacheProvider): ShoeboxServiceClient = {
+    new ShoeboxServiceClientImpl(
+      current.configuration.getString("service.shoebox.host").get,
+      current.configuration.getInt("service.shoebox.port").get,
+      client, cacheProvider)
   }
 
 }
