@@ -62,8 +62,6 @@ class URIGraphImpl(
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
     decoders: Map[String, FieldDecoder],
-    bookmarkRepo: BookmarkRepo,
-    db: Database,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[User](indexDirectory, indexWriterConfig, decoders) with URIGraph {
 
@@ -85,10 +83,7 @@ class URIGraphImpl(
 
   def update(): Int = update{
     resetSequenceNumberIfReindex()
-
-    db.readOnly { implicit s =>
-      bookmarkRepo.getUsersChanged(sequenceNumber)
-    }
+    Await.result(shoeboxClient.getUsersChanged(sequenceNumber), 5 seconds)
   }
 
   def update(userId: Id[User]): Int = update{ Seq((userId, SequenceNumber.MinValue)) }
@@ -111,9 +106,7 @@ class URIGraphImpl(
 
   def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber)): URIListIndexable = {
     val (userId, seq) = userIdAndSequenceNumber
-    val bookmarks = db.readOnly { implicit session =>
-      bookmarkRepo.getByUser(userId)
-    }
+    val bookmarks = Await.result(shoeboxClient.getBookmarks(userId), 5 seconds)
     new URIListIndexable(id = userId,
                          sequenceNumber = seq,
                          isDeleted = false,

@@ -55,8 +55,11 @@ class FakeShoeboxServiceClientImpl @Inject() (
      promise[Seq[NormalizedURI]]().success(uris).future
   }
 
-  def getBookmarks(userId: Id[User]): Future[Bookmark] = {
-    ???
+  def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]] = {
+    val bookmarks = db.readOnly { implicit session =>
+      bookmarkRepo.getByUser(userId)
+    }
+    Promise.successful(bookmarks).future
   }
 
   def getUsersChanged(seqNum: SequenceNumber): Future[Seq[(Id[User], SequenceNumber)]] = {

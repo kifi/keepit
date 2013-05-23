@@ -173,12 +173,11 @@ class SearchDevModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def uriGraph(bookmarkRepo: BookmarkRepo,
-    db: Database, shoeboxClient: ShoeboxServiceClient): URIGraph = {
+  def uriGraph(shoeboxClient: ShoeboxServiceClient): URIGraph = {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new URIGraphImpl(dir, config, URIGraphFields.decoders(), bookmarkRepo, db, shoeboxClient)
+    new URIGraphImpl(dir, config, URIGraphFields.decoders(), shoeboxClient)
   }
 
   @Singleton

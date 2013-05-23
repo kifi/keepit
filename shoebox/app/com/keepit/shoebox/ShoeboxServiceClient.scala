@@ -27,7 +27,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def sendMail(email: ElectronicMail): Future[Boolean]
-  def getBookmarks(userId: Id[User]): Future[Bookmark]
   def getUsersChanged(seqNum: SequenceNumber): Future[Seq[(Id[User], SequenceNumber)]]
   def persistServerSearchEvent(metaData: JsObject): Unit
   def getClickHistoryFilter(userId: Id[User]): Future[Array[Byte]]
@@ -37,7 +36,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getCollectionsChanged(seqNum: SequenceNumber): Future[Seq[(Id[Collection], Id[User], SequenceNumber)]]
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]]
   def getIndexable(seqNum: Long, fetchSize: Int): Future[Seq[NormalizedURI]]
-
+  def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -52,9 +51,12 @@ class ShoeboxServiceClientImpl @Inject() (
   cacheProvider: ShoeboxCacheProvider)
     extends ShoeboxServiceClient {
 
-  def getBookmarks(userId: Id[User]): Future[Bookmark] = {
-    ???
+  def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]] = {
+    call(routes.ShoeboxController.getBookmarks(userId)).map{ r =>
+      r.json.as[JsArray].value.map(js => BookmarkSerializer.fullBookmarkSerializer.reads(js).get)
+    }
   }
+
 
   def sendMail(email: ElectronicMail): Future[Boolean] = {
     call(routes.ShoeboxController.sendMail(), Json.toJson(email)).map(r => r.body.toBoolean)
@@ -90,8 +92,8 @@ class ShoeboxServiceClientImpl @Inject() (
   def getUsersChanged(seqNum: SequenceNumber): Future[Seq[(Id[User], SequenceNumber)]] = {
     call(routes.ShoeboxController.getUsersChanged(seqNum.value)).map{ r =>
       r.json.as[JsArray].value.map{ json =>
-        val id = (json \ "id").asOpt[Long].get
-        val seqNum = (json \ "seqNum").asOpt[Long].get
+        val id = (json \ "id").as[Long]
+        val seqNum = (json \ "seqNum").as[Long]
         (Id[User](id), SequenceNumber(seqNum))
       }
     }
@@ -110,6 +112,7 @@ class ShoeboxServiceClientImpl @Inject() (
       case None => call(routes.ShoeboxController.getBrowsingHistoryFilter(userId)).map(_.body.getBytes)
     }
   }
+
 
   def persistServerSearchEvent(metaData: JsObject): Unit ={
      call(routes.ShoeboxController.persistServerSearchEvent, metaData)
