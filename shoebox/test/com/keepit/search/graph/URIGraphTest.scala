@@ -161,11 +161,11 @@ class URIGraphTest extends Specification with DbRepos {
 
         val graphDir = new RAMDirectory
         val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db, inject[ShoeboxServiceClient])
+        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), inject[ShoeboxServiceClient])
         graph.update() === users.size
         graph.sequenceNumber.value === bookmarks.size
         val config2 = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-        val graph2 = new URIGraphImpl(graphDir, config2, URIGraphFields.decoders(), bookmarkRepo, db, inject[ShoeboxServiceClient])
+        val graph2 = new URIGraphImpl(graphDir, config2, URIGraphFields.decoders(), inject[ShoeboxServiceClient])
         graph2.sequenceNumber.value === bookmarks.size
       }
     }
@@ -179,7 +179,7 @@ class URIGraphTest extends Specification with DbRepos {
 
         val graphDir = new RAMDirectory
         val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db, inject[ShoeboxServiceClient])
+        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), inject[ShoeboxServiceClient])
         graph.update() === users.size
 
         val searcher = graph.getURIGraphSearcher()
@@ -204,7 +204,7 @@ class URIGraphTest extends Specification with DbRepos {
 
         val graphDir = new RAMDirectory
         val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db, inject[ShoeboxServiceClient])
+        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), inject[ShoeboxServiceClient])
         graph.update() === users.size
 
         val searcher = graph.getURIGraphSearcher()
@@ -234,7 +234,7 @@ class URIGraphTest extends Specification with DbRepos {
 
         val graphDir = new RAMDirectory
         val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db, inject[ShoeboxServiceClient])
+        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), inject[ShoeboxServiceClient])
         graph.update() === users.size
 
         val searcher = graph.getURIGraphSearcher()
@@ -265,7 +265,7 @@ class URIGraphTest extends Specification with DbRepos {
 
         val graphDir = new RAMDirectory
         val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db, inject[ShoeboxServiceClient])
+        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), inject[ShoeboxServiceClient])
         val searcher = graph.getURIGraphSearcher()
 
         searcher.getUserToUriEdgeSet(Id[User](10000)).destIdSet.isEmpty === true
@@ -289,7 +289,7 @@ class URIGraphTest extends Specification with DbRepos {
       running(new DevApplication().withShoeboxServiceModule) {
         val graphDir = new RAMDirectory
         val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db, inject[ShoeboxServiceClient])
+        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), inject[ShoeboxServiceClient])
         val searcher = graph.getURIGraphSearcher()
         searcher.intersectAny(new TestDocIdSetIterator(1, 2, 3), new TestDocIdSetIterator(2, 4, 6)) === true
         searcher.intersectAny(new TestDocIdSetIterator(       ), new TestDocIdSetIterator(       )) === false
@@ -314,7 +314,7 @@ class URIGraphTest extends Specification with DbRepos {
 
         val graphDir = new RAMDirectory
         val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db, inject[ShoeboxServiceClient])
+        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), inject[ShoeboxServiceClient])
         graph.update() === 2
 
         val personaltitle = new TermQuery(new Term(URIGraphFields.titleField, "personaltitle"))
@@ -350,7 +350,7 @@ class URIGraphTest extends Specification with DbRepos {
 
         val graphDir = new RAMDirectory
         val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), bookmarkRepo, db, inject[ShoeboxServiceClient])
+        val graph = new URIGraphImpl(graphDir, config, URIGraphFields.decoders(), inject[ShoeboxServiceClient])
         graph.update() === 1
 
         val searcher = graph.getURIGraphSearcher(users(0).id)
@@ -404,7 +404,7 @@ class URIGraphTest extends Specification with DbRepos {
         uris.foreach{ uri => store += (uri.id.get -> mkArticle(uri.id.get, "title", "content")) }
 
         val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-        val indexer = new URIGraphImpl(ramDir, config, URIGraphFields.decoders(), bookmarkRepo, db, inject[ShoeboxServiceClient])
+        val indexer = new URIGraphImpl(ramDir, config, URIGraphFields.decoders(), inject[ShoeboxServiceClient])
         val doc = indexer.buildIndexable(user.id.get, SequenceNumber.ZERO).buildDocument
         doc.getFields.forall{ f => indexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
       }
