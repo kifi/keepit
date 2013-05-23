@@ -26,13 +26,13 @@ class ClickHistoryTracker (tableSize: Int, numHashFuncs: Int, minHits: Int, repo
     }
   }
 
-  def getMultiHashFilter(userId: Id[User]): MultiHashFilter = {
+  def getMultiHashFilter(userId: Id[User]): MultiHashFilter[ClickHistory] = {
     db.readOnly { implicit session =>
       repo.getByUserId(userId) match {
         case Some(clickHistory) =>
-          new MultiHashFilter(clickHistory.tableSize, clickHistory.filter, clickHistory.numHashFuncs, clickHistory.minHits)
+          new MultiHashFilter[ClickHistory](clickHistory.tableSize, clickHistory.filter, clickHistory.numHashFuncs, clickHistory.minHits)
         case None =>
-          val filter = MultiHashFilter(tableSize, numHashFuncs, minHits)
+          val filter = MultiHashFilter[ClickHistory](tableSize, numHashFuncs, minHits)
           filter
       }
     }
