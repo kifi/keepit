@@ -153,8 +153,7 @@ trait HealthcheckPlugin extends SchedulingPlugin {
 class HealthcheckPluginImpl @Inject() (
     actorFactory: ActorFactory[HealthcheckActor],
     services: FortyTwoServices,
-    host: HealthcheckHost,
-    db: Database)
+    host: HealthcheckHost)
   extends HealthcheckPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)
@@ -181,7 +180,7 @@ class HealthcheckPluginImpl @Inject() (
     error
   }
 
-  override def reportStart() = db.readWrite { implicit s =>
+  override def reportStart() = {
     val subject = s"Service ${services.currentService} started"
     val message = Html(s"Service version ${services.currentVersion} started at ${currentDateTime} on $host. Service compiled at ${services.compilationTime}")
     val email = (ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
@@ -191,7 +190,7 @@ class HealthcheckPluginImpl @Inject() (
     email
   }
 
-  override def reportStop() = db.readWrite { implicit s =>
+  override def reportStop() = {
     val subject = s"Service ${services.currentService} stopped"
     val message = Html(s"Service version ${services.currentVersion} stopped at ${currentDateTime} on $host. Service compiled at ${services.compilationTime}")
     val email = (ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
