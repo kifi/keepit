@@ -30,7 +30,8 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
       excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
       (implicit session: RSession): Option[Collection]
   def getUsersChanged(num: SequenceNumber)(implicit session: RSession): Seq[(Id[User], SequenceNumber)]
-  def getCollectionsChanged(num: SequenceNumber)(implicit session: RSession): Seq[(Id[Collection], SequenceNumber)]
+  def getCollectionsChanged(num: SequenceNumber)
+      (implicit session: RSession): Seq[(Id[Collection], Id[User], SequenceNumber)]
   def updateSequenceNumber(modelId: Id[Collection])(implicit session: RWSession)
 }
 
@@ -75,8 +76,9 @@ class CollectionRepoImpl @Inject() (
     (for (c <- table if c.seq > num) yield c)
         .groupBy(_.userId).map{ case (u, c) => (u -> c.map(_.seq).max.get) }.sortBy(_._2).list
 
-  def getCollectionsChanged(num: SequenceNumber)(implicit session: RSession): Seq[(Id[Collection], SequenceNumber)] =
-    (for (c <- table if c.seq > num) yield (c.id, c.seq)).sortBy(_._2).list
+  def getCollectionsChanged(num: SequenceNumber)
+      (implicit session: RSession): Seq[(Id[Collection], Id[User], SequenceNumber)] =
+    (for (c <- table if c.seq > num) yield (c.id, c.userId, c.seq)).sortBy(_._3).list
 }
 
 object CollectionStates extends States[Collection]

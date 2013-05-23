@@ -37,6 +37,8 @@ import play.api.Mode.Mode
 import com.google.inject.Inject
 import com.keepit.shoebox.ShoeboxCacheProvider
 import com.keepit.common.mail.LocalPostOffice
+import com.keepit.shoebox.ClickHistoryTracker
+import com.keepit.shoebox.BrowsingHistoryTracker
 
 class CommonModule extends ScalaModule with Logging {
 
@@ -47,14 +49,6 @@ class CommonModule extends ScalaModule with Logging {
 
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
-
-    bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped]
-
-    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
-    listenerBinder.addBinding().to(classOf[ResultClickedListener])
-    listenerBinder.addBinding().to(classOf[UsefulPageListener])
-    listenerBinder.addBinding().to(classOf[SliderShownListener])
-    listenerBinder.addBinding().to(classOf[SearchUnloadListener])
   }
 
   @Singleton
@@ -62,28 +56,6 @@ class CommonModule extends ScalaModule with Logging {
   def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
     def register() = Node("me")
     def isLeader() = true
-  }
-
-  @Singleton
-  @Provides
-  def searchUnloadProvider(
-    db: Database,
-    userRepo: UserRepo,
-    normalizedURIRepo: NormalizedURIRepo,
-    persistEventProvider: Provider[PersistEventPlugin],
-    store: MongoEventStore,
-    searchClient: SearchServiceClient,
-    clock: Clock,
-    fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
-    new SearchUnloadListenerImpl(db, userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, clock, fortyTwoServices)
-  }
-
-  @Singleton
-  @Provides
-  def searchConfigManager(
-      expRepo: SearchConfigExperimentRepo, userExpRepo: UserExperimentRepo, db: Database): SearchConfigManager = {
-    val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
-    new SearchConfigManager(optFile, expRepo, userExpRepo, db)
   }
 
   @Singleton
@@ -97,44 +69,6 @@ class CommonModule extends ScalaModule with Logging {
   @Singleton
   @Provides
   def impersonateCookie: ImpersonateCookie = new ImpersonateCookie(current.configuration.getString("session.domain"))
-
-  @Singleton
-  @Provides
-  def resultClickTracker: ResultClickTracker = {
-    val conf = current.configuration.getConfig("result-click-tracker").get
-    val numHashFuncs = conf.getInt("numHashFuncs").get
-    val syncEvery = conf.getInt("syncEvery").get
-    val dirPath = conf.getString("dir").get
-    val dir = new File(dirPath).getCanonicalFile()
-    if (!dir.exists()) {
-      if (!dir.mkdirs()) {
-        throw new Exception(s"could not create dir $dir")
-      }
-    }
-    ResultClickTracker(dir, numHashFuncs, syncEvery)
-  }
-
-  @Singleton
-  @Provides
-  def clickHistoryTracker(repo: ClickHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient): ClickHistoryTracker = {
-    val conf = current.configuration.getConfig("click-history-tracker").get
-    val filterSize = conf.getInt("filterSize").get
-    val numHashFuncs = conf.getInt("numHashFuncs").get
-    val minHits = conf.getInt("minHits").get
-
-    new ClickHistoryTracker(filterSize, numHashFuncs, minHits, repo, db, shoeboxClient)
-  }
-
-  @Singleton
-  @Provides
-  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database, shoeboxClient: ShoeboxServiceClient): BrowsingHistoryTracker = {
-    val conf = current.configuration.getConfig("browsing-history-tracker").get
-    val filterSize = conf.getInt("filterSize").get
-    val numHashFuncs = conf.getInt("numHashFuncs").get
-    val minHits = conf.getInt("minHits").get
-
-    new BrowsingHistoryTracker(filterSize, numHashFuncs, minHits, browsingHistoryRepo, db, shoeboxClient)
-  }
 
   @Provides
   @AppScoped
@@ -150,9 +84,9 @@ class CommonModule extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def healthcheckProvider(actorFactory: ActorFactory[HealthcheckActor], db: Database,
+  def healthcheckProvider(actorFactory: ActorFactory[HealthcheckActor],
       services: FortyTwoServices, host: HealthcheckHost): HealthcheckPlugin = {
-    new HealthcheckPluginImpl(actorFactory, services, host, db)
+    new HealthcheckPluginImpl(actorFactory, services, host)
   }
 
   @Singleton
@@ -182,30 +116,9 @@ class CommonModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def sliderHistoryTracker(sliderHistoryRepo: SliderHistoryRepo, db: Database): SliderHistoryTracker = {
-    val conf = current.configuration.getConfig("slider-history-tracker").get
-    val filterSize = conf.getInt("filterSize").get
-    val numHashFuncs = conf.getInt("numHashFuncs").get
-    val minHits = conf.getInt("minHits").get
-
-    new SliderHistoryTracker(sliderHistoryRepo, db, filterSize, numHashFuncs, minHits)
-  }
-
-  @Singleton
-  @Provides
-  def searchServiceClient(client: HttpClient): SearchServiceClient = {
-    new SearchServiceClientImpl(
-      current.configuration.getString("service.search.host").get,
-      current.configuration.getInt("service.search.port").get,
-      client)
-  }
-
-  @Singleton
-  @Provides
-  def shoeboxServiceClient (client: HttpClient, cacheProvider: ShoeboxCacheProvider): ShoeboxServiceClient = {
-    new ShoeboxServiceClientImpl(
-      current.configuration.getString("service.shoebox.host").get,
-      current.configuration.getInt("service.shoebox.port").get,
-      client, cacheProvider)
+  def searchConfigManager(shoeboxClient: ShoeboxServiceClient): SearchConfigManager = {
+    // This is needed still by Shoebox because of reports. Need to split.
+    val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
+    new SearchConfigManager(optFile, shoeboxClient)
   }
 }

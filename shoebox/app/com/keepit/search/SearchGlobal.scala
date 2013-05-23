@@ -29,7 +29,6 @@ trait SearchServices { self: FortyTwoGlobal =>
     require(injector.inject[ArticleIndexerPlugin].enabled)
     require(injector.inject[URIGraphPlugin].enabled)
     require(injector.inject[HealthcheckPlugin].enabled)
-    require(injector.inject[PersistEventPlugin].enabled)
     require(injector.inject[FortyTwoCachePlugin].enabled)
     require(NlpParser.enabled)
   }

@@ -247,6 +247,7 @@ const socketHandlers = {
       api.tabs.eachSelected(tellTab);
       tabsShowingNotificationsPane.forEach(tellTab);
       tellTabsNoticeCountIfChanged();
+      api.play("media/notification.mp3");
     }
     function tellTab(tab) {
       if (told[tab.id]) return;
@@ -477,7 +478,7 @@ api.port.on({
   },
   set_comment_read: function(o, _, tab) {
     var d = pageData[tab.nUri];
-    if (!d || new Date(o.time) > new Date(d.lastCommentRead)) {
+    if (!d || new Date(o.time) > new Date(d.lastCommentRead || 0)) {
       markNoticesVisited("comment", tab.nUri, o.id, o.time);
       if (d) {
         d.lastCommentRead = o.time;

@@ -17,6 +17,7 @@ class SemanticVector(val bytes: Array[Byte]) extends AnyVal {
 
   // similarity of two vectors (-1.0 to 1.0) ~ cosine distance
   def similarity(other: SemanticVector) = SemanticVector.similarity(bytes, other.bytes)
+  def similarity(data: Array[Byte], offset: Int) = SemanticVector.similarity(bytes, data, offset)
 
   def set(data: Array[Byte], offset: Int, length: Int) = System.arraycopy(data, offset, bytes, 0, length)
 }
@@ -47,18 +48,18 @@ object SemanticVector {
   }
 
   // hamming distance
-  def distance(v1: Array[Byte], v2: Array[Byte]) = {
+  def distance(v1: Array[Byte], v2: Array[Byte], v2offset: Int = 0) = {
     var i = 0
     var dist = 0
     while (i < arraySize) {
-      dist += popCount((v1(i) ^ v2(i)) & 0xFF)
+      dist += popCount((v1(i) ^ v2(i + v2offset)) & 0xFF)
       i += 1
     }
     dist
   }
 
   // similarity of two vectors (-1.0 to 1.0) ~ cosine distance
-  def similarity(v1: Array[Byte], v2: Array[Byte]) = similarityScore(distance(v1, v2))
+  def similarity(v1: Array[Byte], v2: Array[Byte], v2offset: Int = 0) = similarityScore(distance(v1, v2, v2offset))
 
   private[this] val popCount = {
     val arr = new Array[Int](256)

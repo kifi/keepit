@@ -1,5 +1,6 @@
 package com.keepit.search.query
 
+import com.keepit.common.logging.Logging
 import com.keepit.search.SemanticVector
 import com.keepit.search.index.Searcher
 import com.keepit.search.query.QueryUtil._
@@ -135,10 +136,8 @@ class SemanticVectorWeight(query: SemanticVectorQuery, searcher: Searcher) exten
   }
 }
 
-private[query] final class DocAndVector(tp: DocsAndPositionsEnum, vector: SemanticVector, weight: Float) {
+private[query] final class DocAndVector(tp: DocsAndPositionsEnum, vector: SemanticVector, weight: Float) extends Logging {
   var doc = -1
-
-  private[this] var sv = new SemanticVector(new Array[Byte](SemanticVector.arraySize))
 
   def fetchDoc(target: Int) {
     doc = tp.advance(target)
@@ -149,9 +148,14 @@ private[query] final class DocAndVector(tp: DocsAndPositionsEnum, vector: Semant
       tp.nextPosition()
       val payload = tp.getPayload()
       if (payload != null) {
-        sv.set(payload.bytes, payload.offset, payload.length)
-        vector.similarity(sv) * weight
+        if (payload.length == SemanticVector.arraySize) {
+          vector.similarity(payload.bytes, payload.offset) * weight
+        } else {
+          log.error("wrong payload size: ${payload.length}")
+          0.0f
+        }
       } else {
+        log.error("no payload")
         0.0f
       }
     } else {
