@@ -53,12 +53,11 @@ class SearchModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def articleIndexer(articleStore: ArticleStore, uriGraph: URIGraph, db: Database,
-    repo: NormalizedURIRepo, healthcheckPlugin: HealthcheckPlugin, shoeboxClient: ShoeboxServiceClient): ArticleIndexer = {
+  def articleIndexer(articleStore: ArticleStore, uriGraph: URIGraph, healthcheckPlugin: HealthcheckPlugin, shoeboxClient: ShoeboxServiceClient): ArticleIndexer = {
     val dir = getDirectory(current.configuration.getString("index.article.directory"))
     log.info(s"storing search index in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new ArticleIndexer(dir, config, articleStore, db, repo, healthcheckPlugin, shoeboxClient)
+    new ArticleIndexer(dir, config, articleStore, healthcheckPlugin, shoeboxClient)
   }
 
 
@@ -90,7 +89,7 @@ class SearchModule() extends ScalaModule with Logging {
     val articleDir = getDirectory(current.configuration.getString("index.article.directory"))
     SpellCorrector(spellDir, articleDir)
   }
-  
+
   @Singleton
   @Provides
   def clickHistoryBuilder: ClickHistoryBuilder = {
@@ -98,10 +97,10 @@ class SearchModule() extends ScalaModule with Logging {
     val filterSize = conf.getInt("filterSize").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val minHits = conf.getInt("minHits").get
-    
+
     new ClickHistoryBuilder(filterSize, numHashFuncs, minHits)
   }
-  
+
   @Singleton
   @Provides
   def browsingHistoryBuilder: BrowsingHistoryBuilder = {
@@ -109,10 +108,10 @@ class SearchModule() extends ScalaModule with Logging {
     val filterSize = conf.getInt("filterSize").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val minHits = conf.getInt("minHits").get
-    
+
     new BrowsingHistoryBuilder(filterSize, numHashFuncs, minHits)
   }
-  
+
   @Singleton
   @Provides
   def resultClickTracker: ResultClickTracker = {
@@ -128,7 +127,7 @@ class SearchModule() extends ScalaModule with Logging {
     }
     ResultClickTracker(dir, numHashFuncs, syncEvery)
   }
-  
+
   @Singleton
   @Provides
   def shoeboxServiceClient (client: HttpClient, cacheProvider: ShoeboxCacheProvider): ShoeboxServiceClient = {

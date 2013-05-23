@@ -32,8 +32,6 @@ class ArticleIndexer @Inject() (
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
     articleStore: ArticleStore,
-    db: Database,
-    repo: NormalizedURIRepo,
     healthcheckPlugin: HealthcheckPlugin,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[NormalizedURI](indexDirectory, indexWriterConfig) {
