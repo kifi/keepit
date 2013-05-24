@@ -85,11 +85,7 @@ class ShoeboxServiceClientImpl @Inject() (
       case Some(bookmark) => Promise.successful(Some(bookmark)).future
       case None =>
         call(routes.ShoeboxController.getBookmarkByUriAndUser(uriId, userId)).map { r =>
-          r.json match {
-            case JsNull => None
-            case b: JsObject => Some(Json.fromJson[Bookmark](b).get) // change Andrew
-            case _ => ???
-          }
+          Json.fromJson[Option[Bookmark]](r.json).get
         }
     }
   }
