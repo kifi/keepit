@@ -1,4 +1,4 @@
-package com.keepit.search;
+package com.keepit.search
 
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
@@ -27,9 +27,28 @@ case class ArticleSearchResultRef (
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
 }
 
-@ImplementedBy(classOf[ArticleSearchResultRefRepoImpl])
-trait ArticleSearchResultRefRepo extends Repo[ArticleSearchResultRef] with ExternalIdColumnFunction[ArticleSearchResultRef] {
+object ArticleSearchResultRef {
+  import play.api.libs.functional.syntax._
+  import play.api.libs.json._
+  
+  implicit def articleSearchResultRefFormat = (
+    (__ \ 'id).formatNullable(Id.format[ArticleSearchResultRef]) and
+    (__ \ 'createdAt).format[DateTime] and
+    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'externalId).format(ExternalId.format[ArticleSearchResultRef]) and
+    (__ \ 'state).format(State.format[ArticleSearchResultRef]) and
+    (__ \ 'last).formatNullable(ExternalId.format[ArticleSearchResultRef]) and
+    (__ \ 'myTotal).format[Int] and
+    (__ \ 'friendsTotal).format[Int] and
+    (__ \ 'mayHaveMoreHits).format[Boolean] and
+    (__ \ 'millisPassed).format[Int] and
+    (__ \ 'hitCount).format[Int] and
+    (__ \ 'pageNumber).format[Int]
+  )(ArticleSearchResultRef.apply, unlift(ArticleSearchResultRef.unapply))
 }
+
+@ImplementedBy(classOf[ArticleSearchResultRefRepoImpl])
+trait ArticleSearchResultRefRepo extends Repo[ArticleSearchResultRef] with ExternalIdColumnFunction[ArticleSearchResultRef]
 
 @Singleton
 class ArticleSearchResultRefRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[ArticleSearchResultRef] with ArticleSearchResultRefRepo with ExternalIdColumnDbFunction[ArticleSearchResultRef] {
@@ -46,7 +65,7 @@ class ArticleSearchResultRefRepoImpl @Inject() (val db: DataBaseComponent, val c
     def millisPassed = column[Int]("millis_passed", O.NotNull)
     def hitCount = column[Int]("hit_count", O.NotNull)
     def pageNumber = column[Int]("page_number", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ state ~ last.? ~ myTotal ~ friendsTotal ~ mayHaveMoreHits ~ millisPassed ~ hitCount ~ pageNumber <> (ArticleSearchResultRef, ArticleSearchResultRef.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ state ~ last.? ~ myTotal ~ friendsTotal ~ mayHaveMoreHits ~ millisPassed ~ hitCount ~ pageNumber <> (ArticleSearchResultRef.apply _, ArticleSearchResultRef.unapply _)
   }
 }
 

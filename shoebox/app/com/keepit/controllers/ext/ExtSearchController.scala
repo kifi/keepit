@@ -5,12 +5,8 @@ import scala.concurrent.future
 import scala.util.Try
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.common.db._
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.db.slick._
 import com.keepit.common.performance._
 import com.keepit.common.social.BasicUser
-import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
@@ -26,6 +22,8 @@ import scala.concurrent.duration._
 import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent.Future
 import com.keepit.common.akka.MonitoredAwait
+import play.api.libs.json.Json
+import com.keepit.common.db.{ExternalId, Id}
 
 
 //note: users.size != count if some users has the bookmark marked as private
@@ -56,17 +54,9 @@ case class PersonalSearchResultPacket(
 @Singleton
 class ExtSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
-  db: Database,
-  userRepo: UserRepo,
-  userConnectionRepo: UserConnectionRepo,
   searchConfigManager: SearchConfigManager,
   mainSearcherFactory: MainSearcherFactory,
   articleSearchResultStore: ArticleSearchResultStore,
-  articleSearchResultRefRepo: ArticleSearchResultRefRepo,
-  socialUserInfoRepo: SocialUserInfoRepo,
-  bookmarkRepo: BookmarkRepo,
-  uriRepo: NormalizedURIRepo,
-  basicUserRepo: BasicUserRepo,
   srcFactory: SearchResultClassifierFactory,
   healthcheckPlugin: HealthcheckPlugin,
   shoeboxClient: ShoeboxServiceClient,
@@ -157,9 +147,7 @@ class ExtSearchController @Inject() (
 
   private def reportArticleSearchResult(res: ArticleSearchResult) {
     future {
-      db.readWrite { implicit s =>
-        articleSearchResultRefRepo.save(ArticleSearchResultFactory(res))
-      }
+      shoeboxClient.reportArticleSearchResult(res)
       articleSearchResultStore += (res.uuid -> res)
     } onFailure { case e =>
       log.error("Could not persist article search result %s".format(res), e)
