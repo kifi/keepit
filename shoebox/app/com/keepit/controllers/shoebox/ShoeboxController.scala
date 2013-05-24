@@ -55,6 +55,8 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.ext.PersonalSearchHit
 import com.keepit.common.social.BasicUser
 import com.keepit.common.db.ExternalId
+import com.keepit.search.ArticleSearchResultRef
+import com.keepit.search.ArticleSearchResultRefRepo
 
 object ShoeboxController {
   implicit val collectionTupleFormat = (
@@ -82,7 +84,8 @@ class ShoeboxController @Inject() (
   phraseRepo: PhraseRepo,
   collectionRepo: CollectionRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
-  basicUserRepo: BasicUserRepo)
+  basicUserRepo: BasicUserRepo,
+  articleSearchResultRefRepo: ArticleSearchResultRefRepo)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
@@ -229,6 +232,14 @@ class ShoeboxController @Inject() (
         .map { friendId => JsNumber(friendId.id) }
     }
     Ok(JsArray(ids))
+  }
+  
+  def reportArticleSearchResult = Action(parse.json) { request =>
+    val ref = Json.fromJson[ArticleSearchResultRef](request.body).get
+    db.readWrite { implicit s =>
+      articleSearchResultRefRepo.save(ref)
+    }
+    Ok
   }
 
   def getActiveExperiments = Action { request =>

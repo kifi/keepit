@@ -26,6 +26,7 @@ import com.keepit.controllers.ext.PersonalSearchHit
 import com.keepit.search.ActiveExperimentsCache
 import com.keepit.search.ActiveExperimentsKey
 import com.keepit.common.db.ExternalId
+import com.keepit.search.ArticleSearchResultFactory
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -33,6 +34,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]]
+  def reportArticleSearchResult(res: ArticleSearchResult): Unit
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def sendMail(email: ElectronicMail): Future[Boolean]
@@ -164,6 +166,10 @@ class ShoeboxServiceClientImpl @Inject() (
           r.json.as[JsArray].value.map(jsv => Id[User](jsv.as[Long])).toSet
         }
     }
+  }
+  
+  def reportArticleSearchResult(res: ArticleSearchResult): Unit = {
+    call(routes.ShoeboxController.reportArticleSearchResult, Json.toJson(ArticleSearchResultFactory(res)))
   }
 
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI] = {
