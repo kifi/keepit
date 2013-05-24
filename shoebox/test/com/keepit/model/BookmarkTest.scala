@@ -47,16 +47,18 @@ class BookmarkTest extends Specification with TestDBRunner {
   }
 
   "Bookmark" should {
-    "load my keeps in pages" in {
+    "load my keeps in pages before and after a given date" in {
       withDB() { implicit injector =>
         val (user1, user2, uri1, uri2) = setup()
         db.readOnly { implicit s =>
-          val marks = bookmarkRepo.getByUser(user1.id.get, None, 2)
+          val marks = bookmarkRepo.getByUser(user1.id.get, None, None, 2)
           marks.map(_.uriId) === Seq(uri2.id.get, uri1.id.get)
-          bookmarkRepo.getByUser(user1.id.get, Some(marks(0).externalId), 5).map(_.uriId) === Seq(uri1.id.get)
-          bookmarkRepo.getByUser(user1.id.get, Some(marks(1).externalId), 5) must beEmpty
-          bookmarkRepo.getByUser(user1.id.get, Some(marks(1).externalId), 5) must beEmpty
-          bookmarkRepo.getByUser(user1.id.get, None, 0) must beEmpty
+          bookmarkRepo.getByUser(user1.id.get, Some(marks(0).externalId), None, 5).map(_.uriId) === Seq(uri1.id.get)
+          bookmarkRepo.getByUser(user1.id.get, Some(marks(1).externalId), None, 5) must beEmpty
+          bookmarkRepo.getByUser(user1.id.get, Some(marks(1).externalId), None, 5) must beEmpty
+          bookmarkRepo.getByUser(user1.id.get, None, Some(marks(1).externalId), 5).map(_.uriId) === Seq(uri2.id.get)
+          bookmarkRepo.getByUser(user1.id.get, None, Some(marks(0).externalId), 5) must beEmpty
+          bookmarkRepo.getByUser(user1.id.get, None, None, 0) must beEmpty
         }
       }
     }

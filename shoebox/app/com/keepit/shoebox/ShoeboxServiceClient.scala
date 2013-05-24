@@ -171,7 +171,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
   def hasExperiment(userId: Id[User], state: State[ExperimentType]): Future[Boolean] = {
     cacheProvider.userExperimentCache.get(UserExperimentUserIdKey(userId)) match {
-      case Some(expTypes) => Promise.successful(expTypes.contains(state)).future
+      case Some(states) => Promise.successful(states.contains(state)).future
       case None => call(routes.ShoeboxController.hasExperiment(userId, state)).map { r =>
         r.json.as[Boolean]
       }
