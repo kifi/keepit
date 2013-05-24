@@ -88,6 +88,14 @@ class ShoeboxController @Inject() (
 )
   extends ShoeboxServiceController with Logging {
 
+  def getUserOpt(id: ExternalId[User]) = Action { request =>
+    val userOpt =  db.readOnly { implicit s => userRepo.getOpt(id) }
+    userOpt match {
+      case Some(user) => Ok(UserSerializer.userSerializer.writes(user))
+      case None => Ok(JsNull)
+    }
+  }
+
   def sendMail = Action(parse.json) { request =>
     Json.fromJson[ElectronicMail](request.body).asOpt match {
       case Some(mail) =>

@@ -18,6 +18,7 @@ commentsPane = function() {
       render("html/metro/comments.html", {
         formatComment: getTextFormatter,
         formatLocalDate: getLocalDateFormatter,
+        emptyUri: api.url("images/metro/bg_comments.png"),
         comments: comments,
         draftPlaceholder: "Type a comment…",
         submitButtonLabel: "Post",
@@ -53,6 +54,7 @@ commentsPane = function() {
               api.port.emit("delete_comment", id, function() {
                 $x.parent().slideUp(function() {
                   $(this).remove();
+                  updateEmptyMessage();
                 });
               });
             } else {
@@ -81,6 +83,7 @@ commentsPane = function() {
           } else {
             $holder.append($c);  // should we compare timestamps and insert in order?
             $scroller.scrollToBottom();
+            updateEmptyMessage();
           }
           emitRead(comment);
         });
@@ -108,6 +111,7 @@ commentsPane = function() {
       function($c) {
         $holder.append($c);
         $scroller.scrollToBottom();
+        updateEmptyMessage();
       });
   }
 
@@ -117,6 +121,11 @@ commentsPane = function() {
     render("html/metro/comment.html", c, function(html) {
       callback($(html).find("time").timeago().end());
     });
+  }
+
+  function updateEmptyMessage() {
+    var any = $holder.find(".kifi-comment-posted").length > 0;
+    $scroller.closest(".kifi-pane-box").find(".kifi-pane-empty").toggleClass("kifi-hidden", any);
   }
 
   function emitRead(c) {
