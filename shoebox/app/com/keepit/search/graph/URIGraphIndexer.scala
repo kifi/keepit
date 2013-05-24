@@ -1,8 +1,5 @@
 package com.keepit.search.graph
 
-import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.Await
-import scala.concurrent.duration._
 import java.io.StringReader
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.document.BinaryDocValuesField
@@ -25,6 +22,9 @@ import com.keepit.search.index.Indexable.IteratorTokenStream
 import com.keepit.search.line.LineField
 import com.keepit.search.line.LineFieldBuilder
 import com.keepit.shoebox.ShoeboxServiceClient
+import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 object URIGraphFields {
   val userField = "usr"
@@ -98,7 +98,7 @@ class URIGraphIndexer(
 
   def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber)): URIListIndexable = {
     val (userId, seq) = userIdAndSequenceNumber
-    val bookmarks = Await.result(shoeboxClient.getBookmarks(userId), 5 seconds)
+    val bookmarks = Await.result(shoeboxClient.getBookmarks(userId), 180 seconds)
     new URIListIndexable(id = userId,
                          sequenceNumber = seq,
                          isDeleted = false,

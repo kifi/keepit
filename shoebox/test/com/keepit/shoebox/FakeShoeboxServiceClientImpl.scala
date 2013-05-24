@@ -9,6 +9,9 @@ import scala.concurrent.{Future, Promise, promise}
 import com.google.inject.Inject
 import play.api.libs.json.JsObject
 import com.keepit.serializer.NormalizedURISerializer
+import com.keepit.search.SearchConfigExperiment
+import com.keepit.search.SearchConfigExperimentRepo
+import com.keepit.serializer.SearchConfigExperimentSerializer
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl @Inject() (
@@ -20,6 +23,8 @@ class FakeShoeboxServiceClientImpl @Inject() (
     browsingHistoryRepo: BrowsingHistoryRepo,
     clickingHistoryRepo: ClickHistoryRepo,
     normUriRepo: NormalizedURIRepo,
+    experimentRepo: SearchConfigExperimentRepo,
+    userExperimentRepo: UserExperimentRepo,
     clickHistoryTracker: ClickHistoryTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
     clock: Clock,
@@ -104,5 +109,30 @@ class FakeShoeboxServiceClientImpl @Inject() (
         normUriRepo.getIndexable(SequenceNumber(seqNum), fetchSize)
       }
     Promise.successful(uris).future
+  }
+
+  def getActiveExperiments: Future[Seq[SearchConfigExperiment]] = {
+    val exp = db.readOnly { implicit s => experimentRepo.getActive() }
+    Promise.successful(exp).future
+  }
+
+  def getExperiments: Future[Seq[SearchConfigExperiment]] = {
+    val exp = db.readOnly { implicit s => experimentRepo.getNotInactive() }
+    Promise.successful(exp).future
+  }
+
+  def getExperiment(id: Id[SearchConfigExperiment]): Future[SearchConfigExperiment] = {
+    val exp = db.readOnly { implicit s => experimentRepo.get(id) }
+    Promise.successful(exp).future
+  }
+  def saveExperiment(experiment: SearchConfigExperiment) = {
+    val saved = db.readWrite { implicit s => experimentRepo.save(experiment) }
+    Promise.successful(saved).future
+  }
+  def hasExperiment(userId: Id[User], state: State[ExperimentType]): Future[Boolean] = {
+     val has = db.readOnly { implicit s =>
+       userExperimentRepo.hasExperiment(userId, state)
+     }
+     Promise.successful(has).future
   }
 }

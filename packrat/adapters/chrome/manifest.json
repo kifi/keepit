@@ -1,6 +1,6 @@
 {
   "name": "KiFi Beta",
-  "version": "2.3.83",
+  "version": "2.3.85",
   "manifest_version": 2,
   "description": "KiFi Private Beta",
   "icons": {
@@ -36,6 +36,8 @@
     "images/shade_above.png",
     "images/snapshot.png",
     "images/social_icons.png",
+    "images/metro/bg_comments.png",
+    "images/metro/bg_messages.png",
     "images/metro/gear.png",
     "images/metro/tile_logo.png",
     "images/keeper/comments.png",

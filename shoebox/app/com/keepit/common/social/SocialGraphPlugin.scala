@@ -17,6 +17,7 @@ import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.plugin.SchedulingPlugin
 import scala.util.{Try, Success, Failure}
+import com.keepit.common.net.NonOKResponseException
 
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
 private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)
@@ -69,7 +70,23 @@ private[social] class SocialGraphActor @Inject() (
         }
         connections
       } catch {
-        //todo(yonatan): healthcheck event, granular exception catching, frontend should be notified.
+        case e @ NonOKResponseException(url, response) =>
+          val errorJson = response.json \ "error"
+          val errorCode = (errorJson \ "code").asOpt[Int]
+          val errorSub = (errorJson \ "error_subcode").asOpt[Int]
+
+          // see https://developers.facebook.com/docs/reference/api/errors/
+          // TODO: deal with other errors as we find them and decide on a reasonable action
+          import FacebookSocialGraph.ErrorSubcodes._
+          (errorCode, errorSub) match {
+            case (_, Some(AppNotInstalled)) =>
+              log.warn(s"App not authorized for social user $socialUserInfo; not fetching connections.")
+              db.readWrite { implicit s =>
+                socialRepo.save(socialUserInfo withState SocialUserInfoStates.APP_NOT_AUTHORIZED)
+              }
+              Seq()
+            case _ => throw e
+          }
         case ex: Exception =>
           db.readWrite { implicit c =>
             socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())

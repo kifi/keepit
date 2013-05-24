@@ -20,23 +20,17 @@ $.fn.scrollToBottom = function() {
   });
 };
 !function() {
-  $.fn.scrollable = function() {
+  $.fn.scrollable = function(o) {
     return this.each(function() {
-      var data = $(this).data(), el;
-      for (el = this; !data.elAbove; el = el.parentNode) {
-        data.elAbove = el.previousElementSibling;
-      }
-      for (el = this; !data.elBelow; el = el.parentNode) {
-        data.elBelow = el.nextElementSibling;
-      }
-      data.elAbove.classList.add("kifi-scrollable-above");
-      data.elBelow.classList.add("kifi-scrollable-below");
+      o.$above.addClass("kifi-scrollable-above");
+      o.$below.addClass("kifi-scrollable-below");
+      $(this).data(o);
     }).scroll(onScroll);
   };
   function onScroll() {
-    var sT = this.scrollTop, sH = this.scrollHeight, oH = this.offsetHeight, data = $(this).data();
-    data.elAbove.classList[sT > 0 ? "add" : "remove"]("kifi-can-scroll");
-    data.elBelow.classList[sT < sH - oH ? "add" : "remove"]("kifi-can-scroll");
+    var sT = this.scrollTop, sH = this.scrollHeight, oH = this.offsetHeight, o = $(this).data();
+    o.$above.toggleClass("kifi-can-scroll", sT > 0);
+    o.$below.toggleClass("kifi-can-scroll", sT < sH - oH);
   }
 }();
 
@@ -217,8 +211,8 @@ slider2 = function() {
       }).bindHover(".kifi-slider2-dock-btn", function(configureHover) {
         var tip = {
           n: ["Notifications", "View all of your notifications.<br>Any new ones are highlighted."],
-          c: ["Comments", "View and post comments<br>about this page."],
-          m: ["Messages (" + CO_KEY + "+Shift+M)", "Send this page to friends<br>and start a discussion."],
+          c: ["Public Comments", "View and post comments<br>about this page."],
+          m: ["Private Messages (" + CO_KEY + "+Shift+M)", "Send this page to friends<br>and start a discussion."],
           g: ["More Options (" + CO_KEY + "+Shift+O)", "Take notes about this page,<br>keep to a collection, read it<br>later and more."]
         }[this.dataset.loc.substr(1,1)];
         render("html/keeper/titled_tip.html", {title: tip[0], html: tip[1]}, function(html) {
