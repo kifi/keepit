@@ -20,10 +20,11 @@ import com.keepit.serializer._
 import play.api.libs.json._
 import com.keepit.search.ActiveExperimentsCache
 import com.keepit.search.ActiveExperimentsKey
+import com.keepit.common.db.ExternalId
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
-
+  def getUserOpt(id: ExternalId[User]): Future[Option[User]]
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]]
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
@@ -47,6 +48,7 @@ trait ShoeboxServiceClient extends ServiceClient {
 }
 
 case class ShoeboxCacheProvider @Inject() (
+    externalUserIdCache: UserExternalIdCache,
     uriIdCache: NormalizedURICache,
     clickHistoryCache: ClickHistoryUserIdCache,
     browsingHistoryCache: BrowsingHistoryUserIdCache,
@@ -59,6 +61,18 @@ class ShoeboxServiceClientImpl @Inject() (
   override val httpClient: HttpClient,
   cacheProvider: ShoeboxCacheProvider)
     extends ShoeboxServiceClient {
+
+  def getUserOpt(id: ExternalId[User]): Future[Option[User]] = {
+    cacheProvider.externalUserIdCache.get(UserExternalIdKey(id)) match {
+      case Some(user) => Promise.successful(Some(user)).future
+      case None => call(routes.ShoeboxController.getUserOpt(id)).map{ r =>
+        r.json match {
+          case JsNull => None
+          case js: JsValue => Some(UserSerializer.userSerializer.reads(js).get)
+        }
+      }
+    }
+  }
 
 
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]] = {
