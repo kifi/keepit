@@ -161,7 +161,7 @@ class ExtSearchController @Inject() (
 
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
     val hitsFuture = time(s"search-personal-result-${res.hits.size}") {
-      toPersonalSearchResult2(userId, res).map{r => log.debug(r.mkString("\n")); r}
+      toPersonalSearchResult(userId, res).map{r => log.debug(r.mkString("\n")); r}
     }
     
     val hits = monitoredAwait.result(hitsFuture, 5 seconds, Nil)
@@ -169,7 +169,7 @@ class ExtSearchController @Inject() (
     PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), experimentId, filter)
   }
   
-  private[ext] def toPersonalSearchResult2(userId: Id[User], resultSet: ArticleSearchResult) = {
+  private[ext] def toPersonalSearchResult(userId: Id[User], resultSet: ArticleSearchResult) = {
     shoeboxClient.getPersonalSearchInfo(userId, resultSet).map { case (allUsers, personalSearchHits) =>
       (resultSet.hits, resultSet.scorings, personalSearchHits).zipped.toSeq.map { case (hit, score, personalHit) =>
         val users = hit.users.map(allUsers)
