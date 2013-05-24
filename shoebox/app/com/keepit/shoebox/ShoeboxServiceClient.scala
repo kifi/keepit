@@ -143,7 +143,7 @@ class ShoeboxServiceClientImpl @Inject() (
     }
     
     call(routes.ShoeboxController.getUserIdsByExternalIds(needToGetUsers)).map { r =>
-      r.json.as[Seq[Long]].map(Id[User](_))
+      cachedUsers ++ r.json.as[Seq[Long]].map(Id[User](_))
     }
   }
 
