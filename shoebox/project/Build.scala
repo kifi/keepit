@@ -35,7 +35,7 @@ object ApplicationBuild extends Build {
       jdbc,
       "securesocial" %% "securesocial" % "master-SNAPSHOT",
       "com.github.mumoshu" %% "play2-memcached" % "0.3.0.1",
-      "mysql" % "mysql-connector-java" % "5.1.10",
+      "mysql" % "mysql-connector-java" % "5.1.25",
       "org.clapper" %% "grizzled-slf4j" % "1.0.1",
       "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
