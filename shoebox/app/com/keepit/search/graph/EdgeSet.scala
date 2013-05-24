@@ -11,6 +11,8 @@ import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import scala.util.Sorting
 import org.apache.lucene.index.Term
 import com.keepit.search.util.LongArraySet
+import org.joda.time.DateTime
+import scala.collection.mutable.ArrayBuffer
 
 trait EdgeSet[S,D] {
   val sourceId: Id[S]
@@ -60,6 +62,22 @@ trait EdgeSet[S,D] {
   }
 
   def accessor: EdgeAccessor[S, D] = new EdgeAccessor[S, D](this)
+
+  def filterByTimeRange(start: DateTime, end: DateTime): EdgeSet[S, D] = filterByTimeRange(start.getMillis, end.getMillis)
+
+  def filterByTimeRange(start: Long, end: Long): EdgeSet[S, D] = {
+    val acc = accessor
+    val filtered = destIdLongSet.filter{ id =>
+      val timestamp = acc.getCreatedAt(id)
+      start <= timestamp && timestamp <= end
+    }.toArray
+    Sorting.quickSort(filtered)
+    val inheritedSourceId = sourceId
+    new LongSetEdgeSet[S, D] {
+      override val sourceId: Id[S] = inheritedSourceId
+      override val longArraySet = LongArraySet.fromSorted(filtered)
+    }
+  }
 }
 
 class EdgeAccessor[S, D](val edgeSet: EdgeSet[S, D]) extends Logging {
@@ -169,6 +187,24 @@ trait LongSetEdgeSetWithCreatedAt[S, D] extends LongSetEdgeSet[S, D] {
         }
         0L //throw new NoSuchElementException(s"failed to find id: ${id}")
       }
+    }
+  }
+
+  override def filterByTimeRange(start: Long, end: Long): EdgeSet[S, D] = {
+    val buf = new ArrayBuffer[Long]
+    var size = longArraySet.size
+    var i = 0
+    while (i < size) {
+      val timestamp = createdAtByIndex(i)
+      if (start <= timestamp && timestamp <= end) buf += longArraySet.key(i)
+      i += 1
+    }
+    val filtered = buf.toArray
+    Sorting.quickSort(filtered)
+    val inheritedSourceId = sourceId
+    new LongSetEdgeSet[S, D] {
+      override val sourceId: Id[S] = inheritedSourceId
+      override val longArraySet = LongArraySet.fromSorted(filtered)
     }
   }
 }

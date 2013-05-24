@@ -13,6 +13,8 @@ abstract class LongArraySet(a: Array[Long]) extends Set[Long] with Logging {
 
   override def size = a.length
 
+  def key(index: Int): Long = a(index)
+
   def findIndex(key: Long): Int
 
   def verify: Boolean
