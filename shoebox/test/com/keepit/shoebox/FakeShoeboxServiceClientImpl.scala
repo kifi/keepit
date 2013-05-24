@@ -12,6 +12,8 @@ import com.keepit.serializer.NormalizedURISerializer
 import com.keepit.search.SearchConfigExperiment
 import com.keepit.search.SearchConfigExperimentRepo
 import com.keepit.serializer.SearchConfigExperimentSerializer
+import com.keepit.common.social.BasicUser
+import com.keepit.controllers.ext.PersonalSearchHit
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl @Inject() (
@@ -111,8 +113,8 @@ class FakeShoeboxServiceClientImpl @Inject() (
     Promise.successful(uris).future
   }
   
-  def getBookmarkByUriAndUser(uriId: com.keepit.common.db.Id[com.keepit.model.NormalizedURI],userId: com.keepit.common.db.Id[com.keepit.model.User]): scala.concurrent.Future[Option[com.keepit.model.Bookmark]] = ???
-  def getPersonalSearchInfo(userId: com.keepit.common.db.Id[com.keepit.model.User],resultSet: com.keepit.search.ArticleSearchResult): scala.concurrent.Future[(Map[com.keepit.common.db.Id[com.keepit.model.User],com.keepit.common.social.BasicUser], Seq[com.keepit.controllers.ext.PersonalSearchHit])] = ???
+  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]] = ???
+  def getPersonalSearchInfo(userId: Id[User], resultSet: com.keepit.search.ArticleSearchResult): Future[(Map[Id[User], BasicUser], Seq[PersonalSearchHit])] = ???
 
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]] = {
     val exp = db.readOnly { implicit s => experimentRepo.getActive() }
