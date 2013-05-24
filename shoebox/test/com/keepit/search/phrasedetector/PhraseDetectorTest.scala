@@ -58,5 +58,13 @@ class PhraseDetectorTest extends Specification {
         ok === true
       }
     }
+    
+    "removal inclusion phrases" in {
+      var phrases = Set((0, 2), (1, 1), (2, 3), (2, 4), (3,2), (4,3))   // (position, len)
+      RemoveOverlapping.removeInclusions(phrases) === Set((0,2), (2, 4), (4, 3))
+      
+      phrases = Set.empty[(Int, Int)]
+      RemoveOverlapping.removeInclusions(phrases) === phrases
+    }
   }
 }
