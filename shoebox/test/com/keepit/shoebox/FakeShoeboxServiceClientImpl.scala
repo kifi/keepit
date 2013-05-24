@@ -36,6 +36,11 @@ class FakeShoeboxServiceClientImpl @Inject() (
   val host: String = ""
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
+  def getUserOpt(id: ExternalId[User]): Future[Option[User]] = {
+     val userOpt =  db.readOnly { implicit s => userRepo.getOpt(id) }
+     Promise.successful(userOpt).future
+  }
+
   def getUser(id: Id[User]): Future[User] = {
     //call(routes.ShoeboxController.getUser(id)).map(r => UserSerializer.userSerializer.reads(r.json))
     ???
