@@ -43,7 +43,7 @@ form.kifi-compose.kifi-scrollable-below {
   text-align: right;
   position: relative;
 }
-a.kifi-compose-snapshot {
+.kifi-compose a.kifi-compose-snapshot[href] {
   float: left;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
@@ -72,15 +72,19 @@ span.kifi-compose-tip {
 .kifi-compose.kifi-empty .kifi-compose-tip {
   display: none;
 }
-a.kifi-compose-submit[href] {
+.kifi-compose a.kifi-compose-submit[href] {
   display: inline-block;
+  margin: -1px;
   padding: 0 18px;
   color: #fff !important;
   background-color: #4c8ffb;
+  border: 1px solid #4c8ffb;
+  border-bottom-right-radius: inherit;
   line-height: 28px;
 }
 .kifi-compose.kifi-empty a.kifi-compose-submit[href] {
   background-color: #bdc3c7;
+  border-color: #d2d2d2;
 }
 a.kifi-compose-submit:focus {
   outline: 1px dashed #aaa;
