@@ -51,6 +51,9 @@ import com.keepit.search.SearchConfigExperiment
 import com.keepit.common.db.State
 import com.keepit.model.ExperimentType
 import com.keepit.common.db.SequenceNumber
+import com.keepit.common.social.BasicUserRepo
+import com.keepit.controllers.ext.PersonalSearchHit
+import com.keepit.common.social.BasicUser
 import com.keepit.common.db.ExternalId
 
 object ShoeboxController {
@@ -78,7 +81,8 @@ class ShoeboxController @Inject() (
   healthcheckPlugin: HealthcheckPlugin,
   phraseRepo: PhraseRepo,
   collectionRepo: CollectionRepo,
-  keepToCollectionRepo: KeepToCollectionRepo)
+  keepToCollectionRepo: KeepToCollectionRepo,
+  basicUserRepo: BasicUserRepo)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
@@ -146,8 +150,41 @@ class ShoeboxController @Inject() (
   def getBookmarks(userId: Id[User]) = Action { request =>
     val bookmarks = db.readOnly { implicit session =>
       bookmarkRepo.getByUser(userId)
-    }.map{BookmarkSerializer.fullBookmarkSerializer.writes(_)}
-    Ok(JsArray(bookmarks))
+    }
+    Ok(Json.toJson(bookmarks))
+  }
+  
+  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]) = Action { request =>
+    val bookmark = db.readOnly { implicit session =>
+      bookmarkRepo.getByUriAndUser(uriId, userId)
+    }.map(Json.toJson(_)).getOrElse(JsNull)
+    Ok(bookmark)
+  }
+  
+  def getPersonalSearchInfo(userId: Id[User], allUsers: String, formattedHits: String) = Action { request =>
+    val (users, personalSearchHits) = db.readOnly { implicit session =>
+      val neededUsers = (allUsers.split(",").filterNot(_.isEmpty).map { u =>
+        val user = Id[User](u.toLong)
+        user.toString -> Json.toJson(basicUserRepo.load(user))
+      }).toSeq
+      val personalSearchHits = formattedHits.split(",").filterNot(_.isEmpty).map { hit =>
+        val param = hit.split(":").toSeq
+        val isMyBookmark = param.head == "1"
+        val uriId = Id[NormalizedURI](param.tail.head.toLong)
+        val uri = normUriRepo.get(uriId)
+        
+        (if(isMyBookmark) bookmarkRepo.getByUriAndUser(uriId, userId) else None) match {
+          case Some(bmk) =>
+            PersonalSearchHit(uri.id.get, uri.externalId, bmk.title, bmk.url, bmk.isPrivate)
+          case None =>
+            val uri = normUriRepo.get(uriId)
+            PersonalSearchHit(uri.id.get, uri.externalId, uri.title, uri.url, false)
+        }
+      }
+      (neededUsers, personalSearchHits)
+    }
+
+    Ok(Json.obj("users" -> JsObject(users), "personalSearchHits" -> personalSearchHits))
   }
 
   def getUsersChanged(seqNum: Long) = Action { request =>
@@ -166,14 +203,24 @@ class ShoeboxController @Inject() (
   }
 
   def getUsers(ids: String) = Action { request =>
-        val userIds = ids.split(',').map(id => Id[User](id.toLong))
-        val users = db.readOnly { implicit s =>
-          userIds.map{userId =>
-            val user = userRepo.get(userId)
-            UserSerializer.userSerializer.writes(user)
-          }
-        }
-        Ok(JsArray(users))
+    val userIds = ids.split(',').map(id => Id[User](id.toLong))
+    val users = db.readOnly { implicit s =>
+      userIds.map{userId =>
+        val user = userRepo.get(userId)
+        UserSerializer.userSerializer.writes(user)
+      }
+    }
+    Ok(JsArray(users))
+  }
+  
+  def getUserIdsByExternalIds(ids: String) = Action { request =>
+    val extUserIds = ids.split(',').map(id => ExternalId[User](id))
+    val users = (db.readOnly { implicit s =>
+      extUserIds.map { userId =>
+        userRepo.getOpt(userId).map(_.id.get.id)
+      } flatten
+    })
+    Ok(Json.toJson(users))
   }
 
   def getConnectedUsers(id : Id[User]) = Action { request =>
