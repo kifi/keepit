@@ -8,6 +8,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.{SocialGraphPlugin, SocialId, SocialNetworkType}
+import com.keepit.common.store.S3ImageStore
 import com.keepit.inject._
 import com.keepit.model._
 
@@ -152,6 +153,7 @@ class SecureSocialUserPlugin @Inject() (
     db: Database,
     socialUserInfoRepo: SocialUserInfoRepo,
     userRepo: UserRepo,
+    imageStore: S3ImageStore,
     healthcheckPlugin: HealthcheckPlugin)
   extends UserService with Logging {
 
@@ -186,8 +188,8 @@ class SecureSocialUserPlugin @Inject() (
     db.readWrite { implicit s =>
       val socialUser = SocialUser(identity)
       log.debug("persisting social user %s".format(socialUser))
-      val socialUserInfo = socialUserInfoRepo.save(internUser(
-        SocialId(socialUser.id.id), SocialNetworkType(socialUser.id.providerId), socialUser).withCredentials(socialUser))
+      val socialUserInfo = internUser(
+        SocialId(socialUser.id.id), SocialNetworkType(socialUser.id.providerId), socialUser).withCredentials(socialUser)
       require(socialUserInfo.credentials.isDefined,
         "social user info's credentials is not defined: %s".format(socialUserInfo))
       require(socialUserInfo.userId.isDefined, "social user id  is not defined: %s".format(socialUserInfo))
@@ -215,9 +217,12 @@ class SecureSocialUserPlugin @Inject() (
         socialUserInfo
       case Some(socialUserInfo) if (socialUserInfo.userId.isEmpty) =>
         val user = userRepo.save(createUser(socialUserInfo.fullName))
+
         //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         //todo(eishay): send a direct fetch request
-        socialUserInfo.withUser(user)
+        val sui = socialUserInfoRepo.save(socialUserInfo.withUser(user))
+        imageStore.updatePicture(sui, user.externalId)
+        sui
       case None =>
         val user = userRepo.save(createUser(socialUser.fullName))
         log.debug("creating new SocialUserInfo for %s".format(user))
@@ -225,7 +230,10 @@ class SecureSocialUserPlugin @Inject() (
             socialId = socialId, networkType = socialNetworkType,
             fullName = socialUser.fullName, credentials = Some(socialUser))
         log.debug("SocialUserInfo created is %s".format(userInfo))
-        userInfo
+
+        val sui = socialUserInfoRepo.save(userInfo)
+        imageStore.updatePicture(sui, user.externalId)
+        sui
     }
   }
 
