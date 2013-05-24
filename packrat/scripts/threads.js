@@ -22,6 +22,7 @@ threadsPane = function() {
       render("html/metro/threads.html", {
         formatSnippet: getSnippetFormatter,
         formatLocalDate: getLocalDateFormatter,
+        emptyUri: api.url("images/metro/bg_messages.png"),
         threads: o.threads,
         showTo: true,
         draftPlaceholder: "Type a message…",
