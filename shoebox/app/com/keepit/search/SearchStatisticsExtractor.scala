@@ -102,7 +102,7 @@ class SearchStatisticsExtractor (queryUUID: ExternalId[ArticleSearchResultRef],
   queryString: String, userId: Id[User], uriLabelMap: scala.collection.immutable.Map[Id[NormalizedURI], UriLabel],
   uriGraph: URIGraph,
   articleIndexer: ArticleIndexer, searchConfigManager: SearchConfigManager, mainSearcherFactory: MainSearcherFactory, parserFactory: MainQueryParserFactory,
-  browsingHistoryBuilder: BrowsingHistoryBuilder, clickHistoryBuilder: ClickHistoryBuilder, resultClickTracker: ResultClickTracker, store: MongoEventStore, shoeboxServiceClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends Logging{
+  browsingHistoryBuilder: BrowsingHistoryBuilder, clickHistoryBuilder: ClickHistoryBuilder, resultClickTracker: ResultClickTracker, store: MongoEventStore,
   shoeboxServiceClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends Logging{
 
   val searcher = new SearchStatisticsHelperSearcher(queryString, userId, uriLabelMap.keySet.toSeq, uriGraph,
@@ -227,14 +227,14 @@ class SearchStatisticsHelperSearcher(queryString: String, userId: Id[User], targ
   val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
 
   val (friendIds, searchFilter) = {
-      val friendIds = Await.result(shoeboxServiceClient.getConnectedUsers(userId), 5 seconds)
+      val friendIds = monitoredAwait.result(shoeboxServiceClient.getConnectedUsers(userId), 5 seconds)
       val searchFilter = filter match {
         case Some("m") =>
           SearchFilter.mine(idFilter)
         case Some("f") =>
           SearchFilter.friends(idFilter)
         case Some(ids) =>
-          val userIds = ids.split('.').flatMap(id => Try(ExternalId[User](id)).toOption).flatMap(id => Await.result(shoeboxServiceClient.getUserOpt(id), 5 seconds)).flatMap(_.id)
+          val userIds = ids.split('.').flatMap(id => Try(ExternalId[User](id)).toOption).flatMap(id => monitoredAwait.result(shoeboxServiceClient.getUserOpt(id), 5 seconds)).flatMap(_.id)
           SearchFilter.custom(idFilter, userIds.toSet)
         case None =>
           SearchFilter.default(idFilter)

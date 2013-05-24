@@ -56,7 +56,7 @@ trait ShoeboxServiceClient extends ServiceClient {
 }
 
 case class ShoeboxCacheProvider @Inject() (
-    externalUserIdCache: UserExternalIdCache,
+    userExternalIdCache: UserExternalIdCache,
     uriIdCache: NormalizedURICache,
     clickHistoryCache: ClickHistoryUserIdCache,
     browsingHistoryCache: BrowsingHistoryUserIdCache,
@@ -64,8 +64,8 @@ case class ShoeboxCacheProvider @Inject() (
     basicUserCache: BasicUserUserIdCache,
     activeSearchConfigExperimentsCache: ActiveExperimentsCache,
     userExperimentCache: UserExperimentCache,
-    externalUserIdCache: ExternalUserIdCache,
-    userConnCache: UserConnectionIdCache)
+    userConnCache: UserConnectionIdCache,
+    externalUserIdCache: ExternalUserIdCache)
     
 class ShoeboxServiceClientImpl @Inject() (
   override val host: String,
@@ -75,7 +75,7 @@ class ShoeboxServiceClientImpl @Inject() (
     extends ShoeboxServiceClient {
 
   def getUserOpt(id: ExternalId[User]): Future[Option[User]] = {
-    cacheProvider.externalUserIdCache.get(UserExternalIdKey(id)) match {
+    cacheProvider.userExternalIdCache.get(UserExternalIdKey(id)) match {
       case Some(user) => Promise.successful(Some(user)).future
       case None => call(routes.ShoeboxController.getUserOpt(id)).map{ r =>
         r.json match {
