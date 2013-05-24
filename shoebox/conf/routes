@@ -268,6 +268,7 @@ GET     /internal/shoebox/database/getExperiments     @com.keepit.controllers.sh
 GET     /internal/shoebox/database/getExperiment      @com.keepit.controllers.shoebox.ShoeboxController.getExperiment(id: Id[SearchConfigExperiment])
 POST    /internal/shoebox/database/saveExperiment     @com.keepit.controllers.shoebox.ShoeboxController.saveExperiment
 GET     /internal/shoebox/database/hasExperimenthas   @com.keepit.controllers.shoebox.ShoeboxController.hasExperiment(userId: Id[User], state: State[ExperimentType])
+POST    /internal/shoebox/database/reportArticleSearchResult  @com.keepit.controllers.shoebox.ShoeboxController.reportArticleSearchResult
 
 
 # INTERNAL ROUTES/Search
