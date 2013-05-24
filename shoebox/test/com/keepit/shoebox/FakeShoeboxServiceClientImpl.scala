@@ -9,6 +9,9 @@ import scala.concurrent.{Future, Promise, promise}
 import com.google.inject.Inject
 import play.api.libs.json.JsObject
 import com.keepit.serializer.NormalizedURISerializer
+import com.keepit.search.SearchConfigExperiment
+import com.keepit.search.SearchConfigExperimentRepo
+import com.keepit.serializer.SearchConfigExperimentSerializer
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl @Inject() (
@@ -20,6 +23,8 @@ class FakeShoeboxServiceClientImpl @Inject() (
     browsingHistoryRepo: BrowsingHistoryRepo,
     clickingHistoryRepo: ClickHistoryRepo,
     normUriRepo: NormalizedURIRepo,
+    experimentRepo: SearchConfigExperimentRepo,
+    userExperimentRepo: UserExperimentRepo,
     clickHistoryTracker: ClickHistoryTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
     clock: Clock,
@@ -108,4 +113,29 @@ class FakeShoeboxServiceClientImpl @Inject() (
   
   def getBookmarkByUriAndUser(uriId: com.keepit.common.db.Id[com.keepit.model.NormalizedURI],userId: com.keepit.common.db.Id[com.keepit.model.User]): scala.concurrent.Future[Option[com.keepit.model.Bookmark]] = ???
   def getPersonalSearchInfo(userId: com.keepit.common.db.Id[com.keepit.model.User],resultSet: com.keepit.search.ArticleSearchResult): scala.concurrent.Future[(Map[com.keepit.common.db.Id[com.keepit.model.User],com.keepit.common.social.BasicUser], Seq[com.keepit.controllers.ext.PersonalSearchHit])] = ???
+
+  def getActiveExperiments: Future[Seq[SearchConfigExperiment]] = {
+    val exp = db.readOnly { implicit s => experimentRepo.getActive() }
+    Promise.successful(exp).future
+  }
+
+  def getExperiments: Future[Seq[SearchConfigExperiment]] = {
+    val exp = db.readOnly { implicit s => experimentRepo.getNotInactive() }
+    Promise.successful(exp).future
+  }
+
+  def getExperiment(id: Id[SearchConfigExperiment]): Future[SearchConfigExperiment] = {
+    val exp = db.readOnly { implicit s => experimentRepo.get(id) }
+    Promise.successful(exp).future
+  }
+  def saveExperiment(experiment: SearchConfigExperiment) = {
+    val saved = db.readWrite { implicit s => experimentRepo.save(experiment) }
+    Promise.successful(saved).future
+  }
+  def hasExperiment(userId: Id[User], state: State[ExperimentType]): Future[Boolean] = {
+     val has = db.readOnly { implicit s =>
+       userExperimentRepo.hasExperiment(userId, state)
+     }
+     Promise.successful(has).future
+  }
 }

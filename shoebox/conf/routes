@@ -245,6 +245,7 @@ GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLab
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURI(id: Long)
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs(ids: String)
 GET     /internal/shoebox/database/getUsers           @com.keepit.controllers.shoebox.ShoeboxController.getUsers(ids: String)
+
 GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.shoebox.ShoeboxController.getConnectedUsers(userId: Id[User])
 GET     /internal/shoebox/tracker/browsingHistory     @com.keepit.controllers.shoebox.ShoeboxController.getBrowsingHistoryFilter(userId: Id[User])
 GET     /internal/shoebox/tracker/browsingHistory     @com.keepit.controllers.shoebox.ShoeboxController.getClickHistoryFilter(userId: Id[User])
@@ -260,6 +261,11 @@ GET     /internal/shoebox/database/getCollectionsByUser @com.keepit.controllers.
 GET     /internal/shoebox/database/getIndexable       @com.keepit.controllers.shoebox.ShoeboxController.getIndexable(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/personalSearchInfo @com.keepit.controllers.shoebox.ShoeboxController.getPersonalSearchInfo(userId: Id[User], allUsers: String, formattedHits: String)
 
+GET     /internal/shoebox/database/getActiveExperiments @com.keepit.controllers.shoebox.ShoeboxController.getActiveExperiments
+GET     /internal/shoebox/database/getExperiments     @com.keepit.controllers.shoebox.ShoeboxController.getExperiments
+GET     /internal/shoebox/database/getExperiment      @com.keepit.controllers.shoebox.ShoeboxController.getExperiment(id: Id[SearchConfigExperiment])
+POST    /internal/shoebox/database/saveExperiment     @com.keepit.controllers.shoebox.ShoeboxController.saveExperiment
+GET     /internal/shoebox/database/hasExperimenthas   @com.keepit.controllers.shoebox.ShoeboxController.hasExperiment(userId: Id[User], state: State[ExperimentType])
 
 
 # INTERNAL ROUTES/Search
@@ -289,8 +295,9 @@ GET     /internal/search/spell/make-correction     @com.keepit.controllers.searc
 
 POST     /internal/search/getSearchStatistics     @com.keepit.controllers.search.SearchStatisticsController.getSearchStatistics
 
-GET     /internal/searchConfig/:id        @com.keepit.controllers.search.SearchConfigController.showUserConfig(id: Id[User])
-POST    /internal/searchConfig/:id/set    @com.keepit.controllers.search.SearchConfigController.setUserConfig(id: Id[User])
-GET     /internal/searchConfig/:id/reset  @com.keepit.controllers.search.SearchConfigController.resetUserConfig(id: Id[User])
+GET     /internal/search/searchConfig/:id        @com.keepit.controllers.search.SearchConfigController.showUserConfig(id: Id[User])
+POST    /internal/search/searchConfig/:id/set    @com.keepit.controllers.search.SearchConfigController.setUserConfig(id: Id[User])
+GET     /internal/search/searchConfig/:id/reset  @com.keepit.controllers.search.SearchConfigController.resetUserConfig(id: Id[User])
+GET     /internal/search/defaultSearchConfig/defaultSearchConfig  @com.keepit.controllers.search.SearchConfigController.getSearchDefaultConfig
 
 GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.SearchController.friendMapJson(userId: Id[User], query: Option[String] ?= None, minKeeps: Option[Int] ?= None)

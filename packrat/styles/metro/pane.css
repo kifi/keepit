@@ -68,7 +68,7 @@ a.kifi-pane-head-logo .kifi-slider2-tip-below {
   left: -24px;
   margin-top: 10px;
 }
-a.kifi-pane-head-feedback {
+.kifi-pane a.kifi-pane-head-feedback[href] {
   float: right;
   width: 77px;
   height: 20px;
@@ -76,16 +76,16 @@ a.kifi-pane-head-feedback {
   border-radius: 3px;
   background-color: #6fa6ef;
   text-align: center;
-  color: #fafafa !important; /* necessary because of a CSS reset we use on all a elements */
+  color: #fafafa !important;
   padding-top: 8px;
   position: relative;
   z-index: 1;
   line-height: 12px;
 }
-a.kifi-pane-head-feedback:hover {
+.kifi-pane a.kifi-pane-head-feedback:hover {
   background-color: #679ade;
 }
-a.kifi-pane-head-feedback:active {
+.kifi-pane a.kifi-pane-head-feedback:active {
   background-color: #5580b8;
 }
 a.kifi-pane-head-feedback .kifi-slider2-tip-below {
@@ -232,7 +232,7 @@ div.kifi-pane-head-settings-menu {
   left: 316px;
 }
 .kifi-pane-title,
-a.kifi-pane-back {
+.kifi-pane a.kifi-pane-back {
   padding: 0 12px;
   font-size: 12px;
   line-height: 40px;
@@ -378,18 +378,18 @@ a.kifi-pane-keeper {
   line-height: 20px;
   color: #f8f8f8;
 }
-a.kifi-pane-action {
+.kifi-pane a.kifi-pane-action {
   display: block;
   margin: 0 -6px;
   padding: 10px 18px;
   color: inherit !important;
   text-decoration: none !important;
 }
-a.kifi-pane-action:hover {
+.kifi-pane a.kifi-pane-action:hover {
   color: #fff !important;
-  background: #67829c;
+  background-color: #67829c;
 }
-a.kifi-pane-action:active {
+.kifi-pane a.kifi-pane-action:active {
   background-color: #607991;
 }
 

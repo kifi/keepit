@@ -43,10 +43,10 @@ class MainQueryParser(
 
   val namedQueryContext = new NamedQueryContext
 
-  private def createPhraseQueries(query: BooleanQuery): Option[Query] = {
+  private def createPhraseQueries(phrases: Set[(Int, Int)]): Query = {
     var phraseQueries = new BooleanQuery(true)
 
-    phraseDetector.detectAll(getStemmedTermArray).foreach{ phrase =>
+    phrases.foreach{ phrase =>
       List("ts", "cs", "title_stemmed").foreach{ field =>
         val phraseStart = phrase._1
         val phraseEnd = phraseStart + phrase._2
@@ -57,12 +57,8 @@ class MainQueryParser(
         phraseQueries.add(phraseQuery, Occur.SHOULD)
       }
     }
-    if (phraseQueries.clauses.size > 0) {
-      phraseQueries.setBoost(phraseBoost)
-      Some(phraseQueries)
-    } else {
-      None
-    }
+    phraseQueries.setBoost(phraseBoost)
+    phraseQueries
   }
 
   private def namedQuery(name: String, query: Query) = new NamedQuery(name, query, namedQueryContext)
@@ -73,11 +69,16 @@ class MainQueryParser(
       else {
         query.setBoost(baseBoost)
 
-        val textQuery = query match {
-          case query: BooleanQuery if (phraseBoost > 0.0f) => {
-            createPhraseQueries(query).map{ q => new AdditiveBoostQuery(query, Array[Query](q)) }.getOrElse(query)
-          }
-          case _ => query
+        val phrases = if (numStemmedTerms > 1 && (phraseBoost > 0.0f || phraseProximityBoost > 0.0f)) {
+          phraseDetector.detectAll(getStemmedTermArray)
+        } else {
+          Set.empty[(Int, Int)]
+        }
+
+        val textQuery = if (phraseBoost > 0.0f && phrases.nonEmpty) {
+          new AdditiveBoostQuery(query, Array[Query](createPhraseQueries(phrases)))
+        } else {
+          query
         }
 
         val auxQueries = ArrayBuffer.empty[Query]
@@ -89,15 +90,14 @@ class MainQueryParser(
           auxStrengths += semanticBoost
         }
 
-        val phrases = phraseDetector.detectAll(getStemmedTermArray)
-        if (phrases.size > 0 && phraseProximityBoost > 0.0f) {
+        if (phraseProximityBoost > 0.0f && phrases.nonEmpty) {
           val phraseProxQ = new DisjunctionMaxQuery(0.0f)
           phraseProxQ.add( PhraseProximityQuery(getStemmedTerms("cs"), phrases))
           phraseProxQ.add( PhraseProximityQuery(getStemmedTerms("ts"), phrases))
           phraseProxQ.add( PhraseProximityQuery(getStemmedTerms("title_stemmed"), phrases))
           auxQueries += namedQuery("proximity", phraseProxQ)
           auxStrengths += phraseProximityBoost
-        } else if (numStemmedTerms > 1 && proximityBoost > 0.0f) {
+        } else if (proximityBoost > 0.0f && numStemmedTerms > 1) {
           val proxQ = new DisjunctionMaxQuery(0.0f)
           proxQ.add(ProximityQuery(getStemmedTerms("cs")))
           proxQ.add(ProximityQuery(getStemmedTerms("ts")))

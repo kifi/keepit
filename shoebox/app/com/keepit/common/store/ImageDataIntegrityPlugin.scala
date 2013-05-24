@@ -9,7 +9,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.{ClientResponse, HttpClient}
+import com.keepit.common.net.{NonOKResponseException, ClientResponse, HttpClient}
 import com.keepit.common.plugin.SchedulingPlugin
 import com.keepit.model.{UserStates, UserRepo, User}
 
@@ -70,11 +70,16 @@ private[store] class ImageDataIntegrityActor @Inject() (
           store.config.avatarUrlByExternalId(size, id, Some("http")))
     }
      for ((s3url, cfUrl) <- urls) yield {
-      httpClient.get(s3url) match {
-        case resp if resp.status == OK => (s3url -> resp, Some(cfUrl -> httpClient.get(cfUrl)))
+      get(s3url) match {
+        case resp if resp.status == OK => (s3url -> resp, Some(cfUrl -> get(cfUrl)))
         case resp => (s3url -> resp, None)
       }
     }
+  }
+  private def get(url: String): ClientResponse = try {
+    httpClient.get(url, httpClient.ignoreFailure)
+  } catch {
+    case NonOKResponseException(_, response) => response
   }
 }
 

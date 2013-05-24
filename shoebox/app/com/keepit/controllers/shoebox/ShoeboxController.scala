@@ -32,12 +32,25 @@ import com.keepit.shoebox.ClickHistoryTracker
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.Action
+
 import com.keepit.model.BrowsingHistoryRepo
 import com.keepit.model.User
 import com.keepit.search.MultiHashFilter
 import com.keepit.model.BrowsingHistory
 import com.keepit.model.ClickHistoryRepo
 import com.keepit.model.ClickHistory
+import com.keepit.common.mail.LocalPostOffice
+import play.api.libs.json.Json
+import com.keepit.common.mail.ElectronicMail
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.common.healthcheck.Healthcheck
+import com.keepit.search.SearchConfigExperimentRepo
+import com.keepit.model.UserExperimentRepo
+import com.keepit.serializer.SearchConfigExperimentSerializer
+import com.keepit.search.SearchConfigExperiment
+import com.keepit.common.db.State
+import com.keepit.model.ExperimentType
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.ext.PersonalSearchHit
@@ -61,6 +74,8 @@ class ShoeboxController @Inject() (
   clickingHistoryRepo: ClickHistoryRepo,
   clickHistoryTracker: ClickHistoryTracker,
   normUriRepo: NormalizedURIRepo,
+  searchConfigExperimentRepo: SearchConfigExperimentRepo,
+  userExperimentRepo: UserExperimentRepo,
   persistEventPlugin: PersistEventPlugin,
   postOffice: LocalPostOffice,
   healthcheckPlugin: HealthcheckPlugin,
@@ -139,7 +154,6 @@ class ShoeboxController @Inject() (
   }
   
   def getPersonalSearchInfo(userId: Id[User], allUsers: String, formattedHits: String) = Action { request =>
-    log.info(s"\n\n\n\n$userId  $allUsers  $formattedHits")
     val (users, personalSearchHits) = db.readOnly { implicit session =>
       val neededUsers = (allUsers.split(",").map({u => if(u == "") None else Some(u)}).flatten.map { u =>
         val user = Id[User](u.toLong)
@@ -197,6 +211,38 @@ class ShoeboxController @Inject() (
         .map { friendId => JsNumber(friendId.id) }
     }
     Ok(JsArray(ids))
+  }
+
+  def getActiveExperiments = Action { request =>
+    val exp = db.readOnly { implicit s => searchConfigExperimentRepo.getActive() }.map {
+      SearchConfigExperimentSerializer.serializer.writes(_)
+    }
+    Ok(JsArray(exp))
+  }
+
+  def getExperiments = Action { request =>
+    val exp = db.readOnly { implicit s => searchConfigExperimentRepo.getNotInactive() }.map {
+      SearchConfigExperimentSerializer.serializer.writes(_)
+    }
+    Ok(JsArray(exp))
+  }
+
+  def getExperiment(id: Id[SearchConfigExperiment]) = Action{ request =>
+    val exp = db.readOnly { implicit s => searchConfigExperimentRepo.get(id) }
+    Ok( SearchConfigExperimentSerializer.serializer.writes(exp))
+  }
+
+  def saveExperiment = Action(parse.json) { request =>
+    val exp = SearchConfigExperimentSerializer.serializer.reads(request.body).get
+    val saved = db.readWrite { implicit s => searchConfigExperimentRepo.save(exp) }
+    Ok(SearchConfigExperimentSerializer.serializer.writes(saved))
+  }
+
+  def hasExperiment(userId: Id[User], state: State[ExperimentType]) = Action { request =>
+     val has = db.readOnly { implicit s =>
+          userExperimentRepo.hasExperiment(userId, state)
+    }
+    Ok(JsBoolean(has))
   }
 
   def getPhrasesByPage(page: Int, size: Int) = Action { request =>

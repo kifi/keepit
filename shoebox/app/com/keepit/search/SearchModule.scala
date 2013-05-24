@@ -139,4 +139,12 @@ class SearchModule() extends ScalaModule with Logging {
       client, cacheProvider)
   }
 
+
+  @Singleton
+  @Provides
+  def searchConfigManager(shoeboxClient: ShoeboxServiceClient): SearchConfigManager = {
+    val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
+    new SearchConfigManager(optFile, shoeboxClient)
+  }
+
 }

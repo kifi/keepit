@@ -50,6 +50,7 @@ import com.keepit.common.mail.FakeMailModule
 import com.keepit.shoebox.BrowsingHistoryTracker
 import com.keepit.classify.DomainTagImportSettings
 import play.api.libs.Files
+import java.io.File
 
 class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplication() {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
@@ -67,6 +68,7 @@ class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplica
   def withFakeCache() = overrideWith(FakeCacheModule())
   def withS3DevModule() = overrideWith(new S3DevModule())
   def withShoeboxServiceModule() = overrideWith(ShoeboxServiceModule())
+  def withSearchConfigModule() = overrideWith(SearchConfigModule())
   def overrideWith(model: Module): TestApplication =
     new TestApplication(new TestGlobal(Modules.`override`(global.modules: _*).`with`(model)))
 }
@@ -131,13 +133,13 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   }
 
   private def dbInfoFromApplication(): DbInfo = TestDbInfo.dbInfo
-  
+
   @Singleton
   @Provides
   def domainTagImportSettings: DomainTagImportSettings = {
     DomainTagImportSettings(localDir = "", url = "")
   }
-  
+
   @Provides
   @Singleton
   def fakeClock: FakeClock = new FakeClock()
@@ -277,6 +279,18 @@ class FakeScraperPlugin() extends ScraperPlugin {
     future { throw new Exception("Not Implemented") }
 }
 
+case class SearchConfigModule() extends ScalaModule {
+  override def configure(): Unit = {
+  }
+
+  @Singleton
+  @Provides
+  def searchConfigManager(shoeboxClient: ShoeboxServiceClient): SearchConfigManager = {
+    val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
+    new SearchConfigManager(optFile, shoeboxClient)
+  }
+}
+
 case class ShoeboxServiceModule() extends ScalaModule {
   override def configure(): Unit = {
   }
@@ -292,6 +306,8 @@ case class ShoeboxServiceModule() extends ScalaModule {
     browsingHistoryRepo: BrowsingHistoryRepo,
     clickingHistoryRepo: ClickHistoryRepo,
     normUriRepo: NormalizedURIRepo,
+    experimentRepo: SearchConfigExperimentRepo,
+    userExperimentRepo: UserExperimentRepo,
     clickHistoryTracker: ClickHistoryTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
     persistEventPluginProvider: Provider[PersistEventPlugin], clock: Clock,
@@ -305,6 +321,8 @@ case class ShoeboxServiceModule() extends ScalaModule {
     browsingHistoryRepo,
     clickingHistoryRepo,
     normUriRepo,
+    experimentRepo,
+    userExperimentRepo,
     clickHistoryTracker,
     browsingHistoryTracker,
     clock,
@@ -338,7 +356,7 @@ case class FakeHealthcheckModule() extends ScalaModule {
 case class FakePersistEventModule() extends ScalaModule {
   override def configure(): Unit = {
     bind[PersistEventPlugin].to[FakePersistEventPluginImpl]
-    
+
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
 
   }
