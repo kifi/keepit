@@ -28,7 +28,6 @@ class EdgeSetTest extends Specification {
       // sorted ids
       var idArray = Array[Long](1, 2, 3, 4, 5, 6, 7, 8, 9)
       var timeArray = Array[Long](100, 200, 300, 110, 120, 130, 101, 102, 103)
-
       var edgeSet = new TestEdgeSet(Id[Vertex](0), LongArraySet.fromSorted(idArray), timeArray)
 
       edgeSet.filterByTimeRange(100, 130).destIdLongSet === Set[Long](1, 4, 5, 6, 7, 8, 9)
@@ -37,7 +36,6 @@ class EdgeSetTest extends Specification {
       // unsorted ids (reversed arrays)
       idArray = idArray.reverse
       timeArray = timeArray.reverse
-
       edgeSet = new TestEdgeSet(Id[Vertex](0), LongArraySet.from(idArray), timeArray)
 
       edgeSet.filterByTimeRange(100, 130).destIdLongSet === Set[Long](1, 4, 5, 6, 7, 8, 9)
