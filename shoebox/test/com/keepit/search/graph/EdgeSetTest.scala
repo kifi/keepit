@@ -26,19 +26,19 @@ class EdgeSetTest extends Specification {
   "EdgeSet" should {
     "filter edges by time range" in {
       // sorted ids
-      val idArray = Array[Long](1, 2, 3, 4, 5, 6, 7, 8, 9)
-      val timeArray = Array[Long](100, 200, 300, 110, 120, 130, 101, 102, 103)
+      var idArray = Array[Long](1, 2, 3, 4, 5, 6, 7, 8, 9)
+      var timeArray = Array[Long](100, 200, 300, 110, 120, 130, 101, 102, 103)
 
-      val edgeSet = new TestEdgeSet(Id[Vertex](0), LongArraySet.fromSorted(idArray), timeArray)
+      var edgeSet = new TestEdgeSet(Id[Vertex](0), LongArraySet.fromSorted(idArray), timeArray)
 
       edgeSet.filterByTimeRange(100, 130).destIdLongSet === Set[Long](1, 4, 5, 6, 7, 8, 9)
       edgeSet.filterByTimeRange(101, 119).destIdLongSet === Set[Long](4, 7, 8, 9)
 
       // unsorted ids (reversed arrays)
-      val idArrayR = idArray.reverse
-      val timeArrayR = timeArray.reverse
+      idArray = idArray.reverse
+      timeArray = timeArray.reverse
 
-      val edgeSetR = new TestEdgeSet(Id[Vertex](0), LongArraySet.from(idArrayR), timeArray)
+      edgeSet = new TestEdgeSet(Id[Vertex](0), LongArraySet.from(idArray), timeArray)
 
       edgeSet.filterByTimeRange(100, 130).destIdLongSet === Set[Long](1, 4, 5, 6, 7, 8, 9)
       edgeSet.filterByTimeRange(101, 119).destIdLongSet === Set[Long](4, 7, 8, 9)
