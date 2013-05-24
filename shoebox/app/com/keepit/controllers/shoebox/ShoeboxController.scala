@@ -29,11 +29,9 @@ import com.keepit.common.healthcheck.Healthcheck
 import com.keepit.model.NormalizedURIRepo
 import com.keepit.model.PhraseRepo
 import com.keepit.shoebox.ClickHistoryTracker
-
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.Action
-
 import com.keepit.model.BrowsingHistoryRepo
 import com.keepit.model.User
 import com.keepit.search.MultiHashFilter
@@ -53,6 +51,7 @@ import com.keepit.search.SearchConfigExperiment
 import com.keepit.common.db.State
 import com.keepit.model.ExperimentType
 import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.ExternalId
 
 object ShoeboxController {
   implicit val collectionTupleFormat = (
@@ -84,6 +83,14 @@ class ShoeboxController @Inject() (
     private val fortyTwoServices: FortyTwoServices
 )
   extends ShoeboxServiceController with Logging {
+
+  def getUserOpt(id: ExternalId[User]) = Action { request =>
+    val userOpt =  db.readOnly { implicit s => userRepo.getOpt(id) }
+    userOpt match {
+      case Some(user) => Ok(UserSerializer.userSerializer.writes(user))
+      case None => Ok(JsNull)
+    }
+  }
 
   def sendMail = Action(parse.json) { request =>
     Json.fromJson[ElectronicMail](request.body).asOpt match {
