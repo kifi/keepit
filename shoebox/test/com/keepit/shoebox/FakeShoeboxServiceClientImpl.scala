@@ -12,6 +12,8 @@ import com.keepit.serializer.NormalizedURISerializer
 import com.keepit.search.SearchConfigExperiment
 import com.keepit.search.SearchConfigExperimentRepo
 import com.keepit.serializer.SearchConfigExperimentSerializer
+import com.keepit.common.social.BasicUser
+import com.keepit.controllers.ext.PersonalSearchHit
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl @Inject() (
@@ -94,6 +96,7 @@ class FakeShoeboxServiceClientImpl @Inject() (
 
   def getConnectedUsers(id: Id[User]): scala.concurrent.Future[Set[com.keepit.common.db.Id[com.keepit.model.User]]] = ???
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = ???
+  def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = ???
   def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
   def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]] = Promise.successful(Seq()).future
 
@@ -115,6 +118,9 @@ class FakeShoeboxServiceClientImpl @Inject() (
       }
     Promise.successful(uris).future
   }
+  
+  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]] = ???
+  def getPersonalSearchInfo(userId: Id[User], resultSet: com.keepit.search.ArticleSearchResult): Future[(Map[Id[User], BasicUser], Seq[PersonalSearchHit])] = ???
 
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]] = {
     val exp = db.readOnly { implicit s => experimentRepo.getActive() }

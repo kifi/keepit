@@ -18,6 +18,11 @@ import com.keepit.controllers.shoebox._
 import com.keepit.model._
 import com.keepit.serializer._
 import play.api.libs.json._
+import com.keepit.search.ArticleSearchResult
+import com.keepit.common.social.BasicUser
+import com.keepit.common.social.BasicUserUserIdCache
+import com.keepit.common.social.BasicUserUserIdKey
+import com.keepit.controllers.ext.PersonalSearchHit
 import com.keepit.search.ActiveExperimentsCache
 import com.keepit.search.ActiveExperimentsKey
 import com.keepit.common.db.ExternalId
@@ -26,6 +31,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
   def getUserOpt(id: ExternalId[User]): Future[Option[User]]
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
+  def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]]
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
@@ -40,6 +46,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]]
   def getIndexable(seqNum: Long, fetchSize: Int): Future[Seq[NormalizedURI]]
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]]
+  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]]
+  def getPersonalSearchInfo(userId: Id[User], resultSet: ArticleSearchResult): Future[(Map[Id[User], BasicUser], Seq[PersonalSearchHit])]
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]]
   def getExperiments: Future[Seq[SearchConfigExperiment]]
   def getExperiment(id: Id[SearchConfigExperiment]): Future[SearchConfigExperiment]
@@ -48,13 +56,17 @@ trait ShoeboxServiceClient extends ServiceClient {
 }
 
 case class ShoeboxCacheProvider @Inject() (
-    externalUserIdCache: UserExternalIdCache,
+    userExternalIdCache: UserExternalIdCache,
     uriIdCache: NormalizedURICache,
     clickHistoryCache: ClickHistoryUserIdCache,
     browsingHistoryCache: BrowsingHistoryUserIdCache,
+    bookmarkUriUserCache: BookmarkUriUserCache,
+    basicUserCache: BasicUserUserIdCache,
     activeSearchConfigExperimentsCache: ActiveExperimentsCache,
-    userExperimentCache: UserExperimentCache)
-
+    userExperimentCache: UserExperimentCache,
+    userConnCache: UserConnectionIdCache,
+    externalUserIdCache: ExternalUserIdCache)
+    
 class ShoeboxServiceClientImpl @Inject() (
   override val host: String,
   override val port: Int,
@@ -63,7 +75,7 @@ class ShoeboxServiceClientImpl @Inject() (
     extends ShoeboxServiceClient {
 
   def getUserOpt(id: ExternalId[User]): Future[Option[User]] = {
-    cacheProvider.externalUserIdCache.get(UserExternalIdKey(id)) match {
+    cacheProvider.userExternalIdCache.get(UserExternalIdKey(id)) match {
       case Some(user) => Promise.successful(Some(user)).future
       case None => call(routes.ShoeboxController.getUserOpt(id)).map{ r =>
         r.json match {
@@ -77,8 +89,45 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]] = {
     call(routes.ShoeboxController.getBookmarks(userId)).map{ r =>
-      r.json.as[JsArray].value.map(js => BookmarkSerializer.fullBookmarkSerializer.reads(js).get)
+      r.json.as[JsArray].value.map(js => Json.fromJson[Bookmark](js).get)
     }
+  }
+  
+  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]] = {
+    cacheProvider.bookmarkUriUserCache.get(BookmarkUriUserKey(uriId, userId)) match {
+      case Some(bookmark) => Promise.successful(Some(bookmark)).future
+      case None =>
+        call(routes.ShoeboxController.getBookmarkByUriAndUser(uriId, userId)).map { r =>
+          Json.fromJson[Option[Bookmark]](r.json).get
+        }
+    }
+  }
+  
+  def getPersonalSearchInfo(userId: Id[User], resultSet: ArticleSearchResult): Future[(Map[Id[User], BasicUser], Seq[PersonalSearchHit])] = {
+    val allUsers = resultSet.hits.map(_.users).flatten.distinct
+    
+    val (preCachedUsers, neededUsers) = allUsers.foldRight((Map[Id[User], BasicUser](), Set[Id[User]]())) { (uid, resSet) =>
+      cacheProvider.basicUserCache.get(BasicUserUserIdKey(uid)) match {
+        case Some(bu) => (resSet._1 + (uid -> bu), resSet._2)
+        case None => (resSet._1, resSet._2 + uid)
+      }
+    }
+    
+    if(neededUsers.nonEmpty || resultSet.hits.nonEmpty) {
+      val neededUsersReq = neededUsers.map(_.id).mkString(",")
+      val formattedHits = resultSet.hits.map( hit => (if(hit.isMyBookmark) 1 else 0) + ":" + hit.uriId ).mkString(",")
+      
+      call(routes.ShoeboxController.getPersonalSearchInfo(userId, neededUsersReq, formattedHits)).map{ res =>
+        val personalSearchHits = (Json.fromJson[Seq[PersonalSearchHit]](res.json \ "personalSearchHits")).getOrElse(Seq())
+        val neededUsers = (res.json \ "users").as[Map[String, BasicUser]]
+        val allUsers = neededUsers.map( b => Id[User](b._1.toLong) -> b._2) ++ preCachedUsers
+        
+        (allUsers, personalSearchHits)
+      }
+    } else {
+      Promise.successful((Map.empty[Id[User], BasicUser], Nil)).future
+    }
+    
   }
 
   def sendMail(email: ElectronicMail): Future[Boolean] = {
@@ -91,10 +140,29 @@ class ShoeboxServiceClientImpl @Inject() (
       r.json.as[JsArray].value.map(js => UserSerializer.userSerializer.reads(js).get)
     }
   }
+  
+  def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
+    val (cachedUsers, needToGetUsers) = userIds.map({ u =>
+      u -> cacheProvider.externalUserIdCache.get(ExternalUserIdKey(u))
+    }).foldRight((Seq[Id[User]](), "")) { (uOpt, res) =>
+      uOpt._2 match {
+        case Some(uid) => (res._1 :+ uid, res._2)
+        case None => (res._1, res._2 + "," + uOpt._1)
+      }
+    }
+    
+    call(routes.ShoeboxController.getUserIdsByExternalIds(needToGetUsers)).map { r =>
+      cachedUsers ++ r.json.as[Seq[Long]].map(Id[User](_))
+    }
+  }
 
   def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]] = {
-    call(routes.ShoeboxController.getConnectedUsers(userId)).map {r =>
-      r.json.as[JsArray].value.map(jsv => Id[User](jsv.as[Long])).toSet
+    cacheProvider.userConnCache.get(UserConnectionKey(userId)) match {
+      case Some(conns) => Promise.successful(conns).future
+      case None =>
+        call(routes.ShoeboxController.getConnectedUsers(userId)).map {r =>
+          r.json.as[JsArray].value.map(jsv => Id[User](jsv.as[Long])).toSet
+        }
     }
   }
 
