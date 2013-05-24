@@ -23,7 +23,7 @@ class MonitoredAwait @Inject() (healthcheckPlugin: HealthcheckPlugin) {
         healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
         valueOnFailure
     } finally {
-      sw.stop
+      sw.stop()
       sw.logTime()
     }
   }
@@ -36,7 +36,7 @@ class MonitoredAwait @Inject() (healthcheckPlugin: HealthcheckPlugin) {
     try {
       Await.result(awaitable, atMost)
     } finally {
-      sw.stop
+      sw.stop()
       sw.logTime()
     }
   }

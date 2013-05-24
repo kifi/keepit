@@ -59,6 +59,17 @@ class UserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCach
   def serialize(user: User) = UserSerializer.userSerializer.writes(user)
 }
 
+case class ExternalUserIdKey(id: ExternalId[User]) extends Key[Id[User]] {
+  override val version = 2
+  val namespace = "user_by_id"
+  def toKey(): String = id.id.toString
+}
+class ExternalUserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[ExternalUserIdKey, Id[User]] {
+  val ttl = 24 hours
+  def deserialize(obj: Any): Id[User] = Id[User](obj.asInstanceOf[Long])
+  def serialize(userId: Id[User]) = userId.id
+}
+
 @Singleton
 class UserRepoImpl @Inject() (
   val db: DataBaseComponent,
