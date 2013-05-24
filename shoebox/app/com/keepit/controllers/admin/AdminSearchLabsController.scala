@@ -10,13 +10,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import views.html
 
 @Singleton
-class AdminSearchLabsController @Inject() (
-  actionAuthenticator: ActionAuthenticator,
-  db: Database,
-  searchConfigManager: SearchConfigManager,
-  normalizedURIRepo: NormalizedURIRepo,
-  userRepo: UserRepo,
-  searchClient: SearchServiceClient)
+class AdminSearchLabsController @Inject() (actionAuthenticator: ActionAuthenticator, searchClient: SearchServiceClient)
     extends AdminController(actionAuthenticator) {
 
   def friendMap(q: Option[String] = None, minKeeps: Option[Int] = None) = AdminHtmlAction { implicit request =>
