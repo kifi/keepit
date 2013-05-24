@@ -12,35 +12,29 @@ import com.keepit.serializer.EventSerializer
 import com.keepit.serializer.SearchStatisticsSerializer
 
 object Parsers {
-  type ParsedDBObject = (DateTime, Map[String, ValueOrdering])
-  def dateCountParser(name: String, r: DBObject, ordering: Int): ParsedDBObject = {
+  type ParsedDBObject = (DateTime, Map[String, String])
+  def dateCountParser(name: String, r: DBObject): ParsedDBObject = {
     val date = r.getAs[String]("_id").get
     val count = r.getAs[DBObject]("value").get.getAs[Double]("count").get.toInt
-    parseStandardDate(date).toDateTimeAtStartOfDay -> Map(name -> ValueOrdering(count.toString, ordering))
+    parseStandardDate(date).toDateTimeAtStartOfDay -> Map(name -> count.toString)
   }
 }
 
-case class ValueOrdering(value: String, ordering: Int)
-
-case class ReportRow(date: DateTime, fields: Map[String, ValueOrdering]) { // key -> ordering, value
-  def toCSV = STANDARD_DATETIME_FORMAT.print(date) + "," + fields.toSeq.sortWith((a, b) => a._2.ordering < b._2.ordering).map(_._2.value).mkString(",")
-}
+case class ReportRow(date: DateTime, fields: Map[String, String])
 
 case class Report(reportName: String, reportVersion: String, list: Seq[ReportRow], createdAt: DateTime = currentDateTime) extends Logging {
-  def toCSV = {
-    val columns = list.flatMap { row =>
-      row.fields.toSeq
-    }.sortWith((a, b) => a._2.ordering < b._2.ordering).map(_._1).distinct
+  def toCSV(requiredColumns: Seq[String] = Nil) = {
+    val columns = if (requiredColumns.isEmpty) list.flatMap(_.fields.toSeq).map(_._1).distinct else requiredColumns
 
     log.info(columns mkString ", ")
     val dates = list.map(_.date).sorted
 
     val keyedList = list.map { row =>
       val f = columns.map { column =>
-        row.fields.getOrElse(column, ValueOrdering("", 0)).value
+        row.fields.getOrElse(column, "")
       }
       (row.date, f)
-    } toMap
+    }.toMap
 
     log.info(keyedList mkString ", ")
 
@@ -80,13 +74,12 @@ abstract class ReportRepo @Inject() (store: MongoEventStore) {
   def reportName = "report"
   val numFields = 2
   val reportVersion: String = "1.0"
-  val ordering = 1000
 
   def collectionName = { "report" + reportName }
   def get(startDate: DateTime, endDate: DateTime): Report
   def get(): Report = get(currentDateTime.minusDays(default_report_size), currentDateTime)
 
-  def reportBuilder(startDate: DateTime, endDate: DateTime, numFields: Int)(reportFields: Map[DateTime, Map[String, ValueOrdering]]) = {
+  def reportBuilder(startDate: DateTime, endDate: DateTime, numFields: Int)(reportFields: Map[DateTime, Map[String, String]]) = {
     val rows = (reportFields map { row =>
       ReportRow(row._1, row._2)
     } toSeq) sortWith ((a, b) => a.date.isAfter(b.date))
@@ -100,14 +93,13 @@ abstract class BasicDailyAggregationReportRepo @Inject() (store: MongoEventStore
   def get(query: DBObject, startDate: DateTime, endDate: DateTime): Report = {
     val results = store.mapReduce(EventFamilies.EXTENSION.collection, MongoMapFunc.DATE_COUNT, MongoReduceFunc.BASIC_COUNT, None, Some(query), None).toList
     val builder = reportBuilder(startDate.toDateTime, endDate.toDateTime, 2)_
-    builder(results map (Parsers.dateCountParser(reportName + "Count", _, ordering)) toMap)
+    builder(results map (Parsers.dateCountParser(reportName + "Count", _)) toMap)
   }
 }
 
 class DailyActiveUniqueUserReportRepo @Inject() (store: MongoEventStore) extends ReportRepo(store) with Logging {
   override val reportName = "DailyActiveUniqueUser"
   override val numFields = 2
-  override val ordering = 10
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.GENERIC_USER)
@@ -122,14 +114,13 @@ class DailyActiveUniqueUserReportRepo @Inject() (store: MongoEventStore) extends
 
     val builder = reportBuilder(startDate.toDateTime, endDate.toDateTime, 2)_
 
-    builder(results map (Parsers.dateCountParser(reportName, _, ordering)) toMap)
+    builder(results map (Parsers.dateCountParser(reportName, _)) toMap)
   }
 }
 
 class DailyUniqueDepricatedAddBookmarksRepo @Inject() (store: MongoEventStore) extends ReportRepo(store) with Logging {
   override val reportName = "DailyUniqueDepricatedAddBookmarks"
   override val numFields = 2
-  override val ordering = 20
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.ACCOUNT)
@@ -145,13 +136,12 @@ class DailyUniqueDepricatedAddBookmarksRepo @Inject() (store: MongoEventStore) e
 
     val builder = reportBuilder(startDate.toDateTime, endDate.toDateTime, 2)_
 
-    builder(results map (Parsers.dateCountParser(reportName, _, ordering)) toMap)
+    builder(results map (Parsers.dateCountParser(reportName, _)) toMap)
   }
 }
 
 class DailyPageLoadReportRepo @Inject() (store: MongoEventStore) extends BasicDailyAggregationReportRepo(store) with Logging {
   override val reportName = "DailyPageLoadReport"
-  override val ordering = 30
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.EXTENSION).withDateRange(startDate, endDate).withEventName("pageLoad").build
@@ -161,7 +151,6 @@ class DailyPageLoadReportRepo @Inject() (store: MongoEventStore) extends BasicDa
 
 class DailySearchQueriesReportRepo @Inject() (store: MongoEventStore) extends BasicDailyAggregationReportRepo(store) with Logging {
   override val reportName = "DailySearchQueriesReport"
-  override val ordering = 40
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("newSearch").build
@@ -171,7 +160,6 @@ class DailySearchQueriesReportRepo @Inject() (store: MongoEventStore) extends Ba
 
 class DailyGoogleResultClickedRepo @Inject() (store: MongoEventStore) extends BasicDailyAggregationReportRepo(store) with Logging {
   override val reportName = "DailyGoogleResultClicked"
-  override val ordering = 50
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("googleResultClicked").build
@@ -181,7 +169,6 @@ class DailyGoogleResultClickedRepo @Inject() (store: MongoEventStore) extends Ba
 
 class DailyKifiResultClickedRepo @Inject() (store: MongoEventStore) extends BasicDailyAggregationReportRepo(store) with Logging {
   override val reportName = "DailyKifiResultClicked"
-  override val ordering = 70
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("kifiResultClicked").build
@@ -191,7 +178,6 @@ class DailyKifiResultClickedRepo @Inject() (store: MongoEventStore) extends Basi
 
 class DailySliderShownByAutoRepo @Inject() (store: MongoEventStore) extends BasicDailyAggregationReportRepo(store) with Logging {
   override val reportName = "DailySliderShownByAuto"
-  override val ordering = 80
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("sliderShown").withMetaData("trigger", "auto").build
@@ -201,7 +187,6 @@ class DailySliderShownByAutoRepo @Inject() (store: MongoEventStore) extends Basi
 
 class DailySliderShownByIconRepo @Inject() (store: MongoEventStore) extends BasicDailyAggregationReportRepo(store) with Logging {
   override val reportName = "DailySliderShownByButton"
-  override val ordering = 90
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("sliderShown").withMetaData("trigger", "button").build
@@ -211,7 +196,6 @@ class DailySliderShownByIconRepo @Inject() (store: MongoEventStore) extends Basi
 
 class DailySliderShownByKeyRepo @Inject() (store: MongoEventStore) extends BasicDailyAggregationReportRepo(store) with Logging {
   override val reportName = "DailySliderShownByKey"
-  override val ordering = 100
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("sliderShown").withMetaData("trigger", "key").build
@@ -221,7 +205,6 @@ class DailySliderShownByKeyRepo @Inject() (store: MongoEventStore) extends Basic
 
 class DailySliderClosedByIconRepo @Inject() (store: MongoEventStore) extends BasicDailyAggregationReportRepo(store) with Logging {
   override val reportName = "DailySliderClosedByButton"
-  override val ordering = 110
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("sliderClosed").withMetaData("trigger", "button").build
@@ -231,7 +214,6 @@ class DailySliderClosedByIconRepo @Inject() (store: MongoEventStore) extends Bas
 
 class DailySliderClosedByKeyRepo @Inject() (store: MongoEventStore) extends BasicDailyAggregationReportRepo(store) with Logging {
   override val reportName = "DailySliderClosedByKey"
-  override val ordering = 120
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("sliderClosed").withMetaData("trigger", "key").build
@@ -241,7 +223,6 @@ class DailySliderClosedByKeyRepo @Inject() (store: MongoEventStore) extends Basi
 
 class DailySliderClosedByXRepo @Inject() (store: MongoEventStore) extends BasicDailyAggregationReportRepo(store) with Logging {
   override val reportName = "DailySliderClosedByX"
-  override val ordering = 130
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("sliderClosed").withMetaData("trigger", "x").build
@@ -251,7 +232,6 @@ class DailySliderClosedByXRepo @Inject() (store: MongoEventStore) extends BasicD
 
 class DailyCommentRepo @Inject() (store: MongoEventStore) extends BasicDailyAggregationReportRepo(store) with Logging {
   override val reportName = "DailyComment"
-  override val ordering = 140
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("comment").build
@@ -261,7 +241,6 @@ class DailyCommentRepo @Inject() (store: MongoEventStore) extends BasicDailyAggr
 
 class DailyMessageRepo @Inject() (store: MongoEventStore) extends BasicDailyAggregationReportRepo(store) with Logging {
   override val reportName = "DailyMessage"
-  override val ordering = 150
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("message").build
@@ -271,7 +250,6 @@ class DailyMessageRepo @Inject() (store: MongoEventStore) extends BasicDailyAggr
 
 class DailyUnkeepRepo @Inject() (store: MongoEventStore) extends BasicDailyAggregationReportRepo(store) with Logging {
   override val reportName = "DailyUnkeep"
-  override val ordering = 160
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("unkeep").build
@@ -281,7 +259,6 @@ class DailyUnkeepRepo @Inject() (store: MongoEventStore) extends BasicDailyAggre
 
 class DailyKeepRepo @Inject() (store: MongoEventStore) extends BasicDailyAggregationReportRepo(store) with Logging {
   override val reportName = "DailyKeep"
-  override val ordering = 170
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("keep").build
@@ -291,7 +268,6 @@ class DailyKeepRepo @Inject() (store: MongoEventStore) extends BasicDailyAggrega
 
 class DailyUsefulPageRepo @Inject() (store: MongoEventStore) extends BasicDailyAggregationReportRepo(store) with Logging {
   override val reportName = "DailyUsefulPage"
-  override val ordering = 180
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("usefulPage").build
@@ -301,7 +277,6 @@ class DailyUsefulPageRepo @Inject() (store: MongoEventStore) extends BasicDailyA
 
 class DailyTotalUsersRepo @Inject() (store: MongoEventStore, db: Database) extends ReportRepo(store) with Logging {
   override val reportName = "DailyTotalUsers"
-  override val ordering = 190
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     var fields = Seq[ReportRow]()
@@ -319,7 +294,7 @@ class DailyTotalUsersRepo @Inject() (store: MongoEventStore, db: Database) exten
       while (rs.next) {
         val day = parseStandardDate(rs.getString("day")).toDateTimeAtStartOfDay
         val sum = rs.getInt("sum")
-        fields +:= ReportRow(day, Map(reportName -> ValueOrdering(sum.toString, ordering)))
+        fields +:= ReportRow(day, Map(reportName -> sum.toString))
       }
     }
     Report(reportName = reportName, reportVersion = reportVersion, list = fields)
@@ -328,7 +303,6 @@ class DailyTotalUsersRepo @Inject() (store: MongoEventStore, db: Database) exten
 
 class DailyPrivateKeepsRepo @Inject() (store: MongoEventStore, db: Database) extends ReportRepo(store) with Logging {
   override val reportName = "DailyPrivateKeeps"
-  override val ordering = 200
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     var fields = Seq[ReportRow]()
@@ -347,7 +321,7 @@ class DailyPrivateKeepsRepo @Inject() (store: MongoEventStore, db: Database) ext
       while (rs.next) {
         val day = parseStandardDate(rs.getString("day")).toDateTimeAtStartOfDay
         val sum = rs.getInt("sum")
-        fields +:= ReportRow(day, Map(reportName -> ValueOrdering(sum.toString, ordering)))
+        fields +:= ReportRow(day, Map(reportName -> sum.toString))
       }
     }
     Report(reportName = reportName, reportVersion = reportVersion, list = fields)
@@ -356,7 +330,6 @@ class DailyPrivateKeepsRepo @Inject() (store: MongoEventStore, db: Database) ext
 
 class DailyPublicKeepsRepo @Inject() (store: MongoEventStore, db: Database) extends ReportRepo(store) with Logging {
   override val reportName = "DailyPublicKeeps"
-  override val ordering = 210
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     var fields = Seq[ReportRow]()
@@ -375,7 +348,7 @@ class DailyPublicKeepsRepo @Inject() (store: MongoEventStore, db: Database) exte
       while (rs.next) {
         val day = parseStandardDate(rs.getString("day")).toDateTimeAtStartOfDay
         val sum = rs.getInt("sum")
-        fields +:= ReportRow(day, Map(reportName -> ValueOrdering(sum.toString, ordering)))
+        fields +:= ReportRow(day, Map(reportName -> sum.toString))
       }
     }
     Report(reportName = reportName, reportVersion = reportVersion, list = fields)
@@ -384,7 +357,6 @@ class DailyPublicKeepsRepo @Inject() (store: MongoEventStore, db: Database) exte
 
 class DailyNewThreadRepo @Inject() (store: MongoEventStore, db: Database) extends ReportRepo(store) with Logging {
   override val reportName = "DailyNewThread"
-  override val ordering = 220
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     var fields = Seq[ReportRow]()
@@ -403,7 +375,7 @@ class DailyNewThreadRepo @Inject() (store: MongoEventStore, db: Database) extend
       while (rs.next) {
         val day = parseStandardDate(rs.getString("day")).toDateTimeAtStartOfDay
         val sum = rs.getInt("sum")
-        fields +:= ReportRow(day, Map(reportName -> ValueOrdering(sum.toString, ordering)))
+        fields +:= ReportRow(day, Map(reportName -> sum.toString))
       }
     }
     Report(reportName = reportName, reportVersion = reportVersion, list = fields)
@@ -432,7 +404,6 @@ class MonthlyClickingUsersRepo @Inject() (store: MongoEventStore) extends Active
 sealed abstract class ActiveUsersReportRepo(store: MongoEventStore, func: MongoMapFunc, events: Seq[String]) extends ReportRepo(store) with Logging {
   override val reportName = getClass.getSimpleName
   override val numFields = 2
-  override val ordering = 230
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.GENERIC_USER).withDateRange(startDate, endDate)
@@ -446,14 +417,13 @@ sealed abstract class ActiveUsersReportRepo(store: MongoEventStore, func: MongoM
 
     val builder = reportBuilder(startDate.toDateTime, endDate.toDateTime, 2) _
 
-    builder(results map (Parsers.dateCountParser(reportName, _, ordering)) toMap)
+    builder(results map (Parsers.dateCountParser(reportName, _)) toMap)
   }
 }
 
 class DailyUniqueUsersKeepingRepo @Inject() (store: MongoEventStore) extends ReportRepo(store) with Logging {
   override val reportName = "DailyUniqueUsersKeeping"
   override val numFields = 2
-  override val ordering = 230
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("keep").build
@@ -466,14 +436,13 @@ class DailyUniqueUsersKeepingRepo @Inject() (store: MongoEventStore) extends Rep
 
     val builder = reportBuilder(startDate.toDateTime, endDate.toDateTime, 2)_
 
-    builder(results map (Parsers.dateCountParser(reportName, _, ordering)) toMap)
+    builder(results map (Parsers.dateCountParser(reportName, _)) toMap)
   }
 }
 
 class DailyUniqueUsersMessagingRepo @Inject() (store: MongoEventStore) extends ReportRepo(store) with Logging {
   override val reportName = "DailyUniqueUsersMessaging"
   override val numFields = 2
-  override val ordering = 240
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("message").build
@@ -486,14 +455,13 @@ class DailyUniqueUsersMessagingRepo @Inject() (store: MongoEventStore) extends R
 
     val builder = reportBuilder(startDate.toDateTime, endDate.toDateTime, 2)_
 
-    builder(results map (Parsers.dateCountParser(reportName, _, ordering)) toMap)
+    builder(results map (Parsers.dateCountParser(reportName, _)) toMap)
   }
 }
 
 class DailyUniqueUsersCommentingRepo @Inject() (store: MongoEventStore) extends ReportRepo(store) with Logging {
   override val reportName = "DailyUniqueUsersCommenting"
   override val numFields = 2
-  override val ordering = 240
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SLIDER).withDateRange(startDate, endDate).withEventName("comment").build
@@ -506,13 +474,12 @@ class DailyUniqueUsersCommentingRepo @Inject() (store: MongoEventStore) extends 
 
     val builder = reportBuilder(startDate.toDateTime, endDate.toDateTime, 2)_
 
-    builder(results map (Parsers.dateCountParser(reportName, _, ordering)) toMap)
+    builder(results map (Parsers.dateCountParser(reportName, _)) toMap)
   }
 }
 
 class DailyKifiLoadedReportRepo @Inject() (store: MongoEventStore) extends BasicDailyAggregationReportRepo(store) with Logging {
   override val reportName = "DailyKifiLoadedReport"
-  override val ordering = 250
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("kifiLoaded").build
@@ -522,7 +489,6 @@ class DailyKifiLoadedReportRepo @Inject() (store: MongoEventStore) extends Basic
 
 class DailyKifiAtLeastOneResultRepo @Inject() (store: MongoEventStore) extends BasicDailyAggregationReportRepo(store) with Logging {
   override val reportName = "DailyKifiAtLeastOneResult"
-  override val ordering = 260
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SEARCH).withDateRange(startDate, endDate).withEventName("kifiAtLeastOneResult").build
@@ -535,7 +501,6 @@ class DailyDustSettledKifiHadResultsRepo @Inject() (store: MongoEventStore) exte
 
 abstract class DailyDustSettledKifiMayHadResultsRepo (store: MongoEventStore, kifiHadResults: Boolean) extends BasicDailyAggregationReportRepo(store) with Logging {
   override val reportName = s"DailyDustSettledKifiHad${if (kifiHadResults) "" else "No"}Results"
-  override val ordering = 270 + (if (kifiHadResults) 1 else 0)
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
     val selector = MongoSelector(EventFamilies.SEARCH)
@@ -577,7 +542,6 @@ class DailyDustSettledKifiHadResultsByExperimentRepo @Inject() (store: MongoEven
   override val eventName = "dustSettled"
   override lazy val reportName = s"DailyDustSettledKifiHad${if (kifiHadResults) "" else "No"}Results " +
     s"${experiment.map(_.description).getOrElse("Default")}"
-  override val ordering = 4000 + experiment.map(_.id.get.id.toInt).getOrElse(0)
   override def baseSelector(startDate: DateTime, endDate: DateTime): MongoSelector =
     MongoSelector(EventFamilies.SEARCH)
       .withDateRange(startDate, endDate)
@@ -586,17 +550,14 @@ class DailyDustSettledKifiHadResultsByExperimentRepo @Inject() (store: MongoEven
 
 class DailyKifiAtLeastOneResultByExperimentRepo @Inject() (store: MongoEventStore, val experiment: Option[SearchConfigExperiment]) extends DailyByExperimentRepo(store) {
   override val eventName = "kifiAtLeastOneResult"
-  override val ordering = 1000 + experiment.map(_.id.get.id.toInt).getOrElse(0)
 }
 
 class DailyGoogleResultClickedByExperimentRepo @Inject() (store: MongoEventStore, val experiment: Option[SearchConfigExperiment]) extends DailyByExperimentRepo(store) {
   override val eventName = "googleResultClicked"
-  override val ordering = 2000 + experiment.map(_.id.get.id.toInt).getOrElse(0)
 }
 
 class DailyKifiResultClickedByExperimentRepo @Inject() (store: MongoEventStore, val experiment: Option[SearchConfigExperiment]) extends DailyByExperimentRepo(store) {
   override val eventName = "kifiResultClicked"
-  override val ordering = 3000 + experiment.map(_.id.get.id.toInt).getOrElse(0)
 }
 
 class DailySearchStatisticsReportRepo @Inject() (store: MongoEventStore) extends ReportRepo(store) with Logging {
@@ -623,35 +584,36 @@ class DailySearchStatisticsReportRepo @Inject() (store: MongoEventStore) extends
         implicit def floatToString(x: Float) = x.toString
         implicit def boolToString(x: Boolean) = x.toString
 
-        Some(ReportRow(dateTime, Map(
-          "queryUUID" -> ValueOrdering(qInfo.queryUUID.id, 10),
-          "queryString" -> ValueOrdering(qInfo.queryString, 11),
-          "userId" -> ValueOrdering(qInfo.userId.id, 12),
+        Some(ReportRow(dateTime, Map[String, Any](
+          "queryUUID" -> qInfo.queryUUID.id,
+          "queryString" -> qInfo.queryString,
+          "userId" -> qInfo.userId.id,
 
-          "uriId" -> ValueOrdering(uriInfo.uriId.id, 20),
-          "textScore" -> ValueOrdering(uriInfo.textScore, 21),
-          "bookmarkScore" -> ValueOrdering(uriInfo.bookmarkScore, 22),
-          "recencyScore" -> ValueOrdering(uriInfo.recencyScore, 23),
-          "clickBoost" -> ValueOrdering(uriInfo.clickBoost, 24),
-          "isMyBookmark" -> ValueOrdering(uriInfo.isMyBookmark, 25),
-          "isPrivate" -> ValueOrdering(uriInfo.isPrivate, 26),
-          "friendsKeepsCount" -> ValueOrdering(uriInfo.friendsKeepsCount, 27),
-          "totalCounts" -> ValueOrdering(uriInfo.totalCounts, 28),
+          "uriId" -> uriInfo.uriId.id,
+          "textScore" -> uriInfo.textScore,
+          "bookmarkScore" -> uriInfo.bookmarkScore,
+          "recencyScore" -> uriInfo.recencyScore,
+          "clickBoost" -> uriInfo.clickBoost,
+          "isMyBookmark" -> uriInfo.isMyBookmark,
+          "isPrivate" -> uriInfo.isPrivate,
+          "friendsKeepsCount" -> uriInfo.friendsKeepsCount,
+          "totalCounts" -> uriInfo.totalCounts,
 
-          "multiplicativeBoost" -> ValueOrdering(lscores.multiplicativeBoost, 30),
-          "additiveBoost" -> ValueOrdering(lscores.additiveBoost, 31),
-          "percentMatch" -> ValueOrdering(lscores.percentMatch, 32),
-          "semanticVector" -> ValueOrdering(lscores.semanticVector, 33),
-          "phraseProximity" -> ValueOrdering(lscores.phraseProximity, 34),
+          "multiplicativeBoost" -> lscores.multiplicativeBoost,
+          "additiveBoost" -> lscores.additiveBoost,
+          "percentMatch" -> lscores.percentMatch,
+          "semanticVector" -> lscores.semanticVector,
+          "phraseProximity" -> lscores.phraseProximity,
 
-          "myHits" -> ValueOrdering(sInfo.myHits, 40),
-          "friendsHits" -> ValueOrdering(sInfo.friendsHits, 41),
-          "othersHits" -> ValueOrdering(sInfo.othersHits, 42),
-          "svVariance" -> ValueOrdering(sInfo.svVariance, 43),
-          "svExistenceVar" -> ValueOrdering(sInfo.svExistenceVar, 44),
+          "myHits" -> sInfo.myHits,
+          "friendsHits" -> sInfo.friendsHits,
+          "othersHits" -> sInfo.othersHits,
+          "svVariance" -> sInfo.svVariance,
+          "svExistenceVar" -> sInfo.svExistenceVar,
 
-          "clicked" -> ValueOrdering(label.clicked, 50),
-          "isCorrectlyRanked" -> ValueOrdering(label.isCorrectlyRanked, 51))))
+          "clicked" -> label.clicked,
+          "isCorrectlyRanked" -> label.isCorrectlyRanked
+        ).mapValues(_.toString)))
       } catch {
         case e: Exception => None // serialization error.
       }
