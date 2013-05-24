@@ -100,16 +100,19 @@ class ShoeboxServiceClientImpl @Inject() (
       }
     }
     
-    val neededUsersReq = neededUsers.map(_.id).mkString(",")
-    
-    val formattedHits = resultSet.hits.map( hit => (if(hit.isMyBookmark) 1 else 0) + ":" + hit.uriId ).mkString(",")
-    
-    call(routes.ShoeboxController.getPersonalSearchInfo(userId, neededUsersReq, formattedHits)).map{ res =>
-      val personalSearchHits = (Json.fromJson[Seq[PersonalSearchHit]](res.json \ "personalSearchHits")).getOrElse(Seq())
-      val neededUsers = (res.json \ "users").as[Map[String, BasicUser]]
-      val allUsers = neededUsers.map( b => Id[User](b._1.toLong) -> b._2) ++ preCachedUsers
+    if(neededUsers.nonEmpty || resultSet.hits.nonEmpty) {
+      val neededUsersReq = neededUsers.map(_.id).mkString(",")
+      val formattedHits = resultSet.hits.map( hit => (if(hit.isMyBookmark) 1 else 0) + ":" + hit.uriId ).mkString(",")
       
-      (allUsers, personalSearchHits)
+      call(routes.ShoeboxController.getPersonalSearchInfo(userId, neededUsersReq, formattedHits)).map{ res =>
+        val personalSearchHits = (Json.fromJson[Seq[PersonalSearchHit]](res.json \ "personalSearchHits")).getOrElse(Seq())
+        val neededUsers = (res.json \ "users").as[Map[String, BasicUser]]
+        val allUsers = neededUsers.map( b => Id[User](b._1.toLong) -> b._2) ++ preCachedUsers
+        
+        (allUsers, personalSearchHits)
+      }
+    } else {
+      Promise.successful((Map.empty[Id[User], BasicUser], Nil)).future
     }
     
   }

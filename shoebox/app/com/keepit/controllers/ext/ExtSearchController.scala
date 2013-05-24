@@ -24,6 +24,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import com.keepit.common.akka.MonitoredAwait
+import scala.concurrent.Future
 
 
 //note: users.size != count if some users has the bookmark marked as private
@@ -169,7 +170,7 @@ class ExtSearchController @Inject() (
     PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), experimentId, filter)
   }
   
-  private[ext] def toPersonalSearchResult(userId: Id[User], resultSet: ArticleSearchResult) = {
+  private[ext] def toPersonalSearchResult(userId: Id[User], resultSet: ArticleSearchResult): Future[Seq[PersonalSearchResult]] = {
     shoeboxClient.getPersonalSearchInfo(userId, resultSet).map { case (allUsers, personalSearchHits) =>
       (resultSet.hits, resultSet.scorings, personalSearchHits).zipped.toSeq.map { case (hit, score, personalHit) =>
         val users = hit.users.map(allUsers)
