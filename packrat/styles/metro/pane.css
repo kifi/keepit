@@ -294,6 +294,27 @@ a.kifi-pane-back::after {
   bottom: 0;
   background: #fafafa;
 }
+div.kifi-pane-tall-middle {
+  display: table;
+  height: 100%;
+  width: 100%;
+}
+div.kifi-pane-empty {
+  display: table-cell;
+  height: 100%;
+  vertical-align: middle;
+  text-align: center;
+  font-size: 16px;
+  color: #34495e;
+  -webkit-transition: opacity .4s;
+  transition: opacity .4s;
+}
+div.kifi-pane-empty.kifi-hidden {
+  opacity: 0;
+}
+div.kifi-pane-empty img {
+  margin-bottom: 18px;
+}
 .kifi-pane-tall-bottom {
   position: absolute;
   left: 0;

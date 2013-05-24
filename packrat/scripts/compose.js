@@ -193,7 +193,10 @@ function attachComposeBindings($c, composeTypeName) {
   });
 
   var hOld, elAbove = $f[0].previousElementSibling;
-  $(elAbove).scrollable().layout();
+  $(elAbove).scrollable({
+    $above: $c.closest(".kifi-pane-box").find(".kifi-pane-title,.kifi-thread-who").last(),
+    $below: $f
+  }).layout();
   updateMaxHeight();
 
   $(window).on("resize", updateMaxHeight);
