@@ -39,6 +39,7 @@ import com.keepit.common.net._
 import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.shoebox.BrowsingHistoryTracker
 import com.keepit.shoebox.ClickHistoryTracker
+import com.keepit.common.akka.MonitoredAwait
 
 class MainSearcherTest extends Specification with DbRepos {
 
@@ -65,6 +66,7 @@ class MainSearcherTest extends Specification with DbRepos {
         inject[ClickHistoryBuilder],
         inject[ShoeboxServiceClient],
         inject[FakeSpellCorrector],
+        inject[MonitoredAwait],
         clock,
         fortyTwoServices)
     (uriGraph, articleIndexer, mainSearcherFactory)

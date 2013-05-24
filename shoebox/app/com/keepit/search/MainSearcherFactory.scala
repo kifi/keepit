@@ -24,6 +24,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.shoebox.BrowsingHistoryTracker
 import scala.concurrent.ExecutionContext.Implicits._
+import com.keepit.common.akka.MonitoredAwait
 
 @Singleton
 class MainSearcherFactory @Inject() (
@@ -35,6 +36,7 @@ class MainSearcherFactory @Inject() (
     clickHistoryBuilder: ClickHistoryBuilder,
     shoeboxClient: ShoeboxServiceClient,
     spellCorrector: SpellCorrector,
+    monitoredAwait: MonitoredAwait,
     implicit private val clock: Clock,
     implicit private val fortyTwoServices: FortyTwoServices
  ) extends Logging {
@@ -68,7 +70,8 @@ class MainSearcherFactory @Inject() (
         browsingHistoryFuture,
         clickHistoryFuture,
         shoeboxClient,
-        spellCorrector
+        spellCorrector,
+        monitoredAwait
     )
   }
 
