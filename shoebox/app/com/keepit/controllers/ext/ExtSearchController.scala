@@ -25,6 +25,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent.Future
+import com.keepit.common.akka.MonitoredAwait
 
 
 //note: users.size != count if some users has the bookmark marked as private
@@ -95,22 +96,21 @@ class ExtSearchController @Inject() (
     log.info(s"""User ${userId} searched ${query.length} characters""")
     val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
     val (friendIds, searchFilter) = time("search-connections") {
-      db.readOnly { implicit s =>
-        val friendIds = userConnectionRepo.getConnectedUsers(userId)
-        val searchFilter = filter match {
-          case Some("m") =>
-            SearchFilter.mine(idFilter, start, end, tz)
-          case Some("f") =>
-            SearchFilter.friends(idFilter, start, end, tz)
-          case Some(ids) =>
-            val userIds = ids.split('.').flatMap(id => Try(ExternalId[User](id)).toOption).flatMap(userRepo.getOpt(_)).flatMap(_.id)
-            SearchFilter.custom(idFilter, userIds.toSet, start, end, tz)
-          case None =>
-            if (start.isDefined || end.isDefined) SearchFilter.all(idFilter, start, end, tz)
-            else SearchFilter.default(idFilter)
-        }
-        (friendIds, searchFilter)
+      val friendIds = shoeboxClient.getConnectedUsers(userId)
+      val searchFilter = filter match {
+        case Some("m") =>
+          SearchFilter.mine(idFilter, start, end, tz)
+        case Some("f") =>
+          SearchFilter.friends(idFilter, start, end, tz)
+        case Some(ids) =>
+          val userExtIds = ids.split('.').flatMap(id => Try(ExternalId[User](id)).toOption)
+          val idFuture = shoeboxClient.getUserIdsByExternalIds(userExtIds)
+          SearchFilter.custom(idFilter, monitoredAwait.result(idFuture, 5 seconds).toSet, start, end, tz)
+        case None =>
+          if (start.isDefined || end.isDefined) SearchFilter.all(idFilter, start, end, tz)
+          else SearchFilter.default(idFilter)
       }
+      (friendIds, searchFilter)
     }
 
     val (config, experimentId) = searchConfigManager.getConfig(userId, query)
@@ -118,7 +118,7 @@ class ExtSearchController @Inject() (
     val t2 = currentDateTime.getMillis()
     var t3 = 0L
     val searchRes = time("search-searching") {
-      val searcher = time("search-factory") { mainSearcherFactory(userId, friendIds, searchFilter, config) }
+      val searcher = time("search-factory") { mainSearcherFactory(userId, monitoredAwait.result(friendIds, 5 seconds), searchFilter, config) }
       t3 = currentDateTime.getMillis()
       val searchRes = if (maxHits > 0) {
         searcher.search(query, maxHits, lastUUID, searchFilter)

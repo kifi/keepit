@@ -25,11 +25,13 @@ import com.keepit.common.social.BasicUserUserIdKey
 import com.keepit.controllers.ext.PersonalSearchHit
 import com.keepit.search.ActiveExperimentsCache
 import com.keepit.search.ActiveExperimentsKey
+import com.keepit.common.db.ExternalId
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
 
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
+  def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]]
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
@@ -125,6 +127,13 @@ class ShoeboxServiceClientImpl @Inject() (
     val query = userIds.mkString(",")
     call(routes.ShoeboxController.getUsers(query)).map {r =>
       r.json.as[JsArray].value.map(js => UserSerializer.userSerializer.reads(js).get)
+    }
+  }
+  
+  def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
+    val query = userIds.mkString(",")
+    call(routes.ShoeboxController.getUserIdsByExternalIds(query)).map { r =>
+      r.json.as[Seq[Long]].map(Id[User](_))
     }
   }
 

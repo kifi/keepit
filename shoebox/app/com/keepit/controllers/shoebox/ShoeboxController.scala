@@ -32,7 +32,6 @@ import com.keepit.shoebox.ClickHistoryTracker
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.Action
-
 import com.keepit.model.BrowsingHistoryRepo
 import com.keepit.model.User
 import com.keepit.search.MultiHashFilter
@@ -55,6 +54,7 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.ext.PersonalSearchHit
 import com.keepit.common.social.BasicUser
+import com.keepit.common.db.ExternalId
 
 object ShoeboxController {
   implicit val collectionTupleFormat = (
@@ -195,14 +195,24 @@ class ShoeboxController @Inject() (
   }
 
   def getUsers(ids: String) = Action { request =>
-        val userIds = ids.split(',').map(id => Id[User](id.toLong))
-        val users = db.readOnly { implicit s =>
-          userIds.map{userId =>
-            val user = userRepo.get(userId)
-            UserSerializer.userSerializer.writes(user)
-          }
-        }
-        Ok(JsArray(users))
+    val userIds = ids.split(',').map(id => Id[User](id.toLong))
+    val users = db.readOnly { implicit s =>
+      userIds.map{userId =>
+        val user = userRepo.get(userId)
+        UserSerializer.userSerializer.writes(user)
+      }
+    }
+    Ok(JsArray(users))
+  }
+  
+  def getUserIdsByExternalIds(ids: String) = Action { request =>
+    val extUserIds = ids.split(',').map(id => ExternalId[User](id))
+    val users = (db.readOnly { implicit s =>
+      extUserIds.map { userId =>
+        userRepo.getOpt(userId).map(_.id.get.id)
+      } flatten
+    })
+    Ok(Json.toJson(users))
   }
 
   def getConnectedUsers(id : Id[User]) = Action { request =>
