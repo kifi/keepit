@@ -87,8 +87,8 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark]
   def getByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark]
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Bookmark]
-  def getByUser(userId: Id[User], lastExternalId: Option[ExternalId[Bookmark]], count: Int)
-      (implicit session: RSession): Seq[Bookmark]
+  def getByUser(userId: Id[User], beforeId: Option[ExternalId[Bookmark]], afterId: Option[ExternalId[Bookmark]],
+      count: Int)(implicit session: RSession): Seq[Bookmark]
   def getCountByUser(userId: Id[User])(implicit session: RSession): Int
   def getUsersChanged(num: SequenceNumber)(implicit session: RSession): Seq[(Id[User], SequenceNumber)]
   def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int
@@ -182,16 +182,18 @@ class BookmarkRepoImpl @Inject() (
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).list
 
-  def getByUser(userId: Id[User], beforeExternalId: Option[ExternalId[Bookmark]], count: Int)
-      (implicit session: RSession): Seq[Bookmark] = {
-    val q = if (beforeExternalId.isDefined) {
-      val last = get(beforeExternalId.get)
-      for (b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE &&
-          (b.createdAt < last.createdAt || b.id < last.id.get && b.createdAt === last.createdAt)) yield b
-    } else {
-      for (b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b
-    }
-    q.sortBy(_.id desc).sortBy(_.createdAt desc).take(count).list
+  def getByUser(userId: Id[User], beforeId: Option[ExternalId[Bookmark]], afterId: Option[ExternalId[Bookmark]],
+      count: Int)(implicit session: RSession): Seq[Bookmark] = {
+    val (maybeBefore, maybeAfter) = (beforeId map get, afterId map get)
+    (for {
+      b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE &&
+        (maybeBefore.map { before =>
+          b.createdAt < before.createdAt || b.id < before.id.get && b.createdAt === before.createdAt
+        } getOrElse (b.id === b.id)) &&
+        (maybeAfter.map { after =>
+          b.createdAt > after.createdAt || b.id > after.id.get && b.createdAt === after.createdAt
+        } getOrElse (b.id === b.id))
+    } yield b).sortBy(_.id desc).sortBy(_.createdAt desc).take(count).list
   }
 
   def getCountByUser(userId: Id[User])(implicit session: RSession): Int =

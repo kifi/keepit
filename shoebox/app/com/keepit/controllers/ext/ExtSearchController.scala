@@ -74,7 +74,15 @@ class ExtSearchController @Inject() (
     private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging{
 
-  def search(query: String, filter: Option[String], maxHits: Int, lastUUIDStr: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] = None) = AuthenticatedJsonAction { request =>
+  def search(query: String,
+             filter: Option[String],
+             maxHits: Int,
+             lastUUIDStr: Option[String],
+             context: Option[String],
+             kifiVersion: Option[KifiVersion] = None,
+             start: Option[String] = None,
+             end: Option[String] = None,
+             tz: Option[String] = None) = AuthenticatedJsonAction { request =>
 
     val t1 = currentDateTime.getMillis()
 
@@ -91,14 +99,15 @@ class ExtSearchController @Inject() (
         val friendIds = userConnectionRepo.getConnectedUsers(userId)
         val searchFilter = filter match {
           case Some("m") =>
-            SearchFilter.mine(idFilter)
+            SearchFilter.mine(idFilter, start, end, tz)
           case Some("f") =>
-            SearchFilter.friends(idFilter)
+            SearchFilter.friends(idFilter, start, end, tz)
           case Some(ids) =>
             val userIds = ids.split('.').flatMap(id => Try(ExternalId[User](id)).toOption).flatMap(userRepo.getOpt(_)).flatMap(_.id)
-            SearchFilter.custom(idFilter, userIds.toSet)
+            SearchFilter.custom(idFilter, userIds.toSet, start, end, tz)
           case None =>
-            SearchFilter.default(idFilter)
+            if (start.isDefined || end.isDefined) SearchFilter.all(idFilter, start, end, tz)
+            else SearchFilter.default(idFilter)
         }
         (friendIds, searchFilter)
       }
