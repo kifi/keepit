@@ -10,13 +10,14 @@ import play.api.Play.current
 import play.api.test.Helpers._
 import com.keepit.model.User
 import com.keepit.model.UserExperiment
+import com.keepit.shoebox.ShoeboxServiceClient
 
 class SearchConfigTest extends Specification with DbRepos {
   "The search configuration" should {
     "load defaults correctly" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
         val searchConfigManager =
-          new SearchConfigManager(None, inject[SearchConfigExperimentRepo], inject[UserExperimentRepo], inject[Database])
+          new SearchConfigManager(None, inject[ShoeboxServiceClient])
         val userRepo = inject[UserRepo]
         val (andrew, greg) = inject[Database].readWrite { implicit s =>
           val andrew = userRepo.save(User(firstName = "Andrew", lastName = "Connor"))
@@ -30,9 +31,9 @@ class SearchConfigTest extends Specification with DbRepos {
       }
     }
     "load overrides for experiments" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
         val searchConfigManager =
-          new SearchConfigManager(None, inject[SearchConfigExperimentRepo], inject[UserExperimentRepo], inject[Database])
+          new SearchConfigManager(None, inject[ShoeboxServiceClient])
         val userRepo = inject[UserRepo]
         val andrew = inject[Database].readWrite { implicit s =>
           userRepo.save(User(firstName = "Andrew", lastName = "Connor"))
@@ -61,8 +62,8 @@ class SearchConfigTest extends Specification with DbRepos {
       }
     }
     "load correct override based on weights" in {
-      running(new EmptyApplication()) {
-        val searchConfigManager = new SearchConfigManager(None, inject[SearchConfigExperimentRepo], inject[UserExperimentRepo], inject[Database])
+      running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
+        val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient])
         val userRepo = inject[UserRepo]
         val andrew = inject[Database].readWrite { implicit s =>
           userRepo.save(User(firstName = "Andrew", lastName = "Connor"))
@@ -89,9 +90,9 @@ class SearchConfigTest extends Specification with DbRepos {
       }
     }
     "not get configs from inactive experiments" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
         val searchConfigManager =
-          new SearchConfigManager(None, inject[SearchConfigExperimentRepo], inject[UserExperimentRepo], inject[Database])
+          new SearchConfigManager(None, inject[ShoeboxServiceClient])
         val userRepo = inject[UserRepo]
         val greg = inject[Database].readWrite { implicit s =>
           userRepo.save(User(firstName = "Greg", lastName = "Metvin"))
@@ -113,10 +114,10 @@ class SearchConfigTest extends Specification with DbRepos {
       }
     }
     "ignore experiments for users excluded from experiments" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
         val userExperimentRepo = inject[UserExperimentRepo]
         val searchConfigManager =
-          new SearchConfigManager(None, inject[SearchConfigExperimentRepo], userExperimentRepo, inject[Database])
+          new SearchConfigManager(None, inject[ShoeboxServiceClient])
         val userRepo = inject[UserRepo]
         val greg = db.readWrite { implicit s =>
           userRepo.save(User(firstName = "Greg", lastName = "Metvin"))

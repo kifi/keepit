@@ -3,13 +3,15 @@ package com.keepit.search
 import java.io.File
 import java.io.FileInputStream
 import java.util.Properties
-
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.model.ExperimentTypes.NO_SEARCH_EXPERIMENTS
 import com.keepit.model.{UserExperimentRepo, User}
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.QueryHash
+import com.keepit.shoebox.ShoeboxServiceClient
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 object SearchConfig {
   private[search] val defaultParams =
@@ -70,43 +72,25 @@ object SearchConfig {
   def getDescription(name: String) = descriptions.get(name)
 }
 
-class SearchConfigManager(
-    configDir: Option[File],
-    experimentRepo: SearchConfigExperimentRepo,
-    userExperimentRepo: UserExperimentRepo,
-    db: Database) {
+class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxServiceClient) {
 
   private[this] val analyzer = DefaultAnalyzer.defaultAnalyzer
 
   private val propertyFileName = "searchconfig.properties"
 
-  lazy val defaultConfig = {
-    configDir.flatMap{ dir =>
-      val file = new File(dir, propertyFileName)
-      if (file.exists()) {
-        val prop = new Properties()
-        prop.load(new FileInputStream(file))
-        val defaults = SearchConfig.defaultParams.foldLeft(Map.empty[String, String]){
-          case (m, (k, v)) => m + (k -> Option(prop.getProperty(k)).getOrElse(v))
-        }
-        Some(new SearchConfig(defaults))
-      } else {
-        None
-      }
-    }.getOrElse(new SearchConfig(SearchConfig.defaultParams))
-  }
+  lazy val defaultConfig = new SearchConfig(SearchConfig.defaultParams)
 
   def activeExperiments: Seq[SearchConfigExperiment] =
-    db.readOnly { implicit s => experimentRepo.getActive() }
+    Await.result(shoeboxClient.getActiveExperiments, 5 seconds)
 
   def getExperiments: Seq[SearchConfigExperiment] =
-    db.readOnly { implicit s => experimentRepo.getNotInactive() }
+    Await.result(shoeboxClient.getExperiments, 5 seconds)
 
   def getExperiment(id: Id[SearchConfigExperiment]): SearchConfigExperiment =
-    db.readOnly { implicit s => experimentRepo.get(id) }
+    Await.result(shoeboxClient.getExperiment(id), 5 seconds)
 
   def saveExperiment(experiment: SearchConfigExperiment): SearchConfigExperiment =
-    db.readWrite { implicit s => experimentRepo.save(experiment) }
+    Await.result(shoeboxClient.saveExperiment(experiment), 5 seconds)
 
   private var userConfig = Map.empty[Long, SearchConfig]
   def getUserConfig(userId: Id[User]) = userConfig.getOrElse(userId.id, defaultConfig)
@@ -124,9 +108,7 @@ class SearchConfigManager(
     userConfig.get(userId.id) match {
       case Some(config) => (config, None)
       case None =>
-        val shouldExclude = db.readOnly { implicit s =>
-          userExperimentRepo.hasExperiment(userId, NO_SEARCH_EXPERIMENTS)
-        }
+        val shouldExclude = Await.result(shoeboxClient.hasExperiment(userId, NO_SEARCH_EXPERIMENTS), 5 seconds)
         val experiment = if (shouldExclude) None else {
           val hashFrac = hash(userId, queryText)
           var frac = 0.0
