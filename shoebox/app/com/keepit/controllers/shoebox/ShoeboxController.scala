@@ -155,13 +155,13 @@ class ShoeboxController @Inject() (
   
   def getPersonalSearchInfo(userId: Id[User], allUsers: String, formattedHits: String) = Action { request =>
     val (users, personalSearchHits) = db.readOnly { implicit session =>
-      val neededUsers = (allUsers.split(",").map({u => if(u == "") None else Some(u)}).flatten.map { u =>
+      val neededUsers = (allUsers.split(",").filterNot(_.isEmpty).map { u =>
         val user = Id[User](u.toLong)
         user.toString -> Json.toJson(basicUserRepo.load(user))
       }).toSeq
-      val personalSearchHits = formattedHits.split(",").map({u => if(u == "") None else Some(u)}).flatten.map { hit =>
+      val personalSearchHits = formattedHits.split(",").filterNot(_.isEmpty).map { hit =>
         val param = hit.split(":").toSeq
-        val isMyBookmark = if(param.head == "1") true else false
+        val isMyBookmark = param.head == "1"
         val uriId = Id[NormalizedURI](param.tail.head.toLong)
         val uri = normUriRepo.get(uriId)
         
