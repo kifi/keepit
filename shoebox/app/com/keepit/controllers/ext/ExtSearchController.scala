@@ -23,6 +23,7 @@ import com.keepit.common.healthcheck.Healthcheck.SEARCH
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import com.keepit.common.akka.MonitoredAwait
 
 
 //note: users.size != count if some users has the bookmark marked as private
@@ -66,7 +67,8 @@ class ExtSearchController @Inject() (
   basicUserRepo: BasicUserRepo,
   srcFactory: SearchResultClassifierFactory,
   healthcheckPlugin: HealthcheckPlugin,
-  shoeboxClient: ShoeboxServiceClient)
+  shoeboxClient: ShoeboxServiceClient,
+  monitoredAwait: MonitoredAwait)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging{
@@ -162,7 +164,7 @@ class ExtSearchController @Inject() (
       toPersonalSearchResult2(userId, res).map{r => log.debug(r.mkString("\n")); r}
     }
     
-    val hits = Await.result(hitsFuture, 5 seconds)
+    val hits = monitoredAwait.result(hitsFuture, 5 seconds, Nil)
     
     PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), experimentId, filter)
   }
