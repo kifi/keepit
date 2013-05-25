@@ -64,7 +64,7 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
       }
       pq.clear()
     }
-    result
+    RemoveOverlapping.removeInclusions(result)
   }
 
   private class Word(val index: Int, tp: DocsAndPositionsEnum) {

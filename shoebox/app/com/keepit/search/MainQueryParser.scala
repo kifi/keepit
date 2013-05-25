@@ -28,7 +28,6 @@ import com.keepit.search.query.BoostQuery
 import com.keepit.search.query.PhraseProximityQuery
 import com.keepit.search.query.NamedQueryContext
 import com.keepit.search.query.NamedQuery
-import com.keepit.search.phrasedetector.RemoveOverlapping
 
 class MainQueryParser(
   analyzer: Analyzer,
@@ -71,7 +70,7 @@ class MainQueryParser(
         query.setBoost(baseBoost)
 
         val phrases = if (numStemmedTerms > 1 && (phraseBoost > 0.0f || phraseProximityBoost > 0.0f)) {
-          RemoveOverlapping.removeInclusions(phraseDetector.detectAll(getStemmedTermArray))
+          phraseDetector.detectAll(getStemmedTermArray)
         } else {
           Set.empty[(Int, Int)]
         }

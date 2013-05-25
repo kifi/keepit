@@ -31,7 +31,7 @@ case class PersonalSearchHit(id: Id[NormalizedURI], externalId: ExternalId[Norma
 object PersonalSearchHit {
   import play.api.libs.functional.syntax._
   import play.api.libs.json._
-  
+
   implicit val format = (
     (__ \ 'id).format(Id.format[NormalizedURI]) and
     (__ \ 'externalId).format(ExternalId.format[NormalizedURI]) and
@@ -133,7 +133,7 @@ class ExtSearchController @Inject() (
     if (total > timeLimit && t5 - fortyTwoServices.started.getMillis() > 1000*60*8) {
       val link = "https://admin.kifi.com/admin/search/results/" + searchRes.uuid.id
       val msg = s"search time exceeds limit! searchUUID = ${searchRes.uuid.id}, Limit time = $timeLimit, total search time = $total, pre-search time = ${t2 - t1}, search-factory time = ${t3 - t2}, main-search time = ${t4 - t3}, post-search time = ${t5 - t4}." +
-      		"\n More details at: \n" + link
+      		"\n More details at: \n" + link + "\n"
       healthcheckPlugin.addError(HealthcheckError(
         error = Some(new SearchTimeExceedsLimit(timeLimit, total)),
         errorMessage = Some(msg),
@@ -161,12 +161,12 @@ class ExtSearchController @Inject() (
     val hitsFuture = time(s"search-personal-result-${res.hits.size}") {
       toPersonalSearchResult(userId, res).map{r => log.debug(r.mkString("\n")); r}
     }
-    
+
     val hits = monitoredAwait.result(hitsFuture, 5 seconds, Nil)
-    
+
     PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), experimentId, filter)
   }
-  
+
   private[ext] def toPersonalSearchResult(userId: Id[User], resultSet: ArticleSearchResult): Future[Seq[PersonalSearchResult]] = {
     shoeboxClient.getPersonalSearchInfo(userId, resultSet).map { case (allUsers, personalSearchHits) =>
       (resultSet.hits, resultSet.scorings, personalSearchHits).zipped.toSeq.map { case (hit, score, personalHit) =>

@@ -70,17 +70,22 @@ function attachComposeBindings($c, composeTypeName) {
       });
       $t.tokenInput(friends, {
         searchDelay: 0,
-        minChars: 2,
+        minChars: 1,
         placeholder: "To",
         hintText: "",
         noResultsText: "",
         searchingText: "",
         animateDropdown: false,
+        resultsLimit: 4,
         preventDuplicates: true,
         allowTabOut: true,
         tokenValue: "id",
         theme: "KiFi",
         zindex: 999999999992,
+        resultsFormatter: function(f) {
+          return "<li style='background-image:url(http://" + cdnBase + "/users/" + f.id + "/pics/100/0.jpg)'>" +
+            Mustache.escape(f.name) + "</li>";
+        },
         onAdd: function() {
           if (defaultText && !$d.text()) {
             $f.removeClass("kifi-empty");
