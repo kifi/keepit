@@ -35,8 +35,8 @@ class PhraseDetectorTest extends Specification {
         val testcases = List(
           ("human genome", Set((0,2))),
           ("human genome research", Set((0,2))),
-          ("human genome research project", Set((0,2),(2,2),(1,3))),
-          ("human genome project", Set((0,2),(0,3))),
+          ("human genome research project", Set((0,2),(1,3))),
+          ("human genome project", Set((0,3))),
           ("product research project", Set((0,2),(1,2))),
           ("large classroom project", Set((1,2))))
 
