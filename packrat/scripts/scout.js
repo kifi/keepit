@@ -13,7 +13,7 @@ window.onerror = function (message, url, lineNo) {
   }
 };
 
-var injected, t0 = +new Date, tile, paneHistory;
+var injected, t0 = +new Date, tile, paneHistory, root = document.querySelector("body") || document.documentElement;
 
 !function() {
   api.log("[scout]", location.hostname);
@@ -140,7 +140,7 @@ var injected, t0 = +new Date, tile, paneHistory;
       "<div class=kifi-tile-kept></div>";
     tileCount = document.createElement("span");
     tileCount.className = "kifi-count";
-    document.documentElement.appendChild(tile);
+    root.appendChild(tile);
     tile.addEventListener("mouseover", function(e) {
       if (e.target === this ||
           e.target.parentNode === this && !e.target.classList.contains("kifi-slider2") && !e.target.classList.contains("kifi-slider2-tip")) {

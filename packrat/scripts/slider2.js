@@ -270,10 +270,9 @@ slider2 = function() {
   // trigger is for the event log (e.g. "key", "icon")
   function hideSlider(trigger) {
     idleTimer.kill();
-    var sliderEl = $slider[0];
     $(tile).removeClass("kifi-behind-slider");
     $slider.addClass("kifi-hiding").on("transitionend webkitTransitionEnd", function(e) {
-      if (e.target === sliderEl && e.originalEvent.propertyName == "opacity") {
+      if (e.target === this && e.originalEvent.propertyName == "opacity") {
         $(tile).removeClass("kifi-with-slider");
         var css = JSON.parse(tile.dataset.pos || 0);
         if (css && !tile.style.top && !tile.style.bottom) {
@@ -302,7 +301,7 @@ slider2 = function() {
       if (data.dragStarting) {
         delete data.dragStarting;
         api.log("[startDrag] installing draggable");
-        data.$dragGlass = $("<div class=kifi-slider2-drag-glass>").mouseup(stopDrag).appendTo("html");
+        data.$dragGlass = $("<div class=kifi-slider2-drag-glass>").mouseup(stopDrag).appendTo(root);
         $(tile).draggable({axis: "y", containment: "window", scroll: false, stop: stopDrag})[0]
           .dispatchEvent(data.mousedownEvent); // starts drag
       }
@@ -468,23 +467,25 @@ slider2 = function() {
           pane: "pane_" + pane + ".html"
         },
         function(html) {
-          var $html = $("html").addClass("kifi-pane-parent");
+          $("html").addClass("kifi-pane-parent");
           $pane = $(html);
           if (bringSlider) {
-            $pane.append($slider).appendTo($html);
+            $pane.append($slider).appendTo(root);
           } else {
-            $pane.appendTo($html);
+            $pane.appendTo(root);
             $slider.detach()
             .css("transform", "translate(0,-" + (window.innerHeight - tile.getBoundingClientRect().bottom) + "px)")
             .insertAfter($pane).layout()
             .css("transform", "");
-            $(tile).hide();
+            $(tile).removeClass("kifi-with-slider");
           }
           $pane.layout()
           .on("transitionend webkitTransitionEnd", function onPaneShown(e) {
+            if (e.target !== this) return;
             $pane.off("transitionend webkitTransitionEnd", onPaneShown);
             if (!bringSlider) {
               $slider.appendTo($pane);
+              $(tile).addClass("kifi-behind-slider");
             }
             $box.data("shown", true).triggerHandler("kifi:shown");
           })
@@ -586,7 +587,7 @@ slider2 = function() {
           .on("mousedown click keydown keypress keyup", function(e) {
             e.stopPropagation();
           });
-          $html.addClass("kifi-with-pane");
+          $("html").addClass("kifi-with-pane");
           var $box = $pane.find(".kifi-pane-box");
           populatePane[pane]($box, locator);
         });
@@ -596,13 +597,13 @@ slider2 = function() {
 
   function hidePane(leaveSlider) {
     api.log("[hidePane]");
-    $(tile).show();
     if (leaveSlider) {
       $(tile).css({top: "", bottom: "", transform: ""}).insertAfter($pane);
       $slider.appendTo(tile).layout();
       $slider.find(".kifi-at").removeClass("kifi-at");
       $slider.find(".kifi-slider2-x").css("overflow", "");
     } else {
+      $(tile).removeClass("kifi-behind-slider");
       $slider = null;
     }
     $pane
@@ -612,12 +613,12 @@ slider2 = function() {
         var $pane = $(this);
         $pane.find(".kifi-pane-box").triggerHandler("kifi:remove");
         $pane.remove();
-        $html.removeClass("kifi-pane-parent");
+        $("html").removeClass("kifi-pane-parent");
         window.dispatchEvent(new Event("resize"));  // for other page scripts
       }
     });
     $pane = paneHistory = null;
-    var $html = $("html").removeClass("kifi-with-pane");
+    $("html").removeClass("kifi-with-pane");
   }
 
   const populatePane = {
