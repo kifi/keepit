@@ -22,11 +22,14 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
       buffer = null;
       if (ws) {
         ws.close();
+        t = setTimeout(onClose.bind(ws), 1000);  // in case browser does not fire close event right promptly
       }
+      window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
     }
   };
 
+  window.addEventListener("online", onOnline);
   window.addEventListener("offline", onOffline); // fires in Chrome when WiFi conn lost or changed
 
   function connect() {
@@ -104,6 +107,14 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
     }
   }
 
+  function onOnline() {
+    api.log("#0bf", "[RWS.onOnline] readyState:", ws && ws.readyState);
+    if (!ws && !closed) {
+      clearTimeout(t);
+      connect();
+    }
+  }
+
   function onOffline() {
     api.log("#0bf", "[RWS.onOffline] readyState:", ws && ws.readyState);
     clearTimeout(t);
@@ -114,10 +125,10 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
   }
 
   function ping() {
-    clearTimeout(t);
     if (ws && !closed) {
       api.log("#0bf", "[RWS.ping]");
       self.send('["ping"]');
+      clearTimeout(t);
       t = setTimeout(onConnectTimeout.bind(null, ws), 2000);
       lastRecOrPingTime = +new Date;
     }
