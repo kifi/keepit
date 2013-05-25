@@ -97,10 +97,9 @@ class URIGraphTest extends Specification with DbRepos {
   }
 
   private def mkURIGraph(graphDir: RAMDirectory = new RAMDirectory, collectionDir: RAMDirectory = new RAMDirectory): URIGraphImpl = {
-    val graphConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    val collectConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    val uriGraphIndexer = new URIGraphIndexer(graphDir, graphConfig, inject[ShoeboxServiceClient])
-    val collectionIndexer = new CollectionIndexer(collectionDir, collectConfig, inject[ShoeboxServiceClient])
+    val shoeboxClient = inject[ShoeboxServiceClient]
+    val uriGraphIndexer = new URIGraphIndexer(graphDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), shoeboxClient)
+    val collectionIndexer = new CollectionIndexer(collectionDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), shoeboxClient)
     new URIGraphImpl(uriGraphIndexer, collectionIndexer)
   }
 
@@ -171,7 +170,6 @@ class URIGraphTest extends Specification with DbRepos {
         val graph = mkURIGraph(graphDir)
         graph.update() === users.size
         graph.uriGraphIndexer.sequenceNumber.value === bookmarks.size
-        val config2 = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
         val graph2 = mkURIGraph(graphDir)
         graph2.uriGraphIndexer.sequenceNumber.value === bookmarks.size
       }
@@ -373,7 +371,6 @@ class URIGraphTest extends Specification with DbRepos {
 
     "dump Lucene Document" in {
       running(new DevApplication().withShoeboxServiceModule) {
-        val ramDir = new RAMDirectory
         val store = new FakeArticleStore()
 
         val (user, uris, bookmarks) = db.readWrite { implicit s =>
@@ -386,10 +383,10 @@ class URIGraphTest extends Specification with DbRepos {
           val url1 = urlRepo.save(URLFactory(url = uris(0).url, normalizedUriId = uris(0).id.get))
           val url2 = urlRepo.save(URLFactory(url = uris(1).url, normalizedUriId = uris(1).id.get))
 
-          val bookmarks = Array(
-            bookmarkRepo.save(BookmarkFactory(title = "line1 titles", url = url1,  uriId = uris(0).id.get, userId = user.id.get, source = BookmarkSource("test"))),
-            bookmarkRepo.save(BookmarkFactory(title = "line2 titles", url = url2,  uriId = uris(1).id.get, userId = user.id.get, source = BookmarkSource("test")))
-          )
+          val bookmarks = uris.map{ uri =>
+            val url = urlRepo.save(URLFactory(url = uris(0).url, normalizedUriId = uris(0).id.get))
+            bookmarkRepo.save(BookmarkFactory(title = "line1 titles", url = url,  uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")))
+          }
           (user, uris, bookmarks)
         }
         uris.foreach{ uri => store += (uri.id.get -> mkArticle(uri.id.get, "title", "content")) }

@@ -72,7 +72,7 @@ class URIGraphIndexer(
   def update(): Int = {
     resetSequenceNumberIfReindex()
     update {
-      Await.result(shoeboxClient.getUsersChanged(sequenceNumber), 5 seconds)
+      Await.result(shoeboxClient.getUsersChanged(sequenceNumber), 180 seconds)
     }
   }
 

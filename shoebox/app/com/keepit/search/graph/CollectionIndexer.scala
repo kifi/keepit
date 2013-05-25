@@ -28,11 +28,11 @@ import scala.concurrent.Await
 
 object CollectionFields {
   val userField = "coll_usr"
-  val collectionListField = "coll_list"
-  val collectionField = "coll"
+  val uriField = "coll_uri"
+  val uriListField = "coll_list"
 
   def decoders() = Map(
-    collectionListField -> DocUtil.URIListDecoder
+    uriListField -> DocUtil.URIListDecoder
   )
 }
 
@@ -61,14 +61,14 @@ class CollectionIndexer(
   def update(): Int = {
     resetSequenceNumberIfReindex()
     update {
-      Await.result(shoeboxClient.getCollectionsChanged(sequenceNumber), 5 seconds)
+      Await.result(shoeboxClient.getCollectionsChanged(sequenceNumber), 180 seconds)
     }
   }
 
   def update(userId: Id[User]): Int = {
     deleteDocuments(new Term(CollectionFields.userField, userId.toString), doCommit = false)
     update {
-      Await.result(shoeboxClient.getCollectionsByUser(userId), 5 seconds).map{ collectionId => (collectionId, userId, SequenceNumber.MinValue) }
+      Await.result(shoeboxClient.getCollectionsByUser(userId), 180 seconds).map{ collectionId => (collectionId, userId, SequenceNumber.MinValue) }
     }
   }
 
@@ -88,10 +88,9 @@ class CollectionIndexer(
 
   def buildIndexable(collectionIdAndSequenceNumber: (Id[Collection], Id[User], SequenceNumber)): CollectionListIndexable = {
     val (collectionId, userId, seq) = collectionIdAndSequenceNumber
-    val bookmarks = Await.result(shoeboxClient.getBookmarksInCollection(collectionId), 5 seconds)
+    val bookmarks = Await.result(shoeboxClient.getBookmarksInCollection(collectionId), 180 seconds)
     new CollectionListIndexable(id = collectionId,
                                 sequenceNumber = seq,
-                                isDeleted = bookmarks.isEmpty,
                                 userId = userId,
                                 bookmarks = bookmarks)
   }
@@ -99,23 +98,23 @@ class CollectionIndexer(
   class CollectionListIndexable(
     override val id: Id[Collection],
     override val sequenceNumber: SequenceNumber,
-    override val isDeleted: Boolean,
     val userId: Id[User],
     val bookmarks: Seq[Bookmark]
   ) extends Indexable[Collection] {
 
+    override val isDeleted: Boolean = bookmarks.isEmpty
     override def buildDocument = {
       val doc = super.buildDocument
-      val collListBytes = URIList.toByteArray(bookmarks)
-      val collListField = buildURIListField(CollectionFields.collectionListField, collListBytes)
-      val collList = URIList(collListBytes)
 
+      val collListBytes = URIList.toByteArray(bookmarks)
+      val collListField = buildURIListField(CollectionFields.uriListField, collListBytes)
+      val collList = URIList(collListBytes)
       doc.add(collListField)
 
       val uri = buildURIIdField(collList)
       doc.add(uri)
 
-      val user = buildKeywordField(URIGraphFields.userField, userId.toString)
+      val user = buildKeywordField(CollectionFields.userField, userId.toString)
       doc.add(user)
 
       doc
@@ -126,7 +125,7 @@ class CollectionIndexer(
     }
 
     private def buildURIIdField(uriList: URIList) = {
-      buildIteratorField(URIGraphFields.uriField, uriList.ids.iterator){ uriId => uriId.toString }
+      buildIteratorField(CollectionFields.uriField, uriList.ids.iterator){ uriId => uriId.toString }
     }
   }
 }

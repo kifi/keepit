@@ -22,6 +22,8 @@ class FakeShoeboxServiceClientImpl @Inject() (
     bookmarkRepo: BookmarkRepo,
     browsingHistoryRepo: BrowsingHistoryRepo,
     clickingHistoryRepo: ClickHistoryRepo,
+    collectionRepo: CollectionRepo,
+    keepToCollectionRepo: KeepToCollectionRepo,
     normUriRepo: NormalizedURIRepo,
     experimentRepo: SearchConfigExperimentRepo,
     userExperimentRepo: UserExperimentRepo,
@@ -93,11 +95,17 @@ class FakeShoeboxServiceClientImpl @Inject() (
   def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]] = Promise.successful(Seq()).future
 
   def getCollectionsChanged(seqNum: SequenceNumber): Future[Seq[(Id[Collection], Id[User], SequenceNumber)]] = {
-    Promise.successful(Seq()).future
+    val colls = db.readOnly { implicit s =>
+        collectionRepo.getCollectionsChanged(seqNum)
+      }
+    Promise.successful(colls).future
   }
 
   def getBookmarksInCollection(collectionId: Id[Collection]): Future[Seq[Bookmark]] = {
-    Promise.successful(Seq()).future
+    val bookmarks = db.readOnly { implicit s =>
+        keepToCollectionRepo.getBookmarksInCollection(collectionId) map bookmarkRepo.get
+      }
+    Promise.successful(bookmarks).future
   }
 
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]] = {

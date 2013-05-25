@@ -76,7 +76,7 @@ object URIList {
         allBookmarks += firstBookmark
         var prevUriId = firstBookmark.uriId
 
-        allBookmarks.tail.foreach{ b =>
+        sortedBookmarks.tail.foreach{ b =>
           if (b.uriId != prevUriId) {
             allBookmarks += b
             prevUriId = b.uriId
@@ -88,6 +88,7 @@ object URIList {
   }
 
   private def toByteArrayFromSorted(sortedBookmarks: Seq[Bookmark]): Array[Byte] = {
+    sortedBookmarks.foreach{ b => println("B>>>" + b.uriId) }
     val size = sortedBookmarks.size
     val baos = new ByteArrayOutputStream(size * 4)
     val out = new OutputStreamDataOutput(baos)
