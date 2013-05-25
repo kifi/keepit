@@ -1,6 +1,6 @@
 function ReconnectingWebSocket(url, onMessage, onConnect) {
   const wordRe = /\w+/, minRetryConnectDelayMs = 300, maxRetryConnectDelayMs = 5000, idlePingDelayMs = 30000;
-  var ws, self = this, buffer = [], closed, t, retryConnectDelayMs = minRetryConnectDelayMs;
+  var ws, self = this, buffer = [], closed, t, lastRecOrPingTime, retryConnectDelayMs = minRetryConnectDelayMs;
 
   connect();
 
@@ -9,6 +9,9 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
       throw "closed, try back tomorrow";
     } else if (ws && ws.greeted && ws.readyState == WebSocket.OPEN) {
       ws.send(data);
+      if (new Date - lastRecOrPingTime > idlePingDelayMs) {
+        ping();
+      }
     } else {
       buffer.push([data, +new Date]);
     }
@@ -78,6 +81,7 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
     }
     clearTimeout(t);
     t = setTimeout(ping, idlePingDelayMs);
+    lastRecOrPingTime = +new Date;
   }
 
   function onMessageN(e) {
@@ -88,6 +92,7 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
     }
     clearTimeout(t);
     t = setTimeout(ping, idlePingDelayMs);
+    lastRecOrPingTime = +new Date;
   }
 
   function onConnectTimeout(ws) {
@@ -108,5 +113,6 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
     api.log("#0bf", "[RWS.ping]");
     self.send('["ping"]');
     t = setTimeout(onConnectTimeout.bind(null, ws), 2000);
+    lastRecOrPingTime = +new Date;
   }
 }
