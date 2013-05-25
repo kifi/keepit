@@ -22,7 +22,7 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
       buffer = null;
       if (ws) {
         ws.close();
-        t = setTimeout(onClose.bind(ws), 1000);  // in case browser does not fire close event right promptly
+        t = setTimeout(onClose.bind(ws), 1000);  // in case browser does not fire close event promptly
       }
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
@@ -103,7 +103,7 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
     clearTimeout(t);
     if (ws) {
       ws.close();
-      t = setTimeout(onClose.bind(ws), 1000);  // browser might not fire close event for 60+ sec
+      t = setTimeout(onClose.bind(ws), 1000);  // browser sometimes does not fire close event promptly (60+ sec)
     }
   }
 
