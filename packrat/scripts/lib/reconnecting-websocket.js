@@ -62,6 +62,9 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
   }
 
   function onMessage1(e) {
+    clearTimeout(t);
+    t = setTimeout(ping, idlePingDelayMs);
+    lastRecOrPingTime = +new Date;
     if (e.data === '["hi"]') {
       api.log("#0bf", "[RWS.onMessage1]", e.data);
       ws.greeted = true;
@@ -79,20 +82,17 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
       api.log("#a00", "[RWS.onMessage1] relaying");
       onMessage.call(self, e);
     }
-    clearTimeout(t);
-    t = setTimeout(ping, idlePingDelayMs);
-    lastRecOrPingTime = +new Date;
   }
 
   function onMessageN(e) {
+    clearTimeout(t);
+    t = setTimeout(ping, idlePingDelayMs);
+    lastRecOrPingTime = +new Date;
     if (e.data === '["pong"]') {
       api.log("#0ac", "[RWS.pong]");
     } else {
       onMessage.call(self, e);
     }
-    clearTimeout(t);
-    t = setTimeout(ping, idlePingDelayMs);
-    lastRecOrPingTime = +new Date;
   }
 
   function onConnectTimeout(ws) {
