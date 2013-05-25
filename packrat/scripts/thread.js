@@ -21,7 +21,7 @@ threadPane = function() {
         messages: messages,
         draftPlaceholder: "Type a message…",
         submitButtonLabel: "Send",
-        submitTip: CO_KEY + "+Enter to send",
+        submitTip: CO_KEY + "-Enter to send",
         snapshotUri: api.url("images/snapshot.png")
       }, {
         message: "message.html",

@@ -22,7 +22,7 @@ commentsPane = function() {
         comments: comments,
         draftPlaceholder: "Type a comment…",
         submitButtonLabel: "Post",
-        submitTip: CO_KEY + "+Enter to post",
+        submitTip: CO_KEY + "-Enter to post",
         // following: following,
         snapshotUri: api.url("images/snapshot.png")
         // connected_networks: api.url("images/social_icons.png")
