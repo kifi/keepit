@@ -5,12 +5,8 @@ import scala.concurrent.future
 import scala.util.Try
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.common.db._
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.db.slick._
 import com.keepit.common.performance._
 import com.keepit.common.social.BasicUser
-import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
@@ -20,10 +16,31 @@ import play.api.http.ContentTypes
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.healthcheck.Healthcheck.SEARCH
+import com.keepit.shoebox.ShoeboxServiceClient
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import com.keepit.common.akka.MonitoredAwait
+import scala.concurrent.Future
+import com.keepit.common.akka.MonitoredAwait
+import play.api.libs.json.Json
+import com.keepit.common.db.{ExternalId, Id}
 
 
 //note: users.size != count if some users has the bookmark marked as private
-case class PersonalSearchHit(id: Id[NormalizedURI], externalId: ExternalId[NormalizedURI], title: Option[String], url: String)
+case class PersonalSearchHit(id: Id[NormalizedURI], externalId: ExternalId[NormalizedURI], title: Option[String], url: String, isPrivate: Boolean)
+object PersonalSearchHit {
+  import play.api.libs.functional.syntax._
+  import play.api.libs.json._
+
+  implicit val format = (
+    (__ \ 'id).format(Id.format[NormalizedURI]) and
+    (__ \ 'externalId).format(ExternalId.format[NormalizedURI]) and
+    (__ \ 'title).formatNullable[String] and
+    (__ \ 'url).format[String] and
+    (__ \ 'isPrivate).format[Boolean]
+  )(PersonalSearchHit.apply, unlift(PersonalSearchHit.unapply))
+}
+
 case class PersonalSearchResult(hit: PersonalSearchHit, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[BasicUser], score: Float, isNew: Boolean)
 case class PersonalSearchResultPacket(
   uuid: ExternalId[ArticleSearchResultRef],
@@ -37,19 +54,13 @@ case class PersonalSearchResultPacket(
 @Singleton
 class ExtSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
-  db: Database,
-  userRepo: UserRepo,
-  userConnectionRepo: UserConnectionRepo,
   searchConfigManager: SearchConfigManager,
   mainSearcherFactory: MainSearcherFactory,
   articleSearchResultStore: ArticleSearchResultStore,
-  articleSearchResultRefRepo: ArticleSearchResultRefRepo,
-  socialUserInfoRepo: SocialUserInfoRepo,
-  bookmarkRepo: BookmarkRepo,
-  uriRepo: NormalizedURIRepo,
-  basicUserRepo: BasicUserRepo,
   srcFactory: SearchResultClassifierFactory,
-  healthcheckPlugin: HealthcheckPlugin)
+  healthcheckPlugin: HealthcheckPlugin,
+  shoeboxClient: ShoeboxServiceClient,
+  monitoredAwait: MonitoredAwait)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with SearchServiceController with Logging{
@@ -75,22 +86,21 @@ class ExtSearchController @Inject() (
     log.info(s"""User ${userId} searched ${query.length} characters""")
     val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
     val (friendIds, searchFilter) = time("search-connections") {
-      db.readOnly { implicit s =>
-        val friendIds = userConnectionRepo.getConnectedUsers(userId)
-        val searchFilter = filter match {
-          case Some("m") =>
-            SearchFilter.mine(idFilter, start, end, tz)
-          case Some("f") =>
-            SearchFilter.friends(idFilter, start, end, tz)
-          case Some(ids) =>
-            val userIds = ids.split('.').flatMap(id => Try(ExternalId[User](id)).toOption).flatMap(userRepo.getOpt(_)).flatMap(_.id)
-            SearchFilter.custom(idFilter, userIds.toSet, start, end, tz)
-          case None =>
-            if (start.isDefined || end.isDefined) SearchFilter.all(idFilter, start, end, tz)
-            else SearchFilter.default(idFilter)
-        }
-        (friendIds, searchFilter)
+      val friendIds = shoeboxClient.getConnectedUsers(userId)
+      val searchFilter = filter match {
+        case Some("m") =>
+          SearchFilter.mine(idFilter, start, end, tz)
+        case Some("f") =>
+          SearchFilter.friends(idFilter, start, end, tz)
+        case Some(ids) =>
+          val userExtIds = ids.split('.').flatMap(id => Try(ExternalId[User](id)).toOption)
+          val idFuture = shoeboxClient.getUserIdsByExternalIds(userExtIds)
+          SearchFilter.custom(idFilter, monitoredAwait.result(idFuture, 5 seconds).toSet, start, end, tz)
+        case None =>
+          if (start.isDefined || end.isDefined) SearchFilter.all(idFilter, start, end, tz)
+          else SearchFilter.default(idFilter)
       }
+      (friendIds, searchFilter)
     }
 
     val (config, experimentId) = searchConfigManager.getConfig(userId, query)
@@ -98,7 +108,7 @@ class ExtSearchController @Inject() (
     val t2 = currentDateTime.getMillis()
     var t3 = 0L
     val searchRes = time("search-searching") {
-      val searcher = time("search-factory") { mainSearcherFactory(userId, friendIds, searchFilter, config) }
+      val searcher = time("search-factory") { mainSearcherFactory(userId, monitoredAwait.result(friendIds, 5 seconds), searchFilter, config) }
       t3 = currentDateTime.getMillis()
       val searchRes = if (maxHits > 0) {
         searcher.search(query, maxHits, lastUUID, searchFilter)
@@ -123,7 +133,7 @@ class ExtSearchController @Inject() (
     if (total > timeLimit && t5 - fortyTwoServices.started.getMillis() > 1000*60*8) {
       val link = "https://admin.kifi.com/admin/search/results/" + searchRes.uuid.id
       val msg = s"search time exceeds limit! searchUUID = ${searchRes.uuid.id}, Limit time = $timeLimit, total search time = $total, pre-search time = ${t2 - t1}, search-factory time = ${t3 - t2}, main-search time = ${t4 - t3}, post-search time = ${t5 - t4}." +
-      		"\n More details at: \n" + link
+      		"\n More details at: \n" + link + "\n"
       healthcheckPlugin.addError(HealthcheckError(
         error = Some(new SearchTimeExceedsLimit(timeLimit, total)),
         errorMessage = Some(msg),
@@ -137,9 +147,7 @@ class ExtSearchController @Inject() (
 
   private def reportArticleSearchResult(res: ArticleSearchResult) {
     future {
-      db.readWrite { implicit s =>
-        articleSearchResultRefRepo.save(ArticleSearchResultFactory(res))
-      }
+      shoeboxClient.reportArticleSearchResult(res)
       articleSearchResultStore += (res.uuid -> res)
     } onFailure { case e =>
       log.error("Could not persist article search result %s".format(res), e)
@@ -149,53 +157,30 @@ class ExtSearchController @Inject() (
   private[ext] def toPersonalSearchResultPacket(userId: Id[User],
       res: ArticleSearchResult, config: SearchConfig, isDefaultFilter: Boolean, experimentId: Option[Id[SearchConfigExperiment]]): PersonalSearchResultPacket = {
 
-
-    val hits = time(s"search-personal-result-${res.hits.size}") {
-      db.readOnly { implicit s =>
-        val t0 = currentDateTime.getMillis()
-        val users = res.hits.map(_.users).flatten.distinct.map(u => u -> basicUserRepo.load(u)).toMap
-        log.info(s"search-personal-a: ${currentDateTime.getMillis()-t0}")
-        val t1 = currentDateTime.getMillis()
-        val h = (res.hits zip res.scorings).map{ case (hit, scoring) => toPersonalSearchResult(userId, users, hit, scoring) }
-        log.info(s"search-personal-d: ${currentDateTime.getMillis()-t1}")
-        h
-      }
-    }
-    log.debug(hits mkString "\n")
-
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
+    val hitsFuture = time(s"search-personal-result-${res.hits.size}") {
+      toPersonalSearchResult(userId, res).map{r => log.debug(r.mkString("\n")); r}
+    }
+
+    val hits = monitoredAwait.result(hitsFuture, 5 seconds, Nil)
+
     PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), experimentId, filter)
   }
 
-  private[ext] def toPersonalSearchResult(userId: Id[User], allUsers: Map[Id[User], BasicUser], res: ArticleHit, scoring: Scoring)(implicit session: RSession): PersonalSearchResult = {
-    val t0 = currentDateTime.getMillis()
-    val uri = uriRepo.get(res.uriId)
-    log.info(s"search-personal-b: ${currentDateTime.getMillis()-t0}")
-    val t1 = currentDateTime.getMillis()
-    val bookmark = if (res.isMyBookmark) bookmarkRepo.getByUriAndUser(uri.id.get, userId) else None
-    log.info(s"search-personal-c: ${currentDateTime.getMillis()-t1}")
-    val users = res.users.map(allUsers)
-
-    // we mark the friend keep "isNew" if recencyScore > 0.5 which means the oldest create time on the hits is
-    // within the halfDecay period. recencyScore is always zero for others' keep.
-    val isNew = (!res.isMyBookmark && scoring.recencyScore > 0.5f)
-
-    PersonalSearchResult(toPersonalSearchHit(uri, bookmark),
-                         res.bookmarkCount,
-                         res.isMyBookmark,
-                         bookmark.exists(_.isPrivate),
-                         users,
-                         res.score,
-                         isNew)
-  }
-
-  private[ext] def toPersonalSearchHit(uri: NormalizedURI, bookmark: Option[Bookmark]) = {
-    val (title, url) = bookmark match {
-      case Some(bookmark) => (bookmark.title, bookmark.url)
-      case None => (uri.title, uri.url)
+  private[ext] def toPersonalSearchResult(userId: Id[User], resultSet: ArticleSearchResult): Future[Seq[PersonalSearchResult]] = {
+    shoeboxClient.getPersonalSearchInfo(userId, resultSet).map { case (allUsers, personalSearchHits) =>
+      (resultSet.hits, resultSet.scorings, personalSearchHits).zipped.toSeq.map { case (hit, score, personalHit) =>
+        val users = hit.users.map(allUsers)
+        val isNew = (!hit.isMyBookmark && score.recencyScore > 0.5f)
+        PersonalSearchResult(personalHit,
+          hit.bookmarkCount,
+          hit.isMyBookmark,
+          personalHit.isPrivate,
+          users,
+          hit.score,
+          isNew)
+      }
     }
-
-    PersonalSearchHit(uri.id.get, uri.externalId, title, url)
   }
 
 }

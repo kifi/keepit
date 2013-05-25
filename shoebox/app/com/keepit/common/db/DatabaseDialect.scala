@@ -9,11 +9,11 @@ trait DatabaseDialect[T <: DataBaseComponent] {
   def day(date: DateTime): String
 }
 
-object MySqlDatabaseDialect extends DatabaseDialect[H2] {
+object MySqlDatabaseDialect extends DatabaseDialect[MySQL] {
   def day(date: DateTime): String = s"""STR_TO_DATE('${date.toStandardDateString}', '%Y-%m-%d')"""
 }
 
-object H2DatabaseDialect extends DatabaseDialect[MySQL] {
+object H2DatabaseDialect extends DatabaseDialect[H2] {
   def day(date: DateTime): String = s"""PARSEDATETIME('${date.toStandardDateString}', 'y-M-d')"""
 }
 

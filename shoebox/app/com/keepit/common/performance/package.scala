@@ -7,7 +7,7 @@ package object performance {
     var startTime = System.nanoTime
     var elapsedTime: Long = 0
 
-    def stop: Long = { elapsedTime = System.nanoTime - startTime; elapsedTime }
+    def stop(): Long = { elapsedTime = System.nanoTime - startTime; elapsedTime }
 
     override def toString = s"[$tag] elapsed milliseconds: ${(elapsedTime/1000000d)}"
 

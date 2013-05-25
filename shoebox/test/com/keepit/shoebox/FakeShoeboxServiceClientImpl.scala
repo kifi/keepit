@@ -12,6 +12,9 @@ import com.keepit.serializer.NormalizedURISerializer
 import com.keepit.search.SearchConfigExperiment
 import com.keepit.search.SearchConfigExperimentRepo
 import com.keepit.serializer.SearchConfigExperimentSerializer
+import com.keepit.common.social.BasicUser
+import com.keepit.controllers.ext.PersonalSearchHit
+import com.keepit.search.ArticleSearchResult
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl @Inject() (
@@ -33,6 +36,11 @@ class FakeShoeboxServiceClientImpl @Inject() (
     extends ShoeboxServiceClient {
   val host: String = ""
   protected def httpClient: com.keepit.common.net.HttpClient = ???
+
+  def getUserOpt(id: ExternalId[User]): Future[Option[User]] = {
+     val userOpt =  db.readOnly { implicit s => userRepo.getOpt(id) }
+     Promise.successful(userOpt).future
+  }
 
   def getUser(id: Id[User]): Future[User] = {
     //call(routes.ShoeboxController.getUser(id)).map(r => UserSerializer.userSerializer.reads(r.json))
@@ -88,7 +96,9 @@ class FakeShoeboxServiceClientImpl @Inject() (
   }
 
   def getConnectedUsers(id: Id[User]): scala.concurrent.Future[Set[com.keepit.common.db.Id[com.keepit.model.User]]] = ???
+  def reportArticleSearchResult(res: ArticleSearchResult): Unit = {}
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = ???
+  def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = ???
   def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
   def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]] = Promise.successful(Seq()).future
 
@@ -110,6 +120,9 @@ class FakeShoeboxServiceClientImpl @Inject() (
       }
     Promise.successful(uris).future
   }
+  
+  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]] = ???
+  def getPersonalSearchInfo(userId: Id[User], resultSet: com.keepit.search.ArticleSearchResult): Future[(Map[Id[User], BasicUser], Seq[PersonalSearchHit])] = ???
 
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]] = {
     val exp = db.readOnly { implicit s => experimentRepo.getActive() }

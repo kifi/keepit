@@ -74,7 +74,7 @@ class AdminSearchConfigController @Inject() (
   private def refetchReportData(report: ReportRepo, endDate: DateTime, days: Int): Map[LocalDate, Int] = {
     val (lastDate, existingData) = existingReportData.get(report).getOrElse((START_OF_TIME, Map()))
     val completeReportData = report.get(Seq(endDate.minusDays(days), lastDate).max, endDate)
-        .list.map(row => row.date.toLocalDate -> row.fields.head._2.value.toInt).toMap
+        .list.map(row => row.date.toLocalDate -> row.fields.head._2.toInt).toMap
     val data = (existingData ++ completeReportData).toMap
     existingReportData += report -> (endDate, data)
     data

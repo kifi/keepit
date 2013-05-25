@@ -5,7 +5,6 @@ import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.{Directory, MMapDirectory}
 import org.apache.lucene.util.Version
 import com.google.inject.{Provides, Singleton}
-import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.inject._
