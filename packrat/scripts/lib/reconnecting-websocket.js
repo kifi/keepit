@@ -22,11 +22,14 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
       buffer = null;
       if (ws) {
         ws.close();
+        t = setTimeout(onClose.bind(ws), 1000);  // in case browser does not fire close event promptly
       }
+      window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
     }
   };
 
+  window.addEventListener("online", onOnline);
   window.addEventListener("offline", onOffline); // fires in Chrome when WiFi conn lost or changed
 
   function connect() {
@@ -96,23 +99,38 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
   }
 
   function onConnectTimeout(ws) {
-    api.log("#0bf", "[RWS.onConnectTimeout] readyState:", ws.readyState);
-    ws.close();
+    api.log("#0bf", "[RWS.onConnectTimeout] readyState:", ws && ws.readyState);
     clearTimeout(t);
-    t = setTimeout(onClose.bind(ws), 1000);  // browser might not fire close event for 60+ sec
+    if (ws) {
+      ws.close();
+      t = setTimeout(onClose.bind(ws), 1000);  // browser sometimes does not fire close event promptly (60+ sec)
+    }
+  }
+
+  function onOnline() {
+    api.log("#0bf", "[RWS.onOnline] readyState:", ws && ws.readyState);
+    if (!ws && !closed) {
+      clearTimeout(t);
+      connect();
+    }
   }
 
   function onOffline() {
-    api.log("#0bf", "[RWS.onOffline] readyState:", ws.readyState);
-    ws.close();
+    api.log("#0bf", "[RWS.onOffline] readyState:", ws && ws.readyState);
     clearTimeout(t);
-    t = setTimeout(onClose.bind(ws), 1000);
+    if (ws) {
+      ws.close();
+      t = setTimeout(onClose.bind(ws), 1000);
+    }
   }
 
   function ping() {
-    api.log("#0bf", "[RWS.ping]");
-    self.send('["ping"]');
-    t = setTimeout(onConnectTimeout.bind(null, ws), 2000);
-    lastRecOrPingTime = +new Date;
+    if (ws && !closed) {
+      api.log("#0bf", "[RWS.ping]");
+      self.send('["ping"]');
+      clearTimeout(t);
+      t = setTimeout(onConnectTimeout.bind(null, ws), 2000);
+      lastRecOrPingTime = +new Date;
+    }
   }
 }
