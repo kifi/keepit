@@ -49,10 +49,6 @@ function attachComposeBindings($c, composeTypeName) {
       $d.removeData("preventNextMouseUp");
       e.preventDefault();
     }
-  }).keydown(function(e) {
-    if (e.which == 13 && (e.metaKey || e.ctrlKey)) { // ⌘-Enter
-      $f.submit();
-    }
   }).keyup(function() {
     $d.data("sel", window.getSelection().getRangeAt(0));
   }).on("input", function() {
@@ -102,7 +98,11 @@ function attachComposeBindings($c, composeTypeName) {
     });
   }
 
-  $f.submit(function(e) {
+  $f.keydown(function(e) {
+    if (e.which == 13 && (e.metaKey || e.ctrlKey)) { // ⌘-Enter
+      $f.submit();
+    }
+  }).submit(function(e) {
     e.preventDefault();
     var text;
     if ($f.hasClass("kifi-empty") || !(text = convertDraftToText($d.html()))) {
