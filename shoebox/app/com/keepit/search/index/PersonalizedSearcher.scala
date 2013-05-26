@@ -23,6 +23,10 @@ import scala.concurrent.Await
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.search.BrowsingHistoryBuilder
 import com.keepit.search.ClickHistoryBuilder
+import scala.concurrent.Future
+import com.keepit.model.BrowsingHistory
+import com.keepit.model.ClickHistory
+import com.keepit.common.akka.MonitoredAwait
 
 object PersonalizedSearcher {
   private val scale = 100
@@ -30,19 +34,20 @@ object PersonalizedSearcher {
             indexReader: WrappedIndexReader,
             myUris: Set[Long],
             friendUris: Set[Long],
-            browsingHistoryBuilder: BrowsingHistoryBuilder,
-            clickHistoryBuilder: ClickHistoryBuilder,
+            browsingHistoryFuture: Future[MultiHashFilter[BrowsingHistory]],
+            clickHistoryFuture: Future[MultiHashFilter[ClickHistory]],
             svWeightMyBookMarks: Int,
             svWeightBrowsingHistory: Int,
             svWeightClickHistory: Int,
-            shoeboxServiceClient: ShoeboxServiceClient) = {
+            shoeboxServiceClient: ShoeboxServiceClient,
+            monitoredAwait: MonitoredAwait) = {
     
-    val browsingHistoryFilter = Await.result(shoeboxServiceClient.getBrowsingHistoryFilter(userId), 4 second) // not good long term
-    val clickHistoryFilter = Await.result(shoeboxServiceClient.getClickHistoryFilter(userId), 4 second)
+    val browsingHistoryFilter = monitoredAwait.result(browsingHistoryFuture, 4 second)
+    val clickHistoryFilter = monitoredAwait.result(clickHistoryFuture, 4 second)
 
     new PersonalizedSearcher(indexReader, myUris, friendUris,
-                             browsingHistoryBuilder.build(browsingHistoryFilter),
-                             clickHistoryBuilder.build(clickHistoryFilter),
+                             browsingHistoryFilter,
+                             clickHistoryFilter,
                              svWeightMyBookMarks * scale, svWeightBrowsingHistory * scale, svWeightClickHistory * scale)
   }
 
@@ -80,7 +85,7 @@ object PersonalizedSearcher {
 }
 
 class PersonalizedSearcher(override val indexReader: WrappedIndexReader, myUris: Set[Long], friendUris: Set[Long],
-                           browsingFilter: MultiHashFilter, clickFilter: MultiHashFilter,
+                           browsingFilter: MultiHashFilter[BrowsingHistory], clickFilter: MultiHashFilter[ClickHistory],
                            scaledWeightMyBookMarks: Int, scaledWeightBrowsingHistory: Int, scaledWeightClickHistory: Int)
 extends Searcher(indexReader) with Logging {
   import PersonalizedSearcher._

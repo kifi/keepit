@@ -13,7 +13,7 @@ window.onerror = function (message, url, lineNo) {
   }
 };
 
-var injected, t0 = +new Date, tile, paneHistory;
+var injected, t0 = +new Date, tile, paneHistory, root = document.querySelector("body") || document.documentElement;
 
 !function() {
   api.log("[scout]", location.hostname);
@@ -93,15 +93,19 @@ var injected, t0 = +new Date, tile, paneHistory;
           api.port.emit("keep", {url: document.URL, title: document.title, how: "public"});
           if (tile) tile.dataset.kept = "public";
         }
+        e.preventDefault();
         break;
       case 76: // l
         api.port.emit("api:reload");
+        e.preventDefault();
         break;
       case 77: // m
         keeper("togglePane", "key", "/messages");
+        e.preventDefault();
         break;
       case 79: // o
         keeper("togglePane", "key", "/general");
+        e.preventDefault();
         break;
       }
     }
@@ -136,7 +140,7 @@ var injected, t0 = +new Date, tile, paneHistory;
       "<div class=kifi-tile-kept></div>";
     tileCount = document.createElement("span");
     tileCount.className = "kifi-count";
-    document.documentElement.appendChild(tile);
+    root.appendChild(tile);
     tile.addEventListener("mouseover", function(e) {
       if (e.target === this ||
           e.target.parentNode === this && !e.target.classList.contains("kifi-slider2") && !e.target.classList.contains("kifi-slider2-tip")) {

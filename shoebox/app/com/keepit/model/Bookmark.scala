@@ -87,8 +87,8 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark]
   def getByUriWithoutTitle(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark]
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Bookmark]
-  def getByUser(userId: Id[User], lastExternalId: Option[ExternalId[Bookmark]], count: Int)
-      (implicit session: RSession): Seq[Bookmark]
+  def getByUser(userId: Id[User], beforeId: Option[ExternalId[Bookmark]], afterId: Option[ExternalId[Bookmark]],
+      count: Int)(implicit session: RSession): Seq[Bookmark]
   def getCountByUser(userId: Id[User])(implicit session: RSession): Int
   def getUsersChanged(num: SequenceNumber)(implicit session: RSession): Seq[(Id[User], SequenceNumber)]
   def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int
@@ -109,11 +109,23 @@ class BookmarkCountCache @Inject() (val repo: FortyTwoCachePlugin) extends Forty
   def serialize(count: Int) = count
 }
 
+case class BookmarkUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Bookmark] {
+  val namespace = "bookmark_uri_user"
+  def toKey(): String = uriId.id + "#" + userId.id
+}
+
+class BookmarkUriUserCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[BookmarkUriUserKey, Bookmark] {
+  val ttl = 7 days
+  def deserialize(obj: Any): Bookmark = parseJson(obj)
+  def serialize(bookmark: Bookmark) = Json.toJson(bookmark)
+}
+
 @Singleton
 class BookmarkRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
-  val countCache: BookmarkCountCache)
+  val countCache: BookmarkCountCache,
+  bookmarkUriUserCache: BookmarkUriUserCache)
       extends DbRepo[Bookmark] with BookmarkRepo with ExternalIdColumnDbFunction[Bookmark] {
 
   import DBSession._
@@ -140,6 +152,7 @@ class BookmarkRepoImpl @Inject() (
 
   override def invalidateCache(bookmark: Bookmark)(implicit session: RSession) = {
     countCache.remove(BookmarkCountKey())
+    bookmarkUriUserCache.set(BookmarkUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
     bookmark
   }
 
@@ -155,8 +168,10 @@ class BookmarkRepoImpl @Inject() (
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User],
       excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))
       (implicit session: RSession): Option[Bookmark] =
-    (for(b <- table if b.uriId === uriId && b.userId === userId && b.state =!= excludeState.getOrElse(null)) yield b)
-      .sortBy(_.state === BookmarkStates.INACTIVE).firstOption
+    bookmarkUriUserCache.getOrElseOpt(BookmarkUriUserKey(uriId, userId)) {
+      (for(b <- table if b.uriId === uriId && b.userId === userId && b.state =!= excludeState.getOrElse(null)) yield b)
+        .sortBy(_.state === BookmarkStates.INACTIVE).firstOption
+    }
 
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.uriId === uriId && b.state === BookmarkStates.ACTIVE) yield b).list
@@ -167,16 +182,18 @@ class BookmarkRepoImpl @Inject() (
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).list
 
-  def getByUser(userId: Id[User], beforeExternalId: Option[ExternalId[Bookmark]], count: Int)
-      (implicit session: RSession): Seq[Bookmark] = {
-    val q = if (beforeExternalId.isDefined) {
-      val last = get(beforeExternalId.get)
-      for (b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE &&
-          (b.createdAt < last.createdAt || b.id < last.id.get && b.createdAt === last.createdAt)) yield b
-    } else {
-      for (b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b
-    }
-    q.sortBy(_.id desc).sortBy(_.createdAt desc).take(count).list
+  def getByUser(userId: Id[User], beforeId: Option[ExternalId[Bookmark]], afterId: Option[ExternalId[Bookmark]],
+      count: Int)(implicit session: RSession): Seq[Bookmark] = {
+    val (maybeBefore, maybeAfter) = (beforeId map get, afterId map get)
+    (for {
+      b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE &&
+        (maybeBefore.map { before =>
+          b.createdAt < before.createdAt || b.id < before.id.get && b.createdAt === before.createdAt
+        } getOrElse (b.id === b.id)) &&
+        (maybeAfter.map { after =>
+          b.createdAt > after.createdAt || b.id > after.id.get && b.createdAt === after.createdAt
+        } getOrElse (b.id === b.id))
+    } yield b).sortBy(_.id desc).sortBy(_.createdAt desc).take(count).list
   }
 
   def getCountByUser(userId: Id[User])(implicit session: RSession): Int =

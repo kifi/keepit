@@ -30,6 +30,8 @@ import com.keepit.search.graph.UserToUriEdgeSet
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.shoebox.BrowsingHistoryTracker
+import scala.concurrent.Future
+import com.keepit.common.akka.MonitoredAwait
 
 
 class MainSearcher(
@@ -41,10 +43,11 @@ class MainSearcher(
     val uriGraphSearcher: URIGraphSearcher,
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
-    browsingHistoryBuilder: BrowsingHistoryBuilder,
-    clickHistoryBuilder: ClickHistoryBuilder,
+    browsingHistoryFuture: Future[MultiHashFilter[BrowsingHistory]],
+    clickHistoryFuture: Future[MultiHashFilter[ClickHistory]],
     shoeboxClient: ShoeboxServiceClient,
-    spellCorrector: SpellCorrector)
+    spellCorrector: SpellCorrector,
+    monitoredAwait: MonitoredAwait)
     (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 ) extends Logging {
@@ -87,7 +90,18 @@ class MainSearcher(
   private[this] val friendsUriEdgeAccessors = friendIds.foldLeft(Map.empty[Long, EdgeAccessor[User, NormalizedURI]]){ (m, f) =>
     m + (f.id -> uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).accessor)
   }
-  private[this] val friendUris = filteredFriendIds.foldLeft(Set.empty[Long]){ (s, f) => s ++ friendsUriEdgeAccessors(f.id).edgeSet.destIdLongSet }
+  private[this] val friendUris = {
+    filter.timeRange match {
+      case Some(timeRange) =>
+        filteredFriendIds.foldLeft(Set.empty[Long]){ (s, f) =>
+          s ++ friendsUriEdgeAccessors(f.id).edgeSet.filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
+        }
+      case None =>
+        filteredFriendIds.foldLeft(Set.empty[Long]){ (s, f) =>
+          s ++ friendsUriEdgeAccessors(f.id).edgeSet.destIdLongSet
+        }
+    }
+  }
   private[this] val friendlyUris = {
     if (filter.includeMine) friendUris ++ myUris
     else if (filter.includeShared) friendUris
@@ -121,7 +135,7 @@ class MainSearcher(
       case None =>
         articleSearcher.indexReader
     }
-    PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryBuilder, clickHistoryBuilder, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient)
+    PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryFuture, clickHistoryFuture, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient, monitoredAwait)
   }
 
   def searchText(queryString: String, maxTextHitsPerCategory: Int, clickBoosts: ResultClickTracker.ResultClickBoosts)(implicit lang: Lang) = {

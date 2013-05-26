@@ -5,7 +5,6 @@ import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.{Directory, MMapDirectory}
 import org.apache.lucene.util.Version
 import com.google.inject.{Provides, Singleton}
-import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.inject._
@@ -16,7 +15,7 @@ import com.keepit.search.graph.URIGraphImpl
 import com.keepit.search.graph.{URIGraphPluginImpl, URIGraphPlugin, URIGraph}
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.{ArticleIndexerPluginImpl, ArticleIndexerPlugin, ArticleIndexer}
-import com.keepit.search.phrasedetector.PhraseIndexer
+import com.keepit.search.phrasedetector.{PhraseIndexerImpl, PhraseIndexer}
 import com.keepit.search.query.parser.SpellCorrector
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.tzavellas.sse.guice.ScalaModule
@@ -53,34 +52,35 @@ class SearchModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def articleIndexer(articleStore: ArticleStore, uriGraph: URIGraph, db: Database,
-    repo: NormalizedURIRepo, healthcheckPlugin: HealthcheckPlugin, shoeboxClient: ShoeboxServiceClient): ArticleIndexer = {
+  def articleIndexer(articleStore: ArticleStore, uriGraph: URIGraph, healthcheckPlugin: HealthcheckPlugin, shoeboxClient: ShoeboxServiceClient): ArticleIndexer = {
     val dir = getDirectory(current.configuration.getString("index.article.directory"))
     log.info(s"storing search index in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new ArticleIndexer(dir, config, articleStore, db, repo, healthcheckPlugin, shoeboxClient)
+    new ArticleIndexer(dir, config, articleStore, healthcheckPlugin, shoeboxClient)
   }
 
 
   @Singleton
   @Provides
-  def uriGraph(bookmarkRepo: BookmarkRepo,
-    db: Database, shoeboxClient: ShoeboxServiceClient): URIGraph = {
+  def uriGraph(shoeboxClient: ShoeboxServiceClient): URIGraph = {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new URIGraphImpl(dir, config, URIGraphFields.decoders(), bookmarkRepo, db, shoeboxClient)
+    new URIGraphImpl(dir, config, URIGraphFields.decoders(), shoeboxClient)
   }
 
   @Singleton
   @Provides
-  def phraseIndexer(db: Database, phraseRepo: PhraseRepo): PhraseIndexer = {
+  def phraseIndexer(shoeboxClient: ShoeboxServiceClient): PhraseIndexer = {
     val dir = getDirectory(current.configuration.getString("index.phrase.directory"))
     val dataDir = current.configuration.getString("index.config").map{ path =>
       val configDir = new File(path).getCanonicalFile()
       new File(configDir, "phrase")
     }
-    PhraseIndexer(dir, db, phraseRepo)
+    val analyzer = DefaultAnalyzer.forIndexing
+    val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
+    new PhraseIndexerImpl(dir, config, shoeboxClient)
+
   }
 
   @Singleton
@@ -90,7 +90,7 @@ class SearchModule() extends ScalaModule with Logging {
     val articleDir = getDirectory(current.configuration.getString("index.article.directory"))
     SpellCorrector(spellDir, articleDir)
   }
-  
+
   @Singleton
   @Provides
   def clickHistoryBuilder: ClickHistoryBuilder = {
@@ -98,10 +98,10 @@ class SearchModule() extends ScalaModule with Logging {
     val filterSize = conf.getInt("filterSize").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val minHits = conf.getInt("minHits").get
-    
+
     new ClickHistoryBuilder(filterSize, numHashFuncs, minHits)
   }
-  
+
   @Singleton
   @Provides
   def browsingHistoryBuilder: BrowsingHistoryBuilder = {
@@ -109,10 +109,10 @@ class SearchModule() extends ScalaModule with Logging {
     val filterSize = conf.getInt("filterSize").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val minHits = conf.getInt("minHits").get
-    
+
     new BrowsingHistoryBuilder(filterSize, numHashFuncs, minHits)
   }
-  
+
   @Singleton
   @Provides
   def resultClickTracker: ResultClickTracker = {
@@ -128,7 +128,7 @@ class SearchModule() extends ScalaModule with Logging {
     }
     ResultClickTracker(dir, numHashFuncs, syncEvery)
   }
-  
+
   @Singleton
   @Provides
   def shoeboxServiceClient (client: HttpClient, cacheProvider: ShoeboxCacheProvider): ShoeboxServiceClient = {
@@ -136,6 +136,14 @@ class SearchModule() extends ScalaModule with Logging {
       current.configuration.getString("service.shoebox.host").get,
       current.configuration.getInt("service.shoebox.port").get,
       client, cacheProvider)
+  }
+
+
+  @Singleton
+  @Provides
+  def searchConfigManager(shoeboxClient: ShoeboxServiceClient): SearchConfigManager = {
+    val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
+    new SearchConfigManager(optFile, shoeboxClient)
   }
 
 }

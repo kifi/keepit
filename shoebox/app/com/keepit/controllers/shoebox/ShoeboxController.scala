@@ -19,11 +19,44 @@ import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.serializer._
 import com.keepit.shoebox.BrowsingHistoryTracker
+import com.keepit.model.NormalizedURI
+import com.keepit.common.mail.LocalPostOffice
+import play.api.libs.json.Json
+import com.keepit.common.mail.ElectronicMail
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.common.healthcheck.Healthcheck
+import com.keepit.model.NormalizedURIRepo
+import com.keepit.model.PhraseRepo
 import com.keepit.shoebox.ClickHistoryTracker
-
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.Action
+import com.keepit.model.BrowsingHistoryRepo
+import com.keepit.model.User
+import com.keepit.search.MultiHashFilter
+import com.keepit.model.BrowsingHistory
+import com.keepit.model.ClickHistoryRepo
+import com.keepit.model.ClickHistory
+import com.keepit.common.mail.LocalPostOffice
+import play.api.libs.json.Json
+import com.keepit.common.mail.ElectronicMail
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.common.healthcheck.Healthcheck
+import com.keepit.search.SearchConfigExperimentRepo
+import com.keepit.model.UserExperimentRepo
+import com.keepit.serializer.SearchConfigExperimentSerializer
+import com.keepit.search.SearchConfigExperiment
+import com.keepit.common.db.State
+import com.keepit.model.ExperimentType
+import com.keepit.common.db.SequenceNumber
+import com.keepit.common.social.BasicUserRepo
+import com.keepit.controllers.ext.PersonalSearchHit
+import com.keepit.common.social.BasicUser
+import com.keepit.common.db.ExternalId
+import com.keepit.search.ArticleSearchResultRef
+import com.keepit.search.ArticleSearchResultRefRepo
 
 object ShoeboxController {
   implicit val collectionTupleFormat = (
@@ -43,15 +76,28 @@ class ShoeboxController @Inject() (
   clickingHistoryRepo: ClickHistoryRepo,
   clickHistoryTracker: ClickHistoryTracker,
   normUriRepo: NormalizedURIRepo,
+  searchConfigExperimentRepo: SearchConfigExperimentRepo,
+  userExperimentRepo: UserExperimentRepo,
   persistEventPlugin: PersistEventPlugin,
   postOffice: LocalPostOffice,
+  healthcheckPlugin: HealthcheckPlugin,
+  phraseRepo: PhraseRepo,
   collectionRepo: CollectionRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
-  healthcheckPlugin: HealthcheckPlugin)
+  basicUserRepo: BasicUserRepo,
+  articleSearchResultRefRepo: ArticleSearchResultRefRepo)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
   extends ShoeboxServiceController with Logging {
+
+  def getUserOpt(id: ExternalId[User]) = Action { request =>
+    val userOpt =  db.readOnly { implicit s => userRepo.getOpt(id) }
+    userOpt match {
+      case Some(user) => Ok(UserSerializer.userSerializer.writes(user))
+      case None => Ok(JsNull)
+    }
+  }
 
   def sendMail = Action(parse.json) { request =>
     Json.fromJson[ElectronicMail](request.body).asOpt match {
@@ -103,14 +149,45 @@ class ShoeboxController @Inject() (
     Ok
   }
 
-  // this is not quite right yet (need new bookmark serializer).
-  // This function is not used yet, just a placeholder.
+
   def getBookmarks(userId: Id[User]) = Action { request =>
     val bookmarks = db.readOnly { implicit session =>
       bookmarkRepo.getByUser(userId)
-    }.map{BookmarkSerializer.bookmarkSerializer.writes}
+    }
+    Ok(Json.toJson(bookmarks))
+  }
+  
+  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]) = Action { request =>
+    val bookmark = db.readOnly { implicit session =>
+      bookmarkRepo.getByUriAndUser(uriId, userId)
+    }.map(Json.toJson(_)).getOrElse(JsNull)
+    Ok(bookmark)
+  }
+  
+  def getPersonalSearchInfo(userId: Id[User], allUsers: String, formattedHits: String) = Action { request =>
+    val (users, personalSearchHits) = db.readOnly { implicit session =>
+      val neededUsers = (allUsers.split(",").filterNot(_.isEmpty).map { u =>
+        val user = Id[User](u.toLong)
+        user.toString -> Json.toJson(basicUserRepo.load(user))
+      }).toSeq
+      val personalSearchHits = formattedHits.split(",").filterNot(_.isEmpty).map { hit =>
+        val param = hit.split(":").toSeq
+        val isMyBookmark = param.head == "1"
+        val uriId = Id[NormalizedURI](param.tail.head.toLong)
+        val uri = normUriRepo.get(uriId)
+        
+        (if(isMyBookmark) bookmarkRepo.getByUriAndUser(uriId, userId) else None) match {
+          case Some(bmk) =>
+            PersonalSearchHit(uri.id.get, uri.externalId, bmk.title, bmk.url, bmk.isPrivate)
+          case None =>
+            val uri = normUriRepo.get(uriId)
+            PersonalSearchHit(uri.id.get, uri.externalId, uri.title, uri.url, false)
+        }
+      }
+      (neededUsers, personalSearchHits)
+    }
 
-    Ok(JsArray(bookmarks))
+    Ok(Json.obj("users" -> JsObject(users), "personalSearchHits" -> personalSearchHits))
   }
 
   def getUsersChanged(seqNum: Long) = Action { request =>
@@ -129,14 +206,24 @@ class ShoeboxController @Inject() (
   }
 
   def getUsers(ids: String) = Action { request =>
-        val userIds = ids.split(',').map(id => Id[User](id.toLong))
-        val users = db.readOnly { implicit s =>
-          userIds.map{userId =>
-            val user = userRepo.get(userId)
-            UserSerializer.userSerializer.writes(user)
-          }
-        }
-        Ok(JsArray(users))
+    val userIds = ids.split(',').map(id => Id[User](id.toLong))
+    val users = db.readOnly { implicit s =>
+      userIds.map{userId =>
+        val user = userRepo.get(userId)
+        UserSerializer.userSerializer.writes(user)
+      }
+    }
+    Ok(JsArray(users))
+  }
+  
+  def getUserIdsByExternalIds(ids: String) = Action { request =>
+    val extUserIds = ids.split(',').map(id => ExternalId[User](id))
+    val users = (db.readOnly { implicit s =>
+      extUserIds.map { userId =>
+        userRepo.getOpt(userId).map(_.id.get.id)
+      } flatten
+    })
+    Ok(Json.toJson(users))
   }
 
   def getConnectedUsers(id : Id[User]) = Action { request =>
@@ -145,6 +232,54 @@ class ShoeboxController @Inject() (
         .map { friendId => JsNumber(friendId.id) }
     }
     Ok(JsArray(ids))
+  }
+  
+  def reportArticleSearchResult = Action(parse.json) { request =>
+    val ref = Json.fromJson[ArticleSearchResultRef](request.body).get
+    db.readWrite { implicit s =>
+      articleSearchResultRefRepo.save(ref)
+    }
+    Ok
+  }
+
+  def getActiveExperiments = Action { request =>
+    val exp = db.readOnly { implicit s => searchConfigExperimentRepo.getActive() }.map {
+      SearchConfigExperimentSerializer.serializer.writes(_)
+    }
+    Ok(JsArray(exp))
+  }
+
+  def getExperiments = Action { request =>
+    val exp = db.readOnly { implicit s => searchConfigExperimentRepo.getNotInactive() }.map {
+      SearchConfigExperimentSerializer.serializer.writes(_)
+    }
+    Ok(JsArray(exp))
+  }
+
+  def getExperiment(id: Id[SearchConfigExperiment]) = Action{ request =>
+    val exp = db.readOnly { implicit s => searchConfigExperimentRepo.get(id) }
+    Ok( SearchConfigExperimentSerializer.serializer.writes(exp))
+  }
+
+  def saveExperiment = Action(parse.json) { request =>
+    val exp = SearchConfigExperimentSerializer.serializer.reads(request.body).get
+    val saved = db.readWrite { implicit s => searchConfigExperimentRepo.save(exp) }
+    Ok(SearchConfigExperimentSerializer.serializer.writes(saved))
+  }
+
+  def hasExperiment(userId: Id[User], state: State[ExperimentType]) = Action { request =>
+     val has = db.readOnly { implicit s =>
+          userExperimentRepo.hasExperiment(userId, state)
+    }
+    Ok(JsBoolean(has))
+  }
+
+  def getPhrasesByPage(page: Int, size: Int) = Action { request =>
+    val phrases = db.readOnly { implicit s =>
+      phraseRepo.page(page,size).map(PhraseSerializer.phraseSerializer.writes(_))
+    }
+
+    Ok(JsArray(phrases))
   }
 
   def getCollectionsByUser(userId: Id[User]) = Action { request =>
@@ -161,4 +296,13 @@ class ShoeboxController @Inject() (
       keepToCollectionRepo.getBookmarksInCollection(collectionId) map bookmarkRepo.get
     }))
   }
+
+
+  def getIndexable(seqNum: Long, fetchSize: Int) = Action { request =>
+    val uris = db.readOnly { implicit s =>
+        normUriRepo.getIndexable(SequenceNumber(seqNum), fetchSize)
+      }.map{uri => NormalizedURISerializer.normalizedURISerializer.writes(uri)}
+    Ok(JsArray(uris))
+  }
+
 }

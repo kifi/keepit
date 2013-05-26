@@ -39,10 +39,11 @@ form.kifi-compose.kifi-scrollable-below {
 .kifi-compose-bar {
   border: 1px solid #d2d2d2;
   border-radius: 0 0 3px 3px;
+  background: #fafafa;
   text-align: right;
   position: relative;
 }
-a.kifi-compose-snapshot {
+.kifi-compose a.kifi-compose-snapshot[href] {
   float: left;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
@@ -71,15 +72,19 @@ span.kifi-compose-tip {
 .kifi-compose.kifi-empty .kifi-compose-tip {
   display: none;
 }
-a.kifi-compose-submit[href] {
+.kifi-compose a.kifi-compose-submit[href] {
   display: inline-block;
+  margin: -1px;
   padding: 0 18px;
   color: #fff !important;
-  background-color: #4c8ffb;
+  background-color: #6fa6ef;
+  border: 1px solid #6fa6ef;
+  border-bottom-right-radius: inherit;
   line-height: 28px;
 }
 .kifi-compose.kifi-empty a.kifi-compose-submit[href] {
   background-color: #bdc3c7;
+  border-color: #d2d2d2;
 }
 a.kifi-compose-submit:focus {
   outline: 1px dashed #aaa;
@@ -173,16 +178,16 @@ form.kifi-compose ul.token-input-list-KiFi {
   width: 100%;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-  border: 1px solid #d2d2d2;
+  border: 1px solid #d2d2d2 !important;
   border-radius: 3px 3px 0 0;
   margin: 0 0 -1px !important;
 }
 form.kifi-compose input[type=text].kifi-compose-to { /* initial input */
-  padding: 4px 5px;
+  padding: 5px;
 }
 form.kifi-compose input[type=text]#token-input-kifi-compose-to { /* token input */
   width: 100px;
-  padding: 1px 0 4px;
+  padding: 2px 0;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
@@ -202,26 +207,22 @@ form.kifi-compose ul.token-input-list-KiFi {
 }
 form.kifi-compose li.token-input-input-token-KiFi { /* input wrapper */
   float: left;
-  margin: 0 0 0 5px !important;
+  margin: 0 0 3px 5px !important;
   padding: 0 !important;
   list-style-type: none;
 }
 form.kifi-compose li.token-input-token-KiFi {
   overflow: hidden;
   margin: 0 0 3px 3px !important;
-  padding: 0 3px !important;
-  background-color: #eaeaea;
-  color: #524d4d;
+  padding: 2px 0 2px 5px !important;
+  background-color: #6fa6ef;
+  color: #fff;
   cursor: default;
-  border: 1px solid #e2e2e2;
-  border-radius: 2px;
   float: left;
   white-space: nowrap;
 }
 form.kifi-compose li.token-input-selected-token-KiFi {
-  background-color: #fafafa;
-  border-color: #e2e2e2;
-  color: #414B52;
+  background-color: #4c8ffb;
 }
 form.kifi-compose li.token-input-token-KiFi p {
   display: inline;
@@ -229,14 +230,17 @@ form.kifi-compose li.token-input-token-KiFi p {
   margin: 0;
 }
 form.kifi-compose li.token-input-token-KiFi .token-input-delete-token-KiFi {
-  color: #524d4d;
   margin-left: 5px;
+  padding: 1px 4px 3px;
   position: relative;
   bottom: 1px;
   cursor: pointer;
 }
-form.kifi-compose li.token-input-selected-token-KiFi .token-input-delete-token-KiFi {
-  color: #414b52;
+form.kifi-compose li.token-input-token-KiFi .token-input-delete-token-KiFi:hover {
+  background-color: #4c8ffb;
+}
+form.kifi-compose li.token-input-selected-token-KiFi .token-input-delete-token-KiFi:hover {
+  background-color: #6fa6ef;
 }
 div.token-input-dropdown-KiFi {
   border: 1px solid #ccc;
@@ -265,15 +269,16 @@ div.token-input-dropdown-KiFi ul {
   color: inherit;
 }
 div.token-input-dropdown-KiFi ul li {
-  background: #fff;
+  background: 6px 2px/28px no-repeat padding-box #fff;
   position: static;
   float: none;
   margin: 0 !important;
-  padding: 3px !important;
+  padding: 2px 6px 2px 42px !important;
   list-style-type: none;
   text-align: left;
   font: inherit;
   color: inherit;
+  line-height: 28px;
 }
 div.token-input-dropdown-KiFi ul li b {
   font: inherit;
@@ -285,6 +290,6 @@ div.token-input-dropdown-KiFi ul li.token-input-dropdown-item2-KiFi {
   background-color: #fff;
 }
 div.token-input-dropdown-KiFi ul li.token-input-selected-dropdown-item-KiFi {
-  background-color: #faf9f9;
-  color: #414b52;
+  background-color: #6fa6ef;
+  color: #fff;
 }

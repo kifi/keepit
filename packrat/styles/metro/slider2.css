@@ -56,8 +56,8 @@
 .kifi-pane a:visited,
 .kifi-pane a:link:hover,
 .kifi-pane a:visited:hover {
-  color: -webkit-link;
-  color: -moz-hyperlinktext;
+  color: -webkit-link !important;
+  color: -moz-hyperlinktext !important;
   text-decoration: none;
   font-weight: inherit;
   border: none;
@@ -145,11 +145,10 @@
   -webkit-transition: width 200ms ease-in, opacity 120ms ease-in 80ms;
   transition: width 200ms ease-in, opacity 120ms ease-in 80ms;
 }
-html>.kifi-slider2.kifi-wide {
+html>.kifi-slider2.kifi-wide, /* frameset docs */
+body>.kifi-slider2.kifi-wide { /* body docs */
   position: fixed;
   z-index: 999999999991;
-  -webkit-transition: -webkit-transform .25s ease-out;
-  transition: -webkit-transform .25s ease-out, transform .25s ease-out;
 }
 .kifi-slider2-x {
   position: absolute;

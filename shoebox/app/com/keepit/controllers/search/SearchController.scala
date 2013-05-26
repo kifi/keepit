@@ -10,9 +10,6 @@ import com.keepit.search.ResultClickTracker.ResultClickBoosts
 import com.keepit.search._
 import com.keepit.search.index.{MutableHit, HitQueue}
 import org.apache.commons.math3.linear.{EigenDecomposition, Array2DRowRealMatrix}
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsNumber
-import play.api.libs.json.JsString
 import play.api.mvc.Action
 import scala.collection.mutable.ArrayBuffer
 import scala.math.{abs, sqrt}
@@ -23,7 +20,7 @@ import scala.concurrent.Await
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.Random
-
+import play.api.libs.json._
 
 class SearchController @Inject()(
     searchConfigManager: SearchConfigManager,
@@ -116,7 +113,7 @@ class SearchController @Inject()(
     }
     (sqrt(s) / vectors1.length) - 1.0d - Double.MinPositiveValue
   }
-  
+
   //randomly creates one of two exceptions, each time with a random exception message
   def causeError() = Action { implicit request =>
     if (Random.nextBoolean) {
@@ -127,4 +124,6 @@ class SearchController @Inject()(
     (new Array[Int](1))(Random.nextInt + 1) = 1
     Ok("You cannot see this :-P ")
   }
+
+
 }

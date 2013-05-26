@@ -89,7 +89,10 @@
 	float: left;
   width: 42px;
   height: 42px;
+  margin: 0;
+  border: none;
   border-radius: 2px;
+  padding: 0;
 }
 
 #kifi-notify-notice-wrapper .kifi-on-page {

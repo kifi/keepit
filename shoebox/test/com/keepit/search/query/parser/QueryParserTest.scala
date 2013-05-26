@@ -127,6 +127,9 @@ class QueryParserTest extends Specification {
 
       query = parser.parse("aaa\"bbb ")
       query.toString === "Some(\"aaa bbb\")"
+
+      query = parser.parse("\"aaa bbb\"  ")
+      query.toString === "Some(\"aaa bbb\")"
     }
 
     "handle missing term after operators" in new QueryParserScope {

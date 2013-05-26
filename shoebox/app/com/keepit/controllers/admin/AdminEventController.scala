@@ -1,9 +1,7 @@
 package com.keepit.controllers.admin
 
 import scala.collection.mutable
-
 import org.joda.time.{Months, ReadablePeriod, Weeks}
-
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.analytics._
 import com.keepit.common.analytics.reports._
@@ -14,12 +12,12 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.search.SearchConfigManager
-
 import play.api.data.Forms._
 import play.api.data._
 import play.api.libs.json._
 import play.api.mvc._
 import views.html
+import com.keepit.search.SearchConfigExperimentRepo
 
 case class ActivityData(
   numUsers: Int,
@@ -40,7 +38,7 @@ class AdminEventController @Inject() (
   userRepo: UserRepo,
   userExperimentRepo: UserExperimentRepo,
   emailRepo: EmailAddressRepo,
-  searchConfigManager: SearchConfigManager,
+  searchConfigExperimentRepo: SearchConfigExperimentRepo,
   rb: ReportBuilderPlugin,
   reportStore: ReportStore,
   events: EventStream,
@@ -51,6 +49,35 @@ class AdminEventController @Inject() (
   reportBuilderPlugin: ReportBuilderPlugin,
   dailySearchStatisticsReports: DailySearchStatisticsReports)
     extends AdminController(actionAuthenticator) {
+
+  val ReportFields = Seq(
+    "DailyActiveUniqueUser",
+    "DailyPageLoadReportCount",
+    "DailySearchQueriesReportCount",
+    "DailyGoogleResultClickedCount",
+    "DailyKifiResultClickedCount",
+    "DailySliderShownByAutoCount",
+    "",
+    "",
+  	"",
+    "",
+    "",
+    "DailyCommentCount",
+    "",
+    "DailyUnkeepCount",
+    "DailyKeepCount",
+    "DailyUsefulPageCount",
+    "DailyTotalUsers",
+    "DailyPrivateKeeps",
+    "DailyPublicKeeps",
+    "DailyNewThread",
+    "DailyUniqueUsersKeeping",
+    "DailyUniqueUsersCommenting",
+    "DailyKifiLoadedReportCount",
+    "DailyKifiAtLeastOneResultCount",
+    "DailyDustSettledKifiHadNoResultsCount",
+    "DailyDustSettledKifiHadResultsCount"
+  )
 
   def buildReport() = AdminHtmlAction { request =>
 
@@ -64,7 +91,7 @@ class AdminEventController @Inject() (
       case "daily" => dailyReports
       case "admin" => dailyAdminReports
       case "experiment" =>
-        val activeExperiments = searchConfigManager.activeExperiments
+        val activeExperiments = db.readOnly { implicit s => searchConfigExperimentRepo.getActive() }
         reportBuilderPlugin.searchExperimentReports(activeExperiments)
       case "daily_search_statisitcs" => dailySearchStatisticsReports
       case unknown => throw new Exception("Unknown report: %s".format(unknown))
@@ -76,7 +103,7 @@ class AdminEventController @Inject() (
   def getReport(reportName: String) = AdminCsvAction(reportName + ".csv") { request =>
     log.info(reportName)
     val report = reportStore.get(reportName).get
-    Ok(report.toCSV)
+    Ok(report.toCSV(ReportFields))
   }
 
   private def getIncludedUsers(): Seq[User] = {

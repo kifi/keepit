@@ -16,11 +16,11 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.inject._
-import com.keepit.model.{PhraseRepo, BookmarkRepo, NormalizedURIRepo}
+import com.keepit.model.{BookmarkRepo, NormalizedURIRepo}
 import com.keepit.search.{ArticleStore, ResultClickTracker}
 import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphFields}
 import com.keepit.search.index.{ArticleIndexer, DefaultAnalyzer}
-import com.keepit.search.phrasedetector.PhraseIndexer
+import com.keepit.search.phrasedetector.{PhraseIndexerImpl, PhraseIndexer}
 import com.keepit.search.query.parser.{FakeSpellCorrector, SpellCorrector}
 import com.mongodb.casbah.MongoConnection
 import com.tzavellas.sse.guice.ScalaModule
@@ -195,34 +195,35 @@ class SearchDevModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def articleIndexer(articleStore: ArticleStore, uriGraph: URIGraph, db: Database,
-    repo: NormalizedURIRepo, healthcheckPlugin: HealthcheckPlugin, shoeboxClient: ShoeboxServiceClient): ArticleIndexer = {
+  def articleIndexer(articleStore: ArticleStore, uriGraph: URIGraph, healthcheckPlugin: HealthcheckPlugin, shoeboxClient: ShoeboxServiceClient): ArticleIndexer = {
     val dir = getDirectory(current.configuration.getString("index.article.directory"))
     log.info(s"storing search index in $dir")
 
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new ArticleIndexer(dir, config, articleStore, db, repo, healthcheckPlugin, shoeboxClient)
+    new ArticleIndexer(dir, config, articleStore, healthcheckPlugin, shoeboxClient)
   }
 
   @Singleton
   @Provides
-  def uriGraph(bookmarkRepo: BookmarkRepo,
-    db: Database, shoeboxClient: ShoeboxServiceClient): URIGraph = {
+  def uriGraph(shoeboxClient: ShoeboxServiceClient): URIGraph = {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new URIGraphImpl(dir, config, URIGraphFields.decoders(), bookmarkRepo, db, shoeboxClient)
+    new URIGraphImpl(dir, config, URIGraphFields.decoders(), shoeboxClient)
   }
 
   @Singleton
   @Provides
-  def phraseIndexer(db: Database, phraseRepo: PhraseRepo): PhraseIndexer = {
+  def phraseIndexer(shoeboxClient: ShoeboxServiceClient): PhraseIndexer = {
     val dir = getDirectory(current.configuration.getString("index.phrase.directory"))
     val dataDir = current.configuration.getString("index.config").map{ path =>
       val configDir = new File(path).getCanonicalFile()
       new File(configDir, "phrase")
     }
-    PhraseIndexer(dir, db, phraseRepo)
+    val analyzer = DefaultAnalyzer.forIndexing
+    val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
+    new PhraseIndexerImpl(dir, config, shoeboxClient)
+
   }
 
   @Singleton

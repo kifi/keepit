@@ -8,6 +8,13 @@ import com.keepit.common.service.FortyTwoServices
 import scala.concurrent.{Future, Promise, promise}
 import com.google.inject.Inject
 import play.api.libs.json.JsObject
+import com.keepit.serializer.NormalizedURISerializer
+import com.keepit.search.SearchConfigExperiment
+import com.keepit.search.SearchConfigExperimentRepo
+import com.keepit.serializer.SearchConfigExperimentSerializer
+import com.keepit.common.social.BasicUser
+import com.keepit.controllers.ext.PersonalSearchHit
+import com.keepit.search.ArticleSearchResult
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl @Inject() (
@@ -19,6 +26,8 @@ class FakeShoeboxServiceClientImpl @Inject() (
     browsingHistoryRepo: BrowsingHistoryRepo,
     clickingHistoryRepo: ClickHistoryRepo,
     normUriRepo: NormalizedURIRepo,
+    experimentRepo: SearchConfigExperimentRepo,
+    userExperimentRepo: UserExperimentRepo,
     clickHistoryTracker: ClickHistoryTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
     clock: Clock,
@@ -27,6 +36,11 @@ class FakeShoeboxServiceClientImpl @Inject() (
     extends ShoeboxServiceClient {
   val host: String = ""
   protected def httpClient: com.keepit.common.net.HttpClient = ???
+
+  def getUserOpt(id: ExternalId[User]): Future[Option[User]] = {
+     val userOpt =  db.readOnly { implicit s => userRepo.getOpt(id) }
+     Promise.successful(userOpt).future
+  }
 
   def getUser(id: Id[User]): Future[User] = {
     //call(routes.ShoeboxController.getUser(id)).map(r => UserSerializer.userSerializer.reads(r.json))
@@ -54,8 +68,11 @@ class FakeShoeboxServiceClientImpl @Inject() (
      promise[Seq[NormalizedURI]]().success(uris).future
   }
 
-  def getBookmarks(userId: Id[User]): Future[Bookmark] = {
-    ???
+  def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]] = {
+    val bookmarks = db.readOnly { implicit session =>
+      bookmarkRepo.getByUser(userId)
+    }
+    Promise.successful(bookmarks).future
   }
 
   def getUsersChanged(seqNum: SequenceNumber): Future[Seq[(Id[User], SequenceNumber)]] = {
@@ -79,8 +96,11 @@ class FakeShoeboxServiceClientImpl @Inject() (
   }
 
   def getConnectedUsers(id: Id[User]): scala.concurrent.Future[Set[com.keepit.common.db.Id[com.keepit.model.User]]] = ???
+  def reportArticleSearchResult(res: ArticleSearchResult): Unit = {}
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = ???
+  def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = ???
   def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
+  def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]] = Promise.successful(Seq()).future
 
   def getCollectionsChanged(seqNum: SequenceNumber): Future[Seq[(Id[Collection], Id[User], SequenceNumber)]] = {
     Promise.successful(Seq()).future
@@ -92,5 +112,40 @@ class FakeShoeboxServiceClientImpl @Inject() (
 
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]] = {
     Promise.successful(Seq()).future
+  }
+
+  def getIndexable(seqNum: Long, fetchSize: Int) : Future[Seq[NormalizedURI]] = {
+    val uris = db.readOnly { implicit s =>
+        normUriRepo.getIndexable(SequenceNumber(seqNum), fetchSize)
+      }
+    Promise.successful(uris).future
+  }
+  
+  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]] = ???
+  def getPersonalSearchInfo(userId: Id[User], resultSet: com.keepit.search.ArticleSearchResult): Future[(Map[Id[User], BasicUser], Seq[PersonalSearchHit])] = ???
+
+  def getActiveExperiments: Future[Seq[SearchConfigExperiment]] = {
+    val exp = db.readOnly { implicit s => experimentRepo.getActive() }
+    Promise.successful(exp).future
+  }
+
+  def getExperiments: Future[Seq[SearchConfigExperiment]] = {
+    val exp = db.readOnly { implicit s => experimentRepo.getNotInactive() }
+    Promise.successful(exp).future
+  }
+
+  def getExperiment(id: Id[SearchConfigExperiment]): Future[SearchConfigExperiment] = {
+    val exp = db.readOnly { implicit s => experimentRepo.get(id) }
+    Promise.successful(exp).future
+  }
+  def saveExperiment(experiment: SearchConfigExperiment) = {
+    val saved = db.readWrite { implicit s => experimentRepo.save(experiment) }
+    Promise.successful(saved).future
+  }
+  def hasExperiment(userId: Id[User], state: State[ExperimentType]): Future[Boolean] = {
+     val has = db.readOnly { implicit s =>
+       userExperimentRepo.hasExperiment(userId, state)
+     }
+     Promise.successful(has).future
   }
 }

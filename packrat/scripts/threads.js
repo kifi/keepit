@@ -22,11 +22,13 @@ threadsPane = function() {
       render("html/metro/threads.html", {
         formatSnippet: getSnippetFormatter,
         formatLocalDate: getLocalDateFormatter,
+        emptyUri: api.url("images/metro/bg_messages.png"),
         threads: o.threads,
         showTo: true,
         draftPlaceholder: "Type a message…",
         draftDefault: "Check this out.",
         submitButtonLabel: "Send",
+        submitTip: CO_KEY + "-Enter to send",
         snapshotUri: api.url("images/snapshot.png")
       }, {
         thread: "thread.html",

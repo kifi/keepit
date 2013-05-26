@@ -5,14 +5,12 @@ import java.net.InetAddress
 import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.google.inject.multibindings.Multibinder
-import com.keepit.common.plugin._
 import com.keepit.common.zookeeper._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.actor.ActorPlugin
 import com.keepit.common.analytics._
 import com.keepit.common.cache.MemcachedCacheModule
-import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{HealthcheckHost, HealthcheckPluginImpl, HealthcheckPlugin, HealthcheckActor}
 import com.keepit.common.logging.Logging
 import com.keepit.common.controller.FortyTwoCookies._
@@ -20,7 +18,6 @@ import com.keepit.common.mail.{MailSenderPluginImpl, MailSenderPlugin, PostOffic
 import com.keepit.common.net.HttpClient
 import com.keepit.common.net.HttpClientImpl
 import com.keepit.inject.{FortyTwoModule, AppScoped}
-import com.keepit.model.{UserExperimentRepo, SliderHistoryTracker, SliderHistoryRepo, BrowsingHistoryRepo, ClickHistoryRepo}
 import com.keepit.scraper.ScraperConfig
 import com.keepit.scraper.{HttpFetcherImpl, HttpFetcher}
 import com.keepit.search._
@@ -29,8 +26,6 @@ import com.mongodb.casbah.MongoConnection
 import com.tzavellas.sse.guice.ScalaModule
 import akka.actor.ActorSystem
 import play.api.Play.current
-import com.keepit.model.UserRepo
-import com.keepit.model.NormalizedURIRepo
 import com.keepit.common.time.Clock
 import com.google.inject.Provider
 import play.api.Play
@@ -73,8 +68,8 @@ class CommonModule extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def actorPluginProvider(schedulingProperties: SchedulingProperties): ActorPlugin =
-    new ActorPlugin(ActorSystem("shoebox-actor-system", Play.current.configuration.underlying, Play.current.classloader), schedulingProperties)
+  def actorPluginProvider: ActorPlugin =
+    new ActorPlugin(ActorSystem("shoebox-actor-system", Play.current.configuration.underlying, Play.current.classloader))
 
   @Provides
   def httpClientProvider(healthcheckPlugin: HealthcheckPlugin): HttpClient = new HttpClientImpl(healthcheckPlugin = healthcheckPlugin)
@@ -86,8 +81,8 @@ class CommonModule extends ScalaModule with Logging {
   @Provides
   @AppScoped
   def healthcheckProvider(actorFactory: ActorFactory[HealthcheckActor],
-      services: FortyTwoServices, host: HealthcheckHost, schedulingProperties: SchedulingProperties): HealthcheckPlugin = {
-    new HealthcheckPluginImpl(actorFactory, services, host, schedulingProperties)
+      services: FortyTwoServices, host: HealthcheckHost): HealthcheckPlugin = {
+    new HealthcheckPluginImpl(actorFactory, services, host)
   }
 
   @Singleton
@@ -115,12 +110,4 @@ class CommonModule extends ScalaModule with Logging {
     }.get
   }
 
-  @Singleton
-  @Provides
-  def searchConfigManager(
-      expRepo: SearchConfigExperimentRepo, userExpRepo: UserExperimentRepo, db: Database): SearchConfigManager = {
-    // This is needed still by Shoebox because of reports. Need to split.
-    val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
-    new SearchConfigManager(optFile, expRepo, userExpRepo, db)
-  }
 }

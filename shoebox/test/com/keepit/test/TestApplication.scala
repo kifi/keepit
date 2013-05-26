@@ -5,10 +5,11 @@ import scala.concurrent._
 import scala.slick.session.{Database => SlickDatabase}
 import scala.collection.mutable
 import org.joda.time.{ReadablePeriod, DateTime}
-import com.google.inject._
+import com.google.inject.Module
+import com.google.inject.Provides
+import com.google.inject.Singleton
 import com.google.inject.multibindings.Multibinder
 import com.google.inject.util.Modules
-import com.keepit.common.plugin._
 import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
 import com.keepit.common.analytics._
 import com.keepit.common.cache.{HashMapMemoryCache, FortyTwoCachePlugin}
@@ -24,7 +25,7 @@ import com.keepit.common.social._
 import com.keepit.common.store.FakeS3StoreModule
 import com.keepit.common.time._
 import com.keepit.common.zookeeper._
-import com.keepit.dev._
+import com.keepit.dev.{SearchDevGlobal, ShoeboxDevGlobal, DevGlobal, S3DevModule}
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.scraper._
@@ -49,6 +50,7 @@ import com.keepit.common.mail.FakeMailModule
 import com.keepit.shoebox.BrowsingHistoryTracker
 import com.keepit.classify.DomainTagImportSettings
 import play.api.libs.Files
+import java.io.File
 
 class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplication() {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
@@ -66,6 +68,7 @@ class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplica
   def withFakeCache() = overrideWith(FakeCacheModule())
   def withS3DevModule() = overrideWith(new S3DevModule())
   def withShoeboxServiceModule() = overrideWith(ShoeboxServiceModule())
+  def withSearchConfigModule() = overrideWith(SearchConfigModule())
   def overrideWith(model: Module): TestApplication =
     new TestApplication(new TestGlobal(Modules.`override`(global.modules: _*).`with`(model)))
 }
@@ -97,6 +100,7 @@ trait DbRepos {
   def unscrapableRepo = inject[UnscrapableRepo]
   def notificationRepo = inject[UserNotificationRepo]
   def scrapeInfoRepo = inject[ScrapeInfoRepo]
+  def phraseRepo = inject[PhraseRepo]
 }
 
 object TestDbInfo {
@@ -124,31 +128,20 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
     bind[HealthcheckPlugin].to[FakeHealthcheck]
     bind[SlickSessionProvider].to[TestSlickSessionProvider]
+
+
   }
 
   private def dbInfoFromApplication(): DbInfo = TestDbInfo.dbInfo
 
-  @Singleton
   @Provides
-  def schedulingProperties: SchedulingProperties = new SchedulingProperties() {
-    def allowSchecualing: Boolean = false
-  }
-
-  @Singleton
-  @Provides
-  def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
-    def register() = Node("me")
-    def isLeader() = false
-  }
+  def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.Never
 
   @Singleton
   @Provides
   def domainTagImportSettings: DomainTagImportSettings = {
     DomainTagImportSettings(localDir = "", url = "")
   }
-
-  @Provides
-  def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.Never
 
   @Provides
   @Singleton
@@ -180,8 +173,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Provides
   @Singleton
-  def mailSenderPlugin(scheduling: SchedulingProperties): MailSenderPlugin = new MailSenderPlugin {
-    def schedulingProperties: SchedulingProperties = scheduling
+  def mailSenderPlugin: MailSenderPlugin = new MailSenderPlugin {
     def processMail(mailId: ElectronicMail) = throw new Exception("Should not attempt to use mail plugin in test")
     def processOutbox() = throw new Exception("Should not attempt to use mail plugin in test")
   }
@@ -221,9 +213,8 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Provides
   @AppScoped
-  def actorPluginProvider(schedulingProperties: SchedulingProperties): ActorPlugin =
-    new ActorPlugin(ActorSystem("shoebox-test-actor-system", Play.current.configuration.underlying, Play.current.classloader),
-      schedulingProperties)
+  def actorPluginProvider: ActorPlugin =
+    new ActorPlugin(ActorSystem("shoebox-test-actor-system", Play.current.configuration.underlying, Play.current.classloader))
 
   @Provides
   @Singleton
@@ -268,7 +259,7 @@ class FakeClock extends Clock with Logging {
   override def getMillis(): Long = timeFunction()
 }
 
-class FakeSocialGraphPlugin(val schedulingProperties: SchedulingProperties) extends SocialGraphPlugin {
+class FakeSocialGraphPlugin extends SocialGraphPlugin {
   def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]] =
     future { throw new Exception("Not Implemented") }
 }
@@ -285,11 +276,22 @@ case class FakeScraperModule() extends ScalaModule {
   }
 }
 
-class FakeScraperPlugin(scheduling: SchedulingProperties) extends ScraperPlugin {
-  def schedulingProperties: SchedulingProperties = scheduling
+class FakeScraperPlugin() extends ScraperPlugin {
   def scrape() = Seq()
   def asyncScrape(uri: NormalizedURI) =
     future { throw new Exception("Not Implemented") }
+}
+
+case class SearchConfigModule() extends ScalaModule {
+  override def configure(): Unit = {
+  }
+
+  @Singleton
+  @Provides
+  def searchConfigManager(shoeboxClient: ShoeboxServiceClient): SearchConfigManager = {
+    val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
+    new SearchConfigManager(optFile, shoeboxClient)
+  }
 }
 
 case class ShoeboxServiceModule() extends ScalaModule {
@@ -307,6 +309,8 @@ case class ShoeboxServiceModule() extends ScalaModule {
     browsingHistoryRepo: BrowsingHistoryRepo,
     clickingHistoryRepo: ClickHistoryRepo,
     normUriRepo: NormalizedURIRepo,
+    experimentRepo: SearchConfigExperimentRepo,
+    userExperimentRepo: UserExperimentRepo,
     clickHistoryTracker: ClickHistoryTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
     persistEventPluginProvider: Provider[PersistEventPlugin], clock: Clock,
@@ -320,6 +324,8 @@ case class ShoeboxServiceModule() extends ScalaModule {
     browsingHistoryRepo,
     clickingHistoryRepo,
     normUriRepo,
+    experimentRepo,
+    userExperimentRepo,
     clickHistoryTracker,
     browsingHistoryTracker,
     clock,

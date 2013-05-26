@@ -21,6 +21,8 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import views.html
 import com.keepit.common.analytics.MongoEventStore
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 @Singleton
 class AdminSearchConfigController @Inject() (
@@ -28,9 +30,10 @@ class AdminSearchConfigController @Inject() (
   db: Database,
   userWithSocialRepo: UserWithSocialRepo,
   userRepo: UserRepo,
-  configManager: SearchConfigManager,
+  searchConfigExperimentRepo: SearchConfigExperimentRepo,
   searchClient: SearchServiceClient,
-  store: MongoEventStore)
+  store: MongoEventStore
+  )
     extends AdminController(actionAuthenticator) {
 
   def showUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
@@ -60,8 +63,8 @@ class AdminSearchConfigController @Inject() (
   }
 
   def getExperiments = AdminHtmlAction { implicit request =>
-    val experiments = configManager.getExperiments
-    val default = configManager.defaultConfig
+    val experiments = db.readOnly { implicit s => searchConfigExperimentRepo.getNotInactive() }
+    val default = Await.result(searchClient.getSearchDefaultConfig, 5 seconds)
     Ok(html.admin.searchConfigExperiments(experiments, default.params))
   }
 
@@ -71,7 +74,7 @@ class AdminSearchConfigController @Inject() (
   private def refetchReportData(report: ReportRepo, endDate: DateTime, days: Int): Map[LocalDate, Int] = {
     val (lastDate, existingData) = existingReportData.get(report).getOrElse((START_OF_TIME, Map()))
     val completeReportData = report.get(Seq(endDate.minusDays(days), lastDate).max, endDate)
-        .list.map(row => row.date.toLocalDate -> row.fields.head._2.value.toInt).toMap
+        .list.map(row => row.date.toLocalDate -> row.fields.head._2.toInt).toMap
     val data = (existingData ++ completeReportData).toMap
     existingReportData += report -> (endDate, data)
     data
@@ -124,21 +127,21 @@ class AdminSearchConfigController @Inject() (
   }
 
   def getKifiVsGoogle(expId: Id[SearchConfigExperiment]) = AdminJsonAction { implicit request =>
-    val e = Some(expId).filter(_.id > 0).map(configManager.getExperiment)
+    val e = Some(expId).filter(_.id > 0).map(db.readOnly { implicit s => searchConfigExperimentRepo.get(_) })
     val data = getChartData(new DailyKifiResultClickedByExperimentRepo(store, _), new DailyGoogleResultClickedByExperimentRepo(store, _), e)
     Ok(data)
   }
 
   def getKifiHadResults(expId: Id[SearchConfigExperiment]) = AdminJsonAction { implicit request =>
-    val e = Some(expId).filter(_.id > 0).map(configManager.getExperiment)
+    val e = Some(expId).filter(_.id > 0).map(db.readOnly { implicit s => searchConfigExperimentRepo.get(_) })
     val data = getChartData(new DailyDustSettledKifiHadResultsByExperimentRepo(store, _, true),
       new DailyDustSettledKifiHadResultsByExperimentRepo(store, _, false), e)
     Ok(data)
   }
 
   def addNewExperiment = AdminHtmlAction { implicit request =>
-    configManager.saveExperiment(
-      SearchConfigExperiment(description = "New Experiment", config = configManager.defaultConfig))
+    val defaultConfig =  Await.result(searchClient.getSearchDefaultConfig, 5 seconds)
+    db.readWrite { implicit s => searchConfigExperimentRepo.save(SearchConfigExperiment(description = "New Experiment", config = defaultConfig)) }
     Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.getExperiments)
   }
 
@@ -146,8 +149,8 @@ class AdminSearchConfigController @Inject() (
     val id = request.request.body.asFormUrlEncoded.get.mapValues(_.head)
        .get("id").map(_.toInt).map(Id[SearchConfigExperiment](_))
     id.map { id =>
-      val experiment = configManager.getExperiment(id)
-      configManager.saveExperiment(experiment.withState(SearchConfigExperimentStates.INACTIVE))
+      val experiment = db.readOnly { implicit s => searchConfigExperimentRepo.get(id) }
+      db.readWrite { implicit s => searchConfigExperimentRepo.save(experiment.withState(SearchConfigExperimentStates.INACTIVE)) }
     }
     Ok(JsObject(Seq()))
   }
@@ -165,9 +168,10 @@ class AdminSearchConfigController @Inject() (
       case (k, v) if k.startsWith("param_") => k.split("_", 2)(1) -> v
     }.toMap
     id.map { id =>
-      val exp = configManager.getExperiment(id)
-      configManager.saveExperiment(exp.copy(description = desc, weight = weight, config = exp.config(params))
-          .withState(state.getOrElse(exp.state)))
+      val exp = db.readOnly { implicit s => searchConfigExperimentRepo.get(id) }
+      val toSave = exp.copy(description = desc, weight = weight, config = exp.config(params))
+          .withState(state.getOrElse(exp.state))
+       db.readWrite { implicit s => searchConfigExperimentRepo.save(toSave) }
     }
     Ok(JsObject(Seq()))
   }
