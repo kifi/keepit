@@ -130,6 +130,19 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Singleton
   @Provides
+  def schedulingProperties: SchedulingProperties = new SchedulingProperties() {
+    def allowSchecualing: Boolean = false
+  }
+
+  @Singleton
+  @Provides
+  def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
+    def register() = Node("me")
+    def isLeader() = false
+  }
+
+  @Singleton
+  @Provides
   def domainTagImportSettings: DomainTagImportSettings = {
     DomainTagImportSettings(localDir = "", url = "")
   }
@@ -167,7 +180,8 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Provides
   @Singleton
-  def mailSenderPlugin: MailSenderPlugin = new MailSenderPlugin {
+  def mailSenderPlugin(scheduling: SchedulingProperties): MailSenderPlugin = new MailSenderPlugin {
+    def schedulingProperties: SchedulingProperties = scheduling
     def processMail(mailId: ElectronicMail) = throw new Exception("Should not attempt to use mail plugin in test")
     def processOutbox() = throw new Exception("Should not attempt to use mail plugin in test")
   }
@@ -254,7 +268,7 @@ class FakeClock extends Clock with Logging {
   override def getMillis(): Long = timeFunction()
 }
 
-class FakeSocialGraphPlugin extends SocialGraphPlugin {
+class FakeSocialGraphPlugin(val schedulingProperties: SchedulingProperties) extends SocialGraphPlugin {
   def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]] =
     future { throw new Exception("Not Implemented") }
 }
@@ -271,7 +285,8 @@ case class FakeScraperModule() extends ScalaModule {
   }
 }
 
-class FakeScraperPlugin() extends ScraperPlugin {
+class FakeScraperPlugin(scheduling: SchedulingProperties) extends ScraperPlugin {
+  def schedulingProperties: SchedulingProperties = scheduling
   def scrape() = Seq()
   def asyncScrape(uri: NormalizedURI) =
     future { throw new Exception("Not Implemented") }
