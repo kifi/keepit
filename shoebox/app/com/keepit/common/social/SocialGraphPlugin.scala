@@ -82,10 +82,15 @@ private[social] class SocialGraphActor @Inject() (
             case (_, Some(AppNotInstalled)) =>
               log.warn(s"App not authorized for social user $socialUserInfo; not fetching connections.")
               db.readWrite { implicit s =>
-                socialRepo.save(socialUserInfo withState SocialUserInfoStates.APP_NOT_AUTHORIZED)
+                socialRepo.save(
+                  socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
               }
               Seq()
-            case _ => throw e
+            case _ =>
+              db.readWrite { implicit s =>
+                socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())
+              }
+              throw e
           }
         case ex: Exception =>
           db.readWrite { implicit c =>
