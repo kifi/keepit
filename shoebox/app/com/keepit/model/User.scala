@@ -40,7 +40,7 @@ trait UserRepo extends Repo[User] with ExternalIdColumnFunction[User] {
 
 case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
   override val version = 2
-  val namespace = "user_by_externalId"
+  val namespace = "user_by_external_id"
   def toKey(): String = externalId.id
 }
 class UserExternalIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[UserExternalIdKey, User] {
@@ -57,6 +57,17 @@ class UserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCach
   val ttl = 24 hours
   def deserialize(obj: Any): User = UserSerializer.userSerializer.reads(Json.parse(obj.asInstanceOf[String]).asInstanceOf[JsObject]).get
   def serialize(user: User) = UserSerializer.userSerializer.writes(user)
+}
+
+case class ExternalUserIdKey(id: ExternalId[User]) extends Key[Id[User]] {
+  override val version = 2
+  val namespace = "user_id_by_external_id"
+  def toKey(): String = id.id.toString
+}
+class ExternalUserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[ExternalUserIdKey, Id[User]] {
+  val ttl = 24 hours
+  def deserialize(obj: Any): Id[User] = Id[User](obj.asInstanceOf[Long])
+  def serialize(userId: Id[User]) = userId.id
 }
 
 @Singleton

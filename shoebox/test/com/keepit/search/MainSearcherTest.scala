@@ -38,6 +38,7 @@ import play.api.libs.json.JsArray
 import com.keepit.common.net._
 import com.keepit.search.graph.CollectionIndexer
 import com.keepit.search.graph.CollectionFields
+import com.keepit.common.akka.MonitoredAwait
 
 class MainSearcherTest extends Specification with DbRepos {
 
@@ -68,6 +69,7 @@ class MainSearcherTest extends Specification with DbRepos {
         inject[ClickHistoryBuilder],
         inject[ShoeboxServiceClient],
         inject[FakeSpellCorrector],
+        inject[MonitoredAwait],
         clock,
         fortyTwoServices)
     (uriGraph, articleIndexer, mainSearcherFactory)

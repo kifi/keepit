@@ -16,7 +16,8 @@ class CompleteReportSerializer extends Format[Report] {
         "reportName" -> JsString(report.reportName),
         "reportVersion" -> JsString(report.reportVersion),
         "createdAt" -> Json.toJson(report.createdAt),
-        "report" -> JsObject(report.list map (r => UTC_DATETIME_FORMAT.print(r.date.withZone(DateTimeZone.UTC)) -> JsObject((r.fields map (s => s._1 -> JsArray(Seq(JsString(s._2.value), JsNumber(s._2.ordering))))).toSeq)))
+        "report" -> JsObject(report.list map (r => UTC_DATETIME_FORMAT.print(r.date.withZone(DateTimeZone.UTC)) ->
+          JsObject((r.fields map (s => s._1 -> JsString(s._2))).toSeq)))
       )
     )
 
@@ -24,9 +25,9 @@ class CompleteReportSerializer extends Format[Report] {
     val list = (json \ "report").as[JsObject].fields.map { case (dateVal, row) =>
       val date = UTC_DATETIME_FORMAT.parseDateTime(dateVal)
       val fields = (row.as[JsObject].fields map { case (key, value) =>
-        key -> value.asOpt[String].map(ValueOrdering(_, 0)).getOrElse {
+        key -> value.asOpt[String].getOrElse {
           val valueOrdering = value.as[List[JsValue]]
-          ValueOrdering(valueOrdering(0).as[String], valueOrdering(1).as[Int])
+          valueOrdering(0).as[String]
         }
       }).toMap
       ReportRow(date, fields)

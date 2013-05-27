@@ -29,7 +29,7 @@ class CommentControllerTest extends TestKit(ActorSystem()) with Specification wi
   "CommentController" should {
 
     "follow and unfollow" in {
-      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeMail()) {
+      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeMail().withFakeStore()) {
         val now = new DateTime(2012, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         val today = now.toDateTime
         inject[FakeClock].push(today)
@@ -94,10 +94,10 @@ class CommentControllerTest extends TestKit(ActorSystem()) with Specification wi
         }
         val extCommentController = inject[ExtCommentController]
         extCommentController.notifyRecipients(comment)
-        
+
         inject[FakeClock].push(new DateTime("2016-01-01"))
         inject[UserEmailNotifierPluginImpl].sendEmails()
-        
+
         val mails = inject[FakeOutbox]
         val mail = mails.head
         mail.htmlBody.value must contain("""Public Comment [look here] on Google1""")

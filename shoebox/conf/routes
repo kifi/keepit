@@ -245,11 +245,14 @@ GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLab
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURI(id: Long)
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs(ids: String)
 GET     /internal/shoebox/database/getUsers           @com.keepit.controllers.shoebox.ShoeboxController.getUsers(ids: String)
+GET     /internal/shoebox/database/userIdsByExternalIds @com.keepit.controllers.shoebox.ShoeboxController.getUserIdsByExternalIds(ids: String)
+GET     /internal/shoebox/database/getUserOpt         @com.keepit.controllers.shoebox.ShoeboxController.getUserOpt(id: ExternalId[User])
 
 GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.shoebox.ShoeboxController.getConnectedUsers(userId: Id[User])
 GET     /internal/shoebox/tracker/browsingHistory     @com.keepit.controllers.shoebox.ShoeboxController.getBrowsingHistoryFilter(userId: Id[User])
 GET     /internal/shoebox/tracker/browsingHistory     @com.keepit.controllers.shoebox.ShoeboxController.getClickHistoryFilter(userId: Id[User])
 GET     /internal/shoebox/database/bookmark           @com.keepit.controllers.shoebox.ShoeboxController.getBookmarks(userId: Id[User])
+GET     /internal/shoebox/database/bookmarkByUriUser  @com.keepit.controllers.shoebox.ShoeboxController.getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])
 GET     /internal/shoebox/database/changedUser        @com.keepit.controllers.shoebox.ShoeboxController.getUsersChanged(seqNum: Long)
 POST    /internal/shoebox/persistServerSearchEvent    @com.keepit.controllers.shoebox.ShoeboxController.persistServerSearchEvent
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.shoebox.ShoeboxController.sendMail
@@ -258,12 +261,14 @@ GET     /internal/shoebox/database/getCollectionsChanged @com.keepit.controllers
 GET     /internal/shoebox/database/getBookmarksInCollection @com.keepit.controllers.shoebox.ShoeboxController.getBookmarksInCollection(collectionId: Id[Collection])
 GET     /internal/shoebox/database/getCollectionsByUser @com.keepit.controllers.shoebox.ShoeboxController.getCollectionsByUser(userId: Id[User])
 GET     /internal/shoebox/database/getIndexable       @com.keepit.controllers.shoebox.ShoeboxController.getIndexable(seqNum: Long, fetchSize: Int)
+GET     /internal/shoebox/database/personalSearchInfo @com.keepit.controllers.shoebox.ShoeboxController.getPersonalSearchInfo(userId: Id[User], allUsers: String, formattedHits: String)
 
 GET     /internal/shoebox/database/getActiveExperiments @com.keepit.controllers.shoebox.ShoeboxController.getActiveExperiments
 GET     /internal/shoebox/database/getExperiments     @com.keepit.controllers.shoebox.ShoeboxController.getExperiments
 GET     /internal/shoebox/database/getExperiment      @com.keepit.controllers.shoebox.ShoeboxController.getExperiment(id: Id[SearchConfigExperiment])
 POST    /internal/shoebox/database/saveExperiment     @com.keepit.controllers.shoebox.ShoeboxController.saveExperiment
 GET     /internal/shoebox/database/hasExperimenthas   @com.keepit.controllers.shoebox.ShoeboxController.hasExperiment(userId: Id[User], state: State[ExperimentType])
+POST    /internal/shoebox/database/reportArticleSearchResult  @com.keepit.controllers.shoebox.ShoeboxController.reportArticleSearchResult
 
 
 # INTERNAL ROUTES/Search

@@ -49,10 +49,6 @@ function attachComposeBindings($c, composeTypeName) {
       $d.removeData("preventNextMouseUp");
       e.preventDefault();
     }
-  }).keydown(function(e) {
-    if (e.which == 13 && (e.metaKey || e.ctrlKey)) { // ⌘-Enter
-      $f.submit();
-    }
   }).keyup(function() {
     $d.data("sel", window.getSelection().getRangeAt(0));
   }).on("input", function() {
@@ -63,41 +59,50 @@ function attachComposeBindings($c, composeTypeName) {
   });
 
   if ($t.length) {
+    $t.tokenInput({}, {
+      searchDelay: 0,
+      minChars: 1,
+      placeholder: "To",
+      hintText: "",
+      noResultsText: "",
+      searchingText: "",
+      animateDropdown: false,
+      resultsLimit: 4,
+      preventDuplicates: true,
+      allowTabOut: true,
+      tokenValue: "id",
+      theme: "KiFi",
+      zindex: 999999999992,
+      resultsFormatter: function(f) {
+        return "<li style='background-image:url(http://" + cdnBase + "/users/" + f.id + "/pics/100/0.jpg)'>" +
+          Mustache.escape(f.name) + "</li>";
+      },
+      onAdd: function() {
+        if (defaultText && !$d.text()) {
+          $f.removeClass("kifi-empty");
+          $d.text(defaultText);
+        }
+      },
+      onDelete: function() {
+        if (defaultText && !$t.tokenInput("get").length && $d.text() == defaultText) {
+          $d.empty();
+          $f.addClass("kifi-empty");
+        }
+      }});
     api.port.emit("get_friends", function(friends) {
-      api.log("friends:", friends);
       friends.forEach(function(f) {
         f.name = f.firstName + " " + f.lastName;
       });
-      $t.tokenInput(friends, {
-        searchDelay: 0,
-        minChars: 2,
-        placeholder: "To",
-        hintText: "",
-        noResultsText: "",
-        searchingText: "",
-        animateDropdown: false,
-        preventDuplicates: true,
-        allowTabOut: true,
-        tokenValue: "id",
-        theme: "KiFi",
-        zindex: 999999999992,
-        onAdd: function() {
-          if (defaultText && !$d.text()) {
-            $f.removeClass("kifi-empty");
-            $d.text(defaultText);
-          }
-        },
-        onDelete: function() {
-          if (defaultText && !$t.tokenInput("get").length && $d.text() == defaultText) {
-            $d.empty();
-            $f.addClass("kifi-empty");
-          }
-        }});
+      $t.data("settings").local_data = friends;
       $t.data("friends", friends);
     });
   }
 
-  $f.submit(function(e) {
+  $f.keydown(function(e) {
+    if (e.which == 13 && (e.metaKey || e.ctrlKey)) { // ⌘-Enter
+      $f.submit();
+    }
+  }).submit(function(e) {
     e.preventDefault();
     var text;
     if ($f.hasClass("kifi-empty") || !(text = convertDraftToText($d.html()))) {
@@ -201,9 +206,13 @@ function attachComposeBindings($c, composeTypeName) {
 
   $(window).on("resize", updateMaxHeight);
 
-  $c.closest(".kifi-pane-box")
-  .on("kifi:shown", setFocus)
-  .on("kifi:remove", function() {
+  var $box = $c.closest(".kifi-pane-box")
+  if ($box.data("shown")) {
+    setFocus();
+  } else {
+    $box.on("kifi:shown", setFocus);
+  }
+  $box.on("kifi:remove", function() {
     $(window).off("resize", updateMaxHeight);
     if ($t.length) {
       $t.tokenInput("destroy");
@@ -212,13 +221,7 @@ function attachComposeBindings($c, composeTypeName) {
 
   function setFocus() {
     api.log("[setFocus]");
-    if ($t.length) {
-      if (!$f.find("#token-input-kifi-compose-to").focus().length) {
-        setTimeout(setFocus, 100);
-      }
-    } else {
-      $d.focus();
-    }
+    ($t.length ? $f.find("#token-input-kifi-compose-to") : $d).focus();
   }
 
   function updateMaxHeight() {

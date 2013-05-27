@@ -2,7 +2,7 @@ package com.keepit.common.store
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.concurrent.promise
+import scala.concurrent.Promise
 import scala.util.{Success, Failure}
 
 import org.joda.time.Weeks
@@ -51,7 +51,7 @@ class S3ImageStoreImpl @Inject() (
   def getPictureUrl(width: Int, user: User): Future[String] = {
     val sui = db.readOnly { implicit s => suiRepo.getByUser(user.id.get).head }
     if (config.isLocal) {
-      promise[String]().success(avatarUrlFromSocialNetwork(sui, width)).future
+      Promise.successful(avatarUrlFromSocialNetwork(sui, width)).future
     } else {
       db.readOnly { implicit s => userValueRepo.getValue(user.id.get, UserPictureLastUpdatedKey) }.map { s =>
         parseStandardTime(s).isAfter(clock.now().minus(ExpirationTime))
@@ -64,7 +64,7 @@ class S3ImageStoreImpl @Inject() (
         case Some(upToDate) =>
           // We have an image so serve that one, even if it might be outdated
           if (!upToDate) updatePicture(sui, user.externalId)
-          promise[String]().success(config.avatarUrlByExternalId(width, user.externalId)).future
+          Promise.successful(config.avatarUrlByExternalId(width, user.externalId)).future
       }
     }
   }
@@ -77,33 +77,37 @@ class S3ImageStoreImpl @Inject() (
   }
 
   def updatePicture(sui: SocialUserInfo, externalId: ExternalId[User]): Future[Seq[PutObjectResult]] = {
-    val future = Future.sequence(for {
-      size <- S3ImageConfig.ImageSizes
-      userId <- sui.userId
-    } yield {
-      val originalImageUrl = avatarUrlFromSocialNetwork(sui, size)
-      WS.url(originalImageUrl).get().map { response =>
-        val key = config.keyByExternalId(size, externalId)
-        log.info(s"Uploading picture $originalImageUrl to S3 key $key")
-        val om = new ObjectMetadata()
-        om.setContentType("image/jpeg")
-        s3Client.putObject(config.bucketName, key, response.getAHCResponse.getResponseBodyAsStream, om)
-      }
-    })
-    future onComplete {
-      case Success(_) =>
-        db.readWrite { implicit s =>
-          userValueRepo.setValue(
-            sui.userId.get, UserPictureLastUpdatedKey,
-            clock.now().toStandardTimeString)
+    if (config.isLocal) {
+      Promise.successful(Seq()).future
+    } else {
+      val future = Future.sequence(for {
+        size <- S3ImageConfig.ImageSizes
+        userId <- sui.userId
+      } yield {
+        val originalImageUrl = avatarUrlFromSocialNetwork(sui, size)
+        WS.url(originalImageUrl).get().map { response =>
+          val key = config.keyByExternalId(size, externalId)
+          log.info(s"Uploading picture $originalImageUrl to S3 key $key")
+          val om = new ObjectMetadata()
+          om.setContentType("image/jpeg")
+          s3Client.putObject(config.bucketName, key, response.getAHCResponse.getResponseBodyAsStream, om)
         }
-      case Failure(e) =>
-        healthcheckPlugin.addError(HealthcheckError(
-          error = Some(e),
-          callType = Healthcheck.INTERNAL,
-          errorMessage = Some("Failed to upload picture to S3")
-        ))
+      })
+      future onComplete {
+        case Success(_) =>
+          db.readWrite { implicit s =>
+            userValueRepo.setValue(
+              sui.userId.get, UserPictureLastUpdatedKey,
+              clock.now().toStandardTimeString)
+          }
+        case Failure(e) =>
+          healthcheckPlugin.addError(HealthcheckError(
+            error = Some(e),
+            callType = Healthcheck.INTERNAL,
+            errorMessage = Some("Failed to upload picture to S3")
+          ))
+      }
+      future
     }
-    future
   }
 }

@@ -50,6 +50,35 @@ class AdminEventController @Inject() (
   dailySearchStatisticsReports: DailySearchStatisticsReports)
     extends AdminController(actionAuthenticator) {
 
+  val ReportFields = Seq(
+    "DailyActiveUniqueUser",
+    "DailyPageLoadReportCount",
+    "DailySearchQueriesReportCount",
+    "DailyGoogleResultClickedCount",
+    "DailyKifiResultClickedCount",
+    "DailySliderShownByAutoCount",
+    "",
+    "",
+  	"",
+    "",
+    "",
+    "DailyCommentCount",
+    "",
+    "DailyUnkeepCount",
+    "DailyKeepCount",
+    "DailyUsefulPageCount",
+    "DailyTotalUsers",
+    "DailyPrivateKeeps",
+    "DailyPublicKeeps",
+    "DailyNewThread",
+    "DailyUniqueUsersKeeping",
+    "DailyUniqueUsersCommenting",
+    "DailyKifiLoadedReportCount",
+    "DailyKifiAtLeastOneResultCount",
+    "DailyDustSettledKifiHadNoResultsCount",
+    "DailyDustSettledKifiHadResultsCount"
+  )
+
   def buildReport() = AdminHtmlAction { request =>
 
     implicit val playrequest = request.request
@@ -74,7 +103,7 @@ class AdminEventController @Inject() (
   def getReport(reportName: String) = AdminCsvAction(reportName + ".csv") { request =>
     log.info(reportName)
     val report = reportStore.get(reportName).get
-    Ok(report.toCSV)
+    Ok(report.toCSV(ReportFields))
   }
 
   private def getIncludedUsers(): Seq[User] = {
