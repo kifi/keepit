@@ -76,7 +76,7 @@ abstract class EventListenerPlugin(
 
   private def getDestinationFromGoogleURL(url: String): Option[String] = {
     val urlOpt = url match {
-      case URI(_, _, Some(Host("com", "google", _*)), _, Some("/url"), Some(query), _) =>
+      case URI(_, _, _, _, Some("/url"), Some(query), _) =>
         query.params.find(_.name == "url").flatMap { _.decodedValue }
       case _ =>
         None
