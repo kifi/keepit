@@ -150,7 +150,7 @@ class ShoeboxDevModule extends ScalaModule with Logging {
   }
 }
 
-class FakeMailToKeepPlugin(val schedulingProperties: SchedulingProperties) extends MailToKeepPlugin with Logging {
+class FakeMailToKeepPlugin @Inject() (val schedulingProperties: SchedulingProperties) extends MailToKeepPlugin with Logging {
   def fetchNewKeeps() {
     log.info("Fake fetching new keeps")
   }

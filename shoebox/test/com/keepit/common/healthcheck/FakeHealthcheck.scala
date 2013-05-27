@@ -10,10 +10,10 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent._
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import com.google.inject.Singleton
+import com.google.inject.{Singleton, Inject}
 
 @Singleton
-case class FakeHealthcheck(val schedulingProperties: SchedulingProperties) extends HealthcheckPlugin {
+class FakeHealthcheck @Inject() (val schedulingProperties: SchedulingProperties) extends HealthcheckPlugin {
 
   val _errors = MutableList[HealthcheckError]()
 

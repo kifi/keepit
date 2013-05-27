@@ -9,8 +9,9 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import play.api.Plugin
 
-trait MailSenderPlugin extends SchedulingPlugin {
+trait MailSenderPlugin extends Plugin {
   def processMail(mail: ElectronicMail)
   def processOutbox()
 }
@@ -18,7 +19,7 @@ trait MailSenderPlugin extends SchedulingPlugin {
 class MailSenderPluginImpl @Inject() (
     actorFactory: ActorFactory[MailSenderActor],
     val schedulingProperties: SchedulingProperties)
-  extends Logging with MailSenderPlugin {
+  extends Logging with MailSenderPlugin with SchedulingPlugin {
 
   private lazy val actor = actorFactory.get()
 

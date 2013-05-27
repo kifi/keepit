@@ -7,6 +7,7 @@ import com.keepit.model._
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.net.NonOKResponseException
 
 import akka.actor._
 import scala.concurrent.Await
@@ -14,10 +15,10 @@ import scala.concurrent.Future
 import akka.pattern.ask
 import akka.util.Timeout
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.Plugin
 import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
 import scala.util.{Try, Success, Failure}
-import com.keepit.common.net.NonOKResponseException
 
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
 private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)
@@ -101,14 +102,14 @@ private[social] class SocialGraphActor @Inject() (
   }
 }
 
-trait SocialGraphPlugin extends SchedulingPlugin {
+trait SocialGraphPlugin extends Plugin {
   def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]]
 }
 
 class SocialGraphPluginImpl @Inject() (
     actorFactory: ActorFactory[SocialGraphActor],
     val schedulingProperties: SchedulingProperties)
-  extends SocialGraphPlugin with Logging {
+  extends SocialGraphPlugin with Logging with SchedulingPlugin {
 
   implicit val actorTimeout = Timeout(5 seconds)
 
