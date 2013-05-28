@@ -365,7 +365,7 @@ api = function() {
       set: function(tab, path) {
         if (tab === pages[tab.id]) {
           tab.icon = path;
-          chrome.pageAction.setIcon({tabId: tab.id, path: path});
+          chrome.pageAction.setIcon({tabId: tab.id, path: {"38": path}});
           chrome.pageAction.show(tab.id);
         }
       }},
