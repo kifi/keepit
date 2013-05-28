@@ -10,7 +10,9 @@
   },
   "options_page": "options.html",
   "page_action": {
-    "default_icon": "icons/keep.faint.png",
+    "default_icon": {
+      "38": "icons/keep.faint.png"
+    },
     "default_title": "KiFi"
   },
   "background" : {
