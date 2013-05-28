@@ -259,7 +259,7 @@ class BooleanScorer(weight: Weight, required: BooleanAndScorer, optional: Boolea
 
   private[this] val overlapValueUnit = maxOverlapValue / numSubScores
   private[this] val maxOptionalOverlapValue = maxOverlapValue - required.value
-  
+
   private[this] var doc = -1
   private[this] var scoredDoc = -1
   private[this] var scoreValue = 0.0f
@@ -355,16 +355,18 @@ extends Scorer(weight) with Coordinator with Logging {
   private[this] var overlapValue = 0.0f
   private[this] val overlapValueUnit = maxOverlapValue / scorers.length
 
-  private[this] class ScorerDoc(val scorer: Scorer, val value: Float, var doc: Int, var scoredDoc: Int) {
-    private[this] var scoreVal = 0.0f
+  private[this] class ScorerDoc(scorer: Scorer, val value: Float) {
+    private[this] var _doc: Int = -1
 
-    def score = {
-      if (doc != scoredDoc) {
-        scoreVal = scorer.score()
-        scoredDoc = doc
-      } else {
-        log.info("score method called twice [docid=%d]".format(doc))
-      }
+    def doc: Int = _doc
+
+    def advance(target: Int) {
+      _doc = scorer.advance(target)
+    }
+
+    def scoreAndNext(): Float = {
+      val scoreVal = scorer.score()
+      _doc = scorer.nextDoc()
       scoreVal
     }
   }
@@ -373,7 +375,7 @@ extends Scorer(weight) with Coordinator with Logging {
     override def lessThan(a: ScorerDoc, b: ScorerDoc) = (a.doc < b.doc)
   }
 
-  scorers.foreach{ case (s, v) => pq.insertWithOverflow(new ScorerDoc(s, v, -1, -1)) }
+  scorers.foreach{ case (s, v) => pq.insertWithOverflow(new ScorerDoc(s, v)) }
 
   override def docID() = doc
 
@@ -383,18 +385,20 @@ extends Scorer(weight) with Coordinator with Logging {
     var matchValue = 0.0f
     var sum = 0.0f
     var cnt = 0
-    if (doc < NO_MORE_DOCS) {
-      var top = pq.top
-      while (top.doc == doc) {
-        sum += top.score
-        matchValue += top.value
-        cnt += 1
-        top.doc = top.scorer.nextDoc()
-        top = pq.updateTop()
-      }
+    var top = pq.top
+    while (top.doc == doc) {
+      sum += top.scoreAndNext
+      matchValue += top.value
+      cnt += 1
+      top = pq.updateTop()
     }
-    overlapValue = matchValue
-    if (matchValue < threshold) 0.0f else sum * coordFactors(cnt)
+
+    if (matchValue < threshold) {
+      0.0f
+    } else {
+      overlapValue = matchValue
+      sum * coordFactors(cnt)
+    }
   }
 
   override def nextDoc(): Int = advance(0)
@@ -402,20 +406,22 @@ extends Scorer(weight) with Coordinator with Logging {
   override def advance(target: Int): Int = {
     if (doc < NO_MORE_DOCS) {
       doc = if (target <= doc) doc + 1 else target
-      scoreValue = 0.0f
       var top = pq.top
       while (top.doc < doc) {
-        top.doc = top.scorer.advance(doc)
+        top.advance(doc)
         top = pq.updateTop()
       }
       doc = top.doc
-      while (scoreValue <= 0.0f && doc < NO_MORE_DOCS) {
-        doc = top.doc
+
+      while (doc < NO_MORE_DOCS) {
         scoreValue = doScore() // doScore advances underlying scorers
-        top = pq.top
+        if (scoreValue > 0.0f) return doc
+        doc = pq.top.doc
       }
     }
-    doc
+    scoreValue = 0.0f
+    overlapValue = 0.0f
+    NO_MORE_DOCS
   }
 
   override def freq(): Int = 1

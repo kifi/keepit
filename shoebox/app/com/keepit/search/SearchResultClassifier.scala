@@ -5,8 +5,7 @@ import com.google.inject.Provider
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.logging.Logging
-import com.keepit.common.db.Id
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{Id,ExternalId}
 import com.keepit.model.User
 import com.keepit.model.NormalizedURI
 
