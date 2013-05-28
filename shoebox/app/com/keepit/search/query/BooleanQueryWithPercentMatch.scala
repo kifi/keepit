@@ -356,15 +356,17 @@ extends Scorer(weight) with Coordinator with Logging {
   private[this] val overlapValueUnit = maxOverlapValue / scorers.length
 
   private[this] class ScorerDoc(scorer: Scorer, val value: Float) {
-    var doc: Int = -1
+    private[this] var _doc: Int = -1
+
+    def doc: Int = _doc
 
     def advance(target: Int) {
-      doc = scorer.advance(target)
+      _doc = scorer.advance(target)
     }
 
     def scoreAndNext(): Float = {
       val scoreVal = scorer.score()
-      doc = scorer.nextDoc()
+      _doc = scorer.nextDoc()
       scoreVal
     }
   }
