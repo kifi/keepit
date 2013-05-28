@@ -143,6 +143,11 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     if (refresh) refreshSearcher()
   }
 
+  def deleteDocuments(term: Term, doCommit: Boolean) {
+    indexWriter.deleteDocuments(term)
+    if (doCommit) commit()
+  }
+
   private def commit(seqNum: SequenceNumber = this.sequenceNumber) {
     this.sequenceNumber = seqNum
     indexWriter.setCommitData(Map(
