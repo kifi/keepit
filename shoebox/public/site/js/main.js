@@ -81,13 +81,12 @@ function isLoading() {
 }
 
 function doSearch(context) {
-	$('#my-keeps .search-section').remove();
-	keepsTemplate.clear();
-	lastKeep = null;
+	$('#my-keeps').hide();
 	$('.search h1').hide();
 	$('.search .num-results').show();
 	$('aside.right').show();
 	showLoading();
+	$('#search-results').show();
 	$.getJSON(urlSearch, 
 		{maxHits: 30
 		,f: $('select[name="keepers"]').val() == 'c' ? $('#custom-keepers').textext()[0].tags().tagElements().find('.text-label').map(function(){return connections[$(this).text()]}).get().join('.') : $('select[name="keepers"]').val()
@@ -106,34 +105,57 @@ function doSearch(context) {
 		});
 }
 
+function addNewKeeps() {
+	var first = $('#my-keeps li.keep').first().data('id');
+	console.log("Fetching 30 keep after " + first);
+	$.getJSON(urlMyKeeps, {after: first}, 
+		function(data) {
+			keepsTemplate.prepend(data.keeps);
+			$('#my-keeps li.search-section.today').prependTo('#my-keeps');
+		});
+}
+
 function populateMyKeeps() {
 	var params = {count: 30};
+	$('.active').removeClass('active');
+	$('aside.left h3.my-keeps').addClass('active');
+	searchTemplate.clear();
+	searchContext = null;
+	$('aside.right').hide();
+	$('.search h1').show();
+	$('.search .num-results').hide();
 	if (lastKeep == null) {
-		$('.active').removeClass('active');
-		$('aside.left h3.my-keeps').addClass('active');
-		searchTemplate.clear();
-		searchContext = null;
-		$('aside.right').hide();
-		$('.search h1').show();
-		$('.search .num-results').hide();
 		$('#my-keeps .search-section').remove();
 	} else {
 		params.before = lastKeep;
 	}
-	showLoading();
-	console.log("Fetching 30 keep before " + lastKeep);
-	$.getJSON(urlMyKeeps, params, 
-		function(data) {
-			if (data.keeps.length == 0) { // end of results
-				lastKeep = null; hideLoading(); return true;
-			} else if (lastKeep == null) {
-				keepsTemplate.render(data.keeps);				
-			} else {
-				keepsTemplate.append(data.keeps);				
-			}
-			lastKeep = data.keeps[data.keeps.length - 1].id;
-		});
+	$('#my-keeps').show();
+	if (lastKeep != "end") {
+		showLoading();
+		console.log("Fetching 30 keep before " + lastKeep);
+		$.getJSON(urlMyKeeps, params, 
+			function(data) {
+				if (data.keeps.length == 0) { // end of results
+					lastKeep = "end"; hideLoading(); return true;
+				} else if (lastKeep == null) {
+					keepsTemplate.render(data.keeps);				
+				} else {
+					keepsTemplate.append(data.keeps);				
+				}
+				lastKeep = data.keeps[data.keeps.length - 1].id;
+			});
+	}
 }
+
+function updateNumKeeps() {
+	$.getJSON(urlMyKeepsCount, function(data) {
+		$('aside.left .my-keeps span').text(data.numKeeps);
+	});	
+}
+
+// auto update my keeps every minute
+setInterval(addNewKeeps, 60000);
+setInterval(updateNumKeeps, 60000);
 
 $(document)
 	.on('keypress', function(e) {if (!$(e.target).is('textarea')) $('input.search').focus() }) // auto focus on search field when starting to type anywhere on the document
@@ -147,10 +169,10 @@ $(document)
 		}
 	})
 	.ready(function() {		
-		// populate number of my keeps 
-		$.getJSON(urlMyKeepsCount, function(data) {
-			$('aside.left .my-keeps span').text(data.numKeeps);
-		});
+		$(".fancybox").fancybox();
+		
+		// populate number of my keeps
+		updateNumKeeps();
 
 		// populate all my keeps
 		populateMyKeeps();
