@@ -197,22 +197,7 @@ class MainSearcher(
     val now = currentDateTime
     val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost)
     timeLogs.getClickBoost = currentDateTime.getMillis() - now.getMillis()
-    val (myHits, friendsHits, othersHits, parsedQuery, personalizedSearcher) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts) match {
-      case (myHits, friendsHits, othersHits, parsedQuery, personalizedSearcher) => {
-        if ( myHits.size() + friendsHits.size() + othersHits.size() > 0 ) (myHits, friendsHits, othersHits, parsedQuery, personalizedSearcher)
-        else {
-          val alternative = try {
-            spellCorrector.getAlternativeQuery(queryString)
-          } catch {
-            case e: Exception =>
-              log.error("unexpected SpellCorrector error" )
-              queryString
-          }
-          if (alternative.trim == queryString.trim)	(myHits, friendsHits, othersHits, parsedQuery, personalizedSearcher)
-          else { log.info("spell correction was made"); searchText(alternative, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts) }
-        }
-      }
-    }
+    val (myHits, friendsHits, othersHits, parsedQuery, personalizedSearcher) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
     val t1 = currentDateTime.getMillis()
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
