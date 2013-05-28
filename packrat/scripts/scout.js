@@ -32,10 +32,25 @@ var injected, t0 = +new Date, tile, paneHistory, root = document.querySelector("
     },
     button_click: keeper.bind(null, "togglePane", "button"),
     auto_show: keeper.bind(null, "show", "auto"),
-    kept: function(o) {
-      if (!tile) {
-        insertTile(o.hide, o.position);
+    init: function(o) {
+      var pos = o.position;
+      if (pos) {
+        tile.style.top = pos.top >= 0 ? pos.top + "px" : "auto";
+        tile.style.bottom = pos.bottom >= 0 ? pos.bottom + "px" : "auto";
+        tile.dataset.pos = JSON.stringify(pos);
+        positionTile(pos);
       }
+      if (o.kept) {
+        tile.dataset.kept = o.kept;
+      }
+      window.addEventListener("resize", onResize);
+      api.require("styles/metro/tile.css", function() {
+        if (!o.hide) {
+          tile.style.display = "";
+        }
+      });
+    },
+    kept: function(o) {
       if (o.kept) {
         tile.dataset.kept = o.kept;
       } else {
@@ -122,19 +137,13 @@ var injected, t0 = +new Date, tile, paneHistory, root = document.querySelector("
     });
   }
 
-  function insertTile(hide, pos) {
+  !function insertTile() {
     while (tile = document.getElementById("kifi-tile")) {
       tile.parentNode.removeChild(tile);
     }
     tile = document.createElement("div");
     tile.id = "kifi-tile";
     tile.style.display = "none";
-    if (pos) {
-      tile.style.top = pos.top >= 0 ? pos.top + "px" : "auto";
-      tile.style.bottom = pos.bottom >= 0 ? pos.bottom + "px" : "auto";
-      tile.dataset.pos = JSON.stringify(pos);
-      positionTile(pos);
-    }
     tile.innerHTML =
       "<div class=kifi-tile-flip>" +
       "<div class=kifi-tile-keep style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>" +
@@ -149,13 +158,7 @@ var injected, t0 = +new Date, tile, paneHistory, root = document.querySelector("
       }
     });
     tile["kifi:position"] = positionTile;
-    window.addEventListener("resize", onResize);
-    api.require("styles/metro/tile.css", function() {
-      if (!hide) {
-        tile.style.display = "";
-      }
-    });
-  }
+  }();
 
   function onResize() {
     if (paneHistory) return;

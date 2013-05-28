@@ -149,6 +149,8 @@ html>.kifi-slider2.kifi-wide, /* frameset docs */
 body>.kifi-slider2.kifi-wide { /* body docs */
   position: fixed;
   z-index: 999999999991;
+  -webkit-transition: -webkit-transform .25s ease-out;
+  transition: transform .25s ease-out;
 }
 .kifi-slider2-x {
   position: absolute;
