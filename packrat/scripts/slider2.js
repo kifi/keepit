@@ -14,7 +14,7 @@ $.fn.scrollToBottom = function() {
     if (cH < sH) {
       var sT = this.scrollTop, d = sH - sT - cH;
       if (d > 0) {
-        $(this).animate({scrollTop: "+=" + d}, 40 * Math.log(d));
+        $(this).animate({scrollTop: sT + d}, 40 * Math.log(d));
       }
     }
   });
