@@ -3,9 +3,6 @@ package com.keepit.search
 import java.util.Random
 import com.keepit.inject._
 import play.api.Play.current
-import com.keepit.model.{User, BrowsingHistory,BrowsingHistoryRepo}
-import com.keepit.common.db.slick._
-import com.keepit.common.db.Id
 
 object MultiHashFilter {
   def apply[T](tableSize: Int, numHashFuncs: Int, minHits: Int) = {

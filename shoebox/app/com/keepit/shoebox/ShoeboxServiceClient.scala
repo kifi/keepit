@@ -72,7 +72,7 @@ case class ShoeboxCacheProvider @Inject() (
     userConnCache: UserConnectionIdCache,
     externalUserIdCache: ExternalUserIdCache,
     socialUserNetworkCache: SocialUserInfoNetworkCache)
-    
+
 class ShoeboxServiceClientImpl @Inject() (
   override val host: String,
   override val port: Int,
@@ -105,7 +105,7 @@ class ShoeboxServiceClientImpl @Inject() (
       r.json.as[JsArray].value.map(js => Json.fromJson[Bookmark](js).get)
     }
   }
-  
+
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]] = {
     cacheProvider.bookmarkUriUserCache.get(BookmarkUriUserKey(uriId, userId)) match {
       case Some(bookmark) => Promise.successful(Some(bookmark)).future
@@ -115,32 +115,32 @@ class ShoeboxServiceClientImpl @Inject() (
         }
     }
   }
-  
+
   def getPersonalSearchInfo(userId: Id[User], resultSet: ArticleSearchResult): Future[(Map[Id[User], BasicUser], Seq[PersonalSearchHit])] = {
     val allUsers = resultSet.hits.map(_.users).flatten.distinct
-    
+
     val (preCachedUsers, neededUsers) = allUsers.foldRight((Map[Id[User], BasicUser](), Set[Id[User]]())) { (uid, resSet) =>
       cacheProvider.basicUserCache.get(BasicUserUserIdKey(uid)) match {
         case Some(bu) => (resSet._1 + (uid -> bu), resSet._2)
         case None => (resSet._1, resSet._2 + uid)
       }
     }
-    
+
     if(neededUsers.nonEmpty || resultSet.hits.nonEmpty) {
       val neededUsersReq = neededUsers.map(_.id).mkString(",")
       val formattedHits = resultSet.hits.map( hit => (if(hit.isMyBookmark) 1 else 0) + ":" + hit.uriId ).mkString(",")
-      
+
       call(routes.ShoeboxController.getPersonalSearchInfo(userId, neededUsersReq, formattedHits)).map{ res =>
         val personalSearchHits = (Json.fromJson[Seq[PersonalSearchHit]](res.json \ "personalSearchHits")).getOrElse(Seq())
         val neededUsers = (res.json \ "users").as[Map[String, BasicUser]]
         val allUsers = neededUsers.map( b => Id[User](b._1.toLong) -> b._2) ++ preCachedUsers
-        
+
         (allUsers, personalSearchHits)
       }
     } else {
       Promise.successful((Map.empty[Id[User], BasicUser], Nil)).future
     }
-    
+
   }
 
   def sendMail(email: ElectronicMail): Future[Boolean] = {
@@ -153,19 +153,21 @@ class ShoeboxServiceClientImpl @Inject() (
       r.json.as[JsArray].value.map(js => UserSerializer.userSerializer.reads(js).get)
     }
   }
-  
+
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
     val (cachedUsers, needToGetUsers) = userIds.map({ u =>
       u -> cacheProvider.externalUserIdCache.get(ExternalUserIdKey(u))
-    }).foldRight((Seq[Id[User]](), "")) { (uOpt, res) =>
+    }).foldRight((Seq[Id[User]](), Seq[ExternalId[User]]())) { (uOpt, res) =>
       uOpt._2 match {
         case Some(uid) => (res._1 :+ uid, res._2)
-        case None => (res._1, res._2 + "," + uOpt._1)
+        case None => (res._1, res._2 :+ uOpt._1)
       }
     }
-    
-    call(routes.ShoeboxController.getUserIdsByExternalIds(needToGetUsers)).map { r =>
-      cachedUsers ++ r.json.as[Seq[Long]].map(Id[User](_))
+    needToGetUsers match {
+      case Seq() => Promise.successful(cachedUsers).future
+      case users => call(routes.ShoeboxController.getUserIdsByExternalIds(needToGetUsers.mkString(","))).map { r =>
+        cachedUsers ++ r.json.as[Seq[Long]].map(Id[User](_))
+      }
     }
   }
 
@@ -178,7 +180,7 @@ class ShoeboxServiceClientImpl @Inject() (
         }
     }
   }
-  
+
   def reportArticleSearchResult(res: ArticleSearchResult): Unit = {
     call(routes.ShoeboxController.reportArticleSearchResult, Json.toJson(ArticleSearchResultFactory(res)))
   }

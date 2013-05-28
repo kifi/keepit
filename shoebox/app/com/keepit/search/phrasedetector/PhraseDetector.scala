@@ -1,7 +1,6 @@
 package com.keepit.search.phrasedetector
 
-import com.keepit.common.db.Id
-import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.{Id,SequenceNumber}
 import com.keepit.common.logging.Logging
 import com.keepit.model.Phrase
 import com.keepit.search.index.Indexer
@@ -65,7 +64,7 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
       }
       pq.clear()
     }
-    result
+    RemoveOverlapping.removeInclusions(result)
   }
 
   private class Word(val index: Int, tp: DocsAndPositionsEnum) {
@@ -155,5 +154,20 @@ class PhraseIndexable(override val id: Id[Phrase], phrase: String, lang: Lang) e
     val doc = super.buildDocument
     doc.add(buildPhraseField("p", phrase, lang))
     doc
+  }
+}
+
+object RemoveOverlapping {
+  def removeInclusions(phrases: Set[(Int, Int)]) = {
+    val sortedIntervals = phrases.map{x => ((x._1 ,x._1 + x._2 - 1))}.toArray.sortWith((a,b) => (a._1 < b._1) || (a._1 == b._1 && a._2 > b._2))  // for same position, longer one comes first
+    var minStartPos = -1
+    var minEndPos = -1
+    val intervals = for( i <- 0 until sortedIntervals.size
+      if( sortedIntervals(i)._1 >= minStartPos && sortedIntervals(i)._2 > minEndPos ) ) yield {
+        minStartPos = sortedIntervals(i)._1 + 1
+        minEndPos = sortedIntervals(i)._2
+        sortedIntervals(i)
+    }
+    intervals.map{x => (x._1, x._2 - x._1 + 1)}.toSet
   }
 }

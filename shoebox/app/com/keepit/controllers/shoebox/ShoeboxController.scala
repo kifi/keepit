@@ -170,14 +170,14 @@ class ShoeboxController @Inject() (
     }
     Ok(Json.toJson(bookmarks))
   }
-  
+
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]) = Action { request =>
     val bookmark = db.readOnly { implicit session =>
       bookmarkRepo.getByUriAndUser(uriId, userId)
     }.map(Json.toJson(_)).getOrElse(JsNull)
     Ok(bookmark)
   }
-  
+
   def getPersonalSearchInfo(userId: Id[User], allUsers: String, formattedHits: String) = Action { request =>
     val (users, personalSearchHits) = db.readOnly { implicit session =>
       val neededUsers = (allUsers.split(",").filterNot(_.isEmpty).map { u =>
@@ -189,7 +189,7 @@ class ShoeboxController @Inject() (
         val isMyBookmark = param.head == "1"
         val uriId = Id[NormalizedURI](param.tail.head.toLong)
         val uri = normUriRepo.get(uriId)
-        
+
         (if(isMyBookmark) bookmarkRepo.getByUriAndUser(uriId, userId) else None) match {
           case Some(bmk) =>
             PersonalSearchHit(uri.id.get, uri.externalId, bmk.title, bmk.url, bmk.isPrivate)
@@ -229,14 +229,12 @@ class ShoeboxController @Inject() (
     }
     Ok(JsArray(users))
   }
-  
+
   def getUserIdsByExternalIds(ids: String) = Action { request =>
-    val extUserIds = ids.split(',').map(id => ExternalId[User](id))
-    val users = (db.readOnly { implicit s =>
-      extUserIds.map { userId =>
-        userRepo.getOpt(userId).map(_.id.get.id)
-      } flatten
-    })
+    val extUserIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(ExternalId[User](_))
+    val users = db.readOnly { implicit s =>
+      extUserIds.map { userRepo.getOpt(_).map(_.id.get.id) }.flatten
+    }
     Ok(Json.toJson(users))
   }
 
@@ -247,7 +245,7 @@ class ShoeboxController @Inject() (
     }
     Ok(JsArray(ids))
   }
-  
+
   def reportArticleSearchResult = Action(parse.json) { request =>
     val ref = Json.fromJson[ArticleSearchResultRef](request.body).get
     db.readWrite { implicit s =>
