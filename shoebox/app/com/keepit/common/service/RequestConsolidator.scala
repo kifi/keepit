@@ -1,12 +1,13 @@
 package com.keepit.common.service
 
+import com.keepit.common.logging.Logging
 import scala.collection.concurrent.{TrieMap=>ConcurrentMap}
 import scala.concurrent.duration._
 import scala.concurrent.Future
 import java.lang.ref.WeakReference
 import java.lang.ref.ReferenceQueue
 
-class RequestConsolidator[K, T](ttl: Duration) {
+class RequestConsolidator[K, T](ttl: Duration) extends Logging {
 
   private[this] val ttlMillis = ttl.toMillis
 
@@ -31,13 +32,17 @@ class RequestConsolidator[K, T](ttl: Duration) {
     futureRefMap.get(key) match {
       case Some(ref) =>
         val existingFuture = ref.get
-        if (existingFuture != null && now < ref.expireBy) existingFuture
-        else {
+        if (existingFuture != null && now < ref.expireBy) {
+          log.info("request found. sharing future.")
+          existingFuture
+        } else {
+          log.info("request expired. creating future.")
           val future = newFuture(key)
           futureRefMap.put(key, new FutureRef(key, future, now + ttlMillis))
           future
         }
       case _ =>
+        log.info("request not found. creating future.")
         val future = newFuture(key)
         futureRefMap.put(key, new FutureRef(key, future, now + ttlMillis))
         future
