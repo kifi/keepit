@@ -271,7 +271,9 @@ slider2 = function() {
   function hideSlider(trigger) {
     idleTimer.kill();
     $(tile).removeClass("kifi-behind-slider");
-    $slider.addClass("kifi-hiding").on("transitionend webkitTransitionEnd", function(e) {
+    $slider.addClass("kifi-hiding")
+    .off("transitionend webkitTransitionEnd")
+    .on("transitionend webkitTransitionEnd", function(e) {
       if (e.target === this && e.originalEvent.propertyName == "opacity") {
         $(tile).removeClass("kifi-with-slider");
         var css = JSON.parse(tile.dataset.pos || 0);
