@@ -49,6 +49,21 @@ class CollectionTest extends Specification with TestDBRunner {
   }
 
   "collections" should {
+    "allow the bookmarkRepo to query by a specific collection" in {
+      withDB() { implicit injector =>
+        val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
+        db.readWrite { implicit s =>
+          collectionRepo.getByUser(user1.id.get).map(_.name).toSet == Set("Cooking", "Apparel", "Scala")
+          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll1.id.get))
+          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = coll1.id.get))
+          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = coll2.id.get))
+          bookmarkRepo.getByUser(user1.id.get, None, None, coll1.id, 5) must haveLength(2)
+          bookmarkRepo.getByUser(user1.id.get, None, None, None, 5) must haveLength(2)
+          bookmarkRepo.getByUser(user1.id.get, None, None, coll2.id, 5) must haveLength(1)
+          bookmarkRepo.getByUser(user1.id.get, None, None, coll3.id, 5) must beEmpty
+        }
+      }
+    }
     "work" in {
       withDB() { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
