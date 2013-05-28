@@ -127,10 +127,10 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
   function ping() {
     if (ws && !closed) {
       api.log("#0bf", "[RWS.ping]");
+      lastRecOrPingTime = +new Date;
       self.send('["ping"]');
       clearTimeout(t);
       t = setTimeout(onConnectTimeout.bind(null, ws), 2000);
-      lastRecOrPingTime = +new Date;
     }
   }
 }
