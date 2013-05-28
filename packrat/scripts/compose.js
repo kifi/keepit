@@ -221,7 +221,11 @@ function attachComposeBindings($c, composeTypeName) {
 
   function setFocus() {
     api.log("[setFocus]");
-    ($t.length ? $f.find("#token-input-kifi-compose-to") : $d).focus();
+    if ($t.length) {  // timeout avoids Chrome transition displacement glitch
+      setTimeout($f.focus.bind($f.find("#token-input-kifi-compose-to")));
+    } else {
+      $d.focus();
+    }
   }
 
   function updateMaxHeight() {

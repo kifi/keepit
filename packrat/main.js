@@ -163,7 +163,7 @@ const socketHandlers = {
       d.sensitive = o.sensitive;
       d.tabs.forEach(function(tab) {
         setIcon(tab, d.kept);
-        sendKept(tab, d);
+        sendInit(tab, d);
       });
     }
   },
@@ -885,7 +885,7 @@ function subscribe(tab) {
       if (d.hasOwnProperty("kept")) {
         if (!tabUpToDate) {
           setIcon(tab, d.kept);
-          sendKept(tab, d);
+          sendInit(tab, d);
           if (d.counts) {
             initTab(tab, d);
           } // else wait for uri_2
@@ -918,8 +918,8 @@ function setIcon(tab, kept) {
   api.icon.set(tab, kept ? "icons/kept.png" : "icons/keep.png");
 }
 
-function sendKept(tab, d) {
-  api.tabs.emit(tab, "kept", {
+function sendInit(tab, d) {
+  api.tabs.emit(tab, "init", {
     kept: d.kept,
     position: d.position,
     hide: d.neverOnSite || ruleSet.rules.sensitive && d.sensitive});
