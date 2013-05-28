@@ -31,7 +31,7 @@ class RequestConsolidator[K, T](ttl: Duration) {
     futureRefMap.get(key) match {
       case Some(ref) =>
         val existingFuture = ref.get
-        if (existingFuture != null && ref.expireBy < now) existingFuture
+        if (existingFuture != null && now < ref.expireBy) existingFuture
         else {
           val future = newFuture(key)
           futureRefMap.put(key, new FutureRef(key, future, now + ttlMillis))
