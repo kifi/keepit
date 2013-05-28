@@ -148,12 +148,12 @@ var injected, t0 = +new Date, tile, paneHistory, root = document.querySelector("
       "<div class=kifi-tile-flip>" +
       "<div class=kifi-tile-keep style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>" +
       "<div class=kifi-tile-kept></div></div>";
+    var flip = tile.firstChild;
     tileCount = document.createElement("span");
     tileCount.className = "kifi-count";
     root.appendChild(tile);
     tile.addEventListener("mouseover", function(e) {
-      if (e.target === this ||
-          e.target.parentNode === this && !e.target.classList.contains("kifi-slider2") && !e.target.classList.contains("kifi-slider2-tip")) {
+      if (e.target === tileCount || flip.contains(e.target)) {
         keeper("show", "tile");
       }
     });
