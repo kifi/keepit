@@ -1,6 +1,6 @@
 // @require styles/notifier.css
-// @require scripts/lib/jquery-1.8.2.min.js
-// @require scripts/lib/mustache-0.7.1.min.js
+// @require scripts/lib/jquery.js
+// @require scripts/lib/mustache.js
 // @require scripts/api.js
 // @require scripts/formatting.js
 // @require scripts/render.js
