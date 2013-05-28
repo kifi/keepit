@@ -1,6 +1,6 @@
 {
   "name": "KiFi Beta",
-  "version": "2.3.87",
+  "version": "2.3.91",
   "manifest_version": 2,
   "description": "KiFi Private Beta",
   "icons": {
@@ -10,7 +10,9 @@
   },
   "options_page": "options.html",
   "page_action": {
-    "default_icon": "icons/keep.faint.png",
+    "default_icon": {
+      "38": "icons/keep.faint.png"
+    },
     "default_title": "KiFi"
   },
   "background" : {

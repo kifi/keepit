@@ -118,8 +118,7 @@ function attachComposeBindings($c, composeTypeName) {
       }
       args.push(recipients.map(function(r) {return r.id}));
     }
-    $d.empty().trigger("kifi:compose-submit", args).focus();
-    $f.addClass("kifi-empty");
+    $d.trigger("kifi:compose-submit", args).empty().focus().triggerHandler("input");
     var $submit = $f.find(".kifi-compose-submit").addClass("kifi-active");
     setTimeout($submit.removeClass.bind($submit, "kifi-active"), 10);
   })
@@ -221,7 +220,11 @@ function attachComposeBindings($c, composeTypeName) {
 
   function setFocus() {
     api.log("[setFocus]");
-    ($t.length ? $f.find("#token-input-kifi-compose-to") : $d).focus();
+    if ($t.length) {  // timeout avoids Chrome transition displacement glitch
+      setTimeout($f.focus.bind($f.find("#token-input-kifi-compose-to")));
+    } else {
+      $d.focus();
+    }
   }
 
   function updateMaxHeight() {

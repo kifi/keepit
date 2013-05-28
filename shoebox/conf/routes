@@ -34,7 +34,8 @@ POST    /register                   securesocial.controllers.Registration.handle
 ##########################################
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
 
-GET     /site/keeps/all             @com.keepit.controllers.website.BookmarksController.allKeeps(before: Option[String], after: Option[String], count: Int ?= Integer.MAX_VALUE)
+GET     /site/keeps/all             @com.keepit.controllers.website.BookmarksController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int ?= Integer.MAX_VALUE)
+GET     /site/collections/all       @com.keepit.controllers.website.BookmarksController.allCollections()
 GET     /site/keeps/mutual/:id      @com.keepit.controllers.website.BookmarksController.mutualKeeps(id: ExternalId[User])
 GET     /site/keeps/count           @com.keepit.controllers.website.BookmarksController.numKeeps()
 

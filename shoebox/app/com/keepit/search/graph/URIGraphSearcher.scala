@@ -15,15 +15,13 @@ import com.keepit.search.util.LongArraySet
 import com.keepit.search.util.LongToLongArrayMap
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
-import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.util.BytesRef
 import scala.collection.mutable.ArrayBuffer
 
-class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) extends Logging {
 
-  private[this] val reader: WrappedSubReader = searcher.indexReader.asAtomicReader
+class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) extends BaseGraphSearcher(searcher) with Logging {
 
   private[this] lazy val myInfo: Option[UserInfo] = {
     myUserId.map{ id =>
@@ -72,69 +70,10 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) extends L
     UserToUserEdgeSet(friends.sourceId, searcher, intersection.toArray)
   }
 
-  def intersect(i: DocIdSetIterator, j: DocIdSetIterator): DocIdSetIterator = {
-    new DocIdSetIterator() {
-      var curDoc = i.docID()
-      def docID() = curDoc
-      def nextDoc() = {
-        var di = i.nextDoc()
-        var dj = j.nextDoc()
-        while (di != dj) {
-          if (di < dj) di = i.advance(dj)
-          else dj = j.advance(di)
-        }
-        curDoc = i.docID()
-        curDoc
-      }
-      def advance(target: Int) = {
-        var di = i.advance(target)
-        var dj = j.advance(target)
-        while (di != dj) {
-          if (di < dj) di = i.advance(dj)
-          else dj = j.advance(di)
-        }
-        curDoc = i.docID()
-        curDoc
-      }
-    }
-  }
-
   def intersectAny(friends: UserToUserEdgeSet, bookmarkUsers: UriToUserEdgeSet): Boolean = {
     intersectAny(friends.getDestDocIdSetIterator(searcher), bookmarkUsers.getDestDocIdSetIterator(searcher))
   }
 
-  def intersectAny(i: DocIdSetIterator, j: DocIdSetIterator): Boolean = {
-    // Note: This implementation is only more efficient than intersect(i, j).nextDoc() != NO_MORE_DOCS when the
-    // intersection is empty. This code returns as soon as either iterator is exhausted instead of when both are.
-    var di = i.nextDoc()
-    var dj = j.nextDoc()
-    while (di != dj) {
-      if (di < dj) {
-        di = i.advance(dj)
-        if (di == NO_MORE_DOCS) return false
-      } else {
-        dj = j.advance(di)
-        if (dj == NO_MORE_DOCS) return false
-      }
-    }
-    di != NO_MORE_DOCS
-  }
-
-  private def getURIList(field: String, userDocId: Int): URIList = {
-    if (userDocId >= 0) {
-      var docValues = reader.getBinaryDocValues(field)
-      if (docValues != null) {
-        var ref = new BytesRef()
-        docValues.get(userDocId, ref)
-        if (ref.length > 0) {
-          return URIList(ref.bytes, ref.offset, ref.length)
-        } else {
-          log.error(s"missing uri list data: ${field}")
-        }
-      }
-    }
-    URIList.empty
-  }
 
   def openPersonalIndex(query: Query): Option[(CachingIndexReader, IdMapper)] = {
     val terms = QueryUtil.getTerms(query)

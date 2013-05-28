@@ -129,7 +129,8 @@ class PhraseHelper(terms: Seq[String], phrases: Set[(Int, Int)]) {
         lp(id) = lastPos
         prevPos = lastPos
         localSum = 0.0f
-        for (i <- 0 until numPhrases) {
+        var i = 0
+        while (i < numPhrases) {
           if (i == id) {
             ls(i) = (runLen - phraseLen) * phraseLen + localPhraseScore(phraseLen)      // first summand comes from 'run length growth bonus' (if current phrase is consecutive to the previous phrase)
           } else {
@@ -137,6 +138,7 @@ class PhraseHelper(terms: Seq[String], phrases: Set[(Int, Int)]) {
             lp(i) = lastPos
           }
           localSum += ls(i)
+          i += 1
         }
         maxScore = max(maxScore, localSum)
     }

@@ -4,26 +4,37 @@ import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
 import com.google.inject.{Inject, Singleton}
 import play.api.Play.current
-import scala.collection.mutable
+import scala.collection.concurrent.{TrieMap=>ConcurrentMap}
 import play.api.libs.json._
 import play.api.Plugin
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
+import java.util.concurrent.atomic.AtomicInteger
 
 @Singleton
 class CacheStatistics {
-  private val hitsMap = mutable.HashMap[String, Int]()
-  private val missesMap = mutable.HashMap[String, Int]()
-  private val setsMap = mutable.HashMap[String, Int]()
+  private val hitsMap = ConcurrentMap[String, AtomicInteger]()
+  private val missesMap = ConcurrentMap[String, AtomicInteger]()
+  private val setsMap = ConcurrentMap[String, AtomicInteger]()
 
-  def incrHits(className: String) { hitsMap += className -> (hitsMap.getOrElse(className, 0) + 1) }
-  def incrMisses(className: String) { missesMap += className -> (missesMap.getOrElse(className, 0) + 1) }
-  def incrSets(className: String) { setsMap += className -> (setsMap.getOrElse(className, 0) + 1) }
+  private def incrCount(key: String, m: ConcurrentMap[String, AtomicInteger]) {
+    m.getOrElseUpdate(key, new AtomicInteger(0)).incrementAndGet()
+  }
+  private def getCount(key: String, m: ConcurrentMap[String, AtomicInteger]): Int = {
+    m.get(key) match {
+      case Some(counter) => counter.get()
+      case _ => 0
+    }
+  }
+
+  def incrHits(className: String) { incrCount(className, hitsMap) }
+  def incrMisses(className: String) { incrCount(className, missesMap) }
+  def incrSets(className: String) { incrCount(className, setsMap) }
 
   def getStatistics: Seq[(String, Int, Int, Int)] = {
     val keys = (hitsMap.keySet ++ missesMap.keySet ++ setsMap.keySet).toSeq.sorted
     keys map { key =>
-      (key, hitsMap.getOrElse(key, 0), missesMap.getOrElse(key, 0), setsMap.getOrElse(key, 0))
+      (key, getCount(key, hitsMap), getCount(key, missesMap), getCount(key, setsMap))
     }
   }
 }
@@ -97,7 +108,7 @@ class InMemoryCache @Inject() (
 class HashMapMemoryCache @Inject() (
   val stats: CacheStatistics) extends FortyTwoCachePlugin {
 
-  val cache = mutable.HashMap[String, Any]()
+  val cache = ConcurrentMap[String, Any]()
 
   def get(key: String): Option[Any] =
     cache.get(key)

@@ -106,6 +106,8 @@ trait DbRepos {
   def notificationRepo = inject[UserNotificationRepo]
   def scrapeInfoRepo = inject[ScrapeInfoRepo]
   def phraseRepo = inject[PhraseRepo]
+  def collectionRepo = inject[CollectionRepo]
+  def keepToCollectionRepo = inject[KeepToCollectionRepo]
 }
 
 object TestDbInfo {
@@ -328,6 +330,8 @@ case class ShoeboxServiceModule() extends ScalaModule {
     userRepo: UserRepo,
     bookmarkRepo: BookmarkRepo,
     browsingHistoryRepo: BrowsingHistoryRepo,
+    collectionRepo: CollectionRepo,
+    keepToCollectionRepo: KeepToCollectionRepo,
     clickingHistoryRepo: ClickHistoryRepo,
     normUriRepo: NormalizedURIRepo,
     experimentRepo: SearchConfigExperimentRepo,
@@ -344,6 +348,8 @@ case class ShoeboxServiceModule() extends ScalaModule {
     bookmarkRepo,
     browsingHistoryRepo,
     clickingHistoryRepo,
+    collectionRepo,
+    keepToCollectionRepo,
     normUriRepo,
     experimentRepo,
     userExperimentRepo,

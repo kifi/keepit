@@ -26,6 +26,8 @@ case class Collection(
 @ImplementedBy(classOf[CollectionRepoImpl])
 trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] {
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Collection]
+  def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection])
+      (implicit session: RSession): Option[Collection]
   def getByUserAndName(userId: Id[User], name: String,
       excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
       (implicit session: RSession): Option[Collection]
@@ -56,6 +58,12 @@ class CollectionRepoImpl @Inject() (
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Collection] =
     (for (c <- table if c.userId === userId && c.state === CollectionStates.ACTIVE) yield c).list
+
+  def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection])
+      (implicit session: RSession): Option[Collection] =
+    (for {
+      c <- table if c.userId === userId && c.externalId === externalId && c.state === CollectionStates.ACTIVE
+    } yield c).firstOption
 
   def getByUserAndName(userId: Id[User], name: String,
       excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
