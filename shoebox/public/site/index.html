@@ -40,7 +40,7 @@
 				<div class="name">Loading...</div>
 			</div>
 			<h3 class="active my-keeps">
-				<a href="javascript: populateMyKeeps();"> My Keeps <span
+				<a href="javascript: populateMyKeeps(); addNewKeeps()"> My Keeps <span
 					class="right light"></span></a>
 			</h3>
 		</aside>
@@ -75,7 +75,7 @@
 					<li data-template-fallback>Sorry, JavaScript required!</li>
 				</ol>
 				<ol id="my-keeps">
-					<li data-template class="keep mine" data-created={{createdAt}}>
+					<li data-template data-id="{{id}}" class="keep mine" data-created={{createdAt}}>
 						<a class="long-text" href="{{url}}" target="_blank"
 						title="{{title}}">{{title}}</a> <span class="fs9 green long-text"
 						title="{{url}}">{{url}}</span>

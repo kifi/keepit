@@ -105,8 +105,17 @@ function doSearch(context) {
 		});
 }
 
+function addNewKeeps() {
+	var first = $('#my-keeps li.keep').first().data('id');
+	console.log("Fetching 30 keep after " + first);
+	$.getJSON(urlMyKeeps, {after: first}, 
+		function(data) {
+			keepsTemplate.prepend(data.keeps);
+			$('#my-keeps li.search-section.today').prependTo('#my-keeps');
+		});
+}
+
 function populateMyKeeps() {
-	// TODO: populate new keeps
 	var params = {count: 30};
 	$('.active').removeClass('active');
 	$('aside.left h3.my-keeps').addClass('active');
@@ -138,6 +147,16 @@ function populateMyKeeps() {
 	}
 }
 
+function updateNumKeeps() {
+	$.getJSON(urlMyKeepsCount, function(data) {
+		$('aside.left .my-keeps span').text(data.numKeeps);
+	});	
+}
+
+// auto update my keeps every minute
+setInterval(addNewKeeps, 60000);
+setInterval(updateNumKeeps, 60000);
+
 $(document)
 	.on('keypress', function(e) {if (!$(e.target).is('textarea')) $('input.search').focus() }) // auto focus on search field when starting to type anywhere on the document
 	.on('scroll',function() { // infinite scroll
@@ -151,10 +170,9 @@ $(document)
 	})
 	.ready(function() {		
 		$(".fancybox").fancybox();
-		// populate number of my keeps 
-		$.getJSON(urlMyKeepsCount, function(data) {
-			$('aside.left .my-keeps span').text(data.numKeeps);
-		});
+		
+		// populate number of my keeps
+		updateNumKeeps();
 
 		// populate all my keeps
 		populateMyKeeps();
