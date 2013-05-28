@@ -118,8 +118,7 @@ function attachComposeBindings($c, composeTypeName) {
       }
       args.push(recipients.map(function(r) {return r.id}));
     }
-    $d.empty().trigger("kifi:compose-submit", args).focus();
-    $f.addClass("kifi-empty");
+    $d.trigger("kifi:compose-submit", args).empty().triggerHandler("input");
     var $submit = $f.find(".kifi-compose-submit").addClass("kifi-active");
     setTimeout($submit.removeClass.bind($submit, "kifi-active"), 10);
   })
