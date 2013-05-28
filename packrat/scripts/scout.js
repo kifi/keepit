@@ -136,8 +136,9 @@ var injected, t0 = +new Date, tile, paneHistory, root = document.querySelector("
       positionTile(pos);
     }
     tile.innerHTML =
+      "<div class=kifi-tile-flip>" +
       "<div class=kifi-tile-keep style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>" +
-      "<div class=kifi-tile-kept></div>";
+      "<div class=kifi-tile-kept></div></div>";
     tileCount = document.createElement("span");
     tileCount.className = "kifi-count";
     root.appendChild(tile);
