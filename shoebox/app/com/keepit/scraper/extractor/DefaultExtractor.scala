@@ -50,12 +50,12 @@ class DefaultContentHandler(handler: ContentHandler, metadata: Metadata) extends
   private[this] var inAnchor = false
   private def startAnchor(uri: String, localName: String, qName: String, atts: Attributes) = {
     //nested anchor tags blow up Boilerpipe. so we close it if one is already open
-    if (inAnchor) endElement(uri, localName, qName)
+    if (inAnchor) super.endElement(uri, localName, qName)
     super.startElement(uri, localName, qName, atts)
     inAnchor = true
   }
   private def endAnchor(uri: String, localName: String, qName: String) = {
-    super.endElement(uri, localName, qName)
+    if (inAnchor) super.endElement(uri, localName, qName)
     inAnchor = false
   }
 
