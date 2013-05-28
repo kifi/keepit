@@ -57,6 +57,10 @@ import com.keepit.common.social.BasicUser
 import com.keepit.common.db.ExternalId
 import com.keepit.search.ArticleSearchResultRef
 import com.keepit.search.ArticleSearchResultRefRepo
+import com.keepit.common.social.SocialId
+import com.keepit.common.social.SocialNetworkType
+import com.keepit.common.social.SocialNetworks
+import com.keepit.serializer.SocialUserInfoSerializer._
 
 object ShoeboxController {
   implicit val collectionTupleFormat = (
@@ -85,7 +89,8 @@ class ShoeboxController @Inject() (
   collectionRepo: CollectionRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
   basicUserRepo: BasicUserRepo,
-  articleSearchResultRefRepo: ArticleSearchResultRefRepo)
+  articleSearchResultRefRepo: ArticleSearchResultRefRepo,
+  socialUserInfoRepo: SocialUserInfoRepo)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
@@ -97,6 +102,15 @@ class ShoeboxController @Inject() (
       case Some(user) => Ok(UserSerializer.userSerializer.writes(user))
       case None => Ok(JsNull)
     }
+  }
+  
+  def getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String) = Action {
+    val socialId = SocialId(id)
+    val network = SocialNetworkType(networkType)
+    val sui = db.readOnly { implicit session =>
+      socialUserInfoRepo.get(socialId, SocialNetworks.FACEBOOK)
+    }
+    Ok(Json.toJson(sui))
   }
 
   def sendMail = Action(parse.json) { request =>

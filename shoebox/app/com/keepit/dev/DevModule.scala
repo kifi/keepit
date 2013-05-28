@@ -35,6 +35,9 @@ import play.api.Play
 import com.keepit.search.SearchServiceClient
 import com.keepit.common.service.{FortyTwoServices, IpAddress}
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.common.db._
+import scala.slick.session.{Database => SlickDatabase}
+import play.api.db.DB
 
 
 class ShoeboxDevModule extends ScalaModule with Logging {

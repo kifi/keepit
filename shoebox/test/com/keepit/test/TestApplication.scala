@@ -51,6 +51,8 @@ import com.keepit.shoebox.BrowsingHistoryTracker
 import com.keepit.classify.DomainTagImportSettings
 import play.api.libs.Files
 import java.io.File
+import play.api.db.DB
+import com.keepit.common.controller.{ActionAuthenticator, ShoeboxActionAuthenticator}
 
 class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplication() {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
@@ -128,8 +130,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
     bind[HealthcheckPlugin].to[FakeHealthcheck]
     bind[SlickSessionProvider].to[TestSlickSessionProvider]
-
-
+    bind[ActionAuthenticator].to[ShoeboxActionAuthenticator]
   }
 
   private def dbInfoFromApplication(): DbInfo = TestDbInfo.dbInfo

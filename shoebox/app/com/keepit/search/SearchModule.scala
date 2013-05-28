@@ -28,13 +28,21 @@ import com.keepit.common.healthcheck.HealthcheckMailSender
 import com.keepit.common.net.HttpClient
 import com.keepit.shoebox.ShoeboxCacheProvider
 import com.keepit.shoebox.ShoeboxServiceClientImpl
+import com.keepit.common.controller.ActionAuthenticator
+import com.keepit.common.controller.RemoteActionAuthenticator
+
+class SearchExclusiveModule() extends ScalaModule with Logging {
+  def configure() {
+    bind[ActionAuthenticator].to[RemoteActionAuthenticator]
+  }
+}
+
 
 class SearchModule() extends ScalaModule with Logging {
 
   def configure() {
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
-    bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
     bind[RemotePostOffice].to[RemotePostOfficeImpl]
   }
 

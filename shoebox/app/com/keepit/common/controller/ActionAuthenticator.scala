@@ -13,11 +13,13 @@ import com.keepit.common.net.URI
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social._
 import com.keepit.model._
-
 import play.api.i18n.Messages
 import play.api.libs.json.JsNumber
 import play.api.mvc._
 import securesocial.core._
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.common.akka.MonitoredAwait
+import scala.concurrent.duration._
 
 case class ReportedException(val id: ExternalId[HealthcheckError], val cause: Throwable) extends Exception(id.toString, cause)
 
@@ -35,8 +37,38 @@ object ActionAuthenticator {
   val FORTYTWO_USER_ID = "fortytwo_user_id"
 }
 
+trait ActionAuthenticator extends  SecureSocial {
+  private[controller] def isAdmin(userId: Id[User]): Boolean
+  private[controller] def authenticatedAction[T](
+      apiClient: Boolean,
+      allowPending: Boolean,
+      bodyParser: BodyParser[T],
+      onAuthenticated: AuthenticatedRequest[T] => Result,
+      onUnauthenticated: Request[T] => Result): Action[T]
+
+  private[controller] def authenticatedAction[T](
+      apiClient: Boolean,
+      allowPending: Boolean,
+      bodyParser: BodyParser[T],
+      onAuthenticated: AuthenticatedRequest[T] => Result): Action[T] =
+        authenticatedAction(
+          apiClient = apiClient,
+          allowPending = allowPending,
+          bodyParser = bodyParser,
+          onAuthenticated = onAuthenticated,
+          onUnauthenticated = { implicit request =>
+            if (apiClient) {
+              Forbidden(JsNumber(0))
+            } else {
+              Redirect("/login")
+                .flashing("error" -> Messages("securesocial.loginRequired"))
+                .withSession(session + (SecureSocial.OriginalUrlKey -> request.uri))
+            }
+          })
+}
+
 @Singleton
-class ActionAuthenticator @Inject() (
+class ShoeboxActionAuthenticator @Inject() (
   db: Database,
   socialUserInfoRepo: SocialUserInfoRepo,
   userExperimentRepo: UserExperimentRepo,
@@ -46,7 +78,7 @@ class ActionAuthenticator @Inject() (
   impersonateCookie: ImpersonateCookie,
   connectionUpdater: ConnectionUpdater,
   kifiInstallationCookie: KifiInstallationCookie)
-    extends SecureSocial with Logging {
+    extends ActionAuthenticator with SecureSocial with Logging {
 
   private def loadUserId(userIdOpt: Option[Id[User]], socialId: SocialId)(implicit session: RSession): Id[User] = {
     userIdOpt match {
@@ -121,26 +153,6 @@ class ActionAuthenticator @Inject() (
     }.getOrElse(result)
   }
 
-  private[controller] def authenticatedAction[T](
-      apiClient: Boolean,
-      allowPending: Boolean,
-      bodyParser: BodyParser[T],
-      onAuthenticated: AuthenticatedRequest[T] => Result): Action[T] =
-    authenticatedAction(
-      apiClient = apiClient,
-      allowPending = allowPending,
-      bodyParser = bodyParser,
-      onAuthenticated = onAuthenticated,
-      onUnauthenticated = { implicit request =>
-        if (apiClient) {
-          Forbidden(JsNumber(0))
-        } else {
-          Redirect("/login")
-            .flashing("error" -> Messages("securesocial.loginRequired"))
-            .withSession(session + (SecureSocial.OriginalUrlKey -> request.uri))
-        }
-      })
-
   private[controller] def isAdmin(experiments: Set[State[ExperimentType]]) = experiments.contains(ExperimentTypes.ADMIN)
 
   private[controller] def isAdmin(userId: Id[User]) = db.readOnly { implicit session =>
@@ -181,3 +193,85 @@ class ActionAuthenticator @Inject() (
     }
   }
 }
+
+@Singleton
+class RemoteActionAuthenticator @Inject() (
+  fortyTwoServices: FortyTwoServices,
+  healthcheckPlugin: HealthcheckPlugin,
+  impersonateCookie: ImpersonateCookie,
+  kifiInstallationCookie: KifiInstallationCookie,
+  shoeboxClient: ShoeboxServiceClient,
+  userExperimentCache: UserExperimentCache,
+  monitoredAwait: MonitoredAwait)
+    extends ActionAuthenticator with SecureSocial with Logging {
+
+  private def authenticatedHandler[T](apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Result) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
+      val userId = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map(id => Id[User](id.toLong)).get // we should switch to externalId
+      val impersonatedUserIdOpt: Option[ExternalId[User]] = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
+      val kifiInstallationId: Option[ExternalId[KifiInstallation]] = kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
+      val socialUser = request.user
+      val experiments = userExperimentCache.get(UserExperimentUserIdKey(userId)).getOrElse(Seq()).toSet
+      
+      val newSession = session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString)
+      executeAction(authAction, userId, socialUser, experiments, kifiInstallationId, newSession, request.request, None, allowPending)
+    }
+  
+  override def touch(authenticator: Authenticator) {
+    //Nothing!
+  }
+
+  private[controller] def authenticatedAction[T](
+      apiClient: Boolean,
+      allowPending: Boolean,
+      bodyParser: BodyParser[T],
+      onAuthenticated: AuthenticatedRequest[T] => Result,
+      onUnauthenticated: Request[T] => Result): Action[T] = UserAwareAction(bodyParser) { request =>
+    val result = request.user match {
+      case Some(user) =>
+        authenticatedHandler(apiClient, allowPending)(onAuthenticated)(SecuredRequest(user, request))
+      case None =>
+        onUnauthenticated(request)
+    }
+    request.headers.get("Origin").filter { uri =>
+      val host = URI.parse(uri).toOption.flatMap(_.host).map(_.toString).getOrElse("")
+      host.endsWith("ezkeep.com") || host.endsWith("kifi.com")
+    }.map { h =>
+      result.withHeaders(
+        "Access-Control-Allow-Origin" -> h,
+        "Access-Control-Allow-Credentials" -> "true"
+      )
+    }.getOrElse(result)
+  }
+
+  private[controller] def isAdmin(experiments: Set[State[ExperimentType]]): Boolean = experiments.contains(ExperimentTypes.ADMIN)
+
+  private[controller] def isAdmin(userId: Id[User]): Boolean = {
+    userExperimentCache.get(UserExperimentUserIdKey(userId)).getOrElse(Seq()).contains(ExperimentTypes.ADMIN)
+  }
+
+  private def executeAction[T](action: AuthenticatedRequest[T] => Result, userId: Id[User], identity: Identity,
+      experiments: Set[State[ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]],
+      newSession: Session, request: Request[T], adminUserId: Option[Id[User]] = None, allowPending: Boolean) = {
+    val user = shoeboxClient.getUsers(Seq(userId))
+    val cleanedSesison = newSession - IdentityProvider.SessionId + ("server_version" -> fortyTwoServices.currentVersion.value)
+    log.debug("sending response with new session [%s] of user id: %s".format(cleanedSesison, userId))
+    try {
+      action(AuthenticatedRequest[T](identity, userId, monitoredAwait.result(user, 5 seconds).head, request, experiments, kifiInstallationId, adminUserId)) match {
+        case r: PlainResult => r.withSession(newSession)
+        case any: Result => any
+      }
+    } catch {
+      case e: Throwable =>
+        val globalError = healthcheckPlugin.addError(HealthcheckError(
+            error = Some(e),
+            method = Some(request.method.toUpperCase()),
+            path = Some(request.path),
+            callType = Healthcheck.API,
+            errorMessage = Some("Error executing with userId %s, experiments [%s], installation %s".format(
+                userId, experiments.mkString(","), kifiInstallationId.getOrElse("NA")))))
+        log.error("healthcheck reported [%s]".format(globalError.id), e)
+        throw ReportedException(globalError.id, e)
+    }
+  }
+}
+

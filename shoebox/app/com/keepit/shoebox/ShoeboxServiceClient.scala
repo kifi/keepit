@@ -27,10 +27,13 @@ import com.keepit.search.ActiveExperimentsCache
 import com.keepit.search.ActiveExperimentsKey
 import com.keepit.common.db.ExternalId
 import com.keepit.search.ArticleSearchResultFactory
+import com.keepit.common.social.SocialNetworkType
+import com.keepit.common.social.SocialId
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
   def getUserOpt(id: ExternalId[User]): Future[Option[User]]
+  def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[SocialUserInfo]
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]]
@@ -67,7 +70,8 @@ case class ShoeboxCacheProvider @Inject() (
     activeSearchConfigExperimentsCache: ActiveExperimentsCache,
     userExperimentCache: UserExperimentCache,
     userConnCache: UserConnectionIdCache,
-    externalUserIdCache: ExternalUserIdCache)
+    externalUserIdCache: ExternalUserIdCache,
+    socialUserNetworkCache: SocialUserInfoNetworkCache)
     
 class ShoeboxServiceClientImpl @Inject() (
   override val host: String,
@@ -85,6 +89,13 @@ class ShoeboxServiceClientImpl @Inject() (
           case js: JsValue => Some(UserSerializer.userSerializer.reads(js).get)
         }
       }
+    }
+  }
+  
+  def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[SocialUserInfo] = {
+    cacheProvider.socialUserNetworkCache.get(SocialUserInfoNetworkKey(networkType, id)) match {
+      case Some(sui) => Promise.successful(sui).future
+      case None => ???
     }
   }
 
@@ -264,7 +275,6 @@ class ShoeboxServiceClientImpl @Inject() (
         r.json.as[Boolean]
       }
     }
-
   }
 
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]] = {

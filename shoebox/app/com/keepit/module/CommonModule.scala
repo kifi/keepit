@@ -44,7 +44,6 @@ class CommonModule extends ScalaModule with Logging {
     install(new S3Module)
 
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
-    bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
   }
 
   @Singleton

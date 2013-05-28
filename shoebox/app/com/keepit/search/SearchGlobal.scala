@@ -4,7 +4,6 @@ import com.keepit.FortyTwoGlobal
 import com.keepit.common.analytics.PersistEventPlugin
 import com.keepit.common.cache.FortyTwoCachePlugin
 import com.keepit.common.healthcheck._
-import com.keepit.common.mail.MailSenderPlugin
 import com.keepit.module.CommonModule
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.search.index.ArticleIndexerPlugin
@@ -13,7 +12,7 @@ import play.api._
 import com.keepit.search.nlp.NlpParser
 
 object SearchGlobal extends FortyTwoGlobal(Prod) with SearchServices {
-  val modules = Seq(new CommonModule, new SearchModule)
+  val modules = Seq(new CommonModule, new SearchModule, new SearchExclusiveModule)
 
   override def onStart(app: Application) {
     log.info("starting the search")
