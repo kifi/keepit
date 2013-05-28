@@ -32,6 +32,7 @@ trait SchedulingPlugin extends Plugin with Logging {
 
   def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration,
       frequency: FiniteDuration, receiver: ActorRef, message: Any) {
+    if (schedulingProperties.neverAllowSchecualing) return //don't even schedule in this case
     _cancellables :+= ( system.scheduler.schedule(initialDelay, frequency) { sendMessage(receiver, message) } )
   }
 

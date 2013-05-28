@@ -47,6 +47,9 @@ class CommonModule extends ScalaModule with Logging {
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
   }
 
+  @Provides
+  def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.LeaderOnly
+
   @Singleton
   @Provides
   def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {

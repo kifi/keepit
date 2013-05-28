@@ -69,9 +69,6 @@ class ShoeboxModule() extends ScalaModule with Logging {
         searchClient, schedulingProperties, clock, fortyTwoServices)
   }
 
-  @Provides
-  def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.LeaderOnly
-
   @Singleton
   @Provides
   def domainTagImportSettings: DomainTagImportSettings = {
@@ -124,7 +121,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
 
     new BrowsingHistoryTracker(filterSize, numHashFuncs, minHits, browsingHistoryRepo, db)
   }
-  
+
   @Singleton
   @Provides
   def sliderHistoryTracker(sliderHistoryRepo: SliderHistoryRepo, db: Database): SliderHistoryTracker = {
@@ -135,7 +132,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
 
     new SliderHistoryTracker(sliderHistoryRepo, db, filterSize, numHashFuncs, minHits)
   }
-  
+
   @Singleton
   @Provides
   def searchServiceClient(client: HttpClient): SearchServiceClient = {

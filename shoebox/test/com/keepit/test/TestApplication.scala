@@ -140,8 +140,11 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Singleton
   @Provides
-  def secureSocialUserPlugin: SecureSocialUserPlugin = new SecureSocialUserPlugin (
-    null, null, null, null, null)
+  def secureSocialUserPlugin(db: Database,
+    socialUserInfoRepo: SocialUserInfoRepo,
+    userRepo: UserRepo,
+    healthcheckPlugin: HealthcheckPlugin): SecureSocialUserPlugin =
+      new SecureSocialUserPlugin (db, socialUserInfoRepo, userRepo, null, healthcheckPlugin)
 
   @Singleton
   @Provides
