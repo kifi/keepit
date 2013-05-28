@@ -1,7 +1,6 @@
 package com.keepit.search.index
 
-import com.keepit.common.db.Id
-import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.{Id,SequenceNumber}
 import com.keepit.search.SemanticVectorBuilder
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute

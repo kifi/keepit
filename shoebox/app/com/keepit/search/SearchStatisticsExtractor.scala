@@ -1,12 +1,10 @@
 package com.keepit.search
 
-import com.keepit.common.db.ExternalId
-import com.keepit.common.db.Id
+import com.keepit.common.db.{Id,ExternalId}
 import com.keepit.model.User
 import com.keepit.model.NormalizedURI
 import com.keepit.search.query.LuceneScoreNames
 import com.google.inject.{ Inject, Singleton }
-import com.keepit.common.db.slick.Database
 import scala.util.Try
 import scala.math._
 import com.keepit.search.index.ArticleIndexer
