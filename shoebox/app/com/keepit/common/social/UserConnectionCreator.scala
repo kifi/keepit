@@ -67,7 +67,7 @@ class UserConnectionCreator @Inject() (
       val newConnections = updatedConnections diff existingConnections
       if (newConnections.nonEmpty) userChannel.push(userId, Json.arr("new_friends", newConnections.map(basicUserRepo.load)))
       newConnections.foreach { connId =>
-        log.info("Sending new connection to user $connId (to $userId)")
+        log.info(s"Sending new connection to user $connId (to $userId)")
         userChannel.push(connId, Json.arr("new_friends", Set(basicUserRepo.load(userId))))
       }
       userConnectionRepo.addConnections(userId, newConnections)
@@ -93,13 +93,13 @@ class UserConnectionCreator @Inject() (
         c.state match {
           case SocialConnectionStates.ACTIVE => c
           case _ =>
-            log.debug(s"activate connection between ${c.socialUser1} and ${c.socialUser2}")
+            log.info(s"activate connection between ${c.socialUser1} and ${c.socialUser2}")
             db.readWrite { implicit s =>
               socialConnectionRepo.save(c.withState(SocialConnectionStates.ACTIVE))
             }
         }
       case (friend, None) =>
-        log.debug(s"a new connection was created between ${socialUserInfo} and friend.id.get")
+        log.info(s"a new connection was created between ${socialUserInfo} and ${friend.id.get}")
         db.readWrite { implicit s =>
           socialConnectionRepo.save(SocialConnection(socialUser1 = socialUserInfo.id.get, socialUser2 = friend.id.get))
         }
@@ -110,19 +110,19 @@ class UserConnectionCreator @Inject() (
     log.info("looking for connections to disable for user %s".format(socialUserInfo.fullName))
     db.readWrite { implicit s =>
       val socialUserInfoForAllFriendsIds = parentJson flatMap extractFriends map extractSocialId
-	    val existingSocialUserInfoIds = socialConnectionRepo.getUserConnections(socialUserInfo.userId.get).toSeq map {sui => sui.socialId}
-	    log.debug("socialUserInfoForAllFriendsIds = %s".format(socialUserInfoForAllFriendsIds))
-	    log.debug("existingSocialUserInfoIds = %s".format(existingSocialUserInfoIds))
-	    log.info("size of diff =%s".format((existingSocialUserInfoIds diff socialUserInfoForAllFriendsIds).length))
-	    existingSocialUserInfoIds diff socialUserInfoForAllFriendsIds  map {
-	      socialId => {
-	        val friendSocialUserInfoId = socialRepo.get(socialId, SocialNetworks.FACEBOOK).id.get
-		      log.info("about to disbale connection between %s and for socialId = %s".format(socialUserInfo.id.get,friendSocialUserInfoId ));
-	        socialConnectionRepo.getConnectionOpt(socialUserInfo.id.get, friendSocialUserInfoId) match {
+      val existingSocialUserInfoIds = socialConnectionRepo.getUserConnections(socialUserInfo.userId.get).toSeq map {sui => sui.socialId}
+      log.debug("socialUserInfoForAllFriendsIds = %s".format(socialUserInfoForAllFriendsIds))
+      log.debug("existingSocialUserInfoIds = %s".format(existingSocialUserInfoIds))
+      log.info("size of diff =%s".format((existingSocialUserInfoIds diff socialUserInfoForAllFriendsIds).length))
+      existingSocialUserInfoIds diff socialUserInfoForAllFriendsIds  map {
+        socialId => {
+          val friendSocialUserInfoId = socialRepo.get(socialId, SocialNetworks.FACEBOOK).id.get
+          log.info("about to disbale connection between %s and for socialId = %s".format(socialUserInfo.id.get,friendSocialUserInfoId ));
+          socialConnectionRepo.getConnectionOpt(socialUserInfo.id.get, friendSocialUserInfoId) match {
             case Some(c) => {
               if (c.state != SocialConnectionStates.INACTIVE){
                 log.info("connection is disabled")
-            	  socialConnectionRepo.save(c.withState(SocialConnectionStates.INACTIVE))
+                socialConnectionRepo.save(c.withState(SocialConnectionStates.INACTIVE))
               }
               else {
                 log.info("connection is already disabled")
@@ -131,10 +131,10 @@ class UserConnectionCreator @Inject() (
             }
             case _ => throw new Exception("could not find the SocialConnection between %s and for socialId = %s".format(socialUserInfo.id.get,friendSocialUserInfoId ));
           }
-	      }
-	    }
-	  }
-	}
+        }
+      }
+    }
+  }
   private def extractFriends(parentJson: JsValue): Seq[JsValue] = (parentJson \\ "data").head.asInstanceOf[JsArray].value
   private def extractSocialId(friend: JsValue): SocialId = SocialId((friend \ "id").as[String])
 

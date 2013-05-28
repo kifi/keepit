@@ -79,7 +79,7 @@ var KifiNotification = {
     params = $.extend(KifiNotification.defaultParams, params);
 
     if ($("#kifi-notify-notice-wrapper").length == 0) {
-      $("body").append("<div id=kifi-notify-notice-wrapper>");
+      $(root).append("<div id=kifi-notify-notice-wrapper>");
     }
 
     render("html/notify_box.html", {

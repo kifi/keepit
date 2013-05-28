@@ -1,6 +1,6 @@
 function ReconnectingWebSocket(url, onMessage, onConnect) {
   const wordRe = /\w+/, minRetryConnectDelayMs = 300, maxRetryConnectDelayMs = 5000, idlePingDelayMs = 30000;
-  var ws, self = this, buffer = [], closed, t, retryConnectDelayMs = minRetryConnectDelayMs;
+  var ws, self = this, buffer = [], closed, t, lastRecOrPingTime, retryConnectDelayMs = minRetryConnectDelayMs;
 
   connect();
 
@@ -9,6 +9,9 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
       throw "closed, try back tomorrow";
     } else if (ws && ws.greeted && ws.readyState == WebSocket.OPEN) {
       ws.send(data);
+      if (new Date - lastRecOrPingTime > idlePingDelayMs) {
+        ping();
+      }
     } else {
       buffer.push([data, +new Date]);
     }
@@ -19,11 +22,14 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
       buffer = null;
       if (ws) {
         ws.close();
+        t = setTimeout(onClose.bind(ws), 1000);  // in case browser does not fire close event promptly
       }
+      window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
     }
   };
 
+  window.addEventListener("online", onOnline);
   window.addEventListener("offline", onOffline); // fires in Chrome when WiFi conn lost or changed
 
   function connect() {
@@ -59,6 +65,9 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
   }
 
   function onMessage1(e) {
+    clearTimeout(t);
+    t = setTimeout(ping, idlePingDelayMs);
+    lastRecOrPingTime = +new Date;
     if (e.data === '["hi"]') {
       api.log("#0bf", "[RWS.onMessage1]", e.data);
       ws.greeted = true;
@@ -76,37 +85,52 @@ function ReconnectingWebSocket(url, onMessage, onConnect) {
       api.log("#a00", "[RWS.onMessage1] relaying");
       onMessage.call(self, e);
     }
-    clearTimeout(t);
-    t = setTimeout(ping, idlePingDelayMs);
   }
 
   function onMessageN(e) {
+    clearTimeout(t);
+    t = setTimeout(ping, idlePingDelayMs);
+    lastRecOrPingTime = +new Date;
     if (e.data === '["pong"]') {
       api.log("#0ac", "[RWS.pong]");
     } else {
       onMessage.call(self, e);
     }
-    clearTimeout(t);
-    t = setTimeout(ping, idlePingDelayMs);
   }
 
   function onConnectTimeout(ws) {
-    api.log("#0bf", "[RWS.onConnectTimeout] readyState:", ws.readyState);
-    ws.close();
+    api.log("#0bf", "[RWS.onConnectTimeout] readyState:", ws && ws.readyState);
     clearTimeout(t);
-    t = setTimeout(onClose.bind(ws), 1000);  // browser might not fire close event for 60+ sec
+    if (ws) {
+      ws.close();
+      t = setTimeout(onClose.bind(ws), 1000);  // browser sometimes does not fire close event promptly (60+ sec)
+    }
+  }
+
+  function onOnline() {
+    api.log("#0bf", "[RWS.onOnline] readyState:", ws && ws.readyState);
+    if (!ws && !closed) {
+      clearTimeout(t);
+      connect();
+    }
   }
 
   function onOffline() {
-    api.log("#0bf", "[RWS.onOffline] readyState:", ws.readyState);
-    ws.close();
+    api.log("#0bf", "[RWS.onOffline] readyState:", ws && ws.readyState);
     clearTimeout(t);
-    t = setTimeout(onClose.bind(ws), 1000);
+    if (ws) {
+      ws.close();
+      t = setTimeout(onClose.bind(ws), 1000);
+    }
   }
 
   function ping() {
-    api.log("#0bf", "[RWS.ping]");
-    self.send('["ping"]');
-    t = setTimeout(onConnectTimeout.bind(null, ws), 2000);
+    if (ws && !closed) {
+      api.log("#0bf", "[RWS.ping]");
+      self.send('["ping"]');
+      clearTimeout(t);
+      t = setTimeout(onConnectTimeout.bind(null, ws), 2000);
+      lastRecOrPingTime = +new Date;
+    }
   }
 }

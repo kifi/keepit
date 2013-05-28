@@ -1,7 +1,6 @@
 package com.keepit.search.phrasedetector
 
-import com.keepit.common.db.Id
-import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.{Id,SequenceNumber}
 import com.keepit.common.logging.Logging
 import com.keepit.model.Phrase
 import com.keepit.search.index.Indexer
