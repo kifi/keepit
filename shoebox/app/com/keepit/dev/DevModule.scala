@@ -17,7 +17,8 @@ import com.keepit.common.mail._
 import com.keepit.inject._
 import com.keepit.model.{BookmarkRepo, NormalizedURIRepo}
 import com.keepit.search.{ArticleStore, ResultClickTracker}
-import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphFields}
+import com.keepit.search.graph.CollectionIndexer
+import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphIndexer}
 import com.keepit.search.index.{ArticleIndexer, DefaultAnalyzer}
 import com.keepit.search.phrasedetector.{PhraseIndexerImpl, PhraseIndexer}
 import com.keepit.search.query.parser.{FakeSpellCorrector, SpellCorrector}
@@ -27,6 +28,8 @@ import play.api.Play.current
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.{Directory, MMapDirectory, RAMDirectory}
 import org.apache.lucene.util.Version
+import com.keepit.model.CollectionRepo
+import com.keepit.model.KeepToCollectionRepo
 import com.keepit.model.UserRepo
 import com.keepit.common.time.Clock
 import com.google.inject.Provider
@@ -173,11 +176,20 @@ class SearchDevModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def uriGraph(shoeboxClient: ShoeboxServiceClient): URIGraph = {
+  def uriGraphIndexer(shoeboxClient: ShoeboxServiceClient): URIGraphIndexer = {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new URIGraphImpl(dir, config, URIGraphFields.decoders(), shoeboxClient)
+    new URIGraphIndexer(dir, config, shoeboxClient)
+  }
+
+  @Singleton
+  @Provides
+  def collectionIndexer(shoeboxClient: ShoeboxServiceClient): CollectionIndexer = {
+    val dir = getDirectory(current.configuration.getString("index.collection.directory"))
+    log.info(s"storing collection index in $dir")
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new CollectionIndexer(dir, config, shoeboxClient)
   }
 
   @Singleton

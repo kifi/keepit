@@ -1,9 +1,9 @@
 // @match /^https?:\/\/www\.google\.(com|com\.(a[fgiru]|b[dhnorz]|c[ouy]|do|e[cgt]|fj|g[hit]|hk|jm|k[hw]|l[by]|m[txy]|n[afgip]|om|p[aehkry]|qa|s[abglv]|t[jrw]|u[ay]|v[cn])|co\.(ao|bw|c[kr]|i[dln]|jp|k[er]|ls|m[az]|nz|t[hz]|u[gkz]|v[ei]|z[amw])|a[demstz]|b[aefgijsy]|cat|c[adfghilmnvz]|d[ejkmz]|e[es]|f[imr]|g[aeglmpry]|h[nrtu]|i[emqst]|j[eo]|k[giz]|l[aiktuv]|m[degklnsuvw]|n[eloru]|p[lnstosuw]|s[cehikmnot]|t[dgklmnot]|v[gu]|ws)\/(|search|webhp)([?#].*)?$/
 // @require styles/google_inject.css
 // @require styles/friend_card.css
-// @require scripts/lib/jquery-1.8.2.min.js
+// @require scripts/lib/jquery.js
 // @require scripts/lib/jquery-bindhover.js
-// @require scripts/lib/mustache-0.7.1.min.js
+// @require scripts/lib/mustache.js
 // @require scripts/api.js
 // @require scripts/render.js
 
@@ -326,7 +326,7 @@ api.log("[google_inject]");
             var f = friends[i];
             f.name = f.firstName + " " + f.lastName;
           }
-          api.require("scripts/lib/jquery-tokeninput-1.6.1.min.js", function() {
+          api.require("scripts/lib/jquery-tokeninput.js", function() {
             if ($in.prev("ul").length) return;
             $in.tokenInput(friends, {
               searchDelay: 0,

@@ -29,16 +29,15 @@ import com.keepit.common.service.FortyTwoServices
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.{Directory, MMapDirectory, RAMDirectory}
 import org.apache.lucene.util.Version
-import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphFields}
+import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphFields, URIGraphIndexer}
 import org.apache.lucene.util.Version
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.net.HttpClient
 import com.keepit.common.net.FakeHttpClient
 import play.api.libs.json.JsArray
 import com.keepit.common.net._
-import com.keepit.shoebox.ClickHistoryTracker
-import com.keepit.shoebox.BrowsingHistoryTracker
-import com.keepit.shoebox.ClickHistoryTracker
+import com.keepit.search.graph.CollectionIndexer
+import com.keepit.search.graph.CollectionFields
 import com.keepit.common.akka.MonitoredAwait
 
 class MainSearcherTest extends Specification with DbRepos {
@@ -52,9 +51,13 @@ class MainSearcherTest extends Specification with DbRepos {
   }
 
   def initIndexes(store: ArticleStore) = {
-    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    val articleIndexer = new ArticleIndexer(new RAMDirectory, config, store, null, inject[ShoeboxServiceClient])
-    val uriGraph = new URIGraphImpl(new RAMDirectory, config, URIGraphFields.decoders(), inject[ShoeboxServiceClient])
+    val articleConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    val graphConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    val collectConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    val articleIndexer = new ArticleIndexer(new RAMDirectory, articleConfig, store, null, inject[ShoeboxServiceClient])
+    val uriGraph = new URIGraphImpl(
+        new URIGraphIndexer(new RAMDirectory, graphConfig, inject[ShoeboxServiceClient]),
+        new CollectionIndexer(new RAMDirectory, collectConfig, inject[ShoeboxServiceClient]))
     implicit val clock = inject[Clock]
     implicit val fortyTwoServices = inject[FortyTwoServices]
     val mainSearcherFactory = new MainSearcherFactory(
