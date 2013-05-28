@@ -1,6 +1,6 @@
 package com.keepit.search
 
-import com.keepit.common.db._
+import com.keepit.common.db.Id
 import com.keepit.model._
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.DefaultAnalyzer
