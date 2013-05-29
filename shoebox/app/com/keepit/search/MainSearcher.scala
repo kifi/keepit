@@ -173,12 +173,12 @@ class MainSearcher(
             val newSemanticScore = semanticVectorScoreAccessor.getScore(doc)
             if (friendlyUris.contains(id)) {
               if (myUriEdgeAccessor.seek(id)) {
-                myHits.insert(id, score * clickBoost, score, newSemanticScore, true, !myUriEdgeAccessor.isPublic)
+                myHits.insert(id, score * clickBoost, score, newSemanticScore, clickBoost, true, !myUriEdgeAccessor.isPublic)
               } else {
-                friendsHits.insert(id, score * clickBoost, score, newSemanticScore, false, false)
+                friendsHits.insert(id, score * clickBoost, score, newSemanticScore, clickBoost, false, false)
               }
             } else if (filter.includeOthers) {
-              othersHits.insert(id, score * clickBoost, score, newSemanticScore, false, false)
+              othersHits.insert(id, score * clickBoost, score, newSemanticScore, clickBoost, false, false)
             }
           }
           doc = scorer.nextDoc()
@@ -346,7 +346,7 @@ class MainSearcher(
 
   private def classify(parsedQuery: Query, hitList: List[MutableArticleHit], personalizedSearcher: PersonalizedSearcher) = {
     def classify(hit: MutableArticleHit) = {
-      (hit.score/hit.luceneScore) > 1.25f || hit.scoring.recencyScore > 0.25f || hit.scoring.textScore > 0.7f || (hit.scoring.textScore >= 0.04f && hit.semanticScore >= 0.28f)
+      (hit.clickBoost) > 1.25f || hit.scoring.recencyScore > 0.25f || hit.scoring.textScore > 0.7f || (hit.scoring.textScore >= 0.04f && hit.semanticScore >= 0.28f)
     }
     hitList.take(3).exists(classify(_))
   }
@@ -392,9 +392,9 @@ class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit](sz) {
 
   var overflow: MutableArticleHit = null // sorry about the null, but this is necessary to work with lucene's priority queue efficiently
 
-  def insert(id: Long, score: Float, textScore: Float, semanticScore: Float, isMyBookmark: Boolean, isPrivate: Boolean, friends: Set[Id[User]] = NO_FRIEND_IDS, bookmarkCount: Int = 0) {
-    if (overflow == null) overflow = new MutableArticleHit(id, score, textScore, semanticScore, isMyBookmark, isPrivate, friends, bookmarkCount, null)
-    else overflow(id, score, textScore, semanticScore, isMyBookmark, isPrivate, friends, bookmarkCount)
+  def insert(id: Long, score: Float, textScore: Float, semanticScore: Float, clickBoost: Float, isMyBookmark: Boolean, isPrivate: Boolean, friends: Set[Id[User]] = NO_FRIEND_IDS, bookmarkCount: Int = 0) {
+    if (overflow == null) overflow = new MutableArticleHit(id, score, textScore, semanticScore, clickBoost, isMyBookmark, isPrivate, friends, bookmarkCount, null)
+    else overflow(id, score, textScore, semanticScore, clickBoost, isMyBookmark, isPrivate, friends, bookmarkCount)
 
     if (score > highScore) highScore = score
 
@@ -506,12 +506,13 @@ class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmark
 }
 
 // mutable hit object for efficiency
-class MutableArticleHit(var id: Long, var score: Float, var luceneScore: Float, var semanticScore: Float, var isMyBookmark: Boolean, var isPrivate: Boolean, var users: Set[Id[User]], var bookmarkCount: Int, var scoring: Scoring) {
-  def apply(newId: Long, newScore: Float, newTextScore: Float, newSemanticScore: Float, newIsMyBookmark: Boolean, newIsPrivate: Boolean, newUsers: Set[Id[User]], newBookmarkCount: Int) = {
+class MutableArticleHit(var id: Long, var score: Float, var luceneScore: Float, var semanticScore: Float, var clickBoost: Float, var isMyBookmark: Boolean, var isPrivate: Boolean, var users: Set[Id[User]], var bookmarkCount: Int, var scoring: Scoring) {
+  def apply(newId: Long, newScore: Float, newTextScore: Float, newSemanticScore: Float, newClickBoost: Float, newIsMyBookmark: Boolean, newIsPrivate: Boolean, newUsers: Set[Id[User]], newBookmarkCount: Int) = {
     id = newId
     score = newScore
     luceneScore = newTextScore
     semanticScore = newSemanticScore
+    clickBoost = newClickBoost
     isMyBookmark = newIsMyBookmark
     isPrivate = newIsPrivate
     users = newUsers

@@ -56,7 +56,7 @@ class ExtErrorReportControllerTest extends Specification with DbRepos {
 
   "ExtAuthController" should {
     "start" in {
-      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeStore()) {
+      running(new EmptyApplication().withFakeSecureSocialUserService()) {
         val fakeHealthcheck = inject[FakeHealthcheck]
         fakeHealthcheck.errorCount() === 0
 

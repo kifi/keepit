@@ -23,6 +23,7 @@ import javax.mail._
 import javax.mail.internet.{InternetAddress, MimeMultipart}
 import javax.mail.search._
 import play.api.libs.json.Json
+import play.api.Plugin
 
 private case object FetchNewKeeps
 
@@ -201,14 +202,14 @@ class MailToKeepMessageParser @Inject() (
 }
 
 @ImplementedBy(classOf[MailToKeepPluginImpl])
-trait MailToKeepPlugin extends SchedulingPlugin {
+trait MailToKeepPlugin extends Plugin {
   def fetchNewKeeps()
 }
 
 class MailToKeepPluginImpl @Inject()(
   actorFactory: ActorFactory[MailToKeepActor],
   val schedulingProperties: SchedulingProperties
-) extends MailToKeepPlugin with Logging {
+) extends MailToKeepPlugin with SchedulingPlugin {
 
   override def enabled: Boolean = true
 
@@ -218,7 +219,6 @@ class MailToKeepPluginImpl @Inject()(
     actor ! FetchNewKeeps
   }
   override def onStart() {
-    log.info("Starting MailToKeepPluginImpl")
     scheduleTask(actorFactory.system, 10 seconds, 1 minute, actor, FetchNewKeeps)
   }
 }

@@ -46,7 +46,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
     bind[LocalPostOffice].to[ShoeboxPostOfficeImpl]
     bind[HealthcheckMailSender].to[LocalHealthcheckMailSender]
     bind[EventPersister].to[EventPersisterImpl].in[AppScoped]
-    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
+    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListener])
     listenerBinder.addBinding().to(classOf[ResultClickedListener])
     listenerBinder.addBinding().to(classOf[UsefulPageListener])
     listenerBinder.addBinding().to(classOf[SliderShownListener])

@@ -5,6 +5,7 @@ import com.keepit.common.analytics._
 import com.keepit.common.cache.{HashMapMemoryCache, FortyTwoCachePlugin}
 import com.keepit.common.controller.FortyTwoCookies._
 import com.keepit.common.db._
+import com.keepit.common.store.FakeS3StoreModule
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
@@ -13,7 +14,6 @@ import com.keepit.common.mail._
 import com.keepit.common.net.{FakeHttpClientModule,HttpClient}
 import com.keepit.common.service._
 import com.keepit.common.social._
-import com.keepit.common.store.FakeS3StoreModule
 import com.keepit.common.time._
 import com.keepit.common.zookeeper._
 import com.keepit.social._
@@ -135,10 +135,10 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
     bind[HealthcheckPlugin].to[FakeHealthcheck]
     bind[SlickSessionProvider].to[TestSlickSessionProvider]
+    install(new FakeS3StoreModule())
   }
 
   private def dbInfoFromApplication(): DbInfo = TestDbInfo.dbInfo
-
 
   @Singleton
   @Provides
@@ -385,7 +385,7 @@ case class FakePersistEventModule() extends ScalaModule {
   override def configure(): Unit = {
     bind[EventPersister].to[FakeEventPersisterImpl]
 
-    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
+    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListener])
 
   }
 }
