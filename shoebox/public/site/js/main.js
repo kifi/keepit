@@ -3,6 +3,7 @@ var urlMyKeeps = 'https://api.kifi.com/site/keeps/all';
 var urlMyKeepsCount = 'https://api.kifi.com/site/keeps/count';
 var urlMe = 'https://api.kifi.com/site/user/me';
 var urlConnections = 'https://api.kifi.com/site/user/connections';
+var urlCollections = 'https://api.kifi.com/site/collections/all';
 
 var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
 				hideLoading();
@@ -10,6 +11,7 @@ var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPL
 					$(this).find('img.small-avatar').prependTo($(this));
 				});
 				$('#my-keeps .keep .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myAvatar + '"/>');
+				initDraggable();
 
 				// insert time sections
 				var currentDate = new Date();
@@ -34,6 +36,11 @@ var searchTemplate = Tempo.prepare("search-results").when(TempoEvent.Types.RENDE
 					$('#search-results .keep.mine .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myAvatar + '"/>');
 					$('div.search .num-results span').text($('#search-results .keep').length);
 				});
+var collectionsTemplate = Tempo.prepare("collections").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
+	$('#collections').show();
+	initDroppable();
+});
+
 var searchContext = null;
 var connections = {};
 var connectionNames = [];
@@ -47,6 +54,27 @@ $.ajaxSetup({
     },
     crossDomain: true
 });
+
+function initDraggable() {
+	$( ".draggable" ).draggable({ 
+		revert: "invalid",
+		cursorAt: { top: 15, left: 0 },
+		helper: function() {
+			return $('<div class="drag-helper">').html($(this).find('a').first().text());
+		} 
+	});	
+}
+
+function initDroppable() {
+	$( ".droppable" ).droppable({
+		greedy: true,
+		tolerance: "pointer",
+		hoverClass: "drop-hover",
+		drop: function( event, ui ) {
+				alert('dropped');
+			}
+		});
+}
 
 function daysBetween(date1, date2) {
 
@@ -120,6 +148,7 @@ function populateMyKeeps() {
 	$('.active').removeClass('active');
 	$('aside.left h3.my-keeps').addClass('active');
 	searchTemplate.clear();
+	$('input.search').val('');
 	searchContext = null;
 	$('aside.right').hide();
 	$('.search h1').show();
@@ -147,6 +176,13 @@ function populateMyKeeps() {
 	}
 }
 
+function populateCollections() {
+	$.getJSON(urlCollections,  
+			function(data) {
+				collectionsTemplate.render(data.collections);				
+			});
+}
+
 function updateNumKeeps() {
 	$.getJSON(urlMyKeepsCount, function(data) {
 		$('aside.left .my-keeps span').text(data.numKeeps);
@@ -156,9 +192,9 @@ function updateNumKeeps() {
 // auto update my keeps every minute
 setInterval(addNewKeeps, 60000);
 setInterval(updateNumKeeps, 60000);
-
+	
 $(document)
-	.on('keypress', function(e) {if (!$(e.target).is('textarea')) $('input.search').focus() }) // auto focus on search field when starting to type anywhere on the document
+	.on('keypress', function(e) {if (!$(e.target).is('textarea, input')) $('input.search').focus() }) // auto focus on search field when starting to type anywhere on the document
 	.on('scroll',function() { // infinite scroll
 		if (!isLoading() && $(document).height() - ($(window).scrollTop() + $(window).height()) < 300) //  scrolled down to less than 300px from the bottom
 		{
@@ -170,6 +206,8 @@ $(document)
 	})
 	.ready(function() {		
 		$(".fancybox").fancybox();
+		
+		populateCollections();
 		
 		// populate number of my keeps
 		updateNumKeeps();
@@ -183,7 +221,7 @@ $(document)
 			$('aside.left .large-avatar').html('<img src="' + myAvatar + '"/>\
 				<div class="name">' + data.firstName + ' ' + data.lastName + '</div>');
 		}); 
-
+		
 		// populate user connections
 		$.getJSON(urlConnections, function(data) {
 			for (i in data.connections) {
@@ -231,6 +269,10 @@ $(document)
 			.on('focus',function() {$('.active').removeClass('active'); $(this).parent().addClass('active')});
 
 
+		$('aside.left h3.new a').click(function() {
+			$('#add-collection').slideDown();
+			$('#add-collection input').focus();
+		})
 	});
 
 

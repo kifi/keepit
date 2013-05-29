@@ -18,7 +18,7 @@ h1 {font-size: 1.7em; text-align: left;}
 label { font-size: .9em; color: #628196}
 img {vertical-align: middle; border: 0px}
 a {color: #0074c5; text-decoration: none}
-select {background: #eeeeee; border: 0; -webkit-appearance: none; -moz-appearance: none; width: 110%}
+select {font-weight: bold; font-size: .8em; background: #ecf0f1; border: 0; -webkit-appearance: none; -moz-appearance: none; width: 110%}
 header { width: 1260px;  height: 48px; padding: 0px; position: relative; left: 50%; margin-left: -630px; text-align: left}
 nav {float: right}
 ol {list-style: none; padding: 0; margin: 0}
@@ -31,6 +31,7 @@ ol {list-style: none; padding: 0; margin: 0}
 .gray {color: #999a9c;}
 .dark-gray {color: #66676a}
 .green {color: #27ae60}
+.red {color: #ca5742}
 span.light {color: #628196}
 .fs9 {font-size: .8em}
 div.header-wrapper {position: fixed; z-index: 10; background: #204b69; width: 100%}
@@ -42,6 +43,7 @@ nav a.invite{background: #7a8096 url(../img/invite.png) 15px 50% no-repeat; padd
 nav a.feedback {background: #27ae60}
 
 aside.left {top: 48px; width: 200px; height: 100%;  position:fixed; padding-right: 10px;}
+aside.left input {background: #ecf0f1; border: 1px solid #204b69; color: #204b69; line-height: 2em; padding: 0 .5em; width: 90%}
 aside.right {top: 48px; width: 270px; padding: 20px; height: 100%; position: fixed; margin-left: 940px }
 section.main {width: 700px; height: 100%; float: left; margin-left: 210px; background: #ffffff; }
 aside.right textarea {width: 265px; margin-top: 10px; background: transparent}
@@ -52,7 +54,7 @@ div.custom-select {
 div.custom-select:after {
 content: url('../img/down.png');
 position: absolute;
-top: 6px;
+top: 0px;
 right: 0;
 bottom: 0;
 padding: 0 7px;
@@ -60,11 +62,15 @@ pointer-events:none;
 }
 aside.left .active a {background: #3da9f5; color: #ffffff}
 aside.left .active a span {color: #ffffff}
+aside.left h3 {font-size: .9em}
 aside.left h3 a {display: block; padding: 10px; font-size: 1em; }
-aside.left .large-avatar {position: relative; overflow: hidden; height: 130px; width: 100%;}
+aside.left h3.new a {color: #3da9f5; }
+aside.left h3.read-later a {color: #ca5742}
+aside.left h3.read-later a span {background: #ca5742; color: #fff; border-radius: 3px; padding: 2px 5px; margin-top: -2px}
+aside.left .large-avatar {position: relative; overflow: hidden; max-height: 130px; width: 100%;}
 aside.left .large-avatar img {margin-top: -20%}
 aside.left .large-avatar .name {color: #ffffff; background: #204b69; text-align: center; position: absolute; bottom: 0; width: 200px; line-height: 1.5em}
-aside.right label {display: block}
+aside.right label {display: block; margin-bottom: 5px;}
 aside.right select {padding: 5px;}
 span.right {float: right}
 input.search {z-index: 1; position: relative; font-size: 1.6em; padding: 10px 50px 10px 100px; width: 550px; border: none; background: url('../img/search.png') 15px 50% no-repeat}
@@ -96,7 +102,7 @@ div.search-wrapper:before {
 div.search-wrapper.active:before {background: #3da9f5}
 .long-text { display: block; white-space: nowrap; overflow: hidden; text-overflow:    ellipsis;}
 .small-avatar {max-width: 30px; max-height: 30px;}
-.keep {clear: left; padding: 10px; border-top: 1px solid #f9f9f9}
+.keep {clear: left; padding: 10px 10px 10px 30px; border-top: 1px solid #f9f9f9; cursor: move;}
 .keep .small-avatar {vertical-align: bottom; float: left;}
 .keep .small-avatar.me {margin-right: 3px;}
 .keep .bottom {margin-top: 5px;}
@@ -106,10 +112,13 @@ div.search {position: fixed; top: 48px; padding: 30px 20px 0px 20px; width: 660p
 
 div.search .num-results {display: none; font-size: .8em; color: #204b69; text-align: left; padding: 10px 0;}
 .search-section {color: #b6c3cc; background: #f9f9f9 url('../img/clock.png') 5px 50% no-repeat; padding: 5px 30px; }
-div.scrollable {margin-top: 100px; padding: 50px 20px; text-align: left;  width: 660px;  overflow: hidden; }
-div.scrollable ol {display: none}
+div.scrollable {margin-top: 100px; padding: 50px 20px; text-align: left;  width: 660px;   }
 div.loading {text-align: center; display: none;}
 .clearfix {clear: both}
+.template-wrapper, #add-collection {display: none}
+.draggable:hover {background: url(../img/drag-handle.png) 0px 50% no-repeat;}
+.drag-helper {background: #fff; padding: 5px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
+.drop-hover {background: #b6c3cc}
 
 
 @media all and (max-width: 1590px) {
@@ -127,6 +136,7 @@ div.loading {text-align: center; display: none;}
 	.centered, header {width: 100%}
 	.container, header {left: 0; margin-left: 0px}
 	aside.left {width: 17%}
+	aside.left .large-avatar .name, aside.left .large-avatar img {width: 100%}
 	aside.right {width: 20%; margin-left: 76%}
 	section.main {width: 54%; margin-left: 18%}
 	div.scrollable { padding: 50px 20px; width: auto; left: 0; margin-left: 0}
@@ -135,9 +145,5 @@ div.loading {text-align: center; display: none;}
 	aside.right textarea {width: 200px}
 }
 @media all and (max-width: 1024px) {
-	aside.left {width: 150px; }
-	aside.right {width: 200px;  padding: 10px;}
-	section.main {width: 580px}
-	body {overflow-x: hidden;}
 }
  
