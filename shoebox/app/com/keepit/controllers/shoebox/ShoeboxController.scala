@@ -112,6 +112,13 @@ class ShoeboxController @Inject() (
     }
     Ok(Json.toJson(sui))
   }
+  
+  def getSocialUserInfosByUserId(userId: Id[User]) = Action {
+    val sui = db.readOnly { implicit session =>
+      socialUserInfoRepo.getByUser(userId)
+    }
+    Ok(Json.toJson(sui))
+  }
 
   def sendMail = Action(parse.json) { request =>
     Json.fromJson[ElectronicMail](request.body).asOpt match {
@@ -280,10 +287,17 @@ class ShoeboxController @Inject() (
   }
 
   def hasExperiment(userId: Id[User], state: State[ExperimentType]) = Action { request =>
-     val has = db.readOnly { implicit s =>
-          userExperimentRepo.hasExperiment(userId, state)
+    val has = db.readOnly { implicit s =>
+      userExperimentRepo.hasExperiment(userId, state)
     }
     Ok(JsBoolean(has))
+  }
+  
+  def getUserExperiments(userId: Id[User]) = Action { request =>
+    val experiments = db.readOnly { implicit s =>
+      userExperimentRepo.getUserExperiments(userId).map(_.value)
+    }
+    Ok(Json.toJson(experiments))
   }
 
   def getPhrasesByPage(page: Int, size: Int) = Action { request =>

@@ -26,14 +26,14 @@ class SecureSocialAuthenticatorStore(app: Application) extends AuthenticatorStor
   lazy val global = app.global.asInstanceOf[FortyTwoGlobal]
   lazy val plugin = {
     val injector = new RichInjector(global.injector)
-    new SecureSocialAuthenticatorPlugin(
+    new ShoeboxSecureSocialAuthenticatorPlugin(
       injector.inject[Database],
       injector.inject[SocialUserInfoRepo],
       injector.inject[UserSessionRepo],
       injector.inject[HealthcheckPlugin],
       app)
   }
-  def proxy: Option[SecureSocialAuthenticatorPlugin] = {
+  def proxy: Option[ShoeboxSecureSocialAuthenticatorPlugin] = {
     if (global.initialized) Some(plugin) else None
   }
   def save(authenticator: Authenticator): Either[Error, Unit] = proxy.get.save(authenticator)
@@ -42,7 +42,7 @@ class SecureSocialAuthenticatorStore(app: Application) extends AuthenticatorStor
 }
 
 @AppScoped
-class SecureSocialAuthenticatorPlugin @Inject()(
+class ShoeboxSecureSocialAuthenticatorPlugin @Inject()(
   db: Database,
   socialUserInfoRepo: SocialUserInfoRepo,
   sessionRepo: UserSessionRepo,
@@ -129,12 +129,12 @@ class SecureSocialAuthenticatorPlugin @Inject()(
 class SecureSocialUserService(implicit val application: Application) extends UserServicePlugin(application) {
   lazy val global = application.global.asInstanceOf[FortyTwoGlobal]
 
-  def proxy: Option[SecureSocialUserPlugin] = {
+  def proxy: Option[ShoeboxSecureSocialUserPlugin] = {
     // Play will try to initialize this plugin before FortyTwoGlobal is fully initialized. This will cause
     // FortyTwoGlobal to attempt to initialize AppScope in multiple threads, causing deadlock. This allows us to wait
     // until the injector is initialized to do something if we want. When we need the plugin to be instantiated,
     // we can fail with None.get which will let us know immediately that there is a problem.
-    if (global.initialized) Some(new RichInjector(global.injector).inject[SecureSocialUserPlugin]) else None
+    if (global.initialized) Some(new RichInjector(global.injector).inject[ShoeboxSecureSocialUserPlugin]) else None
   }
   def find(id: UserId): Option[SocialUser] = proxy.get.find(id)
   def save(user: Identity): SocialUser = proxy.get.save(user)
@@ -149,7 +149,7 @@ class SecureSocialUserService(implicit val application: Application) extends Use
 }
 
 @Singleton
-class SecureSocialUserPlugin @Inject() (
+class ShoeboxSecureSocialUserPlugin @Inject() (
     db: Database,
     socialUserInfoRepo: SocialUserInfoRepo,
     userRepo: UserRepo,
