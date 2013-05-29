@@ -9,10 +9,10 @@
 $(function() {
   var $f = $(".kifi-ver-form").submit(function(e) {
     e.preventDefault();
-    $.post(this.action.replace("X", this.querySelector("input[name=ver]").value))
+    $.post(this.action.replace("X", $f.find("input[name=ver]").val()))
      .done(function() {
       $f.find("button").after($("<i class=icon-ok-sign style=margin-left:10px>").delay(1000).fadeOut(function() {
-        $(this).rmeove();
+        $(this).remove();
       }));
     });
   });
