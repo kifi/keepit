@@ -38,7 +38,7 @@ class EventListenerTest extends Specification with DbRepos {
     "parse search events" in {
       running(new DevApplication().withShoeboxServiceModule) {
         val (normUrlId, url, user, bookmark) = setup()
-        val listener = new EventListenerPlugin(inject[UserRepo], inject[NormalizedURIRepo]) {
+        val listener = new EventListener(inject[UserRepo], inject[NormalizedURIRepo]) {
           val schedulingProperties = inject[SchedulingProperties]
           def onEvent: PartialFunction[Event,Unit] = { case _ => }
         }
