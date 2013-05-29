@@ -6,7 +6,8 @@ import com.google.inject.{Inject, Singleton}
 import play.api.Play.current
 import scala.collection.concurrent.{TrieMap=>ConcurrentMap}
 import play.api.libs.json._
-import com.keepit.common.plugin.SchedulingPlugin
+import play.api.Plugin
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -39,7 +40,7 @@ class CacheStatistics {
 }
 
 // Abstraction around play2-memcached plugin
-trait FortyTwoCachePlugin extends SchedulingPlugin {
+trait FortyTwoCachePlugin extends Plugin {
   val stats: CacheStatistics
 
   private[cache] def onError(error: HealthcheckError) {}

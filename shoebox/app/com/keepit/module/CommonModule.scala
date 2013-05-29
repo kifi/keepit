@@ -7,8 +7,8 @@ import com.google.inject.Singleton
 import com.google.inject.multibindings.Multibinder
 import com.keepit.common.zookeeper._
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.actor.ActorFactory
-import com.keepit.common.actor.ActorPlugin
+import com.keepit.common.actor._
+import com.keepit.common.plugin._
 import com.keepit.common.analytics._
 import com.keepit.common.cache.MemcachedCacheModule
 import com.keepit.common.healthcheck.{HealthcheckHost, HealthcheckPluginImpl, HealthcheckPlugin, HealthcheckActor}
@@ -47,6 +47,9 @@ class CommonModule extends ScalaModule with Logging {
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
   }
 
+  @Provides
+  def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.LeaderOnly
+
   @Singleton
   @Provides
   def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
@@ -68,8 +71,11 @@ class CommonModule extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def actorPluginProvider: ActorPlugin =
-    new ActorPlugin(ActorSystem("shoebox-actor-system", Play.current.configuration.underlying, Play.current.classloader))
+  def actorPluginProvider(schedulingProperties: SchedulingProperties): ActorPlugin =
+    new ActorPlugin(ActorSystem("shoebox-actor-system",
+        Play.current.configuration.underlying,
+        Play.current.classloader),
+      schedulingProperties)
 
   @Provides
   def httpClientProvider(healthcheckPlugin: HealthcheckPlugin): HttpClient = new HttpClientImpl(healthcheckPlugin = healthcheckPlugin)
@@ -81,8 +87,8 @@ class CommonModule extends ScalaModule with Logging {
   @Provides
   @AppScoped
   def healthcheckProvider(actorFactory: ActorFactory[HealthcheckActor],
-      services: FortyTwoServices, host: HealthcheckHost): HealthcheckPlugin = {
-    new HealthcheckPluginImpl(actorFactory, services, host)
+      services: FortyTwoServices, host: HealthcheckHost, schedulingProperties: SchedulingProperties): HealthcheckPlugin = {
+    new HealthcheckPluginImpl(actorFactory, services, host, schedulingProperties)
   }
 
   @Singleton

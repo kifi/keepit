@@ -10,7 +10,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{NonOKResponseException, ClientResponse, HttpClient}
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin._
 import com.keepit.model.{UserStates, UserRepo, User}
 
 import akka.actor.ActorSystem
@@ -89,7 +89,8 @@ trait ImageDataIntegrityPlugin extends Plugin {
 
 class ImageDataIntegrityPluginImpl @Inject()(
     system: ActorSystem,
-    actorFactory: ActorFactory[ImageDataIntegrityActor]
+    actorFactory: ActorFactory[ImageDataIntegrityActor],
+    val schedulingProperties: SchedulingProperties
   ) extends SchedulingPlugin with ImageDataIntegrityPlugin {
   private lazy val actor = actorFactory.get()
 

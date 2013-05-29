@@ -25,7 +25,7 @@ import com.keepit.serializer.ThreadInfoSerializer._
 import com.keepit.common.healthcheck._
 import com.keepit.common.akka._
 import com.keepit.common.time._
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.actor.ActorFactory
 import akka.util.Timeout
 import scala.concurrent.duration._
@@ -164,7 +164,8 @@ trait UserEmailNotifierPlugin extends SchedulingPlugin {
 }
 
 class UserEmailNotifierPluginImpl @Inject() (
-  actorFactory: ActorFactory[UserEmailNotifierActor])
+    actorFactory: ActorFactory[UserEmailNotifierActor],
+    val schedulingProperties: SchedulingProperties)
   extends UserEmailNotifierPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 second)

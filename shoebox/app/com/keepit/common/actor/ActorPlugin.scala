@@ -3,7 +3,7 @@ package com.keepit.common.actor
 import akka.actor.ActorSystem
 import com.google.inject.Provider
 import play.api.Play
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin._
 import com.keepit.common.logging.Logging
 
 /**
@@ -14,7 +14,10 @@ import com.keepit.common.logging.Logging
  * Also serves as Provider[ActorSystem] so that guice can inject this actor system into
  * other services or plugins that need to use actors.
  */
-class ActorPlugin(system: ActorSystem) extends SchedulingPlugin with Provider[ActorSystem] with Logging {
+class ActorPlugin(
+    system: ActorSystem,
+    val schedulingProperties: SchedulingProperties)
+  extends SchedulingPlugin with Provider[ActorSystem] with Logging {
 
   def get: ActorSystem = system
 

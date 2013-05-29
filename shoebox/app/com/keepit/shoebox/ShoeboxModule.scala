@@ -3,6 +3,7 @@ package com.keepit.shoebox
 import com.google.common.io.Files
 import com.google.inject.{Provides, Singleton}
 import com.keepit.classify.DomainTagImportSettings
+import com.keepit.common.plugin._
 import com.keepit.common.analytics.reports._
 import com.keepit.common.crypto._
 import com.keepit.common.logging.Logging
@@ -61,9 +62,11 @@ class ShoeboxModule() extends ScalaModule with Logging {
     persistEventProvider: Provider[PersistEventPlugin],
     store: MongoEventStore,
     searchClient: SearchServiceClient,
+    schedulingProperties: SchedulingProperties,
     clock: Clock,
     fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
-    new SearchUnloadListenerImpl(db, userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, clock, fortyTwoServices)
+    new SearchUnloadListenerImpl(db, userRepo, normalizedURIRepo, persistEventProvider, store,
+        searchClient, schedulingProperties, clock, fortyTwoServices)
   }
 
   @Singleton
@@ -95,7 +98,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
       case None => new UserVoiceTokenGeneratorImpl()
     }
   }
-  
+
 
   @Singleton
   @Provides
@@ -118,7 +121,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
 
     new BrowsingHistoryTracker(filterSize, numHashFuncs, minHits, browsingHistoryRepo, db)
   }
-  
+
   @Singleton
   @Provides
   def sliderHistoryTracker(sliderHistoryRepo: SliderHistoryRepo, db: Database): SliderHistoryTracker = {
@@ -129,7 +132,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
 
     new SliderHistoryTracker(sliderHistoryRepo, db, filterSize, numHashFuncs, minHits)
   }
-  
+
   @Singleton
   @Provides
   def searchServiceClient(client: HttpClient): SearchServiceClient = {

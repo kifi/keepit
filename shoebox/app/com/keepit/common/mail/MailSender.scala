@@ -8,15 +8,18 @@ import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import play.api.Plugin
 
-trait MailSenderPlugin extends SchedulingPlugin {
+trait MailSenderPlugin extends Plugin {
   def processMail(mail: ElectronicMail)
   def processOutbox()
 }
 
-class MailSenderPluginImpl @Inject() (actorFactory: ActorFactory[MailSenderActor])
-  extends Logging with MailSenderPlugin {
+class MailSenderPluginImpl @Inject() (
+    actorFactory: ActorFactory[MailSenderActor],
+    val schedulingProperties: SchedulingProperties)
+  extends Logging with MailSenderPlugin with SchedulingPlugin {
 
   private lazy val actor = actorFactory.get()
 

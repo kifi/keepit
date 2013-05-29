@@ -13,7 +13,7 @@ import com.keepit.search.{SearchConfigExperiment}
 import akka.actor.ActorSystem
 import akka.actor.Cancellable
 import akka.actor.Props
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.analytics.MongoEventStore
 import com.keepit.search.SearchConfigExperimentRepo
 import com.keepit.common.db.slick.Database
@@ -128,7 +128,8 @@ class ReportBuilderPluginImpl @Inject() (
   searchConfigExperimentRepo: SearchConfigExperimentRepo,
   reportStore: ReportStore,
   store: MongoEventStore,
-  dailyReports: DailyReports)
+  dailyReports: DailyReports,
+  val schedulingProperties: SchedulingProperties)
     extends Logging with ReportBuilderPlugin {
 
   def buildReport(startDate: DateTime, endDate: DateTime, report: ReportRepo): Unit = actor ! BuildReport(startDate, endDate, report)
