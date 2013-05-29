@@ -13,6 +13,7 @@ import com.keepit.common.actor.ActorFactory
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import scala.concurrent.duration._
 import akka.util.Timeout
+import play.api.Plugin
 
 trait LocalPostOffice {
   def sendMail(mail: ElectronicMail)(implicit session: RWSession): ElectronicMail
@@ -60,14 +61,14 @@ class RemotePostOfficeActor @Inject() (shoeboxClient: ShoeboxServiceClient)
 }
 
 @ImplementedBy(classOf[RemotePostOfficePluginImpl])
-trait RemotePostOfficePlugin extends SchedulingPlugin {
+trait RemotePostOfficePlugin extends Plugin {
   def sendMail(mail: ElectronicMail): Unit
 }
 
 class RemotePostOfficePluginImpl @Inject() (
     actorFactory: ActorFactory[RemotePostOfficeActor],
     val schedulingProperties: SchedulingProperties)
-  extends RemotePostOfficePlugin with Logging {
+  extends RemotePostOfficePlugin with SchedulingPlugin {
   implicit val actorTimeout = Timeout(5 seconds)
   private lazy val actor = actorFactory.get()
 
