@@ -385,7 +385,7 @@ case class FakePersistEventModule() extends ScalaModule {
   override def configure(): Unit = {
     bind[PersistEventPlugin].to[FakePersistEventPluginImpl]
 
-    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
+    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListener])
 
   }
 }
