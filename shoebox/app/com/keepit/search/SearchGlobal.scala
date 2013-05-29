@@ -1,7 +1,7 @@
 package com.keepit.search
 
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.analytics.PersistEventPlugin
+import com.keepit.common.analytics.EventPersister
 import com.keepit.common.cache.FortyTwoCachePlugin
 import com.keepit.common.healthcheck._
 import com.keepit.common.mail.MailSenderPlugin

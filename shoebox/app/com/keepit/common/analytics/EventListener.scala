@@ -198,7 +198,7 @@ class SearchUnloadListenerImpl @Inject() (
   db: Database,
   userRepo: UserRepo,
   normalizedURIRepo: NormalizedURIRepo,
-  persistEventProvider: Provider[PersistEventPlugin],
+  persistEventProvider: Provider[EventPersister],
   store: MongoEventStore,
   searchClient: SearchServiceClient,
   implicit private val clock: Clock,

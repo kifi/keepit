@@ -336,7 +336,7 @@ case class ShoeboxServiceModule() extends ScalaModule {
     userExperimentRepo: UserExperimentRepo,
     clickHistoryTracker: ClickHistoryTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
-    persistEventPluginProvider: Provider[PersistEventPlugin], clock: Clock,
+    EventPersisterProvider: Provider[EventPersister], clock: Clock,
     fortyTwoServices: FortyTwoServices
   ): ShoeboxServiceClient = new FakeShoeboxServiceClientImpl(
     cacheProvider,
@@ -383,7 +383,7 @@ case class FakeHealthcheckModule() extends ScalaModule {
 
 case class FakePersistEventModule() extends ScalaModule {
   override def configure(): Unit = {
-    bind[PersistEventPlugin].to[FakePersistEventPluginImpl]
+    bind[EventPersister].to[FakeEventPersisterImpl]
 
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListenerPlugin])
 

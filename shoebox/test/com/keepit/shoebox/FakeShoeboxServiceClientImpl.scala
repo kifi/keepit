@@ -86,7 +86,7 @@ class FakeShoeboxServiceClientImpl @Inject() (
   }
 
   def persistServerSearchEvent(metaData: JsObject): Unit ={
-    //persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject])(clock, fortyTwoServices))
+    //EventPersister.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject])(clock, fortyTwoServices))
   }
 
   def getClickHistoryFilter(userId: Id[User]) = {
@@ -128,7 +128,7 @@ class FakeShoeboxServiceClientImpl @Inject() (
       }
     Promise.successful(uris).future
   }
-  
+
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]] = ???
   def getPersonalSearchInfo(userId: Id[User], resultSet: com.keepit.search.ArticleSearchResult): Future[(Map[Id[User], BasicUser], Seq[PersonalSearchHit])] = ???
 
