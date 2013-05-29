@@ -62,11 +62,10 @@ class ShoeboxModule() extends ScalaModule with Logging {
     persistEventProvider: Provider[PersistEventPlugin],
     store: MongoEventStore,
     searchClient: SearchServiceClient,
-    schedulingProperties: SchedulingProperties,
     clock: Clock,
     fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
     new SearchUnloadListenerImpl(db, userRepo, normalizedURIRepo, persistEventProvider, store,
-        searchClient, schedulingProperties, clock, fortyTwoServices)
+        searchClient, clock, fortyTwoServices)
   }
 
   @Singleton
