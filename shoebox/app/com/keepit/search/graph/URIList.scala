@@ -88,7 +88,6 @@ object URIList {
   }
 
   private def toByteArrayFromSorted(sortedBookmarks: Seq[Bookmark]): Array[Byte] = {
-    sortedBookmarks.foreach{ b => println("B>>>" + b.uriId) }
     val size = sortedBookmarks.size
     val baos = new ByteArrayOutputStream(size * 4)
     val out = new OutputStreamDataOutput(baos)

@@ -1,11 +1,14 @@
 package com.keepit.common.analytics
 
-import play.api.libs.json.{ JsArray, JsBoolean, JsNumber, JsObject, JsString }
-import com.keepit.serializer.EventSerializer
+import play.api.libs.json.{ Json, JsArray, JsBoolean, JsNumber, JsObject, JsString }
+import akka.actor.ActorSystem
+import akka.actor.Props
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
 import java.util.{ Set => JSet }
-import com.google.inject.{ Inject, Singleton }
+import com.google.inject.{ Inject, Singleton, Provider }
+
+import com.keepit.serializer.EventSerializer
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.common.db._
@@ -15,7 +18,6 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.net.Host
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
@@ -23,11 +25,6 @@ import com.keepit.model._
 import com.keepit.search.{ SearchServiceClient, ArticleSearchResultRef }
 import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.common.akka.FortyTwoActor
-import akka.actor.ActorSystem
-import akka.actor.Props
-import play.api.libs.json.JsObject
-import play.api.libs.json.Json
-import com.google.inject.Provider
 import com.keepit.serializer.SearchResultInfoSerializer
 import com.keepit.search.TrainingDataLabeler
 import com.keepit.search.SearchStatisticsExtractorFactory
@@ -35,10 +32,10 @@ import com.keepit.search.UriLabel
 import com.keepit.serializer.SearchStatisticsSerializer
 import com.keepit.shoebox.BrowsingHistoryTracker
 
-abstract class EventListenerPlugin(
-  userRepo: UserRepo,
-  normalizedURIRepo: NormalizedURIRepo)
-  extends SchedulingPlugin with Logging {
+abstract class EventListener(
+    userRepo: UserRepo,
+    normalizedURIRepo: NormalizedURIRepo)
+  extends Logging {
 
   def onEvent: PartialFunction[Event, Unit]
 
@@ -98,7 +95,7 @@ object SearchEventName {
 @Singleton
 class EventHelper @Inject() (
   actorFactory: ActorFactory[EventHelperActor],
-  listeners: JSet[EventListenerPlugin]) {
+  listeners: JSet[EventListener]) {
   private lazy val actor = actorFactory.get()
 
   def newEvent(event: Event): Unit = actor ! event
@@ -109,7 +106,7 @@ class EventHelper @Inject() (
 
 class EventHelperActor @Inject() (
   healthcheckPlugin: HealthcheckPlugin,
-  listeners: JSet[EventListenerPlugin],
+  listeners: JSet[EventListener],
   eventStream: EventStream)
   extends FortyTwoActor(healthcheckPlugin) {
 
@@ -128,9 +125,8 @@ class ResultClickedListener @Inject() (
   searchServiceClient: SearchServiceClient,
   db: Database,
   bookmarkRepo: BookmarkRepo,
-  val schedulingProperties: SchedulingProperties,
   clickHistoryTracker: ClickHistoryTracker)
-  extends EventListenerPlugin(userRepo, normalizedURIRepo) {
+  extends EventListener(userRepo, normalizedURIRepo) {
 
   import SearchEventName._
 
@@ -156,9 +152,8 @@ class UsefulPageListener @Inject() (
   userRepo: UserRepo,
   normalizedURIRepo: NormalizedURIRepo,
   db: Database,
-  browsingHistoryTracker: BrowsingHistoryTracker,
-  val schedulingProperties: SchedulingProperties)
-  extends EventListenerPlugin(userRepo, normalizedURIRepo) {
+  browsingHistoryTracker: BrowsingHistoryTracker)
+  extends EventListener(userRepo, normalizedURIRepo) {
 
   def onEvent: PartialFunction[Event, Unit] = {
     case Event(_, UserEventMetadata(EventFamilies.SLIDER, "usefulPage", externalUser, _, experiments, metaData, _), _, _) =>
@@ -177,9 +172,8 @@ class SliderShownListener @Inject() (
   userRepo: UserRepo,
   normalizedURIRepo: NormalizedURIRepo,
   db: Database,
-  sliderHistoryTracker: SliderHistoryTracker,
-  val schedulingProperties: SchedulingProperties)
-  extends EventListenerPlugin(userRepo, normalizedURIRepo) {
+  sliderHistoryTracker: SliderHistoryTracker)
+  extends EventListener(userRepo, normalizedURIRepo) {
 
   def onEvent: PartialFunction[Event, Unit] = {
     case Event(_, UserEventMetadata(EventFamilies.SLIDER, "sliderShown", externalUser, _, experiments, metaData, _), _, _) =>
@@ -196,7 +190,7 @@ class SliderShownListener @Inject() (
 }
 
 abstract class SearchUnloadListener(userRepo: UserRepo, normalizedURIRepo: NormalizedURIRepo)
-  extends EventListenerPlugin(userRepo, normalizedURIRepo)
+  extends EventListener(userRepo, normalizedURIRepo)
 
 @Singleton
 class SearchUnloadListenerImpl @Inject() (
@@ -206,7 +200,6 @@ class SearchUnloadListenerImpl @Inject() (
   persistEventProvider: Provider[PersistEventPlugin],
   store: MongoEventStore,
   searchClient: SearchServiceClient,
-  val schedulingProperties: SchedulingProperties,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
   extends SearchUnloadListener(userRepo, normalizedURIRepo) with Logging {
@@ -254,8 +247,7 @@ class SearchUnloadListenerImpl @Inject() (
 
 class FakeSearchUnloadListenerImpl @Inject() (
     userRepo: UserRepo,
-    normalizedURIRepo: NormalizedURIRepo,
-    val schedulingProperties: SchedulingProperties)
+    normalizedURIRepo: NormalizedURIRepo)
   extends SearchUnloadListener(userRepo, normalizedURIRepo) {
 
   def onEvent: PartialFunction[Event, Unit] = {

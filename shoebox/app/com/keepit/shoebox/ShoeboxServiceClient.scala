@@ -3,6 +3,7 @@ package com.keepit.shoebox
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Promise
 import scala.concurrent.{Future, promise}
+import scala.concurrent.duration._
 import com.google.inject.Inject
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
@@ -27,6 +28,7 @@ import com.keepit.search.ActiveExperimentsCache
 import com.keepit.search.ActiveExperimentsKey
 import com.keepit.common.db.ExternalId
 import com.keepit.search.ArticleSearchResultFactory
+import com.keepit.common.service.RequestConsolidator
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -75,6 +77,11 @@ class ShoeboxServiceClientImpl @Inject() (
   override val httpClient: HttpClient,
   cacheProvider: ShoeboxCacheProvider)
     extends ShoeboxServiceClient {
+
+  // request consolidation
+  private[this] val consolidateConnectedUsersReq = new RequestConsolidator[UserConnectionKey, Set[Id[User]]](ttl = 3 seconds)
+  private[this] val consolidateClickHistoryReq = new RequestConsolidator[ClickHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
+  private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[BrowsingHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
 
   def getUserOpt(id: ExternalId[User]): Future[Option[User]] = {
     cacheProvider.userExternalIdCache.get(UserExternalIdKey(id)) match {
@@ -160,8 +167,8 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]] = {
-    cacheProvider.userConnCache.get(UserConnectionKey(userId)) match {
+  def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]] = consolidateConnectedUsersReq(UserConnectionKey(userId)) { key =>
+    cacheProvider.userConnCache.get(key) match {
       case Some(conns) => Promise.successful(conns).future
       case None =>
         call(routes.ShoeboxController.getConnectedUsers(userId)).map {r =>
@@ -198,15 +205,15 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getClickHistoryFilter(userId: Id[User]): Future[Array[Byte]] = {
-    cacheProvider.clickHistoryCache.get(ClickHistoryUserIdKey(userId)) match {
+  def getClickHistoryFilter(userId: Id[User]): Future[Array[Byte]] = consolidateClickHistoryReq(ClickHistoryUserIdKey(userId)) { key =>
+    cacheProvider.clickHistoryCache.get(key) match {
       case Some(clickHistory) => Promise.successful(clickHistory.filter).future
       case None => call(routes.ShoeboxController.getClickHistoryFilter(userId)).map(_.body.getBytes)
     }
   }
 
-  def getBrowsingHistoryFilter(userId: Id[User]): Future[Array[Byte]] = {
-    cacheProvider.browsingHistoryCache.get(BrowsingHistoryUserIdKey(userId)) match {
+  def getBrowsingHistoryFilter(userId: Id[User]): Future[Array[Byte]] = consolidateBrowsingHistoryReq(BrowsingHistoryUserIdKey(userId)) { key =>
+    cacheProvider.browsingHistoryCache.get(key) match {
       case Some(browsingHistory) => Promise.successful(browsingHistory.filter).future
       case None => call(routes.ShoeboxController.getBrowsingHistoryFilter(userId)).map(_.body.getBytes)
     }

@@ -87,11 +87,10 @@ class ShoeboxDevModule extends ScalaModule with Logging {
     store: MongoEventStore,
     searchClient: SearchServiceClient,
     clock: Clock,
-    fortyTwoServices: FortyTwoServices,
-    schedulingProperties: SchedulingProperties): SearchUnloadListener = {
+    fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
     current.configuration.getBoolean("event-listener.searchUnload").getOrElse(false) match {
-      case true =>  new SearchUnloadListenerImpl(db,userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, schedulingProperties, clock, fortyTwoServices)
-      case false => new FakeSearchUnloadListenerImpl(userRepo, normalizedURIRepo, schedulingProperties)
+      case true =>  new SearchUnloadListenerImpl(db,userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, clock, fortyTwoServices)
+      case false => new FakeSearchUnloadListenerImpl(userRepo, normalizedURIRepo)
     }
   }
 

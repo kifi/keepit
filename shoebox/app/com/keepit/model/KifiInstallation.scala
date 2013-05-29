@@ -71,15 +71,17 @@ case class KifiInstallation (
   userAgent: UserAgent,
   state: State[KifiInstallation] = KifiInstallationStates.ACTIVE
 ) extends ModelWithExternalId[KifiInstallation] {
-  def withId(id: Id[KifiInstallation]) = this.copy(id = Some(id))
-  def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
-  def withVersion(version: KifiVersion) = copy(version = version)
-  def withUserAgent(userAgent: UserAgent) = copy(userAgent = userAgent)
+  def withId(id: Id[KifiInstallation]): KifiInstallation = copy(id = Some(id))
+  def withUpdateTime(time: DateTime): KifiInstallation = copy(updatedAt = time)
+  def withVersion(version: KifiVersion): KifiInstallation = copy(version = version)
+  def withUserAgent(userAgent: UserAgent): KifiInstallation = copy(userAgent = userAgent)
+  def withState(state: State[KifiInstallation]): KifiInstallation = copy(state = state)
+  def isActive: Boolean = state == KifiInstallationStates.ACTIVE
 }
 
 @ImplementedBy(classOf[KifiInstallationRepoImpl])
 trait KifiInstallationRepo extends Repo[KifiInstallation] with ExternalIdColumnFunction[KifiInstallation] {
-  def all(userId: Id[User])(implicit session: RSession): Seq[KifiInstallation]
+  def all(userId: Id[User], excludeState: Option[State[KifiInstallation]] = Some(KifiInstallationStates.INACTIVE))(implicit session: RSession): Seq[KifiInstallation]
   def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit session: RSession): Option[KifiInstallation]
 }
 
@@ -97,8 +99,8 @@ class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: 
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ externalId ~ version ~ userAgent ~ state <> (KifiInstallation, KifiInstallation.unapply _)
   }
 
-  def all(userId: Id[User])(implicit session: RSession): Seq[KifiInstallation] =
-    (for(k <- table if k.userId === userId) yield k).list
+  def all(userId: Id[User], excludeState: Option[State[KifiInstallation]] = Some(KifiInstallationStates.INACTIVE))(implicit session: RSession): Seq[KifiInstallation] =
+    (for(k <- table if k.userId === userId && k.state =!= excludeState.orNull) yield k).list
 
   def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit session: RSession): Option[KifiInstallation] =
     (for(k <- table if k.userId === userId && k.externalId === externalId) yield k).firstOption

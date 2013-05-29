@@ -58,8 +58,8 @@ class ExtAuthController @Inject() (
       } match {
         case None =>
           installationRepo.save(KifiInstallation(userId = userId, userAgent = userAgent, version = version))
-        case Some(install) if install.version != version || install.userAgent != userAgent =>
-          installationRepo.save(install.withUserAgent(userAgent).withVersion(version))
+        case Some(install) if install.version != version || install.userAgent != userAgent || !install.isActive =>
+          installationRepo.save(install.withUserAgent(userAgent).withVersion(version).withState(KifiInstallationStates.ACTIVE))
         case Some(install) =>
           install
       }

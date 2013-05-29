@@ -1,19 +1,13 @@
 package com.keepit.search.graph
 
-import com.keepit.scraper.FakeArticleStore
-import com.keepit.search.{Article, ArticleStore, Lang}
 import com.keepit.search.index.{Searcher, WrappedIndexReader, WrappedSubReader}
-import com.keepit.search.query.SiteQuery
-import com.keepit.search.query.ConditionalQuery
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.db._
-import com.keepit.common.time._
+import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.test._
-import com.keepit.inject._
 import org.specs2.mutable._
 import play.api.Play.current
-import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
 import org.apache.lucene.index.Term
@@ -22,96 +16,9 @@ import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
-import org.apache.lucene.search.BooleanQuery
 import scala.collection.JavaConversions._
-import org.apache.lucene.search.IndexSearcher
-import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.util.Version
-import com.keepit.search.index.{ArticleIndexer, DefaultAnalyzer}
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.net.HttpClient
-import com.keepit.common.net.FakeHttpClient
-import play.api.libs.json.JsArray
 
-class CollectionIndexerTest extends Specification with DbRepos {
-
-  private def setupDB = {
-    db.readWrite { implicit s =>
-      val users = List(
-            userRepo.save(User(firstName = "Agrajag", lastName = "")),
-            userRepo.save(User(firstName = "Barmen", lastName = "")),
-            userRepo.save(User(firstName = "Colin", lastName = "")),
-            userRepo.save(User(firstName = "Dan", lastName = "")),
-            userRepo.save(User(firstName = "Eccentrica", lastName = "")),
-            userRepo.save(User(firstName = "Hactar", lastName = "")))
-      val uris = List(
-            uriRepo.save(NormalizedURIFactory(title = "a1", url = "http://www.keepit.com/article1", state = SCRAPED)),
-            uriRepo.save(NormalizedURIFactory(title = "a2", url = "http://www.keepit.com/article2", state = SCRAPED)),
-            uriRepo.save(NormalizedURIFactory(title = "a3", url = "http://www.keepit.org/article3", state = SCRAPED)),
-            uriRepo.save(NormalizedURIFactory(title = "a4", url = "http://www.findit.com/article4", state = SCRAPED)),
-            uriRepo.save(NormalizedURIFactory(title = "a5", url = "http://www.findit.com/article5", state = SCRAPED)),
-            uriRepo.save(NormalizedURIFactory(title = "a6", url = "http://www.findit.org/article6", state = SCRAPED)))
-      (users, uris)
-    }
-  }
-
-  private def setupArticleStore(uris: Seq[NormalizedURI]) = {
-    uris.zipWithIndex.foldLeft(new FakeArticleStore){ case (store, (uri, idx)) =>
-      store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "content%d alldocs".format(idx)))
-      store
-    }
-  }
-
-  private def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String) = {
-    Article(
-        id = normalizedUriId,
-        title = title,
-        description = None,
-        media = None,
-        content = content,
-        scrapedAt = currentDateTime,
-        httpContentType = Some("text/html"),
-        httpOriginalContentCharset = Option("UTF-8"),
-        state = SCRAPED,
-        message = None,
-        titleLang = Some(Lang("en")),
-        contentLang = Some(Lang("en")))
-  }
-
-  private def mkBookmarks(expectedUriToUserEdges: Seq[(NormalizedURI, List[User])], mixPrivate: Boolean = false): Seq[Bookmark] = {
-    db.readWrite { implicit s =>
-      expectedUriToUserEdges.flatMap{ case (uri, users) =>
-        users.map { user =>
-          val url1 = urlRepo.get(uri.url).getOrElse( urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-          bookmarkRepo.save(BookmarkFactory(
-            uri = uri,
-            userId = user.id.get,
-            title = uri.title,
-            url = url1,
-            source = BookmarkSource("test"),
-            isPrivate = mixPrivate && ((uri.id.get.id + user.id.get.id) % 2 == 0),
-            kifiInstallation = None))
-        }
-      }
-    }
-  }
-
-  private def mkCollection(user: User, name: String): Collection = {
-    db.readWrite { implicit s => collectionRepo.save(Collection(userId = user.id.get, name = name)) }
-  }
-
-  private def addBookmarks(collection: Collection, bookmarks: Seq[Bookmark]): Collection = {
-    db.readWrite { implicit s =>
-      bookmarks.map { bookmark =>
-        keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark.id.get, collectionId = collection.id.get))
-      }
-      collectionRepo.get(collection.id.get)
-    }
-  }
-
-  private def mkCollectionIndexer(collectionDir: RAMDirectory = new RAMDirectory): CollectionIndexer = {
-    new CollectionIndexer(collectionDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[ShoeboxServiceClient])
-  }
+class CollectionIndexerTest extends Specification with GraphTestHelper {
 
   "CollectionIndexer" should {
     "maintain a sequence number on collections " in {
