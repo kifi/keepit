@@ -15,7 +15,7 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.net.Host
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
@@ -128,6 +128,7 @@ class ResultClickedListener @Inject() (
   searchServiceClient: SearchServiceClient,
   db: Database,
   bookmarkRepo: BookmarkRepo,
+  val schedulingProperties: SchedulingProperties,
   clickHistoryTracker: ClickHistoryTracker)
   extends EventListenerPlugin(userRepo, normalizedURIRepo) {
 
@@ -155,7 +156,8 @@ class UsefulPageListener @Inject() (
   userRepo: UserRepo,
   normalizedURIRepo: NormalizedURIRepo,
   db: Database,
-  browsingHistoryTracker: BrowsingHistoryTracker)
+  browsingHistoryTracker: BrowsingHistoryTracker,
+  val schedulingProperties: SchedulingProperties)
   extends EventListenerPlugin(userRepo, normalizedURIRepo) {
 
   def onEvent: PartialFunction[Event, Unit] = {
@@ -175,7 +177,8 @@ class SliderShownListener @Inject() (
   userRepo: UserRepo,
   normalizedURIRepo: NormalizedURIRepo,
   db: Database,
-  sliderHistoryTracker: SliderHistoryTracker)
+  sliderHistoryTracker: SliderHistoryTracker,
+  val schedulingProperties: SchedulingProperties)
   extends EventListenerPlugin(userRepo, normalizedURIRepo) {
 
   def onEvent: PartialFunction[Event, Unit] = {
@@ -192,7 +195,8 @@ class SliderShownListener @Inject() (
   }
 }
 
-abstract class SearchUnloadListener(userRepo: UserRepo, normalizedURIRepo: NormalizedURIRepo) extends EventListenerPlugin(userRepo, normalizedURIRepo)
+abstract class SearchUnloadListener(userRepo: UserRepo, normalizedURIRepo: NormalizedURIRepo)
+  extends EventListenerPlugin(userRepo, normalizedURIRepo)
 
 @Singleton
 class SearchUnloadListenerImpl @Inject() (
@@ -202,6 +206,7 @@ class SearchUnloadListenerImpl @Inject() (
   persistEventProvider: Provider[PersistEventPlugin],
   store: MongoEventStore,
   searchClient: SearchServiceClient,
+  val schedulingProperties: SchedulingProperties,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
   extends SearchUnloadListener(userRepo, normalizedURIRepo) with Logging {
@@ -247,10 +252,13 @@ class SearchUnloadListenerImpl @Inject() (
   }
 }
 
-class FakeSearchUnloadListenerImpl @Inject() (userRepo: UserRepo, normalizedURIRepo: NormalizedURIRepo) extends SearchUnloadListener(userRepo, normalizedURIRepo) {
+class FakeSearchUnloadListenerImpl @Inject() (
+    userRepo: UserRepo,
+    normalizedURIRepo: NormalizedURIRepo,
+    val schedulingProperties: SchedulingProperties)
+  extends SearchUnloadListener(userRepo, normalizedURIRepo) {
+
   def onEvent: PartialFunction[Event, Unit] = {
     case event @ Event(_, UserEventMetadata(EventFamilies.SEARCH, "searchUnload", _, _, _, metaData, _), _, _) =>
-
   }
 }
-
