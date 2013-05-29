@@ -234,10 +234,8 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Provides
   @AppScoped
-  def actorPluginProvider(schedulingProperties: SchedulingProperties): ActorPlugin =
-    new ActorPlugin(
-        ActorSystem("shoebox-test-actor-system", Play.current.configuration.underlying, Play.current.classloader),
-        schedulingProperties)
+  def actorPluginProvider: ActorPlugin =
+    new ActorPlugin(ActorSystem("shoebox-test-actor-system", Play.current.configuration.underlying, Play.current.classloader))
 
   @Provides
   @Singleton
