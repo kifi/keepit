@@ -63,6 +63,14 @@ api = function() {
     }
   });
 
+  var updateCheckRequested;
+  chrome.runtime.onUpdateAvailable.addListener(function(details) {
+    api.log("#666", "[onUpdateAvailable]", details.version);
+    if (updateCheckRequested) {
+      chrome.runtime.reload();
+    }
+  });
+
   chrome.tabs.onCreated.addListener(function(tab) {
     api.log("#666", "[tabs.onCreated]", tab.id, tab.url);
   });
@@ -473,6 +481,12 @@ api = function() {
         xhr.setRequestHeader("Content-Type", "application/json; charset=utf-8");
       }
       xhr.send(data);
+    },
+    requestUpdateCheck: function() {
+      chrome.runtime.requestUpdateCheck(function(status) {
+        api.log("[requestUpdateCheck]", status);
+      });
+      updateCheckRequested = true;
     },
     socket: {
       open: function(url, handlers, onConnect) {
