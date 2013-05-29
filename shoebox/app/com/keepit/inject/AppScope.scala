@@ -9,7 +9,7 @@ import com.keepit.common.db.ExternalId
 import play.api.Application
 import play.api.Plugin
 import play.utils.Threads
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.plugin.SchedulingPlugin
 
 class AppScope extends Scope with Logging {
 
