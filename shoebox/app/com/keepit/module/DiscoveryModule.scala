@@ -19,16 +19,10 @@ class DiscoveryModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def serviceDiscovery(services: FortyTwoServices, mode: Mode): ServiceDiscovery = mode match {
-      case Mode.Prod =>
-        val zk = new ZooKeeperClientImpl("b01", 2000, Path("/kifi/discovery"),
-          Some({client => log.warn(s"ZK Client restarted $client")}))
-        new ServiceDiscoveryImpl(zk, services)
-      case _ =>
+  def serviceDiscovery(services: FortyTwoServices, mode: Mode): ServiceDiscovery =
         new ServiceDiscovery {
           def register() = Node("me")
           def isLeader() = true
         }
-    }
 
 }
