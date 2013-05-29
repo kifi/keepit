@@ -271,8 +271,8 @@ class DevCommonModule extends ScalaModule with Logging {
 
   @Provides
   @AppScoped
-  def actorPluginProvider(schedulingProperties: SchedulingProperties): ActorPlugin =
-    new ActorPlugin(ActorSystem("shoebox-dev-actor-system", Play.current.configuration.underlying, Play.current.classloader), schedulingProperties)
+  def actorPluginProvider: ActorPlugin =
+    new ActorPlugin(ActorSystem("shoebox-dev-actor-system", Play.current.configuration.underlying, Play.current.classloader))
 }
 
 class DevModule extends ScalaModule with Logging {

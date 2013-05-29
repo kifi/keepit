@@ -7,7 +7,6 @@ import play.api.Play.current
 import scala.collection.concurrent.{TrieMap=>ConcurrentMap}
 import play.api.libs.json._
 import play.api.Plugin
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
 import java.util.concurrent.atomic.AtomicInteger
 
