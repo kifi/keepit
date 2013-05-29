@@ -108,7 +108,7 @@ class ShoeboxServiceClientImpl @Inject() (
   def getSocialUserInfosByUserId(userId: Id[User]): Future[List[SocialUserInfo]] = {
     cacheProvider.socialUserCache.get(SocialUserInfoUserKey(userId)) match {
       case Some(sui) => Promise.successful(sui).future
-      case None => call(routes.ShoeboxController.getSocialUserInfoByNetworkAndSocialId(id.id, networkType.name)) map { resp =>
+      case None => call(routes.ShoeboxController.getSocialUserInfosByUserId(userId)) map { resp =>
         Json.fromJson[List[SocialUserInfo]](resp.json).get
       }
     }
@@ -297,7 +297,7 @@ class ShoeboxServiceClientImpl @Inject() (
   def getUserExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]] = {
     cacheProvider.userExperimentCache.get(UserExperimentUserIdKey(userId)) match {
       case Some(states) => Promise.successful(states).future
-      case None => call(routes.ShoeboxController.hasExperiment(userId, state)).map { r =>
+      case None => call(routes.ShoeboxController.getUserExperiments(userId)).map { r =>
         r.json.as[Set[String]].map(State[ExperimentType](_)).toSeq
       }
     }
