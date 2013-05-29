@@ -314,6 +314,9 @@ div.kifi-pane-empty.kifi-hidden {
 }
 div.kifi-pane-empty img {
   margin-bottom: 18px;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 .kifi-pane-tall-bottom {
   position: absolute;
