@@ -1,6 +1,6 @@
 @(domain: Option[String], tags: Seq[(String, Option[Boolean])])
 
-@admin("Classifications", stylesheets = List("admin_slider")) {
+@admin("Domain Classifications", stylesheets = List("admin_slider")) {
   <form action="" method="get">
     <div><label>Domain: <input type="text" name="domain" value="@domain.getOrElse("")"></label></div>
     <div><input type="submit" class="btn" value="Look up classifications"></div>

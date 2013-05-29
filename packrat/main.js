@@ -124,6 +124,12 @@ const socketHandlers = {
     session = null;
     clearDataCache();
   },
+  version: function(v) {
+    api.log("[socket:version]", v);
+    if (api.version != v) {
+      api.requestUpdateCheck();
+    }
+  },
   experiments: function(exp) {
     api.log("[socket:experiments]", exp);
     session.experiments = exp;
