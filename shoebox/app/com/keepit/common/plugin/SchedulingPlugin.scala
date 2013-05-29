@@ -26,19 +26,16 @@ trait SchedulingPlugin extends Plugin with Logging {
   private var _cancellables: Seq[Cancellable] = Seq()
 
   private def sendMessage(receiver: ActorRef, message: Any): Unit = if (schedulingProperties.allowSchecualing) {
-    log.info(s"sending a scheduled message $message to actor")
+    log.info(s"sending a scheduled message $message to actor $receiver")
     receiver ! message
   }
 
-  def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration,
-      frequency: FiniteDuration, receiver: ActorRef, message: Any) {
-    if (schedulingProperties.neverAllowSchecualing) return //don't even schedule in this case
-    _cancellables :+= ( system.scheduler.schedule(initialDelay, frequency) { sendMessage(receiver, message) } )
-  }
+  def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any) =
+    if (!schedulingProperties.neverAllowSchecualing) {
+      _cancellables :+= ( system.scheduler.schedule(initialDelay, frequency) { sendMessage(receiver, message) } )
+    }
 
-  def cancelTasks() {
-    _cancellables.map(_.cancel)
-  }
+  def cancelTasks() = _cancellables.map(_.cancel)
 
   override def onStop() {
     cancelTasks()
