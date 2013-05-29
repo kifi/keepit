@@ -19,7 +19,7 @@ class UserConnectionCreatorTest extends Specification {
 
   "UserConnectionCreator" should {
     "create connections between friends" in {
-      running(new EmptyApplication().withFakeStore) {
+      running(new EmptyApplication()) {
 
         /*
          * grab json
@@ -65,7 +65,7 @@ class UserConnectionCreatorTest extends Specification {
     }
 
     "disable non existing connections" in {
-      running(new EmptyApplication().withFakeStore) {
+      running(new EmptyApplication()) {
 
         val json1 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay_min.json")).mkString)
 

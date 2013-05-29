@@ -29,7 +29,7 @@ class CommentControllerTest extends TestKit(ActorSystem()) with Specification wi
   "CommentController" should {
 
     "follow and unfollow" in {
-      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeMail().withFakeStore()) {
+      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeMail()) {
         val now = new DateTime(2012, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         val today = now.toDateTime
         inject[FakeClock].push(today)

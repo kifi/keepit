@@ -59,25 +59,16 @@ private[analytics] class PersistEventActor @Inject() (
   }
 }
 
-trait PersistEventPlugin extends SchedulingPlugin {
+trait EventPersister {
   def persist(event: Event): Unit
   def persist(events: Seq[Event]): Unit
 }
 
-class PersistEventPluginImpl @Inject() (
-    actorFactory: ActorFactory[PersistEventActor],
-    val schedulingProperties: SchedulingProperties)
-  extends PersistEventPlugin with Logging {
+class EventPersisterImpl @Inject() (
+    actorFactory: ActorFactory[PersistEventActor])
+  extends EventPersister with Logging {
 
   private lazy val actor = actorFactory.get()
-
-  override def enabled: Boolean = true
-  override def onStart() {
-    log.info("starting PersistEventImpl")
-  }
-  override def onStop() {
-    log.info("stopping PersistEventImpl")
-  }
 
   def persist(event: Event): Unit = actor ! Persist(event, currentDateTime)
   def persist(events: Seq[Event]): Unit = actor ! PersistMany(events, currentDateTime)
