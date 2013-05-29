@@ -38,6 +38,7 @@ exports.addToWindow = function(win, click) {
 
   let iconEl = xpcomWin.document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", "image");
   iconEl.setAttribute("id", ICON_ID);
+  iconEl.setAttribute("height", 19);
   iconEl.setAttribute("class", "urlbar-icon");
   iconEl.setAttribute("collapsed", true);
   iconEl.addEventListener("click", clickListener);
