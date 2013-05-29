@@ -148,7 +148,7 @@ var snapshot = {
       updateSelection(cX = e.clientX, cY = e.clientY, e.pageX - e.clientX, e.pageY - e.clientY);
     });
     render("html/comments/snapshot_bar.html", {"type": composeTypeName}, function(html) {
-      api.require("scripts/lib/jquery-ui-1.9.1.custom.min.js", function() {  // for draggable
+      api.require("scripts/lib/jquery-ui-draggable.min.js", function() {  // for draggable
         $(html).appendTo("body")
           .draggable({cursor: "move", distance: 10, handle: ".kifi-snapshot-bar", scroll: false})
           .on("click", ".kifi-snapshot-cancel", exitSnapshotMode)

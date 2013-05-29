@@ -1,8 +1,8 @@
 // @require styles/metro/slider2.css
 // @require styles/friend_card.css
-// @require scripts/lib/jquery-1.8.2.min.js
+// @require scripts/lib/jquery.js
 // @require scripts/lib/jquery-bindhover.js
-// @require scripts/lib/mustache-0.7.1.min.js
+// @require scripts/lib/mustache.js
 // @require scripts/render.js
 
 $.fn.layout = function() {
@@ -14,7 +14,7 @@ $.fn.scrollToBottom = function() {
     if (cH < sH) {
       var sT = this.scrollTop, d = sH - sT - cH;
       if (d > 0) {
-        $(this).animate({scrollTop: "+=" + d}, 40 * Math.log(d));
+        $(this).animate({scrollTop: sT + d}, 40 * Math.log(d));
       }
     }
   });
@@ -299,7 +299,7 @@ slider2 = function() {
     clearTimeout(data.dragTimer);
     delete data.dragTimer;
     data.dragStarting = true;
-    api.require("scripts/lib/jquery-ui-1.9.1.custom.min.js", function() {
+    api.require("scripts/lib/jquery-ui-draggable.min.js", function() {
       if (data.dragStarting) {
         delete data.dragStarting;
         api.log("[startDrag] installing draggable");

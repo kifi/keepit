@@ -22,7 +22,7 @@ class SlickTest extends Specification {
   "Slick" should {
 
     "using driver abstraction" in {
-      running(new ShoeboxApplication().withFakePersistEvent.withShoeboxServiceModule) {
+      running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
 
         case class Bar(
           id: Option[Id[Bar]] = None,
@@ -82,7 +82,7 @@ class SlickTest extends Specification {
 
     "rollback transaction" in {
 
-      running(new ShoeboxApplication().withFakePersistEvent.withShoeboxServiceModule) {
+      running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
         val db = inject[Database]
         import db.db.Driver.Implicit._ // here's the driver, abstracted away
         import db.db.Driver.Table
@@ -149,7 +149,7 @@ class SlickTest extends Specification {
 
     "re-try MySQLIntegrityConstraintViolationException failed transactions" in {
 
-      running(new ShoeboxApplication().withFakePersistEvent.withShoeboxServiceModule) {
+      running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
         val db = inject[Database]
         import db.db.Driver.Implicit._ // here's the driver, abstracted away
 
@@ -182,7 +182,7 @@ class SlickTest extends Specification {
     }
 
     "using external id" in {
-      running(new ShoeboxApplication().withFakePersistEvent.withShoeboxServiceModule) {
+      running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
 
         case class Bar(
           id: Option[Id[Bar]] = None,

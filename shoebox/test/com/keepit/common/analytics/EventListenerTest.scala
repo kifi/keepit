@@ -1,5 +1,6 @@
 package com.keepit.common.analytics
 
+import com.keepit.common.plugin._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.time._
 import org.specs2.mutable._
@@ -38,7 +39,8 @@ class EventListenerTest extends Specification with DbRepos {
       running(new DevApplication().withShoeboxServiceModule) {
         val (normUrlId, url, user, bookmark) = setup()
         val listener = new EventListenerPlugin(inject[UserRepo], inject[NormalizedURIRepo]) {
-         def onEvent: PartialFunction[Event,Unit] = { case _ => }
+          val schedulingProperties = inject[SchedulingProperties]
+          def onEvent: PartialFunction[Event,Unit] = { case _ => }
         }
         val (user2, result) = db.readWrite {implicit s =>
           listener.searchParser(user.externalId,

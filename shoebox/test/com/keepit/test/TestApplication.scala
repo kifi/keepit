@@ -1,15 +1,5 @@
 package com.keepit.test
 
-import scala.collection.mutable.{Stack => MutableStack}
-import scala.concurrent._
-import scala.slick.session.{Database => SlickDatabase}
-import scala.collection.mutable
-import org.joda.time.{ReadablePeriod, DateTime}
-import com.google.inject.Module
-import com.google.inject.Provides
-import com.google.inject.Singleton
-import com.google.inject.multibindings.Multibinder
-import com.google.inject.util.Modules
 import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
 import com.keepit.common.analytics._
 import com.keepit.common.cache.{HashMapMemoryCache, FortyTwoCachePlugin}
@@ -18,6 +8,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
+import com.keepit.common.plugin._
 import com.keepit.common.mail._
 import com.keepit.common.net.{FakeHttpClientModule,HttpClient}
 import com.keepit.common.service._
@@ -25,31 +16,45 @@ import com.keepit.common.social._
 import com.keepit.common.store.FakeS3StoreModule
 import com.keepit.common.time._
 import com.keepit.common.zookeeper._
-import com.keepit.dev.{SearchDevGlobal, ShoeboxDevGlobal, DevGlobal, S3DevModule}
+import com.keepit.social._
+import com.keepit.dev._
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.scraper._
 import com.keepit.search._
 import com.keepit.search.index.FakePhraseIndexerModule
-import com.tzavellas.sse.guice.ScalaModule
-import org.apache.zookeeper.CreateMode
-import akka.actor.ActorSystem
-import akka.actor.Cancellable
-import akka.actor.Scheduler
-import play.api.Mode.{Mode, Test}
-import play.api.Play
-import play.api.Play.current
-import play.api.libs.concurrent.Execution.Implicits._
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.shoebox.ShoeboxServiceClientImpl
-import com.keepit.shoebox.ShoeboxCacheProvider
-import com.keepit.shoebox.FakeShoeboxServiceClientImpl
+import com.keepit.shoebox._
 import com.google.inject.Provider
 import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.shoebox.BrowsingHistoryTracker
 import com.keepit.classify.DomainTagImportSettings
+
+import com.tzavellas.sse.guice.ScalaModule
+import org.joda.time.{ReadablePeriod, DateTime}
+import org.apache.zookeeper.CreateMode
+
+import scala.collection.mutable.{Stack => MutableStack}
+import scala.concurrent._
+import scala.slick.session.{Database => SlickDatabase}
+import scala.collection.mutable
+
+import com.google.inject.Module
+import com.google.inject.Provides
+import com.google.inject.Singleton
+import com.google.inject.multibindings.Multibinder
+import com.google.inject.util.Modules
+
+import akka.actor.ActorSystem
+import akka.actor.Cancellable
+import akka.actor.Scheduler
+
+import play.api.Mode.{Mode, Test}
+import play.api.Play
+import play.api.Play.current
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.Files
+
 import java.io.File
 import play.api.db.DB
 import com.keepit.common.controller.{ActionAuthenticator, ShoeboxActionAuthenticator}
@@ -103,6 +108,8 @@ trait DbRepos {
   def notificationRepo = inject[UserNotificationRepo]
   def scrapeInfoRepo = inject[ScrapeInfoRepo]
   def phraseRepo = inject[PhraseRepo]
+  def collectionRepo = inject[CollectionRepo]
+  def keepToCollectionRepo = inject[KeepToCollectionRepo]
 }
 
 object TestDbInfo {
@@ -134,6 +141,25 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   }
 
   private def dbInfoFromApplication(): DbInfo = TestDbInfo.dbInfo
+
+
+  @Singleton
+  @Provides
+  def secureSocialUserPlugin(db: Database,
+    socialUserInfoRepo: SocialUserInfoRepo,
+    userRepo: UserRepo,
+    healthcheckPlugin: HealthcheckPlugin): SecureSocialUserPlugin =
+      new SecureSocialUserPlugin (db, socialUserInfoRepo, userRepo, null, healthcheckPlugin)
+
+  @Singleton
+  @Provides
+  def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
+    def register() = Node("me")
+    def isLeader() = true
+  }
+
+  @Provides
+  def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.Never
 
   @Singleton
   @Provides
@@ -305,6 +331,8 @@ case class ShoeboxServiceModule() extends ScalaModule {
     userRepo: UserRepo,
     bookmarkRepo: BookmarkRepo,
     browsingHistoryRepo: BrowsingHistoryRepo,
+    collectionRepo: CollectionRepo,
+    keepToCollectionRepo: KeepToCollectionRepo,
     clickingHistoryRepo: ClickHistoryRepo,
     normUriRepo: NormalizedURIRepo,
     experimentRepo: SearchConfigExperimentRepo,
@@ -321,6 +349,8 @@ case class ShoeboxServiceModule() extends ScalaModule {
     bookmarkRepo,
     browsingHistoryRepo,
     clickingHistoryRepo,
+    collectionRepo,
+    keepToCollectionRepo,
     normUriRepo,
     experimentRepo,
     userExperimentRepo,

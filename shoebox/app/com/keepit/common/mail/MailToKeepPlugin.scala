@@ -12,7 +12,7 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.model.{EmailAddressRepo, User, UserRepo}
 import com.keepit.common.time._
@@ -206,7 +206,8 @@ trait MailToKeepPlugin extends SchedulingPlugin {
 }
 
 class MailToKeepPluginImpl @Inject()(
-  actorFactory: ActorFactory[MailToKeepActor]
+  actorFactory: ActorFactory[MailToKeepActor],
+  val schedulingProperties: SchedulingProperties
 ) extends MailToKeepPlugin with Logging {
 
   override def enabled: Boolean = true
@@ -219,11 +220,5 @@ class MailToKeepPluginImpl @Inject()(
   override def onStart() {
     log.info("Starting MailToKeepPluginImpl")
     scheduleTask(actorFactory.system, 10 seconds, 1 minute, actor, FetchNewKeeps)
-  }
-}
-
-class FakeMailToKeepPlugin extends MailToKeepPlugin with Logging {
-  def fetchNewKeeps() {
-    log.info("Fake fetching new keeps")
   }
 }

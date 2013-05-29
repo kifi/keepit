@@ -10,7 +10,7 @@ import scala.collection.mutable.Queue
 import akka.actor.Actor
 import scala.util.{Success, Failure}
 import com.keepit.common.actor.ActorFactory
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import scala.concurrent.duration._
 import akka.util.Timeout
 
@@ -43,9 +43,9 @@ case object SendQueuedEmails extends PostOfficeMessage
 
 class RemotePostOfficeActor @Inject() (shoeboxClient: ShoeboxServiceClient)
   extends Actor { // we cannot use an AlertingActor, because this generated Healthcheck errors on failure
-  
+
   val mailQueue = Queue[ElectronicMail]()
-  
+
   def receive = {
     case SendEmail(mail: ElectronicMail) =>
       shoeboxClient.sendMail(mail) onComplete {
@@ -64,7 +64,9 @@ trait RemotePostOfficePlugin extends SchedulingPlugin {
   def sendMail(mail: ElectronicMail): Unit
 }
 
-class RemotePostOfficePluginImpl @Inject() (actorFactory: ActorFactory[RemotePostOfficeActor])
+class RemotePostOfficePluginImpl @Inject() (
+    actorFactory: ActorFactory[RemotePostOfficeActor],
+    val schedulingProperties: SchedulingProperties)
   extends RemotePostOfficePlugin with Logging {
   implicit val actorTimeout = Timeout(5 seconds)
   private lazy val actor = actorFactory.get()
@@ -79,7 +81,7 @@ class RemotePostOfficePluginImpl @Inject() (actorFactory: ActorFactory[RemotePos
 class RemotePostOfficeImpl @Inject() (
   remotePostOfficePlugin: RemotePostOfficePlugin)
   extends RemotePostOffice with Logging {
-  
+
   def queueMail(mail: ElectronicMail): ElectronicMail = {
     remotePostOfficePlugin.sendMail(mail)
     mail

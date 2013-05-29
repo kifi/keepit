@@ -3,8 +3,9 @@ package com.keepit.dev
 import java.io.File
 import com.google.common.io.Files
 import com.google.inject.util.Modules
-import com.google.inject.{Provides, Singleton, Provider}
+import com.google.inject.{Provides, Singleton, Provider, Inject}
 import com.keepit.classify.DomainTagImportSettings
+import com.keepit.common.plugin._
 import com.keepit.common.zookeeper._
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.actor.{ActorFactory, ActorPlugin}
@@ -17,7 +18,8 @@ import com.keepit.common.mail._
 import com.keepit.inject._
 import com.keepit.model.{BookmarkRepo, NormalizedURIRepo}
 import com.keepit.search.{ArticleStore, ResultClickTracker}
-import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphFields}
+import com.keepit.search.graph.CollectionIndexer
+import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphIndexer}
 import com.keepit.search.index.{ArticleIndexer, DefaultAnalyzer}
 import com.keepit.search.phrasedetector.{PhraseIndexerImpl, PhraseIndexer}
 import com.keepit.search.query.parser.{FakeSpellCorrector, SpellCorrector}
@@ -27,6 +29,8 @@ import play.api.Play.current
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.{Directory, MMapDirectory, RAMDirectory}
 import org.apache.lucene.util.Version
+import com.keepit.model.CollectionRepo
+import com.keepit.model.KeepToCollectionRepo
 import com.keepit.model.UserRepo
 import com.keepit.common.time.Clock
 import com.google.inject.Provider
@@ -40,16 +44,40 @@ import scala.slick.session.{Database => SlickDatabase}
 import play.api.db.DB
 
 
+class FakePersistEventPluginImpl @Inject() (
+    system: ActorSystem, eventHelper: EventHelper, val schedulingProperties: SchedulingProperties) extends PersistEventPlugin with Logging {
+  def persist(event: Event): Unit = {
+    eventHelper.newEvent(event)
+    log.info("Fake persisting event %s".format(event.externalId))
+  }
+  def persist(events: Seq[Event]): Unit = {
+    log.info("Fake persisting events %s".format(events map (_.externalId) mkString(",")))
+  }
+}
+
 class ShoeboxDevModule extends ScalaModule with Logging {
   def configure() {
     bind[PersistEventPlugin].to[FakePersistEventPluginImpl].in[AppScoped]
   }
+
+  @Provides
+  def globalSchedulingEnabled: SchedulingEnabled =
+    (current.configuration.getBoolean("scheduler.enabled").map {
+      case true => SchedulingEnabled.Never
+      case false => SchedulingEnabled.Always
+    }).getOrElse(SchedulingEnabled.Never)
 
   @Singleton
   @Provides
   def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
     def register() = Node("me")
     def isLeader() = true
+  }
+
+  @Singleton
+  @Provides
+  def schedulingProperties: SchedulingProperties = new SchedulingProperties() {
+    def allowScheduling = true
   }
 
   @Singleton
@@ -62,13 +90,11 @@ class ShoeboxDevModule extends ScalaModule with Logging {
     store: MongoEventStore,
     searchClient: SearchServiceClient,
     clock: Clock,
-    fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
-    val isEnabled = current.configuration.getBoolean("event-listener.searchUnload").getOrElse(false)
-    if(isEnabled) {
-      new SearchUnloadListenerImpl(db,userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, clock, fortyTwoServices)
-    }
-    else {
-      new FakeSearchUnloadListenerImpl(userRepo, normalizedURIRepo)
+    fortyTwoServices: FortyTwoServices,
+    schedulingProperties: SchedulingProperties): SearchUnloadListener = {
+    current.configuration.getBoolean("event-listener.searchUnload").getOrElse(false) match {
+      case true =>  new SearchUnloadListenerImpl(db,userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, schedulingProperties, clock, fortyTwoServices)
+      case false => new FakeSearchUnloadListenerImpl(userRepo, normalizedURIRepo, schedulingProperties)
     }
   }
 
@@ -120,13 +146,22 @@ class ShoeboxDevModule extends ScalaModule with Logging {
   @AppScoped
   @Provides
   def mailToKeepPlugin(
-      actorFactory: ActorFactory[MailToKeepActor], mailToKeepServerSettings: Option[MailToKeepServerSettings]): MailToKeepPlugin = {
+      actorFactory: ActorFactory[MailToKeepActor],
+      mailToKeepServerSettings: Option[MailToKeepServerSettings],
+      schedulingProperties: SchedulingProperties): MailToKeepPlugin = {
     mailToKeepServerSettingsOpt match {
-      case None => new FakeMailToKeepPlugin
-      case _ => new MailToKeepPluginImpl(actorFactory)
+      case None => new FakeMailToKeepPlugin(schedulingProperties)
+      case _ => new MailToKeepPluginImpl(actorFactory, schedulingProperties)
     }
   }
 }
+
+class FakeMailToKeepPlugin @Inject() (val schedulingProperties: SchedulingProperties) extends MailToKeepPlugin with Logging {
+  def fetchNewKeeps() {
+    log.info("Fake fetching new keeps")
+  }
+}
+
 
 class SearchDevModule extends ScalaModule with Logging {
   def configure() {}
@@ -176,11 +211,20 @@ class SearchDevModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def uriGraph(shoeboxClient: ShoeboxServiceClient): URIGraph = {
+  def uriGraphIndexer(shoeboxClient: ShoeboxServiceClient): URIGraphIndexer = {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new URIGraphImpl(dir, config, URIGraphFields.decoders(), shoeboxClient)
+    new URIGraphIndexer(dir, config, shoeboxClient)
+  }
+
+  @Singleton
+  @Provides
+  def collectionIndexer(shoeboxClient: ShoeboxServiceClient): CollectionIndexer = {
+    val dir = getDirectory(current.configuration.getString("index.collection.directory"))
+    log.info(s"storing collection index in $dir")
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new CollectionIndexer(dir, config, shoeboxClient)
   }
 
   @Singleton

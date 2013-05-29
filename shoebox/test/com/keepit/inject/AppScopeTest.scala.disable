@@ -62,7 +62,7 @@ class AppScopeTest extends Specification {
     "start and stop injected plugins" in {
       val app = FakeApplication()
       val scope = new AppScope
- 
+
       val pluginAPrestart = new PluginA
       val providerA = scope.scope(Key.get(classOf[PluginA]), provide(pluginAPrestart))
       val providerB = scope.scope(Key.get(classOf[PluginB]), provide(new PluginB))

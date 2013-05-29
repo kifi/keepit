@@ -11,7 +11,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin.SchedulingPlugin
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
@@ -82,7 +82,8 @@ trait InvitationMailPlugin extends SchedulingPlugin {
 }
 
 class InvitationMailPluginImpl @Inject()(
-    actorFactory: ActorFactory[InvitationMailActor]
+    actorFactory: ActorFactory[InvitationMailActor],
+    val schedulingProperties: SchedulingProperties
     ) extends InvitationMailPlugin with Logging {
 
   override def enabled: Boolean = true

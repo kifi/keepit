@@ -70,21 +70,21 @@ class URIGraphController @Inject()(
   }
 
   def indexInfo = Action { implicit request =>
-    val uriGraphImpl = uriGraph.asInstanceOf[URIGraphImpl]
+    val uriGraphIndexer = uriGraph.asInstanceOf[URIGraphImpl].uriGraphIndexer
     Ok(Json.toJson(URIGraphIndexInfo(
-      numDocs = uriGraphImpl.numDocs,
-      sequenceNumber = uriGraphImpl.commitData.get(CommitData.sequenceNumber).map(v => SequenceNumber(v.toLong)),
-      committedAt = uriGraphImpl.commitData.get(CommitData.committedAt)
+      numDocs = uriGraphIndexer.numDocs,
+      sequenceNumber = uriGraphIndexer.commitData.get(CommitData.sequenceNumber).map(v => SequenceNumber(v.toLong)),
+      committedAt = uriGraphIndexer.commitData.get(CommitData.committedAt)
     )))
   }
 
   def dumpLuceneDocument(id: Id[User]) = Action { implicit request =>
-    val indexer = uriGraph.asInstanceOf[URIGraphImpl]
+    val uriGraphIndexer = uriGraph.asInstanceOf[URIGraphImpl].uriGraphIndexer
     try {
-      val doc = indexer.buildIndexable(id, SequenceNumber.ZERO).buildDocument
-      Ok(html.admin.luceneDocDump("URIGraph", doc, indexer))
+      val doc = uriGraphIndexer.buildIndexable(id, SequenceNumber.ZERO).buildDocument
+      Ok(html.admin.luceneDocDump("URIGraph", doc, uriGraphIndexer))
     } catch {
-      case e: Throwable => Ok(html.admin.luceneDocDump("No URIGraph", new Document, indexer))
+      case e: Throwable => Ok(html.admin.luceneDocDump("No URIGraph", new Document, uriGraphIndexer))
     }
   }
 }
