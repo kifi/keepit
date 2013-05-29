@@ -4,7 +4,6 @@ import com.keepit.common.controller.SearchServiceController
 import com.keepit.search.SearchStatisticsExtractorFactory
 import com.google.inject.Inject
 import com.google.inject.Provider
-import com.keepit.common.analytics.EventPersister
 import com.keepit.common.db.ExternalId
 import com.keepit.model.User
 import play.api.libs.json.JsObject

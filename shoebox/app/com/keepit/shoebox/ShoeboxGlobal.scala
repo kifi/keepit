@@ -1,7 +1,6 @@
 package com.keepit.shoebox
 
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.analytics.EventPersister
 import com.keepit.common.analytics.reports.ReportBuilderPlugin
 import com.keepit.common.cache.FortyTwoCachePlugin
 import com.keepit.common.healthcheck._
