@@ -9,7 +9,7 @@ import play.api.Play.current
 import play.api.mvc.Controller
 import play.api.test.Helpers.running
 import scala.reflect.ManifestFactory.classType
-import com.keepit.common.analytics.EventListenerPlugin
+import com.keepit.common.analytics.EventListener
 import com.keepit.common.analytics.EventRepo
 import com.keepit.FortyTwoGlobal
 import scala.collection.JavaConversions._
