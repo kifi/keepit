@@ -31,7 +31,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.shoebox.BrowsingHistoryTracker
 import scala.concurrent.Future
-import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.akka.{MonitoredAwait, MonitoredFuture}
 
 
 class MainSearcher(
@@ -47,7 +47,8 @@ class MainSearcher(
     clickHistoryFuture: Future[MultiHashFilter[ClickHistory]],
     shoeboxClient: ShoeboxServiceClient,
     spellCorrector: SpellCorrector,
-    monitoredAwait: MonitoredAwait)
+    monitoredAwait: MonitoredAwait,
+    monitoredFuture: MonitoredFuture)
     (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 ) extends Logging {
@@ -136,7 +137,7 @@ class MainSearcher(
       case None =>
         articleSearcher.indexReader
     }
-    PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryFuture, clickHistoryFuture, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient, monitoredAwait)
+    PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryFuture, clickHistoryFuture, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient, monitoredAwait, monitoredFuture)
   }
 
   def searchText(queryString: String, maxTextHitsPerCategory: Int, clickBoosts: ResultClickTracker.ResultClickBoosts)(implicit lang: Lang) = {
