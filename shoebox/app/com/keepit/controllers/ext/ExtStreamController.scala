@@ -49,7 +49,7 @@ class ExtStreamController @Inject() (
   uriChannel: UriChannel,
   userToDomainRepo: UserToDomainRepo,
   userNotificationRepo: UserNotificationRepo,
-  persistEventPlugin: PersistEventPlugin,
+  EventPersister: EventPersister,
   keeperInfoLoader: KeeperInfoLoader,
   sliderRuleRepo: SliderRuleRepo,
   urlPatternRepo: URLPatternRepo,
@@ -287,7 +287,7 @@ class ExtStreamController @Inject() (
     val user = db.readOnly { implicit s => userRepo.get(session.userId) }
     val event = Events.userEvent(eventFamily, eventName, user, session.experiments, installId, metaData, prevEvents, eventTime)
     log.debug("Created new event: %s".format(event))
-    persistEventPlugin.persist(event)
+    EventPersister.persist(event)
   }
 
   private def getMessageThread(messageId: ExternalId[Comment]): (NormalizedURI, Seq[CommentWithBasicUser]) = {

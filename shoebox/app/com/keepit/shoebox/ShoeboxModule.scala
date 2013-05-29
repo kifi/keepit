@@ -45,7 +45,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
 
     bind[LocalPostOffice].to[ShoeboxPostOfficeImpl]
     bind[HealthcheckMailSender].to[LocalHealthcheckMailSender]
-    bind[PersistEventPlugin].to[PersistEventPluginImpl].in[AppScoped]
+    bind[EventPersister].to[EventPersisterImpl].in[AppScoped]
     val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListener])
     listenerBinder.addBinding().to(classOf[ResultClickedListener])
     listenerBinder.addBinding().to(classOf[UsefulPageListener])
@@ -59,7 +59,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
     db: Database,
     userRepo: UserRepo,
     normalizedURIRepo: NormalizedURIRepo,
-    persistEventProvider: Provider[PersistEventPlugin],
+    persistEventProvider: Provider[EventPersister],
     store: MongoEventStore,
     searchClient: SearchServiceClient,
     clock: Clock,

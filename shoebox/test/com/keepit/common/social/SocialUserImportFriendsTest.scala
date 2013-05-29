@@ -25,7 +25,7 @@ class SocialUserImportFriendsTest extends Specification {
 
   "SocialUserImportFriends" should {
     "import friends" in {
-      running(new EmptyApplication().withFakeStore) {
+      running(new EmptyApplication()) {
         val graphs = List(
             ("facebook_graph_andrew_min.json", 7),
             ("facebook_graph_eishay_super_min.json", 5),

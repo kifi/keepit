@@ -41,8 +41,8 @@ import com.keepit.common.service.{FortyTwoServices, IpAddress}
 import com.keepit.shoebox.ShoeboxServiceClient
 
 
-class FakePersistEventPluginImpl @Inject() (
-    system: ActorSystem, eventHelper: EventHelper, val schedulingProperties: SchedulingProperties) extends PersistEventPlugin with Logging {
+class FakeEventPersisterImpl @Inject() (
+    system: ActorSystem, eventHelper: EventHelper, val schedulingProperties: SchedulingProperties) extends EventPersister with Logging {
   def persist(event: Event): Unit = {
     eventHelper.newEvent(event)
     log.info("Fake persisting event %s".format(event.externalId))
@@ -54,7 +54,7 @@ class FakePersistEventPluginImpl @Inject() (
 
 class ShoeboxDevModule extends ScalaModule with Logging {
   def configure() {
-    bind[PersistEventPlugin].to[FakePersistEventPluginImpl].in[AppScoped]
+    bind[EventPersister].to[FakeEventPersisterImpl].in[AppScoped]
   }
 
   @Provides
@@ -83,7 +83,7 @@ class ShoeboxDevModule extends ScalaModule with Logging {
     db: Database,
     userRepo: UserRepo,
     normalizedURIRepo: NormalizedURIRepo,
-    persistEventProvider: Provider[PersistEventPlugin],
+    persistEventProvider: Provider[EventPersister],
     store: MongoEventStore,
     searchClient: SearchServiceClient,
     clock: Clock,

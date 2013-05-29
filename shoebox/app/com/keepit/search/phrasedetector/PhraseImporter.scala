@@ -16,7 +16,7 @@ import akka.pattern.ask
 import play.api.libs.json.{JsArray, JsNumber, JsString, JsObject}
 
 import com.google.inject.{Provider, ImplementedBy, Inject}
-import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
+import com.keepit.common.analytics.{EventFamilies, Events, EventPersister}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
@@ -95,7 +95,7 @@ trait PhraseImporter {
 
 class PhraseImporterImpl @Inject()(
     actorFactory: ActorFactory[PhraseImporterActor],
-    persistEventPlugin: PersistEventPlugin)
+    EventPersister: EventPersister)
   extends PhraseImporter {
 
   private lazy val actor = actorFactory.get()
