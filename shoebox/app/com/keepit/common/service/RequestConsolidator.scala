@@ -33,16 +33,16 @@ class RequestConsolidator[K, T](ttl: Duration) extends Logging {
       case Some(ref) =>
         val existingFuture = ref.get
         if (existingFuture != null && now < ref.expireBy) {
-          log.info("request found. sharing future.")
+          log.debug("request found. sharing future.")
           existingFuture
         } else {
-          log.info("request expired. creating future.")
+          log.debug("request expired. creating future.")
           val future = newFuture(key)
           futureRefMap.put(key, new FutureRef(key, future, now + ttlMillis, referenceQueue))
           future
         }
       case _ =>
-        log.info("request not found. creating future.")
+        log.debug("request not found. creating future.")
         val future = newFuture(key)
         futureRefMap.put(key, new FutureRef(key, future, now + ttlMillis, referenceQueue))
         future
