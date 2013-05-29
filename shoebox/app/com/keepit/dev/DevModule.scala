@@ -74,7 +74,7 @@ class ShoeboxDevModule extends ScalaModule with Logging {
   @Singleton
   @Provides
   def schedulingProperties: SchedulingProperties = new SchedulingProperties() {
-    def allowSchecualing = true
+    def allowScheduling = true
   }
 
   @Singleton

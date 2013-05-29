@@ -25,13 +25,13 @@ trait SchedulingPlugin extends Plugin with Logging {
 
   private var _cancellables: Seq[Cancellable] = Seq()
 
-  private def sendMessage(receiver: ActorRef, message: Any): Unit = if (schedulingProperties.allowSchecualing) {
+  private def sendMessage(receiver: ActorRef, message: Any): Unit = if (schedulingProperties.allowScheduling) {
     log.info(s"sending a scheduled message $message to actor $receiver")
     receiver ! message
   }
 
   def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any) =
-    if (!schedulingProperties.neverAllowSchecualing) {
+    if (!schedulingProperties.neverallowScheduling) {
       _cancellables :+= ( system.scheduler.schedule(initialDelay, frequency) { sendMessage(receiver, message) } )
     }
 
