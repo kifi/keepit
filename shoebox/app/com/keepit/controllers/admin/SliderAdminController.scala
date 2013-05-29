@@ -211,6 +211,15 @@ class SliderAdminController @Inject() (
     }.sortBy(_.createdAt).reverse
     Ok(html.admin.domainImportEvents(events))
   }
+
+  def getVersionForm = AdminHtmlAction { implicit request =>
+    Ok(html.admin.versionForm())
+  }
+
+  def broadcastLatestVersion(ver: String) = AdminJsonAction { implicit request =>
+    userChannel.broadcast(Json.arr("version", ver))
+    Ok(Json.obj("version" -> ver))
+  }
 }
 
 case class ImportEvent(createdAt: DateTime, eventType: String, description: String)
