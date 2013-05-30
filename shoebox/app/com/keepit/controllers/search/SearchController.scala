@@ -36,10 +36,9 @@ class SearchController @Inject()(
 
   def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
     val friendIdsFuture = shoeboxClient.getConnectedUsers(userId)
-    val friendIds = Await.result(friendIdsFuture, 5 seconds)
     val (config, _) = searchConfigManager.getConfig(userId, query)
 
-    val searcher = searcherFactory(userId, friendIds, SearchFilter.default(), config)
+    val searcher = searcherFactory(userId, friendIdsFuture, SearchFilter.default(), config)
     val explanation = searcher.explain(query, uriId)
     Ok(html.admin.explainResult(query, userId, uriId, explanation))
   }
