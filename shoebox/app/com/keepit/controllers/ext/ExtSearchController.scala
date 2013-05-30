@@ -82,8 +82,8 @@ class ExtSearchController @Inject() (
     val userId = request.userId
     log.info(s"""User ${userId} searched ${query.length} characters""")
     val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
-    val (friendIds, searchFilter) = time("search-connections") {
-      val friendIds = shoeboxClient.getConnectedUsers(userId)
+    val (friendIdsFuture, searchFilter) = time("search-connections") {
+      val friendIdsFuture = shoeboxClient.getConnectedUsers(userId)
       val searchFilter = filter match {
         case Some("m") =>
           SearchFilter.mine(idFilter, start, end, tz)
@@ -97,7 +97,7 @@ class ExtSearchController @Inject() (
           if (start.isDefined || end.isDefined) SearchFilter.all(idFilter, start, end, tz)
           else SearchFilter.default(idFilter)
       }
-      (friendIds, searchFilter)
+      (friendIdsFuture, searchFilter)
     }
 
     val (config, experimentId) = searchConfigManager.getConfig(userId, query)
@@ -105,7 +105,7 @@ class ExtSearchController @Inject() (
     val t2 = currentDateTime.getMillis()
     var t3 = 0L
     val searchRes = time("search-searching") {
-      val searcher = time("search-factory") { mainSearcherFactory(userId, monitoredAwait.result(friendIds, 5 seconds), searchFilter, config) }
+      val searcher = time("search-factory") { mainSearcherFactory(userId, friendIdsFuture, searchFilter, config) }
       t3 = currentDateTime.getMillis()
       val searchRes = if (maxHits > 0) {
         searcher.search(query, maxHits, lastUUID, searchFilter)
