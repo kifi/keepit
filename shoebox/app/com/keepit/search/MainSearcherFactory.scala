@@ -54,7 +54,8 @@ class MainSearcherFactory @Inject() (
           uriGraph.getURIGraphSearcher(Some(userId))
       }
     }
-    
+    val collectionSearcher = uriGraph.getCollectionSearcher()
+
     val browsingHistoryFuture = shoeboxClient.getBrowsingHistoryFilter(userId).map(browsingHistoryBuilder.build)
     val clickHistoryFuture = shoeboxClient.getClickHistoryFilter(userId).map(clickHistoryBuilder.build)
 
@@ -65,6 +66,7 @@ class MainSearcherFactory @Inject() (
         config,
         articleSearcher,
         uriGraphSearcher,
+        collectionSearcher,
         parserFactory,
         resultClickTracker,
         browsingHistoryFuture,

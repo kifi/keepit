@@ -359,7 +359,8 @@ class MainSearcherTest extends Specification with DbRepos {
         val friendIds = Set(Id[User](6))
         var uriSeen = Set.empty[Long]
 
-        val mainSearcher = mainSearcherFactory(userId, friendIds, SearchFilter.default(uriSeen), allHitsConfig)
+        var context = Some(IdFilterCompressor.fromSetToBase64(uriSeen))
+        val mainSearcher = mainSearcherFactory(userId, friendIds, SearchFilter.default(context), allHitsConfig)
         val graphSearcher = mainSearcher.uriGraphSearcher
         val reachableUris = users.foldLeft(Set.empty[Long])((s, u) => s ++ graphSearcher.getUserToUriEdgeSet(u.id.get, publicOnly = true).destIdLongSet)
 
@@ -367,7 +368,8 @@ class MainSearcherTest extends Specification with DbRepos {
         var cnt = 0
         while (cnt < reachableUris.size && uriSeen.size < reachableUris.size) {
           cnt += 1
-          val mainSearcher = mainSearcherFactory(userId, friendIds, SearchFilter.default(uriSeen), allHitsConfig)
+          context = Some(IdFilterCompressor.fromSetToBase64(uriSeen))
+          val mainSearcher = mainSearcherFactory(userId, friendIds, SearchFilter.default(context), allHitsConfig)
           //println("---" + uriSeen + ":" + reachableUris)
           val res = mainSearcher.search("alldocs", numHitsToReturn, uuid)
           res.hits.foreach{ h =>

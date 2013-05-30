@@ -3,8 +3,18 @@ package com.keepit.search
 import com.keepit.common.db.Id
 import com.keepit.common.time._
 import com.keepit.model.User
+import com.keepit.model.Collection
+import com.keepit.common.akka.MonitoredAwait
+import scala.concurrent.duration._
+import scala.concurrent.Future
 
-abstract class SearchFilter(val idFilter: Set[Long], val timeRange: Option[SearchFilter.TimeRange]) {
+abstract class SearchFilter(
+    context: Option[String],
+    val collections: Option[Seq[Id[Collection]]],
+    val timeRange: Option[SearchFilter.TimeRange]) {
+
+  lazy val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
+
   def includeMine: Boolean
   def includeShared: Boolean
   def includeFriends: Boolean
@@ -27,7 +37,7 @@ object SearchFilter {
     }
   }
 
-  def default(idFilter: Set[Long] = Set()) = new SearchFilter(idFilter, None) {
+  def default(context: Option[String] = None) = new SearchFilter(context, None, None) {
     def includeMine    = true
     def includeShared  = true
     def includeFriends = true
@@ -35,12 +45,12 @@ object SearchFilter {
     override def isDefault = true
   }
 
-  def all(idFilter: Set[Long] = Set(),
+  def all(context: Option[String] = None,
           startTime: Option[String] = None,
           endTime: Option[String] = None,
           tz: Option[String] = None) = {
     val excludeOthers = (startTime.isDefined || endTime.isDefined)
-    new SearchFilter(idFilter, timeRange(startTime, endTime, tz)) {
+    new SearchFilter(context, None, timeRange(startTime, endTime, tz)) {
       def includeMine    = true
       def includeShared  = true
       def includeFriends = true
@@ -49,34 +59,39 @@ object SearchFilter {
     }
   }
 
-  def mine(idFilter: Set[Long] = Set(),
+  def mine(context: Option[String] = None,
+           collections: Option[Seq[Id[Collection]]] = None,
            startTime: Option[String] = None,
            endTime: Option[String] = None,
            tz: Option[String] = None) = {
-    new SearchFilter(idFilter, timeRange(startTime, endTime, tz)) {
+    new SearchFilter(context, collections, timeRange(startTime, endTime, tz)) {
       def includeMine    = true
       def includeShared  = true
       def includeFriends = false
       def includeOthers  = false
     }
   }
-  def friends(idFilter: Set[Long] = Set(),
+  def friends(context: Option[String] = None,
               startTime: Option[String] = None,
               endTime: Option[String] = None,
               tz: Option[String] = None) = {
-    new SearchFilter(idFilter, timeRange(startTime, endTime, tz)) {
+    new SearchFilter(context, None, timeRange(startTime, endTime, tz)) {
       def includeMine    = false
       def includeShared  = false
       def includeFriends = true
       def includeOthers  = false
     }
   }
-  def custom(idFilter: Set[Long] = Set(),
-             users: Set[Id[User]],
+  def custom(context: Option[String] = None,
+             usersFuture: Future[Seq[Id[User]]],
              startTime: Option[String] = None,
              endTime: Option[String] = None,
-             tz: Option[String]= None) = {
-    new SearchFilter(idFilter, timeRange(startTime, endTime, tz)) {
+             tz: Option[String]= None,
+             monitoredAwait: MonitoredAwait) = {
+    new SearchFilter(context, None, timeRange(startTime, endTime, tz)) {
+
+      private[this] lazy val users = monitoredAwait.result(usersFuture, 5 seconds).toSet
+
       def includeMine    = false
       def includeShared  = true
       def includeFriends = true
