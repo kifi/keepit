@@ -1,7 +1,9 @@
 package com.keepit.controllers.ext
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
 import scala.concurrent.future
+import scala.concurrent.Future
 import scala.util.Try
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
@@ -16,8 +18,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.healthcheck.Healthcheck.SEARCH
 import com.keepit.shoebox.ShoeboxServiceClient
-import scala.concurrent.duration._
-import scala.concurrent.Future
 import com.keepit.common.akka.MonitoredAwait
 import play.api.libs.json.Json
 import com.keepit.common.db.{ExternalId, Id}
@@ -81,23 +81,20 @@ class ExtSearchController @Inject() (
 
     val userId = request.userId
     log.info(s"""User ${userId} searched ${query.length} characters""")
-    val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
-    val (friendIdsFuture, searchFilter) = time("search-connections") {
-      val friendIdsFuture = shoeboxClient.getConnectedUsers(userId)
-      val searchFilter = filter match {
-        case Some("m") =>
-          SearchFilter.mine(idFilter, start, end, tz)
-        case Some("f") =>
-          SearchFilter.friends(idFilter, start, end, tz)
-        case Some(ids) =>
-          val userExtIds = ids.split('.').flatMap(id => Try(ExternalId[User](id)).toOption)
-          val idFuture = shoeboxClient.getUserIdsByExternalIds(userExtIds)
-          SearchFilter.custom(idFilter, monitoredAwait.result(idFuture, 5 seconds).toSet, start, end, tz)
-        case None =>
-          if (start.isDefined || end.isDefined) SearchFilter.all(idFilter, start, end, tz)
-          else SearchFilter.default(idFilter)
-      }
-      (friendIdsFuture, searchFilter)
+
+    val friendIdsFuture = shoeboxClient.getConnectedUsers(userId)
+    val searchFilter = filter match {
+      case Some("m") =>
+        SearchFilter.mine(context, None, start, end, tz)
+      case Some("f") =>
+        SearchFilter.friends(context, start, end, tz)
+      case Some(ids) =>
+        val userExtIds = ids.split('.').flatMap(id => Try(ExternalId[User](id)).toOption)
+        val idFuture = shoeboxClient.getUserIdsByExternalIds(userExtIds)
+        SearchFilter.custom(context, idFuture, start, end, tz, monitoredAwait)
+      case None =>
+        if (start.isDefined || end.isDefined) SearchFilter.all(context, start, end, tz)
+        else SearchFilter.default(context)
     }
 
     val (config, experimentId) = searchConfigManager.getConfig(userId, query)
@@ -111,6 +108,7 @@ class ExtSearchController @Inject() (
         searcher.search(query, maxHits, lastUUID, searchFilter)
       } else {
         log.warn("maxHits is zero")
+        val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
         ArticleSearchResult(lastUUID, query, Seq.empty[ArticleHit], 0, 0, true, Seq.empty[Scoring], idFilter, 0, Int.MaxValue)
       }
 

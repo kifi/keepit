@@ -56,7 +56,8 @@ class MainSearcherFactory @Inject() (
           uriGraph.getURIGraphSearcher(Some(userId))
       }
     }
-    
+    val collectionSearcher = uriGraph.getCollectionSearcher()
+
     val browsingHistoryFuture = shoeboxClient.getBrowsingHistoryFilter(userId).map(browsingHistoryBuilder.build)
     val clickHistoryFuture = shoeboxClient.getClickHistoryFilter(userId).map(clickHistoryBuilder.build)
     val friendIds = monitoredAwait.result(friendIdsFuture, 5 milliseconds)
@@ -68,6 +69,7 @@ class MainSearcherFactory @Inject() (
         config,
         articleSearcher,
         uriGraphSearcher,
+        collectionSearcher,
         parserFactory,
         resultClickTracker,
         browsingHistoryFuture,

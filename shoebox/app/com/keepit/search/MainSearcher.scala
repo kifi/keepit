@@ -1,6 +1,7 @@
 package com.keepit.search
 
 import com.keepit.search.graph.EdgeAccessor
+import com.keepit.search.graph.CollectionSearcher
 import com.keepit.search.graph.URIGraphSearcher
 import com.keepit.search.graph.UserToUriEdgeSet
 import com.keepit.search.graph.UserToUserEdgeSet
@@ -41,6 +42,7 @@ class MainSearcher(
     config: SearchConfig,
     articleSearcher: Searcher,
     val uriGraphSearcher: URIGraphSearcher,
+    val collectionSearcher: CollectionSearcher,
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
     browsingHistoryFuture: Future[MultiHashFilter[BrowsingHistory]],
@@ -85,24 +87,46 @@ class MainSearcher(
 
   // initialize user's social graph info
   private[this] val myUriEdges = uriGraphSearcher.myUriEdgeSet
-  private[this] val myUris = myUriEdges.destIdLongSet
   private[this] val myUriEdgeAccessor = myUriEdges.accessor
   private[this] val filteredFriendIds = filter.filterFriends(friendIds)
   private[this] val friendsUriEdgeAccessors = friendIds.foldLeft(Map.empty[Long, EdgeAccessor[User, NormalizedURI]]){ (m, f) =>
     m + (f.id -> uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).accessor)
   }
+
+  private[this] val myUris =
+    filter.timeRange match {
+      case Some(timeRange) =>
+        filter.collections match {
+          case Some(collections) =>
+            collections.foldLeft(Set.empty[Long]){ (s, collId) =>
+              s ++ collectionSearcher.getCollectionToUriEdgeSet(collId).filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
+            }
+          case _ => myUriEdges.filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
+        }
+      // no time range
+      case _ =>
+        filter.collections match {
+          case Some(collections) =>
+            collections.foldLeft(Set.empty[Long]){ (s, collId) =>
+              s ++ collectionSearcher.getCollectionToUriEdgeSet(collId).destIdLongSet
+            }
+          case _ => myUriEdges.destIdLongSet
+        }
+    }
+
   private[this] val friendUris = {
     filter.timeRange match {
       case Some(timeRange) =>
         filteredFriendIds.foldLeft(Set.empty[Long]){ (s, f) =>
           s ++ friendsUriEdgeAccessors(f.id).edgeSet.filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
         }
-      case None =>
+      case _ =>
         filteredFriendIds.foldLeft(Set.empty[Long]){ (s, f) =>
           s ++ friendsUriEdgeAccessors(f.id).edgeSet.destIdLongSet
         }
     }
   }
+
   private[this] val friendlyUris = {
     if (filter.includeMine) friendUris ++ myUris
     else if (filter.includeShared) friendUris
