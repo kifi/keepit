@@ -26,7 +26,8 @@ import com.keepit.search.ClickHistoryBuilder
 import scala.concurrent.Future
 import com.keepit.model.BrowsingHistory
 import com.keepit.model.ClickHistory
-import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.akka.{MonitoredAwait, MonitoredFuture}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object PersonalizedSearcher {
   private val scale = 100
@@ -40,10 +41,15 @@ object PersonalizedSearcher {
             svWeightBrowsingHistory: Int,
             svWeightClickHistory: Int,
             shoeboxServiceClient: ShoeboxServiceClient,
-            monitoredAwait: MonitoredAwait) = {
-    
-    val browsingHistoryFilter = monitoredAwait.result(browsingHistoryFuture, 20 millisecond, MultiHashFilter.emptyFilter[BrowsingHistory])
-    val clickHistoryFilter = monitoredAwait.result(clickHistoryFuture, 20 millisecond, MultiHashFilter.emptyFilter[ClickHistory])
+            monitoredAwait: MonitoredAwait,
+            monitoredFuture: MonitoredFuture) = {
+
+    val filtersFuture = for {
+      browsingHistoryFilter <- monitoredFuture.recover(browsingHistoryFuture, {case ex: Throwable => MultiHashFilter.emptyFilter[BrowsingHistory]})
+      clickHistoryFilter <- monitoredFuture.recover(clickHistoryFuture, {case ex: Throwable => MultiHashFilter.emptyFilter[ClickHistory]})
+    } yield (browsingHistoryFilter, clickHistoryFilter)
+
+    val (browsingHistoryFilter, clickHistoryFilter) = monitoredAwait.result(filtersFuture, 40 millisecond)
 
     new PersonalizedSearcher(indexReader, myUris, friendUris,
                              browsingHistoryFilter,
