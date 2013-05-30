@@ -14,13 +14,14 @@ import com.keepit.search.SearchServiceClient
 
 import play.api.libs.json._
 
-private case class BasicCollection(id: Option[ExternalId[Collection]], name: String)
+private case class BasicCollection(id: Option[ExternalId[Collection]], name: String, keeps: Option[Int])
 
 private object BasicCollection {
   private implicit val externalIdFormat = ExternalId.format[Collection]
   implicit val format = Json.format[BasicCollection]
 
-  def fromCollection(c: Collection): BasicCollection = BasicCollection(Some(c.externalId), c.name)
+  def fromCollection(c: Collection, keeps: Option[Int] = None): BasicCollection =
+    BasicCollection(Some(c.externalId), c.name, keeps)
 }
 
 @Singleton
@@ -88,7 +89,10 @@ class BookmarksController @Inject() (
   def allCollections() = AuthenticatedJsonAction { request =>
     Ok(Json.obj(
       "collections" -> db.readOnly { implicit s =>
-        collectionRepo.getByUser(request.userId).map(BasicCollection fromCollection _)
+        collectionRepo.getByUser(request.userId).map { c =>
+          val count = keepToCollectionRepo.count(c.id.get)
+          BasicCollection fromCollection(c, Some(count))
+        }
       }
     ))
   }
