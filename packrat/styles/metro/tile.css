@@ -1,6 +1,7 @@
 .kifi-tile,
 .kifi-tile * {
   background: transparent;
+  overflow: visible;
 }
 .kifi-tile {
   position: fixed;

@@ -3,6 +3,7 @@
 .kifi-pane,
 .kifi-slider2 *,
 .kifi-pane * {
+  overflow: visible;
   float: none;
   width: auto;
   line-height: normal;
