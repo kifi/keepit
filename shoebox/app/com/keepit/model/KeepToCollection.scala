@@ -7,6 +7,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
+import com.keepit.common.net.Query
 
 case class KeepToCollection(
   id: Option[Id[KeepToCollection]] = None,
@@ -31,6 +32,7 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
   def getByCollection(collId: Id[Collection],
       excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))
       (implicit session: RSession): Seq[KeepToCollection]
+  def count(collId: Id[Collection])(implicit session: RSession): Int
 }
 
 @Singleton
@@ -71,6 +73,10 @@ class KeepToCollectionRepoImpl @Inject() (
   override def save(model: KeepToCollection)(implicit session: RWSession): KeepToCollection = {
     collectionRepo.updateSequenceNumber(model.collectionId)
     super.save(model)
+  }
+
+  def count(collId: Id[Collection])(implicit session: RSession): Int = {
+    (for (c <- table if c.collectionId === collId) yield c.length).firstOption.getOrElse(0)
   }
 }
 

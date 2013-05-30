@@ -72,6 +72,7 @@ class CollectionTest extends Specification with TestDBRunner {
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.getBookmarksInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
+          keepToCollectionRepo.count(coll1.id.get) === 2
         }
       }
     }
