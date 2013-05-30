@@ -58,7 +58,8 @@ object ApplicationBuild extends Build {
       "spy" % "spymemcached" % "2.8.12",
       "com.typesafe.slick" %% "slick" % "1.0.0",
       "com.typesafe.slick" %% "slick-testkit" % "1.0.0",
-      "net.sf.uadetector" % "uadetector-resources" % "2013.02"
+      "net.sf.uadetector" % "uadetector-resources" % "2013.02",
+      "com.newrelic.agent.java" % "newrelic-agent" % "2.18.0"
     ) map (_.excludeAll(
       ExclusionRule(organization = "com.cedarsoft"),
       ExclusionRule(organization = "javax.jms"),
