@@ -11,6 +11,11 @@ home-grown at FortyTwo, not intended for distribution (yet)
 
 !function($) {
   $.fn.bindHover = function(selector, create) {
+    if (selector == "destroy") {
+      return this.each(function() {
+        $(($(this).data("hover") || {}).$h).remove();
+      }).unbind(".bindHover").removeData("hover");
+    }
     if (!create) create = selector, selector = null;
     if (typeof create != "function") create = createFromDataAttr(create);
     return this.on("mouseover.bindHover", selector, function(e) {
