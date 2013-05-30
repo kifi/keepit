@@ -223,6 +223,8 @@ slider2 = function() {
               this.style.left = 21 - w / 2 + "px";
             }});
         });
+      }).on("mousedown", ".kifi-slider2-dock-btn", function(e) {
+        e.preventDefault();
       }).on("click", ".kifi-slider2-dock-btn", function() {
         var locator = this.dataset.loc;
         if ($pane) {
