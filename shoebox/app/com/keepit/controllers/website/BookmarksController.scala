@@ -99,7 +99,8 @@ class BookmarksController @Inject() (
     } map { bc =>
       db.readWrite { implicit s =>
         val name = bc.name
-        val existingExternalId = collectionRepo.getByUserAndName(request.userId, name).map(_.externalId)
+        val existingCollection = collectionRepo.getByUserAndName(request.userId, name, None)
+        val existingExternalId = existingCollection collect { case c if c.isActive => c.externalId }
         if (existingExternalId.isEmpty || existingExternalId == bc.id) {
           bc.id map { id =>
             collectionRepo.getByUserAndExternalId(request.userId, id) map { coll =>
@@ -109,7 +110,9 @@ class BookmarksController @Inject() (
               NotFound(Json.obj("error" -> s"Collection not found for id $id"))
             }
           } getOrElse {
-            val newColl = collectionRepo.save(Collection(userId = request.userId, name = name))
+            val newColl = collectionRepo.save(existingCollection
+                map { _.copy(name = name, state = CollectionStates.ACTIVE) }
+                getOrElse Collection(userId = request.userId, name = name))
             Ok(Json.toJson(BasicCollection.fromCollection(newColl)))
           }
         } else {
