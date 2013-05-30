@@ -14,13 +14,13 @@ import com.keepit.search.SearchServiceClient
 
 import play.api.libs.json._
 
-private case class BasicCollection(id: ExternalId[Collection], name: String)
+private case class BasicCollection(id: Option[ExternalId[Collection]], name: String)
 
 private object BasicCollection {
   private implicit val externalIdFormat = ExternalId.format[Collection]
   implicit val format = Json.format[BasicCollection]
 
-  def fromCollection(c: Collection): BasicCollection = BasicCollection(c.externalId, c.name)
+  def fromCollection(c: Collection): BasicCollection = BasicCollection(Some(c.externalId), c.name)
 }
 
 @Singleton
@@ -29,6 +29,7 @@ class BookmarksController @Inject() (
     userRepo: UserRepo,
     bookmarkRepo: BookmarkRepo,
     collectionRepo: CollectionRepo,
+    keepToCollectionRepo: KeepToCollectionRepo,
     basicUserRepo: BasicUserRepo,
     searchClient: SearchServiceClient,
     actionAuthenticator: ActionAuthenticator
@@ -90,6 +91,97 @@ class BookmarksController @Inject() (
         collectionRepo.getByUser(request.userId).map(BasicCollection fromCollection _)
       }
     ))
+  }
+
+  def saveCollection(id: String) = AuthenticatedJsonAction { request =>
+    request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt) map { bc =>
+      bc.copy(id = ExternalId.asOpt(id))
+    } map { bc =>
+      db.readWrite { implicit s =>
+        val name = bc.name
+        val existingExternalId = collectionRepo.getByUserAndName(request.userId, name).map(_.externalId)
+        if (existingExternalId.isEmpty || existingExternalId == bc.id) {
+          bc.id map { id =>
+            collectionRepo.getByUserAndExternalId(request.userId, id) map { coll =>
+              val newColl = collectionRepo.save(coll.copy(externalId = id, name = name))
+              Ok(Json.toJson(BasicCollection.fromCollection(newColl)))
+            } getOrElse {
+              NotFound(Json.obj("error" -> s"Collection not found for id $id"))
+            }
+          } getOrElse {
+            val newColl = collectionRepo.save(Collection(userId = request.userId, name = name))
+            Ok(Json.toJson(BasicCollection.fromCollection(newColl)))
+          }
+        } else {
+          BadRequest(Json.obj("error" -> s"Collection with name $name already exists (id ${existingExternalId.get})!"))
+        }
+      }
+    } getOrElse {
+      BadRequest(Json.obj("error" -> "could not parse collection from body"))
+    }
+  }
+
+  def deleteCollection(id: ExternalId[Collection]) = AuthenticatedJsonAction { request =>
+    db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { coll =>
+      db.readWrite { implicit s =>
+        collectionRepo.save(coll.copy(state = CollectionStates.INACTIVE))
+      }
+      Ok(Json.obj())
+    } getOrElse {
+      NotFound(Json.obj("error" -> s"Collection not found for id $id"))
+    }
+  }
+
+  def removeKeepsFromCollection(id: ExternalId[Collection]) = AuthenticatedJsonAction { request =>
+    implicit val externalIdFormat = ExternalId.format[Bookmark]
+    db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { collection =>
+      request.body.asJson.flatMap(Json.fromJson[Set[ExternalId[Bookmark]]](_).asOpt) map { keepExtIds =>
+        val removed = db.readWrite { implicit s =>
+          val keepIds = keepExtIds.flatMap(bookmarkRepo.getOpt(_).map(_.id.get))
+          keepToCollectionRepo.getByCollection(collection.id.get, excludeState = None) collect {
+            case ktc if ktc.state != KeepToCollectionStates.INACTIVE && keepIds.contains(ktc.bookmarkId) =>
+              keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+          }
+        }
+        Ok(Json.obj("removed" -> removed.size))
+      } getOrElse {
+        BadRequest(Json.obj("error" -> "Could not parse JSON keep ids from body"))
+      }
+    } getOrElse {
+      NotFound(Json.obj("error" -> s"Collection not found for id $id"))
+    }
+  }
+
+  def keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = false) =AuthenticatedJsonAction { request =>
+    implicit val externalIdFormat = ExternalId.format[Bookmark]
+    db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { collection =>
+      request.body.asJson.flatMap(Json.fromJson[Set[ExternalId[Bookmark]]](_).asOpt) map { keepExtIds =>
+        val (added, removed) = db.readWrite { implicit s =>
+          val keepIds = keepExtIds.flatMap(bookmarkRepo.getOpt(_).map(_.id.get))
+          val existing = keepToCollectionRepo.getByCollection(collection.id.get, excludeState = None)
+          val activated = existing collect {
+            case ktc if ktc.state == KeepToCollectionStates.INACTIVE && keepIds.contains(ktc.bookmarkId) =>
+              keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
+          }
+          val created = (keepIds diff existing.map(_.bookmarkId).toSet) map { bid =>
+            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bid, collectionId = collection.id.get))
+          }
+          val removed = removeOthers match {
+            case true => existing.collect {
+              case ktc if ktc.state == KeepToCollectionStates.ACTIVE && !keepIds.contains(ktc.bookmarkId) =>
+                keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+            }
+            case false => Seq()
+          }
+          (activated ++ created, removed)
+        }
+        Ok(Json.obj("added" -> added.size, "removed" -> removed.size))
+      } getOrElse {
+        BadRequest(Json.obj("error" -> "Could not parse JSON keep ids from body"))
+      }
+    } getOrElse {
+      NotFound(Json.obj("error" -> s"Collection not found for id $id"))
+    }
   }
 
   def numKeeps() = AuthenticatedJsonAction { request =>

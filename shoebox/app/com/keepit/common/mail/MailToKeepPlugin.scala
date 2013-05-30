@@ -7,7 +7,7 @@ import org.jsoup.Jsoup
 import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.akka.FortyTwoActor
-import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
+import com.keepit.common.analytics.{EventFamilies, Events, EventPersister}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
@@ -49,7 +49,7 @@ class MailToKeepActor @Inject() (
     healthcheckPlugin: HealthcheckPlugin,
     settings: MailToKeepServerSettings,
     bookmarkInterner: BookmarkInterner,
-    persistEventPlugin: PersistEventPlugin,
+    EventPersister: EventPersister,
     postOffice: LocalPostOffice,
     messageParser: MailToKeepMessageParser,
     db: Database,
@@ -111,7 +111,7 @@ class MailToKeepActor @Inject() (
                     "user_id" -> user.id.get.id,
                     "bookmark_id" -> bookmark.id.get.id
                   ))
-                  persistEventPlugin.persist(event)
+                  EventPersister.persist(event)
                   sendReply(
                     message = message,
                     htmlBody =

@@ -24,7 +24,7 @@ class SocialUserImportEmailTest extends Specification with DbRepos {
 
   "SocialUserImportEmail" should {
     "import email" in {
-      running(new EmptyApplication().withFakeStore) {
+      running(new EmptyApplication()) {
         val graphs = List(
             ("facebook_graph_andrew.json", "fb@andrewconner.org")
         )
