@@ -11,15 +11,12 @@ import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
 import com.keepit.search._
-import com.keepit.serializer.{PersonalSearchResultPacketSerializer => RPS}
-import play.api.http.ContentTypes
+import com.keepit.serializer.PersonalSearchResultPacketSerializer.resSerializer
 import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.{HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.healthcheck.Healthcheck.SEARCH
 import com.keepit.shoebox.ShoeboxServiceClient
-import scala.concurrent.Await
 import scala.concurrent.duration._
-import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent.Future
 import com.keepit.common.akka.MonitoredAwait
 import play.api.libs.json.Json
@@ -85,8 +82,8 @@ class ExtSearchController @Inject() (
     val userId = request.userId
     log.info(s"""User ${userId} searched ${query.length} characters""")
     val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
-    val (friendIds, searchFilter) = time("search-connections") {
-      val friendIds = shoeboxClient.getConnectedUsers(userId)
+    val (friendIdsFuture, searchFilter) = time("search-connections") {
+      val friendIdsFuture = shoeboxClient.getConnectedUsers(userId)
       val searchFilter = filter match {
         case Some("m") =>
           SearchFilter.mine(idFilter, start, end, tz)
@@ -100,7 +97,7 @@ class ExtSearchController @Inject() (
           if (start.isDefined || end.isDefined) SearchFilter.all(idFilter, start, end, tz)
           else SearchFilter.default(idFilter)
       }
-      (friendIds, searchFilter)
+      (friendIdsFuture, searchFilter)
     }
 
     val (config, experimentId) = searchConfigManager.getConfig(userId, query)
@@ -108,7 +105,7 @@ class ExtSearchController @Inject() (
     val t2 = currentDateTime.getMillis()
     var t3 = 0L
     val searchRes = time("search-searching") {
-      val searcher = time("search-factory") { mainSearcherFactory(userId, monitoredAwait.result(friendIds, 5 seconds), searchFilter, config) }
+      val searcher = time("search-factory") { mainSearcherFactory(userId, friendIdsFuture, searchFilter, config) }
       t3 = currentDateTime.getMillis()
       val searchRes = if (maxHits > 0) {
         searcher.search(query, maxHits, lastUUID, searchFilter)
@@ -146,14 +143,14 @@ class ExtSearchController @Inject() (
     if (total > timeLimit && t5 - fortyTwoServices.started.getMillis() > 1000*60*8) {
       val link = "https://admin.kifi.com/admin/search/results/" + searchRes.uuid.id
       val msg = s"search time exceeds limit! searchUUID = ${searchRes.uuid.id}, Limit time = $timeLimit, total search time = $total, pre-search time = ${t2 - t1}, search-factory time = ${t3 - t2}, main-search time = ${t4 - t3}, post-search time = ${t5 - t4}." +
-      		"\n More details at: \n" + link + "\n" + searchDetails + "\n"
+        "\n More details at: \n" + link + "\n" + searchDetails + "\n"
       healthcheckPlugin.addError(HealthcheckError(
         error = Some(new SearchTimeExceedsLimit(timeLimit, total)),
         errorMessage = Some(msg),
         callType = SEARCH))
     }
 
-    Ok(RPS.resSerializer.writes(res)).as(ContentTypes.JSON)
+    Ok(Json.toJson(res)).withHeaders("Cache-Control" -> "private, max-age=10")
   }
 
   class SearchTimeExceedsLimit(timeout: Int, actual: Long) extends Exception(s"Timeout ${timeout}ms, actual ${actual}ms")
