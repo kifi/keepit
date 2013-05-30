@@ -122,7 +122,7 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
             }
           }
           hits.size === expectedUsers.size
-          expectedUsers.foreach{ u => hits.exists(_ == collections(u).id.get.id) }
+          expectedUsers.foreach{ u => hits.exists(_ == collections(u).id.get.id) === true }
 
           true
         } === true
@@ -138,21 +138,21 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
         val expectedUriToUsers = uris.map{ uri => (uri, users.filter{ _.id.get.id <= uri.id.get.id }) }
         mkBookmarks(expectedUriToUsers)
 
-        val collections = users.foldLeft(Map.empty[User, Collection]){ (m, user) =>
+        val collections = users.map{ user =>
           val coll = mkCollection(user, s"${user.firstName} - Collection")
           val bookmarks = db.readOnly { implicit s =>
             bookmarkRepo.getByUser(user.id.get)
           }
-          m + (user -> addBookmarks(coll, bookmarks))
+          (user, addBookmarks(coll, bookmarks), bookmarks)
         }
         collectionIndexer.update()
         collectionIndexer.numDocs === collections.size
 
         val searcher = new BaseGraphSearcher(collectionIndexer.getSearcher)
 
-        collections.forall{ case (user, coll) =>
+        collections.forall{ case (user, coll, bookmarks) =>
           val uriList = searcher.getURIList(CollectionFields.uriListField, searcher.getDocId(coll.id.get.id))
-          (user.id.get, uriList.ids.toSet) === (user.id.get, uris.map(_.id.get.id).filter{ _ >= user.id.get.id }.toSet)
+          (user.id.get, uriList.ids.toSet) === (user.id.get, bookmarks.map(_.uriId.id).toSet)
           true
         } === true
       }
