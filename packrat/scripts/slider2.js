@@ -89,7 +89,7 @@ slider2 = function() {
           startDrag(data);
         } else if (!$pane && !data.dragStarting && !data.$dragGlass) {
           if (e.relatedTarget) {
-            if ($slider && !$slider[0].contains(e.relatedTarget)) {
+            if (!this.contains(e.relatedTarget)) {
               api.log("[slider.mouseout] hiding");
               hideSlider("mouseout");
             }
