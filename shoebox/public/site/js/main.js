@@ -1,9 +1,16 @@
-var urlSearch = 'https://api.kifi.com/search';
-var urlMyKeeps = 'https://api.kifi.com/site/keeps/all';
-var urlMyKeepsCount = 'https://api.kifi.com/site/keeps/count';
-var urlMe = 'https://api.kifi.com/site/user/me';
-var urlConnections = 'https://api.kifi.com/site/user/connections';
-var urlCollections = 'https://api.kifi.com/site/collections/all';
+var urlBase = 'https://api.kifi.com';
+var urlBase = 'http://dev.ezkeep.com:9000';
+var urlSite = urlBase + '/site'; 
+var urlSearch = urlBase + '/search';
+var urlKeeps =  urlSite + '/keeps';
+var urlMyKeeps = urlKeeps + '/all';
+var urlMyKeepsCount = urlKeeps + '/count';
+var urlUser = urlSite + '/user';
+var urlMe = urlUser + '/me';
+var urlConnections = urlUser + '/connections';
+var urlCollections = urlSite + '/collections';
+var urlCollectionsAll = urlCollections + '/all';
+var urlCollectionsCreate = urlCollections + '/create';
 
 var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
 				hideLoading();
@@ -47,6 +54,7 @@ var connectionNames = [];
 var myAvatar = '';
 var searchTimeout;
 var lastKeep= null;
+var prevCollection = null;
 
 $.ajaxSetup({
     xhrFields: {
@@ -71,7 +79,23 @@ function initDroppable() {
 		tolerance: "pointer",
 		hoverClass: "drop-hover",
 		drop: function( event, ui ) {
-				alert('dropped');
+				var thisCollection = $(this);
+				var collectionId = thisCollection.data('id');
+				$.ajax( {url: urlCollections + '/' + collectionId + '/addKeeps' 
+					,type: "POST"
+					,async: false
+					,dataType: 'json'
+					,data: JSON.stringify([ui.draggable.data('id')])
+					,contentType: 'application/json'
+					,error: function() {
+						showMessage('Could not add to collection, please try again later');
+						return false;
+					}
+					,success: function(data) {
+									var added = data.added;
+									thisCollection.find('a span').text(added);
+								}
+					});
 			}
 		});
 }
@@ -143,10 +167,20 @@ function addNewKeeps() {
 		});
 }
 
-function populateMyKeeps() {
+function populateMyKeeps(id) {
 	var params = {count: 30};
 	$('.active').removeClass('active');
-	$('aside.left h3.my-keeps').addClass('active');
+	if (id == null) 
+		$('aside.left h3.my-keeps').addClass('active');
+	else {
+		$('aside.left h3[data-id="' + id + '"]').addClass('active');
+		params.collection = id;
+	}
+	if (prevCollection != id) { // reset search if not fetching the same collection
+		prevCollection = id;
+		lastKeep = null;
+		keepsTemplate.clear();
+	}
 	searchTemplate.clear();
 	$('input.search').val('');
 	searchContext = null;
@@ -177,7 +211,7 @@ function populateMyKeeps() {
 }
 
 function populateCollections() {
-	$.getJSON(urlCollections,  
+	$.getJSON(urlCollectionsAll,  
 			function(data) {
 				collectionsTemplate.render(data.collections);				
 			});
@@ -187,6 +221,10 @@ function updateNumKeeps() {
 	$.getJSON(urlMyKeepsCount, function(data) {
 		$('aside.left .my-keeps span').text(data.numKeeps);
 	});	
+}
+
+function showMessage(msg) {
+	$.fancybox($('<p>').text(msg));
 }
 
 // auto update my keeps every minute
@@ -269,10 +307,37 @@ $(document)
 			.on('focus',function() {$('.active').removeClass('active'); $(this).parent().addClass('active')});
 
 
+		$('#collections').on('click', 'h3 a', function() {
+			populateMyKeeps($(this).parent().data('id'));
+		});
+
 		$('aside.left h3.new a').click(function() {
 			$('#add-collection').slideDown();
 			$('#add-collection input').focus();
 		})
+
+		// create new collection
+		$('#add-collection input').keypress(function(e) {
+			var code = (e.keyCode ? e.keyCode : e.which);
+			if(code == 13) { //Enter key pressed
+				var inputField = $(this);
+				var newName = inputField.val();
+				$.ajax( {url: urlCollectionsCreate
+						,type: "POST"
+						,dataType: 'json'
+						,data: JSON.stringify({ name: newName })
+						,contentType: 'application/json'
+						,error: function() {showMessage('Could not create collection, please try again later')}
+						,success: function(data) {
+										console.log(data)
+									   $('#collections').append('<h3 class="droppable" data-id="' + data.id + '"><a href="javascript: ;"> ' + newName + ' <span class="right light"></span></a></h3>');
+									   initDroppable();
+									   $('#add-collection').slideUp();
+									   inputField.val('');
+									}
+						});
+			 }
+		});
 	});
 
 
