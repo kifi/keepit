@@ -21,7 +21,7 @@ import scala.concurrent.Future
 import com.keepit.common.akka.MonitoredAwait
 import play.api.libs.json.Json
 import com.keepit.common.db.{ExternalId, Id}
-
+import com.newrelic.api.agent.NewRelic
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchHit(id: Id[NormalizedURI], externalId: ExternalId[NormalizedURI], title: Option[String], url: String, isPrivate: Boolean)
@@ -130,6 +130,13 @@ class ExtSearchController @Inject() (
       case None => "main-search detail: N/A"
     }
     log.info(searchDetails)
+
+    try{
+      NewRelic.setTransactionName("search", "SearchTotal")
+      NewRelic.recordResponseTimeMetric("SearchTotal", total)
+    } catch {
+      case e: Exception => log.warn("error in adding record to newRelic")
+    }
 
     val timeLimit = 1000
     // search is a little slow after service restart. allow some grace period
