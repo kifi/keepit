@@ -83,7 +83,6 @@ function initDroppable() {
 				var collectionId = thisCollection.data('id');
 				$.ajax( {url: urlCollections + '/' + collectionId + '/addKeeps' 
 					,type: "POST"
-					,async: false
 					,dataType: 'json'
 					,data: JSON.stringify([ui.draggable.data('id')])
 					,contentType: 'application/json'
@@ -92,8 +91,9 @@ function initDroppable() {
 						return false;
 					}
 					,success: function(data) {
-									var added = data.added;
-									thisCollection.find('a span').text(added);
+									var countSpan = thisCollection.find('a span'); 
+									var added = countSpan.text() * 1  + data.added;
+									countSpan.text(added);
 								}
 					});
 			}
@@ -159,8 +159,11 @@ function doSearch(context) {
 
 function addNewKeeps() {
 	var first = $('#my-keeps li.keep').first().data('id');
+	var params = {after: first};
+	if ($('aside.left h3.active').is('.collection'))
+		params.collection = $('aside.left h3.active').data('id');
 	console.log("Fetching 30 keep after " + first);
-	$.getJSON(urlMyKeeps, {after: first}, 
+	$.getJSON(urlMyKeeps, params, 
 		function(data) {
 			keepsTemplate.prepend(data.keeps);
 			$('#my-keeps li.search-section.today').prependTo('#my-keeps');
