@@ -22,7 +22,7 @@
   -webkit-perspective: 200px;
   perspective: 200px;
 }
-.kifi-tile-flip {
+.kifi-tile-card {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -33,7 +33,7 @@
   -webkit-transform-style: preserve-3d;
   transform-style: preserve-3d;
 }
-.kifi-tile[data-kept] .kifi-tile-flip {
+.kifi-tile[data-kept] .kifi-tile-card {
   -webkit-transform: rotateX(-180deg);
   transform: rotateX(-180deg);
 }
@@ -77,10 +77,6 @@
   font-size: 14px;
   line-height: 42px;
 }
-.kifi-tile.ui-draggable .kifi-tile-flip,
-.kifi-tile.kifi-behind-slider .kifi-tile-flip {
-  display: none;
-}
 .kifi-count,
 .kifi-slider2 .kifi-count {
   display: inline-block;
@@ -94,7 +90,4 @@
   color: #fff;
   font-size: 10px;
   line-height: 20px;
-}
-.kifi-tile.kifi-with-slider>.kifi-count {
-  display: none;
 }
