@@ -5,6 +5,8 @@ import scala.concurrent.duration._
 import org.joda.time.Days
 
 import com.google.inject.{ImplementedBy, Inject}
+import play.api.Plugin
+
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.Id
@@ -76,7 +78,7 @@ private[mail] class InvitationMailActor @Inject() (
 }
 
 @ImplementedBy(classOf[InvitationMailPluginImpl])
-trait InvitationMailPlugin extends SchedulingPlugin {
+trait InvitationMailPlugin extends Plugin {
   def resendNotifications()
   def notifyAcceptedUser(userId: Id[User])
 }
@@ -84,7 +86,7 @@ trait InvitationMailPlugin extends SchedulingPlugin {
 class InvitationMailPluginImpl @Inject()(
     actorFactory: ActorFactory[InvitationMailActor],
     val schedulingProperties: SchedulingProperties
-    ) extends InvitationMailPlugin with Logging {
+    ) extends InvitationMailPlugin with SchedulingPlugin with Logging {
 
   override def enabled: Boolean = true
 

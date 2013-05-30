@@ -1,6 +1,5 @@
 package com.keepit.common.analytics
 
-import play.api.Plugin
 import play.api.libs.json.{ Json, JsArray, JsBoolean, JsNumber, JsObject, JsString }
 import akka.actor.ActorSystem
 import akka.actor.Props
@@ -33,10 +32,10 @@ import com.keepit.search.UriLabel
 import com.keepit.serializer.SearchStatisticsSerializer
 import com.keepit.shoebox.BrowsingHistoryTracker
 
-abstract class EventListenerPlugin(
-  userRepo: UserRepo,
-  normalizedURIRepo: NormalizedURIRepo)
-  extends Plugin with Logging {
+abstract class EventListener(
+    userRepo: UserRepo,
+    normalizedURIRepo: NormalizedURIRepo)
+  extends Logging {
 
   def onEvent: PartialFunction[Event, Unit]
 
@@ -96,7 +95,7 @@ object SearchEventName {
 @Singleton
 class EventHelper @Inject() (
   actorFactory: ActorFactory[EventHelperActor],
-  listeners: JSet[EventListenerPlugin]) {
+  listeners: JSet[EventListener]) {
   private lazy val actor = actorFactory.get()
 
   def newEvent(event: Event): Unit = actor ! event
@@ -107,7 +106,7 @@ class EventHelper @Inject() (
 
 class EventHelperActor @Inject() (
   healthcheckPlugin: HealthcheckPlugin,
-  listeners: JSet[EventListenerPlugin],
+  listeners: JSet[EventListener],
   eventStream: EventStream)
   extends FortyTwoActor(healthcheckPlugin) {
 
@@ -127,7 +126,7 @@ class ResultClickedListener @Inject() (
   db: Database,
   bookmarkRepo: BookmarkRepo,
   clickHistoryTracker: ClickHistoryTracker)
-  extends EventListenerPlugin(userRepo, normalizedURIRepo) {
+  extends EventListener(userRepo, normalizedURIRepo) {
 
   import SearchEventName._
 
@@ -154,7 +153,7 @@ class UsefulPageListener @Inject() (
   normalizedURIRepo: NormalizedURIRepo,
   db: Database,
   browsingHistoryTracker: BrowsingHistoryTracker)
-  extends EventListenerPlugin(userRepo, normalizedURIRepo) {
+  extends EventListener(userRepo, normalizedURIRepo) {
 
   def onEvent: PartialFunction[Event, Unit] = {
     case Event(_, UserEventMetadata(EventFamilies.SLIDER, "usefulPage", externalUser, _, experiments, metaData, _), _, _) =>
@@ -174,7 +173,7 @@ class SliderShownListener @Inject() (
   normalizedURIRepo: NormalizedURIRepo,
   db: Database,
   sliderHistoryTracker: SliderHistoryTracker)
-  extends EventListenerPlugin(userRepo, normalizedURIRepo) {
+  extends EventListener(userRepo, normalizedURIRepo) {
 
   def onEvent: PartialFunction[Event, Unit] = {
     case Event(_, UserEventMetadata(EventFamilies.SLIDER, "sliderShown", externalUser, _, experiments, metaData, _), _, _) =>
@@ -191,14 +190,14 @@ class SliderShownListener @Inject() (
 }
 
 abstract class SearchUnloadListener(userRepo: UserRepo, normalizedURIRepo: NormalizedURIRepo)
-  extends EventListenerPlugin(userRepo, normalizedURIRepo)
+  extends EventListener(userRepo, normalizedURIRepo)
 
 @Singleton
 class SearchUnloadListenerImpl @Inject() (
   db: Database,
   userRepo: UserRepo,
   normalizedURIRepo: NormalizedURIRepo,
-  persistEventProvider: Provider[PersistEventPlugin],
+  persistEventProvider: Provider[EventPersister],
   store: MongoEventStore,
   searchClient: SearchServiceClient,
   implicit private val clock: Clock,

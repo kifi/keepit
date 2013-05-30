@@ -1,19 +1,14 @@
 package com.keepit.search.graph
 
-import com.keepit.scraper.FakeArticleStore
-import com.keepit.search.{Article, ArticleStore, Lang}
 import com.keepit.search.index.{Searcher, WrappedIndexReader, WrappedSubReader}
 import com.keepit.search.query.SiteQuery
 import com.keepit.search.query.ConditionalQuery
 import com.keepit.model._
-import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.db._
-import com.keepit.common.time._
+import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.test._
-import com.keepit.inject._
 import org.specs2.mutable._
 import play.api.Play.current
-import play.api.libs.json.Json
 import play.api.test._
 import play.api.test.Helpers._
 import org.apache.lucene.index.Term
@@ -23,85 +18,8 @@ import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.search.BooleanQuery
-import scala.collection.JavaConversions._
-import org.apache.lucene.search.IndexSearcher
-import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.util.Version
-import com.keepit.search.index.{ArticleIndexer, DefaultAnalyzer}
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.net.HttpClient
-import com.keepit.common.net.FakeHttpClient
-import play.api.libs.json.JsArray
 
-class URIGraphTest extends Specification with DbRepos {
-
-  private def setupDB = {
-    db.readWrite { implicit s =>
-      val users = List(
-            userRepo.save(User(firstName = "Agrajag", lastName = "")),
-            userRepo.save(User(firstName = "Barmen", lastName = "")),
-            userRepo.save(User(firstName = "Colin", lastName = "")),
-            userRepo.save(User(firstName = "Dan", lastName = "")),
-            userRepo.save(User(firstName = "Eccentrica", lastName = "")),
-            userRepo.save(User(firstName = "Hactar", lastName = "")))
-      val uris = List(
-            uriRepo.save(NormalizedURIFactory(title = "a1", url = "http://www.keepit.com/article1", state = SCRAPED)),
-            uriRepo.save(NormalizedURIFactory(title = "a2", url = "http://www.keepit.com/article2", state = SCRAPED)),
-            uriRepo.save(NormalizedURIFactory(title = "a3", url = "http://www.keepit.org/article3", state = SCRAPED)),
-            uriRepo.save(NormalizedURIFactory(title = "a4", url = "http://www.findit.com/article4", state = SCRAPED)),
-            uriRepo.save(NormalizedURIFactory(title = "a5", url = "http://www.findit.com/article5", state = SCRAPED)),
-            uriRepo.save(NormalizedURIFactory(title = "a6", url = "http://www.findit.org/article6", state = SCRAPED)))
-      (users, uris)
-    }
-  }
-
-  private def setupArticleStore(uris: Seq[NormalizedURI]) = {
-    uris.zipWithIndex.foldLeft(new FakeArticleStore){ case (store, (uri, idx)) =>
-      store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "content%d alldocs".format(idx)))
-      store
-    }
-  }
-
-  private def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String) = {
-    Article(
-        id = normalizedUriId,
-        title = title,
-        description = None,
-        media = None,
-        content = content,
-        scrapedAt = currentDateTime,
-        httpContentType = Some("text/html"),
-        httpOriginalContentCharset = Option("UTF-8"),
-        state = SCRAPED,
-        message = None,
-        titleLang = Some(Lang("en")),
-        contentLang = Some(Lang("en")))
-  }
-
-  private def mkBookmarks(expectedUriToUserEdges: List[(NormalizedURI, List[User])], mixPrivate: Boolean = false): List[Bookmark] = {
-    db.readWrite { implicit s =>
-      expectedUriToUserEdges.flatMap{ case (uri, users) =>
-        users.map { user =>
-          val url1 = urlRepo.get(uri.url).getOrElse( urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-          bookmarkRepo.save(BookmarkFactory(
-            uri = uri,
-            userId = user.id.get,
-            title = uri.title,
-            url = url1,
-            source = BookmarkSource("test"),
-            isPrivate = mixPrivate && ((uri.id.get.id + user.id.get.id) % 2 == 0),
-            kifiInstallation = None))
-        }
-      }
-    }
-  }
-
-  private def mkURIGraph(graphDir: RAMDirectory = new RAMDirectory, collectionDir: RAMDirectory = new RAMDirectory): URIGraphImpl = {
-    val shoeboxClient = inject[ShoeboxServiceClient]
-    val uriGraphIndexer = new URIGraphIndexer(graphDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), shoeboxClient)
-    val collectionIndexer = new CollectionIndexer(collectionDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), shoeboxClient)
-    new URIGraphImpl(uriGraphIndexer, collectionIndexer)
-  }
+class URIGraphTest extends Specification with GraphTestHelper {
 
   class Searchable(uriGraphSearcher: URIGraphSearcher) {
     def search(query: Query): Map[Long, Float] = {
@@ -148,36 +66,10 @@ class URIGraphTest extends Specification with DbRepos {
     }
   }
 
-  private def httpClientGetChangedUsers(seqNum: Long) = {
-                val changed = db.readOnly { implicit s =>
-                  bookmarkRepo.getUsersChanged(SequenceNumber(seqNum))
-                } map {
-                  case (userId, seqNum) =>
-                    Json.obj("id" -> userId.id, "seqNum" -> seqNum.value)
-                }
-                JsArray(changed)
-              }
-
   "URIGraph" should {
-    "maintain a sequence number on bookmarks " in {
-     running(new DevApplication().withShoeboxServiceModule)
-            {
-        val (users, uris) = setupDB
-        val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
-        val bookmarks = mkBookmarks(expectedUriToUserEdges)
-
-        val graphDir = new RAMDirectory
-        val graph = mkURIGraph(graphDir)
-        graph.update() === users.size
-        graph.uriGraphIndexer.sequenceNumber.value === bookmarks.size
-        val graph2 = mkURIGraph(graphDir)
-        graph2.uriGraphIndexer.sequenceNumber.value === bookmarks.size
-      }
-    }
     "generate UriToUsrEdgeSet" in {
       running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
-        val store = setupArticleStore(uris)
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = mkBookmarks(expectedUriToUserEdges)
@@ -199,7 +91,6 @@ class URIGraphTest extends Specification with DbRepos {
     "generate UserToUriEdgeSet" in {
       running(new DevApplication().withShoeboxServiceModule){
         val (users, uris) = setupDB
-        val store = setupArticleStore(uris)
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = mkBookmarks(expectedUriToUserEdges, mixPrivate = true)
@@ -223,10 +114,127 @@ class URIGraphTest extends Specification with DbRepos {
       }
     }
 
+    "generate UserToCollectionEdgeSet" in {
+      running(new DevApplication().withShoeboxServiceModule) {
+        val (users, uris) = setupDB
+
+        val usersWithCollection = users.take(2)
+        val expectedUriToUserEdges = uris.map{ (_, usersWithCollection) }
+        mkBookmarks(expectedUriToUserEdges)
+
+        val collections = usersWithCollection.foldLeft(Map.empty[Id[User], Collection]){ (m, user) =>
+          val coll = mkCollection(user, s"${user.firstName} - Collection")
+          val bookmarks = db.readOnly { implicit s =>
+            bookmarkRepo.getByUser(user.id.get)
+          }
+          m + (user.id.get -> addBookmarks(coll, bookmarks))
+        }
+        val graph = mkURIGraph()
+        graph.update()
+
+        val searcher = graph.getCollectionSearcher()
+
+        val positiveUsers = usersWithCollection.map(_.id.get).toSet
+        users.forall{ user =>
+          val answer = searcher.getUserToCollectionEdgeSet(user.id.get)
+          val expected = collections.get(user.id.get).map(_.id.get).toSet
+          answer.destIdSet === expected
+          true
+        } === true
+      }
+    }
+
+    "generate UriToCollectionEdgeSet" in {
+      running(new DevApplication().withShoeboxServiceModule) {
+        val (users, uris) = setupDB
+
+        val expectedUriToUsers = uris.map{ uri => (uri, users.filter( _.id.get.id == uri.id.get.id)) }
+        mkBookmarks(expectedUriToUsers)
+
+        val collections = users.foldLeft(Map.empty[User, Collection]){ (m, user) =>
+          val coll = mkCollection(user, s"${user.firstName} - Collection")
+          val bookmarks = db.readOnly { implicit s =>
+            bookmarkRepo.getByUser(user.id.get)
+          }
+          m + (user -> addBookmarks(coll, bookmarks))
+        }
+        val graph = mkURIGraph()
+        graph.update()
+
+        val searcher = graph.getCollectionSearcher()
+
+        expectedUriToUsers.forall{ case (uri, users) =>
+          val answer = searcher.getUriToCollectionEdgeSet(uri.id.get)
+          val expected = users.flatMap{ user => collections.get(user) }.map(_.id.get).toSet
+          answer.destIdSet === expected
+          true
+        } === true
+      }
+    }
+
+    "generate CollectionToUriEdgeSet" in {
+      running(new DevApplication().withShoeboxServiceModule) {
+        val (users, uris) = setupDB
+
+        val expectedUriToUsers = uris.map{ uri => (uri, users.filter{ _.id.get.id <= uri.id.get.id }) }
+        mkBookmarks(expectedUriToUsers)
+
+        val collections = users.map{ user =>
+          val coll = mkCollection(user, s"${user.firstName} - Collection")
+          val bookmarks = db.readOnly { implicit s =>
+            bookmarkRepo.getByUser(user.id.get)
+          }
+          (addBookmarks(coll, bookmarks), bookmarks)
+        }
+        val graph = mkURIGraph()
+        graph.update()
+
+        val searcher = graph.getCollectionSearcher()
+
+        collections.forall{ case (coll, bookmarks) =>
+          val answer = searcher.getCollectionToUriEdgeSet(coll.id.get)
+          answer.destIdSet === bookmarks.map(_.uriId).toSet
+          true
+        } === true
+      }
+    }
+
+    "intersect UserToCollectionEdgeSet and UriToCollectionEdgeSet" in {
+      running(new DevApplication().withShoeboxServiceModule) {
+        val (users, uris) = setupDB
+
+        val expectedUriToUsers = uris.map{ uri => (uri, users.filter( _.id.get.id == uri.id.get.id)) }
+        mkBookmarks(expectedUriToUsers)
+
+        val collections = users.foldLeft(Map.empty[User, Collection]){ (m, user) =>
+          val coll = mkCollection(user, s"${user.firstName} - Collection")
+          val bookmarks = db.readOnly { implicit s =>
+            bookmarkRepo.getByUser(user.id.get)
+          }
+          m + (user -> addBookmarks(coll, bookmarks))
+        }
+        val graph = mkURIGraph()
+        graph.update()
+
+        val searcher = graph.getCollectionSearcher()
+
+        expectedUriToUsers.forall{ case (uri, users) =>
+          val uriToColl = searcher.getUriToCollectionEdgeSet(uri.id.get)
+          val expectedFromUri = users.flatMap{ user => collections.get(user) }.map(_.id.get).toSet
+          users.forall{ user =>
+            val userToColl = searcher.getUserToCollectionEdgeSet(user.id.get)
+            val expectedFromUser = collections.get(user).map(_.id.get).toSet
+
+            searcher.intersect(userToColl, uriToColl).destIdSet === (expectedFromUri intersect expectedFromUser)
+            true
+          }
+        } === true
+      }
+    }
+
     "intersect UserToUserEdgeSet and UriToUserEdgeSet" in {
       running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
-        val store = setupArticleStore(uris)
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = mkBookmarks(expectedUriToUserEdges)
@@ -366,34 +374,6 @@ class URIGraphTest extends Specification with DbRepos {
 
         site = mkSiteQuery(".findit.org")
         searcher.search(site).keySet === Set(6L)
-      }
-    }
-
-    "dump Lucene Document" in {
-      running(new DevApplication().withShoeboxServiceModule) {
-        val store = new FakeArticleStore()
-
-        val (user, uris, bookmarks) = db.readWrite { implicit s =>
-          val user = userRepo.save(User(firstName = "Agrajag", lastName = ""))
-          val uris = Array(
-            uriRepo.save(NormalizedURIFactory(title = "title", url = "http://www.keepit.com/article1", state=SCRAPED)),
-            uriRepo.save(NormalizedURIFactory(title = "title", url = "http://www.keepit.com/article2", state=SCRAPED))
-          )
-
-          val url1 = urlRepo.save(URLFactory(url = uris(0).url, normalizedUriId = uris(0).id.get))
-          val url2 = urlRepo.save(URLFactory(url = uris(1).url, normalizedUriId = uris(1).id.get))
-
-          val bookmarks = uris.map{ uri =>
-            val url = urlRepo.save(URLFactory(url = uris(0).url, normalizedUriId = uris(0).id.get))
-            bookmarkRepo.save(BookmarkFactory(title = "line1 titles", url = url,  uriId = uri.id.get, userId = user.id.get, source = BookmarkSource("test")))
-          }
-          (user, uris, bookmarks)
-        }
-        uris.foreach{ uri => store += (uri.id.get -> mkArticle(uri.id.get, "title", "content")) }
-
-        val graph = mkURIGraph()
-        val doc = graph.uriGraphIndexer.buildIndexable(user.id.get, SequenceNumber.ZERO).buildDocument
-        doc.getFields.forall{ f => graph.uriGraphIndexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
       }
     }
   }

@@ -31,7 +31,7 @@ class ExtEventController @Inject() (
   db: Database,
   userExperimentRepo: UserExperimentRepo,
   userRepo: UserRepo,
-  persistEventPlugin: PersistEventPlugin,
+  EventPersister: EventPersister,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
@@ -83,7 +83,7 @@ class ExtEventController @Inject() (
         val newEvent = Events.userEvent(eventFamily, eventName, user, experiments, installId, metaData, prevEvents, eventTime)
         log.debug("Created new event: %s".format(newEvent))
 
-        persistEventPlugin.persist(newEvent)
+        EventPersister.persist(newEvent)
       }
   }
 }

@@ -20,7 +20,7 @@ import com.google.inject.{Provider, ImplementedBy, Inject}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.akka.FortyTwoActor
-import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
+import com.keepit.common.analytics.{EventFamilies, Events, EventPersister}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
@@ -61,7 +61,7 @@ private[classify] class DomainTagImportActor @Inject() (
   domainRepo: DomainRepo,
   tagRepo: DomainTagRepo,
   domainToTagRepo: DomainToTagRepo,
-  persistEventPlugin: PersistEventPlugin,
+  EventPersister: EventPersister,
   settings: DomainTagImportSettings,
   postOffice: LocalPostOffice,
   healthcheckPlugin: HealthcheckPlugin,
@@ -169,13 +169,13 @@ private[classify] class DomainTagImportActor @Inject() (
   }
 
   private def persistEvent(eventName: String, metaData: JsObject) {
-    persistEventPlugin.persist(Events.serverEvent(EventFamilies.DOMAIN_TAG_IMPORT, eventName, metaData))
+    EventPersister.persist(Events.serverEvent(EventFamilies.DOMAIN_TAG_IMPORT, eventName, metaData))
   }
 
   private def failWithException(eventName: String, e: Exception) {
     log.error(s"fail on event $eventName", e)
     healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(e.getMessage)))
-    persistEventPlugin.persist(Events.serverEvent(
+    EventPersister.persist(Events.serverEvent(
       EventFamilies.EXCEPTION,
       eventName,
       JsObject(Seq(

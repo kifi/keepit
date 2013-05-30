@@ -41,9 +41,9 @@ object PersonalizedSearcher {
             svWeightClickHistory: Int,
             shoeboxServiceClient: ShoeboxServiceClient,
             monitoredAwait: MonitoredAwait) = {
-    
-    val browsingHistoryFilter = monitoredAwait.result(browsingHistoryFuture, 20 millisecond, MultiHashFilter.emptyFilter[BrowsingHistory])
-    val clickHistoryFilter = monitoredAwait.result(clickHistoryFuture, 20 millisecond, MultiHashFilter.emptyFilter[ClickHistory])
+
+    val browsingHistoryFilter = monitoredAwait.result(browsingHistoryFuture, 40 millisecond, MultiHashFilter.emptyFilter[BrowsingHistory])
+    val clickHistoryFilter = monitoredAwait.result(clickHistoryFuture, 40 millisecond, MultiHashFilter.emptyFilter[ClickHistory])
 
     new PersonalizedSearcher(indexReader, myUris, friendUris,
                              browsingHistoryFilter,

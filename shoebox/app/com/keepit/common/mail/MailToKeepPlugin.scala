@@ -7,7 +7,7 @@ import org.jsoup.Jsoup
 import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.akka.FortyTwoActor
-import com.keepit.common.analytics.{EventFamilies, Events, PersistEventPlugin}
+import com.keepit.common.analytics.{EventFamilies, Events, EventPersister}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
@@ -23,6 +23,7 @@ import javax.mail._
 import javax.mail.internet.{InternetAddress, MimeMultipart}
 import javax.mail.search._
 import play.api.libs.json.Json
+import play.api.Plugin
 
 private case object FetchNewKeeps
 
@@ -48,7 +49,7 @@ class MailToKeepActor @Inject() (
     healthcheckPlugin: HealthcheckPlugin,
     settings: MailToKeepServerSettings,
     bookmarkInterner: BookmarkInterner,
-    persistEventPlugin: PersistEventPlugin,
+    EventPersister: EventPersister,
     postOffice: LocalPostOffice,
     messageParser: MailToKeepMessageParser,
     db: Database,
@@ -110,7 +111,7 @@ class MailToKeepActor @Inject() (
                     "user_id" -> user.id.get.id,
                     "bookmark_id" -> bookmark.id.get.id
                   ))
-                  persistEventPlugin.persist(event)
+                  EventPersister.persist(event)
                   sendReply(
                     message = message,
                     htmlBody =
@@ -201,14 +202,14 @@ class MailToKeepMessageParser @Inject() (
 }
 
 @ImplementedBy(classOf[MailToKeepPluginImpl])
-trait MailToKeepPlugin extends SchedulingPlugin {
+trait MailToKeepPlugin extends Plugin {
   def fetchNewKeeps()
 }
 
 class MailToKeepPluginImpl @Inject()(
   actorFactory: ActorFactory[MailToKeepActor],
   val schedulingProperties: SchedulingProperties
-) extends MailToKeepPlugin with Logging {
+) extends MailToKeepPlugin with SchedulingPlugin {
 
   override def enabled: Boolean = true
 
@@ -218,7 +219,6 @@ class MailToKeepPluginImpl @Inject()(
     actor ! FetchNewKeeps
   }
   override def onStart() {
-    log.info("Starting MailToKeepPluginImpl")
     scheduleTask(actorFactory.system, 10 seconds, 1 minute, actor, FetchNewKeeps)
   }
 }

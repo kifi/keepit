@@ -42,6 +42,7 @@ class CommonModule extends ScalaModule with Logging {
     install(new FortyTwoModule)
     install(new MemcachedCacheModule)
     install(new S3Module)
+    install(new DiscoveryModule)
 
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
@@ -49,13 +50,6 @@ class CommonModule extends ScalaModule with Logging {
 
   @Provides
   def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.LeaderOnly
-
-  @Singleton
-  @Provides
-  def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
-    def register() = Node("me")
-    def isLeader() = true
-  }
 
   @Singleton
   @Provides

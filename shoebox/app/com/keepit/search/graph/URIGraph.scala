@@ -10,6 +10,7 @@ trait URIGraph {
   def update(userId: Id[User]): Int
   def reindex(): Unit
   def getURIGraphSearcher(userId: Option[Id[User]] = None): URIGraphSearcher
+  def getCollectionSearcher(): CollectionSearcher
   def close(): Unit
 }
 
@@ -37,5 +38,8 @@ class URIGraphImpl @Inject()(
   }
   def getURIGraphSearcher(userId: Option[Id[User]]): URIGraphSearcher = {
     new URIGraphSearcher(uriGraphIndexer.getSearcher, userId)
+  }
+  def getCollectionSearcher(): CollectionSearcher = {
+    new CollectionSearcher(collectionIndexer.getSearcher)
   }
 }

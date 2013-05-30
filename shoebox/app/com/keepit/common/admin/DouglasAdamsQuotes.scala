@@ -9,7 +9,7 @@ case class DouglasAdamsQuote(quote: List[String], cite: String)
 
 object DouglasAdamsQuotes {
 
-  lazy val qoutes: List[DouglasAdamsQuote] = {
+  lazy val qoutes: List[DouglasAdamsQuote] = try {
     val lines = io.Source.fromURL(Play.resource("/public/html/quotes.txt").get).getLines.toList
     var lastQuote: Option[DouglasAdamsQuote] = None
     val quotes = MList[DouglasAdamsQuote]()
@@ -22,6 +22,9 @@ object DouglasAdamsQuotes {
       }
     }
     quotes.toList
+  } catch {
+    case e: RuntimeException =>
+      List(DouglasAdamsQuote(List("No quotes for you :-("), e.toString))
   }
 
   def random: DouglasAdamsQuote = qoutes(new Random().nextInt(qoutes.size))

@@ -1,5 +1,6 @@
 package com.keepit.common.analytics.reports
 
+import play.api.Plugin
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import org.joda.time.DateTime
@@ -111,7 +112,7 @@ class DailySearchStatisticsReports @Inject() (
   extends ReportGroup("DailySearchStatistics", Seq(dailySearchStatstics))
 
 
-trait ReportBuilderPlugin extends SchedulingPlugin {
+trait ReportBuilderPlugin extends Plugin {
   def buildReport(startDate: DateTime, endDate: DateTime, report: ReportRepo) : Unit
   def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit
   def reportCron(): Unit
@@ -130,7 +131,7 @@ class ReportBuilderPluginImpl @Inject() (
   store: MongoEventStore,
   dailyReports: DailyReports,
   val schedulingProperties: SchedulingProperties)
-    extends Logging with ReportBuilderPlugin {
+    extends Logging with ReportBuilderPlugin with SchedulingPlugin {
 
   def buildReport(startDate: DateTime, endDate: DateTime, report: ReportRepo): Unit = actor ! BuildReport(startDate, endDate, report)
   def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit = actor ! BuildReports(startDate, endDate, reportGroup)
