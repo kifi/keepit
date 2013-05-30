@@ -1,5 +1,5 @@
 var urlBase = 'https://api.kifi.com';
-var urlBase = 'http://dev.ezkeep.com:9000';
+//var urlBase = 'http://dev.ezkeep.com:9000';
 var urlSite = urlBase + '/site'; 
 var urlSearch = urlBase + '/search';
 var urlKeeps =  urlSite + '/keeps';
