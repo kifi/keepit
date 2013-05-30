@@ -70,7 +70,6 @@ class URIGraphTest extends Specification with GraphTestHelper {
     "generate UriToUsrEdgeSet" in {
       running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
-        val store = setupArticleStore(uris)
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = mkBookmarks(expectedUriToUserEdges)
@@ -92,7 +91,6 @@ class URIGraphTest extends Specification with GraphTestHelper {
     "generate UserToUriEdgeSet" in {
       running(new DevApplication().withShoeboxServiceModule){
         val (users, uris) = setupDB
-        val store = setupArticleStore(uris)
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = mkBookmarks(expectedUriToUserEdges, mixPrivate = true)
@@ -116,10 +114,127 @@ class URIGraphTest extends Specification with GraphTestHelper {
       }
     }
 
+    "generate UserToCollectionEdgeSet" in {
+      running(new DevApplication().withShoeboxServiceModule) {
+        val (users, uris) = setupDB
+
+        val usersWithCollection = users.take(2)
+        val expectedUriToUserEdges = uris.map{ (_, usersWithCollection) }
+        mkBookmarks(expectedUriToUserEdges)
+
+        val collections = usersWithCollection.foldLeft(Map.empty[Id[User], Collection]){ (m, user) =>
+          val coll = mkCollection(user, s"${user.firstName} - Collection")
+          val bookmarks = db.readOnly { implicit s =>
+            bookmarkRepo.getByUser(user.id.get)
+          }
+          m + (user.id.get -> addBookmarks(coll, bookmarks))
+        }
+        val graph = mkURIGraph()
+        graph.update()
+
+        val searcher = graph.getCollectionSearcher()
+
+        val positiveUsers = usersWithCollection.map(_.id.get).toSet
+        users.forall{ user =>
+          val answer = searcher.getUserToCollectionEdgeSet(user.id.get)
+          val expected = collections.get(user.id.get).map(_.id.get).toSet
+          answer.destIdSet === expected
+          true
+        } === true
+      }
+    }
+
+    "generate UriToCollectionEdgeSet" in {
+      running(new DevApplication().withShoeboxServiceModule) {
+        val (users, uris) = setupDB
+
+        val expectedUriToUsers = uris.map{ uri => (uri, users.filter( _.id.get.id == uri.id.get.id)) }
+        mkBookmarks(expectedUriToUsers)
+
+        val collections = users.foldLeft(Map.empty[User, Collection]){ (m, user) =>
+          val coll = mkCollection(user, s"${user.firstName} - Collection")
+          val bookmarks = db.readOnly { implicit s =>
+            bookmarkRepo.getByUser(user.id.get)
+          }
+          m + (user -> addBookmarks(coll, bookmarks))
+        }
+        val graph = mkURIGraph()
+        graph.update()
+
+        val searcher = graph.getCollectionSearcher()
+
+        expectedUriToUsers.forall{ case (uri, users) =>
+          val answer = searcher.getUriToCollectionEdgeSet(uri.id.get)
+          val expected = users.flatMap{ user => collections.get(user) }.map(_.id.get).toSet
+          answer.destIdSet === expected
+          true
+        } === true
+      }
+    }
+
+    "generate CollectionToUriEdgeSet" in {
+      running(new DevApplication().withShoeboxServiceModule) {
+        val (users, uris) = setupDB
+
+        val expectedUriToUsers = uris.map{ uri => (uri, users.filter{ _.id.get.id <= uri.id.get.id }) }
+        mkBookmarks(expectedUriToUsers)
+
+        val collections = users.map{ user =>
+          val coll = mkCollection(user, s"${user.firstName} - Collection")
+          val bookmarks = db.readOnly { implicit s =>
+            bookmarkRepo.getByUser(user.id.get)
+          }
+          (addBookmarks(coll, bookmarks), bookmarks)
+        }
+        val graph = mkURIGraph()
+        graph.update()
+
+        val searcher = graph.getCollectionSearcher()
+
+        collections.forall{ case (coll, bookmarks) =>
+          val answer = searcher.getCollectionToUriEdgeSet(coll.id.get)
+          answer.destIdSet === bookmarks.map(_.uriId).toSet
+          true
+        } === true
+      }
+    }
+
+    "intersect UserToCollectionEdgeSet and UriToCollectionEdgeSet" in {
+      running(new DevApplication().withShoeboxServiceModule) {
+        val (users, uris) = setupDB
+
+        val expectedUriToUsers = uris.map{ uri => (uri, users.filter( _.id.get.id == uri.id.get.id)) }
+        mkBookmarks(expectedUriToUsers)
+
+        val collections = users.foldLeft(Map.empty[User, Collection]){ (m, user) =>
+          val coll = mkCollection(user, s"${user.firstName} - Collection")
+          val bookmarks = db.readOnly { implicit s =>
+            bookmarkRepo.getByUser(user.id.get)
+          }
+          m + (user -> addBookmarks(coll, bookmarks))
+        }
+        val graph = mkURIGraph()
+        graph.update()
+
+        val searcher = graph.getCollectionSearcher()
+
+        expectedUriToUsers.forall{ case (uri, users) =>
+          val uriToColl = searcher.getUriToCollectionEdgeSet(uri.id.get)
+          val expectedFromUri = users.flatMap{ user => collections.get(user) }.map(_.id.get).toSet
+          users.forall{ user =>
+            val userToColl = searcher.getUserToCollectionEdgeSet(user.id.get)
+            val expectedFromUser = collections.get(user).map(_.id.get).toSet
+
+            searcher.intersect(userToColl, uriToColl).destIdSet === (expectedFromUri intersect expectedFromUser)
+            true
+          }
+        } === true
+      }
+    }
+
     "intersect UserToUserEdgeSet and UriToUserEdgeSet" in {
       running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
-        val store = setupArticleStore(uris)
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
         val bookmarks = mkBookmarks(expectedUriToUserEdges)
