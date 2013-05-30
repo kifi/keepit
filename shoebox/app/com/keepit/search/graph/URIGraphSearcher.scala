@@ -12,12 +12,9 @@ import com.keepit.search.index.WrappedSubReader
 import com.keepit.search.line.LineIndexReader
 import com.keepit.search.query.QueryUtil
 import com.keepit.search.util.LongArraySet
-import com.keepit.search.util.LongToLongArrayMap
-import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
-import org.apache.lucene.util.BytesRef
 import scala.collection.mutable.ArrayBuffer
 
 

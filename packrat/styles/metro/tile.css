@@ -47,6 +47,8 @@
   opacity: .4;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
+  -webkit-transition: visibility 0s .125s; /* broken backface-visibility workaround */
+  transition: visibility 0s .125s;
 }
 .kifi-tile-keep {
   background-color: #263f5c;
@@ -58,6 +60,10 @@
   background-color: #0a5aab;
   -webkit-transform: rotateX(180deg);
   transform: rotateX(180deg);
+}
+.kifi-tile[data-kept] .kifi-tile-keep,
+.kifi-tile:not([data-kept]) .kifi-tile-kept {
+  visibility: hidden;
 }
 .kifi-tile .kifi-tile-kept::before {
   content: "kept";
