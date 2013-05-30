@@ -131,6 +131,7 @@ div.kifi-snapshot-bar-wrap {
   right: 0;
   bottom: 80px;
   height: 0;
+  overflow: visible;
   text-align: center;
 }
 .kifi-snapshot-bar-wrap .kifi-snapshot-bar {

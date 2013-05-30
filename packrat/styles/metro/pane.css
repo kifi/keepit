@@ -45,6 +45,11 @@ html.kifi-pane-parent.kifi-with-pane {
 html.kifi-pane-parent.kifi-with-pane.kifi-snapshot-mode {
   margin-right: 0;
 }
+.kifi-pane+.kifi-tile {
+  -webkit-transition: -webkit-transform .25s ease-out;
+  transition: transform .25s ease-out;
+}
+
 .kifi-pane-head {
   height: 39px;
   background: #2c3e50;
