@@ -142,7 +142,7 @@ var injected, t0 = +new Date, tile, paneHistory, root = document.querySelector("
       tile.parentNode.removeChild(tile);
     }
     tile = document.createElement("div");
-    tile.id = "kifi-tile";
+    tile.id = tile.className = "kifi-tile";
     tile.style.display = "none";
     tile.innerHTML =
       "<div class=kifi-tile-flip>" +
