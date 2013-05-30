@@ -791,6 +791,10 @@ slider2 = function() {
         }, function(html) {
           configureHover(html, {showDelay: 0, hideDelay: 1e9, click: "hide"});
         });
+      }).on("transitionend webkitTransitionEnd", function unbindHover(e) {
+        if (!$tile.hasClass("kifi-hover-showing") && e.target.classList.contains("kifi-slider2-tip") && e.originalEvent.propertyName == "opacity") {
+          $tile.off("transitionend webkitTransitionEnd", unbindHover).bindHover("destroy");
+        }
       });
       $tile.triggerHandler("mouseover.bindHover");
       setTimeout($tile.triggerHandler.bind($tile, "mousedown.bindHover"), 2500);
