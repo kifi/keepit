@@ -132,6 +132,8 @@ class FakeShoeboxServiceClientImpl @Inject() (
     Promise.successful(Seq()).future
   }
 
+  def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]] = ???
+
   def getIndexable(seqNum: Long, fetchSize: Int) : Future[Seq[NormalizedURI]] = {
     val uris = db.readOnly { implicit s =>
         normUriRepo.getIndexable(SequenceNumber(seqNum), fetchSize)

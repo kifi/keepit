@@ -72,7 +72,8 @@ class ExtSearchController @Inject() (
              kifiVersion: Option[KifiVersion] = None,
              start: Option[String] = None,
              end: Option[String] = None,
-             tz: Option[String] = None) = AuthenticatedJsonAction { request =>
+             tz: Option[String] = None,
+             coll: Option[String] = None) = AuthenticatedJsonAction { request =>
 
     val t1 = currentDateTime.getMillis()
 
@@ -86,13 +87,15 @@ class ExtSearchController @Inject() (
 
     val searchFilter = filter match {
       case Some("m") =>
-        SearchFilter.mine(context, None, start, end, tz)
+        val collExtIds = coll.map{ _.split('.').flatMap(id => Try(ExternalId[Collection](id)).toOption) }
+        val collIdsFuture = collExtIds.map{ shoeboxClient.getCollectionIdsByExternalIds(_) }
+        SearchFilter.mine(context, collIdsFuture, start, end, tz, monitoredAwait)
       case Some("f") =>
         SearchFilter.friends(context, start, end, tz)
       case Some(ids) =>
         val userExtIds = ids.split('.').flatMap(id => Try(ExternalId[User](id)).toOption)
-        val idFuture = shoeboxClient.getUserIdsByExternalIds(userExtIds)
-        SearchFilter.custom(context, idFuture, start, end, tz, monitoredAwait)
+        val userIdsFuture = shoeboxClient.getUserIdsByExternalIds(userExtIds)
+        SearchFilter.custom(context, userIdsFuture, start, end, tz, monitoredAwait)
       case None =>
         if (start.isDefined || end.isDefined) SearchFilter.all(context, start, end, tz)
         else SearchFilter.default(context)
