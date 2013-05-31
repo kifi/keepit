@@ -45,6 +45,7 @@ class ExtStreamController @Inject() (
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   experimentRepo: UserExperimentRepo,
+  userValueRepo: UserValueRepo,
   userChannel: UserChannel,
   uriChannel: UriChannel,
   userToDomainRepo: UserToDomainRepo,
@@ -181,6 +182,13 @@ class ExtStreamController @Inject() (
                 Json.obj("id" -> threadId, "uri" -> nUri.url, "messages" -> msgs)
               }))
             },
+            "set_enter_to_send" -> { case JsBoolean(enterToSend) +: _ =>
+              db.readWrite(implicit s => userValueRepo.setValue(userId, "enterToSend", enterToSend.toString))
+              channel.push(Json.arr("prefs", loadUserPrefs(userId)))
+            },
+            "get_prefs" -> { _ =>
+              channel.push(Json.arr("prefs", loadUserPrefs(userId)))
+            },
             "get_last_notify_read_time" -> { _ =>
               val t = db.readOnly(implicit s => userNotificationRepo.getLastReadTime(userId))
               channel.push(Json.arr("last_notify_read_time", t.toStandardTimeString))
@@ -253,6 +261,15 @@ class ExtStreamController @Inject() (
     db.readOnly { implicit s =>
       userConnectionRepo.getConnectedUsers(userId).map(basicUserRepo.load)
     }
+  }
+
+  private def loadUserPrefs(userId: Id[User]): JsObject = {
+    val enterToSend = db.readOnly { implicit s =>
+      userValueRepo.getValue(userId, "enter_to_send").map(_.toBoolean)
+    }
+    JsObject(Seq[Option[(String, JsValue)]](
+      if (enterToSend.nonEmpty) Some("enterToSend" -> JsBoolean(enterToSend.get)) else None)
+    .flatten)
   }
 
   private def setAllNotificationsVisited(userId: Id[User], lastId: ExternalId[UserNotification]) {
