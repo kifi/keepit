@@ -1,5 +1,7 @@
 package com.keepit.model
 
+import scala.slick.lifted.Query
+
 import org.joda.time.DateTime
 
 import com.google.inject.{Inject, ImplementedBy, Singleton}
@@ -7,7 +9,6 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
-import com.keepit.common.net.Query
 
 case class KeepToCollection(
   id: Option[Id[KeepToCollection]] = None,
@@ -76,7 +77,7 @@ class KeepToCollectionRepoImpl @Inject() (
   }
 
   def count(collId: Id[Collection])(implicit session: RSession): Int = {
-    (for (c <- table if c.collectionId === collId) yield c.length).firstOption.getOrElse(0)
+    Query((for (c <- table if c.collectionId === collId) yield c).length).firstOption.getOrElse(0)
   }
 }
 
