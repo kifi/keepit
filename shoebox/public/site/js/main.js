@@ -216,7 +216,10 @@ function populateMyKeeps(id) {
 function populateCollections() {
 	$.getJSON(urlCollectionsAll,  
 			function(data) {
-				collectionsTemplate.render(data.collections);				
+				collectionsTemplate.render(data.collections);	
+				for (i in data.collections) {
+					$('aside.right select[name="collection"]').append('<option value="'+ data.collections[i].id +'">'+ data.collections[i].name +'</option>');
+				}
 			});
 }
 
@@ -291,6 +294,7 @@ $(document)
 					doSearch();
 				});
 			$('.text-core').hide();
+			$('.text-core, .text-core .text-wrap').height('1.5em');
 		}); 
 
 		$('select[name="keepers"]').on('change',function() { // execute search when changing the filter
@@ -302,6 +306,10 @@ $(document)
 				doSearch(null); 
 			}
 		});
+		$('aside.right select[name!="keepers"]').on('change',function() { // execute search when changing the filter
+			doSearch(null);
+		});
+		
 		$('input.search')
 			.on('keyup',function() {
 					clearTimeout(searchTimeout);
