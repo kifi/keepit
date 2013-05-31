@@ -37,6 +37,12 @@
   -webkit-transform: rotateX(-180deg);
   transform: rotateX(-180deg);
 }
+.kifi-tile-card.kifi-0s,
+.kifi-tile-card.kifi-0s>.kifi-tile-keep,
+.kifi-tile-card.kifi-0s>.kifi-tile-kept {
+  -webkit-transition: none;
+  transition: none;
+}
 .kifi-tile-keep,
 .kifi-tile-kept {
   position: absolute;
