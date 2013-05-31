@@ -105,7 +105,7 @@ class ExtSearchController @Inject() (
 
     val t2 = currentDateTime.getMillis()
     var t3 = 0L
-    val searchRes = time("search-searching") {
+    val searchRes = timeWithStatsd("search-searching", "search.searching") {
       val searcher = time("search-factory") { mainSearcherFactory(userId, searchFilter, config) }
       t3 = currentDateTime.getMillis()
       val searchRes = if (maxHits > 0) {
