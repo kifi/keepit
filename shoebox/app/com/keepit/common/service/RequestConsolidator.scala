@@ -49,5 +49,5 @@ class RequestConsolidator[K, T](ttl: Duration) extends Logging {
     }
   }
 
-  def clear() { futureRefMap.clear }
+  def clear() { futureRefMap.clear() }
 }

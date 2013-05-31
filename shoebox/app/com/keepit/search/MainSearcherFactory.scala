@@ -56,15 +56,13 @@ class MainSearcherFactory @Inject() (
 
     val uriGraphSearcherFuture = consolidate(userId){ userId =>
       future {
-        try {
-          uriGraph.getURIGraphSearcher(Some(userId))
-        } catch {
-          case e: URIGraphUnsupportedVersionException =>
-            // self healing, just in case
-            log.warn("fixing graph data", e)
-            uriGraph.update(userId)
-            uriGraph.getURIGraphSearcher(Some(userId))
-        }
+        uriGraph.getURIGraphSearcher(Some(userId))
+      } recover {
+        case e: URIGraphUnsupportedVersionException =>
+          // self healing, just in case
+        log.warn("fixing graph data", e)
+        uriGraph.update(userId)
+        uriGraph.getURIGraphSearcher(Some(userId))
       }
     }
 
