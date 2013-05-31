@@ -10,16 +10,17 @@ import scala.concurrent.Future
 
 abstract class SearchFilter(
     context: Option[String],
-    val collections: Option[Seq[Id[Collection]]],
     val timeRange: Option[SearchFilter.TimeRange]) {
 
   lazy val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
+  lazy val collections: Option[Seq[Id[Collection]]] = None
 
   def includeMine: Boolean
   def includeShared: Boolean
   def includeFriends: Boolean
   def includeOthers: Boolean
   def isDefault = false
+  def isCustom = false
   def filterFriends(f: Set[Id[User]]) = f
 }
 
@@ -37,7 +38,7 @@ object SearchFilter {
     }
   }
 
-  def default(context: Option[String] = None) = new SearchFilter(context, None, None) {
+  def default(context: Option[String] = None) = new SearchFilter(context, None) {
     def includeMine    = true
     def includeShared  = true
     def includeFriends = true
@@ -50,7 +51,7 @@ object SearchFilter {
           endTime: Option[String] = None,
           tz: Option[String] = None) = {
     val excludeOthers = (startTime.isDefined || endTime.isDefined)
-    new SearchFilter(context, None, timeRange(startTime, endTime, tz)) {
+    new SearchFilter(context, timeRange(startTime, endTime, tz)) {
       def includeMine    = true
       def includeShared  = true
       def includeFriends = true
@@ -60,11 +61,15 @@ object SearchFilter {
   }
 
   def mine(context: Option[String] = None,
-           collections: Option[Seq[Id[Collection]]] = None,
+           collectionsFuture: Option[Future[Seq[Id[Collection]]]] = None,
            startTime: Option[String] = None,
            endTime: Option[String] = None,
-           tz: Option[String] = None) = {
-    new SearchFilter(context, collections, timeRange(startTime, endTime, tz)) {
+           tz: Option[String] = None,
+           monitoredAwait: MonitoredAwait) = {
+    new SearchFilter(context, timeRange(startTime, endTime, tz)) {
+
+      override lazy val collections = collectionsFuture.map{ monitoredAwait.result(_, Duration.Inf) }
+
       def includeMine    = true
       def includeShared  = true
       def includeFriends = false
@@ -75,7 +80,7 @@ object SearchFilter {
               startTime: Option[String] = None,
               endTime: Option[String] = None,
               tz: Option[String] = None) = {
-    new SearchFilter(context, None, timeRange(startTime, endTime, tz)) {
+    new SearchFilter(context, timeRange(startTime, endTime, tz)) {
       def includeMine    = false
       def includeShared  = false
       def includeFriends = true
@@ -88,14 +93,15 @@ object SearchFilter {
              endTime: Option[String] = None,
              tz: Option[String]= None,
              monitoredAwait: MonitoredAwait) = {
-    new SearchFilter(context, None, timeRange(startTime, endTime, tz)) {
+    new SearchFilter(context, timeRange(startTime, endTime, tz)) {
 
-      private[this] lazy val users = monitoredAwait.result(usersFuture, 5 seconds).toSet
+      private[this] lazy val users = monitoredAwait.result(usersFuture, Duration.Inf).toSet
 
       def includeMine    = false
       def includeShared  = true
       def includeFriends = true
       def includeOthers  = false
+      override def isCustom = true
       override def filterFriends(f: Set[Id[User]]) = (users intersect f)
     }
   }

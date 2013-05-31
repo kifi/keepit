@@ -375,7 +375,7 @@ api.log("[google_inject]");
         id: friend.id,
         iconsUrl: api.url("images/social_icons.png")
       }, function(html) {
-        configureHover(html, {hideDelay: 600, click: "toggle"});
+        configureHover(html, {canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
       });
     }).bindHover(".kifi-res-friends", function(configureHover) {
       var $a = $(this), i = $a.closest("li.g").prevAll("li.g").length;
@@ -393,7 +393,7 @@ api.log("[google_inject]");
         numMessages: n[1],
         pluralize: function() {return pluralLambda}
       }, function(html) {
-        configureHover(html, {hideDelay: 600, click: "toggle"});
+        configureHover(html, {canLeaveFor: 600, click: "toggle"});
       });
     }).on("click", ".kifi-chatter-deeplink", function() {
       api.port.emit("add_deep_link_listener", $(this).data("locator"));

@@ -303,6 +303,8 @@ div.kifi-pane-tall-middle {
   display: table;
   height: 100%;
   width: 100%;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
 }
 div.kifi-pane-empty {
   display: table-cell;

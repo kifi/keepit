@@ -192,7 +192,7 @@ api = function() {
       }
     },
     "api:require": function(data, respond, tab) {
-      injectWithDeps(tab.id, data, respond);
+      injectWithDeps(tab.id, data.path, data.injected, respond);
     }};
   chrome.runtime.onConnect.addListener(function(port) {
     var tab = port.sender.tab;
@@ -260,7 +260,7 @@ api = function() {
   });
 
   function injectContentScripts(page, skipOnReady) {
-    if (page.injecting || page.ready) return;
+    if (page.injecting || page.ready || ports[page.id]) return;
     if (/^https:\/\/chrome.google.com\/webstore/.test(page.url)) {
       api.log("[injectContentScripts] forbidden", page.url);
       return;
@@ -270,49 +270,41 @@ api = function() {
     if (api.prefs.get("suppressLog")) {
       chrome.tabs.executeScript(page.id, {code: "var api=api||{};api.log=function(){}", runAt: "document_start"}, api.noop);
     }
-    for (var i = 0, n = 0, N = 0; i < meta.contentScripts.length; i++) {
-      var cs = meta.contentScripts[i];
-      if (cs[1].test(page.url)) {
-        N++;
-        injectWithDeps(page.id, cs[0], function() {
-          if (++n === N) {
-            if (localStorage[":env"] == "development") {
-              chrome.tabs.executeScript(page.id, {code: "api.dev=1", runAt: "document_start"}, api.noop);
-            }
-            done();
-          }
-        });
-      }
-    }
-    if (N === 0) done();
+    var scripts = meta.contentScripts.filter(function(cs) { return cs[1].test(page.url) });
+    var injected = {};
+    done(0);
 
-    function done() {
-      page.ready = true;
-      delete page.injecting;
-      if (!skipOnReady) {
-        dispatch.call(api.tabs.on.ready, page);
+    function done(n) {
+      if (n < scripts.length) {
+        injectWithDeps(page.id, scripts[n][0], injected, function(paths) {
+          for (var i in paths) {
+            injected[paths[i]] = true;
+          }
+          done(n + 1);
+        });
+      } else {
+        if (localStorage[":env"] == "development") {
+          chrome.tabs.executeScript(page.id, {code: "api.dev=1", runAt: "document_start"}, api.noop);
+        }
+        api.tabs.emit(page, "api:injected", Object.keys(injected));
+        page.ready = true;
+        delete page.injecting;
+        if (!skipOnReady) {
+          dispatch.call(api.tabs.on.ready, page);
+        }
       }
     }
   }
 
-  function injectWithDeps(tabId, path, callback) {
-    // To avoid duplicate injections, we use one script to both:
-    // 1) read what's already been injected and
-    // 2) record what's about to be injected.
-    // We use runAt: "document_start" to ensure that it executes ASAP.
-    var paths = function(o) {return o.styles.concat(o.scripts)}(deps(path));
-    chrome.tabs.executeScript(tabId, {
-        code: "var injected=injected||{};(function(i){var o={},n=['" + paths.join("','") + "'],k;for(k in i)o[k]=i[k];for(k in n)i[n[k]]=1;return o})(injected)",
-        runAt: "document_start"}, function(arr) {
-      var injected = arr && arr[0] || {};
-      var o = deps(path, injected), n = 0;
-      injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), o.styles, done);
-      injectAll(chrome.tabs.executeScript.bind(chrome.tabs), o.scripts, done);
-      function done() {
-        if (++n === 2) callback();
+  function injectWithDeps(tabId, path, injected, callback) {
+    var o = deps(path, injected), n = 0;
+    injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), o.styles, done);
+    injectAll(chrome.tabs.executeScript.bind(chrome.tabs), o.scripts, done);
+    function done() {
+      if (++n == 2) {
+        callback(o.styles.concat(o.scripts));
       }
-    });
-
+    }
     function injectAll(inject, paths, callback) {
       var n = 0, N = paths.length;
       if (N) {
