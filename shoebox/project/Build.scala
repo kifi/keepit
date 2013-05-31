@@ -33,6 +33,7 @@ object ApplicationBuild extends Build {
 
     val appDependencies = Seq(
       jdbc,
+      "com.typesafe.play.plugins" %% "play-statsd" % "2.1.0",
       "securesocial" %% "securesocial" % "master-SNAPSHOT",
       "com.github.mumoshu" %% "play2-memcached" % "0.3.0.1",
       "mysql" % "mysql-connector-java" % "5.1.25",
