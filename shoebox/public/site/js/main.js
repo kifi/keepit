@@ -19,6 +19,7 @@ var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPL
 				});
 				$('#my-keeps .keep .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myAvatar + '"/>');
 				initDraggable();
+				$(".easydate").easydate({set_title: false}); 
 
 				// insert time sections
 				var currentDate = new Date();
@@ -26,9 +27,9 @@ var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPL
 					var age = daysBetween(new Date(Date.parse($(this).data('created'))), currentDate);
 					if ($('#my-keeps li.search-section.today').length == 0 && age <= 1) {
 						$(this).before('<li class="search-section today">Today</li>'); 
-					} else if ($('#my-keeps li.search-section.yesterday').length == 0  && age > 1 && age <= 2) {
+					} else if ($('#my-keeps li.search-section.yesterday').length == 0  && age > 1 && age < 2) {
 						$(this).before('<li class="search-section yesterday">Yesderday</li>'); 
-					} else if ($('#my-keeps li.search-section.week').length == 0  && age > 2 && age <= 7) {
+					} else if ($('#my-keeps li.search-section.week').length == 0  && age >= 2 && age <= 7) {
 						$(this).before('<li class="search-section week">Past Week</li>'); 
 					} else if ($('#my-keeps li.search-section.older').length == 0  && age > 7) {
 						$(this).before('<li class="search-section older">Older</li>'); 
@@ -136,7 +137,7 @@ function doSearch(context) {
 	$('#my-keeps').hide();
 	$('.search h1').hide();
 	$('.search .num-results').show();
-	$('aside.right').show();
+//	$('aside.right').show();
 	showLoading();
 	$('#search-results').show();
 	$.getJSON(urlSearch, 
@@ -187,7 +188,7 @@ function populateMyKeeps(id) {
 	searchTemplate.clear();
 	$('input.search').val('');
 	searchContext = null;
-	$('aside.right').hide();
+//	$('aside.right').hide();
 	$('.search h1').show();
 	$('.search .num-results').hide();
 	if (lastKeep == null) {
@@ -217,10 +218,10 @@ function populateCollections() {
 	$.getJSON(urlCollectionsAll,  
 			function(data) {
 				collectionsTemplate.render(data.collections);	
-				for (i in data.collections) {
+/*				for (i in data.collections) {
 					$('aside.right select[name="collection"]').append('<option value="'+ data.collections[i].id +'">'+ data.collections[i].name +'</option>');
 				}
-			});
+*/			});
 }
 
 function updateNumKeeps() {
@@ -242,10 +243,10 @@ $(document)
 	.on('scroll',function() { // infinite scroll
 		if (!isLoading() && $(document).height() - ($(window).scrollTop() + $(window).height()) < 300) //  scrolled down to less than 300px from the bottom
 		{
-			if (lastKeep != null ) // scroll keeps
-				populateMyKeeps();
-			else if (searchContext != null ) //
+			if (searchContext != null ) 
 				doSearch(searchContext);	
+			else
+				populateMyKeeps();
 		}
 	})
 	.ready(function() {		
@@ -262,8 +263,8 @@ $(document)
 		// populate user data 
 		$.getJSON(urlMe, function(data) {
 			myAvatar = getAvatar(data.id, data.pictureName, 200);
-			$('aside.left .large-avatar').html('<img src="' + myAvatar + '"/>\
-				<div class="name">' + data.firstName + ' ' + data.lastName + '</div>');
+			$('aside.left .large-avatar').html('<div class="name">' + data.firstName + ' ' + data.lastName + '</div>');
+			$('header .header-left').prepend('<img id="my-avatar" src="' + myAvatar + '"/>');
 		}); 
 		
 		// populate user connections
@@ -306,6 +307,11 @@ $(document)
 				doSearch(null); 
 			}
 		});
+/*		$('select[name="collection"]').on('change', function() { // mark selected collection as active
+			$('aside.left h3.collection').removeClass('active');
+			$('aside.left h3[data-id="'+ $(this).val() +'"]').addClass('active');
+		});
+*/		
 		$('aside.right select[name!="keepers"]').on('change',function() { // execute search when changing the filter
 			doSearch(null);
 		});
@@ -315,16 +321,30 @@ $(document)
 					clearTimeout(searchTimeout);
 					searchTimeout = setTimeout('doSearch(null)', 500);
 				}) // instant search
-			.on('focus',function() {$('.active').removeClass('active'); $(this).parent().addClass('active')});
+			.on('focus',function() {
+/*				if ($('aside.left h3.active').is('.collection')) { // set the search filters to the selected collection
+					$('select[name="keepers"]').val('m');
+					$('select[name="collection"]').val($('aside.left h3.active').data('id'));
+				} else { // reset filters
+					$('select[name="keepers"]').val('f');
+					$('select[name="collection"]').val('');
+				}
+*/
+				$('aside.left .active').removeClass('active'); 
+			});
 
 
 		$('#collections').on('click', 'h3 a', function() {
 			populateMyKeeps($(this).parent().data('id'));
 		});
 
-		$('aside.left h3.new a').click(function() {
-			$('#add-collection').slideDown();
-			$('#add-collection input').focus();
+		$('aside.left a#new-collection').click(function() {
+			if ($('#add-collection').is(':visible')) {
+				$('#add-collection').slideUp();
+			} else {
+				$('#add-collection').slideDown();
+				$('#add-collection input').focus();				
+			}
 		})
 
 		// create new collection
@@ -341,7 +361,7 @@ $(document)
 						,error: function() {showMessage('Could not create collection, please try again later')}
 						,success: function(data) {
 										console.log(data)
-									   $('#collections').append('<h3 class="droppable" data-id="' + data.id + '"><a href="javascript: ;"> ' + newName + ' <span class="right light"></span></a></h3>');
+									   $('#collections').append('<h3 class="droppable" data-id="' + data.id + '"><a href="javascript: ;"> ' + newName + ' <span class="right light">0</span></a></h3>');
 									   initDroppable();
 									   $('#add-collection').slideUp();
 									   inputField.val('');
