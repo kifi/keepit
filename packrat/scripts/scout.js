@@ -40,14 +40,19 @@ var t0 = +new Date, tile, paneHistory, root = document.querySelector("body") || 
         tile.dataset.pos = JSON.stringify(pos);
         positionTile(pos);
       }
+      tileCard.classList.add("kifi-0s");
       if (o.kept) {
         tile.dataset.kept = o.kept;
+      } else {
+        tile.removeAttribute("data-kept");
       }
       window.addEventListener("resize", onResize);
       api.require("styles/metro/tile.css", function() {
         if (!o.hide) {
           tile.style.display = "";
         }
+        tile.offsetHeight;
+        tileCard.classList.remove("kifi-0s");
       });
     },
     kept: function(o) {

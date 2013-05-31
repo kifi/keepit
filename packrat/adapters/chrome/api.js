@@ -260,7 +260,7 @@ api = function() {
   });
 
   function injectContentScripts(page, skipOnReady) {
-    if (page.injecting || page.ready) return;
+    if (page.injecting || page.ready || ports[page.id]) return;
     if (/^https:\/\/chrome.google.com\/webstore/.test(page.url)) {
       api.log("[injectContentScripts] forbidden", page.url);
       return;
