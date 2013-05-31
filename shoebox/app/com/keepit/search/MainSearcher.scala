@@ -133,9 +133,8 @@ class MainSearcher(
     else friendUris -- myUris // friends only
   }
 
-  private[this] val customFilterOn = (filteredFriendIds != friendIds)
   private[this] val friendEdgeSet = uriGraphSearcher.getUserToUserEdgeSet(userId, friendIds)
-  private[this] val filteredFriendEdgeSet = if (customFilterOn) uriGraphSearcher.getUserToUserEdgeSet(userId, filteredFriendIds) else friendEdgeSet
+  private[this] val filteredFriendEdgeSet = if (filter.isCustom) uriGraphSearcher.getUserToUserEdgeSet(userId, filteredFriendIds) else friendEdgeSet
 
   val preparationTime = currentDateTime.getMillis() - currentTime
   timeLogs.socialGraphInfo = preparationTime
@@ -145,11 +144,11 @@ class MainSearcher(
   }
 
   private def sharingScore(sharingUsers: UserToUserEdgeSet): Float = {
-    if (customFilterOn) filter.filterFriends(sharingUsers.destIdSet).size.toFloat else sharingUsers.size.toFloat
+    if (filter.isCustom) filter.filterFriends(sharingUsers.destIdSet).size.toFloat else sharingUsers.size.toFloat
   }
 
   private def sharingScore(sharingUsers: UserToUserEdgeSet, normalizedFriendStats: FriendStats): Float = {
-    val users = if (customFilterOn) filter.filterFriends(sharingUsers.destIdSet) else sharingUsers.destIdSet
+    val users = if (filter.isCustom) filter.filterFriends(sharingUsers.destIdSet) else sharingUsers.destIdSet
     users.foldLeft(0.0f){ (score, id) => score + normalizedFriendStats.score(id) }
   }
 
