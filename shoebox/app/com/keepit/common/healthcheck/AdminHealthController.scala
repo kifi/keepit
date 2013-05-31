@@ -56,4 +56,5 @@ class AdminHealthController @Inject() (
     // throwing an array out bound exception. its a fixed stack exception with random message text
     (new Array[Int](1))(Random.nextInt + 1) = 1
     Ok("You cannot see this :-P ")
-  }}
+  }
+}
