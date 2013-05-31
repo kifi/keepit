@@ -183,7 +183,7 @@ class ExtStreamController @Inject() (
               }))
             },
             "set_enter_to_send" -> { case JsBoolean(enterToSend) +: _ =>
-              db.readWrite(implicit s => userValueRepo.setValue(userId, "enterToSend", enterToSend.toString))
+              db.readWrite(implicit s => userValueRepo.setValue(userId, "enter_to_send", enterToSend.toString))
               channel.push(Json.arr("prefs", loadUserPrefs(userId)))
             },
             "get_prefs" -> { _ =>
