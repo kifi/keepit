@@ -567,6 +567,7 @@ slider2 = function() {
             var q;
             if (e.which == 13 && (q = this.value.trim())) {
               window.open("https://www.google.com/search?q=" + encodeURIComponent(q).replace(/%20/g, "+"));
+              this.value = "";
             }
           })
           .on("click", ".kifi-pane-back", function() {
