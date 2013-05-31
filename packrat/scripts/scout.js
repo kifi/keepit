@@ -13,7 +13,7 @@ window.onerror = function (message, url, lineNo) {
   }
 };
 
-var injected, t0 = +new Date, tile, paneHistory, root = document.querySelector("body") || document.documentElement;
+var t0 = +new Date, tile, paneHistory, root = document.querySelector("body") || document.documentElement;
 
 !function() {
   api.log("[scout]", location.hostname);
