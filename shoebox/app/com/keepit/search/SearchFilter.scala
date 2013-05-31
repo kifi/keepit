@@ -20,6 +20,7 @@ abstract class SearchFilter(
   def includeFriends: Boolean
   def includeOthers: Boolean
   def isDefault = false
+  def isCustom = false
   def filterFriends(f: Set[Id[User]]) = f
 }
 
@@ -96,6 +97,7 @@ object SearchFilter {
       def includeShared  = true
       def includeFriends = true
       def includeOthers  = false
+      override def isCustom = true
       override def filterFriends(f: Set[Id[User]]) = (users intersect f)
     }
   }
