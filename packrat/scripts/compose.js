@@ -128,7 +128,8 @@ function attachComposeBindings($c, composeTypeName) {
       html: "Click to mark something on<br>the page and reference it in<br>your " + composeTypeName + "."
     }, function(html) {
       configureHover(html, {
-        showDelay: 500,
+        mustHoverFor: 500,
+        hideAfter: 3000,
         click: "hide",
         position: function(w) {
           this.style.left = 21 - w / 2 + "px";

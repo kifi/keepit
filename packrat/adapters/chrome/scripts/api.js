@@ -13,12 +13,19 @@ var api = function() {
         delete callbacks[id];
         cb(msg[2]);
       }
+    } else if (kind == "api:injected") {
+      msg[1].forEach(function(path) {
+        injected[path] = true;
+      });
+      api.log("[api:injected]", Object.keys(injected));
+      requireNext();
     } else {
-      var data = msg[1];
+      var data = msg[1], handler;
       api.log("[onMessage]", kind, data != null ? data : "");
       for (var i in msgHandlers) {
-        var handler = msgHandlers[i][kind];
-        handler && handler(data);
+        if (handler = msgHandlers[i][kind]) {
+          handler(data);
+        }
       }
     }
   });
@@ -30,6 +37,35 @@ var api = function() {
     }
     api.onEnd.length = msgHandlers.length = 0;
   });
+
+  var requireQueue = [], injected = {};
+  function requireNow(path, callback) {
+    if (injected[path]) {
+      done();
+    } else {
+      requireQueue = requireQueue || [];
+      api.port.emit("api:require", {path: path, injected: injected}, function(paths) {
+        for (var i = 0; i < paths.length; i++) {
+          injected[paths[i]] = true;
+        }
+        done();
+      });
+    }
+    function done() {
+      try {
+        callback();
+      } finally {
+        requireNext();
+      }
+    }
+  }
+  function requireNext() {
+    if (requireQueue && requireQueue.length) {
+      requireNow.apply(null, requireQueue.shift());
+    } else {
+      requireQueue = null;
+    }
+  }
 
   return {
     load: function(path, callback) {
@@ -64,10 +100,10 @@ var api = function() {
         msgHandlers.push(handlers);
       }},
     require: function(path, callback) {
-      if (injected[path]) {
-        callback();
+      if (requireQueue) {
+        requireQueue.push([path, callback]);
       } else {
-        api.port.emit("api:require", path, callback);
+        requireNow(path, callback);
       }
     },
     url: chrome.runtime.getURL};
