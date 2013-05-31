@@ -13,7 +13,9 @@ home-grown at FortyTwo, not intended for distribution (yet)
   $.fn.bindHover = function(selector, create) {
     if (selector == "destroy") {
       return this.each(function() {
-        $(($(this).data("hover") || {}).$h).remove();
+        var data = $(this).data("hover") || {};
+        clearTimeout(data.show || data.hide);
+        $(data.$h).remove();
       }).unbind(".bindHover").removeData("hover");
     }
     if (!create) create = selector, selector = null;
@@ -26,7 +28,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
       if (!data.$h) {  // fresh start
         createHover($a, data, create);
       } else { // hover currently showing or at least initiated
-        if (data.opts && data.opts.hideDelay) {
+        if (data.opts && data.opts.canLeaveFor) {
           clearTimeout(data.hide), delete data.hide;
           document.removeEventListener("mousemove", data.move, true);
           delete data.move;
@@ -38,8 +40,11 @@ home-grown at FortyTwo, not intended for distribution (yet)
       clearTimeout(data.show), delete data.show;
       data.mouseoutTimeStamp = e.timeStamp || +new Date;
       if ($a.hasClass("kifi-hover-showing")) {
-        if (data.opts && data.opts.hideDelay && between(this, data.$h[0], e.clientX, e.clientY)) {
-          data.hide = setTimeout(hide.bind(this), data.opts.hideDelay);
+        if (data.opts && data.opts.hideAfter) {
+          clearTimeout(data.hide), delete data.hide;
+        }
+        if (data.opts && data.opts.canLeaveFor && between(this, data.$h[0], e.clientX, e.clientY)) {
+          data.hide = setTimeout(hide.bind(this), data.opts.canLeaveFor);
           data.move = onMouseMoveMaybeHide.bind(this);
           document.addEventListener("mousemove", data.move, true);
         } else {
@@ -87,7 +92,7 @@ home-grown at FortyTwo, not intended for distribution (yet)
         $h.css({visibility: "", display: ""}).detach();
         opts.position.call($h[0], r.width, r.height);
       }
-      var ms = showImmediately ? 0 : (opts.showDelay || 0) - (new Date - createStartTime);
+      var ms = showImmediately ? 0 : (opts.mustHoverFor || 0) - (new Date - createStartTime);
       if (ms > 0) {
         data.show = setTimeout(show.bind($a[0]), ms);
       } else {
@@ -103,6 +108,9 @@ home-grown at FortyTwo, not intended for distribution (yet)
     data.$h.appendTo($a).each(function(){this.offsetHeight});
     $a.addClass("kifi-hover-showing");
     data.showTime = +new Date;
+    if (data.opts.hideAfter) {
+      data.hide = setTimeout(hide.bind(this), data.opts.hideAfter);
+    }
   }
   function hide() {
     var $a = $(this), data = getOrCreateData($a);
