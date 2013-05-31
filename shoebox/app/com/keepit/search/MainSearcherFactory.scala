@@ -43,7 +43,11 @@ class MainSearcherFactory @Inject() (
     implicit private val fortyTwoServices: FortyTwoServices
  ) extends Logging {
 
-  def apply(userId: Id[User], friendIdsFuture: Future[Set[Id[User]]], filter: SearchFilter, config: SearchConfig) = {
+  def apply(userId: Id[User], filter: SearchFilter, config: SearchConfig) = {
+    val browsingHistoryFuture = shoeboxClient.getBrowsingHistoryFilter(userId).map(browsingHistoryBuilder.build)
+    val clickHistoryFuture = shoeboxClient.getClickHistoryFilter(userId).map(clickHistoryBuilder.build)
+    val friendIdsFuture = shoeboxClient.getConnectedUsers(userId)
+
     val articleSearcher = articleIndexer.getSearcher
     val uriGraphSearcher = {
       try {
@@ -58,8 +62,6 @@ class MainSearcherFactory @Inject() (
     }
     val collectionSearcher = uriGraph.getCollectionSearcher()
 
-    val browsingHistoryFuture = shoeboxClient.getBrowsingHistoryFilter(userId).map(browsingHistoryBuilder.build)
-    val clickHistoryFuture = shoeboxClient.getClickHistoryFilter(userId).map(clickHistoryBuilder.build)
     val friendIds = monitoredAwait.result(friendIdsFuture, 5 milliseconds)
 
     new MainSearcher(
