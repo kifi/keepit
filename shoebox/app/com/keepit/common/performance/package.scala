@@ -29,8 +29,8 @@ package object performance {
     val res = f
     sw.stop()
     sw.logTime()
-    Statsd.timing(statsdTag, sw.elapsedTime / 1000000)
     Statsd.increment(statsdTag)
+    Statsd.timing(statsdTag, sw.elapsedTime / 1000000)
     res
   }
 }
