@@ -224,6 +224,14 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(users))
   }
 
+  def getCollectionIdsByExternalIds(ids: String) = Action { request =>
+    val extCollIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(ExternalId[Collection](_))
+    val collectionIds = db.readOnly { implicit s =>
+      extCollIds.map { collectionRepo.getOpt(_).map(_.id.get.id) }.flatten
+    }
+    Ok(Json.toJson(collectionIds))
+  }
+
   def getConnectedUsers(id : Id[User]) = Action { request =>
     val ids = db.readOnly { implicit s =>
       userConnectionRepo.getConnectedUsers(id).toSeq
