@@ -1,5 +1,6 @@
 package com.keepit.search.graph
 
+import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model._
@@ -7,6 +8,7 @@ import com.keepit.model.NormalizedURIStates._
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.Article
 import com.keepit.search.Lang
+import com.keepit.shoebox.FakeShoeboxServiceClientImpl
 import com.keepit.test._
 import com.keepit.inject._
 import org.apache.lucene.store.RAMDirectory
@@ -102,6 +104,10 @@ trait GraphTestHelper extends DbRepos {
   }
 
   def mkURIGraph(graphDir: RAMDirectory = new RAMDirectory, collectionDir: RAMDirectory = new RAMDirectory): URIGraphImpl = {
-    new URIGraphImpl(mkURIGraphIndexer(graphDir), mkCollectionIndexer(collectionDir))
+    new URIGraphImpl(mkURIGraphIndexer(graphDir), mkCollectionIndexer(collectionDir), inject[ShoeboxServiceClient], inject[MonitoredAwait])
+  }
+
+  def setConnections(connections: Map[Id[User], Set[Id[User]]]) {
+    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].setConnections(connections)
   }
 }

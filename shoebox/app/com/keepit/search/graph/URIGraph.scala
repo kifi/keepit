@@ -3,6 +3,8 @@ package com.keepit.search.graph
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db._
 import com.keepit.model._
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.common.akka.MonitoredAwait
 
 @ImplementedBy(classOf[URIGraphImpl])
 trait URIGraph {
@@ -17,7 +19,9 @@ trait URIGraph {
 @Singleton
 class URIGraphImpl @Inject()(
     val uriGraphIndexer: URIGraphIndexer,
-    val collectionIndexer: CollectionIndexer
+    val collectionIndexer: CollectionIndexer,
+    shoeboxClient: ShoeboxServiceClient,
+    monitoredAwait: MonitoredAwait
   ) extends URIGraph {
 
   def update(): Int = {
@@ -37,7 +41,7 @@ class URIGraphImpl @Inject()(
     uriGraphIndexer.close()
   }
   def getURIGraphSearcher(userId: Option[Id[User]]): URIGraphSearcher = {
-    new URIGraphSearcher(uriGraphIndexer.getSearcher, userId)
+    new URIGraphSearcher(uriGraphIndexer.getSearcher, userId, shoeboxClient, monitoredAwait)
   }
   def getCollectionSearcher(): CollectionSearcher = {
     new CollectionSearcher(collectionIndexer.getSearcher)

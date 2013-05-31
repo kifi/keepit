@@ -37,7 +37,6 @@ import com.keepit.common.akka.MonitoredAwait
 
 class MainSearcher(
     userId: Id[User],
-    friendIds: Set[Id[User]],
     filter: SearchFilter,
     config: SearchConfig,
     articleSearcher: Searcher,
@@ -86,6 +85,8 @@ class MainSearcher(
   val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.001f
 
   // initialize user's social graph info
+  private[this] val friendEdgeSet = uriGraphSearcher.friendEdgeSet
+  private[this] val friendIds = friendEdgeSet.destIdSet
   private[this] val myUriEdges = uriGraphSearcher.myUriEdgeSet
   private[this] val myUriEdgeAccessor = myUriEdges.accessor
   private[this] val filteredFriendIds = filter.filterFriends(friendIds)
@@ -133,7 +134,6 @@ class MainSearcher(
     else friendUris -- myUris // friends only
   }
 
-  private[this] val friendEdgeSet = uriGraphSearcher.getUserToUserEdgeSet(userId, friendIds)
   private[this] val filteredFriendEdgeSet = if (filter.isCustom) uriGraphSearcher.getUserToUserEdgeSet(userId, filteredFriendIds) else friendEdgeSet
 
   val preparationTime = currentDateTime.getMillis() - currentTime

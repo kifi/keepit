@@ -48,4 +48,6 @@ class RequestConsolidator[K, T](ttl: Duration) extends Logging {
         future
     }
   }
+
+  def clear() { futureRefMap.clear }
 }

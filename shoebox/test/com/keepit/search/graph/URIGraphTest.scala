@@ -321,6 +321,8 @@ class URIGraphTest extends Specification with GraphTestHelper {
         val bmt1 = new TermQuery(new Term(URIGraphFields.titleField, "bmt1"))
         val bmt2 = new TermQuery(new Term(URIGraphFields.titleField, "bmt2"))
 
+        setConnections(Map(users(0).id.get -> Set(), users(1).id.get -> Set()))
+
         val searcher0 = graph.getURIGraphSearcher(users(0).id)
         val searcher1 = graph.getURIGraphSearcher(users(1).id)
 
@@ -349,6 +351,8 @@ class URIGraphTest extends Specification with GraphTestHelper {
         }
         val graph = mkURIGraph()
         graph.update() === 1
+
+        setConnections(Map(users(0).id.get -> Set()))
 
         val searcher = graph.getURIGraphSearcher(users(0).id)
 
