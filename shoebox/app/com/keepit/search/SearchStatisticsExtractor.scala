@@ -227,7 +227,7 @@ class SearchStatisticsHelperSearcher(queryString: String, userId: Id[User], targ
   val friendIds = monitoredAwait.result(shoeboxServiceClient.getConnectedUsers(userId), 5 seconds)
   val searchFilter = filter match {
     case Some("m") =>
-      SearchFilter.mine(context)
+      SearchFilter.mine(context, monitoredAwait = monitoredAwait)
     case Some("f") =>
       SearchFilter.friends(context)
     case Some(ids) =>
