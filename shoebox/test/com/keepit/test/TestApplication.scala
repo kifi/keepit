@@ -2,7 +2,7 @@ package com.keepit.test
 
 import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
 import com.keepit.common.analytics._
-import com.keepit.common.cache.{HashMapMemoryCache, FortyTwoCachePlugin}
+import com.keepit.common.cache.{InMemoryFortyTwoCachePlugin, HashMapMemoryCache, FortyTwoCachePlugin}
 import com.keepit.common.controller.FortyTwoCookies._
 import com.keepit.common.db._
 import com.keepit.common.store.FakeS3StoreModule
@@ -130,12 +130,12 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[Babysitter].to[FakeBabysitter]
     install(new SlickModule(dbInfo.getOrElse(dbInfoFromApplication)))
-    bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
     bind[MailToKeepPlugin].to[FakeMailToKeepPlugin]
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
     bind[HealthcheckPlugin].to[FakeHealthcheck]
     bind[SlickSessionProvider].to[TestSlickSessionProvider]
     install(new FakeS3StoreModule())
+    install(new FakeCacheModule)
   }
 
   private def dbInfoFromApplication(): DbInfo = TestDbInfo.dbInfo
@@ -288,6 +288,7 @@ class FakeSocialGraphPlugin extends SocialGraphPlugin {
 case class FakeCacheModule() extends ScalaModule {
   override def configure() {
     bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
+    bind[InMemoryFortyTwoCachePlugin].to[HashMapMemoryCache]
   }
 }
 

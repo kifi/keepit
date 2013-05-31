@@ -2,7 +2,7 @@ package com.keepit.common.cache
 
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{ImplementedBy, Inject, Singleton}
 import play.api.Play.current
 import scala.collection.concurrent.{TrieMap=>ConcurrentMap}
 import play.api.libs.json._
@@ -51,6 +51,8 @@ trait FortyTwoCachePlugin extends Plugin {
   override def enabled = true
 }
 
+trait InMemoryFortyTwoCachePlugin extends FortyTwoCachePlugin
+
 @Singleton
 class MemcachedCache @Inject() (
   val cache: MemcachedPlugin,
@@ -74,12 +76,14 @@ class MemcachedCache @Inject() (
   override def onStop() {
     cache.onStop()
   }
+
+  override def toString = "Memcached"
 }
 
 @Singleton
-class InMemoryCache @Inject() (
+class EhCacheCache @Inject() (
   val stats: CacheStatistics,
-  val healthcheck: HealthcheckPlugin) extends FortyTwoCachePlugin {
+  val healthcheck: HealthcheckPlugin) extends InMemoryFortyTwoCachePlugin {
 
   import play.api.Play
   import play.api.cache.{EhCachePlugin, Cache}
@@ -101,11 +105,14 @@ class InMemoryCache @Inject() (
   def set(key: String, value: Any, expiration: Int = 0) {
     Cache.set(key, value, expiration)
   }
+
+  override def toString = "EhCache"
+
 }
 
 @Singleton
 class HashMapMemoryCache @Inject() (
-  val stats: CacheStatistics) extends FortyTwoCachePlugin {
+  val stats: CacheStatistics) extends InMemoryFortyTwoCachePlugin {
 
   val cache = ConcurrentMap[String, Any]()
 
@@ -119,6 +126,9 @@ class HashMapMemoryCache @Inject() (
   def set(key: String, value: Any, expiration: Int = 0) {
     cache += key -> value
   }
+
+  override def toString = "HashMapMemoryCache"
+
 }
 
 
@@ -130,7 +140,10 @@ trait Key[T] {
 }
 
 trait ObjectCache[K <: Key[T], T] {
+  val outerCache: Option[ObjectCache[K, T]] = None
   val ttl: Duration
+  outerCache map {outer => require(ttl <= outer.ttl) }
+
   def serialize(value: T): Any
   def deserialize(obj: Any): T
 
@@ -140,7 +153,10 @@ trait ObjectCache[K <: Key[T], T] {
 
   def getOrElse(key: K)(orElse: => T): T = {
     get(key).getOrElse {
-      val value = orElse
+      val value = outerCache match {
+        case Some(cache) => cache.getOrElse(key)(orElse)
+        case None => orElse
+      }
       set(key, value)
     }
   }
@@ -149,7 +165,10 @@ trait ObjectCache[K <: Key[T], T] {
     get(key) match {
       case s @ Some(value) => s
       case None =>
-        val value = orElse
+        val value = outerCache match {
+          case Some(cache) => cache.getOrElseOpt(key)(orElse)
+          case None => orElse
+        }
         if (value.isDefined)
           Some(set(key, value.get))
         else
@@ -164,7 +183,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
     val value = try repo.get(key.toString) catch {
       case e: Throwable =>
         repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
-          errorMessage = Some(s"Failed fetching key $key from cache")))
+          errorMessage = Some(s"Failed fetching key $key from $repo")))
         None
     }
     try {
@@ -177,7 +196,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
     } catch {
       case e: Throwable =>
         repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
-          errorMessage = Some(s"Failed deserializing key $key from cache, got raw value $value")))
+          errorMessage = Some(s"Failed deserializing key $key from $repo, got raw value $value")))
         remove(key)
         None
     }
@@ -204,7 +223,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
     } catch {
       case e: Throwable =>
         repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
-          errorMessage = Some(s"Failed setting key $key in cache")))
+          errorMessage = Some(s"Failed setting key $key in $repo")))
         value
     }
 

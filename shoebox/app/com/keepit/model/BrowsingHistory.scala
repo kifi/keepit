@@ -16,10 +16,11 @@ import java.net.URI
 import java.security.MessageDigest
 import scala.collection.mutable
 import play.api.libs.json._
-import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache._
 import com.keepit.serializer.BrowsingHistoryBinarySerializer
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
+import scala.Some
 
 case class BrowsingHistory (
                     id: Option[Id[BrowsingHistory]] = None,
@@ -47,11 +48,22 @@ case class BrowsingHistoryUserIdKey(userId: Id[User]) extends Key[BrowsingHistor
   val namespace = "browsing_history_by_userid"
   def toKey(): String = userId.id.toString
 }
-class BrowsingHistoryUserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[BrowsingHistoryUserIdKey, BrowsingHistory] {
-  val ttl = 7 days
+
+@ImplementedBy(classOf[BrowsingHistoryUserIdCacheImpl])
+trait BrowsingHistoryUserIdCache extends FortyTwoCache[BrowsingHistoryUserIdKey, BrowsingHistory] {
   def deserialize(obj: Any): BrowsingHistory = BrowsingHistoryBinarySerializer.browsingHistoryBinarySerializer.reads(obj.asInstanceOf[Array[Byte]])
   def serialize(browsingHistory: BrowsingHistory) = BrowsingHistoryBinarySerializer.browsingHistoryBinarySerializer.writes(browsingHistory)
 }
+
+@Singleton
+class OuterBrowsingHistoryUserIdCacheImpl @Inject() (val repo: FortyTwoCachePlugin)
+  extends {val ttl = 7 days} with BrowsingHistoryUserIdCache
+
+@Singleton
+class BrowsingHistoryUserIdCacheImpl @Inject() (
+    val repo: InMemoryFortyTwoCachePlugin,
+    outerCacheImpl: OuterBrowsingHistoryUserIdCacheImpl)
+  extends {val ttl = 10 seconds; override val outerCache = Some(outerCacheImpl)} with BrowsingHistoryUserIdCache
 
 
 @Singleton
@@ -77,7 +89,11 @@ class BrowsingHistoryRepoImpl @Inject() (
   }
 
   override def invalidateCache(browsingHistory: BrowsingHistory)(implicit session: RSession) = {
-    browsingCache.set(BrowsingHistoryUserIdKey(browsingHistory.userId), browsingHistory)
+    def invalidateRecursively(cache: ObjectCache[BrowsingHistoryUserIdKey, BrowsingHistory]) {
+      cache.set(BrowsingHistoryUserIdKey(browsingHistory.userId), browsingHistory)
+      if (cache.outerCache isDefined) invalidateRecursively(cache.outerCache.get)
+    }
+    invalidateRecursively(browsingCache)
     browsingHistory
   }
 
