@@ -1,11 +1,22 @@
-@(cpuBenchmarkTime: Long)
+@(shoebox: com.keepit.common.healthcheck.BenchmarkResults, search: com.keepit.common.healthcheck.BenchmarkResults)
 
 @admin("Benchmark times") {
   Checking for "Noisy Neighbors"
-  <ul>
-    <li>CPU: @{cpuBenchmarkTime}ms</li>
-    <li>Disk Read: todo</li>
-    <li>Cache Read: todo</li>
-    <li>Cache Write: todo</li>
-  </ul>
+  <table class="table">
+    <tr>
+      <th></th>
+      <th>Shoebox</th>
+      <th>Search</th>
+    </tr>
+    <tr>
+      <td>CPU</td>
+      <td>@{shoebox.cpu}</td>
+      <td>@{search.cpu}</td>
+    </tr>
+    <tr>
+      <td>Memcached Reads</td>
+      <td>@{shoebox.memcacheRead}</td>
+      <td>@{search.memcacheRead}</td>
+    </tr>
+  </table>
 }
