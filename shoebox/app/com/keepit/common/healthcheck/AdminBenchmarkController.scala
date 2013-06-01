@@ -29,7 +29,7 @@ object BenchmarkResultsJson {
 class AdminBenchmarkController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   searchServiceClient: SearchServiceClient,
-  userIdCache: UserIdCache)
+  benchmarkRunner: BenchmarkRunner)
     extends AdminController(actionAuthenticator) {
   import BenchmarkResultsJson._
 
@@ -37,16 +37,28 @@ class AdminBenchmarkController @Inject() (
     Async {
       for {
         searchBenchmark <- searchServiceClient.benchmarks()
-        shoeboxBenchmark <- future { runBenchmark() }
+        shoeboxBenchmark <- future { benchmarkRunner.runBenchmark() }
       } yield Ok(html.admin.benchmark(shoeboxBenchmark, searchBenchmark))
     }
   }
 
-  def benchmarksResults = Action { implicit request =>
-    Ok(Json.toJson(runBenchmark()))
-  }
+}
 
-  private def runBenchmark() = BenchmarkResults(cpuBenchmarkTime(), memcachedBenchmarkTime())
+@Singleton
+class CommonBenchmarkController @Inject() (
+  actionAuthenticator: ActionAuthenticator,
+  benchmarkRunner: BenchmarkRunner)
+    extends AdminController(actionAuthenticator) {
+  import BenchmarkResultsJson._
+
+  def benchmarksResults = Action { implicit request =>
+    Ok(Json.toJson(benchmarkRunner.runBenchmark()))
+  }
+}
+
+@Singleton
+class BenchmarkRunner @Inject() (userIdCache: UserIdCache) {
+  def runBenchmark() = BenchmarkResults(cpuBenchmarkTime(), memcachedBenchmarkTime())
 
   private def cpuBenchmarkTime(): Long = {
     val start = System.currentTimeMillis

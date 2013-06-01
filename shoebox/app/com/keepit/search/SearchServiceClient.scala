@@ -144,7 +144,7 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
 
   implicit val benchmarksResultsFormat = Json.format[BenchmarkResults]
   def benchmarks(): Future[BenchmarkResults] = {
-    call(com.keepit.common.healthcheck.routes.AdminBenchmarkController.benchmarksResults()).map(r => Json.fromJson[BenchmarkResults](r.json).get)
+    call(com.keepit.common.healthcheck.routes.CommonBenchmarkController.benchmarksResults()).map(r => Json.fromJson[BenchmarkResults](r.json).get)
   }
 
   def buildSpellCorrectorDictionary(): Future[Unit] = {
