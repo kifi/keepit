@@ -317,4 +317,4 @@ GET     /internal/search/defaultSearchConfig/defaultSearchConfig  @com.keepit.co
 GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.SearchController.friendMapJson(userId: Id[User], query: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 
 # INTERNAL ROUTES/GLOBAL
-GET     /internal/benchmark                   @com.keepit.common.healthcheck.AdminBenchmarkController.benchmarksResults()
+GET     /internal/benchmark                   @com.keepit.common.healthcheck.CommonBenchmarkController.benchmarksResults()
