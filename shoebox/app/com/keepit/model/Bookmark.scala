@@ -168,10 +168,10 @@ class BookmarkRepoImpl @Inject() (
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User],
       excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))
       (implicit session: RSession): Option[Bookmark] =
-    bookmarkUriUserCache.getOrElseOpt(BookmarkUriUserKey(uriId, userId)) {
+    (bookmarkUriUserCache.getOrElseOpt(BookmarkUriUserKey(uriId, userId)) {
       (for(b <- table if b.uriId === uriId && b.userId === userId && b.state =!= excludeState.getOrElse(null)) yield b)
         .sortBy(_.state === BookmarkStates.INACTIVE).firstOption
-    }
+    }) filter { _.state != excludeState.orNull }
 
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.uriId === uriId && b.state === BookmarkStates.ACTIVE) yield b).list

@@ -275,7 +275,11 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getCollectionIdsByExternalIds(userIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]] = ???
+  def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]] = {
+    call(routes.ShoeboxController.getUserIdsByExternalIds(collIds.mkString(","))).map { r =>
+      r.json.as[Seq[Long]].map(Id[Collection](_))
+    }
+  }
 
   def getIndexable(seqNum: Long, fetchSize: Int): Future[Seq[NormalizedURI]] = {
     call(routes.ShoeboxController.getIndexable(seqNum, fetchSize)).map{
