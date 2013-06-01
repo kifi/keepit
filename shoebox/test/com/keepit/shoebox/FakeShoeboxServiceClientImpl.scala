@@ -97,7 +97,17 @@ class FakeShoeboxServiceClientImpl @Inject() (
     Promise.successful(browsingHistoryTracker.getMultiHashFilter(userId).getFilter).future
   }
 
-  def getConnectedUsers(id: Id[User]): scala.concurrent.Future[Set[com.keepit.common.db.Id[com.keepit.model.User]]] = ???
+  def setConnections(connections: Map[Id[User], Set[Id[User]]]) {
+    connectionsOpt = Some(connections)
+  }
+
+  private[this] var connectionsOpt: Option[Map[Id[User], Set[Id[User]]]] = None
+
+  def getConnectedUsers(id: Id[User]): scala.concurrent.Future[Set[com.keepit.common.db.Id[com.keepit.model.User]]] = {
+    val connections = connectionsOpt.getOrElse(???)
+    Promise.successful(connections.getOrElse(id, Set()) - id).future
+  }
+
   def reportArticleSearchResult(res: ArticleSearchResult): Unit = {}
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = ???
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = ???
@@ -121,6 +131,8 @@ class FakeShoeboxServiceClientImpl @Inject() (
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]] = {
     Promise.successful(Seq()).future
   }
+
+  def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]] = ???
 
   def getIndexable(seqNum: Long, fetchSize: Int) : Future[Seq[NormalizedURI]] = {
     val uris = db.readOnly { implicit s =>

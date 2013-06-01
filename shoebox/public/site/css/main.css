@@ -1,7 +1,7 @@
 /*
 @dark-blue: #204b69;
 @light-blue: #628196;
-@active: #3da9f5;
+@active: #6fa6ef;
 @inactive: #b6c3cc; 
 */
 
@@ -12,14 +12,14 @@ html {
   overflow: -moz-scrollbars-vertical; 
   overflow-y: scroll;
 }
-body {margin:0; padding: 0; background: #f8f8f8; height: 100%; width: 100%; text-align: center;  font-size: 16px;}
-h1,h2,h3,h4,h5,label, select { font-weight: normal; color: #204b69}
+body {margin:0; padding: 0; background: #fafafa; height: 100%; width: 100%; text-align: center;  font-size: 16px;}
+h1,h2,h3,h4,h5,label, select { font-weight: normal; color: #99a3b3}
 h1 {font-size: 1.7em; text-align: left;}
 label { font-size: .9em; color: #628196}
 img {vertical-align: middle; border: 0px}
-a {color: #0074c5; text-decoration: none}
-select {background: #eeeeee; border: 0; -webkit-appearance: none; -moz-appearance: none; width: 110%}
-header { width: 1260px;  height: 48px; padding: 0px; position: relative; left: 50%; margin-left: -630px; text-align: left}
+a {color: #0089d5; text-decoration: none}
+select {font-weight: bold; font-size: .8em; background: #ecf0f1; border: 0; -webkit-appearance: none; -moz-appearance: none; width: 110%}
+header { width: 1260px;  height: 70px; padding: 0px; position: relative; left: 50%; margin-left: -630px; text-align: left}
 nav {float: right}
 ol {list-style: none; padding: 0; margin: 0}
 ::-webkit-input-placeholder{ color: #b6c3cc;}
@@ -28,23 +28,26 @@ ol {list-style: none; padding: 0; margin: 0}
 :-ms-input-placeholder { color: #b6c3cc;}
 
 /* common layout */
-.gray {color: #999a9c;}
+.gray {color: #99a3b3;}
 .dark-gray {color: #66676a}
 .green {color: #27ae60}
+.red {color: #ca5742}
 span.light {color: #628196}
 .fs9 {font-size: .8em}
-div.header-wrapper {position: fixed; z-index: 10; background: #204b69; width: 100%}
+div.header-wrapper {position: fixed; z-index: 10; background: #67829c; width: 100%}
 .centered {width: 1260px; text-align: left; margin: 0 auto;}
-.container {position:relative; top: 48px; }
-header .logo {margin: 6px 15px}
-nav a {color: #ffffff; font-size: 1.1em; display: inline-block; line-height: 48px; padding: 0 30px}
+.container {position:relative; top: 70px; }
+header .logo {margin: 12px auto; vertical-align: top}
+header .header-left {text-align: center; width: 200px; position: absolute; }
+nav a {color: #ffffff; font-size: 1.1em; display: inline-block; line-height: 70px; padding: 0 30px}
 nav a.invite{background: #7a8096 url(../img/invite.png) 15px 50% no-repeat; padding-left: 50px;}
 nav a.feedback {background: #27ae60}
 
-aside.left {top: 48px; width: 200px; height: 100%;  position:fixed; padding-right: 10px;}
-aside.right {top: 48px; width: 270px; padding: 20px; height: 100%; position: fixed; margin-left: 940px }
-section.main {width: 700px; height: 100%; float: left; margin-left: 210px; background: #ffffff; }
-aside.right textarea {width: 265px; margin-top: 10px; background: transparent}
+aside.left {top: 70px; width: 200px; height: 100%;  position:fixed; background: #eff2f7 }
+aside.left input {background: #fafafa; border: 1px solid #b4b9ca; color: #204b69; line-height: 2em; padding: 0 .5em; width: 80%; margin-left: 5px;}
+aside.right {top: 70px; width: 270px; padding: 20px; height: 100%; position: fixed; margin-left: 940px }
+section.main {width: 700px; height: 100%; float: left; margin-left: 200px; background: #ffffff; }
+aside.right input {width: 265px; margin-top: 10px; background: transparent}
 div.custom-select {
     position: relative;
     display: inline-block; overflow: hidden; width: 275px;
@@ -52,64 +55,55 @@ div.custom-select {
 div.custom-select:after {
 content: url('../img/down.png');
 position: absolute;
-top: 6px;
+top: 0px;
 right: 0;
 bottom: 0;
 padding: 0 7px;
 pointer-events:none;
 }
-aside.left .active a {background: #3da9f5; color: #ffffff}
-aside.left .active a span {color: #ffffff}
-aside.left h3 a {display: block; padding: 10px; font-size: 1em; }
-aside.left .large-avatar {position: relative; overflow: hidden; height: 130px; width: 100%;}
-aside.left .large-avatar img {margin-top: -20%}
-aside.left .large-avatar .name {color: #ffffff; background: #204b69; text-align: center; position: absolute; bottom: 0; width: 200px; line-height: 1.5em}
-aside.right label {display: block}
+aside.left .active a {background: #6fa6ef; color: #ffffff}
+aside.left h3 a span {font-weight: bold; border: 1px solid #b4b9ca; border-radius: 10px; padding: 1px 12px; margin-top: -2px}
+aside.left h3.active a span {color: #6fa6ef; background: #fff; border: 1px solid #fff;}
+aside.left h2 {font-size: 1.2em; padding: 5px 10px; margin-bottom: 0; }
+aside.left h3 {font-size: .9em; margin: 0}
+aside.left h3.my-keeps a {background: url(../img/kifi-icon-blue.png) 8px 45% no-repeat; padding-left: 40px}
+aside.left h3.my-keeps.active a {background: #6fa6ef url(../img/kifi-icon-white.png) 8px 50% no-repeat;}
+aside.left #collections h2, aside.left h3.collection { border-bottom: 1px solid #dbdee3 }
+aside.left h3 a {display: block; padding: 10px; font-size: 1em; color: #818692}
+aside.left h3.new a {color: #6fa6ef; }
+aside.left h3.read-later a {color: #ca5742}
+aside.left h3.read-later a span {background: #ca5742; color: #fff; border-radius: 3px; padding: 2px 5px; margin-top: -2px}
+aside.left .large-avatar {position: relative;  width: 100%; text-align: center; background: #fff; padding-top: 80px; padding-bottom: 20px}
+aside.left .large-avatar .name { line-height: 1.5em}
+aside.right label {display: block; margin: 10px 0 5px 0;}
 aside.right select {padding: 5px;}
 span.right {float: right}
-input.search {z-index: 1; position: relative; font-size: 1.6em; padding: 10px 50px 10px 100px; width: 550px; border: none; background: url('../img/search.png') 15px 50% no-repeat}
+input.search {z-index: 1; position: relative; font-size: 1.6em; margin-top: 10px; margin-left: 200px; padding: 10px 50px 10px 20px; width: 550px; border: none; background: #fff url('../img/search.png') 98% 50% no-repeat}
+
+img#my-avatar {position: absolute; top: 60px; margin-left: -10px; max-width: 70px; border-radius: 40px; border: 5px solid #eff2f7; }
 
 .sticky-wrapper {float: left}
 
-div.search-wrapper {position: relative; background: #eeeeee; overflow: hidden;}
-div.search-wrapper:before {
-	content:'';
-	position: absolute;
-	top: 5px;
-	left: 30px;
-	width: 80px; 
-   height: 80px; 
-   background: #b6c3cc;
-   /* Rotate */
-   -webkit-transform: rotate(-45deg);
-   -moz-transform: rotate(-45deg);
-   -ms-transform: rotate(-45deg);
-   -o-transform: rotate(-45deg);
-   transform: rotate(-45deg);
-   /* Rotate Origin */
-   -webkit-transform-origin: 0 100%;
-   -moz-transform-origin: 0 100%;
-   -ms-transform-origin: 0 100%;
-   -o-transform-origin: 0 100%;
-   transform-origin: 0 100%;
-}
-div.search-wrapper.active:before {background: #3da9f5}
 .long-text { display: block; white-space: nowrap; overflow: hidden; text-overflow:    ellipsis;}
 .small-avatar {max-width: 30px; max-height: 30px;}
-.keep {clear: left; padding: 10px; border-top: 1px solid #f9f9f9}
+.keep {clear: left; padding: 10px 10px 10px 30px; border-top: 1px solid #f9f9f9; cursor: move;}
+.keep .right {float: right; }
 .keep .small-avatar {vertical-align: bottom; float: left;}
 .keep .small-avatar.me {margin-right: 3px;}
 .keep .bottom {margin-top: 5px;}
 .keep .bottom span { float: left; margin-left: 10px}
-div.search {position: fixed; top: 48px; padding: 30px 20px 0px 20px; width: 660px; height: 110px; background: #ffffff; }
+div.search {position: fixed; top: 70px; padding: 0px 20px; width: 660px; height: 70px; background: #ffffff; }
 .kifi-pane-parent header {margin-left: -790px}
 
 div.search .num-results {display: none; font-size: .8em; color: #204b69; text-align: left; padding: 10px 0;}
-.search-section {color: #b6c3cc; background: #f9f9f9 url('../img/clock.png') 5px 50% no-repeat; padding: 5px 30px; }
-div.scrollable {margin-top: 100px; padding: 50px 20px; text-align: left;  width: 660px;  overflow: hidden; }
-div.scrollable ol {display: none}
+.search-section {color: #b6c3cc; background: #eff2f7 url('../img/clock.png') 5px 50% no-repeat; padding: 5px 30px; }
+div.scrollable {margin-top: 50px; padding: 50px 20px; text-align: left;  width: 660px;   }
 div.loading {text-align: center; display: none;}
 .clearfix {clear: both}
+.template-wrapper, #add-collection {display: none}
+.draggable:hover {background: url(../img/drag-handle.png) 0px 50% no-repeat;}
+.drag-helper {background: #fff; padding: 5px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
+.drop-hover {background: #b6c3cc}
 
 
 @media all and (max-width: 1590px) {
@@ -117,7 +111,7 @@ div.loading {text-align: center; display: none;}
 	.kifi-pane-parent header nav {margin-right: 320px}
 	.kifi-pane-parent aside.left {width: 200px;}
 	.kifi-pane-parent aside.right {margin-left: 800px;}
-	.kifi-pane-parent section.main {width: 600px; margin-left: 210px}
+	.kifi-pane-parent section.main {width: 600px; margin-left: 200px}
 	.kifi-pane-parent div.search {padding: 30px 20px 0 20px; left: 210px; width: 560px;}
 	.kifi-pane-parent div.scrollable { padding: 50px 20px; width: auto; left: 0; margin-left: 0}
 	.kifi-pane-parent div.custom-select { width: 90%}
@@ -126,18 +120,16 @@ div.loading {text-align: center; display: none;}
 {
 	.centered, header {width: 100%}
 	.container, header {left: 0; margin-left: 0px}
-	aside.left {width: 17%}
+	aside.left .large-avatar .name, aside.left .large-avatar img {width: 100%}
 	aside.right {width: 20%; margin-left: 76%}
-	section.main {width: 54%; margin-left: 18%}
+	section.main {width: 54%; }
 	div.scrollable { padding: 50px 20px; width: auto; left: 0; margin-left: 0}
-	div.search {padding: 30px 2% 0 2%; left: 18%; width: 50%;}
+	div.search {padding: 30px 2% 0 2%; width: 50%;}
+	input.search {width: 40%;}
 	div.custom-select { width: 90%}
 	aside.right textarea {width: 200px}
 }
 @media all and (max-width: 1024px) {
-	aside.left {width: 150px; }
-	aside.right {width: 200px;  padding: 10px;}
-	section.main {width: 580px}
-	body {overflow-x: hidden;}
+	input.search {width: 30%;}
 }
  

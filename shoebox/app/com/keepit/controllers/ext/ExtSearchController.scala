@@ -23,6 +23,7 @@ import play.api.libs.json.Json
 import com.keepit.common.db.{ExternalId, Id}
 import com.newrelic.api.agent.NewRelic
 import com.newrelic.api.agent.Trace
+import play.modules.statsd.api.Statsd
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchHit(id: Id[NormalizedURI], externalId: ExternalId[NormalizedURI], title: Option[String], url: String, isPrivate: Boolean)
@@ -72,7 +73,8 @@ class ExtSearchController @Inject() (
              kifiVersion: Option[KifiVersion] = None,
              start: Option[String] = None,
              end: Option[String] = None,
-             tz: Option[String] = None) = AuthenticatedJsonAction { request =>
+             tz: Option[String] = None,
+             coll: Option[String] = None) = AuthenticatedJsonAction { request =>
 
     val t1 = currentDateTime.getMillis()
 
@@ -84,16 +86,17 @@ class ExtSearchController @Inject() (
     val userId = request.userId
     log.info(s"""User ${userId} searched ${query.length} characters""")
 
-    val friendIdsFuture = shoeboxClient.getConnectedUsers(userId)
     val searchFilter = filter match {
       case Some("m") =>
-        SearchFilter.mine(context, None, start, end, tz)
+        val collExtIds = coll.map{ _.split('.').flatMap(id => Try(ExternalId[Collection](id)).toOption) }
+        val collIdsFuture = collExtIds.map{ shoeboxClient.getCollectionIdsByExternalIds(_) }
+        SearchFilter.mine(context, collIdsFuture, start, end, tz, monitoredAwait)
       case Some("f") =>
         SearchFilter.friends(context, start, end, tz)
       case Some(ids) =>
         val userExtIds = ids.split('.').flatMap(id => Try(ExternalId[User](id)).toOption)
-        val idFuture = shoeboxClient.getUserIdsByExternalIds(userExtIds)
-        SearchFilter.custom(context, idFuture, start, end, tz, monitoredAwait)
+        val userIdsFuture = shoeboxClient.getUserIdsByExternalIds(userExtIds)
+        SearchFilter.custom(context, userIdsFuture, start, end, tz, monitoredAwait)
       case None =>
         if (start.isDefined || end.isDefined) SearchFilter.all(context, start, end, tz)
         else SearchFilter.default(context)
@@ -103,8 +106,8 @@ class ExtSearchController @Inject() (
 
     val t2 = currentDateTime.getMillis()
     var t3 = 0L
-    val searchRes = time("search-searching") {
-      val searcher = time("search-factory") { mainSearcherFactory(userId, friendIdsFuture, searchFilter, config) }
+    val searchRes = timeWithStatsd("search-searching", "search.searching") {
+      val searcher = timeWithStatsd("search-factory", "search.factory") { mainSearcherFactory(userId, searchFilter, config) }
       t3 = currentDateTime.getMillis()
       val searchRes = if (maxHits > 0) {
         searcher.search(query, maxHits, lastUUID, searchFilter)
@@ -124,20 +127,13 @@ class ExtSearchController @Inject() (
 
     val t5 = currentDateTime.getMillis()
     val total = t5 - t1
+    Statsd.timing("postSearchTime", t5 - t4)
     log.info(s"total search time = $total, pre-search time = ${t2 - t1}, search-factory time = ${t3 - t2}, main-search time = ${t4 - t3}, post-search time = ${t5 - t4}")
     val searchDetails = searchRes.timeLogs match {
       case Some(timelog) => "main-search detail: " + timelog.toString
       case None => "main-search detail: N/A"
     }
     log.info(searchDetails)
-
-    try{
-      NewRelic.setTransactionName(null, "search")
-      NewRelic.incrementCounter("Custom/search")
-      NewRelic.recordResponseTimeMetric("Custom/SearchTotal", total)
-    } catch {
-      case e: Exception => log.warn("error in adding record to newRelic")
-    }
 
     val timeLimit = 1000
     // search is a little slow after service restart. allow some grace period

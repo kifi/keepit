@@ -1,10 +1,13 @@
 package com.keepit.common.akka
 
 import com.keepit.common.performance._
-import scala.concurrent.{Await, Awaitable, Future}
+import scala.concurrent.Await
+import scala.concurrent.Awaitable
 import scala.concurrent.duration._
 import com.google.inject.Inject
-import com.keepit.common.healthcheck.{ErrorMessage, HealthcheckPlugin, HealthcheckError, Healthcheck}
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.common.healthcheck.Healthcheck
 
 class MonitoredAwait @Inject() (healthcheckPlugin: HealthcheckPlugin) {
 
@@ -17,14 +20,7 @@ class MonitoredAwait @Inject() (healthcheckPlugin: HealthcheckPlugin) {
       Await.result(awaitable, atMost)
     } catch {
       case ex: Throwable =>
-
-        val additionalInfo = awaitable match {
-          case future: Future[T] => Some(future.failed.value.get.get.getMessage)
-          case _ => None
-        }
-
-        val errorMessage = ErrorMessage(ex.getMessage, additionalInfo)
-        healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(errorMessage)))
+        healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
         valueOnFailure
     } finally {
       sw.stop()

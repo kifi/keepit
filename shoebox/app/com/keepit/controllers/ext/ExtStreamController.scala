@@ -333,7 +333,7 @@ class ExtStreamController @Inject() (
         case None =>
           Some(commentReadRepo.save(CommentRead(userId = userId, uriId = parent.uriId, parentId = parent.id, lastReadId = message.id.get)))
         case _ => None
-      }) //foreach { _ =>  // TODO: uncomment after past data inconsistencies are all repaired or no longer a concern
+      }) foreach { _ =>
         val nUri = normUriRepo.get(parent.uriId)
         if (!quietly) {
           userChannel.push(userId, Json.arr("message_read", nUri.url, parent.externalId.id, message.createdAt, message.externalId.id))
@@ -341,7 +341,7 @@ class ExtStreamController @Inject() (
 
         val messageIds = commentRepo.getMessageIdsCreatedBefore(nUri.id.get, parent.id.get, message.createdAt) :+ message.id.get
         userNotificationRepo.markVisited(userId, messageIds)
-      //}
+      }
     }
   }
 
@@ -353,7 +353,7 @@ class ExtStreamController @Inject() (
         case None =>
           Some(commentReadRepo.save(CommentRead(userId = userId, uriId = comment.uriId, lastReadId = comment.id.get)))
         case _ => None
-      }) //foreach { _ =>  // TODO: uncomment after past data inconsistencies are all repaired or no longer a concern
+      }) foreach { _ =>
         val nUri = normUriRepo.get(comment.uriId)
 
         if (!quietly) {
@@ -362,7 +362,7 @@ class ExtStreamController @Inject() (
 
         val commentIds = commentRepo.getPublicIdsCreatedBefore(nUri.id.get, comment.createdAt) :+ comment.id.get
         userNotificationRepo.markVisited(userId, commentIds)
-      //}
+      }
     }
   }
 
