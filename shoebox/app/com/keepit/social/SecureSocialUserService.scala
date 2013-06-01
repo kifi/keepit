@@ -144,7 +144,10 @@ class SecureSocialUserService(implicit val application: Application) extends Use
   def save(token: Token) = proxy.get.save(token)
   def findToken(token: String) = proxy.get.findToken(token)
   def deleteToken(uuid: String) = proxy.get.deleteToken(uuid)
-  def deleteExpiredTokens() = proxy.foreach(_.deleteExpiredTokens())
+  def deleteExpiredTokens() {
+    // Even if global is defined, getting the SecureSocialUserPlugin seems to cause deadlocks on start.
+    // Fortunately our implementation of this method does nothing so it doesn't matter.
+  }
 
 }
 
