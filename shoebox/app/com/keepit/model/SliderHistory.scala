@@ -75,7 +75,6 @@ class SliderHistoryRepoImpl @Inject() (
 
   override def invalidateCache(sliderHistory: SliderHistory)(implicit session: RSession) = {
     browsingCache.set(SliderHistoryUserIdKey(sliderHistory.userId), sliderHistory)
-    sliderHistory
   }
 
   override def save(model: SliderHistory)(implicit session: RWSession): SliderHistory = {

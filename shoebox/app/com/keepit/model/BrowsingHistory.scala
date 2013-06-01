@@ -61,9 +61,12 @@ class OuterBrowsingHistoryUserIdCacheImpl @Inject() (val repo: FortyTwoCachePlug
 
 @Singleton
 class BrowsingHistoryUserIdCacheImpl @Inject() (
-    val repo: InMemoryFortyTwoCachePlugin,
+    val repo: InMemoryCachePlugin,
     outerCacheImpl: OuterBrowsingHistoryUserIdCacheImpl)
-  extends {val ttl = 10 seconds; override val outerCache = Some(outerCacheImpl)} with BrowsingHistoryUserIdCache
+  extends {
+    val ttl = 10 seconds
+    override val outerCache = Some(outerCacheImpl)
+  } with BrowsingHistoryUserIdCache
 
 
 @Singleton
@@ -89,12 +92,7 @@ class BrowsingHistoryRepoImpl @Inject() (
   }
 
   override def invalidateCache(browsingHistory: BrowsingHistory)(implicit session: RSession) = {
-    def invalidateRecursively(cache: ObjectCache[BrowsingHistoryUserIdKey, BrowsingHistory]) {
-      cache.set(BrowsingHistoryUserIdKey(browsingHistory.userId), browsingHistory)
-      if (cache.outerCache isDefined) invalidateRecursively(cache.outerCache.get)
-    }
-    invalidateRecursively(browsingCache)
-    browsingHistory
+    browsingCache.set(BrowsingHistoryUserIdKey(browsingHistory.userId), browsingHistory)
   }
 
   override def save(model: BrowsingHistory)(implicit session: RWSession): BrowsingHistory = {

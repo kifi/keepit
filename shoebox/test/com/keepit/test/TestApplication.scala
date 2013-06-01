@@ -2,7 +2,7 @@ package com.keepit.test
 
 import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
 import com.keepit.common.analytics._
-import com.keepit.common.cache.{InMemoryFortyTwoCachePlugin, HashMapMemoryCache, FortyTwoCachePlugin}
+import com.keepit.common.cache.{InMemoryCachePlugin, HashMapMemoryCache, FortyTwoCachePlugin}
 import com.keepit.common.controller.FortyTwoCookies._
 import com.keepit.common.db._
 import com.keepit.common.store.FakeS3StoreModule
@@ -288,7 +288,7 @@ class FakeSocialGraphPlugin extends SocialGraphPlugin {
 case class FakeCacheModule() extends ScalaModule {
   override def configure() {
     bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
-    bind[InMemoryFortyTwoCachePlugin].to[HashMapMemoryCache]
+    bind[InMemoryCachePlugin].to[HashMapMemoryCache]
   }
 }
 

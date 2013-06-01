@@ -96,10 +96,7 @@ class NormalizedURIRepoImpl @Inject() (
   }
 
   override def invalidateCache(uri: NormalizedURI)(implicit session: RSession) = {
-    uri.id match {
-      case Some(id) => idCache.set(NormalizedURIKey(id), uri)
-      case None =>
-    }
+    uri.id map {id => idCache.set(NormalizedURIKey(id), uri)}
     uri
   }
 

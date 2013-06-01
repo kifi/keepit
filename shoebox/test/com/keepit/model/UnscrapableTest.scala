@@ -28,6 +28,7 @@ class UnscrapableTest extends Specification with DbRepos {
           unscrapeCache.get(UnscrapableAllKey()).isDefined === false
 
           unscrapableRepo.allActive().length === 2
+          Thread sleep 1000
           unscrapeCache.get(UnscrapableAllKey()).get.length === 2
 
           unscrapableRepo.save(Unscrapable(pattern = "^https*://app.asana.com.*$"))
