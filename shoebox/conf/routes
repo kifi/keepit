@@ -315,3 +315,6 @@ GET     /internal/search/searchConfig/:id/reset  @com.keepit.controllers.search.
 GET     /internal/search/defaultSearchConfig/defaultSearchConfig  @com.keepit.controllers.search.SearchConfigController.getSearchDefaultConfig
 
 GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.SearchController.friendMapJson(userId: Id[User], query: Option[String] ?= None, minKeeps: Option[Int] ?= None)
+
+# INTERNAL ROUTES/GLOBAL
+GET     /internal/benchmark                   @com.keepit.common.healthcheck.AdminBenchmarkController.benchmarksResults()
