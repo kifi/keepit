@@ -19,7 +19,7 @@ import views.html
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.google.inject.{Inject, Singleton, Provider}
 
-case class BenchmarkResults(cpu: Long, memcacheRead: Long)
+case class BenchmarkResults(cpu: Long, cpuPar: Long, memcacheRead: Double)
 
 object BenchmarkResultsJson {
   implicit val benchmarksResultsFormat = Json.format[BenchmarkResults]
@@ -58,20 +58,30 @@ class CommonBenchmarkController @Inject() (
 
 @Singleton
 class BenchmarkRunner @Inject() (userIdCache: UserIdCache) {
-  def runBenchmark() = BenchmarkResults(cpuBenchmarkTime(), memcachedBenchmarkTime())
+  def runBenchmark() = BenchmarkResults(cpuBenchmarkTime(), cpuParBenchmarkTime(), memcachedBenchmarkTime())
 
   private def cpuBenchmarkTime(): Long = {
     val start = System.currentTimeMillis
-    var a = 1.0
-    for (i <- 0 to 100000000) { a = (a + (Random.nextDouble * Random.nextDouble / Random.nextDouble))  }
+    (0 to 100) map { i => calc()}
     System.currentTimeMillis - start
   }
 
-  private def memcachedBenchmarkTime(): Long = {
-    val iterations = 100
+  private def cpuParBenchmarkTime(): Long = {
+    val start = System.currentTimeMillis
+    (0 to 100).par map { i => calc()}
+    System.currentTimeMillis - start
+  }
+
+  private def calc() {
+    var a = 1.1d
+    while (a < 10000000d) {a = (a + 0.000001d) * 1.000001}
+  }
+
+  private def memcachedBenchmarkTime(): Double = {
+    val iterations = 1000
     val start = System.currentTimeMillis
     for (i <- 0 to iterations) { userIdCache.get(UserIdKey(Id[User](1))) }
-    (System.currentTimeMillis - start) / iterations
+    (System.currentTimeMillis - start).toDouble / iterations.toDouble
   }
 }
 
