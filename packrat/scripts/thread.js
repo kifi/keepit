@@ -21,7 +21,7 @@ threadPane = function() {
         messages: messages,
         draftPlaceholder: "Type a message…",
         submitButtonLabel: "Send",
-        submitTip: CO_KEY + "-Enter to send",
+        submitTip: (session.prefs.enterToSend ? "" : CO_KEY + "-") + "Enter to send",
         snapshotUri: api.url("images/snapshot.png")
       }, {
         message: "message.html",
@@ -35,7 +35,7 @@ threadPane = function() {
         .on("kifi:compose-submit", sendReply.bind(null, $container, threadId, session))
         .find("time").timeago();
 
-        attachComposeBindings($container, "message");
+        attachComposeBindings($container, "message", session.prefs.enterToSend);
 
         $scroller = $container.find(".kifi-messages-sent");
         $holder = $scroller.find(".kifi-messages-sent-inner").data("threadId", threadId);

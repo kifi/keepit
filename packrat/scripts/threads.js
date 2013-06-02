@@ -12,7 +12,7 @@
 threadsPane = function() {
   var $list = $();
   return {
-    render: function($container, o) {
+    render: function($container, o, prefs) {
       o.threads.forEach(function(t) {
         var n = messageCount(t, new Date(o.read[t.id] || 0));
         t.messageCount = Math.abs(n);
@@ -28,7 +28,7 @@ threadsPane = function() {
         draftPlaceholder: "Type a message…",
         draftDefault: "Check this out.",
         submitButtonLabel: "Send",
-        submitTip: CO_KEY + "-Enter to send",
+        submitTip: (prefs.enterToSend ? "" : CO_KEY + "-") + "Enter to send",
         snapshotUri: api.url("images/snapshot.png")
       }, {
         thread: "thread.html",
@@ -48,7 +48,7 @@ threadsPane = function() {
         .on("kifi:compose-submit", sendMessage.bind(null, $container))
         .find("time").timeago();
 
-        attachComposeBindings($container, "message");
+        attachComposeBindings($container, "message", prefs.enterToSend);
 
         $list = $container.find(".kifi-threads-list");
         $container.closest(".kifi-pane-box").on("kifi:remove", function() {
