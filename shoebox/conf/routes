@@ -318,3 +318,4 @@ GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.Se
 
 # INTERNAL ROUTES/GLOBAL
 GET     /internal/benchmark                   @com.keepit.common.healthcheck.CommonBenchmarkController.benchmarksResults()
+GET     /internal/version                     @com.keepit.common.healthcheck.CommonBenchmarkController.version()
