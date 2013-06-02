@@ -3,6 +3,7 @@ package com.keepit.common.healthcheck
 import scala.util.Random
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
+import scala.concurrent.duration._
 
 import play.api.libs.json._
 import play.api.Play.current
@@ -11,6 +12,7 @@ import play.api.mvc.Controller
 import securesocial.core.SecureSocial
 
 import com.keepit.search._
+import com.keepit.common.service._
 import com.keepit.model._
 import com.keepit.common.db.Id
 
@@ -35,11 +37,19 @@ class AdminBenchmarkController @Inject() (
 
   def benchmarks = AdminHtmlAction { implicit request =>
     Async {
+      val internalPing = pingSearchProcess()
       for {
         searchBenchmark <- searchServiceClient.benchmarks()
         shoeboxBenchmark <- future { benchmarkRunner.runBenchmark() }
-      } yield Ok(html.admin.benchmark(shoeboxBenchmark, searchBenchmark))
+      } yield Ok(html.admin.benchmark(shoeboxBenchmark, searchBenchmark, internalPing))
     }
+  }
+
+  private def pingSearchProcess(): Double = {
+    val iterations = 100
+    val start = System.currentTimeMillis
+    for (i <- 0 to iterations) { Await.result(searchServiceClient.version(), Duration(5, SECONDS)) }
+    (System.currentTimeMillis - start).toDouble / iterations.toDouble
   }
 
 }
@@ -47,12 +57,17 @@ class AdminBenchmarkController @Inject() (
 @Singleton
 class CommonBenchmarkController @Inject() (
   actionAuthenticator: ActionAuthenticator,
-  benchmarkRunner: BenchmarkRunner)
+  benchmarkRunner: BenchmarkRunner,
+  fortyTwoServices: FortyTwoServices)
     extends AdminController(actionAuthenticator) {
   import BenchmarkResultsJson._
 
   def benchmarksResults = Action { implicit request =>
     Ok(Json.toJson(benchmarkRunner.runBenchmark()))
+  }
+
+  def version() = Action { implicit request =>
+    Ok(fortyTwoServices.currentVersion.toString)
   }
 }
 
