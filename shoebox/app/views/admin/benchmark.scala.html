@@ -1,4 +1,4 @@
-@(shoebox: com.keepit.common.healthcheck.BenchmarkResults, search: com.keepit.common.healthcheck.BenchmarkResults)
+@(shoebox: com.keepit.common.healthcheck.BenchmarkResults, search: com.keepit.common.healthcheck.BenchmarkResults, internalPing: Double)
 
 @admin("Benchmark times") {
   Checking for "Noisy Neighbors"
@@ -24,8 +24,14 @@
     <tr>
       <td>Memcached Reads</td>
       <td>Less is better</td>
-      <td>@{f"${shoebox.memcacheRead}%2.2f"}</td>
-      <td>@{f"${search.memcacheRead}%2.2f"}</td>
+      <td>@{f"${shoebox.memcacheRead}%2.2f"}ms</td>
+      <td>@{f"${search.memcacheRead}%2.2f"}ms</td>
+    </tr>
+    <tr>
+      <td>Service Ping</td>
+      <td>Less is better</td>
+      <td>N/A</td>
+      <td>@{f"$internalPing%2.2f"}ms</td>
     </tr>
   </table>
 }
