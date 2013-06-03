@@ -94,7 +94,9 @@ class EhCacheCache @Inject() (
   }
 
   def get(key: String): Option[Any] =
-    Cache.get(key)
+    Play.current.plugin[EhCachePlugin].map { ehcache =>
+      ehcache.cache.get(key)
+    }
 
   def remove(key: String) {
     Play.current.plugin[EhCachePlugin].map {
@@ -104,7 +106,9 @@ class EhCacheCache @Inject() (
   }
 
   def set(key: String, value: Any, expiration: Int = 0) {
-    Cache.set(key, value, expiration)
+    Play.current.plugin[EhCachePlugin].map { ehcache =>
+      ehcache.api.set(key, value, expiration)
+    }
   }
 
   override def toString = "EhCache"
