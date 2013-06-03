@@ -18,6 +18,11 @@ alt="search.searching.time.mean" width="586" height="308">
   <option>timers.postSearchTime.mean</option>
 </select>
 
+<form>
+<input type="radio" name="yscale" value="linear" checked="checked" onclick = "changeYscale()">linear-scale<br>
+<input type="radio" name="yscale" value="log" onclick = "changeYscale()">log2
+</form>
+
 <script>
 function updateImage(){
   e = document.getElementById("metric")
@@ -29,6 +34,22 @@ function updateImage(){
   img = document.getElementById("chart")
   img.src = url.concat(metric)
 }
+
+function changeYscale(){
+  img = document.getElementById("chart")
+  url = img.src
+  if ( url.indexOf("&logBase=2") == -1 ) {
+    img.src = url.concat("&logBase=2")
+  } else {
+    img.src = url.replace("&logBase=2", "")
+  }
+  
+}
+
 </script>
+
+
+
+
 
 }
