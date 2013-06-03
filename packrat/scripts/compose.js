@@ -195,26 +195,30 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
     var $alt = $("<span class=kifi-compose-tip-alt>")
       .text((enterToSend ? prefix : "") + tipTextNode.nodeValue.replace(prefix, ""))
       .css({"min-width": $tip.outerWidth(), "visibility": "hidden"})
-      .hover(function() {
-        $alt.addClass("kifi-hover");
-      }, function() {
-        $alt.removeClass("kifi-hover");
-      });
+      .hover(
+        function() { $alt.addClass("kifi-hover"); },
+        function() { $alt.removeClass("kifi-hover"); });
     var $menu = $("<span class=kifi-compose-tip-menu>").append($alt).insertAfter($tip);
     $tip.css("min-width", $alt.outerWidth()).addClass("kifi-active");
-    $alt.css("visibility", "");
-    $(document).on("mouseup.kifiComposeTip mouseout.kifiComposeTip", function(e) {
-      if (e.type == "mouseout" && e.target !== this) return;
-      $(this).off(".kifiComposeTip");
+    $alt.css("visibility", "").mouseup(hide.bind(null, true));
+    document.addEventListener("mousedown", docMouseDown, true);
+    function docMouseDown(e) {
+      hide($alt[0].contains(e.target));
+      if ($tip[0].contains(e.target)) {
+        e.stopPropagation();
+      }
+    }
+    function hide(toggle) {
+      document.removeEventListener("mousedown", docMouseDown, true);
       $tip.removeClass("kifi-active");
       $menu.remove();
-      if (e.type == "mouseup" && $alt[0].contains(e.target)) {
+      if (toggle) {
         enterToSend = !enterToSend;
         api.log("[enterToSend]", enterToSend);
         tipTextNode.nodeValue = enterToSend ? tipTextNode.nodeValue.replace(prefix, "") : prefix + tipTextNode.nodeValue;
         api.port.emit("set_enter_to_send", enterToSend);
       }
-    });
+    }
   })
   .find(".kifi-compose-submit")
   .click(function() {
