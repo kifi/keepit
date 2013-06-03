@@ -22,6 +22,7 @@ import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.Query
 import org.apache.lucene.util.Bits
 import org.apache.lucene.util.BytesRef
+import org.apache.lucene.util.FixedBitSet
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.SortedMap
@@ -29,7 +30,6 @@ import scala.collection.SortedSet
 import java.util.Arrays
 import java.util.Comparator
 import java.util.{Iterator=>JIterator}
-import org.apache.lucene.util.FixedBitSet
 
 class CachingIndexReader(val index: CachedIndex, liveDocs: FixedBitSet = null) extends AtomicReader with Logging {
 
@@ -76,7 +76,8 @@ class CachingIndexReader(val index: CachedIndex, liveDocs: FixedBitSet = null) e
   protected def doClose() {}
 }
 
-class InvertedList(val dlist: Array[(Int, Array[Int])]) {
+class InvertedList(val dlist: ArrayBuffer[(Int, Array[Int])]) {
+
   def docFreq = dlist.length
 
   def totalTermFreq = dlist.foldLeft(0){ case (sum, (doc, positions)) => sum + positions.length }
@@ -93,7 +94,7 @@ class InvertedList(val dlist: Array[(Int, Array[Int])]) {
       else remainder.add(dlist(i))
       i += 1
     }
-    (remapped.build, remainder.build)
+    (remapped.sortAndBuild, remainder.build)
   }
 
   override def toString() = {
@@ -103,24 +104,40 @@ class InvertedList(val dlist: Array[(Int, Array[Int])]) {
   }
 }
 
-object EmptyInvertedList extends InvertedList(Array.empty[(Int, Array[Int])]) {
+object EmptyInvertedList extends InvertedList(ArrayBuffer.empty[(Int, Array[Int])]) {
   val emptyPositions = Array.empty[Int]
 }
 
 class InvertedListBuilder() {
   private[this] lazy val buf = new ArrayBuffer[(Int, Array[Int])]
-  private[this] var isEmpty = true
+  private[this] var _isEmpty = true
+
+  def isEmpty: Boolean = _isEmpty
 
   def add(docid: Int, positions: Array[Int]) {
     buf += ((docid, positions))
-    isEmpty = false
+    _isEmpty = false
   }
   def add(doc: (Int, Array[Int])) {
     buf += doc
-    isEmpty = false
+    _isEmpty = false
   }
 
-  def build = if (isEmpty) EmptyInvertedList else new InvertedList(buf.sortBy(_._1).toArray)
+  def sortAndBuild: InvertedList = {
+    if (_isEmpty) {
+      EmptyInvertedList
+    } else {
+      new InvertedList(buf.sortBy(_._1))
+    }
+  }
+
+  def build: InvertedList = {
+    if (_isEmpty) {
+      EmptyInvertedList
+    } else {
+      new InvertedList(buf)
+    }
+  }
 }
 
 class CachedIndex(invertedLists: SortedMap[String, SortedMap[BytesRef, InvertedList]], val maxDoc: Int, val numDocs: Int) {
@@ -128,9 +145,13 @@ class CachedIndex(invertedLists: SortedMap[String, SortedMap[BytesRef, InvertedL
 
   def isEmpty = invertedLists.isEmpty
 
-  def +(field: String, text: BytesRef, list: InvertedList) = {
-    val terms = invertedLists.getOrElse(field, SortedMap.empty[BytesRef, InvertedList])
-    new CachedIndex(invertedLists + (field -> (terms + (text -> list))), maxDoc, numDocs)
+  def +(field: String, text: BytesRef, list: InvertedList): CachedIndex = {
+    if (list.docFreq > 0) {
+      val terms = invertedLists.getOrElse(field, SortedMap.empty[BytesRef, InvertedList])
+      new CachedIndex(invertedLists + (field -> (terms + (text -> list))), maxDoc, numDocs)
+    } else {
+      this
+    }
   }
 
   def foreach(f: (String, BytesRef, InvertedList) => Unit) = {
