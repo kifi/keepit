@@ -84,6 +84,7 @@ class UserSessionRepoImpl @Inject() (
 
   override def invalidateCache(userSession: UserSession)(implicit session: RSession): UserSession = {
     externalIdCache.set(UserSessionExternalIdKey(userSession.externalId), userSession)
+    userSession
   }
 
   override def getOpt(id: ExternalId[UserSession])(implicit session: RSession): Option[UserSession] = {

@@ -10,7 +10,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.actor._
 import com.keepit.common.plugin._
 import com.keepit.common.analytics._
-import com.keepit.common.cache.MemcachedCacheModule
+import com.keepit.common.cache.{CacheModule, MemcachedCacheModule}
 import com.keepit.common.healthcheck.{HealthcheckHost, HealthcheckPluginImpl, HealthcheckPlugin, HealthcheckActor}
 import com.keepit.common.logging.Logging
 import com.keepit.common.controller.FortyTwoCookies._
@@ -41,7 +41,7 @@ class CommonModule extends ScalaModule with Logging {
 
   def configure() {
     install(new FortyTwoModule)
-    install(new MemcachedCacheModule)
+    install(new CacheModule)
     install(new S3Module)
     install(new DiscoveryModule)
 
