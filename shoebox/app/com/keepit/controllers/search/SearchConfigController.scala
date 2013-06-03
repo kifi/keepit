@@ -26,9 +26,6 @@ import com.keepit.common.analytics.MongoEventStore
 
 @Singleton
 class SearchConfigController @Inject() (
-  db: Database,
-  userWithSocialRepo: UserWithSocialRepo,
-  userRepo: UserRepo,
   configManager: SearchConfigManager,
   store: MongoEventStore)
     extends SearchServiceController {
@@ -38,11 +35,11 @@ class SearchConfigController @Inject() (
   }
 
   def showUserConfig(userId: Id[User]) = Action { implicit request =>
-    val user = db.readOnly { implicit s =>
+    /*val user = db.readOnly { implicit s =>
       userWithSocialRepo.toUserWithSocial(userRepo.get(userId))
-    }
+    }*/
     val configs = configManager.getUserConfig(userId).iterator.toSeq.sortBy(_._1)
-    Ok(html.admin.searchConfig(user, configs))
+    Ok//Ok(html.admin.searchConfig(user, configs))
   }
 
   def setUserConfig(userId: Id[User]) = Action { implicit request =>

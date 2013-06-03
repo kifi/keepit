@@ -20,7 +20,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with DbRepos {
     "find existing user sessions" in {
       running(new EmptyApplication()) {
         val plugin =
-          new SecureSocialAuthenticatorPlugin(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
+          new ShoeboxSecureSocialAuthenticatorPlugin(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
         val id = ExternalId[UserSession]()
         plugin.find(id.id) === Right(None)
         db.readWrite { implicit s =>
@@ -37,7 +37,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with DbRepos {
     "not find deleted sessions" in {
       running(new EmptyApplication()) {
         val plugin =
-          new SecureSocialAuthenticatorPlugin(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
+          new ShoeboxSecureSocialAuthenticatorPlugin(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
         val id = ExternalId[UserSession]()
         db.readWrite { implicit s =>
           userSessionRepo.save(UserSession(
@@ -57,7 +57,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with DbRepos {
         inject[FakeClock].push(new DateTime("2015-01-01"))
 
         val plugin =
-          new SecureSocialAuthenticatorPlugin(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
+          new ShoeboxSecureSocialAuthenticatorPlugin(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
         val id = ExternalId[UserSession]()
         db.readWrite { implicit s =>
           userSessionRepo.save(UserSession(
@@ -70,7 +70,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with DbRepos {
     "associate with the correct user and save the session when needed" in {
       running(new EmptyApplication()) {
         val plugin =
-          new SecureSocialAuthenticatorPlugin(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
+          new ShoeboxSecureSocialAuthenticatorPlugin(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
         val id = ExternalId[UserSession]()
         val socialId = SocialId("gm")
         val provider = SocialNetworks.FACEBOOK
