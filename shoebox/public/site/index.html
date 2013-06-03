@@ -29,9 +29,9 @@
 			</div>
 			<input class="search" type="text" placeholder="Find anything..." />
 			<nav>
-				<a href="" class="invite">Invite</a><a
-					href="https://www.kifi.com/feedback/form" 
-					class="feedback fancybox fancybox.iframe">Feedback</a>
+				<a href="javascript:;" >+ Add a new keep</a>
+				<a href="javascript:;" >Settings</a>
+				<a href="javascript:;" >Log out</a>
 			</nav>
 		</header>
 	</div>
@@ -59,7 +59,14 @@
 					<input placeholder="Type name here"/>
 				</div>
 				<h3 data-template class="droppable collection" data-id="{{id}}">
-					<a href="javascript: ;"> {{name}} <span
+					<div class="edit-menu">
+						<a href="javascript: ;" class="edit"></a>
+						<ul>
+							<li><a class="rename" href="javascript: ;">Rename</a></li>
+							<li><a class="remove" href="javascript: ;">Remove</a></li>
+						</ul>
+					</div>
+					<a href="javascript: ;"><span class="name">{{name}}</span> <span
 						class="right light">{{keeps}}</span></a>
 				</h3>
 			</div>
@@ -94,6 +101,7 @@
 				<ol id="my-keeps" class="template-wrapper">
 					<li data-template data-id="{{id}}" class="keep mine draggable" data-created={{createdAt}}>
 						<div class="right fs9 gray easydate">{{createdAt}}</div>
+						<input type="checkbox"/>
 						<a class="long-text" href="{{url}}" target="_blank"
 						title="{{title}}">{{title}}</a> <span class="fs9 gray long-text"
 						title="{{url}}">{{url}}</span>
@@ -116,25 +124,27 @@
 			</div>
 		</section>
 		
-<!-- 		<aside class="right sticky">
-			<h2>Filter Results By:</h2>
-			<label>Keepers:</label>
-			<div class="custom-select">
-				<select name="keepers">
-					<option value="f">Friends</option>
-					<option value="m">Only Me</option>
-					<option value="c">Custom</option>
-				</select>
-			</div>
-			<input id="custom-keepers" />
-			<label>Collection:</label>
-			<div class="custom-select">
-				<select name="collection">
-					<option value="">Any</option>
-				</select>
-			</div>
+ 		<aside class="right sticky">
+ 			<div class="title">
+ 				<h2></h2>
+	 			<a class="link"></a>
+ 			</div>
+ 			<div class="who-kept">
+ 				[TODO]
+ 			</div>
+			<label>In collections:</label>
+ 			<div class="in-collections">
+ 				[TODO]
+ 			</div>
+ 			<div class="actions">
+ 				<a href="javascript:;">Add to a collection</a>
+ 				<a href="javascript:;">Share on your social networks</a>
+ 				<div class="keepit">
+	 				<a class="kept" href="javascript:;"><span class="private"></span> kept</a>
+ 				</div>
+ 			</div>
 		</aside>
- -->
+
 		<footer> </footer>
 
 	</div>
