@@ -272,7 +272,9 @@ api.log("[google_inject]");
       } else if (response.mayHaveMore) {
         showMoreOnArrival = true;
       } else {
-        $(this).closest(".kifi-res-more").hide(200);
+        $(this).hide(200, function() {
+          $(this).closest(".kifi-res-end").empty();
+        });
       }
     }).on("click", ".kifi-res-title", function() {
       $res.find("#kifi-res-list,.kifi-res-end").toggle(200);
