@@ -33,6 +33,7 @@ object ApplicationBuild extends Build {
 
     val appDependencies = Seq(
       jdbc,
+      "com.typesafe.play.plugins" %% "play-statsd" % "2.1.0",
       "securesocial" %% "securesocial" % "master-SNAPSHOT",
       "com.github.mumoshu" %% "play2-memcached" % "0.3.0.1",
       "mysql" % "mysql-connector-java" % "5.1.25",
@@ -58,7 +59,8 @@ object ApplicationBuild extends Build {
       "spy" % "spymemcached" % "2.8.12",
       "com.typesafe.slick" %% "slick" % "1.0.0",
       "com.typesafe.slick" %% "slick-testkit" % "1.0.0",
-      "net.sf.uadetector" % "uadetector-resources" % "2013.02"
+      "net.sf.uadetector" % "uadetector-resources" % "2013.02",
+      "com.newrelic.agent.java" % "newrelic-agent" % "2.18.0"
     ) map (_.excludeAll(
       ExclusionRule(organization = "com.cedarsoft"),
       ExclusionRule(organization = "javax.jms"),

@@ -36,6 +36,12 @@ GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkContr
 
 GET     /site/keeps/all             @com.keepit.controllers.website.BookmarksController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int ?= Integer.MAX_VALUE)
 GET     /site/collections/all       @com.keepit.controllers.website.BookmarksController.allCollections()
+POST    /site/collections/create @com.keepit.controllers.website.BookmarksController.saveCollection(id = "")
+POST    /site/collections/:id/update @com.keepit.controllers.website.BookmarksController.saveCollection(id: String)
+POST    /site/collections/:id/delete @com.keepit.controllers.website.BookmarksController.deleteCollection(id: ExternalId[Collection])
+POST    /site/collections/:id/removeKeeps @com.keepit.controllers.website.BookmarksController.removeKeepsFromCollection(id: ExternalId[Collection])
+POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.BookmarksController.keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = false)
+POST    /site/collections/:id/setKeeps @com.keepit.controllers.website.BookmarksController.keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = true)
 GET     /site/keeps/mutual/:id      @com.keepit.controllers.website.BookmarksController.mutualKeeps(id: ExternalId[User])
 GET     /site/keeps/count           @com.keepit.controllers.website.BookmarksController.numKeeps()
 
@@ -84,7 +90,7 @@ POST    /error/report               @com.keepit.controllers.ext.ExtErrorReportCo
 GET     /users/:id/pics/:size/0.jpg @com.keepit.controllers.assets.UserPictureController.get(size: Int, id: ExternalId[User])
 POST    /users/pics/update      @com.keepit.controllers.assets.UserPictureController.update()
 
-GET     /search                     @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String])
+GET     /search                     @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String])
 GET     /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts(ids: String)
 
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
@@ -150,7 +156,7 @@ GET     /admin/search/spell         @com.keepit.controllers.admin.AdminSpellCorr
 GET     /admin/search/spell/test-correct  @com.keepit.controllers.admin.AdminSpellCorrectorController.correctSpelling(query: String)
 GET     /admin/search/scrape        @com.keepit.controllers.admin.ScraperController.searchScraper
 GET     /admin/search/scrape/regex  @com.keepit.controllers.admin.ScraperController.rescrapeByRegex(urlRegex: String ?= "", withinHours: Int ?= 8)
-
+GET     /admin/search/performance/viewPerformance @com.keepit.controllers.admin.AdminSearchPerformanceController.viewSearchPerformance
 
 GET     /admin/uriGraph/reindex     @com.keepit.controllers.admin.AdminURIGraphController.reindex
 GET     /admin/uriGraph/load        @com.keepit.controllers.admin.AdminURIGraphController.load
@@ -178,6 +184,7 @@ GET     /admin/social_user/:id/refresh @com.keepit.controllers.admin.AdminSocial
 GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUserController.resetSocialUser(id: Id[SocialUserInfo])
 
 GET     /admin/server               @com.keepit.common.healthcheck.AdminHealthController.serviceView()
+GET     /admin/benchmark            @com.keepit.common.healthcheck.AdminBenchmarkController.benchmarks()
 GET     /admin/ec2-instance         @com.keepit.controllers.admin.AmazonInstanceController.instanceInfo()
 
 GET     /admin/emails/comment       @com.keepit.controllers.admin.AdminEmailPreviewController.newComment
@@ -219,6 +226,8 @@ GET     /admin/slider/classifications @com.keepit.controllers.admin.SliderAdminC
 POST    /admin/slider/domains       @com.keepit.controllers.admin.SliderAdminController.saveDomainOverrides
 POST    /admin/slider/domains/fetch @com.keepit.controllers.admin.SliderAdminController.refetchClassifications
 GET     /admin/slider/importEvents  @com.keepit.controllers.admin.SliderAdminController.getImportEvents
+GET     /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.getVersionForm
+POST    /admin/slider/version       @com.keepit.controllers.admin.SliderAdminController.broadcastLatestVersion(ver: String)
 
 GET     /admin/phrases              @com.keepit.controllers.admin.PhraseController.displayPhrases(page: Int ?= 0)
 POST    /admin/phrases/add          @com.keepit.controllers.admin.PhraseController.addPhrase
@@ -247,6 +256,7 @@ GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.sh
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs(ids: String)
 GET     /internal/shoebox/database/getUsers           @com.keepit.controllers.shoebox.ShoeboxController.getUsers(ids: String)
 GET     /internal/shoebox/database/userIdsByExternalIds @com.keepit.controllers.shoebox.ShoeboxController.getUserIdsByExternalIds(ids: String)
+GET     /internal/shoebox/database/collectionIdsByExternalIds @com.keepit.controllers.shoebox.ShoeboxController.getCollectionIdsByExternalIds(ids: String)
 GET     /internal/shoebox/database/getUserOpt         @com.keepit.controllers.shoebox.ShoeboxController.getUserOpt(id: ExternalId[User])
 GET     /internal/shoebox/database/getUserExperiments           @com.keepit.controllers.shoebox.ShoeboxController.getUserExperiments(id: Id[User])
 
@@ -308,3 +318,7 @@ GET     /internal/search/searchConfig/:id/reset  @com.keepit.controllers.search.
 GET     /internal/search/defaultSearchConfig/defaultSearchConfig  @com.keepit.controllers.search.SearchConfigController.getSearchDefaultConfig
 
 GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.SearchController.friendMapJson(userId: Id[User], query: Option[String] ?= None, minKeeps: Option[Int] ?= None)
+
+# INTERNAL ROUTES/GLOBAL
+GET     /internal/benchmark                   @com.keepit.common.healthcheck.CommonBenchmarkController.benchmarksResults()
+GET     /internal/version                     @com.keepit.common.healthcheck.CommonBenchmarkController.version()

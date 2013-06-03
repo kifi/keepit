@@ -13,11 +13,11 @@ window.onerror = function (message, url, lineNo) {
   }
 };
 
-var injected, t0 = +new Date, tile, paneHistory, root = document.querySelector("body") || document.documentElement;
+var t0 = +new Date, tile, paneHistory, root = document.querySelector("body") || document.documentElement;
 
 !function() {
   api.log("[scout]", location.hostname);
-  var tileCount, onScroll;
+  var tileCard, tileCount, onScroll;
   api.port.on({
     new_notification: function(n) {
       if (n.state != "visited" &&
@@ -40,14 +40,19 @@ var injected, t0 = +new Date, tile, paneHistory, root = document.querySelector("
         tile.dataset.pos = JSON.stringify(pos);
         positionTile(pos);
       }
+      tileCard.classList.add("kifi-0s");
       if (o.kept) {
         tile.dataset.kept = o.kept;
+      } else {
+        tile.removeAttribute("data-kept");
       }
       window.addEventListener("resize", onResize);
       api.require("styles/metro/tile.css", function() {
         if (!o.hide) {
           tile.style.display = "";
         }
+        tile.offsetHeight;
+        tileCard.classList.remove("kifi-0s");
       });
     },
     kept: function(o) {
@@ -61,18 +66,16 @@ var injected, t0 = +new Date, tile, paneHistory, root = document.querySelector("
       setTimeout(keeper.bind(null, "showKeepers", o.keepers, o.otherKeeps), 3000);
     },
     counts: function(counts) {
-      if (!tileCount) return;
       var n = 0;
       for (var i in counts) {
         n += counts[i];
       }
       if (n) {
         tileCount.textContent = n;
-        tile.appendChild(tileCount);
+        tile.insertBefore(tileCount, tileCard.nextSibling);
       } else if (tileCount.parentNode) {
-        tileCount.parentNode.removeChild(tileCount);
+        tile.removeChild(tileCount);
       }
-      tile.classList[n ? "add" : "remove"]("kifi-with-count");
       tile.dataset.counts = JSON.stringify(counts);
     },
     scroll_rule: function(r) {
@@ -142,18 +145,18 @@ var injected, t0 = +new Date, tile, paneHistory, root = document.querySelector("
       tile.parentNode.removeChild(tile);
     }
     tile = document.createElement("div");
-    tile.id = "kifi-tile";
+    tile.id = tile.className = "kifi-tile";
     tile.style.display = "none";
     tile.innerHTML =
-      "<div class=kifi-tile-flip>" +
+      "<div class=kifi-tile-card>" +
       "<div class=kifi-tile-keep style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>" +
       "<div class=kifi-tile-kept></div></div>";
-    var flip = tile.firstChild;
+    tileCard = tile.firstChild;
     tileCount = document.createElement("span");
     tileCount.className = "kifi-count";
     root.appendChild(tile);
     tile.addEventListener("mouseover", function(e) {
-      if (e.target === tileCount || flip.contains(e.target)) {
+      if (e.target === tileCount || tileCard.contains(e.target)) {
         keeper("show", "tile");
       }
     });

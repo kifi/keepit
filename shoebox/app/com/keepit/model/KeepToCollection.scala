@@ -1,5 +1,7 @@
 package com.keepit.model
 
+import scala.slick.lifted.Query
+
 import org.joda.time.DateTime
 
 import com.google.inject.{Inject, ImplementedBy, Singleton}
@@ -31,6 +33,7 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
   def getByCollection(collId: Id[Collection],
       excludeState: Option[State[KeepToCollection]] = Some(KeepToCollectionStates.INACTIVE))
       (implicit session: RSession): Seq[KeepToCollection]
+  def count(collId: Id[Collection])(implicit session: RSession): Int
 }
 
 @Singleton
@@ -71,6 +74,10 @@ class KeepToCollectionRepoImpl @Inject() (
   override def save(model: KeepToCollection)(implicit session: RWSession): KeepToCollection = {
     collectionRepo.updateSequenceNumber(model.collectionId)
     super.save(model)
+  }
+
+  def count(collId: Id[Collection])(implicit session: RSession): Int = {
+    Query((for (c <- table if c.collectionId === collId) yield c).length).firstOption.getOrElse(0)
   }
 }
 

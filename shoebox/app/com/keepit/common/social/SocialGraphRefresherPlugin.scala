@@ -31,6 +31,7 @@ import scala.concurrent.Await
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.plugin._
 import com.keepit.common.actor.ActorFactory
+import play.api.Plugin
 
 private case class RefreshUserInfo(socialUserInfo: SocialUserInfo)
 private case object RefreshAll
@@ -58,12 +59,12 @@ private[social] class SocialGraphRefresherActor @Inject() (
 }
 
 
-trait SocialGraphRefresher extends SchedulingPlugin {}
+trait SocialGraphRefresher extends Plugin {}
 
 class SocialGraphRefresherImpl @Inject() (
     actorFactory: ActorFactory[SocialGraphRefresherActor],
     val schedulingProperties: SchedulingProperties)
-  extends SocialGraphRefresher with Logging {
+  extends SocialGraphRefresher with SchedulingPlugin {
 
   implicit val actorTimeout = Timeout(5 seconds)
 

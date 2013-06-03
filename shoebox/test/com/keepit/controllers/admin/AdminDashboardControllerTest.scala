@@ -24,9 +24,9 @@ class AdminDashboardControllerTest extends Specification with DbRepos {
 
   "AdminDashboardController" should {
     "get users by date as JSON" in {
-      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeStore()) {
+      running(new EmptyApplication().withFakeSecureSocialUserService()) {
 
-        val now = new DateTime(2012, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
+        val now = new DateTime(2020, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         inject[FakeClock].setTimeFunction(() => now.getMillis)
 
         val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
@@ -52,7 +52,7 @@ class AdminDashboardControllerTest extends Specification with DbRepos {
         status(result) must equalTo(OK)
         contentType(result) must beSome("application/json")
         charset(result) must beSome("utf-8")
-        Json.parse(contentAsString(result)) === Json.parse("{\"day0\":\"2012-05-28\",\"counts\":[1,0,2,0]}")
+        Json.parse(contentAsString(result)) === Json.parse("{\"day0\":\"2020-05-28\",\"counts\":[1,0,2,0]}")
       }
     }
   }

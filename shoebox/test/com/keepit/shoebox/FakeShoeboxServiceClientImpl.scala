@@ -88,7 +88,7 @@ class FakeShoeboxServiceClientImpl @Inject() (
   }
 
   def persistServerSearchEvent(metaData: JsObject): Unit ={
-    //persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject])(clock, fortyTwoServices))
+    //EventPersister.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject])(clock, fortyTwoServices))
   }
 
   def getClickHistoryFilter(userId: Id[User]) = {
@@ -99,7 +99,17 @@ class FakeShoeboxServiceClientImpl @Inject() (
     Promise.successful(browsingHistoryTracker.getMultiHashFilter(userId).getFilter).future
   }
 
-  def getConnectedUsers(id: Id[User]): scala.concurrent.Future[Set[com.keepit.common.db.Id[com.keepit.model.User]]] = ???
+  def setConnections(connections: Map[Id[User], Set[Id[User]]]) {
+    connectionsOpt = Some(connections)
+  }
+
+  private[this] var connectionsOpt: Option[Map[Id[User], Set[Id[User]]]] = None
+
+  def getConnectedUsers(id: Id[User]): scala.concurrent.Future[Set[com.keepit.common.db.Id[com.keepit.model.User]]] = {
+    val connections = connectionsOpt.getOrElse(???)
+    Promise.successful(connections.getOrElse(id, Set()) - id).future
+  }
+
   def reportArticleSearchResult(res: ArticleSearchResult): Unit = {}
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = ???
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = ???
@@ -125,13 +135,15 @@ class FakeShoeboxServiceClientImpl @Inject() (
     Promise.successful(Seq()).future
   }
 
+  def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]] = ???
+
   def getIndexable(seqNum: Long, fetchSize: Int) : Future[Seq[NormalizedURI]] = {
     val uris = db.readOnly { implicit s =>
         normUriRepo.getIndexable(SequenceNumber(seqNum), fetchSize)
       }
     Promise.successful(uris).future
   }
-  
+
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]] = ???
   def getPersonalSearchInfo(userId: Id[User], resultSet: com.keepit.search.ArticleSearchResult): Future[(Map[Id[User], BasicUser], Seq[PersonalSearchHit])] = ???
 

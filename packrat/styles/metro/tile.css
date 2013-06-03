@@ -1,4 +1,9 @@
-#kifi-tile {
+.kifi-tile,
+.kifi-tile * {
+  background: transparent;
+  overflow: visible;
+}
+.kifi-tile {
   position: fixed;
   z-index: 999999999991;
   bottom: 0;
@@ -17,7 +22,7 @@
   -webkit-perspective: 200px;
   perspective: 200px;
 }
-.kifi-tile-flip {
+.kifi-tile-card {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -28,9 +33,15 @@
   -webkit-transform-style: preserve-3d;
   transform-style: preserve-3d;
 }
-#kifi-tile[data-kept] .kifi-tile-flip {
+.kifi-tile[data-kept] .kifi-tile-card {
   -webkit-transform: rotateX(-180deg);
   transform: rotateX(-180deg);
+}
+.kifi-tile-card.kifi-0s,
+.kifi-tile-card.kifi-0s>.kifi-tile-keep,
+.kifi-tile-card.kifi-0s>.kifi-tile-kept {
+  -webkit-transition: none;
+  transition: none;
 }
 .kifi-tile-keep,
 .kifi-tile-kept {
@@ -43,6 +54,8 @@
   opacity: .4;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
+  -webkit-transition: visibility 0s .125s; /* broken backface-visibility workaround */
+  transition: visibility 0s .125s;
 }
 .kifi-tile-keep {
   background-color: #263f5c;
@@ -55,7 +68,11 @@
   -webkit-transform: rotateX(180deg);
   transform: rotateX(180deg);
 }
-#kifi-tile .kifi-tile-kept::before {
+.kifi-tile[data-kept] .kifi-tile-keep,
+.kifi-tile:not([data-kept]) .kifi-tile-kept {
+  visibility: hidden;
+}
+.kifi-tile .kifi-tile-kept::before {
   content: "kept";
   position: absolute;
   top: 0;
@@ -65,10 +82,6 @@
   color: #fff;
   font-size: 14px;
   line-height: 42px;
-}
-#kifi-tile.ui-draggable .kifi-tile-flip,
-#kifi-tile.kifi-behind-slider .kifi-tile-flip {
-  display: none;
 }
 .kifi-count,
 .kifi-slider2 .kifi-count {
@@ -83,7 +96,4 @@
   color: #fff;
   font-size: 10px;
   line-height: 20px;
-}
-#kifi-tile.kifi-with-slider>.kifi-count {
-  display: none;
 }

@@ -22,6 +22,7 @@ import com.keepit.common.time._
 import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
+import play.api.Plugin
 import play.api.templates.Html
 import com.keepit.common.mail.RemotePostOffice
 
@@ -85,7 +86,7 @@ class SendHealthcheckMail(history: HealthcheckErrorHistory, host: HealthcheckHos
       val subject = s"[${services.currentService}] ${history.lastError.subjectName}"
       sender.sendMail(ElectronicMail(
         from = EmailAddresses.EISHAY,
-        to = EmailAddresses.ASANA_PROD_HEALTH::EmailAddresses.ANDREW::Nil,
+        to = EmailAddresses.ASANA_PROD_HEALTH::EmailAddresses.GREG::Nil,
         cc = EmailAddresses.ENG_EMAILS,
         subject = subject,
         htmlBody = views.html.email.healthcheckMail(history, started, host.host).body,
@@ -140,7 +141,7 @@ class HealthcheckActor @Inject() (
   }
 }
 
-trait HealthcheckPlugin extends SchedulingPlugin {
+trait HealthcheckPlugin extends Plugin {
   def errorCount(): Int
   def errors(): Seq[HealthcheckError]
   def resetErrorCount(): Unit
@@ -155,7 +156,7 @@ class HealthcheckPluginImpl @Inject() (
     services: FortyTwoServices,
     host: HealthcheckHost,
     val schedulingProperties: SchedulingProperties)
-  extends HealthcheckPlugin with Logging {
+  extends HealthcheckPlugin with SchedulingPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)
 

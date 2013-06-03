@@ -182,15 +182,16 @@ class ExtCommentController @Inject() (
         text = LargeString(text),
         permissions = CommentPermissions.MESSAGE,
         parent = parent.id))
+      (message, parent)
+    }
 
+    db.readWrite(attempts = 2) { implicit s =>
       commentReadRepo.save(commentReadRepo.getByUserAndParent(userId, parent.id.get) match {
         case Some(commentRead) =>
           commentRead.withLastReadId(message.id.get)
         case None =>
           CommentRead(userId = userId, uriId = uri.id.get, parentId = parent.id, lastReadId = message.id.get)
       })
-
-      (message, parent)
     }
 
     future {  // important that this is spawned only *after* above read/write transaction committed

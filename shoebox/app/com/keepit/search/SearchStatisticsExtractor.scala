@@ -222,22 +222,20 @@ class SearchStatisticsHelperSearcher(queryString: String, userId: Id[User], targ
   //===================== some preparations ==========================//
   val filter: Option[String] = None         // TODO: receive filter info from frontend. It's reasonable to assume most (>99%) search is done without any filter
   val context: Option[String] = None        // TODO: similar as above. Default context is empty
-  val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
+//  val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
 
-  val (friendIds, searchFilter) = {
-      val friendIds = monitoredAwait.result(shoeboxServiceClient.getConnectedUsers(userId), 5 seconds)
-      val searchFilter = filter match {
-        case Some("m") =>
-          SearchFilter.mine(idFilter)
-        case Some("f") =>
-          SearchFilter.friends(idFilter)
-        case Some(ids) =>
-          val userIds = ids.split('.').flatMap(id => Try(ExternalId[User](id)).toOption).flatMap(id => monitoredAwait.result(shoeboxServiceClient.getUserOpt(id), 5 seconds)).flatMap(_.id)
-          SearchFilter.custom(idFilter, userIds.toSet)
-        case None =>
-          SearchFilter.default(idFilter)
-      }
-      (friendIds, searchFilter)
+  val friendIds = monitoredAwait.result(shoeboxServiceClient.getConnectedUsers(userId), 5 seconds)
+  val searchFilter = filter match {
+    case Some("m") =>
+      SearchFilter.mine(context, monitoredAwait = monitoredAwait)
+    case Some("f") =>
+      SearchFilter.friends(context)
+    case Some(ids) =>
+      val userExtIds = ids.split('.').flatMap(id => Try(ExternalId[User](id)).toOption)
+      val idFuture = shoeboxServiceClient.getUserIdsByExternalIds(userExtIds)
+      SearchFilter.custom(context, idFuture, None, None, None, monitoredAwait)
+    case None =>
+      SearchFilter.default(context)
   }
 
  // val searcher = mainSearcherFactory(userId, friendIds, searchFilter, config)
@@ -306,6 +304,7 @@ class SearchStatisticsHelperSearcher(queryString: String, userId: Id[User], targ
   def getUriInfo() = {
     var uriInfoMap = Map.empty[Id[NormalizedURI], UriInfo]
     val idsetFilter = new IdSetFilter(targetUriIds.map{_.id}.toSet)
+    val idFilter = searchFilter.idFilter
 
     parsedQuery.map { articleQuery =>
       val filteredQuery = new FilteredQuery(articleQuery, idsetFilter)

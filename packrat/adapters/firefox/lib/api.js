@@ -191,6 +191,8 @@ exports.request = function(method, url, data, done, fail) {
   require("sdk/request").Request(options)[method.toLowerCase()]();
 };
 
+exports.requestUpdateCheck = exports.log.bind(null, "[requestUpdateCheck] unsupported");
+
 var socketPage, sockets = [,];
 var socketCallbacks = {}, nextSocketCallbackId = 1;  // TODO: garbage collect old uncalled callbacks
 exports.socket = {

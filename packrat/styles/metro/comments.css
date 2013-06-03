@@ -1,6 +1,9 @@
+.kifi-pane-comments .kifi-pane-tall-middle {
+  border-bottom: 76px solid transparent;
+}
 .kifi-pane-comments .kifi-pane-empty img {
-  width: 128px;
-  height: 121px;
+  width: 105px;
+  height: 99px;
 }
 .kifi-comments-posted {
   padding: 10px 12px 4px;

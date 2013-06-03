@@ -44,8 +44,8 @@ import scala.slick.session.{Database => SlickDatabase}
 import play.api.db.DB
 
 
-class FakePersistEventPluginImpl @Inject() (
-    system: ActorSystem, eventHelper: EventHelper, val schedulingProperties: SchedulingProperties) extends PersistEventPlugin with Logging {
+class FakeEventPersisterImpl @Inject() (
+    system: ActorSystem, eventHelper: EventHelper, val schedulingProperties: SchedulingProperties) extends EventPersister with Logging {
   def persist(event: Event): Unit = {
     eventHelper.newEvent(event)
     log.info("Fake persisting event %s".format(event.externalId))
@@ -57,7 +57,7 @@ class FakePersistEventPluginImpl @Inject() (
 
 class ShoeboxDevModule extends ScalaModule with Logging {
   def configure() {
-    bind[PersistEventPlugin].to[FakePersistEventPluginImpl].in[AppScoped]
+    bind[EventPersister].to[FakeEventPersisterImpl].in[AppScoped]
   }
 
   @Provides
@@ -86,15 +86,14 @@ class ShoeboxDevModule extends ScalaModule with Logging {
     db: Database,
     userRepo: UserRepo,
     normalizedURIRepo: NormalizedURIRepo,
-    persistEventProvider: Provider[PersistEventPlugin],
+    persistEventProvider: Provider[EventPersister],
     store: MongoEventStore,
     searchClient: SearchServiceClient,
     clock: Clock,
-    fortyTwoServices: FortyTwoServices,
-    schedulingProperties: SchedulingProperties): SearchUnloadListener = {
+    fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
     current.configuration.getBoolean("event-listener.searchUnload").getOrElse(false) match {
-      case true =>  new SearchUnloadListenerImpl(db,userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, schedulingProperties, clock, fortyTwoServices)
-      case false => new FakeSearchUnloadListenerImpl(userRepo, normalizedURIRepo, schedulingProperties)
+      case true =>  new SearchUnloadListenerImpl(db,userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, clock, fortyTwoServices)
+      case false => new FakeSearchUnloadListenerImpl(userRepo, normalizedURIRepo)
     }
   }
 

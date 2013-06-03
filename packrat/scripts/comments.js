@@ -22,7 +22,7 @@ commentsPane = function() {
         comments: comments,
         draftPlaceholder: "Type a comment…",
         submitButtonLabel: "Post",
-        submitTip: CO_KEY + "-Enter to post",
+        submitTip: (session.prefs.enterToSend ? "" : CO_KEY + "-") + "Enter to post",
         // following: following,
         snapshotUri: api.url("images/snapshot.png")
         // connected_networks: api.url("images/social_icons.png")
@@ -65,7 +65,7 @@ commentsPane = function() {
           });
         }
 
-        attachComposeBindings($container, "comment");
+        attachComposeBindings($container, "comment", session.prefs.enterToSend);
 
         $container.closest(".kifi-pane-box").on("kifi:remove", function() {
           $scroller = $holder = $();

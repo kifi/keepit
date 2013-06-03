@@ -21,7 +21,7 @@ class SocialConnectionTest extends Specification {
   "SocialConnection" should {
 
     "give Kifi user's connections (min set)" in {
-      running(new EmptyApplication().withFakeStore) {
+      running(new EmptyApplication()) {
 
         def loadJsonImportFriends(filename: String): Unit = {
           val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format(filename))).mkString)
@@ -85,7 +85,7 @@ class SocialConnectionTest extends Specification {
       }
     }
     "give Kifi user's connections (min set) w/o non active connections" in {
-      running(new EmptyApplication().withFakeStore) {
+      running(new EmptyApplication()) {
 
         def loadJsonImportFriends(filename: String): Unit = {
           val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format(filename))).mkString)
@@ -153,7 +153,7 @@ class SocialConnectionTest extends Specification {
     }
 
     "give Kifi user's connections (min set) with pagination" in {
-      running(new EmptyApplication().withFakeStore) {
+      running(new EmptyApplication()) {
 
         def loadJsonImportFriends(filenames: Seq[String]): Unit = {
           val jsons = filenames map { filename =>

@@ -45,11 +45,12 @@ class ExtStreamController @Inject() (
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   experimentRepo: UserExperimentRepo,
+  userValueRepo: UserValueRepo,
   userChannel: UserChannel,
   uriChannel: UriChannel,
   userToDomainRepo: UserToDomainRepo,
   userNotificationRepo: UserNotificationRepo,
-  persistEventPlugin: PersistEventPlugin,
+  EventPersister: EventPersister,
   keeperInfoLoader: KeeperInfoLoader,
   sliderRuleRepo: SliderRuleRepo,
   urlPatternRepo: URLPatternRepo,
@@ -181,6 +182,13 @@ class ExtStreamController @Inject() (
                 Json.obj("id" -> threadId, "uri" -> nUri.url, "messages" -> msgs)
               }))
             },
+            "set_enter_to_send" -> { case JsBoolean(enterToSend) +: _ =>
+              db.readWrite(implicit s => userValueRepo.setValue(userId, "enter_to_send", enterToSend.toString))
+              channel.push(Json.arr("prefs", loadUserPrefs(userId)))
+            },
+            "get_prefs" -> { _ =>
+              channel.push(Json.arr("prefs", loadUserPrefs(userId)))
+            },
             "get_last_notify_read_time" -> { _ =>
               val t = db.readOnly(implicit s => userNotificationRepo.getLastReadTime(userId))
               channel.push(Json.arr("last_notify_read_time", t.toStandardTimeString))
@@ -255,6 +263,15 @@ class ExtStreamController @Inject() (
     }
   }
 
+  private def loadUserPrefs(userId: Id[User]): JsObject = {
+    val enterToSend = db.readOnly { implicit s =>
+      userValueRepo.getValue(userId, "enter_to_send").map(_.toBoolean)
+    }
+    JsObject(Seq[Option[(String, JsValue)]](
+      if (enterToSend.nonEmpty) Some("enterToSend" -> JsBoolean(enterToSend.get)) else None)
+    .flatten)
+  }
+
   private def setAllNotificationsVisited(userId: Id[User], lastId: ExternalId[UserNotification]) {
     import UserNotificationStates._
     import UserNotificationCategories._
@@ -287,7 +304,7 @@ class ExtStreamController @Inject() (
     val user = db.readOnly { implicit s => userRepo.get(session.userId) }
     val event = Events.userEvent(eventFamily, eventName, user, session.experiments, installId, metaData, prevEvents, eventTime)
     log.debug("Created new event: %s".format(event))
-    persistEventPlugin.persist(event)
+    EventPersister.persist(event)
   }
 
   private def getMessageThread(messageId: ExternalId[Comment]): (NormalizedURI, Seq[CommentWithBasicUser]) = {
@@ -316,7 +333,7 @@ class ExtStreamController @Inject() (
         case None =>
           Some(commentReadRepo.save(CommentRead(userId = userId, uriId = parent.uriId, parentId = parent.id, lastReadId = message.id.get)))
         case _ => None
-      }) //foreach { _ =>  // TODO: uncomment after past data inconsistencies are all repaired or no longer a concern
+      }) foreach { _ =>
         val nUri = normUriRepo.get(parent.uriId)
         if (!quietly) {
           userChannel.push(userId, Json.arr("message_read", nUri.url, parent.externalId.id, message.createdAt, message.externalId.id))
@@ -324,7 +341,7 @@ class ExtStreamController @Inject() (
 
         val messageIds = commentRepo.getMessageIdsCreatedBefore(nUri.id.get, parent.id.get, message.createdAt) :+ message.id.get
         userNotificationRepo.markVisited(userId, messageIds)
-      //}
+      }
     }
   }
 
@@ -336,7 +353,7 @@ class ExtStreamController @Inject() (
         case None =>
           Some(commentReadRepo.save(CommentRead(userId = userId, uriId = comment.uriId, lastReadId = comment.id.get)))
         case _ => None
-      }) //foreach { _ =>  // TODO: uncomment after past data inconsistencies are all repaired or no longer a concern
+      }) foreach { _ =>
         val nUri = normUriRepo.get(comment.uriId)
 
         if (!quietly) {
@@ -345,7 +362,7 @@ class ExtStreamController @Inject() (
 
         val commentIds = commentRepo.getPublicIdsCreatedBefore(nUri.id.get, comment.createdAt) :+ comment.id.get
         userNotificationRepo.markVisited(userId, commentIds)
-      //}
+      }
     }
   }
 

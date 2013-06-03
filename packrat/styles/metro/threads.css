@@ -1,6 +1,9 @@
+.kifi-pane-threads .kifi-pane-tall-middle {
+  border-bottom: 100px solid transparent;
+}
 .kifi-pane-threads .kifi-pane-empty img {
   width: 138px;
-  height: 106px;
+  height: 105px;
 }
 .kifi-threads-list {
   padding: 0 6px 4px;

@@ -22,7 +22,7 @@ class AdminAuthControllerTest extends Specification with DbRepos {
   //todo(eishay) refactor commonalities out of this one and AdminDashboardController to make this test easy to write
   "AdminAuthController" should {
     "impersonate" in {
-      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeStore()) {
+      running(new EmptyApplication().withFakeSecureSocialUserService()) {
         val su1 = SocialUser(UserId("111", "facebook"), "A", "1", "A 1", Some("a1@gmail.com"),
           Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None, Some(OAuth2Info(accessToken = "A")), None)
         val su2 = SocialUser(UserId("222", "facebook"), "B", "1", "B 1", Some("b1@gmail.com"),

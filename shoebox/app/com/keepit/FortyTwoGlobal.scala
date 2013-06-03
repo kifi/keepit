@@ -1,22 +1,23 @@
 package com.keepit
 
-import java.util.concurrent.atomic.AtomicBoolean
-
 import com.google.inject.{Stage, Guice, Module, Injector}
-import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.controller.ReportedException
+import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.inject._
 
+import java.util.concurrent.atomic.AtomicBoolean
 import play.api._
-import play.api.mvc.Results.InternalServerError
+import play.api.mvc.Results._
 import play.api.mvc._
+import play.modules.statsd.api.StatsdFilter
 import play.utils.Threads
 
-abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with Logging {
+abstract class FortyTwoGlobal(val mode: Mode.Mode)
+    extends WithFilters(LoggingFilter) /* extends WithFilters(new StatsdFilter()) */ with Logging {
 
   implicit def richInjector(injector: Injector) = new RichInjector(injector)
 
@@ -65,17 +66,17 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode) extends GlobalSettings with L
     println("starting app %s with dbs %s".format(appName, dbs.mkString(",")))
   }
 
-  override def onBadRequest (request: RequestHeader, error: String): Result = {
+  override def onBadRequest(request: RequestHeader, error: String): Result = {
     val errorId = ExternalId[Exception]()
     val msg = "BAD REQUEST: %s: [%s] on %s:%s query: %s".format(errorId, error, request.method, request.path, request.queryString.mkString("::"))
     log.warn(msg)
-    InternalServerError(msg)
+    BadRequest(msg)
   }
 
-  override def onHandlerNotFound (request: RequestHeader): Result = {
+  override def onHandlerNotFound(request: RequestHeader): Result = {
     val errorId = ExternalId[Exception]()
     log.warn("Handler Not Found %s: on %s".format(errorId, request.path))
-    InternalServerError("NO HANDLER: %s".format(errorId))
+    NotFound("NO HANDLER: %s".format(errorId))
   }
 
   override def onStart(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {

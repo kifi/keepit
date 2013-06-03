@@ -3,7 +3,7 @@ package com.keepit.controllers.shoebox
 import com.google.inject.Inject
 import com.keepit.common.analytics.EventFamilies
 import com.keepit.common.analytics.Events
-import com.keepit.common.analytics.PersistEventPlugin
+import com.keepit.common.analytics.EventPersister
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
@@ -82,7 +82,7 @@ class ShoeboxController @Inject() (
   normUriRepo: NormalizedURIRepo,
   searchConfigExperimentRepo: SearchConfigExperimentRepo,
   userExperimentRepo: UserExperimentRepo,
-  persistEventPlugin: PersistEventPlugin,
+  EventPersister: EventPersister,
   postOffice: LocalPostOffice,
   healthcheckPlugin: HealthcheckPlugin,
   phraseRepo: PhraseRepo,
@@ -222,7 +222,7 @@ class ShoeboxController @Inject() (
 
   def persistServerSearchEvent() = Action(parse.json) { request =>
     val metaData = request.body
-    persistEventPlugin.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject]))
+    EventPersister.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject]))
     Ok("server search event persisted")
   }
 
@@ -243,6 +243,14 @@ class ShoeboxController @Inject() (
       extUserIds.map { userRepo.getOpt(_).map(_.id.get.id) }.flatten
     }
     Ok(Json.toJson(users))
+  }
+
+  def getCollectionIdsByExternalIds(ids: String) = Action { request =>
+    val extCollIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(ExternalId[Collection](_))
+    val collectionIds = db.readOnly { implicit s =>
+      extCollIds.map { collectionRepo.getOpt(_).map(_.id.get.id) }.flatten
+    }
+    Ok(Json.toJson(collectionIds))
   }
 
   def getConnectedUsers(id : Id[User]) = Action { request =>

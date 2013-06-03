@@ -27,14 +27,11 @@ object LongArraySet {
       override def findIndex(key: Long): Int = Arrays.binarySearch(a, key)
       override def contains(key: Long): Boolean = (Arrays.binarySearch(a, key) >= 0)
       override def verify: Boolean = {
-        if (a.forall(contains)) true else {
-          if ((1 until a.length).forall{ i => a(i - 1) < a(i) }) {
-            log.error("sorted source: verification failed, source sorted")
-          } else {
+          if ((1 until a.length).forall{ i => a(i - 1) <= a(i) }) true
+          else {
             log.error("sorted source: verification failed, source not sorted")
+            false
           }
-          false
-        }
       }
     }
   }

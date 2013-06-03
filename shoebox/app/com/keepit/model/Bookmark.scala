@@ -169,10 +169,10 @@ class BookmarkRepoImpl @Inject() (
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User],
       excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))
       (implicit session: RSession): Option[Bookmark] =
-    bookmarkUriUserCache.getOrElseOpt(BookmarkUriUserKey(uriId, userId)) {
+    (bookmarkUriUserCache.getOrElseOpt(BookmarkUriUserKey(uriId, userId)) {
       (for(b <- table if b.uriId === uriId && b.userId === userId && b.state =!= excludeState.getOrElse(null)) yield b)
         .sortBy(_.state === BookmarkStates.INACTIVE).firstOption
-    }
+    }) filter { _.state != excludeState.orNull }
 
   def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[Bookmark] =
     (for(b <- table if b.uriId === uriId && b.state === BookmarkStates.ACTIVE) yield b).list
@@ -185,6 +185,7 @@ class BookmarkRepoImpl @Inject() (
 
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Bookmark]], afterId: Option[ExternalId[Bookmark]],
       collectionId: Option[Id[Collection]], count: Int)(implicit session: RSession): Seq[Bookmark] = {
+    import keepToCollectionRepo.{stateTypeMapper => ktcStateMapper}
     val (maybeBefore, maybeAfter) = (beforeId map get, afterId map get)
     val q = (for {
       b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE &&
@@ -198,7 +199,7 @@ class BookmarkRepoImpl @Inject() (
     (collectionId.map { cid =>
       for {
         (b, ktc) <- q join keepToCollectionRepo.table on (_.id === _.bookmarkId)
-          if ktc.collectionId === cid
+          if ktc.collectionId === cid && ktc.state === KeepToCollectionStates.ACTIVE
       } yield b
     } getOrElse q).sortBy(_.id desc).sortBy(_.createdAt desc).take(count).list
   }
