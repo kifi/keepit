@@ -27,13 +27,44 @@ import com.keepit.common.healthcheck.HealthcheckMailSender
 import com.keepit.common.net.HttpClient
 import com.keepit.shoebox.ShoeboxCacheProvider
 import com.keepit.shoebox.ShoeboxServiceClientImpl
+import com.keepit.common.controller.ActionAuthenticator
+import com.keepit.common.controller.RemoteActionAuthenticator
+import com.keepit.common.akka.MonitoredAwait
+import com.keepit.social.SecureSocialAuthenticatorPlugin
+import com.keepit.social.RemoteSecureSocialAuthenticatorPlugin
+import com.keepit.social.SecureSocialUserPlugin
+import com.keepit.social.RemoteSecureSocialUserPlugin
+
+class SearchExclusiveModule() extends ScalaModule with Logging {
+  def configure() {
+    bind[ActionAuthenticator].to[RemoteActionAuthenticator]
+  }
+  
+  @Singleton
+  @Provides
+  def secureSocialAuthenticatorPlugin(
+    shoeboxClient: ShoeboxServiceClient,
+    healthcheckPlugin: HealthcheckPlugin,
+    monitoredAwait: MonitoredAwait,
+    app: play.api.Application): SecureSocialAuthenticatorPlugin = {
+    new RemoteSecureSocialAuthenticatorPlugin(shoeboxClient, healthcheckPlugin, monitoredAwait, app)
+  }
+
+  @Singleton
+  @Provides
+  def secureSocialUserPlugin(healthcheckPlugin: HealthcheckPlugin,
+  shoeboxClient: ShoeboxServiceClient,
+  monitoredAwait: MonitoredAwait): SecureSocialUserPlugin = {
+    new RemoteSecureSocialUserPlugin(healthcheckPlugin, shoeboxClient, monitoredAwait)
+  }
+}
+
 
 class SearchModule() extends ScalaModule with Logging {
 
   def configure() {
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
-    bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
     bind[RemotePostOffice].to[RemotePostOfficeImpl]
   }
 

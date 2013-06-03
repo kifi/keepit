@@ -29,10 +29,14 @@ import com.keepit.search.ActiveExperimentsKey
 import com.keepit.common.db.ExternalId
 import com.keepit.search.ArticleSearchResultFactory
 import com.keepit.common.service.RequestConsolidator
+import com.keepit.common.social.SocialNetworkType
+import com.keepit.common.social.SocialId
+import com.keepit.serializer.SocialUserInfoSerializer.socialUserInfoSerializer
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
   def getUserOpt(id: ExternalId[User]): Future[Option[User]]
+  def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]]
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]]
@@ -58,6 +62,9 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getExperiment(id: Id[SearchConfigExperiment]): Future[SearchConfigExperiment]
   def saveExperiment(experiment: SearchConfigExperiment): Future[SearchConfigExperiment]
   def hasExperiment(userId: Id[User], state: State[ExperimentType]): Future[Boolean]
+  def getUserExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]]
+  def getSocialUserInfosByUserId(userId: Id[User]): Future[List[SocialUserInfo]]
+  def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -70,7 +77,10 @@ case class ShoeboxCacheProvider @Inject() (
     activeSearchConfigExperimentsCache: ActiveExperimentsCache,
     userExperimentCache: UserExperimentCache,
     userConnCache: UserConnectionIdCache,
-    externalUserIdCache: ExternalUserIdCache)
+    externalUserIdCache: ExternalUserIdCache,
+    socialUserNetworkCache: SocialUserInfoNetworkCache,
+    socialUserCache: SocialUserInfoUserCache,
+    userSessionExternalIdCache: UserSessionExternalIdCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val host: String,
@@ -92,6 +102,24 @@ class ShoeboxServiceClientImpl @Inject() (
           case JsNull => None
           case js: JsValue => Some(UserSerializer.userSerializer.reads(js).get)
         }
+      }
+    }
+  }
+  
+  def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] = {
+    cacheProvider.socialUserNetworkCache.get(SocialUserInfoNetworkKey(networkType, id)) match {
+      case Some(sui) => Promise.successful(Some(sui)).future
+      case None => call(routes.ShoeboxController.getSocialUserInfoByNetworkAndSocialId(id.id, networkType.name)) map { resp =>
+        Json.fromJson[SocialUserInfo](resp.json).asOpt
+      }
+    }
+  }
+  
+  def getSocialUserInfosByUserId(userId: Id[User]): Future[List[SocialUserInfo]] = {
+    cacheProvider.socialUserCache.get(SocialUserInfoUserKey(userId)) match {
+      case Some(sui) => Promise.successful(sui).future
+      case None => call(routes.ShoeboxController.getSocialUserInfosByUserId(userId)) map { resp =>
+        Json.fromJson[List[SocialUserInfo]](resp.json).get
       }
     }
   }
@@ -275,6 +303,15 @@ class ShoeboxServiceClientImpl @Inject() (
       }
     }
   }
+  
+  def getUserExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]] = {
+    cacheProvider.userExperimentCache.get(UserExperimentUserIdKey(userId)) match {
+      case Some(states) => Promise.successful(states).future
+      case None => call(routes.ShoeboxController.getUserExperiments(userId)).map { r =>
+        r.json.as[Set[String]].map(State[ExperimentType](_)).toSeq
+      }
+    }
+  }
 
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]] = {
     call(routes.ShoeboxController.getCollectionsByUser(userId)).map { r =>
@@ -291,6 +328,19 @@ class ShoeboxServiceClientImpl @Inject() (
   def getIndexable(seqNum: Long, fetchSize: Int): Future[Seq[NormalizedURI]] = {
     call(routes.ShoeboxController.getIndexable(seqNum, fetchSize)).map{
       r => r.json.as[JsArray].value.map(js => NormalizedURISerializer.normalizedURISerializer.reads(js).get)
+    }
+  }
+  
+  def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]] = {
+    cacheProvider.userSessionExternalIdCache.get(UserSessionExternalIdKey(sessionId)) match {
+      case Some(session) => Promise.successful(Some(session)).future
+      case None => 
+        call(routes.ShoeboxController.getSessionByExternalId(sessionId)).map { r =>
+          r.json match {
+            case jso: JsObject => Json.fromJson[UserSession](jso).asOpt
+            case _ => None
+          }
+        }
     }
   }
 

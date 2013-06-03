@@ -24,4 +24,10 @@ case class TestGlobal(modules: Module*) extends FortyTwoGlobal(Test) {
   }
 }
 
+case class TestRemoteGlobal(modules: Module*) extends FortyTwoGlobal(Test) {
+  override val initialized = true
+  override lazy val injector: Injector = Guice.createInjector(modules: _*)
+}
+
+
 

@@ -57,6 +57,10 @@ import com.keepit.common.social.BasicUser
 import com.keepit.common.db.ExternalId
 import com.keepit.search.ArticleSearchResultRef
 import com.keepit.search.ArticleSearchResultRefRepo
+import com.keepit.common.social.SocialId
+import com.keepit.common.social.SocialNetworkType
+import com.keepit.common.social.SocialNetworks
+import com.keepit.serializer.SocialUserInfoSerializer._
 
 object ShoeboxController {
   implicit val collectionTupleFormat = (
@@ -85,7 +89,9 @@ class ShoeboxController @Inject() (
   collectionRepo: CollectionRepo,
   keepToCollectionRepo: KeepToCollectionRepo,
   basicUserRepo: BasicUserRepo,
-  articleSearchResultRefRepo: ArticleSearchResultRefRepo)
+  articleSearchResultRefRepo: ArticleSearchResultRefRepo,
+  socialUserInfoRepo: SocialUserInfoRepo,
+  sessionRepo: UserSessionRepo)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
@@ -97,6 +103,22 @@ class ShoeboxController @Inject() (
       case Some(user) => Ok(UserSerializer.userSerializer.writes(user))
       case None => Ok(JsNull)
     }
+  }
+  
+  def getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String) = Action {
+    val socialId = SocialId(id)
+    val network = SocialNetworkType(networkType)
+    val sui = db.readOnly { implicit session =>
+      socialUserInfoRepo.get(socialId, SocialNetworks.FACEBOOK)
+    }
+    Ok(Json.toJson(sui))
+  }
+  
+  def getSocialUserInfosByUserId(userId: Id[User]) = Action {
+    val sui = db.readOnly { implicit session =>
+      socialUserInfoRepo.getByUser(userId)
+    }
+    Ok(Json.toJson(sui))
   }
 
   def sendMail = Action(parse.json) { request =>
@@ -274,10 +296,17 @@ class ShoeboxController @Inject() (
   }
 
   def hasExperiment(userId: Id[User], state: State[ExperimentType]) = Action { request =>
-     val has = db.readOnly { implicit s =>
-          userExperimentRepo.hasExperiment(userId, state)
+    val has = db.readOnly { implicit s =>
+      userExperimentRepo.hasExperiment(userId, state)
     }
     Ok(JsBoolean(has))
+  }
+  
+  def getUserExperiments(userId: Id[User]) = Action { request =>
+    val experiments = db.readOnly { implicit s =>
+      userExperimentRepo.getUserExperiments(userId).map(_.value)
+    }
+    Ok(Json.toJson(experiments))
   }
 
   def getPhrasesByPage(page: Int, size: Int) = Action { request =>
@@ -309,6 +338,13 @@ class ShoeboxController @Inject() (
         normUriRepo.getIndexable(SequenceNumber(seqNum), fetchSize)
       }.map{uri => NormalizedURISerializer.normalizedURISerializer.writes(uri)}
     Ok(JsArray(uris))
+  }
+  
+  def getSessionByExternalId(sessionId: ExternalId[UserSession]) = Action { request =>
+    val res = db.readOnly { implicit session =>
+      sessionRepo.getOpt(sessionId)
+    }
+    Ok(Json.toJson(res))
   }
 
 }
