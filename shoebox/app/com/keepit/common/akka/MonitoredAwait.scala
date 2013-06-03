@@ -13,9 +13,9 @@ class MonitoredAwait @Inject() (healthcheckPlugin: HealthcheckPlugin) {
 
   def result[T](awaitable: Awaitable[T], atMost: Duration, valueOnFailure: T): T = {
     val caller = Thread.currentThread().getStackTrace()(2)
-    val friendlyCaller = s"${caller.getClassName()}.${caller.getMethodName()}:${caller.getLineNumber()}"
-    
-    val sw = new Stopwatch(s"Await: $friendlyCaller")
+    val tag = s"Await: ${caller.getClassName()}.${caller.getMethodName()}:${caller.getLineNumber()}"
+
+    val sw = new Stopwatch(tag)
     try {
       Await.result(awaitable, atMost)
     } catch {
@@ -27,12 +27,12 @@ class MonitoredAwait @Inject() (healthcheckPlugin: HealthcheckPlugin) {
       sw.logTime()
     }
   }
-  
+
   def result[T](awaitable: Awaitable[T], atMost: Duration) = {
     val caller = Thread.currentThread().getStackTrace()(2)
-    val friendlyCaller = s"${caller.getClassName()}.${caller.getMethodName()}:${caller.getLineNumber()}"
-    
-    val sw = new Stopwatch(s"Await: $friendlyCaller")
+    val tag = s"Await: ${caller.getClassName()}.${caller.getMethodName()}:${caller.getLineNumber()}"
+
+    val sw = new Stopwatch(tag)
     try {
       Await.result(awaitable, atMost)
     } finally {
