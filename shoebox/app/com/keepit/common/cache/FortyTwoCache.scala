@@ -10,7 +10,6 @@ import play.api.Plugin
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
 import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent._
-import net.sf.ehcache._
 
 @Singleton
 class CacheStatistics {
