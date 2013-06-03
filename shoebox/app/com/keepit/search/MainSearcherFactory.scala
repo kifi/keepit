@@ -86,7 +86,7 @@ class MainSearcherFactory @Inject() (
     )
   }
 
-  def clear() = consolidate.clear()
+  def clear() { consolidate.clear() }
 
   def bookmarkSearcher(userId: Id[User]) = {
     val articleSearcher = articleIndexer.getSearcher
