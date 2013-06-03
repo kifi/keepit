@@ -25,7 +25,7 @@ function updateImage(){
   if (e.selectedIndex > 0 ) {
     metric = e.options[e.selectedIndex].value
   }
-  url = "https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/?width=586&height=308&_salt=1370129514.597&lineMode=connected&logBase=2&target="
+  url = "https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/?width=586&height=308&_salt=1370129514.597&lineMode=connected&target="
   img = document.getElementById("chart")
   img.src = url.concat(metric)
 }
