@@ -801,9 +801,15 @@ function initTab(tab, d) {  // d is pageData[tab.nUri]
   }
 }
 
+function dateWithoutMs(t) { // until db has ms precision
+  var d = new Date(t);
+  d.setMilliseconds(0);
+  return d;
+}
+
 function commentCount(d) {  // comments only count as unread if by a friend
-  var t = new Date(d.lastCommentRead || 0);
-  return d.comments.filter(function(c) {return friendsById[c.user.id] && new Date(c.createdAt) > t}).length;
+  var t = dateWithoutMs(d.lastCommentRead || 0);
+  return d.comments.filter(function(c) { return friendsById[c.user.id] && dateWithoutMs(c.createdAt) > t }).length;
 }
 
 function messageCount(d) {
