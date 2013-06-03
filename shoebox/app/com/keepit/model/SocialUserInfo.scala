@@ -91,10 +91,7 @@ class SocialUserInfoRepoImpl @Inject() (
   }
 
   override def invalidateCache(socialUser: SocialUserInfo)(implicit session: RSession) = {
-    socialUser.userId match {
-      case Some(userId) => userCache.remove(SocialUserInfoUserKey(userId))
-      case None =>
-    }
+    socialUser.userId map {userId => userCache.remove(SocialUserInfoUserKey(userId))}
     networkCache.remove(SocialUserInfoNetworkKey(socialUser.networkType, socialUser.socialId))
     socialUser
   }

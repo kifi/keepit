@@ -1,4 +1,4 @@
-package com.keepit
+package com.keepit.akka
 
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
