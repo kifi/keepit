@@ -234,6 +234,56 @@ function showMessage(msg) {
 	$.fancybox($('<p>').text(msg));
 }
 
+// delete/rename collection
+$('#collections').on('click','a.remove',function() {
+	var colElement = $(this).parents('h3.collection').first();
+	var colId = colElement.data('id');
+	console.log('Removing collection ' + colId);
+	$.ajax( {url: urlCollections + "/" + colId + "/delete"
+		,type: "POST"
+		,dataType: 'json'
+		,data: '{}'
+		,contentType: 'application/json'
+		,error: function() {showMessage('Could not delete collection, please try again later')}
+		,success: function(data) {
+						colElement.remove();
+					}
+		});
+}).on('click','a.rename',function() {
+	var colElement = $(this).parents('h3.collection').first();
+	var nameSpan = colElement.find('span.name').first();
+	var name = nameSpan.text();
+	nameSpan.html('<input type="text" value="' + name + '" data-orig="' + name + '"/>');
+	nameSpan.find('input').focus();
+}).on('keypress','.collection span.name input', function(e) {
+	var code = (e.keyCode ? e.keyCode : e.which);
+	if(code == 13) { //Enter key pressed
+		var colElement = $(this).parents('h3.collection').first();
+		var colId = colElement.data('id');
+		console.log('Renaming collection ' + colId);
+		newName = $(this).val();
+		$.ajax( {url: urlCollections + "/" + colId + "/update"
+			,type: "POST"
+			,dataType: 'json'
+			,data: JSON.stringify({name: newName})
+			,contentType: 'application/json'
+			,error: function() {
+				showMessage('Could not rename collection, please try again later');
+				var nameSpan = colElement.find('span.name');
+				nameSpan.html(nameSpan.find('input').data('orig'));
+			}
+			,success: function(data) {
+							colElement.find('span.name').html(newName);
+						}
+		});
+		
+	}
+}).on('blur','.collection span.name input', function() {
+	$(this).parent().html($(this).data('orig'));
+});
+
+
+
 // auto update my keeps every minute
 setInterval(addNewKeeps, 60000);
 setInterval(updateNumKeeps, 60000);
@@ -361,7 +411,11 @@ $(document)
 						,error: function() {showMessage('Could not create collection, please try again later')}
 						,success: function(data) {
 										console.log(data)
-									   $('#collections').append('<h3 class="droppable" data-id="' + data.id + '"><a href="javascript: ;"> ' + newName + ' <span class="right light">0</span></a></h3>');
+									   $('#collections').append('<h3 class="droppable collection" data-id="' + data.id + '"><div class="edit-menu">\
+												<a href="javascript: ;" class="edit"></a>\
+												<ul><li><a class="rename" href="javascript: ;">Rename</a></li>\
+													<li><a class="remove" href="javascript: ;">Remove</a></li></ul>\
+											</div><a href="javascript: ;"><span class="name">' + newName + '</span> <span class="right light">0</span></a></h3>');
 									   initDroppable();
 									   $('#add-collection').slideUp();
 									   inputField.val('');
