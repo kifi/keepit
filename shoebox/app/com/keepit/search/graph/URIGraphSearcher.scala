@@ -1,5 +1,6 @@
 package com.keepit.search.graph
 
+import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.model.{NormalizedURI, User}
@@ -12,13 +13,17 @@ import com.keepit.search.index.WrappedSubReader
 import com.keepit.search.line.LineIndexReader
 import com.keepit.search.query.QueryUtil
 import com.keepit.search.util.LongArraySet
+import com.keepit.shoebox.ShoeboxServiceClient
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.duration._
 
 
-class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) extends BaseGraphSearcher(searcher) with Logging {
+class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends BaseGraphSearcher(searcher) with Logging {
+
+  private[this] val friendIdsFutureOpt = myUserId.map{ shoeboxClient.getConnectedUsers(_) }
 
   private[this] lazy val myInfo: Option[UserInfo] = {
     myUserId.map{ id =>
@@ -38,6 +43,23 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]]) extends B
 
   def myPublicUriEdgeSet: UserToUriEdgeSet = {
     myPublicUriEdgeSetOpt.getOrElse{ throw new Exception("search user was not set") }
+  }
+
+  private[this] lazy val friendEdgeSetOpt = friendIdsFutureOpt.map{ future =>
+    val friendIds = monitoredAwait.result(future, 5 seconds)
+    UserToUserEdgeSet(myUserId.get, friendIds)
+  }
+  private[this] val friendsUriEdgeSetsOpt = friendEdgeSetOpt.map{ friendEdgeSet =>
+    friendEdgeSet.destIdSet.foldLeft(Map.empty[Long, UserToUriEdgeSet]){ (m, f) =>
+      m + (f.id -> getUserToUriEdgeSet(f, publicOnly = true))
+    }
+  }
+
+  def friendEdgeSet: UserToUserEdgeSet = {
+    friendEdgeSetOpt.getOrElse{ throw new Exception("search user was not set") }
+  }
+  def friendsUriEdgeSets: Map[Long, UserToUriEdgeSet] = {
+    friendsUriEdgeSetsOpt.getOrElse{ throw new Exception("search user was not set") }
   }
 
   def getUserToUserEdgeSet(sourceId: Id[User], destIdSet: Set[Id[User]]) = UserToUserEdgeSet(sourceId, destIdSet)
