@@ -9,12 +9,14 @@ import com.keepit.test.{DbRepos, EmptyApplication}
 import play.api.Play.current
 import play.api.test._
 import play.api.test.Helpers._
+import com.keepit.akka.{TestKitScope, TestAkkaSystem}
+import concurrent.duration._
 
-class UnscrapableTest extends Specification with DbRepos {
+class UnscrapableTest extends Specification with DbRepos with TestAkkaSystem {
 
   "Unscrapable" should {
 
-    "persist & use unscrapable patterns w/ approperiate cashing" in {
+    "persist & use unscrapable patterns w/ approperiate cashing" in new TestKitScope {
       running(new EmptyApplication()) {
 
         val unscrapeCache = inject[UnscrapableRepoImpl].unscrapableCache
@@ -28,8 +30,8 @@ class UnscrapableTest extends Specification with DbRepos {
           unscrapeCache.get(UnscrapableAllKey()).isDefined === false
 
           unscrapableRepo.allActive().length === 2
-          Thread sleep 1000
-          unscrapeCache.get(UnscrapableAllKey()).get.length === 2
+          awaitCond(unscrapeCache.get(UnscrapableAllKey()).isDefined)
+          awaitCond(unscrapeCache.get(UnscrapableAllKey()).get.length === 2)
 
           unscrapableRepo.save(Unscrapable(pattern = "^https*://app.asana.com.*$"))
 

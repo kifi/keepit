@@ -17,8 +17,9 @@ import securesocial.core.UserId
 import securesocial.core.OAuth2Info
 import play.api.libs.json.JsObject
 import com.keepit.common.social.SocialId
+import com.keepit.akka.{TestAkkaSystem, TestKitScope}
 
-class SocialUserInfoTest extends Specification with TestDBRunner {
+class SocialUserInfoTest extends Specification with TestDBRunner with TestAkkaSystem {
 
   def setup()(implicit injector: RichInjector): User = {
     db.readWrite { implicit s =>
@@ -87,22 +88,20 @@ class SocialUserInfoTest extends Specification with TestDBRunner {
       deserialized === sui
     }
 
-    "use cache properly" in {
+    "use cache properly" in new TestKitScope {
       withDB() { implicit injector =>
         val user = setup()
         db.readWrite { implicit c =>
           def isInCache = inject[SocialUserInfoRepoImpl].userCache.get(SocialUserInfoUserKey(user.id.get)).isDefined
 
           val origSocialUser = socialUserInfoRepo.getByUser(user.id.get).head
-          Thread sleep 1000
-          isInCache === true
+          awaitCond(isInCache)
 
           socialUserInfoRepo.save(origSocialUser.copy(fullName = "John Smith"))
-          isInCache === false
+          isInCache must beFalse
 
           val newSocialUser = socialUserInfoRepo.getByUser(user.id.get).head
-          Thread sleep 1000
-          isInCache === true
+          awaitCond(isInCache)
 
           newSocialUser.fullName === "John Smith"
         }
