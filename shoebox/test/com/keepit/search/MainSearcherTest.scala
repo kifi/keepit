@@ -40,6 +40,7 @@ import com.keepit.search.graph.CollectionFields
 import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent.Promise
 import com.keepit.shoebox.FakeShoeboxServiceClientImpl
+import scala.concurrent.duration.Duration
 
 class MainSearcherTest extends Specification with DbRepos {
 
@@ -58,10 +59,11 @@ class MainSearcherTest extends Specification with DbRepos {
     val articleIndexer = new ArticleIndexer(new RAMDirectory, articleConfig, store, null, inject[ShoeboxServiceClient])
     val uriGraph = new URIGraphImpl(
         new URIGraphIndexer(new RAMDirectory, graphConfig, inject[ShoeboxServiceClient]),
-        new CollectionIndexer(new RAMDirectory, collectConfig, inject[ShoeboxServiceClient]))
+        new CollectionIndexer(new RAMDirectory, collectConfig, inject[ShoeboxServiceClient]),
+        inject[ShoeboxServiceClient],
+        inject[MonitoredAwait])
     implicit val clock = inject[Clock]
     implicit val fortyTwoServices = inject[FortyTwoServices]
-    val shoeboxServiceClient = inject[ShoeboxServiceClient]
 
     val mainSearcherFactory = new MainSearcherFactory(
         articleIndexer,
@@ -70,12 +72,12 @@ class MainSearcherTest extends Specification with DbRepos {
         resultClickTracker,
         inject[BrowsingHistoryBuilder],
         inject[ClickHistoryBuilder],
-        shoeboxServiceClient,
+        inject[ShoeboxServiceClient],
         inject[FakeSpellCorrector],
         inject[MonitoredAwait],
         clock,
         fortyTwoServices)
-    (uriGraph, articleIndexer, mainSearcherFactory, shoeboxServiceClient.asInstanceOf[FakeShoeboxServiceClientImpl])
+    (uriGraph, articleIndexer, mainSearcherFactory)
   }
 
   def mkStore(uris: Seq[NormalizedURI]) = {
@@ -99,6 +101,10 @@ class MainSearcherTest extends Specification with DbRepos {
         message = None,
         titleLang = Some(Lang("en")),
         contentLang = Some(Lang("en")))
+  }
+
+  def setConnections(connections: Map[Id[User], Set[Id[User]]]) {
+    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].setConnections(connections)
   }
 
   val source = BookmarkSource("test")
@@ -126,7 +132,7 @@ class MainSearcherTest extends Specification with DbRepos {
         }
 
         val store = mkStore(uris)
-        val (graph, indexer, mainSearcherFactory, client) = initIndexes(store)
+        val (graph, indexer, mainSearcherFactory) = initIndexes(store)
         val clickBoosts = resultClickTracker.getBoosts(Id[User](0), "", 1.0f)
         graph.update() === users.size
         indexer.run() === uris.size
@@ -135,7 +141,8 @@ class MainSearcherTest extends Specification with DbRepos {
         users.foreach{ user =>
           users.sliding(3).foreach{ friends =>
             val userId = user.id.get
-            client.setConnections(Map(userId -> (friends.map(_.id.get).toSet - userId)))
+            setConnections(Map(userId -> (friends.map(_.id.get).toSet - userId)))
+            mainSearcherFactory.clear
             val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), allHitsConfig)
             val graphSearcher = mainSearcher.uriGraphSearcher
             val (myHits, friendsHits, othersHits, _, _) = mainSearcher.searchText("alldocs", numHitsPerCategory, clickBoosts)(Lang("en"))
@@ -185,7 +192,7 @@ class MainSearcherTest extends Specification with DbRepos {
         }
 
         val store = mkStore(uris)
-        val (graph, indexer, mainSearcherFactory, client) = initIndexes(store)
+        val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
         graph.update() === users.size
         indexer.run() === uris.size
@@ -195,8 +202,9 @@ class MainSearcherTest extends Specification with DbRepos {
           val userId = user.id.get
           //println("user:" + userId)
           users.sliding(3).foreach{ friends =>
-            client.setConnections(Map(userId -> (friends.map(_.id.get).toSet - userId)))
+            setConnections(Map(userId -> (friends.map(_.id.get).toSet - userId)))
 
+            mainSearcherFactory.clear
             val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), allHitsConfig)
             val graphSearcher = mainSearcher.uriGraphSearcher
             val res = mainSearcher.search("alldocs", numHitsToReturn, None)
@@ -243,7 +251,7 @@ class MainSearcherTest extends Specification with DbRepos {
         }
 
         val store = mkStore(uris)
-        val (graph, indexer, mainSearcherFactory, client) = initIndexes(store)
+        val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
         graph.update() === users.size
 
@@ -252,7 +260,8 @@ class MainSearcherTest extends Specification with DbRepos {
           users.foreach{ user =>
             val userId = user.id.get
             //println("user:" + userId)
-            client.setConnections(Map(userId -> (users.map(_.id.get).toSet - userId)))
+            setConnections(Map(userId -> (users.map(_.id.get).toSet - userId)))
+            mainSearcherFactory.clear
             val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), allHitsConfig)
             val graphSearcher = mainSearcher.uriGraphSearcher
             val res = mainSearcher.search("personal", numHitsToReturn, None)
@@ -307,7 +316,7 @@ class MainSearcherTest extends Specification with DbRepos {
         }
 
         val store = mkStore(uris)
-        val (graph, indexer, mainSearcherFactory, client) = initIndexes(store)
+        val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
         graph.update() === users.size
         indexer.run() === uris.size
@@ -315,7 +324,7 @@ class MainSearcherTest extends Specification with DbRepos {
         val numHitsToReturn = 100
         val userId = users(0).id.get
         //println("user:" + userId)
-        client.setConnections(Map(userId -> (users.map(_.id.get).toSet - userId)))
+        setConnections(Map(userId -> (users.map(_.id.get).toSet - userId)))
         val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), noBoostConfig("myBookMarkBoost" -> "1.5"))
         val graphSearcher = mainSearcher.uriGraphSearcher
 
@@ -342,14 +351,14 @@ class MainSearcherTest extends Specification with DbRepos {
         }
 
         val store = mkStore(uris)
-        val (graph, indexer, mainSearcherFactory, client) = initIndexes(store)
+        val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
         graph.update() === users.size
         indexer.run() === uris.size
 
         val numHitsToReturn = 3
         val userId = Id[User](8)
-        client.setConnections(Map(userId -> Set(Id[User](6))))
+        setConnections(Map(userId -> Set(Id[User](6))))
         var uriSeen = Set.empty[Long]
 
         var context = Some(IdFilterCompressor.fromSetToBase64(uriSeen))
@@ -395,12 +404,12 @@ class MainSearcherTest extends Specification with DbRepos {
         }
 
         val store = mkStore(uris)
-        val (graph, indexer, mainSearcherFactory, client) = initIndexes(store)
+        val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
         graph.update() === users.size
         indexer.run() === uris.size
 
-        client.setConnections(Map(userId -> Set.empty[Id[User]]))
+        setConnections(Map(userId -> Set.empty[Id[User]]))
 
         val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), noBoostConfig("recencyBoost" -> "1.0"))
         val res = mainSearcher.search("alldocs", uris.size, None)
@@ -434,11 +443,11 @@ class MainSearcherTest extends Specification with DbRepos {
             store
           }
         }
-        val (graph, indexer, mainSearcherFactory, client) = initIndexes(store)
+        val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
         graph.update() === users.size
         indexer.run() === uris.size
-        client.setConnections(Map(userId -> Set.empty[Id[User]]))
+        setConnections(Map(userId -> Set.empty[Id[User]]))
 
         var mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), noBoostConfig)
         var res = mainSearcher.search("alldocs", uris.size, None)
@@ -475,12 +484,12 @@ class MainSearcherTest extends Specification with DbRepos {
         }
 
         val store = mkStore(uris)
-        val (graph, indexer, mainSearcherFactory, client) = initIndexes(store)
+        val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
         graph.update() === 1
         indexer.run() === uris.size
 
-        client.setConnections(Map(user1.id.get -> Set(user2.id.get)))
+        setConnections(Map(user1.id.get -> Set(user2.id.get)))
 
         val mainSearcher = mainSearcherFactory(user1.id.get, SearchFilter.default(), noBoostConfig)
         val res = mainSearcher.search("alldocs", uris.size, None)
@@ -510,12 +519,12 @@ class MainSearcherTest extends Specification with DbRepos {
         }
 
         val store = mkStore(uris)
-        val (graph, indexer, mainSearcherFactory, client) = initIndexes(store)
+        val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
         graph.update() === 1
         indexer.run() === uris.size
 
-        client.setConnections(Map(user1.id.get -> Set(user2.id.get)))
+        setConnections(Map(user1.id.get -> Set(user2.id.get)))
 
         val mainSearcher = mainSearcherFactory(user1.id.get, SearchFilter.default(), noBoostConfig)
         val res = mainSearcher.search("alldocs", uris.size, None)
@@ -545,14 +554,14 @@ class MainSearcherTest extends Specification with DbRepos {
         }
 
         val store = mkStore(uris)
-        val (graph, indexer, mainSearcherFactory, client) = initIndexes(store)
+        val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
         graph.update() === users.size
         indexer.run() === uris.size
 
         val numHitsToReturn = 100
         val userId = users(0).id.get
-        client.setConnections(Map(userId -> (users.map(_.id.get).toSet - userId)))
+        setConnections(Map(userId -> (users.map(_.id.get).toSet - userId)))
         val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), noBoostConfig)
         val graphSearcher = mainSearcher.uriGraphSearcher
 

@@ -38,7 +38,6 @@ import play.modules.statsd.api.Statsd
 
 class MainSearcher(
     userId: Id[User],
-    friendIds: Set[Id[User]],
     filter: SearchFilter,
     config: SearchConfig,
     articleSearcher: Searcher,
@@ -87,12 +86,13 @@ class MainSearcher(
   val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.001f
 
   // initialize user's social graph info
+  private[this] val friendEdgeSet = uriGraphSearcher.friendEdgeSet
+  private[this] val friendIds = friendEdgeSet.destIdSet
   private[this] val myUriEdges = uriGraphSearcher.myUriEdgeSet
   private[this] val myUriEdgeAccessor = myUriEdges.accessor
+  private[this] val friendsUriEdgeSets = uriGraphSearcher.friendsUriEdgeSets
+  private[this] val friendsUriEdgeAccessors = friendsUriEdgeSets.mapValues{ _.accessor }
   private[this] val filteredFriendIds = filter.filterFriends(friendIds)
-  private[this] val friendsUriEdgeAccessors = friendIds.foldLeft(Map.empty[Long, EdgeAccessor[User, NormalizedURI]]){ (m, f) =>
-    m + (f.id -> uriGraphSearcher.getUserToUriEdgeSet(f, publicOnly = true).accessor)
-  }
 
   private[this] val myUris =
     filter.timeRange match {
@@ -119,11 +119,11 @@ class MainSearcher(
     filter.timeRange match {
       case Some(timeRange) =>
         filteredFriendIds.foldLeft(Set.empty[Long]){ (s, f) =>
-          s ++ friendsUriEdgeAccessors(f.id).edgeSet.filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
+          s ++ friendsUriEdgeSets(f.id).filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
         }
       case _ =>
         filteredFriendIds.foldLeft(Set.empty[Long]){ (s, f) =>
-          s ++ friendsUriEdgeAccessors(f.id).edgeSet.destIdLongSet
+          s ++ friendsUriEdgeSets(f.id).destIdLongSet
         }
     }
   }
@@ -134,7 +134,6 @@ class MainSearcher(
     else friendUris -- myUris // friends only
   }
 
-  private[this] val friendEdgeSet = uriGraphSearcher.getUserToUserEdgeSet(userId, friendIds)
   private[this] val filteredFriendEdgeSet = if (filter.isCustom) uriGraphSearcher.getUserToUserEdgeSet(userId, filteredFriendIds) else friendEdgeSet
 
   val preparationTime = currentDateTime.getMillis() - currentTime
