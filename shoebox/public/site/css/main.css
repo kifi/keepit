@@ -39,12 +39,12 @@ div.header-wrapper {position: fixed; z-index: 10; background: #67829c; width: 10
 .container {position:relative; top: 70px; }
 header .logo {margin: 12px auto; vertical-align: top}
 header .header-left {text-align: center; width: 200px; position: absolute; }
-nav a {color: #ffffff; font-size: 1.1em; display: inline-block; line-height: 70px; padding: 0 30px}
-nav a.invite{background: #7a8096 url(../img/invite.png) 15px 50% no-repeat; padding-left: 50px;}
-nav a.feedback {background: #27ae60}
+nav a {color: #ffffff;  display:  inline-block; font-size: .9em; margin-top: 25px; padding: 0 15px; border-left: 1px solid #fff}
+nav a:first-child {border-left: 0}
 
 aside.left {top: 70px; width: 200px; height: 100%;  position:fixed; background: #eff2f7 }
 aside.left input {background: #fafafa; border: 1px solid #b4b9ca; color: #204b69; line-height: 2em; padding: 0 .5em; width: 80%; margin-left: 5px;}
+aside.left .collection input {width: 60%;}
 aside.right {top: 70px; width: 270px; padding: 20px; height: 100%; position: fixed; margin-left: 940px }
 section.main {width: 700px; height: 100%; float: left; margin-left: 200px; background: #ffffff; }
 aside.right input {width: 265px; margin-top: 10px; background: transparent}
@@ -61,14 +61,20 @@ bottom: 0;
 padding: 0 7px;
 pointer-events:none;
 }
-aside.left .active a {background: #6fa6ef; color: #ffffff}
-aside.left h3 a span {font-weight: bold; border: 1px solid #b4b9ca; border-radius: 10px; padding: 1px 12px; margin-top: -2px}
-aside.left h3.active a span {color: #6fa6ef; background: #fff; border: 1px solid #fff;}
+aside.left .active a {background: #e3e6ee; color: #556179}
+aside.left h3 a span.right {font-weight: bold; border: 1px solid #b4b9ca; border-radius: 10px; padding: 1px 12px; margin-top: -2px}
+aside.left h3.active a span.right {color: #fff; background: #9ba4b8; border: 1px solid #9ba4b8;}
 aside.left h2 {font-size: 1.2em; padding: 5px 10px; margin-bottom: 0; }
 aside.left h3 {font-size: .9em; margin: 0}
 aside.left h3.my-keeps a {background: url(../img/kifi-icon-blue.png) 8px 45% no-repeat; padding-left: 40px}
-aside.left h3.my-keeps.active a {background: #6fa6ef url(../img/kifi-icon-white.png) 8px 50% no-repeat;}
+aside.left h3.my-keeps.active a {background: #e3e6ee url(../img/kifi-icon-gray.png) 8px 50% no-repeat;}
 aside.left #collections h2, aside.left h3.collection { border-bottom: 1px solid #dbdee3 }
+aside.left h3.collection div.edit-menu {display: none; position: absolute; margin-left: -20px; margin-top: 8px; width: 50px; }
+aside.left h3.collection a.edit {position: absolute; left:0; display: block; width: 15px; height: 17px;  overflow: hidden; background: url(../img/edit-sprite.png) -18px 0 no-repeat;}
+aside.left h3.collection:hover div.edit-menu {display: block;}
+aside.left h3.collection div.edit-menu ul {display: none; margin: 20px 0; padding: 0; list-style: none; }
+aside.left h3.collection div.edit-menu ul li a {width: 50px; display: block; background: #9ba4b8; color: #fff}
+aside.left h3.collection div.edit-menu:hover ul {display: block;}
 aside.left h3 a {display: block; padding: 10px; font-size: 1em; color: #818692}
 aside.left h3.new a {color: #6fa6ef; }
 aside.left h3.read-later a {color: #ca5742}
@@ -86,22 +92,24 @@ img#my-avatar {position: absolute; top: 60px; margin-left: -10px; max-width: 70p
 
 .long-text { display: block; white-space: nowrap; overflow: hidden; text-overflow:    ellipsis;}
 .small-avatar {max-width: 30px; max-height: 30px;}
-.keep {clear: left; padding: 10px 10px 10px 30px; border-top: 1px solid #f9f9f9; cursor: move;}
+.keep {position:relative; clear: left; padding: 10px 10px 10px 30px; border-top: 1px solid #f9f9f9; cursor: move;}
+.keep input[type="checkbox"] {display: none; position: absolute; left: 4px; top: 12px; margin: 0; border: 1px solid #99a3b3; border-radius: 0;}
+.keep:hover input[type="checkbox"] {display: block;}
 .keep .right {float: right; }
 .keep .small-avatar {vertical-align: bottom; float: left;}
 .keep .small-avatar.me {margin-right: 3px;}
 .keep .bottom {margin-top: 5px;}
 .keep .bottom span { float: left; margin-left: 10px}
-div.search {position: fixed; top: 70px; padding: 0px 20px; width: 660px; height: 70px; background: #ffffff; }
+div.search {position: fixed; top: 70px; padding: 0px 20px; width: 660px; height: 70px; background: #ffffff; z-index: 1}
 .kifi-pane-parent header {margin-left: -790px}
 
 div.search .num-results {display: none; font-size: .8em; color: #204b69; text-align: left; padding: 10px 0;}
-.search-section {color: #b6c3cc; background: #eff2f7 url('../img/clock.png') 5px 50% no-repeat; padding: 5px 30px; }
+.search-section {color: #67829c; border-bottom: 1px solid #e3e6ee; background: url('../img/clock.png') 5px 50% no-repeat; padding: 5px 30px; }
 div.scrollable {margin-top: 50px; padding: 50px 20px; text-align: left;  width: 660px;   }
 div.loading {text-align: center; display: none;}
 .clearfix {clear: both}
 .template-wrapper, #add-collection {display: none}
-.draggable:hover {background: url(../img/drag-handle.png) 0px 50% no-repeat;}
+.draggable:hover {background: #eef2f7 url(../img/drag-handle.png) 3px 50% no-repeat;}
 .drag-helper {background: #fff; padding: 5px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
 .drop-hover {background: #b6c3cc}
 
