@@ -59,6 +59,7 @@ class MainSearcher(
   val isInitialSearch = idFilter.isEmpty
 
   // get config params
+  val newContentDiscoveryThreshold = config.asFloat("newContentDiscoveryThreshold")
   val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
   val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
   val percentMatch = config.asFloat("percentMatch")
@@ -86,14 +87,8 @@ class MainSearcher(
   val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.001f
 
   // initialize user's social graph info
-  private[this] val friendEdgeSet = uriGraphSearcher.friendEdgeSet
-  private[this] val friendIds = friendEdgeSet.destIdSet
   private[this] val myUriEdges = uriGraphSearcher.myUriEdgeSet
   private[this] val myUriEdgeAccessor = myUriEdges.accessor
-  private[this] val friendsUriEdgeSets = uriGraphSearcher.friendsUriEdgeSets
-  private[this] val friendsUriEdgeAccessors = friendsUriEdgeSets.mapValues{ _.accessor }
-  private[this] val filteredFriendIds = filter.filterFriends(friendIds)
-
   private[this] val myUris =
     filter.timeRange match {
       case Some(timeRange) =>
@@ -115,6 +110,12 @@ class MainSearcher(
         }
     }
 
+  private[this] val friendEdgeSet = uriGraphSearcher.friendEdgeSet
+  private[this] val friendIds = friendEdgeSet.destIdSet
+  private[this] val friendsUriEdgeSets = uriGraphSearcher.friendsUriEdgeSets
+  private[this] val friendsUriEdgeAccessors = friendsUriEdgeSets.mapValues{ _.accessor }
+  private[this] val filteredFriendIds = filter.filterFriends(friendIds)
+  private[this] val filteredFriendEdgeSet = if (filter.isCustom) uriGraphSearcher.getUserToUserEdgeSet(userId, filteredFriendIds) else friendEdgeSet
   private[this] val friendUris = {
     filter.timeRange match {
       case Some(timeRange) =>
@@ -133,8 +134,6 @@ class MainSearcher(
     else if (filter.includeShared) friendUris
     else friendUris -- myUris // friends only
   }
-
-  private[this] val filteredFriendEdgeSet = if (filter.isCustom) uriGraphSearcher.getUserToUserEdgeSet(userId, filteredFriendIds) else friendEdgeSet
 
   val preparationTime = currentDateTime.getMillis() - currentTime
   timeLogs.socialGraphInfo = preparationTime
@@ -281,7 +280,7 @@ class MainSearcher(
       hits.discharge(hits.size - minMyBookmarks).foreach{ h => queue.insert(h) }
 
       val normalizedFriendStats = friendStats.normalize
-      var newContentScore = 0.5f // one day
+      var newContentScore = newContentDiscoveryThreshold
       friendsHits.toRankedIterator.forall{ case (h, rank) =>
         val sharingUsers = findSharingUsers(h.id)
 
