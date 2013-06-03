@@ -25,7 +25,7 @@ class SearchModuleTest extends Specification with Logging {
 
   "Module" should {
     "instantiate controllers" in {
-      running(new SearchApplication().withFakeCache().withS3DevModule()) {
+      running(new SearchApplication()) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {
           case (_, _, ClassRoute(className)) => Class.forName(className)
@@ -43,8 +43,6 @@ class SearchModuleTest extends Specification with Logging {
         } foreach { key =>
           injector.getInstance(key)
         }
-//        inject[EventRepo]
-//        inject[EventHelper]
         true
       }
     }

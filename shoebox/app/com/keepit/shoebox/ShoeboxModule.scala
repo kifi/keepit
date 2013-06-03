@@ -33,6 +33,12 @@ import play.api.db.DB
 import play.api.Play
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.ShoeboxActionAuthenticator
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.social.ShoeboxSecureSocialAuthenticatorPlugin
+import com.keepit.social.SecureSocialAuthenticatorPlugin
+import com.keepit.social.SecureSocialUserPlugin
+import com.keepit.common.store.S3ImageStore
+import com.keepit.social.ShoeboxSecureSocialUserPlugin
 
 class ShoeboxModule() extends ScalaModule with Logging {
   def configure() {
@@ -66,7 +72,27 @@ class ShoeboxModule() extends ScalaModule with Logging {
     listenerBinder.addBinding().to(classOf[SliderShownListener])
     listenerBinder.addBinding().to(classOf[SearchUnloadListener])
   }
+  
+  @Singleton
+  @Provides
+  def secureSocialAuthenticatorPlugin(db: Database,
+      suiRepo: SocialUserInfoRepo,
+      usRepo: UserSessionRepo,
+      healthPlugin: HealthcheckPlugin,
+      app: play.api.Application): SecureSocialAuthenticatorPlugin = {
+    new ShoeboxSecureSocialAuthenticatorPlugin(db, suiRepo, usRepo, healthPlugin, app)
+  }
 
+  @Singleton
+  @Provides
+  def secureSocialUserPlugin(db: Database,
+    socialUserInfoRepo: SocialUserInfoRepo,
+    userRepo: UserRepo,
+    imageStore: S3ImageStore,
+    healthcheckPlugin: HealthcheckPlugin): SecureSocialUserPlugin = {
+    new ShoeboxSecureSocialUserPlugin(db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin)
+  }
+  
   @Singleton
   @Provides
   def searchUnloadProvider(

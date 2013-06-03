@@ -35,6 +35,7 @@ import com.keepit.shoebox.ShoeboxCacheProvider
 import com.keepit.common.mail.LocalPostOffice
 import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.shoebox.BrowsingHistoryTracker
+import com.google.inject.Provider
 
 class CommonModule extends ScalaModule with Logging {
 
@@ -45,6 +46,9 @@ class CommonModule extends ScalaModule with Logging {
     install(new DiscoveryModule)
 
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
+    bind[play.api.Application].toProvider(new Provider[play.api.Application] {
+      def get(): play.api.Application = current
+    }).in[AppScoped]
   }
 
   @Provides

@@ -199,9 +199,6 @@ class ShoeboxActionAuthenticator @Inject() (
 
 @Singleton
 class RemoteActionAuthenticator @Inject() (
-  socialUserInfoRepo: SocialUserInfoRepo,
-  userExperimentRepo: UserExperimentRepo,
-  userRepo: UserRepo,
   fortyTwoServices: FortyTwoServices,
   healthcheckPlugin: HealthcheckPlugin,
   impersonateCookie: ImpersonateCookie,

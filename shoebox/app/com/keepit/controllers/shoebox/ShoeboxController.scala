@@ -90,7 +90,8 @@ class ShoeboxController @Inject() (
   keepToCollectionRepo: KeepToCollectionRepo,
   basicUserRepo: BasicUserRepo,
   articleSearchResultRefRepo: ArticleSearchResultRefRepo,
-  socialUserInfoRepo: SocialUserInfoRepo)
+  socialUserInfoRepo: SocialUserInfoRepo,
+  sessionRepo: UserSessionRepo)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
@@ -337,6 +338,13 @@ class ShoeboxController @Inject() (
         normUriRepo.getIndexable(SequenceNumber(seqNum), fetchSize)
       }.map{uri => NormalizedURISerializer.normalizedURISerializer.writes(uri)}
     Ok(JsArray(uris))
+  }
+  
+  def getSessionByExternalId(sessionId: ExternalId[UserSession]) = Action { request =>
+    val res = db.readOnly { implicit session =>
+      sessionRepo.getOpt(sessionId)
+    }
+    Ok(Json.toJson(res))
   }
 
 }

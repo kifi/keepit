@@ -1,5 +1,6 @@
 package com.keepit.social
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import com.google.inject.{Inject, Singleton}
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.db.ExternalId
@@ -9,14 +10,17 @@ import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.{SocialGraphPlugin, SocialId, SocialNetworkType}
 import com.keepit.common.store.S3ImageStore
+import com.keepit.common.akka.MonitoredAwait
 import com.keepit.inject._
 import com.keepit.model._
+import com.keepit.shoebox.ShoeboxServiceClient
 
 import play.api.Application
 import play.api.Play
 import play.api.Play.current
 import securesocial.core._
 import securesocial.core.providers.Token
+import scala.concurrent.duration._
 
 class SecureSocialIdGenerator(app: Application) extends IdGenerator(app) {
   def generate: String = ExternalId[String]().toString
@@ -26,19 +30,20 @@ class SecureSocialAuthenticatorStore(app: Application) extends AuthenticatorStor
   lazy val global = app.global.asInstanceOf[FortyTwoGlobal]
   lazy val plugin = {
     val injector = new RichInjector(global.injector)
-    new ShoeboxSecureSocialAuthenticatorPlugin(
-      injector.inject[Database],
-      injector.inject[SocialUserInfoRepo],
-      injector.inject[UserSessionRepo],
-      injector.inject[HealthcheckPlugin],
-      app)
+    injector.inject[SecureSocialAuthenticatorPlugin]
   }
-  def proxy: Option[ShoeboxSecureSocialAuthenticatorPlugin] = {
+  def proxy: Option[SecureSocialAuthenticatorPlugin] = {
     if (global.initialized) Some(plugin) else None
   }
   def save(authenticator: Authenticator): Either[Error, Unit] = proxy.get.save(authenticator)
   def find(id: String): Either[Error, Option[Authenticator]] = proxy.get.find(id)
   def delete(id: String): Either[Error, Unit] = proxy.get.delete(id)
+}
+
+trait SecureSocialAuthenticatorPlugin {
+  def save(authenticator: Authenticator): Either[Error, Unit]
+  def find(id: String): Either[Error, Option[Authenticator]]
+  def delete(id: String): Either[Error, Unit]
 }
 
 @AppScoped
@@ -47,7 +52,7 @@ class ShoeboxSecureSocialAuthenticatorPlugin @Inject()(
   socialUserInfoRepo: SocialUserInfoRepo,
   sessionRepo: UserSessionRepo,
   healthcheckPlugin: HealthcheckPlugin,
-  app: Application) extends AuthenticatorStore(app) {
+  app: Application) extends AuthenticatorStore(app) with SecureSocialAuthenticatorPlugin  {
 
   private def reportExceptions[T](f: => T): Either[Error, T] =
     try Right(f) catch { case ex: Throwable =>
@@ -126,15 +131,79 @@ class ShoeboxSecureSocialAuthenticatorPlugin @Inject()(
   }
 }
 
+
+@AppScoped
+class RemoteSecureSocialAuthenticatorPlugin @Inject()(
+  shoeboxClient: ShoeboxServiceClient,
+  healthcheckPlugin: HealthcheckPlugin,
+  monitoredAwait: MonitoredAwait,
+  app: Application) extends AuthenticatorStore(app) with SecureSocialAuthenticatorPlugin {
+
+  private def reportExceptions[T](f: => T): Either[Error, T] =
+    try Right(f) catch { case ex: Throwable =>
+      healthcheckPlugin.addError(
+        HealthcheckError(error = Some(ex), method = None, path = None, callType = Healthcheck.INTERNAL))
+      Left(new Error(ex))
+    }
+
+  private def sessionFromAuthenticator(authenticator: Authenticator): UserSession = {
+    val (socialId, provider) = (SocialId(authenticator.userId.id), SocialNetworkType(authenticator.userId.providerId))
+    val userIdFuture = shoeboxClient.getSocialUserInfoByNetworkAndSocialId(socialId, provider).map(_.map(_.userId))
+    val userId = monitoredAwait.result(userIdFuture, 3 seconds).flatten
+    UserSession(
+      userId = userId,
+      externalId = ExternalId[UserSession](authenticator.id),
+      socialId = socialId,
+      provider = provider,
+      expires = authenticator.expirationDate,
+      state = if (authenticator.isValid) UserSessionStates.ACTIVE else UserSessionStates.INACTIVE
+    )
+  }
+  private def authenticatorFromSession(session: UserSession): Authenticator = Authenticator(
+    id = session.externalId.id,
+    userId = UserId(session.socialId.id, session.provider.name),
+    creationDate = session.createdAt,
+    lastUsed = session.updatedAt,
+    expirationDate = session.expires
+  )
+
+  private def needsUpdate(oldSession: UserSession, newSession: UserSession): Boolean = {
+    // We only want to save if we actually changed something. SecureSocial likes to "touch" the session to update the
+    // last used time, but we're not using that right now. If we eventually do want to keep track of the last used
+    // time, we should try to avoid writing to the database every time.
+    oldSession.copy(
+      updatedAt = newSession.updatedAt,
+      createdAt = newSession.createdAt,
+      id = newSession.id) != newSession
+  }
+
+  def save(authenticator: Authenticator): Either[Error, Unit] = reportExceptions { }
+  def find(id: String): Either[Error, Option[Authenticator]] = reportExceptions {
+    val externalIdOpt = try {
+      Some(ExternalId[UserSession](id))
+    } catch {
+      case ex: Throwable => None
+    }
+
+    externalIdOpt.map{ externalId =>
+      val result = monitoredAwait.result(shoeboxClient.getSessionByExternalId(externalId), 3 seconds)
+      result collect {
+        case s if s.isValid => authenticatorFromSession(s)
+      }
+    } flatten
+  }
+  def delete(id: String): Either[Error, Unit] = reportExceptions { }
+}
+
 class SecureSocialUserService(implicit val application: Application) extends UserServicePlugin(application) {
   lazy val global = application.global.asInstanceOf[FortyTwoGlobal]
 
-  def proxy: Option[ShoeboxSecureSocialUserPlugin] = {
+  def proxy: Option[SecureSocialUserPlugin] = {
     // Play will try to initialize this plugin before FortyTwoGlobal is fully initialized. This will cause
     // FortyTwoGlobal to attempt to initialize AppScope in multiple threads, causing deadlock. This allows us to wait
     // until the injector is initialized to do something if we want. When we need the plugin to be instantiated,
     // we can fail with None.get which will let us know immediately that there is a problem.
-    if (global.initialized) Some(new RichInjector(global.injector).inject[ShoeboxSecureSocialUserPlugin]) else None
+    if (global.initialized) Some(new RichInjector(global.injector).inject[SecureSocialUserPlugin]) else None
   }
   def find(id: UserId): Option[SocialUser] = proxy.get.find(id)
   def save(user: Identity): SocialUser = proxy.get.save(user)
@@ -151,6 +220,17 @@ class SecureSocialUserService(implicit val application: Application) extends Use
 
 }
 
+trait SecureSocialUserPlugin {
+  def find(id: UserId): Option[SocialUser]
+  def save(identity: Identity): SocialUser
+  
+  def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser]
+  def save(token: Token)
+  def findToken(token: String): Option[Token] 
+  def deleteToken(uuid: String)
+  def deleteExpiredTokens()
+}
+
 @Singleton
 class ShoeboxSecureSocialUserPlugin @Inject() (
     db: Database,
@@ -158,7 +238,7 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
     userRepo: UserRepo,
     imageStore: S3ImageStore,
     healthcheckPlugin: HealthcheckPlugin)
-  extends UserService with Logging {
+  extends UserService with SecureSocialUserPlugin with Logging {
 
   private def reportExceptions[T](f: => T): T =
     try f catch { case ex: Throwable =>
@@ -238,6 +318,52 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
         imageStore.updatePicture(sui, user.externalId)
         sui
     }
+  }
+
+  // TODO(greg): implement when we start using the UsernamePasswordProvider
+  def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser] = ???
+  def save(token: Token) {}
+  def findToken(token: String): Option[Token] = None
+  def deleteToken(uuid: String) {}
+  def deleteExpiredTokens() {}
+}
+
+
+@Singleton
+class RemoteSecureSocialUserPlugin @Inject() (
+  healthcheckPlugin: HealthcheckPlugin,
+  shoeboxClient: ShoeboxServiceClient,
+  monitoredAwait: MonitoredAwait)
+  extends UserService with SecureSocialUserPlugin with Logging {
+
+  private def reportExceptions[T](f: => T): T =
+    try f catch { case ex: Throwable =>
+      healthcheckPlugin.addError(
+        HealthcheckError(error = Some(ex), method = None, path = None, callType = Healthcheck.INTERNAL))
+      throw ex
+    }
+
+  private var maybeSocialGraphPlugin: Option[SocialGraphPlugin] = None
+
+  @Inject(optional = true)
+  def setSocialGraphPlugin(sgp: SocialGraphPlugin) {
+    maybeSocialGraphPlugin = Some(sgp)
+  }
+
+  def find(id: UserId): Option[SocialUser] = reportExceptions {
+    val resFuture = shoeboxClient.getSocialUserInfoByNetworkAndSocialId(SocialId(id.id), SocialNetworkType(id.providerId))
+    monitoredAwait.result(resFuture, 3 seconds) match {
+      case None =>
+        log.debug("No SocialUserInfo found for %s".format(id))
+        None
+      case Some(user) =>
+        log.debug("User found: %s for %s".format(user, id))
+        user.credentials
+    }
+  }
+
+  def save(identity: Identity): SocialUser = reportExceptions {
+    SocialUser(identity)
   }
 
   // TODO(greg): implement when we start using the UsernamePasswordProvider

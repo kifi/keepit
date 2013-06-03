@@ -36,7 +36,7 @@ import com.keepit.serializer.SocialUserInfoSerializer.socialUserInfoSerializer
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
   def getUserOpt(id: ExternalId[User]): Future[Option[User]]
-  def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[SocialUserInfo]
+  def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]]
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]]
@@ -64,6 +64,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def hasExperiment(userId: Id[User], state: State[ExperimentType]): Future[Boolean]
   def getUserExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]]
   def getSocialUserInfosByUserId(userId: Id[User]): Future[List[SocialUserInfo]]
+  def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -78,7 +79,8 @@ case class ShoeboxCacheProvider @Inject() (
     userConnCache: UserConnectionIdCache,
     externalUserIdCache: ExternalUserIdCache,
     socialUserNetworkCache: SocialUserInfoNetworkCache,
-    socialUserCache: SocialUserInfoUserCache)
+    socialUserCache: SocialUserInfoUserCache,
+    userSessionExternalIdCache: UserSessionExternalIdCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val host: String,
@@ -104,11 +106,11 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
   
-  def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[SocialUserInfo] = {
+  def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] = {
     cacheProvider.socialUserNetworkCache.get(SocialUserInfoNetworkKey(networkType, id)) match {
-      case Some(sui) => Promise.successful(sui).future
+      case Some(sui) => Promise.successful(Some(sui)).future
       case None => call(routes.ShoeboxController.getSocialUserInfoByNetworkAndSocialId(id.id, networkType.name)) map { resp =>
-        Json.fromJson[SocialUserInfo](resp.json).get
+        Json.fromJson[SocialUserInfo](resp.json).asOpt
       }
     }
   }
@@ -326,6 +328,19 @@ class ShoeboxServiceClientImpl @Inject() (
   def getIndexable(seqNum: Long, fetchSize: Int): Future[Seq[NormalizedURI]] = {
     call(routes.ShoeboxController.getIndexable(seqNum, fetchSize)).map{
       r => r.json.as[JsArray].value.map(js => NormalizedURISerializer.normalizedURISerializer.reads(js).get)
+    }
+  }
+  
+  def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]] = {
+    cacheProvider.userSessionExternalIdCache.get(UserSessionExternalIdKey(sessionId)) match {
+      case Some(session) => Promise.successful(Some(session)).future
+      case None => 
+        call(routes.ShoeboxController.getSessionByExternalId(sessionId)).map { r =>
+          r.json match {
+            case jso: JsObject => Json.fromJson[UserSession](jso).asOpt
+            case _ => None
+          }
+        }
     }
   }
 
