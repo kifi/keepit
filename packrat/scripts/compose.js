@@ -207,6 +207,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
       if ($tip[0].contains(e.target)) {
         e.stopPropagation();
       }
+      e.preventDefault();
     }
     function hide(toggle) {
       document.removeEventListener("mousedown", docMouseDown, true);
