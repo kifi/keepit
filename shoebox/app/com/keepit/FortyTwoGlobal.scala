@@ -1,13 +1,14 @@
 package com.keepit
 
 import com.google.inject.{Stage, Guice, Module, Injector}
-import com.keepit.common.controller.ReportedException
+import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.inject._
+
 import java.util.concurrent.atomic.AtomicBoolean
 import play.api._
 import play.api.mvc.Results._
@@ -16,7 +17,7 @@ import play.modules.statsd.api.StatsdFilter
 import play.utils.Threads
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
-    extends GlobalSettings /* extends WithFilters(new StatsdFilter()) */ with Logging {
+    extends WithFilters(LoggingFilter) /* extends WithFilters(new StatsdFilter()) */ with Logging {
 
   implicit def richInjector(injector: Injector) = new RichInjector(injector)
 

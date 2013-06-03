@@ -1,16 +1,17 @@
 package com.keepit.search
 
+import com.keepit.common.healthcheck.BenchmarkResults
+import com.keepit.common.healthcheck.BenchmarkResultsJson._
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.db.Id
 import com.keepit.common.net.HttpClient
 import com.keepit.controllers.search._
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
-import play.api.libs.json.{JsArray, JsValue, Json}
+import play.api.libs.json.{JsArray, JsValue, Json, JsString}
 import play.api.templates.Html
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import play.api.libs.json.JsString
 import com.keepit.serializer.UriLabelSerializer
 
 trait SearchServiceClient extends ServiceClient {
@@ -41,6 +42,8 @@ trait SearchServiceClient extends ServiceClient {
   def getSearchStatistics(queryUUID: String, queryString: String, userId: Id[User], labeledUris: Map[Id[NormalizedURI], UriLabel]): Future[JsArray]
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html]
   def dumpLuceneDocument(uri: Id[NormalizedURI]): Future[Html]
+  def benchmarks(): Future[BenchmarkResults]
+  def version(): Future[String]
 }
 
 class SearchServiceClientImpl(override val host: String, override val port: Int, override val httpClient: HttpClient)
@@ -138,6 +141,14 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
 
   def dumpLuceneDocument(id: Id[NormalizedURI]): Future[Html] = {
     call(routes.ArticleIndexerController.dumpLuceneDocument(id)).map(r => Html(r.body))
+  }
+
+  def benchmarks(): Future[BenchmarkResults] = {
+    call(com.keepit.common.healthcheck.routes.CommonBenchmarkController.benchmarksResults()).map(r => Json.fromJson[BenchmarkResults](r.json).get)
+  }
+
+  def version(): Future[String] = {
+    call(com.keepit.common.healthcheck.routes.CommonBenchmarkController.version()).map(r => r.body)
   }
 
   def buildSpellCorrectorDictionary(): Future[Unit] = {

@@ -78,11 +78,6 @@ class ExtSearchController @Inject() (
 
     val t1 = currentDateTime.getMillis()
 
-    val lastUUID = lastUUIDStr.flatMap{
-      case "" => None
-      case str => Some(ExternalId[ArticleSearchResultRef](str))
-    }
-
     val userId = request.userId
     log.info(s"""User ${userId} searched ${query.length} characters""")
 
@@ -103,6 +98,11 @@ class ExtSearchController @Inject() (
     }
 
     val (config, experimentId) = searchConfigManager.getConfig(userId, query)
+
+    val lastUUID = lastUUIDStr.flatMap{
+      case "" => None
+      case str => Some(ExternalId[ArticleSearchResultRef](str))
+    }
 
     val t2 = currentDateTime.getMillis()
     var t3 = 0L
