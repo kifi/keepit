@@ -19,7 +19,7 @@
 .kifi-res-title,
 .kifi-res-filter-keeps {
   border: 1px solid #e5e7e8;
-  border-radius: 20px;
+  border-radius: 6px;
   background: #fafafa;
   padding: 5px !important; /* FF */
   font-size: 12px !important; /* FF */
@@ -267,7 +267,7 @@ div.token-input-dropdown-googly ul li.token-input-selected-dropdown-item-googly 
 
 .kifi-who {
   margin-top: 3px;
-  height: 27px;
+  height: 25px;
   background-color: #fafafa;
   border-radius: 20px;
   padding-right: 8px;
@@ -282,26 +282,22 @@ div.token-input-dropdown-googly ul li.token-input-selected-dropdown-item-googly 
 .kifi-face {
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-  width: 27px;
-  height: 27px;
+  width: 25px;
+  height: 25px;
   margin-left: 1px;
-  border: 2px solid #dbdbdb;
-  border-radius: 2px;
   background-color: #fff;
-  padding: 1px;
   vertical-align: middle;
 }
 .kifi-face.kifi-self {
   margin-left: 0;
-  border-radius: 20px 2px 2px 20px;
+  border-radius: 50% 0 0 50%;
 }
 .kifi-face.kifi-self.kifi-only {
-  border-radius: 20px;
+  border-radius: 50%;
 }
 .kifi-face.kifi-friend {
   display: inline-block;
-  background-size: 21px;
-  background-position: 1px 1px;
+  background-size: 25px;
   background-repeat: no-repeat;
   position: relative;
 }
@@ -321,10 +317,13 @@ div.token-input-dropdown-googly ul li.token-input-selected-dropdown-item-googly 
   vertical-align: middle;
 }
 .kifi-who-text {
-  margin-left: 7px;
+  margin-left: 12px;
   font-size: 12px;
   color: #666;
   vertical-align: middle;
+}
+.kifi-face.kifi-self.kifi-only+.kifi-who-text {
+  margin-left: 10px;
 }
 .kifi-res-private {
   margin: 0 1px;
@@ -379,7 +378,7 @@ a.kifi-res-friends {
 }
 .kifi-chatter {
   float: right;
-  margin-top: 6px;
+  margin-top: 5px;
   width: 18px;
   height: 16px;
   background-position: right 0;
@@ -435,38 +434,39 @@ a.kifi-res-friends {
 }
 
 .kifi-res-end {
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  background-size: 100% 14px;
   border-bottom: 1px solid #dedede;
   min-height: 9px;
+  text-align: center;
 }
-.kifi-res-end:after {
-  content: " ";
-  font-size: 0;
-  visibility: none;
-  display: block;
-  clear: both;
+.kifi-res-end:empty {
+  background: none !important;
 }
 .kifi-res-more {
-  float: right;
-  margin: 0 20px -1px 0;
-  border: 1px solid #dedede;
-  border-bottom: none;
-  border-radius: 5px 5px 0 0;
-  padding: 8px 28px 5px 16px;
-  background-color: #fff;
+  display: inline-block;
+  margin: 0 auto;
+  padding: 5px 24px;
   position: relative;
   font-size: 12px;
   cursor: pointer;
-  color: #4c8ffb;
+  color: #999;
 }
 .kifi-res-more:hover {
-  color: #3380fb;
+  color: #4c8ffb;
 }
 .kifi-res-more-arrow {
   position: absolute;
-  top: 8px;
-  right: 13px;
+  top: 6px;
   -webkit-transform: rotate(90deg) scale(1,1.2);
   transform: rotate(90deg) scale(1,1.2);
+}
+.kifi-res-more-arrow:first-child {
+  left: 9px;
+}
+.kifi-res-more-arrow:last-child {
+  right: 7px;
 }
 
 .kifi-debug .kifi-res-debug {

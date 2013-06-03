@@ -43,6 +43,7 @@ trait SearchServiceClient extends ServiceClient {
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html]
   def dumpLuceneDocument(uri: Id[NormalizedURI]): Future[Html]
   def benchmarks(): Future[BenchmarkResults]
+  def version(): Future[String]
 }
 
 class SearchServiceClientImpl(override val host: String, override val port: Int, override val httpClient: HttpClient)
@@ -142,9 +143,12 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
     call(routes.ArticleIndexerController.dumpLuceneDocument(id)).map(r => Html(r.body))
   }
 
-  implicit val benchmarksResultsFormat = Json.format[BenchmarkResults]
   def benchmarks(): Future[BenchmarkResults] = {
-    call(com.keepit.common.healthcheck.routes.AdminBenchmarkController.benchmarksResults()).map(r => Json.fromJson[BenchmarkResults](r.json).get)
+    call(com.keepit.common.healthcheck.routes.CommonBenchmarkController.benchmarksResults()).map(r => Json.fromJson[BenchmarkResults](r.json).get)
+  }
+
+  def version(): Future[String] = {
+    call(com.keepit.common.healthcheck.routes.CommonBenchmarkController.version()).map(r => r.body)
   }
 
   def buildSpellCorrectorDictionary(): Future[Unit] = {

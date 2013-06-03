@@ -1,12 +1,14 @@
 package com.keepit.search
 
 import com.keepit.search.graph.URIGraph
+import com.keepit.search.graph.URIGraphSearcher
 import com.keepit.search.graph.URIGraphUnsupportedVersionException
 import com.keepit.search.graph.URIList
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.PersonalizedSearcher
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.logging.Logging
+import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.time._
 import com.keepit.model._
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
@@ -26,7 +28,10 @@ import com.keepit.shoebox.BrowsingHistoryTracker
 import scala.concurrent.ExecutionContext.Implicits._
 import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent.duration._
+import scala.concurrent.future
 import scala.concurrent.Future
+import scala.concurrent.Promise
+import scala.concurrent.Await
 
 @Singleton
 class MainSearcherFactory @Inject() (
@@ -43,34 +48,33 @@ class MainSearcherFactory @Inject() (
     implicit private val fortyTwoServices: FortyTwoServices
  ) extends Logging {
 
+  private[this] val consolidate = new RequestConsolidator[Id[User], URIGraphSearcher](3 seconds)
+
   def apply(userId: Id[User], filter: SearchFilter, config: SearchConfig) = {
     val browsingHistoryFuture = shoeboxClient.getBrowsingHistoryFilter(userId).map(browsingHistoryBuilder.build)
     val clickHistoryFuture = shoeboxClient.getClickHistoryFilter(userId).map(clickHistoryBuilder.build)
-    val friendIdsFuture = shoeboxClient.getConnectedUsers(userId)
 
-    val articleSearcher = articleIndexer.getSearcher
-    val uriGraphSearcher = {
-      try {
+    val uriGraphSearcherFuture = consolidate(userId){ userId =>
+      future {
         uriGraph.getURIGraphSearcher(Some(userId))
-      } catch {
+      } recover {
         case e: URIGraphUnsupportedVersionException =>
           // self healing, just in case
-          log.warn("fixing graph data", e)
-          uriGraph.update(userId)
-          uriGraph.getURIGraphSearcher(Some(userId))
+        log.warn("fixing graph data", e)
+        uriGraph.update(userId)
+        uriGraph.getURIGraphSearcher(Some(userId))
       }
     }
-    val collectionSearcher = uriGraph.getCollectionSearcher()
 
-    val friendIds = monitoredAwait.result(friendIdsFuture, 5 milliseconds)
+    val articleSearcher = articleIndexer.getSearcher
+    val collectionSearcher = uriGraph.getCollectionSearcher()
 
     new MainSearcher(
         userId,
-        friendIds,
         filter,
         config,
         articleSearcher,
-        uriGraphSearcher,
+        monitoredAwait.result(uriGraphSearcherFuture, 5 seconds),
         collectionSearcher,
         parserFactory,
         resultClickTracker,
@@ -81,6 +85,8 @@ class MainSearcherFactory @Inject() (
         monitoredAwait
     )
   }
+
+  def clear() { consolidate.clear() }
 
   def bookmarkSearcher(userId: Id[User]) = {
     val articleSearcher = articleIndexer.getSearcher

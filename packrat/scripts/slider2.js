@@ -652,10 +652,12 @@ slider2 = function() {
     },
     threads: function($box) {
       api.port.emit("threads", function(o) {
-        api.require("scripts/threads.js", function() {
-          threadsPane.render($box.find(".kifi-pane-tall"), o);
-          o.threads.forEach(function(th) {
-            api.port.emit("thread", {id: th.id});  // preloading
+        api.port.emit("session", function(session) {
+          api.require("scripts/threads.js", function() {
+            threadsPane.render($box.find(".kifi-pane-tall"), o, session.prefs);
+            o.threads.forEach(function(th) {
+              api.port.emit("thread", {id: th.id});  // preloading
+            });
           });
         });
       });

@@ -9,6 +9,7 @@ import com.keepit.search.{SearchServices, SearchModule}
 import com.keepit.shoebox.{ShoeboxServices, ShoeboxModule}
 import play.api.Application
 import play.api.Mode._
+import com.keepit.search.SearchExclusiveModule
 
 object DevGlobal extends FortyTwoGlobal(Dev) with ShoeboxServices with SearchServices {
   override val modules =
@@ -25,7 +26,7 @@ object DevGlobal extends FortyTwoGlobal(Dev) with ShoeboxServices with SearchSer
 
 object SearchDevGlobal extends FortyTwoGlobal(Dev) with SearchServices {
   override val modules =
-    Seq(Modules.`override`(new CommonModule, new SearchModule).`with`(new DevCommonModule, new SearchDevModule))
+    Seq(Modules.`override`(new CommonModule, new SearchModule, new SearchExclusiveModule).`with`(new DevCommonModule, new SearchDevModule))
 
   override def onStart(app: Application) {
     startSearchServices()

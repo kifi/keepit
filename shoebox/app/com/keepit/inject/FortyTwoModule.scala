@@ -20,12 +20,6 @@ class FortyTwoModule() extends ScalaModule {
     val appScope = new AppScope
     bindScope(classOf[AppScoped], appScope)
     bind[AppScope].toInstance(appScope)
-    install(new SlickModule(new DbInfo() {
-      //later on we can customize it by the application name
-      lazy val database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
-      lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
-      println("loading database driver %s".format(driverName))
-    }))
   }
 
   @Provides

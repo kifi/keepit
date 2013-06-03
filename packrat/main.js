@@ -134,6 +134,10 @@ const socketHandlers = {
     api.log("[socket:experiments]", exp);
     session.experiments = exp;
   },
+  prefs: function(o) {
+    api.log("[socket:prefs]", o);
+    session.prefs = o;
+  },
   friends: function(fr) {
     api.log("[socket:friends]", fr);
     friends = fr;
@@ -449,6 +453,10 @@ api.port.on({
       }
     }
     socket.send(["set_keeper_position", o.host, o.pos]);
+  },
+  set_enter_to_send: function(data) {
+    session.prefs.enterToSend = data;
+    socket.send(["set_enter_to_send", data]);
   },
   log_event: function(data) {
     logEvent.apply(null, data);
@@ -793,9 +801,15 @@ function initTab(tab, d) {  // d is pageData[tab.nUri]
   }
 }
 
+function dateWithoutMs(t) { // until db has ms precision
+  var d = new Date(t);
+  d.setMilliseconds(0);
+  return d;
+}
+
 function commentCount(d) {  // comments only count as unread if by a friend
-  var t = new Date(d.lastCommentRead || 0);
-  return d.comments.filter(function(c) {return friendsById[c.user.id] && new Date(c.createdAt) > t}).length;
+  var t = dateWithoutMs(d.lastCommentRead || 0);
+  return d.comments.filter(function(c) { return friendsById[c.user.id] && dateWithoutMs(c.createdAt) > t }).length;
 }
 
 function messageCount(d) {
@@ -1092,7 +1106,9 @@ function authenticate(callback) {
       logEvent("extension", "authenticated");
 
       session = data;
+      session.prefs = {}; // to come via socket
       socket = api.socket.open(apiBaseUri().replace(/^http/, "ws") + "/ext/ws", socketHandlers, function onConnect() {
+        socket.send(["get_prefs"]);
         socket.send(["get_last_notify_read_time"]);
         if (!notifications) {
           socket.send(["get_notifications", NOTIFICATION_BATCH_SIZE]);

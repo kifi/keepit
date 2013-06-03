@@ -1,4 +1,4 @@
-package com.keepit.search.phrasedetector
+package com.keepit.shoebox
 
 import java.io._
 import com.keepit.common.healthcheck.HealthcheckPlugin
@@ -48,7 +48,7 @@ case class ImportFile(file: File) extends PhraseMessage
 case object StartImport extends PhraseMessage
 case object EndImport extends PhraseMessage
 
-private[phrasedetector] class PhraseImporterActor @Inject() (
+private class PhraseImporterActor @Inject() (
     healthcheckPlugin: HealthcheckPlugin,
     dbConnection: Database,
     phraseRepo: PhraseRepo)

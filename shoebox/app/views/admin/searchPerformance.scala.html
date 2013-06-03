@@ -1,0 +1,55 @@
+
+@admin("SearchPerformance") {
+
+<img id="chart" border="0" src="https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/?width=586&height=308&_salt=1370129514.597" 
+alt="search.searching.time.mean" width="586" height="308">
+
+
+<select id="metric" onchange="updateImage()">
+  <option selected="selected"">select a metric</option>
+  <option>timers.search.factory.mean</option>
+  <option>timers.socialGraphInfo.mean</option>
+  <option>timers.getClickboost.mean</option>
+  <option>timers.queryParsing.mean</option>
+  <option>timers.personalizedSearcher.mean</option>
+  <option>timers.LuceneSearch.mean</option>
+  <option>timers.processHits.mean</option>
+  <option>timers.search.searching.mean</option>
+  <option>timers.postSearchTime.mean</option>
+</select>
+
+<form>
+<input type="radio" name="yscale" value="linear" checked="checked" onclick = "changeYscale()">linear-scale<br>
+<input type="radio" name="yscale" value="log" onclick = "changeYscale()">log2
+</form>
+
+<script>
+function updateImage(){
+  e = document.getElementById("metric")
+  metric = ""
+  if (e.selectedIndex > 0 ) {
+    metric = e.options[e.selectedIndex].value
+  }
+  url = "https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/?width=586&height=308&_salt=1370129514.597&lineMode=connected&target="
+  img = document.getElementById("chart")
+  img.src = url.concat(metric)
+}
+
+function changeYscale(){
+  img = document.getElementById("chart")
+  url = img.src
+  if ( url.indexOf("&logBase=2") == -1 ) {
+    img.src = url.concat("&logBase=2")
+  } else {
+    img.src = url.replace("&logBase=2", "")
+  }
+  
+}
+
+</script>
+
+
+
+
+
+}

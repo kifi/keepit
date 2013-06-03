@@ -33,7 +33,7 @@ case class SliderRuleGroup (rules: Seq[SliderRule]) {
   lazy val version: String = SliderRuleGroup.version(updatedAt)
   lazy val compactJson = JsObject(Seq(
     "version" -> JsString(version),
-    "rules" -> JsObject(rules.map {r => r.name -> r.parameters.getOrElse(JsNumber(1))})))
+    "rules" -> JsObject(rules.filter(_.isActive).map {r => r.name -> r.parameters.getOrElse(JsNumber(1))})))
 }
 
 object SliderRuleGroup {
