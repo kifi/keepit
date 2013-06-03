@@ -94,6 +94,7 @@ class UserRepoImpl @Inject() (
   override def invalidateCache(user: User)(implicit session: RSession) = {
     user.id map {id => idCache.set(UserIdKey(id), user)}
     externalIdCache.set(UserExternalIdKey(user.externalId), user)
+    user
   }
 
   override def get(id: Id[User])(implicit session: RSession): User = {

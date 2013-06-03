@@ -69,6 +69,7 @@ class ClickHistoryRepoImpl @Inject() (
 
   override def invalidateCache(clickHistory: ClickHistory)(implicit session: RSession) = {
     clickCache.set(ClickHistoryUserIdKey(clickHistory.userId), clickHistory)
+    clickHistory
   }
 
   override def save(model: ClickHistory)(implicit session: RWSession): ClickHistory = {

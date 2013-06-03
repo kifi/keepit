@@ -163,11 +163,11 @@ trait ObjectCache[K <: Key[T], T] {
   def deserialize(obj: Any): T
 
   protected[cache] def getFromInnerCache(key: K): Option[T]
-  protected[cache] def setInnerCache(key: K, value: T): T
+  protected[cache] def setInnerCache(key: K, value: T): Future[T]
 
   def remove(key: K): Unit
 
-  def set(key: K, value: T): T = {
+  def set(key: K, value: T): Future[T] = {
     outerCache map {outer => outer.set(key, value)}
     setInnerCache(key, value)
   }
@@ -250,7 +250,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
     }
   }
 
-  protected[cache] def setInnerCache(key: K, value: T): T = {
+  protected[cache] def setInnerCache(key: K, value: T): Future[T] = {
     future {
       val properlyBoxed = serialize(value) match {
         case x: java.lang.Byte => x.byteValue()
@@ -267,12 +267,13 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
       }
       repo.set(key.toString, properlyBoxed, ttl.toSeconds.toInt)
       repo.stats.incrSets(key.getClass.getSimpleName)
+      value
     } recover {
       case e: Throwable =>
         repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
           errorMessage = Some(s"Failed setting key $key in $repo")))
+        throw e
     }
-    value
   }
 
   def remove(key: K) {

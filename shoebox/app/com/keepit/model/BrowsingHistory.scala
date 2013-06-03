@@ -93,6 +93,7 @@ class BrowsingHistoryRepoImpl @Inject() (
 
   override def invalidateCache(browsingHistory: BrowsingHistory)(implicit session: RSession) = {
     browsingCache.set(BrowsingHistoryUserIdKey(browsingHistory.userId), browsingHistory)
+    browsingHistory
   }
 
   override def save(model: BrowsingHistory)(implicit session: RWSession): BrowsingHistory = {
