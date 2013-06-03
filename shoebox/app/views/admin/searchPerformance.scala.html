@@ -1,7 +1,34 @@
+
 @admin("SearchPerformance") {
 
-<img border="0" src="https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/?width=586&height=308&_salt=1370129514.597&target=timers.search.searching.mean&lineMode=connected" 
+<img id="chart" border="0" src="https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/?width=586&height=308&_salt=1370129514.597" 
 alt="search.searching.time.mean" width="586" height="308">
 
+
+<select id="metric" onchange="updateImage()">
+  <option selected="selected"">select a metric</option>
+  <option>timers.search.factory.mean</option>
+  <option>timers.socialGraphInfo.mean</option>
+  <option>timers.getClickboost.mean</option>
+  <option>timers.queryParsing.mean</option>
+  <option>timers.personalizedSearcher.mean</option>
+  <option>timers.LuceneSearch.mean</option>
+  <option>timers.processHits.mean</option>
+  <option>timers.search.searching.mean</option>
+  <option>timers.postSearchTime.mean</option>
+</select>
+
+<script>
+function updateImage(){
+  e = document.getElementById("metric")
+  metric = ""
+  if (e.selectedIndex > 0 ) {
+    metric = e.options[e.selectedIndex].value
+  }
+  url = "https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/?width=586&height=308&_salt=1370129514.597&lineMode=connected&logBase=2&target="
+  img = document.getElementById("chart")
+  img.src = url.concat(metric)
+}
+</script>
 
 }
