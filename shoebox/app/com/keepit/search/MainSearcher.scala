@@ -59,6 +59,7 @@ class MainSearcher(
   val isInitialSearch = idFilter.isEmpty
 
   // get config params
+  val newContentDiscoveryThreshold = config.asFloat("newContentDiscoveryThreshold")
   val sharingBoostInNetwork = config.asFloat("sharingBoostInNetwork")
   val sharingBoostOutOfNetwork = config.asFloat("sharingBoostOutOfNetwork")
   val percentMatch = config.asFloat("percentMatch")
@@ -281,7 +282,7 @@ class MainSearcher(
       hits.discharge(hits.size - minMyBookmarks).foreach{ h => queue.insert(h) }
 
       val normalizedFriendStats = friendStats.normalize
-      var newContentScore = 0.5f // one day
+      var newContentScore = newContentDiscoveryThreshold
       friendsHits.toRankedIterator.forall{ case (h, rank) =>
         val sharingUsers = findSharingUsers(h.id)
 
