@@ -87,7 +87,7 @@ aside.right label {display: block; margin: 10px 0 5px 0;}
 aside.right select {padding: 5px;}
 aside.right a {color: #556179}
 aside.right .who-kept span {display: block; margin-bottom: 5px;}
-aside.right div.actions {position: fixed; bottom: 0px; }
+aside.right div.actions {position: absolute; bottom: 100px }
 aside.right div.actions a { display: block; margin-bottom: 20px; font-size: 1.2em}
 aside.right div.actions .keepit {text-align: center; width: 330px}
 aside.right div.actions .keepit a {color: #fff; font-size: .9em; display: block; margin: 25px auto; background: #2980b9; border-radius: 5px; padding: 15px 0; width: 140px; position: relative; overflow: hidden;}
