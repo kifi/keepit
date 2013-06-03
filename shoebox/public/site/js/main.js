@@ -301,6 +301,21 @@ $(document)
 				populateMyKeeps();
 		}
 	})
+	.on('click','.keep input[type="checkbox"]',function() {
+		if ($(this).is(':checked')) {
+			var keep = $(this).parents('.keep').first();
+			$('aside.right .title h2').text(keep.find('a').first().text());
+			var url = keep.find('a').first().attr('href');
+			$('aside.right .title a').text(url).attr('href',url).attr('target','_blank');
+			$('aside.right .who-kept').html(keep.find('div.bottom').html());
+			$('aside.right .who-kept span').prependTo($('aside.right .who-kept')).removeClass('fs9 gray');
+			$('aside.right').addClass('visible');
+			$('.keep input[type="checkbox"]').removeAttr('checked');
+			$(this).prop('checked', true);
+		} else {
+			$('aside.right').removeClass('visible');
+		}
+	})
 	.ready(function() {		
 		$(".fancybox").fancybox();
 		
