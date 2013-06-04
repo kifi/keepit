@@ -83,7 +83,7 @@ extends MultiReader(wrappedSubReaders.map{ _.asInstanceOf[IndexReader] }.toArray
     }
   }
 
-  def asAtomicReader: WrappedSubReader = new WrappedSubReader("", SlowCompositeReaderWrapper.wrap(this), getIdMapper)
+  lazy val asAtomicReader: WrappedSubReader = new WrappedSubReader("", SlowCompositeReaderWrapper.wrap(this), getIdMapper)
 
   def add(indexReader: CachingIndexReader, idMapper: IdMapper) = {
     val remappers = wrappedSubReaders.foldLeft(Map.empty[String, DocIdRemapper]){ (m, r) => m + (r.name -> DocIdRemapper(idMapper, r.getIdMapper, r.inner)) }
