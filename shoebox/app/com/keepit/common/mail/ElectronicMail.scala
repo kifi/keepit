@@ -51,7 +51,10 @@ case class ElectronicMail (
   def isReadyToSend: Boolean = state == ElectronicMailStates.READY_TO_SEND
 
   def prepareToSend(): ElectronicMail = state match {
-    case ElectronicMailStates.PREPARING => copy(state = ElectronicMailStates.READY_TO_SEND)
+    case ElectronicMailStates.PREPARING => copy(
+      state = ElectronicMailStates.READY_TO_SEND,
+      htmlBody = htmlBody.value.take(8*1024*1024),
+      textBody = textBody.map(_.value.take(8*1024*1024)))
     case _ => throw new Exception("mail %s in bad state, can't prepare to send".format(this))
   }
 
