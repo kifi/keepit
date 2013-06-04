@@ -52,14 +52,11 @@ class FakeShoeboxServiceClientImpl @Inject() (
   }
 
   def getNormalizedURI(uriId: Id[NormalizedURI]): Future[NormalizedURI] = {
-    cacheProvider.uriIdCache.get(NormalizedURIKey(uriId)) match {
-      case Some(uri) => promise[NormalizedURI]().success(uri).future
-      case None => {
-        val uri = db.readOnly { implicit s =>
+    cacheProvider.uriIdCache.getOrElseFuture(NormalizedURIKey(uriId)) {
+      val uri = db.readOnly { implicit s =>
           normUriRepo.get(uriId)
         }
-        promise[NormalizedURI]().success(uri).future
-      }
+      Promise.successful(uri).future
     }
   }
 

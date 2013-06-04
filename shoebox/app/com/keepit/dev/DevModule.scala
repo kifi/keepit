@@ -256,7 +256,8 @@ class SearchDevModule extends ScalaModule with Logging {
 class DevCommonModule extends ScalaModule with Logging {
   def configure() {
     install(new S3DevModule)
-    bind[FortyTwoCachePlugin].to[InMemoryCache].in[AppScoped]
+    bind[FortyTwoCachePlugin].to[NoOpCache].in[AppScoped]
+    bind[InMemoryCachePlugin].to[EhCacheCache].in[AppScoped]
   }
 
   @Singleton

@@ -35,37 +35,12 @@ class MemcachedCacheModule() extends ScalaModule {
   @Singleton
   @Provides
   def spyMemcachedClient(): MemcachedClient = {
-    if (Play.isTest) throw new IllegalStateException("memecach client should not be loaded in test!")
+    if (Play.isTest) throw new IllegalStateException("memcached client should not be loaded in test!")
 
     System.setProperty("net.spy.log.LoggerImpl", "com.keepit.common.cache.MemcachedSlf4JLogger")
 
-    lazy val singleHost = current.configuration.getString("memcached.host").map(AddrUtil.getAddresses)
-    lazy val multipleHosts = current.configuration.getString("memcached.1.host").map { _ =>
-      def accumulate(cacheNumber: Int): String = {
-        current.configuration.getString("memcached." + cacheNumber + ".host").map { h => h + " " + accumulate(cacheNumber + 1) }.getOrElse("")
-      }
-      AddrUtil.getAddresses(accumulate(1))
-    }
-
-    val addrs = singleHost.orElse(multipleHosts)
-      .getOrElse(throw new RuntimeException("Bad configuration for memcached: missing host(s)"))
-
-    current.configuration.getString("memcached.user").map { memcacheUser =>
-      val memcachePassword = current.configuration.getString("memcached.password").getOrElse {
-        throw new RuntimeException("Bad configuration for memcached: missing password")
-      }
-
-      // Use plain SASL to connect to memcached
-      val ad = new AuthDescriptor(Array("PLAIN"),
-        new PlainCallbackHandler(memcacheUser, memcachePassword))
-      val cf = new ConnectionFactoryBuilder()
-        .setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
-        .setAuthDescriptor(ad)
-        .build()
-
-      new MemcachedClient(cf, addrs)
-    }.getOrElse {
-      new MemcachedClient(addrs)
-    }
+    current.configuration.getString("elasticache.config.endpoint").map { endpoint =>
+      new MemcachedClient(AddrUtil.getAddresses(endpoint))
+    }.getOrElse(throw new RuntimeException("Bad configuration for memcached: missing host(s)"))
   }
 }
