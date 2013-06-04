@@ -1,6 +1,7 @@
 package com.keepit.common.db
 
 import play.api.libs.json.Format
+import scala.collection.immutable.StringLike
 
 case class LargeString(value: String) {
   override def toString = value
