@@ -6,7 +6,7 @@
 */
 
 /* overrides */
-* {font-family: 'Lato', "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;}
+* {font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;}
 *:focus {outline: none;}
 html {
   overflow: -moz-scrollbars-vertical; 
@@ -20,7 +20,7 @@ img {vertical-align: middle; border: 0px}
 a {color: #0089d5; text-decoration: none}
 select {font-weight: bold; font-size: .8em; background: #ecf0f1; border: 0; -webkit-appearance: none; -moz-appearance: none; width: 110%}
 header { width: 1260px;  height: 70px; padding: 0px; position: relative; left: 50%; margin-left: -630px; text-align: left}
-nav {float: right}
+nav {float: right}						
 ol {list-style: none; padding: 0; margin: 0}
 ::-webkit-input-placeholder{ color: #b6c3cc;}
 :-moz-placeholder { color: #b6c3cc;}
@@ -43,8 +43,8 @@ nav a {color: #ffffff;  display:  inline-block; font-size: .9em; margin-top: 25p
 nav a:first-child {border-left: 0}
 
 aside.left {top: 70px; width: 200px; height: 100%;  position:fixed; background: #eff2f7 }
-aside.left input {background: #fafafa; border: 1px solid #b4b9ca; color: #204b69; line-height: 2em; padding: 0 .5em; width: 80%; margin-left: 5px;}
-aside.left .collection input {width: 60%;}
+aside.left input {background: #fafafa; border: 1px solid #b4b9ca; color: #204b69; padding: .7em; width: 80%; margin-left: 5px;}
+aside.left .collection input {width: 190px; position: absolute; top: -2px; left: 25px; z-index: 2;}
 aside.right {margin-left: 110%; transition: margin-left .5s; -webkit-transition: margin-left .5s; top: 70px; width: 330px; padding: 20px; height: 100%; position: fixed; background: #eff2f7; color: #556179}
 aside.right.visible {margin-left: 900px}
 section.main {width: 700px; height: 100%; float: left; margin-left: 200px; background: #ffffff; }
@@ -66,15 +66,19 @@ aside.left .active a {background: #e3e6ee; color: #556179}
 aside.left h3 a span.right {font-weight: bold; border: 1px solid #b4b9ca; border-radius: 10px; padding: 1px 12px; margin-top: -2px}
 aside.left h3.active a span.right {color: #fff; background: #9ba4b8; border: 1px solid #9ba4b8;}
 aside.left h2 {font-size: 1.2em; padding: 5px 10px; margin-bottom: 0; }
-aside.left h3 {font-size: .9em; margin: 0}
+aside.left h3 {font-size: .9em; margin: 0; position: relative; min-height: 36px;}
 aside.left h3.my-keeps a {background: url(../img/kifi-icon-blue.png) 8px 45% no-repeat; padding-left: 40px}
 aside.left h3.my-keeps.active a {background: #e3e6ee url(../img/kifi-icon-gray.png) 8px 50% no-repeat;}
 aside.left #collections h2, aside.left h3.collection { border-bottom: 1px solid #dbdee3 }
-aside.left h3.collection div.edit-menu {display: none; position: absolute; margin-left: -20px; margin-top: 8px; width: 50px; }
-aside.left h3.collection a.edit {position: absolute; left:0; display: block; width: 15px; height: 17px;  overflow: hidden; background: url(../img/edit-sprite.png) -18px 0 no-repeat;}
-aside.left h3.collection:hover div.edit-menu {display: block;}
-aside.left h3.collection div.edit-menu ul {display: none; margin: 20px 0; padding: 0; list-style: none; }
-aside.left h3.collection div.edit-menu ul li a {width: 50px; display: block; background: #9ba4b8; color: #fff}
+aside.left h3.collection span.name {width: 130px}
+aside.left h3.collection:hover span.name, aside.left h3.collection.editing span.name {width: 105px}
+aside.left h3.collection div.edit-menu {display: none; position: absolute; top: 0; left:0; width: 50px; }
+aside.left h3.collection a.edit { width: 30px; display: block; height: 37px; padding: 0; background: #e3e6ee url(../img/edit-gray.png) 12px 12px no-repeat; }
+aside.left h3.collection.editing a.edit {background: #6fa6ef url(../img/edit-blue.png) 12px 12px no-repeat; }
+aside.left h3.collection:hover, aside.left h3.collection.editing {padding-left: 25px;}
+aside.left h3.collection:hover div.edit-menu, aside.left h3.collection.editing div.edit-menu {display: block;}
+aside.left h3.collection div.edit-menu ul {display: none; margin: 0px 0; padding: 0; list-style: none; position: absolute; z-index: 1; }
+aside.left h3.collection div.edit-menu ul li a {width: 50px; display: block; background: #9ba4b8; color: #fff; line-height: 1em}
 aside.left h3.collection div.edit-menu:hover ul {display: block;}
 aside.left h3 a {display: block; padding: 10px; font-size: 1em; color: #818692}
 aside.left h3.new a {color: #6fa6ef; }
@@ -104,8 +108,10 @@ img#my-avatar {position: absolute; top: 60px; margin-left: -10px; max-width: 70p
 .small-avatar {max-width: 30px; max-height: 30px;}
 aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px; border-radius: 4px;}
 .keep {position:relative; clear: left; padding: 10px 10px 10px 30px; border-top: 1px solid #f9f9f9; cursor: move;}
-.keep input[type="checkbox"] {display: none; position: absolute; left: 4px; top: 12px; margin: 0; border: 1px solid #99a3b3; border-radius: 0;}
-.keep:hover input[type="checkbox"] {display: block;}
+.keep input[type="checkbox"] {position: absolute; left: 4px; top: 12px; margin: 0; border: 1px solid #99a3b3; border-radius: 0;}
+.keep .handle {position: absolute; top: 0; left: 0; width: 22px; height: 100%; display: none; background: #e3e6ee url(../img/drag-handle.png) 4px 35px no-repeat;}
+.keep:hover .handle, .keep.selected .handle {display: block}
+.keep.selected {background: #eff2f7}
 .keep .right {float: right; }
 .keep .small-avatar {vertical-align: bottom; float: left;}
 .keep .small-avatar.me {margin-right: 3px;}
@@ -120,7 +126,6 @@ div.scrollable {margin-top: 50px; padding: 50px 20px; text-align: left;  width: 
 div.loading {text-align: center; display: none;}
 .clearfix {clear: both}
 .template-wrapper, #add-collection {display: none}
-.draggable:hover {background: #eef2f7 url(../img/drag-handle.png) 4px 35px no-repeat;}
 .drag-helper {background: #fff; padding: 5px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
 .drop-hover {background: #b6c3cc}
 

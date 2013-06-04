@@ -51,6 +51,7 @@ var collectionsTemplate = Tempo.prepare("collections").when(TempoEvent.Types.REN
 
 var searchContext = null;
 var connections = {};
+var collections = {};
 var connectionNames = [];
 var myAvatar = '';
 var searchTimeout;
@@ -63,6 +64,25 @@ $.ajaxSetup({
     },
     crossDomain: true
 });
+
+(function($){
+
+    var _old = $.unique;
+
+    $.unique = function(arr){
+
+        // do the default behavior only if we got an array of elements
+        if (!!arr[0].nodeType){
+            return _old.apply(this,arguments);
+        } else {
+            // reduce the array to contain no dupes via grep/inArray
+            return $.grep(arr,function(v,k){
+                return $.inArray(v,arr) === k;
+            });
+        }
+    };
+})(jQuery);
+
 
 function initDraggable() {
 	$( ".draggable" ).draggable({ 
@@ -218,10 +238,10 @@ function populateCollections() {
 	$.getJSON(urlCollectionsAll,  
 			function(data) {
 				collectionsTemplate.render(data.collections);	
-/*				for (i in data.collections) {
-					$('aside.right select[name="collection"]').append('<option value="'+ data.collections[i].id +'">'+ data.collections[i].name +'</option>');
+				for (i in data.collections) {
+					collections[data.collections[i].id] = data.collections[i];
 				}
-*/			});
+			});
 }
 
 function updateNumKeeps() {
@@ -250,7 +270,7 @@ $('#collections').on('click','a.remove',function() {
 					}
 		});
 }).on('click','a.rename',function() {
-	var colElement = $(this).parents('h3.collection').first();
+	var colElement = $(this).parents('h3.collection').first().addClass('editing');
 	var nameSpan = colElement.find('span.name').first();
 	var name = nameSpan.text();
 	nameSpan.html('<input type="text" value="' + name + '" data-orig="' + name + '"/>');
@@ -273,16 +293,15 @@ $('#collections').on('click','a.remove',function() {
 				nameSpan.html(nameSpan.find('input').data('orig'));
 			}
 			,success: function(data) {
-							colElement.find('span.name').html(newName);
+							colElement.removeClass('editing').find('span.name').html(newName).attr('title',newName);
 						}
 		});
 		
 	}
 }).on('blur','.collection span.name input', function() {
+	$('h3.collection.editing').removeClass('editing');
 	$(this).parent().html($(this).data('orig'));
 });
-
-
 
 // auto update my keeps every minute
 setInterval(addNewKeeps, 60000);
@@ -302,19 +321,51 @@ $(document)
 		}
 	})
 	.on('click','.keep input[type="checkbox"]',function() {
-		if ($(this).is(':checked')) {
-			var keep = $(this).parents('.keep').first();
+		var keep = $(this).parents('.keep').first();
+		if ($(this).is(':checked')) { 
+			keep.addClass('selected');
+		} else {
+			keep.removeClass('selected');			
+		}
+		var selected = $('.keep.selected');
+		if ($('.keep input[type="checkbox"]:checked').length == 0) {
+			// if no keeps are checked, hide the side bar
+			$('aside.right').removeClass('visible');
+		} else if (selected.length > 1) {
+			// TODO: handle multiple selection
+			$('aside.right .title h2').text(selected.length + " keeps selected");
+			$('aside.right .title a').text('');
+			$('aside.right .who-kept').html('');
+			var allCol = [];
+			selected.each(function() {
+				$('aside.right .who-kept').append('<div class="long-text">' + $(this).find('a').first().text() + '</div>');
+				if ($(this).data('collections').length > 0) {
+					var colArray = $(this).data('collections').split(',');
+					allCol = allCol.concat(colArray);
+				}
+			});
+			allCol = $.unique(allCol);
+			var inCol = $('aside.right .in-collections').html('');
+			for (i in allCol) {
+				inCol.append(collections[allCol[i]].name + "<br/>");
+			}
+			$('aside.right').addClass('visible');
+		} else { // only one keep is selcted
+			keep = $('.keep.selected').first();
 			$('aside.right .title h2').text(keep.find('a').first().text());
 			var url = keep.find('a').first().attr('href');
 			$('aside.right .title a').text(url).attr('href',url).attr('target','_blank');
 			$('aside.right .who-kept').html(keep.find('div.bottom').html());
 			$('aside.right .who-kept span').prependTo($('aside.right .who-kept')).removeClass('fs9 gray');
+			var inCol = $('aside.right .in-collections').html('');
+			if (keep.data('collections').length > 0) {
+				var colArray = keep.data('collections').split(',');
+				for (i in colArray) {
+					inCol.append(collections[colArray[i]].name + "<br/>");
+				}
+			}
 			$('aside.right').addClass('visible');
-			$('.keep input[type="checkbox"]').removeAttr('checked');
-			$(this).prop('checked', true);
-		} else {
-			$('aside.right').removeClass('visible');
-		}
+		} 
 	})
 	.ready(function() {		
 		$(".fancybox").fancybox();
