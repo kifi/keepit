@@ -13,7 +13,7 @@ object ApplicationBuild extends Build {
   override def settings = super.settings ++ Seq(
       EclipseKeys.skipParents in ThisBuild := false)
 
-    val appName         = "shoebox"
+    val appName         = "common"
 
     val BUILD_DATETIME_FORMAT = DateTimeFormat.forPattern("yyyyMMdd-HHmm")
                                                  .withLocale(Locale.ENGLISH)
@@ -67,70 +67,6 @@ object ApplicationBuild extends Build {
       ExclusionRule(organization = "org.jboss.netty")
     ))
 
-    val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
-      "-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds",
-      "-language:existentials", "-language:experimental.macros", "-Xmax-classfile-name", "140")
-
-    val _routesImport = Seq(
-      "com.keepit.common.db.{ExternalId, Id, State}",
-      "com.keepit.model._",
-      "com.keepit.common.social._",
-      "com.keepit.search._"
-    )
-
-    val _resolvers = Seq(
-      Resolver.url("sbt-plugin-snapshots",
-        new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
-      "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
-      "kevoree Repository" at "http://maven2.kevoree.org/release/",
-      //for org.mongodb#casb
-      "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
-      "releases"  at "https://oss.sonatype.org/content/groups/scala-tools"
-    )
-
-    val _templatesImport = Seq(
-      "com.keepit.common.db.{ExternalId, Id, State}",
-      "com.keepit.model._",
-      "com.keepit.common.social._",
-      "com.keepit.search._"
-    )
-
-    val _libraryDependencies = Seq(
-      // updating bonecp, trying to resolve "Timed out waiting for a free available connection" exception
-      // http://stackoverflow.com/a/15500442/81698
-      "com.google.inject" % "guice" % "3.0",
-      "com.google.inject.extensions" % "guice-multibindings" % "3.0",
-      "com.tzavellas" % "sse-guice" % "0.7.1"
-    )
-
-    val javaTestOptions = Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=512m")
-
-    lazy val common = play.Project("common", appVersion, commonDependencies, path = file("modules/common")).settings(
-      scalacOptions ++= _scalacOptions,
-      // add some imports to the routes file
-      routesImport ++= _routesImport,
-
-      resolvers ++= _resolvers,
-
-      // add some imports to the templates files
-      templatesImport ++= _templatesImport,
-
-      libraryDependencies ++= _libraryDependencies,
-
-      javaOptions in test ++= javaTestOptions,
-
-      parallelExecution in Test := true,
-
-      testOptions in Test += Tests.Argument("sequential", "false"),
-      testOptions in Test += Tests.Argument("threadsNb", "16"),
-      testOptions in Test += Tests.Argument("showtimes", "true"),
-      testOptions in Test += Tests.Argument("stopOnFail", "true"),
-      testOptions in Test += Tests.Argument("failtrace", "true"),
-
-      //https://groups.google.com/forum/?fromgroups=#!topic/play-framework/aa90AAp5bpo
-      sources in doc in Compile := List()
-    )
-
 
     val main = play.Project(appName, appVersion, commonDependencies).settings(
       scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
@@ -182,5 +118,5 @@ object ApplicationBuild extends Build {
 
       //https://groups.google.com/forum/?fromgroups=#!topic/play-framework/aa90AAp5bpo
       sources in doc in Compile := List()
-    ).dependsOn(common).aggregate(common)
+    )
 }
