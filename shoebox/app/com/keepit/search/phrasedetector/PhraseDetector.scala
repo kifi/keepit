@@ -18,7 +18,7 @@ import scala.collection.JavaConversions._
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.collection.mutable.{Set => MutableSet, ListBuffer}
+import scala.collection.mutable.{ListBuffer}
 
 object PhraseDetector {
   val fieldName = "p"
