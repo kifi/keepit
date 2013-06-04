@@ -61,20 +61,22 @@ aside.left {top: 70px; width: 200px; height: 100%;  position:fixed; background: 
 aside.left input {background: #fafafa; border: 1px solid #b4b9ca; color: #204b69; padding: .7em; width: 80%; margin-left: 5px;}
 aside.left .collection input {width: 190px; position: absolute; top: -2px; left: 25px; z-index: 2;}
 aside.left .active a {background: #e3e6ee; color: #556179}
-aside.left h3 a span.right {font-weight: bold; border: 1px solid #b4b9ca; border-radius: 10px; padding: 1px 12px; margin-top: -2px}
+aside.left h3 a span.right {position:absolute; right: 3px; font-weight: bold; border: 1px solid #b4b9ca; border-radius: 10px; padding: 1px 12px; margin-top: -2px}
 aside.left h3.active a span.right {color: #fff; background: #9ba4b8; border: 1px solid #9ba4b8;}
 aside.left h2 {font-size: 1.2em; padding: 5px 10px; margin-bottom: 0; }
 aside.left h3 {font-size: .9em; margin: 0; position: relative; min-height: 36px;}
 aside.left h3.my-keeps a {background: url(../img/kifi-icon-blue.png) 8px 45% no-repeat; padding-left: 40px}
 aside.left h3.my-keeps.active a {background: #e3e6ee url(../img/kifi-icon-gray.png) 8px 50% no-repeat;}
 aside.left #collections h2, aside.left h3.collection { border-bottom: 1px solid #dbdee3 }
-aside.left #collections #collections-wrapper {overflow-y: auto;}
-aside.left h3.collection span.name {width: 130px}
-aside.left h3.collection:hover span.name, aside.left h3.collection.editing span.name {width: 105px}
-aside.left h3.collection div.edit-menu {display: none; position: absolute; top: 0; left:0; width: 50px; }
+aside.left #collections #collections-wrapper {overflow-y: auto; overflow-x: hidden;}
+aside.left h3.collection span.name {width: 120px}
+aside.left h3.collection.editing span.name, aside.left h3.collection.hover span.name {width: 100px}
+aside.left h3.collection div.edit-menu {transition: width .5s; -webkit-transition: width .5s; display: none; position: absolute; top: 0; left:0; width: 5px; overflow: hidden; }
+aside.left h3.collection div.edit-menu:hover, aside.left h3.collection.editing div.edit-menu {width: 25px; overflow: visible;}
 aside.left h3.collection a.edit { width: 30px; display: block; height: 37px; padding: 0; background: #e3e6ee url(../img/edit-gray.png) 12px 12px no-repeat; }
 aside.left h3.collection.editing a.edit {background: #6fa6ef url(../img/edit-blue.png) 12px 12px no-repeat; }
-aside.left h3.collection:hover, aside.left h3.collection.editing {padding-left: 25px;}
+aside.left h3.collection {transition: padding-left .5s; -webkit-transition: padding-left .5s;}
+aside.left h3.collection.editing, aside.left h3.collection.hover {padding-left: 25px;}
 aside.left h3.collection:hover div.edit-menu, aside.left h3.collection.editing div.edit-menu {display: block;}
 aside.left h3.collection div.edit-menu ul {display: none; margin: 0px 0; padding: 0; list-style: none; position: absolute; z-index: 1; }
 aside.left h3.collection div.edit-menu ul li a {width: 50px; display: block; background: #9ba4b8; color: #fff; padding: .3em .5em; font-size: .9em}
@@ -110,7 +112,6 @@ aside.right .collections.active {height: 250px; border-top: 5px solid #6fa6ef; b
 aside.right .collections ul {padding: 0; margin: 0; list-style: none}
 aside.right .collections ul li a {display: block; padding: .5em .5em .5em 4em; border-top: 1px solid #dbdee3;}
 aside.right .collections ul li a.create {background: url(../img/plus.png) 20px 50% no-repeat; border-top: 0}
-span.right {float: right}
 input.search {transition: width .5s; -webkit-transition: width .5s; z-index: 1; position: relative; font-size: 1.6em; margin-top: 10px; margin-left: 200px; padding: 10px 50px 10px 20px; width: 550px; border: none; background: #fff url('../img/search.png') 98% 50% no-repeat}
 input.search:focus {background-image: url('../img/search-blue.png'); width: 630px;}
 
