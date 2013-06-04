@@ -98,7 +98,7 @@ class EhCacheCache @Inject() (
   def get(key: String): Option[Any] =
     Play.current.plugin[EhCachePlugin].map { ehcache =>
       ehcache.api.get(key)
-    }
+    } flatten
 
   def remove(key: String) {
     Play.current.plugin[EhCachePlugin].map {
@@ -186,7 +186,7 @@ trait ObjectCache[K <: Key[T], T] {
         case Some(cache) => cache.getOrElse(key)(orElse)
         case None => orElse
       }
-      value.map(setInnerCache(key, _))
+      setInnerCache(key, value)
       value
     }
   }
