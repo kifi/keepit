@@ -13,7 +13,7 @@ object ApplicationBuild extends Build {
   override def settings = super.settings ++ Seq(
       EclipseKeys.skipParents in ThisBuild := false)
 
-    val appName         = "shoebox"
+    val appName         = "common"
 
     val BUILD_DATETIME_FORMAT = DateTimeFormat.forPattern("yyyyMMdd-HHmm")
                                                  .withLocale(Locale.ENGLISH)
@@ -31,7 +31,7 @@ object ApplicationBuild extends Build {
     writeToFile("conf/app_version.txt", appVersion)
     writeToFile("conf/app_compilation_date.txt", now)
 
-    val appDependencies = Seq(
+    val commonDependencies = Seq(
       jdbc,
       "com.typesafe.play.plugins" %% "play-statsd" % "2.1.0",
       "securesocial" %% "securesocial" % "master-SNAPSHOT",
@@ -67,7 +67,8 @@ object ApplicationBuild extends Build {
       ExclusionRule(organization = "org.jboss.netty")
     ))
 
-    val main = play.Project(appName, appVersion, appDependencies).settings(
+
+    val main = play.Project(appName, appVersion, commonDependencies).settings(
       scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
         "-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds",
         "-language:existentials", "-language:experimental.macros", "-Xmax-classfile-name", "140"),
