@@ -500,6 +500,11 @@ $(document)
 						});
 			 }
 		});
+		
+		$('aside.right .actions a.add').click(function() {
+			$(this).toggleClass('active');
+			$('aside.right .collections').toggleClass('active');
+		})
 	});
 
 
