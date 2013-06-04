@@ -63,9 +63,9 @@ class BookmarksController @Inject() (
       AuthenticatedJsonAction { request =>
     (before map getBookmarkExternalId, after map getBookmarkExternalId,
         collection map { getCollectionByExternalId(request.userId, _) }) match {
-      case (Some(None), _, _) => BadRequest(s"Invalid id for before: ${before.get}")
-      case (_, Some(None), _) => BadRequest(s"Invalid id for after: ${after.get}")
-      case (_, _, Some(None)) => BadRequest(s"Invalid id for collection: ${collection.get}")
+      case (Some(None), _, _) => BadRequest(Json.obj("error" -> s"Invalid id for before: ${before.get}"))
+      case (_, Some(None), _) => BadRequest(Json.obj("error" -> s"Invalid id for after: ${after.get}"))
+      case (_, _, Some(None)) => BadRequest(Json.obj("error" -> s"Invalid id for collection: ${collection.get}"))
       case (beforeId, afterId, coll) => Async {
         val keeps = db.readOnly { implicit s =>
           bookmarkRepo.getByUser(request.userId, beforeId.flatten, afterId.flatten, coll.flatten.map(_.id.get), count)
