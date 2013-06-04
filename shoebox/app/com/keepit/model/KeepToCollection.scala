@@ -1,14 +1,18 @@
 package com.keepit.model
 
+import scala.concurrent.duration._
 import scala.slick.lifted.Query
 
 import org.joda.time.DateTime
 
 import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
+
+import play.api.libs.json.Json
 
 case class KeepToCollection(
   id: Option[Id[KeepToCollection]] = None,
@@ -36,8 +40,22 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
   def count(collId: Id[Collection])(implicit session: RSession): Int
 }
 
+case class CollectionsForBookmarkKey(bookmarkId: Id[Bookmark]) extends Key[Seq[Id[Collection]]] {
+  val namespace = "collections_for_bookmark"
+  def toKey(): String = bookmarkId.toString
+}
+
+class CollectionsForBookmarkCache @Inject() (val repo: FortyTwoCachePlugin)
+    extends FortyTwoCache[CollectionsForBookmarkKey, Seq[Id[Collection]]] {
+  val ttl = 1 day
+  private implicit val idFormat = Id.format[Collection]
+  def deserialize(obj: Any): Seq[Id[Collection]] = parseJson(obj)
+  def serialize(c: Seq[Id[Collection]]): Any = Json.toJson(c)
+}
+
 @Singleton
 class KeepToCollectionRepoImpl @Inject() (
+  collectionsForBookmarkCache: CollectionsForBookmarkCache,
   collectionRepo: CollectionRepo,
   val db: DataBaseComponent,
   val clock: Clock)
@@ -47,6 +65,13 @@ class KeepToCollectionRepoImpl @Inject() (
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
+  override def invalidateCache(ktc: KeepToCollection)(implicit session: RSession): KeepToCollection = {
+    collectionsForBookmarkCache.set(CollectionsForBookmarkKey(ktc.bookmarkId),
+      (for (c <- table if c.bookmarkId === ktc.bookmarkId && c.state === KeepToCollectionStates.ACTIVE)
+        yield c.collectionId).list)
+    ktc
+  }
+
   override val table = new RepoTable[KeepToCollection](db, "keep_to_collection") {
     def bookmarkId = column[Id[Bookmark]]("bookmark_id", O.NotNull)
     def collectionId = column[Id[Collection]]("collection_id", O.NotNull)
@@ -54,8 +79,10 @@ class KeepToCollectionRepoImpl @Inject() (
         KeepToCollection.unapply _)
   }
   def getCollectionsForBookmark(bookmarkId: Id[Bookmark])(implicit session: RSession): Seq[Id[Collection]] =
-    (for (c <- table if c.bookmarkId === bookmarkId && c.state === KeepToCollectionStates.ACTIVE)
-      yield c.collectionId).list
+    collectionsForBookmarkCache.getOrElse(CollectionsForBookmarkKey(bookmarkId)) {
+      (for (c <- table if c.bookmarkId === bookmarkId && c.state === KeepToCollectionStates.ACTIVE)
+        yield c.collectionId).list
+    }
 
   def getBookmarksInCollection(collectionId: Id[Collection])(implicit session: RSession): Seq[Id[Bookmark]] =
     (for (c <- table if c.collectionId === collectionId && c.state === KeepToCollectionStates.ACTIVE)

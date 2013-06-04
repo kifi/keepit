@@ -2,7 +2,7 @@ package com.keepit.test
 
 import scala.slick.session.{ Database => SlickDatabase, Session, ResultSetConcurrency, ResultSetType, ResultSetHoldability }
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.db.DbInfo
+import com.keepit.common.db.{TestSlickSessionProvider, DbInfo}
 import com.google.inject.util.Modules
 import scala.slick.lifted.DDL
 import com.google.inject.{Module, Injector}
@@ -27,6 +27,8 @@ trait TestDBRunner extends TestInjector {
   def emailAddressRepo(implicit injector: RichInjector) = inject[EmailAddressRepo]
   def unscrapableRepo(implicit injector: RichInjector) = inject[UnscrapableRepo]
   def electronicMailRepo(implicit injector: RichInjector) = inject[ElectronicMailRepo]
+
+  def sessionProvider(implicit injector: RichInjector) = inject[TestSlickSessionProvider]
 
   def withDB[T](overridingModules: Module*)(f: RichInjector => T) = {
     withInjector(overridingModules: _*) { implicit injector =>
