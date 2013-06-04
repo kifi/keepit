@@ -37,14 +37,15 @@ class BookmarksController @Inject() (
   )
   extends WebsiteController(actionAuthenticator) {
 
-  implicit val writesKeepWithKeepers = new Writes[(Bookmark, Set[BasicUser])] {
-    def writes(info: (Bookmark, Set[BasicUser])) = Json.obj(
+  implicit val writesKeepInfo = new Writes[(Bookmark, Set[BasicUser], Set[ExternalId[Collection]])] {
+    def writes(info: (Bookmark, Set[BasicUser], Set[ExternalId[Collection]])) = Json.obj(
       "id" -> info._1.externalId.id,
       "title" -> info._1.title,
       "url" -> info._1.url,
       "isPrivate" -> info._1.isPrivate,
       "createdAt" -> info._1.createdAt,
-      "keepers" -> info._2
+      "keepers" -> info._2,
+      "collections" -> info._3.map(_.id)
     )
   }
 
@@ -70,16 +71,21 @@ class BookmarksController @Inject() (
           bookmarkRepo.getByUser(request.userId, beforeId.flatten, afterId.flatten, coll.flatten.map(_.id.get), count)
         }
         searchClient.sharingUserInfo(request.userId, keeps.map(_.uriId)) map { infos =>
-          val idToBasicUser = db.readOnly { implicit s =>
-            infos.flatMap(_.sharingUserIds).distinct.map(id => id -> basicUserRepo.load(id)).toMap
+          db.readOnly { implicit s =>
+            val idToBasicUser = infos.flatMap(_.sharingUserIds).distinct.map(id => id -> basicUserRepo.load(id)).toMap
+            val collIdToExternalId = collectionRepo.getByUser(request.userId).map(c => c.id.get -> c.externalId).toMap
+            (keeps zip infos).map { case (keep, info) =>
+              val collIds =
+                keepToCollectionRepo.getCollectionsForBookmark(keep.id.get).flatMap(collIdToExternalId.get).toSet
+              (keep, info.sharingUserIds map idToBasicUser, collIds)
+            }
           }
-          (keeps zip infos).map { case (keep, info) => (keep, info.sharingUserIds map idToBasicUser) }
-        } map { keepsWithKeepers =>
+        } map { keepsInfo =>
           Ok(Json.obj(
             "collection" -> coll.flatten.map(BasicCollection fromCollection _),
             "before" -> before,
             "after" -> after,
-            "keeps" -> keepsWithKeepers
+            "keeps" -> keepsInfo
           ))
         }
       }
