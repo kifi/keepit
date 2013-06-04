@@ -47,6 +47,7 @@ var searchTemplate = Tempo.prepare("search-results").when(TempoEvent.Types.RENDE
 var collectionsTemplate = Tempo.prepare("collections").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
 	$('#collections').show();
 	initDroppable();
+	adjustHeight();
 });
 
 var searchContext = null;
@@ -254,6 +255,10 @@ function showMessage(msg) {
 	$.fancybox($('<p>').text(msg));
 }
 
+function adjustHeight() {
+	$('aside.left #collections #collections-wrapper').height($(window).height() - $('aside.left #collections #collections-wrapper').offset().top);
+}
+
 // delete/rename collection
 $('#collections').on('click','a.remove',function() {
 	var colElement = $(this).parents('h3.collection').first();
@@ -293,7 +298,9 @@ $('#collections').on('click','a.remove',function() {
 				nameSpan.html(nameSpan.find('input').data('orig'));
 			}
 			,success: function(data) {
-							colElement.removeClass('editing').find('span.name').html(newName).attr('title',newName);
+							colElement.removeClass('editing');
+							colElement.find('span.name').html(newName).attr('title',newName);
+							adjustHeight();
 						}
 		});
 		
@@ -306,7 +313,9 @@ $('#collections').on('click','a.remove',function() {
 // auto update my keeps every minute
 setInterval(addNewKeeps, 60000);
 setInterval(updateNumKeeps, 60000);
-	
+
+$(window).resize(adjustHeight);
+
 $(document)
 	.on('keypress', function(e) {if (!$(e.target).is('textarea, input')) $('input.search').focus() }) // auto focus on search field when starting to type anywhere on the document
 	.on('scroll',function() { // infinite scroll
@@ -369,7 +378,7 @@ $(document)
 	})
 	.ready(function() {		
 		$(".fancybox").fancybox();
-		
+				
 		populateCollections();
 		
 		// populate number of my keeps
@@ -479,7 +488,7 @@ $(document)
 						,error: function() {showMessage('Could not create collection, please try again later')}
 						,success: function(data) {
 										console.log(data)
-									   $('#collections').append('<h3 class="droppable collection" data-id="' + data.id + '"><div class="edit-menu">\
+									   $('#collections-wrapper').append('<h3 class="droppable collection" data-id="' + data.id + '"><div class="edit-menu">\
 												<a href="javascript: ;" class="edit"></a>\
 												<ul><li><a class="rename" href="javascript: ;">Rename</a></li>\
 													<li><a class="remove" href="javascript: ;">Remove</a></li></ul>\

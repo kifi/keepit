@@ -58,19 +58,21 @@
 				<div id="add-collection">
 					<input placeholder="Type name here"/>
 				</div>
-				<h3 data-template class="droppable collection" data-id="{{id}}">
-					<div class="edit-menu">
-						<a href="javascript: ;" class="edit">&nbsp;</a>
-						<ul>
-							<li><a class="rename" href="javascript: ;">Rename</a></li>
-							<li><a class="remove" href="javascript: ;">Remove</a></li>
-						</ul>
-					</div>
-					<a class="" href="javascript: ;">
-						<span class="right light">{{keeps}}</span>
-						<span class="name long-text" title ="{{name}}">{{name}}</span> 
-					</a>
-				</h3>
+				<div id="collections-wrapper">
+					<h3 data-template class="droppable collection" data-id="{{id}}">
+						<div class="edit-menu">
+							<a href="javascript: ;" class="edit">&nbsp;</a>
+							<ul>
+								<li><a class="rename" href="javascript: ;">Rename</a></li>
+								<li><a class="remove" href="javascript: ;">Remove</a></li>
+							</ul>
+						</div>
+						<a class="" href="javascript: ;">
+							<span class="right light">{{keeps}}</span>
+							<span class="name long-text" title ="{{name}}">{{name}}</span> 
+						</a>
+					</h3>
+				</div>
 			</div>
 		</aside>
 
