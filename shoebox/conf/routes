@@ -262,7 +262,7 @@ GET     /internal/shoebox/database/getUserExperiments           @com.keepit.cont
 
 GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.shoebox.ShoeboxController.getConnectedUsers(userId: Id[User])
 GET     /internal/shoebox/tracker/browsingHistory     @com.keepit.controllers.shoebox.ShoeboxController.getBrowsingHistoryFilter(userId: Id[User])
-GET     /internal/shoebox/tracker/browsingHistory     @com.keepit.controllers.shoebox.ShoeboxController.getClickHistoryFilter(userId: Id[User])
+GET     /internal/shoebox/tracker/clickHistory        @com.keepit.controllers.shoebox.ShoeboxController.getClickHistoryFilter(userId: Id[User])
 GET     /internal/shoebox/database/bookmark           @com.keepit.controllers.shoebox.ShoeboxController.getBookmarks(userId: Id[User])
 GET     /internal/shoebox/database/bookmarkByUriUser  @com.keepit.controllers.shoebox.ShoeboxController.getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])
 GET     /internal/shoebox/database/changedUser        @com.keepit.controllers.shoebox.ShoeboxController.getUsersChanged(seqNum: Long)
