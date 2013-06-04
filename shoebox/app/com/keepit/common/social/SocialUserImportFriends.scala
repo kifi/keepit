@@ -48,11 +48,18 @@ class SocialUserImportFriends @Inject() (
     }
   }
 
-  private def extractFriends(parentJson: JsValue): Seq[JsValue] =
-    (parentJson \\ "data").head match {
+  private def extractFriends(parentJson: JsValue): Seq[JsValue] = {
+    (parentJson \ "friends" \ "data") match {
       case JsArray(values) => values
-      case _ => Seq() // Workaround for bug in Facebook graph API when a user has no friends.
+      case JsObject(Seq()) => Seq()
+      case _ => 
+        // For certain API calls (such as paginated friends), Facebook returns just the `friends` node
+        (parentJson \ "data") match {
+          case JsArray(values) => values
+          case _ => Seq() // Workaround for bug in Facebook graph API when a user has no friends.
+        }
     }
+  }
 
   private def createSocialUserInfo(friend: JsValue): (SocialUserInfo, JsValue) =
     (SocialUserInfo(
