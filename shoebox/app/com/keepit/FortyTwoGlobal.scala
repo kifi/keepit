@@ -13,11 +13,11 @@ import java.util.concurrent.atomic.AtomicBoolean
 import play.api._
 import play.api.mvc.Results._
 import play.api.mvc._
-import play.modules.statsd.api.StatsdFilter
 import play.utils.Threads
+import play.modules.statsd.api.StatsdFilter
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
-    extends WithFilters(LoggingFilter) /* extends WithFilters(new StatsdFilter()) */ with Logging {
+    extends WithFilters(LoggingFilter, new StatsdFilter()) with Logging {
 
   implicit def richInjector(injector: Injector) = new RichInjector(injector)
 

@@ -10,6 +10,8 @@ import play.api.Plugin
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
 import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent._
+import play.modules.statsd.api.Statsd
+import com.keepit.common.time._
 
 @Singleton
 class CacheStatistics {
@@ -228,6 +230,7 @@ trait ObjectCache[K <: Key[T], T] {
 trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
   val repo: FortyTwoCachePlugin
   protected[cache] def getFromInnerCache(key: K): Option[T] = {
+    val getStart = currentDateTime.getMillis()
     val value = try repo.get(key.toString) catch {
       case e: Throwable =>
         repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
@@ -236,9 +239,15 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
     }
     try {
       val objOpt = value.map(deserialize)
+      val getEnd = currentDateTime.getMillis()
       objOpt match {
-        case Some(_) => repo.stats.incrHits(key.getClass.getSimpleName)
-        case None => repo.stats.incrMisses(key.getClass.getSimpleName)
+        case Some(_) =>
+          repo.stats.incrHits(key.namespace)
+          Statsd.increment(s"$repo.${key.namespace}.hits")
+          Statsd.timing(s"$repo.${key.namespace}.hits", getEnd - getStart)
+        case None =>
+          repo.stats.incrMisses(key.namespace)
+          Statsd.increment(s"$repo.${key.namespace}.misses")
       }
       objOpt
     } catch {
@@ -251,6 +260,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
   }
 
   protected[cache] def setInnerCache(key: K, value: T): Future[T] = {
+    val setStart = currentDateTime.getMillis()
     future {
       val properlyBoxed = serialize(value) match {
         case x: java.lang.Byte => x.byteValue()
@@ -266,7 +276,12 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
         case x: String => x
       }
       repo.set(key.toString, properlyBoxed, ttl.toSeconds.toInt)
-      repo.stats.incrSets(key.getClass.getSimpleName)
+      val setEnd = currentDateTime.getMillis()
+
+      repo.stats.incrSets(key.namespace)
+      Statsd.increment(s"$repo.${key.namespace}.sets")
+      Statsd.timing(s"$repo.${key.namespace}.sets", setEnd - setStart)
+
       value
     } recover {
       case e: Throwable =>
