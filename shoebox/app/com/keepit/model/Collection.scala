@@ -43,6 +43,8 @@ object Collection {
     (__ \ 'lastKeptTo).formatNullable[DateTime] and
     (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
   )(Collection.apply, unlift(Collection.unapply))
+
+  val MaxNameLength = 64
 }
 
 case class UserCollectionsKey(userId: Id[User]) extends Key[Seq[Collection]] {
