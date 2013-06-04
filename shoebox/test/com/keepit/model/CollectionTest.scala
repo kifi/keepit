@@ -74,6 +74,11 @@ class CollectionTest extends Specification with TestDBRunner {
           keepToCollectionRepo.getBookmarksInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
           keepToCollectionRepo.count(coll1.id.get) === 2
         }
+        sessionProvider.doWithoutCreatingSessions {
+          db.readOnly { implicit s =>
+            collectionRepo.getByUser(user1.id.get).map(_.name).toSet == Set("Cooking", "Apparel", "Scala")
+          }
+        }
       }
     }
     "separate collections by user" in {
@@ -88,6 +93,24 @@ class CollectionTest extends Specification with TestDBRunner {
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = coll4.id.get))
           keepToCollectionRepo.getBookmarksInCollection(coll4.id.get).length === 1
           collectionRepo.getByUserAndName(user2.id.get, "Cooking") must beNone
+        }
+      }
+    }
+    "get and cache collection ids for a bookmark" in {
+      withDB() { implicit injector =>
+        val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
+        db.readWrite { implicit s =>
+          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll3.id.get))
+          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll1.id.get))
+          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll2.id.get))
+          keepToCollectionRepo.getCollectionsForBookmark(bookmark1.id.get).toSet ===
+            Set(coll1.id.get, coll2.id.get, coll3.id.get)
+        }
+        sessionProvider.doWithoutCreatingSessions {
+          db.readOnly { implicit s =>
+            keepToCollectionRepo.getCollectionsForBookmark(bookmark1.id.get).toSet ===
+              Set(coll1.id.get, coll2.id.get, coll3.id.get)
+          }
         }
       }
     }

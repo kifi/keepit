@@ -18,6 +18,7 @@ import scala.collection.JavaConversions._
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.collection.mutable.{ListBuffer}
 
 object PhraseDetector {
   val fieldName = "p"
@@ -169,5 +170,52 @@ object RemoveOverlapping {
         sortedIntervals(i)
     }
     intervals.toSet
+  }
+
+  def weakRemoveInclusions(phrases: Set[(Int, Int)]) = {
+    // finest in the sense of max number of sub-intervals. Not unique.
+    def getFinestDecomposition(decomp: Set[ListBuffer[(Int, Int)]]) = {
+      decomp.foldLeft(ListBuffer.empty[(Int, Int)])((finest, buf) => if (buf.size > finest.size) buf else finest)
+    }
+
+    def getIntervalMap(phrases: Set[(Int, Int)]) = {
+      phrases.groupBy(_._1).foldLeft(Map.empty[Int, Set[Int]])((m, x) => m + (x._1 -> x._2.map(_._2)))
+    }
+
+    val intervalMaps = getIntervalMap(phrases)
+    val newIntervals = removeInclusions(phrases)
+    val rv = ListBuffer.empty[(Int, Int)]
+    for(interval <- newIntervals){
+      val decomp = decompose(interval, intervalMaps)
+      val finest = getFinestDecomposition(decomp.getOrElse(Set(ListBuffer.empty[(Int, Int)])))
+      rv.appendAll(finest)
+    }
+    rv.toSet
+  }
+
+  /**
+   * x: (startpos, len)
+   * intervals: key = start position. Set[Int] = lengths
+   *
+   */
+  def decompose(x: (Int, Int), intervals: Map[Int, Set[Int]]): Option[Set[ListBuffer[(Int, Int)]]] = {
+    if ( x._2 == 0 ) return Some(Set(ListBuffer.empty[(Int, Int)]))
+    if ( x._2 < 0 ) return None
+
+    var solu = Set.empty[ListBuffer[(Int, Int)]]
+    var found = false
+    intervals.get(x._1) match {
+      case None => None
+      case Some(lens) => {
+        for(len <- lens){
+          val subSolu = decompose((x._1 + len, x._2 - len), intervals)
+          subSolu match {
+            case None => None
+            case Some(subsolu) => {found = true; solu ++= subsolu.foldLeft(Set.empty[ListBuffer[(Int, Int)]]){(s, list) => list.prepend((x._1, len)); s + list}}
+          }
+        }
+        if (found) Some(solu) else None
+      }
+    }
   }
 }

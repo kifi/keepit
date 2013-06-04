@@ -1,12 +1,18 @@
 package com.keepit.model
 
+import scala.concurrent.duration._
+
 import org.joda.time.DateTime
 
 import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
+
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 case class Collection(
   id: Option[Id[Collection]] = None,
@@ -21,6 +27,31 @@ case class Collection(
   def withId(id: Id[Collection]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def isActive: Boolean = state == CollectionStates.ACTIVE
+}
+
+object Collection {
+  implicit def collectionFormat = (
+    (__ \ 'id).formatNullable(Id.format[Collection]) and
+    (__ \ 'externalId).format(ExternalId.format[Collection]) and
+    (__ \ 'userId).format(Id.format[User]) and
+    (__ \ 'name).format[String] and
+    (__ \ 'state).format(State.format[Collection]) and
+    (__ \ 'createdAt).format[DateTime] and
+    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
+  )(Collection.apply, unlift(Collection.unapply))
+}
+
+case class UserCollectionsKey(userId: Id[User]) extends Key[Seq[Collection]] {
+  val namespace = "user_collections"
+  def toKey(): String = userId.toString
+}
+
+class UserCollectionsCache @Inject() (val repo: FortyTwoCachePlugin)
+    extends FortyTwoCache[UserCollectionsKey, Seq[Collection]] {
+  val ttl = 1 day
+  def deserialize(obj: Any): Seq[Collection] = parseJson(obj)
+  def serialize(c: Seq[Collection]): Any = Json.toJson(c)
 }
 
 @ImplementedBy(classOf[CollectionRepoImpl])
@@ -39,6 +70,7 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
 
 @Singleton
 class CollectionRepoImpl @Inject() (
+  val userCollectionsCache: UserCollectionsCache,
   val db: DataBaseComponent,
   val clock: Clock)
   extends DbRepo[Collection] with CollectionRepo with ExternalIdColumnDbFunction[Collection] {
@@ -56,8 +88,16 @@ class CollectionRepoImpl @Inject() (
         Collection.unapply _)
   }
 
+  override def invalidateCache(collection: Collection)(implicit session: RSession): Collection = {
+    userCollectionsCache.set(UserCollectionsKey(collection.userId),
+      (for (c <- table if c.userId === collection.userId && c.state === CollectionStates.ACTIVE) yield c).list)
+    collection
+  }
+
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Collection] =
-    (for (c <- table if c.userId === userId && c.state === CollectionStates.ACTIVE) yield c).list
+    userCollectionsCache.getOrElse(UserCollectionsKey(userId)) {
+      (for (c <- table if c.userId === userId && c.state === CollectionStates.ACTIVE) yield c).list
+    }
 
   def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection])
       (implicit session: RSession): Option[Collection] =
