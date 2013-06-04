@@ -58,7 +58,10 @@ object ApplicationBuild extends Build {
       "com.typesafe.slick" %% "slick" % "1.0.0",
       "com.typesafe.slick" %% "slick-testkit" % "1.0.0",
       "net.sf.uadetector" % "uadetector-resources" % "2013.02",
-      "com.newrelic.agent.java" % "newrelic-agent" % "2.18.0"
+      "com.newrelic.agent.java" % "newrelic-agent" % "2.18.0",
+      "com.google.inject" % "guice" % "3.0",
+      "com.google.inject.extensions" % "guice-multibindings" % "3.0",
+      "com.tzavellas" % "sse-guice" % "0.7.1"
     ) map (_.excludeAll(
       ExclusionRule(organization = "com.cedarsoft"),
       ExclusionRule(organization = "javax.jms"),
@@ -132,7 +135,7 @@ object ApplicationBuild extends Build {
     )
 
 
-    val main = play.Project(appName, appVersion, commonDependencies).settings(
+    val main = play.Project(appName, appVersion).settings(
       scalacOptions ++= _scalacOptions,
       // add some imports to the routes file
       routesImport ++= Seq(
@@ -158,14 +161,6 @@ object ApplicationBuild extends Build {
         "com.keepit.model._",
         "com.keepit.common.social._",
         "com.keepit.search._"
-      ),
-
-      libraryDependencies ++= Seq(
-        // updating bonecp, trying to resolve "Timed out waiting for a free available connection" exception
-        // http://stackoverflow.com/a/15500442/81698
-        "com.google.inject" % "guice" % "3.0",
-        "com.google.inject.extensions" % "guice-multibindings" % "3.0",
-        "com.tzavellas" % "sse-guice" % "0.7.1"
       ),
 
       javaOptions in test ++= Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=512m"),
