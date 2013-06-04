@@ -1,6 +1,7 @@
 package com.keepit.test
 
 import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
+import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.analytics._
 import com.keepit.common.cache.{InMemoryCachePlugin, HashMapMemoryCache, FortyTwoCachePlugin}
 import com.keepit.common.controller.FortyTwoCookies._
@@ -154,7 +155,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
       app: play.api.Application): SecureSocialAuthenticatorPlugin = {
     new ShoeboxSecureSocialAuthenticatorPlugin(db, suiRepo, usRepo, healthPlugin, app)
   }
-  
+
   @Singleton
   @Provides
   def secureSocialUserPlugin(db: Database,
@@ -164,7 +165,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     healthcheckPlugin: HealthcheckPlugin): SecureSocialUserPlugin = {
     new ShoeboxSecureSocialUserPlugin(db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin)
   }
-  
+
 
   @Singleton
   @Provides
@@ -328,9 +329,9 @@ case class SearchConfigModule() extends ScalaModule {
 
   @Singleton
   @Provides
-  def searchConfigManager(shoeboxClient: ShoeboxServiceClient): SearchConfigManager = {
+  def searchConfigManager(shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait): SearchConfigManager = {
     val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
-    new SearchConfigManager(optFile, shoeboxClient)
+    new SearchConfigManager(optFile, shoeboxClient, monitoredAwait)
   }
 }
 

@@ -93,6 +93,8 @@ class ShoeboxServiceClientImpl @Inject() (
   private[this] val consolidateConnectedUsersReq = new RequestConsolidator[UserConnectionKey, Set[Id[User]]](ttl = 3 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[ClickHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
   private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[BrowsingHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
+  private[this] val consolidateHasExperimentReq = new RequestConsolidator[(Id[User], State[ExperimentType]), Boolean](ttl = 30 seconds)
+  private[this] val consolidateGetExperimentsReq = new RequestConsolidator[String, Seq[SearchConfigExperiment]](ttl = 30 seconds)
 
   def getUserOpt(id: ExternalId[User]): Future[Option[User]] = {
     cacheProvider.userExternalIdCache.getOrElseFutureOpt(UserExternalIdKey(id)) {
@@ -104,7 +106,7 @@ class ShoeboxServiceClientImpl @Inject() (
       }
     }
   }
-  
+
   def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] = {
     cacheProvider.socialUserNetworkCache.get(SocialUserInfoNetworkKey(networkType, id)) match {
       case Some(sui) => Promise.successful(Some(sui)).future
@@ -113,7 +115,7 @@ class ShoeboxServiceClientImpl @Inject() (
       }
     }
   }
-  
+
   def getSocialUserInfosByUserId(userId: Id[User]): Future[List[SocialUserInfo]] = {
     cacheProvider.socialUserCache.get(SocialUserInfoUserKey(userId)) match {
       case Some(sui) => Promise.successful(sui).future
@@ -266,7 +268,7 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getActiveExperiments: Future[Seq[SearchConfigExperiment]] = {
+  def getActiveExperiments: Future[Seq[SearchConfigExperiment]] = consolidateGetExperimentsReq("active") { t =>
     cacheProvider.activeSearchConfigExperimentsCache.getOrElseFuture(ActiveExperimentsKey) {
       call(routes.ShoeboxController.getActiveExperiments).map { r =>
         r.json.as[JsArray].value.map { SearchConfigExperimentSerializer.serializer.reads(_).get }
@@ -288,7 +290,7 @@ class ShoeboxServiceClientImpl @Inject() (
       SearchConfigExperimentSerializer.serializer.reads(r.json).get
     }
   }
-  def hasExperiment(userId: Id[User], state: State[ExperimentType]): Future[Boolean] = {
+  def hasExperiment(userId: Id[User], state: State[ExperimentType]): Future[Boolean] = consolidateHasExperimentReq((userId, state)) { case (userId, state) =>
     cacheProvider.userExperimentCache.getOrElseOpt(UserExperimentUserIdKey(userId))(None) match {
       case Some(states) => Promise.successful(states.contains(state)).future
       case None => call(routes.ShoeboxController.hasExperiment(userId, state)).map { r =>
@@ -296,7 +298,7 @@ class ShoeboxServiceClientImpl @Inject() (
       }
     }
   }
-  
+
   def getUserExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]] = {
     cacheProvider.userExperimentCache.get(UserExperimentUserIdKey(userId)) match {
       case Some(states) => Promise.successful(states).future
@@ -323,11 +325,11 @@ class ShoeboxServiceClientImpl @Inject() (
       r => r.json.as[JsArray].value.map(js => NormalizedURISerializer.normalizedURISerializer.reads(js).get)
     }
   }
-  
+
   def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]] = {
     cacheProvider.userSessionExternalIdCache.get(UserSessionExternalIdKey(sessionId)) match {
       case Some(session) => Promise.successful(Some(session)).future
-      case None => 
+      case None =>
         call(routes.ShoeboxController.getSessionByExternalId(sessionId)).map { r =>
           r.json match {
             case jso: JsObject => Json.fromJson[UserSession](jso).asOpt
