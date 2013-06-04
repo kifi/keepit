@@ -35,7 +35,6 @@ object ApplicationBuild extends Build {
       jdbc,
       "com.typesafe.play.plugins" %% "play-statsd" % "2.1.0",
       "securesocial" %% "securesocial" % "master-SNAPSHOT",
-      "com.github.mumoshu" %% "play2-memcached" % "0.3.0.1",
       "mysql" % "mysql-connector-java" % "5.1.25",
       "org.clapper" %% "grizzled-slf4j" % "1.0.1",
       "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
@@ -56,7 +55,6 @@ object ApplicationBuild extends Build {
       "javax.mail" % "mail" % "1.4.5",
       "org.mongodb" %% "casbah" % "2.5.0",
       "org.jsoup" % "jsoup" % "1.7.1",
-      "spy" % "spymemcached" % "2.8.12",
       "com.typesafe.slick" %% "slick" % "1.0.0",
       "com.typesafe.slick" %% "slick-testkit" % "1.0.0",
       "net.sf.uadetector" % "uadetector-resources" % "2013.02",
@@ -82,8 +80,6 @@ object ApplicationBuild extends Build {
       ),
 
       resolvers ++= Seq(
-        //used for securesocial
-        "Spy Repository" at "http://files.couchbase.com/maven2",
         Resolver.url("sbt-plugin-snapshots",
           new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
         "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
