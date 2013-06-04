@@ -99,7 +99,7 @@ class KeepToCollectionRepoImpl @Inject() (
     (for (c <- table if c.collectionId === collId && c.state =!= excludeState.getOrElse(null)) yield c).list
 
   override def save(model: KeepToCollection)(implicit session: RWSession): KeepToCollection = {
-    collectionRepo.updateSequenceNumber(model.collectionId)
+    collectionRepo.keepsChanged(model.collectionId, model.isActive)
     super.save(model)
   }
 
