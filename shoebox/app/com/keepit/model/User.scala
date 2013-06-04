@@ -92,11 +92,8 @@ class UserRepoImpl @Inject() (
     (for (u <- table if !(u.state inSet excludeStates)) yield u).list
 
   override def invalidateCache(user: User)(implicit session: RSession) = {
+    user.id map {id => idCache.set(UserIdKey(id), user)}
     externalIdCache.set(UserExternalIdKey(user.externalId), user)
-    user.id match {
-      case Some(id) => idCache.set(UserIdKey(id), user)
-      case None =>
-    }
     user
   }
 

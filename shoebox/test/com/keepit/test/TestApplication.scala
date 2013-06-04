@@ -2,7 +2,7 @@ package com.keepit.test
 
 import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
 import com.keepit.common.analytics._
-import com.keepit.common.cache.{HashMapMemoryCache, FortyTwoCachePlugin}
+import com.keepit.common.cache.{InMemoryCachePlugin, HashMapMemoryCache, FortyTwoCachePlugin}
 import com.keepit.common.controller.FortyTwoCookies._
 import com.keepit.common.db._
 import com.keepit.common.store.FakeS3StoreModule
@@ -29,35 +29,33 @@ import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.shoebox.BrowsingHistoryTracker
 import com.keepit.classify.DomainTagImportSettings
-
 import com.tzavellas.sse.guice.ScalaModule
 import org.joda.time.{ReadablePeriod, DateTime}
 import org.apache.zookeeper.CreateMode
-
 import scala.collection.mutable.{Stack => MutableStack}
 import scala.concurrent._
 import scala.slick.session.{Database => SlickDatabase}
 import scala.collection.mutable
-
 import com.google.inject.Module
 import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.google.inject.multibindings.Multibinder
 import com.google.inject.util.Modules
-
 import akka.actor.ActorSystem
 import akka.actor.Cancellable
 import akka.actor.Scheduler
-
 import play.api.Mode.{Mode, Test}
 import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.Files
-
 import java.io.File
+import play.api.db.DB
+import com.keepit.common.controller.{ActionAuthenticator, ShoeboxActionAuthenticator}
+import com.keepit.FortyTwoGlobal
+import com.keepit.common.store.S3ImageStore
 
-class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplication() {
+class TestApplication(val _global: FortyTwoGlobal, useDb: Boolean = true) extends play.api.test.FakeApplication() {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
   def withFakeMail() = overrideWith(FakeMailModule())
   def withFakeScraper() = overrideWith(FakeScraperModule())
@@ -75,12 +73,15 @@ class TestApplication(val _global: TestGlobal) extends play.api.test.FakeApplica
   def withShoeboxServiceModule() = overrideWith(ShoeboxServiceModule())
   def withSearchConfigModule() = overrideWith(SearchConfigModule())
   def overrideWith(model: Module): TestApplication =
-    new TestApplication(new TestGlobal(Modules.`override`(global.modules: _*).`with`(model)))
+    if(useDb)
+      new TestApplication(new TestGlobal(Modules.`override`(global.modules: _*).`with`(model)))
+    else
+      new TestApplication(new TestRemoteGlobal(Modules.`override`(global.modules: _*).`with`(model)))
 }
 
 class DevApplication() extends TestApplication(new TestGlobal(DevGlobal.modules: _*))
 class ShoeboxApplication() extends TestApplication(new TestGlobal(ShoeboxDevGlobal.modules: _*))
-class SearchApplication() extends TestApplication(new TestGlobal(SearchDevGlobal.modules: _*))
+class SearchApplication() extends TestApplication(new TestRemoteGlobal(SearchDevGlobal.modules: _*), false)
 class EmptyApplication() extends TestApplication(new TestGlobal(TestModule()))
 
 trait DbRepos {
@@ -130,23 +131,40 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[Babysitter].to[FakeBabysitter]
     install(new SlickModule(dbInfo.getOrElse(dbInfoFromApplication)))
-    bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
     bind[MailToKeepPlugin].to[FakeMailToKeepPlugin]
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
     bind[HealthcheckPlugin].to[FakeHealthcheck]
     bind[SlickSessionProvider].to[TestSlickSessionProvider]
+    bind[ActionAuthenticator].to[ShoeboxActionAuthenticator]
     install(new FakeS3StoreModule())
+    install(new FakeCacheModule)
+    bind[play.api.Application].toProvider(new Provider[play.api.Application] {
+      def get(): play.api.Application = current
+    }).in[AppScoped]
   }
 
   private def dbInfoFromApplication(): DbInfo = TestDbInfo.dbInfo
 
   @Singleton
   @Provides
+  def secureSocialAuthenticatorPlugin(db: Database,
+      suiRepo: SocialUserInfoRepo,
+      usRepo: UserSessionRepo,
+      healthPlugin: HealthcheckPlugin,
+      app: play.api.Application): SecureSocialAuthenticatorPlugin = {
+    new ShoeboxSecureSocialAuthenticatorPlugin(db, suiRepo, usRepo, healthPlugin, app)
+  }
+  
+  @Singleton
+  @Provides
   def secureSocialUserPlugin(db: Database,
     socialUserInfoRepo: SocialUserInfoRepo,
     userRepo: UserRepo,
-    healthcheckPlugin: HealthcheckPlugin): SecureSocialUserPlugin =
-      new SecureSocialUserPlugin (db, socialUserInfoRepo, userRepo, null, healthcheckPlugin)
+    imageStore: S3ImageStore,
+    healthcheckPlugin: HealthcheckPlugin): SecureSocialUserPlugin = {
+    new ShoeboxSecureSocialUserPlugin(db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin)
+  }
+  
 
   @Singleton
   @Provides
@@ -288,6 +306,7 @@ class FakeSocialGraphPlugin extends SocialGraphPlugin {
 case class FakeCacheModule() extends ScalaModule {
   override def configure() {
     bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
+    bind[InMemoryCachePlugin].to[HashMapMemoryCache]
   }
 }
 

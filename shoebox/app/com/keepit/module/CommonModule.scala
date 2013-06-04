@@ -10,7 +10,7 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.actor._
 import com.keepit.common.plugin._
 import com.keepit.common.analytics._
-import com.keepit.common.cache.MemcachedCacheModule
+import com.keepit.common.cache.{CacheModule, MemcachedCacheModule}
 import com.keepit.common.healthcheck.{HealthcheckHost, HealthcheckPluginImpl, HealthcheckPlugin, HealthcheckActor}
 import com.keepit.common.logging.Logging
 import com.keepit.common.controller.FortyTwoCookies._
@@ -35,17 +35,20 @@ import com.keepit.shoebox.ShoeboxCacheProvider
 import com.keepit.common.mail.LocalPostOffice
 import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.shoebox.BrowsingHistoryTracker
+import com.google.inject.Provider
 
 class CommonModule extends ScalaModule with Logging {
 
   def configure() {
     install(new FortyTwoModule)
-    install(new MemcachedCacheModule)
+    install(new CacheModule)
     install(new S3Module)
     install(new DiscoveryModule)
 
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
-    bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
+    bind[play.api.Application].toProvider(new Provider[play.api.Application] {
+      def get(): play.api.Application = current
+    }).in[AppScoped]
   }
 
   @Provides

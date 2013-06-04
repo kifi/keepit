@@ -39,6 +39,9 @@ import play.api.Play
 import com.keepit.search.SearchServiceClient
 import com.keepit.common.service.{FortyTwoServices, IpAddress}
 import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.common.db._
+import scala.slick.session.{Database => SlickDatabase}
+import play.api.db.DB
 
 
 class FakeEventPersisterImpl @Inject() (
@@ -253,7 +256,8 @@ class SearchDevModule extends ScalaModule with Logging {
 class DevCommonModule extends ScalaModule with Logging {
   def configure() {
     install(new S3DevModule)
-    bind[FortyTwoCachePlugin].to[InMemoryCache].in[AppScoped]
+    bind[FortyTwoCachePlugin].to[NoOpCache].in[AppScoped]
+    bind[InMemoryCachePlugin].to[EhCacheCache].in[AppScoped]
   }
 
   @Singleton

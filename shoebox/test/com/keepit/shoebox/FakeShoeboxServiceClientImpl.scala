@@ -15,6 +15,8 @@ import com.keepit.serializer.SearchConfigExperimentSerializer
 import com.keepit.common.social.BasicUser
 import com.keepit.controllers.ext.PersonalSearchHit
 import com.keepit.search.ArticleSearchResult
+import com.keepit.common.social.SocialId
+import com.keepit.common.social.SocialNetworkType
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl @Inject() (
@@ -50,14 +52,11 @@ class FakeShoeboxServiceClientImpl @Inject() (
   }
 
   def getNormalizedURI(uriId: Id[NormalizedURI]): Future[NormalizedURI] = {
-    cacheProvider.uriIdCache.get(NormalizedURIKey(uriId)) match {
-      case Some(uri) => promise[NormalizedURI]().success(uri).future
-      case None => {
-        val uri = db.readOnly { implicit s =>
+    cacheProvider.uriIdCache.getOrElseFuture(NormalizedURIKey(uriId)) {
+      val uri = db.readOnly { implicit s =>
           normUriRepo.get(uriId)
         }
-        promise[NormalizedURI]().success(uri).future
-      }
+      Promise.successful(uri).future
     }
   }
 
@@ -113,6 +112,10 @@ class FakeShoeboxServiceClientImpl @Inject() (
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = ???
   def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
   def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]] = Promise.successful(Seq()).future
+  def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] = ???
+  def getSessionByExternalId(sessionId: com.keepit.common.db.ExternalId[com.keepit.model.UserSession]): scala.concurrent.Future[Option[com.keepit.model.UserSession]] = ???
+  def getSocialUserInfosByUserId(userId: com.keepit.common.db.Id[com.keepit.model.User]): scala.concurrent.Future[List[com.keepit.model.SocialUserInfo]] = ???
+  def getUserExperiments(userId: com.keepit.common.db.Id[com.keepit.model.User]): scala.concurrent.Future[Seq[com.keepit.common.db.State[com.keepit.model.ExperimentType]]] = ???
 
   def getCollectionsChanged(seqNum: SequenceNumber): Future[Seq[(Id[Collection], Id[User], SequenceNumber)]] = {
     val colls = db.readOnly { implicit s =>

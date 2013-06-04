@@ -1,7 +1,7 @@
 package com.keepit.shoebox
 
 import com.google.common.io.Files
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{ Provides, Singleton }
 import com.keepit.classify.DomainTagImportSettings
 import com.keepit.common.plugin._
 import com.keepit.common.analytics.reports._
@@ -9,7 +9,7 @@ import com.keepit.common.crypto._
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.common.social._
-import com.keepit.common.store.{ImageDataIntegrityPluginImpl, ImageDataIntegrityPlugin}
+import com.keepit.common.store.{ ImageDataIntegrityPluginImpl, ImageDataIntegrityPlugin }
 import com.keepit.inject.AppScoped
 import com.keepit.realtime._
 import com.keepit.scraper._
@@ -27,10 +27,30 @@ import com.google.inject.multibindings.Multibinder
 import com.keepit.common.analytics._
 import com.keepit.common.net.HttpClient
 import com.keepit.search.SearchServiceClientImpl
+import com.keepit.common.db._
+import scala.slick.session.{ Database => SlickDatabase }
+import play.api.db.DB
+import play.api.Play
+import com.keepit.common.controller.ActionAuthenticator
+import com.keepit.common.controller.ShoeboxActionAuthenticator
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.social.ShoeboxSecureSocialAuthenticatorPlugin
+import com.keepit.social.SecureSocialAuthenticatorPlugin
+import com.keepit.social.SecureSocialUserPlugin
+import com.keepit.common.store.S3ImageStore
+import com.keepit.social.ShoeboxSecureSocialUserPlugin
 
 class ShoeboxModule() extends ScalaModule with Logging {
   def configure() {
+    install(new SlickModule(new DbInfo() {
+      //later on we can customize it by the application name
+      lazy val database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
+      lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
+      println("loading database driver %s".format(driverName))
+    }))
     println("configuring ShoeboxModule")
+    bind[ActionAuthenticator].to[ShoeboxActionAuthenticator]
+    bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
     bind[SocialGraphRefresher].to[SocialGraphRefresherImpl].in[AppScoped]
     bind[ReportBuilderPlugin].to[ReportBuilderPluginImpl].in[AppScoped]
     bind[DataIntegrityPlugin].to[DataIntegrityPluginImpl].in[AppScoped]
@@ -52,7 +72,27 @@ class ShoeboxModule() extends ScalaModule with Logging {
     listenerBinder.addBinding().to(classOf[SliderShownListener])
     listenerBinder.addBinding().to(classOf[SearchUnloadListener])
   }
+  
+  @Singleton
+  @Provides
+  def secureSocialAuthenticatorPlugin(db: Database,
+      suiRepo: SocialUserInfoRepo,
+      usRepo: UserSessionRepo,
+      healthPlugin: HealthcheckPlugin,
+      app: play.api.Application): SecureSocialAuthenticatorPlugin = {
+    new ShoeboxSecureSocialAuthenticatorPlugin(db, suiRepo, usRepo, healthPlugin, app)
+  }
 
+  @Singleton
+  @Provides
+  def secureSocialUserPlugin(db: Database,
+    socialUserInfoRepo: SocialUserInfoRepo,
+    userRepo: UserRepo,
+    imageStore: S3ImageStore,
+    healthcheckPlugin: HealthcheckPlugin): SecureSocialUserPlugin = {
+    new ShoeboxSecureSocialUserPlugin(db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin)
+  }
+  
   @Singleton
   @Provides
   def searchUnloadProvider(

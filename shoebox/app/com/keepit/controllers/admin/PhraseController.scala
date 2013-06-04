@@ -5,7 +5,7 @@ import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
 import com.keepit.model.{PhraseStates, PhraseRepo, Phrase}
-import com.keepit.search.phrasedetector.PhraseImporter
+import com.keepit.shoebox.PhraseImporter
 import com.keepit.search.{SearchServiceClient, Lang}
 import views.html
 

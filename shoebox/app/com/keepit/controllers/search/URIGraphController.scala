@@ -2,9 +2,8 @@ package com.keepit.controllers.search
 
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
-import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{SequenceNumber, Id}
-import com.keepit.model.{NormalizedURI, BookmarkRepo, User}
+import com.keepit.model.{NormalizedURI, User}
 import com.keepit.search.graph.{URIGraphImpl, URIGraph, URIGraphPlugin}
 import com.keepit.search.index.Indexer.CommitData
 import org.apache.lucene.document.Document
@@ -34,9 +33,7 @@ object URIGraphJson {
 
 
 class URIGraphController @Inject()(
-    db: Database,
     uriGraphPlugin: URIGraphPlugin,
-    bookmarkRepo: BookmarkRepo,
     shoeboxClient: ShoeboxServiceClient,
     uriGraph: URIGraph) extends SearchServiceController {
 
@@ -57,9 +54,11 @@ class URIGraphController @Inject()(
 
   private def getSharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo] = {
     val friendIdsFuture = shoeboxClient.getConnectedUsers(userId)
-    val friendIds = Await.result(friendIdsFuture, 5 seconds)
     val searcher = uriGraph.getURIGraphSearcher(None)
-    val friendEdgeSet = searcher.getUserToUserEdgeSet(userId, friendIds)
+    lazy val friendEdgeSet = {
+      val friendIds = Await.result(friendIdsFuture, 5 seconds)
+      searcher.getUserToUserEdgeSet(userId, friendIds)
+    }
     uriIds.map { uriId =>
       val keepersEdgeSet = searcher.getUriToUserEdgeSet(uriId)
       val sharingUserIds = searcher.intersect(friendEdgeSet, keepersEdgeSet).destIdSet - userId

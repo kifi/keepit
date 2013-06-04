@@ -10,6 +10,7 @@ import play.api.Application
 import play.api.Plugin
 import play.utils.Threads
 import com.keepit.common.plugin.SchedulingPlugin
+import com.tzavellas.sse.guice.ScalaModule
 
 class AppScope extends Scope with Logging {
 

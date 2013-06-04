@@ -8,7 +8,7 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api._
-import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache.{ObjectCache, FortyTwoCache, FortyTwoCachePlugin, Key}
 import com.keepit.serializer.ClickHistoryBinarySerializer
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._

@@ -24,11 +24,9 @@ object ArticleIndexInfoJson {
 }
 
 class ArticleIndexerController @Inject()(
-    db: Database,
     indexer: ArticleIndexer,
     phraseIndexer: PhraseIndexer,
-    indexerPlugin: ArticleIndexerPlugin,
-    normUriRepo: NormalizedURIRepo)
+    indexerPlugin: ArticleIndexerPlugin)
   extends SearchServiceController {
 
   import ArticleIndexInfoJson._
