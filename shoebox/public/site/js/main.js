@@ -92,7 +92,7 @@ function initDroppable() {
 						return false;
 					}
 					,success: function(data) {
-									var countSpan = thisCollection.find('a span'); 
+									var countSpan = thisCollection.find('a span.right'); 
 									var added = countSpan.text() * 1  + data.added;
 									countSpan.text(added);
 								}
@@ -234,6 +234,56 @@ function showMessage(msg) {
 	$.fancybox($('<p>').text(msg));
 }
 
+// delete/rename collection
+$('#collections').on('click','a.remove',function() {
+	var colElement = $(this).parents('h3.collection').first();
+	var colId = colElement.data('id');
+	console.log('Removing collection ' + colId);
+	$.ajax( {url: urlCollections + "/" + colId + "/delete"
+		,type: "POST"
+		,dataType: 'json'
+		,data: '{}'
+		,contentType: 'application/json'
+		,error: function() {showMessage('Could not delete collection, please try again later')}
+		,success: function(data) {
+						colElement.remove();
+					}
+		});
+}).on('click','a.rename',function() {
+	var colElement = $(this).parents('h3.collection').first();
+	var nameSpan = colElement.find('span.name').first();
+	var name = nameSpan.text();
+	nameSpan.html('<input type="text" value="' + name + '" data-orig="' + name + '"/>');
+	nameSpan.find('input').focus();
+}).on('keypress','.collection span.name input', function(e) {
+	var code = (e.keyCode ? e.keyCode : e.which);
+	if(code == 13) { //Enter key pressed
+		var colElement = $(this).parents('h3.collection').first();
+		var colId = colElement.data('id');
+		console.log('Renaming collection ' + colId);
+		newName = $(this).val();
+		$.ajax( {url: urlCollections + "/" + colId + "/update"
+			,type: "POST"
+			,dataType: 'json'
+			,data: JSON.stringify({name: newName})
+			,contentType: 'application/json'
+			,error: function() {
+				showMessage('Could not rename collection, please try again later');
+				var nameSpan = colElement.find('span.name');
+				nameSpan.html(nameSpan.find('input').data('orig'));
+			}
+			,success: function(data) {
+							colElement.find('span.name').html(newName);
+						}
+		});
+		
+	}
+}).on('blur','.collection span.name input', function() {
+	$(this).parent().html($(this).data('orig'));
+});
+
+
+
 // auto update my keeps every minute
 setInterval(addNewKeeps, 60000);
 setInterval(updateNumKeeps, 60000);
@@ -245,8 +295,25 @@ $(document)
 		{
 			if (searchContext != null ) 
 				doSearch(searchContext);	
+			else if ($('#collections .collection.active').length > 0)
+				populateMyKeeps($('#collections .collection.active').data('id'));
 			else
 				populateMyKeeps();
+		}
+	})
+	.on('click','.keep input[type="checkbox"]',function() {
+		if ($(this).is(':checked')) {
+			var keep = $(this).parents('.keep').first();
+			$('aside.right .title h2').text(keep.find('a').first().text());
+			var url = keep.find('a').first().attr('href');
+			$('aside.right .title a').text(url).attr('href',url).attr('target','_blank');
+			$('aside.right .who-kept').html(keep.find('div.bottom').html());
+			$('aside.right .who-kept span').prependTo($('aside.right .who-kept')).removeClass('fs9 gray');
+			$('aside.right').addClass('visible');
+			$('.keep input[type="checkbox"]').removeAttr('checked');
+			$(this).prop('checked', true);
+		} else {
+			$('aside.right').removeClass('visible');
 		}
 	})
 	.ready(function() {		
@@ -361,7 +428,11 @@ $(document)
 						,error: function() {showMessage('Could not create collection, please try again later')}
 						,success: function(data) {
 										console.log(data)
-									   $('#collections').append('<h3 class="droppable" data-id="' + data.id + '"><a href="javascript: ;"> ' + newName + ' <span class="right light">0</span></a></h3>');
+									   $('#collections').append('<h3 class="droppable collection" data-id="' + data.id + '"><div class="edit-menu">\
+												<a href="javascript: ;" class="edit"></a>\
+												<ul><li><a class="rename" href="javascript: ;">Rename</a></li>\
+													<li><a class="remove" href="javascript: ;">Remove</a></li></ul>\
+											</div><a href="javascript: ;"><span class="name">' + newName + '</span> <span class="right light">0</span></a></h3>');
 									   initDroppable();
 									   $('#add-collection').slideUp();
 									   inputField.val('');
