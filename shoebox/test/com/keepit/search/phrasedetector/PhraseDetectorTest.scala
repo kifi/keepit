@@ -14,6 +14,7 @@ import com.keepit.inject._
 import java.io.StringReader
 import com.keepit.shoebox.ShoeboxServiceClient
 import org.apache.lucene.util.Version
+import scala.collection.mutable.ListBuffer
 
 class PhraseDetectorTest extends Specification {
 
@@ -59,9 +60,35 @@ class PhraseDetectorTest extends Specification {
       }
     }
     
+    
     "removal inclusion phrases" in {
       var phrases = Set((0, 2), (1, 1), (2, 3), (2, 4), (3,2), (4,3))   // (position, len)
       RemoveOverlapping.removeInclusions(phrases) === Set((0,2), (2, 4), (4, 3))
+      
+      phrases = Set.empty[(Int, Int)]
+      RemoveOverlapping.removeInclusions(phrases) === phrases
+    }
+    
+    "interval decomposer decompses correctly" in {
+      var phrases = Set((0, 4), (0, 1), (0,2), (1, 3), (2, 1), (2,2), (2, 3))
+      var intervals = Map( 0 -> Set(1, 2, 4), 1 -> Set(3), 2 -> Set(1, 2, 3))
+      RemoveOverlapping.decompose((0,4), intervals) === Some(Set( ListBuffer((0, 4)), ListBuffer((0, 2), (2, 2)), ListBuffer((0, 1), (1, 3)) ))
+      
+      RemoveOverlapping.decompose((0,6), intervals) === None
+    }
+    
+    "correctly and weakly remove overlapping" in {
+      var phrases = Set((0, 4), (0, 1), (0,2), (1, 3), (2, 1), (2,2), (2, 4))
+      RemoveOverlapping.weakRemoveInclusions(phrases) === Set((0, 2), (2, 2), (2, 4))
+      
+      phrases = Set((0, 10), (0, 6), (6, 4), (0, 2), (2, 4), (6, 1), (7, 3), (1, 8), (2, 2), (4, 2), (6, 3))
+      RemoveOverlapping.weakRemoveInclusions(phrases) === Set((0, 2), (2, 2), (4, 2), (6, 1), (7, 3))
+      
+      phrases = Set((0,3), (0, 1), (1, 2))
+      RemoveOverlapping.weakRemoveInclusions(phrases) === Set((0, 1), (1, 2))
+      
+      phrases = Set((0,3))
+      RemoveOverlapping.weakRemoveInclusions(phrases) === Set((0, 3))
       
       phrases = Set.empty[(Int, Int)]
       RemoveOverlapping.removeInclusions(phrases) === phrases
