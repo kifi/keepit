@@ -186,7 +186,7 @@ trait ObjectCache[K <: Key[T], T] {
         case Some(cache) => cache.getOrElse(key)(orElse)
         case None => orElse
       }
-      setInnerCache(key, value)
+      value.map(setInnerCache(key, _))
       value
     }
   }
