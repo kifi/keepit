@@ -53,10 +53,11 @@ class CollectionTest extends Specification with TestDBRunner {
       withDB() { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
-          collectionRepo.getByUser(user1.id.get).map(_.name).toSet == Set("Cooking", "Apparel", "Scala")
+          collectionRepo.getByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = coll2.id.get))
+          collectionRepo.getByUser(user1.id.get).map(_.name) === Seq("Apparel", "Cooking", "Scala")
           bookmarkRepo.getByUser(user1.id.get, None, None, coll1.id, 5) must haveLength(2)
           bookmarkRepo.getByUser(user1.id.get, None, None, None, 5) must haveLength(2)
           bookmarkRepo.getByUser(user1.id.get, None, None, coll2.id, 5) must haveLength(1)
@@ -68,10 +69,12 @@ class CollectionTest extends Specification with TestDBRunner {
       withDB() { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
-          collectionRepo.getByUser(user1.id.get).map(_.name).toSet == Set("Cooking", "Apparel", "Scala")
+          collectionRepo.getByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll1.id.get))
+          keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = coll3.id.get))
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark2.id.get, collectionId = coll1.id.get))
           keepToCollectionRepo.getBookmarksInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
+          collectionRepo.getByUser(user1.id.get).map(_.name) === Seq("Cooking", "Scala", "Apparel")
           keepToCollectionRepo.count(coll1.id.get) === 2
         }
         sessionProvider.doWithoutCreatingSessions {
@@ -145,7 +148,7 @@ class CollectionTest extends Specification with TestDBRunner {
         }
       }
     }
-    "ignore case in getting elements and for uniqueness" in {
+    "ignore case in getting elements" in {
       running(new EmptyApplication) {
         // TODO: figure out why this works but not withDB()
         implicit val injector = new RichInjector(current.global.asInstanceOf[FortyTwoGlobal].injector)
@@ -154,9 +157,6 @@ class CollectionTest extends Specification with TestDBRunner {
           collectionRepo.getByUserAndName(user1.id.get, "scala") ===
               collectionRepo.getByUserAndName(user1.id.get, "Scala")
         }
-        db.readWrite { implicit s =>
-          collectionRepo.save(Collection(userId = user2.id.get, name = "scala"))
-        } should throwA[SQLException]
       }
     }
   }
