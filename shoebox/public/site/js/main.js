@@ -500,6 +500,17 @@ $(document)
 						});
 			 }
 		});
+		
+		$('aside.right .actions a.add').click(function() {
+			$(this).toggleClass('active');
+			$('aside.right .collections').toggleClass('active');
+		})
+		
+		$('aside.left').on('mouseenter','h3.collection div.edit-menu',function() {
+			$(this).parents('h3').first().addClass('hover');
+		}).on('mouseleave','h3.collection div.edit-menu',function() {
+			$(this).parents('h3').first().removeClass('hover');
+		});
 	});
 
 

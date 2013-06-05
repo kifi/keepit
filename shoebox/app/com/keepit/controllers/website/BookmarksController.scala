@@ -107,30 +107,34 @@ class BookmarksController @Inject() (
     request.body.asJson.flatMap(Json.fromJson[BasicCollection](_).asOpt) map { bc =>
       bc.copy(id = ExternalId.asOpt(id))
     } map { bc =>
-      db.readWrite { implicit s =>
-        val name = bc.name
-        val existingCollection = collectionRepo.getByUserAndName(request.userId, name, None)
-        val existingExternalId = existingCollection collect { case c if c.isActive => c.externalId }
-        if (existingExternalId.isEmpty || existingExternalId == bc.id) {
-          bc.id map { id =>
-            collectionRepo.getByUserAndExternalId(request.userId, id) map { coll =>
-              val newColl = collectionRepo.save(coll.copy(externalId = id, name = name))
-              Ok(Json.toJson(BasicCollection.fromCollection(newColl)))
+      val name = bc.name
+      if (name.length <= Collection.MaxNameLength) {
+        db.readWrite { implicit s =>
+          val existingCollection = collectionRepo.getByUserAndName(request.userId, name, None)
+          val existingExternalId = existingCollection collect { case c if c.isActive => c.externalId }
+          if (existingExternalId.isEmpty || existingExternalId == bc.id) {
+            bc.id map { id =>
+              collectionRepo.getByUserAndExternalId(request.userId, id) map { coll =>
+                val newColl = collectionRepo.save(coll.copy(externalId = id, name = name))
+                Ok(Json.toJson(BasicCollection.fromCollection(newColl)))
+              } getOrElse {
+                NotFound(Json.obj("error" -> s"Collection not found for id $id"))
+              }
             } getOrElse {
-              NotFound(Json.obj("error" -> s"Collection not found for id $id"))
+              val newColl = collectionRepo.save(existingCollection
+                  map { _.copy(name = name, state = CollectionStates.ACTIVE) }
+                  getOrElse Collection(userId = request.userId, name = name))
+              Ok(Json.toJson(BasicCollection.fromCollection(newColl)))
             }
-          } getOrElse {
-            val newColl = collectionRepo.save(existingCollection
-                map { _.copy(name = name, state = CollectionStates.ACTIVE) }
-                getOrElse Collection(userId = request.userId, name = name))
-            Ok(Json.toJson(BasicCollection.fromCollection(newColl)))
+          } else {
+            BadRequest(Json.obj("error" -> s"Collection '$name' already exists with id ${existingExternalId.get}"))
           }
-        } else {
-          BadRequest(Json.obj("error" -> s"Collection with name $name already exists (id ${existingExternalId.get})!"))
         }
+      } else {
+        BadRequest(Json.obj("error" -> s"Name '$name' is too long (maximum ${Collection.MaxNameLength} chars)"))
       }
     } getOrElse {
-      BadRequest(Json.obj("error" -> "could not parse collection from body"))
+      BadRequest(Json.obj("error" -> "Could not parse collection from body"))
     }
   }
 
