@@ -67,7 +67,7 @@ class UserConnectionCreatorTest extends Specification {
     "disable non existing connections" in {
       running(new EmptyApplication()) {
 
-        val json1 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay_min.json")).mkString)
+        val json1 = Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/facebook_graph_eishay_min.json")).mkString)
 
         inject[SocialUserImportFriends].importFriends(Seq(json1))
 
@@ -84,7 +84,7 @@ class UserConnectionCreatorTest extends Specification {
 
         connections.size === 12
 
-        val json2 = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay_super_min.json")).mkString)
+        val json2 = Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/facebook_graph_eishay_super_min.json")).mkString)
 
         val connectionsAfter = inject[UserConnectionCreator].createConnections(socialUserInfo, Seq(json2))
         connectionsAfter.size === 5
