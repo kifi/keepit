@@ -34,6 +34,7 @@ import com.keepit.common.social.SocialId
 import com.keepit.serializer.SocialUserInfoSerializer.socialUserInfoSerializer
 import scala.collection.mutable.ArrayBuffer
 import com.keepit.search.ArticleHit
+import com.keepit.common.logging.Logging
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -89,7 +90,7 @@ class ShoeboxServiceClientImpl @Inject() (
   override val port: Int,
   override val httpClient: HttpClient,
   cacheProvider: ShoeboxCacheProvider)
-    extends ShoeboxServiceClient {
+    extends ShoeboxServiceClient with Logging{
 
   // request consolidation
   private[this] val consolidateConnectedUsersReq = new RequestConsolidator[UserConnectionKey, Set[Id[User]]](ttl = 3 seconds)
@@ -156,11 +157,12 @@ class ShoeboxServiceClientImpl @Inject() (
     }
 
     def getPersonalSearchHitFromCache(uriId: Id[NormalizedURI], userId: Id[User], isMyBookmark: Boolean): Option[PersonalSearchHit] = {
-      val uri = cacheProvider.uriIdCache.get(NormalizedURIKey(uriId))
-      if (uri == None) return None
       (if (isMyBookmark) cacheProvider.bookmarkUriUserCache.get(BookmarkUriUserKey(uriId, userId)) else None) match {
-        case Some(bmk) =>
-          Some(PersonalSearchHit(uri.get.id.get, uri.get.externalId, bmk.title, bmk.url, bmk.isPrivate))
+        case Some(bmk) => {
+          val uri = cacheProvider.uriIdCache.get(NormalizedURIKey(uriId))
+          if (uri == None) None
+          else Some(PersonalSearchHit(uri.get.id.get, uri.get.externalId, bmk.title, bmk.url, bmk.isPrivate))
+        }
         case None => None
       }
     }
@@ -183,12 +185,13 @@ class ShoeboxServiceClientImpl @Inject() (
     val (allPersonalHits, indexBuf, hitBuf) = loadCachedBookmarks(userId, resultSet)
 
     if (neededUsers.nonEmpty || resultSet.hits.nonEmpty) {
-      val neededUsersReq = neededUsers.map(_.id).mkString(",")
-      val formattedHits = hitBuf.map(hit => (if (hit.isMyBookmark) 1 else 0) + ":" + hit.uriId).mkString(",")
-
       if (neededUsers.size == 0 && hitBuf.size == 0) {
+        log.info("getPersonalSearchInfo: everything is cached!")
         Promise.successful((preCachedUsers, allPersonalHits.toSeq)).future
       } else {
+
+        val neededUsersReq = neededUsers.map(_.id).mkString(",")
+        val formattedHits = hitBuf.map(hit => (if (hit.isMyBookmark) 1 else 0) + ":" + hit.uriId).mkString(",")
 
         call(routes.ShoeboxController.getPersonalSearchInfo(userId, neededUsersReq, formattedHits)).map { res =>
           val searchHits = (Json.fromJson[Seq[PersonalSearchHit]](res.json \ "personalSearchHits")).getOrElse(Seq())
