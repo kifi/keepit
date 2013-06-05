@@ -23,8 +23,6 @@ trait EdgeSet[S,D] {
   def getDestDocIdSetIterator(searcher: Searcher): DocIdSetIterator
   def size: Int
 
-  protected def toId(longId: Long): Id[D] = new Id[D](longId)
-
   implicit def toIterator(it: DocIdSetIterator): Iterator[Int] = {
     if (it != null) {
       new Iterator[Int] {
@@ -106,7 +104,7 @@ trait MaterializedEdgeSet[S,D] extends EdgeSet[S, D] {
       case (curSearcher, curDocIds) if (curSearcher eq searcher) =>
         curDocIds
       case _ =>
-        val mapper = searcher.indexReader.getIdMapper
+        val mapper = searcher.indexReader.asAtomicReader.getIdMapper
         val docids = destIdSet.map{ id => mapper.getDocId(id.id) }.filter{ _ >= 0 }.toArray
         Sorting.quickSort(docids)
         cache = (searcher, docids)
@@ -120,12 +118,12 @@ trait MaterializedEdgeSet[S,D] extends EdgeSet[S, D] {
 trait LuceneBackedEdgeSet[S, D] extends EdgeSet[S, D] {
   val searcher: Searcher
 
-  private[this] lazy val lazyDestIdLongSet = {
-    val mapper = searcher.indexReader.getIdMapper
+  private[this] lazy val lazyDestIdLongSet: Set[Long] = {
+    val mapper = searcher.indexReader.asAtomicReader.getIdMapper
     getDestDocIdSetIterator(searcher).map(docid => mapper.getId(docid)).toSet
   }
 
-  private[this] lazy val lazyDestIdSet = lazyDestIdLongSet.map(toId(_))
+  private[this] lazy val lazyDestIdSet: Set[Id[D]] = new IdSetWrapper[D](lazyDestIdLongSet)
 
   override def destIdLongSet = lazyDestIdLongSet
   override def destIdSet = lazyDestIdSet
@@ -213,8 +211,8 @@ trait DocIdSetEdgeSet[S, D] extends EdgeSet[S, D] {
   val docids: Array[Int]
   val searcher: Searcher
 
-  private[this] lazy val lazyDestIdLongSet = {
-    val mapper = searcher.indexReader.getIdMapper
+  private[this] lazy val lazyDestIdLongSet: Set[Long] = {
+    val mapper = searcher.indexReader.asAtomicReader.getIdMapper
     val res = new Array[Long](docids.length)
     var i = 0
     while (i < docids.length) {
@@ -224,7 +222,7 @@ trait DocIdSetEdgeSet[S, D] extends EdgeSet[S, D] {
     LongArraySet.from(res)
   }
 
-  private[this] lazy val lazyDestIdSet = lazyDestIdLongSet.map(toId(_))
+  private[this] lazy val lazyDestIdSet: Set[Id[D]] = new IdSetWrapper(lazyDestIdLongSet)
 
   override def destIdLongSet = lazyDestIdLongSet
   override def destIdSet = lazyDestIdSet
@@ -235,4 +233,17 @@ trait DocIdSetEdgeSet[S, D] extends EdgeSet[S, D] {
   }
 
   override def size = docids.length
+}
+
+class IdSetWrapper[T](inner: Set[Long]) extends Set[Id[T]] {
+
+  override def contains(elem: Id[T]): Boolean = inner.contains(elem.id)
+
+  override def iterator: Iterator[Id[T]] = inner.iterator.map{ Id[T](_) }
+
+  override def +(elem: Id[T]): Set[Id[T]] = new IdSetWrapper[T](inner + elem.id)
+
+  override def -(elem: Id[T]): Set[Id[T]] = new IdSetWrapper[T](inner - elem.id)
+
+  override def size: Int = inner.size
 }

@@ -57,11 +57,11 @@ class URIGraphController @Inject()(
     val searcher = uriGraph.getURIGraphSearcher(None)
     lazy val friendEdgeSet = {
       val friendIds = Await.result(friendIdsFuture, 5 seconds)
-      searcher.getUserToUserEdgeSet(userId, friendIds)
+      searcher.getUserToUserEdgeSet(userId, friendIds - userId)
     }
     uriIds.map { uriId =>
       val keepersEdgeSet = searcher.getUriToUserEdgeSet(uriId)
-      val sharingUserIds = searcher.intersect(friendEdgeSet, keepersEdgeSet).destIdSet - userId
+      val sharingUserIds = searcher.intersect(friendEdgeSet, keepersEdgeSet).destIdSet
       SharingUserInfo(sharingUserIds, keepersEdgeSet.size)
     }
   }
