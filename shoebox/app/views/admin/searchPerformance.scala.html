@@ -1,13 +1,35 @@
 
 @admin("Search Performance", scripts = List("graphite")) {
 
+<p>
+<figure>
+<img border="0" src="https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/?width=600&height=400&_salt=1370129514.597&target=timers.search.extSearch.total.mean&lineMode=connected" 
+alt="search.searching.time.mean" width="600" height="400">
+    <figcaption>Ext Search Total</figcaption>
+</figure>
+</p>
+
+<p>
+<figure>
+<img border="0" src="https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/?width=600&height=400&_salt=1370129514.597&target=timers.search.mainSearch.total.mean&lineMode=connected" 
+alt="search.searching.time.mean" width="600" height="400">
+    <figcaption>Main Search Total</figcaption>
+</figure>
+</p>
+
+
+<p>
+<figure>
 <img id="chart">
+<figcaption>Select a metric to view</figcaption>
+</fiugre>
 <select id="metric"></select>
 
 <form id="scale">
 <label><input type="radio" name="yscale" value="linear" checked="checked"> linear scale</label>
 <label><input type="radio" name="yscale" value="log"> log2</label>
 </form>
+</p>
 
 <script>
 
