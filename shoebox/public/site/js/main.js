@@ -47,10 +47,12 @@ var searchTemplate = Tempo.prepare("search-results").when(TempoEvent.Types.RENDE
 var collectionsTemplate = Tempo.prepare("collections").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
 	$('#collections').show();
 	initDroppable();
+	adjustHeight();
 });
 
 var searchContext = null;
 var connections = {};
+var collections = {};
 var connectionNames = [];
 var myAvatar = '';
 var searchTimeout;
@@ -63,6 +65,25 @@ $.ajaxSetup({
     },
     crossDomain: true
 });
+
+(function($){
+
+    var _old = $.unique;
+
+    $.unique = function(arr){
+
+        // do the default behavior only if we got an array of elements
+        if (!!arr[0].nodeType){
+            return _old.apply(this,arguments);
+        } else {
+            // reduce the array to contain no dupes via grep/inArray
+            return $.grep(arr,function(v,k){
+                return $.inArray(v,arr) === k;
+            });
+        }
+    };
+})(jQuery);
+
 
 function initDraggable() {
 	$( ".draggable" ).draggable({ 
@@ -92,7 +113,7 @@ function initDroppable() {
 						return false;
 					}
 					,success: function(data) {
-									var countSpan = thisCollection.find('a span'); 
+									var countSpan = thisCollection.find('a span.right'); 
 									var added = countSpan.text() * 1  + data.added;
 									countSpan.text(added);
 								}
@@ -218,10 +239,10 @@ function populateCollections() {
 	$.getJSON(urlCollectionsAll,  
 			function(data) {
 				collectionsTemplate.render(data.collections);	
-/*				for (i in data.collections) {
-					$('aside.right select[name="collection"]').append('<option value="'+ data.collections[i].id +'">'+ data.collections[i].name +'</option>');
+				for (i in data.collections) {
+					collections[data.collections[i].id] = data.collections[i];
 				}
-*/			});
+			});
 }
 
 function updateNumKeeps() {
@@ -234,10 +255,67 @@ function showMessage(msg) {
 	$.fancybox($('<p>').text(msg));
 }
 
+function adjustHeight() {
+	$('aside.left #collections #collections-wrapper').height($(window).height() - $('aside.left #collections #collections-wrapper').offset().top);
+}
+
+// delete/rename collection
+$('#collections').on('click','a.remove',function() {
+	var colElement = $(this).parents('h3.collection').first();
+	var colId = colElement.data('id');
+	console.log('Removing collection ' + colId);
+	$.ajax( {url: urlCollections + "/" + colId + "/delete"
+		,type: "POST"
+		,dataType: 'json'
+		,data: '{}'
+		,contentType: 'application/json'
+		,error: function() {showMessage('Could not delete collection, please try again later')}
+		,success: function(data) {
+						colElement.remove();
+					}
+		});
+}).on('click','a.rename',function() {
+	var colElement = $(this).parents('h3.collection').first().addClass('editing');
+	var nameSpan = colElement.find('span.name').first();
+	var name = nameSpan.text();
+	nameSpan.html('<input type="text" value="' + name + '" data-orig="' + name + '"/>');
+	nameSpan.find('input').focus();
+}).on('keypress','.collection span.name input', function(e) {
+	var code = (e.keyCode ? e.keyCode : e.which);
+	if(code == 13) { //Enter key pressed
+		var colElement = $(this).parents('h3.collection').first();
+		var colId = colElement.data('id');
+		console.log('Renaming collection ' + colId);
+		newName = $(this).val();
+		$.ajax( {url: urlCollections + "/" + colId + "/update"
+			,type: "POST"
+			,dataType: 'json'
+			,data: JSON.stringify({name: newName})
+			,contentType: 'application/json'
+			,error: function() {
+				showMessage('Could not rename collection, please try again later');
+				var nameSpan = colElement.find('span.name');
+				nameSpan.html(nameSpan.find('input').data('orig'));
+			}
+			,success: function(data) {
+							colElement.removeClass('editing');
+							colElement.find('span.name').html(newName).attr('title',newName);
+							adjustHeight();
+						}
+		});
+		
+	}
+}).on('blur','.collection span.name input', function() {
+	$('h3.collection.editing').removeClass('editing');
+	$(this).parent().html($(this).data('orig'));
+});
+
 // auto update my keeps every minute
 setInterval(addNewKeeps, 60000);
 setInterval(updateNumKeeps, 60000);
-	
+
+$(window).resize(adjustHeight);
+
 $(document)
 	.on('keypress', function(e) {if (!$(e.target).is('textarea, input')) $('input.search').focus() }) // auto focus on search field when starting to type anywhere on the document
 	.on('scroll',function() { // infinite scroll
@@ -245,13 +323,62 @@ $(document)
 		{
 			if (searchContext != null ) 
 				doSearch(searchContext);	
+			else if ($('#collections .collection.active').length > 0)
+				populateMyKeeps($('#collections .collection.active').data('id'));
 			else
 				populateMyKeeps();
 		}
 	})
+	.on('click','.keep input[type="checkbox"]',function() {
+		var keep = $(this).parents('.keep').first();
+		if ($(this).is(':checked')) { 
+			keep.addClass('selected');
+		} else {
+			keep.removeClass('selected');			
+		}
+		var selected = $('.keep.selected');
+		if ($('.keep input[type="checkbox"]:checked').length == 0) {
+			// if no keeps are checked, hide the side bar
+			$('aside.right').removeClass('visible');
+		} else if (selected.length > 1) {
+			// TODO: handle multiple selection
+			$('aside.right .title h2').text(selected.length + " keeps selected");
+			$('aside.right .title a').text('');
+			$('aside.right .who-kept').html('');
+			var allCol = [];
+			selected.each(function() {
+				$('aside.right .who-kept').append('<div class="long-text">' + $(this).find('a').first().text() + '</div>');
+				if ($(this).data('collections').length > 0) {
+					var colArray = $(this).data('collections').split(',');
+					allCol = allCol.concat(colArray);
+				}
+			});
+			allCol = $.unique(allCol);
+			var inCol = $('aside.right .in-collections').html('');
+			for (i in allCol) {
+				inCol.append(collections[allCol[i]].name + "<br/>");
+			}
+			$('aside.right').addClass('visible');
+		} else { // only one keep is selcted
+			keep = $('.keep.selected').first();
+			$('aside.right .title h2').text(keep.find('a').first().text());
+			var url = keep.find('a').first().attr('href');
+			$('aside.right .title a').text(url).attr('href',url).attr('target','_blank');
+			$('aside.right .who-kept').html(keep.find('div.bottom').html());
+			$('aside.right .who-kept span').prependTo($('aside.right .who-kept')).removeClass('fs9 gray');
+			var inCol = $('aside.right .in-collections').html('');
+			if (keep.data('collections').length > 0) {
+				var colArray = keep.data('collections').split(',');
+				for (i in colArray) {
+					inCol.append(collections[colArray[i]].name + "<br/>");
+				}
+			}
+			$('aside.right').addClass('visible');
+		} 
+	})
 	.ready(function() {		
 		$(".fancybox").fancybox();
-		
+				
 		populateCollections();
 		
 		// populate number of my keeps
@@ -361,13 +488,28 @@ $(document)
 						,error: function() {showMessage('Could not create collection, please try again later')}
 						,success: function(data) {
 										console.log(data)
-									   $('#collections').append('<h3 class="droppable" data-id="' + data.id + '"><a href="javascript: ;"> ' + newName + ' <span class="right light">0</span></a></h3>');
+									   $('#collections-wrapper').append('<h3 class="droppable collection" data-id="' + data.id + '"><div class="edit-menu">\
+												<a href="javascript: ;" class="edit"></a>\
+												<ul><li><a class="rename" href="javascript: ;">Rename</a></li>\
+													<li><a class="remove" href="javascript: ;">Remove</a></li></ul>\
+											</div><a href="javascript: ;"><span class="name">' + newName + '</span> <span class="right light">0</span></a></h3>');
 									   initDroppable();
 									   $('#add-collection').slideUp();
 									   inputField.val('');
 									}
 						});
 			 }
+		});
+		
+		$('aside.right .actions a.add').click(function() {
+			$(this).toggleClass('active');
+			$('aside.right .collections').toggleClass('active');
+		})
+		
+		$('aside.left').on('mouseenter','h3.collection div.edit-menu',function() {
+			$(this).parents('h3').first().addClass('hover');
+		}).on('mouseleave','h3.collection div.edit-menu',function() {
+			$(this).parents('h3').first().removeClass('hover');
 		});
 	});
 

@@ -98,13 +98,13 @@ class EhCacheCache @Inject() (
 
   def get(key: String): Option[Any] =
     Play.current.plugin[EhCachePlugin].map { ehcache =>
-      ehcache.cache.get(key)
-    }
+      ehcache.api.get(key)
+    } flatten
 
   def remove(key: String) {
     Play.current.plugin[EhCachePlugin].map {
       ehcache =>
-        ehcache.cache.remove(key)
+        ehcache.api.remove(key)
     }
   }
 

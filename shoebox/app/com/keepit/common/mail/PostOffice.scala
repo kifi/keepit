@@ -49,7 +49,7 @@ class RemotePostOfficeActor @Inject() (shoeboxClient: ShoeboxServiceClient)
 
   def receive = {
     case SendEmail(mail: ElectronicMail) =>
-      shoeboxClient.sendMail(mail) onComplete {
+      shoeboxClient.sendMail(mail.copy(htmlBody = mail.htmlBody.value.take(8*1024*1024), textBody = mail.textBody.map(_.value.take(8*1024*1024)))) onComplete {
         case Success(result)  => if(!result) self ! QueueEmail(mail)
         case Failure(failure) => self ! QueueEmail(mail)
       }
