@@ -115,6 +115,7 @@ GET     /site/*path                 @com.keepit.controllers.website.HomeControll
 GET     /admin                      @com.keepit.controllers.admin.AdminDashboardController.index
 GET     /admin/graphs/users.json    @com.keepit.controllers.admin.AdminDashboardController.usersByDate
 GET     /admin/graphs/bookmarks.json    @com.keepit.controllers.admin.AdminDashboardController.bookmarksByDate
+GET     /admin/engineering/overview @com.keepit.controllers.admin.AdminEngineeringDashboardController.overview
 
 GET     /admin/events               @com.keepit.controllers.admin.AdminEventController.reportList
 POST    /admin/events/buildReport   @com.keepit.controllers.admin.AdminEventController.buildReport
@@ -159,6 +160,7 @@ GET     /admin/search/spell/test-correct  @com.keepit.controllers.admin.AdminSpe
 GET     /admin/search/scrape        @com.keepit.controllers.admin.ScraperController.searchScraper
 GET     /admin/search/scrape/regex  @com.keepit.controllers.admin.ScraperController.rescrapeByRegex(urlRegex: String ?= "", withinHours: Int ?= 8)
 GET     /admin/search/performance/viewPerformance @com.keepit.controllers.admin.AdminSearchPerformanceController.viewSearchPerformance
+
 
 GET     /admin/uriGraph/reindex     @com.keepit.controllers.admin.AdminURIGraphController.reindex
 GET     /admin/uriGraph/load        @com.keepit.controllers.admin.AdminURIGraphController.load
