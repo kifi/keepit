@@ -35,8 +35,7 @@ POST    /register                   securesocial.controllers.Registration.handle
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
 
 GET     /site/keeps/all             @com.keepit.controllers.website.BookmarksController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int ?= Integer.MAX_VALUE)
-GET     /site/collections/all       @com.keepit.controllers.website.BookmarksController.allCollections()
-GET     /site/collections/ordering  @com.keepit.controllers.website.BookmarksController.getCollectionOrdering()
+GET     /site/collections/all       @com.keepit.controllers.website.BookmarksController.allCollections(sort: String ?= "last_kept")
 POST    /site/collections/ordering  @com.keepit.controllers.website.BookmarksController.setCollectionOrdering()
 POST    /site/collections/create @com.keepit.controllers.website.BookmarksController.saveCollection(id = "")
 POST    /site/collections/:id/update @com.keepit.controllers.website.BookmarksController.saveCollection(id: String)
