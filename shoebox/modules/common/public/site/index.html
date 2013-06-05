@@ -58,17 +58,21 @@
 				<div id="add-collection">
 					<input placeholder="Type name here"/>
 				</div>
-				<h3 data-template class="droppable collection" data-id="{{id}}">
-					<div class="edit-menu">
-						<a href="javascript: ;" class="edit"></a>
-						<ul>
-							<li><a class="rename" href="javascript: ;">Rename</a></li>
-							<li><a class="remove" href="javascript: ;">Remove</a></li>
-						</ul>
-					</div>
-					<a href="javascript: ;"><span class="name">{{name}}</span> <span
-						class="right light">{{keeps}}</span></a>
-				</h3>
+				<div id="collections-wrapper">
+					<h3 data-template class="droppable collection" data-id="{{id}}">
+						<div class="edit-menu">
+							<a href="javascript: ;" class="edit">&nbsp;</a>
+							<ul>
+								<li><a class="rename" href="javascript: ;">Rename</a></li>
+								<li><a class="remove" href="javascript: ;">Remove</a></li>
+							</ul>
+						</div>
+						<a class="" href="javascript: ;">
+							<span class="right light">{{keeps}}</span>
+							<span class="name long-text" title ="{{name}}">{{name}}</span> 
+						</a>
+					</h3>
+				</div>
 			</div>
 		</aside>
 
@@ -81,7 +85,10 @@
 			</div>
 			<div class="scrollable">
 				<ol id="search-results" class="template-wrapper">
-					<li data-template class="keep {% if isMyBookmark %}mine{% endif %}">
+					<li data-template class="keep draggable {% if isMyBookmark %}mine{% endif %}" data-collections="{{collections}}">
+						<div class="handle">
+							<input type="checkbox"/>
+						</div>
 						<a class="long-text" href="{{bookmark.url}}" target="_blank"
 						title="{{bookmark.title}}">{{bookmark.title}}</a> <span
 						class="fs9 gray long-text" title="{{bookmark.url}}">{{bookmark.url}}</span>
@@ -99,9 +106,11 @@
 					<li data-template-fallback>Sorry, JavaScript required!</li>
 				</ol>
 				<ol id="my-keeps" class="template-wrapper">
-					<li data-template data-id="{{id}}" class="keep mine draggable" data-created={{createdAt}}>
+					<li data-template data-id="{{id}}" class="keep mine draggable" data-created={{createdAt}} data-collections="{{collections}}">
 						<div class="right fs9 gray easydate">{{createdAt}}</div>
-						<input type="checkbox"/>
+						<div class="handle">
+							<input type="checkbox"/>
+						</div>
 						<a class="long-text" href="{{url}}" target="_blank"
 						title="{{title}}">{{title}}</a> <span class="fs9 gray long-text"
 						title="{{url}}">{{url}}</span>
@@ -128,18 +137,28 @@
  		<aside class="right sticky">
  			<div class="title">
  				<h2></h2>
-	 			<a class="link"></a>
+	 			<a class="link long-text"></a>
  			</div>
  			<div class="who-kept">
  				[TODO]
  			</div>
-			<label>In collections:</label>
+			<div>In collections:</div>
  			<div class="in-collections">
  				[TODO]
  			</div>
  			<div class="actions">
- 				<a href="javascript:;">Add to a collection</a>
- 				<a href="javascript:;">Share on your social networks</a>
+ 				<a class="add" href="javascript:;">Add to a collection <span class="close">x</span></a>
+ 				<div class="collections">
+ 					<input type="text" placeholder="Find a collection..."/>
+ 					<ul>
+ 						<li><a class="create" href="javascript:;">Create a new collection</a></li>
+ 						<li><a href="javascript:;">TODO</a></li>
+ 						<li><a href="javascript:;">TODO</a></li>
+ 						<li><a href="javascript:;">TODO</a></li>
+ 						<li><a href="javascript:;">TODO</a></li>
+ 					</ul>
+ 				</div>
+ 				<a class="share" href="javascript:;">Share on your social networks</a>
  				<div class="keepit">
 	 				<a class="kept" href="javascript:;"><span class="private"></span> kept</a>
  				</div>

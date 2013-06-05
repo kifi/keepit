@@ -4,15 +4,16 @@ import com.google.inject.Inject
 import com.keepit.common.db.slick._
 import com.keepit.common.logging.Logging
 import com.keepit.model._
-
 import play.api.Play
 import play.api.Play.current
 import play.api.libs.json.{JsObject, JsArray, JsValue}
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 
 class SocialUserImportFriends @Inject() (
     db: Database,
     repo: SocialUserInfoRepo,
-    store: SocialUserRawInfoStore) extends Logging {
+    store: SocialUserRawInfoStore,
+    healthcheckPlugin: HealthcheckPlugin) extends Logging {
 
   def importFriends(parentJsons: Seq[JsValue]): Seq[SocialUserRawInfo] = parentJsons map importFriendsFromJson flatten
 
@@ -36,23 +37,38 @@ class SocialUserImportFriends @Inject() (
   }
 
   private[social] def infoNotInDb(friend: JsValue): Boolean = {
-    val socialId = try {
-      SocialId((friend \ "id").as[String])
+    val socialIdOpt = try {
+      Some(SocialId((friend \ "id").as[String]))
     } catch {
       case e: Throwable =>
         log.error("Can't parse username from friend json %s".format(friend))
-        throw e
+        healthcheckPlugin.addError(HealthcheckError(
+            error = Some(e),
+            callType = Healthcheck.INTERNAL,
+            errorMessage = Some("Can't parse username from friend json %s".format(friend))
+        ))
+        None
     }
-    db.readOnly {implicit s =>
-      repo.getOpt(socialId, SocialNetworks.FACEBOOK).isEmpty //todo: check if we want to merge jsons here
-    }
+    socialIdOpt map { socialId =>
+      db.readOnly {implicit s =>
+        repo.getOpt(socialId, SocialNetworks.FACEBOOK).isEmpty //todo: check if we want to merge jsons here
+      }
+    } getOrElse (false)
+
   }
 
-  private def extractFriends(parentJson: JsValue): Seq[JsValue] =
-    (parentJson \\ "data").head match {
+  private def extractFriends(parentJson: JsValue): Seq[JsValue] = {
+    (parentJson \ "friends" \ "data") match {
       case JsArray(values) => values
-      case JsObject(Seq()) => Seq() // Workaround for bug in Facebook graph API when a user has no friends.
+      case JsObject(Seq()) => Seq()
+      case _ => 
+        // For certain API calls (such as paginated friends), Facebook returns just the `friends` node
+        (parentJson \ "data") match {
+          case JsArray(values) => values
+          case _ => Seq() // Workaround for bug in Facebook graph API when a user has no friends.
+        }
     }
+  }
 
   private def createSocialUserInfo(friend: JsValue): (SocialUserInfo, JsValue) =
     (SocialUserInfo(
