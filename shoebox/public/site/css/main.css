@@ -89,11 +89,12 @@ aside.left .large-avatar {position: relative;  width: 100%; text-align: center; 
 aside.left .large-avatar .name { line-height: 1.5em}
 aside.right {margin-left: 110%; transition: margin-left .5s; -webkit-transition: margin-left .5s; top: 70px; width: 330px; padding: 10px 0; height: 100%; position: fixed; background: #eff2f7; color: #556179}
 aside.right > div {padding: 10px 20px;}
+aside.right > div.subtitle {padding-bottom: 0px;}
+aside.right > div.in-collections .row {padding: 5px 0px;}
 aside.right > div.actions {padding: 0}
 aside.right.visible {margin-left: 900px}
-aside.right input {margin-left: 20px; width: 260px; margin-top: 10px; margin-bottom: 5px}
-aside.right h2 {color: #556179; font-size: 1.4em; margin-top: 0 ; margin-bottom: .1em}
-aside.right label {display: block; margin: 10px 0 5px 0;}
+aside.right input[type="text"] {margin-left: 20px; width: 260px; margin-top: 10px; margin-bottom: 5px}
+aside.right h2 {color: #556179; font-size: 1.2em; margin-top: 0 ; margin-bottom: .1em}
 aside.right select {padding: 5px;}
 aside.right a {color: #556179}
 aside.right .who-kept span {display: block; margin-bottom: 5px;}
@@ -110,8 +111,26 @@ aside.right div.actions a.add.active {background: #eff2f7; color: #556179; paddi
 aside.right .collections {background:#f6f8fc; height: 0; overflow: hidden; transition: height .5s; -webkit-transition: height .5s; }
 aside.right .collections.active {height: 250px; border-top: 5px solid #6fa6ef; border-bottom: 5px solid #6fa6ef;}
 aside.right .collections ul {padding: 0; margin: 0; list-style: none}
-aside.right .collections ul li a {display: block; padding: .5em .5em .5em 4em; border-top: 1px solid #dbdee3;}
-aside.right .collections ul li a.create {background: url(../img/plus.png) 20px 50% no-repeat; border-top: 0}
+aside.right .collections ul li {padding: 10px 20px; border-top: 1px solid #dbdee3;}
+aside.right .collections ul li.create {border-top: 0}
+aside.right .collections ul li.create a {padding-left: 25px;  background: url(../img/plus.png) 2px 50% no-repeat; }
+aside.right input[type="checkbox"] {display: none}
+aside.right input[type="checkbox"]:checked + label { color: #6fa6ef}
+aside.right input[type="checkbox"] + label span {
+	display:inline-block;
+    width:22px;
+    height:22px;
+    margin:-1px 4px 0 0;
+    vertical-align:middle;
+    cursor:pointer;
+    background:url(../img/sprite-check.png) left top no-repeat;
+}
+aside.right input[type="checkbox"]:checked + label span {
+    background:url(../img/sprite-check.png) -22px top no-repeat;
+}
+aside.right input[type="checkbox"]:not(:checked) + label:hover span {
+    background:url(../img/sprite-check.png) -44px top no-repeat;
+}
 input.search {transition: width .5s; -webkit-transition: width .5s; z-index: 1; position: relative; font-size: 1.6em; margin-top: 10px; margin-left: 200px; padding: 10px 50px 10px 20px; width: 550px; border: none; background: #fff url('../img/search.png') 98% 50% no-repeat}
 input.search:focus {background-image: url('../img/search-blue.png'); width: 630px;}
 
@@ -122,9 +141,9 @@ img#my-avatar {position: absolute; top: 60px; margin-left: -10px; max-width: 70p
 .long-text { display: block; white-space: nowrap; overflow: hidden; text-overflow:    ellipsis;}
 .small-avatar {max-width: 30px; max-height: 30px;}
 aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px; border-radius: 4px;}
-.keep {position:relative; clear: left; padding: 10px 10px 10px 30px; border-top: 1px solid #f9f9f9; cursor: move;}
-.keep input[type="checkbox"] {position: absolute; left: 4px; top: 12px; margin: 0; border: 1px solid #99a3b3; border-radius: 0;}
-.keep .handle {position: absolute; top: 0; left: 0; width: 22px; height: 100%; display: none; background: #e3e6ee url(../img/drag-handle.png) 4px 35px no-repeat;}
+.keep {position:relative; clear: left; padding: 10px 10px 10px 30px; border-top: 1px solid #f9f9f9; }
+.keep input[type="checkbox"] {position: absolute; left: 4px; top: 12px; margin: 0;}
+.keep .handle {cursor: move; position: absolute; top: 0; left: 0; width: 22px; height: 100%; display: none; background: #e3e6ee url(../img/drag-handle.png) 4px 35px no-repeat;}
 .keep:hover .handle, .keep.selected .handle {display: block}
 .keep.selected {background: #eff2f7}
 .keep .right {float: right; }

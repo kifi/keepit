@@ -19,6 +19,7 @@ var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPL
 				});
 				$('#my-keeps .keep .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myAvatar + '"/>');
 				initDraggable();
+
 				$(".easydate").easydate({set_title: false}); 
 
 				// insert time sections
@@ -38,6 +39,7 @@ var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPL
 			});
 var searchTemplate = Tempo.prepare("search-results").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
 					hideLoading();
+					initDraggable();
 					$('#search-results .keep .bottom').each(function() {
 						$(this).find('img.small-avatar').prependTo($(this));
 					});
@@ -66,28 +68,16 @@ $.ajaxSetup({
     crossDomain: true
 });
 
-(function($){
-
-    var _old = $.unique;
-
-    $.unique = function(arr){
-
-        // do the default behavior only if we got an array of elements
-        if (!!arr[0].nodeType){
-            return _old.apply(this,arguments);
-        } else {
-            // reduce the array to contain no dupes via grep/inArray
-            return $.grep(arr,function(v,k){
-                return $.inArray(v,arr) === k;
-            });
-        }
-    };
-})(jQuery);
-
+function unique(arr) {
+    return $.grep(arr,function(v,k){
+        return $.inArray(v,arr) === k;
+    });
+}
 
 function initDraggable() {
 	$( ".draggable" ).draggable({ 
 		revert: "invalid",
+		handle: ".handle",
 		cursorAt: { top: 15, left: 0 },
 		helper: function() {
 			return $('<div class="drag-helper">').html($(this).find('a').first().text());
@@ -239,8 +229,10 @@ function populateCollections() {
 	$.getJSON(urlCollectionsAll,  
 			function(data) {
 				collectionsTemplate.render(data.collections);	
+				$('aside.right .actions .collections ul li:not(.create)').remove();
 				for (i in data.collections) {
 					collections[data.collections[i].id] = data.collections[i];
+					$('aside.right .actions .collections ul').append('<li><input type="checkbox" data-id="'+data.collections[i].id+'" id="cb-'+data.collections[i].id+'"/><label for="cb-'+data.collections[i].id+'"><span></span>'+data.collections[i].name+'</label></li>');
 				}
 			});
 }
@@ -316,6 +308,29 @@ setInterval(updateNumKeeps, 60000);
 
 $(window).resize(adjustHeight);
 
+// handle collection adding/removing from right bar
+$('aside.right div.in-collections').on('change','input[type="checkbox"]',function(){
+	// remove selected keeps from collection
+	var row = $(this).parents('.row');
+	var colId = $(this).data('id');
+	var keeps = $('section.main .keep.selected').map(function(){ return $(this).data('id')}).get();
+	$.ajax( {url: urlCollections + "/" + colId + "/removeKeeps"
+		,type: "POST"
+		,dataType: 'json'
+		,data: JSON.stringify(keeps)
+		,contentType: 'application/json'
+		,error: function() {showMessage('Could not remove keeps from collection, please try again later')}
+		,success: function(data) {
+						console.log(data);
+						// substract removed from collection count on left bar 
+						var countSpan = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right'); 
+						countSpan.text(countSpan.text() * 1  - data.removed);
+						row.remove();
+					}
+		});
+	
+})
+
 $(document)
 	.on('keypress', function(e) {if (!$(e.target).is('textarea, input')) $('input.search').focus() }) // auto focus on search field when starting to type anywhere on the document
 	.on('scroll',function() { // infinite scroll
@@ -329,9 +344,16 @@ $(document)
 				populateMyKeeps();
 		}
 	})
-	.on('click','.keep input[type="checkbox"]',function() {
-		var keep = $(this).parents('.keep').first();
-		if ($(this).is(':checked')) { 
+	.on('click','.keep',function(e) {
+		var keep = $(this);
+		var cb = $(this).find('input[type="checkbox"]');
+		if (!$(e.target).is('input[type="checkbox"]')) {
+			if (cb.is(':checked'))
+				cb.removeAttr('checked');
+			else
+				cb.attr('checked',true);			
+		}
+		if (cb.is(':checked')) { 
 			keep.addClass('selected');
 		} else {
 			keep.removeClass('selected');			
@@ -341,7 +363,7 @@ $(document)
 			// if no keeps are checked, hide the side bar
 			$('aside.right').removeClass('visible');
 		} else if (selected.length > 1) {
-			// TODO: handle multiple selection
+			//  handle multiple selection
 			$('aside.right .title h2').text(selected.length + " keeps selected");
 			$('aside.right .title a').text('');
 			$('aside.right .who-kept').html('');
@@ -353,10 +375,10 @@ $(document)
 					allCol = allCol.concat(colArray);
 				}
 			});
-			allCol = $.unique(allCol);
+			allCol = unique(allCol);
 			var inCol = $('aside.right .in-collections').html('');
 			for (i in allCol) {
-				inCol.append(collections[allCol[i]].name + "<br/>");
+				inCol.append('<div class="row"><input type="checkbox" data-id="'+allCol[i]+'" id="cb1-'+allCol[i]+'" checked/><label for="cb1-'+allCol[i]+'"><span></span>'+collections[allCol[i]].name+'</label><div>');
 			}
 			$('aside.right').addClass('visible');
 		} else { // only one keep is selcted
@@ -370,7 +392,7 @@ $(document)
 			if (keep.data('collections').length > 0) {
 				var colArray = keep.data('collections').split(',');
 				for (i in colArray) {
-					inCol.append(collections[colArray[i]].name + "<br/>");
+					inCol.append('<div class="row"><input type="checkbox" data-id="'+colArray[i]+'" id="cb1-'+colArray[i]+'" checked/><label for="cb1-'+colArray[i]+'"><span></span>'+collections[colArray[i]].name+'</label></div>');
 				}
 			}
 			$('aside.right').addClass('visible');
@@ -378,7 +400,7 @@ $(document)
 	})
 	.ready(function() {		
 		$(".fancybox").fancybox();
-				
+						
 		populateCollections();
 		
 		// populate number of my keeps
