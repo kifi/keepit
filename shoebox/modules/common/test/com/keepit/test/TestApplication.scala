@@ -56,7 +56,7 @@ import com.keepit.common.controller.{ActionAuthenticator, ShoeboxActionAuthentic
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.store.S3ImageStore
 
-class TestApplication(val _global: FortyTwoGlobal, useDb: Boolean = true) extends play.api.test.FakeApplication() {
+class TestApplication(val _global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
   def withFakeMail() = overrideWith(FakeMailModule())
   def withFakeScraper() = overrideWith(FakeScraperModule())
@@ -75,15 +75,15 @@ class TestApplication(val _global: FortyTwoGlobal, useDb: Boolean = true) extend
   def withSearchConfigModule() = overrideWith(SearchConfigModule())
   def overrideWith(model: Module): TestApplication =
     if(useDb)
-      new TestApplication(new TestGlobal(Modules.`override`(global.modules: _*).`with`(model)))
+      new TestApplication(new TestGlobal(Modules.`override`(global.modules: _*).`with`(model)), path = path)
     else
-      new TestApplication(new TestRemoteGlobal(Modules.`override`(global.modules: _*).`with`(model)))
+      new TestApplication(new TestRemoteGlobal(Modules.`override`(global.modules: _*).`with`(model)), useDb = false, path = path)
 }
 
-class DevApplication() extends TestApplication(new TestGlobal(DevGlobal.modules: _*))
-class ShoeboxApplication() extends TestApplication(new TestGlobal(ShoeboxDevGlobal.modules: _*))
-class SearchApplication() extends TestApplication(new TestRemoteGlobal(SearchDevGlobal.modules: _*), false)
-class EmptyApplication() extends TestApplication(new TestGlobal(TestModule()))
+class DevApplication() extends TestApplication(new TestGlobal(DevGlobal.modules: _*), path = new File("./modules/common/"))
+class ShoeboxApplication() extends TestApplication(new TestGlobal(ShoeboxDevGlobal.modules: _*), path = new File("./modules/common/"))
+class SearchApplication() extends TestApplication(new TestRemoteGlobal(SearchDevGlobal.modules: _*), useDb = false)
+class EmptyApplication() extends TestApplication(new TestGlobal(TestModule()), path = new File("./modules/common/"))
 
 trait DbRepos {
 

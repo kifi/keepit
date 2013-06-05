@@ -10,7 +10,7 @@ class GithubExtractorTest extends Specification {
 
   def setup(url: String, file: String): String = {
     val uri = URI.parse(url).get
-    val stream = new FileInputStream("test/com/keepit/scraper/extractor/" + file)
+    val stream = new FileInputStream("modules/common/test/com/keepit/scraper/extractor/" + file)
     val extractor = GithubExtractorFactory(uri)
     extractor.process(new HttpInputStream(stream))
 

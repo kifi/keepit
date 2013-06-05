@@ -135,5 +135,5 @@ object ApplicationBuild extends Build {
 
       //https://groups.google.com/forum/?fromgroups=#!topic/play-framework/aa90AAp5bpo
       sources in doc in Compile := List()
-    ).dependsOn(common).aggregate(common)
+    ).dependsOn(common % "test->test;compile->compile").aggregate(common)
 }

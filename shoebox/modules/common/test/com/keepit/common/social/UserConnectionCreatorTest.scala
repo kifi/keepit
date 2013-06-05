@@ -27,7 +27,7 @@ class UserConnectionCreatorTest extends Specification {
          * using json and one socialuserinfo, create connections
          *
          */
-        val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/facebook_graph_eishay_min.json")).mkString)
+        val json = Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/facebook_graph_eishay_min.json")).mkString)
 
         inject[Database].readWrite { implicit s =>
           val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))

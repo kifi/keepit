@@ -15,6 +15,7 @@ class DevModuleTest extends Specification with Logging {
     "instantiate controllers" in {
       running(new DevApplication().withFakeMail()) {
         val ClassRoute = "@(.+)@.+".r
+        log.info("xxxxxx\n\n" + current.configuration.getString("application.router").map(_ + "$").getOrElse("Routes$"))
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {
           case (_, _, ClassRoute(className)) => Class.forName(className)
         }.distinct

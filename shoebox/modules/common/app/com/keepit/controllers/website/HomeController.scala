@@ -35,6 +35,11 @@ class HomeController @Inject() (db: Database,
     } else NotFound
   }
 
+  def test = Action {
+    log.info("xxxxxxx\n\n" + current.configuration.getString("application.router"))
+    Ok
+  }
+
   def home = HtmlAction(true)(authenticatedAction = { implicit request =>
 
     if(request.user.state == UserStates.PENDING) { pendingHome() }

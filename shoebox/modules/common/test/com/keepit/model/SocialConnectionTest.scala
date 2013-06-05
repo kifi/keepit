@@ -24,7 +24,7 @@ class SocialConnectionTest extends Specification {
       running(new EmptyApplication()) {
 
         def loadJsonImportFriends(filename: String): Unit = {
-          val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format(filename))).mkString)
+          val json = Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/%s".format(filename))).mkString)
           println(inject[SocialUserImportFriends].importFriends(Seq(json)).size)
         }
 
@@ -43,8 +43,8 @@ class SocialConnectionTest extends Specification {
           socialRepo.save(socialRepo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Andrew", lastName = "Conner"))))
         }
 
-        val eishayJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format("facebook_graph_eishay_min.json"))).mkString)
-        val andrewJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format("facebook_graph_andrew_min.json"))).mkString)
+        val eishayJson = Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/%s".format("facebook_graph_eishay_min.json"))).mkString)
+        val andrewJson = Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/%s".format("facebook_graph_andrew_min.json"))).mkString)
 
 
         // Create FortyTwo accounts on certain users
@@ -88,7 +88,7 @@ class SocialConnectionTest extends Specification {
       running(new EmptyApplication()) {
 
         def loadJsonImportFriends(filename: String): Unit = {
-          val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format(filename))).mkString)
+          val json = Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/%s".format(filename))).mkString)
           println(inject[SocialUserImportFriends].importFriends(Seq(json)).size)
         }
 
@@ -108,8 +108,8 @@ class SocialConnectionTest extends Specification {
           socialRepo.save(socialRepo.get(SocialId("71105121"), SocialNetworks.FACEBOOK).withUser(userRepo.save(User(firstName = "Andrew", lastName = "Conner"))))
         }
 
-        val eishayJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format("facebook_graph_eishay_min.json"))).mkString)
-        val andrewJson = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format("facebook_graph_andrew_min.json"))).mkString)
+        val eishayJson = Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/%s".format("facebook_graph_eishay_min.json"))).mkString)
+        val andrewJson = Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/%s".format("facebook_graph_andrew_min.json"))).mkString)
 
 
         // Create FortyTwo accounts on certain users
@@ -157,7 +157,7 @@ class SocialConnectionTest extends Specification {
 
         def loadJsonImportFriends(filenames: Seq[String]): Unit = {
           val jsons = filenames map { filename =>
-            Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format(filename))).mkString)
+            Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/%s".format(filename))).mkString)
           }
           println(inject[SocialUserImportFriends].importFriends(jsons).size)
         }
@@ -177,8 +177,8 @@ class SocialConnectionTest extends Specification {
           socialRepo.save(info.withUser(userRepo.save(User(firstName = "Eishay", lastName = "Smith"))))
         }
 
-        val eishay1Json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format("facebook_graph_eishay_min_page1.json"))).mkString)
-        val eishay2Json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format("facebook_graph_eishay_min_page2.json"))).mkString)
+        val eishay1Json = Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/%s".format("facebook_graph_eishay_min_page1.json"))).mkString)
+        val eishay2Json = Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/%s".format("facebook_graph_eishay_min_page2.json"))).mkString)
 
         // Create FortyTwo accounts on certain users
         val users = inject[Database].readWrite{ implicit s =>

@@ -32,6 +32,7 @@ class BookmarksController @Inject() (
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
     basicUserRepo: BasicUserRepo,
+    userValueRepo: UserValueRepo,
     searchClient: SearchServiceClient,
     actionAuthenticator: ActionAuthenticator
   )
@@ -56,6 +57,43 @@ class BookmarksController @Inject() (
   private def getCollectionByExternalId(userId: Id[User], id: String): Option[Collection] = {
     db.readOnly { implicit s =>
       ExternalId.asOpt[Collection](id).flatMap(collectionRepo.getByUserAndExternalId(userId, _))
+    }
+  }
+
+  val CollectionOrderingKey = "user_collection_ordering"
+
+  def getCollectionOrdering() = AuthenticatedJsonAction { request =>
+    val uid = request.userId
+    implicit val collectionIdFormat = ExternalId.format[Collection]
+    val allCollectionIds = db.readOnly { implicit s => collectionRepo.getByUser(uid).map(_.externalId) }
+    val orderedCollectionIds = Json.fromJson[Seq[ExternalId[Collection]]](Json.parse {
+      db.readOnly { implicit s => userValueRepo.getValue(uid, CollectionOrderingKey) } getOrElse {
+        db.readWrite { implicit s =>
+          userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(allCollectionIds)))
+        }
+      }
+    }).get
+    Ok(Json.obj(
+      "collectionIds" -> allCollectionIds.sortBy(orderedCollectionIds.indexOf(_))
+    ))
+  }
+
+  def setCollectionOrdering() = AuthenticatedJsonAction { request =>
+    implicit val collectionIdFormat = ExternalId.format[Collection]
+    val uid = request.userId
+    request.body.asJson.flatMap(Json.fromJson[Seq[ExternalId[Collection]]](_).asOpt) map { orderedIds =>
+      val allCollectionIds = db.readOnly { implicit s => collectionRepo.getByUser(uid).map(_.externalId) }
+      val newCollectionIds = allCollectionIds.sortBy(orderedIds.indexOf(_))
+      db.readWrite { implicit s =>
+        userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(newCollectionIds)))
+      }
+      Ok(Json.obj(
+        "collectionIds" -> newCollectionIds
+      ))
+    } getOrElse {
+      BadRequest(Json.obj(
+        "error" -> "Could not parse JSON array of collection ids from request body"
+      ))
     }
   }
 

@@ -37,7 +37,7 @@ class SocialUserImportEmailTest extends Specification with DbRepos {
     val user = db.readWrite {implicit s =>
       userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
     }
-    val json = Json.parse(io.Source.fromFile(new File("test/com/keepit/common/social/%s".format(jsonFilename))).mkString)
+    val json = Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/%s".format(jsonFilename))).mkString)
     val email = inject[SocialUserImportEmail].importEmail(user.id.get, Seq(json)).getOrElse(
         throw new Exception("fail getting email %s of %s".format(emailString, json.toString)))
     email.address === emailString

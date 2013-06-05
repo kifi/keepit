@@ -1,7 +1,3 @@
-# Routes
-# This file defines all application routes (Higher priority routes first)
-# ~~~~
-
 ##########################################
 # Website
 ##########################################
@@ -36,6 +32,8 @@ GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkContr
 
 GET     /site/keeps/all             @com.keepit.controllers.website.BookmarksController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int ?= Integer.MAX_VALUE)
 GET     /site/collections/all       @com.keepit.controllers.website.BookmarksController.allCollections()
+GET     /site/collections/ordering  @com.keepit.controllers.website.BookmarksController.getCollectionOrdering()
+POST    /site/collections/ordering  @com.keepit.controllers.website.BookmarksController.setCollectionOrdering()
 POST    /site/collections/create @com.keepit.controllers.website.BookmarksController.saveCollection(id = "")
 POST    /site/collections/:id/update @com.keepit.controllers.website.BookmarksController.saveCollection(id: String)
 POST    /site/collections/:id/delete @com.keepit.controllers.website.BookmarksController.deleteCollection(id: ExternalId[Collection])
@@ -98,6 +96,9 @@ GET     /whois                      @com.keepit.controllers.ext.ExtAuthControlle
 GET     /session/end                @com.keepit.controllers.ext.ExtAuthController.logOut
 
 GET     /ext/ws                     @com.keepit.controllers.ext.ExtStreamController.ws()
+
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/*file               controllers.Assets.at(path="/public", file)
 
 # Temporary hack for kifi.com site before we fully integrate it with Play!
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html")
@@ -320,5 +321,5 @@ GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.Se
 GET     /internal/benchmark                   @com.keepit.common.healthcheck.CommonBenchmarkController.benchmarksResults()
 GET     /internal/version                     @com.keepit.common.healthcheck.CommonBenchmarkController.version()
 
-# Map static resources from the /public folder to the /assets URL path
-GET     /assets/*file               controllers.Assets.at(path="/public", file)
+
+GET /test                        @com.keepit.controllers.website.HomeController.test   
