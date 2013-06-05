@@ -202,7 +202,6 @@ class ShoeboxController @Inject() (
           case Some(bmk) =>
             PersonalSearchHit(uri.id.get, uri.externalId, bmk.title, bmk.url, bmk.isPrivate)
           case None =>
-            val uri = normUriRepo.get(uriId)
             PersonalSearchHit(uri.id.get, uri.externalId, uri.title, uri.url, false)
         }
       }
