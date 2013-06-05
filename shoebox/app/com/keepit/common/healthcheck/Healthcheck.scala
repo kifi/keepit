@@ -25,6 +25,7 @@ import akka.util.Timeout
 import play.api.Plugin
 import play.api.templates.Html
 import com.keepit.common.mail.RemotePostOffice
+import play.modules.statsd.api.Statsd
 
 object Healthcheck {
 
@@ -165,7 +166,7 @@ class HealthcheckPluginImpl @Inject() (
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-     scheduleTask(actorFactory.system, 0 seconds, 10 minutes, actor, ReportErrorsAction)
+    scheduleTask(actorFactory.system, 0 seconds, 10 minutes, actor, ReportErrorsAction)
   }
 
   def errorCount(): Int = Await.result((actor ? ErrorCount).mapTo[Int], 1 seconds)
@@ -183,6 +184,7 @@ class HealthcheckPluginImpl @Inject() (
   }
 
   override def reportStart() = {
+    Statsd.increment("deploys")
     val subject = s"Service ${services.currentService} started"
     val message = Html(s"Service version ${services.currentVersion} started at ${currentDateTime} on $host. Service compiled at ${services.compilationTime}")
     val email = (ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
