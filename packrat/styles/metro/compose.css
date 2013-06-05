@@ -18,7 +18,6 @@ form.kifi-compose.kifi-scrollable-below {
   outline: none;
   box-shadow: none;
   cursor: text; /* ff */
-  -webkit-transition: 160ms cubic-bezier(.405,-.375,.630,1.260) min-height;
   transition: 160ms cubic-bezier(.405,-.375,.630,1.260) min-height;
 }
 .kifi-compose .kifi-compose-draft[contenteditable]:first-child {
@@ -55,7 +54,6 @@ form.kifi-compose.kifi-scrollable-below {
   background-clip: content-box;
   background-origin: content-box;
   background-repeat: no-repeat;
-  -webkit-transition: none;
   transition: none;
   outline: none; /* for tooltip */
 }

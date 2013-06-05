@@ -54,7 +54,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
   }).on("input", function() {
     updateMaxHeight();
     $f[0].classList[this.firstElementChild === this.lastElementChild && !this.textContent ? "add" : "remove"]("kifi-empty");
-  }).on("transitionend webkitTransitionEnd", function() {
+  }).on("transitionend", function() {
     updateMaxHeight();
   });
 

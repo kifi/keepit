@@ -20,7 +20,6 @@
   text-align: left;
   direction: ltr;
   z-index: 999999999991;
-  -webkit-transition: right .25s ease-in;
   transition: right .25s ease-in;
 }
 .kifi-pane-parent.kifi-with-pane .kifi-pane {
@@ -36,7 +35,6 @@ html.kifi-pane-parent {
   min-width: 0;
   min-height: 100%;
   margin-right: 0;
-  -webkit-transition: margin-right .25s ease-in;
   transition: margin-right .25s ease-in;
 }
 html.kifi-pane-parent.kifi-with-pane {
@@ -46,7 +44,7 @@ html.kifi-pane-parent.kifi-with-pane.kifi-snapshot-mode {
   margin-right: 0;
 }
 .kifi-pane+.kifi-tile {
-  -webkit-transition: -webkit-transform .25s ease-out;
+  transition: -webkit-transform .25s ease-out;
   transition: transform .25s ease-out;
 }
 
@@ -181,7 +179,6 @@ div.kifi-pane-head-settings-menu {
   line-height: 20px;
   font-weight: normal;
   color: #333;
-  -webkit-transition: background-color linear .1s;
   transition: background-color linear .1s;
 }
 .kifi-pane input[type=text].kifi-pane-search:focus {
@@ -215,8 +212,8 @@ div.kifi-pane-head-settings-menu {
   width: 626px; /* 310 + 6 + 310 */
 }
 .kifi-pane-box-cart.kifi-animated {
-  -webkit-transition: -webkit-transform ease-in-out .2s;
-  transition: -webkit-transform ease-in-out .2s, transform ease-in-out .2s;
+  transition: -webkit-transform .2s ease-in-out;
+  transition: transform .2s ease-in-out;
 }
 .kifi-pane-box-cart.kifi-back:not(.kifi-roll),
 .kifi-pane-box-cart.kifi-roll.kifi-forward {
@@ -313,7 +310,6 @@ div.kifi-pane-empty {
   text-align: center;
   font-size: 16px;
   color: #34495e;
-  -webkit-transition: opacity .4s;
   transition: opacity .4s;
 }
 div.kifi-pane-empty.kifi-hidden {
@@ -347,7 +343,6 @@ div.kifi-pane-empty img {
   border-top: none;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-  -webkit-transition: top .1s ease-in-out;
   transition: top .1s ease-in-out;
 }
 .kifi-not-done.kifi-showing {
@@ -355,7 +350,6 @@ div.kifi-pane-empty img {
 }
 .kifi-scrollable-above,
 .kifi-scrollable-below {
-  -webkit-transition: box-shadow 60ms linear;
   transition: box-shadow 60ms linear;
 }
 .kifi-scrollable-above.kifi-can-scroll {
