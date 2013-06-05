@@ -103,22 +103,16 @@ case class BookmarkCountKey() extends Key[Int] {
   def toKey(): String = "k"
 }
 
-class BookmarkCountCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[BookmarkCountKey, Int] {
-  val ttl = 1 hours
-  def deserialize(obj: Any): Int = obj.asInstanceOf[Int]
-  def serialize(count: Int) = count
-}
+class BookmarkCountCache @Inject() (repo: FortyTwoCachePlugin)
+  extends PrimitiveCacheImpl[BookmarkCountKey, Int]((repo, 1 hour))
 
 case class BookmarkUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Bookmark] {
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }
 
-class BookmarkUriUserCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[BookmarkUriUserKey, Bookmark] {
-  val ttl = 7 days
-  def deserialize(obj: Any): Bookmark = parseJson(obj)
-  def serialize(bookmark: Bookmark) = Json.toJson(bookmark)
-}
+class BookmarkUriUserCache @Inject() (repo: FortyTwoCachePlugin)
+  extends JsonCacheImpl[BookmarkUriUserKey, Bookmark]((repo, 7 days))
 
 @Singleton
 class BookmarkRepoImpl @Inject() (

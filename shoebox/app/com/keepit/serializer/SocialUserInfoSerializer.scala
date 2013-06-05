@@ -46,12 +46,6 @@ class SocialUserInfoSerializer extends Format[SocialUserInfo] {
         case v => Some(v.as[DateTime])
       }
     ))
-
-  def writesSeq(infos: Seq[SocialUserInfo]): JsValue =
-    JsArray(infos.map(writes))
-
-  def readsSeq(json: JsValue): List[SocialUserInfo] =
-    json.as[List[JsObject]].map(reads).map(_.get)
 }
 
 object SocialUserInfoSerializer {

@@ -14,7 +14,7 @@ import com.keepit.model.User
 import com.keepit.common.logging.Logging
 import org.joda.time.DateTime
 
-class SliderHistoryBinarySerializer extends BinaryFormat with Logging {
+class SliderHistoryBinarySerializer extends BinaryFormat[SliderHistory] with Logging {
 
   def writes(history: SliderHistory): Array[Byte] = {
     val json = historyJsonWrites(history).toString.getBytes(UTF8)

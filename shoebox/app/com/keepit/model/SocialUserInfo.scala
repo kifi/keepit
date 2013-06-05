@@ -5,14 +5,14 @@ import scala.concurrent.duration._
 import org.joda.time.DateTime
 
 import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworkType
 import com.keepit.common.time._
-import com.keepit.serializer.SocialUserInfoSerializer
+import com.keepit.serializer.SequenceFormat
 
 import play.api.libs.json._
 import securesocial.core.SocialUser
@@ -47,26 +47,22 @@ trait SocialUserInfoRepo extends Repo[SocialUserInfo] {
   def getOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUserInfo]
 }
 
-case class SocialUserInfoUserKey(userId: Id[User]) extends Key[List[SocialUserInfo]] {
+import com.keepit.serializer.SocialUserInfoSerializer.socialUserInfoSerializer // Required implicit value
+case class SocialUserInfoUserKey(userId: Id[User]) extends Key[Seq[SocialUserInfo]] {
   val namespace = "social_user_info_by_userid"
   override val version = 2
   def toKey(): String = userId.id.toString
 }
-class SocialUserInfoUserCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[SocialUserInfoUserKey, List[SocialUserInfo]] {
-  val ttl = 30 days
-  def deserialize(obj: Any): List[SocialUserInfo] = SocialUserInfoSerializer.socialUserInfoSerializer.readsSeq(Json.parse(obj.asInstanceOf[String]).asInstanceOf[JsArray])
-  def serialize(socialUsers: List[SocialUserInfo]) = SocialUserInfoSerializer.socialUserInfoSerializer.writesSeq(socialUsers)
-}
+class SocialUserInfoUserCache @Inject() (repo: FortyTwoCachePlugin)
+  extends JsonCacheImpl[SocialUserInfoUserKey, Seq[SocialUserInfo]]((repo, 30 days))(SequenceFormat[SocialUserInfo])
 
 case class SocialUserInfoNetworkKey(networkType: SocialNetworkType, id: SocialId) extends Key[SocialUserInfo] {
   val namespace = "social_user_info_by_network_and_id"
   def toKey(): String = networkType.name.toString + "_" + id.id
 }
-class SocialUserInfoNetworkCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[SocialUserInfoNetworkKey, SocialUserInfo] {
-  val ttl = 30 days
-  def deserialize(obj: Any): SocialUserInfo = SocialUserInfoSerializer.socialUserInfoSerializer.reads(Json.parse(obj.asInstanceOf[String]).asInstanceOf[JsObject]).get
-  def serialize(socialUser: SocialUserInfo) = SocialUserInfoSerializer.socialUserInfoSerializer.writes(socialUser)
-}
+
+class SocialUserInfoNetworkCache @Inject() (repo: FortyTwoCachePlugin)
+  extends JsonCacheImpl[SocialUserInfoNetworkKey, SocialUserInfo]((repo, 30 days))
 
 @Singleton
 class SocialUserInfoRepoImpl @Inject() (

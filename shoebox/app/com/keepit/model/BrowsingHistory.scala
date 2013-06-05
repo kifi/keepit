@@ -17,7 +17,7 @@ import java.security.MessageDigest
 import scala.collection.mutable
 import play.api.libs.json._
 import com.keepit.common.cache._
-import com.keepit.serializer.BrowsingHistoryBinarySerializer
+import com.keepit.serializer.{Serializer, BrowsingHistoryBinarySerializer}
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
 import scala.Some
@@ -49,25 +49,8 @@ case class BrowsingHistoryUserIdKey(userId: Id[User]) extends Key[BrowsingHistor
   def toKey(): String = userId.id.toString
 }
 
-@ImplementedBy(classOf[BrowsingHistoryUserIdCacheImpl])
-trait BrowsingHistoryUserIdCache extends FortyTwoCache[BrowsingHistoryUserIdKey, BrowsingHistory] {
-  def deserialize(obj: Any): BrowsingHistory = BrowsingHistoryBinarySerializer.browsingHistoryBinarySerializer.reads(obj.asInstanceOf[Array[Byte]])
-  def serialize(browsingHistory: BrowsingHistory) = BrowsingHistoryBinarySerializer.browsingHistoryBinarySerializer.writes(browsingHistory)
-}
-
-@Singleton
-class OuterBrowsingHistoryUserIdCacheImpl @Inject() (val repo: FortyTwoCachePlugin)
-  extends {val ttl = 7 days} with BrowsingHistoryUserIdCache
-
-@Singleton
-class BrowsingHistoryUserIdCacheImpl @Inject() (
-    val repo: InMemoryCachePlugin,
-    outerCacheImpl: OuterBrowsingHistoryUserIdCacheImpl)
-  extends {
-    val ttl = 10 seconds
-    override val outerCache = Some(outerCacheImpl)
-  } with BrowsingHistoryUserIdCache
-
+class BrowsingHistoryUserIdCache @Inject() (innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin)
+  extends BinaryCacheImpl[BrowsingHistoryUserIdKey, BrowsingHistory]((innerRepo, 10 seconds), (outerRepo, 7 days))
 
 @Singleton
 class BrowsingHistoryRepoImpl @Inject() (

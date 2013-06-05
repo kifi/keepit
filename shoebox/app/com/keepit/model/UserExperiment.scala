@@ -1,7 +1,7 @@
 package com.keepit.model
 
 import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCache, FortyTwoCachePlugin, Key}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
@@ -10,6 +10,7 @@ import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import scala.concurrent.duration._
+import com.keepit.serializer.SequenceFormat
 
 case class UserExperiment (
   id: Option[Id[UserExperiment]] = None,
@@ -52,15 +53,8 @@ case class UserExperimentUserIdKey(userId: Id[User]) extends Key[Seq[State[Exper
   def toKey(): String = userId.id.toString
 }
 
-class UserExperimentCache @Inject()(val repo: FortyTwoCachePlugin)
-    extends FortyTwoCache[UserExperimentUserIdKey, Seq[State[ExperimentType]]] {
-  private implicit val experimentTypeFormat = State.format[ExperimentType]
-  val ttl = 7 days
-  def deserialize(obj: Any): Seq[State[ExperimentType]] =
-    Json.fromJson[Seq[State[ExperimentType]]](Json.parse(obj.asInstanceOf[String])).get
-  def serialize(userExperiments: Seq[State[ExperimentType]]): Any =
-    Json.toJson(userExperiments)
-}
+class UserExperimentCache @Inject()(repo: FortyTwoCachePlugin)
+    extends JsonCacheImpl[UserExperimentUserIdKey, Seq[State[ExperimentType]]]((repo, 7 days))(SequenceFormat(State.format[ExperimentType]))
 
 @ImplementedBy(classOf[UserExperimentRepoImpl])
 trait UserExperimentRepo extends Repo[UserExperiment] {

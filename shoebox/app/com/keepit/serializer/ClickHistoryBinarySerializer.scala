@@ -13,7 +13,7 @@ import com.keepit.model.User
 import com.keepit.common.logging.Logging
 import org.joda.time.DateTime
 
-class ClickHistoryBinarySerializer extends BinaryFormat with Logging {
+class ClickHistoryBinarySerializer extends BinaryFormat[ClickHistory] with Logging {
 
   def writes(history: ClickHistory): Array[Byte] = {
     val json = historyJsonWrites(history).toString.getBytes(UTF8)

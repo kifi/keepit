@@ -1,7 +1,7 @@
 package com.keepit.search
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.cache.{Key, FortyTwoCache, FortyTwoCachePlugin}
+import com.keepit.common.cache.{JsonCacheImpl, Key, FortyTwoCache, FortyTwoCachePlugin}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
@@ -11,6 +11,7 @@ import org.joda.time.DateTime
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import scala.concurrent.duration._
+import com.keepit.serializer.SequenceFormat
 
 case class SearchConfigExperiment(
     id: Option[Id[SearchConfigExperiment]] = None,
@@ -65,18 +66,10 @@ sealed trait ActiveExperimentsKey extends Key[Seq[SearchConfigExperiment]] {
 
 object ActiveExperimentsKey extends ActiveExperimentsKey
 
-class ActiveExperimentsCache @Inject()(val repo: FortyTwoCachePlugin)
-    extends FortyTwoCache[ActiveExperimentsKey, Seq[SearchConfigExperiment]] {
-  val ttl = 1 day
-  def serialize(value: Seq[SearchConfigExperiment]) = Json.toJson(value)
-  def deserialize(obj: Any): Seq[SearchConfigExperiment] =
-    Json.fromJson[Seq[SearchConfigExperiment]](Json.parse(obj.asInstanceOf[String])).get
-  def getOrElseUpdate(value: => Seq[SearchConfigExperiment]): Seq[SearchConfigExperiment] = {
-    getOrElse(ActiveExperimentsKey)(value)
-  }
-  def remove() {
-    remove(ActiveExperimentsKey)
-  }
+class ActiveExperimentsCache @Inject()(repo: FortyTwoCachePlugin)
+  extends JsonCacheImpl[ActiveExperimentsKey, Seq[SearchConfigExperiment]]((repo, 1 day))(SequenceFormat[SearchConfigExperiment]) {
+    def getOrElseUpdate(value: => Seq[SearchConfigExperiment]): Seq[SearchConfigExperiment] = getOrElse(ActiveExperimentsKey)(value)
+    def remove(): Unit = remove(ActiveExperimentsKey)
 }
 
 @ImplementedBy(classOf[SearchConfigExperimentRepoImpl])

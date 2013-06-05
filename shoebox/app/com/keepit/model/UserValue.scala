@@ -45,12 +45,8 @@ case class UserValueKey(userId: Id[User], key: String) extends Key[String] {
   val namespace = "uservalue"
   def toKey(): String = userId.id + "_" + key
 }
-class UserValueCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[UserValueKey, String] {
-  val ttl = 7 days
-  def deserialize(obj: Any): String = obj.asInstanceOf[String]
-  def serialize(value: String) = value
-}
-
+class UserValueCache @Inject() (repo: FortyTwoCachePlugin)
+  extends PrimitiveCacheImpl[UserValueKey, String]((repo, 7 days))
 
 @Singleton
 class UserValueRepoImpl @Inject() (

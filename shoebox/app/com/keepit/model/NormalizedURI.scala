@@ -11,7 +11,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.URINormalizer
 import com.keepit.common.net.URI
 import com.keepit.common.cache._
-import com.keepit.serializer.NormalizedURISerializer
 import com.keepit.model._
 
 import java.security.SecureRandom
@@ -57,15 +56,13 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
 }
 
+import com.keepit.serializer.NormalizedURISerializer.normalizedURISerializer // Required implicit value
 case class NormalizedURIKey(id: Id[NormalizedURI]) extends Key[NormalizedURI] {
   val namespace = "uri_by_id"
   def toKey(): String = id.id.toString
 }
-class NormalizedURICache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[NormalizedURIKey, NormalizedURI] {
-  val ttl = 7 days
-  def deserialize(obj: Any): NormalizedURI = NormalizedURISerializer.normalizedURISerializer.reads(Json.parse(obj.asInstanceOf[String]).asInstanceOf[JsObject]).get
-  def serialize(uri: NormalizedURI) = NormalizedURISerializer.normalizedURISerializer.writes(uri)
-}
+class NormalizedURICache @Inject() (repo: FortyTwoCachePlugin)
+  extends JsonCacheImpl[NormalizedURIKey, NormalizedURI]((repo, 7 days))
 
 @Singleton
 class NormalizedURIRepoImpl @Inject() (

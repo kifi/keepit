@@ -8,10 +8,9 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api._
-import com.keepit.common.cache.{ObjectCache, FortyTwoCache, FortyTwoCachePlugin, Key}
-import com.keepit.serializer.ClickHistoryBinarySerializer
-import play.api.libs.concurrent.Execution.Implicits._
+import com.keepit.common.cache._
 import scala.concurrent.duration._
+import scala.Some
 
 case class ClickHistory (
                     id: Option[Id[ClickHistory]] = None,
@@ -39,11 +38,9 @@ case class ClickHistoryUserIdKey(userId: Id[User]) extends Key[ClickHistory] {
   val namespace = "click_history_by_userid"
   def toKey(): String = userId.id.toString
 }
-class ClickHistoryUserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[ClickHistoryUserIdKey, ClickHistory] {
-  val ttl = 7 days
-  def deserialize(obj: Any): ClickHistory = ClickHistoryBinarySerializer.clickHistoryBinarySerializer.reads(obj.asInstanceOf[Array[Byte]])
-  def serialize(clickHistory: ClickHistory) = ClickHistoryBinarySerializer.clickHistoryBinarySerializer.writes(clickHistory)
-}
+
+class ClickHistoryUserIdCache @Inject() (repo: FortyTwoCachePlugin)
+  extends BinaryCacheImpl[ClickHistoryUserIdKey, ClickHistory]((repo, 7 days))
 
 @Singleton
 class ClickHistoryRepoImpl @Inject() (

@@ -12,6 +12,7 @@ import com.keepit.common.cache._
 import scala.concurrent.duration._
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
+import com.keepit.serializer.Serializer
 
 case class CommentWithBasicUser(user: BasicUser, comment: Comment, recipients: Seq[BasicUser])
 
@@ -24,11 +25,8 @@ case class CommentWithBasicUserKey(commentId: Id[Comment]) extends Key[CommentWi
   def toKey(): String = commentId.id.toString
 }
 
-class CommentWithBasicUserCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[CommentWithBasicUserKey, CommentWithBasicUser] {
-  val ttl = 7 days
-  def deserialize(obj: Any): CommentWithBasicUser = parseJson(obj)
-  def serialize(commentWithBasicUser: CommentWithBasicUser) = Json.toJson(commentWithBasicUser)
-}
+class CommentWithBasicUserCache @Inject() (repo: FortyTwoCachePlugin)
+  extends JsonCacheImpl[CommentWithBasicUserKey, CommentWithBasicUser]((repo, 7 days))
 
 class CommentWithBasicUserRepo @Inject() (basicUserRepo: BasicUserRepo, commentRecipientRepo: CommentRecipientRepo, commentCache: CommentWithBasicUserCache) {
   def load(comment: Comment)(implicit session: RSession): CommentWithBasicUser = commentCache.getOrElse(CommentWithBasicUserKey(comment.id.get)) {
