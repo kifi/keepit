@@ -1,6 +1,6 @@
 /*!
 jQuery Plugin: Tokenizing Autocomplete Text Entry
-commit f1ad56020c + pull requests 522, 523, 529
+commit f1ad56020c + pull requests 522, 529, 538
 
 Copyright (c) 2009 James Smith (http://loopj.com)
 Licensed jointly under the GPL and MIT licenses,
@@ -49,7 +49,7 @@ choose which suits your project best!
     a(this).data("settings", a.extend({}, a(this).data("settings"), b || {}));
     return this
   }, destroy:function() {
-    this.data("tokenInputObject") && (this.data("tokenInputObject").destroy(), this.siblings().remove(), this.show());
+    this.data("tokenInputObject") && (this.data("tokenInputObject").destroy(), this.removeData("tokenInputObject settings"));
     return this
   }};
   a.fn.tokenInput = function(a) {
@@ -255,8 +255,11 @@ choose which suits your project best!
       var e, d;
       switch(c.keyCode) {
         case 37:
+        ;
         case 39:
+        ;
         case 38:
+        ;
         case 40:
           return a(this).val() ? (e = null, e = 40 === c.keyCode || 39 === c.keyCode ? a(s).next() : a(s).prev(), e.length && K(e)) : (e = u.prev(), d = u.next(), e.length && e.get(0) === f || d.length && d.get(0) === f ? 37 === c.keyCode || 38 === c.keyCode ? x(a(f), H) : x(a(f), B) : (37 === c.keyCode || 38 === c.keyCode) && e.length ? A(a(e.get(0))) : (39 === c.keyCode || 40 === c.keyCode) && d.length && A(a(d.get(0)))), !1;
         case 8:
@@ -270,8 +273,11 @@ choose which suits your project best!
           }
           break;
         case 9:
+        ;
         case 13:
+        ;
         case 108:
+        ;
         case 188:
           if(s) {
             E(a(s).data("tokeninput")), j.change()
@@ -299,9 +305,9 @@ choose which suits your project best!
       }
     });
     l.placeholder && g.attr("placeholder", l.placeholder);
-    var j = a(b).hide().val("").focus(function() {
+    var j = a(b).hide().val("").on("focus.tokenInput", function() {
       y(g)
-    }).blur(function() {
+    }).on("blur.tokenInput", function() {
       g.blur();
       return j
     }), f = null, r = 0, s = null, k = a("<ul />").addClass(a(b).data("settings").classes.tokenList).click(function(b) {
@@ -357,7 +363,9 @@ choose which suits your project best!
     };
     this.destroy = function() {
       this.clear();
-      v.remove()
+      k.remove();
+      v.remove();
+      j.off(".tokenInput").show()
     };
     w();
     var T = RegExp("[.\\\\+*?\\[\\^\\]$(){}=!<>|:\\-]", "g")
