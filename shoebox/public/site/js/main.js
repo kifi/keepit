@@ -45,7 +45,7 @@ var searchTemplate = Tempo.prepare("search-results").when(TempoEvent.Types.RENDE
 						$(this).find('img.small-avatar').prependTo($(this));
 					});
 					$('#search-results .keep.mine .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myAvatar + '"/>');
-					$('div.search .num-results span').text($('#search-results .keep').length);
+					$('div.search .num-results').text('Showing ' + $('#search-results .keep').length + ' for "'+$('header input.search').val()+'"');
 				});
 var collectionsTemplate = Tempo.prepare("collections").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
 	$('#collections').show();
@@ -81,7 +81,11 @@ function initDraggable() {
 		handle: ".handle",
 		cursorAt: { top: 15, left: 0 },
 		helper: function() {
-			return $('<div class="drag-helper">').html($(this).find('a').first().text());
+			var text = $(this).find('a').first().text();
+			var numSelected = $('section.main .keep.selected').length; 
+			if (numSelected > 1)
+				text = numSelected + " selected keeps";
+			return $('<div class="drag-helper">').html(text);
 		} 
 	});	
 }
@@ -98,7 +102,7 @@ function initDroppable() {
 				$.ajax( {url: urlCollections + '/' + collectionId + '/addKeeps' 
 					,type: "POST"
 					,dataType: 'json'
-					,data: JSON.stringify([ui.draggable.data('id')])
+					,data: JSON.stringify($('section.main .keep.selected').map(function() {return $(this).data('id')}).get())
 					,contentType: 'application/json'
 					,error: function() {
 						showMessage('Could not add to collection, please try again later');
@@ -108,6 +112,8 @@ function initDroppable() {
 									var countSpan = thisCollection.find('a span.right'); 
 									var added = countSpan.text() * 1  + data.added;
 									countSpan.text(added);
+									// update collection list on right bar
+									$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+collectionId+'" id="cb1-'+collectionId+'" checked=""><label for="cb1-'+collectionId+'"><span></span>'+collections[collectionId].name+'</label><div></div></div>');
 								}
 					});
 			}
@@ -188,11 +194,13 @@ function addNewKeeps() {
 function populateMyKeeps(id) {
 	var params = {count: 30};
 	$('.active').removeClass('active');
-	if (id == null) 
+	if (id == null) {
 		$('aside.left h3.my-keeps').addClass('active');
-	else {
+		$('section.main .search h1').text('Browse your keeps');
+	} else {
 		$('aside.left h3[data-id="' + id + '"]').addClass('active');
 		params.collection = id;
+		$('section.main .search h1').text('Browse your ' + collections[id].name + ' collection');
 	}
 	if (prevCollection != id) { // reset search if not fetching the same collection
 		prevCollection = id;
@@ -554,7 +562,7 @@ $(document)
 												<a href="javascript: ;" class="edit"></a>\
 												<ul><li><a class="rename" href="javascript: ;">Rename</a></li>\
 													<li><a class="remove" href="javascript: ;">Remove</a></li></ul>\
-											</div><a href="javascript: ;"><span class="name">' + newName + '</span> <span class="right light">0</span></a></h3>');
+											</div><a href="javascript: ;"><span class="name long-text">' + newName + '</span> <span class="right light">0</span></a></h3>');
 										$('aside.right .actions .collections ul li.create').after('<li><input type="checkbox" data-id="' + data.id + '" id="cb-' + data.id + '"><label for="cb-' + data.id + '"><span></span>' + newName + '</label></li>');
 										collections[data.id] = {id: data.id, name: newName};
 										initDroppable();
