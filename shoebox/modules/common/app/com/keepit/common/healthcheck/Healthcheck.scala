@@ -165,7 +165,7 @@ class HealthcheckPluginImpl @Inject() (
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-     scheduleTask(actorFactory.system, 0 seconds, 10 minutes, actor, ReportErrorsAction)
+    scheduleTask(actorFactory.system, 0 seconds, 10 minutes, actor, ReportErrorsAction)
   }
 
   def errorCount(): Int = Await.result((actor ? ErrorCount).mapTo[Int], 1 seconds)

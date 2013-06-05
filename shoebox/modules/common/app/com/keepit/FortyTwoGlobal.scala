@@ -14,7 +14,7 @@ import play.api._
 import play.api.mvc.Results._
 import play.api.mvc._
 import play.utils.Threads
-import play.modules.statsd.api.StatsdFilter
+import play.modules.statsd.api.{Statsd, StatsdFilter}
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
     extends WithFilters(LoggingFilter, new StatsdFilter()) with Logging {
@@ -89,7 +89,10 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     log.info(startMessage)
     println(startMessage)
     injector.inject[AppScope].onStart(app)
-    if (app.mode != Mode.Test && app.mode != Mode.Dev) injector.inject[HealthcheckPlugin].reportStart()
+    if (app.mode != Mode.Test && app.mode != Mode.Dev) {
+      Statsd.increment("deploys")
+      injector.inject[HealthcheckPlugin].reportStart()
+    }
   }
 
   override def onError(request: RequestHeader, ex: Throwable): Result = {
