@@ -1,5 +1,3 @@
-// graphite.js
-
 (function ($) {
   $.fn.graphite = function (options) {
     if (options === "update") {
@@ -65,5 +63,4 @@
     url: "/render/",
     width: "940"
   };
-
 }(jQuery));
