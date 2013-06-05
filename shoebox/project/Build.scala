@@ -118,6 +118,7 @@ object ApplicationBuild extends Build {
       javaOptions in test ++= javaTestOptions,
       parallelExecution in Test := true,
       testOptions in Test ++= _testOptions,
+      EclipseKeys.skipParents in ThisBuild := false,
 
       //https://groups.google.com/forum/?fromgroups=#!topic/play-framework/aa90AAp5bpo
       sources in doc in Compile := List()
@@ -132,6 +133,7 @@ object ApplicationBuild extends Build {
       javaOptions in test ++= javaTestOptions,
       parallelExecution in Test := true,
       testOptions in Test ++= _testOptions,
+      EclipseKeys.skipParents in ThisBuild := false,
 
       //https://groups.google.com/forum/?fromgroups=#!topic/play-framework/aa90AAp5bpo
       sources in doc in Compile := List()
