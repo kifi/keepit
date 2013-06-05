@@ -62,22 +62,6 @@ class BookmarksController @Inject() (
 
   val CollectionOrderingKey = "user_collection_ordering"
 
-  def getCollectionOrdering() = AuthenticatedJsonAction { request =>
-    val uid = request.userId
-    implicit val collectionIdFormat = ExternalId.format[Collection]
-    val allCollectionIds = db.readOnly { implicit s => collectionRepo.getByUser(uid).map(_.externalId) }
-    val orderedCollectionIds = Json.fromJson[Seq[ExternalId[Collection]]](Json.parse {
-      db.readOnly { implicit s => userValueRepo.getValue(uid, CollectionOrderingKey) } getOrElse {
-        db.readWrite { implicit s =>
-          userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(allCollectionIds)))
-        }
-      }
-    }).get
-    Ok(Json.obj(
-      "collectionIds" -> allCollectionIds.sortBy(orderedCollectionIds.indexOf(_))
-    ))
-  }
-
   def setCollectionOrdering() = AuthenticatedJsonAction { request =>
     implicit val collectionIdFormat = ExternalId.format[Collection]
     val uid = request.userId
@@ -130,14 +114,31 @@ class BookmarksController @Inject() (
     }
   }
 
-  def allCollections() = AuthenticatedJsonAction { request =>
-    Ok(Json.obj(
-      "collections" -> db.readOnly { implicit s =>
-        collectionRepo.getByUser(request.userId).map { c =>
-          val count = keepToCollectionRepo.count(c.id.get)
-          BasicCollection fromCollection(c, Some(count))
-        }
+  def allCollections(sort: String) = AuthenticatedJsonAction { request =>
+    val uid = request.userId
+    implicit val collectionIdFormat = ExternalId.format[Collection]
+    val unsortedCollections = db.readOnly { implicit s =>
+      collectionRepo.getByUser(uid).map { c =>
+        val count = keepToCollectionRepo.count(c.id.get)
+        BasicCollection fromCollection(c, Some(count))
       }
+    }
+    val collections = sort match {
+      case "user" =>
+        val allCollectionIds = unsortedCollections.map(_.id)
+        val orderedCollectionIds = Json.fromJson[Seq[ExternalId[Collection]]](Json.parse {
+          db.readOnly { implicit s => userValueRepo.getValue(uid, CollectionOrderingKey) } getOrElse {
+            db.readWrite { implicit s =>
+              userValueRepo.setValue(uid, CollectionOrderingKey, Json.stringify(Json.toJson(allCollectionIds)))
+            }
+          }
+        }).get
+        unsortedCollections.sortBy(c => orderedCollectionIds.indexOf(c.id.get))
+      case _ => // default is "last_kept"
+        unsortedCollections
+    }
+    Ok(Json.obj(
+      "collections" -> collections
     ))
   }
 

@@ -1,3 +1,4 @@
-GET     /test2                           controllers.Assets.at(path="/public", file)
 
 ->  / common.Routes
+
+
