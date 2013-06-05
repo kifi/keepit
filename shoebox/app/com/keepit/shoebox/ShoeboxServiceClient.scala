@@ -32,6 +32,8 @@ import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.social.SocialNetworkType
 import com.keepit.common.social.SocialId
 import com.keepit.serializer.SocialUserInfoSerializer.socialUserInfoSerializer
+import scala.collection.mutable.ArrayBuffer
+import com.keepit.search.ArticleHit
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -141,25 +143,62 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getPersonalSearchInfo(userId: Id[User], resultSet: ArticleSearchResult): Future[(Map[Id[User], BasicUser], Seq[PersonalSearchHit])] = {
-    val allUsers = resultSet.hits.map(_.users).flatten.distinct
+    def splitUserByCache(resultSet: ArticleSearchResult) = {
+      val allUsers = resultSet.hits.map(_.users).flatten.distinct
 
-    val (preCachedUsers, neededUsers) = allUsers.foldRight((Map[Id[User], BasicUser](), Set[Id[User]]())) { (uid, resSet) =>
-      cacheProvider.basicUserCache.getOrElseOpt(BasicUserUserIdKey(uid))(None) match {
-        case Some(bu) => (resSet._1 + (uid -> bu), resSet._2)
-        case None => (resSet._1, resSet._2 + uid)
+      val (preCachedUsers, neededUsers) = allUsers.foldRight((Map[Id[User], BasicUser](), Set[Id[User]]())) { (uid, resSet) =>
+        cacheProvider.basicUserCache.getOrElseOpt(BasicUserUserIdKey(uid))(None) match {
+          case Some(bu) => (resSet._1 + (uid -> bu), resSet._2)
+          case None => (resSet._1, resSet._2 + uid)
+        }
+      }
+      (preCachedUsers, neededUsers)
+    }
+
+    def getPersonalSearchHitFromCache(uriId: Id[NormalizedURI], userId: Id[User], isMyBookmark: Boolean): Option[PersonalSearchHit] = {
+      val uri = cacheProvider.uriIdCache.get(NormalizedURIKey(uriId))
+      if (uri == None) return None
+      (if (isMyBookmark) cacheProvider.bookmarkUriUserCache.get(BookmarkUriUserKey(uriId, userId)) else None) match {
+        case Some(bmk) =>
+          Some(PersonalSearchHit(uri.get.id.get, uri.get.externalId, bmk.title, bmk.url, bmk.isPrivate))
+        case None => None
       }
     }
 
-    if(neededUsers.nonEmpty || resultSet.hits.nonEmpty) {
+    def loadCachedBookmarks(userId: Id[User], resultSet: ArticleSearchResult) = {
+      val personalHits = new Array[PersonalSearchHit](resultSet.hits.size)
+      val indexBuf = ArrayBuffer.empty[Int]
+      val hitBuf = ArrayBuffer.empty[ArticleHit]
+      for (i <- 0 until resultSet.hits.size) {
+        val hit = resultSet.hits(i)
+        getPersonalSearchHitFromCache(hit.uriId, userId, hit.isMyBookmark) match {
+          case Some(personalHit) => personalHits(i) = personalHit
+          case None => { indexBuf.append(i); hitBuf.append(hit) }
+        }
+      }
+      (personalHits, indexBuf, hitBuf)
+    }
+
+    val (preCachedUsers, neededUsers) = splitUserByCache(resultSet)
+    val (allPersonalHits, indexBuf, hitBuf) = loadCachedBookmarks(userId, resultSet)
+
+    if (neededUsers.nonEmpty || resultSet.hits.nonEmpty) {
       val neededUsersReq = neededUsers.map(_.id).mkString(",")
-      val formattedHits = resultSet.hits.map( hit => (if(hit.isMyBookmark) 1 else 0) + ":" + hit.uriId ).mkString(",")
+      val formattedHits = hitBuf.map(hit => (if (hit.isMyBookmark) 1 else 0) + ":" + hit.uriId).mkString(",")
 
-      call(routes.ShoeboxController.getPersonalSearchInfo(userId, neededUsersReq, formattedHits)).map{ res =>
-        val personalSearchHits = (Json.fromJson[Seq[PersonalSearchHit]](res.json \ "personalSearchHits")).getOrElse(Seq())
-        val neededUsers = (res.json \ "users").as[Map[String, BasicUser]]
-        val allUsers = neededUsers.map( b => Id[User](b._1.toLong) -> b._2) ++ preCachedUsers
+      if (neededUsers.size == 0 && hitBuf.size == 0) {
+        Promise.successful((preCachedUsers, allPersonalHits.toSeq)).future
+      } else {
 
-        (allUsers, personalSearchHits)
+        call(routes.ShoeboxController.getPersonalSearchInfo(userId, neededUsersReq, formattedHits)).map { res =>
+          val searchHits = (Json.fromJson[Seq[PersonalSearchHit]](res.json \ "personalSearchHits")).getOrElse(Seq())
+          val neededUsers = (res.json \ "users").as[Map[String, BasicUser]]
+          val allUsers = neededUsers.map(b => Id[User](b._1.toLong) -> b._2) ++ preCachedUsers
+
+          searchHits.zipWithIndex.foreach { x => allPersonalHits(indexBuf(x._2)) = x._1 }
+
+          (allUsers, allPersonalHits.toSeq)
+        }
       }
     } else {
       Promise.successful((Map.empty[Id[User], BasicUser], Nil)).future

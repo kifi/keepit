@@ -104,7 +104,7 @@ class ShoeboxController @Inject() (
       case None => Ok(JsNull)
     }
   }
-  
+
   def getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String) = Action {
     val socialId = SocialId(id)
     val network = SocialNetworkType(networkType)
@@ -113,7 +113,7 @@ class ShoeboxController @Inject() (
     }
     Ok(Json.toJson(sui))
   }
-  
+
   def getSocialUserInfosByUserId(userId: Id[User]) = Action {
     val sui = db.readOnly { implicit session =>
       socialUserInfoRepo.getByUser(userId)
@@ -193,9 +193,9 @@ class ShoeboxController @Inject() (
         user.toString -> Json.toJson(basicUserRepo.load(user))
       }).toSeq
       val personalSearchHits = formattedHits.split(",").filterNot(_.isEmpty).map { hit =>
-        val param = hit.split(":").toSeq
-        val isMyBookmark = param.head == "1"
-        val uriId = Id[NormalizedURI](param.tail.head.toLong)
+        val param = hit.split(":")
+        val isMyBookmark = param(0) == "1"
+        val uriId = Id[NormalizedURI](param(1).toLong)
         val uri = normUriRepo.get(uriId)
 
         (if(isMyBookmark) bookmarkRepo.getByUriAndUser(uriId, userId) else None) match {
@@ -301,7 +301,7 @@ class ShoeboxController @Inject() (
     }
     Ok(JsBoolean(has))
   }
-  
+
   def getUserExperiments(userId: Id[User]) = Action { request =>
     val experiments = db.readOnly { implicit s =>
       userExperimentRepo.getUserExperiments(userId).map(_.value)
@@ -339,7 +339,7 @@ class ShoeboxController @Inject() (
       }.map{uri => NormalizedURISerializer.normalizedURISerializer.writes(uri)}
     Ok(JsArray(uris))
   }
-  
+
   def getSessionByExternalId(sessionId: ExternalId[UserSession]) = Action { request =>
     val res = db.readOnly { implicit session =>
       sessionRepo.getOpt(sessionId)
