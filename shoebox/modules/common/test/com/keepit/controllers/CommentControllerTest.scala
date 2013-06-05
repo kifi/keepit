@@ -30,7 +30,7 @@ class CommentControllerTest extends TestKit(ActorSystem()) with Specification wi
 
     "follow and unfollow" in {
       running(new EmptyApplication().withFakeSecureSocialUserService().withFakeMail()) {
-        val now = new DateTime(2012, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
+        val now = new DateTime(2013, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         val today = now.toDateTime
         inject[FakeClock].push(today)
 
