@@ -81,7 +81,7 @@ object ApplicationBuild extends Build {
       "com.keepit.search._"
     )
 
-    val _resolvers = Seq(
+    val commonResolvers = Seq(
       Resolver.url("sbt-plugin-snapshots",
         new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
       "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
@@ -98,37 +98,26 @@ object ApplicationBuild extends Build {
       "com.keepit.search._"
     )
 
-    val _libraryDependencies = Seq(
-      // updating bonecp, trying to resolve "Timed out waiting for a free available connection" exception
-      // http://stackoverflow.com/a/15500442/81698
-      "com.google.inject" % "guice" % "3.0",
-      "com.google.inject.extensions" % "guice-multibindings" % "3.0",
-      "com.tzavellas" % "sse-guice" % "0.7.1"
-    )
-
     val javaTestOptions = Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=512m")
+
+    val _testOptions = Seq(
+      Tests.Argument("sequential", "false"),
+      Tests.Argument("threadsNb", "16"),
+      Tests.Argument("showtimes", "true"),
+      Tests.Argument("stopOnFail", "true"),
+      Tests.Argument("failtrace", "true")
+    )
 
     lazy val common = play.Project("common", appVersion, commonDependencies, path = file("modules/common")).settings(
       scalacOptions ++= _scalacOptions,
-      // add some imports to the routes file
       routesImport ++= _routesImport,
-
-      resolvers ++= _resolvers,
-
-      // add some imports to the templates files
+      resolvers ++= commonResolvers,
       templatesImport ++= _templatesImport,
-
-      libraryDependencies ++= _libraryDependencies,
-
       javaOptions in test ++= javaTestOptions,
 
+      javaOptions in test ++= javaTestOptions,
       parallelExecution in Test := true,
-
-      testOptions in Test += Tests.Argument("sequential", "false"),
-      testOptions in Test += Tests.Argument("threadsNb", "16"),
-      testOptions in Test += Tests.Argument("showtimes", "true"),
-      testOptions in Test += Tests.Argument("stopOnFail", "true"),
-      testOptions in Test += Tests.Argument("failtrace", "true"),
+      testOptions in Test ++= _testOptions,
 
       //https://groups.google.com/forum/?fromgroups=#!topic/play-framework/aa90AAp5bpo
       sources in doc in Compile := List()
@@ -137,41 +126,12 @@ object ApplicationBuild extends Build {
 
     val main = play.Project(appName, appVersion).settings(
       scalacOptions ++= _scalacOptions,
-      // add some imports to the routes file
-      routesImport ++= Seq(
-        "com.keepit.common.db.{ExternalId, Id, State}",
-        "com.keepit.model._",
-        "com.keepit.common.social._",
-        "com.keepit.search._"
-      ),
+      // Due to the way resolvers work in sbt, we need to specify the resolvers for *all* subprojects here.
+      resolvers ++= commonResolvers,
 
-      resolvers ++= Seq(
-        Resolver.url("sbt-plugin-snapshots",
-          new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
-        "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
-        "kevoree Repository" at "http://maven2.kevoree.org/release/",
-        //for org.mongodb#casb
-        "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
-        "releases"  at "https://oss.sonatype.org/content/groups/scala-tools"
-      ),
-
-      // add some imports to the templates files
-      templatesImport ++= Seq(
-        "com.keepit.common.db.{ExternalId, Id, State}",
-        "com.keepit.model._",
-        "com.keepit.common.social._",
-        "com.keepit.search._"
-      ),
-
-      javaOptions in test ++= Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=512m"),
-
+      javaOptions in test ++= javaTestOptions,
       parallelExecution in Test := true,
-
-      testOptions in Test += Tests.Argument("sequential", "false"),
-      testOptions in Test += Tests.Argument("threadsNb", "16"),
-      testOptions in Test += Tests.Argument("showtimes", "true"),
-      testOptions in Test += Tests.Argument("stopOnFail", "true"),
-      testOptions in Test += Tests.Argument("failtrace", "true"),
+      testOptions in Test ++= _testOptions,
 
       //https://groups.google.com/forum/?fromgroups=#!topic/play-framework/aa90AAp5bpo
       sources in doc in Compile := List()

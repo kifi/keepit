@@ -99,9 +99,6 @@ GET     /session/end                @com.keepit.controllers.ext.ExtAuthControlle
 
 GET     /ext/ws                     @com.keepit.controllers.ext.ExtStreamController.ws()
 
-# Map static resources from the /public folder to the /assets URL path
-GET     /assets/*file               controllers.Assets.at(path="/public", file)
-
 # Temporary hack for kifi.com site before we fully integrate it with Play!
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html")
 GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSite(path: String)
@@ -322,3 +319,6 @@ GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.Se
 # INTERNAL ROUTES/GLOBAL
 GET     /internal/benchmark                   @com.keepit.common.healthcheck.CommonBenchmarkController.benchmarksResults()
 GET     /internal/version                     @com.keepit.common.healthcheck.CommonBenchmarkController.version()
+
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/*file               controllers.Assets.at(path="/public", file)
