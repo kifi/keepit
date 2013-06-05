@@ -255,11 +255,8 @@ choose which suits your project best!
       var e, d;
       switch(c.keyCode) {
         case 37:
-        ;
         case 39:
-        ;
         case 38:
-        ;
         case 40:
           return a(this).val() ? (e = null, e = 40 === c.keyCode || 39 === c.keyCode ? a(s).next() : a(s).prev(), e.length && K(e)) : (e = u.prev(), d = u.next(), e.length && e.get(0) === f || d.length && d.get(0) === f ? 37 === c.keyCode || 38 === c.keyCode ? x(a(f), H) : x(a(f), B) : (37 === c.keyCode || 38 === c.keyCode) && e.length ? A(a(e.get(0))) : (39 === c.keyCode || 40 === c.keyCode) && d.length && A(a(d.get(0)))), !1;
         case 8:
@@ -273,11 +270,8 @@ choose which suits your project best!
           }
           break;
         case 9:
-        ;
         case 13:
-        ;
         case 108:
-        ;
         case 188:
           if(s) {
             E(a(s).data("tokeninput")), j.change()
