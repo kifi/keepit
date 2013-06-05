@@ -39,7 +39,7 @@ class SearchExclusiveModule() extends ScalaModule with Logging {
   def configure() {
     bind[ActionAuthenticator].to[RemoteActionAuthenticator]
   }
-  
+
   @Singleton
   @Provides
   def secureSocialAuthenticatorPlugin(
@@ -179,9 +179,9 @@ class SearchModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def searchConfigManager(shoeboxClient: ShoeboxServiceClient): SearchConfigManager = {
+  def searchConfigManager(shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait): SearchConfigManager = {
     val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
-    new SearchConfigManager(optFile, shoeboxClient)
+    new SearchConfigManager(optFile, shoeboxClient, monitoredAwait)
   }
 
 }

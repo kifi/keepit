@@ -1,5 +1,6 @@
 package com.keepit.search
 
+import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db.slick.Database
 import com.keepit.inject._
 import com.keepit.model._
@@ -17,7 +18,7 @@ class SearchConfigTest extends Specification with DbRepos {
     "load defaults correctly" in {
       running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
         val searchConfigManager =
-          new SearchConfigManager(None, inject[ShoeboxServiceClient])
+          new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
         val userRepo = inject[UserRepo]
         val (andrew, greg) = inject[Database].readWrite { implicit s =>
           val andrew = userRepo.save(User(firstName = "Andrew", lastName = "Connor"))
@@ -32,22 +33,30 @@ class SearchConfigTest extends Specification with DbRepos {
     }
     "load overrides for experiments" in {
       running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
-        val searchConfigManager =
-          new SearchConfigManager(None, inject[ShoeboxServiceClient])
+        val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
+        val searchConfigExperimentRepo = inject[SearchConfigExperimentRepo]
         val userRepo = inject[UserRepo]
-        val andrew = inject[Database].readWrite { implicit s =>
+
+        val andrew = db.readWrite { implicit s =>
           userRepo.save(User(firstName = "Andrew", lastName = "Connor"))
         }
-        val v1 = searchConfigManager.saveExperiment(SearchConfigExperiment(config = SearchConfig(
-          "recencyBoost" -> "2.0",
-          "percentMatch" -> "70",
-          "tailCutting" -> "0.30"
-        ), weight = 0.5, state = SearchConfigExperimentStates.ACTIVE))
-        val v2 = searchConfigManager.saveExperiment(SearchConfigExperiment(config = SearchConfig(
-          "recencyBoost" -> "1.0",
-          "percentMatch" -> "90",
-          "tailCutting" -> "0.10"
-        ), weight = 0.5, state = SearchConfigExperimentStates.ACTIVE))
+
+        val v1 = db.readWrite{ implicit s =>
+          searchConfigExperimentRepo.save(SearchConfigExperiment(config = SearchConfig(
+            "recencyBoost" -> "2.0",
+            "percentMatch" -> "70",
+            "tailCutting" -> "0.30"
+          ), weight = 0.5, state = SearchConfigExperimentStates.ACTIVE))
+        }
+
+        val v2 = db.readWrite{ implicit s =>
+          searchConfigExperimentRepo.save(SearchConfigExperiment(config = SearchConfig(
+            "recencyBoost" -> "1.0",
+            "percentMatch" -> "90",
+            "tailCutting" -> "0.10"
+          ), weight = 0.5, state = SearchConfigExperimentStates.ACTIVE))
+        }
+
         val (c1, e1) = searchConfigManager.getConfig(andrew.id.get, "andrew conner")
         val (c2, e2) = searchConfigManager.getConfig(andrew.id.get, "Andrew  Conner")
         c1 === c2
@@ -63,21 +72,26 @@ class SearchConfigTest extends Specification with DbRepos {
     }
     "load correct override based on weights" in {
       running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
-        val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient])
+        val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
+        val searchConfigExperimentRepo = inject[SearchConfigExperimentRepo]
         val userRepo = inject[UserRepo]
-        val andrew = inject[Database].readWrite { implicit s =>
+
+        val andrew = db.readWrite { implicit s =>
           userRepo.save(User(firstName = "Andrew", lastName = "Connor"))
         }
-        searchConfigManager.saveExperiment(SearchConfigExperiment(config = SearchConfig(
-          "recencyBoost" -> "2.0",
-          "percentMatch" -> "70",
-          "tailCutting" -> "0.30"
-        ), weight = 0, state = SearchConfigExperimentStates.ACTIVE))
-        searchConfigManager.saveExperiment(SearchConfigExperiment(config = SearchConfig(
-          "recencyBoost" -> "1.0",
-          "percentMatch" -> "90",
-          "tailCutting" -> "0.10"
-        ), weight = 1000, state = SearchConfigExperimentStates.ACTIVE))
+
+        db.readWrite{ implicit s =>
+          searchConfigExperimentRepo.save(SearchConfigExperiment(config = SearchConfig(
+            "recencyBoost" -> "2.0",
+            "percentMatch" -> "70",
+            "tailCutting" -> "0.30"
+          ), weight = 0, state = SearchConfigExperimentStates.ACTIVE))
+          searchConfigExperimentRepo.save(SearchConfigExperiment(config = SearchConfig(
+            "recencyBoost" -> "1.0",
+            "percentMatch" -> "90",
+            "tailCutting" -> "0.10"
+          ), weight = 1000, state = SearchConfigExperimentStates.ACTIVE))
+        }
 
         val (c1, _) = searchConfigManager.getConfig(andrew.id.get, "andrew conner")
         val (c2, _) = searchConfigManager.getConfig(andrew.id.get, "software engineer")
@@ -91,22 +105,28 @@ class SearchConfigTest extends Specification with DbRepos {
     }
     "not get configs from inactive experiments" in {
       running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
-        val searchConfigManager =
-          new SearchConfigManager(None, inject[ShoeboxServiceClient])
+        val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
+        val searchConfigExperimentRepo = inject[SearchConfigExperimentRepo]
         val userRepo = inject[UserRepo]
-        val greg = inject[Database].readWrite { implicit s =>
+
+        val greg = db.readWrite { implicit s =>
           userRepo.save(User(firstName = "Greg", lastName = "Metvin"))
         }
-        val ex = searchConfigManager.saveExperiment(SearchConfigExperiment(config = SearchConfig(
-          "percentMatch" -> "700",
-          "phraseBoost" -> "500.0"
-        ), weight = 1, state = SearchConfigExperimentStates.ACTIVE))
+
+        val ex = db.readWrite{ implicit s =>
+          searchConfigExperimentRepo.save(SearchConfigExperiment(config = SearchConfig(
+            "percentMatch" -> "700",
+            "phraseBoost" -> "500.0"
+          ), weight = 1, state = SearchConfigExperimentStates.ACTIVE))
+        }
 
         val (c1, _) = searchConfigManager.getConfig(greg.id.get, "turtles")
         c1.asInt("percentMatch") === 700
         c1.asDouble("phraseBoost") === 500.0
 
-        searchConfigManager.saveExperiment(ex.withState(SearchConfigExperimentStates.INACTIVE))
+        db.readWrite{ implicit s =>
+          searchConfigExperimentRepo.save(ex.withState(SearchConfigExperimentStates.INACTIVE))
+        }
 
         val (c2, _) = searchConfigManager.getConfig(greg.id.get, "turtles")
         c2.asInt("percentMatch") !== 700
@@ -115,17 +135,20 @@ class SearchConfigTest extends Specification with DbRepos {
     }
     "ignore experiments for users excluded from experiments" in {
       running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
+        val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
         val userExperimentRepo = inject[UserExperimentRepo]
-        val searchConfigManager =
-          new SearchConfigManager(None, inject[ShoeboxServiceClient])
+        val searchConfigExperimentRepo = inject[SearchConfigExperimentRepo]
         val userRepo = inject[UserRepo]
+
         val greg = db.readWrite { implicit s =>
           userRepo.save(User(firstName = "Greg", lastName = "Metvin"))
         }
-        searchConfigManager.saveExperiment(SearchConfigExperiment(config = SearchConfig(
-          "percentMatch" -> "9000",
-          "phraseBoost" -> "10000.0"
-        ), weight = 1, state = SearchConfigExperimentStates.ACTIVE))
+        db.readWrite { implicit s =>
+          searchConfigExperimentRepo.save(SearchConfigExperiment(config = SearchConfig(
+            "percentMatch" -> "9000",
+            "phraseBoost" -> "10000.0"
+          ), weight = 1, state = SearchConfigExperimentStates.ACTIVE))
+        }
         val (c1, _) = searchConfigManager.getConfig(greg.id.get, "turtles")
         c1.asInt("percentMatch") === 9000
         c1.asDouble("phraseBoost") === 10000.0

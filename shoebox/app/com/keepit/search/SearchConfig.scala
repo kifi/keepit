@@ -4,6 +4,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.util.Properties
 import com.keepit.common.db.Id
+import com.keepit.common.akka.MonitoredAwait
 import com.keepit.model.ExperimentTypes.NO_SEARCH_EXPERIMENTS
 import com.keepit.model.{UserExperimentRepo, User}
 import com.keepit.search.index.DefaultAnalyzer
@@ -72,25 +73,21 @@ object SearchConfig {
   def getDescription(name: String) = descriptions.get(name)
 }
 
-class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxServiceClient) {
+class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) {
 
   private[this] val analyzer = DefaultAnalyzer.defaultAnalyzer
+
+  @volatile private[this] var _activeExperiments: Seq[SearchConfigExperiment] = Seq()
 
   private val propertyFileName = "searchconfig.properties"
 
   lazy val defaultConfig = new SearchConfig(SearchConfig.defaultParams)
 
-  def activeExperiments: Seq[SearchConfigExperiment] =
-    Await.result(shoeboxClient.getActiveExperiments, 5 seconds)
-
-  def getExperiments: Seq[SearchConfigExperiment] =
-    Await.result(shoeboxClient.getExperiments, 5 seconds)
-
-  def getExperiment(id: Id[SearchConfigExperiment]): SearchConfigExperiment =
-    Await.result(shoeboxClient.getExperiment(id), 5 seconds)
-
-  def saveExperiment(experiment: SearchConfigExperiment): SearchConfigExperiment =
-    Await.result(shoeboxClient.saveExperiment(experiment), 5 seconds)
+  def activeExperiments: Seq[SearchConfigExperiment] = {
+    val ret = monitoredAwait.result(shoeboxClient.getActiveExperiments, 5 milliseconds, _activeExperiments)
+    _activeExperiments = ret
+    ret
+  }
 
   private var userConfig = Map.empty[Long, SearchConfig]
   def getUserConfig(userId: Id[User]) = userConfig.getOrElse(userId.id, defaultConfig)
@@ -108,7 +105,7 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
     userConfig.get(userId.id) match {
       case Some(config) => (config, None)
       case None =>
-        val shouldExclude = Await.result(shoeboxClient.hasExperiment(userId, NO_SEARCH_EXPERIMENTS), 5 seconds)
+        val shouldExclude = monitoredAwait.result(shoeboxClient.hasExperiment(userId, NO_SEARCH_EXPERIMENTS), 10 milliseconds, true)
         val experiment = if (shouldExclude) None else {
           val hashFrac = hash(userId, queryText)
           var frac = 0.0
