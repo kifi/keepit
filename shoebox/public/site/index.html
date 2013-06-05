@@ -56,8 +56,8 @@
 			</h3>
 			 -->
 			<div id="collections" class="template-wrapper">
-				<h2>Collections <a id="new-collection" href="javascript:;"><img src="img/plus.png" alt="+"/></a></h2>
-				<div id="add-collection">
+				<h2>Collections <a class="new-collection" href="javascript:;"><img src="img/plus.png" alt="+"/></a></h2>
+				<div class="add-collection">
 					<input placeholder="Type name here"/>
 				</div>
 				<div id="collections-wrapper">
@@ -149,9 +149,13 @@
  			<div class="actions">
  				<a class="add" href="javascript:;">Add to a collection <span class="close">x</span></a>
  				<div class="collections">
- 					<input type="text" placeholder="Find a collection..."/>
+ 					<input class="find" type="text" placeholder="Find a collection..."/>
  					<ul>
- 						<li class="create"><a href="javascript:;">Create a new collection</a></li>
+ 						<li class="create"><a class="new-collection" href="javascript:;">Create a new collection</a>
+	 						<div class="add-collection">
+								<input type = "text" placeholder="Type name here"/>
+							</div>
+						</li>
  					</ul>
  				</div>
  				<a class="share" href="javascript:;">Share on your social networks</a>

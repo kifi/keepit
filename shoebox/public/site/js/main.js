@@ -10,6 +10,7 @@ var urlMe = urlUser + '/me';
 var urlConnections = urlUser + '/connections';
 var urlCollections = urlSite + '/collections';
 var urlCollectionsAll = urlCollections + '/all';
+var urlCollectionsOrder = urlCollections + '/ordering';
 var urlCollectionsCreate = urlCollections + '/create';
 
 var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
@@ -87,6 +88,7 @@ function initDraggable() {
 
 function initDroppable() {
 	$( ".droppable" ).droppable({
+		accept: '.keep',
 		greedy: true,
 		tolerance: "pointer",
 		hoverClass: "drop-hover",
@@ -162,9 +164,10 @@ function doSearch(context) {
 				searchContext = data.context;
 			else
 				searchContext = null;
-			if (context == null)
+			if (context == null) {
 				searchTemplate.render(data.hits);
-			else
+				$('aside.right').removeClass('visible');
+			} else
 				searchTemplate.append(data.hits);
 		});
 }
@@ -195,6 +198,7 @@ function populateMyKeeps(id) {
 		prevCollection = id;
 		lastKeep = null;
 		keepsTemplate.clear();
+		$('aside.right').removeClass('visible');
 	}
 	searchTemplate.clear();
 	$('input.search').val('');
@@ -264,6 +268,7 @@ $('#collections').on('click','a.remove',function() {
 		,error: function() {showMessage('Could not delete collection, please try again later')}
 		,success: function(data) {
 						colElement.remove();
+						$('aside.right .collections ul li:has(input[data-id="'+colId+'"])').remove();
 					}
 		});
 }).on('click','a.rename',function() {
@@ -329,7 +334,29 @@ $('aside.right div.in-collections').on('change','input[type="checkbox"]',functio
 					}
 		});
 	
-})
+});
+$('aside.right .actions .collections').on('change','input[type="checkbox"]',function(){
+	// add selected keeps to collection
+	var row = $(this).parents('li');
+	var colId = $(this).data('id');
+	var keeps = $('section.main .keep.selected').map(function(){ return $(this).data('id')}).get();
+	$.ajax( {url: urlCollections + "/" + colId + "/addKeeps"
+		,type: "POST"
+		,dataType: 'json'
+		,data: JSON.stringify(keeps)
+		,contentType: 'application/json'
+		,error: function() {showMessage('Could not add keeps to collection, please try again later')}
+		,success: function(data) {
+						console.log(data);
+						// add to collection count on left bar 
+						var countSpan = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right'); 
+						countSpan.text(countSpan.text() * 1  + data.added);
+						$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+colId+'" id="cb1-'+colId+'" checked/><label for="cb1-'+colId+'"><span></span>'+collections[colId].name+'</label><div>');
+						row.remove();
+					}
+		});
+	
+});
 
 $(document)
 	.on('keypress', function(e) {if (!$(e.target).is('textarea, input')) $('input.search').focus() }) // auto focus on search field when starting to type anywhere on the document
@@ -346,12 +373,12 @@ $(document)
 	})
 	.on('click','.keep',function(e) {
 		var keep = $(this);
-		var cb = $(this).find('input[type="checkbox"]');
+		var cb = keep.find('input[type="checkbox"]');
 		if (!$(e.target).is('input[type="checkbox"]')) {
 			if (cb.is(':checked'))
-				cb.removeAttr('checked');
+				cb.prop('checked',false);
 			else
-				cb.attr('checked',true);			
+				cb.prop('checked',true);			
 		}
 		if (cb.is(':checked')) { 
 			keep.addClass('selected');
@@ -402,6 +429,24 @@ $(document)
 		$(".fancybox").fancybox();
 						
 		populateCollections();
+		
+		// make collections sortable
+		$('aside.left #collections-wrapper').sortable({items: 'h3', opacity: 0.6, 
+			placeholder: "sortable-placeholder",
+			beforeStop: function( event, ui ) {
+				// update the collection order
+				$.ajax( {url: urlCollectionsOrder
+					,type: "POST"
+					,async: false
+					,dataType: 'json'
+					,data: JSON.stringify($('aside.left #collections-wrapper h3').map(function() {return ($(this).data('id'))}).get())
+					,contentType: 'application/json'
+					,error: function() {showMessage('Could not reorder the collections, please try again later'); return false;}
+					,success: function(data) {
+									console.log(data);
+								}
+				});
+		}});
 		
 		// populate number of my keeps
 		updateNumKeeps();
@@ -456,14 +501,6 @@ $(document)
 				doSearch(null); 
 			}
 		});
-/*		$('select[name="collection"]').on('change', function() { // mark selected collection as active
-			$('aside.left h3.collection').removeClass('active');
-			$('aside.left h3[data-id="'+ $(this).val() +'"]').addClass('active');
-		});
-*/		
-		$('aside.right select[name!="keepers"]').on('change',function() { // execute search when changing the filter
-			doSearch(null);
-		});
 		
 		$('input.search')
 			.on('keyup',function() {
@@ -471,14 +508,6 @@ $(document)
 					searchTimeout = setTimeout('doSearch(null)', 500);
 				}) // instant search
 			.on('focus',function() {
-/*				if ($('aside.left h3.active').is('.collection')) { // set the search filters to the selected collection
-					$('select[name="keepers"]').val('m');
-					$('select[name="collection"]').val($('aside.left h3.active').data('id'));
-				} else { // reset filters
-					$('select[name="keepers"]').val('f');
-					$('select[name="collection"]').val('');
-				}
-*/
 				$('aside.left .active').removeClass('active'); 
 			});
 
@@ -487,17 +516,29 @@ $(document)
 			populateMyKeeps($(this).parent().data('id'));
 		});
 
-		$('aside.left a#new-collection').click(function() {
-			if ($('#add-collection').is(':visible')) {
-				$('#add-collection').slideUp();
+		$('aside a.new-collection').click(function() {
+			var addColDiv = $(this).parents('div').first().find('.add-collection');
+			if (addColDiv.is(':visible')) {
+				addColDiv.slideUp();
 			} else {
-				$('#add-collection').slideDown();
-				$('#add-collection input').focus();				
+				addColDiv.slideDown();
+				addColDiv.find('input').focus();				
 			}
-		})
+		});
+		
+		// filter collections or right bar
+		$('aside.right .collections input.find').on('keyup',function() {
+			var p = new RegExp($(this).val(),"gi");
+			$('aside.right .collections ul li:not(.create)').each(function() {
+				if (p.test($(this).find('label').text()))
+					$(this).show();
+				else
+					$(this).hide();
+			});
+		});
 
 		// create new collection
-		$('#add-collection input').keypress(function(e) {
+		$('.add-collection input').keypress(function(e) {
 			var code = (e.keyCode ? e.keyCode : e.which);
 			if(code == 13) { //Enter key pressed
 				var inputField = $(this);
@@ -509,15 +550,16 @@ $(document)
 						,contentType: 'application/json'
 						,error: function() {showMessage('Could not create collection, please try again later')}
 						,success: function(data) {
-										console.log(data)
 									   $('#collections-wrapper').append('<h3 class="droppable collection" data-id="' + data.id + '"><div class="edit-menu">\
 												<a href="javascript: ;" class="edit"></a>\
 												<ul><li><a class="rename" href="javascript: ;">Rename</a></li>\
 													<li><a class="remove" href="javascript: ;">Remove</a></li></ul>\
 											</div><a href="javascript: ;"><span class="name">' + newName + '</span> <span class="right light">0</span></a></h3>');
-									   initDroppable();
-									   $('#add-collection').slideUp();
-									   inputField.val('');
+										$('aside.right .actions .collections ul li.create').after('<li><input type="checkbox" data-id="' + data.id + '" id="cb-' + data.id + '"><label for="cb-' + data.id + '"><span></span>' + newName + '</label></li>');
+										collections[data.id] = {id: data.id, name: newName};
+										initDroppable();
+										inputField.parent().slideUp();
+										inputField.val('');
 									}
 						});
 			 }

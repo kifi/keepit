@@ -60,7 +60,7 @@ pointer-events:none;
 aside.left {top: 70px; width: 200px; height: 100%;  position:fixed; background: #eff2f7 }
 aside.left input {background: #fafafa; border: 1px solid #b4b9ca; color: #204b69; padding: .7em; width: 80%; margin-left: 5px;}
 aside.left .collection input {width: 190px; position: absolute; top: -2px; left: 25px; z-index: 2;}
-aside.left .active a {background: #e3e6ee; color: #556179}
+aside.left .active, aside.left .active a {background: #e3e6ee; color: #556179}
 aside.left h3 a span.right {position:absolute; right: 3px; font-weight: bold; border: 1px solid #b4b9ca; border-radius: 10px; padding: 1px 12px; margin-top: -2px}
 aside.left h3.active a span.right {color: #fff; background: #9ba4b8; border: 1px solid #9ba4b8;}
 aside.left h2 {font-size: 1.2em; padding: 5px 10px; margin-bottom: 0; }
@@ -69,6 +69,9 @@ aside.left h3.my-keeps a {background: url(../img/kifi-icon-blue.png) 8px 45% no-
 aside.left h3.my-keeps.active a {background: #e3e6ee url(../img/kifi-icon-gray.png) 8px 50% no-repeat;}
 aside.left #collections h2, aside.left h3.collection { border-bottom: 1px solid #dbdee3 }
 aside.left #collections #collections-wrapper {overflow-y: auto; overflow-x: hidden;}
+aside.left #collections .sortable-placeholder {background: #6fa6ef; height: 2px; min-height: 0}
+aside.left h3.collection:hover, aside.left h3.collection:hover a {background: #6fa6ef; color: #fff}
+aside.left h3.collection:hover a span.right { background: #eff2f7; border: 1px solid #eff2f7; color: #6fa6ef}
 aside.left h3.collection span.name {width: 120px}
 aside.left h3.collection.editing span.name, aside.left h3.collection.hover span.name {width: 100px}
 aside.left h3.collection div.edit-menu {transition: width .5s; -webkit-transition: width .5s; display: none; position: absolute; top: 0; left:0; width: 5px; overflow: hidden; }
@@ -93,7 +96,8 @@ aside.right > div.subtitle {padding-bottom: 0px;}
 aside.right > div.in-collections .row {padding: 5px 0px;}
 aside.right > div.actions {padding: 0}
 aside.right.visible {margin-left: 900px}
-aside.right input[type="text"] {margin-left: 20px; width: 260px; margin-top: 10px; margin-bottom: 5px}
+aside.right input[type="text"] { width: 260px; margin-top: 10px; margin-bottom: 5px}
+aside.right .collections > input[type="text"] {margin-left: 20px;}
 aside.right h2 {color: #556179; font-size: 1.2em; margin-top: 0 ; margin-bottom: .1em}
 aside.right select {padding: 5px;}
 aside.right a {color: #556179}
@@ -159,7 +163,7 @@ div.search .num-results {display: none; font-size: .8em; color: #204b69; text-al
 div.scrollable {margin-top: 50px; padding: 50px 20px; text-align: left;  width: 660px;   }
 div.loading {text-align: center; display: none;}
 .clearfix {clear: both}
-.template-wrapper, #add-collection {display: none}
+.template-wrapper, .add-collection {display: none}
 .drag-helper {background: #fff; padding: 5px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
 .drop-hover {background: #b6c3cc}
 
