@@ -35,7 +35,7 @@ class BabysitterTest extends Specification with TestInjector {
 
         inject[HealthcheckPlugin].errorCount == 0
 
-        val now = new DateTime(2012, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
+        val now = new DateTime(2013, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         // Babysitter gets time twice. At the beginning, and at the end for warnTimeout
         inject[FakeClock].push(now)
         inject[FakeClock].push(now.minusSeconds(5))
