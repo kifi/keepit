@@ -132,7 +132,7 @@ function initDroppable() {
 											var added = countSpan.text() * 1  + data.added;
 											countSpan.text(added);
 											// update collection list on right bar
-											$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+collectionId+'" id="cb1-'+collectionId+'" checked=""><label for="cb1-'+collectionId+'"><span></span>'+collections[collectionId].name+'</label><div></div></div>');
+											$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+collectionId+'" id="cb1-'+collectionId+'" checked=""><label class="long-text" for="cb1-'+collectionId+'"><span></span>'+collections[collectionId].name+'</label><div></div></div>');
 										}
 							});						
 					}
@@ -155,7 +155,7 @@ function initDroppable() {
 									var added = countSpan.text() * 1  + data.added;
 									countSpan.text(added);
 									// update collection list on right bar
-									$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+collectionId+'" id="cb1-'+collectionId+'" checked=""><label for="cb1-'+collectionId+'"><span></span>'+collections[collectionId].name+'</label><div></div></div>');
+									$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+collectionId+'" id="cb1-'+collectionId+'" checked=""><label class="long-text" for="cb1-'+collectionId+'"><span></span>'+collections[collectionId].name+'</label><div></div></div>');
 								}
 					});
 			}
@@ -282,13 +282,19 @@ function populateMyKeeps(id) {
 }
 
 function populateCollections() {
-	$.getJSON(urlCollectionsAll,  
+	$.getJSON(urlCollectionsAll, {sort: "user"} , 
 			function(data) {
 				collectionsTemplate.render(data.collections);	
+			});
+}
+
+function populateCollectionsRight() {
+	$.getJSON(urlCollectionsAll, {sort: "last_kept"} ,
+			function(data) {
 				$('aside.right .actions .collections ul li:not(.create)').remove();
 				for (i in data.collections) {
 					collections[data.collections[i].id] = data.collections[i];
-					$('aside.right .actions .collections ul').append('<li><input type="checkbox" data-id="'+data.collections[i].id+'" id="cb-'+data.collections[i].id+'"/><label for="cb-'+data.collections[i].id+'"><span></span>'+data.collections[i].name+'</label></li>');
+					$('aside.right .actions .collections ul').append('<li><input type="checkbox" data-id="'+data.collections[i].id+'" id="cb-'+data.collections[i].id+'"/><label class="long-text" for="cb-'+data.collections[i].id+'"><span></span>'+data.collections[i].name+'</label></li>');
 				}
 			});
 }
@@ -403,7 +409,7 @@ $('aside.right .actions .collections').on('change','input[type="checkbox"]',func
 						// add to collection count on left bar 
 						var countSpan = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right'); 
 						countSpan.text(countSpan.text() * 1  + data.added);
-						$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+colId+'" id="cb1-'+colId+'" checked/><label for="cb1-'+colId+'"><span></span>'+collections[colId].name+'</label><div>');
+						$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+colId+'" id="cb1-'+colId+'" checked/><label class="long-text" for="cb1-'+colId+'"><span></span>'+collections[colId].name+'</label><div>');
 						row.remove();
 					}
 		});
@@ -457,7 +463,7 @@ $(document)
 			allCol = unique(allCol);
 			var inCol = $('aside.right .in-collections').html('');
 			for (i in allCol) {
-				inCol.append('<div class="row"><input type="checkbox" data-id="'+allCol[i]+'" id="cb1-'+allCol[i]+'" checked/><label for="cb1-'+allCol[i]+'"><span></span>'+collections[allCol[i]].name+'</label><div>');
+				inCol.append('<div class="row"><input type="checkbox" data-id="'+allCol[i]+'" id="cb1-'+allCol[i]+'" checked/><label class="long-text" for="cb1-'+allCol[i]+'"><span></span>'+collections[allCol[i]].name+'</label><div>');
 			}
 			$('aside.right').addClass('visible');
 		} else { // only one keep is selcted
@@ -471,7 +477,7 @@ $(document)
 			if (keep.data('collections').length > 0) {
 				var colArray = keep.data('collections').split(',');
 				for (i in colArray) {
-					inCol.append('<div class="row"><input type="checkbox" data-id="'+colArray[i]+'" id="cb1-'+colArray[i]+'" checked/><label for="cb1-'+colArray[i]+'"><span></span>'+collections[colArray[i]].name+'</label></div>');
+					inCol.append('<div class="row"><input type="checkbox" data-id="'+colArray[i]+'" id="cb1-'+colArray[i]+'" checked/><label class="long-text" for="cb1-'+colArray[i]+'"><span></span>'+collections[colArray[i]].name+'</label></div>');
 				}
 			}
 			var keepButton = $('aside.right .keepit .keep-button');
@@ -494,6 +500,7 @@ $(document)
 		$(".fancybox").fancybox();
 						
 		populateCollections();
+		populateCollectionsRight();
 		
 		// make collections sortable
 		$('aside.left #collections-wrapper').sortable({items: 'h3', opacity: 0.6, 
@@ -620,7 +627,7 @@ $(document)
 												<ul><li><a class="rename" href="javascript: ;">Rename</a></li>\
 													<li><a class="remove" href="javascript: ;">Remove</a></li></ul>\
 											</div><a href="javascript: ;"><span class="name long-text">' + newName + '</span> <span class="right light">0</span></a></h3>');
-										$('aside.right .actions .collections ul li.create').after('<li><input type="checkbox" data-id="' + data.id + '" id="cb-' + data.id + '"><label for="cb-' + data.id + '"><span></span>' + newName + '</label></li>');
+										$('aside.right .actions .collections ul li.create').after('<li><input type="checkbox" data-id="' + data.id + '" id="cb-' + data.id + '"><label class="long-text" for="cb-' + data.id + '"><span></span>' + newName + '</label></li>');
 										collections[data.id] = {id: data.id, name: newName};
 										initDroppable();
 										inputField.parent().slideUp();

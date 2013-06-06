@@ -116,7 +116,7 @@ aside.right div.actions a.add span.close {display: none; float: right; color: #6
 aside.right div.actions a.add.active span.close {display: block;}
 aside.right div.actions a.add.active {background: #eff2f7; color: #556179; padding-bottom: .2em}
 aside.right .collections {background:#f6f8fc; height: 0; overflow: hidden; transition: height .5s; -webkit-transition: height .5s; }
-aside.right .collections.active {height: 250px; border-top: 5px solid #6fa6ef; border-bottom: 5px solid #6fa6ef;}
+aside.right .collections.active {height: 250px; width: 330px; border-top: 5px solid #6fa6ef; border-bottom: 5px solid #6fa6ef;}
 aside.right .collections ul {padding: 0; margin: 0; list-style: none}
 aside.right .collections ul li {padding: 10px 20px; border-top: 1px solid #dbdee3;}
 aside.right .collections ul li.create {border-top: 0}
