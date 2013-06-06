@@ -1,0 +1,7 @@
+@admin("Product Dashboard", scripts = List("d3-2.10.3", "admin_dashboard"), stylesheets = List("admin_dashboard")) {
+  <h2>User Growth</h2>
+  <div class="growth-chart" data-uri="@com.keepit.controllers.admin.routes.AdminDashboardController.usersByDate()"></div>
+  
+  <h2>Bookmark Growth</h2>
+  <div class="growth-chart" data-uri="@com.keepit.controllers.admin.routes.AdminDashboardController.bookmarksByDate()"></div>
+}

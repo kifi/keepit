@@ -443,7 +443,10 @@ api.port.on({
     pageData[tab.nUri].neverOnSite = !!data;
   },
   get_suppressed: function(_, respond, tab) {
-    respond(pageData[tab.nUri].neverOnSite);
+    var d = pageData[tab.nUri];
+    if (d) {
+      respond(d.neverOnSite);
+    }
   },
   set_keeper_pos: function(o, _, tab) {
     const hostRe = /^https?:\/\/([^\/]*)/;
@@ -865,13 +868,20 @@ function searchOnServer(request, respond) {
     return;
   }
 
-  ajax("GET", "/search", {
+  var when, params = {
       q: request.query,
-      f: request.filter === "a" ? null : request.filter,
+      f: request.filter && request.filter.who,
       maxHits: request.lastUUID ? 5 : api.prefs.get("maxResults"),
       lastUUID: request.lastUUID,
       context: request.context,
-      kifiVersion: api.version},
+      kifiVersion: api.version};
+  if (when = request.filter && request.filter.when) {
+    var d = new Date();
+    params.tz = d.toTimeString().substr(12, 5);
+    params.end = ymd(when == "y" ? new Date(d - 86400000) : d);
+    params.start = ymd(new Date(d - {t:0, y:1, w:7, m:30}[when] * 86400000));
+  }
+  ajax("GET", "/search", params,
     function(resp) {
       api.log("[searchOnServer] response:", resp);
       resp.session = session;
@@ -880,6 +890,10 @@ function searchOnServer(request, respond) {
       respond(resp);
     });
   return true;
+}
+
+function ymd(d) {  // yyyy-mm-dd local date
+  return new Date(d - d.getTimezoneOffset() * 60000).toISOString().substr(0, 10);
 }
 
 // kifi icon in location bar

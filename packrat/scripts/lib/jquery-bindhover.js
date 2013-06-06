@@ -123,10 +123,10 @@ home-grown at FortyTwo, not intended for distribution (yet)
     if ($a.hasClass("kifi-hover-showing")) {
       $a.removeClass("kifi-hover-showing");
       data.fadeOutStartTime = +new Date;
-      data.$h.on("transitionend webkitTransitionEnd", function end(e) {
+      data.$h.on("transitionend", function end(e) {
         if (e.target === this && e.originalEvent.propertyName === "opacity") {
           delete data.fadeOutStartTime;
-          data.$h.off("transitionend webkitTransitionEnd", end).remove();
+          data.$h.off("transitionend", end).remove();
           delete data.$h;
           if (data.mouseoverTimeStamp > data.mouseoutTimeStamp && this.contains(data.mouseoverEl)) {
             api.log("[bindHover.hide:transitionend] faking mouseout");
