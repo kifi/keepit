@@ -74,8 +74,8 @@ aside.left h3.collection:hover, aside.left h3.collection:hover a {background: #6
 aside.left h3.collection:hover a span.right { background: #eff2f7; border: 1px solid #eff2f7; color: #6fa6ef}
 aside.left h3.collection span.name {width: 120px}
 aside.left h3.collection.editing span.name, aside.left h3.collection.hover span.name {width: 100px}
-aside.left h3.collection div.edit-menu {transition: width .5s; -webkit-transition: width .5s; display: none; position: absolute; top: 0; left:0; width: 5px; overflow: hidden; }
-aside.left h3.collection div.edit-menu:hover, aside.left h3.collection.editing div.edit-menu {width: 25px; overflow: visible;}
+aside.left h3.collection div.edit-menu {transition: left .5s; -webkit-transition: left .5s; display: none; position: absolute; top: 0; left: -25px; }
+aside.left h3.collection div.edit-menu:hover, aside.left h3.collection.editing div.edit-menu {left:0px; }
 aside.left h3.collection a.edit { width: 30px; display: block; height: 37px; padding: 0; background: #e3e6ee url(../img/edit-gray.png) 12px 12px no-repeat; }
 aside.left h3.collection.editing a.edit {background: #6fa6ef url(../img/edit-blue.png) 12px 12px no-repeat; }
 aside.left h3.collection {transition: padding-left .5s; -webkit-transition: padding-left .5s;}
@@ -83,7 +83,6 @@ aside.left h3.collection.editing, aside.left h3.collection.hover {padding-left: 
 aside.left h3.collection:hover div.edit-menu, aside.left h3.collection.editing div.edit-menu {display: block;}
 aside.left h3.collection div.edit-menu ul {display: none; margin: 0px 0; padding: 0; list-style: none; position: absolute; z-index: 1; }
 aside.left h3.collection div.edit-menu ul li a {width: 50px; display: block; background: #9ba4b8; color: #fff; padding: .3em .5em; font-size: .9em}
-aside.left h3.collection div.edit-menu:hover ul {display: block;}
 aside.left h3 a {display: block; padding: 10px; font-size: 1em; color: #818692}
 aside.left h3.new a {color: #6fa6ef; }
 aside.left h3.read-later a {color: #ca5742}

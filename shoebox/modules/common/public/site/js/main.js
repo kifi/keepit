@@ -646,6 +646,9 @@ $(document)
 			$(this).parents('h3').first().addClass('hover');
 		}).on('mouseleave','h3.collection div.edit-menu',function() {
 			$(this).parents('h3').first().removeClass('hover');
+			$('aside.left h3.collection div.edit-menu ul').hide();
+		}).on('click','h3.collection div.edit-menu > a',function() {
+			$('aside.left h3.collection div.edit-menu ul').toggle();
 		});
 		
 		// keep / unkeep
