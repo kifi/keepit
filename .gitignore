@@ -31,7 +31,9 @@ shoebox/modules/securesocial/bin/*
 shoebox/shoebox.sublime-project
 shoebox/shoebox.sublime-workspace
 *.swp
-
+shoebox/modules/common/.target/*
+shoebox/modules/common/.classpath
+shoebox/modules/common/.project
 # Compiled source #
 ###################
 *.com
