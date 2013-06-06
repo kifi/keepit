@@ -48,8 +48,8 @@
   $("#metrictype").append($("<option>").val(metrictype).text(name));
   });
 
-  $("#yscale").append($("<option>").val("linear").text("Linear Scale"));
-  //$("#yscale").append($("<option>").val("log").text("Log2 Scale"));
+  $("#yscale").append($("<option>").val(null).text("Linear Scale"));
+  $("#yscale").append($("<option>").val(10).text("Log10 Scale"));
 
   var options = $.fn.graphite.defaults = {
   url: "https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/",
@@ -61,30 +61,37 @@
   hideGrid: "true"
   };
 
+  var baseTargets = ["drawAsInfinite(counters." + service + ".deploys.count)"]
+
   function selectTargets() {
     var metrictype = $("#metrictype").val();
     var service = $("#service").val();
     var plugin = $("#plugin").val();
     var namespace = $("#namespace").val();
 
+    var targetPrefix = [metrictype, service, plugin, namespace].join(".")
+
+    function sumSeries(metric, value) {
+      return "sumSeries(" + [targetPrefix, metric, value].join(".") + ")"
+    }
+
     if (metrictype == "counters") {
-      var value = "count"
-      var metrics = ["hits", "misses", "sets"]
+      var metrics = ["hits", "misses", "sets"];
+      var countTargets = metrics.map(function (metric) sumSeries(metric, "count"));
+      var targets = baseTargets.concatenate(countTargets)
     }
 
     if (metrictype == "timers") {
-      var value = "mean"
-      var metrics = ["hits"]
+      var metrics = ["hits"];
+      var meanTargets = metrics.map(function (metric) "divideSeries(" + sumSeries(metric, "sum")) + "," + sumSeries(metric, "count") + ")");
+      var targets = baseTargets.concatenate(meanTargets)
     }
-
-    var targets = metrics.map(function (metric) {return "sumSeries(" + [metrictype, service, plugin, namespace, metric, value].join(".") + ")"})
-    targets.push(["drawAsInfinite(counters." + service + ".deploys.count)"])
     return targets
   }
   
   $(".params").change(function () {
   options.target = selectTargets();
-  options.logBase = ($("#yscale").val() == "log" ? 2 : null);
+  options.logBase = $("#yscale").val()
   renderChart();
   }).change();
 
