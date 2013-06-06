@@ -35,6 +35,7 @@ shoebox/modules/common/.target/*
 shoebox/modules/common/.classpath
 shoebox/modules/common/.project
 shoebox/modules/common/.settings/*
+shoebox/modules/common/.cache
 # Compiled source #
 ###################
 *.com
