@@ -2,14 +2,26 @@
 @admin("Search Performance", scripts = List("graphite")) {
 
 
-<p>
+<div align="center">
 <figure>
 <img id="chart">
-<figcaption>Main Search Performance</figcaption>
+<figcaption><font size="5">Main Search Performance</font></figcaption>
 </fiugre>
 <select id="metric"></select>
 <select id="yscale"></select>
-</p>
+</div>
+
+
+
+<div align="center">
+<figure>
+<img id="chart2">
+<figcaption><font size="5">Ext Search Performance</font></figcaption>
+</fiugre>
+<select id="metric2"></select>
+<select id="yscale2"></select>
+</div>
+
 
 <script>
 
@@ -62,7 +74,54 @@ function renderChart() {
   $("#chart").graphite(options);
 }
 
-renderChart();
+
+var metrics2 = {
+  "search factory": "timers.search.extSearch.factory.mean",
+  "mainSearch": "timers.search.extSearch.searching.mean",
+  "postsearch": "timers.search.extSearch.postSearchTime.mean",
+  "ext search total": "timers.search.extSearch.total.mean"
+};
+
+  var yscales2 = {
+    "Linear Scale": "linear",
+    "log": "log"
+  };
+
+  $.each(metrics2, function (name, metric) {
+    $("#metric2").append($("<option>").val(metric).text(name));
+  });
+
+
+  $.each(yscales2, function (name, scale) {
+    $("#yscale2").append($("<option>").val(scale).text(name));
+  });
+
+  var options2 = $.fn.graphite.defaults = {
+    url: "https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/",
+    lineMode: "connected",
+    width: 600,
+    height: 400
+  };
+
+  $("#metric2").change(function () {
+    options.target = [$(this).val()];
+    renderChart2();
+  }).change();
+
+
+  $("#yscale2").change(function () {
+    options.logBase = $(this).val() == "log" ? 2 : null;
+    renderChart2();
+  });
+
+
+  function renderChart2() {
+    $("#chart2").graphite(options);
+  }
+
+  renderChart2();
+
+
 
 </script>
 }
