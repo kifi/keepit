@@ -40,7 +40,9 @@ class ServiceDiscoveryImpl @Inject() (
     val siblings = zk.getChildren(myServicePath)
     val siblingsIds = siblings map extractId
     val minId = siblingsIds.min
-    minId == id
+    val isMinid = minId == id
+    log.info(s"my service id is $id, service with id $minId is the leader => I'm the leader == $isMinid")
+    isMinid
   } getOrElse (throw new IllegalStateException("service did not register yet"))
 
   def watchNode(node: Node) {
