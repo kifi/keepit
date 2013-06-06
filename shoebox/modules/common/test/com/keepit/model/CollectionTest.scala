@@ -18,8 +18,8 @@ import play.api.test.Helpers._
 class CollectionTest extends Specification with TestDBRunner {
 
   def setup()(implicit injector: RichInjector) = {
-    val t1 = new DateTime(2012, 2, 14, 21, 59, 0, 0, PT)
-    val t2 = new DateTime(2012, 3, 22, 14, 30, 0, 0, PT)
+    val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, PT)
+    val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, PT)
 
     db.readWrite {implicit s =>
       val user1 = userRepo.save(User(firstName = "Andrew", lastName = "Conner", createdAt = t1))
