@@ -308,7 +308,7 @@ li.token-input-token-googly {
   margin: 0 0 3px 3px !important; /* FF */
   padding: 0 0 0 30px !important; /* FF */
   background: 0 0/22px no-repeat padding-box #fff;
-  background-color: #4c8ffb;
+  background-color: #6ca4f2;
   color: #fff;
   line-height: 22px;
   white-space: nowrap;
@@ -532,7 +532,7 @@ a.kifi-res-friends {
   width: 78px;
   height: 42px;
   padding: 6px 10px;
-  background-color: #4c8ffb;
+  background-color: #6ca4f2;
   color: #fff;
   font-size: 11px;
   cursor: default;
@@ -552,7 +552,7 @@ a.kifi-res-friends {
   width: 0;
   height: 0;
   border-style: solid;
-  border-color: #4c8ffb transparent;
+  border-color: #6ca4f2 transparent;
   border-width: 5px 4px 0;
   font-size: 0;
 }
