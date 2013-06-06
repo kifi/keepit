@@ -74,8 +74,8 @@ aside.left h3.collection:hover, aside.left h3.collection:hover a {background: #6
 aside.left h3.collection:hover a span.right { background: #eff2f7; border: 1px solid #eff2f7; color: #6fa6ef}
 aside.left h3.collection span.name {width: 120px}
 aside.left h3.collection.editing span.name, aside.left h3.collection.hover span.name {width: 100px}
-aside.left h3.collection div.edit-menu {transition: width .5s; -webkit-transition: width .5s; display: none; position: absolute; top: 0; left:0; width: 5px; overflow: hidden; }
-aside.left h3.collection div.edit-menu:hover, aside.left h3.collection.editing div.edit-menu {width: 25px; overflow: visible;}
+aside.left h3.collection div.edit-menu {transition: left .5s; -webkit-transition: left .5s; display: none; position: absolute; top: 0; left: -25px; }
+aside.left h3.collection div.edit-menu:hover, aside.left h3.collection.editing div.edit-menu {left:0px; }
 aside.left h3.collection a.edit { width: 30px; display: block; height: 37px; padding: 0; background: #e3e6ee url(../img/edit-gray.png) 12px 12px no-repeat; }
 aside.left h3.collection.editing a.edit {background: #6fa6ef url(../img/edit-blue.png) 12px 12px no-repeat; }
 aside.left h3.collection {transition: padding-left .5s; -webkit-transition: padding-left .5s;}
@@ -83,7 +83,6 @@ aside.left h3.collection.editing, aside.left h3.collection.hover {padding-left: 
 aside.left h3.collection:hover div.edit-menu, aside.left h3.collection.editing div.edit-menu {display: block;}
 aside.left h3.collection div.edit-menu ul {display: none; margin: 0px 0; padding: 0; list-style: none; position: absolute; z-index: 1; }
 aside.left h3.collection div.edit-menu ul li a {width: 50px; display: block; background: #9ba4b8; color: #fff; padding: .3em .5em; font-size: .9em}
-aside.left h3.collection div.edit-menu:hover ul {display: block;}
 aside.left h3 a {display: block; padding: 10px; font-size: 1em; color: #818692}
 aside.left h3.new a {color: #6fa6ef; }
 aside.left h3.read-later a {color: #ca5742}
@@ -102,18 +101,21 @@ aside.right h2 {color: #556179; font-size: 1.2em; margin-top: 0 ; margin-bottom:
 aside.right select {padding: 5px;}
 aside.right a {color: #556179}
 aside.right .who-kept span {display: block; margin-bottom: 5px;}
+aside.right .who-kept span.private {display: none}
 aside.right div.actions {position: absolute; bottom: 100px }
 aside.right div.actions > a { display: block; font-size: 1.2em; width: 290px; padding: 10px 20px;}
 aside.right div.actions > a:hover {color: #fff; background: #6fa6ef}
 aside.right div.actions .keepit {text-align: center; width: 330px}
-aside.right div.actions .keepit a {color: #fff; font-size: .9em; display: block; margin: 15px auto; background: #2980b9; border-radius: 5px; padding: 15px 0; width: 140px; position: relative; overflow: hidden;}
+aside.right div.actions .keepit a {color: #fff; font-size: .9em; display: block; margin: 15px auto; background: rgb(34, 48, 63); border-radius: 5px; padding: 15px 0; width: 140px; position: relative; overflow: hidden;}
+aside.right div.actions .keepit a.kept {background: #2980b9;}
 aside.right div.actions .keepit a span.private {background: #465f78 url(../img/lock.png) 22px 20px no-repeat; display: block; position: absolute; width: 40px; height: 40px; left: -18px; top: -13px; border-radius: 25px;}
+aside.right div.actions .keepit a.private span.private{background-color: rgb(0, 187, 0)}
 aside.right div.title, aside.right div.who-kept {border-bottom: 1px solid #abbac9; }
 aside.right div.actions a.add span.close {display: none; float: right; color: #6fa6ef}
 aside.right div.actions a.add.active span.close {display: block;}
 aside.right div.actions a.add.active {background: #eff2f7; color: #556179; padding-bottom: .2em}
 aside.right .collections {background:#f6f8fc; height: 0; overflow: hidden; transition: height .5s; -webkit-transition: height .5s; }
-aside.right .collections.active {height: 250px; border-top: 5px solid #6fa6ef; border-bottom: 5px solid #6fa6ef;}
+aside.right .collections.active {height: 250px; width: 330px; border-top: 5px solid #6fa6ef; border-bottom: 5px solid #6fa6ef;}
 aside.right .collections ul {padding: 0; margin: 0; list-style: none}
 aside.right .collections ul li {padding: 10px 20px; border-top: 1px solid #dbdee3;}
 aside.right .collections ul li.create {border-top: 0}
@@ -154,7 +156,10 @@ aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px;
 .keep .small-avatar {vertical-align: bottom; float: left;}
 .keep .small-avatar.me {margin-right: 3px;}
 .keep .bottom {margin-top: 5px;}
-.keep .bottom span { float: left; margin-left: 10px}
+.keep .bottom > span { float: left; margin-left: 10px}
+.keep .bottom span.private {display: none}
+.keep .bottom span.private.on {display: inline}
+.keep .bottom:after {content: "."; display: block; visibility: hidden; clear: both;}
 div.search {position: fixed; top: 70px; padding: 0px 20px; width: 660px; height: 70px; background: #ffffff; z-index: 1}
 .kifi-pane-parent header {margin-left: -790px}
 
