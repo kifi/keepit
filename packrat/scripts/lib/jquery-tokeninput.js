@@ -1,6 +1,6 @@
 /*!
 jQuery Plugin: Tokenizing Autocomplete Text Entry
-commit f1ad56020c + pull requests 522, 529, 538
+commit f1ad56020c + pull requests 522, 529, 538, 539
 
 Copyright (c) 2009 James Smith (http://loopj.com)
 Licensed jointly under the GPL and MIT licenses,
@@ -71,7 +71,7 @@ choose which suits your project best!
     }
     function w() {
       if(D !== (D = g.val())) {
-        var a = k.width() - g.offset().left - k.offset().left;
+        var a = k.width() - g.offset().left + k.offset().left;
         P.html(C(D));
         g.width(Math.min(k.width(), Math.max(a, P.width() + 30)))
       }

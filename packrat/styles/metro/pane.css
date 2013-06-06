@@ -136,7 +136,8 @@ div.kifi-pane-head-settings-menu {
   line-height: 1;
   box-shadow: 0 3px 6px 0 rgba(0,0,0,.3);
   display: none;
-  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
 }
 .kifi-pane-settings-hide {
   padding: 6px 10px 6px 6px;

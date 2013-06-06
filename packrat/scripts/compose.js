@@ -74,7 +74,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
       theme: "KiFi",
       zindex: 999999999992,
       resultsFormatter: function(f) {
-        return "<li style='background-image:url(http://" + cdnBase + "/users/" + f.id + "/pics/100/0.jpg)'>" +
+        return "<li style='background-image:url(//" + cdnBase + "/users/" + f.id + "/pics/100/0.jpg)'>" +
           Mustache.escape(f.name) + "</li>";
       },
       onAdd: function() {
