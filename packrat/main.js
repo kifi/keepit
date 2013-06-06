@@ -878,7 +878,7 @@ function searchOnServer(request, respond) {
   if (when = request.filter && request.filter.when) {
     var d = new Date();
     params.tz = d.toTimeString().substr(12, 5);
-    params.end = ymd(d);
+    params.end = ymd(when == "y" ? new Date(d - 86400000) : d);
     params.start = ymd(new Date(d - {t:0, y:1, w:7, m:30}[when] * 86400000));
   }
   ajax("GET", "/search", params,
