@@ -31,6 +31,14 @@ POST    /register                   securesocial.controllers.Registration.handle
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
 
 GET     /site/keeps/all             @com.keepit.controllers.website.BookmarksController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int ?= Integer.MAX_VALUE)
+POST    /site/keeps/add             @com.keepit.controllers.website.BookmarksController.keepMultiple()
+POST    /site/keeps/remove          @com.keepit.controllers.website.BookmarksController.unkeepMultiple()
+GET     /site/keeps/:id             @com.keepit.controllers.website.BookmarksController.getKeepInfo(id: ExternalId[Bookmark])
+POST    /site/keeps/:id/update      @com.keepit.controllers.website.BookmarksController.updateKeepInfo(id: ExternalId[Bookmark])
+POST    /site/keeps/:id/delete      @com.keepit.controllers.website.BookmarksController.unkeep(id: ExternalId[Bookmark])
+GET     /site/keeps/mutual/:id      @com.keepit.controllers.website.BookmarksController.mutualKeeps(id: ExternalId[User])
+GET     /site/keeps/count           @com.keepit.controllers.website.BookmarksController.numKeeps()
+
 GET     /site/collections/all       @com.keepit.controllers.website.BookmarksController.allCollections(sort: String ?= "last_kept")
 POST    /site/collections/ordering  @com.keepit.controllers.website.BookmarksController.setCollectionOrdering()
 POST    /site/collections/create @com.keepit.controllers.website.BookmarksController.saveCollection(id = "")
@@ -39,8 +47,6 @@ POST    /site/collections/:id/delete @com.keepit.controllers.website.BookmarksCo
 POST    /site/collections/:id/removeKeeps @com.keepit.controllers.website.BookmarksController.removeKeepsFromCollection(id: ExternalId[Collection])
 POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.BookmarksController.keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = false)
 POST    /site/collections/:id/setKeeps @com.keepit.controllers.website.BookmarksController.keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = true)
-GET     /site/keeps/mutual/:id      @com.keepit.controllers.website.BookmarksController.mutualKeeps(id: ExternalId[User])
-GET     /site/keeps/count           @com.keepit.controllers.website.BookmarksController.numKeeps()
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 GET     /site/user/connections      @com.keepit.controllers.website.UserController.connections()
