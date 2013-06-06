@@ -1,52 +1,42 @@
 
 @admin("Search Performance", scripts = List("graphite")) {
 
-<p>
-<figure>
-<img border="0" src="https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/?width=600&height=400&_salt=1370129514.597&target=timers.search.extSearch.total.mean&lineMode=connected" 
-alt="search.searching.time.mean" width="600" height="400">
-    <figcaption>Ext Search Total</figcaption>
-</figure>
-</p>
-
-<p>
-<figure>
-<img border="0" src="https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/?width=600&height=400&_salt=1370129514.597&target=timers.search.mainSearch.total.mean&lineMode=connected" 
-alt="search.searching.time.mean" width="600" height="400">
-    <figcaption>Main Search Total</figcaption>
-</figure>
-</p>
-
 
 <p>
 <figure>
 <img id="chart">
-<figcaption>Select a metric to view</figcaption>
+<figcaption>Main Search Performance</figcaption>
 </fiugre>
 <select id="metric"></select>
-
-<form id="scale">
-<label><input type="radio" name="yscale" value="linear" checked="checked"> linear scale</label>
-<label><input type="radio" name="yscale" value="log"> log2</label>
-</form>
+<select id="yscale"></select>
 </p>
 
 <script>
 
+
+
 var metrics = {
-  "search factory mean": "timers.search.factory.mean",
-  "social graph info mean": "timers.socialGraphInfo.mean",
-  "get click boost mean": "timers.getClickboost.mean",
-  "query parsing mean": "timers.queryParsing.mean",
-  "personalized searcher mean": "timers.personalizedSearcher.mean",
-  "lucene search mean": "timers.LuceneSearch.mean",
-  "process hits mean": "timers.processHits.mean",
-  "searching mean": "timers.search.searching.mean",
-  "post search time mean": "timers.postSearchTime.mean"
+  "social graph info" : "gauges.search.mainSearch.socialGraphInfo",
+  "get clickboost" : "gauges.search.mainSearch.getClickboost",
+  "query parsing" : "gauges.search.mainSearch.queryParsing",
+  "personalized searcher" : "gauges.search.mainSearch.personalizedSearcher",
+  "Lucene Search" : "gauges.search.mainSearch.LuceneSearch",
+  "processHits" : "gauges.search.mainSearch.processHits",
+  "mainSearch total" : "gauges.search.mainSearch.total" 
+};
+
+var yscales = {
+  "Linear Scale": "linear",
+  "log": "log"
 };
 
 $.each(metrics, function (name, metric) {
   $("#metric").append($("<option>").val(metric).text(name));
+});
+
+
+$.each(yscales, function (name, scale) {
+  $("#yscale").append($("<option>").val(scale).text(name));
 });
 
 var options = $.fn.graphite.defaults = {
@@ -61,10 +51,12 @@ $("#metric").change(function () {
   renderChart();
 }).change();
 
-$("#scale :radio").on("click", function () {
+
+$("#yscale").change(function () {
   options.logBase = $(this).val() == "log" ? 2 : null;
   renderChart();
 });
+
 
 function renderChart() {
   $("#chart").graphite(options);
