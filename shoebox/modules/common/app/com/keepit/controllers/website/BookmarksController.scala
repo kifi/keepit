@@ -147,7 +147,10 @@ class BookmarksController @Inject() (
 
   def updateKeepInfo(id: ExternalId[Bookmark]) = AuthenticatedJsonAction { request =>
     db.readOnly { implicit s => bookmarkRepo.getOpt(id) } map { b =>
-      request.body.asJson.flatMap(Json.fromJson[KeepInfo](_).asOpt) map { keepInfo =>
+      request.body.asJson.flatMap { newJson =>
+        val oldJson = Json.toJson(KeepInfo.fromBookmark(b))
+        Json.fromJson[KeepInfo](oldJson.as[JsObject] deepMerge newJson.as[JsObject]).asOpt
+      } map { keepInfo =>
         val newKeepInfo = KeepInfo.fromBookmark(db.readWrite { implicit s =>
           bookmarkRepo.save(b.copy(isPrivate = keepInfo.isPrivate, title = keepInfo.title))
         })
@@ -156,7 +159,7 @@ class BookmarksController @Inject() (
           "keep" -> newKeepInfo
         ))
       } getOrElse {
-        BadRequest(Json.obj("error" -> "Could not parse JSON keep with url from request body"))
+        BadRequest(Json.obj("error" -> "Could not parse JSON keep info from body"))
       }
     } getOrElse {
       NotFound(Json.obj("error" -> "Keep not found"))
