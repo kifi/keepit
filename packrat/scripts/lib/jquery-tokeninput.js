@@ -1,6 +1,6 @@
 /*!
 jQuery Plugin: Tokenizing Autocomplete Text Entry
-commit f1ad56020c + pull requests 522, 529, 538, 539
+commit f1ad56020c + pull requests 522, 529, 538, 539, 540
 
 Copyright (c) 2009 James Smith (http://loopj.com)
 Licensed jointly under the GPL and MIT licenses,
@@ -163,7 +163,7 @@ choose which suits your project best!
       s = null
     }
     function G() {
-      v.css({position:"absolute", top:k.offset().top + k.outerHeight(), left:k.offset().left, width:k.width(), "z-index":a(b).data("settings").zindex}).show()
+      v.css({position:"absolute", top:k.offset().top + k.outerHeight(), left:k.offset().left, width:k.css("width"), "z-index":a(b).data("settings").zindex}).show()
     }
     function J(c, e) {
       if(e && e.length) {
