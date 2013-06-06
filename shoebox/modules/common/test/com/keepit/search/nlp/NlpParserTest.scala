@@ -35,4 +35,9 @@ class NlpParserTest extends Specification {
       println(s"nlp parser time elapesed: ${t2 - t1}")
     }
   }
+
+  "remove overlapping segments" in {
+    var segs = Array((0, 3), (1, 4), (4, 4), (2, 3), (3, 6), (4, 6), (2, 7), (8, 8))
+    NlpParser.removeOverlapping(segs) === Set((0, 3), (4, 6))
+  }
 }
