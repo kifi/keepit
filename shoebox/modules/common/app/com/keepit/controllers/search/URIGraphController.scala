@@ -15,18 +15,11 @@ import scala.concurrent.Await
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
 
-case class URIGraphIndexInfo(
-    sequenceNumber: Option[SequenceNumber],
-    numDocs: Int,
-    committedAt: Option[String])
-
 case class SharingUserInfo(
     sharingUserIds: Set[Id[User]],
     keepersEdgeSetSize: Int)
 
 object URIGraphJson {
-  implicit val uriGraphIndexInfoFormat = Json.format[URIGraphIndexInfo]
-
   private implicit val userIdFormat = Id.format[User]
   implicit val sharingUserInfoFormat = Json.format[SharingUserInfo]
 }
@@ -38,6 +31,7 @@ class URIGraphController @Inject()(
     uriGraph: URIGraph) extends SearchServiceController {
 
   import URIGraphJson._
+  import IndexInfoJson._
 
   def reindex() = Action { implicit request =>
     uriGraphPlugin.reindex()
@@ -73,10 +67,18 @@ class URIGraphController @Inject()(
 
   def indexInfo = Action { implicit request =>
     val uriGraphIndexer = uriGraph.asInstanceOf[URIGraphImpl].uriGraphIndexer
-    Ok(Json.toJson(URIGraphIndexInfo(
-      numDocs = uriGraphIndexer.numDocs,
-      sequenceNumber = uriGraphIndexer.commitData.get(CommitData.sequenceNumber).map(v => SequenceNumber(v.toLong)),
-      committedAt = uriGraphIndexer.commitData.get(CommitData.committedAt)
+    val collectionIndexer = uriGraph.asInstanceOf[URIGraphImpl].collectionIndexer
+    Ok(Json.toJson(Seq(
+        IndexInfo(
+          name = "URIGraphIndex",
+          numDocs = uriGraphIndexer.numDocs,
+          sequenceNumber = uriGraphIndexer.commitData.get(CommitData.sequenceNumber).map(v => SequenceNumber(v.toLong)),
+          committedAt = uriGraphIndexer.commitData.get(CommitData.committedAt)),
+        IndexInfo(
+          name = "CollectionIndex",
+          numDocs = collectionIndexer.numDocs,
+          sequenceNumber = collectionIndexer.commitData.get(CommitData.sequenceNumber).map(v => SequenceNumber(v.toLong)),
+          committedAt = collectionIndexer.commitData.get(CommitData.committedAt))
     )))
   }
 

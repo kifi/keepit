@@ -22,9 +22,9 @@ trait SearchServiceClient extends ServiceClient {
   def reindexURIGraph(): Future[Unit]
   def index(): Future[Int]
   def reindex(): Future[Unit]
-  def articleIndexInfo(): Future[ArticleIndexInfo]
+  def articleIndexInfo(): Future[IndexInfo]
   def articleIndexerSequenceNumber(): Future[Int]
-  def uriGraphIndexInfo(): Future[URIGraphIndexInfo]
+  def uriGraphIndexInfo(): Future[Seq[IndexInfo]]
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo]
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]]
   def refreshSearcher(): Future[Unit]
@@ -49,9 +49,9 @@ trait SearchServiceClient extends ServiceClient {
 class SearchServiceClientImpl(override val host: String, override val port: Int, override val httpClient: HttpClient)
     extends SearchServiceClient {
 
-  import com.keepit.controllers.search.ArticleIndexInfoJson._
   import com.keepit.controllers.search.ResultClickedJson._
   import com.keepit.controllers.search.URIGraphJson._
+  import com.keepit.controllers.search.IndexInfoJson._
 
   def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isKeep: Boolean): Future[Unit] = {
     val json = Json.toJson(ResultClicked(userId, query, uriId, rank, isKeep))
@@ -89,12 +89,12 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
     call(routes.ArticleIndexerController.reindex()).map(r => ())
   }
 
-  def articleIndexInfo(): Future[ArticleIndexInfo] = {
-    call(routes.ArticleIndexerController.indexInfo()).map(r => Json.fromJson[ArticleIndexInfo](r.json).get)
+  def articleIndexInfo(): Future[IndexInfo] = {
+    call(routes.ArticleIndexerController.indexInfo()).map(r => Json.fromJson[IndexInfo](r.json).get)
   }
 
-  def uriGraphIndexInfo(): Future[URIGraphIndexInfo] = {
-    call(routes.URIGraphController.indexInfo()).map(r => Json.fromJson[URIGraphIndexInfo](r.json).get)
+  def uriGraphIndexInfo(): Future[Seq[IndexInfo]] = {
+    call(routes.URIGraphController.indexInfo()).map(r => Json.fromJson[Seq[IndexInfo]](r.json).get)
   }
 
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] = {

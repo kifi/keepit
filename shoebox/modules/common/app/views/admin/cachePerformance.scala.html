@@ -1,0 +1,107 @@
+@admin("Cache Performance", scripts = List("graphite")) {
+
+<select class=params id="service"></select>
+<select class=params id="plugin"></select>
+<select class=params id="namespace"></select>
+<select class=params id="metrictype"></select>
+<select class=params id="yscale"></select>
+
+<img id="chart">
+
+<script>
+
+  var services = {
+  "All Services": "*",
+  "Shoebox": "shoebox",
+  "Search": "search",
+  };
+
+  var plugins = {
+  "All Plugins": "*",
+  "Memcached": "Memcached",
+  "EhCache": "EhCache"
+  };
+
+  var namespaces = {
+  "All Namespaces": "*",
+  "BrowsingHistoryUserIdKey": "browsing_history_by_userid"
+  };
+
+  var metrictypes = {
+  "Counters": "counters",
+  "Timers": "timers"
+  };
+
+  $.each(services, function (name, service) {
+  $("#service").append($("<option>").val(service).text(name));
+  });
+
+  $.each(plugins, function (name, plugin) {
+  $("#plugin").append($("<option>").val(plugin).text(name));
+  });
+
+  $.each(namespaces, function (name, namespace) {
+  $("#namespace").append($("<option>").val(namespace).text(name));
+  });
+
+  $.each(metrictypes, function (name, metrictype) {
+  $("#metrictype").append($("<option>").val(metrictype).text(name));
+  });
+
+  $("#yscale").append($("<option>").val(null).text("Linear Scale"));
+  $("#yscale").append($("<option>").val(10).text("Log10 Scale"));
+
+  var options = $.fn.graphite.defaults = {
+  url: "https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/",
+  lineMode: "connected",
+  width: 1100,
+  height: 550,
+  from: "-12h",
+  hideGrid: "true"
+  };
+
+  var baseTargets = ["drawAsInfinite(gauges." + $("#service").val() + ".deploys)"];
+
+  function selectTargets() {
+    var metrictype = $("#metrictype").val();
+    var service = $("#service").val();
+    var plugin = $("#plugin").val();
+    var namespace = $("#namespace").val();
+
+    var targetPrefix = [metrictype, service, plugin, namespace].join(".");
+    function sumSeries(metric, value) {
+      return "sumSeries(" + [targetPrefix, metric, value].join(".") + ")"
+    }
+
+    if (metrictype == "counters") {
+      var metrics = ["hits", "misses", "sets"];
+      var countTargets = metrics.map(function (metric) {return sumSeries(metric, "count")});
+      var targets = baseTargets.concat(countTargets)
+      options.drawNullAsZero = "true"
+    }
+
+    if (metrictype == "timers") {
+      var metrics = ["hits"];
+      var meanTargets = metrics.map(function (metric) {return "divideSeries(" + sumSeries(metric, "sum") + "," + sumSeries(metric, "count") + ")"});
+      var targets = baseTargets.concat(meanTargets)
+      options.drawNullAsZero = "false"
+    }
+
+    return targets
+  }
+  
+  $(".params").change(function () {
+  options.target = selectTargets();
+  options.logBase = $("#yscale").val();
+  renderChart();
+  }).change();
+
+  function renderChart() {
+  $("#chart").graphite(options);
+  }
+
+  renderChart();
+
+</script>
+}
+
