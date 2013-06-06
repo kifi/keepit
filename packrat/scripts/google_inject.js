@@ -554,6 +554,7 @@ api.log("[google_inject]");
         }
         api.require("scripts/lib/jquery-tokeninput.js", function() {
           if ($in.prev("ul").length) return;
+          var addTime;
           $in.tokenInput(friends, {
             searchDelay: 0,
             minChars: 1,
@@ -575,13 +576,18 @@ api.log("[google_inject]");
                 Mustache.escape(f.name) + "</p></li>";
             },
             onReady: function() {
-              $("#token-input-kifi-filter-det").focus();
+              $("#token-input-kifi-filter-det").focus().blur(function(e) {
+                if (!e.relatedTarget && new Date - addTime < 50) {
+                  setTimeout(this.focus.bind(this));  // restore focus (stolen by Google script after add)
+                };
+              });
             },
             onAdd: function(friend) {
               api.log("[onAdd]", friend.id, friend.name);
               var who = filter.who.length > 1 ? filter.who + "." + friend.id : friend.id;
               search(null, $.extend({}, filter, {who: who}));
               $in.nextAll(".kifi-filter-detail-clear").addClass("kifi-visible");
+              addTime = +new Date;
             },
             onDelete: function(friend) {
               api.log("[onDelete]", friend.id, friend.name);
