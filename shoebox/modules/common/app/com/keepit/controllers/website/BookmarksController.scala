@@ -5,13 +5,15 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.WebsiteController
-import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.social.{BasicUser, BasicUserRepo}
 import com.keepit.common.time._
+import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
 
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 private case class BasicCollection(id: Option[ExternalId[Collection]], name: String, keeps: Option[Int])
@@ -24,6 +26,22 @@ private object BasicCollection {
     BasicCollection(Some(c.externalId), c.name, keeps)
 }
 
+private case class KeepInfo(id: Option[ExternalId[Bookmark]], title: Option[String], url: String, isPrivate: Boolean)
+
+private object KeepInfo {
+  implicit val bookmarkExternalIdFormat = ExternalId.format[Bookmark]
+  implicit val format = (
+    (__ \ 'id).formatNullable[ExternalId[Bookmark]] and
+    (__ \ 'title).formatNullable[String] and
+    (__ \ 'url).format[String] and
+    (__ \ 'isPrivate).formatNullable[Boolean].inmap[Boolean](_ getOrElse false, Some(_))
+  )(KeepInfo.apply _, unlift(KeepInfo.unapply))
+
+  def fromBookmark(bookmark: Bookmark): KeepInfo = {
+    KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate)
+  }
+}
+
 @Singleton
 class BookmarksController @Inject() (
     db: Database,
@@ -34,6 +52,8 @@ class BookmarksController @Inject() (
     basicUserRepo: BasicUserRepo,
     userValueRepo: UserValueRepo,
     searchClient: SearchServiceClient,
+    bookmarkInterner: BookmarkInterner,
+    uriRepo: NormalizedURIRepo,
     actionAuthenticator: ActionAuthenticator
   )
   extends WebsiteController(actionAuthenticator) {
@@ -78,6 +98,78 @@ class BookmarksController @Inject() (
       BadRequest(Json.obj(
         "error" -> "Could not parse JSON array of collection ids from request body"
       ))
+    }
+  }
+
+  def keepMultiple() = AuthenticatedJsonAction { request =>
+    request.body.asJson.flatMap(Json.fromJson[Seq[KeepInfo]](_).asOpt) map { keepInfos =>
+      val keeps = bookmarkInterner.internBookmarks(
+        Json.toJson(keepInfos), request.user, request.experiments, "SITE").map(KeepInfo.fromBookmark)
+      searchClient.updateURIGraph()
+      Ok(Json.obj(
+        "keeps" -> keeps
+      ))
+    } getOrElse {
+      BadRequest(Json.obj("error" -> "Could not parse JSON array of keep with url from request body"))
+    }
+  }
+
+  def unkeepMultiple() = AuthenticatedJsonAction { request =>
+    request.body.asJson.flatMap(Json.fromJson[Seq[KeepInfo]](_).asOpt) map { keepInfos =>
+      val deactivatedKeepInfos = db.readWrite { implicit s =>
+        keepInfos.map { ki =>
+          val url = ki.url
+          db.readWrite { implicit s =>
+            uriRepo.getByNormalizedUrl(url).flatMap { uri =>
+              bookmarkRepo.getByUriAndUser(uri.id.get, request.userId).map { b =>
+                bookmarkRepo.save(b withActive false)
+              }
+            }
+          }
+        }
+      }.flatten.map(KeepInfo.fromBookmark(_))
+      searchClient.updateURIGraph()
+      Ok(Json.obj(
+        "removedKeeps" -> deactivatedKeepInfos
+      ))
+    } getOrElse {
+      BadRequest(Json.obj("error" -> "Could not parse JSON array of keep with url from request body"))
+    }
+  }
+
+  def getKeepInfo(id: ExternalId[Bookmark]) = AuthenticatedJsonAction { request =>
+    db.readOnly { implicit s => bookmarkRepo.getOpt(id) } filter { _.isActive } map { b =>
+      Ok(Json.toJson(KeepInfo.fromBookmark(b)))
+    } getOrElse {
+      NotFound(Json.obj("error" -> "Keep not found"))
+    }
+  }
+
+  def updateKeepInfo(id: ExternalId[Bookmark]) = AuthenticatedJsonAction { request =>
+    db.readOnly { implicit s => bookmarkRepo.getOpt(id) } map { b =>
+      request.body.asJson.flatMap(Json.fromJson[KeepInfo](_).asOpt) map { keepInfo =>
+        val newKeepInfo = KeepInfo.fromBookmark(db.readWrite { implicit s =>
+          bookmarkRepo.save(b.copy(isPrivate = keepInfo.isPrivate, title = keepInfo.title))
+        })
+        searchClient.updateURIGraph()
+        Ok(Json.obj(
+          "keep" -> newKeepInfo
+        ))
+      } getOrElse {
+        BadRequest(Json.obj("error" -> "Could not parse JSON keep with url from request body"))
+      }
+    } getOrElse {
+      NotFound(Json.obj("error" -> "Keep not found"))
+    }
+  }
+
+  def unkeep(id: ExternalId[Bookmark]) = AuthenticatedJsonAction { request =>
+    db.readOnly { implicit s => bookmarkRepo.getOpt(id) } map { b =>
+      db.readWrite { implicit s => bookmarkRepo.save(b withActive false) }
+      searchClient.updateURIGraph()
+      Ok(Json.obj())
+    } getOrElse {
+      NotFound(Json.obj("error" -> "Keep not found"))
     }
   }
 
