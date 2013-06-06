@@ -308,7 +308,7 @@ api.log("[google_inject]");
     }).on("click", ".kifi-filters-x", function() {
       $res.find(".kifi-filter-btn").click();
     }).on("mousedown", ".kifi-filter-a", function(e) {
-      if (e.which != 1) return;
+      if (e.which > 1) return;
       e.preventDefault();
       var $a = $(this).addClass("kifi-active");
       var $menu = $a.next("menu").fadeIn(50)
@@ -333,6 +333,7 @@ api.log("[google_inject]");
         });
       }
     }).on("mouseup", ".kifi-filter-val", function(e, alreadySearched) {
+      if (e.which > 1) return;
       var $v = $(this), $menu = $v.parent(), $f = $menu.parent();
       $menu.filter(":visible").triggerHandler("kifi:hide");
 
@@ -540,10 +541,9 @@ api.log("[google_inject]");
     return f1 === f2 || !f1 && !f2 || f1 && f2 && f1.who == f2.who && f1.when == f2.when;
   }
 
-  function showFilterDetail($det) {
-    $(this).prev(".kifi-filter-detail-notch").addBack().addClass("kifi-visible").end().end()
-    .off("transitionend").on("transitionend", function end(e) {
-      if (e.target !== this || e.originalEvent.propertyName != "height") return;
+  function showFilterDetail() {
+    $(this).off("transitionend").on("transitionend", function end(e) {
+      if (e.target !== this || e.originalEvent.propertyName != "opacity") return;
       $(this).off("transitionend", end);
       var $in = $res.find("#kifi-filter-det");
       api.port.emit("get_friends", function(friends) {
@@ -593,18 +593,17 @@ api.log("[google_inject]");
             }});
         });
       });
-    });
+    }).prev(".kifi-filter-detail-notch").addBack().addClass("kifi-visible");
   }
 
   function hideFilterDetail() {
-    $(this).prev(".kifi-filter-detail-notch").addBack().removeClass("kifi-visible").end().end()
-    .off("transitionend").on("transitionend", function end(e) {
-      if (e.target !== this || e.originalEvent.propertyName != "height") return;
+    $(this).off("transitionend").on("transitionend", function end(e) {
+      if (e.target !== this || e.originalEvent.propertyName != "visibility") return;
       $(this).off("transitionend", end);
       var $in = $res.find("#kifi-filter-det");
       if ($in.tokenInput) {
         $in.tokenInput("destroy");
       }
-    });
+    }).prev(".kifi-filter-detail-notch").addBack().removeClass("kifi-visible");
   }
 }();
