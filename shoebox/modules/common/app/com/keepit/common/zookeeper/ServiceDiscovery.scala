@@ -30,9 +30,10 @@ class ServiceDiscoveryImpl @Inject() (
   def register(): Node = {
     val path = zk.createPath(myServicePath)
     zk.watchChildren(path, { (children : Seq[Node]) =>
-      log.debug(s"""services in my cluster: ${children.mkString(", ")}""")
+      log.info(s"""services in my cluster: ${children.mkString(", ")}""")
     })
     myNode = Some(zk.createNode(myServiceNodeMaster, null, EPHEMERAL_SEQUENTIAL))
+    log.info(s"registered as node $myNode")
     myNode.get
   }
 
