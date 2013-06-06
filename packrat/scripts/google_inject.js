@@ -585,7 +585,7 @@ api.log("[google_inject]");
             },
             onDelete: function(friend) {
               api.log("[onDelete]", friend.id, friend.name);
-              var who = filter.split(".").filter(function(id) {return id != friend.id}).join(".") || "f";
+              var who = filter.who.split(".").filter(function(id) {return id != friend.id}).join(".") || "f";
               search(null, $.extend({}, filter, {who: who}));
               if (who == "f") {
                 $in.nextAll(".kifi-filter-detail-clear").removeClass("kifi-visible");
