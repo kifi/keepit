@@ -191,6 +191,7 @@ GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUs
 GET     /admin/server               @com.keepit.common.healthcheck.AdminHealthController.serviceView()
 GET     /admin/benchmark            @com.keepit.common.healthcheck.AdminBenchmarkController.benchmarks()
 GET     /admin/ec2-instance         @com.keepit.controllers.admin.AmazonInstanceController.instanceInfo()
+GET     /admin/cache                @com.keepit.controllers.admin.AdminCacheController.serviceView
 
 GET     /admin/emails/comment       @com.keepit.controllers.admin.AdminEmailPreviewController.newComment
 GET     /admin/emails/message       @com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
