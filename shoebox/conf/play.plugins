@@ -1,7 +1,1 @@
-9994:com.keepit.social.SecureSocialAuthenticatorStore
-9995:com.keepit.social.SecureSocialIdGenerator
-9996:securesocial.core.providers.utils.DefaultPasswordValidator
-9997:securesocial.controllers.DefaultTemplatesPlugin
-9998:com.keepit.social.SecureSocialUserService
-9999:securesocial.core.providers.utils.BCryptPasswordHasher
-10001:securesocial.core.providers.FacebookProvider
+
