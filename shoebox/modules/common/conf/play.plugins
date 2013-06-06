@@ -5,3 +5,4 @@
 9998:com.keepit.social.SecureSocialUserService
 9999:securesocial.core.providers.utils.BCryptPasswordHasher
 10001:securesocial.core.providers.FacebookProvider
+10002:com.keepit.common.cache.HashMapPlayCache
