@@ -28,12 +28,12 @@ trait SchedulingPlugin extends Plugin with Logging {
   private def sendMessage(receiver: ActorRef, message: Any): Unit = if (schedulingProperties.allowScheduling) {
     log.info(s"sending a scheduled message $message to actor $receiver")
     receiver ! message
-  }
+  } else log.info(s"scheduling disabled, block send a scheduled message $message to actor $receiver")
 
   def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any) =
     if (!schedulingProperties.neverallowScheduling) {
       _cancellables :+= ( system.scheduler.schedule(initialDelay, frequency) { sendMessage(receiver, message) } )
-    }
+    } else log.info("permanently disable scheduling for message $message to actor $receiver")
 
   def cancelTasks() = _cancellables.map(_.cancel)
 

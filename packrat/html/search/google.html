@@ -5,17 +5,36 @@
     }}<a class="kifi-res-debug" href="javascript:" target="_blank">debug</a>{{!
     }}<span class="kifi-res-title-arrow">&raquo;</span>
     </h3>
-    <a class="kifi-res-filter-keeps" href="javascript:">Filter</a>
+    <a class="kifi-filter-btn" href="javascript:">
+      <span class="kifi-filter-btn-text">Filter</span><span class="kifi-filter-btn-tri"></span>
+    </a>
   </div>
-  <menu class="kifi-res-filters">
-    <span data-filter="a" class="kifi-res-filter kifi-selected">All Keeps</span>
-    <span data-filter="m" class="kifi-res-filter">My Keeps</span>
-    <span data-filter="f" class="kifi-res-filter">Friends’ Keeps</span>
-    <span data-filter="c" class="kifi-res-filter">Custom Keeps</span>
-    <span class="kifi-res-filters-x">&times;</span>
-  </menu>
-  <div class="kifi-res-filter-custom">
-    <input type="text" class="kifi-res-filter-cust" id="kifi-res-filter-cust" placeholder="Type a friend’s name">
-    <span class="kifi-res-filter-custom-x">&times;</span>
+  <div class="kifi-filters">
+    <div class="kifi-filter" data-name="who">
+      <a class="kifi-filter-a" href="javascript:">All keeps<span class="kifi-filter-a-tri">&nbsp;</span></a>
+      <menu>
+        <li data-val="a" class="kifi-filter-val kifi-selected">All keeps</li>
+        <li data-val="m" class="kifi-filter-val">My keeps</li>
+        <li data-val="f" class="kifi-filter-val">Friends’ keeps</li>
+      </menu>
+    </div>
+    <div class="kifi-filter" data-name="when">
+      <a class="kifi-filter-a" href="javascript:">All time<span class="kifi-filter-a-tri">&nbsp;</span></a>
+      <menu>
+        <li data-val="a" class="kifi-filter-val kifi-selected">All time</li>
+        <li data-val="t" class="kifi-filter-val">Today</li>
+        <li data-val="y" class="kifi-filter-val">Yesterday</li>
+        <li data-val="w" class="kifi-filter-val">Past week</li>
+        <li data-val="m" class="kifi-filter-val">Past 30 days</li>
+      </menu>
+    </div>
+    <span class="kifi-filters-x">&times;</span>
+    <span class="kifi-filters-clear">Clear</span>
+    <div class="kifi-filter-detail-notch"></div>
+    <div class="kifi-filter-detail">
+      <input type="text" class="kifi-filter-det" id="kifi-filter-det" placeholder="Type to select a friend">
+      <span class="kifi-filter-detail-x">&times;</span>
+      <span class="kifi-filter-detail-clear">Clear</span>
+    </div>
   </div>
 </div>
