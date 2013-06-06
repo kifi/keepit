@@ -6,16 +6,18 @@
 <html class="no-js">
 <!--<![endif]-->
 <head>
-<meta charset="utf-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-<title></title>
-<meta name="description" content="">
-<meta name="viewport" content="width=device-width">
-<link rel="stylesheet" href="js/fancybox/jquery.fancybox.css">
-<link rel="stylesheet" href="css/main.css">
-<link href='http://fonts.googleapis.com/css?family=Lato'
-	rel='stylesheet' type='text/css'>
-<script src="js/tempo.min.js"></script>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<title></title>
+	<meta name="description" content="">
+	<meta name="viewport" content="width=device-width">
+	<link rel="stylesheet" href="js/fancybox/jquery.fancybox.css">
+	<link rel="stylesheet" href="css/main.css">
+	<link href='http://fonts.googleapis.com/css?family=Lato'
+		rel='stylesheet' type='text/css'>
+	<script src="js/tempo.min.js"></script>
+	<link href="js/icheck/skins/flat/kifi.css" rel="stylesheet">
+	<link href="js/icheck/skins/minimal/grey.css" rel="stylesheet">
 </head>
 <body>
 	<!--[if lt IE 7]>
@@ -54,8 +56,8 @@
 			</h3>
 			 -->
 			<div id="collections" class="template-wrapper">
-				<h2>Collections <a id="new-collection" href="javascript:;"><img src="img/plus.png" alt="+"/></a></h2>
-				<div id="add-collection">
+				<h2>Collections <a class="new-collection" href="javascript:;"><img src="img/plus.png" alt="+"/></a></h2>
+				<div class="add-collection">
 					<input placeholder="Type name here"/>
 				</div>
 				<div id="collections-wrapper">
@@ -85,7 +87,7 @@
 			</div>
 			<div class="scrollable">
 				<ol id="search-results" class="template-wrapper">
-					<li data-template class="keep draggable {% if isMyBookmark %}mine{% endif %}" data-collections="{{collections}}">
+					<li data-template class="keep draggable {% if isMyBookmark %}mine{% endif %}" data-id="{{bookmark.id}}" data-collections="">
 						<div class="handle">
 							<input type="checkbox"/>
 						</div>
@@ -140,22 +142,20 @@
 	 			<a class="link long-text"></a>
  			</div>
  			<div class="who-kept">
- 				[TODO]
  			</div>
-			<div>In collections:</div>
+			<div class="subtitle">In collections:</div>
  			<div class="in-collections">
- 				[TODO]
  			</div>
  			<div class="actions">
  				<a class="add" href="javascript:;">Add to a collection <span class="close">x</span></a>
  				<div class="collections">
- 					<input type="text" placeholder="Find a collection..."/>
+ 					<input class="find" type="text" placeholder="Find a collection..."/>
  					<ul>
- 						<li><a class="create" href="javascript:;">Create a new collection</a></li>
- 						<li><a href="javascript:;">TODO</a></li>
- 						<li><a href="javascript:;">TODO</a></li>
- 						<li><a href="javascript:;">TODO</a></li>
- 						<li><a href="javascript:;">TODO</a></li>
+ 						<li class="create"><a class="new-collection" href="javascript:;">Create a new collection</a>
+	 						<div class="add-collection">
+								<input type = "text" placeholder="Type name here"/>
+							</div>
+						</li>
  					</ul>
  				</div>
  				<a class="share" href="javascript:;">Share on your social networks</a>
@@ -182,6 +182,7 @@
 	<script src="js/textext.1.3.1.min.js"></script>
 	<script src="js/jquery-ui-1.10.3.custom/js/jquery-ui-1.10.3.custom.min.js"></script>
 	<script src="js/fancybox/jquery.fancybox.pack.js"></script>
+	<script src="js/icheck/jquery.icheck.min.js"></script>
 	<script src="js/main.js"></script>
 	<script>
 		var _gaq = [ [ '_setAccount', 'UA-XXXXX-X' ], [ '_trackPageview' ] ];

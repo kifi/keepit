@@ -1,6 +1,6 @@
 /*!
 jQuery Plugin: Tokenizing Autocomplete Text Entry
-commit f1ad56020c + pull requests 522, 529, 538, 539
+commit f1ad56020c + pull requests 522, 529, 538, 539, 540
 
 Copyright (c) 2009 James Smith (http://loopj.com)
 Licensed jointly under the GPL and MIT licenses,

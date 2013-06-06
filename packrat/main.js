@@ -1217,6 +1217,8 @@ doAuth();
 // Global error logging
 
 function reportError(errMsg, url, lineNo) {
+  return; // disable error reporting completely
+  // TODO: fix this
   api.log('Reporting error "%s" in %s line %s', errMsg, url, lineNo);
   if (!api.isPackaged()) {
     // Don't report errors on development (unpacked) extensions
