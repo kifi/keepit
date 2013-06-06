@@ -1,6 +1,6 @@
 /*!
 jQuery Plugin: Tokenizing Autocomplete Text Entry
-commit f1ad56020c + pull requests 522, 523, 529
+commit f1ad56020c + pull requests 522, 529, 538
 
 Copyright (c) 2009 James Smith (http://loopj.com)
 Licensed jointly under the GPL and MIT licenses,
@@ -49,7 +49,7 @@ choose which suits your project best!
     a(this).data("settings", a.extend({}, a(this).data("settings"), b || {}));
     return this
   }, destroy:function() {
-    this.data("tokenInputObject") && (this.data("tokenInputObject").destroy(), this.siblings().remove(), this.show());
+    this.data("tokenInputObject") && (this.data("tokenInputObject").destroy(), this.removeData("tokenInputObject settings"));
     return this
   }};
   a.fn.tokenInput = function(a) {
@@ -299,9 +299,9 @@ choose which suits your project best!
       }
     });
     l.placeholder && g.attr("placeholder", l.placeholder);
-    var j = a(b).hide().val("").focus(function() {
+    var j = a(b).hide().val("").on("focus.tokenInput", function() {
       y(g)
-    }).blur(function() {
+    }).on("blur.tokenInput", function() {
       g.blur();
       return j
     }), f = null, r = 0, s = null, k = a("<ul />").addClass(a(b).data("settings").classes.tokenList).click(function(b) {
@@ -357,7 +357,9 @@ choose which suits your project best!
     };
     this.destroy = function() {
       this.clear();
-      v.remove()
+      k.remove();
+      v.remove();
+      j.off(".tokenInput").show()
     };
     w();
     var T = RegExp("[.\\\\+*?\\[\\^\\]$(){}=!<>|:\\-]", "g")

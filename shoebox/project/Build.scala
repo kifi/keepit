@@ -31,7 +31,7 @@ object ApplicationBuild extends Build {
     writeToFile("conf/app_version.txt", appVersion)
     writeToFile("conf/app_compilation_date.txt", now)
 
-    val appDependencies = Seq(
+    val commonDependencies = Seq(
       jdbc,
       "com.typesafe.play.plugins" %% "play-statsd" % "2.1.0",
       "securesocial" %% "securesocial" % "master-SNAPSHOT",
@@ -58,7 +58,10 @@ object ApplicationBuild extends Build {
       "com.typesafe.slick" %% "slick" % "1.0.0",
       "com.typesafe.slick" %% "slick-testkit" % "1.0.0",
       "net.sf.uadetector" % "uadetector-resources" % "2013.02",
-      "com.newrelic.agent.java" % "newrelic-agent" % "2.18.0"
+      "com.newrelic.agent.java" % "newrelic-agent" % "2.18.0",
+      "com.google.inject" % "guice" % "3.0",
+      "com.google.inject.extensions" % "guice-multibindings" % "3.0",
+      "com.tzavellas" % "sse-guice" % "0.7.1"
     ) map (_.excludeAll(
       ExclusionRule(organization = "com.cedarsoft"),
       ExclusionRule(organization = "javax.jms"),
@@ -67,55 +70,72 @@ object ApplicationBuild extends Build {
       ExclusionRule(organization = "org.jboss.netty")
     ))
 
-    val main = play.Project(appName, appVersion, appDependencies).settings(
-      scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
-        "-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds",
-        "-language:existentials", "-language:experimental.macros", "-Xmax-classfile-name", "140"),
-      // add some imports to the routes file
-      routesImport ++= Seq(
-        "com.keepit.common.db.{ExternalId, Id, State}",
-        "com.keepit.model._",
-        "com.keepit.common.social._",
-        "com.keepit.search._"
-      ),
+    val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
+      "-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds",
+      "-language:existentials", "-language:experimental.macros", "-Xmax-classfile-name", "140")
 
-      resolvers ++= Seq(
-        Resolver.url("sbt-plugin-snapshots",
-          new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
-        "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
-        "kevoree Repository" at "http://maven2.kevoree.org/release/",
-        //for org.mongodb#casb
-        "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
-        "releases"  at "https://oss.sonatype.org/content/groups/scala-tools"
-      ),
+    val _routesImport = Seq(
+      "com.keepit.common.db.{ExternalId, Id, State}",
+      "com.keepit.model._",
+      "com.keepit.common.social._",
+      "com.keepit.search._"
+    )
 
-      // add some imports to the templates files
-      templatesImport ++= Seq(
-        "com.keepit.common.db.{ExternalId, Id, State}",
-        "com.keepit.model._",
-        "com.keepit.common.social._",
-        "com.keepit.search._"
-      ),
+    val commonResolvers = Seq(
+      Resolver.url("sbt-plugin-snapshots",
+        new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
+      "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
+      "kevoree Repository" at "http://maven2.kevoree.org/release/",
+      //for org.mongodb#casb
+      "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
+      "releases"  at "https://oss.sonatype.org/content/groups/scala-tools"
+    )
 
-      libraryDependencies ++= Seq(
-        // updating bonecp, trying to resolve "Timed out waiting for a free available connection" exception
-        // http://stackoverflow.com/a/15500442/81698
-        "com.google.inject" % "guice" % "3.0",
-        "com.google.inject.extensions" % "guice-multibindings" % "3.0",
-        "com.tzavellas" % "sse-guice" % "0.7.1"
-      ),
+    val _templatesImport = Seq(
+      "com.keepit.common.db.{ExternalId, Id, State}",
+      "com.keepit.model._",
+      "com.keepit.common.social._",
+      "com.keepit.search._"
+    )
 
-      javaOptions in test ++= Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=512m"),
+    val javaTestOptions = Seq("-Xms512m", "-Xmx2g", "-XX:PermSize=256m", "-XX:MaxPermSize=512m")
 
+    val _testOptions = Seq(
+      Tests.Argument("sequential", "false"),
+      Tests.Argument("threadsNb", "16"),
+      Tests.Argument("showtimes", "true"),
+      Tests.Argument("stopOnFail", "true"),
+      Tests.Argument("failtrace", "true")
+    )
+
+    lazy val common = play.Project("common", appVersion, commonDependencies, path = file("modules/common")).settings(
+      scalacOptions ++= _scalacOptions,
+      routesImport ++= _routesImport,
+      resolvers ++= commonResolvers,
+      templatesImport ++= _templatesImport,
+      javaOptions in test ++= javaTestOptions,
+
+      javaOptions in test ++= javaTestOptions,
       parallelExecution in Test := true,
-
-      testOptions in Test += Tests.Argument("sequential", "false"),
-      testOptions in Test += Tests.Argument("threadsNb", "16"),
-      testOptions in Test += Tests.Argument("showtimes", "true"),
-      testOptions in Test += Tests.Argument("stopOnFail", "true"),
-      testOptions in Test += Tests.Argument("failtrace", "true"),
+      testOptions in Test ++= _testOptions,
+      EclipseKeys.skipParents in ThisBuild := false,
 
       //https://groups.google.com/forum/?fromgroups=#!topic/play-framework/aa90AAp5bpo
       sources in doc in Compile := List()
     )
+
+
+    val main = play.Project(appName, appVersion).settings(
+      scalacOptions ++= _scalacOptions,
+      // Due to the way resolvers work in sbt, we need to specify the resolvers for *all* subprojects here.
+      resolvers ++= commonResolvers,
+
+      javaOptions in test ++= javaTestOptions,
+      parallelExecution in Test := true,
+      testOptions in Test ++= _testOptions,
+      EclipseKeys.skipParents in ThisBuild := false,
+
+      //https://groups.google.com/forum/?fromgroups=#!topic/play-framework/aa90AAp5bpo
+      sources in doc in Compile := List()
+    ).dependsOn(common % "test->test;compile->compile").aggregate(common)
 }
