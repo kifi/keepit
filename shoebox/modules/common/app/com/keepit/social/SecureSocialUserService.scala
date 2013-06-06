@@ -223,10 +223,10 @@ class SecureSocialUserService(implicit val application: Application) extends Use
 trait SecureSocialUserPlugin {
   def find(id: UserId): Option[SocialUser]
   def save(identity: Identity): SocialUser
-  
+
   def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser]
   def save(token: Token)
-  def findToken(token: String): Option[Token] 
+  def findToken(token: String): Option[Token]
   def deleteToken(uuid: String)
   def deleteExpiredTokens()
 }
@@ -259,10 +259,10 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
       socialUserInfoRepo.getOpt(SocialId(id.id), SocialNetworkType(id.providerId))
     } match {
       case None =>
-        log.debug("No SocialUserInfo found for %s".format(id))
+        log.info("No SocialUserInfo found for %s".format(id))
         None
       case Some(user) =>
-        log.debug("User found: %s for %s".format(user, id))
+        log.info("User found: %s for %s".format(user, id))
         user.credentials
     }
   }
@@ -270,22 +270,22 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
   def save(identity: Identity): SocialUser = reportExceptions {
     db.readWrite { implicit s =>
       val socialUser = SocialUser(identity)
-      log.debug("persisting social user %s".format(socialUser))
+      log.info("persisting social user %s".format(socialUser))
       val socialUserInfo = internUser(
-        SocialId(socialUser.id.id), SocialNetworkType(socialUser.id.providerId), socialUser).withCredentials(socialUser)
+        SocialId(socialUser.id.id), SocialNetworkType(socialUser.id.providerId), socialUser)
       require(socialUserInfo.credentials.isDefined,
         "social user info's credentials is not defined: %s".format(socialUserInfo))
       require(socialUserInfo.userId.isDefined, "social user id  is not defined: %s".format(socialUserInfo))
       for (sgp <- maybeSocialGraphPlugin if socialUserInfo.state != SocialUserInfoStates.FETCHED_USING_SELF) {
         sgp.asyncFetch(socialUserInfo)
       }
-      log.debug("persisting %s into %s".format(socialUser, socialUserInfo))
+      log.info("persisting %s into %s".format(socialUser, socialUserInfo))
       socialUser
     }
   }
 
   private def createUser(displayName: String): User = {
-    log.debug("creating new user for %s".format(displayName))
+    log.info("creating new user for %s".format(displayName))
     val nameParts = displayName.split(' ')
     User(firstName = nameParts(0),
         lastName = nameParts.tail.mkString(" "),
@@ -295,10 +295,10 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
 
   private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType,
       socialUser: SocialUser)(implicit session: RWSession): SocialUserInfo = {
-    socialUserInfoRepo.getOpt(socialId, socialNetworkType) match {
-      case Some(socialUserInfo) if (!socialUserInfo.userId.isEmpty) =>
-        socialUserInfo
-      case Some(socialUserInfo) if (socialUserInfo.userId.isEmpty) =>
+    socialUserInfoRepo.getOpt(socialId, socialNetworkType).map(_.withCredentials(socialUser)) match {
+      case Some(socialUserInfo) if !socialUserInfo.userId.isEmpty =>
+        socialUserInfoRepo.save(socialUserInfo)
+      case Some(socialUserInfo) if socialUserInfo.userId.isEmpty =>
         val user = userRepo.save(createUser(socialUserInfo.fullName))
 
         //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
@@ -308,11 +308,11 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
         sui
       case None =>
         val user = userRepo.save(createUser(socialUser.fullName))
-        log.debug("creating new SocialUserInfo for %s".format(user))
+        log.info("creating new SocialUserInfo for %s".format(user))
         val userInfo = SocialUserInfo(userId = Some(user.id.get),//verify saved
             socialId = socialId, networkType = socialNetworkType,
             fullName = socialUser.fullName, credentials = Some(socialUser))
-        log.debug("SocialUserInfo created is %s".format(userInfo))
+        log.info("SocialUserInfo created is %s".format(userInfo))
 
         val sui = socialUserInfoRepo.save(userInfo)
         imageStore.updatePicture(sui, user.externalId)
@@ -354,10 +354,10 @@ class RemoteSecureSocialUserPlugin @Inject() (
     val resFuture = shoeboxClient.getSocialUserInfoByNetworkAndSocialId(SocialId(id.id), SocialNetworkType(id.providerId))
     monitoredAwait.result(resFuture, 3 seconds) match {
       case None =>
-        log.debug("No SocialUserInfo found for %s".format(id))
+        log.info("No SocialUserInfo found for %s".format(id))
         None
       case Some(user) =>
-        log.debug("User found: %s for %s".format(user, id))
+        log.info("User found: %s for %s".format(user, id))
         user.credentials
     }
   }

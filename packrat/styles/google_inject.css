@@ -146,12 +146,12 @@ span.kifi-filter-a-tri {
   background-color: #fafafa;
   border: 1px solid #e1e4ea;
 }
-.kifi-filter-val {
+.kifi-filter>menu>li.kifi-filter-val {
   list-style: none;
-  margin: 0 -1px;
+  margin: 0 -1px !important; /* FF */
   border: 1px solid transparent;
-  padding: 0 21px;
-  line-height: 24px;
+  padding: 0 21px !important; /* FF */
+  line-height: 24px !important; /* FF */
   white-space: nowrap;
   cursor: default;
 }
@@ -163,7 +163,7 @@ span.kifi-filter-a-tri {
 .kifi-filter-val::before {
   content: "\2713";
   position: absolute;
-  margin-left: -14px;
+  margin-left: -14px !important;
   visibility: hidden;
 }
 .kifi-filter-val.kifi-selected::before {
@@ -258,26 +258,30 @@ div.kifi-filter-detail.kifi-visible {
 }
 input#kifi-filter-det,
 input#token-input-kifi-filter-det {
-  margin: 0 0 0 9px;
+  margin: 0 !important;
   border: none;
+  padding: 7px 0 !important;
   outline: none;
   -moz-appearance: none;
-  padding: 7px 0 !important; /* FF */
   background-color: #fff;
   font: inherit;
+  line-height: 14px !important; /* FF */
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
 input#kifi-filter-det { /* shown temporarily until $.tokenInput called */
   width: 414px;
   border: 1px solid #e5e7e8;
-  line-height: normal;
+  padding-left: 9px !important; /* FF */
+  max-height: 30px; /* FF */
 }
 input#token-input-kifi-filter-det {
-  padding-top: 4px !important;
+  margin-left: 9px !important; /* FF */
+  padding-top: 4px !important; /* FF */
+  max-height: 25px; /* FF */
 }
 li:not(:first-child)>input#token-input-kifi-filter-det {
-  margin-left: 6px;
+  margin-left: 6px !important; /* FF */
 }
 input#kifi-filter-det::-moz-placeholder,
 input#token-input-kifi-filter-det::-moz-placeholder {
@@ -293,7 +297,7 @@ ul.token-input-list-googly {
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   width: 414px;
-  margin: 0;
+  margin: 0 !important;
   padding: 3px 2px 0 0 !important; /* FF */
   border: 1px solid #e5e7e8 !important; /* FF */
   background-color: #fff;
@@ -310,35 +314,38 @@ li.token-input-token-googly {
   background: 0 0/22px no-repeat padding-box #fff;
   background-color: #6ca4f2;
   color: #fff;
-  line-height: 22px;
+  line-height: 22px !important;
   white-space: nowrap;
   cursor: default;
 }
 li.token-input-selected-token-googly {
-  background-color: #639dfb;
+  background-color: #4c8ffb;
 }
 li.token-input-token-googly>p {
   display: inline;
-  padding: 0;
-  margin: 0;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 li.token-input-token-googly .token-input-delete-token-googly {
   display: inline-block;
-  margin-left: 5px;
-  padding: 0 5px;
+  margin-left: 5px !important;
+  padding: 0 5px !important;
   color: #fff;
   font-size: 15px;
   cursor: pointer;
   vertical-align: -1px;
 }
 li.token-input-token-googly .token-input-delete-token-googly:hover {
-  background-color: #7eaefb;
+  background-color: #90b9f2;
+}
+li.token-input-token-googly .token-input-delete-token-googly:active {
+  background-color: #427cd9;
 }
 li.token-input-input-token-googly {
   list-style: none;
   float: left;
-  margin: 0;
-  padding: 0;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 div.token-input-dropdown-googly {
   position: absolute;
@@ -348,8 +355,10 @@ div.token-input-dropdown-googly {
   border-top: none;
   cursor: default;
   font: 12px "helvetica neue",Helvetica,Arial,sans-serif;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
 }
-/* searchingText or noResultText
+/* hintText, searchingText, noResultText
 div.token-input-dropdown-googly>p {
   margin: 0;
   padding: 5px;
@@ -358,32 +367,31 @@ div.token-input-dropdown-googly>p {
 }
 */
 div.token-input-dropdown-googly>ul {
-  margin: 0;
-  padding: 0;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 div.token-input-dropdown-googly>ul>li {
   background: 6px 2px/28px no-repeat padding-box #fff;
   position: static;
   float: none;
-  margin: 0;
-  padding: 2px 6px 2px 42px;
+  margin: 0 !important;
+  padding: 2px 6px 2px 42px !important;
   list-style-type: none;
   text-align: left;
   font: inherit;
   color: inherit;
-  line-height: 28px;
+  line-height: 28px !important;
 }
 div.token-input-dropdown-googly>ul>li.token-input-selected-dropdown-item-googly {
   background-color: #6ca4f2;
   color: #fff;
 }
 
-
 #kifi-res-list {
   margin-top: 18px !important; /* FF */
 }
 #kifi-res-list.kifi-res-none {
-  margin: 20px 0 12px;
+  margin: 20px 0 12px !important;
   text-align: center;
   font-size: 12px;
   color: #666;
