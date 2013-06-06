@@ -14,22 +14,13 @@ import play.api.libs.json._
 import play.api.mvc.Action
 import views.html
 
-case class ArticleIndexInfo(
-    sequenceNumber: Option[SequenceNumber],
-    numDocs: Int,
-    committedAt: Option[String])
-
-object ArticleIndexInfoJson {
-  implicit val articleIndexInfoFormat = Json.format[ArticleIndexInfo]
-}
-
 class ArticleIndexerController @Inject()(
     indexer: ArticleIndexer,
     phraseIndexer: PhraseIndexer,
     indexerPlugin: ArticleIndexerPlugin)
   extends SearchServiceController {
 
-  import ArticleIndexInfoJson._
+  import IndexInfoJson._
 
   def index() = Action { implicit request =>
     val cnt = indexerPlugin.index()
@@ -42,7 +33,8 @@ class ArticleIndexerController @Inject()(
   }
 
   def indexInfo = Action { implicit request =>
-    Ok(Json.toJson(ArticleIndexInfo(
+    Ok(Json.toJson(IndexInfo(
+      name = "ArticleIndex",
       numDocs = indexer.numDocs,
       sequenceNumber = indexer.commitData.get(CommitData.sequenceNumber).map(v => SequenceNumber(v.toLong)),
       committedAt = indexer.commitData.get(CommitData.committedAt)

@@ -1,17 +1,21 @@
-@(articleIndexInfo: com.keepit.controllers.search.ArticleIndexInfo,
-  uriGraphInfo: com.keepit.controllers.search.URIGraphIndexInfo)
+@(articleIndexInfo: com.keepit.controllers.search.IndexInfo,
+  indexInfoSeq: Seq[com.keepit.controllers.search.IndexInfo])
 
 @admin("Index") {
   <h2>Article Index</h2>
   <div>
+    <b>index name:</b> @{articleIndexInfo.name}<br>
     <b>num documents indexed:</b> @{articleIndexInfo.numDocs}<br>
     <b>last committed at:</b> @{articleIndexInfo.committedAt.getOrElse("N/A")}<br>
     <b>last sequence number:</b> @{articleIndexInfo.sequenceNumber.getOrElse("N/A")}<br>
   </div>
   <h2>URI Graph</h2>
   <div>
-    <b>num documents indexed:</b> @{uriGraphInfo.numDocs}<br>
-    <b>last committed at:</b> @{uriGraphInfo.committedAt.getOrElse("N/A")}<br>
-    <b>last sequence number:</b> @{uriGraphInfo.sequenceNumber.getOrElse("N/A")}<br>
+    @indexInfoSeq.map{ info =>
+      <b>index name:</b> @{info.name}<br>
+      <b>num documents indexed:</b> @{info.numDocs}<br>
+      <b>last committed at:</b> @{info.committedAt.getOrElse("N/A")}<br>
+      <b>last sequence number:</b> @{info.sequenceNumber.getOrElse("N/A")}<br><br>
+    }
   </div>
 }
