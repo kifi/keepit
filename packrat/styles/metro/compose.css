@@ -18,7 +18,6 @@ form.kifi-compose.kifi-scrollable-below {
   outline: none;
   box-shadow: none;
   cursor: text; /* ff */
-  -webkit-transition: 160ms cubic-bezier(.405,-.375,.630,1.260) min-height;
   transition: 160ms cubic-bezier(.405,-.375,.630,1.260) min-height;
 }
 .kifi-compose .kifi-compose-draft[contenteditable]:first-child {
@@ -55,7 +54,6 @@ form.kifi-compose.kifi-scrollable-below {
   background-clip: content-box;
   background-origin: content-box;
   background-repeat: no-repeat;
-  -webkit-transition: none;
   transition: none;
   outline: none; /* for tooltip */
 }
@@ -295,7 +293,7 @@ form.kifi-compose li.token-input-token-KiFi {
 form.kifi-compose li.token-input-selected-token-KiFi {
   background-color: #4c8ffb;
 }
-form.kifi-compose li.token-input-token-KiFi p {
+form.kifi-compose li.token-input-token-KiFi>p {
   display: inline;
   padding: 0;
   margin: 0;
@@ -324,14 +322,16 @@ div.token-input-dropdown-KiFi {
   -moz-box-sizing: content-box;
   box-sizing: content-box;
 }
-div.token-input-dropdown-KiFi p {
+/* searchingText or noResultText
+div.token-input-dropdown-KiFi>p {
   margin: 0 !important;
   padding: 5px;
   font: inherit;
   font-weight: bold;
   color: #777;
 }
-div.token-input-dropdown-KiFi ul {
+*/
+div.token-input-dropdown-KiFi>ul {
   position: static;
   float: none;
   margin: 0 !important;
@@ -339,7 +339,7 @@ div.token-input-dropdown-KiFi ul {
   font: inherit;
   color: inherit;
 }
-div.token-input-dropdown-KiFi ul li {
+div.token-input-dropdown-KiFi>ul>li {
   background: 6px 2px/28px no-repeat padding-box #fff;
   position: static;
   float: none;
@@ -351,16 +351,12 @@ div.token-input-dropdown-KiFi ul li {
   color: inherit;
   line-height: 28px;
 }
-div.token-input-dropdown-KiFi ul li b {
+div.token-input-dropdown-KiFi>ul>li>b {
   font: inherit;
   font-weight: bold;
   color: inherit;
 }
-div.token-input-dropdown-KiFi ul li.token-input-dropdown-item-KiFi,
-div.token-input-dropdown-KiFi ul li.token-input-dropdown-item2-KiFi {
-  background-color: #fff;
-}
-div.token-input-dropdown-KiFi ul li.token-input-selected-dropdown-item-KiFi {
+div.token-input-dropdown-KiFi>ul>li.token-input-selected-dropdown-item-KiFi {
   background-color: #6fa6ef;
   color: #fff;
 }

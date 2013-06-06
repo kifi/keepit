@@ -80,7 +80,6 @@ div.kifi-comment-x {
   color: #d2d2d2;
   cursor: pointer;
   display: none;
-  -webkit-transition: right ease-in-out 60ms, background-color linear 60ms;
   transition: right ease-in-out 60ms, background-color linear 60ms;
 }
 div.kifi-comment-x:hover,
