@@ -7,6 +7,7 @@ import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.inject._
 
 import java.util.concurrent.atomic.AtomicBoolean
@@ -84,13 +85,14 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       require(app.mode == mode, "Current mode %s is not allowed. Mode %s required for %s".format(app.mode, mode, this))
     }
     val services = injector.inject[FortyTwoServices]
+    injector.inject[ServiceDiscovery].register()
     val startMessage = ">>>>>>>>>> FortyTwo [%s] service %s Application version %s compiled at %s started on base URL: [%s]. Url is defined on conf/application.conf".format(
         this, services.currentService, services.currentVersion, services.compilationTime, services.baseUrl)
     log.info(startMessage)
     println(startMessage)
     injector.inject[AppScope].onStart(app)
     if (app.mode != Mode.Test && app.mode != Mode.Dev) {
-      Statsd.increment("deploys")
+      Statsd.gauge("deploys", 1)
       injector.inject[HealthcheckPlugin].reportStart()
     }
   }

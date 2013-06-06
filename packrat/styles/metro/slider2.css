@@ -28,7 +28,6 @@
   -webkit-user-select: auto;
   -moz-user-select: auto;
   user-select: auto;
-  -webkit-transition: none;
   transition: none;
 }
 .kifi-slider2,
@@ -72,14 +71,16 @@
   margin-bottom: 13px;
   -webkit-transform: translate(0,20px);
   transform: translate(0,20px);
-  -webkit-transition: opacity .8s ease-out, -webkit-transform .8s ease-out;
-  transition: opacity .8s ease-out, -webkit-transform .8s ease-out, transform .8s ease-out;
+  transition: opacity ease-out, -webkit-transform ease-out;
+  transition: opacity ease-out, transform ease-out;
+  transition-duration: .8s;
 }
 .kifi-tile.kifi-hover-showing>.kifi-slider2-tip {
   -webkit-transform: none;
   transform: none;
-  -webkit-transition: opacity .5s ease-in, -webkit-transform .5s ease-out;
-  transition: opacity .5s ease-in, -webkit-transform .5s ease-out, transform .5s ease-out;
+  transition: opacity ease-in, -webkit-transform ease-out;
+  transition: opacity ease-in, transform ease-out;
+  transition-duration: .5s;
 }
 .kifi-tile>.kifi-count+.kifi-slider2-tip {
   margin-bottom: 23px;
@@ -133,12 +134,10 @@
 }
 .kifi-slider2.kifi-auto {
   width: 136px;
-  -webkit-transition: width 200ms ease-out;
   transition: width 200ms ease-out;
 }
 .kifi-slider2.kifi-wide {
   width: 310px;
-  -webkit-transition: width 100ms ease-out;
   transition: width 100ms ease-out;
 }
 .kifi-slider2.kifi-growing {
@@ -148,11 +147,9 @@
   overflow: hidden;
   width: 0;
   opacity: 0;
-  -webkit-transition: width 100ms ease-in, opacity 60ms ease-in 40ms;
   transition: width 100ms ease-in, opacity 60ms ease-in 40ms;
 }
 .kifi-slider2.kifi-hiding.kifi-auto {
-  -webkit-transition: width 200ms ease-in, opacity 120ms ease-in 80ms;
   transition: width 200ms ease-in, opacity 120ms ease-in 80ms;
 }
 .kifi-slider2-x {
@@ -167,7 +164,6 @@
   background-repeat: no-repeat;
   overflow: hidden;
   cursor: pointer;
-  -webkit-transition: width .25s ease-in;
   transition: width .25s ease-in;
 }
 .kifi-with-pane .kifi-slider2-x {
@@ -200,8 +196,8 @@
 }
 .kifi-slider2-keep-card,
 .kifi-slider2-dock { /* width for .kifi-slider2-keep-card only */
-  -webkit-transition: width .25s ease-in, -webkit-transform 50ms ease-in, box-shadow 50ms ease-in;
-  transition: width .25s ease-in, -webkit-transform 50ms ease-in, transform 50ms ease-in, box-shadow 50ms ease-in;
+  transition: width .25s ease-in, -webkit-transform 50ms ease-in, box-shadow 50ms ease-in;
+  transition: width .25s ease-in, transform 50ms ease-in, box-shadow 50ms ease-in;
 }
 .kifi-tile.ui-draggable .kifi-slider2-keep-card,
 .kifi-tile.ui-draggable .kifi-slider2-dock {
@@ -219,7 +215,7 @@
   border-radius: inherit;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
-  -webkit-transition: -webkit-transform .25s ease-in-out, z-index .25s linear;
+  transition: -webkit-transform .25s ease-in-out, z-index .25s linear;
   transition: transform .25s ease-in-out, z-index .25s linear;
 }
 .kifi-slider2-keep-card.kifi-private .kifi-slider2-keep-side,
@@ -510,14 +506,13 @@ a.kifi-slider2-keeper {
   opacity: 0;
   -webkit-transform: translate(0, 2px);
   transform: translate(0, 2px);
-  -webkit-transition: opacity 90ms ease-in-out, -webkit-transform 90ms ease-out;
-  transition: opacity 90ms ease-in-out, -webkit-transform 90ms ease-out, transform 90ms ease-out;
+  transition: opacity 90ms ease-in-out, -webkit-transform 90ms ease-out;
+  transition: opacity 90ms ease-in-out, transform 90ms ease-out;
 }
 .kifi-hover-showing .kifi-slider2-tip {
   opacity: 1;
   -webkit-transform: none;
   transform: none;
-  -webkit-transition-duration: 50ms;
   transition-duration: 50ms;
 }
 .kifi-slider2-tip-below {
