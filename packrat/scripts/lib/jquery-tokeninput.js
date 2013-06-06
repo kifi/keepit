@@ -163,7 +163,7 @@ choose which suits your project best!
       s = null
     }
     function G() {
-      v.css({position:"absolute", top:k.offset().top + k.outerHeight(), left:k.offset().left, width:k.width(), "z-index":a(b).data("settings").zindex}).show()
+      v.css({position:"absolute", top:k.offset().top + k.outerHeight(), left:k.offset().left, width:k.css("width"), "z-index":a(b).data("settings").zindex}).show()
     }
     function J(c, e) {
       if(e && e.length) {
