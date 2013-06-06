@@ -336,10 +336,10 @@ li.token-input-token-googly .token-input-delete-token-googly {
   vertical-align: -1px;
 }
 li.token-input-token-googly .token-input-delete-token-googly:hover {
-  background-color: #4c8ffb;
+  background-color: #90b9f2;
 }
-li.token-input-selected-token-googly .token-input-delete-token-googly:hover {
-  background-color: #6ca4f2;
+li.token-input-token-googly .token-input-delete-token-googly:active {
+  background-color: #427cd9;
 }
 li.token-input-input-token-googly {
   list-style: none;
