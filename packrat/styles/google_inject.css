@@ -228,7 +228,7 @@ div.kifi-filter-detail-notch {
 div.kifi-filter-detail-notch.kifi-visible {
   height: 7px;
   width: 7px;
-  left: 32px;
+  left: 48px;
   transition-delay: .15s;
 }
 div.kifi-filter-detail {
