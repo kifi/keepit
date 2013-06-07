@@ -1,5 +1,8 @@
 @admin("Engineering Dashboard", scripts = List("graphite")) {
-<div style="float: right"><select id="timerange"></select></div>
+<div style="float: right" class="form-horizontal">
+  <select class="input-medium" id="timerange"></select>
+  <button class="btn btn-primary" type="button" id="update">Update Now</button>
+</div>
 
 <p>
   <a href="@com.keepit.controllers.admin.routes.AdminSearchPerformanceController.viewSearchPerformance"><font size="5">Search Performance</font></a>
@@ -37,7 +40,7 @@
   from: $("#timerange").val()
   };
 
-  var baseTargets = ["drawAsInfinite(counters.*.deploys)"];
+  var baseTargets = ["drawAsInfinite(counters.*.deploys.count)"];
 
   // Search Chart
 
@@ -63,7 +66,9 @@
   $("#cache").graphite(options);
 }
 
-  $("#timerange").change(renderCharts).change();
+  $("#timerange").change(renderCharts);
+  $("#update").click(renderCharts);
+  setInterval(renderCharts, 300000);
   renderCharts()
 </script>
 }
