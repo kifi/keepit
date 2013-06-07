@@ -146,6 +146,7 @@ POST    /admin/data/unscrapable     @com.keepit.controllers.admin.ScraperControl
 GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.renormalize(readOnly: Boolean ?= true, domain: Option[String] ?= None)
 POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.ScraperController.handleDuplicate
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.ScraperController.handleDuplicates
+GET     /admin/data/fixSeqNum       @com.keepit.controllers.admin.UrlController.fixSeqNum
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
