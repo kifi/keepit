@@ -138,9 +138,9 @@
   
   if (chart == "ratios") {
     var prefix = ["counters", service, plugin, namespace].join(".");
-    var ratioTargets = baseTargets.concat(["scale(divideSeries(" + sumSeries(prefix, "hits", "count") + "," + sumSeries(prefix, "{hits,misses}", "count") + "),100)"]);
+    var ratioTarget = ["scale(divideSeries(" + sumSeries(prefix, "hits", "count") + "," + sumSeries(prefix, "{hits,misses}", "count") + "),100)"];
     options.title = "Hit Ratio"
-    options.target = baseTargets.concat(ratioTargets)
+    options.target = baseTargets.concat(ratioTarget)
     options.drawNullAsZero = "false"
     options.logBase = null;
   }
