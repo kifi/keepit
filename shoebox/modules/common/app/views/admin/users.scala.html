@@ -23,10 +23,10 @@
     <tr>
       <td>@{i+1}</td>
       <td><span class="badge">@userStatistics.user.id.get.id</span></td>
-      <td>@adminHelper.userDisplay(userStatistics.userWithSocial.user, userStatistics.userWithSocial.socialUserInfo)</td>
-      <td>@userStatistics.userWithSocial.bookmarksCount</td>
+      <td>@adminHelper.userDisplay(userStatistics.user)</td>
+      <td>@userStatistics.bookmarksCount</td>
       <td>@adminHelper.dateDisplay(userStatistics.user.createdAt)</td>
-      <td>@userStatistics.userWithSocial.experiments.mkString(", ")</td>
+      <td>@userStatistics.experiments.mkString(", ")</td>
       <td>@kifiInstallations(userStatistics.kifiInstallations)</td>
     </tr>
   }

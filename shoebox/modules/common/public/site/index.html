@@ -100,7 +100,7 @@
 								data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
 								title="{{firstName}} {{lastName}}" /> 
 							<span class="fs9 gray">
-								{% if isMyBookmark %}You{% endif %}{% if users.length > 0 && isMyBookmark %} + {% endif %}{% if users.length > 0 %}{{users.length}} friend{% endif %}{% if users.length > 1 %}s{% endif %} kept this {% if isPrivate %} <img src="img/private.png" /> Private {% endif %}
+								{% if isMyBookmark %}You{% endif %}{% if users.length > 0 && isMyBookmark %} + {% endif %}{% if users.length > 0 %}{{users.length}} friend{% endif %}{% if users.length > 1 %}s{% endif %} kept this <span class="private {% if isPrivate %}on{% endif %}"><img src="img/private.png" /> Private</span>
 							</span>
 							<div class="clearfix"></div>
 						</div>
@@ -108,7 +108,7 @@
 					<li data-template-fallback>Sorry, JavaScript required!</li>
 				</ol>
 				<ol id="my-keeps" class="template-wrapper">
-					<li data-template data-id="{{id}}" class="keep mine draggable" data-created={{createdAt}} data-collections="{{collections}}">
+					<li data-template data-id="{{id}}" class="keep mine draggable {% if isPrivate %}private{% endif %}" data-created={{createdAt}} data-collections="{{collections}}">
 						<div class="right fs9 gray easydate">{{createdAt}}</div>
 						<div class="handle">
 							<input type="checkbox"/>
@@ -121,8 +121,7 @@
 								src="img/clock.png"
 								data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
 								title="{{firstName}} {{lastName}}" /> 
-							<span class="fs9 gray"> You {% if keepers.length > 0 %} + {{keepers.length}} friend{% endif %}{% if keepers.length > 1 %}s{% endif %} kept this {% if isPrivate %} <img
-								src="img/private.png" /> Private {% endif %}
+							<span class="fs9 gray"> You {% if keepers.length > 0 %} + {{keepers.length}} friend{% endif %}{% if keepers.length > 1 %}s{% endif %} kept this <span class="private {% if isPrivate %}on{% endif %}"><img src="img/private.png" /> Private<span class="private">
 							</span>
 							<div class="clearfix"></div>
 						</div>
@@ -160,7 +159,7 @@
  				</div>
  				<a class="share" href="javascript:;">Share on your social networks</a>
  				<div class="keepit">
-	 				<a class="kept" href="javascript:;"><span class="private"></span> kept</a>
+	 				<a class="keep-button" href="javascript:;"><span class="private"></span> <span class="text">kept</span></a>
  				</div>
  			</div>
 		</aside>

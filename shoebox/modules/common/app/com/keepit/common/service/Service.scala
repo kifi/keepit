@@ -58,11 +58,13 @@ class FortyTwoServices(
 
   lazy val currentVersion: ServiceVersion = playMode match {
     case Mode.Test => ServiceVersion("Test mode service")
+    case _ if currentVersionFile.isEmpty => ServiceVersion("dev")
     case _ => ServiceVersion(io.Source.fromURL(currentVersionFile.get).mkString)
   }
 
   lazy val compilationTime: DateTime = playMode match {
     case Mode.Test => currentDateTime
+    case _ if currentVersionFile.isEmpty => currentDateTime
     case _ =>
       val timeStr = io.Source.fromURL(compilationTimeFile.get).mkString
 	  DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss Z").withLocale(Locale.ENGLISH).withZone(zones.PT).parseDateTime(timeStr)

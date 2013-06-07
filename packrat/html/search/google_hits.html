@@ -9,11 +9,14 @@
   <div id="kifi-res-list" class="kifi-res-none">Sorry, no keeps match this filter.</div>
 {{/anyResults}}
 
-<div class="kifi-res-end" style="background-image:url({{endBgUrl}}){{^show}};display:none{{/show}}">{{!
+<div class="kifi-res-end"{{^show}} style="display:none"{{/show}}>{{!
 }}{{#mayHaveMore}}
   <div class="kifi-res-more">
-    <span class="kifi-res-more-arrow">&raquo;</span> show more
-    <span class="kifi-res-more-arrow">&raquo;</span>
+    <span class="kifi-res-more-l" style="background-image:url({{images}}/more_results_left.gif),url({{images}}/more_results_left_top.gif)"></span>
+    <span class="kifi-res-more-c" style="background-image:url({{images}}/more_results_bottom.gif)">
+      <a class="kifi-res-more-a" style="background-image:url({{images}}/double_down.png)" href="javascript:">More KiFi Trusted Results</a>
+    </span>
+    <span class="kifi-res-more-r" style="background-image:url({{images}}/more_results_right.gif),url({{images}}/more_results_right_top.gif)"></span>
   </div>
 {{/mayHaveMore}}{{!
 }}</div>

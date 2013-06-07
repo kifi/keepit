@@ -1,6 +1,6 @@
 {
   "name": "KiFi Beta",
-  "version": "2.4.4",
+  "version": "2.4.6",
   "manifest_version": 2,
   "description": "KiFi Private Beta",
   "icons": {
@@ -33,9 +33,14 @@
   ],
   "web_accessible_resources": [
     "images/chatter.png",
+    "images/double_down.png",
     "images/globe.png",
     "images/kifi_logo.png",
-    "images/shade_above.png",
+    "images/more_results_bottom.gif",
+    "images/more_results_left.gif",
+    "images/more_results_left_top.gif",
+    "images/more_results_right.gif",
+    "images/more_results_right_top.gif",
     "images/snapshot.png",
     "images/social_icons.png",
     "images/metro/bg_comments.png",
