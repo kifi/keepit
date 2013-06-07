@@ -129,6 +129,7 @@ class ExtSearchController @Inject() (
     val total = t5 - t1
     Statsd.timing("extSearch.postSearchTime", t5 - t4)
     Statsd.timing("extSearch.total", total)
+    Statsd.increment("extSearch.total")
     log.info(s"total search time = $total, pre-search time = ${t2 - t1}, search-factory time = ${t3 - t2}, main-search time = ${t4 - t3}, post-search time = ${t5 - t4}")
     val searchDetails = searchRes.timeLogs match {
       case Some(timelog) => "main-search detail: " + timelog.toString

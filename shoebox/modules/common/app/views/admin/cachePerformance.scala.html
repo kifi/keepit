@@ -3,11 +3,12 @@
 <select class=params id="service"></select>
 <select class=params id="plugin"></select>
 <select class=params id="namespace"></select>
-<select class=params id="metrictype"></select>
 <select class=params id="timerange"></select>
-<!<select class=params id="yscale"></select>
+<select class=params id="yscale"></select>
 
-<img id="chart" class="img-polaroid">
+<p><img id="ratios" class="img-polaroid"></p>
+<p><img id="counters" class="img-polaroid"></p>
+<p><img id="timers" class="img-polaroid"></p>
 
 <script>
 
@@ -99,50 +100,58 @@
   hideGrid: "true"
   };
 
-  var baseTargets = ["drawAsInfinite(gauges." + $("#service").val() + ".deploys)"];
 
-  function selectTargets() {
-    var metrictype = $("#metrictype").val();
+  function sumSeries(prefix, infix, suffix) {
+  return "sumSeries(" + [prefix, infix, suffix].join(".") + ")"
+  }
+
+  function renderChart(chart) {
     var service = $("#service").val();
     var plugin = $("#plugin").val();
     var namespace = $("#namespace").val();
+    var baseTargets = ["drawAsInfinite(counters." + service + ".deploys)"];
+    options.from = $("#timerange").val();
 
-    var targetPrefix = [metrictype, service, plugin, namespace].join(".");
-    function sumSeries(metric, value) {
-      return "sumSeries(" + [targetPrefix, metric, value].join(".") + ")"
-    }
-
-    if (metrictype == "counters") {
-      var metrics = ["hits", "misses", "sets"];
-      var countTargets = metrics.map(function (metric) {return sumSeries(metric, "count")});
-      var ratioTarget = ["scale(divideSeries(" + sumSeries("hits", "count") + "," + sumSeries("{hits,misses}", "count") + "),100)"];
-      var targets = baseTargets.concat(countTargets).concat(ratioTarget)
-      options.drawNullAsZero = "true"
-    }
-
-    if (metrictype == "timers") {
-      var metrics = ["hits", "sets"];
-      var meanTargets = metrics.map(function (metric) {return "divideSeries(" + sumSeries(metric, "sum") + "," + sumSeries(metric, "count") + ")"});
-      var targets = baseTargets.concat(meanTargets)
-      options.drawNullAsZero = "false"
-    }
-
-    return targets
+  if (chart == "counters") {
+    var prefix = [chart, service, plugin, namespace].join(".");
+    var metrics = ["hits", "misses", "sets"];
+    var countTargets = metrics.map(function (metric) {return sumSeries(prefix, metric, "count")});
+    options.title = "Hits - Misses - Sets (Events per Minute)"
+    options.target = baseTargets.concat(countTargets)
+    //options.drawNullAsZero = "true"
+    options.logBase = $("#yscale").val();
   }
+
+  if (chart == "timers") {
+    var prefix = [chart, service, plugin, namespace].join(".");
+    var metrics = ["hits", "sets"];
+    var meanTargets = metrics.map(function (metric) {return "divideSeries(" + sumSeries(prefix, metric, "sum") + "," + sumSeries(prefix, metric, "count") + ")"});
+    options.title = "Hits - Sets (Mean Time in Milliseconds)"
+    options.target = baseTargets.concat(meanTargets)
+    options.drawNullAsZero = "false"
+    options.logBase = null;
+  }
+
   
-  $(".params").change(function () {
-  options.target = selectTargets();
-  options.logBase = $("#yscale").val();
-  options.from = $("#timerange").val();
-  renderChart();
-  }).change();
-
-  function renderChart() {
-  $("#chart").graphite(options);
+  if (chart == "ratios") {
+    var prefix = ["counters", service, plugin, namespace].join(".");
+    var ratioTargets = baseTargets.concat(["scale(divideSeries(" + sumSeries(prefix, "hits", "count") + "," + sumSeries(prefix, "{hits,misses}", "count") + "),100)"]);
+    options.title = "Hit Ratio"
+    options.target = baseTargets.concat(ratioTargets)
+    options.drawNullAsZero = "false"
+    options.logBase = null;
   }
 
-  renderChart();
+  $("#" + chart).graphite(options);
+  }
 
+  function renderAll() {
+    renderChart("counters")
+    renderChart("timers")
+    renderChart("ratios")
+  }
+
+  $(".params").change(renderAll).change();
+  renderAll()
 </script>
 }
-
