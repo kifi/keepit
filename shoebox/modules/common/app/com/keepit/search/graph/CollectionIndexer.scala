@@ -42,8 +42,8 @@ class CollectionIndexer(
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[Collection](indexDirectory, indexWriterConfig, CollectionFields.decoders) {
 
-  val commitBatchSize = 100
-  val fetchSize = commitBatchSize * 3
+  private[this] val commitBatchSize = 100
+  private[this] val fetchSize = commitBatchSize * 3
 
   private def commitCallback(commitBatch: Seq[(Indexable[Collection], Option[IndexError])]) = {
     var cnt = 0

@@ -9,6 +9,7 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.inject._
 import com.keepit.scraper.{ScraperPluginImpl, ScraperPlugin}
+import com.keepit.search.graph.BookmarkStore
 import com.keepit.search.graph.CollectionIndexer
 import com.keepit.search.graph.URIGraphImpl
 import com.keepit.search.graph.{URIGraphPluginImpl, URIGraphPlugin, URIGraph, URIGraphIndexer}
@@ -91,11 +92,20 @@ class SearchModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def uriGraphIndexer(shoeboxClient: ShoeboxServiceClient): URIGraphIndexer = {
+  def bookmarkStore(shoeboxClient: ShoeboxServiceClient): BookmarkStore = {
+    val dir = getDirectory(current.configuration.getString("index.bookmarkStore.directory"))
+    log.info(s"storing BookmarkStore in $dir")
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new BookmarkStore(dir, config)
+  }
+
+  @Singleton
+  @Provides
+  def uriGraphIndexer(bookmarkStore: BookmarkStore, shoeboxClient: ShoeboxServiceClient): URIGraphIndexer = {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new URIGraphIndexer(dir, config, shoeboxClient)
+    new URIGraphIndexer(dir, config, bookmarkStore, shoeboxClient)
   }
 
   @Singleton

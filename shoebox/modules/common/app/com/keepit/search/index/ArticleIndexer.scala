@@ -22,6 +22,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.{Success, Failure}
+import ArticleRecordSerializer._
 
 object ArticleIndexer {
   private[this] val toBeDeletedStates = Set[State[NormalizedURI]](ACTIVE, INACTIVE, SCRAPE_WANTED, UNSCRAPABLE)
@@ -139,6 +140,10 @@ class ArticleIndexer @Inject() (
           article.media.foreach{ media =>
             doc.add(buildTextField("media", media, DefaultAnalyzer.defaultAnalyzer))
           }
+
+          // store title and url in the index
+          val r = ArticleRecord(article.title, uri.url)
+          doc.add(buildBinaryDocValuesField("rec", r))
 
           doc
         case None => doc

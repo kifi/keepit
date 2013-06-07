@@ -30,7 +30,8 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]], shoeboxCl
       val docid = reader.getIdMapper.getDocId(id.id)
       val publicList = getURIList(publicListField, docid)
       val privateList = getURIList(privateListField, docid)
-      new UserInfo(id, docid, publicList, privateList)
+      val bookmarkIdArray = getLongArray(bookmarkIdField, docid)
+      new UserInfo(id, docid, publicList, privateList, bookmarkIdArray)
     }
   }
 
@@ -105,7 +106,7 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]], shoeboxCl
   }
 }
 
-class UserInfo(val id: Id[User], val docId: Int, val publicList: URIList, val privateList: URIList) {
+class UserInfo(val id: Id[User], val docId: Int, val publicList: URIList, val privateList: URIList, val bookmarkIdArray: Array[Long]) {
   val uriIdArray: Array[Long] = {
     val publicIds = publicList.ids
     val privateIds = privateList.ids
@@ -148,7 +149,7 @@ object UserToUriEdgeSet {
   def apply(sourceId: Id[User], uriList: URIList, isPublicEdgeSet: Boolean): UserToUriEdgeSet = {
     val set = LongArraySet.fromSorted(uriList.ids)
 
-    new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithCreatedAt[User, NormalizedURI] {
+    new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithAttributes[User, NormalizedURI] {
       override protected val longArraySet = set
       override protected def createdAtByIndex(idx:Int): Long = {
         val datetime = uriList.createdAt(idx)
@@ -168,7 +169,7 @@ object UserToUriEdgeSet {
       val set = LongArraySet.from(concat(publicIds, privateIds))
       val pubListSize = publicIds.length
 
-      new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithCreatedAt[User, NormalizedURI] {
+      new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithAttributes[User, NormalizedURI] {
         override protected val longArraySet = set
         override protected def createdAtByIndex(idx:Int): Long = {
           val datetime = if (idx < pubListSize) publicList.createdAt(idx) else privateList.createdAt(idx - pubListSize)
@@ -183,16 +184,18 @@ object UserToUriEdgeSet {
     val sourceId: Id[User] = myInfo.id
     val publicList = myInfo.publicList
     val privateList = myInfo.privateList
+    val bookmarkIds = myInfo.bookmarkIdArray
     val set = LongArraySet.from(myInfo.uriIdArray, myInfo.mapper.reserveMapper)
 
     val pubListSize = publicList.size
-    new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithCreatedAt[User, NormalizedURI] {
+    new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithAttributes[User, NormalizedURI] {
       override protected val longArraySet = set
       override protected def createdAtByIndex(idx:Int): Long = {
         val datetime = if (idx < pubListSize) publicList.createdAt(idx) else privateList.createdAt(idx - pubListSize)
         URIList.unitToMillis(datetime)
       }
       override protected def isPublicByIndex(idx: Int): Boolean = (idx < pubListSize)
+      override protected def bookmarkIdByIndex(idx: Int): Long = bookmarkIds(idx)
     }
   }
 

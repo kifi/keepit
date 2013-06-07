@@ -92,8 +92,10 @@ class EdgeAccessor[S, D](val edgeSet: EdgeSet[S, D]) extends Logging {
   def createdAt: Long = throw new UnsupportedOperationException
   def isPublic: Boolean = true
   def isPrivate: Boolean = false
+  def bookmarkId: Long = throw new UnsupportedOperationException
 
   def getCreatedAt(id: Long): Long = throw new UnsupportedOperationException
+  def getBookmarkId(id: Long): Long = throw new UnsupportedOperationException
 }
 
 trait MaterializedEdgeSet[S,D] extends EdgeSet[S, D] {
@@ -160,9 +162,10 @@ trait LongSetEdgeSet[S, D] extends MaterializedEdgeSet[S, D] {
   }
 }
 
-trait LongSetEdgeSetWithCreatedAt[S, D] extends LongSetEdgeSet[S, D] {
+trait LongSetEdgeSetWithAttributes[S, D] extends LongSetEdgeSet[S, D] {
   protected def createdAtByIndex(idx: Int): Long
   protected def isPublicByIndex(idx: Int): Boolean
+  protected def bookmarkIdByIndex(idx: Int): Long = throw new UnsupportedOperationException
 
   override def accessor: EdgeAccessor[S, D] = new EdgeAccessor[S, D](this) {
     protected var index: Int = -1
@@ -173,6 +176,7 @@ trait LongSetEdgeSetWithCreatedAt[S, D] extends LongSetEdgeSet[S, D] {
     }
     override def createdAt: Long = if (index >= 0) createdAtByIndex(index) else throw new IllegalStateException("accessor is not positioned")
     override def isPublic: Boolean = if (index >= 0) isPublicByIndex(index) else throw new IllegalStateException("accessor is not positioned")
+    override def bookmarkId: Long = if (index >= 0) bookmarkIdByIndex(index) else throw new IllegalStateException("accessor is not positioned")
 
     override def getCreatedAt(id: Long): Long = {
       val idx = longArraySet.findIndex(id)
@@ -184,6 +188,18 @@ trait LongSetEdgeSetWithCreatedAt[S, D] extends LongSetEdgeSet[S, D] {
           if (longArraySet.iterator.forall(_ != id)) log.error(s"verified the data structure, but the key does not exists")
         }
         0L //throw new NoSuchElementException(s"failed to find id: ${id}")
+      }
+    }
+    override def getBookmarkId(id: Long): Long = {
+      val idx = longArraySet.findIndex(id)
+      if (idx >= 0) {
+        bookmarkIdByIndex(idx)
+      } else {
+        log.error(s"failed in getBookmarkId: src=${sourceId} dest=${id} idx=${idx}")
+        if (longArraySet.verify) {
+          if (longArraySet.iterator.forall(_ != id)) log.error(s"verified the data structure, but the key does not exists")
+        }
+        -1L //throw new NoSuchElementException(s"failed to find id: ${id}")
       }
     }
   }

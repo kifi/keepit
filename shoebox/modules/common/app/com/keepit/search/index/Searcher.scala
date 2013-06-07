@@ -97,6 +97,13 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     }
   }
 
+  def foreachReader(f: WrappedSubReader => Unit) {
+    indexReader.getContext.leaves.foreach{ subReaderContext =>
+      val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
+      f(subReader)
+    }
+  }
+
   def findDocIdAndAtomicReaderContext(id: Long): Option[(Int, AtomicReaderContext)] = {
     indexReader.getContext.leaves.foreach{ subReaderContext =>
       val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]

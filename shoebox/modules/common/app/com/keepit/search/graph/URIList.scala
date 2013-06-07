@@ -16,6 +16,10 @@ trait URIList {
   def createdAt: Array[Long]
 }
 
+class SortedBookmarks(bookmarks: Seq[Bookmark]) {
+  def toSeq: Seq[Bookmark] = bookmarks
+}
+
 object URIList {
 
   val currentVersion = 3
@@ -38,7 +42,7 @@ object URIList {
     override def createdAt: Array[Long] = Array.empty[Long]
   }
 
-  def toByteArrays(bookmarks: Seq[Bookmark]): (Array[Byte]/*public*/, Array[Byte]/*private*/) = {
+  def sortBookmarks(bookmarks: Seq[Bookmark]): (SortedBookmarks/*public*/, SortedBookmarks/*private*/) = {
     // sort bookmarks by uriid. if there are duplicate uriIds, take most recent one
     val sortedBookmarks = bookmarks.sortWith{ (a, b) =>
       (a.uriId.id < b.uriId.id) || (a.uriId.id == b.uriId.id && a.createdAt.getMillis > b.createdAt.getMillis)
@@ -61,7 +65,7 @@ object URIList {
         }
       case None =>
     }
-    (toByteArrayFromSorted(publicBookmarks), toByteArrayFromSorted(privateBookmarks))
+    (new SortedBookmarks(publicBookmarks), new SortedBookmarks(privateBookmarks))
   }
 
   def toByteArray(bookmarks: Seq[Bookmark]): Array[Byte] = {
@@ -86,6 +90,8 @@ object URIList {
     }
     toByteArrayFromSorted(allBookmarks)
   }
+
+  def toByteArray(sortedBookmarks: SortedBookmarks): Array[Byte] = toByteArrayFromSorted(sortedBookmarks.toSeq)
 
   private def toByteArrayFromSorted(sortedBookmarks: Seq[Bookmark]): Array[Byte] = {
     val size = sortedBookmarks.size
@@ -143,6 +149,25 @@ object URIList {
       i += 1
     }
     arr
+  }
+
+  def packLongArray(arr: Array[Long]): Array[Byte] = {
+    val size = arr.length
+    val baos = new ByteArrayOutputStream(size * 4)
+    val out = new OutputStreamDataOutput(baos)
+
+    // no version
+    // list size
+    out.writeVInt(size)
+    // encode list
+    arr.foreach{ v => out.writeVLong(v) }
+    baos.flush()
+    baos.toByteArray()
+  }
+
+  def unpackLongArray(bytes: Array[Byte], offset: Int, length: Int): Array[Long] = {
+    val in = new InputStreamDataInput(new ByteArrayInputStream(bytes, offset, length))
+    readRawList(in, in.readVInt())
   }
 }
 

@@ -179,6 +179,13 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(bookmarks))
   }
 
+  def getBookmarksChanged(seqNum: Long, fetchSize: Int) = Action { request =>
+    val bookmarks = db.readOnly { implicit session =>
+      bookmarkRepo.getBookmarksChanged(SequenceNumber(seqNum), fetchSize)
+    }
+    Ok(Json.toJson(bookmarks))
+  }
+
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]) = Action { request =>
     val bookmark = db.readOnly { implicit session =>
       bookmarkRepo.getByUriAndUser(uriId, userId)

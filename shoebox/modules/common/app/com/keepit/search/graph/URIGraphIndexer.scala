@@ -2,7 +2,7 @@ package com.keepit.search.graph
 
 import java.io.StringReader
 import org.apache.lucene.analysis.TokenStream
-import org.apache.lucene.document.BinaryDocValuesField
+import org.apache.lucene.document.Field
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
 import org.apache.lucene.store.Directory
@@ -30,6 +30,7 @@ object URIGraphFields {
   val userField = "usr"
   val publicListField = "public_list"
   val privateListField = "private_list"
+  val bookmarkIdField = "bookmark_ids"
   val uriField = "uri"
   val titleField = "title"
   val stemmedField = "title_stemmed"
@@ -50,11 +51,12 @@ object URIGraphFields {
 class URIGraphIndexer(
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
+    bookmarkStore: BookmarkStore,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[User](indexDirectory, indexWriterConfig, URIGraphFields.decoders) {
 
-  val commitBatchSize = 100
-  val fetchSize = commitBatchSize * 3
+  private[this] val commitBatchSize = 3000
+  private[this] val fetchSize = commitBatchSize
 
   private def commitCallback(commitBatch: Seq[(Indexable[User], Option[IndexError])]) = {
     var cnt = 0
@@ -72,19 +74,23 @@ class URIGraphIndexer(
   def update(): Int = {
     resetSequenceNumberIfReindex()
     update {
-      Await.result(shoeboxClient.getUsersChanged(sequenceNumber), 180 seconds)
+      Await.result(shoeboxClient.getBookmarksChanged(sequenceNumber, fetchSize), 180 seconds)
     }
   }
 
   def update(userId: Id[User]): Int = {
     update {
-      Seq((userId, SequenceNumber.ZERO))
+      Await.result(shoeboxClient.getBookmarks(userId), 180 seconds)
     }
   }
 
-  private def update(usersChanged: => Seq[(Id[User], SequenceNumber)]): Int = {
+  private def update(bookmarksChanged: => Seq[Bookmark]): Int = {
     log.info("updating URIGraph")
     try {
+      val bookmarks = bookmarksChanged
+      bookmarkStore.update(bookmarks)
+
+      val usersChanged = bookmarks.foldLeft(Map.empty[Id[User], SequenceNumber]){ (m, b) => m + (b.userId -> b.seq) }.toSeq.sortBy(_._2)
       var cnt = 0
       indexDocuments(usersChanged.iterator.map(buildIndexable), commitBatchSize){ commitBatch =>
         cnt += commitCallback(commitBatch)
@@ -98,7 +104,7 @@ class URIGraphIndexer(
 
   def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber)): URIListIndexable = {
     val (userId, seq) = userIdAndSequenceNumber
-    val bookmarks = Await.result(shoeboxClient.getBookmarks(userId), 180 seconds)
+    val bookmarks = bookmarkStore.getBookmarks(userId)
     new URIListIndexable(id = userId,
                          sequenceNumber = seq,
                          isDeleted = false,
@@ -114,7 +120,9 @@ class URIGraphIndexer(
 
     override def buildDocument = {
       val doc = super.buildDocument
-      val (publicListBytes, privateListBytes) = URIList.toByteArrays(bookmarks)
+      val (publicBookmarks, privateBookmarks) = URIList.sortBookmarks(bookmarks)
+      val publicListBytes = URIList.toByteArray(publicBookmarks)
+      val privateListBytes = URIList.toByteArray(privateBookmarks)
       val publicListField = buildURIListField(URIGraphFields.publicListField, publicListBytes)
       val privateListField = buildURIListField(URIGraphFields.privateListField, privateListBytes)
       val publicList = URIList(publicListBytes)
@@ -126,7 +134,10 @@ class URIGraphIndexer(
       val uri = buildURIIdField(publicList)
       doc.add(uri)
 
-      val titles = buildBookmarkTitleList(publicList.ids, privateList.ids, bookmarks, Lang("en")) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
+      val bookmarkIds = buildBookmarkIdField(publicBookmarks.toSeq, privateBookmarks.toSeq)
+      doc.add(bookmarkIds)
+
+      val titles = buildBookmarkTitleList(publicBookmarks.toSeq, privateBookmarks.toSeq, Lang("en")) // TODO: use user's primary language to bias the detection or do the detection upon bookmark creation?
 
       val title = buildLineField(URIGraphFields.titleField, titles){ (fieldName, text, lang) =>
         val analyzer = DefaultAnalyzer.forIndexing(lang)
@@ -140,7 +151,7 @@ class URIGraphIndexer(
       }
       doc.add(titleStemmed)
 
-      val bookmarkURLs = buildBookmarkURLList(publicList.ids, privateList.ids, bookmarks)
+      val bookmarkURLs = buildBookmarkURLList(publicBookmarks.toSeq, privateBookmarks.toSeq)
 
       val siteField = buildLineField(URIGraphFields.siteField, bookmarkURLs){ (fieldName, url, lang) =>
         URI.parse(url).toOption.flatMap(_.host) match {
@@ -164,14 +175,14 @@ class URIGraphIndexer(
     }
 
     private def buildURIListField(field: String, uriListBytes: Array[Byte]) = {
-      new BinaryDocValuesField(field, new BytesRef(uriListBytes))
+      buildBinaryDocValuesField(field, uriListBytes)
     }
 
     private def buildURIIdField(uriList: URIList) = {
       buildIteratorField(URIGraphFields.uriField, uriList.ids.iterator){ uriId => uriId.toString }
     }
 
-    private def buildBookmarkTitleList(publicIds: Array[Long], privateIds: Array[Long], bookmarks: Seq[Bookmark], preferedLang: Lang): ArrayBuffer[(Int, String, Lang)] = {
+    private def buildBookmarkTitleList(publicBookmarks: Seq[Bookmark], privateBookmarks: Seq[Bookmark], preferedLang: Lang): ArrayBuffer[(Int, String, Lang)] = {
       val titleMap = bookmarks.foldLeft(Map.empty[Long, (String, Lang)]){ (m, b) =>
         val text = b.title.getOrElse("")
         m + (b.uriId.id -> (text, LangDetector.detect(text, preferedLang)))
@@ -179,33 +190,43 @@ class URIGraphIndexer(
 
       var lineNo = 0
       var titles = new ArrayBuffer[(Int, String, Lang)]
-      publicIds.foreach{ uriId =>
-        titleMap.get(uriId).foreach{ case (title, lang) => titles += ((lineNo, title, lang)) }
+      publicBookmarks.foreach{ b =>
+        val text = b.title.getOrElse("")
+        val lang = LangDetector.detect(text, preferedLang)
+        titles += ((lineNo, text, lang))
         lineNo += 1
       }
-      privateIds.foreach{ uriId =>
-        titleMap.get(uriId).foreach{ case (title, lang) => titles += ((lineNo, title, lang)) }
+      privateBookmarks.foreach{ b =>
+        val text = b.title.getOrElse("")
+        val lang = LangDetector.detect(text, preferedLang)
+        titles += ((lineNo, text, lang))
         lineNo += 1
       }
       titles
     }
 
-    private def buildBookmarkURLList(publicIds: Array[Long], privateIds: Array[Long], bookmarks: Seq[Bookmark]): ArrayBuffer[(Int, String, Lang)] = {
-      val urlMap = bookmarks.foldLeft(Map.empty[Long,String]){ (m, b) => m + (b.uriId.id -> b.url) }
+    private def buildBookmarkURLList(publicBookmarks: Seq[Bookmark], privateBookmarks: Seq[Bookmark]): ArrayBuffer[(Int, String, Lang)] = {
+      val urlMap = bookmarks.foldLeft(Map.empty[Long, String]){ (m, b) => m + (b.uriId.id -> b.url) }
 
       var lineNo = 0
       var sites = new ArrayBuffer[(Int, String, Lang)]
       val en = LangDetector.en
-      publicIds.foreach{ uriId =>
-        urlMap.get(uriId).foreach{ site => sites += ((lineNo, site, en)) }
+      publicBookmarks.foreach{ b =>
+        sites += ((lineNo, b.url, en))
         lineNo += 1
       }
-      privateIds.foreach{ uriId =>
-        urlMap.get(uriId).foreach{ site => sites += ((lineNo, site, en)) }
+      privateBookmarks.foreach{ b =>
+        sites += ((lineNo, b.url, en))
         lineNo += 1
       }
 
       sites
+    }
+
+    private def buildBookmarkIdField(publicBookmarks: Seq[Bookmark], privateBookmarks: Seq[Bookmark]): Field = {
+      val arr = (publicBookmarks.map(_.id.get.id) ++ privateBookmarks.map(_.id.get.id)).toArray
+      val packedBookmarkIds = URIList.packLongArray(arr)
+      buildBinaryDocValuesField(URIGraphFields.bookmarkIdField, packedBookmarkIds)
     }
   }
 }

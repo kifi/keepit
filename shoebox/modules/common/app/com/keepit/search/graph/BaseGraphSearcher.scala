@@ -37,6 +37,22 @@ class BaseGraphSearcher(searcher: Searcher) extends Logging {
     URIList.empty
   }
 
+  def getLongArray(field: String, docid: Int): Array[Long] = {
+    if (docid >= 0) {
+      var docValues = reader.getBinaryDocValues(field)
+      if (docValues != null) {
+        var ref = new BytesRef()
+        docValues.get(docid, ref)
+        if (ref.length > 0) {
+          return URIList.unpackLongArray(ref.bytes, ref.offset, ref.length)
+        } else {
+          log.error(s"missing uri list data: ${field}")
+        }
+      }
+    }
+    Array.empty[Long]
+  }
+
   def intersect(i: DocIdSetIterator, j: DocIdSetIterator): DocIdSetIterator = {
     new DocIdSetIterator() {
       var curDoc = i.docID()
