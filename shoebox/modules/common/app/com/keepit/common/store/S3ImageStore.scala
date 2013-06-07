@@ -70,10 +70,13 @@ class S3ImageStoreImpl @Inject() (
   }
 
   private def avatarUrlFromSocialNetwork(sui: SocialUserInfo, size: Int): String = {
-    if (sui.networkType != SocialNetworks.FACEBOOK) {
-      throw new UnsupportedOperationException("We only support facebook right now")
+    sui.networkType match {
+      case SocialNetworks.FACEBOOK =>
+        s"https://graph.facebook.com/${sui.socialId.id}/picture?width=$size&height=$size"
+      case _ =>
+        // TODO: specific sizes for linkedin and other networks
+        sui.credentials.flatMap(_.avatarUrl).get
     }
-    s"https://graph.facebook.com/${sui.socialId.id}/picture?width=$size&height=$size"
   }
 
   def updatePicture(sui: SocialUserInfo, externalId: ExternalId[User]): Future[Seq[PutObjectResult]] = {
