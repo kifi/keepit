@@ -286,7 +286,11 @@ api.log("[google_inject]");
           $(this).closest(".kifi-res-end").empty();
         });
       }
-    }).on("click", ".kifi-res-title", function() {
+    }).on("click", ".kifi-res-title", function(e) {
+      if (e.shiftKey && response.session && ~response.session.experiments.indexOf("admin")) {
+        location.href = response.admBaseUri + "/admin/search/results/" + response.uuid;
+        return;
+      }
       $res.find("#kifi-res-list,.kifi-res-end").toggle(200);
       $res.find(".kifi-filter-btn").fadeToggle(200);
       $res.find(".kifi-filters-x:visible").click();
@@ -369,9 +373,6 @@ api.log("[google_inject]");
     }).on("click", ".kifi-filter-detail-x", function() {
       search(null, $.extend({}, filter, {who: "f"}));
       $(this).closest(".kifi-filter-detail").each(hideFilterDetail);
-    }).on("click", ".kifi-res-debug", function(e) {
-      e.stopPropagation();
-      location.href = response.admBaseUri + "/admin/search/results/" + response.uuid;
     }).bindHover(".kifi-face.kifi-friend", function(configureHover) {
       var $a = $(this);
       var i = $a.closest("li.g").prevAll("li.g").length;
@@ -422,7 +423,7 @@ api.log("[google_inject]");
       }, {
         google_hit: "google_hit.html"
       }, function(html) {
-        $res.append(html).toggleClass("kifi-debug", response.session.experiments.indexOf("admin") >= 0);
+        $res.append(html);
         api.log("[appendResults] done");
       });
   }

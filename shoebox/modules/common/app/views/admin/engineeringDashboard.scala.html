@@ -1,4 +1,5 @@
 @admin("Engineering Dashboard", scripts = List("graphite")) {
+<div style="float: right"><select id="timerange"></select></div>
 
 <p>
   <a href="@com.keepit.controllers.admin.routes.AdminSearchPerformanceController.viewSearchPerformance"><font size="5">Search Performance</font></a>
@@ -11,22 +12,39 @@
 
 <script>
 
+  var timeranges = {
+  "24 Hours": "-24h",
+  "12 Hours": "-12h",
+  "6 Hours": "-6h",
+  "3 Hours": "-3h",
+  "1 Hour": "-1h",
+  "30 Minutes": "-0h30min",
+  "10 Minutes": "-0h10min",
+  "1 Minute": "-0h1min"
+  };
+
+  $.each(timeranges, function (name, timerange) {
+  $("#timerange").append($("<option>").val(timerange).text(name));
+  });
+
+  function renderCharts() {
   var options = $.fn.graphite.defaults = {
   url: "https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/",
   lineMode: "connected",
   width: 1100,
   height: 400,
   hideGrid: "true",
-  from: "-3h"
+  from: $("#timerange").val()
   };
 
-  var baseTargets = ["drawAsInfinite(gauges.*.deploys)"];
+  var baseTargets = ["drawAsInfinite(counters.*.deploys)"];
 
   // Search Chart
 
-  var searchTargets = baseTargets.concat(["timers.search.extSearch.total.mean"]);
+  var searchTargets = baseTargets.concat("counters.search.extSearch.total.count").concat(["secondYAxis(timers.search.extSearch.total.mean)"]);
   options.drawNullAsZero = "false";
   options.target = searchTargets;
+  options.title = "Searches per Minute vs Mean Time in Milliseconds"
   $("#search").graphite(options);
 
   // Cache Chart
@@ -36,13 +54,17 @@
   }
 
   var cacheCountTargets = ["hits", "misses", "sets"].map(function (metric) {return sumSeries(metric)});
-  var cacheRatioTarget = ["scale(divideSeries(" + sumSeries("hits") + "," + sumSeries("{hits,misses}") + "),100)"];
+  var cacheRatioTarget = ["secondYAxis(scale(divideSeries(" + sumSeries("hits") + "," + sumSeries("{hits,misses}") + "),100))"];
   var cacheTargets = baseTargets.concat(cacheCountTargets).concat(cacheRatioTarget);
 
   options.drawNullAsZero = "true";
   options.target = cacheTargets;
+  options.title = "Hits - Misses - Sets per Minute vs Hit Ratio"
   $("#cache").graphite(options);
+}
 
+  $("#timerange").change(renderCharts).change();
+  renderCharts()
 </script>
 }
 
