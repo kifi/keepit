@@ -9,8 +9,14 @@ class NlpPhraseDetectorTest extends Specification {
   "NlpPhraseDetector" should {
     "detect phrases and correctly mapping them to Lucene tokenStream offsets" in {
       val analyzer = new StandardAnalyzer(Version.LUCENE_42)
-      val queryText = "this is a critical test that should not fail"
-      NlpPhraseDetector.detectAll(queryText, analyzer) === Set((0, 2), (2, 2))    // (critical test, should fail), Lucene tokenstream = (critical test should fial)
+      var queryText = "this is a critical test that should not fail"
+      NlpPhraseDetector.detectAll(queryText, analyzer) === Set((0, 2), (2, 2))    // (critical test, should fail), Lucene tokenstream = (critical test should fail)
+
+      queryText = "text mining and machine learning"
+      NlpPhraseDetector.detectAll(queryText, analyzer) === Set((0, 2), (2, 2))
+
+      queryText = "install photoshop on windows 7"
+      NlpPhraseDetector.detectAll(queryText, analyzer) === Set((0, 3))           // tokenStream = (install photoshop windows 7)
     }
 
     // need to revisit this later. Need to be more tolerant.

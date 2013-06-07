@@ -65,6 +65,7 @@ object NlpParser {
     removeOverlapping(pairs)
   }
 
+  // NOTE: also removes single term constituents
   def removeOverlapping(segments: Seq[(Int, Int)]) = {
     val sorted = segments.filter(x => x._1 < x._2).sortWith((a, b) => (a._2 < b._2) || (a._2 == b._2 && a._1 < b._1) )    // sort by right endpoint, then by length of interval
     val rv = ListBuffer.empty[(Int, Int)]
