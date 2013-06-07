@@ -61,7 +61,7 @@ class CollectionIndexer(
   def update(): Int = {
     resetSequenceNumberIfReindex()
     update {
-      Await.result(shoeboxClient.getCollectionsChanged(sequenceNumber), 180 seconds)
+      Await.result(shoeboxClient.getCollectionsChanged(sequenceNumber, fetchSize), 180 seconds)
     }
   }
 
