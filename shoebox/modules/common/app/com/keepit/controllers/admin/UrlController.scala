@@ -165,7 +165,7 @@ class UrlController @Inject() (
     log.info("started bookmark seq num fix")
     var count = 0
     var done = false
-    while (done) {
+    while (!done) {
       db.readWrite { implicit session =>
         val bookmarks = bookmarkRepo.getBookmarksChanged(SequenceNumber.MinValue, 100)
         done = bookmarks.exists{ b =>
@@ -184,7 +184,7 @@ class UrlController @Inject() (
     log.info("started normalized uri seq num fix")
     var count = 0
     var done = false
-    while (done) {
+    while (!done) {
       db.readWrite { implicit session =>
         val uris = uriRepo.getIndexable(SequenceNumber.MinValue, 100)
         done = uris.exists{ u =>
@@ -203,7 +203,7 @@ class UrlController @Inject() (
     log.info("started collection seq num fix")
     var count = 0
     var done = false
-    while (done) {
+    while (!done) {
       db.readWrite { implicit session =>
         val collections = collectionRepo.getCollectionsChanged(SequenceNumber.MinValue)
         done = collections.exists{ case (collId, userId, seq) =>
