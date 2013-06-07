@@ -15,7 +15,7 @@ import play.api._
 import play.api.mvc.Results._
 import play.api.mvc._
 import play.utils.Threads
-import play.modules.statsd.api.{Statsd, StatsdFilter}
+import play.modules.statsd.api.StatsdFilter
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
     extends WithFilters(LoggingFilter, new StatsdFilter()) with Logging {
@@ -92,7 +92,6 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     println(startMessage)
     injector.inject[AppScope].onStart(app)
     if (app.mode != Mode.Test && app.mode != Mode.Dev) {
-      Statsd.gauge("deploys", 1)
       injector.inject[HealthcheckPlugin].reportStart()
     }
   }
