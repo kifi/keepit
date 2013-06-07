@@ -280,7 +280,6 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
         sgp.asyncFetch(socialUserInfo)
       }
       log.info("persisting %s into %s".format(socialUser, socialUserInfo))
-      socialUserInfoRepo.save(socialUserInfo)
       socialUser
     }
   }
