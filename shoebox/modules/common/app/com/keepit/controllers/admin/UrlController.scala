@@ -205,7 +205,7 @@ class UrlController @Inject() (
     var done = false
     while (!done) {
       db.readWrite { implicit session =>
-        val collections = collectionRepo.getCollectionsChanged(SequenceNumber.MinValue)
+        val collections = collectionRepo.getCollectionsChanged(SequenceNumber.MinValue, 100)
         done = collections.exists{ case (collId, userId, seq) =>
           if (seq.value != 0L) true
           else {
