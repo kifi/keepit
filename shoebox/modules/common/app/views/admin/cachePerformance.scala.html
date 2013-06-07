@@ -7,7 +7,7 @@
 <select class=params id="timerange"></select>
 <!<select class=params id="yscale"></select>
 
-<img id="chart">
+<img id="chart" class="img-polaroid">
 
 <script>
 
@@ -87,7 +87,6 @@
   $("#timerange").append($("<option>").val(timerange).text(name));
   });
 
-
   $.each(yscales, function (name, scale) {
   $("#yscale").append($("<option>").val(scale).text(name));
   });
@@ -116,7 +115,8 @@
     if (metrictype == "counters") {
       var metrics = ["hits", "misses", "sets"];
       var countTargets = metrics.map(function (metric) {return sumSeries(metric, "count")});
-      var targets = baseTargets.concat(countTargets)
+      var ratioTarget = ["scale(divideSeries(" + sumSeries("hits", "count") + "," + sumSeries("{hits,misses}", "count") + "),100)"];
+      var targets = baseTargets.concat(countTargets).concat(ratioTarget)
       options.drawNullAsZero = "true"
     }
 
