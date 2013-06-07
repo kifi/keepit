@@ -1,34 +1,32 @@
 package com.keepit.controllers.admin
 
-import scala.Some
 import scala.collection.concurrent
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
+import scala.concurrent.duration._
+
 import org.joda.time._
+
 import com.google.inject.{Inject, Singleton}
+import com.keepit.common.analytics.MongoEventStore
 import com.keepit.common.analytics.reports.{ReportRepo, DailyDustSettledKifiHadResultsByExperimentRepo, DailyKifiResultClickedByExperimentRepo, DailyGoogleResultClickedByExperimentRepo}
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.social._
 import com.keepit.common.time._
-import com.keepit.model.User
 import com.keepit.model._
 import com.keepit.search._
+
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsNumber
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import views.html
-import com.keepit.common.analytics.MongoEventStore
-import scala.concurrent.Await
-import scala.concurrent.duration._
 
 @Singleton
 class AdminSearchConfigController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
-  userWithSocialRepo: UserWithSocialRepo,
   userRepo: UserRepo,
   searchConfigExperimentRepo: SearchConfigExperimentRepo,
   searchClient: SearchServiceClient,

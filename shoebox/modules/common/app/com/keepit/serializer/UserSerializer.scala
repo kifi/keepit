@@ -1,12 +1,12 @@
 package com.keepit.serializer
 
-import com.keepit.common.db.ExternalId
+import org.joda.time.DateTime
+
+import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model.User
+
 import play.api.libs.json._
-import com.keepit.common.social.UserWithSocial
-import com.keepit.common.db._
-import org.joda.time.DateTime
 
 class UserSerializer extends Format[User] {
 
@@ -21,7 +21,7 @@ class UserSerializer extends Format[User] {
       "state" -> JsString(user.state.value)
     ))
 
-  def reads(json: JsValue): JsResult[User] = 
+  def reads(json: JsValue): JsResult[User] =
     JsSuccess(User(
       id = (json \ "id").asOpt[Long].map(Id[User](_)),
       createdAt = (json \ "createdAt").as[DateTime],

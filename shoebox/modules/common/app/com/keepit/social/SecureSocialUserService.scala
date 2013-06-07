@@ -295,9 +295,10 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
 
   private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType,
       socialUser: SocialUser)(implicit session: RWSession): SocialUserInfo = {
-    socialUserInfoRepo.getOpt(socialId, socialNetworkType).map(_.withCredentials(socialUser)) match {
+    val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
+    suiOpt.map(_.withCredentials(socialUser)) match {
       case Some(socialUserInfo) if !socialUserInfo.userId.isEmpty =>
-        socialUserInfoRepo.save(socialUserInfo)
+        if (suiOpt == Some(socialUserInfo)) socialUserInfo else socialUserInfoRepo.save(socialUserInfo)
       case Some(socialUserInfo) if socialUserInfo.userId.isEmpty =>
         val user = userRepo.save(createUser(socialUserInfo.fullName))
 
