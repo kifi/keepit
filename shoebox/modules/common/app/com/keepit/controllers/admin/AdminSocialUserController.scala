@@ -1,37 +1,14 @@
 package com.keepit.controllers.admin
 
-import play.api.data._
-import java.util.concurrent.TimeUnit
-import java.sql.Connection
-import play.api._
-import play.api.data.Forms._
-import play.api.data.validation.Constraints._
-import play.api.libs.ws.WS
-import play.api.mvc._
-import play.api.libs.json.JsArray
-import play.api.libs.json.Json
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsString
-import play.api.libs.json.JsValue
-import play.api.libs.json.JsNumber
-import play.api.Play.current
+import com.google.inject.{Inject, Singleton}
+import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.logging.Logging
-import com.keepit.model.User
+import com.keepit.common.social.SocialGraphPlugin
+import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.model._
 
-import play.api.http.ContentTypes
-import securesocial.core._
-import com.keepit.common.social.{SocialGraphPlugin, UserWithSocial}
-import com.keepit.common.social.SocialUserRawInfoStore
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import views.html
-
-import scala.concurrent.ExecutionContext.Implicits.global
-
-import com.google.inject.{Inject, Singleton}
 
 @Singleton
 class AdminSocialUserController @Inject() (
