@@ -44,10 +44,11 @@ object NlpPhraseDetector {
   private def toDetect(queryText: String): Boolean = {
     if (queryText.length() > UPPER_LIMIT || queryText.length() < LOWER_LIMIT) return false
     if (queryText.toCharArray.exists(x => !(x.isLetterOrDigit || x.isSpaceChar))) return false
-    if (LangDetector.detectShortText(queryText).lang != "en") return false
+    if (LangDetector.detect(queryText).lang != "en" && LangDetector.detectShortText(queryText).lang != "en" ) return false
     return true
   }
 
+  // e.g. queryText = "ab cd ef", 3 tokens. token indexes (0,1) => char indexes (0, 4)
   def toCharOffsets(tokenOffsets: Seq[(Int, Int)], queryText: String) = {
     val chars = queryText.toCharArray
     var p = 0
