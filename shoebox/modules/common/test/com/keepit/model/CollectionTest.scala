@@ -144,7 +144,7 @@ class CollectionTest extends Specification with TestDBRunner {
         }
 
         db.readOnly { implicit s =>
-          collectionRepo.getCollectionsChanged(SequenceNumber(newSeqNum)).map(_._1) === Seq(coll1.id.get)
+          collectionRepo.getCollectionsChanged(SequenceNumber(newSeqNum), 1000).map(_._1) === Seq(coll1.id.get)
         }
       }
     }

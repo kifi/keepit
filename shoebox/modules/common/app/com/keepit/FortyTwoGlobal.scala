@@ -92,7 +92,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     println(startMessage)
     injector.inject[AppScope].onStart(app)
     if (app.mode != Mode.Test && app.mode != Mode.Dev) {
-      Statsd.increment("deploys")
+      Statsd.increment("deploys", 42)
       injector.inject[HealthcheckPlugin].reportStart()
     }
   }

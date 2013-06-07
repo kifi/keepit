@@ -1,4 +1,4 @@
-@(bookmarksAndUsers: Seq[((User, SocialUserInfo), (Bookmark, NormalizedURI, Option[ScrapeInfo]))], page: Int, count: Long, pageCount: Int)
+@(bookmarksAndUsers: Seq[(User, (Bookmark, NormalizedURI, Option[ScrapeInfo]))], page: Int, count: Long, pageCount: Int)
 @import com.keepit.model.NormalizedURIStates._
 @import com.keepit.controllers.admin.routes
 
@@ -64,10 +64,10 @@
       <th>State</th>
       <th>Last Scrape</th>
     </tr>
-  @for((((user, socialUserInfo), (bookmark, uri, scrapeInfo)), i) <- bookmarksAndUsers.zipWithIndex) {
+  @for(((user, (bookmark, uri, scrapeInfo)), i) <- bookmarksAndUsers.zipWithIndex) {
     <tr>
       <td>@{i+1}</td>
-      <td>@adminHelper.userDisplay(user, socialUserInfo)</td>
+      <td>@adminHelper.userDisplay(user)</td>
       <td>@adminHelper.bookmarkDisplay(bookmark)</td>
       <td>
         @{bookmark.source.value match {
@@ -82,6 +82,9 @@
           }
           case "EMAIL" => {
             <span class="label label-success">Email</span>
+          }
+          case "SITE" => {
+            <span class="label label-success">Website</span>
           }
         }}
       </td>

@@ -3,6 +3,8 @@ var urlBase = 'https://api.kifi.com';
 var urlSite = urlBase + '/site'; 
 var urlSearch = urlBase + '/search';
 var urlKeeps =  urlSite + '/keeps';
+var urlKeepAdd =  urlKeeps + '/add';
+var urlKeepRemove =  urlKeeps + '/remove';
 var urlMyKeeps = urlKeeps + '/all';
 var urlMyKeepsCount = urlKeeps + '/count';
 var urlUser = urlSite + '/user';
@@ -10,6 +12,7 @@ var urlMe = urlUser + '/me';
 var urlConnections = urlUser + '/connections';
 var urlCollections = urlSite + '/collections';
 var urlCollectionsAll = urlCollections + '/all';
+var urlCollectionsOrder = urlCollections + '/ordering';
 var urlCollectionsCreate = urlCollections + '/create';
 
 var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
@@ -19,6 +22,7 @@ var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPL
 				});
 				$('#my-keeps .keep .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myAvatar + '"/>');
 				initDraggable();
+
 				$(".easydate").easydate({set_title: false}); 
 
 				// insert time sections
@@ -38,11 +42,12 @@ var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPL
 			});
 var searchTemplate = Tempo.prepare("search-results").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
 					hideLoading();
+					initDraggable();
 					$('#search-results .keep .bottom').each(function() {
 						$(this).find('img.small-avatar').prependTo($(this));
 					});
 					$('#search-results .keep.mine .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myAvatar + '"/>');
-					$('div.search .num-results span').text($('#search-results .keep').length);
+					$('div.search .num-results').text('Showing ' + $('#search-results .keep').length + ' for "'+$('header input.search').val()+'"');
 				});
 var collectionsTemplate = Tempo.prepare("collections").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
 	$('#collections').show();
@@ -66,47 +71,80 @@ $.ajaxSetup({
     crossDomain: true
 });
 
-(function($){
-
-    var _old = $.unique;
-
-    $.unique = function(arr){
-
-        // do the default behavior only if we got an array of elements
-        if (!!arr[0].nodeType){
-            return _old.apply(this,arguments);
-        } else {
-            // reduce the array to contain no dupes via grep/inArray
-            return $.grep(arr,function(v,k){
-                return $.inArray(v,arr) === k;
-            });
-        }
-    };
-})(jQuery);
-
+function unique(arr) {
+    return $.grep(arr,function(v,k){
+        return $.inArray(v,arr) === k;
+    });
+}
 
 function initDraggable() {
 	$( ".draggable" ).draggable({ 
 		revert: "invalid",
+		handle: ".handle",
 		cursorAt: { top: 15, left: 0 },
 		helper: function() {
-			return $('<div class="drag-helper">').html($(this).find('a').first().text());
+			var text = $(this).find('a').first().text();
+			var numSelected = $('section.main .keep.selected').length; 
+			if (numSelected > 1)
+				text = numSelected + " selected keeps";
+			return $('<div class="drag-helper">').html(text);
 		} 
 	});	
 }
 
 function initDroppable() {
 	$( ".droppable" ).droppable({
+		accept: '.keep',
 		greedy: true,
 		tolerance: "pointer",
 		hoverClass: "drop-hover",
 		drop: function( event, ui ) {
-				var thisCollection = $(this);
-				var collectionId = thisCollection.data('id');
+			var thisCollection = $(this);
+			var collectionId = thisCollection.data('id');
+
+			// first add keeps that are not mine 
+			var keeps = $('section.main .keep.selected:not(.mine)');
+			if (keeps.length > 0)
+				$.ajax( {url: urlKeepAdd
+					,type: "POST"
+					,dataType: 'json'
+					,data: JSON.stringify(keeps.map(function() {return { title: $(this).find('a').first().attr('title')
+						,url: $(this).find('a').first().attr('href')}}).get())
+					,contentType: 'application/json'
+					,error: function() {showMessage('Could not add keeps, please try again later')}
+					,success: function(data) {
+						// add the returned IDs to the collection
+						var keepIds = [];
+						for (i in data.keeps) {
+							keepIds[i] = data.keeps[i].id;
+						}
+						$.ajax( {url: urlCollections + '/' + collectionId + '/addKeeps' 
+							,type: "POST"
+							,dataType: 'json'
+							,data: JSON.stringify(keepIds)
+							,contentType: 'application/json'
+							,error: function() {
+								showMessage('Could not add to collection, please try again later');
+								return false;
+							}
+							,success: function(data) {
+											var countSpan = thisCollection.find('a span.right'); 
+											var added = countSpan.text() * 1  + data.added;
+											countSpan.text(added);
+											// update collection list on right bar
+											$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+collectionId+'" id="cb1-'+collectionId+'" checked=""><label class="long-text" for="cb1-'+collectionId+'"><span></span>'+collections[collectionId].name+'</label><div></div></div>');
+										}
+							});						
+					}
+				});
+
+			// now add my keeps to the collection
+			keeps = $('section.main .keep.selected.mine');
+			if (keeps.length > 0)
 				$.ajax( {url: urlCollections + '/' + collectionId + '/addKeeps' 
 					,type: "POST"
 					,dataType: 'json'
-					,data: JSON.stringify([ui.draggable.data('id')])
+					,data: JSON.stringify(keeps.map(function() {return $(this).data('id')}).get())
 					,contentType: 'application/json'
 					,error: function() {
 						showMessage('Could not add to collection, please try again later');
@@ -116,6 +154,8 @@ function initDroppable() {
 									var countSpan = thisCollection.find('a span.right'); 
 									var added = countSpan.text() * 1  + data.added;
 									countSpan.text(added);
+									// update collection list on right bar
+									$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+collectionId+'" id="cb1-'+collectionId+'" checked=""><label class="long-text" for="cb1-'+collectionId+'"><span></span>'+collections[collectionId].name+'</label><div></div></div>');
 								}
 					});
 			}
@@ -156,6 +196,8 @@ function isLoading() {
 
 function doSearch(context) {
 	$('#my-keeps').hide();
+	$('#my-keeps .keep.selected input[type="checkbox"]').prop('checked', false);
+	$('#my-keeps .keep.selected').removeClass('selected');
 	$('.search h1').hide();
 	$('.search .num-results').show();
 //	$('aside.right').show();
@@ -172,9 +214,10 @@ function doSearch(context) {
 				searchContext = data.context;
 			else
 				searchContext = null;
-			if (context == null)
+			if (context == null) {
 				searchTemplate.render(data.hits);
-			else
+				$('aside.right').removeClass('visible');
+			} else
 				searchTemplate.append(data.hits);
 		});
 }
@@ -195,16 +238,19 @@ function addNewKeeps() {
 function populateMyKeeps(id) {
 	var params = {count: 30};
 	$('.active').removeClass('active');
-	if (id == null) 
+	if (id == null) {
 		$('aside.left h3.my-keeps').addClass('active');
-	else {
+		$('section.main .search h1').text('Browse your keeps');
+	} else {
 		$('aside.left h3[data-id="' + id + '"]').addClass('active');
 		params.collection = id;
+		$('section.main .search h1').text('Browse your ' + collections[id].name + ' collection');
 	}
 	if (prevCollection != id) { // reset search if not fetching the same collection
 		prevCollection = id;
 		lastKeep = null;
 		keepsTemplate.clear();
+		$('aside.right').removeClass('visible');
 	}
 	searchTemplate.clear();
 	$('input.search').val('');
@@ -236,11 +282,19 @@ function populateMyKeeps(id) {
 }
 
 function populateCollections() {
-	$.getJSON(urlCollectionsAll,  
+	$.getJSON(urlCollectionsAll, {sort: "user"} , 
 			function(data) {
 				collectionsTemplate.render(data.collections);	
+			});
+}
+
+function populateCollectionsRight() {
+	$.getJSON(urlCollectionsAll, {sort: "last_kept"} ,
+			function(data) {
+				$('aside.right .actions .collections ul li:not(.create)').remove();
 				for (i in data.collections) {
 					collections[data.collections[i].id] = data.collections[i];
+					$('aside.right .actions .collections ul').append('<li><input type="checkbox" data-id="'+data.collections[i].id+'" id="cb-'+data.collections[i].id+'"/><label class="long-text" for="cb-'+data.collections[i].id+'"><span></span>'+data.collections[i].name+'</label></li>');
 				}
 			});
 }
@@ -272,6 +326,7 @@ $('#collections').on('click','a.remove',function() {
 		,error: function() {showMessage('Could not delete collection, please try again later')}
 		,success: function(data) {
 						colElement.remove();
+						$('aside.right .collections ul li:has(input[data-id="'+colId+'"])').remove();
 					}
 		});
 }).on('click','a.rename',function() {
@@ -316,6 +371,51 @@ setInterval(updateNumKeeps, 60000);
 
 $(window).resize(adjustHeight);
 
+// handle collection adding/removing from right bar
+$('aside.right div.in-collections').on('change','input[type="checkbox"]',function(){
+	// remove selected keeps from collection
+	var row = $(this).parents('.row');
+	var colId = $(this).data('id');
+	var keeps = $('section.main .keep.selected').map(function(){ return $(this).data('id')}).get();
+	$.ajax( {url: urlCollections + "/" + colId + "/removeKeeps"
+		,type: "POST"
+		,dataType: 'json'
+		,data: JSON.stringify(keeps)
+		,contentType: 'application/json'
+		,error: function() {showMessage('Could not remove keeps from collection, please try again later')}
+		,success: function(data) {
+						console.log(data);
+						// substract removed from collection count on left bar 
+						var countSpan = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right'); 
+						countSpan.text(countSpan.text() * 1  - data.removed);
+						row.remove();
+					}
+		});
+	
+});
+$('aside.right .actions .collections').on('change','input[type="checkbox"]',function(){
+	// add selected keeps to collection
+	var row = $(this).parents('li');
+	var colId = $(this).data('id');
+	var keeps = $('section.main .keep.selected').map(function(){ return $(this).data('id')}).get();
+	$.ajax( {url: urlCollections + "/" + colId + "/addKeeps"
+		,type: "POST"
+		,dataType: 'json'
+		,data: JSON.stringify(keeps)
+		,contentType: 'application/json'
+		,error: function() {showMessage('Could not add keeps to collection, please try again later')}
+		,success: function(data) {
+						console.log(data);
+						// add to collection count on left bar 
+						var countSpan = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right'); 
+						countSpan.text(countSpan.text() * 1  + data.added);
+						$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+colId+'" id="cb1-'+colId+'" checked/><label class="long-text" for="cb1-'+colId+'"><span></span>'+collections[colId].name+'</label><div>');
+						row.remove();
+					}
+		});
+	
+});
+
 $(document)
 	.on('keypress', function(e) {if (!$(e.target).is('textarea, input')) $('input.search').focus() }) // auto focus on search field when starting to type anywhere on the document
 	.on('scroll',function() { // infinite scroll
@@ -329,9 +429,16 @@ $(document)
 				populateMyKeeps();
 		}
 	})
-	.on('click','.keep input[type="checkbox"]',function() {
-		var keep = $(this).parents('.keep').first();
-		if ($(this).is(':checked')) { 
+	.on('click','.keep',function(e) {
+		var keep = $(this);
+		var cb = keep.find('input[type="checkbox"]');
+		if (!$(e.target).is('input[type="checkbox"]')) {
+			if (cb.is(':checked'))
+				cb.prop('checked',false);
+			else
+				cb.prop('checked',true);			
+		}
+		if (cb.is(':checked')) { 
 			keep.addClass('selected');
 		} else {
 			keep.removeClass('selected');			
@@ -341,7 +448,7 @@ $(document)
 			// if no keeps are checked, hide the side bar
 			$('aside.right').removeClass('visible');
 		} else if (selected.length > 1) {
-			// TODO: handle multiple selection
+			//  handle multiple selection
 			$('aside.right .title h2').text(selected.length + " keeps selected");
 			$('aside.right .title a').text('');
 			$('aside.right .who-kept').html('');
@@ -353,10 +460,10 @@ $(document)
 					allCol = allCol.concat(colArray);
 				}
 			});
-			allCol = $.unique(allCol);
+			allCol = unique(allCol);
 			var inCol = $('aside.right .in-collections').html('');
 			for (i in allCol) {
-				inCol.append(collections[allCol[i]].name + "<br/>");
+				inCol.append('<div class="row"><input type="checkbox" data-id="'+allCol[i]+'" id="cb1-'+allCol[i]+'" checked/><label class="long-text" for="cb1-'+allCol[i]+'"><span></span>'+collections[allCol[i]].name+'</label><div>');
 			}
 			$('aside.right').addClass('visible');
 		} else { // only one keep is selcted
@@ -370,16 +477,48 @@ $(document)
 			if (keep.data('collections').length > 0) {
 				var colArray = keep.data('collections').split(',');
 				for (i in colArray) {
-					inCol.append(collections[colArray[i]].name + "<br/>");
+					inCol.append('<div class="row"><input type="checkbox" data-id="'+colArray[i]+'" id="cb1-'+colArray[i]+'" checked/><label class="long-text" for="cb1-'+colArray[i]+'"><span></span>'+collections[colArray[i]].name+'</label></div>');
 				}
+			}
+			var keepButton = $('aside.right .keepit .keep-button');
+			if (keep.is('.mine')) {
+				keepButton.addClass('kept');
+				if (keep.is('.private')) {
+					keepButton.addClass('private');
+				} else {
+					keepButton.removeClass('private');
+				}
+				keepButton.find('span.text').text('kept');
+			} else {
+				keepButton.removeClass('kept private');
+				keepButton.find('span.text').text('keep it');
 			}
 			$('aside.right').addClass('visible');
 		} 
 	})
 	.ready(function() {		
 		$(".fancybox").fancybox();
-				
+						
 		populateCollections();
+		populateCollectionsRight();
+		
+		// make collections sortable
+		$('aside.left #collections-wrapper').sortable({items: 'h3', opacity: 0.6, 
+			placeholder: "sortable-placeholder",
+			beforeStop: function( event, ui ) {
+				// update the collection order
+				$.ajax( {url: urlCollectionsOrder
+					,type: "POST"
+					,async: false
+					,dataType: 'json'
+					,data: JSON.stringify($('aside.left #collections-wrapper h3').map(function() {return ($(this).data('id'))}).get())
+					,contentType: 'application/json'
+					,error: function() {showMessage('Could not reorder the collections, please try again later'); return false;}
+					,success: function(data) {
+									console.log(data);
+								}
+				});
+		}});
 		
 		// populate number of my keeps
 		updateNumKeeps();
@@ -434,14 +573,6 @@ $(document)
 				doSearch(null); 
 			}
 		});
-/*		$('select[name="collection"]').on('change', function() { // mark selected collection as active
-			$('aside.left h3.collection').removeClass('active');
-			$('aside.left h3[data-id="'+ $(this).val() +'"]').addClass('active');
-		});
-*/		
-		$('aside.right select[name!="keepers"]').on('change',function() { // execute search when changing the filter
-			doSearch(null);
-		});
 		
 		$('input.search')
 			.on('keyup',function() {
@@ -449,14 +580,6 @@ $(document)
 					searchTimeout = setTimeout('doSearch(null)', 500);
 				}) // instant search
 			.on('focus',function() {
-/*				if ($('aside.left h3.active').is('.collection')) { // set the search filters to the selected collection
-					$('select[name="keepers"]').val('m');
-					$('select[name="collection"]').val($('aside.left h3.active').data('id'));
-				} else { // reset filters
-					$('select[name="keepers"]').val('f');
-					$('select[name="collection"]').val('');
-				}
-*/
 				$('aside.left .active').removeClass('active'); 
 			});
 
@@ -465,17 +588,29 @@ $(document)
 			populateMyKeeps($(this).parent().data('id'));
 		});
 
-		$('aside.left a#new-collection').click(function() {
-			if ($('#add-collection').is(':visible')) {
-				$('#add-collection').slideUp();
+		$('aside a.new-collection').click(function() {
+			var addColDiv = $(this).parents('div').first().find('.add-collection');
+			if (addColDiv.is(':visible')) {
+				addColDiv.slideUp();
 			} else {
-				$('#add-collection').slideDown();
-				$('#add-collection input').focus();				
+				addColDiv.slideDown();
+				addColDiv.find('input').focus();				
 			}
-		})
+		});
+		
+		// filter collections or right bar
+		$('aside.right .collections input.find').on('keyup',function() {
+			var p = new RegExp($(this).val(),"gi");
+			$('aside.right .collections ul li:not(.create)').each(function() {
+				if (p.test($(this).find('label').text()))
+					$(this).show();
+				else
+					$(this).hide();
+			});
+		});
 
 		// create new collection
-		$('#add-collection input').keypress(function(e) {
+		$('.add-collection input').keypress(function(e) {
 			var code = (e.keyCode ? e.keyCode : e.which);
 			if(code == 13) { //Enter key pressed
 				var inputField = $(this);
@@ -487,15 +622,16 @@ $(document)
 						,contentType: 'application/json'
 						,error: function() {showMessage('Could not create collection, please try again later')}
 						,success: function(data) {
-										console.log(data)
 									   $('#collections-wrapper').append('<h3 class="droppable collection" data-id="' + data.id + '"><div class="edit-menu">\
 												<a href="javascript: ;" class="edit"></a>\
 												<ul><li><a class="rename" href="javascript: ;">Rename</a></li>\
 													<li><a class="remove" href="javascript: ;">Remove</a></li></ul>\
-											</div><a href="javascript: ;"><span class="name">' + newName + '</span> <span class="right light">0</span></a></h3>');
-									   initDroppable();
-									   $('#add-collection').slideUp();
-									   inputField.val('');
+											</div><a href="javascript: ;"><span class="name long-text">' + newName + '</span> <span class="right light">0</span></a></h3>');
+										$('aside.right .actions .collections ul li.create').after('<li><input type="checkbox" data-id="' + data.id + '" id="cb-' + data.id + '"><label class="long-text" for="cb-' + data.id + '"><span></span>' + newName + '</label></li>');
+										collections[data.id] = {id: data.id, name: newName};
+										initDroppable();
+										inputField.parent().slideUp();
+										inputField.val('');
 									}
 						});
 			 }
@@ -510,6 +646,66 @@ $(document)
 			$(this).parents('h3').first().addClass('hover');
 		}).on('mouseleave','h3.collection div.edit-menu',function() {
 			$(this).parents('h3').first().removeClass('hover');
+			$('aside.left h3.collection div.edit-menu ul').hide();
+		}).on('click','h3.collection div.edit-menu > a',function() {
+			$('aside.left h3.collection div.edit-menu ul').toggle();
+		});
+		
+		// keep / unkeep
+		$('aside.right .keepit .keep-button').click(function(e) {
+			var keepButton = $(this);
+			var keeps = $('section.main .keep.selected');
+			if (keepButton.hasClass('kept') && !$(e.target).is('span.private')) {
+				$.ajax( {url: urlKeepRemove
+					,type: "POST"
+					,dataType: 'json'
+					,data: JSON.stringify(keeps.map(function() {return {url: $(this).find('a').first().attr('href')}}).get())
+					,contentType: 'application/json'
+					,error: function() {showMessage('Could not remove keeps, please try again later')}
+					,success: function(data) {
+						keepButton.removeClass('kept');
+						keepButton.find('span.text').text('keep it');
+					}
+				});
+			} else if (keepButton.hasClass('kept') && $(e.target).is('span.private')) {
+				keepButton.toggleClass('private');
+				keeps.each(function() {
+					// toggle private state
+					var keep = $(this);
+					var keepId = keep.data('id');
+					var link = keep.find('a').first();
+					$.ajax( {url: urlKeeps + "/" + keepId + "/update"
+						,type: "POST"
+						,dataType: 'json'
+						,data: JSON.stringify({title: link.attr('title'), url: link.attr('href') ,isPrivate: keepButton.is('.private') })
+						,contentType: 'application/json'
+						,error: function() {showMessage('Could not update keep, please try again later')}
+						,success: function(data) {
+							if (keepButton.is('.private'))
+								keep.find('.bottom span.private').addClass('on');
+							else
+								keep.find('.bottom span.private').removeClass('on');
+						}
+					});				
+				});
+			} else {
+				if ($(e.target).is('span.private'))
+					keepButton.addClass('private');
+				// add selected keeps
+				$.ajax( {url: urlKeepAdd
+					,type: "POST"
+					,dataType: 'json'
+					,data: JSON.stringify(keeps.map(function() {return { title: $(this).find('a').first().attr('title')
+						,url: $(this).find('a').first().attr('href')
+						,isPrivate: keepButton.is('.private')}}).get())
+					,contentType: 'application/json'
+					,error: function() {showMessage('Could not add keeps, please try again later')}
+					,success: function(data) {
+						keepButton.addClass('kept');
+						keepButton.find('span.text').text('kept');
+					}
+				});
+			}
 		});
 	});
 

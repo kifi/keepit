@@ -124,9 +124,9 @@ class FakeShoeboxServiceClientImpl @Inject() (
   def getSocialUserInfosByUserId(userId: com.keepit.common.db.Id[com.keepit.model.User]): scala.concurrent.Future[List[com.keepit.model.SocialUserInfo]] = ???
   def getUserExperiments(userId: com.keepit.common.db.Id[com.keepit.model.User]): scala.concurrent.Future[Seq[com.keepit.common.db.State[com.keepit.model.ExperimentType]]] = ???
 
-  def getCollectionsChanged(seqNum: SequenceNumber): Future[Seq[(Id[Collection], Id[User], SequenceNumber)]] = {
+  def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[(Id[Collection], Id[User], SequenceNumber)]] = {
     val colls = db.readOnly { implicit s =>
-        collectionRepo.getCollectionsChanged(seqNum)
+        collectionRepo.getCollectionsChanged(seqNum, fetchSize)
       }
     Promise.successful(colls).future
   }

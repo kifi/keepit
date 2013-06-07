@@ -269,8 +269,13 @@ api.log("[google_inject]");
   }
 
   function bindHandlers() {
-    $res.on("click", ".kifi-res-more", function onMoreClick() {
-      api.log("[onMoreClick] shown:", response.hits.length, "avail:", response.nextHits);
+    $res.on("mouseover", ".kifi-res-more-a", function() {
+      $(this).closest(".kifi-res-more").addClass("kifi-over");
+    }).on("mouseout", ".kifi-res-more-a", function() {
+      $(this).closest(".kifi-res-more").removeClass("kifi-over");
+    }).on("click", ".kifi-res-more-a", function(e) {
+      if (e.which > 1) return;
+      api.log("[moreClick] shown:", response.hits.length, "avail:", response.nextHits);
       if (response.nextHits) {
         renderMore();
         prefetchMore();
@@ -281,7 +286,11 @@ api.log("[google_inject]");
           $(this).closest(".kifi-res-end").empty();
         });
       }
-    }).on("click", ".kifi-res-title", function() {
+    }).on("click", ".kifi-res-title", function(e) {
+      if (e.shiftKey && response.session && ~response.session.experiments.indexOf("admin")) {
+        location.href = response.admBaseUri + "/admin/search/results/" + response.uuid;
+        return;
+      }
       $res.find("#kifi-res-list,.kifi-res-end").toggle(200);
       $res.find(".kifi-filter-btn").fadeToggle(200);
       $res.find(".kifi-filters-x:visible").click();
@@ -308,7 +317,7 @@ api.log("[google_inject]");
     }).on("click", ".kifi-filters-x", function() {
       $res.find(".kifi-filter-btn").click();
     }).on("mousedown", ".kifi-filter-a", function(e) {
-      if (e.which != 1) return;
+      if (e.which > 1) return;
       e.preventDefault();
       var $a = $(this).addClass("kifi-active");
       var $menu = $a.next("menu").fadeIn(50)
@@ -333,6 +342,7 @@ api.log("[google_inject]");
         });
       }
     }).on("mouseup", ".kifi-filter-val", function(e, alreadySearched) {
+      if (e.which > 1) return;
       var $v = $(this), $menu = $v.parent(), $f = $menu.parent();
       $menu.filter(":visible").triggerHandler("kifi:hide");
 
@@ -363,9 +373,6 @@ api.log("[google_inject]");
     }).on("click", ".kifi-filter-detail-x", function() {
       search(null, $.extend({}, filter, {who: "f"}));
       $(this).closest(".kifi-filter-detail").each(hideFilterDetail);
-    }).on("click", ".kifi-res-debug", function(e) {
-      e.stopPropagation();
-      location.href = response.admBaseUri + "/admin/search/results/" + response.uuid;
     }).bindHover(".kifi-face.kifi-friend", function(configureHover) {
       var $a = $(this);
       var i = $a.closest("li.g").prevAll("li.g").length;
@@ -411,13 +418,12 @@ api.log("[google_inject]");
         results: response.hits,
         anyResults: response.hits.length > 0,
         session: response.session,
-        endBgUrl: api.url("images/shade_above.png"),
-        globeUrl: api.url("images/globe.png"),
+        images: api.url("images"),
         mayHaveMore: response.mayHaveMore
       }, {
         google_hit: "google_hit.html"
       }, function(html) {
-        $res.append(html).toggleClass("kifi-debug", response.session.experiments.indexOf("admin") >= 0);
+        $res.append(html);
         api.log("[appendResults] done");
       });
   }
@@ -477,7 +483,7 @@ api.log("[google_inject]");
     var hitHtml = [];
     for (var i = 0; i < hits.length; i++) {
       render("html/search/google_hit.html",
-        $.extend({session: response.session, globeUrl: api.url("images/globe.png")}, hits[i]),
+        $.extend({session: response.session, images: api.url("images")}, hits[i]),
         function(html) {
           hitHtml.push(html);
           if (hitHtml.length == hits.length) {
@@ -540,10 +546,9 @@ api.log("[google_inject]");
     return f1 === f2 || !f1 && !f2 || f1 && f2 && f1.who == f2.who && f1.when == f2.when;
   }
 
-  function showFilterDetail($det) {
-    $(this).prev(".kifi-filter-detail-notch").addBack().addClass("kifi-visible").end().end()
-    .off("transitionend").on("transitionend", function end(e) {
-      if (e.target !== this || e.originalEvent.propertyName != "height") return;
+  function showFilterDetail() {
+    $(this).off("transitionend").on("transitionend", function end(e) {
+      if (e.target !== this || e.originalEvent.propertyName != "opacity") return;
       $(this).off("transitionend", end);
       var $in = $res.find("#kifi-filter-det");
       api.port.emit("get_friends", function(friends) {
@@ -554,6 +559,7 @@ api.log("[google_inject]");
         }
         api.require("scripts/lib/jquery-tokeninput.js", function() {
           if ($in.prev("ul").length) return;
+          var addTime;
           $in.tokenInput(friends, {
             searchDelay: 0,
             minChars: 1,
@@ -575,17 +581,22 @@ api.log("[google_inject]");
                 Mustache.escape(f.name) + "</p></li>";
             },
             onReady: function() {
-              $("#token-input-kifi-filter-det").focus();
+              $("#token-input-kifi-filter-det").focus().blur(function(e) {
+                if (!e.relatedTarget && new Date - addTime < 50) {
+                  setTimeout(this.focus.bind(this));  // restore focus (stolen by Google script after add)
+                };
+              });
             },
             onAdd: function(friend) {
               api.log("[onAdd]", friend.id, friend.name);
               var who = filter.who.length > 1 ? filter.who + "." + friend.id : friend.id;
               search(null, $.extend({}, filter, {who: who}));
               $in.nextAll(".kifi-filter-detail-clear").addClass("kifi-visible");
+              addTime = +new Date;
             },
             onDelete: function(friend) {
               api.log("[onDelete]", friend.id, friend.name);
-              var who = filter.split(".").filter(function(id) {return id != friend.id}).join(".") || "f";
+              var who = filter.who.split(".").filter(function(id) {return id != friend.id}).join(".") || "f";
               search(null, $.extend({}, filter, {who: who}));
               if (who == "f") {
                 $in.nextAll(".kifi-filter-detail-clear").removeClass("kifi-visible");
@@ -593,18 +604,17 @@ api.log("[google_inject]");
             }});
         });
       });
-    });
+    }).prev(".kifi-filter-detail-notch").addBack().addClass("kifi-visible");
   }
 
   function hideFilterDetail() {
-    $(this).prev(".kifi-filter-detail-notch").addBack().removeClass("kifi-visible").end().end()
-    .off("transitionend").on("transitionend", function end(e) {
-      if (e.target !== this || e.originalEvent.propertyName != "height") return;
+    $(this).off("transitionend").on("transitionend", function end(e) {
+      if (e.target !== this || e.originalEvent.propertyName != "visibility") return;
       $(this).off("transitionend", end);
       var $in = $res.find("#kifi-filter-det");
       if ($in.tokenInput) {
         $in.tokenInput("destroy");
       }
-    });
+    }).prev(".kifi-filter-detail-notch").addBack().removeClass("kifi-visible");
   }
 }();

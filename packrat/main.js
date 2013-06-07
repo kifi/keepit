@@ -878,8 +878,10 @@ function searchOnServer(request, respond) {
   if (when = request.filter && request.filter.when) {
     var d = new Date();
     params.tz = d.toTimeString().substr(12, 5);
-    params.end = ymd(when == "y" ? new Date(d - 86400000) : d);
     params.start = ymd(new Date(d - {t:0, y:1, w:7, m:30}[when] * 86400000));
+    if (when == "y") {
+      params.end = params.start;
+    }
   }
   ajax("GET", "/search", params,
     function(resp) {
@@ -1215,6 +1217,8 @@ doAuth();
 // Global error logging
 
 function reportError(errMsg, url, lineNo) {
+  return; // disable error reporting completely
+  // TODO: fix this
   api.log('Reporting error "%s" in %s line %s', errMsg, url, lineNo);
   if (!api.isPackaged()) {
     // Don't report errors on development (unpacked) extensions

@@ -327,9 +327,9 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getByUser(userId).map(_.id.get.id) }))
   }
 
-  def getCollectionsChanged(seqNum: Long) = Action { request =>
+  def getCollectionsChanged(seqNum: Long, fetchSize: Int) = Action { request =>
     import ShoeboxController.collectionTupleFormat
-    Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getCollectionsChanged(SequenceNumber(seqNum)) }))
+    Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getCollectionsChanged(SequenceNumber(seqNum), fetchSize) }))
   }
 
   def getBookmarksInCollection(collectionId: Id[Collection]) = Action { request =>
