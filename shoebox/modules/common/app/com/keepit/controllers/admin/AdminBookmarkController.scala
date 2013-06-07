@@ -1,37 +1,21 @@
 package com.keepit.controllers.admin
 
-import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
-import com.keepit.common.analytics.EventFamilies
-import com.keepit.common.analytics.Events
-import com.keepit.common.performance._
+import scala.collection.mutable.{HashMap => MutableMap, SynchronizedMap}
+import scala.concurrent._
+import scala.concurrent.duration._
+
+import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
-import com.keepit.common.healthcheck.HealthcheckError
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.net._
-import com.keepit.common.social._
+import com.keepit.common.performance._
 import com.keepit.model._
 import com.keepit.scraper.ScraperPlugin
-import com.keepit.search.graph.URIGraph
-import com.keepit.search.graph.URIGraphPlugin
-import com.keepit.serializer.BookmarkSerializer
 
-import scala.concurrent.Await
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.Play.current
 import play.api.libs.json._
-import scala.concurrent.duration._
-import scala.concurrent._
-import ExecutionContext.Implicits.global
-
-import scala.collection.mutable.{HashMap => MutableMap, SynchronizedMap}
-
-import com.keepit.common.analytics.ActivityStream
-
-import com.google.inject.{Inject, Singleton}
-
 import views.html
 
 @Singleton
@@ -41,7 +25,6 @@ class AdminBookmarksController @Inject() (
   scraper: ScraperPlugin,
   bookmarkRepo: BookmarkRepo,
   uriRepo: NormalizedURIRepo,
-  socialRepo: UserWithSocialRepo,
   userRepo: UserRepo,
   scrapeRepo: ScrapeInfoRepo,
   socialUserInfoRepo: SocialUserInfoRepo)
@@ -52,7 +35,7 @@ class AdminBookmarksController @Inject() (
       db.readOnlyAsync { implicit session =>
         val bookmark = bookmarkRepo.get(id)
         val uri = uriRepo.get(bookmark.uriId)
-        val user = socialRepo.toUserWithSocial(userRepo.get(bookmark.userId))
+        val user = userRepo.get(bookmark.userId)
         val scrapeInfo = scrapeRepo.getByUri(bookmark.uriId)
         Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo))
       }
@@ -113,7 +96,6 @@ class AdminBookmarksController @Inject() (
     val PAGE_SIZE = 50
 
     val userMap = new MutableMap[Id[User], User] with SynchronizedMap[Id[User], User]
-    val socialUserInfoMap = new MutableMap[Id[User], SocialUserInfo] with SynchronizedMap[Id[User], SocialUserInfo]
 
     def bookmarksInfos() = {
       future { time(s"load $PAGE_SIZE bookmarks") { db.readOnly { implicit s => bookmarkRepo.page(page, PAGE_SIZE) } } } flatMap { bookmarks =>
@@ -123,23 +105,17 @@ class AdminBookmarksController @Inject() (
               userMap.getOrElseUpdate(id, userRepo.get(id))
             }
           }}}
-          socialUserInfo <- future { time("load socialUserInfo") { db.readOnly { implicit s =>
-            bookmarks map (_.userId) map { id =>
-              socialUserInfoMap.getOrElseUpdate(id, socialUserInfoRepo.getByUser(id).head)
-            }
-          }}}
           uris <- future { time("load uris") { db.readOnly { implicit s =>
             bookmarks map (_.uriId) map uriRepo.get
           }}}
           scrapes <- future { time("load scrape info") { db.readOnly { implicit s =>
             bookmarks map (_.uriId) map scrapeRepo.getByUri
           }}}
-        } yield ((users, socialUserInfo).zipped.toList.seq,
-                 (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq
+        } yield (users.toList.seq, (bookmarks, uris, scrapes).zipped.toList.seq).zipped.toList.seq
       }
     }
 
-    val (count, bookmarksAndUsers) = Await.result( for {
+    val (count, bookmarksAndUsers) = Await.result(for {
         bookmarksAndUsers <- time("load full bookmarksInfos") { bookmarksInfos() }
         count <- future { time("count bookmarks") { db.readOnly { implicit s => bookmarkRepo.count(s) } } }
       } yield (count, bookmarksAndUsers), 1 minutes)

@@ -1,14 +1,8 @@
-@(user: User, socialUserInfo: SocialUserInfo)
+@(user: User)
 
-@userWithFacebookDisplay(user: User, socialUserInfo: SocialUserInfo) = {
-  <span style="margin:2px">
-    <a data-hover="tooltip" title="@user.firstName @user.lastName+"
-       class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get)">
-      <img class="user-avatar" src="https://graph.facebook.com/@socialUserInfo.socialId.id/picture?type=square"/> @user.firstName @user.lastName
-    </a>
-  </span>
-}
-
-
-
-@userWithFacebookDisplay(user, socialUserInfo)
+<span style="margin:2px">
+<a data-hover="tooltip" title="@user.firstName @user.lastName+"
+    class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminUserController.userView(user.id.get)">
+  <img class="user-avatar" src="@com.keepit.controllers.assets.routes.UserPictureController.get(60, user.externalId)"> @user.firstName @user.lastName
+</a>
+</span>

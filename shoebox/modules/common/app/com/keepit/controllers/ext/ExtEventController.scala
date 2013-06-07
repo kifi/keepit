@@ -1,29 +1,15 @@
 package com.keepit.controllers.ext
 
-import play.api.data._
-import play.api._
-import play.api.Play.current
-import play.api.data.Forms._
-import play.api.data.validation.Constraints._
-import play.api.libs.ws.WS
-import play.api.mvc._
-import play.api.http.ContentTypes
-import play.api.libs.json._
-
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.db.slick._
-import com.keepit.common.db._
-import com.keepit.model._
-import java.sql.Connection
-import com.keepit.common.social.UserWithSocial
-import com.keepit.search.ArticleSearchResultStore
-import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.common.analytics._
-import com.keepit.common.time._
-import com.keepit.common.analytics.reports._
-import com.keepit.common.service.FortyTwoServices
-
 import com.google.inject.{Inject, Singleton}
+import com.keepit.common.analytics._
+import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.db._
+import com.keepit.common.db.slick._
+import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.time._
+import com.keepit.model._
+
+import play.api.libs.json._
 
 @Singleton
 class ExtEventController @Inject() (
