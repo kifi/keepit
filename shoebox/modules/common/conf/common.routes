@@ -33,11 +33,11 @@ GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkContr
 GET     /site/keeps/all             @com.keepit.controllers.website.BookmarksController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int ?= Integer.MAX_VALUE)
 POST    /site/keeps/add             @com.keepit.controllers.website.BookmarksController.keepMultiple()
 POST    /site/keeps/remove          @com.keepit.controllers.website.BookmarksController.unkeepMultiple()
+GET     /site/keeps/count           @com.keepit.controllers.website.BookmarksController.numKeeps()
 GET     /site/keeps/:id             @com.keepit.controllers.website.BookmarksController.getKeepInfo(id: ExternalId[Bookmark])
 POST    /site/keeps/:id/update      @com.keepit.controllers.website.BookmarksController.updateKeepInfo(id: ExternalId[Bookmark])
 POST    /site/keeps/:id/delete      @com.keepit.controllers.website.BookmarksController.unkeep(id: ExternalId[Bookmark])
 GET     /site/keeps/mutual/:id      @com.keepit.controllers.website.BookmarksController.mutualKeeps(id: ExternalId[User])
-GET     /site/keeps/count           @com.keepit.controllers.website.BookmarksController.numKeeps()
 
 GET     /site/collections/all       @com.keepit.controllers.website.BookmarksController.allCollections(sort: String ?= "last_kept")
 POST    /site/collections/ordering  @com.keepit.controllers.website.BookmarksController.setCollectionOrdering()
@@ -191,6 +191,7 @@ GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUs
 GET     /admin/server               @com.keepit.common.healthcheck.AdminHealthController.serviceView()
 GET     /admin/benchmark            @com.keepit.common.healthcheck.AdminBenchmarkController.benchmarks()
 GET     /admin/ec2-instance         @com.keepit.controllers.admin.AmazonInstanceController.instanceInfo()
+GET     /admin/cache                @com.keepit.controllers.admin.AdminCacheController.serviceView
 
 GET     /admin/emails/comment       @com.keepit.controllers.admin.AdminEmailPreviewController.newComment
 GET     /admin/emails/message       @com.keepit.controllers.admin.AdminEmailPreviewController.newMessage

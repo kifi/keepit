@@ -17,7 +17,6 @@ case class BasicUser(
   externalId: ExternalId[User],
   firstName: String,
   lastName: String,
-  facebookId: String, // TODO: remove after extension is migrated
   networkIds: Map[SocialNetworkType, SocialId],
   pictureName: String)
 
@@ -27,7 +26,6 @@ object BasicUser {
       (__ \ 'id).format[ExternalId[User]] and
       (__ \ 'firstName).format[String] and
       (__ \ 'lastName).format[String] and
-      (__ \ 'facebookId).format[String] and
       (__ \ 'networkIds).format[Map[String, String]].inmap[Map[SocialNetworkType,SocialId]](
         _.map { case (netStr, idStr) => SocialNetworkType(netStr) -> SocialId(idStr) }.toMap,
         _.map { case (network, id) => network.name -> id.id }.toMap
@@ -58,9 +56,6 @@ class BasicUserRepo @Inject() (socialUserRepo: SocialUserInfoRepo, userRepo: Use
       externalId = user.externalId,
       firstName = user.firstName,
       lastName = user.lastName,
-      facebookId = socialUserInfos.collectFirst {
-        case su if su.networkType == SocialNetworks.FACEBOOK => su.socialId.id
-      }.getOrElse(""),
       networkIds = socialUserInfos.map { su => su.networkType -> su.socialId }.toMap,
       pictureName = "0.jpg" // TODO: when we have multiple picture IDs make sure we change this
     )
