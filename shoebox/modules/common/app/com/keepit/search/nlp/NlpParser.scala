@@ -5,7 +5,6 @@ import edu.stanford.nlp.trees._;
 import edu.stanford.nlp.parser.lexparser.LexicalizedParser
 import scala.collection.mutable.ListBuffer
 
-
 object NlpParser {
   val enabled = true
   val parser = LexicalizedParser.loadModel()
@@ -27,7 +26,7 @@ object NlpParser {
      rv(0)
   }
 
-  // TODO: more intelligent segmentation
+  // return: (start, end), include endpoints.
   private def getSegments(cons: Set[Constituent]): Seq[(Int, Int)] = {
     var segs = ListBuffer.empty[(Int, Int)]
     if (cons.size == 0) {
@@ -57,5 +56,19 @@ object NlpParser {
       (nd.label().value(), phrase)
     }
     tagged
+  }
+
+  def removeOverlapping(segments: Seq[(Int, Int)]) = {
+    val sorted = segments.filter(x => x._1 < x._2).sortWith((a, b) => (a._2 < b._2) || (a._2 == b._2 && a._1 < b._1) )    // sort by right endpoint, then by length of interval
+    val rv = ListBuffer.empty[(Int, Int)]
+    var pos = -1
+    for(i <- 0 until sorted.size){
+      val seg = sorted(i)
+      if ( seg._1 > pos ){
+        pos = seg._2
+        rv.append(seg)
+      }
+    }
+    rv.toSet
   }
 }
