@@ -112,7 +112,7 @@
     var service = $("#service").val();
     var plugin = $("#plugin").val();
     var namespace = $("#namespace").val();
-    var baseTargets = ["drawAsInfinite(counters." + service + ".deploys)"];
+    var baseTargets = ["drawAsInfinite(counters." + service + ".deploys.count)"];
     options.from = $("#timerange").val();
 
   if (chart == "counters") {
