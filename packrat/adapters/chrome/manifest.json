@@ -1,6 +1,6 @@
 {
   "name": "KiFi Beta",
-  "version": "2.4.5",
+  "version": "2.4.6",
   "manifest_version": 2,
   "description": "KiFi Private Beta",
   "icons": {
@@ -41,7 +41,6 @@
     "images/more_results_left_top.gif",
     "images/more_results_right.gif",
     "images/more_results_right_top.gif",
-    "images/shade_above.png",
     "images/snapshot.png",
     "images/social_icons.png",
     "images/metro/bg_comments.png",

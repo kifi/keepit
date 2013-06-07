@@ -1,28 +1,19 @@
-@(userWithSocial: UserWithSocial, configs: Seq[(String, String)])
-
-@userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
-  <span style="margin:2px">
-    <a data-hover="tooltip" title="@userWithSocial.user.firstName @userWithSocial.user.lastName+" class="name_tooltip_link" href="http://www.facebook.com/@userWithSocial.socialUserInfo.socialId.id" target="_blank">
-      <img class="user-avatar" src="https://graph.facebook.com/@userWithSocial.socialUserInfo.socialId.id/picture?type=square"/>
-      @userWithSocial.socialUserInfo.socialId.id
-    </a>
-  </span>
-}
+@(user: User, configs: Seq[(String, String)])
 
 @paramValue(parameter: String, value: String, description: Option[String]) = {
   <tr> <td>@parameter</td> <td><input type="text" name="@{parameter}" value="@{value}"></td><td>@description.getOrElse("")</td> </tr>
 }
 
 @admin("Search Configuration") {
-  <h2>@userWithSocial.user.firstName @userWithSocial.user.lastName</h2>
-  <form action="@com.keepit.controllers.admin.routes.AdminSearchConfigController.setUserConfig(userWithSocial.user.id.get)" method="POST" class="form-inline">
+  <h2>@user.firstName @user.lastName</h2>
+  <form action="@com.keepit.controllers.admin.routes.AdminSearchConfigController.setUserConfig(user.id.get)" method="POST" class="form-inline">
     <table class="table table-bordered">
       <tr> <th>Parameter</th><th>Value</th><th>Description</th> </tr>
       @configs.map{ case (p, v) => @paramValue(p, v, com.keepit.search.SearchConfig.getDescription(p)) }
     </table>
     <button type="submit" class="btn">Update</button>
   </form>
-  <form action="@com.keepit.controllers.admin.routes.AdminSearchConfigController.resetUserConfig(userWithSocial.user.id.get)" method="GET" class="form-inline">
+  <form action="@com.keepit.controllers.admin.routes.AdminSearchConfigController.resetUserConfig(user.id.get)" method="GET" class="form-inline">
      <button type="submit" class="btn">Revert To Defaults</button><br/>
   </form>
 }

@@ -1,26 +1,17 @@
-@(userWithSocial: UserWithSocial,
+@(user: User,
   rawInfos: Seq[SocialUserRawInfo],
   socialUserInfos: Seq[SocialUserInfo],
   follows: Seq[NormalizedURI],
   comments: Seq[(NormalizedURI, Comment)],
-  messages: Seq[(NormalizedURI, Comment, Seq[UserWithSocial])],
+  messages: Seq[(NormalizedURI, Comment, Seq[User])],
   sentElectronicMails: Seq[com.keepit.common.mail.ElectronicMail])
 
-@userWithFacebookDisplay(userWithSocial: UserWithSocial) = {
-  <span style="margin:2px">
-    <a data-hover="tooltip" title="@userWithSocial.user.firstName @userWithSocial.user.lastName+" class="name_tooltip_link" href="http://www.facebook.com/@userWithSocial.socialUserInfo.socialId.id" target="_blank">
-      <img class="user-avatar" src="https://graph.facebook.com/@userWithSocial.socialUserInfo.socialId.id/picture?type=square"/>
-      @userWithSocial.socialUserInfo.socialId.id
-    </a>
-  </span>
-}
-
-@admin("User: " + userWithSocial.user.firstName + " " + userWithSocial.user.lastName) {
+@admin("User: " + user.firstName + " " + user.lastName) {
   <h2>User details </h2>
    <br/>
    <table class="table table-bordered">
       <tr>
-        <th>Name</th><td>@userWithSocial.user.firstName @userWithSocial.user.lastName</td>
+        <th>Name</th><td>@user.firstName @user.lastName</td>
       </tr>
       <tr>
         <th>OAuth</th><td><textarea class="json-textArea">@socialUserInfos</textarea></td>
@@ -86,7 +77,7 @@
        <td>@message.pageTitle</td>
        <td>@adminHelper.articleDisplay(uri)</td>
        <td>@for(recipient <- recipients) {
-         @adminHelper.userDisplay(recipient.user, recipient.socialUserInfo)
+         @adminHelper.userDisplay(user)
        }</td>
        <td>@adminHelper.dateTimeDisplay(message.createdAt)</td>
      </tr>
@@ -110,9 +101,7 @@
        <td rowspan="2">@{i+1}</td>
        <td>@message.pageTitle</td>
        <td>@adminHelper.articleDisplay(uri)</td>
-       <td>@for(recipient <- recipients) {
-         @adminHelper.userDisplay(recipient.user, recipient.socialUserInfo)
-       }</td>
+       <td>@for(recipient <- recipients) { @adminHelper.userDisplay(recipient) }</td>
        <td>@adminHelper.dateTimeDisplay(message.createdAt)</td>
      </tr>
      <tr>

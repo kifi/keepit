@@ -12,9 +12,8 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.realtime.UserChannel
-import play.api.libs.json.Json
 
-import play.api.libs.json.{JsArray, JsValue}
+import play.api.libs.json.{Json, JsArray, JsValue}
 
 object UserConnectionCreator {
   private val UpdatedUserConnectionsKey = "updated_user_connections"
@@ -78,7 +77,7 @@ class UserConnectionCreator @Inject() (
   private def extractFriendsWithConnections(socialUserInfo: SocialUserInfo, parentJson: Seq[JsValue]): Seq[(SocialUserInfo, Option[SocialConnection])] = {
     implicit val timeout = BabysitterTimeout(30 seconds, 2 minutes)
     db.readOnly { implicit s =>
-      parentJson flatMap extractFriends map extractSocialId map {
+      parentJson flatMap extractFriends map {
         socialRepo.get(_, SocialNetworks.FACEBOOK)
       } map { sui =>
         (sui, socialConnectionRepo.getConnectionOpt(socialUserInfo.id.get, sui.id.get))
@@ -109,7 +108,7 @@ class UserConnectionCreator @Inject() (
   def disableConnectionsNotInJson(socialUserInfo: SocialUserInfo, parentJson: Seq[JsValue]): Seq[SocialConnection] = {
     log.info("looking for connections to disable for user %s".format(socialUserInfo.fullName))
     db.readWrite { implicit s =>
-      val socialUserInfoForAllFriendsIds = parentJson flatMap extractFriends map extractSocialId
+      val socialUserInfoForAllFriendsIds = parentJson flatMap extractFriends
       val existingSocialUserInfoIds = socialConnectionRepo.getUserConnections(socialUserInfo.userId.get).toSeq map {sui => sui.socialId}
       log.debug("socialUserInfoForAllFriendsIds = %s".format(socialUserInfoForAllFriendsIds))
       log.debug("existingSocialUserInfoIds = %s".format(existingSocialUserInfoIds))
@@ -135,7 +134,13 @@ class UserConnectionCreator @Inject() (
       }
     }
   }
-  private def extractFriends(parentJson: JsValue): Seq[JsValue] = (parentJson \\ "data").head.asInstanceOf[JsArray].value
-  private def extractSocialId(friend: JsValue): SocialId = SocialId((friend \ "id").as[String])
+
+  private def extractFriends(parentJson: JsValue): Seq[SocialId] = {
+    val friendsArr = ((parentJson \ "friends" \ "data").asOpt[JsArray]
+        orElse (parentJson \ "data").asOpt[JsArray]) getOrElse JsArray()
+    friendsArr.value map { friendJson =>
+      SocialId((friendJson \ "id").as[String])
+    }
+  }
 
 }

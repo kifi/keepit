@@ -577,7 +577,6 @@ a.kifi-res-friends {
 }
 
 .kifi-res-end {
-  /*border-bottom: 1px solid #dedede;*/
   min-height: 9px;
 }
 .kifi-res-end:empty {

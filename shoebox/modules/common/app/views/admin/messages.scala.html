@@ -1,4 +1,4 @@
-@(uriAndUsers: Seq[(UserWithSocial, Comment, NormalizedURI, Seq[com.keepit.common.social.UserWithSocial])], page: Int, count: Long, pageCount: Int))
+@(uriAndUsers: Seq[(User, Comment, NormalizedURI, Seq[com.keepit.model.User])], page: Int, count: Long, pageCount: Int))
 
 @pagination(page: Int, pageCount: Int) = {
   <div class="pagination pagination-centered pagination-mini">
@@ -48,13 +48,11 @@
       <th>Page</th>
       <th>Creation</th>
     </tr>
-  @for(((userWithSocial, comment, article, recipients), i) <- uriAndUsers.zipWithIndex) {
+  @for(((user, comment, article, recipients), i) <- uriAndUsers.zipWithIndex) {
     <tr>
       <td rowspan="2">@{i+1}</td>
-      <td>@adminHelper.userDisplay(userWithSocial.user, userWithSocial.socialUserInfo)</td>
-      <td>@for(recipient <- recipients) {
-        @adminHelper.userDisplay(recipient.user, recipient.socialUserInfo)
-      }</td>
+      <td>@adminHelper.userDisplay(user)</td>
+      <td>@for(recipient <- recipients) { @adminHelper.userDisplay(recipient) }</td>
       <td>@comment.pageTitle</td>
       <td>@adminHelper.articleDisplay(article)</td>
       <td>@adminHelper.dateTimeDisplay(comment.createdAt)</td>
