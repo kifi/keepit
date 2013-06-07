@@ -641,19 +641,3 @@ a.kifi-res-more-a[href]:active {
   background-color: #f0f0f0;
   color: #888 !important;
 }
-
-.kifi-debug .kifi-res-debug {
-  display: inline-block;
-}
-.kifi-res-debug {
-  display: none;
-  width: 0;
-  position: relative;
-  left: 6px;
-  font-size: 8px;
-  opacity: .3;
-  text-decoration: none;
-}
-.kifi-res-debug:hover {
-  opacity: .5;
-}
