@@ -1,5 +1,7 @@
 package com.keepit.controllers.admin
 
+import scala.concurrent.ExecutionContext.Implicits.global
+
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
