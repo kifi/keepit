@@ -269,8 +269,13 @@ api.log("[google_inject]");
   }
 
   function bindHandlers() {
-    $res.on("click", ".kifi-res-more", function onMoreClick() {
-      api.log("[onMoreClick] shown:", response.hits.length, "avail:", response.nextHits);
+    $res.on("mouseover", ".kifi-res-more-a", function() {
+      $(this).closest(".kifi-res-more").addClass("kifi-over");
+    }).on("mouseout", ".kifi-res-more-a", function() {
+      $(this).closest(".kifi-res-more").removeClass("kifi-over");
+    }).on("click", ".kifi-res-more-a", function(e) {
+      if (e.which > 1) return;
+      api.log("[moreClick] shown:", response.hits.length, "avail:", response.nextHits);
       if (response.nextHits) {
         renderMore();
         prefetchMore();
@@ -412,8 +417,7 @@ api.log("[google_inject]");
         results: response.hits,
         anyResults: response.hits.length > 0,
         session: response.session,
-        endBgUrl: api.url("images/shade_above.png"),
-        globeUrl: api.url("images/globe.png"),
+        images: api.url("images"),
         mayHaveMore: response.mayHaveMore
       }, {
         google_hit: "google_hit.html"
@@ -478,7 +482,7 @@ api.log("[google_inject]");
     var hitHtml = [];
     for (var i = 0; i < hits.length; i++) {
       render("html/search/google_hit.html",
-        $.extend({session: response.session, globeUrl: api.url("images/globe.png")}, hits[i]),
+        $.extend({session: response.session, images: api.url("images")}, hits[i]),
         function(html) {
           hitHtml.push(html);
           if (hitHtml.length == hits.length) {
