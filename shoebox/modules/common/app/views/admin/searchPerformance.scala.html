@@ -104,19 +104,19 @@ var metrics2 = {
   };
 
   $("#metric2").change(function () {
-    options.target = [$(this).val()];
+    options2.target = [$(this).val()];
     renderChart2();
   }).change();
 
 
   $("#yscale2").change(function () {
-    options.logBase = $(this).val() == "log" ? 2 : null;
+    options2.logBase = $(this).val() == "log" ? 2 : null;
     renderChart2();
   });
 
 
   function renderChart2() {
-    $("#chart2").graphite(options);
+    $("#chart2").graphite(options2);
   }
 
   renderChart2();
