@@ -577,41 +577,70 @@ a.kifi-res-friends {
 }
 
 .kifi-res-end {
-  background-position: center bottom;
-  background-repeat: no-repeat;
-  background-size: 100% 14px;
-  border-bottom: 1px solid #dedede;
+  /*border-bottom: 1px solid #dedede;*/
   min-height: 9px;
-  text-align: center;
 }
 .kifi-res-end:empty {
+  border-bottom: 1px solid #dedede;
   background: none !important;
 }
 .kifi-res-more {
+  display: table;
+}
+.kifi-res-more-l,
+.kifi-res-more-r {
+  display: table-cell;
+  width: 49%;
+  background-repeat: no-repeat;
+  transition: border-top-width 70ms;
+}
+.kifi-res-more-l {
+  background-position: right 0, 0 0;
+}
+.kifi-res-more-r {
+  background-position: left 0, 8px 0;
+}
+.kifi-over>.kifi-res-more-l,
+.kifi-over>.kifi-res-more-r {
+  border-top: 3px solid transparent;
+}
+.kifi-res-more-c {
+  display: table-cell;
+  background-position: 0 bottom;
+  background-repeat: repeat-x;
+  padding-bottom: 4px;
+  transition: padding-bottom 70ms;
+}
+.kifi-over>.kifi-res-more-c {
+  padding-bottom: 7px;
+}
+a.kifi-res-more-a[href] {
   display: inline-block;
-  margin: 0 auto;
-  padding: 5px 24px;
+  border: 1px solid #e5e7e8;
+  border-radius: 6px;
+  background-position: calc(100% - 13px) center;
+  background-repeat: no-repeat;
+  background-color: #fafafa;
+  padding: 1px 28px 0 15px;
   position: relative;
+  top: -2px;
   font-size: 12px;
+  line-height: 28px;
+  white-space: nowrap;
   cursor: pointer;
-  color: #999;
-  transition: margin-bottom 60ms ease-in-out 20ms;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  text-decoration: none;
+  color: #999 !important;
 }
-.kifi-res-more:hover {
-  color: #3380fb;
-  margin-bottom: 3px;
+a.kifi-res-more-a[href]:hover {
+  background-color: #fcfcfc;
+  color: #888 !important;
 }
-.kifi-res-more-arrow {
-  position: absolute;
-  top: 6px;
-  -webkit-transform: rotate(90deg) scale(1,1.2);
-  transform: rotate(90deg) scale(1,1.2);
-}
-.kifi-res-more-arrow:first-child {
-  left: 9px;
-}
-.kifi-res-more-arrow:last-child {
-  right: 7px;
+a.kifi-res-more-a[href]:active {
+  background-color: #f0f0f0;
+  color: #888 !important;
 }
 
 .kifi-debug .kifi-res-debug {
