@@ -23,6 +23,10 @@ import org.apache.lucene.util.Bits
 import org.apache.lucene.util.BytesRef
 import java.util.{HashSet => JHashSet}
 import scala.collection.JavaConversions._
+import org.apache.lucene.analysis.Analyzer
+import java.io.StringReader
+import org.apache.lucene.analysis.tokenattributes.OffsetAttribute
+import scala.collection.mutable.ListBuffer
 
 object QueryUtil extends Logging {
 
@@ -174,4 +178,17 @@ object QueryUtil extends Logging {
   def emptyDocIdSetIterator: DocIdSetIterator = EmptyDocsAndPositionsEnum
   def emptyDocsEnum: DocsEnum = EmptyDocsAndPositionsEnum
   def emptyDocsAndPositionsEnum: DocsAndPositionsEnum = EmptyDocsAndPositionsEnum
+
+  def getTermOffsets(analyzer: Analyzer, queryText: String) = {
+    val ts = analyzer.tokenStream("foo", new StringReader(queryText))
+    val offset = ts.addAttribute(classOf[OffsetAttribute])
+    val startOffsets = ListBuffer.empty[(Int, Int)]
+    ts.reset()
+    while (ts.incrementToken()){
+      startOffsets.append((offset.startOffset, offset.endOffset))
+    }
+    ts.end()
+    ts.close()
+    startOffsets.toSeq
+  }
 }
