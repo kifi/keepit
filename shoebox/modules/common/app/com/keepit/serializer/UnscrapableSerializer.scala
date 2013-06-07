@@ -1,12 +1,12 @@
 package com.keepit.serializer
 
-import com.keepit.common.db.ExternalId
+import org.joda.time.DateTime
+
+import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model.Unscrapable
+
 import play.api.libs.json._
-import com.keepit.common.social.UserWithSocial
-import com.keepit.common.db._
-import org.joda.time.DateTime
 
 class UnscrapableSerializer extends Format[Unscrapable] {
 
