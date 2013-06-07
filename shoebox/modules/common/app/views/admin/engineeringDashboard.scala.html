@@ -41,9 +41,10 @@
 
   // Search Chart
 
-  var searchTargets = baseTargets.concat(["timers.search.extSearch.total.mean"]);
+  var searchTargets = baseTargets.concat("counters.search.extSearch.total.count").concat(["secondYAxis(timers.search.extSearch.total.mean)"]);
   options.drawNullAsZero = "false";
   options.target = searchTargets;
+  options.title = "Searches per Minute vs Mean Time in Milliseconds"
   $("#search").graphite(options);
 
   // Cache Chart
@@ -58,7 +59,7 @@
 
   options.drawNullAsZero = "true";
   options.target = cacheTargets;
-  options.title = "Hits - Misses - Sets (Events per Minute) vs Hit Ratio"
+  options.title = "Hits - Misses - Sets per Minute vs Hit Ratio"
   $("#cache").graphite(options);
 }
 
