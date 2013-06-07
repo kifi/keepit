@@ -1,0 +1,148 @@
+@admin("Cache Performance", scripts = List("graphite")) {
+
+<select class=params id="service"></select>
+<select class=params id="plugin"></select>
+<select class=params id="namespace"></select>
+<select class=params id="metrictype"></select>
+<select class=params id="timerange"></select>
+<!<select class=params id="yscale"></select>
+
+<img id="chart" class="img-polaroid">
+
+<script>
+
+  var services = {
+  "All Services": "*",
+  "Shoebox": "shoebox",
+  "Search": "search",
+  };
+
+  var plugins = {
+  "All Plugins": "*",
+  "Memcached": "Memcached",
+  "EhCache": "EhCache"
+  };
+
+  var namespaces = {
+  "All Namespaces": "*",
+  "basic_user_userid": "basic_user_userid",
+  "bookmark_uri_user": "bookmark_uri_user",
+  "browsing_history_by_userid": "browsing_history_by_userid",
+  "click_history_by_userid": "click_history_by_userid",
+  "collections_for_bookmark": "collections_for_bookmark",
+  "comment_by_normuriid": "comment_by_normuriid",
+  "comment_with_basic_user_by_comment_id": "comment_with_basic_user_by_comment_id",
+  "slider_history_by_userid": "slider_history_by_userid",
+  "social_user_info_by_network_and_id": "social_user_info_by_network_and_id",
+  "social_user_info_by_userid": "social_user_info_by_userid",
+  "unscrapable_all": "unscrapable_all",
+  "uri_by_id": "uri_by_id",
+  "user_by_external_id": "user_by_external_id",
+  "user_by_id": "user_by_id",
+  "user_collections": "user_collections",
+  "user_connection_key": "user_connection_key",
+  "user_experiment_user_id": "user_experiment_user_id",
+  "user_session_by_external_id": "user_session_by_external_id",
+  "uservalue": "uservalue"
+  };
+
+  var metrictypes = {
+  "Counters": "counters",
+  "Timers": "timers"
+  };
+
+  var timeranges = {
+  "24 Hours": "-24h",
+  "12 Hours": "-12h",
+  "6 Hours": "-6h",
+  "3 Hours": "-3h",
+  "1 Hour": "-1h",
+  "30 Minutes": "-0h30min",
+  "10 Minutes": "-0h10min",
+  "1 Minute": "-0h1min"
+  };
+
+  var yscales = {
+  "Linear Scale": null,
+  "Log10 Scale": 10
+  };
+
+  $.each(services, function (name, service) {
+  $("#service").append($("<option>").val(service).text(name));
+  });
+
+  $.each(plugins, function (name, plugin) {
+  $("#plugin").append($("<option>").val(plugin).text(name));
+  });
+
+  $.each(namespaces, function (name, namespace) {
+  $("#namespace").append($("<option>").val(namespace).text(name));
+  });
+
+  $.each(metrictypes, function (name, metrictype) {
+  $("#metrictype").append($("<option>").val(metrictype).text(name));
+  });
+
+  $.each(timeranges, function (name, timerange) {
+  $("#timerange").append($("<option>").val(timerange).text(name));
+  });
+
+  $.each(yscales, function (name, scale) {
+  $("#yscale").append($("<option>").val(scale).text(name));
+  });
+
+  var options = $.fn.graphite.defaults = {
+  url: "https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/",
+  lineMode: "connected",
+  width: 1100,
+  height: 550,
+  hideGrid: "true"
+  };
+
+  var baseTargets = ["drawAsInfinite(gauges." + $("#service").val() + ".deploys)"];
+
+  function selectTargets() {
+    var metrictype = $("#metrictype").val();
+    var service = $("#service").val();
+    var plugin = $("#plugin").val();
+    var namespace = $("#namespace").val();
+
+    var targetPrefix = [metrictype, service, plugin, namespace].join(".");
+    function sumSeries(metric, value) {
+      return "sumSeries(" + [targetPrefix, metric, value].join(".") + ")"
+    }
+
+    if (metrictype == "counters") {
+      var metrics = ["hits", "misses", "sets"];
+      var countTargets = metrics.map(function (metric) {return sumSeries(metric, "count")});
+      var ratioTarget = ["scale(divideSeries(" + sumSeries("hits", "count") + "," + sumSeries("{hits,misses}", "count") + "),100)"];
+      var targets = baseTargets.concat(countTargets).concat(ratioTarget)
+      options.drawNullAsZero = "true"
+    }
+
+    if (metrictype == "timers") {
+      var metrics = ["hits", "sets"];
+      var meanTargets = metrics.map(function (metric) {return "divideSeries(" + sumSeries(metric, "sum") + "," + sumSeries(metric, "count") + ")"});
+      var targets = baseTargets.concat(meanTargets)
+      options.drawNullAsZero = "false"
+    }
+
+    return targets
+  }
+  
+  $(".params").change(function () {
+  options.target = selectTargets();
+  options.logBase = $("#yscale").val();
+  options.from = $("#timerange").val();
+  renderChart();
+  }).change();
+
+  function renderChart() {
+  $("#chart").graphite(options);
+  }
+
+  renderChart();
+
+</script>
+}
+

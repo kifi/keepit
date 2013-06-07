@@ -9,8 +9,9 @@ JAVA_HOME=/usr/java/jdk1.7.0_21
 USER=fortytwo
 [[ $(whoami) == $USER ]] || { echo "You must run this script as $USER"; exit 1; }
 
-serviceNameLo="shoebox"                                  # service name with the first letter in lowercase
-serviceName="Shoebox"                                    # service name
+serviceNameLo="search"                                  # service name with the first letter in lowercase
+dbName="shoebox"
+serviceName="Search"                                    # service name
 serviceUser="fortytwo"                                      # OS user name for the service
 serviceGroup="fortytwo"                                    # OS group name for the service
 applDir="/home/$serviceUser/run/$serviceNameLo"                          # home directory of the service application
@@ -18,18 +19,19 @@ serviceUserHome="/home/$serviceUser"                       # home directory of t
 serviceLogFile="$applDir/log/$serviceNameLo.out"               # log file for StdOut/StdErr
 maxShutdownTime=15                                         # maximum number of seconds to wait for the daemon to terminate normally
 pidFile="$applDir/$serviceNameLo.pid"                      # name of PID file (PID = process ID number)
-yourkit="-agentpath:/opt/yjp/bin/linux-x86-64/libyjpagent.so=port=4242,dir=~/profiles,logdir=/home/fortytwo/run/shoebox/log" #Yourkit profiler agent
+yourkit="-agentpath:/opt/yjp/bin/linux-x86-64/libyjpagent.so=port=4242,dir=~/profiles,logdir=/home/fortytwo/run/$serviceNameLo/log" #Yourkit profiler agent
 newrelic="-javaagent:/opt/newrelic/newrelic.jar -Dnewrelic.bootstrap_classpath=true"
 jmxArgs="-Dcom.sun.management.jmxremote.port=9999 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false" # remote JMX
 javaCommand="java"                                         # name of the Java launcher without the path
 javaExe="$JAVA_HOME/bin/$javaCommand"                      # file name of the Java application launcher executable
-javaGc="-Xloggc:gc_stats.log -XX:+PrintGCDetails -XX:PermSize=64m -XX:MaxPermSize=256m -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+HeapDumpOnOutOfMemoryError"
+javaDebug="-Xrunjdwp:transport=dt_socket,address=8765,server=y,suspend=n"
+javaGc="-Xloggc:gc_stats.log -XX:+PrintGCDetails -XX:PermSize=128m -XX:MaxPermSize=200m -XX:+UseConcMarkSweepGC -XX:+CMSClassUnloadingEnabled -XX:+HeapDumpOnOutOfMemoryError"
 #echo applDir=$applDir
 classpathLine=`grep "classpath=" $applDir/start | sed 's/.*"\(.*\)".*/\1/'`
 #echo classpathLine=$classpathLine
 classpath=`echo "$classpathLine" | sed 's%$scriptdir%'$applDir'%g'`
 #echo classpath=$classpath
-javaArgs="$yourkit $newrelic $jmxArgs $javaGc -Ddb.$serviceNameLo.password=keepmydatasecure -Dhttp.port=9000 -Xms512M -Xmx3072m -server -Dconfig.resource=prod/$serviceNameLo.conf -Duser.dir=$applDir/ -Dlogger.resource=prod/logger.prod.xml -cp $classpath play.core.server.NettyServer $applDir"
+javaArgs="$yourkit $newrelic $jmxArgs $javaGc -Ddb.$dbName.password=keepmydatasecure -Dhttp.port=9000 -Xms512M -Xmx3g -server -Dconfig.resource=prod/$serviceNameLo.conf -Duser.dir=$applDir/ -Dlogger.resource=prod/logger.prod.xml -Dscheduled.enabled=false -cp $classpath play.core.server.NettyServer $applDir"                     # arguments for Java launcher
 javaCommandLine="$javaExe $javaArgs"                       # command line to start the Java service application
 javaCommandLineKeyword="prod/$serviceNameLo.conf"                     # a keyword that occurs on the commandline, used to detect an already running service process and to distinguish it from others
 

@@ -264,9 +264,9 @@ slider2 = function() {
 
   function growSlider(fromClass, toClass) {
     $slider.addClass(fromClass).layout().addClass(toClass + " kifi-growing").removeClass(fromClass)
-    .on("transitionend webkitTransitionEnd", function f(e) {
+    .on("transitionend", function f(e) {
       if (e.target === this) {
-        $(this).off("transitionend webkitTransitionEnd", f).removeClass("kifi-growing");
+        $(this).off("transitionend", f).removeClass("kifi-growing");
       }
     });
   }
@@ -275,8 +275,8 @@ slider2 = function() {
   function hideSlider(trigger) {
     idleTimer.kill();
     $slider.addClass("kifi-hiding")
-    .off("transitionend webkitTransitionEnd")
-    .on("transitionend webkitTransitionEnd", function(e) {
+    .off("transitionend")
+    .on("transitionend", function(e) {
       if (e.target === this && e.originalEvent.propertyName == "opacity") {
         var css = JSON.parse(tile.dataset.pos || 0);
         if (css && !tile.style.top && !tile.style.bottom) {
@@ -287,8 +287,8 @@ slider2 = function() {
           .layout().css({transition: "", "transition-duration": Math.min(1, 32 * Math.log(y)) + "ms"})
           .find(".kifi-count").css("zoom", 1); // webkit repaint workaround
           tile["kifi:position"]();
-          $(tile).on("transitionend webkitTransitionEnd", function end() {
-            $(this).off("transitionend webkitTransitionEnd", end).css("transition-duration", "");
+          $(tile).on("transitionend", function end() {
+            $(this).off("transitionend", end).css("transition-duration", "");
           });
         }
         $slider.remove(), $slider = null;
@@ -434,14 +434,14 @@ slider2 = function() {
         var $old = $cart.find(".kifi-pane-box");
         var $new = $(html)[left ? "prependTo" : "appendTo"]($cart).layout();
         $cart.addClass("kifi-animated").layout().addClass("kifi-roll")
-        .on("transitionend webkitTransitionEnd", function end(e) {
+        .on("transitionend", function end(e) {
           if (e.target !== this) return;
           if (!left) $cart.removeClass("kifi-animated kifi-back kifi-forward");
           $old.triggerHandler("kifi:remove");
           $old.remove();
           $new.data("shown", true).triggerHandler("kifi:shown");
           $cart.removeClass("kifi-roll kifi-animated kifi-back kifi-forward")
-            .off("transitionend webkitTransitionEnd", end);
+            .off("transitionend", end);
           $cubby.css("overflow", "");
           window.dispatchEvent(new Event("resize"));  // for other page scripts
         });
@@ -481,9 +481,9 @@ slider2 = function() {
             $(tile).css("transform", "translate(0," + (window.innerHeight - tile.getBoundingClientRect().bottom) + "px)");
           }
           $pane.layout()
-          .on("transitionend webkitTransitionEnd", function onPaneShown(e) {
+          .on("transitionend", function onPaneShown(e) {
             if (e.target !== this) return;
-            $pane.off("transitionend webkitTransitionEnd", onPaneShown);
+            $pane.off("transitionend", onPaneShown);
             if (!bringSlider) {
               $pane.before(tile);
               $slider.appendTo($pane);
@@ -609,8 +609,8 @@ slider2 = function() {
       $slider = null;
     }
     $pane
-    .off("transitionend webkitTransitionEnd") // onPaneShown
-    .on("transitionend webkitTransitionEnd", function(e) {
+    .off("transitionend") // onPaneShown
+    .on("transitionend", function(e) {
       if (e.target === this) {
         var $pane = $(this);
         $pane.find(".kifi-pane-box").triggerHandler("kifi:remove");
@@ -791,9 +791,9 @@ slider2 = function() {
         }, function(html) {
           configureHover(html, {mustHoverFor: 0, canLeaveFor: 1e9, click: "hide"});
         });
-      }).on("transitionend webkitTransitionEnd", function unbindHover(e) {
+      }).on("transitionend", function unbindHover(e) {
         if (!$tile.hasClass("kifi-hover-showing") && e.target.classList.contains("kifi-slider2-tip") && e.originalEvent.propertyName == "opacity") {
-          $tile.off("transitionend webkitTransitionEnd", unbindHover).bindHover("destroy");
+          $tile.off("transitionend", unbindHover).bindHover("destroy");
         }
       });
       $tile.triggerHandler("mouseover.bindHover");
