@@ -1,10 +1,13 @@
 @admin("Cache Performance", scripts = List("graphite")) {
 
-<select class=params id="service"></select>
-<select class=params id="plugin"></select>
-<select class=params id="namespace"></select>
-<select class=params id="timerange"></select>
-<select class=params id="yscale"></select>
+<div style="float: right" class="form-horizontal">
+  <select class="input-medium" class="params" id="timerange"></select>
+  <button class="btn btn-primary" type="button" id="update">Update Now</button>
+</div>
+<select class="input-medium" class="params" id="service"></select>
+<select class="input-medium" class="params" id="plugin"></select>
+<select class="input-medium" class="params" id="namespace"></select>
+<select class="input-medium" class="params" id="yscale"></select>
 
 <p><img id="ratios" class="img-polaroid"></p>
 <p><img id="counters" class="img-polaroid"></p>
@@ -60,7 +63,6 @@
   "1 Hour": "-1h",
   "30 Minutes": "-0h30min",
   "10 Minutes": "-0h10min",
-  "1 Minute": "-0h1min"
   };
 
   var yscales = {
@@ -109,7 +111,7 @@
     var service = $("#service").val();
     var plugin = $("#plugin").val();
     var namespace = $("#namespace").val();
-    var baseTargets = ["drawAsInfinite(counters." + service + ".deploys)"];
+    var baseTargets = ["drawAsInfinite(counters." + service + ".deploys.count)"];
     options.from = $("#timerange").val();
 
   if (chart == "counters") {
@@ -135,9 +137,9 @@
   
   if (chart == "ratios") {
     var prefix = ["counters", service, plugin, namespace].join(".");
-    var ratioTargets = baseTargets.concat(["scale(divideSeries(" + sumSeries(prefix, "hits", "count") + "," + sumSeries(prefix, "{hits,misses}", "count") + "),100)"]);
+    var ratioTarget = ["scale(divideSeries(" + sumSeries(prefix, "hits", "count") + "," + sumSeries(prefix, "{hits,misses}", "count") + "),100)"];
     options.title = "Hit Ratio"
-    options.target = baseTargets.concat(ratioTargets)
+    options.target = baseTargets.concat(ratioTarget)
     options.drawNullAsZero = "false"
     options.logBase = null;
   }
@@ -151,7 +153,9 @@
     renderChart("ratios")
   }
 
-  $(".params").change(renderAll).change();
+  $(".params").change(renderAll);
+  $("#update").click(renderAll);
+  setInterval(renderAll, 300000);
   renderAll()
 </script>
 }

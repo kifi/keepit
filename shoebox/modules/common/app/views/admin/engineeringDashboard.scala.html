@@ -1,5 +1,8 @@
 @admin("Engineering Dashboard", scripts = List("graphite")) {
-<div style="float: right"><select id="timerange"></select></div>
+<div style="float: right" class="form-horizontal">
+  <select class="input-medium" id="timerange"></select>
+  <button class="btn btn-primary" type="button" id="update">Update Now</button>
+</div>
 
 <p>
   <a href="@com.keepit.controllers.admin.routes.AdminSearchPerformanceController.viewSearchPerformance"><font size="5">Search Performance</font></a>
@@ -20,7 +23,6 @@
   "1 Hour": "-1h",
   "30 Minutes": "-0h30min",
   "10 Minutes": "-0h10min",
-  "1 Minute": "-0h1min"
   };
 
   $.each(timeranges, function (name, timerange) {
@@ -37,14 +39,14 @@
   from: $("#timerange").val()
   };
 
-  var baseTargets = ["drawAsInfinite(counters.*.deploys)"];
+  var baseTargets = ["drawAsInfinite(counters.*.deploys.count)"];
 
   // Search Chart
 
-  var searchTargets = baseTargets.concat("counters.search.extSearch.total.count").concat(["secondYAxis(timers.search.extSearch.total.mean)"]);
+  var searchTargets = baseTargets.concat('summarize(counters.search.extSearch.total.count,"1hour")').concat(["secondYAxis(timers.search.extSearch.total.mean)"]);
   options.drawNullAsZero = "false";
   options.target = searchTargets;
-  options.title = "Searches per Minute vs Mean Time in Milliseconds"
+  options.title = "Searches per Hour vs Mean Time in Milliseconds"
   $("#search").graphite(options);
 
   // Cache Chart
@@ -63,7 +65,9 @@
   $("#cache").graphite(options);
 }
 
-  $("#timerange").change(renderCharts).change();
+  $("#timerange").change(renderCharts);
+  $("#update").click(renderCharts);
+  setInterval(renderCharts, 300000);
   renderCharts()
 </script>
 }

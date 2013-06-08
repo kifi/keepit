@@ -83,14 +83,15 @@ class ShoeboxActionAuthenticator @Inject() (
   kifiInstallationCookie: KifiInstallationCookie)
     extends ActionAuthenticator with SecureSocial with Logging {
 
-  private def loadUserId(userIdOpt: Option[Id[User]], socialId: SocialId)(implicit session: RSession): Id[User] = {
+  private def loadUserId(userIdOpt: Option[Id[User]], socialId: SocialId,
+      socialNetworkType: SocialNetworkType)(implicit session: RSession): Id[User] = {
     userIdOpt match {
       case None =>
-        val socialUser = socialUserInfoRepo.get(socialId, SocialNetworks.FACEBOOK)
+        val socialUser = socialUserInfoRepo.get(socialId, socialNetworkType)
         val userId = socialUser.userId.get
         userId
       case Some(userId) =>
-        val socialUser = socialUserInfoRepo.get(socialId, SocialNetworks.FACEBOOK)
+        val socialUser = socialUserInfoRepo.get(socialId, socialNetworkType)
         if (socialUser.userId.get != userId) {
           log.error("Social user id %s does not match session user id %s".format(socialUser, userId))
         }
@@ -98,9 +99,10 @@ class ShoeboxActionAuthenticator @Inject() (
     }
   }
 
-  private def loadUserContext(userIdOpt: Option[Id[User]], socialId: SocialId): (Id[User], Set[State[ExperimentType]]) = {
+  private def loadUserContext(userIdOpt: Option[Id[User]], socialId: SocialId,
+      socialNetworkType: SocialNetworkType): (Id[User], Set[State[ExperimentType]]) = {
     val (userId, experiments) = db.readOnly { implicit session =>
-      val userId = loadUserId(userIdOpt, socialId)
+      val userId = loadUserId(userIdOpt, socialId, socialNetworkType)
       (userId, getExperiments(userId))
     }
     // for migration to new UserConnection
@@ -116,7 +118,8 @@ class ShoeboxActionAuthenticator @Inject() (
       val impersonatedUserIdOpt: Option[ExternalId[User]] = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
       val kifiInstallationId: Option[ExternalId[KifiInstallation]] = kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
       val socialUser = request.user
-      val (userId, experiments) = loadUserContext(userIdOpt, SocialId(socialUser.id.id))
+      val (userId, experiments) =
+        loadUserContext(userIdOpt, SocialId(socialUser.id.id), SocialNetworkType(socialUser.id.providerId))
       val newSession = session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString)
       impersonatedUserIdOpt match {
         case Some(impExternalUserId) =>
@@ -207,7 +210,7 @@ class RemoteActionAuthenticator @Inject() (
   shoeboxClient: ShoeboxServiceClient,
   monitoredAwait: MonitoredAwait)
     extends ActionAuthenticator with SecureSocial with Logging {
-  
+
   import scala.concurrent.ExecutionContext.Implicits.global
 
   private def getExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]] = shoeboxClient.getUserExperiments(userId)
@@ -228,7 +231,7 @@ class RemoteActionAuthenticator @Inject() (
           val experiments = monitoredAwait.result(experimentsFuture, 1 second, Set[State[ExperimentType]]())
           if (!experiments.contains(ExperimentTypes.ADMIN)) throw new IllegalStateException("non admin user %s tries to impersonate to %s".format(userId, impUserId))
           val impSocialUserInfoFuture = shoeboxClient.getSocialUserInfosByUserId(userId)
-          
+
           val impSocialUserInfo = monitoredAwait.result(impSocialUserInfoFuture, 3 seconds)
           log.info("[IMPERSONATOR] admin user %s is impersonating user %s with request %s".format(userId, impSocialUserInfo, request.request.path))
           executeAction(authAction, monitoredAwait.result(impUserId, 3 seconds), impSocialUserInfo.head.credentials.get, experiments.toSet, kifiInstallationId, newSession, request.request, Some(userId), allowPending)

@@ -137,7 +137,7 @@ class MainSearcher(
 
   val preparationTime = currentDateTime.getMillis() - currentTime
   timeLogs.socialGraphInfo = preparationTime
-  Statsd.gauge("mainSearch.socialGraphInfo", preparationTime)
+  Statsd.timing("mainSearch.socialGraphInfo", preparationTime)
 
   private def findSharingUsers(id: Long): UserToUserEdgeSet = {
     uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)))
@@ -174,7 +174,7 @@ class MainSearcher(
 
     val parsedQuery = parser.parse(queryString)
     timeLogs.queryParsing = currentDateTime.getMillis() - t1
-    Statsd.gauge("mainSearch.queryParsing", timeLogs.queryParsing)
+    Statsd.timing("mainSearch.queryParsing", timeLogs.queryParsing)
 
     val t2 = currentDateTime.getMillis()
 
@@ -187,7 +187,7 @@ class MainSearcher(
       val personalizedSearcher = getPersonalizedSearcher(articleQuery)
       personalizedSearcher.setSimilarity(similarity)
       timeLogs.personalizedSearcher = currentDateTime.getMillis() - t2
-      Statsd.gauge("mainSearch.personalizedSearcher", timeLogs.personalizedSearcher)
+      Statsd.timing("mainSearch.personalizedSearcher", timeLogs.personalizedSearcher)
       val t3 = currentDateTime.getMillis()
       personalizedSearcher.doSearch(articleQuery){ (scorer, mapper) =>
         var doc = scorer.nextDoc()
@@ -212,7 +212,7 @@ class MainSearcher(
         namedQueryContext.reset()
       }
       timeLogs.search = currentDateTime.getMillis() - t3
-      Statsd.gauge("mainSearch.LuceneSearch", timeLogs.search)
+      Statsd.timing("mainSearch.LuceneSearch", timeLogs.search)
       personalizedSearcher
     }
     (myHits, friendsHits, othersHits, parsedQuery, personalizedSearcher)
@@ -224,7 +224,7 @@ class MainSearcher(
     val now = currentDateTime
     val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost)
     timeLogs.getClickBoost = currentDateTime.getMillis() - now.getMillis()
-    Statsd.gauge("mainSearch.getClickboost", timeLogs.getClickBoost)
+    Statsd.timing("mainSearch.getClickboost", timeLogs.getClickBoost)
     val (myHits, friendsHits, othersHits, parsedQuery, personalizedSearcher) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
     val t1 = currentDateTime.getMillis()
     val myTotal = myHits.totalHits
@@ -349,10 +349,10 @@ class MainSearcher(
     val newIdFilter = filter.idFilter ++ hitList.map(_.id)
 
     timeLogs.processHits = currentDateTime.getMillis() - t1
-    Statsd.gauge("mainSearch.processHits", timeLogs.processHits)
+    Statsd.timing("mainSearch.processHits", timeLogs.processHits)
     val millisPassed = currentDateTime.getMillis() - now.getMillis()
     timeLogs.total = millisPassed
-    Statsd.gauge("mainSearch.total", millisPassed)
+    Statsd.timing("mainSearch.total", millisPassed)
 
     // simple classifier
     val show = if (svVar > 0.17f) false else {
