@@ -23,7 +23,6 @@
   "1 Hour": "-1h",
   "30 Minutes": "-0h30min",
   "10 Minutes": "-0h10min",
-  "1 Minute": "-0h1min"
   };
 
   $.each(timeranges, function (name, timerange) {
@@ -44,10 +43,10 @@
 
   // Search Chart
 
-  var searchTargets = baseTargets.concat("counters.search.extSearch.total.count").concat(["secondYAxis(timers.search.extSearch.total.mean)"]);
+  var searchTargets = baseTargets.concat('summarize(counters.search.extSearch.total.count,"1hour")').concat(["secondYAxis(timers.search.extSearch.total.mean)"]);
   options.drawNullAsZero = "false";
   options.target = searchTargets;
-  options.title = "Searches per Minute vs Mean Time in Milliseconds"
+  options.title = "Searches per Hour vs Mean Time in Milliseconds"
   $("#search").graphite(options);
 
   // Cache Chart
