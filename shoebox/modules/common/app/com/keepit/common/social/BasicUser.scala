@@ -3,14 +3,13 @@ package com.keepit.common.social
 import scala.concurrent.duration._
 
 import com.google.inject.Inject
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCache, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.serializer.Serializer
 
 case class BasicUser(
   externalId: ExternalId[User],

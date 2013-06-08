@@ -1,16 +1,14 @@
 package com.keepit.model
 
 import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCache, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
 import scala.concurrent.duration._
-import com.keepit.serializer.SequenceFormat
+import com.keepit.serializer.TraversableFormat
 
 case class UserExperiment (
   id: Option[Id[UserExperiment]] = None,
@@ -46,7 +44,9 @@ object ExperimentTypes {
   }
 }
 
-object UserExperimentStates extends States[UserExperiment]
+object UserExperimentStates extends States[UserExperiment] {
+  implicit val formatter = State.format[ExperimentType]
+}
 
 case class UserExperimentUserIdKey(userId: Id[User]) extends Key[Seq[State[ExperimentType]]] {
   val namespace = "user_experiment_user_id"
@@ -54,7 +54,7 @@ case class UserExperimentUserIdKey(userId: Id[User]) extends Key[Seq[State[Exper
 }
 
 class UserExperimentCache @Inject()(repo: FortyTwoCachePlugin)
-    extends JsonCacheImpl[UserExperimentUserIdKey, Seq[State[ExperimentType]]]((repo, 7 days))(SequenceFormat(State.format[ExperimentType]))
+    extends JsonCacheImpl[UserExperimentUserIdKey, Seq[State[ExperimentType]]]((repo, 7 days))(TraversableFormat.seq(State.format[ExperimentType]))
 
 @ImplementedBy(classOf[UserExperimentRepoImpl])
 trait UserExperimentRepo extends Repo[UserExperiment] {

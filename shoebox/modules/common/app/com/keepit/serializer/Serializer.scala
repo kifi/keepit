@@ -1,20 +1,6 @@
 package com.keepit.serializer
 
 import play.api.libs.json._
-import com.keepit.model.SocialUserInfo
-import com.keepit.model.SocialUserInfo
-import play.api.libs.json.JsArray
-import com.keepit.model.SocialUserInfo
-import play.api.libs.json.JsObject
-
-class SequenceFormat[T](implicit formatter: Format[T]) extends Format[Seq[T]] {
-  def writes(values: Seq[T]) = JsArray(values.map(formatter.writes))
-  def reads(obj: JsValue) = JsSuccess(obj.as[Seq[T]])
-}
-
-object SequenceFormat {
-  def apply[T](implicit formatter: Format[T]) = new SequenceFormat[T]
-}
 
 trait BinaryFormat[T] {
   def writes(value: T): Array[Byte]
@@ -27,6 +13,12 @@ object BinaryFormat {
   implicit val browsingHistoryBinaryFormat = BrowsingHistoryBinarySerializer.browsingHistoryBinarySerializer
 }
 
+object TraversableFormat {
+  private def materialize[U, T <: Traversable[U]](implicit traversableFormatter: Format[T]) = traversableFormatter
+  def seq[U](implicit formatter: Format[U]) = materialize[U, Seq[U]]
+  def set[U](implicit formatter: Format[U]) = materialize[U, Set[U]]
+}
+
 trait Serializer[T] {
   def writes(value: T): Any
   def reads(obj: Any): T
@@ -34,13 +26,13 @@ trait Serializer[T] {
 
 object Serializer {
   def apply[T](formatter: Format[T]): Serializer[T] =  new Serializer[T] {
-    def writes(value: T) = formatter.writes(value)
-    def reads(obj: Any) = formatter.reads(Json.parse(obj.asInstanceOf[String])).get
+    def writes(value: T) = Json.toJson[T](value)(formatter)
+    def reads(obj: Any) = Json.fromJson[T](Json.parse(obj.asInstanceOf[String]))(formatter).get
   }
 
-  def apply[T <: AnyVal] = new Serializer[T] {
-    def writes(value: T): Any = value
-    def reads(obj: Any) = obj.asInstanceOf[T]
+  def apply[P <: AnyVal] = new Serializer[P] {
+    def writes(value: P): Any = value
+    def reads(obj: Any) = obj.asInstanceOf[P]
   }
 
   def apply[T](binaryFormatter: BinaryFormat[T]): Serializer[T] = new Serializer[T] {
@@ -48,4 +40,8 @@ object Serializer {
     def reads(obj: Any) = binaryFormatter.reads(obj.asInstanceOf[Array[Byte]])
   }
 
+  val string = new Serializer[String] {
+    def writes(value: String): Any = value
+    def reads(obj: Any) = obj.asInstanceOf[String]
+  }
 }

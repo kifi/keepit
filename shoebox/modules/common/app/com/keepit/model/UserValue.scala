@@ -14,7 +14,6 @@ import play.api.Play.current
 import java.net.URI
 import java.security.MessageDigest
 import scala.collection.mutable
-import play.api.libs.json._
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.cache._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -46,7 +45,7 @@ case class UserValueKey(userId: Id[User], key: String) extends Key[String] {
   def toKey(): String = userId.id + "_" + key
 }
 class UserValueCache @Inject() (repo: FortyTwoCachePlugin)
-  extends PrimitiveCacheImpl[UserValueKey, String]((repo, 7 days))
+  extends StringCacheImpl[UserValueKey]((repo, 7 days))
 
 @Singleton
 class UserValueRepoImpl @Inject() (

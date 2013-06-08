@@ -2,8 +2,7 @@ package com.keepit.common.cache
 
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
-import com.google.inject.{ImplementedBy, Inject, Singleton}
-import play.api.Play.current
+import com.google.inject.{Inject, Singleton}
 import scala.collection.concurrent.{TrieMap=>ConcurrentMap}
 import play.api.libs.json._
 import play.api.Plugin
@@ -152,7 +151,6 @@ class NoOpCache @Inject() (
   override def toString = "NoOpCache"
 
 }
-
 
 trait Key[T] {
   val namespace: String
@@ -338,8 +336,9 @@ class JsonCacheImpl[K <: Key[T], T](innermostPlugin: (FortyTwoCachePlugin, Durat
 class BinaryCacheImpl[K <: Key[T], T](innermostPlugin: (FortyTwoCachePlugin, Duration), innerToOuterPlugins: (FortyTwoCachePlugin, Duration)*)(implicit formatter: BinaryFormat[T])
   extends FortyTwoCacheImpl[K, T](innermostPlugin, innerToOuterPlugins:_*)(Serializer(formatter))
 
-class PrimitiveCacheImpl[K <: Key[T], T <: AnyVal](innermostPlugin: (FortyTwoCachePlugin, Duration), innerToOuterPlugins: (FortyTwoCachePlugin, Duration)*)
-  extends FortyTwoCacheImpl[K, T](innermostPlugin, innerToOuterPlugins:_*)(Serializer[T])
+class PrimitiveCacheImpl[K <: Key[P], P <: AnyVal](innermostPlugin: (FortyTwoCachePlugin, Duration), innerToOuterPlugins: (FortyTwoCachePlugin, Duration)*)
+  extends FortyTwoCacheImpl[K, P](innermostPlugin, innerToOuterPlugins:_*)(Serializer[P])
 
-
+class StringCacheImpl[K <: Key[String]](innermostPlugin: (FortyTwoCachePlugin, Duration), innerToOuterPlugins: (FortyTwoCachePlugin, Duration)*)
+  extends FortyTwoCacheImpl[K, String](innermostPlugin, innerToOuterPlugins:_*)(Serializer.string)
 

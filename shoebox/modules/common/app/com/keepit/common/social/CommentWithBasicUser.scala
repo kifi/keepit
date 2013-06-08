@@ -11,8 +11,6 @@ import com.google.inject.Inject
 import com.keepit.common.cache._
 import scala.concurrent.duration._
 import play.api.libs.json._
-import play.api.libs.functional.syntax._
-import com.keepit.serializer.Serializer
 
 case class CommentWithBasicUser(user: BasicUser, comment: Comment, recipients: Seq[BasicUser])
 

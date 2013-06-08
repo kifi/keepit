@@ -14,8 +14,7 @@ import java.net.URI
 import java.security.MessageDigest
 import scala.collection.mutable
 import play.api.libs.json._
-import com.keepit.common.cache.{BinaryCacheImpl, FortyTwoCache, FortyTwoCachePlugin, Key}
-import com.keepit.serializer.SliderHistoryBinarySerializer
+import com.keepit.common.cache.{BinaryCacheImpl, FortyTwoCachePlugin, Key}
 import scala.concurrent.duration._
 import com.keepit.search.MultiHashFilter
 

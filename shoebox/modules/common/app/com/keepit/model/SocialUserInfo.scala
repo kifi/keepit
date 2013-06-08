@@ -12,7 +12,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworkType
 import com.keepit.common.time._
-import com.keepit.serializer.SequenceFormat
+import com.keepit.serializer.SocialUserInfoSerializer.socialUserInfoSerializer
 
 import play.api.libs.json._
 import securesocial.core.SocialUser
@@ -47,14 +47,13 @@ trait SocialUserInfoRepo extends Repo[SocialUserInfo] {
   def getOpt(id: SocialId, networkType: SocialNetworkType)(implicit session: RSession): Option[SocialUserInfo]
 }
 
-import com.keepit.serializer.SocialUserInfoSerializer.socialUserInfoSerializer // Required implicit value
 case class SocialUserInfoUserKey(userId: Id[User]) extends Key[Seq[SocialUserInfo]] {
   val namespace = "social_user_info_by_userid"
   override val version = 2
   def toKey(): String = userId.id.toString
 }
 class SocialUserInfoUserCache @Inject() (repo: FortyTwoCachePlugin)
-  extends JsonCacheImpl[SocialUserInfoUserKey, Seq[SocialUserInfo]]((repo, 30 days))(SequenceFormat[SocialUserInfo])
+  extends JsonCacheImpl[SocialUserInfoUserKey, Seq[SocialUserInfo]]((repo, 30 days))
 
 case class SocialUserInfoNetworkKey(networkType: SocialNetworkType, id: SocialId) extends Key[SocialUserInfo] {
   val namespace = "social_user_info_by_network_and_id"

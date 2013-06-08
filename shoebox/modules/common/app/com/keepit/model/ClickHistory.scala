@@ -7,7 +7,6 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import play.api._
 import com.keepit.common.cache._
 import scala.concurrent.duration._
 import scala.Some

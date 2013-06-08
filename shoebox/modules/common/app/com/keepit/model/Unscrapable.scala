@@ -14,12 +14,10 @@ import play.api.Play.current
 import java.net.URI
 import java.security.MessageDigest
 import scala.collection.mutable
-import play.api.libs.json._
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.cache._
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
-import com.keepit.serializer.SequenceFormat
 
 case class Unscrapable(
   id: Option[Id[Unscrapable]] = None,
@@ -48,7 +46,7 @@ case class UnscrapableAllKey() extends Key[Seq[Unscrapable]] {
 }
 
 class UnscrapableAllCache @Inject() (repo: FortyTwoCachePlugin)
-  extends JsonCacheImpl[UnscrapableAllKey, Seq[Unscrapable]]((repo, 0 second))(SequenceFormat[Unscrapable])
+  extends JsonCacheImpl[UnscrapableAllKey, Seq[Unscrapable]]((repo, 0 second))
 
 @Singleton
 class UnscrapableRepoImpl @Inject() (

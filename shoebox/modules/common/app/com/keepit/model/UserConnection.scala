@@ -14,12 +14,9 @@ import com.keepit.common.db.slick.FortyTwoTypeMappers
 import com.keepit.common.db.slick.Repo
 import com.keepit.common.time._
 import com.keepit.common.time.currentDateTime
-import com.keepit.common.cache.Key
-import com.keepit.common.cache.FortyTwoCachePlugin
-import com.keepit.common.cache.FortyTwoCache
+import com.keepit.common.cache.{JsonCacheImpl, Key, FortyTwoCachePlugin}
 import scala.concurrent.duration._
-import play.api.libs.json.Json
-
+import com.keepit.serializer.TraversableFormat
 
 case class UserConnection(
     id: Option[Id[UserConnection]] = None,
@@ -47,14 +44,9 @@ case class UserConnectionKey(userId: Id[User]) extends Key[Set[Id[User]]] {
   def toKey(): String = userId.id.toString
 }
 
-class UserConnectionIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[UserConnectionKey, Set[Id[User]]] {
-  val ttl = 7 days
-  def deserialize(obj: Any): Set[Id[User]] = {
-    val arr = obj.asInstanceOf[Array[Long]].toSet
-    arr.map(Id[User](_))
-  }
-  def serialize(value: Set[Id[User]]) = value.map(_.id).toArray
-}
+object UserConnectionFormatter {implicit val format = Id.format[User]}
+class UserConnectionIdCache @Inject() (repo: FortyTwoCachePlugin)
+  extends JsonCacheImpl[UserConnectionKey, Set[Id[User]]]((repo, 7 days))(TraversableFormat.set(Id.format[User]))
 
 @Singleton
 class UserConnectionRepoImpl @Inject() (

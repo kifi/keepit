@@ -15,6 +15,7 @@ import com.keepit.common.cache._
 import play.api.libs.concurrent.Execution.Implicits._
 import com.keepit.common.logging.Logging
 import scala.concurrent.duration._
+import com.keepit.serializer.UserSerializer.userSerializer
 
 case class User(
   id: Option[Id[User]] = None,
@@ -37,13 +38,11 @@ trait UserRepo extends Repo[User] with ExternalIdColumnFunction[User] {
   def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User]
 }
 
-import com.keepit.serializer.UserSerializer.userSerializer // Required implicit value
 case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
   override val version = 2
   val namespace = "user_by_external_id"
   def toKey(): String = externalId.id
 }
-
 
 class UserExternalIdCache @Inject() (repo: FortyTwoCachePlugin)
   extends JsonCacheImpl[UserExternalIdKey, User]((repo, 24 hours))
@@ -53,6 +52,7 @@ case class UserIdKey(id: Id[User]) extends Key[User] {
   val namespace = "user_by_id"
   def toKey(): String = id.id.toString
 }
+
 class UserIdCache @Inject() (repo: FortyTwoCachePlugin)
   extends JsonCacheImpl[UserIdKey, User]((repo, 24 hours))
 
@@ -63,7 +63,7 @@ case class ExternalUserIdKey(id: ExternalId[User]) extends Key[Id[User]] {
 }
 
 class ExternalUserIdCache @Inject() (repo: FortyTwoCachePlugin)
-  extends PrimitiveCacheImpl[ExternalUserIdKey, Id[User]]((repo, 24 hours))
+  extends JsonCacheImpl[ExternalUserIdKey, Id[User]]((repo, 24 hours))(Id.format[User])
 
 @Singleton
 class UserRepoImpl @Inject() (

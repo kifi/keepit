@@ -11,7 +11,6 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.common.time.currentDateTime
 import annotation.elidable.ASSERTION
-import play.api.libs.json._
 import com.keepit.inject._
 import com.keepit.common.healthcheck._
 import com.keepit.common.cache._

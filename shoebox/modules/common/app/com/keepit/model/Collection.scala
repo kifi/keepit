@@ -5,7 +5,7 @@ import scala.concurrent.duration._
 import org.joda.time.DateTime
 
 import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
@@ -52,12 +52,8 @@ case class UserCollectionsKey(userId: Id[User]) extends Key[Seq[Collection]] {
   def toKey(): String = userId.toString
 }
 
-class UserCollectionsCache @Inject() (val repo: FortyTwoCachePlugin)
-    extends FortyTwoCache[UserCollectionsKey, Seq[Collection]] {
-  val ttl = 1 day
-  def deserialize(obj: Any): Seq[Collection] = parseJson(obj)
-  def serialize(c: Seq[Collection]): Any = Json.toJson(c)
-}
+class UserCollectionsCache @Inject() (repo: FortyTwoCachePlugin)
+    extends JsonCacheImpl[UserCollectionsKey, Seq[Collection]]((repo, 1 day))
 
 @ImplementedBy(classOf[CollectionRepoImpl])
 trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] {
