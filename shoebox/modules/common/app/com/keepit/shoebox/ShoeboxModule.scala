@@ -71,8 +71,11 @@ class ShoeboxModule() extends ScalaModule with Logging {
     listenerBinder.addBinding().to(classOf[UsefulPageListener])
     listenerBinder.addBinding().to(classOf[SliderShownListener])
     listenerBinder.addBinding().to(classOf[SearchUnloadListener])
+
+    val socialGraphBinder = Multibinder.newSetBinder(binder(), classOf[SocialGraph])
+    socialGraphBinder.addBinding().to(classOf[FacebookSocialGraph])
   }
-  
+
   @Singleton
   @Provides
   def secureSocialAuthenticatorPlugin(db: Database,
@@ -92,7 +95,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
     healthcheckPlugin: HealthcheckPlugin): SecureSocialUserPlugin = {
     new ShoeboxSecureSocialUserPlugin(db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin)
   }
-  
+
   @Singleton
   @Provides
   def searchUnloadProvider(
