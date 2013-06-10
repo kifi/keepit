@@ -1,5 +1,7 @@
 package com.keepit.module
 
+import net.codingwell.scalaguice.ScalaModule
+
 import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.services.s3.AmazonS3
 import com.amazonaws.services.s3.AmazonS3Client
@@ -12,7 +14,6 @@ import com.keepit.common.social.S3SocialUserRawInfoStoreImpl
 import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.common.store.{S3ImageConfig, S3Bucket}
 import com.keepit.search._
-import com.tzavellas.sse.guice.ScalaModule
 
 import play.api.Play.current
 

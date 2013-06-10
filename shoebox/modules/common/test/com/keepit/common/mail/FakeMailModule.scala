@@ -1,11 +1,11 @@
 package com.keepit.common.mail
 
 import scala.collection.mutable.MutableList
-import com.keepit.common.db._
+
+import net.codingwell.scalaguice.ScalaModule
 
 import com.google.inject._
 import com.keepit.common.db.slick.DBSession.RWSession
-import com.tzavellas.sse.guice.ScalaModule
 
 class FakeOutbox(val mails: MutableList[ElectronicMail] = MutableList()) {
   def add(email: ElectronicMail): Unit = mails += email

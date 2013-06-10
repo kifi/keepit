@@ -16,7 +16,7 @@ object DevGlobal extends FortyTwoGlobal(Dev) with ShoeboxServices with SearchSer
     Seq(Modules.`override`(new CommonModule, new ShoeboxModule, new SearchModule).`with`(new DevModule))
 
   override def onStart(app: Application) {
-    require(injector.inject[FortyTwoServices].currentService == ServiceType.DEV_MODE,
+    require(injector.instance[FortyTwoServices].currentService == ServiceType.DEV_MODE,
         "DevGlobal can only be run on a dev service")
     startShoeboxServices()
     startSearchServices()

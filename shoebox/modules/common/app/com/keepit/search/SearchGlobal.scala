@@ -24,10 +24,10 @@ object SearchGlobal extends FortyTwoGlobal(Prod) with SearchServices {
 
 trait SearchServices { self: FortyTwoGlobal =>
   def startSearchServices() {
-    require(injector.inject[ArticleIndexerPlugin].enabled)
-    require(injector.inject[URIGraphPlugin].enabled)
-    require(injector.inject[HealthcheckPlugin].enabled)
-    require(injector.inject[FortyTwoCachePlugin].enabled)
+    require(injector.instance[ArticleIndexerPlugin].enabled)
+    require(injector.instance[URIGraphPlugin].enabled)
+    require(injector.instance[HealthcheckPlugin].enabled)
+    require(injector.instance[FortyTwoCachePlugin].enabled)
     require(NlpParser.enabled)
   }
 }

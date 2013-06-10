@@ -1,17 +1,16 @@
 package com.keepit.dev
 
-import com.keepit.module.S3Module
-import com.amazonaws.auth.BasicAWSCredentials
+import net.codingwell.scalaguice.ScalaModule
+
 import com.amazonaws.services.s3.AmazonS3
-import com.amazonaws.services.s3.AmazonS3Client
 import com.google.inject.{Provides, Singleton, Provider}
 import com.keepit.common.analytics._
 import com.keepit.common.analytics.reports._
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.{InMemorySocialUserRawInfoStoreImpl, SocialUserRawInfoStore}
-import com.keepit.common.store.{S3ImageConfig, S3Bucket}
+import com.keepit.common.store.S3ImageConfig
+import com.keepit.module.S3Module
 import com.keepit.search._
-import com.tzavellas.sse.guice.ScalaModule
 
 import play.api.Play.current
 

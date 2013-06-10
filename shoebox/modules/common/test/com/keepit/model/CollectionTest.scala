@@ -1,10 +1,9 @@
 package com.keepit.model
 
-import java.sql.SQLException
-
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
+import com.google.inject.Injector
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.time._
@@ -17,7 +16,7 @@ import play.api.test.Helpers._
 
 class CollectionTest extends Specification with TestDBRunner {
 
-  def setup()(implicit injector: RichInjector) = {
+  def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, PT)
     val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, PT)
 
@@ -151,7 +150,7 @@ class CollectionTest extends Specification with TestDBRunner {
     "ignore case in getting elements" in {
       running(new EmptyApplication) {
         // TODO: figure out why this works but not withDB()
-        implicit val injector = new RichInjector(current.global.asInstanceOf[FortyTwoGlobal].injector)
+        implicit val injector = current.global.asInstanceOf[FortyTwoGlobal].injector
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readOnly { implicit s =>
           collectionRepo.getByUserAndName(user1.id.get, "scala") ===
