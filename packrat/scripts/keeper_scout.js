@@ -19,14 +19,6 @@ var t0 = +new Date, tile, paneHistory, root = document.querySelector("body") || 
   api.log("[scout]", location.hostname);
   var tileCard, tileCount, onScroll;
   api.port.on({
-    new_notification: function(n) {
-      if (n.state != "visited" &&
-          (!paneHistory || (paneHistory[0] != n.details.locator && paneHistory[0] != "/notices"))) {
-        api.require("scripts/notifier.js", function() {
-          notifier.show(n);
-        });
-      }
-    },
     open_to: function(o) {
       keeper("showPane", o.trigger, o.locator);
     },
