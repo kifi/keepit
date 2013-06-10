@@ -86,7 +86,7 @@ class SendHealthcheckMail(history: HealthcheckErrorHistory, host: HealthcheckHos
       val subject = s"[${services.currentService}] ${history.lastError.subjectName}"
       sender.sendMail(ElectronicMail(
         from = EmailAddresses.EISHAY,
-        to = EmailAddresses.ASANA_PROD_HEALTH::EmailAddresses.GREG::Nil,
+        to = EmailAddresses.ASANA_PROD_HEALTH::EmailAddresses.LEO::Nil,
         cc = EmailAddresses.ENG_EMAILS,
         subject = subject,
         htmlBody = views.html.email.healthcheckMail(history, started, host.host).body,

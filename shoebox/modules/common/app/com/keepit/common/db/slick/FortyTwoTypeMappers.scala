@@ -400,11 +400,8 @@ class BookmarkSourceMapperDelegate(profile: BasicProfile) extends StringMapperDe
 //************************************
 class SocialNetworkTypeMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[SocialNetworkType](profile) {
   def zero = SocialNetworks.FACEBOOK
-  def sourceToDest(socialNetworkType: SocialNetworkType) = socialNetworkType.name
-  def safeDestToSource(str: String) = str match {
-    case SocialNetworks.FACEBOOK.name => SocialNetworks.FACEBOOK
-    case _ => throw new RuntimeException("unknown network type %s".format(str))
-  }
+  def sourceToDest(socialNetworkType: SocialNetworkType) = SocialNetworkType.unapply(socialNetworkType).get
+  def safeDestToSource(str: String) = SocialNetworkType(str)
 }
 
 //************************************

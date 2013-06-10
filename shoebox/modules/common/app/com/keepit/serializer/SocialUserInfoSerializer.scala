@@ -2,10 +2,9 @@ package com.keepit.serializer
 
 import com.keepit.common.db.{State, Id}
 import com.keepit.common.time._
-import com.keepit.common.social.SocialNetworks
+import com.keepit.common.social.{SocialNetworkType, SocialNetworks, SocialId}
 import com.keepit.model.SocialUserInfo
 import play.api.libs.json._
-import com.keepit.common.social.SocialId
 import org.joda.time.DateTime
 
 class SocialUserInfoSerializer extends Format[SocialUserInfo] {
@@ -19,7 +18,7 @@ class SocialUserInfoSerializer extends Format[SocialUserInfo] {
       "fullName" -> JsString(info.fullName),
       "state" -> JsString(info.state.value),
       "socialId" -> JsString(info.socialId.id),
-      "networkType" -> JsString(info.networkType.name),
+      "networkType" -> JsString(SocialNetworkType.unapply(info.networkType).get),
       "credentials" -> (info.credentials map { i => SocialUserSerializer.userSerializer.writes(i) } getOrElse (JsNull)),
       "lastGraphRefresh" -> Json.toJson(info.lastGraphRefresh)
     )
@@ -34,9 +33,7 @@ class SocialUserInfoSerializer extends Format[SocialUserInfo] {
       fullName = (json \ "fullName").as[String],
       state = State[SocialUserInfo]((json \ "state").as[String]),
       socialId = SocialId((json \ "socialId").as[String]),
-      networkType = (json \ "networkType").as[String] match {
-        case SocialNetworks.FACEBOOK.name => SocialNetworks.FACEBOOK
-      },
+      networkType = SocialNetworkType((json \ "networkType").as[String]),
       credentials = (json \ "credentials") match {
         case n: JsObject => Some(SocialUserSerializer.userSerializer.reads(n).get)
         case n: JsValue => None

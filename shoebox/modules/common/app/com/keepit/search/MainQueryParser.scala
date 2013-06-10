@@ -1,7 +1,7 @@
 package com.keepit.search
 
 import com.keepit.classify.Domain
-import com.keepit.search.phrasedetector.PhraseDetector
+import com.keepit.search.phrasedetector.{PhraseDetector, NlpPhraseDetector}
 import com.keepit.search.query.parser.QueryParser
 import com.keepit.search.query.parser.DefaultSyntax
 import com.keepit.search.query.parser.PercentMatch
@@ -28,6 +28,9 @@ import com.keepit.search.query.BoostQuery
 import com.keepit.search.query.PhraseProximityQuery
 import com.keepit.search.query.NamedQueryContext
 import com.keepit.search.query.NamedQuery
+import scala.concurrent._
+import ExecutionContext.Implicits.global
+
 
 class MainQueryParser(
   analyzer: Analyzer,
@@ -70,7 +73,9 @@ class MainQueryParser(
         query.setBoost(baseBoost)
 
         val phrases = if (numStemmedTerms > 1 && (phraseBoost > 0.0f || phraseProximityBoost > 0.0f)) {
-          phraseDetector.detectAll(getStemmedTermArray)
+          val p = phraseDetector.detectAll(getStemmedTermArray)
+          if (p.size > 0) p
+          else NlpPhraseDetector.detectAll(queryText.toString, stemmingAnalyzer)
         } else {
           Set.empty[(Int, Int)]
         }
