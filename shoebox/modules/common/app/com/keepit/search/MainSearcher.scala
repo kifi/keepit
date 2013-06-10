@@ -340,7 +340,7 @@ class MainSearcher(
 
     val (svVar,svExistVar) = SemanticVariance.svVariance(parsedQuery, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
 
-    // inject a new content if any
+    // instance a new content if any
     newContent.foreach { h =>
       if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id)
       hitList = (hitList.take(numHitsToReturn - 1) :+ h)

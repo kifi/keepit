@@ -1,5 +1,9 @@
 package com.keepit
 
+import java.util.concurrent.atomic.AtomicBoolean
+
+import net.codingwell.scalaguice.InjectorExtensions.ScalaInjector
+
 import com.google.inject.{Stage, Guice, Module, Injector}
 import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
@@ -10,17 +14,16 @@ import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.inject._
 
-import java.util.concurrent.atomic.AtomicBoolean
 import play.api._
 import play.api.mvc.Results._
 import play.api.mvc._
-import play.utils.Threads
 import play.modules.statsd.api.{Statsd, StatsdFilter}
+import play.utils.Threads
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
     extends WithFilters(LoggingFilter, new StatsdFilter()) with Logging {
 
-  implicit def richInjector(injector: Injector) = new RichInjector(injector)
+  implicit def richInjector(injector: Injector): ScalaInjector = new ScalaInjector(injector)
 
   def modules: Seq[Module]
 
@@ -56,7 +59,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     injector.getInstance(clazz)
   } catch {
     case e: Throwable =>
-      injector.inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.API))
+      injector.instance[HealthcheckPlugin].addError(HealthcheckError(error = Some(e), callType = Healthcheck.API))
       throw e
   }
 
@@ -84,16 +87,16 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     if (app.mode != Mode.Test) {
       require(app.mode == mode, "Current mode %s is not allowed. Mode %s required for %s".format(app.mode, mode, this))
     }
-    val services = injector.inject[FortyTwoServices]
-    injector.inject[ServiceDiscovery].register()
+    val services = injector.instance[FortyTwoServices]
+    injector.instance[ServiceDiscovery].register()
     val startMessage = ">>>>>>>>>> FortyTwo [%s] service %s Application version %s compiled at %s started on base URL: [%s]. Url is defined on conf/application.conf".format(
         this, services.currentService, services.currentVersion, services.compilationTime, services.baseUrl)
     log.info(startMessage)
     println(startMessage)
-    injector.inject[AppScope].onStart(app)
+    injector.instance[AppScope].onStart(app)
     if (app.mode != Mode.Test && app.mode != Mode.Dev) {
       Statsd.increment("deploys", 42)
-      injector.inject[HealthcheckPlugin].reportStart()
+      injector.instance[HealthcheckPlugin].reportStart()
     }
   }
 
@@ -102,7 +105,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       case reported: ReportedException =>
         reported.id
       case _ =>
-        injector.inject[HealthcheckPlugin].addError(HealthcheckError(error = Some(ex), method = Some(request.method.toUpperCase()), path = Some(request.path), callType = Healthcheck.API)).id
+        injector.instance[HealthcheckPlugin].addError(HealthcheckError(error = Some(ex), method = Some(request.method.toUpperCase()), path = Some(request.path), callType = Healthcheck.API)).id
     }
     ex.printStackTrace()
     InternalServerError("error: %s".format(errorId))
@@ -113,8 +116,8 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     println(stopMessage)
     log.info(stopMessage)
     try {
-      if (app.mode != Mode.Test && app.mode != Mode.Dev) injector.inject[HealthcheckPlugin].reportStop()
-      injector.inject[AppScope].onStop(app)
+      if (app.mode != Mode.Test && app.mode != Mode.Dev) injector.instance[HealthcheckPlugin].reportStop()
+      injector.instance[AppScope].onStop(app)
     } catch {
       case e: Throwable =>
         val errorMessage = "====================== error during onStop ==============================="
