@@ -1,7 +1,7 @@
 package com.keepit.search
 
 import com.keepit.classify.Domain
-import com.keepit.search.phrasedetector.PhraseDetector
+import com.keepit.search.phrasedetector.{PhraseDetector, NlpPhraseDetector}
 import com.keepit.search.query.parser.QueryParser
 import com.keepit.search.query.parser.DefaultSyntax
 import com.keepit.search.query.parser.PercentMatch
@@ -28,6 +28,9 @@ import com.keepit.search.query.BoostQuery
 import com.keepit.search.query.PhraseProximityQuery
 import com.keepit.search.query.NamedQueryContext
 import com.keepit.search.query.NamedQuery
+import scala.concurrent._
+import ExecutionContext.Implicits.global
+
 
 class MainQueryParser(
   analyzer: Analyzer,
@@ -68,6 +71,18 @@ class MainQueryParser(
       if (numStemmedTerms <= 0) query
       else {
         query.setBoost(baseBoost)
+
+        // doing nothing. block nothing. Just some tests.
+        future {
+          val tic = System.currentTimeMillis
+          val phrases = NlpPhraseDetector.detectAll(queryText.toString, stemmingAnalyzer)
+          val offsets = getTermOffsets(stemmingAnalyzer, queryText.toString)
+          val elapsed = System.currentTimeMillis - tic
+          log.info("nlp phrase detector time elapsed: " + elapsed)
+          log.info("query: " + queryText.toString)
+          log.info("term offsets: " + offsets.toSeq.toString)
+          log.info("detected phrases: " + phrases.toSeq.toString)
+        }
 
         val phrases = if (numStemmedTerms > 1 && (phraseBoost > 0.0f || phraseProximityBoost > 0.0f)) {
           phraseDetector.detectAll(getStemmedTermArray)
