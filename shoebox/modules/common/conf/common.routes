@@ -263,6 +263,7 @@ GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.sh
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs(ids: String)
 GET     /internal/shoebox/database/getUsers           @com.keepit.controllers.shoebox.ShoeboxController.getUsers(ids: String)
 GET     /internal/shoebox/database/userIdsByExternalIds @com.keepit.controllers.shoebox.ShoeboxController.getUserIdsByExternalIds(ids: String)
+GET     /internal/shoebox/database/getBasicUsers      @com.keepit.controllers.shoebox.ShoeboxController.getBasicUsers(ids: String)
 GET     /internal/shoebox/database/collectionIdsByExternalIds @com.keepit.controllers.shoebox.ShoeboxController.getCollectionIdsByExternalIds(ids: String)
 GET     /internal/shoebox/database/getUserOpt         @com.keepit.controllers.shoebox.ShoeboxController.getUserOpt(id: ExternalId[User])
 GET     /internal/shoebox/database/getUserExperiments           @com.keepit.controllers.shoebox.ShoeboxController.getUserExperiments(id: Id[User])

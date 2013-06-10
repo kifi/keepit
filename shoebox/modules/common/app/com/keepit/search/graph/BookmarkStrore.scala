@@ -142,7 +142,7 @@ class BookmarkStore @Inject() (
       doc.add(buildKeywordField(userField, user.id.toString))
 
       // save bookmark information (title, url, createdAt) in the store
-      val r = BookmarkRecord(bookmark.title.getOrElse(""), bookmark.url, bookmark.createdAt.getMillis, bookmark.uriId.id, bookmark.isPrivate)
+      val r = BookmarkRecord(bookmark.uriId.id, bookmark.title.getOrElse(""), bookmark.url, bookmark.createdAt.getMillis, bookmark.isPrivate)
       doc.add(buildBinaryDocValuesField(recField, r))
 
       doc

@@ -92,6 +92,7 @@ trait DbRepos {
   def db = inject[Database]
   def userSessionRepo = inject[UserSessionRepo]
   def userRepo = inject[UserRepo]
+  def basicUserRepo = inject[BasicUserRepo]
   def userConnRepo = inject[UserConnectionRepo]
   def uriRepo = inject[NormalizedURIRepo]
   def urlRepo = inject[URLRepo]
@@ -346,6 +347,7 @@ case class ShoeboxServiceModule() extends ScalaModule {
     db: Database,
     userConnectionRepo: UserConnectionRepo,
     userRepo: UserRepo,
+    basicUserRepo: BasicUserRepo,
     bookmarkRepo: BookmarkRepo,
     browsingHistoryRepo: BrowsingHistoryRepo,
     collectionRepo: CollectionRepo,
@@ -363,6 +365,7 @@ case class ShoeboxServiceModule() extends ScalaModule {
     db,
     userConnectionRepo,
     userRepo,
+    basicUserRepo,
     bookmarkRepo,
     browsingHistoryRepo,
     clickingHistoryRepo,

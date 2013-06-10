@@ -42,6 +42,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]]
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
+  def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
   def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]]
   def reportArticleSearchResult(res: ArticleSearchResult): Unit
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
@@ -243,6 +244,25 @@ class ShoeboxServiceClientImpl @Inject() (
       }
     }
   }
+
+  def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User],BasicUser]] = {
+    var cached = Map.empty[Id[User], BasicUser]
+    val needed = new ArrayBuffer[Id[User]]
+    userIds.foreach{ userId =>
+      cacheProvider.basicUserCache.getOrElseOpt(BasicUserUserIdKey(userId))(None) match {
+        case Some(bu) => cached += (userId -> bu)
+        case None => needed += userId
+      }
+    }
+
+    val query = needed.map(_.id).mkString(",")
+    call(routes.ShoeboxController.getBasicUsers(query)).map { res =>
+      val retrievedUsers = res.json.as[Map[String, BasicUser]]
+      cached ++ (retrievedUsers.map(u => Id[User](u._1.toLong) -> u._2))
+    }
+  }
+
+
 
   def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]] = consolidateConnectedUsersReq(UserConnectionKey(userId)) { key =>
     cacheProvider.userConnCache.getOrElseFuture(key) {

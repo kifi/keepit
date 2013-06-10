@@ -142,7 +142,7 @@ class ArticleIndexer @Inject() (
           }
 
           // store title and url in the index
-          val r = ArticleRecord(article.title, uri.url)
+          val r = ArticleRecord(article.id.id, article.title, uri.url)
           doc.add(buildBinaryDocValuesField("rec", r))
 
           doc

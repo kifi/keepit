@@ -6,7 +6,7 @@ import org.apache.lucene.store.OutputStreamDataOutput
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
-case class BookmarkRecord(title: String, url: String, createdAt: Long, uriId: Long, isPrivate: Boolean)
+case class BookmarkRecord(uriId: Long, title: String, url: String, createdAt: Long, isPrivate: Boolean)
 
 object BookmarkRecordSerializer {
   implicit def toByteArray(r: BookmarkRecord): Array[Byte] = {
@@ -15,10 +15,10 @@ object BookmarkRecordSerializer {
 
     // version
     out.writeByte(1)
+    out.writeLong(r.uriId)
     out.writeString(r.title)
     out.writeString(r.url)
     out.writeLong(r.createdAt)
-    out.writeLong(r.uriId)
     out.writeByte(if (r.isPrivate) 1 else 0)
 
     out.close()
@@ -36,6 +36,7 @@ object BookmarkRecordSerializer {
       throw new Exception(s"invalid data [version=${version}]")
     }
 
-    BookmarkRecord(in.readString(), in.readString(), in readLong(), in.readLong(), in.readByte() == 1)
+    BookmarkRecord(in readLong(), in.readString(), in.readString(), in.readLong(), in.readByte() == 1)
   }
 }
+

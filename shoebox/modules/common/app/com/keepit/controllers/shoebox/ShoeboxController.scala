@@ -252,6 +252,14 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(users))
   }
 
+  def getBasicUsers(ids: String) = Action { request =>
+    val userIds = ids.split(',').map(id => Id[User](id.toLong))
+    val users = db.readOnly { implicit s =>
+      userIds.map{ userId => userId.id.toString -> Json.toJson(basicUserRepo.load(userId)) }.toMap
+    }
+    Ok(Json.toJson(users))
+  }
+
   def getCollectionIdsByExternalIds(ids: String) = Action { request =>
     val extCollIds = ids.split(',').map(_.trim).filterNot(_.isEmpty).map(ExternalId[Collection](_))
     val collectionIds = db.readOnly { implicit s =>

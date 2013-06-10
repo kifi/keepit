@@ -21,7 +21,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
 
 
-class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends BaseGraphSearcher(searcher) with Logging {
+class URIGraphSearcher(searcher: Searcher, storeSearcher: Searcher, myUserId: Option[Id[User]], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends BaseGraphSearcher(searcher) with Logging {
 
   private[this] val friendIdsFutureOpt = myUserId.map{ shoeboxClient.getConnectedUsers(_) }
 
@@ -103,6 +103,13 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]], shoeboxCl
 
       (LineIndexReader(reader, u.docId, terms, u.uriIdArray.length), u.mapper)
     }
+  }
+
+  def getBookmarkRecord(uriId: Id[NormalizedURI]): Option[BookmarkRecord] = {
+    import com.keepit.search.graph.BookmarkRecordSerializer._
+
+    val bookmarkId = myUriEdgeSet.accessor.getBookmarkId(uriId.id)
+    storeSearcher.getDecodedDocValue[BookmarkRecord](BookmarkStoreFields.recField, bookmarkId)
   }
 }
 

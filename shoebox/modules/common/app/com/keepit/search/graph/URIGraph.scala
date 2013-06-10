@@ -41,7 +41,8 @@ class URIGraphImpl @Inject()(
     uriGraphIndexer.close()
   }
   def getURIGraphSearcher(userId: Option[Id[User]]): URIGraphSearcher = {
-    new URIGraphSearcher(uriGraphIndexer.getSearcher, userId, shoeboxClient, monitoredAwait)
+    val (indexSearcher, storeSearcher) = uriGraphIndexer.getSearchers
+    new URIGraphSearcher(indexSearcher, storeSearcher, userId, shoeboxClient, monitoredAwait)
   }
   def getCollectionSearcher(): CollectionSearcher = {
     new CollectionSearcher(collectionIndexer.getSearcher)

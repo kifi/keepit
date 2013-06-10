@@ -380,5 +380,36 @@ class URIGraphTest extends Specification with GraphTestHelper {
         searcher.search(site).keySet === Set(6L)
       }
     }
+
+    "retrieve bookmark records from bookmark store" in {
+       running(new DevApplication().withShoeboxServiceModule) {
+        val (users, uris) = setupDB
+        val store = setupArticleStore(uris)
+
+        db.readWrite { implicit s =>
+          uris.take(3).foreach{ uri =>
+            val uriId =  uri.id.get
+            val url1 = urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+            bookmarkRepo.save(BookmarkFactory(title = ("personaltitle bmt"+uriId), url = url1,  uriId = uriId, userId = users(0).id.get, source = BookmarkSource("test")))
+          }
+        }
+        val graph = mkURIGraph()
+        graph.update() === 1
+
+        setConnections(Map(users(0).id.get -> Set()))
+
+        val searcher = graph.getURIGraphSearcher(users(0).id)
+
+        uris.take(3).foreach{ uri =>
+          val uriId =  uri.id.get
+          val recOpt = searcher.getBookmarkRecord(uriId)
+          recOpt must beSome[BookmarkRecord]
+          recOpt.map{ rec =>
+            rec.title === ("personaltitle bmt"+uriId)
+            rec.url === uri.url
+          }
+        }
+      }
+    }
   }
 }

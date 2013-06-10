@@ -114,6 +114,20 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     None
   }
 
+  def getDecodedDocValue[T](field: String, id: Long)(implicit decode: (Array[Byte], Int, Int)=>T): Option[T] = {
+    findDocIdAndAtomicReaderContext(id).flatMap { case (docid, context) =>
+      val reader = context.reader
+      var docValues = reader.getBinaryDocValues(field)
+      if (docValues != null) {
+        var ref = new BytesRef()
+        docValues.get(docid, ref)
+        Some(decode(ref.bytes, ref.offset, ref.length))
+      } else {
+        None
+      }
+    }
+  }
+
   def explain(query: Query, id: Long): Explanation = {
     findDocIdAndAtomicReaderContext(id) match {
       case Some((docid, context)) =>

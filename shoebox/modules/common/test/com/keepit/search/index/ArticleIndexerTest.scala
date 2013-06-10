@@ -36,16 +36,13 @@ class ArticleIndexerTest extends Specification with DbRepos {
     var (uri1, uri2, uri3) = db.readWrite { implicit s =>
       val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith"))
       val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown"))
-      (uriRepo.save(
-        NormalizedURIFactory(title = "a1", url = "http://www.keepit.com/article1", state = SCRAPED)),
-          uriRepo.save(
-            NormalizedURIFactory(title = "a2", url = "http://www.keepit.org/article2", state = SCRAPED)),
-          uriRepo.save(
-            NormalizedURIFactory(title = "a3", url = "http://www.findit.com/article3", state = SCRAPED)))
+      (uriRepo.save(NormalizedURIFactory(title = "title1 titles", url = "http://www.keepit.com/article1", state = SCRAPED)),
+       uriRepo.save(NormalizedURIFactory(title = "title2 titles", url = "http://www.keepit.org/article2", state = SCRAPED)),
+       uriRepo.save(NormalizedURIFactory(title = "title3 titles", url = "http://www.findit.com/article3", state = SCRAPED)))
     }
-    store += (uri1.id.get -> mkArticle(uri1.id.get, "title1 titles", "content1 alldocs body soul"))
-    store += (uri2.id.get -> mkArticle(uri2.id.get, "title2 titles", "content2 alldocs bodies soul"))
-    store += (uri3.id.get -> mkArticle(uri3.id.get, "title3 titles", "content3 alldocs bodies souls"))
+    store += (uri1.id.get -> mkArticle(uri1.id.get, uri1.title.get, "content1 alldocs body soul"))
+    store += (uri2.id.get -> mkArticle(uri2.id.get, uri2.title.get, "content2 alldocs bodies soul"))
+    store += (uri3.id.get -> mkArticle(uri3.id.get, uri3.title.get, "content3 alldocs bodies souls"))
 
     // saving ids for the search test
     uriIdArray(0) = uri1.id.get.id
@@ -253,7 +250,7 @@ class ArticleIndexerTest extends Specification with DbRepos {
 
     "delete documents with inactive, active, unscrapable, oe scrape_wanted state" in running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule)(new IndexerScope {
       indexer.run()
-      indexer.numDocs == 3
+      indexer.numDocs === 3
 
       db.readWrite { implicit s =>
         uri1 = uriRepo.save(uriRepo.get(uri1.id.get).withState(ACTIVE))
@@ -295,6 +292,24 @@ class ArticleIndexerTest extends Specification with DbRepos {
       indexer.search("content1").size === 0
       indexer.search("content2").size === 1
       indexer.search("content3").size === 1
+    })
+
+    "retrieve article records from index" in running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule)(new IndexerScope {
+      import com.keepit.search.index.ArticleRecordSerializer._
+      indexer.run()
+      indexer.numDocs === 3
+
+      val searcher = indexer.getSearcher
+      Seq(uri1, uri2, uri3).map{ uri =>
+        val recOpt: Option[ArticleRecord] = searcher.getDecodedDocValue("rec", uri.id.get.id)
+        recOpt must beSome[ArticleRecord]
+        recOpt.map{ rec =>
+          rec.title === uri.title.get
+          rec.url === uri.url
+        }
+      }
+      val recOpt: Option[ArticleRecord] = searcher.getDecodedDocValue("rec", 999999L)
+      recOpt must beNone
     })
   }
 }

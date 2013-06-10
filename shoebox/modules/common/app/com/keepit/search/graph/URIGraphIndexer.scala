@@ -19,6 +19,7 @@ import com.keepit.search.index.DocUtil
 import com.keepit.search.index.FieldDecoder
 import com.keepit.search.index.{DefaultAnalyzer, Indexable, Indexer, IndexError}
 import com.keepit.search.index.Indexable.IteratorTokenStream
+import com.keepit.search.index.Searcher
 import com.keepit.search.line.LineField
 import com.keepit.search.line.LineFieldBuilder
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -58,6 +59,11 @@ class URIGraphIndexer(
   private[this] val commitBatchSize = 3000
   private[this] val fetchSize = commitBatchSize
 
+  private[this] val updateLock = new AnyRef
+  private[this] var searchers = (this.getSearcher, bookmarkStore.getSearcher)
+
+  def getSearchers: (Searcher, Searcher) = searchers
+
   private def commitCallback(commitBatch: Seq[(Indexable[User], Option[IndexError])]) = {
     var cnt = 0
     commitBatch.foreach{ case (indexable, indexError) =>
@@ -84,7 +90,7 @@ class URIGraphIndexer(
     }
   }
 
-  private def update(bookmarksChanged: => Seq[Bookmark]): Int = {
+  private def update(bookmarksChanged: => Seq[Bookmark]): Int = updateLock.synchronized {
     log.info("updating URIGraph")
     try {
       val bookmarks = bookmarksChanged
@@ -95,6 +101,8 @@ class URIGraphIndexer(
       indexDocuments(usersChanged.iterator.map(buildIndexable), commitBatchSize){ commitBatch =>
         cnt += commitCallback(commitBatch)
       }
+      // update searchers together to get a consistent view og indexes
+      searchers = (this.getSearcher, bookmarkStore.getSearcher)
       cnt
     } catch { case e: Throwable =>
       log.error("error in URIGraph update", e)
