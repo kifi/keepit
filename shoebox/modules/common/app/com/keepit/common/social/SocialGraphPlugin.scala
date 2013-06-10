@@ -1,24 +1,22 @@
 package com.keepit.common.social
 
+import scala.concurrent.Future
+import scala.concurrent.duration._
+
 import com.google.inject.Inject
-import com.keepit.common.db.slick.Database
-import com.keepit.common.logging.Logging
-import com.keepit.model._
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.actor.ActorFactory
+import com.keepit.common.akka.FortyTwoActor
+import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.logging.Logging
 import com.keepit.common.net.NonOKResponseException
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.model._
 
 import akka.actor._
-import scala.concurrent.Await
-import scala.concurrent.Future
 import akka.pattern.ask
 import akka.util.Timeout
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Plugin
-import scala.concurrent.duration._
-import com.keepit.common.akka.FortyTwoActor
-import scala.util.{Try, Success, Failure}
 
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
 private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)
@@ -60,11 +58,14 @@ private[social] class SocialGraphActor @Inject() (
           "social user info's credentials are not defined: %s".format(socialUserInfo))
         val rawInfo = graph.fetchSocialUserRawInfo(socialUserInfo)
 
-        socialUserImportEmail.importEmail(socialUserInfo.userId.get, rawInfo.jsons)
+        rawInfo.jsons flatMap graph.extractEmails map (socialUserImportEmail.importEmail(socialUserInfo.userId.get, _))
+
         socialUserRawInfoStore += (socialUserInfo.id.get -> rawInfo)
 
-        socialUserImportFriends.importFriends(rawInfo.jsons)
-        val connections = socialUserCreateConnections.createConnections(socialUserInfo, rawInfo.jsons)
+        val friends = rawInfo.jsons flatMap graph.extractFriends
+        socialUserImportFriends.importFriends(friends, SocialNetworks.FACEBOOK)
+        val connections = socialUserCreateConnections.createConnections(
+          socialUserInfo, friends.map(_._1.socialId), SocialNetworks.FACEBOOK)
 
         db.readWrite { implicit c =>
           socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
