@@ -1,9 +1,10 @@
 package com.keepit.common.social
 
-import com.keepit.common.net.HttpClient
-import com.keepit.common.logging.Logging
-import com.keepit.model.SocialUserInfo
 import com.google.inject.Inject
+import com.keepit.common.logging.Logging
+import com.keepit.common.net.HttpClient
+import com.keepit.model.{SocialUserInfoStates, SocialUserInfo}
+
 import play.api.libs.json._
 
 object FacebookSocialGraph {
@@ -48,4 +49,20 @@ class FacebookSocialGraph @Inject() (httpClient: HttpClient) extends Logging {
 
   private def url(id: SocialId, accessToken: String) = "https://graph.facebook.com/%s?access_token=%s&fields=%s,friends.fields(%s)".format(
       id.id, accessToken, FacebookSocialGraph.FULL_PROFILE, FacebookSocialGraph.FULL_PROFILE)
+
+  def extractEmails(parentJson: JsValue): Seq[String] = (parentJson \ "email").asOpt[String].toSeq
+
+  def extractFriends(parentJson: JsValue): Seq[(SocialUserInfo, JsValue)] = {
+    val friendsArr = ((parentJson \ "friends" \ "data").asOpt[JsArray]
+        orElse (parentJson \ "data").asOpt[JsArray]) getOrElse JsArray()
+    friendsArr.value map createSocialUserInfo
+  }
+
+  private def createSocialUserInfo(friend: JsValue): (SocialUserInfo, JsValue) =
+    (SocialUserInfo(
+      fullName = (friend \ "name").asOpt[String].getOrElse(""),
+      socialId = SocialId((friend \ "id").as[String]),
+      networkType = SocialNetworks.FACEBOOK,
+      state = SocialUserInfoStates.FETCHED_USING_FRIEND
+    ), friend)
 }
