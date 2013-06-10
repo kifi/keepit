@@ -79,15 +79,13 @@ class MainQueryParser(
           val offsets = getTermOffsets(stemmingAnalyzer, queryText.toString)
           val elapsed = System.currentTimeMillis - tic
           log.info("nlp phrase detector time elapsed: " + elapsed)
+          log.info("query: " + queryText.toString)
           log.info("term offsets: " + offsets.toSeq.toString)
           log.info("detected phrases: " + phrases.toSeq.toString)
         }
 
         val phrases = if (numStemmedTerms > 1 && (phraseBoost > 0.0f || phraseProximityBoost > 0.0f)) {
           phraseDetector.detectAll(getStemmedTermArray)
-
-
-
         } else {
           Set.empty[(Int, Int)]
         }
