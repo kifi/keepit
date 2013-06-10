@@ -13,7 +13,7 @@ window.onerror = function (message, url, lineNo) {
   }
 };
 
-var t0 = +new Date, tile, paneHistory, root = document.querySelector("body") || document.documentElement;
+var t0 = +new Date, tile, root = document.querySelector("body") || document.documentElement;
 
 !function() {
   api.log("[scout]", location.hostname);
@@ -156,7 +156,7 @@ var t0 = +new Date, tile, paneHistory, root = document.querySelector("body") || 
   }();
 
   function onResize() {
-    if (paneHistory) return;
+    if (document.documentElement.classList.contains("kifi-with-pane")) return;
     clearTimeout(onResize.t);  // throttling tile repositioning
     onResize.t = setTimeout(positionTile, 50);
   }
