@@ -1,6 +1,5 @@
 package com.keepit.common.social
 
-import scala.collection.JavaConversions._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -24,7 +23,7 @@ private case object FetchAll
 
 private[social] class SocialGraphActor @Inject() (
     healthcheckPlugin: HealthcheckPlugin,
-    graphs: java.util.Set[SocialGraph],
+    graphs: Set[SocialGraph],
     db: Database,
     socialRepo: SocialUserInfoRepo,
     socialUserRawInfoStore: SocialUserRawInfoStore,

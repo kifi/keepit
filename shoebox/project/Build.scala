@@ -61,7 +61,7 @@ object ApplicationBuild extends Build {
       "com.newrelic.agent.java" % "newrelic-agent" % "2.18.0",
       "com.google.inject" % "guice" % "3.0",
       "com.google.inject.extensions" % "guice-multibindings" % "3.0",
-      "com.tzavellas" % "sse-guice" % "0.7.1"
+      "net.codingwell" % "scala-guice_2.10" % "3.0.2"
     ) map (_.excludeAll(
       ExclusionRule(organization = "com.cedarsoft"),
       ExclusionRule(organization = "javax.jms"),

@@ -3,6 +3,8 @@ package com.keepit.common.store
 import scala.collection.mutable.HashMap
 import scala.concurrent.promise
 
+import net.codingwell.scalaguice.ScalaModule
+
 import com.amazonaws.services.s3.model.PutObjectResult
 import com.google.inject.{Singleton, Provides}
 import com.keepit.common.db.{ExternalId, Id}
@@ -11,7 +13,6 @@ import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.model.{User, NormalizedURI, SocialUserInfo}
 import com.keepit.search.Article
 import com.keepit.search.ArticleStore
-import com.tzavellas.sse.guice.ScalaModule
 
 case class FakeS3StoreModule() extends ScalaModule {
 

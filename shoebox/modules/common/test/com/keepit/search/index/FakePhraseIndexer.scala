@@ -1,12 +1,14 @@
 package com.keepit.search.index
 
-import com.keepit.search.phrasedetector.{PhraseIndexable, PhraseIndexer}
-import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.index.IndexWriterConfig
+import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.util.Version
-import com.keepit.model.Phrase
+
+import net.codingwell.scalaguice.ScalaModule
+
 import com.keepit.common.db.Id
-import com.tzavellas.sse.guice.ScalaModule
+import com.keepit.model.Phrase
+import com.keepit.search.phrasedetector.{PhraseIndexable, PhraseIndexer}
 
 class FakePhraseIndexer extends PhraseIndexer(new RAMDirectory, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)) {
   def reload() = {}

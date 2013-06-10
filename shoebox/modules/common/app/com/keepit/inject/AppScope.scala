@@ -1,16 +1,15 @@
 package com.keepit.inject
 
 import com.google.inject.Key
-import com.google.inject.OutOfScopeException
 import com.google.inject.Provider
 import com.google.inject.Scope
-import com.keepit.common.logging.Logging
 import com.keepit.common.db.ExternalId
+import com.keepit.common.logging.Logging
+import com.keepit.common.plugin.SchedulingPlugin
+
 import play.api.Application
 import play.api.Plugin
 import play.utils.Threads
-import com.keepit.common.plugin.SchedulingPlugin
-import com.tzavellas.sse.guice.ScalaModule
 
 class AppScope extends Scope with Logging {
 
