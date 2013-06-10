@@ -1,40 +1,39 @@
 package com.keepit.search
 
 import java.io.File
+
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.{Directory, MMapDirectory}
 import org.apache.lucene.util.Version
+
+import net.codingwell.scalaguice.ScalaModule
+
 import com.google.inject.{Provides, Singleton}
+import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.controller.ActionAuthenticator
+import com.keepit.common.controller.RemoteActionAuthenticator
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
+import com.keepit.common.mail.RemotePostOffice
+import com.keepit.common.mail.RemotePostOfficeImpl
+import com.keepit.common.net.HttpClient
 import com.keepit.inject._
-import com.keepit.scraper.{ScraperPluginImpl, ScraperPlugin}
 import com.keepit.search.graph.BookmarkStore
 import com.keepit.search.graph.CollectionIndexer
-import com.keepit.search.graph.URIGraphImpl
 import com.keepit.search.graph.{URIGraphPluginImpl, URIGraphPlugin, URIGraph, URIGraphIndexer}
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.{ArticleIndexerPluginImpl, ArticleIndexerPlugin, ArticleIndexer}
 import com.keepit.search.phrasedetector.{PhraseIndexerImpl, PhraseIndexer}
 import com.keepit.search.query.parser.SpellCorrector
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.tzavellas.sse.guice.ScalaModule
-import play.api.Play.current
-import com.keepit.common.mail.PostOffice
-import com.keepit.common.mail.RemotePostOffice
-import com.keepit.common.mail.RemotePostOfficeImpl
-import com.keepit.common.healthcheck.RemoteHealthcheckMailSender
-import com.keepit.common.healthcheck.HealthcheckMailSender
-import com.keepit.common.net.HttpClient
 import com.keepit.shoebox.ShoeboxCacheProvider
+import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.shoebox.ShoeboxServiceClientImpl
-import com.keepit.common.controller.ActionAuthenticator
-import com.keepit.common.controller.RemoteActionAuthenticator
-import com.keepit.common.akka.MonitoredAwait
-import com.keepit.social.SecureSocialAuthenticatorPlugin
 import com.keepit.social.RemoteSecureSocialAuthenticatorPlugin
-import com.keepit.social.SecureSocialUserPlugin
 import com.keepit.social.RemoteSecureSocialUserPlugin
+import com.keepit.social.SecureSocialAuthenticatorPlugin
+import com.keepit.social.SecureSocialUserPlugin
+
+import play.api.Play.current
 
 class SearchExclusiveModule() extends ScalaModule with Logging {
   def configure() {

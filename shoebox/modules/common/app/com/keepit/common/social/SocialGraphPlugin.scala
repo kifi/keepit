@@ -1,6 +1,5 @@
 package com.keepit.common.social
 
-import scala.collection.JavaConversions._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -24,7 +23,7 @@ private case object FetchAll
 
 private[social] class SocialGraphActor @Inject() (
     healthcheckPlugin: HealthcheckPlugin,
-    graphs: java.util.Set[SocialGraph],
+    graphs: Set[SocialGraph],
     db: Database,
     socialRepo: SocialUserInfoRepo,
     socialUserRawInfoStore: SocialUserRawInfoStore,
@@ -32,6 +31,9 @@ private[social] class SocialGraphActor @Inject() (
     socialUserImportEmail: SocialUserImportEmail,
     socialUserCreateConnections: UserConnectionCreator)
   extends FortyTwoActor(healthcheckPlugin) with Logging {
+
+  private val networkTypeToGraph: Map[SocialNetworkType, SocialGraph] =
+    graphs.map(graph => graph.networkType -> graph).toMap
 
   def receive() = {
     case FetchAll =>
@@ -52,34 +54,34 @@ private[social] class SocialGraphActor @Inject() (
     case m => throw new Exception("unknown message %s".format(m))
   }
 
-  def fetchUserInfo(socialUserInfo: SocialUserInfo): Seq[SocialConnection] =
-    graphs.toSeq.flatMap { graph =>
-      try {
-        require(socialUserInfo.credentials.isDefined,
-          s"SocialUserInfo's credentials are not defined: $socialUserInfo")
-        graph.fetchSocialUserRawInfo(socialUserInfo).toSeq flatMap { rawInfo =>
-          rawInfo.jsons flatMap graph.extractEmails map (socialUserImportEmail.importEmail(socialUserInfo.userId.get, _))
+  def fetchUserInfo(socialUserInfo: SocialUserInfo): Seq[SocialConnection] = {
+    try {
+      require(socialUserInfo.credentials.isDefined,
+        s"SocialUserInfo's credentials are not defined: $socialUserInfo")
+      val graph = networkTypeToGraph(socialUserInfo.networkType)
+      graph.fetchSocialUserRawInfo(socialUserInfo).toSeq flatMap { rawInfo =>
+        rawInfo.jsons flatMap graph.extractEmails map (socialUserImportEmail.importEmail(socialUserInfo.userId.get, _))
 
-          socialUserRawInfoStore += (socialUserInfo.id.get -> rawInfo)
+        socialUserRawInfoStore += (socialUserInfo.id.get -> rawInfo)
 
-          val friends = rawInfo.jsons flatMap graph.extractFriends
-          socialUserImportFriends.importFriends(friends, graph.networkType)
-          val connections = socialUserCreateConnections.createConnections(
-            socialUserInfo, friends.map(_._1.socialId), graph.networkType)
+        val friends = rawInfo.jsons flatMap graph.extractFriends
+        socialUserImportFriends.importFriends(friends, graph.networkType)
+        val connections = socialUserCreateConnections.createConnections(
+          socialUserInfo, friends.map(_._1.socialId), graph.networkType)
 
-          db.readWrite { implicit c =>
-            socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
-          }
-          connections
+        db.readWrite { implicit c =>
+          socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
         }
-      } catch {
-        case ex: Exception =>
-          db.readWrite { implicit c =>
-            socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())
-          }
-          throw new Exception(s"Problem updating SocialUserInfo: $socialUserInfo", ex)
+        connections
       }
+    } catch {
+      case ex: Exception =>
+        db.readWrite { implicit c =>
+          socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())
+        }
+        throw new Exception(s"Problem updating SocialUserInfo: $socialUserInfo", ex)
     }
+  }
 }
 
 trait SocialGraphPlugin extends Plugin {

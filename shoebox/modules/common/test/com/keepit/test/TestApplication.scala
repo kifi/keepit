@@ -1,23 +1,42 @@
 package com.keepit.test
 
+import scala.collection.mutable
+import scala.concurrent._
+import scala.slick.session.{Database => SlickDatabase}
+
+import java.io.File
+
+import org.apache.zookeeper.CreateMode
+import org.joda.time.{ReadablePeriod, DateTime}
+
+import net.codingwell.scalaguice.{ScalaModule, ScalaMultibinder}
+
+import com.google.inject.Module
+import com.google.inject.Provider
+import com.google.inject.Provides
+import com.google.inject.Singleton
+import com.google.inject.util.Modules
+import com.keepit.FortyTwoGlobal
+import com.keepit.classify.DomainTagImportSettings
 import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.analytics._
 import com.keepit.common.cache.{InMemoryCachePlugin, HashMapMemoryCache, FortyTwoCachePlugin}
 import com.keepit.common.controller.FortyTwoCookies._
+import com.keepit.common.controller.{ActionAuthenticator, ShoeboxActionAuthenticator}
 import com.keepit.common.db._
-import com.keepit.common.store.FakeS3StoreModule
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
-import com.keepit.common.plugin._
 import com.keepit.common.mail._
 import com.keepit.common.net.{FakeHttpClientModule,HttpClient}
+import com.keepit.common.plugin._
 import com.keepit.common.service._
 import com.keepit.common.social._
+import com.keepit.common.store.FakeS3StoreModule
+import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
 import com.keepit.common.zookeeper._
-import com.keepit.social._
 import com.keepit.dev._
 import com.keepit.inject._
 import com.keepit.model._
@@ -25,23 +44,8 @@ import com.keepit.scraper._
 import com.keepit.search._
 import com.keepit.search.index.FakePhraseIndexerModule
 import com.keepit.shoebox._
-import com.google.inject.Provider
-import com.keepit.shoebox.ClickHistoryTracker
-import com.keepit.common.mail.FakeMailModule
-import com.keepit.shoebox.BrowsingHistoryTracker
-import com.keepit.classify.DomainTagImportSettings
-import com.tzavellas.sse.guice.ScalaModule
-import org.joda.time.{ReadablePeriod, DateTime}
-import org.apache.zookeeper.CreateMode
-import scala.collection.mutable.{Stack => MutableStack}
-import scala.concurrent._
-import scala.slick.session.{Database => SlickDatabase}
-import scala.collection.mutable
-import com.google.inject.Module
-import com.google.inject.Provides
-import com.google.inject.Singleton
-import com.google.inject.multibindings.Multibinder
-import com.google.inject.util.Modules
+import com.keepit.social._
+
 import akka.actor.ActorSystem
 import akka.actor.Cancellable
 import akka.actor.Scheduler
@@ -49,12 +53,6 @@ import play.api.Mode.{Mode, Test}
 import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.Files
-import java.io.File
-import play.api.db.DB
-import com.keepit.common.controller.{ActionAuthenticator, ShoeboxActionAuthenticator}
-import com.keepit.FortyTwoGlobal
-import com.keepit.common.store.S3ImageStore
 
 class TestApplication(val _global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
@@ -142,7 +140,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     install(new FakeCacheModule)
     bind[play.api.Application].toProvider(new Provider[play.api.Application] {
       def get(): play.api.Application = current
-    }).in[AppScoped]
+    }).in(classOf[AppScoped])
   }
 
   private def dbInfoFromApplication(): DbInfo = TestDbInfo.dbInfo
@@ -272,7 +270,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
  * their values returned. You can also completely override the time function by calling setTimeFunction().
  */
 class FakeClock extends Clock with Logging {
-  private val stack = MutableStack[Long]()
+  private val stack = mutable.Stack[Long]()
   private var timeFunction: () => Long = () => {
     if (stack.isEmpty) {
       val nowTime = new DateTime(System.currentTimeMillis())
@@ -408,7 +406,7 @@ case class FakePersistEventModule() extends ScalaModule {
   override def configure(): Unit = {
     bind[EventPersister].to[FakeEventPersisterImpl]
 
-    val listenerBinder = Multibinder.newSetBinder(binder(), classOf[EventListener])
+    val listenerBinder = ScalaMultibinder.newSetBinder[EventListener](binder)
 
   }
 }

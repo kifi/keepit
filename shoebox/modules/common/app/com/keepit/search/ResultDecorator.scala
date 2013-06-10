@@ -69,3 +69,4 @@ class ResultDecoratorImpl2(searcher: MainSearcher, shoeboxClient: ShoeboxService
     }
   }
 }
+

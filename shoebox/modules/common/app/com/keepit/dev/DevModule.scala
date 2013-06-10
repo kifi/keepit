@@ -1,49 +1,46 @@
 package com.keepit.dev
 
 import java.io.File
-import com.google.common.io.Files
-import com.google.inject.util.Modules
-import com.google.inject.{Provides, Singleton, Provider, Inject}
-import com.keepit.classify.DomainTagImportSettings
-import com.keepit.common.plugin._
-import com.keepit.common.zookeeper._
-import com.keepit.common.healthcheck.HealthcheckPlugin
-import com.keepit.common.actor.{ActorFactory, ActorPlugin}
-import com.keepit.common.analytics._
-import com.keepit.common.amazon.{AmazonInstanceInfo, AmazonInstanceId}
-import com.keepit.common.cache._
-import com.keepit.common.db.slick.Database
-import com.keepit.common.logging.Logging
-import com.keepit.common.mail._
-import com.keepit.inject._
-import com.keepit.model.{BookmarkRepo, NormalizedURIRepo}
-import com.keepit.search.{ArticleStore, ResultClickTracker}
-import com.keepit.search.graph.BookmarkStore
-import com.keepit.search.graph.CollectionIndexer
-import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphIndexer}
-import com.keepit.search.index.{ArticleIndexer, DefaultAnalyzer}
-import com.keepit.search.phrasedetector.{PhraseIndexerImpl, PhraseIndexer}
-import com.keepit.search.query.parser.{FakeSpellCorrector, SpellCorrector}
-import com.mongodb.casbah.MongoConnection
-import com.tzavellas.sse.guice.ScalaModule
-import play.api.Play.current
+
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.{Directory, MMapDirectory, RAMDirectory}
 import org.apache.lucene.util.Version
-import com.keepit.model.CollectionRepo
-import com.keepit.model.KeepToCollectionRepo
-import com.keepit.model.UserRepo
-import com.keepit.common.time.Clock
+
+import net.codingwell.scalaguice.ScalaModule
+
+import com.google.common.io.Files
 import com.google.inject.Provider
+import com.google.inject.{Provides, Singleton, Inject}
+import com.keepit.classify.DomainTagImportSettings
+import com.keepit.common.actor.{ActorFactory, ActorPlugin}
+import com.keepit.common.amazon.{AmazonInstanceInfo, AmazonInstanceId}
+import com.keepit.common.analytics._
+import com.keepit.common.cache._
+import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.logging.Logging
+import com.keepit.common.mail._
+import com.keepit.common.plugin._
+import com.keepit.common.service.{FortyTwoServices, IpAddress}
+import com.keepit.common.time.Clock
+import com.keepit.common.zookeeper._
+import com.keepit.inject._
+import com.keepit.model.NormalizedURIRepo
+import com.keepit.model.UserRepo
+import com.keepit.search.SearchServiceClient
+import com.keepit.search.graph.BookmarkStore
+import com.keepit.search.graph.CollectionIndexer
+import com.keepit.search.graph.{URIGraph, URIGraphIndexer}
+import com.keepit.search.index.{ArticleIndexer, DefaultAnalyzer}
+import com.keepit.search.phrasedetector.{PhraseIndexerImpl, PhraseIndexer}
+import com.keepit.search.query.parser.{FakeSpellCorrector, SpellCorrector}
+import com.keepit.search.{ArticleStore, ResultClickTracker}
+import com.keepit.shoebox.ShoeboxServiceClient
+import com.mongodb.casbah.MongoConnection
+
 import akka.actor.ActorSystem
 import play.api.Play
-import com.keepit.search.SearchServiceClient
-import com.keepit.common.service.{FortyTwoServices, IpAddress}
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.db._
-import scala.slick.session.{Database => SlickDatabase}
-import play.api.db.DB
-
+import play.api.Play.current
 
 class FakeEventPersisterImpl @Inject() (
     system: ActorSystem, eventHelper: EventHelper, val schedulingProperties: SchedulingProperties) extends EventPersister with Logging {

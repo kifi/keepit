@@ -2,26 +2,21 @@ package com.keepit.model
 
 import org.specs2.mutable._
 
+import com.google.inject.Injector
+import com.keepit.akka.{TestAkkaSystem, TestKitScope}
 import com.keepit.common.db.{TestSlickSessionProvider, Id}
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworks
-import com.keepit.inject._
+import com.keepit.common.time._
 import com.keepit.serializer.SocialUserInfoSerializer
 import com.keepit.test._
 
 import play.api.libs.json.JsObject
 import securesocial.core._
-import com.keepit.common.time._
-import scala.Some
-import securesocial.core.UserId
-import securesocial.core.OAuth2Info
-import play.api.libs.json.JsObject
-import com.keepit.common.social.SocialId
-import com.keepit.akka.{TestAkkaSystem, TestKitScope}
 
 class SocialUserInfoTest extends Specification with TestDBRunner with TestAkkaSystem {
 
-  def setup()(implicit injector: RichInjector): User = {
+  def setup()(implicit injector: Injector): User = {
     db.readWrite { implicit s =>
       val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
                                   tokenType = None, expiresIn = None, refreshToken = None)
