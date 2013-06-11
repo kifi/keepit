@@ -49,7 +49,7 @@
 				<a href="javascript: populateMyKeeps(); addNewKeeps()"> Your Keeps <span
 					class="right light"></span></a>
 			</h3>
-			<!-- 
+			<!--
 			<h3 class="read-later droppable">
 				<a href="javascript: ;"> Read It Later <span
 					class="right light">0</span></a>
@@ -71,7 +71,7 @@
 						</div>
 						<a class="" href="javascript: ;">
 							<span class="right light">{{keeps}}</span>
-							<span class="name long-text" title ="{{name}}">{{name}}</span> 
+							<span class="name long-text" title ="{{name}}">{{name}}</span>
 						</a>
 					</h3>
 				</div>
@@ -98,7 +98,7 @@
 							<img class="small-avatar" data-template-for="users"
 								src="img/clock.png"
 								data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
-								title="{{firstName}} {{lastName}}" /> 
+								title="{{firstName}} {{lastName}}" />
 							<span class="fs9 gray">
 								{% if isMyBookmark %}You{% endif %}{% if users.length > 0 && isMyBookmark %} + {% endif %}{% if users.length > 0 %}{{users.length}} friend{% endif %}{% if users.length > 1 %}s{% endif %} kept this <span class="private {% if isPrivate %}on{% endif %}"><img src="img/private.png" /> Private</span>
 							</span>
@@ -120,7 +120,7 @@
 							<img class="small-avatar" data-template-for="keepers"
 								src="img/clock.png"
 								data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
-								title="{{firstName}} {{lastName}}" /> 
+								title="{{firstName}} {{lastName}}" />
 							<span class="fs9 gray"> You {% if keepers.length > 0 %} + {{keepers.length}} friend{% endif %}{% if keepers.length > 1 %}s{% endif %} kept this <span class="private {% if isPrivate %}on{% endif %}"><img src="img/private.png" /> Private<span class="private">
 							</span>
 							<div class="clearfix"></div>
