@@ -1,6 +1,5 @@
 package com.keepit.search
 
-import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db.Id
 import com.keepit.common.social.BasicUser
 import com.keepit.controllers.ext.PersonalSearchHit
@@ -17,7 +16,7 @@ trait ResultDecorator {
   def decorate(resultSet: ArticleSearchResult): Future[Seq[PersonalSearchResult]]
 }
 
-class ResultDecoratorImpl(val userId: Id[User], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends ResultDecorator {
+class ResultDecoratorImpl(val userId: Id[User], shoeboxClient: ShoeboxServiceClient) extends ResultDecorator {
   override def decorate(resultSet: ArticleSearchResult): Future[Seq[PersonalSearchResult]] = {
 
     shoeboxClient.getPersonalSearchInfo(userId, resultSet).map { case (allUsers, personalSearchHits) =>
@@ -36,7 +35,7 @@ class ResultDecoratorImpl(val userId: Id[User], shoeboxClient: ShoeboxServiceCli
   }
 }
 
-class ResultDecoratorImpl2(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends ResultDecorator {
+class ResultDecoratorImpl2(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient) extends ResultDecorator {
 
   override def decorate(resultSet: ArticleSearchResult): Future[Seq[PersonalSearchResult]] = {
     val hits = resultSet.hits
@@ -45,11 +44,11 @@ class ResultDecoratorImpl2(searcher: MainSearcher, shoeboxClient: ShoeboxService
 
     val personalSearchHits = hits.map{ h =>
       if (h.isMyBookmark) {
-        val r = searcher.getBookmarkRecord(h.uriId).get
-        PersonalSearchHit(Id[NormalizedURI](r.uriId), ExternalId[NormalizedURI](), Some(r.title), r.url, r.isPrivate)
+        val r = searcher.getBookmarkRecord(h.uriId).getOrElse(throw new Exception(s"missing bookmark record: uri id = ${h.uriId}"))
+        PersonalSearchHit(r.uriId, r.externalUriId, Some(r.title), r.url, r.isPrivate)
       } else {
-        val r = searcher.getArticleRecord(h.uriId).get
-        PersonalSearchHit(Id[NormalizedURI](r.id), ExternalId[NormalizedURI](), Some(r.title), r.url, false)
+        val r = searcher.getArticleRecord(h.uriId).getOrElse(throw new Exception(s"missing article record: uri id = ${h.uriId}"))
+        PersonalSearchHit(r.id, r.externalId, Some(r.title), r.url, false)
       }
     }
 

@@ -28,6 +28,7 @@ import scala.collection.mutable.ArrayBuffer
 import org.apache.lucene.util.BytesRef
 import com.keepit.search.query.QueryUtil
 import org.joda.time.DateTime
+import com.keepit.shoebox.ShoeboxServiceClient
 
 
 object BookmarkStoreFields {
@@ -43,7 +44,8 @@ object BookmarkStore {
 
 class BookmarkStore @Inject() (
     indexDirectory: Directory,
-    indexWriterConfig: IndexWriterConfig)
+    indexWriterConfig: IndexWriterConfig,
+    shoeboxClient: ShoeboxServiceClient)
   extends Indexer[Bookmark](indexDirectory, indexWriterConfig) {
 
   import BookmarkStoreFields._
@@ -94,7 +96,7 @@ class BookmarkStore @Inject() (
             title = Some(rec.title),
             url = rec.url,
             createdAt = new DateTime(rec.createdAt),
-            uriId = Id[NormalizedURI](rec.uriId),
+            uriId = rec.uriId,
             isPrivate = rec.isPrivate,
             userId = userId,
             source = BookmarkStore.bookmarkSource
@@ -120,17 +122,21 @@ class BookmarkStore @Inject() (
   }
 
   def buildIndexable(bookmark: Bookmark): BookmarkIndexable = {
+    val uri = Await.result(shoeboxClient.getNormalizedURI(bookmark.uriId), 180 seconds)
+
     new BookmarkIndexable(id = bookmark.id.get,
                           sequenceNumber = bookmark.seq,
                           isDeleted = BookmarkStore.shouldDelete(bookmark),
-                          bookmark = bookmark)
+                          bookmark = bookmark,
+                          externalUriId = uri.externalId)
   }
 
   class BookmarkIndexable(
     override val id: Id[Bookmark],
     override val sequenceNumber: SequenceNumber,
     override val isDeleted: Boolean,
-    val bookmark: Bookmark
+    val bookmark: Bookmark,
+    val externalUriId: ExternalId[NormalizedURI]
   ) extends Indexable[Bookmark] {
 
     implicit def toReader(text: String) = new StringReader(text)
@@ -142,7 +148,14 @@ class BookmarkStore @Inject() (
       doc.add(buildKeywordField(userField, user.id.toString))
 
       // save bookmark information (title, url, createdAt) in the store
-      val r = BookmarkRecord(bookmark.uriId.id, bookmark.title.getOrElse(""), bookmark.url, bookmark.createdAt.getMillis, bookmark.isPrivate)
+      val r = BookmarkRecord(
+        bookmark.title.getOrElse(""),
+        bookmark.url,
+        bookmark.createdAt.getMillis,
+        bookmark.isPrivate,
+        bookmark.uriId,
+        externalUriId)
+
       doc.add(buildBinaryDocValuesField(recField, r))
 
       doc

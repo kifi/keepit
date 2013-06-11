@@ -212,7 +212,7 @@ class SearchDevModule extends ScalaModule with Logging {
     val dir = getDirectory(current.configuration.getString("index.bookmarkStore.directory"))
     log.info(s"storing BookmarkStore in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new BookmarkStore(dir, config)
+    new BookmarkStore(dir, config, shoeboxClient)
   }
 
   @Singleton

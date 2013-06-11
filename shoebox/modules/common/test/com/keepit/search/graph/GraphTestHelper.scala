@@ -96,7 +96,7 @@ trait GraphTestHelper extends DbRepos {
   }
 
   def mkURIGraphIndexer(uriGraphDir: RAMDirectory = new RAMDirectory): URIGraphIndexer = {
-    val bookmarkStore = new BookmarkStore(new RAMDirectory, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing))
+    val bookmarkStore = new BookmarkStore(new RAMDirectory, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[ShoeboxServiceClient])
     new URIGraphIndexer(uriGraphDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), bookmarkStore, inject[ShoeboxServiceClient])
   }
 

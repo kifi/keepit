@@ -79,6 +79,12 @@ class URIGraphIndexer(
 
   def update(): Int = {
     resetSequenceNumberIfReindex()
+
+    if (sequenceNumber.value > bookmarkStore.sequenceNumber.value) {
+      log.warn(s"bookmarkStore is behind. restarting from the bookmarkStore's sequence number: ${sequenceNumber} -> ${bookmarkStore.sequenceNumber}")
+      sequenceNumber = bookmarkStore.sequenceNumber
+    }
+
     update {
       Await.result(shoeboxClient.getBookmarksChanged(sequenceNumber, fetchSize), 180 seconds)
     }
@@ -108,6 +114,11 @@ class URIGraphIndexer(
       log.error("error in URIGraph update", e)
       throw e
     }
+  }
+
+  override def reindex() {
+    super.reindex()
+    bookmarkStore.reindex()
   }
 
   def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber)): URIListIndexable = {
