@@ -1,6 +1,6 @@
 package com.keepit.common.cache
 
-import com.tzavellas.sse.guice.ScalaModule
+import net.codingwell.scalaguice.ScalaModule
 
 class CacheModule extends ScalaModule {
   def configure() {

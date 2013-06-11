@@ -27,8 +27,14 @@ class HomeController @Inject() (db: Database,
   emailAddressRepo: EmailAddressRepo)
   extends WebsiteController(actionAuthenticator) {
 
+  private def userCanSeeKifiSite[A](implicit request: AuthenticatedRequest[A]): Boolean =
+    (request.experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.WEBSITE)).nonEmpty || Play.isDev
+
+  private def userCanInvite[A](implicit request: AuthenticatedRequest[A]): Boolean =
+    (request.experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.CAN_INVITE)).nonEmpty
+
   def kifiSite(path: String) = AuthenticatedHtmlAction { implicit request =>
-    if (request.experiments.contains(ExperimentTypes.ADMIN) || Play.isDev) {
+    if (userCanSeeKifiSite) {
       Play.resourceAsStream(s"public/site/$path") map { stream =>
         SimpleResult(header = ResponseHeader(OK), body = Enumerator.fromStream(stream))
       } getOrElse NotFound
@@ -42,8 +48,9 @@ class HomeController @Inject() (db: Database,
 
   def home = HtmlAction(true)(authenticatedAction = { implicit request =>
 
-    if(request.user.state == UserStates.PENDING) { pendingHome() }
-    else {
+    if (request.user.state == UserStates.PENDING) {
+      pendingHome()
+    } else {
       val friendsOnKifi = db.readOnly { implicit session =>
         userConnectionRepo.getConnectedUsers(request.user.id.get).map { u =>
           val user = userRepo.get(u)
@@ -51,9 +58,6 @@ class HomeController @Inject() (db: Database,
           else None
         }.flatten
       }
-
-      val userCanInvite = (request.experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.CAN_INVITE)).nonEmpty
-      val userCanSeeKifiSite = (request.experiments & Set(ExperimentTypes.ADMIN)).nonEmpty || Play.isDev
 
       Ok(views.html.website.userHome(request.user, friendsOnKifi, userCanInvite, userCanSeeKifiSite))
     }
@@ -121,7 +125,7 @@ class HomeController @Inject() (db: Database,
                       htmlBody = views.html.email.invitationFriendJoined(request.user).body,
                       category = PostOffice.Categories.INVITATION))
                   }
-                case None => 
+                case None =>
               }
             }
           case None =>

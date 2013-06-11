@@ -62,7 +62,7 @@ package object time {
   def currentDateTime(implicit zone: DateTimeZone) = new DateTime(zone)
 
   /**
-   * Using a clock is similar to have inject a Provider[DateTime] and Provider[LocalDate] with the diferance that it has a bit nicer syntax and a bit easier to test.
+   * Using a clock is similar to have inject a Provider[DateTime] and Provider[LocalDate] with the diferance that it has abit nicer syntax and a bit easier to test.
    * The reason we should avoid injecting the time object directly is that many times a time object injected
    * it is used as the "now" or "today" time which wasn't accurate since the time the DateTime or LocalDate object
    * where injected wasn't neccecarily the time that they where intended to use.

@@ -13,7 +13,7 @@ import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.realtime.UserChannel
 
-import play.api.libs.json.{Json, JsArray, JsValue}
+import play.api.libs.json.Json
 
 object UserConnectionCreator {
   private val UpdatedUserConnectionsKey = "updated_user_connections"
@@ -39,9 +39,10 @@ class UserConnectionCreator @Inject() (
     basicUserRepo: BasicUserRepo)
   extends ConnectionUpdater with Logging {
 
-  def createConnections(socialUserInfo: SocialUserInfo, parentJson: Seq[JsValue]): Seq[SocialConnection] = {
-    disableConnectionsNotInJson(socialUserInfo, parentJson)
-    val socialConnections = createConnectionsFromJson(socialUserInfo, parentJson)
+  def createConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
+      network: SocialNetworkType): Seq[SocialConnection] = {
+    disableOldConnections(socialUserInfo, socialIds, network)
+    val socialConnections = createNewConnections(socialUserInfo, socialIds, network)
     socialUserInfo.userId.map(updateUserConnections)
     socialConnections
   }
@@ -74,20 +75,22 @@ class UserConnectionCreator @Inject() (
     }
   }
 
-  private def extractFriendsWithConnections(socialUserInfo: SocialUserInfo, parentJson: Seq[JsValue]): Seq[(SocialUserInfo, Option[SocialConnection])] = {
+  private def extractFriendsWithConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
+      network: SocialNetworkType): Seq[(SocialUserInfo, Option[SocialConnection])] = {
     implicit val timeout = BabysitterTimeout(30 seconds, 2 minutes)
     db.readOnly { implicit s =>
-      parentJson flatMap extractFriends map {
-        socialRepo.get(_, SocialNetworks.FACEBOOK)
+      socialIds map {
+        socialRepo.get(_, network)
       } map { sui =>
         (sui, socialConnectionRepo.getConnectionOpt(socialUserInfo.id.get, sui.id.get))
       }
     }
   }
 
-  private def createConnectionsFromJson(socialUserInfo: SocialUserInfo, parentJson: Seq[JsValue]): Seq[SocialConnection] = {
+  private def createNewConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
+      network: SocialNetworkType): Seq[SocialConnection] = {
     log.info(s"looking for new (or reactive) connections for user ${socialUserInfo.fullName}")
-    extractFriendsWithConnections(socialUserInfo, parentJson) map {
+    extractFriendsWithConnections(socialUserInfo, socialIds, network) map {
       case (friend, Some(c)) =>
         c.state match {
           case SocialConnectionStates.ACTIVE => c
@@ -105,17 +108,17 @@ class UserConnectionCreator @Inject() (
     }
   }
 
-  def disableConnectionsNotInJson(socialUserInfo: SocialUserInfo, parentJson: Seq[JsValue]): Seq[SocialConnection] = {
+  def disableOldConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
+      network: SocialNetworkType): Seq[SocialConnection] = {
     log.info("looking for connections to disable for user %s".format(socialUserInfo.fullName))
     db.readWrite { implicit s =>
-      val socialUserInfoForAllFriendsIds = parentJson flatMap extractFriends
       val existingSocialUserInfoIds = socialConnectionRepo.getUserConnections(socialUserInfo.userId.get).toSeq map {sui => sui.socialId}
-      log.debug("socialUserInfoForAllFriendsIds = %s".format(socialUserInfoForAllFriendsIds))
+      log.debug("socialUserInfoForAllFriendsIds = %s".format(socialIds))
       log.debug("existingSocialUserInfoIds = %s".format(existingSocialUserInfoIds))
-      log.info("size of diff =%s".format((existingSocialUserInfoIds diff socialUserInfoForAllFriendsIds).length))
-      existingSocialUserInfoIds diff socialUserInfoForAllFriendsIds  map {
+      log.info("size of diff =%s".format((existingSocialUserInfoIds diff socialIds).length))
+      existingSocialUserInfoIds diff socialIds map {
         socialId => {
-          val friendSocialUserInfoId = socialRepo.get(socialId, SocialNetworks.FACEBOOK).id.get
+          val friendSocialUserInfoId = socialRepo.get(socialId, network).id.get
           log.info("about to disbale connection between %s and for socialId = %s".format(socialUserInfo.id.get,friendSocialUserInfoId ));
           socialConnectionRepo.getConnectionOpt(socialUserInfo.id.get, friendSocialUserInfoId) match {
             case Some(c) => {
@@ -132,14 +135,6 @@ class UserConnectionCreator @Inject() (
           }
         }
       }
-    }
-  }
-
-  private def extractFriends(parentJson: JsValue): Seq[SocialId] = {
-    val friendsArr = ((parentJson \ "friends" \ "data").asOpt[JsArray]
-        orElse (parentJson \ "data").asOpt[JsArray]) getOrElse JsArray()
-    friendsArr.value map { friendJson =>
-      SocialId((friendJson \ "id").as[String])
     }
   }
 

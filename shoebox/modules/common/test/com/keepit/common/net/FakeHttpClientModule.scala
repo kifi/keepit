@@ -1,6 +1,6 @@
 package com.keepit.common.net
 
-import com.tzavellas.sse.guice.ScalaModule
+import net.codingwell.scalaguice.ScalaModule
 
 case class FakeHttpClientModule() extends ScalaModule {
   def configure(): Unit = {

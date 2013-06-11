@@ -39,7 +39,7 @@ var generalPane, noticesPane, commentsPane, threadsPane, threadPane;  // stubs
 generalPane = noticesPane = commentsPane = threadsPane = threadPane = {update: $.noop, updateAll: $.noop};
 
 slider2 = function() {
-  var $slider, $pane, lastShownAt;
+  var $slider, $pane, paneHistory, lastShownAt;
 
   document.addEventListener("keydown", onKeyDown, true);
   function onKeyDown(e) {
@@ -451,6 +451,7 @@ slider2 = function() {
         } else {
           paneHistory.unshift(locator);
         }
+        $pane[0].dataset.locator = locator;
         populatePane[pane]($new, locator);
       });
     } else {
@@ -474,6 +475,7 @@ slider2 = function() {
         function(html) {
           $("html").addClass("kifi-pane-parent");
           $pane = $(html);
+          $pane[0].dataset.locator = locator;
           if (bringSlider) {
             $pane.append($slider).appendTo(root);
           } else {

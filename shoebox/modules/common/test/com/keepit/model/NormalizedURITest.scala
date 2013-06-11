@@ -1,21 +1,15 @@
 package com.keepit.model
 
-import java.sql.Connection
 import org.specs2.mutable._
-import play.api.Play.current
-import play.api.libs.json.Json
-import play.api.test._
-import play.api.test.Helpers._
-import com.keepit.controllers._
+
+import com.google.inject.Injector
 import com.keepit.common.db._
-import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.test._
-import com.keepit.inject.RichInjector
 
 class NormalizedURITest extends Specification with TestDBRunner {
 
-  def setup()(implicit injector: RichInjector) = {
+  def setup()(implicit injector: Injector) = {
     db.readWrite {implicit s =>
       uriRepo.count === 0 //making sure the db is clean, we had some strange failures
       userRepo.count === 0 //making sure the db is clean
@@ -149,7 +143,8 @@ class NormalizedURITest extends Specification with TestDBRunner {
     }
   }
 
-  def createUri(title: String, url: String, state: State[NormalizedURI] = NormalizedURIStates.ACTIVE)(implicit session: RWSession, injector: RichInjector) = {
+  def createUri(title: String, url: String, state: State[NormalizedURI] = NormalizedURIStates.ACTIVE)(implicit
+      session: RWSession, injector: Injector) = {
     val uri = NormalizedURIFactory(title = title, url = url, state = state)
     try {
       uriRepo.save(uri)

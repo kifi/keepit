@@ -2,13 +2,12 @@ package com.keepit.common.social
 
 import java.io.File
 
-import org.joda.time.DateTime
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick.Database
 import com.keepit.inject.inject
 import com.keepit.model._
-import com.keepit.test.{FakeClock, EmptyApplication}
+import com.keepit.test.EmptyApplication
 
 import play.api.Play.current
 import play.api.libs.json.Json
@@ -19,7 +18,7 @@ class UserConnectionCreatorTest extends Specification {
 
   "UserConnectionCreator" should {
     "create connections between friends" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHttpClient()) {
 
         /*
          * grab json
@@ -38,7 +37,9 @@ class UserConnectionCreatorTest extends Specification {
           ).withUser(u))
         }
 
-        inject[SocialUserImportFriends].importFriends(Seq(json))
+        val extractedFriends = inject[FacebookSocialGraph].extractFriends(json)
+
+        inject[SocialUserImportFriends].importFriends(extractedFriends, SocialNetworks.FACEBOOK)
 
         val (user, socialUserInfo) = inject[Database].readWrite { implicit c =>
           val user = inject[UserRepo].save(User(firstName = "Greg", lastName = "Smith"))
@@ -50,7 +51,8 @@ class UserConnectionCreatorTest extends Specification {
           (user, socialUserInfo)
         }
 
-        val connections = inject[UserConnectionCreator].createConnections(socialUserInfo, Seq(json))
+        val connections = inject[UserConnectionCreator].createConnections(socialUserInfo,
+          extractedFriends.map(_._1.socialId), SocialNetworks.FACEBOOK)
 
         connections.size === 12
 
@@ -65,11 +67,12 @@ class UserConnectionCreatorTest extends Specification {
     }
 
     "disable non existing connections" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHttpClient()) {
 
         val json1 = Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/facebook_graph_eishay_min.json")).mkString)
 
-        inject[SocialUserImportFriends].importFriends(Seq(json1))
+        val extractedFriends = inject[FacebookSocialGraph].extractFriends(json1)
+        inject[SocialUserImportFriends].importFriends(extractedFriends, SocialNetworks.FACEBOOK)
 
         val socialUserInfo = inject[Database].readWrite { implicit c =>
           val user = inject[UserRepo].save(User(firstName = "fn1", lastName = "ln1"))
@@ -80,13 +83,17 @@ class UserConnectionCreatorTest extends Specification {
           ).withUser(user))
         }
 
-        val connections = inject[UserConnectionCreator].createConnections(socialUserInfo, Seq(json1))
+        val connections = inject[UserConnectionCreator].createConnections(socialUserInfo,
+          extractedFriends.map(_._1.socialId), SocialNetworks.FACEBOOK)
 
         connections.size === 12
 
         val json2 = Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/facebook_graph_eishay_super_min.json")).mkString)
 
-        val connectionsAfter = inject[UserConnectionCreator].createConnections(socialUserInfo, Seq(json2))
+        val extractedFriends2 = inject[FacebookSocialGraph].extractFriends(json2)
+
+        val connectionsAfter = inject[UserConnectionCreator]
+            .createConnections(socialUserInfo, extractedFriends2.map(_._1.socialId), SocialNetworks.FACEBOOK)
         connectionsAfter.size === 5
       }
     }

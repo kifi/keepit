@@ -1,18 +1,15 @@
 package com.keepit.inject
 
-import scala.slick.session.{Database => SlickDatabase}
-import com.tzavellas.sse.guice.ScalaModule
-import com.google.inject.{Provides, Inject, Singleton, Provider}
-import com.keepit.common.time._
+import net.codingwell.scalaguice.ScalaModule
+
+import com.google.inject.{Provides, Singleton}
 import com.keepit.common.service.FortyTwoServices
-import org.joda.time.{DateTime, LocalDate}
+import com.keepit.common.time._
+
 import akka.actor.ActorSystem
 import akka.actor.Scheduler
-import com.keepit.common.db.SlickModule
-import com.keepit.common.db.DbInfo
 import play.api.Play
 import play.api.Play.current
-import play.api.db.DB
 
 class FortyTwoModule() extends ScalaModule {
   def configure(): Unit = {

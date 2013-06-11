@@ -1,31 +1,35 @@
 package com.keepit.model
 
-import org.specs2.mutable._
-import com.keepit.test.EmptyApplication
-import com.keepit.common.social.SocialId
-import com.keepit.common.social.SocialNetworks
-import com.keepit.common.social.UserConnectionCreator
-import com.keepit.inject._
-import play.api.Play.current
-import play.api.test._
-import play.api.test.Helpers._
-import play.api.libs.json._
-import java.io.File
-import com.keepit.common.social.SocialUserImportFriends
-import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
+import com.keepit.common.social._
+import com.keepit.inject._
+import com.keepit.test.EmptyApplication
+import java.io.File
+import org.specs2.mutable._
+import play.api.Play.current
+import play.api.libs.json._
+import play.api.test.Helpers._
 
 class SocialConnectionTest extends Specification {
 
 
+  private def extractFacebookFriendInfo(json: JsValue): Seq[(SocialUserInfo, JsValue)] = {
+    inject[FacebookSocialGraph].extractFriends(json)
+  }
+
+  private def extractFacebookFriendIds(json: JsValue): Seq[SocialId] = {
+    extractFacebookFriendInfo(json).map(_._1.socialId)
+  }
+
   "SocialConnection" should {
 
     "give Kifi user's connections (min set)" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHttpClient()) {
 
         def loadJsonImportFriends(filename: String): Unit = {
           val json = Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/%s".format(filename))).mkString)
-          println(inject[SocialUserImportFriends].importFriends(Seq(json)).size)
+          println(inject[SocialUserImportFriends].importFriends(extractFacebookFriendInfo(json),
+            SocialNetworks.FACEBOOK).size)
         }
 
         loadJsonImportFriends("facebook_graph_andrew_min.json")
@@ -62,8 +66,8 @@ class SocialConnectionTest extends Specification {
           users
         }
 
-        connections.createConnections(eishaySocialUserInfo, Seq(eishayJson))
-        connections.createConnections(andrewSocialUserInfo, Seq(andrewJson))
+        connections.createConnections(eishaySocialUserInfo, extractFacebookFriendIds(eishayJson), SocialNetworks.FACEBOOK)
+        connections.createConnections(andrewSocialUserInfo, extractFacebookFriendIds(andrewJson), SocialNetworks.FACEBOOK)
 
         val (eishayFortyTwoConnection, andrewFortyTwoConnection) = inject[Database].readOnly{ implicit s =>
           connectionRepo.count === 18
@@ -85,11 +89,12 @@ class SocialConnectionTest extends Specification {
       }
     }
     "give Kifi user's connections (min set) w/o non active connections" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHttpClient()) {
 
         def loadJsonImportFriends(filename: String): Unit = {
           val json = Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/%s".format(filename))).mkString)
-          println(inject[SocialUserImportFriends].importFriends(Seq(json)).size)
+          println(inject[SocialUserImportFriends].importFriends(extractFacebookFriendInfo(json),
+            SocialNetworks.FACEBOOK).size)
         }
 
         loadJsonImportFriends("facebook_graph_andrew_min.json")
@@ -127,8 +132,10 @@ class SocialConnectionTest extends Specification {
           users
         }
 
-        inject[UserConnectionCreator].createConnections(eishaySocialUserInfo, Seq(eishayJson))
-        inject[UserConnectionCreator].createConnections(andrewSocialUserInfo, Seq(andrewJson))
+        inject[UserConnectionCreator].createConnections(eishaySocialUserInfo,
+          extractFacebookFriendIds(eishayJson), SocialNetworks.FACEBOOK)
+        inject[UserConnectionCreator].createConnections(andrewSocialUserInfo,
+          extractFacebookFriendIds(andrewJson), SocialNetworks.FACEBOOK)
 
         val connectionRepo = inject[SocialConnectionRepo]
 
@@ -153,13 +160,14 @@ class SocialConnectionTest extends Specification {
     }
 
     "give Kifi user's connections (min set) with pagination" in {
-      running(new EmptyApplication()) {
+      running(new EmptyApplication().withFakeHttpClient()) {
 
         def loadJsonImportFriends(filenames: Seq[String]): Unit = {
           val jsons = filenames map { filename =>
             Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/%s".format(filename))).mkString)
           }
-          println(inject[SocialUserImportFriends].importFriends(jsons).size)
+          println(inject[SocialUserImportFriends]
+              .importFriends(jsons flatMap extractFacebookFriendInfo, SocialNetworks.FACEBOOK).size)
         }
 
         loadJsonImportFriends(Seq("facebook_graph_eishay_min_page1.json", "facebook_graph_eishay_min_page2.json"))
@@ -194,7 +202,8 @@ class SocialConnectionTest extends Specification {
           users
         }
 
-        inject[UserConnectionCreator].createConnections(eishaySocialUserInfo, Seq(eishay1Json, eishay2Json))
+        inject[UserConnectionCreator].createConnections(eishaySocialUserInfo,
+          Seq(eishay1Json, eishay2Json) flatMap extractFacebookFriendIds, SocialNetworks.FACEBOOK)
 
         val eishayFortyTwoConnection = inject[Database].readOnly{ implicit s =>
           connectionRepo.all.size === 12

@@ -1,4 +1,4 @@
-// @match /^https?:\/\/[^\/]*\/.*/
+// @match /^https?:\/\/(?!www\.google\.(com|com\.(a[fgiru]|b[dhnorz]|c[ouy]|do|e[cgt]|fj|g[hit]|hk|jm|k[hw]|l[by]|m[txy]|n[afgip]|om|p[aehkry]|qa|s[abglv]|t[jrw]|u[ay]|v[cn])|co\.(ao|bw|c[kr]|i[dln]|jp|k[er]|ls|m[az]|nz|t[hz]|u[gkz]|v[ei]|z[amw])|a[demstz]|b[aefgijsy]|cat|c[adfghilmnvz]|d[ejkmz]|e[es]|f[imr]|g[aeglmpry]|h[nrtu]|i[emqst]|j[eo]|k[giz]|l[aiktuv]|m[degklnsuvw]|n[eloru]|p[lnstosuw]|s[cehikmnot]|t[dgklmnot]|v[gu]|ws)\/(|search|webhp)([?#].*)?)[^\/]*\/.*$/
 // @require scripts/api.js
 // loaded on every page, so no more dependencies
 
@@ -13,20 +13,12 @@ window.onerror = function (message, url, lineNo) {
   }
 };
 
-var t0 = +new Date, tile, paneHistory, root = document.querySelector("body") || document.documentElement;
+var t0 = +new Date, tile, root = document.querySelector("body") || document.documentElement;
 
 !function() {
   api.log("[scout]", location.hostname);
   var tileCard, tileCount, onScroll;
   api.port.on({
-    new_notification: function(n) {
-      if (n.state != "visited" &&
-          (!paneHistory || (paneHistory[0] != n.details.locator && paneHistory[0] != "/notices"))) {
-        api.require("scripts/notifier.js", function() {
-          notifier.show(n);
-        });
-      }
-    },
     open_to: function(o) {
       keeper("showPane", o.trigger, o.locator);
     },
@@ -164,7 +156,7 @@ var t0 = +new Date, tile, paneHistory, root = document.querySelector("body") || 
   }();
 
   function onResize() {
-    if (paneHistory) return;
+    if (document.documentElement.classList.contains("kifi-with-pane")) return;
     clearTimeout(onResize.t);  // throttling tile repositioning
     onResize.t = setTimeout(positionTile, 50);
   }

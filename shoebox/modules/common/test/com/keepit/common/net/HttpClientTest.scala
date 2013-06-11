@@ -14,7 +14,7 @@ class HttpClientTest extends Specification {
   "HttpClient" should {
     "instantiated" in {
       running(new ShoeboxApplication().withFakePersistEvent.withShoeboxServiceModule) {
-        /*val client = inject[HttpClient]
+        /*val client = instance[HttpClient]
         client !== null
         client.longTimeout() !== null*/
         1===1
