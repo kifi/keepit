@@ -36,30 +36,29 @@
   width: 1100,
   height: 400,
   hideGrid: "true",
-  from: $("#timerange").val()
+  from: $("#timerange").val(),
+  lineWidth: 2
   };
 
-  var baseTargets = ["drawAsInfinite(counters.*.deploys.count)"];
+  var baseTargets = ["drawAsInfinite(stats.counters.*.deploys.count)"];
 
   // Search Chart
 
-  var searchTargets = baseTargets.concat('summarize(counters.search.extSearch.total.count,"1hour")').concat(["secondYAxis(timers.search.extSearch.total.mean)"]);
-  options.drawNullAsZero = "false";
+  var searchTargets = baseTargets.concat('summarize(stats.counters.search.extSearch.total.count,"1h")').concat(["secondYAxis(stats.timers.search.extSearch.total.mean_99)"]);
   options.target = searchTargets;
-  options.title = "Searches per Hour vs Mean Time in Milliseconds"
+  options.title = "Searches per Hour vs 99% Mean Time in Milliseconds"
   $("#search").graphite(options);
 
   // Cache Chart
 
   function sumSeries(metric) {
-    return "sumSeries(" + ["counters.*.*", metric, "count"].join(".") + ")"
+    return "sumSeries(" + ["stats.counters.*.*", metric, "count"].join(".") + ")"
   }
 
-  var cacheCountTargets = ["hits", "misses", "sets"].map(function (metric) {return sumSeries(metric)});
+  var cacheCountTargets = ["hits", "misses", "sets"].map(function (metric) {return "summarize(" + sumSeries(metric) + ',"1min")'});
   var cacheRatioTarget = ["secondYAxis(scale(divideSeries(" + sumSeries("hits") + "," + sumSeries("{hits,misses}") + "),100))"];
   var cacheTargets = baseTargets.concat(cacheCountTargets).concat(cacheRatioTarget);
 
-  options.drawNullAsZero = "true";
   options.target = cacheTargets;
   options.title = "Hits - Misses - Sets per Minute vs Hit Ratio"
   $("#cache").graphite(options);
