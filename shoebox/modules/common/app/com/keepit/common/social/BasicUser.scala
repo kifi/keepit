@@ -33,7 +33,7 @@ object BasicUser {
 }
 
 case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
-  override val version = 2
+  override val version = 3
   val namespace = "basic_user_userid"
   def toKey(): String = userId.id.toString
 }

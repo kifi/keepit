@@ -56,6 +56,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
 
 import com.keepit.serializer.NormalizedURISerializer.normalizedURISerializer // Required implicit value
 case class NormalizedURIKey(id: Id[NormalizedURI]) extends Key[NormalizedURI] {
+  override val version = 2
   val namespace = "uri_by_id"
   def toKey(): String = id.id.toString
 }

@@ -34,6 +34,7 @@ trait ClickHistoryRepo extends Repo[ClickHistory] {
 }
 
 case class ClickHistoryUserIdKey(userId: Id[User]) extends Key[ClickHistory] {
+  override val version = 2
   val namespace = "click_history_by_userid"
   def toKey(): String = userId.id.toString
 }

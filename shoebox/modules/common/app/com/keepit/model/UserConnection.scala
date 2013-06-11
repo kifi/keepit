@@ -40,6 +40,7 @@ trait UserConnectionRepo extends Repo[UserConnection] {
 }
 
 case class UserConnectionKey(userId: Id[User]) extends Key[Set[Id[User]]] {
+  override val version = 2
   val namespace = "user_connection_key"
   def toKey(): String = userId.id.toString
 }

@@ -41,6 +41,7 @@ trait SliderHistoryRepo extends Repo[SliderHistory] {
 }
 
 case class SliderHistoryUserIdKey(userId: Id[User]) extends Key[SliderHistory] {
+  override val version = 2
   val namespace = "slider_history_by_userid"
   def toKey(): String = userId.id.toString
 }

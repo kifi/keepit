@@ -91,6 +91,7 @@ trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
 }
 
 case class CommentCountUriIdKey(normUriId: Id[NormalizedURI]) extends Key[Int] {
+  override val version = 2
   val namespace = "comment_by_normuriid"
   def toKey(): String = normUriId.id.toString
 }

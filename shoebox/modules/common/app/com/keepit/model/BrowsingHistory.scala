@@ -45,6 +45,7 @@ trait BrowsingHistoryRepo extends Repo[BrowsingHistory] {
 }
 
 case class BrowsingHistoryUserIdKey(userId: Id[User]) extends Key[BrowsingHistory] {
+  override val version = 2
   val namespace = "browsing_history_by_userid"
   def toKey(): String = userId.id.toString
 }

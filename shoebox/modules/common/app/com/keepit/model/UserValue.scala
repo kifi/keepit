@@ -41,6 +41,7 @@ trait UserValueRepo extends Repo[UserValue] {
 }
 
 case class UserValueKey(userId: Id[User], key: String) extends Key[String] {
+  override val version = 2
   val namespace = "uservalue"
   def toKey(): String = userId.id + "_" + key
 }

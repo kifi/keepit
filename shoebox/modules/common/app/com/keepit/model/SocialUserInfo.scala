@@ -49,13 +49,14 @@ trait SocialUserInfoRepo extends Repo[SocialUserInfo] {
 
 case class SocialUserInfoUserKey(userId: Id[User]) extends Key[Seq[SocialUserInfo]] {
   val namespace = "social_user_info_by_userid"
-  override val version = 2
+  override val version = 3
   def toKey(): String = userId.id.toString
 }
 class SocialUserInfoUserCache @Inject() (repo: FortyTwoCachePlugin)
   extends JsonCacheImpl[SocialUserInfoUserKey, Seq[SocialUserInfo]]((repo, 30 days))
 
 case class SocialUserInfoNetworkKey(networkType: SocialNetworkType, id: SocialId) extends Key[SocialUserInfo] {
+  override val version = 2
   val namespace = "social_user_info_by_network_and_id"
   def toKey(): String = networkType.name.toString + "_" + id.id
 }

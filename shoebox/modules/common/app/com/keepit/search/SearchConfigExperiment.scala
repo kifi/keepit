@@ -59,7 +59,7 @@ object SearchConfigExperiment {
 
 sealed trait ActiveExperimentsKey extends Key[Seq[SearchConfigExperiment]] {
   val namespace = "search_config"
-  override val version = 2
+  override val version = 3
   def toKey() = "active_experiments"
 }
 

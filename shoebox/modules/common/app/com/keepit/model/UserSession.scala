@@ -51,7 +51,7 @@ object UserSession {
 trait UserSessionRepo extends Repo[UserSession] with ExternalIdColumnFunction[UserSession]
 
 case class UserSessionExternalIdKey(externalId: ExternalId[UserSession]) extends Key[UserSession] {
-  override val version = 1
+  override val version = 2
   val namespace = "user_session_by_external_id"
   def toKey(): String = externalId.id
 }

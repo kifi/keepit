@@ -40,6 +40,7 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
 }
 
 case class CollectionsForBookmarkKey(bookmarkId: Id[Bookmark]) extends Key[Seq[Id[Collection]]] {
+  override val version = 2
   val namespace = "collections_for_bookmark"
   def toKey(): String = bookmarkId.toString
 }

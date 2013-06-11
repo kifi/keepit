@@ -100,6 +100,7 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
 }
 
 case class BookmarkCountKey() extends Key[Int] {
+  override val version = 2
   val namespace = "bookmark_count"
   def toKey(): String = "k"
 }
@@ -108,6 +109,7 @@ class BookmarkCountCache @Inject() (repo: FortyTwoCachePlugin)
   extends PrimitiveCacheImpl[BookmarkCountKey, Int]((repo, 1 hour))
 
 case class BookmarkUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Bookmark] {
+  override val version = 2
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }

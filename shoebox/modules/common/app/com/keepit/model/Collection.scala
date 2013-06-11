@@ -48,6 +48,7 @@ object Collection {
 }
 
 case class UserCollectionsKey(userId: Id[User]) extends Key[Seq[Collection]] {
+  override val version = 2
   val namespace = "user_collections"
   def toKey(): String = userId.toString
 }

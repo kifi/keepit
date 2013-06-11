@@ -41,6 +41,7 @@ trait UnscrapableRepo extends Repo[Unscrapable] {
 
 import com.keepit.serializer.UnscrapableSerializer.unscrapableSerializer // Required implicit value
 case class UnscrapableAllKey() extends Key[Seq[Unscrapable]] {
+  override val version = 2
   val namespace = "unscrapable_all"
   def toKey(): String = "all"
 }

@@ -51,6 +51,7 @@ object UserExperimentStates extends States[UserExperiment] {
 }
 
 case class UserExperimentUserIdKey(userId: Id[User]) extends Key[Seq[State[ExperimentType]]] {
+  override val version = 2
   val namespace = "user_experiment_user_id"
   def toKey(): String = userId.id.toString
 }
