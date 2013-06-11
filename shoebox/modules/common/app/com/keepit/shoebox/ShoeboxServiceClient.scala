@@ -66,7 +66,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def saveExperiment(experiment: SearchConfigExperiment): Future[SearchConfigExperiment]
   def hasExperiment(userId: Id[User], state: State[ExperimentType]): Future[Boolean]
   def getUserExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]]
-  def getSocialUserInfosByUserId(userId: Id[User]): Future[List[SocialUserInfo]]
+  def getSocialUserInfosByUserId(userId: Id[User]): Future[Seq[SocialUserInfo]]
   def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]]
 }
 
@@ -119,11 +119,11 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getSocialUserInfosByUserId(userId: Id[User]): Future[List[SocialUserInfo]] = {
+  def getSocialUserInfosByUserId(userId: Id[User]): Future[Seq[SocialUserInfo]] = {
     cacheProvider.socialUserCache.get(SocialUserInfoUserKey(userId)) match {
       case Some(sui) => Promise.successful(sui).future
       case None => call(routes.ShoeboxController.getSocialUserInfosByUserId(userId)) map { resp =>
-        Json.fromJson[List[SocialUserInfo]](resp.json).get
+        Json.fromJson[Seq[SocialUserInfo]](resp.json).get
       }
     }
   }

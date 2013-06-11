@@ -14,11 +14,9 @@ import play.api.Play.current
 import java.net.URI
 import java.security.MessageDigest
 import scala.collection.mutable
-import play.api.libs.json._
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.cache._
 import play.api.libs.concurrent.Execution.Implicits._
-import com.keepit.serializer.UnscrapableSerializer
 import scala.concurrent.duration._
 
 case class Unscrapable(
@@ -41,16 +39,15 @@ trait UnscrapableRepo extends Repo[Unscrapable] {
   def contains(url: String)(implicit session: RSession): Boolean
 }
 
-case class UnscrapableAllKey() extends Key[List[Unscrapable]] {
+import com.keepit.serializer.UnscrapableSerializer.unscrapableSerializer // Required implicit value
+case class UnscrapableAllKey() extends Key[Seq[Unscrapable]] {
+  override val version = 2
   val namespace = "unscrapable_all"
   def toKey(): String = "all"
 }
-class UnscrapableAllCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[UnscrapableAllKey, List[Unscrapable]] {
-  val ttl = 0 seconds
-  def deserialize(obj: Any): List[Unscrapable] = UnscrapableSerializer.unscrapableSerializer.readsSeq(Json.parse(obj.asInstanceOf[String]).asInstanceOf[JsArray])
-  def serialize(unscrapable: List[Unscrapable]) = UnscrapableSerializer.unscrapableSerializer.writesSeq(unscrapable)
-}
 
+class UnscrapableAllCache @Inject() (repo: FortyTwoCachePlugin)
+  extends JsonCacheImpl[UnscrapableAllKey, Seq[Unscrapable]]((repo, 0 second))
 
 @Singleton
 class UnscrapableRepoImpl @Inject() (
