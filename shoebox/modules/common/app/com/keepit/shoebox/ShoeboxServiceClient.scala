@@ -262,8 +262,6 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-
-
   def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]] = consolidateConnectedUsersReq(UserConnectionKey(userId)) { key =>
     cacheProvider.userConnCache.getOrElseFuture(key) {
       call(routes.ShoeboxController.getConnectedUsers(userId)).map {r =>
