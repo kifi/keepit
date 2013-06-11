@@ -1,41 +1,41 @@
 {
-    "name": "kifi-beta",
-    "license": "MPL 2.0",
-    "author": "FortyTwo Inc.",
-    "homepage": "https://www.kifi.com/",
-    "version": "2.4.6",
-    "fullName": "KiFi Private Beta",
-    "id": "kifi@42go.com",
-    "icon": "data/icons/kifi.48.png",
-    "icon64": "data/icons/kifi.64.png",
-    "description": "This extension is currently in a private beta. To sign up, please visit https://www.kifi.com.",
-    "preferences": [
-        {
-            "title": "Environment",
-            "type": "radio",
-            "options": [
-                {"value": "production", "label": "Production"},
-                {"value": "development", "label": "Development"}],
-            "name": "env",
-            "value": "production"
-        },
-        {
-            "title": "Show slider automatically",
-            "type": "bool",
-            "name": "showSlider",
-            "value": true
-        },
-        {
-            "title": "Maximum search results",
-            "type": "integer",
-            "name": "maxResults",
-            "value": 5
-        },
-        {
-            "title": "Show search result scores",
-            "type": "bool",
-            "name": "showScores",
-            "value": false
-        }
-    ]
+  "name": "kifi-beta",
+  "license": "MPL 2.0",
+  "author": "FortyTwo Inc.",
+  "homepage": "https://www.kifi.com/",
+  "version": "see build.properties",
+  "fullName": "KiFi Private Beta",
+  "id": "kifi@42go.com",
+  "icon": "data/icons/kifi.48.png",
+  "icon64": "data/icons/kifi.64.png",
+  "description": "This extension is currently in a private beta. To sign up, please visit https://www.kifi.com.",
+  "preferences": [
+    {
+      "title": "Environment",
+      "type": "radio",
+      "options": [
+        {"value": "production", "label": "Production"},
+        {"value": "development", "label": "Development"}],
+      "name": "env",
+      "value": "production"
+    },
+    {
+      "title": "Show slider automatically",
+      "type": "bool",
+      "name": "showSlider",
+      "value": true
+    },
+    {
+      "title": "Maximum search results",
+      "type": "integer",
+      "name": "maxResults",
+      "value": 5
+    },
+    {
+      "title": "Show search result scores",
+      "type": "bool",
+      "name": "showScores",
+      "value": false
+    }
+  ]
 }
