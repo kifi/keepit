@@ -45,29 +45,13 @@ trait BrowsingHistoryRepo extends Repo[BrowsingHistory] {
 }
 
 case class BrowsingHistoryUserIdKey(userId: Id[User]) extends Key[BrowsingHistory] {
+  override val version = 2
   val namespace = "browsing_history_by_userid"
   def toKey(): String = userId.id.toString
 }
 
-@ImplementedBy(classOf[BrowsingHistoryUserIdCacheImpl])
-trait BrowsingHistoryUserIdCache extends FortyTwoCache[BrowsingHistoryUserIdKey, BrowsingHistory] {
-  def deserialize(obj: Any): BrowsingHistory = BrowsingHistoryBinarySerializer.browsingHistoryBinarySerializer.reads(obj.asInstanceOf[Array[Byte]])
-  def serialize(browsingHistory: BrowsingHistory) = BrowsingHistoryBinarySerializer.browsingHistoryBinarySerializer.writes(browsingHistory)
-}
-
-@Singleton
-class OuterBrowsingHistoryUserIdCacheImpl @Inject() (val repo: FortyTwoCachePlugin)
-  extends {val ttl = 7 days} with BrowsingHistoryUserIdCache
-
-@Singleton
-class BrowsingHistoryUserIdCacheImpl @Inject() (
-    val repo: InMemoryCachePlugin,
-    outerCacheImpl: OuterBrowsingHistoryUserIdCacheImpl)
-  extends {
-    val ttl = 10 seconds
-    override val outerCache = Some(outerCacheImpl)
-  } with BrowsingHistoryUserIdCache
-
+class BrowsingHistoryUserIdCache @Inject() (innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin)
+  extends BinaryCacheImpl[BrowsingHistoryUserIdKey, BrowsingHistory]((innerRepo, 10 seconds), (outerRepo, 7 days))
 
 @Singleton
 class BrowsingHistoryRepoImpl @Inject() (

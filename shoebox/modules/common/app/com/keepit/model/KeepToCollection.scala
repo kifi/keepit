@@ -6,13 +6,12 @@ import scala.slick.lifted.Query
 import org.joda.time.DateTime
 
 import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
-
-import play.api.libs.json.Json
+import com.keepit.serializer.TraversableFormat
 
 case class KeepToCollection(
   id: Option[Id[KeepToCollection]] = None,
@@ -41,17 +40,13 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
 }
 
 case class CollectionsForBookmarkKey(bookmarkId: Id[Bookmark]) extends Key[Seq[Id[Collection]]] {
+  override val version = 2
   val namespace = "collections_for_bookmark"
   def toKey(): String = bookmarkId.toString
 }
 
-class CollectionsForBookmarkCache @Inject() (val repo: FortyTwoCachePlugin)
-    extends FortyTwoCache[CollectionsForBookmarkKey, Seq[Id[Collection]]] {
-  val ttl = 1 day
-  private implicit val idFormat = Id.format[Collection]
-  def deserialize(obj: Any): Seq[Id[Collection]] = parseJson(obj)
-  def serialize(c: Seq[Id[Collection]]): Any = Json.toJson(c)
-}
+class CollectionsForBookmarkCache @Inject() (repo: FortyTwoCachePlugin)
+    extends JsonCacheImpl[CollectionsForBookmarkKey, Seq[Id[Collection]]]((repo, 1 day))(TraversableFormat.seq(Id.format[Collection]))
 
 @Singleton
 class KeepToCollectionRepoImpl @Inject() (
