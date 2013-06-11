@@ -38,7 +38,7 @@ object CollectionToUriEdgeSet {
   def apply(sourceId: Id[Collection], uriList: URIList): CollectionToUriEdgeSet = {
     val set = LongArraySet.fromSorted(uriList.ids)
 
-    new CollectionToUriEdgeSet(sourceId) with LongSetEdgeSetWithCreatedAt[Collection, NormalizedURI] {
+    new CollectionToUriEdgeSet(sourceId) with LongSetEdgeSetWithAttributes[Collection, NormalizedURI] {
       override protected val longArraySet = set
       override protected def createdAtByIndex(idx:Int): Long = {
         val datetime = uriList.createdAt(idx)

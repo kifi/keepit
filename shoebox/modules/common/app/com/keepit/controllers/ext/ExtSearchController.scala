@@ -106,9 +106,9 @@ class ExtSearchController @Inject() (
 
     val t2 = currentDateTime.getMillis()
     var t3 = 0L
+    val searcher = timeWithStatsd("search-factory", "extSearch.factory") { mainSearcherFactory(userId, searchFilter, config) }
+    t3 = currentDateTime.getMillis()
     val searchRes = timeWithStatsd("search-searching", "extSearch.searching") {
-      val searcher = timeWithStatsd("search-factory", "extSearch.factory") { mainSearcherFactory(userId, searchFilter, config) }
-      t3 = currentDateTime.getMillis()
       val searchRes = if (maxHits > 0) {
         searcher.search(query, maxHits, lastUUID, searchFilter)
       } else {
@@ -122,14 +122,18 @@ class ExtSearchController @Inject() (
 
     val t4 = currentDateTime.getMillis()
 
-    val res = toPersonalSearchResultPacket(userId, searchRes, config, searchFilter.isDefault, experimentId)
+    val decorator = new ResultDecoratorImpl(userId, shoeboxClient, monitoredAwait)
+    val res = toPersonalSearchResultPacket(decorator, userId, searchRes, config, searchFilter.isDefault, experimentId)
+
     reportArticleSearchResult(searchRes)
 
     val t5 = currentDateTime.getMillis()
     val total = t5 - t1
+
     Statsd.timing("extSearch.postSearchTime", t5 - t4)
     Statsd.timing("extSearch.total", total)
     Statsd.increment("extSearch.total")
+
     log.info(s"total search time = $total, pre-search time = ${t2 - t1}, search-factory time = ${t3 - t2}, main-search time = ${t4 - t3}, post-search time = ${t5 - t4}")
     val searchDetails = searchRes.timeLogs match {
       case Some(timelog) => "main-search detail: " + timelog.toString
@@ -163,33 +167,13 @@ class ExtSearchController @Inject() (
     }
   }
 
-  private[ext] def toPersonalSearchResultPacket(userId: Id[User],
+  private[ext] def toPersonalSearchResultPacket(decorator: ResultDecorator, userId: Id[User],
       res: ArticleSearchResult, config: SearchConfig, isDefaultFilter: Boolean, experimentId: Option[Id[SearchConfigExperiment]]): PersonalSearchResultPacket = {
 
+    val future = decorator.decorate(res)
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
-    val hitsFuture = time(s"search-personal-result-${res.hits.size}") {
-      toPersonalSearchResult(userId, res).map{r => log.debug(r.mkString("\n")); r}
-    }
 
-    val hits = monitoredAwait.result(hitsFuture, 5 seconds, Nil)
-
-    PersonalSearchResultPacket(res.uuid, res.query, hits, res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), experimentId, filter)
-  }
-
-  private[ext] def toPersonalSearchResult(userId: Id[User], resultSet: ArticleSearchResult): Future[Seq[PersonalSearchResult]] = {
-    shoeboxClient.getPersonalSearchInfo(userId, resultSet).map { case (allUsers, personalSearchHits) =>
-      (resultSet.hits, resultSet.scorings, personalSearchHits).zipped.toSeq.map { case (hit, score, personalHit) =>
-        val users = hit.users.map(allUsers)
-        val isNew = (!hit.isMyBookmark && score.recencyScore > 0.5f)
-        PersonalSearchResult(personalHit,
-          hit.bookmarkCount,
-          hit.isMyBookmark,
-          personalHit.isPrivate,
-          users,
-          hit.score,
-          isNew)
-      }
-    }
+    PersonalSearchResultPacket(res.uuid, res.query, monitoredAwait.result(future, 5 seconds, Nil), res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), experimentId, filter)
   }
 
 }

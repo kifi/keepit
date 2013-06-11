@@ -29,18 +29,18 @@ object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 
 trait ShoeboxServices { self: FortyTwoGlobal =>
   def startShoeboxServices() {
-    require(injector.inject[ScraperPlugin].enabled)
-    require(injector.inject[SocialGraphPlugin].enabled)
-    require(injector.inject[SocialGraphRefresher].enabled)
-    require(injector.inject[MailSenderPlugin].enabled)
-    injector.inject[MailSenderPlugin].processOutbox()
-    require(injector.inject[MailToKeepPlugin].enabled)
-    require(injector.inject[HealthcheckPlugin].enabled)
-    require(injector.inject[ReportBuilderPlugin].enabled)
-    require(injector.inject[DataIntegrityPlugin].enabled)
-    require(injector.inject[FortyTwoCachePlugin].enabled)
-    require(injector.inject[UserEmailNotifierPlugin].enabled)
-    require(injector.inject[ImageDataIntegrityPlugin].enabled)
-    require(injector.inject[InvitationMailPlugin].enabled)
+    require(injector.instance[ScraperPlugin].enabled)
+    require(injector.instance[SocialGraphPlugin].enabled)
+    require(injector.instance[SocialGraphRefresher].enabled)
+    require(injector.instance[MailSenderPlugin].enabled)
+    injector.instance[MailSenderPlugin].processOutbox()
+    require(injector.instance[MailToKeepPlugin].enabled)
+    require(injector.instance[HealthcheckPlugin].enabled)
+    require(injector.instance[ReportBuilderPlugin].enabled)
+    require(injector.instance[DataIntegrityPlugin].enabled)
+    require(injector.instance[FortyTwoCachePlugin].enabled)
+    require(injector.instance[UserEmailNotifierPlugin].enabled)
+    require(injector.instance[ImageDataIntegrityPlugin].enabled)
+    require(injector.instance[InvitationMailPlugin].enabled)
   }
 }

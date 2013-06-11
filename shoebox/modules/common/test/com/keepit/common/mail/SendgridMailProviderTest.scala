@@ -40,8 +40,8 @@ class SendgridMailProviderTest extends Specification {
     </body>
 </html>""".trim
 
-//         usually using inject[PostOffice].sendMail(mail
-//        inject[SendgridMailProvider].sendMailToSendgrid(mail)
+//         usually using instance[PostOffice].sendMail(mail
+//        instance[SendgridMailProvider].sendMailToSendgrid(mail)
         inject[Database].readOnly { implicit s =>
           val loaded = inject[ElectronicMailRepo].get(mail.id.get)
           loaded.from === mail.from
