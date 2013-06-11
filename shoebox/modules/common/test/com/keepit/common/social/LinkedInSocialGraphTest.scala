@@ -23,7 +23,7 @@ class LinkedInSocialGraphTest extends Specification with DbRepos {
   }
 
   private def urlIsProfile(url: String): Boolean = {
-    url.startsWith("http://api.linkedin.com/v1/people/rFOBMp35vZ/:(id,firstName,lastName,emailAddress)?format=json")
+    url.startsWith("http://api.linkedin.com/v1/people/rFOBMp35vZ:(id,firstName,lastName,emailAddress)?format=json")
   }
 
   "LinkedInSocialGraph" should {
