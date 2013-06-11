@@ -30,7 +30,8 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]], shoeboxCl
       val docid = reader.getIdMapper.getDocId(id.id)
       val publicList = getURIList(publicListField, docid)
       val privateList = getURIList(privateListField, docid)
-      new UserInfo(id, docid, publicList, privateList)
+      val bookmarkIdArray = getLongArray(bookmarkIdField, docid)
+      new UserInfo(id, docid, publicList, privateList, bookmarkIdArray)
     }
   }
 
@@ -105,7 +106,7 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]], shoeboxCl
   }
 }
 
-class UserInfo(val id: Id[User], val docId: Int, val publicList: URIList, val privateList: URIList) {
+class UserInfo(val id: Id[User], val docId: Int, val publicList: URIList, val privateList: URIList, val bookmarkIdArray: Array[Long]) {
   val uriIdArray: Array[Long] = {
     val publicIds = publicList.ids
     val privateIds = privateList.ids
