@@ -27,7 +27,6 @@ import org.joda.time.DateTime
 import com.keepit.serializer.SearchResultInfoSerializer
 import com.keepit.search.query.LuceneExplanationExtractor
 import com.keepit.search.query.LuceneScoreNames
-import com.keepit.search.graph.UserToUriEdgeSet
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.shoebox.BrowsingHistoryTracker
