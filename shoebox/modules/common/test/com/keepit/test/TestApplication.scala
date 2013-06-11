@@ -92,6 +92,7 @@ trait DbRepos {
   def userRepo = inject[UserRepo]
   def basicUserRepo = inject[BasicUserRepo]
   def userConnRepo = inject[UserConnectionRepo]
+  def socialConnRepo = inject[SocialConnectionRepo]
   def uriRepo = inject[NormalizedURIRepo]
   def urlRepo = inject[URLRepo]
   def bookmarkRepo = inject[BookmarkRepo]

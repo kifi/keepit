@@ -20,9 +20,6 @@ class UnscrapableSerializer extends Format[Unscrapable] {
     )
     )
 
-  def writesSeq(unscrapables: Seq[Unscrapable]): JsValue =
-    JsArray(unscrapables.map(writes))
-
   def reads(json: JsValue): JsResult[Unscrapable] =
     JsSuccess(Unscrapable(
       id = (json \ "id").asOpt[Long].map(Id[Unscrapable](_)),
@@ -31,9 +28,6 @@ class UnscrapableSerializer extends Format[Unscrapable] {
       pattern = (json \ "pattern").as[String],
       state = State[Unscrapable]((json \ "state").as[String])
     ))
-
-  def readsSeq(json: JsValue) =
-    json.as[List[JsObject]].map(reads).map(_.get)
 }
 
 object UnscrapableSerializer {
