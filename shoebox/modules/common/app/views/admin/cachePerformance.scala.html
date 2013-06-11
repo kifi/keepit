@@ -7,11 +7,16 @@
 <select class="input-medium" class="params" id="service"></select>
 <select class="input-medium" class="params" id="plugin"></select>
 <select class="input-medium" class="params" id="namespace"></select>
-<select class="input-medium" class="params" id="yscale"></select>
 
 <p><img id="ratios" class="img-polaroid"></p>
-<p><img id="counters" class="img-polaroid"></p>
-<p><img id="timers" class="img-polaroid"></p>
+<p>
+  <img id="counters" class="img-polaroid">
+  <select class="input-medium" class="params" style="float: right" id="yscale"></select>
+</p>
+<p>
+  <img id="timers" class="img-polaroid">
+  <select class="input-medium" class="params" style="float: right" id="percentile"></select>
+</p>
 
 <script>
 
@@ -65,6 +70,11 @@
   "10 Minutes": "-0h10min",
   };
 
+  var percentiles = {
+  "99% Percentile": "0.99",
+  "100% Percentile": "1"
+  };
+
   var yscales = {
   "Linear Scale": null,
   "Log10 Scale": 10
@@ -94,12 +104,17 @@
   $("#yscale").append($("<option>").val(scale).text(name));
   });
 
+  $.each(percentiles, function (name, percentile) {
+  $("#percentile").append($("<option>").val(percentile).text(name));
+  });
+
   var options = $.fn.graphite.defaults = {
   url: "https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/",
   lineMode: "connected",
   width: 1100,
   height: 550,
-  hideGrid: "true"
+  hideGrid: "true",
+  lineWidth: 2
   };
 
 
@@ -111,36 +126,36 @@
     var service = $("#service").val();
     var plugin = $("#plugin").val();
     var namespace = $("#namespace").val();
-    var baseTargets = ["drawAsInfinite(counters." + service + ".deploys.count)"];
+    var baseTargets = ["drawAsInfinite(stats.counters." + service + ".deploys.count)"];
     options.from = $("#timerange").val();
 
   if (chart == "counters") {
-    var prefix = [chart, service, plugin, namespace].join(".");
+    var prefix = ["stats", chart, service, plugin, namespace].join(".");
     var metrics = ["hits", "misses", "sets"];
-    var countTargets = metrics.map(function (metric) {return sumSeries(prefix, metric, "count")});
+    var countTargets = metrics.map(function (metric) {return "summarize(" + sumSeries(prefix, metric, "count") + ',"1min")'});
     options.title = "Hits - Misses - Sets (Events per Minute)"
     options.target = baseTargets.concat(countTargets)
-    //options.drawNullAsZero = "true"
     options.logBase = $("#yscale").val();
   }
 
   if (chart == "timers") {
-    var prefix = [chart, service, plugin, namespace].join(".");
+    var prefix = ["stats", chart, service, plugin, namespace].join(".");
     var metrics = ["hits", "sets"];
-    var meanTargets = metrics.map(function (metric) {return "divideSeries(" + sumSeries(prefix, metric, "sum") + "," + sumSeries(prefix, metric, "count") + ")"});
-    options.title = "Hits - Sets (Mean Time in Milliseconds)"
+    var percentileValue = $("#percentile").val()
+    var percentileSuffix = (percentileValue == "0.99") ? "_99" : "" 
+    var percentileTitle = (percentileValue == "0.99") ? "99% " : "" 
+    var meanTargets = metrics.map(function (metric) {return "divideSeries(" + sumSeries(prefix, metric, "sum" + percentileSuffix) + ",scale(" + sumSeries(prefix, metric, "count") + "," + percentileValue + "))"});
+    options.title = "Hits - Sets (" + percentileTitle + "Mean Time in Milliseconds)"
     options.target = baseTargets.concat(meanTargets)
-    options.drawNullAsZero = "false"
     options.logBase = null;
   }
 
   
   if (chart == "ratios") {
-    var prefix = ["counters", service, plugin, namespace].join(".");
+    var prefix = ["stats.counters", service, plugin, namespace].join(".");
     var ratioTarget = ["scale(divideSeries(" + sumSeries(prefix, "hits", "count") + "," + sumSeries(prefix, "{hits,misses}", "count") + "),100)"];
     options.title = "Hit Ratio"
     options.target = baseTargets.concat(ratioTarget)
-    options.drawNullAsZero = "false"
     options.logBase = null;
   }
 
