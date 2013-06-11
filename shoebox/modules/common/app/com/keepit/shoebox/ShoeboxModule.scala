@@ -75,6 +75,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
 
     val socialGraphBinder = ScalaMultibinder.newSetBinder[SocialGraph](binder)
     socialGraphBinder.addBinding.to[FacebookSocialGraph]
+    socialGraphBinder.addBinding.to[LinkedInSocialGraph]
   }
 
   @Singleton
