@@ -133,5 +133,8 @@ trait Indexable[T] {
     new Field(fieldName, svBuilder.tokenStream, semanticVectorFieldType)
   }
 
+  def buildBinaryDocValuesField(fieldName: String, bytes: Array[Byte]): Field = {
+    new BinaryDocValuesField(fieldName, new BytesRef(bytes))
+  }
 }
 
