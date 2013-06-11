@@ -1,21 +1,21 @@
 @admin("Cache Performance", scripts = List("graphite")) {
 
 <div style="float: right" class="form-horizontal">
-  <select class="input-medium" class="params" id="timerange"></select>
+  <select class="input-medium params" id="timerange"></select>
   <button class="btn btn-primary" type="button" id="update">Update Now</button>
 </div>
-<select class="input-medium" class="params" id="service"></select>
-<select class="input-medium" class="params" id="plugin"></select>
-<select class="input-medium" class="params" id="namespace"></select>
+<select class="input-medium params" id="service"></select>
+<select class="input-medium params" id="plugin"></select>
+<select class="input-medium params" id="namespace"></select>
 
 <p><img id="ratios" class="img-polaroid"></p>
 <p>
   <img id="counters" class="img-polaroid">
-  <select class="input-medium" class="params" style="float: right" id="yscale"></select>
+  <select class="input-medium params" style="float: right" id="yscale"></select>
 </p>
 <p>
   <img id="timers" class="img-polaroid">
-  <select class="input-medium" class="params" style="float: right" id="percentile"></select>
+  <select class="input-medium params" style="float: right" id="percentile"></select>
 </p>
 
 <script>
