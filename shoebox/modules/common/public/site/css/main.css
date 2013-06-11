@@ -2,14 +2,14 @@
 @dark-blue: #204b69;
 @light-blue: #628196;
 @active: #6fa6ef;
-@inactive: #b6c3cc; 
+@inactive: #b6c3cc;
 */
 
 /* overrides */
 * {font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;}
 *:focus {outline: none;}
 html {
-  overflow: -moz-scrollbars-vertical; 
+  overflow: -moz-scrollbars-vertical;
   overflow-y: scroll;
 }
 body {margin:0; padding: 0; background: #fafafa; height: 100%; width: 100%; text-align: center;  font-size: 16px;}
@@ -21,7 +21,7 @@ img {vertical-align: middle; border: 0px}
 a {color: #0089d5; text-decoration: none}
 select {font-weight: bold; font-size: .8em; background: #ecf0f1; border: 0; -webkit-appearance: none; -moz-appearance: none; width: 110%}
 header { width: 1260px;  height: 70px; padding: 0px; position: relative; left: 50%; margin-left: -630px; text-align: left}
-nav {float: right}						
+nav {float: right}
 ol {list-style: none; padding: 0; margin: 0}
 ::-webkit-input-placeholder{ color: #b6c3cc;}
 :-moz-placeholder { color: #b6c3cc;}
@@ -142,8 +142,6 @@ input.search:focus {background-image: url('../img/search-blue.png'); width: 630p
 
 img#my-avatar {position: absolute; top: 60px; margin-left: -10px; max-width: 70px; border-radius: 40px; border: 5px solid #eff2f7; }
 
-.sticky-wrapper {float: left}
-
 .long-text { display: block; white-space: nowrap; overflow: hidden; text-overflow:    ellipsis;}
 .small-avatar {max-width: 30px; max-height: 30px;}
 aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px; border-radius: 4px;}
@@ -199,4 +197,4 @@ div.loading {text-align: center; display: none;}
 @media all and (max-width: 1024px) {
 	input.search, input.search:focus {width: 30%;}
 }
- 
+
