@@ -3,17 +3,9 @@ package com.keepit.search.graph
 import com.keepit.common.logging.Logging
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.WrappedSubReader
-//import com.keepit.search.line.LineIndexReader
-//import com.keepit.search.query.QueryUtil
-//import com.keepit.search.util.LongArraySet
-//import com.keepit.search.util.LongToLongArrayMap
-//import org.apache.lucene.index.IndexReader
-//import org.apache.lucene.index.Term
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
-//import org.apache.lucene.search.Query
 import org.apache.lucene.util.BytesRef
-//import scala.collection.mutable.ArrayBuffer
 
 class BaseGraphSearcher(searcher: Searcher) extends Logging {
 
@@ -46,7 +38,7 @@ class BaseGraphSearcher(searcher: Searcher) extends Logging {
         if (ref.length > 0) {
           return URIList.unpackLongArray(ref.bytes, ref.offset, ref.length)
         } else {
-          log.error(s"missing uri list data: ${field}")
+          log.error(s"missing long array data: ${field}")
         }
       }
     }
