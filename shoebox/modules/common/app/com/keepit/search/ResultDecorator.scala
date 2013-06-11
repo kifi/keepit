@@ -17,7 +17,7 @@ trait ResultDecorator {
   def decorate(resultSet: ArticleSearchResult): Future[Seq[PersonalSearchResult]]
 }
 
-class ResultDecoratorImpl(val userId: Id[User], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends ResultDecorator {
+class ResultDecoratorImpl(val userId: Id[User], shoeboxClient: ShoeboxServiceClient) extends ResultDecorator {
   override def decorate(resultSet: ArticleSearchResult): Future[Seq[PersonalSearchResult]] = {
 
     shoeboxClient.getPersonalSearchInfo(userId, resultSet).map { case (allUsers, personalSearchHits) =>
