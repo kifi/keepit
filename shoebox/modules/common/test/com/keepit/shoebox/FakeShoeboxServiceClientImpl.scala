@@ -13,6 +13,7 @@ import com.keepit.search.SearchConfigExperiment
 import com.keepit.search.SearchConfigExperimentRepo
 import com.keepit.serializer.SearchConfigExperimentSerializer
 import com.keepit.common.social.BasicUser
+import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.ext.PersonalSearchHit
 import com.keepit.search.ArticleSearchResult
 import com.keepit.common.social.SocialId
@@ -24,6 +25,7 @@ class FakeShoeboxServiceClientImpl @Inject() (
     db: Database,
     userConnectionRepo: UserConnectionRepo,
     userRepo: UserRepo,
+    basicUserRepo: BasicUserRepo,
     bookmarkRepo: BookmarkRepo,
     browsingHistoryRepo: BrowsingHistoryRepo,
     clickingHistoryRepo: ClickHistoryRepo,
@@ -76,6 +78,13 @@ class FakeShoeboxServiceClientImpl @Inject() (
     Promise.successful(bookmarks).future
   }
 
+  def getBookmarksChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Bookmark]] = {
+    val bookmarks = db.readOnly { implicit session =>
+      bookmarkRepo.getBookmarksChanged(seqNum, fetchSize)
+    }
+    Promise.successful(bookmarks).future
+  }
+
   def getUsersChanged(seqNum: SequenceNumber): Future[Seq[(Id[User], SequenceNumber)]] = {
     val changed = db.readOnly { implicit s =>
       bookmarkRepo.getUsersChanged(seqNum)
@@ -110,6 +119,14 @@ class FakeShoeboxServiceClientImpl @Inject() (
   def reportArticleSearchResult(res: ArticleSearchResult): Unit = {}
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = ???
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = ???
+
+  def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User],BasicUser]] = {
+    val users = db.readOnly { implicit s =>
+      userIds.map{ userId => userId -> basicUserRepo.load(userId) }.toMap
+    }
+    Promise.successful(users).future
+  }
+
   def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
   def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]] = Promise.successful(Seq()).future
   def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] = ???
