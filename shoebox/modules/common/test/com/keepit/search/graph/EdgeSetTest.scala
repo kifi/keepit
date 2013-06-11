@@ -18,7 +18,7 @@ class EdgeSetTest extends Specification {
     override val sourceId: Id[Vertex],
     override protected val longArraySet: LongArraySet,
     timeArray: Array[Long]
-  ) extends LongSetEdgeSetWithCreatedAt[Vertex, Vertex] {
+  ) extends LongSetEdgeSetWithAttributes[Vertex, Vertex] {
     override protected def createdAtByIndex(idx:Int): Long = timeArray(idx)
     override protected def isPublicByIndex(idx: Int): Boolean = true
   }

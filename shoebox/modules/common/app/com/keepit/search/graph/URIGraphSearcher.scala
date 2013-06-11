@@ -148,7 +148,7 @@ object UserToUriEdgeSet {
   def apply(sourceId: Id[User], uriList: URIList, isPublicEdgeSet: Boolean): UserToUriEdgeSet = {
     val set = LongArraySet.fromSorted(uriList.ids)
 
-    new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithCreatedAt[User, NormalizedURI] {
+    new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithAttributes[User, NormalizedURI] {
       override protected val longArraySet = set
       override protected def createdAtByIndex(idx:Int): Long = {
         val datetime = uriList.createdAt(idx)
@@ -168,7 +168,7 @@ object UserToUriEdgeSet {
       val set = LongArraySet.from(concat(publicIds, privateIds))
       val pubListSize = publicIds.length
 
-      new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithCreatedAt[User, NormalizedURI] {
+      new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithAttributes[User, NormalizedURI] {
         override protected val longArraySet = set
         override protected def createdAtByIndex(idx:Int): Long = {
           val datetime = if (idx < pubListSize) publicList.createdAt(idx) else privateList.createdAt(idx - pubListSize)
@@ -186,7 +186,7 @@ object UserToUriEdgeSet {
     val set = LongArraySet.from(myInfo.uriIdArray, myInfo.mapper.reserveMapper)
 
     val pubListSize = publicList.size
-    new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithCreatedAt[User, NormalizedURI] {
+    new UserToUriEdgeSet(sourceId) with LongSetEdgeSetWithAttributes[User, NormalizedURI] {
       override protected val longArraySet = set
       override protected def createdAtByIndex(idx:Int): Long = {
         val datetime = if (idx < pubListSize) publicList.createdAt(idx) else privateList.createdAt(idx - pubListSize)
