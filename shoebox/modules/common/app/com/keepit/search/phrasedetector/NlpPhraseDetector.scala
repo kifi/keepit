@@ -43,6 +43,7 @@ object NlpPhraseDetector {
 
   private def toDetect(queryText: String): Boolean = {
     if (queryText.length() > UPPER_LIMIT || queryText.length() < LOWER_LIMIT) return false
+    if (queryText.split(" ").filter(!_.isEmpty).size <= 1) return false
     if (queryText.toCharArray.exists(x => !(x.isLetterOrDigit || x.isSpaceChar))) return false
     if (LangDetector.detect(queryText).lang != "en" && LangDetector.detectShortText(queryText).lang != "en" ) return false
     return true

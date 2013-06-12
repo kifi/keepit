@@ -32,6 +32,12 @@ class NlpPhraseDetectorTest extends Specification {
       val queryText = "il me dit que je suis belle"
       NlpPhraseDetector.detectAll(queryText, analyzer) === Set.empty[(Int, Int)]
     }
+
+    "not try to detect single string" in {
+      val analyzer = new StandardAnalyzer(Version.LUCENE_42)
+      val queryText = "foo"
+      NlpPhraseDetector.detectAll(queryText, analyzer) === Set.empty[(Int, Int)]
+    }
   }
 
 }

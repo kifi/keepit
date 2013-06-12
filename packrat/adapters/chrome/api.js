@@ -196,8 +196,8 @@ api = function() {
     }};
   chrome.runtime.onConnect.addListener(function(port) {
     var tab = port.sender.tab;
-    if (port.sender.id === chrome.runtime.id) {
-      api.log("[onConnect]", tab.id, tab.url);
+    api.log("[onConnect]", port.name, tab && tab.id, tab && tab.url);
+    if (port.sender.id === chrome.runtime.id && tab) {
       if (ports[tab.id]) {
         api.log("#a00", "[onConnect] %i disconnecting prev port", tab.id);
         ports[tab.id].disconnect();
