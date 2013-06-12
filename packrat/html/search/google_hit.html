@@ -9,7 +9,7 @@
     </div>
   </div>
   <!--n-->
-  <div class="kifi-who" id="kifi-who-{{bookmark.id}}">
+  <div class="kifi-who" data-url="{{bookmark.url}}">
     {{#displaySelf}}
       <img class="kifi-face kifi-self{{^displayUsers}} kifi-only{{/displayUsers}}" src="{{cdnBase}}/users/{{session.userId}}/pics/100/0.jpg" alt="You!" title="You! You look great!">
     {{/displaySelf}}
