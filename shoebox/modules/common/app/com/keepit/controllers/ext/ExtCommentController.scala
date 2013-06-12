@@ -64,18 +64,6 @@ class ExtCommentController @Inject() (
     Ok(JsObject(counts.map { case (url, n) => url -> JsArray(Seq(JsNumber(n._1), JsNumber(n._2))) }))
   }
 
-  // TODO: remove action below once we don't care about chatter feature working with kifi 2.4.6 and earlier (12 Jun 2013)
-  def getCountsDeprecated(ids: String) = AuthenticatedJsonAction { request =>
-    val nUriExtIds = ids.split('.').map(ExternalId[NormalizedURI](_))
-    val counts = db.readOnly { implicit s =>
-      nUriExtIds.map { extId =>
-        val id = normalizedURIRepo.get(extId).id.get
-        extId -> (commentRepo.getPublicCount(id), commentRepo.getParentMessages(id, request.userId).size)
-      }
-    }
-    Ok(JsObject(counts.map { case (id, n) => id.id -> JsArray(Seq(JsNumber(n._1), JsNumber(n._2))) }))
-  }
-
   def postCommentAction() = AuthenticatedJsonToJsonAction { request =>
     val o = request.body
     val (urlStr, title, text) = (
