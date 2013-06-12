@@ -151,7 +151,7 @@ class RemoteSecureSocialAuthenticatorPlugin @Inject()(
   private def sessionFromAuthenticator(authenticator: Authenticator): UserSession = {
     val (socialId, provider) = (SocialId(authenticator.userId.id), SocialNetworkType(authenticator.userId.providerId))
     val userIdFuture = shoeboxClient.getSocialUserInfoByNetworkAndSocialId(socialId, provider).map(_.map(_.userId))
-    val userId = monitoredAwait.result(userIdFuture, 3 seconds).flatten
+    val userId = monitoredAwait.result(userIdFuture, 3 seconds, s"get userid for $socialId and $provider").flatten
     UserSession(
       userId = userId,
       externalId = ExternalId[UserSession](authenticator.id),
@@ -188,7 +188,7 @@ class RemoteSecureSocialAuthenticatorPlugin @Inject()(
     }
 
     externalIdOpt.map{ externalId =>
-      val result = monitoredAwait.result(shoeboxClient.getSessionByExternalId(externalId), 3 seconds)
+      val result = monitoredAwait.result(shoeboxClient.getSessionByExternalId(externalId), 3 seconds, s"get session for $externalId")
       result collect {
         case s if s.isValid => authenticatorFromSession(s)
       }
@@ -394,7 +394,7 @@ class RemoteSecureSocialUserPlugin @Inject() (
 
   def find(id: UserId): Option[SocialUser] = reportExceptions {
     val resFuture = shoeboxClient.getSocialUserInfoByNetworkAndSocialId(SocialId(id.id), SocialNetworkType(id.providerId))
-    monitoredAwait.result(resFuture, 3 seconds) match {
+    monitoredAwait.result(resFuture, 3 seconds, s"get user for social user ${id.id} on $id.providerId") match {
       case None =>
         log.info("No SocialUserInfo found for %s".format(id))
         None
