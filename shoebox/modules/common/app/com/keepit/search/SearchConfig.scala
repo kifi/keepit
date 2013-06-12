@@ -60,7 +60,7 @@ object SearchConfig {
       "halfDecayHours" -> "the time the recency boost becomes half",
       "recencyBoost" -> "importance of the recent bookmarks",
       "newContentBoost" -> "importance of a new content introduced to the network",
-      "newContentDiscoveryThreshold" -> "minimum recency score to inject new content in a result",
+      "newContentDiscoveryThreshold" -> "minimum recency score to instance new content in a result",
       "tailCutting" -> "after damping, a hit with a score below the high score multiplied by this will be removed",
       "proximityBoost" -> "boosting by proximity",
       "semanticBoost" -> "boosting by semantic vector",

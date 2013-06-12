@@ -1,31 +1,13 @@
 package com.keepit.common.cache
 
-import com.tzavellas.sse.guice.ScalaModule
+import net.codingwell.scalaguice.ScalaModule
+import net.spy.memcached.{AddrUtil, MemcachedClient}
 
-import com.google.inject.Provides
-import com.google.inject.Inject
-import com.google.inject.Singleton
-import com.google.inject.TypeLiteral
-import com.google.inject.{Provides, Inject, Singleton, TypeLiteral}
-import com.keepit.common.db.slick.Repo
-import com.keepit.model._
-import com.keepit.common.time._
-import com.keepit.common.db.slick._
-import org.joda.time.DateTime
-import org.joda.time.LocalDate
-import akka.actor.ActorSystem
-import akka.actor.Scheduler
-import javax.sql.DataSource
-import com.tzavellas.sse.guice.ScalaModule
-import com.keepit.common.db.slick.Database
-import com.keepit.common.db.slick.MySQL
-import com.keepit.common.db.slick.H2
-import com.keepit.common.db.slick.DataBaseComponent
-import play.api.Play.current
-import play.api.Play
-import net.spy.memcached.{ConnectionFactoryBuilder, AddrUtil, MemcachedClient}
-import net.spy.memcached.auth.{PlainCallbackHandler, AuthDescriptor}
+import com.google.inject.{Provides, Singleton}
 import com.keepit.inject.AppScoped
+
+import play.api.Play
+import play.api.Play.current
 
 class MemcachedCacheModule() extends ScalaModule {
   def configure(): Unit = {

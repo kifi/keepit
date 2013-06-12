@@ -14,8 +14,7 @@ import java.net.URI
 import java.security.MessageDigest
 import scala.collection.mutable
 import play.api.libs.json._
-import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
-import com.keepit.serializer.SliderHistoryBinarySerializer
+import com.keepit.common.cache.{BinaryCacheImpl, FortyTwoCachePlugin, Key}
 import scala.concurrent.duration._
 import com.keepit.search.MultiHashFilter
 
@@ -42,14 +41,13 @@ trait SliderHistoryRepo extends Repo[SliderHistory] {
 }
 
 case class SliderHistoryUserIdKey(userId: Id[User]) extends Key[SliderHistory] {
+  override val version = 2
   val namespace = "slider_history_by_userid"
   def toKey(): String = userId.id.toString
 }
-class SliderHistoryUserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[SliderHistoryUserIdKey, SliderHistory] {
-  val ttl = 7 days
-  def deserialize(obj: Any): SliderHistory = SliderHistoryBinarySerializer.sliderHistoryBinarySerializer.reads(obj.asInstanceOf[Array[Byte]])
-  def serialize(sliderHistory: SliderHistory) = SliderHistoryBinarySerializer.sliderHistoryBinarySerializer.writes(sliderHistory)
-}
+
+class SliderHistoryUserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends BinaryCacheImpl[SliderHistoryUserIdKey, SliderHistory](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 @Singleton
 class SliderHistoryRepoImpl @Inject() (

@@ -2,8 +2,7 @@ package com.keepit.common.cache
 
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
-import com.google.inject.{ImplementedBy, Inject, Singleton}
-import play.api.Play.current
+import com.google.inject.{Inject, Singleton}
 import scala.collection.concurrent.{TrieMap=>ConcurrentMap}
 import play.api.libs.json._
 import play.api.Plugin
@@ -12,9 +11,9 @@ import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent._
 import play.modules.statsd.api.Statsd
 import com.keepit.common.time._
+import com.keepit.serializer.{Serializer, BinaryFormat}
 
-@Singleton
-class CacheStatistics {
+object CacheStatistics {
   private val hitsMap = ConcurrentMap[String, AtomicInteger]()
   private val missesMap = ConcurrentMap[String, AtomicInteger]()
   private val setsMap = ConcurrentMap[String, AtomicInteger]()
@@ -29,9 +28,21 @@ class CacheStatistics {
     }
   }
 
-  def incrHits(className: String) { incrCount(className, hitsMap) }
-  def incrMisses(className: String) { incrCount(className, missesMap) }
-  def incrSets(className: String) { incrCount(className, setsMap) }
+  def recordHit(cachePlugin: FortyTwoCachePlugin, namespace: String, millis: Long) {
+    incrCount(s"$cachePlugin.$namespace", hitsMap)
+    Statsd.increment(s"$cachePlugin.$namespace.hits")
+    Statsd.timing(s"$cachePlugin.$namespace.hits", millis)
+  }
+  def recordMiss(cachePlugin: FortyTwoCachePlugin, namespace: String) {
+    incrCount(s"$cachePlugin.$namespace", missesMap)
+    Statsd.increment(s"$cachePlugin.$namespace.misses")
+  }
+
+  def recordSet(cachePlugin: FortyTwoCachePlugin, namespace: String, millis: Long) {
+    incrCount(s"$cachePlugin.$namespace", setsMap)
+    Statsd.increment(s"$cachePlugin.$namespace.sets")
+    Statsd.timing(s"$cachePlugin.$namespace.sets", millis)
+  }
 
   def getStatistics: Seq[(String, Int, Int, Int)] = {
     val keys = (hitsMap.keySet ++ missesMap.keySet ++ setsMap.keySet).toSeq.sorted
@@ -43,8 +54,6 @@ class CacheStatistics {
 
 // Abstraction around play2-memcached plugin
 trait FortyTwoCachePlugin extends Plugin {
-  val stats: CacheStatistics
-
   private[cache] def onError(error: HealthcheckError) {}
 
   def get(key: String): Option[Any]
@@ -59,7 +68,6 @@ trait InMemoryCachePlugin extends FortyTwoCachePlugin
 @Singleton
 class MemcachedCache @Inject() (
   val cache: MemcachedPlugin,
-  val stats: CacheStatistics,
   val healthcheck: HealthcheckPlugin) extends FortyTwoCachePlugin {
   def get(key: String): Option[Any] =
     cache.api.get(key)
@@ -84,9 +92,7 @@ class MemcachedCache @Inject() (
 }
 
 @Singleton
-class EhCacheCache @Inject() (
-  val stats: CacheStatistics,
-  val healthcheck: HealthcheckPlugin) extends InMemoryCachePlugin {
+class EhCacheCache @Inject() (val healthcheck: HealthcheckPlugin) extends InMemoryCachePlugin {
 
   import play.api.Play
   import play.api.cache.{EhCachePlugin, Cache}
@@ -118,8 +124,7 @@ class EhCacheCache @Inject() (
 }
 
 @Singleton
-class HashMapMemoryCache @Inject() (
-  val stats: CacheStatistics) extends InMemoryCachePlugin {
+class HashMapMemoryCache extends InMemoryCachePlugin {
 
   val cache = ConcurrentMap[String, Any]()
 
@@ -139,8 +144,7 @@ class HashMapMemoryCache @Inject() (
 }
 
 @Singleton
-class NoOpCache @Inject() (
-  val stats: CacheStatistics) extends FortyTwoCachePlugin {
+class NoOpCache extends FortyTwoCachePlugin {
 
   def get(key: String): Option[Any] = None
 
@@ -151,7 +155,6 @@ class NoOpCache @Inject() (
   override def toString = "NoOpCache"
 
 }
-
 
 trait Key[T] {
   val namespace: String
@@ -164,9 +167,6 @@ trait ObjectCache[K <: Key[T], T] {
   val outerCache: Option[ObjectCache[K, T]] = None
   val ttl: Duration
   outerCache map {outer => require(ttl <= outer.ttl)}
-
-  def serialize(value: T): Any
-  def deserialize(obj: Any): T
 
   protected[cache] def getFromInnerCache(key: K): Option[T]
   protected[cache] def setInnerCache(key: K, value: T): Future[T]
@@ -233,6 +233,9 @@ trait ObjectCache[K <: Key[T], T] {
 
 trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
   val repo: FortyTwoCachePlugin
+  val serializer: Serializer[T]
+  val stats = CacheStatistics
+
   protected[cache] def getFromInnerCache(key: K): Option[T] = {
     val getStart = currentDateTime.getMillis()
     val value = try repo.get(key.toString) catch {
@@ -242,16 +245,11 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
         None
     }
     try {
-      val objOpt = value.map(deserialize)
+      val objOpt = value.map(serializer.reads)
       val getEnd = currentDateTime.getMillis()
       objOpt match {
-        case Some(_) =>
-          repo.stats.incrHits(key.namespace)
-          Statsd.increment(s"$repo.${key.namespace}.hits")
-          Statsd.timing(s"$repo.${key.namespace}.hits", getEnd - getStart)
-        case None =>
-          repo.stats.incrMisses(key.namespace)
-          Statsd.increment(s"$repo.${key.namespace}.misses")
+        case Some(_) => CacheStatistics.recordHit(repo, key.namespace, getEnd - getStart)
+        case None => CacheStatistics.recordMiss(repo, key.namespace)
       }
       objOpt
     } catch {
@@ -266,7 +264,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
   protected[cache] def setInnerCache(key: K, value: T): Future[T] = {
     val setStart = currentDateTime.getMillis()
     future {
-      val properlyBoxed = serialize(value) match {
+      val properlyBoxed = serializer.writes(value) match {
         case x: java.lang.Byte => x.byteValue()
         case x: java.lang.Short => x.shortValue()
         case x: java.lang.Integer => x.intValue()
@@ -281,11 +279,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
       }
       repo.set(key.toString, properlyBoxed, ttl.toSeconds.toInt)
       val setEnd = currentDateTime.getMillis()
-
-      repo.stats.incrSets(key.namespace)
-      Statsd.increment(s"$repo.${key.namespace}.sets")
-      Statsd.timing(s"$repo.${key.namespace}.sets", setEnd - setStart)
-
+      CacheStatistics.recordSet(repo, key.namespace, setEnd - setStart)
       value
     } recover {
       case e: Throwable =>
@@ -299,7 +293,41 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
     repo.remove(key.toString)
     outerCache map {outer => outer.remove(key)}
   }
-
-  def parseJson(obj: Any)(implicit formatter: Format[T]): T =
-    Json.fromJson[T](Json.parse(obj.asInstanceOf[String]).asInstanceOf[JsValue]).get
 }
+
+object FortyTwoCacheFactory {
+  def apply[K <: Key[T], T](innerToOuterPluginSettings: Seq[(FortyTwoCachePlugin, Duration, Serializer[T])]): Option[FortyTwoCacheImpl[K, T]] =
+    innerToOuterPluginSettings.foldRight[Option[FortyTwoCacheImpl[K, T]]](None) {
+      case ((innerPlugin, shorterTTL, nextSerializer), outer) =>
+        Some(new FortyTwoCacheImpl[K, T](innerPlugin, shorterTTL, nextSerializer, outer))
+    }
+}
+
+class FortyTwoCacheImpl[K <: Key[T], T](
+  val repo: FortyTwoCachePlugin,
+  val ttl: Duration,
+  val serializer: Serializer[T],
+  override val outerCache: Option[ObjectCache[K, T]]
+) extends FortyTwoCache[K, T] {
+
+  // Constructor using a distinct serializer for each cache plugin
+  def this(innerMostPluginSettings: (FortyTwoCachePlugin, Duration, Serializer[T]), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration, Serializer[T])*) =
+    this(innerMostPluginSettings._1, innerMostPluginSettings._2, innerMostPluginSettings._3, FortyTwoCacheFactory[K, T](innerToOuterPluginSettings))
+
+  // Constructor using the same serializer for each cache plugin
+  def this(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(serializer: Serializer[T]) =
+    this((innermostPluginSettings._1, innermostPluginSettings._2, serializer), innerToOuterPluginSettings.map {case (plugin, ttl) => (plugin, ttl, serializer)}:_*)
+}
+
+class JsonCacheImpl[K <: Key[T], T](innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(implicit formatter: Format[T])
+  extends FortyTwoCacheImpl[K, T](innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer(formatter))
+
+class BinaryCacheImpl[K <: Key[T], T](innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(implicit formatter: BinaryFormat[T])
+  extends FortyTwoCacheImpl[K, T](innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer(formatter))
+
+class PrimitiveCacheImpl[K <: Key[P], P <: AnyVal](innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends FortyTwoCacheImpl[K, P](innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer[P])
+
+class StringCacheImpl[K <: Key[String]](innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends FortyTwoCacheImpl[K, String](innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer.string)
+

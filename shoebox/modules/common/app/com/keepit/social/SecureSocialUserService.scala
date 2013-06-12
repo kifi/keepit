@@ -1,16 +1,20 @@
 package com.keepit.social
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration._
+
+import net.codingwell.scalaguice.InjectorExtensions._
+
 import com.google.inject.{Inject, Singleton}
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.db.ExternalId
+import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.{SocialGraphPlugin, SocialId, SocialNetworkType}
 import com.keepit.common.store.S3ImageStore
-import com.keepit.common.akka.MonitoredAwait
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -20,7 +24,6 @@ import play.api.Play
 import play.api.Play.current
 import securesocial.core._
 import securesocial.core.providers.Token
-import scala.concurrent.duration._
 
 class SecureSocialIdGenerator(app: Application) extends IdGenerator(app) {
   def generate: String = ExternalId[String]().toString
@@ -28,10 +31,7 @@ class SecureSocialIdGenerator(app: Application) extends IdGenerator(app) {
 
 class SecureSocialAuthenticatorStore(app: Application) extends AuthenticatorStore(app) {
   lazy val global = app.global.asInstanceOf[FortyTwoGlobal]
-  lazy val plugin = {
-    val injector = new RichInjector(global.injector)
-    injector.inject[SecureSocialAuthenticatorPlugin]
-  }
+  lazy val plugin = global.injector.instance[SecureSocialAuthenticatorPlugin]
   def proxy: Option[SecureSocialAuthenticatorPlugin] = {
     if (global.initialized) Some(plugin) else None
   }
@@ -203,7 +203,7 @@ class SecureSocialUserService(implicit val application: Application) extends Use
     // FortyTwoGlobal to attempt to initialize AppScope in multiple threads, causing deadlock. This allows us to wait
     // until the injector is initialized to do something if we want. When we need the plugin to be instantiated,
     // we can fail with None.get which will let us know immediately that there is a problem.
-    if (global.initialized) Some(new RichInjector(global.injector).inject[SecureSocialUserPlugin]) else None
+    if (global.initialized) Some(global.injector.instance[SecureSocialUserPlugin]) else None
   }
   def find(id: UserId): Option[SocialUser] = proxy.get.find(id)
   def save(user: Identity): SocialUser = proxy.get.save(user)
@@ -269,10 +269,10 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
 
   def save(identity: Identity): SocialUser = reportExceptions {
     db.readWrite { implicit s =>
-      val socialUser = SocialUser(identity)
+      val (userId, socialUser) = getUserIdAndSocialUser(identity)
       log.info("persisting social user %s".format(socialUser))
       val socialUserInfo = internUser(
-        SocialId(socialUser.id.id), SocialNetworkType(socialUser.id.providerId), socialUser)
+        SocialId(socialUser.id.id), SocialNetworkType(socialUser.id.providerId), socialUser, userId)
       require(socialUserInfo.credentials.isDefined,
         "social user info's credentials is not defined: %s".format(socialUserInfo))
       require(socialUserInfo.userId.isDefined, "social user id  is not defined: %s".format(socialUserInfo))
@@ -282,6 +282,11 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
       log.info("persisting %s into %s".format(socialUser, socialUserInfo))
       socialUser
     }
+  }
+
+  private def getUserIdAndSocialUser(identity: Identity): (Option[Id[User]], SocialUser) = identity match {
+    case UserIdentity(userId, socialUser) => (userId, socialUser)
+    case ident => (None, SocialUser(ident))
   }
 
   private def createUser(displayName: String): User = {
@@ -294,13 +299,13 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
   }
 
   private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType,
-      socialUser: SocialUser)(implicit session: RWSession): SocialUserInfo = {
+      socialUser: SocialUser, userId: Option[Id[User]])(implicit session: RWSession): SocialUserInfo = {
     val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
     suiOpt.map(_.withCredentials(socialUser)) match {
       case Some(socialUserInfo) if !socialUserInfo.userId.isEmpty =>
         if (suiOpt == Some(socialUserInfo)) socialUserInfo else socialUserInfoRepo.save(socialUserInfo)
       case Some(socialUserInfo) if socialUserInfo.userId.isEmpty =>
-        val user = userRepo.save(createUser(socialUserInfo.fullName))
+        val user = userRepo.save(createUser(socialUserInfo.fullName).copy(id = userId))
 
         //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         //todo(eishay): send a direct fetch request
@@ -308,7 +313,7 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
         imageStore.updatePicture(sui, user.externalId)
         sui
       case None =>
-        val user = userRepo.save(createUser(socialUser.fullName))
+        val user = userRepo.save(createUser(socialUser.fullName).copy(id = userId))
         log.info("creating new SocialUserInfo for %s".format(user))
         val userInfo = SocialUserInfo(userId = Some(user.id.get),//verify saved
             socialId = socialId, networkType = socialNetworkType,

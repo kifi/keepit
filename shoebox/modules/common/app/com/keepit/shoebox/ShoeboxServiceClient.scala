@@ -42,6 +42,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]]
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
+  def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
   def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]]
   def reportArticleSearchResult(res: ArticleSearchResult): Unit
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
@@ -58,6 +59,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]]
   def getIndexable(seqNum: Long, fetchSize: Int): Future[Seq[NormalizedURI]]
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]]
+  def getBookmarksChanged(seqNum: SequenceNumber, fertchSize: Int): Future[Seq[Bookmark]]
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]]
   def getPersonalSearchInfo(userId: Id[User], resultSet: ArticleSearchResult): Future[(Map[Id[User], BasicUser], Seq[PersonalSearchHit])]
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]]
@@ -66,7 +68,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def saveExperiment(experiment: SearchConfigExperiment): Future[SearchConfigExperiment]
   def hasExperiment(userId: Id[User], state: State[ExperimentType]): Future[Boolean]
   def getUserExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]]
-  def getSocialUserInfosByUserId(userId: Id[User]): Future[List[SocialUserInfo]]
+  def getSocialUserInfosByUserId(userId: Id[User]): Future[Seq[SocialUserInfo]]
   def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]]
 }
 
@@ -119,11 +121,11 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getSocialUserInfosByUserId(userId: Id[User]): Future[List[SocialUserInfo]] = {
+  def getSocialUserInfosByUserId(userId: Id[User]): Future[Seq[SocialUserInfo]] = {
     cacheProvider.socialUserCache.get(SocialUserInfoUserKey(userId)) match {
       case Some(sui) => Promise.successful(sui).future
       case None => call(routes.ShoeboxController.getSocialUserInfosByUserId(userId)) map { resp =>
-        Json.fromJson[List[SocialUserInfo]](resp.json).get
+        Json.fromJson[Seq[SocialUserInfo]](resp.json).get
       }
     }
   }
@@ -131,6 +133,12 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]] = {
     call(routes.ShoeboxController.getBookmarks(userId)).map{ r =>
+      r.json.as[JsArray].value.map(js => Json.fromJson[Bookmark](js).get)
+    }
+  }
+
+  def getBookmarksChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Bookmark]] = {
+    call(routes.ShoeboxController.getBookmarksChanged(seqNum.value, fetchSize)).map{ r =>
       r.json.as[JsArray].value.map(js => Json.fromJson[Bookmark](js).get)
     }
   }
@@ -234,6 +242,23 @@ class ShoeboxServiceClientImpl @Inject() (
       case users => call(routes.ShoeboxController.getUserIdsByExternalIds(needToGetUsers.mkString(","))).map { r =>
         cachedUsers ++ r.json.as[Seq[Long]].map(Id[User](_))
       }
+    }
+  }
+
+  def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User],BasicUser]] = {
+    var cached = Map.empty[Id[User], BasicUser]
+    val needed = new ArrayBuffer[Id[User]]
+    userIds.foreach{ userId =>
+      cacheProvider.basicUserCache.getOrElseOpt(BasicUserUserIdKey(userId))(None) match {
+        case Some(bu) => cached += (userId -> bu)
+        case None => needed += userId
+      }
+    }
+
+    val query = needed.map(_.id).mkString(",")
+    call(routes.ShoeboxController.getBasicUsers(query)).map { res =>
+      val retrievedUsers = res.json.as[Map[String, BasicUser]]
+      cached ++ (retrievedUsers.map(u => Id[User](u._1.toLong) -> u._2))
     }
   }
 

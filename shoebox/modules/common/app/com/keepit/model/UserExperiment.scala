@@ -1,15 +1,14 @@
 package com.keepit.model
 
 import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.common.cache.{FortyTwoCache, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
 import scala.concurrent.duration._
+import com.keepit.serializer.TraversableFormat
 
 case class UserExperiment (
   id: Option[Id[UserExperiment]] = None,
@@ -47,22 +46,18 @@ object ExperimentTypes {
   }
 }
 
-object UserExperimentStates extends States[UserExperiment]
+object UserExperimentStates extends States[UserExperiment] {
+  implicit val formatter = State.format[ExperimentType]
+}
 
 case class UserExperimentUserIdKey(userId: Id[User]) extends Key[Seq[State[ExperimentType]]] {
+  override val version = 2
   val namespace = "user_experiment_user_id"
   def toKey(): String = userId.id.toString
 }
 
-class UserExperimentCache @Inject()(val repo: FortyTwoCachePlugin)
-    extends FortyTwoCache[UserExperimentUserIdKey, Seq[State[ExperimentType]]] {
-  private implicit val experimentTypeFormat = State.format[ExperimentType]
-  val ttl = 7 days
-  def deserialize(obj: Any): Seq[State[ExperimentType]] =
-    Json.fromJson[Seq[State[ExperimentType]]](Json.parse(obj.asInstanceOf[String])).get
-  def serialize(userExperiments: Seq[State[ExperimentType]]): Any =
-    Json.toJson(userExperiments)
-}
+class UserExperimentCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+    extends JsonCacheImpl[UserExperimentUserIdKey, Seq[State[ExperimentType]]](innermostPluginSettings, innerToOuterPluginSettings:_*)(TraversableFormat.seq(State.format[ExperimentType]))
 
 @ImplementedBy(classOf[UserExperimentRepoImpl])
 trait UserExperimentRepo extends Repo[UserExperiment] {

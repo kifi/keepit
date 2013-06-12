@@ -95,7 +95,8 @@ trait Indexable[T] {
     new Field(fieldName, ts, textFieldType)
   }
 
-  def buildIdValueField(typedId: Id[T]) = new NumericDocValuesField(Indexer.idValueFieldName, typedId.id)
+  def buildIdValueField(typedId: Id[T]): Field = buildIdValueField(Indexer.idValueFieldName, typedId)
+  def buildIdValueField[V](field: String, typedId: Id[V]): Field = new NumericDocValuesField(field, typedId.id)
 
   def buildDataPayloadField(term: Term, data: Array[Byte]): Field = {
     new Field(term.field(), new DataPayloadTokenStream(term.text(), data), dataPayloadFieldType)
@@ -104,7 +105,7 @@ trait Indexable[T] {
   class DataPayloadTokenStream(termText: String, data: Array[Byte]) extends TokenStream {
     val termAttr = addAttribute(classOf[CharTermAttribute])
     val payloadAttr = addAttribute(classOf[PayloadAttribute])
-    val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute]);
+    val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
     var returnToken = true;
 
     @throws(classOf[IOException])
@@ -133,5 +134,8 @@ trait Indexable[T] {
     new Field(fieldName, svBuilder.tokenStream, semanticVectorFieldType)
   }
 
+  def buildBinaryDocValuesField(fieldName: String, bytes: Array[Byte]): Field = {
+    new BinaryDocValuesField(fieldName, new BytesRef(bytes))
+  }
 }
 

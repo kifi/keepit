@@ -9,7 +9,6 @@ import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.NonOKResponseException
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.model._
 
@@ -24,7 +23,7 @@ private case object FetchAll
 
 private[social] class SocialGraphActor @Inject() (
     healthcheckPlugin: HealthcheckPlugin,
-    graph: FacebookSocialGraph,
+    graphs: Set[SocialGraph],
     db: Database,
     socialRepo: SocialUserInfoRepo,
     socialUserRawInfoStore: SocialUserRawInfoStore,
@@ -32,6 +31,9 @@ private[social] class SocialGraphActor @Inject() (
     socialUserImportEmail: SocialUserImportEmail,
     socialUserCreateConnections: UserConnectionCreator)
   extends FortyTwoActor(healthcheckPlugin) with Logging {
+
+  private val networkTypeToGraph: Map[SocialNetworkType, SocialGraph] =
+    graphs.map(graph => graph.networkType -> graph).toMap
 
   def receive() = {
     case FetchAll =>
@@ -53,53 +55,32 @@ private[social] class SocialGraphActor @Inject() (
   }
 
   def fetchUserInfo(socialUserInfo: SocialUserInfo): Seq[SocialConnection] = {
-      try {
-        require(socialUserInfo.credentials.isDefined,
-          "social user info's credentials are not defined: %s".format(socialUserInfo))
-        val rawInfo = graph.fetchSocialUserRawInfo(socialUserInfo)
-
+    try {
+      require(socialUserInfo.credentials.isDefined,
+        s"SocialUserInfo's credentials are not defined: $socialUserInfo")
+      val graph = networkTypeToGraph(socialUserInfo.networkType)
+      graph.fetchSocialUserRawInfo(socialUserInfo).toSeq flatMap { rawInfo =>
         rawInfo.jsons flatMap graph.extractEmails map (socialUserImportEmail.importEmail(socialUserInfo.userId.get, _))
 
         socialUserRawInfoStore += (socialUserInfo.id.get -> rawInfo)
 
         val friends = rawInfo.jsons flatMap graph.extractFriends
-        socialUserImportFriends.importFriends(friends, SocialNetworks.FACEBOOK)
+        socialUserImportFriends.importFriends(friends, graph.networkType)
         val connections = socialUserCreateConnections.createConnections(
-          socialUserInfo, friends.map(_._1.socialId), SocialNetworks.FACEBOOK)
+          socialUserInfo, friends.map(_._1.socialId), graph.networkType)
 
         db.readWrite { implicit c =>
           socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCHED_USING_SELF).withLastGraphRefresh())
         }
         connections
-      } catch {
-        case e @ NonOKResponseException(url, response) =>
-          val errorJson = response.json \ "error"
-          val errorCode = (errorJson \ "code").asOpt[Int]
-          val errorSub = (errorJson \ "error_subcode").asOpt[Int]
-
-          // see https://developers.facebook.com/docs/reference/api/errors/
-          // TODO: deal with other errors as we find them and decide on a reasonable action
-          import FacebookSocialGraph.ErrorSubcodes._
-          (errorCode, errorSub) match {
-            case (_, Some(AppNotInstalled)) =>
-              log.warn(s"App not authorized for social user $socialUserInfo; not fetching connections.")
-              db.readWrite { implicit s =>
-                socialRepo.save(
-                  socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
-              }
-              Seq()
-            case _ =>
-              db.readWrite { implicit s =>
-                socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())
-              }
-              throw e
-          }
-        case ex: Exception =>
-          db.readWrite { implicit c =>
-            socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())
-          }
-          throw new Exception(s"Problem Fetching User Info for $socialUserInfo", ex)
       }
+    } catch {
+      case ex: Exception =>
+        db.readWrite { implicit c =>
+          socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())
+        }
+        throw new Exception(s"Problem updating SocialUserInfo: $socialUserInfo", ex)
+    }
   }
 }
 

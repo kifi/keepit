@@ -122,6 +122,8 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
         uris.foreach{ uri => store += (uri.id.get -> mkArticle(uri.id.get, "title", "content")) }
 
         val indexer = mkURIGraphIndexer()
+        indexer.update()
+
         val doc = indexer.buildIndexable(user.id.get, SequenceNumber.ZERO).buildDocument
         doc.getFields.forall{ f => indexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
       }

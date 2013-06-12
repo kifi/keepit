@@ -1,6 +1,7 @@
 package com.keepit.common.cache
 
-import com.tzavellas.sse.guice.ScalaModule
+import net.codingwell.scalaguice.ScalaModule
+
 import com.keepit.inject.AppScoped
 
 class EhCacheCacheModule() extends ScalaModule {

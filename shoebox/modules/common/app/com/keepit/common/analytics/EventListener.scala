@@ -1,36 +1,27 @@
 package com.keepit.common.analytics
 
-import play.api.libs.json.{ Json, JsArray, JsBoolean, JsNumber, JsObject, JsString }
-import akka.actor.ActorSystem
-import akka.actor.Props
-import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext.Implicits.global
-import java.util.{ Set => JSet }
-import com.google.inject.{ Inject, Singleton, Provider }
 
-import com.keepit.serializer.EventSerializer
-import com.keepit.inject._
-import com.keepit.model._
+import com.google.inject.{ Inject, Singleton, Provider }
+import com.keepit.common.actor.ActorFactory
+import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.URI
 import com.keepit.common.net.Host
-import com.keepit.common.actor.ActorFactory
-import com.keepit.common.time._
+import com.keepit.common.net.URI
 import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.search.{ SearchServiceClient, ArticleSearchResultRef }
-import com.keepit.shoebox.ClickHistoryTracker
-import com.keepit.common.akka.FortyTwoActor
-import com.keepit.serializer.SearchResultInfoSerializer
 import com.keepit.search.TrainingDataLabeler
-import com.keepit.search.SearchStatisticsExtractorFactory
 import com.keepit.search.UriLabel
-import com.keepit.serializer.SearchStatisticsSerializer
+import com.keepit.search.{ SearchServiceClient, ArticleSearchResultRef }
 import com.keepit.shoebox.BrowsingHistoryTracker
+import com.keepit.shoebox.ClickHistoryTracker
+
+import play.api.libs.json.JsObject
 
 abstract class EventListener(
     userRepo: UserRepo,
@@ -95,7 +86,7 @@ object SearchEventName {
 @Singleton
 class EventHelper @Inject() (
   actorFactory: ActorFactory[EventHelperActor],
-  listeners: JSet[EventListener]) {
+  listeners: Set[EventListener]) {
   private lazy val actor = actorFactory.get()
 
   def newEvent(event: Event): Unit = actor ! event
@@ -106,7 +97,7 @@ class EventHelper @Inject() (
 
 class EventHelperActor @Inject() (
   healthcheckPlugin: HealthcheckPlugin,
-  listeners: JSet[EventListener],
+  listeners: Set[EventListener],
   eventStream: EventStream)
   extends FortyTwoActor(healthcheckPlugin) {
 

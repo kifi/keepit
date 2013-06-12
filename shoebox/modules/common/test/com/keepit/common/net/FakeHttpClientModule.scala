@@ -1,9 +1,9 @@
 package com.keepit.common.net
 
-import com.tzavellas.sse.guice.ScalaModule
 import com.keepit.common.amazon._
 import com.keepit.common.service._
 import com.google.inject._
+import net.codingwell.scalaguice.ScalaModule
 
 case class FakeHttpClientModule() extends ScalaModule {
 

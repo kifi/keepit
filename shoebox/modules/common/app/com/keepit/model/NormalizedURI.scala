@@ -11,15 +11,12 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.URINormalizer
 import com.keepit.common.net.URI
 import com.keepit.common.cache._
-import com.keepit.serializer.NormalizedURISerializer
 import com.keepit.model._
 
 import java.security.SecureRandom
 import java.sql.Connection
 import org.joda.time.DateTime
 import play.api._
-import play.api.Play.current
-import play.api.libs.json._
 import java.security.MessageDigest
 import org.apache.commons.codec.binary.Base64
 import scala.collection.mutable
@@ -57,15 +54,14 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
 }
 
+import com.keepit.serializer.NormalizedURISerializer.normalizedURISerializer // Required implicit value
 case class NormalizedURIKey(id: Id[NormalizedURI]) extends Key[NormalizedURI] {
+  override val version = 2
   val namespace = "uri_by_id"
   def toKey(): String = id.id.toString
 }
-class NormalizedURICache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[NormalizedURIKey, NormalizedURI] {
-  val ttl = 7 days
-  def deserialize(obj: Any): NormalizedURI = NormalizedURISerializer.normalizedURISerializer.reads(Json.parse(obj.asInstanceOf[String]).asInstanceOf[JsObject]).get
-  def serialize(uri: NormalizedURI) = NormalizedURISerializer.normalizedURISerializer.writes(uri)
-}
+class NormalizedURICache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[NormalizedURIKey, NormalizedURI](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 @Singleton
 class NormalizedURIRepoImpl @Inject() (

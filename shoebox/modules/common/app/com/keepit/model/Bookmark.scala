@@ -100,26 +100,22 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
 }
 
 case class BookmarkCountKey() extends Key[Int] {
+  override val version = 2
   val namespace = "bookmark_count"
   def toKey(): String = "k"
 }
 
-class BookmarkCountCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[BookmarkCountKey, Int] {
-  val ttl = 1 hours
-  def deserialize(obj: Any): Int = obj.asInstanceOf[Int]
-  def serialize(count: Int) = count
-}
+class BookmarkCountCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[BookmarkCountKey, Int](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class BookmarkUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Bookmark] {
+  override val version = 2
   val namespace = "bookmark_uri_user"
   def toKey(): String = uriId.id + "#" + userId.id
 }
 
-class BookmarkUriUserCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[BookmarkUriUserKey, Bookmark] {
-  val ttl = 7 days
-  def deserialize(obj: Any): Bookmark = parseJson(obj)
-  def serialize(bookmark: Bookmark) = Json.toJson(bookmark)
-}
+class BookmarkUriUserCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[BookmarkUriUserKey, Bookmark](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 @Singleton
 class BookmarkRepoImpl @Inject() (

@@ -51,16 +51,12 @@ object UserSession {
 trait UserSessionRepo extends Repo[UserSession] with ExternalIdColumnFunction[UserSession]
 
 case class UserSessionExternalIdKey(externalId: ExternalId[UserSession]) extends Key[UserSession] {
-  override val version = 1
+  override val version = 2
   val namespace = "user_session_by_external_id"
   def toKey(): String = externalId.id
 }
-class UserSessionExternalIdCache @Inject() (val repo: FortyTwoCachePlugin)
-    extends FortyTwoCache[UserSessionExternalIdKey, UserSession] {
-  val ttl = 24 hours
-  def deserialize(obj: Any): UserSession = Json.fromJson[UserSession](Json.parse(obj.asInstanceOf[String])).get
-  def serialize(userSession: UserSession) = Json.toJson(userSession)
-}
+class UserSessionExternalIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+    extends JsonCacheImpl[UserSessionExternalIdKey, UserSession](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 @Singleton
 class UserSessionRepoImpl @Inject() (

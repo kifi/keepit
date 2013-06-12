@@ -11,7 +11,6 @@ import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
 import com.keepit.common.time.currentDateTime
 import annotation.elidable.ASSERTION
-import play.api.libs.json._
 import com.keepit.inject._
 import com.keepit.common.healthcheck._
 import com.keepit.common.cache._
@@ -92,14 +91,12 @@ trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
 }
 
 case class CommentCountUriIdKey(normUriId: Id[NormalizedURI]) extends Key[Int] {
+  override val version = 2
   val namespace = "comment_by_normuriid"
   def toKey(): String = normUriId.id.toString
 }
-class CommentCountUriIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[CommentCountUriIdKey, Int] {
-  val ttl = 1 hour
-  def deserialize(obj: Any): Int = obj.asInstanceOf[Int]
-  def serialize(count: Int) = count
-}
+class CommentCountUriIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[CommentCountUriIdKey, Int](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 @Singleton
 class CommentRepoImpl @Inject() (

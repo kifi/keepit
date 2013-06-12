@@ -3,9 +3,7 @@ package com.keepit.common.social
 import scala.concurrent.duration._
 
 import com.google.inject.Inject
-import com.keepit.common.cache.FortyTwoCache
-import com.keepit.common.cache.FortyTwoCachePlugin
-import com.keepit.common.cache.Key
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
@@ -35,18 +33,16 @@ object BasicUser {
 }
 
 case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
-  override val version = 2
+  override val version = 3
   val namespace = "basic_user_userid"
   def toKey(): String = userId.id.toString
 }
 
-class BasicUserUserIdCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[BasicUserUserIdKey, BasicUser] {
-  val ttl = 7 days
-  def deserialize(obj: Any): BasicUser = parseJson(obj)
-  def serialize(basicUser: BasicUser) = Json.toJson(basicUser)
+class BasicUserUserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[BasicUserUserIdKey, BasicUser](innermostPluginSettings, innerToOuterPluginSettings:_*)
+
   // TODO(andrew): Invalidate cache. More tricky on this multi-object cache. Right now, the data doesn't change. When we go multi-network, it will.
   // Also affected: CommentWithBasicUser
-}
 
 class BasicUserRepo @Inject() (socialUserRepo: SocialUserInfoRepo, userRepo: UserRepo, userCache: BasicUserUserIdCache){
   def load(userId: Id[User])(implicit session: RSession): BasicUser = userCache.getOrElse(BasicUserUserIdKey(userId)) {

@@ -1,20 +1,19 @@
 package com.keepit.module
 
-import com.keepit.common.zookeeper._
+import net.codingwell.scalaguice.ScalaModule
+
+import com.google.inject.{Singleton, Provides}
 import com.keepit.common.logging.Logging
 import com.keepit.common.service._
 import com.keepit.common.amazon._
 
 import com.keepit.common.net.HttpClient
 
-import play.api.Play
-import play.api.Play.current
+import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.zookeeper._
+
 import play.api.Mode
 import play.api.Mode._
-
-import com.tzavellas.sse.guice.ScalaModule
-
-import com.google.inject.{Provider, Inject, Singleton, Provides}
 
 class DiscoveryModule extends ScalaModule with Logging {
 

@@ -14,7 +14,6 @@ import play.api.Play.current
 import java.net.URI
 import java.security.MessageDigest
 import scala.collection.mutable
-import play.api.libs.json._
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.cache._
 import play.api.libs.concurrent.Execution.Implicits._
@@ -42,15 +41,12 @@ trait UserValueRepo extends Repo[UserValue] {
 }
 
 case class UserValueKey(userId: Id[User], key: String) extends Key[String] {
+  override val version = 2
   val namespace = "uservalue"
   def toKey(): String = userId.id + "_" + key
 }
-class UserValueCache @Inject() (val repo: FortyTwoCachePlugin) extends FortyTwoCache[UserValueKey, String] {
-  val ttl = 7 days
-  def deserialize(obj: Any): String = obj.asInstanceOf[String]
-  def serialize(value: String) = value
-}
-
+class UserValueCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends StringCacheImpl[UserValueKey](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 @Singleton
 class UserValueRepoImpl @Inject() (
