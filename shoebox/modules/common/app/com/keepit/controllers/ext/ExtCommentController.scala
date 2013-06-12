@@ -54,7 +54,18 @@ class ExtCommentController @Inject() (
   userNotifier: UserNotifier)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
-  def getCounts(ids: String) = AuthenticatedJsonAction { request =>
+  def getCounts = AuthenticatedJsonToJsonAction { request =>
+    val urls = request.body.as[Seq[String]]
+    val counts = db.readOnly { implicit s =>
+      urls.flatMap(normalizedURIRepo.getByNormalizedUri).map { nUri =>
+        nUri.url -> (commentRepo.getPublicCount(nUri.id.get), commentRepo.getParentMessages(nUri.id.get, request.userId).size)
+      }
+    }
+    Ok(JsObject(counts.map { case (url, n) => url -> JsArray(Seq(JsNumber(n._1), JsNumber(n._2))) }))
+  }
+
+  // TODO: remove action below once we don't care about chatter feature working with kifi 2.4.6 and earlier (12 Jun 2013)
+  def getCountsDeprecated(ids: String) = AuthenticatedJsonAction { request =>
     val nUriExtIds = ids.split('.').map(ExternalId[NormalizedURI](_))
     val counts = db.readOnly { implicit s =>
       nUriExtIds.map { extId =>
