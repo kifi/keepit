@@ -36,6 +36,7 @@ case class User(
 @ImplementedBy(classOf[UserRepoImpl])
 trait UserRepo extends Repo[User] with ExternalIdColumnFunction[User] {
   def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User]
+  def getOpt(id: Id[User])(implicit session: RSession): Option[User]
 }
 
 case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
@@ -97,6 +98,9 @@ class UserRepoImpl @Inject() (
       (for(f <- table if f.id is id) yield f).first
     }
   }
+
+  def getOpt(id: Id[User])(implicit session: RSession): Option[User] =
+    idCache.getOrElseOpt(UserIdKey(id)) { (for(f <- table if f.id is id) yield f).firstOption }
 
   override def getOpt(id: ExternalId[User])(implicit session: RSession): Option[User] = {
     externalIdCache.getOrElseOpt(UserExternalIdKey(id)) {
