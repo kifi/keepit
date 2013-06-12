@@ -84,7 +84,7 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
   lazy val defaultConfig = new SearchConfig(SearchConfig.defaultParams)
 
   def activeExperiments: Seq[SearchConfigExperiment] = {
-    val ret = monitoredAwait.result(shoeboxClient.getActiveExperiments, 5 milliseconds, _activeExperiments)
+    val ret = monitoredAwait.result(shoeboxClient.getActiveExperiments, 5 milliseconds, "getting experiments", _activeExperiments)
     _activeExperiments = ret
     ret
   }
@@ -105,7 +105,7 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
     userConfig.get(userId.id) match {
       case Some(config) => (config, None)
       case None =>
-        val shouldExclude = monitoredAwait.result(shoeboxClient.hasExperiment(userId, NO_SEARCH_EXPERIMENTS), 10 milliseconds, true)
+        val shouldExclude = monitoredAwait.result(shoeboxClient.hasExperiment(userId, NO_SEARCH_EXPERIMENTS), 10 milliseconds, s"check has NO_SEARCH_EXPERIMENTS for $userId", true)
         val experiment = if (shouldExclude) None else {
           val hashFrac = hash(userId, queryText)
           var frac = 0.0

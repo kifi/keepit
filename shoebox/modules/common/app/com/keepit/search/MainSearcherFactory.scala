@@ -74,7 +74,7 @@ class MainSearcherFactory @Inject() (
         filter,
         config,
         articleSearcher,
-        monitoredAwait.result(uriGraphSearcherFuture, 5 seconds),
+        monitoredAwait.result(uriGraphSearcherFuture, 5 seconds, s"getting uri graph for user Id $userId"),
         collectionSearcher,
         parserFactory,
         resultClickTracker,

@@ -218,7 +218,7 @@ class RemoteActionAuthenticator @Inject() (
   private def authenticatedHandler[T](apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Result) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
       val userId = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map(id => Id[User](id.toLong)).getOrElse {
         // If this fails, then SecureSocial says they're authenticated, but they're not.
-        monitoredAwait.result(shoeboxClient.getSocialUserInfoByNetworkAndSocialId(SocialId(request.user.id.id), SocialNetworks.FACEBOOK), 3 seconds).get.userId.get
+        monitoredAwait.result(shoeboxClient.getSocialUserInfoByNetworkAndSocialId(SocialId(request.user.id.id), SocialNetworks.FACEBOOK), 3 seconds, s"on social user id $request.user.id.id").get.userId.get
       }
       val experimentsFuture = getExperiments(userId).map(_.toSet)
       val impersonatedUserIdOpt: Option[ExternalId[User]] = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
@@ -228,15 +228,16 @@ class RemoteActionAuthenticator @Inject() (
       impersonatedUserIdOpt match {
         case Some(impExternalUserId) =>
           val impUserId = shoeboxClient.getUserIdsByExternalIds(Seq(impExternalUserId)).map(_.head)
-          val experiments = monitoredAwait.result(experimentsFuture, 1 second, Set[State[ExperimentType]]())
+          val experiments = monitoredAwait.result(experimentsFuture, 3 second, s"on user id $userId", Set[State[ExperimentType]]())
           if (!experiments.contains(ExperimentTypes.ADMIN)) throw new IllegalStateException("non admin user %s tries to impersonate to %s".format(userId, impUserId))
           val impSocialUserInfoFuture = shoeboxClient.getSocialUserInfosByUserId(userId)
 
-          val impSocialUserInfo = monitoredAwait.result(impSocialUserInfoFuture, 3 seconds)
+          val impSocialUserInfo = monitoredAwait.result(impSocialUserInfoFuture, 3 seconds, s"on user id $userId")
           log.info("[IMPERSONATOR] admin user %s is impersonating user %s with request %s".format(userId, impSocialUserInfo, request.request.path))
-          executeAction(authAction, monitoredAwait.result(impUserId, 3 seconds), impSocialUserInfo.head.credentials.get, experiments.toSet, kifiInstallationId, newSession, request.request, Some(userId), allowPending)
+          executeAction(authAction, monitoredAwait.result(impUserId, 3 seconds, s"on impersonating external user id $impExternalUserId"),
+            impSocialUserInfo.head.credentials.get, experiments.toSet, kifiInstallationId, newSession, request.request, Some(userId), allowPending)
         case None =>
-          executeAction(authAction, userId, socialUser, monitoredAwait.result(experimentsFuture, 2 second, Set[State[ExperimentType]]()), kifiInstallationId, newSession, request.request, None, allowPending)
+          executeAction(authAction, userId, socialUser, monitoredAwait.result(experimentsFuture, 3 second, s"on experiments for user $userId", Set[State[ExperimentType]]()), kifiInstallationId, newSession, request.request, None, allowPending)
       }
     }
 
@@ -265,7 +266,8 @@ class RemoteActionAuthenticator @Inject() (
 
   private[controller] def isAdmin(experiments: Set[State[ExperimentType]]) = experiments.contains(ExperimentTypes.ADMIN)
 
-  private[controller] def isAdmin(userId: Id[User]) = monitoredAwait.result(getExperiments(userId).map(r => r.contains(ExperimentTypes.ADMIN)), 2 seconds, false)
+  private[controller] def isAdmin(userId: Id[User]) = monitoredAwait.result(
+    getExperiments(userId).map(r => r.contains(ExperimentTypes.ADMIN)), 2 seconds, s"on is admin experiment for user $userId", false)
 
   private def executeAction[T](action: AuthenticatedRequest[T] => Result, userId: Id[User], identity: Identity,
       experiments: Set[State[ExperimentType]], kifiInstallationId: Option[ExternalId[KifiInstallation]],
@@ -274,7 +276,7 @@ class RemoteActionAuthenticator @Inject() (
     val cleanedSesison = newSession - IdentityProvider.SessionId + ("server_version" -> fortyTwoServices.currentVersion.value)
     log.debug("sending response with new session [%s] of user id: %s".format(cleanedSesison, userId))
     try {
-      action(AuthenticatedRequest[T](identity, userId, monitoredAwait.result(user, 3 seconds), request, experiments, kifiInstallationId, adminUserId)) match {
+      action(AuthenticatedRequest[T](identity, userId, monitoredAwait.result(user, 3 seconds, s"getting user $userId"), request, experiments, kifiInstallationId, adminUserId)) match {
         case r: PlainResult => r.withSession(newSession)
         case any: Result => any
       }

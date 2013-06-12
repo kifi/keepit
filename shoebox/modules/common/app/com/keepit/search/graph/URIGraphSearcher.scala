@@ -47,7 +47,7 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]], shoeboxCl
   }
 
   private[this] lazy val friendEdgeSetOpt = friendIdsFutureOpt.map{ future =>
-    val friendIds = monitoredAwait.result(future, 5 seconds)
+    val friendIds = monitoredAwait.result(future, 5 seconds, s"getting friends edges")
     UserToUserEdgeSet(myUserId.get, friendIds)
   }
   private[this] val friendsUriEdgeSetsOpt = friendEdgeSetOpt.map{ friendEdgeSet =>
