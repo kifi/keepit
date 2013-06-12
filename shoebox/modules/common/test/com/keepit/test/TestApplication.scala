@@ -21,7 +21,7 @@ import com.keepit.classify.DomainTagImportSettings
 import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.analytics._
-import com.keepit.common.cache.{CacheModule, InMemoryCachePlugin, HashMapMemoryCache, FortyTwoCachePlugin}
+import com.keepit.common.cache.{ShoeboxCacheModule, InMemoryCachePlugin, HashMapMemoryCache, FortyTwoCachePlugin}
 import com.keepit.common.controller.FortyTwoCookies._
 import com.keepit.common.controller.{ActionAuthenticator, ShoeboxActionAuthenticator}
 import com.keepit.common.db._
@@ -304,7 +304,7 @@ class FakeSocialGraphPlugin extends SocialGraphPlugin {
     future { throw new Exception("Not Implemented") }
 }
 
-case class FakeCacheModule() extends CacheModule {
+case class FakeCacheModule() extends ShoeboxCacheModule {
   override def configure() {
     bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
     bind[InMemoryCachePlugin].to[HashMapMemoryCache]
