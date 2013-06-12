@@ -71,8 +71,6 @@ class ExtAuthControllerTest extends Specification with DbRepos {
         }
         val json1 = Json.parse(contentAsString(result1)).asInstanceOf[JsObject]
         json1 \ "name" === JsString("A 1")
-        json1 \ "facebookId" === JsString("111")
-        json1 \ "provider" === JsString("facebook")
         json1 \ "userId" === JsString(user.externalId.id)
         json1 \ "installationId" === JsString(kifiInstallation1.externalId.id)
         json1 \ "rules" \ "version" must beAnInstanceOf[JsString]
