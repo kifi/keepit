@@ -20,7 +20,8 @@ var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPL
 	$('#my-keeps .keep .bottom').each(function() {
 		$(this).find('img.small-avatar').prependTo($(this));
 	});
-	$('#my-keeps .keep .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myPicUrl + '"/>');
+	$('#my-keeps .keep .bottom:not(:has(.me))')
+		.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
 	initDraggable();
 
 	$(".easydate").easydate({set_title: false});
@@ -44,21 +45,22 @@ var searchTemplate = Tempo.prepare("search-results").when(TempoEvent.Types.RENDE
 	hideLoading();
 	initDraggable();
 	$('#search-results .keep .bottom').each(function() {
-		$(this).find('img.small-avatar').prependTo($(this));
+		$(this).find('img.small-avatar').prependTo(this);
 	});
-	$('#search-results .keep.mine .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myPicUrl + '"/>');
-	$('div.search .num-results').text('Showing ' + $('#search-results .keep').length + ' for "'+$('header input.search').val()+'"');
+	$('#search-results .keep.mine .bottom:not(:has(.me))')
+		.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '"/>');
+	$('div.search .num-results').text('Showing ' + $('#search-results .keep').length + ' for "' + $('header input.search').val() + '"');
 });
 var collectionsTemplate = Tempo.prepare("collections").when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 	initDroppable();
 	adjustHeight();
 });
 
+var me;
 var searchContext;
 var connections = {};
 var collections = {};
 var connectionNames = [];
-var myPicUrl;
 var searchTimeout;
 var lastKeep;
 var prevCollection;
@@ -394,12 +396,12 @@ $('aside.right div.in-collections').on('change','input[type="checkbox"]', functi
 		,contentType: 'application/json'
 		,error: function() {showMessage('Could not remove keeps from collection, please try again later')}
 		,success: function(data) {
-						console.log(data);
-						// substract removed from collection count on left bar
-						var countSpan = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
-						countSpan.text(countSpan.text() * 1  - data.removed);
-						row.remove();
-					}
+				console.log(data);
+				// substract removed from collection count on left bar
+				var countSpan = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
+				countSpan.text(countSpan.text() * 1  - data.removed);
+				row.remove();
+			}
 		});
 
 });
@@ -415,13 +417,13 @@ $('aside.right .actions .collections').on('change','input[type="checkbox"]',func
 		,contentType: 'application/json'
 		,error: function() {showMessage('Could not add keeps to collection, please try again later')}
 		,success: function(data) {
-						console.log(data);
-						// add to collection count on left bar
-						var countSpan = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
-						countSpan.text(countSpan.text() * 1  + data.added);
-						$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+colId+'" id="cb1-'+colId+'" checked/><label class="long-text" for="cb1-'+colId+'"><span></span>'+collections[colId].name+'</label><div>');
-						row.remove();
-					}
+				console.log(data);
+				// add to collection count on left bar
+				var countSpan = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
+				countSpan.text(countSpan.text() * 1  + data.added);
+				$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+colId+'" id="cb1-'+colId+'" checked/><label class="long-text" for="cb1-'+colId+'"><span></span>'+collections[colId].name+'</label><div>');
+				row.remove();
+			}
 		});
 });
 
@@ -508,6 +510,13 @@ $(document)
 	.ready(function() {
 		$(".fancybox").fancybox();
 
+		// populate user data
+		$.getJSON(urlMe, function(data) {
+			me = data;
+			$(".my-pic").css("background-image", "url(" + formatPicUrl(data.id, data.pictureName, 200) + ")");
+			$(".my-name").text(data.firstName + ' ' + data.lastName);
+		});
+
 		populateCollections();
 		populateCollectionsRight();
 
@@ -534,13 +543,6 @@ $(document)
 
 		// populate all my keeps
 		populateMyKeeps();
-
-		// populate user data
-		$.getJSON(urlMe, function(data) {
-			myPicUrl = formatPicUrl(data.id, data.pictureName, 200);
-			$(".my-pic").css("background-image", "url(" + myPicUrl + ")");
-			$(".my-name").text(data.firstName + ' ' + data.lastName);
-		});
 
 		// populate user connections
 		$.getJSON(urlConnections, function(data) {
