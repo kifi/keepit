@@ -316,11 +316,10 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
     case ident => (None, SocialUser(ident))
   }
 
-  private def createUser(displayName: String, id: Option[Id[User]]): User = {
+  private def createUser(displayName: String): User = {
     log.info("creating new user for %s".format(displayName))
     val nameParts = displayName.split(' ')
-    User(id = id,
-      firstName = nameParts(0),
+    User(firstName = nameParts(0),
       lastName = nameParts.tail.mkString(" "),
       state = if(Play.isDev) UserStates.ACTIVE else UserStates.PENDING
     )
@@ -329,11 +328,11 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
   private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType,
       socialUser: SocialUser, userId: Option[Id[User]])(implicit session: RWSession): SocialUserInfo = {
     val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
-    val userIdOpt = userId flatMap userRepo.getOpt flatMap (_.id)
+    val userOpt = userId flatMap userRepo.getOpt
 
     // TODO(greg): remove this when we want to enable linkedin for all users
     if (socialNetworkType != SocialNetworks.FACEBOOK && Play.isProd &&
-        userIdOpt.flatMap(userExperimentRepo.get(_, ExperimentTypes.ADMIN)).isEmpty) {
+        userOpt.flatMap(u => userExperimentRepo.get(u.id.get, ExperimentTypes.ADMIN)).isEmpty) {
       throw new AuthenticationException()
     }
 
@@ -342,7 +341,7 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
         // TODO(greg): handle case where user id in socialUserInfo is different from the one in the session
         if (suiOpt == Some(socialUserInfo)) socialUserInfo else socialUserInfoRepo.save(socialUserInfo)
       case Some(socialUserInfo) if socialUserInfo.userId.isEmpty =>
-        val user = userRepo.save(createUser(socialUserInfo.fullName, userIdOpt))
+        val user = userOpt getOrElse userRepo.save(createUser(socialUserInfo.fullName))
 
         //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         //todo(eishay): send a direct fetch request
@@ -350,7 +349,7 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
         imageStore.updatePicture(sui, user.externalId)
         sui
       case None =>
-        val user = userRepo.save(createUser(socialUser.fullName, userIdOpt))
+        val user = userOpt getOrElse userRepo.save(createUser(socialUser.fullName))
         log.info("creating new SocialUserInfo for %s".format(user))
         val userInfo = SocialUserInfo(userId = Some(user.id.get),//verify saved
             socialId = socialId, networkType = socialNetworkType,
@@ -358,7 +357,9 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
         log.info("SocialUserInfo created is %s".format(userInfo))
 
         val sui = socialUserInfoRepo.save(userInfo)
-        imageStore.updatePicture(sui, user.externalId)
+        if (userOpt.isEmpty) {
+          imageStore.updatePicture(sui, user.externalId)
+        }
         sui
     }
   }
