@@ -1,6 +1,6 @@
 {
   "name": "KiFi Beta",
-  "version": "2.4.6",
+  "version": "see build.properties",
   "manifest_version": 2,
   "description": "KiFi Private Beta",
   "icons": {
@@ -15,10 +15,10 @@
     },
     "default_title": "KiFi"
   },
-  "background" : {
+  "background": {
     "page": "main.html"
   },
-  "content_scripts" : [
+  "content_scripts": [
     {
       "matches": ["*://*/*"],
       "js": ["scripts/ready.js"],
@@ -31,60 +31,5 @@
     "http://*/",
     "https://*/"
   ],
-  "web_accessible_resources": [
-    "images/chatter.png",
-    "images/double_down.png",
-    "images/globe.png",
-    "images/kifi_logo.png",
-    "images/more_results_bottom.gif",
-    "images/more_results_left.gif",
-    "images/more_results_left_top.gif",
-    "images/more_results_right.gif",
-    "images/more_results_right_top.gif",
-    "images/snapshot.png",
-    "images/social_icons.png",
-    "images/metro/bg_comments.png",
-    "images/metro/bg_messages.png",
-    "images/metro/gear.png",
-    "images/metro/tile_logo.png",
-    "images/keeper/comments.png",
-    "images/keeper/general.png",
-    "images/keeper/lock.png",
-    "images/keeper/messages.png",
-    "images/keeper/notices.png",
-    "images/keeper/x.png",
-    "images/results/dropbox.png",
-    "images/results/facebook.png",
-    "images/results/gdocs.gif",
-    "images/results/gdrive.png",
-    "images/results/gmail.png",
-    "html/friend_card.html",
-    "html/notify_box.html",
-    "html/keeper/titled_tip.html",
-    "html/metro/comment.html",
-    "html/metro/comments.html",
-    "html/metro/notice_comment.html",
-    "html/metro/notice_message.html",
-    "html/metro/notices.html",
-    "html/metro/compose.html",
-    "html/metro/general.html",
-    "html/metro/keepers.html",
-    "html/metro/message.html",
-    "html/metro/messages.html",
-    "html/metro/pane.html",
-    "html/metro/pane_comments.html",
-    "html/metro/pane_general.html",
-    "html/metro/pane_notices.html",
-    "html/metro/pane_thread.html",
-    "html/metro/pane_threads.html",
-    "html/metro/slider2.html",
-    "html/metro/thread.html",
-    "html/metro/threads.html",
-    "html/comments/snapshot_bar.html",
-    "html/search/chatter.html",
-    "html/search/friends.html",
-    "html/search/google.html",
-    "html/search/google_hits.html",
-    "html/search/google_hit.html"
-  ]
+  "web_accessible_resources": []
 }
