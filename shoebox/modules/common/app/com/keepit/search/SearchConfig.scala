@@ -105,7 +105,7 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
     userConfig.get(userId.id) match {
       case Some(config) => (config, None)
       case None =>
-        val shouldExclude = monitoredAwait.result(shoeboxClient.hasExperiment(userId, NO_SEARCH_EXPERIMENTS), 10 milliseconds, true)
+        val shouldExclude = monitoredAwait.result(shoeboxClient.hasExperiment(userId, NO_SEARCH_EXPERIMENTS), 50 milliseconds, true)
         val experiment = if (shouldExclude) None else {
           val hashFrac = hash(userId, queryText)
           var frac = 0.0
