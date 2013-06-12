@@ -289,23 +289,26 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
     case ident => (None, SocialUser(ident))
   }
 
-  private def createUser(displayName: String): User = {
+  private def createUser(displayName: String, id: Option[Id[User]]): User = {
     log.info("creating new user for %s".format(displayName))
     val nameParts = displayName.split(' ')
-    User(firstName = nameParts(0),
-        lastName = nameParts.tail.mkString(" "),
-        state = if(Play.isDev) UserStates.ACTIVE else UserStates.PENDING
+    User(id = id,
+      firstName = nameParts(0),
+      lastName = nameParts.tail.mkString(" "),
+      state = if(Play.isDev) UserStates.ACTIVE else UserStates.PENDING
     )
   }
 
   private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType,
       socialUser: SocialUser, userId: Option[Id[User]])(implicit session: RWSession): SocialUserInfo = {
     val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
+    val userIdOpt = userId flatMap userRepo.getOpt flatMap (_.id)
     suiOpt.map(_.withCredentials(socialUser)) match {
       case Some(socialUserInfo) if !socialUserInfo.userId.isEmpty =>
+        // TODO(greg): handle case where user id in socialUserInfo is different from the one in the session
         if (suiOpt == Some(socialUserInfo)) socialUserInfo else socialUserInfoRepo.save(socialUserInfo)
       case Some(socialUserInfo) if socialUserInfo.userId.isEmpty =>
-        val user = userRepo.save(createUser(socialUserInfo.fullName).copy(id = userId))
+        val user = userRepo.save(createUser(socialUserInfo.fullName, userIdOpt))
 
         //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         //todo(eishay): send a direct fetch request
@@ -313,7 +316,7 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
         imageStore.updatePicture(sui, user.externalId)
         sui
       case None =>
-        val user = userRepo.save(createUser(socialUser.fullName).copy(id = userId))
+        val user = userRepo.save(createUser(socialUser.fullName, userIdOpt))
         log.info("creating new SocialUserInfo for %s".format(user))
         val userInfo = SocialUserInfo(userId = Some(user.id.get),//verify saved
             socialId = socialId, networkType = socialNetworkType,
