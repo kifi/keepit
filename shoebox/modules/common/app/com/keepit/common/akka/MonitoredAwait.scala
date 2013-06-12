@@ -35,6 +35,10 @@ class MonitoredAwait @Inject() (healthcheckPlugin: HealthcheckPlugin) {
     val sw = new Stopwatch(tag)
     try {
       Await.result(awaitable, atMost)
+    } catch {
+      case ex: Throwable =>
+        healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        throw ex
     } finally {
       sw.stop()
       sw.logTime()
