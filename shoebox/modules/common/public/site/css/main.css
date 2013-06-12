@@ -48,7 +48,7 @@ aside.left {left: 0; width: 200px}
 aside.left input {background: #fafafa; border: 1px solid #b4b9ca; color: #204b69; padding: .7em; width: 80%; margin-left: 5px}
 aside.left .collection input {width: 190px; position: absolute; top: -2px; left: 25px; z-index: 2}
 aside.left .active, aside.left .active a {background: #e3e6ee; color: #556179}
-aside.left h3 a span.right {position:absolute; right: 3px; font-weight: bold; border: 1px solid #b4b9ca; border-radius: 10px; padding: 1px 12px; margin-top: -2px}
+aside.left h3 a span.right {position:absolute; right: 6px; font-weight: bold; border: 1px solid #b4b9ca; border-radius: 10px; padding: 1px 12px; margin-top: -2px}
 aside.left h3.active a span.right {color: #fff; background: #9ba4b8; border: 1px solid #9ba4b8}
 aside.left h2 {font-size: 1.2em; padding: 5px 10px; margin-bottom: 0}
 aside.left h3 {font-size: .9em; margin: 0; position: relative; min-height: 36px}
@@ -135,10 +135,12 @@ aside.right input[type="checkbox"]:not(:checked) + label:hover span {
   background:url(../img/sprite-check.png) -44px top no-repeat;
 }
 
-.long-text {display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
+.long-text {white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
+span.long-text, a.long-text {display: inline-block}
 .small-avatar {max-width: 30px; max-height: 30px}
 aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px; border-radius: 4px}
 .keep {position:relative; clear: left; padding: 10px 10px 10px 30px; border-top: 1px solid #f9f9f9}
+.search-section+.keep {border-top: 0}
 .keep input[type="checkbox"] {position: absolute; left: 4px; top: 12px; margin: 0}
 .keep .handle {cursor: move; position: absolute; top: 0; left: 0; width: 22px; height: 100%; display: none; background: #e3e6ee url(../img/drag-handle.png) 4px 35px no-repeat}
 .keep:hover .handle, .keep.selected .handle {display: block}
@@ -158,6 +160,6 @@ aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px;
 .main>.scrollable {padding-top: 20px}
 div.loading {text-align: center; display: none}
 .clearfix {clear: both}
-.template-wrapper, .add-collection {display: none}
+.add-collection {display: none}
 .drag-helper {background: #fff; padding: 5px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
 .drop-hover {background: #b6c3cc}
