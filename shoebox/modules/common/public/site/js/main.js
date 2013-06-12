@@ -26,9 +26,9 @@ var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPL
 	$(".easydate").easydate({set_title: false});
 
 	// insert time sections
-	var currentDate = new Date();
+	var now = new Date;
 	$('#my-keeps .keep').each(function() {
-		var age = daysBetween(new Date(Date.parse($(this).data('created'))), currentDate);
+		var age = daysBetween(new Date($(this).data('created')), now);
 		if ($('#my-keeps li.search-section.today').length == 0 && age <= 1) {
 			$(this).before('<li class="search-section today">Today</li>');
 		} else if ($('#my-keeps li.search-section.yesterday').length == 0  && age > 1 && age < 2) {
@@ -166,18 +166,7 @@ function initDroppable() {
 }
 
 function daysBetween(date1, date2) {
-  // The number of milliseconds in one day
-  var ONE_DAY = 1000 * 60 * 60 * 24
-
-  // Convert both dates to milliseconds
-  var date1_ms = date1.getTime()
-  var date2_ms = date2.getTime()
-
-  // Calculate the difference in milliseconds
-  var difference_ms = Math.abs(date1_ms - date2_ms)
-
-  // Convert back to days and return
-  return Math.round(difference_ms/ONE_DAY)
+  return Math.round((date2 - date1) / 86400000);  // ms in one day
 }
 
 function formatPicUrl(userId, pictureName, size) {
