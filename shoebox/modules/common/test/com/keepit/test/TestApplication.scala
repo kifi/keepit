@@ -53,6 +53,13 @@ import play.api.Mode.{Mode, Test}
 import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.Files
+import java.io.File
+import play.api.db.DB
+import com.keepit.common.controller.{ActionAuthenticator, ShoeboxActionAuthenticator}
+import com.keepit.FortyTwoGlobal
+import com.keepit.common.store.S3ImageStore
+import com.keepit.common.amazon._
 
 class TestApplication(val _global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
@@ -187,9 +194,26 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   @Singleton
   def fakeClock: FakeClock = new FakeClock()
 
+  @Singleton
+  @Provides
+  def amazonInstanceInfo: AmazonInstanceInfo =
+    new AmazonInstanceInfo(
+      instanceId = AmazonInstanceId("i-f168c1a8"),
+      localHostname = "ip-10-160-95-26.us-west-1.compute.internal",
+      publicHostname = "ec2-50-18-183-73.us-west-1.compute.amazonaws.com",
+      localIp = IpAddress("10.160.95.26"),
+      publicIp = IpAddress("50.18.183.73"),
+      instanceType = "c1.medium",
+      availabilityZone = "us-west-1b",
+      securityGroups = "default",
+      amiId = "ami-1bf9de5e",
+      amiLaunchIndex = "0"
+    )
+
   @Provides
   @Singleton
   def fakeZooKeeperClient: ZooKeeperClient = new ZooKeeperClient() {
+    private val db = new mutable.HashMap[Node, Array[Byte]]()
     val basePath = Path("")
 
     def watchNode(node: Node, onDataChanged : Option[Array[Byte]] => Unit) {}
@@ -202,9 +226,11 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     def createPath(path: Path): Path = path
 
     def getChildren(path: Path): Seq[Node] = Nil
-    def get(node: Node): Array[Byte] = ???
+    def get(node: Node): Array[Byte] = db(node)
 
-    def set(node: Node, data: Array[Byte]) {}
+    def set(node: Node, data: Array[Byte]) {
+      db(node) = data
+    }
 
     def delete(path: Path) {}
     def deleteNode(node: Node) {}
