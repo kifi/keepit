@@ -28,6 +28,7 @@ import com.keepit.inject._
 import com.keepit.model.NormalizedURIRepo
 import com.keepit.model.UserRepo
 import com.keepit.search.SearchServiceClient
+import com.keepit.search.graph.BookmarkStore
 import com.keepit.search.graph.CollectionIndexer
 import com.keepit.search.graph.{URIGraph, URIGraphIndexer}
 import com.keepit.search.index.{ArticleIndexer, DefaultAnalyzer}
@@ -102,20 +103,19 @@ class ShoeboxDevModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def amazonInstanceInfo: AmazonInstanceInfo = {
-    new AmazonInstanceInfo(null) {
-      override lazy val instanceId = AmazonInstanceId("i-f168c1a8")
-      override lazy val localHostname = "ip-10-160-95-26.us-west-1.compute.internal"
-      override lazy val publicHostname = "ec2-50-18-183-73.us-west-1.compute.amazonaws.com"
-      override lazy val localIp = IpAddress("10.160.95.26")
-      override lazy val publicIp = IpAddress("50.18.183.73")
-      override lazy val instanceType = "c1.medium"
-      override lazy val availabilityZone = "us-west-1b"
-      override lazy val securityGroups = "default"
-      override lazy val amiId = "ami-1bf9de5e"
-      override lazy val amiLaunchIndex = "0"
-    }
-  }
+  def amazonInstanceInfo: AmazonInstanceInfo =
+    new AmazonInstanceInfo(
+      instanceId = AmazonInstanceId("i-f168c1a8"),
+      localHostname = "ip-10-160-95-26.us-west-1.compute.internal",
+      publicHostname = "ec2-50-18-183-73.us-west-1.compute.amazonaws.com",
+      localIp = IpAddress("10.160.95.26"),
+      publicIp = IpAddress("50.18.183.73"),
+      instanceType = "c1.medium",
+      availabilityZone = "us-west-1b",
+      securityGroups = "default",
+      amiId = "ami-1bf9de5e",
+      amiLaunchIndex = "0"
+    )
 
   @Provides
   @Singleton
@@ -207,11 +207,20 @@ class SearchDevModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def uriGraphIndexer(shoeboxClient: ShoeboxServiceClient): URIGraphIndexer = {
+  def bookmarkStore(shoeboxClient: ShoeboxServiceClient): BookmarkStore = {
+    val dir = getDirectory(current.configuration.getString("index.bookmarkStore.directory"))
+    log.info(s"storing BookmarkStore in $dir")
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new BookmarkStore(dir, config, shoeboxClient)
+  }
+
+  @Singleton
+  @Provides
+  def uriGraphIndexer(bookmarkStore: BookmarkStore, shoeboxClient: ShoeboxServiceClient): URIGraphIndexer = {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new URIGraphIndexer(dir, config, shoeboxClient)
+    new URIGraphIndexer(dir, config, bookmarkStore, shoeboxClient)
   }
 
   @Singleton

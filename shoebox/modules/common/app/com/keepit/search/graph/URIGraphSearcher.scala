@@ -21,7 +21,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
 
 
-class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends BaseGraphSearcher(searcher) with Logging {
+class URIGraphSearcher(searcher: Searcher, storeSearcher: Searcher, myUserId: Option[Id[User]], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends BaseGraphSearcher(searcher) with Logging {
 
   private[this] val friendIdsFutureOpt = myUserId.map{ shoeboxClient.getConnectedUsers(_) }
 
@@ -47,7 +47,7 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]], shoeboxCl
   }
 
   private[this] lazy val friendEdgeSetOpt = friendIdsFutureOpt.map{ future =>
-    val friendIds = monitoredAwait.result(future, 5 seconds)
+    val friendIds = monitoredAwait.result(future, 5 seconds, s"getting friends edges")
     UserToUserEdgeSet(myUserId.get, friendIds)
   }
   private[this] val friendsUriEdgeSetsOpt = friendEdgeSetOpt.map{ friendEdgeSet =>
@@ -103,6 +103,13 @@ class URIGraphSearcher(searcher: Searcher, myUserId: Option[Id[User]], shoeboxCl
 
       (LineIndexReader(reader, u.docId, terms, u.uriIdArray.length), u.mapper)
     }
+  }
+
+  def getBookmarkRecord(uriId: Id[NormalizedURI]): Option[BookmarkRecord] = {
+    import com.keepit.search.graph.BookmarkRecordSerializer._
+
+    val bookmarkId = myUriEdgeSet.accessor.getBookmarkId(uriId.id)
+    storeSearcher.getDecodedDocValue[BookmarkRecord](BookmarkStoreFields.recField, bookmarkId)
   }
 }
 
@@ -184,6 +191,7 @@ object UserToUriEdgeSet {
     val sourceId: Id[User] = myInfo.id
     val publicList = myInfo.publicList
     val privateList = myInfo.privateList
+    val bookmarkIds = myInfo.bookmarkIdArray
     val set = LongArraySet.from(myInfo.uriIdArray, myInfo.mapper.reserveMapper)
 
     val pubListSize = publicList.size
@@ -194,6 +202,7 @@ object UserToUriEdgeSet {
         URIList.unitToMillis(datetime)
       }
       override protected def isPublicByIndex(idx: Int): Boolean = (idx < pubListSize)
+      override protected def bookmarkIdByIndex(idx: Int): Long = bookmarkIds(idx)
     }
   }
 

@@ -18,6 +18,7 @@ import com.keepit.common.mail.RemotePostOffice
 import com.keepit.common.mail.RemotePostOfficeImpl
 import com.keepit.common.net.HttpClient
 import com.keepit.inject._
+import com.keepit.search.graph.BookmarkStore
 import com.keepit.search.graph.CollectionIndexer
 import com.keepit.search.graph.{URIGraphPluginImpl, URIGraphPlugin, URIGraph, URIGraphIndexer}
 import com.keepit.search.index.DefaultAnalyzer
@@ -91,11 +92,20 @@ class SearchModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def uriGraphIndexer(shoeboxClient: ShoeboxServiceClient): URIGraphIndexer = {
+  def bookmarkStore(shoeboxClient: ShoeboxServiceClient): BookmarkStore = {
+    val dir = getDirectory(current.configuration.getString("index.bookmarkStore.directory"))
+    log.info(s"storing BookmarkStore in $dir")
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new BookmarkStore(dir, config, shoeboxClient)
+  }
+
+  @Singleton
+  @Provides
+  def uriGraphIndexer(bookmarkStore: BookmarkStore, shoeboxClient: ShoeboxServiceClient): URIGraphIndexer = {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new URIGraphIndexer(dir, config, shoeboxClient)
+    new URIGraphIndexer(dir, config, bookmarkStore, shoeboxClient)
   }
 
   @Singleton

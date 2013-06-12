@@ -97,6 +97,13 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     }
   }
 
+  def foreachReader(f: WrappedSubReader => Unit) {
+    indexReader.getContext.leaves.foreach{ subReaderContext =>
+      val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
+      f(subReader)
+    }
+  }
+
   def findDocIdAndAtomicReaderContext(id: Long): Option[(Int, AtomicReaderContext)] = {
     indexReader.getContext.leaves.foreach{ subReaderContext =>
       val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
@@ -105,6 +112,20 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
       if (docid >= 0 && (liveDocs == null || liveDocs.get(docid))) return Some((docid, subReaderContext))
     }
     None
+  }
+
+  def getDecodedDocValue[T](field: String, id: Long)(implicit decode: (Array[Byte], Int, Int)=>T): Option[T] = {
+    findDocIdAndAtomicReaderContext(id).flatMap { case (docid, context) =>
+      val reader = context.reader
+      var docValues = reader.getBinaryDocValues(field)
+      if (docValues != null) {
+        var ref = new BytesRef()
+        docValues.get(docid, ref)
+        Some(decode(ref.bytes, ref.offset, ref.length))
+      } else {
+        None
+      }
+    }
   }
 
   def explain(query: Query, id: Long): Explanation = {

@@ -15,51 +15,53 @@ var urlCollectionsAll = urlCollections + '/all';
 var urlCollectionsOrder = urlCollections + '/ordering';
 var urlCollectionsCreate = urlCollections + '/create';
 
-var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
-				hideLoading();
-				$('#my-keeps .keep .bottom').each(function() {
-					$(this).find('img.small-avatar').prependTo($(this));
-				});
-				$('#my-keeps .keep .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myPicUrl + '"/>');
-				initDraggable();
+var $myKeeps = $("#my-keeps");
+var keepsTemplate = Tempo.prepare($myKeeps).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
+	hideLoading();
+	$myKeeps.find(".keep .bottom").each(function() {
+		$(this).find('img.small-avatar').prependTo(this);  // eliminating whitespace text nodes?
+	}).filter(":not(:has(.me))")
+		.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
+	initDraggable();
 
-				$(".easydate").easydate({set_title: false});
+	$(".easydate").easydate({set_title: false});
 
-				// insert time sections
-				var currentDate = new Date();
-				$('#my-keeps .keep').each(function() {
-					var age = daysBetween(new Date(Date.parse($(this).data('created'))), currentDate);
-					if ($('#my-keeps li.search-section.today').length == 0 && age <= 1) {
-						$(this).before('<li class="search-section today">Today</li>');
-					} else if ($('#my-keeps li.search-section.yesterday').length == 0  && age > 1 && age < 2) {
-						$(this).before('<li class="search-section yesterday">Yesderday</li>');
-					} else if ($('#my-keeps li.search-section.week').length == 0  && age >= 2 && age <= 7) {
-						$(this).before('<li class="search-section week">Past Week</li>');
-					} else if ($('#my-keeps li.search-section.older').length == 0  && age > 7) {
-						$(this).before('<li class="search-section older">Older</li>');
-					}
-				});
-			});
-var searchTemplate = Tempo.prepare("search-results").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
-					hideLoading();
-					initDraggable();
-					$('#search-results .keep .bottom').each(function() {
-						$(this).find('img.small-avatar').prependTo($(this));
-					});
-					$('#search-results .keep.mine .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myPicUrl + '"/>');
-					$('div.search .num-results').text('Showing ' + $('#search-results .keep').length + ' for "'+$('header input.search').val()+'"');
-				});
-var collectionsTemplate = Tempo.prepare("collections").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
-	$('#collections').show();
-	initDroppable();
+	// insert time sections
+	var now = new Date;
+	$myKeeps.find('.keep').each(function() {
+		var age = daysBetween(new Date($(this).data('created')), now);
+		if ($myKeeps.find('li.search-section.today').length == 0 && age <= 1) {
+			$(this).before('<li class="search-section today">Today</li>');
+		} else if ($myKeeps.find('li.search-section.yesterday').length == 0 && age > 1 && age < 2) {
+			$(this).before('<li class="search-section yesterday">Yesderday</li>');
+		} else if ($myKeeps.find('li.search-section.week').length == 0 && age >= 2 && age <= 7) {
+			$(this).before('<li class="search-section week">Past Week</li>');
+		} else if ($myKeeps.find('li.search-section.older').length == 0 && age > 7) {
+			$(this).before('<li class="search-section older">Older</li>');
+		}
+	});
+});
+var searchTemplate = Tempo.prepare("search-results").when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
+	hideLoading();
+	initDraggable();
+	$('#search-results .keep .bottom').each(function() {
+		$(this).find('img.small-avatar').prependTo(this);
+	});
+	$('#search-results .keep.mine .bottom:not(:has(.me))')
+		.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '"/>');
+	$('div.search .num-results').text('Showing ' + $('#search-results .keep').length + ' for "' + $('header input.search').val() + '"');
+});
+var collectionsTemplate = Tempo.prepare("collections").when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
+	makeCollectionsDroppable($(event.element).find(".collection"));
 	adjustHeight();
 });
+var $inColl = $(".in-collections"), inCollTmpl = Tempo.prepare($inColl);
 
+var me;
 var searchContext;
 var connections = {};
 var collections = {};
 var connectionNames = [];
-var myPicUrl;
 var searchTimeout;
 var lastKeep;
 var prevCollection;
@@ -76,13 +78,13 @@ $.fn.layout = function() {
 };
 
 function unique(arr) {
-    return $.grep(arr,function(v,k){
-        return $.inArray(v,arr) === k;
-    });
+  return $.grep(arr, function(v, k) {
+    return $.inArray(v, arr) === k;
+  });
 }
 
 function initDraggable() {
-	$( ".draggable" ).draggable({
+	$(".draggable").draggable({
 		revert: "invalid",
 		handle: ".handle",
 		cursorAt: { top: 15, left: 0 },
@@ -96,91 +98,67 @@ function initDraggable() {
 	});
 }
 
-function initDroppable() {
-	$( ".droppable" ).droppable({
-		accept: '.keep',
+function makeCollectionsDroppable($coll) {
+	$coll.droppable({
+		accept: ".keep",
 		greedy: true,
 		tolerance: "pointer",
 		hoverClass: "drop-hover",
-		drop: function( event, ui ) {
-			var thisCollection = $(this);
-			var collectionId = thisCollection.data('id');
+		drop: onDropOnCollection});
+}
 
-			// first add keeps that are not mine
-			var keeps = $('section.main .keep.selected:not(.mine)');
-			if (keeps.length > 0)
-				$.ajax( {url: urlKeepAdd
-					,type: "POST"
-					,dataType: 'json'
-					,data: JSON.stringify(keeps.map(function() {return { title: $(this).find('a').first().attr('title')
-						,url: $(this).find('a').first().attr('href')}}).get())
-					,contentType: 'application/json'
-					,error: function() {showMessage('Could not add keeps, please try again later')}
-					,success: function(data) {
-						// add the returned IDs to the collection
-						var keepIds = [];
-						for (i in data.keeps) {
-							keepIds[i] = data.keeps[i].id;
-						}
-						$.ajax( {url: urlCollections + '/' + collectionId + '/addKeeps'
-							,type: "POST"
-							,dataType: 'json'
-							,data: JSON.stringify(keepIds)
-							,contentType: 'application/json'
-							,error: function() {
-								showMessage('Could not add to collection, please try again later');
-								return false;
-							}
-							,success: function(data) {
-											var countSpan = thisCollection.find('a span.right');
-											var added = countSpan.text() * 1  + data.added;
-											countSpan.text(added);
-											// update collection list on right bar
-											$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+collectionId+'" id="cb1-'+collectionId+'" checked=""><label class="long-text" for="cb1-'+collectionId+'"><span></span>'+collections[collectionId].name+'</label><div></div></div>');
-										}
-							});
-					}
-				});
+function onDropOnCollection(event, ui) {
+	var $keeps = ui.draggable;
+	if ($keeps.hasClass("selected")) {
+		$keeps = $keeps.add('section.main .keep.selected');
+	}
 
-			// now add my keeps to the collection
-			keeps = $('section.main .keep.selected.mine');
-			if (keeps.length > 0)
-				$.ajax( {url: urlCollections + '/' + collectionId + '/addKeeps'
-					,type: "POST"
-					,dataType: 'json'
-					,data: JSON.stringify(keeps.map(function() {return $(this).data('id')}).get())
-					,contentType: 'application/json'
-					,error: function() {
-						showMessage('Could not add to collection, please try again later');
-						return false;
-					}
-					,success: function(data) {
-									var countSpan = thisCollection.find('a span.right');
-									var added = countSpan.text() * 1  + data.added;
-									countSpan.text(added);
-									// update collection list on right bar
-									$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+collectionId+'" id="cb1-'+collectionId+'" checked=""><label class="long-text" for="cb1-'+collectionId+'"><span></span>'+collections[collectionId].name+'</label><div></div></div>');
-								}
-					});
+	var myKeepIds = $keeps.filter(".mine").map(function() {return $(this).data("id")}).get();
+
+	// may first need to keep any keeps that are not mine yet
+	var $notMine = $keeps.filter(":not(.mine)");
+	if ($notMine.length) {
+		$.ajax({
+			url: urlKeepAdd,
+			type: "POST",
+			dataType: 'json',
+			data: JSON.stringify($notMine.map(function() {var a = this.querySelector("a"); return {title: a.title, url: a.href}}).get()),
+			contentType: 'application/json',
+			error: onDropOnCollectionAjaxError,
+			success: function(data) {
+				myKeepIds.push.apply(myKeepIds, data.keeps.map(function(k) {return k.id}));
+				addMyKeepsToCollection.call(this, myKeepIds);
 			}
 		});
+	} else {
+		addMyKeepsToCollection.call(this, myKeepIds);
+	}
+}
+
+function addMyKeepsToCollection(keepIds) {
+	var $coll = $(this), collId = $coll.data("id");
+	$.ajax({
+		url: urlCollections + '/' + collId + '/addKeeps',
+		type: "POST",
+		dataType: 'json',
+		data: JSON.stringify(keepIds),
+		contentType: 'application/json',
+		error: onDropOnCollectionAjaxError,
+		success: function(data) {
+			var $count = $coll.find("a span.right");
+			$count.text(+$count.text() + data.added);
+			if (!$inColl.find("#cb1-" + collId).length) {
+				inCollTmpl.append({id: collId, name: collections[collId].name});
+			}
+		}});
+}
+
+function onDropOnCollectionAjaxError() {
+	showMessage('Could not add to collection, please try again later');
 }
 
 function daysBetween(date1, date2) {
-
-    // The number of milliseconds in one day
-    var ONE_DAY = 1000 * 60 * 60 * 24
-
-    // Convert both dates to milliseconds
-    var date1_ms = date1.getTime()
-    var date2_ms = date2.getTime()
-
-    // Calculate the difference in milliseconds
-    var difference_ms = Math.abs(date1_ms - date2_ms)
-
-    // Convert back to days and return
-    return Math.round(difference_ms/ONE_DAY)
-
+  return Math.round((date2 - date1) / 86400000);  // ms in one day
 }
 
 function formatPicUrl(userId, pictureName, size) {
@@ -219,9 +197,7 @@ function hideRightSide() {
 }
 
 function doSearch(context) {
-	$('#my-keeps').hide();
-	$('#my-keeps .keep.selected input[type="checkbox"]').prop('checked', false);
-	$('#my-keeps .keep.selected').removeClass('selected');
+	$myKeeps.hide().find('.keep.selected').removeClass('selected').find('input[type="checkbox"]').prop('checked', false);
 	$('.search h1').hide();
 	$('.search .num-results').show();
 //	$('aside.right').show();
@@ -247,7 +223,7 @@ function doSearch(context) {
 }
 
 function addNewKeeps() {
-	var first = $('#my-keeps li.keep').first().data('id');
+	var first = $myKeeps.find('.keep').first().data('id');
 	var params = {after: first};
 	if ($('aside.left h3.active').is('.collection'))
 		params.collection = $('aside.left h3.active').data('id');
@@ -255,7 +231,7 @@ function addNewKeeps() {
 	$.getJSON(urlMyKeeps, params,
 		function(data) {
 			keepsTemplate.prepend(data.keeps);
-			$('#my-keeps li.search-section.today').prependTo('#my-keeps');
+			$myKeeps.find('.search-section.today').prependTo($myKeeps);
 		});
 }
 
@@ -283,11 +259,11 @@ function populateMyKeeps(id) {
 	$('.search h1').show();
 	$('.search .num-results').hide();
 	if (lastKeep == null) {
-		$('#my-keeps .search-section').remove();
+		$myKeeps.find('.search-section').remove();
 	} else {
 		params.before = lastKeep;
 	}
-	$('#my-keeps').show();
+	$myKeeps.show();
 	if (lastKeep != "end") {
 		showLoading();
 		console.log("Fetching 30 keep before " + lastKeep);
@@ -396,11 +372,11 @@ setInterval(updateNumKeeps, 60000);
 $(window).resize(adjustHeight);
 
 // handle collection adding/removing from right bar
-$('aside.right div.in-collections').on('change','input[type="checkbox"]',function(){
+$inColl.on('change', 'input[type="checkbox"]', function() {
 	// remove selected keeps from collection
 	var row = $(this).parents('.row');
 	var colId = $(this).data('id');
-	var keeps = $('section.main .keep.selected').map(function(){ return $(this).data('id')}).get();
+	var keeps = $('section.main .keep.selected').map(function() {return $(this).data('id')}).get();
 	$.ajax( {url: urlCollections + "/" + colId + "/removeKeeps"
 		,type: "POST"
 		,dataType: 'json'
@@ -408,20 +384,20 @@ $('aside.right div.in-collections').on('change','input[type="checkbox"]',functio
 		,contentType: 'application/json'
 		,error: function() {showMessage('Could not remove keeps from collection, please try again later')}
 		,success: function(data) {
-						console.log(data);
-						// substract removed from collection count on left bar
-						var countSpan = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
-						countSpan.text(countSpan.text() * 1  - data.removed);
-						row.remove();
-					}
+				console.log(data);
+				// substract removed from collection count on left bar
+				var countSpan = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
+				countSpan.text(countSpan.text() * 1  - data.removed);
+				row.remove();
+			}
 		});
 
 });
-$('aside.right .actions .collections').on('change','input[type="checkbox"]',function(){
+$('aside.right .actions .collections').on('change','input[type="checkbox"]',function() {
 	// add selected keeps to collection
 	var row = $(this).parents('li');
 	var colId = $(this).data('id');
-	var keeps = $('section.main .keep.selected').map(function(){ return $(this).data('id')}).get();
+	var keeps = $('section.main .keep.selected').map(function() {return $(this).data('id')}).get();
 	$.ajax( {url: urlCollections + "/" + colId + "/addKeeps"
 		,type: "POST"
 		,dataType: 'json'
@@ -429,15 +405,16 @@ $('aside.right .actions .collections').on('change','input[type="checkbox"]',func
 		,contentType: 'application/json'
 		,error: function() {showMessage('Could not add keeps to collection, please try again later')}
 		,success: function(data) {
-						console.log(data);
-						// add to collection count on left bar
-						var countSpan = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
-						countSpan.text(countSpan.text() * 1  + data.added);
-						$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+colId+'" id="cb1-'+colId+'" checked/><label class="long-text" for="cb1-'+colId+'"><span></span>'+collections[colId].name+'</label><div>');
-						row.remove();
-					}
+				console.log(data);
+				// add to collection count on left bar
+				var countSpan = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
+				countSpan.text(countSpan.text() * 1  + data.added);
+				if (!$inColl.find("#cb1-" + colId).length) {
+					inCollTmpl.append({id: colId, name: collections[colId].name});
+				}
+				row.remove();
+			}
 		});
-
 });
 
 $(document)
@@ -485,24 +462,23 @@ $(document)
 				}
 			});
 			allCol = unique(allCol);
-			var inCol = $('aside.right .in-collections').html('');
+			$inColl.empty();
 			for (i in allCol) {
-				inCol.append('<div class="row"><input type="checkbox" data-id="'+allCol[i]+'" id="cb1-'+allCol[i]+'" checked/><label class="long-text" for="cb1-'+allCol[i]+'"><span></span>'+collections[allCol[i]].name+'</label><div>');
+				inCollTmpl.append({id: allCol[i], name: collections[allCol[i]].name});
 			}
 			showRightSide();
-		} else { // only one keep is selcted
+		} else { // only one keep is selected
 			keep = $('.keep.selected').first();
 			$('aside.right .title h2').text(keep.find('a').first().text());
 			var url = keep.find('a').first().attr('href');
 			$('aside.right .title a').text(url).attr('href',url).attr('target','_blank');
 			$('aside.right .who-kept').html(keep.find('div.bottom').html());
 			$('aside.right .who-kept span').prependTo($('aside.right .who-kept')).removeClass('fs9 gray');
-			var inCol = $('aside.right .in-collections').html('');
-			if (keep.data('collections').length > 0) {
-				var colArray = keep.data('collections').split(',');
-				for (i in colArray) {
-					inCol.append('<div class="row"><input type="checkbox" data-id="'+colArray[i]+'" id="cb1-'+colArray[i]+'" checked/><label class="long-text" for="cb1-'+colArray[i]+'"><span></span>'+collections[colArray[i]].name+'</label></div>');
-				}
+			$inColl.empty();
+			if (keep.data('collections')) {
+				keep.data('collections').split(',').forEach(function(id) {
+					inCollTmpl.append({id: id, name: collections[id].name});
+				});
 			}
 			var keepButton = $('aside.right .keepit .keep-button');
 			if (keep.is('.mine')) {
@@ -522,6 +498,13 @@ $(document)
 	})
 	.ready(function() {
 		$(".fancybox").fancybox();
+
+		// populate user data
+		$.getJSON(urlMe, function(data) {
+			me = data;
+			$(".my-pic").css("background-image", "url(" + formatPicUrl(data.id, data.pictureName, 200) + ")");
+			$(".my-name").text(data.firstName + ' ' + data.lastName);
+		});
 
 		populateCollections();
 		populateCollectionsRight();
@@ -549,13 +532,6 @@ $(document)
 
 		// populate all my keeps
 		populateMyKeeps();
-
-		// populate user data
-		$.getJSON(urlMe, function(data) {
-			myPicUrl = formatPicUrl(data.id, data.pictureName, 200);
-			$(".my-pic").css("background-image", "url(" + myPicUrl + ")");
-			$(".my-name").text(data.firstName + ' ' + data.lastName);
-		});
 
 		// populate user connections
 		$.getJSON(urlConnections, function(data) {
@@ -624,7 +600,7 @@ $(document)
 
 		// filter collections or right bar
 		$('aside.right .collections input.find').on('keyup',function() {
-			var p = new RegExp($(this).val(),"gi");
+			var p = new RegExp(this.value, "gi");
 			$('aside.right .collections ul li:not(.create)').each(function() {
 				if (p.test($(this).find('label').text()))
 					$(this).show();
@@ -635,29 +611,31 @@ $(document)
 
 		// create new collection
 		$('.add-collection input').keypress(function(e) {
-			var code = (e.keyCode ? e.keyCode : e.which);
-			if(code == 13) { //Enter key pressed
-				var inputField = $(this);
-				var newName = inputField.val();
-				$.ajax( {url: urlCollectionsCreate
-						,type: "POST"
-						,dataType: 'json'
-						,data: JSON.stringify({ name: newName })
-						,contentType: 'application/json'
-						,error: function() {showMessage('Could not create collection, please try again later')}
-						,success: function(data) {
-									   $('#collections-wrapper').append('<h3 class="droppable collection" data-id="' + data.id + '"><div class="edit-menu">\
-												<a href="javascript: ;" class="edit"></a>\
-												<ul><li><a class="rename" href="javascript: ;">Rename</a></li>\
-													<li><a class="remove" href="javascript: ;">Remove</a></li></ul>\
-											</div><a href="javascript: ;"><span class="name long-text">' + newName + '</span> <span class="right light">0</span></a></h3>');
-										$('aside.right .actions .collections ul li.create').after('<li><input type="checkbox" data-id="' + data.id + '" id="cb-' + data.id + '"><label class="long-text" for="cb-' + data.id + '"><span></span>' + newName + '</label></li>');
-										collections[data.id] = {id: data.id, name: newName};
-										initDroppable();
-										inputField.parent().slideUp();
-										inputField.val('');
-									}
-						});
+			if (e.which == 13) { // Enter
+				var input = this;
+				var newName = input.value;
+				$.ajax({
+					url: urlCollectionsCreate,
+					type: "POST",
+					dataType: 'json',
+					data: JSON.stringify({name: newName}),
+					contentType: 'application/json',
+					error: showMessage.bind(null, 'Could not create collection, please try again later'),
+					success: function(data) {
+						var $coll = $('<h3 class=collection data-id=' + data.id + '><div class=edit-menu>\
+							<a href=javascript: class=edit></a>\
+							<ul><li><a class=rename href=javascript:>Rename</a></li>\
+									<li><a class=remove href=javascript:>Remove</a></li></ul>\
+							</div><a href=javascript:><span class="name long-text">' + newName + '</span> <span class="right light">0</span></a></h3>')
+					   .appendTo('#collections-wrapper');
+						makeCollectionsDroppable($coll);
+					  // TODO: Use Tempo templates!!
+						$('aside.right .actions .collections ul li.create')
+							.after('<li><input type="checkbox" data-id="' + data.id + '" id="cb-' + data.id + '"><label class="long-text" for="cb-' + data.id + '"><span></span>' + newName + '</label></li>');
+						collections[data.id] = {id: data.id, name: newName};
+						$(input).parent().slideUp();
+						input.value = "";
+					}});
 			 }
 		});
 
@@ -732,5 +710,3 @@ $(document)
 			}
 		});
 	});
-
-
