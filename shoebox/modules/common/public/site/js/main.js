@@ -55,6 +55,7 @@ var collectionsTemplate = Tempo.prepare("collections").when(TempoEvent.Types.REN
 	makeCollectionsDroppable($(event.element).find(".collection"));
 	adjustHeight();
 });
+var $inColl = $(".in-collections"), inCollTmpl = Tempo.prepare($inColl);
 
 var me;
 var searchContext;
@@ -135,9 +136,9 @@ function onDropOnCollection(event, ui) {
 }
 
 function addMyKeepsToCollection(keepIds) {
-	var $coll = $(this), collectionId = $coll.data("id");
+	var $coll = $(this), collId = $coll.data("id");
 	$.ajax({
-		url: urlCollections + '/' + collectionId + '/addKeeps',
+		url: urlCollections + '/' + collId + '/addKeeps',
 		type: "POST",
 		dataType: 'json',
 		data: JSON.stringify(keepIds),
@@ -146,15 +147,9 @@ function addMyKeepsToCollection(keepIds) {
 		success: function(data) {
 			var $count = $coll.find("a span.right");
 			$count.text(+$count.text() + data.added);
-			// update collection list on right bar
-			$('aside.right .in-collections')
-				.append("<div class=row>" +
-					"<input type=checkbox data-id=" + collectionId + " id=cb1-" + collectionId + " checked>" +
-					"<label class=long-text for=cb1-" + collectionId + ">" +
-					"<span></span>" + collections[collectionId].name +
-					"</label>" +
-					"<div></div>" +
-					"</div>");
+			if (!$inColl.find("#cb1-" + collId).length) {
+				inCollTmpl.append({id: collId, name: collections[collId].name});
+			}
 		}});
 }
 
@@ -377,7 +372,7 @@ setInterval(updateNumKeeps, 60000);
 $(window).resize(adjustHeight);
 
 // handle collection adding/removing from right bar
-$('aside.right div.in-collections').on('change','input[type="checkbox"]', function() {
+$inColl.on('change', 'input[type="checkbox"]', function() {
 	// remove selected keeps from collection
 	var row = $(this).parents('.row');
 	var colId = $(this).data('id');
@@ -414,7 +409,9 @@ $('aside.right .actions .collections').on('change','input[type="checkbox"]',func
 				// add to collection count on left bar
 				var countSpan = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
 				countSpan.text(countSpan.text() * 1  + data.added);
-				$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+colId+'" id="cb1-'+colId+'" checked/><label class="long-text" for="cb1-'+colId+'"><span></span>'+collections[colId].name+'</label><div>');
+				if (!$inColl.find("#cb1-" + colId).length) {
+					inCollTmpl.append({id: colId, name: collections[colId].name});
+				}
 				row.remove();
 			}
 		});
@@ -465,24 +462,23 @@ $(document)
 				}
 			});
 			allCol = unique(allCol);
-			var inCol = $('aside.right .in-collections').html('');
+			$inColl.empty();
 			for (i in allCol) {
-				inCol.append('<div class="row"><input type="checkbox" data-id="'+allCol[i]+'" id="cb1-'+allCol[i]+'" checked/><label class="long-text" for="cb1-'+allCol[i]+'"><span></span>'+collections[allCol[i]].name+'</label><div>');
+				inCollTmpl.append({id: allCol[i], name: collections[allCol[i]].name});
 			}
 			showRightSide();
-		} else { // only one keep is selcted
+		} else { // only one keep is selected
 			keep = $('.keep.selected').first();
 			$('aside.right .title h2').text(keep.find('a').first().text());
 			var url = keep.find('a').first().attr('href');
 			$('aside.right .title a').text(url).attr('href',url).attr('target','_blank');
 			$('aside.right .who-kept').html(keep.find('div.bottom').html());
 			$('aside.right .who-kept span').prependTo($('aside.right .who-kept')).removeClass('fs9 gray');
-			var inCol = $('aside.right .in-collections').html('');
-			if (keep.data('collections').length > 0) {
-				var colArray = keep.data('collections').split(',');
-				for (i in colArray) {
-					inCol.append('<div class="row"><input type="checkbox" data-id="'+colArray[i]+'" id="cb1-'+colArray[i]+'" checked/><label class="long-text" for="cb1-'+colArray[i]+'"><span></span>'+collections[colArray[i]].name+'</label></div>');
-				}
+			$inColl.empty();
+			if (keep.data('collections')) {
+				keep.data('collections').split(',').forEach(function(id) {
+					inCollTmpl.append({id: id, name: collections[id].name});
+				});
 			}
 			var keepButton = $('aside.right .keepit .keep-button');
 			if (keep.is('.mine')) {

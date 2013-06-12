@@ -125,7 +125,12 @@
 		</div>
 		<div class="who-kept"></div>
 		<div class="subtitle">In collections:</div>
-		<div class="in-collections"></div>
+		<div class="in-collections">
+			<div class="row" data-template>
+				<input type="checkbox" data-id="{{id}}" id="cb1-{{id}}" checked>
+				<label class="long-text" for="cb1-{{id}}"><span></span>{{name}}</label>
+			</div>
+		</div>
 		<div class="actions">
 			<a class="add" href="javascript:">Add to a collection <span class="close">x</span></a>
 			<div class="collections">
