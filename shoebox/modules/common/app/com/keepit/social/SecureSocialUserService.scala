@@ -346,7 +346,7 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
         //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         //todo(eishay): send a direct fetch request
         val sui = socialUserInfoRepo.save(socialUserInfo.withUser(user))
-        imageStore.updatePicture(sui, user.externalId)
+        if (userOpt.isEmpty) imageStore.updatePicture(sui, user.externalId)
         sui
       case None =>
         val user = userOpt getOrElse userRepo.save(createUser(socialUser.fullName))
@@ -357,9 +357,7 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
         log.info("SocialUserInfo created is %s".format(userInfo))
 
         val sui = socialUserInfoRepo.save(userInfo)
-        if (userOpt.isEmpty) {
-          imageStore.updatePicture(sui, user.externalId)
-        }
+        if (userOpt.isEmpty) imageStore.updatePicture(sui, user.externalId)
         sui
     }
   }
