@@ -52,8 +52,8 @@ case class SocialUserInfoUserKey(userId: Id[User]) extends Key[Seq[SocialUserInf
   override val version = 3
   def toKey(): String = userId.id.toString
 }
-class SocialUserInfoUserCache @Inject() (repo: FortyTwoCachePlugin)
-  extends JsonCacheImpl[SocialUserInfoUserKey, Seq[SocialUserInfo]]((repo, 30 days))
+class SocialUserInfoUserCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[SocialUserInfoUserKey, Seq[SocialUserInfo]](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class SocialUserInfoNetworkKey(networkType: SocialNetworkType, id: SocialId) extends Key[SocialUserInfo] {
   override val version = 2
@@ -61,8 +61,8 @@ case class SocialUserInfoNetworkKey(networkType: SocialNetworkType, id: SocialId
   def toKey(): String = networkType.name.toString + "_" + id.id
 }
 
-class SocialUserInfoNetworkCache @Inject() (repo: FortyTwoCachePlugin)
-  extends JsonCacheImpl[SocialUserInfoNetworkKey, SocialUserInfo]((repo, 30 days))
+class SocialUserInfoNetworkCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[SocialUserInfoNetworkKey, SocialUserInfo](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 @Singleton
 class SocialUserInfoRepoImpl @Inject() (

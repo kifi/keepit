@@ -95,8 +95,8 @@ case class CommentCountUriIdKey(normUriId: Id[NormalizedURI]) extends Key[Int] {
   val namespace = "comment_by_normuriid"
   def toKey(): String = normUriId.id.toString
 }
-class CommentCountUriIdCache @Inject() (repo: FortyTwoCachePlugin)
-  extends PrimitiveCacheImpl[CommentCountUriIdKey, Int]((repo, 1 hour))
+class CommentCountUriIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[CommentCountUriIdKey, Int](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 @Singleton
 class CommentRepoImpl @Inject() (

@@ -60,8 +60,8 @@ case class NormalizedURIKey(id: Id[NormalizedURI]) extends Key[NormalizedURI] {
   val namespace = "uri_by_id"
   def toKey(): String = id.id.toString
 }
-class NormalizedURICache @Inject() (repo: FortyTwoCachePlugin)
-  extends JsonCacheImpl[NormalizedURIKey, NormalizedURI]((repo, 7 days))
+class NormalizedURICache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[NormalizedURIKey, NormalizedURI](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 @Singleton
 class NormalizedURIRepoImpl @Inject() (

@@ -105,8 +105,8 @@ case class BookmarkCountKey() extends Key[Int] {
   def toKey(): String = "k"
 }
 
-class BookmarkCountCache @Inject() (repo: FortyTwoCachePlugin)
-  extends PrimitiveCacheImpl[BookmarkCountKey, Int]((repo, 1 hour))
+class BookmarkCountCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[BookmarkCountKey, Int](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class BookmarkUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extends Key[Bookmark] {
   override val version = 2
@@ -114,8 +114,8 @@ case class BookmarkUriUserKey(uriId: Id[NormalizedURI], userId: Id[User]) extend
   def toKey(): String = uriId.id + "#" + userId.id
 }
 
-class BookmarkUriUserCache @Inject() (repo: FortyTwoCachePlugin)
-  extends JsonCacheImpl[BookmarkUriUserKey, Bookmark]((repo, 7 days))
+class BookmarkUriUserCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[BookmarkUriUserKey, Bookmark](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 @Singleton
 class BookmarkRepoImpl @Inject() (

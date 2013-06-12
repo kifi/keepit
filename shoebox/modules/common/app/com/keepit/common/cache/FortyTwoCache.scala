@@ -319,15 +319,15 @@ class FortyTwoCacheImpl[K <: Key[T], T](
     this((innermostPluginSettings._1, innermostPluginSettings._2, serializer), innerToOuterPluginSettings.map {case (plugin, ttl) => (plugin, ttl, serializer)}:_*)
 }
 
-class JsonCacheImpl[K <: Key[T], T](innermostPlugin: (FortyTwoCachePlugin, Duration), innerToOuterPlugins: (FortyTwoCachePlugin, Duration)*)(implicit formatter: Format[T])
-  extends FortyTwoCacheImpl[K, T](innermostPlugin, innerToOuterPlugins:_*)(Serializer(formatter))
+class JsonCacheImpl[K <: Key[T], T](innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(implicit formatter: Format[T])
+  extends FortyTwoCacheImpl[K, T](innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer(formatter))
 
-class BinaryCacheImpl[K <: Key[T], T](innermostPlugin: (FortyTwoCachePlugin, Duration), innerToOuterPlugins: (FortyTwoCachePlugin, Duration)*)(implicit formatter: BinaryFormat[T])
-  extends FortyTwoCacheImpl[K, T](innermostPlugin, innerToOuterPlugins:_*)(Serializer(formatter))
+class BinaryCacheImpl[K <: Key[T], T](innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)(implicit formatter: BinaryFormat[T])
+  extends FortyTwoCacheImpl[K, T](innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer(formatter))
 
-class PrimitiveCacheImpl[K <: Key[P], P <: AnyVal](innermostPlugin: (FortyTwoCachePlugin, Duration), innerToOuterPlugins: (FortyTwoCachePlugin, Duration)*)
-  extends FortyTwoCacheImpl[K, P](innermostPlugin, innerToOuterPlugins:_*)(Serializer[P])
+class PrimitiveCacheImpl[K <: Key[P], P <: AnyVal](innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends FortyTwoCacheImpl[K, P](innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer[P])
 
-class StringCacheImpl[K <: Key[String]](innermostPlugin: (FortyTwoCachePlugin, Duration), innerToOuterPlugins: (FortyTwoCachePlugin, Duration)*)
-  extends FortyTwoCacheImpl[K, String](innermostPlugin, innerToOuterPlugins:_*)(Serializer.string)
+class StringCacheImpl[K <: Key[String]](innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends FortyTwoCacheImpl[K, String](innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer.string)
 
