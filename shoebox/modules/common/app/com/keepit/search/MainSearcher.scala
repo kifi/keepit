@@ -1,10 +1,12 @@
 package com.keepit.search
 
+import com.keepit.search.graph.BookmarkRecord
 import com.keepit.search.graph.EdgeAccessor
 import com.keepit.search.graph.CollectionSearcher
 import com.keepit.search.graph.URIGraphSearcher
 import com.keepit.search.graph.UserToUriEdgeSet
 import com.keepit.search.graph.UserToUserEdgeSet
+import com.keepit.search.index.ArticleRecord
 import com.keepit.search.index.Searcher
 import com.keepit.search.index.PersonalizedSearcher
 import com.keepit.common.db.{Id, ExternalId}
@@ -407,6 +409,13 @@ class MainSearcher(
       (query, personalizedSearcher.explain(query, uriId.id))
     }
   }
+
+  def getArticleRecord(uriId: Id[NormalizedURI]): Option[ArticleRecord] = {
+    import com.keepit.search.index.ArticleRecordSerializer._
+    articleSearcher.getDecodedDocValue[ArticleRecord]("rec", uriId.id)
+  }
+
+  def getBookmarkRecord(uriId: Id[NormalizedURI]): Option[BookmarkRecord] = uriGraphSearcher.getBookmarkRecord(uriId)
 }
 
 class ArticleHitQueue(sz: Int) extends PriorityQueue[MutableArticleHit](sz) {
