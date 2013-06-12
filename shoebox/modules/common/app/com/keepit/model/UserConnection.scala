@@ -45,9 +45,8 @@ case class UserConnectionKey(userId: Id[User]) extends Key[Set[Id[User]]] {
   def toKey(): String = userId.id.toString
 }
 
-object UserConnectionFormatter {implicit val format = Id.format[User]}
-class UserConnectionIdCache @Inject() (repo: FortyTwoCachePlugin)
-  extends JsonCacheImpl[UserConnectionKey, Set[Id[User]]]((repo, 7 days))(TraversableFormat.set(Id.format[User]))
+class UserConnectionIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[UserConnectionKey, Set[Id[User]]](innermostPluginSettings, innerToOuterPluginSettings:_*)(TraversableFormat.set(Id.format[User]))
 
 @Singleton
 class UserConnectionRepoImpl @Inject() (

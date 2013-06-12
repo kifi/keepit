@@ -20,14 +20,13 @@ import com.google.inject.{Inject, Singleton, Provider}
 class AdminHealthController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   healthcheckPlugin: HealthcheckPlugin,
-  services: FortyTwoServices,
-  cacheStatistics: CacheStatistics)
+  services: FortyTwoServices)
     extends AdminController(actionAuthenticator) {
 
   def serviceView = AdminHtmlAction { implicit request =>
     val errorCount = healthcheckPlugin.errorCount
     val recentErrors = healthcheckPlugin.errors()
-    val cacheStats = cacheStatistics.getStatistics
+    val cacheStats = CacheStatistics.getStatistics
     val (totalHits, totalMisses, totalSets) = (cacheStats.map(_._2).sum, cacheStats.map(_._3).sum, cacheStats.map(_._4).sum)
     Ok(html.admin.serverInfo(services.currentService, services.currentVersion, services.compilationTime.toStandardTimeString,
         services.started.toStandardTimeString, errorCount, recentErrors, cacheStats, totalHits, totalMisses, totalSets))
