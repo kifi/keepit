@@ -84,7 +84,7 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
   lazy val defaultConfig = new SearchConfig(SearchConfig.defaultParams)
 
   def activeExperiments: Seq[SearchConfigExperiment] = {
-    val ret = monitoredAwait.result(shoeboxClient.getActiveExperiments, 50 milliseconds, _activeExperiments)
+    val ret = monitoredAwait.result(shoeboxClient.getActiveExperiments, 5 milliseconds, _activeExperiments)
     _activeExperiments = ret
     ret
   }
