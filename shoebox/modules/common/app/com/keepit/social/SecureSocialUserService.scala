@@ -8,9 +8,10 @@ import net.codingwell.scalaguice.InjectorExtensions._
 import com.google.inject.{Inject, Singleton}
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
+import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
 import com.keepit.common.social.{SocialGraphPlugin, SocialId, SocialNetworkType}
@@ -22,6 +23,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.Application
 import play.api.Play
 import play.api.Play.current
+import play.api.mvc.{Session, RequestHeader}
 import securesocial.core._
 import securesocial.core.providers.Token
 
@@ -195,6 +197,17 @@ class RemoteSecureSocialAuthenticatorPlugin @Inject()(
   def delete(id: String): Either[Error, Unit] = reportExceptions { }
 }
 
+private class SecureSocialEventListener extends securesocial.core.EventListener {
+  override val id = "fortytwo_event_listener"
+  def onEvent(event: Event, request: RequestHeader, session: Session): Option[Session] = event match {
+    case LogoutEvent(identity) =>
+      // Remove our user ID info when the user logs out
+      Some(session - ActionAuthenticator.FORTYTWO_USER_ID)
+    case _ =>
+      None
+  }
+}
+
 class SecureSocialUserService(implicit val application: Application) extends UserServicePlugin(application) {
   lazy val global = application.global.asInstanceOf[FortyTwoGlobal]
 
@@ -218,6 +231,19 @@ class SecureSocialUserService(implicit val application: Application) extends Use
     // Fortunately our implementation of this method does nothing so it doesn't matter.
   }
 
+  private val secureSocialEventListener = new SecureSocialEventListener
+
+  override def onStart() {
+    if (Registry.eventListeners.get(secureSocialEventListener.id).isEmpty) {
+      Registry.eventListeners.register(secureSocialEventListener)
+    }
+    super.onStart()
+  }
+
+  override def onStop() {
+    Registry.eventListeners.unRegister(secureSocialEventListener.id)
+    super.onStop()
+  }
 }
 
 trait SecureSocialUserPlugin {
