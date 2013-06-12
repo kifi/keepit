@@ -14,7 +14,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
-import com.keepit.common.social.{SocialGraphPlugin, SocialId, SocialNetworkType}
+import com.keepit.common.social.{SocialNetworks, SocialGraphPlugin, SocialId, SocialNetworkType}
 import com.keepit.common.store.S3ImageStore
 import com.keepit.inject._
 import com.keepit.model._
@@ -263,7 +263,8 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
     socialUserInfoRepo: SocialUserInfoRepo,
     userRepo: UserRepo,
     imageStore: S3ImageStore,
-    healthcheckPlugin: HealthcheckPlugin)
+    healthcheckPlugin: HealthcheckPlugin,
+    userExperimentRepo: UserExperimentRepo)
   extends UserService with SecureSocialUserPlugin with Logging {
 
   private def reportExceptions[T](f: => T): T =
@@ -329,6 +330,13 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
       socialUser: SocialUser, userId: Option[Id[User]])(implicit session: RWSession): SocialUserInfo = {
     val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
     val userIdOpt = userId flatMap userRepo.getOpt flatMap (_.id)
+
+    // TODO(greg): remove this when we want to enable linkedin for all users
+    if (socialNetworkType != SocialNetworks.FACEBOOK && Play.isProd &&
+        userIdOpt.flatMap(userExperimentRepo.get(_, ExperimentTypes.ADMIN)).isEmpty) {
+      throw new AuthenticationException()
+    }
+
     suiOpt.map(_.withCredentials(socialUser)) match {
       case Some(socialUserInfo) if !socialUserInfo.userId.isEmpty =>
         // TODO(greg): handle case where user id in socialUserInfo is different from the one in the session
