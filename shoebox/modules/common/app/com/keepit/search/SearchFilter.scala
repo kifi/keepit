@@ -68,7 +68,7 @@ object SearchFilter {
            monitoredAwait: MonitoredAwait) = {
     new SearchFilter(context, timeRange(startTime, endTime, tz)) {
 
-      override lazy val collections = collectionsFuture.map{ monitoredAwait.result(_, 5 seconds) }
+      override lazy val collections = collectionsFuture.map{ monitoredAwait.result(_, 5 seconds, "getting collections") }
 
       def includeMine    = true
       def includeShared  = true
@@ -95,7 +95,7 @@ object SearchFilter {
              monitoredAwait: MonitoredAwait) = {
     new SearchFilter(context, timeRange(startTime, endTime, tz)) {
 
-      private[this] lazy val users = monitoredAwait.result(usersFuture, 5 seconds).toSet
+      private[this] lazy val users = monitoredAwait.result(usersFuture, 5 seconds, "getting users").toSet
 
       def includeMine    = false
       def includeShared  = true
