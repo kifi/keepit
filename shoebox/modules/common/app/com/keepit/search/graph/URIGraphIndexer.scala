@@ -85,9 +85,16 @@ class URIGraphIndexer(
       sequenceNumber = bookmarkStore.sequenceNumber
     }
 
-    update {
-      Await.result(shoeboxClient.getBookmarksChanged(sequenceNumber, fetchSize), 180 seconds)
+    var total = 0
+    var done = false
+    while (!done) {
+      total += update {
+        val bookmarks = Await.result(shoeboxClient.getBookmarksChanged(sequenceNumber, fetchSize), 180 seconds)
+        done = bookmarks.isEmpty
+        bookmarks
+      }
     }
+    total
   }
 
   def update(userId: Id[User]): Int = {
@@ -107,7 +114,7 @@ class URIGraphIndexer(
       indexDocuments(usersChanged.iterator.map(buildIndexable), commitBatchSize){ commitBatch =>
         cnt += commitCallback(commitBatch)
       }
-      // update searchers together to get a consistent view og indexes
+      // update searchers together to get a consistent view of indexes
       searchers = (this.getSearcher, bookmarkStore.getSearcher)
       cnt
     } catch { case e: Throwable =>
