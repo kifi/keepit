@@ -135,7 +135,8 @@ aside.right input[type="checkbox"]:not(:checked) + label:hover span {
   background:url(../img/sprite-check.png) -44px top no-repeat;
 }
 
-.long-text {display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
+.long-text {white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
+span.long-text, a.long-text {display: inline-block}
 .small-avatar {max-width: 30px; max-height: 30px}
 aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px; border-radius: 4px}
 .keep {position:relative; clear: left; padding: 10px 10px 10px 30px; border-top: 1px solid #f9f9f9}

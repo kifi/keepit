@@ -42,8 +42,7 @@
 		</div>
 		<h2>You</h2>
 		<h3 class="active my-keeps">
-			<a href="javascript: populateMyKeeps(); addNewKeeps()"> Your Keeps <span
-				class="right light"></span></a>
+			<a href="javascript:populateMyKeeps();addNewKeeps()">Your Keeps<span class="right light">...</span></a>
 		</h3>
 		<!--
 		<h3 class="read-later droppable">
@@ -65,9 +64,9 @@
 							<li><a class="remove" href="javascript:">Remove</a></li>
 						</ul>
 					</div>
-					<a class="" href="javascript:">
+					<a href="javascript:">
 						<span class="right light">{{keeps}}</span>
-						<span class="name long-text" title ="{{name}}">{{name}}</span>
+						<span class="name long-text" title="{{name}}">{{name}}</span>
 					</a>
 				</h3>
 			</div>
@@ -87,9 +86,8 @@
 					<div class="handle">
 						<input type="checkbox">
 					</div>
-					<a class="long-text" href="{{bookmark.url}}" target="_blank"
-					title="{{bookmark.title}}">{{bookmark.title}}</a> <span
-					class="fs9 gray long-text" title="{{bookmark.url}}">{{bookmark.url}}</span>
+					<a class="long-text" href="{{bookmark.url}}" target="_blank" title="{{bookmark.title}}">{{bookmark.title}}</a>
+					<div class="fs9 gray long-text" title="{{bookmark.url}}">{{bookmark.url}}</div>
 					<div class="bottom">
 						<img class="small-avatar" data-template-for="users"
 							src="img/clock.png"
@@ -109,9 +107,8 @@
 					<div class="handle">
 						<input type="checkbox">
 					</div>
-					<a class="long-text" href="{{url}}" target="_blank"
-					title="{{title}}">{{title}}</a> <span class="fs9 gray long-text"
-					title="{{url}}">{{url}}</span>
+					<a class="long-text" href="{{url}}" target="_blank" title="{{title}}">{{title}}</a>
+					<div class="fs9 gray long-text" title="{{url}}">{{url}}</div>
 					<div class="bottom">
 						<img class="small-avatar" data-template-for="keepers"
 							src="img/clock.png"
@@ -135,11 +132,9 @@
 			<h2></h2>
 			<a class="link long-text"></a>
 		</div>
-		<div class="who-kept">
-		</div>
+		<div class="who-kept"></div>
 		<div class="subtitle">In collections:</div>
-		<div class="in-collections">
-		</div>
+		<div class="in-collections"></div>
 		<div class="actions">
 			<a class="add" href="javascript:">Add to a collection <span class="close">x</span></a>
 			<div class="collections">
@@ -147,7 +142,7 @@
 				<ul>
 					<li class="create"><a class="new-collection" href="javascript:">Create a new collection</a>
 						<div class="add-collection">
-							<input type = "text" placeholder="Type name here">
+							<input type="text" placeholder="Type name here">
 						</div>
 					</li>
 				</ul>
