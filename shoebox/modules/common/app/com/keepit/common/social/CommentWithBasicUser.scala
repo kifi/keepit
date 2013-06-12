@@ -24,8 +24,8 @@ case class CommentWithBasicUserKey(commentId: Id[Comment]) extends Key[CommentWi
   def toKey(): String = commentId.id.toString
 }
 
-class CommentWithBasicUserCache @Inject() (repo: FortyTwoCachePlugin)
-  extends JsonCacheImpl[CommentWithBasicUserKey, CommentWithBasicUser]((repo, 7 days))
+class CommentWithBasicUserCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[CommentWithBasicUserKey, CommentWithBasicUser](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 class CommentWithBasicUserRepo @Inject() (basicUserRepo: BasicUserRepo, commentRecipientRepo: CommentRecipientRepo, commentCache: CommentWithBasicUserCache) {
   def load(comment: Comment)(implicit session: RSession): CommentWithBasicUser = commentCache.getOrElse(CommentWithBasicUserKey(comment.id.get)) {

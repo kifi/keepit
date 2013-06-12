@@ -46,8 +46,8 @@ case class SliderHistoryUserIdKey(userId: Id[User]) extends Key[SliderHistory] {
   def toKey(): String = userId.id.toString
 }
 
-class SliderHistoryUserIdCache @Inject() (repo: FortyTwoCachePlugin)
-  extends BinaryCacheImpl[SliderHistoryUserIdKey, SliderHistory]((repo, 7 days))
+class SliderHistoryUserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends BinaryCacheImpl[SliderHistoryUserIdKey, SliderHistory](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 @Singleton
 class SliderHistoryRepoImpl @Inject() (

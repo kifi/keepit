@@ -50,8 +50,8 @@ case class BrowsingHistoryUserIdKey(userId: Id[User]) extends Key[BrowsingHistor
   def toKey(): String = userId.id.toString
 }
 
-class BrowsingHistoryUserIdCache @Inject() (innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin)
-  extends BinaryCacheImpl[BrowsingHistoryUserIdKey, BrowsingHistory]((innerRepo, 10 seconds), (outerRepo, 7 days))
+class BrowsingHistoryUserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends BinaryCacheImpl[BrowsingHistoryUserIdKey, BrowsingHistory](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 @Singleton
 class BrowsingHistoryRepoImpl @Inject() (

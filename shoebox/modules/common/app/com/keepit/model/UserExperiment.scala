@@ -56,8 +56,8 @@ case class UserExperimentUserIdKey(userId: Id[User]) extends Key[Seq[State[Exper
   def toKey(): String = userId.id.toString
 }
 
-class UserExperimentCache @Inject()(repo: FortyTwoCachePlugin)
-    extends JsonCacheImpl[UserExperimentUserIdKey, Seq[State[ExperimentType]]]((repo, 7 days))(TraversableFormat.seq(State.format[ExperimentType]))
+class UserExperimentCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+    extends JsonCacheImpl[UserExperimentUserIdKey, Seq[State[ExperimentType]]](innermostPluginSettings, innerToOuterPluginSettings:_*)(TraversableFormat.seq(State.format[ExperimentType]))
 
 @ImplementedBy(classOf[UserExperimentRepoImpl])
 trait UserExperimentRepo extends Repo[UserExperiment] {
