@@ -293,5 +293,24 @@ class ArticleIndexerTest extends Specification with DbRepos {
       indexer.search("content2").size === 1
       indexer.search("content3").size === 1
     })
+
+    "retrieve article records from index" in running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule)(new IndexerScope {
+      import com.keepit.search.index.ArticleRecordSerializer._
+      indexer.run()
+      indexer.numDocs === 3
+
+      val searcher = indexer.getSearcher
+      Seq(uri1, uri2, uri3).map{ uri =>
+        val recOpt: Option[ArticleRecord] = searcher.getDecodedDocValue("rec", uri.id.get.id)
+        recOpt must beSome[ArticleRecord]
+        recOpt.map{ rec =>
+          rec.title === uri.title.get
+          rec.url === uri.url
+          rec.externalId === uri.externalId
+        }
+      }
+      val recOpt: Option[ArticleRecord] = searcher.getDecodedDocValue("rec", 999999L)
+      recOpt must beNone
+    })
   }
 }

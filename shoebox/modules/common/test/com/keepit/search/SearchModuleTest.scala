@@ -1,5 +1,12 @@
 package com.keepit.search
 
+import com.keepit.module._
+import com.google.inject.util.Modules
+import com.google.inject._
+import com.keepit.controllers.admin._
+import com.keepit.common.net._
+import com.keepit.common.amazon._
+import com.keepit.common.zookeeper._
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.logging.Logging
 import com.keepit.inject.inject
@@ -25,7 +32,7 @@ class SearchModuleTest extends Specification with Logging {
 
   "Module" should {
     "instantiate controllers" in {
-      running(new SearchApplication()) {
+      running(new SearchApplication().withFakeHttpClient()) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {
           case (_, _, ClassRoute(className)) => Class.forName(className)

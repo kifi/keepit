@@ -60,9 +60,17 @@ class CollectionIndexer(
 
   def update(): Int = {
     resetSequenceNumberIfReindex()
-    update {
-      Await.result(shoeboxClient.getCollectionsChanged(sequenceNumber, fetchSize), 180 seconds)
+
+    var total = 0
+    var done = false
+    while (!done) {
+      total += update {
+        val collections = Await.result(shoeboxClient.getCollectionsChanged(sequenceNumber, fetchSize), 180 seconds)
+        done = collections.isEmpty
+        collections
+      }
     }
+    total
   }
 
   def update(userId: Id[User]): Int = {

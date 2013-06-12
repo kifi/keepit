@@ -19,6 +19,7 @@ import com.keepit.search.index.DocUtil
 import com.keepit.search.index.FieldDecoder
 import com.keepit.search.index.{DefaultAnalyzer, Indexable, Indexer, IndexError}
 import com.keepit.search.index.Indexable.IteratorTokenStream
+import com.keepit.search.index.Searcher
 import com.keepit.search.line.LineField
 import com.keepit.search.line.LineFieldBuilder
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -51,11 +52,17 @@ object URIGraphFields {
 class URIGraphIndexer(
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
+    bookmarkStore: BookmarkStore,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[User](indexDirectory, indexWriterConfig, URIGraphFields.decoders) {
 
-  private[this] val commitBatchSize = 100
-  private[this] val fetchSize = commitBatchSize * 3
+  private[this] val commitBatchSize = 3000
+  private[this] val fetchSize = commitBatchSize
+
+  private[this] val updateLock = new AnyRef
+  private[this] var searchers = (this.getSearcher, bookmarkStore.getSearcher)
+
+  def getSearchers: (Searcher, Searcher) = searchers
 
   private def commitCallback(commitBatch: Seq[(Indexable[User], Option[IndexError])]) = {
     var cnt = 0
@@ -72,24 +79,43 @@ class URIGraphIndexer(
 
   def update(): Int = {
     resetSequenceNumberIfReindex()
-    update {
-      Await.result(shoeboxClient.getUsersChanged(sequenceNumber), 180 seconds)
+
+    if (sequenceNumber.value > bookmarkStore.sequenceNumber.value) {
+      log.warn(s"bookmarkStore is behind. restarting from the bookmarkStore's sequence number: ${sequenceNumber} -> ${bookmarkStore.sequenceNumber}")
+      sequenceNumber = bookmarkStore.sequenceNumber
     }
+
+    var total = 0
+    var done = false
+    while (!done) {
+      total += update {
+        val bookmarks = Await.result(shoeboxClient.getBookmarksChanged(sequenceNumber, fetchSize), 180 seconds)
+        done = bookmarks.isEmpty
+        bookmarks
+      }
+    }
+    total
   }
 
   def update(userId: Id[User]): Int = {
     update {
-      Seq((userId, SequenceNumber.ZERO))
+      Await.result(shoeboxClient.getBookmarks(userId), 180 seconds)
     }
   }
 
-  private def update(usersChanged: => Seq[(Id[User], SequenceNumber)]): Int = {
+  private def update(bookmarksChanged: => Seq[Bookmark]): Int = updateLock.synchronized {
     log.info("updating URIGraph")
     try {
+      val bookmarks = bookmarksChanged
+      bookmarkStore.update(bookmarks)
+
+      val usersChanged = bookmarks.foldLeft(Map.empty[Id[User], SequenceNumber]){ (m, b) => m + (b.userId -> b.seq) }.toSeq.sortBy(_._2)
       var cnt = 0
       indexDocuments(usersChanged.iterator.map(buildIndexable), commitBatchSize){ commitBatch =>
         cnt += commitCallback(commitBatch)
       }
+      // update searchers together to get a consistent view of indexes
+      searchers = (this.getSearcher, bookmarkStore.getSearcher)
       cnt
     } catch { case e: Throwable =>
       log.error("error in URIGraph update", e)
@@ -97,9 +123,14 @@ class URIGraphIndexer(
     }
   }
 
+  override def reindex() {
+    super.reindex()
+    bookmarkStore.reindex()
+  }
+
   def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber)): URIListIndexable = {
     val (userId, seq) = userIdAndSequenceNumber
-    val bookmarks = Await.result(shoeboxClient.getBookmarks(userId), 180 seconds)
+    val bookmarks = bookmarkStore.getBookmarks(userId)
     new URIListIndexable(id = userId,
                          sequenceNumber = seq,
                          isDeleted = false,

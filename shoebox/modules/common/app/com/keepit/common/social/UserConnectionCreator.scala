@@ -112,7 +112,9 @@ class UserConnectionCreator @Inject() (
       network: SocialNetworkType): Seq[SocialConnection] = {
     log.info("looking for connections to disable for user %s".format(socialUserInfo.fullName))
     db.readWrite { implicit s =>
-      val existingSocialUserInfoIds = socialConnectionRepo.getUserConnections(socialUserInfo.userId.get).toSeq map {sui => sui.socialId}
+      val existingSocialUserInfoIds = socialConnectionRepo.getUserConnections(socialUserInfo.userId.get) collect {
+        case sui if sui.networkType == network => sui.socialId
+      }
       log.debug("socialUserInfoForAllFriendsIds = %s".format(socialIds))
       log.debug("existingSocialUserInfoIds = %s".format(existingSocialUserInfoIds))
       log.info("size of diff =%s".format((existingSocialUserInfoIds diff socialIds).length))

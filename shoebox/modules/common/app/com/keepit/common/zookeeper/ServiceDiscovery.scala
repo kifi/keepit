@@ -17,7 +17,8 @@ trait ServiceDiscovery {
 @Singleton
 class ServiceDiscoveryImpl @Inject() (
     zk: ZooKeeperClient,
-    services: FortyTwoServices)
+    services: FortyTwoServices,
+    amazonInstanceInfo: AmazonInstanceInfo)
   extends ServiceDiscovery with Logging {
 
   val serviceType = services.currentService
@@ -27,13 +28,16 @@ class ServiceDiscoveryImpl @Inject() (
   def myId: Option[Long] = myNode map extractId
   def extractId(node: Node) = node.name.substring(node.name.lastIndexOf('_') + 1).toLong
 
+  implicit val amazonInstanceInfoFormat = AmazonInstanceInfo.format
+
   def register(): Node = {
     val path = zk.createPath(myServicePath)
     zk.watchChildren(path, { (children : Seq[Node]) =>
       log.info(s"""services in my cluster: ${children.mkString(", ")}""")
     })
     myNode = Some(zk.createNode(myServiceNodeMaster, null, EPHEMERAL_SEQUENTIAL))
-    log.info(s"registered as node $myNode")
+    zk.set(myNode.get, Json.toJson(amazonInstanceInfo).toString)
+    log.info(s"registered as node ${myNode.get}")
     myNode.get
   }
 

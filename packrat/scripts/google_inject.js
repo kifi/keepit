@@ -430,13 +430,13 @@ api.log("[google_inject]");
 
   function loadChatter(hits) {
     if (!hits.length) return;
-    api.port.emit("get_chatter", {ids: hits.map(function(h) {return h.bookmark.id})}, function gotChatter(counts) {
+    api.port.emit("get_chatter", hits.map(function(h) {return h.bookmark.url}), function gotChatter(counts) {
       api.log("[gotChatter]", counts);
       var bgImg = "url(" + api.url("images/chatter.png") + ")";
-      for (var id in counts) {
-        var n = counts[id];
+      for (var url in counts) {
+        var n = counts[url];
         if (n[0] || n[1]) {
-          $res.find("#kifi-who-" + id).append(
+          $res.find(".kifi-who[data-url='" + url + "']").append(
             $("<span class=kifi-chatter>").css("background-image", bgImg).data("n", n));
         }
       }

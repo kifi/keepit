@@ -2,6 +2,7 @@
   totalBookmarks: Int,
   experiments: Set[State[ExperimentType]],
   bookmarks: Seq[(Bookmark, NormalizedURI, Seq[String])],
+  socialUsers: Seq[SocialUserInfo],
   socialConnections: Seq[SocialUserInfo],
   fortyTwoConnections: Seq[User],
   kifiInstallations: Seq[KifiInstallation],
@@ -26,7 +27,10 @@
         <th>Id</th><td>@user.id</td>
       </tr>
       <tr>
-        <th>Facebook Account</th><td>@adminHelper.userDisplay(user)</td>
+        <th>Social Users</th>
+        <td>
+          @for(u <- socialUsers) { <div>@adminHelper.socialUserDisplay(u, true) (@u.networkType)</div> }
+        </td>
       </tr>
       <tr>
         <th>Created At</th><td>@adminHelper.dateTimeDisplay(user.createdAt)</td>
