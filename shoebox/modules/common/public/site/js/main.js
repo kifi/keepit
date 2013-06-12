@@ -15,12 +15,12 @@ var urlCollectionsAll = urlCollections + '/all';
 var urlCollectionsOrder = urlCollections + '/ordering';
 var urlCollectionsCreate = urlCollections + '/create';
 
-var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
+var $myKeeps = $("#my-keeps");
+var keepsTemplate = Tempo.prepare($myKeeps).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 	hideLoading();
-	$('#my-keeps .keep .bottom').each(function() {
-		$(this).find('img.small-avatar').prependTo($(this));
-	});
-	$('#my-keeps .keep .bottom:not(:has(.me))')
+	$myKeeps.find(".keep .bottom").each(function() {
+		$(this).find('img.small-avatar').prependTo(this);  // eliminating whitespace text nodes?
+	}).filter(":not(:has(.me))")
 		.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
 	initDraggable();
 
@@ -28,15 +28,15 @@ var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPL
 
 	// insert time sections
 	var now = new Date;
-	$('#my-keeps .keep').each(function() {
+	$myKeeps.find('.keep').each(function() {
 		var age = daysBetween(new Date($(this).data('created')), now);
-		if ($('#my-keeps li.search-section.today').length == 0 && age <= 1) {
+		if ($myKeeps.find('li.search-section.today').length == 0 && age <= 1) {
 			$(this).before('<li class="search-section today">Today</li>');
-		} else if ($('#my-keeps li.search-section.yesterday').length == 0  && age > 1 && age < 2) {
+		} else if ($myKeeps.find('li.search-section.yesterday').length == 0 && age > 1 && age < 2) {
 			$(this).before('<li class="search-section yesterday">Yesderday</li>');
-		} else if ($('#my-keeps li.search-section.week').length == 0  && age >= 2 && age <= 7) {
+		} else if ($myKeeps.find('li.search-section.week').length == 0 && age >= 2 && age <= 7) {
 			$(this).before('<li class="search-section week">Past Week</li>');
-		} else if ($('#my-keeps li.search-section.older').length == 0  && age > 7) {
+		} else if ($myKeeps.find('li.search-section.older').length == 0 && age > 7) {
 			$(this).before('<li class="search-section older">Older</li>');
 		}
 	});
@@ -202,9 +202,7 @@ function hideRightSide() {
 }
 
 function doSearch(context) {
-	$('#my-keeps').hide();
-	$('#my-keeps .keep.selected input[type="checkbox"]').prop('checked', false);
-	$('#my-keeps .keep.selected').removeClass('selected');
+	$myKeeps.hide().find('.keep.selected').removeClass('selected').find('input[type="checkbox"]').prop('checked', false);
 	$('.search h1').hide();
 	$('.search .num-results').show();
 //	$('aside.right').show();
@@ -230,7 +228,7 @@ function doSearch(context) {
 }
 
 function addNewKeeps() {
-	var first = $('#my-keeps li.keep').first().data('id');
+	var first = $myKeeps.find('.keep').first().data('id');
 	var params = {after: first};
 	if ($('aside.left h3.active').is('.collection'))
 		params.collection = $('aside.left h3.active').data('id');
@@ -238,7 +236,7 @@ function addNewKeeps() {
 	$.getJSON(urlMyKeeps, params,
 		function(data) {
 			keepsTemplate.prepend(data.keeps);
-			$('#my-keeps li.search-section.today').prependTo('#my-keeps');
+			$myKeeps.find('.search-section.today').prependTo($myKeeps);
 		});
 }
 
@@ -266,11 +264,11 @@ function populateMyKeeps(id) {
 	$('.search h1').show();
 	$('.search .num-results').hide();
 	if (lastKeep == null) {
-		$('#my-keeps .search-section').remove();
+		$myKeeps.find('.search-section').remove();
 	} else {
 		params.before = lastKeep;
 	}
-	$('#my-keeps').show();
+	$myKeeps.show();
 	if (lastKeep != "end") {
 		showLoading();
 		console.log("Fetching 30 keep before " + lastKeep);
