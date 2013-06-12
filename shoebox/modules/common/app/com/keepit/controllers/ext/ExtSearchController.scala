@@ -122,7 +122,7 @@ class ExtSearchController @Inject() (
 
     val t4 = currentDateTime.getMillis()
 
-    val decorator = new ResultDecoratorImpl(userId, shoeboxClient)
+    val decorator = new ResultDecoratorImpl2(searcher, shoeboxClient)
     val res = toPersonalSearchResultPacket(decorator, userId, searchRes, config, searchFilter.isDefault, experimentId)
 
     reportArticleSearchResult(searchRes)
