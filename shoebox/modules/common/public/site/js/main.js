@@ -16,39 +16,39 @@ var urlCollectionsOrder = urlCollections + '/ordering';
 var urlCollectionsCreate = urlCollections + '/create';
 
 var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
-				hideLoading();
-				$('#my-keeps .keep .bottom').each(function() {
-					$(this).find('img.small-avatar').prependTo($(this));
-				});
-				$('#my-keeps .keep .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myPicUrl + '"/>');
-				initDraggable();
+	hideLoading();
+	$('#my-keeps .keep .bottom').each(function() {
+		$(this).find('img.small-avatar').prependTo($(this));
+	});
+	$('#my-keeps .keep .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myPicUrl + '"/>');
+	initDraggable();
 
-				$(".easydate").easydate({set_title: false});
+	$(".easydate").easydate({set_title: false});
 
-				// insert time sections
-				var currentDate = new Date();
-				$('#my-keeps .keep').each(function() {
-					var age = daysBetween(new Date(Date.parse($(this).data('created'))), currentDate);
-					if ($('#my-keeps li.search-section.today').length == 0 && age <= 1) {
-						$(this).before('<li class="search-section today">Today</li>');
-					} else if ($('#my-keeps li.search-section.yesterday').length == 0  && age > 1 && age < 2) {
-						$(this).before('<li class="search-section yesterday">Yesderday</li>');
-					} else if ($('#my-keeps li.search-section.week').length == 0  && age >= 2 && age <= 7) {
-						$(this).before('<li class="search-section week">Past Week</li>');
-					} else if ($('#my-keeps li.search-section.older').length == 0  && age > 7) {
-						$(this).before('<li class="search-section older">Older</li>');
-					}
-				});
-			});
+	// insert time sections
+	var currentDate = new Date();
+	$('#my-keeps .keep').each(function() {
+		var age = daysBetween(new Date(Date.parse($(this).data('created'))), currentDate);
+		if ($('#my-keeps li.search-section.today').length == 0 && age <= 1) {
+			$(this).before('<li class="search-section today">Today</li>');
+		} else if ($('#my-keeps li.search-section.yesterday').length == 0  && age > 1 && age < 2) {
+			$(this).before('<li class="search-section yesterday">Yesderday</li>');
+		} else if ($('#my-keeps li.search-section.week').length == 0  && age >= 2 && age <= 7) {
+			$(this).before('<li class="search-section week">Past Week</li>');
+		} else if ($('#my-keeps li.search-section.older').length == 0  && age > 7) {
+			$(this).before('<li class="search-section older">Older</li>');
+		}
+	});
+});
 var searchTemplate = Tempo.prepare("search-results").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
-					hideLoading();
-					initDraggable();
-					$('#search-results .keep .bottom').each(function() {
-						$(this).find('img.small-avatar').prependTo($(this));
-					});
-					$('#search-results .keep.mine .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myPicUrl + '"/>');
-					$('div.search .num-results').text('Showing ' + $('#search-results .keep').length + ' for "'+$('header input.search').val()+'"');
-				});
+	hideLoading();
+	initDraggable();
+	$('#search-results .keep .bottom').each(function() {
+		$(this).find('img.small-avatar').prependTo($(this));
+	});
+	$('#search-results .keep.mine .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myPicUrl + '"/>');
+	$('div.search .num-results').text('Showing ' + $('#search-results .keep').length + ' for "'+$('header input.search').val()+'"');
+});
 var collectionsTemplate = Tempo.prepare("collections").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
 	$('#collections').show();
 	initDroppable();
@@ -76,9 +76,9 @@ $.fn.layout = function() {
 };
 
 function unique(arr) {
-    return $.grep(arr,function(v,k){
-        return $.inArray(v,arr) === k;
-    });
+  return $.grep(arr, function(v, k) {
+    return $.inArray(v, arr) === k;
+  });
 }
 
 function initDraggable() {
@@ -167,20 +167,18 @@ function initDroppable() {
 }
 
 function daysBetween(date1, date2) {
+  // The number of milliseconds in one day
+  var ONE_DAY = 1000 * 60 * 60 * 24
 
-    // The number of milliseconds in one day
-    var ONE_DAY = 1000 * 60 * 60 * 24
+  // Convert both dates to milliseconds
+  var date1_ms = date1.getTime()
+  var date2_ms = date2.getTime()
 
-    // Convert both dates to milliseconds
-    var date1_ms = date1.getTime()
-    var date2_ms = date2.getTime()
+  // Calculate the difference in milliseconds
+  var difference_ms = Math.abs(date1_ms - date2_ms)
 
-    // Calculate the difference in milliseconds
-    var difference_ms = Math.abs(date1_ms - date2_ms)
-
-    // Convert back to days and return
-    return Math.round(difference_ms/ONE_DAY)
-
+  // Convert back to days and return
+  return Math.round(difference_ms/ONE_DAY)
 }
 
 function formatPicUrl(userId, pictureName, size) {
@@ -396,11 +394,11 @@ setInterval(updateNumKeeps, 60000);
 $(window).resize(adjustHeight);
 
 // handle collection adding/removing from right bar
-$('aside.right div.in-collections').on('change','input[type="checkbox"]',function(){
+$('aside.right div.in-collections').on('change','input[type="checkbox"]', function() {
 	// remove selected keeps from collection
 	var row = $(this).parents('.row');
 	var colId = $(this).data('id');
-	var keeps = $('section.main .keep.selected').map(function(){ return $(this).data('id')}).get();
+	var keeps = $('section.main .keep.selected').map(function() {return $(this).data('id')}).get();
 	$.ajax( {url: urlCollections + "/" + colId + "/removeKeeps"
 		,type: "POST"
 		,dataType: 'json'
@@ -417,11 +415,11 @@ $('aside.right div.in-collections').on('change','input[type="checkbox"]',functio
 		});
 
 });
-$('aside.right .actions .collections').on('change','input[type="checkbox"]',function(){
+$('aside.right .actions .collections').on('change','input[type="checkbox"]',function() {
 	// add selected keeps to collection
 	var row = $(this).parents('li');
 	var colId = $(this).data('id');
-	var keeps = $('section.main .keep.selected').map(function(){ return $(this).data('id')}).get();
+	var keeps = $('section.main .keep.selected').map(function() {return $(this).data('id')}).get();
 	$.ajax( {url: urlCollections + "/" + colId + "/addKeeps"
 		,type: "POST"
 		,dataType: 'json'
@@ -437,7 +435,6 @@ $('aside.right .actions .collections').on('change','input[type="checkbox"]',func
 						row.remove();
 					}
 		});
-
 });
 
 $(document)
@@ -732,5 +729,3 @@ $(document)
 			}
 		});
 	});
-
-
