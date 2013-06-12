@@ -160,6 +160,6 @@ aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px;
 .main>.scrollable {padding-top: 20px}
 div.loading {text-align: center; display: none}
 .clearfix {clear: both}
-.template-wrapper, .add-collection {display: none}
+.add-collection {display: none}
 .drag-helper {background: #fff; padding: 5px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
 .drop-hover {background: #b6c3cc}

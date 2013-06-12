@@ -15,7 +15,7 @@ var urlCollectionsAll = urlCollections + '/all';
 var urlCollectionsOrder = urlCollections + '/ordering';
 var urlCollectionsCreate = urlCollections + '/create';
 
-var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
+var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 	hideLoading();
 	$('#my-keeps .keep .bottom').each(function() {
 		$(this).find('img.small-avatar').prependTo($(this));
@@ -40,7 +40,7 @@ var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPL
 		}
 	});
 });
-var searchTemplate = Tempo.prepare("search-results").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
+var searchTemplate = Tempo.prepare("search-results").when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 	hideLoading();
 	initDraggable();
 	$('#search-results .keep .bottom').each(function() {
@@ -49,8 +49,7 @@ var searchTemplate = Tempo.prepare("search-results").when(TempoEvent.Types.RENDE
 	$('#search-results .keep.mine .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myPicUrl + '"/>');
 	$('div.search .num-results').text('Showing ' + $('#search-results .keep').length + ' for "'+$('header input.search').val()+'"');
 });
-var collectionsTemplate = Tempo.prepare("collections").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
-	$('#collections').show();
+var collectionsTemplate = Tempo.prepare("collections").when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 	initDroppable();
 	adjustHeight();
 });
@@ -82,7 +81,7 @@ function unique(arr) {
 }
 
 function initDraggable() {
-	$( ".draggable" ).draggable({
+	$(".draggable").draggable({
 		revert: "invalid",
 		handle: ".handle",
 		cursorAt: { top: 15, left: 0 },
@@ -97,12 +96,12 @@ function initDraggable() {
 }
 
 function initDroppable() {
-	$( ".droppable" ).droppable({
+	$(".droppable").droppable({
 		accept: '.keep',
 		greedy: true,
 		tolerance: "pointer",
 		hoverClass: "drop-hover",
-		drop: function( event, ui ) {
+		drop: function(event, ui) {
 			var thisCollection = $(this);
 			var collectionId = thisCollection.data('id');
 
