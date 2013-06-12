@@ -388,9 +388,9 @@ const socketHandlers = {
 
 api.port.on({
   get_keeps: searchOnServer,
-  get_chatter: function(data, respond) {
-    api.log("[get_chatter]", data.ids);
-    ajax("GET", "/search/chatter", {ids: data.ids.join(".")}, respond);
+  get_chatter: function(urls, respond) {
+    api.log("[get_chatter]", urls);
+    ajax("POST", "/search/chatter", urls, respond);
   },
   get_keepers: function(_, respond, tab) {
     api.log("[get_keepers]", tab.id);
