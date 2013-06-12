@@ -255,10 +255,14 @@ class ShoeboxServiceClientImpl @Inject() (
       }
     }
 
-    val query = needed.map(_.id).mkString(",")
-    call(routes.ShoeboxController.getBasicUsers(query)).map { res =>
-      val retrievedUsers = res.json.as[Map[String, BasicUser]]
-      cached ++ (retrievedUsers.map(u => Id[User](u._1.toLong) -> u._2))
+    if (needed.isEmpty) {
+      Promise.successful(cached).future
+    } else {
+      val query = needed.map(_.id).mkString(",")
+      call(routes.ShoeboxController.getBasicUsers(query)).map { res =>
+        val retrievedUsers = res.json.as[Map[String, BasicUser]]
+        cached ++ (retrievedUsers.map(u => Id[User](u._1.toLong) -> u._2))
+      }
     }
   }
 
