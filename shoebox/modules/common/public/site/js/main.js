@@ -52,7 +52,7 @@ var searchTemplate = Tempo.prepare("search-results").when(TempoEvent.Types.RENDE
 	$('div.search .num-results').text('Showing ' + $('#search-results .keep').length + ' for "' + $('header input.search').val() + '"');
 });
 var collectionsTemplate = Tempo.prepare("collections").when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
-	initDroppable();
+	makeCollectionsDroppable($(event.element).find(".collection"));
 	adjustHeight();
 });
 
@@ -97,39 +97,41 @@ function initDraggable() {
 	});
 }
 
-function initDroppable() {
-	$(".droppable").droppable({
-		accept: '.keep',
+function makeCollectionsDroppable($coll) {
+	$coll.droppable({
+		accept: ".keep",
 		greedy: true,
 		tolerance: "pointer",
 		hoverClass: "drop-hover",
-		drop: function(event, ui) {
-			var $keeps = ui.draggable;
-			if ($keeps.hasClass("selected")) {
-				$keeps = $keeps.add('section.main .keep.selected');
-			}
+		drop: onDropOnCollection});
+}
 
-			var myKeepIds = $keeps.filter(".mine").map(function() {return $(this).data("id")}).get();
+function onDropOnCollection(event, ui) {
+	var $keeps = ui.draggable;
+	if ($keeps.hasClass("selected")) {
+		$keeps = $keeps.add('section.main .keep.selected');
+	}
 
-			// may first need to keep any keeps that are not mine yet
-			var $notMine = $keeps.filter(":not(.mine)");
-			if ($notMine.length) {
-				$.ajax({
-					url: urlKeepAdd,
-					type: "POST",
-					dataType: 'json',
-					data: JSON.stringify($notMine.map(function() {var a = this.querySelector("a"); return {title: a.title, url: a.href}}).get()),
-					contentType: 'application/json',
-					error: onDropOnCollectionAjaxError,
-					success: function(data) {
-						myKeepIds.push.apply(myKeepIds, data.keeps.map(function(k) {return k.id}));
-						addMyKeepsToCollection.call(this, myKeepIds);
-					}
-				});
-			} else {
+	var myKeepIds = $keeps.filter(".mine").map(function() {return $(this).data("id")}).get();
+
+	// may first need to keep any keeps that are not mine yet
+	var $notMine = $keeps.filter(":not(.mine)");
+	if ($notMine.length) {
+		$.ajax({
+			url: urlKeepAdd,
+			type: "POST",
+			dataType: 'json',
+			data: JSON.stringify($notMine.map(function() {var a = this.querySelector("a"); return {title: a.title, url: a.href}}).get()),
+			contentType: 'application/json',
+			error: onDropOnCollectionAjaxError,
+			success: function(data) {
+				myKeepIds.push.apply(myKeepIds, data.keeps.map(function(k) {return k.id}));
 				addMyKeepsToCollection.call(this, myKeepIds);
 			}
-		}});
+		});
+	} else {
+		addMyKeepsToCollection.call(this, myKeepIds);
+	}
 }
 
 function addMyKeepsToCollection(keepIds) {
@@ -604,7 +606,7 @@ $(document)
 
 		// filter collections or right bar
 		$('aside.right .collections input.find').on('keyup',function() {
-			var p = new RegExp($(this).val(),"gi");
+			var p = new RegExp(this.value, "gi");
 			$('aside.right .collections ul li:not(.create)').each(function() {
 				if (p.test($(this).find('label').text()))
 					$(this).show();
@@ -615,29 +617,31 @@ $(document)
 
 		// create new collection
 		$('.add-collection input').keypress(function(e) {
-			var code = (e.keyCode ? e.keyCode : e.which);
-			if(code == 13) { //Enter key pressed
-				var inputField = $(this);
-				var newName = inputField.val();
-				$.ajax( {url: urlCollectionsCreate
-						,type: "POST"
-						,dataType: 'json'
-						,data: JSON.stringify({ name: newName })
-						,contentType: 'application/json'
-						,error: function() {showMessage('Could not create collection, please try again later')}
-						,success: function(data) {
-									   $('#collections-wrapper').append('<h3 class="droppable collection" data-id="' + data.id + '"><div class="edit-menu">\
-												<a href="javascript: ;" class="edit"></a>\
-												<ul><li><a class="rename" href="javascript: ;">Rename</a></li>\
-													<li><a class="remove" href="javascript: ;">Remove</a></li></ul>\
-											</div><a href="javascript: ;"><span class="name long-text">' + newName + '</span> <span class="right light">0</span></a></h3>');
-										$('aside.right .actions .collections ul li.create').after('<li><input type="checkbox" data-id="' + data.id + '" id="cb-' + data.id + '"><label class="long-text" for="cb-' + data.id + '"><span></span>' + newName + '</label></li>');
-										collections[data.id] = {id: data.id, name: newName};
-										initDroppable();
-										inputField.parent().slideUp();
-										inputField.val('');
-									}
-						});
+			if (e.which == 13) { // Enter
+				var input = this;
+				var newName = input.value;
+				$.ajax({
+					url: urlCollectionsCreate,
+					type: "POST",
+					dataType: 'json',
+					data: JSON.stringify({name: newName}),
+					contentType: 'application/json',
+					error: showMessage.bind(null, 'Could not create collection, please try again later'),
+					success: function(data) {
+						var $coll = $('<h3 class=collection data-id=' + data.id + '><div class=edit-menu>\
+							<a href=javascript: class=edit></a>\
+							<ul><li><a class=rename href=javascript:>Rename</a></li>\
+									<li><a class=remove href=javascript:>Remove</a></li></ul>\
+							</div><a href=javascript:><span class="name long-text">' + newName + '</span> <span class="right light">0</span></a></h3>')
+					   .appendTo('#collections-wrapper');
+						makeCollectionsDroppable($coll);
+					  // TODO: Use Tempo templates!!
+						$('aside.right .actions .collections ul li.create')
+							.after('<li><input type="checkbox" data-id="' + data.id + '" id="cb-' + data.id + '"><label class="long-text" for="cb-' + data.id + '"><span></span>' + newName + '</label></li>');
+						collections[data.id] = {id: data.id, name: newName};
+						$(input).parent().slideUp();
+						input.value = "";
+					}});
 			 }
 		});
 
