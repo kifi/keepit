@@ -104,67 +104,60 @@ function initDroppable() {
 		tolerance: "pointer",
 		hoverClass: "drop-hover",
 		drop: function(event, ui) {
-			var thisCollection = $(this);
-			var collectionId = thisCollection.data('id');
+			var $keeps = ui.draggable;
+			if ($keeps.hasClass("selected")) {
+				$keeps = $keeps.add('section.main .keep.selected');
+			}
 
-			// first add keeps that are not mine
-			var keeps = $('section.main .keep.selected:not(.mine)');
-			if (keeps.length > 0)
-				$.ajax( {url: urlKeepAdd
-					,type: "POST"
-					,dataType: 'json'
-					,data: JSON.stringify(keeps.map(function() {return { title: $(this).find('a').first().attr('title')
-						,url: $(this).find('a').first().attr('href')}}).get())
-					,contentType: 'application/json'
-					,error: function() {showMessage('Could not add keeps, please try again later')}
-					,success: function(data) {
-						// add the returned IDs to the collection
-						var keepIds = [];
-						for (i in data.keeps) {
-							keepIds[i] = data.keeps[i].id;
-						}
-						$.ajax( {url: urlCollections + '/' + collectionId + '/addKeeps'
-							,type: "POST"
-							,dataType: 'json'
-							,data: JSON.stringify(keepIds)
-							,contentType: 'application/json'
-							,error: function() {
-								showMessage('Could not add to collection, please try again later');
-								return false;
-							}
-							,success: function(data) {
-											var countSpan = thisCollection.find('a span.right');
-											var added = countSpan.text() * 1  + data.added;
-											countSpan.text(added);
-											// update collection list on right bar
-											$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+collectionId+'" id="cb1-'+collectionId+'" checked=""><label class="long-text" for="cb1-'+collectionId+'"><span></span>'+collections[collectionId].name+'</label><div></div></div>');
-										}
-							});
+			var myKeepIds = $keeps.filter(".mine").map(function() {return $(this).data("id")}).get();
+
+			// may first need to keep any keeps that are not mine yet
+			var $notMine = $keeps.filter(":not(.mine)");
+			if ($notMine.length) {
+				$.ajax({
+					url: urlKeepAdd,
+					type: "POST",
+					dataType: 'json',
+					data: JSON.stringify($notMine.map(function() {var a = this.querySelector("a"); return {title: a.title, url: a.href}}).get()),
+					contentType: 'application/json',
+					error: onDropOnCollectionAjaxError,
+					success: function(data) {
+						myKeepIds.push.apply(myKeepIds, data.keeps.map(function(k) {return k.id}));
+						addMyKeepsToCollection.call(this, myKeepIds);
 					}
 				});
-
-			// now add my keeps to the collection
-			keeps = $('section.main .keep.selected.mine');
-			if (keeps.length > 0)
-				$.ajax( {url: urlCollections + '/' + collectionId + '/addKeeps'
-					,type: "POST"
-					,dataType: 'json'
-					,data: JSON.stringify(keeps.map(function() {return $(this).data('id')}).get())
-					,contentType: 'application/json'
-					,error: function() {
-						showMessage('Could not add to collection, please try again later');
-						return false;
-					}
-					,success: function(data) {
-									var countSpan = thisCollection.find('a span.right');
-									var added = countSpan.text() * 1  + data.added;
-									countSpan.text(added);
-									// update collection list on right bar
-									$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+collectionId+'" id="cb1-'+collectionId+'" checked=""><label class="long-text" for="cb1-'+collectionId+'"><span></span>'+collections[collectionId].name+'</label><div></div></div>');
-								}
-					});
+			} else {
+				addMyKeepsToCollection.call(this, myKeepIds);
 			}
-		});
+		}});
+}
+
+function addMyKeepsToCollection(keepIds) {
+	var $coll = $(this), collectionId = $coll.data("id");
+	$.ajax({
+		url: urlCollections + '/' + collectionId + '/addKeeps',
+		type: "POST",
+		dataType: 'json',
+		data: JSON.stringify(keepIds),
+		contentType: 'application/json',
+		error: onDropOnCollectionAjaxError,
+		success: function(data) {
+			var $count = $coll.find("a span.right");
+			$count.text(+$count.text() + data.added);
+			// update collection list on right bar
+			$('aside.right .in-collections')
+				.append("<div class=row>" +
+					"<input type=checkbox data-id=" + collectionId + " id=cb1-" + collectionId + " checked>" +
+					"<label class=long-text for=cb1-" + collectionId + ">" +
+					"<span></span>" + collections[collectionId].name +
+					"</label>" +
+					"<div></div>" +
+					"</div>");
+		}});
+}
+
+function onDropOnCollectionAjaxError() {
+	showMessage('Could not add to collection, please try again later');
 }
 
 function daysBetween(date1, date2) {
