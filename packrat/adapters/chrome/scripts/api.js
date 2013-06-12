@@ -1,42 +1,43 @@
 // API for content scripts
 
 var api = function() {
-  var msgHandlers = [], callbacks = {}, nextCallbackId = 1;
-
-  var port = chrome.runtime.connect({name: ""});
-  port.onMessage.addListener(function(msg) {
-    var kind = msg[0];
-    if (kind == "api:respond") {
-      var id = msg[1], cb = callbacks[id];
-      api.log("[onMessage] response:", msg[2] != null ? msg[2] : "");
-      if (cb) {
-        delete callbacks[id];
-        cb(msg[2]);
-      }
-    } else if (kind == "api:injected") {
-      msg[1].forEach(function(path) {
-        injected[path] = true;
-      });
-      api.log("[api:injected]", Object.keys(injected));
-      requireNext();
-    } else {
-      var data = msg[1], handler;
-      api.log("[onMessage]", kind, data != null ? data : "");
-      for (var i in msgHandlers) {
-        if (handler = msgHandlers[i][kind]) {
-          handler(data);
+  var msgHandlers = [], callbacks = {}, nextCallbackId = 1, port;
+  function createPort() {
+    port = chrome.runtime.connect({name: ""});
+    port.onMessage.addListener(function(msg) {
+      var kind = msg[0];
+      if (kind == "api:respond") {
+        var id = msg[1], cb = callbacks[id];
+        api.log("[onMessage] response:", msg[2] != null ? msg[2] : "");
+        if (cb) {
+          delete callbacks[id];
+          cb(msg[2]);
+        }
+      } else if (kind == "api:injected") {
+        msg[1].forEach(function(path) {
+          injected[path] = true;
+        });
+        api.log("[api:injected]", Object.keys(injected));
+        requireNext();
+      } else {
+        var data = msg[1], handler;
+        api.log("[onMessage]", kind, data != null ? data : "");
+        for (var i in msgHandlers) {
+          if (handler = msgHandlers[i][kind]) {
+            handler(data);
+          }
         }
       }
-    }
-  });
-  port.onDisconnect.addListener(function() {
-    api.log("[onDisconnect]");
-    api.port = {emit: api.noop};
-    for (var i in api.onEnd) {
-      api.onEnd[i]();
-    }
-    api.onEnd.length = msgHandlers.length = 0;
-  });
+    });
+    port.onDisconnect.addListener(function() {
+      api.log("[onDisconnect]");
+      api.port.on = api.port.emit = api.noop;
+      for (var i in api.onEnd) {
+        api.onEnd[i]();
+      }
+      api.onEnd.length = msgHandlers.length = 0;
+    });
+  }
 
   var requireQueue = [], injected = {};
   function requireNow(path, callback) {
@@ -94,10 +95,12 @@ var api = function() {
           var callbackId = nextCallbackId++;
           callbacks[callbackId] = callback;
         }
+        port || createPort();
         port.postMessage([type, data, callbackId]);
       },
       on: function(handlers) {
         msgHandlers.push(handlers);
+        port || createPort();
       }},
     require: function(path, callback) {
       if (requireQueue) {

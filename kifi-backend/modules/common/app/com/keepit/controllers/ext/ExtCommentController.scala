@@ -54,15 +54,14 @@ class ExtCommentController @Inject() (
   userNotifier: UserNotifier)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
-  def getCounts(ids: String) = AuthenticatedJsonAction { request =>
-    val nUriExtIds = ids.split('.').map(ExternalId[NormalizedURI](_))
+  def getCounts = AuthenticatedJsonToJsonAction { request =>
+    val urls = request.body.as[Seq[String]]
     val counts = db.readOnly { implicit s =>
-      nUriExtIds.map { extId =>
-        val id = normalizedURIRepo.get(extId).id.get
-        extId -> (commentRepo.getPublicCount(id), commentRepo.getParentMessages(id, request.userId).size)
+      urls.flatMap(normalizedURIRepo.getByNormalizedUri).map { nUri =>
+        nUri.url -> (commentRepo.getPublicCount(nUri.id.get), commentRepo.getParentMessages(nUri.id.get, request.userId).size)
       }
     }
-    Ok(JsObject(counts.map { case (id, n) => id.id -> JsArray(Seq(JsNumber(n._1), JsNumber(n._2))) }))
+    Ok(JsObject(counts.map { case (url, n) => url -> JsArray(Seq(JsNumber(n._1), JsNumber(n._2))) }))
   }
 
   def postCommentAction() = AuthenticatedJsonToJsonAction { request =>

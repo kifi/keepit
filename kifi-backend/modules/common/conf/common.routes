@@ -93,7 +93,7 @@ GET     /users/:id/pics/:size/0.jpg @com.keepit.controllers.assets.UserPictureCo
 POST    /users/pics/update      @com.keepit.controllers.assets.UserPictureController.update()
 
 GET     /search                     @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String])
-GET     /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts(ids: String)
+POST    /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts
 
 POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
 GET     /whois                      @com.keepit.controllers.ext.ExtAuthController.whois
