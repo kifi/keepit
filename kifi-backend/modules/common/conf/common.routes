@@ -1,0 +1,186 @@
+##########################################
+# Website
+##########################################
+
+GET     /                           @com.keepit.controllers.website.HomeController.home
+GET     /install                    @com.keepit.controllers.website.HomeController.install
+GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
+
+GET     /invite                     @com.keepit.controllers.website.InviteController.invite
+POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
+GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
+GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id: ExternalId[Invitation])
+GET     /sign-up                    @com.keepit.controllers.website.OnboardingController.signup(inviteId: String ?= "")
+GET     /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tos
+POST    /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tosAccept
+
+GET     /feedback                   @com.keepit.controllers.website.FeedbackController.feedback
+GET     /feedback/form              @com.keepit.controllers.website.FeedbackController.feedbackForm
+
+GET     /login                      securesocial.controllers.ProviderController.authenticate(provider = "facebook")
+GET     /login/social               securesocial.controllers.LoginPage.login
+GET     /logout                     securesocial.controllers.LoginPage.logout
+
+# Relevant when we support traditional user signups:
+GET     /register                   securesocial.controllers.Registration.signUp(token: String)
+POST    /register                   securesocial.controllers.Registration.handleSignUp(token: String)
+
+##########################################
+# Web API
+##########################################
+GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
+
+GET     /site/keeps/all             @com.keepit.controllers.website.BookmarksController.allKeeps(before: Option[String], after: Option[String], collection: Option[String], count: Int ?= Integer.MAX_VALUE)
+POST    /site/keeps/add             @com.keepit.controllers.website.BookmarksController.keepMultiple()
+POST    /site/keeps/remove          @com.keepit.controllers.website.BookmarksController.unkeepMultiple()
+GET     /site/keeps/count           @com.keepit.controllers.website.BookmarksController.numKeeps()
+GET     /site/keeps/:id             @com.keepit.controllers.website.BookmarksController.getKeepInfo(id: ExternalId[Bookmark])
+POST    /site/keeps/:id/update      @com.keepit.controllers.website.BookmarksController.updateKeepInfo(id: ExternalId[Bookmark])
+POST    /site/keeps/:id/delete      @com.keepit.controllers.website.BookmarksController.unkeep(id: ExternalId[Bookmark])
+GET     /site/keeps/mutual/:id      @com.keepit.controllers.website.BookmarksController.mutualKeeps(id: ExternalId[User])
+
+GET     /site/collections/all       @com.keepit.controllers.website.BookmarksController.allCollections(sort: String ?= "last_kept")
+POST    /site/collections/ordering  @com.keepit.controllers.website.BookmarksController.setCollectionOrdering()
+POST    /site/collections/create @com.keepit.controllers.website.BookmarksController.saveCollection(id = "")
+POST    /site/collections/:id/update @com.keepit.controllers.website.BookmarksController.saveCollection(id: String)
+POST    /site/collections/:id/delete @com.keepit.controllers.website.BookmarksController.deleteCollection(id: ExternalId[Collection])
+POST    /site/collections/:id/removeKeeps @com.keepit.controllers.website.BookmarksController.removeKeepsFromCollection(id: ExternalId[Collection])
+POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.BookmarksController.keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = false)
+POST    /site/collections/:id/setKeeps @com.keepit.controllers.website.BookmarksController.keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = true)
+
+GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
+GET     /site/user/connections      @com.keepit.controllers.website.UserController.connections()
+GET     /site/user/all-connections  @com.keepit.controllers.website.UserController.getAllConnections()
+POST    /site/user/update-email     @com.keepit.controllers.website.UserController.updateEmail
+
+# OAuth provider entry points (e.g. "facebook")
+GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
+POST    /authenticate/:provider     securesocial.controllers.ProviderController.authenticateByPost(provider)
+
+##########################################
+# External Services API
+##########################################
+#todo(eishay): change routes and callback in sendgrid
+# todo(eishay): We should move the paths of the following two and update pingdom
+GET     /admin/healthcheck/ping     @com.keepit.common.healthcheck.WebsiteHealthController.ping()
+GET     /admin/healthcheck/isHealthy    @com.keepit.common.healthcheck.WebsiteHealthController.isHealthy()
+
+##########################################
+# Extension API
+##########################################
+
+POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksController.addBookmarks
+POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
+POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updatePrivacy()
+GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksController.getNumMutualKeeps(id: ExternalId[User])
+
+POST    /comments/add               @com.keepit.controllers.ext.ExtCommentController.createComment()
+POST    /comments/:id/remove        @com.keepit.controllers.ext.ExtCommentController.removeComment(id: ExternalId[Comment])
+POST    /comments/follow            @com.keepit.controllers.ext.ExtCommentController.startFollowing()
+POST    /comments/unfollow          @com.keepit.controllers.ext.ExtCommentController.stopFollowing()
+
+POST    /comments                   @com.keepit.controllers.ext.ExtCommentController.postCommentAction()
+POST    /messages                   @com.keepit.controllers.ext.ExtCommentController.sendMessageAction()
+POST    /messages/:parentId         @com.keepit.controllers.ext.ExtCommentController.sendMessageReplyAction(parentId: ExternalId[Comment])
+
+POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
+
+POST    /users/events               @com.keepit.controllers.ext.ExtEventController.logUserEvents
+POST    /error/report               @com.keepit.controllers.ext.ExtErrorReportController.addErrorReport
+
+# This should match the output format of S3ImageConfig#keyByExternalId
+GET     /users/:id/pics/:size/0.jpg @com.keepit.controllers.assets.UserPictureController.get(size: Int, id: ExternalId[User])
+POST    /users/pics/update      @com.keepit.controllers.assets.UserPictureController.update()
+
+GET     /search                     @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String])
+GET     /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts(ids: String)
+
+POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
+GET     /whois                      @com.keepit.controllers.ext.ExtAuthController.whois
+GET     /session/end                @com.keepit.controllers.ext.ExtAuthController.logOut
+
+GET     /ext/ws                     @com.keepit.controllers.ext.ExtStreamController.ws()
+
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/*file               controllers.Assets.at(path="/public", file)
+
+# Temporary hack for kifi.com site before we fully integrate it with Play!
+GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html")
+GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSite(path: String)
+
+##########################################
+#INTERNAL ROUTES/Shoebox
+##########################################
+
+GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURI(id: Long)
+GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs(ids: String)
+GET     /internal/shoebox/database/getUsers           @com.keepit.controllers.shoebox.ShoeboxController.getUsers(ids: String)
+GET     /internal/shoebox/database/userIdsByExternalIds @com.keepit.controllers.shoebox.ShoeboxController.getUserIdsByExternalIds(ids: String)
+GET     /internal/shoebox/database/getBasicUsers      @com.keepit.controllers.shoebox.ShoeboxController.getBasicUsers(ids: String)
+GET     /internal/shoebox/database/collectionIdsByExternalIds @com.keepit.controllers.shoebox.ShoeboxController.getCollectionIdsByExternalIds(ids: String)
+GET     /internal/shoebox/database/getUserOpt         @com.keepit.controllers.shoebox.ShoeboxController.getUserOpt(id: ExternalId[User])
+GET     /internal/shoebox/database/getUserExperiments           @com.keepit.controllers.shoebox.ShoeboxController.getUserExperiments(id: Id[User])
+
+GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.shoebox.ShoeboxController.getConnectedUsers(userId: Id[User])
+GET     /internal/shoebox/tracker/browsingHistory     @com.keepit.controllers.shoebox.ShoeboxController.getBrowsingHistoryFilter(userId: Id[User])
+GET     /internal/shoebox/tracker/clickHistory        @com.keepit.controllers.shoebox.ShoeboxController.getClickHistoryFilter(userId: Id[User])
+GET     /internal/shoebox/database/bookmark           @com.keepit.controllers.shoebox.ShoeboxController.getBookmarks(userId: Id[User])
+GET     /internal/shoebox/database/changedBookmark    @com.keepit.controllers.shoebox.ShoeboxController.getBookmarksChanged(seqNum: Long, fetchSize: Int)
+GET     /internal/shoebox/database/bookmarkByUriUser  @com.keepit.controllers.shoebox.ShoeboxController.getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])
+GET     /internal/shoebox/database/changedUser        @com.keepit.controllers.shoebox.ShoeboxController.getUsersChanged(seqNum: Long)
+POST    /internal/shoebox/persistServerSearchEvent    @com.keepit.controllers.shoebox.ShoeboxController.persistServerSearchEvent
+POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.shoebox.ShoeboxController.sendMail
+GET     /internal/shoebox/database/getPhrasesByPage   @com.keepit.controllers.shoebox.ShoeboxController.getPhrasesByPage(page: Int, size: Int)
+GET     /internal/shoebox/database/getCollectionsChanged @com.keepit.controllers.shoebox.ShoeboxController.getCollectionsChanged(seqNum: Long, fetchSize: Int)
+GET     /internal/shoebox/database/getBookmarksInCollection @com.keepit.controllers.shoebox.ShoeboxController.getBookmarksInCollection(collectionId: Id[Collection])
+GET     /internal/shoebox/database/getCollectionsByUser @com.keepit.controllers.shoebox.ShoeboxController.getCollectionsByUser(userId: Id[User])
+GET     /internal/shoebox/database/getIndexable       @com.keepit.controllers.shoebox.ShoeboxController.getIndexable(seqNum: Long, fetchSize: Int)
+GET     /internal/shoebox/database/personalSearchInfo @com.keepit.controllers.shoebox.ShoeboxController.getPersonalSearchInfo(userId: Id[User], allUsers: String, formattedHits: String)
+
+GET     /internal/shoebox/database/getActiveExperiments @com.keepit.controllers.shoebox.ShoeboxController.getActiveExperiments
+GET     /internal/shoebox/database/getExperiments     @com.keepit.controllers.shoebox.ShoeboxController.getExperiments
+GET     /internal/shoebox/database/getExperiment      @com.keepit.controllers.shoebox.ShoeboxController.getExperiment(id: Id[SearchConfigExperiment])
+POST    /internal/shoebox/database/saveExperiment     @com.keepit.controllers.shoebox.ShoeboxController.saveExperiment
+GET     /internal/shoebox/database/hasExperimenthas   @com.keepit.controllers.shoebox.ShoeboxController.hasExperiment(userId: Id[User], state: State[ExperimentType])
+POST    /internal/shoebox/database/reportArticleSearchResult  @com.keepit.controllers.shoebox.ShoeboxController.reportArticleSearchResult
+GET     /internal/shoebox/database/socialUserInfoByNetworkAndSocialId @com.keepit.controllers.shoebox.ShoeboxController.getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String)
+GET     /internal/shoebox/database/socialUserInfosByUserId @com.keepit.controllers.shoebox.ShoeboxController.getSocialUserInfosByUserId(id: Id[User])
+GET     /internal/shoebox/database/sessionByExternalId @com.keepit.controllers.shoebox.ShoeboxController.getSessionByExternalId(sessionId: ExternalId[UserSession])
+
+# INTERNAL ROUTES/Search
+POST    /internal/search/events/resultClicked @com.keepit.controllers.search.SearchEventController.logResultClicked()
+
+GET     /internal/search/uriGraph/info         @com.keepit.controllers.search.URIGraphController.indexInfo()
+GET     /internal/search/uriGraph/sharingUserInfo @com.keepit.controllers.search.URIGraphController.sharingUserInfo(userId: Id[User], uriIds: String)
+POST    /internal/search/uriGraph/update       @com.keepit.controllers.search.URIGraphController.updateURIGraph()
+POST    /internal/search/uriGraph/reindex      @com.keepit.controllers.search.URIGraphController.reindex()
+POST    /internal/search/uriGraph/dumpDoc/:id  @com.keepit.controllers.search.URIGraphController.dumpLuceneDocument(id: Id[User])
+
+GET     /internal/search/index/info            @com.keepit.controllers.search.ArticleIndexerController.indexInfo()
+POST    /internal/search/index/update          @com.keepit.controllers.search.ArticleIndexerController.index()
+POST    /internal/search/index/reindex         @com.keepit.controllers.search.ArticleIndexerController.reindex()
+GET     /internal/search/index/sequenceNumber  @com.keepit.controllers.search.ArticleIndexerController.getSequenceNumber()
+POST    /internal/search/index/refreshSearcher @com.keepit.controllers.search.ArticleIndexerController.refreshSearcher()
+POST    /internal/search/index/refreshPhrases  @com.keepit.controllers.search.ArticleIndexerController.refreshPhrases()
+POST    /internal/search/index/dumpDoc/:id     @com.keepit.controllers.search.ArticleIndexerController.dumpLuceneDocument(id: Id[NormalizedURI])
+
+POST    /internal/search/search/keeps          @com.keepit.controllers.search.SearchController.searchKeeps(userId: Id[User], query: String)
+GET     /internal/search/search/explainResult  @com.keepit.controllers.search.SearchController.explain(query: String, userId: Id[User], uriId: Id[NormalizedURI])
+GET     /internal/search/search/causeError  @com.keepit.controllers.search.SearchController.causeError()
+
+POST    /internal/search/spell/buildDict       @com.keepit.controllers.search.SpellCorrectorController.buildDictionary()
+GET     /internal/search/spell/buildStatus     @com.keepit.controllers.search.SpellCorrectorController.getBuildStatus()
+GET     /internal/search/spell/make-correction     @com.keepit.controllers.search.SpellCorrectorController.correctSpelling(query: String)
+
+POST     /internal/search/getSearchStatistics     @com.keepit.controllers.search.SearchStatisticsController.getSearchStatistics
+
+GET     /internal/search/searchConfig/:id        @com.keepit.controllers.search.SearchConfigController.showUserConfig(id: Id[User])
+POST    /internal/search/searchConfig/:id/set    @com.keepit.controllers.search.SearchConfigController.setUserConfig(id: Id[User])
+GET     /internal/search/searchConfig/:id/reset  @com.keepit.controllers.search.SearchConfigController.resetUserConfig(id: Id[User])
+GET     /internal/search/defaultSearchConfig/defaultSearchConfig  @com.keepit.controllers.search.SearchConfigController.getSearchDefaultConfig
+
+GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.SearchController.friendMapJson(userId: Id[User], query: Option[String] ?= None, minKeeps: Option[Int] ?= None)
+
+# INTERNAL ROUTES/GLOBAL
+GET     /internal/benchmark                   @com.keepit.common.healthcheck.CommonBenchmarkController.benchmarksResults()
+GET     /internal/version                     @com.keepit.common.healthcheck.CommonBenchmarkController.version()
