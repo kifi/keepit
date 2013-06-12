@@ -102,20 +102,19 @@ class ShoeboxDevModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def amazonInstanceInfo: AmazonInstanceInfo = {
-    new AmazonInstanceInfo(null) {
-      override lazy val instanceId = AmazonInstanceId("i-f168c1a8")
-      override lazy val localHostname = "ip-10-160-95-26.us-west-1.compute.internal"
-      override lazy val publicHostname = "ec2-50-18-183-73.us-west-1.compute.amazonaws.com"
-      override lazy val localIp = IpAddress("10.160.95.26")
-      override lazy val publicIp = IpAddress("50.18.183.73")
-      override lazy val instanceType = "c1.medium"
-      override lazy val availabilityZone = "us-west-1b"
-      override lazy val securityGroups = "default"
-      override lazy val amiId = "ami-1bf9de5e"
-      override lazy val amiLaunchIndex = "0"
-    }
-  }
+  def amazonInstanceInfo: AmazonInstanceInfo =
+    new AmazonInstanceInfo(
+      instanceId = AmazonInstanceId("i-f168c1a8"),
+      localHostname = "ip-10-160-95-26.us-west-1.compute.internal",
+      publicHostname = "ec2-50-18-183-73.us-west-1.compute.amazonaws.com",
+      localIp = IpAddress("10.160.95.26"),
+      publicIp = IpAddress("50.18.183.73"),
+      instanceType = "c1.medium",
+      availabilityZone = "us-west-1b",
+      securityGroups = "default",
+      amiId = "ami-1bf9de5e",
+      amiLaunchIndex = "0"
+    )
 
   @Provides
   @Singleton
