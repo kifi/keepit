@@ -1,6 +1,6 @@
 var urlBase = 'https://api.kifi.com';
 //var urlBase = 'http://dev.ezkeep.com:9000';
-var urlSite = urlBase + '/site'; 
+var urlSite = urlBase + '/site';
 var urlSearch = urlBase + '/search';
 var urlKeeps =  urlSite + '/keeps';
 var urlKeepAdd =  urlKeeps + '/add';
@@ -20,23 +20,23 @@ var keepsTemplate = Tempo.prepare("my-keeps").when(TempoEvent.Types.RENDER_COMPL
 				$('#my-keeps .keep .bottom').each(function() {
 					$(this).find('img.small-avatar').prependTo($(this));
 				});
-				$('#my-keeps .keep .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myAvatar + '"/>');
+				$('#my-keeps .keep .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myPicUrl + '"/>');
 				initDraggable();
 
-				$(".easydate").easydate({set_title: false}); 
+				$(".easydate").easydate({set_title: false});
 
 				// insert time sections
 				var currentDate = new Date();
 				$('#my-keeps .keep').each(function() {
 					var age = daysBetween(new Date(Date.parse($(this).data('created'))), currentDate);
 					if ($('#my-keeps li.search-section.today').length == 0 && age <= 1) {
-						$(this).before('<li class="search-section today">Today</li>'); 
+						$(this).before('<li class="search-section today">Today</li>');
 					} else if ($('#my-keeps li.search-section.yesterday').length == 0  && age > 1 && age < 2) {
-						$(this).before('<li class="search-section yesterday">Yesderday</li>'); 
+						$(this).before('<li class="search-section yesterday">Yesderday</li>');
 					} else if ($('#my-keeps li.search-section.week').length == 0  && age >= 2 && age <= 7) {
-						$(this).before('<li class="search-section week">Past Week</li>'); 
+						$(this).before('<li class="search-section week">Past Week</li>');
 					} else if ($('#my-keeps li.search-section.older').length == 0  && age > 7) {
-						$(this).before('<li class="search-section older">Older</li>'); 
+						$(this).before('<li class="search-section older">Older</li>');
 					}
 				});
 			});
@@ -46,7 +46,7 @@ var searchTemplate = Tempo.prepare("search-results").when(TempoEvent.Types.RENDE
 					$('#search-results .keep .bottom').each(function() {
 						$(this).find('img.small-avatar').prependTo($(this));
 					});
-					$('#search-results .keep.mine .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myAvatar + '"/>');
+					$('#search-results .keep.mine .bottom:not(:has(.me))').prepend('<img class="small-avatar me" src="' + myPicUrl + '"/>');
 					$('div.search .num-results').text('Showing ' + $('#search-results .keep').length + ' for "'+$('header input.search').val()+'"');
 				});
 var collectionsTemplate = Tempo.prepare("collections").when(TempoEvent.Types.RENDER_COMPLETE, function (event) {
@@ -55,14 +55,14 @@ var collectionsTemplate = Tempo.prepare("collections").when(TempoEvent.Types.REN
 	adjustHeight();
 });
 
-var searchContext = null;
+var searchContext;
 var connections = {};
 var collections = {};
 var connectionNames = [];
-var myAvatar = '';
+var myPicUrl;
 var searchTimeout;
-var lastKeep= null;
-var prevCollection = null;
+var lastKeep;
+var prevCollection;
 
 $.ajaxSetup({
     xhrFields: {
@@ -71,6 +71,10 @@ $.ajaxSetup({
     crossDomain: true
 });
 
+$.fn.layout = function() {
+  return this.each(function() {this.clientHeight});  // forces layout
+};
+
 function unique(arr) {
     return $.grep(arr,function(v,k){
         return $.inArray(v,arr) === k;
@@ -78,18 +82,18 @@ function unique(arr) {
 }
 
 function initDraggable() {
-	$( ".draggable" ).draggable({ 
+	$( ".draggable" ).draggable({
 		revert: "invalid",
 		handle: ".handle",
 		cursorAt: { top: 15, left: 0 },
 		helper: function() {
 			var text = $(this).find('a').first().text();
-			var numSelected = $('section.main .keep.selected').length; 
+			var numSelected = $('section.main .keep.selected').length;
 			if (numSelected > 1)
 				text = numSelected + " selected keeps";
 			return $('<div class="drag-helper">').html(text);
-		} 
-	});	
+		}
+	});
 }
 
 function initDroppable() {
@@ -102,7 +106,7 @@ function initDroppable() {
 			var thisCollection = $(this);
 			var collectionId = thisCollection.data('id');
 
-			// first add keeps that are not mine 
+			// first add keeps that are not mine
 			var keeps = $('section.main .keep.selected:not(.mine)');
 			if (keeps.length > 0)
 				$.ajax( {url: urlKeepAdd
@@ -118,7 +122,7 @@ function initDroppable() {
 						for (i in data.keeps) {
 							keepIds[i] = data.keeps[i].id;
 						}
-						$.ajax( {url: urlCollections + '/' + collectionId + '/addKeeps' 
+						$.ajax( {url: urlCollections + '/' + collectionId + '/addKeeps'
 							,type: "POST"
 							,dataType: 'json'
 							,data: JSON.stringify(keepIds)
@@ -128,20 +132,20 @@ function initDroppable() {
 								return false;
 							}
 							,success: function(data) {
-											var countSpan = thisCollection.find('a span.right'); 
+											var countSpan = thisCollection.find('a span.right');
 											var added = countSpan.text() * 1  + data.added;
 											countSpan.text(added);
 											// update collection list on right bar
 											$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+collectionId+'" id="cb1-'+collectionId+'" checked=""><label class="long-text" for="cb1-'+collectionId+'"><span></span>'+collections[collectionId].name+'</label><div></div></div>');
 										}
-							});						
+							});
 					}
 				});
 
 			// now add my keeps to the collection
 			keeps = $('section.main .keep.selected.mine');
 			if (keeps.length > 0)
-				$.ajax( {url: urlCollections + '/' + collectionId + '/addKeeps' 
+				$.ajax( {url: urlCollections + '/' + collectionId + '/addKeeps'
 					,type: "POST"
 					,dataType: 'json'
 					,data: JSON.stringify(keeps.map(function() {return $(this).data('id')}).get())
@@ -151,7 +155,7 @@ function initDroppable() {
 						return false;
 					}
 					,success: function(data) {
-									var countSpan = thisCollection.find('a span.right'); 
+									var countSpan = thisCollection.find('a span.right');
 									var added = countSpan.text() * 1  + data.added;
 									countSpan.text(added);
 									// update collection list on right bar
@@ -179,19 +183,39 @@ function daysBetween(date1, date2) {
 
 }
 
-function getAvatar(userId, pictureName, size) {
+function formatPicUrl(userId, pictureName, size) {
 	return '//djty7jcqog9qu.cloudfront.net/users/' + userId + '/pics/' + size + '/' + pictureName;
 }
 
 function showLoading() {
 	$('div.loading').fadeIn();
 }
-
 function hideLoading() {
 	$('div.loading').fadeOut();
 }
 function isLoading() {
 	return $('div.loading').is(':visible');
+}
+
+function showRightSide() {
+	var $r = $('aside.right').off("transitionend"), d;
+	if ($r.css("display") == "block") {
+		d = $r[0].getBoundingClientRect().left - $(".main")[0].getBoundingClientRect().right;
+	} else {
+		$r.css({display: "block", visibility: "hidden", transform: ""});
+		d = $(window).width() - $r[0].getBoundingClientRect().left;
+	}
+	$r.css({visibility: "", transform: "translate(" + d + "px,0)", transition: "none"});
+	$r.layout();
+	$r.css({transform: "", transition: "", "transition-timing-function": "ease-out"});
+}
+function hideRightSide() {
+	var d = $(window).width() - $(".main")[0].getBoundingClientRect().right;
+	$('aside.right').on("transitionend", function end(e) {
+		if (e.target === this) {
+			$(this).off("transitionend").css({display: "", transform: ""});
+		}
+	}).css({transform: "translate(" + d + "px,0)", "transition-timing-function": "ease-in"});
 }
 
 function doSearch(context) {
@@ -203,7 +227,7 @@ function doSearch(context) {
 //	$('aside.right').show();
 	showLoading();
 	$('#search-results').show();
-	$.getJSON(urlSearch, 
+	$.getJSON(urlSearch,
 		{maxHits: 30
 		,f: $('select[name="keepers"]').val() == 'c' ? $('#custom-keepers').textext()[0].tags().tagElements().find('.text-label').map(function(){return connections[$(this).text()]}).get().join('.') : $('select[name="keepers"]').val()
 		,q: $('input.search').val()
@@ -216,7 +240,7 @@ function doSearch(context) {
 				searchContext = null;
 			if (context == null) {
 				searchTemplate.render(data.hits);
-				$('aside.right').removeClass('visible');
+				hideRightSide();
 			} else
 				searchTemplate.append(data.hits);
 		});
@@ -228,7 +252,7 @@ function addNewKeeps() {
 	if ($('aside.left h3.active').is('.collection'))
 		params.collection = $('aside.left h3.active').data('id');
 	console.log("Fetching 30 keep after " + first);
-	$.getJSON(urlMyKeeps, params, 
+	$.getJSON(urlMyKeeps, params,
 		function(data) {
 			keepsTemplate.prepend(data.keeps);
 			$('#my-keeps li.search-section.today').prependTo('#my-keeps');
@@ -250,7 +274,7 @@ function populateMyKeeps(id) {
 		prevCollection = id;
 		lastKeep = null;
 		keepsTemplate.clear();
-		$('aside.right').removeClass('visible');
+		hideRightSide();
 	}
 	searchTemplate.clear();
 	$('input.search').val('');
@@ -267,14 +291,14 @@ function populateMyKeeps(id) {
 	if (lastKeep != "end") {
 		showLoading();
 		console.log("Fetching 30 keep before " + lastKeep);
-		$.getJSON(urlMyKeeps, params, 
+		$.getJSON(urlMyKeeps, params,
 			function(data) {
 				if (data.keeps.length == 0) { // end of results
 					lastKeep = "end"; hideLoading(); return true;
 				} else if (lastKeep == null) {
-					keepsTemplate.render(data.keeps);				
+					keepsTemplate.render(data.keeps);
 				} else {
-					keepsTemplate.append(data.keeps);				
+					keepsTemplate.append(data.keeps);
 				}
 				lastKeep = data.keeps[data.keeps.length - 1].id;
 			});
@@ -282,9 +306,9 @@ function populateMyKeeps(id) {
 }
 
 function populateCollections() {
-	$.getJSON(urlCollectionsAll, {sort: "user"} , 
+	$.getJSON(urlCollectionsAll, {sort: "user"} ,
 			function(data) {
-				collectionsTemplate.render(data.collections);	
+				collectionsTemplate.render(data.collections);
 			});
 }
 
@@ -302,7 +326,7 @@ function populateCollectionsRight() {
 function updateNumKeeps() {
 	$.getJSON(urlMyKeepsCount, function(data) {
 		$('aside.left .my-keeps span').text(data.numKeeps);
-	});	
+	});
 }
 
 function showMessage(msg) {
@@ -358,7 +382,7 @@ $('#collections').on('click','a.remove',function() {
 							adjustHeight();
 						}
 		});
-		
+
 	}
 }).on('blur','.collection span.name input', function() {
 	$('h3.collection.editing').removeClass('editing');
@@ -385,13 +409,13 @@ $('aside.right div.in-collections').on('change','input[type="checkbox"]',functio
 		,error: function() {showMessage('Could not remove keeps from collection, please try again later')}
 		,success: function(data) {
 						console.log(data);
-						// substract removed from collection count on left bar 
-						var countSpan = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right'); 
+						// substract removed from collection count on left bar
+						var countSpan = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
 						countSpan.text(countSpan.text() * 1  - data.removed);
 						row.remove();
 					}
 		});
-	
+
 });
 $('aside.right .actions .collections').on('change','input[type="checkbox"]',function(){
 	// add selected keeps to collection
@@ -406,14 +430,14 @@ $('aside.right .actions .collections').on('change','input[type="checkbox"]',func
 		,error: function() {showMessage('Could not add keeps to collection, please try again later')}
 		,success: function(data) {
 						console.log(data);
-						// add to collection count on left bar 
-						var countSpan = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right'); 
+						// add to collection count on left bar
+						var countSpan = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
 						countSpan.text(countSpan.text() * 1  + data.added);
 						$('aside.right .in-collections').append('<div class="row"><input type="checkbox" data-id="'+colId+'" id="cb1-'+colId+'" checked/><label class="long-text" for="cb1-'+colId+'"><span></span>'+collections[colId].name+'</label><div>');
 						row.remove();
 					}
 		});
-	
+
 });
 
 $(document)
@@ -421,8 +445,8 @@ $(document)
 	.on('scroll',function() { // infinite scroll
 		if (!isLoading() && $(document).height() - ($(window).scrollTop() + $(window).height()) < 300) //  scrolled down to less than 300px from the bottom
 		{
-			if (searchContext != null ) 
-				doSearch(searchContext);	
+			if (searchContext != null )
+				doSearch(searchContext);
 			else if ($('#collections .collection.active').length > 0)
 				populateMyKeeps($('#collections .collection.active').data('id'));
 			else
@@ -436,17 +460,17 @@ $(document)
 			if (cb.is(':checked'))
 				cb.prop('checked',false);
 			else
-				cb.prop('checked',true);			
+				cb.prop('checked',true);
 		}
-		if (cb.is(':checked')) { 
+		if (cb.is(':checked')) {
 			keep.addClass('selected');
 		} else {
-			keep.removeClass('selected');			
+			keep.removeClass('selected');
 		}
 		var selected = $('.keep.selected');
 		if ($('.keep input[type="checkbox"]:checked').length == 0) {
 			// if no keeps are checked, hide the side bar
-			$('aside.right').removeClass('visible');
+			hideRightSide();
 		} else if (selected.length > 1) {
 			//  handle multiple selection
 			$('aside.right .title h2').text(selected.length + " keeps selected");
@@ -465,7 +489,7 @@ $(document)
 			for (i in allCol) {
 				inCol.append('<div class="row"><input type="checkbox" data-id="'+allCol[i]+'" id="cb1-'+allCol[i]+'" checked/><label class="long-text" for="cb1-'+allCol[i]+'"><span></span>'+collections[allCol[i]].name+'</label><div>');
 			}
-			$('aside.right').addClass('visible');
+			showRightSide();
 		} else { // only one keep is selcted
 			keep = $('.keep.selected').first();
 			$('aside.right .title h2').text(keep.find('a').first().text());
@@ -493,17 +517,17 @@ $(document)
 				keepButton.removeClass('kept private');
 				keepButton.find('span.text').text('keep it');
 			}
-			$('aside.right').addClass('visible');
-		} 
+			showRightSide();
+		}
 	})
-	.ready(function() {		
+	.ready(function() {
 		$(".fancybox").fancybox();
-						
+
 		populateCollections();
 		populateCollectionsRight();
-		
+
 		// make collections sortable
-		$('aside.left #collections-wrapper').sortable({items: 'h3', opacity: 0.6, 
+		$('aside.left #collections-wrapper').sortable({items: 'h3', opacity: 0.6,
 			placeholder: "sortable-placeholder",
 			beforeStop: function( event, ui ) {
 				// update the collection order
@@ -519,20 +543,20 @@ $(document)
 								}
 				});
 		}});
-		
+
 		// populate number of my keeps
 		updateNumKeeps();
 
 		// populate all my keeps
 		populateMyKeeps();
 
-		// populate user data 
+		// populate user data
 		$.getJSON(urlMe, function(data) {
-			myAvatar = getAvatar(data.id, data.pictureName, 200);
-			$('aside.left .large-avatar').html('<div class="name">' + data.firstName + ' ' + data.lastName + '</div>');
-			$('header .header-left').prepend('<img id="my-avatar" src="' + myAvatar + '"/>');
-		}); 
-		
+			myPicUrl = formatPicUrl(data.id, data.pictureName, 200);
+			$(".my-pic").css("background-image", "url(" + myPicUrl + ")");
+			$(".my-name").text(data.firstName + ' ' + data.lastName);
+		});
+
 		// populate user connections
 		$.getJSON(urlConnections, function(data) {
 			for (i in data.connections) {
@@ -540,7 +564,7 @@ $(document)
 				connections[name] = data.connections[i].id;
 				connectionNames[i] = name;
 			}
-	
+
 			// init custom search
 			$('#custom-keepers')
 				.textext({
@@ -557,30 +581,30 @@ $(document)
 					'setSuggestions',
 					{ result : textext.itemManager().filter(connectionNames, query) }
 				    );
-				}).bind('setFormData', function(e, data) { 
+				}).bind('setFormData', function(e, data) {
 					doSearch();
 				});
 			$('.text-core').hide();
 			$('.text-core, .text-core .text-wrap').height('1.5em');
-		}); 
+		});
 
 		$('select[name="keepers"]').on('change',function() { // execute search when changing the filter
-			$('#custom-keepers').val(''); 
-			if ($(this).val() == 'c') 
+			$('#custom-keepers').val('');
+			if ($(this).val() == 'c')
 				$('.text-core').show().find('textarea').focus();
 			else {
 				$('.text-core').hide();
-				doSearch(null); 
+				doSearch(null);
 			}
 		});
-		
+
 		$('input.search')
 			.on('keyup',function() {
 					clearTimeout(searchTimeout);
 					searchTimeout = setTimeout('doSearch(null)', 500);
 				}) // instant search
 			.on('focus',function() {
-				$('aside.left .active').removeClass('active'); 
+				$('aside.left .active').removeClass('active');
 			});
 
 
@@ -594,10 +618,10 @@ $(document)
 				addColDiv.slideUp();
 			} else {
 				addColDiv.slideDown();
-				addColDiv.find('input').focus();				
+				addColDiv.find('input').focus();
 			}
 		});
-		
+
 		// filter collections or right bar
 		$('aside.right .collections input.find').on('keyup',function() {
 			var p = new RegExp($(this).val(),"gi");
@@ -636,12 +660,12 @@ $(document)
 						});
 			 }
 		});
-		
+
 		$('aside.right .actions a.add').click(function() {
 			$(this).toggleClass('active');
 			$('aside.right .collections').toggleClass('active');
 		})
-		
+
 		$('aside.left').on('mouseenter','h3.collection div.edit-menu',function() {
 			$(this).parents('h3').first().addClass('hover');
 		}).on('mouseleave','h3.collection div.edit-menu',function() {
@@ -650,7 +674,7 @@ $(document)
 		}).on('click','h3.collection div.edit-menu > a',function() {
 			$('aside.left h3.collection div.edit-menu ul').toggle();
 		});
-		
+
 		// keep / unkeep
 		$('aside.right .keepit .keep-button').click(function(e) {
 			var keepButton = $(this);
@@ -686,7 +710,7 @@ $(document)
 							else
 								keep.find('.bottom span.private').removeClass('on');
 						}
-					});				
+					});
 				});
 			} else {
 				if ($(e.target).is('span.private'))
