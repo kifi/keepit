@@ -55,6 +55,10 @@ case class Bookmark(
 
   def withUrlId(urlId: Id[URL]) = copy(urlId = Some(urlId))
 
+  def withUrl(url: String) = copy(url = url)
+
+  def withTitle(title: Option[String]) = copy(title = title)
+
   def isActive: Boolean = state == BookmarkStates.ACTIVE
 }
 

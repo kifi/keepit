@@ -54,7 +54,8 @@ class BookmarkInterner @Inject() (
       bookmarkRepo.getByUriAndUser(uri.id.get, user.id.get, excludeState = None) match {
         case Some(bookmark) if bookmark.isActive =>
           Some(if (bookmark.isPrivate == isPrivate) bookmark else bookmarkRepo.save(bookmark.withPrivate(isPrivate)))
-        case Some(bookmark) => Some(bookmarkRepo.save(bookmark.withActive(true).withPrivate(isPrivate)))
+        case Some(bookmark) =>
+          Some(bookmarkRepo.save(bookmark.withActive(true).withPrivate(isPrivate).withTitle(title orElse uri.title).withUrl(url)))
         case None =>
           Events.userEvent(EventFamilies.SLIDER, "newKeep", user, experiments, installationId.map(_.id).getOrElse(""), JsObject(Seq("source" -> JsString(source.value))))
           val urlObj = urlRepo.get(url).getOrElse(urlRepo.save(URLFactory(url = url, normalizedUriId = uri.id.get)))
