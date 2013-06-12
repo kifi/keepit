@@ -45,8 +45,8 @@ case class UserValueKey(userId: Id[User], key: String) extends Key[String] {
   val namespace = "uservalue"
   def toKey(): String = userId.id + "_" + key
 }
-class UserValueCache @Inject() (repo: FortyTwoCachePlugin)
-  extends StringCacheImpl[UserValueKey]((repo, 7 days))
+class UserValueCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends StringCacheImpl[UserValueKey](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 @Singleton
 class UserValueRepoImpl @Inject() (

@@ -8,7 +8,7 @@ import net.codingwell.scalaguice.InjectorExtensions._
 import com.google.inject.{Inject, Singleton}
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.common.db.ExternalId
+import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck._
@@ -269,10 +269,10 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
 
   def save(identity: Identity): SocialUser = reportExceptions {
     db.readWrite { implicit s =>
-      val socialUser = SocialUser(identity)
+      val (userId, socialUser) = getUserIdAndSocialUser(identity)
       log.info("persisting social user %s".format(socialUser))
       val socialUserInfo = internUser(
-        SocialId(socialUser.id.id), SocialNetworkType(socialUser.id.providerId), socialUser)
+        SocialId(socialUser.id.id), SocialNetworkType(socialUser.id.providerId), socialUser, userId)
       require(socialUserInfo.credentials.isDefined,
         "social user info's credentials is not defined: %s".format(socialUserInfo))
       require(socialUserInfo.userId.isDefined, "social user id  is not defined: %s".format(socialUserInfo))
@@ -284,23 +284,31 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
     }
   }
 
-  private def createUser(displayName: String): User = {
+  private def getUserIdAndSocialUser(identity: Identity): (Option[Id[User]], SocialUser) = identity match {
+    case UserIdentity(userId, socialUser) => (userId, socialUser)
+    case ident => (None, SocialUser(ident))
+  }
+
+  private def createUser(displayName: String, id: Option[Id[User]]): User = {
     log.info("creating new user for %s".format(displayName))
     val nameParts = displayName.split(' ')
-    User(firstName = nameParts(0),
-        lastName = nameParts.tail.mkString(" "),
-        state = if(Play.isDev) UserStates.ACTIVE else UserStates.PENDING
+    User(id = id,
+      firstName = nameParts(0),
+      lastName = nameParts.tail.mkString(" "),
+      state = if(Play.isDev) UserStates.ACTIVE else UserStates.PENDING
     )
   }
 
   private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType,
-      socialUser: SocialUser)(implicit session: RWSession): SocialUserInfo = {
+      socialUser: SocialUser, userId: Option[Id[User]])(implicit session: RWSession): SocialUserInfo = {
     val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
+    val userIdOpt = userId flatMap userRepo.getOpt flatMap (_.id)
     suiOpt.map(_.withCredentials(socialUser)) match {
       case Some(socialUserInfo) if !socialUserInfo.userId.isEmpty =>
+        // TODO(greg): handle case where user id in socialUserInfo is different from the one in the session
         if (suiOpt == Some(socialUserInfo)) socialUserInfo else socialUserInfoRepo.save(socialUserInfo)
       case Some(socialUserInfo) if socialUserInfo.userId.isEmpty =>
-        val user = userRepo.save(createUser(socialUserInfo.fullName))
+        val user = userRepo.save(createUser(socialUserInfo.fullName, userIdOpt))
 
         //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         //todo(eishay): send a direct fetch request
@@ -308,7 +316,7 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
         imageStore.updatePicture(sui, user.externalId)
         sui
       case None =>
-        val user = userRepo.save(createUser(socialUser.fullName))
+        val user = userRepo.save(createUser(socialUser.fullName, userIdOpt))
         log.info("creating new SocialUserInfo for %s".format(user))
         val userInfo = SocialUserInfo(userId = Some(user.id.get),//verify saved
             socialId = socialId, networkType = socialNetworkType,

@@ -65,8 +65,8 @@ sealed trait ActiveExperimentsKey extends Key[Seq[SearchConfigExperiment]] {
 
 object ActiveExperimentsKey extends ActiveExperimentsKey
 
-class ActiveExperimentsCache @Inject()(repo: FortyTwoCachePlugin)
-  extends JsonCacheImpl[ActiveExperimentsKey, Seq[SearchConfigExperiment]]((repo, 1 day)) {
+class ActiveExperimentsCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[ActiveExperimentsKey, Seq[SearchConfigExperiment]](innermostPluginSettings, innerToOuterPluginSettings:_*) {
     def getOrElseUpdate(value: => Seq[SearchConfigExperiment]): Seq[SearchConfigExperiment] = getOrElse(ActiveExperimentsKey)(value)
     def remove(): Unit = remove(ActiveExperimentsKey)
 }

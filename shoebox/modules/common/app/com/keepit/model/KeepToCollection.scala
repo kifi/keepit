@@ -45,8 +45,8 @@ case class CollectionsForBookmarkKey(bookmarkId: Id[Bookmark]) extends Key[Seq[I
   def toKey(): String = bookmarkId.toString
 }
 
-class CollectionsForBookmarkCache @Inject() (repo: FortyTwoCachePlugin)
-    extends JsonCacheImpl[CollectionsForBookmarkKey, Seq[Id[Collection]]]((repo, 1 day))(TraversableFormat.seq(Id.format[Collection]))
+class CollectionsForBookmarkCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+    extends JsonCacheImpl[CollectionsForBookmarkKey, Seq[Id[Collection]]](innermostPluginSettings, innerToOuterPluginSettings:_*)(TraversableFormat.seq(Id.format[Collection]))
 
 @Singleton
 class KeepToCollectionRepoImpl @Inject() (

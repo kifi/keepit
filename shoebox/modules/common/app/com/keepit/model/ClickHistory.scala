@@ -39,8 +39,8 @@ case class ClickHistoryUserIdKey(userId: Id[User]) extends Key[ClickHistory] {
   def toKey(): String = userId.id.toString
 }
 
-class ClickHistoryUserIdCache @Inject() (repo: FortyTwoCachePlugin)
-  extends BinaryCacheImpl[ClickHistoryUserIdKey, ClickHistory]((repo, 7 days))
+class ClickHistoryUserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends BinaryCacheImpl[ClickHistoryUserIdKey, ClickHistory](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 @Singleton
 class ClickHistoryRepoImpl @Inject() (

@@ -53,8 +53,8 @@ case class UserCollectionsKey(userId: Id[User]) extends Key[Seq[Collection]] {
   def toKey(): String = userId.toString
 }
 
-class UserCollectionsCache @Inject() (repo: FortyTwoCachePlugin)
-    extends JsonCacheImpl[UserCollectionsKey, Seq[Collection]]((repo, 1 day))
+class UserCollectionsCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+    extends JsonCacheImpl[UserCollectionsKey, Seq[Collection]](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 @ImplementedBy(classOf[CollectionRepoImpl])
 trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] {

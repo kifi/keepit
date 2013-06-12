@@ -36,6 +36,7 @@ case class User(
 @ImplementedBy(classOf[UserRepoImpl])
 trait UserRepo extends Repo[User] with ExternalIdColumnFunction[User] {
   def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User]
+  def getOpt(id: Id[User])(implicit session: RSession): Option[User]
 }
 
 case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
@@ -44,8 +45,8 @@ case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {
   def toKey(): String = externalId.id
 }
 
-class UserExternalIdCache @Inject() (repo: FortyTwoCachePlugin)
-  extends JsonCacheImpl[UserExternalIdKey, User]((repo, 24 hours))
+class UserExternalIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[UserExternalIdKey, User](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class UserIdKey(id: Id[User]) extends Key[User] {
   override val version = 3
@@ -53,8 +54,8 @@ case class UserIdKey(id: Id[User]) extends Key[User] {
   def toKey(): String = id.id.toString
 }
 
-class UserIdCache @Inject() (repo: FortyTwoCachePlugin)
-  extends JsonCacheImpl[UserIdKey, User]((repo, 24 hours))
+class UserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[UserIdKey, User](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 case class ExternalUserIdKey(id: ExternalId[User]) extends Key[Id[User]] {
   override val version = 3
@@ -62,8 +63,8 @@ case class ExternalUserIdKey(id: ExternalId[User]) extends Key[Id[User]] {
   def toKey(): String = id.id.toString
 }
 
-class ExternalUserIdCache @Inject() (repo: FortyTwoCachePlugin)
-  extends JsonCacheImpl[ExternalUserIdKey, Id[User]]((repo, 24 hours))(Id.format[User])
+class ExternalUserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[ExternalUserIdKey, Id[User]](innermostPluginSettings, innerToOuterPluginSettings:_*)(Id.format[User])
 
 @Singleton
 class UserRepoImpl @Inject() (
@@ -97,6 +98,9 @@ class UserRepoImpl @Inject() (
       (for(f <- table if f.id is id) yield f).first
     }
   }
+
+  def getOpt(id: Id[User])(implicit session: RSession): Option[User] =
+    idCache.getOrElseOpt(UserIdKey(id)) { (for(f <- table if f.id is id) yield f).firstOption }
 
   override def getOpt(id: ExternalId[User])(implicit session: RSession): Option[User] = {
     externalIdCache.getOrElseOpt(UserExternalIdKey(id)) {

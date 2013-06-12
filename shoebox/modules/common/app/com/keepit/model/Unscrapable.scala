@@ -46,8 +46,8 @@ case class UnscrapableAllKey() extends Key[Seq[Unscrapable]] {
   def toKey(): String = "all"
 }
 
-class UnscrapableAllCache @Inject() (repo: FortyTwoCachePlugin)
-  extends JsonCacheImpl[UnscrapableAllKey, Seq[Unscrapable]]((repo, 0 second))
+class UnscrapableAllCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[UnscrapableAllKey, Seq[Unscrapable]](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 @Singleton
 class UnscrapableRepoImpl @Inject() (

@@ -55,8 +55,8 @@ case class UserSessionExternalIdKey(externalId: ExternalId[UserSession]) extends
   val namespace = "user_session_by_external_id"
   def toKey(): String = externalId.id
 }
-class UserSessionExternalIdCache @Inject() (repo: FortyTwoCachePlugin)
-    extends JsonCacheImpl[UserSessionExternalIdKey, UserSession]((repo, 24 hours))
+class UserSessionExternalIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+    extends JsonCacheImpl[UserSessionExternalIdKey, UserSession](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 @Singleton
 class UserSessionRepoImpl @Inject() (
