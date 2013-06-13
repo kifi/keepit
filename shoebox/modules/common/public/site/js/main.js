@@ -427,32 +427,37 @@ $(function() {
 		}
 	})
 
-	var $main = $(".main").on('click', '.keep', function(e) {
-		var $keep = $(this);
-		var $cb = $keep.find('input[type="checkbox"]');
-		if (!$(e.target).is('input[type="checkbox"]')) {
-			$cb.prop('checked', !$cb.is(':checked'));
-		}
-		if ($cb.is(':checked')) {
-			$keep.addClass('selected');
+	var $main = $(".main").on("click", ".keep", function(e) {
+		// 1. Only one keep at a time can be selected and not checked.
+		// 2. If a keep is selected and not checked, no keeps are checked.
+		// 3. If a keep is checked, it is also selected.
+		var $keep = $(this), $selected = $main.find(".keep.selected");
+		if (e.target.type === "checkbox") {
+			if (e.target.checked) {
+				$selected.not(":has(.handle>input:checked)").removeClass("selected");
+				$keep.addClass("selected");
+			} else {
+				$keep.removeClass("selected");
+			}
 		} else {
-			$keep.removeClass('selected');
+			var select = !$keep.is(".selected") || $selected.length != 1;
+			$selected.not(this).removeClass("selected").end().find(".handle>input").prop("checked", false);
+			$keep.toggleClass("selected", select);
 		}
-		var $selected = $main.find(".keep.selected");
-		if ($('.keep input[type="checkbox"]:checked').length == 0) {
-			// if no keeps are checked, hide the side bar
+		$selected = $main.find(".keep.selected");
+		var $title = $('aside.right>.title');
+		var $who = $('aside.right>.who-kept');
+		if (!$selected.length) {
 			hideRightSide();
 		} else if ($selected.length > 1) {
-			//  handle multiple selection
-			$('aside.right .title h2').text($selected.length + " keeps selected");
-			$('aside.right .title a').text('');
-			$('aside.right .who-kept').html('');
-			var allCol = [];
+			$title.find('h2').text($selected.length + " keeps selected");
+			$title.find('a').empty();
+			$who.empty();
+			var allCol = [], ids;
 			$selected.each(function() {
-				$('aside.right .who-kept').append('<div class="long-text">' + $(this).find('a').first().text() + '</div>');
-				if ($(this).data('collections').length > 0) {
-					var colArray = $(this).data('collections').split(',');
-					allCol = allCol.concat(colArray);
+				$who.append('<div class=long-text>' + $(this).find('a').first().html() + '</div>');
+				if (ids = $(this).data('collections').length) {
+					allCol.push.apply(allCol, ids.split(','));
 				}
 			});
 			allCol = unique(allCol);
@@ -461,31 +466,24 @@ $(function() {
 				inCollTmpl.append({id: allCol[i], name: collections[allCol[i]].name});
 			}
 			showRightSide();
-		} else { // only one keep is selected
+		} else { // one keep is selected
 			$keep = $selected.first();
-			$('aside.right .title h2').text($keep.find('a').first().text());
+			$title.find('h2').text($keep.find('a').first().text());
 			var url = $keep.find('a').first().attr('href');
-			$('aside.right .title a').text(url).attr('href',url).attr('target','_blank');
-			$('aside.right .who-kept').html($keep.find('div.bottom').html());
-			$('aside.right .who-kept span').prependTo($('aside.right .who-kept')).removeClass('fs9 gray');
+			$title.find('a').text(url).attr('href', url).attr('target', '_blank');
+			$who.html($keep.find('div.bottom').html());
+			$who.find('span').prependTo($who).removeClass('fs9 gray');
 			$inColl.empty();
 			if ($keep.data('collections')) {
 				$keep.data('collections').split(',').forEach(function(id) {
 					inCollTmpl.append({id: id, name: collections[id].name});
 				});
 			}
-			var keepButton = $('aside.right .keepit .keep-button');
+			var $btn = $('aside.right .keepit .keep-button');
 			if ($keep.is('.mine')) {
-				keepButton.addClass('kept');
-				if ($keep.is('.private')) {
-					keepButton.addClass('private');
-				} else {
-					keepButton.removeClass('private');
-				}
-				keepButton.find('span.text').text('kept');
+				$btn.addClass('kept').toggleClass('private', $keep.is('.private')).find('.text').text('kept');
 			} else {
-				keepButton.removeClass('kept private');
-				keepButton.find('span.text').text('keep it');
+				$btn.removeClass('kept private').find('.text').text('keep it');
 			}
 			showRightSide();
 		}
