@@ -53,8 +53,10 @@ case class HttpClientImpl(
   override val defaultOnFailure: String => PartialFunction[Throwable, Unit] = { url =>
     {
       case cause: ConnectException =>
-        val ex = new ConnectException(s"${cause.getMessage}. Requesting $url.").initCause(cause)
-        healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        if (healthcheckPlugin.isWarm) {
+          val ex = new ConnectException(s"${cause.getMessage}. Requesting $url.").initCause(cause)
+          healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        }
       case ex: Exception =>
         healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
     }
