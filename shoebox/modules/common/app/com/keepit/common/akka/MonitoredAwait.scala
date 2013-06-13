@@ -37,7 +37,8 @@ class MonitoredAwait @Inject() (healthcheckPlugin: HealthcheckPlugin) {
       Await.result(awaitable, atMost)
     } catch {
       case ex: Throwable =>
-        healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(s"[$errorMessage]: ${ex.getMessage}")))
+        if (healthcheckPlugin.isWarm)
+          healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(s"[$errorMessage]: ${ex.getMessage}")))
         throw ex
     } finally {
       sw.stop()
