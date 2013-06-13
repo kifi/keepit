@@ -21,397 +21,397 @@ $.ajaxSetup({
 
 $(function() {
 
-var $myKeeps = $("#my-keeps"), myKeepsTmpl = Tempo.prepare($myKeeps).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
-	hideLoading();
-	$myKeeps.find(".keep .bottom").each(function() {
-		$(this).find('img.small-avatar').prependTo(this);  // eliminating whitespace text nodes?
-	}).filter(":not(:has(.me))")
-		.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
-	initDraggable();
+	var $myKeeps = $("#my-keeps"), myKeepsTmpl = Tempo.prepare($myKeeps).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
+		hideLoading();
+		$myKeeps.find(".keep .bottom").each(function() {
+			$(this).find('img.small-avatar').prependTo(this);  // eliminating whitespace text nodes?
+		}).filter(":not(:has(.me))")
+			.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
+		initDraggable();
 
-	$(".easydate").easydate({set_title: false});
+		$(".easydate").easydate({set_title: false});
 
-	// insert time sections
-	var now = new Date;
-	$myKeeps.find('.keep').each(function() {
-		var age = daysBetween(new Date($(this).data('created')), now);
-		if ($myKeeps.find('li.search-section.today').length == 0 && age <= 1) {
-			$(this).before('<li class="search-section today">Today</li>');
-		} else if ($myKeeps.find('li.search-section.yesterday').length == 0 && age > 1 && age < 2) {
-			$(this).before('<li class="search-section yesterday">Yesderday</li>');
-		} else if ($myKeeps.find('li.search-section.week').length == 0 && age >= 2 && age <= 7) {
-			$(this).before('<li class="search-section week">Past Week</li>');
-		} else if ($myKeeps.find('li.search-section.older').length == 0 && age > 7) {
-			$(this).before('<li class="search-section older">Older</li>');
-		}
+		// insert time sections
+		var now = new Date;
+		$myKeeps.find('.keep').each(function() {
+			var age = daysBetween(new Date($(this).data('created')), now);
+			if ($myKeeps.find('li.search-section.today').length == 0 && age <= 1) {
+				$(this).before('<li class="search-section today">Today</li>');
+			} else if ($myKeeps.find('li.search-section.yesterday').length == 0 && age > 1 && age < 2) {
+				$(this).before('<li class="search-section yesterday">Yesderday</li>');
+			} else if ($myKeeps.find('li.search-section.week').length == 0 && age >= 2 && age <= 7) {
+				$(this).before('<li class="search-section week">Past Week</li>');
+			} else if ($myKeeps.find('li.search-section.older').length == 0 && age > 7) {
+				$(this).before('<li class="search-section older">Older</li>');
+			}
+		});
 	});
-});
-var $results = $("#search-results"), searchTemplate = Tempo.prepare($results).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
-	hideLoading();
-	initDraggable();
-	$results.find(".keep .bottom").each(function() {
-		$(this).find('img.small-avatar').prependTo(this);  // eliminating whitespace text nodes?
+	var $results = $("#search-results"), searchTemplate = Tempo.prepare($results).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
+		hideLoading();
+		initDraggable();
+		$results.find(".keep .bottom").each(function() {
+			$(this).find('img.small-avatar').prependTo(this);  // eliminating whitespace text nodes?
+		});
+		$results.find(".keep.mine .bottom:not(:has(.me))")
+			.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
+		$('div.search .num-results').text('Showing ' + $results.find('.keep').length + ' for "' + $query.val() + '"');
 	});
-	$results.find(".keep.mine .bottom:not(:has(.me))")
-		.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
-	$('div.search .num-results').text('Showing ' + $results.find('.keep').length + ' for "' + $query.val() + '"');
-});
-var $colls = $("#collections"), collTmpl = Tempo.prepare($colls).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
-	makeCollectionsDroppable($colls.find(".collection"));
-	adjustCollHeight();
-});
-var $inColl = $(".in-collections"), inCollTmpl = Tempo.prepare($inColl);
-
-var me;
-var searchContext;
-var connections = {};
-var collections = {};
-var connectionNames = [];
-var searchTimeout;
-var lastKeep;
-var prevCollection;
-
-$.fn.layout = function() {
-  return this.each(function() {this.clientHeight});  // forces layout
-};
-
-function unique(arr) {
-  return $.grep(arr, function(v, k) {
-    return $.inArray(v, arr) === k;
-  });
-}
-
-function initDraggable() {
-	$(".draggable").draggable({
-		revert: "invalid",
-		handle: ".handle",
-		cursorAt: { top: 15, left: 0 },
-		helper: function() {
-			var text = $(this).find('a').first().text();
-			var numSelected = $main.find(".keep.selected").length;
-			if (numSelected > 1)
-				text = numSelected + " selected keeps";
-			return $('<div class="drag-helper">').html(text);
-		}
+	var $colls = $("#collections"), collTmpl = Tempo.prepare($colls).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
+		makeCollectionsDroppable($colls.find(".collection"));
+		adjustCollHeight();
 	});
-}
+	var $inColl = $(".in-collections"), inCollTmpl = Tempo.prepare($inColl);
 
-function makeCollectionsDroppable($c) {
-	$c.droppable({
-		accept: ".keep",
-		greedy: true,
-		tolerance: "pointer",
-		hoverClass: "drop-hover",
-		drop: onDropOnCollection});
-}
+	var me;
+	var searchContext;
+	var connections = {};
+	var collections = {};
+	var connectionNames = [];
+	var searchTimeout;
+	var lastKeep;
+	var prevCollection;
 
-function onDropOnCollection(event, ui) {
-	var $keeps = ui.draggable;
-	if ($keeps.hasClass("selected")) {
-		$keeps = $keeps.add($main.find(".keep.selected"));
+	$.fn.layout = function() {
+	  return this.each(function() {this.clientHeight});  // forces layout
+	};
+
+	function unique(arr) {
+	  return $.grep(arr, function(v, k) {
+	    return $.inArray(v, arr) === k;
+	  });
 	}
 
-	var myKeepIds = $keeps.filter(".mine").map(function() {return $(this).data("id")}).get();
+	function initDraggable() {
+		$(".draggable").draggable({
+			revert: "invalid",
+			handle: ".handle",
+			cursorAt: { top: 15, left: 0 },
+			helper: function() {
+				var text = $(this).find('a').first().text();
+				var numSelected = $main.find(".keep.selected").length;
+				if (numSelected > 1)
+					text = numSelected + " selected keeps";
+				return $('<div class="drag-helper">').html(text);
+			}
+		});
+	}
 
-	// may first need to keep any keeps that are not mine yet
-	var $notMine = $keeps.filter(":not(.mine)");
-	if ($notMine.length) {
+	function makeCollectionsDroppable($c) {
+		$c.droppable({
+			accept: ".keep",
+			greedy: true,
+			tolerance: "pointer",
+			hoverClass: "drop-hover",
+			drop: onDropOnCollection});
+	}
+
+	function onDropOnCollection(event, ui) {
+		var $keeps = ui.draggable;
+		if ($keeps.hasClass("selected")) {
+			$keeps = $keeps.add($main.find(".keep.selected"));
+		}
+
+		var myKeepIds = $keeps.filter(".mine").map(function() {return $(this).data("id")}).get();
+
+		// may first need to keep any keeps that are not mine yet
+		var $notMine = $keeps.filter(":not(.mine)");
+		if ($notMine.length) {
+			$.ajax({
+				url: urlKeepAdd,
+				type: "POST",
+				dataType: 'json',
+				data: JSON.stringify($notMine.map(function() {var a = this.querySelector("a"); return {title: a.title, url: a.href}}).get()),
+				contentType: 'application/json',
+				error: onDropOnCollectionAjaxError,
+				success: function(data) {
+					myKeepIds.push.apply(myKeepIds, data.keeps.map(function(k) {return k.id}));
+					addMyKeepsToCollection.call(this, myKeepIds);
+				}
+			});
+		} else {
+			addMyKeepsToCollection.call(this, myKeepIds);
+		}
+	}
+
+	function addMyKeepsToCollection(keepIds) {
+		var $coll = $(this), collId = $coll.data("id");
 		$.ajax({
-			url: urlKeepAdd,
+			url: urlCollections + '/' + collId + '/addKeeps',
 			type: "POST",
 			dataType: 'json',
-			data: JSON.stringify($notMine.map(function() {var a = this.querySelector("a"); return {title: a.title, url: a.href}}).get()),
+			data: JSON.stringify(keepIds),
 			contentType: 'application/json',
 			error: onDropOnCollectionAjaxError,
 			success: function(data) {
-				myKeepIds.push.apply(myKeepIds, data.keeps.map(function(k) {return k.id}));
-				addMyKeepsToCollection.call(this, myKeepIds);
-			}
-		});
-	} else {
-		addMyKeepsToCollection.call(this, myKeepIds);
+				var $count = $coll.find("a span.right");
+				$count.text(+$count.text() + data.added);
+				if (!$inColl.find("#cb1-" + collId).length) {
+					inCollTmpl.append({id: collId, name: collections[collId].name});
+				}
+			}});
 	}
-}
 
-function addMyKeepsToCollection(keepIds) {
-	var $coll = $(this), collId = $coll.data("id");
-	$.ajax({
-		url: urlCollections + '/' + collId + '/addKeeps',
-		type: "POST",
-		dataType: 'json',
-		data: JSON.stringify(keepIds),
-		contentType: 'application/json',
-		error: onDropOnCollectionAjaxError,
-		success: function(data) {
-			var $count = $coll.find("a span.right");
-			$count.text(+$count.text() + data.added);
-			if (!$inColl.find("#cb1-" + collId).length) {
-				inCollTmpl.append({id: collId, name: collections[collId].name});
-			}
-		}});
-}
-
-function onDropOnCollectionAjaxError() {
-	showMessage('Could not add to collection, please try again later');
-}
-
-function daysBetween(date1, date2) {
-  return Math.round((date2 - date1) / 86400000);  // ms in one day
-}
-
-function formatPicUrl(userId, pictureName, size) {
-	return '//djty7jcqog9qu.cloudfront.net/users/' + userId + '/pics/' + size + '/' + pictureName;
-}
-
-function showLoading() {
-	$('div.loading').fadeIn();
-}
-function hideLoading() {
-	$('div.loading').fadeOut();
-}
-function isLoading() {
-	return $('div.loading').is(':visible');
-}
-
-function showRightSide() {
-	var $r = $('aside.right').off("transitionend"), d;
-	if ($r.css("display") == "block") {
-		d = $r[0].getBoundingClientRect().left - $main[0].getBoundingClientRect().right;
-	} else {
-		$r.css({display: "block", visibility: "hidden", transform: ""});
-		d = $(window).width() - $r[0].getBoundingClientRect().left;
+	function onDropOnCollectionAjaxError() {
+		showMessage('Could not add to collection, please try again later');
 	}
-	$r.css({visibility: "", transform: "translate(" + d + "px,0)", transition: "none"});
-	$r.layout();
-	$r.css({transform: "", transition: "", "transition-timing-function": "ease-out"});
-}
-function hideRightSide() {
-	var d = $(window).width() - $main[0].getBoundingClientRect().right;
-	$('aside.right').on("transitionend", function end(e) {
-		if (e.target === this) {
-			$(this).off("transitionend").css({display: "", transform: ""});
+
+	function daysBetween(date1, date2) {
+	  return Math.round((date2 - date1) / 86400000);  // ms in one day
+	}
+
+	function formatPicUrl(userId, pictureName, size) {
+		return '//djty7jcqog9qu.cloudfront.net/users/' + userId + '/pics/' + size + '/' + pictureName;
+	}
+
+	function showLoading() {
+		$('div.loading').fadeIn();
+	}
+	function hideLoading() {
+		$('div.loading').fadeOut();
+	}
+	function isLoading() {
+		return $('div.loading').is(':visible');
+	}
+
+	function showRightSide() {
+		var $r = $('aside.right').off("transitionend"), d;
+		if ($r.css("display") == "block") {
+			d = $r[0].getBoundingClientRect().left - $main[0].getBoundingClientRect().right;
+		} else {
+			$r.css({display: "block", visibility: "hidden", transform: ""});
+			d = $(window).width() - $r[0].getBoundingClientRect().left;
 		}
-	}).css({transform: "translate(" + d + "px,0)", "transition-timing-function": "ease-in"});
-}
-
-function doSearch(context) {
-	$myKeeps.hide().find('.keep.selected').removeClass('selected').find('input[type="checkbox"]').prop('checked', false);
-	$('.search h1').hide();
-	$('.search .num-results').show();
-	//$('aside.right').show();
-	showLoading();
-	$results.show();
-	$.getJSON(urlSearch,
-		{maxHits: 30
-		,f: $('select[name="keepers"]').val() == 'c' ? $('#custom-keepers').textext()[0].tags().tagElements().find('.text-label').map(function(){return connections[$(this).text()]}).get().join('.') : $('select[name="keepers"]').val()
-		,q: $query.val()
-		,context: context
-		},
-		function(data) {
-			if (data.mayHaveMore)
-				searchContext = data.context;
-			else
-				searchContext = null;
-			if (context == null) {
-				searchTemplate.render(data.hits);
-				hideRightSide();
-			} else
-				searchTemplate.append(data.hits);
-		});
-}
-
-function addNewKeeps() {
-	var first = $myKeeps.find('.keep').first().data('id');
-	var params = {after: first};
-	if ($('aside.left h3.active').is('.collection'))
-		params.collection = $('aside.left h3.active').data('id');
-	console.log("Fetching 30 keep after " + first);
-	$.getJSON(urlMyKeeps, params,
-		function(data) {
-			myKeepsTmpl.prepend(data.keeps);
-			$myKeeps.find('.search-section.today').prependTo($myKeeps);
-		});
-}
-
-function populateMyKeeps(id) {
-	var params = {count: 30};
-	$('.active').removeClass('active');
-	if (id == null) {
-		$('aside.left h3.my-keeps').addClass('active');
-		$main.find(".search h1").text('Browse your keeps');
-	} else {
-		$('aside.left h3[data-id="' + id + '"]').addClass('active');
-		params.collection = id;
-		$main.find(".search h1").text('Browse your ' + collections[id].name + ' collection');
+		$r.css({visibility: "", transform: "translate(" + d + "px,0)", transition: "none"});
+		$r.layout();
+		$r.css({transform: "", transition: "", "transition-timing-function": "ease-out"});
 	}
-	if (prevCollection != id) { // reset search if not fetching the same collection
-		prevCollection = id;
-		lastKeep = null;
-		myKeepsTmpl.clear();
-		hideRightSide();
+	function hideRightSide() {
+		var d = $(window).width() - $main[0].getBoundingClientRect().right;
+		$('aside.right').on("transitionend", function end(e) {
+			if (e.target === this) {
+				$(this).off("transitionend").css({display: "", transform: ""});
+			}
+		}).css({transform: "translate(" + d + "px,0)", "transition-timing-function": "ease-in"});
 	}
-	searchTemplate.clear();
-	$query.val('');
-	searchContext = null;
-//	$('aside.right').hide();
-	$('.search h1').show();
-	$('.search .num-results').hide();
-	if (lastKeep == null) {
-		$myKeeps.find('.search-section').remove();
-	} else {
-		params.before = lastKeep;
-	}
-	$myKeeps.show();
-	if (lastKeep != "end") {
+
+	function doSearch(context) {
+		$myKeeps.hide().find('.keep.selected').removeClass('selected').find('input[type="checkbox"]').prop('checked', false);
+		$('.search h1').hide();
+		$('.search .num-results').show();
+		//$('aside.right').show();
 		showLoading();
-		console.log("Fetching 30 keep before " + lastKeep);
+		$results.show();
+		$.getJSON(urlSearch,
+			{maxHits: 30
+			,f: $('select[name="keepers"]').val() == 'c' ? $('#custom-keepers').textext()[0].tags().tagElements().find('.text-label').map(function(){return connections[$(this).text()]}).get().join('.') : $('select[name="keepers"]').val()
+			,q: $query.val()
+			,context: context
+			},
+			function(data) {
+				if (data.mayHaveMore)
+					searchContext = data.context;
+				else
+					searchContext = null;
+				if (context == null) {
+					searchTemplate.render(data.hits);
+					hideRightSide();
+				} else
+					searchTemplate.append(data.hits);
+			});
+	}
+
+	function addNewKeeps() {
+		var first = $myKeeps.find('.keep').first().data('id');
+		var params = {after: first};
+		if ($('aside.left h3.active').is('.collection'))
+			params.collection = $('aside.left h3.active').data('id');
+		console.log("Fetching 30 keep after " + first);
 		$.getJSON(urlMyKeeps, params,
 			function(data) {
-				if (data.keeps.length == 0) { // end of results
-					lastKeep = "end"; hideLoading(); return true;
-				} else if (lastKeep == null) {
-					myKeepsTmpl.render(data.keeps);
-				} else {
-					myKeepsTmpl.append(data.keeps);
-				}
-				lastKeep = data.keeps[data.keeps.length - 1].id;
+				myKeepsTmpl.prepend(data.keeps);
+				$myKeeps.find('.search-section.today').prependTo($myKeeps);
 			});
 	}
-}
 
-function populateCollections() {
-	$.getJSON(urlCollectionsAll, {sort: "user"}, function(data) {
-		collTmpl.render(data.collections);
-	});
-}
+	function populateMyKeeps(id) {
+		var params = {count: 30};
+		$('.active').removeClass('active');
+		if (id == null) {
+			$('aside.left h3.my-keeps').addClass('active');
+			$main.find(".search h1").text('Browse your keeps');
+		} else {
+			$('aside.left h3[data-id="' + id + '"]').addClass('active');
+			params.collection = id;
+			$main.find(".search h1").text('Browse your ' + collections[id].name + ' collection');
+		}
+		if (prevCollection != id) { // reset search if not fetching the same collection
+			prevCollection = id;
+			lastKeep = null;
+			myKeepsTmpl.clear();
+			hideRightSide();
+		}
+		searchTemplate.clear();
+		$query.val('');
+		searchContext = null;
+	//	$('aside.right').hide();
+		$('.search h1').show();
+		$('.search .num-results').hide();
+		if (lastKeep == null) {
+			$myKeeps.find('.search-section').remove();
+		} else {
+			params.before = lastKeep;
+		}
+		$myKeeps.show();
+		if (lastKeep != "end") {
+			showLoading();
+			console.log("Fetching 30 keep before " + lastKeep);
+			$.getJSON(urlMyKeeps, params,
+				function(data) {
+					if (data.keeps.length == 0) { // end of results
+						lastKeep = "end"; hideLoading(); return true;
+					} else if (lastKeep == null) {
+						myKeepsTmpl.render(data.keeps);
+					} else {
+						myKeepsTmpl.append(data.keeps);
+					}
+					lastKeep = data.keeps[data.keeps.length - 1].id;
+				});
+		}
+	}
 
-function populateCollectionsRight() {
-	$.getJSON(urlCollectionsAll, {sort: "last_kept"} ,
-			function(data) {
-				$('aside.right .actions .collections ul li:not(.create)').remove();
-				for (i in data.collections) {
-					collections[data.collections[i].id] = data.collections[i];
-					$('aside.right .actions .collections ul').append('<li><input type="checkbox" data-id="'+data.collections[i].id+'" id="cb-'+data.collections[i].id+'"/><label class="long-text" for="cb-'+data.collections[i].id+'"><span></span>'+data.collections[i].name+'</label></li>');
+	function populateCollections() {
+		$.getJSON(urlCollectionsAll, {sort: "user"}, function(data) {
+			collTmpl.render(data.collections);
+		});
+	}
+
+	function populateCollectionsRight() {
+		$.getJSON(urlCollectionsAll, {sort: "last_kept"} ,
+				function(data) {
+					$('aside.right .actions .collections ul li:not(.create)').remove();
+					for (i in data.collections) {
+						collections[data.collections[i].id] = data.collections[i];
+						$('aside.right .actions .collections ul').append('<li><input type="checkbox" data-id="'+data.collections[i].id+'" id="cb-'+data.collections[i].id+'"/><label class="long-text" for="cb-'+data.collections[i].id+'"><span></span>'+data.collections[i].name+'</label></li>');
+					}
+				});
+	}
+
+	function updateNumKeeps() {
+		$.getJSON(urlMyKeepsCount, function(data) {
+			$('aside.left .my-keeps span').text(data.numKeeps);
+		});
+	}
+
+	function showMessage(msg) {
+		$.fancybox($('<p>').text(msg));
+	}
+
+	function adjustCollHeight() {
+		var $w = $("#collections-wrapper");
+		$w.height($(window).height() - $w.offset().top);
+	}
+
+	// delete/rename collection
+	$colls.on('click', 'a.remove', function() {
+		var colElement = $(this).parents('h3.collection').first();
+		var colId = colElement.data('id');
+		console.log('Removing collection ' + colId);
+		$.ajax( {url: urlCollections + "/" + colId + "/delete"
+			,type: "POST"
+			,dataType: 'json'
+			,data: '{}'
+			,contentType: 'application/json'
+			,error: function() {showMessage('Could not delete collection, please try again later')}
+			,success: function(data) {
+							colElement.remove();
+							$('aside.right .collections ul li:has(input[data-id="'+colId+'"])').remove();
+						}
+			});
+	}).on('click','a.rename',function() {
+		var colElement = $(this).parents('h3.collection').first().addClass('editing');
+		var nameSpan = colElement.find('span.name').first();
+		var name = nameSpan.text();
+		nameSpan.html('<input type="text" value="' + name + '" data-orig="' + name + '"/>');
+		nameSpan.find('input').focus();
+	}).on('keypress', '.collection span.name input', function(e) {
+		if (e.which == 13) { // Enter
+			var $c = $(this).closest('h3.collection');
+			var colId = $c.data('id');
+			console.log('Renaming collection ' + colId);
+			var newName = this.value;
+			$.ajax({
+				url: urlCollections + "/" + colId + "/update",
+				type: "POST",
+				dataType: 'json',
+				data: JSON.stringify({name: newName}),
+				contentType: 'application/json',
+				error: function() {
+					showMessage('Could not rename collection, please try again later');
+					var $name = $c.find('.name');
+					$name.html($name.find('input').data('orig'));
+				},
+				success: function(data) {
+					$c.removeClass('editing');
+					$c.find('.name').html(newName).attr('title', newName);
+					adjustCollHeight();
 				}
 			});
-}
 
-function updateNumKeeps() {
-	$.getJSON(urlMyKeepsCount, function(data) {
-		$('aside.left .my-keeps span').text(data.numKeeps);
+		}
+	}).on('blur','.collection span.name input', function() {
+		$('h3.collection.editing').removeClass('editing');
+		$(this).parent().html($(this).data('orig'));
 	});
-}
 
-function showMessage(msg) {
-	$.fancybox($('<p>').text(msg));
-}
+	// auto update my keeps every minute
+	setInterval(addNewKeeps, 60000);
+	setInterval(updateNumKeeps, 60000);
 
-function adjustCollHeight() {
-	var $w = $("#collections-wrapper");
-	$w.height($(window).height() - $w.offset().top);
-}
+	$(window).resize(adjustCollHeight);
 
-// delete/rename collection
-$colls.on('click', 'a.remove', function() {
-	var colElement = $(this).parents('h3.collection').first();
-	var colId = colElement.data('id');
-	console.log('Removing collection ' + colId);
-	$.ajax( {url: urlCollections + "/" + colId + "/delete"
-		,type: "POST"
-		,dataType: 'json'
-		,data: '{}'
-		,contentType: 'application/json'
-		,error: function() {showMessage('Could not delete collection, please try again later')}
-		,success: function(data) {
-						colElement.remove();
-						$('aside.right .collections ul li:has(input[data-id="'+colId+'"])').remove();
-					}
-		});
-}).on('click','a.rename',function() {
-	var colElement = $(this).parents('h3.collection').first().addClass('editing');
-	var nameSpan = colElement.find('span.name').first();
-	var name = nameSpan.text();
-	nameSpan.html('<input type="text" value="' + name + '" data-orig="' + name + '"/>');
-	nameSpan.find('input').focus();
-}).on('keypress', '.collection span.name input', function(e) {
-	if (e.which == 13) { // Enter
-		var $c = $(this).closest('h3.collection');
-		var colId = $c.data('id');
-		console.log('Renaming collection ' + colId);
-		var newName = this.value;
+	// handle collection adding/removing from right bar
+	$inColl.on('change', 'input[type="checkbox"]', function() {
+		// remove selected keeps from collection
+		var $row = $(this).closest('.row');
+		var colId = $(this).data('id');
+		var keepIds = $main.find(".keep.selected").map(function() {return $(this).data('id')}).get();
 		$.ajax({
-			url: urlCollections + "/" + colId + "/update",
+			url: urlCollections + "/" + colId + "/removeKeeps",
 			type: "POST",
 			dataType: 'json',
-			data: JSON.stringify({name: newName}),
+			data: JSON.stringify(keepIds),
 			contentType: 'application/json',
-			error: function() {
-				showMessage('Could not rename collection, please try again later');
-				var $name = $c.find('.name');
-				$name.html($name.find('input').data('orig'));
-			},
+			error: showMessage.bind(null, 'Could not remove keeps from collection, please try again later'),
 			success: function(data) {
-				$c.removeClass('editing');
-				$c.find('.name').html(newName).attr('title', newName);
-				adjustCollHeight();
-			}
-		});
+				console.log(data);
+				var $count = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
+				$count.text($count.text() - data.removed);
+				$row.remove();
+			}});
 
-	}
-}).on('blur','.collection span.name input', function() {
-	$('h3.collection.editing').removeClass('editing');
-	$(this).parent().html($(this).data('orig'));
-});
-
-// auto update my keeps every minute
-setInterval(addNewKeeps, 60000);
-setInterval(updateNumKeeps, 60000);
-
-$(window).resize(adjustCollHeight);
-
-// handle collection adding/removing from right bar
-$inColl.on('change', 'input[type="checkbox"]', function() {
-	// remove selected keeps from collection
-	var $row = $(this).closest('.row');
-	var colId = $(this).data('id');
-	var keepIds = $main.find(".keep.selected").map(function() {return $(this).data('id')}).get();
-	$.ajax({
-		url: urlCollections + "/" + colId + "/removeKeeps",
-		type: "POST",
-		dataType: 'json',
-		data: JSON.stringify(keepIds),
-		contentType: 'application/json',
-		error: showMessage.bind(null, 'Could not remove keeps from collection, please try again later'),
-		success: function(data) {
-			console.log(data);
-			var $count = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
-			$count.text($count.text() - data.removed);
-			$row.remove();
-		}});
-
-});
-$('aside.right .actions .collections').on('change', 'input[type="checkbox"]', function() {
-	// add selected keeps to collection
-	var $row = $(this).closest('.row');
-	var colId = $(this).data('id');
-	var keeps = $main.find(".keep.selected").map(function() {return $(this).data('id')}).get();
-	$.ajax({
-		url: urlCollections + "/" + colId + "/addKeeps",
-		type: "POST",
-		dataType: 'json',
-		data: JSON.stringify(keeps),
-		contentType: 'application/json',
-		error: showMessage.bind(null, 'Could not add keeps to collection, please try again later'),
-		success: function(data) {
-			console.log(data);
-			var $count = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
-			$count.text(+$count.text()  + data.added);
-			if (!$inColl.find("#cb1-" + colId).length) {
-				inCollTmpl.append({id: colId, name: collections[colId].name});
-			}
-			$row.remove();
-		}});
-});
+	});
+	$('aside.right .actions .collections').on('change', 'input[type="checkbox"]', function() {
+		// add selected keeps to collection
+		var $row = $(this).closest('.row');
+		var colId = $(this).data('id');
+		var keeps = $main.find(".keep.selected").map(function() {return $(this).data('id')}).get();
+		$.ajax({
+			url: urlCollections + "/" + colId + "/addKeeps",
+			type: "POST",
+			dataType: 'json',
+			data: JSON.stringify(keeps),
+			contentType: 'application/json',
+			error: showMessage.bind(null, 'Could not add keeps to collection, please try again later'),
+			success: function(data) {
+				console.log(data);
+				var $count = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
+				$count.text(+$count.text()  + data.added);
+				if (!$inColl.find("#cb1-" + colId).length) {
+					inCollTmpl.append({id: colId, name: collections[colId].name});
+				}
+				$row.remove();
+			}});
+	});
 
 	$(document).keypress(function(e) {  // auto focus on search field when starting to type anywhere on the document
 		if (!$(e.target).is('textarea,input')) {
