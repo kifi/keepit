@@ -20,7 +20,7 @@ import scala.util.{Random, Try}
 
 class ServiceDiscoveryLiveTest extends Specification with TestInjector {
 
-  args(skipAll = true)
+  // args(skipAll = true)
 
   implicit val amazonInstanceInfoFormat = AmazonInstanceInfo.format
 
@@ -55,9 +55,9 @@ class ServiceDiscoveryLiveTest extends Specification with TestInjector {
           println("sleeping 2 - about to delete")
           Thread.sleep(10000)
           zk.deleteNode(firstNode)
-          discovery.isLeader() === true
           println("sleeping 3")
           Thread.sleep(10000)
+          discovery.isLeader() === true
           discovery.myClusterSize === 1
         } finally {
           zk.close()

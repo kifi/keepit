@@ -56,7 +56,9 @@ class ServiceDiscoveryImpl @Inject() (
           println(s"found ${childNodes.size} nodes in cluster")
           childNodes foreach { childNode =>
             cluster.getOrElseUpdate(childNode, {
-              val json = Json.parse(zk.get(childNode))
+              val nodeData: String = zk.get(childNode)
+              println(s"reading node $childNode data $nodeData")
+              val json = Json.parse(nodeData)
               val amazonInstanceInfo = Json.fromJson[AmazonInstanceInfo](json).get
               println(s"discovered new node $childNode in my cluster: $amazonInstanceInfo")
               amazonInstanceInfo
@@ -79,11 +81,11 @@ class ServiceDiscoveryImpl @Inject() (
   }
 
   def isLeader(): Boolean = myId map { id =>
-    val siblings = zk.getChildren(myServicePath)
+    val siblings = cluster.keys
     val siblingsIds = siblings map extractId
     val minId = siblingsIds.min
     val isMinid = minId == id
-    log.info(s"my service id is $id, service with id $minId is the leader => I'm the leader == $isMinid")
+    println(s"my service id is $id, service with id $minId is the leader => I'm the leader == $isMinid")
     isMinid
   } getOrElse (throw new IllegalStateException("service did not register yet"))
 
