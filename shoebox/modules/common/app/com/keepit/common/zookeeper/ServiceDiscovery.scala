@@ -5,13 +5,20 @@ import com.keepit.common.strings._
 import com.keepit.common.service._
 import com.keepit.common.amazon._
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent._
+import scala.collection.concurrent.TrieMap
+
 import play.api.libs.json._
+
 import com.google.inject.{Inject, Singleton}
+
 import org.apache.zookeeper.CreateMode._
 
 trait ServiceDiscovery {
   def register(): Node
   def isLeader(): Boolean
+  def myClusterSize: Int = 0
 }
 
 @Singleton
@@ -21,23 +28,53 @@ class ServiceDiscoveryImpl @Inject() (
     amazonInstanceInfo: AmazonInstanceInfo)
   extends ServiceDiscovery with Logging {
 
-  val serviceType = services.currentService
-  val myServicePath = Path(s"/fortytwo/services/${serviceType.name}")
-  val myServiceNodeMaster = Node(s"${myServicePath.name}/${serviceType.name}_")
-  var myNode: Option[Node] = None
-  def myId: Option[Long] = myNode map extractId
-  def extractId(node: Node) = node.name.substring(node.name.lastIndexOf('_') + 1).toLong
+  private val serviceType = services.currentService
+  private val myServicePath = Path(s"/fortytwo/services/${serviceType.name}")
+  private val myServiceNodeMaster = Node(s"${myServicePath.name}/${serviceType.name}_")
+  private var myNode: Option[Node] = None
+  private var cluster = new TrieMap[Node, AmazonInstanceInfo]()
+
+  private def myId: Option[Long] = myNode map extractId
+  private def extractId(node: Node) = node.name.substring(node.name.lastIndexOf('_') + 1).toLong
 
   implicit val amazonInstanceInfoFormat = AmazonInstanceInfo.format
 
+  //without me
+  override def myClusterSize: Int = cluster.size
+
   def register(): Node = {
     val path = zk.createPath(myServicePath)
-    zk.watchChildren(myServicePath, { (children : Seq[Node]) =>
-      log.info(s"""services in my cluster under ${myServicePath.name}: ${children.mkString(", ")}""")
-    })
     myNode = Some(zk.createNode(myServiceNodeMaster, null, EPHEMERAL_SEQUENTIAL))
+    zk.watchChildren(myServicePath, { (children : Seq[Node]) =>
+      println(s"""services in my cluster under ${myServicePath.name}: ${children.mkString(", ")}""")
+      future {
+        try {
+          val childNodes = children map {c => Node(s"${myServicePath.name}/$c")} filter { childNode =>
+            println(s"discovered new node $childNode in my cluster")
+            childNode.name != myNode.get.name
+          }
+          println(s"found ${childNodes.size} nodes in cluster")
+          childNodes foreach { childNode =>
+            cluster.getOrElseUpdate(childNode, {
+              val json = Json.parse(zk.get(childNode))
+              val amazonInstanceInfo = Json.fromJson[AmazonInstanceInfo](json).get
+              println(s"discovered new node $childNode in my cluster: $amazonInstanceInfo")
+              amazonInstanceInfo
+            })
+          }
+          cluster.keys foreach { key =>
+            if (!childNodes.contains(key)) {
+              println(s"node $key is not in cluster anymore")
+              cluster.remove(key)
+            }
+          }
+        } catch {
+          case e: Throwable => e.printStackTrace()
+        }
+      }
+    })
     zk.set(myNode.get, Json.toJson(amazonInstanceInfo).toString)
-    log.info(s"registered as node ${myNode.get}")
+    println(s"registered as node ${myNode.get}")
     myNode.get
   }
 
