@@ -32,8 +32,8 @@ class ServiceDiscoveryImpl @Inject() (
 
   def register(): Node = {
     val path = zk.createPath(myServicePath)
-    zk.watchChildren(path, { (children : Seq[Node]) =>
-      log.info(s"""services in my cluster: ${children.mkString(", ")}""")
+    zk.watchChildren(myServicePath, { (children : Seq[Node]) =>
+      log.info(s"""services in my cluster under ${myServicePath.name}: ${children.mkString(", ")}""")
     })
     myNode = Some(zk.createNode(myServiceNodeMaster, null, EPHEMERAL_SEQUENTIAL))
     zk.set(myNode.get, Json.toJson(amazonInstanceInfo).toString)

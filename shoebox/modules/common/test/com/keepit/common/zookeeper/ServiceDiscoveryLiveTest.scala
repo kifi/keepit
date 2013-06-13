@@ -28,25 +28,29 @@ class ServiceDiscoveryLiveTest extends Specification with TestInjector {
         val services = inject[FortyTwoServices]
         val service = RemoteService(AmazonInstanceId("id"), ServiceStatus.UP, IpAddress("127.0.0.1"), services.currentService)
         val amazonInstanceInfo = inject[AmazonInstanceInfo]
-        val basePath = "/test" + Random.nextLong.abs
         val zk = new ZooKeeperClientImpl("localhost", 2000,
           Some({zk1 => println(s"in callback, got $zk1")}))
         try {
           val discovery: ServiceDiscovery = new ServiceDiscoveryImpl(zk, services, amazonInstanceInfo)
-          zk.watchChildren(Path(s"$basePath/services/TEST_MODE"), { (children : Seq[Node]) =>
+          zk.watchChildren(Path(s"/fortytwo/services/TEST_MODE"), { (children : Seq[Node]) =>
             println("Service Instances ----------- : %s".format(children.mkString(", ")))
           })
-          val path = zk.createPath(Path(s"$basePath/services/TEST_MODE"))
-          val firstNode = zk.createNode(Node(s"$basePath/services/TEST_MODE/TEST_MODE_"), null, EPHEMERAL_SEQUENTIAL)
+          val path = zk.createPath(Path("/fortytwo/services/TEST_MODE"))
+          val firstNode = zk.createNode(Node("/fortytwo/services/TEST_MODE/TEST_MODE_"), null, EPHEMERAL_SEQUENTIAL)
           val registeredNode = discovery.register()
-          registeredNode.name === s"""${basePath.name}/services/TEST_MODE/TEST_MODE_0000000001"""
-          println("new node: " + zk.createNode(Node(s"$basePath/services/TEST_MODE/TEST_MODE_"), null, EPHEMERAL_SEQUENTIAL))
-          println("sleeping")
-          println(zk.getChildren(Path(s"$basePath/services/TEST_MODE")) mkString ",")
-          zk.getChildren(Path(s"$basePath/services/TEST_MODE")).size === 3
+          registeredNode.name === "/fortytwo/services/TEST_MODE/TEST_MODE_0000000001"
+          println("new node: " + zk.createNode(Node("/fortytwo/services/TEST_MODE/TEST_MODE_"), null, EPHEMERAL_SEQUENTIAL))
+          println("sleeping 1")
+          Thread.sleep(10000)
+          println(zk.getChildren(Path("/fortytwo/services/TEST_MODE")) mkString ",")
+          zk.getChildren(Path("/fortytwo/services/TEST_MODE")).size === 3
           discovery.isLeader() === false
+          println("sleeping 2 - about to delete")
+          Thread.sleep(10000)
           zk.deleteNode(firstNode)
           discovery.isLeader() === true
+          println("sleeping 3")
+          Thread.sleep(10000)
         } finally {
           zk.close()
         }
