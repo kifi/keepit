@@ -22,7 +22,7 @@ import views.html
 
 case class UserStatistics(
     user: User,
-    networkTypes: Seq[SocialNetworkType],
+    socialUsers: Seq[SocialUserInfo],
     bookmarksCount: Int,
     experiments: Set[State[ExperimentType]],
     kifiInstallations: Seq[KifiInstallation])
@@ -159,7 +159,7 @@ class AdminUserController @Inject() (
     def userStatistics(user: User)(implicit s: RSession): UserStatistics = {
       val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a,b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
       UserStatistics(user,
-        socialUserInfoRepo.getByUser(user.id.get).map(_.networkType).toSeq.sortBy(_.name),
+        socialUserInfoRepo.getByUser(user.id.get),
         bookmarkRepo.getCountByUser(user.id.get),
         userExperimentRepo.getUserExperiments(user.id.get),
         kifiInstallations)
