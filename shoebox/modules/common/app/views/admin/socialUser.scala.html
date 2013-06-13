@@ -1,10 +1,25 @@
 @(socialUserInfo: SocialUserInfo, socialConnections: Seq[SocialUserInfo], rawInfo: Option[SocialUserRawInfo])
 
+@userWithSocialDisplay = {
+  <span style="margin:2px">
+    @if(socialUserInfo.networkType == SocialNetworks.FACEBOOK) {
+      <a data-hover="tooltip" title="@socialUserInfo.fullName+" class="name_tooltip_link"
+        href="http://www.facebook.com/@socialUserInfo.socialId.id" target="_blank">
+        <img src="https://graph.facebook.com/@socialUserInfo.socialId.id/picture?type=square"
+          width="30" height="30" alt=""/>
+        @socialUserInfo.fullName (@socialUserInfo.networkType/@socialUserInfo.socialId)
+      </a>
+    } else {
+      @socialUserInfo.fullName (@socialUserInfo.networkType/@socialUserInfo.socialId)
+    }
+  </span>
+}
+
 @admin("Social User: " + socialUserInfo.fullName) {
   <h2>Social User details</h2>
    Name: @socialUserInfo.fullName<br/>
    Id: @socialUserInfo.id.get<br/>
-   Account: @adminHelper.socialUserDisplay(socialUserInfo)<br/>
+   Account: @userWithSocialDisplay<br/>
    State: @socialUserInfo.state<br/>
    Credentials:<br/><textarea rows="3" cols="400">@socialUserInfo.credentials</textarea><br/>
    Social Raw info: <br/><textarea rows="7" cols="400">@rawInfo</textarea><br/>
