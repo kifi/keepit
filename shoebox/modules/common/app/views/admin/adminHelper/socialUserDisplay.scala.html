@@ -1,24 +1,31 @@
 @(socialUserInfo: SocialUserInfo, socialOnly: Boolean = false)
+@import com.keepit.common.social.SocialNetworks
 
 @networkLogo = {
   <img src="/assets/securesocial/images/providers/@{socialUserInfo.networkType}.png"
-    alt="@{socialUserInfo.networkType}" width="20" height="20">
+    alt="@{socialUserInfo.networkType}" width="16" height="16">
+}
+
+@avatar = {
+  @if(socialUserInfo.networkType == SocialNetworks.FACEBOOK) {
+    <img class="user-avatar" src="http://graph.facebook.com/@socialUserInfo.socialId/picture">
+  } else {
+    @for(creds <- socialUserInfo.credentials; img <- creds.avatarUrl) {
+      <img class="user-avatar" src="@img"/>
+    }
+  }
 }
 
 <span style="margin:2px">
 @if(socialUserInfo.userId.isDefined && !socialOnly) {
   <a data-hover="tooltip" title="@socialUserInfo.fullName"
      class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminUserController.userView(socialUserInfo.userId.get)">
-    @for(creds <- socialUserInfo.credentials; img <- creds.avatarUrl) {
-      <img class="user-avatar" src="@img"/>
-    }<b>@socialUserInfo.fullName</b> @networkLogo
+    @avatar <b>@socialUserInfo.fullName</b> @networkLogo
   </a>
 } else {
   <a data-hover="tooltip" title="@socialUserInfo.fullName"
      class="name_tooltip_link" href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(socialUserInfo.id.get)">
-    @for(creds <- socialUserInfo.credentials; img <- creds.avatarUrl) {
-      <img class="user-avatar" src="@img"/>
-    } @socialUserInfo.fullName @networkLogo
+    @avatar @socialUserInfo.fullName @networkLogo
   </a>
 }
 </span>
