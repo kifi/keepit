@@ -14,7 +14,6 @@ import com.keepit.common.db.LargeString._
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworks
 
-import com.keepit.controllers.ext.ExtCommentController
 import com.keepit.common.social.SocialNetworks.FACEBOOK
 import com.keepit.common.controller.AuthenticatedRequest
 
