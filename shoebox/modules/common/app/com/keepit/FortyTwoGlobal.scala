@@ -97,6 +97,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     if (app.mode != Mode.Test && app.mode != Mode.Dev) {
       Statsd.increment("deploys", 42)
       injector.instance[HealthcheckPlugin].reportStart()
+      injector.instance[HealthcheckPlugin].warmUp()
     }
   }
 
