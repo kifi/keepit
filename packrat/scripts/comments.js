@@ -78,10 +78,12 @@ commentsPane = function() {
       if ($scroller.length) {
         comment.isLoggedInUser = comment.user.id == userId;
         renderComment(comment, function($c) {
-          var $old;
-          if (comment.isLoggedInUser && ($old = $holder.find(".kifi-comment-posted[data-id=]").first()).length) {
-            $old.replaceWith($c);
-          } else {
+          if (!comment.isLoggedInUser ||
+              !$holder.find(".kifi-comment-posted[data-id=" + comment.id + "]").length &&
+              !$holder.find(".kifi-comment-posted[data-id=]").get().some(function(el) {
+                api.log("[update] comparing comment text");
+                return $(el).data("text") === comment.text;
+              })) {
             $holder.append($c);  // should we compare timestamps and insert in order?
             $scroller.scrollToBottom();
             updateEmptyMessage();
@@ -93,12 +95,14 @@ commentsPane = function() {
 
   function submitComment($container, session, e, text) {
     logEvent("slider", "comment");
+    var $comment, resp;
     api.port.emit("post_comment", {
         url: document.URL,
         title: document.title,
         text: text},
-      function(resp) {
-        api.log("[submitComment] resp:", resp);
+      function(o) {
+        api.log("[submitComment] resp:", o);
+        updatePostedComment($comment, resp = o);
       });
     renderComment({
         createdAt: new Date().toISOString(),
@@ -110,7 +114,8 @@ commentsPane = function() {
         isLoggedInUser: true,
         id: ""},
       function($c) {
-        $holder.append($c);
+        updatePostedComment($comment = $c, resp);
+        $holder.append($c.data("text", text));
         $scroller.scrollToBottom();
         updateEmptyMessage();
       });
@@ -122,6 +127,16 @@ commentsPane = function() {
     render("html/metro/comment.html", c, function(html) {
       callback($(html).find("time").timeago().end());
     });
+  }
+
+  function updatePostedComment($c, resp) {
+    if ($c && resp) {
+      $c.attr("data-id", resp.id);
+      $c.find("time")  // TODO: patch timeago to update attrs too
+        .attr("datetime", resp.createdAt)
+        .attr("title", getLocalDateFormatter()(resp.createdAt, function render(s) {return s}))
+        .timeago("update", resp.createdAt);
+    }
   }
 
   function updateEmptyMessage() {
