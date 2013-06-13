@@ -307,15 +307,15 @@ class BookmarksController @Inject() (
     implicit val externalIdFormat = ExternalId.format[Bookmark]
     db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { collection =>
       request.body.asJson.flatMap(Json.fromJson[Set[ExternalId[Bookmark]]](_).asOpt) map { keepExtIds =>
-        val (added, removed) = db.readWrite { implicit s =>
+        val (added, removed) = db.readWrite(attempts = 2) { implicit s =>
           val keepIds = keepExtIds.flatMap(bookmarkRepo.getOpt(_).map(_.id.get))
-          val existing = keepToCollectionRepo.getByCollection(collection.id.get, excludeState = None)
+          val existing = keepToCollectionRepo.getByCollection(collection.id.get, excludeState = None).toSet
+          val created = (keepIds -- existing.map(_.bookmarkId)) map { bid =>
+            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bid, collectionId = collection.id.get))
+          }
           val activated = existing collect {
             case ktc if ktc.state == KeepToCollectionStates.INACTIVE && keepIds.contains(ktc.bookmarkId) =>
               keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
-          }
-          val created = (keepIds diff existing.map(_.bookmarkId).toSet) map { bid =>
-            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bid, collectionId = collection.id.get))
           }
           val removed = removeOthers match {
             case true => existing.collect {
