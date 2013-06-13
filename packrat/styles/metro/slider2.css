@@ -13,6 +13,7 @@
   font-family: inherit;
   font-size: inherit;
   font-weight: inherit;
+  font-style: inherit;
   background: transparent;
   color: inherit;
   border: none;
@@ -64,6 +65,14 @@
   font-weight: inherit;
   border: none;
   cursor: pointer;
+}
+.kifi-slider2 ::-moz-placeholder,
+.kifi-pane ::-moz-placeholder {
+  font-style: inherit;
+}
+.kifi-slider2 ::-webkit-input-placeholder,
+.kifi-pane ::-webkit-input-placeholder {
+  font-style: inherit;
 }
 
 .kifi-tile>.kifi-slider2-tip {
