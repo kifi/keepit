@@ -25,16 +25,18 @@
 
 <script>
 
-var baseTargets = ["drawAsInfinite(stats.counters.search.deploys.count)"];
+//var baseTargets = ["drawAsInfinite(stats.counters.search.deploys.count)"];
+var baseTargets = [""];
 
+// make offsets so log will always work
 var metrics = {
-  "social graph info" : "stats.timers.search.mainSearch.socialGraphInfo.mean_99",
-  "get clickboost" : "stats.timers.search.mainSearch.getClickboost.mean_99",
-  "query parsing" : "stats.timers.search.mainSearch.queryParsing.mean_99",
-  "personalized searcher" : "stats.timers.search.mainSearch.personalizedSearcher.mean_99",
-  "Lucene Search" : "stats.timers.search.mainSearch.LuceneSearch.mean_99",
-  "processHits" : "stats.timers.search.mainSearch.processHits.mean_99",
-  "mainSearch total" : "stats.timers.search.mainSearch.total.mean_99" 
+  "social graph info" : "offset(stats.timers.search.mainSearch.socialGraphInfo.mean_99, 1.0)",
+  "get clickboost" : "offset(stats.timers.search.mainSearch.getClickboost.mean_99, 1.0)",
+  "query parsing" : "offset(stats.timers.search.mainSearch.queryParsing.mean_99, 1.0)",
+  "personalized searcher" : "offset(stats.timers.search.mainSearch.personalizedSearcher.mean_99, 1.0)",
+  "Lucene Search" : "offset(stats.timers.search.mainSearch.LuceneSearch.mean_99, 1.0)",
+  "processHits" : "offset(stats.timers.search.mainSearch.processHits.mean_99, 1.0)",
+  "mainSearch total" : "offset(stats.timers.search.mainSearch.total.mean_99, 1.0)" 
 };
 
 var yscales = {
@@ -54,8 +56,8 @@ $.each(yscales, function (name, scale) {
 var options = $.fn.graphite.defaults = {
   url: "https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/",
   lineMode: "connected",
-  width: 600,
-  height: 400
+  width: 1200,
+  height: 600
 };
 
 $("#metric").change(function () {
@@ -77,10 +79,10 @@ function renderChart() {
 
 
 var metrics2 = {
-  "search factory": "stats.timers.search.extSearch.factory.mean_99",
-  "mainSearch": "stats.timers.search.extSearch.searching.mean_99",
-  "postsearch": "stats.timers.search.extSearch.postSearchTime.mean_99",
-  "ext search total": "stats.timers.search.extSearch.total.mean_99"
+  "search factory": "offset(stats.timers.search.extSearch.factory.mean_99, 1.0)",
+  "mainSearch": "offset(stats.timers.search.extSearch.searching.mean_99, 1.0)",
+  "postsearch": "offset(stats.timers.search.extSearch.postSearchTime.mean_99, 1.0)",
+  "ext search total": "offset(stats.timers.search.extSearch.total.mean_99, 1.0)"
 };
 
   var yscales2 = {
@@ -100,8 +102,8 @@ var metrics2 = {
   var options2 = $.fn.graphite.defaults = {
     url: "https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/",
     lineMode: "connected",
-    width: 600,
-    height: 400
+    width: 1200,
+    height: 600
   };
 
   $("#metric2").change(function () {
