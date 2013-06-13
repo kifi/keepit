@@ -1,0 +1,11 @@
+#!/bin/bash
+
+if [ $# -ne 0 ]; then
+  echo "usage: $(basename $0)"
+  exit 1
+fi
+
+echo '“Please relax,” said the voice pleasantly, like a stewardess in an airliner with
+only one wing and two engines, one of which is on fire, “you are perfectly safe.”'
+
+fab -f "$(dirname $0)/fabric_deploy.py" -H b01,b04 stop restart:2

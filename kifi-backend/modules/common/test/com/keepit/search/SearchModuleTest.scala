@@ -3,7 +3,6 @@ package com.keepit.search
 import com.keepit.module._
 import com.google.inject.util.Modules
 import com.google.inject._
-import com.keepit.controllers.admin._
 import com.keepit.common.net._
 import com.keepit.common.amazon._
 import com.keepit.common.zookeeper._
