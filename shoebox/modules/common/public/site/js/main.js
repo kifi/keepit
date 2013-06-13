@@ -41,15 +41,15 @@ var keepsTemplate = Tempo.prepare($myKeeps).when(TempoEvent.Types.RENDER_COMPLET
 		}
 	});
 });
-var searchTemplate = Tempo.prepare("search-results").when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
+var $results = $("#search-results"), searchTemplate = Tempo.prepare($results).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 	hideLoading();
 	initDraggable();
-	$('#search-results .keep .bottom').each(function() {
-		$(this).find('img.small-avatar').prependTo(this);
+	$results.find(".keep .bottom").each(function() {
+		$(this).find('img.small-avatar').prependTo(this);  // eliminating whitespace text nodes?
 	});
-	$('#search-results .keep.mine .bottom:not(:has(.me))')
-		.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '"/>');
-	$('div.search .num-results').text('Showing ' + $('#search-results .keep').length + ' for "' + $('header input.query').val() + '"');
+	$results.find(".keep.mine .bottom:not(:has(.me))")
+		.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
+	$('div.search .num-results').text('Showing ' + $results.find('.keep').length + ' for "' + $('header input.query').val() + '"');
 });
 var $coll = $("#collections"), collTmpl = Tempo.prepare($coll).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 	makeCollectionsDroppable($coll.find(".collection"));
@@ -202,7 +202,7 @@ function doSearch(context) {
 	$('.search .num-results').show();
 //	$('aside.right').show();
 	showLoading();
-	$('#search-results').show();
+	$results.show();
 	$.getJSON(urlSearch,
 		{maxHits: 30
 		,f: $('select[name="keepers"]').val() == 'c' ? $('#custom-keepers').textext()[0].tags().tagElements().find('.text-label').map(function(){return connections[$(this).text()]}).get().join('.') : $('select[name="keepers"]').val()
