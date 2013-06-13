@@ -1,7 +1,5 @@
 package com.keepit.search.topicModel
 
-import scala.collection.mutable.{Map => MutMap}
-
 trait DocumentTopicModel {
   def getDocumentTopicDistribution(content: String): Array[Double]
   def getDocumentTopicId(content: String): Int
