@@ -25,6 +25,7 @@ import akka.util.Timeout
 import play.api.Plugin
 import play.api.templates.Html
 import com.keepit.common.mail.RemotePostOffice
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object Healthcheck {
 
@@ -149,6 +150,8 @@ trait HealthcheckPlugin extends Plugin {
   def reportStart(): ElectronicMail
   def reportStop(): ElectronicMail
   def reportErrors(): Unit
+  var isWarm = false
+  def warmUp() {isWarm = true}
 }
 
 class HealthcheckPluginImpl @Inject() (
@@ -201,4 +204,6 @@ class HealthcheckPluginImpl @Inject() (
     actor ! email
     email
   }
+
+  override def warmUp() = actorFactory.system.scheduler.scheduleOnce(3 minutes) {super.warmUp()}
 }

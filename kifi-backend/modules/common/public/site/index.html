@@ -43,19 +43,13 @@
 		<h3 class="active my-keeps">
 			<a href="javascript:populateMyKeeps();addNewKeeps()">Your Keeps<span class="right light">...</span></a>
 		</h3>
-		<!--
-		<h3 class="read-later droppable">
-			<a href="javascript:"> Read It Later <span
-				class="right light">0</span></a>
-		</h3>
-		 -->
 		<div id="collections">
 			<h2>Collections <a class="new-collection" href="javascript:"><img src="img/plus.png" alt="+"></a></h2>
 			<div class="add-collection">
 				<input placeholder="Type name here">
 			</div>
 			<div id="collections-wrapper">
-				<h3 data-template class="droppable collection" data-id="{{id}}" style="display:none">
+				<h3 data-template class="collection" data-id="{{id}}" style="display:none">
 					<div class="edit-menu">
 						<a href="javascript:" class="edit">&nbsp;</a>
 						<ul>
@@ -131,7 +125,12 @@
 		</div>
 		<div class="who-kept"></div>
 		<div class="subtitle">In collections:</div>
-		<div class="in-collections"></div>
+		<div class="in-collections">
+			<div class="row" data-template>
+				<input type="checkbox" data-id="{{id}}" id="cb1-{{id}}" checked>
+				<label class="long-text" for="cb1-{{id}}"><span></span>{{name}}</label>
+			</div>
+		</div>
 		<div class="actions">
 			<a class="add" href="javascript:">Add to a collection <span class="close">x</span></a>
 			<div class="collections">

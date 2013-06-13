@@ -7,6 +7,7 @@ import org.apache.http.auth.AuthScope
 import org.apache.http.auth.UsernamePasswordCredentials
 import org.apache.http.client.methods.HttpGet
 import org.apache.http.client.entity.GzipDecompressingEntity
+import org.apache.http.client.entity.DeflateDecompressingEntity
 import org.apache.http.client.params.ClientPNames
 import org.apache.http.conn.scheme.PlainSocketFactory
 import org.apache.http.conn.scheme.Scheme
@@ -48,7 +49,7 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
   val httpClient = new DefaultHttpClient(cm, httpParams)
 
   // track redirects
-  val interceptor = new HttpResponseInterceptor() {
+  val redirectInterceptor = new HttpResponseInterceptor() {
     override def process(response: HttpResponse, context: HttpContext) {
       if (response.containsHeader(LOCATION)) {
         val locations = response.getHeaders(LOCATION)
@@ -56,7 +57,33 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
       }
     }
   }
-  httpClient.addResponseInterceptor(interceptor)
+  httpClient.addResponseInterceptor(redirectInterceptor)
+
+  // transfer encoding
+  val encodingInterceptor = new HttpResponseInterceptor() {
+    override def process(response: HttpResponse, context: HttpContext) {
+      val entity = response.getEntity()
+      if (entity != null) {
+        val ceheader = entity.getContentEncoding()
+        if (ceheader != null) {
+          val codecs = ceheader.getElements()
+          codecs.foreach{ codec =>
+            if (codec.getName().equalsIgnoreCase("gzip")) {
+              response.setEntity(new GzipDecompressingEntity(response.getEntity()))
+              return
+            }
+            if (codec.getName().equalsIgnoreCase("deflate")) {
+              response.setEntity(new DeflateDecompressingEntity(response.getEntity()))
+              return
+            }
+          }
+          val encoding = codecs.map(_.getName).mkString(",")
+          log.error(s"unsupported content-encoding: ${encoding}")
+        }
+      }
+    }
+  }
+  httpClient.addResponseInterceptor(encodingInterceptor)
 
   def fetch(url: String, ifModifiedSince: Option[DateTime] = None)(f: HttpInputStream => Unit): HttpFetchStatus = {
 

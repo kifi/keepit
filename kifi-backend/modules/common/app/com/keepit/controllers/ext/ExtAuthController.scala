@@ -76,8 +76,6 @@ class ExtAuthController @Inject() (
     Ok(Json.obj(
       "avatarUrl" -> avatarUrl,
       "name" -> identity.fullName,
-      "facebookId" -> identity.id.id,
-      "provider" -> identity.id.providerId,
       "userId" -> user.externalId.id,
       "installationId" -> installation.externalId.id,
       "experiments" -> experiments,

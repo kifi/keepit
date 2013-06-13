@@ -22,7 +22,7 @@ class ServiceDiscoveryImpl @Inject() (
   extends ServiceDiscovery with Logging {
 
   val serviceType = services.currentService
-  val myServicePath = Path(s"/services/${serviceType.name}")
+  val myServicePath = Path(s"/fortytwo/services/${serviceType.name}")
   val myServiceNodeMaster = Node(s"${myServicePath.name}/${serviceType.name}_")
   var myNode: Option[Node] = None
   def myId: Option[Long] = myNode map extractId

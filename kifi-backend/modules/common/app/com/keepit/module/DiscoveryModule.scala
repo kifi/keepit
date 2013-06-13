@@ -24,7 +24,7 @@ class DiscoveryModule extends ScalaModule with Logging {
   def serviceDiscovery(services: FortyTwoServices, mode: Mode, amazonInstanceInfo: AmazonInstanceInfo): ServiceDiscovery = mode match {
     case Mode.Prod =>
       //todo: have a dedicated host for zk (instead of using localhost)
-      val zk = new ZooKeeperClientImpl("localhost", 2000, Path("/fortytwo"),
+      val zk = new ZooKeeperClientImpl("localhost", 2000,
         Some({zk1 => println(s"in callback, got $zk1")}))
       new ServiceDiscoveryImpl(zk, services, amazonInstanceInfo)
     case _ =>

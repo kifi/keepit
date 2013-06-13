@@ -8,12 +8,19 @@
   </ul>
 }
 
+@networkLogoLink(sui: SocialUserInfo) = {
+  <a href="@com.keepit.controllers.admin.routes.AdminSocialUserController.socialUserView(sui.id.get)">
+    <img src="/assets/securesocial/images/providers/@{sui.networkType}.png"
+      alt="@sui.networkType" width="16" height="16"></a>
+}
+
 @admin("All " + userStatisticsList.size + " Users") {
   <table class="table table-bordered">
     <tr>
       <th>#</th>
       <th>Id</th>
       <th>User</th>
+      <th>Networks</th>
       <th># of bookmarks</th>
       <th>Date joined</th>
       <th>Experiments</th>
@@ -24,6 +31,7 @@
       <td>@{i+1}</td>
       <td><span class="badge">@userStatistics.user.id.get.id</span></td>
       <td>@adminHelper.userDisplay(userStatistics.user)</td>
+      <td>@for(u <- userStatistics.socialUsers){ @networkLogoLink(u) }</td>
       <td>@userStatistics.bookmarksCount</td>
       <td>@adminHelper.dateDisplay(userStatistics.user.createdAt)</td>
       <td>@userStatistics.experiments.mkString(", ")</td>

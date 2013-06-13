@@ -6,6 +6,7 @@ import com.keepit.scraper.HttpInputStream
 import com.keepit.scraper.Scraper
 import org.apache.tika.detect.DefaultDetector
 import org.apache.tika.metadata.Metadata
+import org.apache.tika.metadata.HttpHeaders
 import org.apache.tika.parser.html.HtmlMapper
 import org.apache.tika.parser.html.HtmlParser
 import org.apache.tika.parser.AutoDetectParser
@@ -43,6 +44,8 @@ abstract class TikaBasedExtractor(url: String, maxContentChars: Int, htmlMapper:
     val contentHandler = getContentHandler
     context.set(classOf[Parser], parser)
     getHtmlMapper.foreach(mapper => context.set(classOf[HtmlMapper], mapper))
+
+    input.getContentType.foreach{ metadata.set(HttpHeaders.CONTENT_TYPE, _) }
 
     try {
       parser.parse(input, contentHandler, metadata, context)

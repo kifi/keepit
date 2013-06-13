@@ -1,38 +1,40 @@
 package com.keepit.controllers.ext
 
-import com.keepit.classify.{Domain, DomainRepo, DomainStates}
-import com.keepit.common.analytics._
-import com.keepit.common.controller._
-import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
-import com.keepit.common.db.ExternalId
-import com.keepit.common.db.slick.Database
-import com.keepit.common.net.URINormalizer
-import com.keepit.common.social._
-import com.keepit.common.time._
-import com.keepit.model._
-import com.keepit.realtime._
+import scala.util.Random
+
+import org.mindrot.jbcrypt.BCrypt
+
 import com.google.inject.Inject
 import com.google.inject.Singleton
+import com.keepit.classify.{Domain, DomainRepo, DomainStates}
+import com.keepit.common.analytics._
+import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
+import com.keepit.common.controller._
+import com.keepit.common.db.ExternalId
+import com.keepit.common.db.Id
+import com.keepit.common.db.State
+import com.keepit.common.db.slick.Database
+import com.keepit.common.net.URINormalizer
+import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.social._
+import com.keepit.common.time._
+import com.keepit.controllers.core.KeeperInfoLoader
+import com.keepit.model._
+import com.keepit.realtime._
+import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
+import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
+import com.keepit.serializer.SendableNotificationSerializer.sendableNotificationSerializer
+
+import play.api.Play.current
+import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Concurrent
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.iteratee.Iteratee
 import play.api.libs.json._
-import play.api.libs.json.Json
 import play.api.mvc.RequestHeader
 import play.api.mvc.WebSocket
 import play.api.mvc.WebSocket.FrameFormatter
 import securesocial.core.{UserService, SecureSocial}
-import com.keepit.common.db.Id
-import com.keepit.common.db.State
-import scala.util.Random
-import com.keepit.controllers.core.KeeperInfoLoader
-import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
-import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
-import com.keepit.serializer.SendableNotificationSerializer.sendableNotificationSerializer
-import play.api.libs.concurrent.Akka
-import play.api.Play.current
-import com.keepit.common.service.FortyTwoServices
-import org.mindrot.jbcrypt.BCrypt
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]])
 
@@ -99,10 +101,12 @@ class ExtStreamController @Inject() (
       secSocialUser <- UserService.find(auth.userId)
     ) yield {
 
-      val impersonatedUserIdOpt: Option[ExternalId[User]] = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
+      val impersonatedUserIdOpt: Option[ExternalId[User]] =
+        impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
 
       db.readOnly { implicit session =>
-        val socialUser = socialUserInfoRepo.get(SocialId(secSocialUser.id.id), SocialNetworks.FACEBOOK)
+        val socialUser = socialUserInfoRepo.get(SocialId(secSocialUser.id.id),
+          SocialNetworkType(secSocialUser.id.providerId))
         val userId = socialUser.userId.get
         val experiments = experimentRepo.getUserExperiments(userId)
         impersonatedUserIdOpt match {
@@ -273,8 +277,8 @@ class ExtStreamController @Inject() (
   }
 
   private def setAllNotificationsVisited(userId: Id[User], lastId: ExternalId[UserNotification]) {
-    import UserNotificationStates._
     import UserNotificationCategories._
+    import UserNotificationStates._
     db.readWrite { implicit s =>
       val lastNotification = userNotificationRepo.get(lastId)
       val excluded = Set(INACTIVE, SUBSUMED, VISITED)

@@ -122,7 +122,7 @@ class ExtSearchController @Inject() (
 
     val t4 = currentDateTime.getMillis()
 
-    val decorator = new ResultDecoratorImpl(userId, shoeboxClient)
+    val decorator = new ResultDecoratorImpl2(searcher, shoeboxClient)
     val res = toPersonalSearchResultPacket(decorator, userId, searchRes, config, searchFilter.isDefault, experimentId)
 
     reportArticleSearchResult(searchRes)
@@ -173,7 +173,9 @@ class ExtSearchController @Inject() (
     val future = decorator.decorate(res)
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
 
-    PersonalSearchResultPacket(res.uuid, res.query, monitoredAwait.result(future, 5 seconds, Nil), res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), experimentId, filter)
+    PersonalSearchResultPacket(res.uuid, res.query,
+      monitoredAwait.result(future, 5 seconds, s"getting search decorations for $userId", Nil),
+      res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), experimentId, filter)
   }
 
 }

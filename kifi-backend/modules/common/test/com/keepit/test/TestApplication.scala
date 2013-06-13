@@ -169,8 +169,10 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     socialUserInfoRepo: SocialUserInfoRepo,
     userRepo: UserRepo,
     imageStore: S3ImageStore,
-    healthcheckPlugin: HealthcheckPlugin): SecureSocialUserPlugin = {
-    new ShoeboxSecureSocialUserPlugin(db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin)
+    healthcheckPlugin: HealthcheckPlugin,
+    userExperimentRepo: UserExperimentRepo): SecureSocialUserPlugin = {
+    new ShoeboxSecureSocialUserPlugin(
+      db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin, userExperimentRepo)
   }
 
 

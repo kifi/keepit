@@ -20,7 +20,12 @@ import play.api.data._
 import play.api.libs.json.Json
 import views.html
 
-case class UserStatistics(user: User, bookmarksCount: Int, experiments: Set[State[ExperimentType]], kifiInstallations: Seq[KifiInstallation])
+case class UserStatistics(
+    user: User,
+    socialUsers: Seq[SocialUserInfo],
+    bookmarksCount: Int,
+    experiments: Set[State[ExperimentType]],
+    kifiInstallations: Seq[KifiInstallation])
 
 @Singleton
 class AdminUserController @Inject() (
@@ -153,13 +158,15 @@ class AdminUserController @Inject() (
   def usersView = AdminHtmlAction { implicit request =>
     def userStatistics(user: User)(implicit s: RSession): UserStatistics = {
       val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a,b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
-      UserStatistics(user, bookmarkRepo.getCountByUser(user.id.get),
+      UserStatistics(user,
+        socialUserInfoRepo.getByUser(user.id.get),
+        bookmarkRepo.getCountByUser(user.id.get),
         userExperimentRepo.getUserExperiments(user.id.get),
         kifiInstallations)
     }
 
     val users = db.readOnly { implicit s =>
-      userRepo.allExcluding(UserStates.PENDING).map(userStatistics)
+      userRepo.allExcluding(UserStates.PENDING) map userStatistics
     }
     Ok(html.admin.users(users))
   }

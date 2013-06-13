@@ -11,7 +11,7 @@ import com.keepit.common.healthcheck.Healthcheck
 
 class MonitoredAwait @Inject() (healthcheckPlugin: HealthcheckPlugin) {
 
-  def result[T](awaitable: Awaitable[T], atMost: Duration, valueOnFailure: T): T = {
+  def result[T](awaitable: Awaitable[T], atMost: Duration, errorMessage: String, valueOnFailure: T): T = {
     val caller = Thread.currentThread().getStackTrace()(2)
     val tag = s"Await: ${caller.getClassName()}.${caller.getMethodName()}:${caller.getLineNumber()}"
 
@@ -20,7 +20,7 @@ class MonitoredAwait @Inject() (healthcheckPlugin: HealthcheckPlugin) {
       Await.result(awaitable, atMost)
     } catch {
       case ex: Throwable =>
-        healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(s"[$errorMessage]: ${ex.getMessage}")))
         valueOnFailure
     } finally {
       sw.stop()
@@ -28,7 +28,7 @@ class MonitoredAwait @Inject() (healthcheckPlugin: HealthcheckPlugin) {
     }
   }
 
-  def result[T](awaitable: Awaitable[T], atMost: Duration) = {
+  def result[T](awaitable: Awaitable[T], atMost: Duration, errorMessage: String) = {
     val caller = Thread.currentThread().getStackTrace()(2)
     val tag = s"Await: ${caller.getClassName()}.${caller.getMethodName()}:${caller.getLineNumber()}"
 
@@ -37,7 +37,8 @@ class MonitoredAwait @Inject() (healthcheckPlugin: HealthcheckPlugin) {
       Await.result(awaitable, atMost)
     } catch {
       case ex: Throwable =>
-        healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(ex.getMessage)))
+        if (healthcheckPlugin.isWarm)
+          healthcheckPlugin.addError(HealthcheckError(Some(ex), None, None, Healthcheck.INTERNAL, Some(s"[$errorMessage]: ${ex.getMessage}")))
         throw ex
     } finally {
       sw.stop()

@@ -8,12 +8,13 @@ import net.codingwell.scalaguice.InjectorExtensions._
 import com.google.inject.{Inject, Singleton}
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
+import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
-import com.keepit.common.social.{SocialGraphPlugin, SocialId, SocialNetworkType}
+import com.keepit.common.social.{SocialNetworks, SocialGraphPlugin, SocialId, SocialNetworkType}
 import com.keepit.common.store.S3ImageStore
 import com.keepit.inject._
 import com.keepit.model._
@@ -22,6 +23,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.Application
 import play.api.Play
 import play.api.Play.current
+import play.api.mvc.{Session, RequestHeader}
 import securesocial.core._
 import securesocial.core.providers.Token
 
@@ -149,7 +151,7 @@ class RemoteSecureSocialAuthenticatorPlugin @Inject()(
   private def sessionFromAuthenticator(authenticator: Authenticator): UserSession = {
     val (socialId, provider) = (SocialId(authenticator.userId.id), SocialNetworkType(authenticator.userId.providerId))
     val userIdFuture = shoeboxClient.getSocialUserInfoByNetworkAndSocialId(socialId, provider).map(_.map(_.userId))
-    val userId = monitoredAwait.result(userIdFuture, 3 seconds).flatten
+    val userId = monitoredAwait.result(userIdFuture, 3 seconds, s"get userid for $socialId and $provider").flatten
     UserSession(
       userId = userId,
       externalId = ExternalId[UserSession](authenticator.id),
@@ -186,13 +188,24 @@ class RemoteSecureSocialAuthenticatorPlugin @Inject()(
     }
 
     externalIdOpt.map{ externalId =>
-      val result = monitoredAwait.result(shoeboxClient.getSessionByExternalId(externalId), 3 seconds)
+      val result = monitoredAwait.result(shoeboxClient.getSessionByExternalId(externalId), 3 seconds, s"get session for $externalId")
       result collect {
         case s if s.isValid => authenticatorFromSession(s)
       }
     } flatten
   }
   def delete(id: String): Either[Error, Unit] = reportExceptions { }
+}
+
+private class SecureSocialEventListener extends securesocial.core.EventListener {
+  override val id = "fortytwo_event_listener"
+  def onEvent(event: Event, request: RequestHeader, session: Session): Option[Session] = event match {
+    case LogoutEvent(identity) =>
+      // Remove our user ID info when the user logs out
+      Some(session - ActionAuthenticator.FORTYTWO_USER_ID)
+    case _ =>
+      None
+  }
 }
 
 class SecureSocialUserService(implicit val application: Application) extends UserServicePlugin(application) {
@@ -218,6 +231,19 @@ class SecureSocialUserService(implicit val application: Application) extends Use
     // Fortunately our implementation of this method does nothing so it doesn't matter.
   }
 
+  private val secureSocialEventListener = new SecureSocialEventListener
+
+  override def onStart() {
+    if (Registry.eventListeners.get(secureSocialEventListener.id).isEmpty) {
+      Registry.eventListeners.register(secureSocialEventListener)
+    }
+    super.onStart()
+  }
+
+  override def onStop() {
+    Registry.eventListeners.unRegister(secureSocialEventListener.id)
+    super.onStop()
+  }
 }
 
 trait SecureSocialUserPlugin {
@@ -237,7 +263,8 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
     socialUserInfoRepo: SocialUserInfoRepo,
     userRepo: UserRepo,
     imageStore: S3ImageStore,
-    healthcheckPlugin: HealthcheckPlugin)
+    healthcheckPlugin: HealthcheckPlugin,
+    userExperimentRepo: UserExperimentRepo)
   extends UserService with SecureSocialUserPlugin with Logging {
 
   private def reportExceptions[T](f: => T): T =
@@ -289,11 +316,10 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
     case ident => (None, SocialUser(ident))
   }
 
-  private def createUser(displayName: String, id: Option[Id[User]]): User = {
+  private def createUser(displayName: String): User = {
     log.info("creating new user for %s".format(displayName))
     val nameParts = displayName.split(' ')
-    User(id = id,
-      firstName = nameParts(0),
+    User(firstName = nameParts(0),
       lastName = nameParts.tail.mkString(" "),
       state = if(Play.isDev) UserStates.ACTIVE else UserStates.PENDING
     )
@@ -302,21 +328,28 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
   private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType,
       socialUser: SocialUser, userId: Option[Id[User]])(implicit session: RWSession): SocialUserInfo = {
     val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
-    val userIdOpt = userId flatMap userRepo.getOpt flatMap (_.id)
+    val userOpt = userId flatMap userRepo.getOpt
+
+    // TODO(greg): remove this when we want to enable linkedin for all users
+    if (socialNetworkType != SocialNetworks.FACEBOOK && Play.isProd &&
+        userOpt.flatMap(u => userExperimentRepo.get(u.id.get, ExperimentTypes.ADMIN)).isEmpty) {
+      throw new AuthenticationException()
+    }
+
     suiOpt.map(_.withCredentials(socialUser)) match {
       case Some(socialUserInfo) if !socialUserInfo.userId.isEmpty =>
         // TODO(greg): handle case where user id in socialUserInfo is different from the one in the session
         if (suiOpt == Some(socialUserInfo)) socialUserInfo else socialUserInfoRepo.save(socialUserInfo)
       case Some(socialUserInfo) if socialUserInfo.userId.isEmpty =>
-        val user = userRepo.save(createUser(socialUserInfo.fullName, userIdOpt))
+        val user = userOpt getOrElse userRepo.save(createUser(socialUserInfo.fullName))
 
         //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         //todo(eishay): send a direct fetch request
         val sui = socialUserInfoRepo.save(socialUserInfo.withUser(user))
-        imageStore.updatePicture(sui, user.externalId)
+        if (userOpt.isEmpty) imageStore.updatePicture(sui, user.externalId)
         sui
       case None =>
-        val user = userRepo.save(createUser(socialUser.fullName, userIdOpt))
+        val user = userOpt getOrElse userRepo.save(createUser(socialUser.fullName))
         log.info("creating new SocialUserInfo for %s".format(user))
         val userInfo = SocialUserInfo(userId = Some(user.id.get),//verify saved
             socialId = socialId, networkType = socialNetworkType,
@@ -324,7 +357,7 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
         log.info("SocialUserInfo created is %s".format(userInfo))
 
         val sui = socialUserInfoRepo.save(userInfo)
-        imageStore.updatePicture(sui, user.externalId)
+        if (userOpt.isEmpty) imageStore.updatePicture(sui, user.externalId)
         sui
     }
   }
@@ -361,7 +394,7 @@ class RemoteSecureSocialUserPlugin @Inject() (
 
   def find(id: UserId): Option[SocialUser] = reportExceptions {
     val resFuture = shoeboxClient.getSocialUserInfoByNetworkAndSocialId(SocialId(id.id), SocialNetworkType(id.providerId))
-    monitoredAwait.result(resFuture, 3 seconds) match {
+    monitoredAwait.result(resFuture, 3 seconds, s"get user for social user ${id.id} on $id.providerId") match {
       case None =>
         log.info("No SocialUserInfo found for %s".format(id))
         None
