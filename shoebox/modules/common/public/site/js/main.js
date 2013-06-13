@@ -427,24 +427,27 @@ $(function() {
 		}
 	})
 
-	var $main = $(".main").on("click", ".keep", function(e) {
+	var $main = $(".main").on("mousedown", ".keep", function(e) {
+		var $sel = $main.find(".keep.selected");
+		if (e.target.type === "checkbox") {
+			if (!e.target.checked) {
+				$sel.not(this).not(":has(.handle>input:checked)").removeClass("selected");
+			}
+		} else {
+			$sel.not(this).removeClass("selected");
+			$sel.find(".handle>input").prop("checked", false);
+		}
+	}).on("click", ".keep", function(e) {
 		// 1. Only one keep at a time can be selected and not checked.
 		// 2. If a keep is selected and not checked, no keeps are checked.
 		// 3. If a keep is checked, it is also selected.
-		var $keep = $(this), $selected = $main.find(".keep.selected");
+		var $keep = $(this);
 		if (e.target.type === "checkbox") {
-			if (e.target.checked) {
-				$selected.not(":has(.handle>input:checked)").removeClass("selected");
-				$keep.addClass("selected");
-			} else {
-				$keep.removeClass("selected");
-			}
+			$keep.toggleClass("selected", e.target.checked);
 		} else {
-			var select = !$keep.is(".selected") || $selected.length != 1;
-			$selected.not(this).removeClass("selected").end().find(".handle>input").prop("checked", false);
-			$keep.toggleClass("selected", select);
+			$keep.addClass("selected");
 		}
-		$selected = $main.find(".keep.selected");
+		var $selected = $main.find(".keep.selected");
 		var $title = $('aside.right>.title');
 		var $who = $('aside.right>.who-kept');
 		if (!$selected.length) {
