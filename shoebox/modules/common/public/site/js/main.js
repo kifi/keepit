@@ -49,11 +49,11 @@ var searchTemplate = Tempo.prepare("search-results").when(TempoEvent.Types.RENDE
 	});
 	$('#search-results .keep.mine .bottom:not(:has(.me))')
 		.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '"/>');
-	$('div.search .num-results').text('Showing ' + $('#search-results .keep').length + ' for "' + $('header input.search').val() + '"');
+	$('div.search .num-results').text('Showing ' + $('#search-results .keep').length + ' for "' + $('header input.query').val() + '"');
 });
-var collectionsTemplate = Tempo.prepare("collections").when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
-	makeCollectionsDroppable($(event.element).find(".collection"));
-	adjustHeight();
+var $coll = $("#collections"), collTmpl = Tempo.prepare($coll).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
+	makeCollectionsDroppable($coll.find(".collection"));
+	adjustCollHeight();
 });
 var $inColl = $(".in-collections"), inCollTmpl = Tempo.prepare($inColl);
 
@@ -206,7 +206,7 @@ function doSearch(context) {
 	$.getJSON(urlSearch,
 		{maxHits: 30
 		,f: $('select[name="keepers"]').val() == 'c' ? $('#custom-keepers').textext()[0].tags().tagElements().find('.text-label').map(function(){return connections[$(this).text()]}).get().join('.') : $('select[name="keepers"]').val()
-		,q: $('input.search').val()
+		,q: $('input.query').val()
 		,context: context
 		},
 		function(data) {
@@ -253,7 +253,7 @@ function populateMyKeeps(id) {
 		hideRightSide();
 	}
 	searchTemplate.clear();
-	$('input.search').val('');
+	$('input.query').val('');
 	searchContext = null;
 //	$('aside.right').hide();
 	$('.search h1').show();
@@ -282,10 +282,9 @@ function populateMyKeeps(id) {
 }
 
 function populateCollections() {
-	$.getJSON(urlCollectionsAll, {sort: "user"} ,
-			function(data) {
-				collectionsTemplate.render(data.collections);
-			});
+	$.getJSON(urlCollectionsAll, {sort: "user"}, function(data) {
+		collTmpl.render(data.collections);
+	});
 }
 
 function populateCollectionsRight() {
@@ -309,12 +308,13 @@ function showMessage(msg) {
 	$.fancybox($('<p>').text(msg));
 }
 
-function adjustHeight() {
-	$('aside.left #collections #collections-wrapper').height($(window).height() - $('aside.left #collections #collections-wrapper').offset().top);
+function adjustCollHeight() {
+	var $w = $("#collections-wrapper");
+	$w.height($(window).height() - $w.offset().top);
 }
 
 // delete/rename collection
-$('#collections').on('click','a.remove',function() {
+$coll.on('click', 'a.remove', function() {
 	var colElement = $(this).parents('h3.collection').first();
 	var colId = colElement.data('id');
 	console.log('Removing collection ' + colId);
@@ -335,28 +335,28 @@ $('#collections').on('click','a.remove',function() {
 	var name = nameSpan.text();
 	nameSpan.html('<input type="text" value="' + name + '" data-orig="' + name + '"/>');
 	nameSpan.find('input').focus();
-}).on('keypress','.collection span.name input', function(e) {
-	var code = (e.keyCode ? e.keyCode : e.which);
-	if(code == 13) { //Enter key pressed
-		var colElement = $(this).parents('h3.collection').first();
-		var colId = colElement.data('id');
+}).on('keypress', '.collection span.name input', function(e) {
+	if (e.which == 13) { // Enter
+		var $c = $(this).closest('h3.collection');
+		var colId = $c.data('id');
 		console.log('Renaming collection ' + colId);
-		newName = $(this).val();
-		$.ajax( {url: urlCollections + "/" + colId + "/update"
-			,type: "POST"
-			,dataType: 'json'
-			,data: JSON.stringify({name: newName})
-			,contentType: 'application/json'
-			,error: function() {
+		var newName = this.value;
+		$.ajax({
+			url: urlCollections + "/" + colId + "/update",
+			type: "POST",
+			dataType: 'json',
+			data: JSON.stringify({name: newName}),
+			contentType: 'application/json',
+			error: function() {
 				showMessage('Could not rename collection, please try again later');
-				var nameSpan = colElement.find('span.name');
-				nameSpan.html(nameSpan.find('input').data('orig'));
+				var $name = $c.find('.name');
+				$name.html($name.find('input').data('orig'));
+			},
+			success: function(data) {
+				$c.removeClass('editing');
+				$c.find('.name').html(newName).attr('title', newName);
+				adjustCollHeight();
 			}
-			,success: function(data) {
-							colElement.removeClass('editing');
-							colElement.find('span.name').html(newName).attr('title',newName);
-							adjustHeight();
-						}
 		});
 
 	}
@@ -369,77 +369,74 @@ $('#collections').on('click','a.remove',function() {
 setInterval(addNewKeeps, 60000);
 setInterval(updateNumKeeps, 60000);
 
-$(window).resize(adjustHeight);
+$(window).resize(adjustCollHeight);
 
 // handle collection adding/removing from right bar
 $inColl.on('change', 'input[type="checkbox"]', function() {
 	// remove selected keeps from collection
-	var row = $(this).parents('.row');
+	var $row = $(this).closest('.row');
 	var colId = $(this).data('id');
-	var keeps = $('section.main .keep.selected').map(function() {return $(this).data('id')}).get();
-	$.ajax( {url: urlCollections + "/" + colId + "/removeKeeps"
-		,type: "POST"
-		,dataType: 'json'
-		,data: JSON.stringify(keeps)
-		,contentType: 'application/json'
-		,error: function() {showMessage('Could not remove keeps from collection, please try again later')}
-		,success: function(data) {
-				console.log(data);
-				// substract removed from collection count on left bar
-				var countSpan = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
-				countSpan.text(countSpan.text() * 1  - data.removed);
-				row.remove();
-			}
-		});
+	var keepIds = $('section.main .keep.selected').map(function() {return $(this).data('id')}).get();
+	$.ajax({
+		url: urlCollections + "/" + colId + "/removeKeeps",
+		type: "POST",
+		dataType: 'json',
+		data: JSON.stringify(keepIds),
+		contentType: 'application/json',
+		error: showMessage.bind(null, 'Could not remove keeps from collection, please try again later'),
+		success: function(data) {
+			console.log(data);
+			var $count = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
+			$count.text($count.text() - data.removed);
+			$row.remove();
+		}});
 
 });
-$('aside.right .actions .collections').on('change','input[type="checkbox"]',function() {
+$('aside.right .actions .collections').on('change', 'input[type="checkbox"]', function() {
 	// add selected keeps to collection
-	var row = $(this).parents('li');
+	var $row = $(this).closest('.row');
 	var colId = $(this).data('id');
 	var keeps = $('section.main .keep.selected').map(function() {return $(this).data('id')}).get();
-	$.ajax( {url: urlCollections + "/" + colId + "/addKeeps"
-		,type: "POST"
-		,dataType: 'json'
-		,data: JSON.stringify(keeps)
-		,contentType: 'application/json'
-		,error: function() {showMessage('Could not add keeps to collection, please try again later')}
-		,success: function(data) {
-				console.log(data);
-				// add to collection count on left bar
-				var countSpan = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
-				countSpan.text(countSpan.text() * 1  + data.added);
-				if (!$inColl.find("#cb1-" + colId).length) {
-					inCollTmpl.append({id: colId, name: collections[colId].name});
-				}
-				row.remove();
+	$.ajax({
+		url: urlCollections + "/" + colId + "/addKeeps",
+		type: "POST",
+		dataType: 'json',
+		data: JSON.stringify(keeps),
+		contentType: 'application/json',
+		error: showMessage.bind(null, 'Could not add keeps to collection, please try again later'),
+		success: function(data) {
+			console.log(data);
+			var $count = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
+			$count.text(+$count.text()  + data.added);
+			if (!$inColl.find("#cb1-" + colId).length) {
+				inCollTmpl.append({id: colId, name: collections[colId].name});
 			}
-		});
+			$row.remove();
+		}});
 });
 
 $(document)
-	.on('keypress', function(e) {if (!$(e.target).is('textarea, input')) $('input.search').focus() }) // auto focus on search field when starting to type anywhere on the document
+	.on('keypress', function(e) {  // auto focus on search field when starting to type anywhere on the document
+		if (!$(e.target).is('textarea,input')) {
+			$('input.query').focus();
+		}
+	})
 	.on('scroll',function() { // infinite scroll
-		if (!isLoading() && $(document).height() - ($(window).scrollTop() + $(window).height()) < 300) //  scrolled down to less than 300px from the bottom
-		{
-			if (searchContext != null )
+		if (!isLoading() && $(document).height() - ($(window).scrollTop() + $(window).height()) < 300) { //  scrolled down to less than 300px from the bottom
+			if (searchContext) {
 				doSearch(searchContext);
-			else if ($('#collections .collection.active').length > 0)
-				populateMyKeeps($('#collections .collection.active').data('id'));
-			else
-				populateMyKeeps();
+			} else {
+				populateMyKeeps($coll.find(".collection.active").data("id"));
+			}
 		}
 	})
 	.on('click','.keep',function(e) {
 		var keep = $(this);
-		var cb = keep.find('input[type="checkbox"]');
+		var $cb = keep.find('input[type="checkbox"]');
 		if (!$(e.target).is('input[type="checkbox"]')) {
-			if (cb.is(':checked'))
-				cb.prop('checked',false);
-			else
-				cb.prop('checked',true);
+			$cb.prop('checked', !$cb.is(':checked'));
 		}
-		if (cb.is(':checked')) {
+		if ($cb.is(':checked')) {
 			keep.addClass('selected');
 		} else {
 			keep.removeClass('selected');
@@ -544,19 +541,13 @@ $(document)
 			// init custom search
 			$('#custom-keepers')
 				.textext({
-				    	plugins : 'tags autocomplete',
+					plugins : 'tags autocomplete',
 					prompt : 'Add...'
 				})
-				.bind('getSuggestions', function(e, data)
-				{
-				    var textext = $(e.target).textext()[0],
-					query = (data ? data.query : '') || ''
-					;
-
-				    $(this).trigger(
-					'setSuggestions',
-					{ result : textext.itemManager().filter(connectionNames, query) }
-				    );
+				.bind('getSuggestions', function(e, data) {
+					var textext = $(e.target).textext()[0],
+					query = (data ? data.query : '') || '';
+					$(this).trigger('setSuggestions', {result: textext.itemManager().filter(connectionNames, query)});
 				}).bind('setFormData', function(e, data) {
 					doSearch();
 				});
@@ -564,48 +555,42 @@ $(document)
 			$('.text-core, .text-core .text-wrap').height('1.5em');
 		});
 
-		$('select[name="keepers"]').on('change',function() { // execute search when changing the filter
+		$('select[name="keepers"]').change(function() { // execute search when changing the filter
 			$('#custom-keepers').val('');
-			if ($(this).val() == 'c')
+			if (this.value == 'c') {
 				$('.text-core').show().find('textarea').focus();
-			else {
+			} else {
 				$('.text-core').hide();
-				doSearch(null);
+				doSearch();
 			}
 		});
 
-		$('input.search')
-			.on('keyup',function() {
-					clearTimeout(searchTimeout);
-					searchTimeout = setTimeout('doSearch(null)', 500);
-				}) // instant search
-			.on('focus',function() {
-				$('aside.left .active').removeClass('active');
-			});
+		$('input.query').keyup(function() {
+			clearTimeout(searchTimeout);
+			searchTimeout = setTimeout(doSearch, 500);
+		}).focus(function() {  // instant search
+			$('aside.left .active').removeClass('active');
+		});
 
-
-		$('#collections').on('click', 'h3 a', function() {
+		$coll.on('click', "h3 a", function() {
 			populateMyKeeps($(this).parent().data('id'));
 		});
 
 		$('aside a.new-collection').click(function() {
-			var addColDiv = $(this).parents('div').first().find('.add-collection');
-			if (addColDiv.is(':visible')) {
-				addColDiv.slideUp();
+			var $add = $(this).closest('div').find('.add-collection');
+			if ($add.is(':visible')) {
+				$add.slideUp();
 			} else {
-				addColDiv.slideDown();
-				addColDiv.find('input').focus();
+				$add.slideDown();
+				$add.find('input').focus();
 			}
 		});
 
 		// filter collections or right bar
-		$('aside.right .collections input.find').on('keyup',function() {
-			var p = new RegExp(this.value, "gi");
+		$('aside.right .collections input.find').keyup(function() {
+			var re = new RegExp(this.value, "gi");
 			$('aside.right .collections ul li:not(.create)').each(function() {
-				if (p.test($(this).find('label').text()))
-					$(this).show();
-				else
-					$(this).hide();
+				$(this).toggle(re.test($(this).find('label').text()));
 			});
 		});
 
