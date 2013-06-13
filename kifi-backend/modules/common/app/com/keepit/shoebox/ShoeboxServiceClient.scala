@@ -23,7 +23,7 @@ import com.keepit.search.ArticleSearchResult
 import com.keepit.common.social.BasicUser
 import com.keepit.common.social.BasicUserUserIdCache
 import com.keepit.common.social.BasicUserUserIdKey
-import com.keepit.controllers.ext.PersonalSearchHit
+import com.keepit.search.PersonalSearchHit
 import com.keepit.search.ActiveExperimentsCache
 import com.keepit.search.ActiveExperimentsKey
 import com.keepit.common.db.ExternalId

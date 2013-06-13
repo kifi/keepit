@@ -52,7 +52,6 @@ import com.keepit.common.db.State
 import com.keepit.model.ExperimentType
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.controllers.ext.PersonalSearchHit
 import com.keepit.common.social.BasicUser
 import com.keepit.common.db.ExternalId
 import com.keepit.search.ArticleSearchResultRef
@@ -61,6 +60,7 @@ import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworkType
 import com.keepit.common.social.SocialNetworks
 import com.keepit.serializer.SocialUserInfoSerializer._
+import com.keepit.search.PersonalSearchHit
 
 object ShoeboxController {
   implicit val collectionTupleFormat = (

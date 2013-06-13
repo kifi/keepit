@@ -2,8 +2,6 @@ package com.keepit.search
 
 import com.keepit.common.db.Id
 import com.keepit.common.social.BasicUser
-import com.keepit.controllers.ext.PersonalSearchHit
-import com.keepit.controllers.ext.PersonalSearchResult
 import com.keepit.model._
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.ExecutionContext.Implicits.global

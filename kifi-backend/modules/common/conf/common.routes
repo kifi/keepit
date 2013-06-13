@@ -1,19 +1,5 @@
 
 
-GET     /login                      securesocial.controllers.ProviderController.authenticate(provider = "facebook")
-GET     /login/social               securesocial.controllers.LoginPage.login
-GET     /logout                     securesocial.controllers.LoginPage.logout
-
-# Relevant when we support traditional user signups:
-GET     /register                   securesocial.controllers.Registration.signUp(token: String)
-POST    /register                   securesocial.controllers.Registration.handleSignUp(token: String)
-
-GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
-
-# OAuth provider entry points (e.g. "facebook")
-GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
-POST    /authenticate/:provider     securesocial.controllers.ProviderController.authenticateByPost(provider)
-
 ##########################################
 # External Services API
 ##########################################
@@ -21,42 +7,6 @@ POST    /authenticate/:provider     securesocial.controllers.ProviderController.
 # todo(eishay): We should move the paths of the following two and update pingdom
 GET     /admin/healthcheck/ping     @com.keepit.common.healthcheck.WebsiteHealthController.ping()
 GET     /admin/healthcheck/isHealthy    @com.keepit.common.healthcheck.WebsiteHealthController.isHealthy()
-
-##########################################
-# Extension API
-##########################################
-
-POST    /bookmarks/add              @com.keepit.controllers.ext.ExtBookmarksController.addBookmarks
-POST    /bookmarks/remove           @com.keepit.controllers.ext.ExtBookmarksController.remove()
-POST    /bookmarks/private          @com.keepit.controllers.ext.ExtBookmarksController.updatePrivacy()
-GET     /bookmarks/mutual/:id       @com.keepit.controllers.ext.ExtBookmarksController.getNumMutualKeeps(id: ExternalId[User])
-
-POST    /comments/add               @com.keepit.controllers.ext.ExtCommentController.createComment()
-POST    /comments/:id/remove        @com.keepit.controllers.ext.ExtCommentController.removeComment(id: ExternalId[Comment])
-POST    /comments/follow            @com.keepit.controllers.ext.ExtCommentController.startFollowing()
-POST    /comments/unfollow          @com.keepit.controllers.ext.ExtCommentController.stopFollowing()
-
-POST    /comments                   @com.keepit.controllers.ext.ExtCommentController.postCommentAction()
-POST    /messages                   @com.keepit.controllers.ext.ExtCommentController.sendMessageAction()
-POST    /messages/:parentId         @com.keepit.controllers.ext.ExtCommentController.sendMessageReplyAction(parentId: ExternalId[Comment])
-
-POST    /users/slider/suppress      @com.keepit.controllers.ext.ExtUserController.suppressSliderForSite
-
-POST    /users/events               @com.keepit.controllers.ext.ExtEventController.logUserEvents
-POST    /error/report               @com.keepit.controllers.ext.ExtErrorReportController.addErrorReport
-
-# This should match the output format of S3ImageConfig#keyByExternalId
-GET     /users/:id/pics/:size/0.jpg @com.keepit.controllers.assets.UserPictureController.get(size: Int, id: ExternalId[User])
-POST    /users/pics/update      @com.keepit.controllers.assets.UserPictureController.update()
-
-GET     /search                     @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String])
-POST    /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts
-
-POST    /kifi/start                 @com.keepit.controllers.ext.ExtAuthController.start
-GET     /whois                      @com.keepit.controllers.ext.ExtAuthController.whois
-GET     /session/end                @com.keepit.controllers.ext.ExtAuthController.logOut
-
-GET     /ext/ws                     @com.keepit.controllers.ext.ExtStreamController.ws()
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
