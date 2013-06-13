@@ -1,4 +1,5 @@
 @(userStatisticsList: Seq[com.keepit.controllers.admin.UserStatistics])
+@import com.keepit.common.social.SocialNetworkType
 
 @kifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
   <ul>
@@ -6,6 +7,10 @@
       <li>@{installation.version}; @{installation.userAgent.name} @{installation.userAgent.version}; @{installation.userAgent.operatingSystemName}</li>
     }
   </ul>
+}
+
+@networkLogo(networkType: SocialNetworkType) = {
+  <img src="/assets/securesocial/images/providers/@{networkType}.png" alt="@networkType" width="16" height="16">
 }
 
 @admin("All " + userStatisticsList.size + " Users") {
@@ -23,7 +28,7 @@
     <tr>
       <td>@{i+1}</td>
       <td><span class="badge">@userStatistics.user.id.get.id</span></td>
-      <td>@adminHelper.userDisplay(userStatistics.user)</td>
+      <td>@adminHelper.userDisplay(userStatistics.user) @for(t <- userStatistics.networkTypes){ @networkLogo(t) }</td>
       <td>@userStatistics.bookmarksCount</td>
       <td>@adminHelper.dateDisplay(userStatistics.user.createdAt)</td>
       <td>@userStatistics.experiments.mkString(", ")</td>

@@ -96,7 +96,7 @@ aside.right input[type="text"] {width: 260px; margin-top: 10px; margin-bottom: 5
 aside.right .collections > input[type="text"] {margin-left: 20px}
 aside.right h2 {color: #556179; font-size: 1.2em; margin-top: 0; margin-bottom: .1em}
 aside.right select {padding: 5px}
-aside.right a {color: #556179}
+aside.right a {color: #556179; display: block}
 aside.right .who-kept span {display: block; margin-bottom: 5px}
 aside.right .who-kept span.private {display: none}
 aside.right div.actions {position: absolute; bottom: 10px}
