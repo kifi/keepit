@@ -3,11 +3,12 @@ package com.keepit.controllers
 import org.specs2.mutable.Specification
 import play.api.test.Helpers._
 import com.keepit.common.db.slick._
+import com.keepit.common.social.BasicUserRepo
 import com.keepit.test.{DbRepos, EmptyApplication}
 import com.keepit.inject._
 import com.keepit.model._
 import play.api.Play.current
-import play.api.libs.json.{JsNumber, JsArray}
+import play.api.libs.json.{Json, JsNumber, JsArray}
 import com.keepit.serializer.UserSerializer
 import com.keepit.model.User
 import com.keepit.controllers.shoebox.ShoeboxController
@@ -60,7 +61,22 @@ class ShoeboxControllerTest extends Specification with DbRepos {
         }
     }
 
-
+    "return basic users from the database" in {
+        running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule().withFakeHttpClient()) {
+          val (user1965,friends) = setupSomeUsers()
+          val users = user1965::friends
+          val basicUserRepo = inject[BasicUserRepo]
+          val basicUsersJson = inject[Database].readOnly { implicit s =>
+            users.map{ u => (u.id.get.id.toString -> Json.toJson(basicUserRepo.load(u.id.get))) }.toMap
+          }
+          val shoeboxController = inject[ShoeboxController]
+          val query = users.map(_.id.get).mkString(",")
+          val result = shoeboxController.getBasicUsers(query)(FakeRequest())
+          status(result) must equalTo(OK);
+          contentType(result) must beSome("application/json");
+          contentAsString(result) must equalTo(Json.toJson(basicUsersJson).toString())
+        }
+    }
 
     "return connected users' ids from the database" in {
       running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule().withFakeHttpClient()) {
