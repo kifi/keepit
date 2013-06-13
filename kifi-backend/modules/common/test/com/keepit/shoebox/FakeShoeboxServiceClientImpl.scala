@@ -14,7 +14,7 @@ import com.keepit.search.SearchConfigExperimentRepo
 import com.keepit.serializer.SearchConfigExperimentSerializer
 import com.keepit.common.social.BasicUser
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.controllers.ext.PersonalSearchHit
+import com.keepit.search.PersonalSearchHit
 import com.keepit.search.ArticleSearchResult
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworkType

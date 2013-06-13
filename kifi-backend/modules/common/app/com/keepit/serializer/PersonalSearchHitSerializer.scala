@@ -1,6 +1,6 @@
 package com.keepit.serializer
 
-import com.keepit.controllers.ext.PersonalSearchHit
+import com.keepit.search.PersonalSearchHit
 
 import play.api.libs.json._
 
