@@ -26,8 +26,6 @@ case class Node(name: String, withBase: Boolean = false) {
 
 @ImplementedBy(classOf[ZooKeeperClientImpl])
 trait ZooKeeperClient {
-  def basePath: Path
-
   def watchNode(node: Node, onDataChanged : Option[Array[Byte]] => Unit): Unit
   def watchChildren(path: Path, updateChildren : Seq[Node] => Unit): Unit
   def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T): Unit
@@ -51,7 +49,7 @@ trait ZooKeeperClient {
  * The code was originally taken from https://github.com/twitter/scala-zookeeper-client/blob/master/src/main/scala/com/twitter/zookeeper/ZooKeeperClient.scala
  * It was abandoned by twitter in favor of https://github.com/twitter/util/tree/master/util-zk
  */
-class ZooKeeperClientImpl(servers: String, sessionTimeout: Int, val basePath : Path,
+class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
                       watcher: Option[ZooKeeperClient => Unit]) extends ZooKeeperClient with Logging {
   @volatile private var zk : ZooKeeper = null
   connect()
@@ -116,7 +114,7 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int, val basePath : P
   }
 
   private def makeNodePath(path: Path): Node = path.withBase match {
-    case false => Node("%s/%s".format(basePath, path.name).replaceAll("//", "/"), true)
+    case false => Node(path.name.replaceAll("//", "/"), true)
     case true => path.asNode
   }
 
@@ -211,7 +209,7 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int, val basePath : P
   }
 
   /**
-   * Gets the children for a node (relative path from our basePath), watches
+   * Gets the children for a node, watches
    * for each NodeChildrenChanged event and runs the supplied updateChildren function and
    * re-watches the node's children.
    */
