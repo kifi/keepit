@@ -61,13 +61,18 @@
   };
 
   var timeranges = {
-  "24 Hours": "-24h",
-  "12 Hours": "-12h",
-  "6 Hours": "-6h",
-  "3 Hours": "-3h",
-  "1 Hour": "-1h",
-  "30 Minutes": "-0h30min",
   "10 Minutes": "-0h10min",
+  "30 Minutes": "-0h30min",
+  "1 Hour": "-1h",
+  "3 Hours": "-3h",
+  "6 Hours": "-6h",
+  "12 Hours": "-12h",
+  "24 Hours": "-24h",
+  "48 Hours": "-48h",
+  "1 Week": "-1w",
+  "2 Weeks": "-2w",
+  "1 Month": "-1mon",
+  "3 Months": "-3mon"
   };
 
   var percentiles = {
@@ -99,6 +104,7 @@
   $.each(timeranges, function (name, timerange) {
   $("#timerange").append($("<option>").val(timerange).text(name));
   });
+  $("#timerange").find('option[value="-24h"]').prop('selected',true)
 
   $.each(yscales, function (name, scale) {
   $("#yscale").append($("<option>").val(scale).text(name));

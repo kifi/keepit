@@ -184,6 +184,7 @@ GET     /admin/social_user/:id/reset @com.keepit.controllers.admin.AdminSocialUs
 
 GET     /admin/ec2-instance         @com.keepit.controllers.admin.AmazonInstanceController.instanceInfo()
 GET     /admin/cache                @com.keepit.controllers.admin.AdminCacheController.serviceView
+GET     /admin/websocket            @com.keepit.controllers.admin.AdminWebSocketController.serviceView
 
 GET     /admin/emails/comment       @com.keepit.controllers.admin.AdminEmailPreviewController.newComment
 GET     /admin/emails/message       @com.keepit.controllers.admin.AdminEmailPreviewController.newMessage
