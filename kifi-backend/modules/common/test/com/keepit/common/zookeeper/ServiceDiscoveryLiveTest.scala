@@ -16,6 +16,7 @@ import com.keepit.common.db.slick._
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.CreateMode._
 import scala.util.{Random, Try}
+import com.google.inject.Provider
 
 class ServiceDiscoveryLiveTest extends Specification with TestInjector {
 
@@ -27,7 +28,7 @@ class ServiceDiscoveryLiveTest extends Specification with TestInjector {
       withInjector()  { implicit injector =>
         val services = inject[FortyTwoServices]
         val service = RemoteService(AmazonInstanceId("id"), ServiceStatus.UP, IpAddress("127.0.0.1"), services.currentService)
-        val amazonInstanceInfo = inject[AmazonInstanceInfo]
+        val amazonInstanceInfo = inject[Provider[AmazonInstanceInfo]]
         val basePath = "/test" + Random.nextLong.abs
         val zk = new ZooKeeperClientImpl("localhost", 2000,
           Some({zk1 => println(s"in callback, got $zk1")}))

@@ -17,12 +17,15 @@ import com.keepit.common.db.slick._
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.CreateMode._
 import scala.util.{Random, Try}
+import com.keepit.common.net.FakeHttpClient
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.net.FakeClientResponse
 
 class ServiceDiscoveryTest extends Specification with TestInjector {
 
   "discovery" should {
     "serialize" in {
-      withInjector()  { implicit injector =>
+      withInjector(new FakeHttpClientModule(FakeClientResponse.fakeAmazonDiscoveryClient))  { implicit injector =>
         val service = RemoteService(AmazonInstanceId("id"), ServiceStatus.UP, IpAddress("127.0.0.1"), ServiceType.DEV_MODE)
         val discovery = inject[ServiceDiscoveryImpl]
         val bytes = discovery.fromRemoteService(service)
@@ -32,7 +35,7 @@ class ServiceDiscoveryTest extends Specification with TestInjector {
     }
 
     "register" in {
-      withInjector()  { implicit injector =>
+      withInjector(new FakeHttpClientModule(FakeClientResponse.fakeAmazonDiscoveryClient))  { implicit injector =>
         val zk = inject[ZooKeeperClient]
         val discovery: ServiceDiscovery = inject[ServiceDiscoveryImpl]
         val registeredNode = discovery.register()

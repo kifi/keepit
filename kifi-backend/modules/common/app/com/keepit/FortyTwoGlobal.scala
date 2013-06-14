@@ -1,9 +1,7 @@
 package com.keepit
 
 import java.util.concurrent.atomic.AtomicBoolean
-
 import net.codingwell.scalaguice.InjectorExtensions.ScalaInjector
-
 import com.google.inject.{Stage, Guice, Module, Injector}
 import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
@@ -13,12 +11,12 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.inject._
-
 import play.api._
 import play.api.mvc.Results._
 import play.api.mvc._
 import play.modules.statsd.api.{Statsd, StatsdFilter}
 import play.utils.Threads
+import com.keepit.common.amazon.AmazonInstanceInfo
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
     extends WithFilters(LoggingFilter, new StatsdFilter()) with Logging {
@@ -88,17 +86,19 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       require(app.mode == mode, "Current mode %s is not allowed. Mode %s required for %s".format(app.mode, mode, this))
     }
     val services = injector.instance[FortyTwoServices]
-    injector.instance[ServiceDiscovery].register()
     val startMessage = ">>>>>>>>>> FortyTwo [%s] service %s Application version %s compiled at %s started on base URL: [%s]. Url is defined on conf/application.conf".format(
         this, services.currentService, services.currentVersion, services.compilationTime, services.baseUrl)
     log.info(startMessage)
-    println(startMessage)
     injector.instance[AppScope].onStart(app)
     if (app.mode != Mode.Test && app.mode != Mode.Dev) {
       Statsd.increment("deploys", 42)
       injector.instance[HealthcheckPlugin].reportStart()
       injector.instance[HealthcheckPlugin].warmUp()
     }
+    
+    val amazonInstanceInfo = injector.instance[AmazonInstanceInfo]
+    log.info(s"Amazon up! $amazonInstanceInfo")
+    injector.instance[ServiceDiscovery].register()
   }
 
   override def onError(request: RequestHeader, ex: Throwable): Result = {
