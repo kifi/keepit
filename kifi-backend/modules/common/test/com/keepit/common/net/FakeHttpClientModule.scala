@@ -5,25 +5,10 @@ import com.keepit.common.service._
 import com.google.inject._
 import net.codingwell.scalaguice.ScalaModule
 
-case class FakeHttpClientModule() extends ScalaModule {
+case class FakeHttpClientModule(requestToResponse: PartialFunction[String, FakeClientResponse]) extends ScalaModule {
 
   def configure(): Unit = {
-    bind[HttpClient].toInstance(new FakeHttpClient())
+    bind[HttpClient].toInstance(new FakeHttpClient(Some(requestToResponse)))
   }
-
-  @Singleton
-  @Provides
-  def amazonInstanceInfo: AmazonInstanceInfo =
-    new AmazonInstanceInfo(
-      instanceId = AmazonInstanceId("i-f168c1a8"),
-      localHostname = "ip-10-160-95-26.us-west-1.compute.internal",
-      publicHostname = "ec2-50-18-183-73.us-west-1.compute.amazonaws.com",
-      localIp = IpAddress("10.160.95.26"),
-      publicIp = IpAddress("50.18.183.73"),
-      instanceType = "c1.medium",
-      availabilityZone = "us-west-1b",
-      securityGroups = "default",
-      amiId = "ami-1bf9de5e",
-      amiLaunchIndex = "0"
-    )
+  
 }

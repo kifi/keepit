@@ -1,3 +1,5 @@
+
+
 GET     /login                      securesocial.controllers.ProviderController.authenticate(provider = "facebook")
 GET     /login/social               securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
