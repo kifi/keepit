@@ -50,4 +50,16 @@ case class FakeClientResponse(expectedResponse: String, override val status: Int
 
 object FakeClientResponse {
   implicit def stringToFakeResponse(s: String): FakeClientResponse = FakeClientResponse(s)
+  val fakeAmazonDiscoveryClient: PartialFunction[String, FakeClientResponse] = {
+    case s if s.contains("instance-id") => FakeClientResponse("i-f168c1a8")
+    case s if s.contains("local-hostname") => FakeClientResponse("ip-10-160-95-26.us-west-1.compute.internal")
+    case s if s.contains("public-hostname") => FakeClientResponse("ec2-50-18-183-73.us-west-1.compute.amazonaws.com")
+    case s if s.contains("local-ipv4") => FakeClientResponse("10.160.95.26")
+    case s if s.contains("public-ipv4") => FakeClientResponse("50.18.183.73")
+    case s if s.contains("instance-type") => FakeClientResponse("c1.medium")
+    case s if s.contains("placement/availability-zone") => FakeClientResponse("us-west-1b")
+    case s if s.contains("security-groups") => FakeClientResponse("default")
+    case s if s.contains("ami-id") => FakeClientResponse("ami-1bf9de5e")
+    case s if s.contains("ami-launch-index") => FakeClientResponse("0")
+  }
 }
