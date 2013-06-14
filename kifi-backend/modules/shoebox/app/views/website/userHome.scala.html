@@ -1,4 +1,5 @@
-@(user: User, friendsOnKifi: Set[ExternalId[User]], userCanInvite: Boolean, userCanSeeKifiSite: Boolean)
+@(user: User, friendsOnKifi: Set[ExternalId[User]], networks: Seq[(SocialNetworkType, Boolean)],
+  userCanInvite: Boolean, userCanSeeKifiSite: Boolean, userCanConnectWithSocialNetworks: Boolean)
 
 @helper.main(title = "Kifi Home") {
   <div class="user_avatar">
@@ -11,7 +12,7 @@
         <h3>Welcome to your KiFi Private beta page</h3>
         @if(friendsOnKifi.nonEmpty) {
           <div class="fb_friends_small clearfix">
-            <h4>Your facebook friends using KiFi: @friendsOnKifi.size</h4>
+            <h4>Your friends using KiFi: @friendsOnKifi.size</h4>
             <div class="friends">
               @for(friend <- friendsOnKifi.take(7)) {
                 <a href="#"><img src="@com.keepit.controllers.assets.routes.UserPictureController.get(30, friend)" width="30" height="30"></a>
@@ -21,6 +22,22 @@
               }
             </div>
           </div>
+        }
+        @if(userCanConnectWithSocialNetworks) {
+          <h4>Social networks</h4>
+          <ul>
+          @for((network, isConnected) <- networks) {
+            <li><b>@network.displayName</b>
+            @if(isConnected) {
+              connected.
+            } else {
+              not connected.
+              <a href="@securesocial.controllers.routes.ProviderController.authenticate(network.name)">
+                Connect with @network.displayName!
+              </a>
+            }</li>
+          }
+          </ul>
         }
     </header>
 

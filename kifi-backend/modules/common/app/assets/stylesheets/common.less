@@ -207,6 +207,12 @@ hr { border: none; background: #e5e5e5; height: 5px; margin: 30px 0; }
 
 .welcome .powered { width: 270px; text-align: right; margin: 0 auto; font-size: 14px; }
 
+.welcome .networks { display: none; }
+.welcome .clicked .networks { display: block; }
+.welcome .clicked .letmein { display: none; }
+.welcome .clicked .powered { display: none; }
+.welcome .clicked .btn.big { padding: 0 20px; margin-left: 6px; margin-right: 6px; }
+
 .install_extensions { max-width: 500px; margin: 0 auto; padding: 10px 0px 30px; }
 
 .install_extensions p { margin-bottom: 4px; }
@@ -531,12 +537,12 @@ h3 { font-size: 20px; }
  @media screen and (max-width: 530px) {
 
    h1, h2 { font-size: 24px; }
-   
+
    .welcome_btn a.btn.big{ font-size:20px; padding:0 10px;}
-   
+
    #agree_btn .btn{ font-size: 26px;}
-   
+
    #agree_btn .btn:after{ display:none;}
-   
+
    .invites_list li{ font-size:15px;}
 }
