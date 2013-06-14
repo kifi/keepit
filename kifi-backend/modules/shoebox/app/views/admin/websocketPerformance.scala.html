@@ -105,14 +105,14 @@
     options.from = $("#timerange").val();
 
   if (chart == "counters") {
-    var countTarget = ["stats.counters.websocket", handler.val(), "count"].join(".");
+    var countTarget = ["stats.counters.shoebox.websocket", handler.val(), "count"].join(".");
     options.title = "Handler Activity (Events per Minute)"
     options.target = baseTargets.concat(countTarget)
     options.logBase = $("#yscale").val();
   }
 
   if (chart == "timers") {
-    var prefix = "stats.timers.websocket." + handler.val()
+    var prefix = "stats.timers.shoebox.websocket." + handler.val()
     var percentileValue = $("#percentile").val()
     var percentileSuffix = (percentileValue == "0.99") ? "_99" : "" 
     var percentileTitle = (percentileValue == "0.99") ? "99% " : "" 
