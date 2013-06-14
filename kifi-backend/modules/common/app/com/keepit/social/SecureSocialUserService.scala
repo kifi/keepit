@@ -14,7 +14,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
-import com.keepit.common.social.{SocialNetworks, SocialGraphPlugin, SocialId, SocialNetworkType}
+import com.keepit.common.social.{SocialGraphPlugin, SocialId, SocialNetworkType}
 import com.keepit.common.store.S3ImageStore
 import com.keepit.inject._
 import com.keepit.model._
@@ -329,12 +329,6 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
       socialUser: SocialUser, userId: Option[Id[User]])(implicit session: RWSession): SocialUserInfo = {
     val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
     val userOpt = userId flatMap userRepo.getOpt
-
-    // TODO(greg): remove this when we want to enable linkedin for all users
-    if (socialNetworkType != SocialNetworks.FACEBOOK && Play.isProd &&
-        userOpt.flatMap(u => userExperimentRepo.get(u.id.get, ExperimentTypes.ADMIN)).isEmpty) {
-      throw new AuthenticationException()
-    }
 
     suiOpt.map(_.withCredentials(socialUser)) match {
       case Some(socialUserInfo) if !socialUserInfo.userId.isEmpty =>

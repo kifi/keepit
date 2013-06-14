@@ -1,0 +1,148 @@
+@admin("Websocket Performance", scripts = List("graphite")) {
+
+<div style="float: right" class="form-horizontal">
+  <select class="input-medium params" id="timerange"></select>
+  <button class="btn btn-primary" type="button" id="update">Update Now</button>
+</div>
+<select class="input-medium params" id="handler"></select>
+
+<p>
+  <img id="counters" class="img-polaroid">
+  <select class="input-medium params" style="float: right" id="yscale"></select>
+</p>
+<p>
+  <img id="timers" class="img-polaroid">
+  <select class="input-medium params" style="float: right" id="percentile"></select>
+</p>
+<p>
+  <img id="anonymous" class="img-polaroid">
+</p>
+
+<script>
+
+  var handlers = {
+  "All Handlers": "*",
+  "ping": "ping",
+  "stats": "stats",
+  "normalize": "normalize",
+  "subscribe_uri": "subscribe_uri",
+  "unsubscribe_uri": "unsubscribe_uri",
+  "log_event": "log_event",
+  "get_rules": "get_rules",
+  "get_friends": "get_friends",
+  "get_thread": "get_thread",
+  "set_enter_to_send": "set_enter_to_send",
+  "get_prefs": "get_prefs",
+  "get_last_notify_read_time": "get_last_notify_read_time",
+  "set_last_notify_read_time": "set_last_notify_read_time",
+  "get_notifications": "get_notifications",
+  "get_missed_notifications": "get_missed_notifications",
+  "get_old_notifications": "get_old_notifications",
+  "set_all_notifications_visited": "set_all_notifications_visited",
+  "set_message_read": "set_message_read",
+  "set_comment_read": "set_comment_read",
+  "set_keeper_position": "set_keeper_position"
+  };
+
+  var timeranges = {
+  "10 Minutes": "-0h10min",
+  "30 Minutes": "-0h30min",
+  "1 Hour": "-1h",
+  "3 Hours": "-3h",
+  "6 Hours": "-6h",
+  "12 Hours": "-12h",
+  "24 Hours": "-24h",
+  "48 Hours": "-48h",
+  "1 Week": "-1w",
+  "2 Weeks": "-2w",
+  "1 Month": "-1mon",
+  "3 Months": "-3mon",
+  };
+
+  var percentiles = {
+  "99% Percentile": "0.99",
+  "100% Percentile": "1"
+  };
+
+  var yscales = {
+  "Linear Scale": null,
+  "Log10 Scale": 10
+  };
+
+  $.each(handlers, function (name, handler) {
+  $("#handler").append($("<option>").val(handler).text(name));
+  });
+  $("#handler").find('option[value="ping"]').prop('selected',true)
+
+  $.each(timeranges, function (name, timerange) {
+  $("#timerange").append($("<option>").val(timerange).text(name));
+  });
+  $("#timerange").find('option[value="-24h"]').prop('selected',true)
+
+  $.each(yscales, function (name, scale) {
+  $("#yscale").append($("<option>").val(scale).text(name));
+  });
+
+  $.each(percentiles, function (name, percentile) {
+  $("#percentile").append($("<option>").val(percentile).text(name));
+  });
+
+  var options = $.fn.graphite.defaults = {
+  url: "https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/",
+  lineMode: "connected",
+  width: 1100,
+  height: 550,
+  hideGrid: "true",
+  lineWidth: 2
+  };
+
+
+  function sumSeries(serie) {
+  return "sumSeries(" + serie + ")"
+  }
+
+  function renderChart(chart) {
+    var handler = $("#handler")
+    var baseTargets = ["drawAsInfinite(stats.counters.*.deploys.count)"];
+    options.from = $("#timerange").val();
+
+  if (chart == "counters") {
+    var countTarget = 'summarize(' + sumSeries(["stats.counters.shoebox.websocket.handler", handler.val(), "count"].join(".")) + ',"1min")';
+    options.title = "Handler Activity (Events per Minute)"
+    options.target = baseTargets.concat(countTarget)
+    options.logBase = $("#yscale").val();
+  }
+
+  if (chart == "timers") {
+    var prefix = "stats.timers.shoebox.websocket.handler." + handler.val()
+    var percentileValue = $("#percentile").val()
+    var percentileSuffix = (percentileValue == "0.99") ? "_99" : "" 
+    var percentileTitle = (percentileValue == "0.99") ? "99% " : "" 
+    var meanTargets = "divideSeries(" + sumSeries(prefix + ".sum" + percentileSuffix) + ",scale(" + sumSeries(prefix + ".count") + "," + percentileValue + "))"
+    options.title = "Handler " + percentileTitle + "Mean Time in Milliseconds"
+    options.target = baseTargets.concat(meanTargets)
+    options.logBase = null;
+  }
+
+  if (chart == "anonymous") {
+    var anonymousTarget = 'summarize(stats.counters.shoebox.websocket.anonymous.count,"1h")';
+    options.title = "Anonymous Attempts per Hour" 
+    options.target = baseTargets.concat(anonymousTarget)
+    options.logBase = null;
+  }
+
+  $("#" + chart).graphite(options);
+  }
+
+  function renderAll() {
+    renderChart("counters")
+    renderChart("timers")
+    renderChart("anonymous")
+  }
+
+  $(".params").change(renderAll);
+  $("#update").click(renderAll);
+  setInterval(renderAll, 300000);
+  renderAll()
+</script>
+}

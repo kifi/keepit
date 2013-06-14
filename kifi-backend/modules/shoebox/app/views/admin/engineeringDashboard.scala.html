@@ -12,22 +12,32 @@
   <a href="@com.keepit.controllers.admin.routes.AdminCacheController.serviceView"><font size="5">Cache Performance</font></a>
   <p><img id="cache" class="img-polaroid"></p>
 </p>
+<p>
+    <a href="@com.keepit.controllers.admin.routes.AdminWebSocketController.serviceView"><font size="5">WebSocket Performance</font></a>
+    <p><img id="websocket" class="img-polaroid"></p>
+</p>
 
 <script>
 
   var timeranges = {
-  "24 Hours": "-24h",
-  "12 Hours": "-12h",
-  "6 Hours": "-6h",
-  "3 Hours": "-3h",
-  "1 Hour": "-1h",
-  "30 Minutes": "-0h30min",
   "10 Minutes": "-0h10min",
+  "30 Minutes": "-0h30min",
+  "1 Hour": "-1h",
+  "3 Hours": "-3h",
+  "6 Hours": "-6h",
+  "12 Hours": "-12h",
+  "24 Hours": "-24h",
+  "48 Hours": "-48h",
+  "1 Week": "-1w",
+  "2 Weeks": "-2w",
+  "1 Month": "-1mon",
+  "3 Months": "-3mon"
   };
 
   $.each(timeranges, function (name, timerange) {
   $("#timerange").append($("<option>").val(timerange).text(name));
   });
+  $("#timerange").find('option[value="-24h"]').prop('selected',true)
 
   function renderCharts() {
   var options = $.fn.graphite.defaults = {
@@ -37,9 +47,7 @@
   height: 400,
   hideGrid: "true",
   from: $("#timerange").val(),
-  lineWidth: 2,
-  yMinRight: 0,
-  yMaxRight: 400
+  lineWidth: 2
   };
 
   var baseTargets = ["drawAsInfinite(stats.counters.*.deploys.count)"];
@@ -48,7 +56,9 @@
 
   var searchTargets = baseTargets.concat('summarize(stats.counters.search.extSearch.total.count,"1h")').concat(["secondYAxis(stats.timers.search.extSearch.total.mean_99)"]);
   options.target = searchTargets;
-  options.title = "Searches per Hour vs 99% Mean Time in Milliseconds"
+  options.title = "Searches per Hour vs 99% Mean Time in Milliseconds";
+  options.yMinRight = 0;
+  options.yMaxRight = 300;
   $("#search").graphite(options);
 
   // Cache Chart
@@ -60,10 +70,18 @@
   var cacheCountTargets = ["hits", "misses", "sets"].map(function (metric) {return "summarize(" + sumSeries(metric) + ',"1min")'});
   var cacheRatioTarget = ["secondYAxis(scale(divideSeries(" + sumSeries("hits") + "," + sumSeries("{hits,misses}") + "),100))"];
   var cacheTargets = baseTargets.concat(cacheCountTargets).concat(cacheRatioTarget);
-
   options.target = cacheTargets;
-  options.title = "Hits - Misses - Sets per Minute vs Hit Ratio"
+  options.title = "Hits - Misses - Sets per Minute vs Hit Ratio";
+  options.yMinRight = 0;
+  options.yMaxRight = 100;
   $("#cache").graphite(options);
+
+  // Websocket Ping Chart
+
+  var websocketTargets = baseTargets.concat('summarize(stats.counters.shoebox.websocket.handler.ping.count,"1min")')
+  options.target = websocketTargets;
+  options.title = "WebSocket Pings per Minute";
+  $("#websocket").graphite(options);
 }
 
   $("#timerange").change(renderCharts);

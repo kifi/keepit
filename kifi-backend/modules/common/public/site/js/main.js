@@ -264,7 +264,7 @@ $(function() {
 		$myKeeps.show();
 		if (lastKeep != "end") {
 			showLoading();
-			console.log("Fetching 30 keep before " + lastKeep);
+			console.log("Fetching %d keeps %s", params.count, lastKeep ? "before " + lastKeep : "");
 			$.getJSON(urlMyKeeps, params,
 				function(data) {
 					if (data.keeps.length == 0) { // end of results
@@ -417,15 +417,7 @@ $(function() {
 		if (!$(e.target).is('textarea,input')) {
 			$query.focus();
 		}
-	}).scroll(function() { // infinite scroll
-		if (!isLoading() && $(document).height() - ($(window).scrollTop() + $(window).height()) < 300) { //  scrolled down to less than 300px from the bottom
-			if (searchContext) {
-				doSearch(searchContext);
-			} else {
-				populateMyKeeps($colls.find(".collection.active").data("id"));
-			}
-		}
-	})
+	});
 
 	var $main = $(".main").on("click", ".keep", function(e) {
 		// 1. Only one keep at a time can be selected and not checked.
@@ -487,12 +479,20 @@ $(function() {
 			}
 			showRightSide();
 		}
+	}).scroll(function() { // infinite scroll
+		if (!isLoading() && this.clientHeight + this.scrollTop > this.scrollHeight - 300) {
+			if (searchContext) {
+				doSearch(searchContext);
+			} else {
+				populateMyKeeps($colls.find(".collection.active").data("id"));
+			}
+		}
 	});
 
 	var $query = $("input.query").keyup(function() {
 		clearTimeout(searchTimeout);
 		searchTimeout = setTimeout(doSearch, 500);
-	}).focus(function() {  // instant search
+	}).focus(function() { // instant search
 		$('aside.left .active').removeClass('active');
 	});
 
@@ -566,6 +566,11 @@ $(function() {
 		}
 	});
 
+	$("aside.left>.my-keeps>a").click(function() {
+		populateMyKeeps();
+		addNewKeeps();
+	});
+
 	$colls.on('click', "h3 a", function() {
 		populateMyKeeps($(this).parent().data('id'));
 	});
@@ -606,9 +611,9 @@ $(function() {
 						<ul><li><a class=rename href=javascript:>Rename</a></li>\
 								<li><a class=remove href=javascript:>Remove</a></li></ul>\
 						</div><a href=javascript:><span class="name long-text">' + newName + '</span> <span class="right light">0</span></a></h3>')
-				   .appendTo('#collections-wrapper');
+					 .appendTo('#collections-wrapper');
 					makeCollectionsDroppable($coll);
-				  // TODO: Use Tempo templates!!
+					// TODO: Use Tempo templates!!
 					$('aside.right .actions .collections ul li.create')
 						.after('<li><input type="checkbox" data-id="' + data.id + '" id="cb-' + data.id + '"><label class="long-text" for="cb-' + data.id + '"><span></span>' + newName + '</label></li>');
 					collections[data.id] = {id: data.id, name: newName};

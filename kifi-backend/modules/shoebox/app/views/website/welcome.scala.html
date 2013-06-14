@@ -1,18 +1,39 @@
-@(id: Option[ExternalId[Invitation]] = None, socialUser: Option[SocialUserInfo] = None)
+@(id: Option[ExternalId[Invitation]] = None, socialUser: Option[SocialUserInfo] = None, isNewHome: Boolean = false)
 
 @helper.main(title = "Welcome to Kifi!", scripts = Seq("website/welcome"), hiddenElements = Seq("header")) {
   <section class="content clearfix text_center welcome">
     <h1>Welcome to the <img src="@routes.Assets.at("images/logo2.png")" width="103" height="58" class="logo2"> private beta!</h1>
 
-    <p>KiFi is still in stealth-mode and is open for<br>beta tester upon invitation only.</p>
+    <p>KiFi is still in stealth-mode and is open for<br>beta testers upon invitation only.</p>
 
     <div class="welcome_btn">
-      @if(id.isDefined) {
-        <a href="@com.keepit.controllers.website.routes.OnboardingController.signup(id.get.id)" class="btn blue big">@if(socialUser.isDefined) {It's me, @socialUser.get.fullName. } else {}Let me in!</a>
+      @if(isNewHome) {
+        <div class="letmein">
+          @if(id.isDefined) {
+            <a href="#" class="big blue btn">@if(socialUser.isDefined) {It's me, @socialUser.get.fullName.} Let me in!</a>
+          } else {
+            <a href="#" class="big blue btn" id="letmein">Let me in!</a>
+          }
+        </div>
+        <div class="networks">
+        @for(network <- SocialNetworks.ALL) {
+          <a href="@securesocial.controllers.routes.ProviderController.authenticate(network.name)" class="big blue btn">
+            Log in with @network.displayName
+          </a>
+        }
+        </div>
       } else {
-        <a href="@com.keepit.controllers.website.routes.OnboardingController.signup()" class="btn blue big">Let me in!</a>
+        @if(id.isDefined) {
+          <a href="@com.keepit.controllers.website.routes.OnboardingController.signup(id.get.id)" class="btn blue big">@if(socialUser.isDefined) {It's me, @socialUser.get.fullName. } else {}Let me in!</a>
+        } else {
+          <a href="@com.keepit.controllers.website.routes.OnboardingController.signup()" class="btn blue big">Let me in!</a>
+        }
       }
-        <div class="powered">Powered by Facebook Connect</div>
+      <div class="powered">Powered by Kifi Konnect</div>
     </div>
   </section>
 }
+
+<script>
+    $("#letmein").click(function () { $(".welcome_btn").addClass("clicked"); });
+</script>

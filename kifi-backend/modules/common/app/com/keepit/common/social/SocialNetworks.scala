@@ -4,7 +4,7 @@ case class SocialId(id: String) {
   override def toString = id
 }
 
-sealed abstract class SocialNetworkType(val name: String) {
+sealed abstract class SocialNetworkType(val name: String, val displayName: String) {
   override def toString: String = name
 }
 
@@ -17,7 +17,7 @@ object SocialNetworkType {
 }
 
 object SocialNetworks {
-  val ALL = Set(FACEBOOK, LINKEDIN)
-  case object LINKEDIN extends SocialNetworkType("linkedin")
-  case object FACEBOOK extends SocialNetworkType("facebook")
+  val ALL = Seq(FACEBOOK, LINKEDIN)
+  case object LINKEDIN extends SocialNetworkType("linkedin", "LinkedIn")
+  case object FACEBOOK extends SocialNetworkType("facebook", "Facebook")
 }

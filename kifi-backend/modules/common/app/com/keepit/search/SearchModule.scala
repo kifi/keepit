@@ -32,7 +32,7 @@ import com.keepit.social.RemoteSecureSocialAuthenticatorPlugin
 import com.keepit.social.RemoteSecureSocialUserPlugin
 import com.keepit.social.SecureSocialAuthenticatorPlugin
 import com.keepit.social.SecureSocialUserPlugin
-
+import com.keepit.common.cache.SearchCacheModule
 import play.api.Play.current
 
 class SearchExclusiveModule() extends ScalaModule with Logging {
@@ -66,6 +66,7 @@ class SearchModule() extends ScalaModule with Logging {
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
     bind[RemotePostOffice].to[RemotePostOfficeImpl]
+    install(new SearchCacheModule)
   }
 
   private def getDirectory(maybeDir: Option[String]): Directory = {
