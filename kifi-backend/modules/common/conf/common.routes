@@ -1,6 +1,12 @@
 
 
 ##########################################
+# Search Extension API
+##########################################
+GET     /search                     @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String])
+
+
+##########################################
 # External Services API
 ##########################################
 #todo(eishay): change routes and callback in sendgrid
