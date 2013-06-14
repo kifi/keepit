@@ -12,12 +12,7 @@ trait WithMetric[T, V <: Vectorized[T], M <: Metric] extends Vectorized[T] {
   val vectorized: V
   val metric : M
   override def vectorRepresentation = vectorized.vectorRepresentation
-
-  final def distanceTo(other: WithMetric[T, V, M]): Double = {
-    val x = this.vectorRepresentation
-    val y = other.vectorRepresentation
-    metric.distance(x, y)
-  }
+  final def distanceTo(other: WithMetric[T, V, M]): Double = metric.distance(this.vectorRepresentation, other.vectorRepresentation)
 }
 
 class UserByTopicWithEucledian (val vectorized: UserByTopic) extends WithMetric[Id[User], UserByTopic, EucledianMetric] {
