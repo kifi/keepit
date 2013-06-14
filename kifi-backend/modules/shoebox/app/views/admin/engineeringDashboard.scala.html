@@ -78,7 +78,7 @@
 
   // Websocket Ping Chart
 
-  var websocketTargets = baseTargets.concat('summarize(stats.counters.shoebox.websocket.ping.count,"1min")')
+  var websocketTargets = baseTargets.concat('summarize(stats.counters.shoebox.websocket.handler.ping.count,"1min")')
   options.target = websocketTargets;
   options.title = "WebSocket Pings per Minute";
   $("#websocket").graphite(options);
