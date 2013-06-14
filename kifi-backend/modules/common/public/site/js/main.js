@@ -264,7 +264,7 @@ $(function() {
 		$myKeeps.show();
 		if (lastKeep != "end") {
 			showLoading();
-			console.log("Fetching %d keeps %s", params.count, lastKeep ? "before " + lastKeep : "");
+			console.log("Fetching 30 keep before " + lastKeep);
 			$.getJSON(urlMyKeeps, params,
 				function(data) {
 					if (data.keeps.length == 0) { // end of results
@@ -417,7 +417,15 @@ $(function() {
 		if (!$(e.target).is('textarea,input')) {
 			$query.focus();
 		}
-	});
+	}).scroll(function() { // infinite scroll
+		if (!isLoading() && $(document).height() - ($(window).scrollTop() + $(window).height()) < 300) { //  scrolled down to less than 300px from the bottom
+			if (searchContext) {
+				doSearch(searchContext);
+			} else {
+				populateMyKeeps($colls.find(".collection.active").data("id"));
+			}
+		}
+	})
 
 	var $main = $(".main").on("click", ".keep", function(e) {
 		// 1. Only one keep at a time can be selected and not checked.
@@ -478,14 +486,6 @@ $(function() {
 				$btn.removeClass('kept private').find('.text').text('keep it');
 			}
 			showRightSide();
-		}
-	}).scroll(function() { // infinite scroll
-		if (!isLoading() && this.clientHeight + this.scrollTop > this.scrollHeight - 300) {
-			if (searchContext) {
-				doSearch(searchContext);
-			} else {
-				populateMyKeeps($colls.find(".collection.active").data("id"));
-			}
 		}
 	});
 
