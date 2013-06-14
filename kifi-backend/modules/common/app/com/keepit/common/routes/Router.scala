@@ -34,6 +34,16 @@ case object GET extends Method("GET")
 case object POST extends Method("POST")
 case object PUT extends Method("PUT")
 
+/*
+  Hello future FortyTwoers. This will help you generate these (still need to handle params, but saves 80% of time):
+    val regex = """(POST|GET)\s*(/internal\S*)[\s].*\.(.*)""".r
+    def convert(s: String) = s match {
+      case regex(a,b, c) => println(s"""def $c = ServiceRoute($a, "$b")""")
+    }
+    val all = """ ....... """ // (copy from Play routes)
+    all.split("\n").filter(_.nonEmpty).map(convert)
+ */
+
 object shoebox extends Service {
   object service {
     def getNormalizedURI(id: Long) = ServiceRoute(GET, "/internal/shoebox/database/getNormalizedURI", Param("id", id))
