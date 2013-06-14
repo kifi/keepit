@@ -109,7 +109,7 @@ class ShoeboxController @Inject() (
     val socialId = SocialId(id)
     val network = SocialNetworkType(networkType)
     val sui = db.readOnly { implicit session =>
-      socialUserInfoRepo.get(socialId, SocialNetworks.FACEBOOK)
+      socialUserInfoRepo.get(socialId, network)
     }
     Ok(Json.toJson(sui))
   }
