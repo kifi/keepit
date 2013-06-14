@@ -48,6 +48,7 @@ threadPane = function() {
         // It's important that we check the buffer after rendering the messages, to avoid creating a window
         // of time during which we might miss an incoming message on this thread.
         if (buffer.threadId == threadId && !messages.some(function(m) {return m.id == buffer.message.id})) {
+          api.log("[render] appending buffered message", buffer.message.id);
           messages.push(buffer.message);
           renderMessage(buffer.message, session.userId, function($m) {
             $holder.append($m);
@@ -61,10 +62,12 @@ threadPane = function() {
     update: function(threadId, message, userId) {
       if ($holder.length && $holder.data("threadId") == threadId) {
         renderMessage(message, userId, function($m) {
-          var $old;
-          if (message.isLoggedInUser && ($old = $holder.find(".kifi-message-sent[data-id=]").first()).length) {
-            $old.replaceWith($m);
-          } else {
+          if (!message.isLoggedInUser ||
+              !$holder.find(".kifi-message-sent[data-id=" + message.id + "]").length &&
+              !$holder.find(".kifi-message-sent[data-id=]").get().some(function(el) {
+                api.log("[update] comparing message text");
+                return $(el).data("text") === message.text;
+              })) {
             $holder.append($m);  // should we compare timestamps and insert in order?
             $scroller.scrollToBottom();
           }
@@ -92,14 +95,15 @@ threadPane = function() {
     }};
 
   function sendReply($container, threadId, session, e, text) {
-    // logEvent("keeper", "reply");
+    var $reply, resp;
     api.port.emit("send_reply", {
         url: document.URL,
         title: document.title,
         text: text,
         threadId: threadId},
-      function(resp) {
-        api.log("[sendReply] resp:", resp);
+      function(o) {
+        api.log("[sendReply] resp:", o);
+        updateSentReply($reply, resp = o);
       });
     renderMessage({
       id: "",
@@ -110,7 +114,8 @@ threadPane = function() {
         firstName: session.name,
         lastName: ""}
     }, session.userId, function($m) {
-      $holder.append($m);
+      updateSentReply($reply = $m, resp);
+      $holder.append($m.data("text", text));
       $scroller.scrollToBottom();
     });
   }
@@ -122,6 +127,16 @@ threadPane = function() {
     render("html/metro/message.html", m, function(html) {
       callback($(html).find("time").timeago().end());
     });
+  }
+
+  function updateSentReply($m, resp) {
+    if ($m && resp) {
+      $m.attr("data-id", resp.id);
+      $m.find("time")  // TODO: patch timeago to update attrs too
+        .attr("datetime", resp.createdAt)
+        .attr("title", getLocalDateFormatter()(resp.createdAt, function render(s) {return s}))
+        .timeago("update", resp.createdAt);
+    }
   }
 
   function emitRead(threadId, m) {
