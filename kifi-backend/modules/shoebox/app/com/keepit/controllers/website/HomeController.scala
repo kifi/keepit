@@ -42,8 +42,7 @@ class HomeController @Inject() (db: Database,
   }
 
   def test = Action {
-    log.info("xxxxxxx\n\n" + current.configuration.getString("application.router"))
-    Ok
+    Ok(Play.resource("app_version.txt").toString)
   }
 
   def home = HtmlAction(true)(authenticatedAction = { implicit request =>

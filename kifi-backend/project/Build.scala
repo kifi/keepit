@@ -29,7 +29,9 @@ object ApplicationBuild extends Build {
     }
 
     writeToFile("conf/app_version.txt", appVersion)
+    writeToFile("modules/common/conf/app_version.txt", appVersion)
     writeToFile("conf/app_compilation_date.txt", now)
+    writeToFile("modules/common/conf/app_compilation_date.txt", now)
 
     val commonDependencies = Seq(
       jdbc,
