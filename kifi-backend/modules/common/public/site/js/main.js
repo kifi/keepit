@@ -54,7 +54,7 @@ $(function() {
 		});
 		$results.find(".keep.mine .bottom:not(:has(.me))")
 			.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
-		$('div.search .num-results').text('Showing ' + $results.find('.keep').length + ' for "' + $query.val() + '"');
+		$('.search>.num-results').text('Showing ' + $results.find('.keep').length + ' for "' + searchResponse.query + '"');
 	});
 	var $colls = $("#collections"), collTmpl = Tempo.prepare($colls).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 		makeCollectionsDroppable($colls.find(".collection"));
@@ -63,7 +63,7 @@ $(function() {
 	var $inColl = $(".in-collections"), inCollTmpl = Tempo.prepare($inColl);
 
 	var me;
-	var searchContext;
+	var searchResponse;
 	var connections = {};
 	var collections = {};
 	var connectionNames = [];
@@ -198,12 +198,12 @@ $(function() {
 		$myKeeps.hide().find('.keep.selected').removeClass('selected').find('input[type="checkbox"]').prop('checked', false);
 		$('aside.left .active').removeClass('active');
 		$('.search h1').hide();
-		$('.search .num-results').show();
+		$('.search>.num-results').show();
 		//$('aside.right').show();
 		showLoading();
 		$results.show();
-		var q = $query.val();
-		$query.data("q", q);
+		var q = $.trim($query.val());
+		$query.attr("data-q", q || null);
 		$.getJSON(urlSearch, {
 			maxHits: 30,
 			f: $('select[name="keepers"]').val() == 'c' ? $('#custom-keepers').textext()[0].tags().tagElements().find('.text-label').map(function(){return connections[$(this).text()]}).get().join('.') : $('select[name="keepers"]').val(),
@@ -211,7 +211,7 @@ $(function() {
 			context: context
 		},
 		function(data) {
-			searchContext = data.mayHaveMore ? data.context : null;
+			searchResponse = data;
 			if (context == null) {
 				searchTemplate.render(data.hits);
 				hideRightSide();
@@ -252,11 +252,11 @@ $(function() {
 			hideRightSide();
 		}
 		searchTemplate.clear();
-		$query.val('');
-		searchContext = null;
+		$query.val("").removeAttr("data-q");
+		searchResponse = null;
 	//	$('aside.right').hide();
-		$('.search h1').show();
-		$('.search .num-results').hide();
+		$('.search>h1').show();
+		$('.search>.num-results').hide();
 		if (lastKeep == null) {
 			$myKeeps.find('.search-section').remove();
 		} else {
@@ -482,24 +482,31 @@ $(function() {
 		}
 	}).scroll(function() { // infinite scroll
 		if (!isLoading() && this.clientHeight + this.scrollTop > this.scrollHeight - 300) {
-			if (searchContext) {
-				doSearch(searchContext);
+			if (searchResponse) {
+				doSearch(searchResponse.context);
 			} else {
 				populateMyKeeps($colls.find(".collection.active").data("id"));
 			}
 		}
 	});
 
-	var $query = $("input.query").keyup(function(e) {
+	var $query = $("input.query").on("keydown input", function(e) {
+		console.log("[clearTimeout]", e.type);
 		clearTimeout(searchTimeout);
 		var q = $.trim(this.value);
-		if (q === ($query.data("q") || "")) {
+		if (q === ($query.attr("data-q") || "")) {
+			console.log("[no change]");
 			return;  // no change
 		} else if (!q) {
+			console.log("[populateMyKeeps]");
 			populateMyKeeps();
-		} else if (e.which == 13) {  // Enter
-			doSearch();
+		} else if (e.which) {
+			if (e.which == 13) { // Enter
+				console.log("[doSearch]");
+				doSearch();
+			}
 		} else {
+			console.log("[setTimeout]");
 			searchTimeout = setTimeout(doSearch, 500);  // instant search
 		}
 	});
