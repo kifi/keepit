@@ -1,19 +1,16 @@
 package com.keepit.module
 
 import net.codingwell.scalaguice.ScalaModule
-
 import com.google.inject.{Singleton, Provides}
 import com.keepit.common.logging.Logging
 import com.keepit.common.service._
 import com.keepit.common.amazon._
-
 import com.keepit.common.net.HttpClient
-
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.zookeeper._
-
 import play.api.Mode
 import play.api.Mode._
+import com.google.inject.Provider
 
 class DiscoveryModule extends ScalaModule with Logging {
 
@@ -21,12 +18,12 @@ class DiscoveryModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def serviceDiscovery(services: FortyTwoServices, mode: Mode, amazonInstanceInfo: AmazonInstanceInfo): ServiceDiscovery = mode match {
+  def serviceDiscovery(services: FortyTwoServices, mode: Mode, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo]): ServiceDiscovery = mode match {
     case Mode.Prod =>
       //todo: have a dedicated host for zk (instead of using localhost)
       val zk = new ZooKeeperClientImpl("localhost", 2000,
         Some({zk1 => println(s"in callback, got $zk1")}))
-      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfo)
+      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider)
     case _ =>
       new ServiceDiscovery {
         def register() = Node("me")
@@ -39,7 +36,7 @@ class DiscoveryModule extends ScalaModule with Logging {
   def amazonInstanceInfo(httpClient: HttpClient): AmazonInstanceInfo = {
     val metadataUrl: String = "http://169.254.169.254/latest/meta-data/"
 
-    AmazonInstanceInfo(
+    val instance = AmazonInstanceInfo(
       instanceId = AmazonInstanceId(httpClient.get(metadataUrl + "instance-id").body),
       localHostname = httpClient.get(metadataUrl + "local-hostname").body,
       publicHostname = httpClient.get(metadataUrl + "public-hostname").body,
@@ -51,6 +48,8 @@ class DiscoveryModule extends ScalaModule with Logging {
       amiId = httpClient.get(metadataUrl + "ami-id").body,
       amiLaunchIndex = httpClient.get(metadataUrl + "ami-launch-index").body
     )
+    log.info(s"my amazon instance is ${instance.toString}")
+    instance
   }
 
 }
