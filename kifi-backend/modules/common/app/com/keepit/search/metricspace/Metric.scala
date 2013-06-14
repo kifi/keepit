@@ -15,7 +15,7 @@ class EucledianMetric extends Metric {
 
 class Intersection extends Metric {
   override def distance(a: Array[Double], b: Array[Double]) = {
-    require(a.length == b.length)
+    require(a.length == b.length && a.forall(_>=0) && b.forall(_>=0))
     (a zip b).foldLeft(0.0)((s, ab) => s + (ab._1 min ab._2))
   }
 }
