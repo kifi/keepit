@@ -5,9 +5,10 @@ import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick._
-import com.keepit.common.mail.{EmailAddresses, ElectronicMail, PostOffice, LocalPostOffice}
-import com.keepit.model._
 import com.keepit.common.mail.EmailAddresses
+import com.keepit.common.mail.{ElectronicMail, PostOffice, LocalPostOffice}
+import com.keepit.common.social.SocialNetworks
+import com.keepit.model._
 
 import play.api.Play.current
 import play.api._
@@ -33,6 +34,9 @@ class HomeController @Inject() (db: Database,
   private def userCanInvite[A](implicit request: AuthenticatedRequest[A]): Boolean =
     (request.experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.CAN_INVITE)).nonEmpty
 
+  private def userCanConnectWithSocialNetworks[A](implicit request: AuthenticatedRequest[A]): Boolean =
+    (request.experiments & Set(ExperimentTypes.ADMIN)).nonEmpty || Play.isDev
+
   def kifiSite(path: String) = AuthenticatedHtmlAction { implicit request =>
     if (userCanSeeKifiSite) {
       Play.resourceAsStream(s"public/site/$path") map { stream =>
@@ -46,7 +50,10 @@ class HomeController @Inject() (db: Database,
     Ok
   }
 
-  def home = HtmlAction(true)(authenticatedAction = { implicit request =>
+  def home: Action[AnyContent] = home(isNewHome = false)
+  def newHome: Action[AnyContent] = home(isNewHome = true)
+
+  def home(isNewHome: Boolean) = HtmlAction(true)(authenticatedAction = { implicit request =>
 
     if (request.user.state == UserStates.PENDING) {
       pendingHome()
@@ -59,10 +66,16 @@ class HomeController @Inject() (db: Database,
         }.flatten
       }
 
-      Ok(views.html.website.userHome(request.user, friendsOnKifi, userCanInvite, userCanSeeKifiSite))
+      val networks = db.readOnly { implicit s =>
+        val socialUsers = socialUserRepo.getByUser(request.userId)
+        SocialNetworks.ALL.map(n => n -> socialUsers.exists(_.networkType == n))
+      }
+
+      Ok(views.html.website.userHome(request.user, friendsOnKifi, networks,
+        userCanInvite, userCanSeeKifiSite, userCanConnectWithSocialNetworks))
     }
   }, unauthenticatedAction = { implicit request =>
-    Ok(views.html.website.welcome())
+    Ok(views.html.website.welcome(isNewHome = isNewHome))
   })
 
   def pendingHome()(implicit request: AuthenticatedRequest[AnyContent]) = {

@@ -3,6 +3,7 @@
 ##########################################
 
 GET     /                           @com.keepit.controllers.website.HomeController.home
+GET     /2                          @com.keepit.controllers.website.HomeController.newHome
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
 
