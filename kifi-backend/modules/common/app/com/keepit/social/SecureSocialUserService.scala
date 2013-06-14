@@ -303,9 +303,7 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
       require(socialUserInfo.credentials.isDefined,
         "social user info's credentials is not defined: %s".format(socialUserInfo))
       require(socialUserInfo.userId.isDefined, "social user id  is not defined: %s".format(socialUserInfo))
-      for (sgp <- maybeSocialGraphPlugin if socialUserInfo.state != SocialUserInfoStates.FETCHED_USING_SELF) {
-        sgp.asyncFetch(socialUserInfo)
-      }
+      maybeSocialGraphPlugin foreach { _.asyncFetch(socialUserInfo) }
       log.info("persisting %s into %s".format(socialUser, socialUserInfo))
       socialUser
     }
