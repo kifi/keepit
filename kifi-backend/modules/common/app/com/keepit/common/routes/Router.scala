@@ -27,6 +27,7 @@ object ParamValue {
   implicit def stateToParam[T](i: State[T]) = ParamValue(i.value)
   implicit def externalIdToParam[T](i: ExternalId[T]) = ParamValue(i.id)
   implicit def idToParam[T](i: Id[T]) = ParamValue(i.id.toString)
+  implicit def optionToParam[T](i: Option[T])(implicit e: T => ParamValue) = if(i.nonEmpty) e(i.get) else ParamValue("")
 }
 
 abstract class Method(name: String)
@@ -44,8 +45,8 @@ case object PUT extends Method("PUT")
     all.split("\n").filter(_.nonEmpty).map(convert)
  */
 
-object shoebox extends Service {
-  object service {
+object Shoebox extends Service {
+  object internal {
     def getNormalizedURI(id: Long) = ServiceRoute(GET, "/internal/shoebox/database/getNormalizedURI", Param("id", id))
     def getNormalizedURIs(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getNormalizedURIs", Param("ids", ids))
     def getUsers(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getUsers", Param("ids", ids))
@@ -81,8 +82,8 @@ object shoebox extends Service {
   }
 }
 
-object search extends Service {
-  object service {
+object Search extends Service {
+  object internal {
     def logResultClicked() = ServiceRoute(POST, "/internal/search/events/resultClicked")
     def uriGraphInfo() = ServiceRoute(GET, "/internal/search/uriGraph/info")
     def sharingUserInfo(userId: Id[User], uriIds: String) = ServiceRoute(GET, "/internal/search/uriGraph/sharingUserInfo", Param("userId", userId), Param("uriIds", uriIds))
@@ -96,6 +97,25 @@ object search extends Service {
     def refreshSearcher() = ServiceRoute(POST, "/internal/search/index/refreshSearcher")
     def refreshPhrases() = ServiceRoute(POST, "/internal/search/index/refreshPhrases")
     def searchDumpLuceneDocument(id: Id[NormalizedURI]) = ServiceRoute(POST, s"/internal/search/index/dumpDoc/${id.id}")
+    def searchKeeps(userId: Id[User], query: String) = ServiceRoute(POST, "/internal/search/search/keeps", Param("userId", userId), Param("query", query))
+    def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/search/search/explainResult", Param("query", query), Param("userId", userId), Param("uriId", uriId))
+    def causeError() = ServiceRoute(GET, "/internal/search/search/causeError")
+    def buildDictionary() = ServiceRoute(POST, "/internal/search/spell/buildDict")
+    def getBuildStatus() = ServiceRoute(GET, "/internal/search/spell/buildStatus")
+    def correctSpelling(query: String) = ServiceRoute(GET, "/internal/search/spell/make-correction", Param("query", query))
+    def getSearchStatistics() = ServiceRoute(POST, "/internal/search/getSearchStatistics")
+    def showUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}")
+    def setUserConfig(id: Id[User]) = ServiceRoute(POST, s"/internal/search/searchConfig/${id.id}/set")
+    def resetUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}/reset")
+    def getSearchDefaultConfig = ServiceRoute(GET, "/internal/search/defaultSearchConfig/defaultSearchConfig")
+    def friendMapJson(userId: Id[User], query: Option[String] = None, minKeeps: Option[Int] = None) = ServiceRoute(GET, "/internal/search/search/friendMapJson", Param("userId", userId), Param("query", query), Param("minKeeps", minKeeps))
+  }
+}
+
+object Common {
+  object internal {
+    def benchmarksResults() = ServiceRoute(GET, "/internal/benchmark")
+    def version() = ServiceRoute(GET, "/internal/version")
   }
 }
 
