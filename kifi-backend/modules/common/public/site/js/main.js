@@ -202,8 +202,8 @@ $(function() {
 		//$('aside.right').show();
 		showLoading();
 		$results.show();
-		var q = $query.val();
-		$query.attr("data-q", q);
+		var q = $.trim($query.val());
+		$query.attr("data-q", q || null);
 		$.getJSON(urlSearch, {
 			maxHits: 30,
 			f: $('select[name="keepers"]').val() == 'c' ? $('#custom-keepers').textext()[0].tags().tagElements().find('.text-label').map(function(){return connections[$(this).text()]}).get().join('.') : $('select[name="keepers"]').val(),
@@ -252,7 +252,7 @@ $(function() {
 			hideRightSide();
 		}
 		searchTemplate.clear();
-		$query.val('');
+		$query.val("").removeAttr("data-q");
 		searchResponse = null;
 	//	$('aside.right').hide();
 		$('.search>h1').show();
@@ -490,16 +490,23 @@ $(function() {
 		}
 	});
 
-	var $query = $("input.query").keyup(function(e) {
+	var $query = $("input.query").on("keydown input", function(e) {
+		console.log("[clearTimeout]", e.type);
 		clearTimeout(searchTimeout);
 		var q = $.trim(this.value);
-		if (q === ($query.data("q") || "")) {
+		if (q === ($query.attr("data-q") || "")) {
+			console.log("[no change]");
 			return;  // no change
 		} else if (!q) {
+			console.log("[populateMyKeeps]");
 			populateMyKeeps();
-		} else if (e.which == 13) {  // Enter
-			doSearch();
+		} else if (e.which) {
+			if (e.which == 13) { // Enter
+				console.log("[doSearch]");
+				doSearch();
+			}
 		} else {
+			console.log("[setTimeout]");
 			searchTimeout = setTimeout(doSearch, 500);  // instant search
 		}
 	});
