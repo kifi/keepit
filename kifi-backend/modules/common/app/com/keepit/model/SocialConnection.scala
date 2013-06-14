@@ -31,6 +31,7 @@ trait SocialConnectionRepo extends Repo[SocialConnection] {
   def getConnectionOpt(u1: Id[SocialUserInfo], u2: Id[SocialUserInfo] )(implicit session: RSession): Option[SocialConnection]
   def getUserConnections(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
   def getSocialUserConnections(id: Id[SocialUserInfo])(implicit session: RSession): Seq[SocialUserInfo]
+  def deactivateAllConnections(id: Id[SocialUserInfo])(implicit session: RWSession): Int
 }
 
 @Singleton
@@ -119,6 +120,12 @@ class SocialConnectionRepoImpl @Inject() (
         (for (t <- socialRepo.table if t.id inSet users) yield t).list
       case _ => Nil
     }
+  }
+
+  def deactivateAllConnections(id: Id[SocialUserInfo])(implicit session: RWSession): Int = {
+    (for {
+      t <- table if (t.socialUser1 === id || t.socialUser2 === id) && t.state === SocialConnectionStates.ACTIVE
+    } yield t.state).update(SocialConnectionStates.INACTIVE)
   }
 }
 
