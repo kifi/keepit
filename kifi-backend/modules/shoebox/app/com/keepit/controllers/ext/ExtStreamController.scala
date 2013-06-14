@@ -35,6 +35,7 @@ import play.api.mvc.RequestHeader
 import play.api.mvc.WebSocket
 import play.api.mvc.WebSocket.FrameFormatter
 import securesocial.core.{UserService, SecureSocial}
+import play.modules.statsd.api.Statsd
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]])
 
@@ -231,7 +232,8 @@ class ExtStreamController @Inject() (
 
           val iteratee = asyncIteratee { jsArr =>
             Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
-              handler(jsArr.value.tail)
+              Statsd.increment(s"websocket.${jsArr.value(0)}")
+              Statsd.time(s"websocket.${jsArr.value(0)}") {handler(jsArr.value.tail)}
             } getOrElse {
               log.warn("WS no handler for: " + jsArr)
             }
@@ -243,6 +245,7 @@ class ExtStreamController @Inject() (
           (iteratee, Enumerator(Json.arr("hi")) >>> enumerator)
 
         case None =>
+          Statsd.increment(s"websocket.anonymous")
           log.info("Disconnecting anonymous user")
           (Iteratee.ignore, Enumerator(Json.arr("denied")) >>> Enumerator.eof)
       }
