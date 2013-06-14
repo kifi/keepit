@@ -7,7 +7,7 @@ import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick._
 import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.{ElectronicMail, PostOffice, LocalPostOffice}
-import com.keepit.common.social.SocialNetworks
+import com.keepit.common.social.{SocialGraphPlugin, SocialNetworkType, SocialNetworks}
 import com.keepit.model._
 
 import play.api.Play.current
@@ -25,7 +25,9 @@ class HomeController @Inject() (db: Database,
   invitationRepo: InvitationRepo,
   actionAuthenticator: ActionAuthenticator,
   postOffice: LocalPostOffice,
-  emailAddressRepo: EmailAddressRepo)
+  emailAddressRepo: EmailAddressRepo,
+  socialConnectionRepo: SocialConnectionRepo,
+  socialGraphPlugin: SocialGraphPlugin)
   extends WebsiteController(actionAuthenticator) {
 
   private def userCanSeeKifiSite[A](implicit request: AuthenticatedRequest[A]): Boolean =
@@ -145,6 +147,26 @@ class HomeController @Inject() (db: Database,
       }
     }
     Ok(views.html.website.install(request.user))
+  }
+
+  def disconnect(networkString: String) = AuthenticatedHtmlAction { implicit request =>
+    val network = SocialNetworkType(networkString)
+    val (thisNetwork, otherNetworks) = db.readOnly { implicit s =>
+      socialUserRepo.getByUser(request.userId).partition(_.networkType == network)
+    }
+    if (otherNetworks.isEmpty) {
+      BadRequest("You must have at least one other network connected.")
+    } else if (thisNetwork.isEmpty) {
+      BadRequest(s"You are not connected to ${network.displayName}.")
+    } else {
+      val sui = thisNetwork.head
+      db.readWrite { implicit s =>
+        socialConnectionRepo.deactivateAllConnections(sui.id.get)
+        socialUserRepo.save(sui.copy(credentials = None, userId = None))
+      }
+      otherNetworks map socialGraphPlugin.asyncFetch
+      Redirect(securesocial.controllers.routes.LoginPage.logout())
+    }
   }
 
   def gettingStarted = AuthenticatedHtmlAction { implicit request =>
