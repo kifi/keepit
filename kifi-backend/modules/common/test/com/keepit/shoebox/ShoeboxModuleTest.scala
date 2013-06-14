@@ -15,6 +15,8 @@ import play.api.mvc.Controller
 import play.api.test.Helpers.running
 import scala.collection.JavaConversions._
 import scala.reflect.ManifestFactory.classType
+import com.keepit.common.net.FakeClientResponse
+import com.keepit.common.zookeeper.ServiceDiscovery
 
 class ShoeboxModuleTest extends Specification with Logging {
 
@@ -24,7 +26,7 @@ class ShoeboxModuleTest extends Specification with Logging {
 
   "Module" should {
     "instantiate controllers" in {
-      running(new ShoeboxApplication().withFakeMail().withFakeCache()
+      running(new ShoeboxApplication().withFakeMail().withFakeCache().withFakeHttpClient(FakeClientResponse.fakeAmazonDiscoveryClient)
           .withS3DevModule().withFakePersistEvent.withShoeboxServiceModule.withSearchConfigModule) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {
@@ -45,6 +47,7 @@ class ShoeboxModuleTest extends Specification with Logging {
         } foreach { key =>
           injector.getInstance(key)
         }
+        injector.getInstance(classOf[ServiceDiscovery])
         true
       }
     }

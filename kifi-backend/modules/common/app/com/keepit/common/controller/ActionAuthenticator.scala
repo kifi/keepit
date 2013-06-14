@@ -218,7 +218,7 @@ class RemoteActionAuthenticator @Inject() (
   private def authenticatedHandler[T](apiClient: Boolean, allowPending: Boolean)(authAction: AuthenticatedRequest[T] => Result) = { implicit request: SecuredRequest[T] => /* onAuthenticated */
       val userId = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map(id => Id[User](id.toLong)).getOrElse {
         // If this fails, then SecureSocial says they're authenticated, but they're not.
-        monitoredAwait.result(shoeboxClient.getSocialUserInfoByNetworkAndSocialId(SocialId(request.user.id.id), SocialNetworks.FACEBOOK), 3 seconds, s"on social user id $request.user.id.id").get.userId.get
+        monitoredAwait.result(shoeboxClient.getSocialUserInfoByNetworkAndSocialId(SocialId(request.user.id.id), SocialNetworkType(request.user.id.providerId)), 3 seconds, s"on social user id $request.user.id.id").get.userId.get
       }
       val experimentsFuture = getExperiments(userId).map(_.toSet)
       val impersonatedUserIdOpt: Option[ExternalId[User]] = impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))

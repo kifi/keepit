@@ -30,6 +30,12 @@
             <li><b>@network.displayName</b>
             @if(isConnected) {
               connected.
+              @if(networks.count(_._2) > 1) {
+                <form action="@com.keepit.controllers.website.routes.HomeController.disconnect(network.name)"
+                  style="display:inline" method="post">
+                  <button type="submit">Disconnect</button>
+                </form>
+              }
             } else {
               not connected.
               <a href="@securesocial.controllers.routes.ProviderController.authenticate(network.name)">

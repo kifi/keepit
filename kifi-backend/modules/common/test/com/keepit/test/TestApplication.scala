@@ -3,12 +3,9 @@ package com.keepit.test
 import scala.collection.mutable
 import scala.concurrent._
 import scala.slick.session.{Database => SlickDatabase}
-
 import org.apache.zookeeper.CreateMode
 import org.joda.time.{ReadablePeriod, DateTime}
-
 import net.codingwell.scalaguice.{ScalaModule, ScalaMultibinder}
-
 import com.google.inject.Module
 import com.google.inject.Provider
 import com.google.inject.Provides
@@ -37,7 +34,6 @@ import com.keepit.scraper._
 import com.keepit.search._
 import com.keepit.shoebox._
 import com.keepit.social._
-
 import akka.actor.ActorSystem
 import akka.actor.Cancellable
 import akka.actor.Scheduler
@@ -66,13 +62,17 @@ import com.keepit.common.social.FakeSecureSocialUserServiceModule
 import com.keepit.model.NormalizedURI
 import com.keepit.search.index.FakePhraseIndexerModule
 import com.keepit.common.amazon.AmazonInstanceId
+import com.keepit.common.net.FakeClientResponse
 
 class TestApplication(val _global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
+  
+  val emptyFakeHttpClient: PartialFunction[String, FakeClientResponse] = Map()
+  
   def withFakeMail() = overrideWith(FakeMailModule())
   def withFakeScraper() = overrideWith(FakeScraperModule())
   def withFakeScheduler() = overrideWith(FakeSchedulerModule())
-  def withFakeHttpClient() = overrideWith(FakeHttpClientModule())
+  def withFakeHttpClient(requestToResponse: PartialFunction[String, FakeClientResponse] = emptyFakeHttpClient) = overrideWith(FakeHttpClientModule(requestToResponse))
   def withFakeStore() = overrideWith(FakeS3StoreModule())
   def withFakeHealthcheck() = overrideWith(FakeHealthcheckModule())
   def withRealBabysitter() = overrideWith(BabysitterModule())
