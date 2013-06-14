@@ -492,7 +492,7 @@ $(function() {
 	var $query = $("input.query").keyup(function() {
 		clearTimeout(searchTimeout);
 		searchTimeout = setTimeout(doSearch, 500);
-	}).focus(function() {	// instant search
+	}).focus(function() { // instant search
 		$('aside.left .active').removeClass('active');
 	});
 
@@ -564,6 +564,11 @@ $(function() {
 			$('.text-core').hide();
 			doSearch();
 		}
+	});
+
+	$("aside.left>.my-keeps>a").click(function() {
+		populateMyKeeps();
+		addNewKeeps();
 	});
 
 	$colls.on('click', "h3 a", function() {
