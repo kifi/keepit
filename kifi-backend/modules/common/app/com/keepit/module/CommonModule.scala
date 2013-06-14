@@ -9,7 +9,6 @@ import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.keepit.common.actor._
 import com.keepit.common.analytics._
-import com.keepit.common.cache.CacheModule
 import com.keepit.common.controller.FortyTwoCookies._
 import com.keepit.common.healthcheck.{HealthcheckHost, HealthcheckPluginImpl, HealthcheckPlugin, HealthcheckActor}
 import com.keepit.common.logging.Logging
@@ -31,7 +30,6 @@ class CommonModule extends ScalaModule with Logging {
 
   def configure() {
     install(new FortyTwoModule)
-    install(new CacheModule)
     install(new S3Module)
     install(new DiscoveryModule)
 
