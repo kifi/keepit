@@ -66,9 +66,9 @@ import com.keepit.common.net.FakeClientResponse
 
 class TestApplication(val _global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
-  
+
   val emptyFakeHttpClient: PartialFunction[String, FakeClientResponse] = Map()
-  
+
   def withFakeMail() = overrideWith(FakeMailModule())
   def withFakeScraper() = overrideWith(FakeScraperModule())
   def withFakeScheduler() = overrideWith(FakeSchedulerModule())
@@ -176,9 +176,10 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     userRepo: UserRepo,
     imageStore: S3ImageStore,
     healthcheckPlugin: HealthcheckPlugin,
-    userExperimentRepo: UserExperimentRepo): SecureSocialUserPlugin = {
+    userExperimentRepo: UserExperimentRepo,
+    socialGraphPlugin: SocialGraphPlugin): SecureSocialUserPlugin = {
     new ShoeboxSecureSocialUserPlugin(
-      db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin, userExperimentRepo)
+      db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin, userExperimentRepo, socialGraphPlugin)
   }
 
 
