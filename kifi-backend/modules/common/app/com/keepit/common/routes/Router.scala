@@ -38,7 +38,7 @@ case object PUT extends Method("PUT")
   Hello future FortyTwoers. This will help you generate these (still need to handle params, but saves 80% of time):
     val regex = """(POST|GET)\s*(/internal\S*)[\s].*\.(.*)""".r
     def convert(s: String) = s match {
-      case regex(a,b, c) => println(s"""def $c = ServiceRoute($a, "$b")""")
+      case regex(a,b,c) => println(s"""def $c = ServiceRoute($a, "$b")""")
     }
     val all = """ ....... """ // (copy from Play routes)
     all.split("\n").filter(_.nonEmpty).map(convert)
@@ -88,14 +88,14 @@ object search extends Service {
     def sharingUserInfo(userId: Id[User], uriIds: String) = ServiceRoute(GET, "/internal/search/uriGraph/sharingUserInfo", Param("userId", userId), Param("uriIds", uriIds))
     def updateURIGraph() = ServiceRoute(POST, "/internal/search/uriGraph/update")
     def uriGraphReindex() = ServiceRoute(POST, "/internal/search/uriGraph/reindex")
-    def dumpLuceneDocument(id: Id[User]) = ServiceRoute(POST, "/internal/search/uriGraph/dumpDoc/:id", Param("id", id))
+    def uriGraphDumpLuceneDocument(id: Id[User]) = ServiceRoute(POST, s"/internal/search/uriGraph/dumpDoc/${id.id}")
     def indexInfo() = ServiceRoute(GET, "/internal/search/index/info")
     def searchUpdate() = ServiceRoute(POST, "/internal/search/index/update")
     def searchReindex() = ServiceRoute(POST, "/internal/search/index/reindex")
     def getSequenceNumber() = ServiceRoute(GET, "/internal/search/index/sequenceNumber")
     def refreshSearcher() = ServiceRoute(POST, "/internal/search/index/refreshSearcher")
     def refreshPhrases() = ServiceRoute(POST, "/internal/search/index/refreshPhrases")
-    def dumpLuceneDocument(id: Id[NormalizedURI]) = ServiceRoute(POST, "/internal/search/index/dumpDoc/:id", Param("id", id))
+    def searchDumpLuceneDocument(id: Id[NormalizedURI]) = ServiceRoute(POST, s"/internal/search/index/dumpDoc/${id.id}")
   }
 }
 
