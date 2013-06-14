@@ -196,28 +196,29 @@ $(function() {
 
 	function doSearch(context) {
 		$myKeeps.hide().find('.keep.selected').removeClass('selected').find('input[type="checkbox"]').prop('checked', false);
+		$('aside.left .active').removeClass('active');
 		$('.search h1').hide();
 		$('.search .num-results').show();
 		//$('aside.right').show();
 		showLoading();
 		$results.show();
-		$.getJSON(urlSearch,
-			{maxHits: 30
-			,f: $('select[name="keepers"]').val() == 'c' ? $('#custom-keepers').textext()[0].tags().tagElements().find('.text-label').map(function(){return connections[$(this).text()]}).get().join('.') : $('select[name="keepers"]').val()
-			,q: $query.val()
-			,context: context
-			},
-			function(data) {
-				if (data.mayHaveMore)
-					searchContext = data.context;
-				else
-					searchContext = null;
-				if (context == null) {
-					searchTemplate.render(data.hits);
-					hideRightSide();
-				} else
-					searchTemplate.append(data.hits);
-			});
+		var q = $query.val();
+		$query.data("q", q);
+		$.getJSON(urlSearch, {
+			maxHits: 30,
+			f: $('select[name="keepers"]').val() == 'c' ? $('#custom-keepers').textext()[0].tags().tagElements().find('.text-label').map(function(){return connections[$(this).text()]}).get().join('.') : $('select[name="keepers"]').val(),
+			q: q,
+			context: context
+		},
+		function(data) {
+			searchContext = data.mayHaveMore ? data.context : null;
+			if (context == null) {
+				searchTemplate.render(data.hits);
+				hideRightSide();
+			} else {
+				searchTemplate.append(data.hits);
+			}
+		});
 	}
 
 	function addNewKeeps() {
@@ -489,11 +490,18 @@ $(function() {
 		}
 	});
 
-	var $query = $("input.query").keyup(function() {
+	var $query = $("input.query").keyup(function(e) {
 		clearTimeout(searchTimeout);
-		searchTimeout = setTimeout(doSearch, 500);
-	}).focus(function() { // instant search
-		$('aside.left .active').removeClass('active');
+		var q = $.trim(this.value);
+		if (q === ($query.data("q") || "")) {
+			return;  // no change
+		} else if (!q) {
+			populateMyKeeps();
+		} else if (e.which == 13) {  // Enter
+			doSearch();
+		} else {
+			searchTimeout = setTimeout(doSearch, 500);  // instant search
+		}
 	});
 
 	$(".fancybox").fancybox();
