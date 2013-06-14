@@ -1,0 +1,182 @@
+@admin("Cache Performance", scripts = List("graphite")) {
+
+<div style="float: right" class="form-horizontal">
+  <select class="input-medium params" id="timerange"></select>
+  <button class="btn btn-primary" type="button" id="update">Update Now</button>
+</div>
+<select class="input-medium params" id="service"></select>
+<select class="input-medium params" id="plugin"></select>
+<select class="input-medium params" id="namespace"></select>
+
+<p><img id="ratios" class="img-polaroid"></p>
+<p>
+  <img id="counters" class="img-polaroid">
+  <select class="input-medium params" style="float: right" id="yscale"></select>
+</p>
+<p>
+  <img id="timers" class="img-polaroid">
+  <select class="input-medium params" style="float: right" id="percentile"></select>
+</p>
+
+<script>
+
+  var services = {
+  "All Services": "*",
+  "Shoebox": "shoebox",
+  "Search": "search",
+  };
+
+  var plugins = {
+  "All Plugins": "*",
+  "Memcached": "Memcached",
+  "EhCache": "EhCache"
+  };
+
+  var namespaces = {
+  "All Namespaces": "*",
+  "basic_user_userid": "basic_user_userid",
+  "bookmark_uri_user": "bookmark_uri_user",
+  "browsing_history_by_userid": "browsing_history_by_userid",
+  "click_history_by_userid": "click_history_by_userid",
+  "collections_for_bookmark": "collections_for_bookmark",
+  "comment_by_normuriid": "comment_by_normuriid",
+  "comment_with_basic_user_by_comment_id": "comment_with_basic_user_by_comment_id",
+  "slider_history_by_userid": "slider_history_by_userid",
+  "social_user_info_by_network_and_id": "social_user_info_by_network_and_id",
+  "social_user_info_by_userid": "social_user_info_by_userid",
+  "unscrapable_all": "unscrapable_all",
+  "uri_by_id": "uri_by_id",
+  "user_by_external_id": "user_by_external_id",
+  "user_by_id": "user_by_id",
+  "user_collections": "user_collections",
+  "user_connection_key": "user_connection_key",
+  "user_experiment_user_id": "user_experiment_user_id",
+  "user_session_by_external_id": "user_session_by_external_id",
+  "uservalue": "uservalue"
+  };
+
+  var metrictypes = {
+  "Counters": "counters",
+  "Timers": "timers"
+  };
+
+  var timeranges = {
+  "10 Minutes": "-0h10min",
+  "30 Minutes": "-0h30min",
+  "1 Hour": "-1h",
+  "3 Hours": "-3h",
+  "6 Hours": "-6h",
+  "12 Hours": "-12h",
+  "24 Hours": "-24h",
+  "48 Hours": "-48h",
+  "1 Week": "-1w",
+  "2 Weeks": "-2w",
+  "1 Month": "-1mon",
+  "3 Months": "-3mon"
+  };
+
+  var percentiles = {
+  "99% Percentile": "0.99",
+  "100% Percentile": "1"
+  };
+
+  var yscales = {
+  "Linear Scale": null,
+  "Log10 Scale": 10
+  };
+
+  $.each(services, function (name, service) {
+  $("#service").append($("<option>").val(service).text(name));
+  });
+
+  $.each(plugins, function (name, plugin) {
+  $("#plugin").append($("<option>").val(plugin).text(name));
+  });
+
+  $.each(namespaces, function (name, namespace) {
+  $("#namespace").append($("<option>").val(namespace).text(name));
+  });
+
+  $.each(metrictypes, function (name, metrictype) {
+  $("#metrictype").append($("<option>").val(metrictype).text(name));
+  });
+
+  $.each(timeranges, function (name, timerange) {
+  $("#timerange").append($("<option>").val(timerange).text(name));
+  });
+  $("#timerange").find('option[value="-24h"]').prop('selected',true)
+
+  $.each(yscales, function (name, scale) {
+  $("#yscale").append($("<option>").val(scale).text(name));
+  });
+
+  $.each(percentiles, function (name, percentile) {
+  $("#percentile").append($("<option>").val(percentile).text(name));
+  });
+
+  var options = $.fn.graphite.defaults = {
+  url: "https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/",
+  lineMode: "connected",
+  width: 1100,
+  height: 550,
+  hideGrid: "true",
+  lineWidth: 2
+  };
+
+
+  function sumSeries(prefix, infix, suffix) {
+  return "sumSeries(" + [prefix, infix, suffix].join(".") + ")"
+  }
+
+  function renderChart(chart) {
+    var service = $("#service").val();
+    var plugin = $("#plugin").val();
+    var namespace = $("#namespace").val();
+    var baseTargets = ["drawAsInfinite(stats.counters." + service + ".deploys.count)"];
+    options.from = $("#timerange").val();
+
+  if (chart == "counters") {
+    var prefix = ["stats", chart, service, plugin, namespace].join(".");
+    var metrics = ["hits", "misses", "sets"];
+    var countTargets = metrics.map(function (metric) {return "summarize(" + sumSeries(prefix, metric, "count") + ',"1min")'});
+    options.title = "Hits - Misses - Sets (Events per Minute)"
+    options.target = baseTargets.concat(countTargets)
+    options.logBase = $("#yscale").val();
+  }
+
+  if (chart == "timers") {
+    var prefix = ["stats", chart, service, plugin, namespace].join(".");
+    var metrics = ["hits", "sets"];
+    var percentileValue = $("#percentile").val()
+    var percentileSuffix = (percentileValue == "0.99") ? "_99" : "" 
+    var percentileTitle = (percentileValue == "0.99") ? "99% " : "" 
+    var meanTargets = metrics.map(function (metric) {return "divideSeries(" + sumSeries(prefix, metric, "sum" + percentileSuffix) + ",scale(" + sumSeries(prefix, metric, "count") + "," + percentileValue + "))"});
+    options.title = "Hits - Sets (" + percentileTitle + "Mean Time in Milliseconds)"
+    options.target = baseTargets.concat(meanTargets)
+    options.logBase = null;
+  }
+
+  
+  if (chart == "ratios") {
+    var prefix = ["stats.counters", service, plugin, namespace].join(".");
+    var ratioTarget = ["scale(divideSeries(" + sumSeries(prefix, "hits", "count") + "," + sumSeries(prefix, "{hits,misses}", "count") + "),100)"];
+    options.title = "Hit Ratio"
+    options.target = baseTargets.concat(ratioTarget)
+    options.logBase = null;
+  }
+
+  $("#" + chart).graphite(options);
+  }
+
+  function renderAll() {
+    renderChart("counters")
+    renderChart("timers")
+    renderChart("ratios")
+  }
+
+  $(".params").change(renderAll);
+  $("#update").click(renderAll);
+  setInterval(renderAll, 300000);
+  renderAll()
+</script>
+}

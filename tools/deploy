@@ -1,0 +1,17 @@
+#!/bin/bash
+
+if [[ $# -eq 0 ]]; then
+  hosts="b04,b01"
+elif [[ $# -eq 1 && "$1" == "shoebox" ]]; then
+  hosts="b01"
+elif [[ $# -eq 1 && "$1" == "search" ]]; then
+  hosts="b04"
+else
+  echo "usage: $(basename $0) [shoebox|search]"
+  exit 1
+fi
+
+echo '“Please relax,” said the voice pleasantly, like a stewardess in an airliner with
+only one wing and two engines, one of which is on fire, “you are perfectly safe.”'
+
+fab -f "$(dirname $0)/fabric_deploy.py" -H "$hosts" upload restart
