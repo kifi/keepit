@@ -48,7 +48,7 @@ class LinkedInSocialGraph @Inject() (client: HttpClient) extends SocialGraph wit
     val oauth = OAuthCalculator(SecureSocial.serviceInfoFor(creds).get.key, RequestToken(info.token, info.secret))
     for (url <- Seq(connectionsUrl(sid), profileUrl(sid))) yield {
       val signedUrl = oauth.sign(url)
-      client.get(signedUrl).json
+      client.longTimeout().get(signedUrl).json
     }
   }
 

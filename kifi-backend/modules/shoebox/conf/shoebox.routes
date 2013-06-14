@@ -10,6 +10,8 @@ POST    /register                   securesocial.controllers.Registration.handle
 GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
 POST    /authenticate/:provider     securesocial.controllers.ProviderController.authenticateByPost(provider)
 
+POST    /disconnect/:provider       @com.keepit.controllers.website.HomeController.disconnect(provider)
+
 ##########################################
 # Extension API
 ##########################################
