@@ -4,8 +4,14 @@ import com.google.inject.{Provides, Singleton}
 import com.keepit.model.{UserConnectionIdCache, ClickHistoryUserIdCache, BrowsingHistoryUserIdCache}
 import scala.concurrent.duration._
 import com.keepit.search.ActiveExperimentsCache
+import net.codingwell.scalaguice.ScalaModule
 
 class SearchCacheModule extends CacheModule {
+
+  def configure {
+    install(new MemcachedCacheModule)
+    install(new EhCacheCacheModule)
+  }
 
   @Singleton
   @Provides

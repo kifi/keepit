@@ -7,23 +7,27 @@ import com.keepit.search.ActiveExperimentsCache
 
 class ShoeboxCacheModule extends CacheModule {
 
+  def configure {
+    install(new MemcachedCacheModule)
+  }
+
   @Singleton
   @Provides
-  def browsingHistoryUserIdCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+  def browsingHistoryUserIdCache(outerRepo: FortyTwoCachePlugin) =
     new BrowsingHistoryUserIdCache((outerRepo, 7 days))
 
   @Singleton
   @Provides
-  def clickHistoryUserIdCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+  def clickHistoryUserIdCache(outerRepo: FortyTwoCachePlugin) =
     new ClickHistoryUserIdCache((outerRepo, 7 days))
 
   @Singleton
   @Provides
-  def activeExperimentsCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+  def activeExperimentsCache(outerRepo: FortyTwoCachePlugin) =
     new ActiveExperimentsCache((outerRepo, 7 days))
 
   @Singleton
   @Provides
-  def userConnectionIdCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+  def userConnectionIdCache(outerRepo: FortyTwoCachePlugin) =
     new UserConnectionIdCache((outerRepo, 7 days))
 }
