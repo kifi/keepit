@@ -97,9 +97,10 @@ class ShoeboxModule() extends ScalaModule with Logging {
     userRepo: UserRepo,
     imageStore: S3ImageStore,
     healthcheckPlugin: HealthcheckPlugin,
-    userExperimentRepo: UserExperimentRepo): SecureSocialUserPlugin = {
+    userExperimentRepo: UserExperimentRepo,
+    socialGraphPlugin: SocialGraphPlugin): SecureSocialUserPlugin = {
     new ShoeboxSecureSocialUserPlugin(
-      db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin, userExperimentRepo)
+      db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin, userExperimentRepo, socialGraphPlugin)
   }
 
   @Singleton
