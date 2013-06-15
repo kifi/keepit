@@ -9,12 +9,14 @@ import com.keepit.model.Collection
 import com.keepit.search.SearchConfigExperiment
 import com.keepit.model.ExperimentType
 import com.keepit.model.UserSession
+import java.net.URLEncoder
+import com.keepit.common.strings.UTF8
 
 
 trait Service
 case class ServiceRoute(method: Method, path: String, params: Param*) {
-  override def toString = path + (if(params.nonEmpty) params.map({ p =>
-    p.key + (if(p.value.value != "") "=" + p.value.value else "")
+  def url = path + (if(params.nonEmpty) "?" + params.map({ p =>
+    URLEncoder.encode(p.key, UTF8) + (if(p.value.value != "") "=" + URLEncoder.encode(p.value.value, UTF8) else "")
   }).mkString("&") else "")
 }
 
