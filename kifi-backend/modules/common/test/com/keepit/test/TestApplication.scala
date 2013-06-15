@@ -3,38 +3,28 @@ package com.keepit.test
 import scala.collection.mutable
 import scala.concurrent._
 import scala.slick.session.{Database => SlickDatabase}
-
-import java.io.File
-
 import org.apache.zookeeper.CreateMode
 import org.joda.time.{ReadablePeriod, DateTime}
-
 import net.codingwell.scalaguice.{ScalaModule, ScalaMultibinder}
-
 import com.google.inject.Module
 import com.google.inject.Provider
 import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.google.inject.util.Modules
-import com.keepit.FortyTwoGlobal
-import com.keepit.classify.DomainTagImportSettings
 import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.analytics._
-import com.keepit.common.cache.{CacheModule, InMemoryCachePlugin, HashMapMemoryCache, FortyTwoCachePlugin}
+import com.keepit.common.cache._
 import com.keepit.common.controller.FortyTwoCookies._
-import com.keepit.common.controller.{ActionAuthenticator, ShoeboxActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
-import com.keepit.common.net.{FakeHttpClientModule,HttpClient}
+import com.keepit.common.net.HttpClient
 import com.keepit.common.plugin._
 import com.keepit.common.service._
 import com.keepit.common.social._
-import com.keepit.common.store.FakeS3StoreModule
-import com.keepit.common.store.S3ImageStore
 import com.keepit.common.time._
 import com.keepit.common.zookeeper._
 import com.keepit.dev._
@@ -42,10 +32,8 @@ import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.scraper._
 import com.keepit.search._
-import com.keepit.search.index.FakePhraseIndexerModule
 import com.keepit.shoebox._
 import com.keepit.social._
-
 import akka.actor.ActorSystem
 import akka.actor.Cancellable
 import akka.actor.Scheduler
@@ -53,20 +41,38 @@ import play.api.Mode.{Mode, Test}
 import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.Files
 import java.io.File
-import play.api.db.DB
 import com.keepit.common.controller.{ActionAuthenticator, ShoeboxActionAuthenticator}
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.amazon._
+import com.keepit.common.store.FakeS3StoreModule
+import com.keepit.model.SocialConnection
+import com.keepit.classify.DomainTagImportSettings
+import scala.Some
+import com.keepit.common.zookeeper.Node
+import com.keepit.common.zookeeper.Path
+import com.keepit.common.healthcheck.BabysitterTimeout
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.service.ServiceVersion
+import com.keepit.shoebox.ShoeboxCacheProvider
+import com.keepit.common.mail.FakeMailModule
+import com.keepit.model.SocialUserInfo
+import com.keepit.common.social.FakeSecureSocialUserServiceModule
+import com.keepit.model.NormalizedURI
+import com.keepit.search.index.FakePhraseIndexerModule
+import com.keepit.common.amazon.AmazonInstanceId
+import com.keepit.common.net.FakeClientResponse
 
 class TestApplication(val _global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
   override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
+
+  val emptyFakeHttpClient: PartialFunction[String, FakeClientResponse] = Map()
+
   def withFakeMail() = overrideWith(FakeMailModule())
   def withFakeScraper() = overrideWith(FakeScraperModule())
   def withFakeScheduler() = overrideWith(FakeSchedulerModule())
-  def withFakeHttpClient() = overrideWith(FakeHttpClientModule())
+  def withFakeHttpClient(requestToResponse: PartialFunction[String, FakeClientResponse] = emptyFakeHttpClient) = overrideWith(FakeHttpClientModule(requestToResponse))
   def withFakeStore() = overrideWith(FakeS3StoreModule())
   def withFakeHealthcheck() = overrideWith(FakeHealthcheckModule())
   def withRealBabysitter() = overrideWith(BabysitterModule())
@@ -170,9 +176,10 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     userRepo: UserRepo,
     imageStore: S3ImageStore,
     healthcheckPlugin: HealthcheckPlugin,
-    userExperimentRepo: UserExperimentRepo): SecureSocialUserPlugin = {
+    userExperimentRepo: UserExperimentRepo,
+    socialGraphPlugin: SocialGraphPlugin): SecureSocialUserPlugin = {
     new ShoeboxSecureSocialUserPlugin(
-      db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin, userExperimentRepo)
+      db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin, userExperimentRepo, socialGraphPlugin)
   }
 
 
@@ -332,7 +339,7 @@ class FakeSocialGraphPlugin extends SocialGraphPlugin {
     future { throw new Exception("Not Implemented") }
 }
 
-case class FakeCacheModule() extends CacheModule {
+case class FakeCacheModule() extends ShoeboxCacheModule {
   override def configure() {
     bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
     bind[InMemoryCachePlugin].to[HashMapMemoryCache]

@@ -4,16 +4,20 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.strings._
 import com.keepit.common.service._
 import com.keepit.common.amazon._
+<<<<<<< HEAD
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.collection.concurrent.TrieMap
 
+=======
+>>>>>>> e415d5468dd22a0f7af246d36be37eb92523a31e
 import play.api.libs.json._
 
 import com.google.inject.{Inject, Singleton}
 
 import org.apache.zookeeper.CreateMode._
+import com.google.inject.Provider
 
 trait ServiceDiscovery {
   def register(): Node
@@ -25,7 +29,7 @@ trait ServiceDiscovery {
 class ServiceDiscoveryImpl @Inject() (
     zk: ZooKeeperClient,
     services: FortyTwoServices,
-    amazonInstanceInfo: AmazonInstanceInfo)
+    amazonInstanceInfoProvider: Provider[AmazonInstanceInfo])
   extends ServiceDiscovery with Logging {
 
   private val serviceType = services.currentService
@@ -51,7 +55,7 @@ class ServiceDiscoveryImpl @Inject() (
         cluster.update(zk, children)
       }
     })
-    zk.set(myNode.get, Json.toJson(amazonInstanceInfo).toString)
+    zk.set(myNode.get, Json.toJson(amazonInstanceInfoProvider.get).toString)
     println(s"registered as node ${myNode.get}")
     myNode.get
   }

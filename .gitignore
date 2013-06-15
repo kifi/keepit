@@ -80,3 +80,5 @@ kifi-backend/mem.h2.db
 kifi-backend/mem.trace.db
 .metadata/*
 kifi-backend/data/*
+kifi-backend/modules/common/conf/app_compilation_date.txt
+kifi-backend/modules/common/conf/app_version.txt

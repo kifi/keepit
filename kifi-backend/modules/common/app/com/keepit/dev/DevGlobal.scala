@@ -13,7 +13,9 @@ import com.keepit.search.SearchExclusiveModule
 
 object DevGlobal extends FortyTwoGlobal(Dev) with ShoeboxServices with SearchServices {
   override val modules =
-    Seq(Modules.`override`(new CommonModule, new ShoeboxModule, new SearchModule).`with`(new DevModule))
+    Seq(Modules.`override`(
+      Modules.`override`(new CommonModule, new SearchModule).`with`(new ShoeboxModule)
+    ).`with`(new DevModule))
 
   override def onStart(app: Application) {
     require(injector.instance[FortyTwoServices].currentService == ServiceType.DEV_MODE,

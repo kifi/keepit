@@ -1,3 +1,5 @@
+
+
 GET     /login                      securesocial.controllers.ProviderController.authenticate(provider = "facebook")
 GET     /login/social               securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
@@ -9,6 +11,8 @@ POST    /register                   securesocial.controllers.Registration.handle
 # OAuth provider entry points (e.g. "facebook")
 GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
 POST    /authenticate/:provider     securesocial.controllers.ProviderController.authenticateByPost(provider)
+
+POST    /disconnect/:provider       @com.keepit.controllers.website.HomeController.disconnect(provider)
 
 ##########################################
 # Extension API

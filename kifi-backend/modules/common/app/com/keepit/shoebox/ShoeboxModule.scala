@@ -40,9 +40,11 @@ import com.keepit.social.ShoeboxSecureSocialUserPlugin
 import play.api.Play
 import play.api.Play.current
 import play.api.db.DB
+import com.keepit.common.cache.ShoeboxCacheModule
 
 class ShoeboxModule() extends ScalaModule with Logging {
   def configure() {
+    install(new ShoeboxCacheModule)
     install(new SlickModule(new DbInfo() {
       //later on we can customize it by the application name
       lazy val database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
@@ -95,9 +97,10 @@ class ShoeboxModule() extends ScalaModule with Logging {
     userRepo: UserRepo,
     imageStore: S3ImageStore,
     healthcheckPlugin: HealthcheckPlugin,
-    userExperimentRepo: UserExperimentRepo): SecureSocialUserPlugin = {
+    userExperimentRepo: UserExperimentRepo,
+    socialGraphPlugin: SocialGraphPlugin): SecureSocialUserPlugin = {
     new ShoeboxSecureSocialUserPlugin(
-      db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin, userExperimentRepo)
+      db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin, userExperimentRepo, socialGraphPlugin)
   }
 
   @Singleton

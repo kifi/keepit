@@ -264,7 +264,8 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
     userRepo: UserRepo,
     imageStore: S3ImageStore,
     healthcheckPlugin: HealthcheckPlugin,
-    userExperimentRepo: UserExperimentRepo)
+    userExperimentRepo: UserExperimentRepo,
+    socialGraphPlugin: SocialGraphPlugin)
   extends UserService with SecureSocialUserPlugin with Logging {
 
   private def reportExceptions[T](f: => T): T =
@@ -273,13 +274,6 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
         HealthcheckError(error = Some(ex), method = None, path = None, callType = Healthcheck.INTERNAL))
       throw ex
     }
-
-  private var maybeSocialGraphPlugin: Option[SocialGraphPlugin] = None
-
-  @Inject(optional = true)
-  def setSocialGraphPlugin(sgp: SocialGraphPlugin) {
-    maybeSocialGraphPlugin = Some(sgp)
-  }
 
   def find(id: UserId): Option[SocialUser] = reportExceptions {
     db.readOnly { implicit s =>
@@ -303,9 +297,7 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
       require(socialUserInfo.credentials.isDefined,
         "social user info's credentials is not defined: %s".format(socialUserInfo))
       require(socialUserInfo.userId.isDefined, "social user id  is not defined: %s".format(socialUserInfo))
-      for (sgp <- maybeSocialGraphPlugin if socialUserInfo.state != SocialUserInfoStates.FETCHED_USING_SELF) {
-        sgp.asyncFetch(socialUserInfo)
-      }
+      socialGraphPlugin.asyncFetch(socialUserInfo)
       log.info("persisting %s into %s".format(socialUser, socialUserInfo))
       socialUser
     }

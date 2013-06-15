@@ -31,7 +31,7 @@ class SearchModuleTest extends Specification with Logging {
 
   "Module" should {
     "instantiate controllers" in {
-      running(new SearchApplication().withFakeHttpClient()) {
+      running(new SearchApplication().withFakeHttpClient(FakeClientResponse.fakeAmazonDiscoveryClient)) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {
           case (_, _, ClassRoute(className)) => Class.forName(className)

@@ -54,7 +54,7 @@ $(function() {
 		});
 		$results.find(".keep.mine .bottom:not(:has(.me))")
 			.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
-		$('div.search .num-results').text('Showing ' + $results.find('.keep').length + ' for "' + $query.val() + '"');
+		$('.search>.num-results').text('Showing ' + $results.find('.keep').length + ' for "' + searchResponse.query + '"');
 	});
 	var $colls = $("#collections"), collTmpl = Tempo.prepare($colls).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 		makeCollectionsDroppable($colls.find(".collection"));
@@ -63,7 +63,7 @@ $(function() {
 	var $inColl = $(".in-collections"), inCollTmpl = Tempo.prepare($inColl);
 
 	var me;
-	var searchContext;
+	var searchResponse;
 	var connections = {};
 	var collections = {};
 	var connectionNames = [];
@@ -196,28 +196,29 @@ $(function() {
 
 	function doSearch(context) {
 		$myKeeps.hide().find('.keep.selected').removeClass('selected').find('input[type="checkbox"]').prop('checked', false);
+		$('aside.left .active').removeClass('active');
 		$('.search h1').hide();
-		$('.search .num-results').show();
+		$('.search>.num-results').show();
 		//$('aside.right').show();
 		showLoading();
 		$results.show();
-		$.getJSON(urlSearch,
-			{maxHits: 30
-			,f: $('select[name="keepers"]').val() == 'c' ? $('#custom-keepers').textext()[0].tags().tagElements().find('.text-label').map(function(){return connections[$(this).text()]}).get().join('.') : $('select[name="keepers"]').val()
-			,q: $query.val()
-			,context: context
-			},
-			function(data) {
-				if (data.mayHaveMore)
-					searchContext = data.context;
-				else
-					searchContext = null;
-				if (context == null) {
-					searchTemplate.render(data.hits);
-					hideRightSide();
-				} else
-					searchTemplate.append(data.hits);
-			});
+		var q = $.trim($query.val());
+		$query.attr("data-q", q || null);
+		$.getJSON(urlSearch, {
+			maxHits: 30,
+			f: $('select[name="keepers"]').val() == 'c' ? $('#custom-keepers').textext()[0].tags().tagElements().find('.text-label').map(function(){return connections[$(this).text()]}).get().join('.') : $('select[name="keepers"]').val(),
+			q: q,
+			context: context
+		},
+		function(data) {
+			searchResponse = data;
+			if (context == null) {
+				searchTemplate.render(data.hits);
+				hideRightSide();
+			} else {
+				searchTemplate.append(data.hits);
+			}
+		});
 	}
 
 	function addNewKeeps() {
@@ -251,11 +252,11 @@ $(function() {
 			hideRightSide();
 		}
 		searchTemplate.clear();
-		$query.val('');
-		searchContext = null;
+		$query.val("").removeAttr("data-q");
+		searchResponse = null;
 	//	$('aside.right').hide();
-		$('.search h1').show();
-		$('.search .num-results').hide();
+		$('.search>h1').show();
+		$('.search>.num-results').hide();
 		if (lastKeep == null) {
 			$myKeeps.find('.search-section').remove();
 		} else {
@@ -327,6 +328,7 @@ $(function() {
 							$('aside.right .collections ul li:has(input[data-id="'+colId+'"])').remove();
 						}
 			});
+		// TODO: update center column if collection is active
 	}).on('click','a.rename',function() {
 		var colElement = $(this).parents('h3.collection').first().addClass('editing');
 		var nameSpan = colElement.find('span.name').first();
@@ -481,19 +483,33 @@ $(function() {
 		}
 	}).scroll(function() { // infinite scroll
 		if (!isLoading() && this.clientHeight + this.scrollTop > this.scrollHeight - 300) {
-			if (searchContext) {
-				doSearch(searchContext);
+			if (searchResponse) {
+				doSearch(searchResponse.context);
 			} else {
 				populateMyKeeps($colls.find(".collection.active").data("id"));
 			}
 		}
 	});
 
-	var $query = $("input.query").keyup(function() {
+	var $query = $("input.query").on("keydown input", function(e) {
+		console.log("[clearTimeout]", e.type);
 		clearTimeout(searchTimeout);
-		searchTimeout = setTimeout(doSearch, 500);
-	}).focus(function() { // instant search
-		$('aside.left .active').removeClass('active');
+		var q = $.trim(this.value);
+		if (q === ($query.attr("data-q") || "")) {
+			console.log("[no change]");
+			return;  // no change
+		} else if (!q) {
+			console.log("[populateMyKeeps]");
+			populateMyKeeps();
+		} else if (e.which) {
+			if (e.which == 13) { // Enter
+				console.log("[doSearch]");
+				doSearch();
+			}
+		} else {
+			console.log("[setTimeout]");
+			searchTimeout = setTimeout(doSearch, 500);  // instant search
+		}
 	});
 
 	$(".fancybox").fancybox();
@@ -571,18 +587,48 @@ $(function() {
 		addNewKeeps();
 	});
 
-	$colls.on('click', "h3 a", function() {
+	$colls.on("click", "h3.collection>a", function() {
 		populateMyKeeps($(this).parent().data('id'));
+	})
+	.on("click", ".new-collection", function() {
+		clearTimeout(hideAddCollTimeout), hideAddCollTimeout = null;
+		if (!$addColl.is(":animated")) {
+			if ($addColl.is(":visible")) {
+				$addColl.slideUp(200).find("input").val("").prop("disabled", true);
+			} else {
+				$addColl.slideDown(200, function() {
+					$addColl.find("input").prop("disabled", false).focus().select();
+				});
+			}
+		}
 	});
 
-	$('aside a.new-collection').click(function() {
-		var $add = $(this).closest('div').find('.add-collection');
-		if ($add.is(':visible')) {
-			$add.slideUp();
-		} else {
-			$add.slideDown();
-			$add.find('input').focus();
+	var $addColl = $colls.find(".add-collection"), hideAddCollTimeout;
+	$addColl.find("input").on("blur keydown", function(e) {
+		if ((e.which === 13 || e.type === "blur") && !$addColl.is(":animated")) { // 13 is Enter
+			var name = $.trim(this.value);
+			if (name) {
+				createCollection(name);
+			} else if (e.type === "blur") {
+				if ($addColl.is(":visible"))
+				// avoid back-to-back hide/show animations if "new collection" clicked again
+				hideAddCollTimeout = setTimeout(hide.bind(this), 300);
+			} else {
+				e.preventDefault();
+				hide.call(this);
+			}
+		} else if (e.which === 27 && !$addColl.is(":animated")) { // 27 is Esc
+			hide.call(this);
 		}
+		function hide() {
+			this.value = "";
+			this.disabled = true;
+			this.blur();
+			$addColl.slideUp(200);
+			clearTimeout(hideAddCollTimeout), hideAddCollTimeout = null;
+		}
+	}).focus(function() {
+		clearTimeout(hideAddCollTimeout), hideAddCollTimeout = null;
 	});
 
 	// filter collections or right bar
@@ -593,35 +639,29 @@ $(function() {
 		});
 	});
 
-	// create new collection
-	$('.add-collection input').keypress(function(e) {
-		if (e.which == 13) { // Enter
-			var input = this;
-			var newName = input.value;
-			$.ajax({
-				url: urlCollectionsCreate,
-				type: "POST",
-				dataType: 'json',
-				data: JSON.stringify({name: newName}),
-				contentType: 'application/json',
-				error: showMessage.bind(null, 'Could not create collection, please try again later'),
-				success: function(data) {
-					var $coll = $('<h3 class=collection data-id=' + data.id + '><div class=edit-menu>\
-						<a href=javascript: class=edit></a>\
-						<ul><li><a class=rename href=javascript:>Rename</a></li>\
-								<li><a class=remove href=javascript:>Remove</a></li></ul>\
-						</div><a href=javascript:><span class="name long-text">' + newName + '</span> <span class="right light">0</span></a></h3>')
-					 .appendTo('#collections-wrapper');
-					makeCollectionsDroppable($coll);
-					// TODO: Use Tempo templates!!
-					$('aside.right .actions .collections ul li.create')
-						.after('<li><input type="checkbox" data-id="' + data.id + '" id="cb-' + data.id + '"><label class="long-text" for="cb-' + data.id + '"><span></span>' + newName + '</label></li>');
-					collections[data.id] = {id: data.id, name: newName};
-					$(input).parent().slideUp();
-					input.value = "";
-				}});
-		 }
-	});
+	function createCollection(name) {
+		$.ajax({
+			url: urlCollectionsCreate,
+			type: "POST",
+			dataType: 'json',
+			data: JSON.stringify({name: name}),
+			contentType: 'application/json',
+			error: showMessage.bind(null, 'Could not create collection, please try again later'),
+			success: function(data) {
+				collections[data.id] = {id: data.id, name: name};
+				var $coll = $('<h3 class=collection data-id=' + data.id + '><div class=edit-menu>\
+					<a href=javascript: class=edit></a>\
+					<ul><li><a class=rename href=javascript:>Rename</a></li>\
+							<li><a class=remove href=javascript:>Remove</a></li></ul>\
+					</div><a href=javascript:><span class="name long-text">' + name + '</span> <span class="right light">0</span></a></h3>')
+				.prependTo("#collections-wrapper");
+				$addColl.hide().find("input").val("").prop("disabled", true);
+				makeCollectionsDroppable($coll);
+				// TODO: Use Tempo templates!!
+				$('aside.right .actions .collections ul li.create')
+					.after('<li><input type="checkbox" data-id="' + data.id + '" id="cb-' + data.id + '"><label class="long-text" for="cb-' + data.id + '"><span></span>' + name + '</label></li>');
+			}});
+	}
 
 	$('aside.right .actions a.add').click(function() {
 		$(this).toggleClass('active');

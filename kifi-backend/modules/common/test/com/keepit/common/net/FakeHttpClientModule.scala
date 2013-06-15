@@ -5,25 +5,33 @@ import com.keepit.common.service._
 import com.google.inject._
 import net.codingwell.scalaguice.ScalaModule
 
-case class FakeHttpClientModule() extends ScalaModule {
+case class FakeHttpClientModule(requestToResponse: PartialFunction[String, FakeClientResponse]) extends ScalaModule {
 
   def configure(): Unit = {
-    bind[HttpClient].toInstance(new FakeHttpClient())
+    bind[HttpClient].toInstance(new FakeHttpClient(Some(requestToResponse)))
   }
+  
+}
 
+case class FakeAmazonInstanceInfoModule() extends ScalaModule {
+  def configure(): Unit = {}
+  
   @Singleton
   @Provides
-  def amazonInstanceInfo: AmazonInstanceInfo =
-    new AmazonInstanceInfo(
-      instanceId = AmazonInstanceId("i-f168c1a8"),
-      localHostname = "ip-10-160-95-26.us-west-1.compute.internal",
-      publicHostname = "ec2-50-18-183-73.us-west-1.compute.amazonaws.com",
-      localIp = IpAddress("10.160.95.26"),
-      publicIp = IpAddress("50.18.183.73"),
-      instanceType = "c1.medium",
-      availabilityZone = "us-west-1b",
-      securityGroups = "default",
-      amiId = "ami-1bf9de5e",
-      amiLaunchIndex = "0"
+  def amazonInstanceInfo(httpClient: HttpClient): AmazonInstanceInfo = {
+    val metadataUrl: String = "http://169.254.169.254/latest/meta-data/"
+
+    AmazonInstanceInfo(
+      instanceId = AmazonInstanceId(httpClient.get(metadataUrl + "instance-id").body),
+      localHostname = httpClient.get(metadataUrl + "local-hostname").body,
+      publicHostname = httpClient.get(metadataUrl + "public-hostname").body,
+      localIp = IpAddress(httpClient.get(metadataUrl + "local-ipv4").body),
+      publicIp = IpAddress(httpClient.get(metadataUrl + "public-ipv4").body),
+      instanceType = httpClient.get(metadataUrl + "instance-type").body,
+      availabilityZone = httpClient.get(metadataUrl + "placement/availability-zone").body,
+      securityGroups = httpClient.get(metadataUrl + "security-groups").body,
+      amiId = httpClient.get(metadataUrl + "ami-id").body,
+      amiLaunchIndex = httpClient.get(metadataUrl + "ami-launch-index").body
     )
+  }
 }
