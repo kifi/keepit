@@ -328,6 +328,7 @@ $(function() {
 							$('aside.right .collections ul li:has(input[data-id="'+colId+'"])').remove();
 						}
 			});
+		// TODO: update center column if collection is active
 	}).on('click','a.rename',function() {
 		var colElement = $(this).parents('h3.collection').first().addClass('editing');
 		var nameSpan = colElement.find('span.name').first();
@@ -586,18 +587,36 @@ $(function() {
 		addNewKeeps();
 	});
 
-	$colls.on('click', "h3 a", function() {
+	$colls.on("click", "h3.collection>a", function() {
 		populateMyKeeps($(this).parent().data('id'));
+	})
+	.on("click", ".new-collection", function() {
+		$addColl.slideDown(200, function() {
+			$addColl.find("input").prop("disabled", false).focus().select();
+		});
 	});
 
-	$('aside a.new-collection').click(function() {
-		var $add = $(this).closest('div').find('.add-collection');
-		if ($add.is(':visible')) {
-			$add.slideUp();
-		} else {
-			$add.slideDown();
-			$add.find('input').focus();
+	var $addColl = $colls.find(".add-collection"), hideAddCollTimeout;
+	$addColl.find("input").on("blur keypress", function(e) {
+		if (e.which === 13 || e.type === "blur") { // 13 is Enter
+			var name = $.trim(this.value);
+			if (name) {
+				createCollection(name);
+			} else {
+				var input = this;
+				if (e.type === "blur") {
+					hideAddCollTimeout = setTimeout(function() {  // avoid back-to-back hide/show animations if "new collection" clicked again
+						input.value = "";
+						input.disabled = true;
+						$addColl.slideUp(200);
+					}, 300);
+				} else {
+					input.blur();
+				}
+			}
 		}
+	}).focus(function() {
+		clearTimeout(hideAddCollTimeout);
 	});
 
 	// filter collections or right bar
@@ -608,35 +627,29 @@ $(function() {
 		});
 	});
 
-	// create new collection
-	$('.add-collection input').keypress(function(e) {
-		if (e.which == 13) { // Enter
-			var input = this;
-			var newName = input.value;
-			$.ajax({
-				url: urlCollectionsCreate,
-				type: "POST",
-				dataType: 'json',
-				data: JSON.stringify({name: newName}),
-				contentType: 'application/json',
-				error: showMessage.bind(null, 'Could not create collection, please try again later'),
-				success: function(data) {
-					var $coll = $('<h3 class=collection data-id=' + data.id + '><div class=edit-menu>\
-						<a href=javascript: class=edit></a>\
-						<ul><li><a class=rename href=javascript:>Rename</a></li>\
-								<li><a class=remove href=javascript:>Remove</a></li></ul>\
-						</div><a href=javascript:><span class="name long-text">' + newName + '</span> <span class="right light">0</span></a></h3>')
-					 .appendTo('#collections-wrapper');
-					makeCollectionsDroppable($coll);
-					// TODO: Use Tempo templates!!
-					$('aside.right .actions .collections ul li.create')
-						.after('<li><input type="checkbox" data-id="' + data.id + '" id="cb-' + data.id + '"><label class="long-text" for="cb-' + data.id + '"><span></span>' + newName + '</label></li>');
-					collections[data.id] = {id: data.id, name: newName};
-					$(input).parent().slideUp();
-					input.value = "";
-				}});
-		 }
-	});
+	function createCollection(name) {
+		$.ajax({
+			url: urlCollectionsCreate,
+			type: "POST",
+			dataType: 'json',
+			data: JSON.stringify({name: name}),
+			contentType: 'application/json',
+			error: showMessage.bind(null, 'Could not create collection, please try again later'),
+			success: function(data) {
+				collections[data.id] = {id: data.id, name: name};
+				var $coll = $('<h3 class=collection data-id=' + data.id + '><div class=edit-menu>\
+					<a href=javascript: class=edit></a>\
+					<ul><li><a class=rename href=javascript:>Rename</a></li>\
+							<li><a class=remove href=javascript:>Remove</a></li></ul>\
+					</div><a href=javascript:><span class="name long-text">' + name + '</span> <span class="right light">0</span></a></h3>')
+				.prependTo("#collections-wrapper");
+				$addColl.hide().find("input").val("").prop("disabled", true);
+				makeCollectionsDroppable($coll);
+				// TODO: Use Tempo templates!!
+				$('aside.right .actions .collections ul li.create')
+					.after('<li><input type="checkbox" data-id="' + data.id + '" id="cb-' + data.id + '"><label class="long-text" for="cb-' + data.id + '"><span></span>' + name + '</label></li>');
+			}});
+	}
 
 	$('aside.right .actions a.add').click(function() {
 		$(this).toggleClass('active');

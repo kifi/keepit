@@ -5,16 +5,16 @@
 </div>
 
 <p>
+    <a href="@com.keepit.controllers.admin.routes.AdminWebSocketController.serviceView"><font size="5">WebSocket Performance</font></a>
+    <p><img id="websocket" class="img-polaroid"></p>
+</p>
+<p>
   <a href="@com.keepit.controllers.admin.routes.AdminSearchPerformanceController.viewSearchPerformance"><font size="5">Search Performance</font></a>
   <p><img id="search" class="img-polaroid"></p>
 </p>
 <p>
   <a href="@com.keepit.controllers.admin.routes.AdminCacheController.serviceView"><font size="5">Cache Performance</font></a>
   <p><img id="cache" class="img-polaroid"></p>
-</p>
-<p>
-    <a href="@com.keepit.controllers.admin.routes.AdminWebSocketController.serviceView"><font size="5">WebSocket Performance</font></a>
-    <p><img id="websocket" class="img-polaroid"></p>
 </p>
 
 <script>
@@ -76,11 +76,15 @@
   options.yMaxRight = 100;
   $("#cache").graphite(options);
 
-  // Websocket Ping Chart
+  // Websocket Chart
 
-  var websocketTargets = baseTargets.concat('summarize(stats.counters.shoebox.websocket.handler.ping.count,"1min")')
+  var pingTarget = 'summarize(stats.counters.shoebox.websocket.handler.ping.count,"1min")'
+  var connectedClientTarget = ["secondYAxis(stats.gauges.shoebox.websocket.channel.user.client)"];
+  var websocketTargets = baseTargets.concat(pingTarget).concat(connectedClientTarget)
   options.target = websocketTargets;
-  options.title = "WebSocket Pings per Minute";
+  options.title = "WebSocket Pings per Minute vs Connected Clients";
+  options.yMinRight = null;
+  options.yMaxRight = null;
   $("#websocket").graphite(options);
 }
 
