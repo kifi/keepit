@@ -80,7 +80,7 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
   }
 
   def reindexURIGraph(): Future[Unit] = {
-    call(routes.URIGraphController.reindex()).map(r => ())
+    call(Search.internal.uriGraphReindex()).map(r => ())
   }
 
   def index(): Future[Int] = {
