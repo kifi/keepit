@@ -5,7 +5,6 @@ import com.keepit.common.healthcheck.BenchmarkResultsJson._
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.db.Id
 import com.keepit.common.net.HttpClient
-import com.keepit.controllers.search._
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
 import play.api.libs.json.{JsArray, JsValue, Json, JsString}
@@ -15,6 +14,7 @@ import scala.concurrent.Future
 import com.keepit.serializer.UriLabelSerializer
 import com.keepit.common.routes.Search
 import com.keepit.common.routes.Common
+import com.keepit.common.search.{ResultClicked, SharingUserInfo, IndexInfo}
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -50,10 +50,6 @@ trait SearchServiceClient extends ServiceClient {
 
 class SearchServiceClientImpl(override val host: String, override val port: Int, override val httpClient: HttpClient)
     extends SearchServiceClient {
-
-  import ResultClickedJson._
-  import SharingUserInfoJason._
-  import IndexInfoJson._
 
   def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isKeep: Boolean): Future[Unit] = {
     val json = Json.toJson(ResultClicked(userId, query, uriId, rank, isKeep))

@@ -5,7 +5,7 @@ import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db.Id
 import com.keepit.model.{User, NormalizedURI}
-import com.keepit.search.{ResultClicked, ResultClickedJson, ResultClickTracker}
+import com.keepit.search.{ResultClickTracker}
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc.Action
 

@@ -1,7 +1,7 @@
-package com.keepit.search
-import play.api.libs.json.Json
-import com.keepit.common.db.{Id, SequenceNumber}
+package com.keepit.common.search
+import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.model.{NormalizedURI, User}
+import play.api.libs.json.Json
 
 case class IndexInfo(
   name: String,
@@ -10,13 +10,13 @@ case class IndexInfo(
   committedAt: Option[String]
 )
 
-object IndexInfoJson {
+object IndexInfo {
   implicit val indexInfoFormat = Json.format[IndexInfo]
 }
 
 case class ResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isUserKeep: Boolean)
 
-object ResultClickedJson {
+object ResultClicked {
   private implicit val uriIdFormat = Id.format[NormalizedURI]
   private implicit val userIdFormat = Id.format[User]
   implicit val resultClickedFormat = Json.format[ResultClicked]
@@ -26,7 +26,7 @@ case class SharingUserInfo(
                             sharingUserIds: Set[Id[User]],
                             keepersEdgeSetSize: Int)
 
-object SharingUserInfoJson {
+object SharingUserInfo {
   private implicit val userIdFormat = Id.format[User]
   implicit val sharingUserInfoFormat = Json.format[SharingUserInfo]
 }
