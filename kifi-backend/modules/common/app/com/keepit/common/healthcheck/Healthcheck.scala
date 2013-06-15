@@ -205,5 +205,5 @@ class HealthcheckPluginImpl @Inject() (
     email
   }
 
-  override def warmUp() = actorFactory.system.scheduler.scheduleOnce(3 minutes) {super.warmUp()}
+  override def warmUp() = scheduleTaskOnce(actorFactory.system, 3 minutes, "Healthcheck: consider service warm") {super.warmUp()}
 }

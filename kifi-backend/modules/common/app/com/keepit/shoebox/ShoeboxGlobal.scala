@@ -9,7 +9,7 @@ import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.social.SocialGraphRefresher
 import com.keepit.common.store.ImageDataIntegrityPlugin
 import com.keepit.module.CommonModule
-import com.keepit.realtime.UserEmailNotifierPlugin
+import com.keepit.realtime.{ChannelPlugin, UserEmailNotifierPlugin}
 import com.keepit.scraper._
 
 import play.api.Mode._
@@ -42,5 +42,6 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[UserEmailNotifierPlugin].enabled)
     require(injector.instance[ImageDataIntegrityPlugin].enabled)
     require(injector.instance[InvitationMailPlugin].enabled)
+    require(injector.instance[ChannelPlugin].enabled)
   }
 }
