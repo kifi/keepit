@@ -82,3 +82,11 @@ kifi-backend/mem.trace.db
 kifi-backend/data/*
 kifi-backend/modules/common/conf/app_compilation_date.txt
 kifi-backend/modules/common/conf/app_version.txt
+shoebox/.target
+shoebox/.settings/org.eclipse.core.resources.prefs
+shoebox/conf/app_compilation_date.txt
+shoebox/conf/app_version.txt
+shoebox/modules/common/target
+shoebox/project/target
+shoebox/target
+shoebox.sublime-workspace
