@@ -1,25 +1,20 @@
 package com.keepit.controllers.website
 
-import com.keepit.common.controller.WebsiteController
-import com.keepit.common.logging.Logging
-import play.api.Play.current
-import play.api.data.Forms._
-import play.api.data.validation.Constraints._
-import play.api.http.ContentTypes
-import play.api.mvc._
-import play.api._
-import com.keepit.model._
-import com.keepit.common.db.slick._
-import com.keepit.common.controller.ActionAuthenticator
 import com.google.inject.{Inject, Singleton}
-import com.keepit.common.controller.AuthenticatedRequest
-import com.keepit.common.db.State
-import com.keepit.common.social._
-import play.api.libs.json._
+import com.keepit.common.controller.ActionAuthenticator
+import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.ExternalId
+import com.keepit.common.db.State
 import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick._
+import com.keepit.common.social._
+import com.keepit.model._
 
-case class BasicUserInvitation(name: String, picture: String, state: State[Invitation])
+import play.api.Play.current
+import play.api._
+import play.api.mvc._
+
+case class BasicUserInvitation(name: String, picture: Option[String], state: State[Invitation])
 
 @Singleton
 class InviteController @Inject() (db: Database,
@@ -30,28 +25,37 @@ class InviteController @Inject() (db: Database,
   userConnectionRepo: UserConnectionRepo,
   invitationRepo: InvitationRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
+  linkedIn: LinkedInSocialGraph,
   actionAuthenticator: ActionAuthenticator)
     extends WebsiteController(actionAuthenticator) {
+
+  private def createBasicUserInvitation(socialUser: SocialUserInfo, state: State[Invitation]): BasicUserInvitation = {
+    BasicUserInvitation(
+      name = socialUser.fullName,
+      picture = socialUser.networkType match {
+        case SocialNetworks.FACEBOOK =>
+          Some(s"https://graph.facebook.com/${socialUser.socialId.id}/picture?type=square&width=75&height=75")
+        case _ =>
+          socialUser.credentials.flatMap(_.avatarUrl)
+      }, state = state
+    )
+  }
 
   def invite = AuthenticatedHtmlAction { implicit request =>
     if(userCanInvite(request.experiments)) {
       val friendsOnKifi = db.readOnly { implicit session =>
-        userConnectionRepo.getConnectedUsers(request.user.id.get).map { u =>
+        userConnectionRepo.getConnectedUsers(request.user.id.get) flatMap { u =>
           val user = userRepo.get(u)
           if(user.state == UserStates.ACTIVE) Some(user.externalId)
           else None
-        } flatten
+        }
       }
 
       val (invites, invitesLeft, invitesSent, invitesAccepted) = db.readOnly { implicit session =>
         val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(6)
         val currentInvitations = invitationRepo.getByUser(request.user.id.get).map{ s =>
           val socialUser = socialUserRepo.get(s.recipientSocialUserId)
-          Some(BasicUserInvitation(
-            name = socialUser.fullName,
-            picture = s"https://graph.facebook.com/${socialUser.socialId.id}/picture?type=square&width=75&height=75",
-            state = s.state
-          ))
+          Some(createBasicUserInvitation(socialUser, s.state))
         }
         val left = totalAllowedInvites - currentInvitations.length
         val sent = currentInvitations.length
@@ -76,44 +80,51 @@ class InviteController @Inject() (db: Database,
   }
 
   def inviteConnection = AuthenticatedHtmlAction { implicit request =>
-    val fullSocialId = request.request.body.asFormUrlEncoded match {
+    val (fullSocialId, subject, message) = request.request.body.asFormUrlEncoded match {
       case Some(form) =>
-        form.get("fullSocialId").map(_.head).getOrElse("").split("/")
-      case None => Array()
+        (form.get("fullSocialId").map(_.head).getOrElse("").split("/"),
+          form.get("subject").map(_.head), form.get("message").map(_.head))
+      case None => (Array(), None, None)
     }
     db.readWrite { implicit session =>
       if(fullSocialId.size != 2) {
         Redirect(routes.InviteController.invite)
       } else {
-        val socialUserInfo = socialUserInfoRepo.get(SocialId(fullSocialId(1)), SocialNetworks.FACEBOOK)
+        val socialUserInfo = socialUserInfoRepo.get(SocialId(fullSocialId(1)), SocialNetworkType(fullSocialId(0)))
         invitationRepo.getByRecipient(socialUserInfo.id.get) match {
           case Some(alreadyInvited) =>
             if(alreadyInvited.senderUserId == request.user.id.get) {
               Redirect(fbInviteUrl(alreadyInvited))
-            }
-            else {
+            } else {
               Redirect(routes.InviteController.invite)
             }
           case None =>
             val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(6)
             val currentInvitations = invitationRepo.getByUser(request.user.id.get).map{ s =>
-              val socialUser = socialUserRepo.get(s.recipientSocialUserId)
-              Some(BasicUserInvitation(
-                name = socialUser.fullName,
-                picture = s"https://graph.facebook.com/${socialUser.socialId.id}/picture?type=square&width=75&height=75",
-                state = s.state
-              ))
+              Some(createBasicUserInvitation(socialUserRepo.get(s.recipientSocialUserId), s.state))
             }
             val left = totalAllowedInvites - currentInvitations.length
-            val invites = currentInvitations ++ Seq.fill(left)(None)
-
             if(left > 0) {
-              val invite = invitationRepo.save(Invitation(
+              val invite = Invitation(
                 senderUserId = Some(request.user.id.get),
                 recipientSocialUserId = socialUserInfo.id.get,
                 state = InvitationStates.INACTIVE
-              ))
-              Redirect(fbInviteUrl(invite))
+              )
+              socialUserInfo.networkType match {
+                case SocialNetworks.FACEBOOK =>
+                  Redirect(fbInviteUrl(invitationRepo.save(invite)))
+                case SocialNetworks.LINKEDIN =>
+                  val me = socialUserInfoRepo.getByUser(request.userId)
+                    .find(_.networkType == SocialNetworks.LINKEDIN).get
+                  val path = com.keepit.controllers.website.routes.InviteController.acceptInvite(
+                    invite.externalId).url
+                  val messageWithUrl = message.getOrElse("").replaceAll("\\{link\\}", s"$url$path")
+                  linkedIn.sendMessage(me, socialUserInfo, subject.getOrElse(""), messageWithUrl)
+                  invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
+                  Redirect(routes.InviteController.invite)
+                case _ =>
+                  BadRequest("Unsupported social network")
+              }
             } else {
               Redirect(routes.InviteController.invite)
             }
