@@ -8,11 +8,11 @@
   <section class="content clearfix">
   <header class="content_header">
         <h2>Hi, @user.firstName</h2>
-        <h3 class="blue">You can invite some facebook friends to the KiFi private beta</h3>
-        
+        <h3 class="blue">You can invite some friends to the KiFi private beta</h3>
+
         @if(friendsOnKifi.nonEmpty) {
           <div class="fb_friends_small clearfix">
-            <h4>Your facebook friends using KiFi: @friendsOnKifi.size</h4>
+            <h4>Your friends using KiFi: @friendsOnKifi.size</h4>
             <div class="friends">
               @for(friend <- friendsOnKifi.take(7)) {
                 <a href="#"><img src="@com.keepit.controllers.assets.routes.UserPictureController.get(30, friend)" width="30" height="30"></a>
@@ -33,19 +33,19 @@
     <li>Invites Sent <span class="amount blue_bg">@invitesSent</span></li>
     <li>Invites Accepted <span class="amount green_bg">@invitesAccepted</span></li>
   </ul>
-  
+
   <div class="alreadyinvited">
     <p>This user has already been invited!</p>
     <div class="btn blue small close">Ok</div>
   </div>
-    
+
     <div class="invites_list clearfix">
       @for(row <- 0 to 1) {
       <ul>
         @for(invite <- invites.drop(row * math.ceil(invites.length / 2.0).toInt).take(math.ceil(invites.length / 2.0).toInt)) {
           @if(invite.isDefined) {
             <li class="invite-@invite.get.state.value clearfix">
-              <img src="@invite.get.picture" width="75" height="75" class="avatar">
+              <img src="@invite.get.picture.getOrElse(routes.Assets.at("images/default_avatar.png"))" width="75" height="75" class="avatar">
               <div class="avatar_info">
                 <div class="name">@invite.get.name</div>
                 <div class="status">
@@ -67,7 +67,12 @@
                 <div class="avatar_info">
                   <input type="text" class="invite_field" value="Select a facebook friend to invite">
                   <input type="hidden" value="" name="fullSocialId" class="invited_id">
-                  <div class="btn blue small invite_btn">Invite</a>
+                  <div style="display:none" class="invitation_editor">
+                    <input value="" name="subject" class="invitation_subject">
+                    <textarea name="message" class="invitation_message"></textarea>
+                    <div class="btn blue small send_btn">Send</div>
+                  </div>
+                  <div class="btn blue small invite_btn">Invite</div>
                 </div>
               </form>
             </li>
@@ -75,8 +80,8 @@
         }
       </ul>
       }
-      
-        
+
+
     </div>
   </section>
 
