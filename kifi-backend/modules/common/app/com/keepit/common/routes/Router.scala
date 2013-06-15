@@ -44,8 +44,8 @@ case object PUT extends Method("PUT")
     all.split("\n").filter(_.nonEmpty).map(convert)
  */
 
-object shoebox extends Service {
-  object service {
+object Shoebox extends Service {
+  object internal {
     def getNormalizedURI(id: Long) = ServiceRoute(GET, "/internal/shoebox/database/getNormalizedURI", Param("id", id))
     def getNormalizedURIs(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getNormalizedURIs", Param("ids", ids))
     def getUsers(ids: String) = ServiceRoute(GET, "/internal/shoebox/database/getUsers", Param("ids", ids))
@@ -81,8 +81,8 @@ object shoebox extends Service {
   }
 }
 
-object search extends Service {
-  object service {
+object Search extends Service {
+  object internal {
     def logResultClicked() = ServiceRoute(POST, "/internal/search/events/resultClicked")
     def uriGraphInfo() = ServiceRoute(GET, "/internal/search/uriGraph/info")
     def sharingUserInfo(userId: Id[User], uriIds: String) = ServiceRoute(GET, "/internal/search/uriGraph/sharingUserInfo", Param("userId", userId), Param("uriIds", uriIds))
