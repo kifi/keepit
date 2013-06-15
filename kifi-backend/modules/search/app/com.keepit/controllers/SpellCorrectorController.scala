@@ -1,4 +1,4 @@
-package com.keepit.controllers.search
+package com.keepit.controllers
 
 import com.google.inject.Inject
 import com.keepit.search.query.parser.SpellCorrector

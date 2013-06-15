@@ -51,9 +51,9 @@ trait SearchServiceClient extends ServiceClient {
 class SearchServiceClientImpl(override val host: String, override val port: Int, override val httpClient: HttpClient)
     extends SearchServiceClient {
 
-  import com.keepit.controllers.search.ResultClickedJson._
-  import com.keepit.controllers.search.URIGraphJson._
-  import com.keepit.controllers.search.IndexInfoJson._
+  import ResultClickedJson._
+  import SharingUserInfoJason._
+  import IndexInfoJson._
 
   def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isKeep: Boolean): Future[Unit] = {
     val json = Json.toJson(ResultClicked(userId, query, uriId, rank, isKeep))

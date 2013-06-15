@@ -1,4 +1,4 @@
-package com.keepit.controllers.search
+package com.keepit.controllers
 
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
@@ -13,6 +13,7 @@ import org.apache.lucene.document.Document
 import play.api.libs.json._
 import play.api.mvc.Action
 import views.html
+import com.keepit.search.IndexInfo
 
 class ArticleIndexerController @Inject()(
     indexer: ArticleIndexer,

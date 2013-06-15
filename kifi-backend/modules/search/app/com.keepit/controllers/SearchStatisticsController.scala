@@ -1,4 +1,4 @@
-package com.keepit.controllers.search
+package com.keepit.controllers
 
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.search.SearchStatisticsExtractorFactory

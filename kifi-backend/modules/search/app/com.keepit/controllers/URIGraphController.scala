@@ -1,4 +1,4 @@
-package com.keepit.controllers.search
+package com.keepit.controllers
 
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
@@ -14,24 +14,13 @@ import views.html
 import scala.concurrent.Await
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
-
-case class SharingUserInfo(
-    sharingUserIds: Set[Id[User]],
-    keepersEdgeSetSize: Int)
-
-object URIGraphJson {
-  private implicit val userIdFormat = Id.format[User]
-  implicit val sharingUserInfoFormat = Json.format[SharingUserInfo]
-}
-
+import com.keepit.search.{SharingUserInfo, IndexInfo}
 
 class URIGraphController @Inject()(
     uriGraphPlugin: URIGraphPlugin,
     shoeboxClient: ShoeboxServiceClient,
     uriGraph: URIGraph) extends SearchServiceController {
 
-  import URIGraphJson._
-  import IndexInfoJson._
 
   def reindex() = Action { implicit request =>
     uriGraphPlugin.reindex()
