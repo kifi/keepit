@@ -7,6 +7,7 @@ import com.keepit.model.{SocialUserInfoStates, SocialUserInfo}
 
 import play.api.libs.json._
 import play.api.libs.oauth.{RequestToken, OAuthCalculator}
+import play.api.libs.ws.WS
 import securesocial.core.SecureSocial
 
 class LinkedInSocialGraph @Inject() (client: HttpClient) extends SocialGraph with Logging {
@@ -32,6 +33,28 @@ class LinkedInSocialGraph @Inject() (client: HttpClient) extends SocialGraph wit
     ((parentJson \ "values").asOpt[JsArray] getOrElse JsArray()).value collect {
       case jsv if (jsv \ "id").asOpt[String].exists(_ != "private") => createSocialUserInfo(jsv)
     }
+
+  def sendMessage(from: SocialUserInfo, to: SocialUserInfo, subject: String, message: String) {
+    val creds = from.credentials.get
+    val info = creds.oAuth1Info.get
+    val oauth = OAuthCalculator(SecureSocial.serviceInfoFor(creds).get.key, RequestToken(info.token, info.secret))
+    WS.url(sendMessageUrl())
+      .withHeaders("x-li-format" -> "json", "Content-Type" -> "application/json")
+      .sign(oauth)
+      .post(sendMessageBody(to.socialId, subject, message))
+  }
+
+  private def sendMessageUrl(): String = {
+    s"http://api.linkedin.com/v1/people/~/mailbox"
+  }
+
+  private def sendMessageBody(id: SocialId, subject: String, body: String): JsObject = Json.obj(
+    "recipients" -> Json.obj("values" -> Json.arr(
+      Json.obj("person" -> Json.obj("_path" -> s"/people/$id"))
+    )),
+    "subject" -> subject,
+    "body" -> body
+  )
 
   private def connectionsUrl(id: SocialId): String = {
     s"http://api.linkedin.com/v1/people/$id/connections?format=json"

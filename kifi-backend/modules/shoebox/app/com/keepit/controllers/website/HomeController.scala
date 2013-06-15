@@ -34,7 +34,7 @@ class HomeController @Inject() (db: Database,
     (request.experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.WEBSITE)).nonEmpty || Play.isDev
 
   private def userCanInvite[A](implicit request: AuthenticatedRequest[A]): Boolean =
-    (request.experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.CAN_INVITE)).nonEmpty
+    (request.experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.CAN_INVITE)).nonEmpty || Play.isDev
 
   private def userCanConnectWithSocialNetworks[A](implicit request: AuthenticatedRequest[A]): Boolean =
     (request.experiments & Set(ExperimentTypes.ADMIN)).nonEmpty || Play.isDev
