@@ -67,6 +67,7 @@ aside.left h3.my-keeps a::before {content: " "; display: inline-block; font-size
 aside.left h3.my-keeps.active a::before {background-position: right top}
 #collections h2 {margin-top: 15px; padding: 0 0 2px 38px; background: url(../img/folder-icon.png) left 12px bottom 13px/18px no-repeat}
 a.new-collection {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhDAAMAIABAO/y9////yH5BAEKAAEALAAAAAAMAAwAAAIXjAMJx6h91IIuMYmz3pzfR0lUNUHiUQAAOw==) center/6px no-repeat #99a3b3; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast}
+a.new-collection:hover {background-color: #a1acbd}
 .add-collection {border-top: 1px solid #dbdee3}
 .add-collection>a>input {width: 100%; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit}
 #collections #collections-wrapper {overflow-y: auto; overflow-x: hidden}
