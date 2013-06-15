@@ -1,4 +1,4 @@
-package com.keepit.controllers.search
+package com.keepit.controllers
 
 import scala.Some
 
