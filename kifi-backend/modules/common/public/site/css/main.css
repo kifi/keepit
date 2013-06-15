@@ -56,10 +56,10 @@ aside.left {left: 0; width: 200px}
 aside.left h2 {margin: 4px 0 0; font-size: 1.2em; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased; padding: 0 11px}
 aside.left h3.active,
 aside.left h3.active a {background: #e3e6ee; color: #556179}
-aside.left h3:not(.active):hover>a {background: #e3e6ee}
+aside.left h3:not(.active):hover>a[href] {background: #e3e6ee}
 aside.left h3:not(.active):hover>a>span.right {background: #eff2f7}
-aside.left h3 {margin: 0; font-size: .9em; position: relative; min-height: 36px}
-aside.left h3 a {display: block; padding: 10px 6px 10px 12px; font-size: 13px; line-height: 21px; color: #818692}
+aside.left h3 {margin: 0; position: relative; font-size: 13px}
+aside.left h3 a {display: block; padding: 10px 6px 10px 12px; line-height: 21px; color: #818692}
 aside.left h3.new a {color: #6fa6ef}
 aside.left h3 a span.right {float: right; border: 1px solid #b4b9ca; border-radius: 10.5px; font-size: 12px; line-height: 17px; padding: 2px 12px 0}
 aside.left h3.active a span.right {color: #fff; background: #9ba4b8; border-color: #9ba4b8}
@@ -68,7 +68,8 @@ aside.left h3.my-keeps.active a::before {background-position: right top}
 #collections h2 {margin-top: 15px; padding: 0 0 2px 38px; background: url(../img/folder-icon.png) left 12px bottom 13px/18px no-repeat}
 a.new-collection {float: right; margin: 10px 6px 0 0; width: 18px; border-radius: 50%; background-color: #99a3b3; color: #eff2f7; font: bold 17px/18px arial,sans-serif; -webkit-font-smoothing: none; text-align: center}
 a.new-collection::before {content: "+"; position: relative; top: 1px}
-.add-collection>input {background: #fafafa; border: 1px solid #b4b9ca; color: #204b69; padding: .7em; width: 80%; margin-left: 5px}
+.add-collection {border-top: 1px solid #dbdee3}
+.add-collection>a>input {width: 100%; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit}
 #collections #collections-wrapper {overflow-y: auto; overflow-x: hidden}
 #collections .sortable-placeholder {background: #6fa6ef; height: 2px; min-height: 0}
 h3.collection:first-child {border-top: 1px solid #dbdee3}
@@ -77,7 +78,7 @@ h3.collection a {padding-top: 9px; padding-bottom: 9px}
 h3.collection span.name {width: 120px}
 h3.collection.editing span.name,
 h3.collection.hover span.name {width: 100px}
-h3.collection div.edit-menu {transition: left .5s; -webkit-transition: left .5s; display: none; position: absolute; top: 0; left: -25px}
+h3.collection div.edit-menu {transition: left .5s; -webkit-transition: left .5s; display: none; position: absolute; top: 0; left: -25px; font-size: 13px}
 h3.collection div.edit-menu:hover,
 h3.collection.editing div.edit-menu {left: 0}
 h3.collection a.edit {width: 30px; display: block; height: 37px; padding: 0; background: #e3e6ee url(../img/edit-gray.png) 12px 12px no-repeat}
