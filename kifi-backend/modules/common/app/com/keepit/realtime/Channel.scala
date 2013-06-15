@@ -1,7 +1,7 @@
 package com.keepit.realtime
 
 import scala.collection.concurrent.TrieMap
-import com.google.inject.Singleton
+import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.db.Id
 import com.keepit.model.User
 import play.api.libs.iteratee.Concurrent.{Channel => PlayChannel}
@@ -9,6 +9,12 @@ import play.api.libs.json.JsArray
 import com.keepit.model.NormalizedURI
 import java.util.concurrent.atomic.AtomicBoolean
 import com.keepit.common.logging.Logging
+import play.api.Plugin
+import com.keepit.common.plugin.{SchedulingProperties, SchedulingPlugin}
+import akka.actor.ActorSystem
+import akka.util.Timeout
+import scala.concurrent.duration._
+import play.modules.statsd.api.Statsd
 
 /** A Channel, which accepts pushed messages, and manages connections to it.
   */
@@ -180,5 +186,41 @@ class UserSpecificChannel(id: Id[User]) extends ChannelImpl(id)
 class UriSpecificChannel(uri: String) extends ChannelImpl(uri)
 @Singleton class UriChannel extends ChannelManagerImpl("uri", (uri: String) => new UriSpecificChannel(uri))
 
+@ImplementedBy(classOf[ChannelPluginImpl])
+trait ChannelPlugin extends Plugin {
+  def reportUserClientCount: Int
+  def reportURIClientCount: Int
+}
 
+@Singleton
+class ChannelPluginImpl @Inject() (
+                                    system: ActorSystem,
+                                    userChannel: UserChannel,
+                                    uriChannel: UriChannel,
+                                    val schedulingProperties: SchedulingProperties)
+  extends ChannelPlugin with SchedulingPlugin with Logging {
+
+  // plugin lifecycle methods
+  override def enabled: Boolean = true
+  override def onStart() {
+    log.info("starting ChannelPluginImpl")
+    scheduleTask(system, 0 seconds, 1 minute, "report user client count") {reportUserClientCount}
+    scheduleTask(system, 0 seconds, 1 minute, "report uri client count") {reportURIClientCount}
+  }
+  override def onStop() {
+    log.info("stopping ChannelPluginImpl")
+  }
+
+  def reportUserClientCount = {
+    val count = userChannel.clientCount
+    Statsd.gauge("websocket.channel.user.client", count)
+    count
+  }
+
+  def reportURIClientCount = {
+    val count = userChannel.clientCount
+    Statsd.gauge("websocket.channel.uri.client", count)
+    count
+  }
+}
 

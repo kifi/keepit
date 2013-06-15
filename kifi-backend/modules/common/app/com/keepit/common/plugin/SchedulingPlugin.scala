@@ -1,15 +1,11 @@
 package com.keepit.common.plugin
 
-import com.keepit.common.zookeeper._
 import com.keepit.common.logging.Logging
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import akka.actor.{ActorSystem, Cancellable, ActorRef}
 import play.api.Plugin
-import play.api.Mode
-
-import com.google.inject.{Inject, Singleton, ImplementedBy}
 
 sealed trait SchedulingEnabled
 
@@ -25,15 +21,22 @@ trait SchedulingPlugin extends Plugin with Logging {
 
   private var _cancellables: Seq[Cancellable] = Seq()
 
-  private def sendMessage(receiver: ActorRef, message: Any): Unit = if (schedulingProperties.allowScheduling) {
-    log.info(s"sending a scheduled message $message to actor $receiver")
-    receiver ! message
-  } else log.info(s"scheduling disabled, block send a scheduled message $message to actor $receiver")
+  private def execute(f: => Unit, taskName: String): Unit =
+    if (schedulingProperties.allowScheduling) {log.info(s"executing scheduled task: $taskName"); f}
+    else log.info(s"scheduling disabled, block execution of scheduled task: $taskName")
 
-  def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any) =
+  def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, taskName: String)(f: => Unit): Unit =
     if (!schedulingProperties.neverallowScheduling) {
-      _cancellables :+= ( system.scheduler.schedule(initialDelay, frequency) { sendMessage(receiver, message) } )
-    } else log.info("permanently disable scheduling for message $message to actor $receiver")
+      _cancellables :+= system.scheduler.schedule(initialDelay, frequency) { execute(f, taskName) }
+    } else log.info(s"permanently disable scheduling for task: $taskName")
+
+  def scheduleTaskOnce(system: ActorSystem, initialDelay: FiniteDuration, taskName: String)(f: => Unit): Unit =
+    if (!schedulingProperties.neverallowScheduling) {
+      _cancellables :+= system.scheduler.scheduleOnce(initialDelay) { execute(f, taskName) }
+    } else log.info(s"permanently disable scheduling for task: $taskName")
+
+  def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any): Unit =
+    scheduleTask(system, initialDelay, frequency, s"send message $message to actor $receiver") { receiver ! message }
 
   def cancelTasks() = _cancellables.map(_.cancel)
 

@@ -4,7 +4,7 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick._
-import com.keepit.common.social.BasicUserRepo
+import com.keepit.common.social.{SocialNetworks, BasicUserRepo}
 import com.keepit.common.time._
 import com.keepit.model._
 
@@ -51,7 +51,7 @@ class UserController @Inject() (db: Database,
   def getAllConnections = AuthenticatedJsonAction { request =>
 
     val connections = db.readOnly { implicit conn =>
-      socialUserRepo.getByUser(request.user.id.get) map { su =>
+      socialUserRepo.getByUser(request.user.id.get) flatMap { su =>
         socialConnectionRepo.getSocialUserConnections(su.id.get) map { suc =>
 
           val status = if(suc.userId.isDefined) "joined"
@@ -63,12 +63,16 @@ class UserController @Inject() (db: Database,
           (suc, status)
         }
       }
-    } flatten
+    }
 
     Ok(JsArray(connections.map { conn =>
       Json.obj(
         "label" -> conn._1.fullName,
-        "image" -> s"https://graph.facebook.com/${conn._1.socialId.id}/picture?type=square&width=75&height=75", // we need a generic profile picture route for non-users
+        "image" -> Json.toJson(conn._1.networkType match {
+          case SocialNetworks.FACEBOOK =>
+            Some(s"https://graph.facebook.com/${conn._1.socialId.id}/picture?type=square&width=75&height=75")
+          case _ => None
+        }),
         "value" -> (conn._1.networkType + "/" + conn._1.socialId.id),
         "status" -> conn._2
       )
