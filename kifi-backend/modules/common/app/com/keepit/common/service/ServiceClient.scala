@@ -17,7 +17,7 @@ trait ServiceClient {
   protected def url(path: String): String = s"${protocol}://${host}:${port}${path}"
 
   protected def call(call: ServiceRoute, body: JsValue = JsNull): Future[ClientResponse] = call match {
-    case c @ ServiceRoute(GET, _, _) => httpClient.getFuture(url(c.toString))
-    case c @ ServiceRoute(POST, _, _) => httpClient.postFuture(url(c.toString), body)
+    case c @ ServiceRoute(GET, _, _*) => httpClient.getFuture(url(c.url))
+    case c @ ServiceRoute(POST, _, _*) => httpClient.postFuture(url(c.url), body)
   }
 }

@@ -1,5 +1,4 @@
-
-package com.keepit.controllers
+package com.keepit.controllers.search
 
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
