@@ -32,15 +32,14 @@ class ServiceDiscoveryImpl @Inject() (
   private val myServicePath = Path(s"/fortytwo/services/${serviceType.name}")
   private val myServiceNodeMaster = Node(s"${myServicePath.name}/${serviceType.name}_")
   private var myNode: Option[Node] = None
-  private var cluster = new TrieMap[Node, AmazonInstanceInfo]()
 
-  private def myId: Option[Long] = myNode map extractId
-  private def extractId(node: Node) = node.name.substring(node.name.lastIndexOf('_') + 1).toLong
+  private var clusters = new TrieMap[Path, ServiceCluster]()
+  val isLeader: Boolean = clusters(myServicePath).leader map (_.node == myNode.get) getOrElse false
 
   implicit val amazonInstanceInfoFormat = AmazonInstanceInfo.format
 
   //without me
-  override def myClusterSize: Int = cluster.size
+  override def myClusterSize: Int = clusters(myServicePath).size
 
   def register(): Node = {
     val path = zk.createPath(myServicePath)
@@ -48,46 +47,14 @@ class ServiceDiscoveryImpl @Inject() (
     zk.watchChildren(myServicePath, { (children : Seq[Node]) =>
       println(s"""services in my cluster under ${myServicePath.name}: ${children.mkString(", ")}""")
       future {
-        try {
-          val childNodes = children map {c => Node(s"${myServicePath.name}/$c")} filter { childNode =>
-            println(s"discovered new node $childNode in my cluster")
-            childNode.name != myNode.get.name
-          }
-          println(s"found ${childNodes.size} nodes in cluster")
-          childNodes foreach { childNode =>
-            cluster.getOrElseUpdate(childNode, {
-              val nodeData: String = zk.get(childNode)
-              println(s"reading node $childNode data $nodeData")
-              val json = Json.parse(nodeData)
-              val amazonInstanceInfo = Json.fromJson[AmazonInstanceInfo](json).get
-              println(s"discovered new node $childNode in my cluster: $amazonInstanceInfo")
-              amazonInstanceInfo
-            })
-          }
-          cluster.keys foreach { key =>
-            if (!childNodes.contains(key)) {
-              println(s"node $key is not in cluster anymore")
-              cluster.remove(key)
-            }
-          }
-        } catch {
-          case e: Throwable => e.printStackTrace()
-        }
+        val cluster = clusters.getOrElseUpdate(myServicePath, new ServiceCluster(serviceType, myServicePath))
+        cluster.update(zk, children)
       }
     })
     zk.set(myNode.get, Json.toJson(amazonInstanceInfo).toString)
     println(s"registered as node ${myNode.get}")
     myNode.get
   }
-
-  def isLeader(): Boolean = myId map { id =>
-    val siblings = cluster.keys
-    val siblingsIds = siblings map extractId
-    val minId = siblingsIds.min
-    val isMinid = minId == id
-    println(s"my service id is $id, service with id $minId is the leader => I'm the leader == $isMinid")
-    isMinid
-  } getOrElse (throw new IllegalStateException("service did not register yet"))
 
   def watchNode(node: Node) {
     zk.watchNode(node, { (data : Option[Array[Byte]]) =>
