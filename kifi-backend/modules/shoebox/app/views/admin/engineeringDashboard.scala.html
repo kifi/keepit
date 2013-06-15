@@ -72,7 +72,7 @@
   var cacheTargets = baseTargets.concat(cacheCountTargets).concat(cacheRatioTarget);
   options.target = cacheTargets;
   options.title = "Hits - Misses - Sets per Minute vs Hit Ratio";
-  options.yMinRight = 0;
+  options.yMinRight = 70;
   options.yMaxRight = 100;
   $("#cache").graphite(options);
 
