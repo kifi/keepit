@@ -591,32 +591,44 @@ $(function() {
 		populateMyKeeps($(this).parent().data('id'));
 	})
 	.on("click", ".new-collection", function() {
-		$addColl.slideDown(200, function() {
-			$addColl.find("input").prop("disabled", false).focus().select();
-		});
+		clearTimeout(hideAddCollTimeout), hideAddCollTimeout = null;
+		if (!$addColl.is(":animated")) {
+			if ($addColl.is(":visible")) {
+				$addColl.slideUp(200).find("input").val("").prop("disabled", true);
+			} else {
+				$addColl.slideDown(200, function() {
+					$addColl.find("input").prop("disabled", false).focus().select();
+				});
+			}
+		}
 	});
 
 	var $addColl = $colls.find(".add-collection"), hideAddCollTimeout;
-	$addColl.find("input").on("blur keypress", function(e) {
-		if (e.which === 13 || e.type === "blur") { // 13 is Enter
+	$addColl.find("input").on("blur keydown", function(e) {
+		if ((e.which === 13 || e.type === "blur") && !$addColl.is(":animated")) { // 13 is Enter
 			var name = $.trim(this.value);
 			if (name) {
 				createCollection(name);
+			} else if (e.type === "blur") {
+				if ($addColl.is(":visible"))
+				// avoid back-to-back hide/show animations if "new collection" clicked again
+				hideAddCollTimeout = setTimeout(hide.bind(this), 300);
 			} else {
-				var input = this;
-				if (e.type === "blur") {
-					hideAddCollTimeout = setTimeout(function() {  // avoid back-to-back hide/show animations if "new collection" clicked again
-						input.value = "";
-						input.disabled = true;
-						$addColl.slideUp(200);
-					}, 300);
-				} else {
-					input.blur();
-				}
+				e.preventDefault();
+				hide.call(this);
 			}
+		} else if (e.which === 27 && !$addColl.is(":animated")) { // 27 is Esc
+			hide.call(this);
+		}
+		function hide() {
+			this.value = "";
+			this.disabled = true;
+			this.blur();
+			$addColl.slideUp(200);
+			clearTimeout(hideAddCollTimeout), hideAddCollTimeout = null;
 		}
 	}).focus(function() {
-		clearTimeout(hideAddCollTimeout);
+		clearTimeout(hideAddCollTimeout), hideAddCollTimeout = null;
 	});
 
 	// filter collections or right bar
