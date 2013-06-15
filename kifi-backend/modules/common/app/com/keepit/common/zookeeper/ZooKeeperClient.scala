@@ -14,14 +14,14 @@ import org.apache.zookeeper.Watcher.Event.KeeperState
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.atomic.AtomicBoolean
 
-case class Path(name: String, withBase: Boolean = false) {
+case class Path(name: String) {
   override def toString = name
-  def asNode: Node = Node(name, withBase)
+  def asNode: Node = Node(name)
 }
 
-case class Node(name: String, withBase: Boolean = false) {
+case class Node(name: String) {
   override def toString = name
-  def asPath: Path = Path(name, withBase)
+  def asPath: Path = Path(name)
 }
 
 @ImplementedBy(classOf[ZooKeeperClientImpl])
@@ -113,10 +113,7 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
     paths.reverse
   }
 
-  private def makeNodePath(path: Path): Node = path.withBase match {
-    case false => Node(path.name.replaceAll("//", "/"), true)
-    case true => path.asNode
-  }
+  private def makeNodePath(path: Path): Node = Node(path.name.replaceAll("//", "/"))
 
   def getChildren(path: Path): Seq[Node] = {
     zk.getChildren(makeNodePath(path).name, false)
@@ -131,7 +128,7 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
   }
 
   def create(path: Path, data: Array[Byte], createMode: CreateMode): Path =
-    Path(zk.create(makeNodePath(path).name, data, Ids.OPEN_ACL_UNSAFE, createMode), true)
+    Path(zk.create(makeNodePath(path).name, data, Ids.OPEN_ACL_UNSAFE, createMode))
 
   def createNode(node: Node, data: Array[Byte], createMode: CreateMode): Node =
     create(node.asPath, data, createMode).asNode

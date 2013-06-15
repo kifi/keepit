@@ -4,14 +4,11 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.strings._
 import com.keepit.common.service._
 import com.keepit.common.amazon._
-<<<<<<< HEAD
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.collection.concurrent.TrieMap
 
-=======
->>>>>>> e415d5468dd22a0f7af246d36be37eb92523a31e
 import play.api.libs.json._
 
 import com.google.inject.{Inject, Singleton}
@@ -38,12 +35,12 @@ class ServiceDiscoveryImpl @Inject() (
   private var myNode: Option[Node] = None
 
   private var clusters = new TrieMap[Path, ServiceCluster]()
-  val isLeader: Boolean = clusters(myServicePath).leader map (_.node == myNode.get) getOrElse false
+  def isLeader: Boolean = clusters(myServicePath).leader map (_.node == myNode.get) getOrElse false
 
   implicit val amazonInstanceInfoFormat = AmazonInstanceInfo.format
 
   //without me
-  override def myClusterSize: Int = clusters(myServicePath).size
+  override def myClusterSize: Int = clusters.get(myServicePath) map {c => c.size} getOrElse 0
 
   def register(): Node = {
     val path = zk.createPath(myServicePath)

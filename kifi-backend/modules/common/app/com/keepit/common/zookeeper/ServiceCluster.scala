@@ -37,8 +37,10 @@ class ServiceCluster(serviceType: ServiceType, myServicePath: Path) extends Logg
       println(s"node $node is not in instances anymore")
       instances.remove(node)
     }
-    val minId = (instances.values map {v => v.id}).min
-    leader = Some(instances.values.filter(_.id == minId).head)
+    if (!instances.isEmpty) {
+      val minId = (instances.values map {v => v.id}).min
+      leader = Some(instances.values.filter(_.id == minId).head)
+    }
   } catch {
     case e: Throwable => e.printStackTrace()
   }

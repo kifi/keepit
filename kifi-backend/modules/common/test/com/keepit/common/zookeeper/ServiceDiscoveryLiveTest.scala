@@ -17,11 +17,12 @@ import com.keepit.common.db.slick._
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.CreateMode._
 import scala.util.{Random, Try}
-import com.google.inject.Provider
+import com.google.inject.util._
+import com.google.inject._
 
 class ServiceDiscoveryLiveTest extends Specification with TestInjector {
 
-  // args(skipAll = true)
+  args(skipAll = true)
 
   implicit val amazonInstanceInfoFormat = AmazonInstanceInfo.format
 
@@ -31,11 +32,11 @@ class ServiceDiscoveryLiveTest extends Specification with TestInjector {
       withInjector()  { implicit injector =>
         val services = inject[FortyTwoServices]
         val service = RemoteService(AmazonInstanceId("id"), ServiceStatus.UP, IpAddress("127.0.0.1"), services.currentService)
-        val amazonInstanceInfo = inject[Provider[AmazonInstanceInfo]]
+        val amazonInstanceInfo = inject[AmazonInstanceInfo]
         val zk = new ZooKeeperClientImpl("localhost", 2000,
           Some({zk1 => println(s"in callback, got $zk1")}))
         try {
-          val discovery: ServiceDiscovery = new ServiceDiscoveryImpl(zk, services, amazonInstanceInfo.copy(localHostname = "main"))
+          val discovery: ServiceDiscovery = new ServiceDiscoveryImpl(zk, services, Providers.of(amazonInstanceInfo.copy(localHostname = "main")))
           discovery.myClusterSize === 0
           zk.watchChildren(Path(s"/fortytwo/services/TEST_MODE"), { (children : Seq[Node]) =>
             println("Service Instances ----------- : %s".format(children.mkString(", ")))
@@ -52,14 +53,14 @@ class ServiceDiscoveryLiveTest extends Specification with TestInjector {
           println(zk.getChildren(Path("/fortytwo/services/TEST_MODE")) mkString ",")
           zk.getChildren(Path("/fortytwo/services/TEST_MODE")).size === 3
           discovery.isLeader() === false
-          discovery.myClusterSize === 2
+          discovery.myClusterSize === 3
           println("sleeping 2 - about to delete")
           Thread.sleep(10000)
           zk.deleteNode(firstNode)
           println("sleeping 3")
           Thread.sleep(10000)
+          discovery.myClusterSize === 2
           discovery.isLeader() === true
-          discovery.myClusterSize === 1
         } finally {
           zk.close()
         }
