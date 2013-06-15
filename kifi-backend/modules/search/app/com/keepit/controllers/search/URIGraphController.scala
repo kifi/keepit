@@ -1,4 +1,4 @@
-package com.keepit.controllers
+package com.keepit.controllers.search
 
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
@@ -14,7 +14,7 @@ import views.html
 import scala.concurrent.Await
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
-import com.keepit.common.search.IndexInfo
+import com.keepit.common.search.{SharingUserInfo, IndexInfo}
 
 class URIGraphController @Inject()(
     uriGraphPlugin: URIGraphPlugin,

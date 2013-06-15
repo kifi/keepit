@@ -1,4 +1,4 @@
-package com.keepit.controllers
+package com.keepit.controllers.search
 
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
@@ -20,8 +20,6 @@ class ArticleIndexerController @Inject()(
     phraseIndexer: PhraseIndexer,
     indexerPlugin: ArticleIndexerPlugin)
   extends SearchServiceController {
-
-  import IndexInfoJson._
 
   def index() = Action { implicit request =>
     val cnt = indexerPlugin.index()
