@@ -28,17 +28,17 @@ object CacheStatistics {
     }
   }
 
-  def recordHit(cachePlugin: FortyTwoCachePlugin, namespace: String, millis: Long) {
+  def recordHit(cachePlugin: String, namespace: String, millis: Long) {
     incrCount(s"$cachePlugin.$namespace", hitsMap)
     Statsd.increment(s"$cachePlugin.$namespace.hits")
     Statsd.timing(s"$cachePlugin.$namespace.hits", millis)
   }
-  def recordMiss(cachePlugin: FortyTwoCachePlugin, namespace: String) {
+  def recordMiss(cachePlugin: String, namespace: String) {
     incrCount(s"$cachePlugin.$namespace", missesMap)
     Statsd.increment(s"$cachePlugin.$namespace.misses")
   }
 
-  def recordSet(cachePlugin: FortyTwoCachePlugin, namespace: String, millis: Long) {
+  def recordSet(cachePlugin: String, namespace: String, millis: Long) {
     incrCount(s"$cachePlugin.$namespace", setsMap)
     Statsd.increment(s"$cachePlugin.$namespace.sets")
     Statsd.timing(s"$cachePlugin.$namespace.sets", millis)
@@ -248,8 +248,14 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
       val objOpt = value.map(serializer.reads)
       val getEnd = currentDateTime.getMillis()
       objOpt match {
-        case Some(_) => CacheStatistics.recordHit(repo, key.namespace, getEnd - getStart)
-        case None => CacheStatistics.recordMiss(repo, key.namespace)
+        case Some(_) => {
+          CacheStatistics.recordHit(repo.toString, key.namespace, getEnd - getStart)
+          CacheStatistics.recordHit("all", key.namespace, getEnd - getStart)
+        }
+        case None => {
+          CacheStatistics.recordMiss(repo.toString, key.namespace)
+          if (outerCache isEmpty) CacheStatistics.recordMiss("all", key.namespace)
+        }
       }
       objOpt
     } catch {
@@ -279,7 +285,8 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
       }
       repo.set(key.toString, properlyBoxed, ttl.toSeconds.toInt)
       val setEnd = currentDateTime.getMillis()
-      CacheStatistics.recordSet(repo, key.namespace, setEnd - setStart)
+      CacheStatistics.recordSet(repo.toString, key.namespace, setEnd - setStart)
+      if (outerCache isEmpty) CacheStatistics.recordSet("all", key.namespace, setEnd - setStart)
       value
     } recover {
       case e: Throwable =>
