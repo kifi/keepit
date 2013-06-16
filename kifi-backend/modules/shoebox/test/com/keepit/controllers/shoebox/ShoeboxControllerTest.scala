@@ -1,4 +1,4 @@
-package com.keepit.controllers
+package com.keepit.controllers.shoebox
 
 import org.specs2.mutable.Specification
 import play.api.test.Helpers._
