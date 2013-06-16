@@ -371,7 +371,7 @@ class MainSearcher(
     shoeboxClient.persistServerSearchEvent(metaData)
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
         myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt,
-        (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = svExistVar, toShow = show, timeLogs = Some(timeLogs))
+        (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = svExistVar, toShow = show, timeLogs = Some(timeLogs.toSearchTimeLogs))
   }
 
   private def classify(parsedQuery: Query, hitList: List[MutableArticleHit], personalizedSearcher: PersonalizedSearcher) = {
@@ -516,8 +516,5 @@ case class MutableSearchTimeLogs(
     var processHits: Long = 0,
     var total: Long = 0
 ) {
-  override def toString() = {
-    s"search time summary: total = $total, approx sum of: socialGraphInfo = $socialGraphInfo, getClickBoost = $getClickBoost, queryParsing = $queryParsing, " +
-    		s"personalizedSearcher = $personalizedSearcher, search = $search, processHits = $processHits"
-  }
+  def toSearchTimeLogs = SearchTimeLogs(socialGraphInfo, getClickBoost, queryParsing, personalizedSearcher, search, processHits, total)
 }

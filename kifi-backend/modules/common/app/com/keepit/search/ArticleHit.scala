@@ -23,7 +23,7 @@ case class ArticleSearchResult(
                                 svVariance: Float = -1.0f,			// semantic vector variance
                                 svExistenceVar: Float = -1.0f,
                                 toShow: Boolean = true,
-                                timeLogs: Option[MutableSearchTimeLogs] = None
+                                timeLogs: Option[SearchTimeLogs] = None
                                 )
 
 
@@ -58,5 +58,19 @@ class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmark
   override def hashCode() = {
     val prime = 41
     prime * (prime * (prime + textScore.hashCode) + normalizedTextScore.hashCode) + bookmarkScore.hashCode
+  }
+}
+
+case class SearchTimeLogs(val socialGraphInfo: Long = 0,
+                          val getClickBoost: Long = 0,
+                          val queryParsing: Long = 0,
+                          val personalizedSearcher: Long = 0,
+                          val search: Long = 0,
+                          val processHits: Long = 0,
+                          val total: Long = 0
+                           ) {
+  override def toString() = {
+    s"search time summary: total = $total, approx sum of: socialGraphInfo = $socialGraphInfo, getClickBoost = $getClickBoost, queryParsing = $queryParsing, " +
+      s"personalizedSearcher = $personalizedSearcher, search = $search, processHits = $processHits"
   }
 }
