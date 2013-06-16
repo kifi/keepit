@@ -91,9 +91,6 @@ class TestApplication(val _global: FortyTwoGlobal, useDb: Boolean = true, overri
       new TestApplication(new TestRemoteGlobal(Modules.`override`(global.modules: _*).`with`(model)), useDb = false, path = path)
 }
 
-class DevApplication(path: File = new File("./modules/common/")) extends TestApplication(new TestGlobal(DevGlobal.modules: _*), path = path)
-class ShoeboxApplication() extends TestApplication(new TestGlobal(ShoeboxDevGlobal.modules: _*), path = new File("./modules/common/"))
-class SearchApplication() extends TestApplication(new TestRemoteGlobal(SearchDevGlobal.modules: _*), useDb = false, path = new File("./modules/common/"))
 class EmptyApplication(path: File = new File("./modules/common/")) extends TestApplication(new TestGlobal(TestModule()), path = path)
 
 trait DbRepos {
