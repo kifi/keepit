@@ -24,7 +24,7 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
 
   "URIGraphIndexer" should {
     "maintain a sequence number on bookmarks " in {
-      running(new DevApplication().withShoeboxServiceModule)
+      running(new EmptyApplication().withShoeboxServiceModule)
             {
         val (users, uris) = setupDB
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
@@ -43,7 +43,7 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
     }
 
     "find users by uri" in {
-      running(new DevApplication().withShoeboxServiceModule) {
+      running(new EmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
 
@@ -72,7 +72,7 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
     }
 
     "store user to keep associations in URILists" in {
-      running(new DevApplication().withShoeboxServiceModule) {
+      running(new EmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
 
         val indexer = mkURIGraphIndexer()
@@ -100,7 +100,7 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
     }
 
     "dump Lucene Document" in {
-      running(new DevApplication().withShoeboxServiceModule) {
+      running(new EmptyApplication().withShoeboxServiceModule) {
         val store = new FakeArticleStore()
 
         val (user, uris, bookmarks) = db.readWrite { implicit s =>

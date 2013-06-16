@@ -36,7 +36,7 @@ class EventListenerTest extends Specification with DbRepos {
 
   "EventHelper" should {
     "parse search events" in {
-      running(new DevApplication().withShoeboxServiceModule) {
+      running(new ShoeboxApplication().withShoeboxServiceModule) {
         val (normUrlId, url, user, bookmark) = setup()
         val listener = new EventListener(inject[UserRepo], inject[NormalizedURIRepo]) {
           val schedulingProperties = inject[SchedulingProperties]
@@ -58,7 +58,7 @@ class EventListenerTest extends Specification with DbRepos {
 
   "EventListener" should {
     "process events" in {
-      running(new DevApplication().withShoeboxServiceModule) {
+      running(new ShoeboxApplication().withShoeboxServiceModule) {
         val (normUrlId, url, user, bookmark) = setup()
         implicit val clock = inject[Clock]
         implicit val fortyTwoServices = inject[FortyTwoServices]

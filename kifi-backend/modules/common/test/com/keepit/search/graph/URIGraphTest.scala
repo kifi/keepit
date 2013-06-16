@@ -68,7 +68,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
 
   "URIGraph" should {
     "generate UriToUsrEdgeSet" in {
-      running(new DevApplication().withShoeboxServiceModule) {
+      running(new EmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
@@ -89,7 +89,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "generate UserToUriEdgeSet" in {
-      running(new DevApplication().withShoeboxServiceModule){
+      running(new EmptyApplication().withShoeboxServiceModule){
         val (users, uris) = setupDB
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
@@ -115,7 +115,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "generate UserToCollectionEdgeSet" in {
-      running(new DevApplication().withShoeboxServiceModule) {
+      running(new EmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
 
         val usersWithCollection = users.take(2)
@@ -145,7 +145,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "generate UriToCollectionEdgeSet" in {
-      running(new DevApplication().withShoeboxServiceModule) {
+      running(new EmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
 
         val expectedUriToUsers = uris.map{ uri => (uri, users.filter( _.id.get.id == uri.id.get.id)) }
@@ -173,7 +173,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "generate CollectionToUriEdgeSet" in {
-      running(new DevApplication().withShoeboxServiceModule) {
+      running(new EmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
 
         val expectedUriToUsers = uris.map{ uri => (uri, users.filter{ _.id.get.id <= uri.id.get.id }) }
@@ -200,7 +200,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "intersect UserToCollectionEdgeSet and UriToCollectionEdgeSet" in {
-      running(new DevApplication().withShoeboxServiceModule) {
+      running(new EmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
 
         val expectedUriToUsers = uris.map{ uri => (uri, users.filter( _.id.get.id == uri.id.get.id)) }
@@ -233,7 +233,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "intersect UserToUserEdgeSet and UriToUserEdgeSet" in {
-      running(new DevApplication().withShoeboxServiceModule) {
+      running(new EmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
@@ -264,7 +264,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "intersect empty sets" in {
-      running(new DevApplication().withShoeboxServiceModule) {
+      running(new EmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
         val graph = mkURIGraph()
         graph.update()
@@ -289,7 +289,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "determine whether intersection is empty" in {
-      running(new DevApplication().withShoeboxServiceModule) {
+      running(new EmptyApplication().withShoeboxServiceModule) {
         val graph = mkURIGraph()
         graph.update()
 
@@ -303,7 +303,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "search personal bookmark titles" in {
-      running(new DevApplication().withShoeboxServiceModule) {
+      running(new EmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
 
@@ -338,7 +338,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "search personal bookmark domains" in {
-       running(new DevApplication().withShoeboxServiceModule) {
+       running(new EmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
 
@@ -382,7 +382,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "retrieve bookmark records from bookmark store" in {
-       running(new DevApplication().withShoeboxServiceModule) {
+       running(new EmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
         val store = setupArticleStore(uris)
 

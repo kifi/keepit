@@ -22,7 +22,7 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
 
   "CollectionIndexer" should {
     "maintain a sequence number on collections " in {
-      running(new DevApplication().withShoeboxServiceModule) {
+      running(new EmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
         val numURIs = uris.size
 
@@ -54,7 +54,7 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
     }
 
     "find collections by user" in {
-      running(new DevApplication().withShoeboxServiceModule) {
+      running(new EmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
 
         val collectionIndexer = mkCollectionIndexer()
@@ -92,7 +92,7 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
     }
 
     "find collections by uri" in {
-      running(new DevApplication().withShoeboxServiceModule) {
+      running(new EmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
 
         val collectionIndexer = mkCollectionIndexer()
@@ -130,7 +130,7 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
     }
 
     "store collection to uri associations in URIList" in {
-      running(new DevApplication().withShoeboxServiceModule) {
+      running(new EmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = setupDB
 
         val collectionIndexer = mkCollectionIndexer()
@@ -159,7 +159,7 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
     }
 
     "dump Lucene Document" in {
-      running(new DevApplication().withShoeboxServiceModule) {
+      running(new EmptyApplication().withShoeboxServiceModule) {
         val (user, uris, bookmarks, collection) = db.readWrite { implicit s =>
           val user = userRepo.save(User(firstName = "Agrajag", lastName = ""))
           val uris = Array(

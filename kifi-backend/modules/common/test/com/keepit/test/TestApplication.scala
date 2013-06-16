@@ -389,7 +389,7 @@ case class ShoeboxServiceModule() extends ScalaModule {
     userExperimentRepo: UserExperimentRepo,
     clickHistoryTracker: ClickHistoryTracker,
     browsingHistoryTracker: BrowsingHistoryTracker,
-    EventPersisterProvider: Provider[EventPersister], clock: Clock,
+    clock: Clock,
     fortyTwoServices: FortyTwoServices
   ): ShoeboxServiceClient = new FakeShoeboxServiceClientImpl(
     cacheProvider,
