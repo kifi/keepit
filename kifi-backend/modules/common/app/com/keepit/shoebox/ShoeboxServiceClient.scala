@@ -15,7 +15,6 @@ import com.keepit.common.net.HttpClient
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.time._
-import com.keepit.controllers.shoebox._
 import com.keepit.model._
 import com.keepit.serializer._
 import play.api.libs.json._
@@ -36,6 +35,7 @@ import scala.collection.mutable.ArrayBuffer
 import com.keepit.search.ArticleHit
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Shoebox
+import com.keepit.serializer.CollectionTupleSerializer.collectionTupleFormat
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -327,7 +327,6 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[(Id[Collection], Id[User], SequenceNumber)]] = {
-    import com.keepit.controllers.shoebox.ShoeboxController.collectionTupleFormat
     call(Shoebox.internal.getCollectionsChanged(seqNum.value, fetchSize)) map { r =>
       Json.fromJson[Seq[(Id[Collection], Id[User], SequenceNumber)]](r.json).get
     }

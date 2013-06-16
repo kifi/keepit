@@ -61,14 +61,7 @@ import com.keepit.common.social.SocialNetworkType
 import com.keepit.common.social.SocialNetworks
 import com.keepit.serializer.SocialUserInfoSerializer._
 import com.keepit.search.PersonalSearchHit
-
-object ShoeboxController {
-  implicit val collectionTupleFormat = (
-    (__ \ 'collId).format(Id.format[Collection]) and
-    (__ \ 'userId).format(Id.format[User]) and
-    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
-  ).tupled
-}
+import com.keepit.serializer.CollectionTupleSerializer.collectionTupleFormat
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -336,7 +329,6 @@ class ShoeboxController @Inject() (
   }
 
   def getCollectionsChanged(seqNum: Long, fetchSize: Int) = Action { request =>
-    import ShoeboxController.collectionTupleFormat
     Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getCollectionsChanged(SequenceNumber(seqNum), fetchSize) }))
   }
 
