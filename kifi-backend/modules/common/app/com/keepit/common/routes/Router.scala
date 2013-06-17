@@ -60,7 +60,6 @@ object shoebox extends Service {
     def getBookmarks(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/bookmark", Param("userId", userId))
     def getBookmarksChanged(seqNum: Long, fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/changedBookmark", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/bookmarkByUriUser", Param("uriId", uriId), Param("userId", userId))
-    def getUsersChanged(seqNum: Long) = ServiceRoute(GET, "/internal/shoebox/database/changedUser", Param("seqNum", seqNum))
     def persistServerSearchEvent() = ServiceRoute(POST, "/internal/shoebox/persistServerSearchEvent")
     def sendMail() = ServiceRoute(POST, "/internal/shoebox/database/sendMail")
     def getPhrasesByPage(page: Int, size: Int) = ServiceRoute(GET, "/internal/shoebox/database/getPhrasesByPage", Param("page", page), Param("size", size))

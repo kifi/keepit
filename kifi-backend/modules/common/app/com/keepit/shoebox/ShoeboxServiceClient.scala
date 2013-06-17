@@ -48,7 +48,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def sendMail(email: ElectronicMail): Future[Boolean]
-  def getUsersChanged(seqNum: SequenceNumber): Future[Seq[(Id[User], SequenceNumber)]]
   def persistServerSearchEvent(metaData: JsObject): Unit
   def getClickHistoryFilter(userId: Id[User]): Future[Array[Byte]]
   def getBrowsingHistoryFilter(userId: Id[User]): Future[Array[Byte]]
@@ -288,16 +287,6 @@ class ShoeboxServiceClientImpl @Inject() (
     val query = uriIds.mkString(",")
     call(routes.ShoeboxController.getNormalizedURIs(query)).map { r =>
       r.json.as[JsArray].value.map(js => NormalizedURISerializer.normalizedURISerializer.reads(js).get)
-    }
-  }
-
-  def getUsersChanged(seqNum: SequenceNumber): Future[Seq[(Id[User], SequenceNumber)]] = {
-    call(routes.ShoeboxController.getUsersChanged(seqNum.value)).map{ r =>
-      r.json.as[JsArray].value.map{ json =>
-        val id = (json \ "id").as[Long]
-        val seqNum = (json \ "seqNum").as[Long]
-        (Id[User](id), SequenceNumber(seqNum))
-      }
     }
   }
 

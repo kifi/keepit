@@ -85,14 +85,6 @@ class FakeShoeboxServiceClientImpl @Inject() (
     Promise.successful(bookmarks).future
   }
 
-  def getUsersChanged(seqNum: SequenceNumber): Future[Seq[(Id[User], SequenceNumber)]] = {
-    val changed = db.readOnly { implicit s =>
-      bookmarkRepo.getUsersChanged(seqNum)
-    }
-    promise[Seq[(Id[User], SequenceNumber)]]().success(changed).future
-
-  }
-
   def persistServerSearchEvent(metaData: JsObject): Unit ={
     //EventPersister.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject])(clock, fortyTwoServices))
   }
