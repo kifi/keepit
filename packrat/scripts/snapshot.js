@@ -178,8 +178,8 @@ var snapshot = {
       if (!el) return;
       if (scrollLeft == null) scrollLeft = document.body.scrollLeft;
       if (scrollTop == null) scrollTop = document.body.scrollTop;
-      var pageX = scrollLeft + clientX;
-      var pageY = scrollTop + clientY;
+      var pageX = clientX + scrollLeft;
+      var pageY = clientY + scrollTop;
       var pageHeight = Math.max(document.documentElement.scrollHeight, elViewport.clientHeight);
       if (el === sel.el) {
         // track the latest hover point over the current element
@@ -196,10 +196,11 @@ var snapshot = {
           //   r.width + " < " + sel.r.width + " * 2 * " + dx + " AND " +
           //   r.height + " < " + sel.r.height + " * 2 * " + dy + " AND " +
           //   r.width * r.height + " < " + sel.r.width * sel.r.height + " * " + Math.sqrt(dx * dx + dy * dy));
-          var yT = scrollTop + r.top - 2;
-          var yB = scrollTop + r.bottom + 2;
-          var xL = scrollLeft + r.left - 3;
-          var xR = scrollLeft + r.right + 3;
+          var rBody = document.body.getBoundingClientRect();
+          var yT = scrollTop - rBody.top + r.top - 2;
+          var yB = scrollTop - rBody.top + r.bottom + 2;
+          var xL = scrollLeft - rBody.left + r.left - 3;
+          var xR = scrollLeft - rBody.left + r.right + 3;
           $shades.eq(0).css({height: yT});
           $shades.eq(1).css({top: yB, height: pageHeight - yB});
           $shades.eq(2).css({top: yT, height: yB - yT, width: xL});
