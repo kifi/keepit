@@ -12,8 +12,6 @@ import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionC
 import com.keepit.common.mail.{ElectronicMail, EmailAddresses}
 import com.keepit.common.social._
 import com.keepit.model._
-import com.keepit.search.graph.URIGraph
-import com.keepit.search.index.ArticleIndexer
 import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import play.api.http.ContentTypes
 import play.api.libs.concurrent.Akka

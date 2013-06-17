@@ -1,11 +1,3 @@
-
-
-##########################################
-# Search Extension API
-##########################################
-GET     /search                     @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String])
-
-
 ##########################################
 # External Services API
 ##########################################
@@ -16,78 +8,6 @@ GET     /admin/healthcheck/isHealthy    @com.keepit.common.healthcheck.WebsiteHe
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
-
-
-##########################################
-#INTERNAL ROUTES/Shoebox
-##########################################
-
-GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURI(id: Long)
-GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs(ids: String)
-GET     /internal/shoebox/database/getUsers           @com.keepit.controllers.shoebox.ShoeboxController.getUsers(ids: String)
-GET     /internal/shoebox/database/userIdsByExternalIds @com.keepit.controllers.shoebox.ShoeboxController.getUserIdsByExternalIds(ids: String)
-GET     /internal/shoebox/database/getBasicUsers      @com.keepit.controllers.shoebox.ShoeboxController.getBasicUsers(ids: String)
-GET     /internal/shoebox/database/collectionIdsByExternalIds @com.keepit.controllers.shoebox.ShoeboxController.getCollectionIdsByExternalIds(ids: String)
-GET     /internal/shoebox/database/getUserOpt         @com.keepit.controllers.shoebox.ShoeboxController.getUserOpt(id: ExternalId[User])
-GET     /internal/shoebox/database/getUserExperiments           @com.keepit.controllers.shoebox.ShoeboxController.getUserExperiments(id: Id[User])
-
-GET     /internal/shoebox/database/getConnectedUsers  @com.keepit.controllers.shoebox.ShoeboxController.getConnectedUsers(userId: Id[User])
-GET     /internal/shoebox/tracker/browsingHistory     @com.keepit.controllers.shoebox.ShoeboxController.getBrowsingHistoryFilter(userId: Id[User])
-GET     /internal/shoebox/tracker/clickHistory        @com.keepit.controllers.shoebox.ShoeboxController.getClickHistoryFilter(userId: Id[User])
-GET     /internal/shoebox/database/bookmark           @com.keepit.controllers.shoebox.ShoeboxController.getBookmarks(userId: Id[User])
-GET     /internal/shoebox/database/changedBookmark    @com.keepit.controllers.shoebox.ShoeboxController.getBookmarksChanged(seqNum: Long, fetchSize: Int)
-GET     /internal/shoebox/database/bookmarkByUriUser  @com.keepit.controllers.shoebox.ShoeboxController.getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])
-POST    /internal/shoebox/persistServerSearchEvent    @com.keepit.controllers.shoebox.ShoeboxController.persistServerSearchEvent
-POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.shoebox.ShoeboxController.sendMail
-GET     /internal/shoebox/database/getPhrasesByPage   @com.keepit.controllers.shoebox.ShoeboxController.getPhrasesByPage(page: Int, size: Int)
-GET     /internal/shoebox/database/getCollectionsChanged @com.keepit.controllers.shoebox.ShoeboxController.getCollectionsChanged(seqNum: Long, fetchSize: Int)
-GET     /internal/shoebox/database/getBookmarksInCollection @com.keepit.controllers.shoebox.ShoeboxController.getBookmarksInCollection(collectionId: Id[Collection])
-GET     /internal/shoebox/database/getCollectionsByUser @com.keepit.controllers.shoebox.ShoeboxController.getCollectionsByUser(userId: Id[User])
-GET     /internal/shoebox/database/getIndexable       @com.keepit.controllers.shoebox.ShoeboxController.getIndexable(seqNum: Long, fetchSize: Int)
-
-GET     /internal/shoebox/database/getActiveExperiments @com.keepit.controllers.shoebox.ShoeboxController.getActiveExperiments
-GET     /internal/shoebox/database/getExperiments     @com.keepit.controllers.shoebox.ShoeboxController.getExperiments
-GET     /internal/shoebox/database/getExperiment      @com.keepit.controllers.shoebox.ShoeboxController.getExperiment(id: Id[SearchConfigExperiment])
-POST    /internal/shoebox/database/saveExperiment     @com.keepit.controllers.shoebox.ShoeboxController.saveExperiment
-GET     /internal/shoebox/database/hasExperimenthas   @com.keepit.controllers.shoebox.ShoeboxController.hasExperiment(userId: Id[User], state: State[ExperimentType])
-POST    /internal/shoebox/database/reportArticleSearchResult  @com.keepit.controllers.shoebox.ShoeboxController.reportArticleSearchResult
-GET     /internal/shoebox/database/socialUserInfoByNetworkAndSocialId @com.keepit.controllers.shoebox.ShoeboxController.getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String)
-GET     /internal/shoebox/database/socialUserInfosByUserId @com.keepit.controllers.shoebox.ShoeboxController.getSocialUserInfosByUserId(id: Id[User])
-GET     /internal/shoebox/database/sessionByExternalId @com.keepit.controllers.shoebox.ShoeboxController.getSessionByExternalId(sessionId: ExternalId[UserSession])
-
-# INTERNAL ROUTES/Search
-POST    /internal/search/events/resultClicked @com.keepit.controllers.search.SearchEventController.logResultClicked()
-
-GET     /internal/search/uriGraph/info         @com.keepit.controllers.search.URIGraphController.indexInfo()
-GET     /internal/search/uriGraph/sharingUserInfo @com.keepit.controllers.search.URIGraphController.sharingUserInfo(userId: Id[User], uriIds: String)
-POST    /internal/search/uriGraph/update       @com.keepit.controllers.search.URIGraphController.updateURIGraph()
-POST    /internal/search/uriGraph/reindex      @com.keepit.controllers.search.URIGraphController.reindex()
-POST    /internal/search/uriGraph/dumpDoc/:id  @com.keepit.controllers.search.URIGraphController.dumpLuceneDocument(id: Id[User])
-
-GET     /internal/search/index/info            @com.keepit.controllers.search.ArticleIndexerController.indexInfo()
-POST    /internal/search/index/update          @com.keepit.controllers.search.ArticleIndexerController.index()
-POST    /internal/search/index/reindex         @com.keepit.controllers.search.ArticleIndexerController.reindex()
-GET     /internal/search/index/sequenceNumber  @com.keepit.controllers.search.ArticleIndexerController.getSequenceNumber()
-POST    /internal/search/index/refreshSearcher @com.keepit.controllers.search.ArticleIndexerController.refreshSearcher()
-POST    /internal/search/index/refreshPhrases  @com.keepit.controllers.search.ArticleIndexerController.refreshPhrases()
-POST    /internal/search/index/dumpDoc/:id     @com.keepit.controllers.search.ArticleIndexerController.dumpLuceneDocument(id: Id[NormalizedURI])
-
-POST    /internal/search/search/keeps          @com.keepit.controllers.search.SearchController.searchKeeps(userId: Id[User], query: String)
-GET     /internal/search/search/explainResult  @com.keepit.controllers.search.SearchController.explain(query: String, userId: Id[User], uriId: Id[NormalizedURI])
-GET     /internal/search/search/causeError  @com.keepit.controllers.search.SearchController.causeError()
-
-POST    /internal/search/spell/buildDict       @com.keepit.controllers.search.SpellCorrectorController.buildDictionary()
-GET     /internal/search/spell/buildStatus     @com.keepit.controllers.search.SpellCorrectorController.getBuildStatus()
-GET     /internal/search/spell/make-correction     @com.keepit.controllers.search.SpellCorrectorController.correctSpelling(query: String)
-
-POST     /internal/search/getSearchStatistics     @com.keepit.controllers.search.SearchStatisticsController.getSearchStatistics
-
-GET     /internal/search/searchConfig/:id        @com.keepit.controllers.search.SearchConfigController.showUserConfig(id: Id[User])
-POST    /internal/search/searchConfig/:id/set    @com.keepit.controllers.search.SearchConfigController.setUserConfig(id: Id[User])
-GET     /internal/search/searchConfig/:id/reset  @com.keepit.controllers.search.SearchConfigController.resetUserConfig(id: Id[User])
-GET     /internal/search/defaultSearchConfig/defaultSearchConfig  @com.keepit.controllers.search.SearchConfigController.getSearchDefaultConfig
-
-GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.SearchController.friendMapJson(userId: Id[User], query: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 
 # INTERNAL ROUTES/GLOBAL
 GET     /internal/benchmark                   @com.keepit.common.healthcheck.CommonBenchmarkController.benchmarksResults()

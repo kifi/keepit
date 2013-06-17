@@ -1,13 +1,6 @@
 package com.keepit.common.healthcheck
 
-import com.keepit.inject._
-import com.keepit.common.mail.FakeOutbox
-import com.keepit.test.EmptyApplication
-import play.api.Play.current
-import play.api.test.Helpers.running
 import org.specs2.mutable.Specification
-import com.keepit.test.ShoeboxApplication
-import com.keepit.shoebox.ShoeboxModule
 
 class HealthcheckErrorTest extends Specification {
 
