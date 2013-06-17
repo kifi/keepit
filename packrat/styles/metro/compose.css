@@ -319,8 +319,8 @@ div.token-input-dropdown-KiFi {
   cursor: default;
   font: 12px "Helvetica Neue",arial,sans-serif;
   color: #000;
-  -moz-box-sizing: content-box;
-  box-sizing: content-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
 }
 /* searchingText or noResultText
 div.token-input-dropdown-KiFi>p {

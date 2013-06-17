@@ -293,7 +293,7 @@ const socketHandlers = {
   comment: function(nUri, c) {
     api.log("[socket:comment]", c);
     var d = pageData[nUri];
-    if (d && d.comments) {
+    if (d && d.comments && !d.comments.some(hasId(c.id))) {
       d.comments.push(c);
       d.tabs.forEach(function(tab) {
         api.tabs.emit(tab, "comment", {comment: c, userId: session.userId});
@@ -332,7 +332,7 @@ const socketHandlers = {
   message: function(nUri, th, message) {
     api.log("[socket:message]", nUri, th, message);
     var d = pageData[nUri];
-    if (d && d.threads) {
+    if (d && d.threads && !(d.messages[th.id] || []).some(hasId(message.id))) {
       // remove old copy of thread
       for (var i = 0, n = d.threads.length; i < n; i++) {
         if (d.threads[i].id == th.id) {
@@ -388,9 +388,9 @@ const socketHandlers = {
 
 api.port.on({
   get_keeps: searchOnServer,
-  get_chatter: function(data, respond) {
-    api.log("[get_chatter]", data.ids);
-    ajax("GET", "/search/chatter", {ids: data.ids.join(".")}, respond);
+  get_chatter: function(urls, respond) {
+    api.log("[get_chatter]", urls);
+    ajax("POST", "/search/chatter", urls, respond);
   },
   get_keepers: function(_, respond, tab) {
     api.log("[get_keepers]", tab.id);
