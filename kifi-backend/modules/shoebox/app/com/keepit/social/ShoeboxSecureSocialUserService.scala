@@ -22,14 +22,15 @@ import com.keepit.model.SocialUserInfo
 
 @Singleton
 class ShoeboxSecureSocialUserPlugin @Inject() (
-                                                db: Database,
-                                                socialUserInfoRepo: SocialUserInfoRepo,
-                                                userRepo: UserRepo,
-                                                imageStore: S3ImageStore,
-                                                healthcheckPlugin: HealthcheckPlugin,
-                                                userExperimentRepo: UserExperimentRepo,
-                                                socialGraphPlugin: SocialGraphPlugin)
-  extends UserService with SecureSocialUserPlugin with Logging {
+    db: Database,
+    socialUserInfoRepo: SocialUserInfoRepo,
+    userRepo: UserRepo,
+    imageStore: S3ImageStore,
+    healthcheckPlugin: HealthcheckPlugin,
+    userExperimentRepo: UserExperimentRepo,
+    emailRepo: EmailAddressRepo,
+    socialGraphPlugin: SocialGraphPlugin
+  ) extends UserService with SecureSocialUserPlugin with Logging {
 
   private def reportExceptions[T](f: => T): T =
     try f catch { case ex: Throwable =>
@@ -83,7 +84,10 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
   private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType,
                          socialUser: SocialUser, userId: Option[Id[User]])(implicit session: RWSession): SocialUserInfo = {
     val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
-    val userOpt = userId flatMap userRepo.getOpt
+    val userOpt = userId orElse {
+      // TODO: better way of dealing with emails that already exist; for now just link accounts
+      socialUser.email flatMap emailRepo.getByAddressOpt map (_.userId)
+    } flatMap userRepo.getOpt
 
     suiOpt.map(_.withCredentials(socialUser)) match {
       case Some(socialUserInfo) if !socialUserInfo.userId.isEmpty =>
@@ -121,11 +125,12 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
 
 @AppScoped
 class ShoeboxSecureSocialAuthenticatorPlugin @Inject()(
-                                                        db: Database,
-                                                        socialUserInfoRepo: SocialUserInfoRepo,
-                                                        sessionRepo: UserSessionRepo,
-                                                        healthcheckPlugin: HealthcheckPlugin,
-                                                        app: Application) extends AuthenticatorStore(app) with SecureSocialAuthenticatorPlugin  {
+    db: Database,
+    socialUserInfoRepo: SocialUserInfoRepo,
+    sessionRepo: UserSessionRepo,
+    healthcheckPlugin: HealthcheckPlugin,
+    app: Application
+  ) extends AuthenticatorStore(app) with SecureSocialAuthenticatorPlugin {
 
   private def reportExceptions[T](f: => T): Either[Error, T] =
     try Right(f) catch { case ex: Throwable =>
@@ -187,13 +192,13 @@ class ShoeboxSecureSocialAuthenticatorPlugin @Inject()(
       case ex: Throwable => None
     }
 
-    externalIdOpt.map{ externalId =>
+    externalIdOpt flatMap { externalId =>
       db.readOnly { implicit s =>
         sessionRepo.getOpt(externalId)
       } collect {
         case s if s.isValid => authenticatorFromSession(s)
       }
-    } flatten
+    }
   }
   def delete(id: String): Either[Error, Unit] = reportExceptions {
     db.readWrite { implicit s =>

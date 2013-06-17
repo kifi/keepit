@@ -5,6 +5,7 @@ import net.codingwell.scalaguice.InjectorExtensions._
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.db.ExternalId
+
 import play.api.Application
 import play.api.mvc.{Session, RequestHeader}
 import securesocial.core._
@@ -32,8 +33,7 @@ trait SecureSocialAuthenticatorPlugin {
 }
 
 private class SecureSocialEventListener extends securesocial.core.EventListener {
-  override val id = "fortytwo_event_l" +
-    "istener"
+  override val id = "fortytwo_event_listener"
   def onEvent(event: Event, request: RequestHeader, session: Session): Option[Session] = event match {
     case LogoutEvent(identity) =>
       // Remove our user ID info when the user logs out

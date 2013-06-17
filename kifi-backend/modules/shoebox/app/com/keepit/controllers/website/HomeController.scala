@@ -51,10 +51,7 @@ class HomeController @Inject() (db: Database,
     Ok(Play.resource("app_version.txt").toString)
   }
 
-  def home: Action[AnyContent] = home(isNewHome = false)
-  def newHome: Action[AnyContent] = home(isNewHome = true)
-
-  def home(isNewHome: Boolean) = HtmlAction(true)(authenticatedAction = { implicit request =>
+  def home = HtmlAction(true)(authenticatedAction = { implicit request =>
 
     if (request.user.state == UserStates.PENDING) {
       pendingHome()
@@ -76,7 +73,7 @@ class HomeController @Inject() (db: Database,
         userCanInvite, userCanSeeKifiSite, userCanConnectWithSocialNetworks))
     }
   }, unauthenticatedAction = { implicit request =>
-    Ok(views.html.website.welcome(isNewHome = isNewHome))
+    Ok(views.html.website.welcome())
   })
 
   def pendingHome()(implicit request: AuthenticatedRequest[AnyContent]) = {
