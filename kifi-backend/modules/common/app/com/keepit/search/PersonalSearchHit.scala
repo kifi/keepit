@@ -13,19 +13,7 @@ import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.social.BasicUser
 
 //note: users.size != count if some users has the bookmark marked as private
-case class PersonalSearchHit(id: Id[NormalizedURI], externalId: ExternalId[NormalizedURI], title: Option[String], url: String, isPrivate: Boolean)
-object PersonalSearchHit {
-  import play.api.libs.functional.syntax._
-  import play.api.libs.json._
-
-  implicit val format = (
-    (__ \ 'id).format(Id.format[NormalizedURI]) and
-    (__ \ 'externalId).format(ExternalId.format[NormalizedURI]) and
-    (__ \ 'title).formatNullable[String] and
-    (__ \ 'url).format[String] and
-    (__ \ 'isPrivate).format[Boolean]
-  )(PersonalSearchHit.apply, unlift(PersonalSearchHit.unapply))
-}
+case class PersonalSearchHit(id: Id[NormalizedURI], title: Option[String], url: String, isPrivate: Boolean)
 
 case class PersonalSearchResult(hit: PersonalSearchHit, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[BasicUser], score: Float, isNew: Boolean)
 case class PersonalSearchResultPacket(
