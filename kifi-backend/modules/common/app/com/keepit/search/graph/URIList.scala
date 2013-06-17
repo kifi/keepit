@@ -194,3 +194,5 @@ private[graph] class URIListV3(in: InputStreamDataInput) extends URIList with UR
   private[this] lazy val idList: Array[Long] = URIList.readList(in, listSize)
   private[this] lazy val createdAtList: Array[Long] = loadRawListAfter(idList, listSize, in)
 }
+
+class URIGraphUnsupportedVersionException(msg: String) extends Exception(msg)

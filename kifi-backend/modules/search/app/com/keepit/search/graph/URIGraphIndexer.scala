@@ -256,6 +256,3 @@ class URIGraphIndexer(
     }
   }
 }
-
-class URIGraphUnsupportedVersionException(msg: String) extends Exception(msg)
-
