@@ -122,21 +122,17 @@ class BookmarkStore @Inject() (
   }
 
   def buildIndexable(bookmark: Bookmark): BookmarkIndexable = {
-    val uri = Await.result(shoeboxClient.getNormalizedURI(bookmark.uriId), 180 seconds)
-
     new BookmarkIndexable(id = bookmark.id.get,
                           sequenceNumber = bookmark.seq,
                           isDeleted = BookmarkStore.shouldDelete(bookmark),
-                          bookmark = bookmark,
-                          externalUriId = uri.externalId)
+                          bookmark = bookmark)
   }
 
   class BookmarkIndexable(
     override val id: Id[Bookmark],
     override val sequenceNumber: SequenceNumber,
     override val isDeleted: Boolean,
-    val bookmark: Bookmark,
-    val externalUriId: ExternalId[NormalizedURI]
+    val bookmark: Bookmark
   ) extends Indexable[Bookmark] {
 
     implicit def toReader(text: String) = new StringReader(text)
@@ -153,8 +149,7 @@ class BookmarkStore @Inject() (
         bookmark.url,
         bookmark.createdAt.getMillis,
         bookmark.isPrivate,
-        bookmark.uriId,
-        externalUriId)
+        bookmark.uriId)
 
       doc.add(buildBinaryDocValuesField(recField, r))
 
