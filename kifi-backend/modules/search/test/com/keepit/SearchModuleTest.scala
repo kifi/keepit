@@ -1,26 +1,18 @@
 package com.keepit.search
 
-import com.keepit.module._
-import com.google.inject.util.Modules
-import com.google.inject._
+import com.keepit.inject.inject
 import com.keepit.common.net._
-import com.keepit.common.amazon._
-import com.keepit.common.zookeeper._
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.logging.Logging
-import com.keepit.inject.inject
 import com.keepit.test.SearchApplication
 import org.specs2.mutable.Specification
 import play.api.Play.current
 import play.api.mvc.Controller
 import play.api.test.Helpers.running
 import scala.reflect.ManifestFactory.classType
-import com.keepit.common.analytics.EventListener
-import com.keepit.common.analytics.EventRepo
 import com.keepit.FortyTwoGlobal
 import scala.collection.JavaConversions._
 import com.keepit.common.akka.{FortyTwoActor,AlertingActor}
-import com.keepit.common.analytics.EventHelper
 import net.spy.memcached.MemcachedClient
 
 class SearchModuleTest extends Specification with Logging {

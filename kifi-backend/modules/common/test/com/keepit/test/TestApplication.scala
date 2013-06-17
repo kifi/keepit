@@ -42,7 +42,6 @@ import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import java.io.File
-import com.keepit.common.controller.{ActionAuthenticator, ShoeboxActionAuthenticator}
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.amazon._
@@ -63,8 +62,14 @@ import com.keepit.model.NormalizedURI
 import com.keepit.common.amazon.AmazonInstanceId
 import com.keepit.common.net.FakeClientResponse
 
-class TestApplication(val _global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
-  override lazy val global = _global // Play 2.1 makes global a lazy val, which can't be directly overridden.
+class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
+
+  private def createTestGlobal(baseGlobal: FortyTwoGlobal, modules: Module*) = if (useDb)
+    new TestGlobal(Modules.`override`(baseGlobal.modules: _*).`with`(modules: _*))
+  else
+    new TestRemoteGlobal(Modules.`override`(baseGlobal.modules: _*).`with`(modules: _*))
+
+  override lazy val global = createTestGlobal(_global, new FakeClockModule()) // Play 2.1 makes global a lazy val, which can't be directly overridden.
 
   val emptyFakeHttpClient: PartialFunction[String, FakeClientResponse] = Map()
 
@@ -82,11 +87,8 @@ class TestApplication(val _global: FortyTwoGlobal, useDb: Boolean = true, overri
   def withS3DevModule() = overrideWith(new S3DevModule())
   def withShoeboxServiceModule() = overrideWith(ShoeboxServiceModule())
   def withSearchConfigModule() = overrideWith(SearchConfigModule())
-  def overrideWith(model: Module): TestApplication =
-    if(useDb)
-      new TestApplication(new TestGlobal(Modules.`override`(global.modules: _*).`with`(model)), path = path)
-    else
-      new TestApplication(new TestRemoteGlobal(Modules.`override`(global.modules: _*).`with`(model)), useDb = false, path = path)
+  def overrideWith(modules: Module*): TestApplication = new TestApplication(createTestGlobal(global, modules: _*), useDb, path)
+
 }
 
 class EmptyApplication(path: File = new File("./modules/common/")) extends TestApplication(new TestGlobal(TestModule()), path = path)
@@ -144,7 +146,6 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
     bind[HealthcheckPlugin].to[FakeHealthcheck]
     bind[SlickSessionProvider].to[TestSlickSessionProvider]
-    bind[ActionAuthenticator].to[ShoeboxActionAuthenticator]
     install(new FakeS3StoreModule())
     install(new FakeCacheModule)
     bind[play.api.Application].toProvider(new Provider[play.api.Application] {
@@ -153,30 +154,6 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   }
 
   private def dbInfoFromApplication(): DbInfo = TestDbInfo.dbInfo
-
-  @Singleton
-  @Provides
-  def secureSocialAuthenticatorPlugin(db: Database,
-      suiRepo: SocialUserInfoRepo,
-      usRepo: UserSessionRepo,
-      healthPlugin: HealthcheckPlugin,
-      app: play.api.Application): SecureSocialAuthenticatorPlugin = {
-    new ShoeboxSecureSocialAuthenticatorPlugin(db, suiRepo, usRepo, healthPlugin, app)
-  }
-
-  @Singleton
-  @Provides
-  def secureSocialUserPlugin(db: Database,
-    socialUserInfoRepo: SocialUserInfoRepo,
-    userRepo: UserRepo,
-    imageStore: S3ImageStore,
-    healthcheckPlugin: HealthcheckPlugin,
-    userExperimentRepo: UserExperimentRepo,
-    socialGraphPlugin: SocialGraphPlugin): SecureSocialUserPlugin = {
-    new ShoeboxSecureSocialUserPlugin(
-      db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin, userExperimentRepo, socialGraphPlugin)
-  }
-
 
   @Singleton
   @Provides
@@ -193,10 +170,6 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   def domainTagImportSettings: DomainTagImportSettings = {
     DomainTagImportSettings(localDir = "", url = "")
   }
-
-  @Provides
-  @Singleton
-  def fakeClock: FakeClock = new FakeClock()
 
   @Singleton
   @Provides
@@ -278,10 +251,6 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   def searchServiceClient: SearchServiceClient = new SearchServiceClientImpl(null, -1, null)
 
   @Provides
-  @Singleton
-  def clock(clock: FakeClock): Clock = clock
-
-  @Provides
   @AppScoped
   def actorPluginProvider: ActorPlugin =
     new ActorPlugin(ActorSystem("shoebox-test-actor-system", Play.current.configuration.underlying, Play.current.classloader))
@@ -300,6 +269,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
  * If you know how many times the underlying code will call getMillis(), you can push() times onto the stack to have
  * their values returned. You can also completely override the time function by calling setTimeFunction().
  */
+@Singleton
 class FakeClock extends Clock with Logging {
   private val stack = mutable.Stack[Long]()
   private var timeFunction: () => Long = () => {
@@ -327,6 +297,12 @@ class FakeClock extends Clock with Logging {
   def push(t : DateTime): FakeClock = { stack push t.getMillis; this }
   def setTimeFunction(timeFunction: () => Long) { this.timeFunction = timeFunction }
   override def getMillis(): Long = timeFunction()
+}
+
+case class FakeClockModule() extends ScalaModule {
+  def configure() {
+    bind[Clock].to[FakeClock]
+  }
 }
 
 class FakeSocialGraphPlugin extends SocialGraphPlugin {

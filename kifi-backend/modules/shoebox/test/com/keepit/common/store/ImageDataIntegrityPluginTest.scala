@@ -7,7 +7,7 @@ import com.keepit.common.healthcheck.FakeHealthcheck
 import com.keepit.common.net.{FakeClientResponse, FakeHttpClient, HttpClient}
 import com.keepit.inject._
 import com.keepit.model.User
-import com.keepit.test.{ShoeboxApplication, EmptyApplication, DbRepos}
+import com.keepit.test.{ShoeboxApplication, DbRepos}
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit

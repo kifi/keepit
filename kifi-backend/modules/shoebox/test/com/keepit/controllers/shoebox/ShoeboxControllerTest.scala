@@ -11,7 +11,6 @@ import play.api.Play.current
 import play.api.libs.json.{Json, JsNumber, JsArray}
 import com.keepit.serializer.UserSerializer
 import com.keepit.model.User
-import com.keepit.controllers.shoebox.ShoeboxController
 import play.api.test.FakeRequest
 import com.keepit.search.Lang
 
