@@ -79,7 +79,7 @@ var api = api || function() {
       };
       req.send(null);
     },
-    log: api && api.log || function() {
+    log: window.suppressLog ? function() {} : function() {
       var d = new Date, ds = d.toString();
       arguments[0] = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] " + arguments[0];
       console.log.apply(console, arguments);
