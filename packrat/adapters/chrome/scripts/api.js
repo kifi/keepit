@@ -1,6 +1,6 @@
-// API for content scripts
+// API for content scripts (idempotent b/c Chrome sometimes injects twice)
 
-var api = function() {
+var api = api || function() {
   var msgHandlers = [], callbacks = {}, nextCallbackId = 1, port;
   function createPort() {
     port = chrome.runtime.connect({name: ""});
