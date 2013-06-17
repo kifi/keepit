@@ -154,7 +154,6 @@ class FakeShoeboxServiceClientImpl @Inject() (
   }
 
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]] = ???
-  def getPersonalSearchInfo(userId: Id[User], resultSet: com.keepit.search.ArticleSearchResult): Future[(Map[Id[User], BasicUser], Seq[PersonalSearchHit])] = ???
 
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]] = {
     val exp = db.readOnly { implicit s => experimentRepo.getActive() }
