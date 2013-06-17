@@ -52,7 +52,7 @@ object URIGraphFields {
 class URIGraphIndexer(
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
-    bookmarkStore: BookmarkStore,
+    val bookmarkStore: BookmarkStore,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[User](indexDirectory, indexWriterConfig, URIGraphFields.decoders) {
 
