@@ -255,7 +255,7 @@ slider2 = function() {
     createSlider(function() {
       $slider.prependTo(tile);
 
-      logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0), url: document.URL});
+      logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - tile.dataset.t0), url: document.URL});
       api.port.emit("keeper_shown");
 
       callback && callback();
