@@ -49,7 +49,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification {
       }
     }
     "properly remove domain tags" in {
-      running(new DevApplication().withFakePersistEvent().withTestActorSystem(system)) {
+      running(new EmptyApplication().withFakePersistEvent().withTestActorSystem(system)) {
         val tagRepo = inject[DomainTagRepo]
         val domainRepo = inject[DomainRepo]
         val db = inject[Database]
@@ -82,7 +82,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification {
       }
     }
     "respect manual overrides" in {
-      running(new DevApplication().withFakePersistEvent().withTestActorSystem(system)) {
+      running(new EmptyApplication().withFakePersistEvent().withTestActorSystem(system)) {
         val tagRepo = inject[DomainTagRepo]
         val domainRepo = inject[DomainRepo]
         val db = inject[Database]

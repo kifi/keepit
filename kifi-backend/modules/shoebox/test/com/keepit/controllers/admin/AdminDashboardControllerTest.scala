@@ -25,7 +25,7 @@ class AdminDashboardControllerTest extends Specification with DbRepos {
 
   "AdminDashboardController" should {
     "get users by date as JSON" in {
-      running(new EmptyApplication(path = new File("./modules/shoebox/")).withFakeSecureSocialUserService()) {
+      running(new ShoeboxApplication().withFakeSecureSocialUserService()) {
 
         val now = new DateTime(2020, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         inject[FakeClock].setTimeFunction(() => now.getMillis)
