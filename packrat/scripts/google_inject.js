@@ -7,9 +7,10 @@
 // @require scripts/api.js
 // @require scripts/render.js
 
-api.log("[google_inject]");
 
-!function() {
+var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test(location.host) && function() {  // idempotent for Chrome
+  api.log("[google_inject]");
+
   function logEvent() {  // parameters defined in main.js
     api.port.emit("log_event", Array.prototype.slice.call(arguments));
   }
@@ -617,4 +618,6 @@ api.log("[google_inject]");
       }
     }).prev(".kifi-filter-detail-notch").addBack().removeClass("kifi-visible");
   }
+
+  return true;
 }();

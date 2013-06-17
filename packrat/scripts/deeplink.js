@@ -1,11 +1,13 @@
 // @match /^https?:\/\/(dev\.ezkeep\.com:9000|(www\.)?(kifi|keepitfindit)\.com)\/r\/.*/
 // @require scripts/api.js
 
-!function() {
-  document.querySelector(".kifi-deep-link-no-extension").style.display = "none";
-  var deepLink = JSON.parse(document.documentElement.dataset.kifiDeepLink);
-  api.port.emit("add_deep_link_listener", deepLink.locator);
-  if (deepLink.uri) {
-    window.location = deepLink.uri;
+!function(json) {
+  if (json) {  // in case injected into wrong page
+    document.querySelector(".kifi-deep-link-no-extension").style.display = "none";
+    var link = JSON.parse(json);
+    api.port.emit("add_deep_link_listener", link.locator);
+    if (link.uri) {
+      window.location = link.uri;
+    }
   }
-}();
+}(document.documentElement.dataset.kifiDeepLink);
