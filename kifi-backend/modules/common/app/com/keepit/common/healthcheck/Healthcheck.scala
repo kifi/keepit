@@ -88,7 +88,7 @@ class SendHealthcheckMail(history: HealthcheckErrorHistory, host: HealthcheckHos
       val started = services.started.toStandardTimeString
       val subject = s"[${services.currentService}] ${history.lastError.subjectName}"
       sender.sendMail(ElectronicMail(
-        from = EmailAddresses.EISHAY,
+        from = Healthcheck.OPS_OF_THE_WEEK,
         to = EmailAddresses.ASANA_PROD_HEALTH::Healthcheck.OPS_OF_THE_WEEK::Nil,
         cc = EmailAddresses.ENG_EMAILS,
         subject = subject,
