@@ -250,11 +250,11 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
       objOpt match {
         case Some(_) => {
           CacheStatistics.recordHit(repo.toString, key.namespace, getEnd - getStart)
-          CacheStatistics.recordHit("all", key.namespace, getEnd - getStart)
+          CacheStatistics.recordHit("Cache", key.namespace, getEnd - getStart)
         }
         case None => {
           CacheStatistics.recordMiss(repo.toString, key.namespace)
-          if (outerCache isEmpty) CacheStatistics.recordMiss("all", key.namespace)
+          if (outerCache isEmpty) CacheStatistics.recordMiss("Cache", key.namespace)
         }
       }
       objOpt
@@ -286,7 +286,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
       repo.set(key.toString, properlyBoxed, ttl.toSeconds.toInt)
       val setEnd = currentDateTime.getMillis()
       CacheStatistics.recordSet(repo.toString, key.namespace, setEnd - setStart)
-      if (outerCache isEmpty) CacheStatistics.recordSet("all", key.namespace, setEnd - setStart)
+      if (outerCache isEmpty) CacheStatistics.recordSet("Cache", key.namespace, setEnd - setStart)
       value
     } recover {
       case e: Throwable =>
