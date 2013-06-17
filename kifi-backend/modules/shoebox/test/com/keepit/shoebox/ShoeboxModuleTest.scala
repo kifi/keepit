@@ -6,7 +6,6 @@ import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.MailToKeepServerSettings
 import com.keepit.inject.inject
-import com.keepit.search.ResultClickTracker
 import com.keepit.test.ShoeboxApplication
 import net.spy.memcached.MemcachedClient
 import org.specs2.mutable.Specification
@@ -35,9 +34,8 @@ class ShoeboxModuleTest extends Specification with Logging {
         for (c <- classes) inject(classType[Controller](c), current)
         val injector = current.global.asInstanceOf[FortyTwoGlobal].injector
         val bindings = injector.getAllBindings
-        val exclude: Set[Class[_]] = Set(
-          classOf[FortyTwoActor], classOf[AlertingActor], classOf[MailToKeepServerSettings], classOf[ResultClickTracker],
-          classOf[MemcachedClient])
+        val exclude: Set[Class[_]] = Set(classOf[FortyTwoActor], classOf[AlertingActor],
+          classOf[MailToKeepServerSettings], classOf[MemcachedClient])
         bindings.keySet() filter { key =>
           val klazz = key.getTypeLiteral.getRawType
           val fail = exclude exists { badKalazz =>
