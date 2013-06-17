@@ -38,6 +38,8 @@ object Healthcheck {
   case object BOOTSTRAP extends CallType
   case object INTERNAL extends CallType
   case object EXTENSION extends CallType
+
+  val OPS_OF_THE_WEEK = EmailAddresses.EISHAY
 }
 
 case object ReportErrorsAction
@@ -87,7 +89,7 @@ class SendHealthcheckMail(history: HealthcheckErrorHistory, host: HealthcheckHos
       val subject = s"[${services.currentService}] ${history.lastError.subjectName}"
       sender.sendMail(ElectronicMail(
         from = EmailAddresses.EISHAY,
-        to = EmailAddresses.ASANA_PROD_HEALTH::EmailAddresses.LEO::Nil,
+        to = EmailAddresses.ASANA_PROD_HEALTH::Healthcheck.OPS_OF_THE_WEEK::Nil,
         cc = EmailAddresses.ENG_EMAILS,
         subject = subject,
         htmlBody = views.html.email.healthcheckMail(history, started, host.host).body,
