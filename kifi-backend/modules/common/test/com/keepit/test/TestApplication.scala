@@ -60,7 +60,6 @@ import com.keepit.common.mail.FakeMailModule
 import com.keepit.model.SocialUserInfo
 import com.keepit.common.social.FakeSecureSocialUserServiceModule
 import com.keepit.model.NormalizedURI
-import com.keepit.search.index.FakePhraseIndexerModule
 import com.keepit.common.amazon.AmazonInstanceId
 import com.keepit.common.net.FakeClientResponse
 
@@ -77,7 +76,6 @@ class TestApplication(val _global: FortyTwoGlobal, useDb: Boolean = true, overri
   def withFakeHealthcheck() = overrideWith(FakeHealthcheckModule())
   def withRealBabysitter() = overrideWith(BabysitterModule())
   def withFakeSecureSocialUserService() = overrideWith(FakeSecureSocialUserServiceModule())
-  def withFakePhraseIndexer() = overrideWith(FakePhraseIndexerModule())
   def withTestActorSystem(system: ActorSystem) = overrideWith(TestActorSystemModule(system))
   def withFakePersistEvent() = overrideWith(FakePersistEventModule())
   def withFakeCache() = overrideWith(FakeCacheModule())
