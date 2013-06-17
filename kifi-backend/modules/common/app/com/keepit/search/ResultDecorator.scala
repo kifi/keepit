@@ -24,10 +24,10 @@ class ResultDecoratorImpl2(searcher: MainSearcher, shoeboxClient: ShoeboxService
     val personalSearchHits = hits.map{ h =>
       if (h.isMyBookmark) {
         val r = searcher.getBookmarkRecord(h.uriId).getOrElse(throw new Exception(s"missing bookmark record: uri id = ${h.uriId}"))
-        PersonalSearchHit(r.uriId, r.externalUriId, Some(r.title), r.url, r.isPrivate)
+        PersonalSearchHit(r.uriId, Some(r.title), r.url, r.isPrivate)
       } else {
         val r = searcher.getArticleRecord(h.uriId).getOrElse(throw new Exception(s"missing article record: uri id = ${h.uriId}"))
-        PersonalSearchHit(r.id, r.externalId, Some(r.title), r.url, false)
+        PersonalSearchHit(r.id, Some(r.title), r.url, false)
       }
     }
 
