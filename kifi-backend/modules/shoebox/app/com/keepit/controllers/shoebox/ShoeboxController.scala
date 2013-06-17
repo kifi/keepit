@@ -60,8 +60,14 @@ import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworkType
 import com.keepit.common.social.SocialNetworks
 import com.keepit.serializer.SocialUserInfoSerializer._
-import com.keepit.search.PersonalSearchHit
-import com.keepit.serializer.CollectionTupleSerializer.collectionTupleFormat
+
+object ShoeboxController {
+  implicit val collectionTupleFormat = (
+    (__ \ 'collId).format(Id.format[Collection]) and
+    (__ \ 'userId).format(Id.format[User]) and
+    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
+  ).tupled
+}
 
 class ShoeboxController @Inject() (
   db: Database,
@@ -186,40 +192,6 @@ class ShoeboxController @Inject() (
     Ok(bookmark)
   }
 
-  def getPersonalSearchInfo(userId: Id[User], allUsers: String, formattedHits: String) = Action { request =>
-    val (users, personalSearchHits) = db.readOnly { implicit session =>
-      val neededUsers = (allUsers.split(",").filterNot(_.isEmpty).map { u =>
-        val user = Id[User](u.toLong)
-        user.toString -> Json.toJson(basicUserRepo.load(user))
-      }).toSeq
-      val personalSearchHits = formattedHits.split(",").filterNot(_.isEmpty).map { hit =>
-        val param = hit.split(":")
-        val isMyBookmark = param(0) == "1"
-        val uriId = Id[NormalizedURI](param(1).toLong)
-        val uri = normUriRepo.get(uriId)
-
-        (if(isMyBookmark) bookmarkRepo.getByUriAndUser(uriId, userId) else None) match {
-          case Some(bmk) =>
-            PersonalSearchHit(uri.id.get, uri.externalId, bmk.title, bmk.url, bmk.isPrivate)
-          case None =>
-            PersonalSearchHit(uri.id.get, uri.externalId, uri.title, uri.url, false)
-        }
-      }
-      (neededUsers, personalSearchHits)
-    }
-
-    Ok(Json.obj("users" -> JsObject(users), "personalSearchHits" -> personalSearchHits))
-  }
-
-  def getUsersChanged(seqNum: Long) = Action { request =>
-    val changed = db.readOnly { implicit s =>
-      bookmarkRepo.getUsersChanged(SequenceNumber(seqNum))
-    } map{ case(userId, seqNum) =>
-      Json.obj( "id" -> userId.id, "seqNum" -> seqNum.value)
-    }
-    Ok(JsArray(changed))
-  }
-
   def persistServerSearchEvent() = Action(parse.json) { request =>
     val metaData = request.body
     EventPersister.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject]))
@@ -329,6 +301,7 @@ class ShoeboxController @Inject() (
   }
 
   def getCollectionsChanged(seqNum: Long, fetchSize: Int) = Action { request =>
+    import ShoeboxController.collectionTupleFormat
     Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getCollectionsChanged(SequenceNumber(seqNum), fetchSize) }))
   }
 

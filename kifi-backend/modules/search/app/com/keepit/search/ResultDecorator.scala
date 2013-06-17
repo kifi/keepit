@@ -14,25 +14,6 @@ trait ResultDecorator {
   def decorate(resultSet: ArticleSearchResult): Future[Seq[PersonalSearchResult]]
 }
 
-class ResultDecoratorImpl(val userId: Id[User], shoeboxClient: ShoeboxServiceClient) extends ResultDecorator {
-  override def decorate(resultSet: ArticleSearchResult): Future[Seq[PersonalSearchResult]] = {
-
-    shoeboxClient.getPersonalSearchInfo(userId, resultSet).map { case (allUsers, personalSearchHits) =>
-      (resultSet.hits, resultSet.scorings, personalSearchHits).zipped.toSeq.map { case (hit, score, personalHit) =>
-        val users = hit.users.map(allUsers)
-        val isNew = (!hit.isMyBookmark && score.recencyScore > 0.5f)
-        PersonalSearchResult(personalHit,
-          hit.bookmarkCount,
-          hit.isMyBookmark,
-          personalHit.isPrivate,
-          users,
-          hit.score,
-          isNew)
-      }
-    }
-  }
-}
-
 class ResultDecoratorImpl2(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient) extends ResultDecorator {
 
   override def decorate(resultSet: ArticleSearchResult): Future[Seq[PersonalSearchResult]] = {
@@ -43,10 +24,10 @@ class ResultDecoratorImpl2(searcher: MainSearcher, shoeboxClient: ShoeboxService
     val personalSearchHits = hits.map{ h =>
       if (h.isMyBookmark) {
         val r = searcher.getBookmarkRecord(h.uriId).getOrElse(throw new Exception(s"missing bookmark record: uri id = ${h.uriId}"))
-        PersonalSearchHit(r.uriId, r.externalUriId, Some(r.title), r.url, r.isPrivate)
+        PersonalSearchHit(r.uriId, Some(r.title), r.url, r.isPrivate)
       } else {
         val r = searcher.getArticleRecord(h.uriId).getOrElse(throw new Exception(s"missing article record: uri id = ${h.uriId}"))
-        PersonalSearchHit(r.id, r.externalId, Some(r.title), r.url, false)
+        PersonalSearchHit(r.id, Some(r.title), r.url, false)
       }
     }
 

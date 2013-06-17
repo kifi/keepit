@@ -14,13 +14,15 @@ import views.html
 import scala.concurrent.Await
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
-import com.keepit.common.search.{SharingUserInfo, IndexInfo}
+import com.keepit.search.index.Indexer
+import com.keepit.common.search.SharingUserInfo
+import com.keepit.common.search.IndexInfo
+
 
 class URIGraphController @Inject()(
     uriGraphPlugin: URIGraphPlugin,
     shoeboxClient: ShoeboxServiceClient,
     uriGraph: URIGraph) extends SearchServiceController {
-
 
   def reindex() = Action { implicit request =>
     uriGraphPlugin.reindex()
@@ -56,19 +58,23 @@ class URIGraphController @Inject()(
 
   def indexInfo = Action { implicit request =>
     val uriGraphIndexer = uriGraph.asInstanceOf[URIGraphImpl].uriGraphIndexer
+    val bookmarkStore = uriGraphIndexer.bookmarkStore
     val collectionIndexer = uriGraph.asInstanceOf[URIGraphImpl].collectionIndexer
+
     Ok(Json.toJson(Seq(
-        IndexInfo(
-          name = "URIGraphIndex",
-          numDocs = uriGraphIndexer.numDocs,
-          sequenceNumber = uriGraphIndexer.commitData.get(CommitData.sequenceNumber).map(v => SequenceNumber(v.toLong)),
-          committedAt = uriGraphIndexer.commitData.get(CommitData.committedAt)),
-        IndexInfo(
-          name = "CollectionIndex",
-          numDocs = collectionIndexer.numDocs,
-          sequenceNumber = collectionIndexer.commitData.get(CommitData.sequenceNumber).map(v => SequenceNumber(v.toLong)),
-          committedAt = collectionIndexer.commitData.get(CommitData.committedAt))
+        mkIndexInfo("URIGraphIndex", uriGraphIndexer),
+        mkIndexInfo("BookmarkStore", bookmarkStore),
+        mkIndexInfo("CollectionIndex", collectionIndexer)
     )))
+  }
+
+  private def mkIndexInfo(name: String, indexer: Indexer[_]): IndexInfo = {
+    IndexInfo(
+      name = name,
+      numDocs = indexer.numDocs,
+      sequenceNumber = indexer.commitData.get(CommitData.sequenceNumber).map(v => SequenceNumber(v.toLong)),
+      committedAt = indexer.commitData.get(CommitData.committedAt)
+    )
   }
 
   def dumpLuceneDocument(id: Id[User]) = Action { implicit request =>

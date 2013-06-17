@@ -268,7 +268,7 @@ api = function() {
     page.injecting = true;
 
     if (api.prefs.get("suppressLog")) {
-      chrome.tabs.executeScript(page.id, {code: "var api=api||{};api.log=function(){}", runAt: "document_start"}, api.noop);
+      chrome.tabs.executeScript(page.id, {code: "var suppressLog=true", runAt: "document_start"}, api.noop);
     }
     var scripts = meta.contentScripts.filter(function(cs) { return cs[1].test(page.url) });
     var injected = {};

@@ -4,14 +4,22 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.strings._
 import com.keepit.common.service._
 import com.keepit.common.amazon._
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent._
+import scala.collection.concurrent.TrieMap
+
 import play.api.libs.json._
+
 import com.google.inject.{Inject, Singleton}
+
 import org.apache.zookeeper.CreateMode._
 import com.google.inject.Provider
 
 trait ServiceDiscovery {
   def register(): Node
   def isLeader(): Boolean
+  def myClusterSize: Int = 0
 }
 
 @Singleton
@@ -21,34 +29,33 @@ class ServiceDiscoveryImpl @Inject() (
     amazonInstanceInfoProvider: Provider[AmazonInstanceInfo])
   extends ServiceDiscovery with Logging {
 
-  val serviceType = services.currentService
-  val myServicePath = Path(s"/fortytwo/services/${serviceType.name}")
-  val myServiceNodeMaster = Node(s"${myServicePath.name}/${serviceType.name}_")
-  var myNode: Option[Node] = None
-  def myId: Option[Long] = myNode map extractId
-  def extractId(node: Node) = node.name.substring(node.name.lastIndexOf('_') + 1).toLong
+  private val serviceType = services.currentService
+  private val myServicePath = Path(s"/fortytwo/services/${serviceType.name}")
+  private val myServiceNodeMaster = Node(s"${myServicePath.name}/${serviceType.name}_")
+  private var myNode: Option[Node] = None
+
+  private var clusters = new TrieMap[Path, ServiceCluster]()
+  def isLeader: Boolean = clusters(myServicePath).leader map (_.node == myNode.get) getOrElse false
 
   implicit val amazonInstanceInfoFormat = AmazonInstanceInfo.format
 
+  //without me
+  override def myClusterSize: Int = clusters.get(myServicePath) map {c => c.size} getOrElse 0
+
   def register(): Node = {
     val path = zk.createPath(myServicePath)
-    zk.watchChildren(path, { (children : Seq[Node]) =>
-      log.info(s"""services in my cluster: ${children.mkString(", ")}""")
-    })
     myNode = Some(zk.createNode(myServiceNodeMaster, null, EPHEMERAL_SEQUENTIAL))
+    zk.watchChildren(myServicePath, { (children : Seq[Node]) =>
+      println(s"""services in my cluster under ${myServicePath.name}: ${children.mkString(", ")}""")
+      future {
+        val cluster = clusters.getOrElseUpdate(myServicePath, new ServiceCluster(serviceType, myServicePath))
+        cluster.update(zk, children)
+      }
+    })
     zk.set(myNode.get, Json.toJson(amazonInstanceInfoProvider.get).toString)
-    log.info(s"registered as node ${myNode.get}")
+    println(s"registered as node ${myNode.get}")
     myNode.get
   }
-
-  def isLeader(): Boolean = myId map { id =>
-    val siblings = zk.getChildren(myServicePath)
-    val siblingsIds = siblings map extractId
-    val minId = siblingsIds.min
-    val isMinid = minId == id
-    log.info(s"my service id is $id, service with id $minId is the leader => I'm the leader == $isMinid")
-    isMinid
-  } getOrElse (throw new IllegalStateException("service did not register yet"))
 
   def watchNode(node: Node) {
     zk.watchNode(node, { (data : Option[Array[Byte]]) =>
