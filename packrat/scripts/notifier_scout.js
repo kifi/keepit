@@ -13,4 +13,4 @@ var notifierScout = notifierScout || function() {  // idempotent for Chrome
       }
     }});
   return true;
-})();
+}();
