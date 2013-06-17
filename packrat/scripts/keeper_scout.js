@@ -6,14 +6,14 @@ function logEvent() {  // parameters defined in main.js
   api.port.emit("log_event", Array.prototype.slice.call(arguments));
 }
 
-window.onerror = function (message, url, lineNo) {
+window.onerror = function(message, url, lineNo) {
   if (!/https?\:/.test(url)) {
     // this is probably from extension code, not from the website we're running this on
     api.port.emit("report_error", { message: message, url: url, lineNo: lineNo });
   }
 };
 
-var t0 = +new Date, tile, root = document.querySelector("body") || document.documentElement;
+var t0 = +new Date, tile;
 
 !function() {
   api.log("[scout]", location.hostname);
@@ -146,7 +146,7 @@ var t0 = +new Date, tile, root = document.querySelector("body") || document.docu
     tileCard = tile.firstChild;
     tileCount = document.createElement("span");
     tileCount.className = "kifi-count";
-    root.appendChild(tile);
+    (document.querySelector("body") || document.documentElement).appendChild(tile);
     tile.addEventListener("mouseover", function(e) {
       if (e.target === tileCount || tileCard.contains(e.target)) {
         keeper("show", "tile");
