@@ -407,7 +407,6 @@ class URIGraphTest extends Specification with GraphTestHelper {
           recOpt.map{ rec =>
             rec.title === ("personaltitle bmt"+uriId)
             rec.url === uri.url
-            rec.externalUriId === uri.externalId
           }
         }
       }

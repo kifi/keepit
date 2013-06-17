@@ -9,7 +9,7 @@ import org.apache.lucene.store.OutputStreamDataOutput
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
-case class BookmarkRecord(title: String, url: String, createdAt: Long, isPrivate: Boolean, uriId: Id[NormalizedURI], externalUriId: ExternalId[NormalizedURI])
+case class BookmarkRecord(title: String, url: String, createdAt: Long, isPrivate: Boolean, uriId: Id[NormalizedURI])
 
 object BookmarkRecordSerializer {
   implicit def toByteArray(r: BookmarkRecord): Array[Byte] = {
@@ -17,13 +17,12 @@ object BookmarkRecordSerializer {
     val out = new OutputStreamDataOutput(baos)
 
     // version
-    out.writeByte(1)
+    out.writeByte(2)
     out.writeString(r.title)
     out.writeString(r.url)
     out.writeLong(r.createdAt)
     out.writeByte(if (r.isPrivate) 1 else 0)
     out.writeLong(r.uriId.id)
-    out.writeString(r.externalUriId.toString)
 
     out.close()
     baos.close()
@@ -36,7 +35,7 @@ object BookmarkRecordSerializer {
     val in = new InputStreamDataInput(new ByteArrayInputStream(bytes, offset, length))
 
     val version = in.readByte().toInt
-    if (version != 1) {
+    if (version > 2) {
       throw new Exception(s"invalid data [version=${version}]")
     }
 
@@ -45,8 +44,7 @@ object BookmarkRecordSerializer {
       in.readString(),    // url
       in.readLong(),      // createdAt
       in.readByte() == 1, // isPrivate
-      Id[NormalizedURI](in readLong()),
-      ExternalId[NormalizedURI](in.readString()))
+      Id[NormalizedURI](in readLong()))
   }
 }
 
