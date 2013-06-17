@@ -78,10 +78,6 @@ var KifiNotification = {
   add: function(params) {
     params = $.extend(KifiNotification.defaultParams, params);
 
-    if ($("#kifi-notify-notice-wrapper").length == 0) {
-      $(root).append("<div id=kifi-notify-notice-wrapper>");
-    }
-
     render("html/notify_box.html", {
       formatSnippet: getSnippetFormatter,
       title: params.title,
@@ -94,7 +90,11 @@ var KifiNotification = {
     }, function(html) {
       var $item = $(html);
 
-      $("#kifi-notify-notice-wrapper").addClass(params.wrapperClass).append($item);
+      var $wrap = $("#kifi-notify-notice-wrapper");
+      if (!$wrap.length) {
+        $wrap = $("<div id=kifi-notify-notice-wrapper>").appendTo($("body")[0] || "html");
+      }
+      $wrap.addClass(params.wrapperClass).append($item);
 
       ["beforeOpen", "afterOpen", "beforeClose", "afterClose"].forEach(function(val) {
         $item.data(val, $.isFunction(params[val]) ? params[val] : $.noop);
@@ -155,9 +155,7 @@ var KifiNotification = {
     function removeItem() {
       $item.data("afterClose")($item, manualClose);
       $item.remove();
-      if ($(".kifi-notify-item-wrapper").length == 0) {
-        $("#kifi-notify-notice-wrapper").remove();
-      }
+      $("#kifi-notify-notice-wrapper").not(":has(.kifi-notify-item-wrapper)").remove();
     }
   },
 
@@ -175,7 +173,7 @@ var KifiNotification = {
     var $wrap = $("#kifi-notify-notice-wrapper");
     (params.beforeClose || $.noop)($wrap);
     $wrap.fadeOut(function() {
-      $(this).remove();
+      $wrap.remove();
       (params.afterClose || $.noop)();
     });
   }
