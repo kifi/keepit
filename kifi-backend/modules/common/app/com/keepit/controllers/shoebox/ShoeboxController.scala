@@ -218,15 +218,6 @@ class ShoeboxController @Inject() (
     Ok(Json.obj("users" -> JsObject(users), "personalSearchHits" -> personalSearchHits))
   }
 
-  def getUsersChanged(seqNum: Long) = Action { request =>
-    val changed = db.readOnly { implicit s =>
-      bookmarkRepo.getUsersChanged(SequenceNumber(seqNum))
-    } map{ case(userId, seqNum) =>
-      Json.obj( "id" -> userId.id, "seqNum" -> seqNum.value)
-    }
-    Ok(JsArray(changed))
-  }
-
   def persistServerSearchEvent() = Action(parse.json) { request =>
     val metaData = request.body
     EventPersister.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject]))
