@@ -6,17 +6,14 @@ function logEvent() {  // parameters defined in main.js
   api.port.emit("log_event", Array.prototype.slice.call(arguments));
 }
 
-window.onerror = function (message, url, lineNo) {
-  if (!/https?\:/.test(url)) {
-    // this is probably from extension code, not from the website we're running this on
-    api.port.emit("report_error", { message: message, url: url, lineNo: lineNo });
-  }
-};
-
-var t0 = +new Date, tile, root = document.querySelector("body") || document.documentElement;
-
-!function() {
+var tile = tile || function() {  // idempotent for Chrome
   api.log("[scout]", location.hostname);
+  window.onerror = function(message, url, lineNo) {
+    if (!/https?\:/.test(url)) {  // this is probably from extension code, not from the website we're running this on
+      api.port.emit("report_error", { message: message, url: url, lineNo: lineNo });
+    }
+  };
+
   var tileCard, tileCount, onScroll;
   api.port.on({
     open_to: function(o) {
@@ -132,28 +129,27 @@ var t0 = +new Date, tile, root = document.querySelector("body") || document.docu
     });
   }
 
-  !function insertTile() {
-    while (tile = document.getElementById("kifi-tile")) {
-      tile.parentNode.removeChild(tile);
+  while (tile = document.getElementById("kifi-tile")) {
+    tile.parentNode.removeChild(tile);
+  }
+  tile = document.createElement("div");
+  tile.dataset.t0 = +new Date;
+  tile.id = tile.className = "kifi-tile";
+  tile.style.display = "none";
+  tile.innerHTML =
+    "<div class=kifi-tile-card>" +
+    "<div class=kifi-tile-keep style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>" +
+    "<div class=kifi-tile-kept></div></div>";
+  tileCard = tile.firstChild;
+  tileCount = document.createElement("span");
+  tileCount.className = "kifi-count";
+  (document.querySelector("body") || document.documentElement).appendChild(tile);
+  tile.addEventListener("mouseover", function(e) {
+    if (e.target === tileCount || tileCard.contains(e.target)) {
+      keeper("show", "tile");
     }
-    tile = document.createElement("div");
-    tile.id = tile.className = "kifi-tile";
-    tile.style.display = "none";
-    tile.innerHTML =
-      "<div class=kifi-tile-card>" +
-      "<div class=kifi-tile-keep style='background-image:url(" + api.url("images/metro/tile_logo.png") + ")'></div>" +
-      "<div class=kifi-tile-kept></div></div>";
-    tileCard = tile.firstChild;
-    tileCount = document.createElement("span");
-    tileCount.className = "kifi-count";
-    root.appendChild(tile);
-    tile.addEventListener("mouseover", function(e) {
-      if (e.target === tileCount || tileCard.contains(e.target)) {
-        keeper("show", "tile");
-      }
-    });
-    tile["kifi:position"] = positionTile;
-  }();
+  });
+  tile["kifi:position"] = positionTile;
 
   function onResize() {
     if (document.documentElement.classList.contains("kifi-with-pane")) return;
@@ -196,4 +192,6 @@ var t0 = +new Date, tile, root = document.querySelector("body") || document.docu
       tile = tileCount = null;
     }
   });
+
+  return tile;
 }();
