@@ -15,6 +15,7 @@ import com.keepit.serializer.UriLabelSerializer
 import com.keepit.common.routes.Search
 import com.keepit.common.routes.Common
 import com.keepit.common.search.{ResultClicked, SharingUserInfo, IndexInfo}
+import scala.concurrent.Promise
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -102,8 +103,12 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
   }
 
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]] = {
-    call(Search.internal.sharingUserInfo(userId, uriIds.map(_.id).mkString(","))) map { r =>
-      Json.fromJson[Seq[SharingUserInfo]](r.json).get
+    if (uriIds.isEmpty) {
+      Promise.successful(Seq[SharingUserInfo]()).future
+    } else {
+      call(Search.internal.sharingUserInfo(userId, uriIds.map(_.id).mkString(","))) map { r =>
+        Json.fromJson[Seq[SharingUserInfo]](r.json).get
+      }
     }
   }
 
