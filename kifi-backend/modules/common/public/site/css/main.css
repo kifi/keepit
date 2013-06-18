@@ -65,17 +65,16 @@ aside {position: absolute; top: 70px; bottom: 0; background: #eff2f7}
 .left-col h3.new>a {color: #6fa6ef}
 .left-col h3.my-keeps>a::before {content: " "; display: inline-block; width: 21px; height: 21px; padding: 10px 0; margin-right: 7px; background: url(../img/kifi-icon.png) 0/42px content-box; vertical-align: top; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
 .left-col h3.my-keeps.active>a::before {background-position: right}
-#collections>h2 {margin-top: 15px; padding: 0 0 2px 38px; background: url(../img/folder-icon.png) left 12px bottom 13px/18px no-repeat}
+#collections>h2 {margin-top: 15px; padding: 0 0 2px 38px; background: url(../img/folder-icon.png) left 12px bottom 13px/18px no-repeat; border-bottom: 1px solid #dbdee3}
 #collections h3 {line-height: 39px; -webkit-transition: background-color 80ms linear, padding-left .2s; transition: background-color 80ms linear, padding-left .2s}
-a.new-collection {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhDAAMAIABAO/y9////yH5BAEKAAEALAAAAAAMAAwAAAIXjAMJx6h91IIuMYmz3pzfR0lUNUHiUQAAOw==) center/6px no-repeat #99a3b3; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast}
+a.new-collection {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhDAAMAIABAO/y9////yH5BAEKAAEALAAAAAAMAAwAAAIXjAMJx6h91IIuMYmz3pzfR0lUNUHiUQAAOw==) center/6px no-repeat #99a3b3; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
 a.new-collection:hover {background-color: #a1acbd}
-.add-collection {border-top: 1px solid #dbdee3; background: #fff}
+.add-collection {border-bottom: 1px solid #dbdee3; background: #fff}
 .add-collection.submitted {background-color: rgba(255,255,255,0)}
 #collections h3>a>input {width: 100%; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; line-height: normal; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text}
 #collections-list {overflow-y: auto; overflow-x: hidden}
 #collections .sortable-placeholder {background: #6fa6ef; height: 2px; min-height: 0}
 h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
-.collection:first-child {border-top: 1px solid #dbdee3}
 .collection.with-tri:not(.no-tri) {padding-left: 27px}
 h3.collection.renaming {background-color: #fff}
 .collection.renaming>a {cursor: text}
@@ -92,7 +91,8 @@ h3.collection>.keep-count {margin-top: 9px}
 .collection.with-tri.no-tri>.coll-tri {-webkit-transition-delay: 0, .2s; transition-delay: 0, .2s}
 #coll-menu {display: none; margin: 0; padding: 0; list-style: none; position: absolute; z-index: 1; background: #e3e6ee}
 #coll-menu>li>a {display: block; padding: 0 16px; font-size: 12px; line-height: 24px; white-space: nowrap; color: #556179; border: solid #dbdee3; border-width: 0 1px 1px 0}
-#coll-menu>li>a:hover {background: #9ba4b8; color: #fff}
+#coll-menu>li>a:hover,
+#coll-menu>li>a.hover {background: #9ba4b8; color: #fff}
 
 aside.right {
   right: 0;

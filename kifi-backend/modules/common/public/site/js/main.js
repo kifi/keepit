@@ -312,8 +312,14 @@ $(function() {
 	}
 
 	// delete/rename collection
-	var $collMenu = $("#coll-menu").on("mousedown", ".coll-remove", function(e) {
+	var $collMenu = $("#coll-menu")
+	.on("mouseover", "a", function() {
+		$(this).addClass("hover");
+	}).on("mouseout", "a", function() {
+		$(this).removeClass("hover");
+	}).on("mouseup mousedown", ".coll-remove", function(e) {
 		if (e.which > 1) return;
+		hideCollMenu();
 		var $coll = $collMenu.prev(".collection");
 		var collId = $coll.data("id");
 		console.log("Removing collection", collId);
@@ -329,8 +335,9 @@ $(function() {
 				$('aside.right .collections ul li:has(input[data-id="'+collId+'"])').remove();
 				// TODO: update center column
 			}});
-	}).on("mousedown", ".coll-rename", function(e) {
+	}).on("mouseup mousedown", ".coll-rename", function(e) {
 		if (e.which > 1) return;
+		hideCollMenu();
 		var $coll = $collMenu.prev(".collection").addClass("renaming").removeAttr("title");
 		var $a = $coll.find(".coll-name"), name = $a.text();
 		var $in = $("<input type=text placeholder='Type new collection name'>").val(name).data("orig", name);
@@ -371,6 +378,13 @@ $(function() {
 			$coll.removeClass("renaming");
 		}
 	});
+	function hideCollMenu() {
+		console.log("[hideCollMenu]");
+    document.removeEventListener("mousedown", $collMenu.data("docMouseDown"), true);
+    $collMenu.removeData("docMouseDown").slideUp(80, function() {
+			$collMenu.detach().find(".hover").removeClass("hover");
+		}).prev(".collection").removeClass("with-menu").each(hideCollTri);
+	}
 
 	// auto update my keeps every minute
 	setInterval(addNewKeeps, 60000);
@@ -552,15 +566,16 @@ $(function() {
 		}
 	}).on("mousedown", ".coll-tri", function(e) {
 		if (e.button > 0) return;
+		e.preventDefault();  // do not start selection
 		if ($collMenu.is(":animated")) return;
-		var $tri = $(this), $coll = $tri.closest(".collection").addClass("with-menu");
-		$collMenu.insertAfter($coll).slideDown(80);
-		document.addEventListener("mousedown", function down(e) {
-			if (e.button > 0) return;
-			document.removeEventListener("mousedown", down, true);
-			$collMenu.slideUp(80, $.fn.detach.bind($collMenu));
-			$coll.removeClass("with-menu").each(hideCollTri);
-		}, true);
+    var $tri = $(this), $coll = $tri.closest(".collection").addClass("with-menu");
+		$collMenu.hide().insertAfter($coll).slideDown(80).data("docMouseDown", docMouseDown);
+		document.addEventListener("mousedown", docMouseDown, true);
+		function docMouseDown(e) {
+			if (!e.button && !$.contains($collMenu[0], e.target)) {
+	      hideCollMenu();
+	    }
+		}
 	}).on("mousemove", ".collection:not(.with-menu):not(.renaming)", function(e) {
 		var $coll = $(this), $tri = $coll.find(".coll-tri"), data = $coll.data();
 		var x = e.clientX, y = e.clientY, dx = x - data.x, dy = y - data.y, now = +new Date;
