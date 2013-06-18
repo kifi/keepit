@@ -36,9 +36,6 @@ class HomeController @Inject() (db: Database,
   private def userCanInvite[A](implicit request: AuthenticatedRequest[A]): Boolean =
     (request.experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.CAN_INVITE)).nonEmpty || Play.isDev
 
-  private def userCanConnectWithSocialNetworks[A](implicit request: AuthenticatedRequest[A]): Boolean =
-    (request.experiments & Set(ExperimentTypes.ADMIN)).nonEmpty || Play.isDev
-
   def kifiSite(path: String) = AuthenticatedHtmlAction { implicit request =>
     if (userCanSeeKifiSite) {
       Play.resourceAsStream(s"public/site/$path") map { stream =>
@@ -69,8 +66,7 @@ class HomeController @Inject() (db: Database,
         SocialNetworks.ALL.map(n => n -> socialUsers.exists(_.networkType == n))
       }
 
-      Ok(views.html.website.userHome(request.user, friendsOnKifi, networks,
-        userCanInvite, userCanSeeKifiSite, userCanConnectWithSocialNetworks))
+      Ok(views.html.website.userHome(request.user, friendsOnKifi, networks, userCanInvite, userCanSeeKifiSite))
     }
   }, unauthenticatedAction = { implicit request =>
     Ok(views.html.website.welcome())
