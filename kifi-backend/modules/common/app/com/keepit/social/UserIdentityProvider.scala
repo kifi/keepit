@@ -2,9 +2,9 @@ package com.keepit.social
 
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.db.Id
+import com.keepit.common.logging.Logging
 import com.keepit.model.User
 
-import play.api.Logger
 import play.api.mvc.{Result, Request}
 import securesocial.core.{Identity, UserService, IdentityProvider}
 
@@ -14,9 +14,10 @@ import securesocial.core.{Identity, UserService, IdentityProvider}
  *
  * All our providers should extend this trait.
  */
-trait UserIdentityProvider extends IdentityProvider {
+trait UserIdentityProvider extends IdentityProvider with Logging {
   abstract override def authenticate[A]()(implicit request: Request[A]): Either[Result, Identity] = {
-    Logger.info(s"[securesocial] request: $request")
+    log.info(s"UserIdentityProvider got request: $request")
+    log.info(s"session data: ${request.session.data}")
     val userIdOpt = request.session.get(ActionAuthenticator.FORTYTWO_USER_ID).map { id => Id[User](id.toLong) }
     doAuth() match {
       case Right(socialUser) =>
