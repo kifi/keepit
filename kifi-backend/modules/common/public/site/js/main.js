@@ -106,7 +106,7 @@ $(function() {
 	}
 
 	function onDropOnCollection(event, ui) {
-		var $keeps = ui.draggable;
+		var $keeps = ui.draggable, coll = this;
 		if ($keeps.hasClass("selected")) {
 			$keeps = $keeps.add($main.find(".keep.selected"));
 		}
@@ -125,11 +125,11 @@ $(function() {
 				error: onDropOnCollectionAjaxError,
 				success: function(data) {
 					myKeepIds.push.apply(myKeepIds, data.keeps.map(function(k) {return k.id}));
-					addMyKeepsToCollection.call(this, myKeepIds);
+					addMyKeepsToCollection.call(coll, myKeepIds);
 				}
 			});
 		} else {
-			addMyKeepsToCollection.call(this, myKeepIds);
+			addMyKeepsToCollection.call(coll, myKeepIds);
 		}
 	}
 
