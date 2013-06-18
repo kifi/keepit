@@ -1,18 +1,16 @@
 # --- !Ups
 
-CREATE TABLE uri_topic (
-    id bigint(20) NOT NULL AUTO_INCREMENT,
-    uri_id bigint(20) NOT NULL,
-    topic BLOB NOT NULL,
-    primaryTopic SMALLINT UNSIGNED,
-    secondaryTopic SMALLINT UNSIGNED,
-    created_at datetime NOT NULL,
-    updated_at datetime NOT NULL,
-    PRIMARY KEY (id),
-    CONSTRAINT uri_topic_uri_id FOREIGN KEY (uri_id) REFERENCES normalized_uri(id),
-    UNIQUE INDEX uri_topic_i_uri_id(uri_id)
-);
+=======
+-- MySQl
+-- =====
+-- alter table scrape_info
+--   modify column destination_url varchar(3072);
 
-insert into evolutions (name, description) values('64.sql', 'adding uri_topic table');
+-- H2
+-- =====
+alter table scrape_info
+  alter column destination_url varchar(3072);
+
+insert into evolutions (name, description) values('64.sql', 'enlarging the destination_url in scrape_info table');
 
 # --- !Downs
