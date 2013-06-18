@@ -497,9 +497,6 @@ class MainSearcherTest extends Specification with DbRepos {
         val mainSearcher = mainSearcherFactory(user1.id.get, SearchFilter.default(), noBoostConfig)
         val res = mainSearcher.search("alldocs", uris.size, None)
 
-        val publicSet = publicUris.map(u => u.id.get).toSet
-        val privateSet = privateUris.map(u => u.id.get).toSet
-
         res.hits.size === uris.size
       }
     }
@@ -573,6 +570,67 @@ class MainSearcherTest extends Specification with DbRepos {
 
         res = mainSearcher.search("book", numHitsToReturn, None)
         res.hits.size > 0 === true
+      }
+    }
+
+    "search within collections" in {
+        running(new DevApplication().withShoeboxServiceModule) {
+        val (users, uris) = initData(numUsers = 2, numUris = 20)
+        val user1 = users(0)
+        val user2 = users(1)
+        val bookmarks = db.readWrite { implicit s =>
+          uris.map{ uri =>
+            val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+            bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user1.id.get, source = source))
+          }
+        }
+
+        val (coll1set, tmp) = uris.partition(_.id.get.id % 3 == 0)
+        val (coll2set, nocoll) = tmp.partition(_.id.get.id % 3 == 1)
+
+        val (coll1, coll2) = db.readWrite { implicit s =>
+          def mk(name: String, uris: Seq[NormalizedURI]) = {
+            val coll = collectionRepo.save(Collection(userId = user1.id.get, name = name))
+            uris.map { uri =>
+              val url = urlRepo.save(urlRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+              val bookmark = bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url,  uriId = uri.id.get, userId = user1.id.get, source = source))
+              keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark.id.get, collectionId = coll.id.get))
+            }
+            coll
+          }
+          (mk("coll1", coll1set), mk("coll2", coll2set))
+        }
+
+        val store = mkStore(uris)
+        val (graph, indexer, mainSearcherFactory) = initIndexes(store)
+
+        graph.update() === 1
+        indexer.run() === uris.size
+
+        setConnections(Map(user1.id.get -> Set(user2.id.get)))
+
+        val coll1Future = Promise.successful(Seq(coll1.id.get)).future
+        val searchFilter1 = SearchFilter.mine(collectionsFuture = Some(coll1Future), monitoredAwait = inject[MonitoredAwait])
+        val mainSearcher1 = mainSearcherFactory(user1.id.get, searchFilter1, noBoostConfig)
+        val res1 = mainSearcher1.search("alldocs", uris.size, None)
+
+        res1.hits.size == coll1set.size
+        res1.hits.foreach{ _.uriId.id % 3 === 0 }
+
+        val coll2Future = Promise.successful(Seq(coll2.id.get)).future
+        val searchFilter2 = SearchFilter.mine(collectionsFuture = Some(coll2Future), monitoredAwait = inject[MonitoredAwait])
+        val mainSearcher2 = mainSearcherFactory(user1.id.get, searchFilter2, noBoostConfig)
+        val res2 = mainSearcher2.search("alldocs", uris.size, None)
+
+        res2.hits.size == coll2set.size
+        res2.hits.foreach{ _.uriId.id % 3 === 1 }
+
+        val coll3Future = Promise.successful(Seq(coll1.id.get, coll2.id.get)).future
+        val searchFilter3 = SearchFilter.mine(collectionsFuture = Some(coll3Future), monitoredAwait = inject[MonitoredAwait])
+        val mainSearcher3 = mainSearcherFactory(user1.id.get, searchFilter3, noBoostConfig)
+        val res3 = mainSearcher3.search("alldocs", uris.size, None)
+
+        res3.hits.size == (coll1set.size + coll2set.size)
       }
     }
   }
