@@ -325,7 +325,7 @@ $(function() {
 			contentType: 'application/json',
 			error: showMessage.bind(null, 'Could not delete collection, please try again later'),
 			success: function(data) {
-				$coll.slideUp(80, $coll.remove.bind($coll));
+				$coll.slideUp(80, $.fn.remove.bind($coll));
 				$('aside.right .collections ul li:has(input[data-id="'+collId+'"])').remove();
 				// TODO: update center column
 			}});
@@ -558,7 +558,7 @@ $(function() {
 		document.addEventListener("mousedown", function down(e) {
 			if (e.button > 0) return;
 			document.removeEventListener("mousedown", down, true);
-			$collMenu.slideUp(80, $collMenu.detach.bind($collMenu));
+			$collMenu.slideUp(80, $.fn.detach.bind($collMenu));
 			$coll.removeClass("with-menu").each(hideCollTri);
 		}, true);
 	}).on("mousemove", ".collection:not(.with-menu):not(.renaming)", function(e) {
