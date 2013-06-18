@@ -106,7 +106,7 @@ $(function() {
 	}
 
 	function onDropOnCollection(event, ui) {
-		var $keeps = ui.draggable;
+		var $keeps = ui.draggable, coll = this;
 		if ($keeps.hasClass("selected")) {
 			$keeps = $keeps.add($main.find(".keep.selected"));
 		}
@@ -125,11 +125,11 @@ $(function() {
 				error: onDropOnCollectionAjaxError,
 				success: function(data) {
 					myKeepIds.push.apply(myKeepIds, data.keeps.map(function(k) {return k.id}));
-					addMyKeepsToCollection.call(this, myKeepIds);
+					addMyKeepsToCollection.call(coll, myKeepIds);
 				}
 			});
 		} else {
-			addMyKeepsToCollection.call(this, myKeepIds);
+			addMyKeepsToCollection.call(coll, myKeepIds);
 		}
 	}
 
@@ -649,15 +649,9 @@ $(function() {
 			error: showMessage.bind(null, 'Could not create collection, please try again later'),
 			success: function(data) {
 				collections[data.id] = {id: data.id, name: name};
-				var $coll = $('<h3 class=collection data-id=' + data.id + '><div class=edit-menu>\
-					<a href=javascript: class=edit></a>\
-					<ul><li><a class=rename href=javascript:>Rename</a></li>\
-							<li><a class=remove href=javascript:>Remove</a></li></ul>\
-					</div><a href=javascript:><span class="name long-text">' + name + '</span> <span class="right light">0</span></a></h3>')
-				.prependTo("#collections-wrapper");
+				collTmpl.prepend({id: data.id, name: name, keeps: 0});
 				$addColl.hide().find("input").val("").prop("disabled", true);
-				makeCollectionsDroppable($coll);
-				// TODO: Use Tempo templates!!
+				// TODO: Use Tempo template!!
 				$('aside.right .actions .collections ul li.create')
 					.after('<li><input type="checkbox" data-id="' + data.id + '" id="cb-' + data.id + '"><label class="long-text" for="cb-' + data.id + '"><span></span>' + name + '</label></li>');
 			}});
