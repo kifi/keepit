@@ -25,7 +25,6 @@ ol {list-style: none; padding: 0; margin: 0}
 .dark-gray {color: #66676a}
 .green {color: #27ae60}
 .red {color: #ca5742}
-span.light {color: #628196}
 .fs9 {font-size: .8em}
 
 html {height: 100%; text-align: center; overflow: hidden}
@@ -48,47 +47,51 @@ div.custom-select:after {content: url(../img/down.png); position: absolute; top:
 aside {position: absolute; top: 70px; bottom: 0; background: #eff2f7}
 
 /* left column */
-aside.left {left: 0; width: 200px}
+.left-col {left: 0; width: 200px}
 .my-identity {position: relative; width: 100%; text-align: center; background: #fff; padding-bottom: 10px}
 .my-pic {width: 66px; height: 66px; margin: 0 auto -10px; border-radius: 50%; border: 6px solid #eff2f7; position: relative; top: -10px; background-size: 100%; background-color: #b6c3cc}
 .my-name {line-height: 28px}
 .my-name:first-child {padding-top: 80px}
-aside.left h2 {margin: 4px 0 0; font-size: 1.2em; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased; padding: 0 11px}
-aside.left h3.active,
-aside.left h3.active a {background: #e3e6ee; color: #556179}
-aside.left h3:not(.active):hover>a[href] {background: #e3e6ee}
-aside.left h3:not(.active):hover>a>span.right {background: #eff2f7}
-aside.left h3 {margin: 0; position: relative; font-size: 13px}
-aside.left h3 a {display: block; padding: 10px 6px 10px 12px; line-height: 21px; color: #818692}
-aside.left h3.new a {color: #6fa6ef}
-aside.left h3 a span.right {float: right; border: 1px solid #b4b9ca; border-radius: 10.5px; font-size: 12px; line-height: 17px; padding: 2px 12px 0}
-aside.left h3.active a span.right {color: #fff; background: #9ba4b8; border-color: #9ba4b8}
-aside.left h3.my-keeps a::before {content: " "; display: inline-block; font-size: 0; width: 21px; height: 21px; margin-right: 7px; background: url(../img/kifi-icon.png) left top/42px; vertical-align: top; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
-aside.left h3.my-keeps.active a::before {background-position: right top}
-#collections h2 {margin-top: 15px; padding: 0 0 2px 38px; background: url(../img/folder-icon.png) left 12px bottom 13px/18px no-repeat}
-a.new-collection {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhDAAMAIABAO/y9////yH5BAEKAAEALAAAAAAMAAwAAAIXjAMJx6h91IIuMYmz3pzfR0lUNUHiUQAAOw==) center/6px no-repeat #99a3b3; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast}
+.left-col h2 {margin: 4px 0 0; font-size: 1.2em; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased; padding: 0 11px}
+.left-col h3 {margin: 0; position: relative; font-size: 13px; line-height: 41px; -webkit-user-select: none; -moz-user-select: -moz-none; -ms-user-select: none}
+.left-col h3.active,
+.left-col h3.my-keeps:not(.active):hover {background: #e3e6ee}
+.left-col h3>.keep-count {float: right; margin: 10px 6px 0 0; border: 1px solid #b4b9ca; border-radius: 10.5px; color: #628196; font-size: 12px; line-height: 20px; height: 19px; padding: 0 12px}
+@-moz-document url-prefix() {.left-col h3>.keep-count {line-height: 18px}}
+.left-col h3.active>.keep-count {color: #fff; background: #9ba4b8; border-color: #9ba4b8}
+.left-col h3.my-keeps:not(.active):hover>.keep-count {background: #eff2f7}
+.left-col h3>a {display: block; padding: 0 6px 0 12px; color: #818692}
+.left-col h3.active>a {color: #556179}
+.left-col h3.new>a {color: #6fa6ef}
+.left-col h3.my-keeps>a::before {content: " "; display: inline-block; width: 21px; height: 21px; padding: 10px 0; margin-right: 7px; background: url(../img/kifi-icon.png) 0/42px content-box; vertical-align: top; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
+.left-col h3.my-keeps.active>a::before {background-position: right}
+#collections>h2 {margin-top: 15px; padding: 0 0 2px 38px; background: url(../img/folder-icon.png) left 12px bottom 13px/18px no-repeat; border-bottom: 1px solid #dbdee3}
+#collections h3 {line-height: 39px; -webkit-transition: background-color 80ms linear, padding-left .2s; transition: background-color 80ms linear, padding-left .2s}
+a.new-collection {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhDAAMAIABAO/y9////yH5BAEKAAEALAAAAAAMAAwAAAIXjAMJx6h91IIuMYmz3pzfR0lUNUHiUQAAOw==) center/6px no-repeat #99a3b3; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
 a.new-collection:hover {background-color: #a1acbd}
-.add-collection {border-top: 1px solid #dbdee3}
-.add-collection>a>input {width: 100%; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit}
-#collections #collections-wrapper {overflow-y: auto; overflow-x: hidden}
+.add-collection {border-bottom: 1px solid #dbdee3; background: #fff}
+.add-collection.submitted {background-color: rgba(255,255,255,0)}
+#collections h3>a>input {width: 100%; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; line-height: normal; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text}
+#collections-list {overflow-y: auto; overflow-x: hidden}
 #collections .sortable-placeholder {background: #6fa6ef; height: 2px; min-height: 0}
-h3.collection:first-child {border-top: 1px solid #dbdee3}
-h3.collection {border-bottom: 1px solid #dbdee3}
-h3.collection a {padding-top: 9px; padding-bottom: 9px}
-h3.collection span.name {width: 120px}
-h3.collection.editing span.name,
-h3.collection.hover span.name {width: 100px}
-h3.collection div.edit-menu {transition: left .5s; -webkit-transition: left .5s; display: none; position: absolute; top: 0; left: -25px; font-size: 13px}
-h3.collection div.edit-menu:hover,
-h3.collection.editing div.edit-menu {left: 0}
-h3.collection a.edit {width: 30px; display: block; height: 37px; padding: 0; background: #e3e6ee url(../img/edit-gray.png) 12px 12px no-repeat}
-h3.collection.editing a.edit {background: #6fa6ef url(../img/edit-blue.png) 12px 12px no-repeat}
-h3.collection {transition: padding-left .5s; -webkit-transition: padding-left .5s}
-h3.collection.editing, h3.collection.hover {padding-left: 25px}
-h3.collection:hover div.edit-menu, h3.collection.editing div.edit-menu {display: block}
-h3.collection div.edit-menu ul {display: none; margin: 0; padding: 0; list-style: none; position: absolute; z-index: 1}
-h3.collection div.edit-menu ul li a {width: 50px; display: block; background: #9ba4b8; color: #fff; padding: .3em .5em; font-size: .9em}
-h3.collection input {width: 190px; position: absolute; top: -2px; left: 25px; z-index: 2}
+h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
+.collection.with-tri:not(.no-tri) {padding-left: 27px}
+h3.collection.renaming {background-color: #fff}
+.collection.renaming>a {cursor: text}
+h3.collection>.keep-count {margin-top: 9px}
+.collection.renaming>.keep-count {display: none}
+.coll-tri {position: absolute; top: 0; bottom: 0; left: -27px; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer; visibility: hidden; -webkit-transition: left .2s; transition: left .2s}
+.active>.coll-tri {background-color: #9ba4b8}
+.renaming>.coll-tri {display: none}
+.coll-tri::before {content: " "; border-width: 4px 4px 0; border-style: solid; border-color: #9ba4b8 transparent; font-size: 0; line-height: 0; vertical-align: 1px}
+.active>.coll-tri::before {border-top-color: #fff}
+.collection:hover>.coll-tri,
+.collection.with-tri>.coll-tri {visibility: visible}
+.collection.with-tri:not(.no-tri)>.coll-tri {left: 0}
+#coll-menu {display: none; margin: 0; padding: 0; list-style: none; position: absolute; z-index: 1; background: #e3e6ee}
+#coll-menu>li>a {display: block; padding: 0 16px; font-size: 12px; line-height: 24px; white-space: nowrap; color: #556179; border: solid #dbdee3; border-width: 0 1px 1px 0}
+#coll-menu>li>a:hover,
+#coll-menu>li>a.hover {background: #9ba4b8; color: #fff}
 
 aside.right {
   right: 0;
