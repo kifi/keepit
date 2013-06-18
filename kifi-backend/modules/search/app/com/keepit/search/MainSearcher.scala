@@ -95,6 +95,7 @@ class MainSearcher(
       case Some(timeRange) =>
         filter.collections match {
           case Some(collections) =>
+            log.info(s"searching collections: ${collections}")
             collections.foldLeft(Set.empty[Long]){ (s, collId) =>
               s ++ collectionSearcher.getCollectionToUriEdgeSet(collId).filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
             }
@@ -104,6 +105,7 @@ class MainSearcher(
       case _ =>
         filter.collections match {
           case Some(collections) =>
+            log.info(s"searching collections: ${collections}")
             collections.foldLeft(Set.empty[Long]){ (s, collId) =>
               s ++ collectionSearcher.getCollectionToUriEdgeSet(collId).destIdLongSet
             }
