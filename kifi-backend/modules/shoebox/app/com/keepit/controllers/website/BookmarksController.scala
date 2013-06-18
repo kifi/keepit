@@ -29,9 +29,8 @@ private object BasicCollection {
 private case class KeepInfo(id: Option[ExternalId[Bookmark]], title: Option[String], url: String, isPrivate: Boolean)
 
 private object KeepInfo {
-  implicit val bookmarkExternalIdFormat = ExternalId.format[Bookmark]
   implicit val format = (
-    (__ \ 'id).formatNullable[ExternalId[Bookmark]] and
+    (__ \ 'id).formatNullable(ExternalId.format[Bookmark]) and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'url).format[String] and
     (__ \ 'isPrivate).formatNullable[Boolean].inmap[Boolean](_ getOrElse false, Some(_))
@@ -40,6 +39,15 @@ private object KeepInfo {
   def fromBookmark(bookmark: Bookmark): KeepInfo = {
     KeepInfo(Some(bookmark.externalId), bookmark.title, bookmark.url, bookmark.isPrivate)
   }
+}
+
+private case class KeepInfosWithCollection(collectionId: Option[ExternalId[Collection]], keeps: Seq[KeepInfo])
+
+private object KeepInfosWithCollection {
+  implicit val format = (
+    (__ \ 'collectionId).formatNullable(ExternalId.format[Collection]) and
+    (__ \ 'keeps).format[Seq[KeepInfo]]
+  )(KeepInfosWithCollection.apply _, unlift(KeepInfosWithCollection.unapply))
 }
 
 @Singleton
@@ -102,15 +110,22 @@ class BookmarksController @Inject() (
   }
 
   def keepMultiple() = AuthenticatedJsonAction { request =>
-    request.body.asJson.flatMap(Json.fromJson[Seq[KeepInfo]](_).asOpt) map { keepInfos =>
+    request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { kwc =>
+      val KeepInfosWithCollection(collectionIdOpt, keepInfos) = kwc
       val keeps = bookmarkInterner.internBookmarks(
         Json.toJson(keepInfos), request.user, request.experiments, "SITE").map(KeepInfo.fromBookmark)
+      val addedToCollection = db.readOnly { implicit s =>
+        collectionIdOpt flatMap collectionRepo.getOpt map { coll =>
+          addToCollection(keeps.map(_.id.get).toSet, coll)._1.size
+        }
+      }
       searchClient.updateURIGraph()
       Ok(Json.obj(
-        "keeps" -> keeps
+        "keeps" -> keeps,
+        "addedToCollection" -> addedToCollection
       ))
     } getOrElse {
-      BadRequest(Json.obj("error" -> "Could not parse JSON array of keep with url from request body"))
+      BadRequest(Json.obj("error" -> "Could not parse object from request body"))
     }
   }
 
@@ -307,25 +322,7 @@ class BookmarksController @Inject() (
     implicit val externalIdFormat = ExternalId.format[Bookmark]
     db.readOnly { implicit s => collectionRepo.getByUserAndExternalId(request.userId, id) } map { collection =>
       request.body.asJson.flatMap(Json.fromJson[Set[ExternalId[Bookmark]]](_).asOpt) map { keepExtIds =>
-        val (added, removed) = db.readWrite(attempts = 2) { implicit s =>
-          val keepIds = keepExtIds.flatMap(bookmarkRepo.getOpt(_).map(_.id.get))
-          val existing = keepToCollectionRepo.getByCollection(collection.id.get, excludeState = None).toSet
-          val created = (keepIds -- existing.map(_.bookmarkId)) map { bid =>
-            keepToCollectionRepo.save(KeepToCollection(bookmarkId = bid, collectionId = collection.id.get))
-          }
-          val activated = existing collect {
-            case ktc if ktc.state == KeepToCollectionStates.INACTIVE && keepIds.contains(ktc.bookmarkId) =>
-              keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
-          }
-          val removed = removeOthers match {
-            case true => existing.collect {
-              case ktc if ktc.state == KeepToCollectionStates.ACTIVE && !keepIds.contains(ktc.bookmarkId) =>
-                keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
-            }
-            case false => Seq()
-          }
-          (activated ++ created, removed)
-        }
+        val (added, removed) = addToCollection(keepExtIds, collection, removeOthers)
         Ok(Json.obj("added" -> added.size, "removed" -> removed.size))
       } getOrElse {
         BadRequest(Json.obj("error" -> "Could not parse JSON keep ids from body"))
@@ -345,5 +342,28 @@ class BookmarksController @Inject() (
     Ok(Json.obj(
       "mutualKeeps" -> db.readOnly { implicit s => bookmarkRepo.getNumMutual(request.userId, userRepo.get(id).id.get) }
     ))
+  }
+
+  private def addToCollection(keepExtIds: Set[ExternalId[Bookmark]], collection: Collection,
+      removeOthers: Boolean = false): (Set[KeepToCollection], Set[KeepToCollection]) = {
+    db.readWrite(attempts = 2) { implicit s =>
+      val keepIds = keepExtIds.flatMap(bookmarkRepo.getOpt(_).map(_.id.get))
+      val existing = keepToCollectionRepo.getByCollection(collection.id.get, excludeState = None).toSet
+      val created = (keepIds -- existing.map(_.bookmarkId)) map { bid =>
+        keepToCollectionRepo.save(KeepToCollection(bookmarkId = bid, collectionId = collection.id.get))
+      }
+      val activated = existing collect {
+        case ktc if ktc.state == KeepToCollectionStates.INACTIVE && keepIds.contains(ktc.bookmarkId) =>
+          keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.ACTIVE))
+      }
+      val removed = removeOthers match {
+        case true => existing.collect {
+          case ktc if ktc.state == KeepToCollectionStates.ACTIVE && !keepIds.contains(ktc.bookmarkId) =>
+            keepToCollectionRepo.save(ktc.copy(state = KeepToCollectionStates.INACTIVE))
+        }
+        case false => Seq()
+      }
+      ((activated ++ created).toSet, removed.toSet)
+    }
   }
 }
