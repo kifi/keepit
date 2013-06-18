@@ -13,7 +13,6 @@ import akka.actor.ActorSystem
 import play.api.Play
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.analytics.Event
-import com.keepit.common.mail.MailToKeepPlugin
 
 class DevCommonModule extends ScalaModule with Logging {
   def configure() {
@@ -48,11 +47,5 @@ class FakeEventPersisterImpl @Inject() (
   }
   def persist(events: Seq[Event]): Unit = {
     log.info("Fake persisting events %s".format(events map (_.externalId) mkString(",")))
-  }
-}
-
-class FakeMailToKeepPlugin @Inject() (val schedulingProperties: SchedulingProperties) extends MailToKeepPlugin with Logging {
-  def fetchNewKeeps() {
-    log.info("Fake fetching new keeps")
   }
 }

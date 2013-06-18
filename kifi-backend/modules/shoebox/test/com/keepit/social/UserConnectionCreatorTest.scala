@@ -26,7 +26,7 @@ class UserConnectionCreatorTest extends Specification {
          * using json and one socialuserinfo, create connections
          *
          */
-        val json = Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/facebook_graph_eishay_min.json")).mkString)
+        val json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/facebook_graph_eishay_min.json")).mkString)
 
         inject[Database].readWrite { implicit s =>
           val u = inject[UserRepo].save(User(firstName = "Andrew", lastName = "Conner"))
@@ -69,7 +69,7 @@ class UserConnectionCreatorTest extends Specification {
     "disable non existing connections" in {
       running(new EmptyApplication().withFakeHttpClient()) {
 
-        val json1 = Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/facebook_graph_eishay_min.json")).mkString)
+        val json1 = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/facebook_graph_eishay_min.json")).mkString)
 
         val extractedFriends = inject[FacebookSocialGraph].extractFriends(json1)
         inject[SocialUserImportFriends].importFriends(extractedFriends, SocialNetworks.FACEBOOK)
@@ -88,7 +88,7 @@ class UserConnectionCreatorTest extends Specification {
 
         connections.size === 12
 
-        val json2 = Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/facebook_graph_eishay_super_min.json")).mkString)
+        val json2 = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/facebook_graph_eishay_super_min.json")).mkString)
 
         val extractedFriends2 = inject[FacebookSocialGraph].extractFriends(json2)
 
