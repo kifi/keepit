@@ -24,12 +24,11 @@ class UserPictureController @Inject() (
   extends WebsiteController(actionAuthenticator) {
 
   def get(size: Int, id: ExternalId[User]) = Action { request =>
-    db.readOnly { implicit s => userRepo.getOpt(id) } map { user =>
-      imageStore.getPictureUrl(size, user)
-    } map { futureImage =>
-      Async {
-        futureImage map { Redirect(_) }
-      }
+    db.readOnly { implicit s => userRepo.getOpt(id) } collect {
+      case user if Set(UserStates.ACTIVE, UserStates.PENDING) contains user.state =>
+        Async {
+          imageStore.getPictureUrl(size, user) map (Redirect(_))
+        }
     } getOrElse {
       NotFound("Cannot find user!")
     }
