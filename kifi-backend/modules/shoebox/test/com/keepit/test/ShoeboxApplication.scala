@@ -6,7 +6,7 @@ import com.google.inject.{Provides, Singleton}
 import com.keepit.common.db.slick.Database
 import com.keepit.model.{UserExperimentRepo, UserRepo, UserSessionRepo, SocialUserInfoRepo}
 import com.keepit.common.healthcheck.HealthcheckPlugin
-import com.keepit.social.{ShoeboxSecureSocialUserPlugin, ShoeboxSecureSocialAuthenticatorPlugin, SecureSocialUserPlugin, SecureSocialAuthenticatorPlugin}
+import com.keepit.social.{SecureSocialUserPluginImpl, SecureSocialAuthenticatorPluginImpl, SecureSocialUserPlugin, SecureSocialAuthenticatorPlugin}
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.social.SocialGraphPlugin
 
@@ -19,7 +19,7 @@ class ShoeboxApplication() extends TestApplication(new TestGlobal(ShoeboxDevGlob
                                       usRepo: UserSessionRepo,
                                       healthPlugin: HealthcheckPlugin,
                                       app: play.api.Application): SecureSocialAuthenticatorPlugin = {
-    new ShoeboxSecureSocialAuthenticatorPlugin(db, suiRepo, usRepo, healthPlugin, app)
+    new SecureSocialAuthenticatorPluginImpl(db, suiRepo, usRepo, healthPlugin, app)
   }
 
   @Singleton
@@ -31,7 +31,7 @@ class ShoeboxApplication() extends TestApplication(new TestGlobal(ShoeboxDevGlob
                              healthcheckPlugin: HealthcheckPlugin,
                              userExperimentRepo: UserExperimentRepo,
                              socialGraphPlugin: SocialGraphPlugin): SecureSocialUserPlugin = {
-    new ShoeboxSecureSocialUserPlugin(
+    new SecureSocialUserPluginImpl(
       db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin, userExperimentRepo, socialGraphPlugin)
   }
 }

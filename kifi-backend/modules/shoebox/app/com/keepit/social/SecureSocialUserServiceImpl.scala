@@ -21,7 +21,7 @@ import securesocial.core.UserId
 import com.keepit.model.SocialUserInfo
 
 @Singleton
-class ShoeboxSecureSocialUserPlugin @Inject() (
+class SecureSocialUserPluginImpl @Inject() (
                                                 db: Database,
                                                 socialUserInfoRepo: SocialUserInfoRepo,
                                                 userRepo: UserRepo,
@@ -120,7 +120,7 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
 }
 
 @AppScoped
-class ShoeboxSecureSocialAuthenticatorPlugin @Inject()(
+class SecureSocialAuthenticatorPluginImpl @Inject()(
                                                         db: Database,
                                                         socialUserInfoRepo: SocialUserInfoRepo,
                                                         sessionRepo: UserSessionRepo,

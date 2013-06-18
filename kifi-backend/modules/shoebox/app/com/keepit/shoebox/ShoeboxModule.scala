@@ -34,8 +34,8 @@ import com.keepit.search.SearchServiceClient
 import com.keepit.search.SearchServiceClientImpl
 import com.keepit.social.SecureSocialAuthenticatorPlugin
 import com.keepit.social.SecureSocialUserPlugin
-import com.keepit.social.ShoeboxSecureSocialAuthenticatorPlugin
-import com.keepit.social.ShoeboxSecureSocialUserPlugin
+import com.keepit.social.SecureSocialAuthenticatorPluginImpl
+import com.keepit.social.SecureSocialUserPluginImpl
 
 import play.api.Play
 import play.api.Play.current
@@ -87,7 +87,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
       usRepo: UserSessionRepo,
       healthPlugin: HealthcheckPlugin,
       app: play.api.Application): SecureSocialAuthenticatorPlugin = {
-    new ShoeboxSecureSocialAuthenticatorPlugin(db, suiRepo, usRepo, healthPlugin, app)
+    new SecureSocialAuthenticatorPluginImpl(db, suiRepo, usRepo, healthPlugin, app)
   }
 
   @Singleton
@@ -99,7 +99,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
     healthcheckPlugin: HealthcheckPlugin,
     userExperimentRepo: UserExperimentRepo,
     socialGraphPlugin: SocialGraphPlugin): SecureSocialUserPlugin = {
-    new ShoeboxSecureSocialUserPlugin(
+    new SecureSocialUserPluginImpl(
       db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin, userExperimentRepo, socialGraphPlugin)
   }
 
