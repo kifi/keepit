@@ -15,7 +15,7 @@ import java.io.{DataOutputStream, DataInputStream, ByteArrayInputStream, ByteArr
 case class UriTopic(
   id: Option[Id[UriTopic]] = None,
   uriId: Id[NormalizedURI],
-  topic: Array[Byte],
+  topic: Array[Byte],           // hold array of doubles, topic membership
   primaryTopic: Option[Int] = None,
   secondaryTopic: Option[Int] = None,
   createdAt: DateTime = currentDateTime,
@@ -38,7 +38,7 @@ class UriTopicHelper {
   }
 
   def toDoubleArray(arr: Array[Byte]) = {
-    assume(arr.size == TopicModelGlobal.numTopics * 8, "topic array size not matching TopicModelGlobal.numTopics")
+    assume(arr.size == TopicModelGlobal.numTopics * 8, s"topic array size ${arr.size} not matching TopicModelGlobal.numTopics")
     val is = new DataInputStream(new ByteArrayInputStream(arr))
     val topic = (0 until TopicModelGlobal.numTopics).map{i => is.readDouble()}
     is.close()
@@ -46,7 +46,7 @@ class UriTopicHelper {
   }
 
   def assignTopics(arr: Array[Double]): (Option[Int], Option[Int]) = {
-    assume(arr.length > 2 && arr.length == TopicModelGlobal.numTopics, "topic array size less than 3 or not matching TopicModelGlobal.numTopics")
+    assume(arr.length > 2 && arr.length == TopicModelGlobal.numTopics, s"topic array size ${arr.size} less than 3 or not matching TopicModelGlobal.numTopics")
     var i = arr.indexWhere(x => x!=arr(0), 1)
     if (i == -1) (None, None)
     else {
