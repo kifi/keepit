@@ -1,6 +1,5 @@
 # --- !Ups
 
-=======
 -- MySQl
 -- =====
 -- alter table scrape_info
@@ -14,3 +13,4 @@ alter table scrape_info
 insert into evolutions (name, description) values('64.sql', 'enlarging the destination_url in scrape_info table');
 
 # --- !Downs
+
