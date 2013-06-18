@@ -15,14 +15,17 @@ import com.google.inject.{Inject, Singleton}
 
 import org.apache.zookeeper.CreateMode._
 
-class ServiceCluster(serviceType: ServiceType, myServicePath: Path) extends Logging {
+class ServiceCluster(serviceType: ServiceType) extends Logging {
 
   private var instances = new TrieMap[Node, ServiceInstance]()
+
+  val servicePath = Path(s"/fortytwo/services/${serviceType.name}")
+  val serviceNodeMaster = Node(s"${servicePath.name}/${serviceType.name}_")
 
   def size: Int = instances.size
   var leader: Option[ServiceInstance] = None
 
-  private def toFullPathNodes(nodes: Seq[Node]) = nodes map {c => Node(s"${myServicePath.name}/$c")}
+  private def toFullPathNodes(nodes: Seq[Node]) = nodes map {c => Node(s"${servicePath.name}/$c")}
 
   private def addNewNodes(newInstances: TrieMap[Node, ServiceInstance], childNodes: Seq[Node], zk: ZooKeeperClient) = childNodes foreach { childNode =>
     newInstances.getOrElseUpdate(childNode, {
