@@ -4,18 +4,20 @@
   <button class="btn btn-primary" type="button" id="update">Update Now</button>
 </div>
 
-<p>
-    <a href="@com.keepit.controllers.admin.routes.AdminWebSocketController.serviceView"><font size="5">WebSocket Performance</font></a>
-    <p><img id="websocket" class="img-polaroid"></p>
-</p>
-<p>
-  <a href="@com.keepit.controllers.admin.routes.AdminSearchPerformanceController.viewSearchPerformance"><font size="5">Search Performance</font></a>
-  <p><img id="search" class="img-polaroid"></p>
-</p>
-<p>
-  <a href="@com.keepit.controllers.admin.routes.AdminCacheController.serviceView"><font size="5">Cache Performance</font></a>
-  <p><img id="cache" class="img-polaroid"></p>
-</p>
+<div class="container" style="clear: both">
+  <div style="display: inline-block">
+      <h3><a href="@com.keepit.controllers.admin.routes.AdminWebSocketController.serviceView">WebSocket Performance</a></h3>
+      <p><img id="websocket" class="img-polaroid"></p>
+  </div>
+  <div style="display: inline-block">
+      <h3><a href="@com.keepit.controllers.admin.routes.AdminSearchPerformanceController.viewSearchPerformance">Search Performance</a></h3>
+      <p><img id="search" class="img-polaroid"></p>
+  </div>
+  <div style="display: inline-block">
+    <h3><a href="@com.keepit.controllers.admin.routes.AdminCacheController.serviceView">Cache Performance</a></h3>
+      <p><img id="cache" class="img-polaroid"></p>
+  </div>
+</div>
 
 <script>
 
@@ -37,13 +39,13 @@
   $.each(timeranges, function (name, timerange) {
   $("#timerange").append($("<option>").val(timerange).text(name));
   });
-  $("#timerange").find('option[value="-24h"]').prop('selected',true)
+  $("#timerange").find('option[value="-12h"]').prop('selected',true)
 
   function renderCharts() {
   var options = $.fn.graphite.defaults = {
   url: "https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/",
   lineMode: "connected",
-  width: 1100,
+  width: 550,
   height: 400,
   hideGrid: "true",
   from: $("#timerange").val(),
@@ -64,14 +66,14 @@
   // Cache Chart
 
   function sumSeries(metric) {
-    return "sumSeries(" + ["stats.counters.*.*", metric, "count"].join(".") + ")"
+    return "sumSeries(" + ["stats.counters.{search,shoebox}.Cache.*", metric, "count"].join(".") + ")"
   }
 
-  var cacheCountTargets = ["hits", "misses", "sets"].map(function (metric) {return "summarize(" + sumSeries(metric) + ',"1min")'});
-  var cacheRatioTarget = ["secondYAxis(scale(divideSeries(" + sumSeries("hits") + "," + sumSeries("{hits,misses}") + "),100))"];
+  var cacheCountTargets = ["hits"].map(function (metric) {return "summarize(" + sumSeries(metric) + ',"1min")'});
+  var cacheRatioTarget = ["secondYAxis(asPercent(" + sumSeries("hits") + "," + "sumSeries(" + sumSeries("hits") + "," + sumSeries("misses") + ")))"];
   var cacheTargets = baseTargets.concat(cacheCountTargets).concat(cacheRatioTarget);
   options.target = cacheTargets;
-  options.title = "Hits - Misses - Sets per Minute vs Hit Ratio";
+  options.title = "Hits per Minute vs Hit Ratio";
   options.yMinRight = 70;
   options.yMaxRight = 100;
   $("#cache").graphite(options);
