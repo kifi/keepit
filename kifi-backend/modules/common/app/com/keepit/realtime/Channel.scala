@@ -186,10 +186,9 @@ class UserSpecificChannel(id: Id[User]) extends ChannelImpl(id)
 class UriSpecificChannel(uri: String) extends ChannelImpl(uri)
 @Singleton class UriChannel extends ChannelManagerImpl("uri", (uri: String) => new UriSpecificChannel(uri))
 
-@ImplementedBy(classOf[ChannelPluginImpl])
 trait ChannelPlugin extends Plugin {
-  def reportUserClientCount: Int
-  def reportURIClientCount: Int
+  def reportUserClientCount(): Int
+  def reportURIClientCount(): Int
 }
 
 @Singleton
@@ -204,20 +203,20 @@ class ChannelPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting ChannelPluginImpl")
-    scheduleTask(system, 0 seconds, 1 minute, "report user client count") {reportUserClientCount}
-    scheduleTask(system, 0 seconds, 1 minute, "report uri client count") {reportURIClientCount}
+    scheduleTask(system, 0 seconds, 1 minute, "report user client count") {reportUserClientCount()}
+    scheduleTask(system, 0 seconds, 1 minute, "report uri client count") {reportURIClientCount()}
   }
   override def onStop() {
     log.info("stopping ChannelPluginImpl")
   }
 
-  def reportUserClientCount = {
+  def reportUserClientCount() = {
     val count = userChannel.clientCount
     Statsd.gauge("websocket.channel.user.client", count)
     count
   }
 
-  def reportURIClientCount = {
+  def reportURIClientCount() = {
     val count = userChannel.clientCount
     Statsd.gauge("websocket.channel.uri.client", count)
     count
