@@ -1,5 +1,5 @@
 @(user: User, friendsOnKifi: Set[ExternalId[User]], networks: Seq[(SocialNetworkType, Boolean)],
-  userCanInvite: Boolean, userCanSeeKifiSite: Boolean, userCanConnectWithSocialNetworks: Boolean)
+  userCanInvite: Boolean, userCanSeeKifiSite: Boolean)
 
 @helper.main(title = "Kifi Home") {
   <div class="user_avatar">
@@ -23,28 +23,27 @@
             </div>
           </div>
         }
-        @if(userCanConnectWithSocialNetworks) {
-          <h4>Social networks</h4>
-          <ul>
-          @for((network, isConnected) <- networks) {
-            <li><b>@network.displayName</b>
-            @if(isConnected) {
-              connected.
-              @if(networks.count(_._2) > 1) {
-                <form action="@com.keepit.controllers.website.routes.HomeController.disconnect(network.name)"
-                  style="display:inline" method="post">
-                  <button type="submit">Disconnect</button>
-                </form>
-              }
-            } else {
-              not connected.
-              <a href="@securesocial.controllers.routes.ProviderController.authenticate(network.name)">
-                Connect with @network.displayName!
-              </a>
-            }</li>
-          }
-          </ul>
+        <h4>Social networks</h4>
+        <ul>
+        @for((network, isConnected) <- networks) {
+          <li><b>@network.displayName</b>
+          @if(isConnected) {
+            connected.
+            @if(networks.count(_._2) > 1) {
+              <form action="@com.keepit.controllers.website.routes.HomeController.disconnect(network.name)"
+                style="display:inline" method="post">
+                <button type="submit" class="btn-link">Disconnect</button>
+              </form>
+            }
+          } else {
+            not connected.
+            <form action="@securesocial.controllers.routes.ProviderController.authenticate(network.name)"
+              style="display:inline" method="post">
+              <button type="submit" class="btn-link">Connect with @network.displayName</button>
+            </form>
+          }</li>
         }
+        </ul>
     </header>
 
     <h2>What would you like to do today?</h2>

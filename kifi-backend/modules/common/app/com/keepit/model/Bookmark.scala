@@ -55,6 +55,10 @@ case class Bookmark(
 
   def withUrlId(urlId: Id[URL]) = copy(urlId = Some(urlId))
 
+  def withUrl(url: String) = copy(url = url)
+
+  def withTitle(title: Option[String]) = copy(title = title)
+
   def isActive: Boolean = state == BookmarkStates.ACTIVE
 }
 
@@ -90,7 +94,6 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Bookmark]], afterId: Option[ExternalId[Bookmark]],
       collectionId: Option[Id[Collection]], count: Int)(implicit session: RSession): Seq[Bookmark]
   def getCountByUser(userId: Id[User])(implicit session: RSession): Int
-  def getUsersChanged(num: SequenceNumber)(implicit session: RSession): Seq[(Id[User], SequenceNumber)]
   def getBookmarksChanged(num: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[Bookmark]
   def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int
   def getNumMutual(userId: Id[User], otherUserId: Id[User])(implicit session: RSession): Int
@@ -203,9 +206,6 @@ class BookmarkRepoImpl @Inject() (
 
   def getCountByUser(userId: Id[User])(implicit session: RSession): Int =
     Query((for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).length).first
-
-  def getUsersChanged(num: SequenceNumber)(implicit session: RSession): Seq[(Id[User], SequenceNumber)] =
-    (for (b <- table if b.seq > num) yield b).groupBy(_.userId).map{ case (u, b) => (u -> b.map(_.seq).max.get) }.sortBy(_._2).list
 
   def getBookmarksChanged(num: SequenceNumber, limit: Int)(implicit session: RSession): Seq[Bookmark] =
     (for (b <- table if b.seq > num) yield b).sortBy(_.seq).take(limit).list

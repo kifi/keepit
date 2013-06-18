@@ -255,7 +255,7 @@ slider2 = function() {
     createSlider(function() {
       $slider.prependTo(tile);
 
-      logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - t0), url: document.URL});
+      logEvent("slider", "sliderShown", {trigger: trigger, onPageMs: String(lastShownAt - tile.dataset.t0), url: document.URL});
       api.port.emit("keeper_shown");
 
       callback && callback();
@@ -306,7 +306,7 @@ slider2 = function() {
       if (data.dragStarting) {
         delete data.dragStarting;
         api.log("[startDrag] installing draggable");
-        data.$dragGlass = $("<div class=kifi-slider2-drag-glass>").mouseup(stopDrag).appendTo(root);
+        data.$dragGlass = $("<div class=kifi-slider2-drag-glass>").mouseup(stopDrag).appendTo(tile.parentNode);
         $(tile).draggable({axis: "y", containment: "window", scroll: false, stop: stopDrag})[0]
           .dispatchEvent(data.mousedownEvent); // starts drag
       }
@@ -477,7 +477,7 @@ slider2 = function() {
           $pane = $(html);
           $pane[0].dataset.locator = locator;
           if (bringSlider) {
-            $pane.append($slider).appendTo(root);
+            $pane.append($slider).appendTo(tile.parentNode);
           } else {
             $pane.insertBefore(tile);
             $(tile).css("transform", "translate(0," + (window.innerHeight - tile.getBoundingClientRect().bottom) + "px)");

@@ -1,6 +1,6 @@
-// API for content scripts
+// API for content scripts (idempotent b/c Chrome sometimes injects twice)
 
-var api = function() {
+var api = api || function() {
   var msgHandlers = [], callbacks = {}, nextCallbackId = 1, port;
   function createPort() {
     port = chrome.runtime.connect({name: ""});
@@ -79,7 +79,7 @@ var api = function() {
       };
       req.send(null);
     },
-    log: api && api.log || function() {
+    log: window.suppressLog ? function() {} : function() {
       var d = new Date, ds = d.toString();
       arguments[0] = "[" + ds.substr(0, 2) + ds.substr(15,9) + "." + String(+d).substr(10) + "] " + arguments[0];
       console.log.apply(console, arguments);
