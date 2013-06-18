@@ -33,14 +33,15 @@
               @if(networks.count(_._2) > 1) {
                 <form action="@com.keepit.controllers.website.routes.HomeController.disconnect(network.name)"
                   style="display:inline" method="post">
-                  <button type="submit">Disconnect</button>
+                  <button type="submit" class="btn-link">Disconnect</button>
                 </form>
               }
             } else {
               not connected.
-              <a href="@securesocial.controllers.routes.ProviderController.authenticate(network.name)">
-                Connect with @network.displayName!
-              </a>
+              <form action="@securesocial.controllers.routes.ProviderController.authenticate(network.name)"
+                style="display:inline" method="post">
+                <button type="submit" class="btn-link">Connect with @network.displayName</button>
+              </form>
             }</li>
           }
           </ul>
