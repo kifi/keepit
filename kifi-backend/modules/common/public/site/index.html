@@ -33,35 +33,32 @@
 		</nav>
 	</header>
 
-	<aside class="left">
+	<aside class="left-col">
 		<div class="my-identity">
 			<div class="my-pic"></div>
 			<div class="my-name">Loading...</div>
 		</div>
 		<h2>You</h2>
-		<h3 class="active my-keeps">
-			<a href="javascript:">Your Keeps<span class="right light">...</span></a>
+		<h3 class="my-keeps active">
+			<span class="keep-count">...</span>
+			<a href="javascript:">Your Keeps</a>
 		</h3>
 		<div id="collections">
 			<h2>Collections <a class="new-collection" href="javascript:"></a></h2>
 			<h3 class="add-collection">
 				<a><input placeholder="Type new collection name" disabled></a>
 			</h3>
-			<div id="collections-wrapper">
+			<div id="collections-list">
 				<h3 data-template class="collection" data-id="{{id}}" style="display:none">
-					<div class="edit-menu">
-						<a href="javascript:" class="edit">&nbsp;</a>
-						<ul>
-							<li><a class="rename" href="javascript:">Rename</a></li>
-							<li><a class="remove" href="javascript:">Remove</a></li>
-						</ul>
-					</div>
-					<a href="javascript:">
-						<span class="right light">{{keeps}}</span>
-						<span class="name long-text" title="{{name}}">{{name}}</span>
-					</a>
+					<div class="coll-tri"></div>
+					<span class="keep-count">{{keeps}}</span>
+					<a class="coll-name long-text" href="javascript:" title="{{name}}">{{name}}</a>
 				</h3>
 			</div>
+			<menu id="coll-menu">
+				<li><a class="coll-rename" href="javascript:">Rename</a></li>
+				<li><a class="coll-remove" href="javascript:">Remove</a></li>
+			</menu>
 		</div>
 	</aside>
 

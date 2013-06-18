@@ -196,7 +196,7 @@ $(function() {
 
 	function doSearch(context) {
 		$myKeeps.hide().find('.keep.selected').removeClass('selected').find('input[type="checkbox"]').prop('checked', false);
-		$('aside.left .active').removeClass('active');
+		$('.left-col .active').removeClass('active');
 		$('.search h1').hide();
 		$('.search>.num-results').show();
 		//$('aside.right').show();
@@ -224,8 +224,8 @@ $(function() {
 	function addNewKeeps() {
 		var first = $myKeeps.find('.keep').first().data('id');
 		var params = {after: first};
-		if ($('aside.left h3.active').is('.collection'))
-			params.collection = $('aside.left h3.active').data('id');
+		if ($('.left-col h3.active').is('.collection'))
+			params.collection = $('.left-col h3.active').data('id');
 		console.log("Fetching 30 keep after " + first);
 		$.getJSON(urlMyKeeps, params,
 			function(data) {
@@ -238,10 +238,10 @@ $(function() {
 		var params = {count: 30};
 		$('.active').removeClass('active');
 		if (id == null) {
-			$('aside.left h3.my-keeps').addClass('active');
+			$('.left-col h3.my-keeps').addClass('active');
 			$main.find(".search h1").text('Browse your keeps');
 		} else {
-			$('aside.left h3[data-id="' + id + '"]').addClass('active');
+			$('.left-col h3[data-id="' + id + '"]').addClass('active');
 			params.collection = id;
 			$main.find(".search h1").text('Browse your ' + collections[id].name + ' collection');
 		}
@@ -299,7 +299,7 @@ $(function() {
 
 	function updateNumKeeps() {
 		$.getJSON(urlMyKeepsCount, function(data) {
-			$('aside.left .my-keeps span').text(data.numKeeps);
+			$('.left-col .my-keeps span').text(data.numKeeps);
 		});
 	}
 
@@ -308,61 +308,68 @@ $(function() {
 	}
 
 	function adjustCollHeight() {
-		var $w = $("#collections-wrapper");
-		$w.height($(window).height() - $w.offset().top);
+		$collList.height($(window).height() - $collList.offset().top);
 	}
 
 	// delete/rename collection
-	$colls.on('click', 'a.remove', function() {
-		var colElement = $(this).parents('h3.collection').first();
-		var colId = colElement.data('id');
-		console.log('Removing collection ' + colId);
-		$.ajax( {url: urlCollections + "/" + colId + "/delete"
-			,type: "POST"
-			,dataType: 'json'
-			,data: '{}'
-			,contentType: 'application/json'
-			,error: function() {showMessage('Could not delete collection, please try again later')}
-			,success: function(data) {
-							colElement.remove();
-							$('aside.right .collections ul li:has(input[data-id="'+colId+'"])').remove();
+	var $collMenu = $("#coll-menu").on("mousedown", ".coll-remove", function(e) {
+		if (e.which > 1) return;
+		var $coll = $collMenu.prev(".collection");
+		var collId = $coll.data("id");
+		console.log("Removing collection", collId);
+		$.ajax({
+			url: urlCollections + "/" + collId + "/delete",
+			type: "POST",
+			dataType: 'json',
+			data: '{}',
+			contentType: 'application/json',
+			error: showMessage.bind(null, 'Could not delete collection, please try again later'),
+			success: function(data) {
+				$coll.slideUp(80, $coll.remove.bind($coll));
+				$('aside.right .collections ul li:has(input[data-id="'+collId+'"])').remove();
+				// TODO: update center column
+			}});
+	}).on("mousedown", ".coll-rename", function(e) {
+		if (e.which > 1) return;
+		var $coll = $collMenu.prev(".collection").addClass("renaming").removeAttr("title");
+		var $a = $coll.find(".coll-name"), name = $a.text();
+		var $in = $("<input type=text placeholder='Type new collection name'>").val(name).data("orig", name);
+		$a.empty().append($in);
+		setTimeout(function() {
+			$in[0].setSelectionRange(0, name.length, "backward");
+			$in[0].focus();
+		});
+		$in.on('blur keydown', function(e) {
+			if (e.which === 13 || e.type === "blur") { // 13 is Enter
+				var oldName = $in.data("orig");
+				var newName = $.trim(this.value) || oldName;
+				if (newName !== oldName) {
+					$.ajax({
+						url: urlCollections + "/" + $coll.data('id') + "/update",
+						type: "POST",
+						dataType: 'json',
+						data: JSON.stringify({name: newName}),
+						contentType: 'application/json',
+						error: function() {
+							showMessage('Could not rename collection, please try again later');
+							$a.text(oldName).prop("title", oldName);
+						},
+						success: function() {
+							// TODO: update center column
 						}
-			});
-		// TODO: update center column if collection is active
-	}).on('click','a.rename',function() {
-		var colElement = $(this).parents('h3.collection').first().addClass('editing');
-		var nameSpan = colElement.find('span.name').first();
-		var name = nameSpan.text();
-		nameSpan.html('<input type="text" value="' + name + '" data-orig="' + name + '"/>');
-		nameSpan.find('input').focus();
-	}).on('keypress', '.collection span.name input', function(e) {
-		if (e.which == 13) { // Enter
-			var $c = $(this).closest('h3.collection');
-			var colId = $c.data('id');
-			console.log('Renaming collection ' + colId);
-			var newName = this.value;
-			$.ajax({
-				url: urlCollections + "/" + colId + "/update",
-				type: "POST",
-				dataType: 'json',
-				data: JSON.stringify({name: newName}),
-				contentType: 'application/json',
-				error: function() {
-					showMessage('Could not rename collection, please try again later');
-					var $name = $c.find('.name');
-					$name.html($name.find('input').data('orig'));
-				},
-				success: function(data) {
-					$c.removeClass('editing');
-					$c.find('.name').html(newName).attr('title', newName);
-					adjustCollHeight();
+					});
 				}
-			});
-
+				exitRename(newName);
+			} else if (e.which === 27) {
+				exitRename();
+			}
+		});
+		function exitRename(name) {
+			name = name || $in.data("orig");
+			$in.remove();
+			$a.text(name).prop("title", name);
+			$coll.removeClass("renaming");
 		}
-	}).on('blur','.collection span.name input', function() {
-		$('h3.collection.editing').removeClass('editing');
-		$(this).parent().html($(this).data('orig'));
 	});
 
 	// auto update my keeps every minute
@@ -386,7 +393,7 @@ $(function() {
 			error: showMessage.bind(null, 'Could not remove keeps from collection, please try again later'),
 			success: function(data) {
 				console.log(data);
-				var $count = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
+				var $count = $('.left-col .collection[data-id="'+colId+'"]').find('a span.right');
 				$count.text($count.text() - data.removed);
 				$row.remove();
 			}});
@@ -406,7 +413,7 @@ $(function() {
 			error: showMessage.bind(null, 'Could not add keeps to collection, please try again later'),
 			success: function(data) {
 				console.log(data);
-				var $count = $('aside.left .collection[data-id="'+colId+'"]').find('a span.right');
+				var $count = $('.left-col .collection[data-id="'+colId+'"]').find('a span.right');
 				$count.text(+$count.text()  + data.added);
 				if (!$inColl.find("#cb1-" + colId).length) {
 					inCollTmpl.append({id: colId, name: collections[colId].name});
@@ -415,8 +422,8 @@ $(function() {
 			}});
 	});
 
-	$(document).keypress(function(e) {  // auto focus on search field when starting to type anywhere on the document
-		if (!$(e.target).is('textarea,input')) {
+	$(document).keydown(function(e) {  // auto focus on search field when starting to type anywhere on the document
+		if (!$(e.target).is('input,textarea')) {
 			$query.focus();
 		}
 	});
@@ -524,23 +531,63 @@ $(function() {
 	populateCollections();
 	populateCollectionsRight();
 
-	// make collections sortable
-	$('aside.left #collections-wrapper').sortable({items: 'h3', opacity: 0.6,
+	var $collList = $("#collections-list").sortable({
+		items: ".collection",
+		cancel: ".coll-tri,.renaming",
+		opacity: .6,
 		placeholder: "sortable-placeholder",
-		beforeStop: function( event, ui ) {
+		beforeStop: function(event, ui) {
 			// update the collection order
-			$.ajax( {url: urlCollectionsOrder
-				,type: "POST"
-				,async: false
-				,dataType: 'json'
-				,data: JSON.stringify($('aside.left #collections-wrapper h3').map(function() {return ($(this).data('id'))}).get())
-				,contentType: 'application/json'
-				,error: function() {showMessage('Could not reorder the collections, please try again later'); return false;}
-				,success: function(data) {
-								console.log(data);
-							}
-			});
-	}});
+			$.ajax({
+				url: urlCollectionsOrder,
+				type: "POST",
+				async: false,
+				dataType: 'json',
+				data: JSON.stringify($(this).find(".collection").map(function() {return $(this).data("id")}).get()),
+				contentType: 'application/json',
+				error: showMessage.bind(null, 'Could not reorder the collections, please try again later'),
+				success: function(data) {
+					console.log(data);
+				}});
+		}
+	}).on("mousedown", ".coll-tri", function(e) {
+		if (e.button > 0) return;
+		if ($collMenu.is(":animated")) return;
+		var $tri = $(this), $coll = $tri.closest(".collection").addClass("with-menu");
+		$collMenu.insertAfter($coll).slideDown(80);
+		document.addEventListener("mousedown", function down(e) {
+			if (e.button > 0) return;
+			document.removeEventListener("mousedown", down, true);
+			$collMenu.slideUp(80, $collMenu.detach.bind($collMenu));
+			$coll.removeClass("with-menu").each(hideCollTri);
+		}, true);
+	}).on("mousemove", ".collection:not(.with-menu):not(.renaming)", function(e) {
+		var $coll = $(this), $tri = $coll.find(".coll-tri"), data = $coll.data();
+		var x = e.clientX, y = e.clientY, dx = x - data.x, dy = y - data.y, now = +new Date;
+		if ($coll.hasClass("with-tri")) {
+			if (!$coll.hasClass("no-tri") && e.target !== $tri[0] && dx > Math.abs(dy)) {
+				hideCollTri.call(this);
+			}
+		} else {
+			var r = this.getBoundingClientRect();
+			if (x < r.left + .5 * r.width &&
+				  (-4 * dx > now - data.t && -dx > Math.abs(dy) || e.target === $tri[0] ||
+		       dx < 0 && x < r.left + $tri.width())) {
+				$coll.addClass("with-tri");
+			}
+		}
+		data.x = x, data.y = y, data.t = now;
+	}).on("mouseleave", ".collection.with-tri:not(.with-menu):not(.no-tri)", function() {
+		hideCollTri.call(this);
+	});
+
+	function hideCollTri() {
+		$(this).on("transitionend", function end(e) {
+			if (e.target === this) {
+				$(this).off("transitionend", end).removeClass("with-tri no-tri");
+			}
+		}).addClass("no-tri");
+	}
 
 	// populate number of my keeps
 	updateNumKeeps();
@@ -582,21 +629,28 @@ $(function() {
 		}
 	});
 
-	$("aside.left>.my-keeps>a").click(function() {
+	$(".left-col>.my-keeps>a").click(function() {
 		populateMyKeeps();
 		addNewKeeps();
 	});
 
-	$colls.on("click", "h3.collection>a", function() {
-		populateMyKeeps($(this).parent().data('id'));
+	$colls.on("click", "h3.collection>a", function(e) {
+		var $a = $(this), $coll = $a.parent();
+		if ($coll.hasClass("renaming")) {
+			if (e.target === this) {
+				$a.find("input").focus();
+			}
+		} else {
+			populateMyKeeps($coll.data("id"));
+		}
 	})
 	.on("click", ".new-collection", function() {
 		clearTimeout(hideAddCollTimeout), hideAddCollTimeout = null;
 		if (!$addColl.is(":animated")) {
 			if ($addColl.is(":visible")) {
-				$addColl.slideUp(200).find("input").val("").prop("disabled", true);
+				$addColl.slideUp(80).find("input").val("").prop("disabled", true);
 			} else {
-				$addColl.slideDown(200, function() {
+				$addColl.slideDown(80, function() {
 					$addColl.find("input").prop("disabled", false).focus().select();
 				});
 			}
@@ -640,17 +694,21 @@ $(function() {
 	});
 
 	function createCollection(name) {
+		$addColl.addClass("submitted");
 		$.ajax({
 			url: urlCollectionsCreate,
 			type: "POST",
 			dataType: 'json',
 			data: JSON.stringify({name: name}),
 			contentType: 'application/json',
-			error: showMessage.bind(null, 'Could not create collection, please try again later'),
+			error: function() {
+				showMessage('Could not create collection, please try again later');
+				$addColl.removeClass("submitted");
+			},
 			success: function(data) {
 				collections[data.id] = {id: data.id, name: name};
 				collTmpl.prepend({id: data.id, name: name, keeps: 0});
-				$addColl.hide().find("input").val("").prop("disabled", true);
+				$addColl.hide().removeClass("submitted").find("input").val("").prop("disabled", true);
 				// TODO: Use Tempo template!!
 				$('aside.right .actions .collections ul li.create')
 					.after('<li><input type="checkbox" data-id="' + data.id + '" id="cb-' + data.id + '"><label class="long-text" for="cb-' + data.id + '"><span></span>' + name + '</label></li>');
@@ -661,15 +719,6 @@ $(function() {
 		$(this).toggleClass('active');
 		$('aside.right .collections').toggleClass('active');
 	})
-
-	$('aside.left').on('mouseenter','h3.collection div.edit-menu',function() {
-		$(this).parents('h3').first().addClass('hover');
-	}).on('mouseleave','h3.collection div.edit-menu',function() {
-		$(this).parents('h3').first().removeClass('hover');
-		$('aside.left h3.collection div.edit-menu ul').hide();
-	}).on('click','h3.collection div.edit-menu > a',function() {
-		$('aside.left h3.collection div.edit-menu ul').toggle();
-	});
 
 	// keep / unkeep
 	$('aside.right .keepit .keep-button').click(function(e) {
