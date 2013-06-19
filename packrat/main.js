@@ -1162,11 +1162,11 @@ function authenticate(callback) {
     var baseUri = webBaseUri();
     api.popup.open({
       name: "kifi-authenticate",
-      url: baseUri + "/login#_=_",
+      url: baseUri + "/login",
       width: 1020,
       height: 530}, {
       navigate: function(url) {
-        if (url == baseUri + "/#_=_") {
+        if (url == baseUri + "/#_=_" || url == baseUri + "/") {
           api.log("[openLogin] closing popup");
           this.close();
           startSession();

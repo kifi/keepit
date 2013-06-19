@@ -39,7 +39,7 @@ class UserConnectionCreatorTest extends Specification {
 
         val extractedFriends = inject[FacebookSocialGraph].extractFriends(json)
 
-        inject[SocialUserImportFriends].importFriends(extractedFriends, SocialNetworks.FACEBOOK)
+        inject[SocialUserImportFriends].importFriends(extractedFriends)
 
         val (user, socialUserInfo) = inject[Database].readWrite { implicit c =>
           val user = inject[UserRepo].save(User(firstName = "Greg", lastName = "Smith"))
@@ -72,7 +72,7 @@ class UserConnectionCreatorTest extends Specification {
         val json1 = Json.parse(io.Source.fromFile(new File("modules/common/test/com/keepit/common/social/facebook_graph_eishay_min.json")).mkString)
 
         val extractedFriends = inject[FacebookSocialGraph].extractFriends(json1)
-        inject[SocialUserImportFriends].importFriends(extractedFriends, SocialNetworks.FACEBOOK)
+        inject[SocialUserImportFriends].importFriends(extractedFriends)
 
         val socialUserInfo = inject[Database].readWrite { implicit c =>
           val user = inject[UserRepo].save(User(firstName = "fn1", lastName = "ln1"))

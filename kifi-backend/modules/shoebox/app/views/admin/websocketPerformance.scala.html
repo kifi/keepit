@@ -110,7 +110,7 @@
     var countTarget = 'summarize(' + sumSeries(["stats.counters.shoebox.websocket.handler", handler.val(), "count"].join(".")) + ',"1min")';
     var connectedClientTargets = ["secondYAxis(stats.gauges.shoebox.websocket.channel.*.client)"];
     options.title = "Handler Activity (Events per Minute) vs Connected Clients (User vs URI Specific Channels)"
-    options.target = baseTargets.concat(countTarget)
+    options.target = baseTargets.concat(countTarget).concat(connectedClientTargets)
     options.logBase = $("#yscale").val();
   }
 
