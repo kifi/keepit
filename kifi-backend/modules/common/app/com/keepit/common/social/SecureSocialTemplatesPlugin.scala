@@ -15,7 +15,6 @@ import com.keepit.common.logging.Logging
 
 class SecureSocialTemplatesPlugin(app: Application) extends TemplatesPlugin with Logging {
   lazy val plugin = app.global.asInstanceOf[FortyTwoGlobal].injector.instance[TemplatesPlugin]
-  log.debug(plugin.toString)
   def getLoginPage[A](implicit request: Request[A], form: Form[(String, String)], msg: Option[String]) =
     plugin.getLoginPage
   def getSignUpPage[A](implicit request: Request[A], form: Form[RegistrationInfo], token: String) =
