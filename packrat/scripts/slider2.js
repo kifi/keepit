@@ -116,6 +116,8 @@ slider2 = function() {
           delete data.dragStarting;
         }
         delete data.mousedownEvent;
+      }).on("mousewheel", function(e) {
+        e.preventDefault(); // crbug.com/151734
       }).on("click", ".kifi-slider2-keep-btn", function(e) {
         if (e.target !== this) return;
         keepPage("public");
