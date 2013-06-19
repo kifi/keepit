@@ -3,23 +3,81 @@ package com.keepit.search
 import com.keepit.common.db.Id
 import com.keepit.common.social.BasicUser
 import com.keepit.model._
+import com.keepit.search.index.Analyzer
+import com.keepit.search.index.DefaultAnalyzer
+import com.keepit.search.query.QueryUtil
 import com.keepit.shoebox.ShoeboxServiceClient
+import org.apache.lucene.analysis.tokenattributes.OffsetAttribute
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute
+import org.apache.lucene.index.Term
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Promise
 import scala.concurrent.{Future, promise}
 import scala.concurrent.duration._
-import com.keepit.common.db.ExternalId
+import java.io.StringReader
+import scala.collection.immutable.SortedMap
+import com.keepit.search.index.SymbolDecompounder
 
 trait ResultDecorator {
   def decorate(resultSet: ArticleSearchResult): Future[Seq[PersonalSearchResult]]
 }
 
-class ResultDecoratorImpl2(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient) extends ResultDecorator {
+object ResultDecorator {
+
+  def apply(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient): ResultDecorator = new ResultDecoratorImpl(searcher, shoeboxClient)
+
+  def highlight(text: String, analyzer: Analyzer, field: String, terms: Set[String]): Seq[(Int, Int)] = {
+    var positions = SortedMap.empty[Int, Int]
+    val ts = analyzer.tokenStream(field, new StringReader(text))
+    if (ts.hasAttribute(classOf[OffsetAttribute]) && ts.hasAttribute(classOf[CharTermAttribute])) {
+      val termAttr = ts.getAttribute(classOf[CharTermAttribute])
+      val offsetAttr = ts.getAttribute(classOf[OffsetAttribute])
+      ts.reset()
+      while (ts.incrementToken()) {
+        val termString = new String(termAttr.buffer(), 0, termAttr.length())
+        if (terms.contains(termString)) {
+          val thisStart = offsetAttr.startOffset()
+          val thisEnd = offsetAttr.endOffset()
+          positions.get(thisStart) match {
+            case Some(endOffset) =>
+              if (endOffset < thisEnd) positions += (thisStart -> thisEnd)
+            case _ => positions += (thisStart -> thisEnd)
+          }
+        }
+      }
+      var curStart = -1
+      var curEnd = -1
+      positions.foreach{ case (start, end) =>
+        if (start <= curEnd) { // overlapping
+          if (curEnd < end) {
+            positions += (curStart -> end) // extend the highlight region
+            positions -= start
+            curEnd = end
+          } else { // included. remove it
+            positions -= start
+          }
+        } else {
+          curStart = start
+          curEnd = end
+        }
+      }
+      positions.toSeq
+    } else {
+      Seq.empty[(Int, Int)]
+    }
+  }
+}
+
+class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient) extends ResultDecorator {
 
   override def decorate(resultSet: ArticleSearchResult): Future[Seq[PersonalSearchResult]] = {
     val hits = resultSet.hits
     val users = hits.map(_.users).flatten.distinct
     val usersFuture = shoeboxClient.getBasicUsers(users)
+
+    val field = "title_stemmed"
+    val analyzer = DefaultAnalyzer.forIndexingWithStemmer(searcher.getLang)
+    val terms = searcher.getParsedQuery.map(QueryUtil.getTerms(field, _))
 
     val personalSearchHits = hits.map{ h =>
       if (h.isMyBookmark) {
@@ -47,4 +105,3 @@ class ResultDecoratorImpl2(searcher: MainSearcher, shoeboxClient: ShoeboxService
     }
   }
 }
-
