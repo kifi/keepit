@@ -580,8 +580,15 @@ class MainSearcherTest extends Specification with DbRepos {
         val user2 = users(1)
         val bookmarks = db.readWrite { implicit s =>
           uris.map{ uri =>
-            val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-            bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user1.id.get, source = source))
+            val url = urlRepo.save(urlRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+            bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url,  uriId = uri.id.get, userId = user1.id.get, source = source))
+          }
+        }
+
+        db.readWrite { implicit s =>
+          uris.map{ uri =>
+            val url = urlRepo.save(urlRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+            bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url,  uriId = uri.id.get, userId = user2.id.get, source = source))
           }
         }
 
@@ -604,7 +611,7 @@ class MainSearcherTest extends Specification with DbRepos {
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
 
-        graph.update() === 1
+        graph.update() === 2
         indexer.run() === uris.size
 
         setConnections(Map(user1.id.get -> Set(user2.id.get)))
