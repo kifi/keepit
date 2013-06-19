@@ -41,6 +41,7 @@ import play.api.Play
 import play.api.Play.current
 import play.api.db.DB
 import com.keepit.common.cache.ShoeboxCacheModule
+import securesocial.controllers.TemplatesPlugin
 
 class ShoeboxModule() extends ScalaModule with Logging {
   def configure() {
@@ -79,6 +80,12 @@ class ShoeboxModule() extends ScalaModule with Logging {
     val socialGraphBinder = ScalaMultibinder.newSetBinder[SocialGraph](binder)
     socialGraphBinder.addBinding.to[FacebookSocialGraph]
     socialGraphBinder.addBinding.to[LinkedInSocialGraph]
+  }
+
+  @Provides
+  @Singleton
+  def secureSocialTemplatesPlugin(app: play.api.Application): TemplatesPlugin = {
+    new ShoeboxTemplatesPlugin(app)
   }
 
   @Singleton

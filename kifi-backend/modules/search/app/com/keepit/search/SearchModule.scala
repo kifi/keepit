@@ -10,6 +10,7 @@ import net.codingwell.scalaguice.ScalaModule
 
 import com.google.inject.{Provides, Singleton}
 import com.keepit.common.akka.MonitoredAwait
+import com.keepit.common.cache.SearchCacheModule
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.RemoteActionAuthenticator
 import com.keepit.common.healthcheck.HealthcheckPlugin
@@ -32,8 +33,9 @@ import com.keepit.social.RemoteSecureSocialAuthenticatorPlugin
 import com.keepit.social.RemoteSecureSocialUserPlugin
 import com.keepit.social.SecureSocialAuthenticatorPlugin
 import com.keepit.social.SecureSocialUserPlugin
-import com.keepit.common.cache.SearchCacheModule
+
 import play.api.Play.current
+import securesocial.controllers.{DefaultTemplatesPlugin, TemplatesPlugin}
 
 class SearchExclusiveModule() extends ScalaModule with Logging {
   def configure() {
@@ -79,6 +81,12 @@ class SearchModule() extends ScalaModule with Logging {
       }
       new MMapDirectory(dir)
     }.get
+  }
+
+  @Singleton
+  @Provides
+  def templatesPlugin(app: play.api.Application): TemplatesPlugin = {
+    new DefaultTemplatesPlugin(app)
   }
 
   @Singleton
