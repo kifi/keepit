@@ -684,8 +684,7 @@ $(function() {
 				$addColl.removeClass("submitted");
 			},
 			success: function(data) {
-				collections[data.id] = {id: data.id, name: name};
-				collTmpl.prepend({id: data.id, name: name, keeps: 0});
+				collTmpl.prepend(collections[data.id] = {id: data.id, name: name, keeps: 0});
 				$addColl.hide().removeClass("submitted").find("input").val("").prop("disabled", true);
 				// TODO: Use Tempo template!!
 				$('aside.right .actions .collections ul li.create')
