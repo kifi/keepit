@@ -1,7 +1,7 @@
 package com.keepit.search
 
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.cache.FortyTwoCachePlugin
+import com.keepit.common.cache.{InMemoryCachePlugin, FortyTwoCachePlugin}
 import com.keepit.common.healthcheck._
 import com.keepit.module.CommonModule
 import com.keepit.search.graph.URIGraphPlugin
@@ -28,6 +28,7 @@ trait SearchServices { self: FortyTwoGlobal =>
     require(injector.instance[URIGraphPlugin].enabled)
     require(injector.instance[HealthcheckPlugin].enabled)
     require(injector.instance[FortyTwoCachePlugin].enabled)
+    require(injector.instance[InMemoryCachePlugin].enabled)
     require(NlpParser.enabled)
   }
 }
