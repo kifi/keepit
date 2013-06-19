@@ -99,7 +99,7 @@
 			<ol id="search-results">
 				<li data-template class="keep draggable {% if isMyBookmark %}mine{% endif %}" data-id="{{bookmark.id}}" style="display:none">
 					<div class="handle">
-						<input type="checkbox">
+						<div class="checkbox"></div>
 					</div>
 					<div class="long-text">
 						<a class="long-text" href="{{bookmark.url}}" target="_blank" title="{{bookmark.title}}">{{bookmark.title}}</a>
@@ -121,7 +121,7 @@
 				<li data-template data-id="{{id}}" class="keep mine draggable {% if isPrivate %}private{% endif %}" data-created={{createdAt}} data-collections="{{collections}}" style="display:none">
 					<div class="right fs9 gray easydate">{{createdAt}}</div>
 					<div class="handle">
-						<input type="checkbox">
+						<div class="checkbox"></div>
 					</div>
 					<div class="long-text">
 						<a class="long-text" href="{{url}}" target="_blank" title="{{title}}">{{title}}</a>

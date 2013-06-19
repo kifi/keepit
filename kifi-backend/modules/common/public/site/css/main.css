@@ -168,8 +168,9 @@ aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px;
 .keep-group-title {color: #67829c; font-size: 21px; font-weight: 100; letter-spacing: 1px; border-bottom: 1px solid #e3e6ee; padding: 4px 30px}
 .keep-group-title+.keep {border-top: 0}
 .keep {position:relative; clear: left; padding: 10px 0 10px 30px; border-top: 1px solid #f9f9f9}
-.keep input[type="checkbox"] {position: absolute; left: 4px; top: 12px; margin: 0}
-.keep .handle {cursor: move; position: absolute; top: 0; left: 0; width: 22px; height: 100%; display: none; background: #e3e6ee url(../img/drag-handle.png) 4px 35px no-repeat}
+.keep .checkbox {position: absolute; left: 3px; top: 4px; width: 15px; height: 15px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; cursor: pointer}
+.keep .checkbox.checked {background-position: 2px 4px}
+.keep .handle {cursor: move; position: absolute; top: 0; bottom: 0; left: 0; width: 21px; display: none; background: #e3e6ee url(../img/drag-handle.png) 4px 35px no-repeat}
 .keep:hover .handle, .keep.selected .handle {display: block}
 .keep.selected {background: #eff2f7}
 .keep .right {float: right; margin: 0 0 20px 5%}
