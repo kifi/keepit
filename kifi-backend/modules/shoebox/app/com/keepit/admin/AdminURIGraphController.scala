@@ -39,7 +39,7 @@ class AdminURIGraphController @Inject()(
   def reindex = AdminHtmlAction { implicit request =>
     Async {
       searchClient.reindexURIGraph().map { cnt =>
-        Ok("reindexinf started")
+        Ok("reindexing started")
       }
     }
   }
@@ -53,7 +53,7 @@ class AdminURIGraphController @Inject()(
   def reindexCollection = AdminHtmlAction { implicit request =>
     Async {
       searchClient.reindexCollection().map { cnt =>
-        Ok("reindexinf started")
+        Ok("reindexing started")
       }
     }
   }
