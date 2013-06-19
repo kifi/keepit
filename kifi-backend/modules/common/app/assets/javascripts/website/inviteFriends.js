@@ -1,7 +1,7 @@
 $(function() {
   $(".invite_field:not(:first)").prop("disabled", "true");
 
-  $(".invite_field").val("Select a facebook friend to invite");
+  $(".invite_field").val("Select a friend to invite");
 
   function hideAlreadyInvited() {
     $(".alreadyinvited").fadeOut();
