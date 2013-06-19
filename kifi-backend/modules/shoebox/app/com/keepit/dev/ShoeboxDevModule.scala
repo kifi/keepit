@@ -40,6 +40,7 @@ class ShoeboxDevModule extends ScalaModule with Logging {
   @Provides
   def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
     def register() = Node("me")
+    def unRegister() = {}
     def isLeader() = true
   }
 

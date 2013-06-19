@@ -18,17 +18,12 @@ class DiscoveryModule extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def serviceDiscovery(services: FortyTwoServices, mode: Mode, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo]): ServiceDiscovery = mode match {
-    case Mode.Prod =>
-      //todo: have a dedicated host for zk (instead of using localhost)
-      val zk = new ZooKeeperClientImpl("localhost", 2000,
-        Some({zk1 => println(s"in callback, got $zk1")}))
-      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider)
-    case _ =>
-      new ServiceDiscovery {
-        def register() = Node("me")
-        def isLeader() = true
-      }
+  def serviceDiscovery(services: FortyTwoServices,
+      amazonInstanceInfoProvider: Provider[AmazonInstanceInfo]): ServiceDiscovery = {
+    //todo: have a dedicated host for zk (instead of using localhost)
+    val zk = new ZooKeeperClientImpl("localhost", 2000,
+      Some({zk1 => println(s"in callback, got $zk1")}))
+    new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider)
   }
 
   @Singleton

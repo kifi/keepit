@@ -18,6 +18,7 @@ import com.google.inject.Provider
 
 trait ServiceDiscovery {
   def register(): Node
+  def unRegister(): Unit
   def isLeader(): Boolean
   def myClusterSize: Int = 0
 }
@@ -31,7 +32,7 @@ class ServiceDiscoveryImpl @Inject() (
 
   private var myNode: Option[Node] = None
 
-  private var clusters = {
+  private val clusters: TrieMap[ServiceType, ServiceCluster] = {
     val clustersToInit = new TrieMap[ServiceType, ServiceCluster]()
     //the following should be configurable
     val servicesToListenOn = ServiceType.SEARCH :: ServiceType.SHOEBOX :: Nil
@@ -39,10 +40,32 @@ class ServiceDiscoveryImpl @Inject() (
       val cluster = new ServiceCluster(service)
       clustersToInit(service) = cluster
     }
+    log.info(s"registered clusters: $clustersToInit")
     clustersToInit
   }
 
-  def isLeader: Boolean = clusters(services.currentService).leader map (_.node == myNode.get) getOrElse false
+  require(clusters.size == 2)//search & shoebox
+
+  def isLeader: Boolean = {
+    val myCluster = clusters(services.currentService)
+    val registered = myNode map {node => myCluster.registered(node)} getOrElse false
+    if (!registered) {
+      log.warn(s"service did not register itself yet!")
+      return false
+    }
+    myCluster.leader match {
+      case Some(instance) if instance.node == myNode.get =>
+        require(myCluster.size > 0)
+        return true
+      case Some(instance)  =>
+        require(myCluster.size > 1)
+        log.info(s"I'm not the leader since my node is ${myNode.get} and the leader is ${instance.node}")
+        return false
+      case None =>
+        require(myCluster.size == 0)
+        return true
+    }
+  }
 
   implicit val amazonInstanceInfoFormat = AmazonInstanceInfo.format
 
@@ -62,11 +85,16 @@ class ServiceDiscoveryImpl @Inject() (
 
   def register(): Node = {
     watchServices()
-    myNode = Some(zk.createNode(clusters(services.currentService).serviceNodeMaster, null, EPHEMERAL_SEQUENTIAL))
+    val myServiceType: ServiceType = services.currentService
+    println(s"registered clusters: $clusters, my service is $myServiceType")
+    val myCluster = clusters(myServiceType)
+    myNode = Some(zk.createNode(myCluster.serviceNodeMaster, null, EPHEMERAL_SEQUENTIAL))
     zk.set(myNode.get, Json.toJson(amazonInstanceInfoProvider.get).toString)
     println(s"registered as node ${myNode.get}")
     myNode.get
   }
+
+  def unRegister(): Unit = myNode map {node => zk.deleteNode(node)}
 
   implicit val amazonInstanceIdFormat = Json.format[AmazonInstanceId]
   implicit val serviceStatusFormat = ServiceStatus.format

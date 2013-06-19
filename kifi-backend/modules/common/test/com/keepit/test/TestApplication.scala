@@ -159,6 +159,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   @Provides
   def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
     def register() = Node("me")
+    def unRegister() = {}
     def isLeader() = true
   }
 

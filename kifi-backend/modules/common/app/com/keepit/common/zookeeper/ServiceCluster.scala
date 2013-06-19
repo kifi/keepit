@@ -23,32 +23,35 @@ class ServiceCluster(serviceType: ServiceType) extends Logging {
   val serviceNodeMaster = Node(s"${servicePath.name}/${serviceType.name}_")
 
   def size: Int = instances.size
+  def registered(node: Node): Boolean = instances.contains(node)
   var leader: Option[ServiceInstance] = None
 
-  private def toFullPathNodes(nodes: Seq[Node]) = nodes map {c => Node(s"${servicePath.name}/$c")}
+  private def toFullPathNodes(nodes: Seq[Node]): Set[Node] = ( nodes map {c => Node(s"${servicePath.name}/$c")} ).toSet
 
-  private def addNewNodes(newInstances: TrieMap[Node, ServiceInstance], childNodes: Seq[Node], zk: ZooKeeperClient) = childNodes foreach { childNode =>
+  private def addNewNodes(newInstances: TrieMap[Node, ServiceInstance], childNodes: Set[Node], zk: ZooKeeperClient) = childNodes foreach { childNode =>
     newInstances.getOrElseUpdate(childNode, {
       val nodeData: String = zk.get(childNode)
       val json = Json.parse(nodeData)
       val amazonInstanceInfo = Json.fromJson[AmazonInstanceInfo](json).get
-      log.info(s"discovered new node $childNode in my instances: $amazonInstanceInfo")
+      println(s"discovered new node $childNode: $amazonInstanceInfo, adding to ${newInstances.keys}")
       ServiceInstance(serviceType, childNode, amazonInstanceInfo)
     })
   }
 
-  private def removeOldNodes(newInstances: TrieMap[Node, ServiceInstance], childNodes: Seq[Node]) = newInstances.keys filter { node =>
-    !childNodes.contains(node)
-  } foreach { node =>
-    println(s"node $node is not in instances anymore")
-    newInstances.remove(node)
+  private def removeOldNodes(newInstances: TrieMap[Node, ServiceInstance], childNodes: Set[Node]) = newInstances.keys foreach { node =>
+    if(!childNodes.contains(node)) {
+      println(s"node $node is not in instances anymore: ${newInstances.keys}")
+      newInstances.remove(node)
+    }
   }
 
   private def findLeader(newInstances: TrieMap[Node, ServiceInstance]) = newInstances.isEmpty match {
     case true => None
     case false =>
       val minId = (newInstances.values map {v => v.id}).min
-      Some(newInstances.values.filter(_.id == minId).head)
+      val leader = newInstances.values.filter(_.id == minId).head
+      println(s"leader is $leader")
+      Some(leader)
   }
 
   def update(zk: ZooKeeperClient, children: Seq[Node]): Unit = synchronized {

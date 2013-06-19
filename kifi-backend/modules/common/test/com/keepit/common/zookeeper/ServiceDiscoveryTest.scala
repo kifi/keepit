@@ -34,6 +34,11 @@ class ServiceDiscoveryTest extends Specification with TestInjector {
       }
     }
 
+    "set of nodes" in {
+      Set(Node("/a/b"), Node("a/c")).contains(Node("a/b")) == true
+      Set(Node("/a/b"), Node("a/c")).contains(Node("a/d")) == false
+    }
+
     "register" in {
       withInjector(new FakeHttpClientModule(FakeClientResponse.fakeAmazonDiscoveryClient))  { implicit injector =>
         val zk = inject[ZooKeeperClient]
