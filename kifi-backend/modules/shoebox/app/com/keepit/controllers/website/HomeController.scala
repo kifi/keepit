@@ -9,6 +9,7 @@ import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.{ElectronicMail, PostOffice, LocalPostOffice}
 import com.keepit.common.social.{SocialGraphPlugin, SocialNetworkType, SocialNetworks}
 import com.keepit.model._
+import com.keepit.common.service.FortyTwoServices
 
 import play.api.Play.current
 import play.api._
@@ -46,7 +47,7 @@ class HomeController @Inject() (db: Database,
   }
 
   def version = Action {
-    Ok(fortyTwoServices.currentVersion)
+    Ok(fortyTwoServices.currentVersion.toString)
   }
 
   def home = HtmlAction(true)(authenticatedAction = { implicit request =>
