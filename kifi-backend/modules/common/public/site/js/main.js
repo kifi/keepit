@@ -35,14 +35,14 @@ $(function() {
 		var now = new Date;
 		$myKeeps.find('.keep').each(function() {
 			var age = daysBetween(new Date($(this).data('created')), now);
-			if ($myKeeps.find('li.search-section.today').length == 0 && age <= 1) {
-				$(this).before('<li class="search-section today">Today</li>');
-			} else if ($myKeeps.find('li.search-section.yesterday').length == 0 && age > 1 && age < 2) {
-				$(this).before('<li class="search-section yesterday">Yesderday</li>');
-			} else if ($myKeeps.find('li.search-section.week').length == 0 && age >= 2 && age <= 7) {
-				$(this).before('<li class="search-section week">Past Week</li>');
-			} else if ($myKeeps.find('li.search-section.older').length == 0 && age > 7) {
-				$(this).before('<li class="search-section older">Older</li>');
+			if ($myKeeps.find('li.keep-group-title.today').length == 0 && age <= 1) {
+				$(this).before('<li class="keep-group-title today">Today</li>');
+			} else if ($myKeeps.find('li.keep-group-title.yesterday').length == 0 && age > 1 && age < 2) {
+				$(this).before('<li class="keep-group-title yesterday">Yesderday</li>');
+			} else if ($myKeeps.find('li.keep-group-title.week').length == 0 && age >= 2 && age <= 7) {
+				$(this).before('<li class="keep-group-title week">Past Week</li>');
+			} else if ($myKeeps.find('li.keep-group-title.older').length == 0 && age > 7) {
+				$(this).before('<li class="keep-group-title older">Older</li>');
 			}
 		});
 	});
@@ -223,7 +223,7 @@ $(function() {
 		$.getJSON(urlMyKeeps, params,
 			function(data) {
 				myKeepsTmpl.prepend(data.keeps);
-				$myKeeps.find('.search-section.today').prependTo($myKeeps);
+				$myKeeps.find('.keep-group-title.today').prependTo($myKeeps);
 			});
 	}
 
@@ -248,7 +248,7 @@ $(function() {
 			subtitleTmpl.render({
 				numShown: $myKeeps.find(".keep").length,
 				numTotal: collId ? collections[collId].keeps : myKeepsCount,
-				collId: collId});
+				collId: collId || undefined});
 		}
 	}
 
@@ -269,7 +269,7 @@ $(function() {
 					subtitleTmpl.render({
 						numShown: $myKeeps.find(".keep").length + data.keeps.length,
 						numTotal: collId ? collections[collId].keeps : myKeepsCount,
-						collId: collId});
+						collId: collId || undefined});
 					hideLoading();
 					if (!data.keeps.length) {  // no more
 						lastKeep = "end";

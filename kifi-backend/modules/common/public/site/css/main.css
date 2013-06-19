@@ -41,13 +41,13 @@ header>nav>a {padding: 0 15px; color: #fff; border-left: 1px solid #fff; vertica
 header>nav>a:first-child {border-left: 0}
 
 /* main */
-section.main {margin: -70px 330px 0 200px; height: 100%; -moz-box-sizing: border-box; box-sizing: border-box; overflow-y: auto; border-top: 148px solid transparent; border-left: 1px solid #dbdee3; background: #fff; padding: 0 20px}
-.main[data-view=search] {border-top-width: 108px}
+section.main {margin: -70px 330px 0 200px; height: 100%; -moz-box-sizing: border-box; box-sizing: border-box; overflow-y: auto; border-top: 140px solid transparent; border-left: 1px solid #dbdee3; background: #fff; padding: 0 20px}
+.main[data-view=search] {border-top-width: 100px}
 #my-keeps,#search-results {display: none}
 .main[data-view=mine] #my-keeps,
 .main[data-view=search] #search-results {display: block}
-.main-head {position: fixed; margin-top: -78px; padding-top: 15px; background: #fff}
-.main[data-view=search]>.main-head {margin-top: -38px}
+.main-head {position: fixed; margin-top: -70px; padding-top: 15px; background: #fff}
+.main[data-view=search]>.main-head {margin-top: -30px}
 .main-head>h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
 .main[data-view=search]>.main-head>h1 {display: none}
 .main-head>.subtitle {font-size: 13px; font-weight: 300; color: #5b6670}
@@ -165,9 +165,9 @@ span.long-text, a.long-text {display: inline-block}
 .small-avatar {max-width: 30px; max-height: 30px}
 aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px; border-radius: 4px}
 
-.search-section {color: #67829c; border-bottom: 1px solid #e3e6ee; background: url(../img/clock.png) 5px 50% no-repeat; padding: 5px 30px}
+.keep-group-title {color: #67829c; font-size: 21px; font-weight: 100; letter-spacing: 1px; border-bottom: 1px solid #e3e6ee; padding: 4px 30px}
+.keep-group-title+.keep {border-top: 0}
 .keep {position:relative; clear: left; padding: 10px 0 10px 30px; border-top: 1px solid #f9f9f9}
-.search-section+.keep {border-top: 0}
 .keep input[type="checkbox"] {position: absolute; left: 4px; top: 12px; margin: 0}
 .keep .handle {cursor: move; position: absolute; top: 0; left: 0; width: 22px; height: 100%; display: none; background: #e3e6ee url(../img/drag-handle.png) 4px 35px no-repeat}
 .keep:hover .handle, .keep.selected .handle {display: block}
