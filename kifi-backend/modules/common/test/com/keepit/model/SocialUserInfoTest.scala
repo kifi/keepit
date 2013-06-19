@@ -51,7 +51,7 @@ class SocialUserInfoTest extends Specification with TestDBRunner with TestAkkaSy
       val sui = SocialUserInfo(userId = Option(Id(1)), fullName = "Eishay Smith", state = SocialUserInfoStates.CREATED,
         socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser))
       val json = Json.toJson(sui)
-      val deserialized = Json.fromJson(json).get
+      val deserialized = Json.fromJson[SocialUserInfo](json).get
       deserialized === sui
     }
 
@@ -65,7 +65,7 @@ class SocialUserInfoTest extends Specification with TestDBRunner with TestAkkaSy
         socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser),
         lastGraphRefresh = None)
       val json = Json.toJson(sui)
-      val deserialized = Json.fromJson(json).get
+      val deserialized = Json.fromJson[SocialUserInfo](json).get
       deserialized === sui
     }
 
@@ -79,7 +79,7 @@ class SocialUserInfoTest extends Specification with TestDBRunner with TestAkkaSy
         socialId = SocialId("eishay"), networkType = SocialNetworks.FACEBOOK, credentials = Some(socialUser),
         lastGraphRefresh = None)
       val json = Json.toJson(sui).as[JsObject] - "lastGraphRefresh"
-      val deserialized = Json.fromJson(json).get
+      val deserialized = Json.fromJson[SocialUserInfo](json).get
       deserialized === sui
     }
 

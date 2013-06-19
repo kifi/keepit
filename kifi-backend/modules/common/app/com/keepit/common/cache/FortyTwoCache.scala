@@ -100,7 +100,6 @@ class EhCacheConfiguration extends CacheConfiguration
 class EhCacheCache @Inject() (config: EhCacheConfiguration, val healthcheck: HealthcheckPlugin) extends InMemoryCachePlugin {
   lazy val (manager, cache) = {
     val manager = CacheManager.create()
-    new Exception().printStackTrace()
     val cache = new Cache(config)
     manager.addCache(cache)
     (manager, cache)
