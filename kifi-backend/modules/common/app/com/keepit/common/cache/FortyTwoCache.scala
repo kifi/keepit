@@ -12,6 +12,9 @@ import scala.concurrent._
 import play.modules.statsd.api.Statsd
 import com.keepit.common.time._
 import com.keepit.serializer.{Serializer, BinaryFormat}
+import net.sf.ehcache._
+import net.sf.ehcache.config.CacheConfiguration
+
 
 object CacheStatistics {
   private val hitsMap = ConcurrentMap[String, AtomicInteger]()
@@ -91,32 +94,29 @@ class MemcachedCache @Inject() (
   override def toString = "Memcached"
 }
 
+class EhCacheConfiguration extends CacheConfiguration
+
 @Singleton
-class EhCacheCache @Inject() (val healthcheck: HealthcheckPlugin) extends InMemoryCachePlugin {
-
-  import play.api.Play
-  import play.api.cache.{EhCachePlugin, Cache}
-
-  override def onError(he: HealthcheckError) {
-    healthcheck.addError(he)
+class EhCacheCache @Inject() (config: EhCacheConfiguration, val healthcheck: HealthcheckPlugin) extends InMemoryCachePlugin {
+  lazy val (manager, cache) = {
+    val manager = CacheManager.create()
+    new Exception().printStackTrace()
+    val cache = new Cache(config)
+    manager.addCache(cache)
+    (manager, cache)
   }
+  override def onStart() { cache }
+  override def onStop() { manager. shutdown() }
+  override def onError(he: HealthcheckError) { healthcheck.addError(he) }
 
-  def get(key: String): Option[Any] =
-    Play.current.plugin[EhCachePlugin].map { ehcache =>
-      ehcache.api.get(key)
-    } flatten
-
-  def remove(key: String) {
-    Play.current.plugin[EhCachePlugin].map {
-      ehcache =>
-        ehcache.api.remove(key)
-    }
-  }
+  def get(key: String): Option[Any] = Option(cache.get(key)).map(_.getObjectValue)
+  def remove(key: String) { cache.remove(key) }
 
   def set(key: String, value: Any, expiration: Int = 0) {
-    Play.current.plugin[EhCachePlugin].map { ehcache =>
-      ehcache.api.set(key, value, expiration)
-    }
+    val element = new Element(key, value)
+    if (expiration == 0) element.setEternal(true)
+    element.setTimeToLive(expiration)
+    cache.put(element)
   }
 
   override def toString = "EhCache"
@@ -297,7 +297,12 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
   }
 
   def remove(key: K) {
-    repo.remove(key.toString)
+    try repo.remove(key.toString) catch {
+      case e: Throwable =>
+        repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
+          errorMessage = Some(s"Failed removing key $key from $repo")))
+        None
+    }
     outerCache map {outer => outer.remove(key)}
   }
 }
