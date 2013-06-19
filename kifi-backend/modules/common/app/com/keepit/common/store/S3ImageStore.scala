@@ -75,7 +75,7 @@ class S3ImageStoreImpl @Inject() (
         s"https://graph.facebook.com/${sui.socialId.id}/picture?width=$size&height=$size"
       case _ =>
         // TODO: specific sizes for linkedin and other networks
-        sui.credentials.flatMap(_.avatarUrl).getOrElse(
+        sui.pictureUrl.getOrElse(
           "http://s.c.lnkd.licdn.com/scds/common/u/images/themes/katy/ghosts/person/ghost_person_200x200_v1.png")
     }
   }

@@ -61,7 +61,7 @@ class LinkedInSocialGraph @Inject() (client: HttpClient) extends SocialGraph wit
   }
 
   private def profileUrl(id: SocialId): String = {
-    s"http://api.linkedin.com/v1/people/$id:(id,firstName,lastName,emailAddress)?format=json"
+    s"http://api.linkedin.com/v1/people/$id:(id,firstName,lastName,emailAddress,pictureUrl)?format=json"
   }
 
   private def getJson(socialUserInfo: SocialUserInfo): Seq[JsValue] = {
@@ -78,6 +78,7 @@ class LinkedInSocialGraph @Inject() (client: HttpClient) extends SocialGraph wit
   private def createSocialUserInfo(friend: JsValue): (SocialUserInfo, JsValue) =
     (SocialUserInfo(
       fullName = ((friend \ "firstName").asOpt[String] ++ (friend \ "lastName").asOpt[String]).mkString(" "),
+      pictureUrl = (friend \ "pictureUrl").asOpt[String],
       socialId = SocialId((friend \ "id").as[String]),
       networkType = SocialNetworks.LINKEDIN,
       state = SocialUserInfoStates.FETCHED_USING_FRIEND

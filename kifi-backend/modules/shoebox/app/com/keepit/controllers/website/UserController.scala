@@ -71,7 +71,7 @@ class UserController @Inject() (db: Database,
         "image" -> Json.toJson(conn._1.networkType match {
           case SocialNetworks.FACEBOOK =>
             Some(s"https://graph.facebook.com/${conn._1.socialId.id}/picture?type=square&width=75&height=75")
-          case _ => None
+          case _ => conn._1.pictureUrl
         }),
         "value" -> (conn._1.networkType + "/" + conn._1.socialId.id),
         "status" -> conn._2

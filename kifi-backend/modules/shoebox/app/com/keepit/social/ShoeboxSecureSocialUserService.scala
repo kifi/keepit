@@ -105,7 +105,7 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
         val user = userOpt getOrElse userRepo.save(createUser(socialUser.fullName))
         log.info("creating new SocialUserInfo for %s".format(user))
         val userInfo = SocialUserInfo(userId = Some(user.id.get),//verify saved
-          socialId = socialId, networkType = socialNetworkType,
+          socialId = socialId, networkType = socialNetworkType, pictureUrl = socialUser.avatarUrl,
           fullName = socialUser.fullName, credentials = Some(socialUser))
         log.info("SocialUserInfo created is %s".format(userInfo))
 

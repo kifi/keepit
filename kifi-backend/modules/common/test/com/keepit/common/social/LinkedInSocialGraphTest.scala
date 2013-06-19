@@ -23,7 +23,7 @@ class LinkedInSocialGraphTest extends Specification with DbRepos {
   }
 
   private def urlIsProfile(url: String): Boolean = {
-    url.startsWith("http://api.linkedin.com/v1/people/rFOBMp35vZ:(id,firstName,lastName,emailAddress)?format=json")
+    url.startsWith("http://api.linkedin.com/v1/people/rFOBMp35vZ:(id,firstName,lastName,emailAddress,pictureUrl)?format=json")
   }
 
   "LinkedInSocialGraph" should {
@@ -60,7 +60,10 @@ class LinkedInSocialGraphTest extends Specification with DbRepos {
 
         val connections = rawInfo.jsons flatMap graph.extractFriends
         connections.length === 9
-        connections exists { _._1.fullName == "Eishay Smith" } must beTrue
+        connections exists { conn =>
+          conn._1.fullName == "Eishay Smith" &&
+          conn._1.pictureUrl.get == "http://m3.licdn.com/mpr/mprx/0_pl4fenTiB2Pj0CawOvZpez9GBu6Sx3OwYK2Kez61eW-g85dIKBHi6vtjMGQtp60bjtVAbtNe8-mP"
+        } must beTrue
       }
     }
   }
@@ -71,7 +74,8 @@ class LinkedInSocialGraphTest extends Specification with DbRepos {
   "emailAddress": "greg.methvin@gmail.com",
   "firstName": "Greg",
   "id": "rFOBMp35vZ",
-  "lastName": "Methvin"
+  "lastName": "Methvin",
+  "pictureUrl": "http://m3.licdn.com/mpr/mprx/0_VqIaHTv7Z7Iiji26sv2AHik8NuM30Qp64z0lHiBYwoSAhGIQn-RGQ_iKsTJOyTjoRcdrFkWGuL1A"
 }
 """
 
