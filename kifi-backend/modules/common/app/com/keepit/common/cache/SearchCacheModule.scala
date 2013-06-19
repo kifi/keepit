@@ -5,6 +5,7 @@ import com.keepit.model.{UserConnectionIdCache, ClickHistoryUserIdCache, Browsin
 import scala.concurrent.duration._
 import com.keepit.search.ActiveExperimentsCache
 import net.codingwell.scalaguice.ScalaModule
+import com.keepit.common.social.BasicUserUserIdCache
 
 class SearchCacheModule extends CacheModule {
 
@@ -12,6 +13,11 @@ class SearchCacheModule extends CacheModule {
     install(new MemcachedCacheModule)
     install(new EhCacheCacheModule)
   }
+
+  @Singleton
+  @Provides
+  def basicUserUserIdCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new BasicUserUserIdCache((innerRepo, 5 minutes), (outerRepo, 7 days))
 
   @Singleton
   @Provides

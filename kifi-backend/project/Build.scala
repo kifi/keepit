@@ -93,7 +93,8 @@ object ApplicationBuild extends Build {
       "kevoree Repository" at "http://maven2.kevoree.org/release/",
       //for org.mongodb#casb
       "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
-      "releases"  at "https://oss.sonatype.org/content/groups/scala-tools"
+      "releases"  at "https://oss.sonatype.org/content/groups/scala-tools",
+      "terracotta" at "http://www.terracotta.org/download/reflector/releases/"
     )
 
     val _templatesImport = Seq(

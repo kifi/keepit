@@ -10,11 +10,6 @@ abstract class CacheModule extends ScalaModule {
 
   @Singleton
   @Provides
-  def basicUserUserIdCache(outerRepo: FortyTwoCachePlugin) =
-    new BasicUserUserIdCache((outerRepo, 7 days))
-
-  @Singleton
-  @Provides
   def commentWithBasicUserCache(outerRepo: FortyTwoCachePlugin) =
     new CommentWithBasicUserCache((outerRepo, 7 days))
 
