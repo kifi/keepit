@@ -9,7 +9,6 @@ var urlMyKeeps = urlKeeps + '/all';
 var urlMyKeepsCount = urlKeeps + '/count';
 var urlUser = urlSite + '/user';
 var urlMe = urlUser + '/me';
-var urlConnections = urlUser + '/connections';
 var urlCollections = urlSite + '/collections';
 var urlCollectionsAll = urlCollections + '/all';
 var urlCollectionsOrder = urlCollections + '/ordering';
@@ -64,9 +63,7 @@ $(function() {
 
 	var me;
 	var searchResponse;
-	var connections = {};
 	var collections = {};
-	var connectionNames = [];
 	var searchTimeout;
 	var lastKeep;
 	var prevCollection;
@@ -206,7 +203,7 @@ $(function() {
 		$query.attr("data-q", q || null);
 		$.getJSON(urlSearch, {
 			maxHits: 30,
-			f: $('select[name="keepers"]').val() == 'c' ? $('#custom-keepers').textext()[0].tags().tagElements().find('.text-label').map(function(){return connections[$(this).text()]}).get().join('.') : $('select[name="keepers"]').val(),
+			f: "a",
 			q: q,
 			context: context
 		},
@@ -609,40 +606,6 @@ $(function() {
 
 	// populate all my keeps
 	populateMyKeeps();
-
-	// populate user connections
-	$.getJSON(urlConnections, function(data) {
-		for (i in data.connections) {
-			var name = data.connections[i].firstName + ' ' + data.connections[i].lastName;
-			connections[name] = data.connections[i].id;
-			connectionNames[i] = name;
-		}
-
-		// init custom search
-		$('#custom-keepers')
-			.textext({
-				plugins : 'tags autocomplete',
-				prompt : 'Add...'
-			})
-			.bind('getSuggestions', function(e, data) {
-				var textext = $(e.target).textext()[0];
-				var query = data && data.query || '';
-				$(this).trigger('setSuggestions', {result: textext.itemManager().filter(connectionNames, query)});
-			}).bind('setFormData', function(e, data) {
-				doSearch();
-			});
-		$(".text-core").hide().find(".text-wrap").addBack().height("1.5em");
-	});
-
-	$('select[name="keepers"]').change(function() { // execute search when changing the filter
-		$('#custom-keepers').val('');
-		if (this.value == 'c') {
-			$('.text-core').show().find('textarea').focus();
-		} else {
-			$('.text-core').hide();
-			doSearch();
-		}
-	});
 
 	$(".left-col>.my-keeps>a").click(function() {
 		populateMyKeeps();
