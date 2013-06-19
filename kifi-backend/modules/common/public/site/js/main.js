@@ -20,6 +20,7 @@ $.ajaxSetup({
 
 $(function() {
 
+	var $subtitle = $(".subtitle"), subtitleTmpl = Tempo.prepare($subtitle);
 	var $myKeeps = $("#my-keeps"), myKeepsTmpl = Tempo.prepare($myKeeps).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 		hideLoading();
 		$myKeeps.find(".keep .bottom").each(function() {
@@ -53,7 +54,6 @@ $(function() {
 		});
 		$results.find(".keep.mine .bottom:not(:has(.me))")
 			.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
-		$('.search>.num-results').text('Showing ' + $results.find('.keep').length + ' for "' + searchResponse.query + '"');
 	});
 	var $colls = $("#collections"), collTmpl = Tempo.prepare($colls).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 		makeCollectionsDroppable($colls.find(".collection"));
@@ -62,6 +62,7 @@ $(function() {
 	var $inColl = $(".in-collections"), inCollTmpl = Tempo.prepare($inColl);
 
 	var me;
+	var myKeepsCount;
 	var searchResponse;
 	var collections = {};
 	var searchTimeout;
@@ -161,10 +162,10 @@ $(function() {
 	}
 
 	function showLoading() {
-		$('div.loading').fadeIn();
+		$('div.loading').show();
 	}
 	function hideLoading() {
-		$('div.loading').fadeOut();
+		$('div.loading').hide();
 	}
 	function isLoading() {
 		return $('div.loading').is(':visible');
@@ -192,23 +193,20 @@ $(function() {
 	}
 
 	function doSearch(context) {
-		$myKeeps.hide().find('.keep.selected').removeClass('selected').find('input[type="checkbox"]').prop('checked', false);
 		$('.left-col .active').removeClass('active');
-		$('.search h1').hide();
-		$('.search>.num-results').show();
-		//$('aside.right').show();
+		$main.attr("data-view", "search");
+		$main.find("h1").hide();
+		subtitleTmpl.render({searching: true});
+		// showRightSide();
 		showLoading();
-		$results.show();
+		myKeepsTmpl.clear();
 		var q = $.trim($query.val());
 		$query.attr("data-q", q || null);
-		$.getJSON(urlSearch, {
-			maxHits: 30,
-			f: "a",
-			q: q,
-			context: context
-		},
-		function(data) {
+		$.getJSON(urlSearch, {q: q, f: "a", maxHits: 30, context: context}, function(data) {
 			searchResponse = data;
+			subtitleTmpl.render({
+				numShown: data.hits.length + (context ? $results.find(".keep").length : 0),
+				query: data.query});
 			if (context == null) {
 				searchTemplate.render(data.hits);
 				hideRightSide();
@@ -221,8 +219,9 @@ $(function() {
 	function addNewKeeps() {
 		var first = $myKeeps.find('.keep').first().data('id');
 		var params = {after: first};
-		if ($('.left-col h3.active').is('.collection'))
+		if ($('.left-col h3.active').is('.collection')) {
 			params.collection = $('.left-col h3.active').data('id');
+		}
 		console.log("Fetching 30 keep after " + first);
 		$.getJSON(urlMyKeeps, params,
 			function(data) {
@@ -233,15 +232,12 @@ $(function() {
 
 	function populateMyKeeps(id) {
 		var params = {count: 30};
-		$('.active').removeClass('active');
-		if (id == null) {
-			$('.left-col h3.my-keeps').addClass('active');
-			$main.find(".search h1").text('Browse your keeps');
-		} else {
-			$('.left-col h3[data-id="' + id + '"]').addClass('active');
-			params.collection = id;
-			$main.find(".search h1").text('Browse your ' + collections[id].name + ' collection');
-		}
+		var $h3 = $(".left-col h3");
+		$h3.filter(".active").removeClass("active");
+		$h3.filter(id ? "[data-id='" + id + "']" : ".my-keeps").addClass("active");
+		$main.attr("data-view", "mine")
+			.find("h1").text(id ? collections[id].name : "Browse your keeps").show();
+		if (id) params.collection = id;
 		if (prevCollection != id) { // reset search if not fetching the same collection
 			prevCollection = id;
 			lastKeep = null;
@@ -251,26 +247,32 @@ $(function() {
 		searchTemplate.clear();
 		$query.val("").removeAttr("data-q");
 		searchResponse = null;
-	//	$('aside.right').hide();
-		$('.search>h1').show();
-		$('.search>.num-results').hide();
+		// hideRightSide();
 		if (lastKeep == null) {
 			$myKeeps.find('.search-section').remove();
 		} else {
 			params.before = lastKeep;
 		}
-		$myKeeps.show();
 		if (lastKeep != "end") {
 			showLoading();
+			subtitleTmpl.render({});
 			console.log("Fetching %d keeps %s", params.count, lastKeep ? "before " + lastKeep : "");
 			$.getJSON(urlMyKeeps, params,
 				function(data) {
-					if (data.keeps.length == 0) { // end of results
-						lastKeep = "end"; hideLoading(); return true;
-					} else if (lastKeep == null) {
-						myKeepsTmpl.render(data.keeps);
+					subtitleTmpl.render({
+						numShown: $myKeeps.find(".keep").length + data.keeps.length,
+						numTotal: id ? collections[id].keeps : myKeepsCount,
+						collId: id});
+					if (!data.keeps.length) {  // no more
+						lastKeep = "end";
+						hideLoading();
+						return true;
 					} else {
-						myKeepsTmpl.append(data.keeps);
+						if (lastKeep == null) {
+							myKeepsTmpl.render(data.keeps);
+						} else {
+							myKeepsTmpl.append(data.keeps);
+						}
 					}
 					lastKeep = data.keeps[data.keeps.length - 1].id;
 				});
@@ -296,7 +298,7 @@ $(function() {
 
 	function updateNumKeeps() {
 		$.getJSON(urlMyKeepsCount, function(data) {
-			$('.left-col .my-keeps span').text(data.numKeeps);
+			$('.left-col .my-keeps span').text(myKeepsCount = data.numKeeps);
 		});
 	}
 

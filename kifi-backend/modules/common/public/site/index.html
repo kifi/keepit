@@ -61,16 +61,43 @@
 		</div>
 	</aside>
 
-	<section class="main">
-		<div class="search">
+	<section class="main" data-view="mine">
+		<div class="main-head">
 			<h1>Browse your keeps</h1>
-			<div class="num-results">
-				Showing <span>0</span> keeps
+			<div class="subtitle">
+				<span data-template data-has="query" style="display:none">
+					{% if numShown == 0 %}
+						Sorry, no results match
+					{% endif %}{% if numShown == 1 %}
+						Showing the only result for
+					{% endif %}{% if numShown > 1 %}
+						Showing top {{numShown}} results for
+					{% endif %}
+				 <span class="result-query">{{query}}</span>
+				</span>
+				<span data-template data-has="collId" style="display:none">
+					{% if numTotal == 0 %}
+						No keeps in this collection
+					{% endif %}{% if numTotal == 1 %}
+						Showing the only keep in this collection
+					{% endif %}{% if numTotal > 1 %}
+						Showing {{numShown}} out of {{numTotal}} total keeps in this collection
+					{% endif %}
+				</span>
+				<span data-template data-has="numShown" style="display:none">
+					{% if numTotal != 1 %}
+						Showing {{numShown}} out of {{numTotal}} total keeps
+					{% else %}
+						Showing your only keep
+					{% endif %}
+				</span>
+				<span data-template data-has="searching" style="display:none">Searching...</span>
+				<span data-template>Loading...</span>
 			</div>
 		</div>
 		<div class="scrollable">
-			<ol id="search-results" style="display:none">
-				<li data-template class="keep draggable {% if isMyBookmark %}mine{% endif %}" data-id="{{bookmark.id}}" data-collections="">
+			<ol id="search-results">
+				<li data-template class="keep draggable {% if isMyBookmark %}mine{% endif %}" data-id="{{bookmark.id}}" style="display:none">
 					<div class="handle">
 						<input type="checkbox">
 					</div>
@@ -90,8 +117,8 @@
 					</div>
 				</li>
 			</ol>
-			<ol id="my-keeps" style="display:none">
-				<li data-template data-id="{{id}}" class="keep mine draggable {% if isPrivate %}private{% endif %}" data-created={{createdAt}} data-collections="{{collections}}">
+			<ol id="my-keeps">
+				<li data-template data-id="{{id}}" class="keep mine draggable {% if isPrivate %}private{% endif %}" data-created={{createdAt}} data-collections="{{collections}}" style="display:none">
 					<div class="right fs9 gray easydate">{{createdAt}}</div>
 					<div class="handle">
 						<input type="checkbox">
