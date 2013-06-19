@@ -2,7 +2,7 @@ package com.keepit.dev
 
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.logging.Logging
-import com.keepit.common.cache.{EhCacheCache, InMemoryCachePlugin, NoOpCache, FortyTwoCachePlugin}
+import com.keepit.common.cache._
 import com.keepit.inject.AppScoped
 import com.google.inject.{Inject, Provides, Singleton}
 import com.keepit.common.analytics._
@@ -14,12 +14,13 @@ import play.api.Play
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.analytics.Event
 import com.keepit.common.mail.MailToKeepPlugin
+import com.keepit.common.analytics.Event
 
 class DevCommonModule extends ScalaModule with Logging {
   def configure() {
     install(new S3DevModule)
-    bind[FortyTwoCachePlugin].to[NoOpCache].in[AppScoped]
-    bind[InMemoryCachePlugin].to[EhCacheCache].in[AppScoped]
+    install(new EhCacheCacheModule)
+    bind[FortyTwoCachePlugin].to[EhCacheCache]
   }
 
   @Singleton
