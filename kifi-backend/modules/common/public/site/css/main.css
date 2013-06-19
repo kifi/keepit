@@ -32,7 +32,7 @@ body {height: 100%; max-width: 1260px; min-width: 1024px; margin: 0 auto; paddin
 header {display: table; width: 100%; height: 70px; background: #67829c; position: relative}
 .header-left {display: table-cell; width: 200px; padding: 12px 0; text-align: center; vertical-align: top}
 .header-center {display: table-cell; padding-top: 10px}
-input.query {font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; -moz-box-sizing: border-box; box-sizing: border-box; padding: 10px 50px 10px 20px; border: none; border-right: 120px solid #67829c; background: #fff url(../img/search.png) right 16px center no-repeat; transition: border-right-width .3s; -webkit-transition: border-right-width .3s; -webkit-font-smoothing: antialiased}
+input.query {font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; -moz-box-sizing: border-box; box-sizing: border-box; padding: 9px 50px 9px 20px; border: none; border-right: 120px solid #67829c; background: #fff url(../img/search.png) right 16px center no-repeat; transition: border-right-width .3s; -webkit-transition: border-right-width .3s; -webkit-font-smoothing: antialiased}
 input.query:focus, input.query[data-q] {background-image: url(../img/search-blue.png); border-right-width: 0}
 input.query::-webkit-input-placeholder {color: #99a3b3}
 input.query::-moz-placeholder {color: #99a3b3}
@@ -40,9 +40,20 @@ header>nav {display: table-cell; width: 330px; -moz-box-sizing: border-box; box-
 header>nav>a {padding: 0 15px; color: #fff; border-left: 1px solid #fff; vertical-align: middle}
 header>nav>a:first-child {border-left: 0}
 
+/* main */
 section.main {margin: -70px 330px 0 200px; height: 100%; -moz-box-sizing: border-box; box-sizing: border-box; overflow-y: auto; border-top: 148px solid transparent; border-left: 1px solid #dbdee3; background: #fff; padding: 0 20px}
-div.custom-select {position: relative; display: inline-block; overflow: hidden; width: 275px}
-div.custom-select:after {content: url(../img/down.png); position: absolute; top: 0; right: 0; bottom: 0; padding: 0 7px; pointer-events: none}
+.main[data-view=search] {border-top-width: 108px}
+#my-keeps,#search-results {display: none}
+.main[data-view=mine] #my-keeps,
+.main[data-view=search] #search-results {display: block}
+.main-head {position: fixed; margin-top: -78px; padding-top: 15px; background: #fff}
+.main[data-view=search]>.main-head {margin-top: -38px}
+.main-head>h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
+.main[data-view=search]>.main-head>h1 {display: none}
+.main-head>.subtitle {font-size: 13px; font-weight: 300; color: #5b6670}
+.result-query::before {content: "\201c"}
+.result-query::after {content: "\201d"}
+.main>.scrollable {padding-top: 10px}
 
 aside {position: absolute; top: 70px; bottom: 0; background: #eff2f7}
 
@@ -153,6 +164,8 @@ aside.right input[type="checkbox"]:not(:checked) + label:hover span {
 span.long-text, a.long-text {display: inline-block}
 .small-avatar {max-width: 30px; max-height: 30px}
 aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px; border-radius: 4px}
+
+.search-section {color: #67829c; border-bottom: 1px solid #e3e6ee; background: url(../img/clock.png) 5px 50% no-repeat; padding: 5px 30px}
 .keep {position:relative; clear: left; padding: 10px 0 10px 30px; border-top: 1px solid #f9f9f9}
 .search-section+.keep {border-top: 0}
 .keep input[type="checkbox"] {position: absolute; left: 4px; top: 12px; margin: 0}
@@ -168,11 +181,6 @@ aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px;
 .keep .bottom span.private {display: none}
 .keep .bottom span.private.on {display: inline}
 .keep .bottom:after {content: "."; display: block; visibility: hidden; clear: both}
-.search {position: fixed; margin-top: -78px; background: #fff}
-.search>h1 {font-size: 27px; line-height: 78px; margin: 0; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
-.search>.num-results {display: none; font-size: .8em; color: #204b69; text-align: left; padding: 10px 0}
-.search-section {color: #67829c; border-bottom: 1px solid #e3e6ee; background: url(../img/clock.png) 5px 50% no-repeat; padding: 5px 30px}
-.main>.scrollable {padding-top: 20px}
 div.loading {text-align: center; display: none}
 .clearfix {clear: both}
 .add-collection {display: none}
