@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
-import com.keepit.model.{BookmarkRepo, User}
+import com.keepit.model.{BookmarkRepo, CollectionRepo, Collection, User}
 import com.keepit.search.SearchServiceClient
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -12,6 +12,7 @@ class AdminURIGraphController @Inject()(
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   bookmarkRepo: BookmarkRepo,
+  collectionRepo: CollectionRepo,
   searchClient: SearchServiceClient)
     extends AdminController(actionAuthenticator) {
 
@@ -46,6 +47,21 @@ class AdminURIGraphController @Inject()(
   def dumpLuceneDocument(id: Id[User]) =  AdminHtmlAction { implicit request =>
     Async {
       searchClient.dumpLuceneURIGraph(id).map(Ok(_))
+    }
+  }
+
+  def reindexCollection = AdminHtmlAction { implicit request =>
+    Async {
+      searchClient.reindexCollection().map { cnt =>
+        Ok("reindexinf started")
+      }
+    }
+  }
+
+  def dumpCollectionLuceneDocument(id: Id[Collection]) =  AdminHtmlAction { implicit request =>
+    Async {
+      val collection = db.readOnly { implicit s => collectionRepo.get(id) }
+      searchClient.dumpLuceneCollection(id, collection.userId).map(Ok(_))
     }
   }
 }

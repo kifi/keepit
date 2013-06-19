@@ -166,6 +166,8 @@ GET     /admin/uriGraph/reindex     @com.keepit.controllers.admin.AdminURIGraphC
 GET     /admin/uriGraph/load        @com.keepit.controllers.admin.AdminURIGraphController.load
 GET     /admin/uriGraph/update/:userId @com.keepit.controllers.admin.AdminURIGraphController.update(userId: Id[User])
 GET     /admin/uriGraph/dumpDoc/:userId  @com.keepit.controllers.admin.AdminURIGraphController.dumpLuceneDocument(userId: Id[User])
+GET     /admin/uriGraph/reindexCollection  @com.keepit.controllers.admin.AdminURIGraphController.reindexCollection
+GET     /admin/uriGraph/dumpCollectionDoc/:colId  @com.keepit.controllers.admin.AdminURIGraphController.dumpCollectionLuceneDocument(colId: Id[Collection])
 
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.usersView
 GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User])

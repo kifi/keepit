@@ -38,6 +38,7 @@ private[graph] class URIGraphActor @Inject() (
 trait URIGraphPlugin extends SchedulingPlugin {
   def update(): Future[Int]
   def reindex()
+  def reindexCollection()
 }
 
 class URIGraphPluginImpl @Inject() (
@@ -65,6 +66,11 @@ class URIGraphPluginImpl @Inject() (
 
   override def reindex() {
     uriGraph.reindex()
+    actor ! Update
+  }
+
+  override def reindexCollection() {
+    uriGraph.reindexCollection()
     actor ! Update
   }
 }
