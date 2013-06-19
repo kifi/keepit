@@ -27,7 +27,8 @@ class HomeController @Inject() (db: Database,
   postOffice: LocalPostOffice,
   emailAddressRepo: EmailAddressRepo,
   socialConnectionRepo: SocialConnectionRepo,
-  socialGraphPlugin: SocialGraphPlugin)
+  socialGraphPlugin: SocialGraphPlugin,
+  fortyTwoServices: FortyTwoServices)
   extends WebsiteController(actionAuthenticator) {
 
   private def userCanSeeKifiSite[A](implicit request: AuthenticatedRequest[A]): Boolean =
@@ -44,8 +45,8 @@ class HomeController @Inject() (db: Database,
     } else NotFound
   }
 
-  def test = Action {
-    Ok(Play.resource("app_version.txt").toString)
+  def version = Action {
+    Ok(fortyTwoServices.currentVersion)
   }
 
   def home = HtmlAction(true)(authenticatedAction = { implicit request =>
