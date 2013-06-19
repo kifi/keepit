@@ -1,5 +1,6 @@
 package com.keepit.test
 
+import scala.collection.concurrent.{TrieMap => ConcurrentMap}
 import scala.collection.mutable
 import scala.concurrent._
 import scala.slick.session.{Database => SlickDatabase}
@@ -308,6 +309,29 @@ case class FakeClockModule() extends ScalaModule {
 class FakeSocialGraphPlugin extends SocialGraphPlugin {
   def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]] =
     future { throw new Exception("Not Implemented") }
+}
+
+@Singleton
+class HashMapMemoryCache extends InMemoryCachePlugin {
+
+  val cache = ConcurrentMap[String, Any]()
+
+  def get(key: String): Option[Any] = {
+    val value = cache.get(key)
+    println(s"retrieved from cache: $key -> $value")
+    value
+  }
+
+  def remove(key: String) {
+    cache.remove(key)
+  }
+
+  def set(key: String, value: Any, expiration: Int = 0) {
+    println(s"setting in cache: $key -> $value")
+    cache += key -> value
+  }
+
+  override def toString = "HashMapMemoryCache"
 }
 
 case class FakeCacheModule() extends ShoeboxCacheModule {
