@@ -59,7 +59,6 @@ import com.keepit.search.ArticleSearchResultRefRepo
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworkType
 import com.keepit.common.social.SocialNetworks
-import com.keepit.serializer.SocialUserInfoSerializer._
 
 object ShoeboxController {
   implicit val collectionTupleFormat = (
