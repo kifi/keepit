@@ -217,7 +217,7 @@ class ChannelPluginImpl @Inject() (
   }
 
   def reportURIClientCount() = {
-    val count = userChannel.clientCount
+    val count = uriChannel.clientCount
     Statsd.gauge("websocket.channel.uri.client", count)
     count
   }
