@@ -1,8 +1,5 @@
 
-
-GET     /login                      securesocial.controllers.ProviderController.authenticate(provider = "facebook")
-POST    /login                      securesocial.controllers.ProviderController.authenticateByPost(provider = "facebook")
-GET     /login/social               securesocial.controllers.LoginPage.login
+GET     /login                      securesocial.controllers.LoginPage.login
 GET     /logout                     securesocial.controllers.LoginPage.logout
 
 # Relevant when we support traditional user signups:

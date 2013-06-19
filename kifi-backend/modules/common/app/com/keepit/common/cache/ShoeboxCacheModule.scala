@@ -4,12 +4,18 @@ import com.google.inject.{Provides, Singleton}
 import com.keepit.model.{UserConnectionIdCache, ClickHistoryUserIdCache, BrowsingHistoryUserIdCache}
 import scala.concurrent.duration._
 import com.keepit.search.ActiveExperimentsCache
+import com.keepit.common.social.BasicUserUserIdCache
 
 class ShoeboxCacheModule extends CacheModule {
 
   def configure {
     install(new MemcachedCacheModule)
   }
+
+  @Singleton
+  @Provides
+  def basicUserUserIdCache(outerRepo: FortyTwoCachePlugin) =
+    new BasicUserUserIdCache((outerRepo, 7 days))
 
   @Singleton
   @Provides

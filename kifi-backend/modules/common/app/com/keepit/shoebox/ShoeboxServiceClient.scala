@@ -29,7 +29,6 @@ import com.keepit.search.ArticleSearchResultFactory
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.social.SocialNetworkType
 import com.keepit.common.social.SocialId
-import com.keepit.serializer.SocialUserInfoSerializer.socialUserInfoSerializer
 import scala.collection.mutable.ArrayBuffer
 import com.keepit.search.ArticleHit
 import com.keepit.common.logging.Logging
