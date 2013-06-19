@@ -65,7 +65,7 @@ private[social] class SocialGraphActor @Inject() (
         socialUserRawInfoStore += (socialUserInfo.id.get -> rawInfo)
 
         val friends = rawInfo.jsons flatMap graph.extractFriends
-        socialUserImportFriends.importFriends(friends, graph.networkType)
+        socialUserImportFriends.importFriends(friends)
         val connections = socialUserCreateConnections.createConnections(
           socialUserInfo, friends.map(_._1.socialId), graph.networkType)
 
