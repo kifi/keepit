@@ -39,8 +39,10 @@
 		</div>
 		<h2>You</h2>
 		<h3 class="my-keeps active">
-			<span class="keep-count">...</span>
-			<a href="javascript:">Your Keeps</a>
+			<a href="javascript:">
+				<div class="keep-count">...</div>
+				<div class="view-name long-text">Your Keeps</div>
+			</a>
 		</h3>
 		<div id="collections">
 			<h2>Collections <a class="new-collection" href="javascript:"></a></h2>
@@ -50,8 +52,10 @@
 			<div id="collections-list">
 				<h3 data-template class="collection" data-id="{{id}}" style="display:none">
 					<div class="coll-tri"></div>
-					<span class="keep-count">{{keeps}}</span>
-					<a class="coll-name long-text" href="javascript:" title="{{name}}">{{name}}</a>
+					<a href="javascript:">
+						<div class="keep-count">{{keeps}}</div>
+						<div class="view-name long-text">{{name}}</div>
+					</a>
 				</h3>
 			</div>
 			<menu id="coll-menu">

@@ -304,7 +304,7 @@ $(function() {
 
 	function updateNumKeeps() {
 		$.getJSON(urlMyKeepsCount, function(data) {
-			$('.left-col .my-keeps span').text(myKeepsCount = data.numKeeps);
+			$('.left-col .my-keeps .keep-count').text(myKeepsCount = data.numKeeps);
 		});
 	}
 
@@ -336,17 +336,21 @@ $(function() {
 			contentType: 'application/json',
 			error: showMessage.bind(null, 'Could not delete collection, please try again later'),
 			success: function(data) {
+				delete collections[collId];
 				$coll.slideUp(80, $.fn.remove.bind($coll));
+				if ($myKeeps.data("collId") === collId) {
+					$myKeeps.removeData("collId");
+					showMyKeeps();
+				}
 				$('aside.right .collections ul li:has(input[data-id="'+collId+'"])').remove();
-				// TODO: update center column
 			}});
 	}).on("mouseup mousedown", ".coll-rename", function(e) {
 		if (e.which > 1) return;
 		hideCollMenu();
-		var $coll = $collMenu.prev(".collection").addClass("renaming").removeAttr("title");
-		var $a = $coll.find(".coll-name"), name = $a.text();
+		var $coll = $collMenu.prev(".collection").addClass("renaming");
+		var $name = $coll.find(".view-name"), name = $name.text();
 		var $in = $("<input type=text placeholder='Type new collection name'>").val(name).data("orig", name);
-		$a.empty().append($in);
+		$name.empty().append($in);
 		setTimeout(function() {
 			$in[0].setSelectionRange(0, name.length, "backward");
 			$in[0].focus();
@@ -356,18 +360,22 @@ $(function() {
 				var oldName = $in.data("orig");
 				var newName = $.trim(this.value) || oldName;
 				if (newName !== oldName) {
+					var collId = $coll.data("id");
 					$.ajax({
-						url: urlCollections + "/" + $coll.data('id') + "/update",
+						url: urlCollections + "/" + collId + "/update",
 						type: "POST",
 						dataType: 'json',
 						data: JSON.stringify({name: newName}),
 						contentType: 'application/json',
 						error: function() {
 							showMessage('Could not rename collection, please try again later');
-							$a.text(oldName).prop("title", oldName);
+							$name.text(oldName);
 						},
 						success: function() {
-							// TODO: update center column
+							collections[collId].name = newName;
+							if ($myKeeps.data("collId") === collId) {
+								$main.find("h1").text(newName);
+							}
 						}
 					});
 				}
@@ -379,7 +387,7 @@ $(function() {
 		function exitRename(name) {
 			name = name || $in.data("orig");
 			$in.remove();
-			$a.text(name).prop("title", name);
+			$name.text(name);
 			$coll.removeClass("renaming");
 		}
 	});
