@@ -1,12 +1,36 @@
 package com.keepit.common.cache
 
-import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{Provides, Singleton}
-import com.keepit.model._
 import scala.concurrent.duration._
 import com.keepit.common.social.{CommentWithBasicUserCache, BasicUserUserIdCache}
+import net.codingwell.scalaguice.ScalaModule
+import com.keepit.model.BookmarkUriUserCache
+import com.keepit.model.UserCollectionsCache
+import com.keepit.model.CollectionsForBookmarkCache
+import com.keepit.model.NormalizedURICache
+import com.keepit.model.SocialUserInfoUserCache
+import com.keepit.model.SocialUserInfoNetworkCache
+import com.keepit.model.UnscrapableAllCache
+import com.keepit.model.UserExternalIdCache
+import com.keepit.model.UserIdCache
+import com.keepit.model.UserSessionExternalIdCache
+import com.keepit.model.ExternalUserIdCache
+import com.keepit.model.UserExperimentCache
+import com.keepit.model.SliderHistoryUserIdCache
+import com.keepit.model.BookmarkCountCache
+import com.keepit.model.CommentCountUriIdCache
+import com.keepit.model.UserValueCache
+import com.keepit.model.BrowsingHistoryUserIdCache
+import com.keepit.model.ClickHistoryUserIdCache
+import com.keepit.search.ActiveExperimentsCache
+import com.keepit.model.UserConnectionIdCache
 
-abstract class CacheModule extends ScalaModule {
+class DevCacheModule extends ScalaModule {
+
+  def configure {
+    bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
+    bind[InMemoryCachePlugin].to[HashMapMemoryCache]
+  }
 
   @Singleton
   @Provides
@@ -98,4 +122,23 @@ abstract class CacheModule extends ScalaModule {
   def userValueCache(outerRepo: FortyTwoCachePlugin) =
     new UserValueCache((outerRepo, 7 days))
 
+  @Singleton
+  @Provides
+  def browsingHistoryUserIdCache(outerRepo: FortyTwoCachePlugin) =
+    new BrowsingHistoryUserIdCache((outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def clickHistoryUserIdCache(outerRepo: FortyTwoCachePlugin) =
+    new ClickHistoryUserIdCache((outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def activeExperimentsCache(outerRepo: FortyTwoCachePlugin) =
+    new ActiveExperimentsCache((outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def userConnectionIdCache(outerRepo: FortyTwoCachePlugin) =
+    new UserConnectionIdCache((outerRepo, 7 days))
 }

@@ -52,7 +52,6 @@ object CacheStatistics {
   }
 }
 
-// Abstraction around play2-memcached plugin
 trait FortyTwoCachePlugin extends Plugin {
   private[cache] def onError(error: HealthcheckError) {}
 

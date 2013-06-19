@@ -6,6 +6,8 @@ import com.keepit.model._
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
+import scala.concurrent.duration.Duration
 
 case class BasicUser(
   externalId: ExternalId[User],
@@ -27,3 +29,15 @@ object BasicUser {
       (__ \ 'pictureName).format[String]
   )(BasicUser.apply, unlift(BasicUser.unapply))
 }
+
+case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
+  override val version = 3
+  val namespace = "basic_user_userid"
+  def toKey(): String = userId.id.toString
+}
+
+class BasicUserUserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[BasicUserUserIdKey, BasicUser](innermostPluginSettings, innerToOuterPluginSettings:_*)
+
+// TODO(andrew): Invalidate cache. More tricky on this multi-object cache. Right now, the data doesn't change. When we go multi-network, it will.
+// Also affected: CommentWithBasicUser

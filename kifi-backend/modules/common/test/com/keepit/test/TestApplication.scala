@@ -146,7 +146,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     bind[HealthcheckPlugin].to[FakeHealthcheck]
     bind[SlickSessionProvider].to[TestSlickSessionProvider]
     install(new FakeS3StoreModule())
-    install(new FakeCacheModule)
+    install(new DevCacheModule)
     bind[play.api.Application].toProvider(new Provider[play.api.Application] {
       def get(): play.api.Application = current
     }).in(classOf[AppScoped])
@@ -309,7 +309,7 @@ class FakeSocialGraphPlugin extends SocialGraphPlugin {
     future { throw new Exception("Not Implemented") }
 }
 
-case class FakeCacheModule() extends ShoeboxCacheModule {
+case class FakeCacheModule() extends ScalaModule {
   override def configure() {
     bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
     bind[InMemoryCachePlugin].to[HashMapMemoryCache]
