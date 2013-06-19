@@ -67,7 +67,6 @@ $(function() {
 	var collections = {};
 	var searchTimeout;
 	var lastKeep;
-	var prevCollection;
 
 	$.fn.layout = function() {
 	  return this.each(function() {this.clientHeight});  // forces layout
@@ -195,11 +194,9 @@ $(function() {
 	function doSearch(context) {
 		$('.left-col .active').removeClass('active');
 		$main.attr("data-view", "search");
-		$main.find("h1").hide();
 		subtitleTmpl.render({searching: true});
 		// showRightSide();
 		showLoading();
-		myKeepsTmpl.clear();
 		var q = $.trim($query.val());
 		$query.attr("data-q", q || null);
 		$.getJSON(urlSearch, {q: q, f: "a", maxHits: 30, context: context}, function(data) {
@@ -230,51 +227,60 @@ $(function() {
 			});
 	}
 
-	function populateMyKeeps(id) {
-		var params = {count: 30};
+	function showMyKeeps(collId) {
+		collId = collId || null;
 		var $h3 = $(".left-col h3");
 		$h3.filter(".active").removeClass("active");
-		$h3.filter(id ? "[data-id='" + id + "']" : ".my-keeps").addClass("active");
+		$h3.filter(collId ? "[data-id='" + collId + "']" : ".my-keeps").addClass("active");
 		$main.attr("data-view", "mine")
-			.find("h1").text(id ? collections[id].name : "Browse your keeps").show();
-		if (id) params.collection = id;
-		if (prevCollection != id) { // reset search if not fetching the same collection
-			prevCollection = id;
-			lastKeep = null;
-			myKeepsTmpl.clear();
-			hideRightSide();
-		}
+			.find("h1").text(collId ? collections[collId].name : "Browse your keeps");
+
 		searchTemplate.clear();
 		$query.val("").removeAttr("data-q");
 		searchResponse = null;
-		// hideRightSide();
-		if (lastKeep == null) {
-			$myKeeps.find('.search-section').remove();
+		hideRightSide();
+
+		if ($myKeeps.data("collId") != collId || !("collId" in $myKeeps.data())) {
+			$myKeeps.data("collId", collId).empty();
+			lastKeep = null;
+			loadKeeps(collId);
 		} else {
-			params.before = lastKeep;
+			subtitleTmpl.render({
+				numShown: $myKeeps.find(".keep").length,
+				numTotal: collId ? collections[collId].keeps : myKeepsCount,
+				collId: collId});
 		}
+	}
+
+	function loadKeeps(collId) {
 		if (lastKeep != "end") {
 			showLoading();
 			subtitleTmpl.render({});
+			var params = {count: 30};
+			if (collId) {
+				params.collection = collId;
+			}
+			if (lastKeep) {
+				params.before = lastKeep;
+			}
 			console.log("Fetching %d keeps %s", params.count, lastKeep ? "before " + lastKeep : "");
 			$.getJSON(urlMyKeeps, params,
 				function(data) {
 					subtitleTmpl.render({
 						numShown: $myKeeps.find(".keep").length + data.keeps.length,
-						numTotal: id ? collections[id].keeps : myKeepsCount,
-						collId: id});
+						numTotal: collId ? collections[collId].keeps : myKeepsCount,
+						collId: collId});
+					hideLoading();
 					if (!data.keeps.length) {  // no more
 						lastKeep = "end";
-						hideLoading();
-						return true;
 					} else {
 						if (lastKeep == null) {
 							myKeepsTmpl.render(data.keeps);
 						} else {
 							myKeepsTmpl.append(data.keeps);
 						}
+						lastKeep = data.keeps[data.keeps.length - 1].id;
 					}
-					lastKeep = data.keeps[data.keeps.length - 1].id;
 				});
 		}
 	}
@@ -506,7 +512,7 @@ $(function() {
 			if (searchResponse) {
 				doSearch(searchResponse.context);
 			} else {
-				populateMyKeeps($colls.find(".collection.active").data("id"));
+				loadKeeps($myKeeps.data("collId"));
 			}
 		}
 	});
@@ -519,8 +525,7 @@ $(function() {
 			console.log("[no change]");
 			return;  // no change
 		} else if (!q) {
-			console.log("[populateMyKeeps]");
-			populateMyKeeps();
+			showMyKeeps();
 		} else if (e.which) {
 			if (e.which == 13) { // Enter
 				console.log("[doSearch]");
@@ -607,10 +612,10 @@ $(function() {
 	updateNumKeeps();
 
 	// populate all my keeps
-	populateMyKeeps();
+	showMyKeeps();
 
 	$(".left-col>.my-keeps>a").click(function() {
-		populateMyKeeps();
+		showMyKeeps();
 		addNewKeeps();
 	});
 
@@ -621,7 +626,7 @@ $(function() {
 				$a.find("input").focus();
 			}
 		} else {
-			populateMyKeeps($coll.data("id"));
+			showMyKeeps($coll.data("id"));
 		}
 	})
 	.on("click", ".new-collection", function() {
