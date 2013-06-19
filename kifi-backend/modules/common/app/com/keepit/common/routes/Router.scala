@@ -90,6 +90,8 @@ object Search extends Service {
     def updateURIGraph() = ServiceRoute(POST, "/internal/search/uriGraph/update")
     def uriGraphReindex() = ServiceRoute(POST, "/internal/search/uriGraph/reindex")
     def uriGraphDumpLuceneDocument(id: Id[User]) = ServiceRoute(POST, s"/internal/search/uriGraph/dumpDoc/${id.id}")
+    def collectionReindex() = ServiceRoute(POST, "/internal/search/collection/reindex")
+    def collectionDumpLuceneDocument(id: Id[Collection], userId: Id[User]) = ServiceRoute(POST, "/internal/search/collection/dumpDoc", Param("id", id), Param("userId", userId))
     def indexInfo() = ServiceRoute(GET, "/internal/search/index/info")
     def searchUpdate() = ServiceRoute(POST, "/internal/search/index/update")
     def searchReindex() = ServiceRoute(POST, "/internal/search/index/reindex")
