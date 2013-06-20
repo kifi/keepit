@@ -72,11 +72,11 @@ class SecureSocialUserPluginImpl @Inject() (
     case ident => (None, SocialUser(ident))
   }
 
-  private def createUser(displayName: String): User = {
-    log.info("creating new user for %s".format(displayName))
-    val nameParts = displayName.split(' ')
-    User(firstName = nameParts(0),
-      lastName = nameParts.tail.mkString(" "),
+  private def createUser(identity: Identity): User = {
+    log.info(s"Creating new user for ${identity.fullName}")
+    User(
+      firstName = identity.firstName,
+      lastName = identity.lastName,
       state = if(Play.isDev) UserStates.ACTIVE else UserStates.PENDING
     )
   }
@@ -94,7 +94,7 @@ class SecureSocialUserPluginImpl @Inject() (
         // TODO(greg): handle case where user id in socialUserInfo is different from the one in the session
         if (suiOpt == Some(socialUserInfo)) socialUserInfo else socialUserInfoRepo.save(socialUserInfo)
       case Some(socialUserInfo) if socialUserInfo.userId.isEmpty =>
-        val user = userOpt getOrElse userRepo.save(createUser(socialUserInfo.fullName))
+        val user = userOpt getOrElse userRepo.save(createUser(socialUser))
 
         //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         //todo(eishay): send a direct fetch request
@@ -102,7 +102,7 @@ class SecureSocialUserPluginImpl @Inject() (
         if (userOpt.isEmpty) imageStore.updatePicture(sui, user.externalId)
         sui
       case None =>
-        val user = userOpt getOrElse userRepo.save(createUser(socialUser.fullName))
+        val user = userOpt getOrElse userRepo.save(createUser(socialUser))
         log.info("creating new SocialUserInfo for %s".format(user))
         val userInfo = SocialUserInfo(userId = Some(user.id.get),//verify saved
           socialId = socialId, networkType = socialNetworkType, pictureUrl = socialUser.avatarUrl,
@@ -125,11 +125,12 @@ class SecureSocialUserPluginImpl @Inject() (
 
 @AppScoped
 class SecureSocialAuthenticatorPluginImpl @Inject()(
-                                                        db: Database,
-                                                        socialUserInfoRepo: SocialUserInfoRepo,
-                                                        sessionRepo: UserSessionRepo,
-                                                        healthcheckPlugin: HealthcheckPlugin,
-                                                        app: Application) extends AuthenticatorStore(app) with SecureSocialAuthenticatorPlugin  {
+  db: Database,
+  socialUserInfoRepo: SocialUserInfoRepo,
+  sessionRepo: UserSessionRepo,
+  healthcheckPlugin: HealthcheckPlugin,
+  app: Application)
+  extends AuthenticatorStore(app) with SecureSocialAuthenticatorPlugin  {
 
   private def reportExceptions[T](f: => T): Either[Error, T] =
     try Right(f) catch { case ex: Throwable =>
