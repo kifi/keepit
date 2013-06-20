@@ -6,6 +6,7 @@ import org.apache.lucene.analysis.tokenattributes.OffsetAttribute
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute
 import org.apache.lucene.index.Term
 import java.io.StringReader
+import scala.collection.mutable.ArrayBuffer
 
 class TermIterator(field: String, text: String, analyzer: Analyzer) extends Iterator[Term] {
   protected val ts = {
@@ -68,3 +69,13 @@ trait Offset extends TermIterator {
   def startOffSet: Int = start
   def endOffset: Int = end
 }
+
+trait TermInterceptor extends TermIterator {
+  override def next(): Term = {
+    val term = super.next()
+    process(term)
+  }
+
+  def process(term: Term): Term
+}
+
