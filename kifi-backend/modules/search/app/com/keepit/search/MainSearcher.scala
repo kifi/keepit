@@ -380,7 +380,9 @@ class MainSearcher(
     shoeboxClient.persistServerSearchEvent(metaData)
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
         myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt,
-        (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = svExistVar, toShow = show, timeLogs = Some(timeLogs.toSearchTimeLogs))
+        (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = svExistVar, toShow = show,
+        timeLogs = Some(timeLogs.toSearchTimeLogs),
+        lang = lang)
   }
 
   private def classify(hitList: List[MutableArticleHit], personalizedSearcher: PersonalizedSearcher) = {
