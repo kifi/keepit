@@ -21,16 +21,16 @@ import securesocial.core.UserId
 import com.keepit.model.SocialUserInfo
 
 @Singleton
-class ShoeboxSecureSocialUserPlugin @Inject() (
-    db: Database,
-    socialUserInfoRepo: SocialUserInfoRepo,
-    userRepo: UserRepo,
-    imageStore: S3ImageStore,
-    healthcheckPlugin: HealthcheckPlugin,
-    userExperimentRepo: UserExperimentRepo,
-    emailRepo: EmailAddressRepo,
-    socialGraphPlugin: SocialGraphPlugin
-  ) extends UserService with SecureSocialUserPlugin with Logging {
+class SecureSocialUserPluginImpl @Inject() (
+  db: Database,
+  socialUserInfoRepo: SocialUserInfoRepo,
+  userRepo: UserRepo,
+  imageStore: S3ImageStore,
+  healthcheckPlugin: HealthcheckPlugin,
+  userExperimentRepo: UserExperimentRepo,
+  emailRepo: EmailAddressRepo,
+  socialGraphPlugin: SocialGraphPlugin)
+  extends UserService with SecureSocialUserPlugin with Logging {
 
   private def reportExceptions[T](f: => T): T =
     try f catch { case ex: Throwable =>
@@ -124,13 +124,12 @@ class ShoeboxSecureSocialUserPlugin @Inject() (
 }
 
 @AppScoped
-class ShoeboxSecureSocialAuthenticatorPlugin @Inject()(
-    db: Database,
-    socialUserInfoRepo: SocialUserInfoRepo,
-    sessionRepo: UserSessionRepo,
-    healthcheckPlugin: HealthcheckPlugin,
-    app: Application
-  ) extends AuthenticatorStore(app) with SecureSocialAuthenticatorPlugin {
+class SecureSocialAuthenticatorPluginImpl @Inject()(
+                                                        db: Database,
+                                                        socialUserInfoRepo: SocialUserInfoRepo,
+                                                        sessionRepo: UserSessionRepo,
+                                                        healthcheckPlugin: HealthcheckPlugin,
+                                                        app: Application) extends AuthenticatorStore(app) with SecureSocialAuthenticatorPlugin  {
 
   private def reportExceptions[T](f: => T): Either[Error, T] =
     try Right(f) catch { case ex: Throwable =>

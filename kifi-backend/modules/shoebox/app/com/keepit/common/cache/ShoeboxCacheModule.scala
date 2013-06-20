@@ -1,12 +1,22 @@
 package com.keepit.common.cache
 
-import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
 import scala.concurrent.duration._
+import com.keepit.search.ActiveExperimentsCache
 import com.keepit.common.social.{CommentWithBasicUserCache, BasicUserUserIdCache}
+import net.codingwell.scalaguice.ScalaModule
 
-abstract class CacheModule extends ScalaModule {
+class ShoeboxCacheModule extends ScalaModule {
+
+  def configure {
+    install(new MemcachedCacheModule)
+  }
+
+  @Singleton
+  @Provides
+  def basicUserUserIdCache(outerRepo: FortyTwoCachePlugin) =
+    new BasicUserUserIdCache((outerRepo, 7 days))
 
   @Singleton
   @Provides
@@ -93,4 +103,23 @@ abstract class CacheModule extends ScalaModule {
   def userValueCache(outerRepo: FortyTwoCachePlugin) =
     new UserValueCache((outerRepo, 7 days))
 
+  @Singleton
+  @Provides
+  def browsingHistoryUserIdCache(outerRepo: FortyTwoCachePlugin) =
+    new BrowsingHistoryUserIdCache((outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def clickHistoryUserIdCache(outerRepo: FortyTwoCachePlugin) =
+    new ClickHistoryUserIdCache((outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def activeExperimentsCache(outerRepo: FortyTwoCachePlugin) =
+    new ActiveExperimentsCache((outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def userConnectionIdCache(outerRepo: FortyTwoCachePlugin) =
+    new UserConnectionIdCache((outerRepo, 7 days))
 }
