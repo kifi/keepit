@@ -40,7 +40,7 @@ class UserTopicByteArrayHelper {
     val is = new DataInputStream(new ByteArrayInputStream(arr))
     val topic = (0 until TopicModelGlobal.numTopics).map{i => is.readInt()}
     is.close()
-    topic
+    topic.toArray
   }
 }
 

@@ -42,7 +42,7 @@ class UriTopicHelper {
     val is = new DataInputStream(new ByteArrayInputStream(arr))
     val topic = (0 until TopicModelGlobal.numTopics).map{i => is.readDouble()}
     is.close()
-    topic
+    topic.toArray
   }
 
   def assignTopics(arr: Array[Double]): (Option[Int], Option[Int]) = {
