@@ -1,15 +1,13 @@
 package com.keepit.common.social
 
-import scala.concurrent.duration._
 
-import com.google.inject.Inject
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
 import com.keepit.common.db._
-import com.keepit.common.db.slick.DBSession._
 import com.keepit.model._
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
+import scala.concurrent.duration.Duration
 
 case class BasicUser(
   externalId: ExternalId[User],
@@ -41,19 +39,5 @@ case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
 class BasicUserUserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[BasicUserUserIdKey, BasicUser](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
-  // TODO(andrew): Invalidate cache. More tricky on this multi-object cache. Right now, the data doesn't change. When we go multi-network, it will.
-  // Also affected: CommentWithBasicUser
-
-class BasicUserRepo @Inject() (socialUserRepo: SocialUserInfoRepo, userRepo: UserRepo, userCache: BasicUserUserIdCache){
-  def load(userId: Id[User])(implicit session: RSession): BasicUser = userCache.getOrElse(BasicUserUserIdKey(userId)) {
-    val user = userRepo.get(userId)
-    val socialUserInfos = socialUserRepo.getByUser(user.id.get)
-    BasicUser(
-      externalId = user.externalId,
-      firstName = user.firstName,
-      lastName = user.lastName,
-      networkIds = socialUserInfos.map { su => su.networkType -> su.socialId }.toMap,
-      pictureName = "0.jpg" // TODO: when we have multiple picture IDs make sure we change this
-    )
-  }
-}
+// TODO(andrew): Invalidate cache. More tricky on this multi-object cache. Right now, the data doesn't change. When we go multi-network, it will.
+// Also affected: CommentWithBasicUser
