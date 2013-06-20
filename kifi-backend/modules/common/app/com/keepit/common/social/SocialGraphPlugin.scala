@@ -86,9 +86,11 @@ private[social] class SocialGraphActor @Inject() (
 
 trait SocialGraphPlugin extends Plugin {
   def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]]
+  def asyncRevokePermissions(socialUserInfo: SocialUserInfo): Future[Unit]
 }
 
 class SocialGraphPluginImpl @Inject() (
+    graphs: Set[SocialGraph],
     actorFactory: ActorFactory[SocialGraphActor],
     val schedulingProperties: SchedulingProperties)
   extends SocialGraphPlugin with Logging with SchedulingPlugin {
@@ -105,6 +107,10 @@ class SocialGraphPluginImpl @Inject() (
   }
   override def onStop() {
     log.info("stopping SocialGraphPluginImpl")
+  }
+
+  def asyncRevokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = {
+    graphs.find(_.networkType == socialUserInfo.networkType).get.revokePermissions(socialUserInfo)
   }
 
   override def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]] = {
