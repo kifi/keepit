@@ -1,13 +1,13 @@
 package com.keepit.test
 
 import scala.slick.session.ResultSetConcurrency
-
 import com.google.inject.{Module, Injector}
 import com.keepit.common.db.TestSlickSessionProvider
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
 import com.keepit.model._
+
 
 trait TestDBRunner extends TestInjector {
 
@@ -25,8 +25,6 @@ trait TestDBRunner extends TestInjector {
   def emailAddressRepo(implicit injector: Injector) = inject[EmailAddressRepo]
   def unscrapableRepo(implicit injector: Injector) = inject[UnscrapableRepo]
   def electronicMailRepo(implicit injector: Injector) = inject[ElectronicMailRepo]
-  def userTopicRepo(implicit injector: Injector) = inject[UserTopicRepo]
-  def uriTopicRepo(implicit injector: Injector) = inject[UriTopicRepo]
   def sessionProvider(implicit injector: Injector) = inject[TestSlickSessionProvider]
 
   def withDB[T](overridingModules: Module*)(f: Injector => T) = {

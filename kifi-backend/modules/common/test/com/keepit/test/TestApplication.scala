@@ -62,8 +62,8 @@ import com.keepit.common.social.FakeSecureSocialUserServiceModule
 import com.keepit.model.NormalizedURI
 import com.keepit.common.amazon.AmazonInstanceId
 import com.keepit.common.net.FakeClientResponse
-import com.keepit.search.topicmodel.FakeWordTopicModel
-import com.keepit.search.topicModel.WordTopicModel
+
+
 
 class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
 
@@ -90,7 +90,8 @@ class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override v
   def withS3DevModule() = overrideWith(new S3DevModule())
   def withShoeboxServiceModule() = overrideWith(ShoeboxServiceModule())
   def withSearchConfigModule() = overrideWith(SearchConfigModule())
-  def withWordTopicModule() = overrideWith(WordTopicModule())
+
+
   def overrideWith(modules: Module*): TestApplication = new TestApplication(createTestGlobal(global, modules: _*), useDb, path)
 
 }
@@ -465,14 +466,6 @@ case class FakeSchedulerModule() extends ScalaModule {
   }
 }
 
-case class WordTopicModule() extends ScalaModule {
-  override def configure(): Unit = {}
-
-  @Provides
-  @Singleton
-  def wordTopicModel: WordTopicModel = new FakeWordTopicModel
-
-}
 
 class FakeScheduler extends Scheduler {
   private def fakeCancellable = new Cancellable() {
