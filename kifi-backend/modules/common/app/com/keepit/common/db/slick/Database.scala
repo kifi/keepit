@@ -7,14 +7,18 @@ import scala.slick.session.{Database => SlickDatabase}
 import scala.util.DynamicVariable
 
 import com.google.inject.{Singleton, ImplementedBy, Inject, Provider}
+
 import com.keepit.common.db.DatabaseDialect
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
+
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
+import java.sql.SQLException
 
 import akka.actor.ActorSystem
 import play.api.Mode.Mode
 import play.api.Mode.Test
+import play.modules.statsd.api.Statsd
 
 class InSessionException(message: String) extends Exception(message)
 class TimedOutWaitingForConnectionException(message: String) extends Exception(message)
@@ -91,8 +95,13 @@ class Database @Inject() (
     1 to attempts - 1 foreach { attempt =>
       try {
         return readWrite(f)
-      } catch { case ex: MySQLIntegrityConstraintViolationException =>
-        log.warn(s"Failed readWrite transaction attempt $attempt of $attempts")
+      } catch {
+        case ex: MySQLIntegrityConstraintViolationException =>
+          throw ex
+        case t: SQLException =>
+          val throwableName = t.getClass.getSimpleName
+          log.warn(s"Failed ($throwableName) readWrite transaction attempt $attempt of $attempts")
+          Statsd.increment(s"db.fail.attempt.$attempt.$throwableName")
       }
     }
     readWrite(f)

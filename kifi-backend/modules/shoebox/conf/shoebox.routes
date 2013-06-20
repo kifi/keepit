@@ -54,7 +54,6 @@ GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkContr
 GET     /                           @com.keepit.controllers.website.HomeController.home
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
-GET     /test           @com.keepit.controllers.website.HomeController.test
 
 GET     /invite                     @com.keepit.controllers.website.InviteController.invite
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
@@ -259,6 +258,8 @@ GET     /admin/healthcheck/resetErrorCount    @com.keepit.controllers.admin.Admi
 ##########################################
 #INTERNAL ROUTES/Shoebox
 ##########################################
+
+GET     /internal/version                             @com.keepit.controllers.website.HomeController.version
 
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURI(id: Long)
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs(ids: String)
