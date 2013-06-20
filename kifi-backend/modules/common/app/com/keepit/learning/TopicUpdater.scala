@@ -127,13 +127,14 @@ class TopicUpdater @Inject() (
           userTopic._2.foreach{ case (topicIdx, counts) => topic(topicIdx) += counts;
             if (topic(topicIdx) < 0) { topic(topicIdx) = 0; log.warn("was trying to set user topic to negative")}
           }
+          // insert new record
           userTopicRepo.save(UserTopic(userId = oldTopic.get.userId, topic = userTopicHelper.toByteArray(topic)))
         } else {
           val topic = userTopicHelper.toIntArray(oldTopic.get.topic)
           userTopic._2.foreach{ case (topicIdx, counts) => topic(topicIdx) += counts;
             if (topic(topicIdx) < 0) { topic(topicIdx) = 0; log.warn("was trying to set user topic to negative")}
           }
-          userTopicRepo.save(UserTopic(id = oldTopic.get.id, userId = oldTopic.get.userId, topic = userTopicHelper.toByteArray(topic)))
+          userTopicRepo.save(oldTopic.get.copy(topic = userTopicHelper.toByteArray(topic)))
         }
       }
       val largestSeq = bookmarks.sortBy(_.seq).last.seq
