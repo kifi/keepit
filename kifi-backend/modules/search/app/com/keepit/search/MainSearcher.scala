@@ -117,7 +117,7 @@ class MainSearcher(
   private[this] val friendsUriEdgeAccessors = friendsUriEdgeSets.mapValues{ _.accessor }
   private[this] val filteredFriendIds = filter.filterFriends(friendIds)
   private[this] val filteredFriendEdgeSet = if (filter.isCustom) uriGraphSearcher.getUserToUserEdgeSet(userId, filteredFriendIds) else friendEdgeSet
-  private[this] val friendUris = {
+  private[this] val friendUris = if (filter.includeFriends) {
     filter.timeRange match {
       case Some(timeRange) =>
         filteredFriendIds.foldLeft(Set.empty[Long]){ (s, f) =>
@@ -128,6 +128,8 @@ class MainSearcher(
           s ++ friendsUriEdgeSets(f.id).destIdLongSet
         }
     }
+  } else {
+    Set.empty[Long]
   }
 
   private[this] val friendlyUris = {

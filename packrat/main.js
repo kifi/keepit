@@ -1097,11 +1097,11 @@ var session, socket;
 function authenticate(callback) {
   var dev = api.prefs.get("env") === "development";
   if (dev) {
-    openFacebookConnect();
+    openLogin();
   } else {
     startSession(function () {
       if (getStored("kifi_installation_id")) {
-        openFacebookConnect();
+        openLogin();
       } else {
         var tab = api.tabs.anyAt(webBaseUri() + "/");
         if (tab) {
@@ -1157,17 +1157,17 @@ function authenticate(callback) {
     });
   }
 
-  function openFacebookConnect() {
-    api.log("[openFacebookConnect]");
+  function openLogin() {
+    api.log("[openLogin]");
     var baseUri = webBaseUri();
     api.popup.open({
       name: "kifi-authenticate",
-      url: baseUri + "/authenticate/facebook",
+      url: baseUri + "/login",
       width: 1020,
       height: 530}, {
       navigate: function(url) {
-        if (url == baseUri + "/#_=_") {
-          api.log("[openFacebookConnect] closing popup");
+        if (url == baseUri + "/#_=_" || url == baseUri + "/") {
+          api.log("[openLogin] closing popup");
           this.close();
           startSession();
         }
@@ -1186,9 +1186,16 @@ function deauthenticate() {
   // TODO: make all page icons faint?
   api.popup.open({
     name: "kifi-deauthenticate",
-    url: webBaseUri() + "/session/end",
+    url: webBaseUri() + "/logout#_=_",
     width: 200,
-    height: 100})
+    height: 100}, {
+    navigate: function(url) {
+      if (url == webBaseUri() + "/#_=_") {
+        api.log("[deauthenticate] closing popup");
+        this.close();
+      }
+    }
+  })
 }
 
 // ===== Main, executed upon install (or reinstall), update, re-enable, and browser start

@@ -1,21 +1,26 @@
 @admin("Engineering Dashboard", scripts = List("graphite")) {
-<div style="float: right" class="form-horizontal">
-  <select class="input-medium" id="timerange"></select>
-  <button class="btn btn-primary" type="button" id="update">Update Now</button>
-</div>
 
-<p>
-    <a href="@com.keepit.controllers.admin.routes.AdminWebSocketController.serviceView"><font size="5">WebSocket Performance</font></a>
+<div class="container" style="clear: both">
+  <div style="display: inline-block">
+    <h3><a href="@com.keepit.controllers.admin.routes.AdminWebSocketController.serviceView">WebSocket Performance</a></h3>
     <p><img id="websocket" class="img-polaroid"></p>
-</p>
-<p>
-  <a href="@com.keepit.controllers.admin.routes.AdminSearchPerformanceController.viewSearchPerformance"><font size="5">Search Performance</font></a>
-  <p><img id="search" class="img-polaroid"></p>
-</p>
-<p>
-  <a href="@com.keepit.controllers.admin.routes.AdminCacheController.serviceView"><font size="5">Cache Performance</font></a>
-  <p><img id="cache" class="img-polaroid"></p>
-</p>
+  </div>
+
+  <div style="display: inline-block">
+    <div style="float: right" class="form-horizontal">
+      <select class="input-medium" id="timerange"></select>
+      <button class="btn btn-primary" type="button" id="update">Update Now</button>
+    </div>
+
+    <h3><a href="@com.keepit.controllers.admin.routes.AdminSearchPerformanceController.viewSearchPerformance">Search Performance</a></h3>
+    <p><img id="search" class="img-polaroid"></p>
+  </div>
+
+  <div style="display: inline-block">
+    <h3><a href="@com.keepit.controllers.admin.routes.AdminCacheController.serviceView">Cache Performance</a></h3>
+    <p><img id="cache" class="img-polaroid"></p>
+  </div>
+</div>
 
 <script>
 
@@ -37,24 +42,24 @@
   $.each(timeranges, function (name, timerange) {
   $("#timerange").append($("<option>").val(timerange).text(name));
   });
-  $("#timerange").find('option[value="-24h"]').prop('selected',true)
+  $("#timerange").find('option[value="-12h"]').prop('selected',true)
 
   function renderCharts() {
   var options = $.fn.graphite.defaults = {
   url: "https://www.hostedgraphite.com/a3d638f9/b4e709e5-45b0-4b89-904b-a6cc7e517e04/graphite/render/",
   lineMode: "connected",
-  width: 1100,
-  height: 400,
+  width: 570,
+  height: 280,
   hideGrid: "true",
   from: $("#timerange").val(),
   lineWidth: 2
   };
 
-  var baseTargets = ["drawAsInfinite(stats.counters.*.deploys.count)"];
+  var baseTargets = ['alias(drawAsInfinite(stats.counters.search.deploys.count),"Search Deploys")','alias(drawAsInfinite(stats.counters.shoebox.deploys.count),"Shoebox Deploys")'];
 
   // Search Chart
 
-  var searchTargets = baseTargets.concat('summarize(stats.counters.search.extSearch.total.count,"1h")').concat(["secondYAxis(stats.timers.search.extSearch.total.mean_99)"]);
+  var searchTargets = baseTargets.concat('alias(summarize(stats.counters.search.extSearch.total.count,"1h"),"Searches per Hour")').concat(['alias(secondYAxis(stats.timers.search.extSearch.total.mean_99),"99% Mean Time (ms)")']);
   options.target = searchTargets;
   options.title = "Searches per Hour vs 99% Mean Time in Milliseconds";
   options.yMinRight = 0;
@@ -64,22 +69,22 @@
   // Cache Chart
 
   function sumSeries(metric) {
-    return "sumSeries(" + ["stats.counters.*.*", metric, "count"].join(".") + ")"
+    return "sumSeries(" + ["stats.counters.{search,shoebox}.Cache.*", metric, "count"].join(".") + ")"
   }
 
-  var cacheCountTargets = ["hits", "misses", "sets"].map(function (metric) {return "summarize(" + sumSeries(metric) + ',"1min")'});
-  var cacheRatioTarget = ["secondYAxis(scale(divideSeries(" + sumSeries("hits") + "," + sumSeries("{hits,misses}") + "),100))"];
+  var cacheCountTargets = ["hits"].map(function (metric) {return "alias(summarize(" + sumSeries(metric) + ',"1min"),"Hits per Minute")'});
+  var cacheRatioTarget = ["alias(secondYAxis(asPercent(" + sumSeries("hits") + "," + "sumSeries(" + sumSeries("hits") + "," + sumSeries("misses") + '))), "Hit Ratio")'];
   var cacheTargets = baseTargets.concat(cacheCountTargets).concat(cacheRatioTarget);
   options.target = cacheTargets;
-  options.title = "Hits - Misses - Sets per Minute vs Hit Ratio";
+  options.title = "Hits per Minute vs Hit Ratio";
   options.yMinRight = 70;
   options.yMaxRight = 100;
   $("#cache").graphite(options);
 
   // Websocket Chart
 
-  var pingTarget = 'summarize(stats.counters.shoebox.websocket.handler.ping.count,"1min")'
-  var connectedClientTarget = ["secondYAxis(stats.gauges.shoebox.websocket.channel.user.client)"];
+  var pingTarget = 'alias(summarize(stats.counters.shoebox.websocket.handler.ping.count,"1min"),"Pings per Minute")'
+  var connectedClientTarget = ['alias(secondYAxis(stats.gauges.shoebox.websocket.channel.user.client),"Connected Clients")'];
   var websocketTargets = baseTargets.concat(pingTarget).concat(connectedClientTarget)
   options.target = websocketTargets;
   options.title = "WebSocket Pings per Minute vs Connected Clients";

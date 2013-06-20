@@ -1,6 +1,7 @@
 package com.keepit.common.social
 
 import com.google.inject.Inject
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
@@ -16,31 +17,39 @@ class SocialUserImportFriends @Inject() (
     store: SocialUserRawInfoStore,
     healthcheckPlugin: HealthcheckPlugin) extends Logging {
 
-  def importFriends(friendsWithRawJson: Seq[(SocialUserInfo, JsValue)],
-      network: SocialNetworkType): Seq[SocialUserRawInfo] = {
-    val socialUserInfos = friendsWithRawJson filter {
-      case (f, json) => infoNotInDb(f, network)
-    } map { t =>
-      (db.readWrite {implicit s => repo.save(t._1)}, t._2)
+  def importFriends(friendsWithRawJson: Seq[(SocialUserInfo, JsValue)]): Seq[SocialUserRawInfo] = {
+    val socialUserInfos = db.readOnly { implicit s =>
+      friendsWithRawJson flatMap { case (f, json) => getIfUpdateNeeded(f).map(_ -> json) }
+    }.grouped(100).toIndexedSeq.flatMap { friendsWithJson =>
+      db.readWrite { implicit s =>
+        friendsWithJson.map { case (info, value) => (repo.save(info), value) }
+      }
     }
 
     val socialUserRawInfos = socialUserInfos map { case (info, friend) => createSocialUserRawInfo(info, friend) }
 
     socialUserRawInfos map { info =>
-      log.info("Adding user %s (%s) to S3".format(info.fullName, info.socialUserInfoId.get))
+      log.info(s"Adding user ${info.fullName} (${info.socialUserInfoId.get}) to S3")
       if (!Play.isDev) {
         store += (info.socialUserInfoId.get -> info)
       }
     }
 
-    log.info("Imported %s friends".format(socialUserRawInfos.size))
+    log.info(s"Imported ${socialUserRawInfos.size} friends")
 
     socialUserRawInfos
   }
 
-  private[social] def infoNotInDb(friend: SocialUserInfo, network: SocialNetworkType): Boolean = {
-    db.readOnly { implicit s =>
-      repo.getOpt(friend.socialId, network).isEmpty //todo: check if we want to merge jsons here
+  private def getIfUpdateNeeded(friend: SocialUserInfo)(implicit s: RSession): Option[SocialUserInfo] = {
+    repo.getOpt(friend.socialId, friend.networkType) match {
+      case Some(existing) if existing.copy(fullName = friend.fullName, pictureUrl = friend.pictureUrl) != existing =>
+        Some(existing.copy(
+          fullName = friend.fullName,
+          pictureUrl = friend.pictureUrl,
+          state = SocialUserInfoStates.FETCHED_USING_FRIEND
+        ))
+      case None => Some(friend)
+      case _ => None
     }
   }
 

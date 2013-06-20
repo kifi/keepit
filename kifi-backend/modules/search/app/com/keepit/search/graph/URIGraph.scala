@@ -11,6 +11,7 @@ trait URIGraph {
   def update(): Int
   def update(userId: Id[User]): Int
   def reindex(): Unit
+  def reindexCollection(): Unit
   def getURIGraphSearcher(userId: Option[Id[User]] = None): URIGraphSearcher
   def getCollectionSearcher(): CollectionSearcher
   def close(): Unit
@@ -36,6 +37,8 @@ class URIGraphImpl @Inject()(
     collectionIndexer.reindex()
     uriGraphIndexer.reindex()
   }
+  def reindexCollection(): Unit = collectionIndexer.reindex()
+
   def close() {
     collectionIndexer.close()
     uriGraphIndexer.close()

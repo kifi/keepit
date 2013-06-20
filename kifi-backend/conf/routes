@@ -2,3 +2,5 @@
 ->  / common.Routes
 
 ->  / shoebox.Routes
+
+-> /  search.Routes

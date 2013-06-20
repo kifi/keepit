@@ -1,12 +1,17 @@
-@(id: Option[ExternalId[Invitation]] = None, socialUser: Option[SocialUserInfo] = None)
+@(id: Option[ExternalId[Invitation]] = None, socialUser: Option[SocialUserInfo] = None,
+    msg: Option[String] = None, skipLetMeIn: Boolean = false)
 
 @helper.main(title = "Welcome to Kifi!", scripts = Seq("website/welcome"), hiddenElements = Seq("header")) {
   <section class="content clearfix text_center welcome">
     <h1>Welcome to the <img src="@routes.Assets.at("images/logo2.png")" width="103" height="58" class="logo2"> private beta!</h1>
 
-    <p>KiFi is still in stealth-mode and is open for<br>beta testers upon invitation only.</p>
+    @msg.map { m =>
+      <p class="error-message">@m</p>
+    }.getOrElse {
+      <p>KiFi is still in stealth-mode and is open for<br>beta testers upon invitation only.</p>
+    }
 
-    <div class="welcome_btn">
+    <div class="welcome_btn @{if (skipLetMeIn) "clicked" else ""}">
       <div class="letmein">
         @if(id.isDefined) {
           <a href="#" class="big blue btn" id="letmein">@if(socialUser.isDefined) {It's me, @socialUser.get.fullName.} Let me in!</a>

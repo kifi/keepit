@@ -5,6 +5,7 @@ import com.keepit.common.healthcheck.BenchmarkResultsJson._
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.db.Id
 import com.keepit.common.net.HttpClient
+import com.keepit.model.Collection
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
 import play.api.libs.json.{JsArray, JsValue, Json, JsString}
@@ -15,6 +16,7 @@ import com.keepit.serializer.UriLabelSerializer
 import com.keepit.common.routes.Search
 import com.keepit.common.routes.Common
 import com.keepit.common.search.{ResultClicked, SharingUserInfo, IndexInfo}
+import scala.concurrent.Promise
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -22,6 +24,7 @@ trait SearchServiceClient extends ServiceClient {
   def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isUserKeep: Boolean): Future[Unit]
   def updateURIGraph(): Future[Int]
   def reindexURIGraph(): Future[Unit]
+  def reindexCollection(): Future[Unit]
   def index(): Future[Int]
   def reindex(): Future[Unit]
   def articleIndexInfo(): Future[IndexInfo]
@@ -43,6 +46,7 @@ trait SearchServiceClient extends ServiceClient {
   def getSearchDefaultConfig: Future[SearchConfig]
   def getSearchStatistics(queryUUID: String, queryString: String, userId: Id[User], labeledUris: Map[Id[NormalizedURI], UriLabel]): Future[JsArray]
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html]
+  def dumpLuceneCollection(colId: Id[Collection], userId: Id[User]): Future[Html]
   def dumpLuceneDocument(uri: Id[NormalizedURI]): Future[Html]
   def benchmarks(): Future[BenchmarkResults]
   def version(): Future[String]
@@ -79,6 +83,10 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
     call(Search.internal.uriGraphReindex()).map(r => ())
   }
 
+  def reindexCollection(): Future[Unit] = {
+    call(Search.internal.collectionReindex()).map(r => ())
+  }
+
   def index(): Future[Int] = {
     call(Search.internal.searchUpdate()).map(r => (r.json \ "articles").as[Int])
   }
@@ -102,8 +110,12 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
   }
 
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]] = {
-    call(Search.internal.sharingUserInfo(userId, uriIds.map(_.id).mkString(","))) map { r =>
-      Json.fromJson[Seq[SharingUserInfo]](r.json).get
+    if (uriIds.isEmpty) {
+      Promise.successful(Seq[SharingUserInfo]()).future
+    } else {
+      call(Search.internal.sharingUserInfo(userId, uriIds.map(_.id).mkString(","))) map { r =>
+        Json.fromJson[Seq[SharingUserInfo]](r.json).get
+      }
     }
   }
 
@@ -135,6 +147,10 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
 
   def dumpLuceneURIGraph(userId: Id[User]): Future[Html] = {
     call(Search.internal.uriGraphDumpLuceneDocument(userId)).map(r => Html(r.body))
+  }
+
+  def dumpLuceneCollection(colId: Id[Collection], userId: Id[User]): Future[Html] = {
+    call(Search.internal.collectionDumpLuceneDocument(colId, userId)).map(r => Html(r.body))
   }
 
   def dumpLuceneDocument(id: Id[NormalizedURI]): Future[Html] = {

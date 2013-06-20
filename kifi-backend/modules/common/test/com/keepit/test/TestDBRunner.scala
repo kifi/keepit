@@ -26,6 +26,7 @@ trait TestDBRunner extends TestInjector {
   def unscrapableRepo(implicit injector: Injector) = inject[UnscrapableRepo]
   def electronicMailRepo(implicit injector: Injector) = inject[ElectronicMailRepo]
   def userTopicRepo(implicit injector: Injector) = inject[UserTopicRepo]
+  def uriTopicRepo(implicit injector: Injector) = inject[UriTopicRepo]
   def sessionProvider(implicit injector: Injector) = inject[TestSlickSessionProvider]
 
   def withDB[T](overridingModules: Module*)(f: Injector => T) = {
