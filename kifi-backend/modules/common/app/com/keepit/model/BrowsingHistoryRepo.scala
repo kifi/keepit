@@ -13,9 +13,9 @@ trait BrowsingHistoryRepo extends Repo[BrowsingHistory] {
 
 @Singleton
 class BrowsingHistoryRepoImpl @Inject() (
-                                          val db: DataBaseComponent,
-                                          val clock: Clock,
-                                          val browsingCache: BrowsingHistoryUserIdCache)
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val browsingCache: BrowsingHistoryUserIdCache)
   extends DbRepo[BrowsingHistory] with BrowsingHistoryRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
