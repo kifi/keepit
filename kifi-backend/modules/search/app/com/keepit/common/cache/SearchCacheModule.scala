@@ -1,13 +1,13 @@
 package com.keepit.common.cache
 
 import com.google.inject.{Provides, Singleton}
-import com.keepit.model.{UserConnectionIdCache, ClickHistoryUserIdCache, BrowsingHistoryUserIdCache}
+import com.keepit.model._
 import scala.concurrent.duration._
 import com.keepit.search.ActiveExperimentsCache
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.social.BasicUserUserIdCache
 
-class SearchCacheModule extends CacheModule {
+class SearchCacheModule extends ScalaModule {
 
   def configure {
     install(new MemcachedCacheModule)
@@ -18,6 +18,46 @@ class SearchCacheModule extends CacheModule {
   @Provides
   def basicUserUserIdCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new BasicUserUserIdCache((innerRepo, 5 minutes), (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def bookmarkUriUserCache(outerRepo: FortyTwoCachePlugin) =
+    new BookmarkUriUserCache((outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def normalizedURICache(outerRepo: FortyTwoCachePlugin) =
+    new NormalizedURICache((outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def socialUserInfoUserCache(outerRepo: FortyTwoCachePlugin) =
+    new SocialUserInfoUserCache((outerRepo, 30 days))
+
+  @Singleton
+  @Provides
+  def socialUserInfoNetworkCache(outerRepo: FortyTwoCachePlugin) =
+    new SocialUserInfoNetworkCache((outerRepo, 30 days))
+
+  @Singleton
+  @Provides
+  def userExternalIdCache(outerRepo: FortyTwoCachePlugin) =
+    new UserExternalIdCache((outerRepo, 24 hours))
+
+  @Singleton
+  @Provides
+  def userSessionExternalIdCache(outerRepo: FortyTwoCachePlugin) =
+    new UserSessionExternalIdCache((outerRepo, 24 hours))
+
+  @Singleton
+  @Provides
+  def externalUserIdCache(outerRepo: FortyTwoCachePlugin) =
+    new ExternalUserIdCache((outerRepo, 24 hours))
+
+  @Singleton
+  @Provides
+  def userExperimentCache(outerRepo: FortyTwoCachePlugin) =
+    new UserExperimentCache((outerRepo, 7 days))
 
   @Singleton
   @Provides

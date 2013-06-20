@@ -1,33 +1,13 @@
 package com.keepit.common.social
 
 import com.keepit.common.healthcheck.HealthcheckPlugin
-import scala.collection.mutable.MutableList
-import com.keepit.search.ArticleStore
 import com.keepit.common.logging.Logging
-import com.keepit.search.Article
 import com.keepit.model._
-import play.api.templates.Html
 import akka.util.Timeout
 import akka.actor._
-import akka.actor.Actor._
-import akka.actor.ActorRef
-import play.api.libs.concurrent.Execution.Implicits._
-import akka.pattern.ask
-import scala.concurrent.Await
-import akka.pattern.ask
-import play.api.libs.concurrent._
-import org.joda.time.DateTime
 import com.google.inject.Inject
-import com.google.inject.Provider
-import scala.collection.mutable.{Map => MutableMap}
-import com.keepit.inject._
 import com.keepit.common.db.slick._
-import play.api.Play.current
-import play.api.libs.json.JsArray
-import securesocial.core.{SocialUser, UserId, AuthenticationMethod, OAuth2Info}
-import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
-import scala.concurrent.Await
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.plugin._
 import com.keepit.common.actor.ActorFactory
