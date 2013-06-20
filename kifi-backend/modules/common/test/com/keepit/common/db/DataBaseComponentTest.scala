@@ -16,6 +16,8 @@ import play.api.test.Helpers._
 import scala.collection.mutable.{Map => MutableMap}
 import org.joda.time._
 import com.keepit.common.healthcheck._
+import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
+import java.sql.SQLException
 
 class DataBaseComponentTest extends Specification {
 
@@ -62,6 +64,42 @@ class DataBaseComponentTest extends Specification {
           (inject[Database].readWrite { implicit s2 => 1 === 1 }) must throwA[InSessionException]
         }
         //fakeHealthcheck.errorCount() === 1
+      }
+    }
+
+    "attempt retry" in {
+      running(new EmptyApplication()) {
+        var counter = 0
+        (inject[Database].readWrite(attempts = 3) { implicit s1 =>
+          counter = counter + 1
+          if (1 == 1) throw new SQLException("i'm bad")
+          true
+        }) must throwA[SQLException]
+        counter === 3
+      }
+    }
+
+    "attempt retry not with regular exception" in {
+      running(new EmptyApplication()) {
+        var counter = 0
+        (inject[Database].readWrite(attempts = 3) { implicit s1 =>
+          counter = counter + 1
+          if (1 == 1) throw new Exception("i'm not as bad")
+          true
+        }) must throwA[Exception]
+        counter === 1
+      }
+    }
+
+    "attempt retry not with MySQLIntegrityConstraintViolationException" in {
+      running(new EmptyApplication()) {
+        var counter = 0
+        (inject[Database].readWrite(attempts = 3) { implicit s1 =>
+          counter = counter + 1
+          if (1 == 1) throw new MySQLIntegrityConstraintViolationException("i'm really bad")
+          true
+        }) must throwA[MySQLIntegrityConstraintViolationException]
+        counter === 1
       }
     }
 
