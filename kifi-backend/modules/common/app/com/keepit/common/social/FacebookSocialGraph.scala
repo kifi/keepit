@@ -1,5 +1,8 @@
 package com.keepit.common.social
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
 import com.google.inject.Inject
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
@@ -67,6 +70,12 @@ class FacebookSocialGraph @Inject() (
     val friendsArr = ((parentJson \ "friends" \ "data").asOpt[JsArray]
         orElse (parentJson \ "data").asOpt[JsArray]) getOrElse JsArray()
     friendsArr.value map createSocialUserInfo
+  }
+
+  def revokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = {
+    val accessToken = getAccessToken(socialUserInfo)
+    val url = s"https://graph.facebook.com/${socialUserInfo.socialId}/permissions?access_token=$accessToken"
+    httpClient.deleteFuture(url).map(_ => ())
   }
 
   protected def getAccessToken(socialUserInfo: SocialUserInfo): String = {
