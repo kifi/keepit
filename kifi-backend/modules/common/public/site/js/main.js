@@ -140,8 +140,7 @@ $(function() {
 			contentType: 'application/json',
 			error: onDropOnCollectionAjaxError,
 			success: function(data) {
-				var $count = $coll.find("a span.right");
-				$count.text(+$count.text() + data.added);
+				$coll.find(".keep-count").text(collections[collId].keeps += data.added);
 				if (!$inColl.find("#cb1-" + collId).length) {
 					inCollTmpl.append({id: collId, name: collections[collId].name});
 				}
@@ -424,8 +423,7 @@ $(function() {
 			error: showMessage.bind(null, 'Could not remove keeps from collection, please try again later'),
 			success: function(data) {
 				console.log(data);
-				var $count = $('.left-col .collection[data-id="'+colId+'"]').find('a span.right');
-				$count.text($count.text() - data.removed);
+				$('#collections-list>.collection[data-id="'+colId+'"] .keep-count').text(collections[colId].keeps -= data.removed);
 				$row.remove();
 			}});
 
@@ -444,8 +442,7 @@ $(function() {
 			error: showMessage.bind(null, 'Could not add keeps to collection, please try again later'),
 			success: function(data) {
 				console.log(data);
-				var $count = $('.left-col .collection[data-id="'+colId+'"]').find('a span.right');
-				$count.text(+$count.text()  + data.added);
+				$('#collections-list>.collection[data-id="'+colId+'"] .keep-count').text(collections[colId].keeps += data.added);
 				if (!$inColl.find("#cb1-" + colId).length) {
 					inCollTmpl.append({id: colId, name: collections[colId].name});
 				}
