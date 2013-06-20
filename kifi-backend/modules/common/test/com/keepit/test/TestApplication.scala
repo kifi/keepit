@@ -312,6 +312,8 @@ case class FakeClockModule() extends ScalaModule {
 class FakeSocialGraphPlugin extends SocialGraphPlugin {
   def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]] =
     future { throw new Exception("Not Implemented") }
+  def asyncRevokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] =
+    future { throw new Exception("Not Implemented") }
 }
 
 @Singleton

@@ -146,41 +146,6 @@ class SlickTest extends Specification {
       }
     }
 
-
-    "re-try MySQLIntegrityConstraintViolationException failed transactions" in {
-
-      running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
-        val db = inject[Database]
-        import db.db.Driver.Implicit._ // here's the driver, abstracted away
-
-        var count = 0
-
-        db.readWrite(3) { implicit session =>
-          count += 1
-        }
-        count === 1
-
-        count = 0
-        db.readWrite(3) { implicit session =>
-          count += 1
-          if(count < 3) throw new MySQLIntegrityConstraintViolationException
-        }
-        count === 3
-
-        count = 0
-        ({
-          db.readWrite(1) { implicit session =>
-            count += 1
-            throw new MySQLIntegrityConstraintViolationException
-          }
-          Unit
-        }) must throwA[MySQLIntegrityConstraintViolationException]
-        count === 1
-
-
-      }
-    }
-
     "using external id" in {
       running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
 
