@@ -360,7 +360,7 @@ $(function() {
 				var oldName = $in.data("orig");
 				var newName = $.trim(this.value) || oldName;
 				if (newName !== oldName) {
-					var collId = $coll.data("id");
+					var collId = $coll.addClass("renamed").data("id");
 					$.ajax({
 						url: urlCollections + "/" + collId + "/update",
 						type: "POST",
@@ -388,7 +388,11 @@ $(function() {
 			name = name || $in.data("orig");
 			$in.remove();
 			$name.text(name);
-			$coll.removeClass("renaming");
+			$coll.on("transitionend", function end(e) {
+				if (e.target === this) {
+					$coll.off("transitionend", end).removeClass("renamed");
+				}
+			}).addClass("renamed").removeClass("renaming");
 		}
 	});
 	function hideCollMenu() {

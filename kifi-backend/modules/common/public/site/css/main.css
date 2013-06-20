@@ -37,7 +37,7 @@ input.query:focus, input.query[data-q] {background-image: url(../img/search-blue
 input.query::-webkit-input-placeholder {color: #99a3b3}
 input.query::-moz-placeholder {color: #99a3b3}
 header>nav {display: table-cell; width: 330px; -moz-box-sizing: border-box; box-sizing: border-box; padding-top: 26px; text-align: center; vertical-align: top; font-size: 14px}
-header>nav>a {padding: 0 15px; color: #fff; border-left: 1px solid #fff; vertical-align: middle}
+header>nav>a[href] {padding: 0 15px; color: #fff; border-left: 1px solid #fff; vertical-align: middle}
 header>nav>a:first-child {border-left: 0}
 
 /* main */
@@ -76,21 +76,23 @@ aside {position: absolute; top: 70px; bottom: 0; background: #eff2f7}
 .left-col .my-keeps .view-name::before {content: " "; display: inline-block; width: 21px; height: 21px; padding: 10px 0; margin-right: 7px; background: url(../img/kifi-icon.png) 0/42px content-box; vertical-align: top; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
 .left-col .my-keeps.active .view-name::before {background-position: right}
 #collections>h2 {margin-top: 15px; padding: 0 0 2px 38px; background: url(../img/folder-icon.png) left 12px bottom 13px/18px no-repeat; border-bottom: 1px solid #dbdee3}
-#collections h3 {line-height: 39px; -webkit-transition: background-color 80ms linear, padding-left .2s; transition: background-color 80ms linear, padding-left .2s}
+#collections h3 {line-height: 39px}
 a.new-collection {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhDAAMAIABAO/y9////yH5BAEKAAEALAAAAAAMAAwAAAIXjAMJx6h91IIuMYmz3pzfR0lUNUHiUQAAOw==) center/6px no-repeat #99a3b3; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
 a.new-collection:hover {background-color: #a1acbd}
-.add-collection {border-bottom: 1px solid #dbdee3; background: #fff}
+.add-collection {border-bottom: 1px solid #dbdee3; background: #fff; -webkit-transition: background-color .16s; transition: background-color .16s}
 .add-collection.submitted {background-color: rgba(255,255,255,0)}
 #collections input {width: 100%; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; line-height: normal; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text}
 #collections-list {overflow-y: auto; overflow-x: hidden}
 #collections-list>.sortable-placeholder {background: #6fa6ef; height: 2px; min-height: 0}
-h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
+h3.collection {border-bottom: 1px solid #dbdee3; position: relative; -webkit-transition: padding-left .16s, background-color 0s; transition: padding-left .16s, background-color 0s}
 .collection.with-tri:not(.no-tri) {padding-left: 27px}
 .collection.renaming {background-color: #fff}
 .collection.renaming>a {cursor: text}
+.collection.renaming,
+.collection.renamed {-webkit-transition-duration: .16s; transition-duration: .16s}
 .collection .keep-count {margin-top: 9px}
 .collection.renaming>.keep-count {display: none}
-.coll-tri {position: absolute; top: 0; bottom: 0; left: -27px; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer; visibility: hidden; -webkit-transition: left .2s; transition: left .2s}
+.coll-tri {position: absolute; top: 0; bottom: 0; left: -27px; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer; visibility: hidden; -webkit-transition: left .16s; transition: left .16s}
 .active>.coll-tri {background-color: #9ba4b8}
 .renaming>.coll-tri {display: none}
 .coll-tri::before {content: " "; border-width: 4px 4px 0; border-style: solid; border-color: #9ba4b8 transparent; font-size: 0; line-height: 0; vertical-align: 1px}
