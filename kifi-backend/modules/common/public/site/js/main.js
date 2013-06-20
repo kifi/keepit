@@ -23,13 +23,13 @@ $(function() {
 	var $subtitle = $(".subtitle"), subtitleTmpl = Tempo.prepare($subtitle);
 	var $myKeeps = $("#my-keeps"), myKeepsTmpl = Tempo.prepare($myKeeps).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 		hideLoading();
-		$myKeeps.find(".keep .bottom").each(function() {
+		$myKeeps.find(".keep-who").each(function() {
 			$(this).find('img.small-avatar').prependTo(this);  // eliminating whitespace text nodes?
 		}).filter(":not(:has(.me))")
 			.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
 		initDraggable();
 
-		$(".easydate").easydate({set_title: false});
+		$("time").easydate({set_title: false});
 
 		// insert time sections
 		var now = new Date;
@@ -49,10 +49,10 @@ $(function() {
 	var $results = $("#search-results"), searchTemplate = Tempo.prepare($results).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 		hideLoading();
 		initDraggable();
-		$results.find(".keep .bottom").each(function() {
+		$results.find(".keep-who").each(function() {
 			$(this).find('img.small-avatar').prependTo(this);  // eliminating whitespace text nodes?
 		});
-		$results.find(".keep.mine .bottom:not(:has(.me))")
+		$results.find(".keep.mine .keep-who:not(:has(.me))")
 			.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
 	});
 	var $colls = $("#collections"), collTmpl = Tempo.prepare($colls).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
@@ -461,16 +461,16 @@ $(function() {
 		// 2. If a keep is selected and not checked, no keeps are checked.
 		// 3. If a keep is checked, it is also selected.
 		var $keep = $(this), $selected = $main.find(".keep.selected");
-		if ($(e.target).hasClass("checkbox")) {
+		if ($(e.target).hasClass("keep-checkbox")) {
 			if ($(e.target).toggleClass("checked").hasClass("checked")) {
-				$selected.not(":has(.handle>.checkbox.checked)").removeClass("selected");
+				$selected.not(":has(.keep-checkbox.checked)").removeClass("selected");
 				$keep.addClass("selected");
 			} else {
 				$keep.removeClass("selected");
 			}
 		} else {
 			var select = !$keep.is(".selected") || $selected.length != 1;
-			$selected.not(this).removeClass("selected").end().find(".handle>.checkbox").removeClass("checked");
+			$selected.not(this).removeClass("selected").end().find(".keep-checkbox").removeClass("checked");
 			$keep.toggleClass("selected", select);
 		}
 		$selected = $main.find(".keep.selected");
@@ -500,7 +500,7 @@ $(function() {
 			$title.find('h2').text($keep.find('a').first().text());
 			var url = $keep.find('a').first().attr('href');
 			$title.find('a').text(url).attr('href', url).attr('target', '_blank');
-			$who.html($keep.find('div.bottom').html());
+			$who.html($keep.find(".keep-who").html());
 			$who.find('span').prependTo($who).removeClass('fs9 gray');
 			$inColl.empty();
 			if ($keep.data('collections')) {
@@ -510,7 +510,7 @@ $(function() {
 			}
 			var $btn = $('aside.right .keepit .keep-button');
 			if ($keep.is('.mine')) {
-				$btn.addClass('kept').toggleClass('private', $keep.is('.private')).find('.text').text('kept');
+				$btn.addClass('kept').toggleClass('private', !!$keep.has('.keep-private.on').length).find('.text').text('kept');
 			} else {
 				$btn.removeClass('kept private').find('.text').text('keep it');
 			}
@@ -746,10 +746,7 @@ $(function() {
 					,contentType: 'application/json'
 					,error: function() {showMessage('Could not update keep, please try again later')}
 					,success: function(data) {
-						if (keepButton.is('.private'))
-							keep.find('.bottom span.private').addClass('on');
-						else
-							keep.find('.bottom span.private').removeClass('on');
+						keep.find('.keep-private').toggleClass('on', keepButton.is('.private'));
 					}
 				});
 			});

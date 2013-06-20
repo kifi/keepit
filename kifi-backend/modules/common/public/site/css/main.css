@@ -25,7 +25,6 @@ ol {list-style: none; padding: 0; margin: 0}
 .dark-gray {color: #66676a}
 .green {color: #27ae60}
 .red {color: #ca5742}
-.fs9 {font-size: .8em}
 
 html {height: 100%; text-align: center; overflow: hidden}
 body {height: 100%; max-width: 1260px; min-width: 1024px; margin: 0 auto; padding: 0; background: #fafafa; font-size: 16px; text-align: left; position: relative}
@@ -54,7 +53,7 @@ section.main {margin: -70px 330px 0 200px; height: 100%; -moz-box-sizing: border
 .main-head>.subtitle {font-size: 13px; font-weight: 300; color: #5b6670}
 .result-query::before {content: "\201c"}
 .result-query::after {content: "\201d"}
-.main>.scrollable {height: 100%; overflow-y: auto; padding: 8px 20px 0; border-top: 72px solid transparent; box-sizing: border-box; -moz-box-sizing: border-box}
+.main>.scrollable {height: 100%; overflow-y: auto; padding: 1px 18px 0; border-top: 72px solid transparent; box-sizing: border-box; -moz-box-sizing: border-box}
 
 aside {position: absolute; top: 70px; bottom: 0; background: #eff2f7}
 
@@ -170,24 +169,31 @@ span.long-text, a.long-text {display: inline-block}
 .small-avatar {max-width: 30px; max-height: 30px}
 aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px; border-radius: 4px}
 
-.keep-group-title {color: #67829c; font-size: 21px; font-weight: 100; letter-spacing: 1px; border-bottom: 1px solid #e3e6ee; padding: 4px 30px}
+.keep-group-title {margin-top: 7px; color: #67829c; font-size: 21px; font-weight: 100; letter-spacing: 1px; border-bottom: 1px solid #e3e6ee; padding: 4px 30px}
 .keep-group-title+.keep {border-top: 0}
-.keep {position:relative; clear: left; padding: 10px 0 10px 30px; border-top: 1px solid #f9f9f9}
-.keep .checkbox {position: absolute; left: 3px; top: 4px; width: 15px; height: 15px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; cursor: pointer}
-.keep .checkbox.checked {background-position: 2px 4px}
-.keep .handle {cursor: move; position: absolute; top: 0; bottom: 0; left: 0; width: 21px; display: none; background: #e3e6ee url(../img/drag-handle.png) 4px center no-repeat}
-.keep:hover .handle, .keep.selected .handle {display: block}
-.keep.selected {background: #eff2f7}
-.keep .right {float: right; margin: 0 0 20px 5%}
-.keep a.long-text {max-width: 100%}
-.keep .small-avatar {vertical-align: bottom; float: left}
-.keep .small-avatar.me {margin-right: 3px}
-.keep .bottom {margin-top: 5px}
-.keep .bottom > span {float: left; margin-left: 10px}
-.keep .bottom span.private {display: none}
-.keep .bottom span.private.on {display: inline}
-.keep .bottom:after {content: "."; display: block; visibility: hidden; clear: both}
+.keep {position: relative; clear: left; padding: 10px 0 13px 30px; border-top: 1px solid #f9f9f9}
+.keep>.handle {cursor: move; position: absolute; top: 0; bottom: 0; left: 0; width: 21px; display: none; background: #e3e6ee url(../img/drag-handle.png) 4px center no-repeat}
+.keep-checkbox {position: absolute; left: 3px; top: 4px; width: 15px; height: 15px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; cursor: pointer}
+.keep-checkbox.checked {background-position: 2px 4px}
+.keep:hover>.handle,
+.keep.selected>.handle {display: block}
+.keep.selected {background-color: #eff2f7}
+.keep>time {float: right; margin: 0 16px 0 4%; font-size: 12px; line-height: 28px; color: #99a3b3}
+.keep-title {max-width: 100%; color: #0089d5; font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased}
+.keep-title>a[href] {color: inherit}
+.keep-url {font-size: 12px; line-height: 14px; color: #99a3b3}
+.keep-who {margin-top: 7px}
+.keep-who>img {vertical-align: middle; width: 23px; height: 23px; border-radius: 2px; margin-right: 1px}
+.keep-who>img.me {border-radius: 50% 0 0 50%}
+.keep-who>img.me:last-of-type {border-radius: 50%}
+.keep-who-text {vertical-align: middle; margin-left: 3px; font-size: 12px; color: #99a3b3}
+.keep-private {display: none; margin: 0 2px; background: url(../img/private.png) left center/17px no-repeat; margin: 0 2px; line-height: 17px; padding-left: 21px}
+.keep-private.on {display: inline-block}
 div.loading {text-align: center; display: none}
 .clearfix {clear: both}
 .add-collection {display: none}
 .drag-helper {background: #fff; padding: 5px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
+
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .keep-private {background-image: url(../img/private.2x.png)}
+}
