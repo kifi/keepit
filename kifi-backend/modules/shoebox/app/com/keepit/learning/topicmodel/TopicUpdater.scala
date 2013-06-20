@@ -26,12 +26,13 @@ class TopicUpdater @Inject() (
   documentTopicModel: DocumentTopicModel
 ) extends Logging {
   val commitBatchSize = 100
-  val fetchSize = 2000
+  val fetchSize = 5000
   val uriTopicHelper = new UriTopicHelper
   val userTopicHelper = new UserTopicByteArrayHelper
 
   // main entry point
   def update(): Unit = {
+    log.info("==============topicUpdater: starting a new round of update =============")
     val (uriSeq, bookmarkSeq) = db.readOnly { implicit s =>
       topicSeqInfoRepo.getSeqNums match {
         case Some((uriSeq, bookmarkSeq)) => (uriSeq, bookmarkSeq)
@@ -58,7 +59,7 @@ class TopicUpdater @Inject() (
       log.info(s"uri topic update round ${i + 1} of $rounds")
       batchUpdateUriTopic(uris.slice(i * commitBatchSize, (i + 1) * commitBatchSize))
     }
-    batchUpdateUriTopic(uris.slice(rounds * commitBatchSize, rounds * commitBatchSize + left))
+    if ( left > 0) batchUpdateUriTopic(uris.slice(rounds * commitBatchSize, rounds * commitBatchSize + left))
     log.info("UriTopicRepo update done")
 
   }
@@ -73,25 +74,27 @@ class TopicUpdater @Inject() (
     val userBookmarks = getOverdueUserUris(seqNum)
     val rounds = userBookmarks.size / commitBatchSize
     val left = userBookmarks.size % commitBatchSize
-    log.info(s"{userBookmarks} bookmarks have been changed. Updating UserTopicTable")
+    log.info(s"${userBookmarks.size} bookmarks have been changed. Updating UserTopicTable")
     (0 until rounds).foreach { i =>
       log.info(s"user topic update round ${i + 1} of $rounds")
       batchUpdateUserTopic(userBookmarks.slice(i * commitBatchSize, (i + 1) * commitBatchSize))
     }
-    batchUpdateUserTopic(userBookmarks.slice(rounds * commitBatchSize, rounds * commitBatchSize + left))
+    if (left > 0 ) batchUpdateUserTopic(userBookmarks.slice(rounds * commitBatchSize, rounds * commitBatchSize + left))
     log.info("UserTopicRepo update done")
   }
 
   private def batchUpdateUriTopic(uris: Seq[NormalizedURI]): Unit = {
-
-    val uriTopics = getTopicForUris(uris.flatMap { _.id })
-    db.readWrite { implicit s =>
-      uriTopics.foreach { x =>
-        uriTopicRepo.getByUriId(x.uriId) match {
-          case Some(uriTopic) => uriTopicRepo.save(uriTopic.copy(topic = x.topic, primaryTopic = x.primaryTopic, secondaryTopic = x.secondaryTopic))
-          case None => uriTopicRepo.save(x)
+    if ( uris.size > 0 ) {
+      val uriTopics = getTopicForUris(uris.flatMap { _.id })
+      db.readWrite { implicit s =>
+        uriTopics.foreach { x =>
+          uriTopicRepo.getByUriId(x.uriId) match {
+            case Some(uriTopic) => uriTopicRepo.save(uriTopic.copy(topic = x.topic, primaryTopic = x.primaryTopic, secondaryTopic = x.secondaryTopic))
+            case None => uriTopicRepo.save(x)
+          }
         }
         val largestSeq = uris.sortBy(_.seq).last.seq
+        log.info("updating uri_seq in topicSeqInfoRepo to" + largestSeq)
         topicSeqInfoRepo.updateUriSeq(largestSeq)
       }
     }
@@ -118,29 +121,32 @@ class TopicUpdater @Inject() (
   }
 
   def batchUpdateUserTopic(bookmarks: Seq[Bookmark]): Unit = {
-    val userBookmarks = groupBookmarksByUser(bookmarks)
-    val bookmarkTopics = getBookmarkTopics(bookmarks.map(_.uriId))
-    val userTopics = getUserTopics(userBookmarks, bookmarkTopics)
-    db.readWrite { implicit s =>
-      userTopics.foreach{ userTopic =>
-        val oldTopic = userTopicRepo.getByUserId(userTopic._1)
-        if (oldTopic == None){
-          val topic = new Array[Int](TopicModelGlobal.numTopics)
-          userTopic._2.foreach{ case (topicIdx, counts) => topic(topicIdx) += counts;
-            if (topic(topicIdx) < 0) { topic(topicIdx) = 0; log.warn("was trying to set user topic to negative")}
+    if (bookmarks.size > 0) {
+      val userBookmarks = groupBookmarksByUser(bookmarks)
+      val bookmarkTopics = getBookmarkTopics(bookmarks.map(_.uriId))
+      val userTopics = getUserTopics(userBookmarks, bookmarkTopics)
+      db.readWrite { implicit s =>
+        userTopics.foreach{ userTopic =>
+          val oldTopic = userTopicRepo.getByUserId(userTopic._1)
+          if (oldTopic == None){
+            val topic = new Array[Int](TopicModelGlobal.numTopics)
+            userTopic._2.foreach{ case (topicIdx, counts) => topic(topicIdx) += counts;
+              if (topic(topicIdx) < 0) { topic(topicIdx) = 0; log.warn("was trying to set user topic to negative")}
+            }
+            // insert new record
+            userTopicRepo.save(UserTopic(userId = userTopic._1, topic = userTopicHelper.toByteArray(topic)))
+          } else {
+            val topic = userTopicHelper.toIntArray(oldTopic.get.topic)
+            userTopic._2.foreach{ case (topicIdx, counts) => topic(topicIdx) += counts;
+              if (topic(topicIdx) < 0) { topic(topicIdx) = 0; log.warn("was trying to set user topic to negative")}
+            }
+            userTopicRepo.save(oldTopic.get.copy(topic = userTopicHelper.toByteArray(topic)))
           }
-          // insert new record
-          userTopicRepo.save(UserTopic(userId = userTopic._1, topic = userTopicHelper.toByteArray(topic)))
-        } else {
-          val topic = userTopicHelper.toIntArray(oldTopic.get.topic)
-          userTopic._2.foreach{ case (topicIdx, counts) => topic(topicIdx) += counts;
-            if (topic(topicIdx) < 0) { topic(topicIdx) = 0; log.warn("was trying to set user topic to negative")}
-          }
-          userTopicRepo.save(oldTopic.get.copy(topic = userTopicHelper.toByteArray(topic)))
         }
+        val largestSeq = bookmarks.sortBy(_.seq).last.seq
+        log.info("updating bookmark_seq in topicSeqInfoRepo to" + largestSeq.value)
+        topicSeqInfoRepo.updateBookmarkSeq(largestSeq)
       }
-      val largestSeq = bookmarks.sortBy(_.seq).last.seq
-      topicSeqInfoRepo.updateBookmarkSeq(largestSeq)
     }
   }
 

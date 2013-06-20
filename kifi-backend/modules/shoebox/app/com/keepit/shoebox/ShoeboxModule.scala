@@ -39,8 +39,7 @@ import play.api.Play.current
 import play.api.db.DB
 import com.keepit.common.cache.ShoeboxCacheModule
 import securesocial.controllers.TemplatesPlugin
-import com.keepit.learning.topicmodel.WordTopicModel
-import com.keepit.learning.topicmodel.LdaWordTopicModel
+import com.keepit.learning.topicmodel.{WordTopicModel, LdaWordTopicModel, TopicUpdaterPlugin, TopicUpdaterPluginImpl}
 
 
 class ShoeboxModule() extends ScalaModule with Logging {
@@ -67,6 +66,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
     bind[InvitationMailPlugin].to[InvitationMailPluginImpl].in[AppScoped]
     bind[NotificationConsistencyChecker].to[NotificationConsistencyCheckerImpl].in[AppScoped]
     bind[ChannelPlugin].to[ChannelPluginImpl].in[AppScoped]
+    bind[TopicUpdaterPlugin].to[TopicUpdaterPluginImpl].in[AppScoped]
 
     bind[LocalPostOffice].to[ShoeboxPostOfficeImpl]
     bind[HealthcheckMailSender].to[LocalHealthcheckMailSender]
