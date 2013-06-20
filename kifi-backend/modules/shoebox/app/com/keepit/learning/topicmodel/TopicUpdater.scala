@@ -88,7 +88,7 @@ class TopicUpdater @Inject() (
     db.readWrite { implicit s =>
       uriTopics.foreach { x =>
         uriTopicRepo.getByUriId(x.uriId) match {
-          case Some(uriTopic) => uriTopicRepo.save(x.copy(id = uriTopic.id))
+          case Some(uriTopic) => uriTopicRepo.save(uriTopic.copy(topic = x.topic, primaryTopic = x.primaryTopic, secondaryTopic = x.secondaryTopic))
           case None => uriTopicRepo.save(x)
         }
         val largestSeq = uris.sortBy(_.seq).last.seq
