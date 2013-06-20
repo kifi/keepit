@@ -23,7 +23,8 @@ case class ArticleSearchResult(
   svVariance: Float = -1.0f,			// semantic vector variance
   svExistenceVar: Float = -1.0f,
   toShow: Boolean = true,
-  timeLogs: Option[SearchTimeLogs] = None)
+  timeLogs: Option[SearchTimeLogs] = None,
+  lang: Lang = Lang("en"))
 
 
 class Scoring(val textScore: Float, val normalizedTextScore: Float, val bookmarkScore: Float, val recencyScore: Float) extends Equals {
