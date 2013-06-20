@@ -82,6 +82,7 @@ $(function() {
 		$(".draggable").draggable({
 			revert: "invalid",
 			handle: ".handle",
+			cancel: ".keep-checkbox",
 			cursorAt: { top: 15, left: 0 },
 			helper: function() {
 				var text = $(this).find('a').first().text();
@@ -456,7 +457,9 @@ $(function() {
 		}
 	});
 
-	var $main = $(".main").on("click", ".keep", function(e) {
+	var $main = $(".main").on("mousedown", ".keep-checkbox", function(e) {
+		e.preventDefault();  // avoid starting selection
+	}).on("click", ".keep", function(e) {
 		// 1. Only one keep at a time can be selected and not checked.
 		// 2. If a keep is selected and not checked, no keeps are checked.
 		// 3. If a keep is checked, it is also selected.
@@ -516,8 +519,8 @@ $(function() {
 			}
 			showRightSide();
 		}
-	})
-	.find(".scrollable").scroll(function() { // infinite scroll
+	});
+	$main.find(".scrollable").scroll(function() { // infinite scroll
 		var sT = this.scrollTop;
 		$(this.previousElementSibling).toggleClass("scrolled", sT > 0);
 		if (!isLoading() && this.clientHeight + sT > this.scrollHeight - 300) {

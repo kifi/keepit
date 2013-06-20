@@ -46,10 +46,10 @@ section.main {margin: -70px 330px 0 200px; height: 100%; -moz-box-sizing: border
 aside {position: absolute; top: 70px; bottom: 0; background: #eff2f7}
 
 /* left column */
-.left-col {left: 0; width: 200px; z-index: 1}
+.left-col {left: 0; width: 200px}
 .my-identity {position: relative; width: 100%; text-align: center; background: #fff; padding-bottom: 10px}
-.my-pic {width: 66px; height: 66px; margin: 0 auto -10px; border-radius: 50%; border: 6px solid #eff2f7; position: relative; top: -10px; background-size: 100%; background-color: #b6c3cc}
-.my-name {line-height: 28px}
+.my-pic {width: 66px; height: 66px; margin: 0 auto -10px; border-radius: 50%; border: 6px solid #eff2f7; position: relative; top: -10px; background-size: 100%; background-color: #b6c3cc; z-index: 1}
+.my-name {height: 28px; line-height: 28px}
 .my-name:first-child {padding-top: 80px}
 .left-col h2 {margin: 4px 0 0; font-size: 1.2em; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased; padding: 0 11px}
 .left-col h3 {margin: 0; position: relative; font-size: 13px; line-height: 41px; -webkit-user-select: none; -moz-user-select: -moz-none; -ms-user-select: none}
@@ -160,8 +160,11 @@ aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px;
 .keep-group-title {margin-top: 7px; color: #67829c; font-size: 21px; font-weight: 100; letter-spacing: 1px; border-bottom: 1px solid #e3e6ee; padding: 4px 30px}
 .keep-group-title+.keep {border-top: 0}
 .keep {position: relative; clear: left; padding: 10px 0 13px 30px; border-top: 1px solid #f9f9f9}
-.keep>.handle {cursor: move; position: absolute; top: 0; bottom: 0; left: 0; width: 21px; display: none; background: #e3e6ee url(../img/drag-handle.png) 4px center no-repeat}
-.keep-checkbox {position: absolute; left: 3px; top: 4px; width: 15px; height: 15px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; cursor: pointer}
+.keep>.handle {cursor: move; position: absolute; top: 0; bottom: 0; left: 0; width: 21px; display: none; background: url(../img/drag-handle.png) center/10px no-repeat}
+.keep>.handle:hover {background-color: #e3e6ee}
+.keep-checkbox {display: none; position: absolute; left: 3px; top: 4px; width: 15px; height: 15px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; cursor: pointer}
+.keep>.handle:hover>.keep-checkbox,
+.keep.selected>.handle>.keep-checkbox {display: block}
 .keep-checkbox.checked {background-position: 2px 4px}
 .keep:hover>.handle,
 .keep.selected>.handle {display: block}
@@ -185,4 +188,5 @@ div.loading {text-align: center; display: none}
 /* retina image overrides */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
   .keep-private {background-image: url(../img/private.2x.png)}
+  .keep>.handle {background-image: url(../img/drag-handle.2x.png)}
 }
