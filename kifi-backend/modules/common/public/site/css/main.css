@@ -90,6 +90,9 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative; -webkit-tra
 .collection.renaming>a {cursor: text}
 .collection.renaming,
 .collection.renamed {-webkit-transition-duration: .16s; transition-duration: .16s}
+.collection.drop-hover {background-color: #6fa6ef}
+.collection.drop-hover .view-name {color: #fff}
+.collection.drop-hover .keep-count {background-color: #fff; border-color: #fff; color: #628196}
 .collection .keep-count {margin-top: 9px}
 .collection.renaming>.keep-count {display: none}
 .coll-tri {position: absolute; top: 0; bottom: 0; left: -27px; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer; visibility: hidden; -webkit-transition: left .16s; transition: left .16s}
@@ -171,7 +174,7 @@ aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px;
 .keep {position:relative; clear: left; padding: 10px 0 10px 30px; border-top: 1px solid #f9f9f9}
 .keep .checkbox {position: absolute; left: 3px; top: 4px; width: 15px; height: 15px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; cursor: pointer}
 .keep .checkbox.checked {background-position: 2px 4px}
-.keep .handle {cursor: move; position: absolute; top: 0; bottom: 0; left: 0; width: 21px; display: none; background: #e3e6ee url(../img/drag-handle.png) 4px 35px no-repeat}
+.keep .handle {cursor: move; position: absolute; top: 0; bottom: 0; left: 0; width: 21px; display: none; background: #e3e6ee url(../img/drag-handle.png) 4px center no-repeat}
 .keep:hover .handle, .keep.selected .handle {display: block}
 .keep.selected {background: #eff2f7}
 .keep .right {float: right; margin: 0 0 20px 5%}
@@ -187,4 +190,3 @@ div.loading {text-align: center; display: none}
 .clearfix {clear: both}
 .add-collection {display: none}
 .drag-helper {background: #fff; padding: 5px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
-.drop-hover {background: #b6c3cc}
