@@ -38,7 +38,7 @@ class FakeHttpClient(
 }
 
 class FakeHttpPostClient(requestToResponse: Option[PartialFunction[String, FakeClientResponse]],
-                     assertion: String => Unit) extends FakeHttpClient(requestToResponse) {
+  assertion: String => Unit) extends FakeHttpClient(requestToResponse) {
   override def post(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = {
     assertion(body.toString())
     assertUrl(url)

@@ -211,20 +211,22 @@ class Scraper @Inject() (
                 case None => LangDetector.detect(content)
               }
               val titleLang = LangDetector.detect(title, contentLang) // bias the detection using the content language
-              Scraped(Article(id = normalizedUri.id.get,
-                              title = title,
-                              description = description,
-                              media = media,
-                              content = content,
-                              scrapedAt = currentDateTime,
-                              httpContentType = extractor.getMetadata("Content-Type"),
-                              httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
-                              state = NormalizedURIStates.SCRAPED,
-                              message = None,
-                              titleLang = Some(titleLang),
-                              contentLang = Some(contentLang),
-                              destinationUrl = fetchStatus.destinationUrl),
-                      signature)
+              Scraped(Article(
+                  id = normalizedUri.id.get,
+                  title = title,
+                  description = description,
+                  media = media,
+                  content = content,
+                  scrapedAt = currentDateTime,
+                  httpContentType = extractor.getMetadata("Content-Type"),
+                  httpOriginalContentCharset = extractor.getMetadata("Content-Encoding"),
+                  state = NormalizedURIStates.SCRAPED,
+                  message = None,
+                  titleLang = Some(titleLang),
+                  contentLang = Some(contentLang),
+                  destinationUrl = fetchStatus.destinationUrl
+               ),
+               signature)
             }
           }
         case HttpStatus.SC_NOT_MODIFIED =>

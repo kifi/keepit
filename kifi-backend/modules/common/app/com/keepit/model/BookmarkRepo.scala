@@ -29,11 +29,11 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
 
 @Singleton
 class BookmarkRepoImpl @Inject() (
-                                   val db: DataBaseComponent,
-                                   val clock: Clock,
-                                   val countCache: BookmarkCountCache,
-                                   val keepToCollectionRepo: KeepToCollectionRepoImpl,
-                                   bookmarkUriUserCache: BookmarkUriUserCache)
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val countCache: BookmarkCountCache,
+  val keepToCollectionRepo: KeepToCollectionRepoImpl,
+  bookmarkUriUserCache: BookmarkUriUserCache)
   extends DbRepo[Bookmark] with BookmarkRepo with ExternalIdColumnDbFunction[Bookmark] {
 
   import DBSession._
