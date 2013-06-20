@@ -155,6 +155,7 @@ class HomeController @Inject() (db: Database,
       BadRequest(s"You are not connected to ${network.displayName}.")
     } else {
       val sui = thisNetwork.head
+      socialGraphPlugin.asyncRevokePermissions(sui)
       db.readWrite { implicit s =>
         socialConnectionRepo.deactivateAllConnections(sui.id.get)
         socialUserRepo.save(sui.copy(credentials = None, userId = None))
