@@ -501,7 +501,7 @@ $(function() {
 			var url = $keep.find('a').first().attr('href');
 			$title.find('a').text(url).attr('href', url).attr('target', '_blank');
 			$who.html($keep.find(".keep-who").html());
-			$who.find('span').prependTo($who).removeClass('fs9 gray');
+			$who.find('span').prependTo($who);
 			$inColl.empty();
 			if ($keep.data('collections')) {
 				$keep.data('collections').split(',').forEach(function(id) {

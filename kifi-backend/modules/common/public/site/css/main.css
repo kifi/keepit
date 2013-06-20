@@ -1,11 +1,4 @@
-/*
-@dark-blue: #204b69;
-@light-blue: #628196;
-@active: #6fa6ef;
-@inactive: #b6c3cc;
-*/
-
-/* overrides */
+/* normalization */
 * {font-family: "Helvetica Neue",Helvetica,Arial,sans-serif}
 *:focus {outline: none}
 h1,h2,h3,h4,h5,label,select {font-weight: normal; color: #99a3b3}
@@ -20,12 +13,7 @@ ol {list-style: none; padding: 0; margin: 0}
 ::-moz-placeholder {color: #b6c3cc}
 :-ms-input-placeholder {color: #b6c3cc}
 
-/* common */
-.gray {color: #99a3b3}
-.dark-gray {color: #66676a}
-.green {color: #27ae60}
-.red {color: #ca5742}
-
+/* header */
 html {height: 100%; text-align: center; overflow: hidden}
 body {height: 100%; max-width: 1260px; min-width: 1024px; margin: 0 auto; padding: 0; background: #fafafa; font-size: 16px; text-align: left; position: relative}
 header {display: table; width: 100%; height: 70px; background: #67829c; position: relative; z-index: 1}
@@ -194,6 +182,7 @@ div.loading {text-align: center; display: none}
 .add-collection {display: none}
 .drag-helper {background: #fff; padding: 5px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
 
+/* retina image overrides */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
   .keep-private {background-image: url(../img/private.2x.png)}
 }
