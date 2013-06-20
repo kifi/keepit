@@ -16,7 +16,7 @@ class UnscrapableTest extends Specification with DbRepos with TestAkkaSystem {
 
   "Unscrapable" should {
 
-    "persist & use unscrapable patterns w/ approperiate cashing" in new TestKitScope {
+    "persist & use unscrapable patterns w/ approperiate cashing" in {
       running(new EmptyApplication()) {
 
         val unscrapeCache = inject[UnscrapableRepoImpl].unscrapableCache
@@ -30,8 +30,8 @@ class UnscrapableTest extends Specification with DbRepos with TestAkkaSystem {
           unscrapeCache.get(UnscrapableAllKey()).isDefined === false
 
           unscrapableRepo.allActive().length === 2
-          awaitCond(unscrapeCache.get(UnscrapableAllKey()).isDefined)
-          awaitCond(unscrapeCache.get(UnscrapableAllKey()).get.length === 2)
+          unscrapeCache.get(UnscrapableAllKey()).isDefined
+          unscrapeCache.get(UnscrapableAllKey()).get.length === 2
 
           unscrapableRepo.save(Unscrapable(pattern = "^https*://app.asana.com.*$"))
 

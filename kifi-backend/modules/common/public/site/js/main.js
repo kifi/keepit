@@ -35,14 +35,14 @@ $(function() {
 		var now = new Date;
 		$myKeeps.find('.keep').each(function() {
 			var age = daysBetween(new Date($(this).data('created')), now);
-			if ($myKeeps.find('li.search-section.today').length == 0 && age <= 1) {
-				$(this).before('<li class="search-section today">Today</li>');
-			} else if ($myKeeps.find('li.search-section.yesterday').length == 0 && age > 1 && age < 2) {
-				$(this).before('<li class="search-section yesterday">Yesderday</li>');
-			} else if ($myKeeps.find('li.search-section.week').length == 0 && age >= 2 && age <= 7) {
-				$(this).before('<li class="search-section week">Past Week</li>');
-			} else if ($myKeeps.find('li.search-section.older').length == 0 && age > 7) {
-				$(this).before('<li class="search-section older">Older</li>');
+			if ($myKeeps.find('li.keep-group-title.today').length == 0 && age <= 1) {
+				$(this).before('<li class="keep-group-title today">Today</li>');
+			} else if ($myKeeps.find('li.keep-group-title.yesterday').length == 0 && age > 1 && age < 2) {
+				$(this).before('<li class="keep-group-title yesterday">Yesderday</li>');
+			} else if ($myKeeps.find('li.keep-group-title.week').length == 0 && age >= 2 && age <= 7) {
+				$(this).before('<li class="keep-group-title week">Past Week</li>');
+			} else if ($myKeeps.find('li.keep-group-title.older').length == 0 && age > 7) {
+				$(this).before('<li class="keep-group-title older">Older</li>');
 			}
 		});
 	});
@@ -140,8 +140,7 @@ $(function() {
 			contentType: 'application/json',
 			error: onDropOnCollectionAjaxError,
 			success: function(data) {
-				var $count = $coll.find("a span.right");
-				$count.text(+$count.text() + data.added);
+				$coll.find(".keep-count").text(collections[collId].keeps += data.added);
 				if (!$inColl.find("#cb1-" + collId).length) {
 					inCollTmpl.append({id: collId, name: collections[collId].name});
 				}
@@ -223,7 +222,7 @@ $(function() {
 		$.getJSON(urlMyKeeps, params,
 			function(data) {
 				myKeepsTmpl.prepend(data.keeps);
-				$myKeeps.find('.search-section.today').prependTo($myKeeps);
+				$myKeeps.find('.keep-group-title.today').prependTo($myKeeps);
 			});
 	}
 
@@ -248,7 +247,7 @@ $(function() {
 			subtitleTmpl.render({
 				numShown: $myKeeps.find(".keep").length,
 				numTotal: collId ? collections[collId].keeps : myKeepsCount,
-				collId: collId});
+				collId: collId || undefined});
 		}
 	}
 
@@ -269,7 +268,7 @@ $(function() {
 					subtitleTmpl.render({
 						numShown: $myKeeps.find(".keep").length + data.keeps.length,
 						numTotal: collId ? collections[collId].keeps : myKeepsCount,
-						collId: collId});
+						collId: collId || undefined});
 					hideLoading();
 					if (!data.keeps.length) {  // no more
 						lastKeep = "end";
@@ -304,7 +303,7 @@ $(function() {
 
 	function updateNumKeeps() {
 		$.getJSON(urlMyKeepsCount, function(data) {
-			$('.left-col .my-keeps span').text(myKeepsCount = data.numKeeps);
+			$('.left-col .my-keeps .keep-count').text(myKeepsCount = data.numKeeps);
 		});
 	}
 
@@ -336,17 +335,21 @@ $(function() {
 			contentType: 'application/json',
 			error: showMessage.bind(null, 'Could not delete collection, please try again later'),
 			success: function(data) {
+				delete collections[collId];
 				$coll.slideUp(80, $.fn.remove.bind($coll));
+				if ($myKeeps.data("collId") === collId) {
+					$myKeeps.removeData("collId");
+					showMyKeeps();
+				}
 				$('aside.right .collections ul li:has(input[data-id="'+collId+'"])').remove();
-				// TODO: update center column
 			}});
 	}).on("mouseup mousedown", ".coll-rename", function(e) {
 		if (e.which > 1) return;
 		hideCollMenu();
-		var $coll = $collMenu.prev(".collection").addClass("renaming").removeAttr("title");
-		var $a = $coll.find(".coll-name"), name = $a.text();
+		var $coll = $collMenu.prev(".collection").addClass("renaming");
+		var $name = $coll.find(".view-name"), name = $name.text();
 		var $in = $("<input type=text placeholder='Type new collection name'>").val(name).data("orig", name);
-		$a.empty().append($in);
+		$name.empty().append($in);
 		setTimeout(function() {
 			$in[0].setSelectionRange(0, name.length, "backward");
 			$in[0].focus();
@@ -356,18 +359,22 @@ $(function() {
 				var oldName = $in.data("orig");
 				var newName = $.trim(this.value) || oldName;
 				if (newName !== oldName) {
+					var collId = $coll.addClass("renamed").data("id");
 					$.ajax({
-						url: urlCollections + "/" + $coll.data('id') + "/update",
+						url: urlCollections + "/" + collId + "/update",
 						type: "POST",
 						dataType: 'json',
 						data: JSON.stringify({name: newName}),
 						contentType: 'application/json',
 						error: function() {
 							showMessage('Could not rename collection, please try again later');
-							$a.text(oldName).prop("title", oldName);
+							$name.text(oldName);
 						},
 						success: function() {
-							// TODO: update center column
+							collections[collId].name = newName;
+							if ($myKeeps.data("collId") === collId) {
+								$main.find("h1").text(newName);
+							}
 						}
 					});
 				}
@@ -379,8 +386,12 @@ $(function() {
 		function exitRename(name) {
 			name = name || $in.data("orig");
 			$in.remove();
-			$a.text(name).prop("title", name);
-			$coll.removeClass("renaming");
+			$name.text(name);
+			$coll.on("transitionend", function end(e) {
+				if (e.target === this) {
+					$coll.off("transitionend", end).removeClass("renamed");
+				}
+			}).addClass("renamed").removeClass("renaming");
 		}
 	});
 	function hideCollMenu() {
@@ -412,8 +423,7 @@ $(function() {
 			error: showMessage.bind(null, 'Could not remove keeps from collection, please try again later'),
 			success: function(data) {
 				console.log(data);
-				var $count = $('.left-col .collection[data-id="'+colId+'"]').find('a span.right');
-				$count.text($count.text() - data.removed);
+				$('#collections-list>.collection[data-id="'+colId+'"] .keep-count').text(collections[colId].keeps -= data.removed);
 				$row.remove();
 			}});
 
@@ -432,8 +442,7 @@ $(function() {
 			error: showMessage.bind(null, 'Could not add keeps to collection, please try again later'),
 			success: function(data) {
 				console.log(data);
-				var $count = $('.left-col .collection[data-id="'+colId+'"]').find('a span.right');
-				$count.text(+$count.text()  + data.added);
+				$('#collections-list>.collection[data-id="'+colId+'"] .keep-count').text(collections[colId].keeps += data.added);
 				if (!$inColl.find("#cb1-" + colId).length) {
 					inCollTmpl.append({id: colId, name: collections[colId].name});
 				}
@@ -452,16 +461,16 @@ $(function() {
 		// 2. If a keep is selected and not checked, no keeps are checked.
 		// 3. If a keep is checked, it is also selected.
 		var $keep = $(this), $selected = $main.find(".keep.selected");
-		if (e.target.type === "checkbox") {
-			if (e.target.checked) {
-				$selected.not(":has(.handle>input:checked)").removeClass("selected");
+		if ($(e.target).hasClass("checkbox")) {
+			if ($(e.target).toggleClass("checked").hasClass("checked")) {
+				$selected.not(":has(.handle>.checkbox.checked)").removeClass("selected");
 				$keep.addClass("selected");
 			} else {
 				$keep.removeClass("selected");
 			}
 		} else {
 			var select = !$keep.is(".selected") || $selected.length != 1;
-			$selected.not(this).removeClass("selected").end().find(".handle>input").prop("checked", false);
+			$selected.not(this).removeClass("selected").end().find(".handle>.checkbox").removeClass("checked");
 			$keep.toggleClass("selected", select);
 		}
 		$selected = $main.find(".keep.selected");

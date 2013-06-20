@@ -81,6 +81,7 @@ private[social] class SocialGraphActor @Inject() (
 }
 
 class SocialGraphPluginImpl @Inject() (
+                                        graphs: Set[SocialGraph],
                                         actorFactory: ActorFactory[SocialGraphActor],
                                         val schedulingProperties: SchedulingProperties)
   extends SocialGraphPlugin with Logging with SchedulingPlugin {
@@ -99,12 +100,13 @@ class SocialGraphPluginImpl @Inject() (
     log.info("stopping SocialGraphPluginImpl")
   }
 
+  def asyncRevokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = {
+    graphs.find(_.networkType == socialUserInfo.networkType).get.revokePermissions(socialUserInfo)
+  }
+
   override def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]] = {
     require(socialUserInfo.credentials.isDefined,
       "social user info's credentials are not defined: %s".format(socialUserInfo))
     actor.ask(FetchUserInfo(socialUserInfo))(5 minutes).mapTo[Seq[SocialConnection]]
   }
 }
-
-
-

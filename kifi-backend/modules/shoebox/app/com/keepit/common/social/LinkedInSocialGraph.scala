@@ -1,5 +1,7 @@
 package com.keepit.common.social
 
+import scala.concurrent.Future
+
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.HttpClient
@@ -42,6 +44,11 @@ class LinkedInSocialGraph @Inject() (client: HttpClient) extends SocialGraph wit
       .withHeaders("x-li-format" -> "json", "Content-Type" -> "application/json")
       .sign(oauth)
       .post(sendMessageBody(to.socialId, subject, message))
+  }
+
+  def revokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] = {
+    // LinkedIn has no way of doing this through the API
+    Future.successful(())
   }
 
   private def sendMessageUrl(): String = {

@@ -83,24 +83,29 @@ class SocialUserInfoTest extends Specification with TestDBRunner with TestAkkaSy
       deserialized === sui
     }
 
-    "use cache properly" in new TestKitScope {
+    "use cache properly" in {
       withDB() { implicit injector =>
         val user = setup()
         db.readWrite { implicit c =>
           def isInCache = inject[SocialUserInfoRepoImpl].userCache.get(SocialUserInfoUserKey(user.id.get)).isDefined
 
           val origSocialUser = socialUserInfoRepo.getByUser(user.id.get).head
-          awaitCond(isInCache)
+          isInCache === true
 
           socialUserInfoRepo.save(origSocialUser.copy(fullName = "John Smith"))
           isInCache must beFalse
 
           val newSocialUser = socialUserInfoRepo.getByUser(user.id.get).head
-          awaitCond(isInCache)
+          isInCache === true
 
           newSocialUser.fullName === "John Smith"
         }
-        db.readOnly { implicit s => socialUserInfoRepo.get(SocialId("eishay"), SocialNetworks.FACEBOOK) }
+        val networkCache = inject[SocialUserInfoRepoImpl].networkCache
+        val cacheKey = SocialUserInfoNetworkKey(SocialNetworks.FACEBOOK, SocialId("eishay"))
+        networkCache.get(cacheKey) === None
+        val sui = db.readOnly { implicit s => socialUserInfoRepo.get(SocialId("eishay"), SocialNetworks.FACEBOOK) }
+        sui.fullName === "John Smith"
+        networkCache.get(cacheKey).isDefined === true
         val socialUserOpt = inject[TestSlickSessionProvider].doWithoutCreatingSessions {
           db.readOnly { implicit s => socialUserInfoRepo.getOpt(SocialId("eishay"), SocialNetworks.FACEBOOK) }
         }

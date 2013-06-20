@@ -1,9 +1,9 @@
 package com.keepit.common.cache
 
+import scala.collection.concurrent.{TrieMap => ConcurrentMap}
 import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
 import com.google.inject.{Inject, Singleton}
-import scala.collection.concurrent.{TrieMap=>ConcurrentMap}
 import play.api.libs.json._
 import play.api.Plugin
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
@@ -82,7 +82,7 @@ class MemcachedCache @Inject() (
     cache.api.remove(key)
   }
 
-  def set(key: String, value: Any, expiration: Int = 0) {
+  def set(key: String, value: Any, expiration: Int = 0): Unit = future {
     cache.api.set(key, value, expiration)
   }
 
@@ -110,7 +110,7 @@ class EhCacheCache @Inject() (config: EhCacheConfiguration, val healthcheck: Hea
   def get(key: String): Option[Any] = Option(cache.get(key)).map(_.getObjectValue)
   def remove(key: String) { cache.remove(key) }
 
-  def set(key: String, value: Any, expiration: Int = 0) {
+  def set(key: String, value: Any, expiration: Int = 0): Unit = future {
     val element = new Element(key, value)
     if (expiration == 0) element.setEternal(true)
     element.setTimeToLive(expiration)
@@ -118,39 +118,6 @@ class EhCacheCache @Inject() (config: EhCacheConfiguration, val healthcheck: Hea
   }
 
   override def toString = "EhCache"
-
-}
-
-@Singleton
-class HashMapMemoryCache extends InMemoryCachePlugin {
-
-  val cache = ConcurrentMap[String, Any]()
-
-  def get(key: String): Option[Any] =
-    cache.get(key)
-
-  def remove(key: String) {
-    cache.remove(key)
-  }
-
-  def set(key: String, value: Any, expiration: Int = 0) {
-    cache += key -> value
-  }
-
-  override def toString = "HashMapMemoryCache"
-
-}
-
-@Singleton
-class NoOpCache extends FortyTwoCachePlugin {
-
-  def get(key: String): Option[Any] = None
-
-  def remove(key: String) {}
-
-  def set(key: String, value: Any, expiration: Int = 0) {}
-
-  override def toString = "NoOpCache"
 
 }
 
@@ -167,11 +134,11 @@ trait ObjectCache[K <: Key[T], T] {
   outerCache map {outer => require(ttl <= outer.ttl)}
 
   protected[cache] def getFromInnerCache(key: K): Option[T]
-  protected[cache] def setInnerCache(key: K, value: T): Future[T]
+  protected[cache] def setInnerCache(key: K, value: T): Unit
 
   def remove(key: K): Unit
 
-  def set(key: K, value: T): Future[T] = {
+  def set(key: K, value: T): Unit = {
     outerCache map {outer => outer.set(key, value)}
     setInnerCache(key, value)
   }
@@ -265,9 +232,9 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
     }
   }
 
-  protected[cache] def setInnerCache(key: K, value: T): Future[T] = {
+  protected[cache] def setInnerCache(key: K, value: T): Unit = {
     val setStart = currentDateTime.getMillis()
-    future {
+    try {
       val properlyBoxed = serializer.writes(value) match {
         case x: java.lang.Byte => x.byteValue()
         case x: java.lang.Short => x.shortValue()
@@ -285,8 +252,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
       val setEnd = currentDateTime.getMillis()
       CacheStatistics.recordSet(repo.toString, key.namespace, setEnd - setStart)
       if (outerCache isEmpty) CacheStatistics.recordSet("Cache", key.namespace, setEnd - setStart)
-      value
-    } recover {
+    } catch {
       case e: Throwable =>
         repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
           errorMessage = Some(s"Failed setting key $key in $repo")))

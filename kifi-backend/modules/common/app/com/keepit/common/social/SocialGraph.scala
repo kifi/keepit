@@ -1,5 +1,7 @@
 package com.keepit.common.social
 
+import scala.concurrent.Future
+
 import com.keepit.model.SocialUserInfo
 
 import play.api.libs.json.JsValue
@@ -12,4 +14,5 @@ trait SocialGraph {
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): Option[SocialUserRawInfo]
   def extractEmails(parentJson: JsValue): Seq[String]
   def extractFriends(parentJson: JsValue): Seq[(SocialUserInfo, JsValue)]
+  def revokePermissions(socialUserInfo: SocialUserInfo): Future[Unit]
 }
