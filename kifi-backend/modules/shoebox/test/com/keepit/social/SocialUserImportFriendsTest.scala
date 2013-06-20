@@ -35,10 +35,10 @@ class SocialUserImportFriendsTest extends Specification {
   def testFacebookGraph(jsonFilename: String, numOfFriends: Int) = {
     val json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/%s".format(jsonFilename))).mkString)
     val extractedFriends = inject[FacebookSocialGraph].extractFriends(json)
-    val rawFriends = inject[SocialUserImportFriends].importFriends(extractedFriends, SocialNetworks.FACEBOOK)
+    val rawFriends = inject[SocialUserImportFriends].importFriends(extractedFriends)
     val store = inject[SocialUserRawInfoStore].asInstanceOf[Map[Id[SocialUserInfo], SocialUserRawInfo]]
     store.size === numOfFriends
-    store.clear
+    store.clear()
     rawFriends.size === numOfFriends
   }
 

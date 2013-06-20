@@ -29,7 +29,6 @@ import com.keepit.search.ArticleSearchResultFactory
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.social.SocialNetworkType
 import com.keepit.common.social.SocialId
-import com.keepit.serializer.SocialUserInfoSerializer.socialUserInfoSerializer
 import scala.collection.mutable.ArrayBuffer
 import com.keepit.search.ArticleHit
 import com.keepit.common.logging.Logging
@@ -307,7 +306,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]] = {
-    call(Shoebox.internal.getUserIdsByExternalIds(collIds.mkString(","))).map { r =>
+    call(Shoebox.internal.getCollectionIdsByExternalIds(collIds.mkString(","))).map { r =>
       r.json.as[Seq[Long]].map(Id[Collection](_))
     }
   }

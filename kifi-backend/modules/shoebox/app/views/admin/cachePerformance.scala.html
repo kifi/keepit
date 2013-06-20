@@ -21,13 +21,13 @@
 <script>
 
   var services = {
-  "All Services": "*",
+  "All Services": "{shoebox,search}",
   "Shoebox": "shoebox",
   "Search": "search",
   };
 
   var plugins = {
-  "All Plugins": "*",
+  "All Plugins": "Cache",
   "Memcached": "Memcached",
   "EhCache": "EhCache"
   };
@@ -104,7 +104,7 @@
   $.each(timeranges, function (name, timerange) {
   $("#timerange").append($("<option>").val(timerange).text(name));
   });
-  $("#timerange").find('option[value="-24h"]').prop('selected',true)
+  $("#timerange").find('option[value="-12h"]').prop('selected',true)
 
   $.each(yscales, function (name, scale) {
   $("#yscale").append($("<option>").val(scale).text(name));
@@ -142,6 +142,7 @@
     options.title = "Hits - Misses - Sets (Events per Minute)"
     options.target = baseTargets.concat(countTargets)
     options.logBase = $("#yscale").val();
+    options.yMax = null;
   }
 
   if (chart == "timers") {
@@ -154,15 +155,17 @@
     options.title = "Hits - Sets (" + percentileTitle + "Mean Time in Milliseconds)"
     options.target = baseTargets.concat(meanTargets)
     options.logBase = null;
+    options.yMax = 20;
   }
 
   
   if (chart == "ratios") {
     var prefix = ["stats.counters", service, plugin, namespace].join(".");
-    var ratioTarget = ["scale(divideSeries(" + sumSeries(prefix, "hits", "count") + "," + sumSeries(prefix, "{hits,misses}", "count") + "),100)"];
+    var ratioTarget = ["asPercent(" + sumSeries(prefix, "hits", "count") + "," + "sumSeries(" + sumSeries(prefix,"hits", "count") + "," + sumSeries(prefix, "misses","count") + "))"];
     options.title = "Hit Ratio"
     options.target = baseTargets.concat(ratioTarget)
     options.logBase = null;
+    options.yMax = null;
   }
 
   $("#" + chart).graphite(options);

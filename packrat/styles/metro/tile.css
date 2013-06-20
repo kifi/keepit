@@ -17,6 +17,7 @@
   box-sizing: content-box;
   text-align: center;
   font-family: "Helvetica Neue",arial,sans-serif;
+  text-transform: none;
   transition: -webkit-transform 90ms ease-in-out;
   transition: transform 90ms ease-in-out;
   -webkit-perspective: 200px;

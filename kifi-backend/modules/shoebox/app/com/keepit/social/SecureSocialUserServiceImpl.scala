@@ -22,13 +22,14 @@ import com.keepit.model.SocialUserInfo
 
 @Singleton
 class SecureSocialUserPluginImpl @Inject() (
-                                                db: Database,
-                                                socialUserInfoRepo: SocialUserInfoRepo,
-                                                userRepo: UserRepo,
-                                                imageStore: S3ImageStore,
-                                                healthcheckPlugin: HealthcheckPlugin,
-                                                userExperimentRepo: UserExperimentRepo,
-                                                socialGraphPlugin: SocialGraphPlugin)
+  db: Database,
+  socialUserInfoRepo: SocialUserInfoRepo,
+  userRepo: UserRepo,
+  imageStore: S3ImageStore,
+  healthcheckPlugin: HealthcheckPlugin,
+  userExperimentRepo: UserExperimentRepo,
+  emailRepo: EmailAddressRepo,
+  socialGraphPlugin: SocialGraphPlugin)
   extends UserService with SecureSocialUserPlugin with Logging {
 
   private def reportExceptions[T](f: => T): T =
@@ -83,7 +84,10 @@ class SecureSocialUserPluginImpl @Inject() (
   private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType,
                          socialUser: SocialUser, userId: Option[Id[User]])(implicit session: RWSession): SocialUserInfo = {
     val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
-    val userOpt = userId flatMap userRepo.getOpt
+    val userOpt = userId orElse {
+      // TODO: better way of dealing with emails that already exist; for now just link accounts
+      socialUser.email flatMap emailRepo.getByAddressOpt map (_.userId)
+    } flatMap userRepo.getOpt
 
     suiOpt.map(_.withCredentials(socialUser)) match {
       case Some(socialUserInfo) if !socialUserInfo.userId.isEmpty =>
@@ -101,7 +105,7 @@ class SecureSocialUserPluginImpl @Inject() (
         val user = userOpt getOrElse userRepo.save(createUser(socialUser.fullName))
         log.info("creating new SocialUserInfo for %s".format(user))
         val userInfo = SocialUserInfo(userId = Some(user.id.get),//verify saved
-          socialId = socialId, networkType = socialNetworkType,
+          socialId = socialId, networkType = socialNetworkType, pictureUrl = socialUser.avatarUrl,
           fullName = socialUser.fullName, credentials = Some(socialUser))
         log.info("SocialUserInfo created is %s".format(userInfo))
 
@@ -187,13 +191,13 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
       case ex: Throwable => None
     }
 
-    externalIdOpt.map{ externalId =>
+    externalIdOpt flatMap { externalId =>
       db.readOnly { implicit s =>
         sessionRepo.getOpt(externalId)
       } collect {
         case s if s.isValid => authenticatorFromSession(s)
       }
-    } flatten
+    }
   }
   def delete(id: String): Either[Error, Unit] = reportExceptions {
     db.readWrite { implicit s =>

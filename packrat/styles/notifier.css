@@ -5,6 +5,7 @@
 	width: 315px;
 	z-index: 999999999990;
   font-family: "Helvetica Neue",arial,sans-serif;
+  text-transform: none;
 }
 
 .kifi-with-pane #kifi-notify-notice-wrapper {

@@ -306,7 +306,6 @@ class ArticleIndexerTest extends Specification with DbRepos {
         recOpt.map{ rec =>
           rec.title === uri.title.get
           rec.url === uri.url
-          rec.externalId === uri.externalId
         }
       }
       val recOpt: Option[ArticleRecord] = searcher.getDecodedDocValue("rec", 999999L)

@@ -28,8 +28,7 @@ class SocialConnectionTest extends Specification {
 
         def loadJsonImportFriends(filename: String): Unit = {
           val json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/%s".format(filename))).mkString)
-          println(inject[SocialUserImportFriends].importFriends(extractFacebookFriendInfo(json),
-            SocialNetworks.FACEBOOK).size)
+          println(inject[SocialUserImportFriends].importFriends(extractFacebookFriendInfo(json)).size)
         }
 
         loadJsonImportFriends("facebook_graph_andrew_min.json")
@@ -93,8 +92,7 @@ class SocialConnectionTest extends Specification {
 
         def loadJsonImportFriends(filename: String): Unit = {
           val json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/%s".format(filename))).mkString)
-          println(inject[SocialUserImportFriends].importFriends(extractFacebookFriendInfo(json),
-            SocialNetworks.FACEBOOK).size)
+          println(inject[SocialUserImportFriends].importFriends(extractFacebookFriendInfo(json)).size)
         }
 
         loadJsonImportFriends("facebook_graph_andrew_min.json")
@@ -166,8 +164,7 @@ class SocialConnectionTest extends Specification {
           val jsons = filenames map { filename =>
             Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/%s".format(filename))).mkString)
           }
-          println(inject[SocialUserImportFriends]
-              .importFriends(jsons flatMap extractFacebookFriendInfo, SocialNetworks.FACEBOOK).size)
+          println(inject[SocialUserImportFriends].importFriends(jsons flatMap extractFacebookFriendInfo).size)
         }
 
         loadJsonImportFriends(Seq("facebook_graph_eishay_min_page1.json", "facebook_graph_eishay_min_page2.json"))
