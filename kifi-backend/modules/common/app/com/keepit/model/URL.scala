@@ -3,6 +3,7 @@ package com.keepit.model
 import com.keepit.common.db._
 import com.keepit.common.time._
 import org.joda.time.DateTime
+import com.keepit.common.net.URI
 
 case class URLHistoryCause(value: String)
 object URLHistoryCause {

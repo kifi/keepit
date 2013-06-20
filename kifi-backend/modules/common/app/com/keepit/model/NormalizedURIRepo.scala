@@ -5,7 +5,6 @@ import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
 import com.keepit.common.db.{State, Id, SequenceNumber}
 import com.keepit.common.db.slick.DBSession.RSession
-import scala.Predef.String
 import scala.Some
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])

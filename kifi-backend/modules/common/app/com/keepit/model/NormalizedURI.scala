@@ -8,13 +8,9 @@ import org.joda.time.DateTime
 import scala.concurrent.duration._
 import com.keepit.common.net.URINormalizer
 import java.security.MessageDigest
-import java.lang.String
-import scala.Predef.String
 import org.apache.commons.codec.binary.Base64
-import com.keepit.common.strings._
 import scala.Some
-import com.keepit.model.NormalizedURI
-import com.keepit.model.NormalizedURIKey
+import com.keepit.common.strings._
 
 case class URISearchResults(uri: NormalizedURI, score: Float)
 
@@ -35,6 +31,7 @@ case class NormalizedURI (
   def withState(state: State[NormalizedURI]) = copy(state = state)
   def withTitle(title: String) = if (title.isEmpty()) this else copy(title = Some(title))
 }
+
 import com.keepit.serializer.NormalizedURISerializer.normalizedURISerializer // Required implicit value
 case class NormalizedURIKey(id: Id[NormalizedURI]) extends Key[NormalizedURI] {
   override val version = 2

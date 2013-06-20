@@ -9,7 +9,6 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.social.{SecureSocialUserPluginImpl, SecureSocialAuthenticatorPluginImpl, SecureSocialUserPlugin, SecureSocialAuthenticatorPlugin}
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.social.SocialGraphPlugin
-import com.keepit.test.TestGlobal
 
 class ShoeboxApplication() extends TestApplication(new TestGlobal(ShoeboxDevGlobal.modules: _*), path = new File("./modules/shoebox/")) {
 
