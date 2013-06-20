@@ -1,14 +1,9 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db.Id
 import com.keepit.common.db.Model
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
 import com.keepit.search.topicModel.TopicModelGlobal
 import java.io.{DataOutputStream, DataInputStream, ByteArrayInputStream, ByteArrayOutputStream}
 
@@ -43,30 +38,3 @@ class UserTopicByteArrayHelper {
     topic
   }
 }
-
-@ImplementedBy(classOf[UserTopicRepoImpl])
-trait UserTopicRepo extends Repo[UserTopic]{
-  def getByUserId(userId: Id[User])(implicit session: RSession):Option[UserTopic]
-}
-
-@Singleton
-class UserTopicRepoImpl @Inject() (
-  val db: DataBaseComponent,
-  val clock: Clock
-) extends DbRepo[UserTopic] with UserTopicRepo {
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
-
-  override val table = new RepoTable[UserTopic](db, "user_topic"){
-    def userId = column[Id[User]]("user_id", O.NotNull)
-    def topic = column[Array[Byte]]("topic", O.NotNull)
-    def * = id.? ~ userId ~ topic ~ createdAt ~ updatedAt <> (UserTopic, UserTopic.unapply _)
-  }
-
-  def getByUserId(userId: Id[User])(implicit session: RSession): Option[UserTopic] = {
-    (for(r <- table if r.userId === userId) yield r).firstOption
-  }
-}
-
-
-

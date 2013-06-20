@@ -4,9 +4,6 @@ import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{State, Id}
 import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
-import scala.concurrent.duration.Duration
-import com.keepit.serializer.TraversableFormat
 import com.keepit.common.time.Clock
 import scala.Some
 import scala.slick.lifted.Query
@@ -23,15 +20,6 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
                      (implicit session: RSession): Seq[KeepToCollection]
   def count(collId: Id[Collection])(implicit session: RSession): Int
 }
-
-case class CollectionsForBookmarkKey(bookmarkId: Id[Bookmark]) extends Key[Seq[Id[Collection]]] {
-  override val version = 2
-  val namespace = "collections_for_bookmark"
-  def toKey(): String = bookmarkId.toString
-}
-
-class CollectionsForBookmarkCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
-  extends JsonCacheImpl[CollectionsForBookmarkKey, Seq[Id[Collection]]](innermostPluginSettings, innerToOuterPluginSettings:_*)(TraversableFormat.seq(Id.format[Collection]))
 
 @Singleton
 class KeepToCollectionRepoImpl @Inject() (

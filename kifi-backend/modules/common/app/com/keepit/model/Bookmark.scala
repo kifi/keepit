@@ -95,3 +95,15 @@ case class BookmarkSource(value: String) {
 object BookmarkSource {
   implicit def source(value: String) = BookmarkSource(value)
 }
+
+object BookmarkFactory {
+
+  def apply(uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: BookmarkSource, isPrivate: Boolean, kifiInstallation: Option[ExternalId[KifiInstallation]]): Bookmark =
+    Bookmark(title = title, userId = userId, uriId = uri.id.get, urlId = Some(url.id.get), url = url.url, source = source, isPrivate = isPrivate)
+
+  def apply(title: String, url: URL, uriId: Id[NormalizedURI], userId: Id[User], source: BookmarkSource): Bookmark =
+    Bookmark(title = Some(title), urlId = Some(url.id.get), url = url.url, uriId = uriId, userId = userId, source = source)
+
+  def apply(title: String, urlId: Id[URL],  uriId: Id[NormalizedURI], userId: Id[User], source: BookmarkSource, isPrivate: Boolean): Bookmark =
+    BookmarkFactory(title = title, urlId = urlId, uriId = uriId, userId = userId, source = source, isPrivate = isPrivate)
+}
