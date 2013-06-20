@@ -7,10 +7,10 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 
 class ThreadInfoRepo @Inject() (
-                                 commentRecipientRepo: CommentRecipientRepo,
-                                 commentRepo: CommentRepo,
-                                 userRepo: UserRepo,
-                                 basicUserRepo: BasicUserRepo) extends Logging {
+  commentRecipientRepo: CommentRecipientRepo,
+  commentRepo: CommentRepo,
+  userRepo: UserRepo,
+  basicUserRepo: BasicUserRepo) extends Logging {
   // TODO: Major optimizations needed!
   def load(comment: Comment, sessionUserOpt: Option[Id[User]] = None)(implicit session: RSession): ThreadInfo = {
     val children = commentRepo.getChildren(comment.id.get).reverse

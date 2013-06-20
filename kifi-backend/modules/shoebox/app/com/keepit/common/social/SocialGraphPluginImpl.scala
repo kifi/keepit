@@ -18,14 +18,14 @@ private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)
 private case object FetchAll
 
 private[social] class SocialGraphActor @Inject() (
-                                                   healthcheckPlugin: HealthcheckPlugin,
-                                                   graphs: Set[SocialGraph],
-                                                   db: Database,
-                                                   socialRepo: SocialUserInfoRepo,
-                                                   socialUserRawInfoStore: SocialUserRawInfoStore,
-                                                   socialUserImportFriends: SocialUserImportFriends,
-                                                   socialUserImportEmail: SocialUserImportEmail,
-                                                   socialUserCreateConnections: UserConnectionCreator)
+  healthcheckPlugin: HealthcheckPlugin,
+  graphs: Set[SocialGraph],
+  db: Database,
+  socialRepo: SocialUserInfoRepo,
+  socialUserRawInfoStore: SocialUserRawInfoStore,
+  socialUserImportFriends: SocialUserImportFriends,
+  socialUserImportEmail: SocialUserImportEmail,
+  socialUserCreateConnections: UserConnectionCreator)
   extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   private val networkTypeToGraph: Map[SocialNetworkType, SocialGraph] =
@@ -81,9 +81,9 @@ private[social] class SocialGraphActor @Inject() (
 }
 
 class SocialGraphPluginImpl @Inject() (
-                                        graphs: Set[SocialGraph],
-                                        actorFactory: ActorFactory[SocialGraphActor],
-                                        val schedulingProperties: SchedulingProperties)
+  graphs: Set[SocialGraph],
+  actorFactory: ActorFactory[SocialGraphActor],
+  val schedulingProperties: SchedulingProperties)
   extends SocialGraphPlugin with Logging with SchedulingPlugin {
 
   implicit val actorTimeout = Timeout(5 seconds)
