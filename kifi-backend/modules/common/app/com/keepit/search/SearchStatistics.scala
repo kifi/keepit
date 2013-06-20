@@ -27,32 +27,32 @@ case class UriInfo(
 
 // get this from EventListener. kifi uri only
 case class UriLabel(
-                     clicked: Boolean,
-                     isCorrectlyRanked: Boolean    // this is false only in this scenario: if this uri was shown to user, AND not clicked by user, AND user clicked some url from google, AND that url is indexed by KiFi.
-                     )
+  clicked: Boolean,
+  isCorrectlyRanked: Boolean    // this is false only in this scenario: if this uri was shown to user, AND not clicked by user, AND user clicked some url from google, AND that url is indexed by KiFi.
+  )
 
 case class SearchResultInfo(
-                             myHits: Int,
-                             friendsHits: Int,
-                             othersHits: Int,
-                             svVariance: Float,
-                             svExistenceVar: Float)
+  myHits: Int,
+  friendsHits: Int,
+  othersHits: Int,
+  svVariance: Float,
+  svExistenceVar: Float)
 
 // the structure may change a lot in the future,
 // as new queries are added and old queries are discarded.
 case class LuceneScores(
-                         multiplicativeBoost: Float,
-                         additiveBoost: Float,
-                         percentMatch: Float,
-                         semanticVector: Float,
-                         phraseProximity: Float)
+  multiplicativeBoost: Float,
+  additiveBoost: Float,
+  percentMatch: Float,
+  semanticVector: Float,
+  phraseProximity: Float)
 
 case class SearchStatistics(
-                             basicQueryInfo: BasicQueryInfo,
-                             uriInfo: UriInfo,
-                             uriLabel: UriLabel,
-                             searchResultInfo: SearchResultInfo,
-                             luceneScores: LuceneScores)
+  basicQueryInfo: BasicQueryInfo,
+  uriInfo: UriInfo,
+  uriLabel: UriLabel,
+  searchResultInfo: SearchResultInfo,
+  luceneScores: LuceneScores)
 
 object TrainingDataLabeler extends Logging{
   private val topNkifi = 2      // at most the top 2 kifi results would be labeled as negative samples

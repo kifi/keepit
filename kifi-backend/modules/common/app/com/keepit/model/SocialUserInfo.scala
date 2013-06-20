@@ -43,16 +43,16 @@ object SocialUserInfo {
   import com.keepit.serializer.SocialUserSerializer._
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[SocialUserInfo]) and
-      (__ \ 'createdAt).format[DateTime] and
-      (__ \ 'updatedAt).format[DateTime] and
-      (__ \ 'userId).formatNullable(Id.format[User]) and
-      (__ \ 'fullName).format[String] and
-      (__ \ 'pictureUrl).formatNullable[String] and
-      (__ \ 'state).format(State.format[SocialUserInfo]) and
-      (__ \ 'socialId).format[String].inmap(SocialId.apply, unlift(SocialId.unapply)) and
-      (__ \ 'networkType).format[String].inmap(SocialNetworkType.apply, unlift(SocialNetworkType.unapply)) and
-      (__ \ 'credentials).formatNullable[SocialUser] and
-      (__ \ 'lastGraphRefresh).formatNullable[DateTime]
+    (__ \ 'createdAt).format[DateTime] and
+    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'userId).formatNullable(Id.format[User]) and
+    (__ \ 'fullName).format[String] and
+    (__ \ 'pictureUrl).formatNullable[String] and
+    (__ \ 'state).format(State.format[SocialUserInfo]) and
+    (__ \ 'socialId).format[String].inmap(SocialId.apply, unlift(SocialId.unapply)) and
+    (__ \ 'networkType).format[String].inmap(SocialNetworkType.apply, unlift(SocialNetworkType.unapply)) and
+    (__ \ 'credentials).formatNullable[SocialUser] and
+    (__ \ 'lastGraphRefresh).formatNullable[DateTime]
   )(SocialUserInfo.apply, unlift(SocialUserInfo.unapply))
 }
 

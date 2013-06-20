@@ -81,8 +81,9 @@ class SecureSocialUserPluginImpl @Inject() (
     )
   }
 
-  private def internUser(socialId: SocialId, socialNetworkType: SocialNetworkType,
-                         socialUser: SocialUser, userId: Option[Id[User]])(implicit session: RWSession): SocialUserInfo = {
+  private def internUser(
+      socialId: SocialId, socialNetworkType: SocialNetworkType,
+      socialUser: SocialUser, userId: Option[Id[User]])(implicit session: RWSession): SocialUserInfo = {
     val suiOpt = socialUserInfoRepo.getOpt(socialId, socialNetworkType)
     val userOpt = userId orElse {
       // TODO: better way of dealing with emails that already exist; for now just link accounts

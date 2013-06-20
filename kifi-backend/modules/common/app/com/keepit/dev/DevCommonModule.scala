@@ -39,7 +39,8 @@ class DevCommonModule extends ScalaModule with Logging {
 }
 
 class FakeEventPersisterImpl @Inject() (
-                                         system: ActorSystem, eventHelper: EventHelper, val schedulingProperties: SchedulingProperties) extends EventPersister with Logging {
+  system: ActorSystem, eventHelper: EventHelper, val schedulingProperties: SchedulingProperties)
+  extends EventPersister with Logging {
   def persist(event: Event): Unit = {
     eventHelper.newEvent(event)
     log.info("Fake persisting event %s".format(event.externalId))
