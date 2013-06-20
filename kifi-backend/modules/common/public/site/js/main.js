@@ -516,8 +516,11 @@ $(function() {
 			}
 			showRightSide();
 		}
-	}).scroll(function() { // infinite scroll
-		if (!isLoading() && this.clientHeight + this.scrollTop > this.scrollHeight - 300) {
+	})
+	.find(".scrollable").scroll(function() { // infinite scroll
+		var sT = this.scrollTop;
+		$(this.previousElementSibling).toggleClass("scrolled", sT > 0);
+		if (!isLoading() && this.clientHeight + sT > this.scrollHeight - 300) {
 			if (searchResponse) {
 				doSearch(searchResponse.context);
 			} else {
