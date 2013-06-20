@@ -63,6 +63,8 @@ class ExtSearchController @Inject() (
         SearchFilter.mine(context, collIdsFuture, start, end, tz, monitoredAwait)
       case Some("f") =>
         SearchFilter.friends(context, start, end, tz)
+      case Some("a") =>
+        SearchFilter.all(context, start, end, tz)
       case Some(ids) =>
         val userExtIds = ids.split('.').flatMap(id => Try(ExternalId[User](id)).toOption)
         val userIdsFuture = shoeboxClient.getUserIdsByExternalIds(userExtIds)

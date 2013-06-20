@@ -8,7 +8,6 @@
 	<meta name="viewport" content="width=device-width">
 	<link rel="stylesheet" href="js/fancybox/jquery.fancybox.css">
 	<link rel="stylesheet" href="css/main.css">
-	<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato">
 	<link rel="shortcut icon" type="image/png" href="/assets/images/kifi-favi-50.png">
 </head>
 <body>
@@ -33,50 +32,78 @@
 		</nav>
 	</header>
 
-	<aside class="left">
+	<aside class="left-col">
 		<div class="my-identity">
 			<div class="my-pic"></div>
 			<div class="my-name">Loading...</div>
 		</div>
 		<h2>You</h2>
-		<h3 class="active my-keeps">
-			<a href="javascript:">Your Keeps<span class="right light">...</span></a>
+		<h3 class="my-keeps active">
+			<a href="javascript:">
+				<div class="keep-count">...</div>
+				<div class="view-name long-text">Your Keeps</div>
+			</a>
 		</h3>
 		<div id="collections">
 			<h2>Collections <a class="new-collection" href="javascript:"></a></h2>
 			<h3 class="add-collection">
 				<a><input placeholder="Type new collection name" disabled></a>
 			</h3>
-			<div id="collections-wrapper">
+			<div id="collections-list">
 				<h3 data-template class="collection" data-id="{{id}}" style="display:none">
-					<div class="edit-menu">
-						<a href="javascript:" class="edit">&nbsp;</a>
-						<ul>
-							<li><a class="rename" href="javascript:">Rename</a></li>
-							<li><a class="remove" href="javascript:">Remove</a></li>
-						</ul>
-					</div>
+					<div class="coll-tri"></div>
 					<a href="javascript:">
-						<span class="right light">{{keeps}}</span>
-						<span class="name long-text" title="{{name}}">{{name}}</span>
+						<div class="keep-count">{{keeps}}</div>
+						<div class="view-name long-text">{{name}}</div>
 					</a>
 				</h3>
 			</div>
+			<menu id="coll-menu">
+				<li><a class="coll-rename" href="javascript:">Rename</a></li>
+				<li><a class="coll-remove" href="javascript:">Remove</a></li>
+			</menu>
 		</div>
 	</aside>
 
-	<section class="main">
-		<div class="search">
+	<section class="main" data-view="mine">
+		<div class="main-head">
 			<h1>Browse your keeps</h1>
-			<div class="num-results">
-				Showing <span>0</span> keeps
+			<div class="subtitle">
+				<span data-template data-has="query" style="display:none">
+					{% if numShown == 0 %}
+						Sorry, no results match
+					{% endif %}{% if numShown == 1 %}
+						Showing the only result for
+					{% endif %}{% if numShown > 1 %}
+						Showing top {{numShown}} results for
+					{% endif %}
+				 <span class="result-query">{{query}}</span>
+				</span>
+				<span data-template data-has="collId" style="display:none">
+					{% if numTotal == 0 %}
+						No keeps in this collection
+					{% endif %}{% if numTotal == 1 %}
+						Showing the only keep in this collection
+					{% endif %}{% if numTotal > 1 %}
+						Showing {{numShown}} out of {{numTotal}} total keeps in this collection
+					{% endif %}
+				</span>
+				<span data-template data-has="numShown" style="display:none">
+					{% if numTotal != 1 %}
+						Showing {{numShown}} out of {{numTotal}} total keeps
+					{% else %}
+						Showing your only keep
+					{% endif %}
+				</span>
+				<span data-template data-has="searching" style="display:none">Searching...</span>
+				<span data-template>Loading...</span>
 			</div>
 		</div>
 		<div class="scrollable">
-			<ol id="search-results" style="display:none">
-				<li data-template class="keep draggable {% if isMyBookmark %}mine{% endif %}" data-id="{{bookmark.id}}" data-collections="">
+			<ol id="search-results">
+				<li data-template class="keep draggable {% if isMyBookmark %}mine{% endif %}" data-id="{{bookmark.id}}" style="display:none">
 					<div class="handle">
-						<input type="checkbox">
+						<div class="checkbox"></div>
 					</div>
 					<div class="long-text">
 						<a class="long-text" href="{{bookmark.url}}" target="_blank" title="{{bookmark.title}}">{{bookmark.title}}</a>
@@ -84,7 +111,7 @@
 					<div class="fs9 gray long-text" title="{{bookmark.url}}">{{bookmark.url}}</div>
 					<div class="bottom">
 						<img class="small-avatar" data-template-for="users"
-							src="img/clock.png"
+							src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
 							data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
 							title="{{firstName}} {{lastName}}">
 						<span class="fs9 gray">
@@ -94,11 +121,11 @@
 					</div>
 				</li>
 			</ol>
-			<ol id="my-keeps" style="display:none">
-				<li data-template data-id="{{id}}" class="keep mine draggable {% if isPrivate %}private{% endif %}" data-created={{createdAt}} data-collections="{{collections}}">
+			<ol id="my-keeps">
+				<li data-template data-id="{{id}}" class="keep mine draggable {% if isPrivate %}private{% endif %}" data-created={{createdAt}} data-collections="{{collections}}" style="display:none">
 					<div class="right fs9 gray easydate">{{createdAt}}</div>
 					<div class="handle">
-						<input type="checkbox">
+						<div class="checkbox"></div>
 					</div>
 					<div class="long-text">
 						<a class="long-text" href="{{url}}" target="_blank" title="{{title}}">{{title}}</a>
@@ -106,7 +133,7 @@
 					<div class="fs9 gray long-text" title="{{url}}">{{url}}</div>
 					<div class="bottom">
 						<img class="small-avatar" data-template-for="keepers"
-							src="img/clock.png"
+							src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
 							data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
 							title="{{firstName}} {{lastName}}">
 						<span class="fs9 gray"> You {% if keepers.length > 0 %} + {{keepers.length}} friend{% endif %}{% if keepers.length > 1 %}s{% endif %} kept this <span class="private {% if isPrivate %}on{% endif %}"><img src="img/private.png"> Private<span class="private">
@@ -156,7 +183,6 @@
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 	<script>window.jQuery||document.write('<script src="js/jquery-1.9.1.min.js"><\/script>')</script>
 	<script src="js/jquery.easydate-0.2.4.min.js"></script>
-	<script src="js/textext.1.3.1.min.js"></script>
 	<script src="js/jquery-ui-1.10.3.custom/js/jquery-ui-1.10.3.custom.min.js"></script>
 	<script src="js/fancybox/jquery.fancybox.pack.js"></script>
 	<script src="js/tempo.min.js"></script>

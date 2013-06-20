@@ -12,8 +12,8 @@ import com.keepit.common.db.slick._
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworkType
 import com.keepit.common.time._
-import com.keepit.serializer.SocialUserInfoSerializer.socialUserInfoSerializer
 
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import securesocial.core.SocialUser
 
@@ -23,6 +23,7 @@ case class SocialUserInfo(
   updatedAt: DateTime = currentDateTime,
   userId: Option[Id[User]] = None,
   fullName: String,
+  pictureUrl: Option[String] = None,
   state: State[SocialUserInfo] = SocialUserInfoStates.CREATED,
   socialId: SocialId,
   networkType: SocialNetworkType,
@@ -36,6 +37,23 @@ case class SocialUserInfo(
   def withCredentials(credentials: SocialUser) = copy(credentials = Some(credentials))//want to make sure the user has an id, fail hard if not!
   def withState(state: State[SocialUserInfo]) = copy(state = state)
   def withLastGraphRefresh(lastGraphRefresh : Option[DateTime] = Some(currentDateTime)) = copy(lastGraphRefresh = lastGraphRefresh)
+}
+
+object SocialUserInfo {
+  import com.keepit.serializer.SocialUserSerializer._
+  implicit val format = (
+    (__ \ 'id).formatNullable(Id.format[SocialUserInfo]) and
+      (__ \ 'createdAt).format[DateTime] and
+      (__ \ 'updatedAt).format[DateTime] and
+      (__ \ 'userId).formatNullable(Id.format[User]) and
+      (__ \ 'fullName).format[String] and
+      (__ \ 'pictureUrl).formatNullable[String] and
+      (__ \ 'state).format(State.format[SocialUserInfo]) and
+      (__ \ 'socialId).format[String].inmap(SocialId.apply, unlift(SocialId.unapply)) and
+      (__ \ 'networkType).format[String].inmap(SocialNetworkType.apply, unlift(SocialNetworkType.unapply)) and
+      (__ \ 'credentials).formatNullable[SocialUser] and
+      (__ \ 'lastGraphRefresh).formatNullable[DateTime]
+  )(SocialUserInfo.apply, unlift(SocialUserInfo.unapply))
 }
 
 @ImplementedBy(classOf[SocialUserInfoRepoImpl])
@@ -83,7 +101,8 @@ class SocialUserInfoRepoImpl @Inject() (
     def networkType = column[SocialNetworkType]("network_type", O.NotNull)
     def credentials = column[SocialUser]("credentials", O.Nullable)
     def lastGraphRefresh = column[DateTime]("last_graph_refresh", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ userId.? ~ fullName ~ state ~ socialId ~ networkType ~ credentials.? ~ lastGraphRefresh.? <> (SocialUserInfo, SocialUserInfo.unapply _)
+    def pictureUrl = column[String]("picture_url", O.Nullable)
+    def * = id.? ~ createdAt ~ updatedAt ~ userId.? ~ fullName ~ pictureUrl.? ~ state ~ socialId ~ networkType ~ credentials.? ~ lastGraphRefresh.? <> (SocialUserInfo.apply _, SocialUserInfo.unapply _)
   }
 
   override def invalidateCache(socialUser: SocialUserInfo)(implicit session: RSession) = {
