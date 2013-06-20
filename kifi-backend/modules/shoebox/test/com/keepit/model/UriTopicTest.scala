@@ -7,10 +7,10 @@ import org.specs2.mutable.Specification
 import com.google.inject.Injector
 import com.keepit.common.db.Id
 import scala.Array.canBuildFrom
-import com.keepit.learning.topicmodel.TopicModelGlobal
 import play.api.Play.current
 import com.keepit.test._
 import com.keepit.inject._
+import com.keepit.learning.topicmodel.TopicModelGlobal
 
 class UriTopicTest extends Specification with TestDBRunner{
   def genTopic(numTopics: Int, uriIdx: Int, default: Double = 0.1, nonDefault: Double = 0.8) = {

@@ -11,10 +11,8 @@ import com.keepit.common.db.SequenceNumber
 import com.google.inject.ImplementedBy
 import scala.Option.option2Iterable
 import scala.collection.mutable.{Map => MutMap}
-import com.keepit.learning.topicmodel.TopicModelGlobal
 import com.google.inject.Singleton
 import scala.collection.mutable.{Map => MutMap}
-import com.keepit.learning.topicmodel.DocumentTopicModel
 
 
 class TopicUpdater @Inject() (
@@ -82,8 +80,6 @@ class TopicUpdater @Inject() (
     }
     batchUpdateUserTopic(userBookmarks.slice(rounds * commitBatchSize, rounds * commitBatchSize + left))
     log.info("UserTopicRepo update done")
-
-
   }
 
   private def batchUpdateUriTopic(uris: Seq[NormalizedURI]): Unit = {

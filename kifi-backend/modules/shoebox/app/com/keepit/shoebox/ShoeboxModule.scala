@@ -1,9 +1,7 @@
 package com.keepit.shoebox
 
 import scala.slick.session.{ Database => SlickDatabase }
-
 import net.codingwell.scalaguice.{ScalaMultibinder, ScalaModule}
-
 import com.google.common.io.Files
 import com.google.inject.Provider
 import com.google.inject.{ Provides, Singleton }
@@ -36,12 +34,14 @@ import com.keepit.social.SecureSocialAuthenticatorPlugin
 import com.keepit.social.SecureSocialUserPlugin
 import com.keepit.social.ShoeboxSecureSocialAuthenticatorPlugin
 import com.keepit.social.ShoeboxSecureSocialUserPlugin
-
 import play.api.Play
 import play.api.Play.current
 import play.api.db.DB
 import com.keepit.common.cache.ShoeboxCacheModule
 import securesocial.controllers.TemplatesPlugin
+import com.keepit.learning.topicmodel.WordTopicModel
+import com.keepit.learning.topicmodel.LdaWordTopicModel
+
 
 class ShoeboxModule() extends ScalaModule with Logging {
   def configure() {
@@ -199,5 +199,9 @@ class ShoeboxModule() extends ScalaModule with Logging {
       current.configuration.getInt("service.search.port").get,
       client)
   }
+
+  @Provides
+  @Singleton
+  def wordTopicModel: WordTopicModel = new LdaWordTopicModel
 
 }
