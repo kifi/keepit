@@ -17,16 +17,6 @@ trait QueryExpansion extends QueryParser {
   var enableCoord = false
   val siteBoost: Float
 
-  private[this] val stemmedTerms = new ArrayBuffer[Term]
-
-  def hasStemmedTerms = !stemmedTerms.isEmpty
-
-  def numStemmedTerms = stemmedTerms.size
-
-  def getStemmedTermArray = stemmedTerms.toArray
-
-  def getStemmedTerms(field: String) = stemmedTerms.map(t => new Term(field, t.text()))
-
   def getStemmedPhrase(field: String, phraseStart: Int, phraseEnd: Int) = {
     stemmedTerms.slice(phraseStart, phraseEnd).foldLeft(new PhraseQuery()){ (phraseQuery, term) =>
       phraseQuery.add(new Term(field, term.text()))
@@ -74,7 +64,6 @@ trait QueryExpansion extends QueryParser {
     }
 
     getStemmedFieldQuery("ts", queryText).foreach{ query =>
-      stemmedTerms ++= getTermSeq("ts", query)
       if(!quoted) {
         disjunct.add(query)
         disjunct.add(copyFieldQuery(query, "cs"))
