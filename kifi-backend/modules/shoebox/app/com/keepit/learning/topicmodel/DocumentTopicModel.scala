@@ -1,11 +1,15 @@
-package com.keepit.search.topicModel
+package com.keepit.learning.topicmodel
+import com.google.inject.{Inject, ImplementedBy, Singleton}
+import scala.Array.canBuildFrom
 
+@ImplementedBy(classOf[LDATopicModel])
 trait DocumentTopicModel {
   def getDocumentTopicDistribution(content: String): Array[Double]
   def getDocumentTopicId(content: String): Int
 }
 
-class LDADocumentTopicModel(val model: WordTopicModel) extends DocumentTopicModel{
+@Singleton
+class LDATopicModel @Inject()(model: WordTopicModel) extends DocumentTopicModel{
   def getDocumentTopicDistribution(content: String) = {
     val words = content.split(" ").filter(!_.isEmpty).map(_.toLowerCase).filter(model.vocabulary.contains(_))
     val wordCounts = words.groupBy(x => x).foldLeft(Map.empty[String,Int]){(m, pair) => m + (pair._1 -> pair._2.size)}
@@ -25,7 +29,6 @@ class LDADocumentTopicModel(val model: WordTopicModel) extends DocumentTopicMode
   }
 
 }
-
 
 object ArrayUtils {
   def add(x: Array[Double], y: Array[Double]) = {
