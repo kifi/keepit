@@ -12,7 +12,8 @@ trait URIGraph {
   def update(userId: Id[User]): Int
   def reindex(): Unit
   def reindexCollection(): Unit
-  def getURIGraphSearcher(userId: Option[Id[User]] = None): URIGraphSearcher
+  def getURIGraphSearcher(): URIGraphSearcher
+  def getURIGraphSearcher(userId: Id[User]): URIGraphSearcherWithUser
   def getCollectionSearcher(): CollectionSearcher
   def close(): Unit
 }
@@ -43,10 +44,17 @@ class URIGraphImpl @Inject()(
     collectionIndexer.close()
     uriGraphIndexer.close()
   }
-  def getURIGraphSearcher(userId: Option[Id[User]]): URIGraphSearcher = {
+
+  def getURIGraphSearcher(): URIGraphSearcher = {
     val (indexSearcher, storeSearcher) = uriGraphIndexer.getSearchers
-    new URIGraphSearcher(indexSearcher, storeSearcher, userId, shoeboxClient, monitoredAwait)
+    new URIGraphSearcher(indexSearcher, storeSearcher)
   }
+
+  def getURIGraphSearcher(userId: Id[User]): URIGraphSearcherWithUser = {
+    val (indexSearcher, storeSearcher) = uriGraphIndexer.getSearchers
+    new URIGraphSearcherWithUser(indexSearcher, storeSearcher, userId, shoeboxClient, monitoredAwait)
+  }
+
   def getCollectionSearcher(): CollectionSearcher = {
     new CollectionSearcher(collectionIndexer.getSearcher)
   }

@@ -1,7 +1,7 @@
 package com.keepit.search
 
 import com.keepit.search.graph.URIGraph
-import com.keepit.search.graph.URIGraphSearcher
+import com.keepit.search.graph.URIGraphSearcherWithUser
 import com.keepit.search.graph.URIGraphUnsupportedVersionException
 import com.keepit.search.graph.URIList
 import com.keepit.search.index.ArticleIndexer
@@ -48,7 +48,7 @@ class MainSearcherFactory @Inject() (
     implicit private val fortyTwoServices: FortyTwoServices
  ) extends Logging {
 
-  private[this] val consolidate = new RequestConsolidator[Id[User], URIGraphSearcher](3 seconds)
+  private[this] val consolidate = new RequestConsolidator[Id[User], URIGraphSearcherWithUser](3 seconds)
 
   def apply(userId: Id[User], filter: SearchFilter, config: SearchConfig) = {
     val browsingHistoryFuture = shoeboxClient.getBrowsingHistoryFilter(userId).map(browsingHistoryBuilder.build)
@@ -56,13 +56,13 @@ class MainSearcherFactory @Inject() (
 
     val uriGraphSearcherFuture = consolidate(userId){ userId =>
       future {
-        uriGraph.getURIGraphSearcher(Some(userId))
+        uriGraph.getURIGraphSearcher(userId)
       } recover {
         case e: URIGraphUnsupportedVersionException =>
           // self healing, just in case
         log.warn("fixing graph data", e)
         uriGraph.update(userId)
-        uriGraph.getURIGraphSearcher(Some(userId))
+        uriGraph.getURIGraphSearcher(userId)
       }
     }
 
@@ -90,7 +90,7 @@ class MainSearcherFactory @Inject() (
 
   def bookmarkSearcher(userId: Id[User]) = {
     val articleSearcher = articleIndexer.getSearcher
-    val uriGraphSearcher = uriGraph.getURIGraphSearcher(Some(userId))
+    val uriGraphSearcher = uriGraph.getURIGraphSearcher(userId)
     new BookmarkSearcher(userId, articleSearcher, uriGraphSearcher)
   }
 
