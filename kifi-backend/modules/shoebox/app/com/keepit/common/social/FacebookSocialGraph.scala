@@ -16,6 +16,7 @@ object FacebookSocialGraph {
 
   object ErrorSubcodes {
     val AppNotInstalled = 458
+    val Expired = 463
   }
 }
 
@@ -44,6 +45,12 @@ class FacebookSocialGraph @Inject() (
             log.warn(s"App not authorized for social user $socialUserInfo; not fetching connections.")
             db.readWrite { implicit s =>
               socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
+            }
+            Seq()
+          case (_, Some(Expired)) =>
+            log.warn(s"Token expired for social user $socialUserInfo; not fetching connections.")
+            db.readWrite { implicit s =>
+              socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())
             }
             Seq()
           case _ =>
