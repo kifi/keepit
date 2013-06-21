@@ -523,9 +523,9 @@ $(function() {
 		}
 	});
 	var $mainHead = $(".main-head");
-	var $scrollable = $main.find(".scrollable").antiscroll({x: false, width: "100%"});
-	var mainScroller = $scrollable.data("antiscroll");
-	$scrollable.find(".antiscroll-inner").scroll(function() { // infinite scroll
+	var $mainScroll = $(".main-scroll").antiscroll({x: false, width: "100%"});
+	var mainScroller = $mainScroll.data("antiscroll");
+	$mainScroll.find(".antiscroll-inner").scroll(function() { // infinite scroll
 		var sT = this.scrollTop;
 		$mainHead.toggleClass("scrolled", sT > 0);
 		if (!isLoading() && this.clientHeight + sT > this.scrollHeight - 300) {
