@@ -1,22 +1,9 @@
 package com.keepit.model
 
-import play.api.Play.current
-import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.inject._
 import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
-import com.keepit.common.crypto._
-import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
 import com.keepit.common.net.UserAgent
-import java.security.SecureRandom
-import java.sql.Connection
 import org.joda.time.DateTime
-import play.api._
-import java.net.URI
-import java.security.MessageDigest
-import scala.collection.mutable
 import com.keepit.common.logging.Logging
 import play.api.mvc.QueryStringBindable
 import play.api.mvc.JavascriptLitteral
@@ -77,33 +64,6 @@ case class KifiInstallation (
   def withUserAgent(userAgent: UserAgent): KifiInstallation = copy(userAgent = userAgent)
   def withState(state: State[KifiInstallation]): KifiInstallation = copy(state = state)
   def isActive: Boolean = state == KifiInstallationStates.ACTIVE
-}
-
-@ImplementedBy(classOf[KifiInstallationRepoImpl])
-trait KifiInstallationRepo extends Repo[KifiInstallation] with ExternalIdColumnFunction[KifiInstallation] {
-  def all(userId: Id[User], excludeState: Option[State[KifiInstallation]] = Some(KifiInstallationStates.INACTIVE))(implicit session: RSession): Seq[KifiInstallation]
-  def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit session: RSession): Option[KifiInstallation]
-}
-
-@Singleton
-class KifiInstallationRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[KifiInstallation] with KifiInstallationRepo with ExternalIdColumnDbFunction[KifiInstallation] {
-  import FortyTwoTypeMappers._
-  import scala.slick.lifted.Query
-  import db.Driver.Implicit._
-  import DBSession._
-
-  override val table = new RepoTable[KifiInstallation](db, "kifi_installation") with ExternalIdColumn[KifiInstallation] {
-    def userId = column[Id[User]]("user_id", O.NotNull)
-    def version = column[KifiVersion]("version", O.NotNull)
-    def userAgent = column[UserAgent]("user_agent", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ userId ~ externalId ~ version ~ userAgent ~ state <> (KifiInstallation, KifiInstallation.unapply _)
-  }
-
-  def all(userId: Id[User], excludeState: Option[State[KifiInstallation]] = Some(KifiInstallationStates.INACTIVE))(implicit session: RSession): Seq[KifiInstallation] =
-    (for(k <- table if k.userId === userId && k.state =!= excludeState.orNull) yield k).list
-
-  def getOpt(userId: Id[User], externalId: ExternalId[KifiInstallation])(implicit session: RSession): Option[KifiInstallation] =
-    (for(k <- table if k.userId === userId && k.externalId === externalId) yield k).firstOption
 }
 
 object KifiInstallationStates extends States[KifiInstallation]

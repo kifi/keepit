@@ -12,8 +12,6 @@ import play.api.templates.Html
 import akka.actor.ActorRef
 import akka.testkit.ImplicitSender
 import org.specs2.mutable.Specification
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.CreateMode._
 import scala.util.{Random, Try}
