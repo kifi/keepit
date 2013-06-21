@@ -30,15 +30,7 @@ class InviteController @Inject() (db: Database,
     extends WebsiteController(actionAuthenticator) {
 
   private def createBasicUserInvitation(socialUser: SocialUserInfo, state: State[Invitation]): BasicUserInvitation = {
-    BasicUserInvitation(
-      name = socialUser.fullName,
-      picture = socialUser.networkType match {
-        case SocialNetworks.FACEBOOK =>
-          Some(s"https://graph.facebook.com/${socialUser.socialId.id}/picture?type=square&width=75&height=75")
-        case _ =>
-          socialUser.credentials.flatMap(_.avatarUrl)
-      }, state = state
-    )
+    BasicUserInvitation(name = socialUser.fullName, picture = socialUser.getPictureUrl(75, 75), state = state)
   }
 
   def invite = AuthenticatedHtmlAction { implicit request =>

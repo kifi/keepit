@@ -42,10 +42,12 @@ class SocialUserImportFriends @Inject() (
 
   private def getIfUpdateNeeded(friend: SocialUserInfo)(implicit s: RSession): Option[SocialUserInfo] = {
     repo.getOpt(friend.socialId, friend.networkType) match {
-      case Some(existing) if existing.copy(fullName = friend.fullName, pictureUrl = friend.pictureUrl) != existing =>
+      case Some(existing) if existing.copy(
+        fullName = friend.fullName, pictureUrl = friend.pictureUrl, profileUrl = friend.profileUrl) != existing =>
         Some(existing.copy(
           fullName = friend.fullName,
           pictureUrl = friend.pictureUrl,
+          profileUrl = friend.profileUrl,
           state = SocialUserInfoStates.FETCHED_USING_FRIEND
         ))
       case None => Some(friend)
