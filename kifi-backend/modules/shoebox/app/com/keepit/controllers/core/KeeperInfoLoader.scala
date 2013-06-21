@@ -80,7 +80,7 @@ class KeeperInfoLoader @Inject() (
 
   def load1(userId: Id[User], normalizedUri: String): KeeperInfo1 = {
     val (domain, bookmark, position, neverOnSite, host) = db.readOnly { implicit session =>
-      val bookmark: Option[Bookmark] = normalizedURIRepo.getByNormalizedUri(normalizedUri).flatMap { uri =>
+      val bookmark: Option[Bookmark] = normalizedURIRepo.getByUri(normalizedUri).flatMap { uri =>
         bookmarkRepo.getByUriAndUser(uri.id.get, userId)
       }
       val host: Option[String] = URI.parse(normalizedUri).get.host.map(_.name)
@@ -98,7 +98,7 @@ class KeeperInfoLoader @Inject() (
 
   def load2(userId: Id[User], normalizedUri: String): KeeperInfo2 = {
     val (nUri, shown, following, comments, threads, lastCommentRead, lastMessageRead) = {
-      val nUri = db.readOnly { implicit s => normalizedURIRepo.getByNormalizedUri(normalizedUri) }
+      val nUri = db.readOnly { implicit s => normalizedURIRepo.getByUri(normalizedUri) }
       nUri match {
         case Some(uri) =>
           val shown = historyTracker.getMultiHashFilter(userId).mayContain(uri.id.get.id)

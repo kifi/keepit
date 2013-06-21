@@ -80,12 +80,25 @@ class NormalizedURITest extends Specification with TestDBRunner {
     }
   }
 
+  "get by state" should {
+    "hash works fine" in {
+      withDB() { implicit injector =>
+        setup()
+        db.readWrite { implicit s =>
+          uriRepo.getByUri("http://www.keepit.com/short").get.url === "http://www.keepit.com/short"
+          uriRepo.getByUri("http://www.keepit.com/short#lulu").get.url === "http://www.keepit.com/short"
+          uriRepo.getByUri("http://www.keepit.com/none/") === None
+        }
+      }
+    }
+  }
+
   "NormalizedURIs search by url" should {
     "search gets nothing" in {
       withDB() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
-          uriRepo.getByNormalizedUrl("http://www.keepit.com/med") === None
+          uriRepo.getByUri("http://www.keepit.com/med") === None
         }
       }
     }
@@ -96,7 +109,7 @@ class NormalizedURITest extends Specification with TestDBRunner {
           val all = uriRepo.all
           all.size === 2
           println(all.mkString("\n"))
-          uriRepo.getByNormalizedUrl("http://www.keepit.com/short").get.url === "http://www.keepit.com/short"
+          uriRepo.getByUri("http://www.keepit.com/short").get.url === "http://www.keepit.com/short"
         }
       }
     }
@@ -104,7 +117,7 @@ class NormalizedURITest extends Specification with TestDBRunner {
       withDB() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
-          uriRepo.getByNormalizedUrl("http://www.keepit.com/long").get.url === "http://www.keepit.com/long"
+          uriRepo.getByUri("http://www.keepit.com/long").get.url === "http://www.keepit.com/long"
         }
       }
     }

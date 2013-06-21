@@ -34,7 +34,7 @@ case class NormalizedURI (
   externalId: ExternalId[NormalizedURI] = ExternalId(),
   title: Option[String] = None,
   url: String,
-  urlHash: String,
+  urlHash: UrlHash,
   state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
   seq: SequenceNumber = SequenceNumber.ZERO
 ) extends ModelWithExternalId[NormalizedURI] with Logging {
@@ -49,25 +49,38 @@ case class NormalizedURI (
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] {
   def allActive()(implicit session: RSession): Seq[NormalizedURI]
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
-  def getByNormalizedUrl(url: String)(implicit session: RSession): Option[NormalizedURI]
-  def getByNormalizedUri(normalizedUri: String)(implicit session: RSession): Option[NormalizedURI]
+  def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI]
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
 }
 
 import com.keepit.serializer.NormalizedURISerializer.normalizedURISerializer // Required implicit value
+
+case class UrlHash(hash: String) extends AnyVal
+
 case class NormalizedURIKey(id: Id[NormalizedURI]) extends Key[NormalizedURI] {
   override val version = 2
   val namespace = "uri_by_id"
   def toKey(): String = id.id.toString
 }
+
+case class NormalizedURIUrlHashKey(urlHash: UrlHash) extends Key[NormalizedURI] {
+  override val version = 0
+  val namespace = "uri_by_hash"
+  def toKey(): String = urlHash.hash
+}
+
 class NormalizedURICache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[NormalizedURIKey, NormalizedURI](innermostPluginSettings, innerToOuterPluginSettings:_*)
+
+class NormalizedURIUrlHashCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[NormalizedURIUrlHashKey, NormalizedURI](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 @Singleton
 class NormalizedURIRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   idCache: NormalizedURICache,
+  urlHashCache: NormalizedURIUrlHashCache,
   scrapeRepoProvider: Provider[ScrapeInfoRepo])
     extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] {
   import FortyTwoTypeMappers._
@@ -80,7 +93,7 @@ class NormalizedURIRepoImpl @Inject() (
   override val table = new RepoTable[NormalizedURI](db, "normalized_uri") with ExternalIdColumn[NormalizedURI] {
     def title = column[String]("title")
     def url = column[String]("url", O.NotNull)
-    def urlHash = column[String]("url_hash", O.NotNull)
+    def urlHash = column[UrlHash]("url_hash", O.NotNull)
     def seq = column[SequenceNumber]("seq", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state ~ seq <> (NormalizedURI,
         NormalizedURI.unapply _)
@@ -93,6 +106,7 @@ class NormalizedURIRepoImpl @Inject() (
 
   override def invalidateCache(uri: NormalizedURI)(implicit session: RSession) = {
     uri.id map {id => idCache.set(NormalizedURIKey(id), uri)}
+    urlHashCache.set(NormalizedURIUrlHashKey(NormalizedURIFactory.hashUrl(uri.url)), uri)
     uri
   }
 
@@ -142,13 +156,12 @@ class NormalizedURIRepoImpl @Inject() (
     limited.list
   }
 
-  // TODO: Rename to getByUrl.
-  def getByNormalizedUrl(url: String)(implicit session: RSession): Option[NormalizedURI] =
-    getByNormalizedUri(NormalizedURIFactory.normalize(url))
-
-  def getByNormalizedUri(normalizedUri: String)(implicit session: RSession): Option[NormalizedURI] = {
+  def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
+    val normalizedUri = NormalizedURIFactory.normalize(url)
     val hash = NormalizedURIFactory.hashUrl(normalizedUri)
-    (for (t <- table if t.urlHash === hash) yield t).firstOption
+    urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
+      (for (t <- table if t.urlHash === hash) yield t).firstOption
+    }
   }
 }
 
@@ -175,9 +188,9 @@ object NormalizedURIFactory {
 
   def normalize(url: String) = URINormalizer.normalize(url)
 
-  def hashUrl(normalizedUrl: String): String = {
+  def hashUrl(normalizedUrl: String): UrlHash = {
     val binaryHash = MessageDigest.getInstance("MD5").digest(normalizedUrl)
-    new String(new Base64().encode(binaryHash), UTF8)
+    UrlHash(new String(new Base64().encode(binaryHash), UTF8))
   }
 }
 
