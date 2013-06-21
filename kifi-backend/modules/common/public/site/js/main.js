@@ -45,6 +45,7 @@ $(function() {
 				$(this).before('<li class="keep-group-title older">Older</li>');
 			}
 		});
+		mainScroller.refresh();
 	});
 	var $results = $("#search-results"), searchTemplate = Tempo.prepare($results).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 		hideLoading();
@@ -54,6 +55,7 @@ $(function() {
 		});
 		$results.find(".keep.mine .keep-who:not(:has(.me))")
 			.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
+		mainScroller.refresh();
 	});
 	var $colls = $("#collections"), collTmpl = Tempo.prepare($colls).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 		makeCollectionsDroppable($colls.find(".collection"));
@@ -520,7 +522,9 @@ $(function() {
 			showRightSide();
 		}
 	});
-	$main.find(".scrollable").scroll(function() { // infinite scroll
+	var $scrollable = $main.find(".scrollable").antiscroll({x: false, width: "100%"});
+	var mainScroller = $scrollable.data("antiscroll");
+	$scrollable.find(".antiscroll-inner").scroll(function() { // infinite scroll
 		var sT = this.scrollTop;
 		$(this.previousElementSibling).toggleClass("scrolled", sT > 0);
 		if (!isLoading() && this.clientHeight + sT > this.scrollHeight - 300) {
