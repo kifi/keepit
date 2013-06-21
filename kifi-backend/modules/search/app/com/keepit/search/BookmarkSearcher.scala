@@ -3,7 +3,7 @@ package com.keepit.search
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-import com.keepit.search.graph.URIGraphSearcher
+import com.keepit.search.graph.URIGraphSearcherWithUser
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.index.Searcher
 import com.keepit.search.query.SiteQuery
@@ -21,19 +21,15 @@ import org.joda.time.DateTime
 import scala.math._
 
 
-class BookmarkSearcher(userId: Id[User], articleSearcher: Searcher, uriGraphSearcher: URIGraphSearcher) extends Logging {
+class BookmarkSearcher(userId: Id[User], articleSearcher: Searcher, uriGraphSearcher: URIGraphSearcherWithUser) extends Logging {
   val currentTime = currentDateTime.getMillis()
 
   val myUriEdges = uriGraphSearcher.myUriEdgeSet
   val myUris = myUriEdges.destIdLongSet
 
   def getSearcher(query: Query) = {
-    val indexReader = uriGraphSearcher.openPersonalIndex(query) match {
-      case Some((personalReader, personalIdMapper)) =>
-        articleSearcher.indexReader.add(personalReader, personalIdMapper)
-      case None =>
-        articleSearcher.indexReader
-    }
+    val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
+    val indexReader = articleSearcher.indexReader.add(personalReader, personalIdMapper)
     new Searcher(indexReader)
   }
 

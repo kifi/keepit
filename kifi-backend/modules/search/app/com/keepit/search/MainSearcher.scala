@@ -3,7 +3,7 @@ package com.keepit.search
 import com.keepit.search.graph.BookmarkRecord
 import com.keepit.search.graph.EdgeAccessor
 import com.keepit.search.graph.CollectionSearcher
-import com.keepit.search.graph.URIGraphSearcher
+import com.keepit.search.graph.URIGraphSearcherWithUser
 import com.keepit.search.graph.UserToUriEdgeSet
 import com.keepit.search.graph.UserToUserEdgeSet
 import com.keepit.search.index.ArticleRecord
@@ -42,7 +42,7 @@ class MainSearcher(
     filter: SearchFilter,
     config: SearchConfig,
     articleSearcher: Searcher,
-    val uriGraphSearcher: URIGraphSearcher,
+    val uriGraphSearcher: URIGraphSearcherWithUser,
     val collectionSearcher: CollectionSearcher,
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
@@ -162,12 +162,8 @@ class MainSearcher(
   }
 
   def getPersonalizedSearcher(query: Query) = {
-    val indexReader = uriGraphSearcher.openPersonalIndex(query) match {
-      case Some((personalReader, personalIdMapper)) =>
-        articleSearcher.indexReader.add(personalReader, personalIdMapper)
-      case None =>
-        articleSearcher.indexReader
-    }
+    val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
+    val indexReader = articleSearcher.indexReader.add(personalReader, personalIdMapper)
     PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryFuture, clickHistoryFuture, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient, monitoredAwait)
   }
 

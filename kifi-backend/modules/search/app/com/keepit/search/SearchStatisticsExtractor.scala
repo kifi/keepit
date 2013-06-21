@@ -169,7 +169,7 @@ class SearchStatisticsHelperSearcher(queryString: String, userId: Id[User], targ
   }
 
  // val searcher = mainSearcherFactory(userId, friendIds, searchFilter, config)
-  val uriGraphSearcher = uriGraph.getURIGraphSearcher(Some(userId))
+  val uriGraphSearcher = uriGraph.getURIGraphSearcher(userId)
   val articleSearcher = articleIndexer.getSearcher
   val myUriEdges = uriGraphSearcher.myUriEdgeSet // my keeps
   val myUris = myUriEdges.destIdLongSet
@@ -201,12 +201,9 @@ class SearchStatisticsHelperSearcher(queryString: String, userId: Id[User], targ
   }
 
   def getPersonalizedSearcher(query: Query) = {
-    val indexReader = uriGraphSearcher.openPersonalIndex(query) match {
-      case Some((personalReader, personalIdMapper)) =>
-        articleSearcher.indexReader.add(personalReader, personalIdMapper)
-      case None =>
-        articleSearcher.indexReader
-    }
+    val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
+    val indexReader = articleSearcher.indexReader.add(personalReader, personalIdMapper)
+
     val browsingHistoryFuture = shoeboxServiceClient.getBrowsingHistoryFilter(userId).map(browsingHistoryBuilder.build)
     val clickHistoryFilter = shoeboxServiceClient.getClickHistoryFilter(userId).map(clickHistoryBuilder.build)
 
