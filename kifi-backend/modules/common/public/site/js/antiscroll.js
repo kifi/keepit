@@ -37,10 +37,10 @@
     this.autoHide = false !== this.options.autoHide;
     this.padding = undefined == this.options.padding ? 2 : this.options.padding;
 
-    this.inner = this.el.find('.antiscroll-inner');
-    this.inner.css({
-        'width':  '+=' + (this.y ? scrollbarSize() : 0)
-      , 'height': '+=' + (this.x ? scrollbarSize() : 0)
+    var ss = scrollbarSize();
+    this.inner = this.el.find('.antiscroll-inner').css({
+        'width':  this.y && ss ? (this.options.width  ? 'calc(' + ss + 'px + ' + this.options.width  + ')' : '+=' + ss) : null
+      , 'height': this.x && ss ? (this.options.height ? 'calc(' + ss + 'px + ' + this.options.height + ')' : '+=' + ss) : null
     });
 
     this.refresh();
