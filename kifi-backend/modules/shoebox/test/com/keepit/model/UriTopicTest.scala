@@ -4,12 +4,15 @@ import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.time.zones.PT
 import org.specs2.mutable.Specification
-import com.keepit.test.TestDBRunner
 import com.google.inject.Injector
 import com.keepit.common.db.Id
-import com.keepit.search.topicModel.TopicModelGlobal
+import scala.Array.canBuildFrom
+import play.api.Play.current
+import com.keepit.test._
+import com.keepit.inject._
+import com.keepit.learning.topicmodel.TopicModelGlobal
 
-class UriTopicTest extends Specification with TestDBRunner {
+class UriTopicTest extends Specification with TestDBRunner{
   def genTopic(numTopics: Int, uriIdx: Int, default: Double = 0.1, nonDefault: Double = 0.8) = {
     val topic = (new Array[Double](numTopics)).map(_ + default)
     topic(uriIdx) = nonDefault
@@ -23,6 +26,7 @@ class UriTopicTest extends Specification with TestDBRunner {
     val ids =  (0 until numUris).map{Id[NormalizedURI](_)}
     val topics = (0 until numUris).map{ genTopic(numTopics, _) }
     val helper = new UriTopicHelper
+    val uriTopicRepo = inject[UriTopicRepo]
     db.readWrite{ implicit s =>
       val uriTopics = (ids zip topics) map { x =>
         val assignedTopics = helper.assignTopics(x._2)
@@ -37,6 +41,7 @@ class UriTopicTest extends Specification with TestDBRunner {
   "uriTopicRepo" should {
     "persist data" in {
       withDB() { implicit injector =>
+        val uriTopicRepo = inject[UriTopicRepo]
         val uriTopics = setup()
         val numDocs = uriTopics.size
         val helper = new UriTopicHelper

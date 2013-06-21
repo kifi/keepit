@@ -8,10 +8,16 @@ import com.keepit.model._
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.social.{SecureSocialUserPluginImpl, SecureSocialAuthenticatorPluginImpl, SecureSocialUserPlugin, SecureSocialAuthenticatorPlugin}
 import com.keepit.common.store.S3ImageStore
+import com.keepit.dev.ShoeboxDevGlobal
+import com.keepit.learning.topicmodel.TinyFakeWordTopicModel
+import net.codingwell.scalaguice.ScalaModule
+import com.keepit.learning.topicmodel.WordTopicModel
+import com.keepit.learning.topicmodel.FakeWordTopicModel
 import com.keepit.common.social.SocialGraphPlugin
-import com.keepit.test.TestGlobal
 
 class ShoeboxApplication() extends TestApplication(new TestGlobal(ShoeboxDevGlobal.modules: _*), path = new File("./modules/shoebox/")) {
+  def withTinyWordTopicModule() = overrideWith(TinyWordTopicModule())
+  def withWordTopicModule() = overrideWith(WordTopicModule())
 
   @Singleton
   @Provides
@@ -39,4 +45,22 @@ class ShoeboxApplication() extends TestApplication(new TestGlobal(ShoeboxDevGlob
   ): SecureSocialUserPlugin = {
     new SecureSocialUserPluginImpl(db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin, userExperimentRepo, emailRepo, socialGraphPlugin)
   }
+}
+
+case class TinyWordTopicModule() extends ScalaModule {
+  override def configure(): Unit = {}
+
+  @Provides
+  @Singleton
+  def wordTopicModel: WordTopicModel = new TinyFakeWordTopicModel
+
+}
+
+case class WordTopicModule() extends ScalaModule {
+  override def configure(): Unit = {}
+
+  @Provides
+  @Singleton
+  def wordTopicModel: WordTopicModel = new FakeWordTopicModel
+
 }

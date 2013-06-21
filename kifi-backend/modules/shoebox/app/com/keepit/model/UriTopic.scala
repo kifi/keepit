@@ -9,8 +9,12 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.search.topicModel.TopicModelGlobal
 import java.io.{DataOutputStream, DataInputStream, ByteArrayInputStream, ByteArrayOutputStream}
+import com.keepit.common.db.slick.FortyTwoTypeMappers.ByteArrayTypeMapper
+import com.keepit.common.db.slick.FortyTwoTypeMappers.NormalizedURIIdTypeMapper
+import scala.annotation.elidable
+import scala.annotation.elidable.ASSERTION
+import com.keepit.learning.topicmodel.TopicModelGlobal
 
 case class UriTopic(
   id: Option[Id[UriTopic]] = None,
@@ -42,7 +46,7 @@ class UriTopicHelper {
     val is = new DataInputStream(new ByteArrayInputStream(arr))
     val topic = (0 until TopicModelGlobal.numTopics).map{i => is.readDouble()}
     is.close()
-    topic
+    topic.toArray
   }
 
   def assignTopics(arr: Array[Double]): (Option[Int], Option[Int]) = {
@@ -86,8 +90,8 @@ class UriTopicRepoImpl @Inject() (
   override val table = new RepoTable[UriTopic](db, "uri_topic"){
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def topic = column[Array[Byte]]("topic", O.NotNull)
-    def primaryTopic = column[Option[Int]]("primary_topic")
-    def secondaryTopic = column[Option[Int]]("secondary_topic")
+    def primaryTopic = column[Option[Int]]("primaryTopic")
+    def secondaryTopic = column[Option[Int]]("secondaryTopic")
     def * = id.? ~ uriId ~ topic ~ primaryTopic ~ secondaryTopic ~ createdAt ~ updatedAt <> (UriTopic, UriTopic.unapply _)
   }
 
