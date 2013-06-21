@@ -33,6 +33,7 @@ class BookmarkRepoImpl @Inject() (
   val clock: Clock,
   val countCache: BookmarkCountCache,
   val keepToCollectionRepo: KeepToCollectionRepoImpl,
+  collectionRepo: CollectionRepo,
   bookmarkUriUserCache: BookmarkUriUserCache)
   extends DbRepo[Bookmark] with BookmarkRepo with ExternalIdColumnDbFunction[Bookmark] {
 
@@ -131,6 +132,8 @@ class BookmarkRepoImpl @Inject() (
 
   override def save(model: Bookmark)(implicit session: RWSession) = {
     val newModel = model.copy(seq = sequence.incrementAndGet())
+    for (bid <- model.id; cid <- keepToCollectionRepo.getCollectionsForBookmark(bid))
+      collectionRepo.collectionChanged(cid)
     super.save(newModel)
   }
 
