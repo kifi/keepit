@@ -7,6 +7,7 @@
 	<meta name="description" content="">
 	<meta name="viewport" content="width=device-width">
 	<link rel="stylesheet" href="js/fancybox/jquery.fancybox.css">
+	<link rel="stylesheet" href="css/antiscroll.css">
 	<link rel="stylesheet" href="css/main.css">
 	<link rel="shortcut icon" type="image/png" href="/assets/images/kifi-favi-50.png">
 </head>
@@ -99,7 +100,7 @@
 				<span data-template>Loading...</span>
 			</div>
 		</div>
-		<div class="scrollable">
+		<div class="scrollable"><div class="antiscroll-inner">
 			<ol id="search-results">
 				<li data-template class="keep draggable {% if isMyBookmark %}mine{% endif %}" data-id="{{bookmark.id}}" style="display:none">
 					<div class="handle">
@@ -148,7 +149,7 @@
 			<div class="loading">
 				<img src="img/loading.gif">
 			</div>
-		</div>
+		</div></div>
 	</section>
 
 	<aside class="right">
@@ -187,6 +188,8 @@
 	<script>window.jQuery||document.write('<script src="js/jquery-1.9.1.min.js"><\/script>')</script>
 	<script src="js/jquery.easydate-0.2.4.min.js"></script>
 	<script src="js/jquery-ui-1.10.3.custom/js/jquery-ui-1.10.3.custom.min.js"></script>
+	<script src="js/jquery.mousewheel.js"></script>
+	<script src="js/antiscroll.js"></script>
 	<script src="js/fancybox/jquery.fancybox.pack.js"></script>
 	<script src="js/tempo.min.js"></script>
 	<script src="js/main.js"></script>

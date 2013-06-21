@@ -33,15 +33,16 @@ section.main {margin: -70px 330px 0 200px; height: 100%; -moz-box-sizing: border
 #my-keeps,#search-results {display: none}
 .main[data-view=mine] #my-keeps,
 .main[data-view=search] #search-results {display: block}
-.main-head {position: absolute; padding: 15px 20px 0; top: 0; left: 0; right: 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
-.main-head.scrolled {border-bottom-color: #dbdee3}
+.main-head {padding: 15px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box}
+.main-head.scrolled {border-bottom: 1px solid #dbdee3}
 .main[data-view=search]>.main-head {margin-top: -30px}
 .main-head>h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
 .main[data-view=search]>.main-head>h1 {display: none}
 .main-head>.subtitle {font-size: 13px; font-weight: 300; color: #5b6670}
 .result-query::before {content: "\201c"}
 .result-query::after {content: "\201d"}
-.main>.scrollable {height: 100%; overflow-y: auto; padding: 1px 18px 0; border-top: 72px solid transparent; box-sizing: border-box; -moz-box-sizing: border-box}
+.main>.scrollable {position: absolute; top: 72px; bottom: 0; left: 0; right: 0; overflow: hidden}
+.main>.scrollable>.antiscroll-inner {position: absolute; height: 100%; width: 100%; overflow-x: hidden; padding: 1px 18px 0; box-sizing: border-box; -moz-box-sizing: border-box}
 
 aside {position: absolute; top: 70px; bottom: 0; background: #eff2f7}
 
