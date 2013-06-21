@@ -21,47 +21,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
 
 
-class URIGraphSearcher(searcher: Searcher, storeSearcher: Searcher, myUserId: Option[Id[User]], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait) extends BaseGraphSearcher(searcher) with Logging {
-
-  private[this] val friendIdsFutureOpt = myUserId.map{ shoeboxClient.getConnectedUsers(_) }
-
-  private[this] lazy val myInfo: Option[UserInfo] = {
-    myUserId.map{ id =>
-      val docid = reader.getIdMapper.getDocId(id.id)
-      val publicList = getURIList(publicListField, docid)
-      val privateList = getURIList(privateListField, docid)
-      val bookmarkIdArray = getLongArray(bookmarkIdField, docid)
-      new UserInfo(id, docid, publicList, privateList, bookmarkIdArray)
-    }
-  }
-
-  lazy val myUriEdgeSetOpt: Option[UserToUriEdgeSet] = myInfo.map(UserToUriEdgeSet(_))
-  lazy val myPublicUriEdgeSetOpt: Option[UserToUriEdgeSet] = myInfo.map(UserToUriEdgeSet(_))
-
-  def myUriEdgeSet: UserToUriEdgeSet = {
-    myUriEdgeSetOpt.getOrElse{ throw new Exception("search user was not set") }
-  }
-
-  def myPublicUriEdgeSet: UserToUriEdgeSet = {
-    myPublicUriEdgeSetOpt.getOrElse{ throw new Exception("search user was not set") }
-  }
-
-  private[this] lazy val friendEdgeSetOpt = friendIdsFutureOpt.map{ future =>
-    val friendIds = monitoredAwait.result(future, 5 seconds, s"getting friends edges")
-    UserToUserEdgeSet(myUserId.get, friendIds)
-  }
-  private[this] val friendsUriEdgeSetsOpt = friendEdgeSetOpt.map{ friendEdgeSet =>
-    friendEdgeSet.destIdSet.foldLeft(Map.empty[Long, UserToUriEdgeSet]){ (m, f) =>
-      m + (f.id -> getUserToUriEdgeSet(f, publicOnly = true))
-    }
-  }
-
-  def friendEdgeSet: UserToUserEdgeSet = {
-    friendEdgeSetOpt.getOrElse{ throw new Exception("search user was not set") }
-  }
-  def friendsUriEdgeSets: Map[Long, UserToUriEdgeSet] = {
-    friendsUriEdgeSetsOpt.getOrElse{ throw new Exception("search user was not set") }
-  }
+class URIGraphSearcher(searcher: Searcher, storeSearcher: Searcher) extends BaseGraphSearcher(searcher) with Logging {
 
   def getUserToUserEdgeSet(sourceId: Id[User], destIdSet: Set[Id[User]]) = UserToUserEdgeSet(sourceId, destIdSet)
 
@@ -93,16 +53,40 @@ class URIGraphSearcher(searcher: Searcher, storeSearcher: Searcher, myUserId: Op
   def intersectAny(friends: UserToUserEdgeSet, bookmarkUsers: UriToUserEdgeSet): Boolean = {
     intersectAny(friends.getDestDocIdSetIterator(searcher), bookmarkUsers.getDestDocIdSetIterator(searcher))
   }
+}
 
+class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUserId: Id[User], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait)
+  extends URIGraphSearcher(searcher, storeSearcher) {
 
-  def openPersonalIndex(query: Query): Option[(CachingIndexReader, IdMapper)] = {
-    val terms = QueryUtil.getTerms(query)
-    myInfo.map{ u =>
-      if (u.mapper.maxDoc != u.uriIdArray.length)
-        log.error(s"mapper.maxDocs=${u.mapper.maxDoc} ids.length=${u.uriIdArray.length} publicList.size=${u.publicList.size} privateList.size=${u.privateList.size}")
+  private[this] val friendIdsFuture = shoeboxClient.getConnectedUsers(myUserId)
 
-      (LineIndexReader(reader, u.docId, terms, u.uriIdArray.length), u.mapper)
+  private[this] lazy val myInfo: UserInfo = {
+    val docid = reader.getIdMapper.getDocId(myUserId.id)
+    val publicList = getURIList(publicListField, docid)
+    val privateList = getURIList(privateListField, docid)
+    val bookmarkIdArray = getLongArray(bookmarkIdField, docid)
+    new UserInfo(myUserId, docid, publicList, privateList, bookmarkIdArray)
+  }
+
+  lazy val myUriEdgeSet: UserToUriEdgeSet = UserToUriEdgeSet(myInfo)
+  lazy val myPublicUriEdgeSet: UserToUriEdgeSet = UserToUriEdgeSet(myInfo)
+
+  lazy val friendEdgeSet = {
+    val friendIds = monitoredAwait.result(friendIdsFuture, 5 seconds, s"getting friends edges")
+    UserToUserEdgeSet(myUserId, friendIds)
+  }
+  lazy val friendsUriEdgeSets = {
+    friendEdgeSet.destIdSet.foldLeft(Map.empty[Long, UserToUriEdgeSet]){ (m, f) =>
+      m + (f.id -> getUserToUriEdgeSet(f, publicOnly = true))
     }
+  }
+
+  def openPersonalIndex(query: Query): (CachingIndexReader, IdMapper) = {
+    if (myInfo.mapper.maxDoc != myInfo.uriIdArray.length)
+      log.error(s"mapper.maxDocs=${myInfo.mapper.maxDoc} ids.length=${myInfo.uriIdArray.length} publicList.size=${myInfo.publicList.size} privateList.size=${myInfo.privateList.size}")
+
+    val terms = QueryUtil.getTerms(query)
+    (LineIndexReader(reader, myInfo.docId, terms, myInfo.uriIdArray.length), myInfo.mapper)
   }
 
   def getBookmarkRecord(uriId: Id[NormalizedURI]): Option[BookmarkRecord] = {

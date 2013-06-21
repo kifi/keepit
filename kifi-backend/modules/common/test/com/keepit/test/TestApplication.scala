@@ -1,6 +1,5 @@
 package com.keepit.test
 
-import scala.collection.concurrent.{TrieMap => ConcurrentMap}
 import scala.collection.mutable
 import scala.concurrent._
 import scala.slick.session.{Database => SlickDatabase}
@@ -147,12 +146,11 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[Babysitter].to[FakeBabysitter]
     install(new SlickModule(dbInfo.getOrElse(dbInfoFromApplication)))
-    bind[MailToKeepPlugin].to[FakeMailToKeepPlugin]
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
     bind[HealthcheckPlugin].to[FakeHealthcheck]
     bind[SlickSessionProvider].to[TestSlickSessionProvider]
     install(new FakeS3StoreModule())
-    install(new FakeCacheModule)
+    install(new DevCacheModule)
     bind[play.api.Application].toProvider(new Provider[play.api.Application] {
       def get(): play.api.Application = current
     }).in(classOf[AppScoped])
@@ -317,30 +315,7 @@ class FakeSocialGraphPlugin extends SocialGraphPlugin {
     future { throw new Exception("Not Implemented") }
 }
 
-@Singleton
-class HashMapMemoryCache extends InMemoryCachePlugin {
-
-  val cache = ConcurrentMap[String, Any]()
-
-  def get(key: String): Option[Any] = {
-    val value = cache.get(key)
-    println(s"retrieved from cache: $key -> $value")
-    value
-  }
-
-  def remove(key: String) {
-    cache.remove(key)
-  }
-
-  def set(key: String, value: Any, expiration: Int = 0) {
-    println(s"setting in cache: $key -> $value")
-    cache += key -> value
-  }
-
-  override def toString = "HashMapMemoryCache"
-}
-
-case class FakeCacheModule() extends ShoeboxCacheModule {
+case class FakeCacheModule() extends ScalaModule {
   override def configure() {
     bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
     bind[InMemoryCachePlugin].to[HashMapMemoryCache]

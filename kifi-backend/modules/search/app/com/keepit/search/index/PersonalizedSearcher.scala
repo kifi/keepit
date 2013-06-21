@@ -45,13 +45,14 @@ object PersonalizedSearcher {
     val browsingHistoryFilter = monitoredAwait.result(browsingHistoryFuture, 40 millisecond,
       s"getting browsing history for user $userId", MultiHashFilter.emptyFilter[BrowsingHistory])
 
-    val clickHistoryFilter = monitoredAwait.result(clickHistoryFuture, 40 millisecond,
+    val clickHistoryFilter = monitoredAwait.result(clickHistoryFuture, 5 seconds,
       s"getting click history for user $userId", MultiHashFilter.emptyFilter[ClickHistory])
 
-    new PersonalizedSearcher(indexReader, myUris, friendUris,
-                             browsingHistoryFilter,
-                             clickHistoryFilter,
-                             svWeightMyBookMarks * scale, svWeightBrowsingHistory * scale, svWeightClickHistory * scale)
+    new PersonalizedSearcher(
+      indexReader, myUris, friendUris,
+      browsingHistoryFilter,
+      clickHistoryFilter,
+      svWeightMyBookMarks * scale, svWeightBrowsingHistory * scale, svWeightClickHistory * scale)
   }
 
   def apply(searcher: Searcher, ids: Set[Long]) = {

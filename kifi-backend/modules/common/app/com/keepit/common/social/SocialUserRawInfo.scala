@@ -15,8 +15,8 @@ case class SocialUserRawInfo(userId: Option[Id[User]], socialUserInfoId: Option[
 object SocialUserRawInfo {
   def apply(socialUserInfo: SocialUserInfo, jsons: Seq[JsValue]): SocialUserRawInfo = {
     SocialUserRawInfo(userId = socialUserInfo.userId, socialUserInfoId = socialUserInfo.id,
-                      socialId = socialUserInfo.socialId, networkType = socialUserInfo.networkType,
-                      fullName = socialUserInfo.fullName, jsons = jsons)
+      socialId = socialUserInfo.socialId, networkType = socialUserInfo.networkType,
+      fullName = socialUserInfo.fullName, jsons = jsons)
   }
 
   def apply(socialUserInfo: SocialUserInfo, json: JsValue): SocialUserRawInfo = apply(socialUserInfo, Seq(json))

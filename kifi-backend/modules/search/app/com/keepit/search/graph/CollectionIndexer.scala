@@ -97,10 +97,11 @@ class CollectionIndexer(
   def buildIndexable(collectionIdAndSequenceNumber: (Id[Collection], Id[User], SequenceNumber)): CollectionListIndexable = {
     val (collectionId, userId, seq) = collectionIdAndSequenceNumber
     val bookmarks = Await.result(shoeboxClient.getBookmarksInCollection(collectionId), 180 seconds)
-    new CollectionListIndexable(id = collectionId,
-                                sequenceNumber = seq,
-                                userId = userId,
-                                bookmarks = bookmarks)
+    new CollectionListIndexable(
+      id = collectionId,
+      sequenceNumber = seq,
+      userId = userId,
+      bookmarks = bookmarks)
   }
 
   class CollectionListIndexable(

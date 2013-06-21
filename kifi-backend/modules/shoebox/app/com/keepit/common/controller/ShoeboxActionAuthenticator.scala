@@ -21,15 +21,15 @@ import securesocial.core.SecuredRequest
 
 @Singleton
 class ShoeboxActionAuthenticator @Inject() (
-                                             db: Database,
-                                             socialUserInfoRepo: SocialUserInfoRepo,
-                                             userExperimentRepo: UserExperimentRepo,
-                                             userRepo: UserRepo,
-                                             fortyTwoServices: FortyTwoServices,
-                                             healthcheckPlugin: HealthcheckPlugin,
-                                             impersonateCookie: ImpersonateCookie,
-                                             connectionUpdater: ConnectionUpdater,
-                                             kifiInstallationCookie: KifiInstallationCookie)
+  db: Database,
+  socialUserInfoRepo: SocialUserInfoRepo,
+  userExperimentRepo: UserExperimentRepo,
+  userRepo: UserRepo,
+  fortyTwoServices: FortyTwoServices,
+  healthcheckPlugin: HealthcheckPlugin,
+  impersonateCookie: ImpersonateCookie,
+  connectionUpdater: ConnectionUpdater,
+  kifiInstallationCookie: KifiInstallationCookie)
   extends ActionAuthenticator with SecureSocial with Logging {
 
   private def loadUserId(userIdOpt: Option[Id[User]], socialId: SocialId,
@@ -86,11 +86,11 @@ class ShoeboxActionAuthenticator @Inject() (
   }
 
   private[controller] def authenticatedAction[T](
-                                                  apiClient: Boolean,
-                                                  allowPending: Boolean,
-                                                  bodyParser: BodyParser[T],
-                                                  onAuthenticated: AuthenticatedRequest[T] => Result,
-                                                  onUnauthenticated: Request[T] => Result): Action[T] = UserAwareAction(bodyParser) { request =>
+      apiClient: Boolean,
+      allowPending: Boolean,
+      bodyParser: BodyParser[T],
+      onAuthenticated: AuthenticatedRequest[T] => Result,
+      onUnauthenticated: Request[T] => Result): Action[T] = UserAwareAction(bodyParser) { request =>
     val result = request.user match {
       case Some(user) =>
         authenticatedHandler(apiClient, allowPending)(onAuthenticated)(SecuredRequest(user, request))

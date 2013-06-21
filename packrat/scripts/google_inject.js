@@ -254,7 +254,6 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     }];
 
   function displayURLFormatter(url) {
-    var prefix = "^https?://w{0,3}\\.?";
     for (var i = 0; i < urlAutoFormatters.length; i++) {
       if (urlAutoFormatters[i].match.test(url)) {
         var iconUrl = api.url("images/results/" + urlAutoFormatters[i].icon);

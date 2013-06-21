@@ -1,32 +1,28 @@
 package com.keepit.common.cache
 
-import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
 import scala.concurrent.duration._
-import com.keepit.common.social.{CommentWithBasicUserCache, BasicUserUserIdCache}
+import com.keepit.search.ActiveExperimentsCache
+import net.codingwell.scalaguice.ScalaModule
+import com.keepit.common.social.BasicUserUserIdCache
 
-abstract class CacheModule extends ScalaModule {
+class SearchCacheModule extends ScalaModule {
+
+  def configure {
+    install(new MemcachedCacheModule)
+    install(new EhCacheCacheModule)
+  }
 
   @Singleton
   @Provides
-  def commentWithBasicUserCache(outerRepo: FortyTwoCachePlugin) =
-    new CommentWithBasicUserCache((outerRepo, 7 days))
+  def basicUserUserIdCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new BasicUserUserIdCache((innerRepo, 5 minutes), (outerRepo, 7 days))
 
   @Singleton
   @Provides
   def bookmarkUriUserCache(outerRepo: FortyTwoCachePlugin) =
     new BookmarkUriUserCache((outerRepo, 7 days))
-
-  @Singleton
-  @Provides
-  def userCollectionCache(outerRepo: FortyTwoCachePlugin) =
-    new UserCollectionsCache((outerRepo, 1 day))
-
-  @Singleton
-  @Provides
-  def collectionsForBookmarkCache(outerRepo: FortyTwoCachePlugin) =
-    new CollectionsForBookmarkCache((outerRepo, 1 day))
 
   @Singleton
   @Provides
@@ -45,18 +41,8 @@ abstract class CacheModule extends ScalaModule {
 
   @Singleton
   @Provides
-  def unscrapableAllCache(outerRepo: FortyTwoCachePlugin) =
-    new UnscrapableAllCache((outerRepo, 0 second))
-
-  @Singleton
-  @Provides
   def userExternalIdCache(outerRepo: FortyTwoCachePlugin) =
     new UserExternalIdCache((outerRepo, 24 hours))
-
-  @Singleton
-  @Provides
-  def userIdCache(outerRepo: FortyTwoCachePlugin) =
-    new UserIdCache((outerRepo, 24 hours))
 
   @Singleton
   @Provides
@@ -75,22 +61,21 @@ abstract class CacheModule extends ScalaModule {
 
   @Singleton
   @Provides
-  def sliderHistoryUserIdCache(outerRepo: FortyTwoCachePlugin) =
-    new SliderHistoryUserIdCache((outerRepo, 7 days))
+  def browsingHistoryUserIdCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new BrowsingHistoryUserIdCache((innerRepo, 10 seconds), (outerRepo, 7 days))
 
   @Singleton
   @Provides
-  def bookmarkCountCache(outerRepo: FortyTwoCachePlugin) =
-    new BookmarkCountCache((outerRepo, 1 hour))
+  def clickHistoryUserIdCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new ClickHistoryUserIdCache((innerRepo, 50 milliseconds), (outerRepo, 7 days))
 
   @Singleton
   @Provides
-  def commentCountUriIdCache(outerRepo: FortyTwoCachePlugin) =
-    new CommentCountUriIdCache((outerRepo, 1 hour))
+  def activeExperimentsCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new ActiveExperimentsCache((innerRepo, 5 minutes), (outerRepo, 7 days))
 
   @Singleton
   @Provides
-  def userValueCache(outerRepo: FortyTwoCachePlugin) =
-    new UserValueCache((outerRepo, 7 days))
-
+  def userConnectionIdCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserConnectionIdCache((innerRepo, 10 seconds), (outerRepo, 7 days))
 }

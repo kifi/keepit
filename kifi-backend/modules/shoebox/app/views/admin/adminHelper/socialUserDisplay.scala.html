@@ -1,5 +1,4 @@
 @(socialUserInfo: SocialUserInfo, socialOnly: Boolean = false)
-@import com.keepit.common.social.SocialNetworks
 
 @networkLogo = {
   <img src="/assets/securesocial/images/providers/@{socialUserInfo.networkType}.png"
@@ -7,12 +6,8 @@
 }
 
 @avatar = {
-  @if(socialUserInfo.networkType == SocialNetworks.FACEBOOK) {
-    <img class="user-avatar" src="http://graph.facebook.com/@socialUserInfo.socialId/picture">
-  } else {
-    @for(img <- socialUserInfo.pictureUrl) {
-      <img class="user-avatar" src="@img"/>
-    }
+  @for(img <- socialUserInfo.getPictureUrl(75, 75)) {
+    <img class="user-avatar" src="@img"/>
   }
 }
 

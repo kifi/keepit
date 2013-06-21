@@ -13,7 +13,14 @@ import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.social.BasicUser
 
 //note: users.size != count if some users has the bookmark marked as private
-case class PersonalSearchHit(id: Id[NormalizedURI], title: Option[String], url: String, isPrivate: Boolean)
+case class PersonalSearchHit(
+    id: Id[NormalizedURI],
+    title: Option[String],
+    url: String,
+    isPrivate: Boolean,
+    titleMatches: Seq[(Int, Int)],
+    urlMatches: Seq[(Int, Int)]
+)
 
 case class PersonalSearchResult(hit: PersonalSearchHit, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[BasicUser], score: Float, isNew: Boolean)
 case class PersonalSearchResultPacket(

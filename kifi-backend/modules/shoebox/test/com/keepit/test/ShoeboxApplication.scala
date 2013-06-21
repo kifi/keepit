@@ -1,18 +1,19 @@
 package com.keepit.test
 
 import java.io.File
+import com.keepit.dev.ShoeboxDevGlobal
 import com.google.inject.{Provides, Singleton}
 import com.keepit.common.db.slick.Database
+import com.keepit.model._
 import com.keepit.common.healthcheck.HealthcheckPlugin
-import com.keepit.common.social.SocialGraphPlugin
+import com.keepit.social.{SecureSocialUserPluginImpl, SecureSocialAuthenticatorPluginImpl, SecureSocialUserPlugin, SecureSocialAuthenticatorPlugin}
 import com.keepit.common.store.S3ImageStore
 import com.keepit.dev.ShoeboxDevGlobal
-import com.keepit.model._
-import com.keepit.social.{ShoeboxSecureSocialUserPlugin, ShoeboxSecureSocialAuthenticatorPlugin, SecureSocialUserPlugin, SecureSocialAuthenticatorPlugin}
 import com.keepit.learning.topicmodel.TinyFakeWordTopicModel
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.learning.topicmodel.WordTopicModel
 import com.keepit.learning.topicmodel.FakeWordTopicModel
+import com.keepit.common.social.SocialGraphPlugin
 
 class ShoeboxApplication() extends TestApplication(new TestGlobal(ShoeboxDevGlobal.modules: _*), path = new File("./modules/shoebox/")) {
   def withTinyWordTopicModule() = overrideWith(TinyWordTopicModule())
@@ -25,8 +26,9 @@ class ShoeboxApplication() extends TestApplication(new TestGlobal(ShoeboxDevGlob
     suiRepo: SocialUserInfoRepo,
     usRepo: UserSessionRepo,
     healthPlugin: HealthcheckPlugin,
-    app: play.api.Application): SecureSocialAuthenticatorPlugin = {
-    new ShoeboxSecureSocialAuthenticatorPlugin(db, suiRepo, usRepo, healthPlugin, app)
+    app: play.api.Application
+  ): SecureSocialAuthenticatorPlugin = {
+    new SecureSocialAuthenticatorPluginImpl(db, suiRepo, usRepo, healthPlugin, app)
   }
 
   @Singleton
@@ -39,12 +41,11 @@ class ShoeboxApplication() extends TestApplication(new TestGlobal(ShoeboxDevGlob
     healthcheckPlugin: HealthcheckPlugin,
     userExperimentRepo: UserExperimentRepo,
     emailRepo: EmailAddressRepo,
-    socialGraphPlugin: SocialGraphPlugin): SecureSocialUserPlugin = {
-    new ShoeboxSecureSocialUserPlugin(
-      db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin, userExperimentRepo, emailRepo, socialGraphPlugin)
+    socialGraphPlugin: SocialGraphPlugin
+  ): SecureSocialUserPlugin = {
+    new SecureSocialUserPluginImpl(db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin, userExperimentRepo, emailRepo, socialGraphPlugin)
   }
 }
-
 
 case class TinyWordTopicModule() extends ScalaModule {
   override def configure(): Unit = {}
@@ -63,5 +64,3 @@ case class WordTopicModule() extends ScalaModule {
   def wordTopicModel: WordTopicModel = new FakeWordTopicModel
 
 }
-
-

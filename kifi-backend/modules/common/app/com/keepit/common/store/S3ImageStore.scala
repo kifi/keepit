@@ -70,14 +70,8 @@ class S3ImageStoreImpl @Inject() (
   }
 
   private def avatarUrlFromSocialNetwork(sui: SocialUserInfo, size: Int): String = {
-    sui.networkType match {
-      case SocialNetworks.FACEBOOK =>
-        s"https://graph.facebook.com/${sui.socialId.id}/picture?width=$size&height=$size"
-      case _ =>
-        // TODO: specific sizes for linkedin and other networks
-        sui.pictureUrl.getOrElse(
-          "http://s.c.lnkd.licdn.com/scds/common/u/images/themes/katy/ghosts/person/ghost_person_200x200_v1.png")
-    }
+    sui.getPictureUrl(size, size).getOrElse(
+      "http://s.c.lnkd.licdn.com/scds/common/u/images/themes/katy/ghosts/person/ghost_person_200x200_v1.png")
   }
 
   def updatePicture(sui: SocialUserInfo, externalId: ExternalId[User]): Future[Seq[PutObjectResult]] = {
