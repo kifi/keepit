@@ -18,7 +18,7 @@ trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Coll
     (implicit session: RSession): Option[Collection]
   def getCollectionsChanged(num: SequenceNumber, limit: Int)
     (implicit session: RSession): Seq[(Id[Collection], Id[User], SequenceNumber)]
-  def keepsChanged(modelId: Id[Collection], isActive: Boolean)(implicit session: RWSession)
+  def collectionChanged(modelId: Id[Collection], isActive: Boolean = false)(implicit session: RWSession)
 }
 
 @Singleton
@@ -70,8 +70,8 @@ class CollectionRepoImpl @Inject() (
     super.save(newModel)
   }
 
-  def keepsChanged(modelId: Id[Collection], isActive: Boolean)(implicit session: RWSession) {
-    if (isActive) {
+  def collectionChanged(modelId: Id[Collection], isNewKeep: Boolean = false)(implicit session: RWSession) {
+    if (isNewKeep) {
       save(get(modelId) withLastKeptTo clock.now())
     } else {
       (for (c <- table if c.id === modelId) yield c.seq).update(sequence.incrementAndGet())
