@@ -33,16 +33,16 @@ section.main {margin: -70px 330px 0 200px; height: 100%; -moz-box-sizing: border
 #my-keeps,#search-results {display: none}
 .main[data-view=mine] #my-keeps,
 .main[data-view=search] #search-results {display: block}
-.main-head {padding: 15px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box}
-.main-head.scrolled {border-bottom: 1px solid #dbdee3}
+.main-head {padding: 15px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
+.main-head.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
 .main[data-view=search]>.main-head {margin-top: -30px}
 .main-head>h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
 .main[data-view=search]>.main-head>h1 {display: none}
 .main-head>.subtitle {font-size: 13px; font-weight: 300; color: #5b6670}
 .result-query::before {content: "\201c"}
 .result-query::after {content: "\201d"}
-.main>.scrollable {position: absolute; top: 72px; bottom: 0; left: 0; right: 0; overflow: hidden}
-.main>.scrollable>.antiscroll-inner {position: absolute; height: 100%; width: 100%; overflow-x: hidden; padding: 1px 18px 0; box-sizing: border-box; -moz-box-sizing: border-box}
+.main-keeps {position: absolute; top: 72px; bottom: 0; left: 0; right: 0; overflow: hidden}
+.main-keeps>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; padding: 1px 18px 0; box-sizing: border-box; -moz-box-sizing: border-box}
 
 aside {position: absolute; top: 70px; bottom: 0; background: #eff2f7}
 
@@ -71,7 +71,9 @@ a.new-collection:hover {background-color: #a1acbd}
 .add-collection {border-bottom: 1px solid #dbdee3; background: #fff; -webkit-transition: background-color .16s; transition: background-color .16s}
 .add-collection.submitted {background-color: rgba(255,255,255,0)}
 #collections input {width: 100%; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; line-height: normal; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text}
-#collections-list {overflow-y: auto; overflow-x: hidden}
+#collections-list {overflow: hidden}
+#collections-list.positioned {position: absolute; bottom: 0; left: 0; right: 0}
+#collections-list>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden}
 #collections-list>.sortable-placeholder {background: #6fa6ef; height: 2px; min-height: 0}
 h3.collection {border-bottom: 1px solid #dbdee3; position: relative; -webkit-transition: padding-left .16s, background-color 0s; transition: padding-left .16s, background-color 0s}
 .collection.with-tri:not(.no-tri) {padding-left: 27px}

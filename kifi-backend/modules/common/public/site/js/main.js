@@ -58,8 +58,8 @@ $(function() {
 		mainScroller.refresh();
 	});
 	var $colls = $("#collections"), collTmpl = Tempo.prepare($colls).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
+		collScroller.refresh();
 		makeCollectionsDroppable($colls.find(".collection"));
-		adjustCollHeight();
 	});
 	var $inColl = $(".in-collections"), inCollTmpl = Tempo.prepare($inColl);
 
@@ -314,10 +314,6 @@ $(function() {
 		$.fancybox($('<p>').text(msg));
 	}
 
-	function adjustCollHeight() {
-		$collList.height($(window).height() - $collList.offset().top);
-	}
-
 	// delete/rename collection
 	var $collMenu = $("#coll-menu")
 	.on("mouseover", "a", function() {
@@ -408,8 +404,6 @@ $(function() {
 	// auto update my keeps every minute
 	setInterval(addNewKeeps, 60000);
 	setInterval(updateNumKeeps, 60000);
-
-	$(window).resize(adjustCollHeight);
 
 	// handle collection adding/removing from right bar
 	$inColl.on('change', 'input[type="checkbox"]', function() {
@@ -522,11 +516,11 @@ $(function() {
 			showRightSide();
 		}
 	});
-	var $scrollable = $main.find(".scrollable").antiscroll({x: false, width: "100%"});
-	var mainScroller = $scrollable.data("antiscroll");
-	$scrollable.find(".antiscroll-inner").scroll(function() { // infinite scroll
+	var $mainHead = $(".main-head");
+	var $mainKeeps = $(".main-keeps").antiscroll({x: false, width: "100%"});
+	$mainKeeps.find(".antiscroll-inner").scroll(function() { // infinite scroll
 		var sT = this.scrollTop;
-		$(this.previousElementSibling).toggleClass("scrolled", sT > 0);
+		$mainHead.toggleClass("scrolled", sT > 0);
 		if (!isLoading() && this.clientHeight + sT > this.scrollHeight - 300) {
 			if (searchResponse) {
 				doSearch(searchResponse.context);
@@ -535,6 +529,8 @@ $(function() {
 			}
 		}
 	});
+	var mainScroller = $mainKeeps.data("antiscroll");
+	$(window).resize(mainScroller.refresh.bind(mainScroller));
 
 	var $query = $("input.query").on("keydown input", function(e) {
 		console.log("[clearTimeout]", e.type);
@@ -568,7 +564,11 @@ $(function() {
 	populateCollections();
 	populateCollectionsRight();
 
-	var $collList = $("#collections-list").sortable({
+	var $collList = $("#collections-list")
+	.each(function() {this.style.top = this.offsetTop + "px"})
+	.addClass("positioned")
+	.antiscroll({x: false, width: "100%"})
+	.sortable({
 		items: ".collection",
 		cancel: ".coll-tri,.renaming",
 		opacity: .6,
@@ -618,6 +618,8 @@ $(function() {
 	}).on("mouseleave", ".collection.with-tri:not(.with-menu):not(.no-tri)", function() {
 		hideCollTri.call(this);
 	});
+	var collScroller = $collList.data("antiscroll");
+	$(window).resize(collScroller.refresh.bind(collScroller));
 
 	function hideCollTri() {
 		$(this).on("transitionend", function end(e) {
@@ -655,6 +657,7 @@ $(function() {
 				$addColl.slideUp(80).find("input").val("").prop("disabled", true);
 			} else {
 				$addColl.slideDown(80, function() {
+					$collList.find(".antiscroll-inner")[0].scrollTop = 0;
 					$addColl.find("input").prop("disabled", false).focus().select();
 				});
 			}
