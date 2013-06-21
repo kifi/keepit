@@ -6,8 +6,7 @@ import org.joda.time.DateTime
 
 import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
 import com.keepit.common.db._
-import com.keepit.common.social.SocialId
-import com.keepit.common.social.SocialNetworkType
+import com.keepit.common.social.{SocialNetworks, SocialId, SocialNetworkType}
 import com.keepit.common.time._
 
 import play.api.libs.functional.syntax._
@@ -21,6 +20,7 @@ case class SocialUserInfo(
   userId: Option[Id[User]] = None,
   fullName: String,
   pictureUrl: Option[String] = None,
+  profileUrl: Option[String] = None,
   state: State[SocialUserInfo] = SocialUserInfoStates.CREATED,
   socialId: SocialId,
   networkType: SocialNetworkType,
@@ -34,22 +34,32 @@ case class SocialUserInfo(
   def withCredentials(credentials: SocialUser) = copy(credentials = Some(credentials))//want to make sure the user has an id, fail hard if not!
   def withState(state: State[SocialUserInfo]) = copy(state = state)
   def withLastGraphRefresh(lastGraphRefresh : Option[DateTime] = Some(currentDateTime)) = copy(lastGraphRefresh = lastGraphRefresh)
+  def getPictureUrl(preferredWidth: Int = 50, preferredHeight: Int = 50): Option[String] = networkType match {
+    case SocialNetworks.FACEBOOK =>
+      Some(s"http://graph.facebook.com/$socialId/picture?width=$preferredWidth&height=$preferredHeight")
+    case _ => pictureUrl
+  }
+  def getProfileUrl: Option[String] = profileUrl orElse (networkType match {
+    case SocialNetworks.FACEBOOK => Some(s"http://facebook.com/$socialId")
+    case _ => None
+  })
 }
 
 object SocialUserInfo {
   import com.keepit.serializer.SocialUserSerializer._
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[SocialUserInfo]) and
-      (__ \ 'createdAt).format[DateTime] and
-      (__ \ 'updatedAt).format[DateTime] and
-      (__ \ 'userId).formatNullable(Id.format[User]) and
-      (__ \ 'fullName).format[String] and
-      (__ \ 'pictureUrl).formatNullable[String] and
-      (__ \ 'state).format(State.format[SocialUserInfo]) and
-      (__ \ 'socialId).format[String].inmap(SocialId.apply, unlift(SocialId.unapply)) and
-      (__ \ 'networkType).format[String].inmap(SocialNetworkType.apply, unlift(SocialNetworkType.unapply)) and
-      (__ \ 'credentials).formatNullable[SocialUser] and
-      (__ \ 'lastGraphRefresh).formatNullable[DateTime]
+    (__ \ 'createdAt).format[DateTime] and
+    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'userId).formatNullable(Id.format[User]) and
+    (__ \ 'fullName).format[String] and
+    (__ \ 'pictureUrl).formatNullable[String] and
+    (__ \ 'profileUrl).formatNullable[String] and
+    (__ \ 'state).format(State.format[SocialUserInfo]) and
+    (__ \ 'socialId).format[String].inmap(SocialId.apply, unlift(SocialId.unapply)) and
+    (__ \ 'networkType).format[String].inmap(SocialNetworkType.apply, unlift(SocialNetworkType.unapply)) and
+    (__ \ 'credentials).formatNullable[SocialUser] and
+    (__ \ 'lastGraphRefresh).formatNullable[DateTime]
   )(SocialUserInfo.apply, unlift(SocialUserInfo.unapply))
 }
 

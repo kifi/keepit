@@ -1,11 +1,20 @@
 package com.keepit.model
 
+import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db.Id
 import com.keepit.common.db.Model
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import com.keepit.search.topicModel.TopicModelGlobal
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession._
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 import java.io.{DataOutputStream, DataInputStream, ByteArrayInputStream, ByteArrayOutputStream}
+import com.keepit.common.db.slick.FortyTwoTypeMappers.ByteArrayTypeMapper
+import com.keepit.common.db.slick.FortyTwoTypeMappers.NormalizedURIIdTypeMapper
+import scala.annotation.elidable
+import scala.annotation.elidable.ASSERTION
+import com.keepit.learning.topicmodel.TopicModelGlobal
 
 case class UriTopic(
   id: Option[Id[UriTopic]] = None,
@@ -37,7 +46,7 @@ class UriTopicHelper {
     val is = new DataInputStream(new ByteArrayInputStream(arr))
     val topic = (0 until TopicModelGlobal.numTopics).map{i => is.readDouble()}
     is.close()
-    topic
+    topic.toArray
   }
 
   def assignTopics(arr: Array[Double]): (Option[Int], Option[Int]) = {
@@ -62,4 +71,36 @@ class UriTopicHelper {
       }
     }
   }
+}
+
+@ImplementedBy(classOf[UriTopicRepoImpl])
+trait UriTopicRepo extends Repo[UriTopic]{
+  def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession):Option[UriTopic]
+  def getAssignedTopicsByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[(Option[Int], Option[Int])]
+}
+
+@Singleton
+class UriTopicRepoImpl @Inject() (
+  val db: DataBaseComponent,
+  val clock: Clock
+) extends DbRepo[UriTopic] with UriTopicRepo {
+  import FortyTwoTypeMappers._
+  import db.Driver.Implicit._
+
+  override val table = new RepoTable[UriTopic](db, "uri_topic"){
+    def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
+    def topic = column[Array[Byte]]("topic", O.NotNull)
+    def primaryTopic = column[Option[Int]]("primaryTopic")
+    def secondaryTopic = column[Option[Int]]("secondaryTopic")
+    def * = id.? ~ uriId ~ topic ~ primaryTopic ~ secondaryTopic ~ createdAt ~ updatedAt <> (UriTopic, UriTopic.unapply _)
+  }
+
+  def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[UriTopic] = {
+    (for(r <- table if r.uriId === uriId) yield r).firstOption
+  }
+
+  def getAssignedTopicsByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[(Option[Int], Option[Int])] = {
+    (for(r <- table if r.uriId === uriId) yield (r.primaryTopic, r.secondaryTopic)).firstOption
+  }
+
 }

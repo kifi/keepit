@@ -1,4 +1,4 @@
-package com.keepit.search.topicModel
+package com.keepit.learning.topicmodel
 
 object TopicModelGlobal {
   val numTopics = 40

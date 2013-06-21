@@ -132,9 +132,9 @@ class URIGraphIndexer(
     val (userId, seq) = userIdAndSequenceNumber
     val bookmarks = bookmarkStore.getBookmarks(userId)
     new URIListIndexable(id = userId,
-                         sequenceNumber = seq,
-                         isDeleted = false,
-                         bookmarks = bookmarks)
+      sequenceNumber = seq,
+      isDeleted = false,
+      bookmarks = bookmarks)
   }
 
   class URIListIndexable(

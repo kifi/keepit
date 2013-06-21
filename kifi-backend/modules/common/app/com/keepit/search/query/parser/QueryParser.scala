@@ -15,6 +15,16 @@ abstract class QueryParser(protected val defaultAnalyzer: Analyzer, protected va
 
   val fields: Set[String]
 
+  protected val stemmedTerms = new ArrayBuffer[Term]
+
+  def hasStemmedTerms = !stemmedTerms.isEmpty
+
+  def numStemmedTerms = stemmedTerms.size
+
+  def getStemmedTermArray = stemmedTerms.toArray
+
+  def getStemmedTerms(field: String) = stemmedTerms.map(t => new Term(field, t.text()))
+
   def parse(queryText: CharSequence): Option[Query]
 
   protected def getBooleanQuery(clauses: ArrayBuffer[BooleanClause]): Option[Query] = {
@@ -28,17 +38,24 @@ abstract class QueryParser(protected val defaultAnalyzer: Analyzer, protected va
   }
 
   protected def getFieldQuery(field: String, queryText: String, quoted: Boolean): Option[Query] = {
-    getFieldQuery(field, queryText, quoted, defaultAnalyzer)
+    val it = new TermIterator(field, queryText, defaultAnalyzer) with Position
+
+    getFieldQuery(field, queryText, quoted, it)
   }
 
   def getStemmedFieldQuery(field: String, queryText: String): Option[Query] = {
-    getFieldQuery(field, queryText, false, stemmingAnalyzer)
+    val it = new TermIterator(field, queryText, stemmingAnalyzer) with Position with TermInterceptor {
+      def process(t: Term): Term = {
+        stemmedTerms += t
+        t
+      }
+    }
+
+    getFieldQuery(field, queryText, false, it)
   }
 
 
-  protected def getFieldQuery(field: String, queryText: String, quoted: Boolean, analyzer: Analyzer): Option[Query] = {
-    val it = new TermIterator(field, queryText, analyzer) with Position
-
+  protected def getFieldQuery(field: String, queryText: String, quoted: Boolean, it: TermIterator with Position): Option[Query] = {
     if (it.hasNext) {
       var term = it.next()
       var pos = it.position

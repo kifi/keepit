@@ -14,9 +14,9 @@ trait CommentReadRepo extends Repo[CommentRead] {
 
 @Singleton
 class CommentReadRepoImpl @Inject() (
-                                      val db: DataBaseComponent,
-                                      val clock: Clock,
-                                      commentRepo: CommentRepo)
+  val db: DataBaseComponent,
+  val clock: Clock,
+  commentRepo: CommentRepo)
   extends DbRepo[CommentRead] with CommentReadRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query

@@ -35,7 +35,7 @@
 	<aside class="left-col">
 		<div class="my-identity">
 			<div class="my-pic"></div>
-			<div class="my-name">Loading...</div>
+			<div class="my-name">&nbsp;</div>
 		</div>
 		<h2>You</h2>
 		<h3 class="my-keeps active">
@@ -103,19 +103,20 @@
 			<ol id="search-results">
 				<li data-template class="keep draggable {% if isMyBookmark %}mine{% endif %}" data-id="{{bookmark.id}}" style="display:none">
 					<div class="handle">
-						<div class="checkbox"></div>
+						<div class="keep-checkbox"></div>
 					</div>
-					<div class="long-text">
-						<a class="long-text" href="{{bookmark.url}}" target="_blank" title="{{bookmark.title}}">{{bookmark.title}}</a>
+					<div class="keep-title long-text">
+						<a href="{{bookmark.url}}" target="_blank" title="{{bookmark.title}}">{{bookmark.title}}</a>
 					</div>
-					<div class="fs9 gray long-text" title="{{bookmark.url}}">{{bookmark.url}}</div>
-					<div class="bottom">
+					<div class="keep-url long-text" title="{{bookmark.url}}">{{bookmark.url | replace '^http://', '	' | replace '^([^/]*)/$', '$1'}}</div>
+					<div class="keep-who">
 						<img class="small-avatar" data-template-for="users"
 							src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
 							data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
 							title="{{firstName}} {{lastName}}">
-						<span class="fs9 gray">
-							{% if isMyBookmark %}You{% endif %}{% if users.length > 0 && isMyBookmark %} + {% endif %}{% if users.length > 0 %}{{users.length}} friend{% endif %}{% if users.length > 1 %}s{% endif %} kept this <span class="private {% if isPrivate %}on{% endif %}"><img src="img/private.png"> Private</span>
+						<span class="keep-who-text">
+							{% if isMyBookmark %}You{% endif %}{% if users.length > 0 && isMyBookmark %} + {% endif %}{% if users.length > 0 %}{{users.length}} friend{% endif %}{% if users.length > 1 %}s{% endif %} kept this
+							<span class="keep-private{% if isPrivate %} on{% endif %}">Private</span>
 						</span>
 						<div class="clearfix"></div>
 					</div>
@@ -123,20 +124,22 @@
 			</ol>
 			<ol id="my-keeps">
 				<li data-template data-id="{{id}}" class="keep mine draggable {% if isPrivate %}private{% endif %}" data-created={{createdAt}} data-collections="{{collections}}" style="display:none">
-					<div class="right fs9 gray easydate">{{createdAt}}</div>
+					<time>{{createdAt}}</time>
 					<div class="handle">
-						<div class="checkbox"></div>
+						<div class="keep-checkbox"></div>
 					</div>
-					<div class="long-text">
-						<a class="long-text" href="{{url}}" target="_blank" title="{{title}}">{{title}}</a>
+					<div class="keep-title long-text">
+						<a href="{{url}}" target="_blank" title="{{title}}">{{title}}</a>
 					</div>
-					<div class="fs9 gray long-text" title="{{url}}">{{url}}</div>
-					<div class="bottom">
+					<div class="keep-url long-text" title="{{url}}">{{url | replace '^http://', '	' | replace '^([^/]*)/$', '$1'}}</div>
+					<div class="keep-who">
 						<img class="small-avatar" data-template-for="keepers"
 							src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
 							data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
 							title="{{firstName}} {{lastName}}">
-						<span class="fs9 gray"> You {% if keepers.length > 0 %} + {{keepers.length}} friend{% endif %}{% if keepers.length > 1 %}s{% endif %} kept this <span class="private {% if isPrivate %}on{% endif %}"><img src="img/private.png"> Private<span class="private">
+						<span class="keep-who-text">
+							You {% if keepers.length > 0 %} + {{keepers.length}} friend{% endif %}{% if keepers.length > 1 %}s{% endif %} kept this
+							<span class="keep-private{% if isPrivate %} on{% endif %}">Private</span>
 						</span>
 						<div class="clearfix"></div>
 					</div>

@@ -10,6 +10,7 @@ import securesocial.core.SocialUser
 import org.joda.time.DateTime
 import com.keepit.common.social.SocialId
 
+
 @ImplementedBy(classOf[SocialUserInfoRepoImpl])
 trait SocialUserInfoRepo extends Repo[SocialUserInfo] {
   def getByUser(id: Id[User])(implicit session: RSession): Seq[SocialUserInfo]
@@ -39,7 +40,9 @@ class SocialUserInfoRepoImpl @Inject() (
     def credentials = column[SocialUser]("credentials", O.Nullable)
     def lastGraphRefresh = column[DateTime]("last_graph_refresh", O.Nullable)
     def pictureUrl = column[String]("picture_url", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ userId.? ~ fullName ~ pictureUrl.? ~ state ~ socialId ~ networkType ~ credentials.? ~ lastGraphRefresh.? <> (SocialUserInfo.apply _, SocialUserInfo.unapply _)
+    def profileUrl = column[String]("profile_url", O.Nullable)
+    def * = id.? ~ createdAt ~ updatedAt ~ userId.? ~ fullName ~ pictureUrl.? ~ profileUrl.? ~ state ~ socialId ~
+      networkType ~ credentials.? ~ lastGraphRefresh.? <> (SocialUserInfo.apply _, SocialUserInfo.unapply _)
   }
 
   override def invalidateCache(socialUser: SocialUserInfo)(implicit session: RSession) = {

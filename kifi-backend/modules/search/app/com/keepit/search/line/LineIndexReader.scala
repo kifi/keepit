@@ -21,7 +21,7 @@ object LineIndexReader extends Logging {
       val field = term.field
       val text = term.bytes
       val tp = indexReader.termPositionsEnum(term)
-      if (tp != null && tp.advance(userDocId) == userDocId) {
+      if (tp != null && userDocId >= 0 && tp.advance(userDocId) == userDocId) {
         val invertedList = new InvertedListBuilder
         val freq = tp.freq()
         var i = 0

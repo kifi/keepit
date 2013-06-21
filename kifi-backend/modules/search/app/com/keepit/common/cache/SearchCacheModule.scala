@@ -67,7 +67,7 @@ class SearchCacheModule extends ScalaModule {
   @Singleton
   @Provides
   def clickHistoryUserIdCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new ClickHistoryUserIdCache((innerRepo, 500 milliseconds), (outerRepo, 7 days))
+    new ClickHistoryUserIdCache((innerRepo, 50 milliseconds), (outerRepo, 7 days))
 
   @Singleton
   @Provides

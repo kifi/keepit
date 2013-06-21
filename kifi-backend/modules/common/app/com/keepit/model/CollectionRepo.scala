@@ -12,12 +12,12 @@ import com.keepit.common.time._
 trait CollectionRepo extends Repo[Collection] with ExternalIdColumnFunction[Collection] {
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Collection]
   def getByUserAndExternalId(userId: Id[User], externalId: ExternalId[Collection])
-                            (implicit session: RSession): Option[Collection]
+    (implicit session: RSession): Option[Collection]
   def getByUserAndName(userId: Id[User], name: String,
-                       excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
-                      (implicit session: RSession): Option[Collection]
+    excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
+    (implicit session: RSession): Option[Collection]
   def getCollectionsChanged(num: SequenceNumber, limit: Int)
-                           (implicit session: RSession): Seq[(Id[Collection], Id[User], SequenceNumber)]
+    (implicit session: RSession): Seq[(Id[Collection], Id[User], SequenceNumber)]
   def keepsChanged(modelId: Id[Collection], isActive: Boolean)(implicit session: RWSession)
 }
 
@@ -60,8 +60,8 @@ class CollectionRepoImpl @Inject() (
     } yield c).firstOption
 
   def getByUserAndName(userId: Id[User], name: String,
-                       excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
-                      (implicit session: RSession): Option[Collection] =
+      excludeState: Option[State[Collection]] = Some(CollectionStates.INACTIVE))
+      (implicit session: RSession): Option[Collection] =
     (for (c <- table if c.userId === userId && c.name === name
       && c.state =!= excludeState.getOrElse(null)) yield c).firstOption
 
@@ -79,6 +79,6 @@ class CollectionRepoImpl @Inject() (
   }
 
   def getCollectionsChanged(num: SequenceNumber, limit: Int)
-                           (implicit session: RSession): Seq[(Id[Collection], Id[User], SequenceNumber)] =
+      (implicit session: RSession): Seq[(Id[Collection], Id[User], SequenceNumber)] =
     (for (c <- table if c.seq > num) yield (c.id, c.userId, c.seq)).sortBy(_._3).take(limit).list
 }
