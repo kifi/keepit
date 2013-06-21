@@ -33,8 +33,8 @@ section.main {margin: -70px 330px 0 200px; height: 100%; -moz-box-sizing: border
 #my-keeps,#search-results {display: none}
 .main[data-view=mine] #my-keeps,
 .main[data-view=search] #search-results {display: block}
-.main-head {padding: 15px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box}
-.main-head.scrolled {border-bottom: 1px solid #dbdee3}
+.main-head {padding: 15px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
+.main-head.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
 .main[data-view=search]>.main-head {margin-top: -30px}
 .main-head>h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
 .main[data-view=search]>.main-head>h1 {display: none}
