@@ -597,7 +597,10 @@ $(function() {
 		e.preventDefault();  // do not start selection
 		if ($collMenu.is(":animated")) return;
     var $tri = $(this), $coll = $tri.closest(".collection").addClass("with-menu");
-		$collMenu.hide().appendTo($coll).slideDown(80).data("docMouseDown", docMouseDown);
+		$collMenu.hide().appendTo($coll)
+			.toggleClass("page-bottom", $coll[0].getBoundingClientRect().bottom > $(window).height() - 51)
+			.slideDown(80)
+			.data("docMouseDown", docMouseDown);
 		document.addEventListener("mousedown", docMouseDown, true);
 		function docMouseDown(e) {
 			if (!e.button && !$.contains($collMenu[0], e.target)) {
