@@ -323,7 +323,7 @@ $(function() {
 	}).on("mouseup mousedown", ".coll-remove", function(e) {
 		if (e.which > 1) return;
 		hideCollMenu();
-		var $coll = $collMenu.prev(".collection");
+		var $coll = $collMenu.closest(".collection");
 		var collId = $coll.data("id");
 		console.log("Removing collection", collId);
 		$.ajax({
@@ -345,7 +345,7 @@ $(function() {
 	}).on("mouseup mousedown", ".coll-rename", function(e) {
 		if (e.which > 1) return;
 		hideCollMenu();
-		var $coll = $collMenu.prev(".collection").addClass("renaming").each(function() {
+		var $coll = $collMenu.closest(".collection").addClass("renaming").each(function() {
 			var scrEl = $collList.find(".antiscroll-inner")[0], oT = this.offsetTop;
 			if (scrEl.scrollTop > oT) {
 				scrEl.scrollTop = oT;
@@ -403,7 +403,7 @@ $(function() {
     document.removeEventListener("mousedown", $collMenu.data("docMouseDown"), true);
     $collMenu.removeData("docMouseDown").slideUp(80, function() {
 			$collMenu.detach().find(".hover").removeClass("hover");
-		}).prev(".collection").removeClass("with-menu").each(hideCollTri);
+		}).closest(".collection").removeClass("with-menu").each(hideCollTri);
 	}
 
 	// auto update my keeps every minute
@@ -575,7 +575,7 @@ $(function() {
 	.antiscroll({x: false, width: "100%"})
 	.sortable({
 		items: ".collection",
-		cancel: ".coll-tri,.renaming",
+		cancel: ".coll-tri,#coll-menu,.renaming",
 		opacity: .6,
 		placeholder: "sortable-placeholder",
 		beforeStop: function(event, ui) {
@@ -597,7 +597,7 @@ $(function() {
 		e.preventDefault();  // do not start selection
 		if ($collMenu.is(":animated")) return;
     var $tri = $(this), $coll = $tri.closest(".collection").addClass("with-menu");
-		$collMenu.hide().insertAfter($coll).slideDown(80).data("docMouseDown", docMouseDown);
+		$collMenu.hide().appendTo($coll).slideDown(80).data("docMouseDown", docMouseDown);
 		document.addEventListener("mousedown", docMouseDown, true);
 		function docMouseDown(e) {
 			if (!e.button && !$.contains($collMenu[0], e.target)) {
