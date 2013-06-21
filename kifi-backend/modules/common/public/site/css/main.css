@@ -85,7 +85,7 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative; -webkit-tra
 .collection.drop-hover .view-name {color: #fff}
 .collection.drop-hover .keep-count {background-color: #fff; border-color: #fff; color: #628196}
 .collection .keep-count {margin-top: 9px}
-.collection.renaming>.keep-count {display: none}
+.collection.renaming .keep-count {display: none}
 .coll-tri {position: absolute; top: 0; bottom: 0; left: -27px; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer; visibility: hidden; -webkit-transition: left .16s; transition: left .16s}
 .active>.coll-tri {background-color: #9ba4b8}
 .renaming>.coll-tri {display: none}
@@ -94,7 +94,7 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative; -webkit-tra
 .collection:hover>.coll-tri,
 .collection.with-tri>.coll-tri {visibility: visible}
 .collection.with-tri:not(.no-tri)>.coll-tri {left: 0}
-#coll-menu {display: none; margin: 0; padding: 0; list-style: none; position: absolute; z-index: 1; background: #e3e6ee}
+#coll-menu {display: none; position: absolute; top: 40px; left: 0; z-index: 1; background: #e3e6ee; margin: 0; padding: 0; list-style: none}
 #coll-menu>li>a {display: block; padding: 0 16px; font-size: 12px; line-height: 24px; white-space: nowrap; color: #556179; border: solid #dbdee3; border-width: 0 1px 1px 0}
 #coll-menu>li>a:hover,
 #coll-menu>li>a.hover {background: #9ba4b8; color: #fff}
