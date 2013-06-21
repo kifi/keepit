@@ -7,14 +7,13 @@
 	<meta name="description" content="">
 	<meta name="viewport" content="width=device-width">
 	<link rel="stylesheet" href="js/fancybox/jquery.fancybox.css">
-	<link rel="stylesheet" href="css/antiscroll.css">
 	<link rel="stylesheet" href="css/main.css">
 	<link rel="shortcut icon" type="image/png" href="/assets/images/kifi-favi-50.png">
 </head>
 <body>
 	<!--[if lt IE 9]>
 		<p class="chromeframe">
-			You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a>
+			You’re using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com">update your browser</a>
 			or <a href="http://www.google.com/chromeframe/">activate Google Chrome Frame</a> to improve your experience.
 		</p>
 	<![endif]-->
@@ -27,9 +26,9 @@
 			<input class="query" type="text" placeholder="Find anything...">
 		</div>
 		<nav>
-			<a href="javascript:">+ Add a new keep</a>
-			<a href="javascript:">Settings</a>
-			<a href="javascript:" >Log out</a>
+			<!--a href="javascript:">+ Add a new keep</a-->
+			<!--a href="javascript:">Settings</a-->
+			<!--a href="javascript:" >Log out</a-->
 		</nav>
 	</header>
 
@@ -47,17 +46,19 @@
 		</h3>
 		<div id="collections">
 			<h2>Collections <a class="new-collection" href="javascript:"></a></h2>
-			<h3 class="add-collection">
-				<a><input placeholder="Type new collection name" disabled></a>
-			</h3>
 			<div id="collections-list">
-				<h3 data-template class="collection" data-id="{{id}}" style="display:none">
-					<div class="coll-tri"></div>
-					<a href="javascript:">
-						<div class="keep-count">{{keeps}}</div>
-						<div class="view-name long-text">{{name}}</div>
-					</a>
-				</h3>
+				<div class="antiscroll-inner">
+					<h3 class="add-collection" data-before-template>
+						<a><input placeholder="Type new collection name" disabled></a>
+					</h3>
+					<h3 class="collection" data-template data-id="{{id}}" style="display:none">
+						<div class="coll-tri"></div>
+						<a href="javascript:">
+							<div class="keep-count">{{keeps}}</div>
+							<div class="view-name long-text">{{name}}</div>
+						</a>
+					</h3>
+				</div>
 			</div>
 			<menu id="coll-menu">
 				<li><a class="coll-rename" href="javascript:">Rename</a></li>
@@ -100,56 +101,58 @@
 				<span data-template>Loading...</span>
 			</div>
 		</div>
-		<div class="scrollable"><div class="antiscroll-inner">
-			<ol id="search-results">
-				<li data-template class="keep draggable {% if isMyBookmark %}mine{% endif %}" data-id="{{bookmark.id}}" style="display:none">
-					<div class="handle">
-						<div class="keep-checkbox"></div>
-					</div>
-					<div class="keep-title long-text">
-						<a href="{{bookmark.url}}" target="_blank" title="{{bookmark.title}}">{{bookmark.title}}</a>
-					</div>
-					<div class="keep-url long-text" title="{{bookmark.url}}">{{bookmark.url | replace '^http://', '	' | replace '^([^/]*)/$', '$1'}}</div>
-					<div class="keep-who">
-						<img class="small-avatar" data-template-for="users"
-							src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
-							data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
-							title="{{firstName}} {{lastName}}">
-						<span class="keep-who-text">
-							{% if isMyBookmark %}You{% endif %}{% if users.length > 0 && isMyBookmark %} + {% endif %}{% if users.length > 0 %}{{users.length}} friend{% endif %}{% if users.length > 1 %}s{% endif %} kept this
-							<span class="keep-private{% if isPrivate %} on{% endif %}">Private</span>
-						</span>
-						<div class="clearfix"></div>
-					</div>
-				</li>
-			</ol>
-			<ol id="my-keeps">
-				<li data-template data-id="{{id}}" class="keep mine draggable {% if isPrivate %}private{% endif %}" data-created={{createdAt}} data-collections="{{collections}}" style="display:none">
-					<time>{{createdAt}}</time>
-					<div class="handle">
-						<div class="keep-checkbox"></div>
-					</div>
-					<div class="keep-title long-text">
-						<a href="{{url}}" target="_blank" title="{{title}}">{{title}}</a>
-					</div>
-					<div class="keep-url long-text" title="{{url}}">{{url | replace '^http://', '	' | replace '^([^/]*)/$', '$1'}}</div>
-					<div class="keep-who">
-						<img class="small-avatar" data-template-for="keepers"
-							src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
-							data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
-							title="{{firstName}} {{lastName}}">
-						<span class="keep-who-text">
-							You {% if keepers.length > 0 %} + {{keepers.length}} friend{% endif %}{% if keepers.length > 1 %}s{% endif %} kept this
-							<span class="keep-private{% if isPrivate %} on{% endif %}">Private</span>
-						</span>
-						<div class="clearfix"></div>
-					</div>
-				</li>
-			</ol>
-			<div class="loading">
-				<img src="img/loading.gif">
+		<div class="main-keeps">
+			<div class="antiscroll-inner">
+				<ol id="search-results">
+					<li data-template class="keep draggable {% if isMyBookmark %}mine{% endif %}" data-id="{{bookmark.id}}" style="display:none">
+						<div class="handle">
+							<div class="keep-checkbox"></div>
+						</div>
+						<div class="keep-title long-text">
+							<a href="{{bookmark.url}}" target="_blank" title="{{bookmark.title}}">{{bookmark.title}}</a>
+						</div>
+						<div class="keep-url long-text" title="{{bookmark.url}}">{{bookmark.url | replace '^http://', '	' | replace '^([^/]*)/$', '$1'}}</div>
+						<div class="keep-who">
+							<img class="small-avatar" data-template-for="users"
+								src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
+								data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
+								title="{{firstName}} {{lastName}}">
+							<span class="keep-who-text">
+								{% if isMyBookmark %}You{% endif %}{% if users.length > 0 && isMyBookmark %} + {% endif %}{% if users.length > 0 %}{{users.length}} friend{% endif %}{% if users.length > 1 %}s{% endif %} kept this
+								<span class="keep-private{% if isPrivate %} on{% endif %}">Private</span>
+							</span>
+							<div class="clearfix"></div>
+						</div>
+					</li>
+				</ol>
+				<ol id="my-keeps">
+					<li data-template data-id="{{id}}" class="keep mine draggable {% if isPrivate %}private{% endif %}" data-created={{createdAt}} data-collections="{{collections}}" style="display:none">
+						<time>{{createdAt}}</time>
+						<div class="handle">
+							<div class="keep-checkbox"></div>
+						</div>
+						<div class="keep-title long-text">
+							<a href="{{url}}" target="_blank" title="{{title}}">{{title}}</a>
+						</div>
+						<div class="keep-url long-text" title="{{url}}">{{url | replace '^http://', '	' | replace '^([^/]*)/$', '$1'}}</div>
+						<div class="keep-who">
+							<img class="small-avatar" data-template-for="keepers"
+								src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
+								data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
+								title="{{firstName}} {{lastName}}">
+							<span class="keep-who-text">
+								You {% if keepers.length > 0 %} + {{keepers.length}} friend{% endif %}{% if keepers.length > 1 %}s{% endif %} kept this
+								<span class="keep-private{% if isPrivate %} on{% endif %}">Private</span>
+							</span>
+							<div class="clearfix"></div>
+						</div>
+					</li>
+				</ol>
+				<div class="loading">
+					<img src="img/loading.gif">
+				</div>
 			</div>
-		</div></div>
+		</div>
 	</section>
 
 	<aside class="right">
