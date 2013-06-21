@@ -102,7 +102,7 @@ class TopicUpdater @Inject() (
 
   private def getUriContent(uriId: Id[NormalizedURI]): String = {
     articleStore.get(uriId) match {
-      case Some(article) => article.content
+      case Some(article) =>  if (article.contentLang != None && article.contentLang.get.lang == "en") article.content else ""
       case None => ""
     }
   }
@@ -170,7 +170,7 @@ class TopicUpdater @Inject() (
           case Some((primary, secondary)) => m + (uriId -> (primary, secondary))
           case None => {
             val article = articleStore.get(uriId)
-            if (article != None && article.get.contentLang != "en") m + (uriId -> (None, None))
+            if (article != None && (article.get.contentLang == None || article.get.contentLang.get.lang != "en")) m + (uriId -> (None, None))
             else {
               if (article == None) { log.warn(s"uri ${uriId.id} is not found in uriTopicRepo, and it's not found in articleStore"); m + (uriId -> (None, None)) }
               else {
