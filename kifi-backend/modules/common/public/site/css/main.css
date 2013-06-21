@@ -41,8 +41,8 @@ section.main {margin: -70px 330px 0 200px; height: 100%; -moz-box-sizing: border
 .main-head>.subtitle {font-size: 13px; font-weight: 300; color: #5b6670}
 .result-query::before {content: "\201c"}
 .result-query::after {content: "\201d"}
-.main-scroll {position: absolute; top: 72px; bottom: 0; left: 0; right: 0; overflow: hidden}
-.main-scroll>.antiscroll-inner {position: absolute; height: 100%; width: 100%; overflow-x: hidden; padding: 1px 18px 0; box-sizing: border-box; -moz-box-sizing: border-box}
+.main-keeps {position: absolute; top: 72px; bottom: 0; left: 0; right: 0; overflow: hidden}
+.main-keeps>.antiscroll-inner {position: absolute; height: 100%; width: 100%; overflow-x: hidden; padding: 1px 18px 0; box-sizing: border-box; -moz-box-sizing: border-box}
 
 aside {position: absolute; top: 70px; bottom: 0; background: #eff2f7}
 
