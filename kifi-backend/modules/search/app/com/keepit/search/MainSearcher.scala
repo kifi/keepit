@@ -361,7 +361,7 @@ class MainSearcher(
     Statsd.timing("mainSearch.total", millisPassed)
 
     // simple classifier
-    val show = if (svVar > 0.16f) false else {
+    val show = if (svVar > 0.18f) false else {
       val isGood = (parsedQuery, personalizedSearcher) match {
         case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(hitList, searcher.get)
         case _ => true
