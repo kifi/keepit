@@ -119,8 +119,6 @@ GET     /admin/events/activityData  @com.keepit.controllers.admin.AdminEventCont
 
 GET     /admin/realtime/event       @com.keepit.controllers.admin.AdminEventController.eventViewer
 GET     /admin/realtime/event/stream      @com.keepit.controllers.admin.AdminEventController.eventStream
-GET     /admin/realtime/activity    @com.keepit.controllers.admin.AdminEventController.activityViewer
-GET     /admin/realtime/activity/stream   @com.keepit.controllers.admin.AdminEventController.activityStream
 
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Bookmark])
