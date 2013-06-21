@@ -15,8 +15,8 @@ var urlCollectionsOrder = urlCollections + '/ordering';
 var urlCollectionsCreate = urlCollections + '/create';
 
 $.ajaxSetup({
-  xhrFields: {withCredentials: true},
-  crossDomain: true});
+	xhrFields: {withCredentials: true},
+	crossDomain: true});
 
 $(function() {
 
@@ -71,13 +71,13 @@ $(function() {
 	var lastKeep;
 
 	$.fn.layout = function() {
-	  return this.each(function() {this.clientHeight});  // forces layout
+		return this.each(function() {this.clientHeight});  // forces layout
 	};
 
 	function unique(arr) {
-	  return $.grep(arr, function(v, k) {
-	    return $.inArray(v, arr) === k;
-	  });
+		return $.grep(arr, function(v, k) {
+			return $.inArray(v, arr) === k;
+		});
 	}
 
 	function initDraggable() {
@@ -155,7 +155,7 @@ $(function() {
 	}
 
 	function daysBetween(date1, date2) {
-	  return Math.round((date2 - date1) / 86400000);  // ms in one day
+		return Math.round((date2 - date1) / 86400000);  // ms in one day
 	}
 
 	function formatPicUrl(userId, pictureName, size) {
@@ -400,8 +400,8 @@ $(function() {
 	});
 	function hideCollMenu() {
 		console.log("[hideCollMenu]");
-    document.removeEventListener("mousedown", $collMenu.data("docMouseDown"), true);
-    $collMenu.removeData("docMouseDown").slideUp(80, function() {
+		document.removeEventListener("mousedown", $collMenu.data("docMouseDown"), true);
+		$collMenu.removeData("docMouseDown").slideUp(80, function() {
 			$collMenu.detach().find(".hover").removeClass("hover");
 		}).closest(".collection").removeClass("with-menu").each(hideCollTri);
 	}
@@ -596,7 +596,7 @@ $(function() {
 		if (e.button > 0) return;
 		e.preventDefault();  // do not start selection
 		if ($collMenu.is(":animated")) return;
-    var $tri = $(this), $coll = $tri.closest(".collection").addClass("with-menu");
+		var $tri = $(this), $coll = $tri.closest(".collection").addClass("with-menu");
 		$collMenu.hide().appendTo($coll)
 			.toggleClass("page-bottom", $coll[0].getBoundingClientRect().bottom > $(window).height() - 51)
 			.slideDown(80)
@@ -604,8 +604,8 @@ $(function() {
 		document.addEventListener("mousedown", docMouseDown, true);
 		function docMouseDown(e) {
 			if (!e.button && !$.contains($collMenu[0], e.target)) {
-	      hideCollMenu();
-	    }
+				hideCollMenu();
+			}
 		}
 	}).on("mousemove", ".collection:not(.with-menu):not(.renaming)", function(e) {
 		var $coll = $(this), $tri = $coll.find(".coll-tri"), data = $coll.data();
@@ -617,8 +617,8 @@ $(function() {
 		} else {
 			var r = this.getBoundingClientRect();
 			if (x < r.left + .5 * r.width &&
-				  (-4 * dx > now - data.t && -dx > Math.abs(dy) || e.target === $tri[0] ||
-		       dx < 0 && x < r.left + $tri.width())) {
+					(-4 * dx > now - data.t && -dx > Math.abs(dy) || e.target === $tri[0] ||
+					 dx < 0 && x < r.left + $tri.width())) {
 				$coll.addClass("with-tri");
 			}
 		}
