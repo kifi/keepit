@@ -124,7 +124,7 @@ class RemoteActionAuthenticator @Inject() (
     }
     request.headers.get("Origin").filter { uri =>
       val host = URI.parse(uri).toOption.flatMap(_.host).map(_.toString).getOrElse("")
-      host.endsWith("ezkeep.com") || host.endsWith("kifi.com")
+      host.endsWith("ezkeep.com") || host.endsWith("kifi.com") || host.endsWith("browserstack.com")
     }.map { h =>
       result.withHeaders(
         "Access-Control-Allow-Origin" -> h,
