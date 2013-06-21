@@ -16,33 +16,36 @@ import scala.collection.SortedMap
 
 object LineIndexReader extends Logging {
 
-  def apply(indexReader: AtomicReader, userDocId: Int, terms: Set[Term], numLines: Int) = {
-    val index = terms.foldLeft(new CachedIndex(numLines, numLines)){ (index, term) =>
-      val field = term.field
-      val text = term.bytes
-      val tp = indexReader.termPositionsEnum(term)
-      if (tp != null && userDocId >= 0 && tp.advance(userDocId) == userDocId) {
-        val invertedList = new InvertedListBuilder
-        val freq = tp.freq()
-        var i = 0
-        var curDoc = -1
-        val plist = new ArrayBuffer[Int]
-        while (i < freq) {
-          val pos = tp.nextPosition()
-          val docid = pos / LineField.MAX_POSITION_PER_LINE
-          if (docid != curDoc) {
+  def apply(indexReader: AtomicReader, userDocId: Int, terms: Set[Term], numLines: Int, cachedIndexOpt: Option[CachedIndex] = None): CachingIndexReader = {
+    val cachedIndex = cachedIndexOpt.getOrElse(new CachedIndex(numLines))
+    val index = terms.foldLeft(cachedIndex){ (index, term) =>
+      index.get(term) match {
+        case Some(invertedList) => index
+        case _ =>
+          val tp = if (userDocId >= 0) indexReader.termPositionsEnum(term) else null
+          if (tp != null && tp.advance(userDocId) == userDocId) {
+            val invertedList = new InvertedListBuilder
+            val freq = tp.freq()
+            var i = 0
+            var curDoc = -1
+            val plist = new ArrayBuffer[Int]
+            while (i < freq) {
+              val pos = tp.nextPosition()
+              val docid = pos / LineField.MAX_POSITION_PER_LINE
+              if (docid != curDoc) {
+                if (curDoc >= 0) invertedList.add(curDoc, plist.toArray)
+                curDoc = docid
+                plist.clear()
+              }
+              plist += (pos % LineField.MAX_POSITION_PER_LINE)
+              i += 1
+            }
+            if (curDoc >= numLines) log.error(s"curDoc=$curDoc numLines=$numLines")
             if (curDoc >= 0) invertedList.add(curDoc, plist.toArray)
-            curDoc = docid
-            plist.clear()
+            index + (term.field, term.bytes, invertedList.build)
+          } else {
+            index
           }
-          plist += (pos % LineField.MAX_POSITION_PER_LINE)
-          i += 1
-        }
-        if (curDoc >= numLines) log.error(s"curDoc=$curDoc numLines=$numLines")
-        if (curDoc >= 0) invertedList.add(curDoc, plist.toArray)
-        index + (field, text, invertedList.build)
-      } else {
-        index
       }
     }
     new CachingIndexReader(index)
