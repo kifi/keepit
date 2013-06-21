@@ -2,14 +2,18 @@ package com.keepit.test
 
 import scala.slick.session.ResultSetConcurrency
 import com.google.inject.{Module, Injector}
-import com.keepit.common.db.TestSlickSessionProvider
+import com.keepit.common.db.{DbInfo, TestSlickSessionProvider}
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
 import com.keepit.common.mail._
 import com.keepit.model._
+import java.sql.{Driver, DriverManager}
 
 
 trait TestDBRunner extends TestInjector {
+
+  def dbInfo: DbInfo = TestDbInfo.dbInfo
+  DriverManager.registerDriver(new play.utils.ProxyDriver(Class.forName("org.h2.Driver").newInstance.asInstanceOf[Driver]))
 
   def db(implicit injector: Injector): Database = inject[Database]
 
