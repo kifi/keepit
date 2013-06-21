@@ -345,7 +345,12 @@ $(function() {
 	}).on("mouseup mousedown", ".coll-rename", function(e) {
 		if (e.which > 1) return;
 		hideCollMenu();
-		var $coll = $collMenu.prev(".collection").addClass("renaming");
+		var $coll = $collMenu.prev(".collection").addClass("renaming").each(function() {
+			var scrEl = $collList.find(".antiscroll-inner")[0], oT = this.offsetTop;
+			if (scrEl.scrollTop > oT) {
+				scrEl.scrollTop = oT;
+			}
+		});
 		var $name = $coll.find(".view-name"), name = $name.text();
 		var $in = $("<input type=text placeholder='Type new collection name'>").val(name).data("orig", name);
 		$name.empty().append($in);

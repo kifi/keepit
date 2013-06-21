@@ -85,7 +85,7 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative; -webkit-tra
 .collection.drop-hover .view-name {color: #fff}
 .collection.drop-hover .keep-count {background-color: #fff; border-color: #fff; color: #628196}
 .collection .keep-count {margin-top: 9px}
-.collection.renaming>.keep-count {display: none}
+.collection.renaming .keep-count {display: none}
 .coll-tri {position: absolute; top: 0; bottom: 0; left: -27px; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer; visibility: hidden; -webkit-transition: left .16s; transition: left .16s}
 .active>.coll-tri {background-color: #9ba4b8}
 .renaming>.coll-tri {display: none}
