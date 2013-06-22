@@ -85,6 +85,7 @@ $(function() {
 			revert: "invalid",
 			handle: ".handle",
 			cancel: ".keep-checkbox",
+			appendTo: "body",
 			cursorAt: { top: 15, left: 0 },
 			helper: function() {
 				var text = $(this).find('a').first().text();
