@@ -94,8 +94,10 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative; -webkit-tra
 .collection:hover>.coll-tri,
 .collection.with-tri>.coll-tri {visibility: visible}
 .collection.with-tri:not(.no-tri)>.coll-tri {left: 0}
-#coll-menu {display: none; position: absolute; top: 40px; left: 0; z-index: 1; background: #e3e6ee; margin: 0; padding: 0; list-style: none}
+#coll-menu {display: none; position: absolute; top: 100%; left: 0; z-index: 1; background: #e3e6ee; margin: 0; padding: 0; list-style: none}
+#coll-menu.page-bottom {top: auto; bottom: 100%}
 #coll-menu>li>a {display: block; padding: 0 16px; font-size: 12px; line-height: 24px; white-space: nowrap; color: #556179; border: solid #dbdee3; border-width: 0 1px 1px 0}
+#coll-menu>li:first-child>a {border-top-width: 1px}
 #coll-menu>li>a:hover,
 #coll-menu>li>a.hover {background: #9ba4b8; color: #fff}
 
@@ -183,7 +185,7 @@ aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px;
 .keep-who-text {vertical-align: middle; margin-left: 3px; font-size: 12px; color: #99a3b3}
 .keep-private {display: none; margin: 0 2px; background: url(../img/private.png) left center/17px no-repeat; margin: 0 2px; line-height: 17px; padding-left: 21px}
 .keep-private.on {display: inline-block}
-div.loading {text-align: center; display: none}
+.keeps-loading {margin: 20px 50%; position: relative; left: -22px}
 .clearfix {clear: both}
 .add-collection {display: none}
 .drag-helper {background: #fff; padding: 5px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
