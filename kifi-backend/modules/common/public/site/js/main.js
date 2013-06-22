@@ -85,6 +85,7 @@ $(function() {
 			revert: "invalid",
 			handle: ".handle",
 			cancel: ".keep-checkbox",
+			appendTo: "body",
 			cursorAt: { top: 15, left: 0 },
 			helper: function() {
 				var text = $(this).find('a').first().text();
@@ -453,7 +454,7 @@ $(function() {
 	});
 
 	$(document).keydown(function(e) {  // auto focus on search field when starting to type anywhere on the document
-		if (!$(e.target).is('input,textarea')) {
+		if (!$(e.target).is('input,textarea') && e.which >= 48 && e.which <= 90 && !e.ctrlKey && !e.metaKey && !e.altKey) {
 			$query.focus();
 		}
 	});

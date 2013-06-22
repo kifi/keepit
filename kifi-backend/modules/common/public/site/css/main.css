@@ -29,19 +29,19 @@ header>nav>a:first-child {border-left: 0}
 
 /* main */
 section.main {margin: -70px 330px 0 200px; height: 100%; -moz-box-sizing: border-box; box-sizing: border-box; border-top: 70px solid transparent; border-left: 1px solid #dbdee3; background: #fff; position: relative}
-.main[data-view=search] {border-top-width: 100px}
 #my-keeps,#search-results {display: none}
 .main[data-view=mine] #my-keeps,
 .main[data-view=search] #search-results {display: block}
 .main-head {padding: 15px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
 .main-head.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
-.main[data-view=search]>.main-head {margin-top: -30px}
+.main[data-view=search]>.main-head {padding-top: 10px; height: 37px}
 .main-head>h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
 .main[data-view=search]>.main-head>h1 {display: none}
 .main-head>.subtitle {font-size: 13px; font-weight: 300; color: #5b6670}
 .result-query::before {content: "\201c"}
 .result-query::after {content: "\201d"}
 .main-keeps {position: absolute; top: 72px; bottom: 0; left: 0; right: 0; overflow: hidden}
+.main[data-view=search]>.main-keeps {top: 37px}
 .main-keeps>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; padding: 1px 18px 0; box-sizing: border-box; -moz-box-sizing: border-box}
 
 aside {position: absolute; top: 70px; bottom: 0; background: #eff2f7}
