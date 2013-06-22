@@ -163,13 +163,13 @@ $(function() {
 	}
 
 	function showLoading() {
-		$('div.loading').show();
+		$('.keeps-loading').show();
 	}
 	function hideLoading() {
-		$('div.loading').hide();
+		$('.keeps-loading').hide();
 	}
 	function isLoading() {
-		return $('div.loading').is(':visible');
+		return $('.keeps-loading').is(':visible');
 	}
 
 	function showRightSide() {
