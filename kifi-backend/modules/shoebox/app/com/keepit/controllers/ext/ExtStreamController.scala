@@ -2,8 +2,6 @@ package com.keepit.controllers.ext
 
 import scala.util.Random
 
-import org.mindrot.jbcrypt.BCrypt
-
 import com.google.inject.Inject
 import com.google.inject.Singleton
 import com.keepit.classify.{Domain, DomainRepo, DomainStates}
@@ -14,6 +12,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.common.db.State
 import com.keepit.common.db.slick.Database
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.net.URINormalizer
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social._
@@ -25,6 +24,7 @@ import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUser
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import com.keepit.serializer.SendableNotificationSerializer.sendableNotificationSerializer
 
+import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Concurrent
@@ -34,8 +34,8 @@ import play.api.libs.json._
 import play.api.mvc.RequestHeader
 import play.api.mvc.WebSocket
 import play.api.mvc.WebSocket.FrameFormatter
-import securesocial.core.{UserService, SecureSocial}
 import play.modules.statsd.api.Statsd
+import securesocial.core.{UserService, SecureSocial}
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]])
 
@@ -264,9 +264,19 @@ class ExtStreamController @Inject() (
     (Cont[JsArray, Unit](i => step(i)))
   }
 
+  private def canMessageAllUsers(userId: Id[User])(implicit s: RSession): Boolean = {
+    experimentRepo.hasExperiment(userId, ExperimentTypes.CAN_MESSAGE_ALL_USERS)
+  }
+
   private def getFriends(userId: Id[User]): Set[BasicUser] = {
     db.readOnly { implicit s =>
-      userConnectionRepo.getConnectedUsers(userId).map(basicUserRepo.load)
+      if (canMessageAllUsers(userId)) {
+        // TODO: remove this or find another way to do it in the future; this will not scale
+        userRepo.allExcluding(UserStates.PENDING, UserStates.BLOCKED, UserStates.INACTIVE)
+          .map(u => basicUserRepo.load(u.id.get)).toSet
+      } else {
+        userConnectionRepo.getConnectedUsers(userId).map(basicUserRepo.load)
+      }
     }
   }
 
