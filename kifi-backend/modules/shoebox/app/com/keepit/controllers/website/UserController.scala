@@ -68,11 +68,7 @@ class UserController @Inject() (db: Database,
     Ok(JsArray(connections.map { conn =>
       Json.obj(
         "label" -> conn._1.fullName,
-        "image" -> Json.toJson(conn._1.networkType match {
-          case SocialNetworks.FACEBOOK =>
-            Some(s"https://graph.facebook.com/${conn._1.socialId.id}/picture?type=square&width=75&height=75")
-          case _ => conn._1.pictureUrl
-        }),
+        "image" -> Json.toJson(conn._1.getPictureUrl(75, 75)),
         "value" -> (conn._1.networkType + "/" + conn._1.socialId.id),
         "status" -> conn._2
       )

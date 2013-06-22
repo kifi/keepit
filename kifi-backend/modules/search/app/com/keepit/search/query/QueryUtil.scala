@@ -50,27 +50,6 @@ object QueryUtil extends Logging {
     }
   }
 
-  def getTermSeq(fieldName: String, query: Query): Seq[Term] = {
-    query match {
-      case q: TermQuery => seqFromTermQuery(fieldName, q)
-      case q: PhraseQuery => seqFromPhraseQuery(fieldName, q)
-      case q: BooleanQuery => seqFromBooleanQuery(fieldName, q)
-      case _ => Seq.empty[Term] // ignore all other types of queries
-    }
-  }
-
-  private def seqFromTermQuery(fieldName: String, query: TermQuery) = {
-    val term = query.getTerm
-    if (term.field() == fieldName) Seq(term) else Seq.empty[Term]
-  }
-  private def seqFromPhraseQuery(fieldName: String, query: PhraseQuery) = {
-    val terms = query.getTerms()
-    terms.filter{ _.field() == fieldName }.toSeq
-  }
-  private def seqFromBooleanQuery(fieldName: String, query: BooleanQuery) = {
-    query.getClauses.foldLeft(Seq.empty[Term]){ (s, c) => if (!c.isProhibited) s ++ getTermSeq(fieldName, c.getQuery) else s }
-  }
-
   def emptyScorer(weight: Weight) = new Scorer(weight) with Coordinator {
     override def score(): Float = 0.0f
     override def docID() = NO_MORE_DOCS

@@ -148,7 +148,7 @@ class MainSearcherTest extends Specification with DbRepos {
             mainSearcherFactory.clear
             val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), allHitsConfig)
             val graphSearcher = mainSearcher.uriGraphSearcher
-            val (myHits, friendsHits, othersHits, _, _) = mainSearcher.searchText("alldocs", numHitsPerCategory, clickBoosts)(Lang("en"))
+            val (myHits, friendsHits, othersHits, _) = mainSearcher.searchText("alldocs", numHitsPerCategory, clickBoosts)
 
             //println("----")
             val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet.map(_.id)

@@ -23,13 +23,13 @@ $(function() {
 	var $subtitle = $(".subtitle"), subtitleTmpl = Tempo.prepare($subtitle);
 	var $myKeeps = $("#my-keeps"), myKeepsTmpl = Tempo.prepare($myKeeps).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 		hideLoading();
-		$myKeeps.find(".keep .bottom").each(function() {
+		$myKeeps.find(".keep-who").each(function() {
 			$(this).find('img.small-avatar').prependTo(this);  // eliminating whitespace text nodes?
 		}).filter(":not(:has(.me))")
 			.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
 		initDraggable();
 
-		$(".easydate").easydate({set_title: false});
+		$("time").easydate({set_title: false});
 
 		// insert time sections
 		var now = new Date;
@@ -45,19 +45,21 @@ $(function() {
 				$(this).before('<li class="keep-group-title older">Older</li>');
 			}
 		});
+		mainScroller.refresh();
 	});
 	var $results = $("#search-results"), searchTemplate = Tempo.prepare($results).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 		hideLoading();
 		initDraggable();
-		$results.find(".keep .bottom").each(function() {
+		$results.find(".keep-who").each(function() {
 			$(this).find('img.small-avatar').prependTo(this);  // eliminating whitespace text nodes?
 		});
-		$results.find(".keep.mine .bottom:not(:has(.me))")
+		$results.find(".keep.mine .keep-who:not(:has(.me))")
 			.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
+		mainScroller.refresh();
 	});
 	var $colls = $("#collections"), collTmpl = Tempo.prepare($colls).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
+		collScroller.refresh();
 		makeCollectionsDroppable($colls.find(".collection"));
-		adjustCollHeight();
 	});
 	var $inColl = $(".in-collections"), inCollTmpl = Tempo.prepare($inColl);
 
@@ -82,6 +84,7 @@ $(function() {
 		$(".draggable").draggable({
 			revert: "invalid",
 			handle: ".handle",
+			cancel: ".keep-checkbox",
 			cursorAt: { top: 15, left: 0 },
 			helper: function() {
 				var text = $(this).find('a').first().text();
@@ -311,10 +314,6 @@ $(function() {
 		$.fancybox($('<p>').text(msg));
 	}
 
-	function adjustCollHeight() {
-		$collList.height($(window).height() - $collList.offset().top);
-	}
-
 	// delete/rename collection
 	var $collMenu = $("#coll-menu")
 	.on("mouseover", "a", function() {
@@ -406,8 +405,6 @@ $(function() {
 	setInterval(addNewKeeps, 60000);
 	setInterval(updateNumKeeps, 60000);
 
-	$(window).resize(adjustCollHeight);
-
 	// handle collection adding/removing from right bar
 	$inColl.on('change', 'input[type="checkbox"]', function() {
 		// remove selected keeps from collection
@@ -456,21 +453,23 @@ $(function() {
 		}
 	});
 
-	var $main = $(".main").on("click", ".keep", function(e) {
+	var $main = $(".main").on("mousedown", ".keep-checkbox", function(e) {
+		e.preventDefault();  // avoid starting selection
+	}).on("click", ".keep", function(e) {
 		// 1. Only one keep at a time can be selected and not checked.
 		// 2. If a keep is selected and not checked, no keeps are checked.
 		// 3. If a keep is checked, it is also selected.
 		var $keep = $(this), $selected = $main.find(".keep.selected");
-		if ($(e.target).hasClass("checkbox")) {
+		if ($(e.target).hasClass("keep-checkbox")) {
 			if ($(e.target).toggleClass("checked").hasClass("checked")) {
-				$selected.not(":has(.handle>.checkbox.checked)").removeClass("selected");
+				$selected.not(":has(.keep-checkbox.checked)").removeClass("selected");
 				$keep.addClass("selected");
 			} else {
 				$keep.removeClass("selected");
 			}
 		} else {
 			var select = !$keep.is(".selected") || $selected.length != 1;
-			$selected.not(this).removeClass("selected").end().find(".handle>.checkbox").removeClass("checked");
+			$selected.not(this).removeClass("selected").end().find(".keep-checkbox").removeClass("checked");
 			$keep.toggleClass("selected", select);
 		}
 		$selected = $main.find(".keep.selected");
@@ -500,8 +499,8 @@ $(function() {
 			$title.find('h2').text($keep.find('a').first().text());
 			var url = $keep.find('a').first().attr('href');
 			$title.find('a').text(url).attr('href', url).attr('target', '_blank');
-			$who.html($keep.find('div.bottom').html());
-			$who.find('span').prependTo($who).removeClass('fs9 gray');
+			$who.html($keep.find(".keep-who").html());
+			$who.find('span').prependTo($who);
 			$inColl.empty();
 			if ($keep.data('collections')) {
 				$keep.data('collections').split(',').forEach(function(id) {
@@ -510,14 +509,19 @@ $(function() {
 			}
 			var $btn = $('aside.right .keepit .keep-button');
 			if ($keep.is('.mine')) {
-				$btn.addClass('kept').toggleClass('private', $keep.is('.private')).find('.text').text('kept');
+				$btn.addClass('kept').toggleClass('private', !!$keep.has('.keep-private.on').length).find('.text').text('kept');
 			} else {
 				$btn.removeClass('kept private').find('.text').text('keep it');
 			}
 			showRightSide();
 		}
-	}).scroll(function() { // infinite scroll
-		if (!isLoading() && this.clientHeight + this.scrollTop > this.scrollHeight - 300) {
+	});
+	var $mainHead = $(".main-head");
+	var $mainKeeps = $(".main-keeps").antiscroll({x: false, width: "100%"});
+	$mainKeeps.find(".antiscroll-inner").scroll(function() { // infinite scroll
+		var sT = this.scrollTop;
+		$mainHead.toggleClass("scrolled", sT > 0);
+		if (!isLoading() && this.clientHeight + sT > this.scrollHeight - 300) {
 			if (searchResponse) {
 				doSearch(searchResponse.context);
 			} else {
@@ -525,6 +529,8 @@ $(function() {
 			}
 		}
 	});
+	var mainScroller = $mainKeeps.data("antiscroll");
+	$(window).resize(mainScroller.refresh.bind(mainScroller));
 
 	var $query = $("input.query").on("keydown input", function(e) {
 		console.log("[clearTimeout]", e.type);
@@ -558,7 +564,11 @@ $(function() {
 	populateCollections();
 	populateCollectionsRight();
 
-	var $collList = $("#collections-list").sortable({
+	var $collList = $("#collections-list")
+	.each(function() {this.style.top = this.offsetTop + "px"})
+	.addClass("positioned")
+	.antiscroll({x: false, width: "100%"})
+	.sortable({
 		items: ".collection",
 		cancel: ".coll-tri,.renaming",
 		opacity: .6,
@@ -608,6 +618,8 @@ $(function() {
 	}).on("mouseleave", ".collection.with-tri:not(.with-menu):not(.no-tri)", function() {
 		hideCollTri.call(this);
 	});
+	var collScroller = $collList.data("antiscroll");
+	$(window).resize(collScroller.refresh.bind(collScroller));
 
 	function hideCollTri() {
 		$(this).on("transitionend", function end(e) {
@@ -645,6 +657,7 @@ $(function() {
 				$addColl.slideUp(80).find("input").val("").prop("disabled", true);
 			} else {
 				$addColl.slideDown(80, function() {
+					$collList.find(".antiscroll-inner")[0].scrollTop = 0;
 					$addColl.find("input").prop("disabled", false).focus().select();
 				});
 			}
@@ -743,10 +756,7 @@ $(function() {
 					,contentType: 'application/json'
 					,error: function() {showMessage('Could not update keep, please try again later')}
 					,success: function(data) {
-						if (keepButton.is('.private'))
-							keep.find('.bottom span.private').addClass('on');
-						else
-							keep.find('.bottom span.private').removeClass('on');
+						keep.find('.keep-private').toggleClass('on', keepButton.is('.private'));
 					}
 				});
 			});

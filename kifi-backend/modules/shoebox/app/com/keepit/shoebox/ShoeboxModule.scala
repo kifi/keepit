@@ -1,9 +1,7 @@
 package com.keepit.shoebox
 
 import scala.slick.session.{ Database => SlickDatabase }
-
 import net.codingwell.scalaguice.{ScalaMultibinder, ScalaModule}
-
 import com.google.common.io.Files
 import com.google.inject.Provider
 import com.google.inject.{ Provides, Singleton }
@@ -36,12 +34,13 @@ import com.keepit.social.SecureSocialAuthenticatorPlugin
 import com.keepit.social.SecureSocialUserPlugin
 import com.keepit.social.SecureSocialAuthenticatorPluginImpl
 import com.keepit.social.SecureSocialUserPluginImpl
-
 import play.api.Play
 import play.api.Play.current
 import play.api.db.DB
 import com.keepit.common.cache.ShoeboxCacheModule
 import securesocial.controllers.TemplatesPlugin
+import com.keepit.learning.topicmodel.{WordTopicModel, LdaWordTopicModel, TopicUpdaterPlugin, TopicUpdaterPluginImpl, TopicModelGlobal}
+
 
 class ShoeboxModule() extends ScalaModule with Logging {
   def configure() {
@@ -67,6 +66,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
     bind[InvitationMailPlugin].to[InvitationMailPluginImpl].in[AppScoped]
     bind[NotificationConsistencyChecker].to[NotificationConsistencyCheckerImpl].in[AppScoped]
     bind[ChannelPlugin].to[ChannelPluginImpl].in[AppScoped]
+    bind[TopicUpdaterPlugin].to[TopicUpdaterPluginImpl].in[AppScoped]
 
     bind[LocalPostOffice].to[ShoeboxPostOfficeImpl]
     bind[HealthcheckMailSender].to[LocalHealthcheckMailSender]
@@ -200,4 +200,19 @@ class ShoeboxModule() extends ScalaModule with Logging {
       client)
   }
 
+  @Provides
+  @Singleton
+  def wordTopicModel: WordTopicModel = {
+    if (false){
+      // read from disk
+      null
+    } else {
+      val vocabulary: Set[String] = (0 until TopicModelGlobal.numTopics).map{ i => "word%d".format(i)}.toSet
+      val wordTopic: Map[String, Array[Double]] = (0 until TopicModelGlobal.numTopics).foldLeft(Map.empty[String, Array[Double]]){
+        (m, i) => { val a = new Array[Double](TopicModelGlobal.numTopics); a(i) = 1.0; m + ("word%d".format(i) -> a) }
+      }
+      val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map{ i => "topic%d".format(i)}.toArray
+      new LdaWordTopicModel(vocabulary, wordTopic, topicNames)
+   }
+  }
 }

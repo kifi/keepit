@@ -11,9 +11,9 @@ import com.keepit.common.store.ImageDataIntegrityPlugin
 import com.keepit.module.CommonModule
 import com.keepit.realtime.{ChannelPlugin, UserEmailNotifierPlugin}
 import com.keepit.scraper._
-
 import play.api.Mode._
 import play.api._
+import com.keepit.learning.topicmodel.TopicUpdaterPlugin
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 
@@ -43,5 +43,7 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[ImageDataIntegrityPlugin].enabled)
     require(injector.instance[InvitationMailPlugin].enabled)
     require(injector.instance[ChannelPlugin].enabled)
+    require(injector.instance[TopicUpdaterPlugin].enabled)
+
   }
 }

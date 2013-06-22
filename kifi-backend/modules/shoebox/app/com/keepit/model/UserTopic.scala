@@ -9,8 +9,12 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.search.topicModel.TopicModelGlobal
 import java.io.{DataOutputStream, DataInputStream, ByteArrayInputStream, ByteArrayOutputStream}
+import com.keepit.common.db.slick.FortyTwoTypeMappers.ByteArrayTypeMapper
+import com.keepit.common.db.slick.FortyTwoTypeMappers.UserIdTypeMapper
+import scala.annotation.elidable
+import scala.annotation.elidable.ASSERTION
+import com.keepit.learning.topicmodel.TopicModelGlobal
 
 case class UserTopic(
   id: Option[Id[UserTopic]] = None,
@@ -40,7 +44,7 @@ class UserTopicByteArrayHelper {
     val is = new DataInputStream(new ByteArrayInputStream(arr))
     val topic = (0 until TopicModelGlobal.numTopics).map{i => is.readInt()}
     is.close()
-    topic
+    topic.toArray
   }
 }
 

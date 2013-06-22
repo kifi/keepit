@@ -193,10 +193,10 @@ trait ChannelPlugin extends Plugin {
 
 @Singleton
 class ChannelPluginImpl @Inject() (
-                                    system: ActorSystem,
-                                    userChannel: UserChannel,
-                                    uriChannel: UriChannel,
-                                    val schedulingProperties: SchedulingProperties)
+  system: ActorSystem,
+  userChannel: UserChannel,
+  uriChannel: UriChannel,
+  val schedulingProperties: SchedulingProperties)
   extends ChannelPlugin with SchedulingPlugin with Logging {
 
   // plugin lifecycle methods

@@ -29,11 +29,11 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
 
 @Singleton
 class BookmarkRepoImpl @Inject() (
-                                   val db: DataBaseComponent,
-                                   val clock: Clock,
-                                   val countCache: BookmarkCountCache,
-                                   val keepToCollectionRepo: KeepToCollectionRepoImpl,
-                                   bookmarkUriUserCache: BookmarkUriUserCache)
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val countCache: BookmarkCountCache,
+  val keepToCollectionRepo: KeepToCollectionRepoImpl,
+  bookmarkUriUserCache: BookmarkUriUserCache)
   extends DbRepo[Bookmark] with BookmarkRepo with ExternalIdColumnDbFunction[Bookmark] {
 
   import DBSession._
@@ -135,16 +135,4 @@ class BookmarkRepoImpl @Inject() (
   }
 
   def delete(id: Id[Bookmark])(implicit sesion: RSession): Unit = (for(b <- table if b.id === id) yield b).delete
-}
-
-object BookmarkFactory {
-
-  def apply(uri: NormalizedURI, userId: Id[User], title: Option[String], url: URL, source: BookmarkSource, isPrivate: Boolean, kifiInstallation: Option[ExternalId[KifiInstallation]]): Bookmark =
-    Bookmark(title = title, userId = userId, uriId = uri.id.get, urlId = Some(url.id.get), url = url.url, source = source, isPrivate = isPrivate)
-
-  def apply(title: String, url: URL, uriId: Id[NormalizedURI], userId: Id[User], source: BookmarkSource): Bookmark =
-    Bookmark(title = Some(title), urlId = Some(url.id.get), url = url.url, uriId = uriId, userId = userId, source = source)
-
-  def apply(title: String, urlId: Id[URL],  uriId: Id[NormalizedURI], userId: Id[User], source: BookmarkSource, isPrivate: Boolean): Bookmark =
-    BookmarkFactory(title = title, urlId = urlId, uriId = uriId, userId = userId, source = source, isPrivate = isPrivate)
 }

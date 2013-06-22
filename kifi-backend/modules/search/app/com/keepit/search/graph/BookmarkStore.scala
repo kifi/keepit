@@ -122,10 +122,11 @@ class BookmarkStore @Inject() (
   }
 
   def buildIndexable(bookmark: Bookmark): BookmarkIndexable = {
-    new BookmarkIndexable(id = bookmark.id.get,
-                          sequenceNumber = bookmark.seq,
-                          isDeleted = BookmarkStore.shouldDelete(bookmark),
-                          bookmark = bookmark)
+    new BookmarkIndexable(
+      id = bookmark.id.get,
+      sequenceNumber = bookmark.seq,
+      isDeleted = BookmarkStore.shouldDelete(bookmark),
+      bookmark = bookmark)
   }
 
   class BookmarkIndexable(

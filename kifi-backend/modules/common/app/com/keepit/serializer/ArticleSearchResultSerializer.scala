@@ -11,6 +11,7 @@ import com.keepit.search.ArticleHit
 import com.keepit.model.User
 import com.keepit.search.ArticleSearchResultRef
 import org.joda.time.DateTime
+import com.keepit.search.Lang
 
 class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
 
@@ -18,6 +19,7 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
     JsObject(List(
         "last" -> (res.last map { t => JsString(t.id) } getOrElse(JsNull)),
         "query" -> JsString(res.query),
+        "lang" -> JsString(res.lang.lang),
         "hits" -> JsArray(res.hits map writeHit),
         "myTotal" -> JsNumber(res.myTotal),
         "friendsTotal" -> JsNumber(res.friendsTotal),
@@ -58,6 +60,7 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
   def reads(json: JsValue): JsResult[ArticleSearchResult] = JsSuccess(ArticleSearchResult(
       last = (json \ "last").asOpt[String] map (j => ExternalId[ArticleSearchResultRef](j)),
       query = (json \ "query").as[String],
+      lang = (json \ "lang").asOpt[String].map(lang => Lang(lang)).getOrElse(Lang("en")),
       hits = readHits((json \ "hits").asInstanceOf[JsArray]),
       myTotal = (json \ "myTotal").as[Int],
       friendsTotal = (json \ "friendsTotal").as[Int],

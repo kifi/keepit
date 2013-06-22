@@ -62,6 +62,8 @@ import com.keepit.model.NormalizedURI
 import com.keepit.common.amazon.AmazonInstanceId
 import com.keepit.common.net.FakeClientResponse
 
+
+
 class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
 
   private def createTestGlobal(baseGlobal: FortyTwoGlobal, modules: Module*) = if (useDb)
@@ -87,6 +89,8 @@ class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override v
   def withS3DevModule() = overrideWith(new S3DevModule())
   def withShoeboxServiceModule() = overrideWith(ShoeboxServiceModule())
   def withSearchConfigModule() = overrideWith(SearchConfigModule())
+
+
   def overrideWith(modules: Module*): TestApplication = new TestApplication(createTestGlobal(global, modules: _*), useDb, path)
 
 }
@@ -436,6 +440,7 @@ case class FakeSchedulerModule() extends ScalaModule {
     bind[Scheduler].to[FakeScheduler]
   }
 }
+
 
 class FakeScheduler extends Scheduler {
   private def fakeCancellable = new Cancellable() {
