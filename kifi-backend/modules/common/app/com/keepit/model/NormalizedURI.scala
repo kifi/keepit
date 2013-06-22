@@ -51,6 +51,9 @@ case class NormalizedURIUrlHashKey(urlHash: UrlHash) extends Key[NormalizedURI] 
 class NormalizedURICache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[NormalizedURIKey, NormalizedURI](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
+class NormalizedURIUrlHashCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[NormalizedURIUrlHashKey, NormalizedURI](innermostPluginSettings, innerToOuterPluginSettings:_*)
+
 object NormalizedURIStates extends States[NormalizedURI] {
   val SCRAPED	= State[NormalizedURI]("scraped")
   val SCRAPE_FAILED = State[NormalizedURI]("scrape_failed")

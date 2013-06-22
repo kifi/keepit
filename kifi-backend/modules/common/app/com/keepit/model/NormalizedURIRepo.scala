@@ -33,7 +33,7 @@ class NormalizedURIRepoImpl @Inject() (
   override val table = new RepoTable[NormalizedURI](db, "normalized_uri") with ExternalIdColumn[NormalizedURI] {
     def title = column[String]("title")
     def url = column[String]("url", O.NotNull)
-    def urlHash = column[String]("url_hash", O.NotNull)
+    def urlHash = column[UrlHash]("url_hash", O.NotNull)
     def seq = column[SequenceNumber]("seq", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state ~ seq <> (NormalizedURI,
       NormalizedURI.unapply _)
