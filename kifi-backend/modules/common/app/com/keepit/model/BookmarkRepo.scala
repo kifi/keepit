@@ -9,7 +9,6 @@ import scala.Some
 
 @ImplementedBy(classOf[BookmarkRepoImpl])
 trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark] {
-  def allActive()(implicit session: RSession): Seq[Bookmark]
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User],
                       excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))
                      (implicit session: RSession): Option[Bookmark]
@@ -70,9 +69,6 @@ class BookmarkRepoImpl @Inject() (
       super.count
     }
   }
-
-  def allActive()(implicit session: RSession): Seq[Bookmark] =
-    (for(b <- table if b.state === BookmarkStates.ACTIVE) yield b).list
 
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User],
                       excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))
