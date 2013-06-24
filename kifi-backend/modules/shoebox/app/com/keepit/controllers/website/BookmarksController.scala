@@ -131,7 +131,7 @@ class BookmarksController @Inject() (
         keepInfos.map { ki =>
           val url = ki.url
           db.readWrite { implicit s =>
-            uriRepo.getByNormalizedUrl(url).flatMap { uri =>
+            uriRepo.getByUri(url).flatMap { uri =>
               bookmarkRepo.getByUriAndUser(uri.id.get, request.userId).map { b =>
                 bookmarkRepo.save(b withActive false)
               }

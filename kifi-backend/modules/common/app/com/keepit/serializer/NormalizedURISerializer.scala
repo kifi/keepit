@@ -17,7 +17,7 @@ class NormalizedURISerializer extends Format[NormalizedURI] {
       "externalId" -> JsString(uri.externalId.id),
       "title"  -> (uri.title map { title => JsString(title) } getOrElse(JsNull)),
       "url"  -> JsString(uri.url),
-      "urlHash"  -> JsString(uri.urlHash),
+      "urlHash"  -> JsString(uri.urlHash.hash),
       "state"  -> JsString(uri.state.value),
       "seq" -> JsNumber(uri.seq.value)
     ))
@@ -30,7 +30,7 @@ class NormalizedURISerializer extends Format[NormalizedURI] {
       externalId = ExternalId[NormalizedURI]((json \ "externalId").as[String]),
       title = (json \ "title").asOpt[String],
       url = (json \ "url").as[String],
-      urlHash = (json \ "urlHash").as[String],
+      urlHash = UrlHash((json \ "urlHash").as[String]),
       state = State[NormalizedURI]((json \ "state").as[String]),
       seq = SequenceNumber((json \ "seq").as[Long])
     ))

@@ -21,7 +21,7 @@ case class NormalizedURI (
   externalId: ExternalId[NormalizedURI] = ExternalId(),
   title: Option[String] = None,
   url: String,
-  urlHash: String,
+  urlHash: UrlHash,
   state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
   seq: SequenceNumber = SequenceNumber.ZERO
 ) extends ModelWithExternalId[NormalizedURI] with Logging {
@@ -33,13 +33,26 @@ case class NormalizedURI (
 }
 
 import com.keepit.serializer.NormalizedURISerializer.normalizedURISerializer // Required implicit value
+
+case class UrlHash(hash: String) extends AnyVal
+
 case class NormalizedURIKey(id: Id[NormalizedURI]) extends Key[NormalizedURI] {
   override val version = 2
   val namespace = "uri_by_id"
   def toKey(): String = id.id.toString
 }
+
+case class NormalizedURIUrlHashKey(urlHash: UrlHash) extends Key[NormalizedURI] {
+  override val version = 0
+  val namespace = "uri_by_hash"
+  def toKey(): String = urlHash.hash
+}
+
 class NormalizedURICache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[NormalizedURIKey, NormalizedURI](innermostPluginSettings, innerToOuterPluginSettings:_*)
+
+class NormalizedURIUrlHashCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[NormalizedURIUrlHashKey, NormalizedURI](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object NormalizedURIStates extends States[NormalizedURI] {
   val SCRAPED	= State[NormalizedURI]("scraped")
@@ -104,8 +117,8 @@ object NormalizedURIFactory {
 
   def normalize(url: String) = URINormalizer.normalize(url)
 
-  def hashUrl(normalizedUrl: String): String = {
+  def hashUrl(normalizedUrl: String): UrlHash = {
     val binaryHash = MessageDigest.getInstance("MD5").digest(normalizedUrl)
-    new String(new Base64().encode(binaryHash), UTF8)
+    UrlHash(new String(new Base64().encode(binaryHash), UTF8))
   }
 }

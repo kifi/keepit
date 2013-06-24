@@ -8,6 +8,7 @@ import com.keepit.model.BookmarkUriUserCache
 import com.keepit.model.UserCollectionsCache
 import com.keepit.model.CollectionsForBookmarkCache
 import com.keepit.model.NormalizedURICache
+import com.keepit.model.NormalizedURIUrlHashCache
 import com.keepit.model.SocialUserInfoUserCache
 import com.keepit.model.SocialUserInfoNetworkCache
 import com.keepit.model.UnscrapableAllCache
@@ -62,6 +63,11 @@ class DevCacheModule extends ScalaModule {
   @Provides
   def normalizedURICache(outerRepo: FortyTwoCachePlugin) =
     new NormalizedURICache((outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def normalizedURIUrlHashCache(outerRepo: FortyTwoCachePlugin) =
+    new NormalizedURIUrlHashCache((outerRepo, 7 days))
 
   @Singleton
   @Provides
