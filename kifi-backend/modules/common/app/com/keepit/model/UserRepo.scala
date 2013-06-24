@@ -10,6 +10,8 @@ import com.keepit.common.logging.Logging
 @ImplementedBy(classOf[UserRepoImpl])
 trait UserRepo extends Repo[User] with ExternalIdColumnFunction[User] {
   def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User]
+  def pageExcluding(excludeStates: State[User]*)(page: Int, size: Int)(implicit session: RSession): Seq[User]
+  def countExcluding(excludeStates: State[User]*)(implicit session: RSession): Int
   def getOpt(id: Id[User])(implicit session: RSession): Option[User]
 }
 
@@ -33,6 +35,18 @@ class UserRepoImpl @Inject() (
 
   def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User] =
     (for (u <- table if !(u.state inSet excludeStates)) yield u).list
+
+  def pageExcluding(excludeStates: State[User]*)(page: Int = 0, size: Int = 20)(implicit session: RSession): Seq[User] = {
+    val q = for {
+      t <- table if !(t.state inSet excludeStates)
+    } yield t
+    q.sortBy(_.id desc).drop(page * size).take(size).list
+  }
+
+  def countExcluding(excludeStates: State[User]*)(implicit session: RSession): Int = {
+    val q = (for (u <- table if !(u.state inSet excludeStates)) yield u)
+    Query(q.length).first
+  }
 
   override def invalidateCache(user: User)(implicit session: RSession) = {
     user.id map {id => idCache.set(UserIdKey(id), user)}
