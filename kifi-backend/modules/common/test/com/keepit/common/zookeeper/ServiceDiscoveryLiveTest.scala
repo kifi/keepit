@@ -25,7 +25,7 @@ import com.google.inject._
 
 class ServiceDiscoveryLiveTest extends Specification with TestInjector {
 
- // args(skipAll = true)
+  args(skipAll = true)
 
   implicit val amazonInstanceInfoFormat = AmazonInstanceInfo.format
 
