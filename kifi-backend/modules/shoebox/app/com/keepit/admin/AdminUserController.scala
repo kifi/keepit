@@ -155,7 +155,7 @@ class AdminUserController @Inject() (
       collections, collectionFilter))
   }
 
-  def usersView = AdminHtmlAction { implicit request =>
+  def usersView(page: Int = 0) = AdminHtmlAction { implicit request =>
     def userStatistics(user: User)(implicit s: RSession): UserStatistics = {
       val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a,b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
       UserStatistics(user,
@@ -165,10 +165,13 @@ class AdminUserController @Inject() (
         kifiInstallations)
     }
 
+    val PAGE_SIZE = 50
+
     val users = db.readOnly { implicit s =>
-      userRepo.allExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED) map userStatistics
+      userRepo.pageExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(page, PAGE_SIZE) map userStatistics
     }
-    Ok(html.admin.users(users))
+    val userCount = db.readOnly { implicit s => userRepo.countExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED) }
+    Ok(html.admin.users(users, page, userCount, Math.ceil(userCount.toFloat / PAGE_SIZE.toFloat).toInt))
   }
 
   def updateUser(userId: Id[User]) = AdminHtmlAction { implicit request =>
@@ -290,6 +293,6 @@ class AdminUserController @Inject() (
 
     userChannel.broadcast(json)
 
-    Redirect(routes.AdminUserController.usersView())
+    Redirect(routes.AdminUserController.usersView(0))
   }
 }
