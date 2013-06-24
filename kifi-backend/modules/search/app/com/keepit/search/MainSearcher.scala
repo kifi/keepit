@@ -3,7 +3,7 @@ package com.keepit.search
 import com.keepit.search.graph.BookmarkRecord
 import com.keepit.search.graph.EdgeAccessor
 import com.keepit.search.graph.CollectionSearcher
-import com.keepit.search.graph.URIGraphSearcher
+import com.keepit.search.graph.URIGraphSearcherWithUser
 import com.keepit.search.graph.UserToUriEdgeSet
 import com.keepit.search.graph.UserToUserEdgeSet
 import com.keepit.search.index.ArticleRecord
@@ -42,7 +42,7 @@ class MainSearcher(
     filter: SearchFilter,
     config: SearchConfig,
     articleSearcher: Searcher,
-    val uriGraphSearcher: URIGraphSearcher,
+    val uriGraphSearcher: URIGraphSearcherWithUser,
     val collectionSearcher: CollectionSearcher,
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
@@ -54,10 +54,17 @@ class MainSearcher(
     (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 ) extends Logging {
-  val currentTime = currentDateTime.getMillis()
-  val timeLogs = new MutableSearchTimeLogs()
-  val idFilter = filter.idFilter
-  val isInitialSearch = idFilter.isEmpty
+
+  private[this] var parsedQuery: Option[Query] = None
+  def getParsedQuery: Option[Query] = parsedQuery
+
+  private[this] var lang: Lang = Lang("en")
+  def getLang: Lang = lang
+
+  private[this] val currentTime = currentDateTime.getMillis()
+  private[this] val timeLogs = new MutableSearchTimeLogs()
+  private[this] val idFilter = filter.idFilter
+  private[this] val isInitialSearch = idFilter.isEmpty
 
   // get config params
   val newContentDiscoveryThreshold = config.asFloat("newContentDiscoveryThreshold")
@@ -85,7 +92,7 @@ class MainSearcher(
   val maxResultClickBoost = config.asFloat("maxResultClickBoost")
 
   // tailCutting is set to low when a non-default filter is in use
-  val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.001f
+  private[this] val tailCutting = if (filter.isDefault && isInitialSearch) config.asFloat("tailCutting") else 0.001f
 
   // initialize user's social graph info
   private[this] val myUriEdges = uriGraphSearcher.myUriEdgeSet
@@ -138,9 +145,8 @@ class MainSearcher(
     else friendUris -- myUris // friends only
   }
 
-  val preparationTime = currentDateTime.getMillis() - currentTime
-  timeLogs.socialGraphInfo = preparationTime
-  Statsd.timing("mainSearch.socialGraphInfo", preparationTime)
+  timeLogs.socialGraphInfo = currentDateTime.getMillis() - currentTime
+  Statsd.timing("mainSearch.socialGraphInfo", timeLogs.socialGraphInfo)
 
   private def findSharingUsers(id: Long): UserToUserEdgeSet = {
     uriGraphSearcher.intersect(friendEdgeSet, uriGraphSearcher.getUriToUserEdgeSet(Id[NormalizedURI](id)))
@@ -156,26 +162,26 @@ class MainSearcher(
   }
 
   def getPersonalizedSearcher(query: Query) = {
-    val indexReader = uriGraphSearcher.openPersonalIndex(query) match {
-      case Some((personalReader, personalIdMapper)) =>
-        articleSearcher.indexReader.add(personalReader, personalIdMapper)
-      case None =>
-        articleSearcher.indexReader
-    }
+    val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
+    val indexReader = articleSearcher.indexReader.add(personalReader, personalIdMapper)
     PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryFuture, clickHistoryFuture, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient, monitoredAwait)
   }
 
-  def searchText(queryString: String, maxTextHitsPerCategory: Int, clickBoosts: ResultClickTracker.ResultClickBoosts)(implicit lang: Lang) = {
+  def searchText(queryString: String, maxTextHitsPerCategory: Int, clickBoosts: ResultClickTracker.ResultClickBoosts) = {
     val myHits = createQueue(maxTextHitsPerCategory)
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
     val t1 = currentDateTime.getMillis()
 
+    // TODO: use user profile info as a bias
+    // lang = LangDetector.detectShortText(queryString, lang)
+    lang = Lang("en")
+    
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
 
-    val parsedQuery = parser.parse(queryString)
+    parsedQuery = parser.parse(queryString)
     timeLogs.queryParsing = currentDateTime.getMillis() - t1
     Statsd.timing("mainSearch.queryParsing", timeLogs.queryParsing)
 
@@ -218,17 +224,15 @@ class MainSearcher(
       Statsd.timing("mainSearch.LuceneSearch", timeLogs.search)
       personalizedSearcher
     }
-    (myHits, friendsHits, othersHits, parsedQuery, personalizedSearcher)
+    (myHits, friendsHits, othersHits, personalizedSearcher)
   }
 
   def search(queryString: String, numHitsToReturn: Int, lastUUID: Option[ExternalId[ArticleSearchResultRef]], filter: SearchFilter = SearchFilter.default()): ArticleSearchResult = {
-
-    implicit val lang = Lang("en") // TODO: detect
     val now = currentDateTime
     val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost)
     timeLogs.getClickBoost = currentDateTime.getMillis() - now.getMillis()
     Statsd.timing("mainSearch.getClickboost", timeLogs.getClickBoost)
-    val (myHits, friendsHits, othersHits, parsedQuery, personalizedSearcher) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
+    val (myHits, friendsHits, othersHits, personalizedSearcher) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
     val t1 = currentDateTime.getMillis()
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
@@ -343,7 +347,7 @@ class MainSearcher(
 
     val (svVar,svExistVar) = SemanticVariance.svVariance(parsedQuery, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
 
-    // instance a new content if any
+    // insert a new content if any
     newContent.foreach { h =>
       if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id)
       hitList = (hitList.take(numHitsToReturn - 1) :+ h)
@@ -358,9 +362,9 @@ class MainSearcher(
     Statsd.timing("mainSearch.total", millisPassed)
 
     // simple classifier
-    val show = if (svVar > 0.17f) false else {
+    val show = if (svVar > 0.18f) false else {
       val isGood = (parsedQuery, personalizedSearcher) match {
-        case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(query.get, hitList, searcher.get)
+        case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(hitList, searcher.get)
         case _ => true
       }
       isGood
@@ -373,12 +377,14 @@ class MainSearcher(
     shoeboxClient.persistServerSearchEvent(metaData)
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
         myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt,
-        (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = svExistVar, toShow = show, timeLogs = Some(timeLogs.toSearchTimeLogs))
+        (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = svExistVar, toShow = show,
+        timeLogs = Some(timeLogs.toSearchTimeLogs),
+        lang = lang)
   }
 
-  private def classify(parsedQuery: Query, hitList: List[MutableArticleHit], personalizedSearcher: PersonalizedSearcher) = {
+  private def classify(hitList: List[MutableArticleHit], personalizedSearcher: PersonalizedSearcher) = {
     def classify(hit: MutableArticleHit) = {
-      (hit.clickBoost) > 1.25f || hit.scoring.recencyScore > 0.25f || hit.scoring.textScore > 0.7f || (hit.scoring.textScore >= 0.04f && hit.semanticScore >= 0.28f)
+      (hit.clickBoost) > 1.25f || hit.scoring.recencyScore > 0.25f || hit.scoring.textScore > 0.7f || (hit.scoring.textScore >= 0.04f && hit.semanticScore >= 0.20f)
     }
     hitList.take(3).exists(classify(_))
   }
@@ -400,7 +406,9 @@ class MainSearcher(
   }
 
   def explain(queryString: String, uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
-    val lang = Lang("en") // TODO: detect
+    // TODO: use user profile info as a bias
+    // lang = LangDetector.detectShortText(queryString, lang)
+    lang = Lang("en")
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator

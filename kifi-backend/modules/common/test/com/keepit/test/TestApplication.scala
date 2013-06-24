@@ -62,6 +62,8 @@ import com.keepit.model.NormalizedURI
 import com.keepit.common.amazon.AmazonInstanceId
 import com.keepit.common.net.FakeClientResponse
 
+
+
 class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
 
   private def createTestGlobal(baseGlobal: FortyTwoGlobal, modules: Module*) = if (useDb)
@@ -87,6 +89,8 @@ class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override v
   def withS3DevModule() = overrideWith(new S3DevModule())
   def withShoeboxServiceModule() = overrideWith(ShoeboxServiceModule())
   def withSearchConfigModule() = overrideWith(SearchConfigModule())
+
+
   def overrideWith(modules: Module*): TestApplication = new TestApplication(createTestGlobal(global, modules: _*), useDb, path)
 
 }
@@ -142,12 +146,11 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[Babysitter].to[FakeBabysitter]
     install(new SlickModule(dbInfo.getOrElse(dbInfoFromApplication)))
-    bind[MailToKeepPlugin].to[FakeMailToKeepPlugin]
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
     bind[HealthcheckPlugin].to[FakeHealthcheck]
     bind[SlickSessionProvider].to[TestSlickSessionProvider]
     install(new FakeS3StoreModule())
-    install(new FakeCacheModule)
+    install(new DevCacheModule)
     bind[play.api.Application].toProvider(new Provider[play.api.Application] {
       def get(): play.api.Application = current
     }).in(classOf[AppScoped])
@@ -308,9 +311,11 @@ case class FakeClockModule() extends ScalaModule {
 class FakeSocialGraphPlugin extends SocialGraphPlugin {
   def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]] =
     future { throw new Exception("Not Implemented") }
+  def asyncRevokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] =
+    future { throw new Exception("Not Implemented") }
 }
 
-case class FakeCacheModule() extends ShoeboxCacheModule {
+case class FakeCacheModule() extends ScalaModule {
   override def configure() {
     bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
     bind[InMemoryCachePlugin].to[HashMapMemoryCache]
@@ -354,6 +359,8 @@ case class ShoeboxServiceModule() extends ScalaModule {
     userRepo: UserRepo,
     basicUserRepo: BasicUserRepo,
     bookmarkRepo: BookmarkRepo,
+    commentRepo: CommentRepo,
+    commentRecipientRepo: CommentRecipientRepo,
     browsingHistoryRepo: BrowsingHistoryRepo,
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
@@ -372,6 +379,8 @@ case class ShoeboxServiceModule() extends ScalaModule {
     userRepo,
     basicUserRepo,
     bookmarkRepo,
+    commentRepo,
+    commentRecipientRepo,
     browsingHistoryRepo,
     clickingHistoryRepo,
     collectionRepo,
@@ -435,6 +444,7 @@ case class FakeSchedulerModule() extends ScalaModule {
     bind[Scheduler].to[FakeScheduler]
   }
 }
+
 
 class FakeScheduler extends Scheduler {
   private def fakeCancellable = new Cancellable() {

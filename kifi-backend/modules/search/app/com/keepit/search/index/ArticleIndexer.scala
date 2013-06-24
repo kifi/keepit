@@ -70,11 +70,12 @@ class ArticleIndexer @Inject() (
   }
 
   def buildIndexable(uri: NormalizedURI): ArticleIndexable = {
-    new ArticleIndexable(id = uri.id.get,
-                         sequenceNumber = uri.seq,
-                         isDeleted = ArticleIndexer.shouldDelete(uri),
-                         uri = uri,
-                         articleStore = articleStore)
+    new ArticleIndexable(
+      id = uri.id.get,
+      sequenceNumber = uri.seq,
+      isDeleted = ArticleIndexer.shouldDelete(uri),
+      uri = uri,
+      articleStore = articleStore)
   }
 
   class ArticleIndexable(

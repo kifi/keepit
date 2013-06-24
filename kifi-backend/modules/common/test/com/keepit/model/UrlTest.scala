@@ -1,12 +1,10 @@
 package com.keepit.model
 
 import org.specs2.mutable._
-
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
 import com.keepit.inject._
 import com.keepit.test.EmptyApplication
-
 import play.api.Play.current
 import play.api.test.Helpers._
 

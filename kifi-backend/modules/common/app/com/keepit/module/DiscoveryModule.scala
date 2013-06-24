@@ -1,16 +1,20 @@
 package com.keepit.module
 
 import net.codingwell.scalaguice.ScalaModule
-import com.google.inject.{Singleton, Provides}
+
+import com.google.inject.{Singleton, Provides, Provider}
+
 import com.keepit.common.logging.Logging
 import com.keepit.common.service._
 import com.keepit.common.amazon._
 import com.keepit.common.net.HttpClient
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.zookeeper._
+
 import play.api.Mode
 import play.api.Mode._
-import com.google.inject.Provider
+import play.api.Play
+import play.api.Play.current
 
 class DiscoveryModule extends ScalaModule with Logging {
 
@@ -21,7 +25,8 @@ class DiscoveryModule extends ScalaModule with Logging {
   def serviceDiscovery(services: FortyTwoServices, mode: Mode, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo]): ServiceDiscovery = mode match {
     case Mode.Prod =>
       //todo: have a dedicated host for zk (instead of using localhost)
-      val zk = new ZooKeeperClientImpl("localhost", 2000,
+      val servers = current.configuration.getString("zookeeper.servers").get
+      val zk = new ZooKeeperClientImpl(servers, 2000,
         Some({zk1 => println(s"in callback, got $zk1")}))
       new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider)
     case _ =>

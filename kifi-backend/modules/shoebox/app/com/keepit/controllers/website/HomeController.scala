@@ -9,6 +9,7 @@ import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.{ElectronicMail, PostOffice, LocalPostOffice}
 import com.keepit.common.social.{SocialGraphPlugin, SocialNetworkType, SocialNetworks}
 import com.keepit.model._
+import com.keepit.common.service.FortyTwoServices
 
 import play.api.Play.current
 import play.api._
@@ -27,7 +28,8 @@ class HomeController @Inject() (db: Database,
   postOffice: LocalPostOffice,
   emailAddressRepo: EmailAddressRepo,
   socialConnectionRepo: SocialConnectionRepo,
-  socialGraphPlugin: SocialGraphPlugin)
+  socialGraphPlugin: SocialGraphPlugin,
+  fortyTwoServices: FortyTwoServices)
   extends WebsiteController(actionAuthenticator) {
 
   private def userCanSeeKifiSite[A](implicit request: AuthenticatedRequest[A]): Boolean =
@@ -44,8 +46,8 @@ class HomeController @Inject() (db: Database,
     } else NotFound
   }
 
-  def test = Action {
-    Ok(Play.resource("app_version.txt").toString)
+  def version = Action {
+    Ok(fortyTwoServices.currentVersion.toString)
   }
 
   def home = HtmlAction(true)(authenticatedAction = { implicit request =>
@@ -153,6 +155,7 @@ class HomeController @Inject() (db: Database,
       BadRequest(s"You are not connected to ${network.displayName}.")
     } else {
       val sui = thisNetwork.head
+      socialGraphPlugin.asyncRevokePermissions(sui)
       db.readWrite { implicit s =>
         socialConnectionRepo.deactivateAllConnections(sui.id.get)
         socialUserRepo.save(sui.copy(credentials = None, userId = None))

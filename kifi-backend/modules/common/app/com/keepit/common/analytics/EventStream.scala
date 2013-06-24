@@ -1,26 +1,25 @@
 package com.keepit.common.analytics
 
-import akka.actor._
-import scala.concurrent.duration._
-import play.api._
-import play.api.libs.json._
-import play.api.libs.iteratee._
-import play.api.libs.concurrent._
-import akka.util.Timeout
-import akka.pattern.ask
-import play.api.Play.current
-import play.api.libs.concurrent.Execution.Implicits._
-import com.keepit.common.actor.ActorFactory
-import com.keepit.common.healthcheck.HealthcheckPlugin
-import com.keepit.common.akka.FortyTwoActor
 import scala.concurrent.Future
-import com.keepit.serializer.EventSerializer
-import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.model._
-import com.keepit.common.time._
+import scala.concurrent.duration._
+
 import org.joda.time.DateTime
-import com.keepit.inject._
+
+import com.google.inject.{Inject, Singleton}
+import com.keepit.common.actor.ActorFactory
+import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.store.S3ImageStore
+import com.keepit.common.time._
+import com.keepit.model._
+
+import akka.actor._
+import akka.pattern.ask
+import akka.util.Timeout
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.iteratee._
+import play.api.libs.json._
 
 @Singleton
 class EventStream @Inject() (
@@ -50,32 +49,39 @@ class EventStream @Inject() (
 
 }
 
-class EventWriter @Inject() (db: Database, userRepo: UserRepo, socialUserInfoRepo: SocialUserInfoRepo){
+class EventWriter @Inject() (
+    db: Database,
+    userRepo: UserRepo,
+    imageStore: S3ImageStore) {
   implicit val writesUserEvent = new Writes[WrappedUserEvent] {
     def writes(wrapped: WrappedUserEvent): JsValue = {
       Json.obj(
         "user" -> Json.obj(
           "id" -> wrapped.user.id.get.id,
           "name" -> s"${wrapped.user.firstName} ${wrapped.user.lastName}",
-          "avatar" -> s"https://graph.facebook.com/${wrapped.social}/picture?height=150&width=150"),
+          "avatar" -> wrapped.avatarUrl
+        ),
         "time" -> wrapped.createdAt.toStandardTimeString,
         "name" -> wrapped.eventName,
         "family" -> wrapped.eventFamily.name
       )
     }
   }
-  trait WrappedEvent
-  case class WrappedUserEvent(event: Event, user: User, social: String, eventName: String, eventFamily: EventFamily, createdAt: DateTime) extends WrappedEvent
+
+  case class WrappedUserEvent(
+    event: Event,
+    user: User,
+    avatarUrl: Option[String],
+    eventName: String,
+    eventFamily: EventFamily,
+    createdAt: DateTime)
 
   def wrapEvent(event: Event): Option[WrappedUserEvent] = {
       event match {
         case Event(_,UserEventMetadata(eventFamily, eventName, externalUser, _, experiments, metaData, _), createdAt, _) =>
-          val (user, social) = db.readOnly { implicit session =>
-            val user = userRepo.get(externalUser)
-            val social = socialUserInfoRepo.getByUser(user.id.get).headOption.map(_.socialId.id).getOrElse("")
-            (user, social)
-          }
-          Some(WrappedUserEvent(event, user, social, eventName, eventFamily, createdAt))
+          val user = db.readOnly { implicit session => userRepo.get(externalUser) }
+          val avatarUrl = imageStore.getPictureUrl(150, user).value.flatMap(_.toOption)
+          Some(WrappedUserEvent(event, user, avatarUrl, eventName, eventFamily, createdAt))
         case _ => None
       }
   }
@@ -103,5 +109,7 @@ class EventStreamActor @Inject() (
 }
 
 private trait EventStreamMessage
+private case object NewStream extends EventStreamMessage
+private case class Connected(enumerator: Enumerator[JsValue]) extends EventStreamMessage
 private case class BroadcastEvent(event: JsValue) extends EventStreamMessage
 private case object ReplyEcho

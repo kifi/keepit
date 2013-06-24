@@ -54,7 +54,6 @@ GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkContr
 GET     /                           @com.keepit.controllers.website.HomeController.home
 GET     /install                    @com.keepit.controllers.website.HomeController.install
 GET     /getting-started            @com.keepit.controllers.website.HomeController.gettingStarted
-GET     /test           @com.keepit.controllers.website.HomeController.test
 
 GET     /invite                     @com.keepit.controllers.website.InviteController.invite
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
@@ -82,7 +81,7 @@ POST    /site/keeps/:id/delete      @com.keepit.controllers.website.BookmarksCon
 GET     /site/keeps/mutual/:id      @com.keepit.controllers.website.BookmarksController.mutualKeeps(id: ExternalId[User])
 
 GET     /site/collections/all       @com.keepit.controllers.website.BookmarksController.allCollections(sort: String ?= "last_kept")
-POST    /site/collections/ordering  @com.keepit.controllers.website.BookmarksController.setCollectionOrdering()
+POST    /site/collections/ordering  @com.keepit.controllers.website.BookmarksController.updateCollectionOrdering()
 POST    /site/collections/create @com.keepit.controllers.website.BookmarksController.saveCollection(id = "")
 POST    /site/collections/:id/update @com.keepit.controllers.website.BookmarksController.saveCollection(id: String)
 POST    /site/collections/:id/delete @com.keepit.controllers.website.BookmarksController.deleteCollection(id: ExternalId[Collection])
@@ -120,8 +119,6 @@ GET     /admin/events/activityData  @com.keepit.controllers.admin.AdminEventCont
 
 GET     /admin/realtime/event       @com.keepit.controllers.admin.AdminEventController.eventViewer
 GET     /admin/realtime/event/stream      @com.keepit.controllers.admin.AdminEventController.eventStream
-GET     /admin/realtime/activity    @com.keepit.controllers.admin.AdminEventController.activityViewer
-GET     /admin/realtime/activity/stream   @com.keepit.controllers.admin.AdminEventController.activityStream
 
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Bookmark])
@@ -166,7 +163,7 @@ GET     /admin/uriGraph/dumpDoc/:userId  @com.keepit.controllers.admin.AdminURIG
 GET     /admin/uriGraph/reindexCollection  @com.keepit.controllers.admin.AdminURIGraphController.reindexCollection
 GET     /admin/uriGraph/dumpCollectionDoc/:colId  @com.keepit.controllers.admin.AdminURIGraphController.dumpCollectionLuceneDocument(colId: Id[Collection])
 
-GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.usersView
+GET     /admin/users/page/:page                @com.keepit.controllers.admin.AdminUserController.usersView(page: Int)
 GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User])
 POST    /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User])
 GET     /admin/user/:id/more-info   @com.keepit.controllers.admin.AdminUserController.moreUserInfoView(id: Id[User])
@@ -260,6 +257,8 @@ GET     /admin/healthcheck/resetErrorCount    @com.keepit.controllers.admin.Admi
 #INTERNAL ROUTES/Shoebox
 ##########################################
 
+GET     /internal/version                             @com.keepit.controllers.website.HomeController.version
+
 GET     /internal/shoebox/database/getNormalizedURI   @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURI(id: Long)
 GET     /internal/shoebox/database/getNormalizedURIs  @com.keepit.controllers.shoebox.ShoeboxController.getNormalizedURIs(ids: String)
 GET     /internal/shoebox/database/getUsers           @com.keepit.controllers.shoebox.ShoeboxController.getUsers(ids: String)
@@ -275,6 +274,8 @@ GET     /internal/shoebox/tracker/clickHistory        @com.keepit.controllers.sh
 GET     /internal/shoebox/database/bookmark           @com.keepit.controllers.shoebox.ShoeboxController.getBookmarks(userId: Id[User])
 GET     /internal/shoebox/database/changedBookmark    @com.keepit.controllers.shoebox.ShoeboxController.getBookmarksChanged(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/bookmarkByUriUser  @com.keepit.controllers.shoebox.ShoeboxController.getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])
+GET     /internal/shoebox/database/changedComment     @com.keepit.controllers.shoebox.ShoeboxController.getCommentsChanged(seqNum: Long, fetchSize: Int)
+GET     /internal/shoebox/database/commentRecipients  @com.keepit.controllers.shoebox.ShoeboxController.getCommentRecipientIds(commentId: Id[Comment])
 POST    /internal/shoebox/persistServerSearchEvent    @com.keepit.controllers.shoebox.ShoeboxController.persistServerSearchEvent
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.shoebox.ShoeboxController.sendMail
 GET     /internal/shoebox/database/getPhrasesByPage   @com.keepit.controllers.shoebox.ShoeboxController.getPhrasesByPage(page: Int, size: Int)

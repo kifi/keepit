@@ -23,8 +23,8 @@ object ResultClicked {
 }
 
 case class SharingUserInfo(
-                            sharingUserIds: Set[Id[User]],
-                            keepersEdgeSetSize: Int)
+  sharingUserIds: Set[Id[User]],
+  keepersEdgeSetSize: Int)
 
 object SharingUserInfo {
   private implicit val userIdFormat = Id.format[User]

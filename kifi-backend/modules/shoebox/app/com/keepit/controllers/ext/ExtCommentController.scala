@@ -26,7 +26,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import com.keepit.common.analytics.ActivityStream
 import views.html
 import com.keepit.realtime.UserNotifier
 import scala.concurrent.future
@@ -48,14 +47,13 @@ class ExtCommentController @Inject() (
   followRepo: FollowRepo,
   emailAddressRepo: EmailAddressRepo,
   deepLinkRepo: DeepLinkRepo,
-  activityStream: ActivityStream,
   userNotifier: UserNotifier)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def getCounts = AuthenticatedJsonToJsonAction { request =>
     val urls = request.body.as[Seq[String]]
     val counts = db.readOnly { implicit s =>
-      urls.flatMap(normalizedURIRepo.getByNormalizedUri).map { nUri =>
+      urls.flatMap(normalizedURIRepo.getByUri).map { nUri =>
         nUri.url -> (commentRepo.getPublicCount(nUri.id.get), commentRepo.getParentMessages(nUri.id.get, request.userId).size)
       }
     }
@@ -202,7 +200,7 @@ class ExtCommentController @Inject() (
 
   private def getOrCreateUriAndUrl(urlStr: String): (NormalizedURI, URL) = {
     db.readWrite(attempts = 2) { implicit s =>
-      val uri = normalizedURIRepo.getByNormalizedUrl(urlStr).getOrElse(normalizedURIRepo.save(NormalizedURIFactory(url = urlStr)))
+      val uri = normalizedURIRepo.getByUri(urlStr).getOrElse(normalizedURIRepo.save(NormalizedURIFactory(url = urlStr)))
       val url: URL = urlRepo.get(urlStr).getOrElse(urlRepo.save(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
       (uri, url)
     }
@@ -222,7 +220,7 @@ class ExtCommentController @Inject() (
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
     val comment = db.readWrite {implicit s =>
       val userId = request.userId
-      val uri = normalizedURIRepo.save(normalizedURIRepo.getByNormalizedUrl(urlStr).getOrElse(NormalizedURIFactory(url = urlStr)))
+      val uri = normalizedURIRepo.save(normalizedURIRepo.getByUri(urlStr).getOrElse(NormalizedURIFactory(url = urlStr)))
 
       val url: URL = urlRepo.save(urlRepo.get(urlStr).getOrElse(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
 
@@ -311,7 +309,7 @@ class ExtCommentController @Inject() (
   def startFollowing() = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
     db.readWrite { implicit session =>
-      val uriId = normalizedURIRepo.getByNormalizedUrl(url).getOrElse(normalizedURIRepo.save(NormalizedURIFactory(url = url))).id.get
+      val uriId = normalizedURIRepo.getByUri(url).getOrElse(normalizedURIRepo.save(NormalizedURIFactory(url = url))).id.get
       followRepo.get(request.userId, uriId, excludeState = None) match {
         case Some(follow) if !follow.isActive =>
           Some(followRepo.save(follow.activate))
@@ -328,7 +326,7 @@ class ExtCommentController @Inject() (
   def stopFollowing() = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
     db.readWrite { implicit session =>
-      normalizedURIRepo.getByNormalizedUrl(url).map { uri =>
+      normalizedURIRepo.getByUri(url).map { uri =>
         followRepo.get(request.userId, uri.id.get).map { follow =>
           followRepo.save(follow.deactivate)
         }

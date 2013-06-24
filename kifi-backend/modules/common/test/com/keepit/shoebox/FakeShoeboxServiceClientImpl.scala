@@ -27,6 +27,8 @@ class FakeShoeboxServiceClientImpl @Inject() (
     userRepo: UserRepo,
     basicUserRepo: BasicUserRepo,
     bookmarkRepo: BookmarkRepo,
+    commentRepo: CommentRepo,
+    commentRecipientRepo: CommentRecipientRepo,
     browsingHistoryRepo: BrowsingHistoryRepo,
     clickingHistoryRepo: ClickHistoryRepo,
     collectionRepo: CollectionRepo,
@@ -84,6 +86,21 @@ class FakeShoeboxServiceClientImpl @Inject() (
     }
     Promise.successful(bookmarks).future
   }
+
+  def getCommentsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Comment]] = {
+    val comments = db.readOnly { implicit session =>
+      commentRepo.getCommentsChanged(seqNum, fetchSize)
+    }
+    Promise.successful(comments).future
+  }
+
+  def getCommentRecipientIds(commentId: Id[Comment]): Future[Seq[Id[User]]] = {
+    val commentRecipientIds = db.readOnly { implicit session =>
+      commentRecipientRepo.getByComment(commentId).filter(_.state == CommentRecipientStates.ACTIVE).flatMap(_.userId)
+    }
+    Promise.successful(commentRecipientIds).future
+  }
+
 
   def persistServerSearchEvent(metaData: JsObject): Unit ={
     //EventPersister.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject])(clock, fortyTwoServices))

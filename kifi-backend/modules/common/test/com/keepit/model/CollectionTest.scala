@@ -8,7 +8,6 @@ import com.keepit.FortyTwoGlobal
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.time._
 import com.keepit.common.time.zones.PT
-import com.keepit.inject._
 import com.keepit.test.{EmptyApplication, TestDBRunner}
 
 import play.api.Play.current
@@ -126,7 +125,7 @@ class CollectionTest extends Specification with TestDBRunner {
         }
       }
     }
-    "update sequence number when keeps are added or removed" in {
+    "update sequence number when keeps are added or removed, and when keeps' uriIds are changed" in {
       withDB() { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         val newSeqNum = db.readWrite { implicit s =>
@@ -136,14 +135,22 @@ class CollectionTest extends Specification with TestDBRunner {
           n must be > coll2.seq.value
           n
         }
-        db.readWrite { implicit s =>
+        val latestSeqNum = db.readWrite { implicit s =>
           keepToCollectionRepo.save(KeepToCollection(
             bookmarkId = bookmark1.id.get, collectionId = coll1.id.get, state = KeepToCollectionStates.INACTIVE))
-          collectionRepo.get(coll1.id.get).seq.value must be > newSeqNum
+          val seq = collectionRepo.get(coll1.id.get).seq.value
+          seq must be > newSeqNum
+          seq
         }
 
         db.readOnly { implicit s =>
           collectionRepo.getCollectionsChanged(SequenceNumber(newSeqNum), 1000).map(_._1) === Seq(coll1.id.get)
+        }
+        db.readWrite { implicit s =>
+          bookmarkRepo.save(bookmark1.withNormUriId(bookmark2.uriId))
+        }
+        db.readOnly { implicit s =>
+          collectionRepo.getCollectionsChanged(SequenceNumber(latestSeqNum), 1000).map(_._1) === Seq(coll1.id.get)
         }
       }
     }
