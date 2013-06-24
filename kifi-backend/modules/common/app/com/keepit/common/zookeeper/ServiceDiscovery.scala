@@ -11,13 +11,13 @@ import scala.collection.concurrent.TrieMap
 
 import play.api.libs.json._
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{Inject, Singleton, Provider}
 
 import org.apache.zookeeper.CreateMode._
-import com.google.inject.Provider
 
 trait ServiceDiscovery {
   def register(): Node
+  def unRegister(): Unit = {}
   def isLeader(): Boolean
   def myClusterSize: Int = 0
 }
@@ -26,48 +26,71 @@ trait ServiceDiscovery {
 class ServiceDiscoveryImpl @Inject() (
     zk: ZooKeeperClient,
     services: FortyTwoServices,
-    amazonInstanceInfoProvider: Provider[AmazonInstanceInfo])
+    amazonInstanceInfoProvider: Provider[AmazonInstanceInfo],
+    servicesToListenOn: Seq[ServiceType] = ServiceType.SEARCH :: ServiceType.SHOEBOX :: Nil)
   extends ServiceDiscovery with Logging {
 
-  private val serviceType = services.currentService
-  private val myServicePath = Path(s"/fortytwo/services/${serviceType.name}")
-  private val myServiceNodeMaster = Node(s"${myServicePath.name}/${serviceType.name}_")
   private var myNode: Option[Node] = None
 
-  private var clusters = new TrieMap[Path, ServiceCluster]()
-  def isLeader: Boolean = clusters(myServicePath).leader map (_.node == myNode.get) getOrElse false
+  private val clusters: TrieMap[ServiceType, ServiceCluster] = {
+    val clustersToInit = new TrieMap[ServiceType, ServiceCluster]()
+    servicesToListenOn foreach {service =>
+      val cluster = new ServiceCluster(service)
+      clustersToInit(service) = cluster
+    }
+    log.info(s"registered clusters: $clustersToInit")
+    clustersToInit
+  }
+
+  def isLeader: Boolean = {
+    val myCluster = clusters(services.currentService)
+    val registered = myNode map {node => myCluster.registered(node)} getOrElse false
+    if (!registered) {
+      log.warn(s"service did not register itself yet!")
+      return false
+    }
+    myCluster.leader match {
+      case Some(instance) if instance.node == myNode.get =>
+        require(myCluster.size > 0)
+        return true
+      case Some(instance)  =>
+        require(myCluster.size > 1)
+        log.info(s"I'm not the leader since my node is ${myNode.get} and the leader is ${instance.node}")
+        return false
+      case None =>
+        require(myCluster.size == 0)
+        return true
+    }
+  }
 
   implicit val amazonInstanceInfoFormat = AmazonInstanceInfo.format
 
-  //without me
-  override def myClusterSize: Int = clusters.get(myServicePath) map {c => c.size} getOrElse 0
+  override def myClusterSize: Int = clusters.get(services.currentService) map {c => c.size} getOrElse 0
 
-  def register(): Node = {
-    val path = zk.createPath(myServicePath)
-    myNode = Some(zk.createNode(myServiceNodeMaster, null, EPHEMERAL_SEQUENTIAL))
-    zk.watchChildren(myServicePath, { (children : Seq[Node]) =>
-      println(s"""services in my cluster under ${myServicePath.name}: ${children.mkString(", ")}""")
+  private def watchServices(): Unit = clusters.values foreach watchService
+
+  private def watchService(cluster: ServiceCluster): Unit = {
+    zk.createPath(cluster.servicePath)
+    zk.watchChildren(cluster.servicePath, { (children : Seq[Node]) =>
+      println(s"""services in my cluster under ${cluster.servicePath.name}: ${children.mkString(", ")}""")
       future {
-        val cluster = clusters.getOrElseUpdate(myServicePath, new ServiceCluster(serviceType, myServicePath))
         cluster.update(zk, children)
       }
     })
+  }
+
+  def register(): Node = {
+    watchServices()
+    val myServiceType: ServiceType = services.currentService
+    println(s"registered clusters: $clusters, my service is $myServiceType")
+    val myCluster = clusters(myServiceType)
+    myNode = Some(zk.createNode(myCluster.serviceNodeMaster, null, EPHEMERAL_SEQUENTIAL))
     zk.set(myNode.get, Json.toJson(amazonInstanceInfoProvider.get).toString)
     println(s"registered as node ${myNode.get}")
     myNode.get
   }
 
-  def watchNode(node: Node) {
-    zk.watchNode(node, { (data : Option[Array[Byte]]) =>
-      data match {
-        case Some(data) =>
-          val service = toRemoteService(data)
-          //do something with service...
-        case None => //nothing to do...
-      }
-    })
-  }
-
+  override def unRegister(): Unit = myNode map {node => zk.deleteNode(node)}
 
   implicit val amazonInstanceIdFormat = Json.format[AmazonInstanceId]
   implicit val serviceStatusFormat = ServiceStatus.format
