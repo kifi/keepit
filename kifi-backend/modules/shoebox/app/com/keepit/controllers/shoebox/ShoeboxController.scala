@@ -75,6 +75,8 @@ class ShoeboxController @Inject() (
   bookmarkRepo: BookmarkRepo,
   browsingHistoryRepo: BrowsingHistoryRepo,
   browsingHistoryTracker: BrowsingHistoryTracker,
+  commentRepo: CommentRepo,
+  commentRecipientRepo: CommentRecipientRepo,
   clickingHistoryRepo: ClickHistoryRepo,
   clickHistoryTracker: ClickHistoryTracker,
   normUriRepo: NormalizedURIRepo,
@@ -189,6 +191,20 @@ class ShoeboxController @Inject() (
       bookmarkRepo.getByUriAndUser(uriId, userId)
     }.map(Json.toJson(_)).getOrElse(JsNull)
     Ok(bookmark)
+  }
+
+  def getCommentsChanged(seqNum: Long, fetchSize: Int) = Action { request =>
+    val comments = db.readOnly { implicit session =>
+      commentRepo.getCommentsChanged(SequenceNumber(seqNum), fetchSize)
+    }
+    Ok(Json.toJson(comments))
+  }
+
+  def getCommentRecipientIds(commentId: Id[Comment]) = Action { request =>
+    val commentRecipientIds = db.readOnly { implicit session =>
+      commentRecipientRepo.getByComment(commentId).filter(_.state == CommentRecipientStates.ACTIVE).flatMap(_.userId.map(_.id))
+    }
+    Ok(Json.toJson(commentRecipientIds))
   }
 
   def persistServerSearchEvent() = Action(parse.json) { request =>

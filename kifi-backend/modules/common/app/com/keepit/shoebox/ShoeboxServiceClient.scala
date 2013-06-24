@@ -59,6 +59,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]]
   def getBookmarksChanged(seqNum: SequenceNumber, fertchSize: Int): Future[Seq[Bookmark]]
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]]
+  def getCommentsChanged(seqNum: SequenceNumber, fertchSize: Int): Future[Seq[Comment]]
+  def getCommentRecipientIds(commentId: Id[Comment]): Future[Seq[Id[User]]]
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]]
   def getExperiments: Future[Seq[SearchConfigExperiment]]
   def getExperiment(id: Id[SearchConfigExperiment]): Future[SearchConfigExperiment]
@@ -147,6 +149,19 @@ class ShoeboxServiceClientImpl @Inject() (
       }
     }
   }
+
+  def getCommentsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Comment]] = {
+    call(Shoebox.internal.getCommentsChanged(seqNum.value, fetchSize)).map{ r =>
+      r.json.as[JsArray].value.map(js => Json.fromJson[Comment](js).get)
+    }
+  }
+
+  def getCommentRecipientIds(commentId: Id[Comment]): Future[Seq[Id[User]]] = {
+    call(Shoebox.internal.getCommentRecipientIds(commentId)).map{ r =>
+      Json.fromJson[Seq[Long]](r.json).get.map(Id[User](_))
+    }
+  }
+
 
   def sendMail(email: ElectronicMail): Future[Boolean] = {
     call(Shoebox.internal.sendMail(), Json.toJson(email)).map(r => r.body.toBoolean)
