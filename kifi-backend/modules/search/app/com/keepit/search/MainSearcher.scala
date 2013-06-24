@@ -174,8 +174,9 @@ class MainSearcher(
     val t1 = currentDateTime.getMillis()
 
     // TODO: use user profile info as a bias
-    lang = LangDetector.detectShortText(queryString, lang)
-
+    // lang = LangDetector.detectShortText(queryString, lang)
+    lang = Lang("en")
+    
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
@@ -406,7 +407,8 @@ class MainSearcher(
 
   def explain(queryString: String, uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
     // TODO: use user profile info as a bias
-    lang = LangDetector.detectShortText(queryString, lang)
+    // lang = LangDetector.detectShortText(queryString, lang)
+    lang = Lang("en")
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator
