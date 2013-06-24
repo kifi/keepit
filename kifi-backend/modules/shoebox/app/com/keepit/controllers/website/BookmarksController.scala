@@ -67,13 +67,14 @@ class BookmarksController @Inject() (
   )
   extends WebsiteController(actionAuthenticator) {
 
-  implicit val writesKeepInfo = new Writes[(Bookmark, Set[BasicUser], Set[ExternalId[Collection]])] {
-    def writes(info: (Bookmark, Set[BasicUser], Set[ExternalId[Collection]])) = Json.obj(
+  implicit val writesKeepInfo = new Writes[(Bookmark, Set[BasicUser], Set[ExternalId[Collection]], Int)] {
+    def writes(info: (Bookmark, Set[BasicUser], Set[ExternalId[Collection]], Int)) = Json.obj(
       "id" -> info._1.externalId.id,
       "title" -> info._1.title,
       "url" -> info._1.url,
       "isPrivate" -> info._1.isPrivate,
       "createdAt" -> info._1.createdAt,
+      "others" -> info._4,
       "keepers" -> info._2,
       "collections" -> info._3.map(_.id)
     )
@@ -205,7 +206,8 @@ class BookmarksController @Inject() (
             (keeps zip infos).map { case (keep, info) =>
               val collIds =
                 keepToCollectionRepo.getCollectionsForBookmark(keep.id.get).flatMap(collIdToExternalId.get).toSet
-              (keep, info.sharingUserIds map idToBasicUser, collIds)
+              val others = info.keepersEdgeSetSize - info.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
+              (keep, info.sharingUserIds map idToBasicUser, collIds, others)
             }
           }
         } map { keepsInfo =>
