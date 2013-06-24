@@ -58,9 +58,41 @@ $(function() {
 
 	var $colls = $("#collections"), collTmpl = Tempo.prepare($colls).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 		collScroller.refresh();
-		makeCollectionsDroppable($colls.find(".collection"));
+		$colls.find(".collection").droppable(droppableCollectionOpts);
 	});
 	var $inColl = $(".in-collections"), inCollTmpl = Tempo.prepare($inColl);
+	var droppableCollectionOpts = {
+			accept: ".keep",
+			greedy: true,
+			tolerance: "pointer",
+			hoverClass: "drop-hover",
+			drop: function(event, ui) {
+				var $keeps = ui.draggable, coll = this;
+				if ($keeps.hasClass("selected")) {
+					$keeps = $keeps.add($main.find(".keep.selected"));
+				}
+
+				var myKeepIds = $keeps.filter(".mine").map(function() {return $(this).data("id")}).get();
+
+				// may first need to keep any keeps that are not mine yet
+				var $notMine = $keeps.filter(":not(.mine)");
+				if ($notMine.length) {
+					$.ajax({
+						url: urlKeepAdd,
+						type: "POST",
+						dataType: 'json',
+						data: JSON.stringify($notMine.map(function() {var a = this.querySelector("a"); return {title: a.title, url: a.href}}).get()),
+						contentType: 'application/json',
+						error: onDropOnCollectionAjaxError,
+						success: function(data) {
+							myKeepIds.push.apply(myKeepIds, data.keeps.map(function(k) {return k.id}));
+							addMyKeepsToCollection.call(coll, myKeepIds);
+						}
+					});
+				} else {
+					addMyKeepsToCollection.call(coll, myKeepIds);
+				}
+			}};
 
 	var me;
 	var myKeepsCount;
@@ -77,44 +109,6 @@ $(function() {
 		return $.grep(arr, function(v, k) {
 			return $.inArray(v, arr) === k;
 		});
-	}
-
-
-	function makeCollectionsDroppable($c) {
-		$c.droppable({
-			accept: ".keep",
-			greedy: true,
-			tolerance: "pointer",
-			hoverClass: "drop-hover",
-			drop: onDropOnCollection});
-	}
-
-	function onDropOnCollection(event, ui) {
-		var $keeps = ui.draggable, coll = this;
-		if ($keeps.hasClass("selected")) {
-			$keeps = $keeps.add($main.find(".keep.selected"));
-		}
-
-		var myKeepIds = $keeps.filter(".mine").map(function() {return $(this).data("id")}).get();
-
-		// may first need to keep any keeps that are not mine yet
-		var $notMine = $keeps.filter(":not(.mine)");
-		if ($notMine.length) {
-			$.ajax({
-				url: urlKeepAdd,
-				type: "POST",
-				dataType: 'json',
-				data: JSON.stringify($notMine.map(function() {var a = this.querySelector("a"); return {title: a.title, url: a.href}}).get()),
-				contentType: 'application/json',
-				error: onDropOnCollectionAjaxError,
-				success: function(data) {
-					myKeepIds.push.apply(myKeepIds, data.keeps.map(function(k) {return k.id}));
-					addMyKeepsToCollection.call(coll, myKeepIds);
-				}
-			});
-		} else {
-			addMyKeepsToCollection.call(coll, myKeepIds);
-		}
 	}
 
 	function addMyKeepsToCollection(keepIds) {
@@ -209,6 +203,10 @@ $(function() {
 	function prepKeepForRender(keep) {
 		keep.isMyBookmark = true;
 		keep.me = me;
+		for (var i = 0; i < keep.collections.length; i++) {
+			var id = keep.collections[i];
+			keep.collections[i] = {id: id, name: collections[id].name};
+		}
 	}
 
 	function addNewKeeps() {
