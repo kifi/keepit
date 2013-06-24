@@ -184,7 +184,11 @@ class UrlController @Inject() (
 
   def fixSeqNum = AdminHtmlAction { request =>
     Akka.future {
-      fixCommentSeqNum
+      try {
+        fixCommentSeqNum
+      } catch {
+        case ex: Throwable => log.error(ex.getMessage, ex)
+      }
     }
     Ok("sequence number fix started")
   }
