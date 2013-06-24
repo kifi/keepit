@@ -29,11 +29,8 @@ $(function() {
 			.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
 		$myKeeps.find(".keep").draggable(draggableKeepOpts);
 
-		$("time").easydate({set_title: false});
-
-		// insert time sections
 		var now = new Date;
-		$myKeeps.find("time").each(function() {
+		$myKeeps.find("time").easydate({set_title: false}).each(function() {
 			var age = daysBetween(new Date($(this).attr("datetime")), now);
 			if ($myKeeps.find('li.keep-group-title.today').length == 0 && age <= 1) {
 				$(this).closest(".keep").before('<li class="keep-group-title today">Today</li>');
@@ -43,6 +40,7 @@ $(function() {
 				$(this).closest(".keep").before('<li class="keep-group-title week">Past Week</li>');
 			} else if ($myKeeps.find('li.keep-group-title.older').length == 0 && age > 7) {
 				$(this).closest(".keep").before('<li class="keep-group-title older">Older</li>');
+				return false;
 			}
 		});
 		mainScroller.refresh();
