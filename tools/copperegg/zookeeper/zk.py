@@ -3,6 +3,15 @@ import time
 import os
 import socket
 
+# to install run
+# crontab -e
+# and add
+# */1 * * * * /usr/bin/flock -n /var/lock/zookeeper_cron /usr/bin/python /home/fortytwo/copperegg/scripts/zk.py
+# to check edit run
+# crontab -l
+# make sure crond is running
+# /sbin/service crond status
+
 zkStatus = 0
 if os.popen("/etc/init.d/zookeeper status").read().startswith("zookeeper is running"):
   zkStatus = 1
