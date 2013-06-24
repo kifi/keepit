@@ -96,7 +96,7 @@ class UrlController @Inject() (
       urls map { url =>
         url.state match {
           case URLStates.ACTIVE =>
-            val (normalizedUri, reason) = uriRepo.getByNormalizedUrl(url.url) match {
+            val (normalizedUri, reason) = uriRepo.getByUri(url.url) match {
               case Some(nuri) =>
                 (nuri, URLHistoryCause.MERGE)
               case None =>

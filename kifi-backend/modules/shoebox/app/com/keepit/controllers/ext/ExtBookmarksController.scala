@@ -27,7 +27,7 @@ class ExtBookmarksController @Inject() (
   def remove() = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
     val bookmark = db.readWrite { implicit s =>
-      uriRepo.getByNormalizedUrl(url).flatMap { uri =>
+      uriRepo.getByUri(url).flatMap { uri =>
         bookmarkRepo.getByUriAndUser(uri.id.get, request.userId).map { b =>
           bookmarkRepo.save(b.withActive(false))
         }
@@ -44,7 +44,7 @@ class ExtBookmarksController @Inject() (
     val json = request.body
     val (url, priv) = ((json \ "url").as[String], (json \ "private").as[Boolean])
     db.readWrite { implicit s =>
-      uriRepo.getByNormalizedUrl(url).flatMap { uri =>
+      uriRepo.getByUri(url).flatMap { uri =>
         bookmarkRepo.getByUriAndUser(uri.id.get, request.userId).filter(_.isPrivate != priv).map {b =>
           bookmarkRepo.save(b.withPrivate(priv))
         }

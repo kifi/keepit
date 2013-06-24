@@ -38,7 +38,7 @@ class BookmarkInterner @Inject() (
   }
 
   private def findUri(url: String, title: Option[String]): NormalizedURI = db.readWrite(attempts = 2) { implicit s =>
-    uriRepo.getByNormalizedUrl(url) match {
+    uriRepo.getByUri(url) match {
       case Some(uri) if uri.state == NormalizedURIStates.ACTIVE | uri.state == NormalizedURIStates.INACTIVE =>
         uriRepo.save(uri.withState(NormalizedURIStates.SCRAPE_WANTED))
       case Some(uri) => uri
