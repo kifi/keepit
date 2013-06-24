@@ -11,6 +11,7 @@ class ShoeboxCacheModule extends ScalaModule {
 
   def configure {
     install(new MemcachedCacheModule)
+    install(new EhCacheCacheModule)
   }
 
   @Singleton
