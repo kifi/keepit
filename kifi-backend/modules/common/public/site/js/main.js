@@ -33,16 +33,16 @@ $(function() {
 
 		// insert time sections
 		var now = new Date;
-		$myKeeps.find('.keep').each(function() {
-			var age = daysBetween(new Date($(this).data('created')), now);
+		$myKeeps.find("time").each(function() {
+			var age = daysBetween(new Date($(this).attr("datetime")), now);
 			if ($myKeeps.find('li.keep-group-title.today').length == 0 && age <= 1) {
-				$(this).before('<li class="keep-group-title today">Today</li>');
+				$(this).closest(".keep").before('<li class="keep-group-title today">Today</li>');
 			} else if ($myKeeps.find('li.keep-group-title.yesterday').length == 0 && age > 1 && age < 2) {
-				$(this).before('<li class="keep-group-title yesterday">Yesderday</li>');
+				$(this).closest(".keep").before('<li class="keep-group-title yesterday">Yesderday</li>');
 			} else if ($myKeeps.find('li.keep-group-title.week').length == 0 && age >= 2 && age <= 7) {
-				$(this).before('<li class="keep-group-title week">Past Week</li>');
+				$(this).closest(".keep").before('<li class="keep-group-title week">Past Week</li>');
 			} else if ($myKeeps.find('li.keep-group-title.older').length == 0 && age > 7) {
-				$(this).before('<li class="keep-group-title older">Older</li>');
+				$(this).closest(".keep").before('<li class="keep-group-title older">Older</li>');
 			}
 		});
 		mainScroller.refresh();
