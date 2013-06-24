@@ -163,7 +163,7 @@ GET     /admin/uriGraph/dumpDoc/:userId  @com.keepit.controllers.admin.AdminURIG
 GET     /admin/uriGraph/reindexCollection  @com.keepit.controllers.admin.AdminURIGraphController.reindexCollection
 GET     /admin/uriGraph/dumpCollectionDoc/:colId  @com.keepit.controllers.admin.AdminURIGraphController.dumpCollectionLuceneDocument(colId: Id[Collection])
 
-GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.usersView
+GET     /admin/users/page/:page                @com.keepit.controllers.admin.AdminUserController.usersView(page: Int)
 GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User])
 POST    /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User])
 GET     /admin/user/:id/more-info   @com.keepit.controllers.admin.AdminUserController.moreUserInfoView(id: Id[User])
