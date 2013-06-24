@@ -103,31 +103,12 @@
 		</div>
 		<div class="main-keeps">
 			<div class="antiscroll-inner">
-				<ol id="search-results">
-					<li class="keep{% if isMyBookmark %} mine{% endif %}" data-template data-id="{{bookmark.id}}" style="display:none">
-						<div class="handle">
-							<div class="keep-checkbox"></div>
-						</div>
-						<div class="keep-title long-text">
-							<a href="{{bookmark.url}}" target="_blank" title="{{bookmark.title}}">{{bookmark.title}}</a>
-						</div>
-						<div class="keep-url long-text" title="{{bookmark.url}}">{{bookmark.url | replace '^http://', '	' | replace '^([^/]*)/$', '$1'}}</div>
-						<div class="keep-who">
-							<img class="small-avatar" data-template-for="users"
-								src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
-								data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
-								title="{{firstName}} {{lastName}}">
-							<span class="keep-who-text">
-								{% if isMyBookmark %}You{% endif %}{% if users.length > 0 && isMyBookmark %} + {% endif %}{% if users.length > 0 %}{{users.length}} friend{% endif %}{% if users.length > 1 %}s{% endif %} kept this
-								<span class="keep-private{% if isPrivate %} on{% endif %}">Private</span>
-							</span>
-							<div class="clearfix"></div>
-						</div>
-					</li>
-				</ol>
+				<ol id="search-results"></ol>
 				<ol id="my-keeps">
-					<li class="keep mine" data-template data-id="{{id}}" data-collections="{{collections}}" style="display:none">
-						<time datetime="{{createdAt}}">{{createdAt}}</time>
+					<li class="keep{% if isMyBookmark %} mine{% endif %}" data-template data-id="{{id}}" data-collections="{{collections}}" style="display:none">
+						{% if typeof createdAt !== "undefined" %}
+							<time datetime="{{createdAt}}">{{createdAt}}</time>
+						{% endif %}
 						<div class="handle">
 							<div class="keep-checkbox"></div>
 						</div>
@@ -136,15 +117,32 @@
 						</div>
 						<div class="keep-url long-text" title="{{url}}">{{url | replace '^http://', '	' | replace '^([^/]*)/$', '$1'}}</div>
 						<div class="keep-who">
-							<img class="small-avatar" data-template-for="keepers"
+							<img class="small-avatar me" src="//djty7jcqog9qu.cloudfront.net/users/{{me.id}}/pics/100/{{me.pictureName}}">
+						  <img class="small-avatar" data-template-for="keepers"
 								src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
 								data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
 								title="{{firstName}} {{lastName}}">
-							<span class="keep-who-text">
-								You {% if keepers.length > 0 %} + {{keepers.length}} friend{% endif %}{% if keepers.length > 1 %}s{% endif %} kept this
-								<span class="keep-private{% if isPrivate %} on{% endif %}">Private</span>
+							<span class="keep-who-text" data-after-template>
+								<span class="keep-you">
+									You
+									{% if keepers.length && isPrivate %}
+										<span class="keep-private on">Private</span> +
+									{% endif %}{% if keepers.length && !isPrivate %}
+										<span class="keep-private">Private</span> +
+									{% endif %}
+								</span>
+								{% if keepers.length > 1 %}
+									{{keepers.length}} friends
+								{% endif %}{% if keepers.length == 1 %}
+									1 friend
+								{% endif %}
+								kept this
+								{% if !keepers.length && isPrivate %}
+									<span class="keep-private on">Private</span>
+								{% endif %}{% if !keepers.length && !isPrivate %}
+									<span class="keep-private">Private</span>
+								{% endif %}
 							</span>
-							<div class="clearfix"></div>
 						</div>
 					</li>
 				</ol>

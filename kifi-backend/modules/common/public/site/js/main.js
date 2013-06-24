@@ -21,16 +21,12 @@ $.ajaxSetup({
 $(function() {
 
 	var $subtitle = $(".subtitle"), subtitleTmpl = Tempo.prepare($subtitle);
-	var $myKeeps = $("#my-keeps"), myKeepsTmpl = Tempo.prepare($myKeeps).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
+
+	var $myKeeps = $("#my-keeps"), $results = $("#search-results"), keepsTmpl = Tempo.prepare($myKeeps).when(TempoEvent.Types.RENDER_COMPLETE, function(ev) {
 		hideLoading();
-		$myKeeps.find(".keep-who").each(function() {
-			$(this).find('img.small-avatar').prependTo(this);  // eliminating whitespace text nodes?
-		}).filter(":not(:has(.me))")
-			.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
-		$myKeeps.find(".keep").draggable(draggableKeepOpts);
 
 		var now = new Date;
-		$myKeeps.find("time").easydate({set_title: false}).each(function() {
+		$(ev.element).find("time").easydate({set_title: false}).each(function() {
 			var age = daysBetween(new Date($(this).attr("datetime")), now);
 			if ($myKeeps.find('li.keep-group-title.today').length == 0 && age <= 1) {
 				$(this).closest(".keep").before('<li class="keep-group-title today">Today</li>');
@@ -43,18 +39,23 @@ $(function() {
 				return false;
 			}
 		});
+
+		$(ev.element).find(".keep").draggable(draggableKeepOpts);
 		mainScroller.refresh();
 	});
-	var $results = $("#search-results"), searchTemplate = Tempo.prepare($results).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
-		hideLoading();
-		$results.find(".keep-who").each(function() {
-			$(this).find('img.small-avatar').prependTo(this);  // eliminating whitespace text nodes?
-		});
-		$results.find(".keep.mine .keep-who:not(:has(.me))")
-			.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
-		$results.find(".keep").draggable(draggableKeepOpts);
-		mainScroller.refresh();
-	});
+	var draggableKeepOpts = {
+		revert: "invalid",
+		handle: ".handle",
+		cancel: ".keep-checkbox",
+		appendTo: "body",
+		cursorAt: { top: 15, left: 0 },
+		helper: function() {
+			var $keep = $(this), $sel = $keep.hasClass("selected") ? $keep.parent().find(".keep.selected") : $keep;
+			return $('<div>', {
+				"class": "drag-helper",
+				"text": $sel.length > 1 ? $sel.length + " selected keeps" : $keep.find(".keep-title>a").text()});
+		}};
+
 	var $colls = $("#collections"), collTmpl = Tempo.prepare($colls).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 		collScroller.refresh();
 		makeCollectionsDroppable($colls.find(".collection"));
@@ -78,20 +79,6 @@ $(function() {
 		});
 	}
 
-	var draggableKeepOpts = {
-			revert: "invalid",
-			handle: ".handle",
-			cancel: ".keep-checkbox",
-			appendTo: "body",
-			cursorAt: { top: 15, left: 0 },
-			helper: function() {
-				var text = $(this).find('a').first().text();
-				var numSelected = $main.find(".keep.selected").length;
-				if (numSelected > 1)
-					text = numSelected + " selected keeps";
-				return $('<div class="drag-helper">').html(text);
-			}
-		};
 
 	function makeCollectionsDroppable($c) {
 		$c.droppable({
@@ -203,13 +190,25 @@ $(function() {
 			subtitleTmpl.render({
 				numShown: data.hits.length + (context ? $results.find(".keep").length : 0),
 				query: data.query});
+			data.hits.forEach(prepHitForRender);
 			if (context == null) {
-				searchTemplate.render(data.hits);
+				keepsTmpl.into($results[0]).render(data.hits);
 				hideRightSide();
 			} else {
-				searchTemplate.append(data.hits);
+				keepsTmpl.into($results[0]).append(data.hits);
 			}
 		});
+	}
+
+	function prepHitForRender(hit) {
+		$.extend(hit, hit.bookmark);
+		hit.me = me;
+		hit.keepers = hit.users;
+	}
+
+	function prepKeepForRender(keep) {
+		keep.isMyBookmark = true;
+		keep.me = me;
 	}
 
 	function addNewKeeps() {
@@ -221,7 +220,8 @@ $(function() {
 		console.log("Fetching 30 keep after " + first);
 		$.getJSON(urlMyKeeps, params,
 			function(data) {
-				myKeepsTmpl.prepend(data.keeps);
+				data.keeps.forEach(prepKeepForRender);
+				keepsTmpl.prepend(data.keeps);
 				$myKeeps.find('.keep-group-title.today').prependTo($myKeeps);
 			});
 	}
@@ -234,7 +234,7 @@ $(function() {
 		$main.attr("data-view", "mine")
 			.find("h1").text(collId ? collections[collId].name : "Browse your keeps");
 
-		searchTemplate.clear();
+		$results.empty();
 		$query.val("").removeAttr("data-q");
 		searchResponse = null;
 		hideRightSide();
@@ -273,10 +273,11 @@ $(function() {
 					if (!data.keeps.length) {  // no more
 						lastKeep = "end";
 					} else {
+						data.keeps.forEach(prepKeepForRender);
 						if (lastKeep == null) {
-							myKeepsTmpl.render(data.keeps);
+							keepsTmpl.render(data.keeps);
 						} else {
-							myKeepsTmpl.append(data.keeps);
+							keepsTmpl.append(data.keeps);
 						}
 						lastKeep = data.keeps[data.keeps.length - 1].id;
 					}
