@@ -155,6 +155,8 @@ class AdminUserController @Inject() (
       collections, collectionFilter))
   }
 
+  def allUsersView = usersView(0)
+
   def usersView(page: Int = 0) = AdminHtmlAction { implicit request =>
     def userStatistics(user: User)(implicit s: RSession): UserStatistics = {
       val kifiInstallations = kifiInstallationRepo.all(user.id.get).sortWith((a,b) => b.updatedAt.isBefore(a.updatedAt)).take(3)
@@ -165,7 +167,7 @@ class AdminUserController @Inject() (
         kifiInstallations)
     }
 
-    val PAGE_SIZE = 50
+    val PAGE_SIZE = 200
 
     val users = db.readOnly { implicit s =>
       userRepo.pageExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(page, PAGE_SIZE) map userStatistics
