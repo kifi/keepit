@@ -160,70 +160,29 @@ class UrlController @Inject() (
     "%s urls processed, changes:<br>\n<br>\n%s".format(urlsSize, changes)
   }
 
+  private def fixCommentSeqNum: Unit = {
+    log.info("started comment seq num fix")
+    var count = 0
+    var done = false
+    while (!done) {
+      db.readWrite { implicit session =>
+        val comments = commentRepo.getCommentsChanged(SequenceNumber.MinValue, 100)
+        done = comments.exists{ comment =>
+          if (comment.seq.value != 0L) true
+          else {
+            commentRepo.save(comment)
+            count += 1
+            false
+          }
+        }
+      }
+    }
+    log.info(s"finished comment seq num fix: ${count}")
+  }
 
-  private def fixBookmarkSeqNum: Unit = {
-    log.info("started bookmark seq num fix")
-    var count = 0
-    var done = false
-    while (!done) {
-      db.readWrite { implicit session =>
-        val bookmarks = bookmarkRepo.getBookmarksChanged(SequenceNumber.MinValue, 100)
-        done = bookmarks.exists{ b =>
-          if (b.seq.value != 0L) true
-          else {
-            bookmarkRepo.save(b)
-            count += 1
-            false
-          }
-        }
-      }
-    }
-    log.info(s"finished bookmark seq num fix: ${count}")
-  }
-  private def fixNormalizedUriSeqNum: Unit = {
-    log.info("started normalized uri seq num fix")
-    var count = 0
-    var done = false
-    while (!done) {
-      db.readWrite { implicit session =>
-        val uris = uriRepo.getIndexable(SequenceNumber.MinValue, 100)
-        done = uris.exists{ u =>
-          if (u.seq.value != 0L) true
-          else {
-            uriRepo.save(u)
-            count += 1
-            false
-          }
-        }
-      }
-    }
-    log.info(s"finished normalized uri seq num fix: ${count}")
-  }
-  private def fixCollectionSeqNum: Unit = {
-    log.info("started collection seq num fix")
-    var count = 0
-    var done = false
-    while (!done) {
-      db.readWrite { implicit session =>
-        val collections = collectionRepo.getCollectionsChanged(SequenceNumber.MinValue, 100)
-        done = collections.exists{ case (collId, userId, seq) =>
-          if (seq.value != 0L) true
-          else {
-            val col = collectionRepo.get(collId)
-            collectionRepo.save(col)
-            count += 1
-            false
-          }
-        }
-      }
-    }
-    log.info(s"finished collection seq num fix: ${count}")
-  }
   def fixSeqNum = AdminHtmlAction { request =>
     Akka.future {
-      fixBookmarkSeqNum
-      fixNormalizedUriSeqNum
-      fixCollectionSeqNum
+      fixCommentSeqNum
     }
     Ok("sequence number fix started")
   }
