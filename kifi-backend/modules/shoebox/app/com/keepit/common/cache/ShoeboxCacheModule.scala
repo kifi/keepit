@@ -20,8 +20,8 @@ class ShoeboxCacheModule extends ScalaModule {
 
   @Singleton
   @Provides
-  def normalizedURIUrlHashCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
-    new NormalizedURIUrlHashCache((innerRepo, 1 second), (outerRepo, 7 days))
+  def normalizedURIUrlHashCache(outerRepo: FortyTwoCachePlugin) =
+    new NormalizedURIUrlHashCache((outerRepo, 7 days))
 
   @Singleton
   @Provides
