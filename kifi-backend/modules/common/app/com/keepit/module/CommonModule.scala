@@ -40,7 +40,7 @@ class CommonModule extends ScalaModule with Logging {
   }
 
   @Provides
-  def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.Always
+  def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.LeaderOnly
 
   @Singleton
   @Provides
