@@ -166,7 +166,8 @@ aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px;
 .keep-group-title+.keep {border-top: 0}
 .keep {position: relative; clear: left; padding: 10px 0 13px 30px; border-top: 1px solid #f9f9f9}
 .keep>.handle {cursor: move; position: absolute; top: 0; bottom: 0; left: 0; width: 21px; display: none; background: url(../img/drag-handle.png) center/10px no-repeat}
-.keep>.handle:hover {background-color: #e3e6ee}
+.keep>.handle:hover,
+.keep.selected>.handle {background-color: #e3e6ee}
 .keep-checkbox {display: none; position: absolute; left: 3px; top: 4px; width: 15px; height: 15px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; cursor: pointer}
 .keep>.handle:hover>.keep-checkbox,
 .keep.selected>.handle>.keep-checkbox {display: block}
