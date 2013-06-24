@@ -27,7 +27,7 @@ $(function() {
 			$(this).find('img.small-avatar').prependTo(this);  // eliminating whitespace text nodes?
 		}).filter(":not(:has(.me))")
 			.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
-		initDraggable();
+		$myKeeps.find(".keep").draggable(draggableKeepOpts);
 
 		$("time").easydate({set_title: false});
 
@@ -49,12 +49,12 @@ $(function() {
 	});
 	var $results = $("#search-results"), searchTemplate = Tempo.prepare($results).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 		hideLoading();
-		initDraggable();
 		$results.find(".keep-who").each(function() {
 			$(this).find('img.small-avatar').prependTo(this);  // eliminating whitespace text nodes?
 		});
 		$results.find(".keep.mine .keep-who:not(:has(.me))")
 			.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
+		$results.find(".keep").draggable(draggableKeepOpts);
 		mainScroller.refresh();
 	});
 	var $colls = $("#collections"), collTmpl = Tempo.prepare($colls).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
@@ -80,8 +80,7 @@ $(function() {
 		});
 	}
 
-	function initDraggable() {
-		$(".draggable").draggable({
+	var draggableKeepOpts = {
 			revert: "invalid",
 			handle: ".handle",
 			cancel: ".keep-checkbox",
@@ -94,8 +93,7 @@ $(function() {
 					text = numSelected + " selected keeps";
 				return $('<div class="drag-helper">').html(text);
 			}
-		});
-	}
+		};
 
 	function makeCollectionsDroppable($c) {
 		$c.droppable({

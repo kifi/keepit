@@ -104,7 +104,7 @@
 		<div class="main-keeps">
 			<div class="antiscroll-inner">
 				<ol id="search-results">
-					<li data-template class="keep draggable {% if isMyBookmark %}mine{% endif %}" data-id="{{bookmark.id}}" style="display:none">
+					<li data-template class="keep{% if isMyBookmark %} mine{% endif %}" data-id="{{bookmark.id}}" style="display:none">
 						<div class="handle">
 							<div class="keep-checkbox"></div>
 						</div>
@@ -126,7 +126,7 @@
 					</li>
 				</ol>
 				<ol id="my-keeps">
-					<li data-template data-id="{{id}}" class="keep mine draggable" data-created={{createdAt}} data-collections="{{collections}}" style="display:none">
+					<li data-template data-id="{{id}}" class="keep mine" data-created={{createdAt}} data-collections="{{collections}}" style="display:none">
 						<time>{{createdAt}}</time>
 						<div class="handle">
 							<div class="keep-checkbox"></div>
