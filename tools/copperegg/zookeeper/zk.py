@@ -12,16 +12,18 @@ import socket
 # make sure crond is running
 # /sbin/service crond status
 
+zkStatStr = os.popen("/etc/init.d/zookeeper status").read()
 zkStatus = 0
-if os.popen("/etc/init.d/zookeeper status").read().startswith("zookeeper is running"):
+if zkStatStr.find("zookeeper is running") >= 0:
   zkStatus = 1
 
 with open ("/opt/zookeeper/data/myid", "r") as myfile:
   zkId = myfile.read().replace('\n', '')
-
 URL = "http://api.copperegg.com/v2/revealmetrics/samples/zk.json"
 userPasswd = "dTZpn2grdgY9qATB:U"
 postdata = {"identifier": "zk" + zkId, "timestamp": int(time.time()), "values": {"alive": zkStatus}}
+
+print postdata
 
 c = pycurl.Curl()
 c.setopt(c.URL, URL)
@@ -36,5 +38,9 @@ try:
     c.perform()
 except:
     print "Error performing curl perform"
+zkMonitorLog = open('/home/fortytwo/copperegg/scripts/zkMonitor.log', 'a')
+zkMonitorLog.write("\n" + str(postdata))
+zkMonitorLog.write("\n" + zkStatStr)
+
 print c.getinfo(pycurl.HTTP_CODE), c.getinfo(pycurl.EFFECTIVE_URL)
 c.close()
