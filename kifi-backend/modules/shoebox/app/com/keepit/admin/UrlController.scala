@@ -167,7 +167,8 @@ class UrlController @Inject() (
     while (!done) {
       db.readWrite { implicit session =>
         val comments = commentRepo.getCommentsChanged(SequenceNumber.MinValue, 100)
-        done = comments.exists{ comment =>
+        val lastCount = count
+        done = comments.isEmpty || comments.exists{ comment =>
           if (comment.seq.value != 0L) true
           else {
             commentRepo.save(comment)
@@ -175,6 +176,7 @@ class UrlController @Inject() (
             false
           }
         }
+        log.info(s"... fixed seq num of ${count - lastCount} comments")
       }
     }
     log.info(s"finished comment seq num fix: ${count}")
