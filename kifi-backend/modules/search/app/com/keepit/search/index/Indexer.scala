@@ -107,7 +107,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
             Left(indexable.buildDocument)
           } catch {
             case e: Throwable =>
-              val msg = s"failed to build document for id=${indexable.id}: ${e.getMessage}"
+              val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
               log.error(msg, e)
               Right(IndexError(msg))
           }
