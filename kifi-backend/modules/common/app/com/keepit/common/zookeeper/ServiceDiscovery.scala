@@ -34,7 +34,6 @@ class ServiceDiscoveryImpl @Inject() (
 
   private val clusters: TrieMap[ServiceType, ServiceCluster] = {
     val clustersToInit = new TrieMap[ServiceType, ServiceCluster]()
-    //the following should be configurable
     servicesToListenOn foreach {service =>
       val cluster = new ServiceCluster(service)
       clustersToInit(service) = cluster
