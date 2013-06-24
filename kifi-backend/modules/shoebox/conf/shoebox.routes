@@ -81,7 +81,7 @@ POST    /site/keeps/:id/delete      @com.keepit.controllers.website.BookmarksCon
 GET     /site/keeps/mutual/:id      @com.keepit.controllers.website.BookmarksController.mutualKeeps(id: ExternalId[User])
 
 GET     /site/collections/all       @com.keepit.controllers.website.BookmarksController.allCollections(sort: String ?= "last_kept")
-POST    /site/collections/ordering  @com.keepit.controllers.website.BookmarksController.setCollectionOrdering()
+POST    /site/collections/ordering  @com.keepit.controllers.website.BookmarksController.updateCollectionOrdering()
 POST    /site/collections/create @com.keepit.controllers.website.BookmarksController.saveCollection(id = "")
 POST    /site/collections/:id/update @com.keepit.controllers.website.BookmarksController.saveCollection(id: String)
 POST    /site/collections/:id/delete @com.keepit.controllers.website.BookmarksController.deleteCollection(id: ExternalId[Collection])
@@ -119,8 +119,6 @@ GET     /admin/events/activityData  @com.keepit.controllers.admin.AdminEventCont
 
 GET     /admin/realtime/event       @com.keepit.controllers.admin.AdminEventController.eventViewer
 GET     /admin/realtime/event/stream      @com.keepit.controllers.admin.AdminEventController.eventStream
-GET     /admin/realtime/activity    @com.keepit.controllers.admin.AdminEventController.activityViewer
-GET     /admin/realtime/activity/stream   @com.keepit.controllers.admin.AdminEventController.activityStream
 
 GET     /admin/bookmarks/page/:page @com.keepit.controllers.admin.AdminBookmarksController.bookmarksView(page: Int)
 GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarksController.edit(id: Id[Bookmark])

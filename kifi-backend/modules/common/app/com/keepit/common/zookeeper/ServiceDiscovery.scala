@@ -11,14 +11,13 @@ import scala.collection.concurrent.TrieMap
 
 import play.api.libs.json._
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.{Inject, Singleton, Provider}
 
 import org.apache.zookeeper.CreateMode._
-import com.google.inject.Provider
 
 trait ServiceDiscovery {
   def register(): Node
-  def unRegister(): Unit
+  def unRegister(): Unit = {}
   def isLeader(): Boolean
   def myClusterSize: Int = 0
 }
@@ -27,7 +26,8 @@ trait ServiceDiscovery {
 class ServiceDiscoveryImpl @Inject() (
     zk: ZooKeeperClient,
     services: FortyTwoServices,
-    amazonInstanceInfoProvider: Provider[AmazonInstanceInfo])
+    amazonInstanceInfoProvider: Provider[AmazonInstanceInfo],
+    servicesToListenOn: Seq[ServiceType] = ServiceType.SEARCH :: ServiceType.SHOEBOX :: Nil)
   extends ServiceDiscovery with Logging {
 
   private var myNode: Option[Node] = None
@@ -35,7 +35,6 @@ class ServiceDiscoveryImpl @Inject() (
   private val clusters: TrieMap[ServiceType, ServiceCluster] = {
     val clustersToInit = new TrieMap[ServiceType, ServiceCluster]()
     //the following should be configurable
-    val servicesToListenOn = ServiceType.SEARCH :: ServiceType.SHOEBOX :: Nil
     servicesToListenOn foreach {service =>
       val cluster = new ServiceCluster(service)
       clustersToInit(service) = cluster
@@ -43,8 +42,6 @@ class ServiceDiscoveryImpl @Inject() (
     log.info(s"registered clusters: $clustersToInit")
     clustersToInit
   }
-
-  require(clusters.size == 2)//search & shoebox
 
   def isLeader: Boolean = {
     val myCluster = clusters(services.currentService)
@@ -94,7 +91,7 @@ class ServiceDiscoveryImpl @Inject() (
     myNode.get
   }
 
-  def unRegister(): Unit = myNode map {node => zk.deleteNode(node)}
+  override def unRegister(): Unit = myNode map {node => zk.deleteNode(node)}
 
   implicit val amazonInstanceIdFormat = Json.format[AmazonInstanceId]
   implicit val serviceStatusFormat = ServiceStatus.format

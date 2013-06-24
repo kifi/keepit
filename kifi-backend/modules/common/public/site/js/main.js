@@ -15,49 +15,51 @@ var urlCollectionsOrder = urlCollections + '/ordering';
 var urlCollectionsCreate = urlCollections + '/create';
 
 $.ajaxSetup({
-  xhrFields: {withCredentials: true},
-  crossDomain: true});
+	xhrFields: {withCredentials: true},
+	crossDomain: true});
 
 $(function() {
 
 	var $subtitle = $(".subtitle"), subtitleTmpl = Tempo.prepare($subtitle);
 	var $myKeeps = $("#my-keeps"), myKeepsTmpl = Tempo.prepare($myKeeps).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 		hideLoading();
-		$myKeeps.find(".keep .bottom").each(function() {
+		$myKeeps.find(".keep-who").each(function() {
 			$(this).find('img.small-avatar').prependTo(this);  // eliminating whitespace text nodes?
 		}).filter(":not(:has(.me))")
 			.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
 		initDraggable();
 
-		$(".easydate").easydate({set_title: false});
+		$("time").easydate({set_title: false});
 
 		// insert time sections
 		var now = new Date;
 		$myKeeps.find('.keep').each(function() {
 			var age = daysBetween(new Date($(this).data('created')), now);
-			if ($myKeeps.find('li.search-section.today').length == 0 && age <= 1) {
-				$(this).before('<li class="search-section today">Today</li>');
-			} else if ($myKeeps.find('li.search-section.yesterday').length == 0 && age > 1 && age < 2) {
-				$(this).before('<li class="search-section yesterday">Yesderday</li>');
-			} else if ($myKeeps.find('li.search-section.week').length == 0 && age >= 2 && age <= 7) {
-				$(this).before('<li class="search-section week">Past Week</li>');
-			} else if ($myKeeps.find('li.search-section.older').length == 0 && age > 7) {
-				$(this).before('<li class="search-section older">Older</li>');
+			if ($myKeeps.find('li.keep-group-title.today').length == 0 && age <= 1) {
+				$(this).before('<li class="keep-group-title today">Today</li>');
+			} else if ($myKeeps.find('li.keep-group-title.yesterday').length == 0 && age > 1 && age < 2) {
+				$(this).before('<li class="keep-group-title yesterday">Yesderday</li>');
+			} else if ($myKeeps.find('li.keep-group-title.week').length == 0 && age >= 2 && age <= 7) {
+				$(this).before('<li class="keep-group-title week">Past Week</li>');
+			} else if ($myKeeps.find('li.keep-group-title.older').length == 0 && age > 7) {
+				$(this).before('<li class="keep-group-title older">Older</li>');
 			}
 		});
+		mainScroller.refresh();
 	});
 	var $results = $("#search-results"), searchTemplate = Tempo.prepare($results).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
 		hideLoading();
 		initDraggable();
-		$results.find(".keep .bottom").each(function() {
+		$results.find(".keep-who").each(function() {
 			$(this).find('img.small-avatar').prependTo(this);  // eliminating whitespace text nodes?
 		});
-		$results.find(".keep.mine .bottom:not(:has(.me))")
+		$results.find(".keep.mine .keep-who:not(:has(.me))")
 			.prepend('<img class="small-avatar me" src="' + formatPicUrl(me.id, me.pictureName, 100) + '">');
+		mainScroller.refresh();
 	});
 	var $colls = $("#collections"), collTmpl = Tempo.prepare($colls).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
+		collScroller.refresh();
 		makeCollectionsDroppable($colls.find(".collection"));
-		adjustCollHeight();
 	});
 	var $inColl = $(".in-collections"), inCollTmpl = Tempo.prepare($inColl);
 
@@ -69,19 +71,21 @@ $(function() {
 	var lastKeep;
 
 	$.fn.layout = function() {
-	  return this.each(function() {this.clientHeight});  // forces layout
+		return this.each(function() {this.clientHeight});  // forces layout
 	};
 
 	function unique(arr) {
-	  return $.grep(arr, function(v, k) {
-	    return $.inArray(v, arr) === k;
-	  });
+		return $.grep(arr, function(v, k) {
+			return $.inArray(v, arr) === k;
+		});
 	}
 
 	function initDraggable() {
 		$(".draggable").draggable({
 			revert: "invalid",
 			handle: ".handle",
+			cancel: ".keep-checkbox",
+			appendTo: "body",
 			cursorAt: { top: 15, left: 0 },
 			helper: function() {
 				var text = $(this).find('a').first().text();
@@ -140,8 +144,7 @@ $(function() {
 			contentType: 'application/json',
 			error: onDropOnCollectionAjaxError,
 			success: function(data) {
-				var $count = $coll.find("a span.right");
-				$count.text(+$count.text() + data.added);
+				$coll.find(".keep-count").text(collections[collId].keeps += data.added);
 				if (!$inColl.find("#cb1-" + collId).length) {
 					inCollTmpl.append({id: collId, name: collections[collId].name});
 				}
@@ -153,7 +156,7 @@ $(function() {
 	}
 
 	function daysBetween(date1, date2) {
-	  return Math.round((date2 - date1) / 86400000);  // ms in one day
+		return Math.round((date2 - date1) / 86400000);  // ms in one day
 	}
 
 	function formatPicUrl(userId, pictureName, size) {
@@ -161,13 +164,13 @@ $(function() {
 	}
 
 	function showLoading() {
-		$('div.loading').show();
+		$('.keeps-loading').show();
 	}
 	function hideLoading() {
-		$('div.loading').hide();
+		$('.keeps-loading').hide();
 	}
 	function isLoading() {
-		return $('div.loading').is(':visible');
+		return $('.keeps-loading').is(':visible');
 	}
 
 	function showRightSide() {
@@ -223,7 +226,7 @@ $(function() {
 		$.getJSON(urlMyKeeps, params,
 			function(data) {
 				myKeepsTmpl.prepend(data.keeps);
-				$myKeeps.find('.search-section.today').prependTo($myKeeps);
+				$myKeeps.find('.keep-group-title.today').prependTo($myKeeps);
 			});
 	}
 
@@ -248,7 +251,7 @@ $(function() {
 			subtitleTmpl.render({
 				numShown: $myKeeps.find(".keep").length,
 				numTotal: collId ? collections[collId].keeps : myKeepsCount,
-				collId: collId});
+				collId: collId || undefined});
 		}
 	}
 
@@ -269,7 +272,7 @@ $(function() {
 					subtitleTmpl.render({
 						numShown: $myKeeps.find(".keep").length + data.keeps.length,
 						numTotal: collId ? collections[collId].keeps : myKeepsCount,
-						collId: collId});
+						collId: collId || undefined});
 					hideLoading();
 					if (!data.keeps.length) {  // no more
 						lastKeep = "end";
@@ -304,16 +307,12 @@ $(function() {
 
 	function updateNumKeeps() {
 		$.getJSON(urlMyKeepsCount, function(data) {
-			$('.left-col .my-keeps span').text(myKeepsCount = data.numKeeps);
+			$('.left-col .my-keeps .keep-count').text(myKeepsCount = data.numKeeps);
 		});
 	}
 
 	function showMessage(msg) {
 		$.fancybox($('<p>').text(msg));
-	}
-
-	function adjustCollHeight() {
-		$collList.height($(window).height() - $collList.offset().top);
 	}
 
 	// delete/rename collection
@@ -325,7 +324,7 @@ $(function() {
 	}).on("mouseup mousedown", ".coll-remove", function(e) {
 		if (e.which > 1) return;
 		hideCollMenu();
-		var $coll = $collMenu.prev(".collection");
+		var $coll = $collMenu.closest(".collection");
 		var collId = $coll.data("id");
 		console.log("Removing collection", collId);
 		$.ajax({
@@ -336,17 +335,26 @@ $(function() {
 			contentType: 'application/json',
 			error: showMessage.bind(null, 'Could not delete collection, please try again later'),
 			success: function(data) {
+				delete collections[collId];
 				$coll.slideUp(80, $.fn.remove.bind($coll));
+				if ($myKeeps.data("collId") === collId) {
+					$myKeeps.removeData("collId");
+					showMyKeeps();
+				}
 				$('aside.right .collections ul li:has(input[data-id="'+collId+'"])').remove();
-				// TODO: update center column
 			}});
 	}).on("mouseup mousedown", ".coll-rename", function(e) {
 		if (e.which > 1) return;
 		hideCollMenu();
-		var $coll = $collMenu.prev(".collection").addClass("renaming").removeAttr("title");
-		var $a = $coll.find(".coll-name"), name = $a.text();
+		var $coll = $collMenu.closest(".collection").addClass("renaming").each(function() {
+			var scrEl = $collList.find(".antiscroll-inner")[0], oT = this.offsetTop;
+			if (scrEl.scrollTop > oT) {
+				scrEl.scrollTop = oT;
+			}
+		});
+		var $name = $coll.find(".view-name"), name = $name.text();
 		var $in = $("<input type=text placeholder='Type new collection name'>").val(name).data("orig", name);
-		$a.empty().append($in);
+		$name.empty().append($in);
 		setTimeout(function() {
 			$in[0].setSelectionRange(0, name.length, "backward");
 			$in[0].focus();
@@ -356,18 +364,22 @@ $(function() {
 				var oldName = $in.data("orig");
 				var newName = $.trim(this.value) || oldName;
 				if (newName !== oldName) {
+					var collId = $coll.addClass("renamed").data("id");
 					$.ajax({
-						url: urlCollections + "/" + $coll.data('id') + "/update",
+						url: urlCollections + "/" + collId + "/update",
 						type: "POST",
 						dataType: 'json',
 						data: JSON.stringify({name: newName}),
 						contentType: 'application/json',
 						error: function() {
 							showMessage('Could not rename collection, please try again later');
-							$a.text(oldName).prop("title", oldName);
+							$name.text(oldName);
 						},
 						success: function() {
-							// TODO: update center column
+							collections[collId].name = newName;
+							if ($myKeeps.data("collId") === collId) {
+								$main.find("h1").text(newName);
+							}
 						}
 					});
 				}
@@ -379,23 +391,25 @@ $(function() {
 		function exitRename(name) {
 			name = name || $in.data("orig");
 			$in.remove();
-			$a.text(name).prop("title", name);
-			$coll.removeClass("renaming");
+			$name.text(name);
+			$coll.on("transitionend", function end(e) {
+				if (e.target === this) {
+					$coll.off("transitionend", end).removeClass("renamed");
+				}
+			}).addClass("renamed").removeClass("renaming");
 		}
 	});
 	function hideCollMenu() {
 		console.log("[hideCollMenu]");
-    document.removeEventListener("mousedown", $collMenu.data("docMouseDown"), true);
-    $collMenu.removeData("docMouseDown").slideUp(80, function() {
+		document.removeEventListener("mousedown", $collMenu.data("docMouseDown"), true);
+		$collMenu.removeData("docMouseDown").slideUp(80, function() {
 			$collMenu.detach().find(".hover").removeClass("hover");
-		}).prev(".collection").removeClass("with-menu").each(hideCollTri);
+		}).closest(".collection").removeClass("with-menu").each(hideCollTri);
 	}
 
 	// auto update my keeps every minute
 	setInterval(addNewKeeps, 60000);
 	setInterval(updateNumKeeps, 60000);
-
-	$(window).resize(adjustCollHeight);
 
 	// handle collection adding/removing from right bar
 	$inColl.on('change', 'input[type="checkbox"]', function() {
@@ -412,8 +426,7 @@ $(function() {
 			error: showMessage.bind(null, 'Could not remove keeps from collection, please try again later'),
 			success: function(data) {
 				console.log(data);
-				var $count = $('.left-col .collection[data-id="'+colId+'"]').find('a span.right');
-				$count.text($count.text() - data.removed);
+				$('#collections-list>.collection[data-id="'+colId+'"] .keep-count').text(collections[colId].keeps -= data.removed);
 				$row.remove();
 			}});
 
@@ -432,8 +445,7 @@ $(function() {
 			error: showMessage.bind(null, 'Could not add keeps to collection, please try again later'),
 			success: function(data) {
 				console.log(data);
-				var $count = $('.left-col .collection[data-id="'+colId+'"]').find('a span.right');
-				$count.text(+$count.text()  + data.added);
+				$('#collections-list>.collection[data-id="'+colId+'"] .keep-count').text(collections[colId].keeps += data.added);
 				if (!$inColl.find("#cb1-" + colId).length) {
 					inCollTmpl.append({id: colId, name: collections[colId].name});
 				}
@@ -442,26 +454,28 @@ $(function() {
 	});
 
 	$(document).keydown(function(e) {  // auto focus on search field when starting to type anywhere on the document
-		if (!$(e.target).is('input,textarea')) {
+		if (!$(e.target).is('input,textarea') && e.which >= 48 && e.which <= 90 && !e.ctrlKey && !e.metaKey && !e.altKey) {
 			$query.focus();
 		}
 	});
 
-	var $main = $(".main").on("click", ".keep", function(e) {
+	var $main = $(".main").on("mousedown", ".keep-checkbox", function(e) {
+		e.preventDefault();  // avoid starting selection
+	}).on("click", ".keep", function(e) {
 		// 1. Only one keep at a time can be selected and not checked.
 		// 2. If a keep is selected and not checked, no keeps are checked.
 		// 3. If a keep is checked, it is also selected.
 		var $keep = $(this), $selected = $main.find(".keep.selected");
-		if (e.target.type === "checkbox") {
-			if (e.target.checked) {
-				$selected.not(":has(.handle>input:checked)").removeClass("selected");
+		if ($(e.target).hasClass("keep-checkbox")) {
+			if ($(e.target).toggleClass("checked").hasClass("checked")) {
+				$selected.not(":has(.keep-checkbox.checked)").removeClass("selected");
 				$keep.addClass("selected");
 			} else {
 				$keep.removeClass("selected");
 			}
 		} else {
 			var select = !$keep.is(".selected") || $selected.length != 1;
-			$selected.not(this).removeClass("selected").end().find(".handle>input").prop("checked", false);
+			$selected.not(this).removeClass("selected").end().find(".keep-checkbox").removeClass("checked");
 			$keep.toggleClass("selected", select);
 		}
 		$selected = $main.find(".keep.selected");
@@ -491,8 +505,8 @@ $(function() {
 			$title.find('h2').text($keep.find('a').first().text());
 			var url = $keep.find('a').first().attr('href');
 			$title.find('a').text(url).attr('href', url).attr('target', '_blank');
-			$who.html($keep.find('div.bottom').html());
-			$who.find('span').prependTo($who).removeClass('fs9 gray');
+			$who.html($keep.find(".keep-who").html());
+			$who.find('span').prependTo($who);
 			$inColl.empty();
 			if ($keep.data('collections')) {
 				$keep.data('collections').split(',').forEach(function(id) {
@@ -501,14 +515,19 @@ $(function() {
 			}
 			var $btn = $('aside.right .keepit .keep-button');
 			if ($keep.is('.mine')) {
-				$btn.addClass('kept').toggleClass('private', $keep.is('.private')).find('.text').text('kept');
+				$btn.addClass('kept').toggleClass('private', !!$keep.has('.keep-private.on').length).find('.text').text('kept');
 			} else {
 				$btn.removeClass('kept private').find('.text').text('keep it');
 			}
 			showRightSide();
 		}
-	}).scroll(function() { // infinite scroll
-		if (!isLoading() && this.clientHeight + this.scrollTop > this.scrollHeight - 300) {
+	});
+	var $mainHead = $(".main-head");
+	var $mainKeeps = $(".main-keeps").antiscroll({x: false, width: "100%"});
+	$mainKeeps.find(".antiscroll-inner").scroll(function() { // infinite scroll
+		var sT = this.scrollTop;
+		$mainHead.toggleClass("scrolled", sT > 0);
+		if (!isLoading() && this.clientHeight + sT > this.scrollHeight - 300) {
 			if (searchResponse) {
 				doSearch(searchResponse.context);
 			} else {
@@ -516,6 +535,8 @@ $(function() {
 			}
 		}
 	});
+	var mainScroller = $mainKeeps.data("antiscroll");
+	$(window).resize(mainScroller.refresh.bind(mainScroller));
 
 	var $query = $("input.query").on("keydown input", function(e) {
 		console.log("[clearTimeout]", e.type);
@@ -549,9 +570,13 @@ $(function() {
 	populateCollections();
 	populateCollectionsRight();
 
-	var $collList = $("#collections-list").sortable({
+	var $collList = $("#collections-list")
+	.each(function() {this.style.top = this.offsetTop + "px"})
+	.addClass("positioned")
+	.antiscroll({x: false, width: "100%"})
+	.sortable({
 		items: ".collection",
-		cancel: ".coll-tri,.renaming",
+		cancel: ".coll-tri,#coll-menu,.renaming",
 		opacity: .6,
 		placeholder: "sortable-placeholder",
 		beforeStop: function(event, ui) {
@@ -572,13 +597,16 @@ $(function() {
 		if (e.button > 0) return;
 		e.preventDefault();  // do not start selection
 		if ($collMenu.is(":animated")) return;
-    var $tri = $(this), $coll = $tri.closest(".collection").addClass("with-menu");
-		$collMenu.hide().insertAfter($coll).slideDown(80).data("docMouseDown", docMouseDown);
+		var $tri = $(this), $coll = $tri.closest(".collection").addClass("with-menu");
+		$collMenu.hide().appendTo($coll)
+			.toggleClass("page-bottom", $coll[0].getBoundingClientRect().bottom > $(window).height() - 51)
+			.slideDown(80)
+			.data("docMouseDown", docMouseDown);
 		document.addEventListener("mousedown", docMouseDown, true);
 		function docMouseDown(e) {
 			if (!e.button && !$.contains($collMenu[0], e.target)) {
-	      hideCollMenu();
-	    }
+				hideCollMenu();
+			}
 		}
 	}).on("mousemove", ".collection:not(.with-menu):not(.renaming)", function(e) {
 		var $coll = $(this), $tri = $coll.find(".coll-tri"), data = $coll.data();
@@ -590,8 +618,8 @@ $(function() {
 		} else {
 			var r = this.getBoundingClientRect();
 			if (x < r.left + .5 * r.width &&
-				  (-4 * dx > now - data.t && -dx > Math.abs(dy) || e.target === $tri[0] ||
-		       dx < 0 && x < r.left + $tri.width())) {
+					(-4 * dx > now - data.t && -dx > Math.abs(dy) || e.target === $tri[0] ||
+					 dx < 0 && x < r.left + $tri.width())) {
 				$coll.addClass("with-tri");
 			}
 		}
@@ -599,6 +627,8 @@ $(function() {
 	}).on("mouseleave", ".collection.with-tri:not(.with-menu):not(.no-tri)", function() {
 		hideCollTri.call(this);
 	});
+	var collScroller = $collList.data("antiscroll");
+	$(window).resize(collScroller.refresh.bind(collScroller));
 
 	function hideCollTri() {
 		$(this).on("transitionend", function end(e) {
@@ -636,6 +666,7 @@ $(function() {
 				$addColl.slideUp(80).find("input").val("").prop("disabled", true);
 			} else {
 				$addColl.slideDown(80, function() {
+					$collList.find(".antiscroll-inner")[0].scrollTop = 0;
 					$addColl.find("input").prop("disabled", false).focus().select();
 				});
 			}
@@ -734,10 +765,7 @@ $(function() {
 					,contentType: 'application/json'
 					,error: function() {showMessage('Could not update keep, please try again later')}
 					,success: function(data) {
-						if (keepButton.is('.private'))
-							keep.find('.bottom span.private').addClass('on');
-						else
-							keep.find('.bottom span.private').removeClass('on');
+						keep.find('.keep-private').toggleClass('on', keepButton.is('.private'));
 					}
 				});
 			});

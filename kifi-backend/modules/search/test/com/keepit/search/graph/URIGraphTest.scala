@@ -21,28 +21,25 @@ import org.apache.lucene.search.BooleanQuery
 
 class URIGraphTest extends Specification with GraphTestHelper {
 
-  class Searchable(uriGraphSearcher: URIGraphSearcher) {
+  class Searchable(uriGraphSearcher: URIGraphSearcherWithUser) {
     def search(query: Query): Map[Long, Float] = {
       var result = Map.empty[Long,Float]
-      uriGraphSearcher.openPersonalIndex(query) match {
-        case Some((indexReader, idMapper)) =>
-          val ir = new WrappedSubReader("", indexReader, idMapper)
-          val searcher = new Searcher(new WrappedIndexReader(null, Array(ir)))
-          val weight = searcher.createNormalizedWeight(query)
-          val scorer = weight.scorer(ir.getContext, true, true, ir.getLiveDocs)
-          if (scorer != null) {
-            var doc = scorer.nextDoc()
-            while (doc < NO_MORE_DOCS) {
-              result += (idMapper.getId(doc) -> scorer.score())
-              doc = scorer.nextDoc()
-            }
+      val (indexReader, idMapper) = uriGraphSearcher.openPersonalIndex(query)
+      val ir = new WrappedSubReader("", indexReader, idMapper)
+      val searcher = new Searcher(new WrappedIndexReader(null, Array(ir)))
+      val weight = searcher.createNormalizedWeight(query)
+      val scorer = weight.scorer(ir.getContext, true, true, ir.getLiveDocs)
+      if (scorer != null) {
+        var doc = scorer.nextDoc()
+          while (doc < NO_MORE_DOCS) {
+            result += (idMapper.getId(doc) -> scorer.score())
+            doc = scorer.nextDoc()
           }
-        case None =>
       }
       result
     }
   }
-  implicit def toSearchable(uriGraphSearcher: URIGraphSearcher) = new Searchable(uriGraphSearcher: URIGraphSearcher)
+  implicit def toSearchable(uriGraphSearcher: URIGraphSearcherWithUser) = new Searchable(uriGraphSearcher)
 
   class TestDocIdSetIterator(docIds: Int*) extends DocIdSetIterator {
     val ids = docIds.toArray.sortWith(_ < _).distinct
@@ -323,8 +320,8 @@ class URIGraphTest extends Specification with GraphTestHelper {
 
         setConnections(Map(users(0).id.get -> Set(), users(1).id.get -> Set()))
 
-        val searcher0 = graph.getURIGraphSearcher(users(0).id)
-        val searcher1 = graph.getURIGraphSearcher(users(1).id)
+        val searcher0 = graph.getURIGraphSearcher(users(0).id.get)
+        val searcher1 = graph.getURIGraphSearcher(users(1).id.get)
 
         searcher0.search(personaltitle).keySet === Set(2L, 4L, 6L)
         searcher1.search(personaltitle).keySet === Set(1L, 3L, 5L)
@@ -354,7 +351,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
 
         setConnections(Map(users(0).id.get -> Set()))
 
-        val searcher = graph.getURIGraphSearcher(users(0).id)
+        val searcher = graph.getURIGraphSearcher(users(0).id.get)
 
         def mkSiteQuery(site: String) = {
           new ConditionalQuery(new TermQuery(new Term("title", "personaltitle")), SiteQuery(site))
@@ -398,7 +395,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
 
         setConnections(Map(users(0).id.get -> Set()))
 
-        val searcher = graph.getURIGraphSearcher(users(0).id)
+        val searcher = graph.getURIGraphSearcher(users(0).id.get)
 
         uris.take(3).foreach{ uri =>
           val uriId =  uri.id.get

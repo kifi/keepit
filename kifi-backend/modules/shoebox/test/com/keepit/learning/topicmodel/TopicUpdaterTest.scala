@@ -1,0 +1,124 @@
+package com.keepit.learning.topicmodel
+import play.api.test._
+import play.api.test.Helpers._
+import com.keepit.test._
+import com.keepit.inject._
+import com.keepit.common.db._
+import com.keepit.common.time._
+import com.keepit.model._
+import com.keepit.model.NormalizedURIStates._
+import com.keepit.scraper.FakeArticleStore
+import com.keepit.search.Article
+import com.keepit.search.Lang
+import org.specs2.mutable.Specification
+import play.api.Play.current
+import com.keepit.common.db.slick.Database
+import scala.math._
+
+class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
+  "TopicUpdater" should {
+    "correctly update topic tables" in {
+      running(new ShoeboxApplication().withWordTopicModule()) {
+        val (users, uris) = setupDB
+        val expectedUriToUserEdges = (0 until uris.size).map{ i =>
+          (uris(i), List(users(i % users.size)))
+        }.toList
+        val bookmarks = mkBookmarks(expectedUriToUserEdges)
+        val articleStore = setupArticleStore(uris)
+
+        val db = inject[Database]
+        val uriRepo = inject[NormalizedURIRepo]
+        val uriTopicRepo = inject[UriTopicRepo]
+        val userTopicRepo = inject[UserTopicRepo]
+        val seqInfoRepo = inject[TopicSeqNumInfoRepo]
+        val bmRepo = inject[BookmarkRepo]
+        val documentTopicModel = inject[DocumentTopicModel]
+
+        val topicUpdater = new TopicUpdater(db, uriRepo, userTopicRepo, uriTopicRepo,
+            seqInfoRepo, bmRepo, articleStore, documentTopicModel)
+
+        topicUpdater.update()
+
+        val uriTopicHelper = new UriTopicHelper
+        db.readOnly { implicit s =>
+          uris.zipWithIndex.foreach{ x =>
+            val uriTopic = uriTopicRepo.getByUriId(x._1.id.get)
+            val arr = new Array[Double](TopicModelGlobal.numTopics)
+            arr(x._2) = 1.0
+            uriTopicHelper.toDoubleArray(uriTopic.get.topic) === arr
+          }
+        }
+
+        val userTopicHelper = new UserTopicByteArrayHelper
+        db.readOnly { implicit s =>
+          users.zipWithIndex.foreach { x =>
+            val userIdx = x._2
+            val N = ceil(uris.size *1.0 / users.size).toInt
+            val userUris = (0 until N).flatMap{ i => val uriIdx = userIdx + i* users.size ;  if ( uriIdx < uris.size ) Some(uriIdx) else None}
+            val topic = new Array[Int](TopicModelGlobal.numTopics)
+            userUris.foreach( i => topic(i) += 1)
+            val userTopic = userTopicRepo.getByUserId(x._1.id.get)
+            userTopicHelper.toIntArray(userTopic.get.topic) === topic
+          }
+
+        }
+      }
+    }
+  }
+}
+
+
+trait TopicUpdaterTestHelper extends DbRepos {
+  def setupDB = {
+    val (numUser, numUri) = (10, TopicModelGlobal.numTopics)
+    db.readWrite { implicit s =>
+      val users = (0 until numUser).map{ i => userRepo.save(User(firstName = "user%d".format(i), lastName = "" ))}
+      val uris = (0 until numUri).map{i  =>
+        uriRepo.save(NormalizedURIFactory(title = "title%d".format(i), url = "http://www.keepit.com/article%d".format(i), state = SCRAPED))
+      }
+      (users, uris)
+    }
+  }
+
+  def setupArticleStore(uris: Seq[NormalizedURI]) = {
+    uris.zipWithIndex.foldLeft(new FakeArticleStore){ case (store, (uri, idx)) =>
+      store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), content = "content%d word%d".format(idx, idx)))
+      store
+    }
+  }
+
+  def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String) = {
+    Article(
+        id = normalizedUriId,
+        title = title,
+        description = None,
+        media = None,
+        content = content,
+        scrapedAt = currentDateTime,
+        httpContentType = Some("text/html"),
+        httpOriginalContentCharset = Option("UTF-8"),
+        state = SCRAPED,
+        message = None,
+        titleLang = Some(Lang("en")),
+        contentLang = Some(Lang("en")))
+  }
+
+  def mkBookmarks(expectedUriToUserEdges: List[(NormalizedURI, List[User])], mixPrivate: Boolean = false): List[Bookmark] = {
+    db.readWrite { implicit s =>
+      expectedUriToUserEdges.flatMap{ case (uri, users) =>
+        users.map { user =>
+          val url1 = urlRepo.get(uri.url).getOrElse( urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
+          bookmarkRepo.save(BookmarkFactory(
+            uri = uri,
+            userId = user.id.get,
+            title = uri.title,
+            url = url1,
+            source = BookmarkSource("test"),
+            isPrivate = mixPrivate && ((uri.id.get.id + user.id.get.id) % 2 == 0),
+            kifiInstallation = None))
+        }
+      }
+    }
+  }
+}
+

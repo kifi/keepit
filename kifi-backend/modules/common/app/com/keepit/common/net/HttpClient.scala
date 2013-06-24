@@ -28,12 +28,16 @@ trait HttpClient {
   }
 
   def get(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse
-
   def getFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse]
 
   def post(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse
-
   def postFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse]
+
+  def put(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse
+  def putFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse]
+
+  def delete(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse
+  def deleteFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse]
 
   def longTimeout(): HttpClient
 
@@ -69,7 +73,6 @@ case class HttpClientImpl(
 
   def getFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
-    val startedAt = System.currentTimeMillis()
     val result = request.get().map { response =>
       val cr = res(request, response)
       if (response.status / 100 != validResponseClass) {
@@ -85,8 +88,38 @@ case class HttpClientImpl(
 
   def postFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
     val request = req(url)
-    val startedAt = System.currentTimeMillis()
     val result = request.post(body).map { response =>
+      val cr = res(request, response)
+      if (response.status / 100 != validResponseClass) {
+        throw new NonOKResponseException(url, cr)
+      }
+      cr
+    }
+    result.onFailure(onFailure(url) orElse defaultOnFailure(url))
+    result
+  }
+
+  def put(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse =
+    await(putFuture(url, body, onFailure))
+
+  def putFuture(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
+    val request = req(url)
+    val result = request.put(body).map { response =>
+      val cr = res(request, response)
+      if (response.status / 100 != validResponseClass) {
+        throw new NonOKResponseException(url, cr)
+      }
+      cr
+    }
+    result.onFailure(onFailure(url) orElse defaultOnFailure(url))
+    result
+  }
+
+  def delete(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = await(deleteFuture(url, onFailure))
+
+  def deleteFuture(url: String, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): Future[ClientResponse] = {
+    val request = req(url)
+    val result = request.delete().map { response =>
       val cr = res(request, response)
       if (response.status / 100 != validResponseClass) {
         throw new NonOKResponseException(url, cr)

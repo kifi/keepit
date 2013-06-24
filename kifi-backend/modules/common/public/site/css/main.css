@@ -1,18 +1,11 @@
-/*
-@dark-blue: #204b69;
-@light-blue: #628196;
-@active: #6fa6ef;
-@inactive: #b6c3cc;
-*/
-
-/* overrides */
+/* normalization */
 * {font-family: "Helvetica Neue",Helvetica,Arial,sans-serif}
 *:focus {outline: none}
 h1,h2,h3,h4,h5,label,select {font-weight: normal; color: #99a3b3}
 label {font-size: .9em; color: #628196}
 input[type="text"] {margin: 0; background: #fff; padding: .5em .7em; color: #628196; border: 1px solid #d8dddf}
 img {vertical-align: middle; border: none}
-a {color: #0089d5; text-decoration: none}
+a[href] {color: #0089d5; text-decoration: none}
 select {font-weight: bold; font-size: .8em; background: #ecf0f1; border: 0; -webkit-appearance: none; -moz-appearance: none; width: 110%}
 ol {list-style: none; padding: 0; margin: 0}
 ::-webkit-input-placeholder{color: #b6c3cc}
@@ -20,16 +13,10 @@ ol {list-style: none; padding: 0; margin: 0}
 ::-moz-placeholder {color: #b6c3cc}
 :-ms-input-placeholder {color: #b6c3cc}
 
-/* common */
-.gray {color: #99a3b3}
-.dark-gray {color: #66676a}
-.green {color: #27ae60}
-.red {color: #ca5742}
-.fs9 {font-size: .8em}
-
+/* header */
 html {height: 100%; text-align: center; overflow: hidden}
 body {height: 100%; max-width: 1260px; min-width: 1024px; margin: 0 auto; padding: 0; background: #fafafa; font-size: 16px; text-align: left; position: relative}
-header {display: table; width: 100%; height: 70px; background: #67829c; position: relative}
+header {display: table; width: 100%; height: 70px; background: #67829c; position: relative; z-index: 1}
 .header-left {display: table-cell; width: 200px; padding: 12px 0; text-align: center; vertical-align: top}
 .header-center {display: table-cell; padding-top: 10px}
 input.query {font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; -moz-box-sizing: border-box; box-sizing: border-box; padding: 9px 50px 9px 20px; border: none; border-right: 120px solid #67829c; background: #fff url(../img/search.png) right 16px center no-repeat; transition: border-right-width .3s; -webkit-transition: border-right-width .3s; -webkit-font-smoothing: antialiased}
@@ -37,61 +24,69 @@ input.query:focus, input.query[data-q] {background-image: url(../img/search-blue
 input.query::-webkit-input-placeholder {color: #99a3b3}
 input.query::-moz-placeholder {color: #99a3b3}
 header>nav {display: table-cell; width: 330px; -moz-box-sizing: border-box; box-sizing: border-box; padding-top: 26px; text-align: center; vertical-align: top; font-size: 14px}
-header>nav>a {padding: 0 15px; color: #fff; border-left: 1px solid #fff; vertical-align: middle}
+header>nav>a[href] {padding: 0 15px; color: #fff; border-left: 1px solid #fff; vertical-align: middle}
 header>nav>a:first-child {border-left: 0}
 
 /* main */
-section.main {margin: -70px 330px 0 200px; height: 100%; -moz-box-sizing: border-box; box-sizing: border-box; overflow-y: auto; border-top: 148px solid transparent; border-left: 1px solid #dbdee3; background: #fff; padding: 0 20px}
-.main[data-view=search] {border-top-width: 108px}
+section.main {margin: -70px 330px 0 200px; height: 100%; -moz-box-sizing: border-box; box-sizing: border-box; border-top: 70px solid transparent; border-left: 1px solid #dbdee3; background: #fff; position: relative}
 #my-keeps,#search-results {display: none}
 .main[data-view=mine] #my-keeps,
 .main[data-view=search] #search-results {display: block}
-.main-head {position: fixed; margin-top: -78px; padding-top: 15px; background: #fff}
-.main[data-view=search]>.main-head {margin-top: -38px}
+.main-head {padding: 15px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
+.main-head.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
+.main[data-view=search]>.main-head {padding-top: 10px; height: 37px}
 .main-head>h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
 .main[data-view=search]>.main-head>h1 {display: none}
 .main-head>.subtitle {font-size: 13px; font-weight: 300; color: #5b6670}
 .result-query::before {content: "\201c"}
 .result-query::after {content: "\201d"}
-.main>.scrollable {padding-top: 10px}
+.main-keeps {position: absolute; top: 72px; bottom: 0; left: 0; right: 0; overflow: hidden}
+.main[data-view=search]>.main-keeps {top: 37px}
+.main-keeps>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; padding: 1px 18px 0; box-sizing: border-box; -moz-box-sizing: border-box}
 
 aside {position: absolute; top: 70px; bottom: 0; background: #eff2f7}
 
 /* left column */
 .left-col {left: 0; width: 200px}
 .my-identity {position: relative; width: 100%; text-align: center; background: #fff; padding-bottom: 10px}
-.my-pic {width: 66px; height: 66px; margin: 0 auto -10px; border-radius: 50%; border: 6px solid #eff2f7; position: relative; top: -10px; background-size: 100%; background-color: #b6c3cc}
-.my-name {line-height: 28px}
+.my-pic {width: 66px; height: 66px; margin: 0 auto -10px; border-radius: 50%; border: 6px solid #eff2f7; position: relative; top: -10px; background-size: 100%; background-color: #b6c3cc; z-index: 1}
+.my-name {height: 28px; line-height: 28px}
 .my-name:first-child {padding-top: 80px}
 .left-col h2 {margin: 4px 0 0; font-size: 1.2em; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased; padding: 0 11px}
 .left-col h3 {margin: 0; position: relative; font-size: 13px; line-height: 41px; -webkit-user-select: none; -moz-user-select: -moz-none; -ms-user-select: none}
-.left-col h3.active,
-.left-col h3.my-keeps:not(.active):hover {background: #e3e6ee}
-.left-col h3>.keep-count {float: right; margin: 10px 6px 0 0; border: 1px solid #b4b9ca; border-radius: 10.5px; color: #628196; font-size: 12px; line-height: 20px; height: 19px; padding: 0 12px}
-@-moz-document url-prefix() {.left-col h3>.keep-count {line-height: 18px}}
-.left-col h3.active>.keep-count {color: #fff; background: #9ba4b8; border-color: #9ba4b8}
-.left-col h3.my-keeps:not(.active):hover>.keep-count {background: #eff2f7}
+.left-col .active,
+.left-col .my-keeps:not(.active):hover {background: #e3e6ee}
 .left-col h3>a {display: block; padding: 0 6px 0 12px; color: #818692}
-.left-col h3.active>a {color: #556179}
-.left-col h3.new>a {color: #6fa6ef}
-.left-col h3.my-keeps>a::before {content: " "; display: inline-block; width: 21px; height: 21px; padding: 10px 0; margin-right: 7px; background: url(../img/kifi-icon.png) 0/42px content-box; vertical-align: top; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
-.left-col h3.my-keeps.active>a::before {background-position: right}
+.left-col .keep-count {float: right; margin: 10px 0 0; border: 1px solid #b4b9ca; border-radius: 10.5px; color: #628196; font-size: 12px; line-height: 20px; height: 19px; padding: 0 12px}
+@-moz-document url-prefix() {.left-col .keep-count {line-height: 18px}}
+.left-col .active .keep-count {color: #fff; background: #9ba4b8; border-color: #9ba4b8}
+.left-col .my-keeps:not(.active):hover .keep-count {background: #eff2f7}
+.left-col .active .view-name {color: #556179}
+.left-col .my-keeps .view-name::before {content: " "; display: inline-block; width: 21px; height: 21px; padding: 10px 0; margin-right: 7px; background: url(../img/kifi-icon.png) 0/42px content-box; vertical-align: top; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
+.left-col .my-keeps.active .view-name::before {background-position: right}
 #collections>h2 {margin-top: 15px; padding: 0 0 2px 38px; background: url(../img/folder-icon.png) left 12px bottom 13px/18px no-repeat; border-bottom: 1px solid #dbdee3}
-#collections h3 {line-height: 39px; -webkit-transition: background-color 80ms linear, padding-left .2s; transition: background-color 80ms linear, padding-left .2s}
+#collections h3 {line-height: 39px}
 a.new-collection {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhDAAMAIABAO/y9////yH5BAEKAAEALAAAAAAMAAwAAAIXjAMJx6h91IIuMYmz3pzfR0lUNUHiUQAAOw==) center/6px no-repeat #99a3b3; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
 a.new-collection:hover {background-color: #a1acbd}
-.add-collection {border-bottom: 1px solid #dbdee3; background: #fff}
+.add-collection {border-bottom: 1px solid #dbdee3; background: #fff; -webkit-transition: background-color .16s; transition: background-color .16s}
 .add-collection.submitted {background-color: rgba(255,255,255,0)}
-#collections h3>a>input {width: 100%; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; line-height: normal; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text}
-#collections-list {overflow-y: auto; overflow-x: hidden}
-#collections .sortable-placeholder {background: #6fa6ef; height: 2px; min-height: 0}
-h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
+#collections input {width: 100%; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; line-height: normal; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text}
+#collections-list {overflow: hidden}
+#collections-list.positioned {position: absolute; bottom: 0; left: 0; right: 0}
+#collections-list>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden}
+#collections-list>.sortable-placeholder {background: #6fa6ef; height: 2px; min-height: 0}
+h3.collection {border-bottom: 1px solid #dbdee3; position: relative; -webkit-transition: padding-left .16s, background-color 0s; transition: padding-left .16s, background-color 0s}
 .collection.with-tri:not(.no-tri) {padding-left: 27px}
-h3.collection.renaming {background-color: #fff}
+.collection.renaming {background-color: #fff}
 .collection.renaming>a {cursor: text}
-h3.collection>.keep-count {margin-top: 9px}
-.collection.renaming>.keep-count {display: none}
-.coll-tri {position: absolute; top: 0; bottom: 0; left: -27px; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer; visibility: hidden; -webkit-transition: left .2s; transition: left .2s}
+.collection.renaming,
+.collection.renamed {-webkit-transition-duration: .16s; transition-duration: .16s}
+.collection.drop-hover {background-color: #6fa6ef}
+.collection.drop-hover .view-name {color: #fff}
+.collection.drop-hover .keep-count {background-color: #fff; border-color: #fff; color: #628196}
+.collection .keep-count {margin-top: 9px}
+.collection.renaming .keep-count {display: none}
+.coll-tri {position: absolute; top: 0; bottom: 0; left: -27px; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer; visibility: hidden; -webkit-transition: left .16s; transition: left .16s}
 .active>.coll-tri {background-color: #9ba4b8}
 .renaming>.coll-tri {display: none}
 .coll-tri::before {content: " "; border-width: 4px 4px 0; border-style: solid; border-color: #9ba4b8 transparent; font-size: 0; line-height: 0; vertical-align: 1px}
@@ -99,8 +94,10 @@ h3.collection>.keep-count {margin-top: 9px}
 .collection:hover>.coll-tri,
 .collection.with-tri>.coll-tri {visibility: visible}
 .collection.with-tri:not(.no-tri)>.coll-tri {left: 0}
-#coll-menu {display: none; margin: 0; padding: 0; list-style: none; position: absolute; z-index: 1; background: #e3e6ee}
+#coll-menu {display: none; position: absolute; top: 100%; left: 0; z-index: 1; background: #e3e6ee; margin: 0; padding: 0; list-style: none}
+#coll-menu.page-bottom {top: auto; bottom: 100%}
 #coll-menu>li>a {display: block; padding: 0 16px; font-size: 12px; line-height: 24px; white-space: nowrap; color: #556179; border: solid #dbdee3; border-width: 0 1px 1px 0}
+#coll-menu>li:first-child>a {border-top-width: 1px}
 #coll-menu>li>a:hover,
 #coll-menu>li>a.hover {background: #9ba4b8; color: #fff}
 
@@ -165,24 +162,60 @@ span.long-text, a.long-text {display: inline-block}
 .small-avatar {max-width: 30px; max-height: 30px}
 aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px; border-radius: 4px}
 
-.search-section {color: #67829c; border-bottom: 1px solid #e3e6ee; background: url(../img/clock.png) 5px 50% no-repeat; padding: 5px 30px}
-.keep {position:relative; clear: left; padding: 10px 0 10px 30px; border-top: 1px solid #f9f9f9}
-.search-section+.keep {border-top: 0}
-.keep input[type="checkbox"] {position: absolute; left: 4px; top: 12px; margin: 0}
-.keep .handle {cursor: move; position: absolute; top: 0; left: 0; width: 22px; height: 100%; display: none; background: #e3e6ee url(../img/drag-handle.png) 4px 35px no-repeat}
-.keep:hover .handle, .keep.selected .handle {display: block}
-.keep.selected {background: #eff2f7}
-.keep .right {float: right; margin: 0 0 20px 5%}
-.keep a.long-text {max-width: 100%}
-.keep .small-avatar {vertical-align: bottom; float: left}
-.keep .small-avatar.me {margin-right: 3px}
-.keep .bottom {margin-top: 5px}
-.keep .bottom > span {float: left; margin-left: 10px}
-.keep .bottom span.private {display: none}
-.keep .bottom span.private.on {display: inline}
-.keep .bottom:after {content: "."; display: block; visibility: hidden; clear: both}
-div.loading {text-align: center; display: none}
+.keep-group-title {margin-top: 7px; color: #67829c; font-size: 21px; font-weight: 100; letter-spacing: 1px; border-bottom: 1px solid #e3e6ee; padding: 4px 30px}
+.keep-group-title+.keep {border-top: 0}
+.keep {position: relative; clear: left; padding: 10px 0 13px 30px; border-top: 1px solid #f9f9f9}
+.keep>.handle {cursor: move; position: absolute; top: 0; bottom: 0; left: 0; width: 21px; display: none; background: url(../img/drag-handle.png) center/10px no-repeat}
+.keep>.handle:hover {background-color: #e3e6ee}
+.keep-checkbox {display: none; position: absolute; left: 3px; top: 4px; width: 15px; height: 15px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; cursor: pointer}
+.keep>.handle:hover>.keep-checkbox,
+.keep.selected>.handle>.keep-checkbox {display: block}
+.keep-checkbox.checked {background-position: 2px 4px}
+.keep:hover>.handle,
+.keep.selected>.handle {display: block}
+.keep.selected {background-color: #eff2f7}
+.keep>time {float: right; margin: 0 16px 0 4%; font-size: 12px; line-height: 28px; color: #99a3b3}
+.keep-title {max-width: 100%; color: #0089d5; font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased}
+.keep-title>a[href] {color: inherit}
+.keep-url {font-size: 12px; line-height: 14px; color: #99a3b3}
+.keep-who {margin-top: 7px}
+.keep-who>img {vertical-align: middle; width: 23px; height: 23px; border-radius: 2px; margin-right: 1px}
+.keep-who>img.me {border-radius: 50% 0 0 50%}
+.keep-who>img.me:last-of-type {border-radius: 50%}
+.keep-who-text {vertical-align: middle; margin-left: 3px; font-size: 12px; color: #99a3b3}
+.keep-private {display: none; margin: 0 2px; background: url(../img/private.png) left center/17px no-repeat; margin: 0 2px; line-height: 17px; padding-left: 21px}
+.keep-private.on {display: inline-block}
+.keeps-loading {margin: 20px 50%; position: relative; left: -22px}
 .clearfix {clear: both}
 .add-collection {display: none}
 .drag-helper {background: #fff; padding: 5px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
-.drop-hover {background: #b6c3cc}
+
+/* retina image overrides */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .keep-private {background-image: url(../img/private.2x.png)}
+  .keep>.handle {background-image: url(../img/drag-handle.2x.png)}
+}
+
+/* scrollbars */
+.antiscroll-scrollbar {
+  background: gray;
+  background: rgba(0,0,0,.5);
+  -webkit-border-radius: 7px;
+  -moz-border-radius: 7px;
+  border-radius: 7px;
+  -webkit-box-shadow: 0 0 1px #fff;
+  -moz-box-shadow: 0 0 1px #fff;
+  box-shadow: 0 0 1px #fff;
+  position: absolute;
+  opacity: 0;
+  filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=0);
+  -webkit-transition: linear 300ms opacity;
+  -moz-transition: linear 300ms opacity;
+  -o-transition: linear 300ms opacity;
+}
+.antiscroll-scrollbar-shown {opacity: 1; filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=100)}
+.antiscroll-scrollbar-horizontal {height: 7px; margin-left: 2px; bottom: 2px; left: 0; cursor: ew-resize}
+.antiscroll-scrollbar-vertical {width: 7px; margin-top: 2px; right: 2px; top: 0; cursor: ns-resize}
+.antiscroll-inner {overflow: scroll}
+.antiscroll-inner::-webkit-scrollbar {width: 0; height: 0}
+.antiscroll-inner::scrollbar {width: 0; height: 0}

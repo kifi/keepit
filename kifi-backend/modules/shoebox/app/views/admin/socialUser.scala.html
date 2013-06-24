@@ -2,14 +2,14 @@
 
 @userWithSocialDisplay = {
   <span style="margin:2px">
-    @if(socialUserInfo.networkType == SocialNetworks.FACEBOOK) {
+    @socialUserInfo.getProfileUrl.map { profileUrl =>
       <a data-hover="tooltip" title="@socialUserInfo.fullName+" class="name_tooltip_link"
-        href="http://www.facebook.com/@socialUserInfo.socialId.id" target="_blank">
-        <img src="https://graph.facebook.com/@socialUserInfo.socialId.id/picture?type=square"
-          width="30" height="30" alt=""/>
+        href="@profileUrl" target="_blank">
+        @socialUserInfo.getPictureUrl(60, 60).map { url => <img src="@url" width="30" height="30"> }
         @socialUserInfo.fullName (@socialUserInfo.networkType/@socialUserInfo.socialId)
       </a>
-    } else {
+    }.getOrElse {
+      @socialUserInfo.getPictureUrl(60, 60).map { url => <img src="@url" width="30" height="30"> }
       @socialUserInfo.fullName (@socialUserInfo.networkType/@socialUserInfo.socialId)
     }
   </span>

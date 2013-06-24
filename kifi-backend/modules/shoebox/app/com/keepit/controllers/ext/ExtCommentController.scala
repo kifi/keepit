@@ -26,7 +26,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import com.keepit.common.time._
 import org.joda.time.DateTime
-import com.keepit.common.analytics.ActivityStream
 import views.html
 import com.keepit.realtime.UserNotifier
 import scala.concurrent.future
@@ -48,7 +47,6 @@ class ExtCommentController @Inject() (
   followRepo: FollowRepo,
   emailAddressRepo: EmailAddressRepo,
   deepLinkRepo: DeepLinkRepo,
-  activityStream: ActivityStream,
   userNotifier: UserNotifier)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 

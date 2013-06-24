@@ -1,6 +1,5 @@
 package com.keepit.test
 
-import scala.collection.concurrent.{TrieMap => ConcurrentMap}
 import scala.collection.mutable
 import scala.concurrent._
 import scala.slick.session.{Database => SlickDatabase}
@@ -63,6 +62,8 @@ import com.keepit.model.NormalizedURI
 import com.keepit.common.amazon.AmazonInstanceId
 import com.keepit.common.net.FakeClientResponse
 
+
+
 class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
 
   private def createTestGlobal(baseGlobal: FortyTwoGlobal, modules: Module*) = if (useDb)
@@ -88,6 +89,8 @@ class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override v
   def withS3DevModule() = overrideWith(new S3DevModule())
   def withShoeboxServiceModule() = overrideWith(ShoeboxServiceModule())
   def withSearchConfigModule() = overrideWith(SearchConfigModule())
+
+
   def overrideWith(modules: Module*): TestApplication = new TestApplication(createTestGlobal(global, modules: _*), useDb, path)
 
 }
@@ -143,12 +146,11 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[Babysitter].to[FakeBabysitter]
     install(new SlickModule(dbInfo.getOrElse(dbInfoFromApplication)))
-    bind[MailToKeepPlugin].to[FakeMailToKeepPlugin]
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
     bind[HealthcheckPlugin].to[FakeHealthcheck]
     bind[SlickSessionProvider].to[TestSlickSessionProvider]
     install(new FakeS3StoreModule())
-    install(new FakeCacheModule)
+    install(new DevCacheModule)
     bind[play.api.Application].toProvider(new Provider[play.api.Application] {
       def get(): play.api.Application = current
     }).in(classOf[AppScoped])
@@ -160,7 +162,6 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   @Provides
   def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
     def register() = Node("me")
-    def unRegister() = {}
     def isLeader() = true
   }
 
@@ -310,32 +311,11 @@ case class FakeClockModule() extends ScalaModule {
 class FakeSocialGraphPlugin extends SocialGraphPlugin {
   def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]] =
     future { throw new Exception("Not Implemented") }
+  def asyncRevokePermissions(socialUserInfo: SocialUserInfo): Future[Unit] =
+    future { throw new Exception("Not Implemented") }
 }
 
-@Singleton
-class HashMapMemoryCache extends InMemoryCachePlugin {
-
-  val cache = ConcurrentMap[String, Any]()
-
-  def get(key: String): Option[Any] = {
-    val value = cache.get(key)
-    println(s"retrieved from cache: $key -> $value")
-    value
-  }
-
-  def remove(key: String) {
-    cache.remove(key)
-  }
-
-  def set(key: String, value: Any, expiration: Int = 0) {
-    println(s"setting in cache: $key -> $value")
-    cache += key -> value
-  }
-
-  override def toString = "HashMapMemoryCache"
-}
-
-case class FakeCacheModule() extends ShoeboxCacheModule {
+case class FakeCacheModule() extends ScalaModule {
   override def configure() {
     bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
     bind[InMemoryCachePlugin].to[HashMapMemoryCache]
@@ -460,6 +440,7 @@ case class FakeSchedulerModule() extends ScalaModule {
     bind[Scheduler].to[FakeScheduler]
   }
 }
+
 
 class FakeScheduler extends Scheduler {
   private def fakeCancellable = new Cancellable() {

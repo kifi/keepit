@@ -40,7 +40,6 @@ class ShoeboxDevModule extends ScalaModule with Logging {
   @Provides
   def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
     def register() = Node("me")
-    def unRegister() = {}
     def isLeader() = true
   }
 
@@ -53,14 +52,14 @@ class ShoeboxDevModule extends ScalaModule with Logging {
   @Singleton
   @Provides
   def searchUnloadProvider(
-                            db: Database,
-                            userRepo: UserRepo,
-                            normalizedURIRepo: NormalizedURIRepo,
-                            persistEventProvider: Provider[EventPersister],
-                            store: MongoEventStore,
-                            searchClient: SearchServiceClient,
-                            clock: Clock,
-                            fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
+      db: Database,
+      userRepo: UserRepo,
+      normalizedURIRepo: NormalizedURIRepo,
+      persistEventProvider: Provider[EventPersister],
+      store: MongoEventStore,
+      searchClient: SearchServiceClient,
+      clock: Clock,
+      fortyTwoServices: FortyTwoServices): SearchUnloadListener = {
     current.configuration.getBoolean("event-listener.searchUnload").getOrElse(false) match {
       case true =>  new SearchUnloadListenerImpl(db,userRepo, normalizedURIRepo, persistEventProvider, store, searchClient, clock, fortyTwoServices)
       case false => new FakeSearchUnloadListenerImpl(userRepo, normalizedURIRepo)
@@ -121,5 +120,11 @@ class ShoeboxDevModule extends ScalaModule with Logging {
       case None => new FakeMailToKeepPlugin(schedulingProperties)
       case _ => new MailToKeepPluginImpl(actorFactory, schedulingProperties)
     }
+  }
+}
+
+class FakeMailToKeepPlugin @Inject() (val schedulingProperties: SchedulingProperties) extends MailToKeepPlugin with Logging {
+  def fetchNewKeeps() {
+    log.info("Fake fetching new keeps")
   }
 }

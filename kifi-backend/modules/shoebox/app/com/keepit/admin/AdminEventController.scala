@@ -1,7 +1,9 @@
 package com.keepit.controllers.admin
 
 import scala.collection.mutable
+
 import org.joda.time.{Months, ReadablePeriod, Weeks}
+
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.analytics._
 import com.keepit.common.analytics.reports._
@@ -11,13 +13,13 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.search.SearchConfigManager
+import com.keepit.search.SearchConfigExperimentRepo
+
 import play.api.data.Forms._
 import play.api.data._
 import play.api.libs.json._
 import play.api.mvc._
 import views.html
-import com.keepit.search.SearchConfigExperimentRepo
 
 case class ActivityData(
   numUsers: Int,
@@ -42,7 +44,6 @@ class AdminEventController @Inject() (
   rb: ReportBuilderPlugin,
   reportStore: ReportStore,
   events: EventStream,
-  activities: ActivityStream,
   activeUsersReports: ActiveUsersReports,
   dailyReports: DailyReports,
   dailyAdminReports: DailyAdminReports,
@@ -170,14 +171,6 @@ class AdminEventController @Inject() (
     val availableReports = reportStore.getReports() // strip ".json"
     val activityData = getActivityData()
     Ok(html.admin.reports(availableReports, activityData))
-  }
-
-  def activityViewer() = AdminHtmlAction { implicit request =>
-    Ok(html.admin.adminRTActivityViewer())
-  }
-
-  def activityStream() = WebSocket.async[JsValue] { implicit request  =>
-    activities.newStream()
   }
 
   def eventViewer() = AdminHtmlAction { implicit request =>
