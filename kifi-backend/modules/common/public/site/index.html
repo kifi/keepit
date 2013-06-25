@@ -117,7 +117,7 @@
 						</div>
 						<div class="keep-url long-text" title="{{url}}">{{url | replace '^http://', '	' | replace '^([^/]*)/$', '$1'}}</div>
 						<div class="keep-colls">
-							<span class="keep-coll" data-template-for="collections" data-id="{{id}}">{{name}}</span>
+							<a class="keep-coll" href="javascript:" data-template-for="collections" data-id="{{id}}">{{name}}</a>
 						</div>
 						<div class="keep-who">
 							<img class="small-avatar me"
@@ -161,6 +161,7 @@
 		<div class="title">
 			<h2></h2>
 			<a class="link long-text"></a>
+			<div class="screenshot"></div>
 		</div>
 		<div class="who-kept"></div>
 		<div class="subtitle">In collections:</div>

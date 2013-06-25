@@ -27,6 +27,7 @@ import scala.annotation.unchecked
 import java.io.ByteArrayOutputStream
 import java.io.ByteArrayInputStream
 import java.io.OutputStreamWriter
+import com.keepit.common.store.FakeS3ScreenshotStore
 
 class ScraperTest extends Specification {
   val config = ScraperConfig(
@@ -297,7 +298,7 @@ class ScraperTest extends Specification {
   def getMockScraper(articleStore: ArticleStore, mockHttpFetcher: HttpFetcher = getMockHttpFetcher) = {
     new Scraper(inject[Database], mockHttpFetcher, articleStore, config,
       inject[ScrapeInfoRepo], inject[NormalizedURIRepo], inject[HealthcheckPlugin],
-      inject[BookmarkRepo], inject[UnscrapableRepo]) {
+      inject[BookmarkRepo], inject[UnscrapableRepo], new FakeS3ScreenshotStore) {
       override protected def getExtractor(url: String): Extractor = {
         new TikaBasedExtractor(url, 10000, None) {
           protected def getContentHandler = new BodyContentHandler(output)

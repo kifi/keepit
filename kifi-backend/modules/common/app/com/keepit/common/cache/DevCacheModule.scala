@@ -19,6 +19,7 @@ import com.keepit.model.ExternalUserIdCache
 import com.keepit.model.UserExperimentCache
 import com.keepit.model.SliderHistoryUserIdCache
 import com.keepit.model.BookmarkCountCache
+import com.keepit.model.SocialUserInfoCountCache
 import com.keepit.model.CommentCountUriIdCache
 import com.keepit.model.UserValueCache
 import com.keepit.model.BrowsingHistoryUserIdCache
@@ -121,6 +122,11 @@ class DevCacheModule extends ScalaModule {
 
   @Singleton
   @Provides
+  def socialUserInfoCountCache(outerRepo: FortyTwoCachePlugin) =
+    new SocialUserInfoCountCache((outerRepo, 1 hour))
+
+  @Singleton
+  @Provides
   def commentCountUriIdCache(outerRepo: FortyTwoCachePlugin) =
     new CommentCountUriIdCache((outerRepo, 1 hour))
 
@@ -157,7 +163,6 @@ class HashMapMemoryCache extends InMemoryCachePlugin {
 
   def get(key: String): Option[Any] = {
     val value = cache.get(key)
-    println(s"retrieved from cache: $key -> $value")
     value
   }
 
@@ -166,7 +171,6 @@ class HashMapMemoryCache extends InMemoryCachePlugin {
   }
 
   def set(key: String, value: Any, expiration: Int = 0) {
-    println(s"setting in cache: $key -> $value")
     cache += key -> value
   }
 

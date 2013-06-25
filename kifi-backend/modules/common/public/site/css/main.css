@@ -15,20 +15,22 @@ ol {list-style: none; padding: 0; margin: 0}
 
 /* header */
 html {height: 100%; text-align: center; overflow: hidden}
-body {height: 100%; max-width: 1260px; min-width: 1024px; margin: 0 auto; padding: 0; background: #fafafa; font-size: 16px; text-align: left; position: relative}
-header {display: table; width: 100%; height: 70px; background: #67829c; position: relative; z-index: 1}
-.header-left {display: table-cell; width: 200px; padding: 12px 0; text-align: center; vertical-align: top}
-.header-center {display: table-cell; padding-top: 10px}
+body {height: 100%; min-width: 1024px; margin: 0 auto; padding: 0; background: #fafafa; font-size: 16px; text-align: left; position: relative}
+header {height: 70px; background: #67829c; position: relative; z-index: 1}
+.header-left {position: absolute; width: 15.873%; min-width: 200px; padding-top: 12px; text-align: center}
+.header-center {position: absolute; left: 15.873%; right: 25.78125%; padding-top: 10px; border-left: 1px solid transparent}
+@media (max-width: 1260px) { .header-center { left: 200px; right: 330px } }
 input.query {font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; -moz-box-sizing: border-box; box-sizing: border-box; padding: 9px 50px 9px 20px; border: none; border-right: 120px solid #67829c; background: #fff url(../img/search.png) right 16px center no-repeat; transition: border-right-width .3s; -webkit-transition: border-right-width .3s; -webkit-font-smoothing: antialiased}
 input.query:focus, input.query[data-q] {background-image: url(../img/search-blue.png); border-right-width: 0}
 input.query::-webkit-input-placeholder {color: #99a3b3}
 input.query::-moz-placeholder {color: #99a3b3}
-header>nav {display: table-cell; width: 330px; -moz-box-sizing: border-box; box-sizing: border-box; padding-top: 26px; text-align: center; vertical-align: top; font-size: 14px}
+header>nav {position: absolute; right: 0; width: 25.78125%; min-width: 330px; -moz-box-sizing: border-box; box-sizing: border-box; padding-top: 26px; text-align: center; font-size: 14px}
 header>nav>a[href] {padding: 0 15px; color: #fff; border-left: 1px solid #fff; vertical-align: middle}
 header>nav>a:first-child {border-left: 0}
 
 /* main */
-section.main {margin: -70px 330px 0 200px; height: 100%; -moz-box-sizing: border-box; box-sizing: border-box; border-top: 70px solid transparent; border-left: 1px solid #dbdee3; background: #fff; position: relative}
+section.main {position: absolute; top: 70px; bottom: 0; left: 15.873%; right: 25.78125%; border-left: 1px solid #dbdee3; background: #fff}
+@media (max-width: 1260px) { section.main { left: 200px; right: 330px } }
 #my-keeps,#search-results {display: none}
 .main[data-view=mine] #my-keeps,
 .main[data-view=search] #search-results {display: block}
@@ -47,7 +49,7 @@ section.main {margin: -70px 330px 0 200px; height: 100%; -moz-box-sizing: border
 aside {position: absolute; top: 70px; bottom: 0; background: #eff2f7}
 
 /* left column */
-.left-col {left: 0; width: 200px}
+.left-col {left: 0; width: 15.873%; min-width: 200px}
 .my-identity {position: relative; width: 100%; text-align: center; background: #fff; padding-bottom: 10px}
 .my-pic {width: 66px; height: 66px; margin: 0 auto -10px; border-radius: 50%; border: 6px solid #eff2f7; position: relative; top: -10px; background-size: 100%; background-color: #b6c3cc; z-index: 1}
 .my-name {height: 28px; line-height: 28px}
@@ -103,7 +105,8 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative; -webkit-tra
 
 aside.right {
   right: 0;
-  width: 330px;
+  width: 25.78125%;
+  min-width: 330px;
   padding: 10px 0;
   color: #556179;
   display: none;
@@ -121,6 +124,8 @@ aside.right select {padding: 5px}
 aside.right a {color: #556179; display: block}
 aside.right .who-kept span {display: block; margin-bottom: 5px}
 aside.right .who-kept span.private {display: none}
+aside.right .screenshot {display:none}
+aside.right .has-screenshot {display: block; background-size: 250px auto; width: 250px; height: 140px}
 aside.right div.actions {position: absolute; bottom: 10px}
 aside.right div.actions > a {display: block; font-size: 1.2em; width: 290px; padding: 10px 20px}
 aside.right div.actions > a:hover {color: #fff; background: #6fa6ef}
@@ -179,8 +184,9 @@ aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px;
 .keep-title {max-width: 100%; color: #0089d5; font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased}
 .keep-title>a[href] {color: inherit}
 .keep-url {font-size: 12px; line-height: 14px; color: #99a3b3}
-.keep-colls {margin-top: 7px; background: url(../img/folder-icon-small.png) 0 0/13px 11px no-repeat; padding-left: 19px; font-size: 12px; line-height: 14px; color: #99a3b3; overflow: hidden}
-.keep-coll {display: inline-block; white-space: nowrap; margin-right: 4px; border-right: 1px solid currentColor; padding-right: 4px}
+.keep-colls {margin-top: 7px; background: url(../img/folder-icon-small.png) 0 0/13px 11px no-repeat; padding-left: 19px; font-size: 12px; line-height: 14px; overflow: hidden}
+.keep-coll[href] {display: inline-block; white-space: nowrap; margin-right: 4px; border-right: 1px solid currentColor; padding-right: 4px; color: #99a3b3}
+.keep-coll[href]:hover {text-decoration: underline; color: #76869f}
 .keep-coll:last-of-type {margin-right: 0; border-right: none; padding-right: 0}
 .keep-who {margin-top: 7px; font-size: 0}
 .keep-who>img {vertical-align: middle; width: 23px; height: 23px; border-radius: 2px; margin-right: 1px}

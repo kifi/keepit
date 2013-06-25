@@ -13,6 +13,7 @@ var urlCollections = urlSite + '/collections';
 var urlCollectionsAll = urlCollections + '/all';
 var urlCollectionsOrder = urlCollections + '/ordering';
 var urlCollectionsCreate = urlCollections + '/create';
+var urlScreenshot = urlBase + '/screenshot';
 
 $.ajaxSetup({
 	xhrFields: {withCredentials: true},
@@ -81,8 +82,9 @@ $(function() {
 						var collName = collections[collId].name;
 						$coll.find(".keep-count").text(collections[collId].keeps += data.addedToCollection);
 						$keeps.addClass("mine")
-							.find("keep-colls:not(:has(.keep-coll[data-id=" + collId + "]))")
-							.append("<span class=keep-coll data-id=" + collId + ">" + collName + "</span>");
+							.find(".keep-colls:not(:has(.keep-coll[data-id=" + collId + "]))")
+							.contents().filter(function() {return this.nodeType == 3}).remove().end()
+							.append("<a href=javascript: class=keep-coll data-id=" + collId + ">" + collName + "</a>");
 						if (!$inColl.find("#cb1-" + collId).length) {
 							inCollTmpl.append({id: collId, name: collName});
 						}
@@ -433,6 +435,12 @@ $(function() {
 
 	var $main = $(".main").on("mousedown", ".keep-checkbox", function(e) {
 		e.preventDefault();  // avoid starting selection
+	}).on("click", ".keep-coll", function(e) {
+		e.stopPropagation(), e.preventDefault();
+		var collId = $(this).data("id");
+		if (collId !== $collList.find(".collection.active").data("id")) {
+			showMyKeeps(collId);
+		}
 	}).on("click", ".keep", function(e) {
 		// 1. Only one keep at a time can be selected and not checked.
 		// 2. If a keep is selected and not checked, no keeps are checked.
@@ -458,6 +466,7 @@ $(function() {
 		} else if ($selected.length > 1) {
 			$title.find('h2').text($selected.length + " keeps selected");
 			$title.find('a').empty();
+			$title.find('div.screenshot').removeAttr('style').removeClass('has-screenshot');
 			$who.empty();
 			var allCollIds = {};
 			$selected.each(function() {
@@ -475,6 +484,7 @@ $(function() {
 			$title.find('h2').text($keep.find('a').first().text());
 			var url = $keep.find('a').first().attr('href');
 			$title.find('a').text(url).attr('href', url).attr('target', '_blank');
+			$title.find('div.screenshot').css({"background-image": "url(" + urlScreenshot + '?url=' + escape(url) + ")"}).addClass('has-screenshot');
 			$who.html($keep.find(".keep-who").html());
 			$who.find('span').prependTo($who);
 			$inColl.empty();
@@ -577,7 +587,7 @@ $(function() {
 				hideCollMenu();
 			}
 		}
-	}).on("mousemove", ".collection:not(.with-menu):not(.renaming)", function(e) {
+	}).on("mousemove", ".collection:not(.with-menu):not(.renaming):not(.drop-hover)", function(e) {
 		var $coll = $(this), $tri = $coll.find(".coll-tri"), data = $coll.data();
 		var x = e.clientX, y = e.clientY, dx = x - data.x, dy = y - data.y, now = +new Date;
 		if ($coll.hasClass("with-tri")) {
