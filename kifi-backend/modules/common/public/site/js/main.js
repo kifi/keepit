@@ -464,7 +464,7 @@ $(function() {
 			});
 			$inColl.empty();
 			for (var collId in allCollIds) {
-				inCollTmpl.append({id: collId, name: collections[id].name});
+				inCollTmpl.append({id: collId, name: collections[collId].name});
 			}
 			showRightSide();
 		} else { // one keep is selected
