@@ -87,7 +87,12 @@
   background-size: 68px !important;
   margin-right: 2px;
 }
-.kifi-kcard-networks a.kifi-kcard-nw-fb {background-position: 0px 0px !important}
-.kifi-kcard-networks a.kifi-kcard-nw-in {background-position: -17px 17px !important}
-.kifi-kcard-networks a.kifi-kcard-nw-tw {background-position: -34px 17px !important}
-.kifi-kcard-networks a.kifi-kcard-nw-pn {background-position: -51px 17px !important}
+.kifi-kcard-networks a.kifi-kcard-nw-facebook {background-position: 0px 17px !important}
+.kifi-kcard-networks a.kifi-kcard-nw-facebook.kifi-on {background-position: 0px 0px !important}
+.kifi-kcard-networks a.kifi-kcard-nw-linkedin {background-position: -17px 17px !important}
+.kifi-kcard-networks a.kifi-kcard-nw-linkedin.kifi-on {background-position: -17px 0px !important}
+.kifi-kcard-networks a.kifi-kcard-nw-twitter {background-position: -34px 17px !important}
+.kifi-kcard-networks a.kifi-kcard-nw-twitter.kifi-on {background-position: -34px 0px !important}
+.kifi-kcard-networks a.kifi-kcard-nw-pinterest {background-position: -51px 17px !important}
+.kifi-kcard-networks a.kifi-kcard-nw-pinterest.kifi-on {background-position: -51px 0px !important}
+
