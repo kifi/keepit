@@ -190,42 +190,42 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
 
   def getUserOpt(id: ExternalId[User]): Future[Option[User]] = {
     val userOpt =  allUserExternalIds.get(id)
-    Promise.successful(userOpt).future
+    Future.successful(userOpt)
   }
 
   def getUser(id: Id[User]): Future[User] = {
     val user = allUsers(id)
-    Promise.successful(user).future
+    Future.successful(user)
   }
 
   def getNormalizedURI(uriId: Id[NormalizedURI]): Future[NormalizedURI] = {
     val uri = allNormalizedURIs(uriId)
-    Promise.successful(uri).future
+    Future.successful(uri)
   }
 
   def getNormalizedURIs(ids: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]] = {
     val uris = ids.map(allNormalizedURIs(_))
-    Promise.successful(uris).future
+    Future.successful(uris)
   }
 
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]] = {
     val bookmarks = allUserBookmarks.getOrElse(userId, Set.empty).map(allBookmarks(_)).toSeq
-    Promise.successful(bookmarks).future
+    Future.successful(bookmarks)
   }
 
   def getBookmarksChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Bookmark]] = {
     val bookmarks = allBookmarks.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
-    Promise.successful(bookmarks).future
+    Future.successful(bookmarks)
   }
 
   def getCommentsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Comment]] = {
     val comments = allComments.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
-    Promise.successful(comments).future
+    Future.successful(comments)
   }
 
   def getCommentRecipientIds(commentId: Id[Comment]): Future[Seq[Id[User]]] = {
     val commentRecipientIds = allCommentRecipients.getOrElse(commentId, Set.empty).filter(_.state == CommentRecipientStates.ACTIVE).map(_.userId.get).toSeq
-    Promise.successful(commentRecipientIds).future
+    Future.successful(commentRecipientIds)
   }
 
 
@@ -234,28 +234,28 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
   }
 
   def getClickHistoryFilter(userId: Id[User]) = {
-    Promise.successful(clickHistoryTracker.getMultiHashFilter(userId).getFilter).future
+    Future.successful(clickHistoryTracker.getMultiHashFilter(userId).getFilter)
   }
 
   def getBrowsingHistoryFilter(userId: Id[User]) = {
-    Promise.successful(browsingHistoryTracker.getMultiHashFilter(userId).getFilter).future
+    Future.successful(browsingHistoryTracker.getMultiHashFilter(userId).getFilter)
   }
 
   def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]] = {
     val connectedUsers = allUserConnections.getOrElse(userId, Set.empty)
-    Promise.successful(connectedUsers).future
+    Future.successful(connectedUsers)
   }
 
   def reportArticleSearchResult(res: ArticleSearchResult): Unit = {}
 
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = {
     val users = userIds.map(allUsers(_))
-    Promise.successful(users).future
+    Future.successful(users)
   }
 
   def getUserIdsByExternalIds(extIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
     val ids = extIds.map(allUserExternalIds(_).id.get)
-    Promise.successful(ids).future
+    Future.successful(ids)
   }
 
   def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], BasicUser]] = {
@@ -269,11 +269,11 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
         pictureName = "fake.jpg" //
       )
     }.toMap
-    Promise.successful(basicUsers).future
+    Future.successful(basicUsers)
   }
 
   def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
-  def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]] = Promise.successful(Seq()).future
+  def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]] = Future.successful(Seq())
   def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] = ???
   def getSessionByExternalId(sessionId: com.keepit.common.db.ExternalId[com.keepit.model.UserSession]): scala.concurrent.Future[Option[com.keepit.model.UserSession]] = ???
   def getSocialUserInfosByUserId(userId: com.keepit.common.db.Id[com.keepit.model.User]): scala.concurrent.Future[List[com.keepit.model.SocialUserInfo]] = ???
@@ -281,17 +281,17 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
   def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[(Id[Collection], Id[User], SequenceNumber)]] = {
     val collections = allCollections.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
     val summarizedCollections = collections.map { c => (c.id.get, c.userId, c.seq) }
-    Promise.successful(summarizedCollections).future
+    Future.successful(summarizedCollections)
   }
 
   def getBookmarksInCollection(collectionId: Id[Collection]): Future[Seq[Bookmark]] = {
     val bookmarks = allCollectionBookmarks(collectionId).map(allBookmarks(_)).toSeq
-    Promise.successful(bookmarks).future
+    Future.successful(bookmarks)
   }
 
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]] = {
     val collections = allCollections.values.filter(_.userId == userId).map(_.id.get).toSeq
-    Promise.successful(collections).future
+    Future.successful(collections)
   }
 
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]] = ???
@@ -299,44 +299,44 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
   def getIndexable(seqNum: Long, fetchSize: Int = -1) : Future[Seq[NormalizedURI]] = {
     val uris = allNormalizedURIs.values.filter(_.seq > SequenceNumber(seqNum)).toSeq.sortBy(_.seq)
     val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris)
-    Promise.successful(fewerUris).future
+    Future.successful(fewerUris)
   }
 
   def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]] = {
     val bookmark = allUserBookmarks(userId).map(allBookmarks(_)).find(_.uriId == uriId)
-    Promise.successful(bookmark).future
+    Future.successful(bookmark)
   }
 
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]] = {
     val exp = allSearchExperiments.values.filter(_.isActive).toSeq
-    Promise.successful(exp).future
+    Future.successful(exp)
   }
 
   def getExperiments: Future[Seq[SearchConfigExperiment]] = {
     val exp = allSearchExperiments.values.filter(_.state != SearchConfigExperimentStates.ACTIVE).toSeq
-    Promise.successful(exp).future
+    Future.successful(exp)
   }
 
   def getExperiment(id: Id[SearchConfigExperiment]): Future[SearchConfigExperiment] = {
     val exp = allSearchExperiments(id)
-    Promise.successful(exp).future
+    Future.successful(exp)
   }
 
   def saveExperiment(experiment: SearchConfigExperiment): Future[SearchConfigExperiment] = {
     val id = experiment.id.getOrElse(nextSearchExperimentId)
     val experimentWithId = experiment.withId(id)
     allSearchExperiments += (experimentWithId.id.get -> experimentWithId)
-    Promise.successful(experimentWithId).future
+    Future.successful(experimentWithId)
   }
 
   def hasExperiment(userId: Id[User], state: State[ExperimentType]): Future[Boolean] = {
     val has = allUserExperiments.getOrElse(userId, Set.empty).exists(exp => exp.experimentType == state && exp.state == UserExperimentStates.ACTIVE)
-    Promise.successful(has).future
+    Future.successful(has)
   }
 
   def getUserExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]] = {
     val states = allUserExperiments.getOrElse(userId, Set.empty).filter(_.state == UserExperimentStates.ACTIVE).map(_.experimentType).toSeq
-    Promise.successful(states).future
+    Future.successful(states)
   }
 
 }
