@@ -9,5 +9,5 @@ class FakeS3ScreenshotStore extends S3ScreenshotStore {
   def config: S3ImageConfig = ???
   def getScreenshotUrl(normalizedUri: NormalizedURI): Option[String] = None
   def getScreenshotUrl(normalizedUriOpt: Option[NormalizedURI]): Option[String] = None
-  def updatePicture(normalizedUri: NormalizedURI): Future[Option[PutObjectResult]] = Promise.successful(None).future
+  def updatePicture(normalizedUri: NormalizedURI): Future[Option[Seq[Option[PutObjectResult]]]] = Promise.successful(None).future
 }
