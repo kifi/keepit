@@ -19,12 +19,12 @@ object LineField {
 }
 
 trait LineFieldBuilder {
-  def buildLineField(fieldName: String, lines: Seq[(Int, String, Lang)], fieldType: FieldType = TextField.TYPE_NOT_STORED)(tokenStreamFunc: (String, String, Lang)=>TokenStream): Field = {
+  def buildLineField[T](fieldName: String, lines: Seq[(Int, T, Lang)], fieldType: FieldType = TextField.TYPE_NOT_STORED)(tokenStreamFunc: (String, T, Lang)=>TokenStream): Field = {
     new Field(fieldName, new LineTokenStream(fieldName, lines, tokenStreamFunc), fieldType)
   }
 }
 
-class LineTokenStream(fieldName: String, lines: Seq[(Int, String, Lang)], tokenStreamFunc: (String, String, Lang)=>TokenStream) extends TokenStream {
+class LineTokenStream[T](fieldName: String, lines: Seq[(Int, T, Lang)], tokenStreamFunc: (String, T, Lang)=>TokenStream) extends TokenStream {
   private[this] val termAttr = addAttribute(classOf[CharTermAttribute])
   private[this] val posIncrAttr = addAttribute(classOf[PositionIncrementAttribute])
   private[this] val lineIter = lines.sortBy(_._1).iterator

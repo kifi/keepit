@@ -128,6 +128,18 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     }
   }
 
+  def getLongDocValue(field: String, id: Long): Option[Long] = {
+    findDocIdAndAtomicReaderContext(id).flatMap { case (docid, context) =>
+      val reader = context.reader
+      var docValues = reader.getNumericDocValues(field)
+      if (docValues != null) {
+        Some(docValues.get(docid))
+      } else {
+        None
+      }
+    }
+  }
+
   def explain(query: Query, id: Long): Explanation = {
     findDocIdAndAtomicReaderContext(id) match {
       case Some((docid, context)) =>

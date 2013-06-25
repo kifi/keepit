@@ -128,7 +128,7 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
                 case e: OutOfMemoryError => throw e       // fatal
                 case e: IOException => throw e            // fatal
                 case e: Throwable =>
-                  val msg = "failed to index document for id=%s: e.getMessage()".format(indexable.id)
+                  val msg = s"failed to index document for id=${indexable.id}: ${e.getMessage()}"
                   log.error(msg, e)
                   Some(IndexError(msg))
               }
