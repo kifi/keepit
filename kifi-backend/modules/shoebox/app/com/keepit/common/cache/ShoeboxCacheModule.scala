@@ -101,6 +101,11 @@ class ShoeboxCacheModule extends ScalaModule {
 
   @Singleton
   @Provides
+  def socialUserInfoCountCache(outerRepo: FortyTwoCachePlugin) =
+    new SocialUserInfoCountCache((outerRepo, 1 day))
+
+  @Singleton
+  @Provides
   def commentCountUriIdCache(outerRepo: FortyTwoCachePlugin) =
     new CommentCountUriIdCache((outerRepo, 1 hour))
 
