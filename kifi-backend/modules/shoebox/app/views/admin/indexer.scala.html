@@ -1,5 +1,6 @@
 @(articleIndexInfo: com.keepit.common.search.IndexInfo,
-  indexInfoSeq: Seq[com.keepit.common.search.IndexInfo])
+  uriGraphIndexInfoSeq: Seq[com.keepit.common.search.IndexInfo],
+  commentIndexInfoSeq: Seq[com.keepit.common.search.IndexInfo])
 
 @admin("Index") {
   <h2>Article Index</h2>
@@ -11,11 +12,21 @@
   </div>
   <h2>URI Graph</h2>
   <div>
-    @indexInfoSeq.map{ info =>
+    @uriGraphIndexInfoSeq.map{ info =>
       <b>index name:</b> @{info.name}<br>
       <b>num documents indexed:</b> @{info.numDocs}<br>
       <b>last committed at:</b> @{info.committedAt.getOrElse("N/A")}<br>
       <b>last sequence number:</b> @{info.sequenceNumber.getOrElse("N/A")}<br><br>
     }
   </div>
+  <h2>Comment Index</h2>
+  <div>
+    @commentIndexInfoSeq.map{ info =>
+      <b>index name:</b> @{info.name}<br>
+      <b>num documents indexed:</b> @{info.numDocs}<br>
+      <b>last committed at:</b> @{info.committedAt.getOrElse("N/A")}<br>
+      <b>last sequence number:</b> @{info.sequenceNumber.getOrElse("N/A")}<br><br>
+    }
+  </div>
+  
 }

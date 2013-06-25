@@ -130,6 +130,8 @@ aside.right {right: 0; width: 25.78125%; min-width: 330px}
 .detail h2 {color: #556179; font-size: 1.2em; margin-top: 0; margin-bottom: .1em}
 .detail select {padding: 5px}
 .detail a {color: #556179; display: block}
+.detail .screenshot {display: none}
+.detail .has-screenshot {display: block; background-size: 250px auto; width: 250px; height: 140px}
 .detail .who-kept span {display: block; margin-bottom: 5px}
 .detail .who-kept span.private {display: none}
 .detail div.actions {position: absolute; bottom: 10px}

@@ -98,6 +98,8 @@ POST    /site/user/update-email     @com.keepit.controllers.website.UserControll
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html")
 GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSite(path: String)
 
+GET     /screenshot                 @com.keepit.controllers.website.BookmarksController.screenshotUrl(url: String ?= "")
+
 
 
 POST    /admin/logging/emails       @com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
@@ -162,6 +164,9 @@ GET     /admin/uriGraph/update/:userId @com.keepit.controllers.admin.AdminURIGra
 GET     /admin/uriGraph/dumpDoc/:userId  @com.keepit.controllers.admin.AdminURIGraphController.dumpLuceneDocument(userId: Id[User])
 GET     /admin/uriGraph/reindexCollection  @com.keepit.controllers.admin.AdminURIGraphController.reindexCollection
 GET     /admin/uriGraph/dumpCollectionDoc/:colId  @com.keepit.controllers.admin.AdminURIGraphController.dumpCollectionLuceneDocument(colId: Id[Collection])
+
+GET     /admin/commentIndex/reindex @com.keepit.controllers.admin.AdminCommentIndexController.reindex
+GET     /admin/commentIndex/dumpDoc/:commentId  @com.keepit.controllers.admin.AdminCommentIndexController.dumpLuceneDocument(commentId: Id[Comment])
 
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView
 GET     /admin/users/page/:page                @com.keepit.controllers.admin.AdminUserController.usersView(page: Int)
@@ -241,6 +246,9 @@ POST    /admin/invites/reject       @com.keepit.controllers.admin.AdminInvitatio
 
 GET     /admin/labs/friendMap       @com.keepit.controllers.admin.AdminSearchLabsController.friendMap(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLabsController.friendMapJson(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
+
+GET     /admin/learning/docTopic    @com.keepit.controllers.admin.TopicModelController.documentTopic(content: Option[String] ?= None, topicId: Option[String] ?= None)
+POST    /admin/learning/inferDocTopic @com.keepit.controllers.admin.TopicModelController.inferTopic
 
 
 ##########################################

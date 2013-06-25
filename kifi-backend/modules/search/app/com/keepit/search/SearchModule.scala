@@ -19,6 +19,7 @@ import com.keepit.common.mail.RemotePostOffice
 import com.keepit.common.mail.RemotePostOfficeImpl
 import com.keepit.common.net.HttpClient
 import com.keepit.inject._
+import com.keepit.search.comment.{CommentIndexer, CommentIndexerPlugin, CommentIndexerPluginImpl, CommentStore}
 import com.keepit.search.graph.BookmarkStore
 import com.keepit.search.graph.CollectionIndexer
 import com.keepit.search.graph.{URIGraphPluginImpl, URIGraphPlugin, URIGraph, URIGraphIndexer}
@@ -67,6 +68,7 @@ class SearchModule() extends ScalaModule with Logging {
   def configure() {
     bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
+    bind[CommentIndexerPlugin].to[CommentIndexerPluginImpl].in[AppScoped]
     bind[RemotePostOffice].to[RemotePostOfficeImpl]
     install(new SearchCacheModule)
   }
@@ -123,6 +125,24 @@ class SearchModule() extends ScalaModule with Logging {
     log.info(s"storing collection index in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     new CollectionIndexer(dir, config, shoeboxClient)
+  }
+
+  @Singleton
+  @Provides
+  def commentStore(shoeboxClient: ShoeboxServiceClient): CommentStore = {
+    val dir = getDirectory(current.configuration.getString("index.commentStore.directory"))
+    log.info(s"storing CommentStore in $dir")
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new CommentStore(dir, config, shoeboxClient)
+  }
+
+  @Singleton
+  @Provides
+  def commentIndexer(commentStore: CommentStore, shoeboxClient: ShoeboxServiceClient): CommentIndexer = {
+    val dir = getDirectory(current.configuration.getString("index.comment.directory"))
+    log.info(s"storing comment index in $dir")
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new CommentIndexer(dir, config, commentStore, shoeboxClient)
   }
 
   @Singleton

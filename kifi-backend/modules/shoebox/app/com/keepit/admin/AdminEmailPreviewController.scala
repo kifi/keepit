@@ -16,7 +16,7 @@ class AdminEmailPreviewController @Inject() (
 
   val sender = User(firstName = "Jared", lastName = "Jacobs", state = UserStates.ACTIVE)
   val recipient = User(firstName = "Eishay", lastName = "Smith", state = UserStates.ACTIVE)
-  val uri = NormalizedURI(title = Some("New Balance Minimus"), url = "http://www.newbalance.com/NB-Minimus/minimus,default,pg.html", urlHash = UrlHash(""))
+  val uri = NormalizedURI(title = Some("New Balance Minimus"), url = "http://www.newbalance.com/NB-Minimus/minimus,default,pg.html", urlHash = UrlHash(""), screenshotUpdatedAt = None)
 
   def newMessage = AdminHtmlAction { implicit request =>
     val comment = Comment(uriId = null, userId = null, pageTitle = "my title", text = "These are the running shoes I was telling you about.")

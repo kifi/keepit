@@ -209,11 +209,6 @@ class URIGraphIndexer(
     }
 
     private def buildBookmarkTitleList(publicBookmarks: Seq[Bookmark], privateBookmarks: Seq[Bookmark], preferedLang: Lang): ArrayBuffer[(Int, String, Lang)] = {
-      val titleMap = bookmarks.foldLeft(Map.empty[Long, (String, Lang)]){ (m, b) =>
-        val text = b.title.getOrElse("")
-        m + (b.uriId.id -> (text, LangDetector.detect(text, preferedLang)))
-      }
-
       var lineNo = 0
       var titles = new ArrayBuffer[(Int, String, Lang)]
       publicBookmarks.foreach{ b =>

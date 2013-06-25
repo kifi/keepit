@@ -7,6 +7,9 @@ GET     /search                     @com.keepit.controllers.ext.ExtSearchControl
 # INTERNAL ROUTES/Search
 POST    /internal/search/events/resultClicked @com.keepit.controllers.search.SearchEventController.logResultClicked()
 
+GET     /internal/search/comment/info         @com.keepit.controllers.search.CommentIndexerController.indexInfo()
+GET     /internal/search/comment/reindex      @com.keepit.controllers.search.CommentIndexerController.reindex()
+
 GET     /internal/search/uriGraph/info         @com.keepit.controllers.search.URIGraphController.indexInfo()
 GET     /internal/search/uriGraph/sharingUserInfo @com.keepit.controllers.search.URIGraphController.sharingUserInfo(userId: Id[User], uriIds: String)
 POST    /internal/search/uriGraph/update       @com.keepit.controllers.search.URIGraphController.updateURIGraph()
