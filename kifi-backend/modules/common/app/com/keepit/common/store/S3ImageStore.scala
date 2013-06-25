@@ -33,7 +33,15 @@ trait S3ImageStore {
   def config: S3ImageConfig
   def getPictureUrl(width: Int, user: User): Future[String]
   def updatePicture(sui: SocialUserInfo, externalId: ExternalId[User]): Future[Seq[PutObjectResult]]
-  def avatarUrlByExternalId(w: Int, userId: ExternalId[User], protocolDefault: Option[String] = None): String
+  
+  def avatarUrlByExternalId(w: Int, userId: ExternalId[User], protocolDefault: Option[String] = None): String = {
+    val size = S3UserPictureConfig.ImageSizes.find(_ >= w).getOrElse(S3UserPictureConfig.ImageSizes.last)
+    val uri = URI.parse(s"${config.cdnBase}/${keyByExternalId(size, userId)}").get
+    URI(uri.scheme orElse protocolDefault, uri.userInfo, uri.host, uri.port, uri.path, uri.query, uri.fragment).toString
+  }
+
+  def keyByExternalId(size: Int, userId: ExternalId[User]): String =
+    s"users/$userId/pics/$size/0.jpg"
 }
 
 @Singleton
@@ -50,15 +58,6 @@ class S3ImageStoreImpl @Inject() (
 
   private val UserPictureLastUpdatedKey = "user_picture_last_updated"
   private val ExpirationTime = Weeks.ONE
-  
-  def avatarUrlByExternalId(w: Int, userId: ExternalId[User], protocolDefault: Option[String] = None): String = {
-    val size = S3UserPictureConfig.ImageSizes.find(_ >= w).getOrElse(S3UserPictureConfig.ImageSizes.last)
-    val uri = URI.parse(s"${config.cdnBase}/${keyByExternalId(size, userId)}").get
-    URI(uri.scheme orElse protocolDefault, uri.userInfo, uri.host, uri.port, uri.path, uri.query, uri.fragment).toString
-  }
-
-  private def keyByExternalId(size: Int, userId: ExternalId[User]): String =
-    s"users/$userId/pics/$size/0.jpg"
 
   def getPictureUrl(width: Int, user: User): Future[String] = {
     val sui = db.readOnly { implicit s => suiRepo.getByUser(user.id.get).head }
