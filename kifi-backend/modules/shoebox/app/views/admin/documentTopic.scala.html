@@ -1,0 +1,17 @@
+@(content: Option[String], topicId: Option[String])
+
+@admin("Document Topic") {
+  <form action = "@com.keepit.controllers.admin.routes.TopicModelController.inferTopic" method = "POST">
+    <div>
+      <label for = "doc">Type or paste document here </label>
+      <textarea id="doc" name="doc" rows="10" cols="100" maxlength = 20000>@{content.getOrElse("")}</textarea>
+    </div>
+    <div>
+      <label for = "topic">topic ids and scores </label>
+      <input type="text" name="topic" value= @topicId.getOrElse("")></input>
+    </div>
+    <div class="buttons">
+      <button type="submit">Infer Topics</button>
+    </div>
+  </form>
+}
