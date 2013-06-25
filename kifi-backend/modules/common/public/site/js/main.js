@@ -81,7 +81,7 @@ $(function() {
 						var collName = collections[collId].name;
 						$coll.find(".keep-count").text(collections[collId].keeps += data.addedToCollection);
 						$keeps.addClass("mine")
-							.find("keep-colls:not(:has(.keep-coll[data-id=" + collId + "]))")
+							.find(".keep-colls:not(:has(.keep-coll[data-id=" + collId + "]))")
 							.append("<span class=keep-coll data-id=" + collId + ">" + collName + "</span>");
 						if (!$inColl.find("#cb1-" + collId).length) {
 							inCollTmpl.append({id: collId, name: collName});
