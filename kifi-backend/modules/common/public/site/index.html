@@ -105,7 +105,7 @@
 			<div class="antiscroll-inner">
 				<ol id="search-results"></ol>
 				<ol id="my-keeps">
-					<li class="keep{% if isMyBookmark %} mine{% endif %}" data-template data-id="{{id}}" data-collections="{{collections}}" style="display:none">
+					<li class="keep{% if isMyBookmark %} mine{% endif %}" data-template data-id="{{id}}" style="display:none">
 						{% if typeof createdAt !== "undefined" %}
 							<time datetime="{{createdAt}}">{{createdAt}}</time>
 						{% endif %}
@@ -116,6 +116,9 @@
 							<a href="{{url}}" target="_blank" title="{{title}}">{{title}}</a>
 						</div>
 						<div class="keep-url long-text" title="{{url}}">{{url | replace '^http://', '	' | replace '^([^/]*)/$', '$1'}}</div>
+						<div class="keep-colls">
+							<span class="keep-coll" data-template-for="collections" data-id="{{id}}">{{name}}</span>
+						</div>
 						<div class="keep-who">
 							<img class="small-avatar me" src="//djty7jcqog9qu.cloudfront.net/users/{{me.id}}/pics/100/{{me.pictureName}}">
 						  <img class="small-avatar" data-template-for="keepers"

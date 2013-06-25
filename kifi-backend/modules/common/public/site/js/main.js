@@ -102,12 +102,6 @@ $(function() {
 		return this.each(function() {this.clientHeight});  // forces layout
 	};
 
-	function unique(arr) {
-		return $.grep(arr, function(v, k) {
-			return $.inArray(v, arr) === k;
-		});
-	}
-
 	function onDropOnCollectionAjaxError() {
 		showMessage('Could not add to collection, please try again later');
 	}
@@ -199,7 +193,7 @@ $(function() {
 		$.getJSON(urlMyKeeps, params,
 			function(data) {
 				data.keeps.forEach(prepKeepForRender);
-				keepsTmpl.prepend(data.keeps);
+				keepsTmpl.into($myKeeps[0]).prepend(data.keeps);
 				$myKeeps.find('.keep-group-title.today').prependTo($myKeeps);
 			});
 	}
@@ -253,9 +247,9 @@ $(function() {
 					} else {
 						data.keeps.forEach(prepKeepForRender);
 						if (lastKeep == null) {
-							keepsTmpl.render(data.keeps);
+							keepsTmpl.into($myKeeps[0]).render(data.keeps);
 						} else {
-							keepsTmpl.append(data.keeps);
+							keepsTmpl.into($myKeeps[0]).append(data.keeps);
 						}
 						lastKeep = data.keeps[data.keeps.length - 1].id;
 					}
@@ -462,17 +456,15 @@ $(function() {
 			$title.find('h2').text($selected.length + " keeps selected");
 			$title.find('a').empty();
 			$who.empty();
-			var allCol = [], ids;
+			var allCollIds = {};
 			$selected.each(function() {
 				$who.append('<div class=long-text>' + $(this).find('a').first().html() + '</div>');
-				if (ids = $(this).data('collections').length) {
-					allCol.push.apply(allCol, ids.split(','));
-				}
+			}).find(".keep-coll").each(function() {
+				allCollIds[$(this).data("id")] = true;
 			});
-			allCol = unique(allCol);
 			$inColl.empty();
-			for (i in allCol) {
-				inCollTmpl.append({id: allCol[i], name: collections[allCol[i]].name});
+			for (var collId in allCollIds) {
+				inCollTmpl.append({id: collId, name: collections[id].name});
 			}
 			showRightSide();
 		} else { // one keep is selected
@@ -483,11 +475,10 @@ $(function() {
 			$who.html($keep.find(".keep-who").html());
 			$who.find('span').prependTo($who);
 			$inColl.empty();
-			if ($keep.data('collections')) {
-				$keep.data('collections').split(',').forEach(function(id) {
-					inCollTmpl.append({id: id, name: collections[id].name});
-				});
-			}
+			$keep.find('.keep-coll').each(function() {
+				var id = $(this).data('id');
+				inCollTmpl.append({id: id, name: collections[id].name});
+			});
 			var $btn = $('aside.right .keepit .keep-button');
 			if ($keep.is('.mine')) {
 				$btn.addClass('kept').toggleClass('private', !!$keep.has('.keep-private.on').length).find('.text').text('kept');
