@@ -30,7 +30,7 @@ class ResultClickTracker(lru: ProbablisticLRU) {
   def add(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isUserKeep: Boolean) = {
     val hash = QueryHash(userId, query, analyzer)
     val updateStrength = if (isUserKeep) {
-      min(0.1d * (rank.toDouble + 1.0d), 0.7d)
+      min(0.1d * (rank.toDouble + 3.0d), 0.7d)
     } else {
       0.20d
     }
