@@ -60,7 +60,6 @@ $(function() {
 		collScroller.refresh();
 		$colls.find(".collection").droppable(droppableCollectionOpts);
 	});
-	var $inColl = $(".in-collections"), inCollTmpl = Tempo.prepare($inColl);
 	var droppableCollectionOpts = {
 			accept: ".keep",
 			greedy: true,
@@ -90,6 +89,8 @@ $(function() {
 					}
 				});
 			}};
+
+	var $inColl = $(".in-collections"), inCollTmpl = Tempo.prepare($inColl);
 
 	var me;
 	var myKeepsCount;
@@ -385,7 +386,8 @@ $(function() {
 		// remove selected keeps from collection
 		var $row = $(this).closest('.row');
 		var colId = $(this).data('id');
-		var keepIds = $main.find(".keep.selected").map(function() {return $(this).data('id')}).get();
+		var $keeps = $main.find(".keep.selected");
+		var keepIds = $keeps.map(function() {return $(this).data('id')}).get();
 		$.ajax({
 			url: urlCollections + "/" + colId + "/removeKeeps",
 			type: "POST",
@@ -395,7 +397,8 @@ $(function() {
 			error: showMessage.bind(null, 'Could not remove keeps from collection, please try again later'),
 			success: function(data) {
 				console.log(data);
-				$('#collections-list>.collection[data-id="'+colId+'"] .keep-count').text(collections[colId].keeps -= data.removed);
+				$collList.find(".collection[data-id=" + colId + "]").find(".keep-count").text(collections[colId].keeps -= data.removed);
+				$keeps.find(".keep-coll[data-id=" + colId + "]").remove();
 				$row.remove();
 			}});
 
@@ -464,7 +467,7 @@ $(function() {
 			});
 			$inColl.empty();
 			for (var collId in allCollIds) {
-				inCollTmpl.append({id: collId, name: collections[id].name});
+				inCollTmpl.append({id: collId, name: collections[collId].name});
 			}
 			showRightSide();
 		} else { // one keep is selected
@@ -713,6 +716,7 @@ $(function() {
 				,contentType: 'application/json'
 				,error: function() {showMessage('Could not remove keeps, please try again later')}
 				,success: function(data) {
+					// TODO: decrement all relevant collection counts
 					keepButton.removeClass('kept');
 					keepButton.find('span.text').text('keep it');
 				}
