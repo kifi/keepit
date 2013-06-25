@@ -98,6 +98,8 @@ POST    /site/user/update-email     @com.keepit.controllers.website.UserControll
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html")
 GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSite(path: String)
 
+GET     /screenshot                 @com.keepit.controllers.website.BookmarksController.screenshotUrl(url: String ?= "")
+
 
 
 POST    /admin/logging/emails       @com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()

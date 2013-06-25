@@ -5,7 +5,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
 import com.keepit.common.db.{State, Id, SequenceNumber}
 import com.keepit.common.db.slick.DBSession.RSession
-import scala.Some
+import org.joda.time.DateTime
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] {
@@ -35,7 +35,8 @@ class NormalizedURIRepoImpl @Inject() (
     def url = column[String]("url", O.NotNull)
     def urlHash = column[UrlHash]("url_hash", O.NotNull)
     def seq = column[SequenceNumber]("seq", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state ~ seq <> (NormalizedURI,
+    def screenshotUpdatedAt = column[DateTime]("screenshot_updated_at")
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state ~ seq ~ screenshotUpdatedAt.? <> (NormalizedURI,
       NormalizedURI.unapply _)
   }
 
