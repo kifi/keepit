@@ -82,7 +82,7 @@ $(function() {
 						$coll.find(".keep-count").text(collections[collId].keeps += data.addedToCollection);
 						$keeps.addClass("mine")
 							.find(".keep-colls:not(:has(.keep-coll[data-id=" + collId + "]))")
-							.contents().filter(function() {return this.nodeType == 3}).remove().end()
+							.contents().filter(function() {return this.nodeType == 3}).remove().end().end()
 							.append("<a href=javascript: class=keep-coll data-id=" + collId + ">" + collName + "</a>");
 						if (!$inColl.find("#cb1-" + collId).length) {
 							inCollTmpl.append({id: collId, name: collName});
