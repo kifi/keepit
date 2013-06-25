@@ -249,6 +249,7 @@ GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLab
 
 GET     /admin/learning/docTopic    @com.keepit.controllers.admin.TopicModelController.documentTopic(content: Option[String] ?= None, topicId: Option[String] ?= None)
 POST    /admin/learning/inferDocTopic @com.keepit.controllers.admin.TopicModelController.inferTopic
+GET    /admin/learning/resetTopic  @com.keepit.controllers.admin.TopicModelController.resetAllTopicTables()
 
 
 ##########################################

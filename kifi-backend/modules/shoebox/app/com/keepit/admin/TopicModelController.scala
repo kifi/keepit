@@ -11,9 +11,15 @@ import com.keepit.model.UriTopicHelper
 class TopicModelController  @Inject() (
   docTopicModel: DocumentTopicModel,
   wordTopicMode: WordTopicModel,
+  topicPlugin: TopicUpdaterPlugin,
   actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator){
 
   val uriTopicHelper = new UriTopicHelper
+
+  def resetAllTopicTables() = AdminHtmlAction{ implicit request =>
+    val (nUri, nUser) = topicPlugin.reset()
+    Ok(s"topic tables have been reset. num uris deleted: ${nUri}, num users deleted: ${nUser}")
+  }
 
   def documentTopic(content: Option[String] = None, topicId: Option[String] = None) = AdminHtmlAction{ implicit request =>
     Ok(html.admin.documentTopic(content, topicId))
