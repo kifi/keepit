@@ -19,6 +19,7 @@ import com.keepit.model.ExternalUserIdCache
 import com.keepit.model.UserExperimentCache
 import com.keepit.model.SliderHistoryUserIdCache
 import com.keepit.model.BookmarkCountCache
+import com.keepit.model.SocialUserInfoCountCache
 import com.keepit.model.CommentCountUriIdCache
 import com.keepit.model.UserValueCache
 import com.keepit.model.BrowsingHistoryUserIdCache
@@ -118,6 +119,11 @@ class DevCacheModule extends ScalaModule {
   @Provides
   def bookmarkCountCache(outerRepo: FortyTwoCachePlugin) =
     new BookmarkCountCache((outerRepo, 1 hour))
+
+  @Singleton
+  @Provides
+  def socialUserInfoCountCache(outerRepo: FortyTwoCachePlugin) =
+    new SocialUserInfoCountCache((outerRepo, 1 hour))
 
   @Singleton
   @Provides

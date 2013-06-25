@@ -81,8 +81,9 @@ $(function() {
 						var collName = collections[collId].name;
 						$coll.find(".keep-count").text(collections[collId].keeps += data.addedToCollection);
 						$keeps.addClass("mine")
-							.find("keep-colls:not(:has(.keep-coll[data-id=" + collId + "]))")
-							.append("<span class=keep-coll data-id=" + collId + ">" + collName + "</span>");
+							.find(".keep-colls:not(:has(.keep-coll[data-id=" + collId + "]))")
+							.contents().filter(function() {return this.nodeType == 3}).remove().end()
+							.append("<a href=javascript: class=keep-coll data-id=" + collId + ">" + collName + "</a>");
 						if (!$inColl.find("#cb1-" + collId).length) {
 							inCollTmpl.append({id: collId, name: collName});
 						}
@@ -433,6 +434,12 @@ $(function() {
 
 	var $main = $(".main").on("mousedown", ".keep-checkbox", function(e) {
 		e.preventDefault();  // avoid starting selection
+	}).on("click", ".keep-coll", function(e) {
+		e.stopPropagation(), e.preventDefault();
+		var collId = $(this).data("id");
+		if (collId !== $collList.find(".collection.active").data("id")) {
+			showMyKeeps(collId);
+		}
 	}).on("click", ".keep", function(e) {
 		// 1. Only one keep at a time can be selected and not checked.
 		// 2. If a keep is selected and not checked, no keeps are checked.
