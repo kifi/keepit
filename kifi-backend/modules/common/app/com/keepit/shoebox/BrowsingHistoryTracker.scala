@@ -12,8 +12,13 @@ import com.keepit.common.logging.Logging
 import com.keepit.search.MultiHashFilter
 import com.keepit.model.BrowsingHistory
 
-class BrowsingHistoryTracker (tableSize: Int, numHashFuncs: Int, minHits: Int,
-    browsingHistoryRepo: BrowsingHistoryRepo, db: Database) extends Logging{
+trait BrowsingHistoryTracker {
+  def add(userId: Id[User], uriId: Id[NormalizedURI]): BrowsingHistory
+  def getMultiHashFilter(userId: Id[User]): MultiHashFilter[BrowsingHistory]
+}
+
+class BrowsingHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits: Int,
+    browsingHistoryRepo: BrowsingHistoryRepo, db: Database) extends BrowsingHistoryTracker with Logging {
 
   def add(userId: Id[User], uriId: Id[NormalizedURI]) = {
     val filter = getMultiHashFilter(userId)

@@ -10,7 +10,12 @@ import com.keepit.model.ClickHistoryRepoImpl
 import com.keepit.search.MultiHashFilter
 import com.keepit.model._
 
-class ClickHistoryTracker (tableSize: Int, numHashFuncs: Int, minHits: Int, repo: ClickHistoryRepo, db: Database) extends Logging {
+trait ClickHistoryTracker {
+  def add(userId: Id[User], uriId: Id[NormalizedURI]): ClickHistory
+  def getMultiHashFilter(userId: Id[User]): MultiHashFilter[ClickHistory]
+}
+
+class ClickHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits: Int, repo: ClickHistoryRepo, db: Database) extends ClickHistoryTracker with Logging {
 
   def add(userId: Id[User], uriId: Id[NormalizedURI]) = {
     val filter = getMultiHashFilter(userId)

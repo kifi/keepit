@@ -2,55 +2,42 @@ package com.keepit.search
 
 import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.graph.BookmarkStore
-import com.keepit.search.graph.URIGraph
-import com.keepit.search.graph.URIGraphSearcher
-import com.keepit.search.graph.URIList
-import index.{FakePhraseIndexer, Indexable, DefaultAnalyzer, ArticleIndexer}
+import index.{FakePhraseIndexer, DefaultAnalyzer, ArticleIndexer}
 import com.keepit.search.phrasedetector._
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.db._
-import com.keepit.common.db.slick._
 import com.keepit.common.time._
 import com.keepit.test._
 import org.specs2.mutable._
-import play.api.Play.current
-import play.api.libs.json.Json
-import play.api.test._
 import play.api.test.Helpers._
-import org.apache.lucene.store.RAMDirectory
 import scala.math._
-import scala.util.Random
-import com.keepit.inject._
-import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.util.Version
 import com.keepit.search.query.parser.FakeSpellCorrector
 import com.keepit.common.service.FortyTwoServices
 import org.apache.lucene.index.IndexWriterConfig
-import org.apache.lucene.store.{Directory, MMapDirectory, RAMDirectory}
+import org.apache.lucene.store.RAMDirectory
+import com.keepit.search.graph.{URIGraphImpl, URIGraphIndexer}
 import org.apache.lucene.util.Version
-import com.keepit.search.graph.{URIGraph, URIGraphImpl, URIGraphFields, URIGraphIndexer}
-import org.apache.lucene.util.Version
-import com.keepit.shoebox.ShoeboxServiceClient
-import com.keepit.common.net.HttpClient
-import com.keepit.common.net.FakeHttpClient
-import play.api.libs.json.JsArray
-import com.keepit.common.net._
 import com.keepit.search.graph.CollectionIndexer
-import com.keepit.search.graph.CollectionFields
 import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent.Promise
-import com.keepit.shoebox.FakeShoeboxServiceClientImpl
-import scala.concurrent.duration.Duration
+import scala.Some
+import com.keepit.model.NormalizedURI
+import com.keepit.model.User
+import com.keepit.inject._
+import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
+import play.api.Play.current
 
-class MainSearcherTest extends Specification with DbRepos {
+class MainSearcherTest extends Specification {
 
   val resultClickTracker = ResultClickTracker(8)
 
-  def initData(numUsers: Int, numUris: Int) = db.readWrite { implicit s =>
-    ((0 until numUsers).map(n => userRepo.save(User(firstName = "foo" + n, lastName = ""))).toList,
-     (0 until numUris).map(n => uriRepo.save(NormalizedURIFactory(title = "a" + n,
-       url = "http://www.keepit.com/article" + n, state = SCRAPED))).toList)
+  def initData(numUsers: Int, numUris: Int) = {
+    val users = (0 until numUsers).map {n => User(firstName = "foo" + n, lastName = "")}.toList
+    val uris =   (0 until numUris).map {n => NormalizedURIFactory(title = "a" + n,
+        url = "http://www.keepit.com/article" + n, state = SCRAPED)}.toList
+    val fakeShoeboxClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+    (fakeShoeboxClient.saveUsers(users:_*), fakeShoeboxClient.saveURIs(uris:_*))
   }
 
   def initIndexes(store: ArticleStore) = {
@@ -61,25 +48,25 @@ class MainSearcherTest extends Specification with DbRepos {
     val articleIndexer = new ArticleIndexer(new RAMDirectory, articleConfig, store, null, inject[ShoeboxServiceClient])
     val bookmarkStore = new BookmarkStore(new RAMDirectory, bookmarkStoreConfig, inject[ShoeboxServiceClient])
     val uriGraph = new URIGraphImpl(
-        new URIGraphIndexer(new RAMDirectory, graphConfig, bookmarkStore, inject[ShoeboxServiceClient]),
-        new CollectionIndexer(new RAMDirectory, collectConfig, inject[ShoeboxServiceClient]),
-        inject[ShoeboxServiceClient],
-        inject[MonitoredAwait])
+      new URIGraphIndexer(new RAMDirectory, graphConfig, bookmarkStore, inject[ShoeboxServiceClient]),
+      new CollectionIndexer(new RAMDirectory, collectConfig, inject[ShoeboxServiceClient]),
+      inject[ShoeboxServiceClient],
+      inject[MonitoredAwait])
     implicit val clock = inject[Clock]
     implicit val fortyTwoServices = inject[FortyTwoServices]
 
     val mainSearcherFactory = new MainSearcherFactory(
-        articleIndexer,
-        uriGraph,
-        new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer())),
-        resultClickTracker,
-        inject[BrowsingHistoryBuilder],
-        inject[ClickHistoryBuilder],
-        inject[ShoeboxServiceClient],
-        inject[FakeSpellCorrector],
-        inject[MonitoredAwait],
-        clock,
-        fortyTwoServices)
+      articleIndexer,
+      uriGraph,
+      new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer())),
+      resultClickTracker,
+      inject[BrowsingHistoryBuilder],
+      inject[ClickHistoryBuilder],
+      inject[ShoeboxServiceClient],
+      inject[FakeSpellCorrector],
+      inject[MonitoredAwait],
+      clock,
+      fortyTwoServices)
     (uriGraph, articleIndexer, mainSearcherFactory)
   }
 
@@ -92,30 +79,47 @@ class MainSearcherTest extends Specification with DbRepos {
 
   def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String) = {
     Article(
-        id = normalizedUriId,
-        title = title,
-        description = None,
-        media = None,
-        content = content,
-        scrapedAt = currentDateTime,
-        httpContentType = Some("text/html"),
-        httpOriginalContentCharset = Option("UTF-8"),
-        state = SCRAPED,
-        message = None,
-        titleLang = Some(Lang("en")),
-        contentLang = Some(Lang("en")))
+      id = normalizedUriId,
+      title = title,
+      description = None,
+      media = None,
+      content = content,
+      scrapedAt = currentDateTime,
+      httpContentType = Some("text/html"),
+      httpOriginalContentCharset = Option("UTF-8"),
+      state = SCRAPED,
+      message = None,
+      titleLang = Some(Lang("en")),
+      contentLang = Some(Lang("en")))
   }
 
   def setConnections(connections: Map[Id[User], Set[Id[User]]]) {
-    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].setConnections(connections)
+    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].clearUserConnections(connections.keys.toSeq:_*)
+    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveConnections(connections)
+  }
+
+  def saveCollections(collections: Collection*): Seq[Collection] = {
+    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveCollections(collections:_*)
+  }
+
+  def saveBookmarksToCollection(collectionId: Id[Collection], bookmarks: Bookmark*) {
+    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarksToCollection(collectionId, bookmarks:_*)
+  }
+
+  def saveBookmarksByURI(edgesByURI: Seq[(NormalizedURI, Seq[User])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false): Seq[Bookmark] = {
+    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarksByURI(edgesByURI, uniqueTitle, isPrivate, source)
+  }
+
+  def saveBookmarksByUser(edgesByUser: Seq[(User, Seq[NormalizedURI])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false): Seq[Bookmark] = {
+    inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl].saveBookmarksByUser(edgesByUser, uniqueTitle, isPrivate, source)
   }
 
   val source = BookmarkSource("test")
-
   val defaultConfig = new SearchConfig(SearchConfig.defaultParams)
-  val noBoostConfig = defaultConfig("myBookmarkBoost" -> "1", "sharingBoostInNetwork" -> "0", "sharingBoostOutOfNetwork" -> "0",
-                                    "recencyBoost" -> "0", "proximityBoost" -> "0", "semanticBoost" -> "0",
-                                    "percentMatch" -> "0", "tailCutting" -> "0", "dampingByRank" -> "false")
+  val noBoostConfig = defaultConfig(
+    "myBookmarkBoost" -> "1", "sharingBoostInNetwork" -> "0", "sharingBoostOutOfNetwork" -> "0",
+    "recencyBoost" -> "0", "proximityBoost" -> "0", "semanticBoost" -> "0",
+    "percentMatch" -> "0", "tailCutting" -> "0", "dampingByRank" -> "false")
   val allHitsConfig = defaultConfig("tailCutting" -> "0")
 
   implicit val lang = Lang("en")
@@ -125,14 +129,7 @@ class MainSearcherTest extends Specification with DbRepos {
       running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
-        val bookmarks = db.readWrite { implicit s =>
-          expectedUriToUserEdges.flatMap{ case (uri, users) =>
-            users.map{ user =>
-              val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))))
-              bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = source))
-            }
-          }
-        }
+        saveBookmarksByURI(expectedUriToUserEdges)
 
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
@@ -182,17 +179,10 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "return a single list of hits" in {
-       running(new DevApplication().withShoeboxServiceModule) {
+      running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
-        val bookmarks = db.readWrite { implicit session =>
-          expectedUriToUserEdges.flatMap{ case (uri, users) =>
-            users.map{ user =>
-              val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))))
-              bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = source))
-            }
-          }
-        }
+        saveBookmarksByURI(expectedUriToUserEdges)
 
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
@@ -241,17 +231,10 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "search personal bookmark titles" in {
-        running(new DevApplication().withShoeboxServiceModule) {
+      running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
-        val bookmarks = db.readWrite {implicit s =>
-          expectedUriToUserEdges.flatMap{ case (uri, users) =>
-            users.map{ user =>
-              val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))))
-              bookmarkRepo.save(BookmarkFactory(title = "personal title", url = url1,  uriId = uri.id.get, userId = user.id.get, source = source))
-            }
-          }
-        }
+        saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("personal title"))
 
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
@@ -306,17 +289,11 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "score using matches in a bookmark title and an article" in {
-        running(new DevApplication().withShoeboxServiceModule) {
+      running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
-        val bookmarks = db.readWrite { implicit s =>
-          expectedUriToUserEdges.flatMap{ case (uri, users) =>
-            users.map{ user =>
-              val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))))
-              bookmarkRepo.save(BookmarkFactory(title = "personal title", url = url1,  uriId = uri.id.get, userId = user.id.get, source = source))
-            }
-          }
-        }
+        saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("personal title"))
+
 
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
@@ -331,7 +308,7 @@ class MainSearcherTest extends Specification with DbRepos {
         val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), noBoostConfig("myBookMarkBoost" -> "1.5"))
         val graphSearcher = mainSearcher.uriGraphSearcher
 
-        val expected = (uris(3) :: ((uris diff List(uris(3))).reverse)).map(_.id.get).toList
+        val expected = (uris(3) :: ((uris.toList diff List(uris(3))).reverse)).map(_.id.get).toList
         val res = mainSearcher.search("personal title3 content3 xyz", numHitsToReturn, None)
 
         val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
@@ -341,17 +318,10 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "paginate" in {
-        running(new DevApplication().withShoeboxServiceModule) {
+      running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
-        val bookmarks = db.readWrite { implicit s =>
-          expectedUriToUserEdges.flatMap{ case (uri, users) =>
-            users.map{ user =>
-              val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))))
-              bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user.id.get, source = source))
-            }
-          }
-        }
+        saveBookmarksByURI(expectedUriToUserEdges)
 
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
@@ -390,21 +360,12 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "boost recent bookmarks" in {
-        running(new DevApplication().withShoeboxServiceModule) {
+      running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 1, numUris = 5)
-        val userId = users.head.id.get
-        val now = currentDateTime
-        val rand = new Random
-
-        val bookmarkMap = db.readWrite { implicit s =>
-          uris.foldLeft(Map.empty[Id[NormalizedURI], Bookmark]){ (m, uri) =>
-            val createdAt = now.minusHours(rand.nextInt(100))
-            val uriId = uri.id.get
-            val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-            val bookmark = bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = userId, source = source))
-            m + (uriId -> bookmark)
-          }
-        }
+        val user = users.head
+        val userId = user.id.get
+        val bookmarks = saveBookmarksByUser(Seq((user, uris)))
+        val bookmarkMap = bookmarks.map(b => (b.uriId -> b)).toMap
 
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
@@ -420,27 +381,22 @@ class MainSearcherTest extends Specification with DbRepos {
         var lastTime = Long.MaxValue
 
         res.hits.map{ h => bookmarkMap(h.uriId) }.foreach{ b =>
-          b.createdAt.getMillis <= lastTime === true
-         lastTime = b.createdAt.getMillis
+          (b.createdAt.getMillis <= lastTime) === true
+          lastTime = b.createdAt.getMillis
         }
         indexer.numDocs === uris.size
       }
     }
 
     "be able to cut the long tail" in {
-        running(new DevApplication().withShoeboxServiceModule) {
+      running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 1, numUris = 10)
-        val userId = users.head.id.get
-
-        val bookmarks = db.readWrite { implicit s =>
-          uris.map{ uri =>
-            val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-            bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = userId, source = source))
-          }
-        }
+        val user = users.head
+        val userId = user.id.get
+        saveBookmarksByUser(Seq((user, uris)))
 
         val store = {
-         val sz = uris.size
+          val sz = uris.size
           uris.zipWithIndex.foldLeft(new FakeArticleStore){ case (store, (uri, idx)) =>
             store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), "alldocs " * idx + "dummy" * (sz - idx)))
             store
@@ -465,26 +421,18 @@ class MainSearcherTest extends Specification with DbRepos {
         mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), tailCuttingConfig)
         res = mainSearcher.search("alldocs", uris.size, None)
         //println("Scores: " + res.hits.map(_.score))
-        res.hits.map(h => h.score).reduce((s1, s2) => min(s1, s2)) >= medianScore === true
+        (res.hits.map(h => h.score).reduce((s1, s2) => min(s1, s2)) >= medianScore) === true
       }
     }
 
     "show own private bookmarks" in {
-        running(new DevApplication().withShoeboxServiceModule) {
+      running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
         val (privateUris, publicUris) = uris.partition(_.id.get.id % 3 == 0)
-        db.readWrite { implicit s =>
-          privateUris.foreach{ uri =>
-            val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-            bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user1.id.get, source = source))
-          }
-          publicUris.foreach{ uri =>
-            val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-            bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url1,  uriId = uri.id.get, userId = user1.id.get, source = source))
-          }
-        }
+        saveBookmarksByUser(Seq((user1, publicUris)), isPrivate = false)
+        saveBookmarksByUser(Seq((user1, privateUris)), isPrivate = true)
 
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
@@ -502,21 +450,13 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "not show friends private bookmarks" in {
-        running(new DevApplication().withShoeboxServiceModule) {
+      running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
         val (privateUris, publicUris) = uris.partition(_.id.get.id % 3 == 0)
-        db.readWrite { implicit s =>
-          privateUris.foreach{ uri =>
-            val url = urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-            bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url, uriId = uri.id.get, userId = user2.id.get, source = source).withPrivate(true)) // wtf??
-          }
-          publicUris.foreach{ uri =>
-            val url = urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-            bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url, uriId = uri.id.get, userId = user2.id.get, source = source))
-          }
-        }
+        saveBookmarksByUser(Seq((user2, publicUris)), isPrivate = false)
+        saveBookmarksByUser(Seq((user2, privateUris)), isPrivate = true)
 
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
@@ -541,17 +481,10 @@ class MainSearcherTest extends Specification with DbRepos {
     }
 
     "search hits using a stemmed word" in {
-        running(new DevApplication().withShoeboxServiceModule) {
+      running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
-        val bookmarks = db.readWrite { implicit s =>
-          expectedUriToUserEdges.flatMap{ case (uri, users) =>
-            users.map{ user =>
-              val url1 = urlRepo.save(urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get))))
-              bookmarkRepo.save(BookmarkFactory(title = "my books", url = url1, uriId = uri.id.get, userId = user.id.get, source = source))
-            }
-          }
-        }
+        saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("my books"))
 
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
@@ -566,47 +499,28 @@ class MainSearcherTest extends Specification with DbRepos {
         val graphSearcher = mainSearcher.uriGraphSearcher
 
         var res = mainSearcher.search("document", numHitsToReturn, None)
-        res.hits.size > 0 === true
+        (res.hits.size > 0) === true
 
         res = mainSearcher.search("book", numHitsToReturn, None)
-        res.hits.size > 0 === true
+        (res.hits.size > 0) === true
       }
     }
 
     "search within collections" in {
-        running(new DevApplication().withShoeboxServiceModule) {
+      running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
-        val bookmarks = db.readWrite { implicit s =>
-          uris.map{ uri =>
-            val url = urlRepo.save(urlRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-            bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url,  uriId = uri.id.get, userId = user1.id.get, source = source))
-          }
-        }
+        val bookmarks = saveBookmarksByUser(Seq((user1, uris), (user2, uris)))
 
-        db.readWrite { implicit s =>
-          uris.map{ uri =>
-            val url = urlRepo.save(urlRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-            bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url,  uriId = uri.id.get, userId = user2.id.get, source = source))
-          }
-        }
-
-        val (coll1set, tmp) = uris.partition(_.id.get.id % 3 == 0)
-        val (coll2set, nocoll) = tmp.partition(_.id.get.id % 3 == 1)
-
-        val (coll1, coll2) = db.readWrite { implicit s =>
-          def mk(name: String, uris: Seq[NormalizedURI]) = {
-            val coll = collectionRepo.save(Collection(userId = user1.id.get, name = name))
-            uris.map { uri =>
-              val url = urlRepo.save(urlRepo.get(uri.url).getOrElse(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-              val bookmark = bookmarkRepo.save(BookmarkFactory(title = uri.title.get, url = url,  uriId = uri.id.get, userId = user1.id.get, source = source))
-              keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark.id.get, collectionId = coll.id.get))
-            }
-            coll
-          }
-          (mk("coll1", coll1set), mk("coll2", coll2set))
-        }
+        val (coll1set, _) = bookmarks.partition { b => b.userId == user1.id.get && b.uriId.id % 3 == 0 }
+        val (coll2set, _) = bookmarks.partition { b => b.userId == user2.id.get && b.uriId.id % 3 == 1 }
+        val Seq(coll1, coll2) = saveCollections(
+          Collection(userId = user1.id.get, name = "coll1"),
+          Collection(userId = user2.id.get, name = "coll2")
+        )
+        saveBookmarksToCollection(coll1.id.get, coll1set:_*)
+        saveBookmarksToCollection(coll2.id.get, coll2set:_*)
 
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)

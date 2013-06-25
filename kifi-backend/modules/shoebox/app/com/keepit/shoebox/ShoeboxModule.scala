@@ -166,7 +166,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val minHits = conf.getInt("minHits").get
 
-    new ClickHistoryTracker(filterSize, numHashFuncs, minHits, repo, db)
+    new ClickHistoryTrackerImpl(filterSize, numHashFuncs, minHits, repo, db)
   }
 
   @Singleton
@@ -177,7 +177,7 @@ class ShoeboxModule() extends ScalaModule with Logging {
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val minHits = conf.getInt("minHits").get
 
-    new BrowsingHistoryTracker(filterSize, numHashFuncs, minHits, browsingHistoryRepo, db)
+    new BrowsingHistoryTrackerImpl(filterSize, numHashFuncs, minHits, browsingHistoryRepo, db)
   }
 
   @Singleton

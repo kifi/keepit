@@ -1,87 +1,193 @@
 package com.keepit.shoebox
 
+import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.common.db._
-import com.keepit.common.db.slick.Database
-import com.keepit.common.time._
-import com.keepit.common.service.FortyTwoServices
-import scala.concurrent.{Future, Promise, promise}
-import com.google.inject.Inject
-import play.api.libs.json.JsObject
-import com.keepit.serializer.NormalizedURISerializer
-import com.keepit.search.SearchConfigExperiment
-import com.keepit.search.SearchConfigExperimentRepo
-import com.keepit.serializer.SearchConfigExperimentSerializer
+import com.keepit.model.ClickHistory
+import scala.concurrent.{Future, Promise}
+import com.keepit.search._
 import com.keepit.common.social.BasicUser
-import com.keepit.common.social.BasicUserRepo
-import com.keepit.search.PersonalSearchHit
-import com.keepit.search.ArticleSearchResult
-import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworkType
+import com.keepit.model.ExperimentType
+import com.keepit.model.Phrase
+import com.keepit.model.NormalizedURI
+import com.keepit.model.User
+import com.keepit.model.UserExperiment
+import com.keepit.search.ArticleSearchResult
+import play.api.libs.json.JsObject
+import com.keepit.common.social.SocialId
+import java.util.concurrent.atomic.AtomicInteger
 
 // code below should be sync with code in ShoeboxController
-class FakeShoeboxServiceClientImpl @Inject() (
-    cacheProvider: ShoeboxCacheProvider,
-    db: Database,
-    userConnectionRepo: UserConnectionRepo,
-    userRepo: UserRepo,
-    basicUserRepo: BasicUserRepo,
-    bookmarkRepo: BookmarkRepo,
-    browsingHistoryRepo: BrowsingHistoryRepo,
-    clickingHistoryRepo: ClickHistoryRepo,
-    collectionRepo: CollectionRepo,
-    keepToCollectionRepo: KeepToCollectionRepo,
-    normUriRepo: NormalizedURIRepo,
-    experimentRepo: SearchConfigExperimentRepo,
-    userExperimentRepo: UserExperimentRepo,
-    clickHistoryTracker: ClickHistoryTracker,
-    browsingHistoryTracker: BrowsingHistoryTracker,
-    clock: Clock,
-    fortyTwoServices: FortyTwoServices
-)
-    extends ShoeboxServiceClient {
+class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, browsingHistoryTracker: BrowsingHistoryTracker) extends ShoeboxServiceClient {
   val host: String = ""
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
+  // Fake data
+  private val userIdCounter = new AtomicInteger(0)
+  private def nextUserId = { Id[User](userIdCounter.incrementAndGet()) }
+
+  private val bookmarkIdCounter = new AtomicInteger(0)
+  private def nextBookmarkId = { Id[Bookmark](bookmarkIdCounter.incrementAndGet()) }
+
+  private val uriIdCounter = new AtomicInteger(0)
+  private def nextUriId = { Id[NormalizedURI](uriIdCounter.incrementAndGet()) }
+
+  private val urlIdCounter = new AtomicInteger(0)
+  private def nextUrlId = { Id[URL](urlIdCounter.incrementAndGet()) }
+
+  private val collectionIdCounter = new AtomicInteger(0)
+  private def nextCollectionId = { Id[Collection](collectionIdCounter.incrementAndGet()) }
+
+  private val searchExpIdCounter = new AtomicInteger(0)
+  private def nextSearchExperimentId = { Id[SearchConfigExperiment](searchExpIdCounter.incrementAndGet()) }
+
+  private val userExpIdCounter = new AtomicInteger(0)
+  private def nextUserExperimentId = { Id[UserExperiment](userExpIdCounter.incrementAndGet()) }
+
+  private val uriSeqCounter = new AtomicInteger(0)
+  private def nextUriSeqNum = { SequenceNumber(uriSeqCounter.incrementAndGet()) }
+
+  private val bookmarkSeqCounter = new AtomicInteger(0)
+  private def nextBookmarkSeqNum = { SequenceNumber(bookmarkSeqCounter.incrementAndGet()) }
+
+  private val collectionSeqCounter = new AtomicInteger(0)
+  private def nextCollectionSeqNum = { SequenceNumber(collectionSeqCounter.incrementAndGet()) }
+
+  var allUsers = Map[Id[User], User]()
+  var allUserExternalIds = Map[ExternalId[User], User]()
+  var allUserConnections = Map[Id[User], Set[Id[User]]]()
+  var allSocialUserInfos = Map[Id[User], Set[SocialUserInfo]]()
+  var allUserExperiments = Map[Id[User], Set[UserExperiment]]()
+  var allUserBookmarks = Map[Id[User], Set[Id[Bookmark]]]()
+  var allBookmarks = Map[Id[Bookmark], Bookmark]()
+  var allNormalizedURIs = Map[Id[NormalizedURI], NormalizedURI]()
+  var uriToUrl = Map[Id[NormalizedURI], URL]()
+  var allCollections = Map[Id[Collection], Collection]()
+  var allCollectionBookmarks = Map[Id[Collection], Set[Id[Bookmark]]]()
+  var allSearchExperiments = Map[Id[SearchConfigExperiment], SearchConfigExperiment]()
+
+  // Fake data initialization methods
+
+  def saveUsers(users: User*): Seq[User] = {
+    users.map {user =>
+      val id = user.id.getOrElse(nextUserId)
+      val updatedUser = user.withId(id)
+      allUsers += (id -> updatedUser)
+      allUserExternalIds += (updatedUser.externalId -> updatedUser)
+      updatedUser
+    }
+  }
+
+  def saveURIs(uris: NormalizedURI*): Seq[NormalizedURI] = {
+    uris.map {uri =>
+      val id = uri.id.getOrElse(nextUriId)
+      val updatedUri = uri.withId(id).copy(seq = nextUriSeqNum)
+      val updatedUrl = uriToUrl.getOrElse(id, URLFactory(url = updatedUri.url, normalizedUriId = updatedUri.id.get).withId(nextUrlId))
+      allNormalizedURIs += (id -> updatedUri)
+      uriToUrl += (id -> updatedUrl)
+      updatedUri
+    }
+  }
+
+  def saveConnections(connections: Map[Id[User], Set[Id[User]]]) {
+    connections.foreach { case (userId, friends) =>
+      allUserConnections += userId -> (allUserConnections.getOrElse(userId, Set.empty) ++ friends)
+    }
+  }
+
+  def deleteConnections(connections: Map[Id[User], Set[Id[User]]]) {
+    connections.foreach { case (userId, friends) =>
+      allUserConnections += userId -> (allUserConnections.getOrElse(userId, Set.empty) -- friends)
+    }
+  }
+
+  def clearUserConnections(userIds: Id[User]*) {
+    allUserConnections ++= userIds.map(_ -> Set.empty[Id[User]])
+  }
+
+  def saveBookmarks(bookmarks: Bookmark*): Seq[Bookmark] = {
+    bookmarks.map {b =>
+      val id = b.id.getOrElse(nextBookmarkId)
+      val updatedBookmark = b.withId(id).copy(seq = nextBookmarkSeqNum)
+      allBookmarks += (id -> updatedBookmark)
+      allUserBookmarks += b.userId -> (allUserBookmarks.getOrElse(b.userId, Set.empty) + id)
+      updatedBookmark
+    }
+  }
+
+  def saveCollections(collections: Collection*): Seq[Collection] = {
+    collections.map {c =>
+      val id = c.id.getOrElse(nextCollectionId)
+      val updatedCollection = c.withId(id).copy(seq = nextCollectionSeqNum)
+      allCollections += (id -> updatedCollection)
+      updatedCollection
+    }
+  }
+  def saveBookmarksToCollection(collectionId: Id[Collection], bookmarks: Bookmark*) {
+    allCollectionBookmarks += collectionId -> (allCollectionBookmarks.getOrElse(collectionId, Set.empty) ++ bookmarks.map(_.id.get))
+    allCollections += (collectionId -> allCollections(collectionId).copy(seq = nextCollectionSeqNum))
+  }
+
+  def saveBookmarksByEdges(edges: Seq[(NormalizedURI, User, Option[String])], isPrivate: Boolean = false, source: BookmarkSource = BookmarkSource("fake")): Seq[Bookmark] = {
+    val bookmarks = edges.map { case (uri, user, optionalTitle) => {
+      val url = uriToUrl(uri.id.get)
+      BookmarkFactory(title = optionalTitle.getOrElse(uri.title.get), url = url, uriId = uri.id.get, userId = user.id.get, source = source).withPrivate(isPrivate)
+    }}
+    saveBookmarks(bookmarks:_*)
+  }
+
+  def saveBookmarksByURI(edgesByURI: Seq[(NormalizedURI, Seq[User])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false, source: BookmarkSource = BookmarkSource("fake")): Seq[Bookmark] = {
+    val edges = for ((uri, users) <- edgesByURI; user <- users) yield (uri, user, uniqueTitle)
+    saveBookmarksByEdges(edges, isPrivate, source)
+  }
+
+  def saveBookmarksByUser(edgesByUser: Seq[(User, Seq[NormalizedURI])], uniqueTitle: Option[String] = None, isPrivate: Boolean = false, source: BookmarkSource = BookmarkSource("fake")): Seq[Bookmark] = {
+    val edges = for ((user, uris) <- edgesByUser; uri <- uris) yield (uri, user, uniqueTitle)
+    saveBookmarksByEdges(edges, isPrivate, source)
+  }
+
+  def getCollection(collectionId: Id[Collection]): Collection = {
+    allCollections(collectionId)
+  }
+
+  def saveUserExperiment(experiment: UserExperiment): UserExperiment = {
+    val id = experiment.id.getOrElse(nextUserExperimentId)
+    val userId = experiment.userId
+    val experimentWithId = experiment.withId(id)
+    allUserExperiments += (userId -> (allUserExperiments.getOrElse(userId, Set.empty) + experimentWithId))
+    experimentWithId
+  }
+
+  // ShoeboxServiceClient methods
+
   def getUserOpt(id: ExternalId[User]): Future[Option[User]] = {
-     val userOpt =  db.readOnly { implicit s => userRepo.getOpt(id) }
-     Promise.successful(userOpt).future
+    val userOpt =  allUserExternalIds.get(id)
+    Promise.successful(userOpt).future
   }
 
   def getUser(id: Id[User]): Future[User] = {
-    //call(routes.ShoeboxController.getUser(id)).map(r => UserSerializer.userSerializer.reads(r.json))
-    ???
+    val user = allUsers(id)
+    Promise.successful(user).future
   }
 
   def getNormalizedURI(uriId: Id[NormalizedURI]): Future[NormalizedURI] = {
-    cacheProvider.uriIdCache.getOrElseFuture(NormalizedURIKey(uriId)) {
-      val uri = db.readOnly { implicit s =>
-          normUriRepo.get(uriId)
-        }
-      Promise.successful(uri).future
-    }
+    val uri = allNormalizedURIs(uriId)
+    Promise.successful(uri).future
   }
 
-
   def getNormalizedURIs(ids: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]] = {
-     val uris = db.readOnly { implicit s =>
-         ids.map{ id => normUriRepo.get(id)
-       }
-     }
-     promise[Seq[NormalizedURI]]().success(uris).future
+    val uris = ids.map(allNormalizedURIs(_))
+    Promise.successful(uris).future
   }
 
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]] = {
-    val bookmarks = db.readOnly { implicit session =>
-      bookmarkRepo.getByUser(userId)
-    }
+    val bookmarks = allUserBookmarks.getOrElse(userId, Set.empty).map(allBookmarks(_)).toSeq
     Promise.successful(bookmarks).future
   }
 
   def getBookmarksChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Bookmark]] = {
-    val bookmarks = db.readOnly { implicit session =>
-      bookmarkRepo.getBookmarksChanged(seqNum, fetchSize)
-    }
+    val bookmarks = allBookmarks.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
     Promise.successful(bookmarks).future
   }
 
@@ -97,26 +203,35 @@ class FakeShoeboxServiceClientImpl @Inject() (
     Promise.successful(browsingHistoryTracker.getMultiHashFilter(userId).getFilter).future
   }
 
-  def setConnections(connections: Map[Id[User], Set[Id[User]]]) {
-    connectionsOpt = Some(connections)
-  }
-
-  private[this] var connectionsOpt: Option[Map[Id[User], Set[Id[User]]]] = None
-
-  def getConnectedUsers(id: Id[User]): scala.concurrent.Future[Set[com.keepit.common.db.Id[com.keepit.model.User]]] = {
-    val connections = connectionsOpt.getOrElse(???)
-    Promise.successful(connections.getOrElse(id, Set()) - id).future
+  def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]] = {
+    val connectedUsers = allUserConnections.getOrElse(userId, Set.empty)
+    Promise.successful(connectedUsers).future
   }
 
   def reportArticleSearchResult(res: ArticleSearchResult): Unit = {}
-  def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = ???
-  def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = ???
 
-  def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User],BasicUser]] = {
-    val users = db.readOnly { implicit s =>
-      userIds.map{ userId => userId -> basicUserRepo.load(userId) }.toMap
-    }
+  def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = {
+    val users = userIds.map(allUsers(_))
     Promise.successful(users).future
+  }
+
+  def getUserIdsByExternalIds(extIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]] = {
+    val ids = extIds.map(allUserExternalIds(_).id.get)
+    Promise.successful(ids).future
+  }
+
+  def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], BasicUser]] = {
+    val basicUsers = userIds.map { id =>
+      val user = allUsers(id)
+      id -> BasicUser(
+        externalId = user.externalId,
+        firstName = user.firstName,
+        lastName = user.lastName,
+        networkIds = allSocialUserInfos(id).map {su => su.networkType -> su.socialId }.toMap,
+        pictureName = "fake.jpg" //
+      )
+    }.toMap
+    Promise.successful(basicUsers).future
   }
 
   def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
@@ -124,59 +239,125 @@ class FakeShoeboxServiceClientImpl @Inject() (
   def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] = ???
   def getSessionByExternalId(sessionId: com.keepit.common.db.ExternalId[com.keepit.model.UserSession]): scala.concurrent.Future[Option[com.keepit.model.UserSession]] = ???
   def getSocialUserInfosByUserId(userId: com.keepit.common.db.Id[com.keepit.model.User]): scala.concurrent.Future[List[com.keepit.model.SocialUserInfo]] = ???
-  def getUserExperiments(userId: com.keepit.common.db.Id[com.keepit.model.User]): scala.concurrent.Future[Seq[com.keepit.common.db.State[com.keepit.model.ExperimentType]]] = ???
 
   def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[(Id[Collection], Id[User], SequenceNumber)]] = {
-    val colls = db.readOnly { implicit s =>
-        collectionRepo.getCollectionsChanged(seqNum, fetchSize)
-      }
-    Promise.successful(colls).future
+    val collections = allCollections.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
+    val summarizedCollections = collections.map { c => (c.id.get, c.userId, c.seq) }
+    Promise.successful(summarizedCollections).future
   }
 
   def getBookmarksInCollection(collectionId: Id[Collection]): Future[Seq[Bookmark]] = {
-    val bookmarks = db.readOnly { implicit s =>
-        keepToCollectionRepo.getBookmarksInCollection(collectionId) map bookmarkRepo.get
-      }
+    val bookmarks = allCollectionBookmarks(collectionId).map(allBookmarks(_)).toSeq
     Promise.successful(bookmarks).future
   }
 
   def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]] = {
-    Promise.successful(Seq()).future
+    val collections = allCollections.values.filter(_.userId == userId).map(_.id.get).toSeq
+    Promise.successful(collections).future
   }
 
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]] = ???
 
-  def getIndexable(seqNum: Long, fetchSize: Int) : Future[Seq[NormalizedURI]] = {
-    val uris = db.readOnly { implicit s =>
-        normUriRepo.getIndexable(SequenceNumber(seqNum), fetchSize)
-      }
-    Promise.successful(uris).future
+  def getIndexable(seqNum: Long, fetchSize: Int = -1) : Future[Seq[NormalizedURI]] = {
+    val uris = allNormalizedURIs.values.filter(_.seq > SequenceNumber(seqNum)).toSeq.sortBy(_.seq)
+    val fewerUris = (if (fetchSize >= 0) uris.take(fetchSize) else uris)
+    Promise.successful(fewerUris).future
   }
 
-  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]] = ???
+  def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]): Future[Option[Bookmark]] = {
+    val bookmark = allUserBookmarks(userId).map(allBookmarks(_)).find(_.uriId == uriId)
+    Promise.successful(bookmark).future
+  }
 
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]] = {
-    val exp = db.readOnly { implicit s => experimentRepo.getActive() }
+    val exp = allSearchExperiments.values.filter(_.isActive).toSeq
     Promise.successful(exp).future
   }
 
   def getExperiments: Future[Seq[SearchConfigExperiment]] = {
-    val exp = db.readOnly { implicit s => experimentRepo.getNotInactive() }
+    val exp = allSearchExperiments.values.filter(_.state != SearchConfigExperimentStates.ACTIVE).toSeq
     Promise.successful(exp).future
   }
 
   def getExperiment(id: Id[SearchConfigExperiment]): Future[SearchConfigExperiment] = {
-    val exp = db.readOnly { implicit s => experimentRepo.get(id) }
+    val exp = allSearchExperiments(id)
     Promise.successful(exp).future
   }
-  def saveExperiment(experiment: SearchConfigExperiment) = {
-    val saved = db.readWrite { implicit s => experimentRepo.save(experiment) }
-    Promise.successful(saved).future
+
+  def saveExperiment(experiment: SearchConfigExperiment): Future[SearchConfigExperiment] = {
+    val id = experiment.id.getOrElse(nextSearchExperimentId)
+    val experimentWithId = experiment.withId(id)
+    allSearchExperiments += (experimentWithId.id.get -> experimentWithId)
+    Promise.successful(experimentWithId).future
   }
+
   def hasExperiment(userId: Id[User], state: State[ExperimentType]): Future[Boolean] = {
-     val has = db.readOnly { implicit s =>
-       userExperimentRepo.hasExperiment(userId, state)
-     }
-     Promise.successful(has).future
+    val has = allUserExperiments.getOrElse(userId, Set.empty).exists(exp => exp.experimentType == state && exp.state == UserExperimentStates.ACTIVE)
+    Promise.successful(has).future
+  }
+
+  def getUserExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]] = {
+    val states = allUserExperiments.getOrElse(userId, Set.empty).filter(_.state == UserExperimentStates.ACTIVE).map(_.experimentType).toSeq
+    Promise.successful(states).future
+  }
+
+}
+
+class FakeClickHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits: Int) extends ClickHistoryTracker with Logging {
+  var allUserClickHistories = Map[Id[User], ClickHistory]()
+
+  def add(userId: Id[User], uriId: Id[NormalizedURI]) = {
+    val filter = getMultiHashFilter(userId)
+    filter.put(uriId.id)
+
+    val userClickHistory = allUserClickHistories.get(userId) match {
+      case Some(ch) =>
+        ch.withFilter(filter.getFilter)
+      case None =>
+        ClickHistory(userId = userId, tableSize = tableSize, filter = filter.getFilter, numHashFuncs = numHashFuncs, minHits = minHits)
+    }
+    allUserClickHistories += (userId -> userClickHistory)
+    userClickHistory
+  }
+
+  def getMultiHashFilter(userId: Id[User]): MultiHashFilter[ClickHistory] = {
+    allUserClickHistories.get(userId) match {
+      case Some(clickHistory) =>
+        new MultiHashFilter[ClickHistory](clickHistory.tableSize, clickHistory.filter, clickHistory.numHashFuncs, clickHistory.minHits)
+      case None =>
+        val filter = MultiHashFilter[ClickHistory](tableSize, numHashFuncs, minHits)
+        filter
+    }
   }
 }
+
+class FakeBrowsingHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits: Int) extends BrowsingHistoryTracker with Logging {
+  var allUserBrowsingHistories = Map[Id[User], BrowsingHistory]()
+
+  def add(userId: Id[User], uriId: Id[NormalizedURI]) = {
+    val filter = getMultiHashFilter(userId)
+    filter.put(uriId.id)
+
+    val userBrowsingHistory = allUserBrowsingHistories.get(userId) match {
+        case Some(bh) =>
+          bh.withFilter(filter.getFilter)
+        case None =>
+          BrowsingHistory(userId = userId, tableSize = tableSize, filter = filter.getFilter, numHashFuncs = numHashFuncs, minHits = minHits)
+
+    }
+    allUserBrowsingHistories += (userId -> userBrowsingHistory)
+    userBrowsingHistory
+  }
+
+  def getMultiHashFilter(userId: Id[User]): MultiHashFilter[BrowsingHistory] = {
+    allUserBrowsingHistories.get(userId) match {
+      case Some(browsingHistory) =>
+        new MultiHashFilter[BrowsingHistory](browsingHistory.tableSize, browsingHistory.filter, browsingHistory.numHashFuncs, browsingHistory.minHits)
+      case None =>
+        val filter = MultiHashFilter[BrowsingHistory](tableSize, numHashFuncs, minHits)
+        filter
+    }
+  }
+}
+
+
