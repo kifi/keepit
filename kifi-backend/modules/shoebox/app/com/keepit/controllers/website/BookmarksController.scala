@@ -112,7 +112,10 @@ class BookmarksController @Inject() (
       db.readOnlyAsync { implicit session =>
         uriRepo.getByUri(url)
       } map { uri =>
-        Redirect(s3ScreenshotStore.getScreenshotUrl(uri))
+        s3ScreenshotStore.getScreenshotUrl(uri) match {
+          case Some(u) => Redirect(u)
+          case None => Ok(s3ScreenshotStore.blankImage).as("image/gif")
+        }
       }
     }
   }

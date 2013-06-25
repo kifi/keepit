@@ -35,8 +35,10 @@ import play.modules.statsd.api.Statsd
 @ImplementedBy(classOf[S3ScreenshotStoreImpl])
 trait S3ScreenshotStore {
   def config: S3ImageConfig
-  def getScreenshotUrl(normalizedUri: NormalizedURI): String
-  def getScreenshotUrl(normalizedUriOpt: Option[NormalizedURI]): String
+  val blankImage: Array[Byte] = Array(71, 73, 70, 56, 57, 97, 1, 0, 1, 0, -128, -1, 0, -1, -1, -1, 0, 0, 0, 44, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 2, 68, 1, 0, 59)
+
+  def getScreenshotUrl(normalizedUri: NormalizedURI): Option[String]
+  def getScreenshotUrl(normalizedUriOpt: Option[NormalizedURI]): Option[String]
   def updatePicture(normalizedUri: NormalizedURI): Future[Option[PutObjectResult]]
 }
 
@@ -54,8 +56,7 @@ class S3ScreenshotStoreImpl @Inject() (
   
   val size = ScreenshotSize("b", "500x280")
   val code = "abf9cd2751"
-  val defaultScreenshot = "data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
-  
+    
   def screenshotUrl(url: String): String = screenshotUrl(size.imageCode, code, url)
   def screenshotUrl(sizeName: String, code: String, url: String): String =
     s"http://api.pagepeeker.com/v2/thumbs.php?size=$sizeName&code=$code&url=${URLEncoder.encode(url, UTF8)}&wait=30&refresh=1"
@@ -68,19 +69,19 @@ class S3ScreenshotStoreImpl @Inject() (
   def keyByExternalId(extNormId: ExternalId[NormalizedURI]): String =
     s"screenshot/$extNormId/${size.size}.jpg"
   
-  def getScreenshotUrl(normalizedUriOpt: Option[NormalizedURI]): String =
-    normalizedUriOpt.map(getScreenshotUrl).getOrElse(defaultScreenshot)
+  def getScreenshotUrl(normalizedUriOpt: Option[NormalizedURI]): Option[String] =
+    normalizedUriOpt.flatMap(getScreenshotUrl)
 
-  def getScreenshotUrl(normalizedUri: NormalizedURI): String = {
+  def getScreenshotUrl(normalizedUri: NormalizedURI): Option[String] = {
     if (config.isLocal) {
-      defaultScreenshot
+      None
     } else {
       normalizedUri.screenshotUpdatedAt match {
         case Some(updatedAt) =>
-          urlByExternalId(normalizedUri.externalId)
+          Some(urlByExternalId(normalizedUri.externalId))
         case None =>
           updatePicture(normalizedUri)
-          defaultScreenshot
+          None
       }
     }
   }

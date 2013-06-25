@@ -111,9 +111,8 @@ class Scraper @Inject() (
         def shouldUpdateScreenshot(uri: NormalizedURI) = {
           uri.screenshotUpdatedAt map { update =>
             Days.daysBetween(currentDateTime.toDateMidnight, update.toDateMidnight).getDays() >= 5
-          } getOrElse false
+          } getOrElse true
         }
-        
         if(shouldUpdateScreenshot(uri))
           s3ScreenshotStore.updatePicture(uri)
         

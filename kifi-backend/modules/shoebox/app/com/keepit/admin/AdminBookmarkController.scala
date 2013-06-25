@@ -38,7 +38,7 @@ class AdminBookmarksController @Inject() (
         val uri = uriRepo.get(bookmark.uriId)
         val user = userRepo.get(bookmark.userId)
         val scrapeInfo = scrapeRepo.getByUri(bookmark.uriId)
-        val screenshotUrl = s3ScreenshotStore.getScreenshotUrl(uri)
+        val screenshotUrl = s3ScreenshotStore.getScreenshotUrl(uri).getOrElse("")
         Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, screenshotUrl))
       }
     }

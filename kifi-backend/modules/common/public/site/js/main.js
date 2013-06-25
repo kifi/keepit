@@ -13,6 +13,7 @@ var urlCollections = urlSite + '/collections';
 var urlCollectionsAll = urlCollections + '/all';
 var urlCollectionsOrder = urlCollections + '/ordering';
 var urlCollectionsCreate = urlCollections + '/create';
+var urlScreenshot = urlBase + '/screenshot';
 
 $.ajaxSetup({
 	xhrFields: {withCredentials: true},
@@ -465,6 +466,7 @@ $(function() {
 		} else if ($selected.length > 1) {
 			$title.find('h2').text($selected.length + " keeps selected");
 			$title.find('a').empty();
+			$title.find('div.screenshot').removeAttr('style').removeClass('has-screenshot');
 			$who.empty();
 			var allCollIds = {};
 			$selected.each(function() {
@@ -482,6 +484,7 @@ $(function() {
 			$title.find('h2').text($keep.find('a').first().text());
 			var url = $keep.find('a').first().attr('href');
 			$title.find('a').text(url).attr('href', url).attr('target', '_blank');
+			$title.find('div.screenshot').css({"background-image": "url(" + urlScreenshot + '?url=' + escape(url) + ")"}).addClass('has-screenshot');
 			$who.html($keep.find(".keep-who").html());
 			$who.find('span').prependTo($who);
 			$inColl.empty();
