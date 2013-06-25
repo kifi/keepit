@@ -74,7 +74,7 @@ class CommentStore @Inject() (
   }
 
   def getComments(parent: Id[Comment]): Seq[Comment] = {
-    val term = new Term(parentField, parent.toString)
+    val term = new Term(parentField, parent.id.toString)
     val buf = new ArrayBuffer[Comment]
     getSearcher.foreachReader{ reader =>
       val mapper = reader.getIdMapper
@@ -95,7 +95,8 @@ class CommentStore @Inject() (
             text = rec.text,
             pageTitle = rec.pageTitle,
             parent = Some(parent),
-            permissions = rec.permission
+            permissions = rec.permission,
+            externalId = rec.externalId
           )
         }
       }
@@ -137,9 +138,8 @@ class CommentStore @Inject() (
     override def buildDocument = {
       val doc = super.buildDocument
 
-      comment.parent.foreach{ parent =>
-        doc.add(buildKeywordField(parentField, parent.id.toString))
-      }
+      val parent = comment.parent.getOrElse(comment.id.get)
+      doc.add(buildKeywordField(parentField, parent.id.toString))
 
       // save comment information (title, url, createdAt) in the store
       val r = CommentRecord(
@@ -148,7 +148,8 @@ class CommentStore @Inject() (
         comment.userId,
         comment.uriId,
         comment.pageTitle,
-        comment.permissions)
+        comment.permissions,
+        comment.externalId)
 
       doc.add(buildBinaryDocValuesField(recField, r))
 

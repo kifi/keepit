@@ -4,7 +4,9 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
+import com.keepit.common.social.BasicUser
 import com.keepit.model._
+import com.keepit.search.graph.URIList
 import com.keepit.search.Lang
 import com.keepit.search.LangDetector
 import com.keepit.search.index.DocUtil
@@ -30,8 +32,7 @@ import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
 import scala.concurrent.future
 import scala.concurrent.Promise
-import com.keepit.common.social.BasicUser
-import com.keepit.search.graph.URIList
+import scala.util.matching.Regex.Match
 
 
 object CommentFields {
@@ -48,6 +49,14 @@ object CommentFields {
   val timestampField = "c_timestamp"
 
   def decoders() = Map.empty[String, FieldDecoder]
+}
+
+object CommentLookHereRemover {
+  private[this] val lookHereRegex = """\[((?:\\\]|[^\]])*)\](\(x-kifi-sel:((?:\\\)|[^)])*)\))""".r
+
+  def apply(text: String): String = {
+    lookHereRegex.replaceAllIn(text, (m: Match) => m.group(1))
+  }
 }
 
 class CommentIndexer(
@@ -146,6 +155,8 @@ class CommentIndexer(
     val recipientsFuture: Future[Seq[Id[User]]]
   ) extends Indexable[Comment] with LineFieldBuilder {
 
+    import CommentFields._
+
     override def buildDocument = {
       val doc = super.buildDocument
 
@@ -163,31 +174,31 @@ class CommentIndexer(
         val titleAnalyzer = DefaultAnalyzer.forIndexing(titleLang)
         val titleAnalyzerWithStemmer = DefaultAnalyzer.forIndexingWithStemmer(titleLang)
 
-        val pageTitle = buildTextField(CommentFields.titleField, titleText, titleAnalyzer)
+        val pageTitle = buildTextField(titleField, titleText, titleAnalyzer)
         doc.add(pageTitle)
 
-        val pageTitleStemmed = buildTextField(CommentFields.titleStemmedField, titleText, titleAnalyzerWithStemmer)
-        doc.add(pageTitle)
+        val pageTitleStemmed = buildTextField(titleStemmedField, titleText, titleAnalyzerWithStemmer)
+        doc.add(pageTitleStemmed)
 
         // use createdAt of the most recent comment as the time stamp of this thread
         val timeStamp = comments.map(_.createdAt.getMillis).max
-        doc.add(buildLongValueField(CommentFields.timestampField, timeStamp))
+        doc.add(buildLongValueField(timestampField, timeStamp))
 
         // uri id
-        doc.add(buildKeywordField(CommentFields.uriField, parent.uriId.id.toString))
+        doc.add(buildKeywordField(uriField, parent.uriId.id.toString))
 
         // index domain name
         val uri = Await.result(normUriFuture, 180 seconds)
         URI.parse(uri.url).toOption.flatMap(_.host) match {
           case Some(Host(domain @ _*)) =>
-            doc.add(buildIteratorField(CommentFields.siteField, (1 to domain.size).iterator){ n => domain.take(n).reverse.mkString(".") })
-            doc.add(buildIteratorField(CommentFields.siteKeywordField, (0 until domain.size).iterator)(domain))
+            doc.add(buildIteratorField(siteField, (1 to domain.size).iterator){ n => domain.take(n).reverse.mkString(".") })
+            doc.add(buildIteratorField(siteKeywordField, (0 until domain.size).iterator)(domain))
           case _ =>
         }
 
-        val ccommentIdListBytes = URIList.packLongArray(comments.map(_.id.get.id).toArray)
-        val commentIdField = buildBinaryDocValuesField(CommentFields.commentIdField, ccommentIdListBytes)
-        doc.add(commentIdField)
+        val commentIdListBytes = URIList.packLongArray(comments.map(_.id.get.id).toArray)
+        val commentIds = buildBinaryDocValuesField(commentIdField, commentIdListBytes)
+        doc.add(commentIds)
 
 
         val participantIds = (Await.result(recipientsFuture, 180 seconds).toSet + parent.userId)
@@ -195,26 +206,26 @@ class CommentIndexer(
         val users = Await.result(usersFuture, 180 seconds)
 
         // user + comment text
-        val commentContentList = buildCommentTextList(comments, users, Lang("en"))
-        val text = buildLineField(CommentFields.textField, commentContentList){ (fieldName, userAndText, lang) =>
+        val commentContentList = buildCommentContentList(comments, users, Lang("en"))
+        val text = buildLineField(textField, commentContentList){ (fieldName, userAndText, lang) =>
           val analyzer = DefaultAnalyzer.forIndexing(lang)
           analyzer.tokenStream(fieldName, new StringReader(userAndText._1 + "\n\n" + userAndText._2))
         }
         doc.add(text)
 
         // comment text stemmed
-        val textStemmed = buildLineField(CommentFields.textStemmedField, commentContentList){ (fieldName, userAndText, lang) =>
+        val textStemmed = buildLineField(textStemmedField, commentContentList){ (fieldName, userAndText, lang) =>
           val analyzer = DefaultAnalyzer.forIndexingWithStemmer(lang)
           analyzer.tokenStream(fieldName, new StringReader(userAndText._2))
         }
         doc.add(textStemmed)
 
         // participant ids
-        doc.add(buildIteratorField(CommentFields.participantIdField, participantIds.iterator){ id => id.toString })
+        doc.add(buildIteratorField(participantIdField, participantIds.iterator){ id => id.toString })
 
         // participant names
         val participantNamelist = buildUserNameList(participantIds.toSeq, users, preferedLang)
-        val participantNames = buildLineField(CommentFields.participantNameField, participantNamelist){ (fieldName, text, lang) =>
+        val participantNames = buildLineField(participantNameField, participantNamelist){ (fieldName, text, lang) =>
           val analyzer = DefaultAnalyzer.forIndexing(lang)
           analyzer.tokenStream(fieldName, new StringReader(text))
         }
@@ -223,14 +234,13 @@ class CommentIndexer(
       doc
     }
 
-    private def buildCommentTextList(comments: Seq[Comment], users: Map[Id[User], BasicUser], preferedLang: Lang): ArrayBuffer[(Int, (String, String), Lang)] = {
+    private def buildCommentContentList(comments: Seq[Comment], users: Map[Id[User], BasicUser], preferedLang: Lang): ArrayBuffer[(Int, (String, String), Lang)] = {
       var lineNo = 0
       var commentList = new ArrayBuffer[(Int, (String, String), Lang)]
       comments.foreach{ c =>
         val name = users.get(c.userId).map{ user => user.firstName + " " + user.lastName}.getOrElse("")
-        val text = c.text
+        val text = CommentLookHereRemover(c.text)
         val lang = LangDetector.detect(text, preferedLang)
-
         commentList += ((lineNo, (name, text), lang))
         lineNo += 1
       }

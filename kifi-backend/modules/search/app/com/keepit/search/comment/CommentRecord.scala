@@ -1,13 +1,13 @@
 package com.keepit.search.comment
 
-import com.keepit.common.db.{Id, State}
+import com.keepit.common.db.{ExternalId, Id, State}
 import com.keepit.model.{Comment, CommentPermission, CommentRecipient, NormalizedURI, User}
 import org.apache.lucene.store.InputStreamDataInput
 import org.apache.lucene.store.OutputStreamDataOutput
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
-case class CommentRecord(text: String, createdAt: Long, userId: Id[User], uriId: Id[NormalizedURI], pageTitle: String, permission: State[CommentPermission])
+case class CommentRecord(text: String, createdAt: Long, userId: Id[User], uriId: Id[NormalizedURI], pageTitle: String, permission: State[CommentPermission], externalId: ExternalId[Comment])
 
 object CommentRecordSerializer {
   implicit def toByteArray(r: CommentRecord): Array[Byte] = {
@@ -22,6 +22,7 @@ object CommentRecordSerializer {
     out.writeLong(r.uriId.id)
     out.writeString(r.pageTitle)
     out.writeString(r.permission.toString)
+    out.writeString(r.externalId.id)
 
     out.close()
     baos.close()
@@ -44,7 +45,8 @@ object CommentRecordSerializer {
       Id[User](in.readLong()),                  // userId
       Id[NormalizedURI](in.readLong()),         // uriId
       in.readString(),                          // pageTitle
-      State[CommentPermission](in.readString()) // permission
+      State[CommentPermission](in.readString()),// permission
+      ExternalId[Comment](in.readString())      // externalId
     )
   }
 }
