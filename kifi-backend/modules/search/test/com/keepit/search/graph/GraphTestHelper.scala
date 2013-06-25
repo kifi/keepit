@@ -104,6 +104,11 @@ trait GraphTestHelper {
     fakeShoeboxServiceClient.getCollection(collection.id.get)
   }
 
+  def saveComment(comment: Comment, optionalRecipients: Id[User]*): Comment = {
+    val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
+    fakeShoeboxServiceClient.saveComment(comment, optionalRecipients:_*)
+  }
+
   def mkURIGraphIndexer(uriGraphDir: RAMDirectory = new RAMDirectory): URIGraphIndexer = {
     val bookmarkStore = new BookmarkStore(new RAMDirectory, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[ShoeboxServiceClient])
     new URIGraphIndexer(uriGraphDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), bookmarkStore, inject[ShoeboxServiceClient])

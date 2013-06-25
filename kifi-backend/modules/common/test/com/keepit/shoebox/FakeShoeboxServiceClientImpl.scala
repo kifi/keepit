@@ -88,6 +88,7 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
       val updatedUser = user.withId(id)
       allUsers += (id -> updatedUser)
       allUserExternalIds += (updatedUser.externalId -> updatedUser)
+      allSocialUserInfos += (id -> allSocialUserInfos.getOrElse(id, Set.empty))
       updatedUser
     }
   }
@@ -173,15 +174,16 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
     experimentWithId
   }
 
-  def saveCommentsWithRecipients(commentWithRecipients: (Comment, Set[Id[User]])*): Seq[Comment] = {
-    commentWithRecipients.map {case (comment, userIds) =>
-      val id = comment.id.getOrElse(nextCommentId)
-      val updatedComment = comment.withId(id).copy(seq = nextCommentSeqNum)
-      val commentRecipients = userIds.map(userId => CommentRecipient(commentId = updatedComment.id.get, userId = Some(userId)))
-      allComments += (id -> updatedComment)
-      allCommentRecipients += (id -> commentRecipients)
-      updatedComment
+  def saveComment(comment: Comment, recipientIds: Id[User]*): Comment = {
+    val id = comment.id.getOrElse(nextCommentId)
+    val updatedComment = comment.withId(id).copy(seq = nextCommentSeqNum)
+    val commentRecipients = recipientIds match {
+      case Nil => updatedComment.parent.map(allCommentRecipients(_)).getOrElse(Set.empty)
+      case _ => recipientIds.map(userId => CommentRecipient(commentId = updatedComment.id.get, userId = Some(userId))).toSet
     }
+    allComments += (id -> updatedComment)
+    allCommentRecipients += (id -> commentRecipients)
+    updatedComment
   }
 
   // ShoeboxServiceClient methods
