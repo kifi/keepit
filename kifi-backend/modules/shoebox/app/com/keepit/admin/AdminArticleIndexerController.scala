@@ -50,8 +50,8 @@ class AdminArticleIndexerController @Inject()(
 
   def indexInfo = AdminHtmlAction { implicit request =>
     Async {
-      (searchClient.articleIndexInfo() zip searchClient.uriGraphIndexInfo()).map { case (aiInfo, ugInfo) =>
-        Ok(views.html.admin.indexer(aiInfo, ugInfo))
+      (searchClient.articleIndexInfo() zip searchClient.uriGraphIndexInfo() zip searchClient.commentIndexInfo()).map{ case ((aiInfo, ugInfo), cmInfo) =>
+        Ok(views.html.admin.indexer(aiInfo, ugInfo, cmInfo))
       }
     }
   }
