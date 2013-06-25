@@ -179,8 +179,9 @@ aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px;
 .keep-title {max-width: 100%; color: #0089d5; font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased}
 .keep-title>a[href] {color: inherit}
 .keep-url {font-size: 12px; line-height: 14px; color: #99a3b3}
-.keep-colls {margin-top: 7px; background: url(../img/folder-icon-small.png) 0 0/13px 11px no-repeat; padding-left: 19px; font-size: 12px; line-height: 14px; color: #99a3b3; overflow: hidden}
-.keep-coll {display: inline-block; white-space: nowrap; margin-right: 4px; border-right: 1px solid currentColor; padding-right: 4px}
+.keep-colls {margin-top: 7px; background: url(../img/folder-icon-small.png) 0 0/13px 11px no-repeat; padding-left: 19px; font-size: 12px; line-height: 14px; overflow: hidden}
+.keep-coll[href] {display: inline-block; white-space: nowrap; margin-right: 4px; border-right: 1px solid currentColor; padding-right: 4px; color: #99a3b3}
+.keep-coll[href]:hover {text-decoration: underline; color: #76869f}
 .keep-coll:last-of-type {margin-right: 0; border-right: none; padding-right: 0}
 .keep-who {margin-top: 7px; font-size: 0}
 .keep-who>img {vertical-align: middle; width: 23px; height: 23px; border-radius: 2px; margin-right: 1px}
