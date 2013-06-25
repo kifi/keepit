@@ -247,6 +247,9 @@ POST    /admin/invites/reject       @com.keepit.controllers.admin.AdminInvitatio
 GET     /admin/labs/friendMap       @com.keepit.controllers.admin.AdminSearchLabsController.friendMap(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLabsController.friendMapJson(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 
+GET     /admin/learning/docTopic    @com.keepit.controllers.admin.TopicModelController.documentTopic(content: Option[String] ?= None, topicId: Option[String] ?= None)
+POST    /admin/learning/inferDocTopic @com.keepit.controllers.admin.TopicModelController.inferTopic
+
 
 ##########################################
 # Common Healthcheck / service routes
