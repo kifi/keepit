@@ -39,7 +39,7 @@ class TopicUpdater @Inject() (
       val nUser = userTopicRepo.deleteAll()
       (nUri, nUser)
     }
-    log.info("resetting topic tables successfully")
+    log.info(s"resetting topic tables successfully. ${nUri} uris removed. ${nUser} users removed.")
     (nUri, nUser)
   }
 
