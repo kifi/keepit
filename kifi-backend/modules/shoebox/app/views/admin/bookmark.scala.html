@@ -1,4 +1,4 @@
-@(user: User, bookmark: Bookmark, normalizedUri: NormalizedURI, scrapeInfo: Option[ScrapeInfo])
+@(user: User, bookmark: Bookmark, normalizedUri: NormalizedURI, scrapeInfo: Option[ScrapeInfo], screenshotUrl: String)
 
 @import com.keepit.controllers.admin.routes
 
@@ -27,6 +27,10 @@
       </tr>
       <tr>
         <th>Next scrape</th><td>@scrapeInfo.map(si => adminHelper.dateTimeDisplay(si.nextScrape)).mkString</td>
+      </tr>
+      <tr>
+        <td>Screenshot</td>
+        <td><img src="@screenshotUrl"></td>
       </tr>
    </table>
    <p><input type="button" id="rescrape" value="Rescrape"></p>

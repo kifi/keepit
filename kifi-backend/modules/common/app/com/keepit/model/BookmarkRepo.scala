@@ -9,7 +9,6 @@ import scala.Some
 
 @ImplementedBy(classOf[BookmarkRepoImpl])
 trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark] {
-  def allActive()(implicit session: RSession): Seq[Bookmark]
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User],
                       excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))
                      (implicit session: RSession): Option[Bookmark]
@@ -20,7 +19,6 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
                 collectionId: Option[Id[Collection]], count: Int)(implicit session: RSession): Seq[Bookmark]
   def getCountByUser(userId: Id[User])(implicit session: RSession): Int
   def getBookmarksChanged(num: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[Bookmark]
-  def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int
   def getNumMutual(userId: Id[User], otherUserId: Id[User])(implicit session: RSession): Int
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark]
   def delete(id: Id[Bookmark])(implicit sesion: RSession): Unit
@@ -33,6 +31,7 @@ class BookmarkRepoImpl @Inject() (
   val clock: Clock,
   val countCache: BookmarkCountCache,
   val keepToCollectionRepo: KeepToCollectionRepoImpl,
+  collectionRepo: CollectionRepo,
   bookmarkUriUserCache: BookmarkUriUserCache)
   extends DbRepo[Bookmark] with BookmarkRepo with ExternalIdColumnDbFunction[Bookmark] {
 
@@ -60,7 +59,7 @@ class BookmarkRepoImpl @Inject() (
 
   override def invalidateCache(bookmark: Bookmark)(implicit session: RSession) = {
     bookmarkUriUserCache.set(BookmarkUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
-    countCache.remove(BookmarkCountKey())
+    countCache.remove(BookmarkCountKey(Some(bookmark.userId)))
     bookmark
   }
 
@@ -69,9 +68,6 @@ class BookmarkRepoImpl @Inject() (
       super.count
     }
   }
-
-  def allActive()(implicit session: RSession): Seq[Bookmark] =
-    (for(b <- table if b.state === BookmarkStates.ACTIVE) yield b).list
 
   def getByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User],
                       excludeState: Option[State[Bookmark]] = Some(BookmarkStates.INACTIVE))
@@ -112,13 +108,12 @@ class BookmarkRepoImpl @Inject() (
   }
 
   def getCountByUser(userId: Id[User])(implicit session: RSession): Int =
-    Query((for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).length).first
+    countCache.getOrElse(BookmarkCountKey(Some(userId))) {
+      Query((for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).length).first
+    }
 
   def getBookmarksChanged(num: SequenceNumber, limit: Int)(implicit session: RSession): Seq[Bookmark] =
     (for (b <- table if b.seq > num) yield b).sortBy(_.seq).take(limit).list
-
-  def getCountByInstallation(kifiInstallation: ExternalId[KifiInstallation])(implicit session: RSession): Int =
-    Query(table.where(b => b.kifiInstallation === kifiInstallation).length).first
 
   def getNumMutual(userId: Id[User], otherUserId: Id[User])(implicit session: RSession): Int =
     Query((for {
@@ -131,6 +126,8 @@ class BookmarkRepoImpl @Inject() (
 
   override def save(model: Bookmark)(implicit session: RWSession) = {
     val newModel = model.copy(seq = sequence.incrementAndGet())
+    for (bid <- model.id; cid <- keepToCollectionRepo.getCollectionsForBookmark(bid))
+      collectionRepo.collectionChanged(cid)
     super.save(newModel)
   }
 

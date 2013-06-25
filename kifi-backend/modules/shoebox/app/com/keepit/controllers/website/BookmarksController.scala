@@ -1,7 +1,6 @@
 package com.keepit.controllers.website
 
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.WebsiteController
@@ -13,9 +12,10 @@ import com.keepit.common.time._
 import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.common.store.S3ScreenshotStore
+import play.api.mvc.Action
 
 private case class BasicCollection(id: Option[ExternalId[Collection]], name: String, keeps: Option[Int])
 
@@ -63,17 +63,19 @@ class BookmarksController @Inject() (
     searchClient: SearchServiceClient,
     bookmarkInterner: BookmarkInterner,
     uriRepo: NormalizedURIRepo,
-    actionAuthenticator: ActionAuthenticator
+    actionAuthenticator: ActionAuthenticator,
+    s3ScreenshotStore: S3ScreenshotStore
   )
   extends WebsiteController(actionAuthenticator) {
 
-  implicit val writesKeepInfo = new Writes[(Bookmark, Set[BasicUser], Set[ExternalId[Collection]])] {
-    def writes(info: (Bookmark, Set[BasicUser], Set[ExternalId[Collection]])) = Json.obj(
+  implicit val writesKeepInfo = new Writes[(Bookmark, Set[BasicUser], Set[ExternalId[Collection]], Int)] {
+    def writes(info: (Bookmark, Set[BasicUser], Set[ExternalId[Collection]], Int)) = Json.obj(
       "id" -> info._1.externalId.id,
       "title" -> info._1.title,
       "url" -> info._1.url,
       "isPrivate" -> info._1.isPrivate,
       "createdAt" -> info._1.createdAt,
+      "others" -> info._4,
       "keepers" -> info._2,
       "collections" -> info._3.map(_.id)
     )
@@ -105,6 +107,19 @@ class BookmarksController @Inject() (
     }
   }
 
+  def screenshotUrl(url: String) = Action { request =>
+    Async {
+      db.readOnlyAsync { implicit session =>
+        uriRepo.getByUri(url)
+      } map { uri =>
+        s3ScreenshotStore.getScreenshotUrl(uri) match {
+          case Some(u) => Redirect(u)
+          case None => Ok(s3ScreenshotStore.blankImage).as("image/gif")
+        }
+      }
+    }
+  }
+
   def keepMultiple() = AuthenticatedJsonAction { request =>
     request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { kwc =>
       val KeepInfosWithCollection(collectionIdOpt, keepInfos) = kwc
@@ -131,7 +146,7 @@ class BookmarksController @Inject() (
         keepInfos.map { ki =>
           val url = ki.url
           db.readWrite { implicit s =>
-            uriRepo.getByNormalizedUrl(url).flatMap { uri =>
+            uriRepo.getByUri(url).flatMap { uri =>
               bookmarkRepo.getByUriAndUser(uri.id.get, request.userId).map { b =>
                 bookmarkRepo.save(b withActive false)
               }
@@ -205,7 +220,8 @@ class BookmarksController @Inject() (
             (keeps zip infos).map { case (keep, info) =>
               val collIds =
                 keepToCollectionRepo.getCollectionsForBookmark(keep.id.get).flatMap(collIdToExternalId.get).toSet
-              (keep, info.sharingUserIds map idToBasicUser, collIds)
+              val others = info.keepersEdgeSetSize - info.sharingUserIds.size - (if (keep.isPrivate) 0 else 1)
+              (keep, info.sharingUserIds map idToBasicUser, collIds, others)
             }
           }
         } map { keepsInfo =>

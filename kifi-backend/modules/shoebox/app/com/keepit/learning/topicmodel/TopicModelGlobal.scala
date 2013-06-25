@@ -1,7 +1,7 @@
 package com.keepit.learning.topicmodel
 
 object TopicModelGlobal {
-  val numTopics = 40
-  val primaryTopicThreshold = 0.4
+  val numTopics = 100
+  val primaryTopicThreshold = 0.4       // need to tune this as numTopics varies
   val topicTailcut = 0.75
 }

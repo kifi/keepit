@@ -19,7 +19,8 @@ case class Comment(
   pageTitle: String,
   parent: Option[Id[Comment]] = None,
   permissions: State[CommentPermission] = CommentPermissions.PUBLIC,
-  state: State[Comment] = CommentStates.ACTIVE
+  state: State[Comment] = CommentStates.ACTIVE,
+  seq: SequenceNumber = SequenceNumber.ZERO
 ) extends ModelWithExternalId[Comment] {
   def withId(id: Id[Comment]): Comment = copy(id = Some(id))
   def withUpdateTime(now: DateTime): Comment = copy(updatedAt = now)
@@ -37,7 +38,7 @@ object Comment {
   implicit val userExternalIdFormat = ExternalId.format[User]
   implicit val commentExternalIdFormat = ExternalId.format[Comment]
   implicit val idFormat = Id.format[Comment]
-  
+
   implicit val commentFormat = (
       (__ \ 'id).formatNullable(Id.format[Comment]) and
       (__ \ 'createdAt).format[DateTime] and
@@ -50,7 +51,8 @@ object Comment {
       (__ \ 'pageTitle).format[String] and
       (__ \ 'parent).formatNullable(Id.format[Comment]) and
       (__ \ 'permissions).format(State.format[CommentPermission]) and
-      (__ \ 'state).format(State.format[Comment])
+      (__ \ 'state).format(State.format[Comment]) and
+      (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
   )(Comment.apply, unlift(Comment.unapply))
 }
 

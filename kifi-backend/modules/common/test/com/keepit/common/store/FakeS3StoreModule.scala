@@ -24,6 +24,7 @@ case class FakeS3StoreModule() extends ScalaModule {
 
   @Provides @Singleton
   def s3ImageStore(s3ImageConfig: S3ImageConfig): S3ImageStore = new S3ImageStore {
+    def avatarUrlByExternalId(w: Int, userId: ExternalId[User], protocolDefault: Option[String]): String = ""
     def config = s3ImageConfig
     def updatePicture(sui: SocialUserInfo, externalId: ExternalId[User]) =
       promise[Seq[PutObjectResult]]().success(Seq()).future

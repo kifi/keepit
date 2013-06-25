@@ -23,7 +23,8 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
   val host: String = ""
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
-  // Fake data
+  // Fake ID counters
+
   private val userIdCounter = new AtomicInteger(0)
   private def nextUserId = { Id[User](userIdCounter.incrementAndGet()) }
 
@@ -45,6 +46,11 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
   private val userExpIdCounter = new AtomicInteger(0)
   private def nextUserExperimentId = { Id[UserExperiment](userExpIdCounter.incrementAndGet()) }
 
+  private val commentIdCounter = new AtomicInteger(0)
+  private def nextCommentId = { Id[Comment](commentIdCounter.incrementAndGet()) }
+
+  // Fake sequence counters
+
   private val uriSeqCounter = new AtomicInteger(0)
   private def nextUriSeqNum = { SequenceNumber(uriSeqCounter.incrementAndGet()) }
 
@@ -53,6 +59,11 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
 
   private val collectionSeqCounter = new AtomicInteger(0)
   private def nextCollectionSeqNum = { SequenceNumber(collectionSeqCounter.incrementAndGet()) }
+
+  private val commentSeqCounter = new AtomicInteger(0)
+  private def nextCommentSeqNum = { SequenceNumber(commentSeqCounter.incrementAndGet()) }
+
+  // Fake repos
 
   var allUsers = Map[Id[User], User]()
   var allUserExternalIds = Map[ExternalId[User], User]()
@@ -66,6 +77,8 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
   var allCollections = Map[Id[Collection], Collection]()
   var allCollectionBookmarks = Map[Id[Collection], Set[Id[Bookmark]]]()
   var allSearchExperiments = Map[Id[SearchConfigExperiment], SearchConfigExperiment]()
+  var allComments = Map[Id[Comment], Comment]()
+  var allCommentRecipients = Map[Id[Comment], Set[CommentRecipient]]()
 
   // Fake data initialization methods
 
@@ -124,6 +137,7 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
       updatedCollection
     }
   }
+
   def saveBookmarksToCollection(collectionId: Id[Collection], bookmarks: Bookmark*) {
     allCollectionBookmarks += collectionId -> (allCollectionBookmarks.getOrElse(collectionId, Set.empty) ++ bookmarks.map(_.id.get))
     allCollections += (collectionId -> allCollections(collectionId).copy(seq = nextCollectionSeqNum))
@@ -159,6 +173,17 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
     experimentWithId
   }
 
+  def saveCommentsWithRecipients(commentWithRecipients: (Comment, Set[Id[User]])*): Seq[Comment] = {
+    commentWithRecipients.map {case (comment, userIds) =>
+      val id = comment.id.getOrElse(nextCommentId)
+      val updatedComment = comment.withId(id).copy(seq = nextCommentSeqNum)
+      val commentRecipients = userIds.map(userId => CommentRecipient(commentId = updatedComment.id.get, userId = Some(userId)))
+      allComments += (id -> updatedComment)
+      allCommentRecipients += (id -> commentRecipients)
+      updatedComment
+    }
+  }
+
   // ShoeboxServiceClient methods
 
   def getUserOpt(id: ExternalId[User]): Future[Option[User]] = {
@@ -190,6 +215,17 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
     val bookmarks = allBookmarks.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
     Promise.successful(bookmarks).future
   }
+
+  def getCommentsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Comment]] = {
+    val comments = allComments.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
+    Promise.successful(comments).future
+  }
+
+  def getCommentRecipientIds(commentId: Id[Comment]): Future[Seq[Id[User]]] = {
+    val commentRecipientIds = allCommentRecipients.getOrElse(commentId, Set.empty).filter(_.state == CommentRecipientStates.ACTIVE).map(_.userId.get).toSeq
+    Promise.successful(commentRecipientIds).future
+  }
+
 
   def persistServerSearchEvent(metaData: JsObject): Unit ={
     //EventPersister.persist(Events.serverEvent(EventFamilies.SERVER_SEARCH, "search_return_hits", metaData.as[JsObject])(clock, fortyTwoServices))

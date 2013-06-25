@@ -3,6 +3,7 @@ package com.keepit.model
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{LargeString, Id, State}
+import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick.DBSession.RSession
 import org.joda.time.DateTime
 import com.keepit.common.time.Clock
@@ -29,6 +30,7 @@ trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Comment]
   def getPublicIdsCreatedBefore(uriId: Id[NormalizedURI], time: DateTime)(implicit session: RSession): Seq[Id[Comment]]
   def getMessageIdsCreatedBefore(uriId: Id[NormalizedURI], parentId: Id[Comment], time: DateTime)(implicit session: RSession): Seq[Id[Comment]]
+  def getCommentsChanged(num: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[Comment]
 }
 
 @Singleton
@@ -45,6 +47,8 @@ class CommentRepoImpl @Inject() (
   import db.Driver.Implicit._
   import DBSession._
 
+  private val sequence = db.getSequence("comment_sequence")
+
   override val table = new RepoTable[Comment](db, "comment") with ExternalIdColumn[Comment] {
     def uriId = column[Id[NormalizedURI]]("normalized_uri_id", O.NotNull)
     def urlId = column[Id[URL]]("url_id", O.Nullable)
@@ -53,7 +57,8 @@ class CommentRepoImpl @Inject() (
     def pageTitle = column[String]("page_title", O.NotNull)
     def parent = column[Id[Comment]]("parent", O.Nullable)
     def permissions = column[State[CommentPermission]]("permissions", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ uriId ~ urlId.? ~ userId ~ text ~ pageTitle ~ parent.? ~ permissions ~ state <> (Comment.apply _, Comment.unapply _)
+    def seq = column[SequenceNumber]("seq", O.NotNull)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ uriId ~ urlId.? ~ userId ~ text ~ pageTitle ~ parent.? ~ permissions ~ state ~ seq <> (Comment.apply _, Comment.unapply _)
   }
 
   override def invalidateCache(comment: Comment)(implicit session: RSession) = {
@@ -177,6 +182,14 @@ class CommentRepoImpl @Inject() (
 
   def getMessageIdsCreatedBefore(uriId: Id[NormalizedURI], parentId: Id[Comment], time: DateTime)(implicit session: RSession): Seq[Id[Comment]] =
     (for(c <- table if c.uriId === uriId && c.permissions === CommentPermissions.MESSAGE && (c.id === parentId || c.parent === parentId) && c.createdAt < time) yield c.id).list
+
+  override def save(model: Comment)(implicit session: RWSession): Comment = {
+    val newModel = model.copy(seq = sequence.incrementAndGet())
+    super.save(newModel)
+  }
+
+  def getCommentsChanged(num: SequenceNumber, limit: Int)(implicit session: RSession): Seq[Comment] =
+    (for (c <- table if c.seq > num) yield c).sortBy(_.seq).take(limit).list
 }
 
 @Singleton

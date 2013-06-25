@@ -142,6 +142,7 @@ class InvertedListBuilder() {
 
 class CachedIndex(invertedLists: SortedMap[String, SortedMap[BytesRef, InvertedList]], val maxDoc: Int, val numDocs: Int) {
   def this(maxDoc: Int, numDocs: Int) = this(SortedMap.empty[String, SortedMap[BytesRef, InvertedList]], maxDoc, numDocs)
+  def this(maxDoc: Int) = this(maxDoc, maxDoc)
 
   def isEmpty = invertedLists.isEmpty
 

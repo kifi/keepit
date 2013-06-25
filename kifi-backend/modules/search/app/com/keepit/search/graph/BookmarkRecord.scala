@@ -1,7 +1,5 @@
 package com.keepit.search.graph
 
-
-import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.model.NormalizedURI
 import org.apache.lucene.store.InputStreamDataInput

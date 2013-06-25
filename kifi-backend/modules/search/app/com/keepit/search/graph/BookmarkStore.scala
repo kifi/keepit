@@ -8,8 +8,6 @@ import com.keepit.common.net.Host
 import com.keepit.common.net.URI
 import com.keepit.model._
 import com.keepit.model.BookmarkStates._
-import com.keepit.search.Article
-import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
 import com.keepit.search.index.{DefaultAnalyzer, FieldDecoder, Indexable, Indexer, IndexError}
 import java.io.StringReader
@@ -26,7 +24,6 @@ import scala.util.{Success, Failure}
 import BookmarkRecordSerializer._
 import scala.collection.mutable.ArrayBuffer
 import org.apache.lucene.util.BytesRef
-import com.keepit.search.query.QueryUtil
 import org.joda.time.DateTime
 import com.keepit.shoebox.ShoeboxServiceClient
 

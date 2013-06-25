@@ -5,14 +5,13 @@ import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
 import com.keepit.common.db.{State, Id, SequenceNumber}
 import com.keepit.common.db.slick.DBSession.RSession
-import scala.Some
+import org.joda.time.DateTime
 
 @ImplementedBy(classOf[NormalizedURIRepoImpl])
 trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFunction[NormalizedURI] {
   def allActive()(implicit session: RSession): Seq[NormalizedURI]
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
-  def getByNormalizedUrl(url: String)(implicit session: RSession): Option[NormalizedURI]
-  def getByNormalizedUri(normalizedUri: String)(implicit session: RSession): Option[NormalizedURI]
+  def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI]
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
 }
 
@@ -21,6 +20,7 @@ class NormalizedURIRepoImpl @Inject() (
                                         val db: DataBaseComponent,
                                         val clock: Clock,
                                         idCache: NormalizedURICache,
+                                        urlHashCache: NormalizedURIUrlHashCache,
                                         scrapeRepoProvider: Provider[ScrapeInfoRepo])
   extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] {
   import FortyTwoTypeMappers._
@@ -33,9 +33,10 @@ class NormalizedURIRepoImpl @Inject() (
   override val table = new RepoTable[NormalizedURI](db, "normalized_uri") with ExternalIdColumn[NormalizedURI] {
     def title = column[String]("title")
     def url = column[String]("url", O.NotNull)
-    def urlHash = column[String]("url_hash", O.NotNull)
+    def urlHash = column[UrlHash]("url_hash", O.NotNull)
     def seq = column[SequenceNumber]("seq", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state ~ seq <> (NormalizedURI,
+    def screenshotUpdatedAt = column[DateTime]("screenshot_updated_at")
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state ~ seq ~ screenshotUpdatedAt.? <> (NormalizedURI,
       NormalizedURI.unapply _)
   }
 
@@ -46,6 +47,7 @@ class NormalizedURIRepoImpl @Inject() (
 
   override def invalidateCache(uri: NormalizedURI)(implicit session: RSession) = {
     uri.id map {id => idCache.set(NormalizedURIKey(id), uri)}
+    urlHashCache.set(NormalizedURIUrlHashKey(NormalizedURIFactory.hashUrl(uri.url)), uri)
     uri
   }
 
@@ -95,12 +97,11 @@ class NormalizedURIRepoImpl @Inject() (
     limited.list
   }
 
-  // TODO: Rename to getByUrl.
-  def getByNormalizedUrl(url: String)(implicit session: RSession): Option[NormalizedURI] =
-    getByNormalizedUri(NormalizedURIFactory.normalize(url))
-
-  def getByNormalizedUri(normalizedUri: String)(implicit session: RSession): Option[NormalizedURI] = {
+  def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI] = {
+    val normalizedUri = NormalizedURIFactory.normalize(url)
     val hash = NormalizedURIFactory.hashUrl(normalizedUri)
-    (for (t <- table if t.urlHash === hash) yield t).firstOption
+    urlHashCache.getOrElseOpt(NormalizedURIUrlHashKey(hash)) {
+      (for (t <- table if t.urlHash === hash) yield t).firstOption
+    }
   }
 }

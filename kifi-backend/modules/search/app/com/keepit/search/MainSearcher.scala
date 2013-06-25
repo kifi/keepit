@@ -164,7 +164,7 @@ class MainSearcher(
   def getPersonalizedSearcher(query: Query) = {
     val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
     val indexReader = articleSearcher.indexReader.add(personalReader, personalIdMapper)
-    PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryFuture, clickHistoryFuture, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient, monitoredAwait)
+    PersonalizedSearcher(userId, indexReader, myUris, browsingHistoryFuture, clickHistoryFuture, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient, monitoredAwait)
   }
 
   def searchText(queryString: String, maxTextHitsPerCategory: Int, clickBoosts: ResultClickTracker.ResultClickBoosts) = {
@@ -174,7 +174,8 @@ class MainSearcher(
     val t1 = currentDateTime.getMillis()
 
     // TODO: use user profile info as a bias
-    lang = LangDetector.detectShortText(queryString, lang)
+    // lang = LangDetector.detectShortText(queryString, lang)
+    lang = Lang("en")
 
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
@@ -361,7 +362,7 @@ class MainSearcher(
     Statsd.timing("mainSearch.total", millisPassed)
 
     // simple classifier
-    val show = if (svVar > 0.17f) false else {
+    val show = if (svVar > 0.18f) false else {
       val isGood = (parsedQuery, personalizedSearcher) match {
         case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(hitList, searcher.get)
         case _ => true
@@ -383,7 +384,7 @@ class MainSearcher(
 
   private def classify(hitList: List[MutableArticleHit], personalizedSearcher: PersonalizedSearcher) = {
     def classify(hit: MutableArticleHit) = {
-      (hit.clickBoost) > 1.25f || hit.scoring.recencyScore > 0.25f || hit.scoring.textScore > 0.7f || (hit.scoring.textScore >= 0.04f && hit.semanticScore >= 0.28f)
+      (hit.clickBoost) > 1.25f || hit.scoring.recencyScore > 0.25f || hit.scoring.textScore > 0.7f || (hit.scoring.textScore >= 0.04f && hit.semanticScore >= 0.20f)
     }
     hitList.take(3).exists(classify(_))
   }
@@ -406,7 +407,8 @@ class MainSearcher(
 
   def explain(queryString: String, uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
     // TODO: use user profile info as a bias
-    lang = LangDetector.detectShortText(queryString, lang)
+    // lang = LangDetector.detectShortText(queryString, lang)
+    lang = Lang("en")
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator

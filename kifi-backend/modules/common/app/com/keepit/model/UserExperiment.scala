@@ -31,6 +31,7 @@ object ExperimentTypes {
   val INACTIVE = State[ExperimentType]("inactive")
   val NO_SEARCH_EXPERIMENTS = State[ExperimentType]("no search experiments")
   val CAN_INVITE = State[ExperimentType]("can invite")
+  val CAN_MESSAGE_ALL_USERS = State[ExperimentType]("can message all users")
 
   def apply(str: String): State[ExperimentType] = str.toLowerCase.trim match {
     case ADMIN.value => ADMIN
@@ -40,6 +41,7 @@ object ExperimentTypes {
     case INACTIVE.value => INACTIVE
     case NO_SEARCH_EXPERIMENTS.value => NO_SEARCH_EXPERIMENTS
     case CAN_INVITE.value => CAN_INVITE
+    case CAN_MESSAGE_ALL_USERS.value => CAN_MESSAGE_ALL_USERS
   }
 }
 

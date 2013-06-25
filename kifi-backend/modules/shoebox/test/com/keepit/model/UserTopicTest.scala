@@ -18,6 +18,7 @@ class UserTopicTest extends Specification with TestDBRunner {
       topic
   }
 
+  // user i concentrates on topic i
   def setup()(implicit injector: Injector) = {
     val t = new DateTime(2013, 5, 20, 21, 59, 0, 0, PT)
     val numTopics = TopicModelGlobal.numTopics

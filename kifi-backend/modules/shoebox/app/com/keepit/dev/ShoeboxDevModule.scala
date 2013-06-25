@@ -17,12 +17,14 @@ import com.google.common.io.Files
 import com.keepit.common.amazon.AmazonInstanceInfo
 import com.keepit.common.mail.{MailToKeepPluginImpl, MailToKeepPlugin, MailToKeepActor}
 import com.keepit.common.actor.ActorFactory
-
 import com.keepit.common.mail.MailToKeepServerSettings
 import com.keepit.classify.DomainTagImportSettings
 import scala.Some
 import com.keepit.common.zookeeper.Node
 import com.keepit.common.amazon.AmazonInstanceId
+import com.keepit.learning.topicmodel.WordTopicModel
+import com.keepit.learning.topicmodel.TopicModelGlobal
+import com.keepit.learning.topicmodel.LdaWordTopicModel
 
 class ShoeboxDevModule extends ScalaModule with Logging {
   def configure() {
@@ -120,6 +122,18 @@ class ShoeboxDevModule extends ScalaModule with Logging {
       case None => new FakeMailToKeepPlugin(schedulingProperties)
       case _ => new MailToKeepPluginImpl(actorFactory, schedulingProperties)
     }
+  }
+
+  @Provides
+  @Singleton
+  def wordTopicModel: WordTopicModel = {
+     val vocabulary: Set[String] = (0 until TopicModelGlobal.numTopics).map{ i => "word%d".format(i)}.toSet
+      val wordTopic: Map[String, Array[Double]] = (0 until TopicModelGlobal.numTopics).foldLeft(Map.empty[String, Array[Double]]){
+        (m, i) => { val a = new Array[Double](TopicModelGlobal.numTopics); a(i) = 1.0; m + ("word%d".format(i) -> a) }
+      }
+      val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map{ i => "topic%d".format(i)}.toArray
+      print("loading fake topic model")
+      new LdaWordTopicModel(vocabulary, wordTopic, topicNames)
   }
 }
 

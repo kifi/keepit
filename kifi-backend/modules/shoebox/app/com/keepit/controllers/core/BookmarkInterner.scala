@@ -12,7 +12,6 @@ import com.keepit.common.healthcheck._
 
 import play.api.libs.json._
 
-import com.keepit.common.analytics.ActivityStream
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 
@@ -26,7 +25,6 @@ class BookmarkInterner @Inject() (
   bookmarkRepo: BookmarkRepo,
   urlRepo: URLRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
-  activityStream: ActivityStream,
   healthcheckPlugin: HealthcheckPlugin,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
@@ -40,7 +38,7 @@ class BookmarkInterner @Inject() (
   }
 
   private def findUri(url: String, title: Option[String]): NormalizedURI = db.readWrite(attempts = 2) { implicit s =>
-    uriRepo.getByNormalizedUrl(url) match {
+    uriRepo.getByUri(url) match {
       case Some(uri) if uri.state == NormalizedURIStates.ACTIVE | uri.state == NormalizedURIStates.INACTIVE =>
         uriRepo.save(uri.withState(NormalizedURIStates.SCRAPE_WANTED))
       case Some(uri) => uri
@@ -73,9 +71,7 @@ class BookmarkInterner @Inject() (
         log.debug("interning bookmark %s with title [%s]".format(json, title))
         val uri = findUri(url, title)
         if (uri.state == NormalizedURIStates.SCRAPE_WANTED) scraper.asyncScrape(uri)
-        val bookmark = internBookmark(uri, user, isPrivate, experiments, installationId, source, title, url)
-        if(bookmark.isDefined) addToActivityStream(user, bookmark.get)
-        bookmark
+        internBookmark(uri, user, isPrivate, experiments, installationId, source, title, url)
       } else {
         None
       }
@@ -89,25 +85,4 @@ class BookmarkInterner @Inject() (
 
   private def createNewURI(title: Option[String], url: String)(implicit session: RWSession) =
     uriRepo.save(NormalizedURIFactory(title = title, url = url, state = NormalizedURIStates.SCRAPE_WANTED))
-
-  private def addToActivityStream(user: User, bookmark: Bookmark) = {
-    val social = db.readOnly { implicit session =>
-      socialUserInfoRepo.getByUser(user.id.get).headOption.map(_.socialId.id).getOrElse("")
-    }
-
-    val json = Json.obj(
-      "user" -> Json.obj(
-        "id" -> user.id.get.id,
-        "name" -> s"${user.firstName} ${user.lastName}",
-        "avatar" -> s"https://graph.facebook.com/${social}/picture?height=150&width=150"),
-      "bookmark" -> Json.obj(
-        "id" -> bookmark.id.get.id,
-        "isPrivate" -> bookmark.isPrivate,
-        "title" -> bookmark.title,
-        "uri" -> bookmark.url,
-        "source" -> bookmark.source.value)
-    )
-
-    activityStream.streamActivity("bookmark", json)
-  }
 }

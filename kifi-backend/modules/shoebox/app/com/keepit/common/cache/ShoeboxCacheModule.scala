@@ -11,12 +11,18 @@ class ShoeboxCacheModule extends ScalaModule {
 
   def configure {
     install(new MemcachedCacheModule)
+    install(new EhCacheCacheModule)
   }
 
   @Singleton
   @Provides
   def basicUserUserIdCache(outerRepo: FortyTwoCachePlugin) =
     new BasicUserUserIdCache((outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def normalizedURIUrlHashCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new NormalizedURIUrlHashCache((innerRepo, 1 second), (outerRepo, 7 days))
 
   @Singleton
   @Provides
@@ -56,7 +62,7 @@ class ShoeboxCacheModule extends ScalaModule {
   @Singleton
   @Provides
   def unscrapableAllCache(outerRepo: FortyTwoCachePlugin) =
-    new UnscrapableAllCache((outerRepo, 0 second))
+    new UnscrapableAllCache((outerRepo, 30 days))
 
   @Singleton
   @Provides
@@ -91,7 +97,12 @@ class ShoeboxCacheModule extends ScalaModule {
   @Singleton
   @Provides
   def bookmarkCountCache(outerRepo: FortyTwoCachePlugin) =
-    new BookmarkCountCache((outerRepo, 1 hour))
+    new BookmarkCountCache((outerRepo, 1 day))
+
+  @Singleton
+  @Provides
+  def socialUserInfoCountCache(outerRepo: FortyTwoCachePlugin) =
+    new SocialUserInfoCountCache((outerRepo, 1 day))
 
   @Singleton
   @Provides

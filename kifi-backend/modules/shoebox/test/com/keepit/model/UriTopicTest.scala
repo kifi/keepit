@@ -19,6 +19,7 @@ class UriTopicTest extends Specification with TestDBRunner{
     topic
   }
 
+  // uri i concentrates on topic i
   def setup()(implicit injector: Injector) = {
     val t = new DateTime(2013, 5, 20, 21, 59, 0, 0, PT)
     val numTopics = TopicModelGlobal.numTopics
@@ -71,7 +72,7 @@ class UriTopicTest extends Specification with TestDBRunner{
       helper.assignTopics(t) === (Some(10), Some(11))
     }
 
-    "helper should correclty convert between doublArray and ArrayByte" in {
+    "helper should correclty convert between doubleArray and ArrayByte" in {
       val N = TopicModelGlobal.numTopics
       val a = new Array[Double](N)
       val helper = new UriTopicHelper

@@ -6,6 +6,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model.{NormalizedURI, User}
 import com.keepit.search.graph.URIGraphFields._
 import com.keepit.search.index.ArrayIdMapper
+import com.keepit.search.index.CachedIndex
 import com.keepit.search.index.CachingIndexReader
 import com.keepit.search.index.IdMapper
 import com.keepit.search.index.Searcher
@@ -81,12 +82,17 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
     }
   }
 
+  @volatile
+  private[this] var cachedIndexOpt: Option[CachedIndex] = None
+
   def openPersonalIndex(query: Query): (CachingIndexReader, IdMapper) = {
     if (myInfo.mapper.maxDoc != myInfo.uriIdArray.length)
       log.error(s"mapper.maxDocs=${myInfo.mapper.maxDoc} ids.length=${myInfo.uriIdArray.length} publicList.size=${myInfo.publicList.size} privateList.size=${myInfo.privateList.size}")
 
     val terms = QueryUtil.getTerms(query)
-    (LineIndexReader(reader, myInfo.docId, terms, myInfo.uriIdArray.length), myInfo.mapper)
+    val r = LineIndexReader(reader, myInfo.docId, terms, myInfo.uriIdArray.length, cachedIndexOpt)
+    cachedIndexOpt = Some(r.index)
+    (r, myInfo.mapper)
   }
 
   def getBookmarkRecord(uriId: Id[NormalizedURI]): Option[BookmarkRecord] = {
