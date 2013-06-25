@@ -104,13 +104,16 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative; -webkit-tra
 #coll-menu>li>a.hover {background: #9ba4b8; color: #fff}
 
 aside.right {right: 0; width: 25.78125%; min-width: 330px}
-.splash {background-color: #fff; border-left: 1px solid #dbdee3; padding: 6px 0 0 36px}
-.splash>h2 {margin: 30px 0 6px; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
-.splash>ul {margin: 0; padding: 0; list-style: none; font-size: 15px; line-height: 46px; -webkit-font-smoothing: antialiased}
-.splash>ul>li>a {display: inline-block; color: #556179; margin-left: -10px; padding: 0 24px 0 10px}
-.splash>ul>li>a[href]:hover {background-color: #f7fafe}
-.splash>ul>li>a[href]:active {background-color: #eff2f7}
-.splash>ul>li>a::before {content: " "; display: inline-block; width: 30px; height: 24px; vertical-align: -6px; font-size: 0; margin-right: 16px; background: url(../img/splash.png) 0 0/30px auto}
+aside.right>.antiscroll-inner {position: absolute; top: 0; bottom: 0; left: 0; right: 0; overflow-x: hidden; overflow-y: scroll; -moz-box-sizing: border-box; box-sizing: border-box}
+
+.splash {background-color: #fff; border-left: 1px solid #dbdee3}
+.splash>.antiscroll-inner {padding: 6px 0 0 36px}
+.splash h2 {margin: 30px 0 6px; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
+.splash ul {margin: 0; padding: 0; list-style: none; font-size: 15px; line-height: 46px; -webkit-font-smoothing: antialiased}
+.splash ul>li>a {display: inline-block; color: #556179; margin-left: -10px; padding: 0 24px 0 10px}
+.splash ul>li>a[href]:hover {background-color: #f7fafe}
+.splash ul>li>a[href]:active {background-color: #eff2f7}
+.splash ul>li>a::before {content: " "; display: inline-block; width: 30px; height: 24px; vertical-align: -6px; font-size: 0; margin-right: 16px; background: url(../img/splash.png) 0 0/30px auto}
 .about-kifi>li:nth-child(2)>a::before {background-position: 0 -24px}
 .about-kifi>li:nth-child(3)>a::before {background-position: 0 -48px}
 .about-kifi>li:nth-child(4)>a::before {background-position: 0 -72px}

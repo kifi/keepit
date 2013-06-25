@@ -517,6 +517,9 @@ $(function() {
 	var mainScroller = $mainKeeps.data("antiscroll");
 	$(window).resize(mainScroller.refresh.bind(mainScroller));
 
+	var splashScroller = $(".splash").antiscroll({x: false, width: "100%"}).data("antiscroll");
+	$(window).resize(splashScroller.refresh.bind(splashScroller));
+
 	var $query = $("input.query").on("keydown input", function(e) {
 		console.log("[clearTimeout]", e.type);
 		clearTimeout(searchTimeout);
