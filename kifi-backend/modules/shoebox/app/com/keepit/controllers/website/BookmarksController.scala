@@ -109,7 +109,7 @@ class BookmarksController @Inject() (
 
   def screenshotUrl(url: String) = Action { request =>
     Async {
-      db.readWriteAsync { implicit session =>
+      db.readOnlyAsync { implicit session =>
         uriRepo.getByUri(url)
       } map { uri =>
         Redirect(s3ScreenshotStore.getScreenshotUrl(uri))
