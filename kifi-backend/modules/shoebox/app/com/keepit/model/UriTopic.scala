@@ -77,6 +77,7 @@ class UriTopicHelper {
 trait UriTopicRepo extends Repo[UriTopic]{
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession):Option[UriTopic]
   def getAssignedTopicsByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[(Option[Int], Option[Int])]
+  def deleteAll()(implicit session: RWSession): Int
 }
 
 @Singleton
@@ -103,4 +104,7 @@ class UriTopicRepoImpl @Inject() (
     (for(r <- table if r.uriId === uriId) yield (r.primaryTopic, r.secondaryTopic)).firstOption
   }
 
+  def deleteAll()(implicit session: RWSession): Int = {
+    (for(r <- table) yield r).delete
+  }
 }

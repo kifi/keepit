@@ -57,6 +57,27 @@ class UriTopicTest extends Specification with TestDBRunner{
       }
     }
 
+    "be able to delete all data" in {
+        withDB() { implicit injector =>
+        val uriTopicRepo = inject[UriTopicRepo]
+        val uriTopics = setup()
+        val numDocs = uriTopics.size
+        val helper = new UriTopicHelper
+          db.readOnly{ implicit s =>
+          (0 until numDocs).foreach{ i =>
+            val uriTopic = uriTopicRepo.getByUriId(Id[NormalizedURI](i)).get
+            helper.toDoubleArray(uriTopic.topic) === helper.toDoubleArray(uriTopics(i).topic)
+            uriTopic.primaryTopic === uriTopics(i).primaryTopic
+            uriTopic.secondaryTopic === uriTopics(i).secondaryTopic
+          }
+        }
+
+        db.readWrite{ implicit s =>
+          uriTopicRepo.deleteAll()
+        } === numDocs
+      }
+    }
+
     "helper should correctly assignTopics" in {
       val N = TopicModelGlobal.numTopics
       val helper = new UriTopicHelper
