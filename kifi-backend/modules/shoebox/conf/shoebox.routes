@@ -98,6 +98,8 @@ POST    /site/user/update-email     @com.keepit.controllers.website.UserControll
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html")
 GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSite(path: String)
 
+GET     /screenshot                 @com.keepit.controllers.website.BookmarksController.screenshotUrl(url: String ?= "")
+
 
 
 POST    /admin/logging/emails       @com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
@@ -166,7 +168,8 @@ GET     /admin/uriGraph/dumpCollectionDoc/:colId  @com.keepit.controllers.admin.
 GET     /admin/commentIndex/reindex @com.keepit.controllers.admin.AdminCommentIndexController.reindex
 GET     /admin/commentIndex/dumpDoc/:commentId  @com.keepit.controllers.admin.AdminCommentIndexController.dumpLuceneDocument(commentId: Id[Comment])
 
-GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.usersView
+GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView
+GET     /admin/users/page/:page                @com.keepit.controllers.admin.AdminUserController.usersView(page: Int)
 GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User])
 POST    /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User])
 GET     /admin/user/:id/more-info   @com.keepit.controllers.admin.AdminUserController.moreUserInfoView(id: Id[User])

@@ -150,6 +150,10 @@ object FortyTwoTypeMappers {
   }
 
   //Other
+  implicit object UrlHashTypeMapper extends BaseTypeMapper[UrlHash] {
+    def apply(profile: BasicProfile) = new UrlHashTypeMapperDelegate(profile)
+  }
+
   implicit object SequenceNumberTypeMapper extends BaseTypeMapper[SequenceNumber] {
     def apply(profile: BasicProfile) = new SequenceNumberTypeMapperDelegate(profile)
   }
@@ -292,6 +296,17 @@ class SequenceNumberTypeMapperDelegate(val profile: BasicProfile)
   def zero = SequenceNumber.ZERO
   def sourceToDest(value: SequenceNumber): Long = value.value
   def safeDestToSource(value: Long): SequenceNumber = SequenceNumber(value)
+}
+
+//************************************
+//       UrlHash -> String
+//************************************
+class UrlHashTypeMapperDelegate(val profile: BasicProfile)
+    extends DelegateMapperDelegate[UrlHash, String] {
+  protected val delegate = profile.typeMapperDelegates.stringTypeMapperDelegate
+  def zero = UrlHash("")
+  def sourceToDest(value: UrlHash): String = value.hash
+  def safeDestToSource(value: String): UrlHash = UrlHash(value)
 }
 
 //************************************

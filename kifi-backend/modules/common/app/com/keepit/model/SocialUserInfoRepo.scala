@@ -22,10 +22,11 @@ trait SocialUserInfoRepo extends Repo[SocialUserInfo] {
 
 @Singleton
 class SocialUserInfoRepoImpl @Inject() (
-                                         val db: DataBaseComponent,
-                                         val clock: Clock,
-                                         val userCache: SocialUserInfoUserCache,
-                                         val networkCache: SocialUserInfoNetworkCache)
+    val db: DataBaseComponent,
+    val clock: Clock,
+    val userCache: SocialUserInfoUserCache,
+    val countCache: SocialUserInfoCountCache,
+    val networkCache: SocialUserInfoNetworkCache)
   extends DbRepo[SocialUserInfo] with SocialUserInfoRepo {
 
   import DBSession._
@@ -49,6 +50,12 @@ class SocialUserInfoRepoImpl @Inject() (
     socialUser.userId map {userId => userCache.remove(SocialUserInfoUserKey(userId))}
     networkCache.remove(SocialUserInfoNetworkKey(socialUser.networkType, socialUser.socialId))
     socialUser
+  }
+
+  override def count(implicit session: RSession): Int = {
+    countCache.getOrElse(SocialUserInfoCountKey()) {
+      super.count
+    }
   }
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[SocialUserInfo] =
