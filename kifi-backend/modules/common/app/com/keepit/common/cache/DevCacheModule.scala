@@ -157,7 +157,6 @@ class HashMapMemoryCache extends InMemoryCachePlugin {
 
   def get(key: String): Option[Any] = {
     val value = cache.get(key)
-    println(s"retrieved from cache: $key -> $value")
     value
   }
 
@@ -166,7 +165,6 @@ class HashMapMemoryCache extends InMemoryCachePlugin {
   }
 
   def set(key: String, value: Any, expiration: Int = 0) {
-    println(s"setting in cache: $key -> $value")
     cache += key -> value
   }
 

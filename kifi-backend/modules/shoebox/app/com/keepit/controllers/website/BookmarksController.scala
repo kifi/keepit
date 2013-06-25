@@ -1,7 +1,6 @@
 package com.keepit.controllers.website
 
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.WebsiteController
@@ -13,9 +12,10 @@ import com.keepit.common.time._
 import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.common.store.S3ScreenshotStore
+import play.api.mvc.Action
 
 private case class BasicCollection(id: Option[ExternalId[Collection]], name: String, keeps: Option[Int])
 
@@ -63,7 +63,8 @@ class BookmarksController @Inject() (
     searchClient: SearchServiceClient,
     bookmarkInterner: BookmarkInterner,
     uriRepo: NormalizedURIRepo,
-    actionAuthenticator: ActionAuthenticator
+    actionAuthenticator: ActionAuthenticator,
+    s3ScreenshotStore: S3ScreenshotStore
   )
   extends WebsiteController(actionAuthenticator) {
 
@@ -103,6 +104,16 @@ class BookmarksController @Inject() (
       BadRequest(Json.obj(
         "error" -> "Could not parse JSON array of collection ids from request body"
       ))
+    }
+  }
+
+  def screenshotUrl(url: String) = Action { request =>
+    Async {
+      db.readWriteAsync { implicit session =>
+        uriRepo.getByUri(url)
+      } map { uri =>
+        Redirect(s3ScreenshotStore.getScreenshotUrl(uri))
+      }
     }
   }
 

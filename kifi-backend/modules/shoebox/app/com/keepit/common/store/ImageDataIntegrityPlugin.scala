@@ -1,7 +1,6 @@
 package com.keepit.common.store
 
 import scala.concurrent.duration._
-
 import com.google.inject.Inject
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.akka.FortyTwoActor
@@ -12,7 +11,6 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.net.{NonOKResponseException, ClientResponse, HttpClient}
 import com.keepit.common.plugin._
 import com.keepit.model.{UserStates, UserRepo, User}
-
 import akka.actor.ActorSystem
 import play.api.Plugin
 import play.api.http.Status.OK
@@ -65,9 +63,9 @@ private[store] class ImageDataIntegrityActor @Inject() (
 
   private type ImageResponseInfo = ((String, ClientResponse), Option[(String, ClientResponse)])
   private def findPictures(id: ExternalId[User]): Seq[ImageResponseInfo] = {
-    val urls: Seq[(String, String)] = S3ImageConfig.ImageSizes map { size =>
+    val urls: Seq[(String, String)] = S3UserPictureConfig.ImageSizes map { size =>
       (s"http://s3.amazonaws.com/${store.config.bucketName}/users/$id/pics/$size/0.jpg",
-          store.config.avatarUrlByExternalId(size, id, Some("http")))
+          store.avatarUrlByExternalId(size, id, Some("http")))
     }
      for ((s3url, cfUrl) <- urls) yield {
       get(s3url) match {

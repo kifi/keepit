@@ -23,7 +23,8 @@ case class NormalizedURI (
   url: String,
   urlHash: UrlHash,
   state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
-  seq: SequenceNumber = SequenceNumber.ZERO
+  seq: SequenceNumber = SequenceNumber.ZERO,
+  screenshotUpdatedAt: Option[DateTime]
 ) extends ModelWithExternalId[NormalizedURI] with Logging {
   def withId(id: Id[NormalizedURI]): NormalizedURI = copy(id = Some(id))
   def withUpdateTime(now: DateTime): NormalizedURI = copy(updatedAt = now)
@@ -112,7 +113,7 @@ object NormalizedURIFactory {
   def apply(title: Option[String], url: String, state: State[NormalizedURI]): NormalizedURI = {
     val normalized = normalize(url)
     if (normalized.size > URLFactory.MAX_URL_SIZE) throw new Exception(s"url size is ${normalized.size} which exceeds ${URLFactory.MAX_URL_SIZE}: $normalized")
-    NormalizedURI(title = title, url = normalized, urlHash = hashUrl(normalized), state = state)
+    NormalizedURI(title = title, url = normalized, urlHash = hashUrl(normalized), state = state, screenshotUpdatedAt = None)
   }
 
   def normalize(url: String) = URINormalizer.normalize(url)
