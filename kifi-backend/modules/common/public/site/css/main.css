@@ -121,6 +121,8 @@ aside.right select {padding: 5px}
 aside.right a {color: #556179; display: block}
 aside.right .who-kept span {display: block; margin-bottom: 5px}
 aside.right .who-kept span.private {display: none}
+aside.right .screenshot {display:none}
+aside.right .has-screenshot {background-size: 250px Auto; width: 250px; height: 140px}
 aside.right div.actions {position: absolute; bottom: 10px}
 aside.right div.actions > a {display: block; font-size: 1.2em; width: 290px; padding: 10px 20px}
 aside.right div.actions > a:hover {color: #fff; background: #6fa6ef}
