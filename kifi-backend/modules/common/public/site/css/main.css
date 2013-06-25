@@ -14,7 +14,7 @@ ol {list-style: none; padding: 0; margin: 0}
 :-ms-input-placeholder {color: #b6c3cc}
 
 /* header */
-html {height: 100%; text-align: center; overflow: hidden}
+html {height: 100%; text-align: center; overflow-y: hidden; overflow-x: auto}
 body {height: 100%; min-width: 1024px; margin: 0 auto; padding: 0; background: #fafafa; font-size: 16px; text-align: left; position: relative}
 header {height: 70px; background: #67829c; position: relative; z-index: 1}
 .header-left {position: absolute; width: 15.873%; min-width: 200px; padding-top: 12px; text-align: center}
