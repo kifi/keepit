@@ -22,9 +22,8 @@ class TopicModelController  @Inject() (
   def inferTopic = AdminHtmlAction{ implicit request =>
 
     def makeString(topicId: Int, membership: Double) = {
-      print(topicId + " ||| " + membership)
       val score = "%.3f".format(membership)
-      topicId.toString + ":" + score
+      topicId.toString + ": " + score
     }
 
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
@@ -36,7 +35,7 @@ class TopicModelController  @Inject() (
       case (None, None) => ""
       case (Some(a), None) => makeString(a, topic(a))
       case (None, Some(b)) => makeString(b, topic(b))
-      case (Some(a), Some(b)) => makeString(a, topic(a)) + "," + makeString(b, topic(b))
+      case (Some(a), Some(b)) => makeString(a, topic(a)) + ", " + makeString(b, topic(b))
     }
     Redirect(com.keepit.controllers.admin.routes.TopicModelController.documentTopic(Some(content), Some(topics)))
   }
