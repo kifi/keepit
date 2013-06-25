@@ -39,7 +39,7 @@ class UserTopicTest extends Specification with TestDBRunner {
   }
 
   "userTopicRepo" should {
-    "correctly persist user topic" in {
+    "correctly persist user topic and be able to delete all" in {
       withDB() { implicit injector =>
         val userTopics = setup()
         val numTopics = TopicModelGlobal.numTopics
@@ -56,6 +56,10 @@ class UserTopicTest extends Specification with TestDBRunner {
             helper.toIntArray(topic).toSeq === genTopic(numTopics, i).toSeq
           }
         }
+
+        db.readWrite{ implicit s =>
+          userTopicRepo.deleteAll()
+        } === userTopics.size
       }
 
     }
