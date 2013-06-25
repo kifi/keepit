@@ -55,7 +55,7 @@ class S3ScreenshotStoreImpl @Inject() (
   
   def screenshotUrl(url: String): String = screenshotUrl(size._1, code, url)
   def screenshotUrl(sizeName: String, code: String, url: String): String =
-    s"http://api.pagepeeker.com/v2/thumbs.php?size=$sizeName&code=$code&url=${URLEncoder.encode(url, UTF8)}&wait=30"//&refresh=1"
+    s"http://api.pagepeeker.com/v2/thumbs.php?size=$sizeName&code=$code&url=${URLEncoder.encode(url, UTF8)}&wait=30&refresh=1"
   
   def urlByExternalId(extNormalizedURIId: ExternalId[NormalizedURI], protocolDefault: Option[String] = None): String = {
     val uri = URI.parse(s"${config.cdnBase}/${keyByExternalId(extNormalizedURIId)}").get
