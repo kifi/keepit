@@ -109,12 +109,9 @@ class Scraper @Inject() (
         log.debug("fetched uri %s => %s".format(uri, article))
         
         def shouldUpdateScreenshot(uri: NormalizedURI) = {
-          if(uri.screenshotUpdatedAt.isDefined) {
-            if(Days.daysBetween(currentDateTime.toDateMidnight, uri.screenshotUpdatedAt.get.toDateMidnight).getDays() >= 5)
-              true
-            else false
-          }
-          else true
+          uri.screenshotUpdatedAt map { update =>
+            Days.daysBetween(currentDateTime.toDateMidnight, update.toDateMidnight).getDays() >= 5
+          } getOrElse false
         }
         
         if(shouldUpdateScreenshot(uri))
