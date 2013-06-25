@@ -72,6 +72,7 @@ class KeepToCollectionRepoImpl @Inject() (
   }
 
   def count(collId: Id[Collection])(implicit session: RSession): Int = {
-    Query((for (c <- table if c.collectionId === collId) yield c).length).firstOption.getOrElse(0)
+    Query((for (c <- table if c.collectionId === collId && c.state === KeepToCollectionStates.ACTIVE) yield c).length)
+      .firstOption.getOrElse(0)
   }
 }
