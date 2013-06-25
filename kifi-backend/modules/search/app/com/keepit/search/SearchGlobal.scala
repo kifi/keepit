@@ -4,6 +4,7 @@ import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.{InMemoryCachePlugin, FortyTwoCachePlugin}
 import com.keepit.common.healthcheck._
 import com.keepit.module.CommonModule
+import com.keepit.search.comment.CommentIndexerPlugin
 import com.keepit.search.graph.URIGraphPlugin
 import com.keepit.search.index.ArticleIndexerPlugin
 import play.api.Mode._
@@ -26,6 +27,7 @@ trait SearchServices { self: FortyTwoGlobal =>
   def startSearchServices() {
     require(injector.instance[ArticleIndexerPlugin].enabled)
     require(injector.instance[URIGraphPlugin].enabled)
+    require(injector.instance[CommentIndexerPlugin].enabled)
     require(injector.instance[HealthcheckPlugin].enabled)
     require(injector.instance[FortyTwoCachePlugin].enabled)
     require(injector.instance[InMemoryCachePlugin].enabled)
