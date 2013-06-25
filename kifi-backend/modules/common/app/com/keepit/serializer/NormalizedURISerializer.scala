@@ -19,7 +19,8 @@ class NormalizedURISerializer extends Format[NormalizedURI] {
       "url"  -> JsString(uri.url),
       "urlHash"  -> JsString(uri.urlHash.hash),
       "state"  -> JsString(uri.state.value),
-      "seq" -> JsNumber(uri.seq.value)
+      "seq" -> JsNumber(uri.seq.value),
+      "screenshotUpdatedAt" -> Json.toJson(uri.screenshotUpdatedAt)
     ))
 
   def reads(json: JsValue): JsResult[NormalizedURI] =
@@ -32,7 +33,8 @@ class NormalizedURISerializer extends Format[NormalizedURI] {
       url = (json \ "url").as[String],
       urlHash = UrlHash((json \ "urlHash").as[String]),
       state = State[NormalizedURI]((json \ "state").as[String]),
-      seq = SequenceNumber((json \ "seq").as[Long])
+      seq = SequenceNumber((json \ "seq").as[Long]),
+      screenshotUpdatedAt = (json \ "screenshotUpdatedAt").asOpt[DateTime]
     ))
 }
 

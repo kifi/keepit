@@ -23,6 +23,8 @@ import org.joda.time.{DateTime, Seconds}
 import play.api.Play.current
 import scala.util.{Failure, Success}
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
+import com.keepit.common.store.S3ScreenshotStore
+import org.joda.time.Days
 
 object Scraper {
   val BATCH_SIZE = 100
@@ -39,7 +41,8 @@ class Scraper @Inject() (
   normalizedURIRepo: NormalizedURIRepo,
   healthcheckPlugin: HealthcheckPlugin,
   bookmarkRepo: BookmarkRepo,
-  unscrapableRepo: UnscrapableRepo)
+  unscrapableRepo: UnscrapableRepo,
+  s3ScreenshotStore: S3ScreenshotStore)
     extends Logging {
 
   implicit val config = scraperConfig
@@ -104,6 +107,15 @@ class Scraper @Inject() (
           savedUri
         }
         log.debug("fetched uri %s => %s".format(uri, article))
+        
+        def shouldUpdateScreenshot(uri: NormalizedURI) = {
+          uri.screenshotUpdatedAt map { update =>
+            Days.daysBetween(currentDateTime.toDateMidnight, update.toDateMidnight).getDays() >= 5
+          } getOrElse true
+        }
+        if(shouldUpdateScreenshot(uri))
+          s3ScreenshotStore.updatePicture(uri)
+        
         (scrapedURI, Some(article))
       case NotScrapable(destinationUrl) =>
         val unscrapableURI = db.readWrite { implicit s =>
