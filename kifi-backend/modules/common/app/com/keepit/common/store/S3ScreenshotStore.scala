@@ -34,7 +34,7 @@ import scala.util.Try
 @ImplementedBy(classOf[S3ScreenshotStoreImpl])
 trait S3ScreenshotStore {
   def config: S3ImageConfig
-  def getScreenshotUrl(user: NormalizedURI): String
+  def getScreenshotUrl(normalizedUri: NormalizedURI): String
   def getScreenshotUrl(normalizedUriOpt: Option[NormalizedURI]): String
   def updatePicture(normalizedUri: NormalizedURI): Future[Option[PutObjectResult]]
 }
