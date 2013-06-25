@@ -30,6 +30,11 @@ import com.keepit.model.NormalizedURIRepoImpl
 import play.api.libs.ws.WS
 import scala.util.Try
 import play.modules.statsd.api.Statsd
+import org.imgscalr.Scalr
+import java.awt.image.BufferedImage
+import javax.imageio.ImageIO
+import java.io.ByteArrayOutputStream
+import java.io.ByteArrayInputStream
 
 
 @ImplementedBy(classOf[S3ScreenshotStoreImpl])
@@ -39,10 +44,11 @@ trait S3ScreenshotStore {
 
   def getScreenshotUrl(normalizedUri: NormalizedURI): Option[String]
   def getScreenshotUrl(normalizedUriOpt: Option[NormalizedURI]): Option[String]
-  def updatePicture(normalizedUri: NormalizedURI): Future[Option[PutObjectResult]]
+  def updatePicture(normalizedUri: NormalizedURI): Future[Option[Seq[Option[PutObjectResult]]]]
 }
 
-case class ScreenshotSize(imageCode: String, size: String)
+case class ScreenshotSize(width: Int, height: Int)
+case class ScreenshotConfig(imageCode: String, targetSizes: Seq[ScreenshotSize])
 
 @Singleton
 class S3ScreenshotStoreImpl @Inject() (
@@ -54,20 +60,22 @@ class S3ScreenshotStoreImpl @Inject() (
     val config: S3ImageConfig
   ) extends S3ScreenshotStore with Logging {
   
-  val size = ScreenshotSize("b", "500x280")
+  val screenshotConfig = ScreenshotConfig("c", Seq(ScreenshotSize(1000, 560), ScreenshotSize(500, 280), ScreenshotSize(250, 140)))
+  val linkedSize = ScreenshotSize(500, 280) // which size to link to, by default; todo: user configurable
+  
   val code = "abf9cd2751"
     
-  def screenshotUrl(url: String): String = screenshotUrl(size.imageCode, code, url)
+  def screenshotUrl(url: String): String = screenshotUrl(screenshotConfig.imageCode, code, url)
   def screenshotUrl(sizeName: String, code: String, url: String): String =
     s"http://api.pagepeeker.com/v2/thumbs.php?size=$sizeName&code=$code&url=${URLEncoder.encode(url, UTF8)}&wait=30&refresh=1"
   
   def urlByExternalId(extNormalizedURIId: ExternalId[NormalizedURI], protocolDefault: Option[String] = None): String = {
-    val uri = URI.parse(s"${config.cdnBase}/${keyByExternalId(extNormalizedURIId)}").get
+    val uri = URI.parse(s"${config.cdnBase}/${keyByExternalId(extNormalizedURIId, linkedSize)}").get
     URI(uri.scheme orElse protocolDefault, uri.userInfo, uri.host, uri.port, uri.path, uri.query, uri.fragment).toString
   }
 
-  def keyByExternalId(extNormId: ExternalId[NormalizedURI]): String =
-    s"screenshot/$extNormId/${size.size}.jpg"
+  def keyByExternalId(extNormId: ExternalId[NormalizedURI], size: ScreenshotSize): String =
+    s"screenshot/$extNormId/${size.width}x${size.height}.jpg"
   
   def getScreenshotUrl(normalizedUriOpt: Option[NormalizedURI]): Option[String] =
     normalizedUriOpt.flatMap(getScreenshotUrl)
@@ -85,8 +93,16 @@ class S3ScreenshotStoreImpl @Inject() (
       }
     }
   }
+  
+  private def resizeImage(rawImage: BufferedImage, size: ScreenshotSize) = {
+    val resized = Try { Scalr.resize(rawImage, Math.max(size.height, size.width)) }
+    val os = new ByteArrayOutputStream()
+    ImageIO.write(resized.getOrElse(rawImage), "jpeg", os)
+    
+    (os.size(), new ByteArrayInputStream(os.toByteArray()))
+  }
 
-  def updatePicture(normalizedUri: NormalizedURI): Future[Option[PutObjectResult]] = {
+  def updatePicture(normalizedUri: NormalizedURI): Future[Option[Seq[Option[PutObjectResult]]]] = {
     if (config.isLocal) {
       Promise.successful(None).future
     } else {
@@ -95,26 +111,58 @@ class S3ScreenshotStoreImpl @Inject() (
       val future = WS.url(screenshotUrl(url)).get().map { response =>
         Option(response.ahcResponse.getHeader("X-PP-Error")) match {
           case Some("True") =>
-            log.warn(s"Failed to take a screenshot of $url")
+            log.warn(s"Failed to take a screenshot of $url. Reported error from provider.")
             Statsd.increment(s"screenshot.fetch.fails")
             None
           case _ =>
-            Statsd.increment(s"screenshot.fetch.successes")
-            val key = keyByExternalId(externalId)
-            log.info(s"Uploading screenshot of $url to S3 key $key")
-            val om = new ObjectMetadata()
-            om.setContentType("image/jpeg")
-            val contentLength = Try { response.ahcResponse.getHeader("Content-Length").toLong }
-            if(contentLength.isSuccess)
-              om.setContentLength(contentLength.get)
-            Some(s3Client.putObject(config.bucketName, key, response.getAHCResponse.getResponseBodyAsStream, om))
+            
+            val originalStream = response.getAHCResponse.getResponseBodyAsStream
+            val rawImageTry = Try { ImageIO.read(originalStream) }
+            
+            val resizedImages = screenshotConfig.targetSizes.map { size =>
+              for {
+                rawImage <- rawImageTry
+                resized <- Try { resizeImage(rawImage, size) }
+              } yield (resized._1, resized._2, size)
+            }
+            
+            val storedObjects = resizedImages map { case resizeAttempt =>
+              resizeAttempt match {
+                case Success((contentLength, imageStream, size)) =>
+                  Statsd.increment(s"screenshot.fetch.successes")
+                  
+                  val om = new ObjectMetadata()
+                  om.setContentType("image/jpeg")
+                  om.setContentLength(contentLength)
+                  val key = keyByExternalId(externalId, size)
+                  val s3obj = s3Client.putObject(config.bucketName, key, imageStream, om)
+                  log.info(s"Uploading screenshot of $url to S3 key $key")
+                  
+                  imageStream.close
+                  Some(s3obj)
+                case Failure(ex) =>
+                  Statsd.increment(s"screenshot.fetch.fails")
+                  healthcheckPlugin.addError(HealthcheckError(
+                    error = Some(ex),
+                    callType = Healthcheck.INTERNAL,
+                    errorMessage = Some(s"Problem resizing screenshot image from $url")
+                  ))
+                  None
+              }
+            }
+            
+            originalStream.close()
+            
+            Some(storedObjects)
         }
       }
       future onComplete {
         case Success(result) =>
-          result.map { _ =>
-            db.readWrite { implicit s =>
-              normUriRepo.save(normalizedUri.copy(screenshotUpdatedAt = Some(clock.now)))
+          result.map { s =>
+            if(s.forall(_.isDefined)) { // if all images persisted successfully
+              db.readWrite { implicit s =>
+                normUriRepo.save(normalizedUri.copy(screenshotUpdatedAt = Some(clock.now)))
+              }
             }
           }
         case Failure(e) =>
