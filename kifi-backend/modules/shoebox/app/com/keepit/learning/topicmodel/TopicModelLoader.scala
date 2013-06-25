@@ -3,6 +3,7 @@ import scala.util.parsing.json.JSON
 
 trait TopicModelLoader {
   def loadFromJsonText(wordTopic: String, topicNames: String): WordTopicModel
+  def load(wordTopicJson: String, topicNames: Array[String]): WordTopicModel
 }
 
 class LdaTopicModelLoader extends TopicModelLoader {
@@ -24,6 +25,14 @@ class LdaTopicModelLoader extends TopicModelLoader {
     topicNames.foreach( name => assume( name != null, "some topic doesn't have a name"))
     assume(topicNames.toSet.size == topicNames.size, "looks like there are repeated topic names")
 
+    new LdaWordTopicModel(vocabulary, topic, topicNames)
+  }
+
+  def load(wordTopicJson: String, topicNames: Array[String]) = {
+    val wordTopicMap = JSON.parseFull(wordTopicJson).get.asInstanceOf[Map[String, Seq[Double]]]
+    val vocabulary = wordTopicMap.keySet
+    val topic = wordTopicMap.foldLeft(Map.empty[String, Array[Double]])((m, x) => m + (x._1 -> x._2.toArray))
+    assume(topicNames.size == TopicModelGlobal.numTopics, s"array topicNames has size ${topicNames.size}, expcect: ${TopicModelGlobal.numTopics}")
     new LdaWordTopicModel(vocabulary, topic, topicNames)
   }
 }
