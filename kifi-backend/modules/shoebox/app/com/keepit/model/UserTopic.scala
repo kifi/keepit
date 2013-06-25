@@ -51,6 +51,7 @@ class UserTopicByteArrayHelper {
 @ImplementedBy(classOf[UserTopicRepoImpl])
 trait UserTopicRepo extends Repo[UserTopic]{
   def getByUserId(userId: Id[User])(implicit session: RSession):Option[UserTopic]
+  def deleteAll()(implicit session: RWSession): Int
 }
 
 @Singleton
@@ -69,6 +70,10 @@ class UserTopicRepoImpl @Inject() (
 
   def getByUserId(userId: Id[User])(implicit session: RSession): Option[UserTopic] = {
     (for(r <- table if r.userId === userId) yield r).firstOption
+  }
+
+  def deleteAll()(implicit session: RWSession): Int = {
+    (for(r <- table) yield r).delete
   }
 }
 
