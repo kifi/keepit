@@ -97,7 +97,7 @@ class ShoeboxCacheModule extends ScalaModule {
   @Singleton
   @Provides
   def bookmarkCountCache(outerRepo: FortyTwoCachePlugin) =
-    new BookmarkCountCache((outerRepo, 1 hour))
+    new BookmarkCountCache((outerRepo, 1 day))
 
   @Singleton
   @Provides

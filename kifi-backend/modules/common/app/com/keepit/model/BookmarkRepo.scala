@@ -59,7 +59,6 @@ class BookmarkRepoImpl @Inject() (
 
   override def invalidateCache(bookmark: Bookmark)(implicit session: RSession) = {
     bookmarkUriUserCache.set(BookmarkUriUserKey(bookmark.uriId, bookmark.userId), bookmark)
-    countCache.remove(BookmarkCountKey())
     countCache.remove(BookmarkCountKey(Some(bookmark.userId)))
     bookmark
   }

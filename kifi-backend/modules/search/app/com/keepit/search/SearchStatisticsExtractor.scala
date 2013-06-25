@@ -207,7 +207,7 @@ class SearchStatisticsHelperSearcher(queryString: String, userId: Id[User], targ
     val browsingHistoryFuture = shoeboxServiceClient.getBrowsingHistoryFilter(userId).map(browsingHistoryBuilder.build)
     val clickHistoryFilter = shoeboxServiceClient.getClickHistoryFilter(userId).map(clickHistoryBuilder.build)
 
-    PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryFuture, clickHistoryFilter, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxServiceClient, monitoredAwait)
+    PersonalizedSearcher(userId, indexReader, myUris, browsingHistoryFuture, clickHistoryFilter, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxServiceClient, monitoredAwait)
   }
 
   //===================== preparation done ===========================//

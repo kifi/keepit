@@ -40,6 +40,7 @@ import play.api.db.DB
 import com.keepit.common.cache.ShoeboxCacheModule
 import securesocial.controllers.TemplatesPlugin
 import com.keepit.learning.topicmodel.{WordTopicModel, LdaWordTopicModel, TopicUpdaterPlugin, TopicUpdaterPluginImpl, TopicModelGlobal}
+import com.keepit.learning.topicmodel.LdaTopicModelLoader
 
 
 class ShoeboxModule() extends ScalaModule with Logging {
@@ -203,16 +204,12 @@ class ShoeboxModule() extends ScalaModule with Logging {
   @Provides
   @Singleton
   def wordTopicModel: WordTopicModel = {
-    if (false){
-      // read from disk
-      null
-    } else {
-      val vocabulary: Set[String] = (0 until TopicModelGlobal.numTopics).map{ i => "word%d".format(i)}.toSet
-      val wordTopic: Map[String, Array[Double]] = (0 until TopicModelGlobal.numTopics).foldLeft(Map.empty[String, Array[Double]]){
-        (m, i) => { val a = new Array[Double](TopicModelGlobal.numTopics); a(i) = 1.0; m + ("word%d".format(i) -> a) }
-      }
+      val path = current.configuration.getString("learning.topicModel.wordTopic.json.path").get
+      log.info("loading word topic model")
+      val c = scala.io.Source.fromFile(path).mkString
+      // names don't matter much, at this moment
       val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map{ i => "topic%d".format(i)}.toArray
-      new LdaWordTopicModel(vocabulary, wordTopic, topicNames)
-   }
+      val loader = new LdaTopicModelLoader
+      loader.load(c, topicNames)
   }
 }
