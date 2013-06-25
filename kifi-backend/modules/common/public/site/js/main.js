@@ -67,31 +67,28 @@ $(function() {
 			tolerance: "pointer",
 			hoverClass: "drop-hover",
 			drop: function(event, ui) {
-				var $keeps = ui.draggable, coll = this;
-				if ($keeps.hasClass("selected")) {
-					$keeps = $keeps.add($main.find(".keep.selected"));
-				}
-
-				var myKeepIds = $keeps.filter(".mine").map(function() {return $(this).data("id")}).get();
-
-				// may first need to keep any keeps that are not mine yet
-				var $notMine = $keeps.filter(":not(.mine)");
-				if ($notMine.length) {
-					$.ajax({
-						url: urlKeepAdd,
-						type: "POST",
-						dataType: 'json',
-						data: JSON.stringify($notMine.map(function() {var a = this.querySelector("a"); return {title: a.title, url: a.href}}).get()),
-						contentType: 'application/json',
-						error: onDropOnCollectionAjaxError,
-						success: function(data) {
-							myKeepIds.push.apply(myKeepIds, data.keeps.map(function(k) {return k.id}));
-							addMyKeepsToCollection.call(coll, myKeepIds);
+				var $keeps = ui.draggable.hasClass("selected") ? ui.draggable.parent().find(".keep.selected") : ui.draggable;
+				var $coll = $(this), collId = $coll.data("id");
+				$.ajax({
+					url: urlKeepAdd,
+					type: "POST",
+					dataType: 'json',
+					data: JSON.stringify({
+						collectionId: collId,
+						keeps: $keeps.map(function() {var a = this.querySelector("a"); return {title: a.title, url: a.href}}).get()}),
+					contentType: 'application/json',
+					error: onDropOnCollectionAjaxError,
+					success: function(data) {
+						var collName = collections[collId].name;
+						$coll.find(".keep-count").text(collections[collId].keeps += data.addedToCollection);
+						$keeps.addClass("mine")
+							.find("keep-colls:not(:has(.keep-coll[data-id=" + collId + "]))")
+							.append("<span class=keep-coll data-id=" + collId + ">" + collName + "</span>");
+						if (!$inColl.find("#cb1-" + collId).length) {
+							inCollTmpl.append({id: collId, name: collName});
 						}
-					});
-				} else {
-					addMyKeepsToCollection.call(coll, myKeepIds);
-				}
+					}
+				});
 			}};
 
 	var me;
@@ -109,23 +106,6 @@ $(function() {
 		return $.grep(arr, function(v, k) {
 			return $.inArray(v, arr) === k;
 		});
-	}
-
-	function addMyKeepsToCollection(keepIds) {
-		var $coll = $(this), collId = $coll.data("id");
-		$.ajax({
-			url: urlCollections + '/' + collId + '/addKeeps',
-			type: "POST",
-			dataType: 'json',
-			data: JSON.stringify(keepIds),
-			contentType: 'application/json',
-			error: onDropOnCollectionAjaxError,
-			success: function(data) {
-				$coll.find(".keep-count").text(collections[collId].keeps += data.added);
-				if (!$inColl.find("#cb1-" + collId).length) {
-					inCollTmpl.append({id: collId, name: collections[collId].name});
-				}
-			}});
 	}
 
 	function onDropOnCollectionAjaxError() {
