@@ -29,6 +29,7 @@ import com.keepit.model.NormalizedURIRepo
 import com.keepit.model.NormalizedURIRepoImpl
 import play.api.libs.ws.WS
 import scala.util.Try
+import play.modules.statsd.api.Statsd
 
 
 @ImplementedBy(classOf[S3ScreenshotStoreImpl])
@@ -94,8 +95,10 @@ class S3ScreenshotStoreImpl @Inject() (
         Option(response.ahcResponse.getHeader("X-PP-Error")) match {
           case Some("True") =>
             log.warn(s"Failed to take a screenshot of $url")
+            Statsd.increment(s"screenshot.fetch.fails")
             None
           case _ =>
+            Statsd.increment(s"screenshot.fetch.successes")
             val key = keyByExternalId(externalId)
             log.info(s"Uploading screenshot of $url to S3 key $key")
             val om = new ObjectMetadata()
