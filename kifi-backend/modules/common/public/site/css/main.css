@@ -57,16 +57,16 @@ aside {position: absolute; top: 70px; bottom: 0; background: #eff2f7}
 .left-col .active,
 .left-col .my-keeps:not(.active):hover {background: #e3e6ee}
 .left-col h3>a {display: block; padding: 0 6px 0 12px; color: #818692}
-.left-col .keep-count {float: right; margin: 10px 0 0; border: 1px solid #b4b9ca; border-radius: 10.5px; color: #628196; font-size: 12px; line-height: 20px; height: 19px; padding: 0 12px}
+.left-col .keep-count {float: right; margin: 10px 0 0; border: 1px solid #b8c5d2; border-radius: 10.5px; color: #628196; font-size: 12px; line-height: 20px; height: 19px; padding: 0 12px}
 @-moz-document url-prefix() {.left-col .keep-count {line-height: 18px}}
-.left-col .active .keep-count {color: #fff; background: #9ba4b8; border-color: #9ba4b8}
+.left-col .active .keep-count {color: #fff; background: #b8c5d2}
 .left-col .my-keeps:not(.active):hover .keep-count {background: #eff2f7}
 .left-col .active .view-name {color: #556179}
 .left-col .my-keeps .view-name::before {content: " "; display: inline-block; width: 21px; height: 21px; padding: 10px 0; margin-right: 7px; background: url(../img/kifi-icon.png) 0/42px content-box; vertical-align: top; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
 .left-col .my-keeps.active .view-name::before {background-position: right}
 #collections>h2 {margin-top: 15px; padding: 0 0 2px 38px; background: url(../img/folder-icon.png) left 12px bottom 13px/18px no-repeat; border-bottom: 1px solid #dbdee3}
 #collections h3 {line-height: 39px}
-a.new-collection {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhDAAMAIABAO/y9////yH5BAEKAAEALAAAAAAMAAwAAAIXjAMJx6h91IIuMYmz3pzfR0lUNUHiUQAAOw==) center/6px no-repeat #99a3b3; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
+a.new-collection {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhDAAMAIABAO/y9////yH5BAEKAAEALAAAAAAMAAwAAAIXjAMJx6h91IIuMYmz3pzfR0lUNUHiUQAAOw==) center/6px no-repeat #b8c5d2; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
 a.new-collection:hover {background-color: #a1acbd}
 .add-collection {border-bottom: 1px solid #dbdee3; background: #fff; -webkit-transition: background-color .16s; transition: background-color .16s}
 .add-collection.submitted {background-color: rgba(255,255,255,0)}
@@ -87,9 +87,9 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative; -webkit-tra
 .collection .keep-count {margin-top: 9px}
 .collection.renaming .keep-count {display: none}
 .coll-tri {position: absolute; top: 0; bottom: 0; left: -27px; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer; visibility: hidden; -webkit-transition: left .16s; transition: left .16s}
-.active>.coll-tri {background-color: #9ba4b8}
+.active>.coll-tri {background-color: #b8c5d2}
 .renaming>.coll-tri {display: none}
-.coll-tri::before {content: " "; border-width: 4px 4px 0; border-style: solid; border-color: #9ba4b8 transparent; font-size: 0; line-height: 0; vertical-align: 1px}
+.coll-tri::before {content: " "; border-width: 4px 4px 0; border-style: solid; border-color: #b8c5d2 transparent; font-size: 0; line-height: 0; vertical-align: 1px}
 .active>.coll-tri::before {border-top-color: #fff}
 .collection:hover>.coll-tri,
 .collection.with-tri>.coll-tri {visibility: visible}
@@ -166,7 +166,8 @@ aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px;
 .keep-group-title+.keep {border-top: 0}
 .keep {position: relative; clear: left; padding: 10px 0 13px 30px; border-top: 1px solid #f9f9f9}
 .keep>.handle {cursor: move; position: absolute; top: 0; bottom: 0; left: 0; width: 21px; display: none; background: url(../img/drag-handle.png) center/10px no-repeat}
-.keep>.handle:hover {background-color: #e3e6ee}
+.keep>.handle:hover,
+.keep.selected>.handle {background-color: #e3e6ee}
 .keep-checkbox {display: none; position: absolute; left: 3px; top: 4px; width: 15px; height: 15px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; cursor: pointer}
 .keep>.handle:hover>.keep-checkbox,
 .keep.selected>.handle>.keep-checkbox {display: block}
@@ -178,11 +179,18 @@ aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px;
 .keep-title {max-width: 100%; color: #0089d5; font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased}
 .keep-title>a[href] {color: inherit}
 .keep-url {font-size: 12px; line-height: 14px; color: #99a3b3}
-.keep-who {margin-top: 7px}
+.keep-colls {margin-top: 7px; background: url(../img/folder-icon-small.png) 0 0/13px 11px no-repeat; padding-left: 19px; font-size: 12px; line-height: 14px; color: #99a3b3; overflow: hidden}
+.keep-coll {display: inline-block; white-space: nowrap; margin-right: 4px; border-right: 1px solid currentColor; padding-right: 4px}
+.keep-coll:last-of-type {margin-right: 0; border-right: none; padding-right: 0}
+.keep-who {margin-top: 7px; font-size: 0}
 .keep-who>img {vertical-align: middle; width: 23px; height: 23px; border-radius: 2px; margin-right: 1px}
 .keep-who>img.me {border-radius: 50% 0 0 50%}
 .keep-who>img.me:last-of-type {border-radius: 50%}
-.keep-who-text {vertical-align: middle; margin-left: 3px; font-size: 12px; color: #99a3b3}
+.keep-who-text {vertical-align: middle; margin-left: 4px; font-size: 12px; color: #99a3b3}
+.me+.keep-who-text {margin-left: 7px}
+.keep:not(.mine) img.me,
+.keep:not(.mine) .keep-you,
+.keep:not(.mine) .keep-private {display: none}
 .keep-private {display: none; margin: 0 2px; background: url(../img/private.png) left center/17px no-repeat; margin: 0 2px; line-height: 17px; padding-left: 21px}
 .keep-private.on {display: inline-block}
 .keeps-loading {margin: 20px 50%; position: relative; left: -22px}
@@ -192,8 +200,10 @@ aside.right .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px;
 
 /* retina image overrides */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  #collections>h2 {background-image: url(../img/folder-icon.2x.png)}
   .keep-private {background-image: url(../img/private.2x.png)}
   .keep>.handle {background-image: url(../img/drag-handle.2x.png)}
+  .keep-colls {background-image: url(../img/folder-icon-small.2x.png)}
 }
 
 /* scrollbars */
