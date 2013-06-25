@@ -39,6 +39,8 @@ trait S3ScreenshotStore {
   def updatePicture(normalizedUri: NormalizedURI): Future[Option[PutObjectResult]]
 }
 
+case class ScreenshotSize(imageCode: String, size: String)
+
 @Singleton
 class S3ScreenshotStoreImpl @Inject() (
     db: Database,
@@ -49,11 +51,11 @@ class S3ScreenshotStoreImpl @Inject() (
     val config: S3ImageConfig
   ) extends S3ScreenshotStore with Logging {
   
-  val size = ("b" -> "500x280")
+  val size = ScreenshotSize("b", "500x280")
   val code = "abf9cd2751"
   val defaultScreenshot = "http://api.kifi.com/site/img/1x1.png"
   
-  def screenshotUrl(url: String): String = screenshotUrl(size._1, code, url)
+  def screenshotUrl(url: String): String = screenshotUrl(size.imageCode, code, url)
   def screenshotUrl(sizeName: String, code: String, url: String): String =
     s"http://api.pagepeeker.com/v2/thumbs.php?size=$sizeName&code=$code&url=${URLEncoder.encode(url, UTF8)}&wait=30&refresh=1"
   
@@ -63,7 +65,7 @@ class S3ScreenshotStoreImpl @Inject() (
   }
 
   def keyByExternalId(extNormId: ExternalId[NormalizedURI]): String =
-    s"screenshot/$extNormId/${size._2}.jpg"
+    s"screenshot/$extNormId/${size.size}.jpg"
   
   def getScreenshotUrl(normalizedUriOpt: Option[NormalizedURI]): String =
     normalizedUriOpt.map(getScreenshotUrl).getOrElse(defaultScreenshot)
@@ -96,7 +98,6 @@ class S3ScreenshotStoreImpl @Inject() (
           case _ =>
             val key = keyByExternalId(externalId)
             log.info(s"Uploading screenshot of $url to S3 key $key")
-            log.info("xxx\n" + response.ahcResponse.getStatusCode() + response.ahcResponse.getHeaders().toString())
             val om = new ObjectMetadata()
             om.setContentType("image/jpeg")
             val contentLength = Try { response.ahcResponse.getHeader("Content-Length").toLong }
