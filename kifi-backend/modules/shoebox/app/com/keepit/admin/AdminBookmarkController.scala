@@ -5,6 +5,9 @@ import scala.concurrent._
 import scala.concurrent.duration._
 
 import com.google.inject.{Inject, Singleton}
+
+import com.keepit.search.SearchServiceClient
+import com.keepit.common.search.IndexInfo
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
@@ -12,6 +15,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.net._
 import com.keepit.common.performance._
 import com.keepit.model._
+import com.keepit.model.BookmarkSource._
 import com.keepit.scraper.ScraperPlugin
 
 import play.api.libs.concurrent.Execution.Implicits._
@@ -23,6 +27,7 @@ class AdminBookmarksController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   scraper: ScraperPlugin,
+  searchServiceClient: SearchServiceClient,
   bookmarkRepo: BookmarkRepo,
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
@@ -117,7 +122,9 @@ class AdminBookmarksController @Inject() (
 
     val (count, bookmarksAndUsers) = Await.result(for {
         bookmarksAndUsers <- time("load full bookmarksInfos") { bookmarksInfos() }
-        count <- future { time("count bookmarks") { db.readOnly { implicit s => bookmarkRepo.count(s) } } }
+        count <- searchServiceClient.uriGraphIndexInfo() map { infos =>
+          (infos find (_.name == "BookmarkStore")).get.numDocs
+        }
       } yield (count, bookmarksAndUsers), 1 minutes)
 
     val pageCount: Int = count / PAGE_SIZE + 1
