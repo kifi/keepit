@@ -54,7 +54,7 @@ class S3ScreenshotStoreImpl @Inject() (
   
   val size = ScreenshotSize("b", "500x280")
   val code = "abf9cd2751"
-  val defaultScreenshot = "http://api.kifi.com/site/img/1x1.png"
+  val defaultScreenshot = "data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
   
   def screenshotUrl(url: String): String = screenshotUrl(size.imageCode, code, url)
   def screenshotUrl(sizeName: String, code: String, url: String): String =
