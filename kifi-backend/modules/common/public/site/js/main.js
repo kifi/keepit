@@ -584,7 +584,7 @@ $(function() {
 				hideCollMenu();
 			}
 		}
-	}).on("mousemove", ".collection:not(.with-menu):not(.renaming)", function(e) {
+	}).on("mousemove", ".collection:not(.with-menu):not(.renaming):not(.drop-hover)", function(e) {
 		var $coll = $(this), $tri = $coll.find(".coll-tri"), data = $coll.data();
 		var x = e.clientX, y = e.clientY, dx = x - data.x, dy = y - data.y, now = +new Date;
 		if ($coll.hasClass("with-tri")) {
