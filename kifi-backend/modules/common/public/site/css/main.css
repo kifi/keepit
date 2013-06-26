@@ -129,12 +129,12 @@ aside.right>.antiscroll-inner {position: absolute; top: 0; bottom: 0; left: 0; r
 .page-meta {font-size: 0}
 a.page-url[href] {font-size: 12px; line-height: 20px; color: inherit; -webkit-font-smoothing: antialiased; max-width: 100%; margin-bottom: 12px}
 a.page-url[href]:hover {text-decoration: underline}
-.page-pic {background-color: rgba(0,0,0,.05); background-size: 100% auto; height: 140px; -webkit-transition: border-width .1s; transition: border-width .1s; position: relative; display: none}
-[data-kept="pub"]>*>.page-pic {border-right: 48px solid #accc98}
-[data-kept="pri"]>*>.page-pic {border-right: 48px solid #e78881}
-.page-how {position: absolute; bottom: 0; right: 0; width: 140px; height: 48px; line-height: 48px; text-align: center; color: #fff; font-size: 18px; -webkit-font-smoothing: antialiased; -webkit-transform: rotate(90deg) scale(.001,1); transform: rotate(90deg) scale(.001,1); -webkit-transition: -webkit-transform .1s; transition: -webkit-transform .1s, transform .1s; -webkit-transform-origin: right bottom; transform-origin: right bottom}
-[data-kept="pub"]>*>*>.page-how,
-[data-kept="pri"]>*>*>.page-how {-webkit-transform: rotate(90deg); transform: rotate(90deg)}
+.page-pic {background-color: rgba(0,0,0,.05); background-size: 100% auto; height: 140px; -webkit-transition: margin-right .15s; transition: margin-right .15s; position: relative; display: none}
+[data-kept]>*>.page-pic {margin-right: 48px}
+.page-how {position: absolute; bottom: 0; right: 0; width: 140px; height: 48px; line-height: 48px; text-align: center; color: #fff; font-size: 18px; -webkit-font-smoothing: antialiased; -webkit-transform: rotate(90deg) scale(1,.001); transform: rotate(90deg) scale(1,.001); -webkit-transition: -webkit-transform .15s; transition: -webkit-transform .15s, transform .15s; -webkit-transform-origin: right bottom; transform-origin: right bottom}
+[data-kept]>*>*>.page-how {-webkit-transform: rotate(90deg); transform: rotate(90deg)}
+.page-how.pub {background-color: #accc98}
+.page-how.pri {background-color: #e78881}
 .page-how.pub::after {content: "Public"}
 .page-how.pri::after {content: "Private"}
 a.page-keep[href],
