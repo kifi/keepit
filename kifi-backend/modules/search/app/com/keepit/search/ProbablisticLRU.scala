@@ -58,18 +58,18 @@ class SimpleLocalBuffer(byteBuffer: ByteBuffer) extends MultiChunkBuffer {
 
 class S3BackedBuffer (dataStore : ProbablisticLRUStore, val filterName: ProbablisticLRUName) extends MultiChunkBuffer {
 
-  private def loadChunk(chunkId: Int) : IntBuffer = {
+  private def loadChunk(chunkId: Int) : Array[Int] = {
     //TODO: get or else from cache, treat empty specially
     dataStore.get(FullFilterChunkId(filterName.name, chunkId)) match {
       case Some(intBuffer) => intBuffer
       case None => 
-        val byteBuffer = ByteBuffer.allocate(chunkSize*4 + 4)
-        byteBuffer.putInt(0, chunkSize)
-        byteBuffer.asIntBuffer
+        val intBuffer = new Array[Int](chunkSize+1)
+        intBuffer(0)=chunkSize
+        intBuffer
     }
   }
 
-  private def saveChunk(chunkId: Int, chunk: IntBuffer) : Unit = dataStore += (FullFilterChunkId(filterName.name, chunkId), chunk) //TODO: remove chunk from cache
+  private def saveChunk(chunkId: Int, chunk: Array[Int]) : Unit = dataStore += (FullFilterChunkId(filterName.name, chunkId), chunk) //TODO: remove chunk from cache
 
   def chunkSize : Int = 5
 
@@ -77,23 +77,23 @@ class S3BackedBuffer (dataStore : ProbablisticLRUStore, val filterName: Probabli
 
   def getChunk(key: Long) = {
     val chunkId = ((key % chunkSize*numChunks) / chunkSize).toInt
-    val thisChunk : IntBuffer = loadChunk(chunkId)
+    val thisChunk : Array[Int] = loadChunk(chunkId)
     var dirtyEntries : Set[Int] = Set[Int]()
     
     new IntBufferWrapper {
       
-      def get(pos: Int) : Int = thisChunk.get(pos)
+      def get(pos: Int) : Int = thisChunk(pos)
 
       def sync : Unit = {
         val storedChunk = loadChunk(chunkId)
         dirtyEntries.foreach { pos =>
-          storedChunk.put(pos, thisChunk.get(pos))
+          storedChunk(pos) = thisChunk(pos)
         }
         saveChunk(chunkId, storedChunk)
       }
 
       def put(pos: Int, value: Int) = {
-        thisChunk.put(pos, value)
+        thisChunk(pos) = value
         dirtyEntries = dirtyEntries + pos
       }
 
