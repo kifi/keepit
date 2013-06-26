@@ -1,26 +1,25 @@
 /* normalization */
-* {font-family: "Helvetica Neue",Helvetica,Arial,sans-serif}
-*:focus {outline: none}
-h1,h2,h3,h4,h5,label,select {font-weight: normal; color: #99a3b3}
-label {font-size: .9em; color: #628196}
-input[type="text"] {margin: 0; background: #fff; padding: .5em .7em; color: #628196; border: 1px solid #d8dddf}
+:focus {outline: none}
+h1,h2,h3,h4,h5,label {margin: 0; font-weight: normal}
+input[type="text"] {margin: 0; padding: 0; border: none; background: #fff}
 img {vertical-align: middle; border: none}
-a[href] {color: #0089d5; text-decoration: none}
-select {font-weight: bold; font-size: .8em; background: #ecf0f1; border: 0; -webkit-appearance: none; -moz-appearance: none; width: 110%}
 ol {list-style: none; padding: 0; margin: 0}
+
+body {font-family: "Helvetica Neue",Helvetica,Arial,sans-serif}
+a[href] {color: #0089d5; text-decoration: none}
 ::-webkit-input-placeholder{color: #b6c3cc}
 :-moz-placeholder {color: #b6c3cc}
 ::-moz-placeholder {color: #b6c3cc}
 :-ms-input-placeholder {color: #b6c3cc}
 
 /* header */
-html {height: 100%; text-align: center; overflow: hidden}
+html {height: 100%; text-align: center; overflow-y: hidden; overflow-x: auto}
 body {height: 100%; min-width: 1024px; margin: 0 auto; padding: 0; background: #fafafa; font-size: 16px; text-align: left; position: relative}
 header {height: 70px; background: #67829c; position: relative; z-index: 1}
 .header-left {position: absolute; width: 15.873%; min-width: 200px; padding-top: 12px; text-align: center}
 .header-center {position: absolute; left: 15.873%; right: 25.78125%; padding-top: 10px; border-left: 1px solid transparent}
 @media (max-width: 1260px) { .header-center { left: 200px; right: 330px } }
-input.query {font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; -moz-box-sizing: border-box; box-sizing: border-box; padding: 9px 50px 9px 20px; border: none; border-right: 120px solid #67829c; background: #fff url(../img/search.png) right 16px center no-repeat; transition: border-right-width .3s; -webkit-transition: border-right-width .3s; -webkit-font-smoothing: antialiased}
+input.query {font-family: inherit; font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; -moz-box-sizing: border-box; box-sizing: border-box; padding: 9px 50px 9px 20px; border: none; border-right: 120px solid #67829c; background: #fff url(../img/search.png) right 16px center no-repeat; transition: border-right-width .3s; -webkit-transition: border-right-width .3s; -webkit-font-smoothing: antialiased}
 input.query:focus, input.query[data-q] {background-image: url(../img/search-blue.png); border-right-width: 0}
 input.query::-webkit-input-placeholder {color: #99a3b3}
 input.query::-moz-placeholder {color: #99a3b3}
@@ -104,13 +103,16 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative; -webkit-tra
 #coll-menu>li>a.hover {background: #9ba4b8; color: #fff}
 
 aside.right {right: 0; width: 25.78125%; min-width: 330px}
-.splash {background-color: #fff; border-left: 1px solid #dbdee3; padding: 6px 0 0 36px}
-.splash>h2 {margin: 30px 0 6px; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
-.splash>ul {margin: 0; padding: 0; list-style: none; font-size: 15px; line-height: 46px; -webkit-font-smoothing: antialiased}
-.splash>ul>li>a {display: inline-block; color: #556179; margin-left: -10px; padding: 0 24px 0 10px}
-.splash>ul>li>a[href]:hover {background-color: #f7fafe}
-.splash>ul>li>a[href]:active {background-color: #eff2f7}
-.splash>ul>li>a::before {content: " "; display: inline-block; width: 30px; height: 24px; vertical-align: -6px; font-size: 0; margin-right: 16px; background: url(../img/splash.png) 0 0/30px auto}
+aside.right>.antiscroll-inner {position: absolute; top: 0; bottom: 0; left: 0; right: 0; overflow-x: hidden; overflow-y: scroll; -moz-box-sizing: border-box; box-sizing: border-box}
+
+.splash {background-color: #fff; border-left: 1px solid #dbdee3}
+.splash>.antiscroll-inner {padding: 6px 0 0 36px}
+.splash h2 {margin: 30px 0 6px; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
+.splash ul {margin: 0; padding: 0; list-style: none; font-size: 15px; line-height: 46px; -webkit-font-smoothing: antialiased}
+.splash ul>li>a {display: inline-block; color: #556179; margin-left: -10px; padding: 0 24px 0 10px}
+.splash ul>li>a[href]:hover {background-color: #f7fafe}
+.splash ul>li>a[href]:active {background-color: #eff2f7}
+.splash ul>li>a::before {content: " "; display: inline-block; width: 30px; height: 24px; vertical-align: -6px; font-size: 0; margin-right: 16px; background: url(../img/splash.png) 0 0/30px auto}
 .about-kifi>li:nth-child(2)>a::before {background-position: 0 -24px}
 .about-kifi>li:nth-child(3)>a::before {background-position: 0 -48px}
 .about-kifi>li:nth-child(4)>a::before {background-position: 0 -72px}
@@ -120,49 +122,66 @@ aside.right {right: 0; width: 25.78125%; min-width: 330px}
 .about-us>li:nth-child(3)>a::before {background-position: 0 -168px}
 .about-us>li:nth-child(4)>a::before {background-position: 0 -192px}
 
-.detail {display: none; padding: 10px 0; background: #eff2f7; color: #556179; -webkit-transition: -webkit-transform .4s; transition: -webkit-transform .4s, transform .4s}
-.detail>div {padding: 10px 20px}
-.detail>div.subtitle {padding-bottom: 0}
-.detail>div.in-collections .row {padding: 5px 0}
-.detail>div.actions {padding: 0}
-.detail input[type="text"] {width: 260px; margin-top: 10px; margin-bottom: 5px}
-.detail .collections > input[type="text"] {margin-left: 20px}
-.detail h2 {color: #556179; font-size: 1.2em; margin-top: 0; margin-bottom: .1em}
-.detail select {padding: 5px}
-.detail a {color: #556179; display: block}
-.detail .screenshot {display: none}
-.detail .has-screenshot {display: block; background-size: 250px auto; width: 250px; height: 140px}
-.detail .who-kept span {display: block; margin-bottom: 5px}
-.detail .who-kept span.private {display: none}
-.detail div.actions {position: absolute; bottom: 10px}
-.detail div.actions>a {display: block; font-size: 1.2em; width: 290px; padding: 10px 20px}
-.detail div.actions>a:hover {color: #fff; background: #6fa6ef}
+.detail {display: none; padding: 20px 20px 0; background: #eff2f7; color: #556179; -webkit-transition: -webkit-transform .2s; transition: -webkit-transform .2s, transform .2s}
+.detail h2 {color: inherit; font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased}
+/*.detail select {padding: 5px}*/
+/*.detail a {color: #556179; display: block}*/
+.page-meta {font-size: 0}
+a.page-url[href] {font-size: 12px; line-height: 20px; color: inherit; -webkit-font-smoothing: antialiased; max-width: 100%; margin-bottom: 12px}
+a.page-url[href]:hover {text-decoration: underline}
+.page-pic {background-color: rgba(0,0,0,.05); background-size: 100% auto; height: 140px; -webkit-transition: border-width .1s; transition: border-width .1s; position: relative; display: none}
+[data-kept="pub"]>*>.page-pic {border-right: 48px solid #accc98}
+[data-kept="pri"]>*>.page-pic {border-right: 48px solid #e78881}
+.page-how {position: absolute; bottom: 0; right: 0; width: 140px; height: 48px; line-height: 48px; text-align: center; color: #fff; font-size: 18px; -webkit-font-smoothing: antialiased; -webkit-transform: rotate(90deg) scale(.001,1); transform: rotate(90deg) scale(.001,1); -webkit-transition: -webkit-transform .1s; transition: -webkit-transform .1s, transform .1s; -webkit-transform-origin: right bottom; transform-origin: right bottom}
+[data-kept="pub"]>*>*>.page-how,
+[data-kept="pri"]>*>*>.page-how {-webkit-transform: rotate(90deg); transform: rotate(90deg)}
+.page-how.pub::after {content: "Public"}
+.page-how.pri::after {content: "Private"}
+a.page-keep[href],
+a.page-priv[href] {display: inline-block; margin-top: 5px; color: #fff; background-color: #b8c5d2; font-size: 13px; line-height: 30px; width: calc(50% - 1px); text-align: center; -webkit-font-smoothing: antialiased}
+.page-priv {float: right}
+.page-keep::before {content: "Keep"}
+[data-kept]>*>.page-keep::before {content: "Unkeep"}
+.page-priv::before {content: "Keep privately"}
+[data-kept="pub"]>*>.page-priv::before {content: "Make private"}
+[data-kept="pri"]>*>.page-priv::before {content: "Make public"}
+.page-who,
+.page-colls {margin: 18px 0 5px; border-top: 1px solid #cdd6e0; padding-top: 11px; display: none}
+.page-who-pics {margin: 5px 0 13px; white-space: nowrap; overflow: hidden}
+.page-who-pics>img {width: 38px; height: 38px; margin-right: 1px; border-radius: 2px}
+.page-who-text {font-size: 12px; line-height: 12px}
+:not([data-kept])>*>.page-who-pics>.me,
+:not([data-kept])>*>.page-who-text>.keep-you,
+.page-who-text>.keep-private {display: none}
+/*
 .detail div.actions .keepit {text-align: center; width: 330px}
 .detail div.actions .keepit a {color: #fff; font-size: .9em; display: block; margin: 15px auto; background: rgb(34,48,63); border-radius: 5px; padding: 15px 0; width: 140px; position: relative; overflow: hidden}
 .detail div.actions .keepit a.kept {background: #2980b9}
 .detail div.actions .keepit a span.private {background: #465f78 url(../img/lock.png) 22px 20px no-repeat; display: block; position: absolute; width: 40px; height: 40px; left: -18px; top: -13px; border-radius: 25px}
 .detail div.actions .keepit a.private span.private{background-color: rgb(0,187,0)}
-.detail div.title,
-.detail div.who-kept {border-bottom: 1px solid #abbac9}
 .detail div.actions a.add span.close {display: none; float: right; color: #6fa6ef}
 .detail div.actions a.add.active span.close {display: block}
 .detail div.actions a.add.active {background: #eff2f7; color: #556179; padding-bottom: .2em}
+*/
+/*.detail>.in-collections .row {padding: 5px 0}*/
+/*.detail input[type="text"] {width: 260px; margin-top: 10px; margin-bottom: 5px}*/
+/*.detail .collections>input[type="text"] {margin-left: 20px}*/
 .detail .collections {background:#f6f8fc; height: 0; overflow: hidden; transition: height .5s; -webkit-transition: height .5s}
 .detail .collections.active {height: 250px; width: 330px; border-top: 5px solid #6fa6ef; border-bottom: 5px solid #6fa6ef}
 .detail .collections ul {padding: 0; margin: 0; list-style: none}
 .detail .collections ul li {padding: 10px 20px; border-top: 1px solid #dbdee3}
 .detail .collections ul li.create {border-top: 0}
 .detail .collections ul li.create a {padding-left: 25px; background: url(../img/plus.png) 2px 50% no-repeat}
+/*
 .detail input[type="checkbox"] {display: none}
 .detail input[type="checkbox"]:checked + label {color: #6fa6ef}
 .detail input[type="checkbox"]+label span {display: inline-block; width:22px; height:22px; margin:-1px 4px 0 0; background:url(../img/sprite-check.png) left top no-repeat; vertical-align:middle; cursor:pointer}
 .detail input[type="checkbox"]:checked+label span {background-position: -22px top}
 .detail input[type="checkbox"]:not(:checked)+label:hover span {background-position: -44px top}
+*/
 
 .long-text {white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
 span.long-text, a.long-text {display: inline-block}
-.small-avatar {max-width: 30px; max-height: 30px}
-.detail .small-avatar {max-width: 40px; max-height: 40px; margin-right: 2px; border-radius: 4px}
 
 .keep-group-title {margin-top: 7px; color: #67829c; font-size: 21px; font-weight: 100; letter-spacing: 1px; border-bottom: 1px solid #e3e6ee; padding: 4px 30px}
 .keep-group-title+.keep {border-top: 0}
@@ -197,8 +216,8 @@ span.long-text, a.long-text {display: inline-block}
 .keep-private {display: none; margin: 0 2px; background: url(../img/private.png) left center/17px no-repeat; margin: 0 2px; line-height: 17px; padding-left: 21px}
 .keep-private.on {display: inline-block}
 .keeps-loading {margin: 20px 50%; position: relative; left: -22px}
-.clearfix {clear: both}
 .add-collection {display: none}
+
 .drag-helper {background: #fff; padding: 5px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
 
 /* retina image overrides */
