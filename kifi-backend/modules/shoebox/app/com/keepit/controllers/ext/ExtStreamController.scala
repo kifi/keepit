@@ -24,7 +24,6 @@ import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUser
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import com.keepit.serializer.SendableNotificationSerializer.sendableNotificationSerializer
 
-import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Concurrent
@@ -35,7 +34,7 @@ import play.api.mvc.RequestHeader
 import play.api.mvc.WebSocket
 import play.api.mvc.WebSocket.FrameFormatter
 import play.modules.statsd.api.Statsd
-import securesocial.core.{UserService, SecureSocial}
+import securesocial.core.{Authenticator, UserService, SecureSocial}
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]])
 
@@ -67,7 +66,23 @@ class ExtStreamController @Inject() (
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
-  private def authenticate(request: RequestHeader): Option[StreamSession] = {
+
+  // A hack which allows us to pass the SecureSocial session ID (sid) by query string.
+  // This is mainly a workaround for the mobile client, since the library we use doesn't support cookies
+  private def getAuthenticatorFromRequest()(implicit request: RequestHeader): Option[Authenticator] =
+    SecureSocial.authenticatorFromRequest orElse {
+      (for {
+        sid <- request.queryString.get("sid").map(_.head)
+        auth <- Authenticator.find(sid).fold(_ => None, Some(_)).flatten
+      } yield auth) match {
+        case Some(auth) if !auth.isValid =>
+          Authenticator.delete(auth.id)
+          None
+        case maybeAuth => maybeAuth
+      }
+    }
+
+  private def authenticate(implicit request: RequestHeader): Option[StreamSession] = {
     // Backdoor for mobile development
     val backdoorAuth = (for (
       // key <- request.getQueryString("key");
@@ -98,7 +113,7 @@ class ExtStreamController @Inject() (
      * WebSockets cannot use these, so I've implemented what I need below.
      */
     for (
-      auth <- SecureSocial.authenticatorFromRequest(request);
+      auth <- getAuthenticatorFromRequest();
       secSocialUser <- UserService.find(auth.userId)
     ) yield {
 
