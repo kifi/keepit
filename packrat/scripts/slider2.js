@@ -172,12 +172,19 @@ slider2 = function() {
         var friend = $a.closest(".kifi-slider2-tip").data("keepers").filter(hasId($a.data("id")))[0];
         if (!friend) return;
         render("html/friend_card.html", {
-          networkIds: friend.networkIds,
           name: friend.firstName + " " + friend.lastName,
           id: friend.id,
           iconsUrl: api.url("images/social_icons.png")
         }, function(html) {
-          configureHover(html, {mustHoverFor: 100, canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
+          var $el = $(html);
+          configureHover($el, {mustHoverFor: 100, canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
+          api.port.emit("get_networks", friend.id, function(networks) {
+            for (nw in networks) {
+              $el.find('.kifi-kcard-nw-' + nw)
+                .toggleClass('kifi-on', networks[nw].connected)
+                .attr('href', networks[nw].profileUrl || null);
+            }
+          });
         });
       }).on("mouseout", ".kifi-slider2-keep-btn,.kifi-slider2-kept-btn", function() {
         this.classList.remove("kifi-hoverless");

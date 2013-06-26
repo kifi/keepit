@@ -8,6 +8,7 @@ import com.google.inject.Provides
 import com.keepit.search.{ArticleStore, ResultClickTracker}
 import play.api.Play._
 import scala.Some
+import com.keepit.search.comment.{CommentIndexer, CommentStore}
 import com.keepit.search.graph.{CollectionIndexer, URIGraphIndexer, BookmarkStore, URIGraph}
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -89,6 +90,24 @@ class SearchDevModule extends ScalaModule with Logging {
     log.info(s"storing collection index in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     new CollectionIndexer(dir, config, shoeboxClient)
+  }
+
+  @Singleton
+  @Provides
+  def commentStore(shoeboxClient: ShoeboxServiceClient): CommentStore = {
+    val dir = getDirectory(current.configuration.getString("index.commentStore.directory"))
+    log.info(s"storing CommentStore in $dir")
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new CommentStore(dir, config, shoeboxClient)
+  }
+
+  @Singleton
+  @Provides
+  def commentIndexer(commentStore: CommentStore, shoeboxClient: ShoeboxServiceClient): CommentIndexer = {
+    val dir = getDirectory(current.configuration.getString("index.comment.directory"))
+    log.info(s"storing comment index in $dir")
+    val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
+    new CommentIndexer(dir, config, commentStore, shoeboxClient)
   }
 
   @Singleton

@@ -70,7 +70,8 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
   // search: hits are ordered by score
   def search(query: Query): Seq[Hit] = {
     val hitBuf = new ArrayBuffer[Hit]()
-    doSearch(query){ (scorer, idMapper) =>
+    doSearch(query){ (scorer, reader) =>
+      val idMapper = reader.getIdMapper
       var doc = scorer.nextDoc()
       while (doc != NO_MORE_DOCS) {
         var score = scorer.score()
@@ -81,7 +82,7 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
     hitBuf.sortWith((a, b) => a.score >= b.score).toSeq
   }
 
-  def doSearch(query: Query)(f: (Scorer, IdMapper) => Unit) {
+  def doSearch(query: Query)(f: (Scorer, WrappedSubReader) => Unit) {
     val rewrittenQuery = rewrite(query)
     if (rewrittenQuery != null) {
       val weight = createNormalizedWeight(rewrittenQuery)
@@ -90,7 +91,7 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
           val subReader = subReaderContext.reader.asInstanceOf[WrappedSubReader]
           val scorer = weight.scorer(subReaderContext, true, false, subReader.getLiveDocs)
           if (scorer != null) {
-            f(scorer, subReader.getIdMapper)
+            f(scorer, subReader)
           }
         }
       }
@@ -122,6 +123,18 @@ class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexR
         var ref = new BytesRef()
         docValues.get(docid, ref)
         Some(decode(ref.bytes, ref.offset, ref.length))
+      } else {
+        None
+      }
+    }
+  }
+
+  def getLongDocValue(field: String, id: Long): Option[Long] = {
+    findDocIdAndAtomicReaderContext(id).flatMap { case (docid, context) =>
+      val reader = context.reader
+      var docValues = reader.getNumericDocValues(field)
+      if (docValues != null) {
+        Some(docValues.get(docid))
       } else {
         None
       }

@@ -164,7 +164,7 @@ class MainSearcher(
   def getPersonalizedSearcher(query: Query) = {
     val (personalReader, personalIdMapper) = uriGraphSearcher.openPersonalIndex(query)
     val indexReader = articleSearcher.indexReader.add(personalReader, personalIdMapper)
-    PersonalizedSearcher(userId, indexReader, myUris, friendUris, browsingHistoryFuture, clickHistoryFuture, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient, monitoredAwait)
+    PersonalizedSearcher(userId, indexReader, myUris, browsingHistoryFuture, clickHistoryFuture, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient, monitoredAwait)
   }
 
   def searchText(queryString: String, maxTextHitsPerCategory: Int, clickBoosts: ResultClickTracker.ResultClickBoosts) = {
@@ -174,7 +174,8 @@ class MainSearcher(
     val t1 = currentDateTime.getMillis()
 
     // TODO: use user profile info as a bias
-    lang = LangDetector.detectShortText(queryString, lang)
+    // lang = LangDetector.detectShortText(queryString, lang)
+    lang = Lang("en")
 
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
@@ -197,7 +198,8 @@ class MainSearcher(
       timeLogs.personalizedSearcher = currentDateTime.getMillis() - t2
       Statsd.timing("mainSearch.personalizedSearcher", timeLogs.personalizedSearcher)
       val t3 = currentDateTime.getMillis()
-      personalizedSearcher.doSearch(articleQuery){ (scorer, mapper) =>
+      personalizedSearcher.doSearch(articleQuery){ (scorer, reader) =>
+        val mapper = reader.getIdMapper
         var doc = scorer.nextDoc()
         while (doc != NO_MORE_DOCS) {
           val id = mapper.getId(doc)
@@ -406,7 +408,8 @@ class MainSearcher(
 
   def explain(queryString: String, uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
     // TODO: use user profile info as a bias
-    lang = LangDetector.detectShortText(queryString, lang)
+    // lang = LangDetector.detectShortText(queryString, lang)
+    lang = Lang("en")
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
     parser.enableCoord = enableCoordinator

@@ -103,31 +103,12 @@
 		</div>
 		<div class="main-keeps">
 			<div class="antiscroll-inner">
-				<ol id="search-results">
-					<li data-template class="keep draggable {% if isMyBookmark %}mine{% endif %}" data-id="{{bookmark.id}}" style="display:none">
-						<div class="handle">
-							<div class="keep-checkbox"></div>
-						</div>
-						<div class="keep-title long-text">
-							<a href="{{bookmark.url}}" target="_blank" title="{{bookmark.title}}">{{bookmark.title}}</a>
-						</div>
-						<div class="keep-url long-text" title="{{bookmark.url}}">{{bookmark.url | replace '^http://', '	' | replace '^([^/]*)/$', '$1'}}</div>
-						<div class="keep-who">
-							<img class="small-avatar" data-template-for="users"
-								src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
-								data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
-								title="{{firstName}} {{lastName}}">
-							<span class="keep-who-text">
-								{% if isMyBookmark %}You{% endif %}{% if users.length > 0 && isMyBookmark %} + {% endif %}{% if users.length > 0 %}{{users.length}} friend{% endif %}{% if users.length > 1 %}s{% endif %} kept this
-								<span class="keep-private{% if isPrivate %} on{% endif %}">Private</span>
-							</span>
-							<div class="clearfix"></div>
-						</div>
-					</li>
-				</ol>
+				<ol id="search-results"></ol>
 				<ol id="my-keeps">
-					<li data-template data-id="{{id}}" class="keep mine draggable {% if isPrivate %}private{% endif %}" data-created={{createdAt}} data-collections="{{collections}}" style="display:none">
-						<time>{{createdAt}}</time>
+					<li class="keep{% if isMyBookmark %} mine{% endif %}" data-template data-id="{{id}}" style="display:none">
+						{% if typeof createdAt !== "undefined" %}
+							<time datetime="{{createdAt}}">{{createdAt}}</time>
+						{% endif %}
 						<div class="handle">
 							<div class="keep-checkbox"></div>
 						</div>
@@ -135,16 +116,39 @@
 							<a href="{{url}}" target="_blank" title="{{title}}">{{title}}</a>
 						</div>
 						<div class="keep-url long-text" title="{{url}}">{{url | replace '^http://', '	' | replace '^([^/]*)/$', '$1'}}</div>
+						<div class="keep-colls">
+							<a class="keep-coll" href="javascript:" data-template-for="collections" data-id="{{id}}">{{name}}</a>
+						</div>
 						<div class="keep-who">
-							<img class="small-avatar" data-template-for="keepers"
+							<img class="me"
+								src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
+								data-src="//djty7jcqog9qu.cloudfront.net/users/{{me.id}}/pics/100/{{me.pictureName}}"
+								title="You! You look great!">
+						  <img data-template-for="keepers"
 								src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
 								data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
 								title="{{firstName}} {{lastName}}">
-							<span class="keep-who-text">
-								You {% if keepers.length > 0 %} + {{keepers.length}} friend{% endif %}{% if keepers.length > 1 %}s{% endif %} kept this
-								<span class="keep-private{% if isPrivate %} on{% endif %}">Private</span>
+							<span class="keep-who-text" data-after-template>
+								<span class="keep-you">
+									You
+									{% if keepers.length && isPrivate %}
+										<span class="keep-private on">Private</span> +
+									{% endif %}{% if keepers.length && !isPrivate %}
+										<span class="keep-private">Private</span> +
+									{% endif %}
+								</span>
+								{% if keepers.length > 1 %}
+									{{keepers.length}} friends
+								{% endif %}{% if keepers.length == 1 %}
+									1 friend
+								{% endif %}
+								kept this
+								{% if !keepers.length && isPrivate %}
+									<span class="keep-private on">Private</span>
+								{% endif %}{% if !keepers.length && !isPrivate %}
+									<span class="keep-private">Private</span>
+								{% endif %}
 							</span>
-							<div class="clearfix"></div>
 						</div>
 					</li>
 				</ol>
@@ -153,22 +157,48 @@
 		</div>
 	</section>
 
-	<aside class="right">
-		<div class="title">
-			<h2></h2>
-			<a class="link long-text"></a>
+	<aside class="right splash">
+	<div class="antiscroll-inner">
+		<h2>KiFi Beta - News & Tools</h2>
+		<ul class="about-kifi">
+			<li><a href="javascript:">Updates and features</a>
+			<li><a href="/install">Install KiFi on this computer</a>
+			<li><a href="/invite">Invite your friends</a>
+			<li><a href="javascript:">How to use KiFi</a>
+			<li><a href="mailto:feedback@kifi.com">Send feedback</a>
+		</ul>
+		<h2>Get to Know Us</h2>
+		<ul class="about-us">
+			<li><a href="http://www.42go.com/team.html">The Team</a>
+			<li><a href="http://eng.42go.com">Engineering Blog</a>
+			<li><a href="mailto:towel@42go.com">Contact Us</a>
+			<li><a href="http://www.42go.com/join_us.html">Jobs</a>
+		</ul>
+	</div>
+	</aside>
+
+	<aside class="right detail">
+		<div class="page-meta">
+			<h2 class="page-title long-text"></h2>
+			<a class="page-url long-text" href="" target="_blank"></a>
+			<div class="page-pic">
+				<div class="page-how"></div>
+			</div>
+			<a class="page-keep" href="javascript:"></a>
+			<a class="page-priv" href="javascript:"></a>
 		</div>
-		<div class="who-kept"></div>
-		<div class="subtitle">In collections:</div>
-		<div class="in-collections">
+		<div class="page-who">
+			<h2>Who kept this:</h2>
+			<div class="page-who-pics"></div>
+			<div class="page-who-text"></div>
+		</div>
+		<div class="page-colls">
+			<h2 data-before-template>In collections: <a class="add" href="javascript:">+</a></h2>
 			<div class="row" data-template>
 				<input type="checkbox" data-id="{{id}}" id="cb1-{{id}}" checked>
 				<label class="long-text" for="cb1-{{id}}"><span></span>{{name}}</label>
 			</div>
-		</div>
-		<div class="actions">
-			<a class="add" href="javascript:">Add to a collection <span class="close">x</span></a>
-			<div class="collections">
+			<!--div class="collections">
 				<input class="find" type="text" placeholder="Find a collection...">
 				<ul>
 					<li class="create"><a class="new-collection" href="javascript:">Create a new collection</a>
@@ -177,11 +207,7 @@
 						</div>
 					</li>
 				</ul>
-			</div>
-			<a class="share" href="javascript:">Share on your social networks</a>
-			<div class="keepit">
-				<a class="keep-button" href="javascript:"><span class="private"></span> <span class="text">kept</span></a>
-			</div>
+			</div-->
 		</div>
 	</aside>
 

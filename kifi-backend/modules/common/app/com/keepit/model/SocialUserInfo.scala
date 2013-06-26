@@ -4,7 +4,7 @@ import scala.concurrent.duration._
 
 import org.joda.time.DateTime
 
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key, PrimitiveCacheImpl}
 import com.keepit.common.db._
 import com.keepit.common.social.{SocialNetworks, SocialId, SocialNetworkType}
 import com.keepit.common.time._
@@ -63,11 +63,21 @@ object SocialUserInfo {
   )(SocialUserInfo.apply, unlift(SocialUserInfo.unapply))
 }
 
+case class SocialUserInfoCountKey() extends Key[Int] {
+  override val version = 0
+  val namespace = "social_user_info_count"
+  def toKey(): String = "all"
+}
+
+class SocialUserInfoCountCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends PrimitiveCacheImpl[SocialUserInfoCountKey, Int](innermostPluginSettings, innerToOuterPluginSettings:_*)
+
 case class SocialUserInfoUserKey(userId: Id[User]) extends Key[Seq[SocialUserInfo]] {
   val namespace = "social_user_info_by_userid"
   override val version = 3
   def toKey(): String = userId.id.toString
 }
+
 class SocialUserInfoUserCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[SocialUserInfoUserKey, Seq[SocialUserInfo]](innermostPluginSettings, innerToOuterPluginSettings:_*)
 

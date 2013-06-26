@@ -1,7 +1,6 @@
 package com.keepit.dev
 
 import net.codingwell.scalaguice.ScalaModule
-
 import com.amazonaws.services.s3.AmazonS3
 import com.google.inject.{Provides, Singleton, Provider}
 import com.keepit.common.analytics._
@@ -11,7 +10,6 @@ import com.keepit.common.social.{InMemorySocialUserRawInfoStoreImpl, SocialUserR
 import com.keepit.common.store.S3ImageConfig
 import com.keepit.module.S3Module
 import com.keepit.search._
-
 import play.api.Play.current
 
 class S3DevModule() extends ScalaModule with Logging {

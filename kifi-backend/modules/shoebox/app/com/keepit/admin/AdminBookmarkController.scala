@@ -3,8 +3,10 @@ package com.keepit.controllers.admin
 import scala.collection.mutable.{HashMap => MutableMap, SynchronizedMap}
 import scala.concurrent._
 import scala.concurrent.duration._
-
 import com.google.inject.{Inject, Singleton}
+
+import com.keepit.search.SearchServiceClient
+import com.keepit.common.search.IndexInfo
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
@@ -12,22 +14,26 @@ import com.keepit.common.db.slick._
 import com.keepit.common.net._
 import com.keepit.common.performance._
 import com.keepit.model._
+import com.keepit.model.BookmarkSource._
 import com.keepit.scraper.ScraperPlugin
-
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import views.html
+import com.keepit.common.store.S3ScreenshotStore
+import com.keepit.common.db.Id
 
 @Singleton
 class AdminBookmarksController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   scraper: ScraperPlugin,
+  searchServiceClient: SearchServiceClient,
   bookmarkRepo: BookmarkRepo,
   uriRepo: NormalizedURIRepo,
   userRepo: UserRepo,
   scrapeRepo: ScrapeInfoRepo,
-  socialUserInfoRepo: SocialUserInfoRepo)
+  socialUserInfoRepo: SocialUserInfoRepo,
+  s3ScreenshotStore: S3ScreenshotStore)
     extends AdminController(actionAuthenticator) {
 
   def edit(id: Id[Bookmark]) = AdminHtmlAction { request =>
@@ -37,7 +43,8 @@ class AdminBookmarksController @Inject() (
         val uri = uriRepo.get(bookmark.uriId)
         val user = userRepo.get(bookmark.userId)
         val scrapeInfo = scrapeRepo.getByUri(bookmark.uriId)
-        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo))
+        val screenshotUrl = s3ScreenshotStore.getScreenshotUrl(uri).getOrElse("")
+        Ok(html.admin.bookmark(user, bookmark, uri, scrapeInfo, screenshotUrl))
       }
     }
   }
@@ -117,7 +124,9 @@ class AdminBookmarksController @Inject() (
 
     val (count, bookmarksAndUsers) = Await.result(for {
         bookmarksAndUsers <- time("load full bookmarksInfos") { bookmarksInfos() }
-        count <- future { time("count bookmarks") { db.readOnly { implicit s => bookmarkRepo.count(s) } } }
+        count <- searchServiceClient.uriGraphIndexInfo() map { infos =>
+          (infos find (_.name == "BookmarkStore")).get.numDocs
+        }
       } yield (count, bookmarksAndUsers), 1 minutes)
 
     val pageCount: Int = count / PAGE_SIZE + 1

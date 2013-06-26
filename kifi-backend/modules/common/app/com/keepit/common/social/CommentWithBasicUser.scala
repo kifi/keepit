@@ -14,7 +14,7 @@ object CommentWithBasicUser {
 
 case class CommentWithBasicUserKey(commentId: Id[Comment]) extends Key[CommentWithBasicUser] {
   val namespace = "comment_with_basic_user_by_comment_id"
-  override val version = 2
+  override val version = 3
   def toKey(): String = commentId.id.toString
 }
 

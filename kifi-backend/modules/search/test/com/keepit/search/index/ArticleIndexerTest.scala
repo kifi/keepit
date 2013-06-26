@@ -13,19 +13,18 @@ import com.keepit.test._
 import com.keepit.inject._
 import org.specs2.mutable._
 import play.api.Play.current
-import play.api.libs.json.Json
-import play.api.test._
 import org.apache.lucene.store.RAMDirectory
 import org.specs2.specification.Scope
 import play.api.test.Helpers._
 import scala.collection.JavaConversions._
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
-import com.keepit.shoebox.ShoeboxServiceClient
+import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
 
-class ArticleIndexerTest extends Specification with DbRepos {
+class ArticleIndexerTest extends Specification {
 
   private trait IndexerScope extends Scope {
+    val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     val ramDir = new RAMDirectory
     val store = new FakeArticleStore()
     val uriIdArray = new Array[Long](3)
@@ -33,13 +32,12 @@ class ArticleIndexerTest extends Specification with DbRepos {
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     var indexer = new ArticleIndexer(ramDir, config, store, null, inject[ShoeboxServiceClient])
 
-    var (uri1, uri2, uri3) = db.readWrite { implicit s =>
-      val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith"))
-      val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown"))
-      (uriRepo.save(NormalizedURIFactory(title = "title1 titles", url = "http://www.keepit.com/article1", state = SCRAPED)),
-       uriRepo.save(NormalizedURIFactory(title = "title2 titles", url = "http://www.keepit.org/article2", state = SCRAPED)),
-       uriRepo.save(NormalizedURIFactory(title = "title3 titles", url = "http://www.findit.com/article3", state = SCRAPED)))
-    }
+    val Seq(user1, user2) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Joe", lastName = "Smith"), User(firstName = "Moo", lastName = "Brown"))
+    var Seq(uri1, uri2, uri3) = fakeShoeboxServiceClient.saveURIs(
+      NormalizedURIFactory(title = "title1 titles", url = "http://www.keepit.com/article1", state = SCRAPED),
+      NormalizedURIFactory(title = "title2 titles", url = "http://www.keepit.org/article2", state = SCRAPED),
+      NormalizedURIFactory(title = "title3 titles", url = "http://www.findit.com/article3", state = SCRAPED)
+    )
     store += (uri1.id.get -> mkArticle(uri1.id.get, uri1.title.get, "content1 alldocs body soul"))
     store += (uri2.id.get -> mkArticle(uri2.id.get, uri2.title.get, "content2 alldocs bodies soul"))
     store += (uri3.id.get -> mkArticle(uri3.id.get, uri3.title.get, "content3 alldocs bodies souls"))
@@ -81,30 +79,27 @@ class ArticleIndexerTest extends Specification with DbRepos {
 
   "ArticleIndexer" should {
     "index indexable URIs" in running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule())(new IndexerScope {
-      db.readWrite { implicit s =>
-        uri1 = uriRepo.save(uriRepo.get(uri1.id.get).withState(INACTIVE))
-        uri2 = uriRepo.save(uriRepo.get(uri2.id.get).withState(INACTIVE))
-        uri3 = uriRepo.save(uriRepo.get(uri3.id.get).withState(INACTIVE))
-      }
+
+      uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(INACTIVE)).head
+      uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(INACTIVE)).head
+      uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(INACTIVE)).head
+
       indexer.run()
       indexer.numDocs === 0
 
       var currentSeqNum = indexer.sequenceNumber.value
 
-      db.readWrite { implicit s =>
-        uri2 = uriRepo.save(uriRepo.get(uri2.id.get).withState(SCRAPED))
-      }
+      uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(SCRAPED)).head
+
       indexer.sequenceNumber.value === currentSeqNum
       indexer.run()
       currentSeqNum += 1
       indexer.sequenceNumber.value === currentSeqNum
       indexer.numDocs === 1
 
-      db.readWrite { implicit s =>
-        uri1 = uriRepo.save(uri1.withState(SCRAPED))
-        uri2 = uriRepo.save(uri2.withState(SCRAPED))
-        uri3 = uriRepo.save(uri3.withState(SCRAPED))
-      }
+      uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(SCRAPED)).head
+      uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(SCRAPED)).head
+      uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(SCRAPED)).head
 
       indexer.run()
       currentSeqNum += 3
@@ -252,41 +247,36 @@ class ArticleIndexerTest extends Specification with DbRepos {
       indexer.run()
       indexer.numDocs === 3
 
-      db.readWrite { implicit s =>
-        uri1 = uriRepo.save(uriRepo.get(uri1.id.get).withState(ACTIVE))
-      }
+      uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(ACTIVE)).head
       indexer.run()
       indexer.numDocs === 2
       indexer.search("content1").size === 0
       indexer.search("content2").size === 1
       indexer.search("content3").size === 1
 
-      db.readWrite { implicit s =>
-        uri1 = uriRepo.save(uriRepo.get(uri1.id.get).withState(SCRAPED))
-        uri2 = uriRepo.save(uriRepo.get(uri2.id.get).withState(INACTIVE))
-      }
+      uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(SCRAPED)).head
+      uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(INACTIVE)).head
+
       indexer.run()
       indexer.numDocs === 2
       indexer.search("content1").size === 1
       indexer.search("content2").size === 0
       indexer.search("content3").size === 1
 
-      db.readWrite { implicit s =>
-        uri1 = uriRepo.save(uri1.withState(SCRAPED))
-        uri2 = uriRepo.save(uri2.withState(SCRAPED))
-        uri3 = uriRepo.save(uri3.withState(UNSCRAPABLE))
-      }
+      uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(SCRAPED)).head
+      uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(SCRAPED)).head
+      uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(UNSCRAPABLE)).head
+
       indexer.run()
       indexer.numDocs === 2
       indexer.search("content1").size === 1
       indexer.search("content2").size === 1
       indexer.search("content3").size === 0
 
-      db.readWrite { implicit s =>
-        uri1 = uriRepo.save(uri1.withState(SCRAPE_WANTED))
-        uri2 = uriRepo.save(uri2.withState(SCRAPED))
-        uri3 = uriRepo.save(uri3.withState(SCRAPED))
-      }
+      uri1 = fakeShoeboxServiceClient.saveURIs(uri1.withState(SCRAPE_WANTED)).head
+      uri2 = fakeShoeboxServiceClient.saveURIs(uri2.withState(SCRAPED)).head
+      uri3 = fakeShoeboxServiceClient.saveURIs(uri3.withState(SCRAPED)).head
+
       indexer.run()
       indexer.numDocs === 2
       indexer.search("content1").size === 0

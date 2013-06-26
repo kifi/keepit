@@ -150,6 +150,10 @@ object FortyTwoTypeMappers {
   }
 
   //Other
+  implicit object UrlHashTypeMapper extends BaseTypeMapper[UrlHash] {
+    def apply(profile: BasicProfile) = new UrlHashTypeMapperDelegate(profile)
+  }
+
   implicit object SequenceNumberTypeMapper extends BaseTypeMapper[SequenceNumber] {
     def apply(profile: BasicProfile) = new SequenceNumberTypeMapperDelegate(profile)
   }
@@ -292,6 +296,17 @@ class SequenceNumberTypeMapperDelegate(val profile: BasicProfile)
   def zero = SequenceNumber.ZERO
   def sourceToDest(value: SequenceNumber): Long = value.value
   def safeDestToSource(value: Long): SequenceNumber = SequenceNumber(value)
+}
+
+//************************************
+//       UrlHash -> String
+//************************************
+class UrlHashTypeMapperDelegate(val profile: BasicProfile)
+    extends DelegateMapperDelegate[UrlHash, String] {
+  protected val delegate = profile.typeMapperDelegates.stringTypeMapperDelegate
+  def zero = UrlHash("")
+  def sourceToDest(value: UrlHash): String = value.hash
+  def safeDestToSource(value: String): UrlHash = UrlHash(value)
 }
 
 //************************************
@@ -504,7 +519,14 @@ class DomainTagNameMapperDelegate(profile: BasicProfile) extends StringMapperDel
 class LargeStringMapperDelegate(val profile: BasicProfile) extends DelegateMapperDelegate[LargeString, Clob] {
   protected val delegate = profile.typeMapperDelegates.clobTypeMapperDelegate
   def zero = LargeString("")
-  def sourceToDest(value: LargeString): Clob = new SerialClob(value.value.toCharArray())
+  def sourceToDest(value: LargeString): Clob = {
+    new SerialClob(value.value.toCharArray()) {
+      override def getSubString(pos: Long, length: Int): String = {
+        // workaround for an empty clob problem
+        if (pos == 1 && length == 0) "" else super.getSubString(pos, length)
+      }
+    }
+  }
   def safeDestToSource(value: Clob): LargeString = {
     val clob = new SerialClob(value)
     clob.length match {

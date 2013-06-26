@@ -19,6 +19,7 @@ class UriTopicTest extends Specification with TestDBRunner{
     topic
   }
 
+  // uri i concentrates on topic i
   def setup()(implicit injector: Injector) = {
     val t = new DateTime(2013, 5, 20, 21, 59, 0, 0, PT)
     val numTopics = TopicModelGlobal.numTopics
@@ -56,6 +57,27 @@ class UriTopicTest extends Specification with TestDBRunner{
       }
     }
 
+    "be able to delete all data" in {
+        withDB() { implicit injector =>
+        val uriTopicRepo = inject[UriTopicRepo]
+        val uriTopics = setup()
+        val numDocs = uriTopics.size
+        val helper = new UriTopicHelper
+          db.readOnly{ implicit s =>
+          (0 until numDocs).foreach{ i =>
+            val uriTopic = uriTopicRepo.getByUriId(Id[NormalizedURI](i)).get
+            helper.toDoubleArray(uriTopic.topic) === helper.toDoubleArray(uriTopics(i).topic)
+            uriTopic.primaryTopic === uriTopics(i).primaryTopic
+            uriTopic.secondaryTopic === uriTopics(i).secondaryTopic
+          }
+        }
+
+        db.readWrite{ implicit s =>
+          uriTopicRepo.deleteAll()
+        } === numDocs
+      }
+    }
+
     "helper should correctly assignTopics" in {
       val N = TopicModelGlobal.numTopics
       val helper = new UriTopicHelper
@@ -71,7 +93,7 @@ class UriTopicTest extends Specification with TestDBRunner{
       helper.assignTopics(t) === (Some(10), Some(11))
     }
 
-    "helper should correclty convert between doublArray and ArrayByte" in {
+    "helper should correclty convert between doubleArray and ArrayByte" in {
       val N = TopicModelGlobal.numTopics
       val a = new Array[Double](N)
       val helper = new UriTopicHelper

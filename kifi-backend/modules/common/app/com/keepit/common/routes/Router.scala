@@ -6,6 +6,7 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.State
 import com.keepit.model.NormalizedURI
 import com.keepit.model.Collection
+import com.keepit.model.Comment
 import com.keepit.search.SearchConfigExperiment
 import com.keepit.model.ExperimentType
 import com.keepit.model.UserSession
@@ -63,6 +64,8 @@ object Shoebox extends Service {
     def getBookmarks(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/bookmark", Param("userId", userId))
     def getBookmarksChanged(seqNum: Long, fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/changedBookmark", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
     def getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/bookmarkByUriUser", Param("uriId", uriId), Param("userId", userId))
+    def getCommentsChanged(seqNum: Long, fetchSize: Int) = ServiceRoute(GET, "/internal/shoebox/database/changedComment", Param("seqNum", seqNum), Param("fetchSize", fetchSize))
+    def getCommentRecipientIds(commentId: Id[Comment]) = ServiceRoute(GET, "/internal/shoebox/database/commentRecipientIds", Param("commentId", commentId))
     def persistServerSearchEvent() = ServiceRoute(POST, "/internal/shoebox/persistServerSearchEvent")
     def sendMail() = ServiceRoute(POST, "/internal/shoebox/database/sendMail")
     def getPhrasesByPage(page: Int, size: Int) = ServiceRoute(GET, "/internal/shoebox/database/getPhrasesByPage", Param("page", page), Param("size", size))
@@ -85,6 +88,9 @@ object Shoebox extends Service {
 object Search extends Service {
   object internal {
     def logResultClicked() = ServiceRoute(POST, "/internal/search/events/resultClicked")
+    def commentIndexInfo() = ServiceRoute(GET, "/internal/search/comment/info")
+    def commentReindex() = ServiceRoute(GET, "/internal/search/comment/reindex")
+    def commentDumpLuceneDocument(id: Id[Comment]) = ServiceRoute(POST, "/internal/search/comment/dumpDoc", Param("id", id))
     def uriGraphInfo() = ServiceRoute(GET, "/internal/search/uriGraph/info")
     def sharingUserInfo(userId: Id[User], uriIds: String) = ServiceRoute(GET, "/internal/search/uriGraph/sharingUserInfo", Param("userId", userId), Param("uriIds", uriIds))
     def updateURIGraph() = ServiceRoute(POST, "/internal/search/uriGraph/update")

@@ -41,7 +41,7 @@ abstract class EventListener(
     val query = (json \ "query").asOpt[String].getOrElse("")
     val url: String = getDestinationURL(json, eventName).getOrElse("")
     val user = userRepo.get(externalUser)
-    val normUrl = normalizedURIRepo.getByNormalizedUrl(url)
+    val normUrl = normalizedURIRepo.getByUri(url)
     val rank = getRank(json, eventName)
     val queryUUID = ExternalId.asOpt[ArticleSearchResultRef]((json \ "queryUUID").asOpt[String].getOrElse(""))
     (user, SearchMeta(query, url, normUrl, rank, queryUUID))
@@ -151,7 +151,7 @@ class UsefulPageListener @Inject() (
       val (user, url, normUrl) = db.readOnly { implicit s =>
         val user = userRepo.get(externalUser)
         val url = (metaData \ "url").asOpt[String].getOrElse("")
-        val normUrl = normalizedURIRepo.getByNormalizedUrl(url)
+        val normUrl = normalizedURIRepo.getByUri(url)
         (user, url, normUrl)
       }
       normUrl.foreach(n => browsingHistoryTracker.add(user.id.get, n.id.get))
@@ -171,7 +171,7 @@ class SliderShownListener @Inject() (
       val (user, normUri) = db.readWrite(attempts = 3) { implicit s =>
         val user = userRepo.get(externalUser)
         val normUri = (metaData \ "url").asOpt[String].map { url =>
-          normalizedURIRepo.getByNormalizedUrl(url).getOrElse(
+          normalizedURIRepo.getByUri(url).getOrElse(
             normalizedURIRepo.save(NormalizedURIFactory(url, NormalizedURIStates.ACTIVE)))
         }
         (user, normUri)
@@ -212,9 +212,9 @@ class SearchUnloadListenerImpl @Inject() (
 
         val (userId, kifiClickedIds, googleClickedIds, kifiShownIds) = db.readOnly { implicit s =>
           val userId = userRepo.get(extUserId).id.get
-          val kifiClickedIds = kifiClickedUris.flatMap{ normalizedURIRepo.getByNormalizedUrl(_) }.flatMap(_.id)
-          val googleClickedIds = googleUris.flatMap{ normalizedURIRepo.getByNormalizedUrl(_) }.flatMap(_.id)
-          val kifiShownIds = kifiShownUris.flatMap{ normalizedURIRepo.getByNormalizedUrl(_) }.flatMap(_.id)
+          val kifiClickedIds = kifiClickedUris.flatMap{ normalizedURIRepo.getByUri(_) }.flatMap(_.id)
+          val googleClickedIds = googleUris.flatMap{ normalizedURIRepo.getByUri(_) }.flatMap(_.id)
+          val kifiShownIds = kifiShownUris.flatMap{ normalizedURIRepo.getByUri(_) }.flatMap(_.id)
           (userId, kifiClickedIds, googleClickedIds, kifiShownIds)
         }
 
