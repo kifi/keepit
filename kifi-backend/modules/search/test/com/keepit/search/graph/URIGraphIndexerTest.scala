@@ -58,7 +58,8 @@ class URIGraphIndexerTest extends Specification with GraphTestHelper {
 
         expectedUriToUserEdges.forall{ case (uri, users) =>
           var hits = Set.empty[Long]
-          searcher.doSearch(new TermQuery(new Term(URIGraphFields.uriField, uri.id.get.toString))){ (scorer, mapper) =>
+          searcher.doSearch(new TermQuery(new Term(URIGraphFields.uriField, uri.id.get.toString))){ (scorer, reader) =>
+            val mapper = reader.getIdMapper
             var doc = scorer.nextDoc()
             while (doc != NO_MORE_DOCS) {
               hits += mapper.getId(doc)

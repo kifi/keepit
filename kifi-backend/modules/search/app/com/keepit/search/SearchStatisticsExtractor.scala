@@ -237,7 +237,8 @@ class SearchStatisticsHelperSearcher(queryString: String, userId: Id[User], targ
       val filteredQuery = new FilteredQuery(articleQuery, idsetFilter)
       val personalizedSearcher = getPersonalizedSearcher(filteredQuery)
       personalizedSearcher.setSimilarity(similarity)
-      personalizedSearcher.doSearch(articleQuery) { (scorer, mapper) =>
+      personalizedSearcher.doSearch(articleQuery) { (scorer, reader) =>
+        val mapper = reader.getIdMapper
         var doc = scorer.nextDoc()
         while (doc != NO_MORE_DOCS) {
           val id = mapper.getId(doc)

@@ -39,7 +39,8 @@ class BookmarkSearcher(userId: Id[User], articleSearcher: Searcher, uriGraphSear
     parser.setPercentMatch(0.0f)
     parser.enableCoord = true
     parser.parse(queryString).map{ query =>
-      getSearcher(query).doSearch(query){ (scorer, mapper) =>
+      getSearcher(query).doSearch(query){ (scorer, reader) =>
+        val mapper = reader.getIdMapper
         var doc = scorer.nextDoc()
         while (doc != NO_MORE_DOCS) {
           val id = mapper.getId(doc)
