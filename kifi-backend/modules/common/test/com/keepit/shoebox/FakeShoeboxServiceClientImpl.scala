@@ -26,42 +26,42 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
   // Fake ID counters
 
   private val userIdCounter = new AtomicInteger(0)
-  private def nextUserId = { Id[User](userIdCounter.incrementAndGet()) }
+  private def nextUserId() = { Id[User](userIdCounter.incrementAndGet()) }
 
   private val bookmarkIdCounter = new AtomicInteger(0)
-  private def nextBookmarkId = { Id[Bookmark](bookmarkIdCounter.incrementAndGet()) }
+  private def nextBookmarkId() = { Id[Bookmark](bookmarkIdCounter.incrementAndGet()) }
 
   private val uriIdCounter = new AtomicInteger(0)
-  private def nextUriId = { Id[NormalizedURI](uriIdCounter.incrementAndGet()) }
+  private def nextUriId() = { Id[NormalizedURI](uriIdCounter.incrementAndGet()) }
 
   private val urlIdCounter = new AtomicInteger(0)
-  private def nextUrlId = { Id[URL](urlIdCounter.incrementAndGet()) }
+  private def nextUrlId() = { Id[URL](urlIdCounter.incrementAndGet()) }
 
   private val collectionIdCounter = new AtomicInteger(0)
-  private def nextCollectionId = { Id[Collection](collectionIdCounter.incrementAndGet()) }
+  private def nextCollectionId() = { Id[Collection](collectionIdCounter.incrementAndGet()) }
 
   private val searchExpIdCounter = new AtomicInteger(0)
-  private def nextSearchExperimentId = { Id[SearchConfigExperiment](searchExpIdCounter.incrementAndGet()) }
+  private def nextSearchExperimentId() = { Id[SearchConfigExperiment](searchExpIdCounter.incrementAndGet()) }
 
   private val userExpIdCounter = new AtomicInteger(0)
-  private def nextUserExperimentId = { Id[UserExperiment](userExpIdCounter.incrementAndGet()) }
+  private def nextUserExperimentId() = { Id[UserExperiment](userExpIdCounter.incrementAndGet()) }
 
   private val commentIdCounter = new AtomicInteger(0)
-  private def nextCommentId = { Id[Comment](commentIdCounter.incrementAndGet()) }
+  private def nextCommentId() = { Id[Comment](commentIdCounter.incrementAndGet()) }
 
   // Fake sequence counters
 
   private val uriSeqCounter = new AtomicInteger(0)
-  private def nextUriSeqNum = { SequenceNumber(uriSeqCounter.incrementAndGet()) }
+  private def nextUriSeqNum() = { SequenceNumber(uriSeqCounter.incrementAndGet()) }
 
   private val bookmarkSeqCounter = new AtomicInteger(0)
-  private def nextBookmarkSeqNum = { SequenceNumber(bookmarkSeqCounter.incrementAndGet()) }
+  private def nextBookmarkSeqNum() = { SequenceNumber(bookmarkSeqCounter.incrementAndGet()) }
 
   private val collectionSeqCounter = new AtomicInteger(0)
-  private def nextCollectionSeqNum = { SequenceNumber(collectionSeqCounter.incrementAndGet()) }
+  private def nextCollectionSeqNum() = { SequenceNumber(collectionSeqCounter.incrementAndGet()) }
 
   private val commentSeqCounter = new AtomicInteger(0)
-  private def nextCommentSeqNum = { SequenceNumber(commentSeqCounter.incrementAndGet()) }
+  private def nextCommentSeqNum() = { SequenceNumber(commentSeqCounter.incrementAndGet()) }
 
   // Fake repos
 
@@ -84,7 +84,7 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
 
   def saveUsers(users: User*): Seq[User] = {
     users.map {user =>
-      val id = user.id.getOrElse(nextUserId)
+      val id = user.id.getOrElse(nextUserId())
       val updatedUser = user.withId(id)
       allUsers += (id -> updatedUser)
       allUserExternalIds += (updatedUser.externalId -> updatedUser)
@@ -95,9 +95,9 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
 
   def saveURIs(uris: NormalizedURI*): Seq[NormalizedURI] = {
     uris.map {uri =>
-      val id = uri.id.getOrElse(nextUriId)
-      val updatedUri = uri.withId(id).copy(seq = nextUriSeqNum)
-      val updatedUrl = uriToUrl.getOrElse(id, URLFactory(url = updatedUri.url, normalizedUriId = updatedUri.id.get).withId(nextUrlId))
+      val id = uri.id.getOrElse(nextUriId())
+      val updatedUri = uri.withId(id).copy(seq = nextUriSeqNum())
+      val updatedUrl = uriToUrl.getOrElse(id, URLFactory(url = updatedUri.url, normalizedUriId = updatedUri.id.get).withId(nextUrlId()))
       allNormalizedURIs += (id -> updatedUri)
       uriToUrl += (id -> updatedUrl)
       updatedUri
@@ -122,8 +122,8 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
 
   def saveBookmarks(bookmarks: Bookmark*): Seq[Bookmark] = {
     bookmarks.map {b =>
-      val id = b.id.getOrElse(nextBookmarkId)
-      val updatedBookmark = b.withId(id).copy(seq = nextBookmarkSeqNum)
+      val id = b.id.getOrElse(nextBookmarkId())
+      val updatedBookmark = b.withId(id).copy(seq = nextBookmarkSeqNum())
       allBookmarks += (id -> updatedBookmark)
       allUserBookmarks += b.userId -> (allUserBookmarks.getOrElse(b.userId, Set.empty) + id)
       updatedBookmark
@@ -132,8 +132,8 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
 
   def saveCollections(collections: Collection*): Seq[Collection] = {
     collections.map {c =>
-      val id = c.id.getOrElse(nextCollectionId)
-      val updatedCollection = c.withId(id).copy(seq = nextCollectionSeqNum)
+      val id = c.id.getOrElse(nextCollectionId())
+      val updatedCollection = c.withId(id).copy(seq = nextCollectionSeqNum())
       allCollections += (id -> updatedCollection)
       updatedCollection
     }
@@ -141,7 +141,7 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
 
   def saveBookmarksToCollection(collectionId: Id[Collection], bookmarks: Bookmark*) {
     allCollectionBookmarks += collectionId -> (allCollectionBookmarks.getOrElse(collectionId, Set.empty) ++ bookmarks.map(_.id.get))
-    allCollections += (collectionId -> allCollections(collectionId).copy(seq = nextCollectionSeqNum))
+    allCollections += (collectionId -> allCollections(collectionId).copy(seq = nextCollectionSeqNum()))
   }
 
   def saveBookmarksByEdges(edges: Seq[(NormalizedURI, User, Option[String])], isPrivate: Boolean = false, source: BookmarkSource = BookmarkSource("fake")): Seq[Bookmark] = {
@@ -167,7 +167,7 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
   }
 
   def saveUserExperiment(experiment: UserExperiment): UserExperiment = {
-    val id = experiment.id.getOrElse(nextUserExperimentId)
+    val id = experiment.id.getOrElse(nextUserExperimentId())
     val userId = experiment.userId
     val experimentWithId = experiment.withId(id)
     allUserExperiments += (userId -> (allUserExperiments.getOrElse(userId, Set.empty) + experimentWithId))
@@ -175,8 +175,8 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
   }
 
   def saveComment(comment: Comment, recipientIds: Id[User]*): Comment = {
-    val id = comment.id.getOrElse(nextCommentId)
-    val updatedComment = comment.withId(id).copy(seq = nextCommentSeqNum)
+    val id = comment.id.getOrElse(nextCommentId())
+    val updatedComment = comment.withId(id).copy(seq = nextCommentSeqNum())
     val commentRecipients = recipientIds match {
       case Nil => updatedComment.parent.map(allCommentRecipients(_)).getOrElse(Set.empty)
       case _ => recipientIds.map(userId => CommentRecipient(commentId = updatedComment.id.get, userId = Some(userId))).toSet
