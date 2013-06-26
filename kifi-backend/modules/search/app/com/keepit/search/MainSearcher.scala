@@ -198,7 +198,8 @@ class MainSearcher(
       timeLogs.personalizedSearcher = currentDateTime.getMillis() - t2
       Statsd.timing("mainSearch.personalizedSearcher", timeLogs.personalizedSearcher)
       val t3 = currentDateTime.getMillis()
-      personalizedSearcher.doSearch(articleQuery){ (scorer, mapper) =>
+      personalizedSearcher.doSearch(articleQuery){ (scorer, reader) =>
+        val mapper = reader.getIdMapper
         var doc = scorer.nextDoc()
         while (doc != NO_MORE_DOCS) {
           val id = mapper.getId(doc)
