@@ -37,39 +37,31 @@ class CommentSearcherTest extends Specification with GraphTestHelper {
   "CommentSearcher" should {
     "return hits" in {
       running(new EmptyApplication().withShoeboxServiceModule) {
-        val (users, uris) = setupDB
+        val (users, uris) = initData
 
         val commentIndexer = mkCommentIndexer()
 
-        val parent1 = db.readWrite { implicit s =>
-          val parent = commentRepo.save(Comment(
+        val parent1 = saveComment(
+          Comment(
             uriId = uris(0).id.get,
             userId = users(0).id.get,
             text = "this is a message",
             pageTitle = uris(0).title.get,
             permissions = CommentPermissions.MESSAGE
-          ))
-          commentRecipientRepo.save(CommentRecipient(
-            commentId = parent.id.get,
-            userId = users(1).id
-          ))
-          parent
-        }
+          ),
+          users(1).id.get
+        )
 
-        val parent2 = db.readWrite { implicit s =>
-          val parent = commentRepo.save(Comment(
+        val parent2 = saveComment(
+          Comment(
             uriId = uris(1).id.get,
             userId = users(1).id.get,
             text = "this is a message",
             pageTitle = uris(1).title.get,
             permissions = CommentPermissions.MESSAGE
-          ))
-          commentRecipientRepo.save(CommentRecipient(
-            commentId = parent.id.get,
-            userId = users(2).id
-          ))
-          parent
-        }
+          ),
+          users(2).id.get
+        )
         commentIndexer.update()
         commentIndexer.numDocs === 2
 
@@ -93,39 +85,31 @@ class CommentSearcherTest extends Specification with GraphTestHelper {
 
     "return hits in time descending order" in {
       running(new EmptyApplication().withShoeboxServiceModule) {
-        val (users, uris) = setupDB
+        val (users, uris) = initData
 
         val commentIndexer = mkCommentIndexer()
 
-        val parent1 = db.readWrite { implicit s =>
-          val parent = commentRepo.save(Comment(
+        val parent1 = saveComment(
+          Comment(
             uriId = uris(0).id.get,
             userId = users(0).id.get,
             text = "this is a message",
             pageTitle = uris(0).title.get,
             permissions = CommentPermissions.MESSAGE
-          ))
-          commentRecipientRepo.save(CommentRecipient(
-            commentId = parent.id.get,
-            userId = users(1).id
-          ))
-          parent
-        }
+          ),
+          users(1).id.get
+        )
 
-        val parent2 = db.readWrite { implicit s =>
-          val parent = commentRepo.save(Comment(
+        val parent2 = saveComment(
+          Comment(
             uriId = uris(1).id.get,
             userId = users(1).id.get,
             text = "this is a message",
             pageTitle = uris(1).title.get,
             permissions = CommentPermissions.MESSAGE
-          ))
-          commentRecipientRepo.save(CommentRecipient(
-            commentId = parent.id.get,
-            userId = users(2).id
-          ))
-          parent
-        }
+          ),
+          users(2).id.get
+        )
         commentIndexer.update()
         commentIndexer.numDocs === 2
 
@@ -137,16 +121,16 @@ class CommentSearcherTest extends Specification with GraphTestHelper {
         res.hits(0).id === parent2.id.get.id
         res.hits(1).id === parent1.id.get.id
 
-        val reply1 = db.readWrite { implicit s =>
-          commentRepo.save(Comment(
+        val reply1 = saveComment(
+          Comment(
             uriId = uris(0).id.get,
             userId = users(1).id.get,
             text = "this is a reply",
             pageTitle = uris(0).title.get,
             permissions = CommentPermissions.MESSAGE,
             parent = parent1.id
-          ))
-        }
+          )
+        )
 
         commentIndexer.update()
 
@@ -161,20 +145,20 @@ class CommentSearcherTest extends Specification with GraphTestHelper {
 
     "return maxHits and paginate" in {
       running(new EmptyApplication().withShoeboxServiceModule) {
-        val (users, uris) = setupDB
+        val (users, uris) = initData
 
         val commentIndexer = mkCommentIndexer()
 
         val parents = uris.map{ uri =>
-          db.readWrite { implicit s =>
-            commentRepo.save(Comment(
+          saveComment(
+            Comment(
               uriId = uri.id.get,
               userId = users(0).id.get,
               text = "this is a message",
               pageTitle = uri.title.get,
               permissions = CommentPermissions.MESSAGE
-            ))
-          }
+            )
+          )
         }
 
         commentIndexer.update()

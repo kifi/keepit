@@ -2,7 +2,6 @@ package com.keepit.test
 
 import scala.collection.mutable
 import scala.concurrent._
-import scala.slick.session.{Database => SlickDatabase}
 import org.apache.zookeeper.CreateMode
 import org.joda.time.{ReadablePeriod, DateTime}
 import net.codingwell.scalaguice.{ScalaModule, ScalaMultibinder}
@@ -21,7 +20,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
-import com.keepit.common.net.HttpClient
+import com.keepit.common.net.{HttpClient, FakeHttpClientModule, FakeClientResponse}
 import com.keepit.common.plugin._
 import com.keepit.common.service._
 import com.keepit.common.social._
@@ -52,7 +51,6 @@ import scala.Some
 import com.keepit.common.zookeeper.Node
 import com.keepit.common.zookeeper.Path
 import com.keepit.common.healthcheck.BabysitterTimeout
-import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.service.ServiceVersion
 import com.keepit.shoebox.ShoeboxCacheProvider
 import com.keepit.common.mail.FakeMailModule
@@ -60,8 +58,6 @@ import com.keepit.model.SocialUserInfo
 import com.keepit.common.social.FakeSecureSocialUserServiceModule
 import com.keepit.model.NormalizedURI
 import com.keepit.common.amazon.AmazonInstanceId
-import com.keepit.common.net.FakeClientResponse
-
 
 
 class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
@@ -90,52 +86,11 @@ class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override v
   def withShoeboxServiceModule() = overrideWith(ShoeboxServiceModule())
   def withSearchConfigModule() = overrideWith(SearchConfigModule())
 
-
   def overrideWith(modules: Module*): TestApplication = new TestApplication(createTestGlobal(global, modules: _*), useDb, path)
 
 }
 
 class EmptyApplication(path: File = new File("./modules/common/")) extends TestApplication(new TestGlobal(TestModule()), path = path)
-
-trait DbRepos {
-
-  import play.api.Play.current
-
-  def db = inject[Database]
-  def userSessionRepo = inject[UserSessionRepo]
-  def userRepo = inject[UserRepo]
-  def basicUserRepo = inject[BasicUserRepo]
-  def userConnRepo = inject[UserConnectionRepo]
-  def socialConnRepo = inject[SocialConnectionRepo]
-  def uriRepo = inject[NormalizedURIRepo]
-  def urlRepo = inject[URLRepo]
-  def bookmarkRepo = inject[BookmarkRepo]
-  def commentRepo = inject[CommentRepo]
-  def commentReadRepo = inject[CommentReadRepo]
-  def commentRecipientRepo = inject[CommentRecipientRepo]
-  def socialUserInfoRepo = inject[SocialUserInfoRepo]
-  def installationRepo = inject[KifiInstallationRepo]
-  def userExperimentRepo = inject[UserExperimentRepo]
-  def emailAddressRepo = inject[EmailAddressRepo]
-  def invitationRepo = inject[InvitationRepo]
-  def unscrapableRepo = inject[UnscrapableRepo]
-  def notificationRepo = inject[UserNotificationRepo]
-  def scrapeInfoRepo = inject[ScrapeInfoRepo]
-  def phraseRepo = inject[PhraseRepo]
-  def collectionRepo = inject[CollectionRepo]
-  def keepToCollectionRepo = inject[KeepToCollectionRepo]
-}
-
-object TestDbInfo {
-  val url = "jdbc:h2:mem:shoebox;USER=shoebox;MODE=MYSQL;MVCC=TRUE;DB_CLOSE_DELAY=-1"
-  val dbInfo = new DbInfo() {
-    //later on we can customize it by the application name
-    lazy val database = SlickDatabase.forURL(url = url)
-    lazy val driverName = H2.driverName
-//    lazy val database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
-//    lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
-  }
-}
 
 case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   def configure(): Unit = {
@@ -347,61 +302,22 @@ case class SearchConfigModule() extends ScalaModule {
 }
 
 case class ShoeboxServiceModule() extends ScalaModule {
-  override def configure(): Unit = {
-  }
+  override def configure(): Unit = {}
 
   @Singleton
   @Provides
-  def fakeShoeboxServiceClient(
-    cacheProvider: ShoeboxCacheProvider,
-    db: Database,
-    userConnectionRepo: UserConnectionRepo,
-    userRepo: UserRepo,
-    basicUserRepo: BasicUserRepo,
-    bookmarkRepo: BookmarkRepo,
-    commentRepo: CommentRepo,
-    commentRecipientRepo: CommentRecipientRepo,
-    browsingHistoryRepo: BrowsingHistoryRepo,
-    collectionRepo: CollectionRepo,
-    keepToCollectionRepo: KeepToCollectionRepo,
-    clickingHistoryRepo: ClickHistoryRepo,
-    normUriRepo: NormalizedURIRepo,
-    experimentRepo: SearchConfigExperimentRepo,
-    userExperimentRepo: UserExperimentRepo,
-    clickHistoryTracker: ClickHistoryTracker,
-    browsingHistoryTracker: BrowsingHistoryTracker,
-    clock: Clock,
-    fortyTwoServices: FortyTwoServices
-  ): ShoeboxServiceClient = new FakeShoeboxServiceClientImpl(
-    cacheProvider,
-    db,
-    userConnectionRepo,
-    userRepo,
-    basicUserRepo,
-    bookmarkRepo,
-    commentRepo,
-    commentRecipientRepo,
-    browsingHistoryRepo,
-    clickingHistoryRepo,
-    collectionRepo,
-    keepToCollectionRepo,
-    normUriRepo,
-    experimentRepo,
-    userExperimentRepo,
-    clickHistoryTracker,
-    browsingHistoryTracker,
-    clock,
-    fortyTwoServices)
+  def fakeShoeboxServiceClient(clickHistoryTracker: ClickHistoryTracker, browsingHistoryTracker: BrowsingHistoryTracker): ShoeboxServiceClient =
+    new FakeShoeboxServiceClientImpl(clickHistoryTracker, browsingHistoryTracker)
 
   @Provides
   @Singleton
-  def browsingHistoryTracker(browsingHistoryRepo: BrowsingHistoryRepo, db: Database): BrowsingHistoryTracker =
-    new BrowsingHistoryTracker(3067, 2, 1, browsingHistoryRepo, db)
+  def fakebrowsingHistoryTracker: BrowsingHistoryTracker =
+    new FakeBrowsingHistoryTrackerImpl(3067, 2, 1)
 
   @Provides
   @Singleton
-  def clickHistoryTracker(repo: ClickHistoryRepo, db: Database): ClickHistoryTracker =
-    new ClickHistoryTracker(307, 2, 1, repo, db)
+  def fakeclickHistoryTracker: ClickHistoryTracker =
+    new FakeClickHistoryTrackerImpl(307, 2, 1)
 
 }
 

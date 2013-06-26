@@ -10,6 +10,7 @@ POST    /internal/search/events/resultClicked @com.keepit.controllers.search.Sea
 
 GET     /internal/search/comment/info         @com.keepit.controllers.search.CommentIndexerController.indexInfo()
 GET     /internal/search/comment/reindex      @com.keepit.controllers.search.CommentIndexerController.reindex()
+POST    /internal/search/comment/dumpDoc/:id  @com.keepit.controllers.search.CommentIndexerController.dumpLuceneDocument(id: Id[Comment])
 
 GET     /internal/search/uriGraph/info         @com.keepit.controllers.search.URIGraphController.indexInfo()
 GET     /internal/search/uriGraph/sharingUserInfo @com.keepit.controllers.search.URIGraphController.sharingUserInfo(userId: Id[User], uriIds: String)

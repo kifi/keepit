@@ -519,7 +519,14 @@ class DomainTagNameMapperDelegate(profile: BasicProfile) extends StringMapperDel
 class LargeStringMapperDelegate(val profile: BasicProfile) extends DelegateMapperDelegate[LargeString, Clob] {
   protected val delegate = profile.typeMapperDelegates.clobTypeMapperDelegate
   def zero = LargeString("")
-  def sourceToDest(value: LargeString): Clob = new SerialClob(value.value.toCharArray())
+  def sourceToDest(value: LargeString): Clob = {
+    new SerialClob(value.value.toCharArray()) {
+      override def getSubString(pos: Long, length: Int): String = {
+        // workaround for an empty clob problem
+        if (pos == 1 && length == 0) "" else super.getSubString(pos, length)
+      }
+    }
+  }
   def safeDestToSource(value: Clob): LargeString = {
     val clob = new SerialClob(value)
     clob.length match {
