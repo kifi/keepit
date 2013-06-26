@@ -5,19 +5,14 @@ import com.keepit.search.query.SiteQuery
 import com.keepit.search.query.ConditionalQuery
 import com.keepit.model._
 import com.keepit.common.db._
-import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.test._
 import org.specs2.mutable._
-import play.api.Play.current
-import play.api.test._
 import play.api.test.Helpers._
 import org.apache.lucene.index.Term
-import org.apache.lucene.store.RAMDirectory
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
-import org.apache.lucene.search.BooleanQuery
 
 class URIGraphTest extends Specification with GraphTestHelper {
 
@@ -66,10 +61,10 @@ class URIGraphTest extends Specification with GraphTestHelper {
   "URIGraph" should {
     "generate UriToUsrEdgeSet" in {
       running(new EmptyApplication().withShoeboxServiceModule) {
-        val (users, uris) = setupDB
+        val (users, uris) = initData
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
-        val bookmarks = mkBookmarks(expectedUriToUserEdges)
+        saveBookmarksByURI(expectedUriToUserEdges)
         val graph = mkURIGraph()
         graph.update() === users.size
 
@@ -87,10 +82,10 @@ class URIGraphTest extends Specification with GraphTestHelper {
 
     "generate UserToUriEdgeSet" in {
       running(new EmptyApplication().withShoeboxServiceModule){
-        val (users, uris) = setupDB
+        val (users, uris) = initData
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
-        val bookmarks = mkBookmarks(expectedUriToUserEdges, mixPrivate = true)
+        val bookmarks = saveBookmarksByURI(expectedUriToUserEdges, mixPrivate = true)
         val graph = mkURIGraph()
         graph.update() === users.size
 
@@ -113,18 +108,16 @@ class URIGraphTest extends Specification with GraphTestHelper {
 
     "generate UserToCollectionEdgeSet" in {
       running(new EmptyApplication().withShoeboxServiceModule) {
-        val (users, uris) = setupDB
+        val (users, uris) = initData
 
         val usersWithCollection = users.take(2)
         val expectedUriToUserEdges = uris.map{ (_, usersWithCollection) }
-        mkBookmarks(expectedUriToUserEdges)
+        saveBookmarksByURI(expectedUriToUserEdges)
 
         val collections = usersWithCollection.foldLeft(Map.empty[Id[User], Collection]){ (m, user) =>
-          val coll = mkCollection(user, s"${user.firstName} - Collection")
-          val bookmarks = db.readOnly { implicit s =>
-            bookmarkRepo.getByUser(user.id.get)
-          }
-          m + (user.id.get -> addBookmarks(coll, bookmarks))
+          val coll = saveCollection(user, s"${user.firstName} - Collection")
+          val bookmarks = getBookmarksByUser(user.id.get)
+          m + (user.id.get -> saveBookmarksToCollection(coll, bookmarks))
         }
         val graph = mkURIGraph()
         graph.update()
@@ -143,17 +136,16 @@ class URIGraphTest extends Specification with GraphTestHelper {
 
     "generate UriToCollectionEdgeSet" in {
       running(new EmptyApplication().withShoeboxServiceModule) {
-        val (users, uris) = setupDB
+        val (users, uris) = initData
 
         val expectedUriToUsers = uris.map{ uri => (uri, users.filter( _.id.get.id == uri.id.get.id)) }
-        mkBookmarks(expectedUriToUsers)
+        saveBookmarksByURI(expectedUriToUsers)
 
         val collections = users.foldLeft(Map.empty[User, Collection]){ (m, user) =>
-          val coll = mkCollection(user, s"${user.firstName} - Collection")
-          val bookmarks = db.readOnly { implicit s =>
-            bookmarkRepo.getByUser(user.id.get)
-          }
-          m + (user -> addBookmarks(coll, bookmarks))
+          val coll = saveCollection(user, s"${user.firstName} - Collection")
+          val bookmarks = getBookmarksByUser(user.id.get)
+
+          m + (user -> saveBookmarksToCollection(coll, bookmarks))
         }
         val graph = mkURIGraph()
         graph.update()
@@ -171,17 +163,16 @@ class URIGraphTest extends Specification with GraphTestHelper {
 
     "generate CollectionToUriEdgeSet" in {
       running(new EmptyApplication().withShoeboxServiceModule) {
-        val (users, uris) = setupDB
+        val (users, uris) = initData
 
         val expectedUriToUsers = uris.map{ uri => (uri, users.filter{ _.id.get.id <= uri.id.get.id }) }
-        mkBookmarks(expectedUriToUsers)
+        saveBookmarksByURI(expectedUriToUsers)
 
         val collections = users.map{ user =>
-          val coll = mkCollection(user, s"${user.firstName} - Collection")
-          val bookmarks = db.readOnly { implicit s =>
-            bookmarkRepo.getByUser(user.id.get)
-          }
-          (addBookmarks(coll, bookmarks), bookmarks)
+          val coll = saveCollection(user, s"${user.firstName} - Collection")
+          val bookmarks = getBookmarksByUser(user.id.get)
+
+          (saveBookmarksToCollection(coll, bookmarks), bookmarks)
         }
         val graph = mkURIGraph()
         graph.update()
@@ -198,17 +189,16 @@ class URIGraphTest extends Specification with GraphTestHelper {
 
     "intersect UserToCollectionEdgeSet and UriToCollectionEdgeSet" in {
       running(new EmptyApplication().withShoeboxServiceModule) {
-        val (users, uris) = setupDB
+        val (users, uris) = initData
 
         val expectedUriToUsers = uris.map{ uri => (uri, users.filter( _.id.get.id == uri.id.get.id)) }
-        mkBookmarks(expectedUriToUsers)
+        saveBookmarksByURI(expectedUriToUsers)
 
         val collections = users.foldLeft(Map.empty[User, Collection]){ (m, user) =>
-          val coll = mkCollection(user, s"${user.firstName} - Collection")
-          val bookmarks = db.readOnly { implicit s =>
-            bookmarkRepo.getByUser(user.id.get)
-          }
-          m + (user -> addBookmarks(coll, bookmarks))
+          val coll = saveCollection(user, s"${user.firstName} - Collection")
+          val bookmarks = getBookmarksByUser(user.id.get)
+
+          m + (user -> saveBookmarksToCollection(coll, bookmarks))
         }
         val graph = mkURIGraph()
         graph.update()
@@ -231,10 +221,10 @@ class URIGraphTest extends Specification with GraphTestHelper {
 
     "intersect UserToUserEdgeSet and UriToUserEdgeSet" in {
       running(new EmptyApplication().withShoeboxServiceModule) {
-        val (users, uris) = setupDB
+        val (users, uris) = initData
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
-        val bookmarks = mkBookmarks(expectedUriToUserEdges)
+        val bookmarks = saveBookmarksByURI(expectedUriToUserEdges)
         val graph = mkURIGraph()
         graph.update() === users.size
 
@@ -262,7 +252,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
 
     "intersect empty sets" in {
       running(new EmptyApplication().withShoeboxServiceModule) {
-        val (users, uris) = setupDB
+        val (users, uris) = initData
         val graph = mkURIGraph()
         graph.update()
 
@@ -301,16 +291,11 @@ class URIGraphTest extends Specification with GraphTestHelper {
 
     "search personal bookmark titles" in {
       running(new EmptyApplication().withShoeboxServiceModule) {
-        val (users, uris) = setupDB
+        val (users, uris) = initData
         val store = setupArticleStore(uris)
+        val edges = uris.map { uri => (uri, users((uri.id.get.id % 2L).toInt), Some("personaltitle bmt" + uri.id.get.id))}
+        saveBookmarksByEdges(edges)
 
-        db.readWrite { implicit s =>
-          uris.foreach{ uri =>
-            val uriId =  uri.id.get
-            val url1 = urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-            bookmarkRepo.save(BookmarkFactory(title = ("personaltitle bmt"+uriId), url = url1,  uriId = uriId, userId = users((uriId.id % 2L).toInt).id.get, source = BookmarkSource("test")))
-          }
-        }
         val graph = mkURIGraph()
         graph.update()
 
@@ -318,7 +303,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
         val bmt1 = new TermQuery(new Term(URIGraphFields.titleField, "bmt1"))
         val bmt2 = new TermQuery(new Term(URIGraphFields.titleField, "bmt2"))
 
-        setConnections(Map(users(0).id.get -> Set(), users(1).id.get -> Set()))
+        addConnections(Map(users(0).id.get -> Set(), users(1).id.get -> Set()))
 
         val searcher0 = graph.getURIGraphSearcher(users(0).id.get)
         val searcher1 = graph.getURIGraphSearcher(users(1).id.get)
@@ -335,21 +320,16 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "search personal bookmark domains" in {
-       running(new EmptyApplication().withShoeboxServiceModule) {
-        val (users, uris) = setupDB
+      running(new EmptyApplication().withShoeboxServiceModule) {
+        val (users, uris) = initData
         val store = setupArticleStore(uris)
+        val edges = uris.map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id))}
+        saveBookmarksByEdges(edges)
 
-        db.readWrite { implicit s =>
-          uris.foreach{ uri =>
-            val uriId =  uri.id.get
-            val url1 = urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-            bookmarkRepo.save(BookmarkFactory(title = ("personaltitle bmt"+uriId), url = url1,  uriId = uriId, userId = users(0).id.get, source = BookmarkSource("test")))
-          }
-        }
         val graph = mkURIGraph()
         graph.update() === 1
 
-        setConnections(Map(users(0).id.get -> Set()))
+        addConnections(Map(users(0).id.get -> Set()))
 
         val searcher = graph.getURIGraphSearcher(users(0).id.get)
 
@@ -380,20 +360,15 @@ class URIGraphTest extends Specification with GraphTestHelper {
 
     "retrieve bookmark records from bookmark store" in {
        running(new EmptyApplication().withShoeboxServiceModule) {
-        val (users, uris) = setupDB
+        val (users, uris) = initData
         val store = setupArticleStore(uris)
+        val edges = uris.take(3).map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id))}
+        saveBookmarksByEdges(edges)
 
-        db.readWrite { implicit s =>
-          uris.take(3).foreach{ uri =>
-            val uriId =  uri.id.get
-            val url1 = urlRepo.get(uri.url).getOrElse(urlRepo.save(URLFactory(url = uri.url, normalizedUriId = uri.id.get)))
-            bookmarkRepo.save(BookmarkFactory(title = ("personaltitle bmt"+uriId), url = url1,  uriId = uriId, userId = users(0).id.get, source = BookmarkSource("test")))
-          }
-        }
         val graph = mkURIGraph()
         graph.update() === 1
 
-        setConnections(Map(users(0).id.get -> Set()))
+        addConnections(Map(users(0).id.get -> Set()))
 
         val searcher = graph.getURIGraphSearcher(users(0).id.get)
 
