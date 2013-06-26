@@ -10,7 +10,7 @@ import com.keepit.model.UriTopicHelper
 @Singleton
 class TopicModelController  @Inject() (
   docTopicModel: DocumentTopicModel,
-  wordTopicMode: WordTopicModel,
+  wordTopicModel: WordTopicModel,
   topicPlugin: TopicUpdaterPlugin,
   actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator){
 
@@ -44,6 +44,31 @@ class TopicModelController  @Inject() (
       case (Some(a), Some(b)) => makeString(a, topic(a)) + ", " + makeString(b, topic(b))
     }
     Redirect(com.keepit.controllers.admin.routes.TopicModelController.documentTopic(Some(content), Some(topics)))
+  }
+
+  def wordTopic(word: Option[String], topic: Option[String]) = AdminHtmlAction { implicit request =>
+    Ok(html.admin.wordTopic(word, topic))
+  }
+
+  def getWordTopic = AdminHtmlAction { implicit request =>
+
+    def getTopTopics(arr: Array[Double], topK: Int = 5) = {
+       arr.zipWithIndex.filter(_._1 > 1.0/TopicModelGlobal.numTopics)
+                       .sortWith((a, b) => a._1 > b._1).take(topK).map{x => (x._2, x._1)}
+    }
+
+    def buildString(arr: Array[(Int, Double)]) = {
+      arr.map{x => x._1 + ": " + "%.3f".format(x._2)}.mkString("\n")
+    }
+
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val word = body.get("word").get
+    val topic = wordTopicModel.wordTopic.get(word) match {
+      case Some(arr) => buildString( getTopTopics(arr) )
+      case None => ""
+    }
+
+   Redirect(com.keepit.controllers.admin.routes.TopicModelController.wordTopic(Some(word), Some(topic)))
   }
 
 }
