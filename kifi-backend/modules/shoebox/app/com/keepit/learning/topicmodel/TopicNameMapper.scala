@@ -9,21 +9,38 @@ package com.keepit.learning.topicmodel
  */
 trait TopicNameMapper {
   val rawTopicNames: Array[String]              // may contain duplicates or NA
+  val mappedNames: Array[String]
   def idMapper(orginialId: Int): Int
-  def nameMapper(originalId: Int): String
+  def getMappedNameByOriginalId(originalId: Int): String
+  def getMappedNameByNewId(newId: Int): String
+  def scoreMapper(score: Array[Int]): Array[Int]
 }
 
 class IdentityTopicNameMapper(val rawTopicNames: Array[String]) extends TopicNameMapper {
+  val mappedNames = rawTopicNames
   def idMapper(id: Int) = id
-  def nameMapper(originalId: Int) = rawTopicNames(originalId)
+  def getMappedNameByOriginalId(originalId: Int) = rawTopicNames(originalId)
+  def getMappedNameByNewId(newId: Int) = mappedNames(newId)
+  def scoreMapper(score: Array[Int]) = score
 }
 
 class ManualTopicNameMapper (val rawTopicNames: Array[String], val mappedNames: Array[String], val mapper: Map[Int, Int]) extends TopicNameMapper {
   def idMapper(id: Int) = mapper.getOrElse(id, -1)
-  def nameMapper(originalId: Int) = {
+  def getMappedNameByOriginalId(originalId: Int) = {
     val newId = idMapper(originalId)
     if (newId < 0 || newId >= mappedNames.size) ""
     else mappedNames(newId)
+  }
+
+  def getMappedNameByNewId(newId: Int) = mappedNames(newId)
+
+  def scoreMapper(score: Array[Int]) = {
+    val rv = new Array[Int](mappedNames.size)
+    (0 until score.length).foreach{ i =>
+      val idx = idMapper(i)
+      if (idx != -1) rv(idx) += score(i)
+    }
+    rv
   }
 }
 

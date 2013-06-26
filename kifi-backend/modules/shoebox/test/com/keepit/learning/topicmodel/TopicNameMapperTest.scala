@@ -16,7 +16,10 @@ class TopicNameMapperTest extends Specification {
       val (newNames, mapper) = NameMapperConstructer.getMapper(names)
       val topicMapper = new ManualTopicNameMapper(names, newNames, mapper)
       (0 until names.size).map{topicMapper.idMapper(_)}.toArray === Array(0, 1, 1, -1, -1, 0, 2)
-      (0 until names.size).map{topicMapper.nameMapper(_)}.toArray === Array("math", "cs", "cs", "", "", "math", "web")
+      (0 until names.size).map{topicMapper.getMappedNameByOriginalId(_)}.toArray === Array("math", "cs", "cs", "", "", "math", "web")
+
+      val score = Array(1, 2, 3, 10, 10, 1, 3)
+      topicMapper.scoreMapper(score) === Array(2, 5, 3)
     }
   }
 }

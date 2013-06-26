@@ -22,9 +22,7 @@ import com.keepit.classify.DomainTagImportSettings
 import scala.Some
 import com.keepit.common.zookeeper.Node
 import com.keepit.common.amazon.AmazonInstanceId
-import com.keepit.learning.topicmodel.WordTopicModel
-import com.keepit.learning.topicmodel.TopicModelGlobal
-import com.keepit.learning.topicmodel.LdaWordTopicModel
+import com.keepit.learning.topicmodel._
 
 class ShoeboxDevModule extends ScalaModule with Logging {
   def configure() {
@@ -134,6 +132,13 @@ class ShoeboxDevModule extends ScalaModule with Logging {
       val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map{ i => "topic%d".format(i)}.toArray
       print("loading fake topic model")
       new LdaWordTopicModel(vocabulary, wordTopic, topicNames)
+  }
+
+  @Provides
+  @Singleton
+  def topicNameMapper: TopicNameMapper = {
+    val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map { i => "topic%d".format(i) }.toArray
+    new IdentityTopicNameMapper(topicNames)
   }
 }
 
