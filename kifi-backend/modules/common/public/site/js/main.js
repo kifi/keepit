@@ -715,10 +715,11 @@ $(function() {
 				url: urlKeepAdd,
 				type: "POST",
 				dataType: 'json',
-				data: JSON.stringify($keeps.map(function() {
-					var keepLink = $(this).find('.keep-title>a')[0];
-					return {title: keepLink.title, url: keepLink.href, isPrivate: howKept == 'pri'};
-				}).get()),
+				data: JSON.stringify({
+					keeps: $keeps.map(function() {
+						var keepLink = $(this).find('.keep-title>a')[0];
+						return {title: keepLink.title, url: keepLink.href, isPrivate: howKept == 'pri'};
+					}).get()}),
 				contentType: 'application/json',
 				error: showMessage.bind(null, 'Could not add keeps, please try again later'),
 				success: function(data) {
@@ -734,7 +735,7 @@ $(function() {
 				contentType: 'application/json',
 				error: showMessage.bind(null, 'Could not remove keeps, please try again later'),
 				success: function(data) {
-					$detail.removeAttr('data-kept').find('.page-how').removeClass(howKept);
+					$detail.removeAttr('data-kept');
 					$keeps.removeClass("mine").find(".keep-private").removeClass("on");
 					// TODO: decrement all relevant collection counts
 				}});
