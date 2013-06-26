@@ -2,6 +2,7 @@
 # Search Extension API
 ##########################################
 GET     /search                     @com.keepit.controllers.ext.ExtSearchController.search(q: String, f: Option[String], maxHits: Int, lastUUID: Option[String], context: Option[String], kifiVersion: Option[KifiVersion] ?= None, start: Option[String], end: Option[String], tz: Option[String], coll: Option[String])
+GET     /search/comment             @com.keepit.controllers.ext.ExtCommentSearchController.search(q: String, maxHits: Int, context: Option[String])
 
 
 # INTERNAL ROUTES/Search

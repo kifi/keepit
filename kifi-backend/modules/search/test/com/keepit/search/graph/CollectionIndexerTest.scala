@@ -78,7 +78,8 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
         val positiveUsers = usersWithCollection.map(_.id.get).toSet
         users.forall{ user =>
           var hits = Set.empty[Long]
-          searcher.doSearch(new TermQuery(new Term(CollectionFields.userField, user.id.get.toString))){ (scorer, mapper) =>
+          searcher.doSearch(new TermQuery(new Term(CollectionFields.userField, user.id.get.toString))){ (scorer, reader) =>
+            val mapper = reader.getIdMapper
             var doc = scorer.nextDoc()
             while (doc != NO_MORE_DOCS) {
               hits += mapper.getId(doc)
@@ -114,7 +115,8 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
 
         expectedUriToUsers.forall{ case (uri, expectedUsers) =>
           var hits = Set.empty[Long]
-          searcher.doSearch(new TermQuery(new Term(CollectionFields.uriField, uri.id.get.toString))){ (scorer, mapper) =>
+          searcher.doSearch(new TermQuery(new Term(CollectionFields.uriField, uri.id.get.toString))){ (scorer, reader) =>
+            val mapper = reader.getIdMapper
             var doc = scorer.nextDoc()
             while (doc != NO_MORE_DOCS) {
               hits += mapper.getId(doc)

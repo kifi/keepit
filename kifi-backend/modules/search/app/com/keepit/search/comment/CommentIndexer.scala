@@ -108,7 +108,7 @@ class CommentIndexer(
   }
 
   private def update(commentsChanged: => Seq[Comment]): Int = updateLock.synchronized {
-    log.info("updating URIGraph")
+    log.info("updating Comment Index")
     try {
       val comments = commentsChanged
       commentStore.update(comments)
@@ -125,7 +125,7 @@ class CommentIndexer(
       searchers = (this.getSearcher, commentStore.getSearcher)
       cnt
     } catch { case e: Throwable =>
-      log.error("error in URIGraph update", e)
+      log.error("error in Comment Index update", e)
       throw e
     }
   }
