@@ -172,10 +172,8 @@ class UrlController @Inject() (
         done = comments.isEmpty || comments.exists{ comment =>
           if (comment.seq.value != 0L) true
           else {
-            if (comment.state == CommentStates.INACTIVE) {
-              commentRepo.save(comment)
-              count += 1
-            }
+            commentRepo.save(comment)
+            count += 1
             false
           }
         }
