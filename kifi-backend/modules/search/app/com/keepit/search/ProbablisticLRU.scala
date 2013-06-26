@@ -1,5 +1,7 @@
 package com.keepit.search
 
+import com.keepit.common.db.Id
+
 import scala.math._
 import java.io.File
 import java.io.RandomAccessFile
@@ -9,6 +11,14 @@ import java.nio.IntBuffer
 import java.nio.MappedByteBuffer
 import java.util.concurrent.atomic.AtomicLong
 import java.util.Random
+
+import com.google.inject.Inject
+import com.amazonaws.services.s3.AmazonS3
+import com.amazonaws.services.sns.model.NotFoundException
+
+
+
+case class ProbablisticLRUName(name: String)
 
 
 trait MultiChunkBuffer {
@@ -29,10 +39,8 @@ class SimpleLocalBuffer(byteBuffer: ByteBuffer) extends MultiChunkBuffer {
 
   def chunkSize : Int = byteBuffer.getInt(0)
 
-
-
   def getChunk(key: Long) : IntBufferWrapper = new IntBufferWrapper {
-    
+
     def get(pos: Int) : Int = intBuffer.get(pos)
 
     def put(pos: Int, value: Int) : Unit = intBuffer.put(pos, value)
@@ -43,8 +51,55 @@ class SimpleLocalBuffer(byteBuffer: ByteBuffer) extends MultiChunkBuffer {
     }
 
   }
-
   
+}
+
+
+
+class S3BackedBuffer (dataStore : ProbablisticLRUStore, val filterName: ProbablisticLRUName) extends MultiChunkBuffer {
+
+  private def loadChunk(chunkId: Int) : IntBuffer = {
+    //TODO: get or else from cache, treat empty specially
+    dataStore.get(FullFilterChunkId(filterName.name, chunkId)) match {
+      case Some(intBuffer) => intBuffer
+      case None => 
+        val byteBuffer = ByteBuffer.allocate(chunkSize*4 + 4)
+        byteBuffer.putInt(0, chunkSize)
+        byteBuffer.asIntBuffer
+    }
+  }
+
+  private def saveChunk(chunkId: Int, chunk: IntBuffer) : Unit = dataStore += (FullFilterChunkId(filterName.name, chunkId), chunk) //TODO: remove chunk from cache
+
+  def chunkSize : Int = 5
+
+  def numChunks : Int = 5 
+
+  def getChunk(key: Long) = {
+    val chunkId = ((key % chunkSize*numChunks) / chunkSize).toInt
+    val thisChunk : IntBuffer = loadChunk(chunkId)
+    var dirtyEntries : Set[Int] = Set[Int]()
+    
+    new IntBufferWrapper {
+      
+      def get(pos: Int) : Int = thisChunk.get(pos)
+
+      def sync : Unit = {
+        val storedChunk = loadChunk(chunkId)
+        dirtyEntries.foreach { pos =>
+          storedChunk.put(pos, thisChunk.get(pos))
+        }
+        saveChunk(chunkId, storedChunk)
+      }
+
+      def put(pos: Int, value: Int) = {
+        thisChunk.put(pos, value)
+        dirtyEntries = dirtyEntries + pos
+      }
+
+    }
+  }
+
 }
 
 object ProbablisticLRU {
