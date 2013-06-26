@@ -14,7 +14,7 @@ import scala.collection.mutable.{Map => MutMap}
 import com.google.inject.Singleton
 import scala.collection.mutable.{Map => MutMap}
 
-
+@Singleton
 class TopicUpdater @Inject() (
   db: Database,
   uriRepo: NormalizedURIRepo,
