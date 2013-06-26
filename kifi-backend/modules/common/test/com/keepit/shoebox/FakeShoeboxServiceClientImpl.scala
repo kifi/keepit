@@ -69,7 +69,6 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
   val allUsers = MutableMap[Id[User], User]()
   val allUserExternalIds = MutableMap[ExternalId[User], User]()
   val allUserConnections = MutableMap[Id[User], Set[Id[User]]]()
-  val allSocialUserInfos = MutableMap[Id[User], Set[SocialUserInfo]]()
   val allUserExperiments = MutableMap[Id[User], Set[UserExperiment]]()
   val allUserBookmarks = MutableMap[Id[User], Set[Id[Bookmark]]]()
   val allBookmarks = MutableMap[Id[Bookmark], Bookmark]()
@@ -89,7 +88,6 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
       val updatedUser = user.withId(id)
       allUsers(id) = updatedUser
       allUserExternalIds(updatedUser.externalId) = updatedUser
-      allSocialUserInfos(id) = allSocialUserInfos.getOrElse(id, Set.empty)
       updatedUser
     }
   }
@@ -266,7 +264,6 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
         externalId = user.externalId,
         firstName = user.firstName,
         lastName = user.lastName,
-        networkIds = allSocialUserInfos(id).map {su => su.networkType -> su.socialId }.toMap,
         pictureName = "fake.jpg" //
       )
     }.toMap
