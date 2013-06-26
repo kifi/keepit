@@ -161,6 +161,7 @@ class UrlController @Inject() (
   }
 
   private def fixCommentSeqNum: Unit = {
+    import com.keepit.model.CommentStates
     log.info("started comment seq num fix")
     var count = 0
     var done = false
@@ -171,8 +172,10 @@ class UrlController @Inject() (
         done = comments.isEmpty || comments.exists{ comment =>
           if (comment.seq.value != 0L) true
           else {
-            commentRepo.save(comment)
-            count += 1
+            if (comment.state == CommentStates.INACTIVE) {
+              commentRepo.save(comment)
+              count += 1
+            }
             false
           }
         }
