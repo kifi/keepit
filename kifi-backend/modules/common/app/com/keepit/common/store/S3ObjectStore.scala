@@ -13,6 +13,8 @@ import com.amazonaws.AmazonServiceException
 import com.amazonaws.services.s3.model.AmazonS3Exception
 import com.amazonaws.services.s3.model.S3Object
 
+import org.apache.poi.util.IOUtils
+
 import play.api.libs.json.Json
 import play.api.libs.json.Format
 import play.api.Play
@@ -146,14 +148,7 @@ trait S3BlobStore[A,B] extends S3ObjectStore[A,B] {
       val size  = s3Obj.getObjectMetadata().getContentLength()
       val dataStream  = s3Obj.getObjectContent()
       try{ 
-        val rawData = new Array[Byte](size.toInt)
-        var bytesRead : Int = 0
-        var lastRead : Int  = 0
-        while (bytesRead < rawData.size && lastRead != -1){
-          lastRead = dataStream.read(rawData, bytesRead, rawData.size-bytesRead)
-          bytesRead += lastRead
-        }
-        decodeValue(rawData)
+        decodeValue(IOUtils.toByteArray(dataStream))
       }
       finally {
         dataStream.close()
