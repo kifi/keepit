@@ -16,6 +16,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 case object UpdateTopic
+case object ResetTopic
 
 private[topicmodel] class TopicUpdaterActor @Inject() (
   healthcheckPlugin: HealthcheckPlugin,
@@ -30,13 +31,22 @@ private[topicmodel] class TopicUpdaterActor @Inject() (
         healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH,
           errorMessage = Some("Error updating topics")))
     }
+
+    case ResetTopic => try {
+      topicUpdater.reset()
+    } catch {
+      case e: Exception =>
+        healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH,
+          errorMessage = Some("Error resetting topics")))
+    }
+
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
 
 trait TopicUpdaterPlugin extends SchedulingPlugin {
   def update(): Unit
-  def reset(): (Int, Int)
+  def reset(): Unit
 }
 
 class TopicUpdaterPluginImpl @Inject() (
@@ -60,9 +70,7 @@ class TopicUpdaterPluginImpl @Inject() (
 
   override def reset() = {
     log.info("admin reset topic tables ...")
-    log.info("cancelling current tasks ...")
-    cancelTasks()
-    topicUpdater.reset()
+    actor ! ResetTopic
   }
 
   def update() = actor ! UpdateTopic

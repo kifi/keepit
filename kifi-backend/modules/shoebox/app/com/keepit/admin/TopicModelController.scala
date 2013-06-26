@@ -25,8 +25,8 @@ class TopicModelController  @Inject() (
   val userTopicHelper = new UserTopicByteArrayHelper
 
   def resetAllTopicTables() = AdminHtmlAction{ implicit request =>
-    val (nUri, nUser) = topicPlugin.reset()
-    Ok(s"topic tables have been reset. num uris deleted: ${nUri}, num users deleted: ${nUser}")
+    topicPlugin.reset()
+    Ok(s"OK. Will reset topic tables")
   }
 
   def documentTopic(content: Option[String] = None, topicId: Option[String] = None) = AdminHtmlAction{ implicit request =>
