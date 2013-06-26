@@ -98,9 +98,25 @@ class ArticleIndexer @Inject() (
       }
     }
 
+    private def getArticle(id: Id[NormalizedURI], maxRetry: Int, minSleepTime: Long): Option[Article] = {
+      var sleepTime = minSleepTime
+      var retry = maxRetry
+      while (retry > 0) {
+        try {
+          return articleStore.get(id)
+        } catch {
+          case e: Throwable =>
+        }
+        Thread.sleep(sleepTime)
+        sleepTime *= 2 // exponential back off
+        retry -= 0
+      }
+      articleStore.get(id)
+    }
+
     override def buildDocument = {
       val doc = super.buildDocument
-      articleStore.get(uri.id.get) match {
+      getArticle(id = uri.id.get, maxRetry = 5, minSleepTime = 1000) match {
         case Some(article) =>
           val titleLang = article.titleLang.getOrElse(Lang("en"))
           val contentLang = article.contentLang.getOrElse(Lang("en"))
