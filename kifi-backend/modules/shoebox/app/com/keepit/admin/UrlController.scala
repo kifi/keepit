@@ -161,6 +161,7 @@ class UrlController @Inject() (
   }
 
   private def fixCommentSeqNum: Unit = {
+    import com.keepit.model.CommentStates
     log.info("started comment seq num fix")
     var count = 0
     var done = false

@@ -120,11 +120,11 @@
 							<a class="keep-coll" href="javascript:" data-template-for="collections" data-id="{{id}}">{{name}}</a>
 						</div>
 						<div class="keep-who">
-							<img class="small-avatar me"
+							<img class="me"
 								src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
 								data-src="//djty7jcqog9qu.cloudfront.net/users/{{me.id}}/pics/100/{{me.pictureName}}"
 								title="You! You look great!">
-						  <img class="small-avatar" data-template-for="keepers"
+						  <img data-template-for="keepers"
 								src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
 								data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
 								title="{{firstName}} {{lastName}}">
@@ -158,6 +158,7 @@
 	</section>
 
 	<aside class="right splash">
+	<div class="antiscroll-inner">
 		<h2>KiFi Beta - News & Tools</h2>
 		<ul class="about-kifi">
 			<li><a href="javascript:">Updates and features</a>
@@ -173,25 +174,31 @@
 			<li><a href="mailto:towel@42go.com">Contact Us</a>
 			<li><a href="http://www.42go.com/join_us.html">Jobs</a>
 		</ul>
+	</div>
 	</aside>
 
 	<aside class="right detail">
-		<div class="title">
-			<h2></h2>
-			<a class="link long-text"></a>
-			<div class="screenshot"></div>
+		<div class="page-meta">
+			<h2 class="page-title long-text"></h2>
+			<a class="page-url long-text" href="" target="_blank"></a>
+			<div class="page-pic">
+				<div class="page-how"></div>
+			</div>
+			<a class="page-keep" href="javascript:"></a>
+			<a class="page-priv" href="javascript:"></a>
 		</div>
-		<div class="who-kept"></div>
-		<div class="subtitle">In collections:</div>
-		<div class="in-collections">
+		<div class="page-who">
+			<h2>Who kept this:</h2>
+			<div class="page-who-pics"></div>
+			<div class="page-who-text"></div>
+		</div>
+		<div class="page-colls">
+			<h2 data-before-template>In collections: <a class="add" href="javascript:">+</a></h2>
 			<div class="row" data-template>
 				<input type="checkbox" data-id="{{id}}" id="cb1-{{id}}" checked>
 				<label class="long-text" for="cb1-{{id}}"><span></span>{{name}}</label>
 			</div>
-		</div>
-		<div class="actions">
-			<a class="add" href="javascript:">Add to a collection <span class="close">x</span></a>
-			<div class="collections">
+			<!--div class="collections">
 				<input class="find" type="text" placeholder="Find a collection...">
 				<ul>
 					<li class="create"><a class="new-collection" href="javascript:">Create a new collection</a>
@@ -200,11 +207,7 @@
 						</div>
 					</li>
 				</ul>
-			</div>
-			<a class="share" href="javascript:">Share on your social networks</a>
-			<div class="keepit">
-				<a class="keep-button" href="javascript:"><span class="private"></span> <span class="text">kept</span></a>
-			</div>
+			</div-->
 		</div>
 	</aside>
 
