@@ -607,6 +607,9 @@ api.port.on({
   get_friends: function(_, respond) {
     respond(friends);
   },
+  get_networks: function(friendId, respond) {
+    socket.send(["get_networks", friendId], respond);
+  },
   open_deep_link: function(data, _, tab) {
     var uriData = pageData[data.nUri];
     if (uriData) {
