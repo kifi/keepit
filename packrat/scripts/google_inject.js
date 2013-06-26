@@ -379,12 +379,19 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
       var j = $a.prevAll(".kifi-friend").length;
       var friend = response.hits[i].users[j];
       render("html/friend_card.html", {
-        networkIds: friend.networkIds,
         name: friend.firstName + " " + friend.lastName,
         id: friend.id,
         iconsUrl: api.url("images/social_icons.png")
       }, function(html) {
-        configureHover(html, {canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
+        var $el = $(html);
+        configureHover($el, {canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
+        api.port.emit("get_networks", friend.id, function(networks) {
+          for (nw in networks) {
+            $el.find('.kifi-kcard-nw-' + nw)
+              .toggleClass('kifi-on', networks[nw].connected)
+              .attr('href', networks[nw].profileUrl || null);
+          }
+        });
       });
     }).bindHover(".kifi-res-friends", function(configureHover) {
       var $a = $(this), i = $a.closest("li.g").prevAll("li.g").length;

@@ -247,9 +247,13 @@ POST    /admin/invites/reject       @com.keepit.controllers.admin.AdminInvitatio
 GET     /admin/labs/friendMap       @com.keepit.controllers.admin.AdminSearchLabsController.friendMap(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 GET     /admin/labs/friendMap.json  @com.keepit.controllers.admin.AdminSearchLabsController.friendMapJson(q: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 
-GET     /admin/learning/docTopic    @com.keepit.controllers.admin.TopicModelController.documentTopic(content: Option[String] ?= None, topicId: Option[String] ?= None)
-POST    /admin/learning/inferDocTopic @com.keepit.controllers.admin.TopicModelController.inferTopic
-GET    /admin/learning/resetTopic  @com.keepit.controllers.admin.TopicModelController.resetAllTopicTables()
+GET     /admin/learning/docTopic        @com.keepit.controllers.admin.TopicModelController.documentTopic(content: Option[String] ?= None, topicId: Option[String] ?= None)
+POST    /admin/learning/inferDocTopic   @com.keepit.controllers.admin.TopicModelController.inferTopic
+GET     /admin/learning/wordTopic       @com.keepit.controllers.admin.TopicModelController.wordTopic(word: Option[String] ?= None, topic: Option[String] ?= None)
+POST    /admin/learning/getWordTopic    @com.keepit.controllers.admin.TopicModelController.getWordTopic
+GET     /admin/learning/userTopic       @com.keepit.controllers.admin.TopicModelController.userTopic(userId: Option[String], topic: Option[String])
+POST    /admin/learning/getUserTopic    @com.keepit.controllers.admin.TopicModelController.getUserTopic
+GET    /admin/learning/resetTopic       @com.keepit.controllers.admin.TopicModelController.resetAllTopicTables()
 
 
 ##########################################
@@ -285,7 +289,7 @@ GET     /internal/shoebox/database/bookmark           @com.keepit.controllers.sh
 GET     /internal/shoebox/database/changedBookmark    @com.keepit.controllers.shoebox.ShoeboxController.getBookmarksChanged(seqNum: Long, fetchSize: Int)
 GET     /internal/shoebox/database/bookmarkByUriUser  @com.keepit.controllers.shoebox.ShoeboxController.getBookmarkByUriAndUser(uriId: Id[NormalizedURI], userId: Id[User])
 GET     /internal/shoebox/database/changedComment     @com.keepit.controllers.shoebox.ShoeboxController.getCommentsChanged(seqNum: Long, fetchSize: Int)
-GET     /internal/shoebox/database/commentRecipients  @com.keepit.controllers.shoebox.ShoeboxController.getCommentRecipientIds(commentId: Id[Comment])
+GET     /internal/shoebox/database/commentRecipientIds  @com.keepit.controllers.shoebox.ShoeboxController.getCommentRecipientIds(commentId: Id[Comment])
 POST    /internal/shoebox/persistServerSearchEvent    @com.keepit.controllers.shoebox.ShoeboxController.persistServerSearchEvent
 POST    /internal/shoebox/database/sendMail           @com.keepit.controllers.shoebox.ShoeboxController.sendMail
 GET     /internal/shoebox/database/getPhrasesByPage   @com.keepit.controllers.shoebox.ShoeboxController.getPhrasesByPage(page: Int, size: Int)

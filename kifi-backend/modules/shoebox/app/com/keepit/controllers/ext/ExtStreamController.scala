@@ -24,7 +24,6 @@ import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUser
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import com.keepit.serializer.SendableNotificationSerializer.sendableNotificationSerializer
 
-import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Concurrent
@@ -35,7 +34,7 @@ import play.api.mvc.RequestHeader
 import play.api.mvc.WebSocket
 import play.api.mvc.WebSocket.FrameFormatter
 import play.modules.statsd.api.Statsd
-import securesocial.core.{UserService, SecureSocial}
+import securesocial.core.{Authenticator, UserService, SecureSocial}
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]])
 
@@ -45,6 +44,7 @@ class ExtStreamController @Inject() (
   db: Database,
   socialUserInfoRepo: SocialUserInfoRepo,
   userConnectionRepo: UserConnectionRepo,
+  socialConnectionRepo: SocialConnectionRepo,
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   experimentRepo: UserExperimentRepo,
@@ -67,7 +67,23 @@ class ExtStreamController @Inject() (
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
-  private def authenticate(request: RequestHeader): Option[StreamSession] = {
+
+  // A hack which allows us to pass the SecureSocial session ID (sid) by query string.
+  // This is mainly a workaround for the mobile client, since the library we use doesn't support cookies
+  private def getAuthenticatorFromRequest()(implicit request: RequestHeader): Option[Authenticator] =
+    SecureSocial.authenticatorFromRequest orElse {
+      (for {
+        sid <- request.queryString.get("sid").map(_.head)
+        auth <- Authenticator.find(sid).fold(_ => None, Some(_)).flatten
+      } yield auth) match {
+        case Some(auth) if !auth.isValid =>
+          Authenticator.delete(auth.id)
+          None
+        case maybeAuth => maybeAuth
+      }
+    }
+
+  private def authenticate(implicit request: RequestHeader): Option[StreamSession] = {
     // Backdoor for mobile development
     val backdoorAuth = (for (
       // key <- request.getQueryString("key");
@@ -98,7 +114,7 @@ class ExtStreamController @Inject() (
      * WebSockets cannot use these, so I've implemented what I need below.
      */
     for (
-      auth <- SecureSocial.authenticatorFromRequest(request);
+      auth <- getAuthenticatorFromRequest();
       secSocialUser <- UserService.find(auth.userId)
     ) yield {
 
@@ -182,6 +198,9 @@ class ExtStreamController @Inject() (
             "get_friends" -> { _ =>
               channel.push(Json.arr("friends", getFriends(userId)))
             },
+            "get_networks" -> { case JsNumber(requestId) +: JsString(friendExtId) +: _ =>
+              channel.push(Json.arr(requestId, getNetworkInfo(userId, ExternalId(friendExtId))))
+            },
             "get_thread" -> { case JsString(threadId) +: _ =>
               channel.push(Json.arr("thread", getMessageThread(ExternalId[Comment](threadId)) match { case (nUri, msgs) =>
                 Json.obj("id" -> threadId, "uri" -> nUri.url, "messages" -> msgs)
@@ -251,6 +270,30 @@ class ExtStreamController @Inject() (
       }
     }
   }
+
+  private case class NetworkInfo(profileUrl: Option[String], connected: Boolean)
+  private implicit val writesNetworkInfo = Json.writes[NetworkInfo]
+  private implicit val writesNetworkTypeToNetworkInfo = new Writes[Map[SocialNetworkType, NetworkInfo]] {
+    def writes(o: Map[SocialNetworkType, NetworkInfo]): JsValue =
+      JsObject(o.map { case (network, info) => network.name -> Json.toJson(info) }.toSeq)
+  }
+
+  private def getNetworkInfo(userId: Id[User], friendId: ExternalId[User]): Map[SocialNetworkType, NetworkInfo] =
+    db.readOnly { implicit s =>
+      val mySocialUsers = socialUserInfoRepo.getByUser(userId)
+      for {
+        friend <- userRepo.getOpt(friendId).toSeq
+        su <- socialUserInfoRepo.getByUser(friend.id.get)
+      } yield {
+        su.networkType -> NetworkInfo(
+          profileUrl = su.getProfileUrl,
+          connected = mySocialUsers.exists { mySu =>
+            mySu.networkType == su.networkType &&
+                socialConnectionRepo.getConnectionOpt(su.id.get, mySu.id.get).isDefined
+          }
+        )
+      }
+    }.toMap
 
   private def asyncIteratee(f: JsArray => Unit): Iteratee[JsArray, Unit] = {
     import play.api.libs.iteratee._
