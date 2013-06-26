@@ -7,12 +7,13 @@ import com.amazonaws.services.s3.AmazonS3
 
 import java.nio.{IntBuffer, ByteBuffer}
 
+case class FullFilterChunkId(name: String, chunk: Int)
 
-trait ProbablisticLRUStore extends ObjectStore[Id[IntBuffer], IntBuffer]
+trait ProbablisticLRUStore extends ObjectStore[FullFilterChunkId, IntBuffer]
 
-class S3ProbablisticLRUStoreImpl(val bucketName: S3Bucket, val filterName: ProbablisticLRUName, val amazonS3Client: AmazonS3) extends S3BlobStore[Id[IntBuffer], IntBuffer] with ProbablisticLRUStore {
+class S3ProbablisticLRUStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3) extends S3BlobStore[FullFilterChunkId, IntBuffer] with ProbablisticLRUStore {
 
-    protected def idToKey(id: Id[IntBuffer]) = filterName.name + "/chunk_" + id.toString
+    protected def idToKey(id: FullFilterChunkId) = id.name + "/chunk_" + id.chunk.toString
 
     protected def encodeValue(value: IntBuffer) : Array[Byte] = {
         value.compact
@@ -27,4 +28,4 @@ class S3ProbablisticLRUStoreImpl(val bucketName: S3Bucket, val filterName: Proba
 
 
 
-class InMemoryProbablisticLRUStoreImpl extends InMemoryObjectStore[Id[IntBuffer], IntBuffer] with ProbablisticLRUStore
+class InMemoryProbablisticLRUStoreImpl extends InMemoryObjectStore[FullFilterChunkId, IntBuffer] with ProbablisticLRUStore
