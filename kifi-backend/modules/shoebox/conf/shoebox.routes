@@ -9,6 +9,7 @@ POST    /register                   securesocial.controllers.Registration.handle
 # OAuth provider entry points (e.g. "facebook")
 GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
 POST    /authenticate/:provider     securesocial.controllers.ProviderController.authenticateByPost(provider)
+POST    /mobileauth/:provider      @com.keepit.controllers.ext.ExtAuthController.mobileAuth(provider)
 
 POST    /disconnect/:provider       @com.keepit.controllers.website.HomeController.disconnect(provider)
 
