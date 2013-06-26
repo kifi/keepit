@@ -1,9 +1,6 @@
 package com.keepit.search.comment
 
-import com.keepit.search.index.{Searcher, WrappedIndexReader, WrappedSubReader}
 import com.keepit.model._
-import com.keepit.model.CommentStates._
-import com.keepit.common.db._
 import com.keepit.search.graph.GraphTestHelper
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -11,14 +8,10 @@ import com.keepit.inject._
 import com.keepit.test._
 import org.specs2.mutable._
 import play.api.Play.current
-import play.api.test._
 import play.api.test.Helpers._
 import org.apache.lucene.index.Term
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.store.RAMDirectory
-import org.apache.lucene.search.DocIdSetIterator
-import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
-import org.apache.lucene.search.Query
 import org.apache.lucene.search.TermQuery
 import org.apache.lucene.util.Version
 import scala.collection.JavaConversions._
@@ -35,7 +28,7 @@ class CommentIndexerTest extends Specification with GraphTestHelper {
   "CommentIndexer" should {
     "maintain a sequence number on comments " in {
       running(new EmptyApplication().withShoeboxServiceModule) {
-        val (users, uris) = setupDB
+        val (users, uris) = initData
         val numURIs = uris.size
 
         val commentStoreDir = new RAMDirectory
@@ -43,54 +36,50 @@ class CommentIndexerTest extends Specification with GraphTestHelper {
         val commentDir = new RAMDirectory
         val commentIndexer = mkCommentIndexer(commentDir, commentStore)
 
-        val publicComment = db.readWrite { implicit s =>
-          commentRepo.save(Comment(
+        val publicComment = saveComment(
+          Comment(
             uriId = uris(0).id.get,
             userId = users(0).id.get,
             text = "this is a comment",
             pageTitle = uris(0).title.get,
             permissions = CommentPermissions.PUBLIC
-          ))
-        }
-        val parent = db.readWrite { implicit s =>
-          val parent = commentRepo.save(Comment(
+          )
+        )
+
+        val parent = saveComment(
+          Comment(
             uriId = uris(0).id.get,
             userId = users(0).id.get,
             text = "this is a comment",
             pageTitle = uris(0).title.get,
             permissions = CommentPermissions.MESSAGE
-          ))
-          commentRecipientRepo.save(CommentRecipient(
-            commentId = parent.id.get,
-            userId = users(1).id
-          ))
-          parent
-        }
+          ), users(0).id.get
+        )
 
         commentIndexer.update() === 2 // two message threads created
         commentIndexer.sequenceNumber.value === 2
         commentIndexer.numDocs === 2 // total two message threads
 
-        val reply1 = db.readWrite { implicit s =>
-          commentRepo.save(Comment(
+        val reply1 = saveComment(
+          Comment(
             uriId = uris(0).id.get,
             userId = users(1).id.get,
             text = "this is a reply",
             pageTitle = uris(0).title.get,
             permissions = CommentPermissions.MESSAGE,
             parent = parent.id
-          ))
-        }
-        val reply2 = db.readWrite { implicit s =>
-          commentRepo.save(Comment(
+          )
+        )
+        val reply2 = saveComment(
+          Comment(
             uriId = uris(0).id.get,
             userId = users(0).id.get,
             text = "this is another reply",
             pageTitle = uris(0).title.get,
             permissions = CommentPermissions.MESSAGE,
             parent = parent.id
-          ))
-        }
+          )
+        )
 
         commentIndexer.update() === 1 // one message thread udpated
         commentIndexer.sequenceNumber.value === 4
@@ -105,39 +94,30 @@ class CommentIndexerTest extends Specification with GraphTestHelper {
 
     "find messages" in {
       running(new EmptyApplication().withShoeboxServiceModule) {
-        val (users, uris) = setupDB
+        val (users, uris) = initData
 
         val commentIndexer = mkCommentIndexer()
 
-        val parent1 = db.readWrite { implicit s =>
-          val parent = commentRepo.save(Comment(
+        val parent1 = saveComment(
+          Comment(
             uriId = uris(0).id.get,
             userId = users(0).id.get,
             text = "this is the firstmessage",
             pageTitle = uris(0).title.get,
             permissions = CommentPermissions.MESSAGE
-          ))
-          commentRecipientRepo.save(CommentRecipient(
-            commentId = parent.id.get,
-            userId = users(1).id
-          ))
-          parent
-        }
+          ), users(1).id.get
+        )
 
-        val parent2 = db.readWrite { implicit s =>
-          val parent = commentRepo.save(Comment(
+        val parent2 = saveComment(
+          Comment(
             uriId = uris(1).id.get,
             userId = users(1).id.get,
             text = "this is the secondmessage",
             pageTitle = uris(1).title.get,
             permissions = CommentPermissions.MESSAGE
-          ))
-          commentRecipientRepo.save(CommentRecipient(
-            commentId = parent.id.get,
-            userId = users(2).id
-          ))
-          parent
-        }
+          ), users(2).id.get
+        )
+
         commentIndexer.update()
         commentIndexer.numDocs === 2
 
@@ -202,26 +182,27 @@ class CommentIndexerTest extends Specification with GraphTestHelper {
         }
 
 
-        val reply1 = db.readWrite { implicit s =>
-          commentRepo.save(Comment(
+        val reply1 = saveComment(
+          Comment(
             uriId = uris(0).id.get,
             userId = users(1).id.get,
             text = "this is the firstreply",
             pageTitle = uris(0).title.get,
             permissions = CommentPermissions.MESSAGE,
             parent = parent1.id
-          ))
-        }
-        val reply2 = db.readWrite { implicit s =>
-          commentRepo.save(Comment(
+          )
+        )
+
+        val reply2 = saveComment(
+          Comment(
             uriId = uris(1).id.get,
             userId = users(0).id.get,
             text = "this is the secondreply",
             pageTitle = uris(1).title.get,
             permissions = CommentPermissions.MESSAGE,
             parent = parent2.id
-          ))
-        }
+          )
+        )
         commentIndexer.update() === 2
         commentIndexer.numDocs === 2
 
@@ -250,100 +231,99 @@ class CommentIndexerTest extends Specification with GraphTestHelper {
 
     "get comment time stamps" in {
       running(new EmptyApplication().withShoeboxServiceModule) {
-        val (users, uris) = setupDB
+        val (users, uris) = initData
 
         val commentIndexer = mkCommentIndexer()
 
-        val parent1 = db.readWrite { implicit s =>
-          val parent = commentRepo.save(Comment(
+        val parent = saveComment(
+          Comment(
             uriId = uris(0).id.get,
             userId = users(0).id.get,
             text = "this is the firstmessage",
             pageTitle = uris(0).title.get,
             permissions = CommentPermissions.MESSAGE
-          ))
-          commentRecipientRepo.save(CommentRecipient(
-            commentId = parent.id.get,
-            userId = users(1).id
-          ))
-          parent
-        }
+          ), users(1).id.get
+        )
 
-        val publicComment1 = db.readWrite { implicit s =>
-          commentRepo.save(Comment(
+
+        val publicComment = saveComment(
+          Comment(
             uriId = uris(0).id.get,
             userId = users(0).id.get,
             text = "this is the firstcomment",
             pageTitle = uris(0).title.get,
             permissions = CommentPermissions.PUBLIC
-          ))
-        }
+          )
+        )
 
         commentIndexer.update()
         commentIndexer.numDocs === 2
 
         var searcher = commentIndexer.getSearcher
-        searcher.getLongDocValue(CommentFields.timestampField, parent1.id.get.id) === Some(parent1.createdAt.getMillis)
-        searcher.getLongDocValue(CommentFields.timestampField, publicComment1.id.get.id) === Some(publicComment1.createdAt.getMillis)
+        searcher.getLongDocValue(CommentFields.timestampField, parent.id.get.id) === Some(parent.createdAt.getMillis)
+        searcher.getLongDocValue(CommentFields.timestampField, publicComment.id.get.id) === Some(publicComment.createdAt.getMillis)
 
-        val reply1 = db.readWrite { implicit s =>
-          commentRepo.save(Comment(
+        val reply1 = saveComment(
+          Comment(
             uriId = uris(0).id.get,
             userId = users(1).id.get,
             text = "this is the firstreply",
             pageTitle = uris(0).title.get,
             permissions = CommentPermissions.MESSAGE,
-            parent = parent1.id
-          ))
-        }
+            parent = parent.id
+          )
+        )
+
         commentIndexer.update()
         commentIndexer.numDocs === 2
 
         searcher = commentIndexer.getSearcher
-        searcher.getLongDocValue(CommentFields.timestampField, parent1.id.get.id) === Some(reply1.createdAt.getMillis)
+        searcher.getLongDocValue(CommentFields.timestampField, parent.id.get.id) === Some(reply1.createdAt.getMillis)
 
-        val reply2 = db.readWrite { implicit s =>
-          commentRepo.save(Comment(
+        val reply2 = saveComment(
+          Comment(
             uriId = uris(0).id.get,
             userId = users(0).id.get,
             text = "this is the secondreply",
             pageTitle = uris(0).title.get,
             permissions = CommentPermissions.MESSAGE,
-            parent = parent1.id
-          ))
-        }
+            parent = parent.id
+          )
+        )
+
         commentIndexer.update()
         commentIndexer.numDocs === 2
 
         searcher = commentIndexer.getSearcher
-        searcher.getLongDocValue(CommentFields.timestampField, parent1.id.get.id) === Some(reply2.createdAt.getMillis)
+        searcher.getLongDocValue(CommentFields.timestampField, parent.id.get.id) === Some(reply2.createdAt.getMillis)
       }
     }
 
     "find public comments" in {
       running(new EmptyApplication().withShoeboxServiceModule) {
-        val (users, uris) = setupDB
+        val (users, uris) = initData
 
         val commentIndexer = mkCommentIndexer()
 
-        val publicComment1 = db.readWrite { implicit s =>
-          commentRepo.save(Comment(
+        val publicComment1 = saveComment(
+          Comment(
             uriId = uris(0).id.get,
             userId = users(0).id.get,
             text = "this is the firstcomment",
             pageTitle = uris(0).title.get,
             permissions = CommentPermissions.PUBLIC
-          ))
-        }
-        val publicComment2 = db.readWrite { implicit s =>
-          commentRepo.save(Comment(
+          )
+        )
+
+        val publicComment2 = saveComment(
+          Comment(
             uriId = uris(1).id.get,
             userId = users(1).id.get,
             text = "this is the secondcomment",
             pageTitle = uris(1).title.get,
             permissions = CommentPermissions.PUBLIC
-          ))
-        }
+          )
+        )
 
         commentIndexer.update()
         commentIndexer.numDocs === 2
