@@ -95,7 +95,8 @@ trait GraphTestHelper {
 
   def saveCollection(user: User, name: String): Collection = {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
-    fakeShoeboxServiceClient.saveCollections(Collection(userId = user.id.get, name = name)).head
+    val Seq(collection) = fakeShoeboxServiceClient.saveCollections(Collection(userId = user.id.get, name = name))
+    collection
   }
 
   def saveBookmarksToCollection(collection: Collection, bookmarks: Seq[Bookmark]): Collection = {

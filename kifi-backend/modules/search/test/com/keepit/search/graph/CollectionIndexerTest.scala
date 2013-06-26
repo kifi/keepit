@@ -147,7 +147,7 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
 
     "dump Lucene Document" in {
       running(new EmptyApplication().withShoeboxServiceModule) {
-        val user = saveUsers(User(firstName = "Agrajag", lastName = "")).head
+        val Seq(user) = saveUsers(User(firstName = "Agrajag", lastName = ""))
         val uris = saveURIs(
           NormalizedURIFactory(title = "title", url = "http://www.keepit.com/article1", state=SCRAPED),
           NormalizedURIFactory(title = "title", url = "http://www.keepit.com/article2", state=SCRAPED)

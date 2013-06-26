@@ -4,7 +4,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.common.db._
 import com.keepit.model.ClickHistory
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.Future
 import com.keepit.search._
 import com.keepit.common.social.BasicUser
 import com.keepit.common.social.SocialNetworkType
@@ -17,6 +17,7 @@ import com.keepit.search.ArticleSearchResult
 import play.api.libs.json.JsObject
 import com.keepit.common.social.SocialId
 import java.util.concurrent.atomic.AtomicInteger
+import collection.mutable.{Map => MutableMap}
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, browsingHistoryTracker: BrowsingHistoryTracker) extends ShoeboxServiceClient {
@@ -65,20 +66,20 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
 
   // Fake repos
 
-  var allUsers = Map[Id[User], User]()
-  var allUserExternalIds = Map[ExternalId[User], User]()
-  var allUserConnections = Map[Id[User], Set[Id[User]]]()
-  var allSocialUserInfos = Map[Id[User], Set[SocialUserInfo]]()
-  var allUserExperiments = Map[Id[User], Set[UserExperiment]]()
-  var allUserBookmarks = Map[Id[User], Set[Id[Bookmark]]]()
-  var allBookmarks = Map[Id[Bookmark], Bookmark]()
-  var allNormalizedURIs = Map[Id[NormalizedURI], NormalizedURI]()
-  var uriToUrl = Map[Id[NormalizedURI], URL]()
-  var allCollections = Map[Id[Collection], Collection]()
-  var allCollectionBookmarks = Map[Id[Collection], Set[Id[Bookmark]]]()
-  var allSearchExperiments = Map[Id[SearchConfigExperiment], SearchConfigExperiment]()
-  var allComments = Map[Id[Comment], Comment]()
-  var allCommentRecipients = Map[Id[Comment], Set[CommentRecipient]]()
+  val allUsers = MutableMap[Id[User], User]()
+  val allUserExternalIds = MutableMap[ExternalId[User], User]()
+  val allUserConnections = MutableMap[Id[User], Set[Id[User]]]()
+  val allSocialUserInfos = MutableMap[Id[User], Set[SocialUserInfo]]()
+  val allUserExperiments = MutableMap[Id[User], Set[UserExperiment]]()
+  val allUserBookmarks = MutableMap[Id[User], Set[Id[Bookmark]]]()
+  val allBookmarks = MutableMap[Id[Bookmark], Bookmark]()
+  val allNormalizedURIs = MutableMap[Id[NormalizedURI], NormalizedURI]()
+  val uriToUrl = MutableMap[Id[NormalizedURI], URL]()
+  val allCollections = MutableMap[Id[Collection], Collection]()
+  val allCollectionBookmarks = MutableMap[Id[Collection], Set[Id[Bookmark]]]()
+  val allSearchExperiments = MutableMap[Id[SearchConfigExperiment], SearchConfigExperiment]()
+  val allComments = MutableMap[Id[Comment], Comment]()
+  val allCommentRecipients = MutableMap[Id[Comment], Set[CommentRecipient]]()
 
   // Fake data initialization methods
 
@@ -86,9 +87,9 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
     users.map {user =>
       val id = user.id.getOrElse(nextUserId())
       val updatedUser = user.withId(id)
-      allUsers += (id -> updatedUser)
-      allUserExternalIds += (updatedUser.externalId -> updatedUser)
-      allSocialUserInfos += (id -> allSocialUserInfos.getOrElse(id, Set.empty))
+      allUsers(id) = updatedUser
+      allUserExternalIds(updatedUser.externalId) = updatedUser
+      allSocialUserInfos(id) = allSocialUserInfos.getOrElse(id, Set.empty)
       updatedUser
     }
   }
@@ -98,34 +99,34 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
       val id = uri.id.getOrElse(nextUriId())
       val updatedUri = uri.withId(id).copy(seq = nextUriSeqNum())
       val updatedUrl = uriToUrl.getOrElse(id, URLFactory(url = updatedUri.url, normalizedUriId = updatedUri.id.get).withId(nextUrlId()))
-      allNormalizedURIs += (id -> updatedUri)
-      uriToUrl += (id -> updatedUrl)
+      allNormalizedURIs(id) = updatedUri
+      uriToUrl(id) = updatedUrl
       updatedUri
     }
   }
 
   def saveConnections(connections: Map[Id[User], Set[Id[User]]]) {
     connections.foreach { case (userId, friends) =>
-      allUserConnections += userId -> (allUserConnections.getOrElse(userId, Set.empty) ++ friends)
+      allUserConnections(userId) = allUserConnections.getOrElse(userId, Set.empty) ++ friends
     }
   }
 
   def deleteConnections(connections: Map[Id[User], Set[Id[User]]]) {
     connections.foreach { case (userId, friends) =>
-      allUserConnections += userId -> (allUserConnections.getOrElse(userId, Set.empty) -- friends)
+      allUserConnections(userId) = allUserConnections.getOrElse(userId, Set.empty) -- friends
     }
   }
 
   def clearUserConnections(userIds: Id[User]*) {
-    allUserConnections ++= userIds.map(_ -> Set.empty[Id[User]])
+    userIds.map(allUserConnections(_) = Set.empty[Id[User]])
   }
 
   def saveBookmarks(bookmarks: Bookmark*): Seq[Bookmark] = {
     bookmarks.map {b =>
       val id = b.id.getOrElse(nextBookmarkId())
       val updatedBookmark = b.withId(id).copy(seq = nextBookmarkSeqNum())
-      allBookmarks += (id -> updatedBookmark)
-      allUserBookmarks += b.userId -> (allUserBookmarks.getOrElse(b.userId, Set.empty) + id)
+      allBookmarks(id) = updatedBookmark
+      allUserBookmarks(b.userId) = allUserBookmarks.getOrElse(b.userId, Set.empty) + id
       updatedBookmark
     }
   }
@@ -134,14 +135,14 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
     collections.map {c =>
       val id = c.id.getOrElse(nextCollectionId())
       val updatedCollection = c.withId(id).copy(seq = nextCollectionSeqNum())
-      allCollections += (id -> updatedCollection)
+      allCollections(id) = updatedCollection
       updatedCollection
     }
   }
 
   def saveBookmarksToCollection(collectionId: Id[Collection], bookmarks: Bookmark*) {
-    allCollectionBookmarks += collectionId -> (allCollectionBookmarks.getOrElse(collectionId, Set.empty) ++ bookmarks.map(_.id.get))
-    allCollections += (collectionId -> allCollections(collectionId).copy(seq = nextCollectionSeqNum()))
+    allCollectionBookmarks(collectionId) = allCollectionBookmarks.getOrElse(collectionId, Set.empty) ++ bookmarks.map(_.id.get)
+    allCollections(collectionId) = allCollections(collectionId).copy(seq = nextCollectionSeqNum())
   }
 
   def saveBookmarksByEdges(edges: Seq[(NormalizedURI, User, Option[String])], isPrivate: Boolean = false, source: BookmarkSource = BookmarkSource("fake")): Seq[Bookmark] = {
@@ -170,7 +171,7 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
     val id = experiment.id.getOrElse(nextUserExperimentId())
     val userId = experiment.userId
     val experimentWithId = experiment.withId(id)
-    allUserExperiments += (userId -> (allUserExperiments.getOrElse(userId, Set.empty) + experimentWithId))
+    allUserExperiments(userId) = allUserExperiments.getOrElse(userId, Set.empty) + experimentWithId
     experimentWithId
   }
 
@@ -181,8 +182,8 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
       case Nil => updatedComment.parent.map(allCommentRecipients(_)).getOrElse(Set.empty)
       case _ => recipientIds.map(userId => CommentRecipient(commentId = updatedComment.id.get, userId = Some(userId))).toSet
     }
-    allComments += (id -> updatedComment)
-    allCommentRecipients += (id -> commentRecipients)
+    allComments(id) = updatedComment
+    allCommentRecipients(id) = commentRecipients
     updatedComment
   }
 
@@ -325,7 +326,7 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
   def saveExperiment(experiment: SearchConfigExperiment): Future[SearchConfigExperiment] = {
     val id = experiment.id.getOrElse(nextSearchExperimentId)
     val experimentWithId = experiment.withId(id)
-    allSearchExperiments += (experimentWithId.id.get -> experimentWithId)
+    allSearchExperiments(experimentWithId.id.get) =  experimentWithId
     Future.successful(experimentWithId)
   }
 
@@ -342,7 +343,7 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
 }
 
 class FakeClickHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits: Int) extends ClickHistoryTracker with Logging {
-  var allUserClickHistories = Map[Id[User], ClickHistory]()
+  val allUserClickHistories = MutableMap[Id[User], ClickHistory]()
 
   def add(userId: Id[User], uriId: Id[NormalizedURI]) = {
     val filter = getMultiHashFilter(userId)
@@ -354,7 +355,7 @@ class FakeClickHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits: I
       case None =>
         ClickHistory(userId = userId, tableSize = tableSize, filter = filter.getFilter, numHashFuncs = numHashFuncs, minHits = minHits)
     }
-    allUserClickHistories += (userId -> userClickHistory)
+    allUserClickHistories(userId) = userClickHistory
     userClickHistory
   }
 
@@ -370,7 +371,7 @@ class FakeClickHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits: I
 }
 
 class FakeBrowsingHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits: Int) extends BrowsingHistoryTracker with Logging {
-  var allUserBrowsingHistories = Map[Id[User], BrowsingHistory]()
+  val allUserBrowsingHistories = MutableMap[Id[User], BrowsingHistory]()
 
   def add(userId: Id[User], uriId: Id[NormalizedURI]) = {
     val filter = getMultiHashFilter(userId)
@@ -383,7 +384,7 @@ class FakeBrowsingHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits
           BrowsingHistory(userId = userId, tableSize = tableSize, filter = filter.getFilter, numHashFuncs = numHashFuncs, minHits = minHits)
 
     }
-    allUserBrowsingHistories += (userId -> userBrowsingHistory)
+    allUserBrowsingHistories(userId) = userBrowsingHistory
     userBrowsingHistory
   }
 

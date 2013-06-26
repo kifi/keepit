@@ -362,7 +362,7 @@ class MainSearcherTest extends Specification {
     "boost recent bookmarks" in {
       running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 1, numUris = 5)
-        val user = users.head
+        val Seq(user) = users
         val userId = user.id.get
         val bookmarks = saveBookmarksByUser(Seq((user, uris)))
         val bookmarkMap = bookmarks.map(b => (b.uriId -> b)).toMap
@@ -391,7 +391,7 @@ class MainSearcherTest extends Specification {
     "be able to cut the long tail" in {
       running(new DevApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 1, numUris = 10)
-        val user = users.head
+        val Seq(user) = users
         val userId = user.id.get
         saveBookmarksByUser(Seq((user, uris)))
 
