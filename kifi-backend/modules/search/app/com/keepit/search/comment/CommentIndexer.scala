@@ -48,7 +48,11 @@ object CommentFields {
   val participantIdField = "c_participant_id"
   val timestampField = "c_timestamp"
 
-  def decoders() = Map.empty[String, FieldDecoder]
+  def decoders() = Map(
+    textField -> DocUtil.LineFieldDecoder,
+    textStemmedField -> DocUtil.LineFieldDecoder,
+    participantNameField -> DocUtil.LineFieldDecoder
+  )
 }
 
 object CommentLookHereRemover {
