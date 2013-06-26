@@ -22,6 +22,14 @@ class S3DevModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
+  def probablisticLRUStore(amazonS3ClientProvider: Provider[AmazonS3]): ProbablisticLRUStore =
+    current.configuration.getString("amazon.s3.flowerFilter.bucket") match {
+      case Some(name) => new S3Module().probablisticLRUStore(amazonS3ClientProvider.get)
+      case None => new InMemoryProbablisticLRUStoreImpl()
+    }
+
+  @Singleton
+  @Provides
   def articleSearchResultStore(amazonS3ClientProvider: Provider[AmazonS3]): ArticleSearchResultStore =
     current.configuration.getString("amazon.s3.articleSearch.bucket") match {
       case Some(name) => new S3Module().articleSearchResultStore(amazonS3ClientProvider.get)
