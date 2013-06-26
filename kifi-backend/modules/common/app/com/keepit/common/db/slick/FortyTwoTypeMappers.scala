@@ -523,7 +523,7 @@ class LargeStringMapperDelegate(val profile: BasicProfile) extends DelegateMappe
     new SerialClob(value.value.toCharArray()) {
       override def getSubString(pos: Long, length: Int): String = {
         // workaround for an empty clob problem
-        if (pos - 1 <= this.length && length == 0) "" else super.getSubString(pos, length)
+        if (pos == 1 && length == 0) "" else super.getSubString(pos, length)
       }
     }
   }
