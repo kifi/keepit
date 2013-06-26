@@ -170,9 +170,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Singleton
   @Provides
-  def domainTagImportSettings: DomainTagImportSettings = {
-    DomainTagImportSettings(localDir = "", url = "")
-  }
+  def domainTagImportSettings: DomainTagImportSettings = DomainTagImportSettings(localDir = "", url = "")
 
   @Singleton
   @Provides
@@ -192,30 +190,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Provides
   @Singleton
-  def fakeZooKeeperClient: ZooKeeperClient = new ZooKeeperClient() {
-    private val db = new mutable.HashMap[Node, Array[Byte]]()
-    val basePath = Path("")
-
-    def watchNode(node: Node, onDataChanged : Option[Array[Byte]] => Unit) {}
-    def watchChildren(path: Path, updateChildren : Seq[Node] => Unit) {}
-    def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T) {}
-    def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T, notifier: Node => Unit) {}
-
-    def create(path: Path, data: Array[Byte], createMode: CreateMode): Path = path
-    def createNode(node: Node, data: Array[Byte], createMode: CreateMode): Node = node
-    def createPath(path: Path): Path = path
-
-    def getChildren(path: Path): Seq[Node] = Nil
-    def get(node: Node): Array[Byte] = db(node)
-
-    def set(node: Node, data: Array[Byte]) {
-      db(node) = data
-    }
-
-    def delete(path: Path) {}
-    def deleteNode(node: Node) {}
-    def deleteRecursive(path: Path) {}
-  }
+  def fakeZooKeeperClient: ZooKeeperClient = new FakeZooKeeperClient()
 
   @Provides
   @Singleton
