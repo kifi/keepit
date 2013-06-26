@@ -1,4 +1,5 @@
 package com.keepit.common.search
+
 import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.model.{NormalizedURI, User}
 import play.api.libs.json.Json

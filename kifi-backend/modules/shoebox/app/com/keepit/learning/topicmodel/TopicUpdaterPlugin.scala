@@ -36,6 +36,7 @@ private[topicmodel] class TopicUpdaterActor @Inject() (
 
 trait TopicUpdaterPlugin extends SchedulingPlugin {
   def update(): Unit
+  def reset(): (Int, Int)
 }
 
 class TopicUpdaterPluginImpl @Inject() (
@@ -55,6 +56,13 @@ class TopicUpdaterPluginImpl @Inject() (
   override def onStop() {
      log.info("stopping TopicUpdaterPluginImpl")
      cancelTasks()
+  }
+
+  override def reset() = {
+    log.info("admin reset topic tables ...")
+    log.info("cancelling current tasks ...")
+    cancelTasks()
+    topicUpdater.reset()
   }
 
   def update() = actor ! UpdateTopic

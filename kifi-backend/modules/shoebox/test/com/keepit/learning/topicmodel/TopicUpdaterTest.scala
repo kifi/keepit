@@ -17,7 +17,7 @@ import scala.math._
 
 class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
   "TopicUpdater" should {
-    "correctly update topic tables" in {
+    "correctly update topic tables and be able to reset tables" in {
       running(new ShoeboxApplication().withWordTopicModule()) {
         val (users, uris) = setupDB
         val expectedUriToUserEdges = (0 until uris.size).map{ i =>
@@ -57,6 +57,33 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
             val userUris = (0 until N).flatMap{ i => val uriIdx = userIdx + i* users.size ;  if ( uriIdx < uris.size ) Some(uriIdx) else None}
             val topic = new Array[Int](TopicModelGlobal.numTopics)
             userUris.foreach( i => topic(i) += 1)
+            val userTopic = userTopicRepo.getByUserId(x._1.id.get)
+            userTopicHelper.toIntArray(userTopic.get.topic) === topic
+          }
+
+        }
+
+        // should be able to reset
+        topicUpdater.reset() === (uris.size, users.size)
+        topicUpdater.update()
+
+        // after re-update, everything should still be ok.
+        db.readOnly { implicit s =>
+          uris.zipWithIndex.foreach { x =>
+            val uriTopic = uriTopicRepo.getByUriId(x._1.id.get)
+            val arr = new Array[Double](TopicModelGlobal.numTopics)
+            arr(x._2) = 1.0
+            uriTopicHelper.toDoubleArray(uriTopic.get.topic) === arr
+          }
+        }
+
+        db.readOnly { implicit s =>
+          users.zipWithIndex.foreach { x =>
+            val userIdx = x._2
+            val N = ceil(uris.size * 1.0 / users.size).toInt
+            val userUris = (0 until N).flatMap { i => val uriIdx = userIdx + i * users.size; if (uriIdx < uris.size) Some(uriIdx) else None }
+            val topic = new Array[Int](TopicModelGlobal.numTopics)
+            userUris.foreach(i => topic(i) += 1)
             val userTopic = userTopicRepo.getByUserId(x._1.id.get)
             userTopicHelper.toIntArray(userTopic.get.topic) === topic
           }

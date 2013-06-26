@@ -30,9 +30,22 @@ class TopicUpdater @Inject() (
   val uriTopicHelper = new UriTopicHelper
   val userTopicHelper = new UserTopicByteArrayHelper
 
+  def reset(): (Int, Int) = {
+    log.info("resetting topic tables")
+    val (nUri, nUser) = db.readWrite { implicit s =>
+      topicSeqInfoRepo.updateUriSeq(SequenceNumber.ZERO)
+      topicSeqInfoRepo.updateBookmarkSeq(SequenceNumber.ZERO)
+      val nUri = uriTopicRepo.deleteAll()
+      val nUser = userTopicRepo.deleteAll()
+      (nUri, nUser)
+    }
+    log.info(s"resetting topic tables successfully. ${nUri} uris removed. ${nUser} users removed.")
+    (nUri, nUser)
+  }
+
   // main entry point
   def update(): Unit = {
-    log.info("==============topicUpdater: starting a new round of update =============")
+    log.info("TopicUpdater: starting a new round of update ...")
     val (uriSeq, bookmarkSeq) = db.readOnly { implicit s =>
       topicSeqInfoRepo.getSeqNums match {
         case Some((uriSeq, bookmarkSeq)) => (uriSeq, bookmarkSeq)
@@ -94,7 +107,7 @@ class TopicUpdater @Inject() (
           }
         }
         val largestSeq = uris.sortBy(_.seq).last.seq
-        log.info("updating uri_seq in topicSeqInfoRepo to" + largestSeq)
+        log.info("updating uri_seq in topicSeqInfoRepo to " + largestSeq)
         topicSeqInfoRepo.updateUriSeq(largestSeq)
       }
     }
@@ -144,7 +157,7 @@ class TopicUpdater @Inject() (
           }
         }
         val largestSeq = bookmarks.sortBy(_.seq).last.seq
-        log.info("updating bookmark_seq in topicSeqInfoRepo to" + largestSeq.value)
+        log.info("updating bookmark_seq in topicSeqInfoRepo to " + largestSeq.value)
         topicSeqInfoRepo.updateBookmarkSeq(largestSeq)
       }
     }

@@ -58,7 +58,8 @@ object ApplicationBuild extends Build {
       "com.newrelic.agent.java" % "newrelic-agent" % "2.18.0",
       "com.google.inject" % "guice" % "3.0",
       "com.google.inject.extensions" % "guice-multibindings" % "3.0",
-      "net.codingwell" %% "scala-guice" % "3.0.2"
+      "net.codingwell" %% "scala-guice" % "3.0.2",
+      "org.imgscalr" % "imgscalr-lib" % "4.2"
     ) map (_.excludeAll(
       ExclusionRule(organization = "com.cedarsoft"),
       ExclusionRule(organization = "javax.jms"),
@@ -94,7 +95,8 @@ object ApplicationBuild extends Build {
       //for org.mongodb#casb
       "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
       "releases"  at "https://oss.sonatype.org/content/groups/scala-tools",
-      "terracotta" at "http://www.terracotta.org/download/reflector/releases/"
+      "terracotta" at "http://www.terracotta.org/download/reflector/releases/",
+      "The Buzz Media Maven Repository" at "http://maven.thebuzzmedia.com"
     )
 
     val _templatesImport = Seq(
