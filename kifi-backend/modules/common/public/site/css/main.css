@@ -69,12 +69,12 @@ aside {position: absolute; top: 70px; bottom: 0; -moz-box-sizing: border-box; bo
 #collections h3 {line-height: 39px}
 a.new-collection {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhDAAMAIABAO/y9////yH5BAEKAAEALAAAAAAMAAwAAAIXjAMJx6h91IIuMYmz3pzfR0lUNUHiUQAAOw==) center/6px no-repeat #b8c5d2; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
 a.new-collection:hover {background-color: #a1acbd}
-.add-collection {border-bottom: 1px solid #dbdee3; background: #fff; -webkit-transition: background-color .16s; transition: background-color .16s}
+.add-collection {display: none; border-bottom: 1px solid #dbdee3; background: #fff; -webkit-transition: background-color .16s; transition: background-color .16s}
 .add-collection.submitted {background-color: rgba(255,255,255,0)}
 #collections input {width: 100%; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; line-height: normal; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text}
 #collections-list {overflow: hidden}
 #collections-list.positioned {position: absolute; bottom: 0; left: 0; right: 0}
-#collections-list>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden}
+#collections-list>.antiscroll-inner {height: 100%; width: 100%; /*overflow-x: hidden;*/ position: relative}
 #collections-list>.antiscroll-inner>.sortable-placeholder {background: #6fa6ef; height: 2px; min-height: 0}
 h3.collection {border-bottom: 1px solid #dbdee3; position: relative; -webkit-transition: padding-left .16s, background-color 0s; transition: padding-left .16s, background-color 0s}
 .collection.with-tri:not(.no-tri) {padding-left: 27px}
@@ -218,7 +218,7 @@ span.long-text, a.long-text {display: inline-block}
 .keep-title {max-width: 100%; color: #0089d5; font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased}
 .keep-title>a[href] {color: inherit}
 .keep-url {font-size: 12px; line-height: 14px; color: #99a3b3}
-.keep-colls {margin-top: 7px; background: url(../img/folder-icon-small.png) 0 0/13px 11px no-repeat; padding-left: 19px; font-size: 12px; line-height: 14px; overflow: hidden}
+.keep-colls {margin: 7px 10px 0 0; background: url(../img/folder-icon-small.png) 0 0/13px 11px no-repeat; padding-left: 19px; font-size: 12px; line-height: 14px; overflow: hidden}
 .keep-coll[href] {display: inline-block; white-space: nowrap; margin-right: 4px; border-right: 1px solid currentColor; padding-right: 4px; color: #99a3b3}
 .keep-coll[href]:hover {text-decoration: underline; color: #76869f}
 .keep-coll:last-of-type {margin-right: 0; border-right: none; padding-right: 0}
@@ -227,14 +227,18 @@ span.long-text, a.long-text {display: inline-block}
 .keep-who>img.me {border-radius: 50% 0 0 50%}
 .keep-who>img.me:last-of-type {border-radius: 50%}
 .keep-who-text {vertical-align: middle; margin-left: 4px; font-size: 12px; color: #99a3b3}
-.me+.keep-who-text {margin-left: 7px}
-.keep:not(.mine) img.me,
+.keep.mine .me+.keep-who-text {margin-left: 7px}
+.keep:not(.mine) .me+.keep-who-text {margin-left: 0}
+.keep:not(.mine) .me,
 .keep:not(.mine) .keep-you,
-.keep:not(.mine) .keep-private {display: none}
-.keep-private {display: none; margin: 0 2px; background: url(../img/private.png) left center/17px no-repeat; margin: 0 2px; line-height: 17px; padding-left: 21px}
-.keep-private.on {display: inline-block}
+.keep:not(.mine) .keep-private,
+.keep-private:not(.on) {display: none}
+.keep-private {display: inline-block; margin: 0 2px; background: url(../img/private.png) left center/17px no-repeat; margin: 0 2px; line-height: 17px; padding-left: 21px}
+.keep.mine .keep-friends::before,
+.keep.mine .keep-others::before,
+.keep-friends+.keep-others::before {content: "+ "}
+.keep:not(.mine) .keep-you+.keep-kept-this::before {content: "Nobody has "; line-height: 23px}
 .keeps-loading {margin: 20px 50%; position: relative; left: -22px}
-.add-collection {display: none}
 
 .drag-helper {background: #fff; padding: 5px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
 

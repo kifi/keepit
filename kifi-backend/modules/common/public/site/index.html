@@ -132,21 +132,26 @@
 							<span class="keep-who-text" data-after-template>
 								<span class="keep-you">
 									You
-									{% if keepers.length && isPrivate %}
-										<span class="keep-private on">Private</span> +
-									{% endif %}{% if keepers.length && !isPrivate %}
-										<span class="keep-private">Private</span> +
+									{% if (keepers.length || others) && isPrivate %}
+										<span class="keep-private on">Private</span>
+									{% endif %}{% if (keepers.length || others) && !isPrivate %}
+										<span class="keep-private">Private</span>
 									{% endif %}
 								</span>
 								{% if keepers.length > 1 %}
-									{{keepers.length}} friends
+									<span class="keep-friends">{{keepers.length}} friends</span>
 								{% endif %}{% if keepers.length == 1 %}
-									1 friend
+									<span class="keep-friends">1 friend</span>
 								{% endif %}
-								kept this
-								{% if !keepers.length && isPrivate %}
+								{% if others > 1 %}
+									<span class="keep-others">{{others}} others</span>
+								{% endif %}{% if others == 1 %}
+									<span class="keep-others">1 other</span>
+								{% endif %}
+								<span class="keep-kept-this">kept this</span>
+								{% if !keepers.length && !others && isPrivate %}
 									<span class="keep-private on">Private</span>
-								{% endif %}{% if !keepers.length && !isPrivate %}
+								{% endif %}{% if !keepers.length && !others && !isPrivate %}
 									<span class="keep-private">Private</span>
 								{% endif %}
 							</span>

@@ -181,6 +181,7 @@ $(function() {
 		$.extend(hit, hit.bookmark);
 		hit.me = me;
 		hit.keepers = hit.users;
+		hit.others = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
 	}
 
 	function prepKeepForRender(keep) {
