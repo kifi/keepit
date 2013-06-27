@@ -82,7 +82,7 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
   }
 
   def sessionEvent(assignLatch: CountDownLatch, connectionLatch : CountDownLatch, event : WatchedEvent) {
-    log.info("Zookeeper event: %s".format(event))
+    log.info("ZooKeeper event: %s".format(event))
     assignLatch.await()
     event.getState match {
       case KeeperState.SyncConnected => {
