@@ -46,11 +46,15 @@ trait SimpleLocalBuffer extends MultiChunkBuffer {
 
     def get(pos: Int) : Int = intBuffer.get(pos)
 
-    def put(pos: Int, value: Int) : Unit = intBuffer.put(pos, value)
+    def put(pos: Int, value: Int) : Unit = synchronized { 
+      intBuffer.put(pos, value)
+    }
 
-    def sync : Unit = byteBuffer match {
-      case mappedByteBuffer: MappedByteBuffer => mappedByteBuffer.force()
-      case _ =>
+    def sync : Unit = synchronized { 
+      byteBuffer match {
+        case mappedByteBuffer: MappedByteBuffer => mappedByteBuffer.force()
+        case _ =>
+      }
     }
 
   }
@@ -123,7 +127,7 @@ class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticL
       
       def get(pos: Int) : Int = thisChunk(pos)
 
-      def sync : Unit = {
+      def sync : Unit = synchronized {
         val storedChunk = loadChunk(chunkId)
         dirtyEntries.foreach { pos =>
           storedChunk(pos) = thisChunk(pos)
@@ -131,7 +135,7 @@ class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticL
         saveChunk(chunkId, storedChunk)
       }
 
-      def put(pos: Int, value: Int) = {
+      def put(pos: Int, value: Int) = synchronized {
         thisChunk(pos) = value
         dirtyEntries = dirtyEntries + pos
       }
