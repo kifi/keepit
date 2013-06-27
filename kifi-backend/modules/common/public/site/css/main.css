@@ -224,12 +224,14 @@ span.long-text, a.long-text {display: inline-block}
 .keep-coll:last-of-type {border-right: none}
 .keep-coll.removed {width: 0 !important; -webkit-transition: width .12s ease-in-out; transition: width .12s ease-in-out}
 .keep-coll>a[href] {color: #99a3b3}
-.keep-coll>a[href]:hover {background-color: #eff2f7; color: #76869f}
-.keep.selected .keep-coll>a[href]:hover {background-color: #fff}
-.keep.keep .keep-coll>a[href]:active {background-color: #f8f808}
+.keep-coll:hover>a {background-color: #eff2f7}
+.keep.selected .keep-coll:hover>a {background-color: #fff}
+.keep.keep a.keep-coll-a:active {background-color: #e3e6ee; color: #8490a4}
 .keep-coll-a {padding: 0 4px}
-.keep-coll-x {display: inline-block; vertical-align: bottom; text-align: center; width: 0; padding: 0; overflow: hidden; -webkit-transition: width .1s; transition: width .1s}
+.keep-coll-x {display: inline-block; vertical-align: bottom; text-align: center; width: 0; padding: 0; overflow: hidden; -webkit-transition: width 70ms; transition: width 70ms}
 .keep-coll:hover>.keep-coll-x {width: 16px; -webkit-transition-delay: .2s; transition-delay: .2s}
+.keep-coll>.keep-coll-x[href][href]:hover {background-color: #b8c5d2; color: #eff2f7}
+.keep-coll>.keep-coll-x[href][href]:active {background-color: #99a3b3}
 .keep-coll-x::before {content: "\00D7"; position: relative; bottom: 1px}
 .keep-who {margin-top: 7px; font-size: 0}
 .keep-who>img {vertical-align: middle; width: 23px; height: 23px; border-radius: 2px; margin-right: 1px}
