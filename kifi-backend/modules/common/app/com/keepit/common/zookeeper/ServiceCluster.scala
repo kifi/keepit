@@ -1,5 +1,7 @@
 package com.keepit.common.zookeeper
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import com.keepit.common.logging.Logging
 import com.keepit.common.strings._
 import com.keepit.common.service._
@@ -18,6 +20,8 @@ import org.apache.zookeeper.CreateMode._
 class ServiceCluster(serviceType: ServiceType) extends Logging {
 
   private var instances = new TrieMap[Node, ServiceInstance]()
+  private var routingList: Vector[ServiceInstance] = Vector()
+  private val nextRoutingInstance = new AtomicInteger(1)
 
   val servicePath = Path(s"/fortytwo/services/${serviceType.name}")
   val serviceNodeMaster = Node(s"${servicePath.name}/${serviceType.name}_")
@@ -29,8 +33,17 @@ class ServiceCluster(serviceType: ServiceType) extends Logging {
   override def toString(): String = s"""Service Cluster of $serviceType:
     instances.toString"""
 
-  def register(node: Node, instanceInfo: AmazonInstanceInfo): Unit =
+  //using round robin
+  def nextService(): ServiceInstance = {
+    val list = routingList
+    list(nextRoutingInstance.getAndIncrement % list.size)
+  }
+
+  def register(node: Node, instanceInfo: AmazonInstanceInfo): ServiceCluster = {
     instances(node) = ServiceInstance(serviceType, node, instanceInfo)
+    resetRoutingList()
+    this
+  }
 
   def ensureFullPathNode(node: Node, throwIfDoes: Boolean = false) = node.name contains servicePath.name match {
     case true if (throwIfDoes) => throw new Exception(s"node $node already contains service path")
@@ -72,5 +85,9 @@ class ServiceCluster(serviceType: ServiceType) extends Logging {
     removeOldNodes(newInstances, childNodes)
     leader = findLeader(newInstances)
     instances = newInstances
+    resetRoutingList()
   }
+
+  private def resetRoutingList() =
+    routingList = Vector(instances.values.toSeq: _*)
 }

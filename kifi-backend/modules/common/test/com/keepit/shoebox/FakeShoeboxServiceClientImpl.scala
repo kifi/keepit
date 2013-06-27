@@ -1,5 +1,7 @@
 package com.keepit.shoebox
 
+import com.keepit.common.service.ServiceType
+import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.logging.Logging
 import com.keepit.model._
 import com.keepit.common.db._
@@ -21,7 +23,7 @@ import collection.mutable.{Map => MutableMap}
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, browsingHistoryTracker: BrowsingHistoryTracker) extends ShoeboxServiceClient {
-  val host: String = ""
+  val serviceCluster: ServiceCluster = new ServiceCluster(ServiceType.TEST_MODE)
   protected def httpClient: com.keepit.common.net.HttpClient = ???
 
   // Fake ID counters

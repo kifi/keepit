@@ -1,5 +1,6 @@
 package com.keepit.shoebox
 
+import com.keepit.common.zookeeper.ServiceCluster
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Promise
 import scala.concurrent.{Future, promise}
@@ -87,7 +88,7 @@ case class ShoeboxCacheProvider @Inject() (
     userSessionExternalIdCache: UserSessionExternalIdCache)
 
 class ShoeboxServiceClientImpl @Inject() (
-  override val host: String,
+  override val serviceCluster: ServiceCluster,
   override val port: Int,
   override val httpClient: HttpClient,
   cacheProvider: ShoeboxCacheProvider)

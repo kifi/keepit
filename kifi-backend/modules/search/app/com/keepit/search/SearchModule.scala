@@ -9,6 +9,8 @@ import org.apache.lucene.util.Version
 import net.codingwell.scalaguice.ScalaModule
 
 import com.google.inject.{Provides, Singleton}
+
+import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.cache.SearchCacheModule
 import com.keepit.common.controller.ActionAuthenticator
@@ -207,9 +209,9 @@ class SearchModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def shoeboxServiceClient (client: HttpClient, cacheProvider: ShoeboxCacheProvider): ShoeboxServiceClient = {
+  def shoeboxServiceClient (client: HttpClient, cacheProvider: ShoeboxCacheProvider, serviceCluster: ServiceCluster): ShoeboxServiceClient = {
     new ShoeboxServiceClientImpl(
-      current.configuration.getString("service.shoebox.host").get,
+      serviceCluster,
       current.configuration.getInt("service.shoebox.port").get,
       client, cacheProvider)
   }

@@ -1,5 +1,6 @@
 package com.keepit.shoebox
 
+import com.keepit.common.zookeeper.ServiceCluster
 import scala.slick.session.{ Database => SlickDatabase }
 import net.codingwell.scalaguice.{ScalaMultibinder, ScalaModule}
 import com.google.common.io.Files
@@ -194,9 +195,9 @@ class ShoeboxModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def searchServiceClient(client: HttpClient): SearchServiceClient = {
+  def searchServiceClient(client: HttpClient, serviceCluster: ServiceCluster): SearchServiceClient = {
     new SearchServiceClientImpl(
-      current.configuration.getString("service.search.host").get,
+      serviceCluster,
       current.configuration.getInt("service.search.port").get,
       client)
   }

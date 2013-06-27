@@ -74,5 +74,28 @@ class ServiceClusterTest extends Specification with TestInjector {
       cluster.registered(Node(s"$basePath/node_00000001")) === true
       cluster.registered(Node(s"$basePath/node_00000002")) === true
     }
+
+    "RR router" in {
+      val cluster = new ServiceCluster(ServiceType.TEST_MODE)
+      val zk = new FakeZooKeeperClient()
+      val basePath = "/fortytwo/services/TEST_MODE"
+      zk.set(Node(s"$basePath/node_00000001"), Json.toJson(instance1).toString)
+      zk.set(Node(s"$basePath/node_00000002"), Json.toJson(instance2).toString)
+      zk.set(Node(s"$basePath/node_00000003"), Json.toJson(instance2).toString)
+      cluster.update(zk, Node("node_00000001") :: Node("node_00000002") :: Node("node_00000003") :: Nil)
+      val service1 = cluster.nextService()
+      val service2 = cluster.nextService()
+      val service3 = cluster.nextService()
+      val service4 = cluster.nextService()
+      val service5 = cluster.nextService()
+      val service6 = cluster.nextService()
+      val service7 = cluster.nextService()
+      service1 === service4
+      service2 === service5
+      service3 === service6
+      service1 === service7
+      service1 !== service2
+      service1 !== service3
+    }
   }
 }

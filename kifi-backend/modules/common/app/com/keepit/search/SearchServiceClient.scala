@@ -1,5 +1,6 @@
 package com.keepit.search
 
+import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.healthcheck.BenchmarkResults
 import com.keepit.common.healthcheck.BenchmarkResultsJson._
 import com.keepit.common.service.{ServiceClient, ServiceType}
@@ -62,8 +63,11 @@ trait SearchServiceClient extends ServiceClient {
   def version(): Future[String]
 }
 
-class SearchServiceClientImpl(override val host: String, override val port: Int, override val httpClient: HttpClient)
-    extends SearchServiceClient {
+class SearchServiceClientImpl(
+    override val serviceCluster: ServiceCluster,
+    override val port: Int,
+    override val httpClient: HttpClient)
+  extends SearchServiceClient() {
 
   def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isKeep: Boolean): Future[Unit] = {
     val json = Json.toJson(ResultClicked(userId, query, uriId, rank, isKeep))
