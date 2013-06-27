@@ -471,7 +471,8 @@ $(function() {
 			$detail.attr("data-kept", howKept);
 			$('.page-title').text($selected.length + " keeps selected");
 			$('.page-url').hide().empty().attr('href', '');
-			$('.page-pic').hide().css('background-image', '');
+			$('.page-pic-wrap').hide();
+			$('.page-pic').css('background-image', '');
 			$('.page-who').hide();
 
 			// inCollTmpl.clear();
@@ -491,7 +492,8 @@ $(function() {
 			$detail.attr("data-kept", howKept);
 			$('.page-title').text($keepLink.text());
 			$('.page-url').attr('href', url).text(url).show();
-			$('.page-pic').css("background-image", "url(" + urlScreenshot + '?url=' + escape(url) + ")").show();
+			$('.page-pic').css("background-image", "url(" + urlScreenshot + '?url=' + escape(url) + ")");
+			$('.page-pic-wrap').show();
 			$('.page-how').attr('class', 'page-how ' + (howKept || ''));
 			$('.page-who-pics').empty().append($keep.find(".keep-who>img").clone());
 			$('.page-who-text').html($keep.find(".keep-who-text").html());
