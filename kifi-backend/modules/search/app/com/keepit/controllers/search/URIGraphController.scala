@@ -3,7 +3,7 @@ package com.keepit.controllers.search
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db.{SequenceNumber, Id}
-import com.keepit.model.{Collection, NormalizedURI, User}
+import com.keepit.model.{Collection, CollectionStates, NormalizedURI, User}
 import com.keepit.search.graph.{URIGraphImpl, URIGraph, URIGraphPlugin}
 import com.keepit.search.index.Indexer.CommitData
 import org.apache.lucene.document.Document
@@ -95,7 +95,7 @@ class URIGraphController @Inject()(
   def dumpCollectionLuceneDocument(id: Id[Collection], userId: Id[User]) = Action { implicit request =>
     val collectionIndexer = uriGraph.asInstanceOf[URIGraphImpl].collectionIndexer
     try {
-      val doc = collectionIndexer.buildIndexable(id, userId, SequenceNumber.ZERO).buildDocument
+      val doc = collectionIndexer.buildIndexable(id, userId, SequenceNumber.ZERO, CollectionStates.ACTIVE).buildDocument
       Ok(html.admin.luceneDocDump("Collection", doc, collectionIndexer))
     } catch {
       case e: Throwable => Ok(html.admin.luceneDocDump("No URIGraph", new Document, collectionIndexer))
