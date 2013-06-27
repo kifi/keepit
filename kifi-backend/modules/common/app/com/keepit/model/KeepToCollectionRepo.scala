@@ -1,6 +1,6 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{Provider, Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{State, Id}
 import com.keepit.common.db.slick.DBSession.RSession
@@ -23,15 +23,18 @@ trait KeepToCollectionRepo extends Repo[KeepToCollection] {
 
 @Singleton
 class KeepToCollectionRepoImpl @Inject() (
-                                           collectionsForBookmarkCache: CollectionsForBookmarkCache,
-                                           collectionRepo: CollectionRepo,
-                                           val db: DataBaseComponent,
-                                           val clock: Clock)
+   collectionsForBookmarkCache: CollectionsForBookmarkCache,
+   collectionRepo: CollectionRepo,
+   bookmarkRepoProvider: Provider[BookmarkRepoImpl],
+   val db: DataBaseComponent,
+   val clock: Clock)
   extends DbRepo[KeepToCollection] with KeepToCollectionRepo {
 
   import DBSession._
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
+
+  private lazy val bookmarkRepo = bookmarkRepoProvider.get
 
   override def invalidateCache(ktc: KeepToCollection)(implicit session: RSession): KeepToCollection = {
     collectionsForBookmarkCache.set(CollectionsForBookmarkKey(ktc.bookmarkId),
@@ -72,7 +75,11 @@ class KeepToCollectionRepoImpl @Inject() (
   }
 
   def count(collId: Id[Collection])(implicit session: RSession): Int = {
-    Query((for (c <- table if c.collectionId === collId && c.state === KeepToCollectionStates.ACTIVE) yield c).length)
-      .firstOption.getOrElse(0)
+    import bookmarkRepo.{stateTypeMapper => bookmarkStateMapper}
+    Query((for {
+      c <- table
+      b <- bookmarkRepo.table if b.id === c.bookmarkId && c.collectionId === collId &&
+         b.state === BookmarkStates.ACTIVE && c.state === KeepToCollectionStates.ACTIVE
+    } yield c).length).firstOption.getOrElse(0)
   }
 }
