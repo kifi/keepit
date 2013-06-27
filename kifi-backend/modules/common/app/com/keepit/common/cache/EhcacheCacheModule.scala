@@ -4,7 +4,7 @@ import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{Provides, Singleton}
 import com.keepit.inject.AppScoped
 
-class EhCacheCacheModule() extends ScalaModule {
+case class EhCacheCacheModule() extends ScalaModule {
   def configure(): Unit = {
     bind[InMemoryCachePlugin].to[EhCacheCache].in[AppScoped]
   }

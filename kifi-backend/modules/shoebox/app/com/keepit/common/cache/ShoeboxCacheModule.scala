@@ -5,13 +5,12 @@ import com.keepit.model._
 import scala.concurrent.duration._
 import com.keepit.search.ActiveExperimentsCache
 import com.keepit.common.social.{CommentWithBasicUserCache, BasicUserUserIdCache}
-import net.codingwell.scalaguice.ScalaModule
 
-class ShoeboxCacheModule extends ScalaModule {
+case class ShoeboxCacheModule() extends CacheModule {
 
   def configure {
-    install(new MemcachedCacheModule)
-    install(new EhCacheCacheModule)
+    install(MemcachedCacheModule())
+    install(EhCacheCacheModule())
   }
 
   @Singleton

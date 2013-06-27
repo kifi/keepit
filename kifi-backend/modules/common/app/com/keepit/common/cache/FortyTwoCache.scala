@@ -14,6 +14,7 @@ import com.keepit.common.time._
 import com.keepit.serializer.{Serializer, BinaryFormat}
 import net.sf.ehcache._
 import net.sf.ehcache.config.CacheConfiguration
+import net.codingwell.scalaguice.ScalaModule
 
 
 object CacheStatistics {
@@ -307,3 +308,4 @@ class PrimitiveCacheImpl[K <: Key[P], P <: AnyVal](innermostPluginSettings: (For
 class StringCacheImpl[K <: Key[String]](innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends FortyTwoCacheImpl[K, String](innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer.string)
 
+trait CacheModule extends ScalaModule

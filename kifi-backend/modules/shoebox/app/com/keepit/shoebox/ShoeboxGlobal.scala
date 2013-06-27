@@ -17,7 +17,7 @@ import com.keepit.learning.topicmodel.TopicUpdaterPlugin
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 
-  val modules = Seq(new CommonModule, new ShoeboxModule)
+  val modules = Seq(new CommonModule, ShoeboxProdModule())
 
   override def onStart(app: Application): Unit = {
     log.info("starting the shoebox")
