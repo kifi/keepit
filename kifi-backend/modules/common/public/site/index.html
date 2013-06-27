@@ -6,6 +6,7 @@
 	<title>kifi.com</title>
 	<meta name="description" content="">
 	<meta name="viewport" content="width=device-width">
+	<link rel="stylesheet" href="css/jquery-ui.css">
 	<link rel="stylesheet" href="js/fancybox/jquery.fancybox.css">
 	<link rel="stylesheet" href="css/main.css">
 	<link rel="shortcut icon" type="image/png" href="/assets/images/kifi-favi-50.png">
@@ -131,21 +132,26 @@
 							<span class="keep-who-text" data-after-template>
 								<span class="keep-you">
 									You
-									{% if keepers.length && isPrivate %}
-										<span class="keep-private on">Private</span> +
-									{% endif %}{% if keepers.length && !isPrivate %}
-										<span class="keep-private">Private</span> +
+									{% if (keepers.length || others) && isPrivate %}
+										<span class="keep-private on">Private</span>
+									{% endif %}{% if (keepers.length || others) && !isPrivate %}
+										<span class="keep-private">Private</span>
 									{% endif %}
 								</span>
 								{% if keepers.length > 1 %}
-									{{keepers.length}} friends
+									<span class="keep-friends">{{keepers.length}} friends</span>
 								{% endif %}{% if keepers.length == 1 %}
-									1 friend
+									<span class="keep-friends">1 friend</span>
 								{% endif %}
-								kept this
-								{% if !keepers.length && isPrivate %}
+								{% if others > 1 %}
+									<span class="keep-others">{{others}} others</span>
+								{% endif %}{% if others == 1 %}
+									<span class="keep-others">1 other</span>
+								{% endif %}
+								<span class="keep-kept-this">kept this</span>
+								{% if !keepers.length && !others && isPrivate %}
 									<span class="keep-private on">Private</span>
-								{% endif %}{% if !keepers.length && !isPrivate %}
+								{% endif %}{% if !keepers.length && !others && !isPrivate %}
 									<span class="keep-private">Private</span>
 								{% endif %}
 							</span>
@@ -215,7 +221,7 @@
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 	<script>window.jQuery||document.write('<script src="js/jquery-1.9.1.min.js"><\/script>')</script>
 	<script src="js/jquery.easydate-0.2.4.min.js"></script>
-	<script src="js/jquery-ui-1.10.3.custom/js/jquery-ui-1.10.3.custom.min.js"></script>
+	<script src="js/jquery-ui.min.js"></script>
 	<script src="js/jquery.mousewheel.js"></script>
 	<script src="js/antiscroll.js"></script>
 	<script src="js/fancybox/jquery.fancybox.pack.js"></script>
