@@ -13,36 +13,34 @@ import com.keepit.common.mail.ShoeboxMailModule
 import com.keepit.common.crypto.ShoeboxCryptoModule
 import com.keepit.common.healthcheck.ShoeboxHealthCheckModule
 import com.keepit.common.store.ShoeboxS3Module
-import com.keepit.realtime.ShoeboxRealtimeModule
+import com.keepit.realtime.ShoeboxWebSocketModule
 import com.keepit.classify.DomainTagImporterImplModule
 import scala.slick.session.{Database => SlickDatabase}
 import play.api.db.DB
 import play.api.Play
 
-case class ShoeboxProdModule() extends ShoeboxModule {
-
+case class ShoeboxProdModule() extends ShoeboxModule(
   // Common Functional Modules
-  val cacheModule = ShoeboxCacheModule()
-  val secureSocialModule = SecureSocialImplModule()
-  val searchServiceClientModule = SearchServiceClientImplModule()
-  val clickHistoryTrackerModule = ClickHistoryTrackerImplModule()
-  val browsingHistoryTrackerModule = BrowsingHistoryTrackerImplModule()
-  val mailModule = ShoeboxMailModule()
-  val cryptoModule = ShoeboxCryptoModule()
-  val healthCheckModule = ShoeboxHealthCheckModule()
-  val s3Module = ShoeboxS3Module()
+  cacheModule = ShoeboxCacheModule(),
+  secureSocialModule = SecureSocialImplModule(),
+  searchServiceClientModule = SearchServiceClientImplModule(),
+  clickHistoryTrackerModule = ClickHistoryTrackerImplModule(),
+  browsingHistoryTrackerModule = BrowsingHistoryTrackerImplModule(),
+  mailModule = ShoeboxMailModule(),
+  cryptoModule = ShoeboxCryptoModule(),
+  healthCheckModule = ShoeboxHealthCheckModule(),
+  s3Module = ShoeboxS3Module(),
 
   // Shoebox Functional Modules
-  val slickModule = SlickModule(ShoeboxDbInfo())
-  val scraperModule = ScraperImplModule()
-  val socialGraphModule = SocialGraphImplModule()
-  val analyticsModule = AnalyticsImplModule()
-  val realtimeModule = ShoeboxRealtimeModule()
-  val topicModelModule = LdaTopicModelModule()
-  val domainTagImporterModule = DomainTagImporterImplModule()
-  val sliderHistoryTrackerModule = SliderHistoryTrackerImplModule()
-
-}
+  slickModule = SlickModule(ShoeboxDbInfo()),
+  scraperModule = ScraperImplModule(),
+  socialGraphModule = SocialGraphImplModule(),
+  analyticsModule = AnalyticsImplModule(),
+  webSocketModule = ShoeboxWebSocketModule(),
+  topicModelModule = LdaTopicModelModule(),
+  domainTagImporterModule = DomainTagImporterImplModule(),
+  sliderHistoryTrackerModule = SliderHistoryTrackerImplModule()
+)
 
 case class ShoeboxDbInfo() extends DbInfo {
   def database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))

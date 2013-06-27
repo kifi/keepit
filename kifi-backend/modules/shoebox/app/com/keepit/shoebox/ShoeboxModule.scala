@@ -1,6 +1,5 @@
 package com.keepit.shoebox
 
-import com.keepit.common.logging.Logging
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.db.SlickModule
 import com.keepit.common.cache.CacheModule
@@ -12,13 +11,35 @@ import com.keepit.common.analytics.AnalyticsModule
 import com.keepit.learning.topicmodel.TopicModelModule
 import com.keepit.model.SliderHistoryTrackerModule
 import com.keepit.scraper.ScraperModule
-import com.keepit.realtime.RealtimeModule
+import com.keepit.realtime.WebSocketModule
 import com.keepit.classify.DomainTagImporterModule
 import com.keepit.common.crypto.CryptoModule
 import com.keepit.common.healthcheck.HealthCheckModule
 import com.keepit.common.store.S3Module
 
-abstract class ShoeboxModule extends ScalaModule with Logging {
+abstract class ShoeboxModule(
+  // Common Functional Modules
+  val cacheModule: CacheModule,
+  val secureSocialModule: SecureSocialModule,
+  val searchServiceClientModule: SearchServiceClientModule,
+  val clickHistoryTrackerModule: ClickHistoryTrackerModule,
+  val browsingHistoryTrackerModule: BrowsingHistoryTrackerModule,
+  val mailModule: MailModule,
+  val cryptoModule: CryptoModule,
+  val healthCheckModule: HealthCheckModule,
+  val s3Module: S3Module,
+
+  // Shoebox Functional Modules
+  val slickModule: SlickModule,
+  val scraperModule: ScraperModule,
+  val socialGraphModule: SocialGraphModule,
+  val analyticsModule: AnalyticsModule,
+  val webSocketModule: WebSocketModule,
+  val topicModelModule: TopicModelModule,
+  val domainTagImporterModule: DomainTagImporterModule,
+  val sliderHistoryTrackerModule: SliderHistoryTrackerModule
+
+) extends ScalaModule {
   def configure {
     println("Configuring ShoeboxModule")
 
@@ -36,32 +57,9 @@ abstract class ShoeboxModule extends ScalaModule with Logging {
     install(scraperModule)
     install(socialGraphModule)
     install(analyticsModule)
-    install(realtimeModule)
+    install(webSocketModule)
     install(topicModelModule)
     install(domainTagImporterModule)
     install(sliderHistoryTrackerModule)
   }
-
-  // Common Functional Modules
-
-  val cacheModule: CacheModule
-  val secureSocialModule: SecureSocialModule
-  val searchServiceClientModule: SearchServiceClientModule
-  val clickHistoryTrackerModule: ClickHistoryTrackerModule
-  val browsingHistoryTrackerModule: BrowsingHistoryTrackerModule
-  val mailModule: MailModule
-  val cryptoModule: CryptoModule
-  val healthCheckModule: HealthCheckModule
-  val s3Module: S3Module
-
-  // Shoebox Functional Modules
-  val slickModule: SlickModule
-  val scraperModule: ScraperModule
-  val socialGraphModule: SocialGraphModule
-  val analyticsModule: AnalyticsModule
-  val realtimeModule: RealtimeModule
-  val topicModelModule: TopicModelModule
-  val domainTagImporterModule: DomainTagImporterModule
-  val sliderHistoryTrackerModule: SliderHistoryTrackerModule
-
 }

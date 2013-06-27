@@ -23,26 +23,27 @@ case class SecureSocialImplModule() extends SecureSocialModule {
 
   @Singleton
   @Provides
-  def secureSocialAuthenticatorPlugin(db: Database,
-                                      suiRepo: SocialUserInfoRepo,
-                                      usRepo: UserSessionRepo,
-                                      healthPlugin: HealthcheckPlugin,
-                                      app: play.api.Application): SecureSocialAuthenticatorPlugin = {
-    new SecureSocialAuthenticatorPluginImpl(db, suiRepo, usRepo, healthPlugin, app)
-  }
+  def secureSocialAuthenticatorPlugin(
+    db: Database,
+    suiRepo: SocialUserInfoRepo,
+    usRepo: UserSessionRepo,
+    healthPlugin: HealthcheckPlugin,
+    app: play.api.Application
+  ): SecureSocialAuthenticatorPlugin = new SecureSocialAuthenticatorPluginImpl(db, suiRepo, usRepo, healthPlugin, app)
 
   @Singleton
   @Provides
-  def secureSocialUserPlugin(db: Database,
-                             socialUserInfoRepo: SocialUserInfoRepo,
-                             userRepo: UserRepo,
-                             imageStore: S3ImageStore,
-                             healthcheckPlugin: HealthcheckPlugin,
-                             userExperimentRepo: UserExperimentRepo,
-                             emailRepo: EmailAddressRepo,
-                             socialGraphPlugin: SocialGraphPlugin): SecureSocialUserPlugin = {
-    new SecureSocialUserPluginImpl(
-      db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin, userExperimentRepo, emailRepo, socialGraphPlugin)
-  }
+  def secureSocialUserPlugin(
+    db: Database,
+    socialUserInfoRepo: SocialUserInfoRepo,
+    userRepo: UserRepo,
+    imageStore: S3ImageStore,
+    healthcheckPlugin: HealthcheckPlugin,
+    userExperimentRepo: UserExperimentRepo,
+    emailRepo: EmailAddressRepo,
+    socialGraphPlugin: SocialGraphPlugin
+  ): SecureSocialUserPlugin = new SecureSocialUserPluginImpl(
+    db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin, userExperimentRepo, emailRepo, socialGraphPlugin
+  )
 
 }

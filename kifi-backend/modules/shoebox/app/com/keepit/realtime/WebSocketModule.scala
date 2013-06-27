@@ -3,9 +3,9 @@ package com.keepit.realtime
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
 
-trait RealtimeModule extends ScalaModule
+trait WebSocketModule extends ScalaModule
 
-case class ShoeboxRealtimeModule() extends RealtimeModule {
+case class ShoeboxWebSocketModule() extends WebSocketModule {
   def configure() {
     bind[UserEmailNotifierPlugin].to[UserEmailNotifierPluginImpl].in[AppScoped]
     bind[NotificationConsistencyChecker].to[NotificationConsistencyCheckerImpl].in[AppScoped]
