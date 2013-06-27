@@ -169,7 +169,7 @@ class AdminUserController @Inject() (
   }
 
   def usersView(page: Int = 0) = AdminHtmlAction { implicit request =>
-    val PAGE_SIZE = 200
+    val PAGE_SIZE = 50
 
     val users = db.readOnly { implicit s =>
       userRepo.pageExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(page, PAGE_SIZE) map userStatistics
