@@ -170,7 +170,8 @@ GET     /admin/commentIndex/reindex @com.keepit.controllers.admin.AdminCommentIn
 GET     /admin/commentIndex/dumpDoc/:commentId  @com.keepit.controllers.admin.AdminCommentIndexController.dumpLuceneDocument(commentId: Id[Comment])
 
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView
-GET     /admin/users/page/:page                @com.keepit.controllers.admin.AdminUserController.usersView(page: Int)
+GET     /admin/users/page/:page     @com.keepit.controllers.admin.AdminUserController.usersView(page: Int)
+POST    /admin/users/search         @com.keepit.controllers.admin.AdminUserController.searchUsers()
 GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User])
 POST    /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User])
 GET     /admin/user/:id/more-info   @com.keepit.controllers.admin.AdminUserController.moreUserInfoView(id: Id[User])
