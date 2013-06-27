@@ -68,7 +68,6 @@ class UserIndex {
 
   def addUsers(users: Seq[User]): Unit = synchronized {
     users.foreach{ user =>
-      println(s"================> adding user $user")
       val doc = new Document()
 
       val userIdField = new Field(userIdFieldName, user.id.get.id.toString, idFieldType)

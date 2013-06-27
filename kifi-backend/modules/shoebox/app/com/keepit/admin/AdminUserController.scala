@@ -181,7 +181,6 @@ class AdminUserController @Inject() (
   def searchUsers() = AdminHtmlAction { implicit request =>
     val form = request.request.body.asFormUrlEncoded.map{ req => req.map(r => (r._1 -> r._2.head)) }
     val searchTerm = form.flatMap{ _.get("searchTerm") }
-    log.info(s"searching users using: ${searchTerm.get}")
     searchTerm match {
       case None => Redirect(routes.AdminUserController.usersView(0))
       case Some(term) =>
@@ -189,7 +188,6 @@ class AdminUserController @Inject() (
         val users = db.readOnly { implicit s =>
           userIds map userRepo.get map userStatistics
         }
-        log.info(s"""found users: ${users mkString "\n"}""")
         Ok(html.admin.users(users, 0, users.size, users.size, searchTerm))
     }
   }
