@@ -14,7 +14,8 @@ class ProbablisticLRUTest extends Specification {
   val rand = new Random(123456789L)
 
   def create(tableSize: Int, numHashFuncs: Int, syncEvery: Int = 1000) = {
-    val lru = ProbablisticLRU(tableSize, numHashFuncs, syncEvery)
+    val buf = new InMemoryResultClickTrackerBuffer(tableSize)
+    val lru = new ProbablisticLRU(buf, numHashFuncs, syncEvery)
     lru.setSeed(123456789L)
     lru
   }

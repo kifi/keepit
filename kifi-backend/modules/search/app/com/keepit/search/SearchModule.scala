@@ -204,7 +204,8 @@ class SearchModule() extends ScalaModule with Logging {
     }
     val file = new File(dir, "resultclicks.plru")
     // table size = 16M (physical size = 64MB + 4bytes)
-    new ResultClickTracker(ProbablisticLRU(file, 0x1000000, numHashFuncs, syncEvery))
+    val buffer = new FileResultClickTrackerBuffer(file, 0x1000000)
+    new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, syncEvery))
   }
 
   @Singleton

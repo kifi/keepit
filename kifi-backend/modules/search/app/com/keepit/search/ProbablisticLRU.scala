@@ -34,9 +34,11 @@ trait IntBufferWrapper {
   def sync() : Unit
 }
 
-class SimpleLocalBuffer(byteBuffer: ByteBuffer) extends MultiChunkBuffer {
+trait SimpleLocalBuffer extends MultiChunkBuffer {
 
-  private[this] val intBuffer = byteBuffer.asIntBuffer
+  protected val byteBuffer: ByteBuffer
+
+  private[this] def intBuffer = byteBuffer.asIntBuffer
 
   def chunkSize : Int = byteBuffer.getInt(0)
 
@@ -53,6 +55,37 @@ class SimpleLocalBuffer(byteBuffer: ByteBuffer) extends MultiChunkBuffer {
 
   }
   
+}
+
+
+class FileResultClickTrackerBuffer(file: File, tableSize: Int) extends SimpleLocalBuffer {
+
+  protected val byteBuffer : ByteBuffer = {
+    val bufferSize = tableSize * 4 + 4
+    val isNew = !file.exists
+    val raf = new RandomAccessFile(file, "rw")
+    val byteBuffer = raf.getChannel().map(MapMode.READ_WRITE, 0, bufferSize)
+    if (isNew) {
+      byteBuffer.putInt(0, tableSize)
+      byteBuffer.force()
+    } else {
+      if (tableSize != byteBuffer.getInt(0)) throw new ProbablisticLRUException("table size mismatch")
+    }
+    byteBuffer
+  }
+
+}
+
+
+class InMemoryResultClickTrackerBuffer(tableSize: Int) extends SimpleLocalBuffer {
+  
+  protected val byteBuffer : ByteBuffer = {
+    val bufferSize = tableSize * 4 + 4
+    val _byteBuffer = ByteBuffer.allocate(bufferSize)
+    _byteBuffer.putInt(0, tableSize)
+    _byteBuffer
+  }
+
 }
 
 
@@ -109,33 +142,9 @@ class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticL
 }
 
 
-object ProbablisticLRU {
-  def apply(file: File, tableSize: Int, numHashFuncs: Int, syncEvery: Int) = {
-    val bufferSize = tableSize * 4 + 4
-    val isNew = !file.exists
-    val raf = new RandomAccessFile(file, "rw")
-    val byteBuffer = raf.getChannel().map(MapMode.READ_WRITE, 0, bufferSize)
-    if (isNew) {
-      byteBuffer.putInt(0, tableSize)
-      byteBuffer.force()
-    } else {
-      if (tableSize != byteBuffer.getInt(0)) throw new ProbablisticLRUException("table size mismatch")
-    }
-    new ProbablisticLRU(new SimpleLocalBuffer(byteBuffer), numHashFuncs, syncEvery)
-  }
 
-  def apply(tableSize: Int, numHashFuncs: Int, syncEvery: Int) = {
-    val bufferSize = tableSize * 4 + 4
-    val byteBuffer = ByteBuffer.allocate(bufferSize)
-    byteBuffer.putInt(0, tableSize)
-    new ProbablisticLRU(new SimpleLocalBuffer(byteBuffer), numHashFuncs, syncEvery)
-  }
-
-  def valueHash(value: Long, position: Int): Int = {
-    // 32-bit integer, excluding zero. zero is special
-    (((value * position.toLong) ^ value) % 0xFFFFFFFFL + 1L).toInt
-  }
-
+class ProbablisticLRU (mcBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEvery : Int) {
+  
   class Likeliness(key: Long, positions: Array[Int], values: Array[Int], norm: Float) {
     def apply(value: Long) = {
       var count = 0.0f
@@ -159,10 +168,11 @@ object ProbablisticLRU {
       count
     }
   }
-}
 
-class ProbablisticLRU(mcBuffer: MultiChunkBuffer, numHashFuncs: Int, syncEvery: Int) {
-  import ProbablisticLRU._
+  def valueHash(value: Long, position: Int): Int = {
+    // 32-bit integer, excluding zero. zero is special
+    (((value * position.toLong) ^ value) % 0xFFFFFFFFL + 1L).toInt
+  }
 
   private[this] val tableSize = mcBuffer.chunkSize
 
@@ -182,7 +192,7 @@ class ProbablisticLRU(mcBuffer: MultiChunkBuffer, numHashFuncs: Int, syncEvery: 
 
   def get(key: Long) = {
     val (p, h) = getValueHashes(key)
-    new ProbablisticLRU.Likeliness(key, p, h, numHashFuncs.toFloat)
+    new Likeliness(key, p, h, numHashFuncs.toFloat)
   }
 
   def get(key: Long, values: Seq[Long]): Map[Long, Int] = {
@@ -249,5 +259,6 @@ class ProbablisticLRU(mcBuffer: MultiChunkBuffer, numHashFuncs: Int, syncEvery: 
     }
   }
 }
+
 
 class ProbablisticLRUException(msg: String) extends Exception(msg)
