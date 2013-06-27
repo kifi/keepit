@@ -17,7 +17,7 @@ import com.google.inject.{Inject, Singleton}
 
 import org.apache.zookeeper.CreateMode._
 
-class ServiceCluster(serviceType: ServiceType) extends Logging {
+class ServiceCluster(val serviceType: ServiceType) extends Logging {
 
   private var instances = new TrieMap[Node, ServiceInstance]()
   private var routingList: Vector[ServiceInstance] = Vector()
@@ -34,9 +34,10 @@ class ServiceCluster(serviceType: ServiceType) extends Logging {
     instances.toString"""
 
   //using round robin
-  def nextService(): ServiceInstance = {
+  def nextService(): Option[ServiceInstance] = {
     val list = routingList
-    list(nextRoutingInstance.getAndIncrement % list.size)
+    if (list.isEmpty) None
+    else Some(list(nextRoutingInstance.getAndIncrement % list.size))
   }
 
   def register(node: Node, instanceInfo: AmazonInstanceInfo): ServiceCluster = {

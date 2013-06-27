@@ -10,12 +10,17 @@ import com.keepit.common.routes._
 import play.api.libs.json.{JsNull, JsValue}
 import play.api.mvc.Call
 
+class ServiceNotAvailableException(serviceType: ServiceType)
+  extends Exception(s"Service of type ${serviceType.name} is not available")
+
 trait ServiceClient extends Logging {
   protected def httpClient: HttpClient
 
   val serviceCluster: ServiceCluster
 
-  private def nextHost(): String = serviceCluster.nextService.amazonInstanceInfo.localHostname
+  private def nextHost(): String = serviceCluster.nextService map { service =>
+    service.amazonInstanceInfo.localHostname
+  } getOrElse (throw new ServiceNotAvailableException(serviceCluster.serviceType))
 
   val protocol: String = "http"
   val port: Int = 9000
