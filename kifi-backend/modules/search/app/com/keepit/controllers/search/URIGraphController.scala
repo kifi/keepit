@@ -84,7 +84,8 @@ class URIGraphController @Inject()(
   def dumpCollectionLuceneDocument(id: Id[Collection], userId: Id[User]) = Action { implicit request =>
     val collectionIndexer = uriGraph.asInstanceOf[URIGraphImpl].collectionIndexer
     try {
-      val doc = collectionIndexer.buildIndexable(id, userId, SequenceNumber.ZERO, CollectionStates.ACTIVE).buildDocument
+      val collection = Await.result(shoeboxClient.getCollectionsByUser(userId), 180 seconds).find(_.id.get == id).get
+      val doc = collectionIndexer.buildIndexable(collection).buildDocument
       Ok(html.admin.luceneDocDump("Collection", doc, collectionIndexer))
     } catch {
       case e: Throwable => Ok(html.admin.luceneDocDump("No URIGraph", new Document, collectionIndexer))

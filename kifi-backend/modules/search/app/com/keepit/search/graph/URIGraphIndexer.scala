@@ -77,7 +77,7 @@ class URIGraphIndexer(
     cnt
   }
 
-  def update(): Int = {
+  def update(): Int = updateLock.synchronized {
     resetSequenceNumberIfReindex()
 
     if (sequenceNumber.value > bookmarkStore.sequenceNumber.value) {
@@ -97,13 +97,13 @@ class URIGraphIndexer(
     total
   }
 
-  def update(userId: Id[User]): Int = {
+  def update(userId: Id[User]): Int = updateLock.synchronized {
     update {
-      Await.result(shoeboxClient.getBookmarks(userId), 180 seconds)
+      Await.result(shoeboxClient.getBookmarks(userId), 180 seconds).filter(_.seq <= sequenceNumber)
     }
   }
 
-  private def update(bookmarksChanged: => Seq[Bookmark]): Int = updateLock.synchronized {
+  private def update(bookmarksChanged: => Seq[Bookmark]): Int = {
     log.info("updating URIGraph")
     try {
       val bookmarks = bookmarksChanged
