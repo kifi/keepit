@@ -30,7 +30,7 @@ import play.api.Play.current
 
 class MainSearcherTest extends Specification {
 
-  val resultClickTracker = ResultClickTracker(8)
+  val resultClickTracker = new ResultClickTracker(ProbablisticLRU(1000, 8, Int.MaxValue))
 
   def initData(numUsers: Int, numUris: Int) = {
     val users = (0 until numUsers).map {n => User(firstName = "foo" + n, lastName = "")}.toList
