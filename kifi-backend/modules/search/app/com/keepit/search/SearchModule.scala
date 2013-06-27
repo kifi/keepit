@@ -202,7 +202,9 @@ class SearchModule() extends ScalaModule with Logging {
         throw new Exception(s"could not create dir $dir")
       }
     }
-    ResultClickTracker(dir, numHashFuncs, syncEvery)
+    val file = new File(dir, "resultclicks.plru")
+    // table size = 16M (physical size = 64MB + 4bytes)
+    new ResultClickTracker(ProbablisticLRU(file, 0x1000000, numHashFuncs, syncEvery))
   }
 
   @Singleton

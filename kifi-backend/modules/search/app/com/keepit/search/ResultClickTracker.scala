@@ -7,24 +7,14 @@ import com.keepit.search.query.QueryHash
 import scala.math._
 import java.io.File
 
-object ResultClickTracker {
 
-  def apply(dir: File, numHashFuncs: Int, syncEvery: Int) = {
-    val file = new File(dir, "resultclicks.plru")
-    // table size = 16M (physical size = 64MB + 4bytes)
-    new ResultClickTracker(ProbablisticLRU(file, 0x1000000, numHashFuncs, syncEvery))
-  }
 
-  def apply(numHashFuncs: Int) = {
-    new ResultClickTracker(ProbablisticLRU(1000, numHashFuncs, Int.MaxValue))
-  }
-
-  abstract class ResultClickBoosts {
-    def apply(value: Long): Float
-  }
+abstract class ResultClickBoosts {
+  def apply(value: Long): Float
 }
 
 class ResultClickTracker(lru: ProbablisticLRU) {
+  
   private[this] val analyzer = DefaultAnalyzer.defaultAnalyzer
 
   def add(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isUserKeep: Boolean) = {
@@ -40,7 +30,7 @@ class ResultClickTracker(lru: ProbablisticLRU) {
   def getBoosts(userId: Id[User], query: String, maxBoost: Float) = {
     val hash = QueryHash(userId, query, analyzer)
     val likeliness = lru.get(hash)
-    new ResultClickTracker.ResultClickBoosts {
+    new ResultClickBoosts {
       def apply(value: Long) = 1.0f +  (maxBoost - 1.0f) * likeliness(value)
     }
   }

@@ -8,6 +8,7 @@ import com.google.inject.Provides
 import com.keepit.search.{ArticleStore, ResultClickTracker}
 import play.api.Play._
 import scala.Some
+import com.keepit.search.{ProbablisticLRU}
 import com.keepit.search.comment.{CommentIndexer, CommentStore}
 import com.keepit.search.graph.{CollectionIndexer, URIGraphIndexer, BookmarkStore, URIGraph}
 import com.keepit.common.healthcheck.HealthcheckPlugin
@@ -43,7 +44,7 @@ class SearchDevModule extends ScalaModule with Logging {
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val syncEvery = conf.getInt("syncEvery").get
     conf.getString("dir") match {
-      case None => ResultClickTracker(numHashFuncs)
+      case None => new ResultClickTracker(ProbablisticLRU(1000, numHashFuncs, Int.MaxValue))
       case Some(dirPath) =>
         val dir = new File(dirPath).getCanonicalFile()
         if (!dir.exists()) {
@@ -51,7 +52,8 @@ class SearchDevModule extends ScalaModule with Logging {
             throw new Exception("could not create dir %s".format(dir))
           }
         }
-        ResultClickTracker(dir, numHashFuncs, syncEvery)
+        val file = new File(dir, "resultclicks.plru")
+        new ResultClickTracker(ProbablisticLRU(file, 0x1000000, numHashFuncs, syncEvery))
     }
   }
 
