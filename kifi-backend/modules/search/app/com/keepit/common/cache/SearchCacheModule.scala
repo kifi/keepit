@@ -16,6 +16,11 @@ class SearchCacheModule extends ScalaModule {
 
   @Singleton
   @Provides
+  def probablisticLRUChunkCache(outerRepo: FortyTwoCachePlugin) = 
+    new ProbablisticLRUChunkCache((outerRepo, 7 days))
+
+  @Singleton
+  @Provides
   def basicUserUserIdCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new BasicUserUserIdCache((innerRepo, 5 minutes), (outerRepo, 7 days))
 
