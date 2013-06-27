@@ -74,6 +74,8 @@ class CollectionTest extends Specification with TestDBRunner {
           keepToCollectionRepo.getBookmarksInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
           collectionRepo.getByUser(user1.id.get).map(_.name) === Seq("Cooking", "Scala", "Apparel")
           keepToCollectionRepo.count(coll1.id.get) === 2
+          bookmarkRepo.save(bookmark1.withActive(false))
+          keepToCollectionRepo.count(coll1.id.get) === 1
         }
         sessionProvider.doWithoutCreatingSessions {
           db.readOnly { implicit s =>

@@ -37,15 +37,15 @@ class TopicModelController  @Inject() (
   def inferTopic = AdminHtmlAction{ implicit request =>
     def makeString(topicId: Int, membership: Double) = {
       val score = "%.3f".format(membership)
-      topicNameMapper.getMappedNameByOriginalId(topicId) + ": " + score
+      topicNameMapper.getMappedNameByNewId(topicId) + ": " + score  // use transferred indexes
     }
 
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val content = body.get("doc").get
-    val topic = docTopicModel.getDocumentTopicDistribution(content)
+    val rawTopic = docTopicModel.getDocumentTopicDistribution(content)
+    val topic = topicNameMapper.scoreMapper(rawTopic)          // indexes will be transferred
 
-
-    val topics = uriTopicHelper.assignTopics(topic) match {
+    val topics = uriTopicHelper.getBiggerTwo(topic) match {
       case (None, None) => ""
       case (Some(a), None) => makeString(a, topic(a))
       case (None, Some(b)) => makeString(b, topic(b))
@@ -66,13 +66,13 @@ class TopicModelController  @Inject() (
     }
 
     def buildString(arr: Array[(Int, Double)]) = {
-      arr.map{x => topicNameMapper.getMappedNameByOriginalId(x._1) + ": " + "%.3f".format(x._2)}.mkString("\n")
+      arr.map{x => topicNameMapper.getMappedNameByNewId(x._1) + ": " + "%.3f".format(x._2)}.mkString("\n")
     }
 
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val word = body.get("word").get
     val topic = wordTopicModel.wordTopic.get(word) match {
-      case Some(arr) => buildString( getTopTopics(arr) )
+      case Some(arr) => buildString( getTopTopics( topicNameMapper.scoreMapper(arr) ) )
       case None => ""
     }
 

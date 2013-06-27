@@ -1,4 +1,4 @@
-@(userStatisticsList: Seq[com.keepit.controllers.admin.UserStatistics], page: Int, count: Int, pageCount: Int)
+@(userStatisticsList: Seq[com.keepit.controllers.admin.UserStatistics], page: Int, count: Int, pageCount: Int, searchTerm: Option[String])
 @import com.keepit.controllers.admin.routes
 
 @kifiInstallations(kifiInstallations: Seq[KifiInstallation]) = {
@@ -64,6 +64,17 @@
 
 @admin(count + " Total Users") {
   <h2> Showing @userStatisticsList.length (page @(page + 1)) </h2>
+
+  <form class="form-inline" action="@com.keepit.controllers.admin.routes.AdminUserController.searchUsers()" method="POST">
+    @if(searchTerm.isDefined){
+      <input type="text" name="searchTerm" value="@{searchTerm.get}"/>
+    } else {
+      <input type="text" name="searchTerm" placeholder="User first and/or last name"/>
+    }
+    <input type="submit" value="Search"/>
+  </form>
+
+
   @pagination(page, pageCount)
   <table class="table table-bordered">
     <tr>

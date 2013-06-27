@@ -28,7 +28,7 @@ import com.keepit.search.ActiveExperimentsCache
 import com.keepit.model.UserConnectionIdCache
 import scala.collection.concurrent.{TrieMap => ConcurrentMap}
 
-class DevCacheModule extends ScalaModule {
+class DevCacheModule extends CacheModule {
 
   def configure {
     bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
