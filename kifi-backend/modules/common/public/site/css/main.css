@@ -129,17 +129,19 @@ aside.right>.antiscroll-inner {position: absolute; top: 0; bottom: 0; left: 0; r
 .page-meta {font-size: 0}
 a.page-url[href] {font-size: 12px; line-height: 20px; color: inherit; -webkit-font-smoothing: antialiased; max-width: 100%; margin-bottom: 12px}
 a.page-url[href]:hover {text-decoration: underline}
-.page-pic {background-color: rgba(0,0,0,.05); background-size: 100% auto; height: 140px; -webkit-transition: margin-right .15s; transition: margin-right .15s; position: relative; display: none}
-[data-kept]>*>.page-pic {margin-right: 48px}
-.page-how {position: absolute; bottom: 0; right: 0; width: 140px; height: 48px; line-height: 48px; text-align: center; color: #fff; font-size: 18px; -webkit-font-smoothing: antialiased; -webkit-transform: rotate(90deg) scale(1,.001); transform: rotate(90deg) scale(1,.001); -webkit-transition: -webkit-transform .15s; transition: -webkit-transform .15s, transform .15s; -webkit-transform-origin: right bottom; transform-origin: right bottom}
-[data-kept]>*>*>.page-how {-webkit-transform: rotate(90deg); transform: rotate(90deg)}
+.page-pic-wrap {display: table; table-layout: fixed; width: 100%}
+.page-pic {display: table-cell; background-color: rgba(0,0,0,.05); background-size: 100% auto; width: 100%; min-height: 135px; padding-top: 47%; -moz-box-sizing: border-box; box-sizing: border-box}
+.page-how {display: table-cell; vertical-align: middle; text-align: center; white-space: nowrap; width: 0; max-width: 0; -webkit-transition: width .18s, max-width .18s; transition: width .18s, max-width .18s}
+[data-kept] .page-how {width: 48px; max-width: 48px}
 .page-how.pub {background-color: #accc98}
 .page-how.pri {background-color: #e78881}
-.page-how.pub::before,
-.page-how.pri::before {content: " "; display: inline-block; height: 16px; width: 16px; background: url(../img/keep-icons.png) -46px 0/auto 16px; vertical-align: -2px; margin-right: 9px; -webkit-transform: rotate(-90deg); transform: rotate(-90deg)}
-.page-how.pri::before {width: 12px; background-position: -34px 0}
-.page-how.pub::after {content: "Public"}
-.page-how.pri::after {content: "Private"}
+.page-how-text {margin: 0 -50%; color: #fff; font-size: 18px; -webkit-font-smoothing: antialiased; -webkit-transform: rotate(90deg) scale(1,.001); transform: rotate(90deg) scale(1,.001); -webkit-transition: -webkit-transform .18s; transition: -webkit-transform .18s, transform .18s}
+[data-kept] .page-how-text {-webkit-transform: rotate(90deg); transform: rotate(90deg)}
+.pub>.page-how-text::before,
+.pri>.page-how-text::before {content: " "; display: inline-block; height: 16px; width: 16px; background: url(../img/keep-icons.png) -46px 0/auto 16px; vertical-align: -2px; margin-right: 9px; -webkit-transform: rotate(-90deg); transform: rotate(-90deg)}
+.pri>.page-how-text::before {width: 12px; background-position: -34px 0}
+.pub>.page-how-text::after {content: "Public"}
+.pri>.page-how-text::after {content: "Private"}
 a.page-keep[href],
 a.page-priv[href] {display: inline-block; margin-top: 5px; color: #fff; background-color: #b8c5d2; font-size: 13px; line-height: 30px; width: 50%; -moz-box-sizing: border-box; box-sizing: border-box; text-align: center; -webkit-font-smoothing: antialiased}
 a.page-priv[href] {border-left: 2px solid #eff2f7}
