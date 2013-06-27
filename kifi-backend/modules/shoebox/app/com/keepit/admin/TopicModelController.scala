@@ -42,10 +42,10 @@ class TopicModelController  @Inject() (
 
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val content = body.get("doc").get
-    val topic = docTopicModel.getDocumentTopicDistribution(content)
-    val mappedTopic = topicNameMapper.scoreMapper(topic)          // indexes will be transferred
+    val rawTopic = docTopicModel.getDocumentTopicDistribution(content)
+    val topic = topicNameMapper.scoreMapper(rawTopic)          // indexes will be transferred
 
-    val topics = uriTopicHelper.getBiggerTwo(mappedTopic) match {
+    val topics = uriTopicHelper.getBiggerTwo(topic) match {
       case (None, None) => ""
       case (Some(a), None) => makeString(a, topic(a))
       case (None, Some(b)) => makeString(b, topic(b))
