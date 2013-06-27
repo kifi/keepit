@@ -680,7 +680,7 @@ slider2 = function() {
       api.require("scripts/thread.js", function() {
         api.port.emit("thread", {id: threadId, respond: true}, function(th) {
           api.port.emit("session", function(session) {
-            threadPane.render($tall, th.id, th.messages, session);
+            threadPane.render($tall, th.id, th.messages, session, th.isRedirect);
           });
         });
       });
