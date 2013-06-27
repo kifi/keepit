@@ -760,6 +760,20 @@ $(function() {
 		}
 	});
 
+	$(".send-feedback").click(function() {
+		if (!window.UserVoice) {
+			window.UserVoice = [];
+			$.getScript("//widget.uservoice.com/2g5fkHnTzmxUgCEwjVY13g.js>");
+		}
+		UserVoice.push(['showLightbox', 'classic_widget', {
+			mode: 'full',
+			primary_color: '#cc6d00',
+			link_color: '#007dbf',
+			default_mode: 'support',
+			forum_id: 200379,
+			custom_template_id: 3305}]);
+	});
+
 	populateCollections();
 	// populateCollectionsRight();
 
