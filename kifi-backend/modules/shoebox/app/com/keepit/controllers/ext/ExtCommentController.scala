@@ -186,7 +186,7 @@ class ExtCommentController @Inject() (
         case Some(commentRead) =>
           commentRead.withLastReadId(message.id.get)
         case None =>
-          CommentRead(userId = userId, uriId = uri.id.get, parentId = parent.id, lastReadId = message.id.get)
+          CommentRead(userId = userId, uriId = uriId, parentId = parent.id, lastReadId = message.id.get)
       })
     }
 
