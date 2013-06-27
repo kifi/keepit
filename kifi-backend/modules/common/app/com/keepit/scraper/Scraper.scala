@@ -77,8 +77,11 @@ class Scraper @Inject() (
         log.error("uncaught exception while scraping uri %s".format(uri), e)
         healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL))
         val errorURI = db.readWrite { implicit s =>
+          // first update the uri state to SCRAPE_FAILED
+          val savedUri = normalizedURIRepo.save(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
+          // then update the scrape schedule
           scrapeInfoRepo.save(info.withFailure())
-          normalizedURIRepo.save(uri.withState(NormalizedURIStates.SCRAPE_FAILED))
+          savedUri
         }
         (errorURI, None)
     }
@@ -100,16 +103,17 @@ class Scraper @Inject() (
         articleStore += (uri.id.get -> article)
 
         val scrapedURI = db.readWrite { implicit s =>
-          // update the scrape schedule and the uri state to SCRAPED
-          scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
+          // first update the uri state to SCRAPED
           val savedUri = normalizedURIRepo.save(uri.withTitle(article.title).withState(NormalizedURIStates.SCRAPED))
+          // then update the scrape schedule
+          scrapeInfoRepo.save(info.withDestinationUrl(article.destinationUrl).withDocumentChanged(signature.toBase64))
           bookmarkRepo.getByUriWithoutTitle(savedUri.id.get).foreach { bookmark =>
             bookmarkRepo.save(bookmark.copy(title = savedUri.title))
           }
           savedUri
         }
         log.debug("fetched uri %s => %s".format(uri, article))
-        
+
         def shouldUpdateScreenshot(uri: NormalizedURI) = {
           uri.screenshotUpdatedAt map { update =>
             Days.daysBetween(currentDateTime.toDateMidnight, update.toDateMidnight).getDays() >= 5
@@ -117,7 +121,7 @@ class Scraper @Inject() (
         }
         if(shouldUpdateScreenshot(uri))
           s3ScreenshotStore.updatePicture(uri)
-        
+
         (scrapedURI, Some(article))
       case NotScrapable(destinationUrl) =>
         val unscrapableURI = db.readWrite { implicit s =>

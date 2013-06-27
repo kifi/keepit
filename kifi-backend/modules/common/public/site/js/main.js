@@ -468,10 +468,11 @@ $(function() {
 		} else if ($selected.length > 1) {
 			var howKept = $selected.not(".mine").length ? null :
 				$selected.has(".keep-private.on").length == $selected.length ? "pri" : "pub";
-			$detail.attr("data-kept", howKept);
+			$detail.attr("data-kept", howKept).addClass("multiple");
 			$('.page-title').text($selected.length + " keeps selected");
 			$('.page-url').hide().empty().attr('href', '');
-			$('.page-pic').hide().css('background-image', '');
+			$('.page-pic-wrap').hide();
+			$('.page-pic').css('background-image', '');
 			$('.page-who').hide();
 
 			// inCollTmpl.clear();
@@ -488,10 +489,11 @@ $(function() {
 			$keep = $selected;
 			var howKept = $keep.is('.mine') ? ($keep.has('.keep-private.on').length ? "pri" : "pub") : null;
 			var $keepLink = $keep.find('.keep-title>a'), url = $keepLink[0].href;
-			$detail.attr("data-kept", howKept);
+			$detail.attr("data-kept", howKept).removeClass("multiple");
 			$('.page-title').text($keepLink.text());
 			$('.page-url').attr('href', url).text(url).show();
-			$('.page-pic').css("background-image", "url(" + urlScreenshot + '?url=' + escape(url) + ")").show();
+			$('.page-pic').css("background-image", "url(" + urlScreenshot + '?url=' + escape(url) + ")");
+			$('.page-pic-wrap').show();
 			$('.page-how').attr('class', 'page-how ' + (howKept || ''));
 			$('.page-who-pics').empty().append($keep.find(".keep-who>img").clone());
 			$('.page-who-text').html($keep.find(".keep-who-text").html());
@@ -756,6 +758,20 @@ $(function() {
 					}});
 			});
 		}
+	});
+
+	$(".send-feedback").click(function() {
+		if (!window.UserVoice) {
+			window.UserVoice = [];
+			$.getScript("//widget.uservoice.com/2g5fkHnTzmxUgCEwjVY13g.js>");
+		}
+		UserVoice.push(['showLightbox', 'classic_widget', {
+			mode: 'full',
+			primary_color: '#cc6d00',
+			link_color: '#007dbf',
+			default_mode: 'support',
+			forum_id: 200379,
+			custom_template_id: 3305}]);
 	});
 
 	populateCollections();

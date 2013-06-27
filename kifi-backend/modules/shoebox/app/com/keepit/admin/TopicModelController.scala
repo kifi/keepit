@@ -17,6 +17,7 @@ class TopicModelController  @Inject() (
   docTopicModel: DocumentTopicModel,
   wordTopicModel: WordTopicModel,
   topicPlugin: TopicUpdaterPlugin,
+  topicNameMapper: TopicNameMapper,
   userTopicRepo: UserTopicRepo,
   db: Database,
   actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator){
@@ -34,18 +35,17 @@ class TopicModelController  @Inject() (
   }
 
   def inferTopic = AdminHtmlAction{ implicit request =>
-
     def makeString(topicId: Int, membership: Double) = {
       val score = "%.3f".format(membership)
-      topicId.toString + ": " + score
+      topicNameMapper.getMappedNameByNewId(topicId) + ": " + score  // use transferred indexes
     }
 
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val content = body.get("doc").get
-    val topic = docTopicModel.getDocumentTopicDistribution(content)
+    val rawTopic = docTopicModel.getDocumentTopicDistribution(content)
+    val topic = topicNameMapper.scoreMapper(rawTopic)          // indexes will be transferred
 
-
-    val topics = uriTopicHelper.assignTopics(topic) match {
+    val topics = uriTopicHelper.getBiggerTwo(topic) match {
       case (None, None) => ""
       case (Some(a), None) => makeString(a, topic(a))
       case (None, Some(b)) => makeString(b, topic(b))
@@ -66,13 +66,13 @@ class TopicModelController  @Inject() (
     }
 
     def buildString(arr: Array[(Int, Double)]) = {
-      arr.map{x => x._1 + ": " + "%.3f".format(x._2)}.mkString("\n")
+      arr.map{x => topicNameMapper.getMappedNameByNewId(x._1) + ": " + "%.3f".format(x._2)}.mkString("\n")
     }
 
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val word = body.get("word").get
     val topic = wordTopicModel.wordTopic.get(word) match {
-      case Some(arr) => buildString( getTopTopics(arr) )
+      case Some(arr) => buildString( getTopTopics( topicNameMapper.scoreMapper(arr) ) )
       case None => ""
     }
 
@@ -84,12 +84,11 @@ class TopicModelController  @Inject() (
   }
 
   def getUserTopic = AdminHtmlAction { implicit request =>
-    def getTopTopics(arr: Array[Int], topK: Int = 5) = {
-       arr.zipWithIndex.filter(_._1 > 0).sortWith((a, b) => a._1 > b._1).take(topK).map{x => (x._2, x._1)}
-    }
 
-    def buildString(arr: Array[(Int, Int)]) = {
-      arr.map{x => x._1 + ": " + x._2}.mkString("\n")
+    def buildString(score: Array[Int], topK: Int = 5) = {
+      val newScore = topicNameMapper.scoreMapper(score)
+      val tops = newScore.zipWithIndex.filter(_._1 > 0).sortWith((a, b) => a._1 > b._1).take(topK).map{x => (x._2, x._1)}
+      tops.map{x => topicNameMapper.getMappedNameByNewId(x._1) + ": " + x._2}.mkString("\n")      // NOTE: use new id after score transformation
     }
 
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
@@ -101,7 +100,7 @@ class TopicModelController  @Inject() (
       }
     }
 
-    val rv = buildString( getTopTopics(topic) )
+    val rv = buildString(topic)
     Redirect(com.keepit.controllers.admin.routes.TopicModelController.userTopic(Some(userId.id.toString), Some(rv)))
   }
 

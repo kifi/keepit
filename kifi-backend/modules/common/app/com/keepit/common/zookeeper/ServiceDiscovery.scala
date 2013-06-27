@@ -42,8 +42,7 @@ class ServiceDiscoveryImpl @Inject() (
     clustersToInit
   }
 
-  def isLeader: Boolean = true
-  /*{
+  def isLeader: Boolean = {
     val myCluster = clusters(services.currentService)
     val registered = myNode map {node => myCluster.registered(node)} getOrElse false
     if (!registered) {
@@ -62,7 +61,7 @@ class ServiceDiscoveryImpl @Inject() (
         require(myCluster.size == 0)
         return true
     }
-  }*/
+  }
 
   implicit val amazonInstanceInfoFormat = AmazonInstanceInfo.format
 
@@ -73,7 +72,7 @@ class ServiceDiscoveryImpl @Inject() (
   private def watchService(cluster: ServiceCluster): Unit = {
     zk.createPath(cluster.servicePath)
     zk.watchChildren(cluster.servicePath, { (children : Seq[Node]) =>
-      println(s"""services in my cluster under ${cluster.servicePath.name}: ${children.mkString(", ")}""")
+      log.info(s"""services in my cluster under ${cluster.servicePath.name}: ${children.mkString(", ")}""")
       future {
         cluster.update(zk, children)
       }
@@ -83,11 +82,13 @@ class ServiceDiscoveryImpl @Inject() (
   def register(): Node = {
     watchServices()
     val myServiceType: ServiceType = services.currentService
-    println(s"registered clusters: $clusters, my service is $myServiceType")
+    log.info(s"registered clusters: $clusters, my service is $myServiceType")
     val myCluster = clusters(myServiceType)
     myNode = Some(zk.createNode(myCluster.serviceNodeMaster, null, EPHEMERAL_SEQUENTIAL))
-    zk.set(myNode.get, Json.toJson(amazonInstanceInfoProvider.get).toString)
-    println(s"registered as node ${myNode.get}")
+    val instanceInfo = amazonInstanceInfoProvider.get
+    myCluster.register(myNode.get, instanceInfo)
+    zk.set(myNode.get, Json.toJson(instanceInfo).toString)
+    log.info(s"registered as node ${myNode.get}")
     myNode.get
   }
 

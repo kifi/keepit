@@ -8,8 +8,8 @@ import com.keepit.inject.AppScoped
 
 object TopicModelGlobal {
   val numTopics = 100
-  val primaryTopicThreshold = 0.1       // need to tune this as numTopics varies
-  val topicTailcut = 0.5
+  val primaryTopicThreshold = 0.07       // need to tune this as numTopics varies
+  val topicTailcut = 0.7
 }
 
 trait TopicModelModule extends ScalaModule
@@ -30,5 +30,18 @@ case class LdaTopicModelModule() extends TopicModelModule with Logging {
     val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map{ i => "topic%d".format(i)}.toArray
     val loader = new LdaTopicModelLoader
     loader.load(c, topicNames)
+  }
+
+  @Provides
+  @Singleton
+  def topicNameMapper: TopicNameMapper = {
+    log.info("loading topic name list")
+    val path = current.configuration.getString("learning.topicModel.topicNames.path").get
+    val rows = scala.io.Source.fromFile(path).mkString.split("\n")
+    assume(rows.size == TopicModelGlobal.numTopics, "insufficient raw topic names")
+    val sep = "\t"
+    val rawNames = rows.map{_.split(sep)(1)}
+    val (newNames, mapper) = NameMapperConstructer.getMapper(rawNames)
+    new ManualTopicNameMapper(rawNames, newNames, mapper)
   }
 }
