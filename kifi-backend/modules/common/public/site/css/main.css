@@ -75,7 +75,7 @@ a.new-collection:hover {background-color: #a1acbd}
 #collections-list {overflow: hidden}
 #collections-list.positioned {position: absolute; bottom: 0; left: 0; right: 0}
 #collections-list>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden}
-#collections-list>.sortable-placeholder {background: #6fa6ef; height: 2px; min-height: 0}
+#collections-list>.antiscroll-inner>.sortable-placeholder {background: #6fa6ef; height: 2px; min-height: 0}
 h3.collection {border-bottom: 1px solid #dbdee3; position: relative; -webkit-transition: padding-left .16s, background-color 0s; transition: padding-left .16s, background-color 0s}
 .collection.with-tri:not(.no-tri) {padding-left: 27px}
 .collection.renaming {background-color: #fff}
