@@ -3,6 +3,7 @@ package com.keepit.search.graph
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
+import com.keepit.common.search.SharingUserInfo
 import com.keepit.model.{NormalizedURI, User}
 import com.keepit.search.graph.URIGraphFields._
 import com.keepit.search.index.ArrayIdMapper
@@ -80,6 +81,12 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
     friendEdgeSet.destIdSet.foldLeft(Map.empty[Long, UserToUriEdgeSet]){ (m, f) =>
       m + (f.id -> getUserToUriEdgeSet(f, publicOnly = true))
     }
+  }
+
+  def getSharingUserInfo(uriId: Id[NormalizedURI]): SharingUserInfo = {
+    val keepersEdgeSet = getUriToUserEdgeSet(uriId)
+    val sharingUserIds = intersect(friendEdgeSet, keepersEdgeSet).destIdSet
+    SharingUserInfo(sharingUserIds, keepersEdgeSet.size)
   }
 
   @volatile

@@ -15,6 +15,7 @@ import scala.concurrent.Await
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
 import com.keepit.search.index.Indexer
+import com.keepit.search.MainSearcherFactory
 import com.keepit.common.search.SharingUserInfo
 import com.keepit.common.search.IndexInfo
 
@@ -22,6 +23,7 @@ import com.keepit.common.search.IndexInfo
 class URIGraphController @Inject()(
     uriGraphPlugin: URIGraphPlugin,
     shoeboxClient: ShoeboxServiceClient,
+    mainSearcherFactory: MainSearcherFactory,
     uriGraph: URIGraph) extends SearchServiceController {
 
   def reindex() = Action { implicit request =>
@@ -42,23 +44,10 @@ class URIGraphController @Inject()(
     }
   }
 
-  private def getSharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Seq[SharingUserInfo] = {
-    val friendIdsFuture = shoeboxClient.getConnectedUsers(userId)
-    val searcher = uriGraph.getURIGraphSearcher()
-    lazy val friendEdgeSet = {
-      val friendIds = Await.result(friendIdsFuture, 5 seconds)
-      searcher.getUserToUserEdgeSet(userId, friendIds - userId)
-    }
-    uriIds.map { uriId =>
-      val keepersEdgeSet = searcher.getUriToUserEdgeSet(uriId)
-      val sharingUserIds = searcher.intersect(friendEdgeSet, keepersEdgeSet).destIdSet
-      SharingUserInfo(sharingUserIds, keepersEdgeSet.size)
-    }
-  }
-
   def sharingUserInfo(userId: Id[User], uriIds: String) = Action { implicit request =>
+    val searcher = mainSearcherFactory.getURIGraphSearcher(userId)
     val ids = uriIds.split(",").map(_.trim).collect { case idStr if !idStr.isEmpty => Id[NormalizedURI](idStr.toLong) }
-    Ok(Json.toJson(getSharingUserInfo(userId, ids)))
+    Ok(Json.toJson(ids map searcher.getSharingUserInfo))
   }
 
   def indexInfo = Action { implicit request =>
