@@ -93,7 +93,8 @@ $(function() {
 				});
 			}};
 
-	// var $inColl = $(".page-colls"), inCollTmpl = Tempo.prepare($inColl);
+	var $inColl = $(".page-coll-list").contents().filter(function() {return this.nodeType == 3}).remove().end().end();
+	var inCollTmpl = Tempo.prepare($inColl);
 
 	var me;
 	var myKeepsCount;
@@ -496,6 +497,7 @@ $(function() {
 			$('.page-pic').css('background-image', '');
 			$('.page-who').hide();
 
+			// TODO: sort collections by number of selected keeps
 			// inCollTmpl.clear();
 			// var allCollIds = {};
 			// $selected.find(".keep-coll").each(function() {
@@ -520,11 +522,11 @@ $(function() {
 			$('.page-who-text').html($keep.find(".keep-who-text").html());
 			$('.page-who').show();
 
-			// inCollTmpl.clear();
-			// $keep.find('.keep-coll').each(function() {
-			// 	var id = $(this).data('id');
-			// 	inCollTmpl.append({id: id, name: collections[id].name});
-			// });
+			inCollTmpl.clear();
+			$keep.find('.keep-coll').each(function() {
+				var id = $(this).data('id');
+				inCollTmpl.append({id: id, name: collections[id].name});
+			});
 			showDetails();
 		}
 	});
@@ -729,7 +731,7 @@ $(function() {
 	var $detail = $('.detail');
 
 	// keep / unkeep
-	$detail.find('.page-keep,.page-priv').click(function(e) {
+	$detail.on("click", '.page-keep,.page-priv', function(e) {
 		var $keeps = $main.find(".keep.selected");
 		var $a = $(this), howKept = $detail.attr("data-kept");
 		if (!howKept) {  // keep
@@ -778,6 +780,12 @@ $(function() {
 						$keep.find('.keep-private').toggleClass('on', howKept == 'pri');
 					}});
 			});
+		}
+	}).on("click", ".page-coll-a", function(e) {
+		e.preventDefault();
+		var collId = $(this.parentNode).data("id");
+		if (collId !== $collList.find(".collection.active").data("id")) {
+			showMyKeeps(collId);
 		}
 	});
 
