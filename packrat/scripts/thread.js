@@ -96,15 +96,10 @@ threadPane = function() {
 
   function sendReply($container, threadId, session, e, text) {
     var $reply, resp;
-    api.port.emit("send_reply", {
-        url: document.URL,
-        title: document.title,
-        text: text,
-        threadId: threadId},
-      function(o) {
-        api.log("[sendReply] resp:", o);
-        updateSentReply($reply, resp = o);
-      });
+    api.port.emit("send_reply", {text: text, threadId: threadId}, function(o) {
+      api.log("[sendReply] resp:", o);
+      updateSentReply($reply, resp = o);
+    });
     renderMessage({
       id: "",
       createdAt: new Date().toISOString(),

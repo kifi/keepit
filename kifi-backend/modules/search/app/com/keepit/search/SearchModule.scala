@@ -70,7 +70,7 @@ class SearchModule() extends ScalaModule with Logging {
     bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
     bind[CommentIndexerPlugin].to[CommentIndexerPluginImpl].in[AppScoped]
     bind[RemotePostOffice].to[RemotePostOfficeImpl]
-    install(new SearchCacheModule)
+    install(SearchCacheModule())
   }
 
   private def getDirectory(maybeDir: Option[String]): Directory = {

@@ -17,7 +17,7 @@ import com.keepit.search._
 
 import play.api.Play.current
 
-class S3Module() extends ScalaModule with Logging {
+class S3ImplModule() extends ScalaModule with Logging {
 
   def configure() {
 

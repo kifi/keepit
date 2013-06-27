@@ -26,6 +26,7 @@ import play.api.Plugin
 import play.api.templates.Html
 import com.keepit.common.mail.RemotePostOffice
 import scala.concurrent.ExecutionContext.Implicits.global
+import net.codingwell.scalaguice.ScalaModule
 
 object Healthcheck {
 
@@ -208,4 +209,12 @@ class HealthcheckPluginImpl @Inject() (
   }
 
   override def warmUp() = scheduleTaskOnce(actorFactory.system, 3 minutes, "Healthcheck: consider service warm") {super.warmUp()}
+}
+
+trait HealthCheckModule extends ScalaModule
+
+case class ShoeboxHealthCheckModule() extends HealthCheckModule {
+  def configure() {
+    bind[HealthcheckMailSender].to[LocalHealthcheckMailSender]
+  }
 }

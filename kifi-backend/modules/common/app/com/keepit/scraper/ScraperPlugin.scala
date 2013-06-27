@@ -18,6 +18,8 @@ import play.api.Plugin
 import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import net.codingwell.scalaguice.ScalaModule
+import com.keepit.inject.AppScoped
 
 case object Scrape
 case class ScrapeInstance(uri: NormalizedURI)
