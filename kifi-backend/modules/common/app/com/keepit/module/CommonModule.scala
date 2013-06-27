@@ -30,7 +30,7 @@ class CommonModule extends ScalaModule with Logging {
 
   def configure() {
     install(new FortyTwoModule)
-    install(new S3Module)
+    install(new S3ImplModule)
     install(new DiscoveryModule)
 
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]

@@ -15,7 +15,7 @@ import org.apache.poi.util.IOUtils
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 
-import com.google.inject.{Provider, ImplementedBy, Inject}
+import com.google.inject.{Provides, ImplementedBy, Inject, Singleton}
 
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.actor.ActorFactory
@@ -35,6 +35,8 @@ import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsNumber, JsString, JsObject}
 import play.api.libs.ws.WS
+import net.codingwell.scalaguice.ScalaModule
+import com.google.common.io.Files
 
 private case object RefetchAll
 private case class ApplyTag(tagName: DomainTagName, domainNames: Seq[String])
@@ -322,5 +324,18 @@ class DomainTagImporterImpl @Inject() (
 
   def applyTagToDomains(tagName: DomainTagName, domainNames: Seq[String]): Future[DomainTag] = {
     actor.ask(ApplyTag(tagName, domainNames))(1 minute).mapTo[DomainTag]
+  }
+}
+
+trait DomainTagImporterModule extends ScalaModule
+
+case class DomainTagImporterImplModule() extends DomainTagImporterModule {
+  def configure() {}
+
+  @Singleton
+  @Provides
+  def domainTagImportSettings: DomainTagImportSettings = {
+    val dirPath = Files.createTempDir().getAbsolutePath
+    DomainTagImportSettings(localDir = dirPath, url = "http://www.komodia.com/clients/42.zip")
   }
 }

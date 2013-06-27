@@ -20,6 +20,7 @@ import play.api.Play.current
 
 import java.io.InputStream
 import java.io.ByteArrayInputStream
+import net.codingwell.scalaguice.ScalaModule
 
 case class S3Bucket(name: String)
 
@@ -111,3 +112,5 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
   }
 
 }
+
+trait S3Module extends ScalaModule

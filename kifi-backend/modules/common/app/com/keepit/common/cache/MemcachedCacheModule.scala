@@ -9,7 +9,7 @@ import com.keepit.inject.AppScoped
 import play.api.Play
 import play.api.Play.current
 
-class MemcachedCacheModule() extends ScalaModule {
+case class MemcachedCacheModule() extends ScalaModule {
   def configure(): Unit = {
     bind[FortyTwoCachePlugin].to[MemcachedCache].in[AppScoped]
   }

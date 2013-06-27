@@ -169,7 +169,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   @Provides
   @Singleton
   def sliderHistoryTracker(sliderHistoryRepo: SliderHistoryRepo, db: Database): SliderHistoryTracker =
-    new SliderHistoryTracker(sliderHistoryRepo, db, -1, -1, -1)
+    new SliderHistoryTrackerImpl(sliderHistoryRepo, db, -1, -1, -1)
 
   @Singleton
   @Provides
