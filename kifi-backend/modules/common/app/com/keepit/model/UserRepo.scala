@@ -2,6 +2,9 @@ package com.keepit.model
 
 import com.google.inject.{Inject, Singleton, ImplementedBy, Provider}
 
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent._
+
 import com.keepit.shoebox.usersearch._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ExternalId, Id, State}
@@ -55,7 +58,9 @@ class UserRepoImpl @Inject() (
   override def invalidateCache(user: User)(implicit session: RSession) = {
     user.id map {id => idCache.set(UserIdKey(id), user)}
     externalIdCache.set(UserExternalIdKey(user.externalId), user)
-    userIndexProvider.get.addUser(user)
+    future {
+      userIndexProvider.get.addUser(user)
+    }
     user
   }
 
