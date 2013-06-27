@@ -158,6 +158,11 @@ a.page-priv[href]:active {background-color: #a0b1c2}
 .page-priv::after {content: "Keep privately"}
 [data-kept="pub"]>*>.page-priv::after {content: "Make private"}
 [data-kept="pri"]>*>.page-priv::after {content: "Make public"}
+.multiple>*>.page-keep::after {content: "Keep all"}
+.multiple[data-kept]>*>.page-keep::after {content: "Unkeep all"}
+.multiple>*>.page-priv::after {content: "Keep all privately"}
+.multiple[data-kept="pub"]>*>.page-priv::after {content: "Make all private"}
+.multiple[data-kept="pri"]>*>.page-priv::after {content: "Make all public"}
 .page-who,
 .page-colls {margin: 18px 0 5px; border-top: 1px solid #cdd6e0; padding-top: 11px; display: none}
 .page-who-pics {margin: 5px 0 13px; white-space: nowrap; overflow: hidden}
