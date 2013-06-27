@@ -83,7 +83,9 @@ $(function() {
 						$keeps.addClass("mine")
 							.find(".keep-colls:not(:has(.keep-coll[data-id=" + collId + "]))")
 							.contents().filter(function() {return this.nodeType == 3}).remove().end().end()
-							.append("<a href=javascript: class=keep-coll data-id=" + collId + ">" + collName + "</a>");
+							.append('<span class=keep-coll data-id=' + collId + '>' +
+								'<a class="keep-coll-a" href="javascript:">' + collName + '</a><a class="keep-coll-x" href="javascript:"></a>' +
+								'</span>');
 						// if (!$inColl.find("#cb1-" + collId).length) {
 						// 	inCollTmpl.append({id: collId, name: collName});
 						// }
@@ -440,12 +442,30 @@ $(function() {
 
 	var $main = $(".main").on("mousedown", ".keep-checkbox", function(e) {
 		e.preventDefault();  // avoid starting selection
-	}).on("click", ".keep-coll", function(e) {
+	}).on("click", ".keep-coll-a", function(e) {
 		e.stopPropagation(), e.preventDefault();
-		var collId = $(this).data("id");
+		var collId = $(this.parentNode).data("id");
 		if (collId !== $collList.find(".collection.active").data("id")) {
 			showMyKeeps(collId);
 		}
+	}).on("click", ".keep-coll-x", function(e) {
+		e.stopPropagation(), e.preventDefault();
+		var $coll = $(this.parentNode), collId = $coll.data("id");
+		$.ajax({
+			url: urlCollections + "/" + collId + "/removeKeeps",
+			type: "POST",
+			dataType: 'json',
+			data: JSON.stringify([$coll.closest(".keep").data("id")]),
+			contentType: 'application/json',
+			error: showMessage.bind(null, 'Could not remove keep from collection, please try again later'),
+			success: function(data) {
+				$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps -= data.removed);
+			}});
+		$coll.css("width", $coll[0].offsetWidth).layout().on("transitionend", function(e) {
+			if (e.target === this) {
+				$coll.remove();
+			}
+		}).addClass("removed");
 	}).on("click", ".keep", function(e) {
 		// 1. Only one keep at a time can be selected and not checked.
 		// 2. If a keep is selected and not checked, no keeps are checked.
