@@ -42,8 +42,7 @@ class ServiceDiscoveryImpl @Inject() (
     clustersToInit
   }
 
-  def isLeader: Boolean = true
-  /*{
+  def isLeader: Boolean = {
     val myCluster = clusters(services.currentService)
     val registered = myNode map {node => myCluster.registered(node)} getOrElse false
     if (!registered) {
@@ -62,7 +61,7 @@ class ServiceDiscoveryImpl @Inject() (
         require(myCluster.size == 0)
         return true
     }
-  }*/
+  }
 
   implicit val amazonInstanceInfoFormat = AmazonInstanceInfo.format
 
