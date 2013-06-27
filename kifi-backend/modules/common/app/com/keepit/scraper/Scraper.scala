@@ -25,6 +25,8 @@ import scala.util.{Failure, Success}
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.store.S3ScreenshotStore
 import org.joda.time.Days
+import net.codingwell.scalaguice.ScalaModule
+import com.keepit.inject.AppScoped
 
 object Scraper {
   val BATCH_SIZE = 100
@@ -263,5 +265,14 @@ class Scraper @Inject() (
 
   def close() {
     httpFetcher.close()
+  }
+}
+
+trait ScraperModule extends ScalaModule
+
+case class ScraperImplModule() extends ScraperModule {
+  def configure {
+    bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
+    bind[DataIntegrityPlugin].to[DataIntegrityPluginImpl].in[AppScoped]
   }
 }

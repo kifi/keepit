@@ -8,14 +8,14 @@ import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.Singleton
 import com.keepit.common.db.slick._
 
-class SlickModule(dbInfo: DbInfo) extends ScalaModule {
+case class SlickModule(dbInfo: DbInfo) extends ScalaModule {
   def configure(): Unit = {
     //see http://stackoverflow.com/questions/6271435/guice-and-scala-injection-on-generics-dependencies
-    bind[Database].in(classOf[Singleton])
     lazy val db = dbInfo.driverName match {
-      case MySQL.driverName     => new MySQL( dbInfo )
-      case H2.driverName        => new H2( dbInfo )
+      case MySQL.driverName     => new MySQL(dbInfo)
+      case H2.driverName        => new H2(dbInfo)
     }
+    bind[Database].in(classOf[Singleton])
     bind[DataBaseComponent].toInstance(db)
   }
 }
