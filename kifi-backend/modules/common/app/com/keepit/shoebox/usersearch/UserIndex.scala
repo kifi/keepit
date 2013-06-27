@@ -1,4 +1,4 @@
-package com.keepit.usersearch
+package com.keepit.shoebox.usersearch
 
 import com.keepit.common.db.Id
 import com.keepit.model.User
@@ -54,7 +54,6 @@ object UserIndex {
   val userNameFieldName = "name"
 }
 
-@Singleton
 class UserIndex {
   import UserIndex._
 
@@ -69,6 +68,7 @@ class UserIndex {
 
   def addUsers(users: Seq[User]): Unit = synchronized {
     users.foreach{ user =>
+      println(s"================> adding user $user")
       val doc = new Document()
 
       val userIdField = new Field(userIdFieldName, user.id.get.id.toString, idFieldType)
@@ -92,6 +92,9 @@ class UserIndex {
       } else {
         oldIndexSearcher
       }
+    }.orElse{
+      val indexReader = DirectoryReader.open(indexDirectory)
+      Some(new IndexSearcher(indexReader))
     }
   }
 

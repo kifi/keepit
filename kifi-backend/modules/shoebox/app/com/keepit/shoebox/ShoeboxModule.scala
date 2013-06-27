@@ -37,7 +37,8 @@ abstract class ShoeboxModule(
   val webSocketModule: WebSocketModule,
   val topicModelModule: TopicModelModule,
   val domainTagImporterModule: DomainTagImporterModule,
-  val sliderHistoryTrackerModule: SliderHistoryTrackerModule
+  val sliderHistoryTrackerModule: SliderHistoryTrackerModule,
+  val userIndexModule: UserIndexModule = UserIndexModule()
 
 ) extends ScalaModule {
   def configure {
@@ -61,5 +62,6 @@ abstract class ShoeboxModule(
     install(topicModelModule)
     install(domainTagImporterModule)
     install(sliderHistoryTrackerModule)
+    install(userIndexModule)
   }
 }
