@@ -14,6 +14,7 @@ import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.realtime.UserChannel
 import com.keepit.search.SearchServiceClient
+import com.keepit.usersearch.UserIndex
 
 import play.api.data.Forms._
 import play.api.data._
@@ -52,7 +53,13 @@ class AdminUserController @Inject() (
     userValueRepo: UserValueRepo,
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
+    userIndex: UserIndex,
     clock: Clock) extends AdminController(actionAuthenticator) {
+
+  // load users into UserIndex
+  db.readOnly{ implicit s =>
+    userIndex.addUsers(userRepo.allExcluding(UserStates.INACTIVE))
+  }
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val (user, socialUserInfos, follows, comments, messages, sentElectronicMails) = db.readOnly { implicit s =>
@@ -183,7 +190,7 @@ class AdminUserController @Inject() (
     searchTerm match {
       case None => Redirect(routes.AdminUserController.usersView(0))
       case Some(term) =>
-        val userIds = Seq(Id[User](1))
+        val userIds = userIndex.search(term)
         val users = db.readOnly { implicit s =>
           userIds map userRepo.get map userStatistics
         }
