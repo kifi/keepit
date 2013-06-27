@@ -1,6 +1,7 @@
 package com.keepit.search
 
 import com.keepit.common.db.Id
+import com.keepit.common.cache.{ProbablisticLRUChunkCache, ProbablisticLRUChunkKey}
 
 import scala.math._
 import java.io.File
@@ -55,25 +56,30 @@ class SimpleLocalBuffer(byteBuffer: ByteBuffer) extends MultiChunkBuffer {
 }
 
 
+class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticLRUStore, val filterName: ProbablisticLRUName) extends MultiChunkBuffer {
 
-class S3BackedBuffer (dataStore : ProbablisticLRUStore, val filterName: ProbablisticLRUName) extends MultiChunkBuffer {
 
   private def loadChunk(chunkId: Int) : Array[Int] = {
-    //TODO: get or else from cache, treat empty specially
-    dataStore.get(FullFilterChunkId(filterName.name, chunkId)) match {
-      case Some(intBuffer) => intBuffer
-      case None => 
+    val fullId = FullFilterChunkId(filterName.name, chunkId)
+    val key = ProbablisticLRUChunkKey(fullId)
+    cache.getOrElseOpt(key)(dataStore.get(fullId)) match {
+      case Some(intArray) => intArray
+      case None =>
         val intBuffer = new Array[Int](chunkSize+1)
         intBuffer(0)=chunkSize
         intBuffer
     }
   }
 
-  private def saveChunk(chunkId: Int, chunk: Array[Int]) : Unit = dataStore += (FullFilterChunkId(filterName.name, chunkId), chunk) //TODO: remove chunk from cache
+  private def saveChunk(chunkId: Int, chunk: Array[Int]) : Unit = { 
+    val fullId = FullFilterChunkId(filterName.name, chunkId)
+    dataStore += (fullId, chunk)
+    cache.remove(ProbablisticLRUChunkKey(fullId))
+  }
+
+  private def numChunks : Int = 4000 
 
   def chunkSize : Int = 4000
-
-  def numChunks : Int = 4000 
 
   def getChunk(key: Long) = {
     val chunkId = ((key % chunkSize*numChunks) / chunkSize).toInt
@@ -101,6 +107,7 @@ class S3BackedBuffer (dataStore : ProbablisticLRUStore, val filterName: Probabli
   }
 
 }
+
 
 object ProbablisticLRU {
   def apply(file: File, tableSize: Int, numHashFuncs: Int, syncEvery: Int) = {
