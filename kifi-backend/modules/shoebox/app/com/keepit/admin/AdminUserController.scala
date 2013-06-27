@@ -188,7 +188,7 @@ class AdminUserController @Inject() (
         val users = db.readOnly { implicit s =>
           userIds map userRepo.get map userStatistics
         }
-        Ok(html.admin.users(users, 0, users.size, users.size, searchTerm))
+        Ok(html.admin.users(users, 0, users.size, 1, searchTerm))
     }
   }
 
