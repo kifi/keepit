@@ -14,6 +14,7 @@ trait TopicNameMapper {
   def getMappedNameByOriginalId(originalId: Int): String
   def getMappedNameByNewId(newId: Int): String
   def scoreMapper(score: Array[Int]): Array[Int]
+  def scoreMapper(score: Array[Double]): Array[Double]
 }
 
 class IdentityTopicNameMapper(val rawTopicNames: Array[String]) extends TopicNameMapper {
@@ -22,6 +23,7 @@ class IdentityTopicNameMapper(val rawTopicNames: Array[String]) extends TopicNam
   def getMappedNameByOriginalId(originalId: Int) = rawTopicNames(originalId)
   def getMappedNameByNewId(newId: Int) = mappedNames(newId)
   def scoreMapper(score: Array[Int]) = score
+  def scoreMapper(score: Array[Double]) = score
 }
 
 class ManualTopicNameMapper (val rawTopicNames: Array[String], val mappedNames: Array[String], val mapper: Map[Int, Int]) extends TopicNameMapper {
@@ -36,7 +38,16 @@ class ManualTopicNameMapper (val rawTopicNames: Array[String], val mappedNames: 
 
   def scoreMapper(score: Array[Int]) = {
     val rv = new Array[Int](mappedNames.size)
-    (0 until score.length).foreach{ i =>
+    (0 until score.length).foreach { i =>
+      val idx = idMapper(i)
+      if (idx != -1) rv(idx) += score(i)
+    }
+    rv
+  }
+
+  def scoreMapper(score: Array[Double]) = {
+    val rv = new Array[Double](mappedNames.size)
+    (0 until score.length).foreach { i =>
       val idx = idMapper(i)
       if (idx != -1) rv(idx) += score(i)
     }
