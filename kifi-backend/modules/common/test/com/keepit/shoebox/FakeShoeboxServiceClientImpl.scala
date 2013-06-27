@@ -286,8 +286,8 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
     Future.successful(bookmarks)
   }
 
-  def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]] = {
-    val collections = allCollections.values.filter(_.userId == userId).map(_.id.get).toSeq
+  def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]] = {
+    val collections = allCollections.values.filter(_.userId == userId).toSeq
     Future.successful(collections)
   }
 

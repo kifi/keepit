@@ -53,7 +53,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]]
   def getBookmarksInCollection(id: Id[Collection]): Future[Seq[Bookmark]]
   def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Collection]]
-  def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]]
+  def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]]
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]]
   def getIndexable(seqNum: Long, fetchSize: Int): Future[Seq[NormalizedURI]]
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]]
@@ -314,9 +314,9 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]] = {
+  def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]] = {
     call(Shoebox.internal.getCollectionsByUser(userId)).map { r =>
-      Json.fromJson[Seq[Long]](r.json).get.map(Id[Collection](_))
+      Json.fromJson[Seq[Collection]](r.json).get
     }
   }
 
