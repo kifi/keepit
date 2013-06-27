@@ -468,7 +468,7 @@ $(function() {
 		} else if ($selected.length > 1) {
 			var howKept = $selected.not(".mine").length ? null :
 				$selected.has(".keep-private.on").length == $selected.length ? "pri" : "pub";
-			$detail.attr("data-kept", howKept);
+			$detail.attr("data-kept", howKept).addClass("multiple");
 			$('.page-title').text($selected.length + " keeps selected");
 			$('.page-url').hide().empty().attr('href', '');
 			$('.page-pic-wrap').hide();
@@ -489,7 +489,7 @@ $(function() {
 			$keep = $selected;
 			var howKept = $keep.is('.mine') ? ($keep.has('.keep-private.on').length ? "pri" : "pub") : null;
 			var $keepLink = $keep.find('.keep-title>a'), url = $keepLink[0].href;
-			$detail.attr("data-kept", howKept);
+			$detail.attr("data-kept", howKept).removeClass("multiple");
 			$('.page-title').text($keepLink.text());
 			$('.page-url').attr('href', url).text(url).show();
 			$('.page-pic').css("background-image", "url(" + urlScreenshot + '?url=' + escape(url) + ")");
