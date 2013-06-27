@@ -142,3 +142,4 @@ class UserIndex {
     if (booleanQuery.clauses.size > 0) Some(booleanQuery) else None
   }
 }
+
