@@ -11,11 +11,12 @@
 threadPane = function() {
   var $scroller = $(), $holder = $(), buffer = {};
   return {
-    render: function($container, threadId, messages, session) {
+    render: function($container, threadId, messages, session, isRedirect) {
       messages.forEach(function(m) {
         m.isLoggedInUser = m.user.id == session.userId;
       });
       render("html/metro/messages.html", {
+        isRedirect: isRedirect,
         formatMessage: getTextFormatter,
         formatLocalDate: getLocalDateFormatter,
         messages: messages,
