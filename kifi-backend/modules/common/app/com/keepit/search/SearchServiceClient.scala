@@ -1,6 +1,6 @@
 package com.keepit.search
 
-import com.keepit.common.zookeeper.ServiceCluster
+import com.keepit.common.zookeeper._
 import com.keepit.common.healthcheck.BenchmarkResults
 import com.keepit.common.healthcheck.BenchmarkResultsJson._
 import com.keepit.common.service.{ServiceClient, ServiceType}
@@ -238,9 +238,11 @@ case class SearchServiceClientImplModule() extends SearchServiceClientModule {
 
   @Singleton
   @Provides
-  def searchServiceClient(client: HttpClient, serviceCluster: ServiceCluster): SearchServiceClient = {
+  def searchServiceClient(
+      client: HttpClient,
+      serviceDiscovery: ServiceDiscovery): SearchServiceClient = {
     new SearchServiceClientImpl(
-      serviceCluster,
+      serviceDiscovery.serviceCluster(ServiceType.SEARCH),
       current.configuration.getInt("service.search.port").get,
       client)
   }
