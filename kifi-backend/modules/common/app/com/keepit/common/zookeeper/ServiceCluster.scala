@@ -40,6 +40,8 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
     else Some(list(nextRoutingInstance.getAndIncrement % list.size))
   }
 
+  def allServices: Vector[ServiceInstance] = routingList
+
   def register(node: Node, instanceInfo: AmazonInstanceInfo): ServiceCluster = {
     instances(node) = ServiceInstance(serviceType, node, instanceInfo)
     resetRoutingList()
