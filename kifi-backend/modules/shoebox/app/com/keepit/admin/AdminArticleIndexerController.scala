@@ -25,7 +25,7 @@ class AdminArticleIndexerController @Inject()(
   }
 
   def reindex = AdminHtmlAction { implicit request =>
-    searchClient.reindex().map { r =>
+    searchClient.reindex
     Ok("reindexing started")
   }
 
