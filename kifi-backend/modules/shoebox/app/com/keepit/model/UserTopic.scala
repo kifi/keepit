@@ -48,6 +48,28 @@ class UserTopicByteArrayHelper {
   }
 }
 
+class TopicByteArrayFormat extends Format[Array[Byte]] {
+  val helper = new UserTopicByteArrayHelper
+  def writes (x: Array[Byte]): JsValue = {
+    JsArray(helper.toIntArray(x).map{JsNumber(_)})
+  }
+  def reads(js: JsValue): JsResult[Array[Byte]] = {
+    val x = js.as[JsArray].value.map{_.as[JsNumber].value.toInt}
+    JsSuccess(helper.toByteArray(x.toArray))
+  }
+}
+
+object UserTopic {
+  implicit val userTopicFormat = (
+    (__ \'id).formatNullable(Id.format[UserTopic]) and
+    (__ \'userId).format(Id.format[User]) and
+    (__ \'topic).format(new TopicByteArrayFormat) and
+    (__ \'createdAt).format[DateTime] and
+    (__ \'updatedAt).format[DateTime]
+  )(UserTopic.apply, unlift(UserTopic.unapply))
+}
+
+
 @ImplementedBy(classOf[UserTopicRepoImpl])
 trait UserTopicRepo extends Repo[UserTopic]{
   def getByUserId(userId: Id[User])(implicit session: RSession):Option[UserTopic]
@@ -65,7 +87,7 @@ class UserTopicRepoImpl @Inject() (
   override val table = new RepoTable[UserTopic](db, "user_topic"){
     def userId = column[Id[User]]("user_id", O.NotNull)
     def topic = column[Array[Byte]]("topic", O.NotNull)
-    def * = id.? ~ userId ~ topic ~ createdAt ~ updatedAt <> (UserTopic, UserTopic.unapply _)
+    def * = id.? ~ userId ~ topic ~ createdAt ~ updatedAt <> (UserTopic.apply _, UserTopic.unapply _)
   }
 
   def getByUserId(userId: Id[User])(implicit session: RSession): Option[UserTopic] = {

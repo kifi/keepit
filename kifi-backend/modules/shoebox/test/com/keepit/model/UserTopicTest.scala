@@ -8,6 +8,8 @@ import com.google.inject.Injector
 import com.keepit.common.db.Id
 import scala.Array.canBuildFrom
 import com.keepit.learning.topicmodel.TopicModelGlobal
+import play.api.libs.json._
+
 
 
 class UserTopicTest extends Specification with TestDBRunner {
@@ -62,6 +64,25 @@ class UserTopicTest extends Specification with TestDBRunner {
         } === userTopics.size
       }
 
+    }
+  }
+
+  "userTopic Serializer " should {
+    "work" in {
+      val t1 = new DateTime(2013, 5, 20, 21, 59, 0, 0, PT)
+      val t2 = new DateTime(2013, 5, 22, 21, 59, 0, 0, PT)
+      val topic = new Array[Int](TopicModelGlobal.numTopics)
+      topic(1) = 1; topic(5) = 5;
+      val helper = new UserTopicByteArrayHelper
+      val userTopic = new UserTopic(id = Some(Id[UserTopic](1)), userId = Id[User](2), topic = helper.toByteArray(topic), createdAt = t1, updatedAt = t2)
+      import UserTopic.userTopicFormat
+      val js = Json.toJson(userTopic)
+      val recovered = Json.fromJson[UserTopic](js).get
+      recovered.id === userTopic.id
+      recovered.userId === userTopic.userId
+      recovered.updatedAt === userTopic.updatedAt
+      recovered.createdAt === userTopic.createdAt
+      helper.toIntArray(recovered.topic) === helper.toIntArray(userTopic.topic)
     }
   }
 
