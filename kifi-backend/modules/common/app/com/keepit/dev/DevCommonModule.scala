@@ -1,6 +1,11 @@
 package com.keepit.dev
 
 import net.codingwell.scalaguice.ScalaModule
+
+import com.keepit.common.zookeeper.Node
+import com.keepit.common.service.ServiceType
+import com.keepit.common.amazon.AmazonInstanceInfo
+import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.logging.Logging
 import com.keepit.inject.AppScoped
 import com.google.inject.{Inject, Provides, Singleton}
@@ -36,6 +41,12 @@ class DevCommonModule extends ScalaModule with Logging {
   @AppScoped
   def actorPluginProvider: ActorPlugin =
     new ActorPlugin(ActorSystem("shoebox-dev-actor-system", Play.current.configuration.underlying, Play.current.classloader))
+
+
+  @Provides
+  @Singleton
+  def serviceCluster(amazonInstanceInfo: AmazonInstanceInfo): ServiceCluster =
+    new ServiceCluster(ServiceType.DEV_MODE).register(Node("DEV"), amazonInstanceInfo)
 }
 
 class FakeEventPersisterImpl @Inject() (

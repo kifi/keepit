@@ -49,8 +49,9 @@ class UriTopicHelper {
     topic.toArray
   }
 
-  def assignTopics(arr: Array[Double]): (Option[Int], Option[Int]) = {
-    assume(arr.length > 2 && arr.length == TopicModelGlobal.numTopics, s"topic array size ${arr.size} less than 3 or not matching TopicModelGlobal.numTopics")
+  def getBiggerTwo(arr: Array[Double]): (Option[Int], Option[Int]) = {
+    if (arr.size < 2) return (None, None)
+
     var i = arr.indexWhere(x => x!=arr(0), 1)
     if (i == -1) (None, None)
     else {
@@ -70,6 +71,11 @@ class UriTopicHelper {
         else (Some(bigIdx), None)
       }
     }
+  }
+
+  def assignTopics(arr: Array[Double]): (Option[Int], Option[Int]) = {
+    assume(arr.length > 2 && arr.length == TopicModelGlobal.numTopics, s"topic array size ${arr.size} less than 3 or not matching TopicModelGlobal.numTopics")
+    getBiggerTwo(arr)
   }
 }
 

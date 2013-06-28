@@ -1,6 +1,8 @@
 package com.keepit.dev
 
 import net.codingwell.scalaguice.ScalaModule
+import com.keepit.common.service._
+import com.keepit.common.zookeeper._
 import com.keepit.common.logging.Logging
 import com.keepit.common.analytics._
 import com.keepit.inject.AppScoped
@@ -22,9 +24,7 @@ import com.keepit.classify.DomainTagImportSettings
 import scala.Some
 import com.keepit.common.zookeeper.Node
 import com.keepit.common.amazon.AmazonInstanceId
-import com.keepit.learning.topicmodel.WordTopicModel
-import com.keepit.learning.topicmodel.TopicModelGlobal
-import com.keepit.learning.topicmodel.LdaWordTopicModel
+import com.keepit.learning.topicmodel._
 
 class ShoeboxDevModule extends ScalaModule with Logging {
   def configure() {
@@ -41,6 +41,7 @@ class ShoeboxDevModule extends ScalaModule with Logging {
   @Singleton
   @Provides
   def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
+    def serviceCluster(serviceType: ServiceType): ServiceCluster = new ServiceCluster(serviceType)
     def register() = Node("me")
     def isLeader() = true
   }
@@ -134,6 +135,13 @@ class ShoeboxDevModule extends ScalaModule with Logging {
       val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map{ i => "topic%d".format(i)}.toArray
       print("loading fake topic model")
       new LdaWordTopicModel(vocabulary, wordTopic, topicNames)
+  }
+
+  @Provides
+  @Singleton
+  def topicNameMapper: TopicNameMapper = {
+    val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map { i => "topic%d".format(i) }.toArray
+    new IdentityTopicNameMapper(topicNames)
   }
 }
 

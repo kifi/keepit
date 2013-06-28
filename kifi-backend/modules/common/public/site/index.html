@@ -6,6 +6,7 @@
 	<title>kifi.com</title>
 	<meta name="description" content="">
 	<meta name="viewport" content="width=device-width">
+	<link rel="stylesheet" href="css/jquery-ui.css">
 	<link rel="stylesheet" href="js/fancybox/jquery.fancybox.css">
 	<link rel="stylesheet" href="css/main.css">
 	<link rel="shortcut icon" type="image/png" href="/assets/images/kifi-favi-50.png">
@@ -117,7 +118,9 @@
 						</div>
 						<div class="keep-url long-text" title="{{url}}">{{url | replace '^http://', '	' | replace '^([^/]*)/$', '$1'}}</div>
 						<div class="keep-colls">
-							<a class="keep-coll" href="javascript:" data-template-for="collections" data-id="{{id}}">{{name}}</a>
+							<span class="keep-coll" data-template-for="collections" data-id="{{id}}">
+								<a class="keep-coll-a" href="javascript:">{{name}}</a><a class="keep-coll-x" href="javascript:"></a>
+							</span>
 						</div>
 						<div class="keep-who">
 							<img class="me"
@@ -131,21 +134,26 @@
 							<span class="keep-who-text" data-after-template>
 								<span class="keep-you">
 									You
-									{% if keepers.length && isPrivate %}
-										<span class="keep-private on">Private</span> +
-									{% endif %}{% if keepers.length && !isPrivate %}
-										<span class="keep-private">Private</span> +
+									{% if (keepers.length || others) && isPrivate %}
+										<span class="keep-private on">Private</span>
+									{% endif %}{% if (keepers.length || others) && !isPrivate %}
+										<span class="keep-private">Private</span>
 									{% endif %}
 								</span>
 								{% if keepers.length > 1 %}
-									{{keepers.length}} friends
+									<span class="keep-friends">{{keepers.length}} friends</span>
 								{% endif %}{% if keepers.length == 1 %}
-									1 friend
+									<span class="keep-friends">1 friend</span>
 								{% endif %}
-								kept this
-								{% if !keepers.length && isPrivate %}
+								{% if others > 1 %}
+									<span class="keep-others">{{others}} others</span>
+								{% endif %}{% if others == 1 %}
+									<span class="keep-others">1 other</span>
+								{% endif %}
+								<span class="keep-kept-this">kept this</span>
+								{% if !keepers.length && !others && isPrivate %}
 									<span class="keep-private on">Private</span>
-								{% endif %}{% if !keepers.length && !isPrivate %}
+								{% endif %}{% if !keepers.length && !others && !isPrivate %}
 									<span class="keep-private">Private</span>
 								{% endif %}
 							</span>
@@ -165,7 +173,7 @@
 			<li><a href="/install">Install KiFi on this computer</a>
 			<li><a href="/invite">Invite your friends</a>
 			<li><a href="javascript:">How to use KiFi</a>
-			<li><a href="mailto:feedback@kifi.com">Send feedback</a>
+			<li><a href="javascript:" class="send-feedback">Send feedback</a>
 		</ul>
 		<h2>Get to Know Us</h2>
 		<ul class="about-us">
@@ -181,8 +189,9 @@
 		<div class="page-meta">
 			<h2 class="page-title long-text"></h2>
 			<a class="page-url long-text" href="" target="_blank"></a>
-			<div class="page-pic">
-				<div class="page-how"></div>
+			<div class="page-pic-wrap">
+				<div class="page-pic"></div>
+				<div class="page-how"><div class="page-how-text"></div></div>
 			</div>
 			<a class="page-keep" href="javascript:"></a>
 			<a class="page-priv" href="javascript:"></a>
@@ -193,11 +202,12 @@
 			<div class="page-who-text"></div>
 		</div>
 		<div class="page-colls">
-			<h2 data-before-template>In collections: <a class="add" href="javascript:">+</a></h2>
-			<div class="row" data-template>
-				<input type="checkbox" data-id="{{id}}" id="cb1-{{id}}" checked>
-				<label class="long-text" for="cb1-{{id}}"><span></span>{{name}}</label>
-			</div>
+			<h2>In collections: <!--a class="page-coll-add" href="javascript:">+</a--></h2>
+			<ul class="page-coll-list">
+				<li class="page-coll" data-template data-id="{{id}}">
+					<a class="page-coll-a long-text" href="javascript:">{{name}}</a><a class="page-coll-x" href="javascript:"></a>
+				</li>
+			</ul>
 			<!--div class="collections">
 				<input class="find" type="text" placeholder="Find a collection...">
 				<ul>
@@ -214,7 +224,7 @@
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 	<script>window.jQuery||document.write('<script src="js/jquery-1.9.1.min.js"><\/script>')</script>
 	<script src="js/jquery.easydate-0.2.4.min.js"></script>
-	<script src="js/jquery-ui-1.10.3.custom/js/jquery-ui-1.10.3.custom.min.js"></script>
+	<script src="js/jquery-ui.min.js"></script>
 	<script src="js/jquery.mousewheel.js"></script>
 	<script src="js/antiscroll.js"></script>
 	<script src="js/fancybox/jquery.fancybox.pack.js"></script>

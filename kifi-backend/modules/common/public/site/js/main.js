@@ -83,7 +83,9 @@ $(function() {
 						$keeps.addClass("mine")
 							.find(".keep-colls:not(:has(.keep-coll[data-id=" + collId + "]))")
 							.contents().filter(function() {return this.nodeType == 3}).remove().end().end()
-							.append("<a href=javascript: class=keep-coll data-id=" + collId + ">" + collName + "</a>");
+							.append('<span class=keep-coll data-id=' + collId + '>' +
+								'<a class="keep-coll-a" href="javascript:">' + collName + '</a><a class="keep-coll-x" href="javascript:"></a>' +
+								'</span>');
 						// if (!$inColl.find("#cb1-" + collId).length) {
 						// 	inCollTmpl.append({id: collId, name: collName});
 						// }
@@ -91,7 +93,8 @@ $(function() {
 				});
 			}};
 
-	// var $inColl = $(".page-colls"), inCollTmpl = Tempo.prepare($inColl);
+	var $inColl = $(".page-coll-list").contents().filter(function() {return this.nodeType == 3}).remove().end().end();
+	var inCollTmpl = Tempo.prepare($inColl);
 
 	var me;
 	var myKeepsCount;
@@ -181,6 +184,7 @@ $(function() {
 		$.extend(hit, hit.bookmark);
 		hit.me = me;
 		hit.keepers = hit.users;
+		hit.others = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
 	}
 
 	function prepKeepForRender(keep) {
@@ -439,12 +443,16 @@ $(function() {
 
 	var $main = $(".main").on("mousedown", ".keep-checkbox", function(e) {
 		e.preventDefault();  // avoid starting selection
-	}).on("click", ".keep-coll", function(e) {
+	}).on("click", ".keep-coll-a", function(e) {
 		e.stopPropagation(), e.preventDefault();
-		var collId = $(this).data("id");
+		var collId = $(this.parentNode).data("id");
 		if (collId !== $collList.find(".collection.active").data("id")) {
 			showMyKeeps(collId);
 		}
+	}).on("click", ".keep-coll-x", function(e) {
+		e.stopPropagation(), e.preventDefault();
+		var $coll = $(this.parentNode);
+		removeKeepsFromCollection($coll.data("id"), [$coll.closest(".keep").data("id")]);
 	}).on("click", ".keep", function(e) {
 		// 1. Only one keep at a time can be selected and not checked.
 		// 2. If a keep is selected and not checked, no keeps are checked.
@@ -468,12 +476,14 @@ $(function() {
 		} else if ($selected.length > 1) {
 			var howKept = $selected.not(".mine").length ? null :
 				$selected.has(".keep-private.on").length == $selected.length ? "pri" : "pub";
-			$detail.attr("data-kept", howKept);
+			$detail.attr("data-kept", howKept).addClass("multiple");
 			$('.page-title').text($selected.length + " keeps selected");
 			$('.page-url').hide().empty().attr('href', '');
-			$('.page-pic').hide().css('background-image', '');
+			$('.page-pic-wrap').hide();
+			$('.page-pic').css('background-image', '');
 			$('.page-who').hide();
 
+			// TODO: sort collections by number of selected keeps
 			// inCollTmpl.clear();
 			// var allCollIds = {};
 			// $selected.find(".keep-coll").each(function() {
@@ -488,20 +498,21 @@ $(function() {
 			$keep = $selected;
 			var howKept = $keep.is('.mine') ? ($keep.has('.keep-private.on').length ? "pri" : "pub") : null;
 			var $keepLink = $keep.find('.keep-title>a'), url = $keepLink[0].href;
-			$detail.attr("data-kept", howKept);
+			$detail.attr("data-kept", howKept).removeClass("multiple");
 			$('.page-title').text($keepLink.text());
 			$('.page-url').attr('href', url).text(url).show();
-			$('.page-pic').css("background-image", "url(" + urlScreenshot + '?url=' + escape(url) + ")").show();
+			$('.page-pic').css("background-image", "url(" + urlScreenshot + '?url=' + escape(url) + ")");
+			$('.page-pic-wrap').show();
 			$('.page-how').attr('class', 'page-how ' + (howKept || ''));
 			$('.page-who-pics').empty().append($keep.find(".keep-who>img").clone());
 			$('.page-who-text').html($keep.find(".keep-who-text").html());
 			$('.page-who').show();
 
-			// inCollTmpl.clear();
-			// $keep.find('.keep-coll').each(function() {
-			// 	var id = $(this).data('id');
-			// 	inCollTmpl.append({id: id, name: collections[id].name});
-			// });
+			inCollTmpl.clear();
+			$keep.find('.keep-coll').each(function() {
+				var id = $(this).data('id');
+				inCollTmpl.append({id: id, name: collections[id].name});
+			});
 			showDetails();
 		}
 	});
@@ -698,6 +709,34 @@ $(function() {
 			}});
 	}
 
+	function removeKeepsFromCollection(collId, keepIds) {
+		$.ajax({
+			url: urlCollections + "/" + collId + "/removeKeeps",
+			type: "POST",
+			dataType: 'json',
+			data: JSON.stringify(keepIds),
+			contentType: 'application/json',
+			error: showMessage.bind(null, 'Could not remove keep' + (keepIds.length > 1 ? 's' : '') + ' from collection, please try again later'),
+			success: function(data) {
+				$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps -= data.removed);
+			}});
+		var $allKeeps = $main.find(".keep");
+		var $keeps = $allKeeps.filter(function() {return keepIds.indexOf($(this).data("id")) >= 0});
+		var $keepColl = $keeps.find(".keep-coll[data-id=" + collId + "]");
+		$keepColl.css("width", $keepColl[0].offsetWidth).layout().on("transitionend", removeIfThis).addClass("removed");
+		if ($keeps.is(".selected") && !$allKeeps.filter(".selected").not($keeps).has(".keep-coll[data-id=" +  + "]").length) {
+			// there are no other selected keeps in the collection, so must remove collection from detail pane
+			var $pageColl = $detail.find(".page-coll[data-id=" + collId + "]");
+			$pageColl.css("width", $pageColl[0].offsetWidth).layout().on("transitionend", removeIfThis).addClass("removed");
+		}
+	}
+
+	function removeIfThis(e) {
+		if (e.target === this) {
+			$(this).remove();
+		}
+	}
+
 	// $('.detail .actions a.add').click(function() {
 	// 	$(this).toggleClass('active');
 	// 	$('.detail .collections').toggleClass('active');
@@ -706,7 +745,7 @@ $(function() {
 	var $detail = $('.detail');
 
 	// keep / unkeep
-	$detail.find('.page-keep,.page-priv').click(function(e) {
+	$detail.on("click", '.page-keep,.page-priv', function(e) {
 		var $keeps = $main.find(".keep.selected");
 		var $a = $(this), howKept = $detail.attr("data-kept");
 		if (!howKept) {  // keep
@@ -756,6 +795,31 @@ $(function() {
 					}});
 			});
 		}
+	}).on("click", ".page-coll-a", function(e) {
+		e.preventDefault();
+		var collId = $(this.parentNode).data("id");
+		if (collId !== $collList.find(".collection.active").data("id")) {
+			showMyKeeps(collId);
+		}
+	}).on("click", ".page-coll-x", function(e) {
+		e.preventDefault();
+		removeKeepsFromCollection(
+			$(this.parentNode).data("id"),
+			$main.find(".keep.selected").map(function() {return $(this).data("id")}).get());
+	});
+
+	$(".send-feedback").click(function() {
+		if (!window.UserVoice) {
+			window.UserVoice = [];
+			$.getScript("//widget.uservoice.com/2g5fkHnTzmxUgCEwjVY13g.js>");
+		}
+		UserVoice.push(['showLightbox', 'classic_widget', {
+			mode: 'full',
+			primary_color: '#cc6d00',
+			link_color: '#007dbf',
+			default_mode: 'support',
+			forum_id: 200379,
+			custom_template_id: 3305}]);
 	});
 
 	populateCollections();

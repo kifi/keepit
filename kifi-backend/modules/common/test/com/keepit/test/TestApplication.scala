@@ -84,7 +84,7 @@ class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override v
   def withFakeCache() = overrideWith(FakeCacheModule())
   def withS3DevModule() = overrideWith(new S3DevModule())
   def withShoeboxServiceModule() = overrideWith(ShoeboxServiceModule())
-  def withSearchConfigModule() = overrideWith(SearchConfigModule())
+  def withSearchConfigModule() = overrideWith(SearchConfigImplModule())
 
   def overrideWith(modules: Module*): TestApplication = new TestApplication(createTestGlobal(global, modules: _*), useDb, path)
 
@@ -116,6 +116,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   @Singleton
   @Provides
   def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
+    def serviceCluster(serviceType: ServiceType): ServiceCluster = new ServiceCluster(serviceType)
     def register() = Node("me")
     def isLeader() = true
   }
@@ -125,9 +126,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Singleton
   @Provides
-  def domainTagImportSettings: DomainTagImportSettings = {
-    DomainTagImportSettings(localDir = "", url = "")
-  }
+  def domainTagImportSettings: DomainTagImportSettings = DomainTagImportSettings(localDir = "", url = "")
 
   @Singleton
   @Provides
@@ -147,30 +146,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Provides
   @Singleton
-  def fakeZooKeeperClient: ZooKeeperClient = new ZooKeeperClient() {
-    private val db = new mutable.HashMap[Node, Array[Byte]]()
-    val basePath = Path("")
-
-    def watchNode(node: Node, onDataChanged : Option[Array[Byte]] => Unit) {}
-    def watchChildren(path: Path, updateChildren : Seq[Node] => Unit) {}
-    def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T) {}
-    def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T, notifier: Node => Unit) {}
-
-    def create(path: Path, data: Array[Byte], createMode: CreateMode): Path = path
-    def createNode(node: Node, data: Array[Byte], createMode: CreateMode): Node = node
-    def createPath(path: Path): Path = path
-
-    def getChildren(path: Path): Seq[Node] = Nil
-    def get(node: Node): Array[Byte] = db(node)
-
-    def set(node: Node, data: Array[Byte]) {
-      db(node) = data
-    }
-
-    def delete(path: Path) {}
-    def deleteNode(node: Node) {}
-    def deleteRecursive(path: Path) {}
-  }
+  def fakeZooKeeperClient: ZooKeeperClient = new FakeZooKeeperClient()
 
   @Provides
   @Singleton
@@ -194,11 +170,12 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   @Provides
   @Singleton
   def sliderHistoryTracker(sliderHistoryRepo: SliderHistoryRepo, db: Database): SliderHistoryTracker =
-    new SliderHistoryTracker(sliderHistoryRepo, db, -1, -1, -1)
+    new SliderHistoryTrackerImpl(sliderHistoryRepo, db, -1, -1, -1)
 
   @Singleton
   @Provides
-  def shoeboxServiceClient(shoeboxCacheProvided: ShoeboxCacheProvider, httpClient: HttpClient): ShoeboxServiceClient = new ShoeboxServiceClientImpl(null, -1, httpClient,shoeboxCacheProvided)
+  def shoeboxServiceClient(shoeboxCacheProvided: ShoeboxCacheProvider, httpClient: HttpClient, serviceCluster: ServiceCluster): ShoeboxServiceClient =
+    new ShoeboxServiceClientImpl(serviceCluster, -1, httpClient,shoeboxCacheProvided)
 
   @Singleton
   @Provides
@@ -206,7 +183,12 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Provides
   @Singleton
-  def searchServiceClient: SearchServiceClient = new SearchServiceClientImpl(null, -1, null)
+  def serviceCluster(amazonInstanceInfo: AmazonInstanceInfo): ServiceCluster =
+    new ServiceCluster(ServiceType.TEST_MODE).register(Node("TEST"), amazonInstanceInfo)
+
+  @Provides
+  @Singleton
+  def searchServiceClient(serviceCluster: ServiceCluster): SearchServiceClient = new SearchServiceClientImpl(serviceCluster, -1, null)
 
   @Provides
   @AppScoped
@@ -287,18 +269,6 @@ class FakeScraperPlugin() extends ScraperPlugin {
   def scrape() = Seq()
   def asyncScrape(uri: NormalizedURI) =
     future { throw new Exception("Not Implemented") }
-}
-
-case class SearchConfigModule() extends ScalaModule {
-  override def configure(): Unit = {
-  }
-
-  @Singleton
-  @Provides
-  def searchConfigManager(shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait): SearchConfigManager = {
-    val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
-    new SearchConfigManager(optFile, shoeboxClient, monitoredAwait)
-  }
 }
 
 case class ShoeboxServiceModule() extends ScalaModule {

@@ -1,5 +1,7 @@
 package com.keepit.common.zookeeper
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import com.keepit.common.logging.Logging
 import com.keepit.common.strings._
 import com.keepit.common.service._
@@ -15,32 +17,55 @@ import com.google.inject.{Inject, Singleton}
 
 import org.apache.zookeeper.CreateMode._
 
-class ServiceCluster(serviceType: ServiceType) extends Logging {
+class ServiceCluster(val serviceType: ServiceType) extends Logging {
 
   private var instances = new TrieMap[Node, ServiceInstance]()
+  private var routingList: Vector[ServiceInstance] = Vector()
+  private val nextRoutingInstance = new AtomicInteger(1)
 
   val servicePath = Path(s"/fortytwo/services/${serviceType.name}")
   val serviceNodeMaster = Node(s"${servicePath.name}/${serviceType.name}_")
 
   def size: Int = instances.size
-  def registered(node: Node): Boolean = instances.contains(node)
+  def registered(node: Node): Boolean = instances.contains(ensureFullPathNode(node))
   var leader: Option[ServiceInstance] = None
 
-  private def toFullPathNodes(nodes: Seq[Node]): Set[Node] = ( nodes map {c => Node(s"${servicePath.name}/$c")} ).toSet
+  override def toString(): String = s"""Service Cluster of $serviceType:
+    instances.toString"""
 
-  private def addNewNodes(newInstances: TrieMap[Node, ServiceInstance], childNodes: Set[Node], zk: ZooKeeperClient) = childNodes foreach { childNode =>
+  //using round robin
+  def nextService(): Option[ServiceInstance] = {
+    val list = routingList
+    if (list.isEmpty) None
+    else Some(list(nextRoutingInstance.getAndIncrement % list.size))
+  }
+
+  def register(node: Node, instanceInfo: AmazonInstanceInfo): ServiceCluster = {
+    instances(node) = ServiceInstance(serviceType, node, instanceInfo)
+    resetRoutingList()
+    this
+  }
+
+  def ensureFullPathNode(node: Node, throwIfDoes: Boolean = false) = node.name contains servicePath.name match {
+    case true if (throwIfDoes) => throw new Exception(s"node $node already contains service path")
+    case true => node
+    case false => Node(s"${servicePath.name}/$node")
+  }
+
+  private def addNewNodes(newInstances: TrieMap[Node, ServiceInstance], childNodes: Seq[Node], zk: ZooKeeperClient) = childNodes foreach { childNode =>
     newInstances.getOrElseUpdate(childNode, {
       val nodeData: String = zk.get(childNode)
+      log.info(s"data for node $childNode is $nodeData")
       val json = Json.parse(nodeData)
       val amazonInstanceInfo = Json.fromJson[AmazonInstanceInfo](json).get
-      println(s"discovered new node $childNode: $amazonInstanceInfo, adding to ${newInstances.keys}")
+      log.info(s"discovered new node $childNode: $amazonInstanceInfo, adding to ${newInstances.keys}")
       ServiceInstance(serviceType, childNode, amazonInstanceInfo)
     })
   }
 
-  private def removeOldNodes(newInstances: TrieMap[Node, ServiceInstance], childNodes: Set[Node]) = newInstances.keys foreach { node =>
+  private def removeOldNodes(newInstances: TrieMap[Node, ServiceInstance], childNodes: Seq[Node]) = newInstances.keys foreach { node =>
     if(!childNodes.contains(node)) {
-      println(s"node $node is not in instances anymore: ${newInstances.keys}")
+      log.info(s"node $node is not in instances anymore: ${newInstances.keys}")
       newInstances.remove(node)
     }
   }
@@ -50,20 +75,20 @@ class ServiceCluster(serviceType: ServiceType) extends Logging {
     case false =>
       val minId = (newInstances.values map {v => v.id}).min
       val leader = newInstances.values.filter(_.id == minId).head
-      println(s"leader is $leader")
+      log.info(s"leader is $leader")
       Some(leader)
   }
 
   def update(zk: ZooKeeperClient, children: Seq[Node]): Unit = synchronized {
-    try {
-      val newInstances = instances.clone()
-      val childNodes = toFullPathNodes(children)
-      addNewNodes(newInstances, childNodes, zk)
-      removeOldNodes(newInstances, childNodes)
-      leader = findLeader(newInstances)
-      instances = newInstances
-    } catch {
-      case e: Throwable => e.printStackTrace()
-    }
+    val newInstances = instances.clone()
+    val childNodes = children map {c => ensureFullPathNode(c, true)}
+    addNewNodes(newInstances, childNodes, zk)
+    removeOldNodes(newInstances, childNodes)
+    leader = findLeader(newInstances)
+    instances = newInstances
+    resetRoutingList()
   }
+
+  private def resetRoutingList() =
+    routingList = Vector(instances.values.toSeq: _*)
 }

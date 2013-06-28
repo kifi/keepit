@@ -159,7 +159,7 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
         saveBookmarksToCollection(collection, bookmarks)
 
         val collectionIndexer = mkCollectionIndexer()
-        val doc = collectionIndexer.buildIndexable((collection.id.get, user.id.get, SequenceNumber.ZERO)).buildDocument
+        val doc = collectionIndexer.buildIndexable(collection).buildDocument
         doc.getFields.forall{ f => collectionIndexer.getFieldDecoder(f.name).apply(f).length > 0 } === true
       }
     }

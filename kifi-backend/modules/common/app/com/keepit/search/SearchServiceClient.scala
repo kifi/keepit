@@ -1,5 +1,6 @@
 package com.keepit.search
 
+import com.keepit.common.zookeeper._
 import com.keepit.common.healthcheck.BenchmarkResults
 import com.keepit.common.healthcheck.BenchmarkResultsJson._
 import com.keepit.common.service.{ServiceClient, ServiceType}
@@ -18,6 +19,13 @@ import com.keepit.common.routes.Search
 import com.keepit.common.routes.Common
 import com.keepit.common.search.{ResultClicked, SharingUserInfo, IndexInfo}
 import scala.concurrent.Promise
+import net.codingwell.scalaguice.ScalaModule
+import com.google.inject.{Provides, Singleton}
+import play.api.Play._
+import com.keepit.common.healthcheck.BenchmarkResults
+import play.api.libs.json.JsArray
+import com.keepit.model.NormalizedURI
+import com.keepit.model.User
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -62,8 +70,13 @@ trait SearchServiceClient extends ServiceClient {
   def version(): Future[String]
 }
 
-class SearchServiceClientImpl(override val host: String, override val port: Int, override val httpClient: HttpClient)
-    extends SearchServiceClient {
+trait SearchServiceClientModule extends ScalaModule
+
+class SearchServiceClientImpl(
+    override val serviceCluster: ServiceCluster,
+    override val port: Int,
+    override val httpClient: HttpClient)
+  extends SearchServiceClient() {
 
   def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isKeep: Boolean): Future[Unit] = {
     val json = Json.toJson(ResultClicked(userId, query, uriId, rank, isKeep))
@@ -217,4 +230,21 @@ class SearchServiceClientImpl(override val host: String, override val port: Int,
       new SearchConfig(param)
     }
   }
+}
+
+case class SearchServiceClientImplModule() extends SearchServiceClientModule {
+
+  def configure {}
+
+  @Singleton
+  @Provides
+  def searchServiceClient(
+      client: HttpClient,
+      serviceDiscovery: ServiceDiscovery): SearchServiceClient = {
+    new SearchServiceClientImpl(
+      serviceDiscovery.serviceCluster(ServiceType.SEARCH),
+      current.configuration.getInt("service.search.port").get,
+      client)
+  }
+
 }

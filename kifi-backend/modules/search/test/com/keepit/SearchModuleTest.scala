@@ -1,5 +1,6 @@
 package com.keepit.search
 
+import com.keepit.common.zookeeper._
 import com.keepit.inject.inject
 import com.keepit.common.net._
 import com.keepit.common.controller.SearchServiceController
@@ -41,6 +42,7 @@ class SearchModuleTest extends Specification with Logging {
         } foreach { key =>
           injector.getInstance(key)
         }
+        injector.getInstance(classOf[ServiceCluster])
         true
       }
     }

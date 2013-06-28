@@ -74,6 +74,8 @@ class CollectionTest extends Specification with TestDBRunner {
           keepToCollectionRepo.getBookmarksInCollection(coll1.id.get).toSet === Set(bookmark1.id.get, bookmark2.id.get)
           collectionRepo.getByUser(user1.id.get).map(_.name) === Seq("Cooking", "Scala", "Apparel")
           keepToCollectionRepo.count(coll1.id.get) === 2
+          bookmarkRepo.save(bookmark1.withActive(false))
+          keepToCollectionRepo.count(coll1.id.get) === 1
         }
         sessionProvider.doWithoutCreatingSessions {
           db.readOnly { implicit s =>
@@ -144,13 +146,13 @@ class CollectionTest extends Specification with TestDBRunner {
         }
 
         db.readOnly { implicit s =>
-          collectionRepo.getCollectionsChanged(SequenceNumber(newSeqNum), 1000).map(_._1) === Seq(coll1.id.get)
+          collectionRepo.getCollectionsChanged(SequenceNumber(newSeqNum), 1000).map(_.id.get) === Seq(coll1.id.get)
         }
         db.readWrite { implicit s =>
           bookmarkRepo.save(bookmark1.withNormUriId(bookmark2.uriId))
         }
         db.readOnly { implicit s =>
-          collectionRepo.getCollectionsChanged(SequenceNumber(latestSeqNum), 1000).map(_._1) === Seq(coll1.id.get)
+          collectionRepo.getCollectionsChanged(SequenceNumber(latestSeqNum), 1000).map(_.id.get) === Seq(coll1.id.get)
         }
       }
     }

@@ -1,7 +1,7 @@
 package com.keepit.social
 
 import com.keepit.inject.AppScoped
-import com.google.inject.{Singleton, Inject}
+import com.google.inject.{Provides, Singleton, Inject}
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.akka.MonitoredAwait
@@ -17,6 +17,8 @@ import com.keepit.common.healthcheck.HealthcheckError
 import securesocial.core.providers.Token
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
+import com.keepit.common.controller.{RemoteActionAuthenticator, ActionAuthenticator}
+import securesocial.controllers.{TemplatesPlugin, DefaultTemplatesPlugin}
 
 @AppScoped
 class RemoteSecureSocialAuthenticatorPlugin @Inject()(
@@ -102,4 +104,37 @@ class RemoteSecureSocialUserPlugin @Inject() (
   def findToken(token: String): Option[Token] = None
   def deleteToken(uuid: String) {}
   def deleteExpiredTokens() {}
+}
+
+case class RemoteSecureSocialModule() extends SecureSocialModule {
+  def configure() {
+    bind[ActionAuthenticator].to[RemoteActionAuthenticator]
+  }
+
+  @Singleton
+  @Provides
+  def secureSocialAuthenticatorPlugin(
+    shoeboxClient: ShoeboxServiceClient,
+    healthcheckPlugin: HealthcheckPlugin,
+    monitoredAwait: MonitoredAwait,
+    app: play.api.Application
+  ): SecureSocialAuthenticatorPlugin = {
+    new RemoteSecureSocialAuthenticatorPlugin(shoeboxClient, healthcheckPlugin, monitoredAwait, app)
+  }
+
+  @Singleton
+  @Provides
+  def secureSocialUserPlugin(
+    healthcheckPlugin: HealthcheckPlugin,
+    shoeboxClient: ShoeboxServiceClient,
+    monitoredAwait: MonitoredAwait
+  ): SecureSocialUserPlugin = {
+    new RemoteSecureSocialUserPlugin(healthcheckPlugin, shoeboxClient, monitoredAwait)
+  }
+
+  @Singleton
+  @Provides
+  def templatesPlugin(app: play.api.Application): TemplatesPlugin = {
+    new DefaultTemplatesPlugin(app)
+  }
 }

@@ -1,12 +1,14 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{Provides, Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.time.Clock
 import scala.Some
 import com.keepit.search.MultiHashFilter
+import net.codingwell.scalaguice.ScalaModule
+import play.api.Play.current
 
 @ImplementedBy(classOf[SliderHistoryRepoImpl])
 trait SliderHistoryRepo extends Repo[SliderHistory] {
@@ -51,7 +53,12 @@ class SliderHistoryRepoImpl @Inject() (
 
 }
 
-class SliderHistoryTracker(sliderHistoryRepo: SliderHistoryRepo, db: Database, tableSize: Int, numHashFuncs: Int, minHits: Int) {
+trait SliderHistoryTracker {
+  def add(userId: Id[User], uriId: Id[NormalizedURI]): SliderHistory
+  def getMultiHashFilter(userId: Id[User]): MultiHashFilter[SliderHistory]
+}
+
+class SliderHistoryTrackerImpl(sliderHistoryRepo: SliderHistoryRepo, db: Database, tableSize: Int, numHashFuncs: Int, minHits: Int) extends SliderHistoryTracker {
 
   def add(userId: Id[User], uriId: Id[NormalizedURI]): SliderHistory = {
     val filter = getMultiHashFilter(userId)
@@ -76,5 +83,22 @@ class SliderHistoryTracker(sliderHistoryRepo: SliderHistoryRepo, db: Database, t
           MultiHashFilter(tableSize, numHashFuncs, minHits)
       }
     }
+  }
+}
+
+trait SliderHistoryTrackerModule extends ScalaModule
+
+case class SliderHistoryTrackerImplModule() extends SliderHistoryTrackerModule {
+  def configure {}
+
+  @Singleton
+  @Provides
+  def sliderHistoryTrackerImpl(sliderHistoryRepo: SliderHistoryRepo, db: Database): SliderHistoryTracker = {
+    val conf = current.configuration.getConfig("slider-history-tracker").get
+    val filterSize = conf.getInt("filterSize").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val minHits = conf.getInt("minHits").get
+
+    new SliderHistoryTrackerImpl(sliderHistoryRepo, db, filterSize, numHashFuncs, minHits)
   }
 }

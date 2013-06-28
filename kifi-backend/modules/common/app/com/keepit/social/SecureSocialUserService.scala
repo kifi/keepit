@@ -10,6 +10,7 @@ import play.api.Application
 import play.api.mvc.{Session, RequestHeader}
 import securesocial.core._
 import securesocial.core.providers.Token
+import net.codingwell.scalaguice.ScalaModule
 
 class SecureSocialIdGenerator(app: Application) extends IdGenerator(app) {
   def generate: String = ExternalId[String]().toString
@@ -91,3 +92,5 @@ trait SecureSocialUserPlugin {
   def deleteToken(uuid: String)
   def deleteExpiredTokens()
 }
+
+trait SecureSocialModule extends ScalaModule
