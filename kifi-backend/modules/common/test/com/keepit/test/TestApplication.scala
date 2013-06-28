@@ -53,7 +53,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.service.ServiceVersion
 import com.keepit.shoebox.ShoeboxCacheProvider
 import com.keepit.common.mail.FakeMailModule
-import com.keepit.module.TestDiscoveryModule
+import com.keepit.module.LocalDiscoveryModule
 
 
 class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
@@ -102,7 +102,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     bind[SlickSessionProvider].to[TestSlickSessionProvider]
     install(new FakeS3StoreModule())
     install(TestCacheModule())
-    install(TestDiscoveryModule())
+    install(LocalDiscoveryModule(ServiceType.TEST_MODE))
     bind[play.api.Application].toProvider(new Provider[play.api.Application] {
       def get(): play.api.Application = current
     }).in(classOf[AppScoped])

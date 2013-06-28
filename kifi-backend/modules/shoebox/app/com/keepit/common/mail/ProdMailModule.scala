@@ -33,8 +33,10 @@ case class ProdMailModule() extends MailModule {
 
 case class DevMailModule() extends MailModule {
 
-  def configure {}
-
+  def configure {
+    bind[LocalPostOffice].to[ShoeboxPostOfficeImpl]
+    bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
+  }
   @Provides
   @Singleton
   def mailToKeepServerSettingsOpt: Option[MailToKeepServerSettings] =

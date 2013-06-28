@@ -4,36 +4,18 @@ import net.codingwell.scalaguice.ScalaModule
 
 import com.google.inject.{Singleton, Provides, Provider}
 
-import com.keepit.common.zookeeper
 import com.keepit.common.logging.Logging
 import com.keepit.common.service._
 import com.keepit.common.amazon._
 import com.keepit.common.net.HttpClient
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.zookeeper._
-
-import play.api.Mode
-import play.api.Mode._
 import play.api.Play.current
+import scala.Some
+import com.keepit.common.amazon.AmazonInstanceId
+import com.keepit.common.zookeeper.Node
 
-trait DiscoveryModule extends ScalaModule {
-  @Singleton
-  @Provides
-  def serviceDiscovery(services: FortyTwoServices, mode: Mode, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo]): ServiceDiscovery = mode match {
-    case Mode.Prod =>
-      //todo: have a dedicated host for zk (instead of using localhost)
-      val servers = current.configuration.getString("zookeeper.servers").get
-      val zk = new ZooKeeperClientImpl(servers, 2000,
-        Some({zk1 => println(s"in callback, got $zk1")}))
-      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider)
-    case _ =>
-      new ServiceDiscovery {
-        def serviceCluster(serviceType: ServiceType): ServiceCluster = new ServiceCluster(serviceType)
-        def register() = Node("me")
-        def isLeader() = true
-      }
-  }
-}
+trait DiscoveryModule extends ScalaModule
 
 case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
 
@@ -60,9 +42,18 @@ case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
     instance
   }
 
+  @Singleton
+  @Provides
+  def serviceDiscovery(services: FortyTwoServices, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo]): ServiceDiscovery = {
+      //todo: have a dedicated host for zk (instead of using localhost)
+      val servers = current.configuration.getString("zookeeper.servers").get
+      val zk = new ZooKeeperClientImpl(servers, 2000,
+        Some({zk1 => println(s"in callback, got $zk1")}))
+      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider)
+  }
 }
 
-case class DevDiscoveryModule() extends DiscoveryModule {
+case class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryModule {
 
   def configure() {}
 
@@ -71,10 +62,10 @@ case class DevDiscoveryModule() extends DiscoveryModule {
   def amazonInstanceInfo: AmazonInstanceInfo =
     new AmazonInstanceInfo(
       instanceId = AmazonInstanceId("i-f168c1a8"),
-      localHostname = "ip-10-160-95-26.us-west-1.compute.internal",
-      publicHostname = "ec2-50-18-183-73.us-west-1.compute.amazonaws.com",
-      localIp = IpAddress("10.160.95.26"),
-      publicIp = IpAddress("50.18.183.73"),
+      localHostname = "localhost",
+      publicHostname = "localhost",
+      localIp = IpAddress("127.0.0.1"),
+      publicIp = IpAddress("127.0.0.1"),
       instanceType = "c1.medium",
       availabilityZone = "us-west-1b",
       securityGroups = "default",
@@ -85,5 +76,14 @@ case class DevDiscoveryModule() extends DiscoveryModule {
   @Provides
   @Singleton
   def serviceCluster(amazonInstanceInfo: AmazonInstanceInfo): ServiceCluster =
-    new ServiceCluster(ServiceType.DEV_MODE).register(Node("DEV"), amazonInstanceInfo)
+    new ServiceCluster(serviceType).register(Node(serviceType.name), amazonInstanceInfo)
+
+  @Singleton
+  @Provides
+  def serviceDiscovery(services: FortyTwoServices, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo], cluster: ServiceCluster): ServiceDiscovery =
+    new ServiceDiscovery {
+      def serviceCluster(serviceType: ServiceType): ServiceCluster = cluster
+      def register() = Node("me")
+      def isLeader() = true
+    }
 }

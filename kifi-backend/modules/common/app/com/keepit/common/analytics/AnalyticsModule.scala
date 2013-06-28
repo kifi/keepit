@@ -47,6 +47,7 @@ case class DevAnalyticsModule() extends AnalyticsModule {
   def configure() {
     bind[EventPersister].to[FakeEventPersisterImpl].in[AppScoped]
     ScalaMultibinder.newSetBinder[EventListener](binder)
+    bind[ReportBuilderPlugin].to[ReportBuilderPluginImpl].in[AppScoped]
   }
 
   @Singleton

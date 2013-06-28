@@ -15,7 +15,7 @@ object DevGlobal extends FortyTwoGlobal(Dev) with ShoeboxServices with SearchSer
     Seq(
       Modules.`override`(
         Modules.`override`(
-          Modules.`override`(new CommonModule, SearchProdModule()).`with`(new SearchDevModule())
+          Modules.`override`(new CommonModule, SearchProdModule()).`with`(SearchDevModule())
         ).`with`(ShoeboxDevModule())
       ).`with`(new DevCommonModule())
     )

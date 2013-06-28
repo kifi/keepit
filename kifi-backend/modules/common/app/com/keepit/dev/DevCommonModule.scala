@@ -12,7 +12,7 @@ import akka.actor.ActorSystem
 import play.api.Play
 import com.keepit.common.plugin.SchedulingProperties
 import com.keepit.common.analytics.Event
-import com.keepit.module.DevDiscoveryModule
+import com.keepit.module.LocalDiscoveryModule
 
 class DevCommonModule extends ScalaModule with Logging {
   def configure() {

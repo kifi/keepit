@@ -1,7 +1,7 @@
 package com.keepit.dev
 
 import com.keepit.search._
-import com.keepit.module.{DevDiscoveryModule, DevActorSystemModule}
+import com.keepit.module.{LocalDiscoveryModule, DevActorSystemModule}
 import com.keepit.shoebox.ShoeboxServiceClientImplModule
 import com.keepit.common.cache.SearchCacheModule
 import com.keepit.common.SearchBrowsingHistoryModule
@@ -9,8 +9,9 @@ import com.keepit.common.SearchClickHistoryModule
 import com.keepit.search.SearchConfigModule
 import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.social.RemoteSecureSocialModule
+import com.keepit.common.service.ServiceType
 
-class SearchDevModule extends SearchModule(
+case class SearchDevModule() extends SearchModule(
 
   // Common Functional Modules
   cacheModule = SearchCacheModule(HashMapMemoryCacheModule()),
@@ -19,7 +20,7 @@ class SearchDevModule extends SearchModule(
   clickHistoryModule = SearchClickHistoryModule(),
   browsingHistoryModule = SearchBrowsingHistoryModule(),
   actorSystemModule = DevActorSystemModule(),
-  discoveryModule = DevDiscoveryModule(),
+  discoveryModule = LocalDiscoveryModule(ServiceType.DEV_MODE),
 
   // Search Functional Modules
   indexModule = DevIndexModule(),
