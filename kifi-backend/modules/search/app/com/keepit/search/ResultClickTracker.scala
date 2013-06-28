@@ -12,24 +12,14 @@ import play.api.Play._
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
 
-object ResultClickTracker {
 
-  def apply(dir: File, numHashFuncs: Int, syncEvery: Int) = {
-    val file = new File(dir, "resultclicks.plru")
-    // table size = 16M (physical size = 64MB + 4bytes)
-    new ResultClickTracker(ProbablisticLRU(file, 0x1000000, numHashFuncs, syncEvery))
-  }
 
-  def apply(numHashFuncs: Int) = {
-    new ResultClickTracker(ProbablisticLRU(1000, numHashFuncs, Int.MaxValue))
-  }
-
-  abstract class ResultClickBoosts {
-    def apply(value: Long): Float
-  }
+abstract class ResultClickBoosts {
+  def apply(value: Long): Float
 }
 
 class ResultClickTracker(lru: ProbablisticLRU) {
+  
   private[this] val analyzer = DefaultAnalyzer.defaultAnalyzer
 
   def add(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isUserKeep: Boolean) = {
@@ -45,7 +35,7 @@ class ResultClickTracker(lru: ProbablisticLRU) {
   def getBoosts(userId: Id[User], query: String, maxBoost: Float) = {
     val hash = QueryHash(userId, query, analyzer)
     val likeliness = lru.get(hash)
-    new ResultClickTracker.ResultClickBoosts {
+    new ResultClickBoosts {
       def apply(value: Long) = 1.0f +  (maxBoost - 1.0f) * likeliness(value)
     }
   }
@@ -59,7 +49,7 @@ case class ProdResultFeedbackModule() extends ResultFeedbackModule {
 
   @Singleton
   @Provides
-  def resultClickTracker: ResultClickTracker = {
+  def resultClickTracker(s3buffer: S3BackedResultClickTrackerBuffer): ResultClickTracker = {
     val conf = current.configuration.getConfig("result-click-tracker").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val syncEvery = conf.getInt("syncEvery").get
@@ -70,8 +60,12 @@ case class ProdResultFeedbackModule() extends ResultFeedbackModule {
         throw new Exception(s"could not create dir $dir")
       }
     }
-    ResultClickTracker(dir, numHashFuncs, syncEvery)
+    val file = new File(dir, "resultclicks.plru")
+    // table size = 16M (physical size = 64MB + 4bytes)
+    val buffer = new FileResultClickTrackerBuffer(file, 0x1000000)
+    new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, syncEvery)(Some(s3buffer)))
   }
+
 }
 
 case class DevResultFeedbackModule() extends ResultFeedbackModule {
@@ -80,12 +74,14 @@ case class DevResultFeedbackModule() extends ResultFeedbackModule {
 
   @Provides
   @Singleton
-  def resultClickTracker: ResultClickTracker = {
+  def resultClickTracker(s3buffer: S3BackedResultClickTrackerBuffer): ResultClickTracker = {
     val conf = current.configuration.getConfig("result-click-tracker").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val syncEvery = conf.getInt("syncEvery").get
     conf.getString("dir") match {
-      case None => ResultClickTracker(numHashFuncs)
+      case None =>
+        val buffer = new InMemoryResultClickTrackerBuffer(1000)
+        new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, Int.MaxValue)(Some(s3buffer)))
       case Some(dirPath) =>
         val dir = new File(dirPath).getCanonicalFile()
         if (!dir.exists()) {
@@ -93,8 +89,11 @@ case class DevResultFeedbackModule() extends ResultFeedbackModule {
             throw new Exception("could not create dir %s".format(dir))
           }
         }
-        ResultClickTracker(dir, numHashFuncs, syncEvery)
+        val file = new File(dir, "resultclicks.plru")
+        val buffer = new FileResultClickTrackerBuffer(file, 0x1000000)
+        new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, syncEvery)(Some(s3buffer)))
     }
   }
 }
+
 

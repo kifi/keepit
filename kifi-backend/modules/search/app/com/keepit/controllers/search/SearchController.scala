@@ -5,7 +5,7 @@ import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
-import com.keepit.search.ResultClickTracker.ResultClickBoosts
+import com.keepit.search.ResultClickBoosts
 import com.keepit.search._
 import com.keepit.search.index.{MutableHit, HitQueue}
 import org.apache.commons.math3.linear.{EigenDecomposition, Array2DRowRealMatrix}
