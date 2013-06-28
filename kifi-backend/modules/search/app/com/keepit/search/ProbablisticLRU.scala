@@ -147,7 +147,40 @@ class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticL
 
 
 
-class ProbablisticLRU (mcBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEvery : Int) {
+class S3BackedResultClickTrackerBuffer @Inject() (cache: ProbablisticLRUChunkCache, dataStore : ProbablisticLRUStore) extends S3BackedBuffer(cache, dataStore, ProbablisticLRUName("ResultClickTracker"))
+
+
+
+class MultiplexingBuffer(buf: MultiChunkBuffer, bufs: MultiChunkBuffer*) extends MultiChunkBuffer {
+
+  bufs.foreach{ buffer =>
+    if (buffer.chunkSize != chunkSize) throw new ProbablisticLRUException("Chunk size mismatch in Multiplexing Buffer") 
+  }
+
+  def chunkSize : Int = buf.chunkSize
+
+  def getChunk(key: Long) : IntBufferWrapper = {
+    val chunks = buf.getChunk(key)::bufs.map(_.getChunk(key)).toList
+    new IntBufferWrapper {
+      
+      def get(pos: Int) = chunks.head.get(pos)
+
+      def sync : Unit = synchronized {
+        chunks.foreach(_.sync)
+      }
+  
+      def put(pos: Int, value: Int) : Unit = synchronized { 
+        chunks.foreach(_.put(pos, value)) 
+      }
+    
+    }
+  }
+
+}
+
+
+
+class ProbablisticLRU(mcBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEvery : Int) {
   
   class Likeliness(key: Long, positions: Array[Int], values: Array[Int], norm: Float) {
     def apply(value: Long) = {

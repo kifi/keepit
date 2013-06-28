@@ -191,7 +191,7 @@ class SearchModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
-  def resultClickTracker: ResultClickTracker = {
+  def resultClickTracker(s3buffer: S3BackedResultClickTrackerBuffer): ResultClickTracker = {
     val conf = current.configuration.getConfig("result-click-tracker").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val syncEvery = conf.getInt("syncEvery").get
@@ -204,7 +204,7 @@ class SearchModule() extends ScalaModule with Logging {
     }
     val file = new File(dir, "resultclicks.plru")
     // table size = 16M (physical size = 64MB + 4bytes)
-    val buffer = new FileResultClickTrackerBuffer(file, 0x1000000)
+    val buffer = new MultiplexingBuffer(new FileResultClickTrackerBuffer(file, 0x1000000), s3buffer)
     new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, syncEvery))
   }
 
