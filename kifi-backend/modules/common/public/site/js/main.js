@@ -83,7 +83,9 @@ $(function() {
 						$keeps.addClass("mine")
 							.find(".keep-colls:not(:has(.keep-coll[data-id=" + collId + "]))")
 							.contents().filter(function() {return this.nodeType == 3}).remove().end().end()
-							.append("<a href=javascript: class=keep-coll data-id=" + collId + ">" + collName + "</a>");
+							.append('<span class=keep-coll data-id=' + collId + '>' +
+								'<a class="keep-coll-a" href="javascript:">' + collName + '</a><a class="keep-coll-x" href="javascript:"></a>' +
+								'</span>');
 						// if (!$inColl.find("#cb1-" + collId).length) {
 						// 	inCollTmpl.append({id: collId, name: collName});
 						// }
@@ -91,7 +93,8 @@ $(function() {
 				});
 			}};
 
-	// var $inColl = $(".page-colls"), inCollTmpl = Tempo.prepare($inColl);
+	var $inColl = $(".page-coll-list").contents().filter(function() {return this.nodeType == 3}).remove().end().end();
+	var inCollTmpl = Tempo.prepare($inColl);
 
 	var me;
 	var myKeepsCount;
@@ -440,12 +443,30 @@ $(function() {
 
 	var $main = $(".main").on("mousedown", ".keep-checkbox", function(e) {
 		e.preventDefault();  // avoid starting selection
-	}).on("click", ".keep-coll", function(e) {
+	}).on("click", ".keep-coll-a", function(e) {
 		e.stopPropagation(), e.preventDefault();
-		var collId = $(this).data("id");
+		var collId = $(this.parentNode).data("id");
 		if (collId !== $collList.find(".collection.active").data("id")) {
 			showMyKeeps(collId);
 		}
+	}).on("click", ".keep-coll-x", function(e) {
+		e.stopPropagation(), e.preventDefault();
+		var $coll = $(this.parentNode), collId = $coll.data("id");
+		$.ajax({
+			url: urlCollections + "/" + collId + "/removeKeeps",
+			type: "POST",
+			dataType: 'json',
+			data: JSON.stringify([$coll.closest(".keep").data("id")]),
+			contentType: 'application/json',
+			error: showMessage.bind(null, 'Could not remove keep from collection, please try again later'),
+			success: function(data) {
+				$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps -= data.removed);
+			}});
+		$coll.css("width", $coll[0].offsetWidth).layout().on("transitionend", function(e) {
+			if (e.target === this) {
+				$coll.remove();
+			}
+		}).addClass("removed");
 	}).on("click", ".keep", function(e) {
 		// 1. Only one keep at a time can be selected and not checked.
 		// 2. If a keep is selected and not checked, no keeps are checked.
@@ -476,6 +497,7 @@ $(function() {
 			$('.page-pic').css('background-image', '');
 			$('.page-who').hide();
 
+			// TODO: sort collections by number of selected keeps
 			// inCollTmpl.clear();
 			// var allCollIds = {};
 			// $selected.find(".keep-coll").each(function() {
@@ -500,11 +522,11 @@ $(function() {
 			$('.page-who-text').html($keep.find(".keep-who-text").html());
 			$('.page-who').show();
 
-			// inCollTmpl.clear();
-			// $keep.find('.keep-coll').each(function() {
-			// 	var id = $(this).data('id');
-			// 	inCollTmpl.append({id: id, name: collections[id].name});
-			// });
+			inCollTmpl.clear();
+			$keep.find('.keep-coll').each(function() {
+				var id = $(this).data('id');
+				inCollTmpl.append({id: id, name: collections[id].name});
+			});
 			showDetails();
 		}
 	});
@@ -709,7 +731,7 @@ $(function() {
 	var $detail = $('.detail');
 
 	// keep / unkeep
-	$detail.find('.page-keep,.page-priv').click(function(e) {
+	$detail.on("click", '.page-keep,.page-priv', function(e) {
 		var $keeps = $main.find(".keep.selected");
 		var $a = $(this), howKept = $detail.attr("data-kept");
 		if (!howKept) {  // keep
@@ -758,6 +780,12 @@ $(function() {
 						$keep.find('.keep-private').toggleClass('on', howKept == 'pri');
 					}});
 			});
+		}
+	}).on("click", ".page-coll-a", function(e) {
+		e.preventDefault();
+		var collId = $(this.parentNode).data("id");
+		if (collId !== $collList.find(".collection.active").data("id")) {
+			showMyKeeps(collId);
 		}
 	});
 

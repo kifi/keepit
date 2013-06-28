@@ -54,8 +54,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBrowsingHistoryFilter(userId: Id[User]): Future[Array[Byte]]
   def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]]
   def getBookmarksInCollection(id: Id[Collection]): Future[Seq[Bookmark]]
-  def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[(Id[Collection], Id[User], SequenceNumber)]]
-  def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]]
+  def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Collection]]
+  def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]]
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]]
   def getIndexable(seqNum: Long, fetchSize: Int): Future[Seq[NormalizedURI]]
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]]
@@ -266,9 +266,9 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[(Id[Collection], Id[User], SequenceNumber)]] = {
+  def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Collection]] = {
     call(Shoebox.internal.getCollectionsChanged(seqNum.value, fetchSize)) map { r =>
-      Json.fromJson[Seq[(Id[Collection], Id[User], SequenceNumber)]](r.json).get
+      Json.fromJson[Seq[Collection]](r.json).get
     }
   }
 
@@ -318,9 +318,9 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]] = {
+  def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]] = {
     call(Shoebox.internal.getCollectionsByUser(userId)).map { r =>
-      Json.fromJson[Seq[Long]](r.json).get.map(Id[Collection](_))
+      Json.fromJson[Seq[Collection]](r.json).get
     }
   }
 

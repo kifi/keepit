@@ -312,7 +312,14 @@ class ShoeboxController @Inject() (
   }
 
   def getCollectionsByUser(userId: Id[User]) = Action { request =>
-    Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getByUser(userId).map(_.id.get.id) }))
+    Ok(Json.toJson(db.readOnly { implicit s => collectionRepo.getByUser(userId) }))
+  }
+
+  def getCollectionsChangedDeprecated(seqNum: Long, fetchSize: Int) = Action { request =>
+    import ShoeboxController.collectionTupleFormat
+    Ok(Json.toJson(db.readOnly { implicit s =>
+      collectionRepo.getCollectionsChanged(SequenceNumber(seqNum), fetchSize).map{ c => (c.id.get, c.userId, c.seq) }
+    }))
   }
 
   def getCollectionsChanged(seqNum: Long, fetchSize: Int) = Action { request =>

@@ -276,10 +276,9 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
   def getSessionByExternalId(sessionId: com.keepit.common.db.ExternalId[com.keepit.model.UserSession]): scala.concurrent.Future[Option[com.keepit.model.UserSession]] = ???
   def getSocialUserInfosByUserId(userId: com.keepit.common.db.Id[com.keepit.model.User]): scala.concurrent.Future[List[com.keepit.model.SocialUserInfo]] = ???
 
-  def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[(Id[Collection], Id[User], SequenceNumber)]] = {
+  def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Collection]] = {
     val collections = allCollections.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
-    val summarizedCollections = collections.map { c => (c.id.get, c.userId, c.seq) }
-    Future.successful(summarizedCollections)
+    Future.successful(collections)
   }
 
   def getBookmarksInCollection(collectionId: Id[Collection]): Future[Seq[Bookmark]] = {
@@ -287,8 +286,8 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
     Future.successful(bookmarks)
   }
 
-  def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]] = {
-    val collections = allCollections.values.filter(_.userId == userId).map(_.id.get).toSeq
+  def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]] = {
+    val collections = allCollections.values.filter(_.userId == userId).toSeq
     Future.successful(collections)
   }
 
