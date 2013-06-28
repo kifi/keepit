@@ -54,6 +54,7 @@ abstract class ShoeboxModule(
     install(cryptoModule)
     install(s3Module)
     install(actorSystemModule)
+    install(discoveryModule)
 
     install(slickModule)
     install(scraperModule)

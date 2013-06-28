@@ -5,7 +5,7 @@ import com.keepit.social.SecureSocialModule
 import com.keepit.shoebox.ShoeboxServiceClientModule
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.model.{BrowsingHistoryModule, ClickHistoryModule}
-import com.keepit.module.DiscoveryModule
+import com.keepit.module.{ActorSystemModule, DiscoveryModule}
 
 abstract class SearchModule(
 
@@ -15,8 +15,8 @@ abstract class SearchModule(
   val shoeboxServiceClientModule: ShoeboxServiceClientModule,
   val clickHistoryModule: ClickHistoryModule,
   val browsingHistoryModule: BrowsingHistoryModule,
+  val actorSystemModule: ActorSystemModule,
   val discoveryModule: DiscoveryModule,
-
 
   // Search Functional Modules
   val indexModule: IndexModule,
@@ -32,6 +32,8 @@ abstract class SearchModule(
     install(shoeboxServiceClientModule)
     install(clickHistoryModule)
     install(browsingHistoryModule)
+    install(actorSystemModule)
+    install(discoveryModule)
 
     install(indexModule)
     install(searchConfigModule)

@@ -17,7 +17,6 @@ import com.keepit.module.DevDiscoveryModule
 class DevCommonModule extends ScalaModule with Logging {
   def configure() {
     install(new S3DevModule)
-    install(DevDiscoveryModule())
   }
 
   @Singleton
