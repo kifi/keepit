@@ -5,15 +5,18 @@ import com.keepit.social.SecureSocialModule
 import com.keepit.shoebox.ShoeboxServiceClientModule
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.model.{BrowsingHistoryModule, ClickHistoryModule}
+import com.keepit.module.DiscoveryModule
 
 abstract class SearchModule(
 
-   // Common Functional Modules
-   val cacheModule: CacheModule,
-   val secureSocialModule: SecureSocialModule,
-   val shoeboxServiceClientModule: ShoeboxServiceClientModule,
-   val clickHistoryModule: ClickHistoryModule,
-   val browsingHistoryModule: BrowsingHistoryModule,
+  // Common Functional Modules
+  val cacheModule: CacheModule,
+  val secureSocialModule: SecureSocialModule,
+  val shoeboxServiceClientModule: ShoeboxServiceClientModule,
+  val clickHistoryModule: ClickHistoryModule,
+  val browsingHistoryModule: BrowsingHistoryModule,
+  val discoveryModule: DiscoveryModule,
+
 
   // Search Functional Modules
   val indexModule: IndexModule,

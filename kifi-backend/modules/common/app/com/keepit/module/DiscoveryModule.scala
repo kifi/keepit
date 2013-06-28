@@ -13,10 +13,11 @@ import com.keepit.common.zookeeper._
 
 import play.api.Mode
 import play.api.Mode._
-import play.api.Play
 import play.api.Play.current
 
-class DiscoveryModule extends ScalaModule with Logging {
+trait DiscoveryModule extends ScalaModule
+
+case class DiscoveryImplModule() extends DiscoveryModule with Logging {
 
   def configure() { }
 
@@ -57,4 +58,32 @@ class DiscoveryModule extends ScalaModule with Logging {
     instance
   }
 
+}
+
+case class DevDiscoveryModule() extends DiscoveryModule {
+
+  def configure() {}
+
+  @Singleton
+  @Provides
+  def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
+    def register() = Node("me")
+    def isLeader() = true
+  }
+
+  @Singleton
+  @Provides
+  def amazonInstanceInfo: AmazonInstanceInfo =
+    new AmazonInstanceInfo(
+      instanceId = AmazonInstanceId("i-f168c1a8"),
+      localHostname = "ip-10-160-95-26.us-west-1.compute.internal",
+      publicHostname = "ec2-50-18-183-73.us-west-1.compute.amazonaws.com",
+      localIp = IpAddress("10.160.95.26"),
+      publicIp = IpAddress("50.18.183.73"),
+      instanceType = "c1.medium",
+      availabilityZone = "us-west-1b",
+      securityGroups = "default",
+      amiId = "ami-1bf9de5e",
+      amiLaunchIndex = "0"
+    )
 }

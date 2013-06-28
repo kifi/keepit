@@ -222,3 +222,9 @@ class MailToKeepPluginImpl @Inject()(
     scheduleTask(actorFactory.system, 10 seconds, 1 minute, actor, FetchNewKeeps)
   }
 }
+
+class FakeMailToKeepPlugin @Inject() (val schedulingProperties: SchedulingProperties) extends MailToKeepPlugin with Logging {
+  def fetchNewKeeps() {
+    log.info("Fake fetching new keeps")
+  }
+}

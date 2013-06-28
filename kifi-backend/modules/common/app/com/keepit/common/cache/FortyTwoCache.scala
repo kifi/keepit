@@ -314,4 +314,3 @@ abstract class CacheModule(cachePluginModules: CachePluginModule*) extends Scala
     cachePluginModules.foreach(install)
   }
 }
-

@@ -12,9 +12,13 @@ import play.api.Mode._
 
 object DevGlobal extends FortyTwoGlobal(Dev) with ShoeboxServices with SearchServices {
   override val modules =
-    Seq(Modules.`override`(
-      Modules.`override`(new CommonModule, SearchProdModule()).`with`(ShoeboxProdModule())
-    ).`with`(new DevModule))
+    Seq(
+      Modules.`override`(
+        Modules.`override`(
+          Modules.`override`(new CommonModule, SearchProdModule()).`with`(new SearchDevModule())
+        ).`with`(ShoeboxDevModule())
+      ).`with`(new DevCommonModule())
+    )
 
   override def onStart(app: Application) {
     require(injector.instance[FortyTwoServices].currentService == ServiceType.DEV_MODE,

@@ -15,6 +15,7 @@ import com.keepit.realtime.WebSocketModule
 import com.keepit.classify.DomainTagImporterModule
 import com.keepit.common.crypto.CryptoModule
 import com.keepit.common.store.S3Module
+import com.keepit.module.{DiscoveryModule, ActorSystemModule}
 
 abstract class ShoeboxModule(
   // Common Functional Modules
@@ -26,6 +27,8 @@ abstract class ShoeboxModule(
   val mailModule: MailModule,
   val cryptoModule: CryptoModule,
   val s3Module: S3Module,
+  val actorSystemModule: ActorSystemModule,
+  val discoveryModule: DiscoveryModule,
 
   // Shoebox Functional Modules
   val slickModule: SlickModule,
@@ -50,6 +53,7 @@ abstract class ShoeboxModule(
     install(mailModule)
     install(cryptoModule)
     install(s3Module)
+    install(actorSystemModule)
 
     install(slickModule)
     install(scraperModule)

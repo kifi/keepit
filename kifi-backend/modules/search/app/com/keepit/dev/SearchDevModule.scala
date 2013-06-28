@@ -18,9 +18,14 @@ import org.apache.lucene.util.Version
 import com.keepit.search.phrasedetector.{PhraseIndexerImpl, PhraseIndexer}
 import com.keepit.search.query.parser.{FakeSpellCorrector, SpellCorrector}
 import com.google.inject.Singleton
+import com.keepit.module.{DevDiscoveryModule, DevActorSystemModule}
+import com.keepit.common.cache.{SearchCacheModule, HashMapMemoryCacheModule}
 
 class SearchDevModule extends ScalaModule with Logging {
-  def configure() {}
+  def configure() {
+    install(DevActorSystemModule())
+    install(SearchCacheModule(HashMapMemoryCacheModule()))
+  }
 
   private def getDirectory(maybeDir: Option[String]): Directory = {
     maybeDir.map { d =>
