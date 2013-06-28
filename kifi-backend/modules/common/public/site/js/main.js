@@ -86,8 +86,11 @@ $(function() {
 							.append('<span class=keep-coll data-id=' + collId + '>' +
 								'<a class="keep-coll-a" href="javascript:">' + collName + '</a><a class="keep-coll-x" href="javascript:"></a>' +
 								'</span>');
-						if ($keeps.is(".selected") && !$inColl.has(".page-coll[data-id=" + collId + "]").length) {
-							inCollTmpl.append({id: collId, name: collName});
+						if ($keeps.is(".selected")) {
+							$detail.attr("data-kept", $keeps.has(".keep-private.on").length == $keeps.length ? "pri" : "pub");
+							if (!$inColl.has(".page-coll[data-id=" + collId + "]").length) {
+								inCollTmpl.append({id: collId, name: collName});
+							}
 						}
 					}
 				});
@@ -301,6 +304,10 @@ $(function() {
 		$.fancybox($('<p>').text(msg));
 	}
 
+	function getDataId() {
+		return $(this).data("id");
+	}
+
 	// delete/rename collection
 	var $collMenu = $("#coll-menu")
 	.on("mouseover", "a", function() {
@@ -399,7 +406,7 @@ $(function() {
 	// 	var $row = $(this).closest('.row');
 	// 	var colId = $(this).data('id');
 	// 	var $keeps = $main.find(".keep.selected");
-	// 	var keepIds = $keeps.map(function() {return $(this).data('id')}).get();
+	// 	var keepIds = $keeps.map(getDataId).get();
 	// 	$.ajax({
 	// 		url: urlCollections + "/" + colId + "/removeKeeps",
 	// 		type: "POST",
@@ -419,7 +426,7 @@ $(function() {
 	// 	// add selected keeps to collection
 	// 	var $row = $(this).closest('.row');
 	// 	var colId = $(this).data('id');
-	// 	var keeps = $main.find(".keep.selected").map(function() {return $(this).data('id')}).get();
+	// 	var keeps = $main.find(".keep.selected").map(getDataId).get();
 	// 	$.ajax({
 	// 		url: urlCollections + "/" + colId + "/addKeeps",
 	// 		type: "POST",
@@ -485,16 +492,12 @@ $(function() {
 			$('.page-pic').css('background-image', '');
 			$('.page-who').hide();
 
-			// TODO: sort collections by number of selected keeps
-			// inCollTmpl.clear();
-			// var allCollIds = {};
-			// $selected.find(".keep-coll").each(function() {
-			// 	var collId = $(this).data("id");
-			// 	if (!allCollIds[collId]) {
-			// 		allCollIds[collId] = true;
-			// 		inCollTmpl.append({id: collId, name: collections[collId].name});
-			// 	}
-			// });
+			var collCounts = $selected.find('.keep-coll').map(getDataId).get()
+				.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
+			inCollTmpl.render(
+				Object.keys(collCounts)
+					.sort(function(id1, id2) {return collCounts[id1] - collCounts[id2]})
+					.map(function(id) {return {id: id, name: collections[id].name}}));
 			showDetails();
 		} else { // one keep is selected
 			$keep = $selected;
@@ -510,11 +513,10 @@ $(function() {
 			$('.page-who-text').html($keep.find(".keep-who-text").html());
 			$('.page-who').show();
 
-			inCollTmpl.clear();
-			$keep.find('.keep-coll').each(function() {
+			inCollTmpl.render($keep.find('.keep-coll').map(function() {
 				var id = $(this).data('id');
-				inCollTmpl.append({id: id, name: collections[id].name});
-			});
+				return {id: id, name: collections[id].name};
+			}).get());
 			showDetails();
 		}
 	});
@@ -573,7 +575,7 @@ $(function() {
 				type: "POST",
 				async: false,
 				dataType: 'json',
-				data: JSON.stringify($(this).find(".collection").map(function() {return $(this).data("id")}).get()),
+				data: JSON.stringify($(this).find(".collection").map(getDataId).get()),
 				contentType: 'application/json',
 				error: showMessage.bind(null, 'Could not reorder the collections, please try again later'),
 				success: function(data) {
@@ -758,8 +760,8 @@ $(function() {
 				dataType: 'json',
 				data: JSON.stringify({
 					keeps: $keeps.map(function() {
-						var keepLink = $(this).find('.keep-title>a')[0];
-						return {title: keepLink.title, url: keepLink.href, isPrivate: howKept == 'pri'};
+						var a = $(this).find('.keep-title>a')[0];
+						return {title: a.title, url: a.href, isPrivate: howKept == 'pri'};
 					}).get()}),
 				contentType: 'application/json',
 				error: showMessage.bind(null, 'Could not add keeps, please try again later'),
@@ -772,7 +774,7 @@ $(function() {
 				url: urlKeepRemove,
 				type: "POST",
 				dataType: 'json',
-				data: JSON.stringify($keeps.map(function() {return {url: $(this).find('a').first().attr('href')}}).get()),
+				data: JSON.stringify($keeps.map(function() {return {url: this.querySelector('.keep-title>a').href}}).get()),
 				contentType: 'application/json',
 				error: showMessage.bind(null, 'Could not remove keeps, please try again later'),
 				success: function(data) {
@@ -807,7 +809,7 @@ $(function() {
 		e.preventDefault();
 		removeKeepsFromCollection(
 			$(this.parentNode).data("id"),
-			$main.find(".keep.selected").map(function() {return $(this).data("id")}).get());
+			$main.find(".keep.selected").map(getDataId).get());
 	});
 
 	$(".send-feedback").click(function() {
