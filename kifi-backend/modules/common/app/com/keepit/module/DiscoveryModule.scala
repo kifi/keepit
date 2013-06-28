@@ -4,6 +4,7 @@ import net.codingwell.scalaguice.ScalaModule
 
 import com.google.inject.{Singleton, Provides, Provider}
 
+import com.keepit.common.zookeeper
 import com.keepit.common.logging.Logging
 import com.keepit.common.service._
 import com.keepit.common.amazon._
@@ -31,6 +32,7 @@ class DiscoveryModule extends ScalaModule with Logging {
       new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider)
     case _ =>
       new ServiceDiscovery {
+        def serviceCluster(serviceType: ServiceType): ServiceCluster = new ServiceCluster(serviceType)
         def register() = Node("me")
         def isLeader() = true
       }
