@@ -99,7 +99,7 @@ $(function() {
 	var me;
 	var myKeepsCount;
 	var searchResponse;
-	var collections = {};
+	var collections;
 	var searchTimeout;
 	var lastKeep;
 
@@ -249,7 +249,11 @@ $(function() {
 			}
 			console.log("Fetching %d keeps %s", params.count, lastKeep ? "before " + lastKeep : "");
 			$.getJSON(urlMyKeeps, params,
-				function(data) {
+				function withKeeps(data) {
+					if (!collections) {
+						setTimeout(withKeeps.bind(null, data), 30);
+						return;
+					}
 					subtitleTmpl.render({
 						numShown: $myKeeps.find(".keep").length + data.keeps.length,
 						numTotal: collId ? collections[collId].keeps : myKeepsCount,
@@ -273,9 +277,7 @@ $(function() {
 	function populateCollections() {
 		$.getJSON(urlCollectionsAll, {sort: "user"}, function(data) {
 			collTmpl.render(data.collections);
-			for (var i in data.collections) {
-				collections[data.collections[i].id] = data.collections[i];
-			}
+			collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
 		});
 	}
 
