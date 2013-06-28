@@ -153,10 +153,6 @@ class S3BackedResultClickTrackerBuffer @Inject() (cache: ProbablisticLRUChunkCac
 
 class MultiplexingBuffer(buf: MultiChunkBuffer, bufs: MultiChunkBuffer*) extends MultiChunkBuffer {
 
-  bufs.foreach{ buffer =>
-    if (buffer.chunkSize != chunkSize) throw new ProbablisticLRUException("Chunk size mismatch in Multiplexing Buffer") 
-  }
-
   def chunkSize : Int = buf.chunkSize
 
   def getChunk(key: Long) : IntBufferWrapper = {

@@ -49,7 +49,7 @@ case class ResultFeedbackImplModule() extends ResultFeedbackModule {
 
   @Singleton
   @Provides
-  def resultClickTracker: ResultClickTracker = {
+  def resultClickTracker(s3buffer: S3BackedResultClickTrackerBuffer): ResultClickTracker = {
     val conf = current.configuration.getConfig("result-click-tracker").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val syncEvery = conf.getInt("syncEvery").get
@@ -60,6 +60,10 @@ case class ResultFeedbackImplModule() extends ResultFeedbackModule {
         throw new Exception(s"could not create dir $dir")
       }
     }
-    ResultClickTracker(dir, numHashFuncs, syncEvery)
+    val file = new File(dir, "resultclicks.plru")
+    // table size = 16M (physical size = 64MB + 4bytes)
+    val buffer = new MultiplexingBuffer(new FileResultClickTrackerBuffer(file, 0x1000000), s3buffer)
+    new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, syncEvery))
   }
+
 }
