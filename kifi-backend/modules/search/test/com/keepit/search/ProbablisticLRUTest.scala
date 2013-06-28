@@ -16,9 +16,6 @@ class ProbablisticLRUTest extends Specification {
   val rand = new Random(123456789L)
 
   def create(tableSize: Int, numHashFuncs: Int, syncEvery: Int = 1000) = {
-    // running(new SearchApplication()){ 
-    //   val buff =  inject[S3BackedResultClickTrackerBuffer]
-    // }
     val buf = new InMemoryResultClickTrackerBuffer(tableSize) //TODO: Use the Multiplexed thingamagic here
     val lru = new ProbablisticLRU(buf, numHashFuncs, syncEvery)(None)
     lru.setSeed(123456789L)
