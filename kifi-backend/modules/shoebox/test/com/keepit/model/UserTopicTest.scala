@@ -30,14 +30,14 @@ class UserTopicTest extends Specification with TestDBRunner {
     }
     val userTopicRepo = inject[UserTopicRepo]
     val helper = new UserTopicByteArrayHelper
-    db.readWrite { implicit s =>
+    val userTopicFromDb = db.readWrite { implicit s =>
       (ids zip userTopics) map { x =>
         val userTopic = UserTopic(userId = x._1, topic = helper.toByteArray(x._2), createdAt = t)
         userTopicRepo.save(userTopic)
       }
 
     }
-    userTopics
+    userTopicFromDb
   }
 
   "userTopicRepo" should {
@@ -83,6 +83,33 @@ class UserTopicTest extends Specification with TestDBRunner {
       recovered.updatedAt === userTopic.updatedAt
       recovered.createdAt === userTopic.createdAt
       helper.toIntArray(recovered.topic) === helper.toIntArray(userTopic.topic)
+    }
+  }
+
+  "userTopic cache" should {
+    "work" in {
+      withDB() { implicit injector =>
+        val userTopics = setup()
+        val userTopicRepo = inject[UserTopicRepo]
+        val helper = new UserTopicByteArrayHelper
+
+        db.readOnly{ implicit s =>
+          (0 until userTopics.size.min(5)).foreach{ i =>
+            val userTopic = userTopicRepo.getByUserId(Id[User](i)).get      // should in cache now
+            helper.toIntArray(userTopic.topic) === helper.toIntArray(userTopics(i).topic)
+          }
+        }
+
+        sessionProvider.doWithoutCreatingSessions {
+          db.readOnly { implicit s =>
+            (0 until userTopics.size.min(5)).foreach { i =>
+              val userTopic = userTopicRepo.getByUserId(Id[User](i)).get
+              helper.toIntArray(userTopic.topic) === helper.toIntArray(userTopics(i).topic)
+            }
+          }
+        }
+
+      }
     }
   }
 

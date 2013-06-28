@@ -15,6 +15,10 @@ import com.keepit.common.db.slick.FortyTwoTypeMappers.UserIdTypeMapper
 import scala.annotation.elidable
 import scala.annotation.elidable.ASSERTION
 import com.keepit.learning.topicmodel.TopicModelGlobal
+import com.keepit.common.cache._
+import scala.concurrent.duration._
+
+
 
 case class UserTopic(
   id: Option[Id[UserTopic]] = None,
@@ -69,6 +73,13 @@ object UserTopic {
   )(UserTopic.apply, unlift(UserTopic.unapply))
 }
 
+case class UserTopicKey(userId: Id[User]) extends Key[UserTopic]{
+  val namespace = "user_topic"
+  def toKey(): String = userId.toString
+}
+
+class UserTopicCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+    extends JsonCacheImpl[UserTopicKey, UserTopic](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 @ImplementedBy(classOf[UserTopicRepoImpl])
 trait UserTopicRepo extends Repo[UserTopic]{
@@ -79,7 +90,8 @@ trait UserTopicRepo extends Repo[UserTopic]{
 @Singleton
 class UserTopicRepoImpl @Inject() (
   val db: DataBaseComponent,
-  val clock: Clock
+  val clock: Clock,
+  val userTopicCache: UserTopicCache
 ) extends DbRepo[UserTopic] with UserTopicRepo {
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
@@ -91,7 +103,9 @@ class UserTopicRepoImpl @Inject() (
   }
 
   def getByUserId(userId: Id[User])(implicit session: RSession): Option[UserTopic] = {
-    (for(r <- table if r.userId === userId) yield r).firstOption
+    userTopicCache.getOrElseOpt(UserTopicKey(userId)){
+      (for(r <- table if r.userId === userId) yield r).firstOption
+    }
   }
 
   def deleteAll()(implicit session: RWSession): Int = {
