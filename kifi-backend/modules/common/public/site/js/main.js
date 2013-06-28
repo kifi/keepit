@@ -779,8 +779,13 @@ $(function() {
 				error: showMessage.bind(null, 'Could not remove keeps, please try again later'),
 				success: function(data) {
 					$detail.removeAttr('data-kept');
+					inCollTmpl.clear();
 					$keeps.removeClass("mine").find(".keep-private").removeClass("on");
-					// TODO: decrement all relevant collection counts
+					var collCounts = $keeps.find(".keep-coll").remove().map(getDataId).get()
+						.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
+					for (var collId in collCounts) {
+						$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps -= collCounts[collId]);
+					}
 				}});
 		} else {  // toggle public/private
 			howKept = howKept == "pub" ? "pri" : "pub";
