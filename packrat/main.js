@@ -5,6 +5,7 @@ const notificationNotVisited = /^(un)?delivered$/;
 
 var tabsShowingNotificationsPane = [];
 var notificationsCallbacks = [];
+var threadCallbacks = {};
 
 // ===== Cached data from server
 
@@ -192,7 +193,7 @@ const socketHandlers = {
       d.following = o.following;
       d.comments = o.comments || [];
       d.threads = o.threads || [];
-      d.messages = {};
+      d.messages = d.messages || {};
       d.lastCommentRead = o.lastCommentRead;
       d.lastMessageRead = o.lastMessageRead || {};
       d.counts = {
@@ -219,12 +220,12 @@ const socketHandlers = {
           var numNew = th.messageCount - (thPrev && thPrev.messageCount || 0);
           if (numNew) {
             socket.send(["get_thread", th.id]);
-            (d.threadCallbacks = d.threadCallbacks || []).push({id: th.id, respond: function(th) {
+            (threadCallbacks[th.id] = threadCallbacks[th.id] || []).push(function(th) {
               d.tabs.forEach(function(tab) {
                 // TODO: may want to special case (numNew == 1) for an animation
                 api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages, userId: session.userId});
               });
-            }});
+            });
             threadsWithNewMessages.push(th);
           }
         });
@@ -318,19 +319,12 @@ const socketHandlers = {
   },
   thread: function(th) {
     api.log("[socket:thread]", th);
-    var d = pageData[th.uri];
-    if (d && d.messages) {
-      d.messages[th.id] = th.messages;
-      if (d.threadCallbacks) {
-        for (var i = 0; i < d.threadCallbacks.length; i++) {
-          var cb = d.threadCallbacks[i];
-          if (th.id == cb.id || th.messages.some(hasId(cb.id))) {
-            cb.respond({id: th.id, messages: th.messages});
-            d.threadCallbacks.splice(i--, 1);
-          }
-        }
+    th.messages.forEach(function(m, i) {
+      for (var cbs = threadCallbacks[m.id]; cbs && cbs.length;) {
+        cbs.shift()({id: m.id, uri: th.uri, messages: th.messages});
       }
-    }
+      delete threadCallbacks[m.id];
+    });
   },
   message: function(nUri, th, message) {
     api.log("[socket:message]", nUri, th, message);
@@ -536,16 +530,21 @@ api.port.on({
     var d = pageData[tab.nUri];
     if (d) d.on2(function() {
       var th = d.threads.filter(function(t) {return t.id == data.id || t.messageTimes[data.id]})[0];
-      if (th && d.messages[th.id]) {
+      var id = (th || data).id;
+      if (d.messages[id]) {
         if (data.respond) {
-          respond({id: th.id, messages: d.messages[th.id]});
+          respond({id: id, messages: d.messages[id], isRedirect: !th});
         }
       } else {
-        var id = (th || data).id;
         socket.send(["get_thread", id]);
-        if (data.respond) {
-          (d.threadCallbacks = d.threadCallbacks || []).push({id: id, respond: respond});
-        }
+        (threadCallbacks[id] = threadCallbacks[id] || []).push(function(thread) {
+          if (d.messages) {
+            d.messages[thread.id] = thread.messages;
+          }
+          if (data.respond) {
+            respond({id: thread.id, messages: thread.messages, isRedirect: thread.uri != tab.nUri});
+          }
+        });
       }
     });
   },

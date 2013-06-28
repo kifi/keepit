@@ -14,6 +14,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
 import com.keepit.model._
+import com.keepit.model.CollectionStates._
 import com.keepit.search.Lang
 import com.keepit.search.LangDetector
 import com.keepit.search.index.DocUtil
@@ -36,6 +37,11 @@ object CollectionFields {
   )
 }
 
+object CollectionIndexer {
+  def shouldDelete(collection: Collection): Boolean = (collection.state == INACTIVE)
+  val bookmarkSource = BookmarkSource("BookmarkStore")
+}
+
 class CollectionIndexer(
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
@@ -44,6 +50,8 @@ class CollectionIndexer(
 
   private[this] val commitBatchSize = 100
   private[this] val fetchSize = commitBatchSize * 3
+
+  private[this] val updateLock = new AnyRef
 
   private def commitCallback(commitBatch: Seq[(Indexable[Collection], Option[IndexError])]) = {
     var cnt = 0
@@ -58,7 +66,7 @@ class CollectionIndexer(
     cnt
   }
 
-  def update(): Int = {
+  def update(): Int = updateLock.synchronized {
     resetSequenceNumberIfReindex()
 
     var total = 0
@@ -73,14 +81,14 @@ class CollectionIndexer(
     total
   }
 
-  def update(userId: Id[User]): Int = {
+  def update(userId: Id[User]): Int = updateLock.synchronized {
     deleteDocuments(new Term(CollectionFields.userField, userId.toString), doCommit = false)
     update {
-      Await.result(shoeboxClient.getCollectionsByUser(userId), 180 seconds).map{ collectionId => (collectionId, userId, SequenceNumber.MinValue) }
+      Await.result(shoeboxClient.getCollectionsByUser(userId), 180 seconds).filter(_.seq <= sequenceNumber)
     }
   }
 
-  private def update(collectionsChanged: => Seq[(Id[Collection], Id[User], SequenceNumber)]): Int = {
+  private def update(collectionsChanged: => Seq[Collection]): Int = {
     log.info("updating Collection")
     try {
       var cnt = 0
@@ -94,24 +102,29 @@ class CollectionIndexer(
     }
   }
 
-  def buildIndexable(collectionIdAndSequenceNumber: (Id[Collection], Id[User], SequenceNumber)): CollectionListIndexable = {
-    val (collectionId, userId, seq) = collectionIdAndSequenceNumber
-    val bookmarks = Await.result(shoeboxClient.getBookmarksInCollection(collectionId), 180 seconds)
+  def buildIndexable(collection: Collection): CollectionListIndexable = {
+    val bookmarks = if (collection.state == CollectionStates.ACTIVE) {
+      Await.result(shoeboxClient.getBookmarksInCollection(collection.id.get), 180 seconds)
+    } else {
+      Seq.empty[Bookmark]
+    }
+
     new CollectionListIndexable(
-      id = collectionId,
-      sequenceNumber = seq,
-      userId = userId,
+      id = collection.id.get,
+      sequenceNumber = collection.seq,
+      isDeleted = bookmarks.isEmpty,
+      collection = collection,
       bookmarks = bookmarks)
   }
 
   class CollectionListIndexable(
     override val id: Id[Collection],
     override val sequenceNumber: SequenceNumber,
-    val userId: Id[User],
+    override val isDeleted: Boolean,
+    val collection: Collection,
     val bookmarks: Seq[Bookmark]
   ) extends Indexable[Collection] {
 
-    override val isDeleted: Boolean = bookmarks.isEmpty
     override def buildDocument = {
       val doc = super.buildDocument
 
@@ -123,7 +136,7 @@ class CollectionIndexer(
       val uri = buildURIIdField(collList)
       doc.add(uri)
 
-      val user = buildKeywordField(CollectionFields.userField, userId.toString)
+      val user = buildKeywordField(CollectionFields.userField, collection.userId.id.toString)
       doc.add(user)
 
       doc

@@ -5,6 +5,7 @@ import scala.concurrent.Future
 import com.keepit.model.SocialUserInfo
 
 import play.api.libs.json.JsValue
+import net.codingwell.scalaguice.ScalaModule
 
 /**
  * A generic social graph trait for a particular social network, e.g. Facebook, Twitter, LinkedIn
@@ -16,3 +17,5 @@ trait SocialGraph {
   def extractFriends(parentJson: JsValue): Seq[(SocialUserInfo, JsValue)]
   def revokePermissions(socialUserInfo: SocialUserInfo): Future[Unit]
 }
+
+trait SocialGraphModule extends ScalaModule

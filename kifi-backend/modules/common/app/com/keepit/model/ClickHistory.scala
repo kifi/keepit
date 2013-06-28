@@ -6,6 +6,7 @@ import org.joda.time.DateTime
 import com.keepit.common.cache._
 import scala.concurrent.duration._
 import scala.Some
+import net.codingwell.scalaguice.ScalaModule
 
 case class ClickHistory (
                     id: Option[Id[ClickHistory]] = None,
@@ -34,3 +35,6 @@ class ClickHistoryUserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Dur
   extends BinaryCacheImpl[ClickHistoryUserIdKey, ClickHistory](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object ClickHistoryStates extends States[ClickHistory]
+
+trait ClickHistoryModule extends ScalaModule
+

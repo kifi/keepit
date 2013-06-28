@@ -19,6 +19,13 @@ import com.keepit.common.routes.Search
 import com.keepit.common.routes.Common
 import com.keepit.common.search.{ResultClicked, SharingUserInfo, IndexInfo}
 import scala.concurrent.Promise
+import net.codingwell.scalaguice.ScalaModule
+import com.google.inject.{Provides, Singleton}
+import play.api.Play._
+import com.keepit.common.healthcheck.BenchmarkResults
+import play.api.libs.json.JsArray
+import com.keepit.model.NormalizedURI
+import com.keepit.model.User
 
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
@@ -62,6 +69,8 @@ trait SearchServiceClient extends ServiceClient {
   def benchmarks(): Future[BenchmarkResults]
   def version(): Future[String]
 }
+
+trait SearchServiceClientModule extends ScalaModule
 
 class SearchServiceClientImpl(
     override val serviceCluster: ServiceCluster,
@@ -221,4 +230,19 @@ class SearchServiceClientImpl(
       new SearchConfig(param)
     }
   }
+}
+
+case class SearchServiceClientImplModule() extends SearchServiceClientModule {
+
+  def configure {}
+
+  @Singleton
+  @Provides
+  def searchServiceClient(client: HttpClient, serviceCluster: ServiceCluster): SearchServiceClient = {
+    new SearchServiceClientImpl(
+      serviceCluster,
+      current.configuration.getInt("service.search.port").get,
+      client)
+  }
+
 }

@@ -84,7 +84,7 @@ class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override v
   def withFakeCache() = overrideWith(FakeCacheModule())
   def withS3DevModule() = overrideWith(new S3DevModule())
   def withShoeboxServiceModule() = overrideWith(ShoeboxServiceModule())
-  def withSearchConfigModule() = overrideWith(SearchConfigModule())
+  def withSearchConfigModule() = overrideWith(SearchConfigImplModule())
 
   def overrideWith(modules: Module*): TestApplication = new TestApplication(createTestGlobal(global, modules: _*), useDb, path)
 
@@ -169,7 +169,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   @Provides
   @Singleton
   def sliderHistoryTracker(sliderHistoryRepo: SliderHistoryRepo, db: Database): SliderHistoryTracker =
-    new SliderHistoryTracker(sliderHistoryRepo, db, -1, -1, -1)
+    new SliderHistoryTrackerImpl(sliderHistoryRepo, db, -1, -1, -1)
 
   @Singleton
   @Provides
@@ -268,18 +268,6 @@ class FakeScraperPlugin() extends ScraperPlugin {
   def scrape() = Seq()
   def asyncScrape(uri: NormalizedURI) =
     future { throw new Exception("Not Implemented") }
-}
-
-case class SearchConfigModule() extends ScalaModule {
-  override def configure(): Unit = {
-  }
-
-  @Singleton
-  @Provides
-  def searchConfigManager(shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait): SearchConfigManager = {
-    val optFile = current.configuration.getString("index.config").map(new File(_).getCanonicalFile).filter(_.exists)
-    new SearchConfigManager(optFile, shoeboxClient, monitoredAwait)
-  }
 }
 
 case class ShoeboxServiceModule() extends ScalaModule {

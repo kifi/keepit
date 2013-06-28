@@ -26,6 +26,7 @@ import play.api.Plugin
 import play.api.templates.Html
 import com.keepit.common.mail.RemotePostOffice
 import scala.concurrent.ExecutionContext.Implicits.global
+import net.codingwell.scalaguice.ScalaModule
 
 object Healthcheck {
 

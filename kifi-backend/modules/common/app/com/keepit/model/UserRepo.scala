@@ -1,6 +1,11 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{Inject, Singleton, ImplementedBy, Provider}
+
+import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent._
+
+import com.keepit.shoebox.usersearch._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ExternalId, Id, State}
 import com.keepit.common.db.slick.DBSession.RSession
@@ -17,11 +22,13 @@ trait UserRepo extends Repo[User] with ExternalIdColumnFunction[User] {
 
 @Singleton
 class UserRepoImpl @Inject() (
-                               val db: DataBaseComponent,
-                               val clock: Clock,
-                               val externalIdCache: UserExternalIdCache,
-                               val idCache: UserIdCache)
+    val db: DataBaseComponent,
+    val clock: Clock,
+    val externalIdCache: UserExternalIdCache,
+    val idCache: UserIdCache,
+    userIndexProvider: Provider[UserIndex])
   extends DbRepo[User] with UserRepo with ExternalIdColumnDbFunction[User] with Logging {
+
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
@@ -51,6 +58,9 @@ class UserRepoImpl @Inject() (
   override def invalidateCache(user: User)(implicit session: RSession) = {
     user.id map {id => idCache.set(UserIdKey(id), user)}
     externalIdCache.set(UserExternalIdKey(user.externalId), user)
+    future {
+      userIndexProvider.get.addUser(user)
+    }
     user
   }
 
