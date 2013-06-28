@@ -34,8 +34,8 @@ case class DevActorSystemModule() extends ActorSystemModule {
   @Provides
   def globalSchedulingEnabled: SchedulingEnabled =
     (current.configuration.getBoolean("scheduler.enabled").map {
-      case true => SchedulingEnabled.Never
-      case false => SchedulingEnabled.Always
+      case false => SchedulingEnabled.Never
+      case true => SchedulingEnabled.Always
     }).getOrElse(SchedulingEnabled.Never)
 
   @Provides
