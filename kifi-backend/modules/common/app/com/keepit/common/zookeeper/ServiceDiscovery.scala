@@ -87,10 +87,9 @@ class ServiceDiscoveryImpl @Inject() (
     val myServiceType: ServiceType = services.currentService
     log.info(s"registered clusters: $clusters, my service is $myServiceType")
     val myCluster = clusters(myServiceType)
-    myNode = Some(zk.createNode(myCluster.serviceNodeMaster, null, EPHEMERAL_SEQUENTIAL))
     val instanceInfo = amazonInstanceInfoProvider.get
+    myNode = Some(zk.createNode(myCluster.serviceNodeMaster, Json.toJson(instanceInfo).toString, EPHEMERAL_SEQUENTIAL))
     myCluster.register(myNode.get, instanceInfo)
-    zk.set(myNode.get, Json.toJson(instanceInfo).toString)
     log.info(s"registered as node ${myNode.get}")
     myNode.get
   }
