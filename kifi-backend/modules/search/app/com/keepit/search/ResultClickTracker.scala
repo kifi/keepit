@@ -62,8 +62,8 @@ case class ResultFeedbackImplModule() extends ResultFeedbackModule {
     }
     val file = new File(dir, "resultclicks.plru")
     // table size = 16M (physical size = 64MB + 4bytes)
-    val buffer = new MultiplexingBuffer(new FileResultClickTrackerBuffer(file, 0x1000000), s3buffer)
-    new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, syncEvery))
+    val buffer = new FileResultClickTrackerBuffer(file, 0x1000000)
+    new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, syncEvery)(Some(s3buffer)))
   }
 
 }

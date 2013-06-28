@@ -20,7 +20,7 @@ class ProbablisticLRUTest extends Specification {
     //   val buff =  inject[S3BackedResultClickTrackerBuffer]
     // }
     val buf = new InMemoryResultClickTrackerBuffer(tableSize) //TODO: Use the Multiplexed thingamagic here
-    val lru = new ProbablisticLRU(buf, numHashFuncs, syncEvery)
+    val lru = new ProbablisticLRU(buf, numHashFuncs, syncEvery)(None)
     lru.setSeed(123456789L)
     lru
   }

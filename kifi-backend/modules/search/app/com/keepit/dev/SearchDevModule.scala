@@ -9,7 +9,7 @@ import com.keepit.search.{ArticleStore, ResultClickTracker}
 import play.api.Play._
 import scala.Some
 import com.keepit.search.{ProbablisticLRU, InMemoryResultClickTrackerBuffer, FileResultClickTrackerBuffer}
-import com.keepit.search.{S3BackedResultClickTrackerBuffer, MultiplexingBuffer}
+import com.keepit.search.{S3BackedResultClickTrackerBuffer}
 import com.keepit.search.comment.{CommentIndexer, CommentStore}
 import com.keepit.search.graph.{CollectionIndexer, URIGraphIndexer, BookmarkStore, URIGraph}
 import com.keepit.common.healthcheck.HealthcheckPlugin
@@ -47,8 +47,8 @@ class SearchDevModule extends ScalaModule with Logging {
     val syncEvery = conf.getInt("syncEvery").get
     conf.getString("dir") match {
       case None =>
-        val buffer = new MultiplexingBuffer(new InMemoryResultClickTrackerBuffer(1000), s3buffer)
-        new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, Int.MaxValue))
+        val buffer = new InMemoryResultClickTrackerBuffer(1000)
+        new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, Int.MaxValue)(Some(s3buffer)))
       case Some(dirPath) =>
         val dir = new File(dirPath).getCanonicalFile()
         if (!dir.exists()) {
@@ -57,8 +57,8 @@ class SearchDevModule extends ScalaModule with Logging {
           }
         }
         val file = new File(dir, "resultclicks.plru")
-        val buffer = new MultiplexingBuffer(new FileResultClickTrackerBuffer(file, 0x1000000), s3buffer)
-        new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, syncEvery))
+        val buffer = new FileResultClickTrackerBuffer(file, 0x1000000)
+        new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, syncEvery)(Some(s3buffer)))
     }
   }
 
