@@ -84,7 +84,7 @@ class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override v
   def withFakeCache() = overrideWith(FakeCacheModule())
   def withS3DevModule() = overrideWith(new S3DevModule())
   def withShoeboxServiceModule() = overrideWith(ShoeboxServiceModule())
-  def withSearchConfigModule() = overrideWith(SearchConfigImplModule())
+  def withSearchConfigModule() = overrideWith(SearchConfigModule())
 
   def overrideWith(modules: Module*): TestApplication = new TestApplication(createTestGlobal(global, modules: _*), useDb, path)
 

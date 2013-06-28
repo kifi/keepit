@@ -16,6 +16,6 @@ case class SearchProdModule() extends SearchModule(
 
   // Search Functional Modules
   indexModule = IndexImplModule(),
-  searchConfigModule = SearchConfigImplModule(),
+  searchConfigModule = SearchConfigModule(),
   resultFeedbackModule = ResultFeedbackImplModule()
 )
