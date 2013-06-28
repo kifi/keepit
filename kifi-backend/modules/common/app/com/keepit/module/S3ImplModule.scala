@@ -25,6 +25,13 @@ class S3ImplModule() extends ScalaModule with Logging {
 
   @Singleton
   @Provides
+  def probablisticLRUStore(amazonS3Client: AmazonS3): ProbablisticLRUStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.flowerFilter.bucket").get)
+    new S3ProbablisticLRUStoreImpl(bucketName, amazonS3Client)
+  }
+
+  @Singleton
+  @Provides
   def articleSearchResultStore(amazonS3Client: AmazonS3): ArticleSearchResultStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.articleSearch.bucket").get)
     new S3ArticleSearchResultStoreImpl(bucketName, amazonS3Client)
