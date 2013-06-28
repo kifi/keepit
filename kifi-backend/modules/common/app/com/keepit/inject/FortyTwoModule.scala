@@ -13,7 +13,7 @@ import play.api.Play.current
 
 class FortyTwoModule() extends ScalaModule {
   def configure(): Unit = {
-    println("configuring FortyTwoModule")
+    println("Configuring FortyTwoModule")
     val appScope = new AppScope
     bindScope(classOf[AppScoped], appScope)
     bind[AppScope].toInstance(appScope)

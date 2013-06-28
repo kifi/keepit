@@ -9,5 +9,3 @@ trait BrowsingHistoryTracker {
   def add(userId: Id[User], uriId: Id[NormalizedURI]): BrowsingHistory
   def getMultiHashFilter(userId: Id[User]): MultiHashFilter[BrowsingHistory]
 }
-
-trait BrowsingHistoryTrackerModule extends ScalaModule

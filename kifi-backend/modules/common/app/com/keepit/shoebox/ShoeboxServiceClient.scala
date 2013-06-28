@@ -4,7 +4,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Promise
 import scala.concurrent.{Future, promise}
 import scala.concurrent.duration._
-import com.google.inject.Inject
+import com.google.inject.{Singleton, Provides, Inject}
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick.Database
@@ -34,6 +34,8 @@ import com.keepit.search.ArticleHit
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Shoebox
 import com.keepit.serializer.CollectionTupleSerializer.collectionTupleFormat
+import net.codingwell.scalaguice.ScalaModule
+import play.api.Play.current
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -70,6 +72,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getSocialUserInfosByUserId(userId: Id[User]): Future[Seq[SocialUserInfo]]
   def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]]
 }
+
+trait ShoeboxServiceClientModule extends ScalaModule
 
 case class ShoeboxCacheProvider @Inject() (
     userExternalIdCache: UserExternalIdCache,
@@ -343,6 +347,20 @@ class ShoeboxServiceClientImpl @Inject() (
           }
         }
     }
+  }
+
+}
+
+case class ShoeboxServiceClientImplModule() extends ShoeboxServiceClientModule {
+  def configure() {}
+
+  @Singleton
+  @Provides
+  def shoeboxServiceClient (client: HttpClient, cacheProvider: ShoeboxCacheProvider): ShoeboxServiceClient = {
+    new ShoeboxServiceClientImpl(
+      current.configuration.getString("service.shoebox.host").get,
+      current.configuration.getInt("service.shoebox.port").get,
+      client, cacheProvider)
   }
 
 }

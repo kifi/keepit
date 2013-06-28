@@ -9,5 +9,3 @@ trait ClickHistoryTracker {
   def add(userId: Id[User], uriId: Id[NormalizedURI]): ClickHistory
   def getMultiHashFilter(userId: Id[User]): MultiHashFilter[ClickHistory]
 }
-
-trait ClickHistoryTrackerModule extends ScalaModule
