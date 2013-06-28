@@ -7,9 +7,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.akka.MonitoredAwait
 import java.io.File
 
-trait SearchConfigModule extends ScalaModule
-
-case class SearchConfigImplModule() extends SearchConfigModule {
+case class SearchConfigModule() extends ScalaModule {
 
   def configure() {}
 

@@ -24,7 +24,7 @@ import akka.actor.Props
 
 import play.api.Play.current
 import com.keepit.common.akka.FortyTwoActor
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.plugin.SchedulingProperties
 
 case object Load
 case class Update(userId: Id[User])
@@ -72,4 +72,18 @@ class EventPersisterImpl @Inject() (
 
   def persist(event: Event): Unit = actor ! Persist(event, currentDateTime)
   def persist(events: Seq[Event]): Unit = actor ! PersistMany(events, currentDateTime)
+}
+
+class FakeEventPersisterImpl @Inject() (
+  system: ActorSystem, eventHelper: EventHelper, val schedulingProperties: SchedulingProperties)
+  extends EventPersister with Logging {
+
+  def persist(event: Event): Unit = {
+    eventHelper.newEvent(event)
+    log.info("Fake persisting event %s".format(event.externalId))
+  }
+
+  def persist(events: Seq[Event]): Unit = {
+    log.info("Fake persisting events %s".format(events map (_.externalId) mkString(",")))
+  }
 }
