@@ -4,15 +4,14 @@ import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
 import scala.concurrent.duration._
 import com.keepit.search.ActiveExperimentsCache
-import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.social.BasicUserUserIdCache
 
-case class SearchCacheModule() extends CacheModule {
+case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
 
-  def configure {
-    install(MemcachedCacheModule())
-    install(EhCacheCacheModule())
-  }
+  @Singleton
+  @Provides
+  def probablisticLRUChunkCache(outerRepo: FortyTwoCachePlugin) = 
+    new ProbablisticLRUChunkCache((outerRepo, 7 days))
 
   @Singleton
   @Provides

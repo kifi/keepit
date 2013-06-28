@@ -1,5 +1,8 @@
 package com.keepit.search
 
+import com.keepit.common.db.Id
+import com.keepit.common.cache.{ProbablisticLRUChunkCache, ProbablisticLRUChunkKey}
+
 import scala.math._
 import java.io.File
 import java.io.RandomAccessFile
@@ -10,8 +13,58 @@ import java.nio.MappedByteBuffer
 import java.util.concurrent.atomic.AtomicLong
 import java.util.Random
 
-object ProbablisticLRU {
-  def apply(file: File, tableSize: Int, numHashFuncs: Int, syncEvery: Int) = {
+import com.google.inject.Inject
+import com.amazonaws.services.s3.AmazonS3
+import com.amazonaws.services.sns.model.NotFoundException
+
+
+
+case class ProbablisticLRUName(name: String)
+
+
+trait MultiChunkBuffer {
+  def getChunk(key: Long) : IntBufferWrapper
+  def chunkSize : Int
+}
+
+
+trait IntBufferWrapper {
+  def get(pos: Int): Int
+  def put(pos: Int, value: Int): Unit
+  def sync() : Unit
+}
+
+trait SimpleLocalBuffer extends MultiChunkBuffer {
+
+  protected val byteBuffer: ByteBuffer
+
+  private[this] def intBuffer = byteBuffer.asIntBuffer
+
+  def chunkSize : Int = byteBuffer.getInt(0)
+
+  def getChunk(key: Long) : IntBufferWrapper = new IntBufferWrapper {
+
+    def get(pos: Int) : Int = intBuffer.get(pos)
+
+    def put(pos: Int, value: Int) : Unit = synchronized { 
+      intBuffer.put(pos, value)
+    }
+
+    def sync : Unit = synchronized { 
+      byteBuffer match {
+        case mappedByteBuffer: MappedByteBuffer => mappedByteBuffer.force()
+        case _ =>
+      }
+    }
+
+  }
+  
+}
+
+
+class FileResultClickTrackerBuffer(file: File, tableSize: Int) extends SimpleLocalBuffer {
+
+  protected val byteBuffer : ByteBuffer = {
     val bufferSize = tableSize * 4 + 4
     val isNew = !file.exists
     val raf = new RandomAccessFile(file, "rw")
@@ -22,21 +75,85 @@ object ProbablisticLRU {
     } else {
       if (tableSize != byteBuffer.getInt(0)) throw new ProbablisticLRUException("table size mismatch")
     }
-    new ProbablisticLRU(byteBuffer, tableSize, numHashFuncs, syncEvery)
+    byteBuffer
   }
 
-  def apply(tableSize: Int, numHashFuncs: Int, syncEvery: Int) = {
+}
+
+
+class InMemoryResultClickTrackerBuffer(tableSize: Int) extends SimpleLocalBuffer {
+  
+  protected val byteBuffer : ByteBuffer = {
     val bufferSize = tableSize * 4 + 4
-    val byteBuffer = ByteBuffer.allocate(bufferSize)
-    byteBuffer.putInt(0, tableSize)
-    new ProbablisticLRU(byteBuffer, tableSize, numHashFuncs, syncEvery)
+    val _byteBuffer = ByteBuffer.allocate(bufferSize)
+    _byteBuffer.putInt(0, tableSize)
+    _byteBuffer
   }
 
-  def valueHash(value: Long, position: Int): Int = {
-    // 32-bit integer, excluding zero. zero is special
-    (((value * position.toLong) ^ value) % 0xFFFFFFFFL + 1L).toInt
+}
+
+
+class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticLRUStore, val filterName: ProbablisticLRUName) extends MultiChunkBuffer {
+
+
+  private def loadChunk(chunkId: Int) : Array[Int] = {
+    val fullId = FullFilterChunkId(filterName.name, chunkId)
+    val key = ProbablisticLRUChunkKey(fullId)
+    cache.getOrElseOpt(key)(dataStore.get(fullId)) match {
+      case Some(intArray) => intArray
+      case None =>
+        val intBuffer = new Array[Int](chunkSize+1)
+        intBuffer(0)=chunkSize
+        intBuffer
+    }
   }
 
+  private def saveChunk(chunkId: Int, chunk: Array[Int]) : Unit = { 
+    val fullId = FullFilterChunkId(filterName.name, chunkId)
+    dataStore += (fullId, chunk)
+    cache.remove(ProbablisticLRUChunkKey(fullId))
+  }
+
+  private def numChunks : Int = 4000 
+
+  def chunkSize : Int = 4000
+
+  def getChunk(key: Long) = {
+    val chunkId = ((key % chunkSize*numChunks) / chunkSize).toInt
+    val thisChunk : Array[Int] = loadChunk(chunkId)
+    var dirtyEntries : Set[Int] = Set[Int]()
+    
+    new IntBufferWrapper {
+      
+      def get(pos: Int) : Int = thisChunk(pos)
+
+      def sync : Unit = synchronized {
+        val storedChunk = loadChunk(chunkId)
+        dirtyEntries.foreach { pos =>
+          storedChunk(pos) = thisChunk(pos)
+        }
+        saveChunk(chunkId, storedChunk)
+      }
+
+      def put(pos: Int, value: Int) = synchronized {
+        thisChunk(pos) = value
+        dirtyEntries = dirtyEntries + pos
+      }
+
+    }
+  }
+
+}
+
+
+
+class S3BackedResultClickTrackerBuffer @Inject() (cache: ProbablisticLRUChunkCache, dataStore : ProbablisticLRUStore) extends S3BackedBuffer(cache, dataStore, ProbablisticLRUName("ResultClickTracker"))
+
+
+
+
+class ProbablisticLRU(masterBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEvery : Int)(slaveBuffer: Option[MultiChunkBuffer] = None) {
+  
   class Likeliness(key: Long, positions: Array[Int], values: Array[Int], norm: Float) {
     def apply(value: Long) = {
       var count = 0.0f
@@ -60,16 +177,19 @@ object ProbablisticLRU {
       count
     }
   }
-}
 
-class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int, syncEvery: Int) {
-  import ProbablisticLRU._
+  def valueHash(value: Long, position: Int): Int = {
+    // 32-bit integer, excluding zero. zero is special
+    (((value * position.toLong) ^ value) % 0xFFFFFFFFL + 1L).toInt
+  }
 
-  private[this] val intBuffer = byteBuffer.asIntBuffer
+
   private[this] val rnd = new Random
 
   private[this] var inserts = new AtomicLong(0L)
   private[this] var syncs = 0L
+  private[this] var dirtyChunks = Set[IntBufferWrapper]()
+  private[this] var dirtyChunksSlave = Set[IntBufferWrapper]()
 
   def setSeed(seed: Long) = rnd.setSeed(seed)
 
@@ -81,7 +201,7 @@ class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int,
 
   def get(key: Long) = {
     val (p, h) = getValueHashes(key)
-    new ProbablisticLRU.Likeliness(key, p, h, numHashFuncs.toFloat)
+    new Likeliness(key, p, h, numHashFuncs.toFloat)
   }
 
   def get(key: Long, values: Seq[Long]): Map[Long, Int] = {
@@ -92,11 +212,13 @@ class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int,
     }
   }
 
-  def sync = {
-    byteBuffer match {
-      case mappedByteBuffer: MappedByteBuffer => mappedByteBuffer.force()
-      case _ =>
-    }
+  def sync = synchronized {
+    dirtyChunks.map(_.sync)
+    dirtyChunks = Set[IntBufferWrapper]()
+
+    dirtyChunksSlave.map(_.sync)
+    dirtyChunksSlave = Set[IntBufferWrapper]()
+
     syncs += 1
     this
   }
@@ -104,38 +226,53 @@ class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int,
   def numInserts = inserts.get
   def numSyncs = syncs
 
-  private[this] def putValueHash(key: Long, value: Long, updateStrength: Double) {
-    var positions = new Array[Int](numHashFuncs)
-    var i = 0
-    foreachPosition(key){ pos =>
-      positions(i) = pos
-      i += 1
+  protected def putValueHash(key: Long, value: Long, updateStrength: Double) {
+    def putValueHashOnce(bufferChunk: IntBufferWrapper, tableSize: Int) : Unit = {
+      var positions = new Array[Int](numHashFuncs)
+      var i = 0
+      foreachPosition(key, tableSize){ pos =>
+        positions(i) = pos
+        i += 1
+      }
+      // randomly overwrite the positions proportionally to updateStrength
+      i = 0
+      val numUpdatePositions = min(ceil(numHashFuncs.toDouble * updateStrength).toInt, numHashFuncs)
+      while (i < numUpdatePositions) {
+        val index = rnd.nextInt(positions.length - i) + i
+        val pos = positions(index)
+        positions(index) = positions(i)
+        bufferChunk.put(pos, valueHash(value, pos))
+        i += 1
+      }
     }
-    // randomly overwrite the positions proportionally to updateStrength
-    i = 0
-    val numUpdatePositions = min(ceil(numHashFuncs.toDouble * updateStrength).toInt, numHashFuncs)
-    while (i < numUpdatePositions) {
-      val index = rnd.nextInt(positions.length - i) + i
-      val pos = positions(index)
-      positions(index) = positions(i)
-      intBuffer.put(pos, valueHash(value, pos))
-      i += 1
+
+    val bufferChunkMaster = masterBuffer.getChunk(key)
+    putValueHashOnce(bufferChunkMaster, masterBuffer.chunkSize)
+    dirtyChunks = dirtyChunks + bufferChunkMaster
+
+    slaveBuffer.foreach{ mcBuffer => 
+      val bufferChunkSlave = mcBuffer.getChunk(key)
+      putValueHashOnce(bufferChunkSlave, mcBuffer.chunkSize)
+      dirtyChunksSlave = dirtyChunks + bufferChunkSlave
     }
+
   }
 
-  private def getValueHashes(key: Long): (Array[Int], Array[Int]) = {
+  protected def getValueHashes(key: Long): (Array[Int], Array[Int]) = {
+    val bufferChunk = masterBuffer.getChunk(key)
+    val tableSize = masterBuffer.chunkSize
     var p = new Array[Int](numHashFuncs)
     var h = new Array[Int](numHashFuncs)
     var i = 0
-    foreachPosition(key){ pos =>
+    foreachPosition(key, tableSize){ pos =>
       p(i) = pos
-      h(i) = intBuffer.get(pos)
+      h(i) = bufferChunk.get(pos)
       i += 1
     }
     (p, h)
   }
 
-  private[this] def foreachPosition(key: Long)(f: Int => Unit) {
+  private[this] def foreachPosition(key: Long, tableSize: Int)(f: Int => Unit) {
     var v = key & 0x7FFFFFFFFFFFFFFFL
     var i = 0
     val tsize = tableSize.toLong
@@ -147,5 +284,8 @@ class ProbablisticLRU(byteBuffer: ByteBuffer, tableSize: Int, numHashFuncs: Int,
     }
   }
 }
+
+// class MultiplexingProbablisticLRU(buffers: MultiplexingBuffer, numHashFuncs : Int, syncEvery : Int)
+
 
 class ProbablisticLRUException(msg: String) extends Exception(msg)
