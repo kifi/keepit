@@ -4,7 +4,7 @@ import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.common.cache.{EhCacheCacheModule, MemcachedCacheModule, SearchCacheModule}
 import com.keepit.common.{SearchBrowsingHistoryModule, SearchClickHistoryModule}
 import com.keepit.shoebox.ShoeboxServiceClientImplModule
-import com.keepit.module.DiscoveryImplModule
+import com.keepit.module.ProdDiscoveryModule
 
 case class SearchProdModule() extends SearchModule(
 
@@ -14,7 +14,7 @@ case class SearchProdModule() extends SearchModule(
   shoeboxServiceClientModule = ShoeboxServiceClientImplModule(),
   clickHistoryModule = SearchClickHistoryModule(),
   browsingHistoryModule = SearchBrowsingHistoryModule(),
-  discoveryModule = DiscoveryImplModule(),
+  discoveryModule = ProdDiscoveryModule(),
 
   // Search Functional Modules
   indexModule = IndexImplModule(),

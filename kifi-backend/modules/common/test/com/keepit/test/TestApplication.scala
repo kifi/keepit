@@ -39,7 +39,6 @@ import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import java.io.File
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.amazon._
 import com.keepit.model.SocialUserInfo
 import com.keepit.common.store.FakeS3StoreModule
 import com.keepit.search.SearchConfigModule
@@ -47,16 +46,14 @@ import com.keepit.common.social.FakeSecureSocialUserServiceModule
 import com.keepit.model.SocialConnection
 import com.keepit.classify.DomainTagImportSettings
 import scala.Some
-import com.keepit.common.zookeeper.Node
 import com.keepit.model.NormalizedURI
 import com.keepit.common.healthcheck.BabysitterTimeout
 import com.keepit.common.db.SlickModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.service.ServiceVersion
 import com.keepit.shoebox.ShoeboxCacheProvider
-import com.keepit.common.amazon.AmazonInstanceId
 import com.keepit.common.mail.FakeMailModule
-import com.keepit.module.DevDiscoveryModule
+import com.keepit.module.TestDiscoveryModule
 
 
 class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
@@ -105,7 +102,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     bind[SlickSessionProvider].to[TestSlickSessionProvider]
     install(new FakeS3StoreModule())
     install(TestCacheModule())
-    install(DevDiscoveryModule())
+    install(TestDiscoveryModule())
     bind[play.api.Application].toProvider(new Provider[play.api.Application] {
       def get(): play.api.Application = current
     }).in(classOf[AppScoped])
@@ -150,7 +147,8 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Singleton
   @Provides
-  def shoeboxServiceClient(shoeboxCacheProvided: ShoeboxCacheProvider, httpClient: HttpClient): ShoeboxServiceClient = new ShoeboxServiceClientImpl(null, -1, httpClient,shoeboxCacheProvided)
+  def shoeboxServiceClient(shoeboxCacheProvided: ShoeboxCacheProvider, httpClient: HttpClient, serviceCluster: ServiceCluster): ShoeboxServiceClient =
+    new ShoeboxServiceClientImpl(serviceCluster, -1, httpClient,shoeboxCacheProvided)
 
   @Singleton
   @Provides
@@ -158,7 +156,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Provides
   @Singleton
-  def searchServiceClient: SearchServiceClient = new SearchServiceClientImpl(null, -1, null)
+  def searchServiceClient(serviceCluster: ServiceCluster): SearchServiceClient = new SearchServiceClientImpl(serviceCluster, -1, null)
 
   @Provides
   @AppScoped

@@ -451,22 +451,8 @@ $(function() {
 		}
 	}).on("click", ".keep-coll-x", function(e) {
 		e.stopPropagation(), e.preventDefault();
-		var $coll = $(this.parentNode), collId = $coll.data("id");
-		$.ajax({
-			url: urlCollections + "/" + collId + "/removeKeeps",
-			type: "POST",
-			dataType: 'json',
-			data: JSON.stringify([$coll.closest(".keep").data("id")]),
-			contentType: 'application/json',
-			error: showMessage.bind(null, 'Could not remove keep from collection, please try again later'),
-			success: function(data) {
-				$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps -= data.removed);
-			}});
-		$coll.css("width", $coll[0].offsetWidth).layout().on("transitionend", function(e) {
-			if (e.target === this) {
-				$coll.remove();
-			}
-		}).addClass("removed");
+		var $coll = $(this.parentNode);
+		removeKeepsFromCollection($coll.data("id"), [$coll.closest(".keep").data("id")]);
 	}).on("click", ".keep", function(e) {
 		// 1. Only one keep at a time can be selected and not checked.
 		// 2. If a keep is selected and not checked, no keeps are checked.
@@ -723,6 +709,34 @@ $(function() {
 			}});
 	}
 
+	function removeKeepsFromCollection(collId, keepIds) {
+		$.ajax({
+			url: urlCollections + "/" + collId + "/removeKeeps",
+			type: "POST",
+			dataType: 'json',
+			data: JSON.stringify(keepIds),
+			contentType: 'application/json',
+			error: showMessage.bind(null, 'Could not remove keep' + (keepIds.length > 1 ? 's' : '') + ' from collection, please try again later'),
+			success: function(data) {
+				$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps -= data.removed);
+			}});
+		var $allKeeps = $main.find(".keep");
+		var $keeps = $allKeeps.filter(function() {return keepIds.indexOf($(this).data("id")) >= 0});
+		var $keepColl = $keeps.find(".keep-coll[data-id=" + collId + "]");
+		$keepColl.css("width", $keepColl[0].offsetWidth).layout().on("transitionend", removeIfThis).addClass("removed");
+		if ($keeps.is(".selected") && !$allKeeps.filter(".selected").not($keeps).has(".keep-coll[data-id=" +  + "]").length) {
+			// there are no other selected keeps in the collection, so must remove collection from detail pane
+			var $pageColl = $detail.find(".page-coll[data-id=" + collId + "]");
+			$pageColl.css("width", $pageColl[0].offsetWidth).layout().on("transitionend", removeIfThis).addClass("removed");
+		}
+	}
+
+	function removeIfThis(e) {
+		if (e.target === this) {
+			$(this).remove();
+		}
+	}
+
 	// $('.detail .actions a.add').click(function() {
 	// 	$(this).toggleClass('active');
 	// 	$('.detail .collections').toggleClass('active');
@@ -787,6 +801,11 @@ $(function() {
 		if (collId !== $collList.find(".collection.active").data("id")) {
 			showMyKeeps(collId);
 		}
+	}).on("click", ".page-coll-x", function(e) {
+		e.preventDefault();
+		removeKeepsFromCollection(
+			$(this.parentNode).data("id"),
+			$main.find(".keep.selected").map(function() {return $(this).data("id")}).get());
 	});
 
 	$(".send-feedback").click(function() {

@@ -31,5 +31,4 @@ class DevCommonModule extends ScalaModule with Logging {
       new FakeMongoS3EventStoreImpl()
     }
   }
-
 }

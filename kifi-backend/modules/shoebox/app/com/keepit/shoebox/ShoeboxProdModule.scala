@@ -17,7 +17,7 @@ import com.keepit.classify.ProdDomainTagImporterModule
 import scala.slick.session.{Database => SlickDatabase}
 import play.api.db.DB
 import play.api.Play
-import com.keepit.module.{DiscoveryImplModule, ProdActorSystemModule}
+import com.keepit.module.{ProdDiscoveryModule, ProdActorSystemModule}
 
 case class ShoeboxProdModule() extends ShoeboxModule(
   // Common Functional Modules
@@ -30,7 +30,7 @@ case class ShoeboxProdModule() extends ShoeboxModule(
   cryptoModule = ShoeboxCryptoModule(),
   s3Module = ShoeboxS3Module(),
   actorSystemModule = ProdActorSystemModule(),
-  discoveryModule = DiscoveryImplModule(),
+  discoveryModule = ProdDiscoveryModule(),
 
   // Shoebox Functional Modules
   slickModule = SlickModule(ShoeboxDbInfo()),

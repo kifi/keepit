@@ -4,6 +4,7 @@ import net.codingwell.scalaguice.ScalaModule
 
 import com.google.inject.{Singleton, Provides, Provider}
 
+import com.keepit.common.zookeeper
 import com.keepit.common.logging.Logging
 import com.keepit.common.service._
 import com.keepit.common.amazon._
@@ -15,12 +16,7 @@ import play.api.Mode
 import play.api.Mode._
 import play.api.Play.current
 
-trait DiscoveryModule extends ScalaModule
-
-case class DiscoveryImplModule() extends DiscoveryModule with Logging {
-
-  def configure() { }
-
+trait DiscoveryModule extends ScalaModule {
   @Singleton
   @Provides
   def serviceDiscovery(services: FortyTwoServices, mode: Mode, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo]): ServiceDiscovery = mode match {
@@ -32,10 +28,16 @@ case class DiscoveryImplModule() extends DiscoveryModule with Logging {
       new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider)
     case _ =>
       new ServiceDiscovery {
+        def serviceCluster(serviceType: ServiceType): ServiceCluster = new ServiceCluster(serviceType)
         def register() = Node("me")
         def isLeader() = true
       }
   }
+}
+
+case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
+
+  def configure() { }
 
   @Singleton
   @Provides
@@ -66,13 +68,6 @@ case class DevDiscoveryModule() extends DiscoveryModule {
 
   @Singleton
   @Provides
-  def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
-    def register() = Node("me")
-    def isLeader() = true
-  }
-
-  @Singleton
-  @Provides
   def amazonInstanceInfo: AmazonInstanceInfo =
     new AmazonInstanceInfo(
       instanceId = AmazonInstanceId("i-f168c1a8"),
@@ -86,4 +81,9 @@ case class DevDiscoveryModule() extends DiscoveryModule {
       amiId = "ami-1bf9de5e",
       amiLaunchIndex = "0"
     )
+
+  @Provides
+  @Singleton
+  def serviceCluster(amazonInstanceInfo: AmazonInstanceInfo): ServiceCluster =
+    new ServiceCluster(ServiceType.DEV_MODE).register(Node("DEV"), amazonInstanceInfo)
 }
