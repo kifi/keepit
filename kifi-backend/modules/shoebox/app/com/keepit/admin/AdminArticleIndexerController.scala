@@ -20,19 +20,13 @@ class AdminArticleIndexerController @Inject()(
   ) extends AdminController(actionAuthenticator) {
 
   def index = AdminHtmlAction { implicit request =>
-    Async {
-      searchClient.index().map { cnt =>
-        Ok("indexed %d articles".format(cnt))
-      }
-    }
+    searchClient.index()
+    Ok("indexed articles")
   }
 
   def reindex = AdminHtmlAction { implicit request =>
-    Async {
-      searchClient.reindex().map { r =>
-        Ok("reindexing started")
-      }
-    }
+    searchClient.reindex
+    Ok("reindexing started")
   }
 
   def indexByState(state: State[NormalizedURI]) = AdminHtmlAction { implicit request =>
@@ -40,11 +34,8 @@ class AdminArticleIndexerController @Inject()(
       db.readWrite { implicit s =>
         normUriRepo.getByState(state).foreach{ uri => normUriRepo.save(uri.withState(newState)) }
       }
-      Async {
-        searchClient.index().map { cnt =>
-          Ok("indexed %d articles".format(cnt))
-        }
-      }
+      searchClient.index()
+      Ok("indexed articles")
     }
   }
 
@@ -65,11 +56,8 @@ class AdminArticleIndexerController @Inject()(
   }
 
   def refreshSearcher = AdminHtmlAction { implicit request =>
-    Async {
-      searchClient.refreshSearcher().map { _ =>
-        Ok("searcher refreshed")
-      }
-    }
+    searchClient.refreshSearcher()
+    Ok("searcher refreshed")
   }
 
   def dumpLuceneDocument(id: Id[NormalizedURI]) =  AdminHtmlAction { implicit request =>
