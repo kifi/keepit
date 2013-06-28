@@ -1,7 +1,7 @@
 package com.keepit.shoebox
 
 import com.keepit.common.cache.ShoeboxCacheModule
-import com.keepit.social.SecureSocialImplModule
+import com.keepit.social.ShoeboxSecureSocialModule
 import com.keepit.search.SearchServiceClientImplModule
 import com.keepit.common.db.{DbInfo, SlickModule}
 import com.keepit.scraper.ScraperImplModule
@@ -11,7 +11,6 @@ import com.keepit.learning.topicmodel.LdaTopicModelModule
 import com.keepit.model.SliderHistoryTrackerImplModule
 import com.keepit.common.mail.ShoeboxMailModule
 import com.keepit.common.crypto.ShoeboxCryptoModule
-import com.keepit.common.healthcheck.ShoeboxHealthCheckModule
 import com.keepit.common.store.ShoeboxS3Module
 import com.keepit.realtime.ShoeboxWebSocketModule
 import com.keepit.classify.DomainTagImporterImplModule
@@ -22,13 +21,12 @@ import play.api.Play
 case class ShoeboxProdModule() extends ShoeboxModule(
   // Common Functional Modules
   cacheModule = ShoeboxCacheModule(),
-  secureSocialModule = SecureSocialImplModule(),
+  secureSocialModule = ShoeboxSecureSocialModule(),
   searchServiceClientModule = SearchServiceClientImplModule(),
-  clickHistoryTrackerModule = ClickHistoryTrackerImplModule(),
-  browsingHistoryTrackerModule = BrowsingHistoryTrackerImplModule(),
+  clickHistoryModule = ShoeboxClickHistoryModule(),
+  browsingHistoryModule = ShoeboxBrowsingHistoryModule(),
   mailModule = ShoeboxMailModule(),
   cryptoModule = ShoeboxCryptoModule(),
-  healthCheckModule = ShoeboxHealthCheckModule(),
   s3Module = ShoeboxS3Module(),
 
   // Shoebox Functional Modules

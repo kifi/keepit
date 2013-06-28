@@ -9,7 +9,7 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.controller.{ShoeboxActionAuthenticator, ActionAuthenticator}
 
-case class SecureSocialImplModule() extends SecureSocialModule {
+case class ShoeboxSecureSocialModule() extends SecureSocialModule {
 
   def configure {
     bind[ActionAuthenticator].to[ShoeboxActionAuthenticator]
