@@ -1,6 +1,8 @@
 package com.keepit.search.phrasedetector
 
 import com.keepit.common.db.{Id,SequenceNumber}
+import com.keepit.common.healthcheck.Healthcheck.INTERNAL
+import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
 import com.keepit.model.Phrase
 import com.keepit.search.index.Indexer
@@ -102,7 +104,11 @@ abstract class PhraseIndexer(indexDirectory: Directory, indexWriterConfig: Index
   def reload(indexableIterator: Iterator[PhraseIndexable], refresh: Boolean = true): Unit
 }
 
-class PhraseIndexerImpl(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, shoeboxClient: ShoeboxServiceClient) extends PhraseIndexer(indexDirectory, indexWriterConfig) with Logging  {
+class PhraseIndexerImpl(
+  indexDirectory: Directory,
+  indexWriterConfig: IndexWriterConfig,
+  healthcheckPlugin: HealthcheckPlugin,
+  shoeboxClient: ShoeboxServiceClient) extends PhraseIndexer(indexDirectory, indexWriterConfig) with Logging  {
 
   final val BATCH_SIZE = 200000
 
@@ -142,8 +148,32 @@ class PhraseIndexerImpl(indexDirectory: Directory, indexWriterConfig: IndexWrite
 
   def reload(indexableIterator: Iterator[PhraseIndexable], refresh: Boolean = true) {
     deleteAllDocuments(refresh = false)
-    indexDocuments(indexableIterator, BATCH_SIZE, refresh = false){ s => log.info(s"[PhraseIndexer] imported ${s.length} phrases. First in batch id: ${s.headOption.map(t=> t._1.id.id).getOrElse("")}") }
+    indexDocuments(indexableIterator, BATCH_SIZE, refresh = false)
     if (refresh) refreshSearcher()
+  }
+
+  override def onFailure(indexable: Indexable[Phrase], e: Throwable): Unit = {
+    val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
+    healthcheckPlugin.addError(HealthcheckError(errorMessage = Some(msg), callType = INTERNAL))
+    super.onFailure(indexable, e)
+  }
+
+  override def onSuccess(indexable: Indexable[Phrase]): Unit = {
+    if (firstInBatch < 0) firstInBatch = indexable.id.id
+    countInBatch += 1
+    super.onSuccess(indexable)
+  }
+
+  private[this] var firstInBatch = -1L
+  private[this] var countInBatch = 0
+
+  override def onStart(batch: Seq[Indexable[Phrase]]): Unit = {
+    firstInBatch = -1L
+    countInBatch = 0
+  }
+
+  override def onCommit(successful: Seq[Indexable[Phrase]]): Unit = {
+    log.info(s"[PhraseIndexer] imported ${countInBatch} phrases. First in batch id: ${firstInBatch}")
   }
 }
 

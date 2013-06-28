@@ -40,6 +40,11 @@ class ArticleIndexer @Inject() (
   val commitBatchSize = 100
   val fetchSize = 20000
 
+  override def onFailure(indexable: Indexable[NormalizedURI], e: Throwable) {
+    healthcheckPlugin.addError(HealthcheckError(errorMessage = Some(e.toString), callType = INTERNAL))
+    super.onFailure(indexable, e)
+  }
+
   def run(): Int = run(commitBatchSize, fetchSize)
 
   def run(commitBatchSize: Int, fetchSize: Int): Int = {
@@ -48,15 +53,9 @@ class ArticleIndexer @Inject() (
     log.info("starting a new indexing round")
     try {
       val uris = Await.result(shoeboxClient.getIndexable(sequenceNumber.value, fetchSize), 180 seconds)
-      var cnt = 0
-      indexDocuments(uris.iterator.map(buildIndexable), commitBatchSize){ commitBatch =>
-        val (errors, successes) = commitBatch.partition(_._2.isDefined)
-        errors.map(_._2.get).foreach { error =>
-          healthcheckPlugin.addError(HealthcheckError(errorMessage = Some(error.msg), callType = INTERNAL))
-        }
-        cnt += successes.size
-      }
-      cnt
+      var cnt = successCount
+      indexDocuments(uris.iterator.map(buildIndexable), commitBatchSize)
+      successCount - cnt
     } catch {
       case ex: Throwable =>
         log.error("error in indexing run", ex)
@@ -107,6 +106,7 @@ class ArticleIndexer @Inject() (
         } catch {
           case e: Throwable =>
         }
+        log.info("failed to get article from ArticleStore. retry in {$sleepTime}ms")
         Thread.sleep(sleepTime)
         sleepTime *= 2 // exponential back off
         retry -= 0
