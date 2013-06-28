@@ -7,12 +7,7 @@ import com.keepit.search.ActiveExperimentsCache
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.social.BasicUserUserIdCache
 
-case class SearchCacheModule() extends CacheModule {
-
-  def configure {
-    install(MemcachedCacheModule())
-    install(EhCacheCacheModule())
-  }
+case class SearchCacheModule() extends CacheModule(MemcachedCacheModule(), EhCacheCacheModule()) {
 
   @Singleton
   @Provides

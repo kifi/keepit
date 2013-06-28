@@ -26,14 +26,8 @@ import com.keepit.model.BrowsingHistoryUserIdCache
 import com.keepit.model.ClickHistoryUserIdCache
 import com.keepit.search.ActiveExperimentsCache
 import com.keepit.model.UserConnectionIdCache
-import scala.collection.concurrent.{TrieMap => ConcurrentMap}
 
-class DevCacheModule extends CacheModule {
-
-  def configure {
-    bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
-    bind[InMemoryCachePlugin].to[HashMapMemoryCache]
-  }
+class DevCacheModule extends CacheModule(HashMapMemoryCacheModule()) {
 
   @Singleton
   @Provides
@@ -154,25 +148,4 @@ class DevCacheModule extends CacheModule {
   @Provides
   def userConnectionIdCache(outerRepo: FortyTwoCachePlugin) =
     new UserConnectionIdCache((outerRepo, 7 days))
-}
-
-@Singleton
-class HashMapMemoryCache extends InMemoryCachePlugin {
-
-  val cache = ConcurrentMap[String, Any]()
-
-  def get(key: String): Option[Any] = {
-    val value = cache.get(key)
-    value
-  }
-
-  def remove(key: String) {
-    cache.remove(key)
-  }
-
-  def set(key: String, value: Any, expiration: Int = 0) {
-    cache += key -> value
-  }
-
-  override def toString = "HashMapMemoryCache"
 }
