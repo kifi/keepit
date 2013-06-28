@@ -2,7 +2,6 @@ package com.keepit.test
 
 import scala.collection.mutable
 import scala.concurrent._
-import org.apache.zookeeper.CreateMode
 import org.joda.time.{ReadablePeriod, DateTime}
 import net.codingwell.scalaguice.{ScalaModule, ScalaMultibinder}
 import com.google.inject.Module
@@ -11,7 +10,6 @@ import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.google.inject.util.Modules
 import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
-import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.analytics._
 import com.keepit.common.cache._
 import com.keepit.common.controller.FortyTwoCookies._
@@ -20,7 +18,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
-import com.keepit.common.net.{HttpClient, FakeHttpClientModule, FakeClientResponse}
+import com.keepit.common.net.{HttpClient, FakeClientResponse}
 import com.keepit.common.plugin._
 import com.keepit.common.service._
 import com.keepit.common.social._
@@ -32,7 +30,6 @@ import com.keepit.model._
 import com.keepit.scraper._
 import com.keepit.search._
 import com.keepit.shoebox._
-import com.keepit.social._
 import akka.actor.ActorSystem
 import akka.actor.Cancellable
 import akka.actor.Scheduler
@@ -42,22 +39,21 @@ import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import java.io.File
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.store.S3ImageStore
-import com.keepit.common.amazon._
+import com.keepit.model.SocialUserInfo
 import com.keepit.common.store.FakeS3StoreModule
+import com.keepit.search.SearchConfigModule
+import com.keepit.common.social.FakeSecureSocialUserServiceModule
 import com.keepit.model.SocialConnection
 import com.keepit.classify.DomainTagImportSettings
 import scala.Some
-import com.keepit.common.zookeeper.Node
-import com.keepit.common.zookeeper.Path
+import com.keepit.model.NormalizedURI
 import com.keepit.common.healthcheck.BabysitterTimeout
+import com.keepit.common.db.SlickModule
+import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.service.ServiceVersion
 import com.keepit.shoebox.ShoeboxCacheProvider
 import com.keepit.common.mail.FakeMailModule
-import com.keepit.model.SocialUserInfo
-import com.keepit.common.social.FakeSecureSocialUserServiceModule
-import com.keepit.model.NormalizedURI
-import com.keepit.common.amazon.AmazonInstanceId
+import com.keepit.module.LocalDiscoveryModule
 
 
 class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
@@ -84,7 +80,7 @@ class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override v
   def withFakeCache() = overrideWith(FakeCacheModule())
   def withS3DevModule() = overrideWith(new S3DevModule())
   def withShoeboxServiceModule() = overrideWith(ShoeboxServiceModule())
-  def withSearchConfigModule() = overrideWith(SearchConfigImplModule())
+  def withSearchConfigModule() = overrideWith(SearchConfigModule())
 
   def overrideWith(modules: Module*): TestApplication = new TestApplication(createTestGlobal(global, modules: _*), useDb, path)
 
@@ -105,7 +101,8 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     bind[HealthcheckPlugin].to[FakeHealthcheck]
     bind[SlickSessionProvider].to[TestSlickSessionProvider]
     install(new FakeS3StoreModule())
-    install(new DevCacheModule)
+    install(TestCacheModule())
+    install(LocalDiscoveryModule(ServiceType.TEST_MODE))
     bind[play.api.Application].toProvider(new Provider[play.api.Application] {
       def get(): play.api.Application = current
     }).in(classOf[AppScoped])
@@ -113,36 +110,12 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   private def dbInfoFromApplication(): DbInfo = TestDbInfo.dbInfo
 
-  @Singleton
-  @Provides
-  def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
-    def serviceCluster(serviceType: ServiceType): ServiceCluster = new ServiceCluster(serviceType)
-    def register() = Node("me")
-    def isLeader() = true
-  }
-
   @Provides
   def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.Never
 
   @Singleton
   @Provides
   def domainTagImportSettings: DomainTagImportSettings = DomainTagImportSettings(localDir = "", url = "")
-
-  @Singleton
-  @Provides
-  def amazonInstanceInfo: AmazonInstanceInfo =
-    new AmazonInstanceInfo(
-      instanceId = AmazonInstanceId("i-f168c1a8"),
-      localHostname = "ip-10-160-95-26.us-west-1.compute.internal",
-      publicHostname = "ec2-50-18-183-73.us-west-1.compute.amazonaws.com",
-      localIp = IpAddress("10.160.95.26"),
-      publicIp = IpAddress("50.18.183.73"),
-      instanceType = "c1.medium",
-      availabilityZone = "us-west-1b",
-      securityGroups = "default",
-      amiId = "ami-1bf9de5e",
-      amiLaunchIndex = "0"
-    )
 
   @Provides
   @Singleton
@@ -180,11 +153,6 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   @Singleton
   @Provides
   def httpClient(): HttpClient = null
-
-  @Provides
-  @Singleton
-  def serviceCluster(amazonInstanceInfo: AmazonInstanceInfo): ServiceCluster =
-    new ServiceCluster(ServiceType.TEST_MODE).register(Node("TEST"), amazonInstanceInfo)
 
   @Provides
   @Singleton

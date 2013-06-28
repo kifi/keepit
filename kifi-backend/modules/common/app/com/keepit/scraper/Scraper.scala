@@ -1,32 +1,30 @@
 package com.keepit.scraper
 
 import com.keepit.common.logging.Logging
-import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.common.db._
+import com.google.inject._
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import com.keepit.common.net.URI
-import com.keepit.search.{Article, ArticleStore}
+import com.keepit.search.ArticleStore
 import com.keepit.model._
-import com.keepit.scraper.extractor.DefaultExtractor
 import com.keepit.scraper.extractor.DefaultExtractorFactory
 import com.keepit.scraper.extractor.Extractor
-import com.keepit.scraper.extractor.YoutubeExtractorFactory
 import com.keepit.scraper.mediatypes.MediaTypes
-import com.keepit.scraper.mediatypes.InternetMediaTypes
-import com.keepit.scraper.mediatypes.OpenGraph
 import com.keepit.search.LangDetector
-import com.google.inject.Inject
 import org.apache.http.HttpStatus
-import org.joda.time.{DateTime, Seconds}
-import play.api.Play.current
-import scala.util.{Failure, Success}
-import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
+import org.joda.time.Seconds
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.store.S3ScreenshotStore
 import org.joda.time.Days
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.inject.AppScoped
+import scala.util.Failure
+import scala.Some
+import com.keepit.model.NormalizedURI
+import com.keepit.common.healthcheck.HealthcheckError
+import scala.util.Success
+import com.keepit.model.ScrapeInfo
+import com.keepit.search.Article
 
 object Scraper {
   val BATCH_SIZE = 100
@@ -275,8 +273,13 @@ class Scraper @Inject() (
 trait ScraperModule extends ScalaModule
 
 case class ScraperImplModule() extends ScraperModule {
+
   def configure {
     bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
     bind[DataIntegrityPlugin].to[DataIntegrityPluginImpl].in[AppScoped]
   }
+
+  @Singleton
+  @Provides
+  def scraperConfig: ScraperConfig = ScraperConfig()
 }

@@ -21,9 +21,7 @@ import com.keepit.scraper.ScraperConfig
 import com.keepit.scraper.{HttpFetcherImpl, HttpFetcher}
 import com.mongodb.casbah.MongoConnection
 
-import akka.actor.ActorSystem
 import play.api.Mode.Mode
-import play.api.Play
 import play.api.Play.current
 
 class CommonModule extends ScalaModule with Logging {
@@ -31,16 +29,11 @@ class CommonModule extends ScalaModule with Logging {
   def configure() {
     install(new FortyTwoModule)
     install(new S3ImplModule)
-    install(new DiscoveryModule)
 
-    bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[play.api.Application].toProvider(new Provider[play.api.Application] {
       def get(): play.api.Application = current
     }).in(classOf[AppScoped])
   }
-
-  @Provides
-  def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.LeaderOnly
 
   @Singleton
   @Provides
@@ -55,13 +48,6 @@ class CommonModule extends ScalaModule with Logging {
   def impersonateCookie: ImpersonateCookie = new ImpersonateCookie(current.configuration.getString("session.domain"))
 
   @Provides
-  @AppScoped
-  def actorPluginProvider: ActorPlugin =
-    new ActorPlugin(ActorSystem("shoebox-actor-system",
-        Play.current.configuration.underlying,
-        Play.current.classloader))
-
-  @Provides
   def httpClientProvider(healthcheckPlugin: HealthcheckPlugin): HttpClient = new HttpClientImpl(healthcheckPlugin = healthcheckPlugin)
 
   @Provides
@@ -74,10 +60,6 @@ class CommonModule extends ScalaModule with Logging {
       services: FortyTwoServices, host: HealthcheckHost, schedulingProperties: SchedulingProperties): HealthcheckPlugin = {
     new HealthcheckPluginImpl(actorFactory, services, host, schedulingProperties)
   }
-
-  @Singleton
-  @Provides
-  def scraperConfig: ScraperConfig = ScraperConfig()
 
   @Singleton
   @Provides

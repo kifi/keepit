@@ -12,13 +12,13 @@ object TopicModelGlobal {
   val topicTailcut = 0.7
 }
 
-trait TopicModelModule extends ScalaModule
-
-case class LdaTopicModelModule() extends TopicModelModule with Logging {
-
+trait TopicModelModule extends ScalaModule {
   def configure {
     bind[TopicUpdaterPlugin].to[TopicUpdaterPluginImpl].in[AppScoped]
   }
+}
+
+case class LdaTopicModelModule() extends TopicModelModule with Logging {
 
   @Provides
   @Singleton
@@ -43,5 +43,27 @@ case class LdaTopicModelModule() extends TopicModelModule with Logging {
     val rawNames = rows.map{_.split(sep)(1)}
     val (newNames, mapper) = NameMapperConstructer.getMapper(rawNames)
     new ManualTopicNameMapper(rawNames, newNames, mapper)
+  }
+}
+
+case class DevTopicModelModule() extends TopicModelModule {
+
+  @Provides
+  @Singleton
+  def wordTopicModel: WordTopicModel = {
+    val vocabulary: Set[String] = (0 until TopicModelGlobal.numTopics).map{ i => "word%d".format(i)}.toSet
+    val wordTopic: Map[String, Array[Double]] = (0 until TopicModelGlobal.numTopics).foldLeft(Map.empty[String, Array[Double]]){
+      (m, i) => { val a = new Array[Double](TopicModelGlobal.numTopics); a(i) = 1.0; m + ("word%d".format(i) -> a) }
+    }
+    val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map{ i => "topic%d".format(i)}.toArray
+    print("loading fake topic model")
+    new LdaWordTopicModel(vocabulary, wordTopic, topicNames)
+  }
+
+  @Provides
+  @Singleton
+  def topicNameMapper: TopicNameMapper = {
+    val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map { i => "topic%d".format(i) }.toArray
+    new IdentityTopicNameMapper(topicNames)
   }
 }
