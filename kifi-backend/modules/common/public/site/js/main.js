@@ -74,7 +74,7 @@ $(function() {
 					dataType: 'json',
 					data: JSON.stringify({
 						collectionId: collId,
-						keeps: $keeps.map(function() {var a = this.querySelector("a"); return {title: a.title, url: a.href}}).get()}),
+						keeps: $keeps.map(function() {var a = this.querySelector(".keep-title>a"); return {title: a.title, url: a.href}}).get()}),
 					contentType: 'application/json',
 					error: onDropOnCollectionAjaxError,
 					success: function(data) {
@@ -86,9 +86,9 @@ $(function() {
 							.append('<span class=keep-coll data-id=' + collId + '>' +
 								'<a class="keep-coll-a" href="javascript:">' + collName + '</a><a class="keep-coll-x" href="javascript:"></a>' +
 								'</span>');
-						// if (!$inColl.find("#cb1-" + collId).length) {
-						// 	inCollTmpl.append({id: collId, name: collName});
-						// }
+						if ($keeps.is(".selected") && !$inColl.has(".page-coll[data-id=" + collId + "]").length) {
+							inCollTmpl.append({id: collId, name: collName});
+						}
 					}
 				});
 			}};
