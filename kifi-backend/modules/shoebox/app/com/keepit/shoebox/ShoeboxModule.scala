@@ -9,12 +9,11 @@ import com.keepit.common.mail.MailModule
 import com.keepit.common.social.SocialGraphModule
 import com.keepit.common.analytics.AnalyticsModule
 import com.keepit.learning.topicmodel.TopicModelModule
-import com.keepit.model.SliderHistoryTrackerModule
+import com.keepit.model.{BrowsingHistoryModule, ClickHistoryModule, SliderHistoryTrackerModule}
 import com.keepit.scraper.ScraperModule
 import com.keepit.realtime.WebSocketModule
 import com.keepit.classify.DomainTagImporterModule
 import com.keepit.common.crypto.CryptoModule
-import com.keepit.common.healthcheck.HealthCheckModule
 import com.keepit.common.store.S3Module
 
 abstract class ShoeboxModule(
@@ -22,11 +21,10 @@ abstract class ShoeboxModule(
   val cacheModule: CacheModule,
   val secureSocialModule: SecureSocialModule,
   val searchServiceClientModule: SearchServiceClientModule,
-  val clickHistoryTrackerModule: ClickHistoryTrackerModule,
-  val browsingHistoryTrackerModule: BrowsingHistoryTrackerModule,
+  val clickHistoryModule: ClickHistoryModule,
+  val browsingHistoryModule: BrowsingHistoryModule,
   val mailModule: MailModule,
   val cryptoModule: CryptoModule,
-  val healthCheckModule: HealthCheckModule,
   val s3Module: S3Module,
 
   // Shoebox Functional Modules
@@ -41,17 +39,16 @@ abstract class ShoeboxModule(
   val userIndexModule: UserIndexModule = UserIndexModule()
 
 ) extends ScalaModule {
-  def configure {
-    println("Configuring ShoeboxModule")
+  final def configure() {
+    println(s"Configuring ${this}")
 
     install(cacheModule)
     install(secureSocialModule)
     install(searchServiceClientModule)
-    install(clickHistoryTrackerModule)
-    install(browsingHistoryTrackerModule)
+    install(clickHistoryModule)
+    install(browsingHistoryModule)
     install(mailModule)
     install(cryptoModule)
-    install(healthCheckModule)
     install(s3Module)
 
     install(slickModule)

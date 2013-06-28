@@ -3,6 +3,10 @@ package com.keepit.common.mail
 import com.google.inject.{Provides, Singleton}
 import play.api.Play._
 import com.keepit.inject.AppScoped
+import com.keepit.common.healthcheck.{HealthcheckMailSender, LocalHealthcheckMailSender}
+import net.codingwell.scalaguice.ScalaModule
+
+trait MailModule extends ScalaModule
 
 case class ShoeboxMailModule() extends MailModule {
   def configure() {
@@ -10,6 +14,7 @@ case class ShoeboxMailModule() extends MailModule {
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
     bind[MailToKeepPlugin].to[MailToKeepPluginImpl].in[AppScoped]
     bind[InvitationMailPlugin].to[InvitationMailPluginImpl].in[AppScoped]
+    bind[HealthcheckMailSender].to[LocalHealthcheckMailSender]
   }
 
   @Singleton

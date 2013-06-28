@@ -19,6 +19,7 @@ trait LocalPostOffice {
   def sendMail(mail: ElectronicMail)(implicit session: RWSession): ElectronicMail
 }
 
+@ImplementedBy(classOf[RemotePostOfficeImpl])
 trait RemotePostOffice {
   def queueMail(mail: ElectronicMail): ElectronicMail
 }

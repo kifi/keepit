@@ -6,6 +6,7 @@ import org.joda.time.DateTime
 import com.keepit.common.cache._
 import scala.concurrent.duration._
 import scala.Some
+import net.codingwell.scalaguice.ScalaModule
 
 case class BrowsingHistory (
                     id: Option[Id[BrowsingHistory]] = None,
@@ -34,3 +35,6 @@ class BrowsingHistoryUserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, 
   extends BinaryCacheImpl[BrowsingHistoryUserIdKey, BrowsingHistory](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object BrowsingHistoryStates extends States[BrowsingHistory]
+
+trait BrowsingHistoryModule extends ScalaModule
+

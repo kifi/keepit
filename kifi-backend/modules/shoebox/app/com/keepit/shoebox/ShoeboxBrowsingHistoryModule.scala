@@ -1,11 +1,11 @@
 package com.keepit.shoebox
 
 import com.google.inject.{Provides, Singleton}
-import com.keepit.model.BrowsingHistoryRepo
+import com.keepit.model.{BrowsingHistoryModule, BrowsingHistoryRepo}
 import com.keepit.common.db.slick.Database
 import play.api.Play._
 
-case class BrowsingHistoryTrackerImplModule() extends BrowsingHistoryTrackerModule {
+case class ShoeboxBrowsingHistoryModule() extends BrowsingHistoryModule {
 
   def configure {}
 
