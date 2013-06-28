@@ -1,6 +1,7 @@
 package com.keepit.shoebox
 
-import com.keepit.common.zookeeper.ServiceCluster
+import com.keepit.common.service._
+import com.keepit.common.zookeeper._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Promise
 import scala.concurrent.{Future, promise}
@@ -357,9 +358,12 @@ case class ShoeboxServiceClientImplModule() extends ShoeboxServiceClientModule {
 
   @Singleton
   @Provides
-  def shoeboxServiceClient (client: HttpClient, cacheProvider: ShoeboxCacheProvider, serviceCluster: ServiceCluster): ShoeboxServiceClient = {
+  def shoeboxServiceClient (
+      client: HttpClient,
+      cacheProvider: ShoeboxCacheProvider,
+      serviceDiscovery: ServiceDiscovery): ShoeboxServiceClient = {
     new ShoeboxServiceClientImpl(
-      serviceCluster,
+      serviceDiscovery.serviceCluster(ServiceType.SHOEBOX),
       current.configuration.getInt("service.shoebox.port").get,
       client, cacheProvider)
   }
