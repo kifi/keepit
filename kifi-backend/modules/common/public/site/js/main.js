@@ -638,46 +638,46 @@ $(function() {
 			showMyKeeps($coll.data("id"));
 		}
 	})
-	.on("click", ".new-collection", function() {
-		clearTimeout(hideAddCollTimeout), hideAddCollTimeout = null;
-		if (!$addColl.is(":animated")) {
-			if ($addColl.is(":visible")) {
-				$addColl.slideUp(80).find("input").val("").prop("disabled", true);
+	.on("click", ".collection-create", function() {
+		clearTimeout(hideNewCollTimeout), hideNewCollTimeout = null;
+		if (!$newColl.is(":animated")) {
+			if ($newColl.is(":visible")) {
+				$newColl.slideUp(80).find("input").val("").prop("disabled", true);
 			} else {
-				$addColl.slideDown(80, function() {
+				$newColl.slideDown(80, function() {
 					$collList.find(".antiscroll-inner")[0].scrollTop = 0;
-					$addColl.find("input").prop("disabled", false).focus().select();
+					$newColl.find("input").prop("disabled", false).focus().select();
 				});
 			}
 		}
 	});
 
-	var $addColl = $colls.find(".add-collection"), hideAddCollTimeout;
-	$addColl.find("input").on("blur keydown", function(e) {
-		if ((e.which === 13 || e.type === "blur") && !$addColl.is(":animated")) { // 13 is Enter
+	var $newColl = $colls.find(".collection-new"), hideNewCollTimeout;
+	$newColl.find("input").on("blur keydown", function(e) {
+		if ((e.which === 13 || e.type === "blur") && !$newColl.is(":animated")) { // 13 is Enter
 			var name = $.trim(this.value);
 			if (name) {
 				createCollection(name);
 			} else if (e.type === "blur") {
-				if ($addColl.is(":visible"))
-				// avoid back-to-back hide/show animations if "new collection" clicked again
-				hideAddCollTimeout = setTimeout(hide.bind(this), 300);
+				if ($newColl.is(":visible"))
+				// avoid back-to-back hide/show animations if "create collection" clicked again
+				hideNewCollTimeout = setTimeout(hide.bind(this), 300);
 			} else {
 				e.preventDefault();
 				hide.call(this);
 			}
-		} else if (e.which === 27 && !$addColl.is(":animated")) { // 27 is Esc
+		} else if (e.which === 27 && !$newColl.is(":animated")) { // 27 is Esc
 			hide.call(this);
 		}
 		function hide() {
 			this.value = "";
 			this.disabled = true;
 			this.blur();
-			$addColl.slideUp(200);
-			clearTimeout(hideAddCollTimeout), hideAddCollTimeout = null;
+			$newColl.slideUp(200);
+			clearTimeout(hideNewCollTimeout), hideNewCollTimeout = null;
 		}
 	}).focus(function() {
-		clearTimeout(hideAddCollTimeout), hideAddCollTimeout = null;
+		clearTimeout(hideNewCollTimeout), hideNewCollTimeout = null;
 	});
 
 	// filter collections or right bar
@@ -689,7 +689,7 @@ $(function() {
 	// });
 
 	function createCollection(name) {
-		$addColl.addClass("submitted");
+		$newColl.addClass("submitted");
 		$.ajax({
 			url: urlCollectionsCreate,
 			type: "POST",
@@ -698,11 +698,11 @@ $(function() {
 			contentType: 'application/json',
 			error: function() {
 				showMessage('Could not create collection, please try again later');
-				$addColl.removeClass("submitted");
+				$newColl.removeClass("submitted");
 			},
 			success: function(data) {
 				collTmpl.prepend(collections[data.id] = {id: data.id, name: name, keeps: 0});
-				$addColl.hide().removeClass("submitted").find("input").val("").prop("disabled", true);
+				$newColl.hide().removeClass("submitted").find("input").val("").prop("disabled", true);
 				// TODO: Use Tempo template!!
 				// $('.detail .actions .collections ul li.create')
 				// 	.after('<li><input type="checkbox" data-id="' + data.id + '" id="cb-' + data.id + '"><label class="long-text" for="cb-' + data.id + '"><span></span>' + name + '</label></li>');
