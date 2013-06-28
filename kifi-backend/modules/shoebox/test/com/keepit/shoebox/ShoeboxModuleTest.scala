@@ -1,5 +1,7 @@
 package com.keepit.shoebox
 
+import com.keepit.search._
+import com.keepit.common.zookeeper._
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.akka.{FortyTwoActor,AlertingActor}
 import com.keepit.common.controller.ShoeboxServiceController
@@ -45,7 +47,9 @@ class ShoeboxModuleTest extends Specification with Logging {
         } foreach { key =>
           injector.getInstance(key)
         }
+        injector.getInstance(classOf[SearchServiceClient])
         injector.getInstance(classOf[ServiceDiscovery])
+        injector.getInstance(classOf[ServiceCluster])
         true
       }
     }

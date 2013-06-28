@@ -116,6 +116,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   @Singleton
   @Provides
   def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
+    def serviceCluster(serviceType: ServiceType): ServiceCluster = new ServiceCluster(serviceType)
     def register() = Node("me")
     def isLeader() = true
   }
