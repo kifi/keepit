@@ -1,6 +1,5 @@
 package com.keepit.common.cache
 
-import net.codingwell.scalaguice.ScalaModule
 import net.spy.memcached.{AddrUtil, MemcachedClient}
 
 import com.google.inject.{Provides, Singleton}
@@ -9,7 +8,7 @@ import com.keepit.inject.AppScoped
 import play.api.Play
 import play.api.Play.current
 
-case class MemcachedCacheModule() extends ScalaModule {
+case class MemcachedCacheModule() extends CachePluginModule {
   def configure(): Unit = {
     bind[FortyTwoCachePlugin].to[MemcachedCache].in[AppScoped]
   }
