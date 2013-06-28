@@ -6,12 +6,7 @@ import scala.concurrent.duration._
 import com.keepit.search.ActiveExperimentsCache
 import com.keepit.common.social.{CommentWithBasicUserCache, BasicUserUserIdCache}
 
-case class ShoeboxCacheModule() extends CacheModule {
-
-  def configure {
-    install(MemcachedCacheModule())
-    install(EhCacheCacheModule())
-  }
+case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
 
   @Singleton
   @Provides

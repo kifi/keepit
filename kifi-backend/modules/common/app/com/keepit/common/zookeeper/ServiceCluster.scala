@@ -52,7 +52,7 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
     case false => Node(s"${servicePath.name}/$node")
   }
 
-  private def addNewNodes(newInstances: TrieMap[Node, ServiceInstance], childNodes: Seq[Node], zk: ZooKeeperClient) = childNodes foreach { childNode =>
+  private def addNewNode(newInstances: TrieMap[Node, ServiceInstance], childNode: Node, zk: ZooKeeperClient) = try {
     newInstances.getOrElseUpdate(childNode, {
       val nodeData: String = zk.get(childNode)
       log.info(s"data for node $childNode is $nodeData")
@@ -61,7 +61,15 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
       log.info(s"discovered new node $childNode: $amazonInstanceInfo, adding to ${newInstances.keys}")
       ServiceInstance(serviceType, childNode, amazonInstanceInfo)
     })
+  } catch {
+    case t: Throwable =>
+      log.error(s"could not fetch data node for instance of $childNode")
   }
+
+  private def addNewNodes(newInstances: TrieMap[Node, ServiceInstance], childNodes: Seq[Node], zk: ZooKeeperClient) =
+    childNodes foreach { childNode =>
+      addNewNode(newInstances, childNode, zk)
+    }
 
   private def removeOldNodes(newInstances: TrieMap[Node, ServiceInstance], childNodes: Seq[Node]) = newInstances.keys foreach { node =>
     if(!childNodes.contains(node)) {

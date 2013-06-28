@@ -27,7 +27,10 @@ class FakeZooKeeperClient() extends ZooKeeperClient {
   def watchChildrenWithData[T](path: Path, watchMap: mutable.Map[Node, T], deserialize: Array[Byte] => T, notifier: Node => Unit) {}
 
   def create(path: Path, data: Array[Byte], createMode: CreateMode): Path = path
-  def createNode(node: Node, data: Array[Byte], createMode: CreateMode): Node = node
+  def createNode(node: Node, data: Array[Byte], createMode: CreateMode): Node = {
+    set(node, data)
+    node
+  }
   def createPath(path: Path): Path = path
 
   def getChildren(path: Path): Seq[Node] = Nil
