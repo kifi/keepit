@@ -1,10 +1,12 @@
 package com.keepit.shoebox
 
+import com.keepit.common.service._
+import com.keepit.common.zookeeper._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Promise
 import scala.concurrent.{Future, promise}
 import scala.concurrent.duration._
-import com.google.inject.Inject
+import com.google.inject.{Singleton, Provides, Inject}
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick.Database
@@ -34,6 +36,8 @@ import com.keepit.search.ArticleHit
 import com.keepit.common.logging.Logging
 import com.keepit.common.routes.Shoebox
 import com.keepit.serializer.CollectionTupleSerializer.collectionTupleFormat
+import net.codingwell.scalaguice.ScalaModule
+import play.api.Play.current
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -52,8 +56,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBrowsingHistoryFilter(userId: Id[User]): Future[Array[Byte]]
   def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]]
   def getBookmarksInCollection(id: Id[Collection]): Future[Seq[Bookmark]]
-  def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[(Id[Collection], Id[User], SequenceNumber)]]
-  def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]]
+  def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Collection]]
+  def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]]
   def getCollectionIdsByExternalIds(collIds: Seq[ExternalId[Collection]]): Future[Seq[Id[Collection]]]
   def getIndexable(seqNum: Long, fetchSize: Int): Future[Seq[NormalizedURI]]
   def getBookmarks(userId: Id[User]): Future[Seq[Bookmark]]
@@ -71,6 +75,8 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]]
 }
 
+trait ShoeboxServiceClientModule extends ScalaModule
+
 case class ShoeboxCacheProvider @Inject() (
     userExternalIdCache: UserExternalIdCache,
     uriIdCache: NormalizedURICache,
@@ -87,7 +93,7 @@ case class ShoeboxCacheProvider @Inject() (
     userSessionExternalIdCache: UserSessionExternalIdCache)
 
 class ShoeboxServiceClientImpl @Inject() (
-  override val host: String,
+  override val serviceCluster: ServiceCluster,
   override val port: Int,
   override val httpClient: HttpClient,
   cacheProvider: ShoeboxCacheProvider)
@@ -262,9 +268,9 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[(Id[Collection], Id[User], SequenceNumber)]] = {
+  def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Collection]] = {
     call(Shoebox.internal.getCollectionsChanged(seqNum.value, fetchSize)) map { r =>
-      Json.fromJson[Seq[(Id[Collection], Id[User], SequenceNumber)]](r.json).get
+      Json.fromJson[Seq[Collection]](r.json).get
     }
   }
 
@@ -314,9 +320,9 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getCollectionsByUser(userId: Id[User]): Future[Seq[Id[Collection]]] = {
+  def getCollectionsByUser(userId: Id[User]): Future[Seq[Collection]] = {
     call(Shoebox.internal.getCollectionsByUser(userId)).map { r =>
-      Json.fromJson[Seq[Long]](r.json).get.map(Id[Collection](_))
+      Json.fromJson[Seq[Collection]](r.json).get
     }
   }
 
@@ -343,6 +349,23 @@ class ShoeboxServiceClientImpl @Inject() (
           }
         }
     }
+  }
+
+}
+
+case class ShoeboxServiceClientImplModule() extends ShoeboxServiceClientModule {
+  def configure() {}
+
+  @Singleton
+  @Provides
+  def shoeboxServiceClient (
+      client: HttpClient,
+      cacheProvider: ShoeboxCacheProvider,
+      serviceDiscovery: ServiceDiscovery): ShoeboxServiceClient = {
+    new ShoeboxServiceClientImpl(
+      serviceDiscovery.serviceCluster(ServiceType.SHOEBOX),
+      current.configuration.getInt("service.shoebox.port").get,
+      client, cacheProvider)
   }
 
 }

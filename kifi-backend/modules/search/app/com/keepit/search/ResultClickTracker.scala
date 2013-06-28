@@ -6,6 +6,11 @@ import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.QueryHash
 import scala.math._
 import java.io.File
+import net.codingwell.scalaguice.ScalaModule
+import com.google.inject.{Provides, Singleton}
+import play.api.Play._
+import com.keepit.model.NormalizedURI
+import com.keepit.model.User
 
 
 
@@ -33,5 +38,28 @@ class ResultClickTracker(lru: ProbablisticLRU) {
     new ResultClickBoosts {
       def apply(value: Long) = 1.0f +  (maxBoost - 1.0f) * likeliness(value)
     }
+  }
+}
+
+trait ResultFeedbackModule extends ScalaModule
+
+case class ResultFeedbackImplModule() extends ResultFeedbackModule {
+
+  def configure() {}
+
+  @Singleton
+  @Provides
+  def resultClickTracker: ResultClickTracker = {
+    val conf = current.configuration.getConfig("result-click-tracker").get
+    val numHashFuncs = conf.getInt("numHashFuncs").get
+    val syncEvery = conf.getInt("syncEvery").get
+    val dirPath = conf.getString("dir").get
+    val dir = new File(dirPath).getCanonicalFile()
+    if (!dir.exists()) {
+      if (!dir.mkdirs()) {
+        throw new Exception(s"could not create dir $dir")
+      }
+    }
+    ResultClickTracker(dir, numHashFuncs, syncEvery)
   }
 }

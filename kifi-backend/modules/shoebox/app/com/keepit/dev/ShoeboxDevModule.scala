@@ -1,6 +1,8 @@
 package com.keepit.dev
 
 import net.codingwell.scalaguice.ScalaModule
+import com.keepit.common.service._
+import com.keepit.common.zookeeper._
 import com.keepit.common.logging.Logging
 import com.keepit.common.analytics._
 import com.keepit.inject.AppScoped
@@ -39,6 +41,7 @@ class ShoeboxDevModule extends ScalaModule with Logging {
   @Singleton
   @Provides
   def serviceDiscovery: ServiceDiscovery = new ServiceDiscovery {
+    def serviceCluster(serviceType: ServiceType): ServiceCluster = new ServiceCluster(serviceType)
     def register() = Node("me")
     def isLeader() = true
   }

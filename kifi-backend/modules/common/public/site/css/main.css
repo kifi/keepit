@@ -3,7 +3,7 @@
 h1,h2,h3,h4,h5,label {margin: 0; font-weight: normal}
 input[type="text"] {margin: 0; padding: 0; border: none; background: #fff}
 img {vertical-align: middle; border: none}
-ol {list-style: none; padding: 0; margin: 0}
+menu,ol,ul {list-style: none; padding: 0; margin: 0}
 
 body {font-family: "Helvetica Neue",Helvetica,Arial,sans-serif}
 a[href] {color: #0089d5; text-decoration: none}
@@ -95,7 +95,7 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative; -webkit-tra
 .collection:hover>.coll-tri,
 .collection.with-tri>.coll-tri {visibility: visible}
 .collection.with-tri:not(.no-tri)>.coll-tri {left: 0}
-#coll-menu {display: none; position: absolute; top: 100%; left: 0; z-index: 1; background: #e3e6ee; margin: 0; padding: 0; list-style: none}
+#coll-menu {display: none; position: absolute; top: 100%; left: 0; z-index: 1; background: #e3e6ee}
 #coll-menu.page-bottom {top: auto; bottom: 100%}
 #coll-menu>li>a {display: block; padding: 0 16px; font-size: 12px; line-height: 24px; white-space: nowrap; color: #556179; border: solid #dbdee3; border-width: 0 1px 1px 0}
 #coll-menu>li:first-child>a {border-top-width: 1px}
@@ -164,39 +164,25 @@ a.page-priv[href]:active {background-color: #a0b1c2}
 .multiple[data-kept="pub"]>*>.page-priv::after {content: "Make all private"}
 .multiple[data-kept="pri"]>*>.page-priv::after {content: "Make all public"}
 .page-who,
-.page-colls {margin: 18px 0 5px; border-top: 1px solid #cdd6e0; padding-top: 11px; display: none}
+.page-colls {margin: 18px 0 5px; border-top: 1px solid #cdd6e0; padding-top: 11px}
 .page-who-pics {margin: 5px 0 13px; white-space: nowrap; overflow: hidden}
 .page-who-pics>img {width: 38px; height: 38px; margin-right: 1px; border-radius: 2px}
 .page-who-text {font-size: 12px; line-height: 12px}
 :not([data-kept])>*>.page-who-pics>.me,
 :not([data-kept])>*>.page-who-text>.keep-you,
 .page-who-text>.keep-private {display: none}
-/*
-.detail div.actions .keepit {text-align: center; width: 330px}
-.detail div.actions .keepit a {color: #fff; font-size: .9em; display: block; margin: 15px auto; background: rgb(34,48,63); border-radius: 5px; padding: 15px 0; width: 140px; position: relative; overflow: hidden}
-.detail div.actions .keepit a.kept {background: #2980b9}
-.detail div.actions .keepit a span.private {background: #465f78 url(../img/lock.png) 22px 20px no-repeat; display: block; position: absolute; width: 40px; height: 40px; left: -18px; top: -13px; border-radius: 25px}
-.detail div.actions .keepit a.private span.private{background-color: rgb(0,187,0)}
-.detail div.actions a.add span.close {display: none; float: right; color: #6fa6ef}
-.detail div.actions a.add.active span.close {display: block}
-.detail div.actions a.add.active {background: #eff2f7; color: #556179; padding-bottom: .2em}
-*/
-/*.detail>.in-collections .row {padding: 5px 0}*/
-/*.detail input[type="text"] {width: 260px; margin-top: 10px; margin-bottom: 5px}*/
-/*.detail .collections>input[type="text"] {margin-left: 20px}*/
-.detail .collections {background:#f6f8fc; height: 0; overflow: hidden; transition: height .5s; -webkit-transition: height .5s}
-.detail .collections.active {height: 250px; width: 330px; border-top: 5px solid #6fa6ef; border-bottom: 5px solid #6fa6ef}
-.detail .collections ul {padding: 0; margin: 0; list-style: none}
-.detail .collections ul li {padding: 10px 20px; border-top: 1px solid #dbdee3}
-.detail .collections ul li.create {border-top: 0}
-.detail .collections ul li.create a {padding-left: 25px; background: url(../img/plus.png) 2px 50% no-repeat}
-/*
-.detail input[type="checkbox"] {display: none}
-.detail input[type="checkbox"]:checked + label {color: #6fa6ef}
-.detail input[type="checkbox"]+label span {display: inline-block; width:22px; height:22px; margin:-1px 4px 0 0; background:url(../img/sprite-check.png) left top no-repeat; vertical-align:middle; cursor:pointer}
-.detail input[type="checkbox"]:checked+label span {background-position: -22px top}
-.detail input[type="checkbox"]:not(:checked)+label:hover span {background-position: -44px top}
-*/
+.page-coll-list {margin-top: 10px}
+.page-coll-list:empty {margin-top: 4px}
+.page-coll-list:empty::before {content: "None"; font-size: 12px}
+.page-coll {display: inline-block; overflow: hidden; white-space: nowrap; background-color: #b8c5d2; margin: 0 3px 3px 0; font-size: 13px; line-height: 24px; -webkit-font-smoothing: antialiased}
+.page-coll.removed {width: 0 !important; -webkit-transition: width .12s ease-in-out; transition: width .12s ease-in-out}
+.page-coll>a[href] {color: #fff}
+.page-coll-a {padding: 0 16px}
+.page-coll-x {display: inline-block; /*vertical-align: bottom;*/ text-align: center; width: 0; overflow: hidden; -webkit-transition: width 80ms; transition: width 80ms}
+.page-coll:hover>.page-coll-x {width: 20px}
+.page-coll>a[href]:hover {background-color: #bdcbd8}
+.page-coll>a[href]:active {background-color: #a0b1c2}
+.page-coll-x::before {content: "\00D7"; position: relative; bottom: 1px}
 
 .long-text {white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
 span.long-text, a.long-text {display: inline-block}
@@ -224,12 +210,14 @@ span.long-text, a.long-text {display: inline-block}
 .keep-coll:last-of-type {border-right: none}
 .keep-coll.removed {width: 0 !important; -webkit-transition: width .12s ease-in-out; transition: width .12s ease-in-out}
 .keep-coll>a[href] {color: #99a3b3}
-.keep-coll>a[href]:hover {background-color: #eff2f7; color: #76869f}
-.keep.selected .keep-coll>a[href]:hover {background-color: #fff}
-.keep.keep .keep-coll>a[href]:active {background-color: #f8f808}
-.keep-coll-a {padding: 0 4px}
-.keep-coll-x {display: inline-block; vertical-align: bottom; text-align: center; width: 0; padding: 0; overflow: hidden; -webkit-transition: width .1s; transition: width .1s}
+.keep-coll:hover>a {background-color: #eff2f7}
+.keep.selected .keep-coll:hover>a {background-color: #fff}
+.keep.keep a.keep-coll-a:active {background-color: #e3e6ee; color: #8490a4}
+.keep-coll-a {padding: 0 5px}
+.keep-coll-x {display: inline-block; vertical-align: bottom; text-align: center; width: 0; overflow: hidden; -webkit-transition: width 70ms; transition: width 70ms}
 .keep-coll:hover>.keep-coll-x {width: 16px; -webkit-transition-delay: .2s; transition-delay: .2s}
+.keep-coll>.keep-coll-x[href][href]:hover {background-color: #b8c5d2; color: #eff2f7}
+.keep-coll>.keep-coll-x[href][href]:active {background-color: #99a3b3}
 .keep-coll-x::before {content: "\00D7"; position: relative; bottom: 1px}
 .keep-who {margin-top: 7px; font-size: 0}
 .keep-who>img {vertical-align: middle; width: 23px; height: 23px; border-radius: 2px; margin-right: 1px}

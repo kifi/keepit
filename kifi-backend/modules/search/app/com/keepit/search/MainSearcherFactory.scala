@@ -54,18 +54,7 @@ class MainSearcherFactory @Inject() (
     val browsingHistoryFuture = shoeboxClient.getBrowsingHistoryFilter(userId).map(browsingHistoryBuilder.build)
     val clickHistoryFuture = shoeboxClient.getClickHistoryFilter(userId).map(clickHistoryBuilder.build)
 
-    val uriGraphSearcherFuture = consolidate(userId){ userId =>
-      future {
-        uriGraph.getURIGraphSearcher(userId)
-      } recover {
-        case e: URIGraphUnsupportedVersionException =>
-          // self healing, just in case
-        log.warn("fixing graph data", e)
-        uriGraph.update(userId)
-        uriGraph.getURIGraphSearcher(userId)
-      }
-    }
-
+    val uriGraphSearcherFuture = getURIGraphSearcherFuture(userId)
     val articleSearcher = articleIndexer.getSearcher
     val collectionSearcher = uriGraph.getCollectionSearcher()
 
@@ -87,6 +76,22 @@ class MainSearcherFactory @Inject() (
   }
 
   def clear() { consolidate.clear() }
+
+  def getURIGraphSearcherFuture(userId: Id[User]) = consolidate(userId){ userId =>
+    future {
+      uriGraph.getURIGraphSearcher(userId)
+    } recover {
+      case e: URIGraphUnsupportedVersionException =>
+      // self healing, just in case
+      log.warn("fixing graph data", e)
+      uriGraph.update(userId)
+      uriGraph.getURIGraphSearcher(userId)
+    }
+  }
+
+  def getURIGraphSearcher(userId: Id[User]): URIGraphSearcherWithUser = {
+    monitoredAwait.result(getURIGraphSearcherFuture(userId), 5 seconds, s"getting uri graph for user Id $userId")
+  }
 
   def bookmarkSearcher(userId: Id[User]) = {
     val articleSearcher = articleIndexer.getSearcher

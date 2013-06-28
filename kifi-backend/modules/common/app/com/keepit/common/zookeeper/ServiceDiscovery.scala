@@ -16,6 +16,7 @@ import com.google.inject.{Inject, Singleton, Provider}
 import org.apache.zookeeper.CreateMode._
 
 trait ServiceDiscovery {
+  def serviceCluster(serviceType: ServiceType): ServiceCluster
   def register(): Node
   def unRegister(): Unit = {}
   def isLeader(): Boolean
@@ -41,6 +42,8 @@ class ServiceDiscoveryImpl @Inject() (
     log.info(s"registered clusters: $clustersToInit")
     clustersToInit
   }
+
+  def serviceCluster(serviceType: ServiceType): ServiceCluster = clusters(serviceType)
 
   def isLeader: Boolean = {
     val myCluster = clusters(services.currentService)

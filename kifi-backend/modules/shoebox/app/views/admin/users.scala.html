@@ -61,9 +61,10 @@
   </div>
 }
 
-
 @admin(count + " Total Users") {
   <h2> Showing @userStatisticsList.length (page @(page + 1)) </h2>
+
+  @pagination(page, pageCount)
 
   <form class="form-inline" action="@com.keepit.controllers.admin.routes.AdminUserController.searchUsers()" method="POST">
     @if(searchTerm.isDefined){
@@ -71,11 +72,11 @@
     } else {
       <input type="text" name="searchTerm" placeholder="User first and/or last name"/>
     }
-    <input type="submit" value="Search"/>
+    <input type="submit" value="Search"/></br>
+    @if(searchTerm.isDefined){
+      <a href="@com.keepit.controllers.admin.routes.AdminUserController.usersView(0)">Clear search</a>
+    }
   </form>
-
-
-  @pagination(page, pageCount)
   <table class="table table-bordered">
     <tr>
       <th>#</th>

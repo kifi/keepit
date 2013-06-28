@@ -14,6 +14,7 @@ import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.realtime.UserChannel
 import com.keepit.search.SearchServiceClient
+import com.keepit.shoebox.usersearch.UserIndex
 
 import play.api.data.Forms._
 import play.api.data._
@@ -52,6 +53,7 @@ class AdminUserController @Inject() (
     userValueRepo: UserValueRepo,
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
+    userIndex: UserIndex,
     clock: Clock) extends AdminController(actionAuthenticator) {
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
@@ -167,7 +169,7 @@ class AdminUserController @Inject() (
   }
 
   def usersView(page: Int = 0) = AdminHtmlAction { implicit request =>
-    val PAGE_SIZE = 200
+    val PAGE_SIZE = 50
 
     val users = db.readOnly { implicit s =>
       userRepo.pageExcluding(UserStates.PENDING, UserStates.INACTIVE, UserStates.BLOCKED)(page, PAGE_SIZE) map userStatistics
@@ -179,15 +181,14 @@ class AdminUserController @Inject() (
   def searchUsers() = AdminHtmlAction { implicit request =>
     val form = request.request.body.asFormUrlEncoded.map{ req => req.map(r => (r._1 -> r._2.head)) }
     val searchTerm = form.flatMap{ _.get("searchTerm") }
-    log.info(s"searching users using: ${searchTerm.get}")
     searchTerm match {
       case None => Redirect(routes.AdminUserController.usersView(0))
       case Some(term) =>
-        val userIds = Seq(Id[User](1))
+        val userIds = userIndex.search(term)
         val users = db.readOnly { implicit s =>
           userIds map userRepo.get map userStatistics
         }
-        Ok(html.admin.users(users, 0, users.size, users.size, searchTerm))
+        Ok(html.admin.users(users, 0, users.size, 1, searchTerm))
     }
   }
 

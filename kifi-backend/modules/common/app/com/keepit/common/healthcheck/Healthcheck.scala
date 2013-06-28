@@ -40,7 +40,7 @@ object Healthcheck {
   case object INTERNAL extends CallType
   case object EXTENSION extends CallType
 
-  val OPS_OF_THE_WEEK = EmailAddresses.EISHAY
+  val OPS_OF_THE_WEEK = EmailAddresses.ANDREW
 }
 
 case object ReportErrorsAction
@@ -209,12 +209,4 @@ class HealthcheckPluginImpl @Inject() (
   }
 
   override def warmUp() = scheduleTaskOnce(actorFactory.system, 3 minutes, "Healthcheck: consider service warm") {super.warmUp()}
-}
-
-trait HealthCheckModule extends ScalaModule
-
-case class ShoeboxHealthCheckModule() extends HealthCheckModule {
-  def configure() {
-    bind[HealthcheckMailSender].to[LocalHealthcheckMailSender]
-  }
 }

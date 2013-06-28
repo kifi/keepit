@@ -202,11 +202,12 @@
 			<div class="page-who-text"></div>
 		</div>
 		<div class="page-colls">
-			<h2 data-before-template>In collections: <a class="add" href="javascript:">+</a></h2>
-			<div class="row" data-template>
-				<input type="checkbox" data-id="{{id}}" id="cb1-{{id}}" checked>
-				<label class="long-text" for="cb1-{{id}}"><span></span>{{name}}</label>
-			</div>
+			<h2>In collections: <!--a class="page-coll-add" href="javascript:">+</a--></h2>
+			<ul class="page-coll-list">
+				<li class="page-coll" data-template data-id="{{id}}">
+					<a class="page-coll-a long-text" href="javascript:">{{name}}</a><a class="page-coll-x" href="javascript:"></a>
+				</li>
+			</ul>
 			<!--div class="collections">
 				<input class="find" type="text" placeholder="Find a collection...">
 				<ul>

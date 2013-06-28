@@ -25,11 +25,15 @@ def restart(number=1):
 
 def stop():
     service_name = get_service_name(env.host)
+    local('curl https://grove.io/api/notice/rQX6TOyYYv2cqt4hnDqqwb8v5taSlUdD/ -d "service=deployment" -d "message=Taking down {0}." -d "url=https://grove.io/app" -d "icon_url=https://grove.io/static/img/avatar.png" &> /dev/null'.format(service_name), capture=True)
+
     with cd('~/run'):
         run('/etc/init.d/{0} stop'.format(service_name))
 
 def start(number=1):
     service_name = get_service_name(env.host)
+    local('curl https://grove.io/api/notice/rQX6TOyYYv2cqt4hnDqqwb8v5taSlUdD/ -d "service=deployment" -d "message=Bringing up {0}." -d "url=https://grove.io/app" -d "icon_url=https://grove.io/static/img/avatar.png" &> /dev/null'.format(service_name), capture=True)
+
     with cd('~/run'):
         with settings(warn_only=True):
             run('rm -f {0}'.format(service_name))
