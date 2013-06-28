@@ -90,6 +90,8 @@ POST    /site/collections/:id/removeKeeps @com.keepit.controllers.website.Bookma
 POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.BookmarksController.keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = false)
 POST    /site/collections/:id/setKeeps @com.keepit.controllers.website.BookmarksController.keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = true)
 
+POST    /site/chatter               @com.keepit.controllers.website.CommentController.getChatter
+
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 GET     /site/user/connections      @com.keepit.controllers.website.UserController.connections()
 GET     /site/user/all-connections  @com.keepit.controllers.website.UserController.getAllConnections()
