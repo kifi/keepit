@@ -61,10 +61,14 @@ img.kifi-message-pic.kifi-self {
   font-size: 0;
   line-height: 0;
   visibility: hidden;
-  clear: both;
 }
 .kifi-messages-redirect-notice {
-  padding: 10px;
+  padding: 8px;
+  margin: 8px;
+  line-height: 1.4;
+  font-size: 12px;
+  background: #d1d8e1;
+}
+.kifi-messages-redirect-notice strong {
   font-weight: bold;
-  font-size: 13px;
 }
