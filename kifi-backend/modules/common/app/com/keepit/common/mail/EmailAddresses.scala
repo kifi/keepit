@@ -26,6 +26,7 @@ object EmailAddresses {
   case object YINGJIE extends SystemEmailAddress("yingjie@42go.com")
   case object LEO extends SystemEmailAddress("leo@42go.com")
   case object STEPHEN extends SystemEmailAddress("stephen@42go.com")
+  case object EDUARDO extends SystemEmailAddress("eduardo@42go.com")
   case object CONGRATS extends SystemEmailAddress("congrats@kifi.com")
   case object ASANA_PROD_HEALTH extends SystemEmailAddress("x+5363166029963@mail.asana.com")
 
