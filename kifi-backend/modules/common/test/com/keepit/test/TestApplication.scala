@@ -173,7 +173,8 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Singleton
   @Provides
-  def shoeboxServiceClient(shoeboxCacheProvided: ShoeboxCacheProvider, httpClient: HttpClient): ShoeboxServiceClient = new ShoeboxServiceClientImpl(null, -1, httpClient,shoeboxCacheProvided)
+  def shoeboxServiceClient(shoeboxCacheProvided: ShoeboxCacheProvider, httpClient: HttpClient, serviceCluster: ServiceCluster): ShoeboxServiceClient =
+    new ShoeboxServiceClientImpl(serviceCluster, -1, httpClient,shoeboxCacheProvided)
 
   @Singleton
   @Provides
@@ -181,7 +182,12 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
 
   @Provides
   @Singleton
-  def searchServiceClient: SearchServiceClient = new SearchServiceClientImpl(null, -1, null)
+  def serviceCluster(amazonInstanceInfo: AmazonInstanceInfo): ServiceCluster =
+    new ServiceCluster(ServiceType.TEST_MODE).register(Node("TEST"), amazonInstanceInfo)
+
+  @Provides
+  @Singleton
+  def searchServiceClient(serviceCluster: ServiceCluster): SearchServiceClient = new SearchServiceClientImpl(serviceCluster, -1, null)
 
   @Provides
   @AppScoped

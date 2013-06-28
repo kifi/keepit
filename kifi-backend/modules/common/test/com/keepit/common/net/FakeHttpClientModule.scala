@@ -10,12 +10,12 @@ case class FakeHttpClientModule(requestToResponse: PartialFunction[String, FakeC
   def configure(): Unit = {
     bind[HttpClient].toInstance(new FakeHttpClient(Some(requestToResponse)))
   }
-  
+
 }
 
 case class FakeAmazonInstanceInfoModule() extends ScalaModule {
   def configure(): Unit = {}
-  
+
   @Singleton
   @Provides
   def amazonInstanceInfo(httpClient: HttpClient): AmazonInstanceInfo = {
@@ -23,10 +23,10 @@ case class FakeAmazonInstanceInfoModule() extends ScalaModule {
 
     AmazonInstanceInfo(
       instanceId = AmazonInstanceId(httpClient.get(metadataUrl + "instance-id").body),
-      localHostname = httpClient.get(metadataUrl + "local-hostname").body,
-      publicHostname = httpClient.get(metadataUrl + "public-hostname").body,
-      localIp = IpAddress(httpClient.get(metadataUrl + "local-ipv4").body),
-      publicIp = IpAddress(httpClient.get(metadataUrl + "public-ipv4").body),
+      localHostname = "localhost",
+      publicHostname = "localhost",
+      localIp = IpAddress("127.0.0.1"),
+      publicIp = IpAddress("127.0.0.1"),
       instanceType = httpClient.get(metadataUrl + "instance-type").body,
       availabilityZone = httpClient.get(metadataUrl + "placement/availability-zone").body,
       securityGroups = httpClient.get(metadataUrl + "security-groups").body,
