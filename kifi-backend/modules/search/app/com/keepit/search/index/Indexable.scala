@@ -64,7 +64,7 @@ object Indexable {
     }
   }
 }
-import org.apache.lucene.document.BinaryDocValuesField
+
 
 trait Indexable[T] {
   import Indexable._

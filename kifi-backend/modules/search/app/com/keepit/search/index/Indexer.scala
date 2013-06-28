@@ -16,8 +16,7 @@ import org.apache.lucene.store.Directory
 import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
-
-case class IndexError(msg: String)
+import scala.collection.mutable.ArrayBuffer
 
 object Indexer {
   val idFieldName = "_ID"
@@ -31,8 +30,36 @@ object Indexer {
   }
 }
 
-abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWriterConfig, fieldDecoders: Map[String, FieldDecoder]) extends Logging {
+trait IndexingEventHandler[T] {
+  protected[this] var _successCount: Int = 0
+  protected[this] var _failureCount: Int = 0
+
+  def successCount = _successCount
+
+  def failureCount = _failureCount
+
+  def onStart(batch: Seq[Indexable[T]]): Unit = {}
+
+  def onCommit(successful: Seq[Indexable[T]]): Unit = {}
+
+  def onSuccess(indexable: Indexable[T]): Unit = {
+    _successCount += 1
+  }
+
+  def onFailure(indexable: Indexable[T], e: Throwable): Unit = {
+    _failureCount += 1
+    throw e
+  }
+}
+
+abstract class Indexer[T](
+    indexDirectory: Directory,
+    indexWriterConfig: IndexWriterConfig,
+    fieldDecoders: Map[String, FieldDecoder])
+  extends IndexingEventHandler[T] with Logging {
+
   def this(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig) = this(indexDirectory, indexWriterConfig, Map.empty[String, FieldDecoder])
+
   lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
   private[this] val indexWriterLock = new AnyRef
 
@@ -88,10 +115,13 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
     indexWriter.close()
   }
 
-  def indexDocuments(indexables: Iterator[Indexable[T]], commitBatchSize: Int, refresh: Boolean = true)(afterCommit: Seq[(Indexable[T], Option[IndexError])]=>Unit): Unit = {
+  def indexDocuments(indexables: Iterator[Indexable[T]], commitBatchSize: Int, refresh: Boolean = true): Unit = {
     doWithIndexWriter{ indexWriter =>
       var maxSequenceNumber = sequenceNumber
       indexables.grouped(commitBatchSize).foreach{ indexableBatch =>
+        var successful = new ArrayBuffer[Indexable[T]]
+        onStart(indexableBatch)
+
         // create a map from id to its highest seqNum in the batch
         val idToSeqNum = indexableBatch.foldLeft(Map.empty[Id[T], SequenceNumber]){ (m, indexable) =>
           m + (indexable.id -> indexable.sequenceNumber)
@@ -104,40 +134,46 @@ abstract class Indexer[T](indexDirectory: Directory, indexWriterConfig: IndexWri
           }
         }.map{ indexable =>
           val document = try {
-            Left(indexable.buildDocument)
+            Some(indexable.buildDocument)
           } catch {
             case e: Throwable =>
-              val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
-              log.error(msg, e)
-              Right(IndexError(msg))
+              onFailure(indexable, e)
+              None
           }
-          val error = document match {
-            case Left(doc) =>
-              try {
-                if (indexable.isDeleted) {
-                  indexWriter.deleteDocuments(indexable.idTerm)
-                } else {
-                  indexWriter.updateDocument(indexable.idTerm, doc)
-                }
-                if (maxSequenceNumber < indexable.sequenceNumber)
-                  maxSequenceNumber = indexable.sequenceNumber
-                log.debug("indexed id=%s seq=%s".format(indexable.id, indexable.sequenceNumber))
-                None
-              } catch {
-                case e: CorruptIndexException => throw e  // fatal
-                case e: OutOfMemoryError => throw e       // fatal
-                case e: IOException => throw e            // fatal
-                case e: Throwable =>
-                  val msg = s"failed to index document for id=${indexable.id}: ${e.getMessage()}"
-                  log.error(msg, e)
-                  Some(IndexError(msg))
+          document.foreach{ doc =>
+            try {
+              if (indexable.isDeleted) {
+                indexWriter.deleteDocuments(indexable.idTerm)
+              } else {
+                indexWriter.updateDocument(indexable.idTerm, doc)
               }
-            case Right(error) => Some(error)
+              onSuccess(indexable)
+              successful += indexable
+              if (maxSequenceNumber < indexable.sequenceNumber)
+                maxSequenceNumber = indexable.sequenceNumber
+              log.debug("indexed id=%s seq=%s".format(indexable.id, indexable.sequenceNumber))
+            } catch {
+              case e: CorruptIndexException => {
+                log.error("fatal indexing error", e)
+                throw e
+              }
+              case e: OutOfMemoryError => {
+                log.error("fatal indexing error", e)
+                throw e
+              }
+              case e: IOException => {
+                log.error("fatal indexing error", e)
+                throw e
+              }
+              case e: Throwable =>
+                val msg = s"failed to index document for id=${indexable.id}: ${e.getMessage()}"
+                log.error(msg, e)
+                onFailure(indexable, e)
+            }
           }
-          (indexable, error)
         }
         commit(maxSequenceNumber)
-        afterCommit(commitBatch)
+        onCommit(successful)
       }
     }
     if (refresh) refreshSearcher()

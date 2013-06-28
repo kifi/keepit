@@ -7,6 +7,7 @@ import com.keepit.search.phrasedetector._
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.db._
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.time._
 import com.keepit.test._
 import org.specs2.mutable._
@@ -46,11 +47,11 @@ class MainSearcherTest extends Specification {
     val bookmarkStoreConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     val graphConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
     val collectConfig = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    val articleIndexer = new ArticleIndexer(new RAMDirectory, articleConfig, store, null, inject[ShoeboxServiceClient])
-    val bookmarkStore = new BookmarkStore(new RAMDirectory, bookmarkStoreConfig, inject[ShoeboxServiceClient])
+    val articleIndexer = new ArticleIndexer(new RAMDirectory, articleConfig, store, inject[HealthcheckPlugin], inject[ShoeboxServiceClient])
+    val bookmarkStore = new BookmarkStore(new RAMDirectory, bookmarkStoreConfig, inject[HealthcheckPlugin], inject[ShoeboxServiceClient])
     val uriGraph = new URIGraphImpl(
-      new URIGraphIndexer(new RAMDirectory, graphConfig, bookmarkStore, inject[ShoeboxServiceClient]),
-      new CollectionIndexer(new RAMDirectory, collectConfig, inject[ShoeboxServiceClient]),
+      new URIGraphIndexer(new RAMDirectory, graphConfig, bookmarkStore, inject[HealthcheckPlugin], inject[ShoeboxServiceClient]),
+      new CollectionIndexer(new RAMDirectory, collectConfig, inject[HealthcheckPlugin], inject[ShoeboxServiceClient]),
       inject[ShoeboxServiceClient],
       inject[MonitoredAwait])
     implicit val clock = inject[Clock]

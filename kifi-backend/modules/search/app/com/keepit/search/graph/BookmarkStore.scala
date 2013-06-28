@@ -9,7 +9,7 @@ import com.keepit.common.net.URI
 import com.keepit.model._
 import com.keepit.model.BookmarkStates._
 import com.keepit.search.Lang
-import com.keepit.search.index.{DefaultAnalyzer, FieldDecoder, Indexable, Indexer, IndexError}
+import com.keepit.search.index.{DefaultAnalyzer, FieldDecoder, Indexable, Indexer}
 import java.io.StringReader
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
@@ -42,6 +42,7 @@ object BookmarkStore {
 class BookmarkStore @Inject() (
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
+    healthcheckPlugin: HealthcheckPlugin,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[Bookmark](indexDirectory, indexWriterConfig) {
 
@@ -49,25 +50,17 @@ class BookmarkStore @Inject() (
 
   private[this] val commitBatchSize = 3000
 
-  private def commitCallback(commitBatch: Seq[(Indexable[Bookmark], Option[IndexError])]) = {
-    var cnt = 0
-    commitBatch.foreach{ case (indexable, indexError) =>
-      indexError match {
-        case Some(error) =>
-          log.error("indexing failed for bookmark=%s error=%s".format(indexable.id, error.msg))
-        case None =>
-          cnt += 1
-      }
-    }
-    cnt
+  override def onFailure(indexable: Indexable[Bookmark], e: Throwable): Unit = {
+    val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
+    healthcheckPlugin.addError(HealthcheckError(errorMessage = Some(msg), callType = INTERNAL))
+    super.onFailure(indexable, e)
   }
 
   def update(bookmarks: Seq[Bookmark]) {
     try {
-      var cnt = 0
-      indexDocuments(bookmarks.iterator.map(buildIndexable), commitBatchSize){ commitBatch =>
-        cnt += commitCallback(commitBatch)
-      }
+      val cnt = successCount
+      indexDocuments(bookmarks.iterator.map(buildIndexable), commitBatchSize)
+      successCount - cnt
     } catch { case e: Throwable =>
       log.error("error in BookmarkStore update", e)
       throw e
