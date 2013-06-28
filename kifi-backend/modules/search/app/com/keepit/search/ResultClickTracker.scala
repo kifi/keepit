@@ -74,12 +74,14 @@ case class DevResultFeedbackModule() extends ResultFeedbackModule {
 
   @Provides
   @Singleton
-  def resultClickTracker: ResultClickTracker = {
+  def resultClickTracker(s3buffer: S3BackedResultClickTrackerBuffer): ResultClickTracker = {
     val conf = current.configuration.getConfig("result-click-tracker").get
     val numHashFuncs = conf.getInt("numHashFuncs").get
     val syncEvery = conf.getInt("syncEvery").get
     conf.getString("dir") match {
-      case None => ResultClickTracker(numHashFuncs)
+      case None =>
+        val buffer = new InMemoryResultClickTrackerBuffer(1000)
+        new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, Int.MaxValue)(Some(s3buffer)))
       case Some(dirPath) =>
         val dir = new File(dirPath).getCanonicalFile()
         if (!dir.exists()) {
@@ -87,8 +89,11 @@ case class DevResultFeedbackModule() extends ResultFeedbackModule {
             throw new Exception("could not create dir %s".format(dir))
           }
         }
-        ResultClickTracker(dir, numHashFuncs, syncEvery)
+        val file = new File(dir, "resultclicks.plru")
+        val buffer = new FileResultClickTrackerBuffer(file, 0x1000000)
+        new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, syncEvery)(Some(s3buffer)))
     }
   }
 }
+
 
