@@ -17,6 +17,7 @@ import scala.annotation.elidable.ASSERTION
 import com.keepit.learning.topicmodel.TopicModelGlobal
 import com.keepit.common.cache._
 import scala.concurrent.duration._
+import com.keepit.common.logging.Logging
 
 
 
@@ -92,7 +93,7 @@ class UserTopicRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
   val userTopicCache: UserTopicCache
-) extends DbRepo[UserTopic] with UserTopicRepo {
+) extends DbRepo[UserTopic] with UserTopicRepo with Logging{
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
@@ -109,6 +110,8 @@ class UserTopicRepoImpl @Inject() (
   }
 
   def deleteAll()(implicit session: RWSession): Int = {
+    (for(r <- table) yield r).list.foreach( x => userTopicCache.remove(UserTopicKey(x.userId)))
+    log.info("All cached userTopics have been removed")
     (for(r <- table) yield r).delete
   }
 }

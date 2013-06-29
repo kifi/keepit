@@ -9,6 +9,12 @@ import com.keepit.common.db.Id
 import scala.Array.canBuildFrom
 import com.keepit.learning.topicmodel.TopicModelGlobal
 import play.api.libs.json._
+import com.keepit.common.db.slick.DataBaseComponent
+import play.api.test._
+import play.api.test.Helpers._
+import com.keepit.test._
+import com.keepit.common.cache.ShoeboxCacheModule
+import com.keepit.common.cache._
 
 
 
@@ -42,7 +48,7 @@ class UserTopicTest extends Specification with TestDBRunner {
 
   "userTopicRepo" should {
     "correctly persist user topic and be able to delete all" in {
-      withDB() { implicit injector =>
+      withDB(ShoeboxCacheModule(HashMapMemoryCacheModule())) { implicit injector =>
         val userTopics = setup()
         val numTopics = TopicModelGlobal.numTopics
         val helper = new UserTopicByteArrayHelper
@@ -88,7 +94,7 @@ class UserTopicTest extends Specification with TestDBRunner {
 
   "userTopic cache" should {
     "work" in {
-      withDB() { implicit injector =>
+      withDB(ShoeboxCacheModule(HashMapMemoryCacheModule())) { implicit injector =>
         val userTopics = setup()
         val userTopicRepo = inject[UserTopicRepo]
         val helper = new UserTopicByteArrayHelper

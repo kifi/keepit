@@ -14,11 +14,14 @@ import org.specs2.mutable.Specification
 import play.api.Play.current
 import com.keepit.common.db.slick.Database
 import scala.math._
+import com.keepit.common.cache.ShoeboxCacheModule
+import com.keepit.common.cache._
 
-class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
+class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper with TestDBRunner{
   "TopicUpdater" should {
     "correctly update topic tables and be able to reset tables" in {
       running(new ShoeboxApplication().withWordTopicModule()) {
+        withDB(ShoeboxCacheModule(HashMapMemoryCacheModule()), DevTopicModelModule() ){ implicit injector =>
         val (users, uris) = setupDB
         val expectedUriToUserEdges = (0 until uris.size).map{ i =>
           (uris(i), List(users(i % users.size)))
@@ -89,7 +92,7 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
           }
 
         }
-      }
+      }}
     }
   }
 }
