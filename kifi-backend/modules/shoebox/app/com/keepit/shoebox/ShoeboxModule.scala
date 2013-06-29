@@ -14,12 +14,15 @@ import com.keepit.scraper.ScraperModule
 import com.keepit.realtime.WebSocketModule
 import com.keepit.classify.DomainTagImporterModule
 import com.keepit.common.crypto.CryptoModule
-import com.keepit.module.{DiscoveryModule, ActorSystemModule}
+import com.keepit.module.{ConfigurationModule, DiscoveryModule, ActorSystemModule}
 import com.keepit.common.healthcheck.HealthCheckModule
 import com.keepit.common.store.StoreModule
+import com.keepit.common.net.HttpClientModule
+import com.keepit.inject.FortyTwoModule
 
 abstract class ShoeboxModule(
   // Common Functional Modules
+  val fortyTwoModule: FortyTwoModule,
   val cacheModule: CacheModule,
   val secureSocialModule: SecureSocialModule,
   val searchServiceClientModule: SearchServiceClientModule,
@@ -31,6 +34,7 @@ abstract class ShoeboxModule(
   val actorSystemModule: ActorSystemModule,
   val discoveryModule: DiscoveryModule,
   val healthCheckModule: HealthCheckModule,
+  val httpClientModule: HttpClientModule,
 
   // Shoebox Functional Modules
   val slickModule: SlickModule,
@@ -43,30 +47,28 @@ abstract class ShoeboxModule(
   val sliderHistoryTrackerModule: SliderHistoryTrackerModule,
   val userIndexModule: UserIndexModule = UserIndexModule()
 
-) extends ScalaModule {
-  final def configure() {
-    println(s"Configuring ${this}")
+) extends ConfigurationModule(
+    fortyTwoModule,
+    cacheModule,
+    secureSocialModule,
+    searchServiceClientModule,
+    clickHistoryModule,
+    browsingHistoryModule,
+    mailModule,
+    cryptoModule,
+    storeModule,
+    actorSystemModule,
+    discoveryModule,
+    healthCheckModule,
+    httpClientModule,
 
-    install(cacheModule)
-    install(secureSocialModule)
-    install(searchServiceClientModule)
-    install(clickHistoryModule)
-    install(browsingHistoryModule)
-    install(mailModule)
-    install(cryptoModule)
-    install(storeModule)
-    install(actorSystemModule)
-    install(discoveryModule)
-    install(healthCheckModule)
-
-    install(slickModule)
-    install(scraperModule)
-    install(socialGraphModule)
-    install(analyticsModule)
-    install(webSocketModule)
-    install(topicModelModule)
-    install(domainTagImporterModule)
-    install(sliderHistoryTrackerModule)
-    install(userIndexModule)
-  }
-}
+    slickModule,
+    scraperModule,
+    socialGraphModule,
+    analyticsModule,
+    webSocketModule,
+    topicModelModule,
+    domainTagImporterModule,
+    sliderHistoryTrackerModule,
+    userIndexModule
+)

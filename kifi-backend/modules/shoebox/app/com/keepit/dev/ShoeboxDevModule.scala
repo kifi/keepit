@@ -24,11 +24,14 @@ import com.keepit.common.crypto.ShoeboxCryptoModule
 import com.keepit.common.store.{ShoeboxDevStoreModule, ShoeboxProdStoreModule}
 import com.keepit.common.service.ServiceType
 import com.keepit.common.healthcheck.HealthCheckProdModule
+import com.keepit.common.net.ProdHttpClientModule
+import com.keepit.inject.FortyTwoModule
 
 case class ShoeboxDevModule() extends ShoeboxModule(
 
 
   // Common Functional Modules
+  fortyTwoModule = FortyTwoModule(),
   cacheModule = ShoeboxCacheModule(HashMapMemoryCacheModule()),
   secureSocialModule = ShoeboxSecureSocialModule(),
   searchServiceClientModule = SearchServiceClientImplModule(),
@@ -40,6 +43,7 @@ case class ShoeboxDevModule() extends ShoeboxModule(
   actorSystemModule = DevActorSystemModule(),
   discoveryModule = LocalDiscoveryModule(ServiceType.DEV_MODE),
   healthCheckModule = HealthCheckProdModule(),
+  httpClientModule = ProdHttpClientModule(),
 
 
   // Shoebox Functional Modules

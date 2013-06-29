@@ -19,9 +19,12 @@ import play.api.db.DB
 import play.api.Play
 import com.keepit.module.{ProdDiscoveryModule, ProdActorSystemModule}
 import com.keepit.common.healthcheck.HealthCheckProdModule
+import com.keepit.common.net.ProdHttpClientModule
+import com.keepit.inject.FortyTwoModule
 
 case class ShoeboxProdModule() extends ShoeboxModule(
   // Common Functional Modules
+  fortyTwoModule = FortyTwoModule(),
   cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
   secureSocialModule = ShoeboxSecureSocialModule(),
   searchServiceClientModule = SearchServiceClientImplModule(),
@@ -33,6 +36,7 @@ case class ShoeboxProdModule() extends ShoeboxModule(
   actorSystemModule = ProdActorSystemModule(),
   discoveryModule = ProdDiscoveryModule(),
   healthCheckModule = HealthCheckProdModule(),
+  httpClientModule = ProdHttpClientModule(),
 
   // Shoebox Functional Modules
   slickModule = SlickModule(ShoeboxDbInfo()),

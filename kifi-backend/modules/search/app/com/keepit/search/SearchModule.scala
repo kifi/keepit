@@ -5,13 +5,16 @@ import com.keepit.social.SecureSocialModule
 import com.keepit.shoebox.ShoeboxServiceClientModule
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.model.{BrowsingHistoryModule, ClickHistoryModule}
-import com.keepit.module.{ActorSystemModule, DiscoveryModule}
+import com.keepit.module.{ConfigurationModule, ActorSystemModule, DiscoveryModule}
 import com.keepit.common.healthcheck.HealthCheckModule
 import com.keepit.common.store.StoreModule
+import com.keepit.common.net.HttpClientModule
+import com.keepit.inject.FortyTwoModule
 
 abstract class SearchModule(
 
   // Common Functional Modules
+  val fortyTwoModule: FortyTwoModule,
   val cacheModule: CacheModule,
   val secureSocialModule: SecureSocialModule,
   val shoeboxServiceClientModule: ShoeboxServiceClientModule,
@@ -21,28 +24,28 @@ abstract class SearchModule(
   val discoveryModule: DiscoveryModule,
   val healthCheckModule: HealthCheckModule,
   val storeModule: StoreModule,
+  val httpClientModule: HttpClientModule,
+
 
   // Search Functional Modules
   val indexModule: IndexModule,
   val searchConfigModule: SearchConfigModule,
   val resultFeedbackModule: ResultFeedbackModule
 
-) extends ScalaModule {
-  final def configure() {
-    println(s"Configuring ${this}")
+) extends ConfigurationModule(
+    fortyTwoModule,
+    cacheModule,
+    secureSocialModule,
+    shoeboxServiceClientModule,
+    clickHistoryModule,
+    browsingHistoryModule,
+    actorSystemModule,
+    discoveryModule,
+    healthCheckModule,
+    storeModule,
+    httpClientModule,
 
-    install(cacheModule)
-    install(secureSocialModule)
-    install(shoeboxServiceClientModule)
-    install(clickHistoryModule)
-    install(browsingHistoryModule)
-    install(actorSystemModule)
-    install(discoveryModule)
-    install(healthCheckModule)
-    install(storeModule)
-
-    install(indexModule)
-    install(searchConfigModule)
-    install(resultFeedbackModule)
-  }
-}
+    indexModule,
+    searchConfigModule,
+    resultFeedbackModule
+)

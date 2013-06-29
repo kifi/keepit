@@ -12,10 +12,13 @@ import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.common.service.ServiceType
 import com.keepit.common.healthcheck.HealthCheckProdModule
 import com.keepit.common.store.SearchDevStoreModule
+import com.keepit.common.net.ProdHttpClientModule
+import com.keepit.inject.FortyTwoModule
 
 case class SearchDevModule() extends SearchModule(
 
   // Common Functional Modules
+  fortyTwoModule = FortyTwoModule(),
   cacheModule = SearchCacheModule(HashMapMemoryCacheModule()),
   secureSocialModule = RemoteSecureSocialModule(),
   shoeboxServiceClientModule = ShoeboxServiceClientImplModule(),
@@ -25,6 +28,7 @@ case class SearchDevModule() extends SearchModule(
   discoveryModule = LocalDiscoveryModule(ServiceType.DEV_MODE),
   healthCheckModule = HealthCheckProdModule(),
   storeModule = SearchDevStoreModule(),
+  httpClientModule = ProdHttpClientModule(),
 
   // Search Functional Modules
   indexModule = DevIndexModule(),

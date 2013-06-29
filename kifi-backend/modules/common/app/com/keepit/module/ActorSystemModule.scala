@@ -1,7 +1,7 @@
 package com.keepit.module
 
 import net.codingwell.scalaguice.ScalaModule
-import akka.actor.ActorSystem
+import akka.actor.{Scheduler, ActorSystem}
 import com.keepit.common.actor.ActorPlugin
 import com.keepit.inject.AppScoped
 import com.google.inject.{Singleton, Provides}
@@ -13,6 +13,10 @@ trait ActorSystemModule extends ScalaModule {
   def configure() {
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
   }
+
+  @Provides
+  @AppScoped
+  def schedulerProvider(system: ActorSystem): Scheduler = system.scheduler
 }
 
 case class ProdActorSystemModule() extends ActorSystemModule {

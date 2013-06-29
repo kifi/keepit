@@ -7,10 +7,13 @@ import com.keepit.shoebox.ShoeboxServiceClientImplModule
 import com.keepit.module.{ProdActorSystemModule, ProdDiscoveryModule}
 import com.keepit.common.healthcheck.HealthCheckProdModule
 import com.keepit.common.store.SearchProdStoreModule
+import com.keepit.common.net.ProdHttpClientModule
+import com.keepit.inject.FortyTwoModule
 
 case class SearchProdModule() extends SearchModule(
 
   // Common Functional Modules
+  fortyTwoModule = FortyTwoModule(),
   cacheModule = SearchCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
   secureSocialModule = RemoteSecureSocialModule(),
   shoeboxServiceClientModule = ShoeboxServiceClientImplModule(),
@@ -20,6 +23,7 @@ case class SearchProdModule() extends SearchModule(
   discoveryModule = ProdDiscoveryModule(),
   healthCheckModule = HealthCheckProdModule(),
   storeModule = SearchProdStoreModule(),
+  httpClientModule = ProdHttpClientModule(),
 
   // Search Functional Modules
   indexModule = ProdIndexModule(),
