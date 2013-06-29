@@ -103,6 +103,11 @@ class UserTopicRepoImpl @Inject() (
     def * = id.? ~ userId ~ topic ~ createdAt ~ updatedAt <> (UserTopic.apply _, UserTopic.unapply _)
   }
 
+  override def invalidateCache(topic: UserTopic)(implicit session: RSession): UserTopic = {
+    userTopicCache.set(UserTopicKey(topic.userId), topic)
+    topic
+  }
+
   def getByUserId(userId: Id[User])(implicit session: RSession): Option[UserTopic] = {
     userTopicCache.getOrElseOpt(UserTopicKey(userId)){
       (for(r <- table if r.userId === userId) yield r).firstOption
