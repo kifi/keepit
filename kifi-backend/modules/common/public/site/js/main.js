@@ -74,7 +74,7 @@ $(function() {
 					dataType: 'json',
 					data: JSON.stringify({
 						collectionId: collId,
-						keeps: $keeps.map(function() {var a = this.querySelector("a"); return {title: a.title, url: a.href}}).get()}),
+						keeps: $keeps.map(function() {var a = this.querySelector(".keep-title>a"); return {title: a.title, url: a.href}}).get()}),
 					contentType: 'application/json',
 					error: onDropOnCollectionAjaxError,
 					success: function(data) {
@@ -86,9 +86,12 @@ $(function() {
 							.append('<span class=keep-coll data-id=' + collId + '>' +
 								'<a class="keep-coll-a" href="javascript:">' + collName + '</a><a class="keep-coll-x" href="javascript:"></a>' +
 								'</span>');
-						// if (!$inColl.find("#cb1-" + collId).length) {
-						// 	inCollTmpl.append({id: collId, name: collName});
-						// }
+						if ($keeps.is(".selected")) {
+							$detail.attr("data-kept", $keeps.has(".keep-private.on").length == $keeps.length ? "pri" : "pub");
+							if (!$inColl.has(".page-coll[data-id=" + collId + "]").length) {
+								inCollTmpl.append({id: collId, name: collName});
+							}
+						}
 					}
 				});
 			}};
@@ -99,7 +102,7 @@ $(function() {
 	var me;
 	var myKeepsCount;
 	var searchResponse;
-	var collections = {};
+	var collections;
 	var searchTimeout;
 	var lastKeep;
 
@@ -249,7 +252,11 @@ $(function() {
 			}
 			console.log("Fetching %d keeps %s", params.count, lastKeep ? "before " + lastKeep : "");
 			$.getJSON(urlMyKeeps, params,
-				function(data) {
+				function withKeeps(data) {
+					if (!collections) {
+						setTimeout(withKeeps.bind(null, data), 30);
+						return;
+					}
 					subtitleTmpl.render({
 						numShown: $myKeeps.find(".keep").length + data.keeps.length,
 						numTotal: collId ? collections[collId].keeps : myKeepsCount,
@@ -273,9 +280,7 @@ $(function() {
 	function populateCollections() {
 		$.getJSON(urlCollectionsAll, {sort: "user"}, function(data) {
 			collTmpl.render(data.collections);
-			for (var i in data.collections) {
-				collections[data.collections[i].id] = data.collections[i];
-			}
+			collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
 		});
 	}
 
@@ -297,6 +302,10 @@ $(function() {
 
 	function showMessage(msg) {
 		$.fancybox($('<p>').text(msg));
+	}
+
+	function getDataId() {
+		return $(this).data("id");
 	}
 
 	// delete/rename collection
@@ -397,7 +406,7 @@ $(function() {
 	// 	var $row = $(this).closest('.row');
 	// 	var colId = $(this).data('id');
 	// 	var $keeps = $main.find(".keep.selected");
-	// 	var keepIds = $keeps.map(function() {return $(this).data('id')}).get();
+	// 	var keepIds = $keeps.map(getDataId).get();
 	// 	$.ajax({
 	// 		url: urlCollections + "/" + colId + "/removeKeeps",
 	// 		type: "POST",
@@ -417,7 +426,7 @@ $(function() {
 	// 	// add selected keeps to collection
 	// 	var $row = $(this).closest('.row');
 	// 	var colId = $(this).data('id');
-	// 	var keeps = $main.find(".keep.selected").map(function() {return $(this).data('id')}).get();
+	// 	var keeps = $main.find(".keep.selected").map(getDataId).get();
 	// 	$.ajax({
 	// 		url: urlCollections + "/" + colId + "/addKeeps",
 	// 		type: "POST",
@@ -483,16 +492,12 @@ $(function() {
 			$('.page-pic').css('background-image', '');
 			$('.page-who').hide();
 
-			// TODO: sort collections by number of selected keeps
-			// inCollTmpl.clear();
-			// var allCollIds = {};
-			// $selected.find(".keep-coll").each(function() {
-			// 	var collId = $(this).data("id");
-			// 	if (!allCollIds[collId]) {
-			// 		allCollIds[collId] = true;
-			// 		inCollTmpl.append({id: collId, name: collections[collId].name});
-			// 	}
-			// });
+			var collCounts = $selected.find('.keep-coll').map(getDataId).get()
+				.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
+			inCollTmpl.render(
+				Object.keys(collCounts)
+					.sort(function(id1, id2) {return collCounts[id1] - collCounts[id2]})
+					.map(function(id) {return {id: id, name: collections[id].name}}));
 			showDetails();
 		} else { // one keep is selected
 			$keep = $selected;
@@ -508,11 +513,10 @@ $(function() {
 			$('.page-who-text').html($keep.find(".keep-who-text").html());
 			$('.page-who').show();
 
-			inCollTmpl.clear();
-			$keep.find('.keep-coll').each(function() {
+			inCollTmpl.render($keep.find('.keep-coll').map(function() {
 				var id = $(this).data('id');
-				inCollTmpl.append({id: id, name: collections[id].name});
-			});
+				return {id: id, name: collections[id].name};
+			}).get());
 			showDetails();
 		}
 	});
@@ -571,7 +575,7 @@ $(function() {
 				type: "POST",
 				async: false,
 				dataType: 'json',
-				data: JSON.stringify($(this).find(".collection").map(function() {return $(this).data("id")}).get()),
+				data: JSON.stringify($(this).find(".collection").map(getDataId).get()),
 				contentType: 'application/json',
 				error: showMessage.bind(null, 'Could not reorder the collections, please try again later'),
 				success: function(data) {
@@ -638,46 +642,46 @@ $(function() {
 			showMyKeeps($coll.data("id"));
 		}
 	})
-	.on("click", ".new-collection", function() {
-		clearTimeout(hideAddCollTimeout), hideAddCollTimeout = null;
-		if (!$addColl.is(":animated")) {
-			if ($addColl.is(":visible")) {
-				$addColl.slideUp(80).find("input").val("").prop("disabled", true);
+	.on("click", ".collection-create", function() {
+		clearTimeout(hideNewCollTimeout), hideNewCollTimeout = null;
+		if (!$newColl.is(":animated")) {
+			if ($newColl.is(":visible")) {
+				$newColl.slideUp(80).find("input").val("").prop("disabled", true);
 			} else {
-				$addColl.slideDown(80, function() {
+				$newColl.slideDown(80, function() {
 					$collList.find(".antiscroll-inner")[0].scrollTop = 0;
-					$addColl.find("input").prop("disabled", false).focus().select();
+					$newColl.find("input").prop("disabled", false).focus().select();
 				});
 			}
 		}
 	});
 
-	var $addColl = $colls.find(".add-collection"), hideAddCollTimeout;
-	$addColl.find("input").on("blur keydown", function(e) {
-		if ((e.which === 13 || e.type === "blur") && !$addColl.is(":animated")) { // 13 is Enter
+	var $newColl = $colls.find(".collection-new"), hideNewCollTimeout;
+	$newColl.find("input").on("blur keydown", function(e) {
+		if ((e.which === 13 || e.type === "blur") && !$newColl.is(":animated")) { // 13 is Enter
 			var name = $.trim(this.value);
 			if (name) {
 				createCollection(name);
 			} else if (e.type === "blur") {
-				if ($addColl.is(":visible"))
-				// avoid back-to-back hide/show animations if "new collection" clicked again
-				hideAddCollTimeout = setTimeout(hide.bind(this), 300);
+				if ($newColl.is(":visible"))
+				// avoid back-to-back hide/show animations if "create collection" clicked again
+				hideNewCollTimeout = setTimeout(hide.bind(this), 300);
 			} else {
 				e.preventDefault();
 				hide.call(this);
 			}
-		} else if (e.which === 27 && !$addColl.is(":animated")) { // 27 is Esc
+		} else if (e.which === 27 && !$newColl.is(":animated")) { // 27 is Esc
 			hide.call(this);
 		}
 		function hide() {
 			this.value = "";
 			this.disabled = true;
 			this.blur();
-			$addColl.slideUp(200);
-			clearTimeout(hideAddCollTimeout), hideAddCollTimeout = null;
+			$newColl.slideUp(200);
+			clearTimeout(hideNewCollTimeout), hideNewCollTimeout = null;
 		}
 	}).focus(function() {
-		clearTimeout(hideAddCollTimeout), hideAddCollTimeout = null;
+		clearTimeout(hideNewCollTimeout), hideNewCollTimeout = null;
 	});
 
 	// filter collections or right bar
@@ -689,7 +693,7 @@ $(function() {
 	// });
 
 	function createCollection(name) {
-		$addColl.addClass("submitted");
+		$newColl.addClass("submitted");
 		$.ajax({
 			url: urlCollectionsCreate,
 			type: "POST",
@@ -698,11 +702,11 @@ $(function() {
 			contentType: 'application/json',
 			error: function() {
 				showMessage('Could not create collection, please try again later');
-				$addColl.removeClass("submitted");
+				$newColl.removeClass("submitted");
 			},
 			success: function(data) {
 				collTmpl.prepend(collections[data.id] = {id: data.id, name: name, keeps: 0});
-				$addColl.hide().removeClass("submitted").find("input").val("").prop("disabled", true);
+				$newColl.hide().removeClass("submitted").find("input").val("").prop("disabled", true);
 				// TODO: Use Tempo template!!
 				// $('.detail .actions .collections ul li.create')
 				// 	.after('<li><input type="checkbox" data-id="' + data.id + '" id="cb-' + data.id + '"><label class="long-text" for="cb-' + data.id + '"><span></span>' + name + '</label></li>');
@@ -756,8 +760,8 @@ $(function() {
 				dataType: 'json',
 				data: JSON.stringify({
 					keeps: $keeps.map(function() {
-						var keepLink = $(this).find('.keep-title>a')[0];
-						return {title: keepLink.title, url: keepLink.href, isPrivate: howKept == 'pri'};
+						var a = $(this).find('.keep-title>a')[0];
+						return {title: a.title, url: a.href, isPrivate: howKept == 'pri'};
 					}).get()}),
 				contentType: 'application/json',
 				error: showMessage.bind(null, 'Could not add keeps, please try again later'),
@@ -770,13 +774,18 @@ $(function() {
 				url: urlKeepRemove,
 				type: "POST",
 				dataType: 'json',
-				data: JSON.stringify($keeps.map(function() {return {url: $(this).find('a').first().attr('href')}}).get()),
+				data: JSON.stringify($keeps.map(function() {return {url: this.querySelector('.keep-title>a').href}}).get()),
 				contentType: 'application/json',
 				error: showMessage.bind(null, 'Could not remove keeps, please try again later'),
 				success: function(data) {
 					$detail.removeAttr('data-kept');
+					inCollTmpl.clear();
 					$keeps.removeClass("mine").find(".keep-private").removeClass("on");
-					// TODO: decrement all relevant collection counts
+					var collCounts = $keeps.find(".keep-coll").remove().map(getDataId).get()
+						.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
+					for (var collId in collCounts) {
+						$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps -= collCounts[collId]);
+					}
 				}});
 		} else {  // toggle public/private
 			howKept = howKept == "pub" ? "pri" : "pub";
@@ -805,7 +814,7 @@ $(function() {
 		e.preventDefault();
 		removeKeepsFromCollection(
 			$(this.parentNode).data("id"),
-			$main.find(".keep.selected").map(function() {return $(this).data("id")}).get());
+			$main.find(".keep.selected").map(getDataId).get());
 	});
 
 	$(".send-feedback").click(function() {

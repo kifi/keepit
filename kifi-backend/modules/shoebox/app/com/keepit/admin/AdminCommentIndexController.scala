@@ -14,11 +14,8 @@ class AdminCommentIndexController @Inject()(
     extends AdminController(actionAuthenticator) {
 
   def reindex = AdminHtmlAction { implicit request =>
-    Async {
-      searchClient.reindexComment().map { cnt =>
-        Ok("reindexing started")
-      }
-    }
+    searchClient.reindexComment()
+    Ok("reindexing started")
   }
 
   def dumpLuceneDocument(id: Id[Comment]) =  AdminHtmlAction { implicit request =>

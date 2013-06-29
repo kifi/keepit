@@ -9,12 +9,15 @@ import scala.math._
 import java.util.Random
 import java.nio.ByteBuffer
 import java.io.File
+import com.keepit.inject._
+// import com.keepit.test.SearchApplication
 
 class ProbablisticLRUTest extends Specification {
   val rand = new Random(123456789L)
 
   def create(tableSize: Int, numHashFuncs: Int, syncEvery: Int = 1000) = {
-    val lru = ProbablisticLRU(tableSize, numHashFuncs, syncEvery)
+    val buf = new InMemoryResultClickTrackerBuffer(tableSize) //TODO: Use the Multiplexed thingamagic here
+    val lru = new ProbablisticLRU(buf, numHashFuncs, syncEvery)(None)
     lru.setSeed(123456789L)
     lru
   }

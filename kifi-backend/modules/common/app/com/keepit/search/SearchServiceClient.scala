@@ -30,34 +30,34 @@ import com.keepit.model.User
 trait SearchServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SEARCH
 
-  def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isUserKeep: Boolean): Future[Unit]
+  def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isUserKeep: Boolean): Unit
 
-  def updateURIGraph(): Future[Int]
-  def reindexURIGraph(): Future[Unit]
-  def reindexCollection(): Future[Unit]
+  def updateURIGraph(): Unit
+  def reindexURIGraph(): Unit
+  def reindexCollection(): Unit
   def uriGraphIndexInfo(): Future[Seq[IndexInfo]]
 
-  def index(): Future[Int]
-  def reindex(): Future[Unit]
+  def index(): Unit
+  def reindex(): Unit
   def articleIndexInfo(): Future[IndexInfo]
   def articleIndexerSequenceNumber(): Future[Int]
 
   def commentIndexInfo(): Future[Seq[IndexInfo]]
-  def reindexComment(): Future[Unit]
+  def reindexComment(): Unit
 
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo]
   def sharingUserInfo(userId: Id[User], uriIds: Seq[Id[NormalizedURI]]): Future[Seq[SharingUserInfo]]
-  def refreshSearcher(): Future[Unit]
-  def refreshPhrases(): Future[Unit]
+  def refreshSearcher(): Unit
+  def refreshPhrases(): Unit
   def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]]
   def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI]): Future[Html]
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray]
-  def buildSpellCorrectorDictionary(): Future[Unit]
+  def buildSpellCorrectorDictionary(): Unit
   def getSpellCorrectorStatus(): Future[Boolean]
   def correctSpelling(text: String): Future[String]
   def showUserConfig(id: Id[User]): Future[Html]
-  def setUserConfig(id: Id[User], params: Map[String, String]): Future[Unit]
-  def resetUserConfig(id: Id[User]): Future[Unit]
+  def setUserConfig(id: Id[User], params: Map[String, String]): Unit
+  def resetUserConfig(id: Id[User]): Unit
   def getSearchDefaultConfig: Future[SearchConfig]
   def getSearchStatistics(queryUUID: String, queryString: String, userId: Id[User], labeledUris: Map[Id[NormalizedURI], UriLabel]): Future[JsArray]
 
@@ -78,9 +78,9 @@ class SearchServiceClientImpl(
     override val httpClient: HttpClient)
   extends SearchServiceClient() {
 
-  def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isKeep: Boolean): Future[Unit] = {
+  def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isKeep: Boolean): Unit = {
     val json = Json.toJson(ResultClicked(userId, query, uriId, rank, isKeep))
-    call(Search.internal.logResultClicked(), json).map(_ => Unit)
+    broadcast(Search.internal.logResultClicked(), json)
   }
 
   def getSearchStatistics(queryUUID: String, queryString: String, userId: Id[User], labeledUris: Map[Id[NormalizedURI], UriLabel]): Future[JsArray] = {
@@ -98,28 +98,28 @@ class SearchServiceClientImpl(
     }
   }
 
-  def updateURIGraph(): Future[Int] = {
-    call(Search.internal.updateURIGraph()).map(r => (r.json \ "users").as[Int])
+  def updateURIGraph(): Unit = {
+    broadcast(Search.internal.updateURIGraph())
   }
 
-  def reindexURIGraph(): Future[Unit] = {
-    call(Search.internal.uriGraphReindex()).map(r => ())
+  def reindexURIGraph(): Unit = {
+    broadcast(Search.internal.uriGraphReindex())
   }
 
-  def reindexCollection(): Future[Unit] = {
-    call(Search.internal.collectionReindex()).map(r => ())
+  def reindexCollection(): Unit = {
+    broadcast(Search.internal.collectionReindex())
   }
 
-  def reindexComment(): Future[Unit] = {
-    call(Search.internal.commentReindex()).map(r => ())
+  def reindexComment(): Unit = {
+    broadcast(Search.internal.commentReindex())
   }
 
-  def index(): Future[Int] = {
-    call(Search.internal.searchUpdate()).map(r => (r.json \ "articles").as[Int])
+  def index(): Unit = {
+    broadcast(Search.internal.searchUpdate())
   }
 
-  def reindex(): Future[Unit] = {
-    call(Search.internal.searchReindex()).map(r => ())
+  def reindex(): Unit = {
+    broadcast(Search.internal.searchReindex())
   }
 
   def articleIndexInfo(): Future[IndexInfo] = {
@@ -154,12 +154,12 @@ class SearchServiceClientImpl(
     call(Search.internal.getSequenceNumber()).map(r => (r.json \ "sequenceNumber").as[Int])
   }
 
-  def refreshSearcher(): Future[Unit] = {
-    call(Search.internal.refreshSearcher()).map(_ => Unit)
+  def refreshSearcher(): Unit = {
+    broadcast(Search.internal.refreshSearcher())
   }
 
-  def refreshPhrases(): Future[Unit] = {
-    call(Search.internal.refreshPhrases()).map(_ => Unit)
+  def refreshPhrases(): Unit = {
+    broadcast(Search.internal.refreshPhrases())
   }
 
   def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]] = {
@@ -200,8 +200,8 @@ class SearchServiceClientImpl(
     call(Common.internal.version()).map(r => r.body)
   }
 
-  def buildSpellCorrectorDictionary(): Future[Unit] = {
-    call(Search.internal.buildDictionary()).map(r => ())
+  def buildSpellCorrectorDictionary(): Unit = {
+    broadcast(Search.internal.buildDictionary())
   }
 
   def getSpellCorrectorStatus(): Future[Boolean] = {
@@ -216,12 +216,12 @@ class SearchServiceClientImpl(
     call(Search.internal.showUserConfig(id)).map(r => Html(r.body))
   }
 
-  def setUserConfig(id: Id[User], params: Map[String, String]): Future[Unit] = {
-    call(Search.internal.setUserConfig(id), Json.toJson(params)).map(r => ())
+  def setUserConfig(id: Id[User], params: Map[String, String]): Unit = {
+    broadcast(Search.internal.setUserConfig(id), Json.toJson(params))
   }
 
-  def resetUserConfig(id: Id[User]): Future[Unit] = {
-    call(Search.internal.resetUserConfig(id)).map(r => ())
+  def resetUserConfig(id: Id[User]): Unit = {
+    broadcast(Search.internal.resetUserConfig(id))
   }
 
   def getSearchDefaultConfig: Future[SearchConfig]  = {

@@ -9,7 +9,7 @@ import com.keepit.common.net.URI
 import com.keepit.model._
 import com.keepit.model.CommentStates._
 import com.keepit.search.Lang
-import com.keepit.search.index.{DefaultAnalyzer, FieldDecoder, Indexable, Indexer, IndexError}
+import com.keepit.search.index.{DefaultAnalyzer, FieldDecoder, Indexable, Indexer}
 import java.io.StringReader
 import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.index.Term
@@ -41,6 +41,7 @@ object CommentStore {
 class CommentStore @Inject() (
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
+    healthcheckPlugin: HealthcheckPlugin,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[Comment](indexDirectory, indexWriterConfig) {
 
@@ -48,25 +49,17 @@ class CommentStore @Inject() (
 
   private[this] val commitBatchSize = 3000
 
-  private def commitCallback(commitBatch: Seq[(Indexable[Comment], Option[IndexError])]) = {
-    var cnt = 0
-    commitBatch.foreach{ case (indexable, indexError) =>
-      indexError match {
-        case Some(error) =>
-          log.error("indexing failed for comment=%s error=%s".format(indexable.id, error.msg))
-        case None =>
-          cnt += 1
-      }
-    }
-    cnt
+  override def onFailure(indexable: Indexable[Comment], e: Throwable): Unit = {
+    val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
+    healthcheckPlugin.addError(HealthcheckError(errorMessage = Some(msg), callType = INTERNAL))
+    super.onFailure(indexable, e)
   }
 
   def update(comments: Seq[Comment]) {
     try {
-      var cnt = 0
-      indexDocuments(comments.iterator.map(buildIndexable), commitBatchSize){ commitBatch =>
-        cnt += commitCallback(commitBatch)
-      }
+      val cnt = successCount
+      indexDocuments(comments.iterator.map(buildIndexable), commitBatchSize)
+      successCount - cnt
     } catch { case e: Throwable =>
       log.error("error in CommentStore update", e)
       throw e

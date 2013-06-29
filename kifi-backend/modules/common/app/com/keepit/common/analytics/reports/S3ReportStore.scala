@@ -23,8 +23,8 @@ trait ReportStore extends ObjectStore[String, Report] {
 }
 
 class S3ReportStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, val formatter: Format[Report] = new CompleteReportSerializer())
-  extends S3ObjectStore[String, Report] with ReportStore {
-  override def idToBJsonKey(id: String): String = id
+  extends S3JsonStore[String, Report] with ReportStore {
+  override def idToKey(id: String): String = id
 
   override def getReports(): List[String] = {
     import scala.collection.JavaConversions._
