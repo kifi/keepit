@@ -21,6 +21,12 @@ import play.api.Play.current
 import java.io.InputStream
 import java.io.ByteArrayInputStream
 import net.codingwell.scalaguice.ScalaModule
+import com.google.inject.{Provides, Singleton}
+import scala.Singleton
+import com.keepit.search.{S3ArticleStoreImpl, ArticleStore, S3ArticleSearchResultStoreImpl, ArticleSearchResultStore}
+import com.keepit.common.social.{S3SocialUserRawInfoStoreImpl, SocialUserRawInfoStore}
+import com.keepit.common.analytics.{S3EventStoreImpl, EventStore}
+import com.keepit.common.analytics.reports.{S3ReportStoreImpl, ReportStore}
 
 case class S3Bucket(name: String)
 
@@ -112,5 +118,3 @@ trait S3ObjectStore[A, B]  extends ObjectStore[A, B] with Logging {
   }
 
 }
-
-trait S3Module extends ScalaModule

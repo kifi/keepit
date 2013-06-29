@@ -21,8 +21,9 @@ import com.keepit.shoebox.UserIndexModule
 import com.keepit.social.ShoeboxSecureSocialModule
 import com.keepit.common.analytics.DevAnalyticsModule
 import com.keepit.common.crypto.ShoeboxCryptoModule
-import com.keepit.common.store.ShoeboxS3Module
+import com.keepit.common.store.{ShoeboxDevStoreModule, ShoeboxProdStoreModule}
 import com.keepit.common.service.ServiceType
+import com.keepit.common.healthcheck.HealthCheckProdModule
 
 case class ShoeboxDevModule() extends ShoeboxModule(
 
@@ -35,9 +36,11 @@ case class ShoeboxDevModule() extends ShoeboxModule(
   browsingHistoryModule = ShoeboxBrowsingHistoryModule(),
   mailModule = DevMailModule(),
   cryptoModule = ShoeboxCryptoModule(),
-  s3Module = ShoeboxS3Module(),
+  storeModule = ShoeboxDevStoreModule(),
   actorSystemModule = DevActorSystemModule(),
   discoveryModule = LocalDiscoveryModule(ServiceType.DEV_MODE),
+  healthCheckModule = HealthCheckProdModule(),
+
 
   // Shoebox Functional Modules
   slickModule = SlickModule(ShoeboxDbInfo()),

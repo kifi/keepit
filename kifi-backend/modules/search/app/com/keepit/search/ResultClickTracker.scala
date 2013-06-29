@@ -82,19 +82,9 @@ case class DevResultFeedbackModule() extends ResultFeedbackModule {
   @Singleton
   def resultClickTracker: ResultClickTracker = {
     val conf = current.configuration.getConfig("result-click-tracker").get
-    val numHashFuncs = conf.getInt("numHashFuncs").get
-    val syncEvery = conf.getInt("syncEvery").get
-    conf.getString("dir") match {
-      case None => ResultClickTracker(numHashFuncs)
-      case Some(dirPath) =>
-        val dir = new File(dirPath).getCanonicalFile()
-        if (!dir.exists()) {
-          if (!dir.mkdirs()) {
-            throw new Exception("could not create dir %s".format(dir))
-          }
-        }
-        ResultClickTracker(dir, numHashFuncs, syncEvery)
-    }
+    conf.getString("dir").map(_ =>
+      ProdResultFeedbackModule().resultClickTracker
+    ).getOrElse(ResultClickTracker(conf.getInt("numHashFuncs").get))
   }
 }
 

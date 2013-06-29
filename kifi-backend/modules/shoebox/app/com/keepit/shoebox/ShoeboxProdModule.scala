@@ -11,13 +11,14 @@ import com.keepit.learning.topicmodel.LdaTopicModelModule
 import com.keepit.model.SliderHistoryTrackerImplModule
 import com.keepit.common.mail.ProdMailModule
 import com.keepit.common.crypto.ShoeboxCryptoModule
-import com.keepit.common.store.ShoeboxS3Module
+import com.keepit.common.store.ShoeboxProdStoreModule
 import com.keepit.realtime.ShoeboxWebSocketModule
 import com.keepit.classify.ProdDomainTagImporterModule
 import scala.slick.session.{Database => SlickDatabase}
 import play.api.db.DB
 import play.api.Play
 import com.keepit.module.{ProdDiscoveryModule, ProdActorSystemModule}
+import com.keepit.common.healthcheck.HealthCheckProdModule
 
 case class ShoeboxProdModule() extends ShoeboxModule(
   // Common Functional Modules
@@ -28,9 +29,10 @@ case class ShoeboxProdModule() extends ShoeboxModule(
   browsingHistoryModule = ShoeboxBrowsingHistoryModule(),
   mailModule = ProdMailModule(),
   cryptoModule = ShoeboxCryptoModule(),
-  s3Module = ShoeboxS3Module(),
+  storeModule = ShoeboxProdStoreModule(),
   actorSystemModule = ProdActorSystemModule(),
   discoveryModule = ProdDiscoveryModule(),
+  healthCheckModule = HealthCheckProdModule(),
 
   // Shoebox Functional Modules
   slickModule = SlickModule(ShoeboxDbInfo()),

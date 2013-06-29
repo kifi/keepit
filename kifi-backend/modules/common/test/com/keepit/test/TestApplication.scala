@@ -24,7 +24,6 @@ import com.keepit.common.service._
 import com.keepit.common.social._
 import com.keepit.common.time._
 import com.keepit.common.zookeeper._
-import com.keepit.dev._
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.scraper._
@@ -40,7 +39,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import java.io.File
 import com.keepit.FortyTwoGlobal
 import com.keepit.model.SocialUserInfo
-import com.keepit.common.store.FakeS3StoreModule
+import com.keepit.common.store.{DevStoreModule, ProdStoreModule, FakeS3StoreModule}
 import com.keepit.search.SearchConfigModule
 import com.keepit.common.social.FakeSecureSocialUserServiceModule
 import com.keepit.model.SocialConnection
@@ -67,6 +66,8 @@ class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override v
 
   val emptyFakeHttpClient: PartialFunction[String, FakeClientResponse] = Map()
 
+  lazy val testStoreModule = new DevStoreModule(new ProdStoreModule { def configure {} }) { def configure {} }
+
   def withFakeMail() = overrideWith(FakeMailModule())
   def withFakeScraper() = overrideWith(FakeScraperModule())
   def withFakeScheduler() = overrideWith(FakeSchedulerModule())
@@ -78,7 +79,7 @@ class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override v
   def withTestActorSystem(system: ActorSystem) = overrideWith(TestActorSystemModule(system))
   def withFakePersistEvent() = overrideWith(FakePersistEventModule())
   def withFakeCache() = overrideWith(FakeCacheModule())
-  def withS3DevModule() = overrideWith(new S3DevModule())
+  def withS3DevModule() = overrideWith(testStoreModule)
   def withShoeboxServiceModule() = overrideWith(ShoeboxServiceModule())
   def withSearchConfigModule() = overrideWith(SearchConfigModule())
 

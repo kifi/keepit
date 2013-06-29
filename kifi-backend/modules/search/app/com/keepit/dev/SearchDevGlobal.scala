@@ -9,7 +9,7 @@ import play.api.Application
 
 object SearchDevGlobal extends FortyTwoGlobal(Dev) with SearchServices {
   override val modules =
-    Seq(Modules.`override`(new CommonModule, SearchProdModule()).`with`(new DevCommonModule, new SearchDevModule))
+    Seq(Modules.`override`(new CommonModule, SearchProdModule()).`with`(SearchDevModule()))
 
   override def onStart(app: Application) {
     startSearchServices()

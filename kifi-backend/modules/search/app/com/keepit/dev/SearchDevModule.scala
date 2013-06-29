@@ -10,6 +10,8 @@ import com.keepit.search.SearchConfigModule
 import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.common.service.ServiceType
+import com.keepit.common.healthcheck.HealthCheckProdModule
+import com.keepit.common.store.SearchDevStoreModule
 
 case class SearchDevModule() extends SearchModule(
 
@@ -21,6 +23,8 @@ case class SearchDevModule() extends SearchModule(
   browsingHistoryModule = SearchBrowsingHistoryModule(),
   actorSystemModule = DevActorSystemModule(),
   discoveryModule = LocalDiscoveryModule(ServiceType.DEV_MODE),
+  healthCheckModule = HealthCheckProdModule(),
+  storeModule = SearchDevStoreModule(),
 
   // Search Functional Modules
   indexModule = DevIndexModule(),

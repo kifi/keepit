@@ -40,20 +40,7 @@ case class DevMailModule() extends MailModule {
   @Provides
   @Singleton
   def mailToKeepServerSettingsOpt: Option[MailToKeepServerSettings] =
-    for {
-      username <- current.configuration.getString("mailtokeep.username")
-      password <- current.configuration.getString("mailtokeep.password")
-    } yield {
-      val server = current.configuration.getString("mailtokeep.server").getOrElse("imap.gmail.com")
-      val protocol = current.configuration.getString("mailtokeep.protocol").getOrElse("imaps")
-      val emailLabel = System.getProperty("user.name")
-      MailToKeepServerSettings(
-        username = username,
-        password = password,
-        server = server,
-        protocol = protocol,
-        emailLabel = Some(emailLabel))
-    }
+    current.configuration.getString("mailtokeep").map(_ => ProdMailModule().mailToKeepServerSettings)
 
   @Provides
   @Singleton

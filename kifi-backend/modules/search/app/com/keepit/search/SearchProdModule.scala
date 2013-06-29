@@ -5,6 +5,8 @@ import com.keepit.common.cache.{EhCacheCacheModule, MemcachedCacheModule, Search
 import com.keepit.common.{SearchBrowsingHistoryModule, SearchClickHistoryModule}
 import com.keepit.shoebox.ShoeboxServiceClientImplModule
 import com.keepit.module.{ProdActorSystemModule, ProdDiscoveryModule}
+import com.keepit.common.healthcheck.HealthCheckProdModule
+import com.keepit.common.store.SearchProdStoreModule
 
 case class SearchProdModule() extends SearchModule(
 
@@ -16,6 +18,8 @@ case class SearchProdModule() extends SearchModule(
   browsingHistoryModule = SearchBrowsingHistoryModule(),
   actorSystemModule = ProdActorSystemModule(),
   discoveryModule = ProdDiscoveryModule(),
+  healthCheckModule = HealthCheckProdModule(),
+  storeModule = SearchProdStoreModule(),
 
   // Search Functional Modules
   indexModule = ProdIndexModule(),
