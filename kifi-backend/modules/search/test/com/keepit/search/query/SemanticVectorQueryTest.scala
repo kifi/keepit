@@ -71,7 +71,7 @@ class SemanticVectorQueryTest extends Specification {
     def buildIndexable(data: Tst): Indexable[Tst] = new TstIndexable(data.id, data.text, data.fallbackText)
 
     def index(id: Id[Tst], text: String, fallbackText: String) = {
-      indexDocuments(Some(buildIndexable(new Tst(id, text, fallbackText))).iterator, 100){ docs => }
+      indexDocuments(Some(buildIndexable(new Tst(id, text, fallbackText))).iterator, 100)
     }
 
     def getPersonalizedSeacher(ids: Set[Long]) = PersonalizedSearcher(searcher, ids)

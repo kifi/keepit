@@ -45,19 +45,13 @@ class AdminSearchConfigController @Inject() (
       case Some(req) => req.map(r => (r._1 -> r._2.head))
       case None => throw new Exception("whoops")
     }
-    Async {
-      searchClient.setUserConfig(userId, form).map{ r =>
-        Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(userId))
-      }
-    }
+    searchClient.setUserConfig(userId, form)
+    Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(userId))
   }
 
   def resetUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    Async {
-      searchClient.resetUserConfig(userId).map{ r =>
-        Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(userId))
-      }
-    }
+    searchClient.resetUserConfig(userId)
+    Redirect(com.keepit.controllers.admin.routes.AdminSearchConfigController.showUserConfig(userId))
   }
 
   def getExperiments = AdminHtmlAction { implicit request =>

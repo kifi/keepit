@@ -2,6 +2,8 @@ package com.keepit.search.comment
 
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck.Healthcheck.INTERNAL
+import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
 import com.keepit.common.social.BasicUser
@@ -11,7 +13,7 @@ import com.keepit.search.Lang
 import com.keepit.search.LangDetector
 import com.keepit.search.index.DocUtil
 import com.keepit.search.index.FieldDecoder
-import com.keepit.search.index.{DefaultAnalyzer, Indexable, Indexer, IndexError}
+import com.keepit.search.index.{DefaultAnalyzer, Indexable, Indexer}
 import com.keepit.search.index.Indexable.IteratorTokenStream
 import com.keepit.search.index.Searcher
 import com.keepit.search.line.LineField
@@ -67,6 +69,7 @@ class CommentIndexer(
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
     val commentStore: CommentStore,
+    healthcheckPlugin: HealthcheckPlugin,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[Comment](indexDirectory, indexWriterConfig, CommentFields.decoders) {
 
@@ -78,17 +81,10 @@ class CommentIndexer(
 
   def getSearchers: (Searcher, Searcher) = searchers
 
-  private def commitCallback(commitBatch: Seq[(Indexable[Comment], Option[IndexError])]) = {
-    var cnt = 0
-    commitBatch.foreach{ case (indexable, indexError) =>
-      indexError match {
-        case Some(error) =>
-          log.error("indexing failed for user=%s error=%s".format(indexable.id, error.msg))
-        case None =>
-          cnt += 1
-      }
-    }
-    cnt
+  override def onFailure(indexable: Indexable[Comment], e: Throwable): Unit = {
+    val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
+    healthcheckPlugin.addError(HealthcheckError(errorMessage = Some(msg), callType = INTERNAL))
+    super.onFailure(indexable, e)
   }
 
   def update(): Int = {
@@ -121,13 +117,11 @@ class CommentIndexer(
         m + (c.parent.getOrElse(c.id.get) -> c.seq)
       }.toSeq.sortBy(_._2)
 
-      var cnt = 0
-      indexDocuments(parentChanged.iterator.map(buildIndexable), commitBatchSize){ commitBatch =>
-        cnt += commitCallback(commitBatch)
-      }
+      val cnt = successCount
+      indexDocuments(parentChanged.iterator.map(buildIndexable), commitBatchSize)
       // update searchers together to get a consistent view of indexes
       searchers = (this.getSearcher, commentStore.getSearcher)
-      cnt
+      successCount - cnt
     } catch { case e: Throwable =>
       log.error("error in Comment Index update", e)
       throw e

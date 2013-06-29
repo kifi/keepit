@@ -50,52 +50,52 @@ case class ProdIndexModule() extends IndexModule with Logging {
 
   @Singleton
   @Provides
-  def bookmarkStore(shoeboxClient: ShoeboxServiceClient): BookmarkStore = {
+  def bookmarkStore(healthcheckPlugin: HealthcheckPlugin, shoeboxClient: ShoeboxServiceClient): BookmarkStore = {
     val dir = getDirectory(current.configuration.getString("index.bookmarkStore.directory"))
     log.info(s"storing BookmarkStore in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new BookmarkStore(dir, config, shoeboxClient)
+    new BookmarkStore(dir, config, healthcheckPlugin, shoeboxClient)
   }
 
   @Singleton
   @Provides
-  def uriGraphIndexer(bookmarkStore: BookmarkStore, shoeboxClient: ShoeboxServiceClient): URIGraphIndexer = {
+  def uriGraphIndexer(bookmarkStore: BookmarkStore, healthcheckPlugin: HealthcheckPlugin, shoeboxClient: ShoeboxServiceClient): URIGraphIndexer = {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new URIGraphIndexer(dir, config, bookmarkStore, shoeboxClient)
+    new URIGraphIndexer(dir, config, bookmarkStore, healthcheckPlugin, shoeboxClient)
   }
 
   @Singleton
   @Provides
-  def collectionIndexer(shoeboxClient: ShoeboxServiceClient): CollectionIndexer = {
+  def collectionIndexer(healthcheckPlugin: HealthcheckPlugin, shoeboxClient: ShoeboxServiceClient): CollectionIndexer = {
     val dir = getDirectory(current.configuration.getString("index.collection.directory"))
     log.info(s"storing collection index in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new CollectionIndexer(dir, config, shoeboxClient)
+    new CollectionIndexer(dir, config, healthcheckPlugin, shoeboxClient)
   }
 
   @Singleton
   @Provides
-  def commentStore(shoeboxClient: ShoeboxServiceClient): CommentStore = {
+  def commentStore(healthcheckPlugin: HealthcheckPlugin, shoeboxClient: ShoeboxServiceClient): CommentStore = {
     val dir = getDirectory(current.configuration.getString("index.commentStore.directory"))
     log.info(s"storing CommentStore in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new CommentStore(dir, config, shoeboxClient)
+    new CommentStore(dir, config, healthcheckPlugin, shoeboxClient)
   }
 
   @Singleton
   @Provides
-  def commentIndexer(commentStore: CommentStore, shoeboxClient: ShoeboxServiceClient): CommentIndexer = {
+  def commentIndexer(commentStore: CommentStore, healthcheckPlugin: HealthcheckPlugin, shoeboxClient: ShoeboxServiceClient): CommentIndexer = {
     val dir = getDirectory(current.configuration.getString("index.comment.directory"))
     log.info(s"storing comment index in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new CommentIndexer(dir, config, commentStore, shoeboxClient)
+    new CommentIndexer(dir, config, commentStore, healthcheckPlugin, shoeboxClient)
   }
 
   @Singleton
   @Provides
-  def phraseIndexer(shoeboxClient: ShoeboxServiceClient): PhraseIndexer = {
+  def phraseIndexer(healthcheckPlugin: HealthcheckPlugin, shoeboxClient: ShoeboxServiceClient): PhraseIndexer = {
     val dir = getDirectory(current.configuration.getString("index.phrase.directory"))
     val dataDir = current.configuration.getString("index.config").map{ path =>
       val configDir = new File(path).getCanonicalFile()
@@ -103,7 +103,7 @@ case class ProdIndexModule() extends IndexModule with Logging {
     }
     val analyzer = DefaultAnalyzer.forIndexing
     val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
-    new PhraseIndexerImpl(dir, config, shoeboxClient)
+    new PhraseIndexerImpl(dir, config, healthcheckPlugin, shoeboxClient)
 
   }
 
@@ -150,52 +150,52 @@ case class DevIndexModule() extends IndexModule with Logging {
 
   @Singleton
   @Provides
-  def bookmarkStore(shoeboxClient: ShoeboxServiceClient): BookmarkStore = {
+  def bookmarkStore(healthcheckPlugin: HealthcheckPlugin, shoeboxClient: ShoeboxServiceClient): BookmarkStore = {
     val dir = getDirectory(current.configuration.getString("index.bookmarkStore.directory"))
     log.info(s"storing BookmarkStore in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new BookmarkStore(dir, config, shoeboxClient)
+    new BookmarkStore(dir, config, healthcheckPlugin, shoeboxClient)
   }
 
   @Singleton
   @Provides
-  def uriGraphIndexer(bookmarkStore: BookmarkStore, shoeboxClient: ShoeboxServiceClient): URIGraphIndexer = {
+  def uriGraphIndexer(bookmarkStore: BookmarkStore, healthcheckPlugin: HealthcheckPlugin, shoeboxClient: ShoeboxServiceClient): URIGraphIndexer = {
     val dir = getDirectory(current.configuration.getString("index.urigraph.directory"))
     log.info(s"storing URIGraph in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new URIGraphIndexer(dir, config, bookmarkStore, shoeboxClient)
+    new URIGraphIndexer(dir, config, bookmarkStore, healthcheckPlugin, shoeboxClient)
   }
 
   @Singleton
   @Provides
-  def collectionIndexer(shoeboxClient: ShoeboxServiceClient): CollectionIndexer = {
+  def collectionIndexer(healthcheckPlugin: HealthcheckPlugin, shoeboxClient: ShoeboxServiceClient): CollectionIndexer = {
     val dir = getDirectory(current.configuration.getString("index.collection.directory"))
     log.info(s"storing collection index in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new CollectionIndexer(dir, config, shoeboxClient)
+    new CollectionIndexer(dir, config, healthcheckPlugin, shoeboxClient)
   }
 
   @Singleton
   @Provides
-  def commentStore(shoeboxClient: ShoeboxServiceClient): CommentStore = {
+  def commentStore(healthcheckPlugin: HealthcheckPlugin, shoeboxClient: ShoeboxServiceClient): CommentStore = {
     val dir = getDirectory(current.configuration.getString("index.commentStore.directory"))
     log.info(s"storing CommentStore in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new CommentStore(dir, config, shoeboxClient)
+    new CommentStore(dir, config, healthcheckPlugin, shoeboxClient)
   }
 
   @Singleton
   @Provides
-  def commentIndexer(commentStore: CommentStore, shoeboxClient: ShoeboxServiceClient): CommentIndexer = {
+  def commentIndexer(commentStore: CommentStore, healthcheckPlugin: HealthcheckPlugin, shoeboxClient: ShoeboxServiceClient): CommentIndexer = {
     val dir = getDirectory(current.configuration.getString("index.comment.directory"))
     log.info(s"storing comment index in $dir")
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    new CommentIndexer(dir, config, commentStore, shoeboxClient)
+    new CommentIndexer(dir, config, commentStore, healthcheckPlugin, shoeboxClient)
   }
 
   @Singleton
   @Provides
-  def phraseIndexer(shoeboxClient: ShoeboxServiceClient): PhraseIndexer = {
+  def phraseIndexer(healthcheckPlugin: HealthcheckPlugin, shoeboxClient: ShoeboxServiceClient): PhraseIndexer = {
     val dir = getDirectory(current.configuration.getString("index.phrase.directory"))
     val dataDir = current.configuration.getString("index.config").map{ path =>
       val configDir = new File(path).getCanonicalFile()
@@ -203,7 +203,7 @@ case class DevIndexModule() extends IndexModule with Logging {
     }
     val analyzer = DefaultAnalyzer.forIndexing
     val config = new IndexWriterConfig(Version.LUCENE_41, analyzer)
-    new PhraseIndexerImpl(dir, config, shoeboxClient)
+    new PhraseIndexerImpl(dir, config, healthcheckPlugin, shoeboxClient)
 
   }
 

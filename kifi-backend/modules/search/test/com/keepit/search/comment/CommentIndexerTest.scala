@@ -1,5 +1,6 @@
 package com.keepit.search.comment
 
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.model._
 import com.keepit.search.graph.GraphTestHelper
 import com.keepit.search.index.DefaultAnalyzer
@@ -19,10 +20,10 @@ import scala.collection.JavaConversions._
 class CommentIndexerTest extends Specification with GraphTestHelper {
 
   def mkCommentStore(commentStoreDir: RAMDirectory = new RAMDirectory): CommentStore = {
-    new CommentStore(commentStoreDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[ShoeboxServiceClient])
+    new CommentStore(commentStoreDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[HealthcheckPlugin], inject[ShoeboxServiceClient])
   }
   def mkCommentIndexer(commentDir: RAMDirectory = new RAMDirectory, commentStore: CommentStore = mkCommentStore()): CommentIndexer = {
-    new CommentIndexer(commentDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), commentStore, inject[ShoeboxServiceClient])
+    new CommentIndexer(commentDir, new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), commentStore, inject[HealthcheckPlugin], inject[ShoeboxServiceClient])
   }
 
   "CommentIndexer" should {

@@ -2,6 +2,7 @@ package com.keepit.search.index
 
 import com.keepit.common.db._
 import com.keepit.common.time._
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.model._
 import com.keepit.scraper.FakeArticleStore
@@ -30,7 +31,7 @@ class ArticleIndexerTest extends Specification {
     val uriIdArray = new Array[Long](3)
     val parserFactory = new MainQueryParserFactory(new PhraseDetector(new FakePhraseIndexer()))
     val config = new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing)
-    var indexer = new ArticleIndexer(ramDir, config, store, null, inject[ShoeboxServiceClient])
+    var indexer = new ArticleIndexer(ramDir, config, store, inject[HealthcheckPlugin], inject[ShoeboxServiceClient])
 
     val Seq(user1, user2) = fakeShoeboxServiceClient.saveUsers(User(firstName = "Joe", lastName = "Smith"), User(firstName = "Moo", lastName = "Brown"))
     var Seq(uri1, uri2, uri3) = fakeShoeboxServiceClient.saveURIs(

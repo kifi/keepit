@@ -35,3 +35,4 @@ case class SearchDevModule() extends SearchModule(
   searchConfigModule = SearchConfigModule(),
   resultFeedbackModule = DevResultFeedbackModule()
 )
+

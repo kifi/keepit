@@ -28,6 +28,13 @@ trait ProdStoreModule extends StoreModule {
 
   @Singleton
   @Provides
+  def probablisticLRUStore(amazonS3Client: AmazonS3): ProbablisticLRUStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.flowerFilter.bucket").get)
+    new S3ProbablisticLRUStoreImpl(bucketName, amazonS3Client)
+  }
+
+  @Singleton
+  @Provides
   def articleSearchResultStore(amazonS3Client: AmazonS3): ArticleSearchResultStore = {
     val bucketName = S3Bucket(current.configuration.getString("amazon.s3.articleSearch.bucket").get)
     new S3ArticleSearchResultStoreImpl(bucketName, amazonS3Client)
@@ -69,6 +76,13 @@ abstract class DevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) exte
 
   protected def whenConfigured[T](parameter: String)(expression: => T): Option[T] =
     current.configuration.getString(parameter).map(_ => expression)
+
+  @Singleton
+  @Provides
+  def probablisticLRUStore(amazonS3ClientProvider: Provider[AmazonS3]): ProbablisticLRUStore =
+    whenConfigured("amazon.s3.flowerFilter.bucket")(
+      prodStoreModule.probablisticLRUStore(amazonS3ClientProvider.get)
+    ).getOrElse(new InMemoryProbablisticLRUStoreImpl())
 
   @Singleton
   @Provides

@@ -37,7 +37,7 @@
             }
           } else {
             not connected.
-            <form action="@securesocial.controllers.routes.ProviderController.authenticate(network.name)"
+            <form action="@com.keepit.controllers.core.routes.AuthController.link(network.name)"
               style="display:inline" method="post">
               <button type="submit" class="btn-link">Connect with @network.displayName</button>
             </form>

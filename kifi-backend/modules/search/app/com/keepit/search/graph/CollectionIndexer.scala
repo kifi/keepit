@@ -11,6 +11,8 @@ import org.apache.lucene.util.BytesRef
 import org.apache.lucene.util.Version
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck.Healthcheck.INTERNAL
+import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
 import com.keepit.model._
@@ -19,7 +21,7 @@ import com.keepit.search.Lang
 import com.keepit.search.LangDetector
 import com.keepit.search.index.DocUtil
 import com.keepit.search.index.FieldDecoder
-import com.keepit.search.index.{DefaultAnalyzer, Indexable, Indexer, IndexError}
+import com.keepit.search.index.{DefaultAnalyzer, Indexable, Indexer}
 import com.keepit.search.index.Indexable.IteratorTokenStream
 import com.keepit.search.line.LineField
 import com.keepit.search.line.LineFieldBuilder
@@ -45,6 +47,7 @@ object CollectionIndexer {
 class CollectionIndexer(
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
+    healthcheckPlugin: HealthcheckPlugin,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[Collection](indexDirectory, indexWriterConfig, CollectionFields.decoders) {
 
@@ -53,17 +56,10 @@ class CollectionIndexer(
 
   private[this] val updateLock = new AnyRef
 
-  private def commitCallback(commitBatch: Seq[(Indexable[Collection], Option[IndexError])]) = {
-    var cnt = 0
-    commitBatch.foreach{ case (indexable, indexError) =>
-      indexError match {
-        case Some(error) =>
-          log.error("indexing failed for user=%s error=%s".format(indexable.id, error.msg))
-        case None =>
-          cnt += 1
-      }
-    }
-    cnt
+  override def onFailure(indexable: Indexable[Collection], e: Throwable): Unit = {
+    val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
+    healthcheckPlugin.addError(HealthcheckError(errorMessage = Some(msg), callType = INTERNAL))
+    super.onFailure(indexable, e)
   }
 
   def update(): Int = updateLock.synchronized {
@@ -91,25 +87,23 @@ class CollectionIndexer(
   private def update(collectionsChanged: => Seq[Collection]): Int = {
     log.info("updating Collection")
     try {
-      var cnt = 0
-      indexDocuments(collectionsChanged.iterator.map(buildIndexable), commitBatchSize){ commitBatch =>
-        cnt += commitCallback(commitBatch)
-      }
-      cnt
+      val cnt = successCount
+      indexDocuments(collectionsChanged.iterator.map(buildIndexable), commitBatchSize)
+      successCount - cnt
     } catch { case e: Throwable =>
       log.error("error in Collection update", e)
       throw e
     }
   }
 
-  def buildIndexable(collection: Collection): CollectionListIndexable = {
+  def buildIndexable(collection: Collection): CollectionIndexable = {
     val bookmarks = if (collection.state == CollectionStates.ACTIVE) {
       Await.result(shoeboxClient.getBookmarksInCollection(collection.id.get), 180 seconds)
     } else {
       Seq.empty[Bookmark]
     }
 
-    new CollectionListIndexable(
+    new CollectionIndexable(
       id = collection.id.get,
       sequenceNumber = collection.seq,
       isDeleted = bookmarks.isEmpty,
@@ -117,7 +111,7 @@ class CollectionIndexer(
       bookmarks = bookmarks)
   }
 
-  class CollectionListIndexable(
+  class CollectionIndexable(
     override val id: Id[Collection],
     override val sequenceNumber: SequenceNumber,
     override val isDeleted: Boolean,
