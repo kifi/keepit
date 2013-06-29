@@ -46,51 +46,51 @@ class UserTopicTest extends Specification with TestDBRunner {
     userTopicFromDb
   }
 
-//  "userTopicRepo" should {
-//    "correctly persist user topic and be able to delete all" in {
-//      withDB(ShoeboxCacheModule(HashMapMemoryCacheModule())) { implicit injector =>
-//        val userTopics = setup()
-//        val numTopics = TopicModelGlobal.numTopics
-//        val helper = new UserTopicByteArrayHelper
-//        val userTopicRepo = inject[UserTopicRepo]
-//        db.readOnly { implicit s =>
-//          (0 until numTopics).foreach {i =>
-//            val userId = Id[User](i)
-//            val userTopic = userTopicRepo.getByUserId(userId)
-//            val topic = userTopic match {
-//              case Some(userTopic) => userTopic.topic
-//              case None => helper.toByteArray(genTopic(numTopics, i, 1, 1))
-//            }
-//            helper.toIntArray(topic).toSeq === genTopic(numTopics, i).toSeq
-//          }
-//        }
-//
-//        db.readWrite{ implicit s =>
-//          userTopicRepo.deleteAll()
-//        } === userTopics.size
-//      }
-//
-//    }
-//  }
-//
-//  "userTopic Serializer " should {
-//    "work" in {
-//      val t1 = new DateTime(2013, 5, 20, 21, 59, 0, 0, PT)
-//      val t2 = new DateTime(2013, 5, 22, 21, 59, 0, 0, PT)
-//      val topic = new Array[Int](TopicModelGlobal.numTopics)
-//      topic(1) = 1; topic(5) = 5;
-//      val helper = new UserTopicByteArrayHelper
-//      val userTopic = new UserTopic(id = Some(Id[UserTopic](1)), userId = Id[User](2), topic = helper.toByteArray(topic), createdAt = t1, updatedAt = t2)
-//      import UserTopic.userTopicFormat
-//      val js = Json.toJson(userTopic)
-//      val recovered = Json.fromJson[UserTopic](js).get
-//      recovered.id === userTopic.id
-//      recovered.userId === userTopic.userId
-//      recovered.updatedAt === userTopic.updatedAt
-//      recovered.createdAt === userTopic.createdAt
-//      helper.toIntArray(recovered.topic) === helper.toIntArray(userTopic.topic)
-//    }
-//  }
+  "userTopicRepo" should {
+    "correctly persist user topic and be able to delete all" in {
+      withDB(ShoeboxCacheModule(HashMapMemoryCacheModule())) { implicit injector =>
+        val userTopics = setup()
+        val numTopics = TopicModelGlobal.numTopics
+        val helper = new UserTopicByteArrayHelper
+        val userTopicRepo = inject[UserTopicRepo]
+        db.readOnly { implicit s =>
+          (0 until numTopics).foreach {i =>
+            val userId = Id[User](i)
+            val userTopic = userTopicRepo.getByUserId(userId)
+            val topic = userTopic match {
+              case Some(userTopic) => userTopic.topic
+              case None => helper.toByteArray(genTopic(numTopics, i, 1, 1))
+            }
+            helper.toIntArray(topic).toSeq === genTopic(numTopics, i).toSeq
+          }
+        }
+
+        db.readWrite{ implicit s =>
+          userTopicRepo.deleteAll()
+        } === userTopics.size
+      }
+
+    }
+  }
+
+  "userTopic Serializer " should {
+    "work" in {
+      val t1 = new DateTime(2013, 5, 20, 21, 59, 0, 0, PT)
+      val t2 = new DateTime(2013, 5, 22, 21, 59, 0, 0, PT)
+      val topic = new Array[Int](TopicModelGlobal.numTopics)
+      topic(1) = 1; topic(5) = 5;
+      val helper = new UserTopicByteArrayHelper
+      val userTopic = new UserTopic(id = Some(Id[UserTopic](1)), userId = Id[User](2), topic = helper.toByteArray(topic), createdAt = t1, updatedAt = t2)
+      import UserTopic.userTopicFormat
+      val js = Json.toJson(userTopic)
+      val recovered = Json.fromJson[UserTopic](js).get
+      recovered.id === userTopic.id
+      recovered.userId === userTopic.userId
+      recovered.updatedAt === userTopic.updatedAt
+      recovered.createdAt === userTopic.createdAt
+      helper.toIntArray(recovered.topic) === helper.toIntArray(userTopic.topic)
+    }
+  }
 
   "userTopic cache" should {
     "work" in {
