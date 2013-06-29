@@ -22,12 +22,12 @@
       <div class="networks">
       @for(network <- SocialNetworks.ALL.sortBy(network => !socialUser.exists(_.networkType == network))) {
         @if(socialUser.isEmpty || socialUser.get.networkType == network) {
-          <a href="@securesocial.controllers.routes.ProviderController.authenticate(network.name)" class="big blue btn">
+          <a href="@com.keepit.controllers.core.routes.AuthController.login(network.name)" class="big blue btn">
             Log in with @network.displayName
           </a>
         } else {
           <br>
-          <a href="@securesocial.controllers.routes.ProviderController.authenticate(network.name)" class="btn">
+          <a href="@com.keepit.controllers.core.routes.AuthController.login(network.name)" class="btn">
             I want to log in with @network.displayName instead
           </a>
         }
