@@ -46,7 +46,7 @@
 			</a>
 		</h3>
 		<div id="collections">
-			<h2>Collections <a class="collection-create" href="javascript:"></a></h2>
+			<h2>Collections<a class="collection-create" href="javascript:"></a></h2>
 			<div id="collections-list">
 				<div class="antiscroll-inner">
 					<h3 class="collection-new" data-before-template>
@@ -202,22 +202,19 @@
 			<div class="page-who-text"></div>
 		</div>
 		<div class="page-colls">
-			<h2>In collections: <!--a class="page-coll-add" href="javascript:">+</a--></h2>
+			<h2></h2>
 			<ul class="page-coll-list">
 				<li class="page-coll" data-template data-id="{{id}}">
 					<a class="page-coll-a long-text" href="javascript:">{{name}}</a><a class="page-coll-x" href="javascript:"></a>
 				</li>
+				<li class="page-coll-new" data-after-template>
+					<a class="page-coll-add" href="javascript:"></a>
+					<input class="page-coll-input" type="text" placeholder="collection name">
+					<ul class="page-coll-opts">
+						<li class="page-coll-opt long-text" data-template data-id="{{id}}">{{name}}</li>
+					</ul>
+				</li>
 			</ul>
-			<!--div class="collections">
-				<input class="find" type="text" placeholder="Find a collection...">
-				<ul>
-					<li class="create"><a class="collection-create" href="javascript:">Create a new collection</a>
-						<div class="collection-new">
-							<input type="text" placeholder="Type name here">
-						</div>
-					</li>
-				</ul>
-			</div-->
 		</div>
 	</aside>
 
