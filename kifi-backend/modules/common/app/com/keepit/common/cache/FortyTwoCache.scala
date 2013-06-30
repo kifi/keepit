@@ -227,14 +227,17 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
 
   protected[cache] def getFromInnerCache(key: K): Option[Option[T]] = {
     val getStart = currentDateTime.getMillis()
-    val value = try repo.get(key.toString).asInstanceOf[Option[Option[Any]]] catch {
+    val rawValueOpt = try repo.get(key.toString) catch {
       case e: Throwable =>
         repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
           errorMessage = Some(s"Failed fetching key $key from $repo")))
         None
     }
+    val valueOpt = try rawValueOpt.asInstanceOf[Option[Option[Any]]] catch {
+      case e: java.lang.ClassCastException => Some(rawValueOpt)
+    }
     try {
-      val objOpt = value.map(_.map(serializer.reads))
+      val objOpt = valueOpt.map(_.map(serializer.reads))
       val getEnd = currentDateTime.getMillis()
       objOpt match {
         case Some(_) => {
@@ -250,7 +253,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
     } catch {
       case e: Throwable =>
         repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
-          errorMessage = Some(s"Failed deserializing key $key from $repo, got raw value $value")))
+          errorMessage = Some(s"Failed deserializing key $key from $repo, got raw value $valueOpt")))
         repo.remove(key.toString)
         None
     }
