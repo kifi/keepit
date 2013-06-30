@@ -42,13 +42,17 @@ private object KeepInfo {
   }
 }
 
-private case class KeepInfosWithCollection(collectionId: Option[ExternalId[Collection]], keeps: Seq[KeepInfo])
+private case class KeepInfosWithCollection(
+  collection: Option[Either[ExternalId[Collection], String]], keeps: Seq[KeepInfo])
 
 private object KeepInfosWithCollection {
-  implicit val format = (
-    (__ \ 'collectionId).formatNullable(ExternalId.format[Collection]) and
-    (__ \ 'keeps).format[Seq[KeepInfo]]
-  )(KeepInfosWithCollection.apply _, unlift(KeepInfosWithCollection.unapply))
+  implicit val reads = (
+    (__ \ 'collectionId).read(ExternalId.format[Collection])
+      .map[Option[Either[ExternalId[Collection], String]]](c => Some(Left(c)))
+    orElse (__ \ 'collectionName).readNullable[String]
+      .map(_.map[Either[ExternalId[Collection], String]](Right(_))) and
+    (__ \ 'keeps).read[Seq[KeepInfo]]
+  )(KeepInfosWithCollection.apply _)
 }
 
 @Singleton
@@ -122,13 +126,20 @@ class BookmarksController @Inject() (
 
   def keepMultiple() = AuthenticatedJsonAction { request =>
     request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { kwc =>
-      val KeepInfosWithCollection(collectionIdOpt, keepInfos) = kwc
+      val KeepInfosWithCollection(collection, keepInfos) = kwc
       val keeps = bookmarkInterner.internBookmarks(
         Json.toJson(keepInfos), request.user, request.experiments, "SITE").map(KeepInfo.fromBookmark)
-      val addedToCollection = db.readOnly { implicit s =>
-        collectionIdOpt flatMap collectionRepo.getOpt map { coll =>
-          addToCollection(keeps.map(_.id.get).toSet, coll)._1.size
+      val addedToCollection = collection flatMap {
+        case Left(collectionId) => db.readOnly { implicit s => collectionRepo.getOpt(collectionId) }
+        case Right(name) => db.readWrite { implicit s =>
+          Some(collectionRepo.getByUserAndName(request.userId, name, excludeState = None) match {
+            case Some(c) if c.isActive => c
+            case Some(c) => collectionRepo.save(c.copy(state = CollectionStates.ACTIVE))
+            case None => collectionRepo.save(Collection(userId = request.userId, name = name))
+          })
         }
+      } map { coll =>
+        addToCollection(keeps.map(_.id.get).toSet, coll)._1.size
       }
       searchClient.updateURIGraph()
       Ok(Json.obj(
