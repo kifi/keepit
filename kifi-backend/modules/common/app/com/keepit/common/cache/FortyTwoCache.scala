@@ -235,6 +235,10 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
     }
     val valueOpt = try rawValueOpt.asInstanceOf[Option[Option[Any]]] catch {
       case e: java.lang.ClassCastException => Some(rawValueOpt)
+      case e: Throwable =>
+        repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
+          errorMessage = Some(s"Failed converting key $key from $repo")))
+        None
     }
     try {
       val objOpt = valueOpt.map(_.map(serializer.reads))
