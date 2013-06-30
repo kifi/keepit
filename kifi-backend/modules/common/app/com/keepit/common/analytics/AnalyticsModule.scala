@@ -13,7 +13,7 @@ import play.api.Play._
 
 trait AnalyticsModule extends ScalaModule
 
-case class AnalyticsImplModule() extends AnalyticsModule {
+case class ProdAnalyticsModule() extends AnalyticsModule {
 
   def configure() {
     bind[EventPersister].to[EventPersisterImpl].in[AppScoped]

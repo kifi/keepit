@@ -6,7 +6,7 @@ import com.keepit.common.db.SlickModule
 import com.keepit.module.DevActorSystemModule
 import com.keepit.shoebox.ShoeboxBrowsingHistoryModule
 import com.keepit.common.social.SocialGraphImplModule
-import com.keepit.model.SliderHistoryTrackerImplModule
+import com.keepit.model.ProdSliderHistoryTrackerModule
 import com.keepit.learning.topicmodel.DevTopicModelModule
 import com.keepit.realtime.ShoeboxWebSocketModule
 import com.keepit.scraper.ScraperImplModule
@@ -54,6 +54,6 @@ case class ShoeboxDevModule() extends ShoeboxModule(
   webSocketModule = ShoeboxWebSocketModule(),
   topicModelModule = DevTopicModelModule(),
   domainTagImporterModule = DevDomainTagImporterModule(),
-  sliderHistoryTrackerModule = SliderHistoryTrackerImplModule(),
+  sliderHistoryTrackerModule = ProdSliderHistoryTrackerModule(),
   userIndexModule = UserIndexModule()
 )

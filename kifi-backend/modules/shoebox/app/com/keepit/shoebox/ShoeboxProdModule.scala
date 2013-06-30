@@ -6,9 +6,9 @@ import com.keepit.search.SearchServiceClientImplModule
 import com.keepit.common.db.{DbInfo, SlickModule}
 import com.keepit.scraper.ScraperImplModule
 import com.keepit.common.social.SocialGraphImplModule
-import com.keepit.common.analytics.AnalyticsImplModule
+import com.keepit.common.analytics.ProdAnalyticsModule
 import com.keepit.learning.topicmodel.LdaTopicModelModule
-import com.keepit.model.SliderHistoryTrackerImplModule
+import com.keepit.model.ProdSliderHistoryTrackerModule
 import com.keepit.common.mail.ProdMailModule
 import com.keepit.common.crypto.ShoeboxCryptoModule
 import com.keepit.common.store.ShoeboxProdStoreModule
@@ -42,11 +42,11 @@ case class ShoeboxProdModule() extends ShoeboxModule(
   slickModule = SlickModule(ShoeboxDbInfo()),
   scraperModule = ScraperImplModule(),
   socialGraphModule = SocialGraphImplModule(),
-  analyticsModule = AnalyticsImplModule(),
+  analyticsModule = ProdAnalyticsModule(),
   webSocketModule = ShoeboxWebSocketModule(),
   topicModelModule = LdaTopicModelModule(),
   domainTagImporterModule = ProdDomainTagImporterModule(),
-  sliderHistoryTrackerModule = SliderHistoryTrackerImplModule()
+  sliderHistoryTrackerModule = ProdSliderHistoryTrackerModule()
 )
 
 case class ShoeboxDbInfo() extends DbInfo {

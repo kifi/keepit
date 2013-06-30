@@ -35,6 +35,3 @@ class BrowsingHistoryUserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, 
   extends BinaryCacheImpl[BrowsingHistoryUserIdKey, BrowsingHistory](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object BrowsingHistoryStates extends States[BrowsingHistory]
-
-trait BrowsingHistoryModule extends ScalaModule
-

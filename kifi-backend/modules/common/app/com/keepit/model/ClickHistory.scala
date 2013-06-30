@@ -35,6 +35,3 @@ class ClickHistoryUserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Dur
   extends BinaryCacheImpl[ClickHistoryUserIdKey, ClickHistory](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object ClickHistoryStates extends States[ClickHistory]
-
-trait ClickHistoryModule extends ScalaModule
-
