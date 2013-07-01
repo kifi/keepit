@@ -118,7 +118,11 @@ case class ProdIndexModule() extends IndexModule with Logging {
 
 case class DevIndexModule() extends IndexModule with Logging {
 
-  def configure {}
+  def configure {
+    bind[ArticleIndexerPlugin].to[ArticleIndexerPluginImpl].in[AppScoped]
+    bind[URIGraphPlugin].to[URIGraphPluginImpl].in[AppScoped]
+    bind[CommentIndexerPlugin].to[CommentIndexerPluginImpl].in[AppScoped]
+  }
 
   private def getDirectory(maybeDir: Option[String]): Directory = {
     maybeDir.map { d =>

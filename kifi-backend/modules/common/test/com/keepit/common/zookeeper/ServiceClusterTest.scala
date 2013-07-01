@@ -1,27 +1,12 @@
 package com.keepit.common.zookeeper
 
-import com.keepit.test._
-import com.keepit.inject._
 import com.keepit.common.amazon._
 import com.keepit.common.service._
-import com.keepit.common.strings._
-import play.api.Play.current
 import play.api.libs.json._
-import play.api.test.Helpers._
-import play.api.templates.Html
-import akka.actor.ActorRef
-import akka.testkit.ImplicitSender
 import org.specs2.mutable.Specification
-import org.apache.zookeeper.CreateMode
-import org.apache.zookeeper.CreateMode._
-import scala.util.{Random, Try}
-import com.keepit.common.net.FakeHttpClient
-import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.net.FakeClientResponse
-import com.google.inject.Provider
 import com.keepit.common.strings._
 
-class ServiceClusterTest extends Specification with TestInjector {
+class ServiceClusterTest extends Specification {
 
   val instance1 = new AmazonInstanceInfo(
     instanceId = AmazonInstanceId("i-f168c1a8"),

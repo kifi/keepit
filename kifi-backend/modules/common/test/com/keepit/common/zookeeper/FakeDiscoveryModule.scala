@@ -1,18 +1,18 @@
 package com.keepit.common.zookeeper
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
-import java.util.{List => JList}
-import com.keepit.common.logging.Logging
-import scala.collection.JavaConversions._
+import com.keepit.common.service.ServiceType
+import com.google.inject.{Singleton, Provides}
 import scala.collection.mutable
-import scala.collection.immutable.Set
-import org.apache.zookeeper.{CreateMode, KeeperException, Watcher, WatchedEvent, ZooKeeper}
-import org.apache.zookeeper.data.{ACL, Stat, Id}
-import org.apache.zookeeper.ZooDefs.Ids
-import org.apache.zookeeper.Watcher.Event.EventType
-import org.apache.zookeeper.Watcher.Event.KeeperState
-import java.util.concurrent.{CountDownLatch, TimeUnit}
-import java.util.concurrent.atomic.AtomicBoolean
+import org.apache.zookeeper.CreateMode
+
+
+case class FakeDiscoveryModule() extends LocalDiscoveryModule(ServiceType.TEST_MODE) {
+
+  @Provides
+  @Singleton
+  def fakeZooKeeperClient: ZooKeeperClient = new FakeZooKeeperClient()
+
+}
 
 class FakeZooKeeperClient() extends ZooKeeperClient {
   private val db = new mutable.HashMap[Node, Array[Byte]]()
@@ -44,3 +44,4 @@ class FakeZooKeeperClient() extends ZooKeeperClient {
   def deleteNode(node: Node) {}
   def deleteRecursive(path: Path) {}
 }
+

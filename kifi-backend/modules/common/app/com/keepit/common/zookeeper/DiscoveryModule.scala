@@ -1,4 +1,4 @@
-package com.keepit.module
+package com.keepit.common.zookeeper
 
 import net.codingwell.scalaguice.ScalaModule
 
@@ -9,11 +9,9 @@ import com.keepit.common.service._
 import com.keepit.common.amazon._
 import com.keepit.common.net.HttpClient
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.zookeeper._
 import play.api.Play.current
 import scala.Some
 import com.keepit.common.amazon.AmazonInstanceId
-import com.keepit.common.zookeeper.Node
 
 trait DiscoveryModule extends ScalaModule
 
@@ -53,7 +51,7 @@ case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
   }
 }
 
-case class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryModule {
+abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryModule {
 
   def configure() {}
 
@@ -87,3 +85,5 @@ case class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryModul
       def isLeader() = true
     }
 }
+
+case class DevDiscoveryModule() extends LocalDiscoveryModule(ServiceType.DEV_MODE)

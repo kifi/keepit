@@ -326,26 +326,3 @@ class DomainTagImporterImpl @Inject() (
     actor.ask(ApplyTag(tagName, domainNames))(1 minute).mapTo[DomainTag]
   }
 }
-
-trait DomainTagImporterModule extends ScalaModule {
-  def configure() {}
-}
-
-case class ProdDomainTagImporterModule() extends DomainTagImporterModule {
-
-  @Singleton
-  @Provides
-  def domainTagImportSettings: DomainTagImportSettings = {
-    val dirPath = Files.createTempDir().getAbsolutePath
-    DomainTagImportSettings(localDir = dirPath, url = "http://www.komodia.com/clients/42.zip")
-  }
-}
-
-case class DevDomainTagImporterModule() extends DomainTagImporterModule {
-
-  @Singleton
-  @Provides
-  def domainTagImportSettings: DomainTagImportSettings = {
-    DomainTagImportSettings(localDir = Files.createTempDir().getAbsolutePath, url = "http://localhost:8000/42.zip")
-  }
-}

@@ -31,8 +31,8 @@ trait TestDBRunner extends TestInjector {
   def electronicMailRepo(implicit injector: Injector) = inject[ElectronicMailRepo]
   def sessionProvider(implicit injector: Injector) = inject[TestSlickSessionProvider]
 
-  def withDB[T](overridingModules: Module*)(f: Injector => T) = {
-    withInjector(overridingModules: _*) { implicit injector =>
+  def withDB[T](additionalModules: Module*)(f: Injector => T) = {
+    withCustomInjector(additionalModules: _*) { implicit injector =>
       val h2 = inject[DataBaseComponent].asInstanceOf[H2]
       h2.initListener = Some(new TableInitListener {
         def init(table: TableWithDDL) = executeTableDDL(h2, table)
@@ -100,4 +100,5 @@ trait TestDBRunner extends TestInjector {
       }
     }
   }
+
 }
