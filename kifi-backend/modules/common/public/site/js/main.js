@@ -30,6 +30,7 @@ $.fn.removeText = function() {
 $(function() {
 	var $subtitle = $(".subtitle"), subtitleTmpl = Tempo.prepare($subtitle);
 
+	$('.keep-colls').removeText();
 	var $myKeeps = $("#my-keeps"), $results = $("#search-results"), keepsTmpl = Tempo.prepare($myKeeps).when(TempoEvent.Types.RENDER_COMPLETE, function(ev) {
 		hideLoading();
 
