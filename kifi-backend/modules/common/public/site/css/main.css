@@ -227,22 +227,24 @@ span.long-text, a.long-text {display: inline-block}
 .keep-title {max-width: 100%; color: #0089d5; font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased}
 .keep-title>a[href] {color: inherit}
 .keep-url {font-size: 12px; line-height: 14px; color: #99a3b3}
-.keep-colls {margin: 7px 10px 0 0; background: url(../img/folder-icon-small.png) 0 0/13px 11px no-repeat; padding-left: 19px; font-size: 12px; line-height: 14px; overflow: hidden}
+.keep-colls {margin-right: 10px; border: solid transparent; border-width: 7px 0; background: url(../img/folder-icon-small.png) 0 0/13px 11px no-repeat; padding-left: 15px; font-size: 12px; line-height: 14px; overflow: hidden}
 @-moz-document url-prefix() {.keep-colls {background-position: 0 1px}}
-.keep-coll {display: inline-block; overflow: hidden; white-space: nowrap; border-right: 1px solid #99a3b3; box-sizing: border-box; -moz-box-sizing: border-box}
+.keep-colls:empty {border-bottom-width: 0}
+.keep-coll {display: inline-block; position: relative; overflow: hidden; white-space: nowrap; border-right: 1px solid #99a3b3; box-sizing: border-box; -moz-box-sizing: border-box}
 .keep-coll:last-of-type {border-right: none}
 .keep-coll.removed {width: 0 !important; -webkit-transition: width .12s ease-in-out; transition: width .12s ease-in-out}
 .keep-coll>a[href] {color: #99a3b3}
 .keep-coll:hover>a {background-color: #eff2f7}
 .keep.selected .keep-coll:hover>a {background-color: #fff}
 .keep.keep a.keep-coll-a:active {background-color: #e3e6ee; color: #8490a4}
-.keep-coll-a {padding: 0 5px}
-.keep-coll-x {display: inline-block; vertical-align: bottom; text-align: center; width: 0; overflow: hidden; -webkit-transition: width 70ms; transition: width 70ms}
-.keep-coll:hover>.keep-coll-x {width: 16px; -webkit-transition-delay: .2s; transition-delay: .2s}
+.keep-coll-a {padding: 0 8px; -webkit-transition: padding .1s ease-in-out .1s; transition: padding .1s ease-in-out .1s}
+.keep-colls:hover .keep-coll-a {padding: 0 13px 0 3px}
+.keep-coll-x {position: absolute; top: 0; bottom: 0; right: 0; width: 0; text-align: center; overflow: hidden; -webkit-transition: width .1s ease-in-out .1s; transition: width .1s ease-in-out .1s}
+.keep-colls:hover .keep-coll-x {width: 10px}
 .keep-coll>.keep-coll-x[href][href]:hover {background-color: #b8c5d2; color: #eff2f7}
 .keep-coll>.keep-coll-x[href][href]:active {background-color: #99a3b3}
 .keep-coll-x::before {content: "\00D7"; position: relative; bottom: 1px}
-.keep-who {margin-top: 7px; font-size: 0}
+.keep-who {font-size: 0}
 .keep-who>img {vertical-align: middle; width: 23px; height: 23px; border-radius: 2px; margin-right: 1px}
 .keep-who>img.me {border-radius: 50% 0 0 50%}
 .keep-who>img.me:last-of-type {border-radius: 50%}
