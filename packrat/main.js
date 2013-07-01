@@ -629,7 +629,8 @@ api.port.on({
     createDeepLinkListener(locator, tab.id);
   },
   report_error: function(data, _, tag) {
-    reportError(data.message, data.url, data.lineNo);
+    // TODO: filter errors and improve fidelity/completeness of information
+    //reportError(data.message, data.url, data.lineNo);
   }
 });
 
@@ -1226,25 +1227,12 @@ function doAuth() {
 }
 doAuth();
 
-// Global error logging
-
 function reportError(errMsg, url, lineNo) {
-  return; // disable error reporting completely
-  // TODO: fix this
   api.log('Reporting error "%s" in %s line %s', errMsg, url, lineNo);
-  if (!api.isPackaged()) {
-    // Don't report errors on development (unpacked) extensions
-    return;
+  if ((api.prefs.get("env") === "production") === api.isPackaged()) {
+    ajax("POST", "/error/report", {message: errMsg + (url ? ' at ' + url + (line ? ':' + lineNo : '') : '')});
   }
-  ajax("POST", "/error/report", {
-    message: errMsg + ' at ' + url + ' line ' + lineNo
-  }, function () {
-    api.log('Logged error "%s" in %s line %s', errMsg, url, lineNo);
-  });
 }
-
-try {
-  // TODO: make error handler work correctly in Firefox
-  window.onerror = reportError;
-} catch (_) {}
-
+if (typeof window !== 'undefined') {  // TODO: add to api, find equivalent for firefox
+  window.onError = reportError;
+}
