@@ -916,7 +916,7 @@ $(function() {
 		}
 	}).on("mousedown", ".page-coll-opt", function(e) {
 		e.preventDefault();  // selection start
-		if (e.which) return;
+		if (e.which > 1) return;
 		var collId = $(this).data('id'), $in = $('.page-coll-input');
 		if (collId) {
 			withCollId(collId);
