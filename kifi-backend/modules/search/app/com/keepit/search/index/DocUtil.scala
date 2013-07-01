@@ -79,8 +79,8 @@ object DocUtil {
           "#%d: %d [%s]".format(seqno, id, new DateTime(URIList.unitToMillis(timestamp), DEFAULT_DATE_TIME_ZONE).toStandardTimeString)
         }.mkString(", ")
       }
-      val payload = indexableField.binaryValue
-      val uriList = URIList(payload.bytes, payload.offset, payload.length)
+      val binaryValue = indexableField.binaryValue
+      val uriList = URIList(binaryValue.bytes, binaryValue.offset, binaryValue.length)
       val printable = toString(uriList.ids, uriList.createdAt)
       "version=%d [%s]".format(uriList.version, printable)
     }
@@ -99,6 +99,13 @@ object DocUtil {
           }.mkString(" / ")
         case _ => "unable to decode"
       }
+    }
+  }
+
+  def binaryDocValFieldDecoder(decode: (Array[Byte], Int, Int)=>String): FieldDecoder = new FieldDecoder {
+    override def apply(indexableField: IndexableField): String = {
+      val binaryValue = indexableField.binaryValue
+      decode(binaryValue.bytes, binaryValue.offset, binaryValue.length)
     }
   }
 }
