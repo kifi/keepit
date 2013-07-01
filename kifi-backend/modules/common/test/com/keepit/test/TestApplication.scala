@@ -9,7 +9,7 @@ import com.google.inject.Provider
 import com.google.inject.Provides
 import com.google.inject.Singleton
 import com.google.inject.util.Modules
-import com.keepit.common.actor.{TestActorBuilderImpl, ActorBuilder, ActorPlugin}
+import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.analytics._
 import com.keepit.common.cache._
 import com.keepit.common.controller.FortyTwoCookies._
@@ -19,42 +19,33 @@ import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail._
 import com.keepit.common.net.{HttpClient, FakeClientResponse}
-import com.keepit.common.plugin._
 import com.keepit.common.service._
 import com.keepit.common.social._
 import com.keepit.common.time._
 import com.keepit.common.zookeeper._
-import com.keepit.dev._
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.scraper._
 import com.keepit.search._
 import com.keepit.shoebox._
 import akka.actor.ActorSystem
-import akka.actor.Cancellable
-import akka.actor.Scheduler
 import play.api.Mode.{Mode, Test}
-import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import java.io.File
 import com.keepit.FortyTwoGlobal
 import com.keepit.model.SocialUserInfo
-import com.keepit.common.store.FakeS3StoreModule
+import com.keepit.common.store.{DevStoreModule, ProdStoreModule, FakeS3StoreModule}
 import com.keepit.search.SearchConfigModule
 import com.keepit.common.social.FakeSecureSocialUserServiceModule
 import com.keepit.model.SocialConnection
-import com.keepit.classify.DomainTagImportSettings
+import com.keepit.classify.FakeDomainTagImporterModule
 import scala.Some
-import com.keepit.model.NormalizedURI
 import com.keepit.common.healthcheck.BabysitterTimeout
 import com.keepit.common.db.SlickModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.service.ServiceVersion
-import com.keepit.shoebox.ShoeboxCacheProvider
 import com.keepit.common.mail.FakeMailModule
-import com.keepit.module.LocalDiscoveryModule
-
 
 class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
 
@@ -67,19 +58,20 @@ class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override v
 
   val emptyFakeHttpClient: PartialFunction[String, FakeClientResponse] = Map()
 
+  lazy val devStoreModule = new DevStoreModule(new ProdStoreModule { def configure {} }) { def configure {} }
+
   def withFakeMail() = overrideWith(FakeMailModule())
   def withFakeScraper() = overrideWith(FakeScraperModule())
-  def withFakeScheduler() = overrideWith(FakeSchedulerModule())
   def withFakeHttpClient(requestToResponse: PartialFunction[String, FakeClientResponse] = emptyFakeHttpClient) = overrideWith(FakeHttpClientModule(requestToResponse))
   def withFakeStore() = overrideWith(FakeS3StoreModule())
   def withFakeHealthcheck() = overrideWith(FakeHealthcheckModule())
   def withRealBabysitter() = overrideWith(BabysitterModule())
   def withFakeSecureSocialUserService() = overrideWith(FakeSecureSocialUserServiceModule())
-  def withTestActorSystem(system: ActorSystem) = overrideWith(TestActorSystemModule(system))
+  def withTestActorSystem(system: ActorSystem) = overrideWith(TestActorSystemModule(Some(system)))
   def withFakePersistEvent() = overrideWith(FakePersistEventModule())
   def withFakeCache() = overrideWith(FakeCacheModule())
-  def withS3DevModule() = overrideWith(new S3DevModule())
-  def withShoeboxServiceModule() = overrideWith(ShoeboxServiceModule())
+  def withS3DevModule() = overrideWith(devStoreModule)
+  def withShoeboxServiceModule() = overrideWith(FakeShoeboxServiceModule())
   def withSearchConfigModule() = overrideWith(SearchConfigModule())
 
   def overrideWith(modules: Module*): TestApplication = new TestApplication(createTestGlobal(global, modules: _*), useDb, path)
@@ -94,43 +86,25 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     bindScope(classOf[AppScoped], appScope)
     bind[AppScope].toInstance(appScope)
     bind[Mode].toInstance(Test)
-    bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[Babysitter].to[FakeBabysitter]
-    install(new SlickModule(dbInfo.getOrElse(dbInfoFromApplication)))
+    install(new SlickModule(dbInfo.getOrElse(TestDbInfo.dbInfo)))
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
     bind[HealthcheckPlugin].to[FakeHealthcheck]
     bind[SlickSessionProvider].to[TestSlickSessionProvider]
     install(new FakeS3StoreModule())
     install(TestCacheModule())
-    install(LocalDiscoveryModule(ServiceType.TEST_MODE))
+    install(FakeDiscoveryModule())
+    install(TestActorSystemModule())
+    install(FakeDomainTagImporterModule())
+    install(TestSliderHistoryTrackerModule())
+    install(TestShoeboxServiceClientModule())
+    install(TestSearchServiceClientModule())
+    install(TestMailModule())
+    install(FakeHttpClientModule(FakeClientResponse.emptyHttpClient))
     bind[play.api.Application].toProvider(new Provider[play.api.Application] {
       def get(): play.api.Application = current
     }).in(classOf[AppScoped])
   }
-
-  private def dbInfoFromApplication(): DbInfo = TestDbInfo.dbInfo
-
-  @Provides
-  def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.Never
-
-  @Singleton
-  @Provides
-  def domainTagImportSettings: DomainTagImportSettings = DomainTagImportSettings(localDir = "", url = "")
-
-  @Provides
-  @Singleton
-  def fakeZooKeeperClient: ZooKeeperClient = new FakeZooKeeperClient()
-
-  @Provides
-  @Singleton
-  def mailSenderPlugin: MailSenderPlugin = new MailSenderPlugin {
-    def processMail(mailId: ElectronicMail) = throw new Exception("Should not attempt to use mail plugin in test")
-    def processOutbox() = throw new Exception("Should not attempt to use mail plugin in test")
-  }
-
-  @Provides
-  @Singleton
-  def localPostOffice(shoeboxPostOfficeImpl: ShoeboxPostOfficeImpl): LocalPostOffice = shoeboxPostOfficeImpl
 
   @Singleton
   @Provides
@@ -139,29 +113,6 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   @Singleton
   @Provides
   def impersonateCookie: ImpersonateCookie = new ImpersonateCookie(Some("test.com"))
-
-  @Provides
-  @Singleton
-  def sliderHistoryTracker(sliderHistoryRepo: SliderHistoryRepo, db: Database): SliderHistoryTracker =
-    new SliderHistoryTrackerImpl(sliderHistoryRepo, db, -1, -1, -1)
-
-  @Singleton
-  @Provides
-  def shoeboxServiceClient(shoeboxCacheProvided: ShoeboxCacheProvider, httpClient: HttpClient, serviceCluster: ServiceCluster): ShoeboxServiceClient =
-    new ShoeboxServiceClientImpl(serviceCluster, -1, httpClient,shoeboxCacheProvided)
-
-  @Singleton
-  @Provides
-  def httpClient(): HttpClient = null
-
-  @Provides
-  @Singleton
-  def searchServiceClient(serviceCluster: ServiceCluster): SearchServiceClient = new SearchServiceClientImpl(serviceCluster, -1, null)
-
-  @Provides
-  @AppScoped
-  def actorPluginProvider: ActorPlugin =
-    new ActorPlugin(ActorSystem("shoebox-test-actor-system", Play.current.configuration.underlying, Play.current.classloader))
 
   @Provides
   @Singleton
@@ -227,44 +178,6 @@ case class FakeCacheModule() extends ScalaModule {
   }
 }
 
-case class FakeScraperModule() extends ScalaModule {
-  override def configure() {
-    bind[ScraperPlugin].to[FakeScraperPlugin]
-  }
-}
-
-class FakeScraperPlugin() extends ScraperPlugin {
-  def scrape() = Seq()
-  def asyncScrape(uri: NormalizedURI) =
-    future { throw new Exception("Not Implemented") }
-}
-
-case class ShoeboxServiceModule() extends ScalaModule {
-  override def configure(): Unit = {}
-
-  @Singleton
-  @Provides
-  def fakeShoeboxServiceClient(clickHistoryTracker: ClickHistoryTracker, browsingHistoryTracker: BrowsingHistoryTracker): ShoeboxServiceClient =
-    new FakeShoeboxServiceClientImpl(clickHistoryTracker, browsingHistoryTracker)
-
-  @Provides
-  @Singleton
-  def fakebrowsingHistoryTracker: BrowsingHistoryTracker =
-    new FakeBrowsingHistoryTrackerImpl(3067, 2, 1)
-
-  @Provides
-  @Singleton
-  def fakeclickHistoryTracker: ClickHistoryTracker =
-    new FakeClickHistoryTrackerImpl(307, 2, 1)
-
-}
-
-case class TestActorSystemModule(system: ActorSystem) extends ScalaModule {
-  override def configure(): Unit = {
-    bind[ActorSystem].toInstance(system)
-    bind[ActorBuilder].to[TestActorBuilderImpl]
-  }
-}
 
 case class FakeHealthcheckModule() extends ScalaModule {
   override def configure(): Unit = {
@@ -292,28 +205,3 @@ class FakeBabysitter extends Babysitter {
     block
   }
 }
-
-case class FakeSchedulerModule() extends ScalaModule {
-  override def configure(): Unit = {
-    bind[Scheduler].to[FakeScheduler]
-  }
-}
-
-
-class FakeScheduler extends Scheduler {
-  private def fakeCancellable = new Cancellable() {
-    def cancel(): Unit = {}
-    def isCancelled = false
-  }
-  private def immediateExecutor(f: => Unit) = {
-    f
-    fakeCancellable
-  }
-  def schedule(initialDelay: scala.concurrent.duration.FiniteDuration, interval: scala.concurrent.duration.FiniteDuration, runnable: Runnable)(implicit executor: scala.concurrent.ExecutionContext): Cancellable = fakeCancellable
-  def schedule(initialDelay: scala.concurrent.duration.FiniteDuration,interval: scala.concurrent.duration.FiniteDuration)(f: => Unit)(implicit executor: scala.concurrent.ExecutionContext): akka.actor.Cancellable = immediateExecutor(f)
-  def schedule(initialDelay: scala.concurrent.duration.FiniteDuration,interval: scala.concurrent.duration.FiniteDuration,receiver: akka.actor.ActorRef,message: Any)(implicit executor: scala.concurrent.ExecutionContext): akka.actor.Cancellable = fakeCancellable
-  def scheduleOnce(delay: scala.concurrent.duration.FiniteDuration)(f: => Unit)(implicit executor: scala.concurrent.ExecutionContext): akka.actor.Cancellable = immediateExecutor(f)
-  def scheduleOnce(delay: scala.concurrent.duration.FiniteDuration,receiver: akka.actor.ActorRef,message: Any)(implicit executor: scala.concurrent.ExecutionContext): akka.actor.Cancellable = fakeCancellable
-  def scheduleOnce(delay: scala.concurrent.duration.FiniteDuration,runnable: Runnable)(implicit executor: scala.concurrent.ExecutionContext): akka.actor.Cancellable = fakeCancellable
-}
-

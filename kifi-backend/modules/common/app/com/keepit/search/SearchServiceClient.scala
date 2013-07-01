@@ -1,16 +1,13 @@
 package com.keepit.search
 
 import com.keepit.common.zookeeper._
-import com.keepit.common.healthcheck.BenchmarkResults
 import com.keepit.common.healthcheck.BenchmarkResultsJson._
 import com.keepit.common.service.{ServiceClient, ServiceType}
 import com.keepit.common.db.Id
 import com.keepit.common.net.HttpClient
 import com.keepit.model.Comment
 import com.keepit.model.Collection
-import com.keepit.model.NormalizedURI
-import com.keepit.model.User
-import play.api.libs.json.{JsArray, JsValue, Json, JsString}
+import play.api.libs.json.{JsValue, Json}
 import play.api.templates.Html
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -19,9 +16,6 @@ import com.keepit.common.routes.Search
 import com.keepit.common.routes.Common
 import com.keepit.common.search.{ResultClicked, SharingUserInfo, IndexInfo}
 import scala.concurrent.Promise
-import net.codingwell.scalaguice.ScalaModule
-import com.google.inject.{Provides, Singleton}
-import play.api.Play._
 import com.keepit.common.healthcheck.BenchmarkResults
 import play.api.libs.json.JsArray
 import com.keepit.model.NormalizedURI
@@ -70,7 +64,7 @@ trait SearchServiceClient extends ServiceClient {
   def version(): Future[String]
 }
 
-trait SearchServiceClientModule extends ScalaModule
+
 
 class SearchServiceClientImpl(
     override val serviceCluster: ServiceCluster,
@@ -230,21 +224,4 @@ class SearchServiceClientImpl(
       new SearchConfig(param)
     }
   }
-}
-
-case class SearchServiceClientImplModule() extends SearchServiceClientModule {
-
-  def configure {}
-
-  @Singleton
-  @Provides
-  def searchServiceClient(
-      client: HttpClient,
-      serviceDiscovery: ServiceDiscovery): SearchServiceClient = {
-    new SearchServiceClientImpl(
-      serviceDiscovery.serviceCluster(ServiceType.SEARCH),
-      current.configuration.getInt("service.search.port").get,
-      client)
-  }
-
 }
