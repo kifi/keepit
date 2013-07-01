@@ -16,7 +16,7 @@ import com.keepit.common.db.ExternalId
 import org.joda.time.DateTime
 import com.keepit.common.db.Id
 
-class ThreadInfoTest extends Specification {
+class ThreadInfoTest extends Specification with ApplicationInjector {
 
   def setup() = {
     inject[Database].readWrite { implicit session =>

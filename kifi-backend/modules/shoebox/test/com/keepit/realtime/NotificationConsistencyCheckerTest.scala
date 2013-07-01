@@ -3,13 +3,11 @@ package com.keepit.realtime
 import org.specs2.mutable.Specification
 
 import com.keepit.common.healthcheck.FakeHealthcheck
-import com.keepit.inject.inject
 import com.keepit.model._
-import com.keepit.test.{EmptyApplication, DbRepos}
+import com.keepit.test.{DbRepos, EmptyApplication, TestDBRunner}
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
-import play.api.Play.current
 import play.api.test.Helpers.running
 import play.api.libs.json.Json
 

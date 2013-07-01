@@ -14,7 +14,7 @@ import play.api.libs.json.JsArray
 import com.keepit.serializer.{PhraseSerializer, UserSerializer}
 import com.keepit.search.Lang
 
-class ShoeboxServiceClientTest extends Specification {
+class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
 
   val user1965 = User(firstName="Richard",lastName="Feynman").withId(Id[User](1965))
   val user1933 = User(firstName="Paul",lastName="Dirac").withId(Id[User](1933))

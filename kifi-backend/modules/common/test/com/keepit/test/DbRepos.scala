@@ -7,7 +7,7 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.db.DbInfo
 import scala.slick.session.{Database => SlickDatabase}
 
-trait DbRepos {
+trait DbRepos extends ApplicationInjector {
 
   import play.api.Play.current
 

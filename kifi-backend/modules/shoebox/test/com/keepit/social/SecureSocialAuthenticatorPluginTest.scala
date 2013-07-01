@@ -6,9 +6,8 @@ import org.specs2.mutable._
 import com.keepit.common.db.{TestSlickSessionProvider, ExternalId}
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.social.{SocialNetworks, SocialId}
-import com.keepit.inject.inject
 import com.keepit.model.{User, SocialUserInfo, UserSession}
-import com.keepit.test.{FakeClock, DbRepos, EmptyApplication}
+import com.keepit.test.{DbRepos, FakeClock, EmptyApplication}
 
 import play.api.Play.current
 import play.api.test.Helpers._

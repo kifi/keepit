@@ -5,15 +5,14 @@ import java.io.File
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick.Database
-import com.keepit.inject.inject
+import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
 import com.keepit.test.EmptyApplication
 
-import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test.Helpers._
 
-class UserConnectionCreatorTest extends Specification {
+class UserConnectionCreatorTest extends Specification with ApplicationInjector {
 
 
   "UserConnectionCreator" should {

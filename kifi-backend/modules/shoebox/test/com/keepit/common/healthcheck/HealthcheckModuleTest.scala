@@ -7,11 +7,10 @@ import com.keepit.inject._
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
-import play.api.Play.current
 import play.api.test.Helpers.running
-import com.keepit.test.{ShoeboxApplication, EmptyApplication}
+import com.keepit.test.{ShoeboxApplication}
 
-class HealthcheckModuleTest extends TestKit(ActorSystem()) with Specification {
+class HealthcheckModuleTest extends TestKit(ActorSystem()) with Specification with ApplicationInjector {
   "HealthcheckModule" should {
     "load" in {
       running(new ShoeboxApplication().withFakeMail().withFakeCache().withTestActorSystem(system)) {
