@@ -1,6 +1,6 @@
-package com.keepit.module
+package com.keepit.inject
 
-import net.codingwell.scalaguice.ScalaModule
+import _root_.net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.logging.Logging
 
 abstract class ConfigurationModule(modules: ScalaModule*) extends ScalaModule with Logging {

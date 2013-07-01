@@ -3,12 +3,13 @@ package com.keepit.search
 import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.common.cache.{EhCacheCacheModule, MemcachedCacheModule, SearchCacheModule}
 import com.keepit.common.{SearchBrowsingHistoryModule, SearchClickHistoryModule}
-import com.keepit.shoebox.ShoeboxServiceClientImplModule
-import com.keepit.module.{ProdActorSystemModule, ProdDiscoveryModule}
+import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.common.healthcheck.HealthCheckProdModule
 import com.keepit.common.store.SearchProdStoreModule
 import com.keepit.common.net.ProdHttpClientModule
 import com.keepit.inject.FortyTwoModule
+import com.keepit.common.actor.ProdActorSystemModule
+import com.keepit.common.zookeeper.ProdDiscoveryModule
 
 case class SearchProdModule() extends SearchModule(
 
@@ -16,7 +17,7 @@ case class SearchProdModule() extends SearchModule(
   fortyTwoModule = FortyTwoModule(),
   cacheModule = SearchCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
   secureSocialModule = RemoteSecureSocialModule(),
-  shoeboxServiceClientModule = ShoeboxServiceClientImplModule(),
+  shoeboxServiceClientModule = ProdShoeboxServiceClientModule(),
   clickHistoryModule = SearchClickHistoryModule(),
   browsingHistoryModule = SearchBrowsingHistoryModule(),
   actorSystemModule = ProdActorSystemModule(),

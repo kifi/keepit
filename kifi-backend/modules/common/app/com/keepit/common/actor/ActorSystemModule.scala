@@ -1,15 +1,17 @@
-package com.keepit.module
+package com.keepit.common.actor
 
 import net.codingwell.scalaguice.ScalaModule
 import akka.actor.{Scheduler, ActorSystem}
-import com.keepit.common.actor.ActorPlugin
 import com.keepit.inject.AppScoped
 import com.google.inject.{Singleton, Provides}
 import com.keepit.common.plugin.{SchedulingProperties, SchedulingEnabled}
 import play.api.Play
 import play.api.Play._
 
-trait ActorSystemModule extends ScalaModule {
+trait ActorSystemModule extends ScalaModule
+
+case class ProdActorSystemModule() extends ActorSystemModule {
+
   def configure() {
     bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
   }
@@ -17,9 +19,6 @@ trait ActorSystemModule extends ScalaModule {
   @Provides
   @AppScoped
   def schedulerProvider(system: ActorSystem): Scheduler = system.scheduler
-}
-
-case class ProdActorSystemModule() extends ActorSystemModule {
 
   @Provides
   def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.LeaderOnly
@@ -27,13 +26,21 @@ case class ProdActorSystemModule() extends ActorSystemModule {
   @Provides
   @AppScoped
   def actorPluginProvider: ActorPlugin =
-    new ActorPlugin(ActorSystem("shoebox-actor-system",
+    new ActorPlugin(ActorSystem("prod-actor-system",
       Play.current.configuration.underlying,
       Play.current.classloader))
 
 }
 
 case class DevActorSystemModule() extends ActorSystemModule {
+
+  def configure() {
+    bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
+  }
+
+  @Provides
+  @AppScoped
+  def schedulerProvider(system: ActorSystem): Scheduler = system.scheduler
 
   @Provides
   def globalSchedulingEnabled: SchedulingEnabled =
@@ -45,7 +52,7 @@ case class DevActorSystemModule() extends ActorSystemModule {
   @Provides
   @AppScoped
   def actorPluginProvider: ActorPlugin =
-    new ActorPlugin(ActorSystem("shoebox-dev-actor-system", Play.current.configuration.underlying, Play.current.classloader))
+    new ActorPlugin(ActorSystem("dev-actor-system", Play.current.configuration.underlying, Play.current.classloader))
 
   @Singleton
   @Provides

@@ -8,3 +8,5 @@ case class FakeHttpClientModule(requestToResponse: PartialFunction[String, FakeC
     bind[HttpClient].toInstance(new FakeHttpClient(Some(requestToResponse)))
   }
 }
+
+

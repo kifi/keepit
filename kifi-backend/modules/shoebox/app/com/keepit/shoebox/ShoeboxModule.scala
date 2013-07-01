@@ -14,11 +14,12 @@ import com.keepit.scraper.ScraperModule
 import com.keepit.realtime.WebSocketModule
 import com.keepit.classify.DomainTagImporterModule
 import com.keepit.common.crypto.CryptoModule
-import com.keepit.module.{ConfigurationModule, DiscoveryModule, ActorSystemModule}
 import com.keepit.common.healthcheck.HealthCheckModule
 import com.keepit.common.store.StoreModule
 import com.keepit.common.net.HttpClientModule
-import com.keepit.inject.FortyTwoModule
+import com.keepit.inject.{ConfigurationModule, FortyTwoModule}
+import com.keepit.common.actor.ActorSystemModule
+import com.keepit.common.zookeeper.DiscoveryModule
 
 abstract class ShoeboxModule(
   // Common Functional Modules
