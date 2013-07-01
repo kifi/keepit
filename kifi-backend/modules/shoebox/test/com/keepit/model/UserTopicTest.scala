@@ -8,6 +8,14 @@ import com.google.inject.Injector
 import com.keepit.common.db.Id
 import scala.Array.canBuildFrom
 import com.keepit.learning.topicmodel.TopicModelGlobal
+import play.api.libs.json._
+import com.keepit.common.db.slick.DataBaseComponent
+import play.api.test._
+import play.api.test.Helpers._
+import com.keepit.test._
+import com.keepit.common.cache.ShoeboxCacheModule
+import com.keepit.common.cache._
+
 
 
 class UserTopicTest extends Specification with TestDBRunner {
@@ -28,19 +36,19 @@ class UserTopicTest extends Specification with TestDBRunner {
     }
     val userTopicRepo = inject[UserTopicRepo]
     val helper = new UserTopicByteArrayHelper
-    db.readWrite { implicit s =>
+    val userTopicFromDb = db.readWrite { implicit s =>
       (ids zip userTopics) map { x =>
         val userTopic = UserTopic(userId = x._1, topic = helper.toByteArray(x._2), createdAt = t)
         userTopicRepo.save(userTopic)
       }
 
     }
-    userTopics
+    userTopicFromDb
   }
 
   "userTopicRepo" should {
     "correctly persist user topic and be able to delete all" in {
-      withDB() { implicit injector =>
+      withDB(ShoeboxCacheModule(HashMapMemoryCacheModule())) { implicit injector =>
         val userTopics = setup()
         val numTopics = TopicModelGlobal.numTopics
         val helper = new UserTopicByteArrayHelper
@@ -62,6 +70,77 @@ class UserTopicTest extends Specification with TestDBRunner {
         } === userTopics.size
       }
 
+    }
+  }
+
+  "userTopic Serializer " should {
+    "work" in {
+      val t1 = new DateTime(2013, 5, 20, 21, 59, 0, 0, PT)
+      val t2 = new DateTime(2013, 5, 22, 21, 59, 0, 0, PT)
+      val topic = new Array[Int](TopicModelGlobal.numTopics)
+      topic(1) = 1; topic(5) = 5;
+      val helper = new UserTopicByteArrayHelper
+      val userTopic = new UserTopic(id = Some(Id[UserTopic](1)), userId = Id[User](2), topic = helper.toByteArray(topic), createdAt = t1, updatedAt = t2)
+      import UserTopic.userTopicFormat
+      val js = Json.toJson(userTopic)
+      val recovered = Json.fromJson[UserTopic](js).get
+      recovered.id === userTopic.id
+      recovered.userId === userTopic.userId
+      recovered.updatedAt === userTopic.updatedAt
+      recovered.createdAt === userTopic.createdAt
+      helper.toIntArray(recovered.topic) === helper.toIntArray(userTopic.topic)
+    }
+  }
+
+  "userTopic cache" should {
+    "work" in {
+      withDB(ShoeboxCacheModule(HashMapMemoryCacheModule())) { implicit injector =>
+        val userTopics = setup()
+        val userTopicRepo = inject[UserTopicRepo]
+        val helper = new UserTopicByteArrayHelper
+
+        db.readOnly{ implicit s =>
+          (0 until userTopics.size).foreach{ i =>
+            val userTopic = userTopicRepo.getByUserId(Id[User](i)).get      // should in cache now
+            helper.toIntArray(userTopic.topic) === helper.toIntArray(userTopics(i).topic)
+          }
+        }
+
+        sessionProvider.doWithoutCreatingSessions {
+          db.readOnly { implicit s =>
+            (0 until userTopics.size).foreach { i =>
+              val userTopic = userTopicRepo.getByUserId(Id[User](i)).get
+              helper.toIntArray(userTopic.topic) === helper.toIntArray(userTopics(i).topic)
+            }
+          }
+        }
+
+        // update repo
+        db.readWrite{ implicit s =>
+          (0 until userTopics.size).foreach{ i =>
+            val userTopic = userTopicRepo.getByUserId(Id[User](i)).get
+            val old = helper.toIntArray(userTopic.topic)
+            old(i) *= 2     // score on topic i doubles
+            userTopicRepo.save(userTopic.copy(topic = helper.toByteArray(old)))     // this should invalidate the cache
+          }
+        }
+
+        db.readOnly{ implicit s =>
+          (0 until userTopics.size).foreach{ i =>
+            val userTopic = userTopicRepo.getByUserId(Id[User](i)).get
+            helper.toIntArray(userTopic.topic) === {val x = helper.toIntArray(userTopics(i).topic); x(i) *= 2; x}
+          }
+        }
+
+        sessionProvider.doWithoutCreatingSessions {
+          db.readOnly { implicit s =>
+            (0 until userTopics.size).foreach { i =>
+              val userTopic = userTopicRepo.getByUserId(Id[User](i)).get
+              helper.toIntArray(userTopic.topic) === {val x = helper.toIntArray(userTopics(i).topic); x(i) *= 2; x}
+            }
+          }
+        }
+      }
     }
   }
 

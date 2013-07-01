@@ -21,8 +21,12 @@ class S3ProbablisticLRUStoreImpl(val bucketName: S3Bucket, val amazonS3Client: A
         byteBuffer.array
     }
 
-    protected def decodeValue(data: Array[Byte]) : Array[Int] = ByteBuffer.wrap(data).asIntBuffer.array
-
+    protected def decodeValue(data: Array[Byte]) : Array[Int] = {
+        val intBuffer = ByteBuffer.wrap(data).asIntBuffer
+        val outArray = new Array[Int](data.length/4)
+        intBuffer.get(outArray)
+        outArray
+    }
 }
 
 
