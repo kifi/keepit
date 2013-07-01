@@ -166,7 +166,7 @@ a.page-priv[href]:active {background-color: #a0b1c2}
 .multiple[data-kept="pub"]>*>.page-priv::after {content: "Make all private"}
 .multiple[data-kept="pri"]>*>.page-priv::after {content: "Make all public"}
 .page-who,
-.page-colls {margin: 18px 0 5px; border-top: 1px solid #cdd6e0; padding-top: 11px}
+.page-colls {margin: 18px 0 5px; border-top: 1px solid #cdd6e0; padding: 11px 0 20px}
 .page-who-pics {margin: 5px 0 13px; white-space: nowrap; overflow: hidden}
 .page-who-pics>img {width: 38px; height: 38px; margin-right: 1px; border-radius: 2px}
 .page-who-text {font-size: 12px; line-height: 12px}
@@ -175,14 +175,15 @@ a.page-priv[href]:active {background-color: #a0b1c2}
 .page-who-text>.keep-private {display: none}
 .page-coll-list {margin-top: 10px}
 .page-coll-list>li {display: inline-block; line-height: 24px; vertical-align: top}
-.page-coll {overflow: hidden; white-space: nowrap; background-color: #b8c5d2; margin: 0 3px 3px 0; font-size: 13px; line-height: 24px; -webkit-font-smoothing: antialiased}
+.page-coll {position: relative; overflow: hidden; white-space: nowrap; background-color: #b8c5d2; margin: 0 3px 3px 0; font-size: 13px; line-height: 24px; -webkit-font-smoothing: antialiased}
 .page-coll.removed {width: 0 !important; -webkit-transition: width .12s ease-in-out; transition: width .12s ease-in-out}
 .page-coll>a[href] {color: #fff; vertical-align: top}
 .page-coll>a[href]:hover {background-color: #bdcbd8}
 .page-coll>a[href]:active {background-color: #a0b1c2}
-.page-coll-a {padding: 0 16px}
-.page-coll-x {display: inline-block; text-align: center; width: 0; overflow: hidden; -webkit-transition: width 80ms; transition: width 80ms}
-.page-coll:hover>.page-coll-x {width: 20px}
+.page-coll-a {padding: 0 16px; -webkit-transition: padding .1s ease-in-out .1s; transition: padding .1s ease-in-out .1s}
+.page-colls:hover .page-coll-a {padding: 0 26px 0 6px}
+.page-coll-x {position: absolute; right: 0; top: 0; bottom: 0; width: 0; text-align: center; -webkit-transition: width .1s ease-in-out .1s; transition: width .1s ease-in-out .1s}
+.page-colls:hover .page-coll-x {width: 20px}
 .page-coll-x::before {content: "\00D7"; position: relative; bottom: 1px}
 .page-coll-new {position: relative}
 .page-coll-add {display: inline-block; white-space: nowrap; font-size: 0; vertical-align: top}
