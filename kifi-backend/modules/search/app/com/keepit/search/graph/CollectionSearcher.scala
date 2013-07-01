@@ -2,6 +2,7 @@ package com.keepit.search.graph
 
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
+import com.keepit.common.strings._
 import com.keepit.model.{NormalizedURI, User, Collection}
 import com.keepit.search.graph.CollectionFields._
 import com.keepit.search.index.Searcher
@@ -29,6 +30,10 @@ class CollectionSearcher(searcher: Searcher) extends BaseGraphSearcher(searcher)
 
     while (iter.nextDoc != NO_MORE_DOCS) intersection += iter.docID
     UserToCollectionEdgeSet(userToCollection.sourceId, searcher, intersection.toArray)
+  }
+
+  def getExternalId(id: Long): String = {
+    searcher.getDecodedDocValue[String](CollectionFields.externalIdField, id)(fromByteArray).get
   }
 }
 
