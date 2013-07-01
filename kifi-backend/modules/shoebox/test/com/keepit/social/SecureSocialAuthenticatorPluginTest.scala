@@ -12,8 +12,9 @@ import com.keepit.test.{DbRepos, FakeClock, EmptyApplication}
 import play.api.Play.current
 import play.api.test.Helpers._
 import securesocial.core.{Authenticator, UserId}
+import com.keepit.inject.ApplicationInjector
 
-class SecureSocialAuthenticatorPluginTest extends Specification with DbRepos {
+class SecureSocialAuthenticatorPluginTest extends Specification with ApplicationInjector with DbRepos {
   def healthcheckPlugin = inject[HealthcheckPlugin]
   "SecureSocialAuthenticatorPlugin" should {
     "find existing user sessions" in {

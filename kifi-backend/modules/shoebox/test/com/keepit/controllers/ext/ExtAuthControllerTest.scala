@@ -2,27 +2,16 @@ package com.keepit.controllers.ext
 
 import com.keepit.test._
 import org.specs2.mutable.Specification
-import play.api.Play.current
 import play.api.libs.json._
-import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test.FakeRequest
-import play.api.test.FakeHeaders
 import com.keepit.inject._
-import com.keepit.common.social.SocialId
-import com.keepit.common.db._
 import com.keepit.common.social.SocialNetworks.FACEBOOK
 import com.keepit.common.time._
-import com.keepit.common.controller.FortyTwoCookies.{ImpersonateCookie, KifiInstallationCookie}
-import com.keepit.model._
-import com.keepit.model.ExperimentTypes.ADMIN
 import com.keepit.test.FakeClock
-import com.keepit.social.SecureSocialUserService
-import com.keepit.common.controller.AuthenticatedRequest
 
 import securesocial.core._
 
-import org.joda.time.LocalDate
 import org.joda.time.DateTime
 import play.api.libs.json.JsArray
 import com.keepit.common.controller.AuthenticatedRequest
@@ -35,7 +24,7 @@ import com.keepit.model.SocialUserInfo
 import play.api.libs.json.JsObject
 import com.keepit.common.social.SocialId
 
-class ExtAuthControllerTest extends Specification with DbRepos {
+class ExtAuthControllerTest extends Specification with ApplicationInjector with DbRepos {
 
   "ExtAuthController" should {
     "start" in {

@@ -13,8 +13,9 @@ import com.keepit.test.{FakeClock, EmptyApplication, DbRepos}
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers.running
+import com.keepit.inject.ApplicationInjector
 
-class InvitationMailPluginTest extends TestKit(ActorSystem()) with Specification with DbRepos {
+class InvitationMailPluginTest extends TestKit(ActorSystem()) with Specification with ApplicationInjector with DbRepos {
   "InvitationMailPlugin" should {
     "send emails to newly accepted users" in {
       running(new EmptyApplication().withTestActorSystem(system).withFakeMail()) {

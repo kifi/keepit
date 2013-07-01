@@ -2,34 +2,16 @@ package com.keepit.test
 
 import scala.slick.session.ResultSetConcurrency
 import com.google.inject.{Module, Injector}
-import com.keepit.common.db.{DbInfo, TestSlickSessionProvider}
+import com.keepit.common.db.DbInfo
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.slick._
-import com.keepit.common.mail._
-import com.keepit.model._
 import java.sql.{Driver, DriverManager}
 
 
-trait TestDBRunner extends TestInjector {
+trait TestDBRunner extends TestInjector with DbRepos {
 
   def dbInfo: DbInfo = TestDbInfo.dbInfo
   DriverManager.registerDriver(new play.utils.ProxyDriver(Class.forName("org.h2.Driver").newInstance.asInstanceOf[Driver]))
-
-  def db(implicit injector: Injector): Database = inject[Database]
-
-  def userRepo(implicit injector: Injector) = inject[UserRepo]
-  def keepToCollectionRepo(implicit injector: Injector) = inject[KeepToCollectionRepo]
-  def collectionRepo(implicit injector: Injector) = inject[CollectionRepo]
-  def uriRepo(implicit injector: Injector) = inject[NormalizedURIRepo]
-  def urlRepo(implicit injector: Injector) = inject[URLRepo]
-  def bookmarkRepo(implicit injector: Injector) = inject[BookmarkRepo]
-  def socialUserInfoRepo(implicit injector: Injector) = inject[SocialUserInfoRepo]
-  def installationRepo(implicit injector: Injector) = inject[KifiInstallationRepo]
-  def userExperimentRepo(implicit injector: Injector) = inject[UserExperimentRepo]
-  def emailAddressRepo(implicit injector: Injector) = inject[EmailAddressRepo]
-  def unscrapableRepo(implicit injector: Injector) = inject[UnscrapableRepo]
-  def electronicMailRepo(implicit injector: Injector) = inject[ElectronicMailRepo]
-  def sessionProvider(implicit injector: Injector) = inject[TestSlickSessionProvider]
 
   def withDB[T](additionalModules: Module*)(f: Injector => T) = {
     withCustomInjector(additionalModules: _*) { implicit injector =>

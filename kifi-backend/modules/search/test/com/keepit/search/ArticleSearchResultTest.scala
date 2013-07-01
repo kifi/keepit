@@ -1,23 +1,14 @@
 package com.keepit.search
 
-import com.keepit.scraper.FakeArticleStore
-import com.keepit.search.index.ArticleIndexer
-import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.db._
-import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.inject._
 import com.keepit.test._
 import org.specs2.mutable._
-import play.api.Play.current
-import play.api.libs.json.Json
-import play.api.test._
 import play.api.test.Helpers._
-import org.apache.lucene.store.RAMDirectory
-import scala.math._
 import com.keepit.serializer.ArticleSearchResultSerializer
 
-class ArticleSearchResultTest extends Specification with DbRepos {
+class ArticleSearchResultTest extends Specification with ApplicationInjector with DbRepos {
 
   "ArticleSearchResult" should {
     "be serialized" in {

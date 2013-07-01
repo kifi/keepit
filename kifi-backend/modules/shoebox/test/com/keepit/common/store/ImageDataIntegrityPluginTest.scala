@@ -11,10 +11,9 @@ import com.keepit.test.{ShoeboxApplication, DbRepos}
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
-import play.api.Play.current
 import play.api.test.Helpers.running
 
-class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specification with DbRepos {
+class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specification with ApplicationInjector with DbRepos {
   "The image data integrity plugin" should {
     "verify all pictures" in {
       running(new ShoeboxApplication()

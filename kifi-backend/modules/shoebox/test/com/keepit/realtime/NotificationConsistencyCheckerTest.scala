@@ -4,14 +4,15 @@ import org.specs2.mutable.Specification
 
 import com.keepit.common.healthcheck.FakeHealthcheck
 import com.keepit.model._
-import com.keepit.test.{DbRepos, EmptyApplication, TestDBRunner}
+import com.keepit.test.{DbRepos, EmptyApplication}
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers.running
 import play.api.libs.json.Json
+import com.keepit.inject.ApplicationInjector
 
-class NotificationConsistencyCheckerTest extends TestKit(ActorSystem()) with Specification with DbRepos {
+class NotificationConsistencyCheckerTest extends TestKit(ActorSystem()) with Specification with ApplicationInjector with DbRepos {
   "NotificationConsistencyChecker" should {
     "create healthcheck errors for unvisited notifications with read comments" in {
       running(new EmptyApplication().withTestActorSystem(system).withFakeMail()) {

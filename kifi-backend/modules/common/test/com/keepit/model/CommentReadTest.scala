@@ -3,27 +3,11 @@ package com.keepit.model
 import org.specs2.mutable._
 import com.keepit.test.{DbRepos, EmptyApplication}
 
-import play.api.Play.current
-import play.api.libs.json._
-import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.inject._
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.LargeString._
-import com.keepit.common.social.SocialId
-import com.keepit.common.social.SocialNetworks
-
-import com.keepit.common.social.SocialNetworks.FACEBOOK
-import com.keepit.common.controller.AuthenticatedRequest
-
-import securesocial.core._
-
-import play.api.Play.current
-import play.api.test._
 import play.api.test.Helpers._
 
-class CommentReadTest extends Specification with DbRepos {
+class CommentReadTest extends Specification with ApplicationInjector with DbRepos {
 
   def setup() = {
     db.readWrite {implicit s =>

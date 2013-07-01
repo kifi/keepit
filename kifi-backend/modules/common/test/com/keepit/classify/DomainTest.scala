@@ -4,12 +4,12 @@ package com.keepit.classify
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick.Database
-import com.keepit.test.DbRepos
 import com.keepit.test.EmptyApplication
 import play.api.test.Helpers._
+import com.keepit.inject.ApplicationInjector
 
 
-class DomainTest extends Specification with DbRepos {
+class DomainTest extends Specification with ApplicationInjector {
   "The domain repo" should {
     "save and retrieve domains by name and id" in {
       running(new EmptyApplication()) {
