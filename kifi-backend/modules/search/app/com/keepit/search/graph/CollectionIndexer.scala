@@ -1,7 +1,5 @@
 package com.keepit.search.graph
 
-import scala.collection.mutable.ArrayBuffer
-import java.io.StringReader
 import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.document.BinaryDocValuesField
 import org.apache.lucene.index.IndexWriterConfig
@@ -15,6 +13,7 @@ import com.keepit.common.healthcheck.Healthcheck.INTERNAL
 import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
+import com.keepit.common.strings._
 import com.keepit.model._
 import com.keepit.model.CollectionStates._
 import com.keepit.search.Lang
@@ -26,6 +25,8 @@ import com.keepit.search.index.Indexable.IteratorTokenStream
 import com.keepit.search.line.LineField
 import com.keepit.search.line.LineFieldBuilder
 import com.keepit.shoebox.ShoeboxServiceClient
+import java.io.StringReader
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
 import scala.concurrent.Await
 
@@ -33,9 +34,11 @@ object CollectionFields {
   val userField = "coll_usr"
   val uriField = "coll_uri"
   val uriListField = "coll_list"
+  val externalIdField = "col_ext"
 
   def decoders() = Map(
-    uriListField -> DocUtil.URIListDecoder
+    uriListField -> DocUtil.URIListDecoder,
+    externalIdField -> DocUtil.binaryDocValFieldDecoder(fromByteArray)
   )
 }
 
@@ -50,6 +53,8 @@ class CollectionIndexer(
     healthcheckPlugin: HealthcheckPlugin,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[Collection](indexDirectory, indexWriterConfig, CollectionFields.decoders) {
+
+  import CollectionFields._
 
   private[this] val commitBatchSize = 100
   private[this] val fetchSize = commitBatchSize * 3
@@ -78,7 +83,7 @@ class CollectionIndexer(
   }
 
   def update(userId: Id[User]): Int = updateLock.synchronized {
-    deleteDocuments(new Term(CollectionFields.userField, userId.toString), doCommit = false)
+    deleteDocuments(new Term(userField, userId.toString), doCommit = false)
     update {
       Await.result(shoeboxClient.getCollectionsByUser(userId), 180 seconds).filter(_.seq <= sequenceNumber)
     }
@@ -123,15 +128,17 @@ class CollectionIndexer(
       val doc = super.buildDocument
 
       val collListBytes = URIList.toByteArray(bookmarks)
-      val collListField = buildURIListField(CollectionFields.uriListField, collListBytes)
+      val collListField = buildURIListField(uriListField, collListBytes)
       val collList = URIList(collListBytes)
       doc.add(collListField)
 
       val uri = buildURIIdField(collList)
       doc.add(uri)
 
-      val user = buildKeywordField(CollectionFields.userField, collection.userId.id.toString)
+      val user = buildKeywordField(userField, collection.userId.id.toString)
       doc.add(user)
+
+      val externalId = buildBinaryDocValuesField(externalIdField, collection.externalId.id)
 
       doc
     }
@@ -141,7 +148,7 @@ class CollectionIndexer(
     }
 
     private def buildURIIdField(uriList: URIList) = {
-      buildIteratorField(CollectionFields.uriField, uriList.ids.iterator){ uriId => uriId.toString }
+      buildIteratorField(uriField, uriList.ids.iterator){ uriId => uriId.toString }
     }
   }
 }
