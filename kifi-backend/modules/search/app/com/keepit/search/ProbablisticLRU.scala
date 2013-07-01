@@ -189,7 +189,6 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEv
   private[this] var inserts = new AtomicLong(0L)
   private[this] var syncs = 0L
   private[this] var dirtyChunks = Set[IntBufferWrapper]()
-  private[this] var dirtyChunksSlave = Set[IntBufferWrapper]()
 
   def setSeed(seed: Long) = rnd.setSeed(seed)
 
@@ -213,11 +212,8 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEv
   }
 
   def sync = synchronized {
-    dirtyChunks.map(_.sync)
+    dirtyChunks.foreach(_.sync)
     dirtyChunks = Set[IntBufferWrapper]()
-
-    dirtyChunksSlave.map(_.sync)
-    dirtyChunksSlave = Set[IntBufferWrapper]()
 
     syncs += 1
     this
@@ -253,7 +249,7 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEv
     slaveBuffer.foreach{ mcBuffer => 
       val bufferChunkSlave = mcBuffer.getChunk(key)
       putValueHashOnce(bufferChunkSlave, mcBuffer.chunkSize)
-      dirtyChunksSlave = dirtyChunks + bufferChunkSlave
+      dirtyChunks = dirtyChunks + bufferChunkSlave
     }
 
   }

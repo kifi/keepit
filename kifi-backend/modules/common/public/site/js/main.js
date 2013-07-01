@@ -61,40 +61,15 @@ $(function() {
 		$colls.find(".collection").droppable(droppableCollectionOpts);
 	});
 	var droppableCollectionOpts = {
-			accept: ".keep",
-			greedy: true,
-			tolerance: "pointer",
-			hoverClass: "drop-hover",
-			drop: function(event, ui) {
-				var $keeps = ui.draggable.hasClass("selected") ? ui.draggable.parent().find(".keep.selected") : ui.draggable;
-				var $coll = $(this), collId = $coll.data("id");
-				$.ajax({
-					url: urlKeepAdd,
-					type: "POST",
-					dataType: 'json',
-					data: JSON.stringify({
-						collectionId: collId,
-						keeps: $keeps.map(function() {var a = this.querySelector(".keep-title>a"); return {title: a.title, url: a.href}}).get()}),
-					contentType: 'application/json',
-					error: onDropOnCollectionAjaxError,
-					success: function(data) {
-						var collName = collections[collId].name;
-						$coll.find(".keep-count").text(collections[collId].keeps += data.addedToCollection);
-						$keeps.addClass("mine")
-							.find(".keep-colls:not(:has(.keep-coll[data-id=" + collId + "]))")
-							.contents().filter(function() {return this.nodeType == 3}).remove().end().end()
-							.append('<span class=keep-coll data-id=' + collId + '>' +
-								'<a class="keep-coll-a" href="javascript:">' + collName + '</a><a class="keep-coll-x" href="javascript:"></a>' +
-								'</span>');
-						if ($keeps.is(".selected")) {
-							$detail.attr("data-kept", $keeps.has(".keep-private.on").length == $keeps.length ? "pri" : "pub");
-							if (!$inColl.has(".page-coll[data-id=" + collId + "]").length) {
-								inCollTmpl.append({id: collId, name: collName});
-							}
-						}
-					}
-				});
-			}};
+		accept: ".keep",
+		greedy: true,
+		tolerance: "pointer",
+		hoverClass: "drop-hover",
+		drop: function(event, ui) {
+			addKeepsToCollection($(this).data("id"), !ui.draggable.hasClass("selected") && ui.draggable);
+		}};
+
+	var $collOpts = $(".page-coll-opts"), collOptsTmpl = Tempo.prepare($collOpts);
 
 	var $inColl = $(".page-coll-list").contents().filter(function() {return this.nodeType == 3}).remove().end().end();
 	var inCollTmpl = Tempo.prepare($inColl);
@@ -117,8 +92,8 @@ $(function() {
 		return this.each(function() {this.clientHeight});  // forces layout
 	};
 
-	function onDropOnCollectionAjaxError() {
-		showMessage('Could not add to collection, please try again later');
+	function identity(a) {
+		return a;
 	}
 
 	function daysBetween(date1, date2) {
@@ -513,10 +488,10 @@ $(function() {
 			$('.page-who-text').html($keep.find(".keep-who-text").html());
 			$('.page-who').show();
 
-			inCollTmpl.render($keep.find('.keep-coll').map(function() {
-				var id = $(this).data('id');
-				return {id: id, name: collections[id].name};
-			}).get());
+			var collIds = $keep.find('.keep-coll').map(getDataId).get();
+			$('.page-colls>h2').text(collIds.length ? 'In Collections:' : 'Collections:');
+			inCollTmpl.render(collIds.map(function(id) {return {id: id, name: collections[id].name}}));
+
 			showDetails();
 		}
 	});
@@ -661,7 +636,12 @@ $(function() {
 		if ((e.which === 13 || e.type === "blur") && !$newColl.is(":animated")) { // 13 is Enter
 			var name = $.trim(this.value);
 			if (name) {
-				createCollection(name);
+				createCollection(name, function(collId) {
+					$newColl.removeClass("submitted");
+					if (collId) {
+						$newColl.hide().find("input").val("").prop("disabled", true);
+					}
+				});
 			} else if (e.type === "blur") {
 				if ($newColl.is(":visible"))
 				// avoid back-to-back hide/show animations if "create collection" clicked again
@@ -692,7 +672,7 @@ $(function() {
 	// 	});
 	// });
 
-	function createCollection(name) {
+	function createCollection(name, callback) {
 		$newColl.addClass("submitted");
 		$.ajax({
 			url: urlCollectionsCreate,
@@ -702,15 +682,45 @@ $(function() {
 			contentType: 'application/json',
 			error: function() {
 				showMessage('Could not create collection, please try again later');
-				$newColl.removeClass("submitted");
+				callback();
 			},
 			success: function(data) {
 				collTmpl.prepend(collections[data.id] = {id: data.id, name: name, keeps: 0});
-				$newColl.hide().removeClass("submitted").find("input").val("").prop("disabled", true);
-				// TODO: Use Tempo template!!
-				// $('.detail .actions .collections ul li.create')
-				// 	.after('<li><input type="checkbox" data-id="' + data.id + '" id="cb-' + data.id + '"><label class="long-text" for="cb-' + data.id + '"><span></span>' + name + '</label></li>');
+				callback(data.id);
 			}});
+	}
+
+	function addKeepsToCollection(collId, $keeps, onError) {
+		$keeps = $keeps || $('.keep.selected');
+		$.ajax({
+			url: urlKeepAdd,
+			type: "POST",
+			dataType: 'json',
+			data: JSON.stringify({
+				collectionId: collId,
+				keeps: $keeps.map(function() {var a = this.querySelector(".keep-title>a"); return {title: a.title, url: a.href}}).get()}),
+			contentType: 'application/json',
+			error: function() {
+				showMessage('Could not add to collection, please try again later');
+				if (onError) onError();
+			},
+			success: function(data) {
+				$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps += data.addedToCollection);
+				var collName = collections[collId].name;
+				$keeps.addClass("mine")
+					.find(".keep-colls:not(:has(.keep-coll[data-id=" + collId + "]))")
+					.contents().filter(function() {return this.nodeType == 3}).remove().end().end()
+					.append('<span class=keep-coll data-id=' + collId + '>' +
+						'<a class="keep-coll-a" href="javascript:">' + collName + '</a><a class="keep-coll-x" href="javascript:"></a>' +
+						'</span>');
+				if ($keeps.is(".selected")) {
+					$detail.attr("data-kept", $keeps.has(".keep-private.on").length == $keeps.length ? "pri" : "pub");
+					if (!$inColl.has(".page-coll[data-id=" + collId + "]").length) {
+						inCollTmpl.append({id: collId, name: collName});
+					}
+				}
+			}
+		});
 	}
 
 	function removeKeepsFromCollection(collId, keepIds) {
@@ -746,7 +756,7 @@ $(function() {
 	// 	$('.detail .collections').toggleClass('active');
 	// });
 
-	var $detail = $('.detail');
+	var $detail = $('.detail'), hideAddCollTimeout;
 
 	// keep / unkeep
 	$detail.on("click", '.page-keep,.page-priv', function(e) {
@@ -815,6 +825,70 @@ $(function() {
 		removeKeepsFromCollection(
 			$(this.parentNode).data("id"),
 			$main.find(".keep.selected").map(getDataId).get());
+	}).on("click", ".page-coll-add", function() {
+		collOptsTmpl.render($.map(collections, identity).sort(function(c1, c2) {return c2.keeps - c1.keeps}).splice(0, 4));
+		$collOpts.find(".page-coll-opt").first().addClass("current");
+		$(".page-coll-new").addClass("editing");
+		$(".page-coll-input").prop("disabled", false).focus().select();
+	}).on("blur", ".page-coll-input", function(e) {
+		hideAddCollTimeout = setTimeout(hide.bind(this), 50);
+		function hide() {
+			clearTimeout(hideAddCollTimeout), hideAddCollTimeout = null;
+			$collOpts.empty();
+			$(this).val("").prop("disabled", true);
+			$('.page-coll-new').removeClass("editing");
+		}
+	}).on("keydown", ".page-coll-input", function(e) {
+		switch (e.which) {
+			case 13: // Enter
+				var $opt = $('.page-coll-opt.current');
+				if ($opt.length) {
+					$opt.mousedown();
+				} else {
+					this.blur();
+				}
+				break;
+			case 27: // Esc
+				this.blur();
+				break;
+			case 38: // Up
+			case 40: // Down
+				var $old = $('.page-coll-opt.current'), $new = $old[e.which == 38 ? 'prev' : 'next']('.page-coll-opt');
+				if ($new.length) {
+					$old.removeClass('current');
+					$new.addClass('current');
+				}
+				break;
+		}
+	}).on("input", ".page-coll-input", function() {
+		var re = $.trim(this.value).split(/\s+/).map(function(p) {return new RegExp('\\b' + p)});
+		collOptsTmpl.render($.map(collections, identity).filter(function(c) {
+			return re.every(function(re) {return re.test(c.name)});
+		}).splice(0, 4));
+		var val = $.trim(this.value);
+		if (val) {
+			collOptsTmpl.append({id: "", name: val});
+		}
+		$('.page-coll-opt').first().addClass('current');
+	}).on("mousemove", ".page-coll-opt", function() {
+		if (this.className.indexOf("current") < 0) {
+			$(this).siblings(".current").removeClass("current").end().addClass("current");
+		}
+	}).on("mousedown", ".page-coll-opt", function(e) {
+		e.preventDefault();  // selection start
+		var collId = $(this).data('id'), $in = $('.page-coll-input');
+		if (collId) {
+			withCollId(collId);
+		} else {
+			createCollection($.trim($in.val()), withCollId);
+		}
+		function withCollId(collId) {
+			if (collId) {
+				$in.val("");
+				$collOpts.empty();
+				addKeepsToCollection(collId);
+			}
+		}
 	});
 
 	$(".send-feedback").click(function() {

@@ -67,8 +67,10 @@ aside {position: absolute; top: 70px; bottom: 0; -moz-box-sizing: border-box; bo
 .left-col .my-keeps.active .view-name::before {background-position: right}
 #collections>h2 {margin-top: 15px; padding: 0 0 2px 38px; background: url(../img/folder-icon.png) left 12px bottom 13px/18px no-repeat; border-bottom: 1px solid #dbdee3}
 #collections h3 {line-height: 39px}
-a.collection-create {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhDAAMAIABAO/y9////yH5BAEKAAEALAAAAAAMAAwAAAIXjAMJx6h91IIuMYmz3pzfR0lUNUHiUQAAOw==) center/6px no-repeat #b8c5d2; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
-a.collection-create:hover {background-color: #a1acbd}
+a.collection-create {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7) center/8px no-repeat #b8c5d2; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
+a.collection-create:hover {background-color: #bdcbd8}
+a.collection-create:active {background-color: #a0b1c2}
+
 .collection-new {display: none; border-bottom: 1px solid #dbdee3; background: #fff; -webkit-transition: background-color .16s; transition: background-color .16s}
 .collection-new.submitted {background-color: rgba(255,255,255,0)}
 #collections input {width: 100%; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; line-height: normal; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text}
@@ -172,17 +174,36 @@ a.page-priv[href]:active {background-color: #a0b1c2}
 :not([data-kept])>*>.page-who-text>.keep-you,
 .page-who-text>.keep-private {display: none}
 .page-coll-list {margin-top: 10px}
-.page-coll-list:empty {margin-top: 4px}
-.page-coll-list:empty::before {content: "None"; font-size: 12px}
-.page-coll {display: inline-block; overflow: hidden; white-space: nowrap; background-color: #b8c5d2; margin: 0 3px 3px 0; font-size: 13px; line-height: 24px; -webkit-font-smoothing: antialiased}
+.page-coll-list>li {display: inline-block; line-height: 24px; vertical-align: top}
+.page-coll {overflow: hidden; white-space: nowrap; background-color: #b8c5d2; margin: 0 3px 3px 0; font-size: 13px; line-height: 24px; -webkit-font-smoothing: antialiased}
 .page-coll.removed {width: 0 !important; -webkit-transition: width .12s ease-in-out; transition: width .12s ease-in-out}
-.page-coll>a[href] {color: #fff}
-.page-coll-a {padding: 0 16px}
-.page-coll-x {display: inline-block; /*vertical-align: bottom;*/ text-align: center; width: 0; overflow: hidden; -webkit-transition: width 80ms; transition: width 80ms}
-.page-coll:hover>.page-coll-x {width: 20px}
+.page-coll>a[href] {color: #fff; vertical-align: top}
 .page-coll>a[href]:hover {background-color: #bdcbd8}
 .page-coll>a[href]:active {background-color: #a0b1c2}
+.page-coll-a {padding: 0 16px}
+.page-coll-x {display: inline-block; text-align: center; width: 0; overflow: hidden; -webkit-transition: width 80ms; transition: width 80ms}
+.page-coll:hover>.page-coll-x {width: 20px}
 .page-coll-x::before {content: "\00D7"; position: relative; bottom: 1px}
+.page-coll-new {position: relative}
+.page-coll-add {display: inline-block; white-space: nowrap; font-size: 0; vertical-align: top}
+.editing>.page-coll-add {display: none}
+.page-coll-add::before {content: " "; display: inline-block; width: 18px; height: 18px; border-radius: 50%; vertical-align: bottom; position: relative; bottom: 3px; margin-left: 5px; background: url(data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7) center/8px no-repeat; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
+li:first-child>.page-coll-add::before {width: 16px; height: 16px; bottom: 4px; margin-left: 8px; background-color: #f7fafe; background-image: url(data:image/gif;base64,R0lGODlhCAAIAIABALjF0v///yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7)}
+.page-coll-add::before,
+li:first-child>.page-coll-add {background-color: #b8c5d2}
+.page-coll-add:hover::before,
+li:first-child>.page-coll-add:hover {background-color: #bdcbd8}
+.page-coll-add:active::before,
+li:first-child>.page-coll-add:active {background-color: #a0b1c2}
+[data-kept]>*>*>*>li:first-child>.page-coll-add::after {content: "Add this keep to a collection"}
+:not([data-kept])>*>*>*>li:first-child>.page-coll-add::after {content: "Keep to a collection"}
+.page-coll-add::after {vertical-align: bottom; color: #fff; font-size: 13px; margin: 0 14px 0 8px; -webkit-font-smoothing: antialiased}
+input.page-coll-input {display: none; border: 1px solid #cdd6e0; padding: 5px 16px; height: 24px; width: 20ex; vertical-align: top; -moz-box-sizing: border-box; box-sizing: border-box; color: inherit; font-family: inherit; font-size: 13px; -webkit-font-smoothing: antialiased}
+.editing>.page-coll-input {display: inline-block}
+.page-coll-opts {display: none; position: absolute; width: 100%; border: 1px solid #cdd6e0; border-top: none; -moz-box-sizing: border-box; box-sizing: border-box; background-color: #fff; font-size: 13px}
+.editing>.page-coll-opts:not(:empty) {display: block}
+.page-coll-opt {padding: 0 16px; font-size: 13px; color: #888b93; -webkit-font-smoothing: antialiased; cursor: pointer}
+.page-coll-opt.current {background-color: #f1f2f6}
 
 .long-text {white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
 span.long-text, a.long-text {display: inline-block}

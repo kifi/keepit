@@ -10,6 +10,7 @@ import play.api.libs.json._
 import play.api.libs.ws.WS.WSRequestHolder
 import play.api.libs.ws._
 import play.mvc._
+import com.keepit.common.logging.Logging
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.Healthcheck
@@ -131,10 +132,51 @@ case class HttpClientImpl(
   }
 
   private def await[A](future: Future[A]): A = Await.result(future, Duration(timeout, timeoutUnit))
-  private def req(url: String): WSRequestHolder = WS.url(url).withHeaders(headers: _*)
-  private def res(request: WSRequestHolder, response: Response): ClientResponse = new ClientResponseImpl(request, response)
+  private def req(url: String): Request = new Request(WS.url(url).withHeaders(headers: _*))
+  private def res(request: Request, response: Response): ClientResponse = new ClientResponseImpl(request, response)
 
   def longTimeout(): HttpClientImpl = copy(timeout = 2, timeoutUnit = TimeUnit.MINUTES)
+}
+
+private[net] class Request(wsRequest: WSRequestHolder) extends Logging {
+  def get() = {
+    val start = System.currentTimeMillis
+    val res = wsRequest.get()
+    res.onComplete { resTry =>
+      logResponse(start, "GET", resTry.isSuccess)
+    }
+    res
+  }
+
+  def put(body: JsValue) = {
+    val start = System.currentTimeMillis
+    val res = wsRequest.put(body)
+    res.onComplete { resTry =>
+      logResponse(start, "PUT", resTry.isSuccess)
+    }
+    res
+  }
+
+  def post(body: JsValue) = {
+    val start = System.currentTimeMillis
+    val res = wsRequest.post(body)
+    res.onComplete { resTry =>
+      logResponse(start, "POST", resTry.isSuccess)
+    }
+    res
+  }
+
+  def delete() = {
+    val start = System.currentTimeMillis
+    val res = wsRequest.delete()
+    res.onComplete { resTry =>
+      logResponse(start, "DELETE", resTry.isSuccess)
+    }
+    res
+  }
+
+  private def logResponse(startTime: Long, method: String, isSuccess: Boolean) =
+    log.info(s"""[${System.currentTimeMillis - startTime}ms] [$method] ${wsRequest.url} [${wsRequest.queryString map {case (k, v) => s"$k=$v"} mkString "&"}] (success = $isSuccess)""")
 }
 
 trait ClientResponse {
@@ -143,7 +185,7 @@ trait ClientResponse {
   def status: Int
 }
 
-class ClientResponseImpl(val request: WSRequestHolder, val response: Response) extends ClientResponse {
+class ClientResponseImpl(val request: Request, val response: Response) extends ClientResponse {
 
   override def status: Int = response.status
 
