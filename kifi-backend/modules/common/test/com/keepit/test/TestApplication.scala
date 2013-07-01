@@ -95,7 +95,6 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     bindScope(classOf[AppScoped], appScope)
     bind[AppScope].toInstance(appScope)
     bind[Mode].toInstance(Test)
-    bind[ActorSystem].toProvider[ActorPlugin].in[AppScoped]
     bind[Babysitter].to[FakeBabysitter]
     install(new SlickModule(dbInfo.getOrElse(dbInfoFromApplication)))
     bind[SocialGraphPlugin].to[FakeSocialGraphPlugin]
@@ -104,6 +103,7 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
     install(new FakeS3StoreModule())
     install(TestCacheModule())
     install(LocalDiscoveryModule(ServiceType.TEST_MODE))
+    install(TestActorSystemModule(actorSystem))
     bind[play.api.Application].toProvider(new Provider[play.api.Application] {
       def get(): play.api.Application = current
     }).in(classOf[AppScoped])
@@ -159,10 +159,16 @@ case class TestModule(dbInfo: Option[DbInfo] = None) extends ScalaModule {
   @Singleton
   def searchServiceClient(serviceCluster: ServiceCluster): SearchServiceClient = new SearchServiceClientImpl(serviceCluster, -1, null)
 
+  def actorSystem: ActorSystem =
+    Play.maybeApplication match {
+      case Some(app) => ActorSystem("shoebox-test-actor-system", app.configuration.underlying, app.classloader)
+      case None => ActorSystem()
+    }
+
   @Provides
   @AppScoped
-  def actorPluginProvider: ActorPlugin =
-    new ActorPlugin(ActorSystem("shoebox-test-actor-system", Play.current.configuration.underlying, Play.current.classloader))
+  def actorPluginProvider(system: ActorSystem): ActorPlugin =
+    new ActorPlugin(system)
 
   @Provides
   @Singleton
