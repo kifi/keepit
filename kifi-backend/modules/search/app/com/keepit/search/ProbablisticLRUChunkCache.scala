@@ -12,10 +12,10 @@ import java.nio.{IntBuffer, ByteBuffer}
 object IntArrayBinarySerializer extends BinaryFormat[Array[Int]] {
   
   def reads(data: Array[Byte]): Array[Int] = {
-      val intBuffer = ByteBuffer.wrap(data).asIntBuffer
-      val outArray = new Array[Int](data.length/4)
-      intBuffer.get(outArray)
-      outArray
+    val intBuffer = ByteBuffer.wrap(data).asIntBuffer
+    val outArray = new Array[Int](data.length/4)
+    intBuffer.get(outArray)
+    outArray
   }
   
   def writes(value: Array[Int]): Array[Byte] = {
