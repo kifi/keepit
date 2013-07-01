@@ -33,7 +33,7 @@ class CollectionSearcher(searcher: Searcher) extends BaseGraphSearcher(searcher)
   }
 
   def getExternalId(id: Long): String = {
-    searcher.getDecodedDocValue[String](CollectionFields.externalIdField, id)(fromByteArray).get
+    searcher.getDecodedDocValue[String](externalIdField, id)(fromByteArray).get
   }
 }
 

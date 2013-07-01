@@ -37,7 +37,8 @@ object CollectionFields {
   val externalIdField = "col_ext"
 
   def decoders() = Map(
-    uriListField -> DocUtil.URIListDecoder
+    uriListField -> DocUtil.URIListDecoder,
+    externalIdField -> DocUtil.binaryDocValFieldDecoder(fromByteArray)
   )
 }
 
@@ -52,6 +53,8 @@ class CollectionIndexer(
     healthcheckPlugin: HealthcheckPlugin,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[Collection](indexDirectory, indexWriterConfig, CollectionFields.decoders) {
+
+  import CollectionFields._
 
   private[this] val commitBatchSize = 100
   private[this] val fetchSize = commitBatchSize * 3
@@ -80,7 +83,7 @@ class CollectionIndexer(
   }
 
   def update(userId: Id[User]): Int = updateLock.synchronized {
-    deleteDocuments(new Term(CollectionFields.userField, userId.toString), doCommit = false)
+    deleteDocuments(new Term(userField, userId.toString), doCommit = false)
     update {
       Await.result(shoeboxClient.getCollectionsByUser(userId), 180 seconds).filter(_.seq <= sequenceNumber)
     }
@@ -125,17 +128,17 @@ class CollectionIndexer(
       val doc = super.buildDocument
 
       val collListBytes = URIList.toByteArray(bookmarks)
-      val collListField = buildURIListField(CollectionFields.uriListField, collListBytes)
+      val collListField = buildURIListField(uriListField, collListBytes)
       val collList = URIList(collListBytes)
       doc.add(collListField)
 
       val uri = buildURIIdField(collList)
       doc.add(uri)
 
-      val user = buildKeywordField(CollectionFields.userField, collection.userId.id.toString)
+      val user = buildKeywordField(userField, collection.userId.id.toString)
       doc.add(user)
 
-      val externalId = buildBinaryDocValuesField(CollectionFields.externalIdField, collection.externalId.id)
+      val externalId = buildBinaryDocValuesField(externalIdField, collection.externalId.id)
 
       doc
     }
@@ -145,7 +148,7 @@ class CollectionIndexer(
     }
 
     private def buildURIIdField(uriList: URIList) = {
-      buildIteratorField(CollectionFields.uriField, uriList.ids.iterator){ uriId => uriId.toString }
+      buildIteratorField(uriField, uriList.ids.iterator){ uriId => uriId.toString }
     }
   }
 }
