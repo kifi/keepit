@@ -225,23 +225,17 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
   val serializer: Serializer[T]
   val stats = CacheStatistics
 
+
   protected[cache] def getFromInnerCache(key: K): Option[Option[T]] = {
     val getStart = currentDateTime.getMillis()
-    val rawValueOpt = try repo.get(key.toString) catch {
+    val valueOpt = try repo.get(key.toString) catch {
       case e: Throwable =>
         repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
           errorMessage = Some(s"Failed fetching key $key from $repo")))
         None
     }
-    val valueOpt = try rawValueOpt.asInstanceOf[Option[Option[Any]]] catch {
-      case e: java.lang.ClassCastException => Some(rawValueOpt)
-      case e: Throwable =>
-        repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
-          errorMessage = Some(s"Failed converting key $key from $repo")))
-        None
-    }
     try {
-      val objOpt = valueOpt.map(_.map(serializer.reads))
+      val objOpt = valueOpt.map(serializer.reads)
       val getEnd = currentDateTime.getMillis()
       objOpt match {
         case Some(_) => {
@@ -266,23 +260,19 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
   protected[cache] def setInnerCache(key: K, valueOpt: Option[T]): Unit = {
     val setStart = currentDateTime.getMillis()
     try {
-      val properlyBoxed = valueOpt match {
-        case Some(value) =>
-          Some(serializer.writes(value) match {
-            case x: java.lang.Byte => x.byteValue()
-            case x: java.lang.Short => x.shortValue()
-            case x: java.lang.Integer => x.intValue()
-            case x: java.lang.Long => x.longValue()
-            case x: java.lang.Float => x.floatValue()
-            case x: java.lang.Double => x.doubleValue()
-            case x: java.lang.Character => x.charValue()
-            case x: java.lang.Boolean => x.booleanValue()
+      val properlyBoxed = serializer.writes(valueOpt) match {
+            case (flag: Boolean, x: java.lang.Byte) => (flag, x.byteValue())
+            case (flag: Boolean, x: java.lang.Short) => (flag, x.shortValue())
+            case (flag: Boolean, x: java.lang.Integer) => (flag, x.intValue())
+            case (flag: Boolean, x: java.lang.Long) => (flag, x.longValue())
+            case (flag: Boolean, x: java.lang.Float) => (flag, x.floatValue())
+            case (flag: Boolean, x: java.lang.Double) => (flag, x.doubleValue())
+            case (flag: Boolean, x: java.lang.Character) => (flag, x.charValue())
+            case (flag: Boolean, x: java.lang.Boolean) => (flag, x.booleanValue())
             case x: scala.Array[_] => x
             case x: JsValue => Json.stringify(x)
             case x: String => x
-          })
-        case None => None
-      }
+          }
       repo.set(key.toString, properlyBoxed, ttl.toSeconds.toInt)
       val setEnd = currentDateTime.getMillis()
       CacheStatistics.recordSet(repo.toString, key.namespace, setEnd - setStart)
