@@ -119,7 +119,7 @@ class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticL
   def chunkSize : Int = 4000
 
   def getChunk(key: Long) = {
-    val chunkId = ((key % chunkSize*numChunks) / chunkSize).toInt
+    val chunkId = ((Math.abs(key) % chunkSize*numChunks) / chunkSize).toInt
     val thisChunk : Array[Int] = loadChunk(chunkId)
     var dirtyEntries : Set[Int] = Set[Int]()
     
