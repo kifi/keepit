@@ -111,7 +111,7 @@ class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticL
   private def saveChunk(chunkId: Int, chunk: Array[Int]) : Unit = { 
     val fullId = FullFilterChunkId(filterName.name, chunkId)
     dataStore += (fullId, chunk)
-    cache.remove(ProbablisticLRUChunkKey(fullId))
+    cache.set(ProbablisticLRUChunkKey(fullId), chunk)
   }
 
   private def numChunks : Int = 4000 
