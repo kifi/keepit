@@ -341,10 +341,3 @@ class PrimitiveCacheImpl[K <: Key[P], P <: AnyVal](innermostPluginSettings: (For
 
 class StringCacheImpl[K <: Key[String]](innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends FortyTwoCacheImpl[K, String](innermostPluginSettings, innerToOuterPluginSettings:_*)(Serializer.string)
-
-trait CachePluginModule extends ScalaModule
-abstract class CacheModule(cachePluginModules: CachePluginModule*) extends ScalaModule {
-  def configure() {
-    cachePluginModules.foreach(install)
-  }
-}

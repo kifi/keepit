@@ -2,21 +2,21 @@ package com.keepit.inject
 
 import net.codingwell.scalaguice.ScalaModule
 
-import com.google.inject.{Provides, Singleton}
+import com.google.inject.{Provides, Singleton, Provider}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
-
-import akka.actor.ActorSystem
-import akka.actor.Scheduler
 import play.api.Play
+import play.api.Mode.Mode
 import play.api.Play.current
 
-class FortyTwoModule() extends ScalaModule {
+case class FortyTwoModule() extends ScalaModule {
   def configure(): Unit = {
-    println("Configuring FortyTwoModule")
     val appScope = new AppScope
     bindScope(classOf[AppScoped], appScope)
     bind[AppScope].toInstance(appScope)
+    bind[play.api.Application].toProvider(new Provider[play.api.Application] {
+      def get(): play.api.Application = current
+    }).in(classOf[AppScoped])
   }
 
   @Provides
@@ -28,8 +28,8 @@ class FortyTwoModule() extends ScalaModule {
       Play.resource("app_compilation_date.txt"),
       Play.resource("app_version.txt"))
 
+  @Singleton
   @Provides
-  @AppScoped
-  def schedulerProvider(system: ActorSystem): Scheduler = system.scheduler
+  def playMode: Mode = current.mode
 
 }

@@ -15,6 +15,11 @@ import com.keepit.common.db.slick.FortyTwoTypeMappers.UserIdTypeMapper
 import scala.annotation.elidable
 import scala.annotation.elidable.ASSERTION
 import com.keepit.learning.topicmodel.TopicModelGlobal
+import com.keepit.common.cache._
+import scala.concurrent.duration._
+import com.keepit.common.logging.Logging
+
+
 
 case class UserTopic(
   id: Option[Id[UserTopic]] = None,
@@ -48,6 +53,35 @@ class UserTopicByteArrayHelper {
   }
 }
 
+class TopicByteArrayFormat extends Format[Array[Byte]] {
+  val helper = new UserTopicByteArrayHelper
+  def writes (x: Array[Byte]): JsValue = {
+    JsArray(helper.toIntArray(x).map{JsNumber(_)})
+  }
+  def reads(js: JsValue): JsResult[Array[Byte]] = {
+    val x = js.as[JsArray].value.map{_.as[JsNumber].value.toInt}
+    JsSuccess(helper.toByteArray(x.toArray))
+  }
+}
+
+object UserTopic {
+  implicit val userTopicFormat = (
+    (__ \'id).formatNullable(Id.format[UserTopic]) and
+    (__ \'userId).format(Id.format[User]) and
+    (__ \'topic).format(new TopicByteArrayFormat) and
+    (__ \'createdAt).format[DateTime] and
+    (__ \'updatedAt).format[DateTime]
+  )(UserTopic.apply, unlift(UserTopic.unapply))
+}
+
+case class UserTopicKey(userId: Id[User]) extends Key[UserTopic]{
+  val namespace = "user_topic"
+  def toKey(): String = userId.toString
+}
+
+class UserTopicCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+    extends JsonCacheImpl[UserTopicKey, UserTopic](innermostPluginSettings, innerToOuterPluginSettings:_*)
+
 @ImplementedBy(classOf[UserTopicRepoImpl])
 trait UserTopicRepo extends Repo[UserTopic]{
   def getByUserId(userId: Id[User])(implicit session: RSession):Option[UserTopic]
@@ -57,22 +91,32 @@ trait UserTopicRepo extends Repo[UserTopic]{
 @Singleton
 class UserTopicRepoImpl @Inject() (
   val db: DataBaseComponent,
-  val clock: Clock
-) extends DbRepo[UserTopic] with UserTopicRepo {
+  val clock: Clock,
+  val userTopicCache: UserTopicCache
+) extends DbRepo[UserTopic] with UserTopicRepo with Logging{
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
   override val table = new RepoTable[UserTopic](db, "user_topic"){
     def userId = column[Id[User]]("user_id", O.NotNull)
     def topic = column[Array[Byte]]("topic", O.NotNull)
-    def * = id.? ~ userId ~ topic ~ createdAt ~ updatedAt <> (UserTopic, UserTopic.unapply _)
+    def * = id.? ~ userId ~ topic ~ createdAt ~ updatedAt <> (UserTopic.apply _, UserTopic.unapply _)
+  }
+
+  override def invalidateCache(topic: UserTopic)(implicit session: RSession): UserTopic = {
+    userTopicCache.set(UserTopicKey(topic.userId), topic)
+    topic
   }
 
   def getByUserId(userId: Id[User])(implicit session: RSession): Option[UserTopic] = {
-    (for(r <- table if r.userId === userId) yield r).firstOption
+    userTopicCache.getOrElseOpt(UserTopicKey(userId)){
+      (for(r <- table if r.userId === userId) yield r).firstOption
+    }
   }
 
   def deleteAll()(implicit session: RWSession): Int = {
+    (for(r <- table) yield r).list.foreach( x => userTopicCache.remove(UserTopicKey(x.userId)))
+    log.info("All cached userTopics have been removed")
     (for(r <- table) yield r).delete
   }
 }

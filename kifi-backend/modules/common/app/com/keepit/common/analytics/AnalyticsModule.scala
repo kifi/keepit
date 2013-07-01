@@ -13,7 +13,7 @@ import play.api.Play._
 
 trait AnalyticsModule extends ScalaModule
 
-case class AnalyticsImplModule() extends AnalyticsModule {
+case class ProdAnalyticsModule() extends AnalyticsModule {
 
   def configure() {
     bind[EventPersister].to[EventPersisterImpl].in[AppScoped]
@@ -46,7 +46,11 @@ case class DevAnalyticsModule() extends AnalyticsModule {
 
   def configure() {
     bind[EventPersister].to[FakeEventPersisterImpl].in[AppScoped]
-    ScalaMultibinder.newSetBinder[EventListener](binder)
+    val listenerBinder = ScalaMultibinder.newSetBinder[EventListener](binder)
+    listenerBinder.addBinding.to[ResultClickedListener]
+    listenerBinder.addBinding.to[UsefulPageListener]
+    listenerBinder.addBinding.to[SliderShownListener]
+    listenerBinder.addBinding.to[SearchUnloadListener]
     bind[ReportBuilderPlugin].to[ReportBuilderPluginImpl].in[AppScoped]
   }
 

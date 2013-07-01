@@ -10,6 +10,8 @@ import org.apache.lucene.util.BytesRef
 import org.apache.lucene.util.Version
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
+import com.keepit.common.healthcheck.Healthcheck.INTERNAL
+import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
 import com.keepit.model._
@@ -17,7 +19,7 @@ import com.keepit.search.Lang
 import com.keepit.search.LangDetector
 import com.keepit.search.index.DocUtil
 import com.keepit.search.index.FieldDecoder
-import com.keepit.search.index.{DefaultAnalyzer, Indexable, Indexer, IndexError}
+import com.keepit.search.index.{DefaultAnalyzer, Indexable, Indexer}
 import com.keepit.search.index.Indexable.IteratorTokenStream
 import com.keepit.search.index.Searcher
 import com.keepit.search.line.LineField
@@ -53,6 +55,7 @@ class URIGraphIndexer(
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
     val bookmarkStore: BookmarkStore,
+    healthcheckPlugin: HealthcheckPlugin,
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[User](indexDirectory, indexWriterConfig, URIGraphFields.decoders) {
 
@@ -64,17 +67,10 @@ class URIGraphIndexer(
 
   def getSearchers: (Searcher, Searcher) = searchers
 
-  private def commitCallback(commitBatch: Seq[(Indexable[User], Option[IndexError])]) = {
-    var cnt = 0
-    commitBatch.foreach{ case (indexable, indexError) =>
-      indexError match {
-        case Some(error) =>
-          log.error("indexing failed for user=%s error=%s".format(indexable.id, error.msg))
-        case None =>
-          cnt += 1
-      }
-    }
-    cnt
+  override def onFailure(indexable: Indexable[User], e: Throwable) {
+    val msg = s"failed to build document for id=${indexable.id}: ${e.toString}"
+    healthcheckPlugin.addError(HealthcheckError(errorMessage = Some(msg), callType = INTERNAL))
+    super.onFailure(indexable, e)
   }
 
   def update(): Int = updateLock.synchronized {
@@ -110,13 +106,11 @@ class URIGraphIndexer(
       bookmarkStore.update(bookmarks)
 
       val usersChanged = bookmarks.foldLeft(Map.empty[Id[User], SequenceNumber]){ (m, b) => m + (b.userId -> b.seq) }.toSeq.sortBy(_._2)
-      var cnt = 0
-      indexDocuments(usersChanged.iterator.map(buildIndexable), commitBatchSize){ commitBatch =>
-        cnt += commitCallback(commitBatch)
-      }
+      val cnt = successCount
+      indexDocuments(usersChanged.iterator.map(buildIndexable), commitBatchSize)
       // update searchers together to get a consistent view of indexes
       searchers = (this.getSearcher, bookmarkStore.getSearcher)
-      cnt
+      successCount - cnt
     } catch { case e: Throwable =>
       log.error("error in URIGraph update", e)
       throw e
@@ -128,16 +122,16 @@ class URIGraphIndexer(
     bookmarkStore.reindex()
   }
 
-  def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber)): URIListIndexable = {
+  def buildIndexable(userIdAndSequenceNumber: (Id[User], SequenceNumber)): URIGraphIndexable = {
     val (userId, seq) = userIdAndSequenceNumber
     val bookmarks = bookmarkStore.getBookmarks(userId)
-    new URIListIndexable(id = userId,
+    new URIGraphIndexable(id = userId,
       sequenceNumber = seq,
       isDeleted = false,
       bookmarks = bookmarks)
   }
 
-  class URIListIndexable(
+  class URIGraphIndexable(
     override val id: Id[User],
     override val sequenceNumber: SequenceNumber,
     override val isDeleted: Boolean,

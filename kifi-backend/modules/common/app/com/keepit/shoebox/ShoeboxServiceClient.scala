@@ -75,8 +75,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]]
 }
 
-trait ShoeboxServiceClientModule extends ScalaModule
-
 case class ShoeboxCacheProvider @Inject() (
     userExternalIdCache: UserExternalIdCache,
     uriIdCache: NormalizedURICache,
@@ -349,23 +347,6 @@ class ShoeboxServiceClientImpl @Inject() (
           }
         }
     }
-  }
-
-}
-
-case class ShoeboxServiceClientImplModule() extends ShoeboxServiceClientModule {
-  def configure() {}
-
-  @Singleton
-  @Provides
-  def shoeboxServiceClient (
-      client: HttpClient,
-      cacheProvider: ShoeboxCacheProvider,
-      serviceDiscovery: ServiceDiscovery): ShoeboxServiceClient = {
-    new ShoeboxServiceClientImpl(
-      serviceDiscovery.serviceCluster(ServiceType.SHOEBOX),
-      current.configuration.getInt("service.shoebox.port").get,
-      client, cacheProvider)
   }
 
 }

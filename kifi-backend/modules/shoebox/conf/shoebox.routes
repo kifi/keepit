@@ -9,7 +9,12 @@ POST    /register                   securesocial.controllers.Registration.handle
 # OAuth provider entry points (e.g. "facebook")
 GET     /authenticate/:provider     securesocial.controllers.ProviderController.authenticate(provider)
 POST    /authenticate/:provider     securesocial.controllers.ProviderController.authenticateByPost(provider)
-POST    /mobileauth/:provider      @com.keepit.controllers.ext.ExtAuthController.mobileAuth(provider)
+# custom auth routes which set some session state
+GET     /login/:provider            @com.keepit.controllers.core.AuthController.login(provider)
+POST    /login/:provider            @com.keepit.controllers.core.AuthController.loginByPost(provider)
+GET     /link/:provider             @com.keepit.controllers.core.AuthController.link(provider)
+POST    /link/:provider             @com.keepit.controllers.core.AuthController.linkByPost(provider)
+POST    /mobileauth/:provider       @com.keepit.controllers.core.AuthController.mobileAuth(provider)
 
 POST    /disconnect/:provider       @com.keepit.controllers.website.HomeController.disconnect(provider)
 
@@ -89,6 +94,8 @@ POST    /site/collections/:id/delete @com.keepit.controllers.website.BookmarksCo
 POST    /site/collections/:id/removeKeeps @com.keepit.controllers.website.BookmarksController.removeKeepsFromCollection(id: ExternalId[Collection])
 POST    /site/collections/:id/addKeeps @com.keepit.controllers.website.BookmarksController.keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = false)
 POST    /site/collections/:id/setKeeps @com.keepit.controllers.website.BookmarksController.keepToCollection(id: ExternalId[Collection], removeOthers: Boolean = true)
+
+POST    /site/chatter               @com.keepit.controllers.website.CommentController.getChatter
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 GET     /site/user/connections      @com.keepit.controllers.website.UserController.connections()
