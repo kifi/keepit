@@ -204,6 +204,7 @@ input.page-coll-input {display: none; border: 1px solid #cdd6e0; padding: 5px 16
 .editing>.page-coll-opts:not(:empty) {display: block}
 .page-coll-opt {padding: 0 16px; font-size: 13px; color: #888b93; -webkit-font-smoothing: antialiased; cursor: pointer}
 .page-coll-opt.current {background-color: #f1f2f6}
+.page-coll-opt[data-id=""]:not(:first-child) {border-top: 1px solid #cdd6e0}
 
 .long-text {white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
 span.long-text, a.long-text {display: inline-block}
