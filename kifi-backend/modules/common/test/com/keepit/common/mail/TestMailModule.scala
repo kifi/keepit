@@ -7,6 +7,23 @@ import net.codingwell.scalaguice.ScalaModule
 import com.google.inject._
 import com.keepit.common.db.slick.DBSession.RWSession
 
+//Todo: These two modules must inherit from MailModule once they have been moved to Shoebox
+
+case class TestMailModule() extends ScalaModule {
+  def configure() {}
+
+  @Provides
+  @Singleton
+  def mailSenderPlugin: MailSenderPlugin = new MailSenderPlugin {
+    def processMail(mailId: ElectronicMail) = throw new Exception("Should not attempt to use mail plugin in test")
+    def processOutbox() = throw new Exception("Should not attempt to use mail plugin in test")
+  }
+
+  @Provides
+  @Singleton
+  def localPostOffice(shoeboxPostOfficeImpl: ShoeboxPostOfficeImpl): LocalPostOffice = shoeboxPostOfficeImpl
+}
+
 class FakeOutbox(val mails: MutableList[ElectronicMail] = MutableList()) {
   def add(email: ElectronicMail): Unit = mails += email
   def size = mails.size

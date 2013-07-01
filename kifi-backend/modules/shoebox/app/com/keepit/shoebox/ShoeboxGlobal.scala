@@ -8,7 +8,6 @@ import com.keepit.common.mail.{InvitationMailPlugin, MailToKeepPlugin, MailSende
 import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.social.SocialGraphRefresher
 import com.keepit.common.store.ImageDataIntegrityPlugin
-import com.keepit.module.CommonModule
 import com.keepit.realtime.{ChannelPlugin, UserEmailNotifierPlugin}
 import com.keepit.scraper._
 import play.api.Mode._
@@ -17,7 +16,7 @@ import com.keepit.learning.topicmodel.TopicUpdaterPlugin
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 
-  val modules = Seq(new CommonModule, ShoeboxProdModule())
+  val modules = Seq(ShoeboxProdModule())
 
   override def onStart(app: Application): Unit = {
     log.info("starting the shoebox")

@@ -17,11 +17,9 @@ import play.api.i18n.Messages
 import play.api.libs.json.JsNumber
 import play.api.mvc._
 import securesocial.core._
-import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent.duration._
 import com.keepit.shoebox.ShoeboxServiceClient
-import scala.concurrent.Promise
 import scala.concurrent.Future
 
 case class ReportedException(val id: ExternalId[HealthcheckError], val cause: Throwable) extends Exception(id.toString, cause)

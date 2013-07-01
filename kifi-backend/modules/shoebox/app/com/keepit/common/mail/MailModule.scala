@@ -1,12 +1,11 @@
 package com.keepit.common.mail
 
-import com.google.inject.{Inject, Provides, Singleton}
+import com.google.inject.{Provides, Singleton}
 import play.api.Play._
 import com.keepit.inject.AppScoped
 import com.keepit.common.healthcheck.{HealthcheckMailSender, LocalHealthcheckMailSender}
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.plugin.SchedulingProperties
-import com.keepit.common.logging.Logging
 import com.keepit.common.actor.ActorFactory
 
 trait MailModule extends ScalaModule
@@ -36,24 +35,12 @@ case class DevMailModule() extends MailModule {
   def configure {
     bind[LocalPostOffice].to[ShoeboxPostOfficeImpl]
     bind[MailSenderPlugin].to[MailSenderPluginImpl].in[AppScoped]
+    bind[HealthcheckMailSender].to[LocalHealthcheckMailSender]
   }
   @Provides
   @Singleton
   def mailToKeepServerSettingsOpt: Option[MailToKeepServerSettings] =
-    for {
-      username <- current.configuration.getString("mailtokeep.username")
-      password <- current.configuration.getString("mailtokeep.password")
-    } yield {
-      val server = current.configuration.getString("mailtokeep.server").getOrElse("imap.gmail.com")
-      val protocol = current.configuration.getString("mailtokeep.protocol").getOrElse("imaps")
-      val emailLabel = System.getProperty("user.name")
-      MailToKeepServerSettings(
-        username = username,
-        password = password,
-        server = server,
-        protocol = protocol,
-        emailLabel = Some(emailLabel))
-    }
+    current.configuration.getString("mailtokeep").map(_ => ProdMailModule().mailToKeepServerSettings)
 
   @Provides
   @Singleton

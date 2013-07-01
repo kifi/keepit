@@ -269,17 +269,3 @@ class Scraper @Inject() (
     httpFetcher.close()
   }
 }
-
-trait ScraperModule extends ScalaModule
-
-case class ScraperImplModule() extends ScraperModule {
-
-  def configure {
-    bind[ScraperPlugin].to[ScraperPluginImpl].in[AppScoped]
-    bind[DataIntegrityPlugin].to[DataIntegrityPluginImpl].in[AppScoped]
-  }
-
-  @Singleton
-  @Provides
-  def scraperConfig: ScraperConfig = ScraperConfig()
-}

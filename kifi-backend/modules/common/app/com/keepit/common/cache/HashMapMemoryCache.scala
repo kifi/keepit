@@ -24,9 +24,3 @@ class HashMapMemoryCache extends InMemoryCachePlugin {
   override def toString = "HashMapMemoryCache"
 }
 
-case class HashMapMemoryCacheModule() extends CachePluginModule {
-  def configure {
-    bind[FortyTwoCachePlugin].to[HashMapMemoryCache]
-    bind[InMemoryCachePlugin].to[HashMapMemoryCache]
-  }
-}

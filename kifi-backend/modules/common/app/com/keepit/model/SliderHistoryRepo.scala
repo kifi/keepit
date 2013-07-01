@@ -85,20 +85,3 @@ class SliderHistoryTrackerImpl(sliderHistoryRepo: SliderHistoryRepo, db: Databas
     }
   }
 }
-
-trait SliderHistoryTrackerModule extends ScalaModule
-
-case class SliderHistoryTrackerImplModule() extends SliderHistoryTrackerModule {
-  def configure {}
-
-  @Singleton
-  @Provides
-  def sliderHistoryTrackerImpl(sliderHistoryRepo: SliderHistoryRepo, db: Database): SliderHistoryTracker = {
-    val conf = current.configuration.getConfig("slider-history-tracker").get
-    val filterSize = conf.getInt("filterSize").get
-    val numHashFuncs = conf.getInt("numHashFuncs").get
-    val minHits = conf.getInt("minHits").get
-
-    new SliderHistoryTrackerImpl(sliderHistoryRepo, db, filterSize, numHashFuncs, minHits)
-  }
-}
