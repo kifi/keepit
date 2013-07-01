@@ -1234,5 +1234,5 @@ function reportError(errMsg, url, lineNo) {
   }
 }
 if (typeof window !== 'undefined') {  // TODO: add to api, find equivalent for firefox
-  window.onError = reportError;
+  window.onerror = reportError;
 }
