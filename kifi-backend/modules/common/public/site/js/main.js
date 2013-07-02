@@ -19,9 +19,18 @@ $.ajaxSetup({
 	xhrFields: {withCredentials: true},
 	crossDomain: true});
 
+$.fn.layout = function() {
+	return this.each(function() {this.clientHeight});  // forces layout
+};
+
+$.fn.removeText = function() {
+	return this.contents().filter(function() {return this.nodeType == 3}).remove().end().end();
+};
+
 $(function() {
 	var $subtitle = $(".subtitle"), subtitleTmpl = Tempo.prepare($subtitle);
 
+	$('.keep-colls').removeText();
 	var $myKeeps = $("#my-keeps"), $results = $("#search-results"), keepsTmpl = Tempo.prepare($myKeeps).when(TempoEvent.Types.RENDER_COMPLETE, function(ev) {
 		hideLoading();
 
@@ -69,9 +78,10 @@ $(function() {
 			addKeepsToCollection($(this).data("id"), !ui.draggable.hasClass("selected") && ui.draggable);
 		}};
 
-	var $collOpts = $(".page-coll-opts"), collOptsTmpl = Tempo.prepare($collOpts);
+	var $collOpts = $(".page-coll-opts").removeText();
+	var collOptsTmpl = Tempo.prepare($collOpts, {escape: false});
 
-	var $inColl = $(".page-coll-list").contents().filter(function() {return this.nodeType == 3}).remove().end().end();
+	var $inColl = $(".page-coll-list").removeText();
 	var inCollTmpl = Tempo.prepare($inColl);
 
 	var me;
@@ -88,10 +98,6 @@ $(function() {
 		$(".my-name").text(data.firstName + ' ' + data.lastName);
 	});
 
-	$.fn.layout = function() {
-		return this.each(function() {this.clientHeight});  // forces layout
-	};
-
 	function identity(a) {
 		return a;
 	}
@@ -103,6 +109,11 @@ $(function() {
 	function formatPicUrl(userId, pictureName, size) {
 		return '//djty7jcqog9qu.cloudfront.net/users/' + userId + '/pics/' + size + '/' + pictureName;
 	}
+
+	function escapeHTMLContent(text) {
+		return text.replace(/[&<>]/g, function(c) { return escapeHTMLContentMap[c]; });
+	}
+	var escapeHTMLContentMap = {'&': '&amp;', '<': '&lt;', '>': '&gt;'};
 
 	function showLoading() {
 		$('.keeps-loading').show();
@@ -826,10 +837,8 @@ $(function() {
 			$(this.parentNode).data("id"),
 			$main.find(".keep.selected").map(getDataId).get());
 	}).on("click", ".page-coll-add", function() {
-		collOptsTmpl.render($.map(collections, identity).sort(function(c1, c2) {return c2.keeps - c1.keeps}).splice(0, 4));
-		$collOpts.find(".page-coll-opt").first().addClass("current");
 		$(".page-coll-new").addClass("editing");
-		$(".page-coll-input").prop("disabled", false).focus().select();
+		$(".page-coll-input").prop("disabled", false).focus().select().trigger("input");
 	}).on("blur", ".page-coll-input", function(e) {
 		hideAddCollTimeout = setTimeout(hide.bind(this), 50);
 		function hide() {
@@ -838,6 +847,8 @@ $(function() {
 			$(this).val("").prop("disabled", true);
 			$('.page-coll-new').removeClass("editing");
 		}
+	}).on("focus", ".page-coll-input", function(e) {
+		clearTimeout(hideAddCollTimeout), hideAddCollTimeout = null;
 	}).on("keydown", ".page-coll-input", function(e) {
 		switch (e.which) {
 			case 13: // Enter
@@ -853,6 +864,7 @@ $(function() {
 				break;
 			case 38: // Up
 			case 40: // Down
+				e.preventDefault();
 				var $old = $('.page-coll-opt.current'), $new = $old[e.which == 38 ? 'prev' : 'next']('.page-coll-opt');
 				if ($new.length) {
 					$old.removeClass('current');
@@ -861,21 +873,51 @@ $(function() {
 				break;
 		}
 	}).on("input", ".page-coll-input", function() {
-		var re = $.trim(this.value).split(/\s+/).map(function(p) {return new RegExp('\\b' + p)});
-		collOptsTmpl.render($.map(collections, identity).filter(function(c) {
-			return re.every(function(re) {return re.test(c.name)});
-		}).splice(0, 4));
+		var allColls = $.map(collections, identity), colls;
 		var val = $.trim(this.value);
 		if (val) {
-			collOptsTmpl.append({id: "", name: val});
+			var re = val.split(/\s+/).map(function(p) {return new RegExp('\\b' + p, 'i')});
+			var scores = {};
+			colls = allColls.filter(function(c) {
+				var arr = re.map(function(re) {return re.exec(c.name)});
+				if (arr.every(identity)) {
+					scores[c.id] = arr.reduce(function(score, m) {
+						score.min = Math.min(score.min, m.index);
+						score.sum += m.index;
+						return score;
+					}, {min: Infinity, sum: 0});
+					return true;
+				}
+			}).sort(function(c1, c2) {
+				var s1 = scores[c1.id];
+				var s2 = scores[c2.id];
+				return (s1.min - s2.min) || (s1.sum - s2.sum) || c1.name.localeCompare(c2.name, undefined, {numeric: true});
+			}).splice(0, 4).map(function(c) {
+				for (var name = escapeHTMLContent(c.name), i = re.length; i--;) {
+					name = name.replace(new RegExp("^((?:[^&<]|&[^;]*;|<[^>]*>)*)\\b(" + re[i].source + ")", "gi"), "$1<b>$2</b>");
+				}
+				return {id: c.id, name: name};
+			});
+			if (!allColls.some(function(c) {return c.name.localeCompare(val, undefined, {usage: "search"}) == 0})) {
+				colls.push({id: "", name: val});
+			}
+			collOptsTmpl.render(colls);
+		} else {
+			colls = allColls.sort(function(c1, c2) {
+				return c2.keeps - c1.keeps || c1.name.localeCompare(c2.name, undefined, {numeric: true});
+			}).splice(0, 4).map(function(c) {
+				return {id: c.id, name: escapeHTMLContent(c.name)};
+			});
+			collOptsTmpl.render(colls);
 		}
-		$('.page-coll-opt').first().addClass('current');
+		$('.page-coll-opt:first-child').addClass('current');
 	}).on("mousemove", ".page-coll-opt", function() {
 		if (this.className.indexOf("current") < 0) {
 			$(this).siblings(".current").removeClass("current").end().addClass("current");
 		}
 	}).on("mousedown", ".page-coll-opt", function(e) {
 		e.preventDefault();  // selection start
+		if (e.which > 1) return;
 		var collId = $(this).data('id'), $in = $('.page-coll-input');
 		if (collId) {
 			withCollId(collId);

@@ -166,7 +166,7 @@ a.page-priv[href]:active {background-color: #a0b1c2}
 .multiple[data-kept="pub"]>*>.page-priv::after {content: "Make all private"}
 .multiple[data-kept="pri"]>*>.page-priv::after {content: "Make all public"}
 .page-who,
-.page-colls {margin: 18px 0 5px; border-top: 1px solid #cdd6e0; padding-top: 11px}
+.page-colls {margin: 18px 0 5px; border-top: 1px solid #cdd6e0; padding: 11px 0 20px}
 .page-who-pics {margin: 5px 0 13px; white-space: nowrap; overflow: hidden}
 .page-who-pics>img {width: 38px; height: 38px; margin-right: 1px; border-radius: 2px}
 .page-who-text {font-size: 12px; line-height: 12px}
@@ -175,14 +175,15 @@ a.page-priv[href]:active {background-color: #a0b1c2}
 .page-who-text>.keep-private {display: none}
 .page-coll-list {margin-top: 10px}
 .page-coll-list>li {display: inline-block; line-height: 24px; vertical-align: top}
-.page-coll {overflow: hidden; white-space: nowrap; background-color: #b8c5d2; margin: 0 3px 3px 0; font-size: 13px; line-height: 24px; -webkit-font-smoothing: antialiased}
+.page-coll {position: relative; overflow: hidden; white-space: nowrap; background-color: #b8c5d2; margin: 0 3px 3px 0; font-size: 13px; line-height: 24px; -webkit-font-smoothing: antialiased}
 .page-coll.removed {width: 0 !important; -webkit-transition: width .12s ease-in-out; transition: width .12s ease-in-out}
 .page-coll>a[href] {color: #fff; vertical-align: top}
 .page-coll>a[href]:hover {background-color: #bdcbd8}
 .page-coll>a[href]:active {background-color: #a0b1c2}
-.page-coll-a {padding: 0 16px}
-.page-coll-x {display: inline-block; text-align: center; width: 0; overflow: hidden; -webkit-transition: width 80ms; transition: width 80ms}
-.page-coll:hover>.page-coll-x {width: 20px}
+.page-coll-a {padding: 0 16px; -webkit-transition: padding .1s ease-in-out .1s; transition: padding .1s ease-in-out .1s}
+.page-colls:hover .page-coll-a {padding: 0 26px 0 6px}
+.page-coll-x {position: absolute; right: 0; top: 0; bottom: 0; width: 0; text-align: center; -webkit-transition: width .1s ease-in-out .1s; transition: width .1s ease-in-out .1s}
+.page-colls:hover .page-coll-x {width: 20px}
 .page-coll-x::before {content: "\00D7"; position: relative; bottom: 1px}
 .page-coll-new {position: relative}
 .page-coll-add {display: inline-block; white-space: nowrap; font-size: 0; vertical-align: top}
@@ -204,6 +205,7 @@ input.page-coll-input {display: none; border: 1px solid #cdd6e0; padding: 5px 16
 .editing>.page-coll-opts:not(:empty) {display: block}
 .page-coll-opt {padding: 0 16px; font-size: 13px; color: #888b93; -webkit-font-smoothing: antialiased; cursor: pointer}
 .page-coll-opt.current {background-color: #f1f2f6}
+.page-coll-opt[data-id=""]:not(:first-child) {border-top: 1px solid #cdd6e0}
 
 .long-text {white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
 span.long-text, a.long-text {display: inline-block}
@@ -225,22 +227,24 @@ span.long-text, a.long-text {display: inline-block}
 .keep-title {max-width: 100%; color: #0089d5; font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased}
 .keep-title>a[href] {color: inherit}
 .keep-url {font-size: 12px; line-height: 14px; color: #99a3b3}
-.keep-colls {margin: 7px 10px 0 0; background: url(../img/folder-icon-small.png) 0 0/13px 11px no-repeat; padding-left: 19px; font-size: 12px; line-height: 14px; overflow: hidden}
+.keep-colls {margin-right: 10px; border: solid transparent; border-width: 7px 0; background: url(../img/folder-icon-small.png) 0 0/13px 11px no-repeat; padding-left: 15px; font-size: 12px; line-height: 14px; overflow: hidden}
 @-moz-document url-prefix() {.keep-colls {background-position: 0 1px}}
-.keep-coll {display: inline-block; overflow: hidden; white-space: nowrap; border-right: 1px solid #99a3b3; box-sizing: border-box; -moz-box-sizing: border-box}
+.keep-colls:empty {border-bottom-width: 0}
+.keep-coll {display: inline-block; position: relative; overflow: hidden; white-space: nowrap; border-right: 1px solid #99a3b3; box-sizing: border-box; -moz-box-sizing: border-box}
 .keep-coll:last-of-type {border-right: none}
 .keep-coll.removed {width: 0 !important; -webkit-transition: width .12s ease-in-out; transition: width .12s ease-in-out}
 .keep-coll>a[href] {color: #99a3b3}
 .keep-coll:hover>a {background-color: #eff2f7}
 .keep.selected .keep-coll:hover>a {background-color: #fff}
 .keep.keep a.keep-coll-a:active {background-color: #e3e6ee; color: #8490a4}
-.keep-coll-a {padding: 0 5px}
-.keep-coll-x {display: inline-block; vertical-align: bottom; text-align: center; width: 0; overflow: hidden; -webkit-transition: width 70ms; transition: width 70ms}
-.keep-coll:hover>.keep-coll-x {width: 16px; -webkit-transition-delay: .2s; transition-delay: .2s}
+.keep-coll-a {padding: 0 8px; -webkit-transition: padding .1s ease-in-out .1s; transition: padding .1s ease-in-out .1s}
+.keep-colls:hover .keep-coll-a {padding: 0 13px 0 3px}
+.keep-coll-x {position: absolute; top: 0; bottom: 0; right: 0; width: 0; text-align: center; overflow: hidden; -webkit-transition: width .1s ease-in-out .1s; transition: width .1s ease-in-out .1s}
+.keep-colls:hover .keep-coll-x {width: 10px}
 .keep-coll>.keep-coll-x[href][href]:hover {background-color: #b8c5d2; color: #eff2f7}
 .keep-coll>.keep-coll-x[href][href]:active {background-color: #99a3b3}
 .keep-coll-x::before {content: "\00D7"; position: relative; bottom: 1px}
-.keep-who {margin-top: 7px; font-size: 0}
+.keep-who {font-size: 0}
 .keep-who>img {vertical-align: middle; width: 23px; height: 23px; border-radius: 2px; margin-right: 1px}
 .keep-who>img.me {border-radius: 50% 0 0 50%}
 .keep-who>img.me:last-of-type {border-radius: 50%}
