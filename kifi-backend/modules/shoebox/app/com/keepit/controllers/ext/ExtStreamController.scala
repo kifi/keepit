@@ -41,6 +41,7 @@ import akka.actor.{Cancellable, ActorSystem}
 import scala.concurrent.duration.FiniteDuration
 import org.joda.time.Seconds
 import scala.concurrent.Promise
+import scala.concurrent.stm._
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]])
 
@@ -161,29 +162,22 @@ class ExtStreamController @Inject() (
       authenticate(request) match {
         case Some(streamSession) =>
           val connectedAt = clock.now
-          var socketLastUsed = connectedAt
           val (enumerator, channel) = Concurrent.broadcast[JsArray]
           val socketId = Random.nextLong()
           val userId = streamSession.userId
           val subscriptions: TrieMap[String, Subscription] = TrieMap(
           "user" -> userChannel.subscribe(userId, socketId, channel))
 
-          val socketHasCancelled = Promise[Unit]()
-          val socketAliveCancellable: Cancellable = {
-            import scala.concurrent.duration._
-            system.scheduler.schedule(30.seconds, 35.seconds) {
-              if(Seconds.secondsBetween(socketLastUsed, clock.now).getSeconds > 35) {
-                log.info(s"It seems like userId ${streamSession.userId}'s socket is stale.")
-              }
-            }
-          }
+          val socketAliveCancellable: Ref[Option[Cancellable]] = Ref(None.asInstanceOf[Option[Cancellable]])
 
 
           def endSession(reason: String) = {
-            socketAliveCancellable.cancel()
+            atomic { implicit txn =>
+              socketAliveCancellable().map(c => if(!c.isCancelled) c.cancel())
+            }
             log.info(s"Closing socket of userId ${streamSession.userId} because: $reason")
             channel.push(Json.arr("goodbye", reason))
-            subscriptions.view.map(_._2.unsubscribe())
+            subscriptions.map(_._2.unsubscribe())
             subscriptions.clear()
             channel.eofAndEnd()
           }
@@ -279,7 +273,17 @@ class ExtStreamController @Inject() (
 
           val iteratee = asyncIteratee { jsArr =>
             Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
-              socketLastUsed = clock.now
+              atomic { implicit txn =>
+                socketAliveCancellable().map(c => if(!c.isCancelled) c.cancel())
+                socketAliveCancellable.single.swap {
+                  import scala.concurrent.duration._
+                  val c = system.scheduler.scheduleOnce(65.seconds) {
+                    log.info(s"It seems like userId ${streamSession.userId}'s socket is stale.")
+                  }
+                  Some(c)
+                }
+              }
+
               Statsd.increment(s"websocket.handler.${jsArr.value(0)}")
               Statsd.time(s"websocket.handler.${jsArr.value(0)}") {handler(jsArr.value.tail)}
             } getOrElse {

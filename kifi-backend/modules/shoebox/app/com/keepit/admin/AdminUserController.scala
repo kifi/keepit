@@ -12,7 +12,7 @@ import com.keepit.common.mail._
 import com.keepit.common.social._
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.realtime.UserChannel
+import com.keepit.realtime.{UserNotifier, UserChannel}
 import com.keepit.search.SearchServiceClient
 import com.keepit.shoebox.usersearch.UserIndex
 
@@ -54,6 +54,7 @@ class AdminUserController @Inject() (
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
     userIndex: UserIndex,
+    userNotifier: UserNotifier,
     clock: Clock) extends AdminController(actionAuthenticator) {
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
@@ -287,30 +288,25 @@ class AdminUserController @Inject() (
       "title" -> text,
       "bodyHtml" -> text,
       "linkText" -> text,
-      "url" -> text,
+      "url" -> optional(text),
       "image" -> text,
       "sticky" -> optional(text)
     ))
 
     val (title, bodyHtml, linkText, url, image, sticky) = notifyForm.bindFromRequest.get
 
-    val json = Json.arr(
-      "notify", Json.obj(
-        "createdAt" -> clock.now(),
-        "category" -> "server_generated",
-        "details" -> Json.obj(
-          "title" -> title,
-          "bodyHtml" -> bodyHtml,
-          "linkText" -> linkText,
-          "image" -> image,
-          "sticky" -> sticky,
-          "url" -> url
-        )
-      )
-    )
+    val globalNotification = GlobalNotification(
+      sendToSpecificUsers = Some(Seq(Id[User](1))),
+      title = title,
+      bodyHtml = bodyHtml,
+      linkText = linkText,
+      url = url,
+      image = image,
+      isSticky = sticky.map(_ => true).getOrElse(false),
+      markReadOnAction = true)
 
-    userChannel.broadcast(json)
-
+    userNotifier.globalNotification(globalNotification)
+  
     Redirect(routes.AdminUserController.usersView(0))
   }
 }

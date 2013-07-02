@@ -40,7 +40,7 @@ case class CommentDetails(
   newCount: Int,
   totalCount: Int,
   subsumes: Option[String] // Option[ExternalId[UserNotification]]
-  )
+)
 
 case class MessageDetails(
   id: String, // ExternalId[Comment] of the message
@@ -56,7 +56,17 @@ case class MessageDetails(
   newCount: Int,
   totalCount: Int,
   subsumes: Option[String] // Option[ExternalId[UserNotification]]
-  )
+)
+
+case class GlobalNotificationDetails(
+  title: String,
+  bodyHtml: String,
+  linkText: String,
+  url: Option[String],
+  image: String,
+  isSticky: Boolean,
+  markReadOnAction: Boolean
+)
 
 case class SendableNotification(
   id: ExternalId[UserNotification],
@@ -105,8 +115,34 @@ class UserNotifier @Inject() (
 
   implicit val commentDetailsFormat = Json.format[CommentDetails]
   implicit val messageDetailsFormat = Json.format[MessageDetails]
+  implicit val globalDetailsFormat = Json.format[GlobalNotificationDetails]
 
-  def comment(comment: Comment) {
+  def globalNotification(global: GlobalNotification) = {
+    db.readWrite { implicit session =>
+      val users = global.sendToSpecificUsers.getOrElse {
+        userRepo.allExcluding(UserStates.BLOCKED, UserStates.PENDING).map(_.id.get)
+      }
+      val globalDetails = GlobalNotificationDetails(title = global.title,
+        bodyHtml = global.bodyHtml,
+        linkText = global.linkText,
+        url = global.url,
+        image = global.image,
+        isSticky = global.isSticky,
+        markReadOnAction = global.markReadOnAction)
+
+      users.map { userId =>
+        val userNotification = userNotifyRepo.save(UserNotification(
+          userId = userId,
+          category = UserNotificationCategories.GLOBAL,
+          details = UserNotificationDetails(Json.toJson(globalDetails)),
+          commentId = None,
+          subsumedId = None))
+        notificationBroadcast.push(userNotification)
+      }
+    }
+  }
+
+  def comment(comment: Comment): Unit = {
     db.readWrite { implicit s =>
       val normalizedUri = normalUriRepo.get(comment.uriId).url
       uriChannel.push(normalizedUri, Json.arr("comment", normalizedUri, commentWithBasicUserRepo.load(comment)))
@@ -128,7 +164,7 @@ class UserNotifier @Inject() (
     }
   }
 
-  def message(message: Comment) {
+  def message(message: Comment): Unit = {
     db.readWrite { implicit s =>
       val normUri = normalUriRepo.get(message.uriId)
       val parent = message.parent.map(commentRepo.get).getOrElse(message)
