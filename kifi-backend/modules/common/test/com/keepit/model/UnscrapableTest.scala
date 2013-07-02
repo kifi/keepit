@@ -6,13 +6,11 @@ import com.keepit.common.db.slick._
 import com.keepit.inject._
 import com.keepit.test.{DbRepos, EmptyApplication}
 
-import play.api.Play.current
-import play.api.test._
 import play.api.test.Helpers._
-import com.keepit.akka.{TestKitScope, TestAkkaSystem}
+import com.keepit.akka.TestAkkaSystem
 import concurrent.duration._
 
-class UnscrapableTest extends Specification with DbRepos with TestAkkaSystem {
+class UnscrapableTest extends Specification with ApplicationInjector with DbRepos with TestAkkaSystem {
 
   "Unscrapable" should {
 

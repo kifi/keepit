@@ -10,14 +10,12 @@ import com.keepit.common.time._
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.test._
-
-import play.api.Play.current
 import play.api.libs.json._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import securesocial.core._
 
-class AdminAuthControllerTest extends Specification with DbRepos {
+class AdminAuthControllerTest extends Specification with ApplicationInjector with DbRepos {
 
   args(skipAll = true) // todo(Andrew/Greg/anyone) Fix this!!!!!
 

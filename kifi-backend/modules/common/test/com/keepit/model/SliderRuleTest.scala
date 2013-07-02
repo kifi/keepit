@@ -8,12 +8,10 @@ import com.keepit.common.time._
 import com.keepit.inject._
 import com.keepit.test._
 
-import play.api.Play.current
 import play.api.libs.json._
-import play.api.test._
 import play.api.test.Helpers._
 
-class SliderRuleTest extends Specification with DbRepos {
+class SliderRuleTest extends Specification with ApplicationInjector {
   "SliderRule" should {
     "save, load by group name, cache group versions" in {
       running(new EmptyApplication()) {

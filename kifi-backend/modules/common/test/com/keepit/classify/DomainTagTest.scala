@@ -3,15 +3,12 @@ package com.keepit.classify
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick.Database
-import com.keepit.inject.inject
-import com.keepit.test.DbRepos
 import com.keepit.test.EmptyApplication
-
-import play.api.Play.current
 import play.api.test.Helpers._
+import com.keepit.inject.ApplicationInjector
 
 
-class DomainTagTest extends Specification with DbRepos {
+class DomainTagTest extends Specification with ApplicationInjector {
   "The tag repo" should {
     "save and retrieve tags" in {
       running(new EmptyApplication()) {

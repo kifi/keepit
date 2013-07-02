@@ -3,12 +3,11 @@ package com.keepit.search
 import com.keepit.common.cache.CacheModule
 import com.keepit.social.SecureSocialModule
 import com.keepit.shoebox.ShoeboxServiceClientModule
-import net.codingwell.scalaguice.ScalaModule
 import com.keepit.model.{BrowsingHistoryModule, ClickHistoryModule}
 import com.keepit.common.healthcheck.HealthCheckModule
 import com.keepit.common.store.StoreModule
 import com.keepit.common.net.HttpClientModule
-import com.keepit.inject.{ConfigurationModule, FortyTwoModule}
+import com.keepit.inject.{FortyTwoModule, ConfigurationModule}
 import com.keepit.common.actor.ActorSystemModule
 import com.keepit.common.zookeeper.DiscoveryModule
 

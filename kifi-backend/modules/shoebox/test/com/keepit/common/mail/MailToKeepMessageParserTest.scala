@@ -5,17 +5,16 @@ import java.util.Properties
 import org.specs2.mutable.Specification
 
 import com.keepit.common.db.slick.Database
-import com.keepit.inject.inject
+import com.keepit.inject.ApplicationInjector
 import com.keepit.model.{EmailAddress, User, UserRepo, EmailAddressRepo}
 
 import javax.mail.Message.RecipientType
 import javax.mail.Session
 import javax.mail.internet.{MimeMultipart, MimeBodyPart, InternetAddress, MimeMessage}
-import play.api.Play.current
 import play.api.test.Helpers.running
 import com.keepit.test.EmptyApplication
 
-class MailToKeepMessageParserTest extends Specification {
+class MailToKeepMessageParserTest extends Specification with ApplicationInjector {
   "MailToKeepMessageParser" should {
     "parse out the text from multipart emails" in {
       running(new EmptyApplication()) {

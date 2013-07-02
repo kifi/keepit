@@ -9,6 +9,7 @@ import com.keepit.common.time._
 import com.keepit.model._
 
 import play.api.libs.json._
+import com.keepit.realtime.{DeviceType, UrbanAirship}
 
 @Singleton
 class UserController @Inject() (db: Database,
@@ -19,8 +20,22 @@ class UserController @Inject() (db: Database,
   socialConnectionRepo: SocialConnectionRepo,
   socialUserRepo: SocialUserInfoRepo,
   invitationRepo: InvitationRepo,
-  actionAuthenticator: ActionAuthenticator)
+  actionAuthenticator: ActionAuthenticator,
+  urbanAirship: UrbanAirship)
     extends WebsiteController(actionAuthenticator) {
+
+  def registerDevice(deviceType: String) = AuthenticatedJsonToJsonAction { implicit request =>
+    (request.body \ "token").asOpt[String] map { token =>
+      val device = urbanAirship.registerDevice(request.userId, token, DeviceType(deviceType))
+      Ok(Json.obj(
+        "token" -> device.token
+      ))
+    } getOrElse {
+      BadRequest(Json.obj(
+        "error" -> "Body must contain a token parameter"
+      ))
+    }
+  }
 
   def connections() = AuthenticatedJsonAction { request =>
     Ok(Json.obj(

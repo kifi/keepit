@@ -16,7 +16,7 @@ import play.utils.Threads
 import com.keepit.common.amazon.AmazonInstanceInfo
 
 abstract class FortyTwoGlobal(val mode: Mode.Mode)
-    extends WithFilters(LoggingFilter, new StatsdFilter()) with Logging with InjectorProvider {
+    extends WithFilters(LoggingFilter, new StatsdFilter()) with Logging with EmptyInjector {
 
   override def getControllerInstance[A](clazz: Class[A]) = try {
     injector.getInstance(clazz)

@@ -19,7 +19,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import play.api.Play.current
 import play.api.test.Helpers._
 
-trait GraphTestHelper {
+trait GraphTestHelper extends ApplicationInjector {
 
   val source = BookmarkSource("test")
 

@@ -4,13 +4,11 @@ import org.specs2.mutable._
 
 import com.keepit.common.net.UserAgent
 import com.keepit.common.db._
-import com.keepit.common.time.zones.PT
 import com.keepit.test._
-
-import play.api.Play.current
 import play.api.test.Helpers._
+import com.keepit.inject.ApplicationInjector
 
-class KifiInstallationTest extends Specification with DbRepos {
+class KifiInstallationTest extends Specification with ApplicationInjector with DbRepos {
 
   "KifiInstallation" should {
     "parse version strings and order correctly" in {

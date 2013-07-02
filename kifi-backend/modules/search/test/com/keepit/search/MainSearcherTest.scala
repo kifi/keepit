@@ -29,7 +29,7 @@ import com.keepit.inject._
 import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
 import play.api.Play.current
 
-class MainSearcherTest extends Specification {
+class MainSearcherTest extends Specification with ApplicationInjector {
 
   val resultClickBuffer  = new InMemoryResultClickTrackerBuffer(1000)
   val resultClickTracker = new ResultClickTracker(new ProbablisticLRU(resultClickBuffer, 8, Int.MaxValue)(None))

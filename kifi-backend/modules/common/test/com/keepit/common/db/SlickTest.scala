@@ -17,7 +17,7 @@ import com.keepit.common.db.slick._
 import org.joda.time.DateTime
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 
-class SlickTest extends Specification {
+class SlickTest extends Specification with ApplicationInjector {
 
   "Slick" should {
 

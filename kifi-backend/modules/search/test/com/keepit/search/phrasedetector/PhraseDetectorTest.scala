@@ -17,7 +17,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import org.apache.lucene.util.Version
 import scala.collection.mutable.ListBuffer
 
-class PhraseDetectorTest extends Specification {
+class PhraseDetectorTest extends Specification with ApplicationInjector {
 
   "PhraseDetectorTest" should {
     "detects phrases in input text" in {

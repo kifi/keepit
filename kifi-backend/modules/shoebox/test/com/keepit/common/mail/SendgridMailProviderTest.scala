@@ -12,7 +12,7 @@ import org.specs2.mutable.Specification
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 
-class SendgridMailProviderTest extends Specification {
+class SendgridMailProviderTest extends Specification with ApplicationInjector {
 
   "SendgridMailProvider" should {
     "send email" in {

@@ -6,11 +6,9 @@ import com.keepit.common.db.LargeString._
 import com.keepit.common.db.slick._
 import com.keepit.inject._
 import com.keepit.test.{DbRepos, EmptyApplication}
-
-import play.api.Play.current
 import play.api.test.Helpers._
 
-class CommentTest extends Specification with DbRepos {
+class CommentTest extends Specification with ApplicationInjector with DbRepos {
 
   def setup() = {
     inject[Database].readWrite {implicit s =>
