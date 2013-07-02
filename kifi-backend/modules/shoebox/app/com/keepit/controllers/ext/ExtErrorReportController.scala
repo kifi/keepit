@@ -34,7 +34,7 @@ class ExtErrorReportController @Inject() (
       Ok(JsObject(Seq("errorId" -> JsString(errorReport.id.id))))
     } else Ok(Json.obj())
   }, unauthenticatedAction = { request =>
-    if (enableExtensionErrorReporting) {
+    if (!feelingOverwhelmed) {
       val json = request.body
       val message = (json \ "message").as[String]
       val errorReport = healthcheck.addError(HealthcheckError(error = None,
