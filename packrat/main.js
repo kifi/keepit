@@ -1142,6 +1142,8 @@ function authenticate(callback) {
           socket.send(["get_rules", ruleSet.version]);
           api.tabs.eachSelected(subscribe);
         }
+      }, function onDisconnect(why) {
+        reportError("socket disconnect (" + why + ")");
       });
       logEvent.catchUp();
 
