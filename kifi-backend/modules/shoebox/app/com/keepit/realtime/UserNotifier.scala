@@ -18,6 +18,7 @@ import com.keepit.common.social.ThreadInfoRepo
 import com.keepit.model._
 import com.keepit.serializer.CommentWithBasicUserSerializer._
 import com.keepit.serializer.ThreadInfoSerializer._
+import com.keepit.common.time._
 
 import play.api.libs.json._
 
