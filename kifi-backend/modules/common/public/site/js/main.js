@@ -481,7 +481,7 @@ $(function() {
 			$detail.attr("data-kept", howKept).removeClass("multiple");
 			$('.page-title').text($keepLink.text());
 			$('.page-url').attr('href', url).text(url).show();
-			$('.page-pic').css("background-image", "url(" + urlScreenshot + '?url=' + escape(url) + ")");
+			$('.page-pic').css("background-image", "url(" + urlScreenshot + '?url=' + escape(url) + ")").attr('href', url);
 			$('.page-pic-wrap').show();
 			$('.page-how').attr('class', 'page-how ' + (howKept || ''));
 			$('.page-who-pics').empty().append($keep.find(".keep-who>img").clone());
