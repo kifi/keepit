@@ -144,6 +144,11 @@ trait ObjectCache[K <: Key[T], T] {
     setInnerCache(key, Some(value))
   }
 
+  def set(key: K, valueOpt: Option[T]) : Unit = {
+    outerCache map {outer => outer.set(key, valueOpt)}
+    setInnerCache(key, valueOpt)
+  }
+
   def get(key: K): Option[T] = {
     getFromInnerCache(key) match {
       case Some(valueOpt) => valueOpt
