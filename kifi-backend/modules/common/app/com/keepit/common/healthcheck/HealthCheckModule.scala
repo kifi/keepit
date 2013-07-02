@@ -10,7 +10,7 @@ import com.keepit.common.plugin.SchedulingProperties
 
 trait HealthCheckModule extends ScalaModule
 
-case class HealthCheckProdModule() extends HealthCheckModule {
+case class ProdHealthCheckModule() extends HealthCheckModule {
 
   def configure() {}
 

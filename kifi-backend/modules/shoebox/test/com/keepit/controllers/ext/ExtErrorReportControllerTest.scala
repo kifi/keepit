@@ -2,30 +2,15 @@ package com.keepit.controllers.ext
 
 import com.keepit.test._
 import org.specs2.mutable.Specification
-import play.api.Play.current
 import play.api.libs.json._
-import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test.FakeRequest
-import play.api.test.FakeHeaders
 import com.keepit.inject._
-import com.keepit.common.social.SocialId
-import com.keepit.common.db._
 import com.keepit.common.social.SocialNetworks.FACEBOOK
-import com.keepit.common.time._
-import com.keepit.common.controller.FortyTwoCookies.{ImpersonateCookie, KifiInstallationCookie}
-import com.keepit.model._
-import com.keepit.model.ExperimentTypes.ADMIN
-import com.keepit.test.FakeClock
-import com.keepit.social.SecureSocialUserService
-import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.common.healthcheck._
 
 import securesocial.core._
 
-import org.joda.time.LocalDate
-import org.joda.time.DateTime
-import play.api.libs.json.JsArray
 import com.keepit.common.controller.AuthenticatedRequest
 import play.api.libs.json.JsString
 import scala.Some
@@ -36,7 +21,7 @@ import com.keepit.model.SocialUserInfo
 import play.api.libs.json.JsObject
 import com.keepit.common.social.SocialId
 
-class ExtErrorReportControllerTest extends Specification with DbRepos {
+class ExtErrorReportControllerTest extends Specification with ApplicationInjector with DbRepos {
 
   def fakeRequest(json: JsValue) = {
     val oAuth2Info = OAuth2Info(accessToken = "A", tokenType = None, expiresIn = None, refreshToken = None)
@@ -63,14 +48,11 @@ class ExtErrorReportControllerTest extends Specification with DbRepos {
         val requestJson = Json.obj("message" -> JsString("bad thing happened"))
         val result = inject[ExtErrorReportController].addErrorReport(fakeRequest(requestJson))
 
-        if (inject[ExtErrorReportController].enableExtensionErrorReporting) {
-          fakeHealthcheck.errorCount() === 1
-          status(result) must equalTo(OK)
-          val json = Json.parse(contentAsString(result)).asInstanceOf[JsObject]
-          val errorExtId = fakeHealthcheck.errors()(0).id
-          json \ "errorId" === JsString(errorExtId.id)
-        }
-        1 === 1
+        fakeHealthcheck.errorCount() === 1
+        status(result) must equalTo(OK)
+        val json = Json.parse(contentAsString(result)).asInstanceOf[JsObject]
+        val errorExtId = fakeHealthcheck.errors()(0).id
+        json \ "errorId" === JsString(errorExtId.id)
       }
     }
   }

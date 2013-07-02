@@ -1,20 +1,14 @@
 package com.keepit.model
 
-import org.joda.time.DateTime
 import org.specs2.mutable._
 
 import com.keepit.classify.{Domain, DomainRepo}
 import com.keepit.common.db.slick._
-import com.keepit.common.time._
 import com.keepit.inject._
 import com.keepit.test._
-
-import play.api.Play.current
-import play.api.libs.json._
-import play.api.test._
 import play.api.test.Helpers._
 
-class UserToDomainTest extends Specification with DbRepos {
+class UserToDomainTest extends Specification with ApplicationInjector {
   "UserToDomain" should {
     "save and load" in {
       running(new EmptyApplication()) {

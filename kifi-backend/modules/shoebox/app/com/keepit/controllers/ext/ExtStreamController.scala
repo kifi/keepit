@@ -23,6 +23,7 @@ import com.keepit.realtime._
 import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
 import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
 import com.keepit.serializer.SendableNotificationSerializer.sendableNotificationSerializer
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
@@ -35,6 +36,11 @@ import play.api.mvc.WebSocket
 import play.api.mvc.WebSocket.FrameFormatter
 import play.modules.statsd.api.Statsd
 import securesocial.core.{Authenticator, UserService, SecureSocial}
+import scala.collection.concurrent.TrieMap
+import akka.actor.{Cancellable, ActorSystem}
+import scala.concurrent.duration.FiniteDuration
+import org.joda.time.Seconds
+import scala.concurrent.Promise
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]])
 
@@ -63,6 +69,7 @@ class ExtStreamController @Inject() (
   domainRepo: DomainRepo,
   commentWithBasicUserRepo: CommentWithBasicUserRepo,
   eventHelper: EventHelper,
+  system: ActorSystem,
   impersonateCookie: ImpersonateCookie,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
@@ -153,13 +160,34 @@ class ExtStreamController @Inject() (
     Akka.future {
       authenticate(request) match {
         case Some(streamSession) =>
-
           val connectedAt = clock.now
+          var socketLastUsed = connectedAt
           val (enumerator, channel) = Concurrent.broadcast[JsArray]
           val socketId = Random.nextLong()
           val userId = streamSession.userId
-          var subscriptions: Map[String, Subscription] = Map(
-            "user" -> userChannel.subscribe(userId, socketId, channel))
+          val subscriptions: TrieMap[String, Subscription] = TrieMap(
+          "user" -> userChannel.subscribe(userId, socketId, channel))
+
+          val socketHasCancelled = Promise[Unit]()
+          val socketAliveCancellable: Cancellable = {
+            import scala.concurrent.duration._
+            system.scheduler.schedule(30.seconds, 35.seconds) {
+              if(Seconds.secondsBetween(socketLastUsed, clock.now).getSeconds > 35) {
+                log.info(s"It seems like userId ${streamSession.userId}'s socket is stale.")
+              }
+            }
+          }
+
+
+          def endSession(reason: String) = {
+            socketAliveCancellable.cancel()
+            log.info(s"Closing socket of userId ${streamSession.userId} because: $reason")
+            channel.push(Json.arr("goodbye", reason))
+            subscriptions.view.map(_._2.unsubscribe())
+            subscriptions.clear()
+            channel.eofAndEnd()
+          }
+
 
           val handlers = Map[String, Seq[JsValue] => Unit](
             "ping" -> { _ =>
@@ -173,7 +201,7 @@ class ExtStreamController @Inject() (
             },
             "subscribe_uri" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
               val nUri = URINormalizer.normalize(url)
-              subscriptions = subscriptions + (nUri -> uriChannel.subscribe(nUri, socketId, channel))
+              subscriptions.putIfAbsent(nUri, uriChannel.subscribe(nUri, socketId, channel))
               channel.push(Json.arr(requestId.toLong, nUri))
               channel.push(Json.arr("uri_1", nUri, keeperInfoLoader.load1(userId, nUri)))
               channel.push(Json.arr("uri_2", nUri, keeperInfoLoader.load2(userId, nUri)))
@@ -181,7 +209,7 @@ class ExtStreamController @Inject() (
             "unsubscribe_uri" -> { case JsString(url) +: _ =>
               val nUri = URINormalizer.normalize(url)
               subscriptions.get(nUri).foreach(_.unsubscribe())
-              subscriptions = subscriptions - nUri
+              subscriptions.remove(nUri)
             },
             "log_event" -> { case JsObject(pairs) +: _ =>
               logEvent(streamSession, JsObject(pairs))
@@ -251,15 +279,13 @@ class ExtStreamController @Inject() (
 
           val iteratee = asyncIteratee { jsArr =>
             Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
+              socketLastUsed = clock.now
               Statsd.increment(s"websocket.handler.${jsArr.value(0)}")
               Statsd.time(s"websocket.handler.${jsArr.value(0)}") {handler(jsArr.value.tail)}
             } getOrElse {
               log.warn("WS no handler for: " + jsArr)
             }
-          }.mapDone { _ =>
-            subscriptions.map(_._2.unsubscribe())
-            subscriptions = Map.empty
-          }
+          }.mapDone(_ => endSession("Session ended"))
 
           (iteratee, Enumerator(Json.arr("hi")) >>> enumerator)
 

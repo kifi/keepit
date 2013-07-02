@@ -117,6 +117,6 @@ abstract class DevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) exte
   def mongoEventStore(): MongoEventStore =
     whenConfigured("mongo.events.server")(
       prodStoreModule.mongoEventStore()
-    ).getOrElse(new FakeMongoS3EventStoreImpl())
+    ).getOrElse(new FakeMongoS3EventStore())
 
 }

@@ -68,7 +68,7 @@ object FakeClientResponse {
     case s if s.contains("ami-launch-index") => FakeClientResponse("0")
   }
 
-  val emptyHttpClient: PartialFunction[String, FakeClientResponse] = {
+  val emptyFakeHttpClient: PartialFunction[String, FakeClientResponse] = {
     case _ => FakeClientResponse("Empty fake HTTP Client.", 404)
   }
 }

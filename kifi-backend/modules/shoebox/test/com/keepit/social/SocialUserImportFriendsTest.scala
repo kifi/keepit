@@ -11,11 +11,10 @@ import com.keepit.inject._
 import com.keepit.model.SocialUserInfo
 import com.keepit.test.EmptyApplication
 
-import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test.Helpers._
 
-class SocialUserImportFriendsTest extends Specification {
+class SocialUserImportFriendsTest extends Specification with ApplicationInjector {
 
   "SocialUserImportFriends" should {
     "import friends" in {

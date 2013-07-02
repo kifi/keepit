@@ -492,7 +492,7 @@ $(function() {
 			$detail.attr("data-kept", howKept).removeClass("multiple");
 			$('.page-title').text($keepLink.text());
 			$('.page-url').attr('href', url).text(url).show();
-			$('.page-pic').css("background-image", "url(" + urlScreenshot + '?url=' + escape(url) + ")");
+			$('.page-pic').css("background-image", "url(" + urlScreenshot + '?url=' + escape(url) + ")").attr('href', url);
 			$('.page-pic-wrap').show();
 			$('.page-how').attr('class', 'page-how ' + (howKept || ''));
 			$('.page-who-pics').empty().append($keep.find(".keep-who>img").clone());
@@ -873,6 +873,8 @@ $(function() {
 				break;
 		}
 	}).on("input", ".page-coll-input", function() {
+		var width = $(this.previousElementSibling).text(this.value).outerWidth();
+		$(this).css("width", Math.min(Math.max(100, width) + 34, $('.page-colls').outerWidth()));
 		var allColls = $.map(collections, identity), colls;
 		var val = $.trim(this.value);
 		if (val) {
