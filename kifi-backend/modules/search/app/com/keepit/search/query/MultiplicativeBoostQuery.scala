@@ -77,7 +77,6 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
       result
     }
 
-    var sum = 0.0f
     val eTxt = textWeight.explain(context, doc)
     eTxt.isMatch() match {
       case false =>
@@ -85,7 +84,7 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
         r.addDetail(eTxt)
         result.addDetail(r)
         result.setMatch(false)
-        result.setValue(sum)
+        result.setValue(0.0f)
         result.setDescription("Failure to meet condition of textQuery")
       case true =>
         result.addDetail(eTxt)
