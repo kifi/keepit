@@ -205,6 +205,8 @@ input.page-coll-input {display: none; border: 1px solid #cdd6e0; padding: 5px 16
 .editing>.page-coll-opts:not(:empty) {display: block}
 .page-coll-opt {padding: 0 16px; font-size: 13px; color: #888b93; -webkit-font-smoothing: antialiased; cursor: pointer}
 .page-coll-opt.current {background-color: #f1f2f6}
+.page-coll-opt[data-id=""] {position: relative}
+.page-coll-opt[data-id=""]::after {content: "NEW"; position: absolute; right: 5px; top: 5px; bottom: 5px; height: 14px; line-height: 13px; padding: 0 4px; font-size: 9px; font-weight: bold; background-color: #b8c5d2; color: white; border-radius: 2px; -webkit-font-smoothing: subpixel-antialiased}
 .page-coll-opt[data-id=""]:not(:first-child) {border-top: 1px solid #cdd6e0}
 
 .long-text {white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
