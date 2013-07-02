@@ -59,6 +59,7 @@ case class MessageDetails(
 )
 
 case class GlobalNotificationDetails(
+  createdAt: DateTime,
   title: String,
   bodyHtml: String,
   linkText: String,
@@ -111,6 +112,7 @@ class UserNotifier @Inject() (
   uriChannel: UriChannel,
   userChannel: UserChannel,
   threadInfoRepo: ThreadInfoRepo,
+  clock: Clock,
   implicit val fortyTwoServices: FortyTwoServices) extends Logging {
 
   implicit val commentDetailsFormat = Json.format[CommentDetails]
@@ -122,7 +124,9 @@ class UserNotifier @Inject() (
       val users = global.sendToSpecificUsers.getOrElse {
         userRepo.allExcluding(UserStates.BLOCKED, UserStates.PENDING).map(_.id.get)
       }
-      val globalDetails = GlobalNotificationDetails(title = global.title,
+      val globalDetails = GlobalNotificationDetails(
+        createdAt = clock.now,
+        title = global.title,
         bodyHtml = global.bodyHtml,
         linkText = global.linkText,
         url = global.url,
@@ -136,7 +140,8 @@ class UserNotifier @Inject() (
           category = UserNotificationCategories.GLOBAL,
           details = UserNotificationDetails(Json.toJson(globalDetails)),
           commentId = None,
-          subsumedId = None))
+          subsumedId = None,
+          state = UserNotificationStates.DELIVERED))
         notificationBroadcast.push(userNotification)
       }
     }

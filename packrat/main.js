@@ -514,6 +514,12 @@ api.port.on({
       socket.send(["set_message_read", o.messageId]);
     }
   },
+  set_global_read: function(o, _, tab) {
+    var d = pageData[tab.nUri];
+    markNoticesVisited("global", undefined, o.noticeId, undefined);
+    tellTabsNoticeCountIfChanged();  // visible tabs
+    socket.send(["set_global_read", o.noticeId]);
+  },
   comments: function(_, respond, tab) {
     var d = pageData[tab.nUri];
     if (d) d.on2(function() {
@@ -621,7 +627,9 @@ api.port.on({
       api.tabs.select(tab.id);
     } else {
       api.tabs.open(data.nUri, function(tabId) {
-        createDeepLinkListener(data.locator, tabId);
+        if(data.locator) {
+          createDeepLinkListener(data.locator, tabId);
+        }
       });
     }
   },
@@ -675,7 +683,12 @@ function insertNewNotification(n) {
 function markNoticesVisited(category, nUri, id, timeStr, locator) {
   var time = new Date(timeStr);
   notifications.forEach(function(n, i) {
-    if (n.details.page == nUri &&
+    if(category == "global") {
+      if(n.id == id) {
+        n.state = "visited";
+        decrementNumNotificationsNotVisited(n);
+      }
+    } else if (n.details.page == nUri &&
         n.category == category &&
         (!locator || n.details.locator == locator) &&
         (n.details.id == id || new Date(n.details.createdAt) <= time) &&
@@ -690,6 +703,7 @@ function markNoticesVisited(category, nUri, id, timeStr, locator) {
       nUri: nUri,
       time: timeStr,
       locator: locator,
+      id: id,
       numNotVisited: numNotificationsNotVisited});
   });
 }

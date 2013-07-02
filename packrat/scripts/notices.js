@@ -23,6 +23,7 @@ noticesPane = function() {
   var templates = {};
   api.load("html/metro/notice_comment.html", function(tmpl) {templates.comment = tmpl});
   api.load("html/metro/notice_message.html", function(tmpl) {templates.message = tmpl});
+  api.load("html/metro/notice_global.html", function(tmpl) {templates.global = tmpl});
 
   var $notices, $markAll;
 
@@ -42,7 +43,13 @@ noticesPane = function() {
         $notices.find("time").timeago();
 
         $notices.on("click", ".kifi-notice", function() {
-          api.port.emit("open_deep_link", {nUri: this.dataset.uri, locator: this.dataset.locator});
+          if(this.dataset.locator) {
+            api.port.emit("open_deep_link", {nUri: this.dataset.uri, locator: this.dataset.locator});
+          } else if(this.dataset.category == "global") {
+            markVisited(this.dataset.category, this.dataset.uri, this.dataset.createdAt, this.dataset.locator, 0, this.dataset.id);
+            api.port.emit("set_global_read", {noticeId: this.dataset.id, nUri: this.dataset.url, time: this.dataset.createdAt});
+            api.port.emit("open_deep_link", {nUri: this.dataset.uri});
+          }
           return false;
         }).scroll(onScroll);
 
@@ -74,7 +81,7 @@ noticesPane = function() {
         }
       } else {
         if (a.locator) {
-          markVisited(a.category, a.nUri, a.time, a.locator);
+          markVisited(a.category, a.nUri, a.time, a.locator, 0, a.id);
         } else {
           markAllVisited(a.id, a.time);
         }
@@ -98,6 +105,8 @@ noticesPane = function() {
       notice.threeAuthors = nAuthors == 3;
       notice.moreAuthors = nAuthors > 3 ? nAuthors - 2 : 0;
       break;
+    case "global":
+      break;
     default:
       api.log("#a00", "[renderNotice] unrecognized category", notice.category);
       return "";
@@ -118,10 +127,12 @@ noticesPane = function() {
     api.port.emit("notifications_read", notices[0].time);
   }
 
-  function markVisited(category, nUri, timeStr, locator, numNotVisited) {
+  function markVisited(category, nUri, timeStr, locator, numNotVisited, id) {
     var time = new Date(timeStr);  // event time, not notification time
     $notices.find(".kifi-notice-" + category + ":not(.kifi-notice-visited)").each(function() {
-      if (this.dataset.uri == nUri &&
+      if(id && id == this.dataset.id) {
+        this.classList.add("kifi-notice-visited");
+      } else if ((!this.dataset.uri || this.dataset.uri == nUri) &&
           dateWithoutMs(this.dataset.createdAt) <= time &&
           (!locator || this.dataset.locator == locator)) {
         this.classList.add("kifi-notice-visited");

@@ -267,6 +267,9 @@ class ExtStreamController @Inject() (
             "set_comment_read" -> { case JsString(commentId) +: _ =>
               setCommentRead(userId, ExternalId[Comment](commentId))
             },
+            "set_global_read" -> { case JsString(commentId) +: _ =>
+              setGlobalRead(userId, ExternalId[UserNotification](commentId))
+            },
             "set_keeper_position" -> { case JsString(host) +: JsObject(pos) +: _ =>
               setKeeperPosition(userId, host, JsObject(pos))
             })
@@ -370,14 +373,23 @@ class ExtStreamController @Inject() (
       val excluded = Set(INACTIVE, SUBSUMED, VISITED)
       val notificationsToVisit = (if (excluded contains lastNotification.state) Set() else Set(lastNotification)) ++
           userNotificationRepo.getCreatedBefore(userId, lastNotification.createdAt, Integer.MAX_VALUE, excluded)
+
       for (notification <- notificationsToVisit) {
+        notification.category match {
+          case MESSAGE | COMMENT =>
+            for (cid <- notification.commentId) {
+              val comment = commentRepo.get(cid)
+              notification.category match {
+                case MESSAGE => setMessageRead(userId, comment, quietly = true)
+                case COMMENT => setCommentRead(userId, comment, quietly = true)
+                case _ => // when we add other types of notifications mark them read here
+              }
+            }
+          case GLOBAL => userNotificationRepo.markVisited(userId, notification.externalId)
+          case _ => // when we add other types of notifications mark them read here
+        }
         for (cid <- notification.commentId) {
           val comment = commentRepo.get(cid)
-          notification.category match {
-            case MESSAGE => setMessageRead(userId, comment, quietly = true)
-            case COMMENT => setCommentRead(userId, comment, quietly = true)
-            case _ => // when we add other types of notifications mark them read here
-          }
         }
       }
       userChannel.push(userId, Json.arr("all_notifications_visited", lastId.id, lastNotification.createdAt))
@@ -414,6 +426,12 @@ class ExtStreamController @Inject() (
     setCommentRead(userId, db.readOnly { implicit s => commentRepo.get(commentExtId) })
   }
 
+  private def setGlobalRead(userId: Id[User], globalExtId: ExternalId[UserNotification]): Unit = {
+    db.readWrite { implicit session =>
+      userNotificationRepo.markVisited(userId, globalExtId)
+    }
+  }
+
   private def setMessageRead(userId: Id[User], message: Comment, quietly: Boolean = false) {
     db.readWrite { implicit session =>
       val parent = message.parent.map(commentRepo.get).getOrElse(message)
@@ -430,7 +448,7 @@ class ExtStreamController @Inject() (
         }
 
         val messageIds = commentRepo.getMessageIdsCreatedBefore(nUri.id.get, parent.id.get, message.createdAt) :+ message.id.get
-        userNotificationRepo.markVisited(userId, messageIds)
+        userNotificationRepo.markCommentVisited(userId, messageIds)
       }
     }
   }
@@ -451,7 +469,7 @@ class ExtStreamController @Inject() (
         }
 
         val commentIds = commentRepo.getPublicIdsCreatedBefore(nUri.id.get, comment.createdAt) :+ comment.id.get
-        userNotificationRepo.markVisited(userId, commentIds)
+        userNotificationRepo.markCommentVisited(userId, commentIds)
       }
     }
   }

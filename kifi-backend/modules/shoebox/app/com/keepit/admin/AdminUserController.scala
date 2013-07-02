@@ -282,6 +282,10 @@ class AdminUserController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
   }
 
+  def notification() = AdminHtmlAction { implicit request =>
+    Ok(html.admin.notification())
+  }
+
   def sendNotificationToAllUsers() = AdminHtmlAction { implicit request =>
     implicit val playRequest = request.request
     val notifyForm = Form(tuple(
@@ -290,13 +294,16 @@ class AdminUserController @Inject() (
       "linkText" -> text,
       "url" -> optional(text),
       "image" -> text,
-      "sticky" -> optional(text)
+      "sticky" -> optional(text),
+      "users" -> optional(text)
     ))
 
-    val (title, bodyHtml, linkText, url, image, sticky) = notifyForm.bindFromRequest.get
+    val (title, bodyHtml, linkText, url, image, sticky, whichUsers) = notifyForm.bindFromRequest.get
+
+    val users = whichUsers.flatMap(s => if(s == "") None else Some(s) ).map(_.split("[\\s,;]").filter(_ != "").map(u => Id[User](u.toLong)).toSeq)
 
     val globalNotification = GlobalNotification(
-      sendToSpecificUsers = Some(Seq(Id[User](1))),
+      sendToSpecificUsers = users,
       title = title,
       bodyHtml = bodyHtml,
       linkText = linkText,
@@ -306,7 +313,7 @@ class AdminUserController @Inject() (
       markReadOnAction = true)
 
     userNotifier.globalNotification(globalNotification)
-  
+
     Redirect(routes.AdminUserController.usersView(0))
   }
 }
