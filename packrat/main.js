@@ -763,14 +763,6 @@ function createDeepLinkListener(locator, tabId) {
   });
 }
 
-function kifiLoginListener(tab) {
-  // check to see if this is the home page, if so try authenticating again if we don't have an installation
-  if (tab.url.replace(/\/#.*$/, "") === webBaseUri() && !getStored("kifi_installation_id")) {
-    doAuth();
-  }
-}
-api.tabs.on.ready.add(kifiLoginListener);
-
 function initTab(tab, d) {  // d is pageData[tab.nUri]
   api.log("[initTab]", tab.id, "inited:", tab.inited);
 
@@ -1098,89 +1090,96 @@ api.on.update.add(function() {
 
 // ===== Session management
 
-var session, socket;
+var session, socket, onReadyTemp;
 
-function authenticate(callback) {
-  var dev = api.prefs.get("env") === "development";
-  if (dev) {
-    openLogin();
+function authenticate(callback, retryMs) {
+  if (api.prefs.get("env") === "development") {
+    openLogin(callback, retryMs);
   } else {
-    startSession(function () {
-      if (getStored("kifi_installation_id")) {
-        openLogin();
+    startSession(callback, retryMs);
+  }
+}
+
+function startSession(callback, retryMs) {
+  ajax("POST", "/kifi/start", {
+    installation: getStored("kifi_installation_id"),
+    version: api.version},
+  function done(data) {
+    api.log("[authenticate:done] reason: %s session: %o", api.loadReason, data);
+    logEvent("extension", "authenticated");
+
+    session = data;
+    session.prefs = {}; // to come via socket
+    socket = api.socket.open(apiBaseUri().replace(/^http/, "ws") + "/ext/ws", socketHandlers, function onConnect() {
+      socket.send(["get_prefs"]);
+      socket.send(["get_last_notify_read_time"]);
+      if (!notifications) {
+        socket.send(["get_notifications", NOTIFICATION_BATCH_SIZE]);
       } else {
-        var tab = api.tabs.anyAt(webBaseUri() + "/");
-        if (tab) {
-          api.tabs.select(tab.id);
-        } else {
-          api.tabs.open(webBaseUri());
-        }
+        socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
       }
+      socket.send(["get_friends"]);  // TODO: optimize seq > 1 case
+      if (socket.seq > 1) {  // reconnected
+        socket.send(["get_rules", ruleSet.version]);
+        api.tabs.eachSelected(subscribe);
+      }
+    }, function onDisconnect(why) {
+      reportError("socket disconnect (" + why + ")");
     });
-  }
+    logEvent.catchUp();
 
-  function startSession(onFail) {
-    ajax("POST", "/kifi/start", {
-      installation: getStored("kifi_installation_id"),
-      version: api.version},
-    function done(data) {
-      api.log("[startSession] reason: %s session: %o", api.loadReason, data);
-      logEvent("extension", "authenticated");
+    ruleSet = data.rules;
+    urlPatterns = compilePatterns(data.patterns);
+    store("kifi_installation_id", data.installationId);
+    delete session.rules;
+    delete session.patterns;
+    delete session.installationId;
 
-      session = data;
-      session.prefs = {}; // to come via socket
-      socket = api.socket.open(apiBaseUri().replace(/^http/, "ws") + "/ext/ws", socketHandlers, function onConnect() {
-        socket.send(["get_prefs"]);
-        socket.send(["get_last_notify_read_time"]);
-        if (!notifications) {
-          socket.send(["get_notifications", NOTIFICATION_BATCH_SIZE]);
-        } else {
-          socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
+    api.tabs.on.ready.remove(onReadyTemp), onReadyTemp = null;
+    api.tabs.eachSelected(subscribe);
+    callback();
+  },
+  function fail(xhr) {
+    api.log("[startSession:fail] xhr.status:", xhr.status);
+    if (!xhr.status || xhr.status >= 500) {  // server down or no network connection, so consider retrying
+      if (retryMs) {
+        setTimeout(startSession.bind(null, callback, Math.min(60000, retryMs * 1.5)), retryMs);
+      }
+    } else if (getStored("kifi_installation_id")) {
+      openLogin();
+    } else {
+      var tab = api.tabs.anyAt(webBaseUri() + "/");
+      if (tab) {
+        api.tabs.select(tab.id);
+      } else {
+        api.tabs.open(webBaseUri());
+      }
+      api.tabs.on.ready.add(onReadyTemp = function(tab) {
+        // if kifi.com home page, retry first authentication
+        if (tab.url.replace(/\/#.*$/, "") === webBaseUri()) {
+          api.tabs.on.ready.remove(onReadyTemp), onReadyTemp = null;
+          startSession(callback, retryMs);
         }
-        socket.send(["get_friends"]);  // TODO: optimize seq > 1 case
-        if (socket.seq > 1) {  // reconnected
-          socket.send(["get_rules", ruleSet.version]);
-          api.tabs.eachSelected(subscribe);
-        }
-      }, function onDisconnect(why) {
-        reportError("socket disconnect (" + why + ")");
       });
-      logEvent.catchUp();
+    }
+  });
+}
 
-      ruleSet = data.rules;
-      urlPatterns = compilePatterns(data.patterns);
-      store("kifi_installation_id", data.installationId);
-      delete session.rules;
-      delete session.patterns;
-      delete session.installationId;
-
-      callback();
-
-      if (api.loadReason == "install" || dev) {
-        postBookmarks(api.bookmarks.getAll, "INIT_LOAD");
+function openLogin(callback, retryMs) {
+  api.log("[openLogin]");
+  var baseUri = webBaseUri();
+  api.popup.open({
+    name: "kifi-authenticate",
+    url: baseUri + "/login",
+    width: 1020,
+    height: 530}, {
+    navigate: function(url) {
+      if (url == baseUri + "/#_=_" || url == baseUri + "/") {
+        api.log("[openLogin] closing popup");
+        this.close();
+        startSession(callback, retryMs);
       }
-    }, function fail(xhr) {
-      api.log("[startSession] xhr failed:", xhr);
-      if (onFail) onFail();
-    });
-  }
-
-  function openLogin() {
-    api.log("[openLogin]");
-    var baseUri = webBaseUri();
-    api.popup.open({
-      name: "kifi-authenticate",
-      url: baseUri + "/login",
-      width: 1020,
-      height: 530}, {
-      navigate: function(url) {
-        if (url == baseUri + "/#_=_" || url == baseUri + "/") {
-          api.log("[openLogin] closing popup");
-          this.close();
-          startSession();
-        }
-      }});
-  }
+    }});
 }
 
 function deauthenticate() {
@@ -1210,24 +1209,20 @@ function deauthenticate() {
 
 logEvent("extension", "started");
 
-function doAuth() {
-  authenticate(function() {
-    api.log("[main] authenticated");
-
-    if (api.loadReason == "install") {
-      api.log("[main] fresh install");
-      var tab = api.tabs.anyAt(webBaseUri() + "/install");
-      if (tab) {
-        api.tabs.navigate(tab.id, webBaseUri() + "/getting-started");
-      } else {
-        api.tabs.open(webBaseUri() + "/getting-started");
-      }
+authenticate(function() {
+  if (api.loadReason == "install") {
+    api.log("[main] fresh install");
+    var tab = api.tabs.anyAt(webBaseUri() + "/install");
+    if (tab) {
+      api.tabs.navigate(tab.id, webBaseUri() + "/getting-started");
+    } else {
+      api.tabs.open(webBaseUri() + "/getting-started");
     }
-    api.tabs.on.ready.remove(kifiLoginListener);
-    api.tabs.eachSelected(subscribe);
-  });
-}
-doAuth();
+  }
+  if (api.loadReason == "install" || api.prefs.get("env") === "development") {
+    postBookmarks(api.bookmarks.getAll, "INIT_LOAD");
+  }
+}, 3000);
 
 function reportError(errMsg, url, lineNo) {
   api.log('Reporting error "%s" in %s line %s', errMsg, url, lineNo);
