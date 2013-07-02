@@ -13,6 +13,7 @@ class PersonalSearchHitSerializer extends Writes[PersonalSearchHit] {
     )
 
     json = addMatches(json, hit)
+    json = addCollections(json, hit)
     json
   }
 
@@ -34,6 +35,14 @@ class PersonalSearchHitSerializer extends Writes[PersonalSearchHit] {
     if (hit.urlMatches.nonEmpty) {
       json + ("url" -> JsArray(hit.urlMatches.map(h => Json.arr(h._1, (h._2 - h._1)))))
     } else json
+  }
+
+  private def addCollections(json: JsObject, hit: PersonalSearchHit): JsObject = {
+    hit.collections match {
+      case Some(collections) =>
+        json + ("collecitons" -> JsArray(collections.map(id => JsString(id.id))))
+      case None => json
+    }
   }
 }
 

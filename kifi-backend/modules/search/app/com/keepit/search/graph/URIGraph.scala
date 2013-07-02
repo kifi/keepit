@@ -15,6 +15,7 @@ trait URIGraph {
   def getURIGraphSearcher(): URIGraphSearcher
   def getURIGraphSearcher(userId: Id[User]): URIGraphSearcherWithUser
   def getCollectionSearcher(): CollectionSearcher
+  def getCollectionSearcher(userId: Id[User]): CollectionSearcherWithUser
   def close(): Unit
 }
 
@@ -57,5 +58,9 @@ class URIGraphImpl @Inject()(
 
   def getCollectionSearcher(): CollectionSearcher = {
     new CollectionSearcher(collectionIndexer.getSearcher)
+  }
+
+  def getCollectionSearcher(userId: Id[User]): CollectionSearcherWithUser = {
+    new CollectionSearcherWithUser(collectionIndexer.getSearcher, userId)
   }
 }
