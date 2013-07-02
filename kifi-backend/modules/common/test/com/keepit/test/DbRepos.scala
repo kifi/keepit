@@ -1,48 +1,38 @@
 package com.keepit.test
 
 import com.keepit.inject._
-import com.keepit.common.db.slick.{H2, Database}
+import com.keepit.common.db.slick.{SlickSessionProvider, Database}
 import com.keepit.model._
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.db.DbInfo
-import scala.slick.session.{Database => SlickDatabase}
+import com.keepit.common.db.TestSlickSessionProvider
+import com.keepit.common.mail.ElectronicMailRepo
+import com.google.inject.Injector
 
-trait DbRepos {
+trait DbRepos { self: InjectorProvider =>
 
-  import play.api.Play.current
-
-  def db = inject[Database]
-  def userSessionRepo = inject[UserSessionRepo]
-  def userRepo = inject[UserRepo]
-  def basicUserRepo = inject[BasicUserRepo]
-  def userConnRepo = inject[UserConnectionRepo]
-  def socialConnRepo = inject[SocialConnectionRepo]
-  def uriRepo = inject[NormalizedURIRepo]
-  def urlRepo = inject[URLRepo]
-  def bookmarkRepo = inject[BookmarkRepo]
-  def commentRepo = inject[CommentRepo]
-  def commentReadRepo = inject[CommentReadRepo]
-  def commentRecipientRepo = inject[CommentRecipientRepo]
-  def socialUserInfoRepo = inject[SocialUserInfoRepo]
-  def installationRepo = inject[KifiInstallationRepo]
-  def userExperimentRepo = inject[UserExperimentRepo]
-  def emailAddressRepo = inject[EmailAddressRepo]
-  def invitationRepo = inject[InvitationRepo]
-  def unscrapableRepo = inject[UnscrapableRepo]
-  def notificationRepo = inject[UserNotificationRepo]
-  def scrapeInfoRepo = inject[ScrapeInfoRepo]
-  def phraseRepo = inject[PhraseRepo]
-  def collectionRepo = inject[CollectionRepo]
-  def keepToCollectionRepo = inject[KeepToCollectionRepo]
-}
-
-object TestDbInfo {
-  val url = "jdbc:h2:mem:shoebox;USER=shoebox;MODE=MYSQL;MVCC=TRUE;DB_CLOSE_DELAY=-1"
-  val dbInfo = new DbInfo() {
-    //later on we can customize it by the application name
-    lazy val database = SlickDatabase.forURL(url = url)
-    lazy val driverName = H2.driverName
-    //    lazy val database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
-    //    lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
-  }
+  def db(implicit injector: Injector) = inject[Database]
+  def userSessionRepo(implicit injector: Injector) = inject[UserSessionRepo]
+  def userRepo(implicit injector: Injector) = inject[UserRepo]
+  def basicUserRepo(implicit injector: Injector) = inject[BasicUserRepo]
+  def userConnRepo(implicit injector: Injector) = inject[UserConnectionRepo]
+  def socialConnRepo(implicit injector: Injector) = inject[SocialConnectionRepo]
+  def uriRepo(implicit injector: Injector) = inject[NormalizedURIRepo]
+  def urlRepo(implicit injector: Injector) = inject[URLRepo]
+  def bookmarkRepo(implicit injector: Injector) = inject[BookmarkRepo]
+  def commentRepo(implicit injector: Injector) = inject[CommentRepo]
+  def commentReadRepo(implicit injector: Injector) = inject[CommentReadRepo]
+  def commentRecipientRepo(implicit injector: Injector) = inject[CommentRecipientRepo]
+  def socialUserInfoRepo(implicit injector: Injector) = inject[SocialUserInfoRepo]
+  def installationRepo(implicit injector: Injector) = inject[KifiInstallationRepo]
+  def userExperimentRepo(implicit injector: Injector) = inject[UserExperimentRepo]
+  def emailAddressRepo(implicit injector: Injector) = inject[EmailAddressRepo]
+  def invitationRepo(implicit injector: Injector) = inject[InvitationRepo]
+  def unscrapableRepo(implicit injector: Injector) = inject[UnscrapableRepo]
+  def notificationRepo(implicit injector: Injector) = inject[UserNotificationRepo]
+  def scrapeInfoRepo(implicit injector: Injector) = inject[ScrapeInfoRepo]
+  def phraseRepo(implicit injector: Injector) = inject[PhraseRepo]
+  def collectionRepo(implicit injector: Injector) = inject[CollectionRepo]
+  def keepToCollectionRepo(implicit injector: Injector) = inject[KeepToCollectionRepo]
+  def electronicMailRepo(implicit injector: Injector) = inject[ElectronicMailRepo]
+  def sessionProvider(implicit injector: Injector) = inject[SlickSessionProvider].asInstanceOf[TestSlickSessionProvider]
 }

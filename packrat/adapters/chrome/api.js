@@ -481,37 +481,41 @@ api = function() {
       updateCheckRequested = true;
     },
     socket: {
-      open: function(url, handlers, onConnect) {
+      open: function(url, handlers, onConnect, onDisconnect) {
         var callbacks = {}, nextCallbackId = 1;  // TODO: garbage collect old uncalled callbacks
-        var rws = new ReconnectingWebSocket(url, function receive(e) {
-          var msg = JSON.parse(e.data);
-          if (Array.isArray(msg)) {
-            var id = msg.shift();
-            if (id > 0) {
-              var cb = callbacks[id];
-              if (cb) {
-                api.log("#0ac", "[socket.receive] response", id, "(" + (new Date - cb[1]) +  "ms)");
-                delete callbacks[id];
-                cb[0].apply(null, msg);
+        var rws = new ReconnectingWebSocket({
+          url: url,
+          onConnect: function() {
+            socket.seq++;
+            onConnect();
+          },
+          onDisconnect: onDisconnect,
+          onMessage: function(e) {
+            var msg = JSON.parse(e.data);
+            if (Array.isArray(msg)) {
+              var id = msg.shift();
+              if (id > 0) {
+                var cb = callbacks[id];
+                if (cb) {
+                  api.log("#0ac", "[socket.receive] response", id, "(" + (new Date - cb[1]) +  "ms)");
+                  delete callbacks[id];
+                  cb[0].apply(null, msg);
+                } else {
+                  api.log("#0ac", "[socket.receive] ignoring", [id].concat(msg));
+                }
               } else {
-                api.log("#0ac", "[socket.receive] ignoring", [id].concat(msg));
+                var handler = handlers[id];
+                if (handler) {
+                  api.log("#0ac", "[socket.receive] handling", id);
+                  handler.apply(null, msg);
+                } else {
+                  api.log("#0ac", "[socket.receive] ignoring", [id].concat(msg));
+                }
               }
             } else {
-              var handler = handlers[id];
-              if (handler) {
-                api.log("#0ac", "[socket.receive] handling", id);
-                handler.apply(null, msg);
-              } else {
-                api.log("#0ac", "[socket.receive] ignoring", [id].concat(msg));
-              }
+              api.log("#0ac", "[socket.receive] ignoring", msg);
             }
-          } else {
-            api.log("#0ac", "[socket.receive] ignoring", msg);
-          }
-        }, function() {
-          socket.seq++;
-          onConnect();
-        });
+          }});
         var socket = {
           seq: 0,
           send: function(arr, callback) {

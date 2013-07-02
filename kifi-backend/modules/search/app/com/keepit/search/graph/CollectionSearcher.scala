@@ -1,7 +1,9 @@
 package com.keepit.search.graph
 
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
+import com.keepit.common.strings._
 import com.keepit.model.{NormalizedURI, User, Collection}
 import com.keepit.search.graph.CollectionFields._
 import com.keepit.search.index.Searcher
@@ -30,6 +32,16 @@ class CollectionSearcher(searcher: Searcher) extends BaseGraphSearcher(searcher)
     while (iter.nextDoc != NO_MORE_DOCS) intersection += iter.docID
     UserToCollectionEdgeSet(userToCollection.sourceId, searcher, intersection.toArray)
   }
+
+  def getExternalId(id: Id[Collection]): ExternalId[Collection] = getExternalId(id.id)
+
+  def getExternalId(id: Long): ExternalId[Collection] = {
+    ExternalId[Collection](searcher.getDecodedDocValue[String](externalIdField, id)(fromByteArray).get)
+  }
+}
+
+class CollectionSearcherWithUser(searcher: Searcher, userId: Id[User]) extends CollectionSearcher(searcher) {
+  lazy val myCollectionEdgeSet: UserToCollectionEdgeSet = getUserToCollectionEdgeSet(userId)
 }
 
 abstract class CollectionToUriEdgeSet(override val sourceId: Id[Collection]) extends EdgeSet[Collection, NormalizedURI]

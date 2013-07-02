@@ -10,8 +10,6 @@ import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.test.DbRepos
 import com.keepit.test.EmptyApplication
-import com.keepit.test.FakeClock
-import play.api.Play.current
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import play.api.test.FakeRequest
@@ -20,10 +18,9 @@ import securesocial.core._
 import com.keepit.realtime.UserEmailNotifierPluginImpl
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
-import play.api.Play.current
 import play.api.test.Helpers.running
 
-class CommentControllerTest extends TestKit(ActorSystem()) with Specification with DbRepos {
+class CommentControllerTest extends TestKit(ActorSystem()) with Specification with ApplicationInjector with DbRepos {
 
   args(skipAll = true) // todo(Andrew/Greg/anyone) Fix this!!!!!
 

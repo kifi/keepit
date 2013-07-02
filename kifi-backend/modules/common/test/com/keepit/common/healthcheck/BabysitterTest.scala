@@ -1,18 +1,23 @@
 package com.keepit.common.healthcheck
 
 import org.specs2.mutable.Specification
-import com.keepit.test.FakeClock
 import org.joda.time.DateTime
 import scala.concurrent.duration._
 import com.keepit.common.time._
 import com.keepit.test.TestInjector
-import com.keepit.test.BabysitterModule
+import net.codingwell.scalaguice.ScalaModule
 
 class BabysitterTest extends Specification with TestInjector {
 
+  val realBabysitterModule = new ScalaModule() {
+    def configure() {
+      bind[Babysitter].to[BabysitterImpl]
+    }
+  }
+
   "Babysitter" should {
     "do nothing if code executes quickly" in {
-      withCustomInjector(BabysitterModule())  { implicit injector =>
+      withCustomInjector(realBabysitterModule)  { implicit injector =>
         inject[Babysitter].watch(BabysitterTimeout(Duration(1, "seconds"), Duration(1, "seconds"))) {
           // So fast!
         }

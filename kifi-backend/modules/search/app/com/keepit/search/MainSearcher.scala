@@ -2,7 +2,7 @@ package com.keepit.search
 
 import com.keepit.search.graph.BookmarkRecord
 import com.keepit.search.graph.EdgeAccessor
-import com.keepit.search.graph.CollectionSearcher
+import com.keepit.search.graph.CollectionSearcherWithUser
 import com.keepit.search.graph.URIGraphSearcherWithUser
 import com.keepit.search.graph.UserToUriEdgeSet
 import com.keepit.search.graph.UserToUserEdgeSet
@@ -43,7 +43,7 @@ class MainSearcher(
     config: SearchConfig,
     articleSearcher: Searcher,
     val uriGraphSearcher: URIGraphSearcherWithUser,
-    val collectionSearcher: CollectionSearcher,
+    val collectionSearcher: CollectionSearcherWithUser,
     parserFactory: MainQueryParserFactory,
     resultClickTracker: ResultClickTracker,
     browsingHistoryFuture: Future[MultiHashFilter[BrowsingHistory]],
