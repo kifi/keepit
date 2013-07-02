@@ -40,7 +40,7 @@ class PersonalSearchHitSerializer extends Writes[PersonalSearchHit] {
   private def addCollections(json: JsObject, hit: PersonalSearchHit): JsObject = {
     hit.collections match {
       case Some(collections) =>
-        json + ("collecitons" -> JsArray(collections.map(id => JsString(id.id))))
+        json + ("collections" -> Json.toJson(collections.map(_.id)))
       case None => json
     }
   }

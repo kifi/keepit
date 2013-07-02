@@ -52,7 +52,7 @@ class ArticleSearchResultSerializer extends Format[ArticleSearchResult] {
       (json \ "score").as[Float],
       (json \ "isMyBookmark").as[Boolean],
       (json \ "isPrivate").as[Boolean],
-      Seq((json \ "users").asInstanceOf[JsArray].value map {j => Id[User](j.as[Long])}: _*),
+      (json \ "users").as[Seq[Long]].map(Id[User](_)),
       (json \ "bookmarkCount").as[Int]
     )
   }
