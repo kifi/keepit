@@ -900,7 +900,7 @@ $(function() {
 				}
 				return {id: c.id, name: name};
 			});
-			if (!allColls.some(function(c) {return c.name.localeCompare(val, undefined, {usage: "search"}) == 0})) {
+			if (!allColls.some(function(c) {return c.name.localeCompare(val, undefined, {usage: "search", sensitivity: "base"}) == 0})) {
 				colls.push({id: "", name: val});
 			}
 			collOptsTmpl.render(colls);
