@@ -1,7 +1,7 @@
 package com.keepit.learning.topicmodel
 
 import net.codingwell.scalaguice.ScalaModule
-import com.google.inject.{Singleton, Provides}
+import com.google.inject.{Provider, Singleton, Provides}
 import com.keepit.common.logging.Logging
 import play.api.Play._
 import com.keepit.inject.AppScoped
