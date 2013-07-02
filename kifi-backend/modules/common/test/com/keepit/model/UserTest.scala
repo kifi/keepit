@@ -14,7 +14,6 @@ class UserRepoTest extends Specification with TestDBRunner {
     "Use the cache" in {
       withDB() { implicit injector =>
         val userRepoImpl = userRepo.asInstanceOf[UserRepoImpl]
-        val sessionProvider = inject[TestSlickSessionProvider]
         inject[Database].readWrite { implicit session =>
           userRepoImpl.idCache.get(UserIdKey(Id[User](1))).isDefined === false
           val user = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))

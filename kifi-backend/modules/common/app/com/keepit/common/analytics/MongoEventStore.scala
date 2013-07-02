@@ -155,7 +155,7 @@ class MongoS3EventStoreImpl(val mongoDB: MongoDB) extends MongoEventStore with L
   private def dbObjectToEvent(o: DBObject): Event = EventSerializer.eventSerializer.mongoReads(o).get
 }
 
-class FakeMongoS3EventStoreImpl() extends MongoEventStore with Logging {
+case class FakeMongoS3EventStore() extends MongoEventStore with Logging {
   def save(event: Event): Event = {
     log.info("Saving event: %s".format(event.toString))
     event

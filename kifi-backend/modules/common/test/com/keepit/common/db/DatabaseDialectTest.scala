@@ -16,7 +16,7 @@ import play.api.test.Helpers._
 import scala.collection.mutable.{Map => MutableMap}
 import org.joda.time._
 
-class DatabaseDialectTest extends Specification {
+class DatabaseDialectTest extends Specification with ApplicationInjector {
 
   val dec_20_2013 = new DateTime(2013, 12, 20, 0, 0, 0, zones.PT)
 

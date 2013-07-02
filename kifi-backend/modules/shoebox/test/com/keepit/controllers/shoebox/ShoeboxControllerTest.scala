@@ -7,14 +7,13 @@ import com.keepit.common.social.BasicUserRepo
 import com.keepit.test.{DbRepos, EmptyApplication}
 import com.keepit.inject._
 import com.keepit.model._
-import play.api.Play.current
 import play.api.libs.json.{Json, JsNumber, JsArray}
 import com.keepit.serializer.UserSerializer
 import com.keepit.model.User
 import play.api.test.FakeRequest
 import com.keepit.search.Lang
 
-class ShoeboxControllerTest extends Specification with DbRepos {
+class ShoeboxControllerTest extends Specification with ApplicationInjector with DbRepos {
 
   def setupSomeUsers() = {
     inject[Database].readWrite {implicit s =>

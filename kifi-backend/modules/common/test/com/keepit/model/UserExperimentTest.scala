@@ -1,19 +1,12 @@
 package com.keepit.model
 
 import org.specs2.mutable._
-import com.keepit.inject._
-import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
 import com.keepit.test.EmptyApplication
-import com.keepit.common.social.SocialId
-import com.keepit.common.social.SocialNetworks
-import securesocial.core._
-import play.api.Play.current
-import play.api.test._
 import play.api.test.Helpers._
+import com.keepit.inject.ApplicationInjector
 
-class UserExperimentTest extends Specification {
+class UserExperimentTest extends Specification with ApplicationInjector {
 
   "UserExperiment" should {
 
