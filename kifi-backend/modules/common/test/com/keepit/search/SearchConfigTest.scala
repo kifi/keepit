@@ -11,7 +11,7 @@ import com.keepit.model.User
 import com.keepit.model.UserExperiment
 import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
 
-class SearchConfigTest extends Specification {
+class SearchConfigTest extends Specification with ApplicationInjector {
   "The search configuration" should {
     "load defaults correctly" in {
       running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {

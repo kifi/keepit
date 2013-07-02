@@ -8,20 +8,19 @@ import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworks.FACEBOOK
 import com.keepit.common.time._
-import com.keepit.inject.inject
 import com.keepit.model.ExperimentTypes.ADMIN
 import com.keepit.model.SocialUserInfo
 import com.keepit.model.User
 import com.keepit.model.UserExperiment
 import com.keepit.test._
 
-import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import securesocial.core._
+import com.keepit.inject.ApplicationInjector
 
-class AdminDashboardControllerTest extends Specification with DbRepos {
+class AdminDashboardControllerTest extends Specification with ApplicationInjector with DbRepos {
 
   "AdminDashboardController" should {
     "get users by date as JSON" in {

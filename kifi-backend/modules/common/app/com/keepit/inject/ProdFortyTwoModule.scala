@@ -9,18 +9,21 @@ import play.api.Play
 import play.api.Mode.Mode
 import play.api.Play.current
 
-case class FortyTwoModule() extends ScalaModule {
+trait FortyTwoModule extends ScalaModule {
+
   def configure(): Unit = {
     val appScope = new AppScope
-    bindScope(classOf[AppScoped], appScope)
+    super.bindScope(classOf[AppScoped], appScope)
     bind[AppScope].toInstance(appScope)
     bind[play.api.Application].toProvider(new Provider[play.api.Application] {
       def get(): play.api.Application = current
     }).in(classOf[AppScoped])
   }
+}
 
-  @Provides
-  @Singleton
+case class ProdFortyTwoModule() extends FortyTwoModule {
+
+  @Provides @Singleton
   def fortyTwoServices(clock: Clock): FortyTwoServices =
     new FortyTwoServices(
       clock,
@@ -28,8 +31,7 @@ case class FortyTwoModule() extends ScalaModule {
       Play.resource("app_compilation_date.txt"),
       Play.resource("app_version.txt"))
 
-  @Singleton
-  @Provides
+  @Provides @Singleton
   def playMode: Mode = current.mode
 
 }

@@ -29,7 +29,7 @@ import java.io.ByteArrayInputStream
 import java.io.OutputStreamWriter
 import com.keepit.common.store.FakeS3ScreenshotStore
 
-class ScraperTest extends Specification {
+class ScraperTest extends Specification with ApplicationInjector {
   val config = ScraperConfig(
     minInterval = 18.0d, //hours
     maxInterval = 30.0d, //hours

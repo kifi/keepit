@@ -1,12 +1,17 @@
 package com.keepit.common.db
 
+import com.google.inject.{Provides, Singleton}
+import com.keepit.common.db.slick.{H2, SlickSessionProvider, SlickSessionProviderImpl}
 import scala.slick.session.{Database => SlickDatabase}
 
-import com.google.inject.Singleton
-import com.keepit.common.db.slick.SlickSessionProviderImpl
+case class TestSlickModule(dbInfo: DbInfo = TestDbInfo.dbInfo) extends SlickModule(dbInfo) {
 
-@Singleton
-class TestSlickSessionProvider extends SlickSessionProviderImpl {
+  @Provides @Singleton
+  def slickSessionProvider: SlickSessionProvider = TestSlickSessionProvider()
+
+}
+
+case class TestSlickSessionProvider() extends SlickSessionProviderImpl {
 
   private[this] var _readOnlySessionsCreated = 0
   def readOnlySessionsCreated: Long = _readOnlySessionsCreated
@@ -30,5 +35,16 @@ class TestSlickSessionProvider extends SlickSessionProviderImpl {
     if (roCreated != 0) throw new IllegalStateException(s"Created $roCreated read-only database sessions")
     if (rwCreated != 0) throw new IllegalStateException(s"Created $rwCreated read-write database sessions")
     result
+  }
+}
+
+object TestDbInfo {
+  val url = "jdbc:h2:mem:shoebox;USER=shoebox;MODE=MYSQL;MVCC=TRUE;DB_CLOSE_DELAY=-1"
+  val dbInfo = new DbInfo() {
+    //later on we can customize it by the application name
+    lazy val database = SlickDatabase.forURL(url = url)
+    lazy val driverName = H2.driverName
+    //    lazy val database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
+    //    lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
   }
 }

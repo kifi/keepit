@@ -2,16 +2,12 @@ package com.keepit.learning.topicmodel
 
 import org.specs2.mutable.Specification
 import scala.math._
-import play.api.test._
-import com.keepit.test._
 import play.api.test.Helpers._
 import com.keepit.test._
-import com.keepit.inject._
-import play.api.Play.current
+import com.keepit.inject.ApplicationInjector
 
 
-
-class TopicModelTest extends Specification{
+class TopicModelTest extends Specification with ApplicationInjector {
   "LDATopicModel" should {
     "correctly compute topic distribution for documents" in {
       running(new ShoeboxApplication().withTinyWordTopicModule()) {

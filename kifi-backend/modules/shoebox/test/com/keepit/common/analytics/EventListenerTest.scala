@@ -1,22 +1,16 @@
 package com.keepit.common.analytics
 
 import com.keepit.common.plugin._
-import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.time._
 import org.specs2.mutable._
-import play.api.test._
 import play.api.test.Helpers._
-import scala.math._
 import com.keepit.test._
-import com.keepit.common.db.Id
-import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
+import play.api.libs.json.{JsObject, JsString}
 import com.keepit.model._
-import com.keepit.common.db._
-import play.api.Play.current
-import com.keepit.inject.inject
 import com.keepit.common.service.FortyTwoServices
+import com.keepit.inject.ApplicationInjector
 
-class EventListenerTest extends Specification with DbRepos {
+class EventListenerTest extends Specification with ApplicationInjector with DbRepos {
 
   def setup() = {
     db.readWrite {implicit s =>

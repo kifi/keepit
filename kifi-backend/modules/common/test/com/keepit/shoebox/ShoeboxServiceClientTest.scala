@@ -14,7 +14,7 @@ import play.api.libs.json.JsArray
 import com.keepit.serializer.{PhraseSerializer, UserSerializer}
 import com.keepit.search.Lang
 
-class ShoeboxServiceClientTest extends Specification {
+class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
 
   val user1965 = User(firstName="Richard",lastName="Feynman").withId(Id[User](1965))
   val user1933 = User(firstName="Paul",lastName="Dirac").withId(Id[User](1933))
@@ -25,7 +25,7 @@ class ShoeboxServiceClientTest extends Specification {
   )
 
   def setup() = {
-    new FortyTwoModule {
+    new ProdFortyTwoModule {
       override def configure() {
         bind[HttpClient].toInstance(new FakeHttpClient(Some({
           case s if s.contains("/internal/shoebox/database/getConnectedUsers") && s.contains("1965") => "[1933,1935,1927,1921]"
