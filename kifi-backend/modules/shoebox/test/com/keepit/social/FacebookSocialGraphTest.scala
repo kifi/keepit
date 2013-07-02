@@ -12,7 +12,6 @@ import com.keepit.model.SocialUserInfoRepo
 import com.keepit.model.User
 import com.keepit.test._
 
-import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test.Helpers._
 import securesocial.core.AuthenticationMethod
@@ -20,7 +19,7 @@ import securesocial.core.OAuth2Info
 import securesocial.core.SocialUser
 import securesocial.core.UserId
 
-class FacebookSocialGraphTest extends Specification with DbRepos {
+class FacebookSocialGraphTest extends Specification with ApplicationInjector with DbRepos {
 
   "FacebookSocialGraph" should {
 

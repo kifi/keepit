@@ -2,21 +2,13 @@ package com.keepit.controllers.core
 
 import com.keepit.test._
 import com.keepit.inject._
-import play.api.Play.current
-import play.api.libs.json.JsValue
 import play.api.test.Helpers._
-import play.api.templates.Html
-import akka.actor.ActorRef
-import akka.testkit.ImplicitSender
 import org.specs2.mutable.Specification
-import com.keepit.common.db._
 import com.keepit.model._
-import com.keepit.common.db.slick._
-import org.apache.zookeeper.CreateMode
 import play.api.libs.json.Json
 import com.keepit.common.healthcheck._
 
-class BookmarkInternerTest extends Specification with DbRepos {
+class BookmarkInternerTest extends Specification with ApplicationInjector with DbRepos {
 
   "BookmarkInterner" should {
     "persist bookmark" in {

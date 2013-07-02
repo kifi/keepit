@@ -1,13 +1,10 @@
 package com.keepit.common.social
 
-import net.codingwell.scalaguice.ScalaModule
-
-import com.keepit.social.SecureSocialUserService
-
-import play.api.Play.current
+import com.keepit.social.{SecureSocialModule, SecureSocialUserService}
 import securesocial.core.UserService
+import play.api.Play.current
 
-case class FakeSecureSocialUserServiceModule() extends ScalaModule {
+case class FakeSecureSocialModule() extends SecureSocialModule {
   override def configure(): Unit = {
     new SecureSocialUserService().onStart()
     require(UserService.delegate.isDefined)

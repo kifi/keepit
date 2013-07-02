@@ -1,8 +1,6 @@
 package com.keepit.learning.topicmodel
-import play.api.test._
 import play.api.test.Helpers._
 import com.keepit.test._
-import com.keepit.inject._
 import com.keepit.common.db._
 import com.keepit.common.time._
 import com.keepit.model._
@@ -11,13 +9,11 @@ import com.keepit.scraper.FakeArticleStore
 import com.keepit.search.Article
 import com.keepit.search.Lang
 import org.specs2.mutable.Specification
-import play.api.Play.current
 import com.keepit.common.db.slick.Database
 import scala.math._
-import com.keepit.common.cache.ShoeboxCacheModule
 import com.keepit.common.cache._
 
-class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper with TestDBRunner{
+class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
   "TopicUpdater" should {
     "correctly update topic tables and be able to reset tables" in {
       running(new ShoeboxApplication().withWordTopicModule()) {
@@ -98,7 +94,7 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper with Te
 }
 
 
-trait TopicUpdaterTestHelper extends DbRepos {
+trait TopicUpdaterTestHelper extends TestDBRunner {
   def setupDB = {
     val (numUser, numUri) = (10, TopicModelGlobal.numTopics)
     db.readWrite { implicit s =>

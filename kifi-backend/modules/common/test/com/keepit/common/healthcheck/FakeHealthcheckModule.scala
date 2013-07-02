@@ -1,16 +1,24 @@
 package com.keepit.common.healthcheck
 
-import com.keepit.common.plugin._
-import com.keepit.common.mail._
+import com.google.inject.{Inject, Singleton}
+import com.keepit.common.plugin.SchedulingProperties
+import com.keepit.common.mail.{PostOffice, ElectronicMail}
 import com.keepit.common.mail.EmailAddresses.ENG
-import akka.actor.Actor._
-import akka.actor._
 import scala.collection.mutable.MutableList
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import scala.concurrent._
-import scala.concurrent.Future
-import scala.concurrent.duration._
-import com.google.inject.{Singleton, Inject}
+
+
+case class FakeHealthcheckModule() extends HealthCheckModule {
+  def configure(): Unit = {
+    bind[HealthcheckPlugin].to[FakeHealthcheck]
+    bind[Babysitter].to[FakeBabysitter]
+  }
+}
+
+class FakeBabysitter extends Babysitter {
+  def watch[A](timeout: BabysitterTimeout)(block: => A): A = {
+    block
+  }
+}
 
 @Singleton
 class FakeHealthcheck @Inject() (val schedulingProperties: SchedulingProperties) extends HealthcheckPlugin {
