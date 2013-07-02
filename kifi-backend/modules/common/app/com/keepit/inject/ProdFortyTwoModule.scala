@@ -6,7 +6,6 @@ import com.google.inject.{Provides, Singleton, Provider}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import play.api.Play
-import play.api.Mode.Mode
 import play.api.Play.current
 
 trait FortyTwoModule extends ScalaModule {
@@ -30,8 +29,4 @@ case class ProdFortyTwoModule() extends FortyTwoModule {
       current.mode,
       Play.resource("app_compilation_date.txt"),
       Play.resource("app_version.txt"))
-
-  @Provides @Singleton
-  def playMode: Mode = current.mode
-
 }
