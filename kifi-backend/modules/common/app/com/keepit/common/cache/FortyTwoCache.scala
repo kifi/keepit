@@ -269,6 +269,7 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
             case (flag: Boolean, x: java.lang.Double) => (flag, x.doubleValue())
             case (flag: Boolean, x: java.lang.Character) => (flag, x.charValue())
             case (flag: Boolean, x: java.lang.Boolean) => (flag, x.booleanValue())
+            case (false, _) => (false, null) 
             case x: scala.Array[_] => x
             case x: JsValue => Json.stringify(x)
             case x: String => x
