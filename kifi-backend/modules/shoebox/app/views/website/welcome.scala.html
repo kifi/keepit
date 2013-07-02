@@ -1,7 +1,7 @@
 @(id: Option[ExternalId[Invitation]] = None, socialUser: Option[SocialUserInfo] = None,
     msg: Option[String] = None, skipLetMeIn: Boolean = false)
 
-@helper.main(title = "Welcome to Kifi!", scripts = Seq("website/welcome"), hiddenElements = Seq("header")) {
+@helper.main(title = "Welcome to Kifi!", hiddenElements = Seq("header")) {
   <section class="content clearfix text_center welcome">
     <h1>Welcome to the <img src="@routes.Assets.at("images/logo2.png")" width="103" height="58" class="logo2"> private beta!</h1>
 
