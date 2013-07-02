@@ -39,6 +39,10 @@ trait Channel {
    */
   def unsubscribeAll(): Unit
 
+  /** Map a function upon all connected connected channels
+   */
+  def map[T](f: ((Long, PlayChannel[JsArray])) => T): Seq[T]
+
   /** Push a message to this Channel.
    *
    *  The message will be broadcasted to all connected clients, using their provided iteratee.Concurrent.Channel.
@@ -116,6 +120,10 @@ abstract class ChannelImpl[T](id: T) extends Channel {
     pool.clear
   }
 
+  def map[T](f: ((Long, PlayChannel[JsArray])) => T): Seq[T] = {
+    pool.view.map(f).toSeq
+  }
+
   def push(msg: JsArray): Int = {
     pool.map(s => s._2.push(msg)).size
   }
@@ -124,8 +132,8 @@ abstract class ChannelImpl[T](id: T) extends Channel {
   def isEmpty: Boolean = pool.isEmpty
 }
 
-abstract class ChannelManagerImpl[T](name: String, creator: T => Channel) extends ChannelManager[T, Channel] with Logging {
-  private val channels = TrieMap[T, Channel]()
+abstract class ChannelManagerImpl[T, S <: Channel](name: String, creator: T => S) extends ChannelManager[T, S] with Logging {
+  protected[this] val channels = TrieMap[T, Channel]()
 
   @scala.annotation.tailrec
   final def subscribe(id: T, socketId: Long, playChannel: PlayChannel[JsArray]): Subscription = {
@@ -180,7 +188,15 @@ abstract class ChannelManagerImpl[T](name: String, creator: T => Channel) extend
 
 // Used for user-specific transmissions, such as notifications.
 class UserSpecificChannel(id: Id[User]) extends ChannelImpl(id)
-@Singleton class UserChannel extends ChannelManagerImpl("user", (id: Id[User]) => new UserSpecificChannel(id))
+@Singleton class UserChannel extends ChannelManagerImpl("user", (id: Id[User]) => new UserSpecificChannel(id)) {
+
+  def closeAllChannels() = {
+    channels.map({ case (id, chan) =>
+      chan.map({ case (_, playChannel) => playChannel.eofAndEnd() })
+    })
+    channels.clear()
+  }
+}
 
 // Used for page-specific transmissions, such as new comments.
 class UriSpecificChannel(uri: String) extends ChannelImpl(uri)
@@ -207,6 +223,7 @@ class ChannelPluginImpl @Inject() (
     scheduleTask(system, 0 seconds, 1 minute, "report uri client count") {reportURIClientCount()}
   }
   override def onStop() {
+    userChannel.closeAllChannels()
     log.info("stopping ChannelPluginImpl")
   }
 
