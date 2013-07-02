@@ -8,6 +8,7 @@ import net.codingwell.scalaguice.InjectorExtensions.ScalaInjector
 import java.util.concurrent.atomic.AtomicBoolean
 import com.google.inject.util.Modules
 import com.keepit.FortyTwoGlobal
+import net.codingwell.scalaguice.ScalaModule
 
 sealed trait InjectorProvider {
 
@@ -17,11 +18,17 @@ sealed trait InjectorProvider {
 
   implicit def richInjector(injector: Injector): ScalaInjector = new ScalaInjector(injector)
 
-  protected def createInjector(modules: Module*) = mode match {
-    case Mode.Dev => Guice.createInjector(Stage.DEVELOPMENT, modules: _*)
-    case Mode.Prod => Guice.createInjector(Stage.PRODUCTION, modules: _*)
-    case Mode.Test => Guice.createInjector(Stage.DEVELOPMENT, modules: _*)
-    case m => throw new IllegalStateException(s"Unknown mode $m")
+  protected def createInjector(modules: Module*) = {
+    val modeModule = new ScalaModule {
+      def configure(): Unit = bind[Mode].toInstance(mode)
+    }
+    val modulesWithMode = modules :+ modeModule
+    mode match {
+      case Mode.Dev => Guice.createInjector(Stage.DEVELOPMENT, modulesWithMode: _*)
+      case Mode.Prod => Guice.createInjector(Stage.PRODUCTION, modulesWithMode: _*)
+      case Mode.Test => Guice.createInjector(Stage.DEVELOPMENT, modulesWithMode: _*)
+      case m => throw new IllegalStateException(s"Unknown mode $m")
+    }
   }
 
   def withCustomInjector[T](overridingModules: Module*)(f: Injector => T) = {

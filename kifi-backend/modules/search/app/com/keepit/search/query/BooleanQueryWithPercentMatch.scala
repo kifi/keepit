@@ -36,7 +36,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
   def setPercentMatch(pctMatch: Float) { percentMatch = pctMatch }
   def getPercentMatch() = percentMatch
 
-  override def rewrite(reader: IndexReader) = {
+  override def rewrite(reader: IndexReader): Query = {
     if (clauses.size() == 1) { // optimize 1-clause queries
       val c = clauses.get(0)
       if (!c.isProhibited()) {
@@ -46,7 +46,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
           if (query eq c.getQuery()) query = query.clone().asInstanceOf[Query]
           query.setBoost(getBoost() * query.getBoost())
         }
-        query
+        return query
       }
     }
 
@@ -143,7 +143,6 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
         val maxCoord = clauses.filterNot{ _.isProhibited }.size
 
         val sumExpl = new ComplexExplanation()
-        sumExpl.setDescription("sum of:")
 
         var coord = 0
         var sum = 0.0f

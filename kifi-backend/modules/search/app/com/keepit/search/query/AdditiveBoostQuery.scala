@@ -25,10 +25,10 @@ class AdditiveBoostQuery(override val textQuery: Query, override val boosterQuer
 
   override protected val name = "AdditiveBoost"
 
-    override def recreate(rewrittenTextQuery: Query, rewrittenBoosterQueries: Array[Query]): Query = {
-      val q = new AdditiveBoostQuery(rewrittenTextQuery, rewrittenBoosterQueries)
-      q.enableCoord = enableCoord
-      q
+  override def recreate(rewrittenTextQuery: Query, rewrittenBoosterQueries: Array[Query]): Query = {
+    val q = new AdditiveBoostQuery(rewrittenTextQuery, rewrittenBoosterQueries)
+    q.enableCoord = enableCoord
+    q
   }
 }
 
