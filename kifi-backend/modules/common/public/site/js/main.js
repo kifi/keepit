@@ -840,12 +840,16 @@ $(function() {
 		$(".page-coll-new").addClass("editing");
 		$(".page-coll-input").prop("disabled", false).focus().select().trigger("input");
 	}).on("blur", ".page-coll-input", function(e) {
-		hideAddCollTimeout = setTimeout(hide.bind(this), 50);
+		var input = this;
+		hideAddCollTimeout = setTimeout(hide, 50);
 		function hide() {
 			clearTimeout(hideAddCollTimeout), hideAddCollTimeout = null;
-			$collOpts.empty();
-			$(this).val("").prop("disabled", true);
-			$('.page-coll-new').removeClass("editing");
+			$collOpts.slideUp(120, function() {
+				$collOpts.empty();
+				input.value = "";
+				input.disabled = true;
+				$('.page-coll-new').removeClass("editing");
+			});
 		}
 	}).on("focus", ".page-coll-input", function(e) {
 		clearTimeout(hideAddCollTimeout), hideAddCollTimeout = null;
@@ -903,15 +907,16 @@ $(function() {
 			if (!allColls.some(function(c) {return c.name.localeCompare(val, undefined, {usage: "search", sensitivity: "base"}) == 0})) {
 				colls.push({id: "", name: val});
 			}
-			collOptsTmpl.render(colls);
 		} else {
 			colls = allColls.sort(function(c1, c2) {
 				return c2.keeps - c1.keeps || c1.name.localeCompare(c2.name, undefined, {numeric: true});
 			}).splice(0, 4).map(function(c) {
 				return {id: c.id, name: escapeHTMLContent(c.name)};
 			});
-			collOptsTmpl.render(colls);
 		}
+		$collOpts.hide();
+		collOptsTmpl.render(colls);
+		$collOpts.slideDown(120);
 		$('.page-coll-opt:first-child').addClass('current');
 	}).on("mousemove", ".page-coll-opt", function() {
 		if (this.className.indexOf("current") < 0) {
