@@ -283,7 +283,7 @@ class AdminUserController @Inject() (
   }
 
   def notification() = AdminHtmlAction { implicit request =>
-    Ok(html.admin.notification())
+    Ok(html.admin.notification(request.user.id.get.id))
   }
 
   def sendNotificationToAllUsers() = AdminHtmlAction { implicit request =>
@@ -314,6 +314,6 @@ class AdminUserController @Inject() (
 
     userNotifier.globalNotification(globalNotification)
 
-    Redirect(routes.AdminUserController.usersView(0))
+    Redirect(routes.AdminUserController.notification())
   }
 }

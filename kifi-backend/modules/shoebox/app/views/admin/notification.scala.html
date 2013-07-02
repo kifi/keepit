@@ -1,9 +1,15 @@
-@()
+@(userId: Long)
 @import com.keepit.controllers.admin.routes
 
 @admin("Global notification") {
 
   <form class="form-horizontal" action="@com.keepit.controllers.admin.routes.AdminUserController.sendNotificationToAllUsers()" method="POST">
+    <div class="control-group">
+      <label class="control-label" for="inputLink">User ids (leave blank for all)</label>
+      <div class="controls">
+        <input type="text" name="users" id="users" value="@userId">
+      </div>
+    </div>
     <div class="control-group">
       <label class="control-label" for="inputTitle">Title</label>
       <div class="controls">
