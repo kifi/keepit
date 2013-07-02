@@ -1,5 +1,6 @@
 package com.keepit.search
 
+import com.keepit.search.graph.CollectionSearcherWithUser
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphSearcherWithUser
 import com.keepit.search.graph.URIGraphUnsupportedVersionException
@@ -48,23 +49,24 @@ class MainSearcherFactory @Inject() (
     implicit private val fortyTwoServices: FortyTwoServices
  ) extends Logging {
 
-  private[this] val consolidate = new RequestConsolidator[Id[User], URIGraphSearcherWithUser](3 seconds)
+  private[this] val consolidateURIGraphSearcherReq = new RequestConsolidator[Id[User], URIGraphSearcherWithUser](3 seconds)
+  private[this] val consolidateCollectionSearcherReq = new RequestConsolidator[Id[User], CollectionSearcherWithUser](3 seconds)
 
   def apply(userId: Id[User], filter: SearchFilter, config: SearchConfig) = {
     val browsingHistoryFuture = shoeboxClient.getBrowsingHistoryFilter(userId).map(browsingHistoryBuilder.build)
     val clickHistoryFuture = shoeboxClient.getClickHistoryFilter(userId).map(clickHistoryBuilder.build)
 
     val uriGraphSearcherFuture = getURIGraphSearcherFuture(userId)
+    val collectionSearcherFuture = getCollectionSearcherFuture(userId)
     val articleSearcher = articleIndexer.getSearcher
-    val collectionSearcher = uriGraph.getCollectionSearcher()
 
     new MainSearcher(
         userId,
         filter,
         config,
         articleSearcher,
-        monitoredAwait.result(uriGraphSearcherFuture, 5 seconds, s"getting uri graph for user Id $userId"),
-        collectionSearcher,
+        monitoredAwait.result(uriGraphSearcherFuture, 5 seconds, s"getting uri graph searcher for user Id $userId"),
+        monitoredAwait.result(collectionSearcherFuture, 5 seconds, s"getting collection searcher for user Id $userId"),
         parserFactory,
         resultClickTracker,
         browsingHistoryFuture,
@@ -75,9 +77,12 @@ class MainSearcherFactory @Inject() (
     )
   }
 
-  def clear() { consolidate.clear() }
+  def clear(): Unit = {
+    consolidateURIGraphSearcherReq.clear()
+    consolidateCollectionSearcherReq.clear()
+  }
 
-  def getURIGraphSearcherFuture(userId: Id[User]) = consolidate(userId){ userId =>
+  def getURIGraphSearcherFuture(userId: Id[User]) = consolidateURIGraphSearcherReq(userId){ userId =>
     future {
       uriGraph.getURIGraphSearcher(userId)
     } recover {
@@ -90,7 +95,17 @@ class MainSearcherFactory @Inject() (
   }
 
   def getURIGraphSearcher(userId: Id[User]): URIGraphSearcherWithUser = {
-    monitoredAwait.result(getURIGraphSearcherFuture(userId), 5 seconds, s"getting uri graph for user Id $userId")
+    monitoredAwait.result(getURIGraphSearcherFuture(userId), 5 seconds, s"getting uri graph searcher for user Id $userId")
+  }
+
+  def getCollectionSearcherFuture(userId: Id[User]) = consolidateCollectionSearcherReq(userId){ userId =>
+    future {
+      uriGraph.getCollectionSearcher(userId)
+    }
+  }
+
+  def getCollectionSearcher(userId: Id[User]): CollectionSearcherWithUser = {
+    monitoredAwait.result(getCollectionSearcherFuture(userId), 5 seconds, s"getting collection searcher for user Id $userId")
   }
 
   def bookmarkSearcher(userId: Id[User]) = {

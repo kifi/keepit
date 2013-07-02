@@ -5,14 +5,13 @@ import org.specs2.mutable.Specification
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.{HttpClient, FakeHttpClient}
 import com.keepit.inject._
-import com.keepit.test.{EmptyApplication, DbRepos}
+import com.keepit.test.EmptyApplication
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
-import play.api.Play.current
 import play.api.test.Helpers.running
 
-class DomainClassifierTest extends TestKit(ActorSystem()) with Specification with DbRepos {
+class DomainClassifierTest extends TestKit(ActorSystem()) with Specification with ApplicationInjector {
 
   "The domain classifier" should {
     "use imported classifications and not fetch for known domains" in {
@@ -41,7 +40,7 @@ class DomainClassifierTest extends TestKit(ActorSystem()) with Specification wit
     "fetch if necessary" in {
       running(new EmptyApplication().withFakeMail().withFakePersistEvent()
           .withTestActorSystem(system)
-          .overrideWith(new FortyTwoModule {
+          .overrideWith(new ProdFortyTwoModule() {
             override def configure() {
               bind[HttpClient].toInstance(new FakeHttpClient(Some({
                 case s if s.contains("yahoo.com") => "FR~Search engines"

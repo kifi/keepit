@@ -73,7 +73,7 @@ class NamedScorer(weight: Weight, subScorer: Scorer) extends Scorer(weight) with
     savedScore = subScorer.score()
     savedScore
   }
-  override def freq() = 1
+  override def freq() = subScorer.freq()
 
   def getScore(doc: Int) = if (doc == scoredDoc) savedScore else 0.0f
 }

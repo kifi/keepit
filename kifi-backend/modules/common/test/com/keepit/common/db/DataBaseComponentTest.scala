@@ -19,7 +19,7 @@ import com.keepit.common.healthcheck._
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import java.sql.SQLException
 
-class DataBaseComponentTest extends Specification {
+class DataBaseComponentTest extends Specification with ApplicationInjector {
 
   "Session" should {
 

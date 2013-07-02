@@ -8,11 +8,10 @@ import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.test._
 
-import play.api.Play.current
 import play.api.libs.json.Json
 import play.api.test.Helpers._
 
-class SocialUserImportEmailTest extends Specification with DbRepos {
+class SocialUserImportEmailTest extends Specification with ApplicationInjector with DbRepos {
 
   "SocialUserImportEmail" should {
     "import email" in {

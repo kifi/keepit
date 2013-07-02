@@ -53,6 +53,8 @@ GET     /ext/ws                     @com.keepit.controllers.ext.ExtStreamControl
 POST    /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
 
+POST    /devices/:deviceType        @com.keepit.controllers.website.UserController.registerDevice(deviceType: String)
+
 ##########################################
 # Website
 ##########################################

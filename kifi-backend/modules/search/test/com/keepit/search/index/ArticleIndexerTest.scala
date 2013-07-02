@@ -22,7 +22,7 @@ import org.apache.lucene.index.IndexWriterConfig
 import org.apache.lucene.util.Version
 import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
 
-class ArticleIndexerTest extends Specification {
+class ArticleIndexerTest extends Specification with ApplicationInjector {
 
   private trait IndexerScope extends Scope {
     val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]

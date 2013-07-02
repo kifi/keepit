@@ -1,31 +1,25 @@
 package com.keepit.realtime
 
-import com.keepit.model._
-import com.keepit.common.db.slick.Database
-import com.keepit.common.mail.PostOffice
-import com.keepit.common.mail.LocalPostOffice
-import com.keepit.common.mail.ElectronicMail
-import com.keepit.common.mail.EmailAddresses
-import com.keepit.serializer.CommentWithBasicUserSerializer._
-import com.keepit.common.social.CommentWithBasicUserRepo
+import org.joda.time.DateTime
+
+import com.google.inject.{ Inject, Singleton }
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.DBSession._
-import play.api.libs.json._
+import com.keepit.common.db.slick.Database
+import com.keepit.common.db.{ State, Id }
+import com.keepit.common.logging._
+import com.keepit.common.mail.LocalPostOffice
+import com.keepit.common.net.URINormalizer
+import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUser
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.model.UserNotificationDetails
-import org.joda.time.DateTime
-import com.keepit.model.UserNotificationDetails
-import com.google.inject.{ Inject, ImplementedBy, Singleton }
-import com.keepit.common.db.ExternalId
-import com.keepit.common.logging._
-import com.keepit.common.net.URINormalizer
-import com.keepit.common.db.{ State, Id }
-import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.social.CommentWithBasicUserRepo
 import com.keepit.common.social.ThreadInfoRepo
+import com.keepit.model._
+import com.keepit.serializer.CommentWithBasicUserSerializer._
 import com.keepit.serializer.ThreadInfoSerializer._
-import com.keepit.common.healthcheck._
-import com.keepit.common.akka._
-import com.keepit.common.time._
+
+import play.api.libs.json._
 
 case class CommentDetails(
   id: String, // ExternalId[Comment]
@@ -83,9 +77,19 @@ object SendableNotification {
   }
 }
 
-class NotificationBroadcaster @Inject() (userChannel: UserChannel) extends Logging {
+class NotificationBroadcaster @Inject() (
+    userChannel: UserChannel,
+    urbanAirship: UrbanAirship,
+    userNotificationRepo: UserNotificationRepo,
+    messageRepo: CommentRepo,
+    db: Database
+  ) extends Logging {
   import com.keepit.serializer.SendableNotificationSerializer
   def push(notify: UserNotification) {
+    lazy val unvisitedCount = db.readOnly { implicit s => userNotificationRepo.getUnvisitedCount(notify.userId) }
+    for (pushNotification <- PushNotification.fromUserNotification(notify, unvisitedCount)) {
+      urbanAirship.notifyUser(notify.userId, pushNotification)
+    }
     val sendable = SendableNotification.fromUserNotification(notify)
     log.info("User notification serialized: " + sendable)
     userChannel.push(notify.userId, Json.arr("notification", SendableNotificationSerializer.sendableNotificationSerializer.writes(sendable)))
