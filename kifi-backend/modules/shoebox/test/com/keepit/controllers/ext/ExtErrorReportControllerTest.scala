@@ -1,25 +1,20 @@
 package com.keepit.controllers.ext
 
-import com.keepit.test._
 import org.specs2.mutable.Specification
-import play.api.libs.json._
-import play.api.test.Helpers._
-import play.api.test.FakeRequest
-import com.keepit.inject._
-import com.keepit.common.social.SocialNetworks.FACEBOOK
-import com.keepit.common.healthcheck._
-
-import securesocial.core._
 
 import com.keepit.common.controller.AuthenticatedRequest
-import play.api.libs.json.JsString
-import scala.Some
-import securesocial.core.UserId
-import com.keepit.model.User
-import securesocial.core.OAuth2Info
-import com.keepit.model.SocialUserInfo
-import play.api.libs.json.JsObject
+import com.keepit.common.healthcheck._
 import com.keepit.common.social.SocialId
+import com.keepit.common.social.SocialNetworks.FACEBOOK
+import com.keepit.inject._
+import com.keepit.model.SocialUserInfo
+import com.keepit.model.User
+import com.keepit.test._
+
+import play.api.libs.json._
+import play.api.test.FakeRequest
+import play.api.test.Helpers._
+import securesocial.core._
 
 class ExtErrorReportControllerTest extends Specification with ApplicationInjector with DbRepos {
 
@@ -41,7 +36,7 @@ class ExtErrorReportControllerTest extends Specification with ApplicationInjecto
 
   "ExtAuthController" should {
     "start" in {
-      running(new ShoeboxApplication().withFakeSecureSocialUserService()) {
+      running(new ShoeboxApplication().withFakeSecureSocialUserService().withFakeHealthcheck()) {
         val fakeHealthcheck = inject[FakeHealthcheck]
         fakeHealthcheck.errorCount() === 0
 

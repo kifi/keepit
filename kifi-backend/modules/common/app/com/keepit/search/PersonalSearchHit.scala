@@ -19,7 +19,8 @@ case class PersonalSearchHit(
     url: String,
     isPrivate: Boolean,
     titleMatches: Seq[(Int, Int)],
-    urlMatches: Seq[(Int, Int)]
+    urlMatches: Seq[(Int, Int)],
+    collections: Option[Seq[ExternalId[Collection]]]
 )
 
 case class PersonalSearchResult(hit: PersonalSearchHit, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[BasicUser], score: Float, isNew: Boolean)
