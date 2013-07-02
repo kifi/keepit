@@ -266,14 +266,14 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
     val setStart = currentDateTime.getMillis()
     try {
       val properlyBoxed = serializer.writes(valueOpt) match {
-            case (flag: Boolean, x: java.lang.Byte) => (flag, x.byteValue())
-            case (flag: Boolean, x: java.lang.Short) => (flag, x.shortValue())
-            case (flag: Boolean, x: java.lang.Integer) => (flag, x.intValue())
-            case (flag: Boolean, x: java.lang.Long) => (flag, x.longValue())
-            case (flag: Boolean, x: java.lang.Float) => (flag, x.floatValue())
-            case (flag: Boolean, x: java.lang.Double) => (flag, x.doubleValue())
-            case (flag: Boolean, x: java.lang.Character) => (flag, x.charValue())
-            case (flag: Boolean, x: java.lang.Boolean) => (flag, x.booleanValue())
+            case (isDefined: Boolean, x: java.lang.Byte) => (isDefined, x.byteValue())
+            case (isDefined: Boolean, x: java.lang.Short) => (isDefined, x.shortValue())
+            case (isDefined: Boolean, x: java.lang.Integer) => (isDefined, x.intValue())
+            case (isDefined: Boolean, x: java.lang.Long) => (isDefined, x.longValue())
+            case (isDefined: Boolean, x: java.lang.Float) => (isDefined, x.floatValue())
+            case (isDefined: Boolean, x: java.lang.Double) => (isDefined, x.doubleValue())
+            case (isDefined: Boolean, x: java.lang.Character) => (isDefined, x.charValue())
+            case (isDefined: Boolean, x: java.lang.Boolean) => (isDefined, x.booleanValue())
             case (false, _) => (false, null) 
             case x: scala.Array[_] => x
             case x: JsValue => Json.stringify(x)
