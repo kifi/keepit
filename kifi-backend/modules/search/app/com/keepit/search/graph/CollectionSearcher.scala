@@ -33,9 +33,15 @@ class CollectionSearcher(searcher: Searcher) extends BaseGraphSearcher(searcher)
     UserToCollectionEdgeSet(userToCollection.sourceId, searcher, intersection.toArray)
   }
 
+  def getExternalId(id: Id[Collection]): ExternalId[Collection] = getExternalId(id.id)
+
   def getExternalId(id: Long): ExternalId[Collection] = {
     ExternalId[Collection](searcher.getDecodedDocValue[String](externalIdField, id)(fromByteArray).get)
   }
+}
+
+class CollectionSearcherWithUser(searcher: Searcher, userId: Id[User]) extends CollectionSearcher(searcher) {
+  lazy val myCollectionEdgeSet: UserToCollectionEdgeSet = getUserToCollectionEdgeSet(userId)
 }
 
 abstract class CollectionToUriEdgeSet(override val sourceId: Id[Collection]) extends EdgeSet[Collection, NormalizedURI]
