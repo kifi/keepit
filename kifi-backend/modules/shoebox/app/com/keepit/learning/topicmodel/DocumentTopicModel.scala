@@ -1,5 +1,5 @@
 package com.keepit.learning.topicmodel
-import com.google.inject.{Inject, ImplementedBy, Singleton}
+import com.google.inject.{Provider, Inject, ImplementedBy, Singleton}
 import scala.Array.canBuildFrom
 
 @ImplementedBy(classOf[LDATopicModel])
@@ -9,13 +9,13 @@ trait DocumentTopicModel {
 }
 
 @Singleton
-class LDATopicModel @Inject()(model: WordTopicModel) extends DocumentTopicModel{
+class LDATopicModel @Inject()(model: Provider[WordTopicModel]) extends DocumentTopicModel{
   def getDocumentTopicDistribution(content: String) = {
-    val words = content.split(" ").filter(!_.isEmpty).map(_.toLowerCase).filter(model.vocabulary.contains(_))
+    val words = content.split(" ").filter(!_.isEmpty).map(_.toLowerCase).filter(model.get.vocabulary.contains(_))
     val wordCounts = words.groupBy(x => x).foldLeft(Map.empty[String,Int]){(m, pair) => m + (pair._1 -> pair._2.size)}
-    var dist = new Array[Double](model.topicNames.size)
+    var dist = new Array[Double](model.get.topicNames.size)
     for(x <- wordCounts){
-      val y = ArrayUtils.scale(model.wordTopic.get(x._1).get, x._2)
+      val y = ArrayUtils.scale(model.get.wordTopic.get(x._1).get, x._2)
       dist = ArrayUtils.add(dist, y)
     }
     val s = ArrayUtils.sum(dist)
