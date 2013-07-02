@@ -8,10 +8,11 @@ import com.keepit.common.db.slick._
 import java.sql.{Driver, DriverManager}
 import com.keepit.inject.EmptyInjector
 import play.api.Mode
+import com.keepit.common.actor.StandaloneTestActorSystemModule
 
 trait TestInjector extends EmptyInjector {
   val mode = Mode.Test
-  val modules = Seq(TestModule())
+  val modules = Seq(TestModule(), StandaloneTestActorSystemModule())
 }
 
 trait TestDBRunner extends TestInjector with DbRepos {

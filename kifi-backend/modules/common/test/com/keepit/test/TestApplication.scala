@@ -1,6 +1,5 @@
 package com.keepit.test
 
-import scala.concurrent._
 import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.Module
 import com.google.inject.util.Modules
@@ -20,16 +19,12 @@ import com.keepit.scraper._
 import com.keepit.search._
 import com.keepit.shoebox._
 import akka.actor.ActorSystem
-import play.api.libs.concurrent.Execution.Implicits._
 import java.io.File
 import com.keepit.FortyTwoGlobal
-import com.keepit.model.SocialUserInfo
 import com.keepit.common.store.{DevStoreModule, ProdStoreModule, FakeStoreModule}
 import com.keepit.search.SearchConfigModule
 import com.keepit.common.social.FakeSecureSocialModule
-import com.keepit.model.SocialConnection
 import com.keepit.classify.FakeDomainTagImporterModule
-import scala.Some
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
 
@@ -40,7 +35,7 @@ class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override v
   else
     new TestRemoteGlobal(Modules.`override`(baseGlobal.modules: _*).`with`(modules: _*))
 
-  override lazy val global = createTestGlobal(_global, new FakeClockModule()) // Play 2.1 makes global a lazy val, which can't be directly overridden.
+  override lazy val global = createTestGlobal(_global, FakeClockModule(), TestActorSystemModule()) // Play 2.1 makes global a lazy val, which can't be directly overridden.
 
   lazy val devStoreModule = new DevStoreModule(new ProdStoreModule { def configure {} }) { def configure {} }
 
@@ -70,7 +65,6 @@ case class TestModule(dbInfo: DbInfo = TestDbInfo.dbInfo) extends ScalaModule {
     install(FakeStoreModule())
     install(TestCacheModule())
     install(FakeDiscoveryModule())
-    install(TestActorSystemModule())
     install(FakeDomainTagImporterModule())
     install(TestSliderHistoryTrackerModule())
     install(TestShoeboxServiceClientModule())
