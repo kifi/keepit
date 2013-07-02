@@ -8,7 +8,6 @@ import play.api.test.FakeRequest
 import com.keepit.inject._
 import com.keepit.common.social.SocialNetworks.FACEBOOK
 import com.keepit.common.time._
-import com.keepit.test.FakeClock
 
 import securesocial.core._
 

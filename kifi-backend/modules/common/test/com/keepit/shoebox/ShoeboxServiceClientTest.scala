@@ -25,7 +25,7 @@ class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
   )
 
   def setup() = {
-    new FortyTwoModule {
+    new ProdFortyTwoModule {
       override def configure() {
         bind[HttpClient].toInstance(new FakeHttpClient(Some({
           case s if s.contains("/internal/shoebox/database/getConnectedUsers") && s.contains("1965") => "[1933,1935,1927,1921]"

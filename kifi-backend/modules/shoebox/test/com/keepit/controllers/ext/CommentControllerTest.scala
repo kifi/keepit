@@ -10,7 +10,6 @@ import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.test.DbRepos
 import com.keepit.test.EmptyApplication
-import com.keepit.test.FakeClock
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import play.api.test.FakeRequest

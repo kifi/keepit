@@ -19,7 +19,7 @@ class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specifica
       running(new ShoeboxApplication()
           .withFakePersistEvent().withFakeMail().withFakeHealthcheck().withFakeHttpClient().withFakeStore()
           .withTestActorSystem(system)
-          .overrideWith(new FortyTwoModule {
+          .overrideWith(new ProdFortyTwoModule {
             override def configure() {
               bind[S3ImageConfig].toInstance(S3ImageConfig("test-bucket", "//cloudfront", isLocal = false))
               bind[HttpClient].toInstance(new FakeHttpClient(Some(Map(

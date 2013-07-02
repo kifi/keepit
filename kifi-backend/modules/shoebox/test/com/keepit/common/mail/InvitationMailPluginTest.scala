@@ -8,12 +8,13 @@ import org.specs2.mutable.Specification
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworks
 import com.keepit.model._
-import com.keepit.test.{FakeClock, EmptyApplication, DbRepos}
+import com.keepit.test.{EmptyApplication, DbRepos}
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers.running
 import com.keepit.inject.ApplicationInjector
+import com.keepit.common.time.FakeClock
 
 class InvitationMailPluginTest extends TestKit(ActorSystem()) with Specification with ApplicationInjector with DbRepos {
   "InvitationMailPlugin" should {

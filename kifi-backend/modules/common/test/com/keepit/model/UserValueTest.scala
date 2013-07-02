@@ -34,12 +34,12 @@ class UserValueTest extends Specification with ApplicationInjector with DbRepos 
           userValueRepo.save(uv.withState(UserValueStates.ACTIVE))
         }
 
-        inject[TestSlickSessionProvider].doWithoutCreatingSessions {
+        sessionProvider.doWithoutCreatingSessions {
           db.readOnly { implicit s => userValueRepo.getValue(user1.id.get, "test1") }
         } should throwAn[IllegalStateException]
 
         db.readOnly { implicit s => userValueRepo.getValue(user1.id.get, "test") } === Some("this right here!")
-        inject[TestSlickSessionProvider].doWithoutCreatingSessions {
+        sessionProvider.doWithoutCreatingSessions {
           db.readOnly { implicit s => userValueRepo.getValue(user1.id.get, "test") } === Some("this right here!")
         }
       }
