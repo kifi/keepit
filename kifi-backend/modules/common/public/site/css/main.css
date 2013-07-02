@@ -199,12 +199,18 @@ li:first-child>.page-coll-add:active {background-color: #a0b1c2}
 [data-kept]>*>*>*>li:first-child>.page-coll-add::after {content: "Add this keep to a collection"}
 :not([data-kept])>*>*>*>li:first-child>.page-coll-add::after {content: "Keep to a collection"}
 .page-coll-add::after {vertical-align: bottom; color: #fff; font-size: 13px; margin: 0 14px 0 8px; -webkit-font-smoothing: antialiased}
-input.page-coll-input {display: none; border: 1px solid #cdd6e0; padding: 5px 16px; height: 24px; width: 20ex; vertical-align: top; -moz-box-sizing: border-box; box-sizing: border-box; color: inherit; font-family: inherit; font-size: 13px; -webkit-font-smoothing: antialiased}
+.page-coll-sizer {position: absolute; visibility: hidden}
+.page-coll-sizer,
+input.page-coll-input {display: none; border: 1px solid #cdd6e0; padding: 0 16px; height: 24px; vertical-align: top; -moz-box-sizing: border-box; box-sizing: border-box; color: inherit; font-family: inherit; font-size: 13px; -webkit-font-smoothing: antialiased}
+input.page-coll-input {width: 20ex}
+.editing>.page-coll-sizer,
 .editing>.page-coll-input {display: inline-block}
 .page-coll-opts {display: none; position: absolute; width: 100%; border: 1px solid #cdd6e0; border-top: none; -moz-box-sizing: border-box; box-sizing: border-box; background-color: #fff; font-size: 13px}
 .editing>.page-coll-opts:not(:empty) {display: block}
 .page-coll-opt {padding: 0 16px; font-size: 13px; color: #888b93; -webkit-font-smoothing: antialiased; cursor: pointer}
 .page-coll-opt.current {background-color: #f1f2f6}
+.page-coll-opt[data-id=""] {position: relative; padding-right: 36px}
+.page-coll-opt[data-id=""]::after {content: "NEW"; position: absolute; right: 5px; top: 5px; bottom: 5px; height: 14px; line-height: 13px; padding: 0 4px; font-size: 9px; font-weight: bold; background-color: #b8c5d2; color: white; border-radius: 2px; -webkit-font-smoothing: subpixel-antialiased}
 .page-coll-opt[data-id=""]:not(:first-child) {border-top: 1px solid #cdd6e0}
 
 .long-text {white-space: nowrap; overflow: hidden; text-overflow: ellipsis}

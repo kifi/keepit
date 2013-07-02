@@ -873,6 +873,8 @@ $(function() {
 				break;
 		}
 	}).on("input", ".page-coll-input", function() {
+		var width = $(this.previousElementSibling).text(this.value).outerWidth();
+		$(this).css("width", Math.min(Math.max(100, width) + 34, $('.page-colls').outerWidth()));
 		var allColls = $.map(collections, identity), colls;
 		var val = $.trim(this.value);
 		if (val) {
