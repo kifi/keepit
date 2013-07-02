@@ -6,11 +6,10 @@ import com.keepit.inject._
 import com.keepit.test.EmptyApplication
 import java.io.File
 import org.specs2.mutable._
-import play.api.Play.current
 import play.api.libs.json._
 import play.api.test.Helpers._
 
-class SocialConnectionTest extends Specification {
+class SocialConnectionTest extends Specification with ApplicationInjector {
 
 
   private def extractFacebookFriendInfo(json: JsValue): Seq[(SocialUserInfo, JsValue)] = {

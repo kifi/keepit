@@ -11,7 +11,7 @@ import akka.testkit.TestKit
 import play.api.Play.current
 import play.api.test.Helpers._
 
-class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification {
+class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification with ApplicationInjector {
 
   "The domain tag importer" should {
     "load domain sensitivity from a map of tags to domains" in {

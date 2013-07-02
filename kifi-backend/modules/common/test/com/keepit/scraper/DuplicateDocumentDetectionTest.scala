@@ -12,7 +12,7 @@ import play.api.test.Helpers._
 import com.keepit.test.EmptyApplication
 import javax.xml.bind.DatatypeConverter._
 
-class DuplicateDocumentDetectionTest extends Specification {
+class DuplicateDocumentDetectionTest extends Specification with ApplicationInjector {
 
   "Signature" should {
 

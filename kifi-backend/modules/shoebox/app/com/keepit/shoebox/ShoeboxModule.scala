@@ -1,6 +1,5 @@
 package com.keepit.shoebox
 
-import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.db.SlickModule
 import com.keepit.common.cache.CacheModule
 import com.keepit.social.SecureSocialModule

@@ -10,11 +10,10 @@ import com.keepit.model.SocialUserInfoRepo
 import com.keepit.model.User
 import com.keepit.test._
 
-import play.api.Play.current
 import play.api.test.Helpers._
 import securesocial.core._
 
-class LinkedInSocialGraphTest extends Specification with DbRepos {
+class LinkedInSocialGraphTest extends Specification with ApplicationInjector with DbRepos {
 
   private def urlIsConnections(url: String): Boolean = {
     url.startsWith("http://api.linkedin.com/v1/people/rFOBMp35vZ/connections:(id,firstName,lastName,pictureUrl,publicProfileUrl)?format=json") &&

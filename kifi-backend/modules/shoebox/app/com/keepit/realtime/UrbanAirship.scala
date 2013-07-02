@@ -11,7 +11,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.net.HttpClient
 import com.keepit.common.time._
-import com.keepit.model.{UserNotification, User}
+import com.keepit.model.{UserNotificationCategories, UserNotification, User}
 
 import play.api.libs.json.Json
 
@@ -85,6 +85,23 @@ object DeviceType {
 
 // Add fields to this object and handle them properly for each platform
 case class PushNotification(id: ExternalId[UserNotification], unvisitedCount: Int, message: String)
+
+object PushNotification {
+  val MaxLength = 80
+  private implicit val messageDetailsFormat = Json.format[MessageDetails]
+  def fromUserNotification(notification: UserNotification, unvisitedCount: => Int): Option[PushNotification] = {
+    notification.category match {
+      case UserNotificationCategories.MESSAGE =>
+        val details = Json.fromJson[MessageDetails](notification.details.payload).get
+        val senderName = details.authors(0).firstName
+        val text = if (details.text.size > MaxLength) s"${details.text.take(MaxLength - 3)}..." else details.text
+        val message = s"$senderName: $text"
+        Some(PushNotification(notification.externalId, unvisitedCount, message))
+      case _ =>
+        None
+    }
+  }
+}
 
 object UrbanAirship {
   val NotificationSound = "notification.aiff"

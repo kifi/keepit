@@ -5,12 +5,9 @@ import org.specs2.mutable._
 import com.keepit.common.db.slick._
 import com.keepit.inject._
 import com.keepit.test._
-
-import play.api.Play.current
-import play.api.test._
 import play.api.test.Helpers._
 
-class URLPatternTest extends Specification with DbRepos {
+class URLPatternTest extends Specification with ApplicationInjector {
   "URLPattern" should {
     "save, load by id and pattern" in {
       running(new EmptyApplication()) {
