@@ -1143,7 +1143,7 @@ function startSession(callback, retryMs) {
     api.log("[startSession:fail] xhr.status:", xhr.status);
     if (!xhr.status || xhr.status >= 500) {  // server down or no network connection, so consider retrying
       if (retryMs) {
-        setTimeout(startSession.bind(null, callback, Math.min(10000, retryMs * 2)), retryMs);
+        setTimeout(startSession.bind(null, callback, Math.min(60000, retryMs * 1.5)), retryMs);
       }
     } else if (getStored("kifi_installation_id")) {
       openLogin();
