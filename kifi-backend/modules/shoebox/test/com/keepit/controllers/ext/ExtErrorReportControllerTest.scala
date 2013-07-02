@@ -48,14 +48,11 @@ class ExtErrorReportControllerTest extends Specification with ApplicationInjecto
         val requestJson = Json.obj("message" -> JsString("bad thing happened"))
         val result = inject[ExtErrorReportController].addErrorReport(fakeRequest(requestJson))
 
-        if (inject[ExtErrorReportController].enableExtensionErrorReporting) {
-          fakeHealthcheck.errorCount() === 1
-          status(result) must equalTo(OK)
-          val json = Json.parse(contentAsString(result)).asInstanceOf[JsObject]
-          val errorExtId = fakeHealthcheck.errors()(0).id
-          json \ "errorId" === JsString(errorExtId.id)
-        }
-        1 === 1
+        fakeHealthcheck.errorCount() === 1
+        status(result) must equalTo(OK)
+        val json = Json.parse(contentAsString(result)).asInstanceOf[JsObject]
+        val errorExtId = fakeHealthcheck.errors()(0).id
+        json \ "errorId" === JsString(errorExtId.id)
       }
     }
   }
