@@ -1,20 +1,39 @@
 package com.keepit.common.social
 
-import com.keepit.model._
-import play.api.libs.json._
-import com.keepit.common.db.Id
-import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
 import scala.concurrent.duration.Duration
 
-case class CommentWithBasicUser(user: BasicUser, comment: Comment, recipients: Seq[BasicUser])
+import org.joda.time.DateTime
+
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
+import com.keepit.common.db.{State, ExternalId, Id}
+import com.keepit.model._
+
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
+
+case class CommentWithBasicUser(
+  id: ExternalId[Comment],
+  createdAt: DateTime,
+  text: String,
+  user: BasicUser,
+  permissions: State[CommentPermission],
+  recipients: Seq[BasicUser]
+)
 
 object CommentWithBasicUser {
-  implicit val commentWithBasicUserFormat = Json.format[CommentWithBasicUser]
+  implicit val format = (
+    (__ \ 'id ).format(ExternalId.format[Comment]) and
+    (__ \ 'createdAt).format[DateTime] and
+    (__ \ 'text).format[String] and
+    (__ \ 'user).format[BasicUser] and
+    (__ \ 'permissions).format(State.format[CommentPermission]) and
+    (__ \ 'recipients).format[Seq[BasicUser]]
+  )(CommentWithBasicUser.apply, unlift(CommentWithBasicUser.unapply))
 }
 
 case class CommentWithBasicUserKey(commentId: Id[Comment]) extends Key[CommentWithBasicUser] {
   val namespace = "comment_with_basic_user_by_comment_id"
-  override val version = 3
+  override val version = 4
   def toKey(): String = commentId.id.toString
 }
 
