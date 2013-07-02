@@ -23,12 +23,13 @@ sealed trait InjectorProvider {
       def configure(): Unit = bind[Mode].toInstance(mode)
     }
     val modulesWithMode = modules :+ modeModule
-    mode match {
-      case Mode.Dev => Guice.createInjector(Stage.DEVELOPMENT, modulesWithMode: _*)
-      case Mode.Prod => Guice.createInjector(Stage.PRODUCTION, modulesWithMode: _*)
-      case Mode.Test => Guice.createInjector(Stage.DEVELOPMENT, modulesWithMode: _*)
+    val stage = mode match {
+      case Mode.Dev => Stage.DEVELOPMENT
+      case Mode.Prod => Stage.PRODUCTION
+      case Mode.Test => Stage.DEVELOPMENT
       case m => throw new IllegalStateException(s"Unknown mode $m")
     }
+    Guice.createInjector(stage, modulesWithMode: _*)
   }
 
   def withCustomInjector[T](overridingModules: Module*)(f: Injector => T) = {
