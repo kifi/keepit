@@ -72,9 +72,25 @@ object SendableNotification {
   }
 }
 
-class NotificationBroadcaster @Inject() (userChannel: UserChannel) extends Logging {
+class NotificationBroadcaster @Inject() (
+    userChannel: UserChannel,
+    urbanAirship: UrbanAirship,
+    userNotificationRepo: UserNotificationRepo,
+    messageRepo: CommentRepo,
+    db: Database
+  ) extends Logging {
   import com.keepit.serializer.SendableNotificationSerializer
+  implicit val messageDetailsFormat = Json.format[MessageDetails]
+
   def push(notify: UserNotification) {
+    val unvisitedCount = db.readOnly { implicit s => userNotificationRepo.getUnvisitedCount(notify.userId) }
+    notify.category match {
+      case UserNotificationCategories.MESSAGE =>
+        val details = Json.fromJson[MessageDetails](notify.details.payload).get
+        val message = s"${details.authors(0).firstName}: ${details.text}"
+        urbanAirship.notifyUser(notify.userId, PushNotification(notify.externalId, unvisitedCount, message))
+      case _ =>
+    }
     val sendable = SendableNotification.fromUserNotification(notify)
     log.info("User notification serialized: " + sendable)
     userChannel.push(notify.userId, Json.arr("notification", SendableNotificationSerializer.sendableNotificationSerializer.writes(sendable)))
