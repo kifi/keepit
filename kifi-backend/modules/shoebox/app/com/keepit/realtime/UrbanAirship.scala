@@ -87,7 +87,7 @@ object DeviceType {
 case class PushNotification(id: ExternalId[UserNotification], unvisitedCount: Int, message: String)
 
 object PushNotification {
-  val MaxLength = 128
+  val MaxLength = 80
   private implicit val messageDetailsFormat = Json.format[MessageDetails]
   def fromUserNotification(notification: UserNotification, unvisitedCount: => Int): Option[PushNotification] = {
     notification.category match {
