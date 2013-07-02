@@ -40,7 +40,7 @@ class DomainClassifierTest extends TestKit(ActorSystem()) with Specification wit
     "fetch if necessary" in {
       running(new EmptyApplication().withFakeMail().withFakePersistEvent()
           .withTestActorSystem(system)
-          .overrideWith(ProdFortyTwoModule() {
+          .overrideWith(new ProdFortyTwoModule() {
             override def configure() {
               bind[HttpClient].toInstance(new FakeHttpClient(Some({
                 case s if s.contains("yahoo.com") => "FR~Search engines"
