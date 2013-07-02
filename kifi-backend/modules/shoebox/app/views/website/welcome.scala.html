@@ -11,13 +11,14 @@
       <p>KiFi is still in stealth-mode and is open for<br>beta testers upon invitation only.</p>
     }
 
-    <div class="welcome_btn @{if (skipLetMeIn) "clicked" else ""}">
+    <div class="welcome_btn@if(skipLetMeIn){ clicked}">
       <div class="letmein">
-        @if(id.isDefined) {
-          <a href="#" class="big blue btn" id="letmein">@if(socialUser.isDefined) {It's me, @socialUser.get.fullName.} Let me in!</a>
-        } else {
-          <a href="#" class="big blue btn" id="letmein">Let me in!</a>
-        }
+        <a href="javascript:" class="big blue btn" id="letmein">
+          @if(id.isDefined && socialUser.isDefined) {
+            It's me, @socialUser.get.fullName.
+          }
+          Let me in!
+        </a>
       </div>
       <div class="networks">
       @for(network <- SocialNetworks.ALL.sortBy(network => !socialUser.exists(_.networkType == network))) {
@@ -39,5 +40,9 @@
 }
 
 <script>
-    $("#letmein").click(function () { $(".welcome_btn").addClass("clicked"); });
+$(function() {
+  $("#letmein").click(function() {
+    $(".welcome_btn").addClass("clicked");
+  });
+});
 </script>
