@@ -19,11 +19,17 @@ if (self.options) {
 
 function openSocket(socketId, url) {
   api.log("[worker:openSocket]", socketId, url);
-  sockets[socketId] = new ReconnectingWebSocket(url, function(e) {
-    self.port.emit("socket_message", socketId, e.data);
-  }, function() {
-    self.port.emit("socket_connect", socketId);
-  });
+  sockets[socketId] = new ReconnectingWebSocket({
+    url: url,
+    onConnect: function() {
+      self.port.emit("socket_connect", socketId);
+    },
+    onDisconnect: function(why) {
+      self.port.emit("socket_disconnect", socketId, why);
+    },
+    onMessage: function(e) {
+      self.port.emit("socket_message", socketId, e.data);
+    }});
 }
 
 function closeSocket(socketId) {
