@@ -14,10 +14,10 @@ class ExtErrorReportController @Inject() (
   healthcheck: HealthcheckPlugin)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
-  val enableExtensionErrorReporting = false
+  val feelingOverwhelmed = false
 
   def addErrorReport = JsonToJsonAction(true) (authenticatedAction = { request =>
-    if (enableExtensionErrorReporting) {
+    if (!feelingOverwhelmed) {
       val json = request.body
       val message = (json \ "message").as[String]
       val (inst, userId, exps) =
@@ -34,7 +34,7 @@ class ExtErrorReportController @Inject() (
       Ok(JsObject(Seq("errorId" -> JsString(errorReport.id.id))))
     } else Ok(Json.obj())
   }, unauthenticatedAction = { request =>
-    if (enableExtensionErrorReporting) {
+    if (!feelingOverwhelmed) {
       val json = request.body
       val message = (json \ "message").as[String]
       val errorReport = healthcheck.addError(HealthcheckError(error = None,
