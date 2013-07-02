@@ -1,8 +1,8 @@
 package com.keepit.common.actor
 
 import akka.actor.{Cancellable, Scheduler, ActorSystem}
-import com.google.inject.Provides
-import com.keepit.common.plugin.SchedulingEnabled
+import com.google.inject.{Singleton, Provides}
+import com.keepit.common.plugin.{SchedulingProperties, SchedulingEnabled}
 import play.api.Play
 import com.keepit.inject.AppScoped
 
@@ -27,6 +27,12 @@ case class TestActorSystemModule(customSystem: Option[ActorSystem] = None) exten
   @AppScoped
   def actorPluginProvider: ActorPlugin =
     new ActorPlugin(system)
+
+  @Singleton
+  @Provides
+  def schedulingProperties: SchedulingProperties = new SchedulingProperties() {
+    def allowScheduling = true
+  }
 }
 
 class FakeScheduler extends Scheduler {
