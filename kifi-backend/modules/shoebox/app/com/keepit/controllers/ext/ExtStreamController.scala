@@ -173,15 +173,11 @@ class ExtStreamController @Inject() (
             import scala.concurrent.duration._
             system.scheduler.schedule(30.seconds, 35.seconds) {
               if(Seconds.secondsBetween(socketLastUsed, clock.now).getSeconds > 35) {
-                socketHasCancelled.success(())
+                log.info(s"It seems like userId ${streamSession.userId}'s socket is stale.")
               }
             }
           }
 
-          socketHasCancelled.future.foreach { _ =>
-            endSession("Socket appears to be stale.")
-            socketAliveCancellable.cancel()
-          }
 
           def endSession(reason: String) = {
             socketAliveCancellable.cancel()
