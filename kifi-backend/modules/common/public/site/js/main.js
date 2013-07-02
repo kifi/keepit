@@ -837,18 +837,23 @@ $(function() {
 			$(this.parentNode).data("id"),
 			$main.find(".keep.selected").map(getDataId).get());
 	}).on("click", ".page-coll-add", function() {
-		$(".page-coll-new").addClass("editing");
-		$(".page-coll-input").prop("disabled", false).focus().select().trigger("input");
+		var $btn = $(this), $in = $(".page-coll-input").css("width", $btn.outerWidth());
+		$btn.hide();
+		$in.add(".page-coll-sizer").show();
+		$in.layout().css("width", "").prop("disabled", false).focus().select().trigger("input");
 	}).on("blur", ".page-coll-input", function(e) {
 		var input = this;
 		hideAddCollTimeout = setTimeout(hide, 50);
 		function hide() {
 			clearTimeout(hideAddCollTimeout), hideAddCollTimeout = null;
+			var $btn = $(".page-coll-add").css({display: "", visibility: "hidden", position: "absolute"}), width = $btn.outerWidth();
+			$btn.css({display: "none", visibility: "", position: ""});
+			var $in = $(input).val("").on("transitionend", function end() {
+				$in.off("transitionend", end).prop("disabled", true).add(".page-coll-sizer").hide().css("width", "");
+				$btn.show();
+			}).layout().css("width", width);
 			$collOpts.slideUp(120, function() {
 				$collOpts.empty();
-				input.value = "";
-				input.disabled = true;
-				$('.page-coll-new').removeClass("editing");
 			});
 		}
 	}).on("focus", ".page-coll-input", function(e) {
@@ -876,7 +881,7 @@ $(function() {
 				}
 				break;
 		}
-	}).on("input", ".page-coll-input", function() {
+	}).on("input", ".page-coll-input", function(e) {
 		var width = $(this.previousElementSibling).text(this.value).outerWidth();
 		$(this).css("width", Math.min(Math.max(100, width) + 34, $('.page-colls').outerWidth()));
 		var allColls = $.map(collections, identity), colls;
@@ -916,7 +921,11 @@ $(function() {
 		}
 		$collOpts.hide();
 		collOptsTmpl.render(colls);
-		$collOpts.slideDown(120);
+		if (e.isTrigger) {
+			$collOpts.slideDown(120);
+		} else {
+			$collOpts.show();
+		}
 		$('.page-coll-opt:first-child').addClass('current');
 	}).on("mousemove", ".page-coll-opt", function() {
 		if (this.className.indexOf("current") < 0) {
@@ -933,8 +942,7 @@ $(function() {
 		}
 		function withCollId(collId) {
 			if (collId) {
-				$in.val("");
-				$collOpts.empty();
+				$in.val("").trigger("input")	;
 				addKeepsToCollection(collId);
 			}
 		}
