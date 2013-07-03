@@ -80,7 +80,7 @@ noticesPane = function() {
           $markAll.show();
         }
       } else {
-        if (a.locator) {
+        if (a.locator || a.id) {
           markVisited(a.category, a.nUri, a.time, a.locator, a.id);
         } else {
           markAllVisited(a.id, a.time);

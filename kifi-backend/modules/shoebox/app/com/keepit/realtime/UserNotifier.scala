@@ -139,11 +139,13 @@ class UserNotifier @Inject() (
         isSticky = global.isSticky,
         markReadOnAction = global.markReadOnAction)
 
+      val globalDetailsJson = UserNotificationDetails(Json.toJson(globalDetails))
+
       users.map { userId =>
         val userNotification = userNotifyRepo.save(UserNotification(
           userId = userId,
           category = UserNotificationCategories.GLOBAL,
-          details = UserNotificationDetails(Json.toJson(globalDetails)),
+          details = globalDetailsJson,
           commentId = None,
           subsumedId = None,
           state = UserNotificationStates.DELIVERED))
