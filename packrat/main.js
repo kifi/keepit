@@ -515,7 +515,7 @@ api.port.on({
     }
   },
   set_global_read: function(o, _, tab) {
-    markNoticesVisited("global", undefined, o.noticeId, undefined);
+    markNoticesVisited("global", undefined, o.noticeId);
     tellTabsNoticeCountIfChanged();  // visible tabs
     socket.send(["set_global_read", o.noticeId]);
   },
@@ -685,7 +685,8 @@ function insertNewNotification(n) {
 function markNoticesVisited(category, nUri, id, timeStr, locator) {
   var time = timeStr ? new Date(timeStr) : null;
   notifications.forEach(function(n, i) {
-    if (n.details.page == nUri &&
+    n.details.id = n.details.id || n.id;
+    if ((!nUri || n.details.page == nUri) &&
         n.category == category &&
         (!locator || n.details.locator == locator) &&
         (n.details.id == id || new Date(n.details.createdAt) <= time) &&

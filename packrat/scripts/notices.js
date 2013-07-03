@@ -46,9 +46,11 @@ noticesPane = function() {
           if(this.dataset.locator) {
             api.port.emit("open_deep_link", {nUri: this.dataset.uri, locator: this.dataset.locator});
           } else if(this.dataset.category == "global") {
-            markVisited(this.dataset.category, this.dataset.uri, this.dataset.createdAt, this.dataset.locator, this.dataset.id);
-            api.port.emit("set_global_read", {noticeId: this.dataset.id, nUri: this.dataset.url, time: this.dataset.createdAt});
-            api.port.emit("open_deep_link", {nUri: this.dataset.uri});
+            markAllVisited(this.dataset.id);
+            api.port.emit("set_global_read", {noticeId: this.dataset.id});
+            if (this.dataset.uri) {
+              window.open(this.dataset.uri, "_blank")
+            }
           }
           return false;
         }).scroll(onScroll);
@@ -80,8 +82,8 @@ noticesPane = function() {
           $markAll.show();
         }
       } else {
-        if (a.locator || a.id) {
-          markVisited(a.category, a.nUri, a.time, a.locator, a.id);
+        if (a.locator) {
+          markVisited(a.category, a.nUri, a.time, a.locator);
         } else {
           markAllVisited(a.id, a.time);
         }
