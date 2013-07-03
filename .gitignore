@@ -90,3 +90,6 @@ shoebox/modules/common/target
 shoebox/project/target
 shoebox/target
 shoebox.sublime-workspace
+kifi-backend/modules/common/common.iml
+kifi-backend/modules/search/search.iml
+kifi-backend/modules/shoebox/shoebox.iml
