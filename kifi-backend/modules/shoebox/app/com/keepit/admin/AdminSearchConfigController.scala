@@ -35,9 +35,10 @@ class AdminSearchConfigController @Inject() (
     extends AdminController(actionAuthenticator) {
 
   def showUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
-    Async {
-      searchClient.showUserConfig(userId).map{ html => Ok(html) }
-    }
+    val searchConfigFuture = searchClient.showUserConfig(userId)
+    val user = db.readOnly{ implicit s => userRepo.get(userId) }
+    val searchConfig = Await.result(searchConfigFuture, 5 seconds)
+    Ok(views.html.admin.searchConfig(user, searchConfig.iterator.toSeq.sortBy(_._1)))
   }
 
   def setUserConfig(userId: Id[User]) = AdminHtmlAction { implicit request =>
