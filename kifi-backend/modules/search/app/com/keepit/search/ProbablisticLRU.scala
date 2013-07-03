@@ -206,13 +206,13 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEv
     if ((ins % syncEvery) == 0) sync
   }
 
-  def get(key: Long) = {
-    val (p, h) = getValueHashes(key)
+  def get(key: Long, useSlaveAsPrimary: Boolean) = {
+    val (p, h) = getValueHashes(key, useSlaveAsPrimary)
     new Likeliness(key, p, h, numHashFuncs.toFloat)
   }
 
-  def get(key: Long, values: Seq[Long]): Map[Long, Int] = {
-    val likeliness = get(key)
+  def get(key: Long, values: Seq[Long], useSlaveAsPrimary: Boolean = false): Map[Long, Int] = {
+    val likeliness = get(key, useSlaveAsPrimary)
     values.foldLeft(Map.empty[Long, Int]){ (m, value) =>
       val c = likeliness.count(value)
       if (c > 0)  m + (value -> c) else m
@@ -262,9 +262,10 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEv
 
   }
 
-  protected def getValueHashes(key: Long): (Array[Int], Array[Int]) = {
-    val bufferChunk = masterBuffer.getChunk(key)
-    val tableSize = masterBuffer.chunkSize
+  protected def getValueHashes(key: Long, useSlaveAsPrimary: Boolean = false): (Array[Int], Array[Int]) = {
+    val buffer = if (useSlaveAsPrimary) slaveBuffer.getOrElse(masterBuffer) else masterBuffer
+    val bufferChunk = buffer.getChunk(key)
+    val tableSize = buffer.chunkSize
     var p = new Array[Int](numHashFuncs)
     var h = new Array[Int](numHashFuncs)
     var i = 0
@@ -274,6 +275,7 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEv
       i += 1
     }
     (p, h)
+
   }
 
   private[this] def foreachPosition(key: Long, tableSize: Int)(f: Int => Unit) {
