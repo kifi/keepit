@@ -4,7 +4,7 @@ import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import org.joda.time.DateTime
-import com.keepit.common.db.{State, Id}
+import com.keepit.common.db.{ExternalId, State, Id}
 import com.keepit.common.time._
 import com.keepit.common.logging.Logging
 import scala.collection.mutable
@@ -23,7 +23,8 @@ trait UserNotificationRepo extends Repo[UserNotification] with ExternalIdColumnF
   def getUnvisitedCount(userId: Id[User])(implicit session: RSession): Int
   def getLastReadTime(userId: Id[User])(implicit session: RSession): DateTime
   def setLastReadTime(userId: Id[User], time: DateTime)(implicit session: RWSession): DateTime
-  def markVisited(userId: Id[User], commentIds: Traversable[Id[Comment]], excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED, UserNotificationStates.VISITED))(implicit session: RWSession): Int
+  def markVisited(userId: Id[User], noticeExternalId: ExternalId[UserNotification], excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED, UserNotificationStates.VISITED))(implicit session: RWSession): Int
+  def markCommentVisited(userId: Id[User], commentIds: Traversable[Id[Comment]], excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED, UserNotificationStates.VISITED))(implicit session: RWSession): Int
 }
 
 @Singleton
@@ -107,7 +108,12 @@ class UserNotificationRepoImpl @Inject() (
   def getLastReadTime(userId: Id[User])(implicit session: RSession): DateTime =
     userValueRepo.getValue(userId, "notificationLastRead").map(parseStandardTime).getOrElse(START_OF_TIME)
 
-  def markVisited(userId: Id[User], commentIds: Traversable[Id[Comment]], excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED, UserNotificationStates.VISITED))(implicit session: RWSession): Int =
+  def markVisited(userId: Id[User], noticeExternalId: ExternalId[UserNotification], excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED, UserNotificationStates.VISITED))(implicit session: RWSession): Int =
+    (for(n <- table if n.userId === userId && !n.state.inSet(excludeStates) && n.externalId === noticeExternalId) yield n.state ~ n.updatedAt)
+      .update((UserNotificationStates.VISITED, currentDateTime))
+
+  def markCommentVisited(userId: Id[User], commentIds: Traversable[Id[Comment]], excludeStates: Set[State[UserNotification]] = Set(UserNotificationStates.INACTIVE, UserNotificationStates.SUBSUMED, UserNotificationStates.VISITED))(implicit session: RWSession): Int =
     (for(n <- table if n.userId === userId && !n.state.inSet(excludeStates) && n.commentId.inSet(commentIds)) yield n.state ~ n.updatedAt)
       .update((UserNotificationStates.VISITED, currentDateTime))
+
 }

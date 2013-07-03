@@ -4,7 +4,7 @@ import org.joda.time.DateTime
 import com.keepit.common.db._
 import com.keepit.common.time._
 
-import play.api.libs.json.JsValue
+import play.api.libs.json.{Json, JsValue}
 
 case class UserNotificationDetails(payload: JsValue) extends AnyVal
 
@@ -43,4 +43,13 @@ object UserNotificationCategories {
   val GLOBAL = UserNotificationCategory("global")
 }
 
-
+case class GlobalNotification(
+  sendToSpecificUsers: Option[Seq[Id[User]]], // when None, send to all users
+  title: String,
+  bodyHtml: String,
+  linkText: String,
+  url: Option[String],
+  image: String,
+  isSticky: Boolean,
+  markReadOnAction: Boolean
+)
