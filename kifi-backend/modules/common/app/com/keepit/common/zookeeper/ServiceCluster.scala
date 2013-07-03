@@ -25,6 +25,9 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
 
   val servicePath = Path(s"/fortytwo/services/${serviceType.name}")
   val serviceNodeMaster = Node(s"${servicePath.name}/${serviceType.name}_")
+  private var myNode : Option[Node] = None
+
+  def getMyNode() : Option[Node] = myNode
 
   def size: Int = instances.size
   def registered(node: Node): Boolean = instances.contains(ensureFullPathNode(node))
@@ -44,6 +47,7 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
 
   def register(node: Node, instanceInfo: AmazonInstanceInfo): ServiceCluster = {
     instances(node) = ServiceInstance(serviceType, node, instanceInfo)
+    myNode = Some(node)
     resetRoutingList()
     this
   }
