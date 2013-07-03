@@ -12,3 +12,4 @@ CREATE TABLE topic_seq_num_info (
 insert into evolutions (name, description) values('68.sql', 'adding topic_seq_num_info table');
 
 # --- !Downs
+
