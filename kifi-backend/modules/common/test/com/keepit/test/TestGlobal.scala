@@ -8,6 +8,7 @@ import play.api.Application
 import play.api.Mode.Test
 import play.utils.Threads
 
+@deprecated
 case class TestGlobal(val modules: Module*) extends FortyTwoGlobal(Test) {
 
   override val initialized = true
@@ -20,6 +21,7 @@ case class TestGlobal(val modules: Module*) extends FortyTwoGlobal(Test) {
   }
 }
 
+@deprecated
 case class TestRemoteGlobal(val modules: Module*) extends FortyTwoGlobal(Test) {
   override val initialized = true
 }

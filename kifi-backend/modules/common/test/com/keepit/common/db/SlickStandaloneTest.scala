@@ -1,24 +1,15 @@
 package com.keepit.common.db
 
 import com.keepit.common.time._
-import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.test._
 import scala.slick.lifted._
-import scala.slick.driver.H2Driver.Implicit._
 import scala.slick.driver._
-import play.api.Play.current
-import play.api.libs.json.JsValue
-import play.api.test.Helpers._
 import org.specs2.mutable.Specification
-import scala.slick.lifted.Query
 import com.keepit.common.db.slick._
 import org.joda.time.DateTime
-import com.google.inject.{Stage, Guice, Module, Injector}
-import scala.slick.session.{Database => SlickDatabase}
-import com.google.inject.util.Modules
 
-class SlickStandaloneTest extends Specification with TestDBRunner {
+class SlickStandaloneTest extends Specification with SimpleTestDBRunner {
 
   "Slick" should {
 

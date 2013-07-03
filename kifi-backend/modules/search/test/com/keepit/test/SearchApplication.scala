@@ -4,6 +4,7 @@ import java.io.File
 import com.keepit.dev.SearchDevGlobal
 import com.keepit.search.index.FakePhraseIndexerModule
 
+@deprecated
 class SearchApplication() extends TestApplication(new TestRemoteGlobal(SearchDevGlobal.modules: _*), useDb = false, path = new File("./modules/search/")) {
   def withFakePhraseIndexer() = overrideWith(FakePhraseIndexerModule())
 

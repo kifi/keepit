@@ -1,29 +1,43 @@
 package com.keepit.test
 
-import scala.slick.session.ResultSetConcurrency
-import com.google.inject.{Module, Injector}
-import com.keepit.common.db.{TestDbInfo, DbInfo}
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.db.slick._
-import java.sql.{Driver, DriverManager}
+import play.api.{Application, Mode}
 import com.keepit.inject.EmptyInjector
-import play.api.Mode
-import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.keepit.common.db.{TestDbInfo, DbInfo}
+import java.sql.{Driver, DriverManager}
+import com.google.inject.{Injector, Module}
+import com.keepit.common.db.slick._
+import com.keepit.common.db.slick.DBSession.RWSession
+import scala.slick.session.ResultSetConcurrency
+import java.io.File
+import play.utils.Threads
+import com.keepit.common.time.FakeClockModule
+import scala.Some
+import com.keepit.common.db.TestSlickModule
+import com.keepit.common.healthcheck.FakeHealthcheckModule
 
-@deprecated
-trait TestInjector extends EmptyInjector {
-  val mode = Mode.Test
-  val modules = Seq(TestModule(), StandaloneTestActorSystemModule())
+class TestGlobalWithDB(defaultModules: Seq[Module], overridingModules: Seq[Module])
+  extends SimpleTestGlobal(defaultModules, overridingModules) {
+
+  override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
+    injector.instance[Database].readWrite { implicit session =>
+      val conn = session.conn
+      conn.createStatement().execute("DROP ALL OBJECTS")
+    }
+  }
 }
 
-@deprecated
-trait TestDBRunner extends TestInjector with DbRepos {
+class SimpleShoeboxApplication(path: File = new File("./modules/shoebox/"))(overridingModules: Module*)
+  extends SimpleTestApplication(path, new TestGlobalWithDB(Seq(FakeClockModule(), FakeHealthcheckModule(), TestSlickModule()), overridingModules)) with DbRepos
+
+trait SimpleTestDBRunner extends EmptyInjector with DbRepos {
+  val mode = Mode.Test
+  val modules = Seq(FakeClockModule(), FakeHealthcheckModule(), TestSlickModule())
 
   def dbInfo: DbInfo = TestDbInfo.dbInfo
   DriverManager.registerDriver(new play.utils.ProxyDriver(Class.forName("org.h2.Driver").newInstance.asInstanceOf[Driver]))
 
-  def withDB[T](additionalModules: Module*)(f: Injector => T) = {
-    withCustomInjector(additionalModules: _*) { implicit injector =>
+  def withDB[T](overridingModules: Module*)(f: Injector => T) = {
+    withCustomInjector(overridingModules:_*) { implicit injector =>
       val h2 = inject[DataBaseComponent].asInstanceOf[H2]
       h2.initListener = Some(new TableInitListener {
         def init(table: TableWithDDL) = executeTableDDL(h2, table)
@@ -79,11 +93,11 @@ trait TestDBRunner extends TestInjector with DbRepos {
       try {
         val ddl = table.ddl
         for (s <- ddl.createStatements) {
-          val statment = s.replace("create table ", "create table IF NOT EXISTS ")
+          val statement = s.replace("create table ", "create table IF NOT EXISTS ")
           try {
-            session.withPreparedStatement(statment)(_.execute)
+            session.withPreparedStatement(statement)(_.execute)
           } catch {
-            case t: Throwable => throw new Exception(s"fail initiating table ${table.tableName}, statement: [$statment]", t)
+            case t: Throwable => throw new Exception(s"fail initiating table ${table.tableName}, statement: [$statement]", t)
           }
         }
       } catch {
@@ -91,5 +105,4 @@ trait TestDBRunner extends TestInjector with DbRepos {
       }
     }
   }
-
 }

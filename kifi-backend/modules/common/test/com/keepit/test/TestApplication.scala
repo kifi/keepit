@@ -28,6 +28,8 @@ import com.keepit.classify.FakeDomainTagImporterModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
 
+
+@deprecated
 class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
 
   private def createTestGlobal(baseGlobal: FortyTwoGlobal, modules: Module*) = if (useDb)
@@ -56,8 +58,10 @@ class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override v
 
 }
 
+@deprecated
 class EmptyApplication(path: File = new File("./modules/common/")) extends TestApplication(new TestGlobal(TestModule()), path = path)
 
+@deprecated
 case class TestModule(dbInfo: DbInfo = TestDbInfo.dbInfo) extends ScalaModule {
   def configure(): Unit = {
     install(TestSlickModule(dbInfo))
