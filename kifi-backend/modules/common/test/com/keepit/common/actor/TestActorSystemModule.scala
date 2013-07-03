@@ -34,10 +34,6 @@ case class StandaloneTestActorSystemModule(system: ActorSystem = ActorSystem("te
   @Provides
   def globalSchedulingEnabled: SchedulingEnabled = SchedulingEnabled.Never
 
-  @Provides @Singleton
-  def schedulingProperties: SchedulingProperties = new SchedulingProperties() {
-    def allowScheduling = true
-  }
 }
 
 class FakeScheduler extends Scheduler {
