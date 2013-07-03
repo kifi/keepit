@@ -1,7 +1,6 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.{Inject, Singleton}
-import com.keepit.classify.{DomainClassifier, DomainRepo}
 import com.keepit.common.controller.{BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
@@ -9,8 +8,25 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.serializer.BookmarkSerializer
+
 import play.api.libs.json._
+
+private case class SendableBookmark(
+  id: ExternalId[Bookmark],
+  title: Option[String],
+  url: String,
+  isPrivate: Boolean,
+  state: State[Bookmark]
+)
+
+private object SendableBookmark {
+  private implicit val externalIdFormat = ExternalId.format[Bookmark]
+  private implicit val stateFormat = State.format[Bookmark]
+  implicit val writesSendableBookmark = Json.writes[SendableBookmark]
+
+  def fromBookmark(b: Bookmark): SendableBookmark =
+    SendableBookmark(b.externalId, b.title, b.url, b.isPrivate, b.state)
+}
 
 @Singleton
 class ExtBookmarksController @Inject() (
@@ -35,7 +51,7 @@ class ExtBookmarksController @Inject() (
     }
     searchClient.updateURIGraph()
     bookmark match {
-      case Some(bookmark) => Ok(BookmarkSerializer.bookmarkSerializer writes bookmark)
+      case Some(bookmark) => Ok(Json.toJson(SendableBookmark fromBookmark bookmark))
       case None => NotFound
     }
   }
@@ -52,7 +68,7 @@ class ExtBookmarksController @Inject() (
     } match {
       case Some(bookmark) =>
         searchClient.updateURIGraph()
-        Ok(BookmarkSerializer.bookmarkSerializer writes bookmark)
+        Ok(Json.toJson(SendableBookmark fromBookmark bookmark))
       case None => NotFound
     }
   }
