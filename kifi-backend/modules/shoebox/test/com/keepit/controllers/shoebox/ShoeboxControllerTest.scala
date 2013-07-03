@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import play.api.test.Helpers._
 import com.keepit.common.db.slick._
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.test.{DbRepos, EmptyApplication}
+import com.keepit.test.{InjectedDbRepos, EmptyApplication}
 import com.keepit.inject._
 import com.keepit.model._
 import play.api.libs.json.{Json, JsNumber, JsArray}
@@ -13,7 +13,7 @@ import com.keepit.model.User
 import play.api.test.FakeRequest
 import com.keepit.search.Lang
 
-class ShoeboxControllerTest extends Specification with ApplicationInjector with DbRepos {
+class ShoeboxControllerTest extends Specification with ApplicationInjector with InjectedDbRepos {
 
   def setupSomeUsers() = {
     inject[Database].readWrite {implicit s =>

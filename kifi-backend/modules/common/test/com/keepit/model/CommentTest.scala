@@ -5,10 +5,10 @@ import org.specs2.mutable._
 import com.keepit.common.db.LargeString._
 import com.keepit.common.db.slick._
 import com.keepit.inject._
-import com.keepit.test.{DbRepos, EmptyApplication}
+import com.keepit.test.{InjectedDbRepos, EmptyApplication}
 import play.api.test.Helpers._
 
-class CommentTest extends Specification with ApplicationInjector with DbRepos {
+class CommentTest extends Specification with ApplicationInjector with InjectedDbRepos {
 
   def setup() = {
     inject[Database].readWrite {implicit s =>

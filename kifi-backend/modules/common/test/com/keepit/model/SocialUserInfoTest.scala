@@ -14,7 +14,7 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import securesocial.core._
 
-class SocialUserInfoTest extends Specification with TestDBRunner with TestAkkaSystem {
+class SocialUserInfoTest extends Specification with DeprecatedTestDBRunner with TestAkkaSystem {
 
   def setup()(implicit injector: Injector): User = {
     db.readWrite { implicit s =>

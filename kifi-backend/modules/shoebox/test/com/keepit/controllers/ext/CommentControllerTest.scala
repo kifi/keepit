@@ -8,7 +8,7 @@ import com.keepit.common.social.SocialNetworks.FACEBOOK
 import com.keepit.common.time._
 import com.keepit.inject._
 import com.keepit.model._
-import com.keepit.test.DbRepos
+import com.keepit.test.InjectedDbRepos
 import com.keepit.test.EmptyApplication
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
@@ -20,7 +20,7 @@ import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers.running
 
-class CommentControllerTest extends TestKit(ActorSystem()) with Specification with ApplicationInjector with DbRepos {
+class CommentControllerTest extends TestKit(ActorSystem()) with Specification with ApplicationInjector with InjectedDbRepos {
 
   args(skipAll = true) // todo(Andrew/Greg/anyone) Fix this!!!!!
 

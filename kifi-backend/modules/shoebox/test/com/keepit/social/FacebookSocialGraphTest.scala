@@ -19,7 +19,7 @@ import securesocial.core.OAuth2Info
 import securesocial.core.SocialUser
 import securesocial.core.UserId
 
-class FacebookSocialGraphTest extends Specification with ApplicationInjector with DbRepos {
+class FacebookSocialGraphTest extends Specification with ApplicationInjector with InjectedDbRepos {
 
   "FacebookSocialGraph" should {
 

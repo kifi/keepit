@@ -9,7 +9,7 @@ import play.api.Play.current
 import com.keepit.common.db.SequenceNumber
 
 
-class TopicSeqNumInfoTest extends Specification with TestDBRunner{
+class TopicSeqNumInfoTest extends Specification with DeprecatedTestDBRunner {
   "TopicSeqNumInfoRepo" should {
     "work" in {
       withDB() { implicit injector =>

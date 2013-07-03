@@ -1,13 +1,13 @@
 package com.keepit.model
 
 import org.specs2.mutable._
-import com.keepit.test.{DbRepos, EmptyApplication}
+import com.keepit.test.{InjectedDbRepos, EmptyApplication}
 
 import com.keepit.inject._
 import com.keepit.common.db.LargeString._
 import play.api.test.Helpers._
 
-class CommentReadTest extends Specification with ApplicationInjector with DbRepos {
+class CommentReadTest extends Specification with ApplicationInjector with InjectedDbRepos {
 
   def setup() = {
     db.readWrite {implicit s =>

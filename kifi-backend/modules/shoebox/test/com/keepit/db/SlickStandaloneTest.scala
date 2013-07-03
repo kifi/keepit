@@ -10,7 +10,7 @@ import com.keepit.common.db.slick._
 import org.joda.time.DateTime
 import com.keepit.common.db.{Model, Id}
 
-class SlickStandaloneTest extends Specification with SimpleTestDBRunner {
+class SlickStandaloneTest extends Specification with TestDBRunner {
 
   "Slick" should {
 

@@ -8,12 +8,12 @@ import com.keepit.FortyTwoGlobal
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.time._
 import com.keepit.common.time.zones.PT
-import com.keepit.test.{EmptyApplication, TestDBRunner}
+import com.keepit.test.{DeprecatedTestDBRunner, EmptyApplication}
 
 import play.api.Play.current
 import play.api.test.Helpers._
 
-class CollectionTest extends Specification with TestDBRunner {
+class CollectionTest extends Specification with DeprecatedTestDBRunner {
 
   def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, PT)

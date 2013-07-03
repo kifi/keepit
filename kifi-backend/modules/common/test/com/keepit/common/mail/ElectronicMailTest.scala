@@ -13,7 +13,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 
 
-class ElectronicMailTest extends Specification with TestDBRunner {
+class ElectronicMailTest extends Specification with DeprecatedTestDBRunner {
 
   "ElectronicMail" should {
     "user filters" in {

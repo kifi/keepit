@@ -17,7 +17,7 @@ import play.api.test._
 import play.api.test.Helpers._
 import com.google.inject.Injector
 
-class BookmarkTest extends Specification with TestDBRunner {
+class BookmarkTest extends Specification with DeprecatedTestDBRunner {
 
   def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, PT)

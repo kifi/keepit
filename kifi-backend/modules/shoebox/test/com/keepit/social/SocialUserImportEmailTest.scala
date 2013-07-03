@@ -11,7 +11,7 @@ import com.keepit.test._
 import play.api.libs.json.Json
 import play.api.test.Helpers._
 
-class SocialUserImportEmailTest extends Specification with ApplicationInjector with DbRepos {
+class SocialUserImportEmailTest extends Specification with ApplicationInjector with InjectedDbRepos {
 
   "SocialUserImportEmail" should {
     "import email" in {

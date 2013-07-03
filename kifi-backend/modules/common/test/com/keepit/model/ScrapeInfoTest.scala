@@ -2,13 +2,13 @@ package com.keepit.model
 
 import com.keepit.common.db.slick._
 import com.keepit.inject._
-import com.keepit.test.{DbRepos, EmptyApplication}
+import com.keepit.test.{InjectedDbRepos, EmptyApplication}
 import org.specs2.mutable._
 import com.keepit.common.time._
 import play.api.test.Helpers._
 
 
-class ScrapeInfoTest extends Specification with ApplicationInjector with DbRepos {
+class ScrapeInfoTest extends Specification with ApplicationInjector with InjectedDbRepos {
 
   def setup() = {
     inject[Database].readWrite {implicit s =>

@@ -15,7 +15,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import securesocial.core._
 
-class AdminAuthControllerTest extends Specification with ApplicationInjector with DbRepos {
+class AdminAuthControllerTest extends Specification with ApplicationInjector with InjectedDbRepos {
 
   args(skipAll = true) // todo(Andrew/Greg/anyone) Fix this!!!!!
 

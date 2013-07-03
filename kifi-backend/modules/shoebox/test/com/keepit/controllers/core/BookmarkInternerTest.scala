@@ -8,7 +8,7 @@ import com.keepit.model._
 import play.api.libs.json.Json
 import com.keepit.common.healthcheck._
 
-class BookmarkInternerTest extends Specification with ApplicationInjector with DbRepos {
+class BookmarkInternerTest extends Specification with ApplicationInjector with InjectedDbRepos {
 
   "BookmarkInterner" should {
     "persist bookmark" in {

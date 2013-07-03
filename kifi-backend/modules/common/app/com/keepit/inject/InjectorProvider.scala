@@ -13,7 +13,7 @@ import net.codingwell.scalaguice.ScalaModule
 sealed trait InjectorProvider {
 
   def mode: Mode
-  def modules: Seq[Module]
+  def module: Module
   implicit def injector: Injector
 
   implicit def richInjector(injector: Injector): ScalaInjector = new ScalaInjector(injector)
@@ -33,7 +33,7 @@ sealed trait InjectorProvider {
   }
 
   def withCustomInjector[T](overridingModules: Module*)(f: Injector => T) = {
-    val customModules = Modules.`override`(modules: _*).`with`(overridingModules:_*)
+    val customModules = Modules.`override`(module).`with`(overridingModules:_*)
     val injector = createInjector(customModules)
 
     f(injector)
@@ -64,7 +64,7 @@ trait EmptyInjector extends InjectorProvider {
 
   implicit lazy val injector: Injector = {
     if (creatingInjector.getAndSet(true)) throw new Exception("Injector is being created!")
-    val injector = createInjector(modules:_*)
+    val injector = createInjector(module)
     _initialized.set(true)
     injector
   }
@@ -75,7 +75,7 @@ trait ApplicationInjector extends InjectorProvider {
   import play.api.Play.current
 
   private def fortyTwoGlobal = current.global.asInstanceOf[FortyTwoGlobal]
-  def modules = fortyTwoGlobal.modules
+  def module = fortyTwoGlobal.module
   def mode = fortyTwoGlobal.mode
   implicit def injector = fortyTwoGlobal.injector
 }

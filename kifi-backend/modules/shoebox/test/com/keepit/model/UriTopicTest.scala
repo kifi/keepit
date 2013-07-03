@@ -12,7 +12,7 @@ import com.keepit.test._
 import com.keepit.inject._
 import com.keepit.learning.topicmodel.TopicModelGlobal
 
-class UriTopicTest extends Specification with TestDBRunner{
+class UriTopicTest extends Specification with DeprecatedTestDBRunner {
   def genTopic(numTopics: Int, uriIdx: Int, default: Double = 0.1, nonDefault: Double = 0.8) = {
     val topic = (new Array[Double](numTopics)).map(_ + default)
     topic(uriIdx) = nonDefault

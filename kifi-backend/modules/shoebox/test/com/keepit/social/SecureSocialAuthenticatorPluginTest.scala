@@ -7,7 +7,7 @@ import com.keepit.common.db.{TestSlickSessionProvider, ExternalId}
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.social.{SocialNetworks, SocialId}
 import com.keepit.model.{User, SocialUserInfo, UserSession}
-import com.keepit.test.{DbRepos, EmptyApplication}
+import com.keepit.test.{InjectedDbRepos, EmptyApplication}
 
 import play.api.Play.current
 import play.api.test.Helpers._
@@ -15,7 +15,7 @@ import securesocial.core.{Authenticator, UserId}
 import com.keepit.inject.ApplicationInjector
 import com.keepit.common.time.FakeClock
 
-class SecureSocialAuthenticatorPluginTest extends Specification with ApplicationInjector with DbRepos {
+class SecureSocialAuthenticatorPluginTest extends Specification with ApplicationInjector with InjectedDbRepos {
   def healthcheckPlugin = inject[HealthcheckPlugin]
   "SecureSocialAuthenticatorPlugin" should {
     "find existing user sessions" in {

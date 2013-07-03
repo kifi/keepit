@@ -30,12 +30,12 @@ import com.keepit.common.mail.FakeMailModule
 
 
 @deprecated("Use SimpleTestApplication instead", "July 3rd 2013")
-class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
+class DeprecatedTestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
 
   private def createTestGlobal(baseGlobal: FortyTwoGlobal, modules: Module*) = if (useDb)
-    new TestGlobal(Modules.`override`(baseGlobal.modules: _*).`with`(modules: _*))
+    new DeprecatedTestGlobal(Modules.`override`(baseGlobal.module).`with`(modules: _*))
   else
-    new TestRemoteGlobal(Modules.`override`(baseGlobal.modules: _*).`with`(modules: _*))
+    new DeprecatedTestRemoteGlobal(Modules.`override`(baseGlobal.module).`with`(modules: _*))
 
   override lazy val global = createTestGlobal(_global, FakeClockModule(), TestActorSystemModule()) // Play 2.1 makes global a lazy val, which can't be directly overridden.
 
@@ -54,15 +54,15 @@ class TestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override v
   def withShoeboxServiceModule() = overrideWith(FakeShoeboxServiceModule())
   def withSearchConfigModule() = overrideWith(SearchConfigModule())
 
-  def overrideWith(modules: Module*): TestApplication = new TestApplication(createTestGlobal(global, modules: _*), useDb, path)
+  def overrideWith(modules: Module*): DeprecatedTestApplication = new DeprecatedTestApplication(createTestGlobal(global, modules: _*), useDb, path)
 
 }
 
 @deprecated("Use RemoteTestApplication instead", "July 3rd 2013")
-class EmptyApplication(path: File = new File("./modules/common/")) extends TestApplication(new TestGlobal(TestModule()), path = path)
+class EmptyApplication(path: File = new File("./modules/common/")) extends DeprecatedTestApplication(new DeprecatedTestGlobal(DeprecatedTestModule()), path = path)
 
 @deprecated("Use smaller functional modules on demand instead", "July 3rd 2013")
-case class TestModule(dbInfo: DbInfo = TestDbInfo.dbInfo) extends ScalaModule {
+case class DeprecatedTestModule(dbInfo: DbInfo = TestDbInfo.dbInfo) extends ScalaModule {
   def configure(): Unit = {
     install(TestSlickModule(dbInfo))
     install(FakeHealthcheckModule())

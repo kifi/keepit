@@ -8,7 +8,7 @@ import org.specs2.mutable._
 import play.api.test.Helpers._
 import com.keepit.serializer.ArticleSearchResultSerializer
 
-class ArticleSearchResultTest extends Specification with ApplicationInjector with DbRepos {
+class ArticleSearchResultTest extends Specification with ApplicationInjector with InjectedDbRepos {
 
   "ArticleSearchResult" should {
     "be serialized" in {

@@ -7,7 +7,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.test._
 
-class NormalizedURITest extends Specification with TestDBRunner {
+class NormalizedURITest extends Specification with DeprecatedTestDBRunner {
 
   def setup()(implicit injector: Injector) = {
     db.readWrite {implicit s =>

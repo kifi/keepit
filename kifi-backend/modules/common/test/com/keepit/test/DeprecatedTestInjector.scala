@@ -9,15 +9,16 @@ import java.sql.{Driver, DriverManager}
 import com.keepit.inject.EmptyInjector
 import play.api.Mode
 import com.keepit.common.actor.StandaloneTestActorSystemModule
+import com.google.inject.util.Modules
 
 @deprecated("Use SimpleTestInjector instead", "July 3rd 2013")
-trait TestInjector extends EmptyInjector {
+trait DeprecatedTestInjector extends EmptyInjector {
   val mode = Mode.Test
-  val modules = Seq(TestModule(), StandaloneTestActorSystemModule())
+  val module = Modules.combine(DeprecatedTestModule(), StandaloneTestActorSystemModule())
 }
 
 @deprecated("Use SimpleTestDbRunner instead", "July 3rd 2013")
-trait TestDBRunner extends TestInjector with DbRepos {
+trait DeprecatedTestDBRunner extends DeprecatedTestInjector with InjectedDbRepos {
 
   def dbInfo: DbInfo = TestDbInfo.dbInfo
   DriverManager.registerDriver(new play.utils.ProxyDriver(Class.forName("org.h2.Driver").newInstance.asInstanceOf[Driver]))

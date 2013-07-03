@@ -8,7 +8,7 @@ import com.keepit.test._
 import play.api.test.Helpers._
 import com.keepit.inject.ApplicationInjector
 
-class KifiInstallationTest extends Specification with ApplicationInjector with DbRepos {
+class KifiInstallationTest extends Specification with ApplicationInjector with InjectedDbRepos {
 
   "KifiInstallation" should {
     "parse version strings and order correctly" in {

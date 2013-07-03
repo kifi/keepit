@@ -18,7 +18,7 @@ import com.keepit.common.cache._
 
 
 
-class UserTopicTest extends Specification with TestDBRunner {
+class UserTopicTest extends Specification with DeprecatedTestDBRunner {
 
   def genTopic(numTopics: Int, userIdx: Int, default: Int = 1, personal: Int = 10) = {
       val topic = (new Array[Int](numTopics)).map(_ + default)

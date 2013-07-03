@@ -7,7 +7,7 @@ import com.keepit.inject._
 import com.keepit.test._
 import play.api.test.Helpers._
 
-class FollowTest extends Specification with ApplicationInjector with DbRepos {
+class FollowTest extends Specification with ApplicationInjector with InjectedDbRepos {
 
   "Follow" should {
 

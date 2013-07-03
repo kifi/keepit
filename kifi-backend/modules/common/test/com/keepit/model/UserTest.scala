@@ -8,7 +8,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
 import com.keepit.test._
 
-class UserRepoTest extends Specification with TestDBRunner {
+class UserRepoTest extends Specification with DeprecatedTestDBRunner {
 
   "UserRepo" should {
     "Use the cache" in {
