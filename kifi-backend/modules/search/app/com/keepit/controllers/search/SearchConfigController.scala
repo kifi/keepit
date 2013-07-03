@@ -23,8 +23,7 @@ class SearchConfigController @Inject() (
   }
 
   def showUserConfig(userId: Id[User]) = Action { implicit request =>
-    val configs = configManager.getUserConfig(userId).iterator.toSeq.sortBy(_._1)
-    Ok//Ok(html.admin.searchConfig(user, configs))
+    Ok(Json.toJson(configManager.getUserConfig(userId).params))
   }
 
   def setUserConfig(userId: Id[User]) = Action { implicit request =>
