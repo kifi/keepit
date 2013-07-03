@@ -1,35 +1,18 @@
 package com.keepit.controllers.ext
 
-import java.sql.Connection
-import scala.Option.option2Iterable
-import scala.math.BigDecimal.long2bigDecimal
-import play.api.Play.current
-import com.google.inject.{Inject, ImplementedBy, Singleton}
+import scala.concurrent.future
+
+import com.google.inject.{Inject, Singleton}
+import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.common.mail.{ElectronicMail, EmailAddresses}
 import com.keepit.common.social._
+import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
-import play.api.http.ContentTypes
-import play.api.libs.concurrent.Akka
-import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
-import play.api.mvc.Action
-import play.api.mvc.Controller
-import securesocial.core.SecureSocial
-import securesocial.core.java.SecureSocial.SecuredAction
-import com.keepit.common.social.ThreadInfo
-import com.keepit.common.healthcheck.BabysitterTimeout
+import com.keepit.realtime.UserNotifier
+
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import com.keepit.common.time._
-import org.joda.time.DateTime
-import views.html
-import com.keepit.realtime.UserNotifier
-import scala.concurrent.future
-import scala.concurrent.ExecutionContext.Implicits.global
 
 @Singleton
 class ExtCommentController @Inject() (
@@ -288,7 +271,7 @@ class ExtCommentController @Inject() (
     comment.permissions match {
       case CommentPermissions.MESSAGE =>
         val message = db.readOnly(implicit s => commentWithBasicUserRepo.load(comment))
-        Ok(Json.obj("message" -> commentWithBasicUserSerializer.writes(message)))
+        Ok(Json.obj("message" -> Json.toJson(message)))
       case _ =>
         Ok(Json.obj("commentId" -> comment.externalId.id, "createdAt" -> JsString(comment.createdAt.toString)))
     }
