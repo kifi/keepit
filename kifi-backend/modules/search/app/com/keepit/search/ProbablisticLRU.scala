@@ -4,6 +4,8 @@ import com.keepit.common.db.Id
 import com.keepit.common.cache.{ProbablisticLRUChunkCache, ProbablisticLRUChunkKey}
 
 import scala.math._
+import scala.concurrent.future
+import scala.concurrent.ExecutionContext.Implicits.global
 import java.io.File
 import java.io.RandomAccessFile
 import java.nio.channels.FileChannel.MapMode
@@ -125,17 +127,22 @@ class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticL
     
     new IntBufferWrapper {
       
+      val syncLock : AnyRef = "Sync Lock"
+      val putLock  : AnyRef = "Put Lock"
+
       def get(pos: Int) : Int = thisChunk(pos)
 
-      def sync : Unit = synchronized {
-        val storedChunk = loadChunk(chunkId)
-        dirtyEntries.foreach { pos =>
-          storedChunk(pos) = thisChunk(pos)
+      def sync : Unit = future { 
+        syncLock.synchronized {
+          val storedChunk = loadChunk(chunkId)
+          dirtyEntries.foreach { pos =>
+            storedChunk(pos) = thisChunk(pos)
+          }
+          saveChunk(chunkId, storedChunk)
         }
-        saveChunk(chunkId, storedChunk)
       }
 
-      def put(pos: Int, value: Int) = synchronized {
+      def put(pos: Int, value: Int) = putLock.synchronized {
         thisChunk(pos) = value
         dirtyEntries = dirtyEntries + pos
       }
