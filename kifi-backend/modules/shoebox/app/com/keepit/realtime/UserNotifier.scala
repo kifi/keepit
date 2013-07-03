@@ -1,5 +1,6 @@
 package com.keepit.realtime
 
+
 import org.joda.time.DateTime
 
 import com.google.inject.{ Inject, Singleton }
@@ -11,14 +12,10 @@ import com.keepit.common.logging._
 import com.keepit.common.mail.LocalPostOffice
 import com.keepit.common.net.URINormalizer
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.social.BasicUser
-import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.social.CommentWithBasicUserRepo
-import com.keepit.common.social.ThreadInfoRepo
+import com.keepit.common.social._
 import com.keepit.model._
-import com.keepit.serializer.CommentWithBasicUserSerializer._
-import com.keepit.serializer.ThreadInfoSerializer._
 
+import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 case class CommentDetails(
@@ -60,6 +57,14 @@ case class SendableNotification(
   state: State[UserNotification])
 
 object SendableNotification {
+  implicit val format = (
+    (__ \ 'id).format(ExternalId.format[UserNotification]) and
+    (__ \ 'time).format[DateTime] and
+    (__ \ 'category).format[String].inmap(UserNotificationCategory.apply, unlift(UserNotificationCategory.unapply)) and
+    (__ \ 'details).format[JsValue].inmap(UserNotificationDetails.apply, unlift(UserNotificationDetails.unapply)) and
+    (__ \ 'state).format(State.format[UserNotification])
+  )(SendableNotification.apply, unlift(SendableNotification.unapply))
+
   def fromUserNotification(notify: UserNotification) = {
     SendableNotification(id = notify.externalId, time = notify.createdAt, category = notify.category,
       details = notify.details, state = notify.state)
@@ -73,7 +78,6 @@ class NotificationBroadcaster @Inject() (
     messageRepo: CommentRepo,
     db: Database
   ) extends Logging {
-  import com.keepit.serializer.SendableNotificationSerializer
   def push(notify: UserNotification) {
     lazy val unvisitedCount = db.readOnly { implicit s => userNotificationRepo.getUnvisitedCount(notify.userId) }
     for (pushNotification <- PushNotification.fromUserNotification(notify, unvisitedCount)) {
@@ -81,7 +85,7 @@ class NotificationBroadcaster @Inject() (
     }
     val sendable = SendableNotification.fromUserNotification(notify)
     log.info("User notification serialized: " + sendable)
-    userChannel.push(notify.userId, Json.arr("notification", SendableNotificationSerializer.sendableNotificationSerializer.writes(sendable)))
+    userChannel.push(notify.userId, Json.arr("notification", Json.toJson(sendable)))
   }
 }
 
