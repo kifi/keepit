@@ -37,7 +37,7 @@ class UserRepoImpl @Inject() (
   override val table = new RepoTable[User](db, "user") with ExternalIdColumn[User] {
     def firstName = column[String]("first_name", O.NotNull)
     def lastName = column[String]("last_name", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state <> (User, User.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ firstName ~ lastName ~ state <> (User.apply _, User.unapply _)
   }
 
   def allExcluding(excludeStates: State[User]*)(implicit session: RSession): Seq[User] =

@@ -1,18 +1,19 @@
 package com.keepit.shoebox
 
-import org.specs2.mutable.Specification
-import play.api.test.Helpers._
-import com.keepit.test.EmptyApplication
-import com.keepit.common.net.{FakeHttpClient, HttpClient}
-import com.keepit.inject._
-import com.keepit.common.db.Id
-import com.keepit.model._
-import play.api.Play.current
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import play.api.libs.json.JsArray
-import com.keepit.serializer.{PhraseSerializer, UserSerializer}
+
+import org.specs2.mutable.Specification
+
+import com.keepit.common.db.Id
+import com.keepit.common.net.{FakeHttpClient, HttpClient}
+import com.keepit.inject._
+import com.keepit.model._
 import com.keepit.search.Lang
+import com.keepit.test.EmptyApplication
+
+import play.api.libs.json._
+import play.api.test.Helpers._
 
 class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
 
@@ -29,9 +30,8 @@ class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
       override def configure() {
         bind[HttpClient].toInstance(new FakeHttpClient(Some({
           case s if s.contains("/internal/shoebox/database/getConnectedUsers") && s.contains("1965") => "[1933,1935,1927,1921]"
-          case s if s.contains("/internal/shoebox/database/getUsers") && s.contains("1965%2C1933") => JsArray(users.map(UserSerializer.userSerializer.writes)).toString()
-          case s if s.contains("/internal/shoebox/database/getPhrasesByPage") && s.contains("page=0&size=2") => JsArray(phrases.map(PhraseSerializer.phraseSerializer.writes)).toString()
-
+          case s if s.contains("/internal/shoebox/database/getUsers") && s.contains("1965%2C1933") => Json.stringify(Json.toJson(users))
+          case s if s.contains("/internal/shoebox/database/getPhrasesByPage") && s.contains("page=0&size=2") => Json.stringify(Json.toJson(phrases))
         })))
       }
     }
