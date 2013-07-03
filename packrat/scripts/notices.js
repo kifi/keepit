@@ -134,7 +134,7 @@ noticesPane = function() {
     $notices.find(".kifi-notice-" + category + ":not(.kifi-notice-visited)").each(function() {
       if(id && id == this.dataset.id) {
         this.classList.add("kifi-notice-visited");
-      } else if ((!this.dataset.uri || this.dataset.uri == nUri) &&
+      } else if (this.dataset.uri == nUri &&
           dateWithoutMs(this.dataset.createdAt) <= time &&
           (!locator || this.dataset.locator == locator)) {
         this.classList.add("kifi-notice-visited");
