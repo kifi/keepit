@@ -196,7 +196,7 @@ exports.requestUpdateCheck = exports.log.bind(null, "[requestUpdateCheck] unsupp
 var socketPage, sockets = [,];
 var socketCallbacks = {}, nextSocketCallbackId = 1;  // TODO: garbage collect old uncalled callbacks
 exports.socket = {
-  open: function(url, handlers, onConnect) {
+  open: function(url, handlers, onConnect, onDisconnect) {
     var socketId = sockets.length, socket = {
       seq: 0,
       send: function(arr, callback) {
@@ -218,7 +218,7 @@ exports.socket = {
         this.send = this.close = exports.noop;
       }};
     exports.log("[api.socket.open]", socketId, url);
-    sockets.push({socket: socket, handlers: handlers, onConnect: onConnect});
+    sockets.push({socket: socket, handlers: handlers, onConnect: onConnect, onDisconnect: onDisconnect});
     if (socketPage) {
       socketPage.port.emit("open_socket", socketId, url);
     } else {
@@ -231,6 +231,7 @@ exports.socket = {
         contentURL: data.url("html/workers/socket.html")
       });
       socketPage.port.on("socket_connect", onSocketConnect);
+      socketPage.port.on("socket_disconnect", onSocketDisconnect);
       socketPage.port.on("socket_message", onSocketMessage);
     }
     return socket;
@@ -247,6 +248,18 @@ function onSocketConnect(socketId) {
     }
   } else {
     exports.log("[onSocketConnect] Ignoring, no socket", socketId);
+  }
+}
+function onSocketDisconnect(socketId, why) {
+  var socket = sockets[socketId];
+  if (socket) {
+    try {
+      socket.onDisconnect(why);
+    } catch (e) {
+      exports.log.error("onSocketDisconnect:" + socketId + ": " + why, e);
+    }
+  } else {
+    exports.log("[onSocketDisconnect] Ignoring, no socket", socketId);
   }
 }
 function onSocketMessage(socketId, data) {

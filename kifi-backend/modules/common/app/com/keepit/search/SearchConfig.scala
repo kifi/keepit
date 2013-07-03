@@ -16,6 +16,7 @@ import scala.concurrent.duration._
 object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
+      "decorateResultWithCollections" -> "false",
       "phraseProximityBoost" -> "0.95",     // could be too aggressive?
       "phraseBoost" -> "0.5",
       "siteBoost" -> "1.0",
@@ -43,6 +44,7 @@ object SearchConfig {
     )
   private[this] val descriptions =
     Map[String, String](
+      "decorateResultWithCollections" -> "decorates result with collection information",
       "phraseProximityBoost" -> "boost value for phrase proximity",
       "phraseBoost" -> "boost value for the detected phrase",
       "siteBoost" -> "boost value for matching website names and domains",
