@@ -27,7 +27,7 @@ trait ServiceClient extends Logging {
 
   protected def url(path: String): String = s"${protocol}://${nextHost()}:${port}${path}"
 
-  protected def urls(path: String): Seq[String] = serviceCluster.getMyNode match {
+  protected def urls(path: String): Seq[String] = serviceCluster.myNode match {
     case Some(node) =>
       serviceCluster.allServices.filterNot(_.node == node).map{service => s"${protocol}://${service.amazonInstanceInfo.localHostname}:${port}${path}" }
     case None =>
