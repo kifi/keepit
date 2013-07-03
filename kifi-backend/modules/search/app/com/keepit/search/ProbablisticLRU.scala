@@ -274,8 +274,6 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEv
       h(i) = bufferChunk.get(pos)
       i += 1
     }
-    println(p.toList)
-    println(h.toList)
     (p, h)
 
   }
