@@ -683,14 +683,9 @@ function insertNewNotification(n) {
 // If category is global, we do not check the nUri, timeStr, and locator because id identifies
 // it sufficiently. `undefined` can be passed in for everything but category and id.
 function markNoticesVisited(category, nUri, id, timeStr, locator) {
-  var time = new Date(timeStr);
+  var time = timeStr ? new Date(timeStr) : null;
   notifications.forEach(function(n, i) {
-    if (category == "global") {
-      if (n.id == id) {
-        n.state = "visited";
-        decrementNumNotificationsNotVisited(n);
-      }
-    } else if (n.details.page == nUri &&
+    if (n.details.page == nUri &&
         n.category == category &&
         (!locator || n.details.locator == locator) &&
         (n.details.id == id || new Date(n.details.createdAt) <= time) &&

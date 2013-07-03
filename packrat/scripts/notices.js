@@ -46,7 +46,7 @@ noticesPane = function() {
           if(this.dataset.locator) {
             api.port.emit("open_deep_link", {nUri: this.dataset.uri, locator: this.dataset.locator});
           } else if(this.dataset.category == "global") {
-            markVisited(this.dataset.category, this.dataset.uri, this.dataset.createdAt, this.dataset.locator, 0, this.dataset.id);
+            markVisited(this.dataset.category, this.dataset.uri, this.dataset.createdAt, this.dataset.locator, this.dataset.id);
             api.port.emit("set_global_read", {noticeId: this.dataset.id, nUri: this.dataset.url, time: this.dataset.createdAt});
             api.port.emit("open_deep_link", {nUri: this.dataset.uri});
           }
@@ -81,7 +81,7 @@ noticesPane = function() {
         }
       } else {
         if (a.locator) {
-          markVisited(a.category, a.nUri, a.time, a.locator, 0, a.id);
+          markVisited(a.category, a.nUri, a.time, a.locator, a.id);
         } else {
           markAllVisited(a.id, a.time);
         }
@@ -127,7 +127,7 @@ noticesPane = function() {
     api.port.emit("notifications_read", notices[0].time);
   }
 
-  function markVisited(category, nUri, timeStr, locator, numNotVisited, id) {
+  function markVisited(category, nUri, timeStr, locator, id) {
     var time = new Date(timeStr);  // event time, not notification time
     $notices.find(".kifi-notice-" + category + ":not(.kifi-notice-visited)").each(function() {
       if(id && id == this.dataset.id) {
@@ -140,7 +140,7 @@ noticesPane = function() {
     });
   }
 
-  function markAllVisited(id, timeStr, numNotVisited) {
+  function markAllVisited(id, timeStr) {
     var time = new Date(timeStr);
     $notices.find(".kifi-notice:not(.kifi-notice-visited)").each(function() {
       if (id == this.dataset.id || dateWithoutMs(this.dataset.createdAt) <= time) {
