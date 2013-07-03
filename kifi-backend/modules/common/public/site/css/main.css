@@ -23,7 +23,7 @@ input.query {font-family: inherit; font-size: 25px; line-height: 30px; font-weig
 input.query:focus, input.query[data-q] {background-image: url(../img/search-blue.png); border-right-width: 0}
 input.query::-webkit-input-placeholder {color: #99a3b3}
 input.query::-moz-placeholder {color: #99a3b3}
-header>nav {position: absolute; right: 0; width: 25.78125%; min-width: 330px; -moz-box-sizing: border-box; box-sizing: border-box; padding-top: 26px; text-align: center; font-size: 14px}
+header>nav {position: absolute; right: 0; width: 25.78125%; min-width: 330px; -moz-box-sizing: border-box; box-sizing: border-box; padding: 26px 18px 0 0; text-align: right; font-size: 14px}
 header>nav>a[href] {padding: 10px 15px; color: #fff; border-left: 1px solid #fff; vertical-align: middle}
 header>nav>a:first-child {border-left: 0}
 header>nav>a[href]:hover {background-color: #a0b1c2}
