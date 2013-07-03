@@ -14,6 +14,8 @@ import com.keepit.common.time.FakeClockModule
 import scala.Some
 import com.keepit.common.db.TestSlickModule
 import com.keepit.common.healthcheck.FakeHealthcheckModule
+import com.keepit.common.cache.TestCacheModule
+import com.google.inject.util.Modules
 
 class TestGlobalWithDB(defaultModules: Seq[Module], overridingModules: Seq[Module])
   extends SimpleTestGlobal(defaultModules, overridingModules) {
@@ -31,7 +33,9 @@ class SimpleShoeboxApplication(path: File = new File("./modules/shoebox/"))(over
 
 trait SimpleTestDBRunner extends EmptyInjector with DbRepos {
   val mode = Mode.Test
-  val modules = Seq(FakeClockModule(), FakeHealthcheckModule(), TestSlickModule(dbInfo))
+  val defaultModules = Seq(FakeClockModule(), FakeHealthcheckModule(), TestSlickModule(dbInfo))
+  val specificationModules: Seq[Module] = Seq.empty
+  val modules = Seq(Modules.`override`(defaultModules:_*).`with`(specificationModules: _*))
 
   def dbInfo: DbInfo = TestDbInfo.dbInfo
   DriverManager.registerDriver(new play.utils.ProxyDriver(Class.forName("org.h2.Driver").newInstance.asInstanceOf[Driver]))

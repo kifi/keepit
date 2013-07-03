@@ -1,4 +1,4 @@
-package com.keepit.common.db
+package com.keepit.db
 
 import com.keepit.common.time._
 import com.keepit.common.db.slick.DBSession._
@@ -8,6 +8,7 @@ import scala.slick.driver._
 import org.specs2.mutable.Specification
 import com.keepit.common.db.slick._
 import org.joda.time.DateTime
+import com.keepit.common.db.{Model, Id}
 
 class SlickStandaloneTest extends Specification with SimpleTestDBRunner {
 

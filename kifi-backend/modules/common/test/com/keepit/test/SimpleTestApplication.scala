@@ -26,5 +26,7 @@ class RemoteTestApplication(path: File = new File("."))(overridingModules: Modul
 
 trait SimpleTestInjector extends EmptyInjector {
   val mode = Mode.Test
-  val modules = Seq(FakeClockModule(), FakeHealthcheckModule())
+  val defaultModules = Seq(FakeClockModule(), FakeHealthcheckModule())
+  val specificationModules: Seq[Module] = Seq.empty
+  val modules = Seq(Modules.`override`(defaultModules:_*).`with`(specificationModules: _*))
 }
