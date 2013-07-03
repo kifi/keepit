@@ -515,7 +515,6 @@ api.port.on({
     }
   },
   set_global_read: function(o, _, tab) {
-    var d = pageData[tab.nUri];
     markNoticesVisited("global", undefined, o.noticeId, undefined);
     tellTabsNoticeCountIfChanged();  // visible tabs
     socket.send(["set_global_read", o.noticeId]);

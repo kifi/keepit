@@ -388,9 +388,6 @@ class ExtStreamController @Inject() (
           case GLOBAL => userNotificationRepo.markVisited(userId, notification.externalId)
           case _ => // when we add other types of notifications mark them read here
         }
-        for (cid <- notification.commentId) {
-          val comment = commentRepo.get(cid)
-        }
       }
       userChannel.push(userId, Json.arr("all_notifications_visited", lastId.id, lastNotification.createdAt))
     }
