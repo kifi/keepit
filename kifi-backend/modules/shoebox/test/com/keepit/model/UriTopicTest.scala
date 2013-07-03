@@ -27,7 +27,7 @@ class UriTopicTest extends Specification with TestDBRunner{
     val ids =  (0 until numUris).map{Id[NormalizedURI](_)}
     val topics = (0 until numUris).map{ genTopic(numTopics, _) }
     val helper = new UriTopicHelper
-    val uriTopicRepo = inject[UriTopicRepo]
+    val uriTopicRepo = inject[UriTopicRepoA]
     db.readWrite{ implicit s =>
       val uriTopics = (ids zip topics) map { x =>
         val assignedTopics = helper.assignTopics(x._2)
@@ -42,7 +42,7 @@ class UriTopicTest extends Specification with TestDBRunner{
   "uriTopicRepo" should {
     "persist data" in {
       withDB() { implicit injector =>
-        val uriTopicRepo = inject[UriTopicRepo]
+        val uriTopicRepo = inject[UriTopicRepoA]
         val uriTopics = setup()
         val numDocs = uriTopics.size
         val helper = new UriTopicHelper
@@ -59,7 +59,7 @@ class UriTopicTest extends Specification with TestDBRunner{
 
     "be able to delete all data" in {
         withDB() { implicit injector =>
-        val uriTopicRepo = inject[UriTopicRepo]
+        val uriTopicRepo = inject[UriTopicRepoA]
         val uriTopics = setup()
         val numDocs = uriTopics.size
         val helper = new UriTopicHelper

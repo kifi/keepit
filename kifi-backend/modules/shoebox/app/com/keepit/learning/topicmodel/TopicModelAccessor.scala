@@ -1,7 +1,7 @@
 package com.keepit.learning.topicmodel
 
-import com.keepit.model.UserTopicRepo
-import com.keepit.model.UriTopicRepo
+import com.keepit.model.{UserTopicRepo, UserTopicRepoA, UserTopicRepoB}
+import com.keepit.model.{UriTopicRepo, UriTopicRepoA, UriTopicRepoB}
 import com.keepit.model.TopicSeqNumInfoRepo
 import com.google.inject.{Inject, Singleton}
 
@@ -14,16 +14,16 @@ trait TopicModelAccessor {
 
 @Singleton
 class TopicModelAccessorA @Inject()(
-  val userTopicRepo: UserTopicRepo,
-  val uriTopicRepo: UriTopicRepo,
+  val userTopicRepo: UserTopicRepoA,
+  val uriTopicRepo: UriTopicRepoA,
   val topicSeqInfoRepo: TopicSeqNumInfoRepo,
   val documentTopicModel: DocumentTopicModel
 ) extends TopicModelAccessor
 
 @Singleton
 class TopicModelAccessorB @Inject()(
-  val userTopicRepo: UserTopicRepo,
-  val uriTopicRepo: UriTopicRepo,
+  val userTopicRepo: UserTopicRepoB,
+  val uriTopicRepo: UriTopicRepoB,
   val topicSeqInfoRepo: TopicSeqNumInfoRepo,
   val documentTopicModel: DocumentTopicModel
 ) extends TopicModelAccessor

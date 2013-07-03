@@ -34,7 +34,7 @@ class UserTopicTest extends Specification with TestDBRunner {
     val userTopics = (0 until numTopics).map{ i =>
       genTopic(numTopics, i)
     }
-    val userTopicRepo = inject[UserTopicRepo]
+    val userTopicRepo = inject[UserTopicRepoA]
     val helper = new UserTopicByteArrayHelper
     val userTopicFromDb = db.readWrite { implicit s =>
       (ids zip userTopics) map { x =>
@@ -52,7 +52,7 @@ class UserTopicTest extends Specification with TestDBRunner {
         val userTopics = setup()
         val numTopics = TopicModelGlobal.numTopics
         val helper = new UserTopicByteArrayHelper
-        val userTopicRepo = inject[UserTopicRepo]
+        val userTopicRepo = inject[UserTopicRepoA]
         db.readOnly { implicit s =>
           (0 until numTopics).foreach {i =>
             val userId = Id[User](i)
@@ -96,7 +96,7 @@ class UserTopicTest extends Specification with TestDBRunner {
     "work" in {
       withDB(ShoeboxCacheModule(HashMapMemoryCacheModule())) { implicit injector =>
         val userTopics = setup()
-        val userTopicRepo = inject[UserTopicRepo]
+        val userTopicRepo = inject[UserTopicRepoA]
         val helper = new UserTopicByteArrayHelper
 
         db.readOnly{ implicit s =>

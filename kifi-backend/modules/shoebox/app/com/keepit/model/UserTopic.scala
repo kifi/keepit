@@ -82,14 +82,13 @@ case class UserTopicKey(userId: Id[User]) extends Key[UserTopic]{
 class UserTopicCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
     extends JsonCacheImpl[UserTopicKey, UserTopic](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
-@ImplementedBy(classOf[UserTopicRepoImpl])
 trait UserTopicRepo extends Repo[UserTopic]{
   def getByUserId(userId: Id[User])(implicit session: RSession):Option[UserTopic]
   def deleteAll()(implicit session: RWSession): Int
 }
 
-@Singleton
-class UserTopicRepoImpl @Inject() (
+abstract  class UserTopicRepoBase(
+  val dbName: String,
   val db: DataBaseComponent,
   val clock: Clock,
   val userTopicCache: UserTopicCache
@@ -97,7 +96,7 @@ class UserTopicRepoImpl @Inject() (
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
-  override val table = new RepoTable[UserTopic](db, "user_topic"){
+  override val table = new RepoTable[UserTopic](db, dbName){
     def userId = column[Id[User]]("user_id", O.NotNull)
     def topic = column[Array[Byte]]("topic", O.NotNull)
     def * = id.? ~ userId ~ topic ~ createdAt ~ updatedAt <> (UserTopic.apply _, UserTopic.unapply _)
@@ -121,5 +120,19 @@ class UserTopicRepoImpl @Inject() (
   }
 }
 
+// CHANGE CACHE KEY TYPE !!!!
 
+@Singleton
+class UserTopicRepoA @Inject()(
+  db: DataBaseComponent,
+  clock: Clock,
+  userTopicCache: UserTopicCache
+) extends UserTopicRepoBase("user_topic", db, clock, userTopicCache)
+
+@Singleton
+class UserTopicRepoB @Inject()(
+  db: DataBaseComponent,
+  clock: Clock,
+  userTopicCache: UserTopicCache
+) extends UserTopicRepoBase("user_topic_b", db, clock, userTopicCache)
 

@@ -18,12 +18,8 @@ import scala.collection.mutable.{Map => MutMap}
 class TopicUpdater @Inject() (
   db: Database,
   uriRepo: NormalizedURIRepo,
-  userTopicRepo: UserTopicRepo,
-  uriTopicRepo: UriTopicRepo,
-  topicSeqInfoRepo: TopicSeqNumInfoRepo,
   bookmarkRepo: BookmarkRepo,
   articleStore: ArticleStore,
-  documentTopicModel: DocumentTopicModel,
   accessorA: TopicModelAccessorA
 ) extends Logging {
   var currentAccessor: TopicModelAccessor = accessorA

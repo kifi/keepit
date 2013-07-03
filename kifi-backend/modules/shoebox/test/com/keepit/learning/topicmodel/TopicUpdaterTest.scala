@@ -27,15 +27,14 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
 
         val db = inject[Database]
         val uriRepo = inject[NormalizedURIRepo]
-        val uriTopicRepo = inject[UriTopicRepo]
-        val userTopicRepo = inject[UserTopicRepo]
+        val uriTopicRepo = inject[UriTopicRepoA]
+        val userTopicRepo = inject[UserTopicRepoA]
         val seqInfoRepo = inject[TopicSeqNumInfoRepo]
         val bmRepo = inject[BookmarkRepo]
         val documentTopicModel = inject[DocumentTopicModel]
         val accessor = inject[TopicModelAccessorA]
 
-        val topicUpdater = new TopicUpdater(db, uriRepo, userTopicRepo, uriTopicRepo,
-            seqInfoRepo, bmRepo, articleStore, documentTopicModel, accessor)
+        val topicUpdater = new TopicUpdater(db, uriRepo, bmRepo, articleStore, accessor)
 
         topicUpdater.update()
 
