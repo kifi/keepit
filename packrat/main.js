@@ -680,6 +680,8 @@ function insertNewNotification(n) {
 
 // id is of last read comment/message, timeStr is its createdAt time (not notification's).
 // locator not passed in the comments case.
+// If category is global, we do not check the nUri, timeStr, and locator because id identifies
+// it sufficiently. `undefined` can be passed in for everything but category and id.
 function markNoticesVisited(category, nUri, id, timeStr, locator) {
   var time = new Date(timeStr);
   notifications.forEach(function(n, i) {
