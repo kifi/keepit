@@ -10,13 +10,13 @@ import com.keepit.inject.EmptyInjector
 import play.api.Mode
 import com.keepit.common.actor.StandaloneTestActorSystemModule
 
-@deprecated
+@deprecated("Use SimpleTestInjector instead", "July 3rd 2013")
 trait TestInjector extends EmptyInjector {
   val mode = Mode.Test
   val modules = Seq(TestModule(), StandaloneTestActorSystemModule())
 }
 
-@deprecated
+@deprecated("Use SimpleTestDbRunner instead", "July 3rd 2013")
 trait TestDBRunner extends TestInjector with DbRepos {
 
   def dbInfo: DbInfo = TestDbInfo.dbInfo

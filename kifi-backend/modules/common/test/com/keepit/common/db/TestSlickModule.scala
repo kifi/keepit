@@ -5,7 +5,7 @@ import com.keepit.common.db.slick.{DbExecutionContext, H2, SlickSessionProvider,
 import scala.slick.session.{Database => SlickDatabase}
 import scala.concurrent.ExecutionContext.Implicits.{global => globalExecutionContext}
 
-case class TestSlickModule(dbInfo: DbInfo = TestDbInfo.dbInfo) extends SlickModule(dbInfo) {
+case class TestSlickModule(dbInfo: DbInfo) extends SlickModule(dbInfo) {
 
   @Provides @Singleton
   def slickSessionProvider: SlickSessionProvider = TestSlickSessionProvider()

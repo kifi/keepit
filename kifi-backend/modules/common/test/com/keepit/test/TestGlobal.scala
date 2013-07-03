@@ -8,7 +8,7 @@ import play.api.Application
 import play.api.Mode.Test
 import play.utils.Threads
 
-@deprecated
+@deprecated("Use TestGlobalWithDb instead", "July 3rd 2013")
 case class TestGlobal(val modules: Module*) extends FortyTwoGlobal(Test) {
 
   override val initialized = true
@@ -21,7 +21,7 @@ case class TestGlobal(val modules: Module*) extends FortyTwoGlobal(Test) {
   }
 }
 
-@deprecated
+@deprecated("Use SimpleTestGlobal instead", "July 3rd 2013")
 case class TestRemoteGlobal(val modules: Module*) extends FortyTwoGlobal(Test) {
   override val initialized = true
 }

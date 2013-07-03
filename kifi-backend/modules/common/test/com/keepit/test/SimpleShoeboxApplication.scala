@@ -27,11 +27,11 @@ class TestGlobalWithDB(defaultModules: Seq[Module], overridingModules: Seq[Modul
 }
 
 class SimpleShoeboxApplication(path: File = new File("./modules/shoebox/"))(overridingModules: Module*)
-  extends SimpleTestApplication(path, new TestGlobalWithDB(Seq(FakeClockModule(), FakeHealthcheckModule(), TestSlickModule()), overridingModules)) with DbRepos
+  extends SimpleTestApplication(path, new TestGlobalWithDB(Seq(FakeClockModule(), FakeHealthcheckModule(), TestSlickModule(TestDbInfo.dbInfo)), overridingModules)) with DbRepos
 
 trait SimpleTestDBRunner extends EmptyInjector with DbRepos {
   val mode = Mode.Test
-  val modules = Seq(FakeClockModule(), FakeHealthcheckModule(), TestSlickModule())
+  val modules = Seq(FakeClockModule(), FakeHealthcheckModule(), TestSlickModule(dbInfo))
 
   def dbInfo: DbInfo = TestDbInfo.dbInfo
   DriverManager.registerDriver(new play.utils.ProxyDriver(Class.forName("org.h2.Driver").newInstance.asInstanceOf[Driver]))
