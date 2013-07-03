@@ -68,8 +68,8 @@ aside {position: absolute; top: 70px; bottom: 0; -moz-box-sizing: border-box; bo
 #collections>h2 {margin-top: 15px; padding: 0 0 2px 38px; background: url(../img/folder-icon.png) left 12px bottom 13px/18px no-repeat; border-bottom: 1px solid #dbdee3}
 #collections h3 {line-height: 39px}
 a.collection-create {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7) center/8px no-repeat #b8c5d2; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
-a.collection-create:hover {background-color: #bdcbd8}
-a.collection-create:active {background-color: #a0b1c2}
+a.collection-create:hover {background-color: #a0b1c2}
+a.collection-create:active {background-color: #8699ab}
 
 .collection-new {display: none; border-bottom: 1px solid #dbdee3; background: #fff; -webkit-transition: background-color .16s; transition: background-color .16s}
 .collection-new.submitted {background-color: rgba(255,255,255,0)}
@@ -131,26 +131,31 @@ aside.right>.antiscroll-inner {position: absolute; top: 0; bottom: 0; left: 0; r
 .page-meta {font-size: 0}
 a.page-url[href] {font-size: 12px; line-height: 20px; color: inherit; -webkit-font-smoothing: antialiased; max-width: 100%; margin-bottom: 12px}
 a.page-url[href]:hover {text-decoration: underline}
-.page-pic-wrap {display: table; table-layout: fixed; width: 100%}
+.page-pic-wrap {display: table; table-layout: fixed; width: 100%; overflow: hidden}
 .page-pic {display: table-cell; background-color: rgba(0,0,0,.05); background-size: 100% auto; width: 100%; min-height: 135px; padding-top: 47%; cursor:pointer; -moz-box-sizing: border-box; box-sizing: border-box}
-.page-how {display: table-cell; vertical-align: middle; text-align: center; white-space: nowrap; width: 0; max-width: 0; -webkit-transition: width .18s, max-width .18s; transition: width .18s, max-width .18s}
+.page-how {display: table-cell; position: relative; vertical-align: middle; text-align: center; white-space: nowrap; width: 0; max-width: 0; -webkit-transition: width .18s, max-width .18s; transition: width .18s, max-width .18s}
 [data-kept] .page-how {width: 48px; max-width: 48px}
-.page-how.pub {background-color: #accc98}
-.page-how.pri {background-color: #e78881}
-.page-how-text {margin: 0 -50%; color: #fff; font-size: 18px; -webkit-font-smoothing: antialiased; -webkit-transform: rotate(90deg) scale(1,.001); transform: rotate(90deg) scale(1,.001); -webkit-transition: -webkit-transform .18s; transition: -webkit-transform .18s, transform .18s}
-[data-kept] .page-how-text {-webkit-transform: rotate(90deg); transform: rotate(90deg)}
-.pub>.page-how-text::before,
-.pri>.page-how-text::before {content: " "; display: inline-block; height: 16px; width: 16px; background: url(../img/keep-icons.png) -46px 0/auto 16px; vertical-align: -2px; margin-right: 9px; -webkit-transform: rotate(-90deg); transform: rotate(-90deg)}
-.pri>.page-how-text::before {width: 12px; background-position: -34px 0}
-.pub>.page-how-text::after {content: "Public"}
-.pri>.page-how-text::after {content: "Private"}
+.page-how-pub,
+.page-how-pri {position: absolute; top: 0; bottom: 0; left: 0; right: 0; -webkit-transform: scale(.001,1); transform: scale(.001,1); -webkit-transition: -webkit-transform .18s; transition: -webkit-transform .18s, transform .18s}
+.page-how-pub {background-color: #accc98}
+.page-how-pri {background-color: #e78881}
+[data-kept] .page-how-pub,
+[data-kept] .page-how-pri {-webkit-transform: none; transform: none}
+.pri>.page-how-pub {-webkit-transform: translate(0,100%); transform: translate(0,100%)}
+.pub>.page-how-pri {-webkit-transform: translate(0,-100%); transform: translate(0,-100%)}
+.page-how-1 {display: table; height: 100%; width: 100%}
+.page-how-2 {display: table-cell; vertical-align: middle; text-align: center}
+.page-how-3 {margin: 0 -50px; color: #fff; font-size: 18px; line-height: 22px; height: 22px; -webkit-font-smoothing: antialiased; -webkit-transform: rotate(90deg); transform: rotate(90deg)}
+.page-how-pub>*>*>.page-how-3::before,
+.page-how-pri>*>*>.page-how-3::before {content: " "; display: inline-block; height: 16px; width: 16px; background: url(../img/keep-icons.png) -46px 0/auto 16px; vertical-align: -2px; margin-right: 9px; -webkit-transform: rotate(-90deg); transform: rotate(-90deg)}
+.page-how-pri>*>*>.page-how-3::before {width: 12px; background-position: -34px 0}
 a.page-keep[href],
 a.page-priv[href] {display: inline-block; margin-top: 5px; color: #fff; background-color: #b8c5d2; font-size: 13px; line-height: 30px; width: 50%; -moz-box-sizing: border-box; box-sizing: border-box; text-align: center; -webkit-font-smoothing: antialiased}
 a.page-priv[href] {border-left: 2px solid #eff2f7}
 a.page-keep[href]:hover,
-a.page-priv[href]:hover {background-color: #bdcbd8}
+a.page-priv[href]:hover {background-color: #a0b1c2}
 a.page-keep[href]:active,
-a.page-priv[href]:active {background-color: #a0b1c2}
+a.page-priv[href]:active {background-color: #8699ab}
 [data-kept]>*>.page-keep[href]::before,
 .page-priv[href]::before {content: " "; display: inline-block; height: 13px; width: 11px; background: url(../img/keep-icons.png) 0 0/auto 16px content-box; vertical-align: -1px; margin-right: 8px}
 :not([data-kept="pri"])>*>.page-priv[href]::before {width: 10px; background-position: -11px 0; border-left: 2px solid transparent}
@@ -178,35 +183,32 @@ a.page-priv[href]:active {background-color: #a0b1c2}
 .page-coll {position: relative; overflow: hidden; white-space: nowrap; background-color: #b8c5d2; margin: 0 3px 3px 0; font-size: 13px; line-height: 24px; -webkit-font-smoothing: antialiased}
 .page-coll.removed {width: 0 !important; -webkit-transition: width .12s ease-in-out; transition: width .12s ease-in-out}
 .page-coll>a[href] {color: #fff; vertical-align: top}
-.page-coll>a[href]:hover {background-color: #bdcbd8}
-.page-coll>a[href]:active {background-color: #a0b1c2}
-.page-coll-a {padding: 0 16px; -webkit-transition: padding .1s ease-in-out .1s; transition: padding .1s ease-in-out .1s}
-.page-colls:hover .page-coll-a {padding: 0 26px 0 6px}
-.page-coll-x {position: absolute; right: 0; top: 0; bottom: 0; width: 0; text-align: center; -webkit-transition: width .1s ease-in-out .1s; transition: width .1s ease-in-out .1s}
-.page-colls:hover .page-coll-x {width: 20px}
+.page-coll>a:hover {background-color: #a0b1c2}
+.page-coll>a:active {background-color: #8699ab}
+.page-coll-a {padding: 0 16px}
+.page-coll:hover>.page-coll-a {padding: 0 25px 0 7px}
+.page-coll-x {position: absolute; right: 0; top: 0; bottom: 0; width: 0; text-align: center; background-color: inherit}
+.page-coll:hover>.page-coll-x {width: 18px}
 .page-coll-x::before {content: "\00D7"; position: relative; bottom: 1px}
 .page-coll-new {position: relative}
 .page-coll-add {display: inline-block; white-space: nowrap; font-size: 0; vertical-align: top}
-.editing>.page-coll-add {display: none}
-.page-coll-add::before {content: " "; display: inline-block; width: 18px; height: 18px; border-radius: 50%; vertical-align: bottom; position: relative; bottom: 3px; margin-left: 5px; background: url(data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7) center/8px no-repeat; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
+.page-coll-add::before {content: " "; display: inline-block; width: 18px; height: 18px; border-radius: 50%; vertical-align: bottom; position: relative; bottom: 3px; background: url(data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7) center/8px no-repeat; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
 li:first-child>.page-coll-add::before {width: 16px; height: 16px; bottom: 4px; margin-left: 8px; background-color: #f7fafe; background-image: url(data:image/gif;base64,R0lGODlhCAAIAIABALjF0v///yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7)}
 .page-coll-add::before,
 li:first-child>.page-coll-add {background-color: #b8c5d2}
 .page-coll-add:hover::before,
-li:first-child>.page-coll-add:hover {background-color: #bdcbd8}
+li:first-child>.page-coll-add:hover {background-color: #a0b1c2}
 .page-coll-add:active::before,
-li:first-child>.page-coll-add:active {background-color: #a0b1c2}
+li:first-child>.page-coll-add:active {background-color: #8699ab}
 [data-kept]>*>*>*>li:first-child>.page-coll-add::after {content: "Add this keep to a collection"}
 :not([data-kept])>*>*>*>li:first-child>.page-coll-add::after {content: "Keep to a collection"}
 .page-coll-add::after {vertical-align: bottom; color: #fff; font-size: 13px; margin: 0 14px 0 8px; -webkit-font-smoothing: antialiased}
 .page-coll-sizer {position: absolute; visibility: hidden}
 .page-coll-sizer,
-input.page-coll-input {display: none; border: 1px solid #cdd6e0; padding: 0 16px; height: 24px; vertical-align: top; -moz-box-sizing: border-box; box-sizing: border-box; color: inherit; font-family: inherit; font-size: 13px; -webkit-font-smoothing: antialiased}
+input.page-coll-input {display: inline-block; border: 1px solid #cdd6e0; padding: 0 16px; height: 24px; vertical-align: top; -moz-box-sizing: border-box; box-sizing: border-box; color: inherit; font-family: inherit; font-size: 13px; -webkit-font-smoothing: antialiased; -webkit-transition: width 60ms ease-in-out; transition: width 60ms ease-in-out}
 input.page-coll-input {width: 20ex}
-.editing>.page-coll-sizer,
-.editing>.page-coll-input {display: inline-block}
 .page-coll-opts {display: none; position: absolute; width: 100%; border: 1px solid #cdd6e0; border-top: none; -moz-box-sizing: border-box; box-sizing: border-box; background-color: #fff; font-size: 13px}
-.editing>.page-coll-opts:not(:empty) {display: block}
+.page-coll-opts:not(:empty) {display: block}
 .page-coll-opt {padding: 0 16px; font-size: 13px; color: #888b93; -webkit-font-smoothing: antialiased; cursor: pointer}
 .page-coll-opt.current {background-color: #f1f2f6}
 .page-coll-opt[data-id=""] {position: relative; padding-right: 36px}
@@ -243,10 +245,11 @@ span.long-text, a.long-text {display: inline-block}
 .keep-coll:hover>a {background-color: #eff2f7}
 .keep.selected .keep-coll:hover>a {background-color: #fff}
 .keep.keep a.keep-coll-a:active {background-color: #e3e6ee; color: #8490a4}
-.keep-coll-a {padding: 0 8px; -webkit-transition: padding .1s ease-in-out .1s; transition: padding .1s ease-in-out .1s}
-.keep-colls:hover .keep-coll-a {padding: 0 13px 0 3px}
-.keep-coll-x {position: absolute; top: 0; bottom: 0; right: 0; width: 0; text-align: center; overflow: hidden; -webkit-transition: width .1s ease-in-out .1s; transition: width .1s ease-in-out .1s}
-.keep-colls:hover .keep-coll-x {width: 10px}
+.keep.selected a.keep-coll-a:active {background-color: #fafcff}
+.keep-coll-a {padding: 0 8px}
+.keep-coll:hover>.keep-coll-a {padding: 0 13px 0 3px}
+.keep-coll-x {position: absolute; top: 0; bottom: 0; right: 0; width: 0; text-align: center; overflow: hidden}
+.keep-coll:hover>.keep-coll-x {width: 10px}
 .keep-coll>.keep-coll-x[href][href]:hover {background-color: #b8c5d2; color: #eff2f7}
 .keep-coll>.keep-coll-x[href][href]:active {background-color: #99a3b3}
 .keep-coll-x::before {content: "\00D7"; position: relative; bottom: 1px}

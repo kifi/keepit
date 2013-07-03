@@ -1,6 +1,11 @@
 package com.keepit.controllers.ext
 
+import scala.collection.concurrent.TrieMap
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Promise
 import scala.util.Random
+
+import org.joda.time.Seconds
 
 import com.google.inject.Inject
 import com.google.inject.Singleton
@@ -11,8 +16,8 @@ import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.common.db.State
-import com.keepit.common.db.slick.Database
 import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.Database
 import com.keepit.common.net.URINormalizer
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social._
@@ -20,11 +25,8 @@ import com.keepit.common.time._
 import com.keepit.controllers.core.KeeperInfoLoader
 import com.keepit.model._
 import com.keepit.realtime._
-import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
-import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
-import com.keepit.serializer.SendableNotificationSerializer.sendableNotificationSerializer
-import scala.concurrent.ExecutionContext.Implicits.global
 
+import akka.actor.{Cancellable, ActorSystem}
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Concurrent

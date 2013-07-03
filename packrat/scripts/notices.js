@@ -46,7 +46,7 @@ noticesPane = function() {
           if(this.dataset.locator) {
             api.port.emit("open_deep_link", {nUri: this.dataset.uri, locator: this.dataset.locator});
           } else if(this.dataset.category == "global") {
-            markAllVisited(this.dataset.id);
+            markVisited("global", undefined, undefined, undefined, this.dataset.id);
             api.port.emit("set_global_read", {noticeId: this.dataset.id});
             if (this.dataset.uri) {
               window.open(this.dataset.uri, "_blank")
@@ -74,20 +74,26 @@ noticesPane = function() {
         }
       });
     },
-    update: function(a) {
+    update: function(a, kind) {
       if (!$notices) return;
-      if (Array.isArray(a)) {
-        showNew(a);
-        if (a.some(function(n) {return /^(un)?delivered$/.test(n.state)})) {
-          $markAll.show();
-        }
-      } else {
-        if (a.locator) {
-          markVisited(a.category, a.nUri, a.time, a.locator);
-        } else {
+      switch(kind) {
+        case "new":
+          console.log("adding new", a)
+          showNew(a);
+          if (a.some(function(n) {return /^(un)?delivered$/.test(n.state)})) {
+            $markAll.show();
+          }
+          break;
+        case "markOneVisited":
+          console.log("marking one", a)
+          markVisited(a.category, a.nUri, a.time, a.locator, a.id);
+          $markAll.toggle(a.numNotVisited > 0);
+          break;
+        case "markAllVisited":
+          console.log("making all", a)
           markAllVisited(a.id, a.time);
-        }
-        $markAll.toggle(a.numNotVisited > 0);
+          $markAll.toggle(a.numNotVisited > 0);
+          break;
       }
     }};
 
@@ -132,6 +138,7 @@ noticesPane = function() {
   function markVisited(category, nUri, timeStr, locator, id) {
     var time = new Date(timeStr);  // event time, not notification time
     $notices.find(".kifi-notice-" + category + ":not(.kifi-notice-visited)").each(function() {
+      console.log("trying",id, this.dataset.id )
       if(id && id == this.dataset.id) {
         this.classList.add("kifi-notice-visited");
       } else if (this.dataset.uri == nUri &&
