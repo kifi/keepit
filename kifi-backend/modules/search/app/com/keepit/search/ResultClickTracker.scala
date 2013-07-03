@@ -27,9 +27,9 @@ class ResultClickTracker(lru: ProbablisticLRU) {
     lru.put(hash, uriId.id, updateStrength)
   }
 
-  def getBoosts(userId: Id[User], query: String, maxBoost: Float) = {
+  def getBoosts(userId: Id[User], query: String, maxBoost: Float, useSlaveAsPrimary: Boolean = false) = {
     val hash = QueryHash(userId, query, analyzer)
-    val likeliness = lru.get(hash)
+    val likeliness = lru.get(hash, useSlaveAsPrimary)
     new ResultClickBoosts {
       def apply(value: Long) = 1.0f +  (maxBoost - 1.0f) * likeliness(value)
     }

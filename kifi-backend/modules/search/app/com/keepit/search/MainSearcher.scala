@@ -230,7 +230,7 @@ class MainSearcher(
 
   def search(queryString: String, numHitsToReturn: Int, lastUUID: Option[ExternalId[ArticleSearchResultRef]], filter: SearchFilter = SearchFilter.default()): ArticleSearchResult = {
     val now = currentDateTime
-    val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost)
+    val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost, config.asBoolean("useS3FlowerFilter"))
     timeLogs.getClickBoost = currentDateTime.getMillis() - now.getMillis()
     Statsd.timing("mainSearch.getClickboost", timeLogs.getClickBoost)
     val (myHits, friendsHits, othersHits, personalizedSearcher) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
