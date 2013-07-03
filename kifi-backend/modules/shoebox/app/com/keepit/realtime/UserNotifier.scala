@@ -60,6 +60,9 @@ case class GlobalNotificationDetails(
   isSticky: Boolean,
   markReadOnAction: Boolean
 )
+object GlobalNotificationDetails {
+  implicit val globalDetailsFormat = Json.format[GlobalNotificationDetails]
+}
 
 case class SendableNotification(
   id: ExternalId[UserNotification],
@@ -126,7 +129,6 @@ class UserNotifier @Inject() (
 
   implicit val commentDetailsFormat = Json.format[CommentDetails]
   implicit val messageDetailsFormat = Json.format[MessageDetails]
-  implicit val globalDetailsFormat = Json.format[GlobalNotificationDetails]
 
   def globalNotification(global: GlobalNotification) = {
     db.readWrite { implicit session =>
