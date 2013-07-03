@@ -626,7 +626,7 @@ api.port.on({
       api.tabs.select(tab.id);
     } else {
       api.tabs.open(data.nUri, function(tabId) {
-        if(data.locator) {
+        if (data.locator) {
           createDeepLinkListener(data.locator, tabId);
         }
       });
@@ -683,8 +683,8 @@ function insertNewNotification(n) {
 function markNoticesVisited(category, nUri, id, timeStr, locator) {
   var time = new Date(timeStr);
   notifications.forEach(function(n, i) {
-    if(category == "global") {
-      if(n.id == id) {
+    if (category == "global") {
+      if (n.id == id) {
         n.state = "visited";
         decrementNumNotificationsNotVisited(n);
       }
