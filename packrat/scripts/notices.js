@@ -23,6 +23,7 @@ noticesPane = function() {
   var templates = {};
   api.load("html/metro/notice_comment.html", function(tmpl) {templates.comment = tmpl});
   api.load("html/metro/notice_message.html", function(tmpl) {templates.message = tmpl});
+  api.load("html/metro/notice_global.html", function(tmpl) {templates.global = tmpl});
 
   var $notices, $markAll;
 
@@ -42,7 +43,15 @@ noticesPane = function() {
         $notices.find("time").timeago();
 
         $notices.on("click", ".kifi-notice", function() {
-          api.port.emit("open_deep_link", {nUri: this.dataset.uri, locator: this.dataset.locator});
+          if(this.dataset.locator) {
+            api.port.emit("open_deep_link", {nUri: this.dataset.uri, locator: this.dataset.locator});
+          } else if(this.dataset.category == "global") {
+            markVisited("global", undefined, undefined, undefined, this.dataset.id);
+            api.port.emit("set_global_read", {noticeId: this.dataset.id});
+            if (this.dataset.uri) {
+              window.open(this.dataset.uri, "_blank")
+            }
+          }
           return false;
         }).scroll(onScroll);
 
@@ -65,20 +74,26 @@ noticesPane = function() {
         }
       });
     },
-    update: function(a) {
+    update: function(a, kind) {
       if (!$notices) return;
-      if (Array.isArray(a)) {
-        showNew(a);
-        if (a.some(function(n) {return /^(un)?delivered$/.test(n.state)})) {
-          $markAll.show();
-        }
-      } else {
-        if (a.locator) {
-          markVisited(a.category, a.nUri, a.time, a.locator);
-        } else {
+      switch(kind) {
+        case "new":
+          console.log("adding new", a)
+          showNew(a);
+          if (a.some(function(n) {return /^(un)?delivered$/.test(n.state)})) {
+            $markAll.show();
+          }
+          break;
+        case "markOneVisited":
+          console.log("marking one", a)
+          markVisited(a.category, a.nUri, a.time, a.locator, a.id);
+          $markAll.toggle(a.numNotVisited > 0);
+          break;
+        case "markAllVisited":
+          console.log("making all", a)
           markAllVisited(a.id, a.time);
-        }
-        $markAll.toggle(a.numNotVisited > 0);
+          $markAll.toggle(a.numNotVisited > 0);
+          break;
       }
     }};
 
@@ -97,6 +112,8 @@ noticesPane = function() {
       notice.twoAuthors = nAuthors == 2;
       notice.threeAuthors = nAuthors == 3;
       notice.moreAuthors = nAuthors > 3 ? nAuthors - 2 : 0;
+      break;
+    case "global":
       break;
     default:
       api.log("#a00", "[renderNotice] unrecognized category", notice.category);
@@ -118,10 +135,13 @@ noticesPane = function() {
     api.port.emit("notifications_read", notices[0].time);
   }
 
-  function markVisited(category, nUri, timeStr, locator, numNotVisited) {
+  function markVisited(category, nUri, timeStr, locator, id) {
     var time = new Date(timeStr);  // event time, not notification time
     $notices.find(".kifi-notice-" + category + ":not(.kifi-notice-visited)").each(function() {
-      if (this.dataset.uri == nUri &&
+      console.log("trying",id, this.dataset.id )
+      if(id && id == this.dataset.id) {
+        this.classList.add("kifi-notice-visited");
+      } else if (this.dataset.uri == nUri &&
           dateWithoutMs(this.dataset.createdAt) <= time &&
           (!locator || this.dataset.locator == locator)) {
         this.classList.add("kifi-notice-visited");
@@ -129,7 +149,7 @@ noticesPane = function() {
     });
   }
 
-  function markAllVisited(id, timeStr, numNotVisited) {
+  function markAllVisited(id, timeStr) {
     var time = new Date(timeStr);
     $notices.find(".kifi-notice:not(.kifi-notice-visited)").each(function() {
       if (id == this.dataset.id || dateWithoutMs(this.dataset.createdAt) <= time) {
