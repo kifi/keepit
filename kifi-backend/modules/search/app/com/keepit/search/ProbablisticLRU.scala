@@ -137,6 +137,7 @@ class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticL
           val storedChunk = loadChunk(chunkId)
           dirtyEntries.foreach { pos =>
             storedChunk(pos) = thisChunk(pos)
+            dirtyEntries = dirtyEntries - pos
           }
           saveChunk(chunkId, storedChunk)
         }
