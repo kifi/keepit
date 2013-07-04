@@ -46,7 +46,7 @@ package object time {
   val UTC_DATETIME_FORMAT = STANDARD_DATETIME_FORMAT.withLocale(Locale.ENGLISH).withZone(zones.UTC)
   val STANDARD_DATE_FORMAT = ISODateTimeFormat.date.withLocale(Locale.ENGLISH).withZone(zones.PT)
 
-  implicit val DateTimeJsonFormat: Format[DateTime] = new Format[DateTime] {
+  implicit object DateTimeJsonFormat extends Format[DateTime] {
     def reads(json: JsValue) = try {
       json.asOpt[String] match {
         case Some(timeStr) => JsSuccess(parseStandardTime(timeStr))

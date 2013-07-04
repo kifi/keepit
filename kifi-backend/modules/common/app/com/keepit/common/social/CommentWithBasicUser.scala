@@ -24,7 +24,7 @@ case class CommentWithBasicUser(
 object CommentWithBasicUser {
   implicit val format = (
     (__ \ 'id ).format(ExternalId.format[Comment]) and
-    (__ \ 'createdAt).format[DateTime] and
+    (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'text).format[String] and
     (__ \ 'user).format[BasicUser] and
     (__ \ 'permissions).format(State.format[CommentPermission]) and

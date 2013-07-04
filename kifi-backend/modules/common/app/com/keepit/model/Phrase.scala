@@ -26,8 +26,8 @@ case class Phrase (
 object Phrase {
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[Phrase]) and
-    (__ \ 'createdAt).format[DateTime] and
-    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'createdAt).format(DateTimeJsonFormat) and
+    (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'phrase).format[String] and
     (__ \ 'lang).format[String].inmap(Lang.apply, unlift(Lang.unapply)) and
     (__ \ 'source).format[String] and
