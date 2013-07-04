@@ -63,8 +63,3 @@ img.kifi-message-pic.kifi-self {
   visibility: hidden;
   clear: both;
 }
-.kifi-messages-redirect-notice {
-  padding: 10px;
-  font-weight: bold;
-  font-size: 13px;
-}
