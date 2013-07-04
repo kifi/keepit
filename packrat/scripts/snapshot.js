@@ -196,11 +196,11 @@ var snapshot = {
           //   r.width + " < " + sel.r.width + " * 2 * " + dx + " AND " +
           //   r.height + " < " + sel.r.height + " * 2 * " + dy + " AND " +
           //   r.width * r.height + " < " + sel.r.width * sel.r.height + " * " + Math.sqrt(dx * dx + dy * dy));
-          var rBody = document.body.getBoundingClientRect();
-          var yT = scrollTop - rBody.top + r.top - 2;
-          var yB = scrollTop - rBody.top + r.bottom + 2;
-          var xL = scrollLeft - rBody.left + r.left - 3;
-          var xR = scrollLeft - rBody.left + r.right + 3;
+          var bod = $("body").offset();
+          var yT = scrollTop - bod.top + r.top - 2;
+          var yB = scrollTop - bod.top + r.bottom + 2;
+          var xL = scrollLeft - bod.left + r.left - 3;
+          var xR = scrollLeft - bod.left + r.right + 3;
           $shades.eq(0).css({height: yT});
           $shades.eq(1).css({top: yB, height: pageHeight - yB});
           $shades.eq(2).css({top: yT, height: yB - yT, width: xL});
