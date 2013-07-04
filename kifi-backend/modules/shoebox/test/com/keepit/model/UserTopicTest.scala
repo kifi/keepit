@@ -3,7 +3,6 @@ import org.joda.time.DateTime
 import com.keepit.common.time._
 import com.keepit.common.time.zones.PT
 import org.specs2.mutable.Specification
-import com.keepit.test.TestDBRunner
 import com.google.inject.Injector
 import com.keepit.common.db.Id
 import scala.Array.canBuildFrom
