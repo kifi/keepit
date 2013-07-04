@@ -139,6 +139,7 @@ class CollectionIndexer(
       doc.add(user)
 
       val externalId = buildBinaryDocValuesField(externalIdField, collection.externalId.id)
+      doc.add(externalId)
 
       doc
     }
