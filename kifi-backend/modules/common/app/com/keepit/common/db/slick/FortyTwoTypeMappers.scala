@@ -6,16 +6,12 @@ import com.keepit.classify.{DomainTagName, Domain}
 import com.keepit.common.db._
 import com.keepit.common.db.{Id, State, Model, ExternalId, LargeString}
 import com.keepit.common.mail._
-import com.keepit.common.social.SocialId
 import com.keepit.common.social._
 import com.keepit.common.time._
 import com.keepit.common.net.UserAgent
 import com.keepit.model._
-import com.keepit.search.ArticleSearchResultRef
-import com.keepit.search.Lang
-import com.keepit.search.SearchConfigExperiment
 import com.keepit.search._
-import com.keepit.serializer.{URLHistorySerializer => URLHS, SocialUserSerializer}
+import com.keepit.serializer.SocialUserSerializer
 import java.sql.{Timestamp, Clob, Blob}
 import javax.sql.rowset.serial.{SerialBlob, SerialClob}
 import org.joda.time.DateTime
@@ -390,13 +386,11 @@ class SearchConfigMapperDelegate(profile: BasicProfile) extends StringMapperDele
 class URLHistorySeqMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[Seq[URLHistory]](profile) {
   def zero = Nil
   def sourceToDest(history: Seq[URLHistory]) = {
-    val serializer = URLHS.urlHistorySerializer
-    Json.stringify(serializer.writes(history))
+    Json.stringify(Json.toJson(history))
   }
   def safeDestToSource(history: String) = {
     val json = Json.parse(history)
-    val serializer = URLHS.urlHistorySerializer
-    serializer.reads(json).get
+    Json.fromJson[Seq[URLHistory]](json).get
   }
 }
 

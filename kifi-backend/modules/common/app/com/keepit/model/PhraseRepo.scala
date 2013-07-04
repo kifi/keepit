@@ -26,7 +26,7 @@ class PhraseRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) ext
     def phrase = column[String]("phrase", O.NotNull)
     def source = column[String]("source", O.NotNull)
     def lang = column[Lang]("lang", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ phrase ~ lang ~ source ~ state <> (Phrase, Phrase.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ phrase ~ lang ~ source ~ state <> (Phrase.apply _, Phrase.unapply _)
   }
 
   def get(phrase: String, lang: Lang, excludeState: Option[State[Phrase]] = Some(PhraseStates.INACTIVE))(implicit session: RSession): Option[Phrase] =

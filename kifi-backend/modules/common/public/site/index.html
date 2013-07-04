@@ -29,7 +29,7 @@
 		<nav>
 			<!--a href="javascript:">+ Add a new keep</a-->
 			<!--a href="javascript:">Settings</a-->
-			<!--a href="javascript:">Log out</a-->
+			<a href="/logout">Log out</a>
 		</nav>
 	</header>
 
@@ -116,7 +116,7 @@
 						<div class="keep-title long-text">
 							<a href="{{url}}" target="_blank" title="{{title}}">{{title}}</a>
 						</div>
-						<div class="keep-url long-text" title="{{url}}">{{url | replace '^http://', '	' | replace '^([^/]*)/$', '$1'}}</div>
+						<div class="keep-url long-text" title="{{url}}">{{url | replace '^http://', '' | replace '^([^/]*)/$', '$1'}}</div>
 						<div class="keep-colls">
 							<span class="keep-coll" data-template-for="collections" data-id="{{id}}">
 								<a class="keep-coll-a" href="javascript:">{{name}}</a><a class="keep-coll-x" href="javascript:"></a>
@@ -127,7 +127,7 @@
 								src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
 								data-src="//djty7jcqog9qu.cloudfront.net/users/{{me.id}}/pics/100/{{me.pictureName}}"
 								title="You! You look great!">
-						  <img data-template-for="keepers"
+							<img data-template-for="keepers"
 								src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
 								data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
 								title="{{firstName}} {{lastName}}">
