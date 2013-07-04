@@ -30,8 +30,8 @@ case class User(
 object User {
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[User]) and
-    (__ \ 'createdAt).format[DateTime] and
-    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'createdAt).format(DateTimeJsonFormat) and
+    (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'externalId).format(ExternalId.format[User]) and
     (__ \ 'firstName).format[String] and
     (__ \ 'lastName).format[String] and

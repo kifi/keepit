@@ -37,10 +37,10 @@ object UserSession {
     (__ \ 'externalId).format[ExternalId[UserSession]] and
     (__ \ 'socialId).format[String].inmap(SocialId.apply, unlift(SocialId.unapply)) and
     (__ \ 'provider).format[String].inmap(SocialNetworkType.apply, unlift(SocialNetworkType.unapply)) and
-    (__ \ 'expires).format[DateTime] and
+    (__ \ 'expires).format(DateTimeJsonFormat) and
     (__ \ 'state).format[State[UserSession]] and
-    (__ \ 'createdAt).format[DateTime] and
-    (__ \ 'updatedAt).format[DateTime]
+    (__ \ 'createdAt).format(DateTimeJsonFormat) and
+    (__ \ 'updatedAt).format(DateTimeJsonFormat)
   )(UserSession.apply, unlift(UserSession.unapply))
 }
 

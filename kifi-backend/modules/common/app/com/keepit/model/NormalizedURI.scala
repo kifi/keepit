@@ -41,8 +41,8 @@ case class NormalizedURI (
 object NormalizedURI {
   implicit def format = (
     (__ \ 'id).formatNullable(Id.format[NormalizedURI]) and
-    (__ \ 'createdAt).format[DateTime] and
-    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'createdAt).format(DateTimeJsonFormat) and
+    (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'externalId).format(ExternalId.format[NormalizedURI]) and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'url).format[String] and

@@ -69,8 +69,8 @@ object UserTopic {
     (__ \'id).formatNullable(Id.format[UserTopic]) and
     (__ \'userId).format(Id.format[User]) and
     (__ \'topic).format(new TopicByteArrayFormat) and
-    (__ \'createdAt).format[DateTime] and
-    (__ \'updatedAt).format[DateTime]
+    (__ \'createdAt).format(DateTimeJsonFormat) and
+    (__ \'updatedAt).format(DateTimeJsonFormat)
   )(UserTopic.apply, unlift(UserTopic.unapply))
 }
 

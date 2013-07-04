@@ -35,8 +35,8 @@ object Collection {
     (__ \ 'userId).format(Id.format[User]) and
     (__ \ 'name).format[String] and
     (__ \ 'state).format(State.format[Collection]) and
-    (__ \ 'createdAt).format[DateTime] and
-    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'createdAt).format(DateTimeJsonFormat) and
+    (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'lastKeptTo).formatNullable[DateTime] and
     (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat)
   )(Collection.apply, unlift(Collection.unapply))
