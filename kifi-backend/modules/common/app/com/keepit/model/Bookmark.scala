@@ -49,8 +49,8 @@ case class Bookmark(
 object Bookmark {
   implicit def bookmarkFormat = (
     (__ \ 'id).formatNullable(Id.format[Bookmark]) and
-    (__ \ 'createdAt).format[DateTime] and
-    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'createdAt).format(DateTimeJsonFormat) and
+    (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'externalId).format(ExternalId.format[Bookmark]) and
     (__ \ 'title).formatNullable[String] and
     (__ \ 'uriId).format(Id.format[NormalizedURI]) and

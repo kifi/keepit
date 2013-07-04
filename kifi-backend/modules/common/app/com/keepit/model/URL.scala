@@ -19,7 +19,7 @@ case class URLHistory(date: DateTime, id: Id[NormalizedURI], cause: URLHistoryCa
 
 object URLHistory {
   implicit val format = (
-    (__ \ 'date).format[DateTime] and
+    (__ \ 'date).format(DateTimeJsonFormat) and
     (__ \ 'id).format(Id.format[NormalizedURI]) and
     (__ \ 'cause).format[String].inmap(URLHistoryCause.apply, unlift(URLHistoryCause.unapply))
   )(URLHistory.apply _, unlift(URLHistory.unapply))
