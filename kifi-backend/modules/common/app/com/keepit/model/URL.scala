@@ -1,9 +1,13 @@
 package com.keepit.model
 
-import com.keepit.common.db._
-import com.keepit.common.time._
 import org.joda.time.DateTime
+
+import com.keepit.common.db._
 import com.keepit.common.net.URI
+import com.keepit.common.time._
+
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 case class URLHistoryCause(value: String)
 object URLHistoryCause {
@@ -12,6 +16,14 @@ object URLHistoryCause {
   val MERGE = URLHistoryCause("merge")
 }
 case class URLHistory(date: DateTime, id: Id[NormalizedURI], cause: URLHistoryCause = URLHistoryCause.CREATE)
+
+object URLHistory {
+  implicit val format = (
+    (__ \ 'date).format[DateTime] and
+    (__ \ 'id).format(Id.format[NormalizedURI]) and
+    (__ \ 'cause).format[String].inmap(URLHistoryCause.apply, unlift(URLHistoryCause.unapply))
+  )(URLHistory.apply _, unlift(URLHistory.unapply))
+}
 
 case class URL (
   id: Option[Id[URL]] = None,

@@ -17,11 +17,11 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
 
 @Singleton
 class NormalizedURIRepoImpl @Inject() (
-                                        val db: DataBaseComponent,
-                                        val clock: Clock,
-                                        idCache: NormalizedURICache,
-                                        urlHashCache: NormalizedURIUrlHashCache,
-                                        scrapeRepoProvider: Provider[ScrapeInfoRepo])
+  val db: DataBaseComponent,
+  val clock: Clock,
+  idCache: NormalizedURICache,
+  urlHashCache: NormalizedURIUrlHashCache,
+  scrapeRepoProvider: Provider[ScrapeInfoRepo])
   extends DbRepo[NormalizedURI] with NormalizedURIRepo with ExternalIdColumnDbFunction[NormalizedURI] {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
@@ -36,8 +36,8 @@ class NormalizedURIRepoImpl @Inject() (
     def urlHash = column[UrlHash]("url_hash", O.NotNull)
     def seq = column[SequenceNumber]("seq", O.NotNull)
     def screenshotUpdatedAt = column[DateTime]("screenshot_updated_at")
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state ~ seq ~ screenshotUpdatedAt.? <> (NormalizedURI,
-      NormalizedURI.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ title.? ~ url ~ urlHash ~ state ~ seq ~
+        screenshotUpdatedAt.? <> (NormalizedURI.apply _, NormalizedURI.unapply _)
   }
 
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {

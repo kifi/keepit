@@ -1,16 +1,21 @@
 package com.keepit.model
 
-import com.keepit.common.db._
-import com.keepit.common.time._
-import com.keepit.common.logging.Logging
-import com.keepit.common.cache._
-import org.joda.time.DateTime
 import scala.concurrent.duration._
-import com.keepit.common.net.URINormalizer
+
 import java.security.MessageDigest
+
 import org.apache.commons.codec.binary.Base64
-import scala.Some
+import org.joda.time.DateTime
+
+import com.keepit.common.cache._
+import com.keepit.common.db._
+import com.keepit.common.logging.Logging
+import com.keepit.common.net.URINormalizer
 import com.keepit.common.strings._
+import com.keepit.common.time._
+
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 case class URISearchResults(uri: NormalizedURI, score: Float)
 
@@ -33,7 +38,20 @@ case class NormalizedURI (
   def withTitle(title: String) = if (title.isEmpty()) this else copy(title = Some(title))
 }
 
-import com.keepit.serializer.NormalizedURISerializer.normalizedURISerializer // Required implicit value
+object NormalizedURI {
+  implicit def format = (
+    (__ \ 'id).formatNullable(Id.format[NormalizedURI]) and
+    (__ \ 'createdAt).format[DateTime] and
+    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'externalId).format(ExternalId.format[NormalizedURI]) and
+    (__ \ 'title).formatNullable[String] and
+    (__ \ 'url).format[String] and
+    (__ \ 'urlHash).format[String].inmap(UrlHash.apply, unlift(UrlHash.unapply)) and
+    (__ \ 'state).format(State.format[NormalizedURI]) and
+    (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat) and
+    (__ \ 'screenshotUpdatedAt).formatNullable[DateTime]
+  )(NormalizedURI.apply, unlift(NormalizedURI.unapply))
+}
 
 case class UrlHash(hash: String) extends AnyVal
 
