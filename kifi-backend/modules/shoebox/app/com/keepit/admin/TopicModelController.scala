@@ -119,6 +119,8 @@ class TopicModelController  @Inject() (
 
   }
 
+  def topicsViewDefault = topicsView(0)
+
   def topicsView(page: Int = 0) = AdminHtmlAction{ request =>
     val PAGE_SIZE = 50
     val (topics, count) = db.readOnly{ implicit s =>
