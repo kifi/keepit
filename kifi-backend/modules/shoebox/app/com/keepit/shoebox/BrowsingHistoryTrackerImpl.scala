@@ -15,7 +15,8 @@ import com.keepit.model.BrowsingHistory
 class BrowsingHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits: Int,
     browsingHistoryRepo: BrowsingHistoryRepo, db: Database) extends BrowsingHistoryTracker with Logging {
 
-  def add(userId: Id[User], uriId: Id[NormalizedURI]) = {
+
+  def add(userId: Id[User], uriId: Id[NormalizedURI]) = Symbol("User Browsing History Lock for " + userId.toString).synchronized {
     val filter = getMultiHashFilter(userId)
     filter.put(uriId.id)
 
