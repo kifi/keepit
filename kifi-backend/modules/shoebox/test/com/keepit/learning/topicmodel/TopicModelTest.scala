@@ -10,7 +10,7 @@ import com.keepit.inject.ApplicationInjector
 class TopicModelTest extends Specification with ApplicationInjector {
   "LDATopicModel" should {
     "correctly compute topic distribution for documents" in {
-      running(new ShoeboxApplication().withTinyWordTopicModule()) {
+      running(new DeprecatedShoeboxApplication().withTinyWordTopicModule()) {
 
         def equals(a: Array[Double], b: Array[Double]) = {
           if (a.length != b.length) false

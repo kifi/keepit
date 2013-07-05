@@ -3,16 +3,14 @@ package com.keepit.model
 import org.specs2.mutable._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick._
-import com.keepit.test.EmptyApplication
-import play.api.test.Helpers._
-import com.keepit.inject.ApplicationInjector
+import com.keepit.test.ShoeboxTestInjector
 
-class URLTest extends Specification with ApplicationInjector {
+class UrlTest extends Specification with ShoeboxTestInjector {
 
   "Url" should {
 
     "load by user and uri" in {
-      running(new EmptyApplication()) {
+      withDb() { implicit injector =>
         val repo = inject[URLRepo]
         repo.eq(inject[URLRepo]) === true //verify singleton
 

@@ -3,19 +3,14 @@ package com.keepit.model
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick._
-import com.keepit.inject._
-import com.keepit.test.{DbRepos, EmptyApplication}
+import com.keepit.test.ShoeboxTestInjector
 
-import play.api.test.Helpers._
-import com.keepit.akka.TestAkkaSystem
-import concurrent.duration._
-
-class UnscrapableTest extends Specification with ApplicationInjector with DbRepos with TestAkkaSystem {
+class UnscrapableTest extends Specification with ShoeboxTestInjector {
 
   "Unscrapable" should {
 
-    "persist & use unscrapable patterns w/ approperiate cashing" in {
-      running(new EmptyApplication()) {
+    "persist & use unscrapable patterns w/ appropriate caching" in {
+      withDb() { implicit injector =>
 
         val unscrapeCache = inject[UnscrapableRepoImpl].unscrapableCache
 

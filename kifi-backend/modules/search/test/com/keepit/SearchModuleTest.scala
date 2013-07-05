@@ -4,7 +4,7 @@ import com.keepit.common.zookeeper._
 import com.keepit.common.net._
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.logging.Logging
-import com.keepit.test.SearchApplication
+import com.keepit.test.DeprecatedSearchApplication
 import org.specs2.mutable.Specification
 import play.api.Play.current
 import play.api.mvc.Controller
@@ -23,7 +23,7 @@ class SearchModuleTest extends Specification with Logging with ApplicationInject
 
   "Module" should {
     "instantiate controllers" in {
-      running(new SearchApplication().withFakeHttpClient(FakeClientResponse.fakeAmazonDiscoveryClient)) {
+      running(new DeprecatedSearchApplication().withFakeHttpClient(FakeClientResponse.fakeAmazonDiscoveryClient)) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {
           case (_, _, ClassRoute(className)) => Class.forName(className)

@@ -10,7 +10,7 @@ import org.specs2.mutable._
 import play.api.Play.current
 import play.api.test.Helpers._
 import com.keepit.model.Phrase
-import com.keepit.test.EmptyApplication
+import com.keepit.test.DeprecatedEmptyApplication
 import com.keepit.inject._
 import java.io.StringReader
 import com.keepit.shoebox.ShoeboxServiceClient
@@ -21,7 +21,7 @@ class PhraseDetectorTest extends Specification with ApplicationInjector {
 
   "PhraseDetectorTest" should {
     "detects phrases in input text" in {
-        running(new EmptyApplication()) {
+        running(new DeprecatedEmptyApplication()) {
         val indexer = new PhraseIndexerImpl(new RAMDirectory(), new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[HealthcheckPlugin], inject[ShoeboxServiceClient])
         val lang = Lang("en")
         val phrases = List(

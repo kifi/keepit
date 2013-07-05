@@ -2,17 +2,15 @@ package com.keepit.model
 
 import org.specs2.mutable._
 import com.keepit.common.db.slick._
-import com.keepit.test.EmptyApplication
-import play.api.test.Helpers._
-import com.keepit.inject.ApplicationInjector
+import com.keepit.test.ShoeboxTestInjector
 
-class UserExperimentTest extends Specification with ApplicationInjector {
+class UserExperimentTest extends Specification with ShoeboxTestInjector {
 
   "UserExperiment" should {
 
     "load by user and experiment type" in {
-      running(new EmptyApplication()) {
-        val userRepo = inject[UserRepo]
+      withDb() { implicit injector =>
+      val userRepo = inject[UserRepo]
         val expRepo = inject[UserExperimentRepo]
 
         val (shanee, santa) = inject[Database].readWrite{ implicit session =>
@@ -34,7 +32,7 @@ class UserExperimentTest extends Specification with ApplicationInjector {
     }
 
     "persist" in {
-      running(new EmptyApplication()) {
+      withDb() { implicit injector =>
         val userRepo = inject[UserRepo]
         val expRepo = inject[UserExperimentRepo]
 

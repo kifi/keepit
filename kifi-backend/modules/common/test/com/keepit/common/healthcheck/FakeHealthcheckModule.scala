@@ -1,7 +1,6 @@
 package com.keepit.common.healthcheck
 
-import com.google.inject.{Inject, Singleton}
-import com.keepit.common.plugin.SchedulingProperties
+import com.google.inject.Singleton
 import com.keepit.common.mail.{PostOffice, ElectronicMail}
 import com.keepit.common.mail.EmailAddresses.ENG
 import scala.collection.mutable.MutableList
@@ -21,7 +20,7 @@ class FakeBabysitter extends Babysitter {
 }
 
 @Singleton
-class FakeHealthcheck @Inject() (val schedulingProperties: SchedulingProperties) extends HealthcheckPlugin {
+class FakeHealthcheck extends HealthcheckPlugin {
 
   val _errors = MutableList[HealthcheckError]()
 

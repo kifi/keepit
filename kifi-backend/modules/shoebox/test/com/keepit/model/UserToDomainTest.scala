@@ -4,14 +4,12 @@ import org.specs2.mutable._
 
 import com.keepit.classify.{Domain, DomainRepo}
 import com.keepit.common.db.slick._
-import com.keepit.inject._
 import com.keepit.test._
-import play.api.test.Helpers._
 
-class UserToDomainTest extends Specification with ApplicationInjector {
+class UserToDomainTest extends Specification with ShoeboxTestInjector {
   "UserToDomain" should {
     "save and load" in {
-      running(new EmptyApplication()) {
+      withDb() { implicit injector =>
         val repo = inject[UserToDomainRepo]
         inject[UserToDomainRepo] must be(repo) // singleton
 

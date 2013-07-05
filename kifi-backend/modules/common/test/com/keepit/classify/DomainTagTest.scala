@@ -3,7 +3,7 @@ package com.keepit.classify
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick.Database
-import com.keepit.test.EmptyApplication
+import com.keepit.test.DeprecatedEmptyApplication
 import play.api.test.Helpers._
 import com.keepit.inject.ApplicationInjector
 
@@ -11,7 +11,7 @@ import com.keepit.inject.ApplicationInjector
 class DomainTagTest extends Specification with ApplicationInjector {
   "The tag repo" should {
     "save and retrieve tags" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val tagRepo = inject[DomainTagRepo]
 
         val t1 = DomainTag(name = DomainTagName("tag1"), sensitive = Some(true))

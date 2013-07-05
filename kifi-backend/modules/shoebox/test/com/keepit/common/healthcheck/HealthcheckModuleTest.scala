@@ -8,12 +8,12 @@ import com.keepit.inject._
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers.running
-import com.keepit.test.{ShoeboxApplication}
+import com.keepit.test.{DeprecatedShoeboxApplication}
 
 class HealthcheckModuleTest extends TestKit(ActorSystem()) with Specification with ApplicationInjector {
   "HealthcheckModule" should {
     "load" in {
-      running(new ShoeboxApplication().withFakeMail().withFakeCache().withTestActorSystem(system)) {
+      running(new DeprecatedShoeboxApplication().withFakeMail().withFakeCache().withTestActorSystem(system)) {
 
         val mail1 = inject[HealthcheckPlugin].reportStart()
 

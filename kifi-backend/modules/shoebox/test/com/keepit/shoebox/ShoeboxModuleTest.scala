@@ -6,7 +6,7 @@ import com.keepit.common.akka.{FortyTwoActor,AlertingActor}
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.MailToKeepServerSettings
-import com.keepit.test.ShoeboxApplication
+import com.keepit.test.DeprecatedShoeboxApplication
 import net.spy.memcached.MemcachedClient
 import org.specs2.mutable.Specification
 import play.api.Play.current
@@ -26,7 +26,7 @@ class ShoeboxModuleTest extends Specification with Logging with ApplicationInjec
 
   "Module" should {
     "instantiate controllers" in {
-      running(new ShoeboxApplication().withFakeMail().withFakeCache().withFakeHttpClient(FakeClientResponse.fakeAmazonDiscoveryClient)
+      running(new DeprecatedShoeboxApplication().withFakeMail().withFakeCache().withFakeHttpClient(FakeClientResponse.fakeAmazonDiscoveryClient)
           .withS3DevModule().withFakePersistEvent.withShoeboxServiceModule.withSearchConfigModule) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {

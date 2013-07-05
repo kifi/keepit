@@ -15,7 +15,6 @@ import com.keepit.common.logging.Logging
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 import java.sql.SQLException
 
-import akka.actor.ActorSystem
 import play.api.Mode.Mode
 import play.api.Mode.Test
 import play.modules.statsd.api.Statsd
@@ -44,9 +43,11 @@ class SlickSessionProviderImpl extends SlickSessionProvider {
   }
 }
 
+case class DbExecutionContext(context: ExecutionContext)
+
 class Database @Inject() (
     val db: DataBaseComponent,
-    val system: ActorSystem,
+    val dbExecutionContext: DbExecutionContext,
     val healthcheckPlugin: Provider[HealthcheckPlugin],
     val sessionProvider: SlickSessionProvider,
     val playMode: Mode
@@ -54,7 +55,7 @@ class Database @Inject() (
 
   import DBSession._
 
-  implicit val executionContext = system.dispatchers.lookup("db-thread-pool-dispatcher")
+  implicit val executionContext = dbExecutionContext.context
 
   val dialect: DatabaseDialect[_] = db.dialect
 
