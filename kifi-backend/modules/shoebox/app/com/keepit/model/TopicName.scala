@@ -22,6 +22,7 @@ trait TopicNameRepo extends Repo[TopicName]{
   def getAllNames()(implicit session: RSession): Seq[String]
   def getName(id: Id[TopicName])(implicit session: RSession): Option[String]
   def updateName(id: Id[TopicName], name: String)(implicit session: RWSession): Option[TopicName]
+  def deleteAll()(implicit session: RWSession): Int
 }
 
 abstract class TopicNameRepoBase(
@@ -49,6 +50,9 @@ abstract class TopicNameRepoBase(
       case Some(topic) => Some(super.save(topic.copy(topicName = name)))
       case None => None
     }
+  }
+  def deleteAll()(implicit session: RWSession): Int = {
+    (for(r <- table) yield r).delete
   }
 }
 
