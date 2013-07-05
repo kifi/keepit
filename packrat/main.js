@@ -1018,10 +1018,6 @@ api.tabs.on.ready.add(function(tab) {
   logEvent("extension", "pageLoad");
 });
 
-api.tabs.on.complete.add(function(tab) {
-  api.log("#b8a", "[tabs.on.complete] %i %o", tab.id, tab);
-});
-
 api.tabs.on.unload.add(function(tab) {
   api.log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab);
   api.timers.clearTimeout(tab.autoShowTimer);
