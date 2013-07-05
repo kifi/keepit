@@ -1239,7 +1239,7 @@ authenticate(function() {
 function reportError(errMsg, url, lineNo) {
   api.log('Reporting error "%s" in %s line %s', errMsg, url, lineNo);
   if ((api.prefs.get("env") === "production") === api.isPackaged()) {
-    ajax("POST", "/error/report", {message: errMsg + (url ? ' at ' + url + (line ? ':' + lineNo : '') : '')});
+    ajax("POST", "/error/report", {message: errMsg + (url ? ' at ' + url + (lineNo ? ':' + lineNo : '') : '')});
   }
 }
 if (typeof window !== 'undefined') {  // TODO: add to api, find equivalent for firefox
