@@ -2,28 +2,30 @@ package com.keepit.model
 
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social._
-import com.keepit.inject._
-import com.keepit.test.EmptyApplication
+import com.keepit.test.ShoeboxTestInjector
 import java.io.File
 import org.specs2.mutable._
 import play.api.libs.json._
-import play.api.test.Helpers._
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.store.FakeStoreModule
+import com.google.inject.Injector
 
-class SocialConnectionTest extends Specification with ApplicationInjector {
+class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 
+  val socialConnectionTestModules = Seq(FakeHttpClientModule(), FakeStoreModule())
 
-  private def extractFacebookFriendInfo(json: JsValue): Seq[(SocialUserInfo, JsValue)] = {
+  private def extractFacebookFriendInfo(json: JsValue)(implicit injector: Injector): Seq[(SocialUserInfo, JsValue)] = {
     inject[FacebookSocialGraph].extractFriends(json)
   }
 
-  private def extractFacebookFriendIds(json: JsValue): Seq[SocialId] = {
+  private def extractFacebookFriendIds(json: JsValue)(implicit injector: Injector): Seq[SocialId] = {
     extractFacebookFriendInfo(json).map(_._1.socialId)
   }
 
   "SocialConnection" should {
 
     "give Kifi user's connections (min set)" in {
-      running(new EmptyApplication().withFakeHttpClient()) {
+      withDb(socialConnectionTestModules:_*) { implicit injector =>
 
         def loadJsonImportFriends(filename: String): Unit = {
           val json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/%s".format(filename))).mkString)
@@ -87,9 +89,9 @@ class SocialConnectionTest extends Specification with ApplicationInjector {
       }
     }
     "give Kifi user's connections (min set) w/o non active connections" in {
-      running(new EmptyApplication().withFakeHttpClient()) {
+      withDb(socialConnectionTestModules:_*) { implicit injector =>
 
-        def loadJsonImportFriends(filename: String): Unit = {
+      def loadJsonImportFriends(filename: String): Unit = {
           val json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/%s".format(filename))).mkString)
           println(inject[SocialUserImportFriends].importFriends(extractFacebookFriendInfo(json)).size)
         }
@@ -157,9 +159,9 @@ class SocialConnectionTest extends Specification with ApplicationInjector {
     }
 
     "give Kifi user's connections (min set) with pagination" in {
-      running(new EmptyApplication().withFakeHttpClient()) {
+      withDb(socialConnectionTestModules:_*) { implicit injector =>
 
-        def loadJsonImportFriends(filenames: Seq[String]): Unit = {
+      def loadJsonImportFriends(filenames: Seq[String]): Unit = {
           val jsons = filenames map { filename =>
             Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/%s".format(filename))).mkString)
           }

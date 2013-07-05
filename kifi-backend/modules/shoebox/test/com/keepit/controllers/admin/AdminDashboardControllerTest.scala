@@ -20,11 +20,11 @@ import play.api.test.Helpers._
 import securesocial.core._
 import com.keepit.inject.ApplicationInjector
 
-class AdminDashboardControllerTest extends Specification with ApplicationInjector with DbRepos {
+class AdminDashboardControllerTest extends Specification with ApplicationInjector with ShoeboxInjectionHelpers {
 
   "AdminDashboardController" should {
     "get users by date as JSON" in {
-      running(new ShoeboxApplication().withFakeSecureSocialUserService()) {
+      running(new DeprecatedShoeboxApplication().withFakeSecureSocialUserService()) {
 
         val now = new DateTime(2020, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         inject[FakeClock].setTimeFunction(() => now.getMillis)

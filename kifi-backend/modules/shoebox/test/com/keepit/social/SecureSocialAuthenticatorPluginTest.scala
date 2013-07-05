@@ -7,7 +7,7 @@ import com.keepit.common.db.{TestSlickSessionProvider, ExternalId}
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.social.{SocialNetworks, SocialId}
 import com.keepit.model.{User, SocialUserInfo, UserSession}
-import com.keepit.test.{DbRepos, EmptyApplication}
+import com.keepit.test.{ShoeboxInjectionHelpers, DeprecatedEmptyApplication}
 
 import play.api.Play.current
 import play.api.test.Helpers._
@@ -15,11 +15,11 @@ import securesocial.core.{Authenticator, UserId}
 import com.keepit.inject.ApplicationInjector
 import com.keepit.common.time.FakeClock
 
-class SecureSocialAuthenticatorPluginTest extends Specification with ApplicationInjector with DbRepos {
+class SecureSocialAuthenticatorPluginTest extends Specification with ApplicationInjector with ShoeboxInjectionHelpers {
   def healthcheckPlugin = inject[HealthcheckPlugin]
   "SecureSocialAuthenticatorPlugin" should {
     "find existing user sessions" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val plugin =
           new SecureSocialAuthenticatorPluginImpl(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
         val id = ExternalId[UserSession]()
@@ -36,7 +36,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with Application
       }
     }
     "not find deleted sessions" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val plugin =
           new SecureSocialAuthenticatorPluginImpl(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
         val id = ExternalId[UserSession]()
@@ -54,7 +54,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with Application
       }
     }
     "not get expired sessions" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         inject[FakeClock].push(new DateTime("2015-01-01"))
 
         val plugin =
@@ -69,7 +69,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with Application
       }
     }
     "associate with the correct user and save the session when needed" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val plugin =
           new SecureSocialAuthenticatorPluginImpl(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
         val id = ExternalId[UserSession]()

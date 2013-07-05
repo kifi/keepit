@@ -7,7 +7,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.test._
 
-class NormalizedURITest extends Specification with TestDBRunner {
+class NormalizedURITest extends Specification with ShoeboxTestInjector {
 
   def setup()(implicit injector: Injector) = {
     db.readWrite {implicit s =>
@@ -27,7 +27,7 @@ class NormalizedURITest extends Specification with TestDBRunner {
 
   "bookmark pagination" should {
     "get all" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
           bookmarkRepo.page(0, 10).size === 3
@@ -35,7 +35,7 @@ class NormalizedURITest extends Specification with TestDBRunner {
       }
     }
     "get first" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
           bookmarkRepo.page(0, 2).size === 2
@@ -43,7 +43,7 @@ class NormalizedURITest extends Specification with TestDBRunner {
       }
     }
     "get last" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
           bookmarkRepo.page(1, 2).size === 1
@@ -51,7 +51,7 @@ class NormalizedURITest extends Specification with TestDBRunner {
       }
     }
     "get none" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
           bookmarkRepo.page(2, 2).size === 0
@@ -62,7 +62,7 @@ class NormalizedURITest extends Specification with TestDBRunner {
 
   "get by state" should {
     "search gets nothing" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
           var uris = uriRepo.getByState(NormalizedURIStates.ACTIVE)
@@ -82,7 +82,7 @@ class NormalizedURITest extends Specification with TestDBRunner {
 
   "get by state" should {
     "hash works fine" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
           uriRepo.getByUri("http://www.keepit.com/short").get.url === "http://www.keepit.com/short"
@@ -95,7 +95,7 @@ class NormalizedURITest extends Specification with TestDBRunner {
 
   "NormalizedURIs search by url" should {
     "search gets nothing" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
           uriRepo.getByUri("http://www.keepit.com/med") === None
@@ -103,7 +103,7 @@ class NormalizedURITest extends Specification with TestDBRunner {
       }
     }
     "search gets short" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
           val all = uriRepo.all
@@ -114,7 +114,7 @@ class NormalizedURITest extends Specification with TestDBRunner {
       }
     }
     "search gets long" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         setup()
         db.readWrite { implicit s =>
           uriRepo.getByUri("http://www.keepit.com/long").get.url === "http://www.keepit.com/long"
@@ -125,7 +125,7 @@ class NormalizedURITest extends Specification with TestDBRunner {
 
   "NormalizedURIs get created url" should {
     "search gets nothing" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         db.readWrite { implicit s =>
       	  val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith"))
       	  val user2 = userRepo.save(User(firstName = "Moo", lastName = "Brown"))
@@ -138,7 +138,7 @@ class NormalizedURITest extends Specification with TestDBRunner {
       }
     }
     "search gets short" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         db.readWrite { implicit s =>
       	  uriRepo.all.size === 0 //making sure the db is clean, trying to understand some strange failures we got
       	  val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith"))

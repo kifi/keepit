@@ -3,14 +3,12 @@ package com.keepit.model
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick._
-import com.keepit.inject._
 import com.keepit.test._
-import play.api.test.Helpers._
 
-class URLPatternTest extends Specification with ApplicationInjector {
+class URLPatternTest extends Specification with ShoeboxTestInjector {
   "URLPattern" should {
     "save, load by id and pattern" in {
-      running(new EmptyApplication()) {
+      withDb() { implicit injector =>
         val repo = inject[URLPatternRepo]
         inject[URLPatternRepo] must be(repo) // singleton
 

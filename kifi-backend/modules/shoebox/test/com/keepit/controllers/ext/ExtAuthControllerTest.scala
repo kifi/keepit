@@ -23,11 +23,11 @@ import com.keepit.model.SocialUserInfo
 import play.api.libs.json.JsObject
 import com.keepit.common.social.SocialId
 
-class ExtAuthControllerTest extends Specification with ApplicationInjector with DbRepos {
+class ExtAuthControllerTest extends Specification with ApplicationInjector with ShoeboxInjectionHelpers {
 
   "ExtAuthController" should {
     "start" in {
-      running(new ShoeboxApplication().withFakeSecureSocialUserService()) {
+      running(new DeprecatedShoeboxApplication().withFakeSecureSocialUserService()) {
         val now = new DateTime(2013, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         val today = now.toDateTime
         inject[FakeClock].push(today)

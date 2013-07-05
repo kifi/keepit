@@ -28,7 +28,7 @@ class CommentIndexerTest extends Specification with GraphTestHelper {
 
   "CommentIndexer" should {
     "maintain a sequence number on comments " in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
         val numURIs = uris.size
 
@@ -94,7 +94,7 @@ class CommentIndexerTest extends Specification with GraphTestHelper {
     }
 
     "find messages" in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
 
         val commentIndexer = mkCommentIndexer()
@@ -231,7 +231,7 @@ class CommentIndexerTest extends Specification with GraphTestHelper {
     }
 
     "get comment time stamps" in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
 
         val commentIndexer = mkCommentIndexer()
@@ -301,7 +301,7 @@ class CommentIndexerTest extends Specification with GraphTestHelper {
     }
 
     "find public comments" in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
 
         val commentIndexer = mkCommentIndexer()

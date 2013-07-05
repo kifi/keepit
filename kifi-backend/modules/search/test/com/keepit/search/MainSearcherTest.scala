@@ -128,7 +128,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
 
   "MainSearcher" should {
     "search and categorize using social graph" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges)
@@ -181,7 +181,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "return a single list of hits" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges)
@@ -233,7 +233,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "search personal bookmark titles" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("personal title"))
@@ -291,7 +291,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "score using matches in a bookmark title and an article" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("personal title"))
@@ -320,7 +320,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "paginate" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges)
@@ -362,7 +362,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "boost recent bookmarks" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 1, numUris = 5)
         val Seq(user) = users
         val userId = user.id.get
@@ -391,7 +391,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "be able to cut the long tail" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 1, numUris = 10)
         val Seq(user) = users
         val userId = user.id.get
@@ -428,7 +428,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "show own private bookmarks" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
@@ -452,7 +452,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "not show friends private bookmarks" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
@@ -483,7 +483,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "search hits using a stemmed word" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("my books"))
@@ -509,7 +509,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
     }
 
     "search within collections" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)

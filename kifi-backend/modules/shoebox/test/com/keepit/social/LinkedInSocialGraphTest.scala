@@ -13,7 +13,7 @@ import com.keepit.test._
 import play.api.test.Helpers._
 import securesocial.core._
 
-class LinkedInSocialGraphTest extends Specification with ApplicationInjector with DbRepos {
+class LinkedInSocialGraphTest extends Specification with ApplicationInjector with ShoeboxInjectionHelpers {
 
   private def urlIsConnections(url: String): Boolean = {
     url.startsWith("http://api.linkedin.com/v1/people/rFOBMp35vZ/connections:(id,firstName,lastName,pictureUrl,publicProfileUrl)?format=json") &&
@@ -27,7 +27,7 @@ class LinkedInSocialGraphTest extends Specification with ApplicationInjector wit
 
   "LinkedInSocialGraph" should {
     "fetch from linkedin" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val httpClient = new FakeHttpClient(Some({
           case url if urlIsConnections(url) => connectionsJson
           case url if urlIsProfile(url) => profileJson
