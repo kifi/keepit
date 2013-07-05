@@ -12,7 +12,6 @@ import java.util.{Set => JSet}
 trait BoostQuery extends Query {
   val textQuery: Query
   val boosterQueries: Array[Query]
-  val enableCoord: Boolean = false
 
   protected val name: String
 
@@ -35,11 +34,10 @@ trait BoostQuery extends Query {
   }
 
   override def toString(s: String) = {
-    "%s(%s, %s, %s)".format(
+    "%s(%s, %s)".format(
       name,
       textQuery.toString(s),
-      boosterQueries.map(_.toString(s)).mkString("(",",",")"),
-      enableCoord)
+      boosterQueries.map(_.toString(s)).mkString("(",",",")"))
   }
 
   override def equals(obj: Any): Boolean = obj match {
