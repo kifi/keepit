@@ -7,13 +7,13 @@ import org.specs2.mutable._
 import play.api.test._
 import play.api.test.Helpers._
 import scala.math._
-import com.keepit.test.EmptyApplication
+import com.keepit.test.DeprecatedEmptyApplication
 
 class DouglasAdamsQuotesTest extends Specification {
 
   "DouglasAdamsQuotes" should {
     "load" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         DouglasAdamsQuotes.qoutes.size === 490
         DouglasAdamsQuotes.random.quote.size !== 0
       }

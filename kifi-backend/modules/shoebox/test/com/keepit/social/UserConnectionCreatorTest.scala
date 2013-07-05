@@ -7,7 +7,7 @@ import org.specs2.mutable._
 import com.keepit.common.db.slick.Database
 import com.keepit.inject.ApplicationInjector
 import com.keepit.model._
-import com.keepit.test.EmptyApplication
+import com.keepit.test.DeprecatedEmptyApplication
 
 import play.api.libs.json.Json
 import play.api.test.Helpers._
@@ -17,7 +17,7 @@ class UserConnectionCreatorTest extends Specification with ApplicationInjector {
 
   "UserConnectionCreator" should {
     "create connections between friends" in {
-      running(new EmptyApplication().withFakeHttpClient()) {
+      running(new DeprecatedEmptyApplication().withFakeHttpClient()) {
 
         /*
          * grab json
@@ -66,7 +66,7 @@ class UserConnectionCreatorTest extends Specification with ApplicationInjector {
     }
 
     "disable non existing connections" in {
-      running(new EmptyApplication().withFakeHttpClient()) {
+      running(new DeprecatedEmptyApplication().withFakeHttpClient()) {
 
         val json1 = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/facebook_graph_eishay_min.json")).mkString)
 

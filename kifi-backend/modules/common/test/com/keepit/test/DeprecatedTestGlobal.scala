@@ -7,8 +7,10 @@ import com.keepit.common.db.slick.Database
 import play.api.Application
 import play.api.Mode.Test
 import play.utils.Threads
+import com.google.inject.util.Modules
 
-case class TestGlobal(val modules: Module*) extends FortyTwoGlobal(Test) {
+case class DeprecatedTestGlobal(modules: Module*) extends FortyTwoGlobal(Test) {
+  val module = Modules.combine(modules:_*)
 
   override val initialized = true
 
@@ -20,7 +22,8 @@ case class TestGlobal(val modules: Module*) extends FortyTwoGlobal(Test) {
   }
 }
 
-case class TestRemoteGlobal(val modules: Module*) extends FortyTwoGlobal(Test) {
+case class DeprecatedTestRemoteGlobal(modules: Module*) extends FortyTwoGlobal(Test) {
+  val module = Modules.combine(modules:_*)
   override val initialized = true
 }
 

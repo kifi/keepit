@@ -7,7 +7,7 @@ import play.api.test.Helpers._
 import com.keepit.inject._
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.test.EmptyApplication
+import com.keepit.test.DeprecatedEmptyApplication
 import play.core.TestApplication
 import scala.collection.mutable.Map
 import com.keepit.model._
@@ -49,7 +49,7 @@ class ThreadInfoTest extends Specification with ApplicationInjector {
 
   "ThreadInfo" should {
     "load with initiator" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val (user1, user2, msg) = setup()
         val info = inject[Database].readOnly { implicit session => inject[ThreadInfoRepo].load(msg, user1.id) }
         info.recipients.size === 1
@@ -57,7 +57,7 @@ class ThreadInfoTest extends Specification with ApplicationInjector {
       }
     }
     "load with recepient" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val (user1, user2, msg) = setup()
         val info = inject[Database].readOnly { implicit session => inject[ThreadInfoRepo].load(msg, user2.id) }
         info.recipients.size === 1

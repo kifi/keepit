@@ -5,10 +5,8 @@ import org.specs2.mutable._
 import com.keepit.common.net.UserAgent
 import com.keepit.common.db._
 import com.keepit.test._
-import play.api.test.Helpers._
-import com.keepit.inject.ApplicationInjector
 
-class KifiInstallationTest extends Specification with ApplicationInjector with DbRepos {
+class KifiInstallationTest extends Specification with ShoeboxTestInjector {
 
   "KifiInstallation" should {
     "parse version strings and order correctly" in {
@@ -29,7 +27,7 @@ class KifiInstallationTest extends Specification with ApplicationInjector with D
       KifiVersion("foo") must throwA[Exception]
     }
     "persist" in {
-      running(new EmptyApplication()) {
+      withDb() { implicit injector =>
         val (user, install) = db.readWrite {implicit s =>
           val user = userRepo.save(User(firstName = "Dafna", lastName = "Smith"))
           val install = installationRepo.save(KifiInstallation(userId = user.id.get, version = KifiVersion("1.1.1"), externalId = ExternalId[KifiInstallation](), userAgent = UserAgent.fromString("my browser")))

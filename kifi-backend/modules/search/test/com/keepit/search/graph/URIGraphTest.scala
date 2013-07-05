@@ -60,7 +60,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
 
   "URIGraph" should {
     "generate UriToUsrEdgeSet" in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
@@ -81,7 +81,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "generate UserToUriEdgeSet" in {
-      running(new EmptyApplication().withShoeboxServiceModule){
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule){
         val (users, uris) = initData
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
@@ -107,7 +107,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "generate UserToCollectionEdgeSet" in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
 
         val usersWithCollection = users.take(2)
@@ -135,7 +135,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "generate UriToCollectionEdgeSet" in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
 
         val expectedUriToUsers = uris.map{ uri => (uri, users.filter( _.id.get.id == uri.id.get.id)) }
@@ -162,7 +162,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "generate CollectionToUriEdgeSet" in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
 
         val expectedUriToUsers = uris.map{ uri => (uri, users.filter{ _.id.get.id <= uri.id.get.id }) }
@@ -188,7 +188,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "intersect UserToCollectionEdgeSet and UriToCollectionEdgeSet" in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
 
         val expectedUriToUsers = uris.map{ uri => (uri, users.filter( _.id.get.id == uri.id.get.id)) }
@@ -220,7 +220,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "intersect UserToUserEdgeSet and UriToUserEdgeSet" in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
 
         val expectedUriToUserEdges = uris.toIterator.zip(users.sliding(4) ++ users.sliding(3)).toList
@@ -251,7 +251,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "intersect empty sets" in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
         val graph = mkURIGraph()
         graph.update()
@@ -276,7 +276,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "determine whether intersection is empty" in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val graph = mkURIGraph()
         graph.update()
 
@@ -290,7 +290,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "search personal bookmark titles" in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
         val store = setupArticleStore(uris)
         val edges = uris.map { uri => (uri, users((uri.id.get.id % 2L).toInt), Some("personaltitle bmt" + uri.id.get.id))}
@@ -320,7 +320,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "search personal bookmark domains" in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
         val store = setupArticleStore(uris)
         val edges = uris.map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id))}
@@ -359,7 +359,7 @@ class URIGraphTest extends Specification with GraphTestHelper {
     }
 
     "retrieve bookmark records from bookmark store" in {
-       running(new EmptyApplication().withShoeboxServiceModule) {
+       running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
         val store = setupArticleStore(uris)
         val edges = uris.take(3).map { uri => (uri, users(0), Some("personaltitle bmt" + uri.id.get.id))}

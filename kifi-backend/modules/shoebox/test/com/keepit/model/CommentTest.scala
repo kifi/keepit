@@ -5,12 +5,13 @@ import org.specs2.mutable._
 import com.keepit.common.db.LargeString._
 import com.keepit.common.db.slick._
 import com.keepit.inject._
-import com.keepit.test.{DbRepos, EmptyApplication}
+import com.keepit.test.{ShoeboxTestInjector, ShoeboxInjectionHelpers, DeprecatedEmptyApplication}
 import play.api.test.Helpers._
+import com.google.inject.Injector
 
-class CommentTest extends Specification with ApplicationInjector with DbRepos {
+class CommentTest extends Specification with ShoeboxTestInjector {
 
-  def setup() = {
+  def setup()(implicit injector: Injector) = {
     inject[Database].readWrite {implicit s =>
       val user1 = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
       val user2 = userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
@@ -41,7 +42,7 @@ class CommentTest extends Specification with ApplicationInjector with DbRepos {
 
   "Comment" should {
     "use caching for counts (with proper invalidation)" in {
-      running(new EmptyApplication()) {
+      withDb() { implicit injector =>
         val (user1, user2, uri1, uri2, msg1, msg2, msg3) = setup()
         val repo = commentRepo.asInstanceOf[CommentRepoImpl]
 
@@ -60,7 +61,7 @@ class CommentTest extends Specification with ApplicationInjector with DbRepos {
       }
     }
     "give all comments by friends" in {
-      running(new EmptyApplication()) {
+      withDb() { implicit injector =>
         val (user1, user2, uri1, uri2, msg1, msg2, msg3) = setup()
 
         inject[Database].readWrite { implicit s =>
@@ -82,7 +83,7 @@ class CommentTest extends Specification with ApplicationInjector with DbRepos {
       }
     }
     "add comments" in {
-      running(new EmptyApplication()) {
+      withDb() { implicit injector =>
         val (user1, user2, uri1, uri2, msg1, msg2, msg3) = setup()
         inject[Database].readOnly {implicit s =>
           commentRepo.all().length === 9
@@ -90,7 +91,7 @@ class CommentTest extends Specification with ApplicationInjector with DbRepos {
       }
     }
    "count" in {
-      running(new EmptyApplication()) {
+     withDb() { implicit injector =>
         setup()
         inject[Database].readOnly {implicit s =>
           commentRepo.count(CommentPermissions.PUBLIC) === 3
@@ -99,7 +100,7 @@ class CommentTest extends Specification with ApplicationInjector with DbRepos {
       }
     }
     "count and load public comments by URI" in {
-      running(new EmptyApplication()) {
+      withDb() { implicit injector =>
         val (user1, user2, uri1, uri2, msg1, msg2, msg3) = setup()
         inject[Database].readOnly {implicit s =>
           commentRepo.getPublicCount(uri1.id.get) === 2
@@ -110,7 +111,7 @@ class CommentTest extends Specification with ApplicationInjector with DbRepos {
       }
     }
     "count and load messages by URI and UserId" in {
-      running(new EmptyApplication()) {
+      withDb() { implicit injector =>
         val (user1, user2, uri1, uri2, msg1, msg2, msg3) = setup()
         inject[Database].readOnly {implicit s =>
           val repo = commentRepo
@@ -123,7 +124,7 @@ class CommentTest extends Specification with ApplicationInjector with DbRepos {
     }
 
     "format comment text markdown as plain text" in {
-      running(new EmptyApplication()) {  // TODO: no need for a Play application
+      withDb() { implicit injector =>
         inject[CommentFormatter].toPlainText("[hi there](x-kifi-sel:body>foo.bar#there)") === "[hi there]"
         inject[CommentFormatter].toPlainText("A [hi there](x-kifi-sel:foo.bar#there) B") === "A [hi there] B"
         inject[CommentFormatter].toPlainText("(A) [hi there](x-kifi-sel:foo.bar#there:nth-child(2\\)>a:nth-child(1\\)) [B] C") === "(A) [hi there] [B] C"
@@ -131,7 +132,7 @@ class CommentTest extends Specification with ApplicationInjector with DbRepos {
     }
 
     "give the parent id for a list of recipients" in {
-      running(new EmptyApplication()) {
+      withDb() { implicit injector =>
         val (user1, user2, uri1, uri2, msg1, msg2, msg3) = setup()
         db.readWrite { implicit session =>
           val user3 = userRepo.save(User(firstName = "Bob", lastName = "Fred"))

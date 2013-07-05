@@ -10,7 +10,7 @@ import com.keepit.common.net.{FakeHttpClient, HttpClient}
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.search.Lang
-import com.keepit.test.EmptyApplication
+import com.keepit.test.DeprecatedEmptyApplication
 
 import play.api.libs.json._
 import play.api.test.Helpers._
@@ -40,7 +40,7 @@ class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
   "ShoeboxServiceClient" should {
 
     "get users" in {
-      running(new EmptyApplication().overrideWith(setup())) {
+      running(new DeprecatedEmptyApplication().overrideWith(setup())) {
         val shoeboxServiceClient = inject[ShoeboxServiceClient]
         val usersFuture = shoeboxServiceClient.getUsers(users.map(_.id.get))
         Await.result(usersFuture, Duration(5, SECONDS)) ===  users
@@ -49,7 +49,7 @@ class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
     }
 
     "get connected users' ids" in {
-      running(new EmptyApplication().overrideWith(setup())) {
+      running(new DeprecatedEmptyApplication().overrideWith(setup())) {
         val shoeboxServiceClient = inject[ShoeboxServiceClient]
         val userIdsFuture = shoeboxServiceClient.getConnectedUsers(user1965.id.get)
         Await.result(userIdsFuture, Duration(5, SECONDS)) ===  Set(1933,1935,1927,1921).map(Id[User](_))
@@ -58,7 +58,7 @@ class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
     }
 
     "get phrases by page" in {
-      running(new EmptyApplication().overrideWith(setup())) {
+      running(new DeprecatedEmptyApplication().overrideWith(setup())) {
         val shoeboxServiceClient = inject[ShoeboxServiceClient]
         val phrasesFuture = shoeboxServiceClient.getPhrasesByPage(0,2)
         Await.result(phrasesFuture, Duration(5, SECONDS)) ===  phrases

@@ -8,7 +8,7 @@ import play.api.Application
 
 
 object ShoeboxDevGlobal extends FortyTwoGlobal(Dev) with ShoeboxServices {
-  override val modules = Seq(ShoeboxDevModule())
+  override val module = ShoeboxDevModule()
 
   override def onStart(app: Application) {
     startShoeboxServices()

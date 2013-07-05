@@ -37,7 +37,7 @@ class CommentSearcherTest extends Specification with GraphTestHelper {
 
   "CommentSearcher" should {
     "return hits" in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
 
         val commentIndexer = mkCommentIndexer()
@@ -85,7 +85,7 @@ class CommentSearcherTest extends Specification with GraphTestHelper {
     }
 
     "return hits in time descending order" in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
 
         val commentIndexer = mkCommentIndexer()
@@ -145,7 +145,7 @@ class CommentSearcherTest extends Specification with GraphTestHelper {
     }
 
     "return maxHits and paginate" in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
 
         val commentIndexer = mkCommentIndexer()

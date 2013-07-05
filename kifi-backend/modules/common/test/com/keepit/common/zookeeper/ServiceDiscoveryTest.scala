@@ -20,7 +20,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.net.FakeClientResponse
 import com.google.inject.Provider
 
-class ServiceDiscoveryTest extends Specification with TestInjector {
+class ServiceDiscoveryTest extends Specification with DeprecatedTestInjector {
 
   "discovery" should {
     "serialize" in {
