@@ -714,7 +714,7 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
     if ((n.id == id || new Date(n.time) <= time) && notificationNotVisited.test(n.state)) {
       n.state = "visited";
       var d = pageData[n.details.page];
-      if (d && new Date(n.details.createdAt) > getTimeLastRead(n, d))) {
+      if (d && new Date(n.details.createdAt) > getTimeLastRead(n, d)) {
         switch (n.category) {
           case "comment":
             d.lastCommentRead = n.details.createdAt;
