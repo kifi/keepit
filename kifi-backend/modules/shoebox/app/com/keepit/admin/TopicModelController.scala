@@ -22,13 +22,14 @@ class TopicModelController  @Inject() (
   wordTopicModel: Provider[WordTopicModel],
   topicPlugin: TopicUpdaterPlugin,
   topicNameMapper: Provider[TopicNameMapper],
-  userTopicRepo: UserTopicRepo,
-  topicNameRepoA: TopicNameRepoA,
   db: Database,
+  modelAccessor: SwitchableTopicModelAccessor,
   actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator){
 
   val uriTopicHelper = new UriTopicHelper
   val userTopicHelper = new UserTopicByteArrayHelper
+
+  def currentAccessor = modelAccessor.getActiveAccessor
 
   def resetAllTopicTables() = AdminHtmlAction{ implicit request =>
     topicPlugin.reset()
@@ -99,7 +100,7 @@ class TopicModelController  @Inject() (
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val userId = Id[User](body.get("user").get.toLong)
     val topic = db.readOnly { implicit s =>
-      userTopicRepo.getByUserId(userId) match {
+      currentAccessor.userTopicRepo.getByUserId(userId) match {
         case Some(userTopic) => userTopicHelper.toIntArray(userTopic.topic)
         case None => Array.empty[Int]
       }
@@ -113,7 +114,7 @@ class TopicModelController  @Inject() (
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val topicName = body.get("topicName").get
     db.readWrite{ implicit s =>
-      topicNameRepoA.updateName(id, topicName)
+      currentAccessor.topicNameRepo.updateName(id, topicName)
     }
     Ok(Json.obj("topicName" -> topicName))
 
@@ -124,7 +125,7 @@ class TopicModelController  @Inject() (
   def topicsView(page: Int = 0) = AdminHtmlAction{ request =>
     val PAGE_SIZE = 50
     val (topics, count) = db.readOnly{ implicit s =>
-      val topics = topicNameRepoA.all.sortWith((a, b) => a.id.get.id < b.id.get.id)
+      val topics = currentAccessor.topicNameRepo.all.sortWith((a, b) => a.id.get.id < b.id.get.id)
       val count = topics.size
       (topics.drop(page * PAGE_SIZE).take(PAGE_SIZE), count)
     }
@@ -144,8 +145,8 @@ class TopicModelController  @Inject() (
     val topics = topicNames.map{ name => TopicName(topicName = name) }
 
     db.readWrite{ implicit s =>
-      topicNameRepoA.deleteAll()
-      topics.foreach{topicNameRepoA.save(_)}
+      currentAccessor.topicNameRepo.deleteAll()
+      topics.foreach{currentAccessor.topicNameRepo.save(_)}
     }
 
     Redirect(com.keepit.controllers.admin.routes.TopicModelController.topicsViewDefault)

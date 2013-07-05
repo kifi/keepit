@@ -6,6 +6,21 @@ import com.keepit.model.{TopicSeqNumInfoRepo, TopicSeqNumInfoRepoA, TopicSeqNumI
 import com.keepit.model.{TopicNameRepo, TopicNameRepoA, TopicNameRepoB}
 import com.google.inject.{Inject, Singleton}
 
+
+/**
+ * A pain point of topic model is: models are not backward compatible. When a new model is available,
+ * e.g. from 100 topics to 200 topics, we have to re-compute values in various DBs. Also, the underlying
+ * documentTopicModel will be different, the membership vector produced will be in-compatible with the one
+ * from old model.
+ *
+ * A temporary solution is to have two copies of various resources: DB repos and models. They should be bundled
+ * together. model A produces data to Repo A, model B talks to Repo B.
+ *
+ * Most of the time, only one type of resoure is active, either A or B. If A is active, then when a new model is
+ * available, we use B to start a "catch up process": compute user topics, uri topics, etc. In the meanwhile,
+ * resource A can still handle various requests. Once we have caught up, we can safely switch from A to B.
+ */
+
 trait TopicModelAccessor {
   val userTopicRepo: UserTopicRepo
   val uriTopicRepo: UriTopicRepo
@@ -42,15 +57,13 @@ class SwitchableTopicModelAccessor @Inject()(
   val accessorA: TopicModelAccessorA,
   val accessorB: TopicModelAccessorB
 ) {
-  var currentAccessor = TopicModelAccessorFlag.A       // will read this from configuration
+  private var currentAccessor = TopicModelAccessorFlag.A       // default to A for now. Will read this from configuration or zookeeper or DB
 
-  // this is the one in use
   def getActiveAccessor = currentAccessor match {
     case TopicModelAccessorFlag.A  => accessorA
     case TopicModelAccessorFlag.B  => accessorB
   }
 
-  // this one will only be used during re-model procedure, when a new topic model is available
   def getInactiveAccessor = currentAccessor match {
     case TopicModelAccessorFlag.A  => accessorB
     case TopicModelAccessorFlag.B  => accessorA

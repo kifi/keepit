@@ -20,9 +20,9 @@ class TopicUpdater @Inject() (
   uriRepo: NormalizedURIRepo,
   bookmarkRepo: BookmarkRepo,
   articleStore: ArticleStore,
-  accessorA: TopicModelAccessorA
+  modelAccessor: SwitchableTopicModelAccessor
 ) extends Logging {
-  var currentAccessor: TopicModelAccessor = accessorA
+  def currentAccessor: TopicModelAccessor = modelAccessor.getActiveAccessor
   val commitBatchSize = 100
   val fetchSize = 5000
   val uriTopicHelper = new UriTopicHelper
