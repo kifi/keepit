@@ -2,5 +2,7 @@ package com.keepit.test
 
 import java.io.File
 import com.keepit.dev.DevGlobal
+import com.google.inject.Module
 
-class DevApplication(path: File = new File("./modules/common/")) extends DeprecatedTestApplication(new DeprecatedTestGlobal(DevGlobal.module), path = path)
+class DevApplication(overridingModules: Module*)(implicit path: File = new File("./modules/common/"))
+  extends TestApplicationFromGlobal(path, new TestGlobalWithDB(Seq(DevGlobal.module), overridingModules))
