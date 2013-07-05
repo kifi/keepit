@@ -5,16 +5,15 @@ import scala.util.Try
 import org.specs2.mutable._
 
 import com.keepit.common.db._
-import com.keepit.common.db.slick.Database
 import com.keepit.test._
 
-class UserRepoTest extends Specification with DeprecatedTestDBRunner {
+class UserTest extends Specification with ShoeboxTestInjector {
 
   "UserRepo" should {
     "Use the cache" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         val userRepoImpl = userRepo.asInstanceOf[UserRepoImpl]
-        inject[Database].readWrite { implicit session =>
+        db.readWrite { implicit session =>
           userRepoImpl.idCache.get(UserIdKey(Id[User](1))).isDefined === false
           val user = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
 

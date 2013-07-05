@@ -8,7 +8,7 @@ import com.keepit.common.db.TestSlickSessionProvider
 import com.keepit.common.mail.ElectronicMailRepo
 import com.google.inject.Injector
 
-trait InjectedDbRepos { self: InjectorProvider =>
+trait ShoeboxInjectionHelpers { self: InjectorProvider =>
 
   def db(implicit injector: Injector) = inject[Database]
   def userSessionRepo(implicit injector: Injector) = inject[UserSessionRepo]

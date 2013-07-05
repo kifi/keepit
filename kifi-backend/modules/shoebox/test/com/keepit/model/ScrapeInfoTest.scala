@@ -1,16 +1,15 @@
 package com.keepit.model
 
 import com.keepit.common.db.slick._
-import com.keepit.inject._
-import com.keepit.test.{InjectedDbRepos, EmptyApplication}
+import com.keepit.test.ShoeboxTestInjector
 import org.specs2.mutable._
 import com.keepit.common.time._
-import play.api.test.Helpers._
+import com.google.inject.Injector
 
 
-class ScrapeInfoTest extends Specification with ApplicationInjector with InjectedDbRepos {
+class ScrapeInfoTest extends Specification with ShoeboxTestInjector {
 
-  def setup() = {
+  def setup()(implicit injector: Injector) = {
     inject[Database].readWrite {implicit s =>
 
       val uri1 = uriRepo.save(NormalizedURIFactory("Google", "http://www.google.com/"))
@@ -35,7 +34,7 @@ class ScrapeInfoTest extends Specification with ApplicationInjector with Injecte
 
   "Scrape Info" should {
     "set the next scrape by regex" in {
-      running(new EmptyApplication()) {
+    withDb() { implicit injector =>
 
         val (uri1, uri2, uri3, uri4, uri5, uri6, uri7, _, _, _, _, _, _, _) = setup()
 

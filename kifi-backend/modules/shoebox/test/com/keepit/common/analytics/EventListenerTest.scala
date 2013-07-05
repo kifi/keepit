@@ -10,7 +10,7 @@ import com.keepit.model._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.inject.ApplicationInjector
 
-class EventListenerTest extends Specification with ApplicationInjector with InjectedDbRepos {
+class EventListenerTest extends Specification with ApplicationInjector with ShoeboxInjectionHelpers {
 
   def setup() = {
     db.readWrite {implicit s =>

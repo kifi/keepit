@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import play.api.test.Helpers._
 import com.keepit.common.db.slick._
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.test.{InjectedDbRepos, EmptyApplication}
+import com.keepit.test.{ShoeboxInjectionHelpers, DeprecatedEmptyApplication}
 import com.keepit.inject._
 import com.keepit.model._
 import play.api.libs.json.{Json, JsNumber, JsArray}
@@ -13,7 +13,7 @@ import com.keepit.model.User
 import play.api.test.FakeRequest
 import com.keepit.search.Lang
 
-class ShoeboxControllerTest extends Specification with ApplicationInjector with InjectedDbRepos {
+class ShoeboxControllerTest extends Specification with ApplicationInjector with ShoeboxInjectionHelpers {
 
   def setupSomeUsers() = {
     inject[Database].readWrite {implicit s =>
@@ -47,7 +47,7 @@ class ShoeboxControllerTest extends Specification with ApplicationInjector with 
   "ShoeboxController" should {
 
     "return users from the database" in {
-        running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule().withFakeHttpClient()) {
+        running(new DeprecatedEmptyApplication().withFakePersistEvent().withShoeboxServiceModule().withFakeHttpClient()) {
           val (user1965,friends) = setupSomeUsers()
           val users = user1965::friends
           val shoeboxController = inject[ShoeboxController]
@@ -60,7 +60,7 @@ class ShoeboxControllerTest extends Specification with ApplicationInjector with 
     }
 
     "return basic users from the database" in {
-        running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule().withFakeHttpClient()) {
+        running(new DeprecatedEmptyApplication().withFakePersistEvent().withShoeboxServiceModule().withFakeHttpClient()) {
           val (user1965,friends) = setupSomeUsers()
           val users = user1965::friends
           val basicUserRepo = inject[BasicUserRepo]
@@ -77,7 +77,7 @@ class ShoeboxControllerTest extends Specification with ApplicationInjector with 
     }
 
     "return connected users' ids from the database" in {
-      running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule().withFakeHttpClient()) {
+      running(new DeprecatedEmptyApplication().withFakePersistEvent().withShoeboxServiceModule().withFakeHttpClient()) {
         val (user1965,friends) = setupSomeUsers()
         val shoeboxController = inject[ShoeboxController]
         val result = shoeboxController.getConnectedUsers(user1965.id.get)(FakeRequest())
@@ -88,7 +88,7 @@ class ShoeboxControllerTest extends Specification with ApplicationInjector with 
     }
 
     "return phrases from the database" in {
-      running(new EmptyApplication().withFakePersistEvent().withShoeboxServiceModule().withFakeHttpClient()) {
+      running(new DeprecatedEmptyApplication().withFakePersistEvent().withShoeboxServiceModule().withFakeHttpClient()) {
         setupSomePhrases()
         val shoeboxController = inject[ShoeboxController]
         val result = shoeboxController.getPhrasesByPage(0,2)(FakeRequest())

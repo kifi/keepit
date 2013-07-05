@@ -59,7 +59,7 @@ class DeprecatedTestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, 
 }
 
 @deprecated("Use RemoteTestApplication instead", "July 3rd 2013")
-class EmptyApplication(path: File = new File("./modules/common/")) extends DeprecatedTestApplication(new DeprecatedTestGlobal(DeprecatedTestModule()), path = path)
+class DeprecatedEmptyApplication(path: File = new File("./modules/common/")) extends DeprecatedTestApplication(new DeprecatedTestGlobal(DeprecatedTestModule()), path = path)
 
 @deprecated("Use smaller functional modules on demand instead", "July 3rd 2013")
 case class DeprecatedTestModule(dbInfo: DbInfo = TestDbInfo.dbInfo) extends ScalaModule {
@@ -70,7 +70,6 @@ case class DeprecatedTestModule(dbInfo: DbInfo = TestDbInfo.dbInfo) extends Scal
     install(TestCacheModule())
     install(FakeDiscoveryModule())
     install(FakeDomainTagImporterModule())
-    install(TestSliderHistoryTrackerModule())
     install(TestShoeboxServiceClientModule())
     install(TestSearchServiceClientModule())
     install(TestMailModule())

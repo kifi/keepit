@@ -20,7 +20,7 @@ import play.api.test.Helpers._
 import securesocial.core._
 import com.keepit.inject.ApplicationInjector
 
-class AdminDashboardControllerTest extends Specification with ApplicationInjector with InjectedDbRepos {
+class AdminDashboardControllerTest extends Specification with ApplicationInjector with ShoeboxInjectionHelpers {
 
   "AdminDashboardController" should {
     "get users by date as JSON" in {

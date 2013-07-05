@@ -18,7 +18,7 @@ trait DeprecatedTestInjector extends EmptyInjector {
 }
 
 @deprecated("Use SimpleTestDbRunner instead", "July 3rd 2013")
-trait DeprecatedTestDBRunner extends DeprecatedTestInjector with InjectedDbRepos {
+trait DeprecatedTestDBRunner extends DeprecatedTestInjector with ShoeboxInjectionHelpers {
 
   def dbInfo: DbInfo = TestDbInfo.dbInfo
   DriverManager.registerDriver(new play.utils.ProxyDriver(Class.forName("org.h2.Driver").newInstance.asInstanceOf[Driver]))

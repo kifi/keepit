@@ -1,7 +1,7 @@
 package com.keepit.test
 
 import play.api.{Application, Mode}
-import com.keepit.inject.{ApplicationInjector, EmptyInjector}
+import com.keepit.inject.{TestFortyTwoModule, ApplicationInjector, EmptyInjector}
 import com.keepit.common.db.{TestDbInfo, DbInfo}
 import java.sql.{Driver, DriverManager}
 import com.keepit.common.db.slick._
@@ -15,6 +15,8 @@ import com.keepit.common.db.TestSlickModule
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.google.inject.util.Modules
 import com.google.inject.{Injector, Module}
+import com.keepit.common.cache.{HashMapMemoryCacheModule, ShoeboxCacheModule}
+import com.keepit.common.zookeeper.FakeDiscoveryModule
 
 class TestGlobalWithDB(defaultModules: Seq[Module], overridingModules: Seq[Module])
   extends TestGlobal(defaultModules, overridingModules) {
@@ -27,19 +29,28 @@ class TestGlobalWithDB(defaultModules: Seq[Module], overridingModules: Seq[Modul
   }
 }
 
-class ShoeboxApplication(path: File = new File("./modules/shoebox/"))(overridingModules: Module*)
-  extends TestApplicationFromGlobal(path, new TestGlobalWithDB(Seq(FakeClockModule(), FakeHealthcheckModule(), TestSlickModule(TestDbInfo.dbInfo)), overridingModules))
+class ShoeboxApplication(overridingModules: Module*)(implicit path: File = new File("./modules/shoebox/"))
+  extends TestApplicationFromGlobal(path, new TestGlobalWithDB(
+    Seq(
+      FakeClockModule(),
+      FakeHealthcheckModule(),
+      TestFortyTwoModule(),
+      FakeDiscoveryModule(),
+      TestSlickModule(TestDbInfo.dbInfo),
+      ShoeboxCacheModule(HashMapMemoryCacheModule())
+    ), overridingModules
+  ))
 
-trait ShoeboxApplicationInjector extends ApplicationInjector with InjectedDbRepos
+trait ShoeboxApplicationInjector extends ApplicationInjector with ShoeboxInjectionHelpers
 
-trait ShoeboxTestInjector extends EmptyInjector with InjectedDbRepos {
+trait ShoeboxTestInjector extends EmptyInjector with ShoeboxInjectionHelpers {
   val mode = Mode.Test
-  val module = Modules.combine(FakeClockModule(), FakeHealthcheckModule(), TestSlickModule(TestDbInfo.dbInfo))
+  val module = Modules.combine(FakeClockModule(), FakeHealthcheckModule(), TestSlickModule(TestDbInfo.dbInfo), ShoeboxCacheModule(HashMapMemoryCacheModule()))
 
   def dbInfo: DbInfo = TestDbInfo.dbInfo
   DriverManager.registerDriver(new play.utils.ProxyDriver(Class.forName("org.h2.Driver").newInstance.asInstanceOf[Driver]))
 
-  def withDB[T](overridingModules: Module*)(f: Injector => T) = {
+  def withDb[T](overridingModules: Module*)(f: Injector => T) = {
     withCustomInjector(overridingModules:_*) { implicit injector =>
       val h2 = inject[DataBaseComponent].asInstanceOf[H2]
       h2.initListener = Some(new TableInitListener {

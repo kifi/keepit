@@ -1,18 +1,15 @@
 package com.keepit.model
 
 import org.joda.time.DateTime
-import com.keepit.common.time._
 import com.keepit.common.time.zones.PT
 import org.specs2.mutable.Specification
 import com.google.inject.Injector
 import com.keepit.common.db.Id
 import scala.Array.canBuildFrom
-import play.api.Play.current
 import com.keepit.test._
-import com.keepit.inject._
 import com.keepit.learning.topicmodel.TopicModelGlobal
 
-class UriTopicTest extends Specification with DeprecatedTestDBRunner {
+class UriTopicTest extends Specification with ShoeboxTestInjector {
   def genTopic(numTopics: Int, uriIdx: Int, default: Double = 0.1, nonDefault: Double = 0.8) = {
     val topic = (new Array[Double](numTopics)).map(_ + default)
     topic(uriIdx) = nonDefault
@@ -41,7 +38,7 @@ class UriTopicTest extends Specification with DeprecatedTestDBRunner {
 
   "uriTopicRepo" should {
     "persist data" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         val uriTopicRepo = inject[UriTopicRepo]
         val uriTopics = setup()
         val numDocs = uriTopics.size
@@ -58,7 +55,7 @@ class UriTopicTest extends Specification with DeprecatedTestDBRunner {
     }
 
     "be able to delete all data" in {
-        withDB() { implicit injector =>
+        withDb() { implicit injector =>
         val uriTopicRepo = inject[UriTopicRepo]
         val uriTopics = setup()
         val numDocs = uriTopics.size

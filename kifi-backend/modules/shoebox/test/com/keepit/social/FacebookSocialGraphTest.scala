@@ -19,12 +19,12 @@ import securesocial.core.OAuth2Info
 import securesocial.core.SocialUser
 import securesocial.core.UserId
 
-class FacebookSocialGraphTest extends Specification with ApplicationInjector with InjectedDbRepos {
+class FacebookSocialGraphTest extends Specification with ApplicationInjector with ShoeboxInjectionHelpers {
 
   "FacebookSocialGraph" should {
 
     "find pagination url" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val graph = new FacebookSocialGraph(new FakeHttpClient(), db, socialUserInfoRepo)
         val eishay1Json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/facebook_graph_eishay_min_page1.json")).mkString)
         graph.nextPageUrl(eishay1Json) === Some("https://graph.facebook.com/646386018/friends?fields=name,first_name,middle_name,last_name,gender,username,languages,installed,devices,email,picture&access_token=AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD&limit=5000&offset=5000&__after_id=100004067535411")
@@ -32,7 +32,7 @@ class FacebookSocialGraphTest extends Specification with ApplicationInjector wit
     }
 
     "not find pagination url" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val graph = new FacebookSocialGraph(new FakeHttpClient(), db, socialUserInfoRepo)
         val eishay2Json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/facebook_graph_eishay_min_page2.json")).mkString)
         graph.nextPageUrl(eishay2Json) === None
@@ -40,7 +40,7 @@ class FacebookSocialGraphTest extends Specification with ApplicationInjector wit
     }
 
     "fetch from facebook" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         //val httpClient = HttpClientImpl(timeout = 1, timeoutUnit = TimeUnit.MINUTES)
         val expectedUrl = "https://graph.facebook.com/eishay?access_token=AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD&fields=name,first_name,middle_name,last_name,gender,username,languages,installed,devices,email,picture,friends.fields(name,first_name,middle_name,last_name,gender,username,languages,installed,devices,email,picture)"
         val json = io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/facebook_graph_eishay_super_min.json")).mkString
@@ -74,7 +74,7 @@ class FacebookSocialGraphTest extends Specification with ApplicationInjector wit
     }
 
     "fetch from facebook using jennifer_hirsch" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         //val httpClient = HttpClientImpl(timeout = 1, timeoutUnit = TimeUnit.MINUTES)
         val data = io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/jennifer_hirsch.min.json")).mkString
         val httpClient = new FakeHttpClient(Some({ case _ => data}))

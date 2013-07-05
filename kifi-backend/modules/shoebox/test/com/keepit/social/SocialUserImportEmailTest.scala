@@ -11,11 +11,11 @@ import com.keepit.test._
 import play.api.libs.json.Json
 import play.api.test.Helpers._
 
-class SocialUserImportEmailTest extends Specification with ApplicationInjector with InjectedDbRepos {
+class SocialUserImportEmailTest extends Specification with ApplicationInjector with ShoeboxInjectionHelpers {
 
   "SocialUserImportEmail" should {
     "import email" in {
-      running(new EmptyApplication().withFakeHttpClient()) {
+      running(new DeprecatedEmptyApplication().withFakeHttpClient()) {
         val graphs = List(
             ("facebook_graph_andrew.json", "fb@andrewconner.org")
         )

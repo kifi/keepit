@@ -3,16 +3,14 @@ package com.keepit.model
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick._
-import com.keepit.inject._
 import com.keepit.test._
-import play.api.test.Helpers._
 
-class FollowTest extends Specification with ApplicationInjector with InjectedDbRepos {
+class FollowTest extends Specification with ShoeboxTestInjector {
 
   "Follow" should {
 
     "load by user and uri" in {
-      running(new EmptyApplication()) {
+      withDb() { implicit injector =>
         val repo = inject[FollowRepo]
         repo.eq(inject[FollowRepo]) === true //verify singleton
 

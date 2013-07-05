@@ -16,7 +16,7 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
 
   "CollectionIndexer" should {
     "maintain a sequence number on collections " in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
         val numURIs = uris.size
 
@@ -47,7 +47,7 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
     }
 
     "find collections by user" in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -84,7 +84,7 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
     }
 
     "find collections by uri" in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -121,7 +121,7 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
     }
 
     "store collection to uri associations in URIList" in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val (users, uris) = initData
 
         val collectionIndexer = mkCollectionIndexer()
@@ -148,7 +148,7 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
     }
 
     "dump Lucene Document" in {
-      running(new EmptyApplication().withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val Seq(user) = saveUsers(User(firstName = "Agrajag", lastName = ""))
         val uris = saveURIs(
           NormalizedURIFactory(title = "title", url = "http://www.keepit.com/article1", state=SCRAPED),

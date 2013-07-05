@@ -1,15 +1,14 @@
 package com.keepit.model
 
 import org.specs2.mutable._
-import com.keepit.test.{InjectedDbRepos, EmptyApplication}
+import com.keepit.test.ShoeboxTestInjector
 
-import com.keepit.inject._
 import com.keepit.common.db.LargeString._
-import play.api.test.Helpers._
+import com.google.inject.Injector
 
-class CommentReadTest extends Specification with ApplicationInjector with InjectedDbRepos {
+class CommentReadTest extends Specification with ShoeboxTestInjector {
 
-  def setup() = {
+  def setup()(implicit injector: Injector) = {
     db.readWrite {implicit s =>
       val user1 = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
       val user2 = userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
@@ -33,7 +32,7 @@ class CommentReadTest extends Specification with ApplicationInjector with Inject
 
   "CommentRead" should {
     "keep track of read/unread comments" in {
-      running(new EmptyApplication()) {
+      withDb() { implicit injector =>
         val (user1, user2, uri1, uri2, comment1, comment2, comment3, msg1, msg2, msg3) = setup()
 
         db.readWrite { implicit s =>
@@ -54,7 +53,7 @@ class CommentReadTest extends Specification with ApplicationInjector with Inject
     }
 
     "keep track of read/unread messages" in {
-      running(new EmptyApplication()) {
+      withDb() { implicit injector =>
         val (user1, user2, uri1, uri2, comment1, comment2, comment3, msg1, msg2, msg3) = setup()
 
         db.readWrite { implicit s =>

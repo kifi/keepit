@@ -48,7 +48,7 @@ class SlickStandaloneTest extends Specification with ShoeboxTestInjector {
         }
       }
 
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         val repo: BarRepoImpl = new BarRepoImpl(db.db, new SystemClock())
         2 == 2
         db.readWrite{ implicit session =>

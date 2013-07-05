@@ -4,16 +4,14 @@ import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
 import com.google.inject.Injector
-import com.keepit.FortyTwoGlobal
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.time._
 import com.keepit.common.time.zones.PT
-import com.keepit.test.{DeprecatedTestDBRunner, EmptyApplication}
+import com.keepit.test.{ShoeboxApplication, ShoeboxTestInjector}
 
-import play.api.Play.current
 import play.api.test.Helpers._
 
-class CollectionTest extends Specification with DeprecatedTestDBRunner {
+class CollectionTest extends Specification with ShoeboxTestInjector {
 
   def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, PT)
@@ -48,7 +46,7 @@ class CollectionTest extends Specification with DeprecatedTestDBRunner {
 
   "collections" should {
     "allow the bookmarkRepo to query by a specific collection" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
           collectionRepo.getByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
@@ -64,7 +62,7 @@ class CollectionTest extends Specification with DeprecatedTestDBRunner {
       }
     }
     "work" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
           collectionRepo.getByUser(user1.id.get).map(_.name).toSet === Set("Cooking", "Apparel", "Scala")
@@ -85,7 +83,7 @@ class CollectionTest extends Specification with DeprecatedTestDBRunner {
       }
     }
     "separate collections by user" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll3.id.get))
@@ -100,7 +98,7 @@ class CollectionTest extends Specification with DeprecatedTestDBRunner {
       }
     }
     "get and cache collection ids for a bookmark" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll3.id.get))
@@ -118,7 +116,7 @@ class CollectionTest extends Specification with DeprecatedTestDBRunner {
       }
     }
     "increment sequence number on save" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readWrite { implicit s =>
           val n = collectionRepo.save(coll1.withUpdateTime(currentDateTime)).seq.value
@@ -128,7 +126,7 @@ class CollectionTest extends Specification with DeprecatedTestDBRunner {
       }
     }
     "update sequence number when keeps are added or removed, and when keeps' uriIds are changed" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         val newSeqNum = db.readWrite { implicit s =>
           keepToCollectionRepo.save(KeepToCollection(bookmarkId = bookmark1.id.get, collectionId = coll1.id.get))
@@ -157,9 +155,8 @@ class CollectionTest extends Specification with DeprecatedTestDBRunner {
       }
     }
     "ignore case in getting elements" in {
-      running(new EmptyApplication) {
-        // TODO: figure out why this works but not withDB()
-        implicit val injector = current.global.asInstanceOf[FortyTwoGlobal].injector
+      running(new ShoeboxApplication()) {
+        // TODO: figure out why this works but not withDb() - this is not even using the application injector
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readOnly { implicit s =>
           collectionRepo.getByUserAndName(user1.id.get, "scala") ===

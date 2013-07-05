@@ -23,7 +23,7 @@ import com.keepit.model.SocialUserInfo
 import play.api.libs.json.JsObject
 import com.keepit.common.social.SocialId
 
-class ExtAuthControllerTest extends Specification with ApplicationInjector with InjectedDbRepos {
+class ExtAuthControllerTest extends Specification with ApplicationInjector with ShoeboxInjectionHelpers {
 
   "ExtAuthController" should {
     "start" in {

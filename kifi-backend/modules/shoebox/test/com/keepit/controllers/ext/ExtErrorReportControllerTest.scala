@@ -16,7 +16,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import securesocial.core._
 
-class ExtErrorReportControllerTest extends Specification with ApplicationInjector with InjectedDbRepos {
+class ExtErrorReportControllerTest extends Specification with ApplicationInjector with ShoeboxInjectionHelpers {
 
   def fakeRequest(json: JsValue) = {
     val oAuth2Info = OAuth2Info(accessToken = "A", tokenType = None, expiresIn = None, refreshToken = None)
