@@ -375,7 +375,7 @@ const socketHandlers = {
     var d = pageData[nUri];
     if (!d || !d.lastMessageRead || new Date(d.lastMessageRead[threadId] || 0) < new Date(time)) {
       markNoticesVisited("message", nUri, messageId, time, "/messages/" + threadId);
-      if (d) {
+      if (d && d.lastMessageRead) {
         d.lastMessageRead[threadId] = time;
         d.tabs.forEach(function(tab) {
           api.tabs.emit(tab, "thread_info", {thread: d.threads.filter(hasId(threadId))[0], read: d.lastMessageRead[threadId]});
@@ -510,9 +510,9 @@ api.port.on({
   },
   set_message_read: function(o, _, tab) {
     var d = pageData[tab.nUri];
-    if (!d || new Date(o.time) > new Date(d.lastMessageRead[o.threadId] || 0)) {
+    if (!d || !d.lastMessageRead || new Date(o.time) > new Date(d.lastMessageRead[o.threadId] || 0)) {
       markNoticesVisited("message", tab.nUri, o.messageId, o.time, "/messages/" + o.threadId);
-      if (d) {
+      if (d && d.lastMessageRead) {
         d.lastMessageRead[o.threadId] = o.time;
         tellTabsIfCountChanged(d, "m", messageCount(d));  // tabs at this uri
       }
@@ -714,7 +714,7 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
     if ((n.id == id || new Date(n.time) <= time) && notificationNotVisited.test(n.state)) {
       n.state = "visited";
       var d = pageData[n.details.page];
-      if (d && new Date(n > getTimeLastRead(n, d))) {
+      if (d && new Date(n.details.createdAt) > getTimeLastRead(n, d))) {
         switch (n.category) {
           case "comment":
             d.lastCommentRead = n.details.createdAt;
@@ -751,8 +751,8 @@ function decrementNumNotificationsNotVisited(n) {
 
 function getTimeLastRead(n, d) {
   return new Date(
-    n.category == "comment" ? d.lastCommentRead :
-    n.category == "message" ? d.lastMessageRead[n.details.locator.split("/")[2]] : 0);
+    n.category == "comment" ? (d.lastCommentRead || 0) :
+    n.category == "message" && d.lastMessageRead ? (d.lastMessageRead[n.details.locator.split("/")[2]] || 0) : 0);
 }
 
 function createDeepLinkListener(locator, tabId) {
