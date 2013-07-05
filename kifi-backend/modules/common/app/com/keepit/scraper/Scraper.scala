@@ -110,15 +110,15 @@ class Scraper @Inject() (
           }
           savedUri
         }
-        log.debug("fetched uri %s => %s".format(uri, article))
+        log.debug("fetched uri %s => %s".format(scrapedURI, article))
 
         def shouldUpdateScreenshot(uri: NormalizedURI) = {
           uri.screenshotUpdatedAt map { update =>
             Days.daysBetween(currentDateTime.toDateMidnight, update.toDateMidnight).getDays() >= 5
           } getOrElse true
         }
-        if(shouldUpdateScreenshot(uri))
-          s3ScreenshotStore.updatePicture(uri)
+        if(shouldUpdateScreenshot(scrapedURI))
+          s3ScreenshotStore.updatePicture(scrapedURI)
 
         (scrapedURI, Some(article))
       case NotScrapable(destinationUrl) =>
