@@ -5,7 +5,7 @@ import org.specs2.mutable.Specification
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.{HttpClient, FakeHttpClient}
 import com.keepit.inject._
-import com.keepit.test.EmptyApplication
+import com.keepit.test.DeprecatedEmptyApplication
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
@@ -15,7 +15,7 @@ class DomainClassifierTest extends TestKit(ActorSystem()) with Specification wit
 
   "The domain classifier" should {
     "use imported classifications and not fetch for known domains" in {
-      running(new EmptyApplication().withFakeMail().withFakePersistEvent().withFakeHttpClient()
+      running(new DeprecatedEmptyApplication().withFakeMail().withFakePersistEvent().withFakeHttpClient()
           .withTestActorSystem(system)) {
         val classifier = inject[DomainClassifierImpl]
         val tagRepo = inject[DomainTagRepo]
@@ -38,7 +38,7 @@ class DomainClassifierTest extends TestKit(ActorSystem()) with Specification wit
       }
     }
     "fetch if necessary" in {
-      running(new EmptyApplication().withFakeMail().withFakePersistEvent()
+      running(new DeprecatedEmptyApplication().withFakeMail().withFakePersistEvent()
           .withTestActorSystem(system)
           .overrideWith(new ProdFortyTwoModule() {
             override def configure() {

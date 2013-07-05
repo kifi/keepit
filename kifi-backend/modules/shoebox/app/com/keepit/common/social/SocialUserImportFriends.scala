@@ -6,16 +6,15 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.model._
-
-import play.api.Play
-import play.api.Play.current
 import play.api.libs.json._
+import play.api.Mode._
 
 class SocialUserImportFriends @Inject() (
     db: Database,
     repo: SocialUserInfoRepo,
     store: SocialUserRawInfoStore,
-    healthcheckPlugin: HealthcheckPlugin) extends Logging {
+    healthcheckPlugin: HealthcheckPlugin
+) extends Logging {
 
   def importFriends(friendsWithRawJson: Seq[(SocialUserInfo, JsValue)]): Seq[SocialUserRawInfo] = {
     val socialUserInfos = db.readOnly { implicit s =>
@@ -30,9 +29,7 @@ class SocialUserImportFriends @Inject() (
 
     socialUserRawInfos map { info =>
       log.info(s"Adding user ${info.fullName} (${info.socialUserInfoId.get}) to S3")
-      if (!Play.isDev) {
-        store += (info.socialUserInfoId.get -> info)
-      }
+      store += (info.socialUserInfoId.get -> info)
     }
 
     log.info(s"Imported ${socialUserRawInfos.size} friends")

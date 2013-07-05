@@ -15,7 +15,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification wi
 
   "The domain tag importer" should {
     "load domain sensitivity from a map of tags to domains" in {
-      running(new EmptyApplication().withFakePersistEvent().withTestActorSystem(system)) {
+      running(new DeprecatedEmptyApplication().withFakePersistEvent().withTestActorSystem(system)) {
         val db = inject[Database]
         val tagRepo = inject[DomainTagRepo]
         val domainTagImporter = inject[DomainTagImporterImpl]
@@ -49,7 +49,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification wi
       }
     }
     "properly remove domain tags" in {
-      running(new EmptyApplication().withFakePersistEvent().withTestActorSystem(system)) {
+      running(new DeprecatedEmptyApplication().withFakePersistEvent().withTestActorSystem(system)) {
         val tagRepo = inject[DomainTagRepo]
         val domainRepo = inject[DomainRepo]
         val db = inject[Database]
@@ -82,7 +82,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification wi
       }
     }
     "respect manual overrides" in {
-      running(new EmptyApplication().withFakePersistEvent().withTestActorSystem(system)) {
+      running(new DeprecatedEmptyApplication().withFakePersistEvent().withTestActorSystem(system)) {
         val tagRepo = inject[DomainTagRepo]
         val domainRepo = inject[DomainRepo]
         val db = inject[Database]

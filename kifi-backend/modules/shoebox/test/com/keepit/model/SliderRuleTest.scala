@@ -5,16 +5,14 @@ import org.specs2.mutable._
 
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
-import com.keepit.inject._
 import com.keepit.test._
 
 import play.api.libs.json._
-import play.api.test.Helpers._
 
-class SliderRuleTest extends Specification with ApplicationInjector {
+class SliderRuleTest extends Specification with ShoeboxTestInjector {
   "SliderRule" should {
     "save, load by group name, cache group versions" in {
-      running(new EmptyApplication()) {
+      withDb() { implicit injector =>
         val repo = inject[SliderRuleRepo]
         inject[SliderRuleRepo] must be(repo) // singleton
 

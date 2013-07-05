@@ -9,7 +9,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import play.api.Play.current
 import play.api.test.Helpers._
-import com.keepit.test.EmptyApplication
+import com.keepit.test.DeprecatedEmptyApplication
 import javax.xml.bind.DatatypeConverter._
 
 class DuplicateDocumentDetectionTest extends Specification with ApplicationInjector {
@@ -17,7 +17,7 @@ class DuplicateDocumentDetectionTest extends Specification with ApplicationInjec
   "Signature" should {
 
     "find similar documents of different thresholds" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
 
         val builder1 = new SignatureBuilder(3)
         val builder2 = new SignatureBuilder(3)

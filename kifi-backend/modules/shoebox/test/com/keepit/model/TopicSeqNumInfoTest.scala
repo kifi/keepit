@@ -1,18 +1,13 @@
 package com.keepit.model
-import com.keepit.common.time._
 import org.specs2.mutable.Specification
-import play.api.test._
-import play.api.test.Helpers._
 import com.keepit.test._
-import com.keepit.inject._
-import play.api.Play.current
 import com.keepit.common.db.SequenceNumber
 
 
-class TopicSeqNumInfoTest extends Specification with TestDBRunner{
+class TopicSeqNumInfoTest extends Specification with ShoeboxTestInjector {
   "TopicSeqNumInfoRepo" should {
     "work" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         val topicSeqNumInfoRepo = inject[TopicSeqNumInfoRepo]
         db.readWrite { implicit s =>
           val s1 = topicSeqNumInfoRepo.updateBookmarkSeq(SequenceNumber(1))
