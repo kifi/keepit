@@ -5,7 +5,6 @@ const notificationNotVisited = /^(un)?delivered$/;
 
 var tabsShowingNotificationsPane = [];
 var notificationsCallbacks = [];
-var threadCallbacks = {};
 
 // ===== Cached data from server
 
@@ -193,7 +192,7 @@ const socketHandlers = {
       d.following = o.following;
       d.comments = o.comments || [];
       d.threads = o.threads || [];
-      d.messages = d.messages || {};
+      d.messages = {};
       d.lastCommentRead = o.lastCommentRead;
       d.lastMessageRead = o.lastMessageRead || {};
       d.counts = {
@@ -220,12 +219,12 @@ const socketHandlers = {
           var numNew = th.messageCount - (thPrev && thPrev.messageCount || 0);
           if (numNew) {
             socket.send(["get_thread", th.id]);
-            (threadCallbacks[th.id] = threadCallbacks[th.id] || []).push(function(th) {
+            (d.threadCallbacks = d.threadCallbacks || []).push({id: th.id, respond: function(th) {
               d.tabs.forEach(function(tab) {
                 // TODO: may want to special case (numNew == 1) for an animation
                 api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages, userId: session.userId});
               });
-            });
+            }});
             threadsWithNewMessages.push(th);
           }
         });
@@ -319,12 +318,19 @@ const socketHandlers = {
   },
   thread: function(th) {
     api.log("[socket:thread]", th);
-    th.messages.forEach(function(m, i) {
-      for (var cbs = threadCallbacks[m.id]; cbs && cbs.length;) {
-        cbs.shift()({id: m.id, uri: th.uri, messages: th.messages});
+    var d = pageData[th.uri];
+    if (d && d.messages) {
+      d.messages[th.id] = th.messages;
+      if (d.threadCallbacks) {
+        for (var i = 0; i < d.threadCallbacks.length; i++) {
+          var cb = d.threadCallbacks[i];
+          if (th.id == cb.id || th.messages.some(hasId(cb.id))) {
+            cb.respond({id: th.id, messages: th.messages});
+            d.threadCallbacks.splice(i--, 1);
+          }
+        }
       }
-      delete threadCallbacks[m.id];
-    });
+    }
   },
   message: function(nUri, th, message) {
     api.log("[socket:message]", nUri, th, message);
@@ -369,7 +375,7 @@ const socketHandlers = {
     var d = pageData[nUri];
     if (!d || !d.lastMessageRead || new Date(d.lastMessageRead[threadId] || 0) < new Date(time)) {
       markNoticesVisited("message", nUri, messageId, time, "/messages/" + threadId);
-      if (d) {
+      if (d && d.lastMessageRead) {
         d.lastMessageRead[threadId] = time;
         d.tabs.forEach(function(tab) {
           api.tabs.emit(tab, "thread_info", {thread: d.threads.filter(hasId(threadId))[0], read: d.lastMessageRead[threadId]});
@@ -504,15 +510,20 @@ api.port.on({
   },
   set_message_read: function(o, _, tab) {
     var d = pageData[tab.nUri];
-    if (!d || new Date(o.time) > new Date(d.lastMessageRead[o.threadId] || 0)) {
+    if (!d || !d.lastMessageRead || new Date(o.time) > new Date(d.lastMessageRead[o.threadId] || 0)) {
       markNoticesVisited("message", tab.nUri, o.messageId, o.time, "/messages/" + o.threadId);
-      if (d) {
+      if (d && d.lastMessageRead) {
         d.lastMessageRead[o.threadId] = o.time;
         tellTabsIfCountChanged(d, "m", messageCount(d));  // tabs at this uri
       }
       tellTabsNoticeCountIfChanged();  // visible tabs
       socket.send(["set_message_read", o.messageId]);
     }
+  },
+  set_global_read: function(o, _, tab) {
+    markNoticesVisited("global", undefined, o.noticeId);
+    tellTabsNoticeCountIfChanged();  // visible tabs
+    socket.send(["set_global_read", o.noticeId]);
   },
   comments: function(_, respond, tab) {
     var d = pageData[tab.nUri];
@@ -530,21 +541,16 @@ api.port.on({
     var d = pageData[tab.nUri];
     if (d) d.on2(function() {
       var th = d.threads.filter(function(t) {return t.id == data.id || t.messageTimes[data.id]})[0];
-      var id = (th || data).id;
-      if (d.messages[id]) {
+      if (th && d.messages[th.id]) {
         if (data.respond) {
-          respond({id: id, messages: d.messages[id], isRedirect: !th});
+          respond({id: th.id, messages: d.messages[th.id]});
         }
       } else {
+        var id = (th || data).id;
         socket.send(["get_thread", id]);
-        (threadCallbacks[id] = threadCallbacks[id] || []).push(function(thread) {
-          if (d.messages) {
-            d.messages[thread.id] = thread.messages;
-          }
-          if (data.respond) {
-            respond({id: thread.id, messages: thread.messages, isRedirect: thread.uri != tab.nUri});
-          }
-        });
+        if (data.respond) {
+          (d.threadCallbacks = d.threadCallbacks || []).push({id: id, respond: respond});
+        }
       }
     });
   },
@@ -621,7 +627,9 @@ api.port.on({
       api.tabs.select(tab.id);
     } else {
       api.tabs.open(data.nUri, function(tabId) {
-        createDeepLinkListener(data.locator, tabId);
+        if (data.locator) {
+          createDeepLinkListener(data.locator, tabId);
+        }
       });
     }
   },
@@ -673,10 +681,13 @@ function insertNewNotification(n) {
 
 // id is of last read comment/message, timeStr is its createdAt time (not notification's).
 // locator not passed in the comments case.
+// If category is global, we do not check the nUri, timeStr, and locator because id identifies
+// it sufficiently. `undefined` can be passed in for everything but category and id.
 function markNoticesVisited(category, nUri, id, timeStr, locator) {
-  var time = new Date(timeStr);
+  var time = timeStr ? new Date(timeStr) : null;
   notifications.forEach(function(n, i) {
-    if (n.details.page == nUri &&
+    n.details.id = n.details.id || n.id;
+    if ((!nUri || n.details.page == nUri) &&
         n.category == category &&
         (!locator || n.details.locator == locator) &&
         (n.details.id == id || new Date(n.details.createdAt) <= time) &&
@@ -691,6 +702,7 @@ function markNoticesVisited(category, nUri, id, timeStr, locator) {
       nUri: nUri,
       time: timeStr,
       locator: locator,
+      id: id,
       numNotVisited: numNotificationsNotVisited});
   });
 }
@@ -702,7 +714,7 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
     if ((n.id == id || new Date(n.time) <= time) && notificationNotVisited.test(n.state)) {
       n.state = "visited";
       var d = pageData[n.details.page];
-      if (d && new Date(n > getTimeLastRead(n, d))) {
+      if (d && new Date(n.details.createdAt) > getTimeLastRead(n, d)) {
         switch (n.category) {
           case "comment":
             d.lastCommentRead = n.details.createdAt;
@@ -739,8 +751,8 @@ function decrementNumNotificationsNotVisited(n) {
 
 function getTimeLastRead(n, d) {
   return new Date(
-    n.category == "comment" ? d.lastCommentRead :
-    n.category == "message" ? d.lastMessageRead[n.details.locator.split("/")[2]] : 0);
+    n.category == "comment" ? (d.lastCommentRead || 0) :
+    n.category == "message" && d.lastMessageRead ? (d.lastMessageRead[n.details.locator.split("/")[2]] || 0) : 0);
 }
 
 function createDeepLinkListener(locator, tabId) {
@@ -1227,7 +1239,7 @@ authenticate(function() {
 function reportError(errMsg, url, lineNo) {
   api.log('Reporting error "%s" in %s line %s', errMsg, url, lineNo);
   if ((api.prefs.get("env") === "production") === api.isPackaged()) {
-    ajax("POST", "/error/report", {message: errMsg + (url ? ' at ' + url + (line ? ':' + lineNo : '') : '')});
+    ajax("POST", "/error/report", {message: errMsg + (url ? ' at ' + url + (lineNo ? ':' + lineNo : '') : '')});
   }
 }
 if (typeof window !== 'undefined') {  // TODO: add to api, find equivalent for firefox

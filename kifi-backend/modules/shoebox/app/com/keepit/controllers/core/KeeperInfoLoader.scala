@@ -1,23 +1,22 @@
 package com.keepit.controllers.core
 
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
+import org.joda.time.DateTime
+
 import com.google.inject.{Inject, Singleton}
 import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.net.URI
-import com.keepit.common.social.{BasicUser, BasicUserRepo}
-import com.keepit.common.social.{CommentWithBasicUser, CommentWithBasicUserRepo}
-import com.keepit.common.social.{ThreadInfo, ThreadInfoRepo}
+import com.keepit.common.social._
+import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.search.SearchServiceClient
-import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
-import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
-import scala.concurrent.Await
-import scala.concurrent.duration._
-import play.api.libs.json._
+
 import play.api.libs.functional.syntax._
-import org.joda.time.DateTime
-import com.keepit.common.time._
+import play.api.libs.json._
 
 case class KeeperInfo1(  // information needed immediately when a page is visited
     kept: Option[String],
@@ -52,8 +51,8 @@ object KeeperInfo2 {
         if (o.keepers.nonEmpty) Some("keepers" -> Json.toJson(o.keepers)) else None,
         if (o.keeps > 0) Some("keeps" -> JsNumber(o.keeps)) else None,
         if (o.following) Some("following" -> JsBoolean(true)) else None,
-        if (o.comments.nonEmpty) Some("comments" -> commentWithBasicUserSerializer.writes(o.comments)) else None,
-        if (o.threads.nonEmpty) Some("threads" -> threadInfoSerializer.writes(o.threads)) else None,
+        if (o.comments.nonEmpty) Some("comments" -> Json.toJson(o.comments)) else None,
+        if (o.threads.nonEmpty) Some("threads" -> Json.toJson(o.threads)) else None,
         if (o.lastCommentRead.nonEmpty) Some("lastCommentRead" -> Json.toJson(o.lastCommentRead.get)) else None,
         if (o.lastMessageRead.nonEmpty) Some("lastMessageRead" -> Json.toJson(o.lastMessageRead.map(m => m._1.id -> m._2))) else None)
       .flatten)

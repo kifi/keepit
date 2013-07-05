@@ -1,35 +1,24 @@
 package com.keepit.realtime
 
-import com.keepit.model._
+import scala.concurrent.duration._
+
+import com.google.inject.Inject
+import com.keepit.common.actor.ActorFactory
+import com.keepit.common.akka._
+import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
-import com.keepit.common.mail.PostOffice
+import com.keepit.common.healthcheck._
+import com.keepit.common.logging._
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.mail.EmailAddresses
-import com.keepit.serializer.CommentWithBasicUserSerializer._
-import com.keepit.common.social.CommentWithBasicUserRepo
-import com.keepit.common.db.slick.DBSession._
-import play.api.libs.json._
-import com.keepit.common.social.BasicUser
-import com.keepit.common.social.BasicUserRepo
-import com.keepit.model.UserNotificationDetails
-import org.joda.time.DateTime
-import com.keepit.model.UserNotificationDetails
-import com.google.inject.{ Inject, ImplementedBy, Singleton }
-import com.keepit.common.db.ExternalId
-import com.keepit.common.logging._
-import com.keepit.common.net.URINormalizer
-import com.keepit.common.db.{ State, Id }
-import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.social.ThreadInfoRepo
-import com.keepit.serializer.ThreadInfoSerializer._
-import com.keepit.common.healthcheck._
-import com.keepit.common.akka._
-import com.keepit.common.time._
-import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
-import com.keepit.common.actor.ActorFactory
-import akka.util.Timeout
-import scala.concurrent.duration._
 import com.keepit.common.mail.LocalPostOffice
+import com.keepit.common.mail.PostOffice
+import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.time._
+import com.keepit.model._
+
+import akka.util.Timeout
+import play.api.libs.json._
 
 case object SendEmails
 case class MessageNotification(notice: UserNotification)

@@ -294,7 +294,6 @@ $(function() {
 		return $(this).data("id");
 	}
 
-	// delete/rename collection
 	var $collMenu = $("#coll-menu")
 	.on("mouseover", "a", function() {
 		$(this).addClass("hover");
@@ -320,7 +319,11 @@ $(function() {
 					$myKeeps.removeData("collId");
 					showMyKeeps();
 				}
-				// $('.detail .collections ul li:has(input[data-id="'+collId+'"])').remove();
+				var $keepColl = $main.find(".keep-coll[data-id=" + collId + "]");
+				$keepColl.css("width", $keepColl[0].offsetWidth);
+				var $pageColl = $detail.find(".page-coll[data-id=" + collId + "]");
+				$pageColl.css("width", $pageColl[0].offsetWidth);
+				$keepColl.add($pageColl).layout().on("transitionend", removeIfThis).addClass("removed");
 			}});
 	}).on("mouseup mousedown", ".coll-rename", function(e) {
 		if (e.which > 1) return;
@@ -837,15 +840,24 @@ $(function() {
 			$(this.parentNode).data("id"),
 			$main.find(".keep.selected").map(getDataId).get());
 	}).on("click", ".page-coll-add", function() {
-		$(".page-coll-new").addClass("editing");
-		$(".page-coll-input").prop("disabled", false).focus().select().trigger("input");
+		var $btn = $(this), $in = $(".page-coll-input").css("width", $btn.outerWidth());
+		$btn.hide();
+		$in.add(".page-coll-sizer").show();
+		$in.layout().css("width", "").prop("disabled", false).focus().select().trigger("input");
 	}).on("blur", ".page-coll-input", function(e) {
-		hideAddCollTimeout = setTimeout(hide.bind(this), 50);
+		var input = this;
+		hideAddCollTimeout = setTimeout(hide, 50);
 		function hide() {
 			clearTimeout(hideAddCollTimeout), hideAddCollTimeout = null;
-			$collOpts.empty();
-			$(this).val("").prop("disabled", true);
-			$('.page-coll-new').removeClass("editing");
+			var $btn = $(".page-coll-add").css({display: "", visibility: "hidden", position: "absolute"}), width = $btn.outerWidth();
+			$btn.css({display: "none", visibility: "", position: ""});
+			var $in = $(input).val("").on("transitionend", function end() {
+				$in.off("transitionend", end).prop("disabled", true).add(".page-coll-sizer").hide().css("width", "");
+				$btn.show();
+			}).layout().css("width", width);
+			$collOpts.slideUp(120, function() {
+				$collOpts.empty();
+			});
 		}
 	}).on("focus", ".page-coll-input", function(e) {
 		clearTimeout(hideAddCollTimeout), hideAddCollTimeout = null;
@@ -872,7 +884,7 @@ $(function() {
 				}
 				break;
 		}
-	}).on("input", ".page-coll-input", function() {
+	}).on("input", ".page-coll-input", function(e) {
 		var width = $(this.previousElementSibling).text(this.value).outerWidth();
 		$(this).css("width", Math.min(Math.max(100, width) + 34, $('.page-colls').outerWidth()));
 		var allColls = $.map(collections, identity), colls;
@@ -900,17 +912,22 @@ $(function() {
 				}
 				return {id: c.id, name: name};
 			});
-			if (!allColls.some(function(c) {return c.name.localeCompare(val, undefined, {usage: "search"}) == 0})) {
+			if (!allColls.some(function(c) {return c.name.localeCompare(val, undefined, {usage: "search", sensitivity: "base"}) == 0})) {
 				colls.push({id: "", name: val});
 			}
-			collOptsTmpl.render(colls);
 		} else {
 			colls = allColls.sort(function(c1, c2) {
 				return c2.keeps - c1.keeps || c1.name.localeCompare(c2.name, undefined, {numeric: true});
 			}).splice(0, 4).map(function(c) {
 				return {id: c.id, name: escapeHTMLContent(c.name)};
 			});
-			collOptsTmpl.render(colls);
+		}
+		$collOpts.hide();
+		collOptsTmpl.render(colls);
+		if (e.isTrigger) {
+			$collOpts.slideDown(120);
+		} else {
+			$collOpts.show();
 		}
 		$('.page-coll-opt:first-child').addClass('current');
 	}).on("mousemove", ".page-coll-opt", function() {
@@ -928,8 +945,7 @@ $(function() {
 		}
 		function withCollId(collId) {
 			if (collId) {
-				$in.val("");
-				$collOpts.empty();
+				$in.val("").trigger("input")	;
 				addKeepsToCollection(collId);
 			}
 		}

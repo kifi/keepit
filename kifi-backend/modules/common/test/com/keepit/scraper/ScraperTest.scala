@@ -12,7 +12,7 @@ import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.ArticleStore
 import com.keepit.search.Lang
-import com.keepit.test.EmptyApplication
+import com.keepit.test.DeprecatedEmptyApplication
 import com.keepit.scraper.extractor.Extractor
 import com.keepit.scraper.extractor.TikaBasedExtractor
 import org.specs2.mutable._
@@ -42,7 +42,7 @@ class ScraperTest extends Specification with ApplicationInjector {
 
   "Scraper" should {
     "get a article from an existing website" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val store = new FakeArticleStore()
         val scraper = getMockScraper(store)
         val url = "http://www.keepit.com/existing"
@@ -59,7 +59,7 @@ class ScraperTest extends Specification with ApplicationInjector {
     }
 
     "throw an error from a non-existing website" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val store = new FakeArticleStore()
         val scraper = getMockScraper(store)
         val url = "http://www.keepit.com/missing"
@@ -73,7 +73,7 @@ class ScraperTest extends Specification with ApplicationInjector {
     }
 
     "fetch allActive" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         inject[Database].readWrite { implicit s =>
           val uriRepo = inject[NormalizedURIRepo]
           val scrapeRepo = inject[ScrapeInfoRepo]
@@ -90,7 +90,7 @@ class ScraperTest extends Specification with ApplicationInjector {
     }
 
     "fetch SCRAPE_WANTED uris and scrape them" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         val (uri1, uri2, info1, info2) = inject[Database].readWrite { implicit s =>
@@ -117,7 +117,7 @@ class ScraperTest extends Specification with ApplicationInjector {
 
     "adjust scrape schedule" in {
       // DEV should be using the default ScraperConfig
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         var (uri1, uri2, info1, info2) = inject[Database].readWrite { implicit s =>
@@ -188,7 +188,7 @@ class ScraperTest extends Specification with ApplicationInjector {
 
     "not scrape a not-modified page" in {
       // DEV should be using the default ScraperConfig
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         var (uri1, info1) = inject[Database].readWrite { implicit s =>
@@ -232,7 +232,7 @@ class ScraperTest extends Specification with ApplicationInjector {
     }
 
     "update scrape schedule upon state change" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         var info = inject[Database].readWrite { implicit s =>

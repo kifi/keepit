@@ -34,7 +34,7 @@ class DatabaseDialectTest extends Specification with ApplicationInjector {
     }
 
     "stringToDay to db" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         inject[Database].readWrite { implicit s =>
           val st = s.conn.createStatement()
           val sql = s"""select DATEADD('MONTH', 1, ${H2DatabaseDialect.day(dec_20_2013)}) as day from dual"""

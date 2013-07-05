@@ -49,7 +49,7 @@ trait SearchServiceClient extends ServiceClient {
   def buildSpellCorrectorDictionary(): Unit
   def getSpellCorrectorStatus(): Future[Boolean]
   def correctSpelling(text: String): Future[String]
-  def showUserConfig(id: Id[User]): Future[Html]
+  def showUserConfig(id: Id[User]): Future[SearchConfig]
   def setUserConfig(id: Id[User], params: Map[String, String]): Unit
   def resetUserConfig(id: Id[User]): Unit
   def getSearchDefaultConfig: Future[SearchConfig]
@@ -206,8 +206,11 @@ class SearchServiceClientImpl(
     call(Search.internal.correctSpelling(text)).map(r => (r.json \ "correction").asOpt[String].getOrElse(text))
   }
 
-  def showUserConfig(id: Id[User]): Future[Html] = {
-    call(Search.internal.showUserConfig(id)).map(r => Html(r.body))
+  def showUserConfig(id: Id[User]): Future[SearchConfig] = {
+    call(Search.internal.showUserConfig(id)).map{ r =>
+      val param = Json.fromJson[Map[String, String]](r.json).get
+      new SearchConfig(param)
+    }
   }
 
   def setUserConfig(id: Id[User], params: Map[String, String]): Unit = {

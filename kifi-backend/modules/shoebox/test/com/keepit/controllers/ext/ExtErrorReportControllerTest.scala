@@ -16,7 +16,7 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import securesocial.core._
 
-class ExtErrorReportControllerTest extends Specification with ApplicationInjector with DbRepos {
+class ExtErrorReportControllerTest extends Specification with ApplicationInjector with ShoeboxInjectionHelpers {
 
   def fakeRequest(json: JsValue) = {
     val oAuth2Info = OAuth2Info(accessToken = "A", tokenType = None, expiresIn = None, refreshToken = None)
@@ -36,7 +36,7 @@ class ExtErrorReportControllerTest extends Specification with ApplicationInjecto
 
   "ExtAuthController" should {
     "start" in {
-      running(new ShoeboxApplication().withFakeSecureSocialUserService().withFakeHealthcheck()) {
+      running(new DeprecatedShoeboxApplication().withFakeSecureSocialUserService().withFakeHealthcheck()) {
         val fakeHealthcheck = inject[FakeHealthcheck]
         fakeHealthcheck.errorCount() === 0
 

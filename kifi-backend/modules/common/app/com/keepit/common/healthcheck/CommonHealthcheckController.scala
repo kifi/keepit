@@ -43,7 +43,7 @@ class CommonBenchmarkController @Inject() (
 }
 
 @Singleton
-class BenchmarkRunner @Inject() (userIdCache: UserIdCache) {
+class BenchmarkRunner @Inject() (cache: UserExperimentCache) {
   def runBenchmark() = BenchmarkResults(cpuBenchmarkTime(), cpuParBenchmarkTime(), memcachedBenchmarkTime())
 
   private def cpuBenchmarkTime(): Long = {
@@ -66,7 +66,7 @@ class BenchmarkRunner @Inject() (userIdCache: UserIdCache) {
   private def memcachedBenchmarkTime(): Double = {
     val iterations = 1000
     val start = System.currentTimeMillis
-    for (i <- 0 to iterations) { userIdCache.get(UserIdKey(Id[User](1))) }
+    for (i <- 0 to iterations) { cache.get(UserExperimentUserIdKey(Id[User](1))) }
     (System.currentTimeMillis - start).toDouble / iterations.toDouble
   }
 }

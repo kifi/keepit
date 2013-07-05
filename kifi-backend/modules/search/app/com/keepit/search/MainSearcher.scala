@@ -83,7 +83,6 @@ class MainSearcher(
   val svWeightBrowsingHistory = config.asInt("svWeightBrowsingHistory")
   val svWeightClickHistory = config.asInt("svWeightClickHistory")
   val similarity = Similarity(config.asString("similarity"))
-  val enableCoordinator = config.asBoolean("enableCoordinator")
   val phraseBoost = config.asFloat("phraseBoost")
   val phraseProximityBoost = config.asFloat("phraseProximityBoost")
   val siteBoost = config.asFloat("siteBoost")
@@ -179,7 +178,6 @@ class MainSearcher(
 
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
-    parser.enableCoord = enableCoordinator
 
     parsedQuery = parser.parse(queryString)
     timeLogs.queryParsing = currentDateTime.getMillis() - t1
@@ -230,7 +228,7 @@ class MainSearcher(
 
   def search(queryString: String, numHitsToReturn: Int, lastUUID: Option[ExternalId[ArticleSearchResultRef]], filter: SearchFilter = SearchFilter.default()): ArticleSearchResult = {
     val now = currentDateTime
-    val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost)
+    val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost, config.asBoolean("useS3FlowerFilter"))
     timeLogs.getClickBoost = currentDateTime.getMillis() - now.getMillis()
     Statsd.timing("mainSearch.getClickboost", timeLogs.getClickBoost)
     val (myHits, friendsHits, othersHits, personalizedSearcher) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
@@ -348,13 +346,20 @@ class MainSearcher(
 
     val (svVar,svExistVar) = SemanticVariance.svVariance(parsedQuery, hitList, personalizedSearcher) // compute sv variance. may need to record the time elapsed.
 
-    // insert a new content if any
+    // simple classifier
+    val show = if (svVar > 0.18f) false else {
+      val isGood = (parsedQuery, personalizedSearcher) match {
+      case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(hitList, searcher.get)
+      case _ => true
+      }
+      isGood
+    }
+
+    // insert a new content if any (after show/no-show classification)
     newContent.foreach { h =>
       if (h.bookmarkCount == 0) h.bookmarkCount = getPublicBookmarkCount(h.id)
       hitList = (hitList.take(numHitsToReturn - 1) :+ h)
     }
-
-    val newIdFilter = filter.idFilter ++ hitList.map(_.id)
 
     timeLogs.processHits = currentDateTime.getMillis() - t1
     Statsd.timing("mainSearch.processHits", timeLogs.processHits)
@@ -362,20 +367,14 @@ class MainSearcher(
     timeLogs.total = millisPassed
     Statsd.timing("mainSearch.total", millisPassed)
 
-    // simple classifier
-    val show = if (svVar > 0.18f) false else {
-      val isGood = (parsedQuery, personalizedSearcher) match {
-        case (query: Some[Query], searcher: Some[PersonalizedSearcher]) => classify(hitList, searcher.get)
-        case _ => true
-      }
-      isGood
-    }
-
     val searchResultUuid = ExternalId[ArticleSearchResultRef]()
     val searchResultInfo = SearchResultInfo(myTotal, friendsTotal, othersTotal, svVar, svExistVar)
     val searchResultJson = SearchResultInfoSerializer.serializer.writes(searchResultInfo)
     val metaData = Json.obj("queryUUID" -> JsString(searchResultUuid.id), "searchResultInfo" -> searchResultJson)
     shoeboxClient.persistServerSearchEvent(metaData)
+
+    val newIdFilter = filter.idFilter ++ hitList.map(_.id)
+
     ArticleSearchResult(lastUUID, queryString, hitList.map(_.toArticleHit(friendStats)),
         myTotal, friendsTotal, !hitList.isEmpty, hitList.map(_.scoring), newIdFilter, millisPassed.toInt,
         (idFilter.size / numHitsToReturn).toInt, uuid = searchResultUuid, svVariance = svVar, svExistenceVar = svExistVar, toShow = show,
@@ -412,7 +411,6 @@ class MainSearcher(
     lang = Lang("en")
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
-    parser.enableCoord = enableCoordinator
 
     parser.parse(queryString).map{ query =>
       var personalizedSearcher = getPersonalizedSearcher(query)

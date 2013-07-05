@@ -16,7 +16,7 @@ import com.keepit.common.cache._
 class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
   "TopicUpdater" should {
     "correctly update topic tables and be able to reset tables" in {
-      running(new ShoeboxApplication().withWordTopicModule()) {
+      running(new DeprecatedShoeboxApplication().withWordTopicModule()) {
         withDB(ShoeboxCacheModule(HashMapMemoryCacheModule()), DevTopicModelModule() ){ implicit injector =>
         val (users, uris) = setupDB
         val expectedUriToUserEdges = (0 until uris.size).map{ i =>
@@ -94,7 +94,7 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
 }
 
 
-trait TopicUpdaterTestHelper extends TestDBRunner {
+trait TopicUpdaterTestHelper extends DeprecatedTestDBRunner {
   def setupDB = {
     val (numUser, numUri) = (10, TopicModelGlobal.numTopics)
     db.readWrite { implicit s =>

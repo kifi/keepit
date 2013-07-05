@@ -680,7 +680,7 @@ slider2 = function() {
       api.require("scripts/thread.js", function() {
         api.port.emit("thread", {id: threadId, respond: true}, function(th) {
           api.port.emit("session", function(session) {
-            threadPane.render($tall, th.id, th.messages, session, th.isRedirect);
+            threadPane.render($tall, th.id, th.messages, session);
           });
         });
       });
@@ -723,16 +723,16 @@ slider2 = function() {
       updateKeptDom(o.kept);
     },
     new_notification: function(n) {
-      noticesPane.update([n]);
+      noticesPane.update([n], "new");
     },
     missed_notifications: function(arr) {
-      noticesPane.update(arr);
+      noticesPane.update(arr, "new");
     },
     notifications_visited: function(o) {
-      noticesPane.update(o);
+      noticesPane.update(o, "markOneVisited");
     },
     all_notifications_visited: function(o) {
-      noticesPane.update(o);
+      noticesPane.update(o, "markAllVisited");
     },
     comment: function(o) {
       commentsPane.update(o.comment, o.userId);

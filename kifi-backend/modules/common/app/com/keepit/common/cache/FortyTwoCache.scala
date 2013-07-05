@@ -126,7 +126,7 @@ trait Key[T] {
   val namespace: String
   val version: Int = 1
   def toKey(): String
-  override final def toString: String = namespace + "#" + version + "#" + toKey()
+  override final def toString: String = namespace + "%" + version + "#" + toKey()
 }
 
 trait ObjectCache[K <: Key[T], T] {
@@ -134,64 +134,92 @@ trait ObjectCache[K <: Key[T], T] {
   val ttl: Duration
   outerCache map {outer => require(ttl <= outer.ttl)}
 
-  protected[cache] def getFromInnerCache(key: K): Option[T]
-  protected[cache] def setInnerCache(key: K, value: T): Unit
+  protected[cache] def getFromInnerCache(key: K): Option[Option[T]]
+  protected[cache] def setInnerCache(key: K, value: Option[T]): Unit
 
   def remove(key: K): Unit
 
   def set(key: K, value: T): Unit = {
     outerCache map {outer => outer.set(key, value)}
-    setInnerCache(key, value)
+    setInnerCache(key, Some(value))
   }
 
-  def get(key: K): Option[T] = getOrElseOpt(key)(None)
+  def set(key: K, valueOpt: Option[T]) : Unit = {
+    outerCache map {outer => outer.set(key, valueOpt)}
+    setInnerCache(key, valueOpt)
+  }
+
+  def get(key: K): Option[T] = {
+    getFromInnerCache(key) match {
+      case Some(valueOpt) => valueOpt
+      case None => outerCache match {
+        case Some(cache) => cache.get(key)
+        case None => None 
+      }
+    }
+  }
 
   def getOrElse(key: K)(orElse: => T): T = {
-    getFromInnerCache(key).getOrElse {
+    def fallback : T = {
       val value = outerCache match {
         case Some(cache) => cache.getOrElse(key)(orElse)
         case None => orElse
       }
-      setInnerCache(key, value)
+      setInnerCache(key, Some(value))
       value
+    }
+
+    getFromInnerCache(key) match {
+      case Some(valueOpt) => valueOpt match {
+        case Some(value) => value
+        case None => fallback
+      }
+      case None => fallback
+
     }
   }
 
   def getOrElseOpt(key: K)(orElse: => Option[T]): Option[T] = {
     getFromInnerCache(key) match {
-      case s @ Some(value) => s
+      case Some(valueOpt) => valueOpt
       case None =>
-        val valueOption = outerCache match {
+        val valueOption : Option[T] = outerCache match {
           case Some(cache) => cache.getOrElseOpt(key)(orElse)
           case None => orElse
         }
-        valueOption.map {value => setInnerCache(key, value)}
-        valueOption
+        setInnerCache(key, valueOption)
+        valueOption 
     }
   }
 
   def getOrElseFuture(key: K)(orElse: => Future[T]): Future[T] = {
+    def fallback: Future[T] = {
+      val valueFuture = outerCache match {
+        case Some(cache) => cache.getOrElseFuture(key)(orElse)
+        case None => orElse
+      }
+      valueFuture.onSuccess {case value => setInnerCache(key, Some(value))}
+      valueFuture
+    }
+
     getFromInnerCache(key) match {
-      case Some(value) => Promise.successful(value).future
-      case None =>
-        val valueFuture = outerCache match {
-          case Some(cache) => cache.getOrElseFuture(key)(orElse)
-          case None => orElse
-        }
-        valueFuture.onSuccess {case value => setInnerCache(key, value)}
-        valueFuture
+      case Some(valueOpt) => valueOpt match {
+        case Some(value) => Promise.successful(value).future
+        case None => fallback
+      }
+      case None => fallback
     }
   }
 
   def getOrElseFutureOpt(key: K)(orElse: => Future[Option[T]]): Future[Option[T]] = {
     getFromInnerCache(key) match {
-      case s @ Some(value) => Promise.successful(s).future
+      case Some(valueOpt) => Promise.successful(valueOpt).future
       case None =>
         val valueFutureOption = outerCache match {
           case Some(cache) => cache.getOrElseFutureOpt(key)(orElse)
           case None => orElse
         }
-        valueFutureOption.onSuccess {case valueOption => valueOption.map {value => setInnerCache(key, value)}}
+        valueFutureOption.onSuccess {case valueOption => setInnerCache(key, valueOption)}
         valueFutureOption
     }
   }
@@ -202,16 +230,17 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
   val serializer: Serializer[T]
   val stats = CacheStatistics
 
-  protected[cache] def getFromInnerCache(key: K): Option[T] = {
+
+  protected[cache] def getFromInnerCache(key: K): Option[Option[T]] = {
     val getStart = currentDateTime.getMillis()
-    val value = try repo.get(key.toString) catch {
+    val valueOpt = try repo.get(key.toString) catch {
       case e: Throwable =>
         repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
           errorMessage = Some(s"Failed fetching key $key from $repo")))
         None
     }
     try {
-      val objOpt = value.map(serializer.reads)
+      val objOpt = valueOpt.map(serializer.reads)
       val getEnd = currentDateTime.getMillis()
       objOpt match {
         case Some(_) => {
@@ -227,28 +256,29 @@ trait FortyTwoCache[K <: Key[T], T] extends ObjectCache[K, T] {
     } catch {
       case e: Throwable =>
         repo.onError(HealthcheckError(Some(e), callType = Healthcheck.INTERNAL,
-          errorMessage = Some(s"Failed deserializing key $key from $repo, got raw value $value")))
+          errorMessage = Some(s"Failed deserializing key $key from $repo, got raw value $valueOpt")))
         repo.remove(key.toString)
         None
     }
   }
 
-  protected[cache] def setInnerCache(key: K, value: T): Unit = {
+  protected[cache] def setInnerCache(key: K, valueOpt: Option[T]): Unit = {
     val setStart = currentDateTime.getMillis()
     try {
-      val properlyBoxed = serializer.writes(value) match {
-        case x: java.lang.Byte => x.byteValue()
-        case x: java.lang.Short => x.shortValue()
-        case x: java.lang.Integer => x.intValue()
-        case x: java.lang.Long => x.longValue()
-        case x: java.lang.Float => x.floatValue()
-        case x: java.lang.Double => x.doubleValue()
-        case x: java.lang.Character => x.charValue()
-        case x: java.lang.Boolean => x.booleanValue()
-        case x: scala.Array[_] => x
-        case x: JsValue => Json.stringify(x)
-        case x: String => x
-      }
+      val properlyBoxed = serializer.writes(valueOpt) match {
+            case (isDefined: Boolean, x: java.lang.Byte) => (isDefined, x.byteValue())
+            case (isDefined: Boolean, x: java.lang.Short) => (isDefined, x.shortValue())
+            case (isDefined: Boolean, x: java.lang.Integer) => (isDefined, x.intValue())
+            case (isDefined: Boolean, x: java.lang.Long) => (isDefined, x.longValue())
+            case (isDefined: Boolean, x: java.lang.Float) => (isDefined, x.floatValue())
+            case (isDefined: Boolean, x: java.lang.Double) => (isDefined, x.doubleValue())
+            case (isDefined: Boolean, x: java.lang.Character) => (isDefined, x.charValue())
+            case (isDefined: Boolean, x: java.lang.Boolean) => (isDefined, x.booleanValue())
+            case (false, _) => (false, null) 
+            case x: scala.Array[_] => x
+            case x: JsValue => Json.stringify(x)
+            case x: String => x
+          }
       repo.set(key.toString, properlyBoxed, ttl.toSeconds.toInt)
       val setEnd = currentDateTime.getMillis()
       CacheStatistics.recordSet(repo.toString, key.namespace, setEnd - setStart)

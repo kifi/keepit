@@ -77,19 +77,19 @@ object ElectronicMail {
   implicit val userExternalIdFormat = ExternalId.format[User]
   implicit val emailExternalIdFormat = ExternalId.format[ElectronicMail]
   implicit val idFormat = Id.format[ElectronicMail]
-  implicit val fromFormat: Format[SystemEmailAddress] = 
+  implicit val fromFormat: Format[SystemEmailAddress] =
     Format(__.read[String].map(s => EmailAddresses(s)), new Writes[SystemEmailAddress]{ def writes(o: SystemEmailAddress) = JsString(o.address) })
-  implicit val emailAddressHolderFormat: Format[EmailAddressHolder] = 
+  implicit val emailAddressHolderFormat: Format[EmailAddressHolder] =
     Format(__.read[String].map(s => GenericEmailAddress(s)), new Writes[EmailAddressHolder]{ def writes(o: EmailAddressHolder) = JsString(o.address) })
-  implicit val emailMessageIdFormat: Format[ElectronicMailMessageId] = 
+  implicit val emailMessageIdFormat: Format[ElectronicMailMessageId] =
     Format(__.read[String].map(s => ElectronicMailMessageId(s)), new Writes[ElectronicMailMessageId]{ def writes(o: ElectronicMailMessageId) = JsString(o.id) })
-  implicit val emailCategoryFormat: Format[ElectronicMailCategory] = 
+  implicit val emailCategoryFormat: Format[ElectronicMailCategory] =
     Format(__.read[String].map(s => ElectronicMailCategory(s)), new Writes[ElectronicMailCategory]{ def writes(o: ElectronicMailCategory) = JsString(o.category) })
 
   implicit val emailFormat = (
       (__ \ 'id).formatNullable(Id.format[ElectronicMail]) and
-      (__ \ 'createdAt).format[DateTime] and
-      (__ \ 'updatedAt).format[DateTime] and
+      (__ \ 'createdAt).format(DateTimeJsonFormat) and
+      (__ \ 'updatedAt).format(DateTimeJsonFormat) and
       (__ \ 'externalId).format(ExternalId.format[ElectronicMail]) and
       (__ \ 'senderUserId).formatNullable(Id.format[User]) and
       (__ \ 'from).format[SystemEmailAddress] and

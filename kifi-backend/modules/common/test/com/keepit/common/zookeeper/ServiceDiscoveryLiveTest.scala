@@ -23,7 +23,7 @@ import scala.util.{Random, Try}
 import com.google.inject.util._
 import com.google.inject._
 
-class ServiceDiscoveryLiveTest extends Specification with TestInjector {
+class ServiceDiscoveryLiveTest extends Specification with DeprecatedTestInjector {
 
   args(skipAll = true)
 
