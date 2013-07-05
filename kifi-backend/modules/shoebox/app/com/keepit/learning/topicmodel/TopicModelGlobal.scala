@@ -45,7 +45,7 @@ case class LdaTopicModelModule() extends TopicModelModule with Logging {
     }
 
     names.zipWithIndex.foreach{ case (name, i) =>
-      log.info(s"topic ${i+1}: name")
+      log.info(s"topic ${i+1}: ${name}")
     }
 
     log.info("loading topic name list")

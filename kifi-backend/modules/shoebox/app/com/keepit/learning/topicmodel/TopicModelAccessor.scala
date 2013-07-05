@@ -57,22 +57,24 @@ class SwitchableTopicModelAccessor @Inject()(
   val accessorA: TopicModelAccessorA,
   val accessorB: TopicModelAccessorB
 ) {
-  private var currentAccessor = TopicModelAccessorFlag.A       // default to A for now. Will read this from configuration or zookeeper or DB
+  private var accessorFlag = TopicModelAccessorFlag.A       // default to A for now. Will read this from configuration or zookeeper or DB
 
-  def getActiveAccessor = currentAccessor match {
+  def getCurrentFlag = accessorFlag
+
+  def getActiveAccessor = accessorFlag match {
     case TopicModelAccessorFlag.A  => accessorA
     case TopicModelAccessorFlag.B  => accessorB
   }
 
-  def getInactiveAccessor = currentAccessor match {
+  def getInactiveAccessor = accessorFlag match {
     case TopicModelAccessorFlag.A  => accessorB
     case TopicModelAccessorFlag.B  => accessorA
   }
 
   def switchAccessor() = {
-    currentAccessor match {
-      case TopicModelAccessorFlag.A  => currentAccessor = TopicModelAccessorFlag.B
-      case TopicModelAccessorFlag.B  => currentAccessor = TopicModelAccessorFlag.A
+    accessorFlag match {
+      case TopicModelAccessorFlag.A  => accessorFlag = TopicModelAccessorFlag.B
+      case TopicModelAccessorFlag.B  => accessorFlag = TopicModelAccessorFlag.A
     }
   }
 }

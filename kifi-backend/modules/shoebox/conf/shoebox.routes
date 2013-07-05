@@ -271,6 +271,7 @@ GET     /admin/learning/topics/:page    @com.keepit.controllers.admin.TopicModel
 POST    /admin/learning/topics/updateTopicName/:id  @com.keepit.controllers.admin.TopicModelController.updateTopicName(id: Id[TopicName])
 GET     /admin/learning/addTopics       @com.keepit.controllers.admin.TopicModelController.addTopics
 POST    /admin/learning/saveAddedTopics @com.keepit.controllers.admin.TopicModelController.saveAddedTopics
+GET     /admin/learning/switchModel     @com.keepit.controllers.admin.TopicModelController.switchModel
 
 ##########################################
 # Common Healthcheck / service routes

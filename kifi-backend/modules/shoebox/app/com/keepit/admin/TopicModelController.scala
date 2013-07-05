@@ -31,6 +31,14 @@ class TopicModelController  @Inject() (
 
   def currentAccessor = modelAccessor.getActiveAccessor
 
+  // dangerous operation ! Test purpose only. This interface will be removed soon.
+  def switchModel = AdminHtmlAction { implicit request =>
+    val prevFlag = modelAccessor.getCurrentFlag
+    modelAccessor.switchAccessor()
+    val currFlag = modelAccessor.getCurrentFlag
+    Ok(s"OK. topic model has been switched from ${prevFlag} to ${currFlag}. Starting to use a different model and talk to different database tables!")
+  }
+
   def resetAllTopicTables() = AdminHtmlAction{ implicit request =>
     topicPlugin.reset()
     Ok(s"OK. Will reset topic tables")
