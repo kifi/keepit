@@ -81,7 +81,7 @@ class MainQueryParser(
         }
 
         val textQuery = if (phraseBoost > 0.0f && phrases.nonEmpty) {
-          new AdditiveBoostQuery(query, Array[Query](createPhraseQueries(phrases)), enableCoord)
+          new AdditiveBoostQuery(query, Array[Query](createPhraseQueries(phrases)))
         } else {
           query
         }

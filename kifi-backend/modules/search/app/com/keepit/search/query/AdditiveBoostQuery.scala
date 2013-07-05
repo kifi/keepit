@@ -13,14 +13,14 @@ import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.util.Bits
 
-class AdditiveBoostQuery(override val textQuery: Query, override val boosterQueries: Array[Query], override val enableCoord: Boolean) extends BoostQuery {
+class AdditiveBoostQuery(override val textQuery: Query, override val boosterQueries: Array[Query]) extends BoostQuery {
 
   override def createWeight(searcher: IndexSearcher): Weight = new AdditiveBoostWeight(this, searcher)
 
   override protected val name = "AdditiveBoost"
 
   override def recreate(rewrittenTextQuery: Query, rewrittenBoosterQueries: Array[Query]): Query = {
-    new AdditiveBoostQuery(rewrittenTextQuery, rewrittenBoosterQueries, enableCoord)
+    new AdditiveBoostQuery(rewrittenTextQuery, rewrittenBoosterQueries)
   }
 }
 
@@ -111,11 +111,7 @@ class AdditiveBoostWeight(override val query: AdditiveBoostQuery, override val s
     else {
       // main scorer has to implement Coordinator trait
       val mainScorer = if (textScorer.isInstanceOf[Coordinator]) {
-        if (getQuery.enableCoord) {
-          textScorer.asInstanceOf[Scorer with Coordinator]
-        } else {
-          QueryUtil.toScorerWithCoordinator(textScorer) // hide textScorer's coord value by wrapping the constant coordinator
-        }
+        textScorer.asInstanceOf[Scorer with Coordinator]
       } else {
         QueryUtil.toScorerWithCoordinator(textScorer)
       }
