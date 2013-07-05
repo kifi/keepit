@@ -52,8 +52,8 @@ object SearchConfigExperiment {
     (__ \ 'config).format[SearchConfig] and
     (__ \ 'startedAt).formatNullable[DateTime] and
     (__ \ 'state).format[State[SearchConfigExperiment]] and
-    (__ \ 'createdAt).format[DateTime] and
-    (__ \ 'updatedAt).format[DateTime]
+    (__ \ 'createdAt).format(DateTimeJsonFormat) and
+    (__ \ 'updatedAt).format(DateTimeJsonFormat)
   )(SearchConfigExperiment.apply, unlift(SearchConfigExperiment.unapply))
 }
 

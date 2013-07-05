@@ -15,7 +15,6 @@ import com.keepit.learning.topicmodel.WordTopicModel
 import com.keepit.learning.topicmodel.FakeWordTopicModel
 import com.keepit.common.social.SocialGraphPlugin
 
-@deprecated("Use ShoeboxApplication instead", "July 3rd 2013")
 class DeprecatedShoeboxApplication() extends DeprecatedTestApplication(new DeprecatedTestGlobal(ShoeboxDevGlobal.module), path = new File("./modules/shoebox/")) {
   def withTinyWordTopicModule() = overrideWith(TinyWordTopicModule())
   def withWordTopicModule() = overrideWith(WordTopicModule())

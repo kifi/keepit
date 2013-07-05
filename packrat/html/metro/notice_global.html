@@ -1,0 +1,11 @@
+<div class="kifi-notice kifi-notice-global{{#isVisited}} kifi-notice-visited{{/isVisited}}{{#isNew}} kifi-notice-new{{/isNew}}" data-id="{{id}}" data-uri="{{details.url}}" data-created-at="{{details.createdAt}}" data-category="global">
+  <img class="kifi-notice-avatar" src="{{details.image}}">
+  <div class="kifi-notice-name">
+    <span class="kifi-author-name">{{details.title}}</span>
+  </div>
+  <div class="kifi-notice-action">
+  	 {{details.linkText}}
+  </div>
+  <div class="kifi-notice-text">{{#formatMessage}}{{{details.bodyHtml}}}{{/formatMessage}}</div>
+  <time datetime="{{time}}">{{#formatLocalDate}}{{time}}{{/formatLocalDate}}</time>
+</div>

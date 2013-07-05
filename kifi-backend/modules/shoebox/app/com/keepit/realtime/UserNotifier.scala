@@ -14,6 +14,7 @@ import com.keepit.common.net.URINormalizer
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social._
 import com.keepit.model._
+import com.keepit.common.time._
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -31,7 +32,7 @@ case class CommentDetails(
   newCount: Int,
   totalCount: Int,
   subsumes: Option[String] // Option[ExternalId[UserNotification]]
-  )
+)
 
 case class MessageDetails(
   id: String, // ExternalId[Comment] of the message
@@ -47,7 +48,21 @@ case class MessageDetails(
   newCount: Int,
   totalCount: Int,
   subsumes: Option[String] // Option[ExternalId[UserNotification]]
-  )
+)
+
+case class GlobalNotificationDetails(
+  createdAt: DateTime,
+  title: String,
+  bodyHtml: String,
+  linkText: String,
+  url: Option[String],
+  image: String,
+  isSticky: Boolean,
+  markReadOnAction: Boolean
+)
+object GlobalNotificationDetails {
+  implicit val globalDetailsFormat = Json.format[GlobalNotificationDetails]
+}
 
 case class SendableNotification(
   id: ExternalId[UserNotification],
@@ -59,7 +74,7 @@ case class SendableNotification(
 object SendableNotification {
   implicit val format = (
     (__ \ 'id).format(ExternalId.format[UserNotification]) and
-    (__ \ 'time).format[DateTime] and
+    (__ \ 'time).format(DateTimeJsonFormat) and
     (__ \ 'category).format[String].inmap(UserNotificationCategory.apply, unlift(UserNotificationCategory.unapply)) and
     (__ \ 'details).format[JsValue].inmap(UserNotificationDetails.apply, unlift(UserNotificationDetails.unapply)) and
     (__ \ 'state).format(State.format[UserNotification])
@@ -109,12 +124,43 @@ class UserNotifier @Inject() (
   uriChannel: UriChannel,
   userChannel: UserChannel,
   threadInfoRepo: ThreadInfoRepo,
+  clock: Clock,
   implicit val fortyTwoServices: FortyTwoServices) extends Logging {
 
   implicit val commentDetailsFormat = Json.format[CommentDetails]
   implicit val messageDetailsFormat = Json.format[MessageDetails]
 
-  def comment(comment: Comment) {
+  def globalNotification(global: GlobalNotification) = {
+    db.readWrite { implicit session =>
+      val users = global.sendToSpecificUsers.getOrElse {
+        userRepo.allExcluding(UserStates.BLOCKED, UserStates.PENDING).map(_.id.get)
+      }
+      val globalDetails = GlobalNotificationDetails(
+        createdAt = clock.now,
+        title = global.title,
+        bodyHtml = global.bodyHtml,
+        linkText = global.linkText,
+        url = global.url,
+        image = global.image,
+        isSticky = global.isSticky,
+        markReadOnAction = global.markReadOnAction)
+
+      val globalDetailsJson = UserNotificationDetails(Json.toJson(globalDetails))
+
+      users.map { userId =>
+        val userNotification = userNotifyRepo.save(UserNotification(
+          userId = userId,
+          category = UserNotificationCategories.GLOBAL,
+          details = globalDetailsJson,
+          commentId = None,
+          subsumedId = None,
+          state = UserNotificationStates.DELIVERED))
+        notificationBroadcast.push(userNotification)
+      }
+    }
+  }
+
+  def comment(comment: Comment): Unit = {
     db.readWrite { implicit s =>
       val normalizedUri = normalUriRepo.get(comment.uriId).url
       uriChannel.push(normalizedUri, Json.arr("comment", normalizedUri, commentWithBasicUserRepo.load(comment)))
@@ -136,7 +182,7 @@ class UserNotifier @Inject() (
     }
   }
 
-  def message(message: Comment) {
+  def message(message: Comment): Unit = {
     db.readWrite { implicit s =>
       val normUri = normalUriRepo.get(message.uriId)
       val parent = message.parent.map(commentRepo.get).getOrElse(message)

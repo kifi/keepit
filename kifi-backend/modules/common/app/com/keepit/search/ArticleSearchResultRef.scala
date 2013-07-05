@@ -30,11 +30,11 @@ case class ArticleSearchResultRef (
 object ArticleSearchResultRef {
   import play.api.libs.functional.syntax._
   import play.api.libs.json._
-  
+
   implicit def articleSearchResultRefFormat = (
     (__ \ 'id).formatNullable(Id.format[ArticleSearchResultRef]) and
-    (__ \ 'createdAt).format[DateTime] and
-    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'createdAt).format(DateTimeJsonFormat) and
+    (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'externalId).format(ExternalId.format[ArticleSearchResultRef]) and
     (__ \ 'state).format(State.format[ArticleSearchResultRef]) and
     (__ \ 'last).formatNullable(ExternalId.format[ArticleSearchResultRef]) and

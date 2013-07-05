@@ -3,24 +3,16 @@ package com.keepit.search.query
 import com.keepit.common.logging.Logging
 import org.apache.lucene.index.IndexReader
 import org.apache.lucene.index.Term
+import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.search.Query
 import org.apache.lucene.search.Scorer
 import org.apache.lucene.search.Weight
-import org.apache.lucene.search.ComplexExplanation
-import org.apache.lucene.search.Explanation
-import org.apache.lucene.search.DocIdSetIterator
-import org.apache.lucene.util.PriorityQueue
-import org.apache.lucene.util.ToStringUtils
 import java.util.{Set => JSet}
-import java.lang.{Float => JFloat}
-import scala.collection.JavaConversions._
-import scala.math._
-import org.apache.lucene.search.IndexSearcher
 
 trait BoostQuery extends Query {
   val textQuery: Query
   val boosterQueries: Array[Query]
-  var enableCoord: Boolean = false
+  val enableCoord: Boolean = false
 
   protected val name: String
 

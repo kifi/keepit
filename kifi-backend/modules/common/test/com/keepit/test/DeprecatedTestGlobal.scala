@@ -9,7 +9,6 @@ import play.api.Mode.Test
 import play.utils.Threads
 import com.google.inject.util.Modules
 
-@deprecated("Use TestGlobalWithDb instead", "July 3rd 2013")
 case class DeprecatedTestGlobal(modules: Module*) extends FortyTwoGlobal(Test) {
   val module = Modules.combine(modules:_*)
 
@@ -23,7 +22,6 @@ case class DeprecatedTestGlobal(modules: Module*) extends FortyTwoGlobal(Test) {
   }
 }
 
-@deprecated("Use TestGlobal instead", "July 3rd 2013")
 case class DeprecatedTestRemoteGlobal(modules: Module*) extends FortyTwoGlobal(Test) {
   val module = Modules.combine(modules:_*)
   override val initialized = true

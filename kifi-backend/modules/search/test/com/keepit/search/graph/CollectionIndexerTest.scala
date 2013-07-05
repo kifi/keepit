@@ -2,7 +2,7 @@ package com.keepit.search.graph
 
 import com.keepit.model._
 import com.keepit.model.NormalizedURIStates._
-import com.keepit.common.db._
+import com.keepit.common.strings._
 import com.keepit.test._
 import org.specs2.mutable._
 import play.api.test.Helpers._
@@ -142,6 +142,34 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
         collections.forall{ case (user, coll, bookmarks) =>
           val uriList = searcher.getURIList(CollectionFields.uriListField, searcher.getDocId(coll.id.get.id))
           (user.id.get, uriList.ids.toSet) === (user.id.get, bookmarks.map(_.uriId.id).toSet)
+          true
+        } === true
+      }
+    }
+
+    "store colleciton external ids" in {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+        val (users, uris) = initData
+
+        val collectionIndexer = mkCollectionIndexer()
+
+        val expectedUriToUsers = uris.map{ uri => (uri, users.filter{ _.id.get.id <= uri.id.get.id }) }
+        saveBookmarksByURI(expectedUriToUsers)
+
+        val collections = users.map{ user =>
+          val coll = saveCollection(user, s"${user.firstName} - Collection")
+          val bookmarks = getBookmarksByUser(user.id.get)
+          (user, saveBookmarksToCollection(coll, bookmarks), bookmarks)
+        }
+        collectionIndexer.update()
+        collectionIndexer.numDocs === collections.size
+
+        val searcher = collectionIndexer.getSearcher
+
+        collections.forall{ case (user, coll, bookmarks) =>
+          val extIdOpt = searcher.getDecodedDocValue[String](CollectionFields.externalIdField, coll.id.get.id)(fromByteArray)
+          extIdOpt must beSome[String]
+          extIdOpt.get === coll.externalId.id
           true
         } === true
       }

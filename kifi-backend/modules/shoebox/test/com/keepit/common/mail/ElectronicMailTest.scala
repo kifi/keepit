@@ -1,23 +1,14 @@
 package com.keepit.common.mail
 
 import com.keepit.test._
-import com.keepit.inject._
-import play.api.Play.current
-import play.api.libs.json.JsValue
-import play.api.test.Helpers._
-import akka.actor.ActorRef
-import akka.testkit.ImplicitSender
 import org.specs2.mutable.Specification
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
 
 
-class ElectronicMailTest extends Specification with DeprecatedTestDBRunner {
+class ElectronicMailTest extends Specification with ShoeboxTestInjector {
 
   "ElectronicMail" should {
     "user filters" in {
-      withDB(FakeMailModule()) { implicit injector =>
+      withDb(FakeMailModule()) { implicit injector =>
         val mails = db.readWrite { implicit s =>
           val mails = ElectronicMail(from = EmailAddresses.TEAM, to = List(EmailAddresses.ENG), subject = "foo 1", htmlBody = "body", category = PostOffice.Categories.HEALTHCHECK) ::
                       ElectronicMail(from = EmailAddresses.TEAM, to = List(EmailAddresses.TEAM), cc = EmailAddresses.EISHAY :: EmailAddresses.JARED :: Nil, subject = "foo 2", htmlBody = "body 2", textBody = Some("other"), category = PostOffice.Categories.HEALTHCHECK) ::

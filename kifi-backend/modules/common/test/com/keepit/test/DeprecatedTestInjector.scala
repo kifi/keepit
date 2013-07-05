@@ -11,13 +11,11 @@ import play.api.Mode
 import com.keepit.common.actor.StandaloneTestActorSystemModule
 import com.google.inject.util.Modules
 
-@deprecated("Use SimpleTestInjector instead", "July 3rd 2013")
 trait DeprecatedTestInjector extends EmptyInjector {
   val mode = Mode.Test
   val module = Modules.combine(DeprecatedTestModule(), StandaloneTestActorSystemModule())
 }
 
-@deprecated("Use SimpleTestDbRunner instead", "July 3rd 2013")
 trait DeprecatedTestDBRunner extends DeprecatedTestInjector with ShoeboxInjectionHelpers {
 
   def dbInfo: DbInfo = TestDbInfo.dbInfo
