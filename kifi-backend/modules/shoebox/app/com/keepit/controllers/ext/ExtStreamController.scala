@@ -358,13 +358,15 @@ class ExtStreamController @Inject() (
     }
   }
 
-  private def loadUserPrefs(userId: Id[User]): JsObject = {
-    val enterToSend = db.readOnly { implicit s =>
-      userValueRepo.getValue(userId, "enter_to_send").map(_.toBoolean)
+  private case class UserPrefs(enterToSend: Boolean)
+  private implicit val userPrefsFormat = Json.format[UserPrefs]
+
+  private def loadUserPrefs(userId: Id[User]): UserPrefs = {
+    db.readOnly { implicit s =>
+      UserPrefs(
+        enterToSend = userValueRepo.getValue(userId, "enter_to_send").map(_.toBoolean).getOrElse(true)
+      )
     }
-    JsObject(Seq[Option[(String, JsValue)]](
-      if (enterToSend.nonEmpty) Some("enterToSend" -> JsBoolean(enterToSend.get)) else None)
-    .flatten)
   }
 
   private def setAllNotificationsVisited(userId: Id[User], lastId: ExternalId[UserNotification]) {
