@@ -49,8 +49,8 @@ object SocialUserInfo {
   import com.keepit.serializer.SocialUserSerializer._
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[SocialUserInfo]) and
-    (__ \ 'createdAt).format[DateTime] and
-    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'createdAt).format(DateTimeJsonFormat) and
+    (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'userId).formatNullable(Id.format[User]) and
     (__ \ 'fullName).format[String] and
     (__ \ 'pictureUrl).formatNullable[String] and

@@ -74,7 +74,7 @@ case class SendableNotification(
 object SendableNotification {
   implicit val format = (
     (__ \ 'id).format(ExternalId.format[UserNotification]) and
-    (__ \ 'time).format[DateTime] and
+    (__ \ 'time).format(DateTimeJsonFormat) and
     (__ \ 'category).format[String].inmap(UserNotificationCategory.apply, unlift(UserNotificationCategory.unapply)) and
     (__ \ 'details).format[JsValue].inmap(UserNotificationDetails.apply, unlift(UserNotificationDetails.unapply)) and
     (__ \ 'state).format(State.format[UserNotification])
