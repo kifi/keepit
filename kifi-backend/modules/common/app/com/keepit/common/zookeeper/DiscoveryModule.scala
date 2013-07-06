@@ -74,7 +74,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
   @Provides
   @Singleton
   def serviceCluster(amazonInstanceInfo: AmazonInstanceInfo): ServiceCluster =
-    new ServiceCluster(serviceType).register(Node(serviceType.name), amazonInstanceInfo)
+    new ServiceCluster(serviceType).register(Node(serviceType.name + "_0"), amazonInstanceInfo)
 
   @Singleton
   @Provides
