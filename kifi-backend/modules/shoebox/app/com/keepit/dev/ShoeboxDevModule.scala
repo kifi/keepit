@@ -15,7 +15,7 @@ import com.keepit.common.cache.ShoeboxCacheModule
 import com.keepit.classify.DevDomainTagImporterModule
 import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.shoebox.UserIndexModule
-import com.keepit.social.ShoeboxSecureSocialModule
+import com.keepit.social.ProdShoeboxSecureSocialModule
 import com.keepit.common.analytics.DevAnalyticsModule
 import com.keepit.common.crypto.ShoeboxCryptoModule
 import com.keepit.common.store.ShoeboxDevStoreModule
@@ -31,7 +31,7 @@ case class ShoeboxDevModule() extends ShoeboxModule(
   // Common Functional Modules
   fortyTwoModule = ProdFortyTwoModule(),
   cacheModule = ShoeboxCacheModule(HashMapMemoryCacheModule()),
-  secureSocialModule = ShoeboxSecureSocialModule(),
+  secureSocialModule = ProdShoeboxSecureSocialModule(),
   searchServiceClientModule = ProdSearchServiceClientModule(),
   clickHistoryModule = ShoeboxClickHistoryModule(),
   browsingHistoryModule = ShoeboxBrowsingHistoryModule(),

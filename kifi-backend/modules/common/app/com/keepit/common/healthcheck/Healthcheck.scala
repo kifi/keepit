@@ -8,12 +8,10 @@ import com.google.inject.Inject
 import com.google.inject.ImplementedBy
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.akka.AlertingActor
-import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.PostOffice
-import com.keepit.common.mail.LocalPostOffice
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
@@ -60,9 +58,7 @@ trait HealthcheckMailSender {
 class RemoteHealthcheckMailSender @Inject() (postOffice: RemotePostOffice) extends HealthcheckMailSender {
   def sendMail(email: ElectronicMail) = postOffice.queueMail(email)
 }
-class LocalHealthcheckMailSender @Inject() (postOffice: LocalPostOffice, db: Database) extends HealthcheckMailSender {
-  def sendMail(email: ElectronicMail) = db.readWrite(postOffice.sendMail(email)(_))
-}
+
 
 class MailSender @Inject() (sender: HealthcheckMailSender) {
   def sendMail(email: ElectronicMail) {

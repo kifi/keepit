@@ -1,18 +1,12 @@
 package com.keepit.model
 
-import org.joda.time.DateTime
-import com.keepit.common.time._
-import com.keepit.common.time.zones.PT
 import org.specs2.mutable.Specification
 import com.google.inject.Injector
 import com.keepit.common.db.Id
-import scala.Array.canBuildFrom
-import play.api.Play.current
 import com.keepit.test._
-import com.keepit.inject._
 
 
-class TopicNameTest extends Specification with TestDBRunner{
+class TopicNameTest extends Specification with ShoeboxTestInjector {
   def setup()(implicit injector: Injector) = {
     val numTopics = 10
     val names = (0 until numTopics).map{ i => "topic%d".format(i)}
@@ -27,7 +21,7 @@ class TopicNameTest extends Specification with TestDBRunner{
 
   "TopicNameRepo" should {
     "persist data" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         val repo = inject[TopicNameRepoA]
         val topics = setup()
         val numTopics = 10
@@ -39,7 +33,7 @@ class TopicNameTest extends Specification with TestDBRunner{
     }
 
     "be able to update name" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         val repo = inject[TopicNameRepoA]
         val topics = setup()
         val numTopics = 10

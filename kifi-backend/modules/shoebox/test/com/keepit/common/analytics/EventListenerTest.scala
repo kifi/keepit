@@ -10,7 +10,7 @@ import com.keepit.model._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.inject.ApplicationInjector
 
-class EventListenerTest extends Specification with ApplicationInjector with DbRepos {
+class EventListenerTest extends Specification with ApplicationInjector with ShoeboxInjectionHelpers {
 
   def setup() = {
     db.readWrite {implicit s =>
@@ -30,7 +30,7 @@ class EventListenerTest extends Specification with ApplicationInjector with DbRe
 
   "EventHelper" should {
     "parse search events" in {
-      running(new ShoeboxApplication().withShoeboxServiceModule) {
+      running(new DeprecatedShoeboxApplication().withShoeboxServiceModule) {
         val (normUrlId, url, user, bookmark) = setup()
         val listener = new EventListener(inject[UserRepo], inject[NormalizedURIRepo]) {
           val schedulingProperties = inject[SchedulingProperties]
@@ -52,7 +52,7 @@ class EventListenerTest extends Specification with ApplicationInjector with DbRe
 
   "EventListener" should {
     "process events" in {
-      running(new ShoeboxApplication().withShoeboxServiceModule) {
+      running(new DeprecatedShoeboxApplication().withShoeboxServiceModule) {
         val (normUrlId, url, user, bookmark) = setup()
         implicit val clock = inject[Clock]
         implicit val fortyTwoServices = inject[FortyTwoServices]

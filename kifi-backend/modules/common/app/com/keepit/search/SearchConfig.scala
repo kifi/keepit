@@ -16,11 +16,10 @@ import scala.concurrent.duration._
 object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
-      "decorateResultWithCollections" -> "false",
+      "decorateResultWithCollections" -> "true",
       "phraseProximityBoost" -> "0.95",     // could be too aggressive?
       "phraseBoost" -> "0.5",
       "siteBoost" -> "1.0",
-      "enableCoordinator" -> "true",
       "similarity" -> "default",
       "svWeightMyBookMarks" -> "1",
       "svWeightBrowsingHistory" -> "2",
@@ -40,7 +39,8 @@ object SearchConfig {
       "semanticBoost" -> "0.8",
       "dampingHalfDecayMine" -> "7.0",
       "dampingHalfDecayFriends" -> "5.0",
-      "dampingHalfDecayOthers" -> "2.0"
+      "dampingHalfDecayOthers" -> "2.0",
+      "useS3FlowerFilter" -> "false"
     )
   private[this] val descriptions =
     Map[String, String](
@@ -48,7 +48,6 @@ object SearchConfig {
       "phraseProximityBoost" -> "boost value for phrase proximity",
       "phraseBoost" -> "boost value for the detected phrase",
       "siteBoost" -> "boost value for matching website names and domains",
-      "enableCoordinator" -> "enables the IDF based coordinator",
       "similarity" -> "similarity characteristics",
       "svWeightMyBookMarks" -> "semantics vector weight for my bookmarks",
       "svWeightBrowsingHistory" -> "semantic vector weight for browsing history",
@@ -68,7 +67,8 @@ object SearchConfig {
       "semanticBoost" -> "boosting by semantic vector",
       "dampingHalfDecayMine" -> "how many top hits in my bookmarks are important",
       "dampingHalfDecayFriends" -> "how many top hits in friends' bookmarks are important",
-      "dampingHalfDecayOthers" -> "how many top hits in others' bookmark are important"
+      "dampingHalfDecayOthers" -> "how many top hits in others' bookmark are important",
+      "useS3FlowerFilter" -> "Using the multiChunk S3 backed result clicked flower filter"
     )
 
   def apply(params: (String, String)*): SearchConfig = SearchConfig(Map(params:_*))

@@ -294,7 +294,6 @@ $(function() {
 		return $(this).data("id");
 	}
 
-	// delete/rename collection
 	var $collMenu = $("#coll-menu")
 	.on("mouseover", "a", function() {
 		$(this).addClass("hover");
@@ -320,7 +319,11 @@ $(function() {
 					$myKeeps.removeData("collId");
 					showMyKeeps();
 				}
-				// $('.detail .collections ul li:has(input[data-id="'+collId+'"])').remove();
+				var $keepColl = $main.find(".keep-coll[data-id=" + collId + "]");
+				$keepColl.css("width", $keepColl[0].offsetWidth);
+				var $pageColl = $detail.find(".page-coll[data-id=" + collId + "]");
+				$pageColl.css("width", $pageColl[0].offsetWidth);
+				$keepColl.add($pageColl).layout().on("transitionend", removeIfThis).addClass("removed");
 			}});
 	}).on("mouseup mousedown", ".coll-rename", function(e) {
 		if (e.which > 1) return;

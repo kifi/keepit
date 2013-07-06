@@ -15,4 +15,6 @@ import com.google.inject.{Inject, Singleton}
 case class ServiceInstance(serviceType: ServiceType, node: Node, amazonInstanceInfo: AmazonInstanceInfo) extends Logging {
   lazy val id: Long = node.name.substring(node.name.lastIndexOf('_') + 1).toLong
 
+  def instanceInfo : AmazonInstanceInfo = amazonInstanceInfo
+
 }

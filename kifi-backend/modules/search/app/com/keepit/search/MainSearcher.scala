@@ -83,7 +83,6 @@ class MainSearcher(
   val svWeightBrowsingHistory = config.asInt("svWeightBrowsingHistory")
   val svWeightClickHistory = config.asInt("svWeightClickHistory")
   val similarity = Similarity(config.asString("similarity"))
-  val enableCoordinator = config.asBoolean("enableCoordinator")
   val phraseBoost = config.asFloat("phraseBoost")
   val phraseProximityBoost = config.asFloat("phraseProximityBoost")
   val siteBoost = config.asFloat("siteBoost")
@@ -179,7 +178,6 @@ class MainSearcher(
 
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
-    parser.enableCoord = enableCoordinator
 
     parsedQuery = parser.parse(queryString)
     timeLogs.queryParsing = currentDateTime.getMillis() - t1
@@ -230,7 +228,7 @@ class MainSearcher(
 
   def search(queryString: String, numHitsToReturn: Int, lastUUID: Option[ExternalId[ArticleSearchResultRef]], filter: SearchFilter = SearchFilter.default()): ArticleSearchResult = {
     val now = currentDateTime
-    val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost)
+    val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost, config.asBoolean("useS3FlowerFilter"))
     timeLogs.getClickBoost = currentDateTime.getMillis() - now.getMillis()
     Statsd.timing("mainSearch.getClickboost", timeLogs.getClickBoost)
     val (myHits, friendsHits, othersHits, personalizedSearcher) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
@@ -413,7 +411,6 @@ class MainSearcher(
     lang = Lang("en")
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
-    parser.enableCoord = enableCoordinator
 
     parser.parse(queryString).map{ query =>
       var personalizedSearcher = getPersonalizedSearcher(query)

@@ -8,8 +8,7 @@ import com.keepit.common.social.SocialNetworks.FACEBOOK
 import com.keepit.common.time._
 import com.keepit.inject._
 import com.keepit.model._
-import com.keepit.test.DbRepos
-import com.keepit.test.EmptyApplication
+import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector, ShoeboxInjectionHelpers, DeprecatedEmptyApplication}
 import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import play.api.test.FakeRequest
@@ -20,14 +19,14 @@ import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers.running
 
-class CommentControllerTest extends TestKit(ActorSystem()) with Specification with ApplicationInjector with DbRepos {
+class CommentControllerTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
 
   args(skipAll = true) // todo(Andrew/Greg/anyone) Fix this!!!!!
 
   "CommentController" should {
 
     "follow and unfollow" in {
-      running(new EmptyApplication().withFakeSecureSocialUserService().withFakeMail()) {
+      running(new ShoeboxApplication()) {
         val now = new DateTime(2013, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         val today = now.toDateTime
         inject[FakeClock].push(today)
@@ -74,7 +73,7 @@ class CommentControllerTest extends TestKit(ActorSystem()) with Specification wi
     }
 
     "persist comment emails" in {
-      running(new EmptyApplication().withFakeMail().withTestActorSystem(system)) {
+      running(new ShoeboxApplication()) {
         val comment = db.readWrite { implicit s =>
           val userRepo = inject[UserRepo]
           val emailRepo = inject[EmailAddressRepo]

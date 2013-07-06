@@ -45,7 +45,7 @@ case class DevResultFeedbackModule() extends ResultFeedbackModule {
     conf.getString("dir") match {
       case None =>
         val buffer = new InMemoryResultClickTrackerBuffer(1000)
-        new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, Int.MaxValue)(Some(s3buffer)))
+        new ResultClickTracker(new ProbablisticLRU(buffer, numHashFuncs, 1)(Some(s3buffer)))
       case Some(_) => ProdResultFeedbackModule().resultClickTracker(s3buffer)
     }
   }

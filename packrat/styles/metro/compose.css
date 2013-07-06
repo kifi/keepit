@@ -71,18 +71,13 @@ span.kifi-compose-tip {
   position: relative;
   margin: -1px 1px -1px 0;
   border: 1px solid transparent;
-  padding: 0 12px;
+  padding: 0 8px 0 12px;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   font-size: 11px;
   line-height: 28px;
   color: #999;
   cursor: pointer;
-  transition: padding-right .1s ease-out;
-}
-.kifi-compose-tip:hover,
-.kifi-compose-tip.kifi-active {
-  padding-right: 8px;
 }
 .kifi-compose-tip.kifi-active {
   border-color: #d2d2d2;
@@ -95,25 +90,12 @@ span.kifi-compose-tip {
 }
 span.kifi-compose-tip-tri {
   display: inline-block;
-  width: 0;
-  opacity: 0;
   line-height: inherit;
   vertical-align: bottom;
-  overflow: hidden;
-  transition: margin-left .1s ease-out, width .1s ease-out, opacity .1s linear;
-}
-.kifi-compose-tip:not(:hover)>.kifi-compose-tip-tri {
-  transition: margin-left .1s ease-out, width .1s ease-out, opacity .1s linear, visibility 0 .1s;
-}
-.kifi-compose-tip:hover>.kifi-compose-tip-tri,
-.kifi-compose-tip.kifi-active>.kifi-compose-tip-tri {
   margin-left: 7px;
-  width: 7px;
-  opacity: 1;
 }
 .kifi-compose-tip.kifi-active>.kifi-compose-tip-tri {
   visibility: hidden;
-  transition: none;
 }
 span.kifi-compose-tip-menu {
   display: inline-block;

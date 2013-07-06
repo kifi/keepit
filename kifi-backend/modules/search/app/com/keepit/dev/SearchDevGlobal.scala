@@ -7,7 +7,7 @@ import com.google.inject.util.Modules
 import play.api.Application
 
 object SearchDevGlobal extends FortyTwoGlobal(Dev) with SearchServices {
-  override val modules = Seq((SearchDevModule()))
+  override val module = SearchDevModule()
 
   override def onStart(app: Application) {
     startSearchServices()

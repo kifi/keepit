@@ -4,10 +4,10 @@ import org.specs2.mutable.Specification
 import org.joda.time.DateTime
 import scala.concurrent.duration._
 import com.keepit.common.time._
-import com.keepit.test.TestInjector
 import net.codingwell.scalaguice.ScalaModule
+import com.keepit.test.DeprecatedTestInjector
 
-class BabysitterTest extends Specification with TestInjector {
+class BabysitterTest extends Specification with DeprecatedTestInjector {
 
   val realBabysitterModule = new ScalaModule() {
     def configure() {

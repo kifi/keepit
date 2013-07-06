@@ -1,18 +1,18 @@
 package com.keepit.controllers.core
 
 import com.keepit.test._
-import com.keepit.inject._
 import play.api.test.Helpers._
 import org.specs2.mutable.Specification
 import com.keepit.model._
 import play.api.libs.json.Json
 import com.keepit.common.healthcheck._
+import com.keepit.scraper.FakeScraperModule
 
-class BookmarkInternerTest extends Specification with ApplicationInjector with DbRepos {
+class BookmarkInternerTest extends Specification with ShoeboxApplicationInjector {
 
   "BookmarkInterner" should {
     "persist bookmark" in {
-      running(new EmptyApplication().withFakeScraper()) {
+      running(new ShoeboxApplication(FakeScraperModule())) {
         val user = db.readWrite { implicit db =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
@@ -31,7 +31,7 @@ class BookmarkInternerTest extends Specification with ApplicationInjector with D
     }
 
     "persist bookmarks" in {
-      running(new EmptyApplication().withFakeScraper()) {
+      running(new ShoeboxApplication(FakeScraperModule())) {
         val user = db.readWrite { implicit db =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
@@ -51,7 +51,7 @@ class BookmarkInternerTest extends Specification with ApplicationInjector with D
       }
     }
     "persist bookmarks with one bad url" in {
-      running(new EmptyApplication().withFakeScraper()) {
+      running(new ShoeboxApplication(FakeScraperModule())) {
         val user = db.readWrite { implicit db =>
           userRepo.save(User(firstName = "Shanee", lastName = "Smith"))
         }
@@ -76,7 +76,7 @@ class BookmarkInternerTest extends Specification with ApplicationInjector with D
       }
     }
     "reactivate inactive bookmarks for the same url" in {
-      running(new EmptyApplication().withFakeScraper()) {
+      running(new ShoeboxApplication(FakeScraperModule())) {
         val user = db.readWrite { implicit s =>
           userRepo.save(User(firstName = "Greg", lastName = "Smith"))
         }

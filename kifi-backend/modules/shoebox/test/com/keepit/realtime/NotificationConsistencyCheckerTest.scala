@@ -4,18 +4,23 @@ import org.specs2.mutable.Specification
 
 import com.keepit.common.healthcheck.FakeHealthcheck
 import com.keepit.model._
-import com.keepit.test.{DbRepos, EmptyApplication}
+import com.keepit.test.{ShoeboxApplicationInjector, ShoeboxApplication, ShoeboxInjectionHelpers, DeprecatedEmptyApplication}
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
-import play.api.test.Helpers.running
+import play.api.test.Helpers._
 import play.api.libs.json.Json
 import com.keepit.inject.ApplicationInjector
+import com.keepit.model.UserNotification
+import com.keepit.model.UserNotificationDetails
+import com.keepit.model.CommentRead
+import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.actor.TestActorSystemModule
 
-class NotificationConsistencyCheckerTest extends TestKit(ActorSystem()) with Specification with ApplicationInjector with DbRepos {
+class NotificationConsistencyCheckerTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
   "NotificationConsistencyChecker" should {
     "create healthcheck errors for unvisited notifications with read comments" in {
-      running(new EmptyApplication().withTestActorSystem(system).withFakeMail()) {
+      running(new ShoeboxApplication(FakeMailModule(), TestActorSystemModule(Some(system)))) {
         val checker = inject[NotificationConsistencyChecker]
         val healthcheck = inject[FakeHealthcheck]
         val (user, nUri, comment, notif) = db.readWrite { implicit s =>

@@ -11,7 +11,7 @@ import play.api._
 import com.keepit.search.nlp.NlpParser
 
 object SearchGlobal extends FortyTwoGlobal(Prod) with SearchServices {
-  val modules = Seq(SearchProdModule())
+  val module = SearchProdModule()
 
   override def onStart(app: Application) {
     log.info("starting the search")

@@ -1,0 +1,18 @@
+@()
+
+@admin("Set Topic Names"){
+  <form action = "@com.keepit.controllers.admin.routes.TopicModelController.saveAddedTopics" method = "POST">
+  <div>
+    <label for = "topics">Type or paste topic names here. One line per topic. 
+    <br>
+    <b>NOTE: Existing topic names will all be removed.</b>
+    <br>
+    To edit topic names, click <a href = "@com.keepit.controllers.admin.routes.TopicModelController.topicsViewDefault">here</a>
+    </label>
+    <textarea id="topics" name="topics" rows="20"></textarea>
+  </div>    
+  <div class="buttons">
+    <button type="submit">Set Topics</button>
+  </div>  
+
+}

@@ -8,18 +8,24 @@ import org.specs2.mutable.Specification
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworks
 import com.keepit.model._
-import com.keepit.test.{EmptyApplication, DbRepos}
+import com.keepit.test._
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers.running
-import com.keepit.inject.ApplicationInjector
 import com.keepit.common.time.FakeClock
+import com.keepit.model.EmailAddress
+import scala.Some
+import com.keepit.model.Invitation
+import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.social.SocialId
 
-class InvitationMailPluginTest extends TestKit(ActorSystem()) with Specification with ApplicationInjector with DbRepos {
+class InvitationMailPluginTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
+
+  val invitationMailPluginModules = Seq(TestActorSystemModule(Some(system)), FakeMailModule())
   "InvitationMailPlugin" should {
     "send emails to newly accepted users" in {
-      running(new EmptyApplication().withTestActorSystem(system).withFakeMail()) {
+      running(new ShoeboxApplication(invitationMailPluginModules:_*)) {
         val plugin = inject[InvitationMailPlugin]
         val fakeOutbox = inject[FakeOutbox]
         val (user, addr) = db.readWrite { implicit s =>
@@ -35,7 +41,7 @@ class InvitationMailPluginTest extends TestKit(ActorSystem()) with Specification
       }
     }
     "resend emails after the appropriate amount of time" in {
-      running(new EmptyApplication().withTestActorSystem(system).withFakeMail()) {
+      running(new ShoeboxApplication(invitationMailPluginModules:_*)) {
         val clock = inject[FakeClock]
         val plugin = inject[InvitationMailPlugin]
         val fakeOutbox = inject[FakeOutbox]

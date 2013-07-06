@@ -11,6 +11,10 @@ import com.keepit.common.db.Id
 import com.keepit.model.User
 import com.keepit.model.UserTopicRepo
 import com.keepit.common.db.slick.Database
+import com.keepit.model.TopicNameRepoA
+import scala.math.ceil
+import com.keepit.model.TopicName
+import play.api.libs.json.Json
 
 @Singleton
 class TopicModelController  @Inject() (
@@ -19,6 +23,7 @@ class TopicModelController  @Inject() (
   topicPlugin: TopicUpdaterPlugin,
   topicNameMapper: Provider[TopicNameMapper],
   userTopicRepo: UserTopicRepo,
+  topicNameRepoA: TopicNameRepoA,
   db: Database,
   actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator){
 
@@ -102,6 +107,48 @@ class TopicModelController  @Inject() (
 
     val rv = buildString(topic)
     Redirect(com.keepit.controllers.admin.routes.TopicModelController.userTopic(Some(userId.id.toString), Some(rv)))
+  }
+
+  def updateTopicName(id: Id[TopicName]) = AdminHtmlAction{ implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val topicName = body.get("topicName").get
+    db.readWrite{ implicit s =>
+      topicNameRepoA.updateName(id, topicName)
+    }
+    Ok(Json.obj("topicName" -> topicName))
+
+  }
+
+  def topicsViewDefault = topicsView(0)
+
+  def topicsView(page: Int = 0) = AdminHtmlAction{ request =>
+    val PAGE_SIZE = 50
+    val (topics, count) = db.readOnly{ implicit s =>
+      val topics = topicNameRepoA.all.sortWith((a, b) => a.id.get.id < b.id.get.id)
+      val count = topics.size
+      (topics.drop(page * PAGE_SIZE).take(PAGE_SIZE), count)
+    }
+    val pageCount = ceil(count*1.0 / PAGE_SIZE).toInt
+
+    Ok(html.admin.topicNames(topics, page, count, pageCount, PAGE_SIZE))
+  }
+
+  def addTopics = AdminHtmlAction { implicit request =>
+    Ok(html.admin.addTopicNames())
+  }
+
+  def saveAddedTopics = AdminHtmlAction{ implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val content = body.get("topics").get
+    val topicNames = content.split("\n").map{_.trim}.filter(_ != "")
+    val topics = topicNames.map{ name => TopicName(topicName = name) }
+
+    db.readWrite{ implicit s =>
+      topicNameRepoA.deleteAll()
+      topics.foreach{topicNameRepoA.save(_)}
+    }
+
+    Redirect(com.keepit.controllers.admin.routes.TopicModelController.topicsViewDefault)
   }
 
 }
