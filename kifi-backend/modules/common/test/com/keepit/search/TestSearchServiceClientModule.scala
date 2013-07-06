@@ -9,6 +9,8 @@ case class TestSearchServiceClientModule() extends SearchServiceClientModule {
 
   @Provides
   @Singleton
-  def searchServiceClient(serviceCluster: ServiceCluster): SearchServiceClient = new SearchServiceClientImpl(serviceCluster, -1, null)
+  def searchServiceClient(serviceCluster: ServiceCluster): SearchServiceClient = {
+    new SearchServiceClientImpl(serviceCluster, -1, null)
+  }
 
 }

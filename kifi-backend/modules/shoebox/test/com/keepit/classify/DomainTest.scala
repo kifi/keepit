@@ -4,15 +4,12 @@ package com.keepit.classify
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick.Database
-import com.keepit.test.DeprecatedEmptyApplication
-import play.api.test.Helpers._
-import com.keepit.inject.ApplicationInjector
+import com.keepit.test.ShoeboxTestInjector
 
-
-class DomainTest extends Specification with ApplicationInjector {
+class DomainTest extends Specification with ShoeboxTestInjector {
   "The domain repo" should {
     "save and retrieve domains by name and id" in {
-      running(new DeprecatedEmptyApplication()) {
+      withDb() { implicit injector =>
         val domainRepo = inject[DomainRepo]
 
         val d1 = Domain(hostname = "google.com", autoSensitive = Some(false))
@@ -35,7 +32,7 @@ class DomainTest extends Specification with ApplicationInjector {
       }
     }
     "respect manual sensitivity override" in {
-      running(new DeprecatedEmptyApplication()) {
+      withDb() { implicit injector =>
         val domainRepo = inject[DomainRepo]
 
         val d = Domain(hostname = "google.com", autoSensitive = Some(false))
