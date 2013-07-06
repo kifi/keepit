@@ -60,6 +60,17 @@ case class LdaTopicModelModule() extends TopicModelModule with Logging {
 }
 
 case class DevTopicModelModule() extends TopicModelModule {
+  override def configure() {
+    bind[TopicUpdaterPlugin].to[TopicUpdaterPluginImpl].in[AppScoped]
+    bind[WordTopicModelFactory].to[FakeWordTopicModelFactoryImpl].in[AppScoped]
+    bind[NameMapperFactory].to[FakeNameMapperFactoryImpl].in[AppScoped]
+  }
+
+  @Provides
+  @Singleton
+  def swtichableTopicModelAccessor(factory: SwitchableTopicModelAccessorFactory): SwitchableTopicModelAccessor = {
+    factory()
+  }
 
   @Provides
   @Singleton
@@ -80,3 +91,35 @@ case class DevTopicModelModule() extends TopicModelModule {
     new IdentityTopicNameMapper(topicNames)
   }
 }
+
+case class DevTopicModelModule2() extends TopicModelModule {
+
+  @Provides
+  @Singleton
+  def swtichableTopicModelAccessor(factory: SwitchableTopicModelAccessorFactory): SwitchableTopicModelAccessor = {
+
+    val accessor = factory()
+    println("got fake switchable accessor")
+    accessor
+  }
+
+  @Provides
+  @Singleton
+  def wordTopicModel: WordTopicModel = {
+    val vocabulary: Set[String] = (0 until TopicModelGlobal.numTopics).map{ i => "word%d".format(i)}.toSet
+    val wordTopic: Map[String, Array[Double]] = (0 until TopicModelGlobal.numTopics).foldLeft(Map.empty[String, Array[Double]]){
+      (m, i) => { val a = new Array[Double](TopicModelGlobal.numTopics); a(i) = 1.0; m + ("word%d".format(i) -> a) }
+    }
+    val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map{ i => "topic%d".format(i)}.toArray
+    println("loading fake topic model")
+    new LdaWordTopicModel(vocabulary, wordTopic, topicNames)
+  }
+
+  @Provides
+  @Singleton
+  def topicNameMapper: TopicNameMapper = {
+    val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map { i => "topic%d".format(i) }.toArray
+    new IdentityTopicNameMapper(topicNames)
+  }
+}
+

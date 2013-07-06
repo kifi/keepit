@@ -29,8 +29,7 @@ trait TopicModelAccessor {
   val documentTopicModel: DocumentTopicModel
 }
 
-@Singleton
-class TopicModelAccessorA @Inject()(
+class TopicModelAccessorA (
   val userTopicRepo: UserTopicRepoA,
   val uriTopicRepo: UriTopicRepoA,
   val topicSeqInfoRepo: TopicSeqNumInfoRepoA,
@@ -38,8 +37,7 @@ class TopicModelAccessorA @Inject()(
   val documentTopicModel: DocumentTopicModel
 ) extends TopicModelAccessor
 
-@Singleton
-class TopicModelAccessorB @Inject()(
+class TopicModelAccessorB (
   val userTopicRepo: UserTopicRepoB,
   val uriTopicRepo: UriTopicRepoB,
   val topicSeqInfoRepo: TopicSeqNumInfoRepoB,
@@ -52,8 +50,7 @@ object TopicModelAccessorFlag {
   val B = "b"
 }
 
-@Singleton
-class SwitchableTopicModelAccessor @Inject()(
+class SwitchableTopicModelAccessor (
   val accessorA: TopicModelAccessorA,
   val accessorB: TopicModelAccessorB
 ) {
