@@ -30,8 +30,8 @@ class SwitchableTopicModelAccessorFactory @Inject()(
     val docTopicModelA = new LDATopicModel(wordTopicModelA)
     val docTopicModelB = new LDATopicModel(wordTopicModelB)
 
-    val accessorA = new TopicModelAccessorA(userTopicRepoA, uriTopicRepoA, topicSeqInfoRepoA, topicNameRepoA, docTopicModelA)
-    val accessorB = new TopicModelAccessorB(userTopicRepoB, uriTopicRepoB, topicSeqInfoRepoB, topicNameRepoB, docTopicModelB)
+    val accessorA = new TopicModelAccessorA(userTopicRepoA, uriTopicRepoA, topicSeqInfoRepoA, topicNameRepoA, docTopicModelA, wordTopicModelA, nameMapperA)
+    val accessorB = new TopicModelAccessorB(userTopicRepoB, uriTopicRepoB, topicSeqInfoRepoB, topicNameRepoB, docTopicModelB, wordTopicModelB, nameMapperB)
 
     new SwitchableTopicModelAccessor(accessorA, accessorB)
   }

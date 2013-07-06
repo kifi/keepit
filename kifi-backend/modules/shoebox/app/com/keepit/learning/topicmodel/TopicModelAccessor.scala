@@ -27,6 +27,8 @@ trait TopicModelAccessor {
   val topicSeqInfoRepo: TopicSeqNumInfoRepo
   val topicNameRepo: TopicNameRepo
   val documentTopicModel: DocumentTopicModel
+  val wordTopicModel: WordTopicModel
+  val topicNameMapper: TopicNameMapper
 }
 
 class TopicModelAccessorA (
@@ -34,7 +36,9 @@ class TopicModelAccessorA (
   val uriTopicRepo: UriTopicRepoA,
   val topicSeqInfoRepo: TopicSeqNumInfoRepoA,
   val topicNameRepo: TopicNameRepoA,
-  val documentTopicModel: DocumentTopicModel
+  val documentTopicModel: DocumentTopicModel,
+  val wordTopicModel: WordTopicModel,
+  val topicNameMapper: TopicNameMapper
 ) extends TopicModelAccessor
 
 class TopicModelAccessorB (
@@ -42,7 +46,9 @@ class TopicModelAccessorB (
   val uriTopicRepo: UriTopicRepoB,
   val topicSeqInfoRepo: TopicSeqNumInfoRepoB,
   val topicNameRepo: TopicNameRepoB,
-  val documentTopicModel: DocumentTopicModel
+  val documentTopicModel: DocumentTopicModel,
+  val wordTopicModel: WordTopicModel,
+  val topicNameMapper: TopicNameMapper
 ) extends TopicModelAccessor
 
 object TopicModelAccessorFlag {

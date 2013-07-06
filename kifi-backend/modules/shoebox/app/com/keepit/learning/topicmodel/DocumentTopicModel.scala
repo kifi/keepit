@@ -8,8 +8,7 @@ trait DocumentTopicModel {
   def getDocumentTopicId(content: String): Int
 }
 
-@Singleton
-class LDATopicModel @Inject()(model: WordTopicModel) extends DocumentTopicModel{
+class LDATopicModel (model: WordTopicModel) extends DocumentTopicModel{
   def getDocumentTopicDistribution(content: String) = {
     val words = content.split(" ").filter(!_.isEmpty).map(_.toLowerCase).filter(model.vocabulary.contains(_))
     val wordCounts = words.groupBy(x => x).foldLeft(Map.empty[String,Int]){(m, pair) => m + (pair._1 -> pair._2.size)}

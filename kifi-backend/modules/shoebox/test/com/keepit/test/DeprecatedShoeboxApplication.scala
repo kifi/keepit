@@ -14,6 +14,8 @@ import net.codingwell.scalaguice.ScalaModule
 import com.keepit.learning.topicmodel.WordTopicModel
 import com.keepit.learning.topicmodel.FakeWordTopicModel
 import com.keepit.common.social.SocialGraphPlugin
+import com.keepit.learning.topicmodel.DocumentTopicModel
+import com.keepit.learning.topicmodel.LDATopicModel
 
 class DeprecatedShoeboxApplication() extends DeprecatedTestApplication(new DeprecatedTestGlobal(ShoeboxDevGlobal.module), path = new File("./modules/shoebox/")) {
   def withTinyWordTopicModule() = overrideWith(TinyWordTopicModule())
@@ -53,6 +55,10 @@ case class TinyWordTopicModule() extends ScalaModule {
   @Provides
   @Singleton
   def wordTopicModel: WordTopicModel = new TinyFakeWordTopicModel
+
+  @Provides
+  @Singleton
+  def docTopicModel: DocumentTopicModel = new LDATopicModel(wordTopicModel)
 
 }
 
