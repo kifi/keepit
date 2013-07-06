@@ -1,7 +1,7 @@
 package com.keepit.shoebox
 
 import com.keepit.common.cache.{EhCacheCacheModule, MemcachedCacheModule, ShoeboxCacheModule}
-import com.keepit.social.ShoeboxSecureSocialModule
+import com.keepit.social.ProdShoeboxSecureSocialModule
 import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.common.db.ShoeboxSlickModule
 import com.keepit.scraper.ScraperImplModule
@@ -24,7 +24,7 @@ case class ShoeboxProdModule() extends ShoeboxModule(
   // Common Functional Modules
   fortyTwoModule = ProdFortyTwoModule(),
   cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
-  secureSocialModule = ShoeboxSecureSocialModule(),
+  secureSocialModule = ProdShoeboxSecureSocialModule(),
   searchServiceClientModule = ProdSearchServiceClientModule(),
   clickHistoryModule = ShoeboxClickHistoryModule(),
   browsingHistoryModule = ShoeboxBrowsingHistoryModule(),

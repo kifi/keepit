@@ -4,18 +4,33 @@ import org.specs2.mutable.Specification
 
 import com.keepit.common.db.slick._
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.search.Lang
-import com.keepit.test.{ShoeboxInjectionHelpers, DeprecatedEmptyApplication}
+import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
 
 import play.api.libs.json.{Json, JsNumber, JsArray}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
+import com.google.inject.Injector
+import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.mail.FakeMailModule
+import com.keepit.common.analytics.TestAnalyticsModule
+import com.keepit.common.store.FakeStoreModule
+import com.keepit.common.actor.TestActorSystemModule
 
-class ShoeboxControllerTest extends Specification with ApplicationInjector with ShoeboxInjectionHelpers {
+class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjector {
 
-  def setupSomeUsers() = {
+  val shoeboxControllerTestModules = Seq(
+    FakeShoeboxServiceModule(),
+    FakeMailModule(),
+    FakeHttpClientModule(),
+    TestAnalyticsModule(),
+    FakeStoreModule(),
+    TestActorSystemModule()
+  )
+
+  def setupSomeUsers()(implicit injector: Injector) = {
     inject[Database].readWrite {implicit s =>
 
       val user1965 = userRepo.save(User(firstName="Richard",lastName="Feynman"))
@@ -30,7 +45,7 @@ class ShoeboxControllerTest extends Specification with ApplicationInjector with 
     }
   }
 
-  def setupSomePhrases() = {
+  def setupSomePhrases()(implicit injector: Injector) = {
     inject[Database].readWrite {implicit s =>
       val phrases = List(
         phraseRepo.save(Phrase(phrase="planck constant", lang=Lang("en"), source="quantum physics")),
@@ -47,7 +62,7 @@ class ShoeboxControllerTest extends Specification with ApplicationInjector with 
   "ShoeboxController" should {
 
     "return users from the database" in {
-        running(new DeprecatedEmptyApplication().withFakePersistEvent().withShoeboxServiceModule().withFakeHttpClient()) {
+        running(new ShoeboxApplication(shoeboxControllerTestModules:_*)) {
           val (user1965,friends) = setupSomeUsers()
           val users = user1965::friends
           val shoeboxController = inject[ShoeboxController]
@@ -60,24 +75,24 @@ class ShoeboxControllerTest extends Specification with ApplicationInjector with 
     }
 
     "return basic users from the database" in {
-        running(new DeprecatedEmptyApplication().withFakePersistEvent().withShoeboxServiceModule().withFakeHttpClient()) {
-          val (user1965,friends) = setupSomeUsers()
-          val users = user1965::friends
-          val basicUserRepo = inject[BasicUserRepo]
-          val basicUsersJson = inject[Database].readOnly { implicit s =>
-            users.map{ u => (u.id.get.id.toString -> Json.toJson(basicUserRepo.load(u.id.get))) }.toMap
-          }
-          val shoeboxController = inject[ShoeboxController]
-          val query = users.map(_.id.get).mkString(",")
-          val result = shoeboxController.getBasicUsers(query)(FakeRequest())
-          status(result) must equalTo(OK);
-          contentType(result) must beSome("application/json");
-          contentAsString(result) must equalTo(Json.toJson(basicUsersJson).toString())
+      running(new ShoeboxApplication(shoeboxControllerTestModules:_*)) {
+        val (user1965,friends) = setupSomeUsers()
+        val users = user1965::friends
+        val basicUserRepo = inject[BasicUserRepo]
+        val basicUsersJson = inject[Database].readOnly { implicit s =>
+          users.map{ u => (u.id.get.id.toString -> Json.toJson(basicUserRepo.load(u.id.get))) }.toMap
         }
+        val shoeboxController = inject[ShoeboxController]
+        val query = users.map(_.id.get).mkString(",")
+        val result = shoeboxController.getBasicUsers(query)(FakeRequest())
+        status(result) must equalTo(OK);
+        contentType(result) must beSome("application/json");
+        contentAsString(result) must equalTo(Json.toJson(basicUsersJson).toString())
+      }
     }
 
     "return connected users' ids from the database" in {
-      running(new DeprecatedEmptyApplication().withFakePersistEvent().withShoeboxServiceModule().withFakeHttpClient()) {
+      running(new ShoeboxApplication(shoeboxControllerTestModules:_*)) {
         val (user1965,friends) = setupSomeUsers()
         val shoeboxController = inject[ShoeboxController]
         val result = shoeboxController.getConnectedUsers(user1965.id.get)(FakeRequest())
@@ -88,7 +103,7 @@ class ShoeboxControllerTest extends Specification with ApplicationInjector with 
     }
 
     "return phrases from the database" in {
-      running(new DeprecatedEmptyApplication().withFakePersistEvent().withShoeboxServiceModule().withFakeHttpClient()) {
+      running(new ShoeboxApplication(shoeboxControllerTestModules:_*)) {
         setupSomePhrases()
         val shoeboxController = inject[ShoeboxController]
         val result = shoeboxController.getPhrasesByPage(0,2)(FakeRequest())
@@ -101,10 +116,6 @@ class ShoeboxControllerTest extends Specification with ApplicationInjector with 
         contentAsString(result) must not contain("wave-particle duality");
         contentAsString(result) must not contain("planck constant")
       }
-
-
     }
-
   }
-
 }

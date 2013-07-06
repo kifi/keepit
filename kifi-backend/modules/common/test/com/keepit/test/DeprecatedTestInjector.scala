@@ -16,7 +16,7 @@ trait DeprecatedTestInjector extends EmptyInjector {
   val module = Modules.combine(DeprecatedTestModule(), StandaloneTestActorSystemModule())
 }
 
-trait DeprecatedTestDBRunner extends DeprecatedTestInjector with ShoeboxInjectionHelpers {
+trait DeprecatedTestDBRunner extends DeprecatedTestInjector with DeprecatedDbRepos {
 
   def dbInfo: DbInfo = TestDbInfo.dbInfo
   DriverManager.registerDriver(new play.utils.ProxyDriver(Class.forName("org.h2.Driver").newInstance.asInstanceOf[Driver]))

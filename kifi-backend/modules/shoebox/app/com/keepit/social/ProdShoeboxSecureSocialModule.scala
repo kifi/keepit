@@ -9,11 +9,7 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.store.S3ImageStore
 import com.keepit.common.controller.{ShoeboxActionAuthenticator, ActionAuthenticator}
 
-case class ShoeboxSecureSocialModule() extends SecureSocialModule {
-
-  def configure {
-    bind[ActionAuthenticator].to[ShoeboxActionAuthenticator]
-  }
+trait ShoeboxSecureSocialModule extends SecureSocialModule {
 
   @Provides
   @Singleton
@@ -45,5 +41,11 @@ case class ShoeboxSecureSocialModule() extends SecureSocialModule {
   ): SecureSocialUserPlugin = new SecureSocialUserPluginImpl(
     db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin, userExperimentRepo, emailRepo, socialGraphPlugin
   )
+}
 
+case class ProdShoeboxSecureSocialModule() extends ShoeboxSecureSocialModule {
+
+  def configure {
+    bind[ActionAuthenticator].to[ShoeboxActionAuthenticator]
+  }
 }

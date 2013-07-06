@@ -4,13 +4,16 @@ import scala.collection.mutable.HashMap
 import scala.concurrent.{Future, promise}
 
 import com.amazonaws.services.s3.model.PutObjectResult
-import com.google.inject.{Singleton, Provides}
+import com.google.inject.{Provider, Singleton, Provides}
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.social.SocialUserRawInfo
 import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.model.{User, NormalizedURI, SocialUserInfo}
-import com.keepit.search.Article
-import com.keepit.search.ArticleStore
+import com.keepit.search.{InMemoryArticleSearchResultStoreImpl, ArticleSearchResultStore, Article, ArticleStore}
+import com.keepit.inject.AppScoped
+import com.keepit.common.analytics.{FakeMongoS3EventStore, MongoEventStore}
+import com.amazonaws.services.s3.AmazonS3
+import com.keepit.common.analytics.reports.{InMemoryReportStoreImpl, ReportStore}
 
 case class FakeStoreModule() extends StoreModule {
 
@@ -25,6 +28,15 @@ case class FakeStoreModule() extends StoreModule {
 
   @Provides @Singleton
   def s3ScreenshotStore = FakeS3ScreenshotStore()
+
+  @Provides @Singleton
+  def fakeMongoStore() : MongoEventStore = new FakeMongoS3EventStore()
+
+  @Provides @Singleton
+  def reportStore(): ReportStore = new InMemoryReportStoreImpl()
+
+  @Provides @Singleton
+  def articleSearchResultStore(): ArticleSearchResultStore = new InMemoryArticleSearchResultStoreImpl()
 
 }
 

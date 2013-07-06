@@ -3,19 +3,29 @@ package com.keepit.classify
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick.Database
-import com.keepit.inject._
 import com.keepit.test._
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
-import play.api.Play.current
 import play.api.test.Helpers._
+import com.keepit.common.analytics.TestAnalyticsModule
+import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.store.FakeStoreModule
+import com.keepit.common.mail.FakeMailModule
 
-class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification with ApplicationInjector {
+class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
+
+  val domainTagImporterTestModules = Seq(
+    FakeMailModule(),
+    TestAnalyticsModule(),
+    FakeStoreModule(),
+    FakeDomainTagImporterModule(),
+    TestActorSystemModule(Some(system))
+  )
 
   "The domain tag importer" should {
     "load domain sensitivity from a map of tags to domains" in {
-      running(new DeprecatedEmptyApplication().withFakePersistEvent().withTestActorSystem(system)) {
+      running(new ShoeboxApplication(domainTagImporterTestModules:_*)) {
         val db = inject[Database]
         val tagRepo = inject[DomainTagRepo]
         val domainTagImporter = inject[DomainTagImporterImpl]
@@ -49,7 +59,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification wi
       }
     }
     "properly remove domain tags" in {
-      running(new DeprecatedEmptyApplication().withFakePersistEvent().withTestActorSystem(system)) {
+      running(new ShoeboxApplication(domainTagImporterTestModules:_*)) {
         val tagRepo = inject[DomainTagRepo]
         val domainRepo = inject[DomainRepo]
         val db = inject[Database]
@@ -82,7 +92,7 @@ class DomainTagImporterTest extends TestKit(ActorSystem()) with Specification wi
       }
     }
     "respect manual overrides" in {
-      running(new DeprecatedEmptyApplication().withFakePersistEvent().withTestActorSystem(system)) {
+      running(new ShoeboxApplication(domainTagImporterTestModules:_*)) {
         val tagRepo = inject[DomainTagRepo]
         val domainRepo = inject[DomainRepo]
         val db = inject[Database]
