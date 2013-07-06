@@ -21,7 +21,7 @@ case class DeepLink(
   id: Option[Id[DeepLink]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
-  initatorUserId: Option[Id[User]],
+  initiatorUserId: Option[Id[User]],
   recipientUserId: Option[Id[User]],
   uriId: Option[Id[NormalizedURI]],
   urlId: Option[Id[URL]] = None, // todo(Andrew): remove Option after grandfathering process
