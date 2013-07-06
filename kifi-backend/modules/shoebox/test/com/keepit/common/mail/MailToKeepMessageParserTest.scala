@@ -12,12 +12,12 @@ import javax.mail.Message.RecipientType
 import javax.mail.Session
 import javax.mail.internet.{MimeMultipart, MimeBodyPart, InternetAddress, MimeMessage}
 import play.api.test.Helpers.running
-import com.keepit.test.EmptyApplication
+import com.keepit.test.DeprecatedEmptyApplication
 
 class MailToKeepMessageParserTest extends Specification with ApplicationInjector {
   "MailToKeepMessageParser" should {
     "parse out the text from multipart emails" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val parser = new MailToKeepMessageParser(inject[Database], inject[EmailAddressRepo], inject[UserRepo])
 
         val session = Session.getDefaultInstance(new Properties())
@@ -41,7 +41,7 @@ class MailToKeepMessageParserTest extends Specification with ApplicationInjector
       }
     }
     "parse out uris correctly from HTML" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val parser = new MailToKeepMessageParser(inject[Database], inject[EmailAddressRepo], inject[UserRepo])
 
         val session = Session.getDefaultInstance(new Properties())
@@ -60,7 +60,7 @@ class MailToKeepMessageParserTest extends Specification with ApplicationInjector
       }
     }
     "parse out users correctly" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val db = inject[Database]
         val emailAddressRepo = inject[EmailAddressRepo]
         val userRepo = inject[UserRepo]

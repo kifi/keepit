@@ -65,7 +65,7 @@ class TestStringCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), 
 
 
 
-class FortyTwoCacheTest extends Specification with TestInjector {
+class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
 
     "JsonCacheImpl Instance" should {
         withCustomInjector(EhCacheCacheModule()){ implicit injector =>

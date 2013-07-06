@@ -9,7 +9,7 @@ import org.specs2.mutable._
 import com.keepit.common.db.Id
 import com.keepit.inject._
 import com.keepit.model.SocialUserInfo
-import com.keepit.test.EmptyApplication
+import com.keepit.test.DeprecatedEmptyApplication
 
 import play.api.libs.json.Json
 import play.api.test.Helpers._
@@ -18,7 +18,7 @@ class SocialUserImportFriendsTest extends Specification with ApplicationInjector
 
   "SocialUserImportFriends" should {
     "import friends" in {
-      running(new EmptyApplication().withFakeHttpClient()) {
+      running(new DeprecatedEmptyApplication().withFakeHttpClient()) {
         val graphs = List(
             ("facebook_graph_andrew_min.json", 7),
             ("facebook_graph_eishay_super_min.json", 5),

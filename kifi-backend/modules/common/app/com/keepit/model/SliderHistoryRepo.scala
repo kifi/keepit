@@ -60,7 +60,7 @@ trait SliderHistoryTracker {
 
 class SliderHistoryTrackerImpl(sliderHistoryRepo: SliderHistoryRepo, db: Database, tableSize: Int, numHashFuncs: Int, minHits: Int) extends SliderHistoryTracker {
 
-  def add(userId: Id[User], uriId: Id[NormalizedURI]): SliderHistory = {
+  def add(userId: Id[User], uriId: Id[NormalizedURI]): SliderHistory = Symbol("User Slider History Lock for " + userId.toString).synchronized {
     val filter = getMultiHashFilter(userId)
     filter.put(uriId.id)
 

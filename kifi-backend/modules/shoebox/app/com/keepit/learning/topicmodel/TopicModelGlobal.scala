@@ -5,6 +5,8 @@ import com.google.inject.{Provider, Singleton, Provides}
 import com.keepit.common.logging.Logging
 import play.api.Play._
 import com.keepit.inject.AppScoped
+import com.keepit.model.TopicNameRepoA
+import com.keepit.common.db.slick.Database
 
 object TopicModelGlobal {
   val numTopics = 100
@@ -35,7 +37,17 @@ case class LdaTopicModelModule() extends TopicModelModule with Logging {
 
   @Provides
   @Singleton
-  def topicNameMapper: TopicNameMapper = {
+  def topicNameMapper(db: Database, topicNameRepo: TopicNameRepoA): TopicNameMapper = {
+    // test read from db. will be removed soon.
+    log.info("loading topic names from DB ...")
+    val names = db.readOnly{ implicit s =>
+      topicNameRepo.getAllNames
+    }
+
+    names.zipWithIndex.foreach{ case (name, i) =>
+      log.info(s"topic ${i+1}: name")
+    }
+
     log.info("loading topic name list")
     val path = current.configuration.getString("learning.topicModel.topicNames.path").get
     val rows = scala.io.Source.fromFile(path).mkString.split("\n")

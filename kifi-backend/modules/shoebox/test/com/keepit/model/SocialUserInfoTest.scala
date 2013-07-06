@@ -3,7 +3,7 @@ package com.keepit.model
 import org.specs2.mutable._
 
 import com.google.inject.Injector
-import com.keepit.akka.{TestAkkaSystem, TestKitScope}
+import com.keepit.akka.TestAkkaSystem
 import com.keepit.common.db.{TestSlickSessionProvider, Id}
 import com.keepit.common.social.SocialId
 import com.keepit.common.social.SocialNetworks
@@ -14,7 +14,7 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import securesocial.core._
 
-class SocialUserInfoTest extends Specification with TestDBRunner with TestAkkaSystem {
+class SocialUserInfoTest extends Specification with ShoeboxTestInjector with TestAkkaSystem {
 
   def setup()(implicit injector: Injector): User = {
     db.readWrite { implicit s =>
@@ -84,7 +84,7 @@ class SocialUserInfoTest extends Specification with TestDBRunner with TestAkkaSy
     }
 
     "use cache properly" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         val user = setup()
         db.readWrite { implicit c =>
           def isInCache = inject[SocialUserInfoRepoImpl].userCache.get(SocialUserInfoUserKey(user.id.get)).isDefined
@@ -114,7 +114,7 @@ class SocialUserInfoTest extends Specification with TestDBRunner with TestAkkaSy
     }
 
     "get pages" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         setup()
         val page0 = db.readOnly { implicit c =>
           socialUserInfoRepo.page(0, 2)
@@ -130,7 +130,7 @@ class SocialUserInfoTest extends Specification with TestDBRunner with TestAkkaSy
     }
 
     "get large page" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         setup()
         val page0 = db.readOnly { implicit s =>
           socialUserInfoRepo.page(0, 2000)
@@ -140,7 +140,7 @@ class SocialUserInfoTest extends Specification with TestDBRunner with TestAkkaSy
     }
 
     "get larger page" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         setup()
         val page0 = db.readOnly { implicit s =>
           socialUserInfoRepo.page(0, 4)
@@ -155,7 +155,7 @@ class SocialUserInfoTest extends Specification with TestDBRunner with TestAkkaSy
     }
 
     "import friends" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
 
         val none_unprocessed = db.readOnly { implicit s =>
           socialUserInfoRepo.getUnprocessed()

@@ -3,21 +3,13 @@ package com.keepit.model
 import org.joda.time.DateTime
 import org.specs2.mutable._
 
-import com.keepit.inject._
 
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.db._
 import com.keepit.common.time.zones.PT
-
 import com.keepit.test._
-
-import play.api.Play.current
-import play.api.test._
-import play.api.test.Helpers._
 import com.google.inject.Injector
 
-class BookmarkTest extends Specification with TestDBRunner {
+class BookmarkTest extends Specification with ShoeboxTestInjector {
 
   def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, PT)
@@ -49,7 +41,7 @@ class BookmarkTest extends Specification with TestDBRunner {
 
   "Bookmark" should {
     "load my keeps in pages before and after a given date" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         val (user1, user2, uri1, uri2) = setup()
         db.readOnly { implicit s =>
           val marks = bookmarkRepo.getByUser(user1.id.get, None, None, None, 2)
@@ -66,7 +58,7 @@ class BookmarkTest extends Specification with TestDBRunner {
       }
     }
     "load all" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         val (user1, user2, uri1, uri2) = setup()
         val cxAll = db.readOnly {implicit s =>
           bookmarkRepo.all
@@ -77,7 +69,7 @@ class BookmarkTest extends Specification with TestDBRunner {
       }
     }
     "load by user" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         val (user1, user2, uri1, uri2) = setup()
         db.readOnly {implicit s =>
           bookmarkRepo.getByUser(user1.id.get).map(_.title) === Seq(Some("G1"), Some("A1"))
@@ -86,7 +78,7 @@ class BookmarkTest extends Specification with TestDBRunner {
       }
     }
     "load by uri" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         val (user1, user2, uri1, uri2) = setup()
         db.readOnly {implicit s =>
           bookmarkRepo.getByUri(uri1.id.get).map(_.title) === Seq(Some("G1"), None)
@@ -95,7 +87,7 @@ class BookmarkTest extends Specification with TestDBRunner {
       }
     }
     "count all" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         val (user1, user2, uri1, uri2) = setup()
         db.readOnly {implicit s =>
           bookmarkRepo.count(s) === 3
@@ -103,7 +95,7 @@ class BookmarkTest extends Specification with TestDBRunner {
       }
     }
     "count by user" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         val (user1, user2, uri1, uri2) = setup()
         db.readOnly {implicit s =>
           bookmarkRepo.getCountByUser(user1.id.get) === 2
@@ -112,7 +104,7 @@ class BookmarkTest extends Specification with TestDBRunner {
       }
     }
     "count mutual keeps" in {
-      withDB() { implicit injector =>
+      withDb() { implicit injector =>
         val (user1, user2, uri1, uri2) = setup()
         db.readOnly {implicit s =>
           bookmarkRepo.getNumMutual(user1.id.get, user2.id.get) === 1

@@ -3,15 +3,13 @@ package com.keepit.model
 import org.specs2.mutable._
 
 import com.keepit.common.db._
-import com.keepit.inject._
 import com.keepit.test._
-import play.api.test.Helpers._
 
-class UserValueTest extends Specification with ApplicationInjector with DbRepos {
+class UserValueTest extends Specification with ShoeboxTestInjector {
 
   "UserValue" should {
     "create, update, delete using the cache (and invalidate properly)" in {
-      running(new EmptyApplication()) {
+      withDb() { implicit injector =>
         val userValueRepo = inject[UserValueRepoImpl]
         userValueRepo.valueCache.get(UserValueKey(Id[User](1), "test")).isDefined === false
 

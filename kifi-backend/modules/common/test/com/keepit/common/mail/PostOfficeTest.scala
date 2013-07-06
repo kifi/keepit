@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 
 import com.keepit.test._
 
-class PostOfficeTest extends Specification with TestDBRunner {
+class PostOfficeTest extends Specification with DeprecatedTestDBRunner {
 
   "LocalPostOffice" should {
     "persist and load email" in {

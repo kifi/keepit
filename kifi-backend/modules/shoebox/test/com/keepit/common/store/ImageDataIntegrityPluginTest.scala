@@ -7,16 +7,16 @@ import com.keepit.common.healthcheck.FakeHealthcheck
 import com.keepit.common.net.{FakeClientResponse, FakeHttpClient, HttpClient}
 import com.keepit.inject._
 import com.keepit.model.User
-import com.keepit.test.{ShoeboxApplication, DbRepos}
+import com.keepit.test.{DeprecatedShoeboxApplication, ShoeboxInjectionHelpers}
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers.running
 
-class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specification with ApplicationInjector with DbRepos {
+class ImageDataIntegrityPluginTest extends TestKit(ActorSystem()) with Specification with ApplicationInjector with ShoeboxInjectionHelpers {
   "The image data integrity plugin" should {
     "verify all pictures" in {
-      running(new ShoeboxApplication()
+      running(new DeprecatedShoeboxApplication()
           .withFakePersistEvent().withFakeMail().withFakeHealthcheck().withFakeHttpClient().withFakeStore()
           .withTestActorSystem(system)
           .overrideWith(new ProdFortyTwoModule {

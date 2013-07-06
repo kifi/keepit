@@ -8,11 +8,11 @@ import org.specs2.mutable._
 import play.api.test.Helpers._
 import com.keepit.serializer.ArticleSearchResultSerializer
 
-class ArticleSearchResultTest extends Specification with ApplicationInjector with DbRepos {
+class ArticleSearchResultTest extends Specification with ApplicationInjector with ShoeboxInjectionHelpers {
 
   "ArticleSearchResult" should {
     "be serialized" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
          val res = ArticleSearchResult(
               last = Some(ExternalId[ArticleSearchResultRef]()),
               query = "scala query",
@@ -34,7 +34,7 @@ class ArticleSearchResultTest extends Specification with ApplicationInjector wit
     }
 
     "persisting to db" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val repo = inject[ArticleSearchResultRefRepo]
          val user = db.readWrite { implicit s =>
            userRepo.save(User(firstName = "Shachaf", lastName = "Smith"))

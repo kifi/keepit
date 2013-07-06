@@ -22,7 +22,7 @@ class SlickTest extends Specification with ApplicationInjector {
   "Slick" should {
 
     "using driver abstraction" in {
-      running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
 
         case class Bar(
           id: Option[Id[Bar]] = None,
@@ -82,7 +82,7 @@ class SlickTest extends Specification with ApplicationInjector {
 
     "rollback transaction" in {
 
-      running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
         val db = inject[Database]
         import db.db.Driver.Implicit._ // here's the driver, abstracted away
         import db.db.Driver.Table
@@ -147,7 +147,7 @@ class SlickTest extends Specification with ApplicationInjector {
     }
 
     "using external id" in {
-      running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
 
         case class Bar(
           id: Option[Id[Bar]] = None,

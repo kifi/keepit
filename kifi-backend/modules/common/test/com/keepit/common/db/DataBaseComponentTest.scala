@@ -24,7 +24,7 @@ class DataBaseComponentTest extends Specification with ApplicationInjector {
   "Session" should {
 
     "not be executed inside another session: rw->ro" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val fakeHealthcheck = inject[FakeHealthcheck]
         fakeHealthcheck.errorCount() === 0
         inject[Database].readWrite { implicit s1 =>
@@ -35,7 +35,7 @@ class DataBaseComponentTest extends Specification with ApplicationInjector {
     }
 
     "not be executed inside another session: rw->rw" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val fakeHealthcheck = inject[FakeHealthcheck]
         fakeHealthcheck.errorCount() === 0
         inject[Database].readWrite { implicit s1 =>
@@ -46,7 +46,7 @@ class DataBaseComponentTest extends Specification with ApplicationInjector {
     }
 
     "not be executed inside another session: ro->ro" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val fakeHealthcheck = inject[FakeHealthcheck]
         fakeHealthcheck.errorCount() === 0
         inject[Database].readOnly { implicit s1 =>
@@ -57,7 +57,7 @@ class DataBaseComponentTest extends Specification with ApplicationInjector {
     }
 
     "not be executed inside another session: ro->rw" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         val fakeHealthcheck = inject[FakeHealthcheck]
         fakeHealthcheck.errorCount() === 0
         inject[Database].readOnly { implicit s1 =>
@@ -68,7 +68,7 @@ class DataBaseComponentTest extends Specification with ApplicationInjector {
     }
 
     "attempt retry" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         var counter = 0
         (inject[Database].readWrite(attempts = 3) { implicit s1 =>
           counter = counter + 1
@@ -80,7 +80,7 @@ class DataBaseComponentTest extends Specification with ApplicationInjector {
     }
 
     "attempt retry not with regular exception" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         var counter = 0
         (inject[Database].readWrite(attempts = 3) { implicit s1 =>
           counter = counter + 1
@@ -92,7 +92,7 @@ class DataBaseComponentTest extends Specification with ApplicationInjector {
     }
 
     "attempt retry not with MySQLIntegrityConstraintViolationException" in {
-      running(new EmptyApplication()) {
+      running(new DeprecatedEmptyApplication()) {
         var counter = 0
         (inject[Database].readWrite(attempts = 3) { implicit s1 =>
           counter = counter + 1
