@@ -22,41 +22,18 @@ trait TopicModelModule extends ScalaModule {
 }
 
 case class LdaTopicModelModule() extends TopicModelModule with Logging {
-
-  @Provides
-  @Singleton
-  def wordTopicModel: WordTopicModel = {
-    val path = current.configuration.getString("learning.topicModel.wordTopic.json.path").get
-    log.info("loading word topic model")
-    val c = scala.io.Source.fromFile(path).mkString
-    // names don't matter much, at this moment
-    val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map{ i => "topic%d".format(i)}.toArray
-    val loader = new LdaTopicModelLoader
-    loader.load(c, topicNames)
+  override def configure() {
+    bind[TopicUpdaterPlugin].to[TopicUpdaterPluginImpl].in[AppScoped]
+    bind[WordTopicModelFactory].to[WordTopicModelFactoryImpl].in[AppScoped]
+    bind[NameMapperFactory].to[NameMapperFactoryImpl].in[AppScoped]
   }
 
   @Provides
   @Singleton
-  def topicNameMapper(db: Database, topicNameRepo: TopicNameRepoA): TopicNameMapper = {
-    // test read from db. will be removed soon.
-    log.info("loading topic names from DB ...")
-    val names = db.readOnly{ implicit s =>
-      topicNameRepo.getAllNames
-    }
-
-    names.zipWithIndex.foreach{ case (name, i) =>
-      log.info(s"topic ${i+1}: ${name}")
-    }
-
-    log.info("loading topic name list")
-    val path = current.configuration.getString("learning.topicModel.topicNames.path").get
-    val rows = scala.io.Source.fromFile(path).mkString.split("\n")
-    assume(rows.size == TopicModelGlobal.numTopics, "insufficient raw topic names")
-    val sep = "\t"
-    val rawNames = rows.map{_.split(sep)(1)}
-    val (newNames, mapper) = NameMapperConstructer.getMapper(rawNames)
-    new ManualTopicNameMapper(rawNames, newNames, mapper)
+  def switchableTopicModelAccessor(factory: SwitchableTopicModelAccessorFactory): SwitchableTopicModelAccessor = {
+    factory()
   }
+
 }
 
 case class DevTopicModelModule() extends TopicModelModule {
@@ -71,7 +48,4 @@ case class DevTopicModelModule() extends TopicModelModule {
   def switchableTopicModelAccessor(factory: SwitchableTopicModelAccessorFactory): SwitchableTopicModelAccessor = {
     factory()
   }
-
 }
-
-

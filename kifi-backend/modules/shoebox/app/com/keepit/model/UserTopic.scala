@@ -19,8 +19,6 @@ import com.keepit.common.cache._
 import scala.concurrent.duration._
 import com.keepit.common.logging.Logging
 
-
-
 case class UserTopic(
   id: Option[Id[UserTopic]] = None,
   userId: Id[User],
@@ -74,21 +72,29 @@ object UserTopic {
   )(UserTopic.apply, unlift(UserTopic.unapply))
 }
 
-case class UserTopicKey(userId: Id[User]) extends Key[UserTopic]{
-  val namespace = "user_topic"
-  def toKey(): String = userId.toString
+// use flag to distinguish values from repoA and those from repoB
+case class UserTopicKey(userId: Id[User], userTopicFlag: String) extends Key[UserTopic]{
+  val namespace = "user_topic" + userTopicFlag
+  def toKey(): String = userId.toString + "#" + userTopicFlag
 }
 
 class UserTopicCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
     extends JsonCacheImpl[UserTopicKey, UserTopic](innermostPluginSettings, innerToOuterPluginSettings:_*)
+
 
 trait UserTopicRepo extends Repo[UserTopic]{
   def getByUserId(userId: Id[User])(implicit session: RSession):Option[UserTopic]
   def deleteAll()(implicit session: RWSession): Int
 }
 
+object UserTopicFlag {
+  val A = "a"
+  val B = "b"
+}
+
 abstract  class UserTopicRepoBase(
-  val dbName: String,
+  val flag: String,
+  val tableName: String,
   val db: DataBaseComponent,
   val clock: Clock,
   val userTopicCache: UserTopicCache
@@ -96,43 +102,41 @@ abstract  class UserTopicRepoBase(
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
-  override val table = new RepoTable[UserTopic](db, dbName){
+  override val table = new RepoTable[UserTopic](db, tableName){
     def userId = column[Id[User]]("user_id", O.NotNull)
     def topic = column[Array[Byte]]("topic", O.NotNull)
     def * = id.? ~ userId ~ topic ~ createdAt ~ updatedAt <> (UserTopic.apply _, UserTopic.unapply _)
   }
 
   override def invalidateCache(topic: UserTopic)(implicit session: RSession): UserTopic = {
-    userTopicCache.set(UserTopicKey(topic.userId), topic)
+    userTopicCache.set(UserTopicKey(topic.userId, flag), topic)
     topic
   }
 
   def getByUserId(userId: Id[User])(implicit session: RSession): Option[UserTopic] = {
-    userTopicCache.getOrElseOpt(UserTopicKey(userId)){
+    userTopicCache.getOrElseOpt(UserTopicKey(userId, flag)){
       (for(r <- table if r.userId === userId) yield r).firstOption
     }
   }
 
   def deleteAll()(implicit session: RWSession): Int = {
-    (for(r <- table) yield r).list.foreach( x => userTopicCache.remove(UserTopicKey(x.userId)))
-    log.info("All cached userTopics have been removed")
+    (for(r <- table) yield r).list.foreach( x => userTopicCache.remove(UserTopicKey(x.userId, flag)))
+    log.info(s"All cached userTopics (flag = ${flag}) have been removed")
     (for(r <- table) yield r).delete
   }
 }
-
-// CHANGE CACHE KEY TYPE !!!!
 
 @Singleton
 class UserTopicRepoA @Inject()(
   db: DataBaseComponent,
   clock: Clock,
   userTopicCache: UserTopicCache
-) extends UserTopicRepoBase("user_topic", db, clock, userTopicCache)
+) extends UserTopicRepoBase(UserTopicFlag.A, "user_topic", db, clock, userTopicCache)
 
 @Singleton
 class UserTopicRepoB @Inject()(
   db: DataBaseComponent,
   clock: Clock,
   userTopicCache: UserTopicCache
-) extends UserTopicRepoBase("user_topic_b", db, clock, userTopicCache)
+) extends UserTopicRepoBase(UserTopicFlag.B, "user_topic_b", db, clock, userTopicCache)
 
