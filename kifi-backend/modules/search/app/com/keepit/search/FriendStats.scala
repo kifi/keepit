@@ -15,17 +15,15 @@ object FriendStats{
 
 class FriendStats(mapper: IdMapper, scores: Array[Float]) {
 
-  def add(friendIds: Set[Long], score: Float) {
-    friendIds.foreach{ id =>
-      val i = mapper.getDocId(id) // index into the friend id array
-      if (i >= 0) scores(i) += score
-    }
+  def add(friendId: Long, score: Float): Unit = {
+    val i = mapper.getDocId(friendId) // index into the friend id array
+    if (i >= 0) scores(i) += score
   }
 
-  def score(id: Id[User]): Float = score(id.id)
+  def score(friendId: Id[User]): Float = score(friendId.id)
 
-  def score(id: Long): Float = {
-    val i = mapper.getDocId(id)
+  def score(friendId: Long): Float = {
+    val i = mapper.getDocId(friendId)
     if (i >= 0) scores(i) else 0.0f
   }
 
