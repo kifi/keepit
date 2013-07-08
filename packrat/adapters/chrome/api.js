@@ -91,6 +91,26 @@ api = function() {
     }
   });
 
+  chrome.webNavigation.onDOMContentLoaded.addListener(function(details) {
+    if (!details.frameId && /^https?:/.test(details.url)) {
+      var page = pages[details.tabId];
+      if (page) {
+        if (page.url === details.url) {
+          api.log("[onDOMContentLoaded]", details.tabId, details.url);
+        } else {
+          api.log("#a00", "[onDOMContentLoaded] %i url mismatch:\n%s\n%s", details.tabId, details.url, page.url);
+        }
+        injectContentScripts(page);
+      } else {
+        chrome.tabs.get(details.tabId, function(tab) {
+          if (tab && selectedTabIds[tab.windowId]) {  // normal win
+            api.log("#a00", "[onDOMContentLoaded] no page for", details.tabId, details.url);
+          }
+        });
+      }
+    }
+  });
+
   chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
     api.log("#666", "[tabs.onUpdated] %i change: %o", tabId, change);
     if (selectedTabIds[tab.windowId]) {  // window is "normal"
@@ -238,23 +258,6 @@ api = function() {
           port.postMessage(m);
         });
         delete page.toEmit;
-      }
-    }
-  });
-
-  chrome.runtime.onMessage.addListener(function(msg, sender) {
-    var tab = sender.tab;
-    if (sender.id === chrome.runtime.id && tab && /^https?:/.test(tab.url) && msg === "api:dom_ready") {
-      var page = pages[tab.id];
-      if (page) {
-        if (tab.url === page.url) {
-          api.log("[api:dom_ready]", tab.id, tab.url);
-        } else {
-          api.log("#a00", "[api:dom_ready] %i url mismatch:\n%s\n%s", tab.id, tab.url, page.url);
-        }
-        injectContentScripts(page);
-      } else if (selectedTabIds[tab.windowId]) {  // normal win
-        api.log("#a00", "[api:dom_ready] no page for", tab.id, tab.url);
       }
     }
   });

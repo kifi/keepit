@@ -30,13 +30,13 @@ var baseTargets = [""];
 
 //make offsets so log will always work
 var metrics = {
+  "mainSearch total" : "offset(stats.timers.search.mainSearch.total.mean_99, 1.0)",
   "social graph info" : "offset(stats.timers.search.mainSearch.socialGraphInfo.mean_99, 1.0)",
   "get clickboost" : "offset(stats.timers.search.mainSearch.getClickboost.mean_99, 1.0)",
   "query parsing" : "offset(stats.timers.search.mainSearch.queryParsing.mean_99, 1.0)",
   "personalized searcher" : "offset(stats.timers.search.mainSearch.personalizedSearcher.mean_99, 1.0)",
   "Lucene Search" : "offset(stats.timers.search.mainSearch.LuceneSearch.mean_99, 1.0)",
-  "processHits" : "offset(stats.timers.search.mainSearch.processHits.mean_99, 1.0)",
-  "mainSearch total" : "offset(stats.timers.search.mainSearch.total.mean_99, 1.0)" 
+  "processHits" : "offset(stats.timers.search.mainSearch.processHits.mean_99, 1.0)"
 };
 
 var yscales = {
@@ -79,10 +79,10 @@ function renderChart() {
 
 
 var metrics2 = {
+  "ext search total": "offset(stats.timers.search.extSearch.total.mean_99, 1.0)",
   "search factory": "offset(stats.timers.search.extSearch.factory.mean_99, 1.0)",
   "mainSearch": "offset(stats.timers.search.extSearch.searching.mean_99, 1.0)",
-  "postsearch": "offset(stats.timers.search.extSearch.postSearchTime.mean_99, 1.0)",
-  "ext search total": "offset(stats.timers.search.extSearch.total.mean_99, 1.0)"
+  "postsearch": "offset(stats.timers.search.extSearch.postSearchTime.mean_99, 1.0)"
 };
 
   var yscales2 = {

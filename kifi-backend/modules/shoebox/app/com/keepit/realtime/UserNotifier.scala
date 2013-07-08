@@ -287,13 +287,11 @@ class UserNotifier @Inject() (
   }
 
   private def createCommentDetails(comment: Comment)(implicit session: RWSession): Set[CommentDetails] = {
-    val author = userRepo.get(comment.userId)
     val uri = normalizedURIRepo.get(comment.uriId)
     val follows = followRepo.getByUri(uri.id.get)
     for (userId <- follows.map(_.userId).toSet - comment.userId) yield {
-      val recipient = userRepo.get(userId)
       val deepLink = deepLinkRepo.save(DeepLink(
-        initatorUserId = Option(comment.userId),
+        initiatorUserId = Option(comment.userId),
         recipientUserId = Some(userId),
         uriId = Some(comment.uriId),
         urlId = comment.urlId,
@@ -318,33 +316,36 @@ class UserNotifier @Inject() (
     val participants = commentRepo.getParticipantsUserIds(message.id.get)
     val parent = message.parent.map(commentRepo.get).getOrElse(message)
 
-    val generatedSet = for (userId <- participants - author.id.get) yield {
-
-      val lastNotifiedMessage = thread.find(c => c.id != message.id && c.userId != userId)
-      val lastNotice = lastNotifiedMessage flatMap { lastMsg =>
-        userNotifyRepo.getWithCommentId(userId, lastMsg.id.get) map { oldNotice =>
-          userNotifyRepo.save(oldNotice.withState(UserNotificationStates.SUBSUMED))
-        }
+    val generatedSet = (for (userId <- participants - author.id.get) yield {
+      val lastMessage +: olderMessages = thread.filter(_.userId != userId)
+      val subsumed = olderMessages flatMap { m =>
+        userNotifyRepo.getWithCommentId(userId, m.id.get)
+      } map { oldNotice =>
+        userNotifyRepo.save(oldNotice.withState(UserNotificationStates.SUBSUMED))
       }
+      if (lastMessage.id.get == message.id.get) {
+        val lastNotice = subsumed.headOption
+        val recipient = userRepo.get(userId)
+        val deepLink = deepLinkRepo.save(DeepLink(
+          initiatorUserId = Option(message.userId),
+          recipientUserId = Some(userId),
+          uriId = Some(message.uriId),
+          urlId = message.urlId,
+          deepLocator = DeepLocator.ofMessageThread(parent)))
 
-      val recipient = userRepo.get(userId)
-      val deepLink = deepLinkRepo.save(DeepLink(
-        initatorUserId = Option(message.userId),
-        recipientUserId = Some(userId),
-        uriId = Some(message.uriId),
-        urlId = message.urlId,
-        deepLocator = DeepLocator.ofMessageThread(parent)))
-
-      val messageDetail = createMessageDetail(message, userId, deepLink.deepLocator, deepLink.url, uri.url, thread, lastNotice.map(_.externalId))
-
-      val user = userRepo.get(userId)
-      (recipient, messageDetail, userNotifyRepo.save(UserNotification(
-        userId = userId,
-        category = UserNotificationCategories.MESSAGE,
-        details = UserNotificationDetails(Json.toJson(messageDetail)),
-        commentId = message.id,
-        subsumedId = lastNotice.map(_.id.get))))
-    }
+        val messageDetail = createMessageDetail(message, userId, deepLink.deepLocator, deepLink.url, uri.url, thread, lastNotice.map(_.externalId))
+        Some((recipient, messageDetail, userNotifyRepo.save(UserNotification(
+          userId = userId,
+          category = UserNotificationCategories.MESSAGE,
+          details = UserNotificationDetails(Json.toJson(messageDetail)),
+          commentId = message.id,
+          subsumedId = lastNotice.map(_.id.get)))))
+      } else {
+        // This message is not the last one in the thread so it should already be subsumed
+        // Therefore, we don't need to generate a notification
+        None
+      }
+    }).flatten
     generatedSet
   }
 

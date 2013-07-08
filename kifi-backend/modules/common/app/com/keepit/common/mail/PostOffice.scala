@@ -1,10 +1,8 @@
 package com.keepit.common.mail
 
 import com.google.inject.{ImplementedBy, Inject}
-import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.logging.Logging
 import com.keepit.shoebox.ShoeboxServiceClient
-import scala.collection.mutable.{Seq => MSeq}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.mutable.Queue
 import akka.actor.Actor
@@ -15,9 +13,7 @@ import scala.concurrent.duration._
 import akka.util.Timeout
 import play.api.Plugin
 
-trait LocalPostOffice {
-  def sendMail(mail: ElectronicMail)(implicit session: RWSession): ElectronicMail
-}
+
 
 @ImplementedBy(classOf[RemotePostOfficeImpl])
 trait RemotePostOffice {
@@ -89,22 +85,3 @@ class RemotePostOfficeImpl @Inject() (
     mail
   }
 }
-
-
-class ShoeboxPostOfficeImpl @Inject() (mailRepo: ElectronicMailRepo)
-  extends LocalPostOffice with Logging {
-
-  def sendMail(mail: ElectronicMail)(implicit session: RWSession): ElectronicMail = {
-    val prepared =
-      if (mail.htmlBody.value.size > PostOffice.BODY_MAX_SIZE ||
-        mail.textBody.isDefined && mail.textBody.get.value.size > PostOffice.BODY_MAX_SIZE) {
-        log.warn(s"PostOffice attempted to send an email (${mail.externalId}) longer than ${PostOffice.BODY_MAX_SIZE} bytes. Too big!")
-        mailRepo.save(mail.copy(
-          htmlBody = mail.htmlBody.value.take(PostOffice.BODY_MAX_SIZE - 20) + "<br>\n<br>\n(snip)").prepareToSend())
-      } else {
-        mailRepo.save(mail.prepareToSend())
-      }
-    prepared
-  }
-}
-
