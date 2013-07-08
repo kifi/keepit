@@ -26,7 +26,7 @@ class SliderHistoryRepoImpl @Inject() (
   import db.Driver.Implicit._
   import DBSession._
 
-  override val table = new RepoTable[SliderHistory](db, "browsing_history") {
+  override val table = new RepoTable[SliderHistory](db, "slider_history") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def tableSize = column[Int]("table_size", O.NotNull)
     def filter = column[Array[Byte]]("filter", O.NotNull)
@@ -60,11 +60,11 @@ trait SliderHistoryTracker {
 
 class SliderHistoryTrackerImpl(sliderHistoryRepo: SliderHistoryRepo, db: Database, tableSize: Int, numHashFuncs: Int, minHits: Int) extends SliderHistoryTracker {
 
-  def add(userId: Id[User], uriId: Id[NormalizedURI]): SliderHistory = Symbol("User Slider History Lock for " + userId.toString).synchronized {
+  def add(userId: Id[User], uriId: Id[NormalizedURI]): SliderHistory = {
     val filter = getMultiHashFilter(userId)
     filter.put(uriId.id)
 
-    db.readWrite { implicit session =>
+    db.readWrite(attempts=3){ implicit session =>
       sliderHistoryRepo.save(sliderHistoryRepo.getByUserId(userId) match {
         case Some(bh) =>
           bh.withFilter(filter.getFilter)

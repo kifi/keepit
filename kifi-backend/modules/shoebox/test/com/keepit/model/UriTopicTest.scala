@@ -24,7 +24,7 @@ class UriTopicTest extends Specification with ShoeboxTestInjector {
     val ids =  (0 until numUris).map{Id[NormalizedURI](_)}
     val topics = (0 until numUris).map{ genTopic(numTopics, _) }
     val helper = new UriTopicHelper
-    val uriTopicRepo = inject[UriTopicRepo]
+    val uriTopicRepo = inject[UriTopicRepoA]
     db.readWrite{ implicit s =>
       val uriTopics = (ids zip topics) map { x =>
         val assignedTopics = helper.assignTopics(x._2)
@@ -39,7 +39,7 @@ class UriTopicTest extends Specification with ShoeboxTestInjector {
   "uriTopicRepo" should {
     "persist data" in {
       withDb() { implicit injector =>
-        val uriTopicRepo = inject[UriTopicRepo]
+        val uriTopicRepo = inject[UriTopicRepoA]
         val uriTopics = setup()
         val numDocs = uriTopics.size
         val helper = new UriTopicHelper
@@ -55,8 +55,9 @@ class UriTopicTest extends Specification with ShoeboxTestInjector {
     }
 
     "be able to delete all data" in {
+
         withDb() { implicit injector =>
-        val uriTopicRepo = inject[UriTopicRepo]
+        val uriTopicRepo = inject[UriTopicRepoA]
         val uriTopics = setup()
         val numDocs = uriTopics.size
         val helper = new UriTopicHelper

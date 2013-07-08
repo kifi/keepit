@@ -79,22 +79,21 @@ class UriTopicHelper {
   }
 }
 
-@ImplementedBy(classOf[UriTopicRepoImpl])
 trait UriTopicRepo extends Repo[UriTopic]{
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession):Option[UriTopic]
   def getAssignedTopicsByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[(Option[Int], Option[Int])]
   def deleteAll()(implicit session: RWSession): Int
 }
 
-@Singleton
-class UriTopicRepoImpl @Inject() (
+abstract class UriTopicRepoBase (
+  val tableName: String,
   val db: DataBaseComponent,
   val clock: Clock
 ) extends DbRepo[UriTopic] with UriTopicRepo {
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
-  override val table = new RepoTable[UriTopic](db, "uri_topic"){
+  override val table = new RepoTable[UriTopic](db, tableName){
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def topic = column[Array[Byte]]("topic", O.NotNull)
     def primaryTopic = column[Option[Int]]("primaryTopic")
@@ -114,3 +113,17 @@ class UriTopicRepoImpl @Inject() (
     (for(r <- table) yield r).delete
   }
 }
+
+@Singleton
+class UriTopicRepoA @Inject()(
+  db: DataBaseComponent,
+  clock: Clock
+) extends UriTopicRepoBase("uri_topic", db, clock)
+
+@Singleton
+class UriTopicRepoB @Inject()(
+  db: DataBaseComponent,
+  clock: Clock
+) extends UriTopicRepoBase("uri_topic_b", db, clock)
+
+
