@@ -15,7 +15,9 @@ case class ServiceVersion(val value: String) {
   override def toString(): String = value
 }
 
-sealed abstract class ServiceType(val name: String)
+sealed abstract class ServiceType(val name: String) {
+  def selfCheck : Boolean = true
+}
 
 object ServiceType {
   case object SHOEBOX extends ServiceType("SHOEBOX")

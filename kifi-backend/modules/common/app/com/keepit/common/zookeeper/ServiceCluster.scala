@@ -46,12 +46,17 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
 
   def allServices: Vector[ServiceInstance] = routingList.filter(_.isAvailable)
 
+  //This will includes all instances still registered with zookeeper including DOWN, STARTING, STOPPING states
+  def allMembers : Vector[ServiceInstance] = routingList
+
   def register(node: Node, remoteService: RemoteService): ServiceCluster = {
     instances(node) = ServiceInstance(serviceType, node, remoteService)
     _myNode = Some(node)
     resetRoutingList()
     this
   }
+
+  def instanceForNode(node: Node) : Option[ServiceInstance] = instances.get(node)
 
   def ensureFullPathNode(node: Node, throwIfDoes: Boolean = false) = node.name contains servicePath.name match {
     case true if (throwIfDoes) => throw new Exception(s"node $node already contains service path")

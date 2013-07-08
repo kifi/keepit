@@ -83,6 +83,8 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
       def serviceCluster(serviceType: ServiceType): ServiceCluster = cluster
       def register() = Node("me")
       def isLeader() = true
+      def changeStatus(newStatus: ServiceStatus): Unit = {}
+      def startSelfCheck(): Unit = {}
     }
 }
 

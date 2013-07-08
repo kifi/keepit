@@ -21,6 +21,8 @@ trait ServiceDiscovery {
   def unRegister(): Unit = {}
   def isLeader(): Boolean
   def myClusterSize: Int = 0
+  def startSelfCheck: Unit
+  def changeStatus(newStatus: ServiceStatus): Unit
 }
 
 @Singleton
@@ -82,13 +84,13 @@ class ServiceDiscoveryImpl @Inject() (
     })
   }
 
-  def register(): Node = { //TODO: perform self check
+  def register(): Node = {
     watchServices()
     val myServiceType: ServiceType = services.currentService
     log.info(s"registered clusters: $clusters, my service is $myServiceType")
     val myCluster = clusters(myServiceType)
     val instanceInfo = amazonInstanceInfoProvider.get
-    val thisRemoteService = RemoteService(instanceInfo, ServiceStatus.UP, myServiceType)
+    val thisRemoteService = RemoteService(instanceInfo, ServiceStatus.STARTING, myServiceType)
     myNode = Some(zk.createNode(myCluster.serviceNodeMaster, RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL))
     myCluster.register(myNode.get, thisRemoteService)
     log.info(s"registered as node ${myNode.get}")
@@ -96,6 +98,22 @@ class ServiceDiscoveryImpl @Inject() (
   }
 
   override def unRegister(): Unit = myNode map {node => zk.deleteNode(node)}
+
+  def changeStatus(newStatus: ServiceStatus) : Unit = {
+    myNode.map { node => 
+      val thisServiceInstance = clusters(services.currentService).instanceForNode(node)
+      thisServiceInstance.foreach{ serviceInstance =>
+        serviceInstance.remoteService.status = newStatus
+        zk.set(node, RemoteService.toJson(serviceInstance.remoteService))
+      }
+    }
+  }
+
+  def startSelfCheck(): Unit = future {
+    if(services.currentService.selfCheck) changeStatus(ServiceStatus.UP)
+    else changeStatus(ServiceStatus.DOWN)
+  }
+  
 
   implicit val amazonInstanceIdFormat = Json.format[AmazonInstanceId]
   implicit val serviceStatusFormat = ServiceStatus.format
