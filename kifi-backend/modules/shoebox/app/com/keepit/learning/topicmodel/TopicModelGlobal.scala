@@ -7,6 +7,8 @@ import play.api.Play._
 import com.keepit.inject.AppScoped
 import com.keepit.model.TopicNameRepoA
 import com.keepit.common.db.slick.Database
+import scala.concurrent._
+import ExecutionContext.Implicits.global
 
 object TopicModelGlobal {
   val numTopics = 100
@@ -28,8 +30,10 @@ case class LdaTopicModelModule() extends TopicModelModule with Logging {
 
   @Provides
   @Singleton
-  def switchableTopicModelAccessor(factory: SwitchableTopicModelAccessorFactory): SwitchableTopicModelAccessor = {
-    factory()
+  def switchableTopicModelAccessor(factory: SwitchableTopicModelAccessorFactory): SwitchableTopicModelAccessorWrapper = {
+    val rv = new SwitchableTopicModelAccessorWrapper(factory = factory)
+    future { rv.loadModel() }
+    rv
   }
 
 }
@@ -43,7 +47,9 @@ case class DevTopicModelModule() extends TopicModelModule {
 
   @Provides
   @Singleton
-  def switchableTopicModelAccessor(factory: SwitchableTopicModelAccessorFactory): SwitchableTopicModelAccessor = {
-    factory()
+  def switchableTopicModelAccessor(factory: SwitchableTopicModelAccessorFactory): SwitchableTopicModelAccessorWrapper = {
+    val rv = new SwitchableTopicModelAccessorWrapper(factory = factory)
+    future { rv.loadModel() }
+    rv
   }
 }

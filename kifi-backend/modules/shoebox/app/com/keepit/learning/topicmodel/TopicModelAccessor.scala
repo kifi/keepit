@@ -81,3 +81,17 @@ class SwitchableTopicModelAccessor (
     }
   }
 }
+
+// wrapper makes startup fast. Otherwise Guice instantiation blocks.
+class SwitchableTopicModelAccessorWrapper(
+  var switchableAccessor: Option[SwitchableTopicModelAccessor] = None,
+  val factory: SwitchableTopicModelAccessorFactory,
+  private var ready: Boolean = false
+){
+  def isReady = ready
+
+  def loadModel() = "lock".synchronized {
+    switchableAccessor = Some(factory())
+    ready = true
+  }
+}
