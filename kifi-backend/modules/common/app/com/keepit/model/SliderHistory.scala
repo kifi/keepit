@@ -24,7 +24,7 @@ case class SliderHistory (
 }
 
 case class SliderHistoryUserIdKey(userId: Id[User]) extends Key[SliderHistory] {
-  override val version = 2
+  override val version = 3
   val namespace = "slider_history_by_userid"
   def toKey(): String = userId.id.toString
 }
