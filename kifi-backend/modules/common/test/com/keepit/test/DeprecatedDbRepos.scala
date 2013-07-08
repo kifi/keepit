@@ -12,7 +12,6 @@ trait DeprecatedDbRepos { self: InjectorProvider =>
   def userSessionRepo(implicit injector: Injector) = inject[UserSessionRepo]
   def userConnRepo(implicit injector: Injector) = inject[UserConnectionRepo]
   def socialConnRepo(implicit injector: Injector) = inject[SocialConnectionRepo]
-  def uriRepo(implicit injector: Injector) = inject[NormalizedURIRepo]
   def urlRepo(implicit injector: Injector) = inject[URLRepo]
   def commentRepo(implicit injector: Injector) = inject[CommentRepo]
   def commentReadRepo(implicit injector: Injector) = inject[CommentReadRepo]
@@ -23,8 +22,6 @@ trait DeprecatedDbRepos { self: InjectorProvider =>
   def emailAddressRepo(implicit injector: Injector) = inject[EmailAddressRepo]
   def unscrapableRepo(implicit injector: Injector) = inject[UnscrapableRepo]
   def notificationRepo(implicit injector: Injector) = inject[UserNotificationRepo]
-  def scrapeInfoRepo(implicit injector: Injector) = inject[ScrapeInfoRepo]
-  def phraseRepo(implicit injector: Injector) = inject[PhraseRepo]
   def collectionRepo(implicit injector: Injector) = inject[CollectionRepo]
   def sessionProvider(implicit injector: Injector) = inject[SlickSessionProvider].asInstanceOf[TestSlickSessionProvider]
 

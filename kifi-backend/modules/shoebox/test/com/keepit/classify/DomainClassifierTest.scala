@@ -13,14 +13,14 @@ import play.api.test.Helpers.running
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.analytics.TestAnalyticsModule
 import com.keepit.common.actor.TestActorSystemModule
-import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.store.ShoeboxFakeStoreModule
 
 class DomainClassifierTest extends TestKit(ActorSystem()) with Specification with ApplicationInjector {
 
   val domainClassifierTestModules = Seq(
     FakeMailModule(),
     TestAnalyticsModule(),
-    FakeShoeboxStoreModule(),
+    ShoeboxFakeStoreModule(),
     FakeDomainTagImporterModule(),
     TestActorSystemModule(Some(system))
   )

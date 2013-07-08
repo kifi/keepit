@@ -12,14 +12,14 @@ import com.keepit.test.{ShoeboxTestInjector, DeprecatedEmptyApplication}
 import play.api.libs.json.Json
 import play.api.test.Helpers._
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.store.ShoeboxFakeStoreModule
 
 class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
 
 
   "UserConnectionCreator" should {
     "create connections between friends" in {
-      withDb(FakeHttpClientModule(), FakeShoeboxStoreModule()) { implicit injector =>
+      withDb(FakeHttpClientModule(), ShoeboxFakeStoreModule()) { implicit injector =>
 
         /*
          * grab json
@@ -68,7 +68,7 @@ class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
     }
 
     "disable non existing connections" in {
-      withDb(FakeHttpClientModule(), FakeShoeboxStoreModule()) { implicit injector =>
+      withDb(FakeHttpClientModule(), ShoeboxFakeStoreModule()) { implicit injector =>
 
         val json1 = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/facebook_graph_eishay_min.json")).mkString)
 

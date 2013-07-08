@@ -15,13 +15,13 @@ import play.api.libs.json.Json
 import play.api.test.Helpers._
 import com.google.inject.Injector
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.store.ShoeboxFakeStoreModule
 
 class SocialUserImportFriendsTest extends Specification with ShoeboxTestInjector {
 
   "SocialUserImportFriends" should {
     "import friends" in {
-      withDb(FakeHttpClientModule(), FakeShoeboxStoreModule()) { implicit injector =>
+      withDb(FakeHttpClientModule(), ShoeboxFakeStoreModule()) { implicit injector =>
         val graphs = List(
             ("facebook_graph_andrew_min.json", 7),
             ("facebook_graph_eishay_super_min.json", 5),

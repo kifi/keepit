@@ -12,13 +12,13 @@ import org.specs2.mutable.Specification
 import com.keepit.common.db.slick.Database
 import scala.math._
 import com.google.inject.Injector
-import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.actor.TestActorSystemModule
 
 class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
   "TopicUpdater" should {
     "correctly update topic tables and be able to reset tables" in {
-      running(new ShoeboxApplication(DevTopicModelModule(), FakeShoeboxStoreModule(), TestActorSystemModule())) {
+      running(new ShoeboxApplication(DevTopicModelModule(), ShoeboxFakeStoreModule(), TestActorSystemModule())) {
         val (users, uris) = setupDB
         val expectedUriToUserEdges = (0 until uris.size).map{ i =>
           (uris(i), List(users(i % users.size)))

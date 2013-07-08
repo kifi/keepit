@@ -19,7 +19,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.realtime.ShoeboxWebSocketModule
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule}
-import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.analytics.TestAnalyticsModule
 import com.keepit.model.TestSliderHistoryTrackerModule
 import com.keepit.scraper.FakeScraperModule
@@ -50,7 +50,7 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         ShoeboxWebSocketModule(),
         TestActorSystemModule(),
         TestShoeboxSecureSocialModule(),
-        FakeShoeboxStoreModule(),
+        ShoeboxFakeStoreModule(),
         FakeSocialGraphModule(),
         TestAnalyticsModule(),
         TestSliderHistoryTrackerModule(),

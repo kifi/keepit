@@ -24,21 +24,11 @@ trait FakeStoreModule extends StoreModule {
   def s3ImageStore(s3ImageConfig: S3ImageConfig): S3ImageStore = FakeS3ImageStore(s3ImageConfig)
 
   @Provides @Singleton
-  def s3ScreenshotStore = FakeS3ScreenshotStore()
-
-  @Provides @Singleton
   def fakeMongoStore() : MongoEventStore = new FakeMongoS3EventStore()
 
   @Provides @Singleton
   def articleSearchResultStore(): ArticleSearchResultStore = new InMemoryArticleSearchResultStoreImpl()
 
-}
-
-case class FakeS3ScreenshotStore() extends S3ScreenshotStore {
-  def config: S3ImageConfig = ???
-  def getScreenshotUrl(normalizedUri: NormalizedURI): Option[String] = None
-  def getScreenshotUrl(normalizedUriOpt: Option[NormalizedURI]): Option[String] = None
-  def updatePicture(normalizedUri: NormalizedURI): Future[Option[Seq[Option[PutObjectResult]]]] = Future.successful(None)
 }
 
 case class FakeS3ImageStore(val config: S3ImageConfig) extends S3ImageStore {

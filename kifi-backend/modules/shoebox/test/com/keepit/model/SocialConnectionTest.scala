@@ -7,12 +7,12 @@ import java.io.File
 import org.specs2.mutable._
 import play.api.libs.json._
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.google.inject.Injector
 
 class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 
-  val socialConnectionTestModules = Seq(FakeHttpClientModule(), FakeShoeboxStoreModule())
+  val socialConnectionTestModules = Seq(FakeHttpClientModule(), ShoeboxFakeStoreModule())
 
   private def extractFacebookFriendInfo(json: JsValue)(implicit injector: Injector): Seq[(SocialUserInfo, JsValue)] = {
     inject[FacebookSocialGraph].extractFriends(json)
