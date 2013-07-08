@@ -25,22 +25,21 @@ case class TopicSeqNumInfo(
   def withId(id: Id[TopicSeqNumInfo]) = this.copy(id = Some(id))
 }
 
-@ImplementedBy(classOf[TopicSeqNumInfoRepoImpl])
 trait TopicSeqNumInfoRepo extends Repo[TopicSeqNumInfo]{
   def getSeqNums(implicit session: RSession): Option[(SequenceNumber, SequenceNumber)]
   def updateUriSeq(uriSeqNum: SequenceNumber)(implicit session: RWSession): TopicSeqNumInfo
   def updateBookmarkSeq(bookmarkSeqNum: SequenceNumber)(implicit session: RWSession): TopicSeqNumInfo
 }
 
-@Singleton
-class TopicSeqNumInfoRepoImpl @Inject() (
+abstract class TopicSeqNumInfoRepoBase(
+  val tableName: String,
   val db: DataBaseComponent,
   val clock: Clock
 ) extends DbRepo[TopicSeqNumInfo] with TopicSeqNumInfoRepo {
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
-  override val table = new RepoTable[TopicSeqNumInfo](db, "topic_seq_num_info"){
+  override val table = new RepoTable[TopicSeqNumInfo](db, tableName){
     def uriSeq = column[SequenceNumber]("uri_seq", O.NotNull)
     def bookmarkSeq = column[SequenceNumber]("bookmark_seq", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ uriSeq ~ bookmarkSeq <> (TopicSeqNumInfo.apply _, TopicSeqNumInfo.unapply _)
@@ -65,4 +64,16 @@ class TopicSeqNumInfoRepoImpl @Inject() (
   }
 
 }
+
+@Singleton
+class TopicSeqNumInfoRepoA @Inject()(
+  db: DataBaseComponent,
+  clock: Clock
+) extends TopicSeqNumInfoRepoBase("topic_seq_num_info", db, clock)
+
+@Singleton
+class TopicSeqNumInfoRepoB @Inject()(
+  db: DataBaseComponent,
+  clock: Clock
+) extends TopicSeqNumInfoRepoBase("topic_seq_num_info_b", db, clock)
 
