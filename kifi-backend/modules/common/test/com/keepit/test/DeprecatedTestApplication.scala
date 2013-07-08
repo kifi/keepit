@@ -4,13 +4,10 @@ import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.Module
 import com.google.inject.util.Modules
 import com.keepit.common.actor.TestActorSystemModule
-import com.keepit.common.analytics._
 import com.keepit.common.cache._
 import com.keepit.common.db._
 import com.keepit.common.healthcheck._
-import com.keepit.common.mail._
 import com.keepit.common.net.FakeClientResponse
-import com.keepit.common.social._
 import com.keepit.common.time._
 import com.keepit.common.zookeeper._
 import com.keepit.inject._
@@ -60,6 +57,5 @@ case class DeprecatedTestModule(dbInfo: DbInfo = TestDbInfo.dbInfo) extends Scal
     install(TestSearchServiceClientModule())
     install(FakeHttpClientModule(FakeClientResponse.emptyFakeHttpClient))
     install(TestFortyTwoModule())
-    install(FakeSocialGraphModule())
   }
 }

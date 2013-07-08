@@ -1,24 +1,14 @@
 package com.keepit.common.social
 
 import org.specs2.mutable._
-import play.api.Play.current
-import play.api.test._
-import play.api.test.Helpers._
-import com.keepit.inject._
-import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.test.DeprecatedEmptyApplication
-import play.core.TestApplication
-import scala.collection.mutable.Map
+import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model._
-import java.sql.Connection
-import com.keepit.common.db.ExternalId
-import org.joda.time.DateTime
-import com.keepit.common.db.Id
+import com.google.inject.Injector
 
-class ThreadInfoTest extends Specification with ApplicationInjector {
+class ThreadInfoTest extends Specification with ShoeboxTestInjector {
 
-  def setup() = {
+  def setup()(implicit injector: Injector) = {
     inject[Database].readWrite { implicit session =>
       val commentRepo = inject[CommentRepo]
       val userRepo = inject[UserRepo]
@@ -49,7 +39,7 @@ class ThreadInfoTest extends Specification with ApplicationInjector {
 
   "ThreadInfo" should {
     "load with initiator" in {
-      running(new DeprecatedEmptyApplication()) {
+      withDb() { implicit injector =>
         val (user1, user2, msg) = setup()
         val info = inject[Database].readOnly { implicit session => inject[ThreadInfoRepo].load(msg, user1.id) }
         info.recipients.size === 1
@@ -57,7 +47,7 @@ class ThreadInfoTest extends Specification with ApplicationInjector {
       }
     }
     "load with recepient" in {
-      running(new DeprecatedEmptyApplication()) {
+      withDb() { implicit injector =>
         val (user1, user2, msg) = setup()
         val info = inject[Database].readOnly { implicit session => inject[ThreadInfoRepo].load(msg, user2.id) }
         info.recipients.size === 1
