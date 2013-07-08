@@ -37,16 +37,16 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
     instances.toString"""
 
   //using round robin
-  def nextService(): Option[ServiceInstance] = {
+  def nextService(): Option[ServiceInstance] = { //Only return UP, fall back on sick
     val list = routingList
     if (list.isEmpty) None
     else Some(list(nextRoutingInstance.getAndIncrement % list.size))
   }
 
-  def allServices: Vector[ServiceInstance] = routingList
+  def allServices: Vector[ServiceInstance] = routingList //Only return UP instances, unless there aren't any in which case also return SICK
 
-  def register(node: Node, instanceInfo: AmazonInstanceInfo): ServiceCluster = {
-    instances(node) = ServiceInstance(serviceType, node, instanceInfo)
+  def register(node: Node, remoteService: RemoteService): ServiceCluster = {
+    instances(node) = ServiceInstance(serviceType, node, remoteService)
     _myNode = Some(node)
     resetRoutingList()
     this
@@ -62,10 +62,10 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
     newInstances.getOrElseUpdate(childNode, {
       val nodeData: String = zk.get(childNode)
       log.info(s"data for node $childNode is $nodeData")
-      val json = Json.parse(nodeData)
-      val amazonInstanceInfo = Json.fromJson[AmazonInstanceInfo](json).get
-      log.info(s"discovered new node $childNode: $amazonInstanceInfo, adding to ${newInstances.keys}")
-      ServiceInstance(serviceType, childNode, amazonInstanceInfo)
+      //val json = Json.parse(nodeData)
+      val remoteService = RemoteService.fromJson(nodeData)
+      log.info(s"discovered new node $childNode: $remoteService, adding to ${newInstances.keys}")
+      ServiceInstance(serviceType, childNode, remoteService)
     })
   } catch {
     case t: Throwable =>

@@ -35,8 +35,8 @@ class ServiceDiscoveryLiveTest extends Specification with DeprecatedTestInjector
       val services = new FortyTwoServices(inject[Clock], Mode.Test, None, None) {
         override lazy val currentService: ServiceType = ServiceType.SHOEBOX
       }
-      val service = RemoteService(AmazonInstanceId("id"), ServiceStatus.UP, IpAddress("127.0.0.1"), services.currentService)
       val amazonInstanceInfo = inject[AmazonInstanceInfo]
+      val service = RemoteService(amazonInstanceInfo, ServiceStatus.UP, services.currentService)
       val zk = new ZooKeeperClientImpl("localhost", 2000,
         Some({zk1 => println(s"in callback, got $zk1")}))
       try {

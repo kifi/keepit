@@ -19,8 +19,9 @@ object ServiceStatus {
     case SICK.name => SICK
   }
 
-  def format[T]: Format[ServiceStatus] = Format(
+  implicit def format[T]: Format[ServiceStatus] = Format(
     __.read[String].map(fromString),
     new Writes[ServiceStatus]{ def writes(o: ServiceStatus) = JsString(o.name)}
   )
+
 }

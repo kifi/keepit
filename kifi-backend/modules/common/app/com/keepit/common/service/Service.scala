@@ -30,7 +30,7 @@ object ServiceType {
     case TEST_MODE.name => TEST_MODE
   }
 
-  def format[T]: Format[ServiceType] = Format(
+  implicit def format[T]: Format[ServiceType] = Format(
     __.read[String].map(fromString),
     new Writes[ServiceType]{ def writes(o: ServiceType) = JsString(o.name)}
   )

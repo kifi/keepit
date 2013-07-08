@@ -82,14 +82,15 @@ class ServiceDiscoveryImpl @Inject() (
     })
   }
 
-  def register(): Node = {
+  def register(): Node = { //TODO: perform self check
     watchServices()
     val myServiceType: ServiceType = services.currentService
     log.info(s"registered clusters: $clusters, my service is $myServiceType")
     val myCluster = clusters(myServiceType)
     val instanceInfo = amazonInstanceInfoProvider.get
-    myNode = Some(zk.createNode(myCluster.serviceNodeMaster, Json.toJson(instanceInfo).toString, EPHEMERAL_SEQUENTIAL))
-    myCluster.register(myNode.get, instanceInfo)
+    val thisRemoteService = RemoteService(instanceInfo, ServiceStatus.UP, myServiceType)
+    myNode = Some(zk.createNode(myCluster.serviceNodeMaster, RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL))
+    myCluster.register(myNode.get, thisRemoteService)
     log.info(s"registered as node ${myNode.get}")
     myNode.get
   }
@@ -100,9 +101,7 @@ class ServiceDiscoveryImpl @Inject() (
   implicit val serviceStatusFormat = ServiceStatus.format
   implicit val ipAddressFormat = Json.format[IpAddress]
   implicit val serviceTypeFormat = ServiceType.format
-  implicit val remoteServiceFormat = Json.format[RemoteService]
+  
 
-  def toRemoteService(data: Array[Byte]): RemoteService = Json.fromJson[RemoteService](Json.parse(data)).get
-  def fromRemoteService(remote: RemoteService): Array[Byte] = Json.toJson[RemoteService](remote).toString
 }
 

@@ -77,7 +77,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     InternalServerError("error: %s".format(errorId))
   }
 
-  override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
+  override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) { //TODO: degegister on stop, two steps (stopping at the beggining, down at the end)
     val stopMessage = "<<<<<<<<<< Stopping " + this
     println(stopMessage)
     log.info(stopMessage)
