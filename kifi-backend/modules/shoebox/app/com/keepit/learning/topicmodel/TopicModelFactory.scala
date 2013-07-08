@@ -47,7 +47,7 @@ class NameMapperFactoryImpl @Inject()(
   db: Database,
   topicNameRepoA: TopicNameRepoA,
   topicNameRepoB: TopicNameRepoB
-) extends NameMapperFactory {
+) extends NameMapperFactory with Logging{
 
   def apply(flag: String) = {
     flag match {
@@ -57,6 +57,7 @@ class NameMapperFactoryImpl @Inject()(
   }
 
   private def loadFromRepo(repo: TopicNameRepoBase) = {
+    log.info(s"loading topic names from ${repo.tableName}")
     val rawNames = db.readOnly{ implicit s =>
       repo.getAllNames
     }.toArray

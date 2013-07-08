@@ -86,14 +86,14 @@ trait UriTopicRepo extends Repo[UriTopic]{
 }
 
 abstract class UriTopicRepoBase (
-  val dbName: String,
+  val tableName: String,
   val db: DataBaseComponent,
   val clock: Clock
 ) extends DbRepo[UriTopic] with UriTopicRepo {
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
-  override val table = new RepoTable[UriTopic](db, dbName){
+  override val table = new RepoTable[UriTopic](db, tableName){
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def topic = column[Array[Byte]]("topic", O.NotNull)
     def primaryTopic = column[Option[Int]]("primaryTopic")
