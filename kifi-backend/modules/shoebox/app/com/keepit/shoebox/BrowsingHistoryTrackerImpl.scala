@@ -16,11 +16,11 @@ class BrowsingHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits: In
     browsingHistoryRepo: BrowsingHistoryRepo, db: Database) extends BrowsingHistoryTracker with Logging {
 
 
-  def add(userId: Id[User], uriId: Id[NormalizedURI]) = Symbol("User Browsing History Lock for " + userId.toString).synchronized {
+  def add(userId: Id[User], uriId: Id[NormalizedURI]) = {
     val filter = getMultiHashFilter(userId)
     filter.put(uriId.id)
 
-    db.readWrite { implicit session =>
+    db.readWrite(attempts=3) { implicit session =>
       browsingHistoryRepo.save(browsingHistoryRepo.getByUserId(userId) match {
         case Some(bh) =>
           bh.withFilter(filter.getFilter)
