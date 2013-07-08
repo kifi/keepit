@@ -42,3 +42,4 @@ class DeprecatedShoeboxApplication() extends DeprecatedTestApplication(new Depre
     new SecureSocialUserPluginImpl(db, socialUserInfoRepo, userRepo, imageStore, healthcheckPlugin, userExperimentRepo, emailRepo, socialGraphPlugin)
   }
 }
+

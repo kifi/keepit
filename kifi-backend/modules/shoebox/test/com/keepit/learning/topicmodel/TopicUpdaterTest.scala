@@ -27,14 +27,13 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
 
         val db = inject[Database]
         val uriRepo = inject[NormalizedURIRepo]
-        val uriTopicRepo = inject[UriTopicRepo]
-        val userTopicRepo = inject[UserTopicRepo]
-        val seqInfoRepo = inject[TopicSeqNumInfoRepo]
+        val uriTopicRepo = inject[UriTopicRepoA]
+        val userTopicRepo = inject[UserTopicRepoA]
+        val seqInfoRepo = inject[TopicSeqNumInfoRepoA]
         val bmRepo = inject[BookmarkRepo]
-        val documentTopicModel = inject[DocumentTopicModel]
+        val accessor = inject[SwitchableTopicModelAccessor]
 
-        val topicUpdater = new TopicUpdater(db, uriRepo, userTopicRepo, uriTopicRepo,
-            seqInfoRepo, bmRepo, articleStore, documentTopicModel)
+        val topicUpdater = new TopicUpdater(db, uriRepo, bmRepo, articleStore, accessor)
 
         topicUpdater.update()
 
@@ -88,8 +87,64 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
           }
 
         }
+
       }}
     }
+
+    "be able to remodel" in {
+      running(new DeprecatedShoeboxApplication().withWordTopicModule()) {
+        withDB(ShoeboxCacheModule(HashMapMemoryCacheModule()), DevTopicModelModule() ){ implicit injector =>
+        val (users, uris) = setupDB
+        val expectedUriToUserEdges = (0 until uris.size).map{ i =>
+          (uris(i), List(users(i % users.size)))
+        }.toList
+        val bookmarks = mkBookmarks(expectedUriToUserEdges)
+        val articleStore = setupArticleStore(uris)
+
+        val db = inject[Database]
+        val uriRepo = inject[NormalizedURIRepo]
+        val uriTopicRepo = inject[UriTopicRepoA]
+        val userTopicRepo = inject[UserTopicRepoA]
+        val seqInfoRepo = inject[TopicSeqNumInfoRepoA]
+        val bmRepo = inject[BookmarkRepo]
+        val accessor = inject[SwitchableTopicModelAccessor]
+
+        val topicUpdater = new TopicUpdater(db, uriRepo, bmRepo, articleStore, accessor)
+
+        topicUpdater.update()
+        topicUpdater.remodel()
+
+        val uriTopicRepoB = inject[UriTopicRepoB]
+        val userTopicRepoB = inject[UserTopicRepoB]
+
+        val uriTopicHelper = new UriTopicHelper
+        db.readOnly { implicit s =>
+          uris.zipWithIndex.foreach{ x =>
+            val uriTopic = uriTopicRepoB.getByUriId(x._1.id.get)
+            val arr = new Array[Double](TopicModelGlobal.numTopics)
+            arr(x._2) = 1.0
+            uriTopicHelper.toDoubleArray(uriTopic.get.topic) === arr
+          }
+        }
+
+        val userTopicHelper = new UserTopicByteArrayHelper
+        db.readOnly { implicit s =>
+          users.zipWithIndex.foreach { x =>
+            val userIdx = x._2
+            val N = ceil(uris.size *1.0 / users.size).toInt
+            val userUris = (0 until N).flatMap{ i => val uriIdx = userIdx + i* users.size ;  if ( uriIdx < uris.size ) Some(uriIdx) else None}
+            val topic = new Array[Int](TopicModelGlobal.numTopics)
+            userUris.foreach( i => topic(i) += 1)
+            val userTopic = userTopicRepoB.getByUserId(x._1.id.get)
+            userTopicHelper.toIntArray(userTopic.get.topic) === topic
+          }
+
+        }
+
+        }
+      }
+    }
+
   }
 }
 
