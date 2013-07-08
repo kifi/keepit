@@ -25,7 +25,7 @@ class SwitchableTopicModelAccessorFactory @Inject()(
     val nameMapperB = nameMapperFactory(TopicModelAccessorFlag.B)
 
     val wordTopicModelA = wordTopicModelFactory()
-    val wordTopicModelB = wordTopicModelFactory()       // same for now, different later
+    val wordTopicModelB = wordTopicModelA       // same for now, different later
 
     val docTopicModelA = new LDATopicModel(wordTopicModelA)
     val docTopicModelB = new LDATopicModel(wordTopicModelB)
