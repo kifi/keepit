@@ -114,8 +114,8 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
         topicUpdater.update()
         topicUpdater.remodel()
 
-        val uriTopicRepoB = inject[UriTopicRepoA]
-        val userTopicRepoB = inject[UserTopicRepoA]
+        val uriTopicRepoB = inject[UriTopicRepoB]
+        val userTopicRepoB = inject[UserTopicRepoB]
 
         val uriTopicHelper = new UriTopicHelper
         db.readOnly { implicit s =>
