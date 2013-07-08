@@ -16,9 +16,7 @@ object TopicModelGlobal {
 }
 
 trait TopicModelModule extends ScalaModule {
-  def configure {
-    bind[TopicUpdaterPlugin].to[TopicUpdaterPluginImpl].in[AppScoped]
-  }
+  def configure {}
 }
 
 case class LdaTopicModelModule() extends TopicModelModule with Logging {
