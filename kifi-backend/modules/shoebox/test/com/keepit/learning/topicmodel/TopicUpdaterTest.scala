@@ -11,13 +11,14 @@ import com.keepit.search.Lang
 import org.specs2.mutable.Specification
 import com.keepit.common.db.slick.Database
 import scala.math._
-import com.keepit.common.cache._
+import com.google.inject.Injector
+import com.keepit.common.store.FakeShoeboxStoreModule
+import com.keepit.common.actor.TestActorSystemModule
 
 class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
   "TopicUpdater" should {
     "correctly update topic tables and be able to reset tables" in {
-      running(new DeprecatedShoeboxApplication().withWordTopicModule()) {
-        withDB(ShoeboxCacheModule(HashMapMemoryCacheModule()), DevTopicModelModule() ){ implicit injector =>
+      running(new ShoeboxApplication(DevTopicModelModule(), FakeShoeboxStoreModule(), TestActorSystemModule())) {
         val (users, uris) = setupDB
         val expectedUriToUserEdges = (0 until uris.size).map{ i =>
           (uris(i), List(users(i % users.size)))
@@ -86,16 +87,16 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
             val userTopic = userTopicRepo.getByUserId(x._1.id.get)
             userTopicHelper.toIntArray(userTopic.get.topic) === topic
           }
-
         }
-      }}
+      }
     }
   }
 }
 
 
-trait TopicUpdaterTestHelper extends DeprecatedTestDBRunner {
-  def setupDB = {
+trait TopicUpdaterTestHelper extends ShoeboxApplicationInjector {
+
+  def setupDB()(implicit injector: Injector) = {
     val (numUser, numUri) = (10, TopicModelGlobal.numTopics)
     db.readWrite { implicit s =>
       val users = (0 until numUser).map{ i => userRepo.save(User(firstName = "user%d".format(i), lastName = "" ))}
@@ -106,14 +107,14 @@ trait TopicUpdaterTestHelper extends DeprecatedTestDBRunner {
     }
   }
 
-  def setupArticleStore(uris: Seq[NormalizedURI]) = {
+  def setupArticleStore(uris: Seq[NormalizedURI])(implicit injector: Injector) = {
     uris.zipWithIndex.foldLeft(new FakeArticleStore){ case (store, (uri, idx)) =>
       store += (uri.id.get -> mkArticle(uri.id.get, "title%d".format(idx), content = "content%d word%d".format(idx, idx)))
       store
     }
   }
 
-  def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String) = {
+  def mkArticle(normalizedUriId: Id[NormalizedURI], title: String, content: String)(implicit injector: Injector) = {
     Article(
         id = normalizedUriId,
         title = title,
@@ -129,7 +130,7 @@ trait TopicUpdaterTestHelper extends DeprecatedTestDBRunner {
         contentLang = Some(Lang("en")))
   }
 
-  def mkBookmarks(expectedUriToUserEdges: List[(NormalizedURI, List[User])], mixPrivate: Boolean = false): List[Bookmark] = {
+  def mkBookmarks(expectedUriToUserEdges: List[(NormalizedURI, List[User])], mixPrivate: Boolean = false)(implicit injector: Injector): List[Bookmark] = {
     db.readWrite { implicit s =>
       expectedUriToUserEdges.flatMap{ case (uri, users) =>
         users.map { user =>

@@ -4,15 +4,12 @@ import com.keepit.inject.InjectorProvider
 import com.google.inject.Injector
 import com.keepit.common.db.slick.{SlickSessionProvider, Database}
 import com.keepit.model._
-import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.db.TestSlickSessionProvider
 
 trait DeprecatedDbRepos { self: InjectorProvider =>
 
   def db(implicit injector: Injector) = inject[Database]
   def userSessionRepo(implicit injector: Injector) = inject[UserSessionRepo]
-  def userRepo(implicit injector: Injector) = inject[UserRepo]
-  def basicUserRepo(implicit injector: Injector) = inject[BasicUserRepo]
   def userConnRepo(implicit injector: Injector) = inject[UserConnectionRepo]
   def socialConnRepo(implicit injector: Injector) = inject[SocialConnectionRepo]
   def uriRepo(implicit injector: Injector) = inject[NormalizedURIRepo]
@@ -25,7 +22,6 @@ trait DeprecatedDbRepos { self: InjectorProvider =>
   def installationRepo(implicit injector: Injector) = inject[KifiInstallationRepo]
   def userExperimentRepo(implicit injector: Injector) = inject[UserExperimentRepo]
   def emailAddressRepo(implicit injector: Injector) = inject[EmailAddressRepo]
-  def invitationRepo(implicit injector: Injector) = inject[InvitationRepo]
   def unscrapableRepo(implicit injector: Injector) = inject[UnscrapableRepo]
   def notificationRepo(implicit injector: Injector) = inject[UserNotificationRepo]
   def scrapeInfoRepo(implicit injector: Injector) = inject[ScrapeInfoRepo]

@@ -6,8 +6,6 @@ import com.keepit.common.time.Clock
 import com.keepit.common.db.{State, Id}
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import org.joda.time.DateTime
-import com.keepit.classify.DomainTag
-import com.keepit.classify.DomainToTag
 import scala.Some
 
 @ImplementedBy(classOf[DomainToTagRepoImpl])

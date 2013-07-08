@@ -6,7 +6,6 @@ import com.amazonaws.services.s3.{AmazonS3Client, AmazonS3}
 import com.keepit.search._
 import play.api.Play._
 import com.keepit.common.analytics._
-import com.keepit.common.analytics.reports.{InMemoryReportStoreImpl, S3ReportStoreImpl, ReportStore}
 import com.amazonaws.auth.BasicAWSCredentials
 import com.mongodb.casbah.MongoConnection
 

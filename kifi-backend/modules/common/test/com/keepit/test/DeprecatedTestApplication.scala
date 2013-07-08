@@ -16,7 +16,7 @@ import com.keepit.shoebox._
 import akka.actor.ActorSystem
 import java.io.File
 import com.keepit.FortyTwoGlobal
-import com.keepit.common.store.{DevStoreModule, ProdStoreModule, FakeStoreModule}
+import com.keepit.common.store.{DevStoreModule, ProdStoreModule}
 import com.keepit.search.SearchConfigModule
 import com.keepit.common.net.FakeHttpClientModule
 
@@ -32,7 +32,6 @@ class DeprecatedTestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, 
   lazy val devStoreModule = new DevStoreModule(new ProdStoreModule { def configure {} }) { def configure {} }
 
   def withFakeHttpClient(requestToResponse: PartialFunction[String, FakeClientResponse] = FakeClientResponse.emptyFakeHttpClient) = overrideWith(FakeHttpClientModule(requestToResponse))
-  def withFakeStore() = overrideWith(FakeStoreModule())
   def withFakeHealthcheck() = overrideWith(FakeHealthcheckModule())
   def withTestActorSystem(system: ActorSystem) = overrideWith(TestActorSystemModule(Some(system)))
   def withFakeCache() = overrideWith(TestCacheModule())
@@ -50,7 +49,7 @@ case class DeprecatedTestModule(dbInfo: DbInfo = TestDbInfo.dbInfo) extends Scal
   def configure(): Unit = {
     install(TestSlickModule(dbInfo))
     install(FakeHealthcheckModule())
-    install(FakeStoreModule())
+    //install(FakeStoreModule())
     install(TestCacheModule())
     install(FakeDiscoveryModule())
     install(TestShoeboxServiceClientModule())
