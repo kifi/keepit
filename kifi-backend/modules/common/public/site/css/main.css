@@ -156,7 +156,7 @@ input.query::-moz-placeholder {color: #99a3b3}
 .keep-private {display: inline-block; margin: 0 2px; background: url(../img/private.png) left center/17px no-repeat; margin: 0 2px; line-height: 17px; padding-left: 21px}
 .keep.mine .keep-friends::before,
 .keep.mine .keep-others::before,
-.keep-friends+.keep-others::before {content: "+ "}
+.keep-who-text>.keep-friends+.keep-others::before {content: "+ "}
 .keep:not(.mine) .keep-you+.keep-kept-this::before {content: "Nobody has "; line-height: 23px}
 .keeps-loading {margin: 20px 50%; position: relative; left: -22px}
 
@@ -246,6 +246,10 @@ a.page-priv[href]:active {background-color: #8699ab}
 :not([data-kept])>*>.page-who-pics>.me,
 :not([data-kept])>*>.page-who-text>.keep-you,
 .page-who-text>.keep-private {display: none}
+[data-kept]>*>*>.keep-friends::before,
+[data-kept]>*>*>.keep-others::before,
+.page-who-text>.keep-friends+.keep-others::before {content: "+ "}
+:not([data-kept])>*>*>.keep-you+.keep-kept-this::before {content: "Nobody has "}
 .page-coll-list {margin-top: 10px}
 .page-coll-list>li {display: inline-block; line-height: 24px; vertical-align: top}
 .page-coll {position: relative; overflow: hidden; white-space: nowrap; background-color: #b8c5d2; margin: 0 3px 3px 0; font-size: 13px; line-height: 24px; -webkit-font-smoothing: antialiased}
