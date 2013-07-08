@@ -28,6 +28,16 @@ $.fn.removeText = function() {
 };
 
 $(function() {
+	// bugzil.la/35168
+	var $pageColInner = $(".page-col-inner"), winHeight = $(window).height();
+	if ($pageColInner.get().some(function(el) {return el.offsetHeight != winHeight})) {
+		setPageColHeights(winHeight);
+		$(window).resize(setPageColHeights);
+	}
+	function setPageColHeights(h) {
+		$pageColInner.css("height", h > 0 ? h : $(window).height());
+	}
+
 	var $subtitle = $(".subtitle"), subtitleTmpl = Tempo.prepare($subtitle);
 
 	$('.keep-colls').removeText();
