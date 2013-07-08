@@ -36,14 +36,15 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
   override def toString(): String = s"""Service Cluster of $serviceType:
     instances.toString"""
 
-  //using round robin
-  def nextService(): Option[ServiceInstance] = { //Only return UP, fall back on sick
-    val list = routingList
+  //using round robin, fall back on also using SICK instances if there are no healthy (i.e. UP) ones left
+  def nextService(): Option[ServiceInstance] = { 
+    var list = routingList.filter(_.isHealthy)
+    if (list.isEmpty) list = routingList.filter(_.isAvailable)
     if (list.isEmpty) None
     else Some(list(nextRoutingInstance.getAndIncrement % list.size))
   }
 
-  def allServices: Vector[ServiceInstance] = routingList //Only return UP instances, unless there aren't any in which case also return SICK
+  def allServices: Vector[ServiceInstance] = routingList.filter(_.isAvailable)
 
   def register(node: Node, remoteService: RemoteService): ServiceCluster = {
     instances(node) = ServiceInstance(serviceType, node, remoteService)

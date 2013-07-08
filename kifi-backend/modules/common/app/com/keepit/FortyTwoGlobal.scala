@@ -46,7 +46,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     NotFound("NO HANDLER: %s".format(errorId))
   }
 
-  override def onStart(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
+  override def onStart(app: Application): Unit = Threads.withContextClassLoader(app.classloader) { //TODO: kick off self check
     if (app.mode != Mode.Test) {
       require(app.mode == mode, "Current mode %s is not allowed. Mode %s required for %s".format(app.mode, mode, this))
     }
