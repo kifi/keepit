@@ -124,13 +124,31 @@ class TopicModelController  @Inject() (
   def topicsView(page: Int = 0) = AdminHtmlAction{ request =>
     val PAGE_SIZE = 50
     val (topics, count) = db.readOnly{ implicit s =>
-      val topics = topicNameRepoA.all
+      val topics = topicNameRepoA.all.sortWith((a, b) => a.id.get.id < b.id.get.id)
       val count = topics.size
       (topics.drop(page * PAGE_SIZE).take(PAGE_SIZE), count)
     }
     val pageCount = ceil(count*1.0 / PAGE_SIZE).toInt
 
-    Ok(html.admin.topicNames(topics, page, count, pageCount))
+    Ok(html.admin.topicNames(topics, page, count, pageCount, PAGE_SIZE))
+  }
+
+  def addTopics = AdminHtmlAction { implicit request =>
+    Ok(html.admin.addTopicNames())
+  }
+
+  def saveAddedTopics = AdminHtmlAction{ implicit request =>
+    val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
+    val content = body.get("topics").get
+    val topicNames = content.split("\n").map{_.trim}.filter(_ != "")
+    val topics = topicNames.map{ name => TopicName(topicName = name) }
+
+    db.readWrite{ implicit s =>
+      topicNameRepoA.deleteAll()
+      topics.foreach{topicNameRepoA.save(_)}
+    }
+
+    Redirect(com.keepit.controllers.admin.routes.TopicModelController.topicsViewDefault)
   }
 
 }

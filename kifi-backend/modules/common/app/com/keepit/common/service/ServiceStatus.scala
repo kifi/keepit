@@ -9,12 +9,14 @@ object ServiceStatus {
   case object DOWN extends ServiceStatus("down")
   case object STARTING extends ServiceStatus("starting")
   case object STOPPING extends ServiceStatus("stopping")
+  case object SICK extends ServiceStatus("sick")
 
   def fromString(str: String) = str match {
     case UP.name => UP
     case DOWN.name => DOWN
     case STARTING.name => STARTING
     case STOPPING.name => STOPPING
+    case SICK.name => SICK
   }
 
   def format[T]: Format[ServiceStatus] = Format(

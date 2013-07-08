@@ -5,8 +5,11 @@ import com.google.inject.{Singleton, Provides}
 import com.keepit.common.plugin.{SchedulingProperties, SchedulingEnabled}
 import com.keepit.inject.AppScoped
 import play.api.Play.current
+import akka.testkit.TestKit
 
-case class TestActorSystemModule(system: Option[ActorSystem] = None) extends ActorSystemModule {
+case class TestActorSystemModule(systemOption: Option[ActorSystem] = None) extends ActorSystemModule {
+
+  lazy val system = systemOption.getOrElse(ActorSystem("test-actor-system", current.configuration.underlying, current.classloader))
 
   def configure() {
     bind[ActorBuilder].to[TestActorBuilderImpl]
@@ -20,7 +23,7 @@ case class TestActorSystemModule(system: Option[ActorSystem] = None) extends Act
   @Provides
   @AppScoped
   def actorPluginProvider: ActorPlugin =
-    new ActorPlugin(ActorSystem("test-actor-system", current.configuration.underlying, current.classloader))
+    new ActorPlugin(system)
 }
 
 case class StandaloneTestActorSystemModule(system: ActorSystem = ActorSystem("test-actor-system")) extends ActorSystemModule {

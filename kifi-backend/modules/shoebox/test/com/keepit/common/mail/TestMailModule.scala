@@ -6,10 +6,9 @@ import net.codingwell.scalaguice.ScalaModule
 
 import com.google.inject._
 import com.keepit.common.db.slick.DBSession.RWSession
+import com.keepit.common.healthcheck.{LocalHealthcheckMailSender, HealthcheckMailSender}
 
-//Todo: These two modules must inherit from MailModule once they have been moved to Shoebox
-
-case class TestMailModule() extends ScalaModule {
+case class TestMailModule() extends MailModule {
   def configure() {}
 
   @Provides
@@ -35,7 +34,7 @@ class FakeMailProvider(emails: FakeOutbox) extends MailProvider {
   def sendMail(mail: ElectronicMail) = emails.add(mail)
 }
 
-case class FakeMailModule() extends ScalaModule {
+case class FakeMailModule() extends MailModule {
 
   override def configure(): Unit = {
     bind[FakeOutbox].toInstance(new FakeOutbox())

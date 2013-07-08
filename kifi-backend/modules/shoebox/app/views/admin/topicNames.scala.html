@@ -1,4 +1,4 @@
-@(topics: Seq[TopicName], page: Int, count: Int, pageCount: Int)
+@(topics: Seq[TopicName], page: Int, count: Int, pageCount: Int, maxPageSize: Int)
 
 @pagination(page: Int, pageCount: Int) = {
   <div class="pagination pagination-centered pagination-mini">
@@ -44,9 +44,9 @@
       <th>#</th>
       <th>Topic Name</th>
     </tr>
-  @for(topic <- topics) {
+  @for((topic, i) <- topics.zipWithIndex) {
     <tr>
-      <td>@{topic.id.get.id}</td>
+      <td>@{i + 1 + page*maxPageSize }</td>
       <td><div class="topic" data-id="@topic.id.get.id">@topic.topicName </div></td>
     </tr>
   }

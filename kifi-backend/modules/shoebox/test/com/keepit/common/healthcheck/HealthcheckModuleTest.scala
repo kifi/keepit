@@ -2,18 +2,22 @@ package com.keepit.common.healthcheck
 
 import org.specs2.mutable.Specification
 
-import com.keepit.common.mail.FakeOutbox
-import com.keepit.inject._
-
+import com.keepit.common.mail.{FakeMailModule, FakeOutbox}
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers.running
-import com.keepit.test.{DeprecatedShoeboxApplication}
+import com.keepit.test.{ShoeboxApplicationInjector, ShoeboxApplication}
+import com.keepit.common.actor.TestActorSystemModule
 
-class HealthcheckModuleTest extends TestKit(ActorSystem()) with Specification with ApplicationInjector {
+class HealthcheckModuleTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
+
+  val prodHealthCheckModuleWithLocalSender = new ProdHealthCheckModule {
+    override def configure() { bind[HealthcheckMailSender].to[LocalHealthcheckMailSender] }
+  }
+
   "HealthcheckModule" should {
     "load" in {
-      running(new DeprecatedShoeboxApplication().withFakeMail().withFakeCache().withTestActorSystem(system)) {
+      running(new ShoeboxApplication(FakeMailModule(), prodHealthCheckModuleWithLocalSender, TestActorSystemModule(Some(system)))) {
 
         val mail1 = inject[HealthcheckPlugin].reportStart()
 
