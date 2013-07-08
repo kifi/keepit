@@ -23,8 +23,8 @@ section.main {display: table-cell; vertical-align: top; position: relative; widt
 .page-col-inner {position: relative; height: 100%; width: 100%} /* bugzil.la/35168 */
 
 /* left col */
-.header-left {height: 70px; background-color: #67829c; text-align: center; padding-top: 12px; -moz-box-sizing: border-box; box-sizing: border-box}
-.header-logo {display: inline-block; width: 56px; height: 36px; background-image: url(../img/kifi-logo.png)}
+.header-left {height: 70px; background-color: #67829c; text-align: center; padding-top: 18px; -moz-box-sizing: border-box; box-sizing: border-box}
+.header-logo {display: inline-block; width: 51px; height: 29px; background: url(../img/kifi-logo.png) 0/100%}
 .my-identity {position: relative; width: 100%; text-align: center; background: #fff; padding-bottom: 10px}
 .my-pic {width: 66px; height: 66px; margin: 0 auto -10px; border-radius: 50%; border: 6px solid #eff2f7; position: relative; top: -10px; background-size: 100%; background-color: #b6c3cc; z-index: 1}
 .my-name {height: 28px; line-height: 28px; font-size: 16px}
@@ -292,6 +292,7 @@ span.long-text, a.long-text {display: inline-block}
 
 /* retina image overrides */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .header-logo {background-image: url(../img/kifi-logo.2x.png)}
   #collections>h2 {background-image: url(../img/folder-icon.2x.png)}
   .keep-private {background-image: url(../img/private.2x.png)}
   .keep-arrow-4 {background-image: url(../img/arrow-r.2x.png)}
