@@ -19,21 +19,13 @@
 		</p>
 	<![endif]-->
 
-	<header>
-		<div class="header-left">
-			<a class="header-logo" href="/"><img src="img/kifi-logo.png" alt="KiFi"></a>
-		</div>
-		<div class="header-center">
-			<input class="query" type="text" placeholder="Find anything...">
-		</div>
-		<nav>
-			<!--a href="javascript:">+ Add a new keep</a-->
-			<!--a href="javascript:">Settings</a-->
-			<a href="/logout">Log out</a>
-		</nav>
-	</header>
+	<div class="page-cols">
 
 	<aside class="left-col">
+	<div class="page-col-inner">
+		<div class="header-left">
+			<a class="header-logo" href="/"></a>
+		</div>
 		<div class="my-identity">
 			<div class="my-pic"></div>
 			<div class="my-name">&nbsp;</div>
@@ -66,9 +58,12 @@
 				<li><a class="coll-remove" href="javascript:">Remove</a></li>
 			</menu>
 		</div>
+	</div>
 	</aside>
 
 	<section class="main" data-view="mine">
+	<div class="page-col-inner">
+		<input class="query" type="text" placeholder="Find anything...">
 		<div class="main-head">
 			<h1>Browse your keeps</h1>
 			<div class="subtitle">
@@ -164,9 +159,18 @@
 				<img class="keeps-loading" src="img/wait.gif">
 			</div>
 		</div>
+	</div>
 	</section>
 
-	<aside class="right splash">
+	<aside class="right-col">
+	<div class="page-col-inner">
+		<nav>
+			<!--a href="javascript:">+ Add a new keep</a-->
+			<!--a href="javascript:">Settings</a-->
+			<a href="/logout">Log out</a>
+		</nav>
+
+	<div class="splash">
 	<div class="antiscroll-inner">
 		<h2>KiFi Beta - News & Tools</h2>
 		<ul class="about-kifi">
@@ -184,9 +188,9 @@
 			<li><a href="http://www.42go.com/join_us.html">Jobs</a>
 		</ul>
 	</div>
-	</aside>
+	</div>
 
-	<aside class="right detail">
+	<div class="detail">
 		<div class="page-meta">
 			<h2 class="page-title long-text"></h2>
 			<a class="page-url long-text" href="" target="_blank"></a>
@@ -233,7 +237,11 @@
 				</li>
 			</ul>
 		</div>
+	</div>
+
+	</div>
 	</aside>
+	</div>
 
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 	<script>window.jQuery||document.write('<script src="js/jquery-1.9.1.min.js"><\/script>')</script>

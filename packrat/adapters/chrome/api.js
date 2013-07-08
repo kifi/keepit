@@ -10,8 +10,7 @@ api = function() {
     var page = pages[tab.id] = {
       id: tab.id,
       url: tab.url,
-      ready: undefined,  // ready state not known
-      complete: tab.status === "complete"};
+      ready: undefined};  // ready state not known
     if (tab.active) {
       selectedTabIds[tab.windowId] = tab.id;
     }
@@ -24,20 +23,13 @@ api = function() {
   function createPageAndInjectContentScripts(tab, skipHandlers) {
     var page = createPage(tab, skipHandlers);
     if (/^https?:/.test(tab.url)) {
-      if (page.complete) {
+      if (tab.status === "complete") {
         injectContentScripts(page, skipHandlers);
-        if (!skipHandlers) {
-          dispatch.call(api.tabs.on.complete, page);
-        }
       } else if (tab.status === "loading") {
         // we might want to dispatch on.loading here.
         chrome.tabs.executeScript(tab.id, {code: "document.readyState", runAt: "document_start"}, function(arr) {
-          page.complete = arr && arr[0] === "complete";
-          if (page.complete || arr && arr[0] === "interactive") {
+          if (arr && (arr[0] === "interactive" || arr[0] === "complete")) {
             injectContentScripts(page, skipHandlers);
-          }
-          if (page.complete && !skipHandlers) {
-            dispatch.call(api.tabs.on.complete, page);
           }
         });
       }
@@ -117,19 +109,6 @@ api = function() {
       if (change.status === "loading") {
         onRemoved(tabId);
         createPage(tab);
-      }
-      // would be nice to get "interactive" too. see http://crbug.com/169070
-      if (change.status === "complete") {
-        var page = pages[tabId];
-        if (page) {
-          page.complete = true;
-          if (/^https?:/.test(page.url)) {
-            injectContentScripts(page);
-            dispatch.call(api.tabs.on.complete, page);
-          }
-        } else {
-          api.log("#800", "[onUpdated] %i no page", tabId);
-        }
       }
     }
   });
@@ -598,7 +577,6 @@ api = function() {
         blur: new Listeners,
         loading: new Listeners,
         ready: new Listeners,
-        complete: new Listeners,
         unload: new Listeners}},
     timers: window,
     version: chrome.app.getDetails().version};
