@@ -9,17 +9,17 @@ import scala.Some
 import net.codingwell.scalaguice.ScalaModule
 
 case class BrowsingHistory (
-                    id: Option[Id[BrowsingHistory]] = None,
-                    createdAt: DateTime = currentDateTime,
-                    updatedAt: DateTime = currentDateTime,
-                    state: State[BrowsingHistory] = BrowsingHistoryStates.ACTIVE,
-                    userId: Id[User],
-                    tableSize: Int,
-                    filter: Array[Byte],
-                    numHashFuncs: Int,
-                    minHits: Int,
-                    updatesCount: Int = 0
-                    ) extends Model[BrowsingHistory] {
+  id: Option[Id[BrowsingHistory]] = None,
+  createdAt: DateTime = currentDateTime,
+  updatedAt: DateTime = currentDateTime,
+  state: State[BrowsingHistory] = BrowsingHistoryStates.ACTIVE,
+  userId: Id[User],
+  tableSize: Int,
+  filter: Array[Byte],
+  numHashFuncs: Int,
+  minHits: Int,
+  updatesCount: Int = 0
+) extends Model[BrowsingHistory] {
   def withFilter(filter: Array[Byte]) = this.copy(filter = filter)
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withId(id: Id[BrowsingHistory]) = this.copy(id = Some(id))
@@ -35,3 +35,5 @@ class BrowsingHistoryUserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, 
   extends BinaryCacheImpl[BrowsingHistoryUserIdKey, BrowsingHistory](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object BrowsingHistoryStates extends States[BrowsingHistory]
+
+trait BrowsingHistoryModule extends ScalaModule
