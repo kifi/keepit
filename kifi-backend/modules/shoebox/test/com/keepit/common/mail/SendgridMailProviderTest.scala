@@ -16,7 +16,7 @@ class SendgridMailProviderTest extends Specification with ApplicationInjector {
 
   "SendgridMailProvider" should {
     "send email" in {
-      running(new DeprecatedEmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val mail = inject[Database].readWrite { implicit s =>
           inject[ElectronicMailRepo].save(ElectronicMail(
               from = EmailAddresses.ENG,

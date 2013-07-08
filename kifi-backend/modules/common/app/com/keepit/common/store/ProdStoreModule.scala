@@ -49,20 +49,6 @@ trait ProdStoreModule extends StoreModule {
 
   @Singleton
   @Provides
-  def eventStore(amazonS3Client: AmazonS3): EventStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.event.bucket").get)
-    new S3EventStoreImpl(bucketName, amazonS3Client)
-  }
-
-  @Singleton
-  @Provides
-  def reportStore(amazonS3Client: AmazonS3): ReportStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.report.bucket").get)
-    new S3ReportStoreImpl(bucketName, amazonS3Client)
-  }
-
-  @Singleton
-  @Provides
   def mongoEventStore(): MongoEventStore = {
     current.configuration.getString("mongo.events.server").map { server =>
       val mongoConn = MongoConnection(server)
@@ -100,23 +86,8 @@ abstract class DevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) exte
 
   @Singleton
   @Provides
-  def eventStore(amazonS3ClientProvider: Provider[AmazonS3]): EventStore =
-    whenConfigured("amazon.s3.event.bucket")(
-      prodStoreModule.eventStore(amazonS3ClientProvider.get)
-    ).getOrElse(new InMemoryS3EventStoreImpl())
-
-  @Singleton
-  @Provides
-  def reportStore(amazonS3ClientProvider: Provider[AmazonS3]): ReportStore =
-    whenConfigured("amazon.s3.report.bucket")(
-      prodStoreModule.reportStore(amazonS3ClientProvider.get)
-    ).getOrElse(new InMemoryReportStoreImpl())
-
-  @Singleton
-  @Provides
   def mongoEventStore(): MongoEventStore =
     whenConfigured("mongo.events.server")(
       prodStoreModule.mongoEventStore()
     ).getOrElse(new FakeMongoS3EventStore())
-
 }

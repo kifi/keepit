@@ -38,7 +38,6 @@ class DeprecatedTestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, 
   def withFakeStore() = overrideWith(FakeStoreModule())
   def withFakeHealthcheck() = overrideWith(FakeHealthcheckModule())
   def withTestActorSystem(system: ActorSystem) = overrideWith(TestActorSystemModule(Some(system)))
-  def withFakePersistEvent() = overrideWith(TestAnalyticsModule())
   def withFakeCache() = overrideWith(TestCacheModule())
   def withS3DevModule() = overrideWith(devStoreModule)
   def withShoeboxServiceModule() = overrideWith(FakeShoeboxServiceModule())
@@ -61,7 +60,6 @@ case class DeprecatedTestModule(dbInfo: DbInfo = TestDbInfo.dbInfo) extends Scal
     install(TestSearchServiceClientModule())
     install(FakeHttpClientModule(FakeClientResponse.emptyFakeHttpClient))
     install(TestFortyTwoModule())
-    install(TestAnalyticsModule())
     install(FakeSocialGraphModule())
   }
 }
