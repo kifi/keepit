@@ -1,22 +1,13 @@
 package com.keepit.common.db
 
-import java.util.UUID
-import com.keepit.test._
-import com.keepit.inject._
-import play.api.Play.current
 import com.keepit.common.time._
-import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
 import org.specs2.mutable._
-import play.api.Play.current
-import play.api.libs.json.Json
-import play.api.test._
-import play.api.test.Helpers._
-import scala.collection.mutable.{Map => MutableMap}
 import org.joda.time._
+import com.google.inject.Injector
+import com.keepit.test._
 
-class DatabaseDialectTest extends Specification with ApplicationInjector {
+class DatabaseDialectTest extends Specification with ShoeboxTestInjector {
 
   val dec_20_2013 = new DateTime(2013, 12, 20, 0, 0, 0, zones.PT)
 
@@ -34,7 +25,7 @@ class DatabaseDialectTest extends Specification with ApplicationInjector {
     }
 
     "stringToDay to db" in {
-      running(new DeprecatedEmptyApplication()) {
+      withDb() { implicit injector: Injector =>
         inject[Database].readWrite { implicit s =>
           val st = s.conn.createStatement()
           val sql = s"""select DATEADD('MONTH', 1, ${H2DatabaseDialect.day(dec_20_2013)}) as day from dual"""

@@ -9,5 +9,6 @@ case class TestAnalyticsModule() extends AnalyticsModule {
     bind[EventPersister].to[FakeEventPersisterImpl].in[AppScoped]
     bind[ReportBuilderPlugin].to[ReportBuilderPluginImpl].in[AppScoped]
     val listenerBinder = ScalaMultibinder.newSetBinder[EventListener](binder)
+    listenerBinder.addBinding.to[ResultClickedListener]
   }
 }

@@ -18,13 +18,13 @@ import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import securesocial.core._
 import com.keepit.common.net.FakeHttpClientModule
-import com.keepit.common.store.FakeStoreModule
+import com.keepit.common.store.ShoeboxFakeStoreModule
 
 class AdminDashboardControllerTest extends Specification with ShoeboxApplicationInjector {
 
   "AdminDashboardController" should {
     "get users by date as JSON" in {
-      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), FakeHttpClientModule(), FakeStoreModule(), FakeSocialGraphModule())) {
+      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), FakeHttpClientModule(), ShoeboxFakeStoreModule(), FakeSocialGraphModule())) {
 
         val now = new DateTime(2020, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         inject[FakeClock].setTimeFunction(() => now.getMillis)

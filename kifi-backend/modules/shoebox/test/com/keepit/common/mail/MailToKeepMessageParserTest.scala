@@ -5,19 +5,17 @@ import java.util.Properties
 import org.specs2.mutable.Specification
 
 import com.keepit.common.db.slick.Database
-import com.keepit.inject.ApplicationInjector
 import com.keepit.model.{EmailAddress, User, UserRepo, EmailAddressRepo}
 
 import javax.mail.Message.RecipientType
 import javax.mail.Session
 import javax.mail.internet.{MimeMultipart, MimeBodyPart, InternetAddress, MimeMessage}
-import play.api.test.Helpers.running
-import com.keepit.test.DeprecatedEmptyApplication
+import com.keepit.test.ShoeboxTestInjector
 
-class MailToKeepMessageParserTest extends Specification with ApplicationInjector {
+class MailToKeepMessageParserTest extends Specification with ShoeboxTestInjector {
   "MailToKeepMessageParser" should {
     "parse out the text from multipart emails" in {
-      running(new DeprecatedEmptyApplication()) {
+      withDb() { implicit injector =>
         val parser = new MailToKeepMessageParser(inject[Database], inject[EmailAddressRepo], inject[UserRepo])
 
         val session = Session.getDefaultInstance(new Properties())
@@ -41,7 +39,7 @@ class MailToKeepMessageParserTest extends Specification with ApplicationInjector
       }
     }
     "parse out uris correctly from HTML" in {
-      running(new DeprecatedEmptyApplication()) {
+      withDb() { implicit injector =>
         val parser = new MailToKeepMessageParser(inject[Database], inject[EmailAddressRepo], inject[UserRepo])
 
         val session = Session.getDefaultInstance(new Properties())
@@ -60,7 +58,7 @@ class MailToKeepMessageParserTest extends Specification with ApplicationInjector
       }
     }
     "parse out users correctly" in {
-      running(new DeprecatedEmptyApplication()) {
+      withDb() { implicit injector =>
         val db = inject[Database]
         val emailAddressRepo = inject[EmailAddressRepo]
         val userRepo = inject[UserRepo]

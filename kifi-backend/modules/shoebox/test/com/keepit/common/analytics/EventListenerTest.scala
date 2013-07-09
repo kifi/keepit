@@ -8,11 +8,17 @@ import com.keepit.test._
 import play.api.libs.json.{JsObject, JsString}
 import com.keepit.model._
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.inject.ApplicationInjector
+import com.google.inject.Injector
+import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.search.TestSearchServiceClientModule
+import com.keepit.shoebox.FakeShoeboxServiceModule
 
-class EventListenerTest extends Specification with ApplicationInjector with ShoeboxInjectionHelpers {
+class EventListenerTest extends Specification with ShoeboxApplicationInjector {
 
-  def setup() = {
+  val eventListenerTestModules = Seq(TestActorSystemModule(), ShoeboxFakeStoreModule(), TestAnalyticsModule(), TestSearchServiceClientModule(), FakeShoeboxServiceModule())
+
+  def setup()(implicit injector: Injector) = {
     db.readWrite {implicit s =>
       val normUrlId = uriRepo.save(NormalizedURIFactory("http://www.google.com/")).id.get
       val url = urlRepo.save(URLFactory(url = "http://www.google.com/", normalizedUriId = normUrlId))
@@ -30,7 +36,7 @@ class EventListenerTest extends Specification with ApplicationInjector with Shoe
 
   "EventHelper" should {
     "parse search events" in {
-      running(new DeprecatedShoeboxApplication().withShoeboxServiceModule) {
+      running(new ShoeboxApplication(eventListenerTestModules:_*)) {
         val (normUrlId, url, user, bookmark) = setup()
         val listener = new EventListener(inject[UserRepo], inject[NormalizedURIRepo]) {
           val schedulingProperties = inject[SchedulingProperties]
@@ -52,7 +58,7 @@ class EventListenerTest extends Specification with ApplicationInjector with Shoe
 
   "EventListener" should {
     "process events" in {
-      running(new DeprecatedShoeboxApplication().withShoeboxServiceModule) {
+      running(new ShoeboxApplication(eventListenerTestModules:_*)) {
         val (normUrlId, url, user, bookmark) = setup()
         implicit val clock = inject[Clock]
         implicit val fortyTwoServices = inject[FortyTwoServices]

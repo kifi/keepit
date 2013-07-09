@@ -8,7 +8,6 @@ import org.apache.lucene.store.Directory
 import org.apache.lucene.util.BytesRef
 import org.apache.lucene.util.Version
 import com.keepit.common.db._
-import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.Healthcheck.INTERNAL
 import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.net.Host

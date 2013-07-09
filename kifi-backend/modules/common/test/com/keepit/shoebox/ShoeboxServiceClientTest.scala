@@ -6,14 +6,15 @@ import scala.concurrent.duration._
 import org.specs2.mutable.Specification
 
 import com.keepit.common.db.Id
-import com.keepit.common.net.{FakeHttpClient, HttpClient}
+import com.keepit.common.net.{FakeHttpClientModule, FakeClientResponse}
 import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.search.Lang
-import com.keepit.test.DeprecatedEmptyApplication
+import com.keepit.test.TestApplication
 
 import play.api.libs.json._
 import play.api.test.Helpers._
+import com.keepit.common.cache.TestCacheModule
 
 class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
 
@@ -25,22 +26,18 @@ class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
     Phrase(phrase="gaz parfait", lang=Lang("fr"), source="physique statistique")
   )
 
-  def setup() = {
-    new ProdFortyTwoModule {
-      override def configure() {
-        bind[HttpClient].toInstance(new FakeHttpClient(Some({
-          case s if s.contains("/internal/shoebox/database/getConnectedUsers") && s.contains("1965") => "[1933,1935,1927,1921]"
-          case s if s.contains("/internal/shoebox/database/getUsers") && s.contains("1965%2C1933") => Json.stringify(Json.toJson(users))
-          case s if s.contains("/internal/shoebox/database/getPhrasesByPage") && s.contains("page=0&size=2") => Json.stringify(Json.toJson(phrases))
-        })))
-      }
-    }
+  val fakeShoeboxResponse: PartialFunction[String, FakeClientResponse] = {
+    case s if s.contains("/internal/shoebox/database/getConnectedUsers") && s.contains("1965") => "[1933,1935,1927,1921]"
+    case s if s.contains("/internal/shoebox/database/getUsers") && s.contains("1965%2C1933") => Json.stringify(Json.toJson(users))
+    case s if s.contains("/internal/shoebox/database/getPhrasesByPage") && s.contains("page=0&size=2") => Json.stringify(Json.toJson(phrases))
   }
 
   "ShoeboxServiceClient" should {
 
+    val shoeboxServiceClientTestModules = Seq(FakeHttpClientModule(fakeShoeboxResponse), ProdShoeboxServiceClientModule(), TestCacheModule())
+
     "get users" in {
-      running(new DeprecatedEmptyApplication().overrideWith(setup())) {
+      running(new TestApplication(shoeboxServiceClientTestModules:_*)) {
         val shoeboxServiceClient = inject[ShoeboxServiceClient]
         val usersFuture = shoeboxServiceClient.getUsers(users.map(_.id.get))
         Await.result(usersFuture, Duration(5, SECONDS)) ===  users
@@ -49,7 +46,7 @@ class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
     }
 
     "get connected users' ids" in {
-      running(new DeprecatedEmptyApplication().overrideWith(setup())) {
+      running(new TestApplication(shoeboxServiceClientTestModules:_*)) {
         val shoeboxServiceClient = inject[ShoeboxServiceClient]
         val userIdsFuture = shoeboxServiceClient.getConnectedUsers(user1965.id.get)
         Await.result(userIdsFuture, Duration(5, SECONDS)) ===  Set(1933,1935,1927,1921).map(Id[User](_))
@@ -58,7 +55,7 @@ class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
     }
 
     "get phrases by page" in {
-      running(new DeprecatedEmptyApplication().overrideWith(setup())) {
+      running(new TestApplication(shoeboxServiceClientTestModules:_*)) {
         val shoeboxServiceClient = inject[ShoeboxServiceClient]
         val phrasesFuture = shoeboxServiceClient.getPhrasesByPage(0,2)
         Await.result(phrasesFuture, Duration(5, SECONDS)) ===  phrases

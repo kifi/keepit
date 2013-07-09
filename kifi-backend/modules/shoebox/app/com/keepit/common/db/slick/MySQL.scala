@@ -1,7 +1,7 @@
 package com.keepit.common.db.slick
 
 import com.keepit.common.db.slick.DBSession.RWSession
-import com.keepit.common.db.{DbSequence, SequenceNumber, DbInfo, MySqlDatabaseDialect}
+import com.keepit.common.db.{DbSequence, SequenceNumber, MySqlDatabaseDialect}
 import scala.slick.driver.MySQLDriver
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw

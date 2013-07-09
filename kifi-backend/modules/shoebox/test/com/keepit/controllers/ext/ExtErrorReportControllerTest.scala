@@ -14,7 +14,7 @@ import play.api.libs.json._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import securesocial.core._
-import com.keepit.common.store.FakeStoreModule
+import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.net.FakeHttpClientModule
 
 class ExtErrorReportControllerTest extends Specification with ShoeboxApplicationInjector {
@@ -37,7 +37,7 @@ class ExtErrorReportControllerTest extends Specification with ShoeboxApplication
 
   "ExtAuthController" should {
     "start" in {
-      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), FakeStoreModule(), FakeHttpClientModule(), FakeSocialGraphModule())) {
+      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), ShoeboxFakeStoreModule(), FakeHttpClientModule(), FakeSocialGraphModule())) {
         val fakeHealthcheck = inject[FakeHealthcheck]
         fakeHealthcheck.errorCount() === 0
 

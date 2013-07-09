@@ -17,7 +17,7 @@ case class SliderHistory (
   numHashFuncs: Int,
   minHits: Int,
   updatesCount: Int = 0
-  ) extends Model[SliderHistory] {
+) extends Model[SliderHistory] {
   def withFilter(filter: Array[Byte]) = this.copy(filter = filter)
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withId(id: Id[SliderHistory]) = this.copy(id = Some(id))

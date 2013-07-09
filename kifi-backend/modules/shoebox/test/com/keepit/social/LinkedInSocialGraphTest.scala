@@ -3,8 +3,7 @@ package com.keepit.common.social
 import org.specs2.mutable._
 
 import com.keepit.common.db.slick.Database
-import com.keepit.common.net.FakeHttpClient
-import com.keepit.inject._
+import com.keepit.common.net.{FakeClientResponse, FakeHttpClientModule}
 import com.keepit.model.SocialUserInfo
 import com.keepit.model.SocialUserInfoRepo
 import com.keepit.model.User
@@ -13,7 +12,7 @@ import com.keepit.test._
 import play.api.test.Helpers._
 import securesocial.core._
 
-class LinkedInSocialGraphTest extends Specification with ApplicationInjector with ShoeboxInjectionHelpers {
+class LinkedInSocialGraphTest extends Specification with ShoeboxApplicationInjector {
 
   private def urlIsConnections(url: String): Boolean = {
     url.startsWith("http://api.linkedin.com/v1/people/rFOBMp35vZ/connections:(id,firstName,lastName,pictureUrl,publicProfileUrl)?format=json") &&
@@ -25,13 +24,14 @@ class LinkedInSocialGraphTest extends Specification with ApplicationInjector wit
     url.startsWith("http://api.linkedin.com/v1/people/rFOBMp35vZ:(id,firstName,lastName,emailAddress,pictureUrl)?format=json")
   }
 
+  private val fakeLinkedInResponse: PartialFunction[String, FakeClientResponse] = {
+    case url if urlIsConnections(url) => connectionsJson
+    case url if urlIsProfile(url) => profileJson
+  }
+
   "LinkedInSocialGraph" should {
     "fetch from linkedin" in {
-      running(new DeprecatedEmptyApplication()) {
-        val httpClient = new FakeHttpClient(Some({
-          case url if urlIsConnections(url) => connectionsJson
-          case url if urlIsProfile(url) => profileJson
-        }))
+      running(new ShoeboxApplication(FakeHttpClientModule(fakeLinkedInResponse))) {
 
         val oAuth1Info = OAuth1Info("a27da99f-3e1f-4fb6-9261-944b3d1a8464", "9e3a1cfe-36c4-406f-903a-13c04d41e42b")
         val socialUser = SocialUser(UserId("rFOBMp35vZ", "linkedin"), "Greg", "Methvin", "Greg Methvin",
@@ -45,13 +45,14 @@ class LinkedInSocialGraphTest extends Specification with ApplicationInjector wit
         val socialUserInfo = inject[Database].readWrite { implicit s =>
           inject[SocialUserInfoRepo].save(unsaved)
         }
+        println("SOCIALUSERINFO: " + socialUserInfo)
         unsaved.userId === user.id
         socialUserInfo.userId === user.id
         socialUserInfo.fullName === "Greg Methvin"
         socialUserInfo.socialId.id === "rFOBMp35vZ"
         socialUserInfo.credentials.get === socialUser
 
-        val graph = new LinkedInSocialGraph(httpClient)
+        val graph = inject[LinkedInSocialGraph]
         val rawInfo = graph.fetchSocialUserRawInfo(socialUserInfo).get
         rawInfo.fullName === "Greg Methvin"
         rawInfo.userId === socialUserInfo.userId

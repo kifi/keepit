@@ -1,7 +1,7 @@
 package com.keepit.common.db.slick
 
 import com.keepit.common.db.slick.DBSession.RWSession
-import com.keepit.common.db.{DbSequence, SequenceNumber, DbInfo, H2DatabaseDialect}
+import com.keepit.common.db.{DbSequence, SequenceNumber, H2DatabaseDialect}
 import scala.slick.driver.H2Driver
 import scala.collection.concurrent.TrieMap
 import scala.slick.lifted.DDL

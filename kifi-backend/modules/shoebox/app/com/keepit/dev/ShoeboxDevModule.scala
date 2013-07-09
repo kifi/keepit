@@ -2,7 +2,6 @@ package com.keepit.dev
 
 import com.keepit.common.mail._
 import com.keepit.shoebox._
-import com.keepit.common.db.ShoeboxSlickModule
 import com.keepit.shoebox.ShoeboxBrowsingHistoryModule
 import com.keepit.common.social.ProdSocialGraphModule
 import com.keepit.model.ProdSliderHistoryTrackerModule
@@ -24,6 +23,7 @@ import com.keepit.common.net.ProdHttpClientModule
 import com.keepit.inject.ProdFortyTwoModule
 import com.keepit.common.actor.DevActorSystemModule
 import com.keepit.common.zookeeper.DevDiscoveryModule
+import com.keepit.common.db.slick.ShoeboxSlickModule
 
 case class ShoeboxDevModule() extends ShoeboxModule(
 

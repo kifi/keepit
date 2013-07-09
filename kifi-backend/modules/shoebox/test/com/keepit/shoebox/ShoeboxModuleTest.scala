@@ -6,7 +6,7 @@ import com.keepit.common.akka.{FortyTwoActor,AlertingActor}
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.{FakeMailModule, MailToKeepServerSettings}
-import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector, DeprecatedShoeboxApplication}
+import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
 import net.spy.memcached.MemcachedClient
 import org.specs2.mutable.Specification
 import play.api.Play.current
@@ -19,7 +19,7 @@ import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.realtime.ShoeboxWebSocketModule
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule}
-import com.keepit.common.store.FakeStoreModule
+import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.analytics.TestAnalyticsModule
 import com.keepit.model.TestSliderHistoryTrackerModule
 import com.keepit.scraper.FakeScraperModule
@@ -51,7 +51,7 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         ShoeboxWebSocketModule(),
         TestActorSystemModule(),
         TestShoeboxSecureSocialModule(),
-        FakeStoreModule(),
+        ShoeboxFakeStoreModule(),
         FakeSocialGraphModule(),
         TestAnalyticsModule(),
         TestSliderHistoryTrackerModule(),

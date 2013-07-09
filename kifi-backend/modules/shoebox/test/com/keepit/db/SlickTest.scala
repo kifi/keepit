@@ -17,12 +17,12 @@ import com.keepit.common.db.slick._
 import org.joda.time.DateTime
 import com.mysql.jdbc.exceptions.jdbc4.MySQLIntegrityConstraintViolationException
 
-class SlickTest extends Specification with ApplicationInjector {
+class SlickTest extends Specification with ShoeboxTestInjector {
 
   "Slick" should {
 
     "using driver abstraction" in {
-      running(new DeprecatedEmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
+      withDb() { implicit injector =>
 
         case class Bar(
           id: Option[Id[Bar]] = None,
@@ -55,16 +55,12 @@ class SlickTest extends Specification with ApplicationInjector {
             val q = for ( f <- table if f.name is name ) yield (f)
             q.list
           }
-
-          //only for testing
-          def createTableForTesting()(implicit session: RWSession) = table.ddl.create
         }
 
         val repo: BarRepo = new BarRepoImpl(inject[DataBaseComponent], inject[Clock])
 
         //just for testing you know...
         inject[Database].readWrite{ implicit session =>
-          repo.asInstanceOf[BarRepoImpl].createTableForTesting() //only in test mode we should know about the implementation
           val fooA = repo.save(Bar(name = "A"))
           fooA.id.get.id === 1
           val fooB = repo.save(Bar(name = "B"))
@@ -82,7 +78,7 @@ class SlickTest extends Specification with ApplicationInjector {
 
     "rollback transaction" in {
 
-      running(new DeprecatedEmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
+      withDb() { implicit injector =>
         val db = inject[Database]
         import db.db.Driver.Implicit._ // here's the driver, abstracted away
         import db.db.Driver.Table
@@ -147,7 +143,7 @@ class SlickTest extends Specification with ApplicationInjector {
     }
 
     "using external id" in {
-      running(new DeprecatedEmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
+      withDb() { implicit injector =>
 
         case class Bar(
           id: Option[Id[Bar]] = None,
@@ -181,16 +177,12 @@ class SlickTest extends Specification with ApplicationInjector {
             val q = for ( f <- table if f.name is name ) yield (f)
             q.list
           }
-
-          //only for testing
-          def createTableForTesting()(implicit session: RWSession) = table.ddl.create
         }
 
         val repo: BarRepo = new BarRepoImpl(inject[DataBaseComponent], inject[Clock])
 
         //just for testing you know...
         val (b1, b2) = inject[Database].readWrite{ implicit session =>
-          repo.asInstanceOf[BarRepoImpl].createTableForTesting() //only in test mode we should know about the implementation
           (repo.save(Bar(name = "A")), repo.save(Bar(name = "B")))
         }
 

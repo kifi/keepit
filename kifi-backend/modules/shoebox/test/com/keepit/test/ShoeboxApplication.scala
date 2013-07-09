@@ -2,7 +2,7 @@ package com.keepit.test
 
 import play.api.{Application, Mode}
 import com.keepit.inject.{TestFortyTwoModule, ApplicationInjector, EmptyInjector}
-import com.keepit.common.db.{TestDbInfo, DbInfo}
+import com.keepit.common.db.{TestDbInfo}
 import java.sql.{Driver, DriverManager}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.RWSession
