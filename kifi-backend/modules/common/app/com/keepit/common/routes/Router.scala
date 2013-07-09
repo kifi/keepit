@@ -12,6 +12,7 @@ import com.keepit.model.ExperimentType
 import com.keepit.model.UserSession
 import java.net.URLEncoder
 import com.keepit.common.strings.UTF8
+import play.api.libs.json.JsArray
 
 
 trait Service
@@ -82,6 +83,8 @@ object Shoebox extends Service {
     def getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String) = ServiceRoute(GET, "/internal/shoebox/database/socialUserInfoByNetworkAndSocialId", Param("id", id), Param("networkType", networkType))
     def getSocialUserInfosByUserId(id: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/socialUserInfosByUserId", Param("id", id))
     def getSessionByExternalId(sessionId: ExternalId[UserSession]) = ServiceRoute(GET, "/internal/shoebox/database/sessionByExternalId", Param("sessionId", sessionId))
+    def userChannelFanout() = ServiceRoute(POST, "/internal/shoebox/channel/user")
+    def uriChannelFanout() = ServiceRoute(POST, "/internal/shoebox/channel/uri")
   }
 }
 
