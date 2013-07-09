@@ -389,8 +389,12 @@ class MainSearcher(
   }
 
   private def classify(hitList: List[MutableArticleHit], personalizedSearcher: PersonalizedSearcher) = {
+    val semanticScoreThreshold = (1.0f - semanticBoost) + semanticBoost * 0.2f
     def classify(hit: MutableArticleHit) = {
-      (hit.clickBoost) > 1.25f || hit.scoring.recencyScore > 0.25f || hit.scoring.textScore > 0.7f || (hit.scoring.textScore >= 0.04f && hit.semanticScore >= 0.20f)
+      (hit.clickBoost) > 1.25f ||
+      hit.scoring.recencyScore > 0.25f ||
+      hit.scoring.textScore > 0.7f ||
+      (hit.scoring.textScore >= 0.04f && hit.semanticScore >= semanticScoreThreshold)
     }
     hitList.take(3).exists(classify(_))
   }
