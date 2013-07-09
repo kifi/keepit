@@ -8,8 +8,6 @@ import com.keepit.common.db._
 import com.keepit.model.ClickHistory
 import scala.concurrent.Future
 import com.keepit.search._
-import com.keepit.common.social.BasicUser
-import com.keepit.common.social.SocialNetworkType
 import com.keepit.model.ExperimentType
 import com.keepit.model.Phrase
 import com.keepit.model.NormalizedURI
@@ -17,9 +15,9 @@ import com.keepit.model.User
 import com.keepit.model.UserExperiment
 import com.keepit.search.ArticleSearchResult
 import play.api.libs.json.JsObject
-import com.keepit.common.social.SocialId
 import java.util.concurrent.atomic.AtomicInteger
 import collection.mutable.{Map => MutableMap}
+import com.keepit.social.{SocialNetworkType, SocialId, BasicUser}
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, browsingHistoryTracker: BrowsingHistoryTracker) extends ShoeboxServiceClient {

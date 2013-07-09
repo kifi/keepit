@@ -17,6 +17,7 @@ import com.keepit.search.SearchServiceClient
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.social.{ThreadInfo, CommentWithBasicUser, BasicUser}
 
 case class KeeperInfo1(  // information needed immediately when a page is visited
     kept: Option[String],

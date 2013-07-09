@@ -5,8 +5,8 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.time.Clock
 import com.keepit.common.logging.Logging
-import com.keepit.common.social.{SocialNetworkType, SocialId}
 import org.joda.time.DateTime
+import com.keepit.social.{SocialNetworkType, SocialId}
 
 @ImplementedBy(classOf[UserSessionRepoImpl])
 trait UserSessionRepo extends Repo[UserSession] with ExternalIdColumnFunction[UserSession]

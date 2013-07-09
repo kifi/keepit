@@ -4,7 +4,7 @@ import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
 import scala.concurrent.duration._
 import com.keepit.search.ActiveExperimentsCache
-import com.keepit.common.social.BasicUserUserIdCache
+import com.keepit.social.BasicUserUserIdCache
 
 case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
 

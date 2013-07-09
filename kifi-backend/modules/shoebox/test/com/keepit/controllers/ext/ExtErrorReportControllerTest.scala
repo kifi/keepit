@@ -4,8 +4,9 @@ import org.specs2.mutable.Specification
 
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.common.healthcheck._
-import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule, SocialId}
-import com.keepit.common.social.SocialNetworks.FACEBOOK
+import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule}
+import com.keepit.social.{SocialId, SocialNetworks}
+import SocialNetworks.FACEBOOK
 import com.keepit.model.SocialUserInfo
 import com.keepit.model.User
 import com.keepit.test._

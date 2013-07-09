@@ -18,8 +18,6 @@ import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.mail.LocalPostOffice
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.social.SocialId
-import com.keepit.common.social.SocialNetworkType
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.search.ArticleSearchResultRef
@@ -32,6 +30,7 @@ import com.keepit.shoebox.ClickHistoryTracker
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.Action
+import com.keepit.social.{SocialNetworkType, SocialId}
 
 object ShoeboxController {
   implicit val collectionTupleFormat = (

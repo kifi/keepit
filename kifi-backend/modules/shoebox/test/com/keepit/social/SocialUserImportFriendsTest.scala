@@ -16,6 +16,7 @@ import play.api.test.Helpers._
 import com.google.inject.Injector
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.social.{SocialUserRawInfo, SocialUserRawInfoStore}
 
 class SocialUserImportFriendsTest extends Specification with ShoeboxTestInjector {
 

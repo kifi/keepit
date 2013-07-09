@@ -23,6 +23,7 @@ import scala.slick.session.{PositionedParameters, PositionedResult}
 import securesocial.core.AuthenticationMethod
 import securesocial.core.SocialUser
 import securesocial.core.UserId
+import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialId}
 
 object FortyTwoTypeMappers {
   // Time

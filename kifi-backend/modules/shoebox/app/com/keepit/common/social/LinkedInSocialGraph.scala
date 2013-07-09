@@ -11,6 +11,7 @@ import play.api.libs.json._
 import play.api.libs.oauth.{RequestToken, OAuthCalculator}
 import play.api.libs.ws.WS
 import securesocial.core.SecureSocial
+import com.keepit.social.{SocialUserRawInfo, SocialNetworks, SocialId, SocialGraph}
 
 class LinkedInSocialGraph @Inject() (client: HttpClient) extends SocialGraph with Logging {
 

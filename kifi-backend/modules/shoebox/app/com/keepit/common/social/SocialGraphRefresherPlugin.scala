@@ -12,6 +12,7 @@ import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.plugin._
 import com.keepit.common.actor.ActorFactory
 import play.api.Plugin
+import com.keepit.social.SocialGraphPlugin
 
 private case class RefreshUserInfo(socialUserInfo: SocialUserInfo)
 private case object RefreshAll
