@@ -83,7 +83,7 @@ input.query:focus, input.query[data-q] {background-image: url(../img/search-blue
 input.query::-webkit-input-placeholder {color: #99a3b3}
 input.query::-moz-placeholder {color: #99a3b3}
 .main-head,
-.main-keeps {border-left: 1px solid #dbdee3}
+.main-keeps {margin-left: 1px; box-shadow: -1px 0 #dbdee3}
 .main-head {padding: 15px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
 .main-head.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
 .main[data-view=search] .main-head {padding-top: 10px; height: 37px}
