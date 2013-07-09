@@ -20,12 +20,11 @@ import com.keepit.common.store.{DevStoreModule, ProdStoreModule}
 import com.keepit.search.SearchConfigModule
 import com.keepit.common.net.FakeHttpClientModule
 
-class DeprecatedTestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
+class DeprecatedTestApplication(_global: FortyTwoGlobal, useDb: Boolean = false, override val path: File = new File(".")) extends play.api.test.FakeApplication(path = path) {
 
-  private def createTestGlobal(baseGlobal: FortyTwoGlobal, modules: Module*) = if (useDb)
-    new DeprecatedTestGlobal(Modules.`override`(baseGlobal.module).`with`(modules: _*))
-  else
-    new DeprecatedTestRemoteGlobal(Modules.`override`(baseGlobal.module).`with`(modules: _*))
+  private def createTestGlobal(baseGlobal: FortyTwoGlobal, modules: Module*) =
+    if (useDb) throw new Exception("Database has already been removed from deprecated test applications")
+    else new DeprecatedTestRemoteGlobal(Modules.`override`(baseGlobal.module).`with`(modules: _*))
 
   override lazy val global = createTestGlobal(_global, FakeClockModule(), TestActorSystemModule()) // Play 2.1 makes global a lazy val, which can't be directly overridden.
 
@@ -43,7 +42,7 @@ class DeprecatedTestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, 
 
 }
 
-class DeprecatedEmptyApplication(path: File = new File("./modules/common/")) extends DeprecatedTestApplication(new DeprecatedTestGlobal(DeprecatedTestModule()), path = path)
+class DeprecatedEmptyApplication(path: File = new File("./modules/common/")) extends DeprecatedTestApplication(new DeprecatedTestRemoteGlobal(DeprecatedTestModule()), path = path)
 
 case class DeprecatedTestModule() extends ScalaModule {
   def configure(): Unit = {
