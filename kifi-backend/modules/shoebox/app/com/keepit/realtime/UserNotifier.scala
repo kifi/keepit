@@ -176,9 +176,6 @@ class UserNotifier @Inject() (
           commentId = comment.id,
           subsumedId = None))
         notificationBroadcast.push(userNotification)
-        //notifyCommentByEmail(user, commentDetail)
-
-        //userNotifyRepo.save(userNotification.withState(UserNotificationStates.DELIVERED))
       }
     }
   }
@@ -195,18 +192,8 @@ class UserNotifier @Inject() (
 
       createMessageUserNotifications(message, thread) map {
         case (user, messageDetails, userNotification) =>
-
-          if (userChannel.isConnected(userNotification.userId)) {
-            log.info(s"Sending notification because ${userNotification.userId} is connected.")
-
-            userChannel.push(userNotification.userId, messageJson)
-            notificationBroadcast.push(userNotification)
-          } else {
-            log.info(s"Sending email because ${userNotification.userId} is not connected.")
-            //notifyMessageByEmail(user, messageDetails)
-          }
-
-        //userNotifyRepo.save(userNotification.withState(UserNotificationStates.DELIVERED))
+          userChannel.push(userNotification.userId, messageJson)
+          notificationBroadcast.push(userNotification)
       }
     }
   }
