@@ -89,14 +89,14 @@ input.query::-moz-placeholder {color: #99a3b3}
 .main-keeps {border-left: 1px solid #dbdee3}
 .main-head {padding: 15px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
 .main-head.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
-.main[data-view=search]>.main-head {padding-top: 10px; height: 37px}
+.main[data-view=search] .main-head {padding-top: 10px; height: 37px}
 .main-head>h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
-.main[data-view=search]>.main-head>h1 {display: none}
+.main[data-view=search] .main-head>h1 {display: none}
 .main-head>.subtitle {font-size: 13px; font-weight: 300; color: #5b6670}
 .result-query::before {content: "\201c"}
 .result-query::after {content: "\201d"}
 .main-keeps {position: absolute; top: 142px; bottom: 0; left: 0; right: 0; overflow: hidden}
-.main[data-view=search]>.main-keeps {top: 107px}
+.main[data-view=search] .main-keeps {top: 107px}
 .main-keeps>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; padding: 1px 18px 0; box-sizing: border-box; -moz-box-sizing: border-box}
 #my-keeps,#search-results {display: none}
 .main[data-view=mine] #my-keeps,
@@ -106,14 +106,11 @@ input.query::-moz-placeholder {color: #99a3b3}
 .keep-group-title+.keep {border-top: 0}
 .keep {position: relative; clear: left; padding: 10px 0 13px 30px; border-top: 1px solid #f9f9f9}
 .keep.selected {background-color: #eff2f7}
-.keep-arrow-1 {position: absolute; right: 16px; width: 22px; top: 0; bottom: 0}
-.keep-arrow-2 {display: table; table-layout: fixed; height: 100%; width: 100%}
-.keep-arrow-3 {display: table-cell; vertical-align: middle}
-.keep-arrow-4 {display: inline-block; width: 6px; height: 16px; cursor: pointer; border: solid transparent; border-width: 4px 8px; background: url(../img/arrow-r.png) left/13px 16px no-repeat content-box; transition: transform .2s}
-.keep-arrow-4:hover {background-color: rgba(0,0,0,.05); border-color: rgba(0,0,0,.05)}
-.keep:hover .keep-arrow-4,
-.keep.selected .keep-arrow-4 {background-position: right}
-.keep.selected .keep-arrow-4 {-webkit-transform: scale(-1,1); transform: scale(-1,1)}
+.keep-arrow {position: absolute; right: 16px; width: 6px; height: 16px; bottom: 13px; border: solid transparent; border-width: 4px 8px; background: url(../img/arrow-r.png) left/13px 16px no-repeat content-box; cursor: pointer; -webkit-transition: -webkit-transform .2s; transition: -webkit-transform .2s, transform .2s}
+.keep-arrow:hover {background-color: rgba(0,0,0,.05); border-color: rgba(0,0,0,.05)}
+.keep:hover .keep-arrow,
+.keep.selected .keep-arrow {background-position: right}
+.keep.selected .keep-arrow {-webkit-transform: scale(-1,1); transform: scale(-1,1)}
 .keep>.handle {cursor: move; position: absolute; top: 0; bottom: 0; left: 0; width: 21px; display: none; background: url(../img/drag-handle.png) center/10px no-repeat}
 .keep>.handle:hover,
 .keep.selected>.handle {background-color: #e3e6ee}
@@ -159,11 +156,11 @@ input.query::-moz-placeholder {color: #99a3b3}
 .keep-private {display: inline-block; margin: 0 2px; background: url(../img/private.png) left center/17px no-repeat; margin: 0 2px; line-height: 17px; padding-left: 21px}
 .keep.mine .keep-friends::before,
 .keep.mine .keep-others::before,
-.keep-friends+.keep-others::before {content: "+ "}
+.keep-who-text>.keep-friends+.keep-others::before {content: "+ "}
 .keep:not(.mine) .keep-you+.keep-kept-this::before {content: "Nobody has "; line-height: 23px}
 .keeps-loading {margin: 20px 50%; position: relative; left: -22px}
 
-.drag-helper {background: #fff; padding: 5px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
+.drag-helper {background: #fff; padding: 5px; font-size: 16px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
 
 /* right col */
 
@@ -249,6 +246,10 @@ a.page-priv[href]:active {background-color: #8699ab}
 :not([data-kept])>*>.page-who-pics>.me,
 :not([data-kept])>*>.page-who-text>.keep-you,
 .page-who-text>.keep-private {display: none}
+[data-kept]>*>*>.keep-friends::before,
+[data-kept]>*>*>.keep-others::before,
+.page-who-text>.keep-friends+.keep-others::before {content: "+ "}
+:not([data-kept])>*>*>.keep-you+.keep-kept-this::before {content: "Nobody has "}
 .page-coll-list {margin-top: 10px}
 .page-coll-list>li {display: inline-block; line-height: 24px; vertical-align: top}
 .page-coll {position: relative; overflow: hidden; white-space: nowrap; background-color: #b8c5d2; margin: 0 3px 3px 0; font-size: 13px; line-height: 24px; -webkit-font-smoothing: antialiased}
