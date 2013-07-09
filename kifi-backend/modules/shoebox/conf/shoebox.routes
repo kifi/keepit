@@ -329,7 +329,10 @@ GET     /internal/shoebox/database/socialUserInfosByUserId @com.keepit.controlle
 GET     /internal/shoebox/database/sessionByExternalId @com.keepit.controllers.shoebox.ShoeboxController.getSessionByExternalId(sessionId: ExternalId[UserSession])
 
 POST    /internal/shoebox/channel/user                @com.keepit.controllers.shoebox.ShoeboxController.userChannelFanout()
+POST    /internal/shoebox/channel/userBroadcast       @com.keepit.controllers.shoebox.ShoeboxController.userChannelBroadcastFanout()
+POST    /internal/shoebox/channel/userCount           @com.keepit.controllers.shoebox.ShoeboxController.userChannelCountFanout()
 POST    /internal/shoebox/channel/uri                 @com.keepit.controllers.shoebox.ShoeboxController.uriChannelFanout()
+POST    /internal/shoebox/channel/uriCount            @com.keepit.controllers.shoebox.ShoeboxController.uriChannelCountFanout()
 
 
 

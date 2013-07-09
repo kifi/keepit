@@ -34,7 +34,7 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
   var leader: Option[ServiceInstance] = None
 
   override def toString(): String = s"""Service Cluster of $serviceType:
-    instances.toString"""
+    ${instances.toString}"""
 
   //using round robin
   def nextService(): Option[ServiceInstance] = {

@@ -42,7 +42,7 @@ case class ShoeboxDevModule() extends ShoeboxModule(
   discoveryModule = DevDiscoveryModule(),
   healthCheckModule = ProdHealthCheckModule(),
   httpClientModule = ProdHttpClientModule(),
-
+  shoeboxServiceClientModule = ProdShoeboxServiceClientModule(),
 
   // Shoebox Functional Modules
   slickModule = ShoeboxSlickModule(),

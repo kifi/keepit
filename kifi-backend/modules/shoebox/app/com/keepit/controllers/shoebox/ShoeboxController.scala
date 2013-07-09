@@ -310,7 +310,17 @@ class ShoeboxController @Inject() (
     val userId = Id[User]((req \ "userId").as[Long])
     val msg = (req \ "msg").asInstanceOf[JsArray]
 
-    Ok(userChannel.pushNoFanout(userId, msg))
+    Ok(userChannel.pushNoFanout(userId, msg).toString)
+  }
+
+  def userChannelBroadcastFanout() = Action { request =>
+    val req = request.body.asJson.get.asInstanceOf[JsArray]
+
+    Ok(userChannel.broadcastNoFanout(req).toString)
+  }
+
+  def userChannelCountFanout() = Action { request =>
+    Ok(userChannel.localClientCount.toString)
   }
 
   def uriChannelFanout() = Action { request =>
@@ -318,7 +328,12 @@ class ShoeboxController @Inject() (
     val uri = (req \ "uri").as[String]
     val msg = (req \ "msg").asInstanceOf[JsArray]
 
-    Ok(uriChannel.pushNoFanout(uri, msg))
+    Ok(uriChannel.pushNoFanout(uri, msg).toString)
+  }
+
+
+  def uriChannelCountFanout() = Action { request =>
+    Ok(uriChannel.localClientCount.toString)
   }
 
 

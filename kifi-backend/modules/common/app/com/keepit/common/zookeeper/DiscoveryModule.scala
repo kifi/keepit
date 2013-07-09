@@ -43,7 +43,6 @@ case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
   @Singleton
   @Provides
   def serviceDiscovery(services: FortyTwoServices, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo]): ServiceDiscovery = {
-      //todo: have a dedicated host for zk (instead of using localhost)
       val servers = current.configuration.getString("zookeeper.servers").get
       val zk = new ZooKeeperClientImpl(servers, 2000,
         Some({zk1 => println(s"in callback, got $zk1")}))
@@ -78,12 +77,17 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
 
   @Singleton
   @Provides
-  def serviceDiscovery(services: FortyTwoServices, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo], cluster: ServiceCluster): ServiceDiscovery =
-    new ServiceDiscovery {
+  def serviceDiscovery(services: FortyTwoServices, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo], cluster: ServiceCluster): ServiceDiscovery = {
+    current.configuration.getString("zookeeper.servers").map({ servers =>
+      val zk = new ZooKeeperClientImpl(servers, 2000,
+        Some({zk1 => println(s"in callback, got $zk1")}))
+      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider)
+    }).getOrElse(new ServiceDiscovery {
       def serviceCluster(serviceType: ServiceType): ServiceCluster = cluster
       def register() = Node("me")
       def isLeader() = true
-    }
+    })
+  }
 }
 
 case class DevDiscoveryModule() extends LocalDiscoveryModule(ServiceType.DEV_MODE)

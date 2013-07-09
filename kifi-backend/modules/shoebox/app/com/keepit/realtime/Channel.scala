@@ -17,6 +17,7 @@ import scala.concurrent.duration._
 import play.modules.statsd.api.Statsd
 import scala.concurrent.{Promise, Future}
 import com.keepit.shoebox.ShoeboxServiceClient
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /** A Channel, which accepts pushed messages, and manages connections to it.
   */
@@ -90,15 +91,24 @@ trait ChannelManager[T, S <: Channel] {
     */
   def pushNoFanout(id: T, msg: JsArray): Int
 
-  /** Broadcast a message to all channels managed by this ChannelManager.
+  /** Broadcast a message to all local channels managed by this ChannelManager.
    *
-   *  The message will be sent to all channels, and will return the number of channels the message was sent to.
+   *  The message will be sent to all local channels, and will return the number of channels the message was sent to.
    */
-  def broadcast(msg: JsArray): Int
+  def broadcastNoFanout(msg: JsArray): Int
+
+  /** Broadcast a message to all channels managed by this ChannelManager, and fanout the message to other clients.
+    *
+    *  The message will be sent to all local and remote channels, and will return a
+    *  future to the number of channels the message was sent to.
+    */
+  def broadcast(msg: JsArray): Future[Int]
 
   /** Returns the number of currently connected clients.
    */
-  def clientCount: Int
+  def localClientCount: Int
+
+  def globalClientCount: Future[Int]
 
   /** Returns whether a client is connected or not to a given channel.
    */
@@ -180,11 +190,24 @@ abstract class ChannelManagerImpl[T, S <: Channel](name: String, creator: T => S
 
   def fanout(id: T, msg: JsArray): Future[Int]
 
-  def broadcast(msg: JsArray): Int = {
+  def broadcastNoFanout(msg: JsArray): Int = {
     channels.map(_._2.push(msg)).sum
   }
 
-  def clientCount: Int = {
+  def broadcastFanout(msg: JsArray): Future[Int]
+
+  def broadcast(msg: JsArray): Future[Int] = {
+    val localTotal = broadcastNoFanout(msg)
+    broadcastFanout(msg).map(t => t + localTotal)
+  }
+
+  def clientCountFanout(): Future[Int]
+
+  def globalClientCount: Future[Int] = {
+    clientCountFanout.map(_ + localClientCount)
+  }
+
+  def localClientCount: Int = {
     channels.map(_._2.size).sum
   }
 
@@ -210,6 +233,14 @@ class UserSpecificChannel(id: Id[User]) extends ChannelImpl(id)
     Future.sequence(shoeboxServiceClient.userChannelFanout(id, msg)).map(_.sum)
   }
 
+  def broadcastFanout(msg: JsArray): Future[Int] = {
+    Future.sequence(shoeboxServiceClient.userChannelBroadcastFanout(msg)).map(_.sum)
+  }
+
+  def clientCountFanout(): Future[Int] = {
+    Future.sequence(shoeboxServiceClient.userChannelCountFanout()).map(_.sum)
+  }
+
   def closeAllChannels() = {
     channels.map({ case (id, chan) =>
       chan.map({ case (_, playChannel) => playChannel.eofAndEnd() })
@@ -222,14 +253,23 @@ class UserSpecificChannel(id: Id[User]) extends ChannelImpl(id)
 class UriSpecificChannel(uri: String) extends ChannelImpl(uri)
 @Singleton class UriChannel @Inject() (shoeboxServiceClient: ShoeboxServiceClient) extends ChannelManagerImpl("uri", (uri: String) => new UriSpecificChannel(uri)) {
 
+
+  def broadcastFanout(msg: JsArray): Future[Int] = {
+    Promise.successful(0).future
+  }
+
+  def clientCountFanout(): Future[Int] = {
+    Future.sequence(shoeboxServiceClient.uriChannelCountFanout()).map(_.sum)
+  }
+
   def fanout(id: String, msg: JsArray): Future[Int] = {
     Future.sequence(shoeboxServiceClient.uriChannelFanout(id, msg)).map(_.sum)
   }
 }
 
 trait ChannelPlugin extends Plugin {
-  def reportUserClientCount(): Int
-  def reportURIClientCount(): Int
+  def reportUserClientCount(): Future[Int]
+  def reportURIClientCount(): Future[Int]
 }
 
 @Singleton
@@ -253,16 +293,19 @@ class ChannelPluginImpl @Inject() (
   }
 
   def reportUserClientCount() = {
-    val count = userChannel.clientCount
-    log.info(s"[userChannel] $count active connections")
-    Statsd.gauge("websocket.channel.user.client", count)
-    count
+    userChannel.globalClientCount.map { count =>
+      log.info(s"[userChannel] $count active connections")
+      Statsd.gauge("websocket.channel.user.client", count)
+      count
+    }
   }
 
   def reportURIClientCount() = {
-    val count = uriChannel.clientCount
-    Statsd.gauge("websocket.channel.uri.client", count)
-    count
+    uriChannel.globalClientCount.map { count =>
+      val count = uriChannel.localClientCount
+      Statsd.gauge("websocket.channel.uri.client", count)
+      count
+    }
   }
 }
 

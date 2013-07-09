@@ -84,7 +84,10 @@ object Shoebox extends Service {
     def getSocialUserInfosByUserId(id: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/socialUserInfosByUserId", Param("id", id))
     def getSessionByExternalId(sessionId: ExternalId[UserSession]) = ServiceRoute(GET, "/internal/shoebox/database/sessionByExternalId", Param("sessionId", sessionId))
     def userChannelFanout() = ServiceRoute(POST, "/internal/shoebox/channel/user")
+    def userChannelBroadcastFanout() = ServiceRoute(POST, "/internal/shoebox/channel/userBroadcast")
+    def userChannelCountFanout() = ServiceRoute(POST, "/internal/shoebox/channel/userCount")
     def uriChannelFanout() = ServiceRoute(POST, "/internal/shoebox/channel/uri")
+    def uriChannelCountFanout() = ServiceRoute(POST, "/internal/shoebox/channel/uriCount")
   }
 }
 
