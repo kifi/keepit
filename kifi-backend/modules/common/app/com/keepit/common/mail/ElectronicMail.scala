@@ -1,15 +1,9 @@
 package com.keepit.common.mail
 
-import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.LargeString._
 import com.keepit.common.time._
-import java.security.SecureRandom
-import java.sql.Connection
 import org.joda.time.DateTime
-import play.api.Play.current
 import com.keepit.model.User
 
 case class ElectronicMailMessageId(id: String) {

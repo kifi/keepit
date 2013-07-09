@@ -1,20 +1,19 @@
 package com.keepit.search
 
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.inject._
 import com.keepit.model.ExperimentTypes.NO_SEARCH_EXPERIMENTS
-import com.keepit.test.DeprecatedEmptyApplication
+import com.keepit.test.TestInjector
 import org.specs2.mutable.Specification
-import play.api.Play.current
 import play.api.test.Helpers._
 import com.keepit.model.User
 import com.keepit.model.UserExperiment
-import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
+import com.keepit.shoebox.{FakeShoeboxServiceModule, FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
+import com.google.inject.Injector
 
-class SearchConfigTest extends Specification with ApplicationInjector {
+class SearchConfigTest extends Specification with TestInjector {
   "The search configuration" should {
     "load defaults correctly" in {
-      running(new DeprecatedEmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
+      withCustomInjector(FakeShoeboxServiceModule()) { implicit injector: Injector =>
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchConfigManager =
           new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
@@ -27,7 +26,7 @@ class SearchConfigTest extends Specification with ApplicationInjector {
       }
     }
     "load overrides for experiments" in {
-      running(new DeprecatedEmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
+      withCustomInjector(FakeShoeboxServiceModule()) { implicit injector: Injector =>
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 
@@ -62,7 +61,7 @@ class SearchConfigTest extends Specification with ApplicationInjector {
       }
     }
     "load correct override based on weights" in {
-      running(new DeprecatedEmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
+      withCustomInjector(FakeShoeboxServiceModule()) { implicit injector: Injector =>
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 
@@ -94,7 +93,7 @@ class SearchConfigTest extends Specification with ApplicationInjector {
       }
     }
     "not get configs from inactive experiments" in {
-      running(new DeprecatedEmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
+      withCustomInjector(FakeShoeboxServiceModule()) { implicit injector: Injector =>
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 
@@ -118,7 +117,7 @@ class SearchConfigTest extends Specification with ApplicationInjector {
       }
     }
     "ignore experiments for users excluded from experiments" in {
-      running(new DeprecatedEmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
+      withCustomInjector(FakeShoeboxServiceModule()) { implicit injector: Injector =>
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 

@@ -25,7 +25,6 @@ class TopicModelController  @Inject() (
 
   val uriTopicHelper = new UriTopicHelper
   val userTopicHelper = new UserTopicByteArrayHelper
-
   def currentAccessor = modelAccessor.getActiveAccessor
 
   // dangerous operation ! Test purpose only. This interface will be removed soon.

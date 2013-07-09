@@ -13,10 +13,10 @@ trait UserSessionRepo extends Repo[UserSession] with ExternalIdColumnFunction[Us
 
 @Singleton
 class UserSessionRepoImpl @Inject() (
-                                      val db: DataBaseComponent,
-                                      val clock: Clock,
-                                      val externalIdCache: UserSessionExternalIdCache
-                                      ) extends DbRepo[UserSession] with UserSessionRepo with ExternalIdColumnDbFunction[UserSession] with Logging {
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val externalIdCache: UserSessionExternalIdCache
+) extends DbRepo[UserSession] with UserSessionRepo with ExternalIdColumnDbFunction[UserSession] with Logging {
 
   import DBSession._
   import FortyTwoTypeMappers._

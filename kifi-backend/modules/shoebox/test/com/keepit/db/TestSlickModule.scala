@@ -1,9 +1,11 @@
 package com.keepit.common.db
 
 import com.google.inject.{Provides, Singleton}
-import com.keepit.common.db.slick.{DbExecutionContext, H2, SlickSessionProvider, SlickSessionProviderImpl}
+import com.keepit.common.db.slick._
 import scala.slick.session.{Database => SlickDatabase}
 import scala.concurrent.ExecutionContext.Implicits.{global => globalExecutionContext}
+import com.keepit.common.db.slick.DbExecutionContext
+import com.keepit.common.db.TestSlickSessionProvider
 
 case class TestSlickModule(dbInfo: DbInfo) extends SlickModule(dbInfo) {
 

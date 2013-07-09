@@ -1,4 +1,4 @@
-package com.keepit.common.db
+package com.keepit.common.db.slick
 
 import scala.slick.lifted.DDL
 import scala.slick.session.{Database => SlickDatabase}

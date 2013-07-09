@@ -22,6 +22,7 @@ class TopicUpdater @Inject() (
   articleStore: ArticleStore,
   modelAccessor: SwitchableTopicModelAccessor
 ) extends Logging {
+
   def getAccessor(useActive: Boolean) = if (useActive) modelAccessor.getActiveAccessor else modelAccessor.getInactiveAccessor
   val commitBatchSize = 100
   val fetchSize = 5000

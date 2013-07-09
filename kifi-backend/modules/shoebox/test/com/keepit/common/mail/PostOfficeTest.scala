@@ -4,11 +4,11 @@ import org.specs2.mutable.Specification
 
 import com.keepit.test._
 
-class PostOfficeTest extends Specification with DeprecatedTestDBRunner {
+class PostOfficeTest extends Specification with ShoeboxTestInjector {
 
   "LocalPostOffice" should {
     "persist and load email" in {
-      withDB(FakeMailModule()) { implicit injector =>
+      withDb(FakeMailModule()) { implicit injector =>
         val (mail1, outbox) = db.readWrite { implicit s =>
           val mail1 = inject[LocalPostOffice].sendMail(ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.TEAM), subject = "foo 1", htmlBody = "some body in html 1", category = PostOffice.Categories.HEALTHCHECK))
           (mail1, inject[FakeOutbox])

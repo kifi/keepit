@@ -1,23 +1,18 @@
 package com.keepit.scraper
 
 import org.specs2.mutable._
-import scala.util.Random
 import com.keepit.model._
-import com.keepit.inject._
-import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
-import play.api.Play.current
-import play.api.test.Helpers._
-import com.keepit.test.DeprecatedEmptyApplication
+import com.keepit.test.ShoeboxTestInjector
 import javax.xml.bind.DatatypeConverter._
+import com.google.inject.Injector
 
-class DuplicateDocumentDetectionTest extends Specification with ApplicationInjector {
+class DuplicateDocumentDetectionTest extends Specification with ShoeboxTestInjector {
 
   "Signature" should {
 
     "find similar documents of different thresholds" in {
-      running(new DeprecatedEmptyApplication()) {
+      withDb() { implicit injector: Injector =>
 
         val builder1 = new SignatureBuilder(3)
         val builder2 = new SignatureBuilder(3)
