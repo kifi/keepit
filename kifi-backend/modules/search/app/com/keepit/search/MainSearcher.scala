@@ -258,10 +258,14 @@ class MainSearcher(
 
         if (numCollectStats > 0 && sharingUsers.size > 0) {
           val createdAt = myUriEdgeAccessor.getCreatedAt(h.id)
-          val sharingUserIdSet = sharingUsers.destIdLongSet
-          val earlyKeepersUserIdSet = sharingUserIdSet.filter{ f => friendsUriEdgeAccessors(f).getCreatedAt(h.id) < createdAt }
-          friendStats.add(sharingUserIdSet, h.score)
-          friendStats.add(earlyKeepersUserIdSet, h.score * 0.5f)
+          sharingUsers.destIdLongSet.foreach{ f =>
+            val keptTime = friendsUriEdgeAccessors(f).getCreatedAt(h.id)
+            if (keptTime < createdAt) {
+              friendStats.add(f, h.score * 1.5f) // an early keeper gets more credit
+            } else {
+              friendStats.add(f, h.score)
+            }
+          }
           numCollectStats -= 1
         }
 
@@ -292,10 +296,12 @@ class MainSearcher(
 
         var recencyScoreVal = 0.0f
         if (numCollectStats > 0) {
-          val sharingUserIdSet = sharingUsers.destIdLongSet
-          val introducedAt = sharingUserIdSet.map{ f => friendsUriEdgeAccessors(f).getCreatedAt(h.id) }.min // oldest keep time
+          val introducedAt = sharingUsers.destIdLongSet.foldLeft(Long.MaxValue){ (t, f) =>
+            friendStats.add(f, h.score)
+            val keptTime = friendsUriEdgeAccessors(f).getCreatedAt(h.id)
+            min(t, keptTime)
+          }
           recencyScoreVal = recencyScore(introducedAt)
-          friendStats.add(sharingUserIdSet, h.score)
           numCollectStats -= 1
         }
 

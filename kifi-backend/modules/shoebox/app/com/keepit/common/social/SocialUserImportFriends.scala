@@ -40,7 +40,8 @@ class SocialUserImportFriends @Inject() (
   private def getIfUpdateNeeded(friend: SocialUserInfo)(implicit s: RSession): Option[SocialUserInfo] = {
     repo.getOpt(friend.socialId, friend.networkType) match {
       case Some(existing) if existing.copy(
-        fullName = friend.fullName, pictureUrl = friend.pictureUrl, profileUrl = friend.profileUrl) != existing =>
+          fullName = friend.fullName, pictureUrl = friend.pictureUrl, profileUrl = friend.profileUrl) != existing &&
+          friend.fullName.nonEmpty /* LinkedIn API sometimes sends us bad data... */ =>
         Some(existing.copy(
           fullName = friend.fullName,
           pictureUrl = friend.pictureUrl,
