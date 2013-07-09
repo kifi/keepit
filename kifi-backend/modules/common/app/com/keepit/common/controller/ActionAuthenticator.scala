@@ -9,7 +9,6 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.URI
 import com.keepit.common.service.FortyTwoServices
-import com.keepit.common.social._
 import com.keepit.model._
 import play.api.i18n.Messages
 import play.api.libs.json.JsNumber
@@ -19,6 +18,7 @@ import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent.duration._
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.Future
+import com.keepit.social.{SocialNetworkType, SocialId}
 
 case class ReportedException(val id: ExternalId[HealthcheckError], val cause: Throwable) extends Exception(id.toString, cause)
 

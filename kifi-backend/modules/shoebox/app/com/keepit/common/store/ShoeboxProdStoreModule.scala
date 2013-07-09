@@ -4,10 +4,10 @@ import com.keepit.inject.AppScoped
 import com.google.inject.{Provider, Provides, Singleton}
 import play.api.Play._
 import com.amazonaws.services.s3.AmazonS3
-import com.keepit.common.social.{InMemorySocialUserRawInfoStoreImpl, S3SocialUserRawInfoStoreImpl, SocialUserRawInfoStore}
 import com.keepit.common.analytics._
 import com.keepit.common.analytics.reports.{InMemoryReportStoreImpl, S3ReportStoreImpl, ReportStore}
 import com.mongodb.casbah.MongoConnection
+import com.keepit.social.{InMemorySocialUserRawInfoStoreImpl, S3SocialUserRawInfoStoreImpl, SocialUserRawInfoStore}
 
 case class ShoeboxProdStoreModule() extends ProdStoreModule {
   def configure() {

@@ -4,8 +4,9 @@ import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 
 import com.keepit.common.controller.AuthenticatedRequest
-import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule, SocialId}
-import com.keepit.common.social.SocialNetworks.FACEBOOK
+import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule}
+import com.keepit.social.{SocialId, SocialNetworks}
+import SocialNetworks.FACEBOOK
 import com.keepit.common.time._
 import com.keepit.model.ExperimentTypes.ADMIN
 import com.keepit.model.SocialUserInfo

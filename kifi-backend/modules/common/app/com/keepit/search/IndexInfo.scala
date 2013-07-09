@@ -1,4 +1,4 @@
-package com.keepit.common.search
+package com.keepit.search
 
 import com.keepit.common.db.{SequenceNumber, Id}
 import com.keepit.model.{NormalizedURI, User}

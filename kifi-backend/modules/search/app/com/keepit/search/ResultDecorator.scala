@@ -1,7 +1,6 @@
 package com.keepit.search
 
 import com.keepit.common.db.Id
-import com.keepit.common.social.BasicUser
 import com.keepit.model._
 import com.keepit.search.index.Analyzer
 import com.keepit.search.index.DefaultAnalyzer
@@ -18,6 +17,7 @@ import java.io.StringReader
 import scala.collection.immutable.SortedMap
 import com.keepit.search.index.SymbolDecompounder
 import com.keepit.common.logging.Logging
+import com.keepit.social.BasicUser
 
 trait ResultDecorator {
   def decorate(resultSet: ArticleSearchResult): Future[Seq[PersonalSearchResult]]

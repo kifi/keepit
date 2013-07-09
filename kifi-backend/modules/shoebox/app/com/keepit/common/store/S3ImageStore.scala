@@ -14,7 +14,6 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.{HealthcheckPlugin, Healthcheck}
 import com.keepit.common.logging.Logging
-import com.keepit.common.social.SocialNetworks
 import com.keepit.common.time._
 import com.keepit.common.time.parseStandardTime
 import com.keepit.model.SocialUserInfo
@@ -23,6 +22,7 @@ import com.keepit.model.User
 import com.keepit.model.UserValueRepo
 import play.api.libs.ws.WS
 import com.keepit.common.net.URI
+import com.keepit.social.SocialNetworks
 
 object S3UserPictureConfig {
   val ImageSizes = Seq(100, 200)

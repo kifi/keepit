@@ -5,6 +5,7 @@ import com.keepit.common.db.slick._
 import com.keepit.test.ShoeboxTestInjector
 import com.keepit.model._
 import com.google.inject.Injector
+import com.keepit.social.{SocialNetworks, SocialId}
 
 class ThreadInfoTest extends Specification with ShoeboxTestInjector {
 

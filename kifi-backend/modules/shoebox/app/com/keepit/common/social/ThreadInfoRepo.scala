@@ -5,6 +5,7 @@ import com.keepit.model._
 import com.keepit.common.logging.Logging
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.social.{ThreadInfo, BasicUser}
 
 class ThreadInfoRepo @Inject() (
   commentRecipientRepo: CommentRecipientRepo,

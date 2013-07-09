@@ -1,10 +1,9 @@
 package com.keepit.shoebox
 
 import com.keepit.common.cache.CacheModule
-import com.keepit.social.SecureSocialModule
+import com.keepit.social.{SocialGraphModule, SecureSocialModule}
 import com.keepit.search.SearchServiceClientModule
 import com.keepit.common.mail.MailModule
-import com.keepit.common.social.SocialGraphModule
 import com.keepit.common.analytics.AnalyticsModule
 import com.keepit.learning.topicmodel.TopicModelModule
 import com.keepit.model.{BrowsingHistoryModule, ClickHistoryModule, SliderHistoryTrackerModule}

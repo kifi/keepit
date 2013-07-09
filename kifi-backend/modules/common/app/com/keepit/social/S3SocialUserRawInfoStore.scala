@@ -1,21 +1,9 @@
-package com.keepit.common.social
+package com.keepit.social
 
-import scala.collection.mutable.{Map => MutableMap}
 import com.keepit.common.db.Id
-import com.keepit.serializer.ArticleSerializer
-import com.keepit.inject._
 import com.keepit.common.store._
 import com.keepit.model.SocialUserInfo
-import com.amazonaws.auth._
 import com.amazonaws.services.s3._
-import com.amazonaws.services.s3.model.ObjectMetadata
-import com.amazonaws.AmazonClientException
-import com.amazonaws.AmazonServiceException
-import com.amazonaws.services.s3.model.AmazonS3Exception
-import com.amazonaws.services.s3.model.S3Object
-import java.io.{InputStream, ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
-import java.lang.UnsupportedOperationException
-import play.api.Play.current
 import play.api.libs.json.Format
 import com.keepit.serializer.SocialUserRawInfoSerializer
 

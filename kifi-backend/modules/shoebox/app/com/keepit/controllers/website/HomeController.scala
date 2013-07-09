@@ -7,7 +7,6 @@ import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick._
 import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.{ElectronicMail, PostOffice, LocalPostOffice}
-import com.keepit.common.social.{SocialGraphPlugin, SocialNetworkType, SocialNetworks}
 import com.keepit.model._
 import com.keepit.common.service.FortyTwoServices
 
@@ -15,6 +14,7 @@ import play.api.Play.current
 import play.api._
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
+import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialGraphPlugin}
 
 @Singleton
 class HomeController @Inject() (db: Database,

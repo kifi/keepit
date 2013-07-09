@@ -14,6 +14,7 @@ import com.keepit.model._
 import com.keepit.realtime.UserChannel
 
 import play.api.libs.json.Json
+import com.keepit.social.{SocialNetworkType, SocialId}
 
 object UserConnectionCreator {
   private val UpdatedUserConnectionsKey = "updated_user_connections"

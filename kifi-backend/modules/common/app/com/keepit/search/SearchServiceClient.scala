@@ -14,7 +14,6 @@ import scala.concurrent.Future
 import com.keepit.serializer.UriLabelSerializer
 import com.keepit.common.routes.Search
 import com.keepit.common.routes.Common
-import com.keepit.common.search.{ResultClicked, SharingUserInfo, IndexInfo}
 import scala.concurrent.Promise
 import com.keepit.common.healthcheck.BenchmarkResults
 import play.api.libs.json.JsArray

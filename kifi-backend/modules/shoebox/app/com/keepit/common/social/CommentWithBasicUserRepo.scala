@@ -3,6 +3,7 @@ package com.keepit.common.social
 import com.google.inject.Inject
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.model.{CommentPermissions, CommentRecipientRepo, Comment}
+import com.keepit.social.{CommentWithBasicUserCache, CommentWithBasicUserKey, CommentWithBasicUser}
 
 class CommentWithBasicUserRepo @Inject() (basicUserRepo: BasicUserRepo, commentRecipientRepo: CommentRecipientRepo, commentCache: CommentWithBasicUserCache) {
   def load(comment: Comment)(implicit session: RSession): CommentWithBasicUser = commentCache.getOrElse(CommentWithBasicUserKey(comment.id.get)) {

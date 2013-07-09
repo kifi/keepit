@@ -11,6 +11,7 @@ import com.keepit.test._
 
 import play.api.test.Helpers._
 import securesocial.core._
+import com.keepit.social.{SocialNetworks, SocialId}
 
 class LinkedInSocialGraphTest extends Specification with ShoeboxApplicationInjector {
 

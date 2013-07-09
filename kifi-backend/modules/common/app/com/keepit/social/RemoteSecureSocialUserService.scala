@@ -8,7 +8,6 @@ import com.keepit.common.akka.MonitoredAwait
 import play.api.Application
 import securesocial.core._
 import com.keepit.model.{UserSessionStates, UserSession}
-import com.keepit.common.social.{SocialGraphPlugin, SocialNetworkType, SocialId}
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
 import scala.Some
