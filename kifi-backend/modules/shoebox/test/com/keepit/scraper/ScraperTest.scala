@@ -1,35 +1,26 @@
 package com.keepit.scraper
 
-import play.api.Play.current
-import com.google.inject.{Inject, ImplementedBy, Singleton}
-import com.keepit.inject._
+import com.google.inject.Injector
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.model._
-import com.keepit.model.NormalizedURIStates._
 import com.keepit.search.ArticleStore
-import com.keepit.search.Lang
-import com.keepit.test.DeprecatedEmptyApplication
+import com.keepit.test.ShoeboxTestInjector
 import com.keepit.scraper.extractor.Extractor
 import com.keepit.scraper.extractor.TikaBasedExtractor
 import org.specs2.mutable._
-import play.api.libs.json.Json
-import play.api.test._
-import play.api.test.Helpers._
 import org.apache.http.HttpStatus
 import org.apache.http.protocol.BasicHttpContext
 import org.apache.tika.sax.BodyContentHandler
 import org.joda.time.DateTime
-import scala.annotation.unchecked
 import java.io.ByteArrayOutputStream
 import java.io.ByteArrayInputStream
 import java.io.OutputStreamWriter
 import com.keepit.common.store.FakeS3ScreenshotStore
 
-class ScraperTest extends Specification with ApplicationInjector {
+class ScraperTest extends Specification with ShoeboxTestInjector {
   val config = ScraperConfig(
     minInterval = 18.0d, //hours
     maxInterval = 30.0d, //hours
@@ -42,7 +33,7 @@ class ScraperTest extends Specification with ApplicationInjector {
 
   "Scraper" should {
     "get a article from an existing website" in {
-      running(new DeprecatedEmptyApplication()) {
+      withDb() { implicit injector =>
         val store = new FakeArticleStore()
         val scraper = getMockScraper(store)
         val url = "http://www.keepit.com/existing"
@@ -59,7 +50,7 @@ class ScraperTest extends Specification with ApplicationInjector {
     }
 
     "throw an error from a non-existing website" in {
-      running(new DeprecatedEmptyApplication()) {
+      withDb() { implicit injector =>
         val store = new FakeArticleStore()
         val scraper = getMockScraper(store)
         val url = "http://www.keepit.com/missing"
@@ -73,7 +64,7 @@ class ScraperTest extends Specification with ApplicationInjector {
     }
 
     "fetch allActive" in {
-      running(new DeprecatedEmptyApplication()) {
+      withDb() { implicit injector =>
         inject[Database].readWrite { implicit s =>
           val uriRepo = inject[NormalizedURIRepo]
           val scrapeRepo = inject[ScrapeInfoRepo]
@@ -90,7 +81,7 @@ class ScraperTest extends Specification with ApplicationInjector {
     }
 
     "fetch SCRAPE_WANTED uris and scrape them" in {
-      running(new DeprecatedEmptyApplication()) {
+      withDb() { implicit injector =>
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         val (uri1, uri2, info1, info2) = inject[Database].readWrite { implicit s =>
@@ -117,7 +108,7 @@ class ScraperTest extends Specification with ApplicationInjector {
 
     "adjust scrape schedule" in {
       // DEV should be using the default ScraperConfig
-      running(new DeprecatedEmptyApplication()) {
+      withDb() { implicit injector =>
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         var (uri1, uri2, info1, info2) = inject[Database].readWrite { implicit s =>
@@ -188,7 +179,7 @@ class ScraperTest extends Specification with ApplicationInjector {
 
     "not scrape a not-modified page" in {
       // DEV should be using the default ScraperConfig
-      running(new DeprecatedEmptyApplication()) {
+      withDb() { implicit injector =>
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         var (uri1, info1) = inject[Database].readWrite { implicit s =>
@@ -232,7 +223,7 @@ class ScraperTest extends Specification with ApplicationInjector {
     }
 
     "update scrape schedule upon state change" in {
-      running(new DeprecatedEmptyApplication()) {
+      withDb() { implicit injector =>
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         var info = inject[Database].readWrite { implicit s =>
@@ -251,7 +242,7 @@ class ScraperTest extends Specification with ApplicationInjector {
     }
   }
 
-  private[this] def scrapeAndUpdateScrapeInfo(info: ScrapeInfo, scraper: Scraper): ScrapeInfo = {
+  private[this] def scrapeAndUpdateScrapeInfo(info: ScrapeInfo, scraper: Scraper)(implicit injector: Injector): ScrapeInfo = {
     val repo = inject[ScrapeInfoRepo]
     inject[Database].readWrite { implicit s => repo.save(info.withNextScrape(info.lastScrape)) }
     scraper.run
@@ -295,7 +286,7 @@ class ScraperTest extends Specification with ApplicationInjector {
     }
   }
 
-  def getMockScraper(articleStore: ArticleStore, mockHttpFetcher: HttpFetcher = getMockHttpFetcher) = {
+  def getMockScraper(articleStore: ArticleStore, mockHttpFetcher: HttpFetcher = getMockHttpFetcher)(implicit injector: Injector) = {
     new Scraper(inject[Database], mockHttpFetcher, articleStore, config,
       inject[ScrapeInfoRepo], inject[NormalizedURIRepo], inject[HealthcheckPlugin],
       inject[BookmarkRepo], inject[UnscrapableRepo], new FakeS3ScreenshotStore) {

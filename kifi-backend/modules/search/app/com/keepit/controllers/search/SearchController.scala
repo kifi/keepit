@@ -3,7 +3,6 @@ package com.keepit.controllers.search
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import com.keepit.search.ResultClickBoosts
 import com.keepit.search._

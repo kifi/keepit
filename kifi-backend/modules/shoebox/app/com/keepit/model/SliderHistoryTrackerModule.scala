@@ -1,12 +1,10 @@
 package com.keepit.model
 
-import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.{Provides, Singleton}
 import com.keepit.common.db.slick.Database
 import play.api.Play._
+import net.codingwell.scalaguice.ScalaModule
 
-trait BrowsingHistoryModule extends ScalaModule
-trait ClickHistoryModule extends ScalaModule
 trait SliderHistoryTrackerModule extends ScalaModule
 
 case class ProdSliderHistoryTrackerModule() extends SliderHistoryTrackerModule {

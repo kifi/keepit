@@ -1,7 +1,6 @@
 package com.keepit.search.comment
 
 import com.keepit.common.db._
-import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.Healthcheck.INTERNAL
 import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.net.Host

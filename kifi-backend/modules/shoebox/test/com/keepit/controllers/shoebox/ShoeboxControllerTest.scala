@@ -5,7 +5,7 @@ import org.specs2.mutable.Specification
 import com.keepit.common.db.slick._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.model._
-import com.keepit.search.Lang
+import com.keepit.search.{TestSearchServiceClientModule, Lang}
 import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
 
 import play.api.libs.json.{Json, JsNumber, JsArray}
@@ -16,7 +16,7 @@ import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.analytics.TestAnalyticsModule
-import com.keepit.common.store.FakeStoreModule
+import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.actor.TestActorSystemModule
 
 class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjector {
@@ -26,8 +26,9 @@ class ShoeboxControllerTest extends Specification with ShoeboxApplicationInjecto
     FakeMailModule(),
     FakeHttpClientModule(),
     TestAnalyticsModule(),
-    FakeStoreModule(),
-    TestActorSystemModule()
+    ShoeboxFakeStoreModule(),
+    TestActorSystemModule(),
+    TestSearchServiceClientModule()
   )
 
   def setupSomeUsers()(implicit injector: Injector) = {

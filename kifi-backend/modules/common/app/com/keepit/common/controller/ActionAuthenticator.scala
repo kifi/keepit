@@ -3,8 +3,6 @@ package com.keepit.common.controller
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.FortyTwoCookies.{ImpersonateCookie, KifiInstallationCookie}
 import com.keepit.common.db._
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.Healthcheck
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.HealthcheckPlugin

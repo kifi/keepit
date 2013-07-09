@@ -9,17 +9,17 @@ import scala.Some
 import net.codingwell.scalaguice.ScalaModule
 
 case class ClickHistory (
-                    id: Option[Id[ClickHistory]] = None,
-                    createdAt: DateTime = currentDateTime,
-                    updatedAt: DateTime = currentDateTime,
-                    state: State[ClickHistory] = ClickHistoryStates.ACTIVE,
-                    userId: Id[User],
-                    tableSize: Int,
-                    filter: Array[Byte],
-                    numHashFuncs: Int,
-                    minHits: Int,
-                    updatesCount: Int = 0
-                    ) extends Model[ClickHistory] {
+  id: Option[Id[ClickHistory]] = None,
+  createdAt: DateTime = currentDateTime,
+  updatedAt: DateTime = currentDateTime,
+  state: State[ClickHistory] = ClickHistoryStates.ACTIVE,
+  userId: Id[User],
+  tableSize: Int,
+  filter: Array[Byte],
+  numHashFuncs: Int,
+  minHits: Int,
+  updatesCount: Int = 0
+) extends Model[ClickHistory] {
   def withFilter(filter: Array[Byte]) = this.copy(filter = filter)
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withId(id: Id[ClickHistory]) = this.copy(id = Some(id))
@@ -35,3 +35,5 @@ class ClickHistoryUserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Dur
   extends BinaryCacheImpl[ClickHistoryUserIdKey, ClickHistory](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
 object ClickHistoryStates extends States[ClickHistory]
+
+trait ClickHistoryModule extends ScalaModule

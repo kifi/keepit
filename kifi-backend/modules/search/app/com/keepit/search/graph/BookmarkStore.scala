@@ -1,7 +1,6 @@
 package com.keepit.search.graph
 
 import com.keepit.common.db._
-import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.Healthcheck.INTERNAL
 import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.net.Host
@@ -17,10 +16,6 @@ import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.store.Directory
 import org.apache.lucene.util.Version
 import com.google.inject.Inject
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Await
-import scala.concurrent.duration._
-import scala.util.{Success, Failure}
 import BookmarkRecordSerializer._
 import scala.collection.mutable.ArrayBuffer
 import org.apache.lucene.util.BytesRef
