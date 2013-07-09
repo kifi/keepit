@@ -10,6 +10,7 @@ import com.keepit.common.time.zones.PT
 import com.keepit.test.{ShoeboxApplication, ShoeboxTestInjector}
 
 import play.api.test.Helpers._
+import com.keepit.FortyTwoGlobal
 
 class CollectionTest extends Specification with ShoeboxTestInjector {
 
@@ -156,6 +157,8 @@ class CollectionTest extends Specification with ShoeboxTestInjector {
     }
     "ignore case in getting elements" in {
       running(new ShoeboxApplication()) {
+        import play.api.Play.current
+        implicit val applicationInjector = current.global.asInstanceOf[FortyTwoGlobal].injector
         // TODO: figure out why this works but not withDb() - this is not even using the application injector
         val (user1, user2, bookmark1, bookmark2, coll1, coll2, coll3, coll4) = setup()
         db.readOnly { implicit s =>

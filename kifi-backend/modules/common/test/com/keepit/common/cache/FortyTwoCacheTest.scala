@@ -68,7 +68,7 @@ class TestStringCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), 
 class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
 
     "JsonCacheImpl Instance" should {
-        withCustomInjector(EhCacheCacheModule()){ implicit injector =>
+        withInjector(EhCacheCacheModule()){ implicit injector =>
             val cachePlugin = inject[FortyTwoCachePlugin]
             val cache = new TestJsonCache((cachePlugin, Duration(7, "days")))
             "yield the value TestJsonCacheData('hello', 42)" in {
@@ -83,7 +83,7 @@ class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
 
 
     "BinaryCacheImpl Instance" should {
-        withCustomInjector(EhCacheCacheModule()){ implicit injector =>
+        withInjector(EhCacheCacheModule()){ implicit injector =>
             val cachePlugin = inject[FortyTwoCachePlugin]
             val cache = new TestBinaryCache((cachePlugin, Duration(7, "days")))
             "yield the value Array[Byte](2,3,7)" in {
@@ -98,7 +98,7 @@ class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
 
 
     "PrimitiveCacheImpl Instance" should {
-        withCustomInjector(EhCacheCacheModule()){ implicit injector =>
+        withInjector(EhCacheCacheModule()){ implicit injector =>
             val cachePlugin = inject[FortyTwoCachePlugin]
             val cache = new TestPrimitiveCache((cachePlugin, Duration(7, "days")))
             "yield the value 4.2141" in {
@@ -113,7 +113,7 @@ class FortyTwoCacheTest extends Specification with DeprecatedTestInjector {
 
 
     "StringCacheImpl Instance" should {
-        withCustomInjector(EhCacheCacheModule()){ implicit injector =>
+        withInjector(EhCacheCacheModule()){ implicit injector =>
             val cachePlugin = inject[FortyTwoCachePlugin]
             val cache = new TestStringCache((cachePlugin, Duration(7, "days")))
             "yield the value 'fortytwo'" in {
