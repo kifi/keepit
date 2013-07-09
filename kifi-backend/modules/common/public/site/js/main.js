@@ -205,8 +205,11 @@ $(function() {
 		console.log("Fetching any new keeps", params);
 		$.getJSON(urlMyKeeps, params,
 			function(data) {
-				data.keeps.forEach(prepKeepForRender);
-				keepsTmpl.into($myKeeps[0]).prepend(data.keeps);
+				var keepIds = $myKeeps.find('.keep').map(getDataId).get().reduce(function(ids, id) {ids[id] = true; return ids}, {});
+				var keeps = data.keeps.filter(function(k) {return !keepIds[k.id]});
+				keeps.forEach(prepKeepForRender);
+				keepsTmpl.into($myKeeps[0]).prepend(keeps);
+				// TODO: insert this group heading if not already there
 				$myKeeps.find('.keep-group-title.today').prependTo($myKeeps);
 			});
 	}
