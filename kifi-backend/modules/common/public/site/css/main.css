@@ -160,7 +160,7 @@ input.query::-moz-placeholder {color: #99a3b3}
 .keep:not(.mine) .keep-you+.keep-kept-this::before {content: "Nobody has "; line-height: 23px}
 .keeps-loading {margin: 20px 50%; position: relative; left: -22px}
 
-.drag-helper {background: #fff; padding: 5px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
+.drag-helper {background: #fff; padding: 5px; font-size: 16px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
 
 /* right col */
 
