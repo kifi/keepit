@@ -195,12 +195,14 @@ $(function() {
 	}
 
 	function addNewKeeps() {
-		var first = $myKeeps.find('.keep').first().data('id');
-		var params = {after: first};
+		var params = {}, keepId = $myKeeps.find('.keep').first().data('id');
+		if (keepId) {
+			params.after = keepId;
+		}
 		if ($('.left-col h3.active').is('.collection')) {
 			params.collection = $('.left-col h3.active').data('id');
 		}
-		console.log("Fetching 30 keep after " + first);
+		console.log("Fetching any new keeps", params);
 		$.getJSON(urlMyKeeps, params,
 			function(data) {
 				data.keeps.forEach(prepKeepForRender);
@@ -231,6 +233,7 @@ $(function() {
 				numShown: $myKeeps.find(".keep").length,
 				numTotal: collId ? collections[collId].keeps : myKeepsCount,
 				collId: collId || undefined});
+			addNewKeeps();
 		}
 	}
 
@@ -571,10 +574,7 @@ $(function() {
 		}).addClass("no-tri");
 	}
 
-	$(".left-col>.my-keeps>a").click(function() {
-		showMyKeeps();
-		addNewKeeps();
-	});
+	$(".left-col .my-keeps>a").click(showMyKeeps.bind(null, null));
 
 	$colls.on("click", "h3.collection>a", function(e) {
 		var $a = $(this), $coll = $a.parent();
