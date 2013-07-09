@@ -84,10 +84,14 @@ class Scraper @Inject() (
         (errorURI, None)
     }
 
-  private def getIfModifiedSince(info: ScrapeInfo) = {
-    info.signature match {
-      case "" => None // no signature. this is the first time
-      case _ => Some(info.lastScrape)
+  private def getIfModifiedSince(uri: NormalizedURI, info: ScrapeInfo) = {
+    if (uri.state == NormalizedURIStates.SCRAPED) {
+      info.signature match {
+        case "" => None // no signature. this is the first time
+        case _ => Some(info.lastScrape)
+      }
+    } else {
+      None
     }
   }
 
@@ -199,7 +203,7 @@ class Scraper @Inject() (
   private def fetchArticle(normalizedUri: NormalizedURI, httpFetcher: HttpFetcher, info: ScrapeInfo): ScraperResult = {
     val url = normalizedUri.url
     val extractor = getExtractor(url)
-    val ifModifiedSince = getIfModifiedSince(info)
+    val ifModifiedSince = getIfModifiedSince(normalizedUri, info)
 
     try {
       val fetchStatus = httpFetcher.fetch(url, ifModifiedSince){ input => extractor.process(input) }
