@@ -63,8 +63,31 @@ class UserController @Inject() (db: Database,
     Ok
   }
 
-  def getAllConnections = AuthenticatedJsonAction { request =>
+  private val SitePrefNames = Set("site_left_col_width")
 
+  def getPrefs() = AuthenticatedJsonAction { request =>
+    Ok(db.readOnly { implicit s =>
+      JsObject(SitePrefNames.toSeq.map { name =>
+        name -> userValueRepo.getValue(request.userId, name).map(JsString).getOrElse(JsNull)
+      })
+    })
+  }
+
+  def savePref() = AuthenticatedJsonToJsonAction { request =>
+    val o = request.request.body
+    val name = (o \ "name").as[String]
+    val value = (o \ "value").as[String]
+    if (SitePrefNames.contains(name)) {
+      db.readWrite { implicit s =>
+        userValueRepo.setValue(request.userId, name, value)
+      }
+      Ok(o)
+    } else {
+      BadRequest(Json.obj("error" -> "name not recognized"))
+    }
+  }
+
+  def getAllConnections = AuthenticatedJsonAction { request =>
     val connections = db.readOnly { implicit conn =>
       socialUserRepo.getByUser(request.user.id.get) flatMap { su =>
         socialConnectionRepo.getSocialUserConnections(su.id.get) map { suc =>
