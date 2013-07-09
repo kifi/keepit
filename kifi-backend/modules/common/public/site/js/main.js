@@ -38,6 +38,18 @@ $(function() {
 		$pageColInner.css("height", h > 0 ? h : $(window).height());
 	}
 
+	var $leftCol = $(".left-col").resizable({
+		delay: 10,
+		handles: "e",
+		minWidth: 240, // should match CSS
+		maxWidth: 420,
+		stop: function(e, ui) {
+			console.log("[resizable:stop]");
+			// TODO: save width in px
+		}
+	});  // TODO: restore saved width
+	$leftCol.find(".ui-resizable-handle").appendTo($leftCol.find(".page-col-inner"));
+
 	var $subtitle = $(".subtitle"), subtitleTmpl = Tempo.prepare($subtitle);
 
 	$('.keep-colls').removeText();
