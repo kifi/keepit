@@ -13,6 +13,7 @@ import com.keepit.model._
 import play.api.Play.current
 import play.api._
 import play.api.mvc._
+import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialId}
 
 case class BasicUserInvitation(name: String, picture: Option[String], state: State[Invitation])
 

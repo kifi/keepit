@@ -10,7 +10,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.akka.MonitoredAwait
 import play.api.libs.json.Json
 import com.keepit.common.db.{ExternalId, Id}
-import com.keepit.common.social.BasicUser
+import com.keepit.social.BasicUser
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchHit(

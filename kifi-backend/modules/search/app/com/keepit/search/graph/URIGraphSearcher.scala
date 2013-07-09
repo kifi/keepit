@@ -3,7 +3,6 @@ package com.keepit.search.graph
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
-import com.keepit.common.search.SharingUserInfo
 import com.keepit.model.{NormalizedURI, User}
 import com.keepit.search.graph.URIGraphFields._
 import com.keepit.search.index.ArrayIdMapper
@@ -21,6 +20,7 @@ import org.apache.lucene.search.DocIdSetIterator.NO_MORE_DOCS
 import org.apache.lucene.search.Query
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration._
+import com.keepit.search.SharingUserInfo
 
 
 class URIGraphSearcher(searcher: Searcher, storeSearcher: Searcher) extends BaseGraphSearcher(searcher) with Logging {

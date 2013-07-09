@@ -4,7 +4,7 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick._
-import com.keepit.common.social.{SocialNetworks, BasicUserRepo}
+import com.keepit.common.social.{BasicUserRepo}
 import com.keepit.common.time._
 import com.keepit.model._
 

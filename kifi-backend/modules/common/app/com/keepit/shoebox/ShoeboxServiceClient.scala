@@ -17,21 +17,32 @@ import com.keepit.common.net.HttpClient
 import com.keepit.common.routes.Shoebox
 import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.service.{ServiceClient, ServiceType}
-import com.keepit.common.social.BasicUser
-import com.keepit.common.social.BasicUserUserIdCache
-import com.keepit.common.social.BasicUserUserIdKey
-import com.keepit.common.social.SocialId
-import com.keepit.common.social.SocialNetworkType
 import com.keepit.common.zookeeper._
 import com.keepit.model._
 import com.keepit.search.ActiveExperimentsCache
 import com.keepit.search.ActiveExperimentsKey
-import com.keepit.search.ArticleSearchResult
 import com.keepit.search.ArticleSearchResultFactory
 import com.keepit.search.SearchConfigExperiment
-import com.keepit.serializer._
-
 import play.api.libs.json._
+import com.keepit.social._
+import com.keepit.model.UserExperimentUserIdKey
+import com.keepit.model.ExperimentType
+import play.api.libs.json.JsArray
+import com.keepit.model.ExternalUserIdKey
+import com.keepit.model.ClickHistoryUserIdKey
+import com.keepit.model.SocialUserInfoUserKey
+import scala.Some
+import com.keepit.model.BookmarkUriUserKey
+import com.keepit.social.BasicUserUserIdKey
+import com.keepit.search.ArticleSearchResult
+import com.keepit.model.BrowsingHistoryUserIdKey
+import com.keepit.social.SocialId
+import com.keepit.model.NormalizedURIKey
+import com.keepit.model.UserConnectionKey
+import play.api.libs.json.JsObject
+import com.keepit.model.SocialUserInfoNetworkKey
+import com.keepit.model.UserSessionExternalIdKey
+import com.keepit.model.UserExternalIdKey
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX

@@ -5,7 +5,8 @@ import org.specs2.mutable.Specification
 import play.api.libs.json._
 import play.api.test.Helpers._
 import play.api.test.FakeRequest
-import com.keepit.common.social.SocialNetworks.FACEBOOK
+import com.keepit.social.{SocialId, SocialNetworks}
+import SocialNetworks.FACEBOOK
 import com.keepit.common.time._
 
 import securesocial.core._
@@ -20,7 +21,7 @@ import com.keepit.model.User
 import securesocial.core.OAuth2Info
 import com.keepit.model.SocialUserInfo
 import play.api.libs.json.JsObject
-import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule, SocialId}
+import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule}
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.net.FakeHttpClientModule
 

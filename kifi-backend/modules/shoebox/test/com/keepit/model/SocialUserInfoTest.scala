@@ -5,14 +5,13 @@ import org.specs2.mutable._
 import com.google.inject.Injector
 import com.keepit.akka.TestAkkaSystem
 import com.keepit.common.db.{TestSlickSessionProvider, Id}
-import com.keepit.common.social.SocialId
-import com.keepit.common.social.SocialNetworks
 import com.keepit.common.time._
 import com.keepit.test._
 
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import securesocial.core._
+import com.keepit.social.{SocialNetworks, SocialId}
 
 class SocialUserInfoTest extends Specification with ShoeboxTestInjector with TestAkkaSystem {
 

@@ -10,6 +10,7 @@ import com.keepit.common.net.{NonOKResponseException, HttpClient}
 import com.keepit.model.{SocialUserInfoRepo, SocialUserInfoStates, SocialUserInfo}
 
 import play.api.libs.json._
+import com.keepit.social.{SocialUserRawInfo, SocialNetworks, SocialId, SocialGraph}
 
 object FacebookSocialGraph {
   val FULL_PROFILE = "name,first_name,middle_name,last_name,gender,username,languages,installed,devices,email,picture"

@@ -18,6 +18,7 @@ import com.keepit.common.time._
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.social.BasicUser
 
 case class CommentDetails(
   id: String, // ExternalId[Comment]

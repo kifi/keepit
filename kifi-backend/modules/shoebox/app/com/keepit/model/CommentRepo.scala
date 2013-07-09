@@ -7,9 +7,9 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick.DBSession.RSession
 import org.joda.time.DateTime
 import com.keepit.common.time.Clock
-import com.keepit.common.social.{CommentWithBasicUserKey, CommentWithBasicUserCache}
 import com.keepit.common.logging.Logging
 import scala.Some
+import com.keepit.social.{CommentWithBasicUserCache, CommentWithBasicUserKey}
 
 @ImplementedBy(classOf[CommentRepoImpl])
 trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {

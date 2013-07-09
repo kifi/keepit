@@ -3,12 +3,12 @@ package com.keepit.serializer
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.common.time._
-import com.keepit.common.social.{SocialNetworkType, SocialNetworks, SocialId, SocialUserRawInfo}
 import com.keepit.search.Article
 import securesocial.core._
 import securesocial.core.AuthenticationMethod._
 import play.api.libs.json._
 import com.keepit.model.SocialUserInfo
+import com.keepit.social.{SocialUserRawInfo, SocialNetworkType, SocialId}
 
 class SocialUserRawInfoSerializer extends Format[SocialUserRawInfo] {
 
