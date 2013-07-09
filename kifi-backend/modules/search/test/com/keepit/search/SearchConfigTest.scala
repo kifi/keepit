@@ -13,7 +13,7 @@ import com.google.inject.Injector
 class SearchConfigTest extends Specification with TestInjector {
   "The search configuration" should {
     "load defaults correctly" in {
-      withCustomInjector(FakeShoeboxServiceModule()) { implicit injector: Injector =>
+      withInjector(FakeShoeboxServiceModule()) { implicit injector: Injector =>
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchConfigManager =
           new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
@@ -26,7 +26,7 @@ class SearchConfigTest extends Specification with TestInjector {
       }
     }
     "load overrides for experiments" in {
-      withCustomInjector(FakeShoeboxServiceModule()) { implicit injector: Injector =>
+      withInjector(FakeShoeboxServiceModule()) { implicit injector: Injector =>
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 
@@ -61,7 +61,7 @@ class SearchConfigTest extends Specification with TestInjector {
       }
     }
     "load correct override based on weights" in {
-      withCustomInjector(FakeShoeboxServiceModule()) { implicit injector: Injector =>
+      withInjector(FakeShoeboxServiceModule()) { implicit injector: Injector =>
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 
@@ -93,7 +93,7 @@ class SearchConfigTest extends Specification with TestInjector {
       }
     }
     "not get configs from inactive experiments" in {
-      withCustomInjector(FakeShoeboxServiceModule()) { implicit injector: Injector =>
+      withInjector(FakeShoeboxServiceModule()) { implicit injector: Injector =>
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 
@@ -117,7 +117,7 @@ class SearchConfigTest extends Specification with TestInjector {
       }
     }
     "ignore experiments for users excluded from experiments" in {
-      withCustomInjector(FakeShoeboxServiceModule()) { implicit injector: Injector =>
+      withInjector(FakeShoeboxServiceModule()) { implicit injector: Injector =>
         val fakeShoeboxServiceClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
         val searchConfigManager = new SearchConfigManager(None, inject[ShoeboxServiceClient], inject[MonitoredAwait])
 
