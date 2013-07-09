@@ -31,7 +31,6 @@ import play.api.libs.json.JsArray
 import com.keepit.model.ExternalUserIdKey
 import com.keepit.model.ClickHistoryUserIdKey
 import com.keepit.model.SocialUserInfoUserKey
-import scala.Some
 import com.keepit.model.BookmarkUriUserKey
 import com.keepit.social.BasicUserUserIdKey
 import com.keepit.search.ArticleSearchResult
