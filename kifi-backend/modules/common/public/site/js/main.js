@@ -160,7 +160,6 @@ $(function() {
 		$('.left-col .active').removeClass('active');
 		$main.attr("data-view", "search");
 		subtitleTmpl.render({searching: true});
-		// showDetails();
 		showLoading();
 		var q = $.trim($query.val());
 		$query.attr("data-q", q || null);
@@ -280,16 +279,6 @@ $(function() {
 		});
 	}
 
-	// function populateCollectionsRight() {
-	// 	$.getJSON(urlCollectionsAll, {sort: "last_kept"} ,
-	// 			function(data) {
-	// 				$('.detail .actions .collections ul li:not(.create)').remove();
-	//				for (var i in data.collections) {
-	// 					$('.detail .actions .collections ul').append('<li><input type="checkbox" data-id="'+data.collections[i].id+'" id="cb-'+data.collections[i].id+'"/><label class="long-text" for="cb-'+data.collections[i].id+'"><span></span>'+data.collections[i].name+'</label></li>');
-	//		 		}
-	// 			});
-	// }
-
 	function updateNumKeeps() {
 		$.getJSON(urlMyKeepsCount, function(data) {
 			$('.left-col .my-keeps .keep-count').text(myKeepsCount = data.numKeeps);
@@ -398,50 +387,6 @@ $(function() {
 			$collMenu.detach().find(".hover").removeClass("hover");
 		}).closest(".collection").removeClass("with-menu").each(hideCollTri);
 	}
-
-	// handle collection adding/removing from right bar
-	// $inColl.on('change', 'input[type="checkbox"]', function() {
-	// 	// remove selected keeps from collection
-	// 	var $row = $(this).closest('.row');
-	// 	var colId = $(this).data('id');
-	// 	var $keeps = $main.find(".keep.selected");
-	// 	var keepIds = $keeps.map(getDataId).get();
-	// 	$.ajax({
-	// 		url: urlCollections + "/" + colId + "/removeKeeps",
-	// 		type: "POST",
-	// 		dataType: 'json',
-	// 		data: JSON.stringify(keepIds),
-	// 		contentType: 'application/json',
-	// 		error: showMessage.bind(null, 'Could not remove keeps from collection, please try again later'),
-	// 		success: function(data) {
-	// 			console.log(data);
-	// 			$collList.find(".collection[data-id=" + colId + "]").find(".keep-count").text(collections[colId].keeps -= data.removed);
-	// 			$keeps.find(".keep-coll[data-id=" + colId + "]").remove();
-	// 			$row.remove();
-	// 		}});
-	// });
-
-	// $('.detail .actions .collections').on('change', 'input[type="checkbox"]', function() {
-	// 	// add selected keeps to collection
-	// 	var $row = $(this).closest('.row');
-	// 	var colId = $(this).data('id');
-	// 	var keeps = $main.find(".keep.selected").map(getDataId).get();
-	// 	$.ajax({
-	// 		url: urlCollections + "/" + colId + "/addKeeps",
-	// 		type: "POST",
-	// 		dataType: 'json',
-	// 		data: JSON.stringify(keeps),
-	// 		contentType: 'application/json',
-	// 		error: showMessage.bind(null, 'Could not add keeps to collection, please try again later'),
-	// 		success: function(data) {
-	// 			console.log(data);
-	// 			$('#collections-list>.collection[data-id="'+colId+'"] .keep-count').text(collections[colId].keeps += data.added);
-	// 			if (!$inColl.find("#cb1-" + colId).length) {
-	// 				inCollTmpl.append({id: colId, name: collections[colId].name});
-	// 			}
-	// 			$row.remove();
-	// 		}});
-	// });
 
 	$(document).keydown(function(e) {  // auto focus on search field when starting to type anywhere on the document
 		if (!$(e.target).is('input,textarea') && e.which >= 48 && e.which <= 90 && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -688,14 +633,6 @@ $(function() {
 		clearTimeout(hideNewCollTimeout), hideNewCollTimeout = null;
 	});
 
-	// filter collections or right bar
-	// $('.detail .collections input.find').keyup(function() {
-	// 	var re = new RegExp(this.value, "gi");
-	// 	$('.detail .collections ul li:not(.create)').each(function() {
-	// 		$(this).toggle(re.test($(this).find('label').text()));
-	// 	});
-	// });
-
 	function createCollection(name, callback) {
 		$newColl.addClass("submitted");
 		$.ajax({
@@ -774,11 +711,6 @@ $(function() {
 			$(this).remove();
 		}
 	}
-
-	// $('.detail .actions a.add').click(function() {
-	// 	$(this).toggleClass('active');
-	// 	$('.detail .collections').toggleClass('active');
-	// });
 
 	var $detail = $('.detail'), hideAddCollTimeout;
 
@@ -976,7 +908,6 @@ $(function() {
 	});
 
 	populateCollections();
-	// populateCollectionsRight();
 
 	updateNumKeeps();  // populate number of my keeps
 	showMyKeeps();     // populate all my keeps
