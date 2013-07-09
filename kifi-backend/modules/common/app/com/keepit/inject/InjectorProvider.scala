@@ -14,7 +14,7 @@ sealed trait InjectorProvider {
 
   def mode: Mode
   def module: Module
-  implicit def injector: Injector
+  def injector: Injector
 
   implicit def richInjector(injector: Injector): ScalaInjector = new ScalaInjector(injector)
 
@@ -32,7 +32,7 @@ sealed trait InjectorProvider {
     Guice.createInjector(stage, modulesWithMode: _*)
   }
 
-  def withCustomInjector[T](overridingModules: Module*)(f: Injector => T) = {
+  def withInjector[T](overridingModules: Module*)(f: Injector => T) = {
     val customModules = Modules.`override`(module).`with`(overridingModules:_*)
     val injector = createInjector(customModules)
 
@@ -62,7 +62,7 @@ trait EmptyInjector extends InjectorProvider {
    * and we don't want to instantiate it until the onStart(app: Application) is executed.
    */
 
-  implicit lazy val injector: Injector = {
+  lazy val injector: Injector = {
     if (creatingInjector.getAndSet(true)) throw new Exception("Injector is being created!")
     val injector = createInjector(module)
     _initialized.set(true)

@@ -18,17 +18,22 @@ import play.api.libs.json.Json
 
 @Singleton
 class TopicModelController  @Inject() (
-  docTopicModel: DocumentTopicModel,
-  wordTopicModel: Provider[WordTopicModel],
-  topicPlugin: TopicUpdaterPlugin,
-  topicNameMapper: Provider[TopicNameMapper],
-  userTopicRepo: UserTopicRepo,
-  topicNameRepoA: TopicNameRepoA,
   db: Database,
+  topicPlugin: TopicUpdaterPlugin,
+  modelAccessor: SwitchableTopicModelAccessor,
   actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator){
 
   val uriTopicHelper = new UriTopicHelper
   val userTopicHelper = new UserTopicByteArrayHelper
+  def currentAccessor = modelAccessor.getActiveAccessor
+
+  // dangerous operation ! Test purpose only. This interface will be removed soon.
+  def switchModel = AdminHtmlAction { implicit request =>
+    val prevFlag = modelAccessor.getCurrentFlag
+    modelAccessor.switchAccessor()
+    val currFlag = modelAccessor.getCurrentFlag
+    Ok(s"OK. topic model has been switched from ${prevFlag} to ${currFlag}. Starting to use a different model and talk to different database tables!")
+  }
 
   def resetAllTopicTables() = AdminHtmlAction{ implicit request =>
     topicPlugin.reset()
@@ -42,13 +47,13 @@ class TopicModelController  @Inject() (
   def inferTopic = AdminHtmlAction{ implicit request =>
     def makeString(topicId: Int, membership: Double) = {
       val score = "%.3f".format(membership)
-      topicNameMapper.get.getMappedNameByNewId(topicId) + ": " + score  // use transferred indexes
+      currentAccessor.topicNameMapper.getMappedNameByNewId(topicId) + ": " + score  // use transferred indexes
     }
 
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val content = body.get("doc").get
-    val rawTopic = docTopicModel.getDocumentTopicDistribution(content)
-    val topic = topicNameMapper.get.scoreMapper(rawTopic)          // indexes will be transferred
+    val rawTopic = currentAccessor.documentTopicModel.getDocumentTopicDistribution(content)
+    val topic = currentAccessor.topicNameMapper.scoreMapper(rawTopic)          // indexes will be transferred
 
     val topics = uriTopicHelper.getBiggerTwo(topic) match {
       case (None, None) => ""
@@ -71,13 +76,13 @@ class TopicModelController  @Inject() (
     }
 
     def buildString(arr: Array[(Int, Double)]) = {
-      arr.map{x => topicNameMapper.get.getMappedNameByNewId(x._1) + ": " + "%.3f".format(x._2)}.mkString("\n")
+      arr.map{x => currentAccessor.topicNameMapper.getMappedNameByNewId(x._1) + ": " + "%.3f".format(x._2)}.mkString("\n")
     }
 
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val word = body.get("word").get
-    val topic = wordTopicModel.get.wordTopic.get(word) match {
-      case Some(arr) => buildString( getTopTopics( topicNameMapper.get.scoreMapper(arr) ) )
+    val topic = currentAccessor.wordTopicModel.wordTopic.get(word) match {
+      case Some(arr) => buildString( getTopTopics( currentAccessor.topicNameMapper.scoreMapper(arr) ) )
       case None => ""
     }
 
@@ -91,15 +96,15 @@ class TopicModelController  @Inject() (
   def getUserTopic = AdminHtmlAction { implicit request =>
 
     def buildString(score: Array[Int], topK: Int = 5) = {
-      val newScore = topicNameMapper.get.scoreMapper(score)
+      val newScore = currentAccessor.topicNameMapper.scoreMapper(score)
       val tops = newScore.zipWithIndex.filter(_._1 > 0).sortWith((a, b) => a._1 > b._1).take(topK).map{x => (x._2, x._1)}
-      tops.map{x => topicNameMapper.get.getMappedNameByNewId(x._1) + ": " + x._2}.mkString("\n")      // NOTE: use new id after score transformation
+      tops.map{x => currentAccessor.topicNameMapper.getMappedNameByNewId(x._1) + ": " + x._2}.mkString("\n")      // NOTE: use new id after score transformation
     }
 
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val userId = Id[User](body.get("user").get.toLong)
     val topic = db.readOnly { implicit s =>
-      userTopicRepo.getByUserId(userId) match {
+      currentAccessor.userTopicRepo.getByUserId(userId) match {
         case Some(userTopic) => userTopicHelper.toIntArray(userTopic.topic)
         case None => Array.empty[Int]
       }
@@ -113,7 +118,7 @@ class TopicModelController  @Inject() (
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val topicName = body.get("topicName").get
     db.readWrite{ implicit s =>
-      topicNameRepoA.updateName(id, topicName)
+      currentAccessor.topicNameRepo.updateName(id, topicName)
     }
     Ok(Json.obj("topicName" -> topicName))
 
@@ -124,7 +129,7 @@ class TopicModelController  @Inject() (
   def topicsView(page: Int = 0) = AdminHtmlAction{ request =>
     val PAGE_SIZE = 50
     val (topics, count) = db.readOnly{ implicit s =>
-      val topics = topicNameRepoA.all.sortWith((a, b) => a.id.get.id < b.id.get.id)
+      val topics = currentAccessor.topicNameRepo.all.sortWith((a, b) => a.id.get.id < b.id.get.id)
       val count = topics.size
       (topics.drop(page * PAGE_SIZE).take(PAGE_SIZE), count)
     }
@@ -144,8 +149,8 @@ class TopicModelController  @Inject() (
     val topics = topicNames.map{ name => TopicName(topicName = name) }
 
     db.readWrite{ implicit s =>
-      topicNameRepoA.deleteAll()
-      topics.foreach{topicNameRepoA.save(_)}
+      currentAccessor.topicNameRepo.deleteAll()
+      topics.foreach{currentAccessor.topicNameRepo.save(_)}
     }
 
     Redirect(com.keepit.controllers.admin.routes.TopicModelController.topicsViewDefault)

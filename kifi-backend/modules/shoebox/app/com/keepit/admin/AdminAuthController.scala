@@ -12,7 +12,6 @@ import play.api.data.validation.Constraints._
 import play.api.libs.json.Json
 import com.keepit.common.db._
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
-import com.keepit.common.social.{SocialId, SocialNetworks}
 import com.keepit.common.net._
 import com.keepit.model._
 import com.keepit.common.healthcheck._

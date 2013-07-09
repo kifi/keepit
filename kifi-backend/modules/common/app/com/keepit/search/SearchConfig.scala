@@ -1,16 +1,13 @@
 package com.keepit.search
 
 import java.io.File
-import java.io.FileInputStream
-import java.util.Properties
 import com.keepit.common.db.Id
 import com.keepit.common.akka.MonitoredAwait
 import com.keepit.model.ExperimentTypes.NO_SEARCH_EXPERIMENTS
-import com.keepit.model.{UserExperimentRepo, User}
+import com.keepit.model.User
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.QueryHash
 import com.keepit.shoebox.ShoeboxServiceClient
-import scala.concurrent.Await
 import scala.concurrent.duration._
 
 object SearchConfig {

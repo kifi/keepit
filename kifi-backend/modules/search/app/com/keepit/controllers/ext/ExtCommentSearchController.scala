@@ -9,7 +9,6 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.performance._
-import com.keepit.common.social.BasicUser
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
@@ -29,6 +28,7 @@ import play.api.libs.json.Json
 import com.newrelic.api.agent.NewRelic
 import com.newrelic.api.agent.Trace
 import play.modules.statsd.api.Statsd
+import com.keepit.social.BasicUser
 
 
 @Singleton

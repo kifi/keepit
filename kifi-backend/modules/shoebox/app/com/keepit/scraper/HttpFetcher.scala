@@ -91,7 +91,7 @@ class HttpFetcherImpl(userAgent: String, connectionTimeout: Int, soTimeOut: Int,
     val httpGet = new HttpGet(url)
 
     ifModifiedSince.foreach{ ifModifiedSince =>
-      httpGet.addHeader(IF_MODIFIED_SINCE, ifModifiedSince.format)
+      httpGet.addHeader(IF_MODIFIED_SINCE, ifModifiedSince.toHttpHeaderString)
     }
 
     log.info("executing request " + httpGet.getURI())

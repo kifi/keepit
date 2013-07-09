@@ -13,6 +13,10 @@ case class FakeWordTopicModule(wordTopicModel: WordTopicModel = TinyFakeWordTopi
     new IdentityTopicNameMapper(topicNames)
   }
 
+  @Provides
+  @Singleton
+  def docTopicModel: DocumentTopicModel = new LDATopicModel(wordTopicModel)
+
 }
 
 case class TinyFakeWordTopicModel() extends WordTopicModel {

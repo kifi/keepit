@@ -5,8 +5,6 @@ import scala.Some
 import org.joda.time.Days
 import org.specs2.mutable.Specification
 
-import com.keepit.common.social.SocialId
-import com.keepit.common.social.SocialNetworks
 import com.keepit.model._
 import com.keepit.test._
 
@@ -18,7 +16,7 @@ import com.keepit.model.EmailAddress
 import scala.Some
 import com.keepit.model.Invitation
 import com.keepit.common.actor.TestActorSystemModule
-import com.keepit.common.social.SocialId
+import com.keepit.social.{SocialNetworks, SocialId}
 
 class InvitationMailPluginTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
 

@@ -218,8 +218,10 @@ class Scraper @Inject() (
             // now detect the document change
             val docChanged = signature.similarTo(Signature(info.signature)) < (1.0d - config.changeThreshold * (config.minInterval / info.interval))
 
-            // if unchanged, don't trigger indexing. buf if SCRAPE_WANTED, we always invoke indexing.
-            if (!docChanged && normalizedUri.state != NormalizedURIStates.SCRAPE_WANTED) {
+            // if unchanged, don't trigger indexing. buf if SCRAPE_WANTED or SCRAPE_FAILED, we always change the state and invoke indexing.
+            if (!docChanged &&
+                normalizedUri.state != NormalizedURIStates.SCRAPE_WANTED &&
+                normalizedUri.state != NormalizedURIStates.SCRAPE_FAILED) {
               NotModified
             } else {
               val contentLang = description match {

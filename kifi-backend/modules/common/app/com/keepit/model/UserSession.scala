@@ -2,12 +2,12 @@ package com.keepit.model
 
 import com.keepit.common.cache._
 import com.keepit.common.db._
-import com.keepit.common.social.{SocialNetworkType, SocialId}
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import scala.concurrent.duration._
+import com.keepit.social.{SocialNetworkType, SocialId}
 
 case class UserSession(
   id: Option[Id[UserSession]] = None,
