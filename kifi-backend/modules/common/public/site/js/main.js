@@ -391,7 +391,7 @@ $(function() {
 		document.removeEventListener("mousedown", $collMenu.data("docMouseDown"), true);
 		$collMenu.removeData("docMouseDown").slideUp(80, function() {
 			$collMenu.detach().find(".hover").removeClass("hover");
-		}).closest(".collection").removeClass("with-menu").each(hideCollTri);
+		}).closest(".collection").removeClass("with-menu");
 	}
 
 	$(document).keydown(function(e) {  // auto focus on search field when starting to type anywhere on the document
@@ -547,35 +547,9 @@ $(function() {
 				hideCollMenu();
 			}
 		}
-	}).on("mousemove", ".collection:not(.with-menu):not(.renaming):not(.drop-hover)", function(e) {
-		var $coll = $(this), $tri = $coll.find(".coll-tri"), data = $coll.data();
-		var x = e.clientX, y = e.clientY, dx = x - data.x, dy = y - data.y, now = +new Date;
-		if ($coll.hasClass("with-tri")) {
-			if (!$coll.hasClass("no-tri") && e.target !== $tri[0] && dx > Math.abs(dy)) {
-				hideCollTri.call(this);
-			}
-		} else {
-			var r = this.getBoundingClientRect();
-			if (x < r.left + .5 * r.width &&
-					(-4 * dx > now - data.t && -dx > Math.abs(dy) || e.target === $tri[0] ||
-					 dx < 0 && x < r.left + $tri.width())) {
-				$coll.addClass("with-tri");
-			}
-		}
-		data.x = x, data.y = y, data.t = now;
-	}).on("mouseleave", ".collection.with-tri:not(.with-menu):not(.no-tri)", function() {
-		hideCollTri.call(this);
 	});
 	var collScroller = $collList.data("antiscroll");
 	$(window).resize(collScroller.refresh.bind(collScroller));
-
-	function hideCollTri() {
-		$(this).on("transitionend", function end(e) {
-			if (e.target === this) {
-				$(this).off("transitionend", end).removeClass("with-tri no-tri");
-			}
-		}).addClass("no-tri");
-	}
 
 	$(".left-col .my-keeps>a").click(showMyKeeps.bind(null, null));
 
