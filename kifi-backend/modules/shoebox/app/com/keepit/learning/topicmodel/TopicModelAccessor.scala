@@ -68,13 +68,13 @@ class SwitchableTopicModelAccessor (
   def getCurrentFlag = accessorFlag
 
   def getActiveAccessor = accessorFlag match {
-    case TopicModelAccessorFlag.A  => Await.result(accessorA, 30 seconds)
-    case TopicModelAccessorFlag.B  => Await.result(accessorB, 30 seconds)
+    case TopicModelAccessorFlag.A  => Await.result(accessorA, 5 minutes)
+    case TopicModelAccessorFlag.B  => Await.result(accessorB, 5 minutes)
   }
 
   def getInactiveAccessor = accessorFlag match {
-    case TopicModelAccessorFlag.A  => Await.result(accessorB, 30 seconds)
-    case TopicModelAccessorFlag.B  => Await.result(accessorA, 30 seconds)
+    case TopicModelAccessorFlag.A  => Await.result(accessorB, 5 minutes)
+    case TopicModelAccessorFlag.B  => Await.result(accessorA, 5 minutes)
   }
 
   def switchAccessor() = {
