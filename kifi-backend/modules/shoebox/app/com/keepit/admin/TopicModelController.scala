@@ -20,17 +20,11 @@ import play.api.libs.json.Json
 class TopicModelController  @Inject() (
   db: Database,
   topicPlugin: TopicUpdaterPlugin,
-  modelAccessorWrapper: SwitchableTopicModelAccessorWrapper,
+  modelAccessor: SwitchableTopicModelAccessor,
   actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator){
 
   val uriTopicHelper = new UriTopicHelper
   val userTopicHelper = new UserTopicByteArrayHelper
-
-  val modelAccessor = {
-    if (!modelAccessorWrapper.isReady) modelAccessorWrapper.loadModel()
-    modelAccessorWrapper.switchableAccessor.get
-  }
-
   def currentAccessor = modelAccessor.getActiveAccessor
 
   // dangerous operation ! Test purpose only. This interface will be removed soon.

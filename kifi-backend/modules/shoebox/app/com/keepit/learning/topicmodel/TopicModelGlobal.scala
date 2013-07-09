@@ -30,10 +30,10 @@ case class LdaTopicModelModule() extends TopicModelModule with Logging {
 
   @Provides
   @Singleton
-  def switchableTopicModelAccessor(factory: SwitchableTopicModelAccessorFactory): SwitchableTopicModelAccessorWrapper = {
-    val rv = new SwitchableTopicModelAccessorWrapper(factory = factory)
-    future { rv.loadModel() }
-    rv
+  def switchableTopicModelAccessor(factory: SwitchableTopicModelAccessorFactory): SwitchableTopicModelAccessor = {
+    val a = future{ factory.makeA() }
+    val b = future{ factory.makeB() }
+    new SwitchableTopicModelAccessor(a, b)
   }
 
 }
@@ -47,9 +47,9 @@ case class DevTopicModelModule() extends TopicModelModule {
 
   @Provides
   @Singleton
-  def switchableTopicModelAccessor(factory: SwitchableTopicModelAccessorFactory): SwitchableTopicModelAccessorWrapper = {
-    val rv = new SwitchableTopicModelAccessorWrapper(factory = factory)
-    future { rv.loadModel() }
-    rv
+  def switchableTopicModelAccessor(factory: SwitchableTopicModelAccessorFactory): SwitchableTopicModelAccessor = {
+    val a = future{ factory.makeA() }
+    val b = future{ factory.makeB() }
+    new SwitchableTopicModelAccessor(a, b)
   }
 }

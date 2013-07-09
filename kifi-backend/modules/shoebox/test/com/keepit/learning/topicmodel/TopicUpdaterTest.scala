@@ -31,7 +31,7 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
         val userTopicRepo = inject[UserTopicRepoA]
         val seqInfoRepo = inject[TopicSeqNumInfoRepoA]
         val bmRepo = inject[BookmarkRepo]
-        val accessor = inject[SwitchableTopicModelAccessorWrapper]
+        val accessor = inject[SwitchableTopicModelAccessor]
 
         val topicUpdater = new TopicUpdater(db, uriRepo, bmRepo, articleStore, accessor)
 
@@ -107,7 +107,7 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
         val userTopicRepo = inject[UserTopicRepoA]
         val seqInfoRepo = inject[TopicSeqNumInfoRepoA]
         val bmRepo = inject[BookmarkRepo]
-        val accessor = inject[SwitchableTopicModelAccessorWrapper]
+        val accessor = inject[SwitchableTopicModelAccessor]
 
         val topicUpdater = new TopicUpdater(db, uriRepo, bmRepo, articleStore, accessor)
 

@@ -20,13 +20,8 @@ class TopicUpdater @Inject() (
   uriRepo: NormalizedURIRepo,
   bookmarkRepo: BookmarkRepo,
   articleStore: ArticleStore,
-  modelAccessorWrapper: SwitchableTopicModelAccessorWrapper
+  modelAccessor: SwitchableTopicModelAccessor
 ) extends Logging {
-
-  val modelAccessor = {
-    if (!modelAccessorWrapper.isReady) modelAccessorWrapper.loadModel()
-    modelAccessorWrapper.switchableAccessor.get
-  }
 
   def getAccessor(useActive: Boolean) = if (useActive) modelAccessor.getActiveAccessor else modelAccessor.getInactiveAccessor
   val commitBatchSize = 100

@@ -5,6 +5,9 @@ import com.keepit.model.{UriTopicRepo, UriTopicRepoA, UriTopicRepoB}
 import com.keepit.model.{TopicSeqNumInfoRepo, TopicSeqNumInfoRepoA, TopicSeqNumInfoRepoB}
 import com.keepit.model.{TopicNameRepo, TopicNameRepoA, TopicNameRepoB}
 import com.google.inject.{Inject, Singleton}
+import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.concurrent._
 
 
 /**
@@ -57,21 +60,21 @@ object TopicModelAccessorFlag {
 }
 
 class SwitchableTopicModelAccessor (
-  val accessorA: TopicModelAccessorA,
-  val accessorB: TopicModelAccessorB
+  val accessorA: Future[TopicModelAccessorA],
+  val accessorB: Future[TopicModelAccessorB]
 ) {
   private var accessorFlag = TopicModelAccessorFlag.A       // default to A for now. Will read this from configuration or zookeeper or DB
 
   def getCurrentFlag = accessorFlag
 
   def getActiveAccessor = accessorFlag match {
-    case TopicModelAccessorFlag.A  => accessorA
-    case TopicModelAccessorFlag.B  => accessorB
+    case TopicModelAccessorFlag.A  => Await.result(accessorA, 30 seconds)
+    case TopicModelAccessorFlag.B  => Await.result(accessorB, 30 seconds)
   }
 
   def getInactiveAccessor = accessorFlag match {
-    case TopicModelAccessorFlag.A  => accessorB
-    case TopicModelAccessorFlag.B  => accessorA
+    case TopicModelAccessorFlag.A  => Await.result(accessorB, 30 seconds)
+    case TopicModelAccessorFlag.B  => Await.result(accessorA, 30 seconds)
   }
 
   def switchAccessor() = {
@@ -79,19 +82,5 @@ class SwitchableTopicModelAccessor (
       case TopicModelAccessorFlag.A  => accessorFlag = TopicModelAccessorFlag.B
       case TopicModelAccessorFlag.B  => accessorFlag = TopicModelAccessorFlag.A
     }
-  }
-}
-
-// wrapper makes startup fast. Otherwise Guice instantiation blocks.
-class SwitchableTopicModelAccessorWrapper(
-  var switchableAccessor: Option[SwitchableTopicModelAccessor] = None,
-  val factory: SwitchableTopicModelAccessorFactory,
-  private var ready: Boolean = false
-){
-  def isReady = ready
-
-  def loadModel() = "lock".synchronized {
-    switchableAccessor = Some(factory())
-    ready = true
   }
 }
