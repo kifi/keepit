@@ -1,10 +1,7 @@
 package com.keepit.search
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.cache.{JsonCacheImpl, Key, FortyTwoCachePlugin}
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.slick._
 import com.keepit.common.db.{Model, State, States}
 import com.keepit.common.time._
 import org.joda.time.DateTime

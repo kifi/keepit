@@ -3,7 +3,6 @@ package com.keepit.shoebox
 import com.keepit.common.cache.{EhCacheCacheModule, MemcachedCacheModule, ShoeboxCacheModule}
 import com.keepit.social.ProdShoeboxSecureSocialModule
 import com.keepit.search.ProdSearchServiceClientModule
-import com.keepit.common.db.ShoeboxSlickModule
 import com.keepit.scraper.ScraperImplModule
 import com.keepit.common.social.ProdSocialGraphModule
 import com.keepit.common.analytics.ProdAnalyticsModule
@@ -19,6 +18,7 @@ import com.keepit.common.net.ProdHttpClientModule
 import com.keepit.inject.ProdFortyTwoModule
 import com.keepit.common.actor.ProdActorSystemModule
 import com.keepit.common.zookeeper.ProdDiscoveryModule
+import com.keepit.common.db.slick.ShoeboxSlickModule
 
 case class ShoeboxProdModule() extends ShoeboxModule(
   // Common Functional Modules

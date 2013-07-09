@@ -5,7 +5,7 @@ import org.specs2.mutable.Specification
 import com.keepit.common.db.slick.Database
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.inject._
-import com.keepit.test.ShoeboxApplication
+import com.keepit.test.{ShoeboxApplicationInjector, ShoeboxApplication}
 
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
@@ -14,15 +14,19 @@ import com.keepit.common.mail.FakeMailModule
 import com.keepit.common.analytics.TestAnalyticsModule
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.shoebox.FakeShoeboxServiceModule
+import com.keepit.search.TestSearchServiceClientModule
 
-class DomainClassifierTest extends TestKit(ActorSystem()) with Specification with ApplicationInjector {
+class DomainClassifierTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
 
   val domainClassifierTestModules = Seq(
     FakeMailModule(),
     TestAnalyticsModule(),
     ShoeboxFakeStoreModule(),
     FakeDomainTagImporterModule(),
-    TestActorSystemModule(Some(system))
+    TestActorSystemModule(Some(system)),
+    FakeShoeboxServiceModule(),
+    TestSearchServiceClientModule()
   )
 
   "The domain classifier" should {

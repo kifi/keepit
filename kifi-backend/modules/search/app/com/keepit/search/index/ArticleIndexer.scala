@@ -1,7 +1,6 @@
 package com.keepit.search.index
 
 import com.keepit.common.db._
-import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.Healthcheck.INTERNAL
 import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.net.Host
@@ -21,7 +20,6 @@ import com.google.inject.Inject
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.util.{Success, Failure}
 import ArticleRecordSerializer._
 
 object ArticleIndexer {

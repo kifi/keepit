@@ -1,22 +1,15 @@
 package com.keepit.common.mail
 
 import com.keepit.test._
-import com.keepit.inject._
-import play.api.Play.current
-import play.api.libs.json.JsValue
-import play.api.test.Helpers._
 import play.api.templates.Html
-import akka.actor.ActorRef
-import akka.testkit.ImplicitSender
 import org.specs2.mutable.Specification
-import com.keepit.common.db._
 import com.keepit.common.db.slick._
 
-class SendgridMailProviderTest extends Specification with ApplicationInjector {
+class SendgridMailProviderTest extends Specification with ShoeboxTestInjector {
 
   "SendgridMailProvider" should {
     "send email" in {
-      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
+      withDb() { implicit injector =>
         val mail = inject[Database].readWrite { implicit s =>
           inject[ElectronicMailRepo].save(ElectronicMail(
               from = EmailAddresses.ENG,

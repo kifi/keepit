@@ -1,13 +1,8 @@
 package com.keepit.search
 
 import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
-import com.google.inject.{Inject, ImplementedBy, Singleton}
-import java.sql.Connection
 import org.joda.time.DateTime
-import com.keepit.model._
 
 case class ArticleSearchResultRef (
   id: Option[Id[ArticleSearchResultRef]] = None,

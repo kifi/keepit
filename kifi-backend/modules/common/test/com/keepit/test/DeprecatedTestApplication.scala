@@ -45,11 +45,9 @@ class DeprecatedTestApplication(_global: FortyTwoGlobal, useDb: Boolean = true, 
 
 class DeprecatedEmptyApplication(path: File = new File("./modules/common/")) extends DeprecatedTestApplication(new DeprecatedTestGlobal(DeprecatedTestModule()), path = path)
 
-case class DeprecatedTestModule(dbInfo: DbInfo = TestDbInfo.dbInfo) extends ScalaModule {
+case class DeprecatedTestModule() extends ScalaModule {
   def configure(): Unit = {
-    install(TestSlickModule(dbInfo))
     install(FakeHealthcheckModule())
-    //install(FakeStoreModule())
     install(TestCacheModule())
     install(FakeDiscoveryModule())
     install(TestShoeboxServiceClientModule())

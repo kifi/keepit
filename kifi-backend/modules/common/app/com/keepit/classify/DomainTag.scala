@@ -1,10 +1,6 @@
 package com.keepit.classify
 
 import org.joda.time.DateTime
-
-import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.slick._
 import com.keepit.common.db.{State, States, Model, Id}
 import com.keepit.common.time._
 
