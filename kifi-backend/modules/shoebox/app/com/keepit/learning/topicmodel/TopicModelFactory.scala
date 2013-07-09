@@ -5,6 +5,7 @@ import com.keepit.model._
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import play.api.Play._
+import scala.concurrent.Promise
 
 @Singleton
 class SwitchableTopicModelAccessorFactory @Inject()(
@@ -21,19 +22,24 @@ class SwitchableTopicModelAccessorFactory @Inject()(
   wordTopicModelFactory: WordTopicModelFactory
 ) {
   def apply() = {
+    val accessorA = makeA()
+    val accessorB = makeB()
+    new SwitchableTopicModelAccessor(Promise.successful(accessorA).future, Promise.successful(accessorB).future)
+  }
+
+  def makeA() = {
     val nameMapperA = nameMapperFactory(TopicModelAccessorFlag.A)
-    val nameMapperB = nameMapperFactory(TopicModelAccessorFlag.B)
-
     val wordTopicModelA = wordTopicModelFactory()
-    val wordTopicModelB = wordTopicModelA       // same for now, different later
-
     val docTopicModelA = new LDATopicModel(wordTopicModelA)
+    new TopicModelAccessorA(userTopicRepoA, uriTopicRepoA, topicSeqInfoRepoA, topicNameRepoA, docTopicModelA, wordTopicModelA, nameMapperA)
+  }
+
+  def makeB() = {
+    val nameMapperB = nameMapperFactory(TopicModelAccessorFlag.B)
+    val wordTopicModelB = wordTopicModelFactory()
     val docTopicModelB = new LDATopicModel(wordTopicModelB)
+    new TopicModelAccessorB(userTopicRepoB, uriTopicRepoB, topicSeqInfoRepoB, topicNameRepoB, docTopicModelB, wordTopicModelB, nameMapperB)
 
-    val accessorA = new TopicModelAccessorA(userTopicRepoA, uriTopicRepoA, topicSeqInfoRepoA, topicNameRepoA, docTopicModelA, wordTopicModelA, nameMapperA)
-    val accessorB = new TopicModelAccessorB(userTopicRepoB, uriTopicRepoB, topicSeqInfoRepoB, topicNameRepoB, docTopicModelB, wordTopicModelB, nameMapperB)
-
-    new SwitchableTopicModelAccessor(accessorA, accessorB)
   }
 }
 
