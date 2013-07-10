@@ -42,7 +42,7 @@ class UriTopicHelper {
   }
 
   def toDoubleArray(arr: Array[Byte], numTopics: Int) = {
-    assume(arr.size == numTopics * 8, s"topic array size ${arr.length} not matching expected numTopics ${numTopics}")
+    assume(arr.size == numTopics * 8, s"topic array size ${arr.length / 8} not matching expected numTopics ${numTopics}")
     val is = new DataInputStream(new ByteArrayInputStream(arr))
     val topic = (0 until numTopics).map{i => is.readDouble()}
     is.close()

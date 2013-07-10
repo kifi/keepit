@@ -205,7 +205,7 @@ class TopicUpdater @Inject() (
             else {
               if (article == None) { log.warn(s"uri ${uriId.id} is not found in uriTopicRepo, and it's not found in articleStore"); m + (uriId -> (None, None)) }
               else {
-                val topic = getAccessor(useActive).documentTopicModel.getDocumentTopicDistribution(article.get.content, numTopics(useActive))
+                val topic = getAccessor(useActive).documentTopicModel.getDocumentTopicDistribution(article.get.content, numTopic)
                 val (primaryTopic, secondaryTopic) = uriTopicHelper.assignTopics(topic, numTopic)
                 m + (uriId -> (primaryTopic, secondaryTopic))
               }
