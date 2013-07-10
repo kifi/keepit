@@ -73,17 +73,17 @@ class UserController @Inject() (db: Database,
     })
   }
 
-  def savePref() = AuthenticatedJsonToJsonAction { request =>
-    val o = request.request.body
-    val name = (o \ "name").as[String]
-    val value = (o \ "value").as[String]
-    if (SitePrefNames.contains(name)) {
+  def savePrefs() = AuthenticatedJsonToJsonAction { request =>
+    val o = request.request.body.as[JsObject]
+    if (o.keys.subsetOf(SitePrefNames)) {
       db.readWrite { implicit s =>
-        userValueRepo.setValue(request.userId, name, value)
+        o.fields.foreach { case (name, value) =>
+          userValueRepo.setValue(request.userId, name, value.as[String])  // TODO: deactivate pref if JsNull
+        }
       }
       Ok(o)
     } else {
-      BadRequest(Json.obj("error" -> "name not recognized"))
+      BadRequest(Json.obj("error" -> ((SitePrefNames -- o.keys).mkString(", ") + " not recognized")))
     }
   }
 
