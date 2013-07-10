@@ -32,8 +32,7 @@ case class UserTopic(
 
 class UserTopicByteArrayHelper {
   def toByteArray(arr: Array[Int]) = {
-    assume(arr.length == TopicModelGlobal.numTopics, "topic array size not matching TopicModelGlobal.numTopics")
-    val bs = new ByteArrayOutputStream(TopicModelGlobal.numTopics * 4)
+    val bs = new ByteArrayOutputStream(arr.length * 4)
     val os = new DataOutputStream(bs)
     arr.foreach{os.writeInt}
     os.close()
@@ -43,9 +42,9 @@ class UserTopicByteArrayHelper {
   }
 
   def toIntArray(arr: Array[Byte]) = {
-    assume(arr.size == TopicModelGlobal.numTopics * 4, "topic array size not matching TopicModelGlobal.numTopics")
+    val numTopics = arr.size / 4
     val is = new DataInputStream(new ByteArrayInputStream(arr))
-    val topic = (0 until TopicModelGlobal.numTopics).map{i => is.readInt()}
+    val topic = (0 until numTopics).map{i => is.readInt()}
     is.close()
     topic.toArray
   }

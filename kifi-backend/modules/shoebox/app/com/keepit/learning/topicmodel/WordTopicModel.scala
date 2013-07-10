@@ -11,5 +11,5 @@ trait WordTopicModel {
 class LdaWordTopicModel (
   val vocabulary: Set[String],
   val wordTopic: Map[String, Array[Double]],
-  val topicNames: Array[String]
+  val topicNames: Array[String] = new Array[String](0)        // will use nameMappers to provide names
 ) extends WordTopicModel {}

@@ -16,6 +16,7 @@ import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.google.inject.Injector
 
 class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
+  val numTopics = TopicModelGlobalTest.numTopics
 
   val topicUpdaterTestModules = Seq(DevTopicModelModule(), ShoeboxFakeStoreModule(), TestActorSystemModule())
   "TopicUpdater" should {
@@ -44,9 +45,9 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
         db.readOnly { implicit s =>
           uris.zipWithIndex.foreach{ x =>
             val uriTopic = uriTopicRepo.getByUriId(x._1.id.get)
-            val arr = new Array[Double](TopicModelGlobal.numTopics)
+            val arr = new Array[Double](numTopics)
             arr(x._2) = 1.0
-            uriTopicHelper.toDoubleArray(uriTopic.get.topic) === arr
+            uriTopicHelper.toDoubleArray(uriTopic.get.topic, numTopics) === arr
           }
         }
 
@@ -56,7 +57,7 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
             val userIdx = x._2
             val N = ceil(uris.size *1.0 / users.size).toInt
             val userUris = (0 until N).flatMap{ i => val uriIdx = userIdx + i* users.size ;  if ( uriIdx < uris.size ) Some(uriIdx) else None}
-            val topic = new Array[Int](TopicModelGlobal.numTopics)
+            val topic = new Array[Int](numTopics)
             userUris.foreach( i => topic(i) += 1)
             val userTopic = userTopicRepo.getByUserId(x._1.id.get)
             userTopicHelper.toIntArray(userTopic.get.topic) === topic
@@ -72,9 +73,9 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
         db.readOnly { implicit s =>
           uris.zipWithIndex.foreach { x =>
             val uriTopic = uriTopicRepo.getByUriId(x._1.id.get)
-            val arr = new Array[Double](TopicModelGlobal.numTopics)
+            val arr = new Array[Double](numTopics)
             arr(x._2) = 1.0
-            uriTopicHelper.toDoubleArray(uriTopic.get.topic) === arr
+            uriTopicHelper.toDoubleArray(uriTopic.get.topic, numTopics) === arr
           }
         }
 
@@ -83,7 +84,7 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
             val userIdx = x._2
             val N = ceil(uris.size * 1.0 / users.size).toInt
             val userUris = (0 until N).flatMap { i => val uriIdx = userIdx + i * users.size; if (uriIdx < uris.size) Some(uriIdx) else None }
-            val topic = new Array[Int](TopicModelGlobal.numTopics)
+            val topic = new Array[Int](numTopics)
             userUris.foreach(i => topic(i) += 1)
             val userTopic = userTopicRepo.getByUserId(x._1.id.get)
             userTopicHelper.toIntArray(userTopic.get.topic) === topic
@@ -124,9 +125,9 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
         db.readOnly { implicit s =>
           uris.zipWithIndex.foreach{ x =>
             val uriTopic = uriTopicRepoB.getByUriId(x._1.id.get)
-            val arr = new Array[Double](TopicModelGlobal.numTopics)
+            val arr = new Array[Double](numTopics)
             arr(x._2) = 1.0
-            uriTopicHelper.toDoubleArray(uriTopic.get.topic) === arr
+            uriTopicHelper.toDoubleArray(uriTopic.get.topic, numTopics) === arr
           }
         }
 
@@ -136,7 +137,7 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
             val userIdx = x._2
             val N = ceil(uris.size *1.0 / users.size).toInt
             val userUris = (0 until N).flatMap{ i => val uriIdx = userIdx + i* users.size ;  if ( uriIdx < uris.size ) Some(uriIdx) else None}
-            val topic = new Array[Int](TopicModelGlobal.numTopics)
+            val topic = new Array[Int](numTopics)
             userUris.foreach( i => topic(i) += 1)
             val userTopic = userTopicRepoB.getByUserId(x._1.id.get)
             userTopicHelper.toIntArray(userTopic.get.topic) === topic
@@ -152,7 +153,7 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
 
 trait TopicUpdaterTestHelper extends ShoeboxApplicationInjector {
   def setupDB(implicit injector: Injector) = {
-    val (numUser, numUri) = (10, TopicModelGlobal.numTopics)
+    val (numUser, numUri) = (10, TopicModelGlobalTest.numTopics)
     db.readWrite { implicit s =>
       val users = (0 until numUser).map{ i => userRepo.save(User(firstName = "user%d".format(i), lastName = "" ))}
       val uris = (0 until numUri).map{i  =>

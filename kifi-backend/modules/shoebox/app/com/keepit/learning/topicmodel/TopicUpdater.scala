@@ -29,6 +29,8 @@ class TopicUpdater @Inject() (
   val uriTopicHelper = new UriTopicHelper
   val userTopicHelper = new UserTopicByteArrayHelper
 
+  def numTopics(useActive: Boolean) = getAccessor(useActive).topicNameMapper.rawTopicNames.size
+
   def reset(useActive: Boolean = true): (Int, Int) = {
     log.info("resetting topic tables")
     val (nUri, nUser) = db.readWrite { implicit s =>
@@ -142,9 +144,10 @@ class TopicUpdater @Inject() (
   }
 
   private def genUriTopic(uriId: Id[NormalizedURI], uriContent: String, useActive: Boolean): UriTopic = {
-    val topic = getAccessor(useActive).documentTopicModel.getDocumentTopicDistribution(uriContent)
-    val (primaryTopic, secondaryTopic) = uriTopicHelper.assignTopics(topic)
-    UriTopic(uriId = uriId, topic = uriTopicHelper.toByteArray(topic), primaryTopic = primaryTopic, secondaryTopic = secondaryTopic)
+    val numTopic = numTopics(useActive)
+    val topic = getAccessor(useActive).documentTopicModel.getDocumentTopicDistribution(uriContent, numTopic)
+    val (primaryTopic, secondaryTopic) = uriTopicHelper.assignTopics(topic, numTopic)
+    UriTopic(uriId = uriId, topic = uriTopicHelper.toByteArray(topic, numTopic), primaryTopic = primaryTopic, secondaryTopic = secondaryTopic)
   }
 
   def batchUpdateUserTopic(bookmarks: Seq[Bookmark], useActive: Boolean): Unit = {
@@ -156,7 +159,7 @@ class TopicUpdater @Inject() (
         userTopics.foreach{ userTopic =>
           val oldTopic = getAccessor(useActive).userTopicRepo.getByUserId(userTopic._1)
           if (oldTopic == None){
-            val topic = new Array[Int](TopicModelGlobal.numTopics)
+            val topic = new Array[Int](numTopics(useActive))
             userTopic._2.foreach{ case (topicIdx, counts) => topic(topicIdx) += counts;
               if (topic(topicIdx) < 0) { topic(topicIdx) = 0; log.warn("was trying to set user topic to negative")}
             }
@@ -191,6 +194,7 @@ class TopicUpdater @Inject() (
   }
 
   private def getBookmarkTopics(uris: Seq[Id[NormalizedURI]], useActive: Boolean): Map[Id[NormalizedURI], (Option[Int], Option[Int])] = {
+    val numTopic = numTopics(useActive)
     db.readOnly{ implicit s =>
       uris.foldLeft(Map.empty[Id[NormalizedURI], (Option[Int], Option[Int])]){ (m, uriId) =>
         getAccessor(useActive).uriTopicRepo.getAssignedTopicsByUriId(uriId) match {
@@ -201,8 +205,8 @@ class TopicUpdater @Inject() (
             else {
               if (article == None) { log.warn(s"uri ${uriId.id} is not found in uriTopicRepo, and it's not found in articleStore"); m + (uriId -> (None, None)) }
               else {
-                val topic = getAccessor(useActive).documentTopicModel.getDocumentTopicDistribution(article.get.content)
-                val (primaryTopic, secondaryTopic) = uriTopicHelper.assignTopics(topic)
+                val topic = getAccessor(useActive).documentTopicModel.getDocumentTopicDistribution(article.get.content, numTopics(useActive))
+                val (primaryTopic, secondaryTopic) = uriTopicHelper.assignTopics(topic, numTopic)
                 m + (uriId -> (primaryTopic, secondaryTopic))
               }
             }

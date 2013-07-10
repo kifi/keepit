@@ -4,10 +4,12 @@ import com.google.inject.{Singleton, Provides}
 
 case class FakeWordTopicModule(wordTopicModel: WordTopicModel = TinyFakeWordTopicModel()) extends TopicModelModule {
 
-  @Provides @Singleton
+  @Provides
+  @Singleton
   def wordTopicModelProvider: WordTopicModel = wordTopicModel
 
-  @Provides @Singleton
+  @Provides
+  @Singleton
   def topicNameMapper: TopicNameMapper = {
     val topicNames = wordTopicModel.topicNames
     new IdentityTopicNameMapper(topicNames)
@@ -30,7 +32,7 @@ case class TinyFakeWordTopicModel() extends WordTopicModel {
 }
 
 case class FakeWordTopicModel() extends WordTopicModel {
-  val numTopics = TopicModelGlobal.numTopics
+  val numTopics = TopicModelGlobalTest.numTopics
   val vocabulary = (0 until numTopics).map{ i => "word%d".format(i)}.toSet
   val wordTopic = (0 until numTopics).foldLeft(Map.empty[String, Array[Double]]){
         (m, i) => { val a = new Array[Double](numTopics); a(i) = 1.0; m + ("word%d".format(i) -> a) }
