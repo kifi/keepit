@@ -29,9 +29,10 @@ class TopicModelTest extends Specification with ShoeboxApplicationInjector {
           Array(0, 0, 0.5 / 3.0, 2.5 / 3.0),
           Array(0, 0, 0.75, 0.25))
         val topics = Array(1, 0, 3, 2)
+        val numTopics = 4
         for (i <- 0 until 4) {
-          val dist = docModel.getDocumentTopicDistribution(docs(i))
-          val id = docModel.getDocumentTopicId(docs(i))
+          val dist = docModel.getDocumentTopicDistribution(docs(i), numTopics)
+          val id = docModel.getDocumentTopicId(docs(i), numTopics)
           equals(dist, dists(i)) === true
           id === topics(i)
         }

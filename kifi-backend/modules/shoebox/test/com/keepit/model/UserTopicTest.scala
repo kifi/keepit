@@ -5,7 +5,7 @@ import org.specs2.mutable.Specification
 import com.google.inject.Injector
 import com.keepit.common.db.Id
 import scala.Array.canBuildFrom
-import com.keepit.learning.topicmodel.TopicModelGlobal
+import com.keepit.learning.topicmodel.TopicModelGlobalTest
 import play.api.libs.json._
 import com.keepit.test._
 import com.keepit.common.cache._
@@ -23,7 +23,7 @@ class UserTopicTest extends Specification with ShoeboxTestInjector {
   // user i concentrates on topic i
   def setup()(implicit injector: Injector) = {
     val t = new DateTime(2013, 5, 20, 21, 59, 0, 0, PT)
-    val numTopics = TopicModelGlobal.numTopics
+    val numTopics = TopicModelGlobalTest.numTopics
     val ids = (0 until numTopics).map{Id[User](_)}
     val userTopics = (0 until numTopics).map{ i =>
       genTopic(numTopics, i)
@@ -44,7 +44,7 @@ class UserTopicTest extends Specification with ShoeboxTestInjector {
     "correctly persist user topic and be able to delete all" in {
       withDb() { implicit injector =>
         val userTopics = setup()
-        val numTopics = TopicModelGlobal.numTopics
+        val numTopics = TopicModelGlobalTest.numTopics
         val helper = new UserTopicByteArrayHelper
         val userTopicRepo = inject[UserTopicRepoA]
         db.readOnly { implicit s =>
@@ -71,7 +71,7 @@ class UserTopicTest extends Specification with ShoeboxTestInjector {
     "work" in {
       val t1 = new DateTime(2013, 5, 20, 21, 59, 0, 0, PT)
       val t2 = new DateTime(2013, 5, 22, 21, 59, 0, 0, PT)
-      val topic = new Array[Int](TopicModelGlobal.numTopics)
+      val topic = new Array[Int](TopicModelGlobalTest.numTopics)
       topic(1) = 1; topic(5) = 5;
       val helper = new UserTopicByteArrayHelper
       val userTopic = new UserTopic(id = Some(Id[UserTopic](1)), userId = Id[User](2), topic = helper.toByteArray(topic), createdAt = t1, updatedAt = t2)

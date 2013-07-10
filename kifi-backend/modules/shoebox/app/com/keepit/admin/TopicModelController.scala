@@ -26,6 +26,7 @@ class TopicModelController  @Inject() (
   val uriTopicHelper = new UriTopicHelper
   val userTopicHelper = new UserTopicByteArrayHelper
   def currentAccessor = modelAccessor.getActiveAccessor
+  def numTopics = currentAccessor.topicNameMapper.rawTopicNames.size
 
   // dangerous operation ! Test purpose only. This interface will be removed soon.
   def switchModel = AdminHtmlAction { implicit request =>
@@ -52,7 +53,7 @@ class TopicModelController  @Inject() (
 
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val content = body.get("doc").get
-    val rawTopic = currentAccessor.documentTopicModel.getDocumentTopicDistribution(content)
+    val rawTopic = currentAccessor.documentTopicModel.getDocumentTopicDistribution(content, numTopics)
     val topic = currentAccessor.topicNameMapper.scoreMapper(rawTopic)          // indexes will be transferred
 
     val topics = uriTopicHelper.getBiggerTwo(topic) match {
@@ -71,7 +72,7 @@ class TopicModelController  @Inject() (
   def getWordTopic = AdminHtmlAction { implicit request =>
 
     def getTopTopics(arr: Array[Double], topK: Int = 5) = {
-       arr.zipWithIndex.filter(_._1 > 1.0/TopicModelGlobal.numTopics)
+       arr.zipWithIndex.filter(_._1 > 1.0/numTopics)
                        .sortWith((a, b) => a._1 > b._1).take(topK).map{x => (x._2, x._1)}
     }
 

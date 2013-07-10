@@ -56,7 +56,7 @@ class ManualTopicNameMapper (val rawTopicNames: Array[String], val mappedNames: 
 }
 
 object NameMapperConstructer {
-  val naString = "NA"
+  val naString = TopicModelGlobal.naString
    // returns unique names and mapper
   def getMapper(rawTopicNames: Array[String]): (Array[String], Map[Int, Int]) = {
     if (rawTopicNames.size == 0) (Array.empty[String], Map.empty[Int, Int])
