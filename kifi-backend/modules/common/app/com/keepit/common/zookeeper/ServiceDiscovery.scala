@@ -23,6 +23,7 @@ trait ServiceDiscovery {
   def myClusterSize: Int = 0
   def startSelfCheck(): Unit
   def changeStatus(newStatus: ServiceStatus): Unit
+  def forceUpdate(): Unit
 }
 
 @Singleton
@@ -78,14 +79,20 @@ class ServiceDiscoveryImpl @Inject() (
     zk.createPath(cluster.servicePath)
     zk.watchChildren(cluster.servicePath, { (children : Seq[Node]) =>
       log.info(s"""services in my cluster under ${cluster.servicePath.name}: ${children.mkString(", ")}""")
-      future {
-        cluster.update(zk, children)
-      }
+      cluster.update(zk, children)
     })
+  }
+
+  def forceUpdate() : Unit = {
+    for (cluster <- clusters.values) {
+      val children = zk.getChildren(cluster.servicePath)
+      cluster.update(zk, children)
+    }
   }
 
   def register(): Node = {
     watchServices()
+
     val myServiceType: ServiceType = services.currentService
     log.info(s"registered clusters: $clusters, my service is $myServiceType")
     val myCluster = clusters(myServiceType)
@@ -110,6 +117,7 @@ class ServiceDiscoveryImpl @Inject() (
   }
 
   def startSelfCheck(): Unit = future {
+    log.info("Running self check")
     if(services.currentService.selfCheck) changeStatus(ServiceStatus.UP)
     else changeStatus(ServiceStatus.SELFCHECK_FAIL)
   }
