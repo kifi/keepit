@@ -9,6 +9,7 @@ import play.api.libs.json._
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.google.inject.Injector
+import com.keepit.shoebox.TestShoeboxServiceClientModule
 
 class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 
