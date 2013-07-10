@@ -51,7 +51,7 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
   //This will includes all instances still registered with zookeeper including DOWN, STARTING, STOPPING states
   def allMembers : Vector[ServiceInstance] = routingList
 
-  def register(node: Node, remoteService: RemoteService): ServiceCluster = {
+  def register(node: Node, remoteService: RemoteService): ServiceCluster = synchronized {
     instances(node) = ServiceInstance(serviceType, node, remoteService)
     _myNode = Some(node)
     resetRoutingList()
