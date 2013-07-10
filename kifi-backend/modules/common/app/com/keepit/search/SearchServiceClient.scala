@@ -73,7 +73,7 @@ class SearchServiceClientImpl(
 
   def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isKeep: Boolean): Unit = {
     val json = Json.toJson(ResultClicked(userId, query, uriId, rank, isKeep))
-    broadcast(Search.internal.logResultClicked(), json)
+    call(Search.internal.logResultClicked(), json)
   }
 
   def getSearchStatistics(queryUUID: String, queryString: String, userId: Id[User], labeledUris: Map[Id[NormalizedURI], UriLabel]): Future[JsArray] = {

@@ -19,7 +19,7 @@ trait ServiceClient extends Logging {
   val serviceCluster: ServiceCluster
 
   private def nextHost(): String = serviceCluster.nextService map { service =>
-    service.amazonInstanceInfo.localHostname
+    service.instanceInfo.localHostname
   } getOrElse (throw new ServiceNotAvailableException(serviceCluster.serviceType))
 
   val protocol: String = "http"
@@ -29,9 +29,9 @@ trait ServiceClient extends Logging {
 
   protected def urls(path: String): Seq[String] = serviceCluster.myNode match {
     case Some(node) =>
-      serviceCluster.allServices.filterNot(_.node == node).map{service => s"${protocol}://${service.amazonInstanceInfo.localHostname}:${port}${path}" }
+      serviceCluster.allServices.filterNot(_.node == node).map{service => s"${protocol}://${service.instanceInfo.localHostname}:${port}${path}" }
     case None =>
-      serviceCluster.allServices map {service => s"${protocol}://${service.amazonInstanceInfo.localHostname}:${port}${path}" }
+      serviceCluster.allServices map {service => s"${protocol}://${service.instanceInfo.localHostname}:${port}${path}" }
   }
 
   protected def call(call: ServiceRoute, body: JsValue = JsNull): Future[ClientResponse] = callUrl(call, url(call.url), body)

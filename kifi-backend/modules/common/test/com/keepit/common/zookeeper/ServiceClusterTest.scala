@@ -21,6 +21,8 @@ class ServiceClusterTest extends Specification {
     amiLaunchIndex = "0"
   )
 
+  val remoteService1 = RemoteService(instance1, ServiceStatus.UP, ServiceType.TEST_MODE)
+
   val instance2 = new AmazonInstanceInfo(
     instanceId = AmazonInstanceId("i-f168c1a9"),
     localHostname = "ip-10-160-95-25.us-west-1.compute.internal",
@@ -34,13 +36,15 @@ class ServiceClusterTest extends Specification {
     amiLaunchIndex = "1"
   )
 
+  val remoteService2 = RemoteService(instance2, ServiceStatus.UP, ServiceType.TEST_MODE)
+
   "ServiceCluster" should {
     "find node" in {
       val cluster = new ServiceCluster(ServiceType.TEST_MODE)
       val zk = new FakeZooKeeperClient()
       val basePath = "/fortytwo/services/TEST_MODE"
-      zk.set(Node(s"$basePath/node_00000001"), Json.toJson(instance1).toString)
-      zk.set(Node(s"$basePath/node_00000002"), Json.toJson(instance2).toString)
+      zk.set(Node(s"$basePath/node_00000001"), RemoteService.toJson(remoteService1))
+      zk.set(Node(s"$basePath/node_00000002"), RemoteService.toJson(remoteService2))
       zk.registeredCount === 2
       println(zk.nodes.mkString(" : "))
       zk.nodes.size === 2
@@ -64,9 +68,9 @@ class ServiceClusterTest extends Specification {
       val cluster = new ServiceCluster(ServiceType.TEST_MODE)
       val zk = new FakeZooKeeperClient()
       val basePath = "/fortytwo/services/TEST_MODE"
-      zk.set(Node(s"$basePath/node_00000001"), Json.toJson(instance1).toString)
-      zk.set(Node(s"$basePath/node_00000002"), Json.toJson(instance2).toString)
-      zk.set(Node(s"$basePath/node_00000003"), Json.toJson(instance2).toString)
+      zk.set(Node(s"$basePath/node_00000001"), RemoteService.toJson(remoteService1))
+      zk.set(Node(s"$basePath/node_00000002"), RemoteService.toJson(remoteService2))
+      zk.set(Node(s"$basePath/node_00000003"), RemoteService.toJson(remoteService2))
       cluster.update(zk, Node("node_00000001") :: Node("node_00000002") :: Node("node_00000003") :: Nil)
       val service1 = cluster.nextService()
       val service2 = cluster.nextService()
