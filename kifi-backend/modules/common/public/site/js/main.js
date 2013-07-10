@@ -337,9 +337,9 @@ $(function() {
 					showMyKeeps();
 				}
 				var $keepColl = $main.find(".keep-coll[data-id=" + collId + "]");
-				$keepColl.css("width", $keepColl[0].offsetWidth);
+				if ($keepColl.length) $keepColl.css("width", $keepColl[0].offsetWidth);
 				var $pageColl = $detail.find(".page-coll[data-id=" + collId + "]");
-				$pageColl.css("width", $pageColl[0].offsetWidth);
+				if ($pageColl.length) $pageColl.css("width", $pageColl[0].offsetWidth);
 				$keepColl.add($pageColl).layout().on("transitionend", removeIfThis).addClass("removed");
 			}});
 	}).on("mouseup mousedown", ".coll-rename", function(e) {
