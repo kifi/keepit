@@ -10,12 +10,13 @@ import com.keepit.common.strings._
 import com.keepit.common.time._
 import org.apache.zookeeper.CreateMode._
 import com.google.inject.util._
+import com.google.inject.Injector
 
 class ServiceDiscoveryLiveTest extends Specification with TestInjector {
 
   args(skipAll = true)
 
-  val fakeJson =  RemoteService.toJson(RemoteService(inject[AmazonInstanceInfo], ServiceStatus.UP, ServiceType.SHOEBOX))
+
   
 
   implicit val amazonInstanceInfoFormat = AmazonInstanceInfo.format
@@ -23,7 +24,8 @@ class ServiceDiscoveryLiveTest extends Specification with TestInjector {
   "discovery" should {
 
     "register" in {
-      withInjector() { implicit injector =>
+      withInjector() { implicit injector : Injector =>
+        val fakeJson =  RemoteService.toJson(RemoteService(inject[AmazonInstanceInfo], ServiceStatus.UP, ServiceType.SHOEBOX))
         val services = new FortyTwoServices(inject[Clock], Mode.Test, None, None) {
           override lazy val currentService: ServiceType = ServiceType.SHOEBOX
         }
