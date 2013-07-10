@@ -74,7 +74,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
   @Provides
   @Singleton
   def serviceCluster(amazonInstanceInfo: AmazonInstanceInfo): ServiceCluster =
-    new ServiceCluster(serviceType).register(Node(serviceType.name + "_0"), amazonInstanceInfo)
+    new ServiceCluster(serviceType).register(Node(serviceType.name + "_0"), RemoteService(amazonInstanceInfo, ServiceStatus.UP, serviceType))
 
   @Singleton
   @Provides
@@ -83,6 +83,8 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
       def serviceCluster(serviceType: ServiceType): ServiceCluster = cluster
       def register() = Node("me")
       def isLeader() = true
+      def changeStatus(newStatus: ServiceStatus): Unit = {}
+      def startSelfCheck(): Unit = {}
     }
 }
 
