@@ -5,6 +5,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
+import com.keepit.common.net.URI
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.inject._
@@ -26,24 +27,11 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       throw e
   }
 
-  override def beforeStart (app: Application): Unit = {
+  override def beforeStart(app: Application): Unit = {
     val conf = app.configuration
     val appName = conf.getString("application.name").get
     val dbs = conf.getConfig("db").get.subKeys
     println("starting app %s with dbs %s".format(appName, dbs.mkString(",")))
-  }
-
-  override def onBadRequest(request: RequestHeader, error: String): Result = {
-    val errorId = ExternalId[Exception]()
-    val msg = "BAD REQUEST: %s: [%s] on %s:%s query: %s".format(errorId, error, request.method, request.path, request.queryString.mkString("::"))
-    log.warn(msg)
-    BadRequest(msg)
-  }
-
-  override def onHandlerNotFound(request: RequestHeader): Result = {
-    val errorId = ExternalId[Exception]()
-    log.warn("Handler Not Found %s: on %s".format(errorId, request.path))
-    NotFound("NO HANDLER: %s".format(errorId))
   }
 
   override def onStart(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
@@ -60,10 +48,23 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
       injector.instance[HealthcheckPlugin].reportStart()
       injector.instance[HealthcheckPlugin].warmUp()
     }
-    
+
     val amazonInstanceInfo = injector.instance[AmazonInstanceInfo]
     log.info(s"Amazon up! $amazonInstanceInfo")
     injector.instance[ServiceDiscovery].register()
+  }
+
+  override def onBadRequest(request: RequestHeader, error: String): Result = {
+    val errorId = ExternalId[Exception]()
+    val msg = "BAD REQUEST: %s: [%s] on %s:%s query: %s".format(errorId, error, request.method, request.path, request.queryString.mkString("::"))
+    log.warn(msg)
+    allowCrossOrigin(request, BadRequest(msg))
+  }
+
+  override def onHandlerNotFound(request: RequestHeader): Result = {
+    val errorId = ExternalId[Exception]()
+    log.warn("Handler Not Found %s: on %s".format(errorId, request.path))
+    allowCrossOrigin(request, NotFound("NO HANDLER: %s".format(errorId)))
   }
 
   override def onError(request: RequestHeader, ex: Throwable): Result = {
@@ -74,7 +75,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         injector.instance[HealthcheckPlugin].addError(HealthcheckError(error = Some(ex), method = Some(request.method.toUpperCase()), path = Some(request.path), callType = Healthcheck.API)).id
     }
     ex.printStackTrace()
-    InternalServerError("error: %s".format(errorId))
+    allowCrossOrigin(request, InternalServerError("error: %s".format(errorId)))
   }
 
   override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
@@ -91,6 +92,17 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         e.printStackTrace
         log.error(errorMessage, e)
     }
+  }
+
+  private def allowCrossOrigin(request: RequestHeader, result: Result): Result = {  // for kifi.com/site dev
+    request.headers.get("Origin").filter { uri =>
+      val host = URI.parse(uri).toOption.flatMap(_.host).map(_.toString).getOrElse("")
+      host.endsWith("ezkeep.com") || host.endsWith("kifi.com") || host.endsWith("browserstack.com")
+    }.map { h =>
+      result.withHeaders(
+        "Access-Control-Allow-Origin" -> h,
+        "Access-Control-Allow-Credentials" -> "true")
+    }.getOrElse(result)
   }
 
 }
