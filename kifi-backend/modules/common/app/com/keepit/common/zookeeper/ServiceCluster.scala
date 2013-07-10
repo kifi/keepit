@@ -68,7 +68,6 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
     newInstances.getOrElseUpdate(childNode, {
       val nodeData: String = zk.get(childNode)
       log.info(s"data for node $childNode is $nodeData")
-      //val json = Json.parse(nodeData)
       val remoteService = RemoteService.fromJson(nodeData)
       log.info(s"discovered new node $childNode: $remoteService, adding to ${newInstances.keys}")
       ServiceInstance(serviceType, childNode, remoteService)

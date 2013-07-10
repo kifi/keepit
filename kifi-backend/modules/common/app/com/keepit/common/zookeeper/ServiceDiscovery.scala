@@ -21,7 +21,7 @@ trait ServiceDiscovery {
   def unRegister(): Unit = {}
   def isLeader(): Boolean
   def myClusterSize: Int = 0
-  def startSelfCheck: Unit
+  def startSelfCheck(): Unit
   def changeStatus(newStatus: ServiceStatus): Unit
 }
 
@@ -64,7 +64,7 @@ class ServiceDiscoveryImpl @Inject() (
         return false
       case None =>
         require(myCluster.size == 0)
-        return true
+        return false
     }
   }
 

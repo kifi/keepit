@@ -65,7 +65,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     log.info(s"Amazon up! $amazonInstanceInfo")
     val serviceDiscovery = injector.instance[ServiceDiscovery]
     serviceDiscovery.register()
-    serviceDiscovery.startSelfCheck
+    serviceDiscovery.startSelfCheck()
 
   }
 
