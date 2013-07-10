@@ -4,9 +4,9 @@ import com.keepit.common.zookeeper._
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 
 @ImplementedBy(classOf[SchedulingPropertiesImpl])
-trait SchedulingProperties  {
+trait SchedulingProperties {
   def allowScheduling: Boolean
-  def neverallowScheduling: Boolean = allowScheduling
+  def neverAllowScheduling: Boolean = allowScheduling
 }
 
 @Singleton
@@ -15,11 +15,18 @@ class SchedulingPropertiesImpl @Inject() (
   schedulingEnabled: SchedulingEnabled)
     extends SchedulingProperties {
 
-  override def neverallowScheduling = schedulingEnabled == SchedulingEnabled.Never
+  override def neverAllowScheduling = (schedulingEnabled == SchedulingEnabled.Never)
 
   def allowScheduling = schedulingEnabled match {
     case SchedulingEnabled.Always => true
     case SchedulingEnabled.Never => false
     case SchedulingEnabled.LeaderOnly => serviceDiscovery.isLeader()
+  }
+}
+
+object SchedulingProperties {
+  val AlwaysEnabled = new SchedulingProperties {
+    def allowScheduling: Boolean = true
+    override def neverAllowScheduling: Boolean = false
   }
 }

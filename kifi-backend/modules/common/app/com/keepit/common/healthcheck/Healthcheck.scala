@@ -156,10 +156,11 @@ trait HealthcheckPlugin extends Plugin {
 class HealthcheckPluginImpl @Inject() (
     actorFactory: ActorFactory[HealthcheckActor],
     services: FortyTwoServices,
-    host: HealthcheckHost,
-    val schedulingProperties: SchedulingProperties)
-  extends HealthcheckPlugin with SchedulingPlugin with Logging {
+    host: HealthcheckHost)
+  extends HealthcheckPlugin
+  with SchedulingPlugin with Logging {
 
+  val schedulingProperties = SchedulingProperties.AlwaysEnabled
   implicit val actorTimeout = Timeout(5 seconds)
 
   private lazy val actor = actorFactory.get()
