@@ -9,6 +9,7 @@ var urlMyKeeps = urlKeeps + '/all';
 var urlMyKeepsCount = urlKeeps + '/count';
 var urlUser = urlSite + '/user';
 var urlMe = urlUser + '/me';
+var urlMyPrefs = urlUser + '/prefs';
 var urlCollections = urlSite + '/collections';
 var urlCollectionsAll = urlCollections + '/all';
 var urlCollectionsOrder = urlCollections + '/ordering';
@@ -44,10 +45,18 @@ $(function() {
 		minWidth: 240, // should match CSS
 		maxWidth: 420,
 		stop: function(e, ui) {
-			console.log("[resizable:stop]");
-			// TODO: save width in px
+			console.log("[resizable:stop] saving");
+			$.ajax({
+				url: urlMyPrefs,
+				type: "POST",
+				dataType: 'json',
+				data: JSON.stringify({site_left_col_width: String($leftCol.outerWidth())}),
+				contentType: 'application/json',
+				done: function(data) {
+					console.log("[prefs]", data);
+				}});
 		}
-	});  // TODO: restore saved width
+	});
 	$leftCol.find(".ui-resizable-handle").appendTo($leftCol.find(".page-col-inner"));
 
 	var $subtitle = $(".subtitle"), subtitleTmpl = Tempo.prepare($subtitle);
@@ -107,18 +116,12 @@ $(function() {
 	var inCollTmpl = Tempo.prepare($inColl);
 
 	var me;
+	var myPrefs;
 	var myKeepsCount;
 	var searchResponse;
 	var collections;
 	var searchTimeout;
 	var lastKeep;
-
-	// populate user data
-	$.getJSON(urlMe, function(data) {
-		me = data;
-		$(".my-pic").css("background-image", "url(" + formatPicUrl(data.id, data.pictureName, 200) + ")");
-		$(".my-name").text(data.firstName + ' ' + data.lastName);
-	});
 
 	function identity(a) {
 		return a;
@@ -288,13 +291,6 @@ $(function() {
 					}
 				});
 		}
-	}
-
-	function populateCollections() {
-		$.getJSON(urlCollectionsAll, {sort: "user"}, function(data) {
-			collTmpl.render(data.collections);
-			collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
-		});
 	}
 
 	function updateNumKeeps() {
@@ -896,12 +892,28 @@ $(function() {
 			custom_template_id: 3305}]);
 	});
 
-	populateCollections();
+	$.getJSON(urlMe, function(data) {
+		me = data;
+		$(".my-pic").css("background-image", "url(" + formatPicUrl(data.id, data.pictureName, 200) + ")");
+		$(".my-name").text(data.firstName + ' ' + data.lastName);
+	});
 
-	updateNumKeeps();  // populate number of my keeps
-	showMyKeeps();     // populate all my keeps
+	$.getJSON(urlMyPrefs, function(data) {
+		myPrefs = data;
+		if (myPrefs.site_left_col_width) {
+			$leftCol.animate({width: +myPrefs.site_left_col_width}, 120);
+		}
+	});
 
-	// auto update my keeps every minute
+	$.getJSON(urlCollectionsAll, {sort: "user"}, function(data) {
+		collTmpl.render(data.collections);
+		collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
+	});
+
+	updateNumKeeps();
+	showMyKeeps();
+
+	// auto-update my keeps every minute
 	setInterval(addNewKeeps, 60000);
 	setInterval(updateNumKeeps, 60000);
 });
