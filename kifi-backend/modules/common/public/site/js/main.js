@@ -198,14 +198,19 @@ $(function() {
 		hit.me = me;
 		hit.keepers = hit.users;
 		hit.others = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
+		if (hit.collections) prepKeepCollections(hit.collections);
 	}
 
 	function prepKeepForRender(keep) {
 		keep.isMyBookmark = true;
 		keep.me = me;
-		for (var i = 0; i < keep.collections.length; i++) {
-			var id = keep.collections[i];
-			keep.collections[i] = {id: id, name: collections[id].name};
+		prepKeepCollections(keep.collections);
+	}
+
+	function prepKeepCollections(colls) {
+		for (var i = 0; i < colls.length; i++) {
+			var id = colls[i];
+			colls[i] = {id: id, name: collections[id].name};
 		}
 	}
 
