@@ -9,6 +9,7 @@ var urlMyKeeps = urlKeeps + '/all';
 var urlMyKeepsCount = urlKeeps + '/count';
 var urlUser = urlSite + '/user';
 var urlMe = urlUser + '/me';
+var urlMyPrefs = urlUser + '/prefs';
 var urlCollections = urlSite + '/collections';
 var urlCollectionsAll = urlCollections + '/all';
 var urlCollectionsOrder = urlCollections + '/ordering';
@@ -37,6 +38,26 @@ $(function() {
 	function setPageColHeights(h) {
 		$pageColInner.css("height", h > 0 ? h : $(window).height());
 	}
+
+	var $leftCol = $(".left-col").resizable({
+		delay: 10,
+		handles: "e",
+		minWidth: 240, // should match CSS
+		maxWidth: 420,
+		stop: function(e, ui) {
+			console.log("[resizable:stop] saving");
+			$.ajax({
+				url: urlMyPrefs,
+				type: "POST",
+				dataType: 'json',
+				data: JSON.stringify({site_left_col_width: String($leftCol.outerWidth())}),
+				contentType: 'application/json',
+				done: function(data) {
+					console.log("[prefs]", data);
+				}});
+		}
+	});
+	$leftCol.find(".ui-resizable-handle").appendTo($leftCol.find(".page-col-inner"));
 
 	var $subtitle = $(".subtitle"), subtitleTmpl = Tempo.prepare($subtitle);
 
@@ -95,18 +116,12 @@ $(function() {
 	var inCollTmpl = Tempo.prepare($inColl);
 
 	var me;
+	var myPrefs;
 	var myKeepsCount;
 	var searchResponse;
 	var collections;
 	var searchTimeout;
 	var lastKeep;
-
-	// populate user data
-	$.getJSON(urlMe, function(data) {
-		me = data;
-		$(".my-pic").css("background-image", "url(" + formatPicUrl(data.id, data.pictureName, 200) + ")");
-		$(".my-name").text(data.firstName + ' ' + data.lastName);
-	});
 
 	function identity(a) {
 		return a;
@@ -183,14 +198,19 @@ $(function() {
 		hit.me = me;
 		hit.keepers = hit.users;
 		hit.others = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
+		if (hit.collections) prepKeepCollections(hit.collections);
 	}
 
 	function prepKeepForRender(keep) {
 		keep.isMyBookmark = true;
 		keep.me = me;
-		for (var i = 0; i < keep.collections.length; i++) {
-			var id = keep.collections[i];
-			keep.collections[i] = {id: id, name: collections[id].name};
+		prepKeepCollections(keep.collections);
+	}
+
+	function prepKeepCollections(colls) {
+		for (var i = 0; i < colls.length; i++) {
+			var id = colls[i];
+			colls[i] = {id: id, name: collections[id].name};
 		}
 	}
 
@@ -278,13 +298,6 @@ $(function() {
 		}
 	}
 
-	function populateCollections() {
-		$.getJSON(urlCollectionsAll, {sort: "user"}, function(data) {
-			collTmpl.render(data.collections);
-			collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
-		});
-	}
-
 	function updateNumKeeps() {
 		$.getJSON(urlMyKeepsCount, function(data) {
 			$('.left-col .my-keeps .keep-count').text(myKeepsCount = data.numKeeps);
@@ -325,9 +338,9 @@ $(function() {
 					showMyKeeps();
 				}
 				var $keepColl = $main.find(".keep-coll[data-id=" + collId + "]");
-				$keepColl.css("width", $keepColl[0].offsetWidth);
+				if ($keepColl.length) $keepColl.css("width", $keepColl[0].offsetWidth);
 				var $pageColl = $detail.find(".page-coll[data-id=" + collId + "]");
-				$pageColl.css("width", $pageColl[0].offsetWidth);
+				if ($pageColl.length) $pageColl.css("width", $pageColl[0].offsetWidth);
 				$keepColl.add($pageColl).layout().on("transitionend", removeIfThis).addClass("removed");
 			}});
 	}).on("mouseup mousedown", ".coll-rename", function(e) {
@@ -884,12 +897,28 @@ $(function() {
 			custom_template_id: 3305}]);
 	});
 
-	populateCollections();
+	$.getJSON(urlMe, function(data) {
+		me = data;
+		$(".my-pic").css("background-image", "url(" + formatPicUrl(data.id, data.pictureName, 200) + ")");
+		$(".my-name").text(data.firstName + ' ' + data.lastName);
+	});
 
-	updateNumKeeps();  // populate number of my keeps
-	showMyKeeps();     // populate all my keeps
+	$.getJSON(urlMyPrefs, function(data) {
+		myPrefs = data;
+		if (myPrefs.site_left_col_width) {
+			$leftCol.animate({width: +myPrefs.site_left_col_width}, 120);
+		}
+	});
 
-	// auto update my keeps every minute
+	$.getJSON(urlCollectionsAll, {sort: "user"}, function(data) {
+		collTmpl.render(data.collections);
+		collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
+	});
+
+	updateNumKeeps();
+	showMyKeeps();
+
+	// auto-update my keeps every minute
 	setInterval(addNewKeeps, 60000);
 	setInterval(updateNumKeeps, 60000);
 });
