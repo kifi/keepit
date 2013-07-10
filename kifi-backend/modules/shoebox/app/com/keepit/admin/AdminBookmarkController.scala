@@ -5,8 +5,7 @@ import scala.concurrent._
 import scala.concurrent.duration._
 import com.google.inject.{Inject, Singleton}
 
-import com.keepit.search.SearchServiceClient
-import com.keepit.common.search.IndexInfo
+import com.keepit.search.{IndexInfo, SearchServiceClient}
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._

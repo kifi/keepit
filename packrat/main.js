@@ -651,6 +651,9 @@ function insertNewNotification(n) {
         return false;
       }
       break;
+    } else if (notifications[i].details.locator == n.details.locator) {
+      // there is already a more recent notification for this thread
+      return false;
     }
   }
   notifications.splice(i, 0, n);
@@ -664,16 +667,14 @@ function insertNewNotification(n) {
     }
   }
 
-  if (n.details.subsumes) {
-    for (i++; i < notifications.length; i++) {
-      var n2 = notifications[i];
-      if (n2.id == n.details.subsumes) {
-        notifications.splice(i, 1);
-        if (notificationNotVisited.test(n2.state)) {
-          decrementNumNotificationsNotVisited(n2);
-        }
-        break;
+  while(++i < notifications.length) {
+    var n2 = notifications[i];
+    if (n2.id == n.details.subsumes || n.details.locator == n2.details.locator) {
+      notifications.splice(i, 1);
+      if (notificationNotVisited.test(n2.state)) {
+        decrementNumNotificationsNotVisited(n2);
       }
+      break;
     }
   }
   return true;

@@ -8,7 +8,7 @@ class TopicSeqNumInfoTest extends Specification with ShoeboxTestInjector {
   "TopicSeqNumInfoRepo" should {
     "work" in {
       withDb() { implicit injector =>
-        val topicSeqNumInfoRepo = inject[TopicSeqNumInfoRepo]
+        val topicSeqNumInfoRepo = inject[TopicSeqNumInfoRepoA]
         db.readWrite { implicit s =>
           val s1 = topicSeqNumInfoRepo.updateBookmarkSeq(SequenceNumber(1))
           val s2 = topicSeqNumInfoRepo.updateUriSeq(SequenceNumber(1))

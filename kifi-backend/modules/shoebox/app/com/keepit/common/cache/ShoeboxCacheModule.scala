@@ -4,7 +4,7 @@ import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
 import scala.concurrent.duration._
 import com.keepit.search.ActiveExperimentsCache
-import com.keepit.common.social.{CommentWithBasicUserCache, BasicUserUserIdCache}
+import com.keepit.social.{CommentWithBasicUserCache, BasicUserUserIdCache}
 
 case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
 

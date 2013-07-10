@@ -4,8 +4,9 @@ import org.specs2.mutable.Specification
 
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.common.healthcheck._
-import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule, SocialId}
-import com.keepit.common.social.SocialNetworks.FACEBOOK
+import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule}
+import com.keepit.social.{SocialId, SocialNetworks}
+import SocialNetworks.FACEBOOK
 import com.keepit.model.SocialUserInfo
 import com.keepit.model.User
 import com.keepit.test._
@@ -14,7 +15,7 @@ import play.api.libs.json._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import securesocial.core._
-import com.keepit.common.store.FakeStoreModule
+import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.common.net.FakeHttpClientModule
 
 class ExtErrorReportControllerTest extends Specification with ShoeboxApplicationInjector {
@@ -37,7 +38,7 @@ class ExtErrorReportControllerTest extends Specification with ShoeboxApplication
 
   "ExtAuthController" should {
     "start" in {
-      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), FakeStoreModule(), FakeHttpClientModule(), FakeSocialGraphModule())) {
+      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), ShoeboxFakeStoreModule(), FakeHttpClientModule(), FakeSocialGraphModule())) {
         val fakeHealthcheck = inject[FakeHealthcheck]
         fakeHealthcheck.errorCount() === 0
 
