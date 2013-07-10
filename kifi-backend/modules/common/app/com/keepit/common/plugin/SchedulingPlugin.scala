@@ -43,7 +43,7 @@ trait SchedulingPlugin extends Plugin with Logging {
   }
 
   def cancelTasks() = {
-    log.info("Cancelling scheduled tasks:\n\t" + _cancellables.mkString("\n\t"))
+    log.info("Cancelling scheduled tasks")
     _cancellables.map(_.cancel())
   }
 
