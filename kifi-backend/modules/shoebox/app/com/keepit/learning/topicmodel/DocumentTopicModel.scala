@@ -4,15 +4,15 @@ import scala.Array.canBuildFrom
 
 @ImplementedBy(classOf[LDATopicModel])
 trait DocumentTopicModel {
-  def getDocumentTopicDistribution(content: String): Array[Double]
-  def getDocumentTopicId(content: String): Int
+  def getDocumentTopicDistribution(content: String, numTopics: Int): Array[Double]
+  def getDocumentTopicId(content: String, numTopics: Int): Int
 }
 
 class LDATopicModel (model: WordTopicModel) extends DocumentTopicModel{
-  def getDocumentTopicDistribution(content: String) = {
+  def getDocumentTopicDistribution(content: String, numTopics: Int) = {
     val words = content.split(" ").filter(!_.isEmpty).map(_.toLowerCase).filter(model.vocabulary.contains(_))
     val wordCounts = words.groupBy(x => x).foldLeft(Map.empty[String,Int]){(m, pair) => m + (pair._1 -> pair._2.size)}
-    var dist = new Array[Double](model.topicNames.size)
+    var dist = new Array[Double](numTopics)
     for(x <- wordCounts){
       val y = ArrayUtils.scale(model.wordTopic.get(x._1).get, x._2)
       dist = ArrayUtils.add(dist, y)
@@ -22,8 +22,8 @@ class LDATopicModel (model: WordTopicModel) extends DocumentTopicModel{
     else ArrayUtils.scale(dist, 1.0/s)
   }
 
-  def getDocumentTopicId(content: String) = {
-    val dist = getDocumentTopicDistribution(content)
+  def getDocumentTopicId(content: String, numTopics: Int) = {
+    val dist = getDocumentTopicDistribution(content, numTopics)
     ArrayUtils.findMax(dist)
   }
 
