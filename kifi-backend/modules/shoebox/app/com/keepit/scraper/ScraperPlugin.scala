@@ -30,7 +30,9 @@ private[scraper] class ScraperActor @Inject() (
   extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
-    case Scrape => sender ! scraper.run()
+    case Scrape =>
+      log.info("Starting scraping session")
+      sender ! scraper.run()
     case ScrapeInstance(uri) => sender ! scraper.safeProcessURI(uri)
     case m => throw new Exception("unknown message %s".format(m))
   }
@@ -55,7 +57,7 @@ class ScraperPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting ScraperPluginImpl")
-    scheduleTask(actorFactory.system, 0 seconds, 1 minutes, actor, Scrape)
+    scheduleTask(actorFactory.system, 30 seconds, 1 minutes, actor, Scrape)
   }
   override def onStop() {
     log.info("stopping ScraperPluginImpl")
