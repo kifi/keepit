@@ -89,7 +89,7 @@ trait WordTopicModelFactory {
 class WordTopicModelFactoryImpl @Inject()(wordTopicStore: WordTopicStore) extends WordTopicModelFactory with Logging{
 
   def apply(flag: String) = {
-
+    log.info(s"loading word topic model for model ${flag}")
     val id = flag match {
       case TopicModelAccessorFlag.A => "model_a"          // file name in S3
       case TopicModelAccessorFlag.B => "model_b"
@@ -98,7 +98,9 @@ class WordTopicModelFactoryImpl @Inject()(wordTopicStore: WordTopicStore) extend
     val content = wordTopicStore.get(id).get
     val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map{ i => "topic%d".format(i)}.toArray
     val loader = new LdaTopicModelLoader
-    loader.load(content, topicNames)
+    val model = loader.load(content, topicNames)
+    log.info(s"word topic model for model ${flag} has been loaded")
+    model
   }
 
 }
