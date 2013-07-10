@@ -29,4 +29,8 @@ object SchedulingProperties {
     def allowScheduling: Boolean = true
     override def neverAllowScheduling: Boolean = false
   }
+  val NeverEnabled = new SchedulingProperties {
+    def allowScheduling: Boolean = false
+    override def neverAllowScheduling: Boolean = true
+  }
 }

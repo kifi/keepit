@@ -44,7 +44,7 @@ trait ScraperPlugin extends Plugin {
 class ScraperPluginImpl @Inject() (
     actorFactory: ActorFactory[ScraperActor],
     scraper: Scraper,
-    val schedulingProperties: SchedulingProperties)
+    val schedulingProperties: SchedulingProperties) //only on leader
   extends ScraperPlugin with SchedulingPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 seconds)

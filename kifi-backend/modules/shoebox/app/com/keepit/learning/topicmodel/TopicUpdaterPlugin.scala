@@ -45,15 +45,15 @@ private[topicmodel] class TopicUpdaterActor @Inject() (
 }
 
 trait TopicUpdaterPlugin extends SchedulingPlugin {
-  def update(): Unit
   def reset(): Unit
 }
 
 class TopicUpdaterPluginImpl @Inject() (
     actorFactory: ActorFactory[TopicUpdaterActor],
     topicUpdater: TopicUpdater,
-    val schedulingProperties: SchedulingProperties
+    val schedulingProperties: SchedulingProperties //only on leader
 ) extends TopicUpdaterPlugin with Logging{
+
   implicit val actorTimeout = Timeout(5 seconds)
 
   private lazy val actor = actorFactory.get()
@@ -72,8 +72,6 @@ class TopicUpdaterPluginImpl @Inject() (
     log.info("admin reset topic tables ...")
     actor ! ResetTopic
   }
-
-  def update() = actor ! UpdateTopic
 
 }
 

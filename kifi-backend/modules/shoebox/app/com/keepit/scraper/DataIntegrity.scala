@@ -27,7 +27,7 @@ trait DataIntegrityPlugin extends SchedulingPlugin
 
 class DataIntegrityPluginImpl @Inject() (
     actorFactory: ActorFactory[DataIntegrityActor],
-    val schedulingProperties: SchedulingProperties)
+    val schedulingProperties: SchedulingProperties) //only on leader
   extends Logging with DataIntegrityPlugin {
 
   private lazy val actor = actorFactory.get()
