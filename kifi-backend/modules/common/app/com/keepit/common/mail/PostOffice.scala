@@ -64,9 +64,11 @@ trait RemotePostOfficePlugin extends Plugin {
 }
 
 class RemotePostOfficePluginImpl @Inject() (
-    actorFactory: ActorFactory[RemotePostOfficeActor],
-    val schedulingProperties: SchedulingProperties)
+    actorFactory: ActorFactory[RemotePostOfficeActor])
   extends RemotePostOfficePlugin with SchedulingPlugin {
+
+  val schedulingProperties = SchedulingProperties.AlwaysEnabled
+
   implicit val actorTimeout = Timeout(5 seconds)
   private lazy val actor = actorFactory.get()
 
