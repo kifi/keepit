@@ -82,7 +82,7 @@ trait ChannelManager[T, S <: Channel] {
    *  The message will be sent to the specified channel locally and to `fanout(id, msg)`, and will
    *  return a future to the number of channels the message was sent to.
    */
-  def push(channelId: T, msg: JsArray): Future[Int]
+  def pushAndFanout(channelId: T, msg: JsArray): Future[Int]
 
   /** Push a message to the local channels managed by this ChannelManager.
     *
@@ -183,7 +183,7 @@ abstract class ChannelManagerImpl[T, S <: Channel](name: String, creator: T => S
     find(id).map(_.push(msg)).getOrElse(0)
   }
 
-  def push(id: T, msg: JsArray): Future[Int] = {
+  def pushAndFanout(id: T, msg: JsArray): Future[Int] = {
     val localTotal = pushNoFanout(id, msg)
     fanout(id, msg).map(t => t + localTotal)
   }
@@ -252,7 +252,6 @@ class UserSpecificChannel(id: Id[User]) extends ChannelImpl(id)
 // Used for page-specific transmissions, such as new comments.
 class UriSpecificChannel(uri: String) extends ChannelImpl(uri)
 @Singleton class UriChannel @Inject() (shoeboxServiceClient: ShoeboxServiceClient) extends ChannelManagerImpl("uri", (uri: String) => new UriSpecificChannel(uri)) {
-
 
   def broadcastFanout(msg: JsArray): Future[Int] = {
     Promise.successful(0).future

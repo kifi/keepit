@@ -243,7 +243,7 @@ class AdminUserController @Inject() (
         case Some(ue) => Some(userExperimentRepo.save(ue.withState(UserExperimentStates.ACTIVE)))
         case None => Some(userExperimentRepo.save(UserExperiment(userId = userId, experimentType = expType)))
       }) foreach { _ =>
-        userChannel.push(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
+        userChannel.pushAndFanout(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
       }
     }
     Ok(Json.obj(experiment -> true))
@@ -265,7 +265,7 @@ class AdminUserController @Inject() (
     db.readWrite { implicit session =>
       userExperimentRepo.get(userId, ExperimentTypes(experiment)).foreach { ue =>
         userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))
-        userChannel.push(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
+        userChannel.pushAndFanout(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
       }
     }
     Ok(Json.obj(experiment -> false))

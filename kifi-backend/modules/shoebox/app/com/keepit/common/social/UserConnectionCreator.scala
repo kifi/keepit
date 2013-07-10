@@ -66,11 +66,11 @@ class UserConnectionCreator @Inject() (
 
       val newConnections = updatedConnections diff existingConnections
       if (newConnections.nonEmpty) {
-        userChannel.push(userId, Json.arr("new_friends", newConnections.map(basicUserRepo.load)))
+        userChannel.pushAndFanout(userId, Json.arr("new_friends", newConnections.map(basicUserRepo.load)))
       }
       newConnections.foreach { connId =>
         log.info(s"Sending new connection to user $connId (to $userId)")
-        userChannel.push(connId, Json.arr("new_friends", Set(basicUserRepo.load(userId))))
+        userChannel.pushAndFanout(connId, Json.arr("new_friends", Set(basicUserRepo.load(userId))))
       }
       userConnectionRepo.addConnections(userId, newConnections)
       userValueRepo.setValue(userId, UserConnectionCreator.UpdatedUserConnectionsKey, clock.now.toStandardTimeString)
