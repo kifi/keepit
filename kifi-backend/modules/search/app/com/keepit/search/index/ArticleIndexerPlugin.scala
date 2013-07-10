@@ -46,10 +46,10 @@ trait ArticleIndexerPlugin extends SchedulingPlugin {
 
 class ArticleIndexerPluginImpl @Inject() (
     actorFactory: ActorFactory[ArticleIndexerActor],
-    articleIndexer: ArticleIndexer,
-    val schedulingProperties: SchedulingProperties)
+    articleIndexer: ArticleIndexer)
   extends ArticleIndexerPlugin with Logging {
 
+  val schedulingProperties = SchedulingProperties.AlwaysEnabled
   implicit val actorTimeout = Timeout(5 seconds)
 
   private lazy val actor = actorFactory.get()

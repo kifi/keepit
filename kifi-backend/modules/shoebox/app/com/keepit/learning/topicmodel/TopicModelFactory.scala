@@ -75,8 +75,15 @@ class NameMapperFactoryImpl @Inject()(
 
 @Singleton
 class FakeNameMapperFactoryImpl() extends NameMapperFactory{
+  val numTopicsA = TopicModelGlobalTest.numTopics            // This HAS to be consistent with the word topic model in S3, if we connect to S3 in devMode
+  val numTopicsB = TopicModelGlobalTest.numTopics
+
   def apply(flag: String) = {
-    val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map { i => "topic%d".format(i) }.toArray
+    val numTopics = flag match {
+      case TopicModelAccessorFlag.A => numTopicsA
+      case TopicModelAccessorFlag.B => numTopicsB
+    }
+    val topicNames: Array[String] = (0 until numTopics).map { i => "topic%d".format(i) }.toArray
     new IdentityTopicNameMapper(topicNames)
   }
 }
@@ -96,9 +103,8 @@ class WordTopicModelFactoryImpl @Inject()(wordTopicStore: WordTopicStore) extend
     }
 
     val content = wordTopicStore.get(id).get
-    val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map{ i => "topic%d".format(i)}.toArray
     val loader = new LdaTopicModelLoader
-    val model = loader.load(content, topicNames)
+    val model = loader.load(content)
     log.info(s"word topic model for model ${flag} has been loaded")
     model
   }
@@ -108,12 +114,10 @@ class WordTopicModelFactoryImpl @Inject()(wordTopicStore: WordTopicStore) extend
 @Singleton
 class FakeWordTopicModelFactoryImpl() extends WordTopicModelFactory{
   def apply(flag: String) = {
-    val vocabulary: Set[String] = (0 until TopicModelGlobal.numTopics).map{ i => "word%d".format(i)}.toSet
-    val wordTopic: Map[String, Array[Double]] = (0 until TopicModelGlobal.numTopics).foldLeft(Map.empty[String, Array[Double]]){
-      (m, i) => { val a = new Array[Double](TopicModelGlobal.numTopics); a(i) = 1.0; m + ("word%d".format(i) -> a) }
+    val vocabulary: Set[String] = (0 until TopicModelGlobalTest.numTopics).map{ i => "word%d".format(i)}.toSet
+    val wordTopic: Map[String, Array[Double]] = (0 until TopicModelGlobalTest.numTopics).foldLeft(Map.empty[String, Array[Double]]){
+      (m, i) => { val a = new Array[Double](TopicModelGlobalTest.numTopics); a(i) = 1.0; m + ("word%d".format(i) -> a) }
     }
-    val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map{ i => "topic%d".format(i)}.toArray
-    print("loading fake topic model")
-    new LdaWordTopicModel(vocabulary, wordTopic, topicNames)
+    new LdaWordTopicModel(vocabulary, wordTopic)
   }
 }

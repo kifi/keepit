@@ -130,7 +130,7 @@ class ReportBuilderPluginImpl @Inject() (
   reportStore: ReportStore,
   store: MongoEventStore,
   dailyReports: DailyReports,
-  val schedulingProperties: SchedulingProperties)
+  val schedulingProperties: SchedulingProperties) //only on leader
     extends Logging with ReportBuilderPlugin with SchedulingPlugin {
 
   def buildReport(startDate: DateTime, endDate: DateTime, report: ReportRepo): Unit = actor ! BuildReport(startDate, endDate, report)

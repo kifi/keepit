@@ -26,13 +26,13 @@ trait SchedulingPlugin extends Plugin with Logging {
     else log.info(s"scheduling disabled, block execution of scheduled task: $taskName")
 
   def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, taskName: String)(f: => Unit): Unit =
-    if (!schedulingProperties.neverallowScheduling) {
+    if (!schedulingProperties.neverAllowScheduling) {
       log.info(s"Registering $taskName in scheduler")
       _cancellables :+= system.scheduler.schedule(initialDelay, frequency) { execute(f, taskName) }
     } else log.info(s"permanently disable scheduling for task: $taskName")
 
   def scheduleTaskOnce(system: ActorSystem, initialDelay: FiniteDuration, taskName: String)(f: => Unit): Unit =
-    if (!schedulingProperties.neverallowScheduling) {
+    if (!schedulingProperties.neverAllowScheduling) {
       _cancellables :+= system.scheduler.scheduleOnce(initialDelay) { execute(f, taskName) }
     } else log.info(s"permanently disable scheduling for task: $taskName")
 

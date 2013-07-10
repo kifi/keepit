@@ -208,7 +208,7 @@ trait MailToKeepPlugin extends Plugin {
 
 class MailToKeepPluginImpl @Inject()(
   actorFactory: ActorFactory[MailToKeepActor],
-  val schedulingProperties: SchedulingProperties
+  val schedulingProperties: SchedulingProperties //only on leader
 ) extends MailToKeepPlugin with SchedulingPlugin {
 
   override def enabled: Boolean = true
@@ -223,7 +223,7 @@ class MailToKeepPluginImpl @Inject()(
   }
 }
 
-class FakeMailToKeepPlugin @Inject() (val schedulingProperties: SchedulingProperties) extends MailToKeepPlugin with Logging {
+class FakeMailToKeepPlugin @Inject() extends MailToKeepPlugin with Logging {
   def fetchNewKeeps() {
     log.info("Fake fetching new keeps")
   }

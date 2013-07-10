@@ -276,7 +276,7 @@ class ChannelPluginImpl @Inject() (
   system: ActorSystem,
   userChannel: UserChannel,
   uriChannel: UriChannel,
-  val schedulingProperties: SchedulingProperties)
+  val schedulingProperties: SchedulingProperties) //only on leader
   extends ChannelPlugin with SchedulingPlugin with Logging {
 
   // plugin lifecycle methods
