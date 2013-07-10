@@ -42,6 +42,7 @@ case class DevTopicModelModule() extends TopicModelModule {
   override def configure() {
     bind[TopicUpdaterPlugin].to[TopicUpdaterPluginImpl].in[AppScoped]
     bind[WordTopicModelFactory].to[FakeWordTopicModelFactoryImpl].in[AppScoped]
+    // bind[WordTopicModelFactory].to[WordTopicModelFactoryImpl].in[AppScoped]        // uncomment to connect to S3 in dev mode
     bind[NameMapperFactory].to[FakeNameMapperFactoryImpl].in[AppScoped]
   }
 

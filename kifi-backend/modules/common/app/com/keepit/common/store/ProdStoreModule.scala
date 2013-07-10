@@ -8,6 +8,9 @@ import play.api.Play._
 import com.keepit.common.analytics._
 import com.amazonaws.auth.BasicAWSCredentials
 import com.mongodb.casbah.MongoConnection
+import com.keepit.learning.topicmodel.WordTopicStore
+import com.keepit.learning.topicmodel.S3WordTopicStoreImpl
+import com.keepit.learning.topicmodel.InMemoryWordTopicStoreImpl
 
 trait StoreModule extends ScalaModule {
 
@@ -48,6 +51,13 @@ trait ProdStoreModule extends StoreModule {
 
   @Singleton
   @Provides
+  def wordTopicStore(amazonS3Client: AmazonS3): WordTopicStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.wordTopic.bucket").get)
+    new S3WordTopicStoreImpl(bucketName, amazonS3Client)
+  }
+
+  @Singleton
+  @Provides
   def mongoEventStore(): MongoEventStore = {
     current.configuration.getString("mongo.events.server").map { server =>
       val mongoConn = MongoConnection(server)
@@ -82,6 +92,13 @@ abstract class DevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) exte
     whenConfigured("amazon.s3.article.bucket")(
       prodStoreModule.articleStore(amazonS3ClientProvider.get)
     ).getOrElse(new InMemoryArticleStoreImpl())
+
+  @Singleton
+  @Provides
+  def wordTopicStore(amazonS3ClientProvider: Provider[AmazonS3]): WordTopicStore =
+    whenConfigured("amazon.s3.wordTopic.bucket")(
+      prodStoreModule.wordTopicStore(amazonS3ClientProvider.get)
+    ).getOrElse(new InMemoryWordTopicStoreImpl())
 
   @Singleton
   @Provides

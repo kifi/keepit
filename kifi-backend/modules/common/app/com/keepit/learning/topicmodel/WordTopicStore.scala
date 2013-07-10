@@ -8,11 +8,14 @@ import com.amazonaws.services.s3.model.S3Object
 import java.io.InputStream
 import com.keepit.common.strings._
 import com.keepit.common.store.InMemoryObjectStore
+import com.keepit.common.store.ObjectStore
 
+// a plain txt file store, fileName -> fileContent
+trait WordTopicStore extends ObjectStore[String, String]
 
-trait WordTopicStore extends S3ObjectStore[String, String]
+class S3WordTopicStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3) extends S3ObjectStore[String, String] with WordTopicStore {
+  val prefix = "word_topic/"              // S3 folder
 
-class S3WordTopicStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3) extends WordTopicStore {
   def unpackValue(s3Obj : S3Object) : String = {
     val is = s3Obj.getObjectContent
     try {
@@ -26,7 +29,7 @@ class S3WordTopicStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS
     throw new NotImplementedError       // currently the model is provided outside Scala. We are not supposed to write to the bucket.
   }
 
-  def idToKey(id: String) = "%s.json".format(id)
+  def idToKey(id: String) = prefix + "%s.json".format(id)
 }
 
-class InMemoryS3WordTopicStoreImpl extends InMemoryObjectStore[String, String] with WordTopicStore
+class InMemoryWordTopicStoreImpl extends InMemoryObjectStore[String, String] with WordTopicStore
