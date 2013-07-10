@@ -12,54 +12,28 @@ a[href] {color: #0089d5; text-decoration: none}
 ::-moz-placeholder {color: #b6c3cc}
 :-ms-input-placeholder {color: #b6c3cc}
 
-/* header */
+/* page structure */
+
 html {height: 100%; text-align: center; overflow-y: hidden; overflow-x: auto}
-body {height: 100%; min-width: 1024px; margin: 0 auto; padding: 0; background: #fafafa; font-size: 16px; text-align: left; position: relative}
-header {height: 70px; background: #67829c; position: relative; z-index: 1}
-.header-left {position: absolute; width: 15.873%; min-width: 200px; padding-top: 12px; text-align: center}
-.header-center {position: absolute; left: 15.873%; right: 25.78125%; padding-top: 10px; border-left: 1px solid transparent}
-@media (max-width: 1260px) { .header-center { left: 200px; right: 330px } }
-input.query {font-family: inherit; font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; -moz-box-sizing: border-box; box-sizing: border-box; padding: 9px 50px 9px 20px; border: none; border-right: 120px solid #67829c; background: #fff url(../img/search.png) right 16px center no-repeat; transition: border-right-width .3s; -webkit-transition: border-right-width .3s; -webkit-font-smoothing: antialiased}
-input.query:focus, input.query[data-q] {background-image: url(../img/search-blue.png); border-right-width: 0}
-input.query::-webkit-input-placeholder {color: #99a3b3}
-input.query::-moz-placeholder {color: #99a3b3}
-header>nav {position: absolute; right: 0; width: 25.78125%; min-width: 330px; -moz-box-sizing: border-box; box-sizing: border-box; padding: 26px 18px 0 0; text-align: right; font-size: 14px}
-header>nav>a[href] {padding: 10px 15px; color: #fff; border-left: 1px solid #fff; vertical-align: middle}
-header>nav>a:first-child {border-left: 0}
-header>nav>a[href]:hover {background-color: #a0b1c2}
-header>nav>a[href]:active {background-color: #8699ab}
+body {height: 100%; min-width: 1024px; margin: 0 auto; padding: 0; background: #fafafa; font-size: 0; text-align: left; position: relative}
+.page-cols {display: table; table-layout: fixed; min-width: 100%; height: 100%}
+.left-col {display: table-cell; vertical-align: top; position: relative; width: 18%; min-width: 240px; background: #eff2f7}
+section.main {display: table-cell; vertical-align: top; position: relative; width: 51%; min-width: 454px; background: #fff}
+.right-col {display: table-cell; vertical-align: top; position: relative; width: 31%; min-width: 330px}
+.page-col-inner {position: relative; height: 100%; width: 100%} /* bugzil.la/35168 */
 
-/* main */
-section.main {position: absolute; top: 70px; bottom: 0; left: 15.873%; right: 25.78125%; border-left: 1px solid #dbdee3; background: #fff}
-@media (max-width: 1260px) { section.main { left: 200px; right: 330px } }
-#my-keeps,#search-results {display: none}
-.main[data-view=mine] #my-keeps,
-.main[data-view=search] #search-results {display: block}
-.main-head {padding: 15px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
-.main-head.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
-.main[data-view=search]>.main-head {padding-top: 10px; height: 37px}
-.main-head>h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
-.main[data-view=search]>.main-head>h1 {display: none}
-.main-head>.subtitle {font-size: 13px; font-weight: 300; color: #5b6670}
-.result-query::before {content: "\201c"}
-.result-query::after {content: "\201d"}
-.main-keeps {position: absolute; top: 72px; bottom: 0; left: 0; right: 0; overflow: hidden}
-.main[data-view=search]>.main-keeps {top: 37px}
-.main-keeps>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; padding: 1px 18px 0; box-sizing: border-box; -moz-box-sizing: border-box}
-
-aside {position: absolute; top: 70px; bottom: 0; -moz-box-sizing: border-box; box-sizing: border-box}
-
-/* left column */
-.left-col {left: 0; width: 15.873%; min-width: 200px; background: #eff2f7}
+/* left col */
+.header-left {height: 70px; background-color: #67829c; text-align: center; padding-top: 18px; -moz-box-sizing: border-box; box-sizing: border-box}
+.header-logo {display: inline-block; width: 51px; height: 29px; background: url(../img/kifi-logo.png) 0/100%}
 .my-identity {position: relative; width: 100%; text-align: center; background: #fff; padding-bottom: 10px}
 .my-pic {width: 66px; height: 66px; margin: 0 auto -10px; border-radius: 50%; border: 6px solid #eff2f7; position: relative; top: -10px; background-size: 100%; background-color: #b6c3cc; z-index: 1}
-.my-name {height: 28px; line-height: 28px}
+.my-name {height: 28px; line-height: 28px; font-size: 16px}
 .my-name:first-child {padding-top: 80px}
-.left-col h2 {margin: 4px 0 0; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased; padding: 0 11px}
+.left-col h2 {margin: 4px 0 0; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased; padding: 0 0 0 39px}
 .left-col h3 {margin: 0; position: relative; font-size: 13px; line-height: 41px; -webkit-user-select: none; -moz-user-select: -moz-none; -ms-user-select: none}
 .left-col .active,
 .left-col .my-keeps:not(.active):hover {background: #e3e6ee}
-.left-col h3>a {display: block; padding: 0 6px 0 12px; color: #818692}
+.left-col h3>a {display: block; padding: 0 6px 0 40px; color: #818692}
 .left-col .keep-count {float: right; margin: 10px 0 0; border: 1px solid #b8c5d2; border-radius: 10.5px; color: #628196; font-size: 12px; line-height: 20px; height: 19px; padding: 0 12px}
 @-moz-document url-prefix() {.left-col .keep-count {line-height: 18px}}
 .left-col .active .keep-count {color: #fff; background: #b8c5d2}
@@ -67,7 +41,7 @@ aside {position: absolute; top: 70px; bottom: 0; -moz-box-sizing: border-box; bo
 .left-col .active .view-name {color: #556179}
 .left-col .my-keeps .view-name::before {content: " "; display: inline-block; width: 21px; height: 21px; padding: 10px 0; margin-right: 7px; background: url(../img/kifi-icon.png) 0/42px content-box; vertical-align: top; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
 .left-col .my-keeps.active .view-name::before {background-position: right}
-#collections>h2 {margin-top: 15px; padding: 0 0 2px 38px; background: url(../img/folder-icon.png) left 12px bottom 13px/18px no-repeat; border-bottom: 1px solid #dbdee3}
+#collections>h2 {margin-top: 15px; padding: 0 0 2px 66px; background: url(../img/folder-icon.png) left 40px bottom 13px/18px no-repeat; border-bottom: 1px solid #dbdee3}
 #collections h3 {line-height: 39px}
 a.collection-create {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7) center/8px no-repeat #b8c5d2; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
 a.collection-create:hover {background-color: #a0b1c2}
@@ -78,27 +52,24 @@ a.collection-create:active {background-color: #8699ab}
 #collections input {width: 100%; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; line-height: normal; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text}
 #collections-list {overflow: hidden}
 #collections-list.positioned {position: absolute; bottom: 0; left: 0; right: 0}
-#collections-list>.antiscroll-inner {height: 100%; width: 100%; /*overflow-x: hidden;*/ position: relative}
+#collections-list>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; position: relative}
 #collections-list>.antiscroll-inner>.sortable-placeholder {background: #6fa6ef; height: 2px; min-height: 0}
-h3.collection {border-bottom: 1px solid #dbdee3; position: relative; -webkit-transition: padding-left .16s, background-color 0s; transition: padding-left .16s, background-color 0s}
-.collection.with-tri:not(.no-tri) {padding-left: 27px}
+h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 .collection.renaming {background-color: #fff}
 .collection.renaming>a {cursor: text}
 .collection.renaming,
-.collection.renamed {-webkit-transition-duration: .16s; transition-duration: .16s}
+.collection.renamed {-webkit-transition: background-color .16s; transition: background-color .16s}
 .collection.drop-hover {background-color: #6fa6ef}
 .collection.drop-hover .view-name {color: #fff}
 .collection.drop-hover .keep-count {background-color: #fff; border-color: #fff; color: #628196}
 .collection .keep-count {margin-top: 9px}
 .collection.renaming .keep-count {display: none}
-.coll-tri {position: absolute; top: 0; bottom: 0; left: -27px; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer; visibility: hidden; -webkit-transition: left .16s; transition: left .16s}
+.coll-tri {position: absolute; top: 0; bottom: 0; left: -33px; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer; -webkit-transition: left .16s; transition: left .16s}
 .active>.coll-tri {background-color: #b8c5d2}
-.renaming>.coll-tri {display: none}
 .coll-tri::before {content: " "; border-width: 4px 4px 0; border-style: solid; border-color: #b8c5d2 transparent; font-size: 0; line-height: 0; vertical-align: 1px}
 .active>.coll-tri::before {border-top-color: #fff}
-.collection:hover>.coll-tri,
-.collection.with-tri>.coll-tri {visibility: visible}
-.collection.with-tri:not(.no-tri)>.coll-tri {left: 0}
+.collection:not(.renaming):hover>.coll-tri,
+.collection.with-menu>.coll-tri {left: 0}
 #coll-menu {display: none; position: absolute; top: 100%; left: 0; z-index: 1; background: #e3e6ee}
 #coll-menu.page-bottom {top: auto; bottom: 100%}
 #coll-menu>li>a {display: block; padding: 0 16px; font-size: 12px; line-height: 24px; white-space: nowrap; color: #556179; border: solid #dbdee3; border-width: 0 1px 1px 0}
@@ -106,132 +77,37 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative; -webkit-tra
 #coll-menu>li>a:hover,
 #coll-menu>li>a.hover {background: #9ba4b8; color: #fff}
 
-aside.right {right: 0; width: 25.78125%; min-width: 330px}
-aside.right>.antiscroll-inner {position: absolute; top: 0; bottom: 0; left: 0; right: 0; overflow-x: hidden; overflow-y: scroll; -moz-box-sizing: border-box; box-sizing: border-box}
-
-.splash {background-color: #fff; border-left: 1px solid #dbdee3}
-.splash>.antiscroll-inner {padding: 6px 0 0 36px}
-.splash h2 {margin: 30px 0 6px; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
-.splash ul {margin: 0; padding: 0; list-style: none; font-size: 15px; line-height: 46px; -webkit-font-smoothing: antialiased}
-.splash ul>li>a {display: inline-block; color: #556179; margin-left: -10px; padding: 0 24px 0 10px}
-.splash ul>li>a[href]:hover {background-color: #f7fafe}
-.splash ul>li>a[href]:active {background-color: #eff2f7}
-.splash ul>li>a::before {content: " "; display: inline-block; width: 30px; height: 24px; vertical-align: -6px; font-size: 0; margin-right: 16px; background: url(../img/splash.png) 0 0/30px auto}
-.about-kifi>li:nth-child(2)>a::before {background-position: 0 -24px}
-.about-kifi>li:nth-child(3)>a::before {background-position: 0 -48px}
-.about-kifi>li:nth-child(4)>a::before {background-position: 0 -72px}
-.about-kifi>li:nth-child(5)>a::before {background-position: 0 -96px}
-.about-us>li:first-child>a::before {background-position: 0 -120px}
-.about-us>li:nth-child(2)>a::before {background-position: 0 -144px}
-.about-us>li:nth-child(3)>a::before {background-position: 0 -168px}
-.about-us>li:nth-child(4)>a::before {background-position: 0 -192px}
-
-.detail {display: none; padding: 20px 20px 0; background: #eff2f7; color: #556179; -webkit-transition: -webkit-transform .2s; transition: -webkit-transform .2s, transform .2s}
-.detail h2 {color: inherit; font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased}
-/*.detail select {padding: 5px}*/
-/*.detail a {color: #556179; display: block}*/
-.page-meta {font-size: 0}
-a.page-url[href] {font-size: 12px; line-height: 20px; color: inherit; -webkit-font-smoothing: antialiased; max-width: 100%; margin-bottom: 12px}
-a.page-url[href]:hover {text-decoration: underline}
-.page-pic-wrap {display: table; table-layout: fixed; width: 100%; overflow: hidden}
-.page-pic {display: table-cell; background-color: rgba(0,0,0,.05); background-size: 100% auto; width: 100%; min-height: 135px; padding-top: 47%; cursor:pointer; -moz-box-sizing: border-box; box-sizing: border-box}
-.page-how {display: table-cell; position: relative; vertical-align: middle; text-align: center; white-space: nowrap; width: 0; max-width: 0; -webkit-transition: width .18s, max-width .18s; transition: width .18s, max-width .18s}
-[data-kept] .page-how {width: 48px; max-width: 48px}
-.page-how-pub,
-.page-how-pri {position: absolute; top: 0; bottom: 0; left: 0; right: 0; -webkit-transform: scale(.001,1); transform: scale(.001,1); -webkit-transition: -webkit-transform .18s; transition: -webkit-transform .18s, transform .18s}
-.page-how-pub {background-color: #accc98}
-.page-how-pri {background-color: #e78881}
-[data-kept] .page-how-pub,
-[data-kept] .page-how-pri {-webkit-transform: none; transform: none}
-.pri>.page-how-pub {-webkit-transform: translate(0,100%); transform: translate(0,100%)}
-.pub>.page-how-pri {-webkit-transform: translate(0,-100%); transform: translate(0,-100%)}
-.page-how-1 {display: table; height: 100%; width: 100%}
-.page-how-2 {display: table-cell; vertical-align: middle; text-align: center}
-.page-how-3 {margin: 0 -50px; color: #fff; font-size: 18px; line-height: 22px; height: 22px; -webkit-font-smoothing: antialiased; -webkit-transform: rotate(90deg); transform: rotate(90deg)}
-.page-how-pub>*>*>.page-how-3::before,
-.page-how-pri>*>*>.page-how-3::before {content: " "; display: inline-block; height: 16px; width: 16px; background: url(../img/keep-icons.png) -46px 0/auto 16px; vertical-align: -2px; margin-right: 9px; -webkit-transform: rotate(-90deg); transform: rotate(-90deg)}
-.page-how-pri>*>*>.page-how-3::before {width: 12px; background-position: -34px 0}
-a.page-keep[href],
-a.page-priv[href] {display: inline-block; margin-top: 5px; color: #fff; background-color: #b8c5d2; font-size: 13px; line-height: 30px; width: 50%; -moz-box-sizing: border-box; box-sizing: border-box; text-align: center; -webkit-font-smoothing: antialiased}
-a.page-priv[href] {border-left: 2px solid #eff2f7}
-a.page-keep[href]:hover,
-a.page-priv[href]:hover {background-color: #a0b1c2}
-a.page-keep[href]:active,
-a.page-priv[href]:active {background-color: #8699ab}
-[data-kept]>*>.page-keep[href]::before,
-.page-priv[href]::before {content: " "; display: inline-block; height: 13px; width: 11px; background: url(../img/keep-icons.png) 0 0/auto 16px content-box; vertical-align: -1px; margin-right: 8px}
-:not([data-kept="pri"])>*>.page-priv[href]::before {width: 10px; background-position: -11px 0; border-left: 2px solid transparent}
-[data-kept="pri"]>*>.page-priv[href]::before {width: 13px; background-position: -21px 0}
-.page-keep::after {content: "Keep"}
-[data-kept]>*>.page-keep::after {content: "Unkeep"}
-.page-priv::after {content: "Keep privately"}
-[data-kept="pub"]>*>.page-priv::after {content: "Make private"}
-[data-kept="pri"]>*>.page-priv::after {content: "Make public"}
-.multiple>*>.page-keep::after {content: "Keep all"}
-.multiple[data-kept]>*>.page-keep::after {content: "Unkeep all"}
-.multiple>*>.page-priv::after {content: "Keep all privately"}
-.multiple[data-kept="pub"]>*>.page-priv::after {content: "Make all private"}
-.multiple[data-kept="pri"]>*>.page-priv::after {content: "Make all public"}
-.page-who,
-.page-colls {margin: 18px 0 5px; border-top: 1px solid #cdd6e0; padding: 11px 0 20px}
-.page-who-pics {margin: 5px 0 13px; white-space: nowrap; overflow: hidden}
-.page-who-pics>img {width: 38px; height: 38px; margin-right: 1px; border-radius: 2px}
-.page-who-text {font-size: 12px; line-height: 12px}
-:not([data-kept])>*>.page-who-pics>.me,
-:not([data-kept])>*>.page-who-text>.keep-you,
-.page-who-text>.keep-private {display: none}
-.page-coll-list {margin-top: 10px}
-.page-coll-list>li {display: inline-block; line-height: 24px; vertical-align: top}
-.page-coll {position: relative; overflow: hidden; white-space: nowrap; background-color: #b8c5d2; margin: 0 3px 3px 0; font-size: 13px; line-height: 24px; -webkit-font-smoothing: antialiased}
-.page-coll.removed {width: 0 !important; -webkit-transition: width .12s ease-in-out; transition: width .12s ease-in-out}
-.page-coll>a[href] {color: #fff; vertical-align: top}
-.page-coll>a:hover {background-color: #a0b1c2}
-.page-coll>a:active {background-color: #8699ab}
-.page-coll-a {padding: 0 16px}
-.page-coll:hover>.page-coll-a {padding: 0 25px 0 7px}
-.page-coll-x {position: absolute; right: 0; top: 0; bottom: 0; width: 0; text-align: center; background-color: inherit}
-.page-coll:hover>.page-coll-x {width: 18px}
-.page-coll-x::before {content: "\00D7"; position: relative; bottom: 1px}
-.page-coll-new {position: relative}
-.page-coll-add {display: inline-block; white-space: nowrap; font-size: 0; vertical-align: top}
-.page-coll-add::before {content: " "; display: inline-block; width: 18px; height: 18px; border-radius: 50%; vertical-align: bottom; position: relative; bottom: 3px; background: url(data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7) center/8px no-repeat; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
-li:first-child>.page-coll-add::before {width: 16px; height: 16px; bottom: 4px; margin-left: 8px; background-color: #f7fafe; background-image: url(data:image/gif;base64,R0lGODlhCAAIAIABALjF0v///yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7)}
-.page-coll-add::before,
-li:first-child>.page-coll-add {background-color: #b8c5d2}
-.page-coll-add:hover::before,
-li:first-child>.page-coll-add:hover {background-color: #a0b1c2}
-.page-coll-add:active::before,
-li:first-child>.page-coll-add:active {background-color: #8699ab}
-[data-kept]>*>*>*>li:first-child>.page-coll-add::after {content: "Add this keep to a collection"}
-:not([data-kept])>*>*>*>li:first-child>.page-coll-add::after {content: "Keep to a collection"}
-.page-coll-add::after {vertical-align: bottom; color: #fff; font-size: 13px; margin: 0 14px 0 8px; -webkit-font-smoothing: antialiased}
-.page-coll-sizer {position: absolute; visibility: hidden}
-.page-coll-sizer,
-input.page-coll-input {display: inline-block; border: 1px solid #cdd6e0; padding: 0 16px; height: 24px; vertical-align: top; -moz-box-sizing: border-box; box-sizing: border-box; color: inherit; font-family: inherit; font-size: 13px; -webkit-font-smoothing: antialiased; -webkit-transition: width 60ms ease-in-out; transition: width 60ms ease-in-out}
-input.page-coll-input {width: 20ex}
-.page-coll-opts {display: none; position: absolute; width: 100%; border: 1px solid #cdd6e0; border-top: none; -moz-box-sizing: border-box; box-sizing: border-box; background-color: #fff; font-size: 13px}
-.page-coll-opts:not(:empty) {display: block}
-.page-coll-opt {padding: 0 16px; font-size: 13px; color: #888b93; -webkit-font-smoothing: antialiased; cursor: pointer}
-.page-coll-opt.current {background-color: #f1f2f6}
-.page-coll-opt[data-id=""] {position: relative; padding-right: 36px}
-.page-coll-opt[data-id=""]::after {content: "NEW"; position: absolute; right: 5px; top: 5px; bottom: 5px; height: 14px; line-height: 13px; padding: 0 4px; font-size: 9px; font-weight: bold; background-color: #b8c5d2; color: white; border-radius: 2px; -webkit-font-smoothing: subpixel-antialiased}
-.page-coll-opt[data-id=""]:not(:first-child) {border-top: 1px solid #cdd6e0}
-
-.long-text {white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
-span.long-text, a.long-text {display: inline-block}
+/* center col */
+input.query {border: solid #67829c; border-width: 10px 120px 12px 0; font-family: inherit; font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; height: 70px; -moz-box-sizing: border-box; box-sizing: border-box; padding: 9px 50px 9px 20px; background: #fff url(../img/search.png) right 16px center no-repeat; transition: border-right-width .3s; -webkit-transition: border-right-width .3s; -webkit-font-smoothing: antialiased}
+input.query:focus, input.query[data-q] {background-image: url(../img/search-blue.png); border-right-width: 0}
+input.query::-webkit-input-placeholder {color: #99a3b3}
+input.query::-moz-placeholder {color: #99a3b3}
+.main-head,
+.main-keeps {margin-left: 1px; box-shadow: -1px 0 #dbdee3}
+.main-head {padding: 15px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
+.main-head.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
+.main[data-view=search] .main-head {padding-top: 10px; height: 37px}
+.main-head>h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
+.main[data-view=search] .main-head>h1 {display: none}
+.main-head>.subtitle {font-size: 13px; font-weight: 300; color: #5b6670}
+.result-query::before {content: "\201c"}
+.result-query::after {content: "\201d"}
+.main-keeps {position: absolute; top: 142px; bottom: 0; left: 0; right: 0; overflow: hidden}
+.main[data-view=search] .main-keeps {top: 107px}
+.main-keeps>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; padding: 1px 18px 0; box-sizing: border-box; -moz-box-sizing: border-box}
+#my-keeps,#search-results {display: none}
+.main[data-view=mine] #my-keeps,
+.main[data-view=search] #search-results {display: block}
 
 .keep-group-title {margin-top: 7px; color: #67829c; font-size: 21px; font-weight: 100; letter-spacing: 1px; border-bottom: 1px solid #e3e6ee; padding: 4px 30px}
 .keep-group-title+.keep {border-top: 0}
 .keep {position: relative; clear: left; padding: 10px 0 13px 30px; border-top: 1px solid #f9f9f9}
 .keep.selected {background-color: #eff2f7}
-.keep-arrow-1 {position: absolute; right: 16px; width: 22px; top: 0; bottom: 0}
-.keep-arrow-2 {display: table; table-layout: fixed; height: 100%; width: 100%}
-.keep-arrow-3 {display: table-cell; vertical-align: middle}
-.keep-arrow-4 {display: inline-block; width: 6px; height: 16px; cursor: pointer; border: solid transparent; border-width: 4px 8px; background: url(../img/arrow-r.png) left/13px 16px no-repeat content-box; transition: transform .2s}
-.keep-arrow-4:hover {background-color: rgba(0,0,0,.05); border-color: rgba(0,0,0,.05)}
-.keep:hover .keep-arrow-4,
-.keep.selected .keep-arrow-4 {background-position: right}
-.keep.selected .keep-arrow-4 {-webkit-transform: scale(-1,1); transform: scale(-1,1)}
+.keep-arrow {position: absolute; right: 16px; width: 6px; height: 16px; bottom: 13px; border: solid transparent; border-width: 4px 8px; background: url(../img/arrow-r.png) left/13px 16px no-repeat content-box; cursor: pointer; -webkit-transition: -webkit-transform .2s; transition: -webkit-transform .2s, transform .2s}
+.keep-arrow:hover {background-color: rgba(0,0,0,.05); border-color: rgba(0,0,0,.05)}
+.keep:hover .keep-arrow,
+.keep.selected .keep-arrow {background-position: right}
+.keep.selected .keep-arrow {-webkit-transform: scale(-1,1); transform: scale(-1,1)}
 .keep>.handle {cursor: move; position: absolute; top: 0; bottom: 0; left: 0; width: 21px; display: none; background: url(../img/drag-handle.png) center/10px no-repeat}
 .keep>.handle:hover,
 .keep.selected>.handle {background-color: #e3e6ee}
@@ -277,14 +153,144 @@ span.long-text, a.long-text {display: inline-block}
 .keep-private {display: inline-block; margin: 0 2px; background: url(../img/private.png) left center/17px no-repeat; margin: 0 2px; line-height: 17px; padding-left: 21px}
 .keep.mine .keep-friends::before,
 .keep.mine .keep-others::before,
-.keep-friends+.keep-others::before {content: "+ "}
+.keep-who-text>.keep-friends+.keep-others::before {content: "+ "}
 .keep:not(.mine) .keep-you+.keep-kept-this::before {content: "Nobody has "; line-height: 23px}
 .keeps-loading {margin: 20px 50%; position: relative; left: -22px}
 
-.drag-helper {background: #fff; padding: 5px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
+.drag-helper {background: #fff; padding: 5px; font-size: 16px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
+
+/* right col */
+
+nav {height: 70px; padding: 26px 18px 0 0; background-color: #67829c; text-align: right; font-size: 14px; -moz-box-sizing: border-box; box-sizing: border-box}
+nav>a[href] {padding: 10px 15px; color: #fff; border-left: 1px solid #fff; vertical-align: middle}
+nav>a:first-child {border-left: 0}
+nav>a[href]:hover {background-color: #a0b1c2}
+nav>a[href]:active {background-color: #8699ab}
+
+.splash,
+.detail {position: absolute; top: 70px; left: 0; right: 0; bottom: 0; overflow: hidden}
+.right-col>*>*>.antiscroll-inner {position: absolute; top: 0; bottom: 0; left: 0; right: 0; overflow-x: hidden; overflow-y: scroll}
+
+.splash {background-color: #fff; border-left: 1px solid #dbdee3}
+.splash>.antiscroll-inner {padding: 6px 0 0 36px}
+.splash h2 {margin: 30px 0 6px; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
+.splash ul {margin: 0; padding: 0; list-style: none; font-size: 15px; line-height: 46px; -webkit-font-smoothing: antialiased}
+.splash ul>li>a {display: inline-block; color: #556179; margin-left: -10px; padding: 0 24px 0 10px}
+.splash ul>li>a[href]:hover {background-color: #f7fafe}
+.splash ul>li>a[href]:active {background-color: #eff2f7}
+.splash ul>li>a::before {content: " "; display: inline-block; width: 30px; height: 24px; vertical-align: -6px; font-size: 0; margin-right: 16px; background: url(../img/splash.png) 0 0/30px auto}
+.about-kifi>li:nth-child(2)>a::before {background-position: 0 -24px}
+.about-kifi>li:nth-child(3)>a::before {background-position: 0 -48px}
+.about-kifi>li:nth-child(4)>a::before {background-position: 0 -72px}
+.about-kifi>li:nth-child(5)>a::before {background-position: 0 -96px}
+.about-us>li:first-child>a::before {background-position: 0 -120px}
+.about-us>li:nth-child(2)>a::before {background-position: 0 -144px}
+.about-us>li:nth-child(3)>a::before {background-position: 0 -168px}
+.about-us>li:nth-child(4)>a::before {background-position: 0 -192px}
+
+.detail {display: none; padding: 20px 20px 0; background: #eff2f7; color: #556179; -webkit-transition: -webkit-transform .2s; transition: -webkit-transform .2s, transform .2s}
+.detail h2 {color: inherit; font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased}
+/*.detail select {padding: 5px}*/
+/*.detail a {color: #556179; display: block}*/
+.page-meta {font-size: 0}
+a.page-url[href] {font-size: 12px; line-height: 20px; color: inherit; -webkit-font-smoothing: antialiased; max-width: 100%; margin-bottom: 12px}
+a.page-url[href]:hover {text-decoration: underline}
+.page-pic-wrap {display: table; table-layout: fixed; width: 100%; position: relative; overflow: hidden}
+.page-pic {display: table-cell; background-color: rgba(0,0,0,.05); background-size: 100% auto; width: 100%; min-height: 135px; padding-top: 47%; cursor:pointer; -moz-box-sizing: border-box; box-sizing: border-box}
+.page-how {display: table-cell; position: relative; vertical-align: middle; text-align: center; white-space: nowrap; width: 0; max-width: 0; -webkit-transition: width .18s, max-width .18s; transition: width .18s, max-width .18s}
+[data-kept] .page-how {width: 48px; max-width: 48px}
+.page-how-0 {position: absolute; top: 0; right: 0; bottom: 0; width: 48px; overflow: hidden}
+.page-how-pub,
+.page-how-pri {position: absolute; top: 0; right: 0; width: 100%; height: 100%; -webkit-transform: scale(.001,1); transform: scale(.001,1); -webkit-transition: -webkit-transform .18s, top .18s; transition: -webkit-transform .18s, transform .18s, top .18s}
+.page-how-pub {background-color: #accc98}
+.page-how-pri {background-color: #e78881}
+[data-kept] .page-how-pub,
+[data-kept] .page-how-pri {-webkit-transform: none; transform: none}
+.pri>*>.page-how-pub {top: 100%}
+.pub>*>.page-how-pri {top: -100%}
+.page-how-1 {display: table; height: 100%; width: 100%}
+.page-how-2 {display: table-cell; vertical-align: middle; text-align: center}
+.page-how-3 {margin: 0 -50px; color: #fff; font-size: 18px; line-height: 22px; height: 22px; -webkit-font-smoothing: antialiased; -webkit-transform: rotate(90deg); transform: rotate(90deg)}
+.page-how-pub>*>*>.page-how-3::before,
+.page-how-pri>*>*>.page-how-3::before {content: " "; display: inline-block; height: 16px; width: 16px; background: url(../img/keep-icons.png) -46px 0/auto 16px; vertical-align: -2px; margin-right: 9px; -webkit-transform: rotate(-90deg); transform: rotate(-90deg)}
+.page-how-pri>*>*>.page-how-3::before {width: 12px; background-position: -34px 0}
+a.page-keep[href],
+a.page-priv[href] {display: inline-block; margin-top: 5px; color: #fff; background-color: #b8c5d2; font-size: 13px; line-height: 30px; width: 50%; -moz-box-sizing: border-box; box-sizing: border-box; text-align: center; -webkit-font-smoothing: antialiased}
+a.page-priv[href] {border-left: 2px solid #eff2f7}
+a.page-keep[href]:hover,
+a.page-priv[href]:hover {background-color: #a0b1c2}
+a.page-keep[href]:active,
+a.page-priv[href]:active {background-color: #8699ab}
+[data-kept]>*>.page-keep[href]::before,
+.page-priv[href]::before {content: " "; display: inline-block; height: 13px; width: 11px; background: url(../img/keep-icons.png) 0 0/auto 16px content-box; vertical-align: -1px; margin-right: 8px}
+:not([data-kept="pri"])>*>.page-priv[href]::before {width: 10px; background-position: -11px 0; border-left: 2px solid transparent}
+[data-kept="pri"]>*>.page-priv[href]::before {width: 13px; background-position: -21px 0}
+.page-keep::after {content: "Keep"}
+[data-kept]>*>.page-keep::after {content: "Unkeep"}
+.page-priv::after {content: "Keep privately"}
+[data-kept="pub"]>*>.page-priv::after {content: "Make private"}
+[data-kept="pri"]>*>.page-priv::after {content: "Make public"}
+.multiple>*>.page-keep::after {content: "Keep all"}
+.multiple[data-kept]>*>.page-keep::after {content: "Unkeep all"}
+.multiple>*>.page-priv::after {content: "Keep all privately"}
+.multiple[data-kept="pub"]>*>.page-priv::after {content: "Make all private"}
+.multiple[data-kept="pri"]>*>.page-priv::after {content: "Make all public"}
+.page-who,
+.page-colls {margin: 18px 0 5px; border-top: 1px solid #cdd6e0; padding: 11px 0 20px}
+.page-who-pics {margin: 5px 0 13px; white-space: nowrap; overflow: hidden}
+.page-who-pics>img {width: 38px; height: 38px; margin-right: 1px; border-radius: 2px}
+.page-who-text {font-size: 12px; line-height: 12px}
+:not([data-kept])>*>.page-who-pics>.me,
+:not([data-kept])>*>.page-who-text>.keep-you,
+.page-who-text>.keep-private {display: none}
+[data-kept]>*>.page-who-text>.keep-friends::before,
+[data-kept]>*>.page-who-text>.keep-others::before,
+.page-who-text>.keep-friends+.keep-others::before {content: "+ "}
+:not([data-kept])>*>.page-who-text>.keep-you+.keep-kept-this::before {content: "Nobody has "}
+.page-coll-list {margin-top: 10px}
+.page-coll-list>li {display: inline-block; line-height: 24px; vertical-align: top}
+.page-coll {position: relative; overflow: hidden; white-space: nowrap; background-color: #b8c5d2; margin: 0 3px 3px 0; font-size: 13px; line-height: 24px; -webkit-font-smoothing: antialiased}
+.page-coll.removed {width: 0 !important; -webkit-transition: width .12s ease-in-out; transition: width .12s ease-in-out}
+.page-coll>a[href] {color: #fff; vertical-align: top}
+.page-coll>a:hover {background-color: #a0b1c2}
+.page-coll>a:active {background-color: #8699ab}
+.page-coll-a {padding: 0 16px}
+.page-coll:hover>.page-coll-a {padding: 0 25px 0 7px}
+.page-coll-x {position: absolute; right: 0; top: 0; bottom: 0; width: 0; text-align: center; background-color: inherit}
+.page-coll:hover>.page-coll-x {width: 18px}
+.page-coll-x::before {content: "\00D7"; position: relative; bottom: 1px}
+.page-coll-new {position: relative}
+.page-coll-add {display: inline-block; white-space: nowrap; font-size: 0; vertical-align: top}
+.page-coll-add::before {content: " "; display: inline-block; width: 18px; height: 18px; border-radius: 50%; vertical-align: bottom; position: relative; bottom: 3px; background: url(data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7) center/8px no-repeat; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
+li:first-child>.page-coll-add::before {width: 16px; height: 16px; bottom: 4px; margin-left: 8px; background-color: #f7fafe; background-image: url(data:image/gif;base64,R0lGODlhCAAIAIABALjF0v///yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7)}
+.page-coll-add::before,
+li:first-child>.page-coll-add {background-color: #b8c5d2}
+.page-coll-add:hover::before,
+li:first-child>.page-coll-add:hover {background-color: #a0b1c2}
+.page-coll-add:active::before,
+li:first-child>.page-coll-add:active {background-color: #8699ab}
+[data-kept]>*>*>*>li:first-child>.page-coll-add::after {content: "Add this keep to a collection"}
+:not([data-kept])>*>*>*>li:first-child>.page-coll-add::after {content: "Keep to a collection"}
+.page-coll-add::after {vertical-align: bottom; color: #fff; font-size: 13px; margin: 0 14px 0 8px; -webkit-font-smoothing: antialiased}
+.page-coll-sizer {position: absolute; visibility: hidden}
+.page-coll-sizer,
+input.page-coll-input {display: inline-block; border: 1px solid #cdd6e0; padding: 0 16px; height: 24px; vertical-align: top; -moz-box-sizing: border-box; box-sizing: border-box; color: inherit; font-family: inherit; font-size: 13px; -webkit-font-smoothing: antialiased; -webkit-transition: width 60ms ease-in-out; transition: width 60ms ease-in-out}
+input.page-coll-input {width: 20ex}
+.page-coll-opts {display: none; position: absolute; width: 100%; border: 1px solid #cdd6e0; border-top: none; -moz-box-sizing: border-box; box-sizing: border-box; background-color: #fff; font-size: 13px}
+.page-coll-opts:not(:empty) {display: block}
+.page-coll-opt {padding: 0 16px; font-size: 13px; color: #888b93; -webkit-font-smoothing: antialiased; cursor: pointer}
+.page-coll-opt.current {background-color: #f1f2f6}
+.page-coll-opt[data-id=""] {position: relative; padding-right: 36px}
+.page-coll-opt[data-id=""]::after {content: "NEW"; position: absolute; right: 5px; top: 5px; bottom: 5px; height: 14px; line-height: 13px; padding: 0 4px; font-size: 9px; font-weight: bold; background-color: #b8c5d2; color: white; border-radius: 2px; -webkit-font-smoothing: subpixel-antialiased}
+.page-coll-opt[data-id=""]:not(:first-child) {border-top: 1px solid #cdd6e0}
+
+/* shared styles */
+.long-text {white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
+span.long-text, a.long-text {display: inline-block}
 
 /* retina image overrides */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .header-logo {background-image: url(../img/kifi-logo.2x.png)}
   #collections>h2 {background-image: url(../img/folder-icon.2x.png)}
   .keep-private {background-image: url(../img/private.2x.png)}
   .keep-arrow-4 {background-image: url(../img/arrow-r.2x.png)}
@@ -295,6 +301,8 @@ span.long-text, a.long-text {display: inline-block}
   [data-kept]>*>.page-keep[href]::before,
   .page-meta>.page-priv[href]::before {background-image: url(../img/keep-icons.2x.png)}
 }
+
+.fancybox-inner {font-size: 16px}
 
 /* scrollbars */
 .antiscroll-scrollbar {
@@ -314,8 +322,8 @@ span.long-text, a.long-text {display: inline-block}
   -o-transition: linear 300ms opacity;
 }
 .antiscroll-scrollbar-shown {opacity: 1; filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=100)}
-.antiscroll-scrollbar-horizontal {height: 7px; margin-left: 2px; bottom: 2px; left: 0; cursor: ew-resize}
-.antiscroll-scrollbar-vertical {width: 7px; margin-top: 2px; right: 2px; top: 0; cursor: ns-resize}
+.antiscroll-scrollbar-horizontal {height: 7px; margin-left: 2px; bottom: 2px; left: 0}
+.antiscroll-scrollbar-vertical {width: 7px; margin-top: 2px; right: 2px; top: 0}
 .antiscroll-inner {overflow: scroll}
 .antiscroll-inner::-webkit-scrollbar {width: 0; height: 0}
 .antiscroll-inner::scrollbar {width: 0; height: 0}

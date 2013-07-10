@@ -3,7 +3,6 @@ package com.keepit.controllers.search
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db._
-import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.search.index.ArticleIndexer
 import com.keepit.search.index.ArticleIndexerPlugin
@@ -13,7 +12,7 @@ import org.apache.lucene.document.Document
 import play.api.libs.json._
 import play.api.mvc.Action
 import views.html
-import com.keepit.common.search.IndexInfo
+import com.keepit.search.IndexInfo
 
 class ArticleIndexerController @Inject()(
     indexer: ArticleIndexer,

@@ -1,36 +1,21 @@
 package com.keepit.controllers.admin
 
-import play.api.data._
-import play.api._
-import play.api.Play.current
-import play.api.mvc._
-import play.api.libs.json.JsArray
-import play.api.libs.json.Json
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsString
-import play.api.libs.json.JsValue
-import play.api.libs.json.JsNumber
-import play.api.libs.concurrent.Execution.Implicits._
-import java.util.concurrent.TimeUnit
-import com.keepit.common.db._
+import scala.concurrent.duration._
 
-import com.keepit.search.ArticleStore
+import org.joda.time.Days
+import org.joda.time.LocalDate
+
+import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
+import com.keepit.common.db.slick.Database
+import com.keepit.common.healthcheck.BabysitterTimeout
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.common.healthcheck.BabysitterTimeout
-import org.joda.time.LocalDate
-import org.joda.time.DateTimeZone
-import org.joda.time.Days
-import play.api.libs.json.JsNumber
-import play.api.http.ContentTypes
-import com.keepit.common.db.slick.Database
-import com.keepit.common.db.slick.Repo
-import scala.concurrent.duration._
-import views.html
 
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.google.inject.{Inject, Singleton, Provider}
+import play.api.Play.current
+import play.api._
+import play.api.libs.json.Json
+import views.html
 
 @Singleton
 class AdminDashboardController @Inject() (
@@ -54,10 +39,7 @@ class AdminDashboardController @Inject() (
     } else {
       (0 to Days.daysBetween(day0, clock.today).getDays()) map {i => dayCounts(day0.plusDays(i))}
     }
-    JsObject(List(
-        "day0" -> day0.toJson,
-        "counts" -> JsArray(userCounts.map {i => JsNumber(i)})
-    ))
+    Json.obj("day0" -> day0, "counts" -> userCounts)
   }
 
   def index = AdminHtmlAction { implicit request =>

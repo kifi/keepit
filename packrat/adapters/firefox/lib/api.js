@@ -367,7 +367,6 @@ exports.tabs = {
     blur: new Listeners,
     loading: new Listeners,
     ready: new Listeners,
-    complete: new Listeners,
     unload: new Listeners}};
 
 exports.timers = timers;
@@ -458,8 +457,7 @@ for each (let win in windows) {
   for each (let tab in win.tabs) {
     exports.log("[windows]", tab.id, tab.url);
     tabsById[tab.id] = tab;
-    let page = pages[tab.id] || createPage(tab);
-    // TODO: initialize page.complete somehow
+    pages[tab.id] || createPage(tab);
   }
 };
 
@@ -482,12 +480,6 @@ PageMod({
         dispatch.call(exports.tabs.on.unload, oldPage);
       }
       dispatch.call(exports.tabs.on.loading, createPage(tab));
-    });
-    worker.port.on("api:complete", function() {
-      exports.log("[api:complete]", tab.id, tab.url);
-      var page = pages[tab.id] || createPage(tab);
-      page.complete = true;
-      dispatch.call(exports.tabs.on.complete, page);
     });
     worker.port.on("api:nav", function() {
       exports.log("[api:nav]", tab.id, tab.url);

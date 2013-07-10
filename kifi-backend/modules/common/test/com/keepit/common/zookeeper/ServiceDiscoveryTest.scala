@@ -24,12 +24,13 @@ class ServiceDiscoveryTest extends Specification with DeprecatedTestInjector {
 
   "discovery" should {
     "serialize" in {
-
-      val service = RemoteService(inject[AmazonInstanceInfo], ServiceStatus.UP, ServiceType.DEV_MODE)
-      val discovery = new ServiceDiscoveryImpl(inject[ZooKeeperClient], inject[FortyTwoServices], inject[Provider[AmazonInstanceInfo]], ServiceType.TEST_MODE::Nil)
-      val json = RemoteService.toJson(service)
-      val deserialized = RemoteService.fromJson(json)
-      deserialized === service
+      withInjector() { implicit injector =>
+        val service = RemoteService(inject[AmazonInstanceInfo], ServiceStatus.UP, ServiceType.DEV_MODE)
+        val discovery = new ServiceDiscoveryImpl(inject[ZooKeeperClient], inject[FortyTwoServices], inject[Provider[AmazonInstanceInfo]], ServiceType.TEST_MODE::Nil)
+        val json = RemoteService.toJson(service)
+        val deserialized = RemoteService.fromJson(json)
+        deserialized === service
+      }
     }
 
     "set of nodes" in {
@@ -38,10 +39,11 @@ class ServiceDiscoveryTest extends Specification with DeprecatedTestInjector {
     }
 
     "register" in {
-      val zk = inject[ZooKeeperClient]
-      val discovery = new ServiceDiscoveryImpl(inject[ZooKeeperClient], inject[FortyTwoServices], inject[Provider[AmazonInstanceInfo]], ServiceType.TEST_MODE::Nil)
-      val registeredNode = discovery.register()
-      fromByteArray(zk.get(registeredNode)) === RemoteService.toJson(RemoteService(inject[AmazonInstanceInfo], ServiceStatus.STARTING, ServiceType.TEST_MODE))
+      withInjector() { implicit injector =>
+        val zk = inject[ZooKeeperClient]
+        val discovery = new ServiceDiscoveryImpl(inject[ZooKeeperClient], inject[FortyTwoServices], inject[Provider[AmazonInstanceInfo]], ServiceType.TEST_MODE::Nil)
+        val registeredNode = discovery.register()
+        fromByteArray(zk.get(registeredNode)) === RemoteService.toJson(RemoteService(inject[AmazonInstanceInfo], ServiceStatus.STARTING, ServiceType.TEST_MODE))
     }
   }
 }

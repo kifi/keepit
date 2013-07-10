@@ -60,7 +60,7 @@ class TopicUpdaterPluginImpl @Inject() (
 
   override def enabled: Boolean = true
   override def onStart() {
-     scheduleTask(actorFactory.system, 60 seconds, 2 minutes, actor, UpdateTopic)
+     scheduleTask(actorFactory.system, 5 minutes, 2 minutes, actor, UpdateTopic)
      log.info("starting TopicUpdaterPluginImpl")
   }
   override def onStop() {

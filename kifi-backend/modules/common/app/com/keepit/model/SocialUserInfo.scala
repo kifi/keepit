@@ -6,12 +6,12 @@ import org.joda.time.DateTime
 
 import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key, PrimitiveCacheImpl}
 import com.keepit.common.db._
-import com.keepit.common.social.{SocialNetworks, SocialId, SocialNetworkType}
 import com.keepit.common.time._
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import securesocial.core.SocialUser
+import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialId}
 
 case class SocialUserInfo(
   id: Option[Id[SocialUserInfo]] = None,

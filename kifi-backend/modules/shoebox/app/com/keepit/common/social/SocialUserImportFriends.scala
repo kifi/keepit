@@ -8,6 +8,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model._
 import play.api.libs.json._
 import play.api.Mode._
+import com.keepit.social.{SocialUserRawInfo, SocialUserRawInfoStore}
 
 class SocialUserImportFriends @Inject() (
     db: Database,
@@ -40,7 +41,8 @@ class SocialUserImportFriends @Inject() (
   private def getIfUpdateNeeded(friend: SocialUserInfo)(implicit s: RSession): Option[SocialUserInfo] = {
     repo.getOpt(friend.socialId, friend.networkType) match {
       case Some(existing) if existing.copy(
-        fullName = friend.fullName, pictureUrl = friend.pictureUrl, profileUrl = friend.profileUrl) != existing =>
+          fullName = friend.fullName, pictureUrl = friend.pictureUrl, profileUrl = friend.profileUrl) != existing &&
+          friend.fullName.nonEmpty /* LinkedIn API sometimes sends us bad data... */ =>
         Some(existing.copy(
           fullName = friend.fullName,
           pictureUrl = friend.pictureUrl,
