@@ -51,7 +51,11 @@ slider2 = function() {
         hidePane();
       } else if ($slider) {
         hideSlider("esc");
+      } else {
+        return;
       }
+      e.preventDefault();
+      e.stopPropagation();
     }
   }
 
