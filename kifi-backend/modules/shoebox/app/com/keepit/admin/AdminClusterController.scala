@@ -36,5 +36,4 @@ class AdminClusterController @Inject() (
         Ok(html.admin.adminClustersView(clustersInfo))
     }
 
-
 }
