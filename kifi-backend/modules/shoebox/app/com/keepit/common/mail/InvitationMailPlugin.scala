@@ -85,7 +85,7 @@ trait InvitationMailPlugin extends Plugin {
 
 class InvitationMailPluginImpl @Inject()(
     actorFactory: ActorFactory[InvitationMailActor],
-    val schedulingProperties: SchedulingProperties
+    val schedulingProperties: SchedulingProperties //only on leader
     ) extends InvitationMailPlugin with SchedulingPlugin with Logging {
 
   override def enabled: Boolean = true

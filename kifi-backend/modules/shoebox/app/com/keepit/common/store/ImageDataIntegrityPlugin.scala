@@ -88,7 +88,7 @@ trait ImageDataIntegrityPlugin extends Plugin {
 class ImageDataIntegrityPluginImpl @Inject()(
     system: ActorSystem,
     actorFactory: ActorFactory[ImageDataIntegrityActor],
-    val schedulingProperties: SchedulingProperties
+    val schedulingProperties: SchedulingProperties //only on leader
   ) extends SchedulingPlugin with ImageDataIntegrityPlugin {
   private lazy val actor = actorFactory.get()
 

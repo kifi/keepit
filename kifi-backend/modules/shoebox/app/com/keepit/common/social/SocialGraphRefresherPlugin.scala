@@ -44,7 +44,7 @@ trait SocialGraphRefresher extends Plugin {}
 
 class SocialGraphRefresherImpl @Inject() (
     actorFactory: ActorFactory[SocialGraphRefresherActor],
-    val schedulingProperties: SchedulingProperties)
+    val schedulingProperties: SchedulingProperties) //only on leader
   extends SocialGraphRefresher with SchedulingPlugin {
 
   implicit val actorTimeout = Timeout(5 seconds)

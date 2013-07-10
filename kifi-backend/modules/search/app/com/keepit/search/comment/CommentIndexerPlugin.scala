@@ -42,10 +42,10 @@ trait CommentIndexerPlugin extends SchedulingPlugin {
 
 class CommentIndexerPluginImpl @Inject() (
     actorFactory: ActorFactory[CommentIndexerActor],
-    commentIndexer: CommentIndexer,
-    val schedulingProperties: SchedulingProperties)
+    commentIndexer: CommentIndexer)
   extends CommentIndexerPlugin with Logging {
 
+  val schedulingProperties = SchedulingProperties.AlwaysEnabled
   implicit val actorTimeout = Timeout(5 seconds)
 
   private lazy val actor = actorFactory.get()

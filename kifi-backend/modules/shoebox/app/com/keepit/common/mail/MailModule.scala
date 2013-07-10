@@ -53,7 +53,7 @@ case class DevMailModule() extends MailModule {
     mailToKeepServerSettings: Option[MailToKeepServerSettings],
     schedulingProperties: SchedulingProperties): MailToKeepPlugin = {
     mailToKeepServerSettingsOpt match {
-      case None => new FakeMailToKeepPlugin(schedulingProperties)
+      case None => new FakeMailToKeepPlugin()
       case _ => new MailToKeepPluginImpl(actorFactory, schedulingProperties)
     }
   }
