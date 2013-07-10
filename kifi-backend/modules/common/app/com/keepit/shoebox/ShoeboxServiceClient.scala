@@ -77,6 +77,11 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUserExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]]
   def getSocialUserInfosByUserId(userId: Id[User]): Future[Seq[SocialUserInfo]]
   def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]]
+  def userChannelFanout(userId: Id[User], msg: JsArray): Seq[Future[Int]]
+  def userChannelBroadcastFanout(msg: JsArray): Seq[Future[Int]]
+  def userChannelCountFanout(): Seq[Future[Int]]
+  def uriChannelFanout(uri: String, msg: JsArray): Seq[Future[Int]]
+  def uriChannelCountFanout(): Seq[Future[Int]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -350,6 +355,49 @@ class ShoeboxServiceClientImpl @Inject() (
             case _ => None
           }
         }
+    }
+  }
+
+  def userChannelFanout(userId: Id[User], msg: JsArray): Seq[Future[Int]] = {
+    implicit val userFormatter = Id.format[User]
+    val payload = Json.obj("userId" -> userId, "msg" -> msg)
+    broadcast(Shoebox.internal.userChannelFanout(), payload).map { futResp =>
+      futResp.map { r =>
+        r.body.toInt
+      }
+    }
+  }
+
+  def userChannelBroadcastFanout(msg: JsArray): Seq[Future[Int]] = {
+    broadcast(Shoebox.internal.userChannelBroadcastFanout(), msg).map { futResp =>
+      futResp.map { r =>
+        r.body.toInt
+      }
+    }
+  }
+
+  def userChannelCountFanout(): Seq[Future[Int]] = {
+    broadcast(Shoebox.internal.userChannelCountFanout()).map { futResp =>
+      futResp.map { r =>
+        r.body.toInt
+      }
+    }
+  }
+
+  def uriChannelFanout(uri: String, msg: JsArray): Seq[Future[Int]] = {
+    val payload = Json.obj("uri" -> uri, "msg" -> msg)
+    broadcast(Shoebox.internal.uriChannelFanout(), payload).map { futResp =>
+      futResp.map { r =>
+        r.body.toInt
+      }
+    }
+  }
+
+  def uriChannelCountFanout(): Seq[Future[Int]] = {
+    broadcast(Shoebox.internal.uriChannelCountFanout()).map { futResp =>
+      futResp.map { r =>
+        r.body.toInt
+      }
     }
   }
 

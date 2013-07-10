@@ -34,6 +34,7 @@ abstract class ShoeboxModule(
   val discoveryModule: DiscoveryModule,
   val healthCheckModule: HealthCheckModule,
   val httpClientModule: HttpClientModule,
+  val shoeboxServiceClientModule: ShoeboxServiceClientModule,
 
   // Shoebox Functional Modules
   val slickModule: SlickModule,
@@ -60,6 +61,7 @@ abstract class ShoeboxModule(
     discoveryModule,
     healthCheckModule,
     httpClientModule,
+    shoeboxServiceClientModule,
 
     slickModule,
     scraperModule,

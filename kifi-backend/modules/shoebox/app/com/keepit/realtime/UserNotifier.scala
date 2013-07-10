@@ -101,7 +101,7 @@ class NotificationBroadcaster @Inject() (
     }
     val sendable = SendableNotification.fromUserNotification(notify)
     log.info("User notification serialized: " + sendable)
-    userChannel.push(notify.userId, Json.arr("notification", Json.toJson(sendable)))
+    userChannel.pushAndFanout(notify.userId, Json.arr("notification", Json.toJson(sendable)))
   }
 }
 
@@ -164,7 +164,7 @@ class UserNotifier @Inject() (
   def comment(comment: Comment): Unit = {
     db.readWrite { implicit s =>
       val normalizedUri = normalUriRepo.get(comment.uriId).url
-      uriChannel.push(normalizedUri, Json.arr("comment", normalizedUri, commentWithBasicUserRepo.load(comment)))
+      uriChannel.pushAndFanout(normalizedUri, Json.arr("comment", normalizedUri, commentWithBasicUserRepo.load(comment)))
 
       val commentDetails = createCommentDetails(comment)
       commentDetails.map { commentDetail =>
@@ -186,13 +186,14 @@ class UserNotifier @Inject() (
       val parent = message.parent.map(commentRepo.get).getOrElse(message)
       val threadInfo = threadInfoRepo.load(parent, Some(message.userId))
       val messageJson = Json.arr("message", normUri.url, threadInfo, commentWithBasicUserRepo.load(message))
-      userChannel.push(message.userId, messageJson)
+      userChannel.pushAndFanout(message.userId, messageJson)
 
       val thread = if (message eq parent) Seq(message) else (parent +: commentRepo.getChildren(parent.id.get)).reverse
 
       createMessageUserNotifications(message, thread) map {
         case (user, messageDetails, userNotification) =>
-          userChannel.push(userNotification.userId, messageJson)
+          log.info(s"Sending notification to ${userNotification.userId}: $messageJson")
+          userChannel.pushAndFanout(userNotification.userId, messageJson)
           notificationBroadcast.push(userNotification)
       }
     }
