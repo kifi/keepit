@@ -11,14 +11,15 @@ import scala.Some
 trait UserValueRepo extends Repo[UserValue] {
   def getValue(userId: Id[User], key: String)(implicit session: RSession): Option[String]
   def setValue(userId: Id[User], name: String, value: String)(implicit session: RWSession): String
+  // def clearValue(userId: Id[User], name: String)(implicit session: RWSession): Unit // TODO
 }
 
 @Singleton
 class UserValueRepoImpl @Inject() (
-                                    val db: DataBaseComponent,
-                                    val valueCache: UserValueCache,
-                                    val clock: Clock)
-  extends DbRepo[UserValue] with UserValueRepo {
+  val db: DataBaseComponent,
+  val valueCache: UserValueCache,
+  val clock: Clock)
+    extends DbRepo[UserValue] with UserValueRepo {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._

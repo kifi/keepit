@@ -5,7 +5,6 @@ import com.keepit.common.healthcheck.Healthcheck.INTERNAL
 import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
 import com.keepit.common.net.Host
 import com.keepit.common.net.URI
-import com.keepit.common.social.BasicUser
 import com.keepit.model._
 import com.keepit.search.graph.URIList
 import com.keepit.search.Lang
@@ -34,6 +33,7 @@ import scala.concurrent.Future
 import scala.concurrent.future
 import scala.concurrent.Promise
 import scala.util.matching.Regex.Match
+import com.keepit.social.BasicUser
 
 
 object CommentFields {

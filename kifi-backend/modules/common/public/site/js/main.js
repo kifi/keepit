@@ -9,6 +9,7 @@ var urlMyKeeps = urlKeeps + '/all';
 var urlMyKeepsCount = urlKeeps + '/count';
 var urlUser = urlSite + '/user';
 var urlMe = urlUser + '/me';
+var urlMyPrefs = urlUser + '/prefs';
 var urlCollections = urlSite + '/collections';
 var urlCollectionsAll = urlCollections + '/all';
 var urlCollectionsOrder = urlCollections + '/ordering';
@@ -37,6 +38,26 @@ $(function() {
 	function setPageColHeights(h) {
 		$pageColInner.css("height", h > 0 ? h : $(window).height());
 	}
+
+	var $leftCol = $(".left-col").resizable({
+		delay: 10,
+		handles: "e",
+		minWidth: 240, // should match CSS
+		maxWidth: 420,
+		stop: function(e, ui) {
+			console.log("[resizable:stop] saving");
+			$.ajax({
+				url: urlMyPrefs,
+				type: "POST",
+				dataType: 'json',
+				data: JSON.stringify({site_left_col_width: String($leftCol.outerWidth())}),
+				contentType: 'application/json',
+				done: function(data) {
+					console.log("[prefs]", data);
+				}});
+		}
+	});
+	$leftCol.find(".ui-resizable-handle").appendTo($leftCol.find(".page-col-inner"));
 
 	var $subtitle = $(".subtitle"), subtitleTmpl = Tempo.prepare($subtitle);
 
@@ -95,18 +116,12 @@ $(function() {
 	var inCollTmpl = Tempo.prepare($inColl);
 
 	var me;
+	var myPrefs;
 	var myKeepsCount;
 	var searchResponse;
 	var collections;
 	var searchTimeout;
 	var lastKeep;
-
-	// populate user data
-	$.getJSON(urlMe, function(data) {
-		me = data;
-		$(".my-pic").css("background-image", "url(" + formatPicUrl(data.id, data.pictureName, 200) + ")");
-		$(".my-name").text(data.firstName + ' ' + data.lastName);
-	});
 
 	function identity(a) {
 		return a;
@@ -183,14 +198,19 @@ $(function() {
 		hit.me = me;
 		hit.keepers = hit.users;
 		hit.others = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
+		if (hit.collections) prepKeepCollections(hit.collections);
 	}
 
 	function prepKeepForRender(keep) {
 		keep.isMyBookmark = true;
 		keep.me = me;
-		for (var i = 0; i < keep.collections.length; i++) {
-			var id = keep.collections[i];
-			keep.collections[i] = {id: id, name: collections[id].name};
+		prepKeepCollections(keep.collections);
+	}
+
+	function prepKeepCollections(colls) {
+		for (var i = 0; i < colls.length; i++) {
+			var id = colls[i];
+			colls[i] = {id: id, name: collections[id].name};
 		}
 	}
 
@@ -278,13 +298,6 @@ $(function() {
 		}
 	}
 
-	function populateCollections() {
-		$.getJSON(urlCollectionsAll, {sort: "user"}, function(data) {
-			collTmpl.render(data.collections);
-			collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
-		});
-	}
-
 	function updateNumKeeps() {
 		$.getJSON(urlMyKeepsCount, function(data) {
 			$('.left-col .my-keeps .keep-count').text(myKeepsCount = data.numKeeps);
@@ -325,9 +338,9 @@ $(function() {
 					showMyKeeps();
 				}
 				var $keepColl = $main.find(".keep-coll[data-id=" + collId + "]");
-				$keepColl.css("width", $keepColl[0].offsetWidth);
+				if ($keepColl.length) $keepColl.css("width", $keepColl[0].offsetWidth);
 				var $pageColl = $detail.find(".page-coll[data-id=" + collId + "]");
-				$pageColl.css("width", $pageColl[0].offsetWidth);
+				if ($pageColl.length) $pageColl.css("width", $pageColl[0].offsetWidth);
 				$keepColl.add($pageColl).layout().on("transitionend", removeIfThis).addClass("removed");
 			}});
 	}).on("mouseup mousedown", ".coll-rename", function(e) {
@@ -391,7 +404,7 @@ $(function() {
 		document.removeEventListener("mousedown", $collMenu.data("docMouseDown"), true);
 		$collMenu.removeData("docMouseDown").slideUp(80, function() {
 			$collMenu.detach().find(".hover").removeClass("hover");
-		}).closest(".collection").removeClass("with-menu").each(hideCollTri);
+		}).closest(".collection").removeClass("with-menu");
 	}
 
 	$(document).keydown(function(e) {  // auto focus on search field when starting to type anywhere on the document
@@ -547,35 +560,9 @@ $(function() {
 				hideCollMenu();
 			}
 		}
-	}).on("mousemove", ".collection:not(.with-menu):not(.renaming):not(.drop-hover)", function(e) {
-		var $coll = $(this), $tri = $coll.find(".coll-tri"), data = $coll.data();
-		var x = e.clientX, y = e.clientY, dx = x - data.x, dy = y - data.y, now = +new Date;
-		if ($coll.hasClass("with-tri")) {
-			if (!$coll.hasClass("no-tri") && e.target !== $tri[0] && dx > Math.abs(dy)) {
-				hideCollTri.call(this);
-			}
-		} else {
-			var r = this.getBoundingClientRect();
-			if (x < r.left + .5 * r.width &&
-					(-4 * dx > now - data.t && -dx > Math.abs(dy) || e.target === $tri[0] ||
-					 dx < 0 && x < r.left + $tri.width())) {
-				$coll.addClass("with-tri");
-			}
-		}
-		data.x = x, data.y = y, data.t = now;
-	}).on("mouseleave", ".collection.with-tri:not(.with-menu):not(.no-tri)", function() {
-		hideCollTri.call(this);
 	});
 	var collScroller = $collList.data("antiscroll");
 	$(window).resize(collScroller.refresh.bind(collScroller));
-
-	function hideCollTri() {
-		$(this).on("transitionend", function end(e) {
-			if (e.target === this) {
-				$(this).off("transitionend", end).removeClass("with-tri no-tri");
-			}
-		}).addClass("no-tri");
-	}
 
 	$(".left-col .my-keeps>a").click(showMyKeeps.bind(null, null));
 
@@ -910,12 +897,28 @@ $(function() {
 			custom_template_id: 3305}]);
 	});
 
-	populateCollections();
+	$.getJSON(urlMe, function(data) {
+		me = data;
+		$(".my-pic").css("background-image", "url(" + formatPicUrl(data.id, data.pictureName, 200) + ")");
+		$(".my-name").text(data.firstName + ' ' + data.lastName);
+	});
 
-	updateNumKeeps();  // populate number of my keeps
-	showMyKeeps();     // populate all my keeps
+	$.getJSON(urlMyPrefs, function(data) {
+		myPrefs = data;
+		if (myPrefs.site_left_col_width) {
+			$leftCol.animate({width: +myPrefs.site_left_col_width}, 120);
+		}
+	});
 
-	// auto update my keeps every minute
+	$.getJSON(urlCollectionsAll, {sort: "user"}, function(data) {
+		collTmpl.render(data.collections);
+		collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
+	});
+
+	updateNumKeeps();
+	showMyKeeps();
+
+	// auto-update my keeps every minute
 	setInterval(addNewKeeps, 60000);
 	setInterval(updateNumKeeps, 60000);
 });

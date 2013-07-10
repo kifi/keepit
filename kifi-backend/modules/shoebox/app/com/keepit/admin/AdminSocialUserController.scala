@@ -6,11 +6,10 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.social.SocialGraphPlugin
-import com.keepit.common.social.SocialUserRawInfoStore
 import com.keepit.model._
 
 import views.html
+import com.keepit.social.{SocialGraphPlugin, SocialUserRawInfoStore}
 
 @Singleton
 class AdminSocialUserController @Inject() (

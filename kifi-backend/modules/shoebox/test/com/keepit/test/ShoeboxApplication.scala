@@ -51,7 +51,7 @@ trait ShoeboxTestInjector extends EmptyInjector with ShoeboxInjectionHelpers {
   DriverManager.registerDriver(new play.utils.ProxyDriver(Class.forName("org.h2.Driver").newInstance.asInstanceOf[Driver]))
 
   def withDb[T](overridingModules: Module*)(f: Injector => T) = {
-    withCustomInjector(overridingModules:_*) { implicit injector =>
+    withInjector(overridingModules:_*) { implicit injector =>
       val h2 = inject[DataBaseComponent].asInstanceOf[H2]
       h2.initListener = Some(new TableInitListener {
         def init(table: TableWithDDL) = executeTableDDL(h2, table)

@@ -44,6 +44,7 @@ import scala.concurrent.duration.FiniteDuration
 import org.joda.time.Seconds
 import scala.concurrent.Promise
 import scala.concurrent.stm._
+import com.keepit.social.{SocialNetworkType, SocialId, CommentWithBasicUser, BasicUser}
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]])
 

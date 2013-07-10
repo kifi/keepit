@@ -29,14 +29,14 @@ class SwitchableTopicModelAccessorFactory @Inject()(
 
   def makeA() = {
     val nameMapperA = nameMapperFactory(TopicModelAccessorFlag.A)
-    val wordTopicModelA = wordTopicModelFactory()
+    val wordTopicModelA = wordTopicModelFactory(TopicModelAccessorFlag.A)
     val docTopicModelA = new LDATopicModel(wordTopicModelA)
     new TopicModelAccessorA(userTopicRepoA, uriTopicRepoA, topicSeqInfoRepoA, topicNameRepoA, docTopicModelA, wordTopicModelA, nameMapperA)
   }
 
   def makeB() = {
     val nameMapperB = nameMapperFactory(TopicModelAccessorFlag.B)
-    val wordTopicModelB = wordTopicModelFactory()
+    val wordTopicModelB = wordTopicModelFactory(TopicModelAccessorFlag.B)
     val docTopicModelB = new LDATopicModel(wordTopicModelB)
     new TopicModelAccessorB(userTopicRepoB, uriTopicRepoB, topicSeqInfoRepoB, topicNameRepoB, docTopicModelB, wordTopicModelB, nameMapperB)
 
@@ -82,26 +82,32 @@ class FakeNameMapperFactoryImpl() extends NameMapperFactory{
 }
 
 trait WordTopicModelFactory {
-  def apply(): WordTopicModel
+  def apply(flag: String): WordTopicModel
 }
 
 @Singleton
-class WordTopicModelFactoryImpl() extends WordTopicModelFactory with Logging{
-  // will load from S3 store
-  def apply() = {
-    val path = current.configuration.getString("learning.topicModel.wordTopic.json.path").get
-    log.info("loading word topic model")
-    val c = scala.io.Source.fromFile(path).mkString
-    // names don't matter much, they will be provided by the nameMapper. May remove this field in the future.
+class WordTopicModelFactoryImpl @Inject()(wordTopicStore: WordTopicStore) extends WordTopicModelFactory with Logging{
+
+  def apply(flag: String) = {
+    log.info(s"loading word topic model for model ${flag}")
+    val id = flag match {
+      case TopicModelAccessorFlag.A => "model_a"          // file name in S3
+      case TopicModelAccessorFlag.B => "model_b"
+    }
+
+    val content = wordTopicStore.get(id).get
     val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map{ i => "topic%d".format(i)}.toArray
     val loader = new LdaTopicModelLoader
-    loader.load(c, topicNames)
+    val model = loader.load(content, topicNames)
+    log.info(s"word topic model for model ${flag} has been loaded")
+    model
   }
+
 }
 
 @Singleton
 class FakeWordTopicModelFactoryImpl() extends WordTopicModelFactory{
-  def apply() = {
+  def apply(flag: String) = {
     val vocabulary: Set[String] = (0 until TopicModelGlobal.numTopics).map{ i => "word%d".format(i)}.toSet
     val wordTopic: Map[String, Array[Double]] = (0 until TopicModelGlobal.numTopics).foldLeft(Map.empty[String, Array[Double]]){
       (m, i) => { val a = new Array[Double](TopicModelGlobal.numTopics); a(i) = 1.0; m + ("word%d".format(i) -> a) }
@@ -111,4 +117,3 @@ class FakeWordTopicModelFactoryImpl() extends WordTopicModelFactory{
     new LdaWordTopicModel(vocabulary, wordTopic, topicNames)
   }
 }
-

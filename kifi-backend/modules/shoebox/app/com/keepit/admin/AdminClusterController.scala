@@ -25,10 +25,10 @@ class AdminClusterController @Inject() (
         
         var clustersInfo : Seq[ClusterMemberInfo] = serviceTypes.flatMap{ serviceType =>
             val serviceCluster = serviceDiscovery.serviceCluster(serviceType)
-            serviceCluster.allServices.map { serviceInstance =>
+            serviceCluster.allMembers.map { serviceInstance =>
                 var isLeader = serviceCluster.leader.map(_==serviceInstance).getOrElse(false)
                 var testCapabilities = if (serviceType==ServiceType.SEARCH) List("Search", "Find") else List("packaging footwear", "email") //this is just for UI testing and will be removed again soon.
-                ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, ServiceStatus.UP, testCapabilities)
+                ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, serviceInstance.remoteService.status, testCapabilities)
             }
 
         }

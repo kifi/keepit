@@ -10,6 +10,7 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.google.inject.Injector
 import com.keepit.shoebox.TestShoeboxServiceClientModule
+import com.keepit.social.{SocialNetworks, SocialId}
 
 class SocialConnectionTest extends Specification with ShoeboxTestInjector {
 

@@ -4,7 +4,7 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick._
-import com.keepit.common.social.{SocialNetworks, BasicUserRepo}
+import com.keepit.common.social.{BasicUserRepo}
 import com.keepit.common.time._
 import com.keepit.model._
 
@@ -63,8 +63,31 @@ class UserController @Inject() (db: Database,
     Ok
   }
 
-  def getAllConnections = AuthenticatedJsonAction { request =>
+  private val SitePrefNames = Set("site_left_col_width")
 
+  def getPrefs() = AuthenticatedJsonAction { request =>
+    Ok(db.readOnly { implicit s =>
+      JsObject(SitePrefNames.toSeq.map { name =>
+        name -> userValueRepo.getValue(request.userId, name).map(JsString).getOrElse(JsNull)
+      })
+    })
+  }
+
+  def savePrefs() = AuthenticatedJsonToJsonAction { request =>
+    val o = request.request.body.as[JsObject]
+    if (o.keys.subsetOf(SitePrefNames)) {
+      db.readWrite { implicit s =>
+        o.fields.foreach { case (name, value) =>
+          userValueRepo.setValue(request.userId, name, value.as[String])  // TODO: deactivate pref if JsNull
+        }
+      }
+      Ok(o)
+    } else {
+      BadRequest(Json.obj("error" -> ((SitePrefNames -- o.keys).mkString(", ") + " not recognized")))
+    }
+  }
+
+  def getAllConnections = AuthenticatedJsonAction { request =>
     val connections = db.readOnly { implicit conn =>
       socialUserRepo.getByUser(request.user.id.get) flatMap { su =>
         socialConnectionRepo.getSocialUserConnections(su.id.get) map { suc =>

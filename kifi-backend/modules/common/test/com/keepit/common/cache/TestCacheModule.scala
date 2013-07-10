@@ -1,10 +1,10 @@
 package com.keepit.common.cache
 
 import com.google.inject.{Provides, Singleton}
-import com.keepit.common.social.{CommentWithBasicUserCache, BasicUserUserIdCache}
 import com.keepit.model._
 import com.keepit.search.ActiveExperimentsCache
 import scala.concurrent.duration._
+import com.keepit.social.{CommentWithBasicUserCache, BasicUserUserIdCache}
 
 case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
   @Singleton

@@ -3,8 +3,8 @@ package com.keepit.controllers.ext
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import com.keepit.common.mail._
-import com.keepit.common.social.SocialId
-import com.keepit.common.social.SocialNetworks.FACEBOOK
+import com.keepit.social.{SocialNetworks, SocialId}
+import SocialNetworks.FACEBOOK
 import com.keepit.common.time._
 import com.keepit.inject._
 import com.keepit.model._
@@ -18,6 +18,7 @@ import com.keepit.realtime.UserEmailNotifierPluginImpl
 import akka.actor.ActorSystem
 import akka.testkit.TestKit
 import play.api.test.Helpers.running
+import com.keepit.social.SocialId
 
 class CommentControllerTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
 

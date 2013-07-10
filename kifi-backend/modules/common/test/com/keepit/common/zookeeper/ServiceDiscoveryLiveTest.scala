@@ -10,6 +10,7 @@ import com.keepit.common.strings._
 import com.keepit.common.time._
 import org.apache.zookeeper.CreateMode._
 import com.google.inject.util._
+import com.google.inject.Injector
 
 class ServiceDiscoveryLiveTest extends Specification with TestInjector {
 
@@ -17,52 +18,70 @@ class ServiceDiscoveryLiveTest extends Specification with TestInjector {
 
   implicit val amazonInstanceInfoFormat = AmazonInstanceInfo.format
 
+  val amazonInstanceInfo = new AmazonInstanceInfo(
+      instanceId = AmazonInstanceId("i-f168c1a8"),
+      localHostname = "localhost",
+      publicHostname = "localhost",
+      localIp = IpAddress("127.0.0.1"),
+      publicIp = IpAddress("127.0.0.1"),
+      instanceType = "c1.medium",
+      availabilityZone = "us-west-1b",
+      securityGroups = "default",
+      amiId = "ami-1bf9de5e",
+      amiLaunchIndex = "0"
+  )
+
   "discovery" should {
 
     "register" in {
-      val services = new FortyTwoServices(inject[Clock], Mode.Test, None, None) {
-        override lazy val currentService: ServiceType = ServiceType.SHOEBOX
-      }
-      val service = RemoteService(AmazonInstanceId("id"), ServiceStatus.UP, IpAddress("127.0.0.1"), services.currentService)
-      val amazonInstanceInfo = inject[AmazonInstanceInfo]
-      val zk = new ZooKeeperClientImpl("localhost", 2000,
-        Some({zk1 => println(s"in callback, got $zk1")}))
-      try {
-        val discovery: ServiceDiscovery = new ServiceDiscoveryImpl(zk, services, Providers.of(amazonInstanceInfo.copy(localHostname = "main")))
-        discovery.myClusterSize === 0
-        zk.watchChildren(Path(s"/fortytwo/services/SHOEBOX"), { (children : Seq[Node]) =>
-          println("Service Instances ----------- : %s".format(children.mkString(", ")))
-        })
-        val path = zk.createPath(Path("/fortytwo/services/SHOEBOX"))
-        val firstNode = zk.createNode(Node("/fortytwo/services/SHOEBOX/SHOEBOX_"), null, EPHEMERAL_SEQUENTIAL)
-        zk.set(firstNode, Json.toJson(amazonInstanceInfo.copy(localHostname = "first")).toString)
-        val registeredNode = discovery.register()
-        val thirdNode = zk.createNode(Node("/fortytwo/services/SHOEBOX/SHOEBOX_"), null, EPHEMERAL_SEQUENTIAL)
-        zk.set(thirdNode, Json.toJson(amazonInstanceInfo.copy(localHostname = "third")).toString)
-        println("new node: " + thirdNode, null, EPHEMERAL_SEQUENTIAL)
-        println("sleeping 1")
-        Thread.sleep(2000)
-        println(zk.getChildren(Path("/fortytwo/services/SHOEBOX")) mkString ",")
-        zk.getChildren(Path("/fortytwo/services/SHOEBOX")).size === 3
-        discovery.isLeader() === false
-        discovery.myClusterSize === 3
-        zk.deleteNode(firstNode)
-        println("sleeping 2")
-        Thread.sleep(2000)
-        discovery.myClusterSize === 2
-        discovery.isLeader() === true
-        zk.deleteNode(thirdNode)
-        println("sleeping 3")
-        Thread.sleep(2000)
-        discovery.myClusterSize === 1
-        discovery.isLeader() === true
-        discovery.unRegister()
-        println("sleeping 3")
-        Thread.sleep(2000)
-        discovery.myClusterSize === 0
-        discovery.isLeader() === true
-      } finally {
-        zk.close()
+      withInjector() { implicit injector : Injector =>
+        val fakeJson =  RemoteService.toJson(RemoteService(amazonInstanceInfo, ServiceStatus.UP, ServiceType.SHOEBOX))
+        val services = new FortyTwoServices(inject[Clock], Mode.Test, None, None) {
+          override lazy val currentService: ServiceType = ServiceType.SHOEBOX
+        }
+        val service = RemoteService(amazonInstanceInfo, ServiceStatus.UP, services.currentService)
+        val zk = new ZooKeeperClientImpl("localhost", 3000,
+          Some({zk1 => println(s"in callback, got $zk1")}))
+        try {
+          val discovery: ServiceDiscovery = new ServiceDiscoveryImpl(zk, services, Providers.of(amazonInstanceInfo.copy(localHostname = "main")))
+          discovery.myClusterSize === 0
+          zk.watchChildren(Path(s"/fortytwo/services/SHOEBOX"), { (children : Seq[Node]) =>
+            println("Service Instances ----------- : %s".format(children.mkString(", ")))
+          })
+          val path = zk.createPath(Path("/fortytwo/services/SHOEBOX"))
+          val firstNode = zk.createNode(Node("/fortytwo/services/SHOEBOX/SHOEBOX_"), fakeJson, EPHEMERAL_SEQUENTIAL)
+          //zk.set(firstNode, Json.toJson(amazonInstanceInfo.copy(localHostname = "first")).toString)
+          val registeredNode = discovery.register()
+          println("registerred:::::")
+          println(registeredNode)
+          println(new String(zk.get(registeredNode)))
+          discovery.startSelfCheck()
+          val thirdNode = zk.createNode(Node("/fortytwo/services/SHOEBOX/SHOEBOX_"), fakeJson, EPHEMERAL_SEQUENTIAL)
+          //zk.set(thirdNode, Json.toJson(amazonInstanceInfo.copy(localHostname = "third")).toString)
+          println("new node: " + thirdNode, null, EPHEMERAL_SEQUENTIAL)
+          println("sleeping 1")
+          Thread.sleep(10000)
+          println(zk.getChildren(Path("/fortytwo/services/SHOEBOX")) mkString ",")
+          zk.getChildren(Path("/fortytwo/services/SHOEBOX")).size === 3
+          discovery.isLeader() === false
+          discovery.myClusterSize === 3
+          zk.deleteNode(firstNode)
+          println("sleeping 2")
+          Thread.sleep(10000)
+          discovery.myClusterSize === 2
+          discovery.isLeader() === true
+          zk.deleteNode(thirdNode)
+          println("sleeping 3")
+          Thread.sleep(10000)
+          discovery.myClusterSize === 1
+          discovery.isLeader() === true
+          println(new String(zk.get(registeredNode)))
+          discovery.unRegister()
+          println("sleeping 4")
+          Thread.sleep(10000)
+          discovery.myClusterSize === 0
+          discovery.isLeader() === false
+        }
       }
     }
   }

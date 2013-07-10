@@ -4,11 +4,10 @@ import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.social.SocialNetworkType
 import com.keepit.common.time._
 import securesocial.core.SocialUser
 import org.joda.time.DateTime
-import com.keepit.common.social.SocialId
+import com.keepit.social.{SocialNetworkType, SocialId}
 
 
 @ImplementedBy(classOf[SocialUserInfoRepoImpl])

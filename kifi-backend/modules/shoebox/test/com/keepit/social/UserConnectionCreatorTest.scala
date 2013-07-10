@@ -13,6 +13,7 @@ import play.api.libs.json.Json
 import play.api.test.Helpers._
 import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.social.{SocialNetworks, SocialId}
 
 class UserConnectionCreatorTest extends Specification with ShoeboxTestInjector {
 

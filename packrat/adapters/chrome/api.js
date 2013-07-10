@@ -55,9 +55,9 @@ api = function() {
     }
   });
 
-  var updateCheckRequested;
+  var updateCheckRequested, updateVersion;
   chrome.runtime.onUpdateAvailable.addListener(function(details) {
-    api.log("#666", "[onUpdateAvailable]", details.version);
+    api.log("#666", "[onUpdateAvailable]", updateVersion = details.version);
     if (updateCheckRequested) {
       chrome.runtime.reload();
     }
@@ -457,10 +457,14 @@ api = function() {
       xhr.send(data);
     },
     requestUpdateCheck: function() {
-      chrome.runtime.requestUpdateCheck(function(status) {
-        api.log("[requestUpdateCheck]", status);
-      });
-      updateCheckRequested = true;
+      if (updateVersion) {
+        chrome.runtime.reload();
+      } else {
+        updateCheckRequested = true;
+        chrome.runtime.requestUpdateCheck(function(status) {
+          api.log("[requestUpdateCheck]", status);
+        });
+      }
     },
     socket: {
       open: function(url, handlers, onConnect, onDisconnect) {

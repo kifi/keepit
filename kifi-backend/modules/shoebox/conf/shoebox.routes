@@ -103,6 +103,8 @@ GET     /site/user/me               @com.keepit.controllers.website.UserControll
 GET     /site/user/connections      @com.keepit.controllers.website.UserController.connections()
 GET     /site/user/all-connections  @com.keepit.controllers.website.UserController.getAllConnections()
 POST    /site/user/update-email     @com.keepit.controllers.website.UserController.updateEmail
+GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
+POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
 
 # Temporary hack for kifi.com site before we fully integrate it with Play!
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html")

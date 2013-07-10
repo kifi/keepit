@@ -21,6 +21,8 @@ trait ServiceDiscovery {
   def unRegister(): Unit = {}
   def isLeader(): Boolean
   def myClusterSize: Int = 0
+  def startSelfCheck(): Unit
+  def changeStatus(newStatus: ServiceStatus): Unit
 }
 
 @Singleton
@@ -62,7 +64,7 @@ class ServiceDiscoveryImpl @Inject() (
         return false
       case None =>
         require(myCluster.size == 0)
-        return true
+        return false
     }
   }
 
@@ -88,21 +90,36 @@ class ServiceDiscoveryImpl @Inject() (
     log.info(s"registered clusters: $clusters, my service is $myServiceType")
     val myCluster = clusters(myServiceType)
     val instanceInfo = amazonInstanceInfoProvider.get
-    myNode = Some(zk.createNode(myCluster.serviceNodeMaster, Json.toJson(instanceInfo).toString, EPHEMERAL_SEQUENTIAL))
-    myCluster.register(myNode.get, instanceInfo)
+    val thisRemoteService = RemoteService(instanceInfo, ServiceStatus.STARTING, myServiceType)
+    myNode = Some(zk.createNode(myCluster.serviceNodeMaster, RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL))
+    myCluster.register(myNode.get, thisRemoteService)
     log.info(s"registered as node ${myNode.get}")
     myNode.get
   }
 
   override def unRegister(): Unit = myNode map {node => zk.deleteNode(node)}
 
+  def changeStatus(newStatus: ServiceStatus) : Unit = {
+    myNode.map { node => 
+      val thisServiceInstance = clusters(services.currentService).instanceForNode(node)
+      thisServiceInstance.foreach{ serviceInstance =>
+        serviceInstance.remoteService.status = newStatus
+        zk.set(node, RemoteService.toJson(serviceInstance.remoteService))
+      }
+    }
+  }
+
+  def startSelfCheck(): Unit = future {
+    if(services.currentService.selfCheck) changeStatus(ServiceStatus.UP)
+    else changeStatus(ServiceStatus.SELFCHECK_FAIL)
+  }
+  
+
   implicit val amazonInstanceIdFormat = Json.format[AmazonInstanceId]
   implicit val serviceStatusFormat = ServiceStatus.format
   implicit val ipAddressFormat = Json.format[IpAddress]
   implicit val serviceTypeFormat = ServiceType.format
-  implicit val remoteServiceFormat = Json.format[RemoteService]
+  
 
-  def toRemoteService(data: Array[Byte]): RemoteService = Json.fromJson[RemoteService](Json.parse(data)).get
-  def fromRemoteService(remote: RemoteService): Array[Byte] = Json.toJson[RemoteService](remote).toString
 }
 

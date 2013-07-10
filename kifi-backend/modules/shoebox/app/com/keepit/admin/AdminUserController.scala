@@ -20,6 +20,7 @@ import play.api.data.Forms._
 import play.api.data._
 import play.api.libs.json.Json
 import views.html
+import com.keepit.social.{SocialGraphPlugin, SocialUserRawInfoStore}
 
 case class UserStatistics(
     user: User,
