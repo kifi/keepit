@@ -16,20 +16,29 @@ class ServiceDiscoveryLiveTest extends Specification with TestInjector {
 
   args(skipAll = true)
 
-
-  
-
   implicit val amazonInstanceInfoFormat = AmazonInstanceInfo.format
+
+  val amazonInstanceInfo = new AmazonInstanceInfo(
+      instanceId = AmazonInstanceId("i-f168c1a8"),
+      localHostname = "localhost",
+      publicHostname = "localhost",
+      localIp = IpAddress("127.0.0.1"),
+      publicIp = IpAddress("127.0.0.1"),
+      instanceType = "c1.medium",
+      availabilityZone = "us-west-1b",
+      securityGroups = "default",
+      amiId = "ami-1bf9de5e",
+      amiLaunchIndex = "0"
+  )
 
   "discovery" should {
 
     "register" in {
       withInjector() { implicit injector : Injector =>
-        val fakeJson =  RemoteService.toJson(RemoteService(inject[AmazonInstanceInfo], ServiceStatus.UP, ServiceType.SHOEBOX))
+        val fakeJson =  RemoteService.toJson(RemoteService(amazonInstanceInfo, ServiceStatus.UP, ServiceType.SHOEBOX))
         val services = new FortyTwoServices(inject[Clock], Mode.Test, None, None) {
           override lazy val currentService: ServiceType = ServiceType.SHOEBOX
         }
-        val amazonInstanceInfo = inject[AmazonInstanceInfo]
         val service = RemoteService(amazonInstanceInfo, ServiceStatus.UP, services.currentService)
         val zk = new ZooKeeperClientImpl("localhost", 3000,
           Some({zk1 => println(s"in callback, got $zk1")}))
