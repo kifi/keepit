@@ -154,7 +154,7 @@ trait UserEmailNotifierPlugin extends SchedulingPlugin {
 
 class UserEmailNotifierPluginImpl @Inject() (
     actorFactory: ActorFactory[UserEmailNotifierActor],
-    val schedulingProperties: SchedulingProperties)
+    val schedulingProperties: SchedulingProperties) //only on leader
   extends UserEmailNotifierPlugin with Logging {
 
   implicit val actorTimeout = Timeout(5 second)

@@ -75,7 +75,8 @@ class EventPersisterImpl @Inject() (
 }
 
 class FakeEventPersisterImpl @Inject() (
-  system: ActorSystem, eventHelper: EventHelper, val schedulingProperties: SchedulingProperties)
+    system: ActorSystem,
+    eventHelper: EventHelper)
   extends EventPersister with Logging {
 
   def persist(event: Event): Unit = {

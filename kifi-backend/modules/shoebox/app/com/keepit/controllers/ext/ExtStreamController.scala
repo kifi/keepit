@@ -352,7 +352,7 @@ class ExtStreamController @Inject() (
       if (canMessageAllUsers(userId)) {
         // TODO: remove this or find another way to do it in the future; this will not scale
         userRepo.allExcluding(UserStates.PENDING, UserStates.BLOCKED, UserStates.INACTIVE)
-          .map(u => basicUserRepo.load(u.id.get)).toSet
+          .collect { case u if u.id.get != userId => BasicUser.fromUser(u) }.toSet
       } else {
         userConnectionRepo.getConnectedUsers(userId).map(basicUserRepo.load)
       }
@@ -394,7 +394,7 @@ class ExtStreamController @Inject() (
           case _ => // when we add other types of notifications mark them read here
         }
       }
-      userChannel.push(userId, Json.arr("all_notifications_visited", lastId.id, lastNotification.createdAt))
+      userChannel.pushAndFanout(userId, Json.arr("all_notifications_visited", lastId.id, lastNotification.createdAt))
     }
   }
 
@@ -446,7 +446,7 @@ class ExtStreamController @Inject() (
       }) foreach { _ =>
         val nUri = normUriRepo.get(parent.uriId)
         if (!quietly) {
-          userChannel.push(userId, Json.arr("message_read", nUri.url, parent.externalId.id, message.createdAt, message.externalId.id))
+          userChannel.pushAndFanout(userId, Json.arr("message_read", nUri.url, parent.externalId.id, message.createdAt, message.externalId.id))
         }
 
         val messageIds = commentRepo.getMessageIdsCreatedBefore(nUri.id.get, parent.id.get, message.createdAt) :+ message.id.get
@@ -467,7 +467,7 @@ class ExtStreamController @Inject() (
         val nUri = normUriRepo.get(comment.uriId)
 
         if (!quietly) {
-          userChannel.push(userId, Json.arr("comment_read", nUri.url, comment.createdAt, comment.externalId.id))
+          userChannel.pushAndFanout(userId, Json.arr("comment_read", nUri.url, comment.createdAt, comment.externalId.id))
         }
 
         val commentIds = commentRepo.getPublicIdsCreatedBefore(nUri.id.get, comment.createdAt) :+ comment.id.get

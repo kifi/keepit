@@ -18,7 +18,7 @@ trait MailSenderPlugin extends Plugin {
 
 class MailSenderPluginImpl @Inject() (
     actorFactory: ActorFactory[MailSenderActor],
-    val schedulingProperties: SchedulingProperties)
+    val schedulingProperties: SchedulingProperties) //only on leader
   extends Logging with MailSenderPlugin with SchedulingPlugin {
 
   private lazy val actor = actorFactory.get()

@@ -26,19 +26,26 @@ trait SchedulingPlugin extends Plugin with Logging {
     else log.info(s"scheduling disabled, block execution of scheduled task: $taskName")
 
   def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, taskName: String)(f: => Unit): Unit =
-    if (!schedulingProperties.neverallowScheduling) {
+    if (!schedulingProperties.neverAllowScheduling) {
+      log.info(s"Registering $taskName in scheduler")
       _cancellables :+= system.scheduler.schedule(initialDelay, frequency) { execute(f, taskName) }
     } else log.info(s"permanently disable scheduling for task: $taskName")
 
   def scheduleTaskOnce(system: ActorSystem, initialDelay: FiniteDuration, taskName: String)(f: => Unit): Unit =
-    if (!schedulingProperties.neverallowScheduling) {
+    if (!schedulingProperties.neverAllowScheduling) {
       _cancellables :+= system.scheduler.scheduleOnce(initialDelay) { execute(f, taskName) }
     } else log.info(s"permanently disable scheduling for task: $taskName")
 
-  def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any): Unit =
-    scheduleTask(system, initialDelay, frequency, s"send message $message to actor $receiver") { receiver ! message }
+  def scheduleTask(system: ActorSystem, initialDelay: FiniteDuration, frequency: FiniteDuration, receiver: ActorRef, message: Any): Unit = {
+    val taskName = s"send message $message to actor $receiver"
+    log.info(s"Scheduling $taskName")
+    scheduleTask(system, initialDelay, frequency, taskName) { receiver ! message }
+  }
 
-  def cancelTasks() = _cancellables.map(_.cancel)
+  def cancelTasks() = {
+    log.info("Cancelling scheduled tasks")
+    _cancellables.map(_.cancel())
+  }
 
   override def onStop() {
     cancelTasks()

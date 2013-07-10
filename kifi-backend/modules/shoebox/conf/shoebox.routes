@@ -103,6 +103,8 @@ GET     /site/user/me               @com.keepit.controllers.website.UserControll
 GET     /site/user/connections      @com.keepit.controllers.website.UserController.connections()
 GET     /site/user/all-connections  @com.keepit.controllers.website.UserController.getAllConnections()
 POST    /site/user/update-email     @com.keepit.controllers.website.UserController.updateEmail
+GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
+POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
 
 # Temporary hack for kifi.com site before we fully integrate it with Play!
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html")
@@ -327,6 +329,13 @@ POST    /internal/shoebox/database/reportArticleSearchResult  @com.keepit.contro
 GET     /internal/shoebox/database/socialUserInfoByNetworkAndSocialId @com.keepit.controllers.shoebox.ShoeboxController.getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String)
 GET     /internal/shoebox/database/socialUserInfosByUserId @com.keepit.controllers.shoebox.ShoeboxController.getSocialUserInfosByUserId(id: Id[User])
 GET     /internal/shoebox/database/sessionByExternalId @com.keepit.controllers.shoebox.ShoeboxController.getSessionByExternalId(sessionId: ExternalId[UserSession])
+
+POST    /internal/shoebox/channel/user                @com.keepit.controllers.shoebox.ShoeboxController.userChannelFanout()
+POST    /internal/shoebox/channel/userBroadcast       @com.keepit.controllers.shoebox.ShoeboxController.userChannelBroadcastFanout()
+POST    /internal/shoebox/channel/userCount           @com.keepit.controllers.shoebox.ShoeboxController.userChannelCountFanout()
+POST    /internal/shoebox/channel/uri                 @com.keepit.controllers.shoebox.ShoeboxController.uriChannelFanout()
+POST    /internal/shoebox/channel/uriCount            @com.keepit.controllers.shoebox.ShoeboxController.uriChannelCountFanout()
+
 
 
 ->  / common.Routes

@@ -43,10 +43,11 @@ class RemotePostOfficeActor @Inject() (shoeboxClient: ShoeboxServiceClient)
   extends Actor { // we cannot use an AlertingActor, because this generated Healthcheck errors on failure
 
   val mailQueue = Queue[ElectronicMail]()
+  val Max8M = 8 * 1024 * 1024
 
   def receive = {
     case SendEmail(mail: ElectronicMail) =>
-      shoeboxClient.sendMail(mail.copy(htmlBody = mail.htmlBody.value.take(8*1024*1024), textBody = mail.textBody.map(_.value.take(8*1024*1024)))) onComplete {
+      shoeboxClient.sendMail(mail.copy(htmlBody = mail.htmlBody.value.take(Max8M), textBody = mail.textBody.map(_.value.take(Max8M)))) onComplete {
         case Success(result)  => if(!result) self ! QueueEmail(mail)
         case Failure(failure) => self ! QueueEmail(mail)
       }
@@ -63,9 +64,11 @@ trait RemotePostOfficePlugin extends Plugin {
 }
 
 class RemotePostOfficePluginImpl @Inject() (
-    actorFactory: ActorFactory[RemotePostOfficeActor],
-    val schedulingProperties: SchedulingProperties)
+    actorFactory: ActorFactory[RemotePostOfficeActor])
   extends RemotePostOfficePlugin with SchedulingPlugin {
+
+  val schedulingProperties = SchedulingProperties.AlwaysEnabled
+
   implicit val actorTimeout = Timeout(5 seconds)
   private lazy val actor = actorFactory.get()
 

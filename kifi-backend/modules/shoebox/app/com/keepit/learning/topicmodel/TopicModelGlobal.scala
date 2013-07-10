@@ -11,10 +11,13 @@ import scala.concurrent._
 import ExecutionContext.Implicits.global
 
 object TopicModelGlobal {
-  val numTopics = 100
   val primaryTopicThreshold = 0.07       // need to tune this as numTopics varies
   val topicTailcut = 0.7
   val naString = "NA"
+}
+
+object TopicModelGlobalTest {
+  val numTopics = 50                    // only used in test
 }
 
 trait TopicModelModule extends ScalaModule {
@@ -42,6 +45,7 @@ case class DevTopicModelModule() extends TopicModelModule {
   override def configure() {
     bind[TopicUpdaterPlugin].to[TopicUpdaterPluginImpl].in[AppScoped]
     bind[WordTopicModelFactory].to[FakeWordTopicModelFactoryImpl].in[AppScoped]
+    //bind[WordTopicModelFactory].to[WordTopicModelFactoryImpl].in[AppScoped]        // uncomment to connect to S3 in dev mode
     bind[NameMapperFactory].to[FakeNameMapperFactoryImpl].in[AppScoped]
   }
 

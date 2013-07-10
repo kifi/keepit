@@ -29,14 +29,14 @@ class SwitchableTopicModelAccessorFactory @Inject()(
 
   def makeA() = {
     val nameMapperA = nameMapperFactory(TopicModelAccessorFlag.A)
-    val wordTopicModelA = wordTopicModelFactory()
+    val wordTopicModelA = wordTopicModelFactory(TopicModelAccessorFlag.A)
     val docTopicModelA = new LDATopicModel(wordTopicModelA)
     new TopicModelAccessorA(userTopicRepoA, uriTopicRepoA, topicSeqInfoRepoA, topicNameRepoA, docTopicModelA, wordTopicModelA, nameMapperA)
   }
 
   def makeB() = {
     val nameMapperB = nameMapperFactory(TopicModelAccessorFlag.B)
-    val wordTopicModelB = wordTopicModelFactory()
+    val wordTopicModelB = wordTopicModelFactory(TopicModelAccessorFlag.B)
     val docTopicModelB = new LDATopicModel(wordTopicModelB)
     new TopicModelAccessorB(userTopicRepoB, uriTopicRepoB, topicSeqInfoRepoB, topicNameRepoB, docTopicModelB, wordTopicModelB, nameMapperB)
 
@@ -75,40 +75,49 @@ class NameMapperFactoryImpl @Inject()(
 
 @Singleton
 class FakeNameMapperFactoryImpl() extends NameMapperFactory{
+  val numTopicsA = TopicModelGlobalTest.numTopics            // This HAS to be consistent with the word topic model in S3, if we connect to S3 in devMode
+  val numTopicsB = TopicModelGlobalTest.numTopics
+
   def apply(flag: String) = {
-    val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map { i => "topic%d".format(i) }.toArray
+    val numTopics = flag match {
+      case TopicModelAccessorFlag.A => numTopicsA
+      case TopicModelAccessorFlag.B => numTopicsB
+    }
+    val topicNames: Array[String] = (0 until numTopics).map { i => "topic%d".format(i) }.toArray
     new IdentityTopicNameMapper(topicNames)
   }
 }
 
 trait WordTopicModelFactory {
-  def apply(): WordTopicModel
+  def apply(flag: String): WordTopicModel
 }
 
 @Singleton
-class WordTopicModelFactoryImpl() extends WordTopicModelFactory with Logging{
-  // will load from S3 store
-  def apply() = {
-    val path = current.configuration.getString("learning.topicModel.wordTopic.json.path").get
-    log.info("loading word topic model")
-    val c = scala.io.Source.fromFile(path).mkString
-    // names don't matter much, they will be provided by the nameMapper. May remove this field in the future.
-    val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map{ i => "topic%d".format(i)}.toArray
+class WordTopicModelFactoryImpl @Inject()(wordTopicStore: WordTopicStore) extends WordTopicModelFactory with Logging{
+
+  def apply(flag: String) = {
+    log.info(s"loading word topic model for model ${flag}")
+    val id = flag match {
+      case TopicModelAccessorFlag.A => "model_a"          // file name in S3
+      case TopicModelAccessorFlag.B => "model_b"
+    }
+
+    val content = wordTopicStore.get(id).get
     val loader = new LdaTopicModelLoader
-    loader.load(c, topicNames)
+    val model = loader.load(content)
+    log.info(s"word topic model for model ${flag} has been loaded")
+    model
   }
+
 }
 
 @Singleton
 class FakeWordTopicModelFactoryImpl() extends WordTopicModelFactory{
-  def apply() = {
-    val vocabulary: Set[String] = (0 until TopicModelGlobal.numTopics).map{ i => "word%d".format(i)}.toSet
-    val wordTopic: Map[String, Array[Double]] = (0 until TopicModelGlobal.numTopics).foldLeft(Map.empty[String, Array[Double]]){
-      (m, i) => { val a = new Array[Double](TopicModelGlobal.numTopics); a(i) = 1.0; m + ("word%d".format(i) -> a) }
+  def apply(flag: String) = {
+    val vocabulary: Set[String] = (0 until TopicModelGlobalTest.numTopics).map{ i => "word%d".format(i)}.toSet
+    val wordTopic: Map[String, Array[Double]] = (0 until TopicModelGlobalTest.numTopics).foldLeft(Map.empty[String, Array[Double]]){
+      (m, i) => { val a = new Array[Double](TopicModelGlobalTest.numTopics); a(i) = 1.0; m + ("word%d".format(i) -> a) }
     }
-    val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map{ i => "topic%d".format(i)}.toArray
-    print("loading fake topic model")
-    new LdaWordTopicModel(vocabulary, wordTopic, topicNames)
+    new LdaWordTopicModel(vocabulary, wordTopic)
   }
 }
-

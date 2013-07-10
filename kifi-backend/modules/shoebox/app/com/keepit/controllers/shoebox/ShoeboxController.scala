@@ -31,6 +31,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.Action
 import com.keepit.social.{SocialNetworkType, SocialId}
+import com.keepit.realtime.{UriChannel, UserChannel}
 
 object ShoeboxController {
   implicit val collectionTupleFormat = (
@@ -63,7 +64,9 @@ class ShoeboxController @Inject() (
   basicUserRepo: BasicUserRepo,
   articleSearchResultRefRepo: ArticleSearchResultRefRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
-  sessionRepo: UserSessionRepo)
+  sessionRepo: UserSessionRepo,
+  userChannel: UserChannel,
+  uriChannel: UriChannel)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
@@ -300,5 +303,38 @@ class ShoeboxController @Inject() (
     }
     Ok(Json.toJson(res))
   }
+
+  def userChannelFanout() = Action { request =>
+    val req = request.body.asJson.get.asInstanceOf[JsObject]
+    val userId = Id[User]((req \ "userId").as[Long])
+    val msg = (req \ "msg").asInstanceOf[JsArray]
+
+    Ok(userChannel.pushNoFanout(userId, msg).toString)
+  }
+
+  def userChannelBroadcastFanout() = Action { request =>
+    val req = request.body.asJson.get.asInstanceOf[JsArray]
+
+    Ok(userChannel.broadcastNoFanout(req).toString)
+  }
+
+  def userChannelCountFanout() = Action { request =>
+    Ok(userChannel.localClientCount.toString)
+  }
+
+  def uriChannelFanout() = Action { request =>
+    val req = request.body.asJson.get.asInstanceOf[JsObject]
+    val uri = (req \ "uri").as[String]
+    val msg = (req \ "msg").asInstanceOf[JsArray]
+
+    Ok(uriChannel.pushNoFanout(uri, msg).toString)
+  }
+
+
+  def uriChannelCountFanout() = Action { request =>
+    Ok(uriChannel.localClientCount.toString)
+  }
+
+
 
 }
