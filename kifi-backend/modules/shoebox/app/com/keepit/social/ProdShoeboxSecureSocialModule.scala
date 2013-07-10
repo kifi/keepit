@@ -2,7 +2,7 @@ package com.keepit.social
 
 import com.google.inject.{Singleton, Provides}
 import securesocial.controllers.TemplatesPlugin
-import com.keepit.common.social.{SocialGraphPlugin, ShoeboxTemplatesPlugin}
+import com.keepit.common.social.{ShoeboxTemplatesPlugin}
 import com.keepit.common.db.slick.Database
 import com.keepit.model._
 import com.keepit.common.healthcheck.HealthcheckPlugin

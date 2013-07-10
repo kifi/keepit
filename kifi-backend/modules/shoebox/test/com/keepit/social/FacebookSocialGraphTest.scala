@@ -16,6 +16,7 @@ import securesocial.core.AuthenticationMethod
 import securesocial.core.OAuth2Info
 import securesocial.core.SocialUser
 import securesocial.core.UserId
+import com.keepit.social.{SocialNetworks, SocialId}
 
 class FacebookSocialGraphTest extends Specification with ShoeboxTestInjector {
 

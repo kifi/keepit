@@ -7,7 +7,6 @@ import com.keepit.common.store.S3ImageStore
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import securesocial.core._
 import com.keepit.common.logging.Logging
-import com.keepit.common.social.{SocialGraphPlugin, SocialNetworkType, SocialId}
 import com.keepit.common.db.{ExternalId, Id}
 import play.api.{Application, Play}
 import Play.current

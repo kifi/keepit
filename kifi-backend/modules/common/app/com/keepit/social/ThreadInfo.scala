@@ -1,4 +1,4 @@
-package com.keepit.common.social
+package com.keepit.social
 
 import org.joda.time.DateTime
 

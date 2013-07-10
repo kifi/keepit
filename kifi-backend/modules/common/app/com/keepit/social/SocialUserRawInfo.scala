@@ -1,4 +1,4 @@
-package com.keepit.common.social
+package com.keepit.social
 
 import com.keepit.model.User
 import com.keepit.common.db.Id

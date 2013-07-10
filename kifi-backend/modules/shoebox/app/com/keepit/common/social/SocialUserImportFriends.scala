@@ -8,6 +8,7 @@ import com.keepit.common.logging.Logging
 import com.keepit.model._
 import play.api.libs.json._
 import play.api.Mode._
+import com.keepit.social.{SocialUserRawInfo, SocialUserRawInfoStore}
 
 class SocialUserImportFriends @Inject() (
     db: Database,

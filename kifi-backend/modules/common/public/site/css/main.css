@@ -17,9 +17,9 @@ a[href] {color: #0089d5; text-decoration: none}
 html {height: 100%; text-align: center; overflow-y: hidden; overflow-x: auto}
 body {height: 100%; min-width: 1024px; margin: 0 auto; padding: 0; background: #fafafa; font-size: 0; text-align: left; position: relative}
 .page-cols {display: table; table-layout: fixed; min-width: 100%; height: 100%}
-.left-col {display: table-cell; vertical-align: top; position: relative; width: 16%; min-width: 200px; background: #eff2f7}
-section.main {display: table-cell; vertical-align: top; position: relative; width: 57%; min-width: 494px; background: #fff}
-.right-col {display: table-cell; vertical-align: top; position: relative; width: 27%; min-width: 330px}
+.left-col {display: table-cell; vertical-align: top; position: relative; width: 18%; min-width: 240px; background: #eff2f7}
+section.main {display: table-cell; vertical-align: top; position: relative; width: 51%; min-width: 454px; background: #fff}
+.right-col {display: table-cell; vertical-align: top; position: relative; width: 31%; min-width: 330px}
 .page-col-inner {position: relative; height: 100%; width: 100%} /* bugzil.la/35168 */
 
 /* left col */
@@ -29,11 +29,11 @@ section.main {display: table-cell; vertical-align: top; position: relative; widt
 .my-pic {width: 66px; height: 66px; margin: 0 auto -10px; border-radius: 50%; border: 6px solid #eff2f7; position: relative; top: -10px; background-size: 100%; background-color: #b6c3cc; z-index: 1}
 .my-name {height: 28px; line-height: 28px; font-size: 16px}
 .my-name:first-child {padding-top: 80px}
-.left-col h2 {margin: 4px 0 0; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased; padding: 0 11px}
+.left-col h2 {margin: 4px 0 0; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased; padding: 0 0 0 39px}
 .left-col h3 {margin: 0; position: relative; font-size: 13px; line-height: 41px; -webkit-user-select: none; -moz-user-select: -moz-none; -ms-user-select: none}
 .left-col .active,
 .left-col .my-keeps:not(.active):hover {background: #e3e6ee}
-.left-col h3>a {display: block; padding: 0 6px 0 12px; color: #818692}
+.left-col h3>a {display: block; padding: 0 6px 0 40px; color: #818692}
 .left-col .keep-count {float: right; margin: 10px 0 0; border: 1px solid #b8c5d2; border-radius: 10.5px; color: #628196; font-size: 12px; line-height: 20px; height: 19px; padding: 0 12px}
 @-moz-document url-prefix() {.left-col .keep-count {line-height: 18px}}
 .left-col .active .keep-count {color: #fff; background: #b8c5d2}
@@ -41,7 +41,7 @@ section.main {display: table-cell; vertical-align: top; position: relative; widt
 .left-col .active .view-name {color: #556179}
 .left-col .my-keeps .view-name::before {content: " "; display: inline-block; width: 21px; height: 21px; padding: 10px 0; margin-right: 7px; background: url(../img/kifi-icon.png) 0/42px content-box; vertical-align: top; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
 .left-col .my-keeps.active .view-name::before {background-position: right}
-#collections>h2 {margin-top: 15px; padding: 0 0 2px 38px; background: url(../img/folder-icon.png) left 12px bottom 13px/18px no-repeat; border-bottom: 1px solid #dbdee3}
+#collections>h2 {margin-top: 15px; padding: 0 0 2px 66px; background: url(../img/folder-icon.png) left 40px bottom 13px/18px no-repeat; border-bottom: 1px solid #dbdee3}
 #collections h3 {line-height: 39px}
 a.collection-create {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7) center/8px no-repeat #b8c5d2; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
 a.collection-create:hover {background-color: #a0b1c2}
@@ -54,25 +54,22 @@ a.collection-create:active {background-color: #8699ab}
 #collections-list.positioned {position: absolute; bottom: 0; left: 0; right: 0}
 #collections-list>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; position: relative}
 #collections-list>.antiscroll-inner>.sortable-placeholder {background: #6fa6ef; height: 2px; min-height: 0}
-h3.collection {border-bottom: 1px solid #dbdee3; position: relative; -webkit-transition: padding-left .16s, background-color 0s; transition: padding-left .16s, background-color 0s}
-.collection.with-tri:not(.no-tri) {padding-left: 27px}
+h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 .collection.renaming {background-color: #fff}
 .collection.renaming>a {cursor: text}
 .collection.renaming,
-.collection.renamed {-webkit-transition-duration: .16s; transition-duration: .16s}
+.collection.renamed {-webkit-transition: background-color .16s; transition: background-color .16s}
 .collection.drop-hover {background-color: #6fa6ef}
 .collection.drop-hover .view-name {color: #fff}
 .collection.drop-hover .keep-count {background-color: #fff; border-color: #fff; color: #628196}
 .collection .keep-count {margin-top: 9px}
 .collection.renaming .keep-count {display: none}
-.coll-tri {position: absolute; top: 0; bottom: 0; left: -27px; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer; visibility: hidden; -webkit-transition: left .16s; transition: left .16s}
+.coll-tri {position: absolute; top: 0; bottom: 0; left: -33px; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer; -webkit-transition: left .16s; transition: left .16s}
 .active>.coll-tri {background-color: #b8c5d2}
-.renaming>.coll-tri {display: none}
 .coll-tri::before {content: " "; border-width: 4px 4px 0; border-style: solid; border-color: #b8c5d2 transparent; font-size: 0; line-height: 0; vertical-align: 1px}
 .active>.coll-tri::before {border-top-color: #fff}
-.collection:hover>.coll-tri,
-.collection.with-tri>.coll-tri {visibility: visible}
-.collection.with-tri:not(.no-tri)>.coll-tri {left: 0}
+.collection:not(.renaming):hover>.coll-tri,
+.collection.with-menu>.coll-tri {left: 0}
 #coll-menu {display: none; position: absolute; top: 100%; left: 0; z-index: 1; background: #e3e6ee}
 #coll-menu.page-bottom {top: auto; bottom: 100%}
 #coll-menu>li>a {display: block; padding: 0 16px; font-size: 12px; line-height: 24px; white-space: nowrap; color: #556179; border: solid #dbdee3; border-width: 0 1px 1px 0}
@@ -86,7 +83,7 @@ input.query:focus, input.query[data-q] {background-image: url(../img/search-blue
 input.query::-webkit-input-placeholder {color: #99a3b3}
 input.query::-moz-placeholder {color: #99a3b3}
 .main-head,
-.main-keeps {border-left: 1px solid #dbdee3}
+.main-keeps {margin-left: 1px; box-shadow: -1px 0 #dbdee3}
 .main-head {padding: 15px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
 .main-head.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
 .main[data-view=search] .main-head {padding-top: 10px; height: 37px}
@@ -246,10 +243,10 @@ a.page-priv[href]:active {background-color: #8699ab}
 :not([data-kept])>*>.page-who-pics>.me,
 :not([data-kept])>*>.page-who-text>.keep-you,
 .page-who-text>.keep-private {display: none}
-[data-kept]>*>*>.keep-friends::before,
-[data-kept]>*>*>.keep-others::before,
+[data-kept]>*>.page-who-text>.keep-friends::before,
+[data-kept]>*>.page-who-text>.keep-others::before,
 .page-who-text>.keep-friends+.keep-others::before {content: "+ "}
-:not([data-kept])>*>*>.keep-you+.keep-kept-this::before {content: "Nobody has "}
+:not([data-kept])>*>.page-who-text>.keep-you+.keep-kept-this::before {content: "Nobody has "}
 .page-coll-list {margin-top: 10px}
 .page-coll-list>li {display: inline-block; line-height: 24px; vertical-align: top}
 .page-coll {position: relative; overflow: hidden; white-space: nowrap; background-color: #b8c5d2; margin: 0 3px 3px 0; font-size: 13px; line-height: 24px; -webkit-font-smoothing: antialiased}
@@ -305,6 +302,8 @@ span.long-text, a.long-text {display: inline-block}
   .page-meta>.page-priv[href]::before {background-image: url(../img/keep-icons.2x.png)}
 }
 
+.fancybox-inner {font-size: 16px}
+
 /* scrollbars */
 .antiscroll-scrollbar {
   background: gray;
@@ -323,8 +322,8 @@ span.long-text, a.long-text {display: inline-block}
   -o-transition: linear 300ms opacity;
 }
 .antiscroll-scrollbar-shown {opacity: 1; filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=100)}
-.antiscroll-scrollbar-horizontal {height: 7px; margin-left: 2px; bottom: 2px; left: 0; cursor: ew-resize}
-.antiscroll-scrollbar-vertical {width: 7px; margin-top: 2px; right: 2px; top: 0; cursor: ns-resize}
+.antiscroll-scrollbar-horizontal {height: 7px; margin-left: 2px; bottom: 2px; left: 0}
+.antiscroll-scrollbar-vertical {width: 7px; margin-top: 2px; right: 2px; top: 0}
 .antiscroll-inner {overflow: scroll}
 .antiscroll-inner::-webkit-scrollbar {width: 0; height: 0}
 .antiscroll-inner::scrollbar {width: 0; height: 0}

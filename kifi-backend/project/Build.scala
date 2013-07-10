@@ -83,7 +83,7 @@ object ApplicationBuild extends Build {
     val _routesImport = Seq(
       "com.keepit.common.db.{ExternalId, Id, State}",
       "com.keepit.model._",
-      "com.keepit.common.social._",
+      "com.keepit.social._",
       "com.keepit.search._"
     )
 
@@ -102,7 +102,7 @@ object ApplicationBuild extends Build {
     val _templatesImport = Seq(
       "com.keepit.common.db.{ExternalId, Id, State}",
       "com.keepit.model._",
-      "com.keepit.common.social._",
+      "com.keepit.social._",
       "com.keepit.search._"
     )
 

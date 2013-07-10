@@ -12,7 +12,7 @@ import org.apache.lucene.document.Document
 import play.api.libs.json._
 import play.api.mvc.Action
 import views.html
-import com.keepit.common.search.IndexInfo
+import com.keepit.search.IndexInfo
 
 class ArticleIndexerController @Inject()(
     indexer: ArticleIndexer,

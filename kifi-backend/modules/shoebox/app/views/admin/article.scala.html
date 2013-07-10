@@ -3,10 +3,16 @@
 @admin("Article: " + article.title) {
   <table class="table table-bordered">
       <tr>
-        <th>First introduced</th><td>@adminHelper.dateTimeDisplay(uri.updatedAt)</td>
+        <th>Created at</th><td>@adminHelper.dateTimeDisplay(uri.createdAt)</td>
+      </tr>
+      <tr>
+        <th>Updated at</th><td>@adminHelper.dateTimeDisplay(uri.updatedAt)</td>
       </tr>
       <tr>
         <th>Last scrape</th><td>@adminHelper.dateTimeDisplay(info.lastScrape)</td>
+      </tr>
+      <tr>
+        <th>Next scrape</th><td>@adminHelper.dateTimeDisplay(info.nextScrape)</td>
       </tr>
       <tr>
         <th>URL</th><td><a href="@uri.url">@uri.url</a></td>

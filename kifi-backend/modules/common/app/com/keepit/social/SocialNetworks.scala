@@ -1,4 +1,4 @@
-package com.keepit.common.social
+package com.keepit.social
 
 case class SocialId(id: String) {
   override def toString = id

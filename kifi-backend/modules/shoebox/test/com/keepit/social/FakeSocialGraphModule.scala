@@ -4,6 +4,7 @@ import com.keepit.model.SocialUserInfo
 import scala.concurrent._
 import com.keepit.model.SocialConnection
 import ExecutionContext.Implicits.global
+import com.keepit.social.{SocialGraphPlugin, SocialGraphModule}
 
 case class FakeSocialGraphModule() extends SocialGraphModule {
 
