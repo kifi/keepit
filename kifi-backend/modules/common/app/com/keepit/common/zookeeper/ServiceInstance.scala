@@ -17,7 +17,7 @@ case class ServiceInstance(serviceType: ServiceType, node: Node, remoteService: 
 
   def instanceInfo : AmazonInstanceInfo = remoteService.amazonInstanceInfo
 
-  def isAvailable : Boolean = isHealthy || remoteService.status==ServiceStatus.SICK
+  def isAvailable : Boolean = isHealthy || remoteService.status==ServiceStatus.SICK || remoteService.status==ServiceStatus.SELFCHECK_FAIL
 
   def isHealthy : Boolean = remoteService.status==ServiceStatus.UP
 

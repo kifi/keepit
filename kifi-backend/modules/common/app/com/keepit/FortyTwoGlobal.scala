@@ -99,7 +99,9 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         e.printStackTrace
         log.error(errorMessage, e)
     }
-    serviceDiscovery.unRegister()
+    finally {
+      serviceDiscovery.unRegister()
+    }
   }
 
 }

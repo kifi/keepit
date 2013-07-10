@@ -111,7 +111,7 @@ class ServiceDiscoveryImpl @Inject() (
 
   def startSelfCheck(): Unit = future {
     if(services.currentService.selfCheck) changeStatus(ServiceStatus.UP)
-    else changeStatus(ServiceStatus.DOWN)
+    else changeStatus(ServiceStatus.SELFCHECK_FAIL)
   }
   
 
