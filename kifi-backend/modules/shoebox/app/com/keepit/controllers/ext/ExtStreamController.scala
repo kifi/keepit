@@ -352,7 +352,7 @@ class ExtStreamController @Inject() (
       if (canMessageAllUsers(userId)) {
         // TODO: remove this or find another way to do it in the future; this will not scale
         userRepo.allExcluding(UserStates.PENDING, UserStates.BLOCKED, UserStates.INACTIVE)
-          .map(u => basicUserRepo.load(u.id.get)).toSet
+          .collect { case u if u.id.get != userId => BasicUser.fromUser(u) }.toSet
       } else {
         userConnectionRepo.getConnectedUsers(userId).map(basicUserRepo.load)
       }

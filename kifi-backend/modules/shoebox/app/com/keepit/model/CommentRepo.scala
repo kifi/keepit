@@ -142,6 +142,7 @@ class CommentRepoImpl @Inject() (
             and c.parent is null
             and c.normalized_uri_id = ${normUri.id}
             and c.user_id in ($recipientIn)
+            and c.user_id <> r.user_id
           group by c.id
           having count(*) = $recipientLength
             and sum(r.user_id in ($recipientIn)) = $recipientLength

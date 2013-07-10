@@ -106,7 +106,7 @@ $(function() {
 		tolerance: "pointer",
 		hoverClass: "drop-hover",
 		drop: function(event, ui) {
-			addKeepsToCollection($(this).data("id"), !ui.draggable.hasClass("selected") && ui.draggable);
+			addKeepsToCollection($(this).data("id"), ui.draggable.hasClass("selected") ? $main.find('.keep.selected') : ui.draggable);
 		}};
 
 	var $collOpts = $(".page-coll-opts").removeText();
@@ -426,44 +426,48 @@ $(function() {
 		var $coll = $(this.parentNode);
 		removeKeepsFromCollection($coll.data("id"), [$coll.closest(".keep").data("id")]);
 	}).on("click", ".keep", function(e) {
-		// 1. Only one keep at a time can be selected and not checked.
-		// 2. If a keep is selected and not checked, no keeps are checked.
-		// 3. If a keep is checked, it is also selected.
-		var $keep = $(this), $selected = $main.find(".keep.selected");
-		if ($(e.target).hasClass("keep-checkbox")) {
-			if ($(e.target).toggleClass("checked").hasClass("checked")) {
-				$selected.not(":has(.keep-checkbox.checked)").removeClass("selected");
-				$keep.addClass("selected");
-			} else {
-				$keep.removeClass("selected");
+		var $keep = $(this), $keeps = $main.find(".keep");
+		if ($(e.target).hasClass("keep-checkbox") || $(e.target).hasClass("handle")) {
+			$keep.toggleClass("selected");
+			var $selected = $keeps.filter(".selected");
+			if ($selected.length == 0 ||
+				  $selected.not(".detailed").addClass("detailed").length +
+			    $keeps.filter(".detailed:not(.selected)").removeClass("detailed").length == 0) {
+				return;  // avoid redrawing same details
 			}
+		} else if ($keep.hasClass("selected")) {
+			$keeps.filter(".selected").toggleClass("detailed");
+			$keeps.not(".selected").removeClass("detailed");
+		} else if ($keep.hasClass("detailed")) {
+			$keep.removeClass("detailed");
+			$keeps.filter(".selected").addClass("detailed");
 		} else {
-			var select = !$keep.is(".selected") || $selected.length != 1;
-			$selected.not(this).removeClass("selected").end().find(".keep-checkbox").removeClass("checked");
-			$keep.toggleClass("selected", select);
+			$keeps.removeClass("detailed");
+			$keep.addClass("detailed");
 		}
-		$selected = $main.find(".keep.selected");
-		if (!$selected.length) {
+
+		var $detailed = $keeps.filter(".detailed");
+		if (!$detailed.length) {
 			hideDetails();
-		} else if ($selected.length > 1) {
-			var howKept = $selected.not(".mine").length ? null :
-				$selected.has(".keep-private.on").length == $selected.length ? "pri" : "pub";
+		} else if ($detailed.length > 1) {
+			var howKept = $detailed.not(".mine").length ? null :
+				$detailed.has(".keep-private.on").length == $detailed.length ? "pri" : "pub";
 			$detail.attr("data-kept", howKept).addClass("multiple");
-			$('.page-title').text($selected.length + " keeps selected");
+			$('.page-title').text($detailed.length + " keeps selected");
 			$('.page-url').hide().empty().attr('href', '');
 			$('.page-pic-wrap').hide();
 			$('.page-pic').css('background-image', '');
 			$('.page-who').hide();
 
-			var collCounts = $selected.find('.keep-coll').map(getDataId).get()
+			var collCounts = $detailed.find('.keep-coll').map(getDataId).get()
 				.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
 			inCollTmpl.render(
 				Object.keys(collCounts)
 					.sort(function(id1, id2) {return collCounts[id1] - collCounts[id2]})
 					.map(function(id) {return {id: id, name: collections[id].name}}));
 			showDetails();
-		} else { // one keep is selected
-			$keep = $selected;
+		} else { // detail one keep
+			$keep = $detailed;
 			var howKept = $keep.is('.mine') ? ($keep.has('.keep-private.on').length ? "pri" : "pub") : null;
 			var $keepLink = $keep.find('.keep-title>a'), url = $keepLink[0].href;
 			$detail.attr("data-kept", howKept).removeClass("multiple");
@@ -642,7 +646,6 @@ $(function() {
 	}
 
 	function addKeepsToCollection(collId, $keeps, onError) {
-		$keeps = $keeps || $('.keep.selected');
 		$.ajax({
 			url: urlKeepAdd,
 			type: "POST",
@@ -664,7 +667,7 @@ $(function() {
 					.append('<span class=keep-coll data-id=' + collId + '>' +
 						'<a class="keep-coll-a" href="javascript:">' + collName + '</a><a class="keep-coll-x" href="javascript:"></a>' +
 						'</span>');
-				if ($keeps.is(".selected")) {
+				if ($keeps.is(".detailed")) {
 					$detail.attr("data-kept", $keeps.has(".keep-private.on").length == $keeps.length ? "pri" : "pub");
 					if (!$inColl.has(".page-coll[data-id=" + collId + "]").length) {
 						inCollTmpl.append({id: collId, name: collName});
@@ -706,7 +709,7 @@ $(function() {
 
 	// keep / unkeep
 	$detail.on("click", '.page-keep,.page-priv', function(e) {
-		var $keeps = $main.find(".keep.selected");
+		var $keeps = $main.find(".keep.detailed");
 		var $a = $(this), howKept = $detail.attr("data-kept");
 		if (!howKept) {  // keep
 			howKept = $a.hasClass('page-keep') ? "pub" : "pri";
@@ -770,7 +773,7 @@ $(function() {
 		e.preventDefault();
 		removeKeepsFromCollection(
 			$(this.parentNode).data("id"),
-			$main.find(".keep.selected").map(getDataId).get());
+			$main.find(".keep.detailed").map(getDataId).get());
 	}).on("click", ".page-coll-add", function() {
 		var $btn = $(this), $in = $(".page-coll-input").css("width", $btn.outerWidth());
 		$btn.hide();
@@ -878,7 +881,7 @@ $(function() {
 		function withCollId(collId) {
 			if (collId) {
 				$in.val("").trigger("input")	;
-				addKeepsToCollection(collId);
+				addKeepsToCollection(collId, $main.find(".keep.detailed"));
 			}
 		}
 	});
