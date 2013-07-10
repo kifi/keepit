@@ -58,6 +58,5 @@ case class DevActorSystemModule() extends ActorSystemModule {
   @Provides
   def schedulingProperties: SchedulingProperties = new SchedulingProperties() {
     def allowScheduling = true
-    override def neverallowScheduling = false
   }
 }
