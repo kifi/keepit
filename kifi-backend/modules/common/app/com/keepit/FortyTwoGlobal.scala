@@ -5,7 +5,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
-import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.service.{FortyTwoServices,ServiceStatus}
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.inject._
 import play.api._
@@ -63,10 +63,15 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     
     val amazonInstanceInfo = injector.instance[AmazonInstanceInfo]
     log.info(s"Amazon up! $amazonInstanceInfo")
-    injector.instance[ServiceDiscovery].register()
+    val serviceDiscovery = injector.instance[ServiceDiscovery]
+    serviceDiscovery.register()
+    serviceDiscovery.startSelfCheck()
+
   }
 
   override def onError(request: RequestHeader, ex: Throwable): Result = {
+    val serviceDiscovery = injector.instance[ServiceDiscovery]
+    serviceDiscovery.changeStatus(ServiceStatus.SICK) 
     val errorId = ex match {
       case reported: ReportedException =>
         reported.id
@@ -74,10 +79,13 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         injector.instance[HealthcheckPlugin].addError(HealthcheckError(error = Some(ex), method = Some(request.method.toUpperCase()), path = Some(request.path), callType = Healthcheck.API)).id
     }
     ex.printStackTrace()
+    serviceDiscovery.startSelfCheck
     InternalServerError("error: %s".format(errorId))
   }
 
   override def onStop(app: Application): Unit = Threads.withContextClassLoader(app.classloader) {
+    val serviceDiscovery = injector.instance[ServiceDiscovery]
+    serviceDiscovery.changeStatus(ServiceStatus.STOPPING)
     val stopMessage = "<<<<<<<<<< Stopping " + this
     println(stopMessage)
     log.info(stopMessage)
@@ -90,6 +98,9 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         println(errorMessage)
         e.printStackTrace
         log.error(errorMessage, e)
+    }
+    finally {
+      serviceDiscovery.unRegister()
     }
   }
 
