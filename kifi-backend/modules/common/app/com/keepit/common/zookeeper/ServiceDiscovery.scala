@@ -110,6 +110,7 @@ class ServiceDiscoveryImpl @Inject() (
     myNode.map { node => 
       val thisServiceInstance = clusters(services.currentService).instanceForNode(node)
       thisServiceInstance.foreach{ serviceInstance =>
+        log.info("Changing instance status to $newStatus")
         serviceInstance.remoteService.status = newStatus
         zk.set(node, RemoteService.toJson(serviceInstance.remoteService))
       }
