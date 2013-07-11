@@ -111,7 +111,7 @@ class InviteController @Inject() (db: Database,
                     .find(_.networkType == SocialNetworks.LINKEDIN).get
                   val path = com.keepit.controllers.website.routes.InviteController.acceptInvite(
                     invite.externalId).url
-                  val messageWithUrl = message.getOrElse("").replaceAll("\\{link\\}", s"$url$path")
+                  val messageWithUrl = s"${message getOrElse ""}\n$url$path"
                   linkedIn.sendMessage(me, socialUserInfo, subject.getOrElse(""), messageWithUrl)
                   invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
                   Redirect(routes.InviteController.invite)
