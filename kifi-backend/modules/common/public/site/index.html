@@ -67,7 +67,8 @@
 		<div class="main-head">
 			<h1>Browse your keeps</h1>
 			<div class="subtitle">
-				<span data-template data-has="query" style="display:none">
+				<span class="check-all"></span>
+				<span class="subtitle-text" data-template data-has="query" data-n="{{numShown}}" style="display:none">
 					{% if numShown == 0 %}
 						Sorry, no results match
 					{% endif %}{% if numShown == 1 %}
@@ -77,24 +78,34 @@
 					{% endif %}
 				 <span class="result-query">{{query}}</span>
 				</span>
-				<span data-template data-has="collId" style="display:none">
-					{% if numTotal == 0 %}
+				<span class="subtitle-text" data-template data-has="collId" data-n="{{numShown}}" style="display:none">
+					{% if numShown == 0 %}
 						No keeps in this collection
-					{% endif %}{% if numTotal == 1 %}
+					{% endif %}{% if numShown == 1 %}
 						Showing the only keep in this collection
-					{% endif %}{% if numTotal > 1 %}
-						Showing {{numShown}} out of {{numTotal}} total keeps in this collection
+					{% endif %}{% if numShown == 2 %}
+						Showing both keeps in this collection
+					{% endif %}{% if numShown > 2 && numShown < numTotal %}
+						Showing the {{numShown}} latest keeps in this collection
+					{% endif %}{% if numShown > 2 && numShown == numTotal %}
+						Showing all {{numShown}} keeps in this collection
 					{% endif %}
 				</span>
-				<span data-template data-has="numShown" style="display:none">
-					{% if numTotal != 1 %}
-						Showing {{numShown}} out of {{numTotal}} total keeps
-					{% else %}
+				<span class="subtitle-text" data-template data-has="numShown" data-n="{{numShown}}" style="display:none">
+					{% if numShown == 0 %}
+						You have no keeps
+					{% endif %}{% if numShown == 1 %}
 						Showing your only keep
+					{% endif %}{% if numShown == 2 %}
+						Showing both of your keeps
+					{% endif %}{% if numShown > 2 && numShown < numTotal %}
+						Showing your {{numShown}} latest keeps
+					{% endif %}{% if numShown > 2 && numShown == numTotal %}
+						Showing all {{numShown}} of your keeps
 					{% endif %}
 				</span>
-				<span data-template data-has="searching" style="display:none">Searching...</span>
-				<span data-template>Loading...</span>
+				<span class="subtitle-text" data-template data-has="searching" style="display:none">Searching...</span>
+				<span class="subtitle-text" data-template>Loading...</span>
 			</div>
 		</div>
 		<div class="main-keeps">
@@ -157,6 +168,7 @@
 					</li>
 				</ol>
 				<img class="keeps-loading" src="img/wait.gif">
+				<a class="keeps-load-more hidden" href="javascript:">Show more</a>
 			</div>
 		</div>
 	</div>
