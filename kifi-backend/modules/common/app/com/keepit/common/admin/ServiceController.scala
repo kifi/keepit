@@ -6,19 +6,18 @@ import com.keepit.common.service.{ServiceType, ServiceStatus}
 import com.keepit.common.amazon.{AmazonInstanceInfo}
 import com.google.inject.{Inject, Singleton}
 import views.html
-
+import com.keepit.common.logging.Logging
+import play.api.mvc._
 
 
 
 @Singleton
 class ServiceController @Inject() (
-    actionAuthenticator: ActionAuthenticator,
-    serviceDiscovery: ServiceDiscovery) extends AdminController(actionAuthenticator) {
+    serviceDiscovery: ServiceDiscovery) extends Controller with Logging {
 
-    def forceRefresh = AdminHtmlAction { implicit request =>
+    def forceRefresh = Action { implicit request =>
         serviceDiscovery.forceUpdate()
         Ok("Alright, alright! I've refreshed.")
     }
-
 
 }
