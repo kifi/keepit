@@ -158,6 +158,7 @@ $(function() {
 	var searchResponse;
 	var collections;
 	var searchTimeout;
+	var lastKeep;
 
 	function identity(a) {
 		return a;
@@ -245,11 +246,12 @@ $(function() {
 		if (!context) {
 			subtitleTmpl.render({searching: true});
 			$checkAll.removeClass('live checked');
-			$myKeeps.detach();
+			$myKeeps.detach().find('.keep').removeClass('selected detailed');
 		}
 		$keepSpinner.show();
 		$loadMore.addClass('hidden');
 		var q = $.trim($query.val());
+		console.log("[doSearch] q:", q);
 		$query.attr("data-q", q || null);
 		$.getJSON(urlSearch, {q: q, f: "a", maxHits: 30, context: context}, function(data) {
 			searchResponse = data;
@@ -313,15 +315,16 @@ $(function() {
 		var $h3 = $(".left-col h3");
 		$h3.filter(".active").removeClass("active");
 		$h3.filter(collId ? "[data-id='" + collId + "']" : ".my-keeps").addClass("active");
+
+		var fromSearch = $main.attr("data-view") == "search";
 		$main.attr("data-view", "mine")
 			.find("h1").text(collId ? collections[collId].name : "Browse your keeps");
 
 		$results.empty();
 		$query.val("").removeAttr("data-q");
-		if (searchResponse) {
+		if (fromSearch) {
 			searchResponse = null;
 			$checkAll.removeClass('checked');
-			hideDetails();
 		}
 		if (!$myKeeps[0].parentNode) {
 			$myKeeps.insertAfter($results);
@@ -330,6 +333,7 @@ $(function() {
 		if ($myKeeps.data("collId") != collId || !("collId" in $myKeeps.data())) {
 			$myKeeps.data("collId", collId).empty();
 			lastKeep = null;
+			hideDetails();
 			loadKeeps(collId);
 		} else {
 			var numShown = $myKeeps.find(".keep").length;
@@ -338,6 +342,9 @@ $(function() {
 				numTotal: collId ? collections[collId].keeps : myKeepsCount,
 				collId: collId || undefined});
 			$checkAll.toggleClass('live', numShown > 0).removeClass('checked');
+			if (fromSearch) {
+				hideDetails();
+			}
 			addNewKeeps();
 		}
 	}
@@ -567,7 +574,6 @@ $(function() {
 			showMyKeeps();
 		} else if (e.which) {
 			if (e.which == 13) { // Enter
-				console.log("[doSearch]");
 				doSearch();
 			}
 		} else {
