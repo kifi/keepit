@@ -10,13 +10,14 @@ import java.util.Locale
 import play.api.Mode
 import play.api.Mode._
 import play.api.libs.json._
+import scala.concurrent.{Future, promise}
 
 case class ServiceVersion(val value: String) {
   override def toString(): String = value
 }
 
 sealed abstract class ServiceType(val name: String) {
-  def selfCheck : Boolean = true
+  def selfCheck() : Future[Boolean] = promise[Boolean].success(true).future
 }
 
 object ServiceType {
