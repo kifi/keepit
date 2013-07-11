@@ -120,6 +120,8 @@ class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticL
 
   def chunkSize : Int = 4000
 
+  def warmCache() : Unit = (0 to numChunks).foreach(loadChunk(_))
+
   def getChunk(key: Long) = {
     val chunkId = ((Math.abs(key) % chunkSize*numChunks) / chunkSize).toInt
     val thisChunk : Array[Int] = loadChunk(chunkId)
