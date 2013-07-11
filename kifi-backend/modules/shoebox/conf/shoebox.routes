@@ -140,6 +140,10 @@ POST    /admin/bookmarks/rescrape   @com.keepit.controllers.admin.AdminBookmarks
 POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Bookmark])
 
+
+GET     /admin/screenshot/uri       @com.keepit.controllers.admin.AdminScreenshotController.updateUri(uriId: Id[NormalizedURI])
+GET     /admin/screenshot/user      @com.keepit.controllers.admin.AdminScreenshotController.updateUser(userId: Id[User], drop: Int ?= 0, take: Int ?= 999999)
+
 GET     /admin/scrape               @com.keepit.controllers.admin.ScraperController.scrape
 GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperController.getScraped(uriId: Id[NormalizedURI])
 
