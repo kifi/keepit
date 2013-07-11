@@ -84,20 +84,23 @@ input.query::-webkit-input-placeholder {color: #99a3b3}
 input.query::-moz-placeholder {color: #99a3b3}
 .main-head,
 .main-keeps {margin-left: 1px; box-shadow: -1px 0 #dbdee3}
-.main-head {padding: 15px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
+.main-head {padding: 13px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
 .main-head.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
 .main[data-view=search] .main-head {padding-top: 10px; height: 37px}
 .main-head>h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
 .main[data-view=search] .main-head>h1 {display: none}
-.main-head>.subtitle {font-size: 13px; font-weight: 300; color: #5b6670}
+.check-all {position: absolute; top: 1px; left: 0; height: 17px; width: 17px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; box-shadow: inset 0 0 0 1px #e3e6ee}
+.check-all.live {cursor: pointer}
+.check-all.live:hover {box-shadow: inset 0 0 0 1px #b8c5d2}
+.check-all.checked {background-position: 3px 5px}
+.check-all.live:hover+.subtitle-text::before {content: "Select "}
+.check-all.live.checked:hover+.subtitle-text::before {content: "Deselect "}
+.main-head>.subtitle {font-size: 13px; line-height: 20px; font-weight: 300; color: #5b6670; padding-left: 30px; position: relative}
 .result-query::before {content: "\201c"}
 .result-query::after {content: "\201d"}
 .main-keeps {position: absolute; top: 142px; bottom: 0; left: 0; right: 0; overflow: hidden}
 .main[data-view=search] .main-keeps {top: 107px}
 .main-keeps>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; padding: 1px 18px 0; box-sizing: border-box; -moz-box-sizing: border-box}
-#my-keeps,#search-results {display: none}
-.main[data-view=mine] #my-keeps,
-.main[data-view=search] #search-results {display: block}
 
 .keep-group-title {margin-top: 7px; color: #67829c; font-size: 21px; font-weight: 100; letter-spacing: 1px; border-bottom: 1px solid #e3e6ee; padding: 4px 30px}
 .keep-group-title+.keep {border-top: 0}
@@ -161,7 +164,11 @@ input.query::-moz-placeholder {color: #99a3b3}
 .keep.mine .keep-others::before,
 .keep-who-text>.keep-friends+.keep-others::before {content: "+ "}
 .keep:not(.mine) .keep-you+.keep-kept-this::before {content: "Nobody has "; line-height: 23px}
-.keeps-loading {margin: 20px 50%; position: relative; left: -22px}
+.keeps-loading {margin: 21px 50%; width: 44px; height: 8px; position: relative; left: -22px}
+.keeps-load-more {display: block; margin: 10px 0; background-color: #fcfdff; line-height: 30px; font-size: 16px; text-align: center}
+.keeps-load-more:hover {background-color: #f3fbff}
+.keeps-load-more:active {background-color: #f3f5f9}
+.keeps-load-more.hidden {display: none}
 
 .drag-helper {background: #fff; padding: 5px; font-size: 16px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
 
