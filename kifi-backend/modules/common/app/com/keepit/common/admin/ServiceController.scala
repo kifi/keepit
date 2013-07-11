@@ -24,4 +24,8 @@ class ServiceController @Inject() (
         Ok(serviceDiscovery.myStatus.map(_.name).getOrElse("none"))
     }
 
+    def topology = Action { implicit request =>
+        Ok(serviceDiscovery.toString)
+    }
+
 }

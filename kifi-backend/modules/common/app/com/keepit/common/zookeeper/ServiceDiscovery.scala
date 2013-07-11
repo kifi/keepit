@@ -70,6 +70,8 @@ class ServiceDiscoveryImpl @Inject() (
     }
   }
 
+  override def toString(): String = clusters.map(kv => kv._1.toString + ":" + kv._2.toString).mkString("\n")
+
   implicit val amazonInstanceInfoFormat = AmazonInstanceInfo.format
 
   override def myClusterSize: Int = clusters.get(services.currentService) map {c => c.size} getOrElse 0

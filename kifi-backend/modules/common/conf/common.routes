@@ -14,3 +14,4 @@ GET     /internal/benchmark                   @com.keepit.common.healthcheck.Com
 GET     /internal/version                     @com.keepit.common.healthcheck.CommonBenchmarkController.version()
 GET     /internal/clusters/refresh            @com.keepit.common.admin.ServiceController.forceRefresh()
 GET		/internal/clusters/mystatus			  @com.keepit.common.admin.ServiceController.myStatus
+GET		/internal/clusters/topology			  @com.keepit.common.admin.ServiceController.topology
