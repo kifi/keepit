@@ -123,15 +123,18 @@ noticesPane = function() {
   }
 
   function showNew(notices) {
-    var $n = $(notices.map(function(n) {return renderNotice(n, true)}).join(""))
-      .find("time").timeago().end()
-      .prependTo($notices);
-    fadeOutNew($n);
     notices.forEach(function(n) {
       if (n.details.subsumes) {
         $notices.find(".kifi-notice[data-id='" + n.details.subsumes + "']").remove();
       }
+      if (n.details.locator) {
+        $notices.find(".kifi-notice[data-locator='" + n.details.locator + "']").remove();
+      }
     });
+    var $n = $(notices.map(function(n) {return renderNotice(n, true)}).join(""))
+      .find("time").timeago().end()
+      .prependTo($notices);
+    fadeOutNew($n);
     api.port.emit("notifications_read", notices[0].time);
   }
 
