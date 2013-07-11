@@ -5,7 +5,6 @@
 # todo(eishay): We should move the paths of the following two and update pingdom
 GET     /admin/healthcheck/ping     @com.keepit.common.healthcheck.WebsiteHealthController.ping()
 GET     /admin/healthcheck/isHealthy    @com.keepit.common.healthcheck.WebsiteHealthController.isHealthy()
-GET		/admin/clusters/refresh			@com.keepit.common.admin.ServiceController.forceRefresh()
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
@@ -13,3 +12,4 @@ GET     /assets/*file               controllers.Assets.at(path="/public", file)
 # INTERNAL ROUTES/GLOBAL
 GET     /internal/benchmark                   @com.keepit.common.healthcheck.CommonBenchmarkController.benchmarksResults()
 GET     /internal/version                     @com.keepit.common.healthcheck.CommonBenchmarkController.version()
+GET     /internal/clusters/refresh            @com.keepit.common.admin.ServiceController.forceRefresh()
