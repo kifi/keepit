@@ -8,6 +8,7 @@ import com.keepit.common.amazon._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.collection.concurrent.TrieMap
+import scala.util.{Try, Success, Failure}
 
 import play.api.libs.json._
 
@@ -129,8 +130,10 @@ class ServiceDiscoveryImpl @Inject() (
 
   def startSelfCheck(): Unit = future {
     log.info("Running self check")
-    if(services.currentService.selfCheck) changeStatus(ServiceStatus.UP)
-    else changeStatus(ServiceStatus.SELFCHECK_FAIL)
+    services.currentService.selfCheck().onComplete{
+      case Success(passed) => if (passed) changeStatus(ServiceStatus.UP) else changeStatus(ServiceStatus.SELFCHECK_FAIL)
+      case Failure(e) => changeStatus(ServiceStatus.SELFCHECK_FAIL)
+    }
   }
   
 
