@@ -674,7 +674,6 @@ function insertNewNotification(n) {
       if (notificationNotVisited.test(n2.state)) {
         decrementNumNotificationsNotVisited(n2);
       }
-      break;
     }
   }
   return true;
