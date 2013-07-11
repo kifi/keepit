@@ -67,13 +67,17 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
   }
 
   private def addNewNode(newInstances: TrieMap[Node, ServiceInstance], childNode: Node, zk: ZooKeeperClient) = try {
-    newInstances.getOrElseUpdate(childNode, {
-      val nodeData: String = zk.get(childNode)
-      log.info(s"data for node $childNode is $nodeData")
-      val remoteService = RemoteService.fromJson(nodeData)
+    val nodeData: String = zk.get(childNode)
+    log.info(s"data for node $childNode is $nodeData")
+    val remoteService = RemoteService.fromJson(nodeData)
+    if (newInstances.isDefinedAt(childNode)){
+      log.info(s"discovered updated node $childNode: $remoteService, adding to ${newInstances.keys}")
+      newInstances(childNode).remoteService = remoteService
+    }
+    else {
       log.info(s"discovered new node $childNode: $remoteService, adding to ${newInstances.keys}")
-      ServiceInstance(serviceType, childNode, remoteService)
-    })
+      newInstances(childNode) = ServiceInstance(serviceType, childNode, remoteService)
+    }
   } catch {
     case t: Throwable =>
       log.error(s"could not fetch data node for instance of $childNode")
