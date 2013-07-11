@@ -44,9 +44,11 @@ class UserController @Inject() (db: Database,
     ))
   }
 
-  def currentUser() = AuthenticatedJsonAction { getUserInfo(_) }
+  def currentUser = AuthenticatedJsonAction(true) { implicit request => getUserInfo(request) }
 
-  private case class UpdatableUserInfo(description: Option[String], firstName: Option[String], lastName: Option[String])
+  private case class UpdatableUserInfo(
+      description: Option[String], emails: Option[Seq[String]],
+      firstName: Option[String] = None, lastName: Option[String] = None)
   private implicit val updatableUserDataFormat = Json.format[UpdatableUserInfo]
 
   def updateCurrentUser() = AuthenticatedJsonToJsonAction(true) { implicit request =>
@@ -60,6 +62,15 @@ class UserController @Inject() (db: Database,
             lastName = userData.lastName getOrElse user.lastName
           ))
         }
+        for (emails <- userData.emails) {
+          val (existing, toRemove) = emailRepo.getByUser(request.user.id.get).partition(emails contains _.address)
+          for (email <- toRemove) {
+            emailRepo.save(email.withState(EmailAddressStates.INACTIVE))
+          }
+          for (address <- emails.toSet -- existing.map(_.address)) {
+            emailRepo.save(EmailAddress(userId = request.userId, address = address))
+          }
+        }
       }
       getUserInfo(request)
     } getOrElse {
@@ -68,27 +79,14 @@ class UserController @Inject() (db: Database,
   }
 
   private def getUserInfo[T](request: AuthenticatedRequest[T]) = {
-    val userJson = Json.toJson(db.readOnly { implicit s => basicUserRepo.load(request.userId) }).asInstanceOf[JsObject]
-    val extraJson = Json.obj(
-      "description" -> Json.toJson(db.readOnly { implicit s =>
-        userValueRepo.getValue(request.userId, "user_description").getOrElse("")
-      })
-    )
-    Ok(userJson ++ extraJson)
-  }
-
-  def updateEmail() = AuthenticatedJsonToJsonAction(true) { request =>
-    val o = request.request.body
-    val email = (o \ "email").as[String]
-    db.readWrite{ implicit session =>
-      if(emailRepo.getByAddressOpt(email).isEmpty) {
-        emailRepo.getByUser(request.user.id.get) map { oldEmail =>
-          emailRepo.save(oldEmail.withState(EmailAddressStates.INACTIVE))
-        }
-        emailRepo.save(EmailAddress(address = email, userId = request.user.id.get))
-      }
+    val basicUser = db.readOnly { implicit s => basicUserRepo.load(request.userId) }
+    val info = db.readOnly { implicit s =>
+      UpdatableUserInfo(
+        description = Some(userValueRepo.getValue(request.userId, "user_description").getOrElse("")),
+        emails = Some(emailRepo.getByUser(request.userId).map(_.address))
+      )
     }
-    Ok
+    Ok(Json.toJson(basicUser).as[JsObject] deepMerge Json.toJson(info).as[JsObject])
   }
 
   private val SitePrefNames = Set("site_left_col_width")
