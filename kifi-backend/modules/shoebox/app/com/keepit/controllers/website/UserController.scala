@@ -44,6 +44,19 @@ class UserController @Inject() (db: Database,
     ))
   }
 
+  private case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
+  private object BasicSocialUser {
+    implicit val writesBasicSocialUser = Json.writes[BasicSocialUser]
+    def from(sui: SocialUserInfo): BasicSocialUser =
+      BasicSocialUser(network = sui.networkType.name, profileUrl = sui.getProfileUrl, pictureUrl = sui.getPictureUrl())
+  }
+
+  def socialNetworkInfo() = AuthenticatedJsonAction { request =>
+    Ok(Json.toJson(db.readOnly { implicit s =>
+      socialUserRepo.getByUser(request.userId).map(BasicSocialUser from _)
+    }))
+  }
+
   def currentUser = AuthenticatedJsonAction(true) { implicit request => getUserInfo(request) }
 
   private case class UpdatableUserInfo(
