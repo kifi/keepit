@@ -19,6 +19,6 @@ case class ServiceInstance(serviceType: ServiceType, node: Node, var remoteServi
 
   def isAvailable : Boolean = isHealthy || remoteService.status==ServiceStatus.SICK || remoteService.status==ServiceStatus.SELFCHECK_FAIL
 
-  def isHealthy : Boolean = true //remoteService.status==ServiceStatus.UP
+  def isHealthy : Boolean = remoteService.status==ServiceStatus.UP
 
 }
