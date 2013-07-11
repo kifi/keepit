@@ -46,4 +46,6 @@ GET     /internal/search/defaultSearchConfig/defaultSearchConfig  @com.keepit.co
 
 GET     /internal/search/search/friendMapJson  @com.keepit.controllers.search.SearchController.friendMapJson(userId: Id[User], query: Option[String] ?= None, minKeeps: Option[Int] ?= None)
 
+GET 	/internal/search/cache/warmResultClick		@com.keepit.controllers.search.SearchCacheController.warmResultClick()
+
 ->  / common.Routes
