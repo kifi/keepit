@@ -309,6 +309,8 @@ class ShoeboxController @Inject() (
     val userId = Id[User]((req \ "userId").as[Long])
     val msg = (req \ "msg").asInstanceOf[JsArray]
 
+    log.info(s"[userChannelFanout] Recieved to $userId: ${msg.toString.take(120)}")
+
     Ok(userChannel.pushNoFanout(userId, msg).toString)
   }
 
