@@ -86,6 +86,7 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
       def changeStatus(newStatus: ServiceStatus): Unit = {}
       def startSelfCheck(): Unit = {}
       def forceUpdate(): Unit = {}
+      def myStatus: Option[ServiceStatus] = Some(ServiceStatus.UP)
     }
 }
 

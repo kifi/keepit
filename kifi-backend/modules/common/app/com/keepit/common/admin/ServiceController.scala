@@ -20,4 +20,8 @@ class ServiceController @Inject() (
         Ok("Alright, alright! I've refreshed.")
     }
 
+    def myStatus = Action { implicit request =>
+        Ok(serviceDiscovery.myStatus.map(_.name).getOrElse("none"))
+    }
+
 }

@@ -13,3 +13,4 @@ GET     /assets/*file               controllers.Assets.at(path="/public", file)
 GET     /internal/benchmark                   @com.keepit.common.healthcheck.CommonBenchmarkController.benchmarksResults()
 GET     /internal/version                     @com.keepit.common.healthcheck.CommonBenchmarkController.version()
 GET     /internal/clusters/refresh            @com.keepit.common.admin.ServiceController.forceRefresh()
+GET		/internal/clusters/mystatus			  @com.keepit.common.admin.ServiceController.myStatus

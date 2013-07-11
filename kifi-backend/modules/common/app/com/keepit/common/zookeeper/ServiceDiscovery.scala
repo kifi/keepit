@@ -24,6 +24,7 @@ trait ServiceDiscovery {
   def startSelfCheck(): Unit
   def changeStatus(newStatus: ServiceStatus): Unit
   def forceUpdate(): Unit
+  def myStatus: Option[ServiceStatus]
 }
 
 @Singleton
@@ -114,6 +115,13 @@ class ServiceDiscoveryImpl @Inject() (
         serviceInstance.remoteService.status = newStatus
         zk.set(node, RemoteService.toJson(serviceInstance.remoteService))
       }
+    }
+  }
+
+  def myStatus : Option[ServiceStatus] = {
+    myNode.flatMap { node =>
+      val thisServiceInstance = clusters(services.currentService).instanceForNode(node)
+      thisServiceInstance.map(_.remoteService.status)
     }
   }
 
