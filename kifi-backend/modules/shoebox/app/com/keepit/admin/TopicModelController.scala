@@ -15,12 +15,17 @@ import com.keepit.model.TopicNameRepoA
 import scala.math.ceil
 import com.keepit.model.TopicName
 import play.api.libs.json.Json
+import scala.concurrent._
+import ExecutionContext.Implicits.global
 
 @Singleton
 class TopicModelController  @Inject() (
   db: Database,
   topicPlugin: TopicUpdaterPlugin,
   modelAccessor: SwitchableTopicModelAccessor,
+  wordTopicStore: WordTopicStore,
+  wordTopicBlobStore: WordTopicBlobStore,
+  wordStore: WordStore,
   actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator){
 
   val uriTopicHelper = new UriTopicHelper
@@ -155,6 +160,32 @@ class TopicModelController  @Inject() (
     }
 
     Redirect(com.keepit.controllers.admin.routes.TopicModelController.topicsViewDefault)
+  }
+
+  def genModelFiles(flag: String) = AdminHtmlAction{ implicit request =>
+    future {
+      log.info(s"loading model files for model ${flag}")
+
+      val id = flag match {
+        case TopicModelAccessorFlag.A => "model_a"
+        case TopicModelAccessorFlag.B => "model_b"
+      }
+
+      val content = wordTopicStore.get(id).get
+      val loader = new LdaTopicModelLoader
+      val model = loader.load(content)
+
+      val words = model.wordTopic.map{_._1}.toArray
+      val arrs = model.wordTopic.map{_._2}.flatten.toArray
+
+      log.info(s"writing converted model files for model ${flag} to S3")
+      log.info(s"num of words: ${words.size}, topic vector size: ${arrs.size}")
+
+      wordStore += (id, words)            // overwrite/create id.words.json
+      wordTopicBlobStore += (id, arrs)    // overwrite/create id.topicVector.bin
+    }
+
+    Ok(s"word list and topic binary array for model ${flag} will be created in S3")
   }
 
 }

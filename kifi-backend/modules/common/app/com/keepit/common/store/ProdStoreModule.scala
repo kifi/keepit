@@ -8,9 +8,7 @@ import play.api.Play._
 import com.keepit.common.analytics._
 import com.amazonaws.auth.BasicAWSCredentials
 import com.mongodb.casbah.MongoConnection
-import com.keepit.learning.topicmodel.WordTopicStore
-import com.keepit.learning.topicmodel.S3WordTopicStoreImpl
-import com.keepit.learning.topicmodel.InMemoryWordTopicStoreImpl
+import com.keepit.learning.topicmodel._
 
 trait StoreModule extends ScalaModule {
 
@@ -58,6 +56,20 @@ trait ProdStoreModule extends StoreModule {
 
   @Singleton
   @Provides
+  def wordTopicBlobStore(amazonS3Client: AmazonS3): WordTopicBlobStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.wordTopic.bucket").get)
+    new S3WordTopicBlobStoreImpl(bucketName, amazonS3Client)
+  }
+
+  @Singleton
+  @Provides
+  def wordStore(amazonS3Client: AmazonS3): WordStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.wordTopic.bucket").get)
+    new S3WordStoreImpl(bucketName, amazonS3Client)
+  }
+
+  @Singleton
+  @Provides
   def mongoEventStore(): MongoEventStore = {
     current.configuration.getString("mongo.events.server").map { server =>
       val mongoConn = MongoConnection(server)
@@ -99,6 +111,20 @@ abstract class DevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) exte
     whenConfigured("amazon.s3.wordTopic.bucket")(
       prodStoreModule.wordTopicStore(amazonS3ClientProvider.get)
     ).getOrElse(new InMemoryWordTopicStoreImpl())
+
+  @Singleton
+  @Provides
+  def wordTopicBlobStore(amazonS3ClientProvider: Provider[AmazonS3]): WordTopicBlobStore =
+    whenConfigured("amazon.s3.wordTopic.bucket")(
+      prodStoreModule.wordTopicBlobStore(amazonS3ClientProvider.get)
+    ).getOrElse(new InMemoryWordTopicBlobStoreImpl())
+
+  @Singleton
+  @Provides
+  def wordStore(amazonS3ClientProvider: Provider[AmazonS3]): WordStore =
+    whenConfigured("amazon.s3.wordTopic.bucket")(
+      prodStoreModule.wordStore(amazonS3ClientProvider.get)
+    ).getOrElse(new InMemoryWordStoreImpl())
 
   @Singleton
   @Provides
