@@ -1,16 +1,17 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy, Provider}
-
-import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent._
 
-import com.keepit.shoebox.usersearch._
+import com.google.inject.{Inject, Singleton, ImplementedBy, Provider}
+import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
 import com.keepit.common.db.{ExternalId, Id, State}
-import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.time.Clock
 import com.keepit.common.logging.Logging
+import com.keepit.common.time.Clock
+import com.keepit.shoebox.usersearch._
+import com.keepit.social._
+
+import play.api.libs.concurrent.Execution.Implicits._
 
 @ImplementedBy(classOf[UserRepoImpl])
 trait UserRepo extends Repo[User] with ExternalIdColumnFunction[User] {
@@ -26,10 +27,12 @@ class UserRepoImpl @Inject() (
     val clock: Clock,
     val externalIdCache: UserExternalIdCache,
     val idCache: UserIdCache,
+    basicUserCache: BasicUserUserIdCache,
+    commentRepo: CommentRepo,
+    commentWithBasicUserCache: CommentWithBasicUserCache,
     userIndexProvider: Provider[UserIndex])
   extends DbRepo[User] with UserRepo with ExternalIdColumnDbFunction[User] with Logging {
 
-  import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
@@ -56,7 +59,13 @@ class UserRepoImpl @Inject() (
   }
 
   override def invalidateCache(user: User)(implicit session: RSession) = {
-    user.id map {id => idCache.set(UserIdKey(id), user)}
+    for (id <- user.id) {
+      idCache.set(UserIdKey(id), user)
+      basicUserCache.set(BasicUserUserIdKey(id), BasicUser.fromUser(user))
+      for (commentId <- commentRepo.getCommentIdsByUser(id)) {
+        commentWithBasicUserCache.remove(CommentWithBasicUserKey(commentId))
+      }
+    }
     externalIdCache.set(UserExternalIdKey(user.externalId), user)
     future {
       userIndexProvider.get.addUser(user)
