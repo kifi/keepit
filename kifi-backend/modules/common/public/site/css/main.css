@@ -103,7 +103,7 @@ input.query::-moz-placeholder {color: #99a3b3}
 .keep-group-title+.keep {border-top: 0}
 .keep {position: relative; clear: left; padding: 10px 0 13px 30px; border-top: 1px solid #f9f9f9}
 .keep.detailed {background-color: #eff2f7}
-.keep.selected {background-color: #ffc}
+.keep.selected {background-color: #fffcf1; border-color: #f0f0f0}
 .keep-arrow {position: absolute; right: 16px; width: 6px; height: 16px; bottom: 13px; border: solid transparent; border-width: 4px 8px; background: url(../img/arrow-r.png) left/13px 16px no-repeat content-box; cursor: pointer; -webkit-transition: -webkit-transform .2s; transition: -webkit-transform .2s, transform .2s}
 .keep-arrow:hover {background-color: rgba(0,0,0,.05); border-color: rgba(0,0,0,.05)}
 .keep:hover .keep-arrow,
