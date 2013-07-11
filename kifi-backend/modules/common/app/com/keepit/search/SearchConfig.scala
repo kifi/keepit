@@ -37,7 +37,7 @@ object SearchConfig {
       "dampingHalfDecayMine" -> "7.0",
       "dampingHalfDecayFriends" -> "5.0",
       "dampingHalfDecayOthers" -> "2.0",
-      "useS3FlowerFilter" -> "true"
+      "useS3FlowerFilter" -> "false"
     )
   private[this] val descriptions =
     Map[String, String](
