@@ -19,11 +19,14 @@ $(function() {
     $form.find(".invitation_message").val(
        "Hi " + name + ",\n\n"
      + "I would like to invite you to the private beta of kifi.com.\n\n"
-     + "Use this link to accept the invitation: {link}\n"
+     + "Use this link to accept the invitation:\n"
     );
     $form.find(".send_btn").off('click').click(function () {
       $this.text("Inviting...");
       $form.submit();
+    });
+    $form.find(".cancel_btn").off('click').click(function () {
+      $form.find(".invitation_editor").hide();
     });
   }
 
