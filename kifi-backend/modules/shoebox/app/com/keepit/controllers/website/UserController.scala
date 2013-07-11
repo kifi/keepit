@@ -1,18 +1,17 @@
 package com.keepit.controllers.website
 
 import com.google.inject.{Inject, Singleton}
-import com.keepit.common.controller.ActionAuthenticator
-import com.keepit.common.controller.WebsiteController
+import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.slick._
-import com.keepit.common.social.{BasicUserRepo}
-import com.keepit.common.time._
+import com.keepit.common.social.BasicUserRepo
 import com.keepit.model._
+import com.keepit.realtime.{DeviceType, UrbanAirship}
 
 import play.api.libs.json._
-import com.keepit.realtime.{DeviceType, UrbanAirship}
 
 @Singleton
 class UserController @Inject() (db: Database,
+  userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   userConnectionRepo: UserConnectionRepo,
   emailRepo: EmailAddressRepo,
@@ -45,8 +44,37 @@ class UserController @Inject() (db: Database,
     ))
   }
 
-  def currentUser() = AuthenticatedJsonAction { request =>
-    Ok(Json.toJson(db.readOnly { implicit s => basicUserRepo.load(request.userId) }))
+  def currentUser() = AuthenticatedJsonAction { getUserInfo(_) }
+
+  private case class UpdatableUserInfo(description: Option[String], firstName: Option[String], lastName: Option[String])
+  private implicit val updatableUserDataFormat = Json.format[UpdatableUserInfo]
+
+  def updateCurrentUser() = AuthenticatedJsonToJsonAction(true) { implicit request =>
+    request.body.asOpt[UpdatableUserInfo] map { userData =>
+      db.readWrite { implicit session =>
+        userData.description foreach { userValueRepo.setValue(request.userId, "user_description", _) }
+        if (userData.firstName.isDefined || userData.lastName.isDefined) {
+          val user = userRepo.get(request.userId)
+          userRepo.save(user.copy(
+            firstName = userData.firstName getOrElse user.firstName,
+            lastName = userData.lastName getOrElse user.lastName
+          ))
+        }
+      }
+      getUserInfo(request)
+    } getOrElse {
+      BadRequest(Json.obj("error" -> "could not parse user info from body"))
+    }
+  }
+
+  private def getUserInfo[T](request: AuthenticatedRequest[T]) = {
+    val userJson = Json.toJson(db.readOnly { implicit s => basicUserRepo.load(request.userId) }).asInstanceOf[JsObject]
+    val extraJson = Json.obj(
+      "description" -> Json.toJson(db.readOnly { implicit s =>
+        userValueRepo.getValue(request.userId, "user_description").getOrElse("")
+      })
+    )
+    Ok(userJson ++ extraJson)
   }
 
   def updateEmail() = AuthenticatedJsonToJsonAction(true) { request =>
