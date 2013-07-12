@@ -12,6 +12,7 @@ import com.keepit.common.service.FortyTwoServices
 
 import play.api.Play.current
 import play.api._
+import play.api.libs.MimeTypes
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
 import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialGraphPlugin}
@@ -41,7 +42,7 @@ class HomeController @Inject() (db: Database,
   def kifiSite(path: String, id: String) = AuthenticatedHtmlAction { implicit request =>
     if (userCanSeeKifiSite) {
       Play.resourceAsStream(s"public/site/$path") map { stream =>
-        SimpleResult(header = ResponseHeader(OK), body = Enumerator.fromStream(stream))
+        Ok.stream(Enumerator.fromStream(stream)).as(MimeTypes.forFileName(path).getOrElse(play.api.http.ContentTypes.BINARY))
       } getOrElse NotFound
     } else NotFound
   }
