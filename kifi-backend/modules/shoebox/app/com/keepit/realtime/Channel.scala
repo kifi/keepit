@@ -192,13 +192,13 @@ abstract class ChannelManagerImpl[T, S <: Channel](name: String, creator: T => S
           val createdAt = Json.fromJson[DateTime](msg(3) \ "createdAt").get
           val now = currentDateTime
           val diff = now.getMillis - createdAt.getMillis
-          log.info(s"[Channel - $tag] Deliverying message (create: $createdAt) to $id after $diff ms: ${msg.toString.take(120)}")
+          log.info(s"[Channel - $tag] Delivering message (create: $createdAt) to $id after $diff ms: ${msg.toString.take(120)}")
           Statsd.timing(s"websocket.delivery.$tag.message", now.getMillis - createdAt.getMillis)
         } else if(msg(0).as[String] == "notification") {
-          val createdAt = Json.fromJson[DateTime](msg(2) \ "time").get
+          val createdAt = Json.fromJson[DateTime](msg(1) \ "time").get
           val now = currentDateTime
           val diff = now.getMillis - createdAt.getMillis
-          log.info(s"[Channel - $tag] Deliverying notification (create: $createdAt) to $id after $diff ms: ${msg.toString.take(120)}")
+          log.info(s"[Channel - $tag] Delivering notification (create: $createdAt) to $id after $diff ms: ${msg.toString.take(120)}")
           Statsd.timing(s"websocket.delivery.$tag.notice", now.getMillis - createdAt.getMillis)
         }
       } catch {
