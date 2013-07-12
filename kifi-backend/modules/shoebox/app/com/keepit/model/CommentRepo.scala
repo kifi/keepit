@@ -31,16 +31,17 @@ trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
   def getPublicIdsCreatedBefore(uriId: Id[NormalizedURI], time: DateTime)(implicit session: RSession): Seq[Id[Comment]]
   def getMessageIdsCreatedBefore(uriId: Id[NormalizedURI], parentId: Id[Comment], time: DateTime)(implicit session: RSession): Seq[Id[Comment]]
   def getCommentsChanged(num: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[Comment]
+  def getCommentIdsByUser(userId: Id[User])(implicit ssession: RSession): Seq[Id[Comment]]
 }
 
 @Singleton
 class CommentRepoImpl @Inject() (
-                                  val db: DataBaseComponent,
-                                  val clock: Clock,
-                                  val commentCountCache: CommentCountUriIdCache,
-                                  commentWithBasicUserCache: CommentWithBasicUserCache,
-                                  userConnectionRepo: UserConnectionRepo,
-                                  commentRecipientRepoImpl: CommentRecipientRepoImpl)
+  val db: DataBaseComponent,
+  val clock: Clock,
+  val commentCountCache: CommentCountUriIdCache,
+  commentWithBasicUserCache: CommentWithBasicUserCache,
+  userConnectionRepo: UserConnectionRepo,
+  commentRecipientRepoImpl: CommentRecipientRepoImpl)
   extends DbRepo[Comment] with CommentRepo with ExternalIdColumnDbFunction[Comment] with Logging {
   import FortyTwoTypeMappers._
   import scala.slick.lifted.Query
@@ -191,6 +192,10 @@ class CommentRepoImpl @Inject() (
 
   def getCommentsChanged(num: SequenceNumber, limit: Int)(implicit session: RSession): Seq[Comment] =
     (for (c <- table if c.seq > num) yield c).sortBy(_.seq).take(limit).list
+
+  def getCommentIdsByUser(userId: Id[User])(implicit session: RSession): Seq[Id[Comment]] = {
+    (for (c <- table if c.userId === userId) yield c.id).list
+  }
 }
 
 @Singleton

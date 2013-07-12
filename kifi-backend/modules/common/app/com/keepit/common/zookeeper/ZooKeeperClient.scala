@@ -13,6 +13,7 @@ import org.apache.zookeeper.Watcher.Event.EventType
 import org.apache.zookeeper.Watcher.Event.KeeperState
 import java.util.concurrent.{CountDownLatch, TimeUnit}
 import java.util.concurrent.atomic.AtomicBoolean
+import scala.collection.JavaConverters._
 
 case class Path(name: String) {
   override def toString = name
@@ -212,23 +213,36 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
    */
   def watchChildren(path: Path, updateChildren : Seq[Node] => Unit) {
     val node = makeNodePath(path)
-    val childWatcher = new Watcher {
+    val parentWatcher = new Watcher {
       def process(event : WatchedEvent) {
-        if (event.getType == EventType.NodeChildrenChanged ||
-            event.getType == EventType.NodeCreated) {
+        if (event.getType!=EventType.NodeDeleted) {
           watchChildren(node.asPath, updateChildren)
         }
       }
     }
     try {
-      val children = zk.getChildren(path.name, childWatcher)
+      val children = zk.getChildren(path.name, parentWatcher)
+      children.asScala.foreach{ child =>
+        val childWatcher = new Watcher {
+          def process(event: WatchedEvent){
+            if (event.getType!=EventType.NodeDeleted) {
+              watchChildren(node.asPath, updateChildren)
+            }
+          }
+        }
+        try { zk.getData(path.name + "/" + child, childWatcher, new Stat()) }
+        catch {
+          case e:KeeperException =>
+            log.warn("Failed to place watch on a child node!")
+        }
+      }
       updateChildren(children)
     } catch {
       case e:KeeperException => {
         // Node was deleted -- fire a watch on node re-creation
         log.warn(s"Failed to read node $path", e)
         updateChildren(List())
-        zk.exists(path.name, childWatcher)
+        zk.exists(path.name, parentWatcher)
       }
     }
   }

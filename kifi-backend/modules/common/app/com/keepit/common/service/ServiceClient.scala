@@ -42,5 +42,8 @@ trait ServiceClient extends Logging {
   }
 
   protected def broadcast(call: ServiceRoute, body: JsValue = JsNull): Seq[Future[ClientResponse]] =
-    urls(call.url) map { url => callUrl(call, url, body) }
+    urls(call.url) map { url =>
+      log.info(s"[broadcast] Sending to $url: ${body.toString.take(120)}")
+      callUrl(call, url, body)
+    }
 }

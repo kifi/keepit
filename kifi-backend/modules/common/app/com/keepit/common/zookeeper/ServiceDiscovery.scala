@@ -8,6 +8,7 @@ import com.keepit.common.amazon._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
 import scala.collection.concurrent.TrieMap
+import scala.util.{Try, Success, Failure}
 
 import play.api.libs.json._
 
@@ -23,6 +24,8 @@ trait ServiceDiscovery {
   def myClusterSize: Int = 0
   def startSelfCheck(): Unit
   def changeStatus(newStatus: ServiceStatus): Unit
+  def forceUpdate(): Unit
+  def myStatus: Option[ServiceStatus]
 }
 
 @Singleton
@@ -68,6 +71,8 @@ class ServiceDiscoveryImpl @Inject() (
     }
   }
 
+  override def toString(): String = clusters.map(kv => kv._1.toString + ":" + kv._2.toString).mkString("\n")
+
   implicit val amazonInstanceInfoFormat = AmazonInstanceInfo.format
 
   override def myClusterSize: Int = clusters.get(services.currentService) map {c => c.size} getOrElse 0
@@ -78,14 +83,20 @@ class ServiceDiscoveryImpl @Inject() (
     zk.createPath(cluster.servicePath)
     zk.watchChildren(cluster.servicePath, { (children : Seq[Node]) =>
       log.info(s"""services in my cluster under ${cluster.servicePath.name}: ${children.mkString(", ")}""")
-      future {
-        cluster.update(zk, children)
-      }
+      cluster.update(zk, children)
     })
+  }
+
+  def forceUpdate() : Unit = {
+    for (cluster <- clusters.values) {
+      val children = zk.getChildren(cluster.servicePath)
+      cluster.update(zk, children)
+    }
   }
 
   def register(): Node = {
     watchServices()
+
     val myServiceType: ServiceType = services.currentService
     log.info(s"registered clusters: $clusters, my service is $myServiceType")
     val myCluster = clusters(myServiceType)
@@ -103,15 +114,26 @@ class ServiceDiscoveryImpl @Inject() (
     myNode.map { node => 
       val thisServiceInstance = clusters(services.currentService).instanceForNode(node)
       thisServiceInstance.foreach{ serviceInstance =>
+        log.info(s"Changing instance status to $newStatus")
         serviceInstance.remoteService.status = newStatus
         zk.set(node, RemoteService.toJson(serviceInstance.remoteService))
       }
     }
   }
 
+  def myStatus : Option[ServiceStatus] = {
+    myNode.flatMap { node =>
+      val thisServiceInstance = clusters(services.currentService).instanceForNode(node)
+      thisServiceInstance.map(_.remoteService.status)
+    }
+  }
+
   def startSelfCheck(): Unit = future {
-    if(services.currentService.selfCheck) changeStatus(ServiceStatus.UP)
-    else changeStatus(ServiceStatus.SELFCHECK_FAIL)
+    log.info("Running self check")
+    services.currentService.selfCheck().onComplete{
+      case Success(passed) => if (passed) changeStatus(ServiceStatus.UP) else changeStatus(ServiceStatus.SELFCHECK_FAIL)
+      case Failure(e) => changeStatus(ServiceStatus.SELFCHECK_FAIL)
+    }
   }
   
 

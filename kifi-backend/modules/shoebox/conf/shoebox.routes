@@ -100,9 +100,11 @@ POST    /site/collections/:id/setKeeps @com.keepit.controllers.website.Bookmarks
 POST    /site/chatter               @com.keepit.controllers.website.CommentController.getChatter
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
+POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
+GET     /site/user/networks         @com.keepit.controllers.website.UserController.socialNetworkInfo()
+
 GET     /site/user/connections      @com.keepit.controllers.website.UserController.connections()
 GET     /site/user/all-connections  @com.keepit.controllers.website.UserController.getAllConnections()
-POST    /site/user/update-email     @com.keepit.controllers.website.UserController.updateEmail
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
 
@@ -139,6 +141,10 @@ GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarks
 POST    /admin/bookmarks/rescrape   @com.keepit.controllers.admin.AdminBookmarksController.rescrape
 POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Bookmark])
+
+
+GET     /admin/screenshot/uri       @com.keepit.controllers.admin.AdminScreenshotController.updateUri(uriId: Id[NormalizedURI])
+GET     /admin/screenshot/user      @com.keepit.controllers.admin.AdminScreenshotController.updateUser(userId: Id[User], drop: Int ?= 0, take: Int ?= 999999)
 
 GET     /admin/scrape               @com.keepit.controllers.admin.ScraperController.scrape
 GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperController.getScraped(uriId: Id[NormalizedURI])

@@ -60,10 +60,38 @@ $(function() {
 	$leftCol.find(".ui-resizable-handle").appendTo($leftCol.find(".page-col-inner"));
 
 	var $subtitle = $(".subtitle"), subtitleTmpl = Tempo.prepare($subtitle);
+	var $checkAll = $subtitle.find('.check-all').click(function() {
+		if ($checkAll.hasClass('live')) {
+			var $keeps = $main.find('.keep');
+			$checkAll.toggleClass('checked');
+			if ($checkAll.hasClass('checked')) {
+				$keeps.addClass('selected detailed');
+			} else {
+				$keeps.filter('.selected').removeClass('selected detailed');
+			}
+			updateDetails();
+		}
+	}).hover(function() {
+		var $text = $checkAll.next('.subtitle-text');
+		var n = $text.data("n");
+		if (n) {
+			$checkAll.addClass("live");
+			$text.data("text", $text.text()).text(
+				n == 1 ? "the keep below" :
+				 n == 2 ? "both keeps below" :
+				 "all " + n + " keeps below");
+		}
+	}, function() {
+		var $text = $(this).removeClass("live").next('.subtitle-text');
+		var text = $text.data("text");
+		if (text) {
+			$text.text(text).removeData("text");
+		}
+	});
 
 	$('.keep-colls').removeText();
 	var $myKeeps = $("#my-keeps"), $results = $("#search-results"), keepsTmpl = Tempo.prepare($myKeeps).when(TempoEvent.Types.RENDER_COMPLETE, function(ev) {
-		hideLoading();
+		$keepSpinner.hide();
 
 		var now = new Date;
 		$(ev.element).find("time").easydate({set_title: false}).each(function() {
@@ -115,6 +143,15 @@ $(function() {
 	var $inColl = $(".page-coll-list").removeText();
 	var inCollTmpl = Tempo.prepare($inColl);
 
+	var $keepSpinner = $('.keeps-loading');
+	var $loadMore = $('.keeps-load-more').click(function() {
+		if (searchResponse) {
+			doSearch(searchResponse.context);
+		} else {
+			loadKeeps($myKeeps.data("collId"));
+		}
+	});
+
 	var me;
 	var myPrefs;
 	var myKeepsCount;
@@ -140,16 +177,6 @@ $(function() {
 	}
 	var escapeHTMLContentMap = {'&': '&amp;', '<': '&lt;', '>': '&gt;'};
 
-	function showLoading() {
-		$('.keeps-loading').show();
-	}
-	function hideLoading() {
-		$('.keeps-loading').hide();
-	}
-	function isLoading() {
-		return $('.keeps-loading').is(':visible');
-	}
-
 	function showDetails() {
 		var $r = $detail.off("transitionend"), d;
 		if ($r.css("display") == "block") {
@@ -170,19 +197,67 @@ $(function() {
 			}
 		}).css({transform: "translate(" + d + "px,0)", "transition-timing-function": "ease-in"});
 	}
+	function updateDetails() {
+		var $detailed = $main.find('.keep.detailed');
+		if (!$detailed.length) {
+			hideDetails();
+		} else if ($detailed.length > 1) {
+			var howKept = $detailed.not(".mine").length ? null :
+				$detailed.has(".keep-private.on").length == $detailed.length ? "pri" : "pub";
+			$detail.attr("data-kept", howKept).addClass("multiple");
+			$('.page-title').text($detailed.length + " keeps selected");
+			$('.page-url').hide().empty().attr('href', '');
+			$('.page-pic-wrap').hide();
+			$('.page-pic').css('background-image', '');
+			$('.page-who').hide();
+
+			var collCounts = $detailed.find('.keep-coll').map(getDataId).get()
+				.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
+			inCollTmpl.render(
+				Object.keys(collCounts)
+					.sort(function(id1, id2) {return collCounts[id1] - collCounts[id2]})
+					.map(function(id) {return {id: id, name: collections[id].name}}));
+			showDetails();
+		} else { // detail one keep
+			$keep = $detailed;
+			var howKept = $keep.is('.mine') ? ($keep.has('.keep-private.on').length ? "pri" : "pub") : null;
+			var $keepLink = $keep.find('.keep-title>a'), url = $keepLink[0].href;
+			$detail.attr("data-kept", howKept).removeClass("multiple");
+			$('.page-title').text($keepLink.text());
+			$('.page-url').attr('href', url).text(url).show();
+			$('.page-pic').css("background-image", "url(" + urlScreenshot + '?url=' + escape(url) + ")").attr('href', url);
+			$('.page-pic-wrap').show();
+			$('.page-how').attr('class', 'page-how ' + (howKept || ''));
+			$('.page-who-pics').empty().append($keep.find(".keep-who>img").clone());
+			$('.page-who-text').html($keep.find(".keep-who-text").html());
+			$('.page-who').show();
+
+			var collIds = $keep.find('.keep-coll').map(getDataId).get();
+			$('.page-colls>h2').text(collIds.length ? 'In Collections:' : 'Collections:');
+			inCollTmpl.render(collIds.map(function(id) {return {id: id, name: collections[id].name}}));
+
+			showDetails();
+		}
+	}
 
 	function doSearch(context) {
 		$('.left-col .active').removeClass('active');
 		$main.attr("data-view", "search");
-		subtitleTmpl.render({searching: true});
-		showLoading();
+		if (!context) {
+			subtitleTmpl.render({searching: true});
+			$checkAll.removeClass('live checked');
+			$myKeeps.detach().find('.keep').removeClass('selected detailed');
+		}
+		$keepSpinner.show();
+		$loadMore.addClass('hidden');
 		var q = $.trim($query.val());
+		console.log("[doSearch] q:", q);
 		$query.attr("data-q", q || null);
 		$.getJSON(urlSearch, {q: q, f: "a", maxHits: 30, context: context}, function(data) {
 			searchResponse = data;
-			subtitleTmpl.render({
-				numShown: data.hits.length + (context ? $results.find(".keep").length : 0),
-				query: data.query});
+			var numShown = data.hits.length + (context ? $results.find(".keep").length : 0);
+			subtitleTmpl.render({numShown: numShown, query: data.query});
+			if (numShown) $checkAll.addClass('live');
 			data.hits.forEach(prepHitForRender);
 			if (context == null) {
 				keepsTmpl.into($results[0]).render(data.hits);
@@ -190,6 +265,7 @@ $(function() {
 			} else {
 				keepsTmpl.into($results[0]).append(data.hits);
 			}
+			$checkAll.removeClass('checked');
 		});
 	}
 
@@ -239,31 +315,48 @@ $(function() {
 		var $h3 = $(".left-col h3");
 		$h3.filter(".active").removeClass("active");
 		$h3.filter(collId ? "[data-id='" + collId + "']" : ".my-keeps").addClass("active");
+
+		var fromSearch = $main.attr("data-view") == "search";
 		$main.attr("data-view", "mine")
 			.find("h1").text(collId ? collections[collId].name : "Browse your keeps");
 
 		$results.empty();
 		$query.val("").removeAttr("data-q");
-		searchResponse = null;
-		hideDetails();
+		if (fromSearch) {
+			searchResponse = null;
+			$checkAll.removeClass('checked');
+		}
+		if (!$myKeeps[0].parentNode) {
+			$myKeeps.insertAfter($results);
+		}
 
 		if ($myKeeps.data("collId") != collId || !("collId" in $myKeeps.data())) {
 			$myKeeps.data("collId", collId).empty();
 			lastKeep = null;
+			hideDetails();
 			loadKeeps(collId);
 		} else {
+			var numShown = $myKeeps.find(".keep").length;
 			subtitleTmpl.render({
-				numShown: $myKeeps.find(".keep").length,
+				numShown: numShown,
 				numTotal: collId ? collections[collId].keeps : myKeepsCount,
 				collId: collId || undefined});
+			$checkAll.toggleClass('live', numShown > 0).removeClass('checked');
+			if (fromSearch) {
+				hideDetails();
+			}
 			addNewKeeps();
 		}
 	}
 
 	function loadKeeps(collId) {
 		if (lastKeep != "end") {
-			showLoading();
-			subtitleTmpl.render({});
+			$keepSpinner.show();
+			$loadMore.addClass('hidden');
+			if (!lastKeep) {
+				subtitleTmpl.render({});
+				$checkAll.removeClass('live checked');
+			}
 			var params = {count: 30};
 			if (collId) {
 				params.collection = collId;
@@ -278,11 +371,13 @@ $(function() {
 						setTimeout(withKeeps.bind(null, data), 30);
 						return;
 					}
+					var numShown = $myKeeps.find(".keep").length + data.keeps.length;
 					subtitleTmpl.render({
-						numShown: $myKeeps.find(".keep").length + data.keeps.length,
+						numShown: numShown,
 						numTotal: collId ? collections[collId].keeps : myKeepsCount,
 						collId: collId || undefined});
-					hideLoading();
+					$checkAll.toggleClass('live', numShown > 0);
+					$keepSpinner.hide();
 					if (!data.keeps.length) {  // no more
 						lastKeep = "end";
 					} else {
@@ -293,6 +388,7 @@ $(function() {
 							keepsTmpl.into($myKeeps[0]).append(data.keeps);
 						}
 						lastKeep = data.keeps[data.keeps.length - 1].id;
+						$checkAll.removeClass('checked');
 					}
 				});
 		}
@@ -430,6 +526,7 @@ $(function() {
 		if ($(e.target).hasClass("keep-checkbox") || $(e.target).hasClass("handle")) {
 			$keep.toggleClass("selected");
 			var $selected = $keeps.filter(".selected");
+			$checkAll.toggleClass("checked", $selected.length == $keeps.length);
 			if ($selected.length == 0 ||
 				  $selected.not(".detailed").addClass("detailed").length +
 			    $keeps.filter(".detailed:not(.selected)").removeClass("detailed").length == 0) {
@@ -445,58 +542,18 @@ $(function() {
 			$keeps.removeClass("detailed");
 			$keep.addClass("detailed");
 		}
-
-		var $detailed = $keeps.filter(".detailed");
-		if (!$detailed.length) {
-			hideDetails();
-		} else if ($detailed.length > 1) {
-			var howKept = $detailed.not(".mine").length ? null :
-				$detailed.has(".keep-private.on").length == $detailed.length ? "pri" : "pub";
-			$detail.attr("data-kept", howKept).addClass("multiple");
-			$('.page-title').text($detailed.length + " keeps selected");
-			$('.page-url').hide().empty().attr('href', '');
-			$('.page-pic-wrap').hide();
-			$('.page-pic').css('background-image', '');
-			$('.page-who').hide();
-
-			var collCounts = $detailed.find('.keep-coll').map(getDataId).get()
-				.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
-			inCollTmpl.render(
-				Object.keys(collCounts)
-					.sort(function(id1, id2) {return collCounts[id1] - collCounts[id2]})
-					.map(function(id) {return {id: id, name: collections[id].name}}));
-			showDetails();
-		} else { // detail one keep
-			$keep = $detailed;
-			var howKept = $keep.is('.mine') ? ($keep.has('.keep-private.on').length ? "pri" : "pub") : null;
-			var $keepLink = $keep.find('.keep-title>a'), url = $keepLink[0].href;
-			$detail.attr("data-kept", howKept).removeClass("multiple");
-			$('.page-title').text($keepLink.text());
-			$('.page-url').attr('href', url).text(url).show();
-			$('.page-pic').css("background-image", "url(" + urlScreenshot + '?url=' + escape(url) + ")").attr('href', url);
-			$('.page-pic-wrap').show();
-			$('.page-how').attr('class', 'page-how ' + (howKept || ''));
-			$('.page-who-pics').empty().append($keep.find(".keep-who>img").clone());
-			$('.page-who-text').html($keep.find(".keep-who-text").html());
-			$('.page-who').show();
-
-			var collIds = $keep.find('.keep-coll').map(getDataId).get();
-			$('.page-colls>h2').text(collIds.length ? 'In Collections:' : 'Collections:');
-			inCollTmpl.render(collIds.map(function(id) {return {id: id, name: collections[id].name}}));
-
-			showDetails();
-		}
+		updateDetails();
 	});
 	var $mainHead = $(".main-head");
 	var $mainKeeps = $(".main-keeps").antiscroll({x: false, width: "100%"});
 	$mainKeeps.find(".antiscroll-inner").scroll(function() { // infinite scroll
 		var sT = this.scrollTop;
 		$mainHead.toggleClass("scrolled", sT > 0);
-		if (!isLoading() && this.clientHeight + sT > this.scrollHeight - 300) {
-			if (searchResponse) {
-				doSearch(searchResponse.context);
+		if ($keepSpinner.css('display') == 'none' && this.clientHeight + sT > this.scrollHeight - 300) {
+			if ($main[0].querySelector('.keep.selected')) {
+				$loadMore.removeClass('hidden');
 			} else {
-				loadKeeps($myKeeps.data("collId"));
+				$loadMore.triggerHandler('click');
 			}
 		}
 	});
@@ -517,7 +574,6 @@ $(function() {
 			showMyKeeps();
 		} else if (e.which) {
 			if (e.which == 13) { // Enter
-				console.log("[doSearch]");
 				doSearch();
 			}
 		} else {

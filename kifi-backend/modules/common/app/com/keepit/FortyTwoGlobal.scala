@@ -54,7 +54,7 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
     val serviceDiscovery = injector.instance[ServiceDiscovery]
     serviceDiscovery.register()
     serviceDiscovery.startSelfCheck()
-
+    serviceDiscovery.forceUpdate()
   }
 
   override def onBadRequest(request: RequestHeader, error: String): Result = {
@@ -80,7 +80,8 @@ abstract class FortyTwoGlobal(val mode: Mode.Mode)
         injector.instance[HealthcheckPlugin].addError(HealthcheckError(error = Some(ex), method = Some(request.method.toUpperCase()), path = Some(request.path), callType = Healthcheck.API)).id
     }
     ex.printStackTrace()
-    serviceDiscovery.startSelfCheck
+    serviceDiscovery.startSelfCheck()
+    serviceDiscovery.forceUpdate()
     allowCrossOrigin(request, InternalServerError("error: %s".format(errorId)))
   }
 

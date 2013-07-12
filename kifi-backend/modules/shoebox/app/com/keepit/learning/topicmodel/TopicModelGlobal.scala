@@ -9,6 +9,7 @@ import com.keepit.model.TopicNameRepoA
 import com.keepit.common.db.slick.Database
 import scala.concurrent._
 import ExecutionContext.Implicits.global
+import com.keepit.common.akka.SlowRunningExecutionContext
 
 object TopicModelGlobal {
   val primaryTopicThreshold = 0.07       // need to tune this as numTopics varies
@@ -34,8 +35,8 @@ case class LdaTopicModelModule() extends TopicModelModule with Logging {
   @Provides
   @Singleton
   def switchableTopicModelAccessor(factory: SwitchableTopicModelAccessorFactory): SwitchableTopicModelAccessor = {
-    val a = future{ factory.makeA() }
-    val b = future{ factory.makeB() }
+    val a = future{ factory.makeA() }(SlowRunningExecutionContext.ec)
+    val b = future{ factory.makeB() }(SlowRunningExecutionContext.ec)
     new SwitchableTopicModelAccessor(a, b)
   }
 

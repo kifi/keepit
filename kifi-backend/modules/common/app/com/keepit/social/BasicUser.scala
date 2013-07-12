@@ -42,6 +42,3 @@ case class BasicUserUserIdKey(userId: Id[User]) extends Key[BasicUser] {
 
 class BasicUserUserIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[BasicUserUserIdKey, BasicUser](innermostPluginSettings, innerToOuterPluginSettings:_*)
-
-// TODO(andrew): Invalidate cache. More tricky on this multi-object cache. Right now, the data doesn't change. When we go multi-network, it will.
-// Also affected: CommentWithBasicUser
