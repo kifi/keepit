@@ -638,6 +638,7 @@ $(function() {
 	.addClass("positioned")
 	.antiscroll({x: false, width: "100%"})
 	.sortable({
+		axis: "y",
 		items: ".collection",
 		cancel: ".coll-tri,#coll-menu,.renaming",
 		opacity: .6,
