@@ -115,7 +115,7 @@ class CommentRepoImpl @Inject() (
     } yield b).list
 
   def getChildren(commentId: Id[Comment])(implicit session: RSession): Seq[Comment] =
-    (for(b <- table if b.parent === commentId && b.state === CommentStates.ACTIVE) yield b).sortBy(_.createdAt asc).list
+    (for(b <- table if b.parent === commentId && b.state === CommentStates.ACTIVE) yield b).sortBy(_.seq asc).list
 
   def getParentMessages(uriId: Id[NormalizedURI], userId: Id[User])(implicit session: RSession): Seq[Comment] = {
     val q1 = for {

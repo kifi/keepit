@@ -197,19 +197,26 @@ class UserNotifier @Inject() (
   }
 
   def message(message: Comment): Unit = withThreadLock(message) {
-    db.readWrite { implicit s =>
+    val (thread, participants) = db.readOnly { implicit s =>
       val normUri = normalUriRepo.get(message.uriId)
       val parent = message.parent.map(commentRepo.get).getOrElse(message)
       val threadInfo = threadInfoRepo.load(parent, Some(message.userId))
       val messageJson = Json.arr("message", normUri.url, threadInfo, commentWithBasicUserRepo.load(message))
-      userChannel.pushAndFanout(message.userId, messageJson)
+
+      val participants = commentRepo.getParticipantsUserIds(message.id.get)
+      participants.map { p =>
+        userChannel.pushAndFanout(p, messageJson)
+      }
 
       val thread = if (message eq parent) Seq(message) else (parent +: commentRepo.getChildren(parent.id.get)).reverse
 
-      createMessageUserNotifications(message, thread) map {
-        case (user, messageDetails, userNotification) =>
-          log.info(s"Sending notification to ${userNotification.userId}: $messageJson")
-          userChannel.pushAndFanout(userNotification.userId, messageJson)
+      (thread, participants)
+    }
+
+    db.readWrite { implicit s =>
+      createMessageUserNotifications(message, thread, participants) map {
+        case (messageDetails, userNotification) =>
+          log.info(s"Sending notification to ${userNotification.userId}: $messageDetails")
           notificationBroadcast.push(userNotification)
       }
     }
@@ -315,10 +322,9 @@ class UserNotifier @Inject() (
     }
   }
 
-  private def createMessageUserNotifications(message: Comment, thread: Seq[Comment])(implicit session: RWSession): Set[(User, MessageDetails, UserNotification)] = {
+  private def createMessageUserNotifications(message: Comment, thread: Seq[Comment], participants: Set[Id[User]])(implicit session: RWSession): Set[(MessageDetails, UserNotification)] = {
     val author = userRepo.get(message.userId)
     val uri = normalizedURIRepo.get(message.uriId)
-    val participants = commentRepo.getParticipantsUserIds(message.id.get)
     val parent = message.parent.map(commentRepo.get).getOrElse(message)
 
     val generatedSet = (for (userId <- participants - author.id.get) yield {
@@ -339,7 +345,7 @@ class UserNotifier @Inject() (
           deepLocator = DeepLocator.ofMessageThread(parent)))
 
         val messageDetail = createMessageDetail(message, userId, deepLink.deepLocator, deepLink.url, uri.url, thread, lastNotice.map(_.externalId))
-        Some((recipient, messageDetail, userNotifyRepo.save(UserNotification(
+        Some((messageDetail, userNotifyRepo.save(UserNotification(
           userId = userId,
           category = UserNotificationCategories.MESSAGE,
           details = UserNotificationDetails(Json.toJson(messageDetail)),
