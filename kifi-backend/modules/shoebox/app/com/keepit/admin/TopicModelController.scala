@@ -183,6 +183,7 @@ class TopicModelController  @Inject() (
 
       wordStore += (id, words)            // overwrite/create id.words.json
       wordTopicBlobStore += (id, arrs)    // overwrite/create id.topicVector.bin
+      log.info("model data has been written to S3")
     }
 
     Ok(s"word list and topic binary array for model ${flag} will be created in S3")

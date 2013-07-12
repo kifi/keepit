@@ -93,19 +93,24 @@ trait WordTopicModelFactory {
 }
 
 @Singleton
-class WordTopicModelFactoryImpl @Inject()(wordTopicStore: WordTopicStore) extends WordTopicModelFactory with Logging{
+class WordTopicModelFactoryImpl @Inject()(wordTopicBlobStore: WordTopicBlobStore, wordStore: WordStore) extends WordTopicModelFactory with Logging{
 
   def apply(flag: String) = {
     log.info(s"loading word topic model for model ${flag}")
+    val t1 = System.currentTimeMillis()
     val id = flag match {
       case TopicModelAccessorFlag.A => "model_a"          // file name in S3
       case TopicModelAccessorFlag.B => "model_b"
     }
 
-    val content = wordTopicStore.get(id).get
+    val words = wordStore.get(id).get
+    val topicVector = wordTopicBlobStore.get(id).get
+    val t2 = System.currentTimeMillis()
     val loader = new LdaTopicModelLoader
-    val model = loader.load(content)
+    val model = loader.load(words, topicVector)
+    val t3 = System.currentTimeMillis()
     log.info(s"word topic model for model ${flag} has been loaded")
+    log.info(s"model loading time: ${t2 - t1} milliseconds, model parsing time: ${t3 - t2} milliseconds")
     model
   }
 
