@@ -108,8 +108,10 @@ GET     /site/user/prefs            @com.keepit.controllers.website.UserControll
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
 
 # Temporary hack for kifi.com site before we fully integrate it with Play!
-GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html")
-GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSite(path: String)
+GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/collection/:id        @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id: String)
+GET     /site/search                @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSite(path: String, id = "")
 
 GET     /screenshot                 @com.keepit.controllers.website.BookmarksController.screenshotUrl(url: String ?= "")
 
