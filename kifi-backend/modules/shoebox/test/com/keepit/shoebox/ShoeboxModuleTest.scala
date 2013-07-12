@@ -27,6 +27,7 @@ import net.codingwell.scalaguice.ScalaModule
 import com.keepit.classify.FakeDomainTagImporterModule
 import com.keepit.learning.topicmodel.FakeWordTopicModule
 import com.keepit.learning.topicmodel.DevTopicModelModule
+import com.keepit.learning.topicmodel.DevTopicStoreModule
 
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
 
@@ -59,7 +60,8 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         FakeScraperInShoeboxModule(),
         FakeDomainTagImporterModule(),
         FakeWordTopicModule(),
-        DevTopicModelModule()
+        DevTopicModelModule(),
+        DevTopicStoreModule()
       )) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {
