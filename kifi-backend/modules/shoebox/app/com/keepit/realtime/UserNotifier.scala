@@ -197,7 +197,7 @@ class UserNotifier @Inject() (
   }
 
   def message(message: Comment): Unit = withThreadLock(message) {
-    db.readWrite { implicit s =>
+    val (thread, participants) = db.readOnly { implicit s =>
       val normUri = normalUriRepo.get(message.uriId)
       val parent = message.parent.map(commentRepo.get).getOrElse(message)
       val threadInfo = threadInfoRepo.load(parent, Some(message.userId))
@@ -210,9 +210,13 @@ class UserNotifier @Inject() (
 
       val thread = if (message eq parent) Seq(message) else (parent +: commentRepo.getChildren(parent.id.get)).reverse
 
+      (thread, participants)
+    }
+
+    db.readWrite { implicit s =>
       createMessageUserNotifications(message, thread, participants) map {
-        case (user, messageDetails, userNotification) =>
-          log.info(s"Sending notification to ${userNotification.userId}: $messageJson")
+        case (messageDetails, userNotification) =>
+          log.info(s"Sending notification to ${userNotification.userId}: $messageDetails")
           notificationBroadcast.push(userNotification)
       }
     }
@@ -318,7 +322,7 @@ class UserNotifier @Inject() (
     }
   }
 
-  private def createMessageUserNotifications(message: Comment, thread: Seq[Comment], participants: Set[Id[User]])(implicit session: RWSession): Set[(User, MessageDetails, UserNotification)] = {
+  private def createMessageUserNotifications(message: Comment, thread: Seq[Comment], participants: Set[Id[User]])(implicit session: RWSession): Set[(MessageDetails, UserNotification)] = {
     val author = userRepo.get(message.userId)
     val uri = normalizedURIRepo.get(message.uriId)
     val parent = message.parent.map(commentRepo.get).getOrElse(message)
@@ -341,7 +345,7 @@ class UserNotifier @Inject() (
           deepLocator = DeepLocator.ofMessageThread(parent)))
 
         val messageDetail = createMessageDetail(message, userId, deepLink.deepLocator, deepLink.url, uri.url, thread, lastNotice.map(_.externalId))
-        Some((recipient, messageDetail, userNotifyRepo.save(UserNotification(
+        Some((messageDetail, userNotifyRepo.save(UserNotification(
           userId = userId,
           category = UserNotificationCategories.MESSAGE,
           details = UserNotificationDetails(Json.toJson(messageDetail)),
