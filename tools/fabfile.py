@@ -54,8 +54,11 @@ def message_irc(msg):
 def get_last(number=1):
     return os.path.splitext(fapi.run('ls -Art ~/repo/ | tail -n {0} | head -n 1'.format(number)))[0]
 
+@parallel
 def upload(service_type, jobName='shoebox'):
     fapi.put('/var/lib/jenkins/jobs/{0}/lastSuccessful/archive/kifi-backend/modules/{1}/dist/{1}-*'.format(jobName, service_type), '~/repo')
+    
+def unpack():
     with fapi.cd('~/run'):
         fapi.run('unzip -o ~/repo/{0}.zip'.format(get_last()))
 
@@ -88,10 +91,11 @@ def deploy(service_type, mode="safe", retries="5", do_rollback=True):
     if mode=='force': mode="FORCE"
     hosts = get_hosts(service_type) if not fapi.env.hosts else fapi.env.hosts
     message_irc("----- Starting round robin deployment of %s to %s in %s mode." % (service_type.upper(), hosts, mode))
+    fapi.execute(upload, service_type, hosts=hosts)
     for host in hosts:
-        message_irc("Uploading %s to %s." % (service_type.upper(), host))
+        message_irc("Unpacking %s on %s." % (service_type.upper(), host))
         #upload the new version
-        fapi.execute(upload, service_type, hosts=[host])
+        fapi.execute(unpack, hosts=[host])
         #restart
         fapi.execute(restart, service_type, hosts=[host])
         #check that we can move on
