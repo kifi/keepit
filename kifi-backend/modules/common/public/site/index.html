@@ -4,8 +4,8 @@
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
 	<title>kifi.com</title>
-	<meta name="description" content="">
 	<meta name="viewport" content="width=device-width">
+	<base href="/site/">
 	<link rel="stylesheet" href="css/jquery-ui.min.css">
 	<link rel="stylesheet" href="js/fancybox/jquery.fancybox.css">
 	<link rel="stylesheet" href="css/main.css">
@@ -24,7 +24,7 @@
 	<aside class="left-col">
 	<div class="page-col-inner">
 		<div class="header-left">
-			<a class="header-logo" href="/"></a>
+			<a class="header-logo" href=""></a>
 		</div>
 		<div class="my-identity">
 			<div class="my-pic"></div>
@@ -32,7 +32,7 @@
 		</div>
 		<h2>You</h2>
 		<h3 class="my-keeps active">
-			<a href="javascript:">
+			<a href="">
 				<div class="keep-count">...</div>
 				<div class="view-name long-text">Your Keeps</div>
 			</a>
@@ -46,7 +46,7 @@
 					</h3>
 					<h3 class="collection" data-template data-id="{{id}}" style="display:none">
 						<div class="coll-tri"></div>
-						<a href="javascript:">
+						<a href="collection/{{id}}">
 							<div class="keep-count">{{keeps}}</div>
 							<div class="view-name long-text">{{name}}</div>
 						</a>
@@ -125,7 +125,7 @@
 						<div class="keep-url long-text" title="{{url}}">{{url | replace '^http://', '' | replace '^([^/]*)/$', '$1'}}</div>
 						<div class="keep-colls">
 							<span class="keep-coll" data-template-for="collections" data-id="{{id}}">
-								<a class="keep-coll-a" href="javascript:">{{name}}</a><a class="keep-coll-x" href="javascript:"></a>
+								<a class="keep-coll-a" href="collection/{{id}}">{{name}}</a><a class="keep-coll-x" href="javascript:"></a>
 							</span>
 						</div>
 						<div class="keep-who">
@@ -239,7 +239,7 @@
 			<h2></h2>
 			<ul class="page-coll-list">
 				<li class="page-coll" data-template data-id="{{id}}">
-					<a class="page-coll-a long-text" href="javascript:">{{name}}</a><a class="page-coll-x" href="javascript:"></a>
+					<a class="page-coll-a long-text" href="collection/{{id}}">{{name}}</a><a class="page-coll-x" href="javascript:"></a>
 				</li>
 				<li class="page-coll-new" data-after-template>
 					<a class="page-coll-add" href="javascript:"></a>
@@ -258,14 +258,15 @@
 	</div>
 
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
-	<script>window.jQuery||document.write('<script src="js/jquery.min.js"><\/script>')</script>
+	<script>window.$||document.write('<script src=js/jquery.min.js><\/script>')</script>
+	<script src="js/jquery.history.min.js"></script>
 	<script src="js/jquery.easydate-0.2.4.min.js"></script>
 	<script src="js/jquery-ui.min.js"></script>
 	<script src="js/jquery.mousewheel.js"></script>
 	<script src="js/antiscroll.js"></script>
-	<script src="js/fancybox/jquery.fancybox.pack.js"></script>
 	<script src="js/tempo.min.js"></script>
 	<script src="js/main.js"></script>
+	<script src="js/fancybox/jquery.fancybox.pack.js" async defer></script>
 	<script>
 		var _gaq = [['_setAccount', 'UA-XXXXX-X'], ['_trackPageview']];
 		!function(d, t) {

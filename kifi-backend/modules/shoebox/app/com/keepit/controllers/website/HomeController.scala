@@ -38,7 +38,7 @@ class HomeController @Inject() (db: Database,
   private def userCanInvite[A](implicit request: AuthenticatedRequest[A]): Boolean =
     (request.experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.CAN_INVITE)).nonEmpty || Play.isDev
 
-  def kifiSite(path: String) = AuthenticatedHtmlAction { implicit request =>
+  def kifiSite(path: String, id: String) = AuthenticatedHtmlAction { implicit request =>
     if (userCanSeeKifiSite) {
       Play.resourceAsStream(s"public/site/$path") map { stream =>
         SimpleResult(header = ResponseHeader(OK), body = Enumerator.fromStream(stream))
