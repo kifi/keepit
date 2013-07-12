@@ -5,7 +5,7 @@ import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.db.Id
 import com.keepit.model.User
 import play.api.libs.iteratee.Concurrent.{Channel => PlayChannel}
-import play.api.libs.json.JsArray
+import play.api.libs.json._
 import com.keepit.model.NormalizedURI
 import java.util.concurrent.atomic.AtomicBoolean
 import com.keepit.common.logging.Logging
@@ -18,6 +18,8 @@ import play.modules.statsd.api.Statsd
 import scala.concurrent.{Promise, Future}
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.ExecutionContext.Implicits.global
+import org.joda.time.DateTime
+import com.keepit.common.time._
 
 /** A Channel, which accepts pushed messages, and manages connections to it.
   */
@@ -179,12 +181,41 @@ abstract class ChannelManagerImpl[T, S <: Channel](name: String, creator: T => S
     }
   }
 
-  def pushNoFanout(id: T, msg: JsArray): Int = {
+  private def pushNoFanoutNoLog(id: T, msg: JsArray): Int = {
     find(id).map(_.push(msg)).getOrElse(0)
   }
 
+  private def logTiming(tag: String, id: T, msg: JsArray) = {
+    find(id).map { q =>
+      try {
+        if(msg(0).as[String] == "message") {
+          val createdAt = Json.fromJson[DateTime](msg(3) \ "createdAt").get
+          val now = currentDateTime
+          val diff = now.getMillis - createdAt.getMillis
+          log.info(s"[Channel - $tag] Deliverying message (create: $createdAt) to $id after $diff ms: ${msg.toString.take(120)}")
+          Statsd.timing(s"websocket.delivery.$tag.message", now.getMillis - createdAt.getMillis)
+        } else if(msg(0).as[String] == "notification") {
+          val createdAt = Json.fromJson[DateTime](msg(2) \ "time").get
+          val now = currentDateTime
+          val diff = now.getMillis - createdAt.getMillis
+          log.info(s"[Channel - $tag] Deliverying notification (create: $createdAt) to $id after $diff ms: ${msg.toString.take(120)}")
+          Statsd.timing(s"websocket.delivery.$tag.notice", now.getMillis - createdAt.getMillis)
+        }
+      } catch {
+        case ex: Throwable => // Do nothing, we couldn't parse this msg has a message or notification
+      }
+    }
+  }
+
+  def pushNoFanout(id: T, msg: JsArray): Int = {
+    val result = find(id).map(_.push(msg)).getOrElse(0)
+    logTiming("remote", id, msg)
+    result
+  }
+
   def pushAndFanout(id: T, msg: JsArray): Future[Int] = {
-    val localTotal = pushNoFanout(id, msg)
+    val localTotal = pushNoFanoutNoLog(id, msg)
+    logTiming("local", id, msg)
     fanout(id, msg).map(t => t + localTotal)
   }
 
