@@ -670,11 +670,10 @@ function insertNewNotification(n) {
   while(++i < notifications.length) {
     var n2 = notifications[i];
     if (n2.id == n.details.subsumes || n.details.locator == n2.details.locator) {
-      notifications.splice(i, 1);
+      notifications.splice(i--, 1);
       if (notificationNotVisited.test(n2.state)) {
         decrementNumNotificationsNotVisited(n2);
       }
-      break;
     }
   }
   return true;

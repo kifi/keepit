@@ -15,4 +15,15 @@ class LdaTopicModelLoader extends TopicModelLoader {
     val topic = wordTopicMap.foldLeft(Map.empty[String, Array[Double]])((m, x) => m + (x._1 -> x._2.toArray))
     new LdaWordTopicModel(vocabulary, topic)
   }
+
+  def load(words: Array[String], topicVector: Array[Double]) = {
+    val numWords = words.size
+    val numTopics = topicVector.size / numWords
+    var m = Map.empty[String, Array[Double]]
+    for(i <- 0 until numWords){
+      val topic = topicVector.slice(i*numTopics, (i + 1)*numTopics)
+      m += (words(i) -> topic)
+    }
+    new LdaWordTopicModel(words.toSet, m)
+  }
 }

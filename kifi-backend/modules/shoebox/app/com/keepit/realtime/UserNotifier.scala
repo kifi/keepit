@@ -1,6 +1,11 @@
 package com.keepit.realtime
 
 
+import scala.collection.JavaConverters._
+import scala.concurrent.Lock
+
+import java.util.concurrent.ConcurrentHashMap
+
 import org.joda.time.DateTime
 
 import com.google.inject.{ Inject, Singleton }
@@ -13,12 +18,12 @@ import com.keepit.common.mail.LocalPostOffice
 import com.keepit.common.net.URINormalizer
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social._
-import com.keepit.model._
 import com.keepit.common.time._
+import com.keepit.model._
+import com.keepit.social.BasicUser
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import com.keepit.social.BasicUser
 
 case class CommentDetails(
   id: String, // ExternalId[Comment]
@@ -128,6 +133,17 @@ class UserNotifier @Inject() (
   clock: Clock,
   implicit val fortyTwoServices: FortyTwoServices) extends Logging {
 
+  private val threadLocks = new ConcurrentHashMap[Id[Comment], Lock]().asScala
+  private def withThreadLock[A](comment: Comment)(block: => A): A = {
+    val lock = threadLocks.getOrElseUpdate(comment.parent getOrElse comment.id.get, new Lock)
+    try {
+      lock.acquire()
+      block
+    } finally {
+      lock.release()
+    }
+  }
+
   implicit val commentDetailsFormat = Json.format[CommentDetails]
   implicit val messageDetailsFormat = Json.format[MessageDetails]
 
@@ -180,7 +196,7 @@ class UserNotifier @Inject() (
     }
   }
 
-  def message(message: Comment): Unit = {
+  def message(message: Comment): Unit = withThreadLock(message) {
     db.readWrite { implicit s =>
       val normUri = normalUriRepo.get(message.uriId)
       val parent = message.parent.map(commentRepo.get).getOrElse(message)
