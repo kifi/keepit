@@ -49,7 +49,7 @@ def verify_up(host, retries):
 
 
 def message_irc(msg):
-    fapi.local('curl https://grove.io/api/notice/rQX6TOyYYv2cqt4hnDqqwb8v5taSlUdD/ -d "service=deployment" -d "message=[TEST]{0}" -d "url=https://grove.io/app" -d "icon_url=https://grove.io/static/img/avatar.png" &> /dev/null'.format(msg), capture=True)
+    fapi.local('curl https://grove.io/api/notice/rQX6TOyYYv2cqt4hnDqqwb8v5taSlUdD/ -d "service=deployment" -d "message={0}" -d "url=https://grove.io/app" -d "icon_url=https://grove.io/static/img/avatar.png" &> /dev/null'.format(msg), capture=True)
 
 def get_last(number=1):
     return os.path.splitext(run('ls -Art ~/repo/ | tail -n {0} | head -n 1'.format(number)))[0]
@@ -84,8 +84,9 @@ def rollback(service_type, host, number=1):
 
 def deploy(service_type, mode="safe", retries="5", do_rollback=True):
     if mode not in ["safe", "force"]: raise Exception("Invalid Mode %s." % mode)
+    if service_type not in ["shoebox", "search"]: raise Exception("Unknown Service Type: %s" % service_type)
     if mode=='force': mode="FORCE"
-    hosts = get_hosts(service_type)
+    hosts = get_hosts(service_type) if not fapi.env.hosts else fapi.env.hosts
     message_irc("----- Starting round robin deployment of %s to %s in %s mode." % (service_type.upper(), hosts, mode))
     for host in hosts:
         message_irc("Uploading %s to %s." % (service_type.upper(), host))
