@@ -52,7 +52,7 @@ def message_irc(msg):
     fapi.local('curl https://grove.io/api/notice/rQX6TOyYYv2cqt4hnDqqwb8v5taSlUdD/ -d "service=deployment" -d "message={0}" -d "url=https://grove.io/app" -d "icon_url=https://grove.io/static/img/avatar.png" &> /dev/null'.format(msg), capture=True)
 
 def get_last(number=1):
-    return os.path.splitext(run('ls -Art ~/repo/ | tail -n {0} | head -n 1'.format(number)))[0]
+    return os.path.splitext(fapi.run('ls -Art ~/repo/ | tail -n {0} | head -n 1'.format(number)))[0]
 
 def upload(service_type, jobName='shoebox'):
     fapi.put('/var/lib/jenkins/jobs/{0}/lastSuccessful/archive/kifi-backend/modules/{1}/dist/{1}-*'.format(jobName, service_type), '~/repo')
@@ -66,15 +66,15 @@ def restart(service_type, number=1):
 def stop(service_type):
     message_irc("Taking down %s on %s." % (service_type.upper(), fapi.env.host))
     with cd('~/run'):
-        run('/etc/init.d/{0} stop'.format(service_type))
+        fapi.run('/etc/init.d/{0} stop'.format(service_type))
 
 def start(service_type, number=1):
     message_irc("Bringing up %s on %s." % (service_type.upper(), fapi.env.host))
-    with cd('~/run'):
-        with settings(warn_only=True):
-            run('rm -f {0}'.format(service_type))
-            run('ln -s {0} {1}'.format(get_last(number), service_type))
-        run('/etc/init.d/{0} start'.format(service_type))
+    with fapi.cd('~/run'):
+        with fapi.settings(warn_only=True):
+            fapi.run('rm -f {0}'.format(service_type))
+            fapi.run('ln -s {0} {1}'.format(get_last(number), service_type))
+        fapi.run('/etc/init.d/{0} start'.format(service_type))
 
 
 def rollback(service_type, host, number=1):
