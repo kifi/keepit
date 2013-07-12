@@ -58,3 +58,21 @@ case class DevTopicModelModule() extends TopicModelModule {
     new SwitchableTopicModelAccessor(a, b)
   }
 }
+
+// need this to make shoeboxModuleTest pass (for TopicModelController)
+case class DevTopicStoreModule() extends ScalaModule {
+  override def configure() {}
+
+  @Provides
+  @Singleton
+  def wordTopicStore: WordTopicStore = new InMemoryWordTopicStoreImpl
+
+  @Provides
+  @Singleton
+  def wordStore: WordStore = new InMemoryWordStoreImpl
+
+  @Provides
+  @Singleton
+  def topicVectorStore: WordTopicBlobStore = new InMemoryWordTopicBlobStoreImpl
+
+}
