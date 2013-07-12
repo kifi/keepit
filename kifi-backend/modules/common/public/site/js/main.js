@@ -522,8 +522,10 @@ $(function() {
 		var $coll = $(this.parentNode);
 		removeKeepsFromCollection($coll.data("id"), [$coll.closest(".keep").data("id")]);
 	}).on("click", ".keep", function(e) {
+		var $target = $(e.target);
+		if ($target.is(".keep-title>a")) return;
 		var $keep = $(this), $keeps = $main.find(".keep");
-		if ($(e.target).hasClass("keep-checkbox") || $(e.target).hasClass("handle")) {
+		if ($target.hasClass("keep-checkbox") || $target.hasClass("handle")) {
 			$keep.toggleClass("selected");
 			var $selected = $keeps.filter(".selected");
 			$checkAll.toggleClass("checked", $selected.length == $keeps.length);
