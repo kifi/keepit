@@ -280,7 +280,8 @@ POST    /admin/learning/topics/updateTopicName/:id  @com.keepit.controllers.admi
 GET     /admin/learning/addTopics       @com.keepit.controllers.admin.TopicModelController.addTopics
 POST    /admin/learning/saveAddedTopics @com.keepit.controllers.admin.TopicModelController.saveAddedTopics
 GET     /admin/learning/switchModel     @com.keepit.controllers.admin.TopicModelController.switchModel
-GET     /admin/learning/getTopicModelS3Files/:flag    @com.keepit.controllers.admin.TopicModelController.genModelFiles(flag: String)
+GET     /admin/learning/genTopicModelS3Files/:flag    @com.keepit.controllers.admin.TopicModelController.genModelFiles(flag: String)
+GET     /admin/learning/viewTopicWords/:flag          @com.keepit.controllers.admin.TopicModelController.viewTopicWords(flag: String)
 
 GET     /admin/clusters/overview        @com.keepit.controllers.admin.AdminClusterController.clustersView
 

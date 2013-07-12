@@ -75,8 +75,8 @@ class NameMapperFactoryImpl @Inject()(
 
 @Singleton
 class FakeNameMapperFactoryImpl() extends NameMapperFactory{
-  val numTopicsA = TopicModelGlobalTest.numTopics            // This HAS to be consistent with the word topic model in S3, if we connect to S3 in devMode
-  val numTopicsB = TopicModelGlobalTest.numTopics
+  val numTopicsA = 100 //TopicModelGlobalTest.numTopics            // This HAS to be consistent with the word topic model in S3, if we connect to S3 in devMode
+  val numTopicsB = 100 //TopicModelGlobalTest.numTopics
 
   def apply(flag: String) = {
     val numTopics = flag match {

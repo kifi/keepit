@@ -26,6 +26,7 @@ class TopicModelController  @Inject() (
   wordTopicStore: WordTopicStore,
   wordTopicBlobStore: WordTopicBlobStore,
   wordStore: WordStore,
+  topicWordsStore: TopicWordsStore,
   actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator){
 
   val uriTopicHelper = new UriTopicHelper
@@ -188,5 +189,16 @@ class TopicModelController  @Inject() (
 
     Ok(s"word list and topic binary array for model ${flag} will be created in S3")
   }
+
+  def viewTopicWords(flag: String) = AdminHtmlAction{ implicit request =>
+    val id = flag match {
+        case TopicModelAccessorFlag.A => "model_a"
+        case TopicModelAccessorFlag.B => "model_b"
+    }
+    log.info("getting topic words from S3")
+    val content = topicWordsStore.get(id).get
+    Ok(content)
+  }
+
 
 }

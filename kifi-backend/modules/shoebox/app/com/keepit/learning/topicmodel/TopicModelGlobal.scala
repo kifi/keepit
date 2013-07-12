@@ -11,6 +11,7 @@ import scala.concurrent._
 import ExecutionContext.Implicits.global
 import com.keepit.common.akka.SlowRunningExecutionContext
 
+
 object TopicModelGlobal {
   val primaryTopicThreshold = 0.07       // need to tune this as numTopics varies
   val topicTailcut = 0.7
@@ -45,8 +46,8 @@ case class LdaTopicModelModule() extends TopicModelModule with Logging {
 case class DevTopicModelModule() extends TopicModelModule {
   override def configure() {
     bind[TopicUpdaterPlugin].to[TopicUpdaterPluginImpl].in[AppScoped]
-    bind[WordTopicModelFactory].to[FakeWordTopicModelFactoryImpl].in[AppScoped]
-    //bind[WordTopicModelFactory].to[WordTopicModelFactoryImpl].in[AppScoped]        // uncomment to connect to S3 in dev mode
+    //bind[WordTopicModelFactory].to[FakeWordTopicModelFactoryImpl].in[AppScoped]
+    bind[WordTopicModelFactory].to[WordTopicModelFactoryImpl].in[AppScoped]        // uncomment to connect to S3 in dev mode
     bind[NameMapperFactory].to[FakeNameMapperFactoryImpl].in[AppScoped]
   }
 
@@ -74,5 +75,9 @@ case class DevTopicStoreModule() extends ScalaModule {
   @Provides
   @Singleton
   def topicVectorStore: WordTopicBlobStore = new InMemoryWordTopicBlobStoreImpl
+
+  @Provides
+  @Singleton
+  def topicWordsStore: TopicWordsStore = new InMemoryTopicWordsStoreImpl
 
 }
