@@ -131,18 +131,6 @@ class TopicModelController  @Inject() (
 
   }
 
-  def getTopicName(id: Id[TopicName]) = AdminHtmlAction{ implicit request =>
-    val topic = db.readOnly { implicit s =>
-      currentAccessor.topicNameRepo.getName(id)
-    }
-    val name = topic match {
-      case Some(topicName) => topicName
-      case None => "topic doesn't exisit"
-    }
-    Ok(Json.obj("topicName" -> name))
-  }
-
-
   def topicsViewDefault = topicsView(0)
 
   def topicsView(page: Int = 0) = AdminHtmlAction{ request =>

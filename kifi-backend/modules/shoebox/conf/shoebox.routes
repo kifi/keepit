@@ -284,7 +284,6 @@ POST    /admin/learning/saveAddedTopics @com.keepit.controllers.admin.TopicModel
 GET     /admin/learning/switchModel     @com.keepit.controllers.admin.TopicModelController.switchModel
 GET     /admin/learning/genTopicModelS3Files/:flag    @com.keepit.controllers.admin.TopicModelController.genModelFiles(flag: String)
 GET     /admin/learning/viewTopicWords/:flag          @com.keepit.controllers.admin.TopicModelController.viewTopicWords(flag: String)
-GET     /admin/learning/topicName                     @com.keepit.controllers.admin.TopicModelController.getTopicName(id: Id[TopicName])
 GET     /admin/learning/topicDetails/:index    @com.keepit.controllers.admin.TopicModelController.viewTopicDetails(index: Int)
 
 GET     /admin/clusters/overview        @com.keepit.controllers.admin.AdminClusterController.clustersView
