@@ -5,21 +5,32 @@ import scala.concurrent.Future
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.HttpClient
-import com.keepit.model.{SocialUserInfoStates, SocialUserInfo}
-
-import play.api.libs.json._
-import play.api.libs.oauth.{RequestToken, OAuthCalculator}
-import play.api.libs.ws.WS
-import securesocial.core.SecureSocial
+import com.keepit.model.{SocialUserInfoRepo, SocialUserInfoStates, SocialUserInfo}
 import com.keepit.social.{SocialUserRawInfo, SocialNetworks, SocialId, SocialGraph}
 
-class LinkedInSocialGraph @Inject() (client: HttpClient) extends SocialGraph with Logging {
+import play.api.libs.json._
+import play.api.libs.ws.WS
+import com.keepit.common.db.slick.Database
+
+class LinkedInSocialGraph @Inject() (
+    client: HttpClient,
+    db: Database,
+    socialRepo: SocialUserInfoRepo
+  ) extends SocialGraph with Logging {
 
   val networkType = SocialNetworks.LINKEDIN
 
   def fetchSocialUserRawInfo(socialUserInfo: SocialUserInfo): Option[SocialUserRawInfo] = {
     val credentials = socialUserInfo.credentials.get
-    val jsons = getJson(socialUserInfo)
+    val jsons = if (credentials.oAuth2Info.isDefined) {
+      getJson(socialUserInfo)
+    } else {
+      log.warn(s"LinkedIn app not authorized with OAuth2 for $socialUserInfo; not fetching connections.")
+      db.readWrite { implicit s =>
+        socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
+      }
+      Seq()
+    }
 
     Some(SocialUserRawInfo(
       socialUserInfo.userId,
@@ -38,12 +49,8 @@ class LinkedInSocialGraph @Inject() (client: HttpClient) extends SocialGraph wit
     }
 
   def sendMessage(from: SocialUserInfo, to: SocialUserInfo, subject: String, message: String) {
-    val creds = from.credentials.get
-    val info = creds.oAuth1Info.get
-    val oauth = OAuthCalculator(SecureSocial.serviceInfoFor(creds).get.key, RequestToken(info.token, info.secret))
-    WS.url(sendMessageUrl())
+    WS.url(sendMessageUrl(getAccessToken(from)))
       .withHeaders("x-li-format" -> "json", "Content-Type" -> "application/json")
-      .sign(oauth)
       .post(sendMessageBody(to.socialId, subject, message))
   }
 
@@ -52,8 +59,8 @@ class LinkedInSocialGraph @Inject() (client: HttpClient) extends SocialGraph wit
     Future.successful(())
   }
 
-  private def sendMessageUrl(): String = {
-    s"http://api.linkedin.com/v1/people/~/mailbox"
+  private def sendMessageUrl(accessToken: String): String = {
+    s"https://api.linkedin.com/v1/people/~/mailbox?oauth2_access_token=$accessToken"
   }
 
   private def sendMessageBody(id: SocialId, subject: String, body: String): JsObject = Json.obj(
@@ -64,22 +71,19 @@ class LinkedInSocialGraph @Inject() (client: HttpClient) extends SocialGraph wit
     "body" -> body
   )
 
-  private def connectionsUrl(id: SocialId): String = {
-    s"http://api.linkedin.com/v1/people/$id/connections:(id,firstName,lastName,pictureUrl,publicProfileUrl)?format=json"
+  private def connectionsUrl(id: SocialId, accessToken: String): String = {
+    s"https://api.linkedin.com/v1/people/$id/connections:(id,firstName,lastName,pictureUrl,publicProfileUrl)?format=json&oauth2_access_token=$accessToken"
   }
 
-  private def profileUrl(id: SocialId): String = {
-    s"http://api.linkedin.com/v1/people/$id:(id,firstName,lastName,emailAddress,pictureUrl)?format=json"
+  private def profileUrl(id: SocialId, accessToken: String): String = {
+    s"https://api.linkedin.com/v1/people/$id:(id,firstName,lastName,emailAddress,pictureUrl)?format=json&oauth2_access_token=$accessToken"
   }
 
   private def getJson(socialUserInfo: SocialUserInfo): Seq[JsValue] = {
-    val creds = socialUserInfo.credentials.get
-    val info = creds.oAuth1Info.get
+    val token = getAccessToken(socialUserInfo)
     val sid = socialUserInfo.socialId
-    val oauth = OAuthCalculator(SecureSocial.serviceInfoFor(creds).get.key, RequestToken(info.token, info.secret))
-    for (url <- Seq(connectionsUrl(sid), profileUrl(sid))) yield {
-      val signedUrl = oauth.sign(url)
-      client.longTimeout().get(signedUrl).json
+    for (url <- Seq(connectionsUrl(sid, token), profileUrl(sid, token))) yield {
+      client.longTimeout().get(url).json
     }
   }
 
@@ -92,4 +96,10 @@ class LinkedInSocialGraph @Inject() (client: HttpClient) extends SocialGraph wit
       networkType = SocialNetworks.LINKEDIN,
       state = SocialUserInfoStates.FETCHED_USING_FRIEND
     ), friend)
+
+  protected def getAccessToken(socialUserInfo: SocialUserInfo): String = {
+    val credentials = socialUserInfo.credentials.getOrElse(throw new Exception("Can't find credentials for %s".format(socialUserInfo)))
+    val oAuth2Info = credentials.oAuth2Info.getOrElse(throw new Exception("Can't find oAuth2Info for %s".format(socialUserInfo)))
+    oAuth2Info.accessToken
+  }
 }
