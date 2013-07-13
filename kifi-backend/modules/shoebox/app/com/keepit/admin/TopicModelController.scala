@@ -131,6 +131,18 @@ class TopicModelController  @Inject() (
 
   }
 
+  def getTopicName(id: Id[TopicName]) = AdminHtmlAction{ implicit request =>
+    val topic = db.readOnly { implicit s =>
+      currentAccessor.topicNameRepo.getName(id)
+    }
+    val name = topic match {
+      case Some(topicName) => topicName
+      case None => "topic doesn't exisit"
+    }
+    Ok(Json.obj("topicName" -> name))
+  }
+
+
   def topicsViewDefault = topicsView(0)
 
   def topicsView(page: Int = 0) = AdminHtmlAction{ request =>
@@ -192,13 +204,44 @@ class TopicModelController  @Inject() (
 
   def viewTopicWords(flag: String) = AdminHtmlAction{ implicit request =>
     val id = flag match {
-        case TopicModelAccessorFlag.A => "model_a"
-        case TopicModelAccessorFlag.B => "model_b"
+      case TopicModelAccessorFlag.A => "model_a"
+      case TopicModelAccessorFlag.B => "model_b"
     }
     log.info("getting topic words from S3")
     val content = topicWordsStore.get(id).get
     Ok(content)
   }
 
+  // index is not necessarily the same as Id in DB. index starts from 1.
+  def viewTopicDetails(index: Int) = AdminHtmlAction{ implicit request =>
+    val topic = db.readOnly { implicit s =>
+      val topics = currentAccessor.topicNameRepo.all.sortWith((a, b) => a.id.get.id < b.id.get.id)
+      topics(index - 1)
+    }
+
+    val name = topic.topicName
+
+    val fileId = modelAccessor.getCurrentFlag match {
+      case TopicModelAccessorFlag.A => "model_a"
+      case TopicModelAccessorFlag.B => "model_b"
+    }
+
+    val content = topicWordsStore.get(fileId).get
+    println(content)
+    val idx = content.indexOfSlice("[1] \"top words in topic " + index)
+    val idx2 = content.indexOfSlice("[1] \"top words in topic " + (index + 1).toString)
+    println((idx, idx2))
+    val topWords = (idx, idx2) match {
+      case (-1, _) => "invalid topicId"
+      case (i, -1) => content.slice(idx, content.size)
+      case (i, j) => content.slice(i, j)
+    }
+
+    println(topWords)
+
+    println("lines: " + topWords.split('\n').size)
+
+    Ok(html.admin.topicDetails(index, topic, topWords))
+  }
 
 }

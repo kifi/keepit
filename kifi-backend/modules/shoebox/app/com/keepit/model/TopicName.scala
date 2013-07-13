@@ -45,6 +45,7 @@ abstract class TopicNameRepoBase(
   def getName(id: Id[TopicName])(implicit session: RSession): Option[String] = {
     (for(r <- table if r.id === id) yield r.topicName).firstOption
   }
+
   def updateName(id: Id[TopicName], name: String)(implicit session: RWSession): Option[TopicName] = {
     (for(r <- table if r.id === id) yield r).firstOption match {
       case Some(topic) => Some(super.save(topic.copy(topicName = name)))
