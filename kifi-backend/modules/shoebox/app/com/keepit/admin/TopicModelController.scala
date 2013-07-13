@@ -227,19 +227,13 @@ class TopicModelController  @Inject() (
     }
 
     val content = topicWordsStore.get(fileId).get
-    println(content)
     val idx = content.indexOfSlice("[1] \"top words in topic " + index)
     val idx2 = content.indexOfSlice("[1] \"top words in topic " + (index + 1).toString)
-    println((idx, idx2))
     val topWords = (idx, idx2) match {
       case (-1, _) => "invalid topicId"
       case (i, -1) => content.slice(idx, content.size)
       case (i, j) => content.slice(i, j)
     }
-
-    println(topWords)
-
-    println("lines: " + topWords.split('\n').size)
 
     Ok(html.admin.topicDetails(index, topic, topWords))
   }
