@@ -231,7 +231,7 @@ class TopicModelController  @Inject() (
     val idx2 = content.indexOfSlice("[1] \"top words in topic " + (index + 1).toString)
     val topWords = (idx, idx2) match {
       case (-1, _) => "invalid topicId"
-      case (i, -1) => content.slice(idx, content.size)
+      case (i, -1) => content.slice(i, content.size)
       case (i, j) => content.slice(i, j)
     }
 
