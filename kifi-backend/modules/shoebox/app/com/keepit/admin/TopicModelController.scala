@@ -26,6 +26,7 @@ class TopicModelController  @Inject() (
   wordTopicStore: WordTopicStore,
   wordTopicBlobStore: WordTopicBlobStore,
   wordStore: WordStore,
+  topicWordsStore: TopicWordsStore,
   actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator){
 
   val uriTopicHelper = new UriTopicHelper
@@ -187,6 +188,42 @@ class TopicModelController  @Inject() (
     }
 
     Ok(s"word list and topic binary array for model ${flag} will be created in S3")
+  }
+
+  def viewTopicWords(flag: String) = AdminHtmlAction{ implicit request =>
+    val id = flag match {
+      case TopicModelAccessorFlag.A => "model_a"
+      case TopicModelAccessorFlag.B => "model_b"
+    }
+    log.info("getting topic words from S3")
+    val content = topicWordsStore.get(id).get
+    Ok(content)
+  }
+
+  // index is not necessarily the same as Id in DB. index starts from 1.
+  def viewTopicDetails(index: Int) = AdminHtmlAction{ implicit request =>
+    val topic = db.readOnly { implicit s =>
+      val topics = currentAccessor.topicNameRepo.all.sortWith((a, b) => a.id.get.id < b.id.get.id)
+      topics(index - 1)
+    }
+
+    val name = topic.topicName
+
+    val fileId = modelAccessor.getCurrentFlag match {
+      case TopicModelAccessorFlag.A => "model_a"
+      case TopicModelAccessorFlag.B => "model_b"
+    }
+
+    val content = topicWordsStore.get(fileId).get
+    val idx = content.indexOfSlice("[1] \"top words in topic " + index)
+    val idx2 = content.indexOfSlice("[1] \"top words in topic " + (index + 1).toString)
+    val topWords = (idx, idx2) match {
+      case (-1, _) => "invalid topicId"
+      case (i, -1) => content.slice(i, content.size)
+      case (i, j) => content.slice(i, j)
+    }
+
+    Ok(html.admin.topicDetails(index, topic, topWords))
   }
 
 }
