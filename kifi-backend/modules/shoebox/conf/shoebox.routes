@@ -66,7 +66,7 @@ GET     /getting-started            @com.keepit.controllers.website.HomeControll
 GET     /invite                     @com.keepit.controllers.website.InviteController.invite
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
-GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id: ExternalId[Invitation])
+GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id:ExternalId[Invitation], error_msg: Option[String], error_code: Option[Int])
 GET     /sign-up                    @com.keepit.controllers.website.OnboardingController.signup(inviteId: String ?= "")
 GET     /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tos
 POST    /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tosAccept
@@ -109,8 +109,10 @@ GET     /site/user/prefs            @com.keepit.controllers.website.UserControll
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
 
 # Temporary hack for kifi.com site before we fully integrate it with Play!
-GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html")
-GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSite(path: String)
+GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/collection/:id        @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id: String)
+GET     /site/search                @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSite(path: String, id = "")
 
 GET     /screenshot                 @com.keepit.controllers.website.BookmarksController.screenshotUrl(url: String ?= "")
 
