@@ -155,8 +155,8 @@ $(function() {
 	var me;
 	var myPrefs;
 	var myKeepsCount;
-	var searchResponse;
 	var collections;
+	var searchResponse;
 	var searchTimeout;
 	var lastKeep;
 
@@ -260,18 +260,20 @@ $(function() {
 		$query.attr("data-q", q);
 		var context = searchResponse && searchResponse.context;
 		$.getJSON(urlSearch, {q: q, f: "a", maxHits: 30, context: context}, function(data) {
-			searchResponse = data;
-			var numShown = data.hits.length + (context ? $results.find(".keep").length : 0);
-			subtitleTmpl.render({numShown: numShown, query: data.query});
-			if (numShown) $checkAll.addClass('live');
-			data.hits.forEach(prepHitForRender);
-			if (context) {
-				keepsTmpl.into($results[0]).append(data.hits);
-			} else {
-				keepsTmpl.into($results[0]).render(data.hits);
-				hideDetails();
-			}
-			$checkAll.removeClass('checked');
+			$.when(promise.me).done(function() {
+				searchResponse = data;
+				var numShown = data.hits.length + (context ? $results.find(".keep").length : 0);
+				subtitleTmpl.render({numShown: numShown, query: data.query});
+				if (numShown) $checkAll.addClass('live');
+				data.hits.forEach(prepHitForRender);
+				if (context) {
+					keepsTmpl.into($results[0]).append(data.hits);
+				} else {
+					keepsTmpl.into($results[0]).render(data.hits);
+					hideDetails();
+				}
+				$checkAll.removeClass('checked');
+			});
 		});
 	}
 
@@ -372,12 +374,8 @@ $(function() {
 				params.before = lastKeep;
 			}
 			console.log("Fetching %d keeps %s", params.count, lastKeep ? "before " + lastKeep : "");
-			$.getJSON(urlMyKeeps, params,
-				function withKeeps(data) {
-					if (!collections) {
-						setTimeout(withKeeps.bind(null, data), 30);
-						return;
-					}
+			$.getJSON(urlMyKeeps, params, function withKeeps(data) {
+				$.when(promise.me, promise.collections).done(function() {
 					var numShown = $myKeeps.find(".keep").length + data.keeps.length;
 					subtitleTmpl.render({
 						numShown: numShown,
@@ -398,6 +396,7 @@ $(function() {
 						$checkAll.removeClass('checked');
 					}
 				});
+			});
 		}
 	}
 
@@ -524,15 +523,17 @@ $(function() {
 				showMyKeeps();
 				break;
 			case 'collection':
-				var collId = parts[1];
-				if (collections[collId]) {
-					if (collId !== $collList.find('.collection.active').data('id')) {
-						showMyKeeps(collId);
+				$.when(promise.collections).done(function() {
+					var collId = parts[1];
+					if (collections[collId]) {
+						if (collId !== $collList.find('.collection.active').data('id')) {
+							showMyKeeps(collId);
+						}
+					} else {
+						showMessage('Sorry, unable to view this collection.');
+						e.preventDefault();
 					}
-				} else {
-					showMessage('Sorry, unable to view this collection.');
-					e.preventDefault();
-				}
+				});
 				break;
 			case 'search':
 				doSearch(decodeURIComponent(queryFromQS(location.search)));
@@ -1010,21 +1011,22 @@ $(function() {
 	});
 
 	// load data for persistent (view-independent) page UI
-	$.getJSON(urlMe, function(data) {
-		me = data;
-		$(".my-pic").css("background-image", "url(" + formatPicUrl(data.id, data.pictureName, 200) + ")");
-		$(".my-name").text(data.firstName + ' ' + data.lastName);
-	});
-	$.getJSON(urlMyPrefs, function(data) {
-		myPrefs = data;
-		if (myPrefs.site_left_col_width) {
-			$leftCol.animate({width: +myPrefs.site_left_col_width}, 120);
-		}
-	});
-	$.getJSON(urlCollectionsAll, {sort: "user"}, function(data) {
-		collTmpl.render(data.collections);
-		collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
-	});
+	var promise = {
+		me: $.getJSON(urlMe, function(data) {
+			me = data;
+			$(".my-pic").css("background-image", "url(" + formatPicUrl(data.id, data.pictureName, 200) + ")");
+			$(".my-name").text(data.firstName + ' ' + data.lastName);
+		}).promise(),
+		myPrefs: $.getJSON(urlMyPrefs, function(data) {
+			myPrefs = data;
+			if (myPrefs.site_left_col_width) {
+				$(".left-col").animate({width: +myPrefs.site_left_col_width}, 120);
+			}
+		}).promise(),
+		collections: $.getJSON(urlCollectionsAll, {sort: "user"}, function(data) {
+			collTmpl.render(data.collections);
+			collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
+		}).promise()};
 	updateNumKeeps();
 
 	// render initial view
