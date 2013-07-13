@@ -99,10 +99,10 @@
 
   // Message Chart
 
-  var messageLocalTarget = 'alias(summarize(stats.timers.shoebox.websocket.delivery.local.message.mean,"1min"),"Message (local)")';
-  var messageRemoteTarget = 'alias(summarize(stats.timers.shoebox.websocket.delivery.remote.message.mean,"1min"),"Message (remote)")';
-  var noticeLocalTarget = 'alias(summarize(stats.timers.shoebox.websocket.delivery.local.notice.mean,"1min"),"Notification (local)")';
-  var noticeRemoteTarget = 'alias(summarize(stats.timers.shoebox.websocket.delivery.remote.notice.mean,"1min"),"Notification (remote)")';
+  var messageLocalTarget = 'alias(summarize(stats.timers.shoebox.websocket.delivery.local.message.mean,"30min"),"Message (local)")';
+  var messageRemoteTarget = 'alias(summarize(stats.timers.shoebox.websocket.delivery.remote.message.mean,"30min"),"Message (remote)")';
+  var noticeLocalTarget = 'alias(summarize(stats.timers.shoebox.websocket.delivery.local.notice.mean,"30min"),"Notification (local)")';
+  var noticeRemoteTarget = 'alias(summarize(stats.timers.shoebox.websocket.delivery.remote.notice.mean,"30min"),"Notification (remote)")';
 
   var messageAndNotificationTargets = baseTargets.concat(messageLocalTarget).concat(messageRemoteTarget).concat(noticeLocalTarget).concat(noticeRemoteTarget)
   options.target = messageAndNotificationTargets;
