@@ -42,7 +42,8 @@ class HomeController @Inject() (db: Database,
   def kifiSite(path: String, id: String) = AuthenticatedHtmlAction { implicit request =>
     if (userCanSeeKifiSite) {
       Play.resourceAsStream(s"public/site/$path") map { stream =>
-        Ok.stream(Enumerator.fromStream(stream)).as(MimeTypes.forFileName(path).getOrElse(play.api.http.ContentTypes.BINARY))
+        val result = Ok.stream(Enumerator.fromStream(stream))
+        MimeTypes.forFileName(path) map (result as _) getOrElse result
       } getOrElse NotFound
     } else NotFound
   }
