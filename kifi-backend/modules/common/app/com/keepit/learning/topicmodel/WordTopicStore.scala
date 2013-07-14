@@ -15,10 +15,16 @@ import java.io.{DataOutputStream, DataInputStream, ByteArrayInputStream, ByteArr
 import play.api.libs.json._
 import com.keepit.common.store.S3JsonStore
 
+/**
+ * This file contains various S3 stores related to topic model
+ */
 
 
-// a plain txt file store, fileName -> fileContent
-// file content format: {"w1":[1,2],"w2":[3,4],"w3":[5,6]}
+/**
+ *  a plain txt file store, fileName -> fileContent
+ *  file content format: {"w1":[1,2],"w2":[3,4],"w3":[5,6]}
+ */
+
 trait WordTopicStore extends ObjectStore[String, String]
 
 class S3WordTopicStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3) extends S3ObjectStore[String, String] with WordTopicStore {
@@ -99,3 +105,29 @@ class S3WordStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3, va
 }
 
 class InMemoryWordStoreImpl extends InMemoryObjectStore[String, Array[String]] with WordStore
+
+/**
+ * show top words related to topics
+ */
+trait TopicWordsStore extends ObjectStore[String, String]
+
+class S3TopicWordsStoreImpl(val bucketName: S3Bucket, val amazonS3Client: AmazonS3) extends S3ObjectStore[String, String] with TopicWordsStore {
+   val prefix = "word_topic/"
+
+  def unpackValue(s3Obj : S3Object) : String = {
+    val is = s3Obj.getObjectContent
+    try {
+      val content = Source.fromInputStream(is, UTF8).getLines().mkString("\n")
+      content
+    } finally {
+      is.close
+    }
+  }
+  def packValue(value : String) : (InputStream, ObjectMetadata) = {
+    throw new NotImplementedError       // currently this file is provided outside Scala. We are not supposed to write to the bucket.
+  }
+
+  def idToKey(id: String) = prefix + "%s.topicWords.txt".format(id)
+}
+
+class InMemoryTopicWordsStoreImpl extends InMemoryObjectStore[String, String] with TopicWordsStore

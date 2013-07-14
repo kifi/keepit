@@ -46,46 +46,11 @@
     </tr>
   @for((topic, i) <- topics.zipWithIndex) {
     <tr>
-      <td>@{i + 1 + page*maxPageSize }</td>
-      <td><div class="topic" data-id="@topic.id.get.id">@topic.topicName </div></td>
+      <td><a href = "@com.keepit.controllers.admin.routes.TopicModelController.viewTopicDetails(i + 1 + page*maxPageSize)"> @{i + 1 + page*maxPageSize} </a></td>
+      <td> @topic.topicName </td>
     </tr>
   }
   </table>
   @pagination(page, pageCount)
   
-  <script type="text/javascript">
-    $(function() {
-        $('.table').on('click', 'div.topic', function () {
-          var $input = $('<input type="text">').addClass('topic').val($(this).text());
-          $(this).hide().parent().append($input);
-          $input.focus();
-        });
-        $('.table').on('keydown', 'input.topic', function (e) {
-          if (e.keyCode === 13) {
-            e.preventDefault();
-            $(this).blur();
-          }
-        });
-        $('.table').on('change', 'input.topic', function () {
-          var $div = $(this).parent().find('div.topic');
-          var $td = $div.closest("td");
-          var $sp = $("<img src='/assets/images/spinner.15.gif'>").appendTo($td);
-          var topicId = $div.data("id");
-          $.post('@com.keepit.controllers.admin.routes.TopicModelController.updateTopicName(Id(-1))'
-              .replace('-1', topicId), { topicName: $(this).val() }).done(done).fail(fail);
-          function done(data) {
-            $div.text(data.topicName).show();
-            $sp.after($("<i class=icon-ok-sign>").delay(1000).fadeOut()).remove();
-          }
-          function fail() {
-            $sp.after($("<i class=icon-exclamation-sign></i> Error. Reload?").delay(3000).fadeOut()).remove();
-          }
-          return false;
-        });
-        $('.table').on('blur', 'input.topic', function () {
-          $(this).parent().find('.topic').show();
-          $(this).remove();
-        });
-     });
-  </script>
 }

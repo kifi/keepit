@@ -11,6 +11,7 @@ import scala.concurrent._
 import ExecutionContext.Implicits.global
 import com.keepit.common.akka.SlowRunningExecutionContext
 
+
 object TopicModelGlobal {
   val primaryTopicThreshold = 0.07       // need to tune this as numTopics varies
   val topicTailcut = 0.7
@@ -74,5 +75,9 @@ case class DevTopicStoreModule() extends ScalaModule {
   @Provides
   @Singleton
   def topicVectorStore: WordTopicBlobStore = new InMemoryWordTopicBlobStoreImpl
+
+  @Provides
+  @Singleton
+  def topicWordsStore: TopicWordsStore = new InMemoryTopicWordsStoreImpl
 
 }
