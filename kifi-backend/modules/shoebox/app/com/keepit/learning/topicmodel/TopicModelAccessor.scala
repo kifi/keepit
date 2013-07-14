@@ -77,6 +77,11 @@ class SwitchableTopicModelAccessor (
     case TopicModelAccessorFlag.B  => Await.result(accessorA, 5 minutes)
   }
 
+  def getAccessorByFlag(flag: String) = flag match {
+    case TopicModelAccessorFlag.A  => Await.result(accessorA, 5 minutes)
+    case TopicModelAccessorFlag.B  => Await.result(accessorB, 5 minutes)
+  }
+
   def switchAccessor() = {
     accessorFlag match {
       case TopicModelAccessorFlag.A  => accessorFlag = TopicModelAccessorFlag.B
