@@ -10,6 +10,8 @@ import com.keepit.common.db.slick.Database
 import scala.concurrent._
 import ExecutionContext.Implicits.global
 import com.keepit.common.akka.SlowRunningExecutionContext
+import com.keepit.search.ArticleStore
+import com.keepit.search.InMemoryArticleStoreImpl
 
 
 object TopicModelGlobal {

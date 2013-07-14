@@ -83,6 +83,7 @@ trait UriTopicRepo extends Repo[UriTopic]{
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession):Option[UriTopic]
   def getAssignedTopicsByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[(Option[Int], Option[Int])]
   def deleteAll()(implicit session: RWSession): Int
+  def getUrisByTopic(topic: Int)(implicit session: RSession): Seq[Id[NormalizedURI]]
 }
 
 abstract class UriTopicRepoBase (
@@ -112,6 +113,11 @@ abstract class UriTopicRepoBase (
   def deleteAll()(implicit session: RWSession): Int = {
     (for(r <- table) yield r).delete
   }
+
+  def getUrisByTopic(topic: Int)(implicit session: RSession): Seq[Id[NormalizedURI]] = {
+    (for(r <- table if (r.primaryTopic === topic)) yield r.uriId).list
+  }
+
 }
 
 @Singleton

@@ -17,6 +17,9 @@ import com.keepit.model.TopicName
 import play.api.libs.json.Json
 import scala.concurrent._
 import ExecutionContext.Implicits.global
+import scala.util.Random
+import com.keepit.search.ArticleStore
+import com.keepit.model.NormalizedURI
 
 @Singleton
 class TopicModelController  @Inject() (
@@ -27,6 +30,7 @@ class TopicModelController  @Inject() (
   wordTopicBlobStore: WordTopicBlobStore,
   wordStore: WordStore,
   topicWordsStore: TopicWordsStore,
+  articleStore: ArticleStore,
   actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator){
 
   val uriTopicHelper = new UriTopicHelper
@@ -207,8 +211,6 @@ class TopicModelController  @Inject() (
       topics(index - 1)
     }
 
-    val name = topic.topicName
-
     val fileId = modelAccessor.getCurrentFlag match {
       case TopicModelAccessorFlag.A => "model_a"
       case TopicModelAccessorFlag.B => "model_b"
@@ -223,7 +225,27 @@ class TopicModelController  @Inject() (
       case (i, j) => content.slice(i, j)
     }
 
-    Ok(html.admin.topicDetails(index, topic, topWords))
+    val randArticles = sampleDocsByTopic(index)
+
+    Ok(html.admin.topicDetails(index, topic, topWords, randArticles))
+  }
+
+  private def sampleDocsByTopic(index: Int) = {
+    val SAMPLE_SIZE = 10
+    val MAX_SAMPLE_POOL = 1000
+    val MAX_CONTENT_SIZE = 2000
+    val uris = db.readOnly { implicit s =>
+      currentAccessor.uriTopicRepo.getUrisByTopic(index)
+    }.take(MAX_SAMPLE_POOL)
+
+    val randIdx = Random.shuffle((0 until uris.size).toList).take(SAMPLE_SIZE)
+    val randArticles = randIdx.map{ idx =>
+      articleStore.get(uris(idx)) match {
+        case Some(article) => (uris(idx), article.content.take(MAX_CONTENT_SIZE))
+        case None => (uris(idx), "article content not available")
+      }
+    }
+    randArticles
   }
 
 }
