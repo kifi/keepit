@@ -98,7 +98,7 @@ class S3ScreenshotStoreImpl @Inject() (
     val resized = Try { Scalr.resize(rawImage, Math.max(size.height, size.width)) }
     val os = new ByteArrayOutputStream()
     ImageIO.write(resized.getOrElse(rawImage), "jpeg", os)
-    
+
     (os.size(), new ByteArrayInputStream(os.toByteArray()))
   }
 
@@ -142,11 +142,16 @@ class S3ScreenshotStoreImpl @Inject() (
                   Some(s3obj)
                 case Failure(ex) =>
                   Statsd.increment(s"screenshot.fetch.fails")
-                  healthcheckPlugin.addError(HealthcheckError(
-                    error = Some(ex),
-                    callType = Healthcheck.INTERNAL,
-                    errorMessage = Some(s"Problem resizing screenshot image from $url")
-                  ))
+                  ex match {
+                    case e: java.lang.IllegalArgumentException =>
+                      // This happens when the image stream is null, coming from javax.imageio.ImageIO
+                    case _ =>
+                      healthcheckPlugin.addError(HealthcheckError(
+                        error = Some(ex),
+                        callType = Healthcheck.INTERNAL,
+                        errorMessage = Some(s"Problem resizing screenshot image from $url. ")
+                      ))
+                  }
                   None
               }
             }
@@ -159,7 +164,8 @@ class S3ScreenshotStoreImpl @Inject() (
       future onComplete {
         case Success(result) =>
           result.map { s =>
-            if(s.forall(_.isDefined)) { // if all images persisted successfully
+            if(s.exists(_.isDefined)) { // *an* image persisted successfully
+              // todo(andrew): create Screenshot model, track what sizes we have and when they were captured
               db.readWrite { implicit s =>
                 normUriRepo.save(normalizedUri.copy(screenshotUpdatedAt = Some(clock.now)))
               }
