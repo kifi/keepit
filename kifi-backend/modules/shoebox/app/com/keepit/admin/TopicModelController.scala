@@ -250,4 +250,14 @@ class TopicModelController  @Inject() (
     randArticles
   }
 
+  def summary = AdminHtmlAction{ implicit request =>
+    val flag = modelAccessor.getCurrentFlag
+    val vocSizeA = modelAccessor.getAccessorByFlag(TopicModelAccessorFlag.A).wordTopicModel.vocabulary.size
+    val vocSizeB = modelAccessor.getAccessorByFlag(TopicModelAccessorFlag.B).wordTopicModel.vocabulary.size
+    val numTopicA = modelAccessor.getAccessorByFlag(TopicModelAccessorFlag.A).topicNameMapper.rawTopicNames.size
+    val numTopicB = modelAccessor.getAccessorByFlag(TopicModelAccessorFlag.B).topicNameMapper.rawTopicNames.size
+
+    Ok(html.admin.topicSummary(flag, vocSizeA, numTopicA, vocSizeB, numTopicB))
+  }
+
 }
