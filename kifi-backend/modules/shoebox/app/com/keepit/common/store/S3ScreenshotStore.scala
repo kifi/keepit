@@ -67,7 +67,7 @@ class S3ScreenshotStoreImpl @Inject() (
     
   def screenshotUrl(url: String): String = screenshotUrl(screenshotConfig.imageCode, code, url)
   def screenshotUrl(sizeName: String, code: String, url: String): String =
-    s"http://api.pagepeeker.com/v2/thumbs.php?size=$sizeName&code=$code&url=${URLEncoder.encode(url, UTF8)}&wait=30&refresh=1"
+    s"http://api.pagepeeker.com/v2/thumbs.php?size=$sizeName&code=$code&url=${URLEncoder.encode(url, UTF8)}&wait=60&refresh=1"
   
   def urlByExternalId(extNormalizedURIId: ExternalId[NormalizedURI], protocolDefault: Option[String] = None): String = {
     val uri = URI.parse(s"${config.cdnBase}/${keyByExternalId(extNormalizedURIId, linkedSize)}").get
@@ -145,6 +145,7 @@ class S3ScreenshotStoreImpl @Inject() (
                   ex match {
                     case e: java.lang.IllegalArgumentException =>
                       // This happens when the image stream is null, coming from javax.imageio.ImageIO
+                      log.warn(s"null image for $url. Will retry later.")
                     case _ =>
                       healthcheckPlugin.addError(HealthcheckError(
                         error = Some(ex),
