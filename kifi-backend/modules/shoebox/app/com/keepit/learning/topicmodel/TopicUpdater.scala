@@ -12,7 +12,15 @@ import com.google.inject.ImplementedBy
 import scala.Option.option2Iterable
 import scala.collection.mutable.{Map => MutMap}
 import com.google.inject.Singleton
-import scala.collection.mutable.{Map => MutMap}
+import scala.concurrent._
+import ExecutionContext.Implicits.global
+import com.keepit.common.akka.SlowRunningExecutionContext
+import scala.util.Success
+import scala.concurrent.Promise
+import scala.util.Failure
+import com.keepit.common.healthcheck.HealthcheckPlugin
+import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.common.healthcheck.Healthcheck
 
 @Singleton
 class TopicUpdater @Inject() (
@@ -20,7 +28,9 @@ class TopicUpdater @Inject() (
   uriRepo: NormalizedURIRepo,
   bookmarkRepo: BookmarkRepo,
   articleStore: ArticleStore,
-  modelAccessor: SwitchableTopicModelAccessor
+  modelAccessor: SwitchableTopicModelAccessor,
+  modelFactory: SwitchableTopicModelAccessorFactory,
+  healthcheckPlugin: HealthcheckPlugin
 ) extends Logging {
 
   def getAccessor(useActive: Boolean) = if (useActive) modelAccessor.getActiveAccessor else modelAccessor.getInactiveAccessor
@@ -59,16 +69,48 @@ class TopicUpdater @Inject() (
   }
 
   def remodel() = {
-    log.info("TopicUpdater: start remodelling ...")
-    log.info(s"current model is ${modelAccessor.getCurrentFlag}. will update using the other model")
-    reset(useActive = false)
-    var catchUp = false
-    while (!catchUp) {
-      val (m, n) = update(useActive = false)
-      if (m.max(n) < fetchSize) catchUp = true
+
+    def afterRefresh() = {
+       reset(useActive = false)
+        var catchUp = false
+        while (!catchUp) {
+          val (m, n) = update(useActive = false)
+          if (m.max(n) < fetchSize) catchUp = true
+        }
+        modelAccessor.switchAccessor()
+        log.info(s"successfully switched to model ${modelAccessor.getCurrentFlag}")
     }
-    modelAccessor.switchAccessor()
-    log.info(s"successfully switched to model ${modelAccessor.getCurrentFlag}")
+
+    log.info("TopicUpdater: start remodelling ...")
+
+    //refresh inactive model:
+    modelAccessor.getCurrentFlag match {
+      case TopicModelAccessorFlag.A => {
+        val model = future { modelFactory.makeB() }
+        model.onComplete {
+          case Success(model) => {
+            log.info("refreshed model B. Start catch up process.")
+         //   modelAccessor.accessorB = Promise.successful(model).future
+            afterRefresh()
+          }
+          case Failure(t) => healthcheckPlugin.addError(HealthcheckError(callType = Healthcheck.SEARCH,
+          errorMessage = Some(t.getMessage())))
+        }
+      }
+
+      case TopicModelAccessorFlag.B => {
+        val model = future { modelFactory.makeA() }
+        model.onComplete {
+          case Success(model) => {
+            log.info("refreshed model A. Start catch up process.")
+        //    modelAccessor.accessorA = Promise.successful(model).future
+            afterRefresh()
+          }
+          case Failure(t) => healthcheckPlugin.addError(HealthcheckError(callType = Healthcheck.SEARCH,
+          errorMessage = Some(t.getMessage())))
+        }
+      }
+    }
   }
 
   private def updateUriTopic(seqNum: SequenceNumber, useActive: Boolean): Int = {
