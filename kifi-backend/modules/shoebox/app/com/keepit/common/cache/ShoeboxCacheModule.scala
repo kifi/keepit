@@ -10,6 +10,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
+  def playCacheApi(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new PlayCacheApi((innerRepo, 1 second), (outerRepo, 1 hour))
+
+  @Singleton
+  @Provides
   def basicUserUserIdCache(outerRepo: FortyTwoCachePlugin) =
     new BasicUserUserIdCache((outerRepo, 7 days))
 

@@ -10,7 +10,12 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
 
   @Singleton
   @Provides
-  def probablisticLRUChunkCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) = 
+  def playCacheApi(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new PlayCacheApi((innerRepo, 1 second), (outerRepo, 1 hour))
+
+  @Singleton
+  @Provides
+  def probablisticLRUChunkCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new ProbablisticLRUChunkCache((innerRepo, 5 seconds), (outerRepo, 7 days))
 
   @Singleton
