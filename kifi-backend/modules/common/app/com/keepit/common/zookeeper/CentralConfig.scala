@@ -60,11 +60,11 @@ trait ConfigStore {
 
 class ZkConfigStore(zk: ZooKeeperClient) extends ConfigStore{
   
-  def get(key: CentralConfigKey): Option[String] = synchronized {
+  def get(key: CentralConfigKey): Option[String] = {
     zk.getOpt(key.toNode).map(fromByteArray(_))
   }
 
-  def set(key: CentralConfigKey, value: String): Unit = synchronized {
+  def set(key: CentralConfigKey, value: String): Unit = {
     try{
       zk.set(key.toNode, value)
     }
@@ -84,29 +84,28 @@ class ZkConfigStore(zk: ZooKeeperClient) extends ConfigStore{
     }
   }
 
-  def watch(key: CentralConfigKey)(handler: Option[String] => Unit) : Unit =  synchronized {
+  def watch(key: CentralConfigKey)(handler: Option[String] => Unit) : Unit = {
     zk.watchNode(key.toNode, byteArrayOption => handler(byteArrayOption.map(fromByteArray(_))))
   }
+
 }
 
 
 class InMemoryConfigStore extends ConfigStore {
-  import scala.collection.mutable.{HashMap, ArrayBuffer}
-  val db : HashMap[String, String] = HashMap[String, String]()
-  val watches : HashMap[String, ArrayBuffer[Option[String] => Unit]] = HashMap[String, ArrayBuffer[Option[String] => Unit]]()
+  import scala.collection.mutable.{HashMap, ArrayBuffer, SynchronizedMap}
+  val db : SynchronizedMap[String, String] = new HashMap[String, String]() with SynchronizedMap[String, String]
+  val watches : HashMap[String, ArrayBuffer[Option[String] => Unit]] = new HashMap[String, ArrayBuffer[Option[String] => Unit]]() with SynchronizedMap[String, ArrayBuffer[Option[String] => Unit]]
 
-  def get(key: CentralConfigKey): Option[String] = synchronized { 
-    db.get(key.toNode.toString) 
-  }
+  def get(key: CentralConfigKey): Option[String] = db.get(key.toNode.toString) 
+  
 
-  def set(key: CentralConfigKey, value: String) : Unit = synchronized {
+  def set(key: CentralConfigKey, value: String) : Unit = {
     db(key.toNode.toString) = value
     watches(key.toNode.toString).foreach(_(Some(value)))
   }
 
-  def watch(key: CentralConfigKey)(handler: Option[String] => Unit) : Unit =  synchronized {
-    watches(key.toNode.toString) += handler
-  }
+  def watch(key: CentralConfigKey)(handler: Option[String] => Unit) : Unit = watches(key.toNode.toString) += handler
+
 
 }
 
