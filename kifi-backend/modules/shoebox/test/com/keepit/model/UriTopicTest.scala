@@ -56,6 +56,19 @@ class UriTopicTest extends Specification with ShoeboxTestInjector {
       }
     }
 
+    "retrieve uris by topic" in {
+      withDb() { implicit injector =>
+        val uriTopicRepo = inject[UriTopicRepoA]
+        val uriTopics = setup()
+        val numDocs = uriTopics.size
+        (0 until numDocs).foreach{ i =>
+          db.readOnly{ implicit s =>
+            uriTopicRepo.getUrisByTopic(i) === List(Id[NormalizedURI](i))
+          }
+        }
+      }
+    }
+
     "be able to delete all data" in {
 
         withDb() { implicit injector =>

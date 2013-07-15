@@ -17,6 +17,9 @@ import com.keepit.model.TopicName
 import play.api.libs.json.Json
 import scala.concurrent._
 import ExecutionContext.Implicits.global
+import scala.util.Random
+import com.keepit.search.ArticleStore
+import com.keepit.model.NormalizedURI
 
 @Singleton
 class TopicModelController  @Inject() (
@@ -27,6 +30,7 @@ class TopicModelController  @Inject() (
   wordTopicBlobStore: WordTopicBlobStore,
   wordStore: WordStore,
   topicWordsStore: TopicWordsStore,
+  articleStore: ArticleStore,
   actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator){
 
   val uriTopicHelper = new UriTopicHelper
@@ -123,36 +127,37 @@ class TopicModelController  @Inject() (
 
   }
 
-  def topicsViewDefault = topicsView(0)
+  def topicsViewDefault = topicsView(modelAccessor.getCurrentFlag, 0)
 
-  def topicsView(page: Int = 0) = AdminHtmlAction{ request =>
+  def topicsView(flag: String, page: Int = 0) = AdminHtmlAction{ request =>
     val PAGE_SIZE = 50
+    val accessor = modelAccessor.getAccessorByFlag(flag)
     val (topics, count) = db.readOnly{ implicit s =>
-      val topics = currentAccessor.topicNameRepo.all.sortWith((a, b) => a.id.get.id < b.id.get.id)
+      val topics = accessor.topicNameRepo.all.sortWith((a, b) => a.id.get.id < b.id.get.id)
       val count = topics.size
       (topics.drop(page * PAGE_SIZE).take(PAGE_SIZE), count)
     }
     val pageCount = ceil(count*1.0 / PAGE_SIZE).toInt
 
-    Ok(html.admin.topicNames(topics, page, count, pageCount, PAGE_SIZE))
+    Ok(html.admin.topicNames(flag, topics, page, count, pageCount, PAGE_SIZE))
   }
 
-  def addTopics = AdminHtmlAction { implicit request =>
-    Ok(html.admin.addTopicNames())
+  def addTopics(flag: String) = AdminHtmlAction { implicit request =>
+    Ok(html.admin.addTopicNames(flag))
   }
 
-  def saveAddedTopics = AdminHtmlAction{ implicit request =>
+  def saveAddedTopics(flag: String) = AdminHtmlAction{ implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val content = body.get("topics").get
     val topicNames = content.split("\n").map{_.trim}.filter(_ != "")
     val topics = topicNames.map{ name => TopicName(topicName = name) }
-
+    val accessor = modelAccessor.getAccessorByFlag(flag)
     db.readWrite{ implicit s =>
-      currentAccessor.topicNameRepo.deleteAll()
-      topics.foreach{currentAccessor.topicNameRepo.save(_)}
+      accessor.topicNameRepo.deleteAll()
+      topics.foreach{accessor.topicNameRepo.save(_)}
     }
 
-    Redirect(com.keepit.controllers.admin.routes.TopicModelController.topicsViewDefault)
+    Redirect(com.keepit.controllers.admin.routes.TopicModelController.topicsView(flag, 0))
   }
 
   def genModelFiles(flag: String) = AdminHtmlAction{ implicit request =>
@@ -193,15 +198,14 @@ class TopicModelController  @Inject() (
   }
 
   // index is not necessarily the same as Id in DB. index starts from 1.
-  def viewTopicDetails(index: Int) = AdminHtmlAction{ implicit request =>
+  def viewTopicDetails(flag: String, index: Int) = AdminHtmlAction{ implicit request =>
+    val accessor = modelAccessor.getAccessorByFlag(flag)
     val topic = db.readOnly { implicit s =>
-      val topics = currentAccessor.topicNameRepo.all.sortWith((a, b) => a.id.get.id < b.id.get.id)
+      val topics = accessor.topicNameRepo.all.sortWith((a, b) => a.id.get.id < b.id.get.id)
       topics(index - 1)
     }
 
-    val name = topic.topicName
-
-    val fileId = modelAccessor.getCurrentFlag match {
+    val fileId = flag match {
       case TopicModelAccessorFlag.A => "model_a"
       case TopicModelAccessorFlag.B => "model_b"
     }
@@ -215,7 +219,37 @@ class TopicModelController  @Inject() (
       case (i, j) => content.slice(i, j)
     }
 
-    Ok(html.admin.topicDetails(index, topic, topWords))
+    val randArticles = sampleDocsByTopic(index)
+
+    Ok(html.admin.topicDetails(index, topic, topWords, randArticles))
+  }
+
+  private def sampleDocsByTopic(index: Int) = {
+    val SAMPLE_SIZE = 10
+    val MAX_SAMPLE_POOL = 1000
+    val MAX_CONTENT_SIZE = 2000
+    val uris = db.readOnly { implicit s =>
+      currentAccessor.uriTopicRepo.getUrisByTopic(index)
+    }.take(MAX_SAMPLE_POOL)
+
+    val randIdx = Random.shuffle((0 until uris.size).toList).take(SAMPLE_SIZE)
+    val randArticles = randIdx.map{ idx =>
+      articleStore.get(uris(idx)) match {
+        case Some(article) => (uris(idx), article.content.take(MAX_CONTENT_SIZE))
+        case None => (uris(idx), "article content not available")
+      }
+    }
+    randArticles
+  }
+
+  def summary = AdminHtmlAction{ implicit request =>
+    val flag = modelAccessor.getCurrentFlag
+    val vocSizeA = modelAccessor.getAccessorByFlag(TopicModelAccessorFlag.A).wordTopicModel.vocabulary.size
+    val vocSizeB = modelAccessor.getAccessorByFlag(TopicModelAccessorFlag.B).wordTopicModel.vocabulary.size
+    val numTopicA = modelAccessor.getAccessorByFlag(TopicModelAccessorFlag.A).topicNameMapper.rawTopicNames.size
+    val numTopicB = modelAccessor.getAccessorByFlag(TopicModelAccessorFlag.B).topicNameMapper.rawTopicNames.size
+
+    Ok(html.admin.topicSummary(flag, vocSizeA, numTopicA, vocSizeB, numTopicB))
   }
 
 }
