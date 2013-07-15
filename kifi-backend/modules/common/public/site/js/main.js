@@ -20,6 +20,15 @@ $.ajaxSetup({
 	xhrFields: {withCredentials: true},
 	crossDomain: true});
 
+$.timeago.settings.localeTitle = true;
+$.extend($.timeago.settings.strings, {
+	seconds: "seconds",
+	minute: "a minute",
+	hour: "an hour",
+	hours: "%d hours",
+	month: "a month",
+	year: "a year"});
+
 $.fn.layout = function() {
 	return this.each(function() {this.clientHeight});  // forces layout
 };
@@ -94,7 +103,7 @@ $(function() {
 		$keepSpinner.hide();
 
 		var now = new Date;
-		$(ev.element).find("time").easydate({set_title: false}).each(function() {
+		$(ev.element).find("time").timeago().each(function() {
 			var age = daysBetween(new Date($(this).attr("datetime")), now);
 			if ($myKeeps.find('li.keep-group-title.today').length == 0 && age <= 1) {
 				$(this).closest(".keep").before('<li class="keep-group-title today">Today</li>');
