@@ -1,5 +1,6 @@
 package com.keepit.common.zookeeper
 
+import com.keepit.common.strings.{fromByteArray, toByteArray}
 import com.google.inject.{Inject, Singleton}
 import org.apache.zookeeper.{CreateMode, KeeperException}
 
@@ -9,7 +10,7 @@ import org.apache.zookeeper.{CreateMode, KeeperException}
 // trait SampleConfigKey extends CentralConfigKey{
 //   val name : String
 //
-//   val namespace = "test_config" //It is stronglu recommended that uou use only alphanumarics and underscores here
+//   val namespace = "test_config" //Don't use funky charaters here for command line compatibility. Use "/" in the namespace to create hirachies 
 //   def key: String = name 
 // }
 //
@@ -60,23 +61,23 @@ trait ConfigStore {
 class ZkConfigStore(zk: ZooKeeperClient) extends ConfigStore{
   
   def get(key: CentralConfigKey): Option[String] = synchronized {
-    zk.getOpt(key.toNode).map(new String(_))
+    zk.getOpt(key.toNode).map(fromByteArray(_))
   }
 
   def set(key: CentralConfigKey, value: String): Unit = synchronized {
     try{
-      zk.set(key.toNode, value.getBytes)
+      zk.set(key.toNode, value)
     }
     catch {
       case e: KeeperException.NoNodeException => {
         try {
-          zk.create(key.toNode.asPath,value.getBytes,CreateMode.PERSISTENT)
+          zk.create(key.toNode.asPath,value,CreateMode.PERSISTENT)
         }
         catch{
           case e: KeeperException.NoNodeException => {
             val parentPath = key.toNode.toString.split("/").tail.dropRight(1).foldLeft("")((xs,x) => xs +"/"+x)
             zk.createPath(Path(parentPath))
-            zk.create(key.toNode.asPath,value.getBytes,CreateMode.PERSISTENT)
+            zk.create(key.toNode.asPath,value,CreateMode.PERSISTENT)
           }
         }
       }
@@ -84,7 +85,7 @@ class ZkConfigStore(zk: ZooKeeperClient) extends ConfigStore{
   }
 
   def watch(key: CentralConfigKey)(handler: Option[String] => Unit) : Unit =  synchronized {
-    zk.watchNode(key.toNode, byteArrayOption => handler(byteArrayOption.map(new String(_))))
+    zk.watchNode(key.toNode, byteArrayOption => handler(byteArrayOption.map(fromByteArray(_))))
   }
 }
 
