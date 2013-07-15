@@ -35,7 +35,7 @@ case class LdaTopicModelModule() extends TopicModelModule with Logging {
 
   @Provides
   @Singleton
-  def switchableTopicModelAccessor(factory: SwitchableTopicModelAccessorFactory): SwitchableTopicModelAccessor = {
+  def switchableTopicModelAccessor(factory: TopicModelAccessorFactory): SwitchableTopicModelAccessor = {
     val a = future{ factory.makeA() }(SlowRunningExecutionContext.ec)
     val b = future{ factory.makeB() }(SlowRunningExecutionContext.ec)
     new SwitchableTopicModelAccessor(a, b)
@@ -53,7 +53,7 @@ case class DevTopicModelModule() extends TopicModelModule {
 
   @Provides
   @Singleton
-  def switchableTopicModelAccessor(factory: SwitchableTopicModelAccessorFactory): SwitchableTopicModelAccessor = {
+  def switchableTopicModelAccessor(factory: TopicModelAccessorFactory): SwitchableTopicModelAccessor = {
     val a = future{ factory.makeA() }
     val b = future{ factory.makeB() }
     new SwitchableTopicModelAccessor(a, b)

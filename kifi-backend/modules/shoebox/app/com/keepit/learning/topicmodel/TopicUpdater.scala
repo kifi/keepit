@@ -12,7 +12,10 @@ import com.google.inject.ImplementedBy
 import scala.Option.option2Iterable
 import scala.collection.mutable.{Map => MutMap}
 import com.google.inject.Singleton
-import scala.collection.mutable.{Map => MutMap}
+import scala.concurrent._
+import ExecutionContext.Implicits.global
+
+
 
 @Singleton
 class TopicUpdater @Inject() (
@@ -20,7 +23,8 @@ class TopicUpdater @Inject() (
   uriRepo: NormalizedURIRepo,
   bookmarkRepo: BookmarkRepo,
   articleStore: ArticleStore,
-  modelAccessor: SwitchableTopicModelAccessor
+  modelAccessor: SwitchableTopicModelAccessor,
+  modelFactory: TopicModelAccessorFactory
 ) extends Logging {
 
   def getAccessor(useActive: Boolean) = if (useActive) modelAccessor.getActiveAccessor else modelAccessor.getInactiveAccessor
@@ -58,17 +62,36 @@ class TopicUpdater @Inject() (
     (m, n)
   }
 
-  def remodel() = {
-    log.info("TopicUpdater: start remodelling ...")
-    log.info(s"current model is ${modelAccessor.getCurrentFlag}. will update using the other model")
-    reset(useActive = false)
-    var catchUp = false
-    while (!catchUp) {
-      val (m, n) = update(useActive = false)
-      if (m.max(n) < fetchSize) catchUp = true
+  def refreshInactiveModel() = {
+    log.info(s"Refreshing inactive model. Currect active model is ${modelAccessor.getCurrentFlag}.")
+    modelAccessor.getCurrentFlag match {
+      case TopicModelAccessorFlag.A => {
+        modelAccessor.accessorB = Promise.successful(modelFactory.makeB()).future
+        log.info("model B refreshed")
+      }
+      case TopicModelAccessorFlag.B => {
+        modelAccessor.accessorA = Promise.successful(modelFactory.makeA()).future
+        log.info("model A refreshed")
+      }
     }
-    modelAccessor.switchAccessor()
-    log.info(s"successfully switched to model ${modelAccessor.getCurrentFlag}")
+  }
+
+
+  def remodel() = {
+    def afterRefresh() = {
+      reset(useActive = false)        // wipe out content associated with the inactive model
+      var catchUp = false
+      while (!catchUp) {
+        val (m, n) = update(useActive = false)
+        if (m.max(n) < fetchSize) catchUp = true
+      }
+      modelAccessor.switchAccessor()
+      log.info(s"successfully switched to model ${modelAccessor.getCurrentFlag}")
+    }
+
+    log.info(s"TopicUpdater: start remodelling ... ")
+    refreshInactiveModel()
+    afterRefresh()
   }
 
   private def updateUriTopic(seqNum: SequenceNumber, useActive: Boolean): Int = {
