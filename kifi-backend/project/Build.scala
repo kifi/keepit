@@ -197,5 +197,5 @@ object ApplicationBuild extends Build {
 
       //https://groups.google.com/forum/?fromgroups=#!topic/play-framework/aa90AAp5bpo
       sources in doc in Compile := List()
-    ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile").aggregate(common, search, shoebox)
+    ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", graph % "test->test;compile->compile").aggregate(common, search, shoebox, graph)
 }
