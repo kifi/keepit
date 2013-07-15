@@ -60,8 +60,8 @@ object TopicModelAccessorFlag {
 }
 
 class SwitchableTopicModelAccessor (
-  val accessorA: Future[TopicModelAccessorA],
-  val accessorB: Future[TopicModelAccessorB]
+  var accessorA: Future[TopicModelAccessorA],
+  var accessorB: Future[TopicModelAccessorB]
 ) {
   private var accessorFlag = TopicModelAccessorFlag.A       // default to A for now. Will read this from configuration or zookeeper or DB
 
