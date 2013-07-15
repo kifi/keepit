@@ -38,16 +38,16 @@ trait CentralConfigKey {
 
 
 trait BooleanCentralConfigKey extends CentralConfigKey {
-  override def toString: String = s"${namespace}/boolean/${key}"
+  override def toString: String = s"${namespace}/${key}.bool"
 }
 trait LongCentralConfigKey extends CentralConfigKey {
-  override def toString: String = s"${namespace}/long/${key}"
+  override def toString: String = s"${namespace}/${key}.long"
 }
 trait DoubleCentralConfigKey extends CentralConfigKey {
-  override def toString: String = s"${namespace}/double/${key}"
+  override def toString: String = s"${namespace}/${key}.double"
 }
 trait StringCentralConfigKey extends CentralConfigKey {
-  override def toString: String = s"${namespace}/string/${key}"
+  override def toString: String = s"${namespace}/${key}.string"
 }
 
 
