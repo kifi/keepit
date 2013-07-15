@@ -84,6 +84,7 @@ trait UriTopicRepo extends Repo[UriTopic]{
   def getAssignedTopicsByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[(Option[Int], Option[Int])]
   def deleteAll()(implicit session: RWSession): Int
   def getUrisByTopic(topic: Int)(implicit session: RSession): Seq[Id[NormalizedURI]]
+  def countByTopic()(implicit session: RSession): Map[Int, Int]
 }
 
 abstract class UriTopicRepoBase (
@@ -118,6 +119,10 @@ abstract class UriTopicRepoBase (
     (for(r <- table if (r.primaryTopic === topic)) yield r.uriId).list
   }
 
+  def countByTopic()(implicit session: RSession): Map[Int, Int] = {
+    val uriAndTopic = (for (r <- table if r.primaryTopic.isNotNull) yield (r.uriId, r.primaryTopic)).list
+    uriAndTopic.groupBy(_._2).map{case (topic, uris) => (topic.get, uris.size) }
+  }
 }
 
 @Singleton
