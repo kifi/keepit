@@ -3,7 +3,8 @@
   vocabularySizeA: Int,
   numTopicA: Int,
   vocabularySizeB: Int,
-  numTopicB: Int
+  numTopicB: Int,
+  topicCounts: Seq[(String, Int)]
 )
 
 @admin("Topic Model Summary") {
@@ -32,6 +33,15 @@
     <tr>
       <th>num of topics</th>
       <td>@numTopicB</td>
+    </tr>
+    
+    <tr>
+      <th>Top Topics</th>
+      <td>
+      @for( (topicName, count) <- topicCounts){
+        <div>@topicName: @count</div>
+      }
+      </td>
     </tr>
   
   </table>
