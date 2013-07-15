@@ -38,6 +38,7 @@ trait ZooKeeperClient {
 
   def getChildren(path: Path): Seq[Node]
   def get(node: Node): Array[Byte]
+  def getOpt(node: Node): Option[Array[Byte]]
 
   def set(node: Node, data: Array[Byte]): Unit
 
@@ -150,6 +151,13 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
   }
 
   def get(node: Node): Array[Byte] = zk.getData(makeNodePath(node.asPath).name, false, null)
+
+  def getOpt(node: Node): Option[Array[Byte]] = try{
+      Some(get(node))
+    }
+    catch {
+      case e: KeeperException.NoNodeException => None
+    }
 
   def set(node: Node, data: Array[Byte]): Unit = zk.setData(makeNodePath(node.asPath).name, data, -1)
 

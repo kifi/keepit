@@ -49,6 +49,13 @@ case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
         Some({zk1 => println(s"in callback, got $zk1")}))
       new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider)
   }
+
+  @Singleton
+  @Provides
+  def configStore(zk: ZooKeeperClient): ConfigStore = {
+    new ZkConfigStore(zk)
+  }
+
 }
 
 abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryModule {
@@ -88,6 +95,13 @@ abstract class LocalDiscoveryModule(serviceType: ServiceType) extends DiscoveryM
       def forceUpdate(): Unit = {}
       def myStatus: Option[ServiceStatus] = Some(ServiceStatus.UP)
     }
+
+  @Singleton
+  @Provides
+  def configStore(): ConfigStore = {
+    new InMemoryConfigStore()
+  }
+
 }
 
 case class DevDiscoveryModule() extends LocalDiscoveryModule(ServiceType.DEV_MODE)
