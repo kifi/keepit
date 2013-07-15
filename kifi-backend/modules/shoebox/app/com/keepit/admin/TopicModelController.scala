@@ -265,7 +265,7 @@ class TopicModelController  @Inject() (
       val mappedId = currentAccessor.topicNameMapper.idMapper(topic)
       mappedCounts += mappedId -> (mappedCounts.getOrElse(mappedId, 0) + count)
     }
-    mappedCounts.toArray.sortBy(-_._2).take(TOP_N).map{ case (mappedId, counts) => (currentAccessor.topicNameMapper.getMappedNameByNewId(mappedId), counts)}.toList
+    mappedCounts.toArray.sortBy(-_._2).filter(_._1 != -1).take(TOP_N).map{ case (mappedId, counts) => (currentAccessor.topicNameMapper.getMappedNameByNewId(mappedId), counts)}.toList
   }
 
 }
