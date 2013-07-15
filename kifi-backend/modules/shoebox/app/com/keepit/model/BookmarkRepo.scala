@@ -84,7 +84,7 @@ class BookmarkRepoImpl @Inject() (
     (for(b <- table if b.uriId === uriId && b.state === BookmarkStates.ACTIVE && b.title.isNull) yield b).list
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[Bookmark] =
-    (for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).list
+    (for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).sortBy(_.createdAt).list
 
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Bookmark]], afterId: Option[ExternalId[Bookmark]],
                 collectionId: Option[Id[Collection]], count: Int)(implicit session: RSession): Seq[Bookmark] = {
@@ -98,7 +98,7 @@ class BookmarkRepoImpl @Inject() (
       (maybeAfter.map { after =>
         b.createdAt > after.createdAt || b.id > after.id.get && b.createdAt === after.createdAt
       } getOrElse (b.id === b.id))
-    } yield b)
+    } yield b).sortBy(_.createdAt)
     (collectionId.map { cid =>
       for {
         (b, ktc) <- q join keepToCollectionRepo.table on (_.id === _.bookmarkId)
