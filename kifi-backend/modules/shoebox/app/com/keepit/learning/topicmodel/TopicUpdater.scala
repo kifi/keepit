@@ -14,10 +14,7 @@ import scala.collection.mutable.{Map => MutMap}
 import com.google.inject.Singleton
 import scala.concurrent._
 import ExecutionContext.Implicits.global
-import com.keepit.common.akka.SlowRunningExecutionContext
-import scala.util.Success
-import scala.concurrent.Promise
-import scala.util.Failure
+
 
 
 @Singleton
