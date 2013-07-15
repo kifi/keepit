@@ -37,7 +37,7 @@
 
     @admin("Clusters Overview") {
         <table class="table table-bordered">
-            <th>Service Type</th> <th> Zookeeper Id </th> <th> Leader? </th> <th> Instance Info </th> <th>State</th> <th>Capabilities</th>
+            <th>Service Type</th> <th>Zookeeper Id</th> <th>Leader?</th> <th>Instance Info</th> <th>State</th> <th>Version <small>(this machine thinks!)</small></th> <th>Capabilities</th>
             @for(cmi <- data) {
                 <tr>
                     <td>@cmi.serviceType.name</td>
@@ -45,6 +45,7 @@
                     <td>@cmi.isLeader</td>
                     <td>@showInstanceInfo(cmi.instanceInfo)</td> 
                     <td>@cmi.state.name</td>
+                    <td>@cmi.version</td>
                     <td>
                       <ul>
                         @for(capability <- cmi.capabilities){
