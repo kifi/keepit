@@ -6,4 +6,4 @@
 9999:securesocial.core.providers.utils.BCryptPasswordHasher
 10001:com.keepit.social.providers.FacebookProvider
 10002:com.keepit.social.providers.LinkedInProvider
-10003:com.keepit.common.cache.HashMapPlayCache
+10003:com.keepit.common.cache.PlayCachePlugin
