@@ -17,6 +17,7 @@ import scala.concurrent.duration._
 
 case object UpdateTopic
 case object ResetTopic
+case object Remodel
 
 private[topicmodel] class TopicUpdaterActor @Inject() (
   healthcheckPlugin: HealthcheckPlugin,
@@ -46,6 +47,7 @@ private[topicmodel] class TopicUpdaterActor @Inject() (
 
 trait TopicUpdaterPlugin extends SchedulingPlugin {
   def reset(): Unit
+  def remodel(): Unit
 }
 
 class TopicUpdaterPluginImpl @Inject() (
@@ -70,7 +72,12 @@ class TopicUpdaterPluginImpl @Inject() (
 
   override def reset() = {
     log.info("admin reset topic tables ...")
-    actor ! ResetTopic
+    scheduleTaskOnce(actorFactory.system, 1 seconds, "reset current topic tables")(actor ! ResetTopic)
+  }
+
+  override def remodel() = {
+    log.info("admin reconstruct topic model ...")
+    scheduleTaskOnce(actorFactory.system, 1 seconds, "reconstruct topic model")(actor ! Remodel)
   }
 
 }
