@@ -9,7 +9,6 @@ import org.apache.zookeeper.{CreateMode, KeeperException}
 // trait SampleConfigKey extends CentralConfigKey{
 //   val name : String
 //
-//   val version = 1
 //   val namespace = "test_config" //It is stronglu recommended that uou use only alphanumarics and underscores here
 //   def key: String = name 
 // }
@@ -26,8 +25,7 @@ import org.apache.zookeeper.{CreateMode, KeeperException}
 
 
 
-trait CentralConfigKey {
-  val version : Int
+trait CentralConfigKey { 
   val namespace: String
   def key: String
 
@@ -40,16 +38,16 @@ trait CentralConfigKey {
 
 
 trait BooleanCentralConfigKey extends CentralConfigKey {
-  override def toString: String = s"${namespace}/boolean/v${version.toString}/${key}"
+  override def toString: String = s"${namespace}/boolean/${key}"
 }
 trait LongCentralConfigKey extends CentralConfigKey {
-  override def toString: String = s"${namespace}/long/v${version.toString}/${key}"
+  override def toString: String = s"${namespace}/long/${key}"
 }
 trait DoubleCentralConfigKey extends CentralConfigKey {
-  override def toString: String = s"${namespace}/double/v${version.toString}/${key}"
+  override def toString: String = s"${namespace}/double/${key}"
 }
 trait StringCentralConfigKey extends CentralConfigKey {
-  override def toString: String = s"${namespace}/string/v${version.toString}/${key}"
+  override def toString: String = s"${namespace}/string/${key}"
 }
 
 
