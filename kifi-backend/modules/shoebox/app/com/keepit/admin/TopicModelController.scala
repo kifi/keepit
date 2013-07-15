@@ -229,7 +229,7 @@ class TopicModelController  @Inject() (
     val MAX_SAMPLE_POOL = 1000
     val MAX_CONTENT_SIZE = 2000
     val uris = db.readOnly { implicit s =>
-      currentAccessor.uriTopicRepo.getUrisByTopic(index)
+      currentAccessor.uriTopicRepo.getUrisByTopic(index-1)
     }.take(MAX_SAMPLE_POOL)
 
     val randIdx = Random.shuffle((0 until uris.size).toList).take(SAMPLE_SIZE)
@@ -248,8 +248,24 @@ class TopicModelController  @Inject() (
     val vocSizeB = modelAccessor.getAccessorByFlag(TopicModelAccessorFlag.B).wordTopicModel.vocabulary.size
     val numTopicA = modelAccessor.getAccessorByFlag(TopicModelAccessorFlag.A).topicNameMapper.rawTopicNames.size
     val numTopicB = modelAccessor.getAccessorByFlag(TopicModelAccessorFlag.B).topicNameMapper.rawTopicNames.size
+    val topicCounts = topicStats()
 
-    Ok(html.admin.topicSummary(flag, vocSizeA, numTopicA, vocSizeB, numTopicB))
+    Ok(html.admin.topicSummary(flag, vocSizeA, numTopicA, vocSizeB, numTopicB, topicCounts))
+  }
+
+  private def topicStats() = {
+    val TOP_N = 20
+    val counts = db.readOnly{ implicit s =>
+      currentAccessor.uriTopicRepo.countByTopic
+    }
+    // map raw counts via nameMapper
+    val N = currentAccessor.topicNameMapper.mappedNames.size
+    var mappedCounts = Map.empty[Int, Int]
+    for((topic, count) <- counts){
+      val mappedId = currentAccessor.topicNameMapper.idMapper(topic)
+      mappedCounts += mappedId -> (mappedCounts.getOrElse(mappedId, 0) + count)
+    }
+    mappedCounts.toArray.sortBy(-_._2).take(TOP_N).map{ case (mappedId, counts) => (currentAccessor.topicNameMapper.getMappedNameByNewId(mappedId), counts)}.toList
   }
 
 }

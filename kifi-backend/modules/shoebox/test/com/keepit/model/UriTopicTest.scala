@@ -56,7 +56,7 @@ class UriTopicTest extends Specification with ShoeboxTestInjector {
       }
     }
 
-    "retrieve uris by topic" in {
+    "retrieve uris by topic and count by topic" in {
       withDb() { implicit injector =>
         val uriTopicRepo = inject[UriTopicRepoA]
         val uriTopics = setup()
@@ -66,6 +66,13 @@ class UriTopicTest extends Specification with ShoeboxTestInjector {
             uriTopicRepo.getUrisByTopic(i) === List(Id[NormalizedURI](i))
           }
         }
+
+        val counts = db.readOnly{ implicit s =>
+          uriTopicRepo.countByTopic
+        }
+
+        val correctCount = (0 until numDocs).foldLeft(Map.empty[Int, Int]){ (m, topicId) => m + (topicId -> 1) }
+        counts === correctCount
       }
     }
 
