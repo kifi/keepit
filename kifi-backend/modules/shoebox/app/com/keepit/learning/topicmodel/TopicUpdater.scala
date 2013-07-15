@@ -24,7 +24,7 @@ class TopicUpdater @Inject() (
   bookmarkRepo: BookmarkRepo,
   articleStore: ArticleStore,
   modelAccessor: SwitchableTopicModelAccessor,
-  modelFactory: SwitchableTopicModelAccessorFactory
+  modelFactory: TopicModelAccessorFactory
 ) extends Logging {
 
   def getAccessor(useActive: Boolean) = if (useActive) modelAccessor.getActiveAccessor else modelAccessor.getInactiveAccessor
