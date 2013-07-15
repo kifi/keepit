@@ -8,7 +8,7 @@ import play.api.Play._
 import scala.concurrent.Promise
 
 @Singleton
-class SwitchableTopicModelAccessorFactory @Inject()(
+class TopicModelAccessorFactory @Inject()(
   db: Database,
   userTopicRepoA: UserTopicRepoA,
   uriTopicRepoA: UriTopicRepoA,
@@ -21,11 +21,6 @@ class SwitchableTopicModelAccessorFactory @Inject()(
   nameMapperFactory: NameMapperFactory,
   wordTopicModelFactory: WordTopicModelFactory
 ) {
-  def apply() = {
-    val accessorA = makeA()
-    val accessorB = makeB()
-    new SwitchableTopicModelAccessor(Promise.successful(accessorA).future, Promise.successful(accessorB).future)
-  }
 
   def makeA() = {
     val nameMapperA = nameMapperFactory(TopicModelAccessorFlag.A)

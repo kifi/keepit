@@ -275,13 +275,12 @@ GET     /admin/learning/wordTopic       @com.keepit.controllers.admin.TopicModel
 POST    /admin/learning/getWordTopic    @com.keepit.controllers.admin.TopicModelController.getWordTopic
 GET     /admin/learning/userTopic       @com.keepit.controllers.admin.TopicModelController.userTopic(userId: Option[String] ?= None, topic: Option[String] ?= None)
 POST    /admin/learning/getUserTopic    @com.keepit.controllers.admin.TopicModelController.getUserTopic
-GET     /admin/learning/resetTopic      @com.keepit.controllers.admin.TopicModelController.resetAllTopicTables()
+GET     /admin/learning/topic/remodel   @com.keepit.controllers.admin.TopicModelController.remodel()
 GET     /admin/learning/topics          @com.keepit.controllers.admin.TopicModelController.topicsViewDefault
 GET     /admin/learning/topics/:page    @com.keepit.controllers.admin.TopicModelController.topicsView(page: Int)
 POST    /admin/learning/topics/updateTopicName/:id  @com.keepit.controllers.admin.TopicModelController.updateTopicName(id: Id[TopicName])
 GET     /admin/learning/addTopics       @com.keepit.controllers.admin.TopicModelController.addTopics
 POST    /admin/learning/saveAddedTopics @com.keepit.controllers.admin.TopicModelController.saveAddedTopics
-GET     /admin/learning/switchModel     @com.keepit.controllers.admin.TopicModelController.switchModel
 GET     /admin/learning/genTopicModelS3Files/:flag    @com.keepit.controllers.admin.TopicModelController.genModelFiles(flag: String)
 GET     /admin/learning/viewTopicWords/:flag          @com.keepit.controllers.admin.TopicModelController.viewTopicWords(flag: String)
 GET     /admin/learning/topicDetails/:index    @com.keepit.controllers.admin.TopicModelController.viewTopicDetails(index: Int)
