@@ -141,9 +141,12 @@ input.query::-moz-placeholder {color: #99a3b3}
 .keep-coll:hover>.keep-coll-x {width: 10px}
 .keep-coll-x::before {content: "\00D7"; position: relative; bottom: 1px}
 .keep-who {font-size: 0}
-.keep-who>img {vertical-align: middle; width: 23px; height: 23px; border-radius: 2px; margin-right: 1px}
-.keep-who>img.me {border-radius: 50% 0 0 50%}
-.keep-who>img.me:last-of-type {border-radius: 50%}
+.keep-who>.pic {display: inline-block; vertical-align: middle; width: 23px; height: 23px; background-size: 100%; border-radius: 2px; margin-right: 1px; position: relative}
+.keep-who>.me {border-radius: 50% 0 0 50%}
+.keep-who>.me:last-of-type {border-radius: 50%}
+.keep-who>.pic>.fr-card {bottom: 36px; left: -22px; z-index: 2}
+.keep-who>.pic>.fr-card::before,
+.keep-who>.pic>.fr-card::after {left: 33px}
 .keep-who-text {vertical-align: middle; margin-left: 4px; font-size: 12px; color: #99a3b3}
 .keep.mine .me+.keep-who-text {margin-left: 7px}
 .keep:not(.mine) .me+.keep-who-text {margin-left: 0}
@@ -305,6 +308,37 @@ input.page-coll-input {width: 20ex}
 /* shared styles */
 .long-text {white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
 span.long-text, a.long-text {display: inline-block}
+
+/* friend card */
+.fr-card {
+  position: absolute; min-width: 300px; background-color: #fff; color: #faf9f9; box-shadow: 2px 5px 12px rgba(0,0,0,.3); border: 1px solid #929496;
+  text-align: left; line-height: normal; cursor: default; opacity: 0;
+  -webkit-transform: translate(0, 3px); transform: translate(0, 3px);
+  -webkit-transition: opacity linear, -webkit-transform ease-in-out;
+  transition: opacity linear, -webkit-transform ease-in-out, transform ease-in-out;
+  -webkit-transition-duration: 100ms; transition-duration: 100ms;
+}
+.kifi-hover-showing>.fr-card {opacity: 1; -webkit-transform: none; transform: none; -webkit-transition-duration: 60ms; transition-duration: 60ms}
+.fr-card::before,
+.fr-card::after {content: " "; position: absolute; top: 100%; height: 0; width: 0; left: 50%; border: solid transparent}
+.fr-card::before {margin-left: -9px; border-width: 9px; border-top-color: inherit}
+.fr-card::after {margin-left: -8px; border-width: 8px; border-top-color: #fff}
+.fr-card .fr-card-top {display: table; padding: 20px 14px}
+.fr-card .fr-card-pic {display: table-cell; -moz-box-sizing: content-box; box-sizing: content-box; height: 100px; width: 100px; padding: 1px; background-color: #fff; border: 2px solid #dbdbdb; border-radius: 5px; float: left}
+.fr-card .fr-card-info {display: table-cell; vertical-align: top; padding-left: 14px; font-size: 12px; line-height: 13px; color: #808080}
+.fr-card .fr-card-name {font-size: 16px; color: #2d2d2d; white-space: nowrap}
+.fr-card-label {margin: 15px 0 3px}
+.fr-card-interests {color: #aaa}
+.fr-card-networks {font-size: 0; line-height: 0}
+.fr-card-networks a.fr-card-nw {width: 17px; height: 17px; display: inline-block; background: url(../img/social_icons.png) 0/68px; margin-right: 2px}
+.fr-card-networks a.fr-card-nw-facebook {background-position: 0 17px}
+.fr-card-networks a.fr-card-nw-facebook.on {background-position: 0}
+.fr-card-networks a.fr-card-nw-linkedin {background-position: -17px 17px}
+.fr-card-networks a.fr-card-nw-linkedin.on {background-position: -17px 0}
+.fr-card-networks a.fr-card-nw-twitter {background-position: -34px 17px}
+.fr-card-networks a.fr-card-nw-twitter.on {background-position: -34px 0}
+.fr-card-networks a.fr-card-nw-pinterest {background-position: -51px 17px}
+.fr-card-networks a.fr-card-nw-pinterest.on {background-position: -51px 0}
 
 /* retina image overrides */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
