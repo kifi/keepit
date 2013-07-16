@@ -437,21 +437,21 @@ class ExtStreamController @Inject() (
   private def setMessageRead(userId: Id[User], message: Comment, quietly: Boolean = false) {
     db.readWrite { implicit session =>
       val parent = message.parent.map(commentRepo.get).getOrElse(message)
-      (commentReadRepo.getByUserAndParent(userId, parent.id.get) match {
+      commentReadRepo.getByUserAndParent(userId, parent.id.get) match {
         case Some(cr) if cr.lastReadId != message.id.get =>
-          Some(commentReadRepo.save(cr.withLastReadId(message.id.get)))
+          commentReadRepo.save(cr.withLastReadId(message.id.get))
         case None =>
-          Some(commentReadRepo.save(CommentRead(userId = userId, uriId = parent.uriId, parentId = parent.id, lastReadId = message.id.get)))
-        case _ => None
-      }) foreach { _ =>
-        val nUri = normUriRepo.get(parent.uriId)
-        if (!quietly) {
-          userChannel.pushAndFanout(userId, Json.arr("message_read", nUri.url, parent.externalId.id, message.createdAt, message.externalId.id))
-        }
-
-        val messageIds = commentRepo.getMessageIdsCreatedBefore(nUri.id.get, parent.id.get, message.createdAt) :+ message.id.get
-        userNotificationRepo.markCommentVisited(userId, messageIds)
+          commentReadRepo.save(CommentRead(userId = userId, uriId = parent.uriId, parentId = parent.id, lastReadId = message.id.get))
+        case _ => 
       }
+
+      val nUri = normUriRepo.get(parent.uriId)
+      if (!quietly) {
+        userChannel.pushAndFanout(userId, Json.arr("message_read", nUri.url, parent.externalId.id, message.createdAt, message.externalId.id))
+      }
+
+      val messageIds = commentRepo.getMessageIdsCreatedBefore(nUri.id.get, parent.id.get, message.createdAt) :+ message.id.get
+      userNotificationRepo.markCommentVisited(userId, messageIds)
     }
   }
 
