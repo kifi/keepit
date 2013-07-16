@@ -78,6 +78,17 @@
           </select>
         </td>
       </tr>
+      @if(user.state != UserStates.ACTIVE) {
+      <tr>
+        <th>Merge to User ID</th>
+        <td><form class="form-inline" method="post"
+            action="@com.keepit.controllers.admin.routes.AdminUserController.merge">
+          <input type="hidden" name="from" value="@user.id.get">
+          <input type="text" name="to">
+          <input type="submit" value="Merge!">
+        </form></td>
+      </tr>
+      }
       <tr>
         <th>Useful page update count</th>
         <td>@historyUpdateCount</td>
