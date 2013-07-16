@@ -22,7 +22,7 @@ import com.keepit.common.net.URINormalizer
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social._
 import com.keepit.common.time._
-import com.keepit.controllers.core.KeeperInfoLoader
+import com.keepit.controllers.core.{KeeperInfoLoader, NetworkInfoLoader}
 import com.keepit.model._
 import com.keepit.realtime._
 
@@ -54,7 +54,6 @@ class ExtStreamController @Inject() (
   db: Database,
   socialUserInfoRepo: SocialUserInfoRepo,
   userConnectionRepo: UserConnectionRepo,
-  socialConnectionRepo: SocialConnectionRepo,
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   experimentRepo: UserExperimentRepo,
@@ -65,6 +64,7 @@ class ExtStreamController @Inject() (
   userNotificationRepo: UserNotificationRepo,
   EventPersister: EventPersister,
   keeperInfoLoader: KeeperInfoLoader,
+  networkInfoLoader: NetworkInfoLoader,
   sliderRuleRepo: SliderRuleRepo,
   urlPatternRepo: URLPatternRepo,
   commentRepo: CommentRepo,
@@ -224,7 +224,7 @@ class ExtStreamController @Inject() (
               channel.push(Json.arr("friends", getFriends(userId)))
             },
             "get_networks" -> { case JsNumber(requestId) +: JsString(friendExtId) +: _ =>
-              channel.push(Json.arr(requestId, getNetworkInfo(userId, ExternalId(friendExtId))))
+              channel.push(Json.arr(requestId, networkInfoLoader.load(userId, ExternalId(friendExtId))))
             },
             "get_thread" -> { case JsString(threadId) +: _ =>
               channel.push(Json.arr("thread", getMessageThread(ExternalId[Comment](threadId)) match { case (nUri, msgs) =>
@@ -306,30 +306,6 @@ class ExtStreamController @Inject() (
       }
     }
   }
-
-  private case class NetworkInfo(profileUrl: Option[String], connected: Boolean)
-  private implicit val writesNetworkInfo = Json.writes[NetworkInfo]
-  private implicit val writesNetworkTypeToNetworkInfo = new Writes[Map[SocialNetworkType, NetworkInfo]] {
-    def writes(o: Map[SocialNetworkType, NetworkInfo]): JsValue =
-      JsObject(o.map { case (network, info) => network.name -> Json.toJson(info) }.toSeq)
-  }
-
-  private def getNetworkInfo(userId: Id[User], friendId: ExternalId[User]): Map[SocialNetworkType, NetworkInfo] =
-    db.readOnly { implicit s =>
-      val mySocialUsers = socialUserInfoRepo.getByUser(userId)
-      for {
-        friend <- userRepo.getOpt(friendId).toSeq
-        su <- socialUserInfoRepo.getByUser(friend.id.get)
-      } yield {
-        su.networkType -> NetworkInfo(
-          profileUrl = su.getProfileUrl,
-          connected = mySocialUsers.exists { mySu =>
-            mySu.networkType == su.networkType &&
-                socialConnectionRepo.getConnectionOpt(su.id.get, mySu.id.get).isDefined
-          }
-        )
-      }
-    }.toMap
 
   private def asyncIteratee(f: JsArray => Unit): Iteratee[JsArray, Unit] = {
     import play.api.libs.iteratee._

@@ -105,7 +105,7 @@ POST    /site/chatter               @com.keepit.controllers.website.CommentContr
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
 GET     /site/user/networks         @com.keepit.controllers.website.UserController.socialNetworkInfo()
-
+GET     /site/user/:id/networks     @com.keepit.controllers.website.UserController.friendNetworkInfo(id: ExternalId[User])
 GET     /site/user/connections      @com.keepit.controllers.website.UserController.connections()
 GET     /site/user/all-connections  @com.keepit.controllers.website.UserController.getAllConnections()
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
