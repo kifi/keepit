@@ -824,7 +824,7 @@ $(function() {
 		var $keeps = $allKeeps.filter(function() {return keepIds.indexOf($(this).data("id")) >= 0});
 		var $keepColl = $keeps.find(".keep-coll[data-id=" + collId + "]");
 		$keepColl.css("width", $keepColl[0].offsetWidth).layout().on("transitionend", removeIfThis).addClass("removed");
-		if ($keeps.is(".selected") && !$allKeeps.filter(".selected").not($keeps).has(".keep-coll[data-id=" +  + "]").length) {
+		if ($keeps.is(".detailed") && !$allKeeps.filter(".detailed").not($keeps).has(".keep-coll[data-id=" + collId + "]").length) {
 			// there are no other selected keeps in the collection, so must remove collection from detail pane
 			var $pageColl = $detail.find(".page-coll[data-id=" + collId + "]");
 			$pageColl.css("width", $pageColl[0].offsetWidth).layout().on("transitionend", removeIfThis).addClass("removed");
