@@ -41,13 +41,13 @@ class TopicUpdater @Inject() (
       case _ => {
         log.warn("ZK returns unuseable flag. Defaulting to model A.")
         modelAccessor.setCurrentFlag(TopicModelAccessorFlag.A)     // throw healthCheck?
-        centralConfig.update(flagKey, TopicModelAccessorFlag.A)
+        centralConfig(flagKey) = TopicModelAccessorFlag.A
       }
     }
 
     centralConfig.onChange(flagKey){ flagOpt =>
       log.info("topic model flag changed. refreshing inactive model")
-      if ( flagOpt != None && (flagOpt.get != modelAccessor.getCurrentFlag)) {
+      if ( flagOpt.isDefined && (flagOpt.get != modelAccessor.getCurrentFlag)) {
         refreshInactiveModel()
         modelAccessor.switchAccessor()    // changes internal flag
       }
