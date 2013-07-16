@@ -3,7 +3,8 @@ package com.keepit.common.zookeeper
 import com.keepit.common.strings.{fromByteArray, toByteArray}
 import com.google.inject.{Inject, Singleton}
 import org.apache.zookeeper.{CreateMode, KeeperException}
-
+import scala.concurrent.future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 // //Sample Usage****************************************
 //
@@ -83,7 +84,7 @@ class ZkConfigStore(zk: ZooKeeperClient) extends ConfigStore{
   }
 
   def watch(key: CentralConfigKey)(handler: Option[String] => Unit) : Unit = {
-    zk.watchNode(key.toNode, byteArrayOption => handler(byteArrayOption.map(fromByteArray(_))))
+    zk.watchNode(key.toNode, byteArrayOption => future{handler(byteArrayOption.map(fromByteArray(_)))})
   }
 
 }
