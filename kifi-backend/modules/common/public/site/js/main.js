@@ -10,6 +10,7 @@ var urlMyKeepsCount = urlKeeps + '/count';
 var urlUser = urlSite + '/user';
 var urlMe = urlUser + '/me';
 var urlMyPrefs = urlUser + '/prefs';
+var urlChatter = urlSite + '/chatter';
 var urlCollections = urlSite + '/collections';
 var urlCollectionsAll = urlCollections + '/all';
 var urlCollectionsOrder = urlCollections + '/ordering';
@@ -233,7 +234,7 @@ $(function() {
 				detailTmpl.render(o);
 				$('.page-who-pics').append($detailed.find(".keep-who>img").clone());
 				$('.page-who-text').html($detailed.find(".keep-who-text").html());
-				var $pic = $('.page-pic');
+				var $pic = $('.page-pic'), $chatter = $('.page-chatter');
 				$.ajax({
 					url: urlScreenshot,
 					type: 'POST',
@@ -245,6 +246,16 @@ $(function() {
 					},
 					error: function() {
 						$pic.find('.page-pic-soon').show();
+					}});
+				$.ajax({
+					url: urlChatter,
+					type: 'POST',
+					dataType: 'json',
+					data: JSON.stringify({url: o.url}),
+					contentType: 'application/json',
+					success: function(data) {
+						$chatter.find('.page-chatter-messages').attr('data-n', data.conversations || 0);
+						$chatter.find('.page-chatter-comments').attr('data-n', data.comments || 0);
 					}});
 			} else { // multiple keeps
 				var collCounts = collIds.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
@@ -824,7 +835,7 @@ $(function() {
 		var $keeps = $allKeeps.filter(function() {return keepIds.indexOf($(this).data("id")) >= 0});
 		var $keepColl = $keeps.find(".keep-coll[data-id=" + collId + "]");
 		$keepColl.css("width", $keepColl[0].offsetWidth).layout().on("transitionend", removeIfThis).addClass("removed");
-		if ($keeps.is(".selected") && !$allKeeps.filter(".selected").not($keeps).has(".keep-coll[data-id=" +  + "]").length) {
+		if ($keeps.is(".detailed") && !$allKeeps.filter(".detailed").not($keeps).has(".keep-coll[data-id=" + collId + "]").length) {
 			// there are no other selected keeps in the collection, so must remove collection from detail pane
 			var $pageColl = $detail.find(".page-coll[data-id=" + collId + "]");
 			$pageColl.css("width", $pageColl[0].offsetWidth).layout().on("transitionend", removeIfThis).addClass("removed");
