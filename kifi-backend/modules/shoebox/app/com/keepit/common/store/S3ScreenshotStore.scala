@@ -67,7 +67,7 @@ class S3ScreenshotStoreImpl @Inject() (
     
   def screenshotUrl(url: String): String = screenshotUrl(screenshotConfig.imageCode, code, url)
   def screenshotUrl(sizeName: String, code: String, url: String): String =
-    s"http://api.pagepeeker.com/v2/thumbs.php?size=$sizeName&code=$code&url=${URLEncoder.encode(url, UTF8)}&wait=30&refresh=1"
+    s"http://api.pagepeeker.com/v2/thumbs.php?size=$sizeName&code=$code&url=${URLEncoder.encode(url, UTF8)}&wait=60&refresh=1"
   
   def urlByExternalId(extNormalizedURIId: ExternalId[NormalizedURI], protocolDefault: Option[String] = None): String = {
     val uri = URI.parse(s"${config.cdnBase}/${keyByExternalId(extNormalizedURIId, linkedSize)}").get
@@ -98,7 +98,7 @@ class S3ScreenshotStoreImpl @Inject() (
     val resized = Try { Scalr.resize(rawImage, Math.max(size.height, size.width)) }
     val os = new ByteArrayOutputStream()
     ImageIO.write(resized.getOrElse(rawImage), "jpeg", os)
-    
+
     (os.size(), new ByteArrayInputStream(os.toByteArray()))
   }
 
@@ -142,11 +142,17 @@ class S3ScreenshotStoreImpl @Inject() (
                   Some(s3obj)
                 case Failure(ex) =>
                   Statsd.increment(s"screenshot.fetch.fails")
-                  healthcheckPlugin.addError(HealthcheckError(
-                    error = Some(ex),
-                    callType = Healthcheck.INTERNAL,
-                    errorMessage = Some(s"Problem resizing screenshot image from $url")
-                  ))
+                  ex match {
+                    case e: java.lang.IllegalArgumentException =>
+                      // This happens when the image stream is null, coming from javax.imageio.ImageIO
+                      log.warn(s"null image for $url. Will retry later.")
+                    case _ =>
+                      healthcheckPlugin.addError(HealthcheckError(
+                        error = Some(ex),
+                        callType = Healthcheck.INTERNAL,
+                        errorMessage = Some(s"Problem resizing screenshot image from $url. ")
+                      ))
+                  }
                   None
               }
             }
@@ -159,7 +165,8 @@ class S3ScreenshotStoreImpl @Inject() (
       future onComplete {
         case Success(result) =>
           result.map { s =>
-            if(s.forall(_.isDefined)) { // if all images persisted successfully
+            if(s.exists(_.isDefined)) { // *an* image persisted successfully
+              // todo(andrew): create Screenshot model, track what sizes we have and when they were captured
               db.readWrite { implicit s =>
                 normUriRepo.save(normalizedUri.copy(screenshotUpdatedAt = Some(clock.now)))
               }

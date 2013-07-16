@@ -211,14 +211,17 @@ a.page-url[href]:hover {text-decoration: underline}
 .page-pic-wrap {display: table; table-layout: fixed; width: 100%; position: relative; overflow: hidden}
 .page-pic {display: table-cell; background-color: rgba(0,0,0,.05); background-size: 100% auto; width: 100%; min-height: 135px; padding-top: 47%; cursor:pointer; -moz-box-sizing: border-box; box-sizing: border-box}
 .page-how {display: table-cell; position: relative; vertical-align: middle; text-align: center; white-space: nowrap; width: 0; max-width: 0; -webkit-transition: width .18s, max-width .18s; transition: width .18s, max-width .18s}
-[data-kept] .page-how {width: 48px; max-width: 48px}
+.page-pic-soon {display: none; position: absolute; top: 0; bottom: 0; left: 0; right: 48px}
+.page-pic-soon-1 {display: table; width: 100%; height: 100%}
+.page-pic-soon-2 {display: table-cell; vertical-align: middle; text-align: center; font-size: 16px; font-weight: 300; -webkit-font-smoothing: antialiased}
+[data-kept^="p"] .page-how {width: 48px; max-width: 48px}
 .page-how-0 {position: absolute; top: 0; right: 0; bottom: 0; width: 48px; overflow: hidden}
 .page-how-pub,
 .page-how-pri {position: absolute; top: 0; right: 0; width: 100%; height: 100%; -webkit-transform: scale(.001,1); transform: scale(.001,1); -webkit-transition: -webkit-transform .18s, top .18s; transition: -webkit-transform .18s, transform .18s, top .18s}
 .page-how-pub {background-color: #accc98}
 .page-how-pri {background-color: #e78881}
-[data-kept] .page-how-pub,
-[data-kept] .page-how-pri {-webkit-transform: none; transform: none}
+[data-kept^="p"] .page-how-pub,
+[data-kept^="p"] .page-how-pri {-webkit-transform: none; transform: none}
 .pri>*>.page-how-pub {top: 100%}
 .pub>*>.page-how-pri {top: -100%}
 .page-how-1 {display: table; height: 100%; width: 100%}
@@ -234,32 +237,42 @@ a.page-keep[href]:hover,
 a.page-priv[href]:hover {background-color: #a0b1c2}
 a.page-keep[href]:active,
 a.page-priv[href]:active {background-color: #8699ab}
-[data-kept]>*>.page-keep[href]::before,
+[data-kept^="p"]>*>.page-keep[href]::before,
 .page-priv[href]::before {content: " "; display: inline-block; height: 13px; width: 11px; background: url(../img/keep-icons.png) 0 0/auto 16px content-box; vertical-align: -1px; margin-right: 8px}
 :not([data-kept="pri"])>*>.page-priv[href]::before {width: 10px; background-position: -11px 0; border-left: 2px solid transparent}
 [data-kept="pri"]>*>.page-priv[href]::before {width: 13px; background-position: -21px 0}
 .page-keep::after {content: "Keep"}
-[data-kept]>*>.page-keep::after {content: "Unkeep"}
+[data-kept^="p"]>*>.page-keep::after {content: "Unkeep"}
 .page-priv::after {content: "Keep privately"}
 [data-kept="pub"]>*>.page-priv::after {content: "Make private"}
 [data-kept="pri"]>*>.page-priv::after {content: "Make public"}
-.multiple>*>.page-keep::after {content: "Keep all"}
-.multiple[data-kept]>*>.page-keep::after {content: "Unkeep all"}
-.multiple>*>.page-priv::after {content: "Keep all privately"}
-.multiple[data-kept="pub"]>*>.page-priv::after {content: "Make all private"}
-.multiple[data-kept="pri"]>*>.page-priv::after {content: "Make all public"}
+:not([data-n="1"])>.page-keep::after {content: "Keep all"}
+[data-kept^="p"]>:not([data-n="1"])>.page-keep::after {content: "Unkeep all"}
+:not([data-n="1"])>.page-priv::after {content: "Keep all privately"}
+[data-kept="pub"]>:not([data-n="1"])>.page-priv::after {content: "Make all private"}
+[data-kept="pri"]>:not([data-n="1"])>.page-priv::after {content: "Make all public"}
 .page-who,
-.page-colls {margin: 18px 0 5px; border-top: 1px solid #cdd6e0; padding: 11px 0 20px}
+.page-chatter,
+.page-colls {margin: 18px 0 5px; border-top: 1px solid #cdd6e0; padding: 11px 0 0}
 .page-who-pics {margin: 5px 0 13px; white-space: nowrap; overflow: hidden}
 .page-who-pics>img {width: 38px; height: 38px; margin-right: 1px; border-radius: 2px}
 .page-who-text {font-size: 12px; line-height: 12px}
-:not([data-kept])>*>.page-who-pics>.me,
-:not([data-kept])>*>.page-who-text>.keep-you,
+:not([data-kept^="p"])>*>.page-who-pics>.me,
+:not([data-kept^="p"])>*>.page-who-text>.keep-you,
 .page-who-text>.keep-private {display: none}
-[data-kept]>*>.page-who-text>.keep-friends::before,
-[data-kept]>*>.page-who-text>.keep-others::before,
+[data-kept^="p"]>*>.page-who-text>.keep-friends::before,
+[data-kept^="p"]>*>.page-who-text>.keep-others::before,
 .page-who-text>.keep-friends+.keep-others::before {content: "+ "}
-:not([data-kept])>*>.page-who-text>.keep-you+.keep-kept-this::before {content: "Nobody has "}
+:not([data-kept^="p"])>*>.page-who-text>.keep-you+.keep-kept-this::before {content: "Nobody has "}
+.page-chatter {margin-bottom: -6px}
+.page-chatter>h2 {margin-bottom: 8px}
+.page-chatter-messages,
+.page-chatter-comments {display: inline; font-size: 13px; margin-right: 16px; color: inherit !important}
+.page-chatter-messages::before,
+.page-chatter-comments::before {content: attr(data-n); font-size: 25px; color: #b8c5d2; font-weight: bold; -webkit-font-smoothing: antialiased; vertical-align: -3px; margin-right: 5px}
+.page-chatter-messages:not([data-n="1"])::after,
+.page-chatter-comments:not([data-n="1"])::after {content: "s"}
+.page-colls.some>h2::before {content: "In "}
 .page-coll-list {margin-top: 10px}
 .page-coll-list>li {display: inline-block; line-height: 24px; vertical-align: top}
 .page-coll {position: relative; overflow: hidden; white-space: nowrap; background-color: #b8c5d2; margin: 0 3px 3px 0; font-size: 13px; line-height: 24px; -webkit-font-smoothing: antialiased}
@@ -282,8 +295,8 @@ li:first-child>.page-coll-add {background-color: #b8c5d2}
 li:first-child>.page-coll-add:hover {background-color: #a0b1c2}
 .page-coll-add:active::before,
 li:first-child>.page-coll-add:active {background-color: #8699ab}
-[data-kept]>*>*>*>li:first-child>.page-coll-add::after {content: "Add this keep to a collection"}
-:not([data-kept])>*>*>*>li:first-child>.page-coll-add::after {content: "Keep to a collection"}
+[data-kept^="p"]>*>*>li:first-child>.page-coll-add::after {content: "Add this keep to a collection"}
+:not([data-kept^="p"])>*>*>li:first-child>.page-coll-add::after {content: "Keep to a collection"}
 .page-coll-add::after {vertical-align: bottom; color: #fff; font-size: 13px; margin: 0 14px 0 8px; -webkit-font-smoothing: antialiased}
 .page-coll-sizer {position: absolute; visibility: hidden}
 .page-coll-sizer,
@@ -311,7 +324,7 @@ span.long-text, a.long-text {display: inline-block}
   .keep-colls {background-image: url(../img/folder-icon-small.2x.png)}
   .splash ul>li>a::before {background-image: url(../img/splash.2x.png)}
   .page-how>.page-how-text::before,
-  [data-kept]>*>.page-keep[href]::before,
+  [data-kept^="p"]>*>.page-keep[href]::before,
   .page-meta>.page-priv[href]::before {background-image: url(../img/keep-icons.2x.png)}
 }
 

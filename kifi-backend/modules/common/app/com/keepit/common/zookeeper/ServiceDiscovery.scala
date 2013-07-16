@@ -26,6 +26,7 @@ trait ServiceDiscovery {
   def changeStatus(newStatus: ServiceStatus): Unit
   def forceUpdate(): Unit
   def myStatus: Option[ServiceStatus]
+  def myVersion: ServiceVersion
 }
 
 @Singleton
@@ -127,6 +128,8 @@ class ServiceDiscoveryImpl @Inject() (
       thisServiceInstance.map(_.remoteService.status)
     }
   }
+
+  def myVersion: ServiceVersion = services.currentVersion 
 
   def startSelfCheck(): Unit = future {
     log.info("Running self check")

@@ -2,7 +2,7 @@ package com.keepit.controllers.admin
 
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.zookeeper.{ServiceDiscovery, ServiceInstance, ServiceCluster}
-import com.keepit.common.service.{ServiceType, ServiceStatus}
+import com.keepit.common.service.{ServiceType, ServiceStatus, ServiceVersion}
 import com.keepit.common.amazon.{AmazonInstanceInfo}
 import com.google.inject.{Inject, Singleton}
 import views.html
@@ -10,7 +10,7 @@ import views.html
 
 
 
-case class ClusterMemberInfo(serviceType: ServiceType, zkid: Long, isLeader: Boolean, instanceInfo: AmazonInstanceInfo, state: ServiceStatus, capabilities: List[String])
+case class ClusterMemberInfo(serviceType: ServiceType, zkid: Long, isLeader: Boolean, instanceInfo: AmazonInstanceInfo, state: ServiceStatus, capabilities: List[String], version: ServiceVersion)
 
 
 
@@ -28,7 +28,7 @@ class AdminClusterController @Inject() (
             serviceCluster.allMembers.map { serviceInstance =>
                 var isLeader = serviceCluster.leader.map(_==serviceInstance).getOrElse(false)
                 var testCapabilities = if (serviceType==ServiceType.SEARCH) List("Search", "Find") else List("packaging footwear", "email") //this is just for UI testing and will be removed again soon.
-                ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, serviceInstance.remoteService.status, testCapabilities)
+                ClusterMemberInfo(serviceType, serviceInstance.id, isLeader, serviceInstance.instanceInfo, serviceInstance.remoteService.status, testCapabilities, serviceDiscovery.myVersion)
             }
 
         }

@@ -202,13 +202,20 @@
 	</div>
 	</div>
 
-	<div class="detail">
-		<div class="page-meta">
-			<h2 class="page-title long-text"></h2>
-			<a class="page-url long-text" href="" target="_blank"></a>
+	<div class="detail"><div data-template data-kept="{{howKept}}">
+		<div class="page-meta" data-n="{{numKeeps}}">
+			<h2 class="page-title long-text">{% if numKeeps == 1 %}{{title}}{% else %}{{numKeeps}} keeps selected{% endif %}</h2>
+			{% if numKeeps == 1 %}
+			<a class="page-url long-text" href="{{url}}" target="_blank">{{url}}</a>
 			<div class="page-pic-wrap">
-				<a class="page-pic" target="_blank"></a>
-				<div class="page-how">
+				<a class="page-pic" target="_blank">
+					<div class="page-pic-soon">
+						<div class="page-pic-soon-1">
+							<div class="page-pic-soon-2">Page preview coming soon</div>
+						</div>
+					</div>
+				</a>
+				<div class="page-how {{howKept}}">
 					<div class="page-how-0">
 						<div class="page-how-pub">
 							<div class="page-how-1">
@@ -227,16 +234,24 @@
 					</div>
 				</div>
 			</div>
+			{% endif %}
 			<a class="page-keep" href="javascript:"></a>
 			<a class="page-priv" href="javascript:"></a>
 		</div>
+		{% if numKeeps == 1 %}
 		<div class="page-who">
 			<h2>Who kept this:</h2>
 			<div class="page-who-pics"></div>
 			<div class="page-who-text"></div>
 		</div>
-		<div class="page-colls">
-			<h2></h2>
+		<div class="page-chatter">
+			<h2>Talking about this keep:</h2>
+			<a class="page-chatter-messages" href="{{url}}" target="_blank" data-n="0" data-locator="/messages">Private Conversation</a>
+			<a class="page-chatter-comments" href="{{url}}" target="_blank" data-n="0" data-locator="/comments">Public Comment</a>
+		</div>
+		{% endif %}
+		<div class="page-colls{% if collections.length %} some{% endif %}">
+			<h2>Collections:</h2>
 			<ul class="page-coll-list">
 				<li class="page-coll" data-template data-id="{{id}}">
 					<a class="page-coll-a long-text" href="collection/{{id}}">{{name}}</a><a class="page-coll-x" href="javascript:"></a>
@@ -251,7 +266,7 @@
 				</li>
 			</ul>
 		</div>
-	</div>
+	</div></div>
 
 	</div>
 	</aside>
@@ -264,13 +279,14 @@
 	<script src="js/jquery-ui.min.js"></script>
 	<script src="js/jquery.mousewheel.js"></script>
 	<script src="js/antiscroll.js"></script>
-	<script src="js/tempo.min.js"></script>
+	<script src="js/tempo.js"></script>
 	<script src="js/main.js"></script>
 	<script src="js/fancybox/jquery.fancybox.pack.js" async defer></script>
 	<script>
-		var _gaq = [['_setAccount', 'UA-XXXXX-X'], ['_trackPageview']];
+		var _gaq = [['_setAccount', 'UA-39789396-1'], ['_setDomainName', 'kifi.com'], ['_trackPageview']];
 		!function(d, t) {
 			var g = d.createElement(t), s = d.getElementsByTagName(t)[0];
+			g.async = true;
 			g.src = ('https:' == location.protocol ? '//ssl' : '//www') + '.google-analytics.com/ga.js';
 			s.parentNode.insertBefore(g, s);
 		}(document, 'script');

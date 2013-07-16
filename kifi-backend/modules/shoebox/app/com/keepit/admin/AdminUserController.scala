@@ -56,7 +56,32 @@ class AdminUserController @Inject() (
     keepToCollectionRepo: KeepToCollectionRepo,
     userIndex: UserIndex,
     userNotifier: UserNotifier,
+    emailAddressRepo: EmailAddressRepo,
+    invitationRepo: InvitationRepo,
     clock: Clock) extends AdminController(actionAuthenticator) {
+
+  def merge(fromUserId: Id[User], toUserId: Id[User]) = AdminHtmlAction { implicit request =>
+    // This doesn't do a complete merge. It's designed for cases where someone accidentally creates a new user when
+    // logging in and wants to associate the newly-created user's social users with an existing user
+    db.readWrite { implicit s =>
+      val fromUser = userRepo.get(fromUserId)
+      val toUser = userRepo.get(toUserId)
+      for (email <- emailAddressRepo.getByUser(fromUserId)) {
+        emailRepo.save(email.copy(userId = toUserId))
+      }
+      val socialUsers = socialUserInfoRepo.getByUser(fromUserId)
+      for (su <- socialUsers; invitation <- invitationRepo.getByRecipient(su.id.get)) {
+        invitationRepo.save(invitation.withState(InvitationStates.INACTIVE))
+      }
+      for (su <- socialUsers) {
+        socialUserInfoRepo.save(su.withUser(toUser))
+      }
+      userRepo.save(toUser.withState(UserStates.ACTIVE))
+      userRepo.save(fromUser.withState(UserStates.INACTIVE))
+    }
+
+    Redirect(routes.AdminUserController.userView(toUserId))
+  }
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val (user, socialUserInfos, follows, comments, messages, sentElectronicMails) = db.readOnly { implicit s =>
