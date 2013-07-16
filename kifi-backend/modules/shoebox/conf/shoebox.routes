@@ -189,6 +189,7 @@ GET     /admin/commentIndex/reindex @com.keepit.controllers.admin.AdminCommentIn
 GET     /admin/commentIndex/dumpDoc/:commentId  @com.keepit.controllers.admin.AdminCommentIndexController.dumpLuceneDocument(commentId: Id[Comment])
 
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView
+GET     /admin/users/merge          @com.keepit.controllers.admin.AdminUserController.merge(from: Id[User], to: Id[User])
 GET     /admin/users/page/:page     @com.keepit.controllers.admin.AdminUserController.usersView(page: Int)
 POST    /admin/users/search         @com.keepit.controllers.admin.AdminUserController.searchUsers()
 GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User])
@@ -284,7 +285,7 @@ POST    /admin/learning/saveAddedTopics/:flag         @com.keepit.controllers.ad
 GET     /admin/learning/genTopicModelS3Files/:flag    @com.keepit.controllers.admin.TopicModelController.genModelFiles(flag: String)
 GET     /admin/learning/viewTopicWords/:flag          @com.keepit.controllers.admin.TopicModelController.viewTopicWords(flag: String)
 GET     /admin/learning/topicDetails/:flag/:index     @com.keepit.controllers.admin.TopicModelController.viewTopicDetails(flag: String, index: Int)
-GET     /admin/learning/topic/summary                 @com.keepit.controllers.admin.TopicModelController.summary               
+GET     /admin/learning/topic/summary                 @com.keepit.controllers.admin.TopicModelController.summary
 
 GET     /admin/clusters/overview        @com.keepit.controllers.admin.AdminClusterController.clustersView
 
