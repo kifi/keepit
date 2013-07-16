@@ -31,6 +31,7 @@ class TopicUpdater @Inject() (
   centralConfig: CentralConfig
 ) extends Logging {
 
+  // zookeeper config
   val flagKey = {
     val flagKey = new TopicModelFlagKey()
     val flag = centralConfig(flagKey)
@@ -48,7 +49,7 @@ class TopicUpdater @Inject() (
       log.info("topic model flag changed. refreshing inactive model")
       if ( flagOpt != None && (flagOpt.get != modelAccessor.getCurrentFlag)) {
         refreshInactiveModel()
-        modelAccessor.switchAccessor()
+        modelAccessor.switchAccessor()    // changes internal flag
       }
     }
     flagKey
@@ -112,7 +113,7 @@ class TopicUpdater @Inject() (
         val (m, n) = update(useActive = false)
         if (m.max(n) < fetchSize) catchUp = true
       }
-      modelAccessor.switchAccessor()      // change flag locally
+      modelAccessor.switchAccessor()      // change internal flag
       log.info(s"successfully switched to model ${modelAccessor.getCurrentFlag}")
     }
 
