@@ -4,13 +4,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 import com.google.inject.Inject
+import com.keepit.common.db.State
 import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{NonOKResponseException, HttpClient}
 import com.keepit.model.{SocialUserInfoRepo, SocialUserInfoStates, SocialUserInfo}
+import com.keepit.social.{SocialUserRawInfo, SocialNetworks, SocialId, SocialGraph}
 
 import play.api.libs.json._
-import com.keepit.social.{SocialUserRawInfo, SocialNetworks, SocialId, SocialGraph}
 
 object FacebookSocialGraph {
   val FULL_PROFILE = "name,first_name,middle_name,last_name,gender,username,languages,installed,devices,email,picture"
@@ -18,6 +19,7 @@ object FacebookSocialGraph {
   object ErrorSubcodes {
     val AppNotInstalled = 458
     val Expired = 463
+    val UnconfirmedUser = 464
   }
 }
 
@@ -34,30 +36,33 @@ class FacebookSocialGraph @Inject() (
       fetchJsons(url(socialUserInfo.socialId, getAccessToken(socialUserInfo)))
     } catch {
       case e @ NonOKResponseException(url, response) =>
+        import FacebookSocialGraph.ErrorSubcodes._
+        import SocialUserInfoStates._
+        def fail(msg: String, state: State[SocialUserInfo] = FETCH_FAIL) {
+          log.warn(msg)
+          db.readWrite { implicit s =>
+            socialRepo.save(socialUserInfo.withState(state).withLastGraphRefresh())
+          }
+        }
+
         val errorJson = response.json \ "error"
         val errorCode = (errorJson \ "code").asOpt[Int]
         val errorSub = (errorJson \ "error_subcode").asOpt[Int]
-
         // see https://developers.facebook.com/docs/reference/api/errors/
         // TODO: deal with other errors as we find them and decide on a reasonable action
-        import FacebookSocialGraph.ErrorSubcodes._
         (errorCode, errorSub) match {
           case (_, Some(AppNotInstalled)) =>
-            log.warn(s"App not authorized for social user $socialUserInfo; not fetching connections.")
-            db.readWrite { implicit s =>
-              socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.APP_NOT_AUTHORIZED).withLastGraphRefresh())
-            }
+            fail(s"App not authorized for social user $socialUserInfo; not fetching connections.", APP_NOT_AUTHORIZED)
             Seq()
           case (_, Some(Expired)) =>
-            log.warn(s"Token expired for social user $socialUserInfo; not fetching connections.")
-            db.readWrite { implicit s =>
-              socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())
-            }
+            fail(s"Token expired for social user $socialUserInfo; not fetching connections.")
+            Seq()
+          case (_, Some(UnconfirmedUser)) =>
+            // this happens when a user deactivates their facebook account
+            fail(s"Sessions not allowed for social user $socialUserInfo; not fetching connections.", INACTIVE)
             Seq()
           case _ =>
-            db.readWrite { implicit s =>
-              socialRepo.save(socialUserInfo.withState(SocialUserInfoStates.FETCH_FAIL).withLastGraphRefresh())
-            }
+            fail(s"Error fetching Facebook connections for $socialUserInfo.")
             throw e
         }
     }
