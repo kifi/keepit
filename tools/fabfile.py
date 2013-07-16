@@ -54,7 +54,7 @@ def message_irc(msg):
 def get_last(number=1):
     return os.path.splitext(fapi.run('ls -Art ~/repo/ | tail -n {0} | head -n 1'.format(number)))[0]
 
-@parallel
+@fapi.parallel
 def upload(service_type, jobName='shoebox'):
     fapi.put('/var/lib/jenkins/jobs/{0}/lastSuccessful/archive/kifi-backend/modules/{1}/dist/{1}-*'.format(jobName, service_type), '~/repo')
     
@@ -82,7 +82,24 @@ def start(service_type, number=1):
 
 def rollback(service_type, host, number=1):
     message_irc("Rolling back %s on %s by %s version." % (service_type.upper(), host, number))
-    fapi.execute(restart,service_type, number+1, hosts=[host])    
+    fapi.execute(restart,service_type, number+1, hosts=[host])
+    #move all previous code versions to "rolled_back" dir
+    try:
+        versions = []
+        for i in range(number):
+            versions.append(fapi.execute(get_last, i+2, hosts=[host]))
+        fapi.run("mkdir -p ~/rollback")
+        for version in versions:
+            #delete the zip
+            with fapi.cd("~/repo"):
+                fapi.run("rm %s" % (version+".zip"))
+            #move the folder from ~/run to ~/rollback
+            with fapi.cd("~/run"):
+                fapi.run("mv %s ../rollback" % version)
+    except Exception, e:
+        print "WARNING: Could not move rolled back deploy files:", str(e)
+        message_irc("WARNING: Could not move rolled back deploy files: " + str(e))
+
 
 
 def deploy(service_type, mode="safe", retries="5", do_rollback=True):
@@ -103,7 +120,7 @@ def deploy(service_type, mode="safe", retries="5", do_rollback=True):
         message_irc("Host %s is up." % host) if is_up else message_irc("Host %s is NOT up." % host)
         if mode=="safe" and not is_up:
             #rollback
-            if do_rollback: rollback(service_type, host, 1)
+            if do_rollback: fapi.execute(rollback,service_type, host, 1)
             message_irc("Aborting Deploy! (previous hosts may have new version running)")
             break
     message_irc("----- Deployment Ended")
