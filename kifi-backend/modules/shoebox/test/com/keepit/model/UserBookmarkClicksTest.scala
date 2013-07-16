@@ -19,8 +19,8 @@ class UserBookmarkClicksTest extends Specification with ShoeboxTestInjector{
           db.readWrite { implicit s =>
             val numSelf = userId.id.toInt
             val numOther = N - numSelf
-            (0 until numSelf).foreach{ i => repo.increamentCounts(userId, uriId, isSelf = true) }
-            (0 until numOther).foreach{ i => repo.increamentCounts(userId, uriId, isSelf = false) }
+            (0 until numSelf).foreach{ i => repo.increaseCounts(userId, uriId, isSelf = true) }
+            (0 until numOther).foreach{ i => repo.increaseCounts(userId, uriId, isSelf = false) }
           }
         }
 

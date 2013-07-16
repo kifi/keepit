@@ -10,7 +10,7 @@ import com.google.inject.{Singleton, ImplementedBy, Inject}
 @ImplementedBy(classOf[UserBookmarkClicksRepoImpl])
 trait UserBookmarkClicksRepo extends Repo[UserBookmarkClicks]{
   def getByUserUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[UserBookmarkClicks]
-  def increamentCounts(userId: Id[User], uriId: Id[NormalizedURI], isSelf: Boolean)(implicit session: RWSession): UserBookmarkClicks
+  def increaseCounts(userId: Id[User], uriId: Id[NormalizedURI], isSelf: Boolean)(implicit session: RWSession): UserBookmarkClicks
 }
 
 @Singleton
@@ -33,7 +33,7 @@ class UserBookmarkClicksRepoImpl @Inject()(
     (for( r<- table if (r.userId === userId && r.uriId === uriId) ) yield r).firstOption
   }
 
-  def increamentCounts(userId: Id[User], uriId: Id[NormalizedURI], isSelf: Boolean)(implicit session: RWSession): UserBookmarkClicks = {
+  def increaseCounts(userId: Id[User], uriId: Id[NormalizedURI], isSelf: Boolean)(implicit session: RWSession): UserBookmarkClicks = {
     val old = getByUserUri(userId, uriId)
     old match {
       case Some(record) => {
