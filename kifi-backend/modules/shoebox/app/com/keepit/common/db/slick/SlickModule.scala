@@ -15,8 +15,8 @@ abstract class SlickModule(dbInfo: DbInfo) extends ScalaModule {
   def configure(): Unit = {
     //see http://stackoverflow.com/questions/6271435/guice-and-scala-injection-on-generics-dependencies
     lazy val db = dbInfo.driverName match {
-      case MySQL.driverName     => new MySQL(dbInfo)
-      case H2.driverName        => new H2(dbInfo)
+      case MySQL.driverName     => new MySQL(dbInfo.database)
+      case H2.driverName        => new H2(dbInfo.database)
     }
     bind[Database].in(classOf[Singleton])
     bind[DataBaseComponent].toInstance(db)

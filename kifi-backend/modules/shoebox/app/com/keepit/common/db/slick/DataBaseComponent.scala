@@ -21,13 +21,17 @@ import play.api.Mode.Test
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
 trait DataBaseComponent {
+  // the actual driver implementation by Slick (e.g. H2 & MySQL)
   val Driver: ExtendedDriver
+  // dialect specific for this driver that Slick does not support
   val dialect: DatabaseDialect[_]
-  def dbInfo: DbInfo
-  lazy val handle: SlickDatabase = dbInfo.database
+
+  val handle: SlickDatabase
 
   def getSequence(name: String): DbSequence
 
+  // MySQL and H2 have different preferences on casing the table and column names.
+  // H2 specifically rather have them in upper case
   def entityName(name: String): String = name
 
   def initTable(table: TableWithDDL): Unit = {}
