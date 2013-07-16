@@ -18,8 +18,8 @@ abstract class SlickModule(dbInfo: DbInfo) extends ScalaModule {
       case MySQL.driverName     => new MySQL(dbInfo.database)
       case H2.driverName        => new H2(dbInfo.database)
     }
-    bind[Database].in(classOf[Singleton])
     bind[DataBaseComponent].toInstance(db)
+    bind[Database].in(classOf[Singleton])
   }
 }
 
@@ -37,5 +37,6 @@ case class ShoeboxDbInfo() extends DbInfo {
 case class ShoeboxSlickModule() extends SlickModule(ShoeboxDbInfo()) {
 
   @Provides @Singleton
-  def dbExecutionContextProvider(system: ActorSystem): DbExecutionContext = DbExecutionContext(system.dispatchers.lookup("db-thread-pool-dispatcher"))
+  def dbExecutionContextProvider(system: ActorSystem): DbExecutionContext =
+    DbExecutionContext(system.dispatchers.lookup("db-thread-pool-dispatcher"))
 }
