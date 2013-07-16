@@ -49,7 +49,7 @@ object ApplicationBuild extends Build {
       "org.mindrot" % "jbcrypt" % "0.3m",
       "com.amazonaws" % "aws-java-sdk" % "1.3.20",
       "org.mongodb" %% "casbah" % "2.5.0",
-      "com.typesafe.slick" %% "slick" % "1.0.0",
+      "com.typesafe.slick" %% "slick" % "1.0.1",
       "net.sf.uadetector" % "uadetector-resources" % "2013.02",
       "com.newrelic.agent.java" % "newrelic-agent" % "2.18.0",
       "com.google.inject" % "guice" % "3.0",
@@ -73,7 +73,7 @@ object ApplicationBuild extends Build {
 
     val shoeboxDependencies = Seq(
       "javax.mail" % "mail" % "1.4.5",
-      "com.typesafe.slick" %% "slick-testkit" % "1.0.0",
+      "com.typesafe.slick" %% "slick-testkit" % "1.0.1",
       "mysql" % "mysql-connector-java" % "5.1.25",
       "org.imgscalr" % "imgscalr-lib" % "4.2",
       "org.jsoup" % "jsoup" % "1.7.1"
