@@ -17,9 +17,7 @@ var urlCollectionsOrder = urlCollections + '/ordering';
 var urlCollectionsCreate = urlCollections + '/create';
 var urlScreenshot = urlKeeps + '/screenshot';
 
-$.ajaxSetup({
-	xhrFields: {withCredentials: true},
-	crossDomain: true});
+$.ajaxSetup({cache: true, crossDomain: true, xhrFields: {withCredentials: true}});
 
 $.timeago.settings.localeTitle = true;
 $.extend($.timeago.settings.strings, {
@@ -109,25 +107,34 @@ $(function() {
 	});
 
 	$('.keep-colls,.keep-coll').removeText();
-	var $myKeeps = $("#my-keeps"), $results = $("#search-results"), keepsTmpl = Tempo.prepare($myKeeps).when(TempoEvent.Types.RENDER_COMPLETE, function(ev) {
+	var $myKeeps = $("#my-keeps"), $results = $("#search-results"), keepsTmpl = Tempo.prepare($myKeeps)
+	.when(TempoEvent.Types.ITEM_RENDER_COMPLETE, function(ev) {
+		var $keep = $(ev.element).draggable(draggableKeepOpts);
+		$keep.find(".pic").each(function() {
+			this.style.backgroundImage = "url(" + this.getAttribute("data-pic") + ")";
+			this.removeAttribute("data-pic");
+		});
+		$keep.find("time").timeago();
+	}).when(TempoEvent.Types.RENDER_COMPLETE, function(ev) {
 		$keepSpinner.hide();
 
-		var now = new Date;
-		$(ev.element).find("time").timeago().each(function() {
-			var age = daysBetween(new Date($(this).attr("datetime")), now);
-			if ($myKeeps.find('li.keep-group-title.today').length == 0 && age <= 1) {
-				$(this).closest(".keep").before('<li class="keep-group-title today">Today</li>');
-			} else if ($myKeeps.find('li.keep-group-title.yesterday').length == 0 && age > 1 && age < 2) {
-				$(this).closest(".keep").before('<li class="keep-group-title yesterday">Yesderday</li>');
-			} else if ($myKeeps.find('li.keep-group-title.week').length == 0 && age >= 2 && age <= 7) {
-				$(this).closest(".keep").before('<li class="keep-group-title week">Past Week</li>');
-			} else if ($myKeeps.find('li.keep-group-title.older').length == 0 && age > 7) {
-				$(this).closest(".keep").before('<li class="keep-group-title older">Older</li>');
-				return false;
-			}
-		});
+		if (ev.element === $myKeeps[0]) {
+			var now = new Date;
+			$myKeeps.find("time").each(function() {
+				var age = daysBetween(new Date($(this).attr("datetime")), now);
+				if ($myKeeps.find('li.keep-group-title.today').length == 0 && age <= 1) {
+					$(this).closest(".keep").before('<li class="keep-group-title today">Today</li>');
+				} else if ($myKeeps.find('li.keep-group-title.yesterday').length == 0 && age > 1 && age < 2) {
+					$(this).closest(".keep").before('<li class="keep-group-title yesterday">Yesderday</li>');
+				} else if ($myKeeps.find('li.keep-group-title.week').length == 0 && age >= 2 && age <= 7) {
+					$(this).closest(".keep").before('<li class="keep-group-title week">Past Week</li>');
+				} else if ($myKeeps.find('li.keep-group-title.older').length == 0 && age > 7) {
+					$(this).closest(".keep").before('<li class="keep-group-title older">Older</li>');
+					return false;
+				}
+			});
+		}
 
-		$(ev.element).find(".keep").draggable(draggableKeepOpts);
 		mainScroller.refresh();
 	});
 	var draggableKeepOpts = {
@@ -1028,7 +1035,7 @@ $(function() {
 	$(".send-feedback").click(function() {
 		if (!window.UserVoice) {
 			window.UserVoice = [];
-			$.getScript("//widget.uservoice.com/2g5fkHnTzmxUgCEwjVY13g.js>");
+			$.getScript("//widget.uservoice.com/2g5fkHnTzmxUgCEwjVY13g.js");
 		}
 		UserVoice.push(['showLightbox', 'classic_widget', {
 			mode: 'full',
@@ -1064,4 +1071,24 @@ $(function() {
 	// auto-update my keeps every minute
 	setInterval(addNewKeeps, 60000);
 	setInterval(updateNumKeeps, 60000);
+
+	// bind hover behavior later to avoid slowing down page load
+	var friendCardTmpl = Tempo.prepare('fr-card-template'); $('#fr-card-template').remove();
+	$.getScript('js/jquery-bindhover.js').done(function() {
+		$main.bindHover(".pic.friend", function(configureHover) {
+			var $a = $(this), id = $a.data('id');
+      friendCardTmpl.into(this).render({
+				name: $a.data('name'),
+				picUri: formatPicUrl(id, $a.css('background-image').match(/\/([^\/]*)['"]?\)$/)[1], 200)});
+      var $el = $a.children();
+      configureHover($el, {canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
+      $.getJSON(urlUser + '/' + id + '/networks', function(networks) {
+        for (nw in networks) {
+          $el.find('.fr-card-nw-' + nw)
+            .toggleClass('on', networks[nw].connected)
+            .attr('href', networks[nw].profileUrl || null);
+        }
+      });
+		});
+	});
 });
