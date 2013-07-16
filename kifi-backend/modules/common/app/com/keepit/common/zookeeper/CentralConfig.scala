@@ -67,13 +67,11 @@ class ZkConfigStore(zk: ZooKeeperClient) extends ConfigStore{
   def set(key: CentralConfigKey, value: String): Unit = {
     try{
       zk.set(key.toNode, value)
-    }
-    catch {
+    } catch {
       case e: KeeperException.NoNodeException => {
         try {
           zk.create(key.toNode.asPath,value,CreateMode.PERSISTENT)
-        }
-        catch{
+        } catch {
           case e: KeeperException.NoNodeException => {
             val parentPath = key.toNode.toString.split("/").tail.dropRight(1).foldLeft("")((xs,x) => xs +"/"+x)
             zk.createPath(Path(parentPath))
