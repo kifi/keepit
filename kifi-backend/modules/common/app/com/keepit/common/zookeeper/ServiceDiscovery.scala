@@ -92,8 +92,7 @@ class ServiceDiscoveryImpl @Inject() (
     scheduler.scheduleOnce(2 minutes){
       if (stillRegistered) {
         keepAlive()
-      }
-      else{
+      } else {
         log.warn("Zookeeper seems to have lost me! Re-registering.")
         register()
       }
