@@ -108,7 +108,7 @@ $(function() {
 		}
 	});
 
-	$('.keep-colls').removeText();
+	$('.keep-colls,.keep-coll').removeText();
 	var $myKeeps = $("#my-keeps"), $results = $("#search-results"), keepsTmpl = Tempo.prepare($myKeeps).when(TempoEvent.Types.RENDER_COMPLETE, function(ev) {
 		$keepSpinner.hide();
 
