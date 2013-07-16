@@ -30,25 +30,25 @@ trait CentralConfigKey {
   val namespace: String
   def key: String
 
-  override def toString: String
+  def fullKey: String
 
   val rootPath = "/fortytwo/config"
-  def toNode : Node = Node(rootPath + "/" + toString)
+  def toNode : Node = Node(rootPath + "/" + fullKey)
 }
 
 
 
 trait BooleanCentralConfigKey extends CentralConfigKey {
-  override def toString: String = s"${namespace}/${key}.bool"
+  override def fullKey: String = s"${namespace}/${key}.bool"
 }
 trait LongCentralConfigKey extends CentralConfigKey {
-  override def toString: String = s"${namespace}/${key}.long"
+  override def fullKey: String = s"${namespace}/${key}.long"
 }
 trait DoubleCentralConfigKey extends CentralConfigKey {
-  override def toString: String = s"${namespace}/${key}.double"
+  override def fullKey: String = s"${namespace}/${key}.double"
 }
 trait StringCentralConfigKey extends CentralConfigKey {
-  override def toString: String = s"${namespace}/${key}.string"
+  override def fullKey: String = s"${namespace}/${key}.string"
 }
 
 
@@ -73,7 +73,7 @@ class ZkConfigStore(zk: ZooKeeperClient) extends ConfigStore{
           zk.create(key.toNode.asPath,value,CreateMode.PERSISTENT)
         } catch {
           case e: KeeperException.NoNodeException => {
-            val parentPath = key.toNode.toString.split("/").tail.dropRight(1).foldLeft("")((xs,x) => xs +"/"+x)
+            val parentPath = key.toNode.name.split("/").tail.dropRight(1).foldLeft("")((xs,x) => xs +"/"+x)
             zk.createPath(Path(parentPath))
             zk.create(key.toNode.asPath,value,CreateMode.PERSISTENT)
           }
@@ -94,15 +94,20 @@ class InMemoryConfigStore extends ConfigStore {
   val db : SynchronizedMap[String, String] = new HashMap[String, String]() with SynchronizedMap[String, String]
   val watches : HashMap[String, ArrayBuffer[Option[String] => Unit]] = new HashMap[String, ArrayBuffer[Option[String] => Unit]]() with SynchronizedMap[String, ArrayBuffer[Option[String] => Unit]]
 
-  def get(key: CentralConfigKey): Option[String] = db.get(key.toNode.toString) 
+  def get(key: CentralConfigKey): Option[String] = db.get(key.toNode.name) 
   
 
   def set(key: CentralConfigKey, value: String) : Unit = {
-    db(key.toNode.toString) = value
-    watches(key.toNode.toString).foreach(_(Some(value)))
+    db(key.toNode.name) = value
+    watches.get(key.toNode.name).foreach{ funs =>
+      funs.foreach(_(Some(value)))
+    }
   }
 
-  def watch(key: CentralConfigKey)(handler: Option[String] => Unit) : Unit = watches(key.toNode.toString) += handler
+  def watch(key: CentralConfigKey)(handler: Option[String] => Unit) : Unit = {
+    if (!watches.isDefinedAt(key.toNode.name)) watches(key.toNode.name) = new ArrayBuffer[Option[String] => Unit]()
+    watches(key.toNode.name) += handler
+  }
 
 
 }
