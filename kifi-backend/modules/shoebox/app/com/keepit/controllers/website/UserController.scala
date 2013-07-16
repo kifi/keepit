@@ -3,7 +3,9 @@ package com.keepit.controllers.website
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.slick._
+import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.social.BasicUserRepo
+import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.model._
 import com.keepit.realtime.{DeviceType, UrbanAirship}
 
@@ -19,6 +21,7 @@ class UserController @Inject() (db: Database,
   socialConnectionRepo: SocialConnectionRepo,
   socialUserRepo: SocialUserInfoRepo,
   invitationRepo: InvitationRepo,
+  networkInfoLoader: NetworkInfoLoader,
   actionAuthenticator: ActionAuthenticator,
   urbanAirship: UrbanAirship)
     extends WebsiteController(actionAuthenticator) {
@@ -55,6 +58,10 @@ class UserController @Inject() (db: Database,
     Ok(Json.toJson(db.readOnly { implicit s =>
       socialUserRepo.getByUser(request.userId).map(BasicSocialUser from _)
     }))
+  }
+
+  def friendNetworkInfo(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+    Ok(Json.toJson(networkInfoLoader.load(request.userId, id)))
   }
 
   def currentUser = AuthenticatedJsonAction(true) { implicit request => getUserInfo(request) }
