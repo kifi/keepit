@@ -49,7 +49,7 @@
   @for((topic, i) <- topics.zipWithIndex) {
     <tr>
       <td><a href = "@com.keepit.controllers.admin.routes.TopicModelController.viewTopicDetails(flag, i + 1 + page*maxPageSize)"> @{i + 1 + page*maxPageSize} </a></td>
-      <td> @topic.topicName </td>
+      <td><a href = "@com.keepit.controllers.admin.routes.TopicModelController.viewTopicDetails(flag, i + 1 + page*maxPageSize)"> @topic.topicName </a></td>
     </tr>
   }
   </table>

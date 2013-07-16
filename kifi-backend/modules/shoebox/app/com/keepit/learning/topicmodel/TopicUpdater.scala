@@ -14,6 +14,9 @@ import scala.collection.mutable.{Map => MutMap}
 import com.google.inject.Singleton
 import scala.concurrent._
 import ExecutionContext.Implicits.global
+import com.keepit.common.zookeeper.CentralConfigKey
+import com.keepit.common.zookeeper.StringCentralConfigKey
+import com.keepit.common.zookeeper.CentralConfig
 
 
 
@@ -24,8 +27,33 @@ class TopicUpdater @Inject() (
   bookmarkRepo: BookmarkRepo,
   articleStore: ArticleStore,
   modelAccessor: SwitchableTopicModelAccessor,
-  modelFactory: TopicModelAccessorFactory
+  modelFactory: TopicModelAccessorFactory,
+  centralConfig: CentralConfig
 ) extends Logging {
+
+  // zookeeper config
+  val flagKey = {
+    val flagKey = new TopicModelFlagKey()
+    val flag = centralConfig(flagKey)
+    flag match {
+      case Some(TopicModelAccessorFlag.A) => modelAccessor.setCurrentFlag(TopicModelAccessorFlag.A)
+      case Some(TopicModelAccessorFlag.B) => modelAccessor.setCurrentFlag(TopicModelAccessorFlag.B)
+      case _ => {
+        log.warn("ZK returns unuseable flag. Defaulting to model A.")
+        modelAccessor.setCurrentFlag(TopicModelAccessorFlag.A)     // throw healthCheck?
+        centralConfig(flagKey) = TopicModelAccessorFlag.A
+      }
+    }
+
+    centralConfig.onChange(flagKey){ flagOpt =>
+      log.info("topic model flag changed. refreshing inactive model")
+      if ( flagOpt.isDefined && (flagOpt.get != modelAccessor.getCurrentFlag)) {
+        refreshInactiveModel()
+        modelAccessor.switchAccessor()    // changes internal flag
+      }
+    }
+    flagKey
+  }
 
   def getAccessor(useActive: Boolean) = if (useActive) modelAccessor.getActiveAccessor else modelAccessor.getInactiveAccessor
   val commitBatchSize = 100
@@ -85,13 +113,14 @@ class TopicUpdater @Inject() (
         val (m, n) = update(useActive = false)
         if (m.max(n) < fetchSize) catchUp = true
       }
-      modelAccessor.switchAccessor()
+      modelAccessor.switchAccessor()      // change internal flag
       log.info(s"successfully switched to model ${modelAccessor.getCurrentFlag}")
     }
 
     log.info(s"TopicUpdater: start remodelling ... ")
     refreshInactiveModel()
     afterRefresh()
+    centralConfig.update(flagKey, modelAccessor.getCurrentFlag)     // update flag to zookeeper
   }
 
   private def updateUriTopic(seqNum: SequenceNumber, useActive: Boolean): Int = {
@@ -273,3 +302,12 @@ class TopicUpdater @Inject() (
   }
 
 }
+
+
+trait TopicModelConfigKey extends CentralConfigKey {
+  val name: String
+  val namespace = "topic_model"
+  def key: String = name
+}
+
+case class TopicModelFlagKey(val name: String = "topic_model_flag") extends StringCentralConfigKey with TopicModelConfigKey

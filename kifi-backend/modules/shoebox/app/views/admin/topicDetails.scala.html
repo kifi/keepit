@@ -20,7 +20,7 @@
     
     @for((uriId, content) <- randArticles){
      <tr>
-      <td> @uriId.id </td>
+      <td><a href="@com.keepit.controllers.admin.routes.ScraperController.getScraped(uriId)"> @uriId.id </td>
       <td><pre> @content </pre></td>
      </tr> 
     }
