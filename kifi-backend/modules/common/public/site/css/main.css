@@ -130,11 +130,12 @@ input.query::-moz-placeholder {color: #99a3b3}
 .keep-colls {margin-right: 10px; border: solid transparent; border-width: 7px 0; background: url(../img/folder-icon-small.png) 0 0/13px 11px no-repeat; padding-left: 15px; font-size: 12px; line-height: 14px; overflow: hidden}
 @-moz-document url-prefix() {.keep-colls {background-position: 0 1px}}
 .keep-colls:empty {border-bottom-width: 0}
-.keep-coll {display: inline-block; position: relative; overflow: hidden; white-space: nowrap; border-right: 1px solid #99a3b3; box-sizing: border-box; -moz-box-sizing: border-box}
-.keep-coll:last-of-type {border-right: none}
+.keep-colls:not(:empty)::before {content: " "; display: inline-block; padding-left: 3px; border-style: solid; border-color: transparent #0089D5; border-width: 4px 4px 4px 0; vertical-align: 1px}
+.keep-coll {display: inline-block; position: relative; overflow: hidden; white-space: nowrap}
+.keep-coll:not(:last-of-type)::after {content: " "; display: inline-block; font-size: 0; border-right: 1px solid #99a3b3; height: 9px}
 .keep-coll.removed {width: 0 !important; -webkit-transition: width .12s ease-in-out; transition: width .12s ease-in-out}
 .keep-coll>a[href] {-webkit-font-smoothing: antialiased}
-.keep-coll-a {padding: 0 6px}
+.keep-coll-a {padding: 0 5px}
 .keep-coll-a:hover {text-decoration: underline}
 .keep-coll-x {display: none; position: absolute; top: 0; bottom: 0; right: 0; width: 0; text-align: center}
 .keep-coll:hover>.keep-coll-x {width: 10px}
