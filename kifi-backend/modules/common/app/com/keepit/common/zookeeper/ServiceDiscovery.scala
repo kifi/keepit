@@ -7,8 +7,12 @@ import com.keepit.common.amazon._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
+import scala.concurrent.duration._
 import scala.collection.concurrent.TrieMap
 import scala.util.{Try, Success, Failure}
+import scala.annotation.tailrec
+
+import akka.actor.Scheduler
 
 import play.api.libs.json._
 
@@ -34,6 +38,7 @@ class ServiceDiscoveryImpl @Inject() (
     zk: ZooKeeperClient,
     services: FortyTwoServices,
     amazonInstanceInfoProvider: Provider[AmazonInstanceInfo],
+    scheduler: Scheduler,
     servicesToListenOn: Seq[ServiceType] = ServiceType.SEARCH :: ServiceType.SHOEBOX :: Nil)
   extends ServiceDiscovery with Logging {
 
@@ -78,6 +83,23 @@ class ServiceDiscoveryImpl @Inject() (
 
   override def myClusterSize: Int = clusters.get(services.currentService) map {c => c.size} getOrElse 0
 
+  private def stillRegistered(): Boolean = myNode.map{ node =>
+    clusters(services.currentService).instanceForNode(node).map(_ => true).getOrElse(false)
+  }.getOrElse(true)
+
+
+  private def keepAlive() : Unit = {
+    scheduler.scheduleOnce(2 minutes){
+      if (stillRegistered) {
+        keepAlive()
+      }
+      else{
+        register()
+        log.warn("Zookeeper seems to have lost me! Re-registering.")
+      }
+    }
+  }
+
   private def watchServices(): Unit = clusters.values foreach watchService
 
   private def watchService(cluster: ServiceCluster): Unit = {
@@ -95,9 +117,10 @@ class ServiceDiscoveryImpl @Inject() (
     }
   }
 
+
+
   def register(): Node = {
     watchServices()
-
     val myServiceType: ServiceType = services.currentService
     log.info(s"registered clusters: $clusters, my service is $myServiceType")
     val myCluster = clusters(myServiceType)
@@ -106,6 +129,7 @@ class ServiceDiscoveryImpl @Inject() (
     myNode = Some(zk.createNode(myCluster.serviceNodeMaster, RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL))
     myCluster.register(myNode.get, thisRemoteService)
     log.info(s"registered as node ${myNode.get}")
+    keepAlive()
     myNode.get
   }
 
@@ -132,6 +156,7 @@ class ServiceDiscoveryImpl @Inject() (
   def myVersion: ServiceVersion = services.currentVersion 
 
   def startSelfCheck(): Unit = future {
+
     log.info("Running self check")
     services.currentService.selfCheck().onComplete{
       case Success(passed) => if (passed) changeStatus(ServiceStatus.UP) else changeStatus(ServiceStatus.SELFCHECK_FAIL)
