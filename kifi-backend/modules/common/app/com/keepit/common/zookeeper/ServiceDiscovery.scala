@@ -83,9 +83,7 @@ class ServiceDiscoveryImpl @Inject() (
 
   override def myClusterSize: Int = clusters.get(services.currentService) map {c => c.size} getOrElse 0
 
-  private def stillRegistered(): Boolean = myNode.map{ node =>
-    clusters(services.currentService).instanceForNode(node).map(_ => true).getOrElse(false)
-  }.getOrElse(true)
+  private def stillRegistered(): Boolean = myNode map { clusters(services.currentService).instanceForNode(_).isDefined } getOrElse true
 
 
   private def keepAlive() : Unit = {
