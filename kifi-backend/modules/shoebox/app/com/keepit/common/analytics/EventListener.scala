@@ -116,6 +116,7 @@ class ResultClickedListener @Inject() (
   searchServiceClient: SearchServiceClient,
   db: Database,
   bookmarkRepo: BookmarkRepo,
+  userBookmarkClicksRepo: UserBookmarkClicksRepo,
   clickHistoryTracker: ClickHistoryTracker)
   extends EventListener(userRepo, normalizedURIRepo) {
 
@@ -134,6 +135,11 @@ class ResultClickedListener @Inject() (
       }.foreach { n =>
         searchServiceClient.logResultClicked(user.id.get, meta.query, n.id.get, meta.rank, !bookmark.isEmpty)
         clickHistoryTracker.add(user.id.get, n.id.get)
+        if (bookmark.isDefined && user.id.isDefined){
+          db.readWrite{ implicit s =>
+            userBookmarkClicksRepo.increaseCounts(bookmark.get.userId, bookmark.get.uriId, bookmark.get.userId == user.id.get)
+          }
+        }
       }
   }
 }
