@@ -176,7 +176,7 @@ nav>a[href]:hover {background-color: #a0b1c2}
 nav>a[href]:active {background-color: #8699ab}
 
 .splash,
-.detail {position: absolute; top: 70px; left: 0; right: 0; bottom: 0; overflow: hidden}
+.detail {position: absolute; top: 70px; left: 0; right: 0; bottom: 0}
 .right-col>*>*>.antiscroll-inner {position: absolute; top: 0; bottom: 0; left: 0; right: 0; overflow-x: hidden; overflow-y: scroll}
 
 .splash {background-color: #fff; border-left: 1px solid #dbdee3}
@@ -249,8 +249,11 @@ a.page-priv[href]:active {background-color: #8699ab}
 .page-who,
 .page-chatter,
 .page-colls {margin: 18px 0 5px; border-top: 1px solid #cdd6e0; padding: 11px 0 0}
-.page-who-pics {margin: 5px 0 13px; white-space: nowrap; overflow: hidden}
-.page-who-pics>img {width: 38px; height: 38px; margin-right: 1px; border-radius: 2px}
+.page-who-pics {margin: 5px 0 13px; white-space: nowrap}
+.page-who-pics>.pic {display: inline-block; width: 38px; height: 38px; background-size: 100%; border-radius: 2px; margin-right: 1px; position: relative}
+.page-who-pics>.pic>.fr-card {bottom: 51px; left: -22px; z-index: 2}
+.page-who-pics>.pic>.fr-card::before,
+.page-who-pics>.pic>.fr-card::after {left: 33px}
 .page-who-text {font-size: 12px; line-height: 12px}
 :not([data-kept^="p"])>*>.page-who-pics>.me,
 :not([data-kept^="p"])>*>.page-who-text>.keep-you,

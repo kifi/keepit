@@ -239,7 +239,7 @@ $(function() {
 				o.url = $keepLink[0].href;
 				o.collections = collIds.map(collIdAndName);
 				detailTmpl.render(o);
-				$('.page-who-pics').append($detailed.find(".keep-who>img").clone());
+				$('.page-who-pics').append($detailed.find(".keep-who>.pic").clone());
 				$('.page-who-text').html($detailed.find(".keep-who-text").html());
 				var $pic = $('.page-pic'), $chatter = $('.page-chatter');
 				$.ajax({
@@ -1075,7 +1075,7 @@ $(function() {
 	// bind hover behavior later to avoid slowing down page load
 	var friendCardTmpl = Tempo.prepare('fr-card-template'); $('#fr-card-template').remove();
 	$.getScript('js/jquery-bindhover.js').done(function() {
-		$main.bindHover(".pic.friend", function(configureHover) {
+		$(document).bindHover(".pic.friend", function(configureHover) {
 			var $a = $(this), id = $a.data('id');
       friendCardTmpl.into(this).render({
 				name: $a.data('name'),
