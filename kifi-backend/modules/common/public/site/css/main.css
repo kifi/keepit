@@ -197,8 +197,10 @@ nav>a[href]:active {background-color: #8699ab}
 
 .detail {display: none; padding: 20px 20px 0; background: #eff2f7; color: #556179; -webkit-transition: -webkit-transform .2s; transition: -webkit-transform .2s, transform .2s}
 .detail h2 {color: inherit; font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased}
-/*.detail select {padding: 5px}*/
-/*.detail a {color: #556179; display: block}*/
+a.page-x[href] {position: absolute; top: 8px; right: 16px; width: 17px; height: 17px; border-radius: 50%; color: #b8c5d2; font-size: 16px; text-align: center}
+a.page-x[href]:hover {background-color: #a0b1c2; color: #fff}
+a.page-x[href]:active {background-color: #8699ab; color: #fff}
+.page-x::before {content: "\00d7"; position: relative; top: -2px}
 .page-meta {font-size: 0}
 a.page-url[href] {font-size: 12px; line-height: 20px; color: inherit; -webkit-font-smoothing: antialiased; max-width: 100%; margin-bottom: 12px}
 a.page-url[href]:hover {text-decoration: underline}

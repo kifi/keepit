@@ -855,9 +855,9 @@ $(function() {
 		}
 	}
 
-	// keep / unkeep
 	var hideAddCollTimeout;
-	$detail.on("click", '.page-keep,.page-priv', function(e) {
+	$detail.on('click', '.page-x', hideDetails)
+	.on("click", '.page-keep,.page-priv', function(e) {
 		var $keeps = $main.find(".keep.detailed");
 		var $a = $(this), howKept = $detail.children().attr("data-kept");
 		if (!howKept) {  // keep
