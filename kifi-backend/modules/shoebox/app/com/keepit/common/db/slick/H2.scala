@@ -35,6 +35,10 @@ class H2(val handle: SlickDatabase)
     }
   }
 
+  /**
+   * The toUpperCase is per an H2 "bug?"
+   * http://stackoverflow.com/a/8722814/81698
+   */
   override def entityName(name: String): String = name.toUpperCase()
 
   private def initSequence(sequence: String) {
