@@ -6,6 +6,7 @@ import com.keepit.common.plugin.{SchedulingProperties, SchedulingEnabled}
 import com.keepit.inject.AppScoped
 import play.api.Play.current
 import akka.testkit.TestKit
+import scala.concurrent.future
 
 case class TestActorSystemModule(systemOption: Option[ActorSystem] = None) extends ActorSystemModule {
 
@@ -40,6 +41,7 @@ case class StandaloneTestActorSystemModule(system: ActorSystem = ActorSystem("te
 }
 
 class FakeScheduler extends Scheduler {
+
   private def fakeCancellable = new Cancellable() {
     def cancel(): Unit = {}
     def isCancelled = false
@@ -48,10 +50,17 @@ class FakeScheduler extends Scheduler {
     f
     fakeCancellable
   }
+
   def schedule(initialDelay: scala.concurrent.duration.FiniteDuration, interval: scala.concurrent.duration.FiniteDuration, runnable: Runnable)(implicit executor: scala.concurrent.ExecutionContext): Cancellable = fakeCancellable
   def schedule(initialDelay: scala.concurrent.duration.FiniteDuration,interval: scala.concurrent.duration.FiniteDuration)(f: => Unit)(implicit executor: scala.concurrent.ExecutionContext): akka.actor.Cancellable = immediateExecutor(f)
   def schedule(initialDelay: scala.concurrent.duration.FiniteDuration,interval: scala.concurrent.duration.FiniteDuration,receiver: akka.actor.ActorRef,message: Any)(implicit executor: scala.concurrent.ExecutionContext): akka.actor.Cancellable = fakeCancellable
-  def scheduleOnce(delay: scala.concurrent.duration.FiniteDuration)(f: => Unit)(implicit executor: scala.concurrent.ExecutionContext): akka.actor.Cancellable = immediateExecutor(f)
+  def scheduleOnce(delay: scala.concurrent.duration.FiniteDuration)(f: => Unit)(implicit executor: scala.concurrent.ExecutionContext): akka.actor.Cancellable = {
+    future {
+      Thread.sleep(delay.toMillis)
+      f
+    }
+    fakeCancellable
+  }
   def scheduleOnce(delay: scala.concurrent.duration.FiniteDuration,receiver: akka.actor.ActorRef,message: Any)(implicit executor: scala.concurrent.ExecutionContext): akka.actor.Cancellable = fakeCancellable
   def scheduleOnce(delay: scala.concurrent.duration.FiniteDuration,runnable: Runnable)(implicit executor: scala.concurrent.ExecutionContext): akka.actor.Cancellable = fakeCancellable
 }
