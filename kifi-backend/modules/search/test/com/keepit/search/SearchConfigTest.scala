@@ -132,11 +132,7 @@ class SearchConfigTest extends Specification with TestInjector {
         val (c1, _) = searchConfigManager.getConfig(greg.id.get, "turtles")
         c1.asInt("percentMatch") === 9000
         c1.asDouble("phraseBoost") === 10000.0
-        fakeShoeboxServiceClient.saveUserExperiment(UserExperiment(
-          userId = greg.id.get,
-          experimentType = NO_SEARCH_EXPERIMENTS
-        ))
-        val (c2, _) = searchConfigManager.getConfig(greg.id.get, "turtles")
+        val (c2, _) = searchConfigManager.getConfig(greg.id.get, "turtles", true)
         c2.asInt("percentMatch") !== 9000
         c2.asDouble("phraseBoost") !== 10000.0
       }
