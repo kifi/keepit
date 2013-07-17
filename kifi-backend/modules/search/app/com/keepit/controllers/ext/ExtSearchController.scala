@@ -11,6 +11,7 @@ import com.keepit.common.performance._
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
+import com.keepit.model.ExperimentTypes.NO_SEARCH_EXPERIMENTS
 import com.keepit.search._
 import com.keepit.serializer.PersonalSearchResultPacketSerializer.resSerializer
 import com.keepit.common.logging.Logging
@@ -49,7 +50,8 @@ class ExtSearchController @Inject() (
              start: Option[String] = None,
              end: Option[String] = None,
              tz: Option[String] = None,
-             coll: Option[String] = None) = AuthenticatedJsonAction { request =>
+             coll: Option[String] = None,
+             lang: Option[String] = None) = AuthenticatedJsonAction { request =>
 
     val t1 = currentDateTime.getMillis()
 
@@ -74,7 +76,7 @@ class ExtSearchController @Inject() (
         else SearchFilter.default(context)
     }
 
-    val (config, experimentId) = searchConfigManager.getConfig(userId, query)
+    val (config, searchExperimentId) = searchConfigManager.getConfig(userId, query, request.experiments.contains(NO_SEARCH_EXPERIMENTS))
 
     val lastUUID = lastUUIDStr.flatMap{
       case "" => None
@@ -82,9 +84,11 @@ class ExtSearchController @Inject() (
     }
 
     val t2 = currentDateTime.getMillis()
-    var t3 = 0L
+
     val searcher = timeWithStatsd("search-factory", "extSearch.factory") { mainSearcherFactory(userId, searchFilter, config) }
-    t3 = currentDateTime.getMillis()
+
+    val t3 = currentDateTime.getMillis()
+
     val searchRes = timeWithStatsd("search-searching", "extSearch.searching") {
       val searchRes = if (maxHits > 0) {
         searcher.search(query, maxHits, lastUUID, searchFilter)
@@ -100,7 +104,7 @@ class ExtSearchController @Inject() (
     val t4 = currentDateTime.getMillis()
 
     val decorator = ResultDecorator(searcher, shoeboxClient, config)
-    val res = toPersonalSearchResultPacket(decorator, userId, searchRes, config, searchFilter.isDefault, experimentId)
+    val res = toPersonalSearchResultPacket(decorator, userId, searchRes, config, searchFilter.isDefault, searchExperimentId)
 
     reportArticleSearchResult(searchRes)
 
@@ -145,14 +149,17 @@ class ExtSearchController @Inject() (
   }
 
   private[ext] def toPersonalSearchResultPacket(decorator: ResultDecorator, userId: Id[User],
-      res: ArticleSearchResult, config: SearchConfig, isDefaultFilter: Boolean, experimentId: Option[Id[SearchConfigExperiment]]): PersonalSearchResultPacket = {
+      res: ArticleSearchResult,
+      config: SearchConfig,
+      isDefaultFilter: Boolean,
+      searchExperimentId: Option[Id[SearchConfigExperiment]]): PersonalSearchResultPacket = {
 
     val future = decorator.decorate(res)
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
 
     PersonalSearchResultPacket(res.uuid, res.query,
       monitoredAwait.result(future, 5 seconds, s"getting search decorations for $userId", Nil),
-      res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), experimentId, filter)
+      res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), searchExperimentId, filter)
   }
 
 }
