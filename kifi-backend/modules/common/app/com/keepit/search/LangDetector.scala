@@ -42,7 +42,7 @@ object LangDetector extends Logging {
     langList.foldLeft(Map.empty[String, Double]){ (m, lang) => m + (lang -> prob)}
   }
 
-  val biasedProbability = 0.9d
+  val biasedProbability = 0.5d
   val priorMapForBiasedDetection = {
     val langList = DetectorFactory.getLangList
     val langListSize = langList.size
