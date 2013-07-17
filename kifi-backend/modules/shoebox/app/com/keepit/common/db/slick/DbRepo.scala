@@ -96,10 +96,6 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     model
   }
 
-  /**
-   * The toUpperCase is per an H2 "bug?"
-   * http://stackoverflow.com/a/8722814/81698
-   */
   abstract class RepoTable[M <: Model[M]](db: DataBaseComponent, name: String) extends Table[M](db.entityName(name)) with TableWithDDL {
     import FortyTwoTypeMappers._
 
