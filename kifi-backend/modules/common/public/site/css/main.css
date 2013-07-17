@@ -125,7 +125,7 @@ input.query::-moz-placeholder {color: #99a3b3}
 .keep.detailed>.handle,
 .keep.selected>.handle {display: block}
 .keep>time {float: right; margin: 0 16px 0 4%; font-size: 12px; line-height: 28px; color: #99a3b3}
-.keep-title {max-width: 100%; font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased}
+.keep-title {max-width: 100%; font-size: 16px; line-height: 24px; color: #0089d5; -webkit-font-smoothing: antialiased}
 .keep-url {font-size: 12px; line-height: 14px; color: #99a3b3}
 .keep-colls {margin-right: 10px; border: solid transparent; border-width: 7px 0; background: url(../img/folder-icon-small.png) 0 0/13px 11px no-repeat; padding-left: 15px; font-size: 12px; line-height: 14px; overflow: hidden}
 @-moz-document url-prefix() {.keep-colls {background-position: 0 1px}}
