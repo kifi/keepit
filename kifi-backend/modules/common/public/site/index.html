@@ -129,14 +129,10 @@
 							</span>
 						</div>
 						<div class="keep-who">
-							<img class="me"
-								src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
-								data-src="//djty7jcqog9qu.cloudfront.net/users/{{me.id}}/pics/100/{{me.pictureName}}"
-								title="You! You look great!">
-							<img data-template-for="keepers"
-								src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs="
-								data-src="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"
-								title="{{firstName}} {{lastName}}">
+							<a class="pic me" title="You! You look great!"
+								data-pic="//djty7jcqog9qu.cloudfront.net/users/{{me.id}}/pics/100/{{me.pictureName}}"></a>
+							<a class="pic friend" data-template-for="keepers" href="javascript:" data-name="{{firstName}} {{lastName}}" data-id="{{id}}"
+								data-pic="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"></a>
 							<span class="keep-who-text" data-after-template>
 								<span class="keep-you">
 									You
@@ -208,10 +204,13 @@
 			{% if numKeeps == 1 %}
 			<a class="page-url long-text" href="{{url}}" target="_blank">{{url}}</a>
 			<div class="page-pic-wrap">
-				<a class="page-pic" target="_blank">
-					<div class="page-pic-soon">
-						<div class="page-pic-soon-1">
-							<div class="page-pic-soon-2">Page preview coming soon</div>
+				<a class="page-pic" href="{{url}}" target="_blank">
+					<div class="page-pic-1">
+						<div class="page-pic-2">
+							<div class="page-pic-3">
+								<div class="page-pic-soon">Page preview coming soon</div>
+								<span class="page-pic-tip">Visit page</span>
+							</div>
 						</div>
 					</div>
 				</a>
@@ -270,6 +269,26 @@
 
 	</div>
 	</aside>
+	</div>
+
+	<div id="fr-card-template">
+		<div class="fr-card" data-template style="display:none">
+		  <div class="fr-card-top">
+		    <img class="fr-card-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{picUri}}">
+		    <div class="fr-card-info">
+		      <div class="fr-card-name">{{name}}</div>
+		      <div class="fr-card-label">Relevant interests:</div>
+		      <div class="fr-card-interests">Coming soon</div>
+		      <div class="fr-card-label">Connected to you through:</div>
+		      <div class="fr-card-networks">
+		        <a class="fr-card-nw fr-card-nw-facebook"></a>
+		        <a class="fr-card-nw fr-card-nw-linkedin"></a>
+		        <a class="fr-card-nw fr-card-nw-twitter"></a>
+		        <a class="fr-card-nw fr-card-nw-pinterest"></a>
+		      </div>
+		    </div>
+		  </div>
+		</div>
 	</div>
 
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>

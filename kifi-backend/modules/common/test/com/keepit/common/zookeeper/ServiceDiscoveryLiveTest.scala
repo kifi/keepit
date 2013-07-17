@@ -11,6 +11,7 @@ import com.keepit.common.time._
 import org.apache.zookeeper.CreateMode._
 import com.google.inject.util._
 import com.google.inject.Injector
+import akka.actor.Scheduler
 
 class ServiceDiscoveryLiveTest extends Specification with TestInjector {
 
@@ -43,7 +44,7 @@ class ServiceDiscoveryLiveTest extends Specification with TestInjector {
         val zk = new ZooKeeperClientImpl("localhost", 3000,
           Some({zk1 => println(s"in callback, got $zk1")}))
         try {
-          val discovery: ServiceDiscovery = new ServiceDiscoveryImpl(zk, services, Providers.of(amazonInstanceInfo.copy(localHostname = "main")))
+          val discovery: ServiceDiscovery = new ServiceDiscoveryImpl(zk, services, Providers.of(amazonInstanceInfo.copy(localHostname = "main")), inject[Scheduler])
           discovery.myClusterSize === 0
           zk.watchChildren(Path(s"/fortytwo/services/SHOEBOX"), { (children : Seq[Node]) =>
             println("Service Instances ----------- : %s".format(children.mkString(", ")))
