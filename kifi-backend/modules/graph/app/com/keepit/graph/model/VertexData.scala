@@ -3,14 +3,14 @@ package com.keepit.graph.model
 import com.keepit.common.db.State
 import com.keepit.model.{Collection, NormalizedURI, User}
 
-trait VertexData
-sealed trait RealVertexData[T] extends VertexData {
-  val state: State[T]
+sealed trait VertexData {
+  type DbType
+  val state: State[DbType]
 }
 
-case class UserData(state: State[User]) extends RealVertexData[User]
-case class UriData(state: State[NormalizedURI]) extends RealVertexData[NormalizedURI]
-case class CollectionData(state: State[Collection]) extends RealVertexData[Collection]
+case class UserData(state: State[User]) extends VertexData { type DbType = User }
+case class UriData(state: State[NormalizedURI]) extends VertexData { type DbType = NormalizedURI }
+case class CollectionData(state: State[Collection]) extends VertexData { type DbType = Collection }
 
 object UserData {
   def apply(user: User): UserData = UserData(user.state)

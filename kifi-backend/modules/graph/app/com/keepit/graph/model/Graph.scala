@@ -1,20 +1,9 @@
 package com.keepit.graph.model
 
-case class Graph(vertices: Seq[Vertex], edges: Seq[Edge])
+case class Graph[V <: VertexData, E <: EdgeData](vertices: Seq[Vertex[V]], edges: Seq[Edge[V, V, E]])
 
-trait Vertex {
-  val id: VertexId
-  val data: VertexData
-}
+case class Vertex[+V <: VertexData](id: VertexId[V], data: V)
 
-case class RealVertex[T](id: RealVertexId[T], data: RealVertexData[T]) extends Vertex
-
-trait Edge {
-  val source: VertexId
-  val destination: VertexId
-  val data: EdgeData
-}
-
-case class RealEdge[S, D, E](source: RealVertexId[S], destination: RealVertexId[D], data: RealEdgeData[E]) extends Edge {
-  def reversed() = RealEdge[D, S, E](destination, source, data)
+case class Edge[S <: VertexData, D <: VertexData, +E <: EdgeData](source: VertexId[S], destination: VertexId[D], data: E) {
+  def reversed() = Edge[D, S, E](destination, source, data)
 }

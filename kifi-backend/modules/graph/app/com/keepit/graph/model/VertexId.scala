@@ -4,29 +4,26 @@ import com.keepit.common.db.Id
 import com.keepit.model.{Collection, NormalizedURI, User}
 import scala.reflect.runtime.universe._
 
-trait VertexId
-
-case class RealVertexId[T](id: Int) extends VertexId {
+case class VertexId[+T <: VertexData](id: Int) {
   override def toString = id.toString
 }
 
-object RealVertexId {
+object VertexId {
 
-  def fourBitPrefix[T]()(implicit tag: TypeTag[T]): Int = tag.tpe match {
+  def fourBitPrefix[DbType]()(implicit tag: TypeTag[DbType]): Int = tag.tpe match {
     case t if t =:= typeOf[User] => 0
     case t if t =:= typeOf[NormalizedURI] => 1
     case t if t =:= typeOf[Collection] => 2
   }
 
-  def apply[T: TypeTag](id: Id[T]): RealVertexId[T] = {
+  def apply[DbType: TypeTag, T <: VertexData](id: Id[DbType]): VertexId[T] = {
     require((id.id >> 28) == 0)
-    RealVertexId[T](id.id.toInt | (fourBitPrefix[T]() << 28))
+    VertexId[T](id.id.toInt | (fourBitPrefix[DbType]() << 28))
   }
 
-  def databaseId[T: TypeTag](id: RealVertexId[T]): Id[T] = {
-    val dbId = Id[T](id.id & ((15 << 28) ^ 0))
-    require((id.id >> 28) == fourBitPrefix[T]())
-    dbId
+  def databaseId[T <: VertexData, DbType: TypeTag](id: VertexId[T]): Id[DbType] = {
+    require((id.id >> 28) == fourBitPrefix[DbType]())
+    Id[DbType](id.id & ((15 << 28) ^ 0))
   }
 
 }
