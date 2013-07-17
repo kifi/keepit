@@ -20,7 +20,6 @@ import play.api.Mode.Test
 import play.modules.statsd.api.Statsd
 
 class InSessionException(message: String) extends Exception(message)
-class TimedOutWaitingForConnectionException(message: String) extends Exception(message)
 
 object DatabaseSessionLock {
   val inSession = new DynamicVariable[Boolean](false)
