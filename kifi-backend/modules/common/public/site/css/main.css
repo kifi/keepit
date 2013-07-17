@@ -338,7 +338,7 @@ span.long-text, a.long-text {display: inline-block}
 .fr-card-networks {font-size: 0; line-height: 0}
 .fr-card-networks a.fr-card-nw {width: 17px; height: 17px; display: inline-block; background: url(../img/social_icons.png) 0/68px; margin-right: 2px}
 .fr-card-networks a.fr-card-nw-facebook {background-position: 0 17px}
-.fr-card-networks a.fr-card-nw-facebook.on {background-position: 0}
+.fr-card-networks a.fr-card-nw-facebook.on {background-position: 0 0}
 .fr-card-networks a.fr-card-nw-linkedin {background-position: -17px 17px}
 .fr-card-networks a.fr-card-nw-linkedin.on {background-position: -17px 0}
 .fr-card-networks a.fr-card-nw-twitter {background-position: -34px 17px}
