@@ -84,14 +84,16 @@ class ExtSearchController @Inject() (
 
     val t2 = currentDateTime.getMillis()
 
-    val searcher = timeWithStatsd("search-factory", "extSearch.factory") { mainSearcherFactory(userId, searchFilter, config) }
+    val probabilities = getLangsPriorProbabilities(request.request.acceptLanguages.map(_.code))
+    val searcher = timeWithStatsd("search-factory", "extSearch.factory") {
+      mainSearcherFactory(userId, query, probabilities, maxHits, searchFilter, config, lastUUID)
+    }
 
     val t3 = currentDateTime.getMillis()
 
     val searchRes = timeWithStatsd("search-searching", "extSearch.searching") {
       val searchRes = if (maxHits > 0) {
-        val probabilities = getLangsPriorProbabilities(request.request.acceptLanguages.map(_.code))
-        searcher.search(query, maxHits, lastUUID, searchFilter, langProbabilities = probabilities)
+        searcher.search()
       } else {
         log.warn("maxHits is zero")
         val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))

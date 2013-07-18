@@ -52,7 +52,15 @@ class MainSearcherFactory @Inject() (
   private[this] val consolidateURIGraphSearcherReq = new RequestConsolidator[Id[User], URIGraphSearcherWithUser](3 seconds)
   private[this] val consolidateCollectionSearcherReq = new RequestConsolidator[Id[User], CollectionSearcherWithUser](3 seconds)
 
-  def apply(userId: Id[User], filter: SearchFilter, config: SearchConfig) = {
+  def apply(
+    userId: Id[User],
+    queryString: String,
+    langProbabilities: Map[Lang, Double],
+    numHitsToReturn: Int,
+    filter: SearchFilter,
+    config: SearchConfig,
+    lastUUID: Option[ExternalId[ArticleSearchResultRef]]
+  ) = {
     val browsingHistoryFuture = shoeboxClient.getBrowsingHistoryFilter(userId).map(browsingHistoryBuilder.build)
     val clickHistoryFuture = shoeboxClient.getClickHistoryFilter(userId).map(clickHistoryBuilder.build)
 
@@ -62,8 +70,12 @@ class MainSearcherFactory @Inject() (
 
     new MainSearcher(
         userId,
+        queryString,
+        langProbabilities,
+        numHitsToReturn,
         filter,
         config,
+        lastUUID,
         articleSearcher,
         monitoredAwait.result(uriGraphSearcherFuture, 5 seconds, s"getting uri graph searcher for user Id $userId"),
         monitoredAwait.result(collectionSearcherFuture, 5 seconds, s"getting collection searcher for user Id $userId"),

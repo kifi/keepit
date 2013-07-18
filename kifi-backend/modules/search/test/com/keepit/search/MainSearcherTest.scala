@@ -34,6 +34,8 @@ class MainSearcherTest extends Specification with ApplicationInjector {
   val resultClickBuffer  = new InMemoryResultClickTrackerBuffer(1000)
   val resultClickTracker = new ResultClickTracker(new ProbablisticLRU(resultClickBuffer, 8, Int.MaxValue)(None))
 
+  val english = Map(Lang("en") -> 0.9999)
+
   def initData(numUsers: Int, numUris: Int) = {
     val users = (0 until numUsers).map {n => User(firstName = "foo" + n, lastName = "")}.toList
     val uris =   (0 until numUris).map {n => NormalizedURIFactory(title = "a" + n,
@@ -145,9 +147,9 @@ class MainSearcherTest extends Specification with ApplicationInjector {
             val userId = user.id.get
             setConnections(Map(userId -> (friends.map(_.id.get).toSet - userId)))
             mainSearcherFactory.clear
-            val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), allHitsConfig)
+            val mainSearcher = mainSearcherFactory(userId, "alldocs", english, numHitsPerCategory, SearchFilter.default(), allHitsConfig, None)
             val graphSearcher = mainSearcher.uriGraphSearcher
-            val (myHits, friendsHits, othersHits, _) = mainSearcher.searchText("alldocs", numHitsPerCategory, clickBoosts, Map(Lang("en") -> 0.9d))
+            val (myHits, friendsHits, othersHits, _) = mainSearcher.searchText(numHitsPerCategory, clickBoosts)
 
             //println("----")
             val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet.map(_.id)
@@ -200,9 +202,9 @@ class MainSearcherTest extends Specification with ApplicationInjector {
             setConnections(Map(userId -> (friends.map(_.id.get).toSet - userId)))
 
             mainSearcherFactory.clear
-            val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), allHitsConfig)
+            val mainSearcher = mainSearcherFactory(userId, "alldocs", english, numHitsToReturn, SearchFilter.default(), allHitsConfig, None)
             val graphSearcher = mainSearcher.uriGraphSearcher
-            val res = mainSearcher.search("alldocs", numHitsToReturn, None)
+            val res = mainSearcher.search()
 
             val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
             val friendsUriIds = friends.foldLeft(Set.empty[Id[NormalizedURI]]){ (s, f) =>
@@ -250,9 +252,9 @@ class MainSearcherTest extends Specification with ApplicationInjector {
             //println("user:" + userId)
             setConnections(Map(userId -> (users.map(_.id.get).toSet - userId)))
             mainSearcherFactory.clear
-            val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), allHitsConfig)
+            val mainSearcher = mainSearcherFactory(userId, "personal", english, numHitsToReturn, SearchFilter.default(), allHitsConfig, None)
             val graphSearcher = mainSearcher.uriGraphSearcher
-            val res = mainSearcher.search("personal", numHitsToReturn, None)
+            val res = mainSearcher.search()
 
             val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
 
@@ -307,11 +309,11 @@ class MainSearcherTest extends Specification with ApplicationInjector {
         val userId = users(0).id.get
         //println("user:" + userId)
         setConnections(Map(userId -> (users.map(_.id.get).toSet - userId)))
-        val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), noBoostConfig("myBookMarkBoost" -> "1.5"))
+        val mainSearcher = mainSearcherFactory(userId, "personal title3 content3 xyz", english, numHitsToReturn, SearchFilter.default(), noBoostConfig("myBookMarkBoost" -> "1.5"), None)
         val graphSearcher = mainSearcher.uriGraphSearcher
 
         val expected = (uris(3) :: ((uris.toList diff List(uris(3))).reverse)).map(_.id.get).toList
-        val res = mainSearcher.search("personal title3 content3 xyz", numHitsToReturn, None)
+        val res = mainSearcher.search()
 
         val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
 
@@ -337,7 +339,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
         var uriSeen = Set.empty[Long]
 
         var context = Some(IdFilterCompressor.fromSetToBase64(uriSeen))
-        val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(context), allHitsConfig)
+        val mainSearcher = mainSearcherFactory(userId, "alldocs", english, numHitsToReturn, SearchFilter.default(context), allHitsConfig, None)
         val graphSearcher = mainSearcher.uriGraphSearcher
         val reachableUris = users.foldLeft(Set.empty[Long])((s, u) => s ++ graphSearcher.getUserToUriEdgeSet(u.id.get, publicOnly = true).destIdLongSet)
 
@@ -346,9 +348,9 @@ class MainSearcherTest extends Specification with ApplicationInjector {
         while (cnt < reachableUris.size && uriSeen.size < reachableUris.size) {
           cnt += 1
           context = Some(IdFilterCompressor.fromSetToBase64(uriSeen))
-          val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(context), allHitsConfig)
+          val mainSearcher = mainSearcherFactory(userId, "alldocs", english, numHitsToReturn, SearchFilter.default(context), allHitsConfig, uuid)
           //println("---" + uriSeen + ":" + reachableUris)
-          val res = mainSearcher.search("alldocs", numHitsToReturn, uuid)
+          val res = mainSearcher.search()
           res.hits.foreach{ h =>
             //println(h)
             uriSeen.contains(h.uriId.id) === false
@@ -377,8 +379,8 @@ class MainSearcherTest extends Specification with ApplicationInjector {
 
         setConnections(Map(userId -> Set.empty[Id[User]]))
 
-        val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), noBoostConfig("recencyBoost" -> "1.0"))
-        val res = mainSearcher.search("alldocs", uris.size, None)
+        val mainSearcher = mainSearcherFactory(userId, "alldocs", english, uris.size, SearchFilter.default(), noBoostConfig("recencyBoost" -> "1.0"), None)
+        val res = mainSearcher.search()
 
         var lastTime = Long.MaxValue
 
@@ -410,8 +412,8 @@ class MainSearcherTest extends Specification with ApplicationInjector {
         indexer.run() === uris.size
         setConnections(Map(userId -> Set.empty[Id[User]]))
 
-        var mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), noBoostConfig)
-        var res = mainSearcher.search("alldocs", uris.size, None)
+        var mainSearcher = mainSearcherFactory(userId, "alldocs", english, uris.size, SearchFilter.default(), noBoostConfig, None)
+        var res = mainSearcher.search()
         //println("Scores: " + res.hits.map(_.score))
         val sz = res.hits.size
         val maxScore = res.hits.head.score
@@ -420,8 +422,8 @@ class MainSearcherTest extends Specification with ApplicationInjector {
         (minScore < medianScore && medianScore < maxScore) === true // this is a sanity check of test data
 
         val tailCuttingConfig = noBoostConfig("tailCutting" -> medianScore.toString)
-        mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), tailCuttingConfig)
-        res = mainSearcher.search("alldocs", uris.size, None)
+        mainSearcher = mainSearcherFactory(userId, "alldocs", english, uris.size, SearchFilter.default(), tailCuttingConfig, None)
+        res = mainSearcher.search()
         //println("Scores: " + res.hits.map(_.score))
         (res.hits.map(h => h.score).reduce((s1, s2) => min(s1, s2)) >= medianScore) === true
       }
@@ -444,8 +446,8 @@ class MainSearcherTest extends Specification with ApplicationInjector {
 
         setConnections(Map(user1.id.get -> Set(user2.id.get)))
 
-        val mainSearcher = mainSearcherFactory(user1.id.get, SearchFilter.default(), noBoostConfig)
-        val res = mainSearcher.search("alldocs", uris.size, None)
+        val mainSearcher = mainSearcherFactory(user1.id.get, "alldocs", english, uris.size, SearchFilter.default(), noBoostConfig, None)
+        val res = mainSearcher.search()
 
         res.hits.size === uris.size
       }
@@ -468,8 +470,8 @@ class MainSearcherTest extends Specification with ApplicationInjector {
 
         setConnections(Map(user1.id.get -> Set(user2.id.get)))
 
-        val mainSearcher = mainSearcherFactory(user1.id.get, SearchFilter.default(), noBoostConfig)
-        val res = mainSearcher.search("alldocs", uris.size, None)
+        val mainSearcher = mainSearcherFactory(user1.id.get, "alldocs", english, uris.size, SearchFilter.default(), noBoostConfig, None)
+        val res = mainSearcher.search()
 
         val publicSet = publicUris.map(u => u.id.get).toSet
         val privateSet = privateUris.map(u => u.id.get).toSet
@@ -497,14 +499,13 @@ class MainSearcherTest extends Specification with ApplicationInjector {
         val numHitsToReturn = 100
         val userId = users(0).id.get
         setConnections(Map(userId -> (users.map(_.id.get).toSet - userId)))
-        val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), noBoostConfig)
-        val graphSearcher = mainSearcher.uriGraphSearcher
+        val mainSearcher1 = mainSearcherFactory(userId, "document", english, numHitsToReturn, SearchFilter.default(), noBoostConfig, None)
+        val res1 = mainSearcher1.search()
+        (res1.hits.size > 0) === true
 
-        var res = mainSearcher.search("document", numHitsToReturn, None)
-        (res.hits.size > 0) === true
-
-        res = mainSearcher.search("book", numHitsToReturn, None)
-        (res.hits.size > 0) === true
+        val mainSearcher2 = mainSearcherFactory(userId, "book", english, numHitsToReturn, SearchFilter.default(), noBoostConfig, None)
+        val res2 = mainSearcher2.search()
+        (res2.hits.size > 0) === true
       }
     }
 
@@ -534,24 +535,24 @@ class MainSearcherTest extends Specification with ApplicationInjector {
 
         val coll1Future = Promise.successful(Seq(coll1.id.get)).future
         val searchFilter1 = SearchFilter.mine(collectionsFuture = Some(coll1Future), monitoredAwait = inject[MonitoredAwait])
-        val mainSearcher1 = mainSearcherFactory(user1.id.get, searchFilter1, noBoostConfig)
-        val res1 = mainSearcher1.search("alldocs", uris.size, None)
+        val mainSearcher1 = mainSearcherFactory(user1.id.get, "alldocs", english, uris.size, searchFilter1, noBoostConfig, None)
+        val res1 = mainSearcher1.search()
 
         res1.hits.size == coll1set.size
         res1.hits.foreach{ _.uriId.id % 3 === 0 }
 
         val coll2Future = Promise.successful(Seq(coll2.id.get)).future
         val searchFilter2 = SearchFilter.mine(collectionsFuture = Some(coll2Future), monitoredAwait = inject[MonitoredAwait])
-        val mainSearcher2 = mainSearcherFactory(user1.id.get, searchFilter2, noBoostConfig)
-        val res2 = mainSearcher2.search("alldocs", uris.size, None)
+        val mainSearcher2 = mainSearcherFactory(user1.id.get, "alldocs", english, uris.size, searchFilter2, noBoostConfig, None)
+        val res2 = mainSearcher2.search()
 
         res2.hits.size == coll2set.size
         res2.hits.foreach{ _.uriId.id % 3 === 1 }
 
         val coll3Future = Promise.successful(Seq(coll1.id.get, coll2.id.get)).future
         val searchFilter3 = SearchFilter.mine(collectionsFuture = Some(coll3Future), monitoredAwait = inject[MonitoredAwait])
-        val mainSearcher3 = mainSearcherFactory(user1.id.get, searchFilter3, noBoostConfig)
-        val res3 = mainSearcher3.search("alldocs", uris.size, None)
+        val mainSearcher3 = mainSearcherFactory(user1.id.get, "alldocs", english, uris.size, searchFilter3, noBoostConfig, None)
+        val res3 = mainSearcher3.search()
 
         res3.hits.size == (coll1set.size + coll2set.size)
       }

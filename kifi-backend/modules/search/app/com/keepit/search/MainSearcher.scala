@@ -39,8 +39,12 @@ import play.modules.statsd.api.Statsd
 
 class MainSearcher(
     userId: Id[User],
+    queryString: String,
+    langProbabilities: Map[Lang, Double],
+    numHitsToReturn: Int,
     filter: SearchFilter,
     config: SearchConfig,
+    lastUUID: Option[ExternalId[ArticleSearchResultRef]],
     articleSearcher: Searcher,
     val uriGraphSearcher: URIGraphSearcherWithUser,
     val collectionSearcher: CollectionSearcherWithUser,
@@ -166,7 +170,7 @@ class MainSearcher(
     PersonalizedSearcher(userId, indexReader, myUris, browsingHistoryFuture, clickHistoryFuture, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient, monitoredAwait)
   }
 
-  def searchText(queryString: String, maxTextHitsPerCategory: Int, clickBoosts: ResultClickBoosts, langProbabilities: Map[Lang, Double]) = {
+  def searchText(maxTextHitsPerCategory: Int, clickBoosts: ResultClickBoosts) = {
     val myHits = createQueue(maxTextHitsPerCategory)
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
@@ -225,18 +229,12 @@ class MainSearcher(
     (myHits, friendsHits, othersHits, personalizedSearcher)
   }
 
-  def search(
-    queryString: String,
-    numHitsToReturn: Int,
-    lastUUID: Option[ExternalId[ArticleSearchResultRef]],
-    filter: SearchFilter = SearchFilter.default(),
-    langProbabilities: Map[Lang, Double] = Map(Lang("en") -> 0.9d)
-  ): ArticleSearchResult = {
+  def search(): ArticleSearchResult = {
     val now = currentDateTime
     val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost, config.asBoolean("useS3FlowerFilter"))
     timeLogs.getClickBoost = currentDateTime.getMillis() - now.getMillis()
     Statsd.timing("mainSearch.getClickboost", timeLogs.getClickBoost)
-    val (myHits, friendsHits, othersHits, personalizedSearcher) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts, langProbabilities)
+    val (myHits, friendsHits, othersHits, personalizedSearcher) = searchText(maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
     val t1 = currentDateTime.getMillis()
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
@@ -420,10 +418,9 @@ class MainSearcher(
     (1.0f/(1.0f + t2))
   }
 
-  def explain(queryString: String, uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
+  def explain(uriId: Id[NormalizedURI]): Option[(Query, Explanation)] = {
     // TODO: use user profile info as a bias
-    // lang = LangDetector.detectShortText(queryString, lang)
-    lang = Lang("en")
+    lang = LangDetector.detectShortText(queryString, langProbabilities)
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
 
