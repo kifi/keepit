@@ -34,5 +34,8 @@ trait ShoeboxInjectionHelpers { self: InjectorProvider =>
   def collectionRepo(implicit injector: Injector) = inject[CollectionRepo]
   def keepToCollectionRepo(implicit injector: Injector) = inject[KeepToCollectionRepo]
   def electronicMailRepo(implicit injector: Injector) = inject[ElectronicMailRepo]
+  def uriTopicRepoA(implicit injector: Injector) = inject[UriTopicRepoA]
+  def uriTopicRepoB(implicit injector: Injector) = inject[UriTopicRepoB]
+  def userBookmarkClicksRepo(implicit injector: Injector) = inject[UserBookmarkClicksRepo]
   def sessionProvider(implicit injector: Injector) = inject[SlickSessionProvider].asInstanceOf[TestSlickSessionProvider]
 }
