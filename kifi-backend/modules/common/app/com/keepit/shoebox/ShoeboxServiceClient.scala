@@ -81,6 +81,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def userChannelCountFanout(): Seq[Future[Int]]
   def uriChannelFanout(uri: String, msg: JsArray): Seq[Future[Int]]
   def uriChannelCountFanout(): Seq[Future[Int]]
+  def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -387,6 +388,18 @@ class ShoeboxServiceClientImpl @Inject() (
     broadcast(Shoebox.internal.uriChannelCountFanout()).map { futResp =>
       futResp.map { r =>
         r.body.toInt
+      }
+    }
+  }
+
+  def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]] = {
+    val payload = JsArray(urisAndKeepers.map{ case (uri, users) =>
+      Json.obj("uri" -> JsNumber(uri.id), "users" -> JsArray(users.map{_.id}.map{JsNumber(_)}) )
+    })
+    call(Shoebox.internal.suggestExperts(), payload).map{ r =>
+      r.json match {
+        case jso: JsObject => jso.as[JsArray].value.map{x => x.as[Long]}.map{Id[User](_)}
+        case _ => List.empty[Id[User]]
       }
     }
   }

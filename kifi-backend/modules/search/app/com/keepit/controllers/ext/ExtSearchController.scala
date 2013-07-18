@@ -101,10 +101,12 @@ class ExtSearchController @Inject() (
       searchRes
     }
 
+    val experts = suggestExperts(searchRes)
+
     val t4 = currentDateTime.getMillis()
 
     val decorator = ResultDecorator(searcher, shoeboxClient, config)
-    val res = toPersonalSearchResultPacket(decorator, userId, searchRes, config, searchFilter.isDefault, searchExperimentId)
+    val res = toPersonalSearchResultPacket(decorator, userId, searchRes, config, searchFilter.isDefault, searchExperimentId, experts)
 
     reportArticleSearchResult(searchRes)
 
@@ -152,14 +154,22 @@ class ExtSearchController @Inject() (
       res: ArticleSearchResult,
       config: SearchConfig,
       isDefaultFilter: Boolean,
-      searchExperimentId: Option[Id[SearchConfigExperiment]]): PersonalSearchResultPacket = {
+      searchExperimentId: Option[Id[SearchConfigExperiment]],
+      experts: Future[Seq[Id[User]]]): PersonalSearchResultPacket = {
 
     val future = decorator.decorate(res)
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
-
+    val expert = monitoredAwait.result(experts, 50 milliseconds, s"suggesting experts", Nil)
     PersonalSearchResultPacket(res.uuid, res.query,
       monitoredAwait.result(future, 5 seconds, s"getting search decorations for $userId", Nil),
-      res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), searchExperimentId, filter)
+      res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), searchExperimentId, filter, expert)
+  }
+
+  private[ext] def suggestExperts(searchRes: ArticleSearchResult) = {
+    val urisAndUsers = searchRes.hits.map{ hit =>
+      (hit.uriId, hit.users)
+    }
+    shoeboxClient.suggestExperts(urisAndUsers)
   }
 
 }

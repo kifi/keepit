@@ -87,6 +87,7 @@ object Shoebox extends Service {
     def userChannelCountFanout() = ServiceRoute(POST, "/internal/shoebox/channel/userCount")
     def uriChannelFanout() = ServiceRoute(POST, "/internal/shoebox/channel/uri")
     def uriChannelCountFanout() = ServiceRoute(POST, "/internal/shoebox/channel/uriCount")
+    def suggestExperts() = ServiceRoute(POST, "/internal/learning/suggestExperts")
   }
 }
 

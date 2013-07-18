@@ -20,10 +20,17 @@ import ExecutionContext.Implicits.global
 import scala.util.Random
 import com.keepit.search.ArticleStore
 import com.keepit.model.NormalizedURI
+import com.keepit.model.UserBookmarkClicksRepo
+import com.keepit.model.BookmarkRepo
+import play.api.mvc.Action
+import play.api.libs.json._
+
 
 @Singleton
 class TopicModelController  @Inject() (
   db: Database,
+  clicksRepo: UserBookmarkClicksRepo,
+  bookmarkRepo: BookmarkRepo,
   topicPlugin: TopicUpdaterPlugin,
   modelAccessor: SwitchableTopicModelAccessor,
   wordTopicStore: WordTopicStore,
@@ -266,6 +273,21 @@ class TopicModelController  @Inject() (
       mappedCounts += mappedId -> (mappedCounts.getOrElse(mappedId, 0) + count)
     }
     mappedCounts.toArray.sortBy(-_._2).filter(_._1 != -1).take(TOP_N).map{ case (mappedId, counts) => (currentAccessor.topicNameMapper.getMappedNameByNewId(mappedId), counts)}.toList
+  }
+
+  def suggestExperts() = Action { request =>
+    val req = request.body.asJson.get.asInstanceOf[JsArray].value
+    val urisAndKeepers = req.map{ js =>
+      val uriId = Id[NormalizedURI]((js \ "uri").as[Long])
+      val userIds = (js \ "users").as[JsArray].value.map{ x => Id[User](x.as[Long]) }
+      (uriId, userIds)
+    }
+
+    val TOP_N = 3
+    val rcmder = new ExpertRecommender(db, currentAccessor.uriTopicRepo, clicksRepo, bookmarkRepo)
+    val ranks = rcmder.rank(urisAndKeepers)
+    val experts = ranks.take(TOP_N).filter(_._2 > 0.0).map{_._1}
+    Ok(JsArray(experts.map{x => JsNumber(x.id)}))
   }
 
 }
