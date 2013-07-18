@@ -137,7 +137,6 @@ class MainSearcherTest extends Specification with ApplicationInjector {
 
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
-        val clickBoosts = resultClickTracker.getBoosts(Id[User](0), "", 1.0f)
         graph.update() === users.size
         indexer.run() === uris.size
 
@@ -149,7 +148,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
             mainSearcherFactory.clear
             val mainSearcher = mainSearcherFactory(userId, "alldocs", english, numHitsPerCategory, SearchFilter.default(), allHitsConfig, None)
             val graphSearcher = mainSearcher.uriGraphSearcher
-            val (myHits, friendsHits, othersHits, _) = mainSearcher.searchText(numHitsPerCategory, clickBoosts)
+            val (myHits, friendsHits, othersHits, _) = mainSearcher.searchText(numHitsPerCategory)
 
             //println("----")
             val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet.map(_.id)
