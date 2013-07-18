@@ -141,16 +141,18 @@ class ResultClickedListener @Inject() (
             userBookmarkClicksRepo.increaseCounts(bookmark.get.userId, bookmark.get.uriId, isSelf = true)
           }
         }
-        // other people who kept the bookmark
-        searchServiceClient.sharingUserInfo(user.id.get, n.id.get).onComplete{
-          case Success(sharingUserInfo) => {
-            sharingUserInfo.sharingUserIds.foreach{ userId =>
-              db.readWrite{ implicit s =>
-                userBookmarkClicksRepo.increaseCounts(userId, n.id.get, isSelf = false)
+        // if kept by others, others get credit
+        if (!bookmark.isDefined){
+          searchServiceClient.sharingUserInfo(user.id.get, n.id.get).onComplete{
+            case Success(sharingUserInfo) => {
+              sharingUserInfo.sharingUserIds.foreach{ userId =>
+                db.readWrite{ implicit s =>
+                  userBookmarkClicksRepo.increaseCounts(userId, n.id.get, isSelf = false)
+                }
               }
             }
+            case _ => log.warn("fail to get sharing user info from search client")
           }
-          case _ => log.warn("fail to get sharing user info from search client")
         }
       }
   }
