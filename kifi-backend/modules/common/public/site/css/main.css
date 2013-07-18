@@ -78,8 +78,9 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 #coll-menu>li>a.hover {background: #9ba4b8; color: #fff}
 
 /* center col */
-input.query {border: solid #67829c; border-width: 10px 120px 12px 0; font-family: inherit; font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; height: 70px; -moz-box-sizing: border-box; box-sizing: border-box; padding: 9px 50px 9px 20px; background: #fff url(../img/search.png) right 16px center no-repeat; transition: border-right-width .3s; -webkit-transition: border-right-width .3s; -webkit-font-smoothing: antialiased}
-input.query:focus, input.query[data-q] {background-image: url(../img/search-blue.png); border-right-width: 0}
+input.query {border: solid #67829c; border-width: 10px 120px 12px 0; font-family: inherit; font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; height: 70px; -moz-box-sizing: border-box; box-sizing: border-box; padding: 9px 50px 9px 20px; background: #fff url(../img/search.png) right 16px top 13px/26px auto no-repeat; transition: border-right-width .3s; -webkit-transition: border-right-width .3s; -webkit-font-smoothing: antialiased}
+input.query:focus,
+input.query[data-q] {background-position: right 16px top -24px; border-right-width: 0}
 input.query::-webkit-input-placeholder {color: #99a3b3}
 input.query::-moz-placeholder {color: #99a3b3}
 .main-head,
@@ -350,6 +351,7 @@ span.long-text, a.long-text {display: inline-block}
 /* retina image overrides */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
   .header-logo {background-image: url(../img/kifi-logo.2x.png)}
+  input.query {background-image: url(../img/search.2x.png)}
   #collections>h2 {background-image: url(../img/folder-icon.2x.png)}
   .keep-private {background-image: url(../img/private.2x.png)}
   .keep-arrow-4 {background-image: url(../img/arrow-r.2x.png)}
