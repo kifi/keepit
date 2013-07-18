@@ -32,11 +32,11 @@ class SearchController @Inject()(
     Ok(JsArray(uris.toSeq.map(JsNumber(_))))
   }
 
-  def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
-    val (config, _) = searchConfigManager.getConfig(userId, query)
+  def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String], excludeFromExperiments: Option[Boolean]) = Action { request =>
+    val (config, _) = searchConfigManager.getConfig(userId, query, excludeFromExperiments.getOrElse(false))
 
-    val searcher = searcherFactory(userId, SearchFilter.default(), config)
-    val explanation = searcher.explain(query, uriId)
+    val searcher = searcherFactory(userId, query, Map(Lang(lang.getOrElse("en")) -> 0.999), 0, SearchFilter.default(), config, None)
+    val explanation = searcher.explain(uriId)
     Ok(html.admin.explainResult(query, userId, uriId, explanation))
   }
 
