@@ -152,7 +152,7 @@ class ExpertRecommender(
         val userRelevantBm = userRelevantBookmarks(bm, relevantBookmarks)
         var s = 0.0
         for((t, p) <- topicPosterior){
-          s += score(user, t, userRelevantBm, relevantBookmarks, bookmarkClicks.getOrElse(user, Map.empty[Id[NormalizedURI], (Int, Int)]))
+          s += p * score(user, t, userRelevantBm, relevantBookmarks, bookmarkClicks.getOrElse(user, Map.empty[Id[NormalizedURI], (Int, Int)]))
         }
         val boost = userhits.getOrElse(user, 0) * 1.0 / hits.length     // if user's hit num is low, probably she is not quite relevant to the query
         (user, s * boost)

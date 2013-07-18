@@ -134,20 +134,20 @@ class ExpertRecommenderTest extends Specification with DbSetupHelper{
          // 5 hits, 3 from topic 1, 2 from topic 5. relevant users: 1, 2, 9, 10
          val urisAndKeepers = List((uriId(1), List(userId(0), userId(1))),
                                (uriId(2), List(userId(0), userId(1)) ),
-                               (uriId(3), List(userId(0), userId(1))),
+                               (uriId(3), List(userId(0))),           // deliberately hide userId(1) here
                                (uriId(45), List(userId(8), userId(9))),
-                               (uriId(46), List(userId(8), userId(9)))
+                               (uriId(46), List(userId(8)))
                              )
          val ranks = rcmder.rank(urisAndKeepers)
          val experts = ranks.take(4).map{_._1}.map{_.id.toInt}
-         experts.toList === List(2, 1, 10, 9)
+         experts.toList === List(1, 2, 9, 10)
          // scores for user 1, 2, 9, 10
-         val scores = List( log2(1 + 10 + 0.2 * 10 * 10) * 0.6,
-                            log2(1 + 10 + 0.8 * 10 * 10) * 0.6,
-                            log2(1 + 10 + 0.2 * 10 * 10) * 0.4,
-                            log2(1 + 10 + 0.8 * 10 * 10) * 0.4
+         val scores = List( log2(1 + 10 + 0.2 * 10 * 10) * 0.6 * 0.6,       // {Sum_T score(T) * p(T | query)} * (user_hit_percentage), T = 1,...,5
+                            log2(1 + 10 + 0.8 * 10 * 10) * 0.6 * 0.4,
+                            log2(1 + 10 + 0.2 * 10 * 10) * 0.4 * 0.4,
+                            log2(1 + 10 + 0.8 * 10 * 10) * 0.4 * 0.2
                               )
-         ranks.take(4).map{_._2}.toList === List(scores(1), scores(0), scores(3), scores(2) )
+         ranks.take(4).map{_._2}.toList === scores
        }
     }
 
