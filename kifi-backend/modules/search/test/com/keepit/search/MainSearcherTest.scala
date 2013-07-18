@@ -147,7 +147,7 @@ class MainSearcherTest extends Specification with ApplicationInjector {
             mainSearcherFactory.clear
             val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), allHitsConfig)
             val graphSearcher = mainSearcher.uriGraphSearcher
-            val (myHits, friendsHits, othersHits, _) = mainSearcher.searchText("alldocs", numHitsPerCategory, clickBoosts)
+            val (myHits, friendsHits, othersHits, _) = mainSearcher.searchText("alldocs", numHitsPerCategory, clickBoosts, Map(Lang("en") -> 0.9d))
 
             //println("----")
             val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet.map(_.id)
