@@ -1,3 +1,8 @@
+/**
+ * learnboost.github.io/antiscroll/
+ * commit 073c8a211a7326c99451c3b136b06b71781667c3 plus pull requests 65, 66, 67, 68 and one other minor edit
+ * see github.com/2is10/antiscroll/
+ */
 (function ($) {
 
   /**
@@ -53,7 +58,7 @@
    */
 
   Antiscroll.prototype.refresh = function() {
-    var needHScroll = this.inner.get(0).scrollWidth > this.el.width() + (this.y ? scrollbarSize() : 0), 
+    var needHScroll = this.inner.get(0).scrollWidth > this.el.width() + (this.y ? scrollbarSize() : 0),
 	    needVScroll = this.inner.get(0).scrollHeight > this.el.height() + (this.x ? scrollbarSize() : 0);
 
     if (this.x) {
@@ -304,7 +309,7 @@
    */
 
   Scrollbar.Horizontal.prototype.update = function () {
-    var paneWidth = this.pane.el.width(), 
+    var paneWidth = this.pane.el.width(),
 	    trackWidth = paneWidth - this.pane.padding * 2,
 		innerEl = this.pane.inner.get(0)
 
@@ -322,7 +327,7 @@
    */
 
   Scrollbar.Horizontal.prototype.mousemove = function (ev) {
-    var trackWidth = this.pane.el.width() - this.pane.padding * 2, 
+    var trackWidth = this.pane.el.width() - this.pane.padding * 2,
 	    pos = ev.pageX - this.startPageX,
 		barWidth = this.el.width(),
 		innerEl = this.pane.inner.get(0)
@@ -373,15 +378,15 @@
    */
 
   Scrollbar.Vertical.prototype.update = function () {
-    var paneHeight = this.pane.el.height(), 
+    var paneHeight = this.pane.el.height(),
 	    trackHeight = paneHeight - this.pane.padding * 2,
 		innerEl = this.innerEl;
-      
+
     var scrollbarHeight = trackHeight * paneHeight / innerEl.scrollHeight;
     scrollbarHeight = scrollbarHeight < 20 ? 20 : scrollbarHeight;
-    
+
     var topPos = trackHeight * innerEl.scrollTop / innerEl.scrollHeight;
-    
+
     if((topPos + scrollbarHeight) > trackHeight) {
         var diff = (topPos + scrollbarHeight) - trackHeight;
         topPos = topPos - diff - 3;
@@ -390,7 +395,7 @@
     this.el
       .css('height', scrollbarHeight)
       .css('top', topPos);
-	  
+
 	  return paneHeight < innerEl.scrollHeight;
   };
 
