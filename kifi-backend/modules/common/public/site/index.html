@@ -63,7 +63,10 @@
 
 	<section class="main" data-view="mine">
 	<div class="page-col-inner">
-		<input class="query" type="text" placeholder="Find anything...">
+		<div class="query-wrap empty">
+			<input class="query" type="text" placeholder="Find anything...">
+			<span class="query-x-wrap"><a class="query-x" href="javascript:"></a></span>
+		</div>
 		<div class="main-head">
 			<h1>Browse your keeps</h1>
 			<div class="subtitle">
@@ -199,6 +202,7 @@
 	</div>
 
 	<div class="detail"><div data-template data-kept="{{howKept}}">
+		<a class="page-x" href="javascript:void 'hide details'"></a>
 		<div class="page-meta" data-n="{{numKeeps}}">
 			<h2 class="page-title long-text">{% if numKeeps == 1 %}{{title}}{% else %}{{numKeeps}} keeps selected{% endif %}</h2>
 			{% if numKeeps == 1 %}
