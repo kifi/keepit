@@ -142,9 +142,7 @@ class ExtSearchController @Inject() (
       println(s"accept-langauge ===>>> $code")
       val lang = code.substring(0,2)
       if (lang == "zh") Set("zh-cn", "zh-tw") else Set(lang)
-    }
-
-    println(s"langauges ===>>> ${langs}")
+    } + "en" // always include English
 
     val size = langs.size
     if (size == 0) {
