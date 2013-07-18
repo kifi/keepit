@@ -863,7 +863,10 @@ $(function() {
 	}
 
 	var hideAddCollTimeout;
-	$detail.on('click', '.page-x', hideDetails)
+	$detail.on('click', '.page-x', function() {
+		$main.find('.keep.detailed').removeClass('detailed');
+		hideDetails();
+	})
 	.on("click", '.page-keep,.page-priv', function(e) {
 		var $keeps = $main.find(".keep.detailed");
 		var $a = $(this), howKept = $detail.children().attr("data-kept");
