@@ -4,6 +4,8 @@ import net.codingwell.scalaguice.ScalaModule
 
 import com.google.inject.{Singleton, Provides, Provider}
 
+import akka.actor.Scheduler
+
 import com.keepit.common.logging.Logging
 import com.keepit.common.service._
 import com.keepit.common.amazon._
@@ -42,12 +44,15 @@ case class ProdDiscoveryModule() extends DiscoveryModule with Logging {
 
   @Singleton
   @Provides
-  def serviceDiscovery(services: FortyTwoServices, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo]): ServiceDiscovery = {
-      //todo: have a dedicated host for zk (instead of using localhost)
-      val servers = current.configuration.getString("zookeeper.servers").get
-      val zk = new ZooKeeperClientImpl(servers, 2000,
-        Some({zk1 => println(s"in callback, got $zk1")}))
-      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider)
+  def zooKeeperClient(): ZooKeeperClient = {
+    val servers = current.configuration.getString("zookeeper.servers").get
+    new ZooKeeperClientImpl(servers, 2000, Some({zk1 => println(s"in callback, got $zk1")}))
+  }
+
+  @Singleton
+  @Provides
+  def serviceDiscovery(zk: ZooKeeperClient, services: FortyTwoServices, amazonInstanceInfoProvider: Provider[AmazonInstanceInfo], scheduler: Scheduler): ServiceDiscovery = {
+      new ServiceDiscoveryImpl(zk, services, amazonInstanceInfoProvider, scheduler)
   }
 
   @Singleton

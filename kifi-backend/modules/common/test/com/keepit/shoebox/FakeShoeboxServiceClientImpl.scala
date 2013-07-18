@@ -332,11 +332,6 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
     Future.successful(experimentWithId)
   }
 
-  def hasExperiment(userId: Id[User], state: State[ExperimentType]): Future[Boolean] = {
-    val has = allUserExperiments.getOrElse(userId, Set.empty).exists(exp => exp.experimentType == state && exp.state == UserExperimentStates.ACTIVE)
-    Future.successful(has)
-  }
-
   def getUserExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]] = {
     val states = allUserExperiments.getOrElse(userId, Set.empty).filter(_.state == UserExperimentStates.ACTIVE).map(_.experimentType).toSeq
     Future.successful(states)

@@ -78,7 +78,6 @@ object Shoebox extends Service {
     def getExperiments() = ServiceRoute(GET, "/internal/shoebox/database/getExperiments")
     def getExperiment(id: Id[SearchConfigExperiment]) = ServiceRoute(GET, "/internal/shoebox/database/getExperiment", Param("id", id))
     def saveExperiment = ServiceRoute(POST, "/internal/shoebox/database/saveExperiment")
-    def hasExperiment(userId: Id[User], state: State[ExperimentType]) = ServiceRoute(GET, "/internal/shoebox/database/hasExperimenthas", Param("userId", userId), Param("state", state))
     def reportArticleSearchResult() = ServiceRoute(POST, "/internal/shoebox/database/reportArticleSearchResult")
     def getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String) = ServiceRoute(GET, "/internal/shoebox/database/socialUserInfoByNetworkAndSocialId", Param("id", id), Param("networkType", networkType))
     def getSocialUserInfosByUserId(id: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/socialUserInfosByUserId", Param("id", id))
