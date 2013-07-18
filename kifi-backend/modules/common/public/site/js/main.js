@@ -266,7 +266,7 @@ $(function() {
 					}});
 			} else { // multiple keeps
 				var collCounts = collIds.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
-				o.collections = collIds.sort(function(id1, id2) {return collCounts[id1] - collCounts[id2]}).map(collIdAndName);
+				o.collections = Object.keys(collCounts).sort(function(id1, id2) {return collCounts[id1] - collCounts[id2]}).map(collIdAndName);
 				detailTmpl.render(o);
 			}
 			inCollTmpl.into($detail.find('.page-coll-list')[0]).render(o.collections);
@@ -863,7 +863,10 @@ $(function() {
 	}
 
 	var hideAddCollTimeout;
-	$detail.on('click', '.page-x', hideDetails)
+	$detail.on('click', '.page-x', function() {
+		$main.find('.keep.detailed').removeClass('detailed');
+		hideDetails();
+	})
 	.on("click", '.page-keep,.page-priv', function(e) {
 		var $keeps = $main.find(".keep.detailed");
 		var $a = $(this), howKept = $detail.children().attr("data-kept");
