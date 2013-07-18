@@ -652,10 +652,14 @@ $(function() {
 	var splashScroller = $(".splash").antiscroll({x: false, width: "100%"}).data("antiscroll");
 	$(window).resize(splashScroller.refresh.bind(splashScroller));
 
+	var $queryWrap = $('.query-wrap');
+	$queryWrap.focusin($.fn.addClass.bind($queryWrap, 'focus'));
+	$queryWrap.focusout($.fn.removeClass.bind($queryWrap, 'focus'));
 	var $query = $("input.query").on("keydown input", function(e) {
 		console.log("[clearTimeout]", e.type);
 		clearTimeout(searchTimeout);
-		var q = $.trim(this.value);
+		var val = this.value, q = $.trim(val);
+		$queryWrap.toggleClass("empty", !val);
 		if (q === ($query.attr("data-q") || "")) {
 			console.log("[query:" + e.type + "] no change");
 		} else if (!q) {
@@ -668,6 +672,9 @@ $(function() {
 				searchTimeout = setTimeout(navigate.bind(null, uri), 500);  // instant search
 			}
 		}
+	})
+	$('.query-x').click(function() {
+		$query.val('').focus().triggerHandler('input');
 	});
 
 	var $collList = $("#collections-list")
@@ -855,9 +862,9 @@ $(function() {
 		}
 	}
 
-	// keep / unkeep
 	var hideAddCollTimeout;
-	$detail.on("click", '.page-keep,.page-priv', function(e) {
+	$detail.on('click', '.page-x', hideDetails)
+	.on("click", '.page-keep,.page-priv', function(e) {
 		var $keeps = $main.find(".keep.detailed");
 		var $a = $(this), howKept = $detail.children().attr("data-kept");
 		if (!howKept) {  // keep
