@@ -78,11 +78,20 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 #coll-menu>li>a.hover {background: #9ba4b8; color: #fff}
 
 /* center col */
-input.query {border: solid #67829c; border-width: 10px 120px 12px 0; font-family: inherit; font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; height: 70px; -moz-box-sizing: border-box; box-sizing: border-box; padding: 9px 50px 9px 20px; background: #fff url(../img/search.png) right 16px top 13px/26px auto no-repeat; transition: border-right-width .3s; -webkit-transition: border-right-width .3s; -webkit-font-smoothing: antialiased}
-input.query:focus,
-input.query[data-q] {background-position: right 16px top -24px; border-right-width: 0}
+.query-wrap {background-color: #67829c; padding: 10px 120px 12px 0; transition: padding-right .3s; -webkit-transition: padding-right .3s; white-space: nowrap}
+.query-wrap.focus,
+.query-wrap:not(.empty) {padding-right: 0}
+input.query {border: none; padding: 9px 50px 9px 20px; font-family: inherit; font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; height: 48px; -moz-box-sizing: border-box; box-sizing: border-box; background: #fff url(../img/search.png) right 16px top 13px/26px auto no-repeat; -webkit-font-smoothing: antialiased}
+.query-wrap.focus>.query {background-position: right 16px top -24px}
+.query-wrap:not(.empty)>.query {background-image: none}
 input.query::-webkit-input-placeholder {color: #99a3b3}
 input.query::-moz-placeholder {color: #99a3b3}
+.query-x-wrap {display: inline-block; width: 0; height: 48px; vertical-align: bottom; position: relative}
+.query-wrap.empty>.query-x-wrap {display: none}
+a.query-x[href] {position: absolute; right: 0; font-size: 42px; line-height: 48px; height: 48px; width: 52px; text-align: center; font-weight: 300; color: #b8c5d2; -webkit-font-smoothing: antialiased}
+a.query-x[href]:hover {color: #0089d5}
+a.query-x[href]:active {color: #556179}
+.query-x::before {content: "\00d7"; position: relative; bottom: 4px}
 .main-head,
 .main-keeps {margin-left: 1px; box-shadow: -1px 0 #dbdee3}
 .main-head {padding: 13px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
