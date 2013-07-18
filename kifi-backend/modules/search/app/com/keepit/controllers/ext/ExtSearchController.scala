@@ -50,8 +50,7 @@ class ExtSearchController @Inject() (
              start: Option[String] = None,
              end: Option[String] = None,
              tz: Option[String] = None,
-             coll: Option[String] = None,
-             lang: Option[String] = None) = AuthenticatedJsonAction { request =>
+             coll: Option[String] = None) = AuthenticatedJsonAction { request =>
 
     val t1 = currentDateTime.getMillis()
 
@@ -91,7 +90,8 @@ class ExtSearchController @Inject() (
 
     val searchRes = timeWithStatsd("search-searching", "extSearch.searching") {
       val searchRes = if (maxHits > 0) {
-        searcher.search(query, maxHits, lastUUID, searchFilter)
+        val probabilities = getLangsPriorProbabilities(request.request.acceptLanguages.map(_.code))
+        searcher.search(query, maxHits, lastUUID, searchFilter, langProbabilities = probabilities)
       } else {
         log.warn("maxHits is zero")
         val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
@@ -135,6 +135,24 @@ class ExtSearchController @Inject() (
     }
 
     Ok(Json.toJson(res)).withHeaders("Cache-Control" -> "private, max-age=10")
+  }
+
+  private def getLangsPriorProbabilities(acceptLangs: Seq[String]): Map[Lang, Double] = {
+    val langs = acceptLangs.toSet.flatMap{ code: String =>
+      println(s"accept-langauge ===>>> $code")
+      val lang = code.substring(0,2)
+      if (lang == "zh") Set("zh-cn", "zh-tw") else Set(lang)
+    }
+
+    println(s"langauges ===>>> ${langs}")
+
+    val size = langs.size
+    if (size == 0) {
+      Map(Lang("en") -> 0.9d)
+    } else {
+      val prob = (1.0d - 0.1d / size) / size
+      langs.map{ (Lang(_) -> prob) }.toMap
+    }
   }
 
   class SearchTimeExceedsLimit(timeout: Int, actual: Long) extends Exception(s"Timeout ${timeout}ms, actual ${actual}ms")

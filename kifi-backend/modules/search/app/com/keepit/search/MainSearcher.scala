@@ -166,15 +166,14 @@ class MainSearcher(
     PersonalizedSearcher(userId, indexReader, myUris, browsingHistoryFuture, clickHistoryFuture, svWeightMyBookMarks, svWeightBrowsingHistory, svWeightClickHistory, shoeboxClient, monitoredAwait)
   }
 
-  def searchText(queryString: String, maxTextHitsPerCategory: Int, clickBoosts: ResultClickBoosts) = {
+  def searchText(queryString: String, maxTextHitsPerCategory: Int, clickBoosts: ResultClickBoosts, langProbabilities: Map[Lang, Double]) = {
     val myHits = createQueue(maxTextHitsPerCategory)
     val friendsHits = createQueue(maxTextHitsPerCategory)
     val othersHits = createQueue(maxTextHitsPerCategory)
     val t1 = currentDateTime.getMillis()
 
     // TODO: use user profile info as a bias
-    // lang = LangDetector.detectShortText(queryString, lang)
-    lang = Lang("en")
+    lang = LangDetector.detectShortText(queryString, langProbabilities)
 
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
@@ -226,12 +225,18 @@ class MainSearcher(
     (myHits, friendsHits, othersHits, personalizedSearcher)
   }
 
-  def search(queryString: String, numHitsToReturn: Int, lastUUID: Option[ExternalId[ArticleSearchResultRef]], filter: SearchFilter = SearchFilter.default()): ArticleSearchResult = {
+  def search(
+    queryString: String,
+    numHitsToReturn: Int,
+    lastUUID: Option[ExternalId[ArticleSearchResultRef]],
+    filter: SearchFilter = SearchFilter.default(),
+    langProbabilities: Map[Lang, Double] = Map(Lang("en") -> 0.9d)
+  ): ArticleSearchResult = {
     val now = currentDateTime
     val clickBoosts = resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost, config.asBoolean("useS3FlowerFilter"))
     timeLogs.getClickBoost = currentDateTime.getMillis() - now.getMillis()
     Statsd.timing("mainSearch.getClickboost", timeLogs.getClickBoost)
-    val (myHits, friendsHits, othersHits, personalizedSearcher) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts)
+    val (myHits, friendsHits, othersHits, personalizedSearcher) = searchText(queryString, maxTextHitsPerCategory = numHitsToReturn * 5, clickBoosts, langProbabilities)
     val t1 = currentDateTime.getMillis()
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
