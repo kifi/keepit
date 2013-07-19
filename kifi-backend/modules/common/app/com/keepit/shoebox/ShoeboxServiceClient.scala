@@ -396,8 +396,6 @@ class ShoeboxServiceClientImpl @Inject() (
     val payload = JsArray(urisAndKeepers.map{ case (uri, users) =>
       Json.obj("uri" -> JsNumber(uri.id), "users" -> JsArray(users.map{_.id}.map{JsNumber(_)}) )
     })
-    println("json is ready ============ ")
-    println(payload.toString)
     call(Shoebox.internal.suggestExperts(), payload).map{ r =>
       r.json match {
         case jso: JsObject => jso.as[JsArray].value.map{x => x.as[Long]}.map{Id[User](_)}
