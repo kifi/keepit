@@ -226,27 +226,28 @@ class TopicModelController  @Inject() (
       case (i, j) => content.slice(i, j)
     }
 
-    val randArticles = sampleDocsByTopic(index)
+    val (randArticles, numDocs) = sampleDocsByTopic(index)
 
-    Ok(html.admin.topicDetails(index, topic, topWords, randArticles))
+    Ok(html.admin.topicDetails(index, topic, numDocs, topWords, randArticles))
   }
 
   private def sampleDocsByTopic(index: Int) = {
     val SAMPLE_SIZE = 10
     val MAX_SAMPLE_POOL = 1000
     val MAX_CONTENT_SIZE = 2000
-    val uris = db.readOnly { implicit s =>
+    val allUrisInTopic = db.readOnly { implicit s =>
       currentAccessor.uriTopicRepo.getUrisByTopic(index-1)
-    }.take(MAX_SAMPLE_POOL)
+    }
+    val uris = allUrisInTopic.take(MAX_SAMPLE_POOL)
 
-    val randIdx = Random.shuffle((0 until uris.size).toList).take(SAMPLE_SIZE)
+    val randIdx = Random.shuffle((0 until uris.size).toList).take(SAMPLE_SIZE)      // shuffle performance seems good for size ~ 10^5
     val randArticles = randIdx.map{ idx =>
       articleStore.get(uris(idx)) match {
         case Some(article) => (uris(idx), article.content.take(MAX_CONTENT_SIZE))
         case None => (uris(idx), "article content not available")
       }
     }
-    randArticles
+    (randArticles, allUrisInTopic.size)
   }
 
   def summary = AdminHtmlAction{ implicit request =>
