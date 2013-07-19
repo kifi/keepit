@@ -104,7 +104,7 @@ class ExtSearchController @Inject() (
       searchRes
     }
 
-    val experts = if (filter.isEmpty && config.params.getOrElse("showExperts", "false") == "true") {
+    val experts = if (filter.isEmpty && config.asBoolean("showExperts")) {
       suggestExperts(searchRes)
     } else { Promise.successful(List.empty[Id[User]]).future }
 
