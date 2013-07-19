@@ -1,4 +1,4 @@
-@(index: Int, topic: TopicName, topicWords: String, randArticles: Seq[(Id[NormalizedURI], String)])
+@(index: Int, topic: TopicName, numDocs: Int, topicWords: String, randArticles: Seq[(Id[NormalizedURI], String)])
 
 @admin("Topic Details") {
   <table class = "topicDetail table table-bordered">
@@ -9,6 +9,11 @@
     <tr>
       <th>Topic Name</th>
       <td><div class = "topic" data-id="@topic.id.get.id"> @topic.topicName </div></td>
+    </tr>
+    
+    <tr>
+      <th>Num docs in topic</th>
+      <td>@numDocs</td>
     </tr>
     
     <tr>
