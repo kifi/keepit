@@ -63,7 +63,10 @@
 
 	<section class="main" data-view="mine">
 	<div class="page-col-inner">
-		<input class="query" type="text" placeholder="Find anything...">
+		<div class="query-wrap empty">
+			<input class="query" type="text" placeholder="Find anything...">
+			<span class="query-x-wrap"><a class="query-x" href="javascript:"></a></span>
+		</div>
 		<div class="main-head">
 			<h1>Browse your keeps</h1>
 			<div class="subtitle">
@@ -199,6 +202,7 @@
 	</div>
 
 	<div class="detail"><div data-template data-kept="{{howKept}}">
+		<a class="page-x" href="javascript:void 'hide details'"></a>
 		<div class="page-meta" data-n="{{numKeeps}}">
 			<h2 class="page-title long-text">{% if numKeeps == 1 %}{{title}}{% else %}{{numKeeps}} keeps selected{% endif %}</h2>
 			{% if numKeeps == 1 %}
@@ -296,9 +300,9 @@
 	<script src="js/jquery.history.min.js"></script>
 	<script src="js/jquery.timeago.min.js"></script>
 	<script src="js/jquery-ui.min.js"></script>
-	<script src="js/jquery.mousewheel.js"></script>
-	<script src="js/antiscroll.js"></script>
-	<script src="js/tempo.js"></script>
+	<script src="js/jquery.mousewheel.min.js"></script>
+	<script src="js/antiscroll.min.js"></script>
+	<script src="js/tempo.min.js"></script>
 	<script src="js/main.js"></script>
 	<script src="js/fancybox/jquery.fancybox.pack.js" async defer></script>
 	<script>

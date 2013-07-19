@@ -25,7 +25,18 @@ import securesocial.core.SocialUser
 import securesocial.core.UserId
 import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialId}
 
+object FortyTwoGenericTypeMappers {
+  def idMapper[M <: Model[M]] = new BaseTypeMapper[Id[M]] {
+    def apply(profile: BasicProfile) = new IdMapperDelegate[M](profile)
+  }
+
+  def stateTypeMapper[M <: Model[M]] = new BaseTypeMapper[State[M]] {
+    def apply(profile: BasicProfile) = new StateMapperDelegate[M](profile)
+  }
+}
+
 object FortyTwoTypeMappers {
+
   // Time
   implicit object DateTimeTypeMapper extends BaseTypeMapper[DateTime] {
     def apply(profile: BasicProfile) = new DateTimeMapperDelegate(profile)

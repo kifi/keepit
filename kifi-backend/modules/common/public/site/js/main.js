@@ -266,7 +266,7 @@ $(function() {
 					}});
 			} else { // multiple keeps
 				var collCounts = collIds.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
-				o.collections = collIds.sort(function(id1, id2) {return collCounts[id1] - collCounts[id2]}).map(collIdAndName);
+				o.collections = Object.keys(collCounts).sort(function(id1, id2) {return collCounts[id1] - collCounts[id2]}).map(collIdAndName);
 				detailTmpl.render(o);
 			}
 			inCollTmpl.into($detail.find('.page-coll-list')[0]).render(o.collections);
@@ -296,7 +296,8 @@ $(function() {
 		$query.attr("data-q", q);
 		var context = searchResponse && searchResponse.context;
 		$.getJSON(urlSearch, {q: q, f: "a", maxHits: 30, context: context}, function(data) {
-			$.when(promise.me).done(function() {
+			updateCollectionsIfAnyUnknown(data.hits);
+			$.when(promise.me, promise.collections).done(function() {
 				searchResponse = data;
 				var numShown = data.hits.length + (context ? $results.find(".keep").length : 0);
 				subtitleTmpl.render({numShown: numShown, query: data.query});
@@ -329,8 +330,7 @@ $(function() {
 
 	function prepKeepCollections(colls) {
 		for (var i = 0; i < colls.length; i++) {
-			var id = colls[i];
-			colls[i] = {id: id, name: collections[id].name};
+			colls[i] = collIdAndName(colls[i]);
 		}
 	}
 
@@ -344,8 +344,9 @@ $(function() {
 			params.collection = $('.left-col h3.active').data('id');
 		}
 		console.log("[anyNewKeeps] fetching", params);
-		$.getJSON(urlMyKeeps, params,
-			function(data) {
+		$.getJSON(urlMyKeeps, params, function(data) {
+			updateCollectionsIfAnyUnknown(data.keeps);
+			$.when(promise.collections).done(function() {
 				var keepIds = $myKeeps.find('.keep').map(getDataId).get().reduce(function(ids, id) {ids[id] = true; return ids}, {});
 				var keeps = data.keeps.filter(function(k) {return !keepIds[k.id]});
 				keeps.forEach(prepKeepForRender);
@@ -353,6 +354,7 @@ $(function() {
 				// TODO: insert this group heading if not already there
 				$myKeeps.find('.keep-group-title.today').prependTo($myKeeps);
 			});
+		});
 	}
 
 	function showMyKeeps(collId) {
@@ -411,6 +413,7 @@ $(function() {
 			}
 			console.log("Fetching %d keeps %s", params.count, lastKeep ? "before " + lastKeep : "");
 			$.getJSON(urlMyKeeps, params, function withKeeps(data) {
+				updateCollectionsIfAnyUnknown(data.keeps);
 				$.when(promise.me, promise.collections).done(function() {
 					var numShown = $myKeeps.find(".keep").length + data.keeps.length;
 					subtitleTmpl.render({
@@ -440,6 +443,19 @@ $(function() {
 		$.getJSON(urlMyKeepsCount, function(data) {
 			$('.left-col .my-keeps .keep-count').text(myKeepsCount = data.numKeeps);
 		});
+	}
+
+	function updateCollections() {
+		promise.collections = $.getJSON(urlCollectionsAll, {sort: "user"}, function(data) {
+			collTmpl.render(data.collections);
+			collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
+		}).promise();
+	}
+
+	function updateCollectionsIfAnyUnknown(keeps) {
+		if (collections && keeps.some(function(k) {return k.collections && k.collections.some(function(id) {return !collections[id]})})) {
+			updateCollections();
+		}
 	}
 
 	function showMessage(msg) {
@@ -652,10 +668,14 @@ $(function() {
 	var splashScroller = $(".splash").antiscroll({x: false, width: "100%"}).data("antiscroll");
 	$(window).resize(splashScroller.refresh.bind(splashScroller));
 
+	var $queryWrap = $('.query-wrap');
+	$queryWrap.focusin($.fn.addClass.bind($queryWrap, 'focus'));
+	$queryWrap.focusout($.fn.removeClass.bind($queryWrap, 'focus'));
 	var $query = $("input.query").on("keydown input", function(e) {
 		console.log("[clearTimeout]", e.type);
 		clearTimeout(searchTimeout);
-		var q = $.trim(this.value);
+		var val = this.value, q = $.trim(val);
+		$queryWrap.toggleClass("empty", !val);
 		if (q === ($query.attr("data-q") || "")) {
 			console.log("[query:" + e.type + "] no change");
 		} else if (!q) {
@@ -668,6 +688,9 @@ $(function() {
 				searchTimeout = setTimeout(navigate.bind(null, uri), 500);  // instant search
 			}
 		}
+	})
+	$('.query-x').click(function() {
+		$query.val('').focus().triggerHandler('input');
 	});
 
 	var $collList = $("#collections-list")
@@ -855,9 +878,12 @@ $(function() {
 		}
 	}
 
-	// keep / unkeep
 	var hideAddCollTimeout;
-	$detail.on("click", '.page-keep,.page-priv', function(e) {
+	$detail.on('click', '.page-x', function() {
+		$main.find('.keep.detailed').removeClass('detailed');
+		hideDetails();
+	})
+	.on("click", '.page-keep,.page-priv', function(e) {
 		var $keeps = $main.find(".keep.detailed");
 		var $a = $(this), howKept = $detail.children().attr("data-kept");
 		if (!howKept) {  // keep
@@ -1058,11 +1084,8 @@ $(function() {
 			if (myPrefs.site_left_col_width) {
 				$(".left-col").animate({width: +myPrefs.site_left_col_width}, 120);
 			}
-		}).promise(),
-		collections: $.getJSON(urlCollectionsAll, {sort: "user"}, function(data) {
-			collTmpl.render(data.collections);
-			collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
 		}).promise()};
+	updateCollections();
 	updateNumKeeps();
 
 	// render initial view

@@ -41,13 +41,8 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
 
   def invalidateCache(model: M)(implicit session: RSession): M = model
 
-  implicit val idMapper = new BaseTypeMapper[Id[M]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[M](profile)
-  }
-
-  implicit val stateTypeMapper = new BaseTypeMapper[State[M]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[M](profile)
-  }
+  implicit val idMapper = FortyTwoGenericTypeMappers.idMapper[M]
+  implicit val stateTypeMapper = FortyTwoGenericTypeMappers.stateTypeMapper[M]
 
   protected def table: RepoTable[M]
 
@@ -97,15 +92,9 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
   }
 
   abstract class RepoTable[M <: Model[M]](db: DataBaseComponent, name: String) extends Table[M](db.entityName(name)) with TableWithDDL {
-    import FortyTwoTypeMappers._
 
-    implicit val idMapper = new BaseTypeMapper[Id[M]] {
-      def apply(profile: BasicProfile) = new IdMapperDelegate[M](profile)
-    }
-
-    implicit def stateMapper = new BaseTypeMapper[State[M]] {
-      def apply(profile: BasicProfile) = new StateMapperDelegate[M](profile)
-    }
+    implicit val idMapper = FortyTwoGenericTypeMappers.idMapper[M]
+    implicit val stateTypeMapper = FortyTwoGenericTypeMappers.stateTypeMapper[M]
 
     def id = column[Id[M]]("ID", O.PrimaryKey, O.Nullable, O.AutoInc)
 
