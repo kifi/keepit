@@ -1220,7 +1220,7 @@ $(function() {
 		me = data;
 		$(".my-pic").css("background-image", "url(" + formatPicUrl(data.id, data.pictureName, 200) + ")");
 		$(".my-name").text(data.firstName + ' ' + data.lastName);
-		$(".my-description").text(data.description);
+		$(".my-description").text(data.description || '\u00A0'); // nbsp
 	}
 
 	$.getJSON(urlNetworks, function (data) {
