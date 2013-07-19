@@ -33,7 +33,6 @@ class ExtSearchController @Inject() (
   searchConfigManager: SearchConfigManager,
   mainSearcherFactory: MainSearcherFactory,
   articleSearchResultStore: ArticleSearchResultStore,
-  srcFactory: SearchResultClassifierFactory,
   healthcheckPlugin: HealthcheckPlugin,
   shoeboxClient: ShoeboxServiceClient,
   monitoredAwait: MonitoredAwait)
