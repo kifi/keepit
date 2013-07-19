@@ -1,5 +1,6 @@
 var urlBase = 'https://api.kifi.com';
 //var urlBase = 'http://dev.ezkeep.com:9000';
+var urlLinkNetwork = urlBase + '/link'
 var urlSite = urlBase + '/site';
 var urlSearch = urlBase + '/search';
 var urlKeeps =  urlSite + '/keeps';
@@ -9,6 +10,7 @@ var urlMyKeeps = urlKeeps + '/all';
 var urlMyKeepsCount = urlKeeps + '/count';
 var urlUser = urlSite + '/user';
 var urlMe = urlUser + '/me';
+var urlNetworks = urlUser + '/networks';
 var urlMyPrefs = urlUser + '/prefs';
 var urlChatter = urlSite + '/chatter';
 var urlCollections = urlSite + '/collections';
@@ -177,6 +179,7 @@ $(function() {
 	});
 
 	var me;
+	var networks;
 	var myPrefs;
 	var myKeepsCount;
 	var collections;
@@ -274,6 +277,55 @@ $(function() {
 		} else {
 			hideDetails();
 		}
+	}
+
+    var profileTmpl = Tempo.prepare("edit-profile-template");
+	function showEditProfile() {
+		$main.attr("data-view", "edit-profile");
+		profileTmpl.render(me);
+		$('.edit-profile').on('keydown keypress keyup', function (e) {
+			e.stopPropagation();
+		});
+		$('.edit-profile .edit').click(function () {
+			$(this).closest('.edit-container').addClass('editing').find('.editable').each(function () {
+				var value = $(this).text()
+				var $input = $('<input>').val(value).keyup(function (e) {
+					if (e.keyCode === 13) {
+						$(this).closest('.edit-container').find('.save').click();
+					}
+				});
+				$(this).html($input);
+			});
+		});
+		$('.edit-profile .save').click(function () {
+			var props = {};
+			$(this).closest('.edit-container').removeClass('editing').find('.editable').each(function () {
+				var value = $(this).find('input').val();
+				$(this).text(value);
+				props[$(this).data('prop')] = value;
+			})[0].focus();
+			$.ajax({
+				url: urlMe,
+				type: "POST",
+				dataType: 'json',
+				data: JSON.stringify(props),
+				contentType: 'application/json',
+				error: showMessage.bind(null, 'Uh oh! A bad thing happened!'),
+				success: updateMe
+			});
+		});
+		$('.edit-profile .networks a').each(function () {
+			var name = $(this).data('network');
+			if (!name) return;
+			var networkInfo = networks.filter(function (nw) {
+				return nw.network === name;
+			})[0];
+			if (networkInfo) {
+				$(this).attr('href', networkInfo.profileUrl).attr('title', 'View profile');
+			} else {
+			    $(this).addClass('not-connected').attr('href', urlLinkNetwork + '/' + name).attr('title', 'Click to connect');
+			}
+		});
 	}
 
 	function doSearch(q) {
@@ -589,6 +641,9 @@ $(function() {
 				break;
 			case 'search':
 				doSearch(decodeURIComponent(queryFromQS(location.search)));
+				break;
+			case 'edit-profile':
+				showEditProfile();
 		}
 	});
 
@@ -597,7 +652,7 @@ $(function() {
 		if (uri.substr(0, baseUri.length) == baseUri) {
 			uri = uri.substr(baseUri.length);
 		}
-		var title, kind = uri.match(/[\w]*/)[0];
+		var title, kind = uri.match(/[\w-]*/)[0];
 		switch (kind) {
 			case '':
 				title = 'Your Keeps';
@@ -607,6 +662,9 @@ $(function() {
 				break;
 			case 'search':
 				title = queryFromQS(uri.substr(kind.length));
+				break;
+			case 'edit-profile':
+				title = 'Edit Profile'
 		}
 		History.pushState(null, 'kifi.com • ' + title, uri);
 	}
@@ -648,6 +706,11 @@ $(function() {
 			$keep.addClass("detailed");
 		}
 		updateDetails();
+	});
+	$(".my-identity a").click(function (e) {
+		e.stopPropagation();
+		e.preventDefault();
+		navigate(this.href);
 	});
 	var $mainHead = $(".main-head");
 	var $mainKeeps = $(".main-keeps").antiscroll({x: false, width: "100%"});
@@ -1072,12 +1135,18 @@ $(function() {
 			custom_template_id: 3305}]);
 	});
 
+	function updateMe(data) {
+		me = data;
+		$(".my-pic").css("background-image", "url(" + formatPicUrl(data.id, data.pictureName, 200) + ")");
+		$(".my-name").text(data.firstName + ' ' + data.lastName);
+		$(".my-description").text(data.description);
+	}
+
 	// load data for persistent (view-independent) page UI
 	var promise = {
-		me: $.getJSON(urlMe, function(data) {
-			me = data;
-			$(".my-pic").css("background-image", "url(" + formatPicUrl(data.id, data.pictureName, 200) + ")");
-			$(".my-name").text(data.firstName + ' ' + data.lastName);
+		me: $.getJSON(urlMe, updateMe).promise(),
+		me: $.getJSON(urlNetworks, function (data) {
+			networks = data;
 		}).promise(),
 		myPrefs: $.getJSON(urlMyPrefs, function(data) {
 			myPrefs = data;
@@ -1100,7 +1169,7 @@ $(function() {
 	$.getScript('js/jquery-bindhover.js').done(function() {
 		$(document).bindHover(".pic.friend", function(configureHover) {
 			var $a = $(this), id = $a.data('id');
-      friendCardTmpl.into(this).render({
+			friendCardTmpl.into(this).render({
 				name: $a.data('name'),
 				picUri: formatPicUrl(id, $a.css('background-image').match(/\/([^\/]*)['"]?\)$/)[1], 200)});
       var $el = $a.children();
