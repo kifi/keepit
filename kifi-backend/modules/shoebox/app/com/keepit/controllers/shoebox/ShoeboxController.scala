@@ -11,7 +11,6 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.State
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.Healthcheck
-import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
@@ -30,8 +29,13 @@ import com.keepit.shoebox.ClickHistoryTracker
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.Action
-import com.keepit.social.{SocialNetworkType, SocialId}
+import com.keepit.social.SocialNetworkType
 import com.keepit.realtime.{UriChannel, UserChannel}
+import scala.concurrent.Future
+import com.keepit.model.ExperimentType
+import com.keepit.common.healthcheck.HealthcheckError
+import com.keepit.social.SocialId
+import com.keepit.graph.model._
 
 object ShoeboxController {
   implicit val collectionTupleFormat = (
@@ -330,6 +334,56 @@ class ShoeboxController @Inject() (
     Ok(uriChannel.localClientCount.toString)
   }
 
+  // Graph Extractor Methods
 
+  def getUserVertices() = Action { request =>
+    val userVertices = db.readOnly { implicit s => userRepo.all().map(user =>
+      Vertex(VertexId[User, UserData](user.id.get), UserData(user))
+    ) }
+    Ok(Json.arr(userVertices.map(Vertex.format[UserData].writes(_))))
+  }
+
+  def getUriVertices() = Action { request =>
+    val uriVertices = db.readOnly { implicit s => normUriRepo.all().map(uri =>
+      Vertex(VertexId[NormalizedURI, UriData](uri.id.get), UriData(uri))
+    ) }
+    Ok(Json.arr(uriVertices.map(Vertex.format[UriData].writes(_))))
+  }
+
+  def getCollectionVertices() = Action { request =>
+    val collectionVertices = db.readOnly { implicit s => collectionRepo.all().map(collection =>
+      Vertex(VertexId[Collection, CollectionData](collection.id.get), CollectionData(collection))
+    ) }
+    Ok(Json.arr(collectionVertices.map(Vertex.format[CollectionData].writes(_))))
+  }
+
+  def getKeptEdges() = Action { request =>
+    val keptEdges = db.readOnly { implicit s => bookmarkRepo.all().map(bookmark =>
+      Edge(VertexId[User, UserData](bookmark.userId), VertexId[NormalizedURI, UriData](bookmark.uriId), KeptData(bookmark))
+    ) }
+    Ok(Json.arr(keptEdges.map(Edge.format[UserData, UriData, KeptData].writes(_))))
+  }
+
+  def getFollowsEdges() = Action { request =>
+    val followsEdges = db.readOnly { implicit s => userConnectionRepo.all().map(userConnection =>
+      Edge(VertexId[User, UserData](userConnection.user1), VertexId[User, UserData](userConnection.user2), FollowsData(userConnection))
+    ) }
+    Ok(Json.arr(followsEdges.map(Edge.format[UserData, UserData, FollowsData].writes(_))))
+  }
+
+  def getCollectsEdges() = Action { request =>
+    val collectsEdges = db.readOnly { implicit s => collectionRepo.all().map(collection =>
+      Edge(VertexId[User, UserData](collection.userId), VertexId[Collection, CollectionData](collection.id.get), CollectsData(collection))
+    ) }
+    Ok(Json.arr(collectsEdges.map(Edge.format[UserData, CollectionData, CollectsData].writes(_))))
+  }
+
+  def getContainsEdges() = Action { request =>
+    val containsEdges = db.readOnly { implicit s => keepToCollectionRepo.all().map(keepToCollection => {
+      val uriId = bookmarkRepo.get(keepToCollection.bookmarkId).uriId
+      Edge(VertexId[Collection, CollectionData](keepToCollection.collectionId), VertexId[NormalizedURI, UriData](uriId), ContainsData(keepToCollection))
+    }) }
+    Ok(Json.arr(containsEdges.map(Edge.format[CollectionData, UriData, ContainsData].writes(_))))
+  }
 
 }

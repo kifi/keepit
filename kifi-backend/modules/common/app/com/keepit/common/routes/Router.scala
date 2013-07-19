@@ -12,8 +12,6 @@ import com.keepit.model.ExperimentType
 import com.keepit.model.UserSession
 import java.net.URLEncoder
 import com.keepit.common.strings.UTF8
-import play.api.libs.json.JsArray
-
 
 trait Service
 case class ServiceRoute(method: Method, path: String, params: Param*) {
@@ -87,6 +85,15 @@ object Shoebox extends Service {
     def userChannelCountFanout() = ServiceRoute(POST, "/internal/shoebox/channel/userCount")
     def uriChannelFanout() = ServiceRoute(POST, "/internal/shoebox/channel/uri")
     def uriChannelCountFanout() = ServiceRoute(POST, "/internal/shoebox/channel/uriCount")
+    
+    // Graph Extractor Methods
+    def getUserVertices() = ServiceRoute(GET, "/internal/shoebox/database/getUserVertices")
+    def getUriVertices() = ServiceRoute(GET, "/internal/shoebox/database/getUriVertices")
+    def getCollectionVertices() = ServiceRoute(GET, "/internal/shoebox/database/getCollectionVertices")
+    def getKeptEdges() = ServiceRoute(GET, "/internal/shoebox/database/getKeptEdges")
+    def getFollowsEdges() = ServiceRoute(GET, "/internal/shoebox/database/getFollowsEdges")
+    def getCollectsEdges() = ServiceRoute(GET, "/internal/shoebox/database/getCollectsEdges")
+    def getContainsEdges() = ServiceRoute(GET, "/internal/shoebox/database/getContainsEdges")
   }
 }
 

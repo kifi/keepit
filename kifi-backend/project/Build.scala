@@ -79,6 +79,8 @@ object ApplicationBuild extends Build {
       "org.jsoup" % "jsoup" % "1.7.1"
     )
 
+    val graphDependencies = Seq()
+
     val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
       "-language:implicitConversions", "-language:postfixOps", "-language:dynamics","-language:higherKinds",
       "-language:existentials", "-language:experimental.macros", "-Xmax-classfile-name", "140")
@@ -167,6 +169,21 @@ object ApplicationBuild extends Build {
       sources in doc in Compile := List()
     ).dependsOn(common % "test->test;compile->compile").aggregate(common)
 
+  val graph = play.Project("graph", appVersion, commonDependencies ++ graphDependencies, path = file("modules/graph")).settings(
+    scalacOptions ++= _scalacOptions,
+    routesImport ++= _routesImport,
+    resolvers ++= commonResolvers,
+    templatesImport ++= _templatesImport,
+    javaOptions in test ++= javaTestOptions,
+
+    javaOptions in test ++= javaTestOptions,
+    parallelExecution in Test := true,
+    testOptions in Test ++= _testOptions,
+    EclipseKeys.skipParents in ThisBuild := false,
+
+    //https://groups.google.com/forum/?fromgroups=#!topic/play-framework/aa90AAp5bpo
+    sources in doc in Compile := List()
+  ).dependsOn(common % "test->test;compile->compile").aggregate(common)
 
     val main = play.Project(appName, appVersion).settings(
       scalacOptions ++= _scalacOptions,
@@ -180,5 +197,5 @@ object ApplicationBuild extends Build {
 
       //https://groups.google.com/forum/?fromgroups=#!topic/play-framework/aa90AAp5bpo
       sources in doc in Compile := List()
-    ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile").aggregate(common, search, shoebox)
+    ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", graph % "test->test;compile->compile").aggregate(common, search, shoebox, graph)
 }

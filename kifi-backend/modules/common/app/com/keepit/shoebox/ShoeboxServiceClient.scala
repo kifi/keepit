@@ -42,6 +42,7 @@ import play.api.libs.json.JsObject
 import com.keepit.model.SocialUserInfoNetworkKey
 import com.keepit.model.UserSessionExternalIdKey
 import com.keepit.model.UserExternalIdKey
+import com.keepit.graph.model._
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -81,6 +82,15 @@ trait ShoeboxServiceClient extends ServiceClient {
   def userChannelCountFanout(): Seq[Future[Int]]
   def uriChannelFanout(uri: String, msg: JsArray): Seq[Future[Int]]
   def uriChannelCountFanout(): Seq[Future[Int]]
+
+  // Graph Extractor Methods
+  def getUserVertices(): Future[Seq[Vertex[UserData]]]
+  def getUriVertices(): Future[Seq[Vertex[UriData]]]
+  def getCollectionVertices(): Future[Seq[Vertex[CollectionData]]]
+  def getKeptEdges(): Future[Seq[Edge[UserData, UriData, KeptData]]]
+  def getFollowsEdges(): Future[Seq[Edge[UserData, UserData, FollowsData]]]
+  def getCollectsEdges(): Future[Seq[Edge[UserData, CollectionData, CollectsData]]]
+  def getContainsEdges(): Future[Seq[Edge[CollectionData, UriData, ContainsData]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -391,4 +401,45 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
+  def getUserVertices(): Future[Seq[Vertex[UserData]]] = {
+    call(Shoebox.internal.getUserVertices()).map{ r =>
+      r.json.as[JsArray].value.map(js => Vertex.format[UserData].reads(js).get)
+    }
+  }
+
+  def getUriVertices(): Future[Seq[Vertex[UriData]]] = {
+    call(Shoebox.internal.getUriVertices()).map{ r =>
+      r.json.as[JsArray].value.map(js => Vertex.format[UriData].reads(js).get)
+    }
+  }
+  
+  def getCollectionVertices(): Future[Seq[Vertex[CollectionData]]] = {
+    call(Shoebox.internal.getCollectionVertices()).map{ r =>
+      r.json.as[JsArray].value.map(js => Vertex.format[CollectionData].reads(js).get)
+    }
+  }
+  
+  def getKeptEdges(): Future[Seq[Edge[UserData, UriData, KeptData]]] = {
+    call(Shoebox.internal.getKeptEdges()).map{ r =>
+      r.json.as[JsArray].value.map(js => Edge.format[UserData, UriData, KeptData].reads(js).get)
+    }
+  }
+  
+  def getFollowsEdges(): Future[Seq[Edge[UserData, UserData, FollowsData]]] = {
+    call(Shoebox.internal.getFollowsEdges()).map{ r =>
+      r.json.as[JsArray].value.map(js => Edge.format[UserData, UserData, FollowsData].reads(js).get)
+    }
+  }
+  
+  def getCollectsEdges(): Future[Seq[Edge[UserData, CollectionData, CollectsData]]] = {
+    call(Shoebox.internal.getCollectsEdges()).map{ r =>
+      r.json.as[JsArray].value.map(js => Edge.format[UserData, CollectionData, CollectsData].reads(js).get)
+    }
+  }
+  
+  def getContainsEdges(): Future[Seq[Edge[CollectionData, UriData, ContainsData]]] = {
+    call(Shoebox.internal.getContainsEdges()).map{ r =>
+      r.json.as[JsArray].value.map(js => Edge.format[CollectionData, UriData, ContainsData].reads(js).get)
+    }
+  }
 }
