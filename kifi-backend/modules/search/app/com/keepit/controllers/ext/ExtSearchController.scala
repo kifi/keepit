@@ -198,7 +198,7 @@ class ExtSearchController @Inject() (
     val urisAndUsers = searchRes.hits.map{ hit =>
       (hit.uriId, hit.users)
     }
-    if (urisAndUsers.map{_._2}.flatten.size < 2){
+    if (urisAndUsers.map{_._2}.flatten.distinct.size < 2){
       Promise.successful(List.empty[Id[User]]).future
     } else{
       shoeboxClient.suggestExperts(urisAndUsers)
