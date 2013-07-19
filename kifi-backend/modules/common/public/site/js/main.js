@@ -299,7 +299,7 @@ $(function() {
 	}
 
     var profileTmpl = Tempo.prepare("profile-template");
-	function showEditProfile() {
+	function showProfile() {
 		$main.attr("data-view", "profile");
 		profileTmpl.render(me);
 		$('.profile').on('keydown keypress keyup', function (e) {
@@ -311,10 +311,10 @@ $(function() {
 				var $input = $('<input>').val(value).keyup(function (e) {
 					if (e.keyCode === 13) {
 						$(this).closest('.edit-container').find('.save').click();
-					}
-					if (e.which === 27) {
+					} else if (e.which === 27) {
 						$(this).closest('.edit-container').removeClass('editing').find('.editable').each(function () {
-							$(this).text(me[$(this).data("prop")]);
+							var $this = $(this);
+							$this.text(me[$this.data("prop")]);
 						});
 					}
 				});
@@ -336,12 +336,14 @@ $(function() {
 			var props = {};
 			var $editContainer = $(this).closest('.edit-container');
 			$editContainer.find('.editable').each(function () {
-				var value = $(this).find('input').val();
-				$(this).text(value);
-				props[$(this).data('prop')] = value;
+				var $this = $(this);
+				var value = $this.find('input').val();
+				$this.text(value);
+				props[$this.data('prop')] = value;
 			});
-			var saveText = $editContainer.find('.save').text();
-			$editContainer.find('.save').text('Saving...');
+			var $save = $editContainer.find('.save')
+			var saveText = $save.text();
+			$save.text('Saving...');
 			$.ajax({
 				url: urlMe,
 				type: "POST",
@@ -350,25 +352,26 @@ $(function() {
 				contentType: 'application/json',
 				error: function () {
 					showMessage('Uh oh! A bad thing happened!');
-					$editContainer.find('.save').text(saveText);
+					$save.text(saveText);
 				},
 				success: function (data) {
 					$editContainer.removeClass('editing')
-					$editContainer.find('.save').text(saveText);
+					$save.text(saveText);
 					updateMe(data);
 				}
 			});
 		});
 		$('.profile .networks a').each(function () {
-			var name = $(this).data('network');
+			var $this = $(this);
+			var name = $this.data('network');
 			if (!name) return;
 			var networkInfo = myNetworks.filter(function (nw) {
 				return nw.network === name;
 			})[0];
 			if (networkInfo) {
-				$(this).attr('href', networkInfo.profileUrl).attr('title', 'View profile');
+				$this.attr('href', networkInfo.profileUrl).attr('title', 'View profile');
 			} else {
-			    $(this).addClass('not-connected').attr('href', urlLinkNetwork + '/' + name).attr('title', 'Click to connect');
+			    $this.addClass('not-connected').attr('href', urlLinkNetwork + '/' + name).attr('title', 'Click to connect');
 			}
 		});
 	}
@@ -688,7 +691,7 @@ $(function() {
 				doSearch(decodeURIComponent(queryFromQS(location.search)));
 				break;
 			case 'profile':
-				showEditProfile();
+				showProfile();
 		}
 	});
 
