@@ -283,7 +283,7 @@ class TopicModelController  @Inject() (
       (uriId, userIds)
     }
 
-    val TOP_N = 3
+    val TOP_N = 4
     val rcmder = new ExpertRecommender(db, currentAccessor.uriTopicRepo, clicksRepo, bookmarkRepo)
     val ranks = rcmder.rank(urisAndKeepers)
     val experts = ranks.take(TOP_N).filter(_._2 > 0.0).map{_._1}

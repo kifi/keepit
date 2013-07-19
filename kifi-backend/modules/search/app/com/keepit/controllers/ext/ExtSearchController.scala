@@ -179,7 +179,8 @@ class ExtSearchController @Inject() (
 
     val future = decorator.decorate(res)
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
-    val expert = monitoredAwait.result(experts, 50 milliseconds, s"suggesting experts", Nil)
+    val expert = monitoredAwait.result(experts, 50 milliseconds, s"suggesting experts", Nil).filter(_.id != userId)   // exclude self
+
 
     PersonalSearchResultPacket(res.uuid, res.query,
       monitoredAwait.result(future, 5 seconds, s"getting search decorations for $userId", Nil),
