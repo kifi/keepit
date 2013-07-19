@@ -32,4 +32,4 @@ case class PersonalSearchResultPacket(
   show: Boolean,
   experimentId: Option[Id[SearchConfigExperiment]],
   context: String,
-  experts: Seq[Id[User]] = Seq.empty[Id[User]])
+  experts: Seq[Id[User]] = Nil)

@@ -25,6 +25,7 @@ import com.newrelic.api.agent.NewRelic
 import com.newrelic.api.agent.Trace
 import play.modules.statsd.api.Statsd
 import com.keepit.social.BasicUser
+import scala.concurrent.Promise
 
 @Singleton
 class ExtSearchController @Inject() (
@@ -101,13 +102,14 @@ class ExtSearchController @Inject() (
       searchRes
     }
 
-    val experts = suggestExperts(searchRes)
+    val experts = if (filter.isEmpty && config.params.getOrElse("showExperts", "false") == "true") {
+      suggestExperts(searchRes)
+    } else { Promise.successful(List.empty[Id[User]]).future }
 
     val t4 = currentDateTime.getMillis()
 
     val decorator = ResultDecorator(searcher, shoeboxClient, config)
     val res = toPersonalSearchResultPacket(decorator, userId, searchRes, config, searchFilter.isDefault, searchExperimentId, experts)
-
     reportArticleSearchResult(searchRes)
 
     val t5 = currentDateTime.getMillis()
@@ -160,6 +162,7 @@ class ExtSearchController @Inject() (
     val future = decorator.decorate(res)
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
     val expert = monitoredAwait.result(experts, 50 milliseconds, s"suggesting experts", Nil)
+
     PersonalSearchResultPacket(res.uuid, res.query,
       monitoredAwait.result(future, 5 seconds, s"getting search decorations for $userId", Nil),
       res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), searchExperimentId, filter, expert)

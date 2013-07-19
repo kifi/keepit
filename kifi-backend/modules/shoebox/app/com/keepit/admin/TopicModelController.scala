@@ -276,6 +276,7 @@ class TopicModelController  @Inject() (
   }
 
   def suggestExperts() = Action { request =>
+    println("in topic controller ================ ")
     val req = request.body.asJson.get.asInstanceOf[JsArray].value
     val urisAndKeepers = req.map{ js =>
       val uriId = Id[NormalizedURI]((js \ "uri").as[Long])
