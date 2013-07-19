@@ -321,7 +321,7 @@ $(function() {
 				$(this).html($input);
 			}).find('input');
 			$inputs[0].focus();
-			$inputs.keyup(function () {
+			$inputs.keypress(function () {
 				var minChars = 3;
 				var len = $(this).val().length;
 				$(this).css('width', 'auto');
@@ -330,7 +330,7 @@ $(function() {
 				} else {
 					$(this).attr('size', minChars);
 				}
-			}).keyup();
+			}).keypress();
 		});
 		$('.profile .save').click(function () {
 			var props = {};
