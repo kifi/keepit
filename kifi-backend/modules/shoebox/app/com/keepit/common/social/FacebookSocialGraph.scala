@@ -18,6 +18,7 @@ object FacebookSocialGraph {
 
   object ErrorSubcodes {
     val AppNotInstalled = 458
+    val PasswordChanged = 460
     val Expired = 463
     val UnconfirmedUser = 464
   }
@@ -53,6 +54,9 @@ class FacebookSocialGraph @Inject() (
         (errorCode, errorSub) match {
           case (_, Some(AppNotInstalled)) =>
             fail(s"App not authorized for social user $socialUserInfo; not fetching connections.", APP_NOT_AUTHORIZED)
+            Seq()
+          case (_, Some(PasswordChanged)) =>
+            fail(s"Facebook password changed for social user $socialUserInfo; not fetching connections.")
             Seq()
           case (_, Some(Expired)) =>
             fail(s"Token expired for social user $socialUserInfo; not fetching connections.")
