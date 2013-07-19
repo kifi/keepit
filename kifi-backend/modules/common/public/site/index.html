@@ -27,8 +27,9 @@
 			<a class="header-logo" href=""></a>
 		</div>
 		<div class="my-identity">
-			<div class="my-pic"></div>
+			<a class="my-pic" href="edit-profile"></a>
 			<div class="my-name">&nbsp;</div>
+			<div class="my-description">&nbsp;</div>
 		</div>
 		<h2>You</h2>
 		<h3 class="my-keeps active">
@@ -168,6 +169,31 @@
 				</ol>
 				<img class="keeps-loading" src="img/wait.gif">
 				<a class="keeps-load-more hidden" href="javascript:">Show more</a>
+			</div>
+		</div>
+		<div id="edit-profile-template">
+			<div class="edit-profile" data-template>
+				<div class="profile-image" style="background-image: url(//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/200/{{pictureName}})"></div>
+				<div class="profile-details">
+					<div class="profile-name edit-container">
+						<span data-prop="firstName" class="profile-firstname editable">{{firstName}}</span>
+						<span data-prop="lastName" class="profile-lastName editable">{{lastName}}</span>
+						<span class="edit">Edit</span>
+						<span class="save">Save</span>
+					</div>
+					<div class="profile-description edit-container">
+						<span data-prop="description" class="editable">{{description}}</span>
+						<span class="edit">Edit</span>
+						<span class="save">Save</span>
+					</div>
+				</div>
+				<h2>Social networks connected to your Kifi account</h2>
+				<ul class="networks">
+					<li><a class="nw-facebook" data-network="facebook">Facebook</a></li>
+					<li><a class="nw-linkedin" data-network="linkedin">LinkedIn</a></li>
+					<li><a class="nw-twitter not-connected" title="Coming soon!">Twitter</a></li>
+					<li><a class="nw-google not-connected" title="Coming soon!">Google</a></li>
+				</ul>
 			</div>
 		</div>
 	</div>
