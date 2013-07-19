@@ -24,9 +24,9 @@ class AdminSearchController @Inject() (
     searchClient: SearchServiceClient
   ) extends AdminController(actionAuthenticator) {
 
-  def explain(query: String, uriId: Id[NormalizedURI]) = AdminHtmlAction { request =>
+  def explain(query: String, uriId: Id[NormalizedURI], lang: String) = AdminHtmlAction { request =>
     Async {
-      searchClient.explainResult(query, request.userId, uriId).map(Ok(_))
+      searchClient.explainResult(query, request.userId, uriId, lang).map(Ok(_))
     }
   }
 
