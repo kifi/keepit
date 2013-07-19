@@ -25,6 +25,7 @@ import com.newrelic.api.agent.NewRelic
 import com.newrelic.api.agent.Trace
 import play.modules.statsd.api.Statsd
 import com.keepit.social.BasicUser
+import scala.concurrent.Promise
 
 @Singleton
 class ExtSearchController @Inject() (
@@ -103,11 +104,14 @@ class ExtSearchController @Inject() (
       searchRes
     }
 
+    val experts = if (filter.isEmpty && config.asBoolean("showExperts")) {
+      suggestExperts(searchRes)
+    } else { Promise.successful(List.empty[Id[User]]).future }
+
     val t4 = currentDateTime.getMillis()
 
     val decorator = ResultDecorator(searcher, shoeboxClient, config)
-    val res = toPersonalSearchResultPacket(decorator, userId, searchRes, config, searchFilter.isDefault, searchExperimentId)
-
+    val res = toPersonalSearchResultPacket(decorator, userId, searchRes, config, searchFilter.isDefault, searchExperimentId, experts)
     reportArticleSearchResult(searchRes)
 
     val t5 = currentDateTime.getMillis()
@@ -170,14 +174,35 @@ class ExtSearchController @Inject() (
       res: ArticleSearchResult,
       config: SearchConfig,
       isDefaultFilter: Boolean,
-      searchExperimentId: Option[Id[SearchConfigExperiment]]): PersonalSearchResultPacket = {
+      searchExperimentId: Option[Id[SearchConfigExperiment]],
+      expertsFuture: Future[Seq[Id[User]]]): PersonalSearchResultPacket = {
 
     val future = decorator.decorate(res)
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
+    val experts = monitoredAwait.result(expertsFuture, 50 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id)
+    val expertsExtIds = {
+      if (experts.size == 0) List.empty[ExternalId[User]]
+      else {
+        val idMap = monitoredAwait.result(shoeboxClient.getBasicUsers(experts), 50 milliseconds, s"getting experts' external ids", Map.empty[Id[User], BasicUser])
+        experts.flatMap{idMap.get(_)}.map{_.externalId}
+      }
+    }
+
 
     PersonalSearchResultPacket(res.uuid, res.query,
       monitoredAwait.result(future, 5 seconds, s"getting search decorations for $userId", Nil),
-      res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), searchExperimentId, filter)
+      res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), searchExperimentId, filter, expertsExtIds)
+  }
+
+  private[ext] def suggestExperts(searchRes: ArticleSearchResult) = {
+    val urisAndUsers = searchRes.hits.map{ hit =>
+      (hit.uriId, hit.users)
+    }
+    if (urisAndUsers.map{_._2}.flatten.distinct.size < 2){
+      Promise.successful(List.empty[Id[User]]).future
+    } else{
+      shoeboxClient.suggestExperts(urisAndUsers)
+    }
   }
 
 }

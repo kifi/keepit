@@ -36,7 +36,8 @@ object SearchConfig {
       "dampingHalfDecayMine" -> "7.0",
       "dampingHalfDecayFriends" -> "5.0",
       "dampingHalfDecayOthers" -> "2.0",
-      "useS3FlowerFilter" -> "true"
+      "useS3FlowerFilter" -> "true",
+      "showExperts" -> "false"
     )
   private[this] val descriptions =
     Map[String, String](
@@ -64,7 +65,8 @@ object SearchConfig {
       "dampingHalfDecayMine" -> "how many top hits in my bookmarks are important",
       "dampingHalfDecayFriends" -> "how many top hits in friends' bookmarks are important",
       "dampingHalfDecayOthers" -> "how many top hits in others' bookmark are important",
-      "useS3FlowerFilter" -> "Using the multiChunk S3 backed result clicked flower filter"
+      "useS3FlowerFilter" -> "Using the multiChunk S3 backed result clicked flower filter",
+      "showExperts" -> "suggest experts when search returns hits"
     )
 
   def apply(params: (String, String)*): SearchConfig = SearchConfig(Map(params:_*))
