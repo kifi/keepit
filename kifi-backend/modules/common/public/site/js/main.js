@@ -158,15 +158,49 @@ $(function() {
 		start: function() {
 			var r = $collList[0].getBoundingClientRect();
 			var $shade = $('<div class=keep-drag-shade>');
-			$shade.clone().css({top: 0, left: 0, right: 0, height: r.top})
+			var $shades = $shade.clone().css({top: 0, left: 0, right: 0, height: r.top})
 				.add($shade.css({top: r.top, left: r.right, right: 0, bottom: 0}))
 				.appendTo('body').layout().css('opacity', .2);
-			document.addEventListener('mouseup', function up() {
+			document.addEventListener('mousemove', move);
+			document.addEventListener('mouseup', up, true);
+			function up() {
+				document.removeEventListener('mousemove', move);
 				document.removeEventListener('mouseup', up, true);
-				$('.keep-drag-shade').css('opacity', 0).on('transitionend', function() {
+				$shades.css('opacity', 0).on('transitionend', function() {
 					$(this).remove();
 				});
-			}, true);
+			}
+			function move(e) {
+				var inCol = e.pageX < r.right && e.pageX >= r.left, dy;
+				if (inCol && Math.abs(dy = (e.pageY - r.bottom)) < 10) {
+					scrollTimeout = scrollTimeout || setTimeout(scroll, scrollTimeoutMs);
+					scrollPx = 10 + dy * 2;
+				} else if (inCol && (dy = e.pageY - r.top) < 10 && dy > -50) {
+					scrollTimeout = scrollTimeout || setTimeout(scroll, scrollTimeoutMs)
+					scrollPx = -10 + Math.max(-10, dy);
+				} else if (scrollTimeout) {
+					clearTimeout(scrollTimeout), scrollTimeout = null;
+				}
+				lastPageX = e.pageX;
+				lastPageY = e.pageY;
+			}
+			var scrollEl = $collList.find('.antiscroll-inner')[0], scrollPx, lastPageX, lastPageY;
+			var scrollTimeout, scrollTimeoutMs = 100, scrollTopMax = scrollEl.scrollHeight - scrollEl.clientHeight;
+			function scroll() {
+				console.log('[scroll] px:', scrollPx);
+				var top = scrollEl.scrollTop, newTop = Math.max(0, Math.min(scrollTopMax, top + scrollPx));
+				if (newTop != top) {
+					scrollEl.scrollTop = newTop;
+					// update cached droppable offsets
+					for (var m = $.ui.ddmanager.droppables['default'], i = 0; i < m.length; i++) {
+						m[i].offset = m[i].element.offset();
+					}
+					$(document).trigger({type: 'mousemove', pageX: lastPageX, pageY: lastPageY});
+					scrollTimeout = setTimeout(scroll, scrollTimeoutMs);
+				} else {
+					scrollTimeout = null;
+				}
+			}
 		}};
 
 	var $colls = $("#collections"), collTmpl = Tempo.prepare($colls).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
