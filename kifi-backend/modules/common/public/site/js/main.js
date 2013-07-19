@@ -279,42 +279,68 @@ $(function() {
 		}
 	}
 
-    var profileTmpl = Tempo.prepare("edit-profile-template");
+    var profileTmpl = Tempo.prepare("profile-template");
 	function showEditProfile() {
-		$main.attr("data-view", "edit-profile");
+		$main.attr("data-view", "profile");
 		profileTmpl.render(me);
-		$('.edit-profile').on('keydown keypress keyup', function (e) {
+		$('.profile').on('keydown keypress keyup', function (e) {
 			e.stopPropagation();
 		});
-		$('.edit-profile .edit').click(function () {
-			$(this).closest('.edit-container').addClass('editing').find('.editable').each(function () {
+		$('.profile .edit').click(function () {
+			var $inputs = $(this).closest('.edit-container').addClass('editing').find('.editable').each(function () {
 				var value = $(this).text()
 				var $input = $('<input>').val(value).keyup(function (e) {
 					if (e.keyCode === 13) {
 						$(this).closest('.edit-container').find('.save').click();
 					}
+					if (e.which === 27) {
+						$(this).closest('.edit-container').removeClass('editing').find('.editable').each(function () {
+							$(this).text(me[$(this).data("prop")]);
+						});
+					}
 				});
 				$(this).html($input);
-			});
+			}).find('input');
+			$inputs[0].focus();
+			$inputs.keyup(function () {
+				var minChars = 3;
+				var len = $(this).val().length;
+				$(this).css('width', 'auto');
+				if (len > minChars) {
+					$(this).attr('size', len);
+				} else {
+					$(this).attr('size', minChars);
+				}
+			}).keyup();
 		});
-		$('.edit-profile .save').click(function () {
+		$('.profile .save').click(function () {
 			var props = {};
-			$(this).closest('.edit-container').removeClass('editing').find('.editable').each(function () {
+			var $editContainer = $(this).closest('.edit-container');
+			$editContainer.find('.editable').each(function () {
 				var value = $(this).find('input').val();
 				$(this).text(value);
 				props[$(this).data('prop')] = value;
-			})[0].focus();
+			});
+			var saveText = $editContainer.find('.save').text();
+			$editContainer.find('.save').text('Saving...');
 			$.ajax({
 				url: urlMe,
 				type: "POST",
 				dataType: 'json',
 				data: JSON.stringify(props),
 				contentType: 'application/json',
-				error: showMessage.bind(null, 'Uh oh! A bad thing happened!'),
-				success: updateMe
+				error: function () {
+					showMessage('Uh oh! A bad thing happened!');
+					$editContainer.find('.save').text(saveText);
+				},
+				success: function (data) {
+					$editContainer.removeClass('editing')
+					$editContainer.find('.save').text(saveText);
+					updateMe(data);
+				}
 			});
 		});
-		$('.edit-profile .networks a').each(function () {
+		$('.profile .networks a').each(function () {
 			var name = $(this).data('network');
 			if (!name) return;
 			var networkInfo = myNetworks.filter(function (nw) {
@@ -642,7 +668,7 @@ $(function() {
 			case 'search':
 				doSearch(decodeURIComponent(queryFromQS(location.search)));
 				break;
-			case 'edit-profile':
+			case 'profile':
 				showEditProfile();
 		}
 	});
@@ -663,7 +689,7 @@ $(function() {
 			case 'search':
 				title = queryFromQS(uri.substr(kind.length));
 				break;
-			case 'edit-profile':
+			case 'profile':
 				title = 'Edit Profile'
 		}
 		History.pushState(null, 'kifi.com • ' + title, uri);

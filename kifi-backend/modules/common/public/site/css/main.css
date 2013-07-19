@@ -100,34 +100,36 @@ a.query-x[href]:active {color: #556179}
 .main[data-view=search] .main-head {padding-top: 10px; height: 37px}
 .main-head>h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
 .main[data-view=search] .main-head>h1 {display: none}
-.main[data-view=edit-profile] .main-head {display: none}
-.main[data-view=edit-profile] .main-keeps {display: none}
+.main[data-view=profile] .main-head {display: none}
+.main[data-view=profile] .main-keeps {display: none}
 
-.edit-profile {display: none; position: absolute; top: 70px; left: 0; width: 100%; font-size: 14px; box-sizing: border-box; padding: 20px 50px; color: #818692;}
-.edit-profile input, .edit-profile textarea {color: #818692; border: none; margin: 0; padding: 0;}
-.main[data-view=edit-profile] .edit-profile {display: block}
-.edit-profile .profile-image {float: left; border: 10px solid #dbdee3; border-radius: 20px; width: 100px; height: 100px; background-size: 100%}
-.edit-profile .profile-details {float: left; padding: 10px; width: 500px;}
-.edit-profile .profile-name {padding: 5px;}
-.edit-profile .profile-name .editable {font-size: 24px; padding: 3px;}
-.edit-profile .profile-name input {font-size: 24px; width: 150px;}
-.edit-profile .profile-description {display: block; font-size: 16px; padding: 5px; margin-left: 5px;}
-.edit-profile .profile-description input {font-size: 16px; width: 300px;}
+.profile {display: none; position: absolute; top: 70px; left: 0; width: 100%; font-size: 14px; box-sizing: border-box; padding: 20px 50px; color: #818692;}
+.profile input, .profile textarea {color: #818692; border: none; margin: 0; padding: 0;}
+.main[data-view=profile] .profile {display: block}
+.profile .profile-image {float: left; border: 10px solid #eff2f7; border-radius: 20px; width: 100px; height: 100px; background-size: 100%}
+.profile .profile-details {float: left; padding: 10px; width: 500px;}
+.profile .profile-name {padding: 5px;}
+.profile .profile-name .editable {font-size: 24px; padding: 3px;}
+.profile .profile-name input {font: inherit; font-size: 24px; width: 150px;}
+.profile .profile-description {display: block; font-size: 16px; padding: 5px; margin-left: 5px;}
+.profile .profile-description input {font: inherit; font-size: 16px; width: 300px;}
 .edit-container span.edit, .edit-container span.save {display: none; cursor: pointer; vertical-align: top; background: #b8c5d2; color: white; font-size: 12px; padding: 4px; margin-left: 8px;}
 .edit-container:hover span.edit {display: inline-block; height: 12px;}
-.edit-container.editing span.save {display: inline-block; height: 12px;}
+.editing span.save {display: inline-block; height: 12px;}
 .edit-container.editing span.edit {display: none;}
 span.edit, span.save {position: relative;}
 span.edit:before, span.save:before { display: inline-block; position: absolute; top: 0; left: -8px; content: "."; font-size: 0; height: 0; width: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-right: 8px solid #b8c5d2; }
+.editing span.save:before {border-right-color: #accc98;}
+.editing span.save {background: #accc98;}
 .editing input {background: #e2edfc;}
-.edit-profile h2 {clear: both; border-bottom: 1px solid #818692; padding: 15px 0 0;}
-.edit-profile .networks li { display: inline-block; margin: 0 5px; width: 40px; height: 40px; font-size: 0; }
-.edit-profile .networks a { display: inline-block; margin: 0; padding: 0; width: 100%; height: 100%; }
-.edit-profile .nw-facebook { background: #637ab8 url(../img/networks/facebook.png) no-repeat scroll center center; background-size: 11px 21px; }
-.edit-profile .nw-linkedin { background: #4f83c3 url(../img/networks/linkedin.png) no-repeat scroll center center; background-size: 21px 20px; }
-.edit-profile .nw-twitter { background: #4f83c3 url(../img/networks/twitter.png) no-repeat scroll center center; background-size: 21px 17px; }
-.edit-profile .nw-google { background: #4f83c3 url(../img/networks/google.png) no-repeat scroll center center; background-size: 21px 21px; }
-.edit-profile a.not-connected { background-color: #dbdee3; }
+.profile h2 {clear: both; border-bottom: 1px solid #818692; padding: 15px 0 0;}
+.profile .networks li { display: inline-block; margin: 0 5px; width: 40px; height: 40px; font-size: 0; }
+.profile .networks a { display: inline-block; margin: 0; padding: 0; width: 100%; height: 100%; }
+.profile .nw-facebook { background: #637ab8 url(../img/networks/facebook.png) no-repeat scroll center center; background-size: 11px 21px; }
+.profile .nw-linkedin { background: #4f83c3 url(../img/networks/linkedin.png) no-repeat scroll center center; background-size: 21px 20px; }
+.profile .nw-twitter { background: #4f83c3 url(../img/networks/twitter.png) no-repeat scroll center center; background-size: 21px 17px; }
+.profile .nw-google { background: #4f83c3 url(../img/networks/google.png) no-repeat scroll center center; background-size: 21px 21px; }
+.profile a.not-connected { background-color: #dbdee3; }
 
 .check-all {position: absolute; top: 1px; left: 0; height: 17px; width: 17px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; border: 1px solid #e3e6ee; -moz-box-sizing: border-box; box-sizing: border-box}
 .check-all.live {cursor: pointer}
