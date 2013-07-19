@@ -43,7 +43,7 @@ trait SearchServiceClient extends ServiceClient {
   def refreshSearcher(): Unit
   def refreshPhrases(): Unit
   def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]]
-  def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI]): Future[Html]
+  def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html]
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray]
   def buildSpellCorrectorDictionary(): Unit
   def getSpellCorrectorStatus(): Future[Boolean]
@@ -161,8 +161,8 @@ class SearchServiceClientImpl(
     }
   }
 
-  def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI]): Future[Html] = {
-    call(Search.internal.explain(query, userId, uriId)).map(r => Html(r.body))
+  def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html] = {
+    call(Search.internal.explain(query, userId, uriId, lang)).map(r => Html(r.body))
   }
 
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray] = {
