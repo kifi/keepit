@@ -179,7 +179,7 @@ $(function() {
 	});
 
 	var me;
-	var networks;
+	var myNetworks;
 	var myPrefs;
 	var myKeepsCount;
 	var collections;
@@ -317,7 +317,7 @@ $(function() {
 		$('.edit-profile .networks a').each(function () {
 			var name = $(this).data('network');
 			if (!name) return;
-			var networkInfo = networks.filter(function (nw) {
+			var networkInfo = myNetworks.filter(function (nw) {
 				return nw.network === name;
 			})[0];
 			if (networkInfo) {
@@ -708,7 +708,6 @@ $(function() {
 		updateDetails();
 	});
 	$(".my-identity a").click(function (e) {
-		e.stopPropagation();
 		e.preventDefault();
 		navigate(this.href);
 	});
@@ -1142,12 +1141,13 @@ $(function() {
 		$(".my-description").text(data.description);
 	}
 
+	$.getJSON(urlNetworks, function (data) {
+		myNetworks = data;
+	}).promise();
+
 	// load data for persistent (view-independent) page UI
 	var promise = {
 		me: $.getJSON(urlMe, updateMe).promise(),
-		me: $.getJSON(urlNetworks, function (data) {
-			networks = data;
-		}).promise(),
 		myPrefs: $.getJSON(urlMyPrefs, function(data) {
 			myPrefs = data;
 			if (myPrefs.site_left_col_width) {
