@@ -33,6 +33,8 @@ object EdgeData {
 
 }
 object KeptData {
+  def apply(bookmark: Bookmark): KeptData = KeptData(bookmark.state)
+
   implicit val format = Format(
     new Reads[KeptData] { def reads(o: JsValue) = State.format[Bookmark].reads(o.as[JsObject] \ "state").map(KeptData.apply) },
     new Writes[KeptData] { def writes(keptData: KeptData) = JsObject(Seq(("state", State.format[Bookmark].writes(keptData.state)))) }
@@ -40,6 +42,8 @@ object KeptData {
 }
 
 object FollowsData {
+  def apply(userConnection: UserConnection): FollowsData = FollowsData(userConnection.state)
+
   implicit val format = Format(
     new Reads[FollowsData] { def reads(o: JsValue) = State.format[UserConnection].reads(o.as[JsObject] \ "state").map(FollowsData.apply) },
     new Writes[FollowsData] { def writes(followsData: FollowsData) = JsObject(Seq(("state", State.format[UserConnection].writes(followsData.state)))) }
@@ -47,6 +51,8 @@ object FollowsData {
 }
 
 object CollectsData {
+  def apply(collection: Collection): CollectsData = CollectsData(collection.state)
+
   implicit val format = Format(
     new Reads[CollectsData] { def reads(o: JsValue) = State.format[Collection].reads(o.as[JsObject] \ "state").map(CollectsData.apply) },
     new Writes[CollectsData] { def writes(collectsData: CollectsData) = JsObject(Seq(("state", State.format[Collection].writes(collectsData.state)))) }
@@ -54,6 +60,8 @@ object CollectsData {
 }
 
 object ContainsData {
+  def apply(keepToCollection: KeepToCollection): ContainsData = ContainsData(keepToCollection.state)
+
   implicit val format = Format(
     new Reads[ContainsData] { def reads(o: JsValue) = State.format[KeepToCollection].reads(o.as[JsObject] \ "state").map(ContainsData.apply) },
     new Writes[ContainsData] { def writes(containsData: ContainsData) = JsObject(Seq(("state", State.format[KeepToCollection].writes(containsData.state)))) }
