@@ -142,12 +142,31 @@ $(function() {
 		handle: ".handle",
 		cancel: ".keep-checkbox",
 		appendTo: "body",
-		cursorAt: { top: 15, left: 0 },
+		scroll: false,
 		helper: function() {
-			var $keep = $(this), $sel = $keep.hasClass("selected") ? $keep.parent().find(".keep.selected") : $keep;
-			return $('<div>', {
-				"class": "drag-helper",
-				"text": $sel.length > 1 ? $sel.length + " selected keeps" : $keep.find(".keep-title>a").text()});
+			var $keep = $(this);
+			if (!$keep.hasClass('selected')) {
+				return $keep.clone().width($keep.css('width'));
+			} else {
+				var $keeps = $keep.parent().find(".keep.selected"), refTop = this.offsetTop;
+				return $('<ul class=keeps-dragging>').width($keep.css('width')).height($keep.css('height'))
+					.append($keeps.clone().each(function(i) {
+						this.style.top = $keeps[i].offsetTop - refTop + "px";
+					}));
+			}
+		},
+		start: function() {
+			var r = $collList[0].getBoundingClientRect();
+			var $shade = $('<div class=keep-drag-shade>');
+			$shade.clone().css({top: 0, left: 0, right: 0, height: r.top})
+				.add($shade.css({top: r.top, left: r.right, right: 0, bottom: 0}))
+				.appendTo('body').layout().css('opacity', .2);
+			document.addEventListener('mouseup', function up() {
+				document.removeEventListener('mouseup', up, true);
+				$('.keep-drag-shade').css('opacity', 0).on('transitionend', function() {
+					$(this).remove();
+				});
+			}, true);
 		}};
 
 	var $colls = $("#collections"), collTmpl = Tempo.prepare($colls).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {

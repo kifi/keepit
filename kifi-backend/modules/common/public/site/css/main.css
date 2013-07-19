@@ -114,9 +114,10 @@ a.query-x[href]:active {color: #556179}
 
 .keep-group-title {margin-top: 7px; color: #67829c; font-size: 21px; font-weight: 100; letter-spacing: 1px; border-bottom: 1px solid #e3e6ee; padding: 4px 30px}
 .keep-group-title+.keep {border-top: 0}
-.keep {position: relative; clear: left; padding: 10px 0 13px 30px; border-top: 1px solid #f9f9f9}
+.keep {background-color: #fff; padding: 10px 0 13px 30px; border-top: 1px solid #f9f9f9; position: relative}
 .keep.detailed {background-color: #eff2f7}
 .keep.selected {background-color: #fffcf1; border-color: #f0f0f0}
+.keep.ui-draggable-dragging {border-top: none}
 .keep-arrow {position: absolute; right: 16px; width: 6px; height: 16px; bottom: 13px; border: solid transparent; border-width: 4px 8px; background: url(../img/arrow-r.png) left/13px 16px no-repeat content-box; cursor: pointer; -webkit-transition: -webkit-transform .2s; transition: -webkit-transform .2s, transform .2s}
 .keep-arrow:hover {background-color: rgba(0,0,0,.05); border-color: rgba(0,0,0,.05)}
 .keep:hover .keep-arrow,
@@ -125,15 +126,18 @@ a.query-x[href]:active {color: #556179}
 .keep>.handle {cursor: move; position: absolute; top: 0; bottom: 0; left: 0; width: 21px; display: none; background: url(../img/drag-handle.png) center/10px no-repeat}
 .keep>.handle:hover,
 .keep.detailed>.handle,
-.keep.selected>.handle {background-color: #e3e6ee}
+.keep.selected>.handle,
+.keep.ui-draggable-dragging>.handle {background-color: #e3e6ee}
 .keep-checkbox {display: none; position: absolute; left: 3px; top: 4px; width: 15px; height: 15px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; cursor: pointer}
 .keep>.handle:hover>.keep-checkbox,
 .keep.detailed>.handle>.keep-checkbox,
-.keep.selected>.handle>.keep-checkbox {display: block}
+.keep.selected>.handle>.keep-checkbox,
+.keep.ui-draggable-dragging>.handle>.keep-checkbox {display: block}
 .keep.selected>.handle>.keep-checkbox {background-position: 2px 4px}
 .keep:hover>.handle,
 .keep.detailed>.handle,
-.keep.selected>.handle {display: block}
+.keep.selected>.handle,
+.keep.ui-draggable-dragging>.handle {display: block}
 .keep>time {float: right; margin: 0 16px 0 4%; font-size: 12px; line-height: 28px; color: #99a3b3}
 .keep-title {max-width: 100%; font-size: 16px; line-height: 24px; color: #0089d5; -webkit-font-smoothing: antialiased}
 .keep-url {font-size: 12px; line-height: 14px; color: #99a3b3}
@@ -174,7 +178,10 @@ a.query-x[href]:active {color: #556179}
 .keeps-load-more:active {background-color: #f3f5f9}
 .keeps-load-more.hidden {display: none}
 
-.drag-helper {background: #fff; padding: 5px; font-size: 16px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
+.keep.ui-draggable-dragging,
+.keeps-dragging {opacity: .7; z-index: 90}
+.keeps-dragging>.keep {position: absolute; width: 100%}
+.keep-drag-shade {position: absolute; z-index: 89; background: #000; opacity: 0; -webkit-transition: opacity .2s; transition: opacity .2s}
 
 /* right col */
 
