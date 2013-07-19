@@ -145,7 +145,6 @@ class ExtSearchController @Inject() (
 
   private def getLangsPriorProbabilities(acceptLangs: Seq[String]): Map[Lang, Double] = {
     val langs = acceptLangs.toSet.flatMap{ code: String =>
-      println(s"accept-langauge ===>>> $code")
       val lang = code.substring(0,2)
       if (lang == "zh") Set("zh-cn", "zh-tw") else Set(lang)
     } + "en" // always include English
