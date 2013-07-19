@@ -211,7 +211,7 @@ span.edit:before, span.save:before { display: inline-block; position: absolute; 
 .keeps-load-more.hidden {display: none}
 
 .keep.ui-draggable-dragging,
-.keeps-dragging {opacity: .7; z-index: 90}
+.keeps-dragging {opacity: .7; z-index: 90; cursor: move}
 .keeps-dragging>.keep {position: absolute; width: 100%}
 .keep-drag-shade {position: absolute; z-index: 89; background: #000; opacity: 0; -webkit-transition: opacity .2s; transition: opacity .2s}
 
