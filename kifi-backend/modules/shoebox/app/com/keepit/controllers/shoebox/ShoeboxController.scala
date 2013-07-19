@@ -325,11 +325,7 @@ class ShoeboxController @Inject() (
     Ok(uriChannel.pushNoFanout(uri, msg).toString)
   }
 
-
   def uriChannelCountFanout() = Action { request =>
     Ok(uriChannel.localClientCount.toString)
   }
-
-
-
 }

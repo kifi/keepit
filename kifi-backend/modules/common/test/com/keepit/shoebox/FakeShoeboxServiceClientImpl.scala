@@ -282,6 +282,8 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
   def userChannelBroadcastFanout(msg: play.api.libs.json.JsArray): Seq[scala.concurrent.Future[Int]] = Seq()
   def userChannelCountFanout(): Seq[scala.concurrent.Future[Int]] = Seq()
 
+  def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]] = ???
+
   def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Collection]] = {
     val collections = allCollections.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
     Future.successful(collections)

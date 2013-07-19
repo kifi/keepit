@@ -31,4 +31,5 @@ case class PersonalSearchResultPacket(
   mayHaveMoreHits: Boolean,
   show: Boolean,
   experimentId: Option[Id[SearchConfigExperiment]],
-  context: String)
+  context: String,
+  experts: Seq[ExternalId[User]] = Nil)
