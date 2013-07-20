@@ -425,8 +425,8 @@ span.long-text, a.long-text {display: inline-block}
 
   .profile .nw-facebook { background: #637ab8 url(../img/networks.2x.png) no-repeat scroll 0px 0px; }
   .profile .nw-linkedin { background: #4f83c3 url(../img/networks.2x.png) no-repeat scroll -60px 0px; }
-  .profile .nw-twitter { background: #4f83c3 url(../img/networks.2x.png) no-repeat scroll -120px 0px; }
-  .profile .nw-google { background: #4f83c3 url(../img/networks.2x.png) no-repeat scroll -180px 0px; }
+  .profile .nw-twitter { background: #0da2d9 url(../img/networks.2x.png) no-repeat scroll -120px 0px; }
+  .profile .nw-google { background: #dd4c39 url(../img/networks.2x.png) no-repeat scroll -180px 0px; }
 }
 
 .fancybox-inner {font-size: 16px}
