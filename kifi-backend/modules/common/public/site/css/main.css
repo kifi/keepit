@@ -125,7 +125,7 @@ span.edit:before, span.save:before { display: inline-block; position: absolute; 
 .profile h2 {clear: both; border-bottom: 1px solid #818692; padding: 15px 0 0; }
 .profile .networks li { display: inline-block; margin: 0 5px; width: 60px; height: 60px; font-size: 0; }
 .profile .networks { position: relative; font-size: 0; padding: 60px 0 0 72px; background: white url(../img/kifi-k.png) no-repeat scroll 0 0; margin: 20px 0; }
-.profile .networks:before { position: absolute; display: block; content: "."; top: 24px; left: 55px; width: 9px; width: 9px; height: 9px; background: #accc98; border: 2px solid white; border-radius: 50%; z-index: 1; }
+.profile .networks:before { position: absolute; display: block; content: "."; top: 24px; left: 55px; width: 9px; width: 9px; height: 9px; background: #accc98; border: 2px solid white; border-radius: 50%; z-index: 3; }
 .profile .networks:after { position: absolute; display: block; content: "."; top: 21px; left: 63px; width: 284px; height: 20px; background: #eff2f7; z-index: 0; }
 .profile .networks a { position: relative; display: inline-block; margin: 0; padding: 0; width: 100%; height: 100%; background-size: 240px 60px; z-index: 2; }
 .profile .networks a:before { position: absolute; display: block; content: "."; border-width: 3px 3px 0 0; border-style: solid; border-color: #accc98; height: 28px; top: -31px;}
