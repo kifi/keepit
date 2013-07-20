@@ -96,15 +96,17 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     implicit val idMapper = FortyTwoGenericTypeMappers.idMapper[M]
     implicit val stateTypeMapper = FortyTwoGenericTypeMappers.stateTypeMapper[M]
 
+    //standardizing the following columns for all entities
     def id = column[Id[M]]("ID", O.PrimaryKey, O.Nullable, O.AutoInc)
+    def createdAt = column[DateTime]("created_at", O.NotNull)
+    def updatedAt = column[DateTime]("updated_at", O.NotNull)
+    //state may not exist in all entities, if it does then its column name is standardized as well.
+    def state = column[State[M]]("state", O.NotNull)
 
     def autoInc = * returning id
 
-    def createdAt = column[DateTime]("created_at", O.NotNull)
-    def updatedAt = column[DateTime]("updated_at", O.NotNull)
-
-    def state = column[State[M]]("state", O.NotNull)
-
+    //H2 likes its column names in upper case where mysql does not mind.
+    //the db component should figure it out
     override def column[C : TypeMapper](name: String, options: ColumnOption[C]*) =
       super.column(db.entityName(name), options:_*)
   }
