@@ -376,6 +376,10 @@ $(function() {
 					$this.text(value);
 					props[$this.data('prop')] = value;
 				});
+				if (props['email']) {
+					props['emails'] = [props['email']];
+					delete props['email'];
+				}
 				var $save = $editContainer.find('.save')
 				var saveText = $save.text();
 				$save.text('Saving...');
@@ -748,7 +752,7 @@ $(function() {
 				title = queryFromQS(uri.substr(kind.length));
 				break;
 			case 'profile':
-				title = 'Edit Profile'
+				title = 'Profile'
 		}
 		History.pushState(null, 'kifi.com • ' + title, uri);
 	}
