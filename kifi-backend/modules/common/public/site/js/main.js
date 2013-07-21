@@ -349,7 +349,12 @@ $(function() {
 						} else if (e.which === 27) {
 							$(this).closest('.edit-container').removeClass('editing').find('.editable').each(function () {
 								var $this = $(this);
-								$this.text(me[$this.data("prop")]);
+								var prop = $this.data("prop");
+								if (prop == 'email') {
+									$this.text(me['emails'][0]);
+								} else {
+									$this.text(me[prop]);
+								}
 							});
 						}
 					});
