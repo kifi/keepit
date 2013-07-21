@@ -107,7 +107,7 @@ a.query-x[href]:active {color: #556179}
 .profile input, .profile textarea {color: #818692; border: none; margin: 0; padding: 0;}
 .main[data-view=profile] .profile {display: block}
 .profile .profile-image {float: left; border: 10px solid #eff2f7; border-radius: 20px; width: 100px; height: 100px; background-size: 100%}
-.profile .profile-details {float: left; padding: 10px; width: 500px;}
+.profile .profile-details {float: left; padding: 10px; }
 .profile .profile-name {padding: 5px;}
 .profile .profile-name .editable {font-size: 24px; padding: 3px;}
 .profile .profile-name input {font: inherit; font-size: 24px; width: 150px;}
@@ -125,21 +125,20 @@ span.edit:before, span.save:before { display: inline-block; position: absolute; 
 .profile h2 {clear: both; border-bottom: 1px solid #818692; padding: 15px 0 0; }
 .profile .networks li { display: inline-block; margin: 0 5px; width: 60px; height: 60px; font-size: 0; }
 .profile .networks { position: relative; font-size: 0; padding: 60px 0 0 72px; background: white url(../img/kifi-k.png) no-repeat scroll 0 0; margin: 20px 0; }
-.profile .networks:before { position: absolute; display: block; content: "."; top: 24px; left: 55px; width: 9px; width: 9px; height: 9px; background: #accc98; border: 2px solid white; border-radius: 50%; z-index: 3; }
+.profile .networks:before { position: absolute; display: block; content: "."; top: 24px; left: 55px; width: 9px; width: 9px; height: 9px; background: #accc98; border: 2px solid white; border-radius: 50%; z-index: 2; }
 .profile .networks:after { position: absolute; display: block; content: "."; top: 21px; left: 63px; width: 284px; height: 20px; background: #eff2f7; z-index: 0; }
-.profile .networks a { position: relative; display: inline-block; margin: 0; padding: 0; width: 100%; height: 100%; background-size: 240px 60px; z-index: 2; }
-.profile .networks a:before { position: absolute; display: block; content: "."; border-width: 3px 3px 0 0; border-style: solid; border-color: #accc98; height: 28px; top: -31px;}
+.profile .networks a { position: relative; display: inline-block; margin: 0; padding: 0; width: 100%; height: 100%; background-size: 240px 60px; }
+.profile .networks a:before { position: absolute; display: block; content: "."; border-width: 3px 3px 0 0; border-style: solid; border-color: #accc98; height: 28px; top: -31px; z-index: 3; }
 .profile .nw-facebook { background: #637ab8 url(../img/networks.png) no-repeat scroll 0px 0px; }
 .profile .nw-facebook:before { width: 46px; left: -15px; width: 44px; }
 .profile .nw-linkedin { background: #4f83c3 url(../img/networks.png) no-repeat scroll -60px 0px; }
-.profile .nw-linkedin:before { width: 46px; left: -79px; width: 108px; }
+.profile .nw-linkedin:before { width: 46px; left: -85px; width: 114px; }
 .profile .nw-twitter { background: #0da2d9 url(../img/networks.png) no-repeat scroll -120px 0px; }
-.profile .nw-twitter:before { width: 46px; left: -143px; width: 172px; }
+.profile .nw-twitter:before { width: 46px; left: -155px; width: 184px; }
 .profile .nw-google { background: #dd4c39 url(../img/networks.png) no-repeat scroll -180px 0px; }
-.profile .nw-google:before { width: 46px; left: -207px; width: 236px; }
-.profile a.not-connected { z-index: 1; }
+.profile .nw-google:before { width: 46px; left: -225px; width: 254px; }
 .profile a.not-connected:not(:hover) { background-color: #dbdee3; }
-.profile a.not-connected:before { border-color: #dbdee3; }
+.profile a.not-connected:before { border-color: #dbdee3; z-index: 2; }
 .profile a:after { position: absolute; display: block; content: "."; top: -6px; left: 24px; border-radius: 50%; width: 9px; height: 9px; background: #accc98; border: 2px solid white; }
 .profile a.not-connected:after { background: #dbdee3; }
 .profile a.not-connected { transition-property: background; transition-duration: 250ms; transition-timing-function: ease-in; transition-delay: 50ms; }
