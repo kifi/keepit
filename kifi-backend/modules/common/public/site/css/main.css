@@ -425,10 +425,10 @@ span.long-text, a.long-text {display: inline-block}
   [data-kept^="p"]>*>.page-keep[href]::before,
   .page-meta>.page-priv[href]::before {background-image: url(../img/keep-icons.2x.png)}
 
-  .profile .nw-facebook { background: #637ab8 url(../img/networks.2x.png) no-repeat scroll 0px 0px; }
-  .profile .nw-linkedin { background: #4f83c3 url(../img/networks.2x.png) no-repeat scroll -60px 0px; }
-  .profile .nw-twitter { background: #0da2d9 url(../img/networks.2x.png) no-repeat scroll -120px 0px; }
-  .profile .nw-google { background: #dd4c39 url(../img/networks.2x.png) no-repeat scroll -180px 0px; }
+  .profile .nw-facebook { background-image: url(../img/networks.2x.png); }
+  .profile .nw-linkedin { background-image: url(../img/networks.2x.png); }
+  .profile .nw-twitter { background-image: url(../img/networks.2x.png); }
+  .profile .nw-google { background-image: url(../img/networks.2x.png); }
 }
 
 .fancybox-inner {font-size: 16px}
