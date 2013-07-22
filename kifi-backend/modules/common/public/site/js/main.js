@@ -342,8 +342,10 @@ $(function() {
 			});
 			$('.profile .edit').click(function () {
 				var $inputs = $(this).closest('.edit-container').addClass('editing').find('.editable').each(function () {
-					var value = $(this).text()
-					var $input = $('<input>').val(value).keyup(function (e) {
+					var $this = $(this);
+					var value = $this.text();
+					var maxlen = $this.data('maxlength');
+					var $input = $('<input>').val(value).attr('maxlength', maxlen).keyup(function (e) {
 						if (e.keyCode === 13) {
 							$(this).closest('.edit-container').find('.save').click();
 						} else if (e.which === 27) {
@@ -361,15 +363,11 @@ $(function() {
 					$(this).html($input);
 				}).find('input');
 				$inputs[0].focus();
-				$inputs.keypress(function () {
-					var minChars = 3;
-					var len = $(this).val().length;
-					$(this).css('width', 'auto');
-					if (len > minChars) {
-						$(this).attr('size', len);
-					} else {
-						$(this).attr('size', minChars);
-					}
+				$inputs.on('keydown keyup keypress paste change', function () {
+					var minChars = 3, scale = 1.25;
+					var $this = $(this);
+					var size = Math.max(Math.ceil($this.val().length * scale), minChars);
+					$this.css('width', 'auto').attr('size', size);
 				}).keypress();
 			});
 			$('.profile .save').click(function () {
