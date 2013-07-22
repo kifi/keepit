@@ -335,78 +335,89 @@ $(function() {
     var profileTmpl = Tempo.prepare("profile-template");
 	function showProfile() {
 		$main.attr("data-view", "profile");
-		profileTmpl.render(me);
-		$('.profile').on('keydown keypress keyup', function (e) {
-			e.stopPropagation();
-		});
-		$('.profile .edit').click(function () {
-			var $inputs = $(this).closest('.edit-container').addClass('editing').find('.editable').each(function () {
-				var value = $(this).text()
-				var $input = $('<input>').val(value).keyup(function (e) {
-					if (e.keyCode === 13) {
-						$(this).closest('.edit-container').find('.save').click();
-					} else if (e.which === 27) {
-						$(this).closest('.edit-container').removeClass('editing').find('.editable').each(function () {
-							var $this = $(this);
-							$this.text(me[$this.data("prop")]);
-						});
+		$.when(promise.me, promise.myNetworks).done(function () {
+			profileTmpl.render(me);
+			$('.profile').on('keydown keypress keyup', function (e) {
+				e.stopPropagation();
+			});
+			$('.profile .edit').click(function () {
+				var $inputs = $(this).closest('.edit-container').addClass('editing').find('.editable').each(function () {
+					var value = $(this).text()
+					var $input = $('<input>').val(value).keyup(function (e) {
+						if (e.keyCode === 13) {
+							$(this).closest('.edit-container').find('.save').click();
+						} else if (e.which === 27) {
+							$(this).closest('.edit-container').removeClass('editing').find('.editable').each(function () {
+								var $this = $(this);
+								var prop = $this.data("prop");
+								if (prop == 'email') {
+									$this.text(me['emails'][0]);
+								} else {
+									$this.text(me[prop]);
+								}
+							});
+						}
+					});
+					$(this).html($input);
+				}).find('input');
+				$inputs[0].focus();
+				$inputs.keypress(function () {
+					var minChars = 3;
+					var len = $(this).val().length;
+					$(this).css('width', 'auto');
+					if (len > minChars) {
+						$(this).attr('size', len);
+					} else {
+						$(this).attr('size', minChars);
+					}
+				}).keypress();
+			});
+			$('.profile .save').click(function () {
+				var props = {};
+				var $editContainer = $(this).closest('.edit-container');
+				$editContainer.find('.editable').each(function () {
+					var $this = $(this);
+					var value = $this.find('input').val();
+					$this.text(value);
+					props[$this.data('prop')] = value;
+				});
+				if (props['email']) {
+					props['emails'] = [props['email']];
+					delete props['email'];
+				}
+				var $save = $editContainer.find('.save')
+				var saveText = $save.text();
+				$save.text('Saving...');
+				$.ajax({
+					url: urlMe,
+					type: "POST",
+					dataType: 'json',
+					data: JSON.stringify(props),
+					contentType: 'application/json',
+					error: function () {
+						showMessage('Uh oh! A bad thing happened!');
+						$save.text(saveText);
+					},
+					success: function (data) {
+						$editContainer.removeClass('editing')
+						$save.text(saveText);
+						updateMe(data);
 					}
 				});
-				$(this).html($input);
-			}).find('input');
-			$inputs[0].focus();
-			$inputs.keypress(function () {
-				var minChars = 3;
-				var len = $(this).val().length;
-				$(this).css('width', 'auto');
-				if (len > minChars) {
-					$(this).attr('size', len);
-				} else {
-					$(this).attr('size', minChars);
-				}
-			}).keypress();
-		});
-		$('.profile .save').click(function () {
-			var props = {};
-			var $editContainer = $(this).closest('.edit-container');
-			$editContainer.find('.editable').each(function () {
+			});
+			$('.profile .networks a').each(function () {
 				var $this = $(this);
-				var value = $this.find('input').val();
-				$this.text(value);
-				props[$this.data('prop')] = value;
-			});
-			var $save = $editContainer.find('.save')
-			var saveText = $save.text();
-			$save.text('Saving...');
-			$.ajax({
-				url: urlMe,
-				type: "POST",
-				dataType: 'json',
-				data: JSON.stringify(props),
-				contentType: 'application/json',
-				error: function () {
-					showMessage('Uh oh! A bad thing happened!');
-					$save.text(saveText);
-				},
-				success: function (data) {
-					$editContainer.removeClass('editing')
-					$save.text(saveText);
-					updateMe(data);
+				var name = $this.data('network');
+				if (!name) return;
+				var networkInfo = myNetworks.filter(function (nw) {
+					return nw.network === name;
+				})[0];
+				if (networkInfo) {
+					$this.attr('href', networkInfo.profileUrl).attr('title', 'View profile');
+				} else {
+				    $this.addClass('not-connected').attr('href', urlLinkNetwork + '/' + name).attr('title', 'Click to connect');
 				}
 			});
-		});
-		$('.profile .networks a').each(function () {
-			var $this = $(this);
-			var name = $this.data('network');
-			if (!name) return;
-			var networkInfo = myNetworks.filter(function (nw) {
-				return nw.network === name;
-			})[0];
-			if (networkInfo) {
-				$this.attr('href', networkInfo.profileUrl).attr('title', 'View profile');
-			} else {
-			    $this.addClass('not-connected').attr('href', urlLinkNetwork + '/' + name).attr('title', 'Click to connect');
-			}
 		});
 	}
 
@@ -746,7 +757,7 @@ $(function() {
 				title = queryFromQS(uri.substr(kind.length));
 				break;
 			case 'profile':
-				title = 'Edit Profile'
+				title = 'Profile'
 		}
 		History.pushState(null, 'kifi.com • ' + title, uri);
 	}
@@ -1220,16 +1231,13 @@ $(function() {
 		me = data;
 		$(".my-pic").css("background-image", "url(" + formatPicUrl(data.id, data.pictureName, 200) + ")");
 		$(".my-name").text(data.firstName + ' ' + data.lastName);
-		$(".my-description").text(data.description);
+		$(".my-description").text(data.description || '\u00A0'); // nbsp
 	}
-
-	$.getJSON(urlNetworks, function (data) {
-		myNetworks = data;
-	}).promise();
 
 	// load data for persistent (view-independent) page UI
 	var promise = {
 		me: $.getJSON(urlMe, updateMe).promise(),
+		myNetworks: $.getJSON(urlNetworks, function (data) { myNetworks = data; }).promise(),
 		myPrefs: $.getJSON(urlMyPrefs, function(data) {
 			myPrefs = data;
 			if (myPrefs.site_left_col_width) {

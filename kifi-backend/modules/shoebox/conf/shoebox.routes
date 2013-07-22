@@ -116,6 +116,7 @@ POST    /site/user/prefs            @com.keepit.controllers.website.UserControll
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
 GET     /site/collection/:id        @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id: String)
 GET     /site/search                @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/profile               @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
 GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSite(path: String, id = "")
 
 
@@ -241,7 +242,7 @@ POST    /admin/searchExperiments/update    @com.keepit.controllers.admin.AdminSe
 GET     /admin/searchExperiments/kvg/:id   @com.keepit.controllers.admin.AdminSearchConfigController.getKifiVsGoogle(id: Id[SearchConfigExperiment])
 GET     /admin/searchExperiments/kifiHadResults/:id   @com.keepit.controllers.admin.AdminSearchConfigController.getKifiHadResults(id: Id[SearchConfigExperiment])
 
-GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchController.explain(query: String, uriId: Id[NormalizedURI])
+GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchController.explain(query: String, uriId: Id[NormalizedURI], lang: String)
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResultRef])
 
 GET     /admin/slider/rules         @com.keepit.controllers.admin.SliderAdminController.getRules
