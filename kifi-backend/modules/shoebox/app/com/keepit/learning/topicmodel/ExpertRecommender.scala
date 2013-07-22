@@ -7,15 +7,16 @@ import com.keepit.model.BookmarkRepo
 import com.keepit.common.db.Id
 import com.keepit.model.User
 import com.keepit.model.NormalizedURI
-import scala.math.log
+import scala.math.{log => logE}
+import com.keepit.common.logging.Logging
 
 class ExpertRecommender(
   db: Database,
   uriTopicRepo: UriTopicRepo,
   clicksRepo: UserBookmarkClicksRepo,
   bookmarkRepo: BookmarkRepo
-) {
-  private def log2(x: Double) = log(x)/log(2)
+) extends Logging {
+  private def log2(x: Double) = logE(x)/logE(2)
 
   /**
    * empirical estimation of P(topic | query)
@@ -139,8 +140,10 @@ class ExpertRecommender(
   def rank(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]) = {
     val users = urisAndKeepers.map{_._2}.flatten.toSet
     val hits = urisAndKeepers.map(_._1)
+    log.info(s"num of users: ${users.size}, num of hits: ${hits.size}")
     val userhits = userHits(urisAndKeepers)
     val topicPosterior = estimateTopicPosterior(hits)
+    log.info(s"topic posterior: ${topicPosterior.toString}")
     val userBookmarks = userPublicBookmarks(users)
     val uris = userBookmarks.values.flatten.toSet
     val relevantBookmarks = allRelevantBookmarks(uris, topicPosterior.keySet)
@@ -158,6 +161,7 @@ class ExpertRecommender(
         (user, s * boost)
       }.toArray
     }
+    log.info(userScores.map{x => x._1.id + ": " + x._2}.mkString(";"))
     userScores.sortBy(-_._2)
   }
 }
