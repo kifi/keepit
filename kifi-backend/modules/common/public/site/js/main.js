@@ -332,7 +332,7 @@ $(function() {
 		}
 	}
 
-    var profileTmpl = Tempo.prepare("profile-template");
+	var profileTmpl = Tempo.prepare("profile-template");
 	function showProfile() {
 		$main.attr("data-view", "profile");
 		$.when(promise.me, promise.myNetworks).done(function () {
@@ -415,7 +415,7 @@ $(function() {
 				if (networkInfo) {
 					$this.attr('href', networkInfo.profileUrl).attr('title', 'View profile');
 				} else {
-				    $this.addClass('not-connected').attr('href', urlLinkNetwork + '/' + name).attr('title', 'Click to connect');
+					$this.addClass('not-connected').attr('href', urlLinkNetwork + '/' + name).attr('title', 'Click to connect');
 				}
 			});
 		});
@@ -737,6 +737,9 @@ $(function() {
 				break;
 			case 'profile':
 				showProfile();
+				break;
+			case 'friends':
+
 		}
 	});
 
@@ -784,7 +787,7 @@ $(function() {
 			var $selected = $keeps.filter(".selected");
 			$checkAll.toggleClass("checked", $selected.length == $keeps.length);
 			if ($selected.length == 0 ||
-				  $selected.not(".detailed").addClass("detailed").length +
+			    $selected.not(".detailed").addClass("detailed").length +
 			    $keeps.filter(".detailed:not(.selected)").removeClass("detailed").length == 0) {
 				return;  // avoid redrawing same details
 			}
@@ -1262,15 +1265,15 @@ $(function() {
 			friendCardTmpl.into(this).render({
 				name: $a.data('name'),
 				picUri: formatPicUrl(id, $a.css('background-image').match(/\/([^\/]*)['"]?\)$/)[1], 200)});
-      var $el = $a.children();
-      configureHover($el, {canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
-      $.getJSON(urlUser + '/' + id + '/networks', function(networks) {
-        for (nw in networks) {
-          $el.find('.fr-card-nw-' + nw)
-            .toggleClass('on', networks[nw].connected)
-            .attr('href', networks[nw].profileUrl || null);
-        }
-      });
+			var $el = $a.children();
+			configureHover($el, {canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
+			$.getJSON(urlUser + '/' + id + '/networks', function(networks) {
+				for (nw in networks) {
+					$el.find('.fr-card-nw-' + nw)
+						.toggleClass('on', networks[nw].connected)
+						.attr('href', networks[nw].profileUrl || null);
+				}
+			});
 		});
 	});
 });
