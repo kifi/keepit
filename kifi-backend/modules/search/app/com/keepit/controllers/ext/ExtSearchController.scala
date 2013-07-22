@@ -179,18 +179,18 @@ class ExtSearchController @Inject() (
     val future = decorator.decorate(res)
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
     val experts = monitoredAwait.result(expertsFuture, 50 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id)
-    val expertsExtIds = {
-      if (experts.size == 0) List.empty[ExternalId[User]]
+    val expertNames = {
+      if (experts.size == 0) List.empty[String]
       else {
         val idMap = monitoredAwait.result(shoeboxClient.getBasicUsers(experts), 50 milliseconds, s"getting experts' external ids", Map.empty[Id[User], BasicUser])
-        experts.flatMap{idMap.get(_)}.map{_.externalId}
+        experts.flatMap{idMap.get(_)}.map{x => x.firstName + " " + x.lastName}
       }
     }
 
 
     PersonalSearchResultPacket(res.uuid, res.query,
       monitoredAwait.result(future, 5 seconds, s"getting search decorations for $userId", Nil),
-      res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), searchExperimentId, filter, expertsExtIds)
+      res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), searchExperimentId, filter, expertNames)
   }
 
   private[ext] def suggestExperts(searchRes: ArticleSearchResult) = {
