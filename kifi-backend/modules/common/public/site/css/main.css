@@ -40,9 +40,10 @@ section.main {display: table-cell; vertical-align: top; position: relative; min-
 .left-col .active .keep-count {color: #fff; background: #b8c5d2}
 .left-col .my-keeps:not(.active):hover .keep-count {background: #eff2f7}
 .left-col .active .view-name {color: #556179}
-.left-col .my-keeps .view-name::before {content: " "; display: inline-block; width: 21px; height: 21px; padding: 10px 0; margin-right: 7px; background: url(../img/kifi-icon.png) 0/42px content-box; vertical-align: top; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
-.left-col .my-keeps.active .view-name::before {background-position: right}
-#collections>h2 {margin-top: 15px; padding: 0 0 2px 66px; background: url(../img/folder-icon.png) left 40px bottom 13px/18px no-repeat; border-bottom: 1px solid #dbdee3}
+.left-col .my-keeps .view-name::before {content: " "; display: inline-block; width: 21px; height: 21px; padding: 10px 0; margin-right: 7px; background: url(../img/nav-icons.png) -21px 0 content-box; background-size: auto 21px; vertical-align: top; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
+.left-col .my-keeps.active .view-name::before {background-position: 0}
+#collections>h2 {margin-top: 15px; padding-bottom: 2px; border-bottom: 1px solid #dbdee3; position: relative}
+#collections>h2::before {content: " "; display: inline-block; height: 15px; width: 18px; margin: 0 8px 0 1px; background: url(../img/nav-icons.png) -65px bottom; background-size: auto 21px}
 #collections h3 {line-height: 39px}
 a.collection-create {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7) center/8px no-repeat #b8c5d2; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
 a.collection-create:hover {background-color: #a0b1c2}
@@ -415,7 +416,8 @@ span.long-text, a.long-text {display: inline-block}
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
   .header-logo {background-image: url(../img/kifi-logo.2x.png)}
   input.query {background-image: url(../img/search.2x.png)}
-  #collections>h2 {background-image: url(../img/folder-icon.2x.png)}
+  .left-col .my-keeps .view-name::before,
+  #collections>h2::before {background-image: url(../img/nav-icons.2x.png)}
   .keep-private {background-image: url(../img/private.2x.png)}
   .keep-arrow-4 {background-image: url(../img/arrow-r.2x.png)}
   .keep>.handle {background-image: url(../img/drag-handle.2x.png)}
