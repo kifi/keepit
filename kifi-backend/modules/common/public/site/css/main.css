@@ -105,6 +105,7 @@ a.query-x[href]:active {color: #556179}
 .main[data-view=profile] .main-keeps {display: none}
 
 .profile {display: none; position: absolute; top: 70px; left: 0; width: 100%; font-size: 14px; box-sizing: border-box; padding: 20px 50px; color: #818692;}
+.profile, .profile input, .profile h2 {font-weight: 300; letter-spacing: 1px;}
 .profile input, .profile textarea {color: #818692; border: none; margin: 0; padding: 0;}
 .main[data-view=profile] .profile {display: block}
 .profile .profile-image {float: left; border: 10px solid #eff2f7; border-radius: 20px; width: 100px; height: 100px; background-size: 100%}
@@ -123,9 +124,9 @@ span.edit:before, span.save:before { display: inline-block; position: absolute; 
 .editing span.save:before {border-right-color: #accc98;}
 .editing span.save {background: #accc98;}
 .editing input {background: #e2edfc;}
-.profile h2 {clear: both; border-bottom: 1px solid #818692; padding: 15px 0 0; }
-.profile .contact-email { font-size: 16px; margin-top: 5px; }
-.profile .contact-email input { font-size: 16px; font: inherit; }
+.profile h2 { clear: both; border-bottom: 1px solid #818692; padding: 15px 0 0; }
+.profile .contact-email { font-size: 17px; margin: 15px 0; }
+.profile .contact-email input { font-size: 17px; font: inherit; }
 .profile .contact-email .editable { display: inline-block; padding: 2px 0;}
 .profile>.networks { position: relative; font-size: 0; background-size: 62px; margin: 20px 0; padding: 0; }
 .profile>.networks>ul { margin: 0; padding: 60px 0 0 72px; }
