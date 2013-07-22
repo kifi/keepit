@@ -17,7 +17,7 @@ class PersonalSearchResultPacketSerializer extends Writes[PersonalSearchResultPa
         "show" -> JsBoolean(res.show),
         "experimentId" -> res.experimentId.map(id => JsNumber(id.id)).getOrElse(JsNull),
         "context" -> JsString(res.context),
-        "experts" -> JsString(res.experts.map(_.id).mkString("\t"))
+        "expertNames" -> JsString(res.expertNames.mkString("\t"))
       ))
     } catch {
       case e: Throwable =>
