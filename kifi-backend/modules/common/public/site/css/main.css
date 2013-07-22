@@ -126,25 +126,25 @@ span.edit:before, span.save:before { display: inline-block; position: absolute; 
 .profile .contact-email { font-size: 16px; margin-top: 5px; }
 .profile .contact-email input { font-size: 16px; font: inherit; }
 .profile .contact-email .editable { display: inline-block; padding: 2px 0;}
-.profile .networks li { display: inline-block; margin: 0 5px; width: 60px; height: 60px; font-size: 0; }
-.profile .networks { position: relative; font-size: 0; padding: 60px 0 0 72px; background: white url(../img/kifi-k.png) no-repeat scroll 0 0; margin: 20px 0; }
-.profile .networks:before { position: absolute; display: block; content: "."; top: 24px; left: 55px; width: 9px; width: 9px; height: 9px; background: #accc98; border: 2px solid white; border-radius: 50%; z-index: 2; }
-.profile .networks:after { position: absolute; display: block; content: "."; top: 21px; left: 63px; width: 284px; height: 20px; background: #eff2f7; z-index: 0; }
-.profile .networks a { position: relative; display: inline-block; margin: 0; padding: 0; width: 100%; height: 100%; background-size: 240px 60px; }
-.profile .networks a:before { position: absolute; display: block; content: "."; border-width: 3px 3px 0 0; border-style: solid; border-color: #accc98; height: 28px; top: -31px; z-index: 3; }
-.profile .nw-facebook { background: #637ab8 url(../img/networks.png) no-repeat scroll 0px 0px; }
-.profile .nw-facebook:before { width: 46px; left: -15px; width: 44px; }
-.profile .nw-linkedin { background: #4f83c3 url(../img/networks.png) no-repeat scroll -60px 0px; }
-.profile .nw-linkedin:before { width: 46px; left: -85px; width: 114px; }
-.profile .nw-twitter { background: #0da2d9 url(../img/networks.png) no-repeat scroll -120px 0px; }
-.profile .nw-twitter:before { width: 46px; left: -155px; width: 184px; }
-.profile .nw-google { background: #dd4c39 url(../img/networks.png) no-repeat scroll -180px 0px; }
-.profile .nw-google:before { width: 46px; left: -225px; width: 254px; }
-.profile a.not-connected:not(:hover) { background-color: #dbdee3; }
-.profile a.not-connected:before { border-color: #dbdee3; z-index: 2; }
-.profile a:after { position: absolute; display: block; content: "."; top: -6px; left: 24px; border-radius: 50%; width: 9px; height: 9px; background: #accc98; border: 2px solid white; }
-.profile a.not-connected:after { background: #dbdee3; }
-.profile a.not-connected { transition-property: background; transition-duration: 250ms; transition-timing-function: ease-in; transition-delay: 50ms; }
+.profile>.networks { position: relative; font-size: 0; padding: 60px 0 0 72px; background: white url(../img/kifi-k.png) no-repeat scroll 0 0; margin: 20px 0; }
+.profile>.networks:before { position: absolute; display: block; content: "."; top: 24px; left: 55px; width: 9px; width: 9px; height: 9px; background: #accc98; border: 2px solid white; border-radius: 50%; z-index: 2; }
+.profile>.networks:after { position: absolute; display: block; content: "."; top: 21px; left: 63px; width: 284px; height: 20px; background: #eff2f7; z-index: 0; }
+.profile>.networks>li { display: inline-block; margin: 0 5px; width: 60px; height: 60px; font-size: 0; }
+.profile-nw { position: relative; display: inline-block; width: 100%; height: 100%; background-image: url(../img/networks.png); background-size: 240px 60px; }
+.profile-nw.nw-facebook { background-color: #637ab8; }
+.profile-nw.nw-linkedin { background-color: #4f83c3; background-position: -60px 0; }
+.profile-nw.nw-twitter { background-color: #0da2d9; background-position: -120px 0; }
+.profile-nw.nw-google { background-color: #dd4c39; background-position: -180px 0; }
+.profile-nw:before { position: absolute; display: block; content: "."; border-width: 3px 3px 0 0; border-style: solid; border-color: #accc98; height: 28px; top: -31px; z-index: 3; }
+.profile-nw.nw-facebook:before { left: -15px; width: 44px; }
+.profile-nw.nw-linkedin:before { left: -85px; width: 114px; }
+.profile-nw.nw-twitter:before { left: -155px; width: 184px; }
+.profile-nw.nw-google:before { left: -225px; width: 254px; }
+.profile-nw.not-connected:not(:hover) { background-color: #dbdee3; }
+.profile-nw.not-connected:before { border-color: #dbdee3; z-index: 2; }
+.profile-nw:after { position: absolute; display: block; content: "."; top: -6px; left: 24px; border-radius: 50%; width: 9px; height: 9px; background: #accc98; border: 2px solid white; }
+.profile-nw.not-connected:after { background: #dbdee3; }
+.profile-nw.not-connected { transition: background .25s ease-in 50ms; }
 
 .check-all {position: absolute; top: 1px; left: 0; height: 17px; width: 17px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; border: 1px solid #e3e6ee; -moz-box-sizing: border-box; box-sizing: border-box}
 .check-all.live {cursor: pointer}
@@ -424,11 +424,7 @@ span.long-text, a.long-text {display: inline-block}
   .page-how>.page-how-text::before,
   [data-kept^="p"]>*>.page-keep[href]::before,
   .page-meta>.page-priv[href]::before {background-image: url(../img/keep-icons.2x.png)}
-
-  .profile .nw-facebook { background: #637ab8 url(../img/networks.2x.png) no-repeat scroll 0px 0px; }
-  .profile .nw-linkedin { background: #4f83c3 url(../img/networks.2x.png) no-repeat scroll -60px 0px; }
-  .profile .nw-twitter { background: #0da2d9 url(../img/networks.2x.png) no-repeat scroll -120px 0px; }
-  .profile .nw-google { background: #dd4c39 url(../img/networks.2x.png) no-repeat scroll -180px 0px; }
+  .profile-nw {background-image: url(../img/networks.2x.png)}
 }
 
 .fancybox-inner {font-size: 16px}
