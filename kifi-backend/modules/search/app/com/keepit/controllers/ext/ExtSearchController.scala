@@ -177,11 +177,11 @@ class ExtSearchController @Inject() (
 
     val future = decorator.decorate(res)
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
-    val experts = monitoredAwait.result(expertsFuture, 50 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id)
+    val experts = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id)
     val expertNames = {
       if (experts.size == 0) List.empty[String]
       else {
-        val idMap = monitoredAwait.result(shoeboxClient.getBasicUsers(experts), 50 milliseconds, s"getting experts' external ids", Map.empty[Id[User], BasicUser])
+        val idMap = monitoredAwait.result(shoeboxClient.getBasicUsers(experts), 100 milliseconds, s"getting experts' external ids", Map.empty[Id[User], BasicUser])
         experts.flatMap{idMap.get(_)}.map{x => x.firstName + " " + x.lastName}
       }
     }
