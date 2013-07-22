@@ -60,12 +60,18 @@ object TopicModelAccessorFlag {
 }
 
 class SwitchableTopicModelAccessor (
-  val accessorA: Future[TopicModelAccessorA],
-  val accessorB: Future[TopicModelAccessorB]
+  var accessorA: Future[TopicModelAccessorA],
+  var accessorB: Future[TopicModelAccessorB]
 ) {
   private var accessorFlag = TopicModelAccessorFlag.A       // default to A for now. Will read this from configuration or zookeeper or DB
 
   def getCurrentFlag = accessorFlag
+  def setCurrentFlag(flag: String) = {
+    flag match {
+      case TopicModelAccessorFlag.A  => accessorFlag = flag
+      case TopicModelAccessorFlag.B  => accessorFlag = flag
+    }
+  }
 
   def getActiveAccessor = accessorFlag match {
     case TopicModelAccessorFlag.A  => Await.result(accessorA, 5 minutes)
@@ -75,6 +81,11 @@ class SwitchableTopicModelAccessor (
   def getInactiveAccessor = accessorFlag match {
     case TopicModelAccessorFlag.A  => Await.result(accessorB, 5 minutes)
     case TopicModelAccessorFlag.B  => Await.result(accessorA, 5 minutes)
+  }
+
+  def getAccessorByFlag(flag: String) = flag match {
+    case TopicModelAccessorFlag.A  => Await.result(accessorA, 5 minutes)
+    case TopicModelAccessorFlag.B  => Await.result(accessorB, 5 minutes)
   }
 
   def switchAccessor() = {

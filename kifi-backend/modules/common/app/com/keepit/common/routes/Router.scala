@@ -78,7 +78,6 @@ object Shoebox extends Service {
     def getExperiments() = ServiceRoute(GET, "/internal/shoebox/database/getExperiments")
     def getExperiment(id: Id[SearchConfigExperiment]) = ServiceRoute(GET, "/internal/shoebox/database/getExperiment", Param("id", id))
     def saveExperiment = ServiceRoute(POST, "/internal/shoebox/database/saveExperiment")
-    def hasExperiment(userId: Id[User], state: State[ExperimentType]) = ServiceRoute(GET, "/internal/shoebox/database/hasExperimenthas", Param("userId", userId), Param("state", state))
     def reportArticleSearchResult() = ServiceRoute(POST, "/internal/shoebox/database/reportArticleSearchResult")
     def getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String) = ServiceRoute(GET, "/internal/shoebox/database/socialUserInfoByNetworkAndSocialId", Param("id", id), Param("networkType", networkType))
     def getSocialUserInfosByUserId(id: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/socialUserInfosByUserId", Param("id", id))
@@ -88,6 +87,7 @@ object Shoebox extends Service {
     def userChannelCountFanout() = ServiceRoute(POST, "/internal/shoebox/channel/userCount")
     def uriChannelFanout() = ServiceRoute(POST, "/internal/shoebox/channel/uri")
     def uriChannelCountFanout() = ServiceRoute(POST, "/internal/shoebox/channel/uriCount")
+    def suggestExperts() = ServiceRoute(POST, "/internal/shoebox/learning/suggestExperts")
   }
 }
 
@@ -112,7 +112,8 @@ object Search extends Service {
     def refreshPhrases() = ServiceRoute(POST, "/internal/search/index/refreshPhrases")
     def searchDumpLuceneDocument(id: Id[NormalizedURI]) = ServiceRoute(POST, s"/internal/search/index/dumpDoc/${id.id}")
     def searchKeeps(userId: Id[User], query: String) = ServiceRoute(POST, "/internal/search/search/keeps", Param("userId", userId), Param("query", query))
-    def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI]) = ServiceRoute(GET, "/internal/search/search/explainResult", Param("query", query), Param("userId", userId), Param("uriId", uriId))
+    def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String) =
+      ServiceRoute(GET, "/internal/search/search/explainResult", Param("query", query), Param("userId", userId), Param("uriId", uriId), Param("lang", lang))
     def causeError() = ServiceRoute(GET, "/internal/search/search/causeError")
     def buildDictionary() = ServiceRoute(POST, "/internal/search/spell/buildDict")
     def getBuildStatus() = ServiceRoute(GET, "/internal/search/spell/buildStatus")

@@ -50,6 +50,21 @@ object LangDetector extends Logging {
     langList.foldLeft(Map.empty[String, Double]){ (m, lang) => m + (lang -> prob) }
   }
 
+  private def makePriorMap(given: Map[Lang, Double]): JHashMap[String, JDouble] = {
+    val givenMap = given.map{ case (k, v) => k.lang -> v }
+    val siz = given.size
+    val sum = given.values.sum
+    val langList = DetectorFactory.getLangList
+    val langListSize = langList.size
+    val prob = (1.0d - sum) / (langListSize - siz)
+
+    new JHashMap(
+      langList.foldLeft(Map.empty[String, JDouble]){ (m, lang) =>
+        m + (lang -> new JDouble(givenMap.getOrElse(lang, prob)))
+      }
+    )
+  }
+
   private def readerToString(reader: Reader) = {
     val sb = new StringBuilder
     var c = reader.read()
@@ -60,63 +75,55 @@ object LangDetector extends Logging {
     sb.toString
   }
 
-  private def makeDetector(text: String, priorMap: Option[Map[String, Double]]) = {
+  private def makeDetector(text: String, priorMap: Map[Lang, Double] = Map()) = {
     val detector = DetectorFactory.create()
     // limit the iteration in the detection process when the text is short
     val iterationLimit = (detector.getIterationLimit.toDouble * (1.0d - (1.0d / (1.0d - ((text.length + 1).toDouble / 30.0d))))).toInt			//TODO: this hyperbolic function has problems. need to modify this.
     detector.setIterationLimit(iterationLimit)
     detector.setProbabilityThreshold(0.0d)
-    priorMap match {
-      case Some(priorMap) => detector.setPriorMap(new JHashMap(priorMap.mapValues{ v => new JDouble(v) }))
-      case None =>
-    }
+    detector.setPriorMap(makePriorMap(priorMap))
     detector.append(text)
     detector
   }
 
   def detect(text: String, lang: Lang): Lang = {
-    detect(text, Some(priorMapForBiasedDetection + (lang.lang -> biasedProbability)))
+    detect(text, Map(lang -> biasedProbability), lang)
   }
 
-  def detect(text: String, priorMap: Option[Map[String, Double]] = None): Lang = {
+  def detect(text: String, priorMap: Map[Lang, Double] = Map(), default: Lang = Lang("en")): Lang = {
     try {
       makeDetector(text, priorMap).detect() match {
-        case "unknown" => Lang("en")
+        case "unknown" => default
         case lang => Lang(lang)
       }
     } catch {
-      case e: LangDetectException => Lang("en") // no text? defaulting to English
+      case e: LangDetectException => default // no text? defaulting to English
     }
   }
 
   def detectShortText(text:String, lang: Lang): Lang = {
-    detectShortText(text, priorMapForBiasedDetection + (lang.lang -> biasedProbability))
+    detectShortText(text, Map(lang -> biasedProbability), lang)
   }
 
-  def detectShortText(text:String): Lang = {
-    detectShortText(text, uniformPriorMap)
-  }
-
-
-  private def detectShortText(text:String,  prior: Map[String, Double]): Lang = {
+  def detectShortText(text:String, priorMap: Map[Lang, Double] = Map(), default: Lang = Lang("en")): Lang = {
     val detector = DetectorFactory.create()
     detector.append(text)
-    detector.setPriorMap(new JHashMap(prior.mapValues{ v => new JDouble(v) }))
+    detector.setPriorMap(makePriorMap(priorMap))
     try{
       detector.detectForShort() match{
-        case "unknown" => Lang("en")
+        case "unknown" => default
         case lang => Lang(lang)
       }
     } catch{
-      case e: LangDetectException => Lang("en")
+      case e: LangDetectException => default
     }
   }
 
   def probabilities(text: String, lang: Lang): Seq[(Lang, Double)] = {
-    probabilities(text, Some(priorMapForBiasedDetection + (lang.lang -> 0.6d)))
+    probabilities(text, Map(lang -> biasedProbability))
   }
 
-  def probabilities(text: String, priorMap: Option[Map[String, Double]] = None): Seq[(Lang, Double)] = {
+  def probabilities(text: String, priorMap: Map[Lang, Double] = Map()): Seq[(Lang, Double)] = {
     try {
       makeDetector(text, priorMap).getProbabilities().map{ language => (Lang(language.lang), language.prob) }.toSeq
     } catch {

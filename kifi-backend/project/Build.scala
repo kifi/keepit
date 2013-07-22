@@ -37,7 +37,6 @@ object ApplicationBuild extends Build {
       jdbc,
       "com.typesafe.play.plugins" %% "play-statsd" % "2.1.0",
       "securesocial" %% "securesocial" % "master-SNAPSHOT",
-      "mysql" % "mysql-connector-java" % "5.1.25",
       "org.clapper" %% "grizzled-slf4j" % "1.0.1",
       "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
@@ -49,18 +48,13 @@ object ApplicationBuild extends Build {
       "com.cybozu.labs" % "langdetect" % "1.1-20120112",
       "org.mindrot" % "jbcrypt" % "0.3m",
       "com.amazonaws" % "aws-java-sdk" % "1.3.20",
-      "javax.mail" % "mail" % "1.4.5",
       "org.mongodb" %% "casbah" % "2.5.0",
-      "org.jsoup" % "jsoup" % "1.7.1",
-      "com.typesafe.slick" %% "slick" % "1.0.0",
-      "com.typesafe.slick" %% "slick-testkit" % "1.0.0",
+      "com.typesafe.slick" %% "slick" % "1.0.1",
       "net.sf.uadetector" % "uadetector-resources" % "2013.02",
       "com.newrelic.agent.java" % "newrelic-agent" % "2.18.0",
       "com.google.inject" % "guice" % "3.0",
       "com.google.inject.extensions" % "guice-multibindings" % "3.0",
       "net.codingwell" %% "scala-guice" % "3.0.2",
-      "org.imgscalr" % "imgscalr-lib" % "4.2",
-      "edu.stanford.nlp" % "stanford-corenlp" % "1.3.5",
       "org.apache.lucene" % "lucene-core" % "4.2.1",
       "org.apache.lucene" % "lucene-analyzers-common" % "4.2.1",
       "org.apache.lucene" % "lucene-suggest" % "4.2.1"
@@ -73,7 +67,16 @@ object ApplicationBuild extends Build {
     ))
 
     val searchDependencies = Seq(
-      "edu.stanford.nlp.models" % "stanford-corenlp-models" % "1.3.5" from "http://scalasbt.artifactoryonline.com/scalasbt/repo/edu/stanford/nlp/stanford-corenlp/1.3.5/stanford-corenlp-1.3.5-models.jar"
+      "edu.stanford.nlp.models" % "stanford-corenlp-models" % "1.3.5" from "http://scalasbt.artifactoryonline.com/scalasbt/repo/edu/stanford/nlp/stanford-corenlp/1.3.5/stanford-corenlp-1.3.5-models.jar",
+      "edu.stanford.nlp" % "stanford-corenlp" % "1.3.5"
+    )
+
+    val shoeboxDependencies = Seq(
+      "javax.mail" % "mail" % "1.4.5",
+      "com.typesafe.slick" %% "slick-testkit" % "1.0.1",
+      "mysql" % "mysql-connector-java" % "5.1.25",
+      "org.imgscalr" % "imgscalr-lib" % "4.2",
+      "org.jsoup" % "jsoup" % "1.7.1"
     )
 
     val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",
@@ -132,7 +135,7 @@ object ApplicationBuild extends Build {
       sources in doc in Compile := List()
     )
 
-    val shoebox = play.Project("shoebox", appVersion, commonDependencies, path = file("modules/shoebox")).settings(
+    val shoebox = play.Project("shoebox", appVersion, commonDependencies ++ shoeboxDependencies, path = file("modules/shoebox")).settings(
       scalacOptions ++= _scalacOptions,
       routesImport ++= _routesImport,
       resolvers ++= commonResolvers,

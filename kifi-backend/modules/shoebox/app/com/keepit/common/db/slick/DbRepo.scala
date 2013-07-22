@@ -41,13 +41,8 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
 
   def invalidateCache(model: M)(implicit session: RSession): M = model
 
-  implicit val idMapper = new BaseTypeMapper[Id[M]] {
-    def apply(profile: BasicProfile) = new IdMapperDelegate[M](profile)
-  }
-
-  implicit val stateTypeMapper = new BaseTypeMapper[State[M]] {
-    def apply(profile: BasicProfile) = new StateMapperDelegate[M](profile)
-  }
+  implicit val idMapper = FortyTwoGenericTypeMappers.idMapper[M]
+  implicit val stateTypeMapper = FortyTwoGenericTypeMappers.stateTypeMapper[M]
 
   protected def table: RepoTable[M]
 
@@ -96,30 +91,22 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     model
   }
 
-  /**
-   * The toUpperCase is per an H2 "bug?"
-   * http://stackoverflow.com/a/8722814/81698
-   */
   abstract class RepoTable[M <: Model[M]](db: DataBaseComponent, name: String) extends Table[M](db.entityName(name)) with TableWithDDL {
-    import FortyTwoTypeMappers._
 
-    implicit val idMapper = new BaseTypeMapper[Id[M]] {
-      def apply(profile: BasicProfile) = new IdMapperDelegate[M](profile)
-    }
+    implicit val idMapper = FortyTwoGenericTypeMappers.idMapper[M]
+    implicit val stateTypeMapper = FortyTwoGenericTypeMappers.stateTypeMapper[M]
 
-    implicit def stateMapper = new BaseTypeMapper[State[M]] {
-      def apply(profile: BasicProfile) = new StateMapperDelegate[M](profile)
-    }
-
+    //standardizing the following columns for all entities
     def id = column[Id[M]]("ID", O.PrimaryKey, O.Nullable, O.AutoInc)
+    def createdAt = column[DateTime]("created_at", O.NotNull)
+    def updatedAt = column[DateTime]("updated_at", O.NotNull)
+    //state may not exist in all entities, if it does then its column name is standardized as well.
+    def state = column[State[M]]("state", O.NotNull)
 
     def autoInc = * returning id
 
-    def createdAt = column[DateTime]("created_at", O.NotNull)
-    def updatedAt = column[DateTime]("updated_at", O.NotNull)
-
-    def state = column[State[M]]("state", O.NotNull)
-
+    //H2 likes its column names in upper case where mysql does not mind.
+    //the db component should figure it out
     override def column[C : TypeMapper](name: String, options: ColumnOption[C]*) =
       super.column(db.entityName(name), options:_*)
   }

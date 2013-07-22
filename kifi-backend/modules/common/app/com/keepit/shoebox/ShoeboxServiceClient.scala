@@ -73,7 +73,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getExperiments: Future[Seq[SearchConfigExperiment]]
   def getExperiment(id: Id[SearchConfigExperiment]): Future[SearchConfigExperiment]
   def saveExperiment(experiment: SearchConfigExperiment): Future[SearchConfigExperiment]
-  def hasExperiment(userId: Id[User], state: State[ExperimentType]): Future[Boolean]
   def getUserExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]]
   def getSocialUserInfosByUserId(userId: Id[User]): Future[Seq[SocialUserInfo]]
   def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]]
@@ -82,6 +81,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def userChannelCountFanout(): Seq[Future[Int]]
   def uriChannelFanout(uri: String, msg: JsArray): Seq[Future[Int]]
   def uriChannelCountFanout(): Seq[Future[Int]]
+  def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -110,7 +110,6 @@ class ShoeboxServiceClientImpl @Inject() (
   private[this] val consolidateConnectedUsersReq = new RequestConsolidator[UserConnectionKey, Set[Id[User]]](ttl = 3 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[ClickHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
   private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[BrowsingHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
-  private[this] val consolidateHasExperimentReq = new RequestConsolidator[(Id[User], State[ExperimentType]), Boolean](ttl = 30 seconds)
   private[this] val consolidateGetExperimentsReq = new RequestConsolidator[String, Seq[SearchConfigExperiment]](ttl = 30 seconds)
 
   def getUserOpt(id: ExternalId[User]): Future[Option[User]] = {
@@ -309,14 +308,6 @@ class ShoeboxServiceClientImpl @Inject() (
       Json.fromJson[SearchConfigExperiment](r.json).get
     }
   }
-  def hasExperiment(userId: Id[User], state: State[ExperimentType]): Future[Boolean] = consolidateHasExperimentReq((userId, state)) { case (userId, state) =>
-    cacheProvider.userExperimentCache.getOrElseOpt(UserExperimentUserIdKey(userId))(None) match {
-      case Some(states) => Promise.successful(states.contains(state)).future
-      case None => call(Shoebox.internal.hasExperiment(userId, state)).map { r =>
-        r.json.as[Boolean]
-      }
-    }
-  }
 
   def getUserExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]] = {
     cacheProvider.userExperimentCache.get(UserExperimentUserIdKey(userId)) match {
@@ -397,6 +388,18 @@ class ShoeboxServiceClientImpl @Inject() (
     broadcast(Shoebox.internal.uriChannelCountFanout()).map { futResp =>
       futResp.map { r =>
         r.body.toInt
+      }
+    }
+  }
+
+  def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]] = {
+    val payload = JsArray(urisAndKeepers.map{ case (uri, users) =>
+      Json.obj("uri" -> JsNumber(uri.id), "users" -> JsArray(users.map{_.id}.map{JsNumber(_)}) )
+    })
+    call(Shoebox.internal.suggestExperts(), payload).map{ r =>
+      r.json match {
+        case jso: JsObject => jso.as[JsArray].value.map{x => x.as[Long]}.map{Id[User](_)}
+        case _ => List.empty[Id[User]]
       }
     }
   }

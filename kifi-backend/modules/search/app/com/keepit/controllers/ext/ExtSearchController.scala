@@ -11,6 +11,7 @@ import com.keepit.common.performance._
 import com.keepit.common.time._
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.model._
+import com.keepit.model.ExperimentTypes.NO_SEARCH_EXPERIMENTS
 import com.keepit.search._
 import com.keepit.serializer.PersonalSearchResultPacketSerializer.resSerializer
 import com.keepit.common.logging.Logging
@@ -24,6 +25,7 @@ import com.newrelic.api.agent.NewRelic
 import com.newrelic.api.agent.Trace
 import play.modules.statsd.api.Statsd
 import com.keepit.social.BasicUser
+import scala.concurrent.Promise
 
 @Singleton
 class ExtSearchController @Inject() (
@@ -31,7 +33,6 @@ class ExtSearchController @Inject() (
   searchConfigManager: SearchConfigManager,
   mainSearcherFactory: MainSearcherFactory,
   articleSearchResultStore: ArticleSearchResultStore,
-  srcFactory: SearchResultClassifierFactory,
   healthcheckPlugin: HealthcheckPlugin,
   shoeboxClient: ShoeboxServiceClient,
   monitoredAwait: MonitoredAwait)
@@ -74,7 +75,7 @@ class ExtSearchController @Inject() (
         else SearchFilter.default(context)
     }
 
-    val (config, experimentId) = searchConfigManager.getConfig(userId, query)
+    val (config, searchExperimentId) = searchConfigManager.getConfig(userId, query, request.experiments.contains(NO_SEARCH_EXPERIMENTS))
 
     val lastUUID = lastUUIDStr.flatMap{
       case "" => None
@@ -82,12 +83,17 @@ class ExtSearchController @Inject() (
     }
 
     val t2 = currentDateTime.getMillis()
-    var t3 = 0L
-    val searcher = timeWithStatsd("search-factory", "extSearch.factory") { mainSearcherFactory(userId, searchFilter, config) }
-    t3 = currentDateTime.getMillis()
+
+    val probabilities = getLangsPriorProbabilities(request.request.acceptLanguages.map(_.code))
+    val searcher = timeWithStatsd("search-factory", "extSearch.factory") {
+      mainSearcherFactory(userId, query, probabilities, maxHits, searchFilter, config, lastUUID)
+    }
+
+    val t3 = currentDateTime.getMillis()
+
     val searchRes = timeWithStatsd("search-searching", "extSearch.searching") {
       val searchRes = if (maxHits > 0) {
-        searcher.search(query, maxHits, lastUUID, searchFilter)
+        searcher.search()
       } else {
         log.warn("maxHits is zero")
         val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
@@ -97,11 +103,14 @@ class ExtSearchController @Inject() (
       searchRes
     }
 
+    val experts = if (filter.isEmpty && config.asBoolean("showExperts")) {
+      suggestExperts(searchRes)
+    } else { Promise.successful(List.empty[Id[User]]).future }
+
     val t4 = currentDateTime.getMillis()
 
     val decorator = ResultDecorator(searcher, shoeboxClient, config)
-    val res = toPersonalSearchResultPacket(decorator, userId, searchRes, config, searchFilter.isDefault, experimentId)
-
+    val res = toPersonalSearchResultPacket(decorator, userId, searchRes, config, searchFilter.isDefault, searchExperimentId, experts)
     reportArticleSearchResult(searchRes)
 
     val t5 = currentDateTime.getMillis()
@@ -133,6 +142,21 @@ class ExtSearchController @Inject() (
     Ok(Json.toJson(res)).withHeaders("Cache-Control" -> "private, max-age=10")
   }
 
+  private def getLangsPriorProbabilities(acceptLangs: Seq[String]): Map[Lang, Double] = {
+    val langs = acceptLangs.toSet.flatMap{ code: String =>
+      val lang = code.substring(0,2)
+      if (lang == "zh") Set("zh-cn", "zh-tw") else Set(lang)
+    } + "en" // always include English
+
+    val size = langs.size
+    if (size == 0) {
+      Map(Lang("en") -> 0.9d)
+    } else {
+      val prob = (1.0d - 0.1d / size) / size
+      langs.map{ (Lang(_) -> prob) }.toMap
+    }
+  }
+
   class SearchTimeExceedsLimit(timeout: Int, actual: Long) extends Exception(s"Timeout ${timeout}ms, actual ${actual}ms")
 
   private def reportArticleSearchResult(res: ArticleSearchResult) {
@@ -145,14 +169,38 @@ class ExtSearchController @Inject() (
   }
 
   private[ext] def toPersonalSearchResultPacket(decorator: ResultDecorator, userId: Id[User],
-      res: ArticleSearchResult, config: SearchConfig, isDefaultFilter: Boolean, experimentId: Option[Id[SearchConfigExperiment]]): PersonalSearchResultPacket = {
+      res: ArticleSearchResult,
+      config: SearchConfig,
+      isDefaultFilter: Boolean,
+      searchExperimentId: Option[Id[SearchConfigExperiment]],
+      expertsFuture: Future[Seq[Id[User]]]): PersonalSearchResultPacket = {
 
     val future = decorator.decorate(res)
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
+    val experts = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id)
+    val expertNames = {
+      if (experts.size == 0) List.empty[String]
+      else {
+        val idMap = monitoredAwait.result(shoeboxClient.getBasicUsers(experts), 100 milliseconds, s"getting experts' external ids", Map.empty[Id[User], BasicUser])
+        experts.flatMap{idMap.get(_)}.map{x => x.firstName + " " + x.lastName}
+      }
+    }
+
 
     PersonalSearchResultPacket(res.uuid, res.query,
       monitoredAwait.result(future, 5 seconds, s"getting search decorations for $userId", Nil),
-      res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), experimentId, filter)
+      res.mayHaveMoreHits, (!isDefaultFilter || res.toShow), searchExperimentId, filter, expertNames)
+  }
+
+  private[ext] def suggestExperts(searchRes: ArticleSearchResult) = {
+    val urisAndUsers = searchRes.hits.map{ hit =>
+      (hit.uriId, hit.users)
+    }
+    if (urisAndUsers.map{_._2}.flatten.distinct.size < 2){
+      Promise.successful(List.empty[Id[User]]).future
+    } else{
+      shoeboxClient.suggestExperts(urisAndUsers)
+    }
   }
 
 }

@@ -14,6 +14,8 @@ import scala.math._
 import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.google.inject.Injector
+import com.keepit.common.zookeeper.CentralConfig
+
 
 class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
   val numTopics = TopicModelGlobalTest.numTopics
@@ -36,8 +38,10 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
         val seqInfoRepo = inject[TopicSeqNumInfoRepoA]
         val bmRepo = inject[BookmarkRepo]
         val accessor = inject[SwitchableTopicModelAccessor]
+        val factory = inject[TopicModelAccessorFactory]
+        val centralConfig = inject[CentralConfig]
 
-        val topicUpdater = new TopicUpdater(db, uriRepo, bmRepo, articleStore, accessor)
+        val topicUpdater = new TopicUpdater(db, uriRepo, bmRepo, articleStore, accessor, factory, centralConfig)
 
         topicUpdater.update()
 
@@ -112,8 +116,10 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
         val seqInfoRepo = inject[TopicSeqNumInfoRepoA]
         val bmRepo = inject[BookmarkRepo]
         val accessor = inject[SwitchableTopicModelAccessor]
+        val factory = inject[TopicModelAccessorFactory]
+        val centralConfig = inject[CentralConfig]
 
-        val topicUpdater = new TopicUpdater(db, uriRepo, bmRepo, articleStore, accessor)
+        val topicUpdater = new TopicUpdater(db, uriRepo, bmRepo, articleStore, accessor, factory, centralConfig)
 
         topicUpdater.update()
         topicUpdater.remodel()

@@ -28,8 +28,7 @@ object ResultDecorator extends Logging {
   private[this] val emptyMatches = Seq.empty[(Int, Int)]
 
   def apply(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient, searchConfig: SearchConfig): ResultDecorator = {
-    val decorateResultWithCollections = searchConfig.asBoolean("decorateResultWithCollections")
-    new ResultDecoratorImpl(searcher, shoeboxClient, decorateResultWithCollections)
+    new ResultDecoratorImpl(searcher, shoeboxClient)
   }
 
   def highlight(text: String, analyzer: Analyzer, field: String, terms: Option[Set[String]]): Seq[(Int, Int)] = {
@@ -101,7 +100,7 @@ object ResultDecorator extends Logging {
   }
 }
 
-class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient, decorateResultWithCollections: Boolean) extends ResultDecorator {
+class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient) extends ResultDecorator {
 
   override def decorate(resultSet: ArticleSearchResult): Future[Seq[PersonalSearchResult]] = {
     val collectionSearcher = searcher.collectionSearcher
@@ -118,10 +117,10 @@ class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceC
       if (h.isMyBookmark) {
         val r = searcher.getBookmarkRecord(h.uriId).getOrElse(throw new Exception(s"missing bookmark record: uri id = ${h.uriId}"))
 
-        val collections = if (decorateResultWithCollections) {
+        val collections = {
           val collIds = collectionSearcher.intersect(myCollectionEdgeSet, collectionSearcher.getUriToCollectionEdgeSet(h.uriId)).destIdLongSet
           if (collIds.isEmpty) None else Some(collIds.toSeq.sortBy(0L - _).map{ id => collectionSearcher.getExternalId(id) })
-        } else None
+        }
 
         PersonalSearchHit(
           r.uriId,

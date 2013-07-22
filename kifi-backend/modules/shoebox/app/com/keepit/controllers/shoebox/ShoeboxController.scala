@@ -250,13 +250,6 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(saved))
   }
 
-  def hasExperiment(userId: Id[User], state: State[ExperimentType]) = Action { request =>
-    val has = db.readOnly { implicit s =>
-      userExperimentRepo.hasExperiment(userId, state)
-    }
-    Ok(JsBoolean(has))
-  }
-
   def getUserExperiments(userId: Id[User]) = Action { request =>
     val experiments = db.readOnly { implicit s =>
       userExperimentRepo.getUserExperiments(userId).map(_.value)
@@ -332,11 +325,7 @@ class ShoeboxController @Inject() (
     Ok(uriChannel.pushNoFanout(uri, msg).toString)
   }
 
-
   def uriChannelCountFanout() = Action { request =>
     Ok(uriChannel.localClientCount.toString)
   }
-
-
-
 }

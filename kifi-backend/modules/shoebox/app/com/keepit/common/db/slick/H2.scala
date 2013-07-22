@@ -5,6 +5,7 @@ import com.keepit.common.db.{DbSequence, SequenceNumber, H2DatabaseDialect}
 import scala.slick.driver.H2Driver
 import scala.collection.concurrent.TrieMap
 import scala.slick.lifted.DDL
+import scala.slick.session.{Database => SlickDatabase}
 
 trait TableInitListener {
   def init(table: TableWithDDL): Unit
@@ -12,7 +13,7 @@ trait TableInitListener {
 }
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
-class H2(val dbInfo: DbInfo)
+class H2(val handle: SlickDatabase)
     extends DataBaseComponent {
   println("initiating H2 driver")
   val Driver = H2Driver
@@ -34,6 +35,10 @@ class H2(val dbInfo: DbInfo)
     }
   }
 
+  /**
+   * The toUpperCase is per an H2 "bug?"
+   * http://stackoverflow.com/a/8722814/81698
+   */
   override def entityName(name: String): String = name.toUpperCase()
 
   private def initSequence(sequence: String) {

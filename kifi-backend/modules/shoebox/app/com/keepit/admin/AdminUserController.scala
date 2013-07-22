@@ -56,7 +56,40 @@ class AdminUserController @Inject() (
     keepToCollectionRepo: KeepToCollectionRepo,
     userIndex: UserIndex,
     userNotifier: UserNotifier,
+    emailAddressRepo: EmailAddressRepo,
+    invitationRepo: InvitationRepo,
     clock: Clock) extends AdminController(actionAuthenticator) {
+
+
+  def merge = AdminHtmlAction { implicit request =>
+    // This doesn't do a complete merge. It's designed for cases where someone accidentally creates a new user when
+    // logging in and wants to associate the newly-created user's social users with an existing user
+    val form = request.request.body.asFormUrlEncoded.get
+    val (fromUserId, toUserId) = (Id[User](form("from").head.toLong), Id[User](form("to").head.toLong))
+
+    db.readWrite { implicit s =>
+      val fromUser = userRepo.get(fromUserId)
+      val toUser = userRepo.get(toUserId)
+      for (email <- emailAddressRepo.getByUser(fromUserId)) {
+        emailRepo.save(email.copy(userId = toUserId))
+      }
+      val socialUsers = socialUserInfoRepo.getByUser(fromUserId)
+      for (su <- socialUsers; invitation <- invitationRepo.getByRecipient(su.id.get)) {
+        invitationRepo.save(invitation.withState(InvitationStates.INACTIVE))
+      }
+      for (su <- socialUsers) {
+        socialUserInfoRepo.save(su.withUser(toUser))
+      }
+      userRepo.save(toUser.withState(UserStates.ACTIVE))
+      userRepo.save(fromUser.withState(UserStates.INACTIVE))
+    }
+
+    for (su <- db.readOnly { implicit s => socialUserInfoRepo.getByUser(toUserId) }) {
+      socialGraphPlugin.asyncFetch(su)
+    }
+
+    Redirect(routes.AdminUserController.userView(toUserId))
+  }
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val (user, socialUserInfos, follows, comments, messages, sentElectronicMails) = db.readOnly { implicit s =>
@@ -124,7 +157,6 @@ class AdminUserController @Inject() (
       val emails = emailRepo.getByUser(user.id.get)
       (user, (bookmarks, uris).zipped.toList.seq, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails)
     }
-    // above needs slicking.
     val historyUpdateCount = db.readOnly { implicit session =>
       browsingHistoryRepo.getByUserId(userId).map(_.updatesCount).getOrElse(0)
     }

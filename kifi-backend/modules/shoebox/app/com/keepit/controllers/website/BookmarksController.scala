@@ -125,6 +125,20 @@ class BookmarksController @Inject() (
     }
   }
 
+  def getScreenshotUrl() = AuthenticatedJsonToJsonAction { request =>
+    val url = (request.body \ "url").as[String]
+    Async {
+      db.readOnlyAsync { implicit session =>
+        uriRepo.getByUri(url)
+      } map { uri =>
+        s3ScreenshotStore.getScreenshotUrl(uri) match {
+          case Some(url) => Ok(Json.obj("url" -> url))
+          case None => NotFound
+        }
+      }
+    }
+  }
+
   def keepMultiple() = AuthenticatedJsonAction { request =>
     request.body.asJson.flatMap(Json.fromJson[KeepInfosWithCollection](_).asOpt) map { kwc =>
       val KeepInfosWithCollection(collection, keepInfos) = kwc

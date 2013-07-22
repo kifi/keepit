@@ -1,7 +1,6 @@
 package com.keepit.common.analytics
 
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import com.google.inject.{ Inject, Singleton, Provider }
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.akka.FortyTwoActor
@@ -20,8 +19,8 @@ import com.keepit.search.UriLabel
 import com.keepit.search.{ SearchServiceClient, ArticleSearchResultRef }
 import com.keepit.shoebox.BrowsingHistoryTracker
 import com.keepit.shoebox.ClickHistoryTracker
-
 import play.api.libs.json.JsObject
+import scala.util.Success
 
 abstract class EventListener(
     userRepo: UserRepo,
@@ -116,6 +115,7 @@ class ResultClickedListener @Inject() (
   searchServiceClient: SearchServiceClient,
   db: Database,
   bookmarkRepo: BookmarkRepo,
+  userBookmarkClicksRepo: UserBookmarkClicksRepo,
   clickHistoryTracker: ClickHistoryTracker)
   extends EventListener(userRepo, normalizedURIRepo) {
 
@@ -134,6 +134,26 @@ class ResultClickedListener @Inject() (
       }.foreach { n =>
         searchServiceClient.logResultClicked(user.id.get, meta.query, n.id.get, meta.rank, !bookmark.isEmpty)
         clickHistoryTracker.add(user.id.get, n.id.get)
+
+        // if bookmark is kept by this user
+        if (bookmark.isDefined && user.id.isDefined){
+          db.readWrite{ implicit s =>
+            userBookmarkClicksRepo.increaseCounts(bookmark.get.userId, bookmark.get.uriId, isSelf = true)
+          }
+        }
+        // if kept by others, others get credit
+        if (!bookmark.isDefined){
+          searchServiceClient.sharingUserInfo(user.id.get, n.id.get).onComplete{
+            case Success(sharingUserInfo) => {
+              sharingUserInfo.sharingUserIds.foreach{ userId =>
+                db.readWrite{ implicit s =>
+                  userBookmarkClicksRepo.increaseCounts(userId, n.id.get, isSelf = false)
+                }
+              }
+            }
+            case _ => log.warn("fail to get sharing user info from search client")
+          }
+        }
       }
   }
 }

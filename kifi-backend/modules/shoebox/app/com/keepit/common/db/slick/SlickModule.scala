@@ -15,11 +15,11 @@ abstract class SlickModule(dbInfo: DbInfo) extends ScalaModule {
   def configure(): Unit = {
     //see http://stackoverflow.com/questions/6271435/guice-and-scala-injection-on-generics-dependencies
     lazy val db = dbInfo.driverName match {
-      case MySQL.driverName     => new MySQL(dbInfo)
-      case H2.driverName        => new H2(dbInfo)
+      case MySQL.driverName     => new MySQL(dbInfo.database)
+      case H2.driverName        => new H2(dbInfo.database)
     }
-    bind[Database].in(classOf[Singleton])
     bind[DataBaseComponent].toInstance(db)
+    bind[Database].in(classOf[Singleton])
   }
 }
 
@@ -37,5 +37,6 @@ case class ShoeboxDbInfo() extends DbInfo {
 case class ShoeboxSlickModule() extends SlickModule(ShoeboxDbInfo()) {
 
   @Provides @Singleton
-  def dbExecutionContextProvider(system: ActorSystem): DbExecutionContext = DbExecutionContext(system.dispatchers.lookup("db-thread-pool-dispatcher"))
+  def dbExecutionContextProvider(system: ActorSystem): DbExecutionContext =
+    DbExecutionContext(system.dispatchers.lookup("db-thread-pool-dispatcher"))
 }

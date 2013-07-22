@@ -3,7 +3,6 @@ package com.keepit.search
 import java.io.File
 import com.keepit.common.db.Id
 import com.keepit.common.akka.MonitoredAwait
-import com.keepit.model.ExperimentTypes.NO_SEARCH_EXPERIMENTS
 import com.keepit.model.User
 import com.keepit.search.index.DefaultAnalyzer
 import com.keepit.search.query.QueryHash
@@ -13,7 +12,6 @@ import scala.concurrent.duration._
 object SearchConfig {
   private[search] val defaultParams =
     Map[String, String](
-      "decorateResultWithCollections" -> "true",
       "phraseProximityBoost" -> "0.95",     // could be too aggressive?
       "phraseBoost" -> "0.5",
       "siteBoost" -> "1.0",
@@ -37,11 +35,11 @@ object SearchConfig {
       "dampingHalfDecayMine" -> "7.0",
       "dampingHalfDecayFriends" -> "5.0",
       "dampingHalfDecayOthers" -> "2.0",
-      "useS3FlowerFilter" -> "true"
+      "useS3FlowerFilter" -> "true",
+      "showExperts" -> "false"
     )
   private[this] val descriptions =
     Map[String, String](
-      "decorateResultWithCollections" -> "decorates result with collection information",
       "phraseProximityBoost" -> "boost value for phrase proximity",
       "phraseBoost" -> "boost value for the detected phrase",
       "siteBoost" -> "boost value for matching website names and domains",
@@ -65,7 +63,8 @@ object SearchConfig {
       "dampingHalfDecayMine" -> "how many top hits in my bookmarks are important",
       "dampingHalfDecayFriends" -> "how many top hits in friends' bookmarks are important",
       "dampingHalfDecayOthers" -> "how many top hits in others' bookmark are important",
-      "useS3FlowerFilter" -> "Using the multiChunk S3 backed result clicked flower filter"
+      "useS3FlowerFilter" -> "Using the multiChunk S3 backed result clicked flower filter",
+      "showExperts" -> "suggest experts when search returns hits"
     )
 
   def apply(params: (String, String)*): SearchConfig = SearchConfig(Map(params:_*))
@@ -100,12 +99,11 @@ class SearchConfigManager(configDir: Option[File], shoeboxClient: ShoeboxService
     (hash - min) / (max - min)
   }
 
-  def getConfig(userId: Id[User], queryText: String): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
+  def getConfig(userId: Id[User], queryText: String, excludeFromExperiments: Boolean = false): (SearchConfig, Option[Id[SearchConfigExperiment]]) = {
     userConfig.get(userId.id) match {
       case Some(config) => (config, None)
       case None =>
-        val shouldExclude = monitoredAwait.result(shoeboxClient.hasExperiment(userId, NO_SEARCH_EXPERIMENTS), 50 milliseconds, s"check has NO_SEARCH_EXPERIMENTS for $userId", true)
-        val experiment = if (shouldExclude) None else {
+        val experiment = if (excludeFromExperiments) None else {
           val hashFrac = hash(userId, queryText)
           var frac = 0.0
           activeExperiments.find { e =>

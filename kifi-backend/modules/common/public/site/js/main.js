@@ -1,5 +1,6 @@
 var urlBase = 'https://api.kifi.com';
 //var urlBase = 'http://dev.ezkeep.com:9000';
+var urlLinkNetwork = urlBase + '/link'
 var urlSite = urlBase + '/site';
 var urlSearch = urlBase + '/search';
 var urlKeeps =  urlSite + '/keeps';
@@ -9,16 +10,25 @@ var urlMyKeeps = urlKeeps + '/all';
 var urlMyKeepsCount = urlKeeps + '/count';
 var urlUser = urlSite + '/user';
 var urlMe = urlUser + '/me';
+var urlNetworks = urlUser + '/networks';
 var urlMyPrefs = urlUser + '/prefs';
+var urlChatter = urlSite + '/chatter';
 var urlCollections = urlSite + '/collections';
 var urlCollectionsAll = urlCollections + '/all';
 var urlCollectionsOrder = urlCollections + '/ordering';
 var urlCollectionsCreate = urlCollections + '/create';
-var urlScreenshot = urlBase + '/screenshot';
+var urlScreenshot = urlKeeps + '/screenshot';
 
-$.ajaxSetup({
-	xhrFields: {withCredentials: true},
-	crossDomain: true});
+$.ajaxSetup({cache: true, crossDomain: true, xhrFields: {withCredentials: true}});
+
+$.timeago.settings.localeTitle = true;
+$.extend($.timeago.settings.strings, {
+	seconds: "seconds",
+	minute: "a minute",
+	hour: "an hour",
+	hours: "%d hours",
+	month: "a month",
+	year: "a year"});
 
 $.fn.layout = function() {
 	return this.each(function() {this.clientHeight});  // forces layout
@@ -26,6 +36,15 @@ $.fn.layout = function() {
 
 $.fn.removeText = function() {
 	return this.contents().filter(function() {return this.nodeType == 3}).remove().end().end();
+};
+
+// detaches and reattaches nested template so it will work as an independent template
+$.fn.prepareDetached = function(opts) {
+	var el = this[0], p = el.parentNode, n = el.nextSibling, t;
+	p.removeChild(el);
+	t = Tempo.prepare(el, opts);
+	p.insertBefore(el, n);
+	return t;
 };
 
 $(function() {
@@ -89,26 +108,35 @@ $(function() {
 		}
 	});
 
-	$('.keep-colls').removeText();
-	var $myKeeps = $("#my-keeps"), $results = $("#search-results"), keepsTmpl = Tempo.prepare($myKeeps).when(TempoEvent.Types.RENDER_COMPLETE, function(ev) {
+	$('.keep-colls,.keep-coll').removeText();
+	var $myKeeps = $("#my-keeps"), $results = $("#search-results"), keepsTmpl = Tempo.prepare($myKeeps)
+	.when(TempoEvent.Types.ITEM_RENDER_COMPLETE, function(ev) {
+		var $keep = $(ev.element).draggable(draggableKeepOpts);
+		$keep.find(".pic").each(function() {
+			this.style.backgroundImage = "url(" + this.getAttribute("data-pic") + ")";
+			this.removeAttribute("data-pic");
+		});
+		$keep.find("time").timeago();
+	}).when(TempoEvent.Types.RENDER_COMPLETE, function(ev) {
 		$keepSpinner.hide();
 
-		var now = new Date;
-		$(ev.element).find("time").easydate({set_title: false}).each(function() {
-			var age = daysBetween(new Date($(this).attr("datetime")), now);
-			if ($myKeeps.find('li.keep-group-title.today').length == 0 && age <= 1) {
-				$(this).closest(".keep").before('<li class="keep-group-title today">Today</li>');
-			} else if ($myKeeps.find('li.keep-group-title.yesterday').length == 0 && age > 1 && age < 2) {
-				$(this).closest(".keep").before('<li class="keep-group-title yesterday">Yesderday</li>');
-			} else if ($myKeeps.find('li.keep-group-title.week').length == 0 && age >= 2 && age <= 7) {
-				$(this).closest(".keep").before('<li class="keep-group-title week">Past Week</li>');
-			} else if ($myKeeps.find('li.keep-group-title.older').length == 0 && age > 7) {
-				$(this).closest(".keep").before('<li class="keep-group-title older">Older</li>');
-				return false;
-			}
-		});
+		if (ev.element === $myKeeps[0]) {
+			var now = new Date;
+			$myKeeps.find("time").each(function() {
+				var age = daysBetween(new Date($(this).attr("datetime")), now);
+				if ($myKeeps.find('li.keep-group-title.today').length == 0 && age <= 1) {
+					$(this).closest(".keep").before('<li class="keep-group-title today">Today</li>');
+				} else if ($myKeeps.find('li.keep-group-title.yesterday').length == 0 && age > 1 && age < 2) {
+					$(this).closest(".keep").before('<li class="keep-group-title yesterday">Yesderday</li>');
+				} else if ($myKeeps.find('li.keep-group-title.week').length == 0 && age >= 2 && age <= 7) {
+					$(this).closest(".keep").before('<li class="keep-group-title week">Past Week</li>');
+				} else if ($myKeeps.find('li.keep-group-title.older').length == 0 && age > 7) {
+					$(this).closest(".keep").before('<li class="keep-group-title older">Older</li>');
+					return false;
+				}
+			});
+		}
 
-		$(ev.element).find(".keep").draggable(draggableKeepOpts);
 		mainScroller.refresh();
 	});
 	var draggableKeepOpts = {
@@ -116,12 +144,65 @@ $(function() {
 		handle: ".handle",
 		cancel: ".keep-checkbox",
 		appendTo: "body",
-		cursorAt: { top: 15, left: 0 },
+		scroll: false,
 		helper: function() {
-			var $keep = $(this), $sel = $keep.hasClass("selected") ? $keep.parent().find(".keep.selected") : $keep;
-			return $('<div>', {
-				"class": "drag-helper",
-				"text": $sel.length > 1 ? $sel.length + " selected keeps" : $keep.find(".keep-title>a").text()});
+			var $keep = $(this);
+			if (!$keep.hasClass('selected')) {
+				return $keep.clone().width($keep.css('width'));
+			} else {
+				var $keeps = $keep.parent().find(".keep.selected"), refTop = this.offsetTop;
+				return $('<ul class=keeps-dragging>').width($keep.css('width')).height($keep.css('height'))
+					.append($keeps.clone().each(function(i) {
+						this.style.top = $keeps[i].offsetTop - refTop + "px";
+					}));
+			}
+		},
+		start: function() {
+			var r = $collList[0].getBoundingClientRect();
+			var $shade = $('<div class=keep-drag-shade>');
+			var $shades = $shade.clone().css({top: 0, left: 0, right: 0, height: r.top})
+				.add($shade.css({top: r.top, left: r.right, right: 0, bottom: 0}))
+				.appendTo('body').layout().css('opacity', .2);
+			document.addEventListener('mousemove', move);
+			document.addEventListener('mouseup', up, true);
+			function up() {
+				document.removeEventListener('mousemove', move);
+				document.removeEventListener('mouseup', up, true);
+				$shades.css('opacity', 0).on('transitionend', function() {
+					$(this).remove();
+				});
+			}
+			function move(e) {
+				var inCol = e.pageX < r.right && e.pageX >= r.left, dy;
+				if (inCol && Math.abs(dy = (e.pageY - r.bottom)) < 10) {
+					scrollTimeout = scrollTimeout || setTimeout(scroll, scrollTimeoutMs);
+					scrollPx = 10 + dy * 2;
+				} else if (inCol && (dy = e.pageY - r.top) < 10 && dy > -50) {
+					scrollTimeout = scrollTimeout || setTimeout(scroll, scrollTimeoutMs)
+					scrollPx = -10 + Math.max(-10, dy);
+				} else if (scrollTimeout) {
+					clearTimeout(scrollTimeout), scrollTimeout = null;
+				}
+				lastPageX = e.pageX;
+				lastPageY = e.pageY;
+			}
+			var scrollEl = $collList.find('.antiscroll-inner')[0], scrollPx, lastPageX, lastPageY;
+			var scrollTimeout, scrollTimeoutMs = 100, scrollTopMax = scrollEl.scrollHeight - scrollEl.clientHeight;
+			function scroll() {
+				console.log('[scroll] px:', scrollPx);
+				var top = scrollEl.scrollTop, newTop = Math.max(0, Math.min(scrollTopMax, top + scrollPx));
+				if (newTop != top) {
+					scrollEl.scrollTop = newTop;
+					// update cached droppable offsets
+					for (var m = $.ui.ddmanager.droppables['default'], i = 0; i < m.length; i++) {
+						m[i].offset = m[i].element.offset();
+					}
+					$(document).trigger({type: 'mousemove', pageX: lastPageX, pageY: lastPageY});
+					scrollTimeout = setTimeout(scroll, scrollTimeoutMs);
+				} else {
+					scrollTimeout = null;
+				}
+			}
 		}};
 
 	var $colls = $("#collections"), collTmpl = Tempo.prepare($colls).when(TempoEvent.Types.RENDER_COMPLETE, function(event) {
@@ -137,11 +218,9 @@ $(function() {
 			addKeepsToCollection($(this).data("id"), ui.draggable.hasClass("selected") ? $main.find('.keep.selected') : ui.draggable);
 		}};
 
-	var $collOpts = $(".page-coll-opts").removeText();
-	var collOptsTmpl = Tempo.prepare($collOpts, {escape: false});
-
-	var $inColl = $(".page-coll-list").removeText();
-	var inCollTmpl = Tempo.prepare($inColl);
+	var collOptsTmpl = $('.page-coll-opts').removeText().prepareDetached({escape: false});
+	var inCollTmpl = $('.page-coll-list').removeText().prepareDetached();
+	var $detail = $('.detail'), detailTmpl = Tempo.prepare($detail);
 
 	var $keepSpinner = $('.keeps-loading');
 	var $loadMore = $('.keeps-load-more').click(function() {
@@ -153,6 +232,7 @@ $(function() {
 	});
 
 	var me;
+	var myNetworks;
 	var myPrefs;
 	var myKeepsCount;
 	var collections;
@@ -177,6 +257,10 @@ $(function() {
 	}
 	var escapeHTMLContentMap = {'&': '&amp;', '<': '&lt;', '>': '&gt;'};
 
+	function collIdAndName(id) {
+		return {id: id, name: collections[id].name};
+	}
+
 	function showDetails() {
 		var $r = $detail.off("transitionend"), d;
 		if ($r.css("display") == "block") {
@@ -199,45 +283,142 @@ $(function() {
 	}
 	function updateDetails() {
 		var $detailed = $main.find('.keep.detailed');
-		if (!$detailed.length) {
+		if ($detailed.length) {
+			var o = {
+				numKeeps: $detailed.length,
+				howKept: $detailed.not(".mine").length ? null :
+					$detailed.has(".keep-private.on").length == $detailed.length ? "pri" : "pub"};
+			var collIds = $detailed.find('.keep-coll').map(getDataId).get();
+			if ($detailed.length == 1) {
+				var $keepLink = $detailed.find('.keep-title>a'), url = $keepLink[0].href;
+				o.title = $keepLink.text();
+				o.url = $keepLink[0].href;
+				o.collections = collIds.map(collIdAndName);
+				detailTmpl.render(o);
+				$('.page-who-pics').append($detailed.find(".keep-who>.pic").clone());
+				$('.page-who-text').html($detailed.find(".keep-who-text").html());
+				var $pic = $('.page-pic'), $chatter = $('.page-chatter');
+				$.ajax({
+					url: urlScreenshot,
+					type: 'POST',
+					dataType: 'json',
+					data: JSON.stringify({url: o.url}),
+					contentType: 'application/json',
+					success: function(data) {
+						$pic.css('background-image', 'url(' + data.url + ')');
+					},
+					error: function() {
+						$pic.find('.page-pic-soon').show();
+					}});
+				$.ajax({
+					url: urlChatter,
+					type: 'POST',
+					dataType: 'json',
+					data: JSON.stringify({url: o.url}),
+					contentType: 'application/json',
+					success: function(data) {
+						$chatter.find('.page-chatter-messages').attr('data-n', data.conversations || 0);
+						$chatter.find('.page-chatter-comments').attr('data-n', data.comments || 0);
+					}});
+			} else { // multiple keeps
+				var collCounts = collIds.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
+				o.collections = Object.keys(collCounts).sort(function(id1, id2) {return collCounts[id1] - collCounts[id2]}).map(collIdAndName);
+				detailTmpl.render(o);
+			}
+			inCollTmpl.into($detail.find('.page-coll-list')[0]).render(o.collections);
+			showDetails();
+		} else {
 			hideDetails();
-		} else if ($detailed.length > 1) {
-			var howKept = $detailed.not(".mine").length ? null :
-				$detailed.has(".keep-private.on").length == $detailed.length ? "pri" : "pub";
-			$detail.attr("data-kept", howKept).addClass("multiple");
-			$('.page-title').text($detailed.length + " keeps selected");
-			$('.page-url').hide().empty().attr('href', '');
-			$('.page-pic-wrap').hide();
-			$('.page-pic').css('background-image', '');
-			$('.page-who').hide();
-
-			var collCounts = $detailed.find('.keep-coll').map(getDataId).get()
-				.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
-			inCollTmpl.render(
-				Object.keys(collCounts)
-					.sort(function(id1, id2) {return collCounts[id1] - collCounts[id2]})
-					.map(function(id) {return {id: id, name: collections[id].name}}));
-			showDetails();
-		} else { // detail one keep
-			$keep = $detailed;
-			var howKept = $keep.is('.mine') ? ($keep.has('.keep-private.on').length ? "pri" : "pub") : null;
-			var $keepLink = $keep.find('.keep-title>a'), url = $keepLink[0].href;
-			$detail.attr("data-kept", howKept).removeClass("multiple");
-			$('.page-title').text($keepLink.text());
-			$('.page-url').attr('href', url).text(url).show();
-			$('.page-pic').css("background-image", "url(" + urlScreenshot + '?url=' + escape(url) + ")").attr('href', url);
-			$('.page-pic-wrap').show();
-			$('.page-how').attr('class', 'page-how ' + (howKept || ''));
-			$('.page-who-pics').empty().append($keep.find(".keep-who>img").clone());
-			$('.page-who-text').html($keep.find(".keep-who-text").html());
-			$('.page-who').show();
-
-			var collIds = $keep.find('.keep-coll').map(getDataId).get();
-			$('.page-colls>h2').text(collIds.length ? 'In Collections:' : 'Collections:');
-			inCollTmpl.render(collIds.map(function(id) {return {id: id, name: collections[id].name}}));
-
-			showDetails();
 		}
+	}
+
+    var profileTmpl = Tempo.prepare("profile-template");
+	function showProfile() {
+		$main.attr("data-view", "profile");
+		$.when(promise.me, promise.myNetworks).done(function () {
+			profileTmpl.render(me);
+			$('.profile').on('keydown keypress keyup', function (e) {
+				e.stopPropagation();
+			});
+			$('.profile .edit').click(function () {
+				var $inputs = $(this).closest('.edit-container').addClass('editing').find('.editable').each(function () {
+					var value = $(this).text()
+					var $input = $('<input>').val(value).keyup(function (e) {
+						if (e.keyCode === 13) {
+							$(this).closest('.edit-container').find('.save').click();
+						} else if (e.which === 27) {
+							$(this).closest('.edit-container').removeClass('editing').find('.editable').each(function () {
+								var $this = $(this);
+								var prop = $this.data("prop");
+								if (prop == 'email') {
+									$this.text(me['emails'][0]);
+								} else {
+									$this.text(me[prop]);
+								}
+							});
+						}
+					});
+					$(this).html($input);
+				}).find('input');
+				$inputs[0].focus();
+				$inputs.keypress(function () {
+					var minChars = 3;
+					var len = $(this).val().length;
+					$(this).css('width', 'auto');
+					if (len > minChars) {
+						$(this).attr('size', len);
+					} else {
+						$(this).attr('size', minChars);
+					}
+				}).keypress();
+			});
+			$('.profile .save').click(function () {
+				var props = {};
+				var $editContainer = $(this).closest('.edit-container');
+				$editContainer.find('.editable').each(function () {
+					var $this = $(this);
+					var value = $this.find('input').val();
+					$this.text(value);
+					props[$this.data('prop')] = value;
+				});
+				if (props['email']) {
+					props['emails'] = [props['email']];
+					delete props['email'];
+				}
+				var $save = $editContainer.find('.save')
+				var saveText = $save.text();
+				$save.text('Saving...');
+				$.ajax({
+					url: urlMe,
+					type: "POST",
+					dataType: 'json',
+					data: JSON.stringify(props),
+					contentType: 'application/json',
+					error: function () {
+						showMessage('Uh oh! A bad thing happened!');
+						$save.text(saveText);
+					},
+					success: function (data) {
+						$editContainer.removeClass('editing')
+						$save.text(saveText);
+						updateMe(data);
+					}
+				});
+			});
+			$('.profile .networks a').each(function () {
+				var $this = $(this);
+				var name = $this.data('network');
+				if (!name) return;
+				var networkInfo = myNetworks.filter(function (nw) {
+					return nw.network === name;
+				})[0];
+				if (networkInfo) {
+					$this.attr('href', networkInfo.profileUrl).attr('title', 'View profile');
+				} else {
+				    $this.addClass('not-connected').attr('href', urlLinkNetwork + '/' + name).attr('title', 'Click to connect');
+				}
+			});
+		});
 	}
 
 	function doSearch(q) {
@@ -260,7 +441,8 @@ $(function() {
 		$query.attr("data-q", q);
 		var context = searchResponse && searchResponse.context;
 		$.getJSON(urlSearch, {q: q, f: "a", maxHits: 30, context: context}, function(data) {
-			$.when(promise.me).done(function() {
+			updateCollectionsIfAnyUnknown(data.hits);
+			$.when(promise.me, promise.collections).done(function() {
 				searchResponse = data;
 				var numShown = data.hits.length + (context ? $results.find(".keep").length : 0);
 				subtitleTmpl.render({numShown: numShown, query: data.query});
@@ -293,8 +475,7 @@ $(function() {
 
 	function prepKeepCollections(colls) {
 		for (var i = 0; i < colls.length; i++) {
-			var id = colls[i];
-			colls[i] = {id: id, name: collections[id].name};
+			colls[i] = collIdAndName(colls[i]);
 		}
 	}
 
@@ -308,8 +489,9 @@ $(function() {
 			params.collection = $('.left-col h3.active').data('id');
 		}
 		console.log("[anyNewKeeps] fetching", params);
-		$.getJSON(urlMyKeeps, params,
-			function(data) {
+		$.getJSON(urlMyKeeps, params, function(data) {
+			updateCollectionsIfAnyUnknown(data.keeps);
+			$.when(promise.collections).done(function() {
 				var keepIds = $myKeeps.find('.keep').map(getDataId).get().reduce(function(ids, id) {ids[id] = true; return ids}, {});
 				var keeps = data.keeps.filter(function(k) {return !keepIds[k.id]});
 				keeps.forEach(prepKeepForRender);
@@ -317,6 +499,7 @@ $(function() {
 				// TODO: insert this group heading if not already there
 				$myKeeps.find('.keep-group-title.today').prependTo($myKeeps);
 			});
+		});
 	}
 
 	function showMyKeeps(collId) {
@@ -375,6 +558,7 @@ $(function() {
 			}
 			console.log("Fetching %d keeps %s", params.count, lastKeep ? "before " + lastKeep : "");
 			$.getJSON(urlMyKeeps, params, function withKeeps(data) {
+				updateCollectionsIfAnyUnknown(data.keeps);
 				$.when(promise.me, promise.collections).done(function() {
 					var numShown = $myKeeps.find(".keep").length + data.keeps.length;
 					subtitleTmpl.render({
@@ -404,6 +588,19 @@ $(function() {
 		$.getJSON(urlMyKeepsCount, function(data) {
 			$('.left-col .my-keeps .keep-count').text(myKeepsCount = data.numKeeps);
 		});
+	}
+
+	function updateCollections() {
+		promise.collections = $.getJSON(urlCollectionsAll, {sort: "user"}, function(data) {
+			collTmpl.render(data.collections);
+			collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
+		}).promise();
+	}
+
+	function updateCollectionsIfAnyUnknown(keeps) {
+		if (collections && keeps.some(function(k) {return k.collections && k.collections.some(function(id) {return !collections[id]})})) {
+			updateCollections();
+		}
 	}
 
 	function showMessage(msg) {
@@ -537,6 +734,9 @@ $(function() {
 				break;
 			case 'search':
 				doSearch(decodeURIComponent(queryFromQS(location.search)));
+				break;
+			case 'profile':
+				showProfile();
 		}
 	});
 
@@ -545,7 +745,7 @@ $(function() {
 		if (uri.substr(0, baseUri.length) == baseUri) {
 			uri = uri.substr(baseUri.length);
 		}
-		var title, kind = uri.match(/[\w]*/)[0];
+		var title, kind = uri.match(/[\w-]*/)[0];
 		switch (kind) {
 			case '':
 				title = 'Your Keeps';
@@ -555,6 +755,9 @@ $(function() {
 				break;
 			case 'search':
 				title = queryFromQS(uri.substr(kind.length));
+				break;
+			case 'profile':
+				title = 'Profile'
 		}
 		History.pushState(null, 'kifi.com • ' + title, uri);
 	}
@@ -597,6 +800,10 @@ $(function() {
 		}
 		updateDetails();
 	});
+	$(".my-identity a").click(function (e) {
+		e.preventDefault();
+		navigate(this.href);
+	});
 	var $mainHead = $(".main-head");
 	var $mainKeeps = $(".main-keeps").antiscroll({x: false, width: "100%"});
 	$mainKeeps.find(".antiscroll-inner").scroll(function() { // infinite scroll
@@ -616,10 +823,14 @@ $(function() {
 	var splashScroller = $(".splash").antiscroll({x: false, width: "100%"}).data("antiscroll");
 	$(window).resize(splashScroller.refresh.bind(splashScroller));
 
+	var $queryWrap = $('.query-wrap');
+	$queryWrap.focusin($.fn.addClass.bind($queryWrap, 'focus'));
+	$queryWrap.focusout($.fn.removeClass.bind($queryWrap, 'focus'));
 	var $query = $("input.query").on("keydown input", function(e) {
 		console.log("[clearTimeout]", e.type);
 		clearTimeout(searchTimeout);
-		var q = $.trim(this.value);
+		var val = this.value, q = $.trim(val);
+		$queryWrap.toggleClass("empty", !val);
 		if (q === ($query.attr("data-q") || "")) {
 			console.log("[query:" + e.type + "] no change");
 		} else if (!q) {
@@ -632,6 +843,9 @@ $(function() {
 				searchTimeout = setTimeout(navigate.bind(null, uri), 500);  // instant search
 			}
 		}
+	})
+	$('.query-x').click(function() {
+		$query.val('').focus().triggerHandler('input');
 	});
 
 	var $collList = $("#collections-list")
@@ -781,9 +995,10 @@ $(function() {
 						'<a class="keep-coll-a" href="javascript:">' + collName + '</a><a class="keep-coll-x" href="javascript:"></a>' +
 						'</span>');
 				if ($keeps.is(".detailed")) {
-					$detail.attr("data-kept", $keeps.has(".keep-private.on").length == $keeps.length ? "pri" : "pub");
+					$detail.children().attr("data-kept", $keeps.has(".keep-private.on").length == $keeps.length ? "pri" : "pub");
+					var $inColl = $detail.find(".page-coll-list");
 					if (!$inColl.has(".page-coll[data-id=" + collId + "]").length) {
-						inCollTmpl.append({id: collId, name: collName});
+						inCollTmpl.into($inColl[0]).append({id: collId, name: collName});
 					}
 				}
 			}
@@ -805,7 +1020,7 @@ $(function() {
 		var $keeps = $allKeeps.filter(function() {return keepIds.indexOf($(this).data("id")) >= 0});
 		var $keepColl = $keeps.find(".keep-coll[data-id=" + collId + "]");
 		$keepColl.css("width", $keepColl[0].offsetWidth).layout().on("transitionend", removeIfThis).addClass("removed");
-		if ($keeps.is(".selected") && !$allKeeps.filter(".selected").not($keeps).has(".keep-coll[data-id=" +  + "]").length) {
+		if ($keeps.is(".detailed") && !$allKeeps.filter(".detailed").not($keeps).has(".keep-coll[data-id=" + collId + "]").length) {
 			// there are no other selected keeps in the collection, so must remove collection from detail pane
 			var $pageColl = $detail.find(".page-coll[data-id=" + collId + "]");
 			$pageColl.css("width", $pageColl[0].offsetWidth).layout().on("transitionend", removeIfThis).addClass("removed");
@@ -818,12 +1033,14 @@ $(function() {
 		}
 	}
 
-	var $detail = $('.detail'), hideAddCollTimeout;
-
-	// keep / unkeep
-	$detail.on("click", '.page-keep,.page-priv', function(e) {
+	var hideAddCollTimeout;
+	$detail.on('click', '.page-x', function() {
+		$main.find('.keep.detailed').removeClass('detailed');
+		hideDetails();
+	})
+	.on("click", '.page-keep,.page-priv', function(e) {
 		var $keeps = $main.find(".keep.detailed");
-		var $a = $(this), howKept = $detail.attr("data-kept");
+		var $a = $(this), howKept = $detail.children().attr("data-kept");
 		if (!howKept) {  // keep
 			howKept = $a.hasClass('page-keep') ? "pub" : "pri";
 			$.ajax({
@@ -838,7 +1055,7 @@ $(function() {
 				contentType: 'application/json',
 				error: showMessage.bind(null, 'Could not add keeps, please try again later'),
 				success: function(data) {
-					$detail.attr('data-kept', howKept).find('.page-how').attr('class', 'page-how ' + howKept);
+					$detail.children().attr('data-kept', howKept).find('.page-how').attr('class', 'page-how ' + howKept);
 					$keeps.addClass("mine").find(".keep-private").toggleClass("on", howKept == "pri");
 				}});
 		} else if ($a.hasClass('page-keep')) {  // unkeep
@@ -850,8 +1067,8 @@ $(function() {
 				contentType: 'application/json',
 				error: showMessage.bind(null, 'Could not remove keeps, please try again later'),
 				success: function(data) {
-					$detail.removeAttr('data-kept');
-					inCollTmpl.clear();
+					$detail.children().removeAttr('data-kept');
+					$detail.find('.page-coll').remove();
 					$keeps.removeClass("mine").find(".keep-private").removeClass("on");
 					var collCounts = $keeps.find(".keep-coll").remove().map(getDataId).get()
 						.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
@@ -861,7 +1078,7 @@ $(function() {
 				}});
 		} else {  // toggle public/private
 			howKept = howKept == "pub" ? "pri" : "pub";
-			$detail.attr('data-kept', howKept).find('.page-how').attr('class', 'page-how ' + howKept);
+			$detail.children().attr('data-kept', howKept).find('.page-how').attr('class', 'page-how ' + howKept);
 			$keeps.each(function() {
 				var $keep = $(this), keepLink = $keep.find('.keep-title>a')[0];
 				$.ajax({
@@ -900,8 +1117,8 @@ $(function() {
 				$in.off("transitionend", end).prop("disabled", true).add(".page-coll-sizer").hide().css("width", "");
 				$btn.show();
 			}).layout().css("width", width);
-			$collOpts.slideUp(120, function() {
-				$collOpts.empty();
+			$('.page-coll-opts').slideUp(120, function() {
+				$(this).empty();
 			});
 		}
 	}).on("focus", ".page-coll-input", function(e) {
@@ -967,12 +1184,12 @@ $(function() {
 				return {id: c.id, name: escapeHTMLContent(c.name)};
 			});
 		}
-		$collOpts.hide();
-		collOptsTmpl.render(colls);
+		var $opts = $('.page-coll-opts').hide();
+		collOptsTmpl.into($opts).render(colls);
 		if (e.isTrigger) {
-			$collOpts.slideDown(120);
+			$opts.slideDown(120);
 		} else {
-			$collOpts.show();
+			$opts.show();
 		}
 		$('.page-coll-opt:first-child').addClass('current');
 	}).on("mousemove", ".page-coll-opt", function() {
@@ -999,7 +1216,7 @@ $(function() {
 	$(".send-feedback").click(function() {
 		if (!window.UserVoice) {
 			window.UserVoice = [];
-			$.getScript("//widget.uservoice.com/2g5fkHnTzmxUgCEwjVY13g.js>");
+			$.getScript("//widget.uservoice.com/2g5fkHnTzmxUgCEwjVY13g.js");
 		}
 		UserVoice.push(['showLightbox', 'classic_widget', {
 			mode: 'full',
@@ -1010,23 +1227,24 @@ $(function() {
 			custom_template_id: 3305}]);
 	});
 
+	function updateMe(data) {
+		me = data;
+		$(".my-pic").css("background-image", "url(" + formatPicUrl(data.id, data.pictureName, 200) + ")");
+		$(".my-name").text(data.firstName + ' ' + data.lastName);
+		$(".my-description").text(data.description || '\u00A0'); // nbsp
+	}
+
 	// load data for persistent (view-independent) page UI
 	var promise = {
-		me: $.getJSON(urlMe, function(data) {
-			me = data;
-			$(".my-pic").css("background-image", "url(" + formatPicUrl(data.id, data.pictureName, 200) + ")");
-			$(".my-name").text(data.firstName + ' ' + data.lastName);
-		}).promise(),
+		me: $.getJSON(urlMe, updateMe).promise(),
+		myNetworks: $.getJSON(urlNetworks, function (data) { myNetworks = data; }).promise(),
 		myPrefs: $.getJSON(urlMyPrefs, function(data) {
 			myPrefs = data;
 			if (myPrefs.site_left_col_width) {
 				$(".left-col").animate({width: +myPrefs.site_left_col_width}, 120);
 			}
-		}).promise(),
-		collections: $.getJSON(urlCollectionsAll, {sort: "user"}, function(data) {
-			collTmpl.render(data.collections);
-			collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
 		}).promise()};
+	updateCollections();
 	updateNumKeeps();
 
 	// render initial view
@@ -1035,4 +1253,24 @@ $(function() {
 	// auto-update my keeps every minute
 	setInterval(addNewKeeps, 60000);
 	setInterval(updateNumKeeps, 60000);
+
+	// bind hover behavior later to avoid slowing down page load
+	var friendCardTmpl = Tempo.prepare('fr-card-template'); $('#fr-card-template').remove();
+	$.getScript('js/jquery-bindhover.js').done(function() {
+		$(document).bindHover(".pic.friend", function(configureHover) {
+			var $a = $(this), id = $a.data('id');
+			friendCardTmpl.into(this).render({
+				name: $a.data('name'),
+				picUri: formatPicUrl(id, $a.css('background-image').match(/\/([^\/]*)['"]?\)$/)[1], 200)});
+      var $el = $a.children();
+      configureHover($el, {canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
+      $.getJSON(urlUser + '/' + id + '/networks', function(networks) {
+        for (nw in networks) {
+          $el.find('.fr-card-nw-' + nw)
+            .toggleClass('on', networks[nw].connected)
+            .attr('href', networks[nw].profileUrl || null);
+        }
+      });
+		});
+	});
 });

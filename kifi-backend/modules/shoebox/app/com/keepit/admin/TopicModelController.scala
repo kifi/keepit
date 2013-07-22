@@ -17,15 +17,27 @@ import com.keepit.model.TopicName
 import play.api.libs.json.Json
 import scala.concurrent._
 import ExecutionContext.Implicits.global
+import scala.util.Random
+import com.keepit.search.ArticleStore
+import com.keepit.model.NormalizedURI
+import com.keepit.model.UserBookmarkClicksRepo
+import com.keepit.model.BookmarkRepo
+import play.api.mvc.Action
+import play.api.libs.json._
+
 
 @Singleton
 class TopicModelController  @Inject() (
   db: Database,
+  clicksRepo: UserBookmarkClicksRepo,
+  bookmarkRepo: BookmarkRepo,
   topicPlugin: TopicUpdaterPlugin,
   modelAccessor: SwitchableTopicModelAccessor,
   wordTopicStore: WordTopicStore,
   wordTopicBlobStore: WordTopicBlobStore,
   wordStore: WordStore,
+  topicWordsStore: TopicWordsStore,
+  articleStore: ArticleStore,
   actionAuthenticator: ActionAuthenticator) extends AdminController(actionAuthenticator){
 
   val uriTopicHelper = new UriTopicHelper
@@ -33,17 +45,9 @@ class TopicModelController  @Inject() (
   def currentAccessor = modelAccessor.getActiveAccessor
   def numTopics = currentAccessor.topicNameMapper.rawTopicNames.size
 
-  // dangerous operation ! Test purpose only. This interface will be removed soon.
-  def switchModel = AdminHtmlAction { implicit request =>
-    val prevFlag = modelAccessor.getCurrentFlag
-    modelAccessor.switchAccessor()
-    val currFlag = modelAccessor.getCurrentFlag
-    Ok(s"OK. topic model has been switched from ${prevFlag} to ${currFlag}. Starting to use a different model and talk to different database tables!")
-  }
-
-  def resetAllTopicTables() = AdminHtmlAction{ implicit request =>
-    topicPlugin.reset()
-    Ok(s"OK. Will reset topic tables")
+  def remodel() = AdminHtmlAction{ implicit request =>
+    topicPlugin.remodel()
+    Ok(s"OK. Will reconstruct topic model.")
   }
 
   def documentTopic(content: Option[String] = None, topicId: Option[String] = None) = AdminHtmlAction{ implicit request =>
@@ -130,36 +134,37 @@ class TopicModelController  @Inject() (
 
   }
 
-  def topicsViewDefault = topicsView(0)
+  def topicsViewDefault = topicsView(modelAccessor.getCurrentFlag, 0)
 
-  def topicsView(page: Int = 0) = AdminHtmlAction{ request =>
+  def topicsView(flag: String, page: Int = 0) = AdminHtmlAction{ request =>
     val PAGE_SIZE = 50
+    val accessor = modelAccessor.getAccessorByFlag(flag)
     val (topics, count) = db.readOnly{ implicit s =>
-      val topics = currentAccessor.topicNameRepo.all.sortWith((a, b) => a.id.get.id < b.id.get.id)
+      val topics = accessor.topicNameRepo.all.sortWith((a, b) => a.id.get.id < b.id.get.id)
       val count = topics.size
       (topics.drop(page * PAGE_SIZE).take(PAGE_SIZE), count)
     }
     val pageCount = ceil(count*1.0 / PAGE_SIZE).toInt
 
-    Ok(html.admin.topicNames(topics, page, count, pageCount, PAGE_SIZE))
+    Ok(html.admin.topicNames(flag, topics, page, count, pageCount, PAGE_SIZE))
   }
 
-  def addTopics = AdminHtmlAction { implicit request =>
-    Ok(html.admin.addTopicNames())
+  def addTopics(flag: String) = AdminHtmlAction { implicit request =>
+    Ok(html.admin.addTopicNames(flag))
   }
 
-  def saveAddedTopics = AdminHtmlAction{ implicit request =>
+  def saveAddedTopics(flag: String) = AdminHtmlAction{ implicit request =>
     val body = request.body.asFormUrlEncoded.get.mapValues(_.head)
     val content = body.get("topics").get
     val topicNames = content.split("\n").map{_.trim}.filter(_ != "")
     val topics = topicNames.map{ name => TopicName(topicName = name) }
-
+    val accessor = modelAccessor.getAccessorByFlag(flag)
     db.readWrite{ implicit s =>
-      currentAccessor.topicNameRepo.deleteAll()
-      topics.foreach{currentAccessor.topicNameRepo.save(_)}
+      accessor.topicNameRepo.deleteAll()
+      topics.foreach{accessor.topicNameRepo.save(_)}
     }
 
-    Redirect(com.keepit.controllers.admin.routes.TopicModelController.topicsViewDefault)
+    Redirect(com.keepit.controllers.admin.routes.TopicModelController.topicsView(flag, 0))
   }
 
   def genModelFiles(flag: String) = AdminHtmlAction{ implicit request =>
@@ -187,6 +192,103 @@ class TopicModelController  @Inject() (
     }
 
     Ok(s"word list and topic binary array for model ${flag} will be created in S3")
+  }
+
+  def viewTopicWords(flag: String) = AdminHtmlAction{ implicit request =>
+    val id = flag match {
+      case TopicModelAccessorFlag.A => "model_a"
+      case TopicModelAccessorFlag.B => "model_b"
+    }
+    log.info("getting topic words from S3")
+    val content = topicWordsStore.get(id).get
+    Ok(content)
+  }
+
+  // index is not necessarily the same as Id in DB. index starts from 1.
+  def viewTopicDetails(flag: String, index: Int) = AdminHtmlAction{ implicit request =>
+    val accessor = modelAccessor.getAccessorByFlag(flag)
+    val topic = db.readOnly { implicit s =>
+      val topics = accessor.topicNameRepo.all.sortWith((a, b) => a.id.get.id < b.id.get.id)
+      topics(index - 1)
+    }
+
+    val fileId = flag match {
+      case TopicModelAccessorFlag.A => "model_a"
+      case TopicModelAccessorFlag.B => "model_b"
+    }
+
+    val content = topicWordsStore.get(fileId).get
+    val idx = content.indexOfSlice("[1] \"top words in topic " + index)
+    val idx2 = content.indexOfSlice("[1] \"top words in topic " + (index + 1).toString)
+    val topWords = (idx, idx2) match {
+      case (-1, _) => "invalid topicId"
+      case (i, -1) => content.slice(i, content.size)
+      case (i, j) => content.slice(i, j)
+    }
+
+    val (randArticles, numDocs) = sampleDocsByTopic(index)
+
+    Ok(html.admin.topicDetails(index, topic, numDocs, topWords, randArticles))
+  }
+
+  private def sampleDocsByTopic(index: Int) = {
+    val SAMPLE_SIZE = 10
+    val MAX_SAMPLE_POOL = 1000
+    val MAX_CONTENT_SIZE = 2000
+    val allUrisInTopic = db.readOnly { implicit s =>
+      currentAccessor.uriTopicRepo.getUrisByTopic(index-1)
+    }
+    val uris = allUrisInTopic.take(MAX_SAMPLE_POOL)
+
+    val randIdx = Random.shuffle((0 until uris.size).toList).take(SAMPLE_SIZE)      // shuffle performance seems good for size ~ 10^5
+    val randArticles = randIdx.map{ idx =>
+      articleStore.get(uris(idx)) match {
+        case Some(article) => (uris(idx), article.content.take(MAX_CONTENT_SIZE))
+        case None => (uris(idx), "article content not available")
+      }
+    }
+    (randArticles, allUrisInTopic.size)
+  }
+
+  def summary = AdminHtmlAction{ implicit request =>
+    val flag = modelAccessor.getCurrentFlag
+    val vocSizeA = modelAccessor.getAccessorByFlag(TopicModelAccessorFlag.A).wordTopicModel.vocabulary.size
+    val vocSizeB = modelAccessor.getAccessorByFlag(TopicModelAccessorFlag.B).wordTopicModel.vocabulary.size
+    val numTopicA = modelAccessor.getAccessorByFlag(TopicModelAccessorFlag.A).topicNameMapper.rawTopicNames.size
+    val numTopicB = modelAccessor.getAccessorByFlag(TopicModelAccessorFlag.B).topicNameMapper.rawTopicNames.size
+    val topicCounts = topicStats()
+
+    Ok(html.admin.topicSummary(flag, vocSizeA, numTopicA, vocSizeB, numTopicB, topicCounts))
+  }
+
+  private def topicStats() = {
+    val TOP_N = 20
+    val counts = db.readOnly{ implicit s =>
+      currentAccessor.uriTopicRepo.countByTopic
+    }
+    // map raw counts via nameMapper
+    val N = currentAccessor.topicNameMapper.mappedNames.size
+    var mappedCounts = Map.empty[Int, Int]
+    for((topic, count) <- counts){
+      val mappedId = currentAccessor.topicNameMapper.idMapper(topic)
+      mappedCounts += mappedId -> (mappedCounts.getOrElse(mappedId, 0) + count)
+    }
+    mappedCounts.toArray.sortBy(-_._2).filter(_._1 != -1).take(TOP_N).map{ case (mappedId, counts) => (currentAccessor.topicNameMapper.getMappedNameByNewId(mappedId), counts)}.toList
+  }
+
+  def suggestExperts() = Action { request =>
+    val req = request.body.asJson.get.asInstanceOf[JsArray].value
+    val urisAndKeepers = req.map{ js =>
+      val uriId = Id[NormalizedURI]((js \ "uri").as[Long])
+      val userIds = (js \ "users").as[JsArray].value.map{ x => Id[User](x.as[Long]) }
+      (uriId, userIds)
+    }
+
+    val TOP_N = 4
+    val rcmder = new ExpertRecommender(db, currentAccessor.uriTopicRepo, clicksRepo, bookmarkRepo)
+    val ranks = rcmder.rank(urisAndKeepers)
+    val experts = ranks.take(TOP_N).filter(_._2 > 0.0).map{_._1}
+    Ok(JsArray(experts.map{x => JsNumber(x.id)}))
   }
 
 }

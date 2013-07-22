@@ -282,6 +282,8 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
   def userChannelBroadcastFanout(msg: play.api.libs.json.JsArray): Seq[scala.concurrent.Future[Int]] = Seq()
   def userChannelCountFanout(): Seq[scala.concurrent.Future[Int]] = Seq()
 
+  def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]] = ???
+
   def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Collection]] = {
     val collections = allCollections.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
     Future.successful(collections)
@@ -330,11 +332,6 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
     val experimentWithId = experiment.withId(id)
     allSearchExperiments(experimentWithId.id.get) =  experimentWithId
     Future.successful(experimentWithId)
-  }
-
-  def hasExperiment(userId: Id[User], state: State[ExperimentType]): Future[Boolean] = {
-    val has = allUserExperiments.getOrElse(userId, Set.empty).exists(exp => exp.experimentType == state && exp.state == UserExperimentStates.ACTIVE)
-    Future.successful(has)
   }
 
   def getUserExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]] = {

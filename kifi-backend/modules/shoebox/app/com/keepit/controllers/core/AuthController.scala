@@ -2,6 +2,7 @@ package com.keepit.controllers.core
 
 import com.keepit.common.controller.{ActionAuthenticator, ShoeboxServiceController}
 
+import play.api.http.HeaderNames
 import play.api.libs.json.Json
 import play.api.mvc._
 import securesocial.controllers.ProviderController
@@ -40,12 +41,18 @@ class AuthController extends ShoeboxServiceController {
   def link(provider: String) = getAuthAction(provider, isLogin = false)
   def linkByPost(provider: String) = getAuthAction(provider, isLogin = false)
 
+  private def getSessionWithOriginalUrl(res: SimpleResult[_])(implicit request: RequestHeader): Session = {
+    val sesh = Session.decodeFromCookie(
+      res.header.headers.get(SET_COOKIE).flatMap(Cookies.decode(_).find(_.name == Session.COOKIE_NAME)))
+    val originalUrlOpt = sesh.get(SecureSocial.OriginalUrlKey) orElse request.headers.get(HeaderNames.REFERER)
+    originalUrlOpt map { url => sesh + (SecureSocial.OriginalUrlKey -> url) } getOrElse sesh
+  }
+
   private def getAuthAction(provider: String, isLogin: Boolean): Action[AnyContent] = Action { implicit request =>
     ProviderController.authenticate(provider)(request) match {
-      case res: SimpleResult[_] if isLogin =>
-        val sesh = Session.decodeFromCookie(
-          res.header.headers.get(SET_COOKIE).flatMap(Cookies.decode(_).find(_.name == Session.COOKIE_NAME)))
-        res.withSession(sesh - ActionAuthenticator.FORTYTWO_USER_ID)
+      case res: SimpleResult[_] =>
+        val sesh = getSessionWithOriginalUrl(res)
+        res.withSession(if (isLogin) sesh - ActionAuthenticator.FORTYTWO_USER_ID else sesh)
       case res => res
     }
   }
