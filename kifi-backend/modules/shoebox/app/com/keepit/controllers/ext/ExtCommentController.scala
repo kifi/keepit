@@ -105,8 +105,7 @@ class ExtCommentController @Inject() (
 
     parentIdOpt match {
       case Some(parentId) =>
-        val (uri, url) = getOrCreateUriAndUrl(urlStr)
-        val (message, parent) = sendMessageReply(userId, uri.id.get, url.id, title, text, parentId)
+        val (message, parent) = sendMessageReply(userId, text, Left(parentId))
         (message, Some(parent))
       case None =>
         val message = db.readWrite { implicit s =>
@@ -138,26 +137,24 @@ class ExtCommentController @Inject() (
     val o = request.body
     val text = (o \ "text").as[String].trim
 
-    val requestedParent = db.readOnly(commentRepo.get(parentExtId)(_))
-
-    val (message, parent) =
-      sendMessageReply(request.user.id.get, requestedParent.uriId, requestedParent.urlId,
-        requestedParent.pageTitle, text, requestedParent.id.get)
+    val (message, parent) = sendMessageReply(request.user.id.get, text, Right(parentExtId))
 
     Ok(Json.obj("id" -> message.externalId.id, "parentId" -> parent.externalId.id, "createdAt" -> message.createdAt))
   }
 
-  private[ext] def sendMessageReply(userId: Id[User], uriId: Id[NormalizedURI], urlId: Option[Id[URL]],
-      title: String, text: String, requestedParentId: Id[Comment]): (Comment, Comment) = {
+  private[ext] def sendMessageReply(userId: Id[User], text: String, parentId: Either[Id[Comment], ExternalId[Comment]]): (Comment, Comment) = {
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
     val (message, parent) = db.readWrite { implicit s =>
-      val reqParent = commentRepo.get(requestedParentId)
+      val reqParent = parentId match {
+        case Left(id) => commentRepo.get(id)
+        case Right(extId) => commentRepo.get(extId)
+      }
       val parent = reqParent.parent.map(commentRepo.get).getOrElse(reqParent)
       val message = commentRepo.save(Comment(
-        uriId = uriId,
-        urlId = urlId,
+        uriId = parent.uriId,
+        urlId = parent.urlId,
         userId = userId,
-        pageTitle = title,
+        pageTitle = parent.pageTitle,
         text = LargeString(text),
         permissions = CommentPermissions.MESSAGE,
         parent = parent.id))
@@ -169,7 +166,7 @@ class ExtCommentController @Inject() (
         case Some(commentRead) =>
           commentRead.withLastReadId(message.id.get)
         case None =>
-          CommentRead(userId = userId, uriId = uriId, parentId = parent.id, lastReadId = message.id.get)
+          CommentRead(userId = userId, uriId = parent.uriId, parentId = parent.id, lastReadId = message.id.get)
       })
     }
 
