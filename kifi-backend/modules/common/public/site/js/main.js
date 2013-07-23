@@ -716,9 +716,11 @@ $(function() {
 		}
 	});
 
+	var baseUriRe = new RegExp('^' + ($('base').attr('href') || ''));
 	$(window).on('statechange anchorchange', function(e) {
-		console.log('[' + e.type + ']', location.href);
-		var parts = location.pathname.substring($('base').attr('href').length).split('/');
+		var state = History.getState();
+		var parts = state.hash.replace(baseUriRe, '').replace(/^\.\//, '').split(/[\/\?&#]+/);
+		console.log('[' + e.type + ']', state, parts);
 		switch (parts[0]) {
 			case '':
 				showMyKeeps();
@@ -756,6 +758,7 @@ $(function() {
 		if (uri.substr(0, baseUri.length) == baseUri) {
 			uri = uri.substr(baseUri.length);
 		}
+		console.log('[navigate]', uri);
 		var title, kind = uri.match(/[\w-]*/)[0];
 		switch (kind) {
 			case '':
