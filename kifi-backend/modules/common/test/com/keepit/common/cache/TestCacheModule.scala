@@ -7,6 +7,12 @@ import scala.concurrent.duration._
 import com.keepit.social.{CommentWithBasicUserCache, BasicUserUserIdCache}
 
 case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
+  
+  @Singleton
+  @Provides
+  def commentCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new CommentCache((innerRepo, 1 hours), (outerRepo, 2 days))
+
   @Singleton
   @Provides
   def basicUserUserIdCache(outerRepo: FortyTwoCachePlugin) =
