@@ -55,14 +55,15 @@ trait IndexingEventHandler[T] {
 abstract class Indexer[T](
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
-    fieldDecoders: Map[String, FieldDecoder],
-    indexWarmer: Option[IndexWarmer] = None)
+    fieldDecoders: Map[String, FieldDecoder])
   extends IndexingEventHandler[T] with Logging {
 
   def this(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig) = this(indexDirectory, indexWriterConfig, Map.empty[String, FieldDecoder])
 
   lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
   private[this] val indexWriterLock = new AnyRef
+
+  val indexWarmer: Option[IndexWarmer] = None
 
   protected var searcher: Searcher = {
     if (!DirectoryReader.indexExists(indexDirectory)) {

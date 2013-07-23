@@ -35,7 +35,7 @@ class ArticleIndexer @Inject() (
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[NormalizedURI](indexDirectory, indexWriterConfig) {
 
-  private[this] val indexWarmer = new IndexWarmer(Seq("t", "ts", "c", "cs"))
+  override val indexWarmer = Some(new IndexWarmer(Seq("t", "ts", "c", "cs")))
 
   val commitBatchSize = 500
   val fetchSize = 10000
