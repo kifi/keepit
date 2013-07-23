@@ -55,7 +55,8 @@ trait IndexingEventHandler[T] {
 abstract class Indexer[T](
     indexDirectory: Directory,
     indexWriterConfig: IndexWriterConfig,
-    fieldDecoders: Map[String, FieldDecoder])
+    fieldDecoders: Map[String, FieldDecoder],
+    indexWarmer: Option[IndexWarmer] = None)
   extends IndexingEventHandler[T] with Logging {
 
   def this(indexDirectory: Directory, indexWriterConfig: IndexWriterConfig) = this(indexDirectory, indexWriterConfig, Map.empty[String, FieldDecoder])
@@ -216,7 +217,7 @@ abstract class Indexer[T](
   def numDocs = (indexWriter.numDocs() - 1) // minus the seed doc
 
   def refreshSearcher() {
-    searcher = Searcher.reopen(searcher)
+    searcher = Searcher.reopen(searcher, indexWarmer)
   }
 
   def getFieldDecoder(fieldName: String) = {
