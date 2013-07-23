@@ -64,6 +64,29 @@ class UserController @Inject() (db: Database,
     Ok(Json.toJson(networkInfoLoader.load(request.userId, id)))
   }
 
+  def unfriend(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+    db.readOnly { implicit s => userRepo.getOpt(id) } map { user =>
+      val removed = db.readWrite { implicit s =>
+        userConnectionRepo.unfriendConnections(request.userId, user.id.toSet) > 0
+      }
+      Ok(Json.obj("removed" -> removed))
+    } getOrElse {
+      NotFound(Json.obj("error" -> s"Could not find user for id $id"))
+    }
+  }
+
+  def friendRequest(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+    db.readOnly { implicit s => userRepo.getOpt(id) } map { user =>
+      // TODO(greg): implement actual friend request; for now just adding connection
+      db.readWrite { implicit s =>
+        userConnectionRepo.addConnections(request.userId, user.id.toSet, requested = true)
+      }
+      Ok(Json.obj("requested" -> true))
+    } getOrElse {
+      NotFound(Json.obj("error" -> s"Could not find user for id $id"))
+    }
+  }
+
   def currentUser = AuthenticatedJsonAction(true) { implicit request => getUserInfo(request) }
 
   private case class UpdatableUserInfo(
