@@ -135,6 +135,12 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
+  def userConnectionCountCache(outerRepo: FortyTwoCachePlugin) =
+    new UserConnectionCountCache((outerRepo, 7 days))
+
+  @Singleton
+  @Provides
   def userTopicCache(outerRepo: FortyTwoCachePlugin) =
     new UserTopicCache((outerRepo, 7 days))
+
 }
