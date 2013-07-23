@@ -26,8 +26,10 @@ import scala.math._
 
 
 object Searcher {
-  def apply(indexReader: DirectoryReader) = new Searcher(WrappedIndexReader(indexReader))
-  def reopen(oldSearcher: Searcher) = new Searcher(WrappedIndexReader.reopen(oldSearcher.indexReader))
+  def apply(indexReader: DirectoryReader, indexWarmer: Option[IndexWarmer] = None) = new Searcher(WrappedIndexReader(indexReader), indexWarmer)
+  def reopen(oldSearcher: Searcher, indexWarmer: Option[IndexWarmer] = None) = {
+    new Searcher(WrappedIndexReader.reopen(oldSearcher.indexReader, indexWarmer), indexWarmer)
+  }
 
   private[search] class FallbackDocsAndPositionsEnum(primary: DocsAndPositionsEnum, secondary: DocsAndPositionsEnum) extends DocsAndPositionsEnum {
     private[this] var doc = -1
@@ -61,7 +63,7 @@ object Searcher {
   }
 }
 
-class Searcher(val indexReader: WrappedIndexReader) extends IndexSearcher(indexReader) {
+class Searcher(val indexReader: WrappedIndexReader, val indexWarmer: Option[IndexWarmer] = None) extends IndexSearcher(indexReader) {
 
   def idf(term: Term) = getSimilarity.asInstanceOf[TFIDFSimilarity]idf(indexReader.docFreq(term), indexReader.maxDoc)
 

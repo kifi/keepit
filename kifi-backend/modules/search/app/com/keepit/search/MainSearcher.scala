@@ -33,7 +33,9 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.shoebox.BrowsingHistoryTracker
 import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
+import scala.concurrent.future
 import com.keepit.common.akka.MonitoredAwait
 import play.modules.statsd.api.Statsd
 
@@ -241,6 +243,14 @@ class MainSearcher(
     val (myHits, friendsHits, othersHits, personalizedSearcher) = searchText(maxTextHitsPerCategory = numHitsToReturn * 5)
 
     val tProcessHits = currentDateTime.getMillis()
+
+    articleSearcher.indexWarmer.foreach{ warmer =>
+      parsedQuery.foreach{ query =>
+        future{
+          warmer.addTerms(QueryUtil.getTerms(query))
+        }
+      }
+    }
 
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
