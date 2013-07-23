@@ -88,7 +88,7 @@ $(function() {
 			} else {
 				$keeps.filter('.selected').removeClass('selected detailed');
 			}
-			updateDetails();
+			updateKeepDetails();
 		}
 	}).hover(function() {
 		var $text = $checkAll.next('.subtitle-text');
@@ -261,7 +261,7 @@ $(function() {
 		return {id: id, name: collections[id].name};
 	}
 
-	function showDetails() {
+	function showKeepDetails() {
 		var $r = $detail.off("transitionend"), d;
 		if ($r.css("display") == "block") {
 			d = $r[0].getBoundingClientRect().left - $main[0].getBoundingClientRect().right;
@@ -273,7 +273,7 @@ $(function() {
 		$r.layout();
 		$r.css({transform: "", transition: "", "transition-timing-function": "ease-out"});
 	}
-	function hideDetails() {
+	function hideKeepDetails() {
 		var d = $(window).width() - $main[0].getBoundingClientRect().right;
 		$detail.on("transitionend", function end(e) {
 			if (e.target === this) {
@@ -281,7 +281,7 @@ $(function() {
 			}
 		}).css({transform: "translate(" + d + "px,0)", "transition-timing-function": "ease-in"});
 	}
-	function updateDetails() {
+	function updateKeepDetails() {
 		var $detailed = $main.find('.keep.detailed');
 		if ($detailed.length) {
 			var o = {
@@ -326,17 +326,18 @@ $(function() {
 				detailTmpl.render(o);
 			}
 			inCollTmpl.into($detail.find('.page-coll-list')[0]).render(o.collections);
-			showDetails();
+			showKeepDetails();
 		} else {
-			hideDetails();
+			hideKeepDetails();
 		}
 	}
 
-    var profileTmpl = Tempo.prepare("profile-template");
+	var profileTmpl = Tempo.prepare("profile-template");
 	function showProfile() {
-		$main.attr("data-view", "profile");
 		$.when(promise.me, promise.myNetworks).done(function () {
 			profileTmpl.render(me);
+			$main.attr("data-view", "profile");
+			$('.left-col .active').removeClass("active");
 			$('.profile').on('keydown keypress keyup', function (e) {
 				e.stopPropagation();
 			});
@@ -413,10 +414,18 @@ $(function() {
 				if (networkInfo) {
 					$this.attr('href', networkInfo.profileUrl).attr('title', 'View profile');
 				} else {
-				    $this.addClass('not-connected').attr('href', urlLinkNetwork + '/' + name).attr('title', 'Click to connect');
+					$this.addClass('not-connected').attr('href', urlLinkNetwork + '/' + name).attr('title', 'Click to connect');
 				}
 			});
 		});
+	}
+
+	//var friendsTmpl = Tempo.prepare("friends-template");
+	function showFriends() {
+		//friendsTmpl.render();
+		$main.attr('data-view', 'friends');
+		$('.left-col .active').removeClass('active');
+		$('.my-friends').addClass('active');
 	}
 
 	function doSearch(q) {
@@ -450,7 +459,7 @@ $(function() {
 					keepsTmpl.into($results[0]).append(data.hits);
 				} else {
 					keepsTmpl.into($results[0]).render(data.hits);
-					hideDetails();
+					hideKeepDetails();
 				}
 				$checkAll.removeClass('checked');
 			});
@@ -507,8 +516,8 @@ $(function() {
 		$h3.filter(collId ? "[data-id='" + collId + "']" : ".my-keeps").addClass("active");
 
 		var fromSearch = $main.attr("data-view") == "search";
-		$main.attr("data-view", "mine")
-			.find("h1").text(collId ? collections[collId].name : "Browse your keeps");
+		$main.attr("data-view", "mine");
+		$mainHead.find("h1").text(collId ? collections[collId].name : "Browse your keeps");
 
 		$results.empty();
 		$query.val("").removeAttr("data-q");
@@ -523,7 +532,7 @@ $(function() {
 		if ($myKeeps.data("collId") != collId || !("collId" in $myKeeps.data())) {
 			$myKeeps.data("collId", collId).empty();
 			lastKeep = null;
-			hideDetails();
+			hideKeepDetails();
 			loadKeeps(collId);
 		} else {
 			var numShown = $myKeeps.find(".keep").length;
@@ -532,9 +541,6 @@ $(function() {
 				numTotal: collId ? collections[collId].keeps : myKeepsCount,
 				collId: collId || undefined});
 			$checkAll.toggleClass('live', numShown > 0).removeClass('checked');
-			if (fromSearch) {
-				hideDetails();
-			}
 			addNewKeeps();
 		}
 	}
@@ -735,7 +741,14 @@ $(function() {
 				break;
 			case 'profile':
 				showProfile();
+				break;
+			case 'friends':
+				showFriends();
+				break;
+			default:
+				return;
 		}
+		hideKeepDetails();
 	});
 
 	function navigate(uri) {
@@ -755,7 +768,10 @@ $(function() {
 				title = queryFromQS(uri.substr(kind.length));
 				break;
 			case 'profile':
-				title = 'Profile'
+				title = 'Profile';
+				break;
+			case 'friends':
+				title = 'Friends';
 		}
 		History.pushState(null, 'kifi.com • ' + title, uri);
 	}
@@ -782,7 +798,7 @@ $(function() {
 			var $selected = $keeps.filter(".selected");
 			$checkAll.toggleClass("checked", $selected.length == $keeps.length);
 			if ($selected.length == 0 ||
-				  $selected.not(".detailed").addClass("detailed").length +
+			    $selected.not(".detailed").addClass("detailed").length +
 			    $keeps.filter(".detailed:not(.selected)").removeClass("detailed").length == 0) {
 				return;  // avoid redrawing same details
 			}
@@ -796,7 +812,7 @@ $(function() {
 			$keeps.removeClass("detailed");
 			$keep.addClass("detailed");
 		}
-		updateDetails();
+		updateKeepDetails();
 	});
 	$(".my-identity a").click(function (e) {
 		e.preventDefault();
@@ -889,7 +905,7 @@ $(function() {
 	var collScroller = $collList.data("antiscroll");
 	$(window).resize(collScroller.refresh.bind(collScroller));
 
-	$(".left-col .my-keeps>a").click(function(e) {
+	$leftCol.on('click', 'h3:not(.collection)>a[href]', function(e) {
 		e.preventDefault();
 		navigate(this.href);
 	});
@@ -1034,7 +1050,7 @@ $(function() {
 	var hideAddCollTimeout;
 	$detail.on('click', '.page-x', function() {
 		$main.find('.keep.detailed').removeClass('detailed');
-		hideDetails();
+		hideKeepDetails();
 	})
 	.on("click", '.page-keep,.page-priv', function(e) {
 		var $keeps = $main.find(".keep.detailed");
@@ -1260,15 +1276,15 @@ $(function() {
 			friendCardTmpl.into(this).render({
 				name: $a.data('name'),
 				picUri: formatPicUrl(id, $a.css('background-image').match(/\/([^\/]*)['"]?\)$/)[1], 200)});
-      var $el = $a.children();
-      configureHover($el, {canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
-      $.getJSON(urlUser + '/' + id + '/networks', function(networks) {
-        for (nw in networks) {
-          $el.find('.fr-card-nw-' + nw)
-            .toggleClass('on', networks[nw].connected)
-            .attr('href', networks[nw].profileUrl || null);
-        }
-      });
+			var $el = $a.children();
+			configureHover($el, {canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
+			$.getJSON(urlUser + '/' + id + '/networks', function(networks) {
+				for (nw in networks) {
+					$el.find('.fr-card-nw-' + nw)
+						.toggleClass('on', networks[nw].connected)
+						.attr('href', networks[nw].profileUrl || null);
+				}
+			});
 		});
 	});
 });
