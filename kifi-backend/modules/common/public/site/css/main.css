@@ -123,11 +123,11 @@ h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-we
 .edit-container span.edit, .edit-container span.save {display: none; cursor: pointer; vertical-align: top; background: #b8c5d2; color: white; font-size: 12px; padding: 4px; margin-left: 8px;}
 .edit-container:hover span.edit {display: inline-block; height: 12px;}
 .editing span.save {display: inline-block; height: 12px;}
-.edit-container .editable[data-placeholder]:empty:before { content: attr(data-placeholder); display: inline; color: #b3b3b3; }
+.edit-container [data-placeholder]:empty::before { content: attr(data-placeholder); color: #b3b3b3; }
 .edit-container.editing span.edit {display: none;}
 span.edit, span.save {position: relative;}
-span.edit:before, span.save:before { display: inline-block; position: absolute; top: 0; left: -8px; content: "."; font-size: 0; height: 0; width: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-right: 8px solid #b8c5d2; }
-.editing span.save:before {border-right-color: #accc98;}
+span.edit::before, span.save::before { display: inline-block; position: absolute; top: 0; left: -8px; content: "."; font-size: 0; height: 0; width: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-right: 8px solid #b8c5d2; }
+.editing span.save::before {border-right-color: #accc98;}
 .editing span.save {background: #accc98;}
 .editing input {background: #e2edfc;}
 .profile h2 { clear: both; border-bottom: 1px solid #818692; padding: 15px 0 0; }
@@ -136,25 +136,25 @@ span.edit:before, span.save:before { display: inline-block; position: absolute; 
 .profile .contact-email .editable { display: inline-block; padding: 2px 0;}
 .profile>.networks { position: relative; font-size: 0; background-size: 62px; margin: 20px 0; padding: 0; }
 .profile>.networks>ul { margin: 0; padding: 60px 0 0 72px; }
-.profile>.networks>.kifi-k:before { position: absolute; display: block; content: "."; background: url(../img/kifi-k.png) no-repeat; background: size: 100%; top: -6px; left: -6px; border: 6px solid white; width: 62px; height: 62px; border-radius: 50%; z-index: 1;}
-.profile>.networks>.kifi-k:after { position: absolute; display: block; content: "*"; z-index: 5; left: 40px; top: 0; width: 286px; height: 58px; }
-.profile>.networks:before { position: absolute; display: block; content: "."; top: 24px; left: 54px; width: 9px; width: 9px; height: 9px; background: #accc98; border: 2px solid white; border-radius: 50%; z-index: 2; }
-.profile>.networks:after { position: absolute; display: block; content: "."; top: 21px; left: 63px; width: 284px; height: 20px; background: #eff2f7; z-index: 0; }
+.profile>.networks>.kifi-k::before { position: absolute; display: block; content: "."; background: url(../img/kifi-k.png) no-repeat; background: size: 100%; top: -6px; left: -6px; border: 6px solid white; width: 62px; height: 62px; border-radius: 50%; z-index: 1;}
+.profile>.networks>.kifi-k::after { position: absolute; display: block; content: "*"; z-index: 5; left: 40px; top: 0; width: 286px; height: 58px; }
+.profile>.networks::before { position: absolute; display: block; content: "."; top: 24px; left: 54px; width: 9px; width: 9px; height: 9px; background: #accc98; border: 2px solid white; border-radius: 50%; z-index: 2; }
+.profile>.networks::after { position: absolute; display: block; content: "."; top: 21px; left: 63px; width: 284px; height: 20px; background: #eff2f7; z-index: 0; }
 .profile>.networks>ul>li { display: inline-block; margin: 0 5px; width: 60px; height: 60px; font-size: 0; }
 .profile-nw { position: relative; display: inline-block; width: 100%; height: 100%; background-image: url(../img/networks.png); background-size: 240px 60px; }
 .profile-nw.nw-facebook { background-color: #637ab8; }
 .profile-nw.nw-linkedin { background-color: #4f83c3; background-position: -60px 0; }
 .profile-nw.nw-twitter { background-color: #0da2d9; background-position: -120px 0; }
 .profile-nw.nw-google { background-color: #dd4c39; background-position: -180px 0; }
-.profile-nw:before { position: absolute; display: block; content: "."; border-width: 3px 3px 0 0; border-style: solid; border-color: #accc98; height: 28px; top: -31px; z-index: 3; }
-.profile-nw.nw-facebook:before { left: -12px; width: 41px; }
-.profile-nw.nw-linkedin:before { left: -82px; width: 111px; }
-.profile-nw.nw-twitter:before { left: -152px; width: 181px; }
-.profile-nw.nw-google:before { left: -222px; width: 251px; }
+.profile-nw::before { position: absolute; display: block; content: "."; border-width: 3px 3px 0 0; border-style: solid; border-color: #accc98; height: 28px; top: -31px; z-index: 3; }
+.profile-nw.nw-facebook::before { left: -12px; width: 41px; }
+.profile-nw.nw-linkedin::before { left: -82px; width: 111px; }
+.profile-nw.nw-twitter::before { left: -152px; width: 181px; }
+.profile-nw.nw-google::before { left: -222px; width: 251px; }
 .profile-nw.not-connected:not(:hover) { background-color: #dbdee3; }
-.profile-nw.not-connected:before { border-color: #dbdee3; z-index: 2; }
-.profile-nw:after { position: absolute; display: block; content: "."; top: -6px; left: 24px; border-radius: 50%; width: 9px; height: 9px; background: #accc98; border: 2px solid white; }
-.profile-nw.not-connected:after { background: #dbdee3; }
+.profile-nw.not-connected::before { border-color: #dbdee3; z-index: 2; }
+.profile-nw::after { position: absolute; display: block; content: "."; top: -6px; left: 24px; border-radius: 50%; width: 9px; height: 9px; background: #accc98; border: 2px solid white; }
+.profile-nw.not-connected::after { background: #dbdee3; }
 .profile-nw.not-connected { transition: background .25s ease-in 50ms; }
 
 .my-friends {display: none} /* TODO: remove */
@@ -439,7 +439,7 @@ span.long-text, a.long-text {display: inline-block}
   .page-how>.page-how-text::before,
   [data-kept^=p]>*>.page-keep[href]::before,
   .page-meta>.page-priv[href]::before {background-image: url(../img/keep-icons.2x.png)}
-  .profile>.networks>.kifi-k:before {background-image: url(../img/kifi-k.2x.png); background-size: 100%;}
+  .profile>.networks>.kifi-k::before {background-image: url(../img/kifi-k.2x.png); background-size: 100%;}
   .profile-nw {background-image: url(../img/networks.2x.png)}
 }
 
