@@ -33,17 +33,20 @@ section.main {display: table-cell; vertical-align: top; position: relative; min-
 .left-col h2 {margin: 4px 0 0; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased; padding: 0 0 0 39px}
 .left-col h3 {margin: 0; position: relative; font-size: 13px; line-height: 41px; -webkit-user-select: none; -moz-user-select: -moz-none; -ms-user-select: none}
 .left-col .active,
-.left-col .my-keeps:not(.active):hover {background: #e3e6ee}
+.left-col>*>h3:not(.active):hover {background: #e3e6ee}
 .left-col h3>a {display: block; padding: 0 6px 0 40px; color: #818692}
 .left-col .keep-count {float: right; margin: 10px 0 0; border: 1px solid #b8c5d2; border-radius: 10.5px; color: #628196; font-size: 12px; line-height: 20px; height: 19px; padding: 0 12px}
 @-moz-document url-prefix() {.left-col .keep-count {line-height: 18px}}
 .left-col .active .keep-count {color: #fff; background: #b8c5d2}
-.left-col .my-keeps:not(.active):hover .keep-count {background: #eff2f7}
+.left-col>*>h3:not(.active):hover .keep-count {background: #eff2f7}
 .left-col .active .view-name {color: #556179}
-.left-col .my-keeps .view-name::before {content: " "; display: inline-block; width: 21px; height: 21px; padding: 10px 0; margin-right: 7px; background: url(../img/nav-icons.png) -21px 0 content-box; background-size: auto 21px; vertical-align: top; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
+.left-col .view-name::before {content: " "; display: inline-block; height: 21px; padding: 10px 0; background: url(../img/nav-icons.png) 0 no-repeat; background-size: auto 21px; vertical-align: top}
+.left-col .my-keeps .view-name::before {width: 21px; margin-right: 7px; background-position: -21px}
 .left-col .my-keeps.active .view-name::before {background-position: 0}
+.left-col .my-friends .view-name::before {width: 20px; margin-right: 8px; background-position: -62px 8px}
+.left-col .my-friends.active .view-name::before {background-position: -42px 8px}
 #collections>h2 {margin-top: 15px; padding-bottom: 2px; border-bottom: 1px solid #dbdee3; position: relative}
-#collections>h2::before {content: " "; display: inline-block; height: 15px; width: 18px; margin: 0 8px 0 1px; background: url(../img/nav-icons.png) -65px bottom; background-size: auto 21px}
+#collections>h2::before {content: " "; display: inline-block; height: 15px; width: 18px; margin: 0 8px 0 1px; background: url(../img/nav-icons.png) right bottom; background-size: auto 21px}
 #collections h3 {line-height: 39px}
 a.collection-create {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7) center/8px no-repeat #b8c5d2; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
 a.collection-create:hover {background-color: #a0b1c2}
@@ -80,6 +83,7 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 #coll-menu>li>a.hover {background: #9ba4b8; color: #fff}
 
 /* center col */
+.main>.page-col-inner::before {content: " "; position: absolute; top: 70px; bottom: 0; border-left: 1px solid #dbdee3}
 .query-wrap {background-color: #67829c; padding: 10px 120px 12px 0; transition: padding-right .3s; -webkit-transition: padding-right .3s; white-space: nowrap}
 .query-wrap.focus,
 .query-wrap:not(.empty) {padding-right: 0}
@@ -99,15 +103,16 @@ a.query-x[href]:active {color: #556179}
 .main-head {padding: 13px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
 .main-head.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
 .main[data-view=search] .main-head {padding-top: 10px; height: 37px}
-.main-head>h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
-.main[data-view=search] .main-head>h1 {display: none}
-.main[data-view=profile] .main-head {display: none}
-.main[data-view=profile] .main-keeps {display: none}
+.main[data-view=search] .main-head>h1,
+.main:not([data-view=mine]):not([data-view=search]) .main-head,
+.main:not([data-view=mine]):not([data-view=search]) .main-keeps,
+.main:not([data-view=profile]) .profile,
+.main:not([data-view=friends]) .friends {display: none}
+h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
 
-.profile {display: none; position: absolute; top: 70px; left: 0; width: 100%; font-size: 14px; box-sizing: border-box; padding: 20px 50px; color: #818692;}
+.profile {position: absolute; top: 70px; left: 0; width: 100%; font-size: 14px; box-sizing: border-box; padding: 20px 50px; color: #818692;}
 .profile, .profile input, .profile h2 {font-weight: 300; letter-spacing: 1px;}
 .profile input, .profile textarea {color: #818692; border: none; margin: 0; padding: 0;}
-.main[data-view=profile] .profile {display: block}
 .profile .profile-image {float: left; border: 10px solid #eff2f7; border-radius: 20px; width: 100px; height: 100px; background-size: 100%}
 .profile .profile-details {float: left; padding: 10px; }
 .profile .profile-name {padding: 5px;}
@@ -149,6 +154,9 @@ span.edit:before, span.save:before { display: inline-block; position: absolute; 
 .profile-nw:after { position: absolute; display: block; content: "."; top: -6px; left: 24px; border-radius: 50%; width: 9px; height: 9px; background: #accc98; border: 2px solid white; }
 .profile-nw.not-connected:after { background: #dbdee3; }
 .profile-nw.not-connected { transition: background .25s ease-in 50ms; }
+
+.my-friends {display: none} /* TODO: remove */
+.friends>h1 {padding: 13px 20px 0}
 
 .check-all {position: absolute; top: 1px; left: 0; height: 17px; width: 17px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; border: 1px solid #e3e6ee; -moz-box-sizing: border-box; box-sizing: border-box}
 .check-all.live {cursor: pointer}
