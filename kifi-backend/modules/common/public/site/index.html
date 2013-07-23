@@ -40,7 +40,7 @@
 		</h3>
 		<h3 class="my-friends">
 			<a href="friends">
-				<div class="keep-count">...</div>
+				<!--div class="keep-count">...</div-->
 				<div class="view-name">Your Friends</div>
 			</a>
 		</h3>
@@ -213,13 +213,18 @@
 		</div>
 		<div class="friends">
 			<h1>Your Friends</h1>
+			<nav class="friends-tabs">
+				<a data-href="friends">Friends</a>
+				<a data-href="friends/invite">Invite Friends</a>
+				<a data-href="friends/requests">Friend Requests</a>
+			</nav>
 		</div>
 	</div>
 	</section>
 
 	<aside class="right-col">
 	<div class="page-col-inner">
-		<nav>
+		<nav class="top-right-nav">
 			<!--a href="javascript:">+ Add a new keep</a-->
 			<!--a href="javascript:">Settings</a-->
 			<a href="/logout">Log out</a>
@@ -246,7 +251,7 @@
 	</div>
 
 	<div class="detail"><div data-template data-kept="{{howKept}}">
-		<a class="page-x" href="javascript:void 'hide details'"></a>
+		<a class="page-x" href="javascript:"></a>
 		<div class="page-meta" data-n="{{numKeeps}}">
 			<h2 class="page-title long-text">{% if numKeeps == 1 %}{{title}}{% else %}{{numKeeps}} keeps selected{% endif %}</h2>
 			{% if numKeeps == 1 %}
