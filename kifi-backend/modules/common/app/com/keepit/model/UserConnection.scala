@@ -33,5 +33,7 @@ case class UserConnectionKey(userId: Id[User]) extends Key[Set[Id[User]]] {
 class UserConnectionIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends JsonCacheImpl[UserConnectionKey, Set[Id[User]]](innermostPluginSettings, innerToOuterPluginSettings:_*)(TraversableFormat.set(Id.format[User]))
 
-object UserConnectionStates extends States[UserConnection]
+object UserConnectionStates extends States[UserConnection] {
+  val UNFRIENDED = State[UserConnection]("unfriended")
+}
 
