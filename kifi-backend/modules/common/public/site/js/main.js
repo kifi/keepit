@@ -337,6 +337,7 @@ $(function() {
 		$.when(promise.me, promise.myNetworks).done(function () {
 			profileTmpl.render(me);
 			$main.attr("data-view", "profile");
+			$('.left-col .active').removeClass("active");
 			$('.profile').on('keydown keypress keyup', function (e) {
 				e.stopPropagation();
 			});
@@ -422,7 +423,9 @@ $(function() {
 	//var friendsTmpl = Tempo.prepare("friends-template");
 	function showFriends() {
 		//friendsTmpl.render();
-		$main.attr("data-view", "friends");
+		$main.attr('data-view', 'friends');
+		$('.left-col .active').removeClass('active');
+		$('.my-friends').addClass('active');
 	}
 
 	function doSearch(q) {
@@ -741,7 +744,11 @@ $(function() {
 				break;
 			case 'friends':
 				showFriends();
+				break;
+			default:
+				return;
 		}
+		hideKeepDetails();
 	});
 
 	function navigate(uri) {
@@ -766,7 +773,6 @@ $(function() {
 			case 'friends':
 				title = 'Friends';
 		}
-		hideKeepDetails();
 		History.pushState(null, 'kifi.com • ' + title, uri);
 	}
 
