@@ -364,7 +364,7 @@ $(function() {
 					$(this).html($input);
 				}).find('input');
 				$inputs[0].focus();
-				$inputs.on('keydown keyup keypress paste change', function () {
+				$inputs.on('keypress paste change', function () {
 					var minChars = 3, scale = 1.25;
 					var $this = $(this);
 					var size = Math.max(Math.ceil($this.val().length * scale), minChars);
