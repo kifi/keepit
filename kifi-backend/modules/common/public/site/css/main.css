@@ -114,7 +114,7 @@ h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-we
 .profile, .profile input, .profile h2 {font-weight: 300; letter-spacing: 1px;}
 .profile input, .profile textarea {color: #818692; border: none; margin: 0; padding: 0;}
 .profile .profile-image {float: left; border: 10px solid #eff2f7; border-radius: 20px; width: 100px; height: 100px; background-size: 100%}
-.profile .profile-details {float: left; padding: 10px; }
+.profile .profile-details {margin-left: 120px; padding: 10px}
 .profile .profile-name {padding: 5px;}
 .profile .profile-name .editable {font-size: 24px; padding: 3px;}
 .profile .profile-name input {font: inherit; font-size: 24px; width: 150px;}
@@ -123,6 +123,7 @@ h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-we
 .edit-container span.edit, .edit-container span.save {display: none; cursor: pointer; vertical-align: top; background: #b8c5d2; color: white; font-size: 12px; padding: 4px; margin-left: 8px;}
 .edit-container:hover span.edit {display: inline-block; height: 12px;}
 .editing span.save {display: inline-block; height: 12px;}
+.edit-container .editable[data-placeholder]:empty:before { content: attr(data-placeholder); display: inline; color: #b3b3b3; }
 .edit-container.editing span.edit {display: none;}
 span.edit, span.save {position: relative;}
 span.edit:before, span.save:before { display: inline-block; position: absolute; top: 0; left: -8px; content: "."; font-size: 0; height: 0; width: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-right: 8px solid #b8c5d2; }
