@@ -2,7 +2,7 @@ package com.keepit.model
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{LargeString, Id, State}
+import com.keepit.common.db.{LargeString, Id, State, ExternalId}
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.slick.DBSession.RSession
 import org.joda.time.DateTime
@@ -40,6 +40,7 @@ class CommentRepoImpl @Inject() (
   val clock: Clock,
   val commentCountCache: CommentCountUriIdCache,
   commentWithBasicUserCache: CommentWithBasicUserCache,
+  commentCache: CommentCache, 
   userConnectionRepo: UserConnectionRepo,
   commentRecipientRepoImpl: CommentRecipientRepoImpl)
   extends DbRepo[Comment] with CommentRepo with ExternalIdColumnDbFunction[Comment] with Logging {
@@ -70,6 +71,7 @@ class CommentRepoImpl @Inject() (
       case CommentPermissions.PRIVATE =>
     }
     commentWithBasicUserCache.remove(CommentWithBasicUserKey(comment.id.get))
+    commentCache.set(CommentKey(comment.id.get), comment)
     comment
   }
 
@@ -196,6 +198,20 @@ class CommentRepoImpl @Inject() (
   def getCommentIdsByUser(userId: Id[User])(implicit session: RSession): Seq[Id[Comment]] = {
     (for (c <- table if c.userId === userId) yield c.id).list
   }
+
+  override def get(commentId: Id[Comment])(implicit session: RSession) : Comment = {
+    commentCache.getOrElse(CommentKey(commentId))(super.get(commentId))
+  }
+
+  override def get(commentId: ExternalId[Comment])(implicit session: RSession) : Comment = {
+    val comment = super.get(commentId)
+    comment.id match {
+      case Some(id) => commentCache.set(CommentKey(id), comment)
+      case _ => 
+    }
+    comment
+  }
+
 }
 
 @Singleton

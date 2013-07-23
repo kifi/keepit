@@ -65,6 +65,18 @@ case class CommentCountUriIdKey(normUriId: Id[NormalizedURI]) extends Key[Int] {
 class CommentCountUriIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends PrimitiveCacheImpl[CommentCountUriIdKey, Int](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
+
+case class CommentKey(commentId: Id[Comment]) extends Key[Comment] {
+  val namespace = "comment_by_id"
+  override val version = 1
+  def toKey(): String = commentId.id.toString
+}
+
+class CommentCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[CommentKey, Comment](innermostPluginSettings, innerToOuterPluginSettings:_*)
+
+
+
 object CommentStates extends States[Comment]
 
 sealed trait CommentPermission
