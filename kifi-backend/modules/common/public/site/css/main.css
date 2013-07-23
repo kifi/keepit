@@ -32,8 +32,8 @@ section.main {display: table-cell; vertical-align: top; position: relative; min-
 .my-description {font-size: 12px; color: #818692;}
 .left-col h2 {margin: 4px 0 0; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased; padding: 0 0 0 39px}
 .left-col h3 {margin: 0; position: relative; font-size: 13px; line-height: 41px; -webkit-user-select: none; -moz-user-select: -moz-none; -ms-user-select: none}
-.left-col .active,
-.left-col>*>h3:not(.active):hover {background: #e3e6ee}
+.left-col .active {background-color: #e3e6ee}
+.left-col>*>h3:not(.active):hover {background-color: #e9ecf2}
 .left-col h3>a {display: block; padding: 0 6px 0 40px; color: #818692}
 .left-col .keep-count {float: right; margin: 10px 0 0; border: 1px solid #b8c5d2; border-radius: 10.5px; color: #628196; font-size: 12px; line-height: 20px; height: 19px; padding: 0 12px}
 @-moz-document url-prefix() {.left-col .keep-count {line-height: 18px}}
@@ -158,7 +158,11 @@ span.edit::before, span.save::before { display: inline-block; position: absolute
 .profile-nw.not-connected { transition: background .25s ease-in 50ms; }
 
 .my-friends {display: none} /* TODO: remove */
-.friends>h1 {padding: 13px 20px 0}
+.friends {padding: 13px 20px 0}
+.friends-tabs {margin-top: 15px; line-height: 46px; border-bottom: 2px solid #e3e6ee}
+.friends-tabs>a {display: inline-block; border: solid transparent; border-radius: 6px 6px 0 0; border-width: 2px 2px 0; padding: 0 40px; font-size: 16px; vertical-align: top; position: relative; bottom: -2px}
+.friends-tabs>a:not([href]) {border-color: #e3e6ee; background-color: #fff; color: #34495e}
+.friends-tabs>a[href]:not(:hover) {color: #34495e}
 
 .check-all {position: absolute; top: 1px; left: 0; height: 17px; width: 17px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; border: 1px solid #e3e6ee; -moz-box-sizing: border-box; box-sizing: border-box}
 .check-all.live {cursor: pointer}
@@ -246,11 +250,11 @@ span.edit::before, span.save::before { display: inline-block; position: absolute
 
 /* right col */
 
-nav {height: 70px; padding: 26px 18px 0 0; background-color: #67829c; text-align: right; font-size: 14px; -moz-box-sizing: border-box; box-sizing: border-box}
-nav>a[href] {padding: 10px 15px; color: #fff; border-left: 1px solid #fff; vertical-align: middle}
-nav>a:first-child {border-left: 0}
-nav>a[href]:hover {background-color: #a0b1c2}
-nav>a[href]:active {background-color: #8699ab}
+.top-right-nav {height: 70px; padding: 26px 18px 0 0; background-color: #67829c; text-align: right; font-size: 14px; -moz-box-sizing: border-box; box-sizing: border-box}
+.top-right-nav>a[href] {padding: 10px 15px; color: #fff; border-left: 1px solid #fff; vertical-align: middle}
+.top-right-nav>a:first-child {border-left: 0}
+.top-right-nav>a[href]:hover {background-color: #a0b1c2}
+.top-right-nav>a[href]:active {background-color: #8699ab}
 
 .splash,
 .detail {position: absolute; top: 70px; left: 0; right: 0; bottom: 0}

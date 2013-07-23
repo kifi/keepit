@@ -420,13 +420,19 @@ $(function() {
 		});
 	}
 
-	//var friendsTmpl = Tempo.prepare("friends-template");
-	function showFriends() {
-		//friendsTmpl.render();
+	function showFriends(path) {
 		$main.attr('data-view', 'friends');
 		$('.left-col .active').removeClass('active');
 		$('.my-friends').addClass('active');
+		var $tabs = $('.friends-tabs>a').each(function() {
+			var $a = $(this), href = $a.data('href');
+			$a.attr('href', path === href ? null : href);
+		});
 	}
+	var $friends = $('.friends').on('click', '.friends-tabs>a[href]', function(e) {
+		e.preventDefault();
+		navigate(this.href);
+	});
 
 	function doSearch(q) {
 		if (q) {
@@ -719,8 +725,9 @@ $(function() {
 	var baseUriRe = new RegExp('^' + ($('base').attr('href') || ''));
 	$(window).on('statechange anchorchange', function(e) {
 		var state = History.getState();
-		var parts = state.hash.replace(baseUriRe, '').replace(/^\.\//, '').split(/[\/\?&#]+/);
-		console.log('[' + e.type + ']', state, parts);
+		var hash = state.hash.replace(baseUriRe, '').replace(/^\.\//, '').replace(/[?#].*/, '');
+		var parts = hash.split('/');
+		console.log('[' + e.type + ']', hash, state);
 		switch (parts[0]) {
 			case '':
 				showMyKeeps();
@@ -745,7 +752,7 @@ $(function() {
 				showProfile();
 				break;
 			case 'friends':
-				showFriends();
+				showFriends(hash);
 				break;
 			default:
 				return;
@@ -774,7 +781,7 @@ $(function() {
 				title = 'Profile';
 				break;
 			case 'friends':
-				title = 'Friends';
+				title = {friends: 'Friends', 'friends/invite': 'Invite Friends', 'friends/requests': 'Friend Requests'}[uri];
 		}
 		History.pushState(null, 'kifi.com • ' + title, uri);
 	}
