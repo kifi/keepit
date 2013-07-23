@@ -13,6 +13,7 @@ import com.keepit.realtime.UserNotifier
 
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
+import com.keepit.common.akka.RealtimeUserFacingExecutionContext
 
 @Singleton
 class ExtCommentController @Inject() (
@@ -127,7 +128,7 @@ class ExtCommentController @Inject() (
         }
         future {  // important that this is spawned only *after* above read/write transaction committed
           notifyRecipients(message)
-        } onFailure { case e =>
+        }(RealtimeUserFacingExecutionContext.ec) onFailure { case e =>
           log.error("Could not notify for new message %s".format(message.id.get), e)
         }
         (message, None)
@@ -175,7 +176,7 @@ class ExtCommentController @Inject() (
 
     future {  // important that this is spawned only *after* above read/write transaction committed
       notifyRecipients(message)
-    } onFailure { case e =>
+    }(RealtimeUserFacingExecutionContext.ec) onFailure { case e =>
       log.error("Could not notify for message reply %s".format(message.id.get), e)
     }
 
@@ -264,7 +265,7 @@ class ExtCommentController @Inject() (
 
     future {
       notifyRecipients(comment)
-    } onFailure { case e =>
+    }(RealtimeUserFacingExecutionContext.ec) onFailure { case e =>
       log.error("Could not persist emails for comment %s".format(comment.id.get), e)
     }
 
