@@ -35,8 +35,10 @@ class ArticleIndexer @Inject() (
     shoeboxClient: ShoeboxServiceClient)
   extends Indexer[NormalizedURI](indexDirectory, indexWriterConfig) {
 
-  val commitBatchSize = 100
-  val fetchSize = 20000
+  private[this] val indexWarmer = new IndexWarmer(Seq("t", "ts", "c", "cs"))
+
+  val commitBatchSize = 500
+  val fetchSize = 10000
 
   override def onFailure(indexable: Indexable[NormalizedURI], e: Throwable) {
     healthcheckPlugin.addError(HealthcheckError(errorMessage = Some(e.toString), callType = INTERNAL))
