@@ -1,9 +1,10 @@
 package com.keepit.common.cache
 
+import scala.concurrent.duration._
+
 import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
 import com.keepit.search.ActiveExperimentsCache
-import scala.concurrent.duration._
 import com.keepit.social.{CommentWithBasicUserCache, BasicUserUserIdCache}
 
 case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
@@ -132,5 +133,10 @@ case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
   @Provides
   def userConnectionIdCache(outerRepo: FortyTwoCachePlugin) =
     new UserConnectionIdCache((outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def userConnectionCountCache(outerRepo: FortyTwoCachePlugin) =
+    new UserConnectionCountCache((outerRepo, 7 days))
 }
 
