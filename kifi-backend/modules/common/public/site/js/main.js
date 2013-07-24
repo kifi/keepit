@@ -1250,6 +1250,13 @@ $(function() {
 	updateCollections();
 	updateNumKeeps();
 
+	$.when(promise.me).done(function() {
+		if (location.port || ~me.experiments.indexOf('friends')) {
+			$('.my-friends').show();
+			$collList.removeClass('positioned').each(function() {this.style.top = this.offsetTop + 'px'}).addClass('positioned');
+		}
+	});
+
 	// render initial view
 	$(window).trigger('statechange');
 
