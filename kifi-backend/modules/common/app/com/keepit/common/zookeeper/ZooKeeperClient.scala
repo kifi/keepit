@@ -219,41 +219,58 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
    * for each NodeChildrenChanged event and runs the supplied updateChildren function and
    * re-watches the node's children.
    */
-  def watchChildren(path: Path, updateChildren : Seq[Node] => Unit) {
-    val node = makeNodePath(path)
-    val parentWatcher = new Watcher {
-      def process(event : WatchedEvent) {
-        if (event.getType!=EventType.NodeDeleted) {
-          watchChildren(node.asPath, updateChildren)
+  def watchChildren(path: Path, updateChildren: Seq[Node] => Unit){
+    var watchedChildren = scala.collection.mutable.HashSet[Node]()
+
+    case class ChildWatcher(node: Node) extends Watcher {
+      def process(event: WatchedEvent) : Unit = watchedChildren.synchronized{
+        watchedChildren -= node 
+        val children = zk.getChildren(path.name, false).asScala.map(Node(_))
+        updateChildren(children)
+        doWatchChildren(children)
+      }
+    }
+
+    class ParentWatcher() extends Watcher {
+      def process(event: WatchedEvent): Unit = {
+        //in case deleted, watch for recreation
+        if (event.getType==EventType.NodeDeleted){
+          updateChildren(List())
+          zk.exists(path.name, new ParentWatcher())
+        } else { //otherwise, recreate watch on self and on new children  
+          val children = zk.getChildren(path.name, new ParentWatcher()).asScala.map(Node(_))
+          updateChildren(children)
+          doWatchChildren(children)
         }
       }
     }
-    try {
-      val children = zk.getChildren(path.name, parentWatcher)
-      children.asScala.foreach{ child =>
-        val childWatcher = new Watcher {
-          def process(event: WatchedEvent){
-            if (event.getType!=EventType.NodeDeleted) {
-              watchChildren(node.asPath, updateChildren)
-            }
-          }
-        }
-        try { zk.getData(path.name + "/" + child, childWatcher, new Stat()) }
-        catch {
+
+    def doWatchChildren(nodes: Seq[Node]) : Unit = watchedChildren.synchronized {
+      nodes.filterNot(watchedChildren.contains _).foreach{ node =>
+        try { 
+          zk.getData(path.name + "/" + node.name, ChildWatcher(node), new Stat())
+          watchedChildren += node
+        } catch {
           case e:KeeperException =>
             log.warn("Failed to place watch on a child node!")
         }
       }
-      updateChildren(children)
-    } catch {
-      case e:KeeperException => {
-        // Node was deleted -- fire a watch on node re-creation
-        log.warn(s"Failed to read node $path", e)
-        updateChildren(List())
-        zk.exists(path.name, parentWatcher)
-      }
     }
+
+
+    //check immediately
+    try{
+      val children = zk.getChildren(path.name, new ParentWatcher()).asScala.map(Node(_))
+      updateChildren(children)
+      doWatchChildren(children)
+    } catch {
+      case e :KeeperException => zk.exists(path.name, new ParentWatcher())
+    }
+  
   }
+
+
+
 
   /**
    * WARNING: watchMap must be thread-safe. Writing is synchronized on the watchMap. Readers MUST
