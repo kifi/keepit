@@ -26,14 +26,9 @@ import com.keepit.learning.topicmodel._
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.akka.SlowRunningExecutionContext
 
-@ImplementedBy(classOf[ExpertRecommenderControllerImpl])
-trait ExpertRecommenderController extends ShoeboxServiceController{
-  def init(): Unit
-  def suggestExperts(): Action[AnyContent]
-}
 
 @Singleton
-class ExpertRecommenderControllerImpl @Inject()(
+class ExpertRecommenderController @Inject()(
   db: Database,
   userRepo: UserRepo,
   uriTopicRepoA: UriTopicRepoA,
@@ -42,12 +37,12 @@ class ExpertRecommenderControllerImpl @Inject()(
   bookmarkRepo: BookmarkRepo,
   centralConfig: CentralConfig,
   healthcheckPlugin: HealthcheckPlugin
-) extends ExpertRecommenderController with Logging{
+) extends ShoeboxServiceController with Logging{
   var enabled = false
   var scoreMap = MutMap.empty[(Id[User], Int), Float]
   var modelFlag: Option[String] = None
 
-  def init() = {
+  val init = {
     val flagKey = new TopicModelFlagKey()
     val flag = centralConfig(flagKey)
     val rcmder = createExpertRecommender(flag)
@@ -83,7 +78,7 @@ class ExpertRecommenderControllerImpl @Inject()(
     genScoreMap(rcmder).onComplete{
       case Success(m) => scoreMap = m ; enableService()
       case _ =>  healthcheckPlugin.addError(HealthcheckError(callType = Healthcheck.SEARCH,
-          errorMessage = Some("Error updating topics")))
+          errorMessage = Some("Error generating user-topic score map")))
     }
   }
 
@@ -128,8 +123,7 @@ class ExpertRecommenderControllerImpl @Inject()(
     } else Nil
   }
 
-  override def suggestExperts() = Action { request =>
-    println("\n\n\nranking experts")
+  def suggestExperts() = Action { request =>
     val req = request.body.asJson.get.asInstanceOf[JsArray].value
     val urisAndKeepers = req.map{ js =>
       val uriId = Id[NormalizedURI]((js \ "uri").as[Long])
