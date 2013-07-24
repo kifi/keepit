@@ -474,6 +474,7 @@ a.friend-nw-pinterest.on {background-position: -51px 0}
   .page-meta>.page-priv[href]::before {background-image: url(../img/keep-icons.2x.png)}
   .profile>.networks>.kifi-k {background-image: url(../img/kifi-k.2x.png); background-size: 100%;}
   .profile-nw {background-image: url(../img/networks.2x.png)}
+  .friend-actions>*>a::before {background-image: url(../img/friend-actions.2x.png)}
 }
 
 .fancybox-inner {font-size: 16px}
