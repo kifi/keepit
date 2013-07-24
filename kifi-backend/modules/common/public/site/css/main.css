@@ -87,14 +87,14 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 .query-wrap {background-color: #67829c; padding: 10px 120px 12px 0; transition: padding-right .3s; -webkit-transition: padding-right .3s; white-space: nowrap}
 .query-wrap.focus,
 .query-wrap:not(.empty) {padding-right: 0}
-input.query {border: none; padding: 9px 50px 9px 20px; font-family: inherit; font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; height: 48px; -moz-box-sizing: border-box; box-sizing: border-box; -webkit-font-smoothing: antialiased}
+input.query {border: none; padding: 9px 48px 9px 20px; font-family: inherit; font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; height: 48px; -moz-box-sizing: border-box; box-sizing: border-box; -webkit-font-smoothing: antialiased}
 input.query::-webkit-input-placeholder {color: #99a3b3}
 input.query::-moz-placeholder {color: #99a3b3}
 input.query::-ms-clear {display: none}
-.query-icon {display: inline-block; width: 0; height: 48px; vertical-align: bottom; position: relative}
+.query-icon {display: inline-block; height: 48px; width: 48px; vertical-align: bottom; position: relative; right: 48px; overflow: hidden}
 .query-mag {cursor: text}
 .query-mag,
-.query-x {position: absolute; right: 0; top: 0; bottom: 0; width: 50px; padding-top: 13px; text-align: center; -moz-box-sizing: border-box; box-sizing: border-box}
+.query-x {position: absolute; top: 0; bottom: 0; left: 0; width: 100%; padding-top: 13px; text-align: center; -moz-box-sizing: border-box; box-sizing: border-box; -webkit-transition: left .12s .07s; transition: left .12s .07s}
 .query-mag::before,
 .query-x::before {content: " "; display: inline-block; vertical-align: bottom; height: 23px; background-image: url(../img/search.png); background-size: auto 23px}
 .query-mag::before {width: 26px}
@@ -103,7 +103,7 @@ input.query::-ms-clear {display: none}
 .query-x:hover::before {background-position: -75px}
 .query-x:active::before {background-position: -98px}
 .empty>*>.query-x,
-:not(.empty)>*>.query-mag {display: none}
+:not(.empty)>*>.query-mag {left: 100%; -webkit-transition-delay: 0; transition-delay: 0}
 .main-head,
 .main-keeps {margin-left: 1px; box-shadow: -1px 0 #dbdee3}
 .main-head {padding: 13px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}

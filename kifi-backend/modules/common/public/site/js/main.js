@@ -916,8 +916,10 @@ $(function() {
 		}
 	});
 	$('.query-mag').mousedown(function(e) {
-		e.preventDefault();
-		$query.focus();
+		if (e.which == 1) {
+			e.preventDefault();
+			$query.focus();
+		}
 	});
 	$('.query-x').click(function() {
 		$query.val('').focus().triggerHandler('input');
