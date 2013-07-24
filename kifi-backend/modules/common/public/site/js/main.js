@@ -346,7 +346,10 @@ $(function() {
 					var $this = $(this);
 					var value = $this.text();
 					var maxlen = $this.data('maxlength');
-					var $input = $('<input>').val(value).attr('maxlength', maxlen).keyup(function (e) {
+					$('<input>').val(value).attr('maxlength', maxlen).keyup(function (e) {
+						if (maxlen) {
+							$(this).closest('.editable').attr('data-chars-left', maxlen - $(this).val().length);
+						}
 						if (e.keyCode === 13) {
 							$(this).closest('.edit-container').find('.save').click();
 						} else if (e.which === 27) {
@@ -360,8 +363,7 @@ $(function() {
 								}
 							});
 						}
-					});
-					$(this).html($input);
+					}).appendTo($this.empty()).keyup();
 				}).find('input');
 				$inputs[0].focus();
 				$inputs.on('keypress paste change', function () {
@@ -374,12 +376,6 @@ $(function() {
 			$('.profile .save').click(function () {
 				var props = {};
 				var $editContainer = $(this).closest('.edit-container');
-				$editContainer.find('.editable').each(function () {
-					var $this = $(this);
-					var value = $this.find('input').val();
-					$this.text(value);
-					props[$this.data('prop')] = value;
-				});
 				if (props['email']) {
 					props['emails'] = [props['email']];
 					delete props['email'];
@@ -398,7 +394,13 @@ $(function() {
 						$save.text(saveText);
 					},
 					success: function (data) {
-						$editContainer.removeClass('editing')
+						$editContainer.find('.editable').each(function () {
+							var $this = $(this);
+							var value = $this.find('input').val();
+							$this.text(value);
+							props[$this.data('prop')] = value;
+						});
+						$editContainer.removeClass('editing');
 						$save.text(saveText);
 						updateMe(data);
 					}
@@ -420,13 +422,63 @@ $(function() {
 		});
 	}
 
-	//var friendsTmpl = Tempo.prepare("friends-template");
-	function showFriends() {
-		//friendsTmpl.render();
+	var $friends = $('.friends').on('click', '.friends-tabs>a[href]', function(e) {
+		e.preventDefault();
+		navigate(this.href);
+	});
+	var $friendsTabs = $friends.find('.friends-tabs>a');
+	var $friendsTabPages = $friends.find('.friends-page');
+
+	function showFriends(path) {
 		$main.attr('data-view', 'friends');
 		$('.left-col .active').removeClass('active');
 		$('.my-friends').addClass('active');
+		var $tab = $friendsTabs.filter('[data-href="' + path + '"]').removeAttr('href');
+		if ($tab.length) {
+			$friendsTabs.not($tab).filter(':not([href])').each(function() {this.href = $(this).data('href')});
+			[prepFriendsTab, prepInviteTab, prepRequestsTab][$tab.index()]();
+			$friendsTabPages.hide().filter('[data-href="' + path + '"]').show().find('input').focus();
+		} else {
+			navigate('friends', {replace: true});
+		}
 	}
+
+	var $friendsList = $('#friends-list').antiscroll({x: false, width: "100%"})
+	.on('mouseover', '.friend-status', function() {
+		$(this).nextAll('.friend-action-desc').text('Unfriend this person');
+	}).on('mouseover', '.friend-mute', function() {
+		$(this).nextAll('.friend-action-desc').text('Don’t show this person’s keeps in my search results');
+	}).on('mouseout', '.friend-status,.friend-mute', function() {
+		$(this).nextAll('.friend-action-desc').empty();
+	});
+	$friendsList.find('.antiscroll-inner').scroll(function() { // infinite scroll
+		$friendsList.prev().toggleClass('scrolled', this.scrollTop > 0);
+	});
+	var friendsScroller = $friendsList.data("antiscroll");
+	$(window).resize(friendsScroller.refresh.bind(friendsScroller));
+	var friendsTmpl = Tempo.prepare($friendsList).when(TempoEvent.Types.RENDER_COMPLETE, function() {
+		$friendsLoading.hide();
+		friendsScroller.refresh();
+	});
+	var $friendsLoading = $('.friends-loading');
+	function prepFriendsTab() {
+		$('.friends-filter').val('');
+		friendsTmpl.clear();
+		$friendsLoading.show();
+		$.getJSON(urlUser + '/all-connections', function(data) {
+			console.log('[prepFriendsTab] friends:', data.length);
+			$.when(promise.myNetworks).then(function() {
+				var friends = data.slice(0, 10), networks = myNetworks.reduce(function(o, n) {o[n.network] = true; return o}, {});
+				for (var i = 0; i < friends.length; i++) {
+					friends[i].networks = networks;
+				}
+				friendsTmpl.render(friends);
+			});
+		});
+	}
+
+	function prepInviteTab() {}
+	function prepRequestsTab() {}
 
 	function doSearch(q) {
 		if (q) {
@@ -446,6 +498,7 @@ $(function() {
 		$loadMore.addClass('hidden');
 
 		$query.attr("data-q", q);
+		if (!$query.val()) $query.val(q).focus().closest($queryWrap).removeClass('empty');
 		var context = searchResponse && searchResponse.context;
 		$.getJSON(urlSearch, {q: q, f: "a", maxHits: 30, context: context}, function(data) {
 			updateCollectionsIfAnyUnknown(data.hits);
@@ -719,8 +772,9 @@ $(function() {
 	var baseUriRe = new RegExp('^' + ($('base').attr('href') || ''));
 	$(window).on('statechange anchorchange', function(e) {
 		var state = History.getState();
-		var parts = state.hash.replace(baseUriRe, '').replace(/^\.\//, '').split(/[\/\?&#]+/);
-		console.log('[' + e.type + ']', state, parts);
+		var hash = state.hash.replace(baseUriRe, '').replace(/^\.\//, '').replace(/[?#].*/, '');
+		var parts = hash.split('/');
+		console.log('[' + e.type + ']', hash, state);
 		switch (parts[0]) {
 			case '':
 				showMyKeeps();
@@ -739,13 +793,13 @@ $(function() {
 				});
 				break;
 			case 'search':
-				doSearch(decodeURIComponent(queryFromQS(location.search)));
+				doSearch(decodeURIComponent(queryFromUri(state.hash)));
 				break;
 			case 'profile':
 				showProfile();
 				break;
 			case 'friends':
-				showFriends();
+				showFriends(hash);
 				break;
 			default:
 				return;
@@ -753,12 +807,12 @@ $(function() {
 		hideKeepDetails();
 	});
 
-	function navigate(uri) {
+	function navigate(uri, opts) {
 		var baseUri = document.baseURI;
 		if (uri.substr(0, baseUri.length) == baseUri) {
 			uri = uri.substr(baseUri.length);
 		}
-		console.log('[navigate]', uri);
+		console.log('[navigate]', uri, opts || '');
 		var title, kind = uri.match(/[\w-]*/)[0];
 		switch (kind) {
 			case '':
@@ -768,19 +822,19 @@ $(function() {
 				title = collections[uri.substr(kind.length + 1)].name;
 				break;
 			case 'search':
-				title = queryFromQS(uri.substr(kind.length));
+				title = queryFromUri(uri);
 				break;
 			case 'profile':
 				title = 'Profile';
 				break;
 			case 'friends':
-				title = 'Friends';
+				title = {friends: 'Friends', 'friends/invite': 'Invite Friends', 'friends/requests': 'Friend Requests'}[uri];
 		}
-		History.pushState(null, 'kifi.com • ' + title, uri);
+		History[opts && opts.replace ? 'replaceState' : 'pushState'](null, 'kifi.com • ' + title, uri);
 	}
 
-	function queryFromQS(qs) {
-		return qs.replace(/.*?[?&]q=([^&]*).*/, '$1').replace(/\+/g, ' ');
+	function queryFromUri(uri) {
+		return uri.replace(/.*?[?&]q=([^&]*).*/, '$1').replace(/\+/g, ' ');
 	}
 
 	var $main = $(".main").on("mousedown", ".keep-checkbox", function(e) {
@@ -860,7 +914,11 @@ $(function() {
 				searchTimeout = setTimeout(navigate.bind(null, uri), 500);  // instant search
 			}
 		}
-	})
+	});
+	$('.query-mag').mousedown(function(e) {
+		e.preventDefault();
+		$query.focus();
+	});
 	$('.query-x').click(function() {
 		$query.val('').focus().triggerHandler('input');
 	});

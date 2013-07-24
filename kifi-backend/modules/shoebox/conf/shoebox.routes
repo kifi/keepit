@@ -106,7 +106,10 @@ GET     /site/user/me               @com.keepit.controllers.website.UserControll
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
 GET     /site/user/networks         @com.keepit.controllers.website.UserController.socialNetworkInfo()
 GET     /site/user/:id/networks     @com.keepit.controllers.website.UserController.friendNetworkInfo(id: ExternalId[User])
+POST    /site/user/:id/unfriend     @com.keepit.controllers.website.UserController.unfriend(id: ExternalId[User])
+POST    /site/user/:id/friend       @com.keepit.controllers.website.UserController.friendRequest(id: ExternalId[User])
 GET     /site/user/connections      @com.keepit.controllers.website.UserController.connections()
+GET     /site/user/connections/count @com.keepit.controllers.website.UserController.connectionCount()
 GET     /site/user/all-connections  @com.keepit.controllers.website.UserController.getAllConnections()
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
@@ -117,6 +120,9 @@ GET     /site/                      @com.keepit.controllers.website.HomeControll
 GET     /site/collection/:id        @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id: String)
 GET     /site/search                @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
 GET     /site/profile               @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/friends               @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/friends/invite        @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/friends/requests      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
 GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSite(path: String, id = "")
 
 

@@ -37,7 +37,7 @@ import com.keepit.search.ArticleSearchResult
 import com.keepit.model.BrowsingHistoryUserIdKey
 import com.keepit.social.SocialId
 import com.keepit.model.NormalizedURIKey
-import com.keepit.model.UserConnectionKey
+import com.keepit.model.UserConnectionIdKey
 import play.api.libs.json.JsObject
 import com.keepit.model.SocialUserInfoNetworkKey
 import com.keepit.model.UserSessionExternalIdKey
@@ -107,7 +107,7 @@ class ShoeboxServiceClientImpl @Inject() (
     extends ShoeboxServiceClient with Logging{
 
   // request consolidation
-  private[this] val consolidateConnectedUsersReq = new RequestConsolidator[UserConnectionKey, Set[Id[User]]](ttl = 3 seconds)
+  private[this] val consolidateConnectedUsersReq = new RequestConsolidator[UserConnectionIdKey, Set[Id[User]]](ttl = 3 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[ClickHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
   private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[BrowsingHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
   private[this] val consolidateGetExperimentsReq = new RequestConsolidator[String, Seq[SearchConfigExperiment]](ttl = 30 seconds)
@@ -224,7 +224,7 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]] = consolidateConnectedUsersReq(UserConnectionKey(userId)) { key =>
+  def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]] = consolidateConnectedUsersReq(UserConnectionIdKey(userId)) { key =>
     cacheProvider.userConnCache.getOrElseFuture(key) {
       call(Shoebox.internal.getConnectedUsers(userId)).map {r =>
         r.json.as[JsArray].value.map(jsv => Id[User](jsv.as[Long])).toSet

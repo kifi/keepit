@@ -61,11 +61,9 @@ class UserConnectionCreator @Inject() (
   def updateUserConnections(userId: Id[User]) {
     db.readWrite { implicit s =>
       val existingConnections = userConnectionRepo.getConnectedUsers(userId)
-      val updatedConnections = socialConnectionRepo.getFortyTwoUserConnections(userId)
+      val socialConnections = socialConnectionRepo.getFortyTwoUserConnections(userId)
 
-      userConnectionRepo.removeConnections(userId, existingConnections diff updatedConnections)
-
-      val newConnections = updatedConnections diff existingConnections
+      val newConnections = socialConnections -- existingConnections
       if (newConnections.nonEmpty) {
         userChannel.pushAndFanout(userId, Json.arr("new_friends", newConnections.map(basicUserRepo.load)))
       }

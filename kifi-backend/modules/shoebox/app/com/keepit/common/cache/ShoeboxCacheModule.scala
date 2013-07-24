@@ -10,6 +10,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
+  def commentCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new CommentCache((innerRepo, 1 hours), (outerRepo, 2 days))
+
+  @Singleton
+  @Provides
   def playCacheApi(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new PlayCacheApi((innerRepo, 1 second), (outerRepo, 1 hour))
 
@@ -135,6 +140,12 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
 
   @Singleton
   @Provides
+  def userConnectionCountCache(outerRepo: FortyTwoCachePlugin) =
+    new UserConnectionCountCache((outerRepo, 7 days))
+
+  @Singleton
+  @Provides
   def userTopicCache(outerRepo: FortyTwoCachePlugin) =
     new UserTopicCache((outerRepo, 7 days))
+
 }
