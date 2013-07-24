@@ -13,6 +13,7 @@ import play.api.Mode._
 import play.api._
 import com.keepit.learning.topicmodel.TopicUpdaterPlugin
 import com.keepit.social.SocialGraphPlugin
+import com.keepit.controllers.shoebox.ExpertRecommenderController
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 
@@ -43,6 +44,6 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[InvitationMailPlugin].enabled)
     require(injector.instance[ChannelPlugin].enabled)
     require(injector.instance[TopicUpdaterPlugin].enabled)
-
+    injector.instance[ExpertRecommenderController].init
   }
 }
