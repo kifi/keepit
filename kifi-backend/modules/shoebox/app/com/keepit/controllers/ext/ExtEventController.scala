@@ -3,8 +3,7 @@ package com.keepit.controllers.ext
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.analytics._
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
+import com.keepit.common.db.{ExternalId, State}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
@@ -14,9 +13,6 @@ import play.api.libs.json._
 @Singleton
 class ExtEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
-  db: Database,
-  userExperimentRepo: UserExperimentRepo,
-  userRepo: UserRepo,
   EventPersister: EventPersister,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
