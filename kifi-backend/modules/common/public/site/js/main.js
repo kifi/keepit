@@ -346,7 +346,10 @@ $(function() {
 					var $this = $(this);
 					var value = $this.text();
 					var maxlen = $this.data('maxlength');
-					var $input = $('<input>').val(value).attr('maxlength', maxlen).keyup(function (e) {
+					$('<input>').val(value).attr('maxlength', maxlen).keyup(function (e) {
+						if (maxlen) {
+							$(this).closest('.editable').attr('data-chars-left', maxlen - $(this).val().length);
+						}
 						if (e.keyCode === 13) {
 							$(this).closest('.edit-container').find('.save').click();
 						} else if (e.which === 27) {
@@ -360,8 +363,7 @@ $(function() {
 								}
 							});
 						}
-					});
-					$(this).html($input);
+					}).appendTo($this.empty()).keyup();
 				}).find('input');
 				$inputs[0].focus();
 				$inputs.on('keypress paste change', function () {
