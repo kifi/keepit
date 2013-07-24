@@ -23,22 +23,16 @@ class ExtEventController @Inject() (
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def logUserEvents = AuthenticatedJsonToJsonAction { request =>
-    val userId = request.userId
-
     val json = request.body
     (json \ "version").as[Int] match {
-      case 1 => createEventsFromPayload(json, userId)
+      case 1 => createEventsFromPayload(json, request.user, request.experiments)
       case i => throw new Exception("Unknown events version: %s".format(i))
     }
     Ok(JsObject(Seq("stored" -> JsString("ok"))))
   }
 
-  private[ext] def createEventsFromPayload(params: JsValue, userId: Id[User]) = {
+  private[ext] def createEventsFromPayload(params: JsValue, user: User, experiments: Set[State[ExperimentType]]) = {
     val logRecievedTime = currentDateTime
-
-    val (user, experiments) = db.readOnly { implicit session =>
-      (userRepo.get(userId), userExperimentRepo.getUserExperiments(userId))
-    }
 
     val events = (params \ "events") match {
       case JsArray(ev) => ev map (  _.as[JsObject] )
