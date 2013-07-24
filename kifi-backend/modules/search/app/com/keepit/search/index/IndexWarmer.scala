@@ -47,17 +47,20 @@ class IndexWarmer(fields: Seq[String]) extends Logging {
     var termsEnum: TermsEnum = null
     var docsEnum: DocsEnum = null
     fields.foreach{ field =>
-      termsEnum = indexReader.terms(field).iterator(termsEnum)
-      var byteRef = termsEnum.next()
-      while (byteRef != null) {
-        if (mayContain(field, byteRef.utf8ToString)) {
-          docsEnum = termsEnum.docs(indexReader.getLiveDocs(), docsEnum)
-          var doc = docsEnum.nextDoc
-          while (doc < NO_MORE_DOCS) {
-            doc = docsEnum.nextDoc
+      val terms = indexReader.terms(field)
+      if (terms != null) {
+        termsEnum = terms.iterator(termsEnum)
+        var byteRef = termsEnum.next()
+        while (byteRef != null) {
+          if (mayContain(field, byteRef.utf8ToString)) {
+            docsEnum = termsEnum.docs(indexReader.getLiveDocs(), docsEnum)
+            var doc = docsEnum.nextDoc
+            while (doc < NO_MORE_DOCS) {
+              doc = docsEnum.nextDoc
+            }
           }
+          byteRef = termsEnum.next()
         }
-        byteRef = termsEnum.next()
       }
     }
     val elapsed = System.currentTimeMillis() - now
