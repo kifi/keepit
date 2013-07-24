@@ -62,8 +62,10 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
         inject[Database].readOnly { implicit s =>
           val fortyTwoConnections = inject[SocialConnectionRepo].getFortyTwoUserConnections(user.id.get)
           val userConnections = inject[UserConnectionRepo].getConnectedUsers(user.id.get)
+          val connectionCount = inject[UserConnectionRepo].getConnectionCount(user.id.get)
           fortyTwoConnections === userConnections
-          userConnections.size === 1
+          connectionCount === userConnections.size
+          connectionCount === 1
         }
         inject[UserConnectionCreator].getConnectionsLastUpdated(user.id.get) must beSome
       }
@@ -117,8 +119,10 @@ class UserConnectionCreatorTest extends Specification with ShoeboxApplicationInj
         inject[Database].readOnly { implicit s =>
           val fortyTwoConnections = inject[SocialConnectionRepo].getFortyTwoUserConnections(user.id.get)
           val userConnections = inject[UserConnectionRepo].getConnectedUsers(user.id.get)
+          val connectionCount = inject[UserConnectionRepo].getConnectionCount(user.id.get)
           fortyTwoConnections.size === 1
-          userConnections.size === 2
+          connectionCount === userConnections.size
+          connectionCount === 2
         }
         connectionsAfter.size === 5
       }

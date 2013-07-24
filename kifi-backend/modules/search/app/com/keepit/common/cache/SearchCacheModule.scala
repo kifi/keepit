@@ -1,8 +1,9 @@
 package com.keepit.common.cache
 
+import scala.concurrent.duration._
+
 import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
-import scala.concurrent.duration._
 import com.keepit.search.ActiveExperimentsCache
 import com.keepit.social.BasicUserUserIdCache
 
@@ -82,4 +83,9 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   @Provides
   def userConnectionIdCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserConnectionIdCache((innerRepo, 10 seconds), (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def userConnectionCountCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserConnectionCountCache((innerRepo, 10 seconds), (outerRepo, 7 days))
 }

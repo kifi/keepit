@@ -47,6 +47,12 @@ class UserController @Inject() (db: Database,
     ))
   }
 
+  def connectionCount() = AuthenticatedJsonAction { request =>
+    Ok(Json.obj(
+      "count" -> db.readOnly { implicit s => userConnectionRepo.getConnectionCount(request.userId) }
+    ))
+  }
+
   private case class BasicSocialUser(network: String, profileUrl: Option[String], pictureUrl: Option[String])
   private object BasicSocialUser {
     implicit val writesBasicSocialUser = Json.writes[BasicSocialUser]
