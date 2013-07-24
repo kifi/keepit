@@ -101,7 +101,8 @@ a.query-x[href]:active {color: #556179}
 .main-head,
 .main-keeps {margin-left: 1px; box-shadow: -1px 0 #dbdee3}
 .main-head {padding: 13px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
-.main-head.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
+.main-head.scrolled,
+.above-friends-list.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
 .main[data-view=search] .main-head {padding-top: 10px; height: 37px}
 .main[data-view=search] .main-head>h1,
 .main:not([data-view=mine]):not([data-view=search]) .main-head,
@@ -161,10 +162,37 @@ span.edit::before, span.save::before { display: inline-block; position: absolute
 
 .my-friends {display: none} /* TODO: remove */
 .friends {padding: 13px 20px 0}
-.friends-tabs {margin-top: 15px; line-height: 46px; border-bottom: 2px solid #e3e6ee}
-.friends-tabs>a {display: inline-block; border: solid transparent; border-radius: 6px 6px 0 0; border-width: 2px 2px 0; padding: 0 40px; font-size: 16px; vertical-align: top; position: relative; bottom: -2px}
+.friends-tabs {margin: 15px 0 24px; line-height: 46px; border-bottom: 2px solid #e3e6ee}
+.friends-tabs>a {display: inline-block; border: solid transparent; border-radius: 6px 6px 0 0; border-width: 2px 2px 0; padding: 0 40px; font-size: 18px; font-weight: 300; vertical-align: top; position: relative; bottom: -2px; -webkit-font-smoothing: antialiased}
 .friends-tabs>a:not([href]) {border-color: #e3e6ee; background-color: #fff; color: #34495e}
-.friends-tabs>a[href]:not(:hover) {color: #34495e}
+.friends-tabs>a[href]:not(:hover) {color: #627d99}
+.friends-tabs>a[href]:focus {border-color: rgba(227,230,238,.3)}
+
+.above-friends-list {padding-bottom: 20px; border-bottom: 1px solid transparent}
+input.friends-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; padding: 0 13px; font-size: 14px; -webkit-font-smoothing: antialiased}
+#friends-list {position: absolute; top: 260px; left: 20px; right: 0; bottom: 0; overflow-y: auto; overflow-x: hidden}
+#friends-list>.antiscroll-inner {position: absolute; left: 0; right: 0; top: 0; bottom: 0; overflow-y: auto; overflow-x: hidden; padding-right: 20px; -moz-box-sizing: border-box; box-sizing: border-box}
+.friend {border-top: 1px solid #e3e6ee; display: table; table-layout: fixed}
+.friend:last-child {border-bottom: 1px solid #e3e6ee}
+.friend-pic {display: table-cell; width: 70px; padding: 15px 0; vertical-align: top}
+.friend-pic>img {width: 70px; height: 70px; border-radius: 4px}
+.friend-info {display: table-cell; width: 99%; padding: 15px 0 15px 16px; vertical-align: top}
+.friend-name {margin: 4px 0 15px; font-size: 16px; line-height: 1; color: #34495e; -webkit-font-smoothing: antialiased}
+.friend-label {margin: 0 0 6px; font-size: 12px; line-height: 1; font-weight: 300; color: #34495e; -webkit-font-smoothing: antialiased}
+.friend-actions {display: table-cell; padding: 15px 0; vertical-align: middle; white-space: nowrap}
+.friend-actions>*>a {display: inline-block; height: 32px; width: 32px; border-radius: 50%; margin-left: 4px; background-color: #d7e8b1; vertical-align: top; text-align: center; -moz-box-sizing: border-box; box-sizing: border-box}
+.friend-actions>*>a::before {content: " "; display: inline-block; margin-top: 8px; height: 16px; background-image: url(../img/friend-actions.png); background-size: auto 16px}
+.friend-mute::before {width: 17px; background-position: -17px}
+.friend-mute:hover {background-color: #fff; border: 2px solid #e3e6ee}
+.friend-mute:hover::before {background-position: 0; margin-top: 6px}
+.friend-status::before {width: 16px; background-position: -34px}
+.friend-status:hover {background-color: #e78881}
+.friend-status:hover::before {width: 19px; background-position: -50px}
+.friend-action-desc {position: absolute; right: 0; bottom: -20px; font-size: 13px; line-height: 1; font-weight: 300; color: #34495e; -webkit-font-smoothing: antialiased}
+
+.network-filters {}
+.network-filters>a {font-size: 16px}
+.friend-request-status {font-size: 16px}
 
 .check-all {position: absolute; top: 1px; left: 0; height: 17px; width: 17px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; border: 1px solid #e3e6ee; -moz-box-sizing: border-box; box-sizing: border-box}
 .check-all.live {cursor: pointer}
@@ -239,7 +267,8 @@ span.edit::before, span.save::before { display: inline-block; position: absolute
 .keep.mine .keep-others::before,
 .keep-who-text>.keep-friends+.keep-others::before {content: "+ "}
 .keep:not(.mine) .keep-you+.keep-kept-this::before {content: "Nobody has "; line-height: 23px}
-.keeps-loading {margin: 21px 50%; width: 44px; height: 8px; position: relative; left: -22px}
+.keeps-loading,
+.friends-loading {margin: 21px 50%; width: 44px; height: 8px; position: relative; left: -22px}
 .keeps-load-more {display: block; margin: 10px 0; background-color: #fcfdff; line-height: 30px; font-size: 16px; text-align: center}
 .keeps-load-more:hover {background-color: #f3fbff}
 .keeps-load-more:active {background-color: #f3f5f9}
@@ -257,6 +286,7 @@ span.edit::before, span.save::before { display: inline-block; position: absolute
 .top-right-nav>a:first-child {border-left: 0}
 .top-right-nav>a[href]:hover {background-color: #a0b1c2}
 .top-right-nav>a[href]:active {background-color: #8699ab}
+.top-right-nav>a[href]:focus {box-shadow: inset 0 0 0 2px #a0b1c2}
 
 .splash,
 .detail {position: absolute; top: 70px; left: 0; right: 0; bottom: 0}
@@ -420,16 +450,17 @@ span.long-text, a.long-text {display: inline-block}
 .fr-card .fr-card-name {font-size: 16px; color: #2d2d2d; white-space: nowrap}
 .fr-card-label {margin: 15px 0 3px}
 .fr-card-interests {color: #aaa}
-.fr-card-networks {font-size: 0; line-height: 0}
-.fr-card-networks a.fr-card-nw {width: 17px; height: 17px; display: inline-block; background: url(../img/social_icons.png) 0/68px; margin-right: 2px}
-.fr-card-networks a.fr-card-nw-facebook {background-position: 0 17px}
-.fr-card-networks a.fr-card-nw-facebook.on {background-position: 0 0}
-.fr-card-networks a.fr-card-nw-linkedin {background-position: -17px 17px}
-.fr-card-networks a.fr-card-nw-linkedin.on {background-position: -17px 0}
-.fr-card-networks a.fr-card-nw-twitter {background-position: -34px 17px}
-.fr-card-networks a.fr-card-nw-twitter.on {background-position: -34px 0}
-.fr-card-networks a.fr-card-nw-pinterest {background-position: -51px 17px}
-.fr-card-networks a.fr-card-nw-pinterest.on {background-position: -51px 0}
+
+.friend-networks {font-size: 0; line-height: 0}
+a.friend-nw {width: 17px; height: 17px; display: inline-block; background: url(../img/social_icons.png) 0/68px; margin-right: 2px}
+a.friend-nw-facebook {background-position: 0 17px}
+a.friend-nw-facebook.on {background-position: 0 0}
+a.friend-nw-linkedin {background-position: -17px 17px}
+a.friend-nw-linkedin.on {background-position: -17px 0}
+a.friend-nw-twitter {background-position: -34px 17px}
+a.friend-nw-twitter.on {background-position: -34px 0}
+a.friend-nw-pinterest {background-position: -51px 17px}
+a.friend-nw-pinterest.on {background-position: -51px 0}
 
 /* retina image overrides */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
@@ -447,6 +478,7 @@ span.long-text, a.long-text {display: inline-block}
   .page-meta>.page-priv[href]::before {background-image: url(../img/keep-icons.2x.png)}
   .profile>.networks>.kifi-k::before {background-image: url(../img/kifi-k.2x.png); background-size: 100%;}
   .profile-nw {background-image: url(../img/networks.2x.png)}
+  .friend-actions>*>a::before {background-image: url(../img/friend-actions.2x.png)}
 }
 
 .fancybox-inner {font-size: 16px}

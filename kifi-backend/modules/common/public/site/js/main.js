@@ -422,19 +422,63 @@ $(function() {
 		});
 	}
 
-	function showFriends(path) {
-		$main.attr('data-view', 'friends');
-		$('.left-col .active').removeClass('active');
-		$('.my-friends').addClass('active');
-		var $tabs = $('.friends-tabs>a').each(function() {
-			var $a = $(this), href = $a.data('href');
-			$a.attr('href', path === href ? null : href);
-		});
-	}
 	var $friends = $('.friends').on('click', '.friends-tabs>a[href]', function(e) {
 		e.preventDefault();
 		navigate(this.href);
 	});
+	var $friendsTabs = $friends.find('.friends-tabs>a');
+	var $friendsTabPages = $friends.find('.friends-page');
+
+	function showFriends(path) {
+		$main.attr('data-view', 'friends');
+		$('.left-col .active').removeClass('active');
+		$('.my-friends').addClass('active');
+		var $tab = $friendsTabs.filter('[data-href="' + path + '"]').removeAttr('href');
+		if ($tab.length) {
+			$friendsTabs.not($tab).filter(':not([href])').each(function() {this.href = $(this).data('href')});
+			[prepFriendsTab, prepInviteTab, prepRequestsTab][$tab.index()]();
+			$friendsTabPages.hide().filter('[data-href="' + path + '"]').show().find('input').focus();
+		} else {
+			navigate('friends', {replace: true});
+		}
+	}
+
+	var $friendsList = $('#friends-list').antiscroll({x: false, width: "100%"})
+	.on('mouseover', '.friend-status', function() {
+		$(this).nextAll('.friend-action-desc').text('Unfriend this person');
+	}).on('mouseover', '.friend-mute', function() {
+		$(this).nextAll('.friend-action-desc').text('Don’t show this person’s keeps in my search results');
+	}).on('mouseout', '.friend-status,.friend-mute', function() {
+		$(this).nextAll('.friend-action-desc').empty();
+	});
+	$friendsList.find('.antiscroll-inner').scroll(function() { // infinite scroll
+		$friendsList.prev().toggleClass('scrolled', this.scrollTop > 0);
+	});
+	var friendsScroller = $friendsList.data("antiscroll");
+	$(window).resize(friendsScroller.refresh.bind(friendsScroller));
+	var friendsTmpl = Tempo.prepare($friendsList).when(TempoEvent.Types.RENDER_COMPLETE, function() {
+		$friendsLoading.hide();
+		friendsScroller.refresh();
+	});
+	var $friendsLoading = $('.friends-loading');
+	function prepFriendsTab() {
+		$('.friends-filter').val('');
+		friendsTmpl.clear();
+		$friendsLoading.show();
+		$.getJSON(urlUser + '/all-connections', function(data) {
+			console.log('[prepFriendsTab] friends:', data.length);
+			$.when(promise.myNetworks).then(function() {
+				var friends = data.slice(0, 10), networks = myNetworks.reduce(function(o, n) {o[n.network] = true; return o}, {});
+				for (var i = 0; i < friends.length; i++) {
+					friends[i].networks = networks;
+				}
+				friendsTmpl.render(friends);
+			});
+		});
+	}
+
+	function prepInviteTab() {}
+	function prepRequestsTab() {}
 
 	function doSearch(q) {
 		if (q) {
@@ -762,12 +806,12 @@ $(function() {
 		hideKeepDetails();
 	});
 
-	function navigate(uri) {
+	function navigate(uri, opts) {
 		var baseUri = document.baseURI;
 		if (uri.substr(0, baseUri.length) == baseUri) {
 			uri = uri.substr(baseUri.length);
 		}
-		console.log('[navigate]', uri);
+		console.log('[navigate]', uri, opts || '');
 		var title, kind = uri.match(/[\w-]*/)[0];
 		switch (kind) {
 			case '':
@@ -785,7 +829,7 @@ $(function() {
 			case 'friends':
 				title = {friends: 'Friends', 'friends/invite': 'Invite Friends', 'friends/requests': 'Friend Requests'}[uri];
 		}
-		History.pushState(null, 'kifi.com • ' + title, uri);
+		History[opts && opts.replace ? 'replaceState' : 'pushState'](null, 'kifi.com • ' + title, uri);
 	}
 
 	function queryFromQS(qs) {
