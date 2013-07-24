@@ -42,7 +42,7 @@ class ExpertRecommenderController @Inject()(
   var scoreMap = MutMap.empty[(Id[User], Int), Float]
   var modelFlag: Option[String] = None
 
-  def init() = {
+  val init = {
     val flagKey = new TopicModelFlagKey()
     val flag = centralConfig(flagKey)
     val rcmder = createExpertRecommender(flag)
