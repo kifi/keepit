@@ -16,6 +16,7 @@ trait ShoeboxInjectionHelpers { self: InjectorProvider =>
   def basicUserRepo(implicit injector: Injector) = inject[BasicUserRepo]
   def userConnRepo(implicit injector: Injector) = inject[UserConnectionRepo]
   def socialConnRepo(implicit injector: Injector) = inject[SocialConnectionRepo]
+  def friendRequestRepo(implicit injector: Injector) = inject[FriendRequestRepo]
   def uriRepo(implicit injector: Injector) = inject[NormalizedURIRepo]
   def urlRepo(implicit injector: Injector) = inject[URLRepo]
   def bookmarkRepo(implicit injector: Injector) = inject[BookmarkRepo]
