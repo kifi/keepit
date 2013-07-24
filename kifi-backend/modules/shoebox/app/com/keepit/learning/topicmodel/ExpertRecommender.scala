@@ -138,26 +138,24 @@ class ExpertRecommender(
 
   // score a user in any topic she knows about
   def score(userId: Id[User]): Map[Int, Float] = {
-    val bms = db.readOnly{ implicit s =>
-      bookmarkRepo.getByUser(userId).filter(! _.isPrivate).map(_.uriId)
-    }
-    val bmAndTopics = db.readOnly{ implicit s =>
-      bms.flatMap{ bm => uriTopicRepo.getAssignedTopicsByUriId(bm) match {
+    val (bmsByTopic, bmClicks) = db.readOnly{ implicit s =>
+      val bms = bookmarkRepo.getByUser(userId).filter(! _.isPrivate).map(_.uriId)
+      val bmAndTopics = bms.flatMap{ bm => uriTopicRepo.getAssignedTopicsByUriId(bm) match {
         case Some( (Some(a), _) ) => Some((bm, a))
         case _ => None
         }
       }
-    }
-    val bmsByTopic = bmAndTopics.groupBy(x => x._2).mapValues{x => x.map{_._1}}
-    var bmClicks = Map.empty[Id[NormalizedURI], (Int, Int)]
-    db.readOnly{ implicit s =>
+      val bmsByTopic = bmAndTopics.groupBy(x => x._2).mapValues{x => x.map{_._1}}
+      var bmClicks = Map.empty[Id[NormalizedURI], (Int, Int)]
        bmAndTopics.map{_._1}.foreach{ uriId =>
          clicksRepo.getByUserUri(userId, uriId) match {
            case Some(clicks) => bmClicks += (uriId -> (clicks.selfClicks, clicks.otherClicks))
            case None =>
          }
        }
+       (bmsByTopic, bmClicks)
     }
+
     var scores = Map.empty[Int, Float]
     for((topic, uris) <- bmsByTopic){
       val clicksInTopic = uris.flatMap{ uriId => bmClicks.get(uriId) }
