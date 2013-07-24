@@ -1,6 +1,6 @@
 package com.keepit.controllers.shoebox
 
-import com.google.inject.{Provider, Inject, Singleton}
+import com.google.inject.{Provider, Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.zookeeper.CentralConfig
 import com.keepit.model.NormalizedURI
@@ -8,6 +8,7 @@ import com.keepit.model.UserBookmarkClicksRepo
 import com.keepit.model.BookmarkRepo
 import com.keepit.model.UserStates
 import play.api.mvc.Action
+import play.api.mvc.AnyContent
 import play.api.libs.json._
 import com.keepit.model.{UriTopicRepoA, UriTopicRepoB}
 import com.keepit.model.UserRepo
@@ -23,9 +24,16 @@ import ExecutionContext.Implicits.global
 import com.keepit.common.logging.Logging
 import com.keepit.learning.topicmodel._
 import com.keepit.common.controller.ShoeboxServiceController
+import com.keepit.common.akka.SlowRunningExecutionContext
+
+@ImplementedBy(classOf[ExpertRecommenderControllerImpl])
+trait ExpertRecommenderController extends ShoeboxServiceController{
+  def init(): Unit
+  def suggestExperts(): Action[AnyContent]
+}
 
 @Singleton
-class ExpertRecommenderController @Inject()(
+class ExpertRecommenderControllerImpl @Inject()(
   db: Database,
   userRepo: UserRepo,
   uriTopicRepoA: UriTopicRepoA,
@@ -34,14 +42,12 @@ class ExpertRecommenderController @Inject()(
   bookmarkRepo: BookmarkRepo,
   centralConfig: CentralConfig,
   healthcheckPlugin: HealthcheckPlugin
-) extends ShoeboxServiceController with Logging{
+) extends ExpertRecommenderController with Logging{
   var enabled = false
   var scoreMap = MutMap.empty[(Id[User], Int), Float]
   var modelFlag: Option[String] = None
 
-  init()
-
-  private def init() = {
+  def init() = {
     val flagKey = new TopicModelFlagKey()
     val flag = centralConfig(flagKey)
     val rcmder = createExpertRecommender(flag)
@@ -97,7 +103,7 @@ class ExpertRecommenderController @Inject()(
       }
       log.info(s"topic score map has been generated for ${userIds.size} users. time elapsed: ${(System.currentTimeMillis() - t)/1000.0} seconds")
       scores
-    }
+    } (SlowRunningExecutionContext.ec)
   }
 
   def rank(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Seq[(Id[User], Double)] = {
@@ -122,7 +128,8 @@ class ExpertRecommenderController @Inject()(
     } else Nil
   }
 
-  def suggestExperts() = Action { request =>
+  override def suggestExperts() = Action { request =>
+    println("\n\n\nranking experts")
     val req = request.body.asJson.get.asInstanceOf[JsArray].value
     val urisAndKeepers = req.map{ js =>
       val uriId = Id[NormalizedURI]((js \ "uri").as[Long])
