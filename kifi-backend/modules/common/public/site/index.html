@@ -75,7 +75,7 @@
 			<span class="query-x-wrap"><a class="query-x" href="javascript:"></a></span>
 		</div>
 		<div class="main-head">
-			<h1>Browse your keeps</h1>
+			<h1></h1>
 			<div class="subtitle">
 				<span class="check-all"></span>
 				<span class="subtitle-text" data-template data-has="query" data-n="{{numShown}}" style="display:none">
@@ -218,6 +218,50 @@
 				<a data-href="friends/invite">Invite Friends</a>
 				<a data-href="friends/requests">Friend Requests</a>
 			</nav>
+			<div class="friends-page" data-href="friends">
+				<div class="above-friends-list">
+					<input class="friends-filter" type="text" placeholder="Type a friend’s name">
+				</div>
+				<div id="friends-list">
+					<ul class="antiscroll-inner">
+						<li class="friend" data-template>
+							<div class="friend-pic">
+								<img src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{image}}">
+							</div>
+							<div class="friend-info">
+								<div class="friend-name">{{label}}</div>
+								<div class="friend-label">Connected to you through:</div>
+								<div class="friend-networks">
+									<a class="friend-nw friend-nw-facebook{%if networks.facebook %} on{% endif %}"></a>
+									<a class="friend-nw friend-nw-linkedin{%if networks.linkedin %} on{% endif %}"></a>
+									<a class="friend-nw friend-nw-twitter"></a>
+									<a class="friend-nw friend-nw-pinterest"></a>
+								</div>
+							</div>
+							<div class="friend-actions">
+								<div style="position:relative">
+									<a class="friend-mute" href="javascript:"></a>
+									<a class="friend-status" href="javascript:"></a>
+									<div class="friend-action-desc"></div>
+								</div>
+							</div>
+						</li>
+					</ul>
+					<img class="friends-loading" src="img/wait.gif">
+				</div>
+			</div>
+			<div class="friends-page" data-href="friends/invite">
+				<nav class="network-filters">
+					<a href="javascript:">All</a>
+					<a href="javascript:" data-nw="facebook"></a>
+					<a href="javascript:" data-nw="linkedin"></a>
+				</nav>
+			</div>
+			<div class="friends-page" data-href="friends/requests">
+				<div class="friend-request-status">
+					You have no pending friend requests right now.
+				</div>
+			</div>
 		</div>
 	</div>
 	</section>
@@ -326,21 +370,21 @@
 
 	<div id="fr-card-template">
 		<div class="fr-card" data-template style="display:none">
-		  <div class="fr-card-top">
-		    <img class="fr-card-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{picUri}}">
-		    <div class="fr-card-info">
-		      <div class="fr-card-name">{{name}}</div>
-		      <div class="fr-card-label">Relevant interests:</div>
-		      <div class="fr-card-interests">Coming soon</div>
-		      <div class="fr-card-label">Connected to you through:</div>
-		      <div class="fr-card-networks">
-		        <a class="fr-card-nw fr-card-nw-facebook"></a>
-		        <a class="fr-card-nw fr-card-nw-linkedin"></a>
-		        <a class="fr-card-nw fr-card-nw-twitter"></a>
-		        <a class="fr-card-nw fr-card-nw-pinterest"></a>
-		      </div>
-		    </div>
-		  </div>
+			<div class="fr-card-top">
+				<img class="fr-card-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{picUri}}">
+				<div class="fr-card-info">
+					<div class="fr-card-name">{{name}}</div>
+					<div class="fr-card-label">Relevant interests:</div>
+					<div class="fr-card-interests">Coming soon</div>
+					<div class="fr-card-label">Connected to you through:</div>
+					<div class="friend-networks">
+						<a class="friend-nw friend-nw-facebook"></a>
+						<a class="friend-nw friend-nw-linkedin"></a>
+						<a class="friend-nw friend-nw-twitter"></a>
+						<a class="friend-nw friend-nw-pinterest"></a>
+					</div>
+				</div>
+			</div>
 		</div>
 	</div>
 
