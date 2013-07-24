@@ -498,7 +498,7 @@ $(function() {
 		$loadMore.addClass('hidden');
 
 		$query.attr("data-q", q);
-		if (!$query.val()) $query.val(q).focus();
+		if (!$query.val()) $query.val(q).focus().closest($queryWrap).removeClass('empty');
 		var context = searchResponse && searchResponse.context;
 		$.getJSON(urlSearch, {q: q, f: "a", maxHits: 30, context: context}, function(data) {
 			updateCollectionsIfAnyUnknown(data.hits);
@@ -914,7 +914,11 @@ $(function() {
 				searchTimeout = setTimeout(navigate.bind(null, uri), 500);  // instant search
 			}
 		}
-	})
+	});
+	$('.query-mag').mousedown(function(e) {
+		e.preventDefault();
+		$query.focus();
+	});
 	$('.query-x').click(function() {
 		$query.val('').focus().triggerHandler('input');
 	});

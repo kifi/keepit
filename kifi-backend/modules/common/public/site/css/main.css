@@ -87,18 +87,23 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 .query-wrap {background-color: #67829c; padding: 10px 120px 12px 0; transition: padding-right .3s; -webkit-transition: padding-right .3s; white-space: nowrap}
 .query-wrap.focus,
 .query-wrap:not(.empty) {padding-right: 0}
-input.query {border: none; padding: 9px 50px 9px 20px; font-family: inherit; font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; height: 48px; -moz-box-sizing: border-box; box-sizing: border-box; background: #fff url(../img/search.png) right 16px top 13px/26px auto no-repeat; -webkit-font-smoothing: antialiased}
-.query-wrap.focus>.query {background-position: right 16px top -24px}
-.query-wrap:not(.empty)>.query {background-image: none}
+input.query {border: none; padding: 9px 50px 9px 20px; font-family: inherit; font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; height: 48px; -moz-box-sizing: border-box; box-sizing: border-box; -webkit-font-smoothing: antialiased}
 input.query::-webkit-input-placeholder {color: #99a3b3}
 input.query::-moz-placeholder {color: #99a3b3}
 input.query::-ms-clear {display: none}
-.query-x-wrap {display: inline-block; width: 0; height: 48px; vertical-align: bottom; position: relative}
-.query-wrap.empty>.query-x-wrap {display: none}
-a.query-x[href] {position: absolute; right: 0; font-size: 42px; line-height: 48px; height: 48px; width: 52px; text-align: center; font-weight: 300; color: #b8c5d2; -webkit-font-smoothing: antialiased}
-a.query-x[href]:hover {color: #0089d5}
-a.query-x[href]:active {color: #556179}
-.query-x::before {content: "\d7"; display: inline-block; vertical-align: bottom; position: relative; bottom: 4px}
+.query-icon {display: inline-block; width: 0; height: 48px; vertical-align: bottom; position: relative}
+.query-mag {cursor: text}
+.query-mag,
+.query-x {position: absolute; right: 0; top: 0; bottom: 0; width: 50px; padding-top: 13px; text-align: center; -moz-box-sizing: border-box; box-sizing: border-box}
+.query-mag::before,
+.query-x::before {content: " "; display: inline-block; vertical-align: bottom; height: 23px; background-image: url(../img/search.png); background-size: auto 23px}
+.query-mag::before {width: 26px}
+.focus>*>.query-mag::before {background-position: -26px}
+.query-x::before {width: 23px; background-position: -52px}
+.query-x:hover::before {background-position: -75px}
+.query-x:active::before {background-position: -98px}
+.empty>*>.query-x,
+:not(.empty)>*>.query-mag {display: none}
 .main-head,
 .main-keeps {margin-left: 1px; box-shadow: -1px 0 #dbdee3}
 .main-head {padding: 13px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
@@ -466,7 +471,8 @@ a.friend-nw-pinterest.on {background-position: -51px 0}
 /* retina image overrides */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
   .header-logo {background-image: url(../img/kifi-logo.2x.png)}
-  input.query {background-image: url(../img/search.2x.png)}
+  .query-mag::before,
+  .query-x::before {background-image: url(../img/search.2x.png)}
   .left-col .my-keeps .view-name::before,
   #collections>h2::before {background-image: url(../img/nav-icons.2x.png)}
   .keep-private {background-image: url(../img/private.2x.png)}
