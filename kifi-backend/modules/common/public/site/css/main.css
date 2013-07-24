@@ -119,6 +119,8 @@ h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-we
 .profile .profile-name .editable {font-size: 24px; padding: 3px;}
 .profile .profile-name input {font: inherit; font-size: 24px; width: 150px;}
 .profile .profile-description {display: block; font-size: 16px; padding: 5px; margin-left: 5px;}
+.profile .profile-description.editing [data-chars-left] { position: relative; padding-bottom: 18px; }
+.profile .profile-description.editing [data-chars-left]:after { content: attr(data-chars-left) " characters left"; display: block; position: absolute; bottom: 0; left: 2px; font-size: 12px; min-width: 150px; }
 .profile .profile-description input {font: inherit; font-size: 16px; width: 300px;}
 .edit-container span.edit, .edit-container span.save {display: none; cursor: pointer; vertical-align: top; background: #b8c5d2; color: white; font-size: 12px; padding: 4px; margin-left: 8px;}
 .edit-container:hover span.edit {display: inline-block; height: 12px;}
@@ -133,11 +135,11 @@ span.edit::before, span.save::before { display: inline-block; position: absolute
 .profile h2 { clear: both; border-bottom: 1px solid #818692; padding: 15px 0 0; }
 .profile .contact-email { font-size: 17px; margin: 15px 0; }
 .profile .contact-email input { font-size: 17px; font: inherit; }
-.profile .contact-email .editable { display: inline-block; padding: 2px 0;}
+.profile .contact-email .editable { display: inline-block; padding: 2px 0; }
 .profile>.networks { position: relative; font-size: 0; background-size: 62px; margin: 20px 0; padding: 0; }
 .profile>.networks>ul { margin: 0; padding: 60px 0 0 72px; }
 .profile>.networks>.kifi-k::before { position: absolute; display: block; content: "."; background: url(../img/kifi-k.png) no-repeat; background: size: 100%; top: -6px; left: -6px; border: 6px solid white; width: 62px; height: 62px; border-radius: 50%; z-index: 1;}
-.profile>.networks>.kifi-k::after { position: absolute; display: block; content: "*"; z-index: 5; left: 40px; top: 0; width: 286px; height: 58px; }
+.profile>.networks>.kifi-k::after { position: absolute; display: block; content: "."; z-index: 5; left: 40px; top: 0; width: 286px; height: 58px; }
 .profile>.networks::before { position: absolute; display: block; content: "."; top: 24px; left: 54px; width: 9px; width: 9px; height: 9px; background: #accc98; border: 2px solid white; border-radius: 50%; z-index: 2; }
 .profile>.networks::after { position: absolute; display: block; content: "."; top: 21px; left: 63px; width: 284px; height: 20px; background: #eff2f7; z-index: 0; }
 .profile>.networks>ul>li { display: inline-block; margin: 0 5px; width: 60px; height: 60px; font-size: 0; }
