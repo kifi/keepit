@@ -151,8 +151,8 @@ api = function() {
 
   var focusedWinId, topNormalWinId;
   chrome.windows.getLastFocused(null, function(win) {
-    focusedWinId = win.focused ? win.id : chrome.windows.WINDOW_ID_NONE;
-    topNormalWinId = win.type == "normal" ? win.id : chrome.windows.WINDOW_ID_NONE;
+    focusedWinId = win && win.focused ? win.id : chrome.windows.WINDOW_ID_NONE;
+    topNormalWinId = win && win.type == "normal" ? win.id : chrome.windows.WINDOW_ID_NONE;
   });
   chrome.windows.onFocusChanged.addListener(function(winId) {
     api.log("[onFocusChanged] win %o -> %o", focusedWinId, winId);
