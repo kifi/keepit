@@ -124,7 +124,6 @@ class ExpertRecommenderController @Inject()(
   }
 
   def suggestExperts() = Action { request =>
-    println("\n\n\nranking experts")
     val req = request.body.asJson.get.asInstanceOf[JsArray].value
     val urisAndKeepers = req.map{ js =>
       val uriId = Id[NormalizedURI]((js \ "uri").as[Long])
