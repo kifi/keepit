@@ -435,7 +435,7 @@ $(function() {
 		if ($tab.length) {
 			$friendsTabs.not($tab).filter(':not([href])').each(function() {this.href = $(this).data('href')});
 			[prepFriendsTab, prepInviteTab, prepRequestsTab][$tab.index()]();
-			$friendsTabPages.hide().filter('[data-href="' + path + '"]').show();
+			$friendsTabPages.hide().filter('[data-href="' + path + '"]').show().find('input').focus();
 		} else {
 			navigate('friends', {replace: true});
 		}
