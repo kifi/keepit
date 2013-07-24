@@ -374,12 +374,6 @@ $(function() {
 			$('.profile .save').click(function () {
 				var props = {};
 				var $editContainer = $(this).closest('.edit-container');
-				$editContainer.find('.editable').each(function () {
-					var $this = $(this);
-					var value = $this.find('input').val();
-					$this.text(value);
-					props[$this.data('prop')] = value;
-				});
 				if (props['email']) {
 					props['emails'] = [props['email']];
 					delete props['email'];
@@ -398,7 +392,13 @@ $(function() {
 						$save.text(saveText);
 					},
 					success: function (data) {
-						$editContainer.removeClass('editing')
+						$editContainer.find('.editable').each(function () {
+							var $this = $(this);
+							var value = $this.find('input').val();
+							$this.text(value);
+							props[$this.data('prop')] = value;
+						});
+						$editContainer.removeClass('editing');
 						$save.text(saveText);
 						updateMe(data);
 					}
