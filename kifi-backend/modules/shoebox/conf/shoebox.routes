@@ -348,7 +348,7 @@ POST    /internal/shoebox/channel/userCount           @com.keepit.controllers.sh
 POST    /internal/shoebox/channel/uri                 @com.keepit.controllers.shoebox.ShoeboxController.uriChannelFanout()
 POST    /internal/shoebox/channel/uriCount            @com.keepit.controllers.shoebox.ShoeboxController.uriChannelCountFanout()
 
-POST     /internal/shoebox/learning/suggestExperts    @com.keepit.controllers.admin.TopicModelController.suggestExperts()
+POST     /internal/shoebox/learning/suggestExperts    @com.keepit.controllers.shoebox.ExpertRecommenderController.suggestExperts()
 
 
 ->  / common.Routes
