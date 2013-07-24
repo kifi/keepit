@@ -25,7 +25,6 @@ class ExtCommentController @Inject() (
   commentReadRepo: CommentReadRepo,
   urlRepo: URLRepo,
   userRepo: UserRepo,
-  userExperimentRepo: UserExperimentRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   commentWithBasicUserRepo: CommentWithBasicUserRepo,
   followRepo: FollowRepo,
@@ -277,7 +276,7 @@ class ExtCommentController @Inject() (
 
   def removeComment(id: ExternalId[Comment]) = AuthenticatedJsonAction { request =>
     db.readWrite { implicit s =>
-      if (userExperimentRepo.hasExperiment(request.userId, ExperimentTypes.ADMIN)) {
+      if (request.experiments.contains(ExperimentTypes.ADMIN)) {
         commentRepo.getOpt(id).filter(_.isActive).map { c =>
           commentRepo.save(c.withState(CommentStates.INACTIVE))
         }
