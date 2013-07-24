@@ -13,23 +13,25 @@ class ExtDeepLinkController @Inject() (
   normalizedURIRepo: NormalizedURIRepo)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
-  def handle(token: String) = AuthenticatedHtmlAction { request =>
-    val deepLink = db.readOnly { implicit session => deepLinkRepo.getByToken(DeepLinkToken(token)) }
+  def handle(token: String) = HtmlAction(authenticatedAction = { request =>
+    getDeepLinkAndUrl(token) map { case (deepLink, url) =>
+      deepLink.recipientUserId match {
+        case Some(request.userId) => Ok(views.html.deeplink(url, deepLink.deepLocator.value))
+        case _ => Redirect(url)
+      }
+    } getOrElse NotFound
+  }, unauthenticatedAction = { request =>
+    getDeepLinkAndUrl(token) map { case (_, url) => Redirect(url) } getOrElse NotFound
+  })
 
-    deepLink match {
-      case Some(deep) =>
-        deep.recipientUserId match {
-          case Some(recip) if request.userId != recip =>
-            Forbidden
-          case _ =>
-            val nUri = db.readOnly { implicit session =>
-              normalizedURIRepo.get(deep.uriId.get)
-            }
-            Ok(views.html.deeplink(nUri.url, deep.deepLocator.value))
-        }
-      case None =>
-        NotFound
+  private def getDeepLinkAndUrl(token: String): Option[(DeepLink, String)] = {
+    db.readOnly { implicit s =>
+      for {
+        deepLink <- deepLinkRepo.getByToken(DeepLinkToken(token))
+        uriId <- deepLink.uriId
+      } yield {
+        (deepLink, normalizedURIRepo.get(uriId).url)
+      }
     }
   }
-
 }
