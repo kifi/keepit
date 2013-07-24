@@ -38,6 +38,16 @@ $.fn.removeText = function() {
 	return this.contents().filter(function() {return this.nodeType == 3}).remove().end().end();
 };
 
+$.postJson = function(uri, data, done) {
+	return $.ajax({
+		url: uri,
+		type: 'POST',
+		dataType: 'json',
+		data: JSON.stringify(data),
+		contentType: 'application/json',
+		success: done || $.noop});
+};
+
 // detaches and reattaches nested template so it will work as an independent template
 $.fn.prepareDetached = function(opts) {
 	var el = this[0], p = el.parentNode, n = el.nextSibling, t;
@@ -65,15 +75,9 @@ $(function() {
 		maxWidth: 420,
 		stop: function(e, ui) {
 			console.log("[resizable:stop] saving");
-			$.ajax({
-				url: urlMyPrefs,
-				type: "POST",
-				dataType: 'json',
-				data: JSON.stringify({site_left_col_width: String($leftCol.outerWidth())}),
-				contentType: 'application/json',
-				done: function(data) {
-					console.log("[prefs]", data);
-				}});
+			$.postJson(urlMyPrefs, {site_left_col_width: String($leftCol.outerWidth())}, function(data) {
+				console.log("[prefs]", data);
+			});
 		}
 	});
 	$leftCol.find(".ui-resizable-handle").appendTo($leftCol.find(".page-col-inner"));
@@ -298,28 +302,15 @@ $(function() {
 				$('.page-who-pics').append($detailed.find(".keep-who>.pic").clone());
 				$('.page-who-text').html($detailed.find(".keep-who-text").html());
 				var $pic = $('.page-pic'), $chatter = $('.page-chatter');
-				$.ajax({
-					url: urlScreenshot,
-					type: 'POST',
-					dataType: 'json',
-					data: JSON.stringify({url: o.url}),
-					contentType: 'application/json',
-					success: function(data) {
-						$pic.css('background-image', 'url(' + data.url + ')');
-					},
-					error: function() {
-						$pic.find('.page-pic-soon').show();
-					}});
-				$.ajax({
-					url: urlChatter,
-					type: 'POST',
-					dataType: 'json',
-					data: JSON.stringify({url: o.url}),
-					contentType: 'application/json',
-					success: function(data) {
-						$chatter.find('.page-chatter-messages').attr('data-n', data.conversations || 0);
-						$chatter.find('.page-chatter-comments').attr('data-n', data.comments || 0);
-					}});
+				$.postJson(urlScreenshot, {url: o.url}, function(data) {
+					$pic.css('background-image', 'url(' + data.url + ')');
+				}).error(function() {
+					$pic.find('.page-pic-soon').show();
+				});
+				$.postJson(urlChatter, {url: o.url}, function(data) {
+					$chatter.find('.page-chatter-messages').attr('data-n', data.conversations || 0);
+					$chatter.find('.page-chatter-comments').attr('data-n', data.comments || 0);
+				});
 			} else { // multiple keeps
 				var collCounts = collIds.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
 				o.collections = Object.keys(collCounts).sort(function(id1, id2) {return collCounts[id1] - collCounts[id2]}).map(collIdAndName);
@@ -383,27 +374,19 @@ $(function() {
 				var $save = $editContainer.find('.save')
 				var saveText = $save.text();
 				$save.text('Saving...');
-				$.ajax({
-					url: urlMe,
-					type: "POST",
-					dataType: 'json',
-					data: JSON.stringify(props),
-					contentType: 'application/json',
-					error: function () {
-						showMessage('Uh oh! A bad thing happened!');
-						$save.text(saveText);
-					},
-					success: function (data) {
-						$editContainer.find('.editable').each(function () {
-							var $this = $(this);
-							var value = $this.find('input').val();
-							$this.text(value);
-							props[$this.data('prop')] = value;
-						});
-						$editContainer.removeClass('editing');
-						$save.text(saveText);
-						updateMe(data);
-					}
+				$.postJson(urlMe, props, function(data) {
+					$editContainer.find('.editable').each(function () {
+						var $this = $(this);
+						var value = $this.find('input').val();
+						$this.text(value);
+						props[$this.data('prop')] = value;
+					});
+					$editContainer.removeClass('editing');
+					$save.text(saveText);
+					updateMe(data);
+				}).error(function() {
+					showMessage('Uh oh! A bad thing happened!');
+					$save.text(saveText);
 				});
 			});
 			$('.profile .networks a').each(function () {
@@ -679,26 +662,19 @@ $(function() {
 		var $coll = $collMenu.closest(".collection");
 		var collId = $coll.data("id");
 		console.log("Removing collection", collId);
-		$.ajax({
-			url: urlCollections + "/" + collId + "/delete",
-			type: "POST",
-			dataType: 'json',
-			data: '{}',
-			contentType: 'application/json',
-			error: showMessage.bind(null, 'Could not delete collection, please try again later'),
-			success: function(data) {
-				delete collections[collId];
-				$coll.slideUp(80, $.fn.remove.bind($coll));
-				if ($myKeeps.data("collId") === collId) {
-					$myKeeps.removeData("collId");
-					showMyKeeps();
-				}
-				var $keepColl = $main.find(".keep-coll[data-id=" + collId + "]");
-				if ($keepColl.length) $keepColl.css("width", $keepColl[0].offsetWidth);
-				var $pageColl = $detail.find(".page-coll[data-id=" + collId + "]");
-				if ($pageColl.length) $pageColl.css("width", $pageColl[0].offsetWidth);
-				$keepColl.add($pageColl).layout().on("transitionend", removeIfThis).addClass("removed");
-			}});
+		$.postJson(urlCollections + '/' + collId + '/delete', {}, function(data) {
+			delete collections[collId];
+			$coll.slideUp(80, $.fn.remove.bind($coll));
+			if ($myKeeps.data("collId") === collId) {
+				$myKeeps.removeData("collId");
+				showMyKeeps();
+			}
+			var $keepColl = $main.find(".keep-coll[data-id=" + collId + "]");
+			if ($keepColl.length) $keepColl.css("width", $keepColl[0].offsetWidth);
+			var $pageColl = $detail.find(".page-coll[data-id=" + collId + "]");
+			if ($pageColl.length) $pageColl.css("width", $pageColl[0].offsetWidth);
+			$keepColl.add($pageColl).layout().on("transitionend", removeIfThis).addClass("removed");
+		}).error(showMessage.bind(null, 'Could not delete collection, please try again later'));
 	}).on("mouseup mousedown", ".coll-rename", function(e) {
 		if (e.which > 1) return;
 		hideCollMenu();
@@ -721,22 +697,14 @@ $(function() {
 				var newName = $.trim(this.value) || oldName;
 				if (newName !== oldName) {
 					var collId = $coll.addClass("renamed").data("id");
-					$.ajax({
-						url: urlCollections + "/" + collId + "/update",
-						type: "POST",
-						dataType: 'json',
-						data: JSON.stringify({name: newName}),
-						contentType: 'application/json',
-						error: function() {
-							showMessage('Could not rename collection, please try again later');
-							$name.text(oldName);
-						},
-						success: function() {
-							collections[collId].name = newName;
-							if ($myKeeps.data("collId") === collId) {
-								$main.find("h1").text(newName);
-							}
+					$.postJson(urlCollections + '/' + collId + '/update', {name: newName}, function() {
+						collections[collId].name = newName;
+						if ($myKeeps.data("collId") === collId) {
+							$main.find("h1").text(newName);
 						}
+					}).error(function() {
+						showMessage('Could not rename collection, please try again later');
+						$name.text(oldName);
 					});
 				}
 				exitRename(newName);
@@ -937,17 +905,12 @@ $(function() {
 		placeholder: "sortable-placeholder",
 		beforeStop: function(event, ui) {
 			// update the collection order
-			$.ajax({
-				url: urlCollectionsOrder,
-				type: "POST",
-				async: false,
-				dataType: 'json',
-				data: JSON.stringify($(this).find(".collection").map(getDataId).get()),
-				contentType: 'application/json',
-				error: showMessage.bind(null, 'Could not reorder the collections, please try again later'),
-				success: function(data) {
-					console.log(data);
-				}});
+			$.postJson(urlCollectionsOrder, $(this).find(".collection").map(getDataId).get(), function(data) {
+				console.log(data);
+			}).error(function() {
+				showMessage('Could not reorder the collections, please try again later');
+				// TODO: revert the re-order in the DOM
+			});
 		}
 	}).on("mousedown", ".coll-tri", function(e) {
 		if (e.button > 0) return;
@@ -1033,36 +996,20 @@ $(function() {
 
 	function createCollection(name, callback) {
 		$newColl.addClass("submitted");
-		$.ajax({
-			url: urlCollectionsCreate,
-			type: "POST",
-			dataType: 'json',
-			data: JSON.stringify({name: name}),
-			contentType: 'application/json',
-			error: function() {
-				showMessage('Could not create collection, please try again later');
-				callback();
-			},
-			success: function(data) {
-				collTmpl.prepend(collections[data.id] = {id: data.id, name: name, keeps: 0});
-				callback(data.id);
-			}});
+		$.postJson(urlCollectionsCreate, {name: name}, function(data) {
+			collTmpl.prepend(collections[data.id] = {id: data.id, name: name, keeps: 0});
+			callback(data.id);
+		}).error(function() {
+			showMessage('Could not create collection, please try again later');
+			callback();
+		});
 	}
 
 	function addKeepsToCollection(collId, $keeps, onError) {
-		$.ajax({
-			url: urlKeepAdd,
-			type: "POST",
-			dataType: 'json',
-			data: JSON.stringify({
+		$.postJson(urlKeepAdd, {
 				collectionId: collId,
-				keeps: $keeps.map(function() {var a = this.querySelector(".keep-title>a"); return {title: a.title, url: a.href}}).get()}),
-			contentType: 'application/json',
-			error: function() {
-				showMessage('Could not add to collection, please try again later');
-				if (onError) onError();
-			},
-			success: function(data) {
+				keeps: $keeps.map(function() {var a = this.querySelector(".keep-title>a"); return {title: a.title, url: a.href}}).get()},
+			function(data) {
 				$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps += data.addedToCollection);
 				var collName = collections[collId].name;
 				$keeps.addClass("mine")
@@ -1078,21 +1025,16 @@ $(function() {
 						inCollTmpl.into($inColl[0]).append({id: collId, name: collName});
 					}
 				}
-			}
-		});
+			}).error(function() {
+				showMessage('Could not add to collection, please try again later');
+				if (onError) onError();
+			});
 	}
 
 	function removeKeepsFromCollection(collId, keepIds) {
-		$.ajax({
-			url: urlCollections + "/" + collId + "/removeKeeps",
-			type: "POST",
-			dataType: 'json',
-			data: JSON.stringify(keepIds),
-			contentType: 'application/json',
-			error: showMessage.bind(null, 'Could not remove keep' + (keepIds.length > 1 ? 's' : '') + ' from collection, please try again later'),
-			success: function(data) {
-				$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps -= data.removed);
-			}});
+		$.postJson(urlCollections + "/" + collId + "/removeKeeps", keepIds, function(data) {
+			$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps -= data.removed);
+		}).error(showMessage.bind(null, 'Could not remove keep' + (keepIds.length > 1 ? 's' : '') + ' from collection, please try again later'));
 		var $allKeeps = $main.find(".keep");
 		var $keeps = $allKeeps.filter(function() {return keepIds.indexOf($(this).data("id")) >= 0});
 		var $keepColl = $keeps.find(".keep-coll[data-id=" + collId + "]");
@@ -1120,54 +1062,38 @@ $(function() {
 		var $a = $(this), howKept = $detail.children().attr("data-kept");
 		if (!howKept) {  // keep
 			howKept = $a.hasClass('page-keep') ? "pub" : "pri";
-			$.ajax({
-				url: urlKeepAdd,
-				type: "POST",
-				dataType: 'json',
-				data: JSON.stringify({
+			$.postJson(urlKeepAdd, {
 					keeps: $keeps.map(function() {
 						var a = $(this).find('.keep-title>a')[0];
 						return {title: a.title, url: a.href, isPrivate: howKept == 'pri'};
-					}).get()}),
-				contentType: 'application/json',
-				error: showMessage.bind(null, 'Could not add keeps, please try again later'),
-				success: function(data) {
+					}).get()
+				}, function(data) {
 					$detail.children().attr('data-kept', howKept).find('.page-how').attr('class', 'page-how ' + howKept);
 					$keeps.addClass("mine").find(".keep-private").toggleClass("on", howKept == "pri");
-				}});
+				}).error(showMessage.bind(null, 'Could not add keeps, please try again later'));
 		} else if ($a.hasClass('page-keep')) {  // unkeep
-			$.ajax({
-				url: urlKeepRemove,
-				type: "POST",
-				dataType: 'json',
-				data: JSON.stringify($keeps.map(function() {return {url: this.querySelector('.keep-title>a').href}}).get()),
-				contentType: 'application/json',
-				error: showMessage.bind(null, 'Could not remove keeps, please try again later'),
-				success: function(data) {
-					$detail.children().removeAttr('data-kept');
-					$detail.find('.page-coll').remove();
-					$keeps.removeClass("mine").find(".keep-private").removeClass("on");
-					var collCounts = $keeps.find(".keep-coll").remove().map(getDataId).get()
-						.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
-					for (var collId in collCounts) {
-						$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps -= collCounts[collId]);
-					}
-				}});
+			$.postJson(urlKeepRemove, $keeps.map(function() {return {url: this.querySelector('.keep-title>a').href}}).get(), function(data) {
+				$detail.children().removeAttr('data-kept');
+				$detail.find('.page-coll').remove();
+				$keeps.removeClass("mine").find(".keep-private").removeClass("on");
+				var collCounts = $keeps.find(".keep-coll").remove().map(getDataId).get()
+					.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
+				for (var collId in collCounts) {
+					$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps -= collCounts[collId]);
+				}
+			}).error(showMessage.bind(null, 'Could not remove keeps, please try again later'));
 		} else {  // toggle public/private
 			howKept = howKept == "pub" ? "pri" : "pub";
 			$detail.children().attr('data-kept', howKept).find('.page-how').attr('class', 'page-how ' + howKept);
 			$keeps.each(function() {
 				var $keep = $(this), keepLink = $keep.find('.keep-title>a')[0];
-				$.ajax({
-					url: urlKeeps + "/" + $keep.data('id') + "/update",  // TODO: support bulk operation with one server request
-					type: "POST",
-					dataType: 'json',
-					data: JSON.stringify({title: keepLink.title, url: keepLink.href, isPrivate: howKept == 'pri'}),
-					contentType: 'application/json',
-					error: showMessage.bind(null, 'Could not update keep, please try again later'),
-					success: function(data) {
+				// TODO: support bulk operation with one server request
+				$.postJson(
+					urlKeeps + "/" + $keep.data('id') + "/update",
+					{title: keepLink.title, url: keepLink.href, isPrivate: howKept == 'pri'},
+					function(data) {
 						$keep.find('.keep-private').toggleClass('on', howKept == 'pri');
-					}});
+					}).error(showMessage.bind(null, 'Could not update keep, please try again later'));
 			});
 		}
 	}).on("click", ".page-coll-a", function(e) {
