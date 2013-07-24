@@ -14,7 +14,6 @@ import com.keepit.search.query.MediaQuery
 
 trait QueryExpansion extends QueryParser {
 
-  var enableCoord = false
   val siteBoost: Float
 
   def getStemmedPhrase(field: String, phraseStart: Int, phraseEnd: Int) = {

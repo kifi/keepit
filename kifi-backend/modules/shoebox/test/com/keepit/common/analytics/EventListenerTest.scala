@@ -1,24 +1,24 @@
 package com.keepit.common.analytics
 
 import com.keepit.common.plugin._
-import com.keepit.model.NormalizedURIStates._
 import com.keepit.common.time._
 import org.specs2.mutable._
-import play.api.test._
 import play.api.test.Helpers._
-import scala.math._
 import com.keepit.test._
-import com.keepit.common.db.Id
-import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
+import play.api.libs.json.{JsObject, JsString}
 import com.keepit.model._
-import com.keepit.common.db._
-import play.api.Play.current
-import com.keepit.inject.inject
 import com.keepit.common.service.FortyTwoServices
+import com.google.inject.Injector
+import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.search.TestSearchServiceClientModule
+import com.keepit.shoebox.FakeShoeboxServiceModule
 
-class EventListenerTest extends Specification with DbRepos {
+class EventListenerTest extends Specification with ShoeboxApplicationInjector {
 
-  def setup() = {
+  val eventListenerTestModules = Seq(TestActorSystemModule(), ShoeboxFakeStoreModule(), TestAnalyticsModule(), TestSearchServiceClientModule(), FakeShoeboxServiceModule())
+
+  def setup()(implicit injector: Injector) = {
     db.readWrite {implicit s =>
       val normUrlId = uriRepo.save(NormalizedURIFactory("http://www.google.com/")).id.get
       val url = urlRepo.save(URLFactory(url = "http://www.google.com/", normalizedUriId = normUrlId))
@@ -36,7 +36,7 @@ class EventListenerTest extends Specification with DbRepos {
 
   "EventHelper" should {
     "parse search events" in {
-      running(new ShoeboxApplication().withShoeboxServiceModule) {
+      running(new ShoeboxApplication(eventListenerTestModules:_*)) {
         val (normUrlId, url, user, bookmark) = setup()
         val listener = new EventListener(inject[UserRepo], inject[NormalizedURIRepo]) {
           val schedulingProperties = inject[SchedulingProperties]
@@ -58,7 +58,7 @@ class EventListenerTest extends Specification with DbRepos {
 
   "EventListener" should {
     "process events" in {
-      running(new ShoeboxApplication().withShoeboxServiceModule) {
+      running(new ShoeboxApplication(eventListenerTestModules:_*)) {
         val (normUrlId, url, user, bookmark) = setup()
         implicit val clock = inject[Clock]
         implicit val fortyTwoServices = inject[FortyTwoServices]

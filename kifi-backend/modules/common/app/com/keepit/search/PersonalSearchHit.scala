@@ -10,7 +10,7 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.common.akka.MonitoredAwait
 import play.api.libs.json.Json
 import com.keepit.common.db.{ExternalId, Id}
-import com.keepit.common.social.BasicUser
+import com.keepit.social.BasicUser
 
 //note: users.size != count if some users has the bookmark marked as private
 case class PersonalSearchHit(
@@ -19,7 +19,8 @@ case class PersonalSearchHit(
     url: String,
     isPrivate: Boolean,
     titleMatches: Seq[(Int, Int)],
-    urlMatches: Seq[(Int, Int)]
+    urlMatches: Seq[(Int, Int)],
+    collections: Option[Seq[ExternalId[Collection]]]
 )
 
 case class PersonalSearchResult(hit: PersonalSearchHit, count: Int, isMyBookmark: Boolean, isPrivate: Boolean, users: Seq[BasicUser], score: Float, isNew: Boolean)
@@ -30,4 +31,5 @@ case class PersonalSearchResultPacket(
   mayHaveMoreHits: Boolean,
   show: Boolean,
   experimentId: Option[Id[SearchConfigExperiment]],
-  context: String)
+  context: String,
+  expertNames: Seq[String] = Nil)

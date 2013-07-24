@@ -1,24 +1,18 @@
 package com.keepit.model
 import org.joda.time.DateTime
-import com.keepit.common.time._
 import com.keepit.common.time.zones.PT
 import org.specs2.mutable.Specification
-import com.keepit.test.TestDBRunner
 import com.google.inject.Injector
 import com.keepit.common.db.Id
 import scala.Array.canBuildFrom
-import com.keepit.learning.topicmodel.TopicModelGlobal
+import com.keepit.learning.topicmodel.TopicModelGlobalTest
 import play.api.libs.json._
-import com.keepit.common.db.slick.DataBaseComponent
-import play.api.test._
-import play.api.test.Helpers._
 import com.keepit.test._
-import com.keepit.common.cache.ShoeboxCacheModule
 import com.keepit.common.cache._
 
 
 
-class UserTopicTest extends Specification with TestDBRunner {
+class UserTopicTest extends Specification with ShoeboxTestInjector {
 
   def genTopic(numTopics: Int, userIdx: Int, default: Int = 1, personal: Int = 10) = {
       val topic = (new Array[Int](numTopics)).map(_ + default)
@@ -29,12 +23,12 @@ class UserTopicTest extends Specification with TestDBRunner {
   // user i concentrates on topic i
   def setup()(implicit injector: Injector) = {
     val t = new DateTime(2013, 5, 20, 21, 59, 0, 0, PT)
-    val numTopics = TopicModelGlobal.numTopics
+    val numTopics = TopicModelGlobalTest.numTopics
     val ids = (0 until numTopics).map{Id[User](_)}
     val userTopics = (0 until numTopics).map{ i =>
       genTopic(numTopics, i)
     }
-    val userTopicRepo = inject[UserTopicRepo]
+    val userTopicRepo = inject[UserTopicRepoA]
     val helper = new UserTopicByteArrayHelper
     val userTopicFromDb = db.readWrite { implicit s =>
       (ids zip userTopics) map { x =>
@@ -48,11 +42,11 @@ class UserTopicTest extends Specification with TestDBRunner {
 
   "userTopicRepo" should {
     "correctly persist user topic and be able to delete all" in {
-      withDB(ShoeboxCacheModule(HashMapMemoryCacheModule())) { implicit injector =>
+      withDb() { implicit injector =>
         val userTopics = setup()
-        val numTopics = TopicModelGlobal.numTopics
+        val numTopics = TopicModelGlobalTest.numTopics
         val helper = new UserTopicByteArrayHelper
-        val userTopicRepo = inject[UserTopicRepo]
+        val userTopicRepo = inject[UserTopicRepoA]
         db.readOnly { implicit s =>
           (0 until numTopics).foreach {i =>
             val userId = Id[User](i)
@@ -77,7 +71,7 @@ class UserTopicTest extends Specification with TestDBRunner {
     "work" in {
       val t1 = new DateTime(2013, 5, 20, 21, 59, 0, 0, PT)
       val t2 = new DateTime(2013, 5, 22, 21, 59, 0, 0, PT)
-      val topic = new Array[Int](TopicModelGlobal.numTopics)
+      val topic = new Array[Int](TopicModelGlobalTest.numTopics)
       topic(1) = 1; topic(5) = 5;
       val helper = new UserTopicByteArrayHelper
       val userTopic = new UserTopic(id = Some(Id[UserTopic](1)), userId = Id[User](2), topic = helper.toByteArray(topic), createdAt = t1, updatedAt = t2)
@@ -94,9 +88,9 @@ class UserTopicTest extends Specification with TestDBRunner {
 
   "userTopic cache" should {
     "work" in {
-      withDB(ShoeboxCacheModule(HashMapMemoryCacheModule())) { implicit injector =>
+      withDb(ShoeboxCacheModule(HashMapMemoryCacheModule())) { implicit injector =>
         val userTopics = setup()
-        val userTopicRepo = inject[UserTopicRepo]
+        val userTopicRepo = inject[UserTopicRepoA]
         val helper = new UserTopicByteArrayHelper
 
         db.readOnly{ implicit s =>

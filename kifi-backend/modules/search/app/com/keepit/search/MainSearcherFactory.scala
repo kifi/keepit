@@ -1,5 +1,6 @@
 package com.keepit.search
 
+import com.keepit.search.graph.CollectionSearcherWithUser
 import com.keepit.search.graph.URIGraph
 import com.keepit.search.graph.URIGraphSearcherWithUser
 import com.keepit.search.graph.URIGraphUnsupportedVersionException
@@ -48,25 +49,39 @@ class MainSearcherFactory @Inject() (
     implicit private val fortyTwoServices: FortyTwoServices
  ) extends Logging {
 
-  private[this] val consolidate = new RequestConsolidator[Id[User], URIGraphSearcherWithUser](3 seconds)
+  private[this] val consolidateURIGraphSearcherReq = new RequestConsolidator[Id[User], URIGraphSearcherWithUser](3 seconds)
+  private[this] val consolidateCollectionSearcherReq = new RequestConsolidator[Id[User], CollectionSearcherWithUser](3 seconds)
 
-  def apply(userId: Id[User], filter: SearchFilter, config: SearchConfig) = {
+  def apply(
+    userId: Id[User],
+    queryString: String,
+    langProbabilities: Map[Lang, Double],
+    numHitsToReturn: Int,
+    filter: SearchFilter,
+    config: SearchConfig,
+    lastUUID: Option[ExternalId[ArticleSearchResultRef]]
+  ) = {
+    val clickBoostsFuture = getClickBoostsFuture(userId, queryString, config.asFloat("maxResultClickBoost"), config.asBoolean("useS3FlowerFilter"))
     val browsingHistoryFuture = shoeboxClient.getBrowsingHistoryFilter(userId).map(browsingHistoryBuilder.build)
     val clickHistoryFuture = shoeboxClient.getClickHistoryFilter(userId).map(clickHistoryBuilder.build)
 
     val uriGraphSearcherFuture = getURIGraphSearcherFuture(userId)
+    val collectionSearcherFuture = getCollectionSearcherFuture(userId)
     val articleSearcher = articleIndexer.getSearcher
-    val collectionSearcher = uriGraph.getCollectionSearcher()
 
     new MainSearcher(
         userId,
+        queryString,
+        langProbabilities,
+        numHitsToReturn,
         filter,
         config,
+        lastUUID,
         articleSearcher,
-        monitoredAwait.result(uriGraphSearcherFuture, 5 seconds, s"getting uri graph for user Id $userId"),
-        collectionSearcher,
+        monitoredAwait.result(uriGraphSearcherFuture, 5 seconds, s"getting uri graph searcher for user Id $userId"),
+        monitoredAwait.result(collectionSearcherFuture, 5 seconds, s"getting collection searcher for user Id $userId"),
         parserFactory,
-        resultClickTracker,
+        clickBoostsFuture,
         browsingHistoryFuture,
         clickHistoryFuture,
         shoeboxClient,
@@ -75,9 +90,12 @@ class MainSearcherFactory @Inject() (
     )
   }
 
-  def clear() { consolidate.clear() }
+  def clear(): Unit = {
+    consolidateURIGraphSearcherReq.clear()
+    consolidateCollectionSearcherReq.clear()
+  }
 
-  def getURIGraphSearcherFuture(userId: Id[User]) = consolidate(userId){ userId =>
+  def getURIGraphSearcherFuture(userId: Id[User]) = consolidateURIGraphSearcherReq(userId){ userId =>
     future {
       uriGraph.getURIGraphSearcher(userId)
     } recover {
@@ -90,7 +108,23 @@ class MainSearcherFactory @Inject() (
   }
 
   def getURIGraphSearcher(userId: Id[User]): URIGraphSearcherWithUser = {
-    monitoredAwait.result(getURIGraphSearcherFuture(userId), 5 seconds, s"getting uri graph for user Id $userId")
+    monitoredAwait.result(getURIGraphSearcherFuture(userId), 5 seconds, s"getting uri graph searcher for user Id $userId")
+  }
+
+  def getCollectionSearcherFuture(userId: Id[User]) = consolidateCollectionSearcherReq(userId){ userId =>
+    future {
+      uriGraph.getCollectionSearcher(userId)
+    }
+  }
+
+  def getCollectionSearcher(userId: Id[User]): CollectionSearcherWithUser = {
+    monitoredAwait.result(getCollectionSearcherFuture(userId), 5 seconds, s"getting collection searcher for user Id $userId")
+  }
+
+  def getClickBoostsFuture(userId: Id[User], queryString: String, maxResultClickBoost: Float, useS3FlowerFilter: Boolean) = {
+    future {
+      resultClickTracker.getBoosts(userId, queryString, maxResultClickBoost, useS3FlowerFilter)
+    }
   }
 
   def bookmarkSearcher(userId: Id[User]) = {

@@ -9,7 +9,7 @@ import play.api.Play.current
 import play.api.libs.json.JsValue
 import play.api.test.Helpers._
 import play.api.templates.Html
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, Scheduler}
 import akka.testkit.ImplicitSender
 import org.specs2.mutable.Specification
 import org.apache.zookeeper.CreateMode
@@ -20,15 +20,17 @@ import com.keepit.common.net.FakeHttpClientModule
 import com.keepit.common.net.FakeClientResponse
 import com.google.inject.Provider
 
-class ServiceDiscoveryTest extends Specification with TestInjector {
+class ServiceDiscoveryTest extends Specification with DeprecatedTestInjector {
 
   "discovery" should {
     "serialize" in {
-      val service = RemoteService(AmazonInstanceId("id"), ServiceStatus.UP, IpAddress("127.0.0.1"), ServiceType.DEV_MODE)
-      val discovery = new ServiceDiscoveryImpl(inject[ZooKeeperClient], inject[FortyTwoServices], inject[Provider[AmazonInstanceInfo]], ServiceType.TEST_MODE::Nil)
-      val bytes = discovery.fromRemoteService(service)
-      val deserialized = discovery.toRemoteService(bytes)
-      deserialized === service
+      withInjector() { implicit injector =>
+        val service = RemoteService(inject[AmazonInstanceInfo], ServiceStatus.UP, ServiceType.DEV_MODE)
+        val discovery = new ServiceDiscoveryImpl(inject[ZooKeeperClient], inject[FortyTwoServices], inject[Provider[AmazonInstanceInfo]], inject[Scheduler], ServiceType.TEST_MODE::Nil)
+        val json = RemoteService.toJson(service)
+        val deserialized = RemoteService.fromJson(json)
+        deserialized === service
+      }
     }
 
     "set of nodes" in {
@@ -37,10 +39,12 @@ class ServiceDiscoveryTest extends Specification with TestInjector {
     }
 
     "register" in {
-      val zk = inject[ZooKeeperClient]
-      val discovery = new ServiceDiscoveryImpl(inject[ZooKeeperClient], inject[FortyTwoServices], inject[Provider[AmazonInstanceInfo]], ServiceType.TEST_MODE::Nil)
-      val registeredNode = discovery.register()
-      fromByteArray(zk.get(registeredNode)) === """{"instanceId":{"id":"i-f168c1a8"},"localHostname":"localhost","publicHostname":"localhost","localIp":{"ip":"127.0.0.1"},"publicIp":{"ip":"127.0.0.1"},"instanceType":"c1.medium","availabilityZone":"us-west-1b","securityGroups":"default","amiId":"ami-1bf9de5e","amiLaunchIndex":"0"}"""
+      withInjector() { implicit injector =>
+        val zk = inject[ZooKeeperClient]
+        val discovery = new ServiceDiscoveryImpl(inject[ZooKeeperClient], inject[FortyTwoServices], inject[Provider[AmazonInstanceInfo]], inject[Scheduler], ServiceType.TEST_MODE::Nil)
+        val registeredNode = discovery.register()
+        fromByteArray(zk.get(registeredNode)) === RemoteService.toJson(RemoteService(inject[AmazonInstanceInfo], ServiceStatus.STARTING, ServiceType.TEST_MODE))
+      }
     }
   }
 }

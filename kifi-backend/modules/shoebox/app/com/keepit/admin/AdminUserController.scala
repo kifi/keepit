@@ -12,7 +12,7 @@ import com.keepit.common.mail._
 import com.keepit.common.social._
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.realtime.UserChannel
+import com.keepit.realtime.{UserNotifier, UserChannel}
 import com.keepit.search.SearchServiceClient
 import com.keepit.shoebox.usersearch.UserIndex
 
@@ -20,6 +20,7 @@ import play.api.data.Forms._
 import play.api.data._
 import play.api.libs.json.Json
 import views.html
+import com.keepit.social.{SocialGraphPlugin, SocialUserRawInfoStore}
 
 case class UserStatistics(
     user: User,
@@ -54,7 +55,41 @@ class AdminUserController @Inject() (
     collectionRepo: CollectionRepo,
     keepToCollectionRepo: KeepToCollectionRepo,
     userIndex: UserIndex,
+    userNotifier: UserNotifier,
+    emailAddressRepo: EmailAddressRepo,
+    invitationRepo: InvitationRepo,
     clock: Clock) extends AdminController(actionAuthenticator) {
+
+
+  def merge = AdminHtmlAction { implicit request =>
+    // This doesn't do a complete merge. It's designed for cases where someone accidentally creates a new user when
+    // logging in and wants to associate the newly-created user's social users with an existing user
+    val form = request.request.body.asFormUrlEncoded.get
+    val (fromUserId, toUserId) = (Id[User](form("from").head.toLong), Id[User](form("to").head.toLong))
+
+    db.readWrite { implicit s =>
+      val fromUser = userRepo.get(fromUserId)
+      val toUser = userRepo.get(toUserId)
+      for (email <- emailAddressRepo.getByUser(fromUserId)) {
+        emailRepo.save(email.copy(userId = toUserId))
+      }
+      val socialUsers = socialUserInfoRepo.getByUser(fromUserId)
+      for (su <- socialUsers; invitation <- invitationRepo.getByRecipient(su.id.get)) {
+        invitationRepo.save(invitation.withState(InvitationStates.INACTIVE))
+      }
+      for (su <- socialUsers) {
+        socialUserInfoRepo.save(su.withUser(toUser))
+      }
+      userRepo.save(toUser.withState(UserStates.ACTIVE))
+      userRepo.save(fromUser.withState(UserStates.INACTIVE))
+    }
+
+    for (su <- db.readOnly { implicit s => socialUserInfoRepo.getByUser(toUserId) }) {
+      socialGraphPlugin.asyncFetch(su)
+    }
+
+    Redirect(routes.AdminUserController.userView(toUserId))
+  }
 
   def moreUserInfoView(userId: Id[User]) = AdminHtmlAction { implicit request =>
     val (user, socialUserInfos, follows, comments, messages, sentElectronicMails) = db.readOnly { implicit s =>
@@ -122,7 +157,6 @@ class AdminUserController @Inject() (
       val emails = emailRepo.getByUser(user.id.get)
       (user, (bookmarks, uris).zipped.toList.seq, socialUsers, socialConnections, fortyTwoConnections, kifiInstallations, allowedInvites, emails)
     }
-    // above needs slicking.
     val historyUpdateCount = db.readOnly { implicit session =>
       browsingHistoryRepo.getByUserId(userId).map(_.updatesCount).getOrElse(0)
     }
@@ -242,7 +276,7 @@ class AdminUserController @Inject() (
         case Some(ue) => Some(userExperimentRepo.save(ue.withState(UserExperimentStates.ACTIVE)))
         case None => Some(userExperimentRepo.save(UserExperiment(userId = userId, experimentType = expType)))
       }) foreach { _ =>
-        userChannel.push(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
+        userChannel.pushAndFanout(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
       }
     }
     Ok(Json.obj(experiment -> true))
@@ -264,7 +298,7 @@ class AdminUserController @Inject() (
     db.readWrite { implicit session =>
       userExperimentRepo.get(userId, ExperimentTypes(experiment)).foreach { ue =>
         userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))
-        userChannel.push(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
+        userChannel.pushAndFanout(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
       }
     }
     Ok(Json.obj(experiment -> false))
@@ -281,36 +315,38 @@ class AdminUserController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.AdminUserController.userView(userId))
   }
 
+  def notification() = AdminHtmlAction { implicit request =>
+    Ok(html.admin.notification(request.user.id.get.id))
+  }
+
   def sendNotificationToAllUsers() = AdminHtmlAction { implicit request =>
     implicit val playRequest = request.request
     val notifyForm = Form(tuple(
       "title" -> text,
       "bodyHtml" -> text,
       "linkText" -> text,
-      "url" -> text,
+      "url" -> optional(text),
       "image" -> text,
-      "sticky" -> optional(text)
+      "sticky" -> optional(text),
+      "users" -> optional(text)
     ))
 
-    val (title, bodyHtml, linkText, url, image, sticky) = notifyForm.bindFromRequest.get
+    val (title, bodyHtml, linkText, url, image, sticky, whichUsers) = notifyForm.bindFromRequest.get
 
-    val json = Json.arr(
-      "notify", Json.obj(
-        "createdAt" -> clock.now(),
-        "category" -> "server_generated",
-        "details" -> Json.obj(
-          "title" -> title,
-          "bodyHtml" -> bodyHtml,
-          "linkText" -> linkText,
-          "image" -> image,
-          "sticky" -> sticky,
-          "url" -> url
-        )
-      )
-    )
+    val users = whichUsers.flatMap(s => if(s == "") None else Some(s) ).map(_.split("[\\s,;]").filter(_ != "").map(u => Id[User](u.toLong)).toSeq)
 
-    userChannel.broadcast(json)
+    val globalNotification = GlobalNotification(
+      sendToSpecificUsers = users,
+      title = title,
+      bodyHtml = bodyHtml,
+      linkText = linkText,
+      url = url,
+      image = image,
+      isSticky = sticky.map(_ => true).getOrElse(false),
+      markReadOnAction = true)
 
-    Redirect(routes.AdminUserController.usersView(0))
+    userNotifier.globalNotification(globalNotification)
+
+    Redirect(routes.AdminUserController.notification())
   }
 }

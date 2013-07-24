@@ -5,7 +5,6 @@ const notificationNotVisited = /^(un)?delivered$/;
 
 var tabsShowingNotificationsPane = [];
 var notificationsCallbacks = [];
-var threadCallbacks = {};
 
 // ===== Cached data from server
 
@@ -193,7 +192,7 @@ const socketHandlers = {
       d.following = o.following;
       d.comments = o.comments || [];
       d.threads = o.threads || [];
-      d.messages = d.messages || {};
+      d.messages = {};
       d.lastCommentRead = o.lastCommentRead;
       d.lastMessageRead = o.lastMessageRead || {};
       d.counts = {
@@ -220,12 +219,12 @@ const socketHandlers = {
           var numNew = th.messageCount - (thPrev && thPrev.messageCount || 0);
           if (numNew) {
             socket.send(["get_thread", th.id]);
-            (threadCallbacks[th.id] = threadCallbacks[th.id] || []).push(function(th) {
+            (d.threadCallbacks = d.threadCallbacks || []).push({id: th.id, respond: function(th) {
               d.tabs.forEach(function(tab) {
                 // TODO: may want to special case (numNew == 1) for an animation
                 api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages, userId: session.userId});
               });
-            });
+            }});
             threadsWithNewMessages.push(th);
           }
         });
@@ -319,12 +318,19 @@ const socketHandlers = {
   },
   thread: function(th) {
     api.log("[socket:thread]", th);
-    th.messages.forEach(function(m, i) {
-      for (var cbs = threadCallbacks[m.id]; cbs && cbs.length;) {
-        cbs.shift()({id: m.id, uri: th.uri, messages: th.messages});
+    var d = pageData[th.uri];
+    if (d && d.messages) {
+      d.messages[th.id] = th.messages;
+      if (d.threadCallbacks) {
+        for (var i = 0; i < d.threadCallbacks.length; i++) {
+          var cb = d.threadCallbacks[i];
+          if (th.id == cb.id || th.messages.some(hasId(cb.id))) {
+            cb.respond({id: th.id, messages: th.messages});
+            d.threadCallbacks.splice(i--, 1);
+          }
+        }
       }
-      delete threadCallbacks[m.id];
-    });
+    }
   },
   message: function(nUri, th, message) {
     api.log("[socket:message]", nUri, th, message);
@@ -369,7 +375,7 @@ const socketHandlers = {
     var d = pageData[nUri];
     if (!d || !d.lastMessageRead || new Date(d.lastMessageRead[threadId] || 0) < new Date(time)) {
       markNoticesVisited("message", nUri, messageId, time, "/messages/" + threadId);
-      if (d) {
+      if (d && d.lastMessageRead) {
         d.lastMessageRead[threadId] = time;
         d.tabs.forEach(function(tab) {
           api.tabs.emit(tab, "thread_info", {thread: d.threads.filter(hasId(threadId))[0], read: d.lastMessageRead[threadId]});
@@ -504,15 +510,20 @@ api.port.on({
   },
   set_message_read: function(o, _, tab) {
     var d = pageData[tab.nUri];
-    if (!d || new Date(o.time) > new Date(d.lastMessageRead[o.threadId] || 0)) {
+    if (!d || !d.lastMessageRead || new Date(o.time) > new Date(d.lastMessageRead[o.threadId] || 0)) {
       markNoticesVisited("message", tab.nUri, o.messageId, o.time, "/messages/" + o.threadId);
-      if (d) {
+      if (d && d.lastMessageRead) {
         d.lastMessageRead[o.threadId] = o.time;
         tellTabsIfCountChanged(d, "m", messageCount(d));  // tabs at this uri
       }
       tellTabsNoticeCountIfChanged();  // visible tabs
       socket.send(["set_message_read", o.messageId]);
     }
+  },
+  set_global_read: function(o, _, tab) {
+    markNoticesVisited("global", undefined, o.noticeId);
+    tellTabsNoticeCountIfChanged();  // visible tabs
+    socket.send(["set_global_read", o.noticeId]);
   },
   comments: function(_, respond, tab) {
     var d = pageData[tab.nUri];
@@ -530,21 +541,16 @@ api.port.on({
     var d = pageData[tab.nUri];
     if (d) d.on2(function() {
       var th = d.threads.filter(function(t) {return t.id == data.id || t.messageTimes[data.id]})[0];
-      var id = (th || data).id;
-      if (d.messages[id]) {
+      if (th && d.messages[th.id]) {
         if (data.respond) {
-          respond({id: id, messages: d.messages[id], isRedirect: !th});
+          respond({id: th.id, messages: d.messages[th.id]});
         }
       } else {
+        var id = (th || data).id;
         socket.send(["get_thread", id]);
-        (threadCallbacks[id] = threadCallbacks[id] || []).push(function(thread) {
-          if (d.messages) {
-            d.messages[thread.id] = thread.messages;
-          }
-          if (data.respond) {
-            respond({id: thread.id, messages: thread.messages, isRedirect: thread.uri != tab.nUri});
-          }
-        });
+        if (data.respond) {
+          (d.threadCallbacks = d.threadCallbacks || []).push({id: id, respond: respond});
+        }
       }
     });
   },
@@ -621,7 +627,9 @@ api.port.on({
       api.tabs.select(tab.id);
     } else {
       api.tabs.open(data.nUri, function(tabId) {
-        createDeepLinkListener(data.locator, tabId);
+        if (data.locator) {
+          createDeepLinkListener(data.locator, tabId);
+        }
       });
     }
   },
@@ -643,6 +651,9 @@ function insertNewNotification(n) {
         return false;
       }
       break;
+    } else if (notifications[i].details.locator == n.details.locator) {
+      // there is already a more recent notification for this thread
+      return false;
     }
   }
   notifications.splice(i, 0, n);
@@ -656,15 +667,12 @@ function insertNewNotification(n) {
     }
   }
 
-  if (n.details.subsumes) {
-    for (i++; i < notifications.length; i++) {
-      var n2 = notifications[i];
-      if (n2.id == n.details.subsumes) {
-        notifications.splice(i, 1);
-        if (notificationNotVisited.test(n2.state)) {
-          decrementNumNotificationsNotVisited(n2);
-        }
-        break;
+  while(++i < notifications.length) {
+    var n2 = notifications[i];
+    if (n2.id == n.details.subsumes || n.details.locator == n2.details.locator) {
+      notifications.splice(i--, 1);
+      if (notificationNotVisited.test(n2.state)) {
+        decrementNumNotificationsNotVisited(n2);
       }
     }
   }
@@ -673,10 +681,13 @@ function insertNewNotification(n) {
 
 // id is of last read comment/message, timeStr is its createdAt time (not notification's).
 // locator not passed in the comments case.
+// If category is global, we do not check the nUri, timeStr, and locator because id identifies
+// it sufficiently. `undefined` can be passed in for everything but category and id.
 function markNoticesVisited(category, nUri, id, timeStr, locator) {
-  var time = new Date(timeStr);
+  var time = timeStr ? new Date(timeStr) : null;
   notifications.forEach(function(n, i) {
-    if (n.details.page == nUri &&
+    n.details.id = n.details.id || n.id;
+    if ((!nUri || n.details.page == nUri) &&
         n.category == category &&
         (!locator || n.details.locator == locator) &&
         (n.details.id == id || new Date(n.details.createdAt) <= time) &&
@@ -691,6 +702,7 @@ function markNoticesVisited(category, nUri, id, timeStr, locator) {
       nUri: nUri,
       time: timeStr,
       locator: locator,
+      id: id,
       numNotVisited: numNotificationsNotVisited});
   });
 }
@@ -702,7 +714,7 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
     if ((n.id == id || new Date(n.time) <= time) && notificationNotVisited.test(n.state)) {
       n.state = "visited";
       var d = pageData[n.details.page];
-      if (d && new Date(n > getTimeLastRead(n, d))) {
+      if (d && new Date(n.details.createdAt) > getTimeLastRead(n, d)) {
         switch (n.category) {
           case "comment":
             d.lastCommentRead = n.details.createdAt;
@@ -739,8 +751,8 @@ function decrementNumNotificationsNotVisited(n) {
 
 function getTimeLastRead(n, d) {
   return new Date(
-    n.category == "comment" ? d.lastCommentRead :
-    n.category == "message" ? d.lastMessageRead[n.details.locator.split("/")[2]] : 0);
+    n.category == "comment" ? (d.lastCommentRead || 0) :
+    n.category == "message" && d.lastMessageRead ? (d.lastMessageRead[n.details.locator.split("/")[2]] || 0) : 0);
 }
 
 function createDeepLinkListener(locator, tabId) {
@@ -762,14 +774,6 @@ function createDeepLinkListener(locator, tabId) {
     }
   });
 }
-
-function kifiLoginListener(tab) {
-  // check to see if this is the home page, if so try authenticating again if we don't have an installation
-  if (tab.url.replace(/\/#.*$/, "") === webBaseUri() && !getStored("kifi_installation_id")) {
-    doAuth();
-  }
-}
-api.tabs.on.ready.add(kifiLoginListener);
 
 function initTab(tab, d) {  // d is pageData[tab.nUri]
   api.log("[initTab]", tab.id, "inited:", tab.inited);
@@ -1014,10 +1018,6 @@ api.tabs.on.ready.add(function(tab) {
   logEvent("extension", "pageLoad");
 });
 
-api.tabs.on.complete.add(function(tab) {
-  api.log("#b8a", "[tabs.on.complete] %i %o", tab.id, tab);
-});
-
 api.tabs.on.unload.add(function(tab) {
   api.log("#b8a", "[tabs.on.unload] %i %o", tab.id, tab);
   api.timers.clearTimeout(tab.autoShowTimer);
@@ -1098,89 +1098,96 @@ api.on.update.add(function() {
 
 // ===== Session management
 
-var session, socket;
+var session, socket, onReadyTemp;
 
-function authenticate(callback) {
-  var dev = api.prefs.get("env") === "development";
-  if (dev) {
-    openLogin();
+function authenticate(callback, retryMs) {
+  if (api.prefs.get("env") === "development") {
+    openLogin(callback, retryMs);
   } else {
-    startSession(function () {
-      if (getStored("kifi_installation_id")) {
-        openLogin();
+    startSession(callback, retryMs);
+  }
+}
+
+function startSession(callback, retryMs) {
+  ajax("POST", "/kifi/start", {
+    installation: getStored("kifi_installation_id"),
+    version: api.version},
+  function done(data) {
+    api.log("[authenticate:done] reason: %s session: %o", api.loadReason, data);
+    logEvent("extension", "authenticated");
+
+    session = data;
+    session.prefs = {}; // to come via socket
+    socket = api.socket.open(apiBaseUri().replace(/^http/, "ws") + "/ext/ws", socketHandlers, function onConnect() {
+      socket.send(["get_prefs"]);
+      socket.send(["get_last_notify_read_time"]);
+      if (!notifications) {
+        socket.send(["get_notifications", NOTIFICATION_BATCH_SIZE]);
       } else {
-        var tab = api.tabs.anyAt(webBaseUri() + "/");
-        if (tab) {
-          api.tabs.select(tab.id);
-        } else {
-          api.tabs.open(webBaseUri());
-        }
+        socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
       }
+      socket.send(["get_friends"]);  // TODO: optimize seq > 1 case
+      if (socket.seq > 1) {  // reconnected
+        socket.send(["get_rules", ruleSet.version]);
+        api.tabs.eachSelected(subscribe);
+      }
+    }, function onDisconnect(why) {
+      reportError("socket disconnect (" + why + ")");
     });
-  }
+    logEvent.catchUp();
 
-  function startSession(onFail) {
-    ajax("POST", "/kifi/start", {
-      installation: getStored("kifi_installation_id"),
-      version: api.version},
-    function done(data) {
-      api.log("[startSession] reason: %s session: %o", api.loadReason, data);
-      logEvent("extension", "authenticated");
+    ruleSet = data.rules;
+    urlPatterns = compilePatterns(data.patterns);
+    store("kifi_installation_id", data.installationId);
+    delete session.rules;
+    delete session.patterns;
+    delete session.installationId;
 
-      session = data;
-      session.prefs = {}; // to come via socket
-      socket = api.socket.open(apiBaseUri().replace(/^http/, "ws") + "/ext/ws", socketHandlers, function onConnect() {
-        socket.send(["get_prefs"]);
-        socket.send(["get_last_notify_read_time"]);
-        if (!notifications) {
-          socket.send(["get_notifications", NOTIFICATION_BATCH_SIZE]);
-        } else {
-          socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
+    api.tabs.on.ready.remove(onReadyTemp), onReadyTemp = null;
+    api.tabs.eachSelected(subscribe);
+    callback();
+  },
+  function fail(xhr) {
+    api.log("[startSession:fail] xhr.status:", xhr.status);
+    if (!xhr.status || xhr.status >= 500) {  // server down or no network connection, so consider retrying
+      if (retryMs) {
+        setTimeout(startSession.bind(null, callback, Math.min(60000, retryMs * 1.5)), retryMs);
+      }
+    } else if (getStored("kifi_installation_id")) {
+      openLogin();
+    } else {
+      var tab = api.tabs.anyAt(webBaseUri() + "/");
+      if (tab) {
+        api.tabs.select(tab.id);
+      } else {
+        api.tabs.open(webBaseUri());
+      }
+      api.tabs.on.ready.add(onReadyTemp = function(tab) {
+        // if kifi.com home page, retry first authentication
+        if (tab.url.replace(/\/#.*$/, "") === webBaseUri()) {
+          api.tabs.on.ready.remove(onReadyTemp), onReadyTemp = null;
+          startSession(callback, retryMs);
         }
-        socket.send(["get_friends"]);  // TODO: optimize seq > 1 case
-        if (socket.seq > 1) {  // reconnected
-          socket.send(["get_rules", ruleSet.version]);
-          api.tabs.eachSelected(subscribe);
-        }
-      }, function onDisconnect(why) {
-        reportError("socket disconnect (" + why + ")");
       });
-      logEvent.catchUp();
+    }
+  });
+}
 
-      ruleSet = data.rules;
-      urlPatterns = compilePatterns(data.patterns);
-      store("kifi_installation_id", data.installationId);
-      delete session.rules;
-      delete session.patterns;
-      delete session.installationId;
-
-      callback();
-
-      if (api.loadReason == "install" || dev) {
-        postBookmarks(api.bookmarks.getAll, "INIT_LOAD");
+function openLogin(callback, retryMs) {
+  api.log("[openLogin]");
+  var baseUri = webBaseUri();
+  api.popup.open({
+    name: "kifi-authenticate",
+    url: baseUri + "/login",
+    width: 1020,
+    height: 530}, {
+    navigate: function(url) {
+      if (url == baseUri + "/#_=_" || url == baseUri + "/") {
+        api.log("[openLogin] closing popup");
+        this.close();
+        startSession(callback, retryMs);
       }
-    }, function fail(xhr) {
-      api.log("[startSession] xhr failed:", xhr);
-      if (onFail) onFail();
-    });
-  }
-
-  function openLogin() {
-    api.log("[openLogin]");
-    var baseUri = webBaseUri();
-    api.popup.open({
-      name: "kifi-authenticate",
-      url: baseUri + "/login",
-      width: 1020,
-      height: 530}, {
-      navigate: function(url) {
-        if (url == baseUri + "/#_=_" || url == baseUri + "/") {
-          api.log("[openLogin] closing popup");
-          this.close();
-          startSession();
-        }
-      }});
-  }
+    }});
 }
 
 function deauthenticate() {
@@ -1210,29 +1217,25 @@ function deauthenticate() {
 
 logEvent("extension", "started");
 
-function doAuth() {
-  authenticate(function() {
-    api.log("[main] authenticated");
-
-    if (api.loadReason == "install") {
-      api.log("[main] fresh install");
-      var tab = api.tabs.anyAt(webBaseUri() + "/install");
-      if (tab) {
-        api.tabs.navigate(tab.id, webBaseUri() + "/getting-started");
-      } else {
-        api.tabs.open(webBaseUri() + "/getting-started");
-      }
+authenticate(function() {
+  if (api.loadReason == "install") {
+    api.log("[main] fresh install");
+    var tab = api.tabs.anyAt(webBaseUri() + "/install");
+    if (tab) {
+      api.tabs.navigate(tab.id, webBaseUri() + "/getting-started");
+    } else {
+      api.tabs.open(webBaseUri() + "/getting-started");
     }
-    api.tabs.on.ready.remove(kifiLoginListener);
-    api.tabs.eachSelected(subscribe);
-  });
-}
-doAuth();
+  }
+  if (api.loadReason == "install" || api.prefs.get("env") === "development") {
+    postBookmarks(api.bookmarks.getAll, "INIT_LOAD");
+  }
+}, 3000);
 
 function reportError(errMsg, url, lineNo) {
   api.log('Reporting error "%s" in %s line %s', errMsg, url, lineNo);
   if ((api.prefs.get("env") === "production") === api.isPackaged()) {
-    ajax("POST", "/error/report", {message: errMsg + (url ? ' at ' + url + (line ? ':' + lineNo : '') : '')});
+    ajax("POST", "/error/report", {message: errMsg + (url ? ' at ' + url + (lineNo ? ':' + lineNo : '') : '')});
   }
 }
 if (typeof window !== 'undefined') {  // TODO: add to api, find equivalent for firefox

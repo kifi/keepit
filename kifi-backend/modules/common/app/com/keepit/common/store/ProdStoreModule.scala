@@ -6,9 +6,9 @@ import com.amazonaws.services.s3.{AmazonS3Client, AmazonS3}
 import com.keepit.search._
 import play.api.Play._
 import com.keepit.common.analytics._
-import com.keepit.common.analytics.reports.{InMemoryReportStoreImpl, S3ReportStoreImpl, ReportStore}
 import com.amazonaws.auth.BasicAWSCredentials
 import com.mongodb.casbah.MongoConnection
+import com.keepit.learning.topicmodel._
 
 trait StoreModule extends ScalaModule {
 
@@ -49,16 +49,30 @@ trait ProdStoreModule extends StoreModule {
 
   @Singleton
   @Provides
-  def eventStore(amazonS3Client: AmazonS3): EventStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.event.bucket").get)
-    new S3EventStoreImpl(bucketName, amazonS3Client)
+  def wordTopicStore(amazonS3Client: AmazonS3): WordTopicStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.wordTopic.bucket").get)
+    new S3WordTopicStoreImpl(bucketName, amazonS3Client)
   }
 
   @Singleton
   @Provides
-  def reportStore(amazonS3Client: AmazonS3): ReportStore = {
-    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.report.bucket").get)
-    new S3ReportStoreImpl(bucketName, amazonS3Client)
+  def wordTopicBlobStore(amazonS3Client: AmazonS3): WordTopicBlobStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.wordTopic.bucket").get)
+    new S3WordTopicBlobStoreImpl(bucketName, amazonS3Client)
+  }
+
+  @Singleton
+  @Provides
+  def wordStore(amazonS3Client: AmazonS3): WordStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.wordTopic.bucket").get)
+    new S3WordStoreImpl(bucketName, amazonS3Client)
+  }
+
+  @Singleton
+  @Provides
+  def topicWordsStore(amazonS3Client: AmazonS3): TopicWordsStore = {
+    val bucketName = S3Bucket(current.configuration.getString("amazon.s3.wordTopic.bucket").get)
+    new S3TopicWordsStoreImpl(bucketName, amazonS3Client)
   }
 
   @Singleton
@@ -100,23 +114,37 @@ abstract class DevStoreModule[T <: ProdStoreModule](val prodStoreModule: T) exte
 
   @Singleton
   @Provides
-  def eventStore(amazonS3ClientProvider: Provider[AmazonS3]): EventStore =
-    whenConfigured("amazon.s3.event.bucket")(
-      prodStoreModule.eventStore(amazonS3ClientProvider.get)
-    ).getOrElse(new InMemoryS3EventStoreImpl())
+  def wordTopicStore(amazonS3ClientProvider: Provider[AmazonS3]): WordTopicStore =
+    whenConfigured("amazon.s3.wordTopic.bucket")(
+      prodStoreModule.wordTopicStore(amazonS3ClientProvider.get)
+    ).getOrElse(new InMemoryWordTopicStoreImpl())
 
   @Singleton
   @Provides
-  def reportStore(amazonS3ClientProvider: Provider[AmazonS3]): ReportStore =
-    whenConfigured("amazon.s3.report.bucket")(
-      prodStoreModule.reportStore(amazonS3ClientProvider.get)
-    ).getOrElse(new InMemoryReportStoreImpl())
+  def wordTopicBlobStore(amazonS3ClientProvider: Provider[AmazonS3]): WordTopicBlobStore =
+    whenConfigured("amazon.s3.wordTopic.bucket")(
+      prodStoreModule.wordTopicBlobStore(amazonS3ClientProvider.get)
+    ).getOrElse(new InMemoryWordTopicBlobStoreImpl())
+
+  @Singleton
+  @Provides
+  def wordStore(amazonS3ClientProvider: Provider[AmazonS3]): WordStore =
+    whenConfigured("amazon.s3.wordTopic.bucket")(
+      prodStoreModule.wordStore(amazonS3ClientProvider.get)
+    ).getOrElse(new InMemoryWordStoreImpl())
+
+  @Singleton
+  @Provides
+  def topicWordsStore(amazonS3ClientProvider: Provider[AmazonS3]): TopicWordsStore =
+    whenConfigured("amazon.s3.wordTopic.bucket")(
+      prodStoreModule.topicWordsStore(amazonS3ClientProvider.get)
+    ).getOrElse(new InMemoryTopicWordsStoreImpl())
+
 
   @Singleton
   @Provides
   def mongoEventStore(): MongoEventStore =
     whenConfigured("mongo.events.server")(
       prodStoreModule.mongoEventStore()
-    ).getOrElse(new FakeMongoS3EventStoreImpl())
-
+    ).getOrElse(new FakeMongoS3EventStore())
 }

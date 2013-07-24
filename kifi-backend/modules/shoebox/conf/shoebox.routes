@@ -66,7 +66,7 @@ GET     /getting-started            @com.keepit.controllers.website.HomeControll
 GET     /invite                     @com.keepit.controllers.website.InviteController.invite
 POST    /invite                     @com.keepit.controllers.website.InviteController.inviteConnection
 GET     /invite/:id                 @com.keepit.controllers.website.InviteController.acceptInvite(id: ExternalId[Invitation])
-GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id: ExternalId[Invitation])
+GET     /invite/confirm/:id         @com.keepit.controllers.website.InviteController.confirmInvite(id:ExternalId[Invitation], error_msg: Option[String], error_code: Option[Int])
 GET     /sign-up                    @com.keepit.controllers.website.OnboardingController.signup(inviteId: String ?= "")
 GET     /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tos
 POST    /sign-up/terms              @com.keepit.controllers.website.OnboardingController.tosAccept
@@ -87,6 +87,9 @@ GET     /site/keeps/:id             @com.keepit.controllers.website.BookmarksCon
 POST    /site/keeps/:id/update      @com.keepit.controllers.website.BookmarksController.updateKeepInfo(id: ExternalId[Bookmark])
 POST    /site/keeps/:id/delete      @com.keepit.controllers.website.BookmarksController.unkeep(id: ExternalId[Bookmark])
 GET     /site/keeps/mutual/:id      @com.keepit.controllers.website.BookmarksController.mutualKeeps(id: ExternalId[User])
+POST    /site/keeps/screenshot      @com.keepit.controllers.website.BookmarksController.getScreenshotUrl()
+GET     /screenshot                 @com.keepit.controllers.website.BookmarksController.screenshotUrl(url: String ?= "")
+# TODO: /screenshot should be removed when no longer used
 
 GET     /site/collections/all       @com.keepit.controllers.website.BookmarksController.allCollections(sort: String ?= "last_kept")
 POST    /site/collections/ordering  @com.keepit.controllers.website.BookmarksController.updateCollectionOrdering()
@@ -100,20 +103,30 @@ POST    /site/collections/:id/setKeeps @com.keepit.controllers.website.Bookmarks
 POST    /site/chatter               @com.keepit.controllers.website.CommentController.getChatter
 
 GET     /site/user/me               @com.keepit.controllers.website.UserController.currentUser()
+POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
+GET     /site/user/networks         @com.keepit.controllers.website.UserController.socialNetworkInfo()
+GET     /site/user/:id/networks     @com.keepit.controllers.website.UserController.friendNetworkInfo(id: ExternalId[User])
+POST    /site/user/:id/unfriend     @com.keepit.controllers.website.UserController.unfriend(id: ExternalId[User])
+POST    /site/user/:id/friend       @com.keepit.controllers.website.UserController.friendRequest(id: ExternalId[User])
 GET     /site/user/connections      @com.keepit.controllers.website.UserController.connections()
+GET     /site/user/connections/count @com.keepit.controllers.website.UserController.connectionCount()
 GET     /site/user/all-connections  @com.keepit.controllers.website.UserController.getAllConnections()
-POST    /site/user/update-email     @com.keepit.controllers.website.UserController.updateEmail
+GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
+POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
+
 
 # Temporary hack for kifi.com site before we fully integrate it with Play!
-GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html")
-GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSite(path: String)
-
-GET     /screenshot                 @com.keepit.controllers.website.BookmarksController.screenshotUrl(url: String ?= "")
-
+GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/collection/:id        @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id: String)
+GET     /site/search                @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/profile               @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/friends               @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/friends/invite        @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/friends/requests      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSite(path: String, id = "")
 
 
 POST    /admin/logging/emails       @com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
-
 
 ##########################################
 # Admin
@@ -137,6 +150,10 @@ GET     /admin/bookmarks/edit       @com.keepit.controllers.admin.AdminBookmarks
 POST    /admin/bookmarks/rescrape   @com.keepit.controllers.admin.AdminBookmarksController.rescrape
 POST    /admin/bookmarks/update     @com.keepit.controllers.admin.AdminBookmarksController.updateBookmarks
 POST    /admin/bookmarks/delete     @com.keepit.controllers.admin.AdminBookmarksController.delete(id: Id[Bookmark])
+
+
+GET     /admin/screenshot/uri       @com.keepit.controllers.admin.AdminScreenshotController.updateUri(uriId: Id[NormalizedURI])
+GET     /admin/screenshot/user      @com.keepit.controllers.admin.AdminScreenshotController.updateUser(userId: Id[User], drop: Int ?= 0, take: Int ?= 999999)
 
 GET     /admin/scrape               @com.keepit.controllers.admin.ScraperController.scrape
 GET     /admin/scraped/:uriId       @com.keepit.controllers.admin.ScraperController.getScraped(uriId: Id[NormalizedURI])
@@ -179,6 +196,7 @@ GET     /admin/commentIndex/reindex @com.keepit.controllers.admin.AdminCommentIn
 GET     /admin/commentIndex/dumpDoc/:commentId  @com.keepit.controllers.admin.AdminCommentIndexController.dumpLuceneDocument(commentId: Id[Comment])
 
 GET     /admin/users                @com.keepit.controllers.admin.AdminUserController.allUsersView
+POST    /admin/users/merge          @com.keepit.controllers.admin.AdminUserController.merge
 GET     /admin/users/page/:page     @com.keepit.controllers.admin.AdminUserController.usersView(page: Int)
 POST    /admin/users/search         @com.keepit.controllers.admin.AdminUserController.searchUsers()
 GET     /admin/user/:id             @com.keepit.controllers.admin.AdminUserController.userView(id: Id[User])
@@ -193,6 +211,7 @@ POST    /admin/user/:id/setInvitesCount      @com.keepit.controllers.admin.Admin
 GET     /admin/user/:id/social_users/refresh @com.keepit.controllers.admin.AdminUserController.refreshAllSocialInfo(id: Id[User])
 POST    /admin/user/:id/impersonate @com.keepit.controllers.admin.AdminAuthController.impersonate(id: Id[User])
 POST    /admin/unimpersonate        @com.keepit.controllers.admin.AdminAuthController.unimpersonate()
+GET     /admin/users/notify         @com.keepit.controllers.admin.AdminUserController.notification()
 POST    /admin/users/sendNotification @com.keepit.controllers.admin.AdminUserController.sendNotificationToAllUsers()
 
 GET     /admin/social_users/:page   @com.keepit.controllers.admin.AdminSocialUserController.socialUsersView(page: Int)
@@ -229,7 +248,7 @@ POST    /admin/searchExperiments/update    @com.keepit.controllers.admin.AdminSe
 GET     /admin/searchExperiments/kvg/:id   @com.keepit.controllers.admin.AdminSearchConfigController.getKifiVsGoogle(id: Id[SearchConfigExperiment])
 GET     /admin/searchExperiments/kifiHadResults/:id   @com.keepit.controllers.admin.AdminSearchConfigController.getKifiHadResults(id: Id[SearchConfigExperiment])
 
-GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchController.explain(query: String, uriId: Id[NormalizedURI])
+GET     /admin/explainResult        @com.keepit.controllers.admin.AdminSearchController.explain(query: String, uriId: Id[NormalizedURI], lang: String)
 GET     /admin/search/results/:id   @com.keepit.controllers.admin.AdminSearchController.articleSearchResult(id: ExternalId[ArticleSearchResultRef])
 
 GET     /admin/slider/rules         @com.keepit.controllers.admin.SliderAdminController.getRules
@@ -264,8 +283,18 @@ GET     /admin/learning/wordTopic       @com.keepit.controllers.admin.TopicModel
 POST    /admin/learning/getWordTopic    @com.keepit.controllers.admin.TopicModelController.getWordTopic
 GET     /admin/learning/userTopic       @com.keepit.controllers.admin.TopicModelController.userTopic(userId: Option[String] ?= None, topic: Option[String] ?= None)
 POST    /admin/learning/getUserTopic    @com.keepit.controllers.admin.TopicModelController.getUserTopic
-GET    /admin/learning/resetTopic       @com.keepit.controllers.admin.TopicModelController.resetAllTopicTables()
+GET     /admin/learning/topic/remodel   @com.keepit.controllers.admin.TopicModelController.remodel()
+GET     /admin/learning/topics          @com.keepit.controllers.admin.TopicModelController.topicsViewDefault
+GET     /admin/learning/topics/:flag/:page            @com.keepit.controllers.admin.TopicModelController.topicsView(flag: String, page: Int)
+POST    /admin/learning/topics/updateTopicName/:id    @com.keepit.controllers.admin.TopicModelController.updateTopicName(id: Id[TopicName])
+GET     /admin/learning/addTopics/:flag               @com.keepit.controllers.admin.TopicModelController.addTopics(flag: String)
+POST    /admin/learning/saveAddedTopics/:flag         @com.keepit.controllers.admin.TopicModelController.saveAddedTopics(flag: String)
+GET     /admin/learning/genTopicModelS3Files/:flag    @com.keepit.controllers.admin.TopicModelController.genModelFiles(flag: String)
+GET     /admin/learning/viewTopicWords/:flag          @com.keepit.controllers.admin.TopicModelController.viewTopicWords(flag: String)
+GET     /admin/learning/topicDetails/:flag/:index     @com.keepit.controllers.admin.TopicModelController.viewTopicDetails(flag: String, index: Int)
+GET     /admin/learning/topic/summary                 @com.keepit.controllers.admin.TopicModelController.summary
 
+GET     /admin/clusters/overview        @com.keepit.controllers.admin.AdminClusterController.clustersView
 
 ##########################################
 # Common Healthcheck / service routes
@@ -314,11 +343,18 @@ GET     /internal/shoebox/database/getActiveExperiments @com.keepit.controllers.
 GET     /internal/shoebox/database/getExperiments     @com.keepit.controllers.shoebox.ShoeboxController.getExperiments
 GET     /internal/shoebox/database/getExperiment      @com.keepit.controllers.shoebox.ShoeboxController.getExperiment(id: Id[SearchConfigExperiment])
 POST    /internal/shoebox/database/saveExperiment     @com.keepit.controllers.shoebox.ShoeboxController.saveExperiment
-GET     /internal/shoebox/database/hasExperimenthas   @com.keepit.controllers.shoebox.ShoeboxController.hasExperiment(userId: Id[User], state: State[ExperimentType])
 POST    /internal/shoebox/database/reportArticleSearchResult  @com.keepit.controllers.shoebox.ShoeboxController.reportArticleSearchResult
 GET     /internal/shoebox/database/socialUserInfoByNetworkAndSocialId @com.keepit.controllers.shoebox.ShoeboxController.getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String)
 GET     /internal/shoebox/database/socialUserInfosByUserId @com.keepit.controllers.shoebox.ShoeboxController.getSocialUserInfosByUserId(id: Id[User])
 GET     /internal/shoebox/database/sessionByExternalId @com.keepit.controllers.shoebox.ShoeboxController.getSessionByExternalId(sessionId: ExternalId[UserSession])
+
+POST    /internal/shoebox/channel/user                @com.keepit.controllers.shoebox.ShoeboxController.userChannelFanout()
+POST    /internal/shoebox/channel/userBroadcast       @com.keepit.controllers.shoebox.ShoeboxController.userChannelBroadcastFanout()
+POST    /internal/shoebox/channel/userCount           @com.keepit.controllers.shoebox.ShoeboxController.userChannelCountFanout()
+POST    /internal/shoebox/channel/uri                 @com.keepit.controllers.shoebox.ShoeboxController.uriChannelFanout()
+POST    /internal/shoebox/channel/uriCount            @com.keepit.controllers.shoebox.ShoeboxController.uriChannelCountFanout()
+
+POST     /internal/shoebox/learning/suggestExperts    @com.keepit.controllers.shoebox.ExpertRecommenderController.suggestExperts()
 
 
 ->  / common.Routes

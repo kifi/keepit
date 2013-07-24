@@ -8,8 +8,6 @@ import com.keepit.common.db._
 import com.keepit.model.ClickHistory
 import scala.concurrent.Future
 import com.keepit.search._
-import com.keepit.common.social.BasicUser
-import com.keepit.common.social.SocialNetworkType
 import com.keepit.model.ExperimentType
 import com.keepit.model.Phrase
 import com.keepit.model.NormalizedURI
@@ -17,9 +15,9 @@ import com.keepit.model.User
 import com.keepit.model.UserExperiment
 import com.keepit.search.ArticleSearchResult
 import play.api.libs.json.JsObject
-import com.keepit.common.social.SocialId
 import java.util.concurrent.atomic.AtomicInteger
 import collection.mutable.{Map => MutableMap}
+import com.keepit.social.{SocialNetworkType, SocialId, BasicUser}
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, browsingHistoryTracker: BrowsingHistoryTracker) extends ShoeboxServiceClient {
@@ -278,6 +276,14 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
   def getSessionByExternalId(sessionId: com.keepit.common.db.ExternalId[com.keepit.model.UserSession]): scala.concurrent.Future[Option[com.keepit.model.UserSession]] = ???
   def getSocialUserInfosByUserId(userId: com.keepit.common.db.Id[com.keepit.model.User]): scala.concurrent.Future[List[com.keepit.model.SocialUserInfo]] = ???
 
+  def uriChannelFanout(uri: String,msg: play.api.libs.json.JsArray): Seq[scala.concurrent.Future[Int]] = Seq()
+  def userChannelFanout(userId: com.keepit.common.db.Id[com.keepit.model.User],msg: play.api.libs.json.JsArray): Seq[scala.concurrent.Future[Int]] = Seq()
+  def uriChannelCountFanout(): Seq[scala.concurrent.Future[Int]] = Seq()
+  def userChannelBroadcastFanout(msg: play.api.libs.json.JsArray): Seq[scala.concurrent.Future[Int]] = Seq()
+  def userChannelCountFanout(): Seq[scala.concurrent.Future[Int]] = Seq()
+
+  def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]] = ???
+
   def getCollectionsChanged(seqNum: SequenceNumber, fetchSize: Int): Future[Seq[Collection]] = {
     val collections = allCollections.values.filter(_.seq > seqNum).toSeq.sortBy(_.seq).take(fetchSize)
     Future.successful(collections)
@@ -326,11 +332,6 @@ class FakeShoeboxServiceClientImpl(clickHistoryTracker: ClickHistoryTracker, bro
     val experimentWithId = experiment.withId(id)
     allSearchExperiments(experimentWithId.id.get) =  experimentWithId
     Future.successful(experimentWithId)
-  }
-
-  def hasExperiment(userId: Id[User], state: State[ExperimentType]): Future[Boolean] = {
-    val has = allUserExperiments.getOrElse(userId, Set.empty).exists(exp => exp.experimentType == state && exp.state == UserExperimentStates.ACTIVE)
-    Future.successful(has)
   }
 
   def getUserExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]] = {

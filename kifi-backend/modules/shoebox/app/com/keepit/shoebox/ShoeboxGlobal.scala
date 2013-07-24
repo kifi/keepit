@@ -5,7 +5,6 @@ import com.keepit.common.analytics.reports.ReportBuilderPlugin
 import com.keepit.common.cache.FortyTwoCachePlugin
 import com.keepit.common.healthcheck._
 import com.keepit.common.mail.{InvitationMailPlugin, MailToKeepPlugin, MailSenderPlugin}
-import com.keepit.common.social.SocialGraphPlugin
 import com.keepit.common.social.SocialGraphRefresher
 import com.keepit.common.store.ImageDataIntegrityPlugin
 import com.keepit.realtime.{ChannelPlugin, UserEmailNotifierPlugin}
@@ -13,10 +12,12 @@ import com.keepit.scraper._
 import play.api.Mode._
 import play.api._
 import com.keepit.learning.topicmodel.TopicUpdaterPlugin
+import com.keepit.social.SocialGraphPlugin
+import com.keepit.controllers.shoebox.ExpertRecommenderController
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 
-  val modules = Seq(ShoeboxProdModule())
+  val module = ShoeboxProdModule()
 
   override def onStart(app: Application): Unit = {
     log.info("starting the shoebox")
@@ -43,6 +44,6 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[InvitationMailPlugin].enabled)
     require(injector.instance[ChannelPlugin].enabled)
     require(injector.instance[TopicUpdaterPlugin].enabled)
-
+    injector.instance[ExpertRecommenderController].init
   }
 }

@@ -2,29 +2,34 @@ package com.keepit.model
 
 import com.keepit.common.db.slick.Database
 import com.keepit.common.social._
-import com.keepit.inject._
-import com.keepit.test.EmptyApplication
+import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector, ShoeboxTestInjector}
 import java.io.File
 import org.specs2.mutable._
-import play.api.Play.current
 import play.api.libs.json._
+import com.keepit.common.net.FakeHttpClientModule
+import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.google.inject.Injector
+import com.keepit.shoebox.TestShoeboxServiceClientModule
+import com.keepit.social.{SocialNetworks, SocialId}
+import com.keepit.common.zookeeper.FakeDiscoveryModule
 import play.api.test.Helpers._
 
-class SocialConnectionTest extends Specification {
+class SocialConnectionTest extends Specification with ShoeboxApplicationInjector {
 
+  val socialConnectionTestModules = Seq(FakeHttpClientModule(), ShoeboxFakeStoreModule(), TestShoeboxServiceClientModule())
 
-  private def extractFacebookFriendInfo(json: JsValue): Seq[(SocialUserInfo, JsValue)] = {
+  private def extractFacebookFriendInfo(json: JsValue)(implicit injector: Injector): Seq[(SocialUserInfo, JsValue)] = {
     inject[FacebookSocialGraph].extractFriends(json)
   }
 
-  private def extractFacebookFriendIds(json: JsValue): Seq[SocialId] = {
+  private def extractFacebookFriendIds(json: JsValue)(implicit injector: Injector): Seq[SocialId] = {
     extractFacebookFriendInfo(json).map(_._1.socialId)
   }
 
   "SocialConnection" should {
 
     "give Kifi user's connections (min set)" in {
-      running(new EmptyApplication().withFakeHttpClient()) {
+      running(new ShoeboxApplication(socialConnectionTestModules:_*)) {
 
         def loadJsonImportFriends(filename: String): Unit = {
           val json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/%s".format(filename))).mkString)
@@ -88,9 +93,9 @@ class SocialConnectionTest extends Specification {
       }
     }
     "give Kifi user's connections (min set) w/o non active connections" in {
-      running(new EmptyApplication().withFakeHttpClient()) {
+      running(new ShoeboxApplication(socialConnectionTestModules:_*)) {
 
-        def loadJsonImportFriends(filename: String): Unit = {
+      def loadJsonImportFriends(filename: String): Unit = {
           val json = Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/%s".format(filename))).mkString)
           println(inject[SocialUserImportFriends].importFriends(extractFacebookFriendInfo(json)).size)
         }
@@ -158,9 +163,9 @@ class SocialConnectionTest extends Specification {
     }
 
     "give Kifi user's connections (min set) with pagination" in {
-      running(new EmptyApplication().withFakeHttpClient()) {
+      running(new ShoeboxApplication(socialConnectionTestModules:_*)) {
 
-        def loadJsonImportFriends(filenames: Seq[String]): Unit = {
+      def loadJsonImportFriends(filenames: Seq[String]): Unit = {
           val jsons = filenames map { filename =>
             Json.parse(io.Source.fromFile(new File("modules/shoebox/test/com/keepit/common/social/data/%s".format(filename))).mkString)
           }

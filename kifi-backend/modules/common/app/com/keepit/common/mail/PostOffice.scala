@@ -1,10 +1,8 @@
 package com.keepit.common.mail
 
 import com.google.inject.{ImplementedBy, Inject}
-import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.logging.Logging
 import com.keepit.shoebox.ShoeboxServiceClient
-import scala.collection.mutable.{Seq => MSeq}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.mutable.Queue
 import akka.actor.Actor
@@ -15,9 +13,7 @@ import scala.concurrent.duration._
 import akka.util.Timeout
 import play.api.Plugin
 
-trait LocalPostOffice {
-  def sendMail(mail: ElectronicMail)(implicit session: RWSession): ElectronicMail
-}
+
 
 @ImplementedBy(classOf[RemotePostOfficeImpl])
 trait RemotePostOffice {
@@ -47,10 +43,11 @@ class RemotePostOfficeActor @Inject() (shoeboxClient: ShoeboxServiceClient)
   extends Actor { // we cannot use an AlertingActor, because this generated Healthcheck errors on failure
 
   val mailQueue = Queue[ElectronicMail]()
+  val Max8M = 8 * 1024 * 1024
 
   def receive = {
     case SendEmail(mail: ElectronicMail) =>
-      shoeboxClient.sendMail(mail.copy(htmlBody = mail.htmlBody.value.take(8*1024*1024), textBody = mail.textBody.map(_.value.take(8*1024*1024)))) onComplete {
+      shoeboxClient.sendMail(mail.copy(htmlBody = mail.htmlBody.value.take(Max8M), textBody = mail.textBody.map(_.value.take(Max8M)))) onComplete {
         case Success(result)  => if(!result) self ! QueueEmail(mail)
         case Failure(failure) => self ! QueueEmail(mail)
       }
@@ -67,9 +64,11 @@ trait RemotePostOfficePlugin extends Plugin {
 }
 
 class RemotePostOfficePluginImpl @Inject() (
-    actorFactory: ActorFactory[RemotePostOfficeActor],
-    val schedulingProperties: SchedulingProperties)
+    actorFactory: ActorFactory[RemotePostOfficeActor])
   extends RemotePostOfficePlugin with SchedulingPlugin {
+
+  val schedulingProperties = SchedulingProperties.AlwaysEnabled
+
   implicit val actorTimeout = Timeout(5 seconds)
   private lazy val actor = actorFactory.get()
 
@@ -89,22 +88,3 @@ class RemotePostOfficeImpl @Inject() (
     mail
   }
 }
-
-
-class ShoeboxPostOfficeImpl @Inject() (mailRepo: ElectronicMailRepo)
-  extends LocalPostOffice with Logging {
-
-  def sendMail(mail: ElectronicMail)(implicit session: RWSession): ElectronicMail = {
-    val prepared =
-      if (mail.htmlBody.value.size > PostOffice.BODY_MAX_SIZE ||
-        mail.textBody.isDefined && mail.textBody.get.value.size > PostOffice.BODY_MAX_SIZE) {
-        log.warn(s"PostOffice attempted to send an email (${mail.externalId}) longer than ${PostOffice.BODY_MAX_SIZE} bytes. Too big!")
-        mailRepo.save(mail.copy(
-          htmlBody = mail.htmlBody.value.take(PostOffice.BODY_MAX_SIZE - 20) + "<br>\n<br>\n(snip)").prepareToSend())
-      } else {
-        mailRepo.save(mail.prepareToSend())
-      }
-    prepared
-  }
-}
-

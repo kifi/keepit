@@ -1,17 +1,23 @@
 package com.keepit.common.cache
 
+import scala.concurrent.duration._
+
 import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
-import scala.concurrent.duration._
 import com.keepit.search.ActiveExperimentsCache
-import com.keepit.common.social.BasicUserUserIdCache
+import com.keepit.social.BasicUserUserIdCache
 
 case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
 
   @Singleton
   @Provides
-  def probablisticLRUChunkCache(outerRepo: FortyTwoCachePlugin) = 
-    new ProbablisticLRUChunkCache((outerRepo, 7 days))
+  def playCacheApi(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new PlayCacheApi((innerRepo, 1 second), (outerRepo, 1 hour))
+
+  @Singleton
+  @Provides
+  def probablisticLRUChunkCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new ProbablisticLRUChunkCache((innerRepo, 5 seconds), (outerRepo, 7 days))
 
   @Singleton
   @Provides
@@ -77,4 +83,9 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   @Provides
   def userConnectionIdCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserConnectionIdCache((innerRepo, 10 seconds), (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def userConnectionCountCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new UserConnectionCountCache((innerRepo, 10 seconds), (outerRepo, 7 days))
 }

@@ -2,11 +2,13 @@ package com.keepit.controllers.shoebox
 
 import com.google.inject.Inject
 import com.keepit.common.analytics.EventFamilies
-import com.keepit.common.analytics.Events
 import com.keepit.common.analytics.EventPersister
+import com.keepit.common.analytics.Events
 import com.keepit.common.controller.ShoeboxServiceController
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
+import com.keepit.common.db.State
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.Healthcheck
 import com.keepit.common.healthcheck.HealthcheckError
@@ -15,50 +17,21 @@ import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.mail.LocalPostOffice
 import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.serializer._
+import com.keepit.search.ArticleSearchResultRef
+import com.keepit.search.ArticleSearchResultRefRepo
+import com.keepit.search.SearchConfigExperiment
+import com.keepit.search.SearchConfigExperimentRepo
 import com.keepit.shoebox.BrowsingHistoryTracker
-import com.keepit.model.NormalizedURI
-import com.keepit.common.mail.LocalPostOffice
-import play.api.libs.json.Json
-import com.keepit.common.mail.ElectronicMail
-import com.keepit.common.healthcheck.HealthcheckPlugin
-import com.keepit.common.healthcheck.HealthcheckError
-import com.keepit.common.healthcheck.Healthcheck
-import com.keepit.model.NormalizedURIRepo
-import com.keepit.model.PhraseRepo
 import com.keepit.shoebox.ClickHistoryTracker
+
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.Action
-import com.keepit.model.BrowsingHistoryRepo
-import com.keepit.model.User
-import com.keepit.search.MultiHashFilter
-import com.keepit.model.BrowsingHistory
-import com.keepit.model.ClickHistoryRepo
-import com.keepit.model.ClickHistory
-import com.keepit.common.mail.LocalPostOffice
-import play.api.libs.json.Json
-import com.keepit.common.mail.ElectronicMail
-import com.keepit.common.healthcheck.HealthcheckPlugin
-import com.keepit.common.healthcheck.HealthcheckError
-import com.keepit.common.healthcheck.Healthcheck
-import com.keepit.search.SearchConfigExperimentRepo
-import com.keepit.model.UserExperimentRepo
-import com.keepit.serializer.SearchConfigExperimentSerializer
-import com.keepit.search.SearchConfigExperiment
-import com.keepit.common.db.State
-import com.keepit.model.ExperimentType
-import com.keepit.common.db.SequenceNumber
-import com.keepit.common.social.BasicUserRepo
-import com.keepit.common.social.BasicUser
-import com.keepit.common.db.ExternalId
-import com.keepit.search.ArticleSearchResultRef
-import com.keepit.search.ArticleSearchResultRefRepo
-import com.keepit.common.social.SocialId
-import com.keepit.common.social.SocialNetworkType
-import com.keepit.common.social.SocialNetworks
+import com.keepit.social.{SocialNetworkType, SocialId}
+import com.keepit.realtime.{UriChannel, UserChannel}
 
 object ShoeboxController {
   implicit val collectionTupleFormat = (
@@ -91,7 +64,9 @@ class ShoeboxController @Inject() (
   basicUserRepo: BasicUserRepo,
   articleSearchResultRefRepo: ArticleSearchResultRefRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
-  sessionRepo: UserSessionRepo)
+  sessionRepo: UserSessionRepo,
+  userChannel: UserChannel,
+  uriChannel: UriChannel)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
@@ -100,7 +75,7 @@ class ShoeboxController @Inject() (
   def getUserOpt(id: ExternalId[User]) = Action { request =>
     val userOpt =  db.readOnly { implicit s => userRepo.getOpt(id) }
     userOpt match {
-      case Some(user) => Ok(UserSerializer.userSerializer.writes(user))
+      case Some(user) => Ok(Json.toJson(user))
       case None => Ok(JsNull)
     }
   }
@@ -139,18 +114,13 @@ class ShoeboxController @Inject() (
     val uri = db.readOnly { implicit s =>
       normUriRepo.get(Id[NormalizedURI](id))
     }
-    Ok(NormalizedURISerializer.normalizedURISerializer.writes(uri))
+    Ok(Json.toJson(uri))
   }
 
   def getNormalizedURIs(ids: String) = Action { request =>
      val uriIds = ids.split(',').map(id => Id[NormalizedURI](id.toLong))
-     val uris = db.readOnly { implicit s =>
-       uriIds.map{ id =>
-         val uri = normUriRepo.get(id)
-         NormalizedURISerializer.normalizedURISerializer.writes(uri)
-       }
-     }
-     Ok(JsArray(uris))
+     val uris = db.readOnly { implicit s => uriIds map normUriRepo.get }
+     Ok(Json.toJson(uris))
   }
 
   def getBrowsingHistoryFilter(userId: Id[User]) = Action {
@@ -215,13 +185,8 @@ class ShoeboxController @Inject() (
 
   def getUsers(ids: String) = Action { request =>
     val userIds = ids.split(',').map(id => Id[User](id.toLong))
-    val users = db.readOnly { implicit s =>
-      userIds.map{userId =>
-        val user = userRepo.get(userId)
-        UserSerializer.userSerializer.writes(user)
-      }
-    }
-    Ok(JsArray(users))
+    val users = db.readOnly { implicit s => userIds map userRepo.get }
+    Ok(Json.toJson(users))
   }
 
   def getUserIdsByExternalIds(ids: String) = Action { request =>
@@ -265,35 +230,24 @@ class ShoeboxController @Inject() (
   }
 
   def getActiveExperiments = Action { request =>
-    val exp = db.readOnly { implicit s => searchConfigExperimentRepo.getActive() }.map {
-      SearchConfigExperimentSerializer.serializer.writes(_)
-    }
-    Ok(JsArray(exp))
+    val exp = db.readOnly { implicit s => searchConfigExperimentRepo.getActive() }
+    Ok(Json.toJson(exp))
   }
 
   def getExperiments = Action { request =>
-    val exp = db.readOnly { implicit s => searchConfigExperimentRepo.getNotInactive() }.map {
-      SearchConfigExperimentSerializer.serializer.writes(_)
-    }
-    Ok(JsArray(exp))
+    val exp = db.readOnly { implicit s => searchConfigExperimentRepo.getNotInactive() }
+    Ok(Json.toJson(exp))
   }
 
   def getExperiment(id: Id[SearchConfigExperiment]) = Action{ request =>
     val exp = db.readOnly { implicit s => searchConfigExperimentRepo.get(id) }
-    Ok( SearchConfigExperimentSerializer.serializer.writes(exp))
+    Ok(Json.toJson(exp))
   }
 
   def saveExperiment = Action(parse.json) { request =>
-    val exp = SearchConfigExperimentSerializer.serializer.reads(request.body).get
+    val exp = Json.fromJson[SearchConfigExperiment](request.body).get
     val saved = db.readWrite { implicit s => searchConfigExperimentRepo.save(exp) }
-    Ok(SearchConfigExperimentSerializer.serializer.writes(saved))
-  }
-
-  def hasExperiment(userId: Id[User], state: State[ExperimentType]) = Action { request =>
-    val has = db.readOnly { implicit s =>
-      userExperimentRepo.hasExperiment(userId, state)
-    }
-    Ok(JsBoolean(has))
+    Ok(Json.toJson(saved))
   }
 
   def getUserExperiments(userId: Id[User]) = Action { request =>
@@ -304,11 +258,8 @@ class ShoeboxController @Inject() (
   }
 
   def getPhrasesByPage(page: Int, size: Int) = Action { request =>
-    val phrases = db.readOnly { implicit s =>
-      phraseRepo.page(page,size).map(PhraseSerializer.phraseSerializer.writes(_))
-    }
-
-    Ok(JsArray(phrases))
+    val phrases = db.readOnly { implicit s => phraseRepo.page(page,size) }
+    Ok(Json.toJson(phrases))
   }
 
   def getCollectionsByUser(userId: Id[User]) = Action { request =>
@@ -335,10 +286,8 @@ class ShoeboxController @Inject() (
 
 
   def getIndexable(seqNum: Long, fetchSize: Int) = Action { request =>
-    val uris = db.readOnly { implicit s =>
-        normUriRepo.getIndexable(SequenceNumber(seqNum), fetchSize)
-      }.map{uri => NormalizedURISerializer.normalizedURISerializer.writes(uri)}
-    Ok(JsArray(uris))
+    val uris = db.readOnly { implicit s => normUriRepo.getIndexable(SequenceNumber(seqNum), fetchSize) }
+    Ok(Json.toJson(uris))
   }
 
   def getSessionByExternalId(sessionId: ExternalId[UserSession]) = Action { request =>
@@ -348,4 +297,35 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(res))
   }
 
+  def userChannelFanout() = Action { request =>
+    val req = request.body.asJson.get.asInstanceOf[JsObject]
+    val userId = Id[User]((req \ "userId").as[Long])
+    val msg = (req \ "msg").asInstanceOf[JsArray]
+
+    log.info(s"[userChannelFanout] Recieved to $userId: ${msg.toString.take(120)}")
+
+    Ok(userChannel.pushNoFanout(userId, msg).toString)
+  }
+
+  def userChannelBroadcastFanout() = Action { request =>
+    val req = request.body.asJson.get.asInstanceOf[JsArray]
+
+    Ok(userChannel.broadcastNoFanout(req).toString)
+  }
+
+  def userChannelCountFanout() = Action { request =>
+    Ok(userChannel.localClientCount.toString)
+  }
+
+  def uriChannelFanout() = Action { request =>
+    val req = request.body.asJson.get.asInstanceOf[JsObject]
+    val uri = (req \ "uri").as[String]
+    val msg = (req \ "msg").asInstanceOf[JsArray]
+
+    Ok(uriChannel.pushNoFanout(uri, msg).toString)
+  }
+
+  def uriChannelCountFanout() = Action { request =>
+    Ok(uriChannel.localClientCount.toString)
+  }
 }

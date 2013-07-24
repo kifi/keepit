@@ -7,7 +7,12 @@ import com.keepit.common.amazon._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent._
+import scala.concurrent.duration._
 import scala.collection.concurrent.TrieMap
+import scala.util.{Try, Success, Failure}
+import scala.annotation.tailrec
+
+import akka.actor.Scheduler
 
 import play.api.libs.json._
 
@@ -21,6 +26,11 @@ trait ServiceDiscovery {
   def unRegister(): Unit = {}
   def isLeader(): Boolean
   def myClusterSize: Int = 0
+  def startSelfCheck(): Unit
+  def changeStatus(newStatus: ServiceStatus): Unit
+  def forceUpdate(): Unit
+  def myStatus: Option[ServiceStatus]
+  def myVersion: ServiceVersion
 }
 
 @Singleton
@@ -28,6 +38,7 @@ class ServiceDiscoveryImpl @Inject() (
     zk: ZooKeeperClient,
     services: FortyTwoServices,
     amazonInstanceInfoProvider: Provider[AmazonInstanceInfo],
+    scheduler: Scheduler,
     servicesToListenOn: Seq[ServiceType] = ServiceType.SEARCH :: ServiceType.SHOEBOX :: Nil)
   extends ServiceDiscovery with Logging {
 
@@ -62,13 +73,29 @@ class ServiceDiscoveryImpl @Inject() (
         return false
       case None =>
         require(myCluster.size == 0)
-        return true
+        return false
     }
   }
+
+  override def toString(): String = clusters.map(kv => kv._1.toString + ":" + kv._2.toString).mkString("\n")
 
   implicit val amazonInstanceInfoFormat = AmazonInstanceInfo.format
 
   override def myClusterSize: Int = clusters.get(services.currentService) map {c => c.size} getOrElse 0
+
+  private def stillRegistered(): Boolean = myNode map { clusters(services.currentService).instanceForNode(_).isDefined } getOrElse true
+
+
+  private def keepAlive() : Unit = {
+    scheduler.scheduleOnce(2 minutes){
+      if (stillRegistered) {
+        keepAlive()
+      } else {
+        log.warn("Zookeeper seems to have lost me! Re-registering.")
+        register()
+      }
+    }
+  }
 
   private def watchServices(): Unit = clusters.values foreach watchService
 
@@ -76,11 +103,18 @@ class ServiceDiscoveryImpl @Inject() (
     zk.createPath(cluster.servicePath)
     zk.watchChildren(cluster.servicePath, { (children : Seq[Node]) =>
       log.info(s"""services in my cluster under ${cluster.servicePath.name}: ${children.mkString(", ")}""")
-      future {
-        cluster.update(zk, children)
-      }
+      cluster.update(zk, children)
     })
   }
+
+  def forceUpdate() : Unit = {
+    for (cluster <- clusters.values) {
+      val children = zk.getChildren(cluster.servicePath)
+      cluster.update(zk, children)
+    }
+  }
+
+
 
   def register(): Node = {
     watchServices()
@@ -88,21 +122,51 @@ class ServiceDiscoveryImpl @Inject() (
     log.info(s"registered clusters: $clusters, my service is $myServiceType")
     val myCluster = clusters(myServiceType)
     val instanceInfo = amazonInstanceInfoProvider.get
-    myNode = Some(zk.createNode(myCluster.serviceNodeMaster, Json.toJson(instanceInfo).toString, EPHEMERAL_SEQUENTIAL))
-    myCluster.register(myNode.get, instanceInfo)
+    val thisRemoteService = RemoteService(instanceInfo, ServiceStatus.STARTING, myServiceType)
+    myNode = Some(zk.createNode(myCluster.serviceNodeMaster, RemoteService.toJson(thisRemoteService), EPHEMERAL_SEQUENTIAL))
+    myCluster.register(myNode.get, thisRemoteService)
     log.info(s"registered as node ${myNode.get}")
+    keepAlive()
     myNode.get
   }
 
   override def unRegister(): Unit = myNode map {node => zk.deleteNode(node)}
 
+  def changeStatus(newStatus: ServiceStatus) : Unit = {
+    myNode.map { node => 
+      val thisServiceInstance = clusters(services.currentService).instanceForNode(node)
+      thisServiceInstance.foreach{ serviceInstance =>
+        log.info(s"Changing instance status to $newStatus")
+        serviceInstance.remoteService.status = newStatus
+        zk.set(node, RemoteService.toJson(serviceInstance.remoteService))
+      }
+    }
+  }
+
+  def myStatus : Option[ServiceStatus] = {
+    myNode.flatMap { node =>
+      val thisServiceInstance = clusters(services.currentService).instanceForNode(node)
+      thisServiceInstance.map(_.remoteService.status)
+    }
+  }
+
+  def myVersion: ServiceVersion = services.currentVersion 
+
+  def startSelfCheck(): Unit = future {
+
+    log.info("Running self check")
+    services.currentService.selfCheck().onComplete{
+      case Success(passed) => if (passed) changeStatus(ServiceStatus.UP) else changeStatus(ServiceStatus.SELFCHECK_FAIL)
+      case Failure(e) => changeStatus(ServiceStatus.SELFCHECK_FAIL)
+    }
+  }
+  
+
   implicit val amazonInstanceIdFormat = Json.format[AmazonInstanceId]
   implicit val serviceStatusFormat = ServiceStatus.format
   implicit val ipAddressFormat = Json.format[IpAddress]
   implicit val serviceTypeFormat = ServiceType.format
-  implicit val remoteServiceFormat = Json.format[RemoteService]
+  
 
-  def toRemoteService(data: Array[Byte]): RemoteService = Json.fromJson[RemoteService](Json.parse(data)).get
-  def fromRemoteService(remote: RemoteService): Array[Byte] = Json.toJson[RemoteService](remote).toString
 }
 

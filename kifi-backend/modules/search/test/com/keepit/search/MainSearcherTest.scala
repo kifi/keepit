@@ -29,10 +29,12 @@ import com.keepit.inject._
 import com.keepit.shoebox.{FakeShoeboxServiceClientImpl, ShoeboxServiceClient}
 import play.api.Play.current
 
-class MainSearcherTest extends Specification {
+class MainSearcherTest extends Specification with ApplicationInjector {
 
   val resultClickBuffer  = new InMemoryResultClickTrackerBuffer(1000)
   val resultClickTracker = new ResultClickTracker(new ProbablisticLRU(resultClickBuffer, 8, Int.MaxValue)(None))
+
+  val english = Map(Lang("en") -> 0.9999)
 
   def initData(numUsers: Int, numUris: Int) = {
     val users = (0 until numUsers).map {n => User(firstName = "foo" + n, lastName = "")}.toList
@@ -128,14 +130,13 @@ class MainSearcherTest extends Specification {
 
   "MainSearcher" should {
     "search and categorize using social graph" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges)
 
         val store = mkStore(uris)
         val (graph, indexer, mainSearcherFactory) = initIndexes(store)
-        val clickBoosts = resultClickTracker.getBoosts(Id[User](0), "", 1.0f)
         graph.update() === users.size
         indexer.run() === uris.size
 
@@ -145,9 +146,9 @@ class MainSearcherTest extends Specification {
             val userId = user.id.get
             setConnections(Map(userId -> (friends.map(_.id.get).toSet - userId)))
             mainSearcherFactory.clear
-            val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), allHitsConfig)
+            val mainSearcher = mainSearcherFactory(userId, "alldocs", english, numHitsPerCategory, SearchFilter.default(), allHitsConfig, None)
             val graphSearcher = mainSearcher.uriGraphSearcher
-            val (myHits, friendsHits, othersHits, _) = mainSearcher.searchText("alldocs", numHitsPerCategory, clickBoosts)
+            val (myHits, friendsHits, othersHits, _) = mainSearcher.searchText(numHitsPerCategory)
 
             //println("----")
             val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet.map(_.id)
@@ -181,7 +182,7 @@ class MainSearcherTest extends Specification {
     }
 
     "return a single list of hits" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges)
@@ -200,9 +201,9 @@ class MainSearcherTest extends Specification {
             setConnections(Map(userId -> (friends.map(_.id.get).toSet - userId)))
 
             mainSearcherFactory.clear
-            val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), allHitsConfig)
+            val mainSearcher = mainSearcherFactory(userId, "alldocs", english, numHitsToReturn, SearchFilter.default(), allHitsConfig, None)
             val graphSearcher = mainSearcher.uriGraphSearcher
-            val res = mainSearcher.search("alldocs", numHitsToReturn, None)
+            val res = mainSearcher.search()
 
             val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
             val friendsUriIds = friends.foldLeft(Set.empty[Id[NormalizedURI]]){ (s, f) =>
@@ -233,7 +234,7 @@ class MainSearcherTest extends Specification {
     }
 
     "search personal bookmark titles" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("personal title"))
@@ -250,9 +251,9 @@ class MainSearcherTest extends Specification {
             //println("user:" + userId)
             setConnections(Map(userId -> (users.map(_.id.get).toSet - userId)))
             mainSearcherFactory.clear
-            val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), allHitsConfig)
+            val mainSearcher = mainSearcherFactory(userId, "personal", english, numHitsToReturn, SearchFilter.default(), allHitsConfig, None)
             val graphSearcher = mainSearcher.uriGraphSearcher
-            val res = mainSearcher.search("personal", numHitsToReturn, None)
+            val res = mainSearcher.search()
 
             val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
 
@@ -291,7 +292,7 @@ class MainSearcherTest extends Specification {
     }
 
     "score using matches in a bookmark title and an article" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("personal title"))
@@ -307,11 +308,11 @@ class MainSearcherTest extends Specification {
         val userId = users(0).id.get
         //println("user:" + userId)
         setConnections(Map(userId -> (users.map(_.id.get).toSet - userId)))
-        val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), noBoostConfig("myBookMarkBoost" -> "1.5"))
+        val mainSearcher = mainSearcherFactory(userId, "personal title3 content3 xyz", english, numHitsToReturn, SearchFilter.default(), noBoostConfig("myBookMarkBoost" -> "1.5"), None)
         val graphSearcher = mainSearcher.uriGraphSearcher
 
         val expected = (uris(3) :: ((uris.toList diff List(uris(3))).reverse)).map(_.id.get).toList
-        val res = mainSearcher.search("personal title3 content3 xyz", numHitsToReturn, None)
+        val res = mainSearcher.search()
 
         val myUriIds = graphSearcher.getUserToUriEdgeSet(userId).destIdSet
 
@@ -320,7 +321,7 @@ class MainSearcherTest extends Specification {
     }
 
     "paginate" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges)
@@ -337,7 +338,7 @@ class MainSearcherTest extends Specification {
         var uriSeen = Set.empty[Long]
 
         var context = Some(IdFilterCompressor.fromSetToBase64(uriSeen))
-        val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(context), allHitsConfig)
+        val mainSearcher = mainSearcherFactory(userId, "alldocs", english, numHitsToReturn, SearchFilter.default(context), allHitsConfig, None)
         val graphSearcher = mainSearcher.uriGraphSearcher
         val reachableUris = users.foldLeft(Set.empty[Long])((s, u) => s ++ graphSearcher.getUserToUriEdgeSet(u.id.get, publicOnly = true).destIdLongSet)
 
@@ -346,9 +347,9 @@ class MainSearcherTest extends Specification {
         while (cnt < reachableUris.size && uriSeen.size < reachableUris.size) {
           cnt += 1
           context = Some(IdFilterCompressor.fromSetToBase64(uriSeen))
-          val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(context), allHitsConfig)
+          val mainSearcher = mainSearcherFactory(userId, "alldocs", english, numHitsToReturn, SearchFilter.default(context), allHitsConfig, uuid)
           //println("---" + uriSeen + ":" + reachableUris)
-          val res = mainSearcher.search("alldocs", numHitsToReturn, uuid)
+          val res = mainSearcher.search()
           res.hits.foreach{ h =>
             //println(h)
             uriSeen.contains(h.uriId.id) === false
@@ -362,7 +363,7 @@ class MainSearcherTest extends Specification {
     }
 
     "boost recent bookmarks" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 1, numUris = 5)
         val Seq(user) = users
         val userId = user.id.get
@@ -377,8 +378,8 @@ class MainSearcherTest extends Specification {
 
         setConnections(Map(userId -> Set.empty[Id[User]]))
 
-        val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), noBoostConfig("recencyBoost" -> "1.0"))
-        val res = mainSearcher.search("alldocs", uris.size, None)
+        val mainSearcher = mainSearcherFactory(userId, "alldocs", english, uris.size, SearchFilter.default(), noBoostConfig("recencyBoost" -> "1.0"), None)
+        val res = mainSearcher.search()
 
         var lastTime = Long.MaxValue
 
@@ -391,7 +392,7 @@ class MainSearcherTest extends Specification {
     }
 
     "be able to cut the long tail" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 1, numUris = 10)
         val Seq(user) = users
         val userId = user.id.get
@@ -410,8 +411,8 @@ class MainSearcherTest extends Specification {
         indexer.run() === uris.size
         setConnections(Map(userId -> Set.empty[Id[User]]))
 
-        var mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), noBoostConfig)
-        var res = mainSearcher.search("alldocs", uris.size, None)
+        var mainSearcher = mainSearcherFactory(userId, "alldocs", english, uris.size, SearchFilter.default(), noBoostConfig, None)
+        var res = mainSearcher.search()
         //println("Scores: " + res.hits.map(_.score))
         val sz = res.hits.size
         val maxScore = res.hits.head.score
@@ -420,15 +421,15 @@ class MainSearcherTest extends Specification {
         (minScore < medianScore && medianScore < maxScore) === true // this is a sanity check of test data
 
         val tailCuttingConfig = noBoostConfig("tailCutting" -> medianScore.toString)
-        mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), tailCuttingConfig)
-        res = mainSearcher.search("alldocs", uris.size, None)
+        mainSearcher = mainSearcherFactory(userId, "alldocs", english, uris.size, SearchFilter.default(), tailCuttingConfig, None)
+        res = mainSearcher.search()
         //println("Scores: " + res.hits.map(_.score))
         (res.hits.map(h => h.score).reduce((s1, s2) => min(s1, s2)) >= medianScore) === true
       }
     }
 
     "show own private bookmarks" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
@@ -444,15 +445,15 @@ class MainSearcherTest extends Specification {
 
         setConnections(Map(user1.id.get -> Set(user2.id.get)))
 
-        val mainSearcher = mainSearcherFactory(user1.id.get, SearchFilter.default(), noBoostConfig)
-        val res = mainSearcher.search("alldocs", uris.size, None)
+        val mainSearcher = mainSearcherFactory(user1.id.get, "alldocs", english, uris.size, SearchFilter.default(), noBoostConfig, None)
+        val res = mainSearcher.search()
 
         res.hits.size === uris.size
       }
     }
 
     "not show friends private bookmarks" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
@@ -468,8 +469,8 @@ class MainSearcherTest extends Specification {
 
         setConnections(Map(user1.id.get -> Set(user2.id.get)))
 
-        val mainSearcher = mainSearcherFactory(user1.id.get, SearchFilter.default(), noBoostConfig)
-        val res = mainSearcher.search("alldocs", uris.size, None)
+        val mainSearcher = mainSearcherFactory(user1.id.get, "alldocs", english, uris.size, SearchFilter.default(), noBoostConfig, None)
+        val res = mainSearcher.search()
 
         val publicSet = publicUris.map(u => u.id.get).toSet
         val privateSet = privateUris.map(u => u.id.get).toSet
@@ -483,7 +484,7 @@ class MainSearcherTest extends Specification {
     }
 
     "search hits using a stemmed word" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 9, numUris = 9)
         val expectedUriToUserEdges = uris.toIterator.zip((1 to 9).iterator.map(users.take(_))).toList
         saveBookmarksByURI(expectedUriToUserEdges, uniqueTitle = Some("my books"))
@@ -497,19 +498,18 @@ class MainSearcherTest extends Specification {
         val numHitsToReturn = 100
         val userId = users(0).id.get
         setConnections(Map(userId -> (users.map(_.id.get).toSet - userId)))
-        val mainSearcher = mainSearcherFactory(userId, SearchFilter.default(), noBoostConfig)
-        val graphSearcher = mainSearcher.uriGraphSearcher
+        val mainSearcher1 = mainSearcherFactory(userId, "document", english, numHitsToReturn, SearchFilter.default(), noBoostConfig, None)
+        val res1 = mainSearcher1.search()
+        (res1.hits.size > 0) === true
 
-        var res = mainSearcher.search("document", numHitsToReturn, None)
-        (res.hits.size > 0) === true
-
-        res = mainSearcher.search("book", numHitsToReturn, None)
-        (res.hits.size > 0) === true
+        val mainSearcher2 = mainSearcherFactory(userId, "book", english, numHitsToReturn, SearchFilter.default(), noBoostConfig, None)
+        val res2 = mainSearcher2.search()
+        (res2.hits.size > 0) === true
       }
     }
 
     "search within collections" in {
-      running(new SearchApplication().withShoeboxServiceModule) {
+      running(new DeprecatedSearchApplication().withShoeboxServiceModule) {
         val (users, uris) = initData(numUsers = 2, numUris = 20)
         val user1 = users(0)
         val user2 = users(1)
@@ -534,24 +534,24 @@ class MainSearcherTest extends Specification {
 
         val coll1Future = Promise.successful(Seq(coll1.id.get)).future
         val searchFilter1 = SearchFilter.mine(collectionsFuture = Some(coll1Future), monitoredAwait = inject[MonitoredAwait])
-        val mainSearcher1 = mainSearcherFactory(user1.id.get, searchFilter1, noBoostConfig)
-        val res1 = mainSearcher1.search("alldocs", uris.size, None)
+        val mainSearcher1 = mainSearcherFactory(user1.id.get, "alldocs", english, uris.size, searchFilter1, noBoostConfig, None)
+        val res1 = mainSearcher1.search()
 
         res1.hits.size == coll1set.size
         res1.hits.foreach{ _.uriId.id % 3 === 0 }
 
         val coll2Future = Promise.successful(Seq(coll2.id.get)).future
         val searchFilter2 = SearchFilter.mine(collectionsFuture = Some(coll2Future), monitoredAwait = inject[MonitoredAwait])
-        val mainSearcher2 = mainSearcherFactory(user1.id.get, searchFilter2, noBoostConfig)
-        val res2 = mainSearcher2.search("alldocs", uris.size, None)
+        val mainSearcher2 = mainSearcherFactory(user1.id.get, "alldocs", english, uris.size, searchFilter2, noBoostConfig, None)
+        val res2 = mainSearcher2.search()
 
         res2.hits.size == coll2set.size
         res2.hits.foreach{ _.uriId.id % 3 === 1 }
 
         val coll3Future = Promise.successful(Seq(coll1.id.get, coll2.id.get)).future
         val searchFilter3 = SearchFilter.mine(collectionsFuture = Some(coll3Future), monitoredAwait = inject[MonitoredAwait])
-        val mainSearcher3 = mainSearcherFactory(user1.id.get, searchFilter3, noBoostConfig)
-        val res3 = mainSearcher3.search("alldocs", uris.size, None)
+        val mainSearcher3 = mainSearcherFactory(user1.id.get, "alldocs", english, uris.size, searchFilter3, noBoostConfig, None)
+        val res3 = mainSearcher3.search()
 
         res3.hits.size == (coll1set.size + coll2set.size)
       }

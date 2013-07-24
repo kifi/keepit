@@ -4,10 +4,9 @@ import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db.Id
 import com.keepit.model.{User, NormalizedURI}
-import com.keepit.search.{ResultClickTracker}
+import com.keepit.search.{ResultClicked, ResultClickTracker}
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc.Action
-import com.keepit.common.search.ResultClicked
 
 class SearchEventController @Inject()(resultClickTracker: ResultClickTracker) extends SearchServiceController {
 

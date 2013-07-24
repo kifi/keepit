@@ -4,6 +4,8 @@ import com.keepit.common.db.Id
 import com.keepit.common.cache.{ProbablisticLRUChunkCache, ProbablisticLRUChunkKey}
 
 import scala.math._
+import scala.concurrent.future
+import scala.concurrent.ExecutionContext.Implicits.global
 import java.io.File
 import java.io.RandomAccessFile
 import java.nio.channels.FileChannel.MapMode
@@ -118,6 +120,8 @@ class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticL
 
   def chunkSize : Int = 4000
 
+  def warmCache() : Unit = (0 to numChunks).foreach(loadChunk(_))
+
   def getChunk(key: Long) = {
     val chunkId = ((Math.abs(key) % chunkSize*numChunks) / chunkSize).toInt
     val thisChunk : Array[Int] = loadChunk(chunkId)
@@ -125,17 +129,23 @@ class S3BackedBuffer(cache: ProbablisticLRUChunkCache, dataStore : ProbablisticL
     
     new IntBufferWrapper {
       
+      val syncLock : AnyRef = "Sync Lock"
+      val putLock  : AnyRef = "Put Lock"
+
       def get(pos: Int) : Int = thisChunk(pos)
 
-      def sync : Unit = synchronized {
-        val storedChunk = loadChunk(chunkId)
-        dirtyEntries.foreach { pos =>
-          storedChunk(pos) = thisChunk(pos)
+      def sync : Unit = future { 
+        syncLock.synchronized {
+          val storedChunk = loadChunk(chunkId)
+          dirtyEntries.foreach { pos =>
+            storedChunk(pos) = thisChunk(pos)
+            dirtyEntries = dirtyEntries - pos
+          }
+          saveChunk(chunkId, storedChunk)
         }
-        saveChunk(chunkId, storedChunk)
       }
 
-      def put(pos: Int, value: Int) = synchronized {
+      def put(pos: Int, value: Int) = putLock.synchronized {
         thisChunk(pos) = value
         dirtyEntries = dirtyEntries + pos
       }
@@ -198,13 +208,13 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEv
     if ((ins % syncEvery) == 0) sync
   }
 
-  def get(key: Long) = {
-    val (p, h) = getValueHashes(key)
+  def get(key: Long, useSlaveAsPrimary: Boolean) = {
+    val (p, h) = getValueHashes(key, useSlaveAsPrimary)
     new Likeliness(key, p, h, numHashFuncs.toFloat)
   }
 
-  def get(key: Long, values: Seq[Long]): Map[Long, Int] = {
-    val likeliness = get(key)
+  def get(key: Long, values: Seq[Long], useSlaveAsPrimary: Boolean = false): Map[Long, Int] = {
+    val likeliness = get(key, useSlaveAsPrimary)
     values.foldLeft(Map.empty[Long, Int]){ (m, value) =>
       val c = likeliness.count(value)
       if (c > 0)  m + (value -> c) else m
@@ -254,9 +264,10 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEv
 
   }
 
-  protected def getValueHashes(key: Long): (Array[Int], Array[Int]) = {
-    val bufferChunk = masterBuffer.getChunk(key)
-    val tableSize = masterBuffer.chunkSize
+  protected def getValueHashes(key: Long, useSlaveAsPrimary: Boolean = false): (Array[Int], Array[Int]) = {
+    val buffer = if (useSlaveAsPrimary) slaveBuffer.getOrElse(masterBuffer) else masterBuffer
+    val bufferChunk = buffer.getChunk(key)
+    val tableSize = buffer.chunkSize
     var p = new Array[Int](numHashFuncs)
     var h = new Array[Int](numHashFuncs)
     var i = 0
@@ -266,6 +277,7 @@ class ProbablisticLRU(masterBuffer: MultiChunkBuffer, numHashFuncs : Int, syncEv
       i += 1
     }
     (p, h)
+
   }
 
   private[this] def foreachPosition(key: Long, tableSize: Int)(f: Int => Unit) {

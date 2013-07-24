@@ -5,65 +5,81 @@ import com.google.inject.{Provider, Singleton, Provides}
 import com.keepit.common.logging.Logging
 import play.api.Play._
 import com.keepit.inject.AppScoped
+import com.keepit.model.TopicNameRepoA
+import com.keepit.common.db.slick.Database
+import scala.concurrent._
+import ExecutionContext.Implicits.global
+import com.keepit.common.akka.SlowRunningExecutionContext
+import com.keepit.search.ArticleStore
+import com.keepit.search.InMemoryArticleStoreImpl
+
 
 object TopicModelGlobal {
-  val numTopics = 100
   val primaryTopicThreshold = 0.07       // need to tune this as numTopics varies
   val topicTailcut = 0.7
+  val naString = "NA"
+}
+
+object TopicModelGlobalTest {
+  val numTopics = 50                    // only used in test
 }
 
 trait TopicModelModule extends ScalaModule {
-  def configure {
-    bind[TopicUpdaterPlugin].to[TopicUpdaterPluginImpl].in[AppScoped]
-  }
+  def configure {}
 }
 
 case class LdaTopicModelModule() extends TopicModelModule with Logging {
-
-  @Provides
-  @Singleton
-  def wordTopicModel: WordTopicModel = {
-    val path = current.configuration.getString("learning.topicModel.wordTopic.json.path").get
-    log.info("loading word topic model")
-    val c = scala.io.Source.fromFile(path).mkString
-    // names don't matter much, at this moment
-    val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map{ i => "topic%d".format(i)}.toArray
-    val loader = new LdaTopicModelLoader
-    loader.load(c, topicNames)
+  override def configure() {
+    bind[TopicUpdaterPlugin].to[TopicUpdaterPluginImpl].in[AppScoped]
+    bind[WordTopicModelFactory].to[WordTopicModelFactoryImpl].in[AppScoped]
+    bind[NameMapperFactory].to[NameMapperFactoryImpl].in[AppScoped]
   }
 
   @Provides
   @Singleton
-  def topicNameMapper: TopicNameMapper = {
-    log.info("loading topic name list")
-    val path = current.configuration.getString("learning.topicModel.topicNames.path").get
-    val rows = scala.io.Source.fromFile(path).mkString.split("\n")
-    assume(rows.size == TopicModelGlobal.numTopics, "insufficient raw topic names")
-    val sep = "\t"
-    val rawNames = rows.map{_.split(sep)(1)}
-    val (newNames, mapper) = NameMapperConstructer.getMapper(rawNames)
-    new ManualTopicNameMapper(rawNames, newNames, mapper)
+  def switchableTopicModelAccessor(factory: TopicModelAccessorFactory): SwitchableTopicModelAccessor = {
+    val a = future{ factory.makeA() }(SlowRunningExecutionContext.ec)
+    val b = future{ factory.makeB() }(SlowRunningExecutionContext.ec)
+    new SwitchableTopicModelAccessor(a, b)
   }
+
 }
 
 case class DevTopicModelModule() extends TopicModelModule {
-
-  @Provides
-  @Singleton
-  def wordTopicModel: WordTopicModel = {
-    val vocabulary: Set[String] = (0 until TopicModelGlobal.numTopics).map{ i => "word%d".format(i)}.toSet
-    val wordTopic: Map[String, Array[Double]] = (0 until TopicModelGlobal.numTopics).foldLeft(Map.empty[String, Array[Double]]){
-      (m, i) => { val a = new Array[Double](TopicModelGlobal.numTopics); a(i) = 1.0; m + ("word%d".format(i) -> a) }
-    }
-    val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map{ i => "topic%d".format(i)}.toArray
-    print("loading fake topic model")
-    new LdaWordTopicModel(vocabulary, wordTopic, topicNames)
+  override def configure() {
+    bind[TopicUpdaterPlugin].to[TopicUpdaterPluginImpl].in[AppScoped]
+    bind[WordTopicModelFactory].to[FakeWordTopicModelFactoryImpl].in[AppScoped]
+    //bind[WordTopicModelFactory].to[WordTopicModelFactoryImpl].in[AppScoped]        // uncomment to connect to S3 in dev mode
+    bind[NameMapperFactory].to[FakeNameMapperFactoryImpl].in[AppScoped]
   }
 
   @Provides
   @Singleton
-  def topicNameMapper: TopicNameMapper = {
-    val topicNames: Array[String] = (0 until TopicModelGlobal.numTopics).map { i => "topic%d".format(i) }.toArray
-    new IdentityTopicNameMapper(topicNames)
+  def switchableTopicModelAccessor(factory: TopicModelAccessorFactory): SwitchableTopicModelAccessor = {
+    val a = future{ factory.makeA() }
+    val b = future{ factory.makeB() }
+    new SwitchableTopicModelAccessor(a, b)
   }
+}
+
+// need this to make shoeboxModuleTest pass (for TopicModelController)
+case class DevTopicStoreModule() extends ScalaModule {
+  override def configure() {}
+
+  @Provides
+  @Singleton
+  def wordTopicStore: WordTopicStore = new InMemoryWordTopicStoreImpl
+
+  @Provides
+  @Singleton
+  def wordStore: WordStore = new InMemoryWordStoreImpl
+
+  @Provides
+  @Singleton
+  def topicVectorStore: WordTopicBlobStore = new InMemoryWordTopicBlobStoreImpl
+
+  @Provides
+  @Singleton
+  def topicWordsStore: TopicWordsStore = new InMemoryTopicWordsStoreImpl
+
 }

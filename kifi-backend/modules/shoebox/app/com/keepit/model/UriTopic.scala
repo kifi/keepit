@@ -30,9 +30,9 @@ case class UriTopic(
 }
 
 class UriTopicHelper {
-  def toByteArray(arr: Array[Double]) = {
-    assume(arr.length == TopicModelGlobal.numTopics, "topic array size not matching TopicModelGlobal.numTopics")
-    val bs = new ByteArrayOutputStream(TopicModelGlobal.numTopics * 8)
+  def toByteArray(arr: Array[Double], numTopics: Int) = {
+    assume(arr.length == numTopics, s"topic array size ${arr.length} not matching expected numTopics ${numTopics}")
+    val bs = new ByteArrayOutputStream(numTopics * 8)
     val os = new DataOutputStream(bs)
     arr.foreach{os.writeDouble}
     os.close()
@@ -41,10 +41,10 @@ class UriTopicHelper {
     rv
   }
 
-  def toDoubleArray(arr: Array[Byte]) = {
-    assume(arr.size == TopicModelGlobal.numTopics * 8, s"topic array size ${arr.size} not matching TopicModelGlobal.numTopics")
+  def toDoubleArray(arr: Array[Byte], numTopics: Int) = {
+    assume(arr.size == numTopics * 8, s"topic array size ${arr.length / 8} not matching expected numTopics ${numTopics}")
     val is = new DataInputStream(new ByteArrayInputStream(arr))
-    val topic = (0 until TopicModelGlobal.numTopics).map{i => is.readDouble()}
+    val topic = (0 until numTopics).map{i => is.readDouble()}
     is.close()
     topic.toArray
   }
@@ -73,28 +73,29 @@ class UriTopicHelper {
     }
   }
 
-  def assignTopics(arr: Array[Double]): (Option[Int], Option[Int]) = {
-    assume(arr.length > 2 && arr.length == TopicModelGlobal.numTopics, s"topic array size ${arr.size} less than 3 or not matching TopicModelGlobal.numTopics")
+  def assignTopics(arr: Array[Double], numTopics: Int): (Option[Int], Option[Int]) = {
+    assume(arr.length > 2 && arr.length == numTopics, s"topic array size ${arr.size} less than 3 or not matching numTopics")
     getBiggerTwo(arr)
   }
 }
 
-@ImplementedBy(classOf[UriTopicRepoImpl])
 trait UriTopicRepo extends Repo[UriTopic]{
   def getByUriId(uriId: Id[NormalizedURI])(implicit session: RSession):Option[UriTopic]
   def getAssignedTopicsByUriId(uriId: Id[NormalizedURI])(implicit session: RSession): Option[(Option[Int], Option[Int])]
   def deleteAll()(implicit session: RWSession): Int
+  def getUrisByTopic(topic: Int)(implicit session: RSession): Seq[Id[NormalizedURI]]
+  def countByTopic()(implicit session: RSession): Map[Int, Int]
 }
 
-@Singleton
-class UriTopicRepoImpl @Inject() (
+abstract class UriTopicRepoBase (
+  val tableName: String,
   val db: DataBaseComponent,
   val clock: Clock
 ) extends DbRepo[UriTopic] with UriTopicRepo {
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
-  override val table = new RepoTable[UriTopic](db, "uri_topic"){
+  override val table = new RepoTable[UriTopic](db, tableName){
     def uriId = column[Id[NormalizedURI]]("uri_id", O.NotNull)
     def topic = column[Array[Byte]]("topic", O.NotNull)
     def primaryTopic = column[Option[Int]]("primaryTopic")
@@ -113,4 +114,25 @@ class UriTopicRepoImpl @Inject() (
   def deleteAll()(implicit session: RWSession): Int = {
     (for(r <- table) yield r).delete
   }
+
+  def getUrisByTopic(topic: Int)(implicit session: RSession): Seq[Id[NormalizedURI]] = {
+    (for(r <- table if (r.primaryTopic === topic)) yield r.uriId).list
+  }
+
+  def countByTopic()(implicit session: RSession): Map[Int, Int] = {
+    val uriAndTopic = (for (r <- table if r.primaryTopic.isNotNull) yield (r.uriId, r.primaryTopic)).list
+    uriAndTopic.groupBy(_._2).map{case (topic, uris) => (topic.get, uris.size) }
+  }
 }
+
+@Singleton
+class UriTopicRepoA @Inject()(
+  db: DataBaseComponent,
+  clock: Clock
+) extends UriTopicRepoBase("uri_topic", db, clock)
+
+@Singleton
+class UriTopicRepoB @Inject()(
+  db: DataBaseComponent,
+  clock: Clock
+) extends UriTopicRepoBase("uri_topic_b", db, clock)

@@ -7,14 +7,15 @@ import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick._
 import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.{ElectronicMail, PostOffice, LocalPostOffice}
-import com.keepit.common.social.{SocialGraphPlugin, SocialNetworkType, SocialNetworks}
 import com.keepit.model._
 import com.keepit.common.service.FortyTwoServices
 
 import play.api.Play.current
 import play.api._
+import play.api.libs.MimeTypes
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
+import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialGraphPlugin}
 
 @Singleton
 class HomeController @Inject() (db: Database,
@@ -38,10 +39,11 @@ class HomeController @Inject() (db: Database,
   private def userCanInvite[A](implicit request: AuthenticatedRequest[A]): Boolean =
     (request.experiments & Set(ExperimentTypes.ADMIN, ExperimentTypes.CAN_INVITE)).nonEmpty || Play.isDev
 
-  def kifiSite(path: String) = AuthenticatedHtmlAction { implicit request =>
+  def kifiSite(path: String, id: String) = AuthenticatedHtmlAction { implicit request =>
     if (userCanSeeKifiSite) {
       Play.resourceAsStream(s"public/site/$path") map { stream =>
-        SimpleResult(header = ResponseHeader(OK), body = Enumerator.fromStream(stream))
+        val result = Ok.stream(Enumerator.fromStream(stream))
+        MimeTypes.forFileName(path) map (result as _) getOrElse result
       } getOrElse NotFound
     } else NotFound
   }

@@ -69,8 +69,6 @@ extends Searcher(indexReader) with Logging {
     val subReaders = indexReader.wrappedSubReaders
     val composer = new SemanticVectorComposer
     var i = 0
-    var cnt = 0
-    val minMyCount = 3
     while (i < subReaders.length) {
       val subReader = subReaders(i)
       val idMapper = subReader.getIdMapper
@@ -85,7 +83,6 @@ extends Searcher(indexReader) with Logging {
             else 0
           }
           if (weight > 0) {
-            cnt += 1
             var freq = tp.freq()
             if (freq > 0) {
               tp.nextPosition()

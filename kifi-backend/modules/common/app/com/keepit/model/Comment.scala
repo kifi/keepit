@@ -1,11 +1,12 @@
 package com.keepit.model
 
-import org.joda.time.DateTime
-import com.keepit.common.db._
-import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
-import com.keepit.common.time.currentDateTime
-import com.keepit.common.cache._
 import scala.concurrent.duration._
+
+import org.joda.time.DateTime
+
+import com.keepit.common.cache._
+import com.keepit.common.db._
+import com.keepit.common.time._
 
 case class Comment(
   id: Option[Id[Comment]] = None,
@@ -41,8 +42,8 @@ object Comment {
 
   implicit val commentFormat = (
       (__ \ 'id).formatNullable(Id.format[Comment]) and
-      (__ \ 'createdAt).format[DateTime] and
-      (__ \ 'updatedAt).format[DateTime] and
+      (__ \ 'createdAt).format(DateTimeJsonFormat) and
+      (__ \ 'updatedAt).format(DateTimeJsonFormat) and
       (__ \ 'externalId).format(ExternalId.format[Comment]) and
       (__ \ 'uriId).format(Id.format[NormalizedURI]) and
       (__ \ 'urlId).formatNullable(Id.format[URL]) and
@@ -57,12 +58,24 @@ object Comment {
 }
 
 case class CommentCountUriIdKey(normUriId: Id[NormalizedURI]) extends Key[Int] {
-  override val version = 2
+  override val version = 3
   val namespace = "comment_by_normuriid"
   def toKey(): String = normUriId.id.toString
 }
 class CommentCountUriIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
   extends PrimitiveCacheImpl[CommentCountUriIdKey, Int](innermostPluginSettings, innerToOuterPluginSettings:_*)
+
+
+case class CommentKey(commentId: Id[Comment]) extends Key[Comment] {
+  val namespace = "comment_by_id"
+  override val version = 1
+  def toKey(): String = commentId.id.toString
+}
+
+class CommentCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[CommentKey, Comment](innermostPluginSettings, innerToOuterPluginSettings:_*)
+
+
 
 object CommentStates extends States[Comment]
 

@@ -1,35 +1,19 @@
 package com.keepit.controllers.ext
 
-import java.sql.Connection
-import scala.Option.option2Iterable
-import scala.math.BigDecimal.long2bigDecimal
-import play.api.Play.current
-import com.google.inject.{Inject, ImplementedBy, Singleton}
+import scala.concurrent.future
+
+import com.google.inject.{Inject, Singleton}
+import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.common.mail.{ElectronicMail, EmailAddresses}
 import com.keepit.common.social._
+import com.keepit.common.time._
 import com.keepit.model._
-import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
-import play.api.http.ContentTypes
-import play.api.libs.concurrent.Akka
-import play.api.libs.json.{JsArray, JsBoolean, JsNumber, JsObject, JsString}
-import play.api.mvc.Action
-import play.api.mvc.Controller
-import securesocial.core.SecureSocial
-import securesocial.core.java.SecureSocial.SecuredAction
-import com.keepit.common.social.ThreadInfo
-import com.keepit.common.healthcheck.BabysitterTimeout
+import com.keepit.realtime.UserNotifier
+
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import com.keepit.common.time._
-import org.joda.time.DateTime
-import views.html
-import com.keepit.realtime.UserNotifier
-import scala.concurrent.future
-import scala.concurrent.ExecutionContext.Implicits.global
+import com.keepit.common.akka.RealtimeUserFacingExecutionContext
 
 @Singleton
 class ExtCommentController @Inject() (
@@ -122,8 +106,7 @@ class ExtCommentController @Inject() (
 
     parentIdOpt match {
       case Some(parentId) =>
-        val (uri, url) = getOrCreateUriAndUrl(urlStr)
-        val (message, parent) = sendMessageReply(userId, uri.id.get, url.id, title, text, parentId)
+        val (message, parent) = sendMessageReply(userId, text, Left(parentId))
         (message, Some(parent))
       case None =>
         val message = db.readWrite { implicit s =>
@@ -144,7 +127,7 @@ class ExtCommentController @Inject() (
         }
         future {  // important that this is spawned only *after* above read/write transaction committed
           notifyRecipients(message)
-        } onFailure { case e =>
+        }(RealtimeUserFacingExecutionContext.ec) onFailure { case e =>
           log.error("Could not notify for new message %s".format(message.id.get), e)
         }
         (message, None)
@@ -155,26 +138,24 @@ class ExtCommentController @Inject() (
     val o = request.body
     val text = (o \ "text").as[String].trim
 
-    val requestedParent = db.readOnly(commentRepo.get(parentExtId)(_))
-
-    val (message, parent) =
-      sendMessageReply(request.user.id.get, requestedParent.uriId, requestedParent.urlId,
-        requestedParent.pageTitle, text, requestedParent.id.get)
+    val (message, parent) = sendMessageReply(request.user.id.get, text, Right(parentExtId))
 
     Ok(Json.obj("id" -> message.externalId.id, "parentId" -> parent.externalId.id, "createdAt" -> message.createdAt))
   }
 
-  private[ext] def sendMessageReply(userId: Id[User], uriId: Id[NormalizedURI], urlId: Option[Id[URL]],
-      title: String, text: String, requestedParentId: Id[Comment]): (Comment, Comment) = {
+  private[ext] def sendMessageReply(userId: Id[User], text: String, parentId: Either[Id[Comment], ExternalId[Comment]]): (Comment, Comment) = {
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
     val (message, parent) = db.readWrite { implicit s =>
-      val reqParent = commentRepo.get(requestedParentId)
+      val reqParent = parentId match {
+        case Left(id) => commentRepo.get(id)
+        case Right(extId) => commentRepo.get(extId)
+      }
       val parent = reqParent.parent.map(commentRepo.get).getOrElse(reqParent)
       val message = commentRepo.save(Comment(
-        uriId = uriId,
-        urlId = urlId,
+        uriId = parent.uriId,
+        urlId = parent.urlId,
         userId = userId,
-        pageTitle = title,
+        pageTitle = parent.pageTitle,
         text = LargeString(text),
         permissions = CommentPermissions.MESSAGE,
         parent = parent.id))
@@ -186,13 +167,13 @@ class ExtCommentController @Inject() (
         case Some(commentRead) =>
           commentRead.withLastReadId(message.id.get)
         case None =>
-          CommentRead(userId = userId, uriId = uriId, parentId = parent.id, lastReadId = message.id.get)
+          CommentRead(userId = userId, uriId = parent.uriId, parentId = parent.id, lastReadId = message.id.get)
       })
     }
 
     future {  // important that this is spawned only *after* above read/write transaction committed
       notifyRecipients(message)
-    } onFailure { case e =>
+    }(RealtimeUserFacingExecutionContext.ec) onFailure { case e =>
       log.error("Could not notify for message reply %s".format(message.id.get), e)
     }
 
@@ -281,14 +262,14 @@ class ExtCommentController @Inject() (
 
     future {
       notifyRecipients(comment)
-    } onFailure { case e =>
+    }(RealtimeUserFacingExecutionContext.ec) onFailure { case e =>
       log.error("Could not persist emails for comment %s".format(comment.id.get), e)
     }
 
     comment.permissions match {
       case CommentPermissions.MESSAGE =>
         val message = db.readOnly(implicit s => commentWithBasicUserRepo.load(comment))
-        Ok(Json.obj("message" -> commentWithBasicUserSerializer.writes(message)))
+        Ok(Json.obj("message" -> Json.toJson(message)))
       case _ =>
         Ok(Json.obj("commentId" -> comment.externalId.id, "createdAt" -> JsString(comment.createdAt.toString)))
     }

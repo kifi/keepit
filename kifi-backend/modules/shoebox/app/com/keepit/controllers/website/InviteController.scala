@@ -13,6 +13,7 @@ import com.keepit.model._
 import play.api.Play.current
 import play.api._
 import play.api.mvc._
+import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialId}
 
 case class BasicUserInvitation(name: String, picture: Option[String], state: State[Invitation])
 
@@ -84,20 +85,23 @@ class InviteController @Inject() (db: Database,
       } else {
         val socialUserInfo = socialUserInfoRepo.get(SocialId(fullSocialId(1)), SocialNetworkType(fullSocialId(0)))
         invitationRepo.getByRecipient(socialUserInfo.id.get) match {
-          case Some(alreadyInvited) =>
-            if(alreadyInvited.senderUserId == request.user.id.get) {
+          case Some(alreadyInvited) if alreadyInvited.state != InvitationStates.INACTIVE =>
+            if(alreadyInvited.senderUserId == request.user.id) {
               Redirect(fbInviteUrl(alreadyInvited))
             } else {
               Redirect(routes.InviteController.invite)
             }
-          case None =>
+          case inactiveOpt =>
             val totalAllowedInvites = userValueRepo.getValue(request.user.id.get, "availableInvites").map(_.toInt).getOrElse(6)
-            val currentInvitations = invitationRepo.getByUser(request.user.id.get).map{ s =>
-              Some(createBasicUserInvitation(socialUserRepo.get(s.recipientSocialUserId), s.state))
+            val currentInvitations = invitationRepo.getByUser(request.user.id.get).collect {
+              case s if s.state != InvitationStates.INACTIVE =>
+                Some(createBasicUserInvitation(socialUserRepo.get(s.recipientSocialUserId), s.state))
             }
             val left = totalAllowedInvites - currentInvitations.length
             if(left > 0) {
-              val invite = Invitation(
+              val invite = inactiveOpt map {
+                _.copy(senderUserId = Some(request.user.id.get))
+              } getOrElse Invitation(
                 senderUserId = Some(request.user.id.get),
                 recipientSocialUserId = socialUserInfo.id.get,
                 state = InvitationStates.INACTIVE
@@ -110,7 +114,7 @@ class InviteController @Inject() (db: Database,
                     .find(_.networkType == SocialNetworks.LINKEDIN).get
                   val path = com.keepit.controllers.website.routes.InviteController.acceptInvite(
                     invite.externalId).url
-                  val messageWithUrl = message.getOrElse("").replaceAll("\\{link\\}", s"$url$path")
+                  val messageWithUrl = s"${message getOrElse ""}\n$url$path"
                   linkedIn.sendMessage(me, socialUserInfo, subject.getOrElse(""), messageWithUrl)
                   invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
                   Redirect(routes.InviteController.invite)
@@ -138,12 +142,14 @@ class InviteController @Inject() (db: Database,
     }
   }
 
-  def confirmInvite(id: ExternalId[Invitation]) = Action {
+  def confirmInvite(id: ExternalId[Invitation], errorMsg: Option[String], errorCode: Option[Int]) = Action {
     db.readWrite { implicit session =>
       val invitation = invitationRepo.getOpt(id)
       invitation match {
         case Some(invite) =>
-          invitationRepo.save(invite.copy(state = InvitationStates.ACTIVE))
+          if (errorCode.isEmpty) {
+            invitationRepo.save(invite.copy(state = InvitationStates.ACTIVE))
+          }
           Redirect(routes.InviteController.invite)
         case None => Redirect(routes.HomeController.home)
       }

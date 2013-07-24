@@ -4,18 +4,17 @@ import scala.Array.canBuildFrom
 
 @ImplementedBy(classOf[LDATopicModel])
 trait DocumentTopicModel {
-  def getDocumentTopicDistribution(content: String): Array[Double]
-  def getDocumentTopicId(content: String): Int
+  def getDocumentTopicDistribution(content: String, numTopics: Int): Array[Double]
+  def getDocumentTopicId(content: String, numTopics: Int): Int
 }
 
-@Singleton
-class LDATopicModel @Inject()(model: Provider[WordTopicModel]) extends DocumentTopicModel{
-  def getDocumentTopicDistribution(content: String) = {
-    val words = content.split(" ").filter(!_.isEmpty).map(_.toLowerCase).filter(model.get.vocabulary.contains(_))
+class LDATopicModel (model: WordTopicModel) extends DocumentTopicModel{
+  def getDocumentTopicDistribution(content: String, numTopics: Int) = {
+    val words = content.split(" ").filter(!_.isEmpty).map(_.toLowerCase).filter(model.vocabulary.contains(_))
     val wordCounts = words.groupBy(x => x).foldLeft(Map.empty[String,Int]){(m, pair) => m + (pair._1 -> pair._2.size)}
-    var dist = new Array[Double](model.get.topicNames.size)
+    var dist = new Array[Double](numTopics)
     for(x <- wordCounts){
-      val y = ArrayUtils.scale(model.get.wordTopic.get(x._1).get, x._2)
+      val y = ArrayUtils.scale(model.wordTopic.get(x._1).get, x._2)
       dist = ArrayUtils.add(dist, y)
     }
     val s = ArrayUtils.sum(dist)
@@ -23,8 +22,8 @@ class LDATopicModel @Inject()(model: Provider[WordTopicModel]) extends DocumentT
     else ArrayUtils.scale(dist, 1.0/s)
   }
 
-  def getDocumentTopicId(content: String) = {
-    val dist = getDocumentTopicDistribution(content)
+  def getDocumentTopicId(content: String, numTopics: Int) = {
+    val dist = getDocumentTopicDistribution(content, numTopics)
     ArrayUtils.findMax(dist)
   }
 

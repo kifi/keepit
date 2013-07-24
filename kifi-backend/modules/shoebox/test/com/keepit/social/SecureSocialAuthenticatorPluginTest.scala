@@ -5,20 +5,19 @@ import org.specs2.mutable._
 
 import com.keepit.common.db.{TestSlickSessionProvider, ExternalId}
 import com.keepit.common.healthcheck.HealthcheckPlugin
-import com.keepit.common.social.{SocialNetworks, SocialId}
-import com.keepit.inject.inject
 import com.keepit.model.{User, SocialUserInfo, UserSession}
-import com.keepit.test.{FakeClock, DbRepos, EmptyApplication}
+import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
 
 import play.api.Play.current
 import play.api.test.Helpers._
 import securesocial.core.{Authenticator, UserId}
+import com.keepit.common.time.FakeClock
 
-class SecureSocialAuthenticatorPluginTest extends Specification with DbRepos {
+class SecureSocialAuthenticatorPluginTest extends Specification with ShoeboxApplicationInjector {
   def healthcheckPlugin = inject[HealthcheckPlugin]
   "SecureSocialAuthenticatorPlugin" should {
     "find existing user sessions" in {
-      running(new EmptyApplication()) {
+      running(new ShoeboxApplication()) {
         val plugin =
           new SecureSocialAuthenticatorPluginImpl(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
         val id = ExternalId[UserSession]()
@@ -35,7 +34,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with DbRepos {
       }
     }
     "not find deleted sessions" in {
-      running(new EmptyApplication()) {
+      running(new ShoeboxApplication()) {
         val plugin =
           new SecureSocialAuthenticatorPluginImpl(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
         val id = ExternalId[UserSession]()
@@ -53,7 +52,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with DbRepos {
       }
     }
     "not get expired sessions" in {
-      running(new EmptyApplication()) {
+      running(new ShoeboxApplication()) {
         inject[FakeClock].push(new DateTime("2015-01-01"))
 
         val plugin =
@@ -68,7 +67,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with DbRepos {
       }
     }
     "associate with the correct user and save the session when needed" in {
-      running(new EmptyApplication()) {
+      running(new ShoeboxApplication()) {
         val plugin =
           new SecureSocialAuthenticatorPluginImpl(db, socialUserInfoRepo, userSessionRepo, healthcheckPlugin, current)
         val id = ExternalId[UserSession]()

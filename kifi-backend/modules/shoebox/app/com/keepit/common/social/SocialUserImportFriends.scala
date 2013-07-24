@@ -6,16 +6,16 @@ import com.keepit.common.db.slick._
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.model._
-
-import play.api.Play
-import play.api.Play.current
 import play.api.libs.json._
+import play.api.Mode._
+import com.keepit.social.{SocialUserRawInfo, SocialUserRawInfoStore}
 
 class SocialUserImportFriends @Inject() (
     db: Database,
     repo: SocialUserInfoRepo,
     store: SocialUserRawInfoStore,
-    healthcheckPlugin: HealthcheckPlugin) extends Logging {
+    healthcheckPlugin: HealthcheckPlugin
+) extends Logging {
 
   def importFriends(friendsWithRawJson: Seq[(SocialUserInfo, JsValue)]): Seq[SocialUserRawInfo] = {
     val socialUserInfos = db.readOnly { implicit s =>
@@ -30,9 +30,7 @@ class SocialUserImportFriends @Inject() (
 
     socialUserRawInfos map { info =>
       log.info(s"Adding user ${info.fullName} (${info.socialUserInfoId.get}) to S3")
-      if (!Play.isDev) {
-        store += (info.socialUserInfoId.get -> info)
-      }
+      store += (info.socialUserInfoId.get -> info)
     }
 
     log.info(s"Imported ${socialUserRawInfos.size} friends")
@@ -43,7 +41,8 @@ class SocialUserImportFriends @Inject() (
   private def getIfUpdateNeeded(friend: SocialUserInfo)(implicit s: RSession): Option[SocialUserInfo] = {
     repo.getOpt(friend.socialId, friend.networkType) match {
       case Some(existing) if existing.copy(
-        fullName = friend.fullName, pictureUrl = friend.pictureUrl, profileUrl = friend.profileUrl) != existing =>
+          fullName = friend.fullName, pictureUrl = friend.pictureUrl, profileUrl = friend.profileUrl) != existing &&
+          friend.fullName.nonEmpty /* LinkedIn API sometimes sends us bad data... */ =>
         Some(existing.copy(
           fullName = friend.fullName,
           pictureUrl = friend.pictureUrl,

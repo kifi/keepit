@@ -14,7 +14,6 @@ import scala.concurrent.Future
 import com.keepit.serializer.UriLabelSerializer
 import com.keepit.common.routes.Search
 import com.keepit.common.routes.Common
-import com.keepit.common.search.{ResultClicked, SharingUserInfo, IndexInfo}
 import scala.concurrent.Promise
 import com.keepit.common.healthcheck.BenchmarkResults
 import play.api.libs.json.JsArray
@@ -44,12 +43,12 @@ trait SearchServiceClient extends ServiceClient {
   def refreshSearcher(): Unit
   def refreshPhrases(): Unit
   def searchKeeps(userId: Id[User], query: String): Future[Set[Id[NormalizedURI]]]
-  def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI]): Future[Html]
+  def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html]
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray]
   def buildSpellCorrectorDictionary(): Unit
   def getSpellCorrectorStatus(): Future[Boolean]
   def correctSpelling(text: String): Future[String]
-  def showUserConfig(id: Id[User]): Future[Html]
+  def showUserConfig(id: Id[User]): Future[SearchConfig]
   def setUserConfig(id: Id[User], params: Map[String, String]): Unit
   def resetUserConfig(id: Id[User]): Unit
   def getSearchDefaultConfig: Future[SearchConfig]
@@ -74,7 +73,7 @@ class SearchServiceClientImpl(
 
   def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isKeep: Boolean): Unit = {
     val json = Json.toJson(ResultClicked(userId, query, uriId, rank, isKeep))
-    broadcast(Search.internal.logResultClicked(), json)
+    call(Search.internal.logResultClicked(), json)
   }
 
   def getSearchStatistics(queryUUID: String, queryString: String, userId: Id[User], labeledUris: Map[Id[NormalizedURI], UriLabel]): Future[JsArray] = {
@@ -162,8 +161,8 @@ class SearchServiceClientImpl(
     }
   }
 
-  def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI]): Future[Html] = {
-    call(Search.internal.explain(query, userId, uriId)).map(r => Html(r.body))
+  def explainResult(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: String): Future[Html] = {
+    call(Search.internal.explain(query, userId, uriId, lang)).map(r => Html(r.body))
   }
 
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]): Future[JsArray] = {
@@ -206,8 +205,11 @@ class SearchServiceClientImpl(
     call(Search.internal.correctSpelling(text)).map(r => (r.json \ "correction").asOpt[String].getOrElse(text))
   }
 
-  def showUserConfig(id: Id[User]): Future[Html] = {
-    call(Search.internal.showUserConfig(id)).map(r => Html(r.body))
+  def showUserConfig(id: Id[User]): Future[SearchConfig] = {
+    call(Search.internal.showUserConfig(id)).map{ r =>
+      val param = Json.fromJson[Map[String, String]](r.json).get
+      new SearchConfig(param)
+    }
   }
 
   def setUserConfig(id: Id[User], params: Map[String, String]): Unit = {

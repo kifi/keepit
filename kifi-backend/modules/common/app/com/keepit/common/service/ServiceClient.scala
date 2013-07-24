@@ -19,7 +19,7 @@ trait ServiceClient extends Logging {
   val serviceCluster: ServiceCluster
 
   private def nextHost(): String = serviceCluster.nextService map { service =>
-    service.amazonInstanceInfo.localHostname
+    service.instanceInfo.localHostname
   } getOrElse (throw new ServiceNotAvailableException(serviceCluster.serviceType))
 
   val protocol: String = "http"
@@ -27,8 +27,15 @@ trait ServiceClient extends Logging {
 
   protected def url(path: String): String = s"${protocol}://${nextHost()}:${port}${path}"
 
-  protected def urls(path: String): Seq[String] = serviceCluster.allServices map {service =>
-    s"${protocol}://${service.amazonInstanceInfo.localHostname}:${port}${path}"
+  protected def urls(path: String): Seq[String] = {
+    val fullUrls = serviceCluster.myNode match {
+      case Some(node) =>
+        serviceCluster.allServices.filterNot(_.node == node).map{service => s"${protocol}://${service.instanceInfo.localHostname}:${port}${path}" }
+      case None =>
+        serviceCluster.allServices map {service => s"${protocol}://${service.instanceInfo.localHostname}:${port}${path}" }
+    }
+    if (fullUrls.length==0) log.warn("Broadcasting to no-one!")
+    fullUrls
   }
 
   protected def call(call: ServiceRoute, body: JsValue = JsNull): Future[ClientResponse] = callUrl(call, url(call.url), body)
@@ -38,6 +45,9 @@ trait ServiceClient extends Logging {
     case c @ ServiceRoute(POST, _, _*) => httpClient.postFuture(url, body)
   }
 
-  protected def broadcast(call: ServiceRoute, body: JsValue = JsNull): Unit =
-    urls(call.url) map { url => callUrl(call, url, body) }
+  protected def broadcast(call: ServiceRoute, body: JsValue = JsNull): Seq[Future[ClientResponse]] =
+    urls(call.url) map { url =>
+      log.info(s"[broadcast] Sending to $url: ${body.toString.take(120)}")
+      callUrl(call, url, body)
+    }
 }

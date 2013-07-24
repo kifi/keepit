@@ -1,11 +1,10 @@
 package com.keepit.shoebox
 
 import com.keepit.common.cache.{EhCacheCacheModule, MemcachedCacheModule, ShoeboxCacheModule}
-import com.keepit.social.ShoeboxSecureSocialModule
+import com.keepit.social.ProdShoeboxSecureSocialModule
 import com.keepit.search.ProdSearchServiceClientModule
-import com.keepit.common.db.{DbInfo, SlickModule}
 import com.keepit.scraper.ScraperImplModule
-import com.keepit.common.social.SocialGraphImplModule
+import com.keepit.common.social.ProdSocialGraphModule
 import com.keepit.common.analytics.ProdAnalyticsModule
 import com.keepit.learning.topicmodel.LdaTopicModelModule
 import com.keepit.model.ProdSliderHistoryTrackerModule
@@ -14,20 +13,18 @@ import com.keepit.common.crypto.ShoeboxCryptoModule
 import com.keepit.common.store.ShoeboxProdStoreModule
 import com.keepit.realtime.ShoeboxWebSocketModule
 import com.keepit.classify.ProdDomainTagImporterModule
-import scala.slick.session.{Database => SlickDatabase}
-import play.api.db.DB
-import play.api.Play
-import com.keepit.common.healthcheck.HealthCheckProdModule
+import com.keepit.common.healthcheck.ProdHealthCheckModule
 import com.keepit.common.net.ProdHttpClientModule
-import com.keepit.inject.FortyTwoModule
+import com.keepit.inject.ProdFortyTwoModule
 import com.keepit.common.actor.ProdActorSystemModule
 import com.keepit.common.zookeeper.ProdDiscoveryModule
+import com.keepit.common.db.slick.ShoeboxSlickModule
 
 case class ShoeboxProdModule() extends ShoeboxModule(
   // Common Functional Modules
-  fortyTwoModule = FortyTwoModule(),
+  fortyTwoModule = ProdFortyTwoModule(),
   cacheModule = ShoeboxCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
-  secureSocialModule = ShoeboxSecureSocialModule(),
+  secureSocialModule = ProdShoeboxSecureSocialModule(),
   searchServiceClientModule = ProdSearchServiceClientModule(),
   clickHistoryModule = ShoeboxClickHistoryModule(),
   browsingHistoryModule = ShoeboxBrowsingHistoryModule(),
@@ -36,21 +33,17 @@ case class ShoeboxProdModule() extends ShoeboxModule(
   storeModule = ShoeboxProdStoreModule(),
   actorSystemModule = ProdActorSystemModule(),
   discoveryModule = ProdDiscoveryModule(),
-  healthCheckModule = HealthCheckProdModule(),
+  healthCheckModule = ProdHealthCheckModule(),
   httpClientModule = ProdHttpClientModule(),
+  shoeboxServiceClientModule = ProdShoeboxServiceClientModule(),
 
   // Shoebox Functional Modules
-  slickModule = SlickModule(ShoeboxDbInfo()),
+  slickModule = ShoeboxSlickModule(),
   scraperModule = ScraperImplModule(),
-  socialGraphModule = SocialGraphImplModule(),
+  socialGraphModule = ProdSocialGraphModule(),
   analyticsModule = ProdAnalyticsModule(),
   webSocketModule = ShoeboxWebSocketModule(),
   topicModelModule = LdaTopicModelModule(),
   domainTagImporterModule = ProdDomainTagImporterModule(),
   sliderHistoryTrackerModule = ProdSliderHistoryTrackerModule()
 )
-
-case class ShoeboxDbInfo() extends DbInfo {
-  def database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
-  def driverName = Play.current.configuration.getString("db.shoebox.driver").get
-}

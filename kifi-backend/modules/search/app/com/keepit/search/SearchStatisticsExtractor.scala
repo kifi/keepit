@@ -143,7 +143,6 @@ class SearchStatisticsHelperSearcher(queryString: String, userId: Id[User], targ
   val svWeightBrowsingHistory = config.asInt("svWeightBrowsingHistory")
   val svWeightClickHistory = config.asInt("svWeightClickHistory")
   val similarity = Similarity(config.asString("similarity"))
-  val enableCoordinator = config.asBoolean("enableCoordinator")
   val phraseBoost = config.asFloat("phraseBoost")
   val phraseProximityBoost = config.asFloat("phraseProximityBoost")
   val siteBoost = config.asFloat("siteBoost")
@@ -216,7 +215,6 @@ class SearchStatisticsHelperSearcher(queryString: String, userId: Id[User], targ
     val lang = Lang("en")           //TODO: detect
     val parser = parserFactory(lang, proximityBoost, semanticBoost, phraseBoost, phraseProximityBoost, siteBoost)
     parser.setPercentMatch(percentMatch)
-    parser.enableCoord = enableCoordinator
     parser.parse(queryString)
   }
 

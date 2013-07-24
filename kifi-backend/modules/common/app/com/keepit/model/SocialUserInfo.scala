@@ -6,12 +6,12 @@ import org.joda.time.DateTime
 
 import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key, PrimitiveCacheImpl}
 import com.keepit.common.db._
-import com.keepit.common.social.{SocialNetworks, SocialId, SocialNetworkType}
 import com.keepit.common.time._
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import securesocial.core.SocialUser
+import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialId}
 
 case class SocialUserInfo(
   id: Option[Id[SocialUserInfo]] = None,
@@ -49,8 +49,8 @@ object SocialUserInfo {
   import com.keepit.serializer.SocialUserSerializer._
   implicit val format = (
     (__ \ 'id).formatNullable(Id.format[SocialUserInfo]) and
-    (__ \ 'createdAt).format[DateTime] and
-    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'createdAt).format(DateTimeJsonFormat) and
+    (__ \ 'updatedAt).format(DateTimeJsonFormat) and
     (__ \ 'userId).formatNullable(Id.format[User]) and
     (__ \ 'fullName).format[String] and
     (__ \ 'pictureUrl).formatNullable[String] and

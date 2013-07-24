@@ -25,28 +25,40 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
 
   val servicePath = Path(s"/fortytwo/services/${serviceType.name}")
   val serviceNodeMaster = Node(s"${servicePath.name}/${serviceType.name}_")
+  private var _myNode : Option[Node] = None
+
+  def myNode() : Option[Node] = _myNode
 
   def size: Int = instances.size
   def registered(node: Node): Boolean = instances.contains(ensureFullPathNode(node))
   var leader: Option[ServiceInstance] = None
 
   override def toString(): String = s"""Service Cluster of $serviceType:
-    instances.toString"""
+    ${instances.toString}"""
 
-  //using round robin
+  //using round robin, also use sick etc. instances if less than half of the instances ar UP.
   def nextService(): Option[ServiceInstance] = {
-    val list = routingList
+    val healthyList = routingList.filter(_.isHealthy)
+    val availableList = routingList.filter(_.isAvailable)
+    var list = healthyList
+    if (healthyList.length < availableList.length/2.0) list = availableList
     if (list.isEmpty) None
     else Some(list(nextRoutingInstance.getAndIncrement % list.size))
   }
 
-  def allServices: Vector[ServiceInstance] = routingList
+  def allServices: Vector[ServiceInstance] = routingList.filter(_.isAvailable)
 
-  def register(node: Node, instanceInfo: AmazonInstanceInfo): ServiceCluster = {
-    instances(node) = ServiceInstance(serviceType, node, instanceInfo)
+  //This will includes all instances still registered with zookeeper including DOWN, STARTING, STOPPING states
+  def allMembers : Vector[ServiceInstance] = routingList
+
+  def register(node: Node, remoteService: RemoteService): ServiceCluster = synchronized {
+    instances(node) = ServiceInstance(serviceType, node, remoteService)
+    _myNode = Some(node)
     resetRoutingList()
     this
   }
+
+  def instanceForNode(node: Node) : Option[ServiceInstance] = instances.get(node)
 
   def ensureFullPathNode(node: Node, throwIfDoes: Boolean = false) = node.name contains servicePath.name match {
     case true if (throwIfDoes) => throw new Exception(s"node $node already contains service path")
@@ -55,14 +67,17 @@ class ServiceCluster(val serviceType: ServiceType) extends Logging {
   }
 
   private def addNewNode(newInstances: TrieMap[Node, ServiceInstance], childNode: Node, zk: ZooKeeperClient) = try {
-    newInstances.getOrElseUpdate(childNode, {
-      val nodeData: String = zk.get(childNode)
-      log.info(s"data for node $childNode is $nodeData")
-      val json = Json.parse(nodeData)
-      val amazonInstanceInfo = Json.fromJson[AmazonInstanceInfo](json).get
-      log.info(s"discovered new node $childNode: $amazonInstanceInfo, adding to ${newInstances.keys}")
-      ServiceInstance(serviceType, childNode, amazonInstanceInfo)
-    })
+    val nodeData: String = zk.get(childNode)
+    log.info(s"data for node $childNode is $nodeData")
+    val remoteService = RemoteService.fromJson(nodeData)
+    if (newInstances.isDefinedAt(childNode)){
+      log.info(s"discovered updated node $childNode: $remoteService, adding to ${newInstances.keys}")
+      newInstances(childNode).remoteService = remoteService
+    }
+    else {
+      log.info(s"discovered new node $childNode: $remoteService, adding to ${newInstances.keys}")
+      newInstances(childNode) = ServiceInstance(serviceType, childNode, remoteService)
+    }
   } catch {
     case t: Throwable =>
       log.error(s"could not fetch data node for instance of $childNode")

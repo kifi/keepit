@@ -19,8 +19,6 @@ import com.keepit.common.cache._
 import scala.concurrent.duration._
 import com.keepit.common.logging.Logging
 
-
-
 case class UserTopic(
   id: Option[Id[UserTopic]] = None,
   userId: Id[User],
@@ -34,8 +32,7 @@ case class UserTopic(
 
 class UserTopicByteArrayHelper {
   def toByteArray(arr: Array[Int]) = {
-    assume(arr.length == TopicModelGlobal.numTopics, "topic array size not matching TopicModelGlobal.numTopics")
-    val bs = new ByteArrayOutputStream(TopicModelGlobal.numTopics * 4)
+    val bs = new ByteArrayOutputStream(arr.length * 4)
     val os = new DataOutputStream(bs)
     arr.foreach{os.writeInt}
     os.close()
@@ -45,9 +42,9 @@ class UserTopicByteArrayHelper {
   }
 
   def toIntArray(arr: Array[Byte]) = {
-    assume(arr.size == TopicModelGlobal.numTopics * 4, "topic array size not matching TopicModelGlobal.numTopics")
+    val numTopics = arr.size / 4
     val is = new DataInputStream(new ByteArrayInputStream(arr))
-    val topic = (0 until TopicModelGlobal.numTopics).map{i => is.readInt()}
+    val topic = (0 until numTopics).map{i => is.readInt()}
     is.close()
     topic.toArray
   }
@@ -69,27 +66,34 @@ object UserTopic {
     (__ \'id).formatNullable(Id.format[UserTopic]) and
     (__ \'userId).format(Id.format[User]) and
     (__ \'topic).format(new TopicByteArrayFormat) and
-    (__ \'createdAt).format[DateTime] and
-    (__ \'updatedAt).format[DateTime]
+    (__ \'createdAt).format(DateTimeJsonFormat) and
+    (__ \'updatedAt).format(DateTimeJsonFormat)
   )(UserTopic.apply, unlift(UserTopic.unapply))
 }
 
-case class UserTopicKey(userId: Id[User]) extends Key[UserTopic]{
-  val namespace = "user_topic"
-  def toKey(): String = userId.toString
+// use flag to distinguish values from repoA and those from repoB
+case class UserTopicKey(userId: Id[User], userTopicFlag: String) extends Key[UserTopic]{
+  val namespace = "user_topic" + userTopicFlag
+  def toKey(): String = userId.toString + "#" + userTopicFlag
 }
 
 class UserTopicCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
     extends JsonCacheImpl[UserTopicKey, UserTopic](innermostPluginSettings, innerToOuterPluginSettings:_*)
 
-@ImplementedBy(classOf[UserTopicRepoImpl])
+
 trait UserTopicRepo extends Repo[UserTopic]{
   def getByUserId(userId: Id[User])(implicit session: RSession):Option[UserTopic]
   def deleteAll()(implicit session: RWSession): Int
 }
 
-@Singleton
-class UserTopicRepoImpl @Inject() (
+object UserTopicFlag {
+  val A = "a"
+  val B = "b"
+}
+
+abstract  class UserTopicRepoBase(
+  val flag: String,
+  val tableName: String,
   val db: DataBaseComponent,
   val clock: Clock,
   val userTopicCache: UserTopicCache
@@ -97,29 +101,41 @@ class UserTopicRepoImpl @Inject() (
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
-  override val table = new RepoTable[UserTopic](db, "user_topic"){
+  override val table = new RepoTable[UserTopic](db, tableName){
     def userId = column[Id[User]]("user_id", O.NotNull)
     def topic = column[Array[Byte]]("topic", O.NotNull)
     def * = id.? ~ userId ~ topic ~ createdAt ~ updatedAt <> (UserTopic.apply _, UserTopic.unapply _)
   }
 
   override def invalidateCache(topic: UserTopic)(implicit session: RSession): UserTopic = {
-    userTopicCache.set(UserTopicKey(topic.userId), topic)
+    userTopicCache.set(UserTopicKey(topic.userId, flag), topic)
     topic
   }
 
   def getByUserId(userId: Id[User])(implicit session: RSession): Option[UserTopic] = {
-    userTopicCache.getOrElseOpt(UserTopicKey(userId)){
+    userTopicCache.getOrElseOpt(UserTopicKey(userId, flag)){
       (for(r <- table if r.userId === userId) yield r).firstOption
     }
   }
 
   def deleteAll()(implicit session: RWSession): Int = {
-    (for(r <- table) yield r).list.foreach( x => userTopicCache.remove(UserTopicKey(x.userId)))
-    log.info("All cached userTopics have been removed")
+    (for(r <- table) yield r).list.foreach( x => userTopicCache.remove(UserTopicKey(x.userId, flag)))
+    log.info(s"All cached userTopics (flag = ${flag}) have been removed")
     (for(r <- table) yield r).delete
   }
 }
 
+@Singleton
+class UserTopicRepoA @Inject()(
+  db: DataBaseComponent,
+  clock: Clock,
+  userTopicCache: UserTopicCache
+) extends UserTopicRepoBase(UserTopicFlag.A, "user_topic", db, clock, userTopicCache)
 
+@Singleton
+class UserTopicRepoB @Inject()(
+  db: DataBaseComponent,
+  clock: Clock,
+  userTopicCache: UserTopicCache
+) extends UserTopicRepoBase(UserTopicFlag.B, "user_topic_b", db, clock, userTopicCache)
 

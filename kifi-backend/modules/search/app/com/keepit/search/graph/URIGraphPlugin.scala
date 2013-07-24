@@ -43,10 +43,10 @@ trait URIGraphPlugin extends SchedulingPlugin {
 
 class URIGraphPluginImpl @Inject() (
     actorFactory: ActorFactory[URIGraphActor],
-    uriGraph: URIGraph,
-    val schedulingProperties: SchedulingProperties)
+    uriGraph: URIGraph)
   extends URIGraphPlugin with Logging {
 
+  val schedulingProperties = SchedulingProperties.AlwaysEnabled
   implicit val actorTimeout = Timeout(5 seconds)
 
   private lazy val actor = actorFactory.get()

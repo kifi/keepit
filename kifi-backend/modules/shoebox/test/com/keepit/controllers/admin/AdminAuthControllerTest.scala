@@ -4,27 +4,25 @@ import org.specs2.mutable.Specification
 
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.FortyTwoCookies.{ImpersonateCookie, KifiInstallationCookie}
-import com.keepit.common.social.SocialId
-import com.keepit.common.social.SocialNetworks.FACEBOOK
+import com.keepit.common.social.{TestShoeboxSecureSocialModule}
+import com.keepit.social.{SocialId, SocialNetworks}
+import SocialNetworks.FACEBOOK
 import com.keepit.common.time._
-import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.test._
-
-import play.api.Play.current
 import play.api.libs.json._
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import securesocial.core._
 
-class AdminAuthControllerTest extends Specification with DbRepos {
+class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjector {
 
   args(skipAll = true) // todo(Andrew/Greg/anyone) Fix this!!!!!
 
   //todo(eishay) refactor commonalities out of this one and AdminDashboardController to make this test easy to write
   "AdminAuthController" should {
     "impersonate" in {
-      running(new EmptyApplication().withFakeSecureSocialUserService()) {
+      running(new ShoeboxApplication(TestShoeboxSecureSocialModule())) {
         val su1 = SocialUser(UserId("111", "facebook"), "A", "1", "A 1", Some("a1@gmail.com"),
           Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None, Some(OAuth2Info(accessToken = "A")), None)
         val su2 = SocialUser(UserId("222", "facebook"), "B", "1", "B 1", Some("b1@gmail.com"),

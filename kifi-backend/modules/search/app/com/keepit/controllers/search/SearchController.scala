@@ -3,8 +3,8 @@ package com.keepit.controllers.search
 import com.google.inject.Inject
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db.Id
-import com.keepit.common.db.slick.Database
 import com.keepit.model._
+import com.keepit.model.ExperimentTypes.NO_SEARCH_EXPERIMENTS
 import com.keepit.search.ResultClickBoosts
 import com.keepit.search._
 import com.keepit.search.index.{MutableHit, HitQueue}
@@ -33,11 +33,12 @@ class SearchController @Inject()(
     Ok(JsArray(uris.toSeq.map(JsNumber(_))))
   }
 
-  def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI]) = Action { request =>
-    val (config, _) = searchConfigManager.getConfig(userId, query)
+  def explain(query: String, userId: Id[User], uriId: Id[NormalizedURI], lang: Option[String]) = Action { request =>
+    val excludeFromExperiments = Await.result(shoeboxClient.getUserExperiments(userId), 5 seconds).contains(NO_SEARCH_EXPERIMENTS)
+    val (config, _) = searchConfigManager.getConfig(userId, query, excludeFromExperiments)
 
-    val searcher = searcherFactory(userId, SearchFilter.default(), config)
-    val explanation = searcher.explain(query, uriId)
+    val searcher = searcherFactory(userId, query, Map(Lang(lang.getOrElse("en")) -> 0.999), 0, SearchFilter.default(), config, None)
+    val explanation = searcher.explain(uriId)
     Ok(html.admin.explainResult(query, userId, uriId, explanation))
   }
 

@@ -12,12 +12,6 @@ import org.apache.lucene.search.Explanation
 import org.apache.lucene.search.DocIdSetIterator
 import org.apache.lucene.search.IndexSearcher
 import org.apache.lucene.util.Bits
-import org.apache.lucene.util.PriorityQueue
-import org.apache.lucene.util.ToStringUtils
-import java.util.{Set => JSet}
-import java.lang.{Float => JFloat}
-import scala.collection.JavaConversions._
-import scala.math._
 
 class MultiplicativeBoostQuery(override val textQuery: Query, override val boosterQueries: Array[Query], val boosterStrengths: Array[Float]) extends BoostQuery {
 
@@ -26,9 +20,7 @@ class MultiplicativeBoostQuery(override val textQuery: Query, override val boost
   override protected val name = "MultiplicativeBoost"
 
   override def recreate(rewrittenTextQuery: Query, rewrittenBoosterQueries: Array[Query]): Query = {
-    val q = new MultiplicativeBoostQuery(rewrittenTextQuery, rewrittenBoosterQueries, boosterStrengths)
-    q.enableCoord = enableCoord
-    q
+    new MultiplicativeBoostQuery(rewrittenTextQuery, rewrittenBoosterQueries, boosterStrengths)
   }
 }
 
@@ -54,30 +46,19 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
     val exists = (sc != null && sc.advance(doc) == doc)
 
     val result = new ComplexExplanation()
-    var ret = if (exists) {
+    if (exists) {
       val score = sc.score
-      val coordFactor = sc.asInstanceOf[Coordinator].coord
 
       val ret = new ComplexExplanation()
-      ret.setDescription("multiplicative boost, product of:")
-      ret.setValue(score)
-      ret.setMatch(true)
-
-      ret.addDetail(result)
-      ret.addDetail(new Explanation(coordFactor, "coord factor"))
-
-      result.setDescription("product of:")
-      result.setValue(score/coordFactor)
+      result.setDescription("multiplicative boost, product of:")
+      result.setValue(score)
       result.setMatch(true)
-      ret
     } else {
       result.setDescription("multiplicative boost, doesn't match id %d".format(doc))
       result.setValue(0)
       result.setMatch(false)
-      result
     }
 
-    var sum = 0.0f
     val eTxt = textWeight.explain(context, doc)
     eTxt.isMatch() match {
       case false =>
@@ -85,7 +66,7 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
         r.addDetail(eTxt)
         result.addDetail(r)
         result.setMatch(false)
-        result.setValue(sum)
+        result.setValue(0.0f)
         result.setDescription("Failure to meet condition of textQuery")
       case true =>
         result.addDetail(eTxt)
@@ -102,30 +83,20 @@ class MultiplicativeBoostWeight(override val query: MultiplicativeBoostQuery, ov
           result.addDetail(r)
         }
     }
-    ret
+    result
   }
 
   override def scorer(context: AtomicReaderContext, scoreDocsInOrder: Boolean, topScorer: Boolean, liveDocs: Bits): Scorer = {
     val textScorer = textWeight.scorer(context, true, false, liveDocs)
     if (textScorer == null) null
     else {
-      // main scorer has to implement Coordinator trait
-      val mainScorer = if (textScorer.isInstanceOf[Coordinator]) {
-        if (getQuery.enableCoord) {
-          textScorer.asInstanceOf[Scorer with Coordinator]
-        } else {
-          QueryUtil.toScorerWithCoordinator(textScorer) // hide textScorer's coord value by wrapping the constant coordinator
-        }
-      } else {
-        QueryUtil.toScorerWithCoordinator(textScorer)
-      }
-      new MultiplicativeBoostScorer(this, mainScorer,
+      new MultiplicativeBoostScorer(this, textScorer,
         boosterWeights.map{ w => w.scorer(context, true, false, liveDocs) }, boosterStrengths)
     }
   }
 }
 
-class MultiplicativeBoostScorer(weight: MultiplicativeBoostWeight, textScorer: Scorer with Coordinator, boosterScorers: Array[Scorer], boosterStrengths: Array[Float])
+class MultiplicativeBoostScorer(weight: MultiplicativeBoostWeight, textScorer: Scorer, boosterScorers: Array[Scorer], boosterStrengths: Array[Float])
 extends Scorer(weight) with Coordinator with Logging {
   private[this] var doc = -1
   private[this] var scoredDoc = -1
@@ -172,6 +143,4 @@ extends Scorer(weight) with Coordinator with Logging {
   }
 
   override def freq(): Int = 1
-
-  override def coord = textScorer.coord
 }

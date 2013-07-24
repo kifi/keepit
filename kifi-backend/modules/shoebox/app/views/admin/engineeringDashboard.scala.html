@@ -20,6 +20,11 @@
     <h3><a href="@com.keepit.controllers.admin.routes.AdminCacheController.serviceView">Cache Performance</a></h3>
     <p><img id="cache" class="img-polaroid"></p>
   </div>
+
+  <div style="display: inline-block">
+    <h3>Message &amp; Notification Performance</h3>
+    <p><img id="message" class="img-polaroid"></p>
+  </div>
 </div>
 
 <script>
@@ -91,6 +96,20 @@
   options.yMinRight = null;
   options.yMaxRight = null;
   $("#websocket").graphite(options);
+
+  // Message Chart
+
+  var messageLocalTarget = 'alias(summarize(stats.timers.shoebox.websocket.delivery.local.message.mean,"30min"),"Message (local)")';
+  var messageRemoteTarget = 'alias(summarize(stats.timers.shoebox.websocket.delivery.remote.message.mean,"30min"),"Message (remote)")';
+  var noticeLocalTarget = 'alias(summarize(stats.timers.shoebox.websocket.delivery.local.notice.mean,"30min"),"Notification (local)")';
+  var noticeRemoteTarget = 'alias(summarize(stats.timers.shoebox.websocket.delivery.remote.notice.mean,"30min"),"Notification (remote)")';
+
+  var messageAndNotificationTargets = baseTargets.concat(messageLocalTarget).concat(messageRemoteTarget).concat(noticeLocalTarget).concat(noticeRemoteTarget)
+  options.target = messageAndNotificationTargets;
+  options.title = "Message and Notification Latiency, local and remote";
+  options.yMin = null;
+  options.yMax = 500;
+  $("#message").graphite(options);
 }
 
   $("#timerange").change(renderCharts);

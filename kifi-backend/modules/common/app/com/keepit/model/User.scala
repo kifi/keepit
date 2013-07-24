@@ -1,11 +1,15 @@
 package com.keepit.model
 
+import scala.concurrent.duration._
+
+import org.joda.time.DateTime
+
+import com.keepit.common.cache._
 import com.keepit.common.db._
 import com.keepit.common.time._
-import org.joda.time.DateTime
-import com.keepit.common.cache._
-import scala.concurrent.duration._
-import com.keepit.serializer.UserSerializer.userSerializer
+
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
 
 case class User(
   id: Option[Id[User]] = None,
@@ -21,6 +25,18 @@ case class User(
   def withName(firstName: String, lastName: String) = copy(firstName = firstName, lastName = lastName)
   def withExternalId(id: ExternalId[User]) = copy(externalId = id)
   def withState(state: State[User]) = copy(state = state)
+}
+
+object User {
+  implicit val format = (
+    (__ \ 'id).formatNullable(Id.format[User]) and
+    (__ \ 'createdAt).format(DateTimeJsonFormat) and
+    (__ \ 'updatedAt).format(DateTimeJsonFormat) and
+    (__ \ 'externalId).format(ExternalId.format[User]) and
+    (__ \ 'firstName).format[String] and
+    (__ \ 'lastName).format[String] and
+    (__ \ 'state).format(State.format[User])
+  )(User.apply, unlift(User.unapply))
 }
 
 case class UserExternalIdKey(externalId: ExternalId[User]) extends Key[User] {

@@ -2,19 +2,16 @@ package com.keepit.learning.topicmodel
 
 import org.specs2.mutable.Specification
 import scala.math._
-import play.api.test._
 import com.keepit.test._
+import com.keepit.test.ShoeboxApplicationInjector
 import play.api.test.Helpers._
-import com.keepit.test._
-import com.keepit.inject._
-import play.api.Play.current
+import com.keepit.common.actor.TestActorSystemModule
+import com.keepit.common.store.ShoeboxFakeStoreModule
 
-
-
-class TopicModelTest extends Specification{
+class TopicModelTest extends Specification with ShoeboxApplicationInjector {
   "LDATopicModel" should {
     "correctly compute topic distribution for documents" in {
-      running(new ShoeboxApplication().withTinyWordTopicModule()) {
+      running(new ShoeboxApplication(TestActorSystemModule(), ShoeboxFakeStoreModule(), FakeWordTopicModule())) {
 
         def equals(a: Array[Double], b: Array[Double]) = {
           if (a.length != b.length) false
@@ -32,9 +29,10 @@ class TopicModelTest extends Specification{
           Array(0, 0, 0.5 / 3.0, 2.5 / 3.0),
           Array(0, 0, 0.75, 0.25))
         val topics = Array(1, 0, 3, 2)
+        val numTopics = 4
         for (i <- 0 until 4) {
-          val dist = docModel.getDocumentTopicDistribution(docs(i))
-          val id = docModel.getDocumentTopicId(docs(i))
+          val dist = docModel.getDocumentTopicDistribution(docs(i), numTopics)
+          val id = docModel.getDocumentTopicId(docs(i), numTopics)
           equals(dist, dists(i)) === true
           id === topics(i)
         }

@@ -18,16 +18,11 @@
   "background": {
     "page": "main.html"
   },
-  "content_scripts": [
-    {
-      "matches": ["*://*/*"],
-      "js": ["scripts/ready.js"],
-      "run_at": "document_end"
-    }
-  ],
+  "content_scripts": [],
   "permissions": [
     "tabs",
     "bookmarks",
+    "webNavigation",
     "http://*/",
     "https://*/"
   ],

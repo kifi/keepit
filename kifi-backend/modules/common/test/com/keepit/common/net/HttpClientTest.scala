@@ -13,7 +13,7 @@ class HttpClientTest extends Specification {
 
   "HttpClient" should {
     "instantiated" in {
-      running(new EmptyApplication().withFakePersistEvent.withShoeboxServiceModule) {
+      running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         /*val client = instance[HttpClient]
         client !== null
         client.longTimeout() !== null*/

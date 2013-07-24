@@ -111,17 +111,11 @@ class MainQueryParser(
           auxStrengths += proximityBoost
         }
 
-        val topLevelQuery = if (!auxQueries.isEmpty) {
+        if (!auxQueries.isEmpty) {
           new MultiplicativeBoostQuery(textQuery, auxQueries.toArray, auxStrengths.toArray)
         } else {
           textQuery
         }
-
-        topLevelQuery match {
-          case q: BoostQuery => q.enableCoord = enableCoord
-          case _ =>
-        }
-        topLevelQuery
       }
     }
   }

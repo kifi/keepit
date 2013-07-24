@@ -46,7 +46,7 @@ trait NotificationConsistencyChecker extends Plugin {
 class NotificationConsistencyCheckerImpl @Inject()(
     system: ActorSystem,
     actorFactory: ActorFactory[NotificationConsistencyActor],
-    val schedulingProperties: SchedulingProperties)
+    val schedulingProperties: SchedulingProperties) //only on leader
   extends SchedulingPlugin with NotificationConsistencyChecker {
 
   private lazy val actor = actorFactory.get()

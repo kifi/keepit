@@ -39,16 +39,18 @@ var notifier = {
           }
         });
         break;
-      case "server_generated":
+      case "global":
+        console.log("got", o)
         KifiNotification.add({
           title: o.title,
           subtitle: o.subtitle,
           contentHtml: o.bodyHtml,
           link: o.linkText,
           image: o.image,
-          sticky: o.sticky || false,
+          sticky: o.isSticky || false,
           showForMs: o.showForMs || 60000,
           clickAction: function() {
+            api.port.emit("set_global_read", {noticeId: data.id});
             if (o.url) {
               var win = window.open(o.url, "_blank");
               win.focus();

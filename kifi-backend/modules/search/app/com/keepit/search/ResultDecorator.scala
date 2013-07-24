@@ -1,7 +1,6 @@
 package com.keepit.search
 
 import com.keepit.common.db.Id
-import com.keepit.common.social.BasicUser
 import com.keepit.model._
 import com.keepit.search.index.Analyzer
 import com.keepit.search.index.DefaultAnalyzer
@@ -18,6 +17,7 @@ import java.io.StringReader
 import scala.collection.immutable.SortedMap
 import com.keepit.search.index.SymbolDecompounder
 import com.keepit.common.logging.Logging
+import com.keepit.social.BasicUser
 
 trait ResultDecorator {
   def decorate(resultSet: ArticleSearchResult): Future[Seq[PersonalSearchResult]]
@@ -27,7 +27,9 @@ object ResultDecorator extends Logging {
 
   private[this] val emptyMatches = Seq.empty[(Int, Int)]
 
-  def apply(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient): ResultDecorator = new ResultDecoratorImpl(searcher, shoeboxClient)
+  def apply(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient, searchConfig: SearchConfig): ResultDecorator = {
+    new ResultDecoratorImpl(searcher, shoeboxClient)
+  }
 
   def highlight(text: String, analyzer: Analyzer, field: String, terms: Option[Set[String]]): Seq[(Int, Int)] = {
     terms match {
@@ -101,6 +103,8 @@ object ResultDecorator extends Logging {
 class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceClient) extends ResultDecorator {
 
   override def decorate(resultSet: ArticleSearchResult): Future[Seq[PersonalSearchResult]] = {
+    val collectionSearcher = searcher.collectionSearcher
+    val myCollectionEdgeSet = collectionSearcher.myCollectionEdgeSet
     val hits = resultSet.hits
     val users = hits.map(_.users).flatten.distinct
     val usersFuture = shoeboxClient.getBasicUsers(users)
@@ -112,13 +116,20 @@ class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceC
     val personalSearchHits = hits.map{ h =>
       if (h.isMyBookmark) {
         val r = searcher.getBookmarkRecord(h.uriId).getOrElse(throw new Exception(s"missing bookmark record: uri id = ${h.uriId}"))
+
+        val collections = {
+          val collIds = collectionSearcher.intersect(myCollectionEdgeSet, collectionSearcher.getUriToCollectionEdgeSet(h.uriId)).destIdLongSet
+          if (collIds.isEmpty) None else Some(collIds.toSeq.sortBy(0L - _).map{ id => collectionSearcher.getExternalId(id) })
+        }
+
         PersonalSearchHit(
           r.uriId,
           Some(r.title),
           r.url,
           r.isPrivate,
           ResultDecorator.highlight(r.title, analyzer, field, terms),
-          ResultDecorator.highlightURL(r.url, analyzer, field, terms)
+          ResultDecorator.highlightURL(r.url, analyzer, field, terms),
+          collections
         )
       } else {
         val r = searcher.getArticleRecord(h.uriId).getOrElse(throw new Exception(s"missing article record: uri id = ${h.uriId}"))
@@ -128,7 +139,8 @@ class ResultDecoratorImpl(searcher: MainSearcher, shoeboxClient: ShoeboxServiceC
           r.url,
           false,
           ResultDecorator.highlight(r.title, analyzer, field, terms),
-          ResultDecorator.highlightURL(r.url, analyzer, field, terms)
+          ResultDecorator.highlightURL(r.url, analyzer, field, terms),
+          None
         )
       }
     }

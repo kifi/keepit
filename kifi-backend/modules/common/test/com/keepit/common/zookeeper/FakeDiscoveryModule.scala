@@ -35,6 +35,7 @@ class FakeZooKeeperClient() extends ZooKeeperClient {
 
   def getChildren(path: Path): Seq[Node] = Nil
   def get(node: Node): Array[Byte] = db.get(node).getOrElse(Array[Byte](0))
+  def getOpt(node: Node): Option[Array[Byte]] = db.get(node)
 
   def set(node: Node, data: Array[Byte]) {
     db(node) = data

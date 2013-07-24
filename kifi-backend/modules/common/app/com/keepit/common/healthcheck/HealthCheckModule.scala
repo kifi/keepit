@@ -10,7 +10,7 @@ import com.keepit.common.plugin.SchedulingProperties
 
 trait HealthCheckModule extends ScalaModule
 
-case class HealthCheckProdModule() extends HealthCheckModule {
+case class ProdHealthCheckModule() extends HealthCheckModule {
 
   def configure() {}
 
@@ -21,7 +21,7 @@ case class HealthCheckProdModule() extends HealthCheckModule {
   @Provides
   @AppScoped
   def healthcheckProvider(actorFactory: ActorFactory[HealthcheckActor],
-    services: FortyTwoServices, host: HealthcheckHost, schedulingProperties: SchedulingProperties): HealthcheckPlugin = {
-    new HealthcheckPluginImpl(actorFactory, services, host, schedulingProperties)
+    services: FortyTwoServices, host: HealthcheckHost): HealthcheckPlugin = {
+    new HealthcheckPluginImpl(actorFactory, services, host)
   }
 }

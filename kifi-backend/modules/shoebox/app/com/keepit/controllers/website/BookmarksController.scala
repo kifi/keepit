@@ -7,7 +7,7 @@ import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick.DBSession.RWSession
 import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{Id, ExternalId}
-import com.keepit.common.social.{BasicUser, BasicUserRepo}
+import com.keepit.common.social.{BasicUserRepo}
 import com.keepit.common.time._
 import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.model._
@@ -16,6 +16,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.common.store.S3ScreenshotStore
 import play.api.mvc.Action
+import com.keepit.social.BasicUser
 
 private case class BasicCollection(id: Option[ExternalId[Collection]], name: String, keeps: Option[Int])
 
@@ -119,6 +120,20 @@ class BookmarksController @Inject() (
         s3ScreenshotStore.getScreenshotUrl(uri) match {
           case Some(u) => Redirect(u)
           case None => Ok(s3ScreenshotStore.blankImage).as("image/gif")
+        }
+      }
+    }
+  }
+
+  def getScreenshotUrl() = AuthenticatedJsonToJsonAction { request =>
+    val url = (request.body \ "url").as[String]
+    Async {
+      db.readOnlyAsync { implicit session =>
+        uriRepo.getByUri(url)
+      } map { uri =>
+        s3ScreenshotStore.getScreenshotUrl(uri) match {
+          case Some(url) => Ok(Json.obj("url" -> url))
+          case None => NotFound
         }
       }
     }

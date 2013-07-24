@@ -2,37 +2,36 @@ package com.keepit.dev
 
 import com.keepit.common.mail._
 import com.keepit.shoebox._
-import com.keepit.common.db.SlickModule
 import com.keepit.shoebox.ShoeboxBrowsingHistoryModule
-import com.keepit.common.social.SocialGraphImplModule
+import com.keepit.common.social.ProdSocialGraphModule
 import com.keepit.model.ProdSliderHistoryTrackerModule
 import com.keepit.learning.topicmodel.DevTopicModelModule
 import com.keepit.realtime.ShoeboxWebSocketModule
 import com.keepit.scraper.ScraperImplModule
 import com.keepit.search.ProdSearchServiceClientModule
 import com.keepit.shoebox.ShoeboxClickHistoryModule
-import com.keepit.shoebox.ShoeboxDbInfo
 import com.keepit.common.cache.ShoeboxCacheModule
 import com.keepit.classify.DevDomainTagImporterModule
 import com.keepit.common.cache.HashMapMemoryCacheModule
 import com.keepit.shoebox.UserIndexModule
-import com.keepit.social.ShoeboxSecureSocialModule
+import com.keepit.social.ProdShoeboxSecureSocialModule
 import com.keepit.common.analytics.DevAnalyticsModule
 import com.keepit.common.crypto.ShoeboxCryptoModule
 import com.keepit.common.store.ShoeboxDevStoreModule
-import com.keepit.common.healthcheck.HealthCheckProdModule
+import com.keepit.common.healthcheck.ProdHealthCheckModule
 import com.keepit.common.net.ProdHttpClientModule
-import com.keepit.inject.FortyTwoModule
+import com.keepit.inject.ProdFortyTwoModule
 import com.keepit.common.actor.DevActorSystemModule
 import com.keepit.common.zookeeper.DevDiscoveryModule
+import com.keepit.common.db.slick.ShoeboxSlickModule
 
 case class ShoeboxDevModule() extends ShoeboxModule(
 
 
   // Common Functional Modules
-  fortyTwoModule = FortyTwoModule(),
+  fortyTwoModule = ProdFortyTwoModule(),
   cacheModule = ShoeboxCacheModule(HashMapMemoryCacheModule()),
-  secureSocialModule = ShoeboxSecureSocialModule(),
+  secureSocialModule = ProdShoeboxSecureSocialModule(),
   searchServiceClientModule = ProdSearchServiceClientModule(),
   clickHistoryModule = ShoeboxClickHistoryModule(),
   browsingHistoryModule = ShoeboxBrowsingHistoryModule(),
@@ -41,14 +40,14 @@ case class ShoeboxDevModule() extends ShoeboxModule(
   storeModule = ShoeboxDevStoreModule(),
   actorSystemModule = DevActorSystemModule(),
   discoveryModule = DevDiscoveryModule(),
-  healthCheckModule = HealthCheckProdModule(),
+  healthCheckModule = ProdHealthCheckModule(),
   httpClientModule = ProdHttpClientModule(),
-
+  shoeboxServiceClientModule = ProdShoeboxServiceClientModule(),
 
   // Shoebox Functional Modules
-  slickModule = SlickModule(ShoeboxDbInfo()),
+  slickModule = ShoeboxSlickModule(),
   scraperModule = ScraperImplModule(),
-  socialGraphModule = SocialGraphImplModule(),
+  socialGraphModule = ProdSocialGraphModule(),
   analyticsModule = DevAnalyticsModule(),
   webSocketModule = ShoeboxWebSocketModule(),
   topicModelModule = DevTopicModelModule(),

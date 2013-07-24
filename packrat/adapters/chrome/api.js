@@ -10,8 +10,7 @@ api = function() {
     var page = pages[tab.id] = {
       id: tab.id,
       url: tab.url,
-      ready: undefined,  // ready state not known
-      complete: tab.status === "complete"};
+      ready: undefined};  // ready state not known
     if (tab.active) {
       selectedTabIds[tab.windowId] = tab.id;
     }
@@ -24,20 +23,13 @@ api = function() {
   function createPageAndInjectContentScripts(tab, skipHandlers) {
     var page = createPage(tab, skipHandlers);
     if (/^https?:/.test(tab.url)) {
-      if (page.complete) {
+      if (tab.status === "complete") {
         injectContentScripts(page, skipHandlers);
-        if (!skipHandlers) {
-          dispatch.call(api.tabs.on.complete, page);
-        }
       } else if (tab.status === "loading") {
         // we might want to dispatch on.loading here.
         chrome.tabs.executeScript(tab.id, {code: "document.readyState", runAt: "document_start"}, function(arr) {
-          page.complete = arr && arr[0] === "complete";
-          if (page.complete || arr && arr[0] === "interactive") {
+          if (arr && (arr[0] === "interactive" || arr[0] === "complete")) {
             injectContentScripts(page, skipHandlers);
-          }
-          if (page.complete && !skipHandlers) {
-            dispatch.call(api.tabs.on.complete, page);
           }
         });
       }
@@ -63,9 +55,9 @@ api = function() {
     }
   });
 
-  var updateCheckRequested;
+  var updateCheckRequested, updateVersion;
   chrome.runtime.onUpdateAvailable.addListener(function(details) {
-    api.log("#666", "[onUpdateAvailable]", details.version);
+    api.log("#666", "[onUpdateAvailable]", updateVersion = details.version);
     if (updateCheckRequested) {
       chrome.runtime.reload();
     }
@@ -91,25 +83,32 @@ api = function() {
     }
   });
 
+  chrome.webNavigation.onDOMContentLoaded.addListener(function(details) {
+    if (!details.frameId && /^https?:/.test(details.url)) {
+      var page = pages[details.tabId];
+      if (page) {
+        if (page.url === details.url) {
+          api.log("[onDOMContentLoaded]", details.tabId, details.url);
+        } else {
+          api.log("#a00", "[onDOMContentLoaded] %i url mismatch:\n%s\n%s", details.tabId, details.url, page.url);
+        }
+        injectContentScripts(page);
+      } else {
+        chrome.tabs.get(details.tabId, function(tab) {
+          if (tab && selectedTabIds[tab.windowId]) {  // normal win
+            api.log("#a00", "[onDOMContentLoaded] no page for", details.tabId, details.url);
+          }
+        });
+      }
+    }
+  });
+
   chrome.tabs.onUpdated.addListener(function(tabId, change, tab) {
     api.log("#666", "[tabs.onUpdated] %i change: %o", tabId, change);
     if (selectedTabIds[tab.windowId]) {  // window is "normal"
       if (change.status === "loading") {
         onRemoved(tabId);
         createPage(tab);
-      }
-      // would be nice to get "interactive" too. see http://crbug.com/169070
-      if (change.status === "complete") {
-        var page = pages[tabId];
-        if (page) {
-          page.complete = true;
-          if (/^https?:/.test(page.url)) {
-            injectContentScripts(page);
-            dispatch.call(api.tabs.on.complete, page);
-          }
-        } else {
-          api.log("#800", "[onUpdated] %i no page", tabId);
-        }
       }
     }
   });
@@ -238,23 +237,6 @@ api = function() {
           port.postMessage(m);
         });
         delete page.toEmit;
-      }
-    }
-  });
-
-  chrome.runtime.onMessage.addListener(function(msg, sender) {
-    var tab = sender.tab;
-    if (sender.id === chrome.runtime.id && tab && /^https?:/.test(tab.url) && msg === "api:dom_ready") {
-      var page = pages[tab.id];
-      if (page) {
-        if (tab.url === page.url) {
-          api.log("[api:dom_ready]", tab.id, tab.url);
-        } else {
-          api.log("#a00", "[api:dom_ready] %i url mismatch:\n%s\n%s", tab.id, tab.url, page.url);
-        }
-        injectContentScripts(page);
-      } else if (selectedTabIds[tab.windowId]) {  // normal win
-        api.log("#a00", "[api:dom_ready] no page for", tab.id, tab.url);
       }
     }
   });
@@ -475,10 +457,14 @@ api = function() {
       xhr.send(data);
     },
     requestUpdateCheck: function() {
-      chrome.runtime.requestUpdateCheck(function(status) {
-        api.log("[requestUpdateCheck]", status);
-      });
-      updateCheckRequested = true;
+      if (updateVersion) {
+        chrome.runtime.reload();
+      } else {
+        updateCheckRequested = true;
+        chrome.runtime.requestUpdateCheck(function(status) {
+          api.log("[requestUpdateCheck]", status);
+        });
+      }
     },
     socket: {
       open: function(url, handlers, onConnect, onDisconnect) {
@@ -595,7 +581,6 @@ api = function() {
         blur: new Listeners,
         loading: new Listeners,
         ready: new Listeners,
-        complete: new Listeners,
         unload: new Listeners}},
     timers: window,
     version: chrome.app.getDetails().version};

@@ -3,20 +3,18 @@ package com.keepit.common.social
 import java.io.File
 
 import org.specs2.mutable._
-
-import com.keepit.inject._
 import com.keepit.model._
 import com.keepit.test._
 
-import play.api.Play.current
 import play.api.libs.json.Json
-import play.api.test.Helpers._
+import com.google.inject.Injector
+import com.keepit.common.net.FakeHttpClientModule
 
-class SocialUserImportEmailTest extends Specification with DbRepos {
+class SocialUserImportEmailTest extends Specification with ShoeboxTestInjector {
 
   "SocialUserImportEmail" should {
     "import email" in {
-      running(new EmptyApplication().withFakeHttpClient()) {
+      withDb(FakeHttpClientModule()) { implicit injector =>
         val graphs = List(
             ("facebook_graph_andrew.json", "fb@andrewconner.org")
         )
@@ -25,7 +23,7 @@ class SocialUserImportEmailTest extends Specification with DbRepos {
     }
   }
 
-  def testSocialUserImportEmail(jsonFilename: String, emailString: String) = {
+  def testSocialUserImportEmail(jsonFilename: String, emailString: String)(implicit injector: Injector) = {
     val user = db.readWrite {implicit s =>
       userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
     }

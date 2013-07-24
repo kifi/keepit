@@ -12,91 +12,69 @@ a[href] {color: #0089d5; text-decoration: none}
 ::-moz-placeholder {color: #b6c3cc}
 :-ms-input-placeholder {color: #b6c3cc}
 
-/* header */
+/* page structure */
+
 html {height: 100%; text-align: center; overflow-y: hidden; overflow-x: auto}
-body {height: 100%; min-width: 1024px; margin: 0 auto; padding: 0; background: #fafafa; font-size: 16px; text-align: left; position: relative}
-header {height: 70px; background: #67829c; position: relative; z-index: 1}
-.header-left {position: absolute; width: 15.873%; min-width: 200px; padding-top: 12px; text-align: center}
-.header-center {position: absolute; left: 15.873%; right: 25.78125%; padding-top: 10px; border-left: 1px solid transparent}
-@media (max-width: 1260px) { .header-center { left: 200px; right: 330px } }
-input.query {font-family: inherit; font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; -moz-box-sizing: border-box; box-sizing: border-box; padding: 9px 50px 9px 20px; border: none; border-right: 120px solid #67829c; background: #fff url(../img/search.png) right 16px center no-repeat; transition: border-right-width .3s; -webkit-transition: border-right-width .3s; -webkit-font-smoothing: antialiased}
-input.query:focus, input.query[data-q] {background-image: url(../img/search-blue.png); border-right-width: 0}
-input.query::-webkit-input-placeholder {color: #99a3b3}
-input.query::-moz-placeholder {color: #99a3b3}
-header>nav {position: absolute; right: 0; width: 25.78125%; min-width: 330px; -moz-box-sizing: border-box; box-sizing: border-box; padding-top: 26px; text-align: center; font-size: 14px}
-header>nav>a[href] {padding: 0 15px; color: #fff; border-left: 1px solid #fff; vertical-align: middle}
-header>nav>a:first-child {border-left: 0}
+body {height: 100%; min-width: 1024px; margin: 0 auto; padding: 0; background: #fafafa; font-size: 0; text-align: left; position: relative}
+.page-cols {display: table; table-layout: fixed; min-width: 100%; height: 100%; overflow: hidden}
+.left-col {display: table-cell; vertical-align: top; position: relative; width: 18%; min-width: 240px; background: #eff2f7}
+section.main {display: table-cell; vertical-align: top; position: relative; min-width: 454px; background: #fff}
+.right-col {display: table-cell; vertical-align: top; position: relative; width: 31%; min-width: 330px}
+.page-col-inner {position: relative; height: 100%; width: 100%} /* bugzil.la/35168 */
 
-/* main */
-section.main {position: absolute; top: 70px; bottom: 0; left: 15.873%; right: 25.78125%; border-left: 1px solid #dbdee3; background: #fff}
-@media (max-width: 1260px) { section.main { left: 200px; right: 330px } }
-#my-keeps,#search-results {display: none}
-.main[data-view=mine] #my-keeps,
-.main[data-view=search] #search-results {display: block}
-.main-head {padding: 15px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
-.main-head.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
-.main[data-view=search]>.main-head {padding-top: 10px; height: 37px}
-.main-head>h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
-.main[data-view=search]>.main-head>h1 {display: none}
-.main-head>.subtitle {font-size: 13px; font-weight: 300; color: #5b6670}
-.result-query::before {content: "\201c"}
-.result-query::after {content: "\201d"}
-.main-keeps {position: absolute; top: 72px; bottom: 0; left: 0; right: 0; overflow: hidden}
-.main[data-view=search]>.main-keeps {top: 37px}
-.main-keeps>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; padding: 1px 18px 0; box-sizing: border-box; -moz-box-sizing: border-box}
-
-aside {position: absolute; top: 70px; bottom: 0; -moz-box-sizing: border-box; box-sizing: border-box}
-
-/* left column */
-.left-col {left: 0; width: 15.873%; min-width: 200px; background: #eff2f7}
+/* left col */
+.header-left {height: 70px; background-color: #67829c; text-align: center; padding-top: 18px; -moz-box-sizing: border-box; box-sizing: border-box}
+.header-logo {display: inline-block; width: 51px; height: 29px; background: url(../img/kifi-logo.png) 0/100%}
 .my-identity {position: relative; width: 100%; text-align: center; background: #fff; padding-bottom: 10px}
-.my-pic {width: 66px; height: 66px; margin: 0 auto -10px; border-radius: 50%; border: 6px solid #eff2f7; position: relative; top: -10px; background-size: 100%; background-color: #b6c3cc; z-index: 1}
-.my-name {height: 28px; line-height: 28px}
+.my-pic {display: block; width: 66px; height: 66px; margin: 0 auto -10px; border-radius: 50%; border: 6px solid #eff2f7; position: relative; top: -10px; background-size: 100%; background-color: #b6c3cc; z-index: 1}
+.my-name {height: 28px; line-height: 28px; font-size: 16px}
 .my-name:first-child {padding-top: 80px}
-.left-col h2 {margin: 4px 0 0; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased; padding: 0 11px}
+.my-description {font-size: 12px; color: #818692;}
+.left-col h2 {margin: 4px 0 0; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased; padding: 0 0 0 39px}
 .left-col h3 {margin: 0; position: relative; font-size: 13px; line-height: 41px; -webkit-user-select: none; -moz-user-select: -moz-none; -ms-user-select: none}
-.left-col .active,
-.left-col .my-keeps:not(.active):hover {background: #e3e6ee}
-.left-col h3>a {display: block; padding: 0 6px 0 12px; color: #818692}
+.left-col .active {background-color: #e3e6ee}
+.left-col>*>h3:not(.active):hover {background-color: #e9ecf2}
+.left-col h3>a {display: block; padding: 0 6px 0 40px; color: #818692}
 .left-col .keep-count {float: right; margin: 10px 0 0; border: 1px solid #b8c5d2; border-radius: 10.5px; color: #628196; font-size: 12px; line-height: 20px; height: 19px; padding: 0 12px}
 @-moz-document url-prefix() {.left-col .keep-count {line-height: 18px}}
 .left-col .active .keep-count {color: #fff; background: #b8c5d2}
-.left-col .my-keeps:not(.active):hover .keep-count {background: #eff2f7}
+.left-col>*>h3:not(.active):hover .keep-count {background: #eff2f7}
 .left-col .active .view-name {color: #556179}
-.left-col .my-keeps .view-name::before {content: " "; display: inline-block; width: 21px; height: 21px; padding: 10px 0; margin-right: 7px; background: url(../img/kifi-icon.png) 0/42px content-box; vertical-align: top; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
-.left-col .my-keeps.active .view-name::before {background-position: right}
-#collections>h2 {margin-top: 15px; padding: 0 0 2px 38px; background: url(../img/folder-icon.png) left 12px bottom 13px/18px no-repeat; border-bottom: 1px solid #dbdee3}
+.left-col .view-name::before {content: " "; display: inline-block; height: 21px; padding: 10px 0; background: url(../img/nav-icons.png) 0 no-repeat; background-size: auto 21px; vertical-align: top}
+.left-col .my-keeps .view-name::before {width: 21px; margin-right: 7px; background-position: -21px}
+.left-col .my-keeps.active .view-name::before {background-position: 0}
+.left-col .my-friends .view-name::before {width: 20px; margin-right: 8px; background-position: -62px 8px}
+.left-col .my-friends.active .view-name::before {background-position: -42px 8px}
+#collections>h2 {margin-top: 15px; padding-bottom: 2px; border-bottom: 1px solid #dbdee3; position: relative}
+#collections>h2::before {content: " "; display: inline-block; height: 15px; width: 18px; margin: 0 8px 0 1px; background: url(../img/nav-icons.png) right bottom; background-size: auto 21px}
 #collections h3 {line-height: 39px}
 a.collection-create {float: right; margin: 10px 6px 0 0; width: 18px; height: 18px; border-radius: 50%; background: url(data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7) center/8px no-repeat #b8c5d2; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
-a.collection-create:hover {background-color: #bdcbd8}
-a.collection-create:active {background-color: #a0b1c2}
+a.collection-create:hover {background-color: #a0b1c2}
+a.collection-create:active {background-color: #8699ab}
 
 .collection-new {display: none; border-bottom: 1px solid #dbdee3; background: #fff; -webkit-transition: background-color .16s; transition: background-color .16s}
 .collection-new.submitted {background-color: rgba(255,255,255,0)}
 #collections input {width: 100%; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; line-height: normal; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text}
 #collections-list {overflow: hidden}
 #collections-list.positioned {position: absolute; bottom: 0; left: 0; right: 0}
-#collections-list>.antiscroll-inner {height: 100%; width: 100%; /*overflow-x: hidden;*/ position: relative}
+#collections-list>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; position: relative}
 #collections-list>.antiscroll-inner>.sortable-placeholder {background: #6fa6ef; height: 2px; min-height: 0}
-h3.collection {border-bottom: 1px solid #dbdee3; position: relative; -webkit-transition: padding-left .16s, background-color 0s; transition: padding-left .16s, background-color 0s}
-.collection.with-tri:not(.no-tri) {padding-left: 27px}
+h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 .collection.renaming {background-color: #fff}
 .collection.renaming>a {cursor: text}
 .collection.renaming,
-.collection.renamed {-webkit-transition-duration: .16s; transition-duration: .16s}
+.collection.renamed {-webkit-transition: background-color .16s; transition: background-color .16s}
 .collection.drop-hover {background-color: #6fa6ef}
 .collection.drop-hover .view-name {color: #fff}
 .collection.drop-hover .keep-count {background-color: #fff; border-color: #fff; color: #628196}
 .collection .keep-count {margin-top: 9px}
 .collection.renaming .keep-count {display: none}
-.coll-tri {position: absolute; top: 0; bottom: 0; left: -27px; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer; visibility: hidden; -webkit-transition: left .16s; transition: left .16s}
+.coll-tri {position: absolute; top: 0; bottom: 0; left: -33px; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer; -webkit-transition: left .16s; transition: left .16s}
 .active>.coll-tri {background-color: #b8c5d2}
-.renaming>.coll-tri {display: none}
 .coll-tri::before {content: " "; border-width: 4px 4px 0; border-style: solid; border-color: #b8c5d2 transparent; font-size: 0; line-height: 0; vertical-align: 1px}
 .active>.coll-tri::before {border-top-color: #fff}
-.collection:hover>.coll-tri,
-.collection.with-tri>.coll-tri {visibility: visible}
-.collection.with-tri:not(.no-tri)>.coll-tri {left: 0}
+.collection:not(.renaming):hover>.coll-tri,
+.collection.with-menu>.coll-tri {left: 0}
 #coll-menu {display: none; position: absolute; top: 100%; left: 0; z-index: 1; background: #e3e6ee}
 #coll-menu.page-bottom {top: auto; bottom: 100%}
 #coll-menu>li>a {display: block; padding: 0 16px; font-size: 12px; line-height: 24px; white-space: nowrap; color: #556179; border: solid #dbdee3; border-width: 0 1px 1px 0}
@@ -104,11 +82,224 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative; -webkit-tra
 #coll-menu>li>a:hover,
 #coll-menu>li>a.hover {background: #9ba4b8; color: #fff}
 
-aside.right {right: 0; width: 25.78125%; min-width: 330px}
-aside.right>.antiscroll-inner {position: absolute; top: 0; bottom: 0; left: 0; right: 0; overflow-x: hidden; overflow-y: scroll; -moz-box-sizing: border-box; box-sizing: border-box}
+/* center col */
+.main>.page-col-inner::before {content: " "; position: absolute; top: 70px; bottom: 0; border-left: 1px solid #dbdee3}
+.query-wrap {background-color: #67829c; padding: 10px 120px 12px 0; transition: padding-right .3s; -webkit-transition: padding-right .3s; white-space: nowrap}
+.query-wrap.focus,
+.query-wrap:not(.empty) {padding-right: 0}
+input.query {border: none; padding: 9px 48px 9px 20px; font-family: inherit; font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; height: 48px; -moz-box-sizing: border-box; box-sizing: border-box; -webkit-font-smoothing: antialiased}
+input.query::-webkit-input-placeholder {color: #99a3b3}
+input.query::-moz-placeholder {color: #99a3b3}
+input.query::-ms-clear {display: none}
+.query-icon {display: inline-block; height: 48px; width: 48px; vertical-align: bottom; position: relative; right: 48px; overflow: hidden}
+.query-mag {cursor: text}
+.query-mag,
+.query-x {position: absolute; top: 0; bottom: 0; left: 0; width: 100%; padding-top: 13px; text-align: center; -moz-box-sizing: border-box; box-sizing: border-box; -webkit-transition: left .15s .07s; transition: left .15s .07s}
+.query-mag::before,
+.query-x::before {content: " "; display: inline-block; vertical-align: bottom; height: 23px; background-image: url(../img/search.png); background-size: auto 23px}
+.query-mag::before {width: 26px}
+.focus>*>.query-mag::before {background-position: -26px}
+.query-x::before {width: 23px; background-position: -52px}
+.query-x:hover::before {background-position: -75px}
+.query-x:active::before {background-position: -98px}
+.empty>*>.query-x,
+:not(.empty)>*>.query-mag {left: 100%; -webkit-transition-delay: 0; transition-delay: 0}
+.main-head,
+.main-keeps {margin-left: 1px; box-shadow: -1px 0 #dbdee3}
+.main-head {padding: 13px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
+.main-head.scrolled,
+.above-friends-list.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
+.main[data-view=search] .main-head {padding-top: 10px; height: 37px}
+.main[data-view=search] .main-head>h1,
+.main:not([data-view=mine]):not([data-view=search]) .main-head,
+.main:not([data-view=mine]):not([data-view=search]) .main-keeps,
+.main:not([data-view=profile]) .profile,
+.main:not([data-view=friends]) .friends {display: none}
+h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
+
+.profile {position: absolute; top: 70px; left: 0; width: 100%; font-size: 14px; box-sizing: border-box; padding: 20px 50px; color: #818692;}
+.profile, .profile input, .profile h2 {font-weight: 300; letter-spacing: 1px;}
+.profile input, .profile textarea {color: #818692; border: none; margin: 0; padding: 0;}
+.profile .profile-image {float: left; border: 10px solid #eff2f7; border-radius: 20px; width: 100px; height: 100px; background-size: 100%}
+.profile .profile-details {margin-left: 120px; padding: 10px}
+.profile .profile-name {padding: 5px;}
+.profile .profile-name .editable {font-size: 24px; padding: 3px;}
+.profile .profile-name input {font: inherit; font-size: 24px; width: 150px;}
+.profile .profile-description {display: block; font-size: 16px; padding: 5px; margin-left: 5px;}
+.profile .profile-description.editing [data-chars-left] { position: relative; padding-bottom: 18px; }
+.profile .profile-description.editing [data-chars-left]:after { content: attr(data-chars-left) " characters left"; display: block; position: absolute; bottom: 0; left: 2px; font-size: 12px; min-width: 150px; }
+.profile .profile-description input {font: inherit; font-size: 16px; width: 300px;}
+.edit-container span.edit, .edit-container span.save {display: none; cursor: pointer; vertical-align: top; background: #b8c5d2; color: white; font-size: 12px; padding: 4px; margin-left: 8px;}
+.edit-container:hover span.edit {display: inline-block; height: 12px;}
+.editing span.save {display: inline-block; height: 12px;}
+.edit-container [data-placeholder]:empty::before { content: attr(data-placeholder); color: #b3b3b3; }
+.edit-container.editing span.edit {display: none;}
+span.edit, span.save {position: relative;}
+span.edit::before, span.save::before { display: inline-block; position: absolute; top: 0; left: -8px; content: "."; font-size: 0; height: 0; width: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-right: 8px solid #b8c5d2; }
+.editing span.save::before {border-right-color: #accc98;}
+.editing span.save {background: #accc98;}
+.editing input {background: #e2edfc;}
+.profile h2 { clear: both; border-bottom: 1px solid #818692; padding: 15px 0 0; }
+.profile .contact-email { font-size: 17px; margin: 15px 0; }
+.profile .contact-email input { font-size: 17px; font: inherit; }
+.profile .contact-email .editable { display: inline-block; padding: 2px 0; }
+.profile>.networks { position: relative; font-size: 0; background-size: 62px; margin: 20px 0; padding: 0; }
+.profile>.networks>ul { margin: 0; padding: 60px 0 0 72px; }
+.profile>.networks>.kifi-k::before { position: absolute; display: block; content: "."; background: url(../img/kifi-k.png) no-repeat; background: size: 100%; top: -6px; left: -6px; border: 6px solid white; width: 62px; height: 62px; border-radius: 50%; z-index: 1;}
+.profile>.networks>.kifi-k::after { position: absolute; display: block; content: "."; z-index: 5; left: 40px; top: 0; width: 286px; height: 58px; }
+.profile>.networks::before { position: absolute; display: block; content: "."; top: 24px; left: 54px; width: 9px; width: 9px; height: 9px; background: #accc98; border: 2px solid white; border-radius: 50%; z-index: 2; }
+.profile>.networks::after { position: absolute; display: block; content: "."; top: 21px; left: 63px; width: 284px; height: 20px; background: #eff2f7; z-index: 0; }
+.profile>.networks>ul>li { display: inline-block; margin: 0 5px; width: 60px; height: 60px; font-size: 0; }
+.profile-nw { position: relative; display: inline-block; width: 100%; height: 100%; background-image: url(../img/networks.png); background-size: 240px 60px; }
+.profile-nw.nw-facebook { background-color: #637ab8; }
+.profile-nw.nw-linkedin { background-color: #4f83c3; background-position: -60px 0; }
+.profile-nw.nw-twitter { background-color: #0da2d9; background-position: -120px 0; }
+.profile-nw.nw-google { background-color: #dd4c39; background-position: -180px 0; }
+.profile-nw::before { position: absolute; display: block; content: "."; border-width: 3px 3px 0 0; border-style: solid; border-color: #accc98; height: 28px; top: -31px; z-index: 3; }
+.profile-nw.nw-facebook::before { left: -12px; width: 41px; }
+.profile-nw.nw-linkedin::before { left: -82px; width: 111px; }
+.profile-nw.nw-twitter::before { left: -152px; width: 181px; }
+.profile-nw.nw-google::before { left: -222px; width: 251px; }
+.profile-nw.not-connected:not(:hover) { background-color: #dbdee3; }
+.profile-nw.not-connected::before { border-color: #dbdee3; z-index: 2; }
+.profile-nw::after { position: absolute; display: block; content: "."; top: -6px; left: 24px; border-radius: 50%; width: 9px; height: 9px; background: #accc98; border: 2px solid white; }
+.profile-nw.not-connected::after { background: #dbdee3; }
+.profile-nw.not-connected { transition: background .25s ease-in 50ms; }
+
+.my-friends {display: none} /* TODO: remove */
+.friends {padding: 13px 20px 0}
+.friends-tabs {margin: 15px 0 24px; line-height: 46px; border-bottom: 2px solid #e3e6ee}
+.friends-tabs>a {display: inline-block; border: solid transparent; border-radius: 6px 6px 0 0; border-width: 2px 2px 0; padding: 0 40px; font-size: 18px; font-weight: 300; vertical-align: top; position: relative; bottom: -2px; -webkit-font-smoothing: antialiased}
+.friends-tabs>a:not([href]) {border-color: #e3e6ee; background-color: #fff; color: #34495e}
+.friends-tabs>a[href]:not(:hover) {color: #627d99}
+.friends-tabs>a[href]:focus {border-color: rgba(227,230,238,.3)}
+
+.above-friends-list {padding-bottom: 20px; border-bottom: 1px solid transparent}
+input.friends-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; padding: 0 13px; font-size: 14px; -webkit-font-smoothing: antialiased}
+#friends-list {position: absolute; top: 260px; left: 20px; right: 0; bottom: 0; overflow-y: auto; overflow-x: hidden}
+#friends-list>.antiscroll-inner {position: absolute; left: 0; right: 0; top: 0; bottom: 0; overflow-y: auto; overflow-x: hidden; padding-right: 20px; -moz-box-sizing: border-box; box-sizing: border-box}
+.friend {border-top: 1px solid #e3e6ee; display: table; table-layout: fixed}
+.friend:last-child {border-bottom: 1px solid #e3e6ee}
+.friend-pic {display: table-cell; width: 70px; padding: 15px 0; vertical-align: top}
+.friend-pic>img {width: 70px; height: 70px; border-radius: 4px}
+.friend-info {display: table-cell; width: 99%; padding: 15px 0 15px 16px; vertical-align: top}
+.friend-name {margin: 4px 0 15px; font-size: 16px; line-height: 1; color: #34495e; -webkit-font-smoothing: antialiased}
+.friend-label {margin: 0 0 6px; font-size: 12px; line-height: 1; font-weight: 300; color: #34495e; -webkit-font-smoothing: antialiased}
+.friend-actions {display: table-cell; padding: 15px 0; vertical-align: middle; white-space: nowrap}
+.friend-actions>*>a {display: inline-block; height: 32px; width: 32px; border-radius: 50%; margin-left: 4px; background-color: #d7e8b1; vertical-align: top; text-align: center; -moz-box-sizing: border-box; box-sizing: border-box}
+.friend-actions>*>a::before {content: " "; display: inline-block; margin-top: 8px; height: 16px; background-image: url(../img/friend-actions.png); background-size: auto 16px}
+.friend-mute::before {width: 17px; background-position: -17px}
+.friend-mute:hover {background-color: #fff; border: 2px solid #e3e6ee}
+.friend-mute:hover::before {background-position: 0; margin-top: 6px}
+.friend-status::before {width: 16px; background-position: -34px}
+.friend-status:hover {background-color: #e78881}
+.friend-status:hover::before {width: 19px; background-position: -50px}
+.friend-action-desc {position: absolute; right: 0; bottom: -20px; font-size: 13px; line-height: 1; font-weight: 300; color: #34495e; -webkit-font-smoothing: antialiased}
+
+.network-filters {}
+.network-filters>a {font-size: 16px}
+.friend-request-status {font-size: 16px}
+
+.check-all {position: absolute; top: 1px; left: 0; height: 17px; width: 17px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; border: 1px solid #e3e6ee; -moz-box-sizing: border-box; box-sizing: border-box}
+.check-all.live {cursor: pointer}
+.check-all.live:hover {border-color: #b8c5d2}
+.check-all.checked {background-position: 2px 4px}
+.check-all.live:hover+.subtitle-text::before {content: "Select "}
+.check-all.live.checked:hover+.subtitle-text::before {content: "Deselect "}
+.main-head>.subtitle {font-size: 13px; line-height: 20px; font-weight: 300; color: #5b6670; padding-left: 30px; position: relative}
+.result-query::before {content: "\201c"}
+.result-query::after {content: "\201d"}
+.main-keeps {position: absolute; top: 142px; bottom: 0; left: 0; right: 0; overflow: hidden}
+.main[data-view=search] .main-keeps {top: 107px}
+.main-keeps>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; padding: 1px 18px 0; box-sizing: border-box; -moz-box-sizing: border-box}
+
+.keep-group-title {margin-top: 7px; color: #67829c; font-size: 21px; font-weight: 100; letter-spacing: 1px; border-bottom: 1px solid #e3e6ee; padding: 4px 30px}
+.keep-group-title+.keep {border-top: 0}
+.keep {background-color: #fff; padding: 10px 0 13px 30px; border-top: 1px solid #f9f9f9; position: relative}
+.keep.detailed {background-color: #eff2f7}
+.keep.selected {background-color: #fffcf1; border-color: #f0f0f0}
+.keep.ui-draggable-dragging {border-top: none}
+.keep-arrow {position: absolute; right: 16px; width: 6px; height: 16px; bottom: 13px; border: solid transparent; border-width: 4px 8px; background: url(../img/arrow-r.png) left/13px 16px no-repeat content-box; cursor: pointer; -webkit-transition: -webkit-transform .2s; transition: -webkit-transform .2s, transform .2s}
+.keep-arrow:hover {background-color: rgba(0,0,0,.05); border-color: rgba(0,0,0,.05)}
+.keep:hover .keep-arrow,
+.keep.detailed .keep-arrow {background-position: right}
+.keep.detailed .keep-arrow {-webkit-transform: scale(-1,1); transform: scale(-1,1)}
+.keep>.handle {cursor: move; position: absolute; top: 0; bottom: 0; left: 0; width: 21px; display: none; background: url(../img/drag-handle.png) center/10px no-repeat}
+.keep>.handle:hover,
+.keep.detailed>.handle,
+.keep.selected>.handle,
+.keep.ui-draggable-dragging>.handle {background-color: #e3e6ee}
+.keep-checkbox {display: none; position: absolute; left: 3px; top: 4px; width: 15px; height: 15px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; cursor: pointer}
+.keep>.handle:hover>.keep-checkbox,
+.keep.detailed>.handle>.keep-checkbox,
+.keep.selected>.handle>.keep-checkbox,
+.keep.ui-draggable-dragging>.handle>.keep-checkbox {display: block}
+.keep.selected>.handle>.keep-checkbox {background-position: 2px 4px}
+.keep:hover>.handle,
+.keep.detailed>.handle,
+.keep.selected>.handle,
+.keep.ui-draggable-dragging>.handle {display: block}
+.keep>time {float: right; margin: 0 16px 0 4%; font-size: 12px; line-height: 28px; color: #99a3b3}
+.keep-title {max-width: 100%; font-size: 16px; line-height: 24px; color: #0089d5; -webkit-font-smoothing: antialiased}
+.keep-url {font-size: 12px; line-height: 14px; color: #99a3b3}
+.keep-colls {margin-right: 10px; border: solid transparent; border-width: 7px 0; background: url(../img/folder-icon-small.png) 0 0/13px 11px no-repeat; padding-left: 15px; font-size: 12px; line-height: 14px; overflow: hidden}
+@-moz-document url-prefix() {.keep-colls {background-position: 0 1px}}
+.keep-colls:empty {border-bottom-width: 0}
+.keep-coll {display: inline-block; position: relative; overflow: hidden; white-space: nowrap}
+.keep-coll:not(:last-of-type)::after {content: " "; display: inline-block; font-size: 0; border-right: 1px solid #99a3b3; height: 9px}
+.keep-coll.removed {width: 0 !important; -webkit-transition: width .12s ease-in-out; transition: width .12s ease-in-out}
+.keep-coll-a {padding: 0 5px}
+.keep-coll-a:not(:hover) {color: #99a3b3}
+.keep-coll-a:hover {text-decoration: underline; -webkit-font-smoothing: antialiased}
+.keep-coll-x {display: none; position: absolute; top: 0; bottom: 0; right: 0; width: 0; text-align: center}
+.keep-coll:hover>.keep-coll-x {width: 10px}
+.keep-coll-x::before {content: "\d7"; position: relative; bottom: 1px}
+.keep-who {font-size: 0}
+.keep-who>.pic {display: inline-block; vertical-align: middle; width: 23px; height: 23px; background-size: 100%; border-radius: 2px; margin-right: 1px; position: relative}
+.keep-who>.me {border-radius: 50% 0 0 50%}
+.keep-who>.me:last-of-type {border-radius: 50%}
+.keep-who>.pic>.fr-card {bottom: 36px; left: -22px; z-index: 2}
+.keep-who>.pic>.fr-card::before,
+.keep-who>.pic>.fr-card::after {left: 33px}
+.keep-who-text {vertical-align: middle; margin-left: 4px; font-size: 12px; color: #99a3b3}
+.keep.mine .me+.keep-who-text {margin-left: 7px}
+.keep:not(.mine) .me+.keep-who-text {margin-left: 0}
+.keep:not(.mine) .me,
+.keep:not(.mine) .keep-you,
+.keep:not(.mine) .keep-private,
+.keep-private:not(.on) {display: none}
+.keep-private {display: inline-block; margin: 0 2px; background: url(../img/private.png) left center/17px no-repeat; margin: 0 2px; line-height: 17px; padding-left: 21px}
+.keep.mine .keep-friends::before,
+.keep.mine .keep-others::before,
+.keep-who-text>.keep-friends+.keep-others::before {content: "+ "}
+.keep:not(.mine) .keep-you+.keep-kept-this::before {content: "Nobody has "; line-height: 23px}
+.keeps-loading,
+.friends-loading {margin: 21px 50%; width: 44px; height: 8px; position: relative; left: -22px}
+.keeps-load-more {display: block; margin: 10px 0; background-color: #fcfdff; line-height: 30px; font-size: 16px; text-align: center}
+.keeps-load-more:hover {background-color: #f3fbff}
+.keeps-load-more:active {background-color: #f3f5f9}
+.keeps-load-more.hidden {display: none}
+
+.keep.ui-draggable-dragging,
+.keeps-dragging {opacity: .7; z-index: 90; cursor: move}
+.keeps-dragging>.keep {position: absolute; width: 100%}
+.keep-drag-shade {position: absolute; z-index: 89; background: #000; opacity: 0; -webkit-transition: opacity .2s; transition: opacity .2s}
+
+/* right col */
+
+.top-right-nav {height: 70px; padding: 26px 18px 0 0; background-color: #67829c; text-align: right; font-size: 14px; -moz-box-sizing: border-box; box-sizing: border-box}
+.top-right-nav>a[href] {padding: 10px 15px; color: #fff; border-left: 1px solid #fff; vertical-align: middle}
+.top-right-nav>a:first-child {border-left: 0}
+.top-right-nav>a[href]:hover {background-color: #a0b1c2}
+.top-right-nav>a[href]:active {background-color: #8699ab}
+.top-right-nav>a[href]:focus {box-shadow: inset 0 0 0 2px #a0b1c2}
+
+.splash,
+.detail {position: absolute; top: 70px; left: 0; right: 0; bottom: 0}
+.right-col>*>*>.antiscroll-inner {position: absolute; top: 0; bottom: 0; left: 0; right: 0; overflow-x: hidden; overflow-y: scroll}
 
 .splash {background-color: #fff; border-left: 1px solid #dbdee3}
-.splash>.antiscroll-inner {padding: 6px 0 0 36px}
+.splash>.antiscroll-inner {padding: 6px 0 0 36px; -moz-box-sizing: border-box; box-sizing: border-box}
 .splash h2 {margin: 30px 0 6px; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
 .splash ul {margin: 0; padding: 0; list-style: none; font-size: 15px; line-height: 46px; -webkit-font-smoothing: antialiased}
 .splash ul>li>a {display: inline-block; color: #556179; margin-left: -10px; padding: 0 24px 0 10px}
@@ -126,160 +317,178 @@ aside.right>.antiscroll-inner {position: absolute; top: 0; bottom: 0; left: 0; r
 
 .detail {display: none; padding: 20px 20px 0; background: #eff2f7; color: #556179; -webkit-transition: -webkit-transform .2s; transition: -webkit-transform .2s, transform .2s}
 .detail h2 {color: inherit; font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased}
-/*.detail select {padding: 5px}*/
-/*.detail a {color: #556179; display: block}*/
+a.page-x[href] {position: absolute; top: 8px; right: 16px; width: 17px; height: 17px; border-radius: 50%; color: #b8c5d2; font-size: 16px; line-height: 1; text-align: center}
+a.page-x[href]:hover {background-color: #a0b1c2; color: #fff}
+a.page-x[href]:active {background-color: #8699ab; color: #fff}
+.page-x::before {content: "\d7"; position: relative; top: -1px}
 .page-meta {font-size: 0}
 a.page-url[href] {font-size: 12px; line-height: 20px; color: inherit; -webkit-font-smoothing: antialiased; max-width: 100%; margin-bottom: 12px}
 a.page-url[href]:hover {text-decoration: underline}
-.page-pic-wrap {display: table; table-layout: fixed; width: 100%}
-.page-pic {display: table-cell; background-color: rgba(0,0,0,.05); background-size: 100% auto; width: 100%; min-height: 135px; padding-top: 47%; cursor:pointer; -moz-box-sizing: border-box; box-sizing: border-box}
-.page-how {display: table-cell; vertical-align: middle; text-align: center; white-space: nowrap; width: 0; max-width: 0; -webkit-transition: width .18s, max-width .18s; transition: width .18s, max-width .18s}
-[data-kept] .page-how {width: 48px; max-width: 48px}
-.page-how.pub {background-color: #accc98}
-.page-how.pri {background-color: #e78881}
-.page-how-text {margin: 0 -50%; color: #fff; font-size: 18px; -webkit-font-smoothing: antialiased; -webkit-transform: rotate(90deg) scale(1,.001); transform: rotate(90deg) scale(1,.001); -webkit-transition: -webkit-transform .18s; transition: -webkit-transform .18s, transform .18s}
-[data-kept] .page-how-text {-webkit-transform: rotate(90deg); transform: rotate(90deg)}
-.pub>.page-how-text::before,
-.pri>.page-how-text::before {content: " "; display: inline-block; height: 16px; width: 16px; background: url(../img/keep-icons.png) -46px 0/auto 16px; vertical-align: -2px; margin-right: 9px; -webkit-transform: rotate(-90deg); transform: rotate(-90deg)}
-.pri>.page-how-text::before {width: 12px; background-position: -34px 0}
-.pub>.page-how-text::after {content: "Public"}
-.pri>.page-how-text::after {content: "Private"}
+.page-pic-wrap {display: table; table-layout: fixed; width: 100%; position: relative; overflow: hidden}
+.page-pic[href] {display: table-cell; background-color: rgba(0,0,0,.05); background-size: 100% auto; width: 100%; min-height: 135px; padding-top: 47%; color: inherit; cursor: pointer; -moz-box-sizing: border-box; box-sizing: border-box}
+.page-how {display: table-cell; position: relative; vertical-align: middle; text-align: center; white-space: nowrap; width: 0; max-width: 0; -webkit-transition: width .18s, max-width .18s; transition: width .18s, max-width .18s}
+.page-pic-1 {position: absolute; top: 0; bottom: 0; left: 0; right: 48px}
+.page-pic-2 {display: table; width: 100%; height: 100%}
+.page-pic-3 {display: table-cell; vertical-align: middle; text-align: center}
+.page-pic-soon {display: none; font-size: 16px; font-weight: 300; -webkit-font-smoothing: antialiased}
+.page-pic-tip {display: inline-block; padding: 0 16px; border-radius: 4px; text-transform: uppercase; background-color: #b8c5d2; color: #fff; font-size: 11px; line-height: 24px; -webkit-font-smoothing: antialiased}
+.page-pic:not(:hover) .page-pic-tip {display: none}
+[data-kept^=p] .page-how {width: 48px; max-width: 48px}
+.page-how-0 {position: absolute; top: 0; right: 0; bottom: 0; width: 48px; overflow: hidden}
+.page-how-pub,
+.page-how-pri {position: absolute; top: 0; right: 0; width: 100%; height: 100%; -webkit-transform: scale(.001,1); transform: scale(.001,1); -webkit-transition: -webkit-transform .18s, top .18s; transition: -webkit-transform .18s, transform .18s, top .18s}
+.page-how-pub {background-color: #accc98}
+.page-how-pri {background-color: #e78881}
+[data-kept^=p] .page-how-pub,
+[data-kept^=p] .page-how-pri {-webkit-transform: none; transform: none}
+.pri>*>.page-how-pub {top: 100%}
+.pub>*>.page-how-pri {top: -100%}
+.page-how-1 {display: table; height: 100%; width: 100%}
+.page-how-2 {display: table-cell; vertical-align: middle; text-align: center}
+.page-how-3 {margin: 0 -50px; color: #fff; font-size: 18px; line-height: 22px; height: 22px; -webkit-font-smoothing: antialiased; -webkit-transform: rotate(90deg); transform: rotate(90deg)}
+.page-how-pub>*>*>.page-how-3::before,
+.page-how-pri>*>*>.page-how-3::before {content: " "; display: inline-block; height: 16px; width: 16px; background: url(../img/keep-icons.png) -46px 0/auto 16px; vertical-align: -2px; margin-right: 9px; -webkit-transform: rotate(-90deg); transform: rotate(-90deg)}
+.page-how-pri>*>*>.page-how-3::before {width: 12px; background-position: -34px 0}
 a.page-keep[href],
 a.page-priv[href] {display: inline-block; margin-top: 5px; color: #fff; background-color: #b8c5d2; font-size: 13px; line-height: 30px; width: 50%; -moz-box-sizing: border-box; box-sizing: border-box; text-align: center; -webkit-font-smoothing: antialiased}
 a.page-priv[href] {border-left: 2px solid #eff2f7}
 a.page-keep[href]:hover,
-a.page-priv[href]:hover {background-color: #bdcbd8}
+a.page-priv[href]:hover {background-color: #a0b1c2}
 a.page-keep[href]:active,
-a.page-priv[href]:active {background-color: #a0b1c2}
-[data-kept]>*>.page-keep[href]::before,
+a.page-priv[href]:active {background-color: #8699ab}
+[data-kept^=p]>*>.page-keep[href]::before,
 .page-priv[href]::before {content: " "; display: inline-block; height: 13px; width: 11px; background: url(../img/keep-icons.png) 0 0/auto 16px content-box; vertical-align: -1px; margin-right: 8px}
-:not([data-kept="pri"])>*>.page-priv[href]::before {width: 10px; background-position: -11px 0; border-left: 2px solid transparent}
-[data-kept="pri"]>*>.page-priv[href]::before {width: 13px; background-position: -21px 0}
+:not([data-kept=pri])>*>.page-priv[href]::before {width: 10px; background-position: -11px 0; border-left: 2px solid transparent}
+[data-kept=pri]>*>.page-priv[href]::before {width: 13px; background-position: -21px 0}
 .page-keep::after {content: "Keep"}
-[data-kept]>*>.page-keep::after {content: "Unkeep"}
+[data-kept^=p]>*>.page-keep::after {content: "Unkeep"}
 .page-priv::after {content: "Keep privately"}
-[data-kept="pub"]>*>.page-priv::after {content: "Make private"}
-[data-kept="pri"]>*>.page-priv::after {content: "Make public"}
-.multiple>*>.page-keep::after {content: "Keep all"}
-.multiple[data-kept]>*>.page-keep::after {content: "Unkeep all"}
-.multiple>*>.page-priv::after {content: "Keep all privately"}
-.multiple[data-kept="pub"]>*>.page-priv::after {content: "Make all private"}
-.multiple[data-kept="pri"]>*>.page-priv::after {content: "Make all public"}
+[data-kept=pub]>*>.page-priv::after {content: "Make private"}
+[data-kept=pri]>*>.page-priv::after {content: "Make public"}
+:not([data-n="1"])>.page-keep::after {content: "Keep all"}
+[data-kept^=p]>:not([data-n="1"])>.page-keep::after {content: "Unkeep all"}
+:not([data-n="1"])>.page-priv::after {content: "Keep all privately"}
+[data-kept=pub]>:not([data-n="1"])>.page-priv::after {content: "Make all private"}
+[data-kept=pri]>:not([data-n="1"])>.page-priv::after {content: "Make all public"}
 .page-who,
-.page-colls {margin: 18px 0 5px; border-top: 1px solid #cdd6e0; padding: 11px 0 20px}
-.page-who-pics {margin: 5px 0 13px; white-space: nowrap; overflow: hidden}
-.page-who-pics>img {width: 38px; height: 38px; margin-right: 1px; border-radius: 2px}
+.page-chatter,
+.page-colls {margin: 18px 0 5px; border-top: 1px solid #cdd6e0; padding: 11px 0 0}
+.page-who-pics {margin: 5px 0 13px; white-space: nowrap}
+.page-who-pics>.pic {display: inline-block; width: 38px; height: 38px; background-size: 100%; border-radius: 2px; margin-right: 1px; position: relative}
+.page-who-pics>.pic>.fr-card {bottom: 51px; left: -22px}
+.page-who-pics>.pic>.fr-card::before,
+.page-who-pics>.pic>.fr-card::after {left: 33px}
 .page-who-text {font-size: 12px; line-height: 12px}
-:not([data-kept])>*>.page-who-pics>.me,
-:not([data-kept])>*>.page-who-text>.keep-you,
+:not([data-kept^=p])>*>.page-who-pics>.me,
+:not([data-kept^=p])>*>.page-who-text>.keep-you,
 .page-who-text>.keep-private {display: none}
+[data-kept^=p]>*>.page-who-text>.keep-friends::before,
+[data-kept^=p]>*>.page-who-text>.keep-others::before,
+.page-who-text>.keep-friends+.keep-others::before {content: "+ "}
+:not([data-kept^=p])>*>.page-who-text>.keep-you+.keep-kept-this::before {content: "Nobody has "}
+.page-chatter {margin-bottom: -6px}
+.page-chatter>h2 {margin-bottom: 8px}
+.page-chatter-messages,
+.page-chatter-comments {display: inline; font-size: 13px; margin-right: 16px; color: inherit !important; white-space: nowrap}
+.page-chatter-messages::before,
+.page-chatter-comments::before {content: attr(data-n); font-size: 25px; color: #b8c5d2; font-weight: bold; -webkit-font-smoothing: antialiased; vertical-align: -3px; margin-right: 5px}
+.page-chatter-messages:not([data-n="1"])::after,
+.page-chatter-comments:not([data-n="1"])::after {content: "s"}
+.page-colls.some>h2::before {content: "In "}
 .page-coll-list {margin-top: 10px}
 .page-coll-list>li {display: inline-block; line-height: 24px; vertical-align: top}
 .page-coll {position: relative; overflow: hidden; white-space: nowrap; background-color: #b8c5d2; margin: 0 3px 3px 0; font-size: 13px; line-height: 24px; -webkit-font-smoothing: antialiased}
 .page-coll.removed {width: 0 !important; -webkit-transition: width .12s ease-in-out; transition: width .12s ease-in-out}
 .page-coll>a[href] {color: #fff; vertical-align: top}
-.page-coll>a[href]:hover {background-color: #bdcbd8}
-.page-coll>a[href]:active {background-color: #a0b1c2}
-.page-coll-a {padding: 0 16px; -webkit-transition: padding .1s ease-in-out .1s; transition: padding .1s ease-in-out .1s}
-.page-colls:hover .page-coll-a {padding: 0 26px 0 6px}
-.page-coll-x {position: absolute; right: 0; top: 0; bottom: 0; width: 0; text-align: center; -webkit-transition: width .1s ease-in-out .1s; transition: width .1s ease-in-out .1s}
-.page-colls:hover .page-coll-x {width: 20px}
-.page-coll-x::before {content: "\00D7"; position: relative; bottom: 1px}
+.page-coll>a:hover {background-color: #a0b1c2}
+.page-coll>a:active {background-color: #8699ab}
+.page-coll-a {padding: 0 16px}
+.page-coll:hover>.page-coll-a {padding: 0 25px 0 7px}
+.page-coll-x {position: absolute; right: 0; top: 0; bottom: 0; width: 0; text-align: center; background-color: inherit}
+.page-coll:hover>.page-coll-x {width: 18px}
+.page-coll-x::before {content: "\d7"; position: relative; bottom: 1px}
 .page-coll-new {position: relative}
 .page-coll-add {display: inline-block; white-space: nowrap; font-size: 0; vertical-align: top}
-.editing>.page-coll-add {display: none}
-.page-coll-add::before {content: " "; display: inline-block; width: 18px; height: 18px; border-radius: 50%; vertical-align: bottom; position: relative; bottom: 3px; margin-left: 5px; background: url(data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7) center/8px no-repeat; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
+.page-coll-add::before {content: " "; display: inline-block; width: 18px; height: 18px; border-radius: 50%; vertical-align: bottom; position: relative; bottom: 3px; background: url(data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7) center/8px no-repeat; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
 li:first-child>.page-coll-add::before {width: 16px; height: 16px; bottom: 4px; margin-left: 8px; background-color: #f7fafe; background-image: url(data:image/gif;base64,R0lGODlhCAAIAIABALjF0v///yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7)}
 .page-coll-add::before,
 li:first-child>.page-coll-add {background-color: #b8c5d2}
 .page-coll-add:hover::before,
-li:first-child>.page-coll-add:hover {background-color: #bdcbd8}
+li:first-child>.page-coll-add:hover {background-color: #a0b1c2}
 .page-coll-add:active::before,
-li:first-child>.page-coll-add:active {background-color: #a0b1c2}
-[data-kept]>*>*>*>li:first-child>.page-coll-add::after {content: "Add this keep to a collection"}
-:not([data-kept])>*>*>*>li:first-child>.page-coll-add::after {content: "Keep to a collection"}
+li:first-child>.page-coll-add:active {background-color: #8699ab}
+[data-kept^=p]>*>*>li:first-child>.page-coll-add::after {content: "Add this keep to a collection"}
+:not([data-kept^=p])>*>*>li:first-child>.page-coll-add::after {content: "Keep to a collection"}
 .page-coll-add::after {vertical-align: bottom; color: #fff; font-size: 13px; margin: 0 14px 0 8px; -webkit-font-smoothing: antialiased}
 .page-coll-sizer {position: absolute; visibility: hidden}
 .page-coll-sizer,
-input.page-coll-input {display: none; border: 1px solid #cdd6e0; padding: 0 16px; height: 24px; vertical-align: top; -moz-box-sizing: border-box; box-sizing: border-box; color: inherit; font-family: inherit; font-size: 13px; -webkit-font-smoothing: antialiased}
+input.page-coll-input {display: inline-block; border: 1px solid #cdd6e0; padding: 0 16px; height: 24px; vertical-align: top; -moz-box-sizing: border-box; box-sizing: border-box; color: inherit; font-family: inherit; font-size: 13px; -webkit-font-smoothing: antialiased; -webkit-transition: width 60ms ease-in-out; transition: width 60ms ease-in-out}
 input.page-coll-input {width: 20ex}
-.editing>.page-coll-sizer,
-.editing>.page-coll-input {display: inline-block}
 .page-coll-opts {display: none; position: absolute; width: 100%; border: 1px solid #cdd6e0; border-top: none; -moz-box-sizing: border-box; box-sizing: border-box; background-color: #fff; font-size: 13px}
-.editing>.page-coll-opts:not(:empty) {display: block}
+.page-coll-opts:not(:empty) {display: block}
 .page-coll-opt {padding: 0 16px; font-size: 13px; color: #888b93; -webkit-font-smoothing: antialiased; cursor: pointer}
 .page-coll-opt.current {background-color: #f1f2f6}
 .page-coll-opt[data-id=""] {position: relative; padding-right: 36px}
 .page-coll-opt[data-id=""]::after {content: "NEW"; position: absolute; right: 5px; top: 5px; bottom: 5px; height: 14px; line-height: 13px; padding: 0 4px; font-size: 9px; font-weight: bold; background-color: #b8c5d2; color: white; border-radius: 2px; -webkit-font-smoothing: subpixel-antialiased}
 .page-coll-opt[data-id=""]:not(:first-child) {border-top: 1px solid #cdd6e0}
 
+/* shared styles */
 .long-text {white-space: nowrap; overflow: hidden; text-overflow: ellipsis}
 span.long-text, a.long-text {display: inline-block}
 
-.keep-group-title {margin-top: 7px; color: #67829c; font-size: 21px; font-weight: 100; letter-spacing: 1px; border-bottom: 1px solid #e3e6ee; padding: 4px 30px}
-.keep-group-title+.keep {border-top: 0}
-.keep {position: relative; clear: left; padding: 10px 0 13px 30px; border-top: 1px solid #f9f9f9}
-.keep>.handle {cursor: move; position: absolute; top: 0; bottom: 0; left: 0; width: 21px; display: none; background: url(../img/drag-handle.png) center/10px no-repeat}
-.keep>.handle:hover,
-.keep.selected>.handle {background-color: #e3e6ee}
-.keep-checkbox {display: none; position: absolute; left: 3px; top: 4px; width: 15px; height: 15px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; cursor: pointer}
-.keep>.handle:hover>.keep-checkbox,
-.keep.selected>.handle>.keep-checkbox {display: block}
-.keep-checkbox.checked {background-position: 2px 4px}
-.keep:hover>.handle,
-.keep.selected>.handle {display: block}
-.keep.selected {background-color: #eff2f7}
-.keep>time {float: right; margin: 0 16px 0 4%; font-size: 12px; line-height: 28px; color: #99a3b3}
-.keep-title {max-width: 100%; color: #0089d5; font-size: 16px; line-height: 24px; -webkit-font-smoothing: antialiased}
-.keep-title>a[href] {color: inherit}
-.keep-url {font-size: 12px; line-height: 14px; color: #99a3b3}
-.keep-colls {margin-right: 10px; border: solid transparent; border-width: 7px 0; background: url(../img/folder-icon-small.png) 0 0/13px 11px no-repeat; padding-left: 15px; font-size: 12px; line-height: 14px; overflow: hidden}
-@-moz-document url-prefix() {.keep-colls {background-position: 0 1px}}
-.keep-colls:empty {border-bottom-width: 0}
-.keep-coll {display: inline-block; position: relative; overflow: hidden; white-space: nowrap; border-right: 1px solid #99a3b3; box-sizing: border-box; -moz-box-sizing: border-box}
-.keep-coll:last-of-type {border-right: none}
-.keep-coll.removed {width: 0 !important; -webkit-transition: width .12s ease-in-out; transition: width .12s ease-in-out}
-.keep-coll>a[href] {color: #99a3b3}
-.keep-coll:hover>a {background-color: #eff2f7}
-.keep.selected .keep-coll:hover>a {background-color: #fff}
-.keep.keep a.keep-coll-a:active {background-color: #e3e6ee; color: #8490a4}
-.keep-coll-a {padding: 0 8px; -webkit-transition: padding .1s ease-in-out .1s; transition: padding .1s ease-in-out .1s}
-.keep-colls:hover .keep-coll-a {padding: 0 13px 0 3px}
-.keep-coll-x {position: absolute; top: 0; bottom: 0; right: 0; width: 0; text-align: center; overflow: hidden; -webkit-transition: width .1s ease-in-out .1s; transition: width .1s ease-in-out .1s}
-.keep-colls:hover .keep-coll-x {width: 10px}
-.keep-coll>.keep-coll-x[href][href]:hover {background-color: #b8c5d2; color: #eff2f7}
-.keep-coll>.keep-coll-x[href][href]:active {background-color: #99a3b3}
-.keep-coll-x::before {content: "\00D7"; position: relative; bottom: 1px}
-.keep-who {font-size: 0}
-.keep-who>img {vertical-align: middle; width: 23px; height: 23px; border-radius: 2px; margin-right: 1px}
-.keep-who>img.me {border-radius: 50% 0 0 50%}
-.keep-who>img.me:last-of-type {border-radius: 50%}
-.keep-who-text {vertical-align: middle; margin-left: 4px; font-size: 12px; color: #99a3b3}
-.keep.mine .me+.keep-who-text {margin-left: 7px}
-.keep:not(.mine) .me+.keep-who-text {margin-left: 0}
-.keep:not(.mine) .me,
-.keep:not(.mine) .keep-you,
-.keep:not(.mine) .keep-private,
-.keep-private:not(.on) {display: none}
-.keep-private {display: inline-block; margin: 0 2px; background: url(../img/private.png) left center/17px no-repeat; margin: 0 2px; line-height: 17px; padding-left: 21px}
-.keep.mine .keep-friends::before,
-.keep.mine .keep-others::before,
-.keep-friends+.keep-others::before {content: "+ "}
-.keep:not(.mine) .keep-you+.keep-kept-this::before {content: "Nobody has "; line-height: 23px}
-.keeps-loading {margin: 20px 50%; position: relative; left: -22px}
+/* friend card */
+.fr-card {
+  position: absolute; min-width: 300px; background-color: #fff; color: #faf9f9; box-shadow: 2px 5px 12px rgba(0,0,0,.3); border: 1px solid #929496;
+  text-align: left; line-height: normal; cursor: default; opacity: 0;
+  -webkit-transform: translate(0, 3px); transform: translate(0, 3px);
+  -webkit-transition: opacity linear, -webkit-transform ease-in-out;
+  transition: opacity linear, -webkit-transform ease-in-out, transform ease-in-out;
+  -webkit-transition-duration: 100ms; transition-duration: 100ms;
+}
+.kifi-hover-showing>.fr-card {opacity: 1; -webkit-transform: none; transform: none; -webkit-transition-duration: 60ms; transition-duration: 60ms}
+.fr-card::before,
+.fr-card::after {content: " "; position: absolute; top: 100%; height: 0; width: 0; left: 50%; border: solid transparent}
+.fr-card::before {margin-left: -9px; border-width: 9px; border-top-color: inherit}
+.fr-card::after {margin-left: -8px; border-width: 8px; border-top-color: #fff}
+.fr-card .fr-card-top {display: table; padding: 20px 14px}
+.fr-card .fr-card-pic {display: table-cell; -moz-box-sizing: content-box; box-sizing: content-box; height: 100px; width: 100px; padding: 1px; background-color: #fff; border: 2px solid #dbdbdb; border-radius: 5px; float: left}
+.fr-card .fr-card-info {display: table-cell; vertical-align: top; padding-left: 14px; font-size: 12px; line-height: 13px; color: #808080}
+.fr-card .fr-card-name {font-size: 16px; color: #2d2d2d; white-space: nowrap}
+.fr-card-label {margin: 15px 0 3px}
+.fr-card-interests {color: #aaa}
 
-.drag-helper {background: #fff; padding: 5px; border: 1px solid #f9f9f9; box-shadow: 1px 1px 3px #eee}
+.friend-networks {font-size: 0; line-height: 0}
+a.friend-nw {width: 17px; height: 17px; display: inline-block; background: url(../img/social_icons.png) 0/68px; margin-right: 2px}
+a.friend-nw-facebook {background-position: 0 17px}
+a.friend-nw-facebook.on {background-position: 0 0}
+a.friend-nw-linkedin {background-position: -17px 17px}
+a.friend-nw-linkedin.on {background-position: -17px 0}
+a.friend-nw-twitter {background-position: -34px 17px}
+a.friend-nw-twitter.on {background-position: -34px 0}
+a.friend-nw-pinterest {background-position: -51px 17px}
+a.friend-nw-pinterest.on {background-position: -51px 0}
 
 /* retina image overrides */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-  #collections>h2 {background-image: url(../img/folder-icon.2x.png)}
+  .header-logo {background-image: url(../img/kifi-logo.2x.png)}
+  .query-mag::before,
+  .query-x::before {background-image: url(../img/search.2x.png)}
+  .left-col .my-keeps .view-name::before,
+  #collections>h2::before {background-image: url(../img/nav-icons.2x.png)}
   .keep-private {background-image: url(../img/private.2x.png)}
+  .keep-arrow-4 {background-image: url(../img/arrow-r.2x.png)}
   .keep>.handle {background-image: url(../img/drag-handle.2x.png)}
   .keep-colls {background-image: url(../img/folder-icon-small.2x.png)}
+  .splash ul>li>a::before {background-image: url(../img/splash.2x.png)}
   .page-how>.page-how-text::before,
-  [data-kept]>*>.page-keep[href]::before,
+  [data-kept^=p]>*>.page-keep[href]::before,
   .page-meta>.page-priv[href]::before {background-image: url(../img/keep-icons.2x.png)}
+  .profile>.networks>.kifi-k::before {background-image: url(../img/kifi-k.2x.png); background-size: 100%;}
+  .profile-nw {background-image: url(../img/networks.2x.png)}
+  .friend-actions>*>a::before {background-image: url(../img/friend-actions.2x.png)}
 }
+
+.fancybox-inner {font-size: 16px}
 
 /* scrollbars */
 .antiscroll-scrollbar {
@@ -299,8 +508,8 @@ span.long-text, a.long-text {display: inline-block}
   -o-transition: linear 300ms opacity;
 }
 .antiscroll-scrollbar-shown {opacity: 1; filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=100)}
-.antiscroll-scrollbar-horizontal {height: 7px; margin-left: 2px; bottom: 2px; left: 0; cursor: ew-resize}
-.antiscroll-scrollbar-vertical {width: 7px; margin-top: 2px; right: 2px; top: 0; cursor: ns-resize}
+.antiscroll-scrollbar-horizontal {height: 7px; margin-left: 2px; bottom: 2px; left: 0}
+.antiscroll-scrollbar-vertical {width: 7px; margin-top: 2px; right: 2px; top: 0}
 .antiscroll-inner {overflow: scroll}
 .antiscroll-inner::-webkit-scrollbar {width: 0; height: 0}
 .antiscroll-inner::scrollbar {width: 0; height: 0}

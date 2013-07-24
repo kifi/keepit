@@ -2,12 +2,12 @@ package com.keepit.model
 
 import com.keepit.common.cache._
 import com.keepit.common.db._
-import com.keepit.common.social.{SocialNetworkType, SocialId}
 import com.keepit.common.time._
 import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import scala.concurrent.duration._
+import com.keepit.social.{SocialNetworkType, SocialId}
 
 case class UserSession(
   id: Option[Id[UserSession]] = None,
@@ -37,10 +37,10 @@ object UserSession {
     (__ \ 'externalId).format[ExternalId[UserSession]] and
     (__ \ 'socialId).format[String].inmap(SocialId.apply, unlift(SocialId.unapply)) and
     (__ \ 'provider).format[String].inmap(SocialNetworkType.apply, unlift(SocialNetworkType.unapply)) and
-    (__ \ 'expires).format[DateTime] and
+    (__ \ 'expires).format(DateTimeJsonFormat) and
     (__ \ 'state).format[State[UserSession]] and
-    (__ \ 'createdAt).format[DateTime] and
-    (__ \ 'updatedAt).format[DateTime]
+    (__ \ 'createdAt).format(DateTimeJsonFormat) and
+    (__ \ 'updatedAt).format(DateTimeJsonFormat)
   )(UserSession.apply, unlift(UserSession.unapply))
 }
 

@@ -36,7 +36,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
   def setPercentMatch(pctMatch: Float) { percentMatch = pctMatch }
   def getPercentMatch() = percentMatch
 
-  override def rewrite(reader: IndexReader) = {
+  override def rewrite(reader: IndexReader): Query = {
     if (clauses.size() == 1) { // optimize 1-clause queries
       val c = clauses.get(0)
       if (!c.isProhibited()) {
@@ -46,7 +46,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
           if (query eq c.getQuery()) query = query.clone().asInstanceOf[Query]
           query.setBoost(getBoost() * query.getBoost())
         }
-        query
+        return query
       }
     }
 
@@ -80,10 +80,10 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
       private[this] val requiredWeights = new ArrayBuffer[Weight]
       private[this] val prohibitedWeights = new ArrayBuffer[Weight]
       private[this] val optionalWeights = new ArrayBuffer[(Weight, Float)]
-      private[this] var totalValueOnRequired = 0.0f
-      private[this] var totalValueOnOptional = 0.0f
-      private[this] val normalizationValue: Float = {
+      private[this] val (normalizationValue: Float, totalValueOnRequired: Float, totalValueOnOptional: Float) = {
         var sum = 0.0d
+        var sumOnReq = 0.0f
+        var sumOnOpt = 0.0f
         clauses.zip(weights).foreach{ case (c, w) =>
           if (c.isProhibited()) {
             prohibitedWeights += w
@@ -92,17 +92,22 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
             val sqrtValue = sqrt(value).toFloat
 
             if (c.isRequired()) {
-              totalValueOnRequired += sqrtValue
+              sumOnReq += sqrtValue
               requiredWeights += w
             }
             else {
-              totalValueOnOptional += sqrtValue
+              sumOnOpt += sqrtValue
               optionalWeights += ((w, sqrtValue))
             }
             sum += value
           }
         }
-        sum.toFloat * getBoost() * getBoost()
+        (sum.toFloat * getBoost() * getBoost(), sumOnReq, sumOnOpt)
+      }
+      private[this] val coordFactorForRequired = if (disableCoord) 1.0f else similarity.coord(requiredWeights.length, requiredWeights.length)
+      private[this] val coordFactorForOptional = {
+        val maxCoord = requiredWeights.length + optionalWeights.length
+        (0 to optionalWeights.length).map{ i => if (disableCoord) 1.0f else similarity.coord(i + requiredWeights.length, maxCoord) }.toArray
       }
 
       override def getValueForNormalization(): Float = normalizationValue
@@ -132,7 +137,7 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
           null
         } else {
           val threshold = (totalValueOnRequired + totalValueOnOptional) * percentMatch / 100.0f - totalValueOnRequired
-          BooleanScorer(this, disableCoord, similarity, maxCoord, threshold,
+          BooleanScorer(this, disableCoord, similarity, threshold, coordFactorForRequired, coordFactorForOptional,
                         required.toArray, totalValueOnRequired, optional.toArray, totalValueOnOptional, prohibited.toArray)
         }
       }
@@ -143,7 +148,6 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
         val maxCoord = clauses.filterNot{ _.isProhibited }.size
 
         val sumExpl = new ComplexExplanation()
-        sumExpl.setDescription("sum of:")
 
         var coord = 0
         var sum = 0.0f
@@ -225,18 +229,17 @@ class BooleanQueryWithPercentMatch(val disableCoord: Boolean = false) extends Bo
 }
 
 object BooleanScorer {
-  def apply(weight: Weight, disableCoord: Boolean, similarity: Similarity, maxCoord: Int, threshold: Float,
+  def apply(weight: Weight, disableCoord: Boolean, similarity: Similarity, threshold: Float,
+            coordFactorForRequired: Float,
+            coordFactorForOptional: Array[Float],
             required: Array[Scorer], requiredValue: Float,
             optional: Array[(Scorer, Float)], optionalValue: Float,
             prohibited: Array[Scorer]) = {
     def conjunction() = {
-      val coord = if (disableCoord) 1.0f else similarity.coord(required.length, required.length)
-      new BooleanAndScorer(weight, coord, required, requiredValue)
+      new BooleanAndScorer(weight, coordFactorForRequired, required, requiredValue)
     }
     def disjunction() = {
-      val maxCoord = required.length + optional.length
-      val coordFactors = (0 to optional.length).map{ i => if (disableCoord) 1.0f else similarity.coord(i + required.length, maxCoord) }.toArray
-      new BooleanOrScorer(weight, optional, coordFactors, threshold, optionalValue)
+      new BooleanOrScorer(weight, optional, coordFactorForOptional, threshold, optionalValue)
     }
     def prohibit(source: Scorer with Coordinator) = {
       new BooleanNotScorer(weight, source, prohibited)
@@ -245,7 +248,7 @@ object BooleanScorer {
     val mainScorer =
       if (required.length > 0 && optional.length > 0) {
         new BooleanScorer(weight, conjunction(), disjunction(), threshold, requiredValue + optionalValue, required.length + optional.length)
-      } else if (required.length > 0){
+      } else if (required.length > 0) {
         conjunction()
       } else if (optional.length > 0) {
         disjunction()

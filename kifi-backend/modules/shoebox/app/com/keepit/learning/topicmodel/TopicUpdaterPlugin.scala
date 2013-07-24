@@ -16,7 +16,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 case object UpdateTopic
-case object ResetTopic
+case object Remodel
 
 private[topicmodel] class TopicUpdaterActor @Inject() (
   healthcheckPlugin: HealthcheckPlugin,
@@ -32,12 +32,12 @@ private[topicmodel] class TopicUpdaterActor @Inject() (
           errorMessage = Some("Error updating topics")))
     }
 
-    case ResetTopic => try {
-      topicUpdater.reset()
+    case Remodel => try {
+      topicUpdater.remodel()
     } catch {
       case e: Exception =>
         healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH,
-          errorMessage = Some("Error resetting topics")))
+          errorMessage = Some("Error reconstructing topic model")))
     }
 
     case m => throw new Exception("unknown message %s".format(m))
@@ -45,22 +45,22 @@ private[topicmodel] class TopicUpdaterActor @Inject() (
 }
 
 trait TopicUpdaterPlugin extends SchedulingPlugin {
-  def update(): Unit
-  def reset(): Unit
+  def remodel(): Unit
 }
 
 class TopicUpdaterPluginImpl @Inject() (
     actorFactory: ActorFactory[TopicUpdaterActor],
     topicUpdater: TopicUpdater,
-    val schedulingProperties: SchedulingProperties
+    val schedulingProperties: SchedulingProperties //only on leader
 ) extends TopicUpdaterPlugin with Logging{
+
   implicit val actorTimeout = Timeout(5 seconds)
 
   private lazy val actor = actorFactory.get()
 
   override def enabled: Boolean = true
   override def onStart() {
-     scheduleTask(actorFactory.system, 60 seconds, 2 minutes, actor, UpdateTopic)
+     scheduleTask(actorFactory.system, 5 minutes, 2 minutes, actor, UpdateTopic)
      log.info("starting TopicUpdaterPluginImpl")
   }
   override def onStop() {
@@ -68,12 +68,10 @@ class TopicUpdaterPluginImpl @Inject() (
      cancelTasks()
   }
 
-  override def reset() = {
-    log.info("admin reset topic tables ...")
-    actor ! ResetTopic
+  override def remodel() = {
+    log.info("admin reconstruct topic model ...")
+    scheduleTaskOnce(actorFactory.system, 1 seconds, "reconstruct topic model")(actor ! Remodel)
   }
-
-  def update() = actor ! UpdateTopic
 
 }
 

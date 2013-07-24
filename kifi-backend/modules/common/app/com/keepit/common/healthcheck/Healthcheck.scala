@@ -8,12 +8,10 @@ import com.google.inject.Inject
 import com.google.inject.ImplementedBy
 import com.keepit.common.actor.ActorFactory
 import com.keepit.common.akka.AlertingActor
-import com.keepit.common.db.slick.Database
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.mail.EmailAddresses
 import com.keepit.common.mail.PostOffice
-import com.keepit.common.mail.LocalPostOffice
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
@@ -40,7 +38,7 @@ object Healthcheck {
   case object INTERNAL extends CallType
   case object EXTENSION extends CallType
 
-  val OPS_OF_THE_WEEK = EmailAddresses.ANDREW
+  val OPS_OF_THE_WEEK = EmailAddresses.LEO
 }
 
 case object ReportErrorsAction
@@ -60,9 +58,7 @@ trait HealthcheckMailSender {
 class RemoteHealthcheckMailSender @Inject() (postOffice: RemotePostOffice) extends HealthcheckMailSender {
   def sendMail(email: ElectronicMail) = postOffice.queueMail(email)
 }
-class LocalHealthcheckMailSender @Inject() (postOffice: LocalPostOffice, db: Database) extends HealthcheckMailSender {
-  def sendMail(email: ElectronicMail) = db.readWrite(postOffice.sendMail(email)(_))
-}
+
 
 class MailSender @Inject() (sender: HealthcheckMailSender) {
   def sendMail(email: ElectronicMail) {
@@ -160,10 +156,11 @@ trait HealthcheckPlugin extends Plugin {
 class HealthcheckPluginImpl @Inject() (
     actorFactory: ActorFactory[HealthcheckActor],
     services: FortyTwoServices,
-    host: HealthcheckHost,
-    val schedulingProperties: SchedulingProperties)
-  extends HealthcheckPlugin with SchedulingPlugin with Logging {
+    host: HealthcheckHost)
+  extends HealthcheckPlugin
+  with SchedulingPlugin with Logging {
 
+  val schedulingProperties = SchedulingProperties.AlwaysEnabled
   implicit val actorTimeout = Timeout(5 seconds)
 
   private lazy val actor = actorFactory.get()

@@ -2,27 +2,15 @@ package com.keepit.controllers.ext
 
 import com.keepit.test._
 import org.specs2.mutable.Specification
-import play.api.Play.current
 import play.api.libs.json._
-import play.api.mvc._
 import play.api.test.Helpers._
 import play.api.test.FakeRequest
-import play.api.test.FakeHeaders
-import com.keepit.inject._
-import com.keepit.common.social.SocialId
-import com.keepit.common.db._
-import com.keepit.common.social.SocialNetworks.FACEBOOK
+import com.keepit.social.{SocialId, SocialNetworks}
+import SocialNetworks.FACEBOOK
 import com.keepit.common.time._
-import com.keepit.common.controller.FortyTwoCookies.{ImpersonateCookie, KifiInstallationCookie}
-import com.keepit.model._
-import com.keepit.model.ExperimentTypes.ADMIN
-import com.keepit.test.FakeClock
-import com.keepit.social.SecureSocialUserService
-import com.keepit.common.controller.AuthenticatedRequest
 
 import securesocial.core._
 
-import org.joda.time.LocalDate
 import org.joda.time.DateTime
 import play.api.libs.json.JsArray
 import com.keepit.common.controller.AuthenticatedRequest
@@ -33,13 +21,15 @@ import com.keepit.model.User
 import securesocial.core.OAuth2Info
 import com.keepit.model.SocialUserInfo
 import play.api.libs.json.JsObject
-import com.keepit.common.social.SocialId
+import com.keepit.common.social.{FakeSocialGraphModule, TestShoeboxSecureSocialModule}
+import com.keepit.common.store.ShoeboxFakeStoreModule
+import com.keepit.common.net.FakeHttpClientModule
 
-class ExtAuthControllerTest extends Specification with DbRepos {
+class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjector {
 
   "ExtAuthController" should {
     "start" in {
-      running(new ShoeboxApplication().withFakeSecureSocialUserService()) {
+      running(new ShoeboxApplication(TestShoeboxSecureSocialModule(), ShoeboxFakeStoreModule(), FakeHttpClientModule(), FakeSocialGraphModule())) {
         val now = new DateTime(2013, 5, 31, 4, 3, 2, 1, DEFAULT_DATE_TIME_ZONE)
         val today = now.toDateTime
         inject[FakeClock].push(today)

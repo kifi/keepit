@@ -1,15 +1,9 @@
 package com.keepit.common.mail
 
-import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.db._
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.db.LargeString._
 import com.keepit.common.time._
-import java.security.SecureRandom
-import java.sql.Connection
 import org.joda.time.DateTime
-import play.api.Play.current
 import com.keepit.model.User
 
 case class ElectronicMailMessageId(id: String) {
@@ -77,19 +71,19 @@ object ElectronicMail {
   implicit val userExternalIdFormat = ExternalId.format[User]
   implicit val emailExternalIdFormat = ExternalId.format[ElectronicMail]
   implicit val idFormat = Id.format[ElectronicMail]
-  implicit val fromFormat: Format[SystemEmailAddress] = 
+  implicit val fromFormat: Format[SystemEmailAddress] =
     Format(__.read[String].map(s => EmailAddresses(s)), new Writes[SystemEmailAddress]{ def writes(o: SystemEmailAddress) = JsString(o.address) })
-  implicit val emailAddressHolderFormat: Format[EmailAddressHolder] = 
+  implicit val emailAddressHolderFormat: Format[EmailAddressHolder] =
     Format(__.read[String].map(s => GenericEmailAddress(s)), new Writes[EmailAddressHolder]{ def writes(o: EmailAddressHolder) = JsString(o.address) })
-  implicit val emailMessageIdFormat: Format[ElectronicMailMessageId] = 
+  implicit val emailMessageIdFormat: Format[ElectronicMailMessageId] =
     Format(__.read[String].map(s => ElectronicMailMessageId(s)), new Writes[ElectronicMailMessageId]{ def writes(o: ElectronicMailMessageId) = JsString(o.id) })
-  implicit val emailCategoryFormat: Format[ElectronicMailCategory] = 
+  implicit val emailCategoryFormat: Format[ElectronicMailCategory] =
     Format(__.read[String].map(s => ElectronicMailCategory(s)), new Writes[ElectronicMailCategory]{ def writes(o: ElectronicMailCategory) = JsString(o.category) })
 
   implicit val emailFormat = (
       (__ \ 'id).formatNullable(Id.format[ElectronicMail]) and
-      (__ \ 'createdAt).format[DateTime] and
-      (__ \ 'updatedAt).format[DateTime] and
+      (__ \ 'createdAt).format(DateTimeJsonFormat) and
+      (__ \ 'updatedAt).format(DateTimeJsonFormat) and
       (__ \ 'externalId).format(ExternalId.format[ElectronicMail]) and
       (__ \ 'senderUserId).formatNullable(Id.format[User]) and
       (__ \ 'from).format[SystemEmailAddress] and
@@ -106,48 +100,6 @@ object ElectronicMail {
       (__ \ 'inReplyTo).formatNullable[ElectronicMailMessageId] and
       (__ \ 'category).format[ElectronicMailCategory]
   )(ElectronicMail.apply, unlift(ElectronicMail.unapply))
-}
-
-@ImplementedBy(classOf[ElectronicMailRepoImpl])
-trait ElectronicMailRepo extends Repo[ElectronicMail] with ExternalIdColumnFunction[ElectronicMail] {
-  def getOpt(id: Id[ElectronicMail])(implicit session: RSession): Option[ElectronicMail]
-  def outbox()(implicit session: RSession): Seq[Id[ElectronicMail]]
-  def forSender(senderId: Id[User])(implicit session: RSession): Seq[ElectronicMail]
-}
-
-@Singleton
-class ElectronicMailRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[ElectronicMail] with ElectronicMailRepo with ExternalIdColumnDbFunction[ElectronicMail] {
-  import FortyTwoTypeMappers._
-  import db.Driver.Implicit._
-  import scala.slick.lifted.Query
-  import DBSession._
-
-  override val table = new RepoTable[ElectronicMail](db, "electronic_mail") with ExternalIdColumn[ElectronicMail] {
-    def senderUserId = column[Id[User]]("user_id", O.Nullable)
-    def from = column[SystemEmailAddress]("from_addr", O.NotNull)
-    def fromName = column[String]("from_name", O.Nullable)
-    def to = column[Seq[EmailAddressHolder]]("to_addr", O.Nullable)
-    def cc = column[Seq[EmailAddressHolder]]("cc_addr", O.Nullable)
-    def subject = column[String]("subject", O.Nullable)
-    def htmlBody = column[LargeString]("html_body", O.NotNull)
-    def textBody = column[LargeString]("text_body", O.Nullable)
-    def responseMessage = column[String]("response_message", O.Nullable)
-    def timeSubmitted = column[DateTime]("time_submitted", O.Nullable)
-    def messageId = column[ElectronicMailMessageId]("message_id", O.Nullable)
-    def inReplyTo = column[ElectronicMailMessageId]("in_reply_to", O.Nullable)
-    def category = column[ElectronicMailCategory]("category", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ senderUserId.? ~ from ~ fromName.? ~ to ~ cc ~ subject ~ state ~
-        htmlBody ~ textBody.? ~ responseMessage.? ~ timeSubmitted.? ~ messageId.? ~ inReplyTo.? ~ category <>
-        (ElectronicMail.apply _, ElectronicMail.unapply _)
-  }
-
-  def getOpt(id: Id[ElectronicMail])(implicit session: RSession): Option[ElectronicMail] = (for(f <- table if f.id is id) yield f).firstOption
-
-  def outbox()(implicit session: RSession): Seq[Id[ElectronicMail]] =
-    (for (t <- table if t.state === ElectronicMailStates.READY_TO_SEND ) yield t.id).list()
-
-  def forSender(senderId: Id[User])(implicit session: RSession): Seq[ElectronicMail] =
-    (for (t <- table if t.senderUserId === senderId ) yield t).list()
 }
 
 object ElectronicMailStates {

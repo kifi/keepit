@@ -1,43 +1,47 @@
 package com.keepit.shoebox
 
-import com.keepit.common.service._
-import com.keepit.common.zookeeper._
+import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.concurrent.{Future, promise}
 import scala.concurrent.duration._
-import com.google.inject.{Singleton, Provides, Inject}
+
+import com.google.inject.Inject
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
-import com.keepit.common.db.slick.Database
-import com.keepit.common.mail.ElectronicMail
-import com.keepit.search.SearchConfigExperiment
 import com.keepit.common.db.State
+import com.keepit.common.logging.Logging
+import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.net.HttpClient
-import com.keepit.common.service.FortyTwoServices
+import com.keepit.common.routes.Shoebox
+import com.keepit.common.service.RequestConsolidator
 import com.keepit.common.service.{ServiceClient, ServiceType}
-import com.keepit.common.time._
+import com.keepit.common.zookeeper._
 import com.keepit.model._
-import com.keepit.serializer._
-import play.api.libs.json._
-import com.keepit.search.ArticleSearchResult
-import com.keepit.common.social.BasicUser
-import com.keepit.common.social.BasicUserUserIdCache
-import com.keepit.common.social.BasicUserUserIdKey
 import com.keepit.search.ActiveExperimentsCache
 import com.keepit.search.ActiveExperimentsKey
-import com.keepit.common.db.ExternalId
 import com.keepit.search.ArticleSearchResultFactory
-import com.keepit.common.service.RequestConsolidator
-import com.keepit.common.social.SocialNetworkType
-import com.keepit.common.social.SocialId
-import scala.collection.mutable.ArrayBuffer
-import com.keepit.search.ArticleHit
-import com.keepit.common.logging.Logging
-import com.keepit.common.routes.Shoebox
-import com.keepit.serializer.CollectionTupleSerializer.collectionTupleFormat
-import net.codingwell.scalaguice.ScalaModule
-import play.api.Play.current
+import com.keepit.search.SearchConfigExperiment
+import play.api.libs.json._
+import com.keepit.social._
+import com.keepit.model.UserExperimentUserIdKey
+import com.keepit.model.ExperimentType
+import play.api.libs.json.JsArray
+import com.keepit.model.ExternalUserIdKey
+import com.keepit.model.ClickHistoryUserIdKey
+import com.keepit.model.SocialUserInfoUserKey
+import com.keepit.model.BookmarkUriUserKey
+import com.keepit.social.BasicUserUserIdKey
+import com.keepit.search.ArticleSearchResult
+import com.keepit.model.BrowsingHistoryUserIdKey
+import com.keepit.social.SocialId
+import com.keepit.model.NormalizedURIKey
+import com.keepit.model.UserConnectionIdKey
+import play.api.libs.json.JsObject
+import com.keepit.model.SocialUserInfoNetworkKey
+import com.keepit.model.UserSessionExternalIdKey
+import com.keepit.model.UserExternalIdKey
 
 trait ShoeboxServiceClient extends ServiceClient {
   final val serviceType = ServiceType.SHOEBOX
@@ -69,10 +73,15 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getExperiments: Future[Seq[SearchConfigExperiment]]
   def getExperiment(id: Id[SearchConfigExperiment]): Future[SearchConfigExperiment]
   def saveExperiment(experiment: SearchConfigExperiment): Future[SearchConfigExperiment]
-  def hasExperiment(userId: Id[User], state: State[ExperimentType]): Future[Boolean]
   def getUserExperiments(userId: Id[User]): Future[Seq[State[ExperimentType]]]
   def getSocialUserInfosByUserId(userId: Id[User]): Future[Seq[SocialUserInfo]]
   def getSessionByExternalId(sessionId: ExternalId[UserSession]): Future[Option[UserSession]]
+  def userChannelFanout(userId: Id[User], msg: JsArray): Seq[Future[Int]]
+  def userChannelBroadcastFanout(msg: JsArray): Seq[Future[Int]]
+  def userChannelCountFanout(): Seq[Future[Int]]
+  def uriChannelFanout(uri: String, msg: JsArray): Seq[Future[Int]]
+  def uriChannelCountFanout(): Seq[Future[Int]]
+  def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -98,10 +107,9 @@ class ShoeboxServiceClientImpl @Inject() (
     extends ShoeboxServiceClient with Logging{
 
   // request consolidation
-  private[this] val consolidateConnectedUsersReq = new RequestConsolidator[UserConnectionKey, Set[Id[User]]](ttl = 3 seconds)
+  private[this] val consolidateConnectedUsersReq = new RequestConsolidator[UserConnectionIdKey, Set[Id[User]]](ttl = 3 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[ClickHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
   private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[BrowsingHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
-  private[this] val consolidateHasExperimentReq = new RequestConsolidator[(Id[User], State[ExperimentType]), Boolean](ttl = 30 seconds)
   private[this] val consolidateGetExperimentsReq = new RequestConsolidator[String, Seq[SearchConfigExperiment]](ttl = 30 seconds)
 
   def getUserOpt(id: ExternalId[User]): Future[Option[User]] = {
@@ -109,7 +117,7 @@ class ShoeboxServiceClientImpl @Inject() (
       call(Shoebox.internal.getUserOpt(id)).map {r =>
         r.json match {
           case JsNull => None
-          case js: JsValue => Some(UserSerializer.userSerializer.reads(js).get)
+          case js: JsValue => Some(Json.fromJson[User](js).get)
         }
       }
     }
@@ -173,8 +181,8 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = {
     val query = userIds.mkString(",")
-    call(Shoebox.internal.getUsers(query)).map {r =>
-      r.json.as[JsArray].value.map(js => UserSerializer.userSerializer.reads(js).get)
+    call(Shoebox.internal.getUsers(query)).map { r =>
+      Json.fromJson[Seq[User]](r.json).get
     }
   }
 
@@ -216,7 +224,7 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]] = consolidateConnectedUsersReq(UserConnectionKey(userId)) { key =>
+  def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]] = consolidateConnectedUsersReq(UserConnectionIdKey(userId)) { key =>
     cacheProvider.userConnCache.getOrElseFuture(key) {
       call(Shoebox.internal.getConnectedUsers(userId)).map {r =>
         r.json.as[JsArray].value.map(jsv => Id[User](jsv.as[Long])).toSet
@@ -230,14 +238,14 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI] = {
     cacheProvider.uriIdCache.getOrElseFuture(NormalizedURIKey(Id[NormalizedURI](uriId.id))) {
-      call(Shoebox.internal.getNormalizedURI(uriId.id)).map(r => NormalizedURISerializer.normalizedURISerializer.reads(r.json).get)
+      call(Shoebox.internal.getNormalizedURI(uriId.id)).map(r => Json.fromJson[NormalizedURI](r.json).get)
     }
   }
 
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]] = {
     val query = uriIds.mkString(",")
     call(Shoebox.internal.getNormalizedURIs(query)).map { r =>
-      r.json.as[JsArray].value.map(js => NormalizedURISerializer.normalizedURISerializer.reads(js).get)
+      Json.fromJson[Seq[NormalizedURI]](r.json).get
     }
   }
 
@@ -262,7 +270,7 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]] = {
     call(Shoebox.internal.getPhrasesByPage(page, size)).map { r =>
-      r.json.as[JsArray].value.map(jsv => PhraseSerializer.phraseSerializer.reads(jsv).get)
+      Json.fromJson[Seq[Phrase]](r.json).get
     }
   }
 
@@ -281,31 +289,23 @@ class ShoeboxServiceClientImpl @Inject() (
   def getActiveExperiments: Future[Seq[SearchConfigExperiment]] = consolidateGetExperimentsReq("active") { t =>
     cacheProvider.activeSearchConfigExperimentsCache.getOrElseFuture(ActiveExperimentsKey) {
       call(Shoebox.internal.getActiveExperiments).map { r =>
-        r.json.as[JsArray].value.map { SearchConfigExperimentSerializer.serializer.reads(_).get }
+        Json.fromJson[Seq[SearchConfigExperiment]](r.json).get
       }
     }
   }
   def getExperiments: Future[Seq[SearchConfigExperiment]] = {
     call(Shoebox.internal.getExperiments).map{r =>
-      r.json.as[JsArray].value.map{SearchConfigExperimentSerializer.serializer.reads(_).get}
+      Json.fromJson[Seq[SearchConfigExperiment]](r.json).get
     }
   }
   def getExperiment(id: Id[SearchConfigExperiment]): Future[SearchConfigExperiment] = {
     call(Shoebox.internal.getExperiment(id)).map{ r =>
-      SearchConfigExperimentSerializer.serializer.reads(r.json).get
+      Json.fromJson[SearchConfigExperiment](r.json).get
     }
   }
   def saveExperiment(experiment: SearchConfigExperiment): Future[SearchConfigExperiment] = {
-    call(Shoebox.internal.saveExperiment, SearchConfigExperimentSerializer.serializer.writes(experiment)).map{ r =>
-      SearchConfigExperimentSerializer.serializer.reads(r.json).get
-    }
-  }
-  def hasExperiment(userId: Id[User], state: State[ExperimentType]): Future[Boolean] = consolidateHasExperimentReq((userId, state)) { case (userId, state) =>
-    cacheProvider.userExperimentCache.getOrElseOpt(UserExperimentUserIdKey(userId))(None) match {
-      case Some(states) => Promise.successful(states.contains(state)).future
-      case None => call(Shoebox.internal.hasExperiment(userId, state)).map { r =>
-        r.json.as[Boolean]
-      }
+    call(Shoebox.internal.saveExperiment, Json.toJson(experiment)).map{ r =>
+      Json.fromJson[SearchConfigExperiment](r.json).get
     }
   }
 
@@ -331,8 +331,8 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def getIndexable(seqNum: Long, fetchSize: Int): Future[Seq[NormalizedURI]] = {
-    call(Shoebox.internal.getIndexable(seqNum, fetchSize)).map{
-      r => r.json.as[JsArray].value.map(js => NormalizedURISerializer.normalizedURISerializer.reads(js).get)
+    call(Shoebox.internal.getIndexable(seqNum, fetchSize)).map { r =>
+      Json.fromJson[Seq[NormalizedURI]](r.json).get
     }
   }
 
@@ -346,6 +346,61 @@ class ShoeboxServiceClientImpl @Inject() (
             case _ => None
           }
         }
+    }
+  }
+
+  def userChannelFanout(userId: Id[User], msg: JsArray): Seq[Future[Int]] = {
+    implicit val userFormatter = Id.format[User]
+    val payload = Json.obj("userId" -> userId, "msg" -> msg)
+    broadcast(Shoebox.internal.userChannelFanout(), payload).map { futResp =>
+      futResp.map { r =>
+        r.body.toInt
+      }
+    }
+  }
+
+  def userChannelBroadcastFanout(msg: JsArray): Seq[Future[Int]] = {
+    broadcast(Shoebox.internal.userChannelBroadcastFanout(), msg).map { futResp =>
+      futResp.map { r =>
+        r.body.toInt
+      }
+    }
+  }
+
+  def userChannelCountFanout(): Seq[Future[Int]] = {
+    broadcast(Shoebox.internal.userChannelCountFanout()).map { futResp =>
+      futResp.map { r =>
+        r.body.toInt
+      }
+    }
+  }
+
+  def uriChannelFanout(uri: String, msg: JsArray): Seq[Future[Int]] = {
+    val payload = Json.obj("uri" -> uri, "msg" -> msg)
+    broadcast(Shoebox.internal.uriChannelFanout(), payload).map { futResp =>
+      futResp.map { r =>
+        r.body.toInt
+      }
+    }
+  }
+
+  def uriChannelCountFanout(): Seq[Future[Int]] = {
+    broadcast(Shoebox.internal.uriChannelCountFanout()).map { futResp =>
+      futResp.map { r =>
+        r.body.toInt
+      }
+    }
+  }
+
+  def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]] = {
+    val payload = JsArray(urisAndKeepers.map{ case (uri, users) =>
+      Json.obj("uri" -> JsNumber(uri.id), "users" -> JsArray(users.map{_.id}.map{JsNumber(_)}) )
+    })
+    call(Shoebox.internal.suggestExperts(), payload).map{ r =>
+      r.json match {
+        case jso: JsObject => jso.as[JsArray].value.map{x => x.as[Long]}.map{Id[User](_)}
+        case _ => List.empty[Id[User]]
+      }
     }
   }
 

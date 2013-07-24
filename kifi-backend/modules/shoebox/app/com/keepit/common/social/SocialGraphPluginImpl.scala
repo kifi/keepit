@@ -12,6 +12,7 @@ import akka.util.Timeout
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import akka.pattern.ask
+import com.keepit.social.{SocialNetworkType, SocialGraphPlugin, SocialGraph, SocialUserRawInfoStore}
 
 private case class FetchUserInfo(socialUserInfo: SocialUserInfo)
 private case class FetchUserInfoQuietly(socialUserInfo: SocialUserInfo)
@@ -83,7 +84,7 @@ private[social] class SocialGraphActor @Inject() (
 class SocialGraphPluginImpl @Inject() (
   graphs: Set[SocialGraph],
   actorFactory: ActorFactory[SocialGraphActor],
-  val schedulingProperties: SchedulingProperties)
+  val schedulingProperties: SchedulingProperties) //only on leader
   extends SocialGraphPlugin with Logging with SchedulingPlugin {
 
   implicit val actorTimeout = Timeout(5 seconds)

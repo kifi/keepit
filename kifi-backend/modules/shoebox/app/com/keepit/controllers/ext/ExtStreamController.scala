@@ -1,6 +1,11 @@
 package com.keepit.controllers.ext
 
+import scala.collection.concurrent.TrieMap
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Promise
 import scala.util.Random
+
+import org.joda.time.Seconds
 
 import com.google.inject.Inject
 import com.google.inject.Singleton
@@ -11,20 +16,17 @@ import com.keepit.common.controller._
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.common.db.State
-import com.keepit.common.db.slick.Database
 import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick.Database
 import com.keepit.common.net.URINormalizer
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social._
 import com.keepit.common.time._
-import com.keepit.controllers.core.KeeperInfoLoader
+import com.keepit.controllers.core.{KeeperInfoLoader, NetworkInfoLoader}
 import com.keepit.model._
 import com.keepit.realtime._
-import com.keepit.serializer.CommentWithBasicUserSerializer.commentWithBasicUserSerializer
-import com.keepit.serializer.ThreadInfoSerializer.threadInfoSerializer
-import com.keepit.serializer.SendableNotificationSerializer.sendableNotificationSerializer
-import scala.concurrent.ExecutionContext.Implicits.global
 
+import akka.actor.{Cancellable, ActorSystem}
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.iteratee.Concurrent
@@ -41,6 +43,8 @@ import akka.actor.{Cancellable, ActorSystem}
 import scala.concurrent.duration.FiniteDuration
 import org.joda.time.Seconds
 import scala.concurrent.Promise
+import scala.concurrent.stm._
+import com.keepit.social.{SocialNetworkType, SocialId, CommentWithBasicUser, BasicUser}
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]])
 
@@ -50,7 +54,6 @@ class ExtStreamController @Inject() (
   db: Database,
   socialUserInfoRepo: SocialUserInfoRepo,
   userConnectionRepo: UserConnectionRepo,
-  socialConnectionRepo: SocialConnectionRepo,
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   experimentRepo: UserExperimentRepo,
@@ -61,6 +64,7 @@ class ExtStreamController @Inject() (
   userNotificationRepo: UserNotificationRepo,
   EventPersister: EventPersister,
   keeperInfoLoader: KeeperInfoLoader,
+  networkInfoLoader: NetworkInfoLoader,
   sliderRuleRepo: SliderRuleRepo,
   urlPatternRepo: URLPatternRepo,
   commentRepo: CommentRepo,
@@ -161,29 +165,22 @@ class ExtStreamController @Inject() (
       authenticate(request) match {
         case Some(streamSession) =>
           val connectedAt = clock.now
-          var socketLastUsed = connectedAt
           val (enumerator, channel) = Concurrent.broadcast[JsArray]
           val socketId = Random.nextLong()
           val userId = streamSession.userId
           val subscriptions: TrieMap[String, Subscription] = TrieMap(
           "user" -> userChannel.subscribe(userId, socketId, channel))
 
-          val socketHasCancelled = Promise[Unit]()
-          val socketAliveCancellable: Cancellable = {
-            import scala.concurrent.duration._
-            system.scheduler.schedule(30.seconds, 35.seconds) {
-              if(Seconds.secondsBetween(socketLastUsed, clock.now).getSeconds > 35) {
-                log.info(s"It seems like userId ${streamSession.userId}'s socket is stale.")
-              }
-            }
-          }
+          val socketAliveCancellable: Ref[Option[Cancellable]] = Ref(None.asInstanceOf[Option[Cancellable]])
 
 
           def endSession(reason: String) = {
-            socketAliveCancellable.cancel()
+            atomic { implicit txn =>
+              socketAliveCancellable().map(c => if(!c.isCancelled) c.cancel())
+            }
             log.info(s"Closing socket of userId ${streamSession.userId} because: $reason")
             channel.push(Json.arr("goodbye", reason))
-            subscriptions.view.map(_._2.unsubscribe())
+            subscriptions.map(_._2.unsubscribe())
             subscriptions.clear()
             channel.eofAndEnd()
           }
@@ -227,7 +224,7 @@ class ExtStreamController @Inject() (
               channel.push(Json.arr("friends", getFriends(userId)))
             },
             "get_networks" -> { case JsNumber(requestId) +: JsString(friendExtId) +: _ =>
-              channel.push(Json.arr(requestId, getNetworkInfo(userId, ExternalId(friendExtId))))
+              channel.push(Json.arr(requestId, networkInfoLoader.load(userId, ExternalId(friendExtId))))
             },
             "get_thread" -> { case JsString(threadId) +: _ =>
               channel.push(Json.arr("thread", getMessageThread(ExternalId[Comment](threadId)) match { case (nUri, msgs) =>
@@ -273,13 +270,26 @@ class ExtStreamController @Inject() (
             "set_comment_read" -> { case JsString(commentId) +: _ =>
               setCommentRead(userId, ExternalId[Comment](commentId))
             },
+            "set_global_read" -> { case JsString(commentId) +: _ =>
+              setGlobalRead(userId, ExternalId[UserNotification](commentId))
+            },
             "set_keeper_position" -> { case JsString(host) +: JsObject(pos) +: _ =>
               setKeeperPosition(userId, host, JsObject(pos))
             })
 
           val iteratee = asyncIteratee { jsArr =>
             Option(jsArr.value(0)).flatMap(_.asOpt[String]).flatMap(handlers.get).map { handler =>
-              socketLastUsed = clock.now
+              atomic { implicit txn =>
+                socketAliveCancellable().map(c => if(!c.isCancelled) c.cancel())
+                socketAliveCancellable.single.swap {
+                  import scala.concurrent.duration._
+                  val c = system.scheduler.scheduleOnce(65.seconds) {
+                    log.info(s"It seems like userId ${streamSession.userId}'s socket is stale.")
+                  }
+                  Some(c)
+                }
+              }
+
               Statsd.increment(s"websocket.handler.${jsArr.value(0)}")
               Statsd.time(s"websocket.handler.${jsArr.value(0)}") {handler(jsArr.value.tail)}
             } getOrElse {
@@ -296,30 +306,6 @@ class ExtStreamController @Inject() (
       }
     }
   }
-
-  private case class NetworkInfo(profileUrl: Option[String], connected: Boolean)
-  private implicit val writesNetworkInfo = Json.writes[NetworkInfo]
-  private implicit val writesNetworkTypeToNetworkInfo = new Writes[Map[SocialNetworkType, NetworkInfo]] {
-    def writes(o: Map[SocialNetworkType, NetworkInfo]): JsValue =
-      JsObject(o.map { case (network, info) => network.name -> Json.toJson(info) }.toSeq)
-  }
-
-  private def getNetworkInfo(userId: Id[User], friendId: ExternalId[User]): Map[SocialNetworkType, NetworkInfo] =
-    db.readOnly { implicit s =>
-      val mySocialUsers = socialUserInfoRepo.getByUser(userId)
-      for {
-        friend <- userRepo.getOpt(friendId).toSeq
-        su <- socialUserInfoRepo.getByUser(friend.id.get)
-      } yield {
-        su.networkType -> NetworkInfo(
-          profileUrl = su.getProfileUrl,
-          connected = mySocialUsers.exists { mySu =>
-            mySu.networkType == su.networkType &&
-                socialConnectionRepo.getConnectionOpt(su.id.get, mySu.id.get).isDefined
-          }
-        )
-      }
-    }.toMap
 
   private def asyncIteratee(f: JsArray => Unit): Iteratee[JsArray, Unit] = {
     import play.api.libs.iteratee._
@@ -342,20 +328,22 @@ class ExtStreamController @Inject() (
       if (canMessageAllUsers(userId)) {
         // TODO: remove this or find another way to do it in the future; this will not scale
         userRepo.allExcluding(UserStates.PENDING, UserStates.BLOCKED, UserStates.INACTIVE)
-          .map(u => basicUserRepo.load(u.id.get)).toSet
+          .collect { case u if u.id.get != userId => BasicUser.fromUser(u) }.toSet
       } else {
         userConnectionRepo.getConnectedUsers(userId).map(basicUserRepo.load)
       }
     }
   }
 
-  private def loadUserPrefs(userId: Id[User]): JsObject = {
-    val enterToSend = db.readOnly { implicit s =>
-      userValueRepo.getValue(userId, "enter_to_send").map(_.toBoolean)
+  private case class UserPrefs(enterToSend: Boolean)
+  private implicit val userPrefsFormat = Json.format[UserPrefs]
+
+  private def loadUserPrefs(userId: Id[User]): UserPrefs = {
+    db.readOnly { implicit s =>
+      UserPrefs(
+        enterToSend = userValueRepo.getValue(userId, "enter_to_send").map(_.toBoolean).getOrElse(true)
+      )
     }
-    JsObject(Seq[Option[(String, JsValue)]](
-      if (enterToSend.nonEmpty) Some("enterToSend" -> JsBoolean(enterToSend.get)) else None)
-    .flatten)
   }
 
   private def setAllNotificationsVisited(userId: Id[User], lastId: ExternalId[UserNotification]) {
@@ -366,17 +354,23 @@ class ExtStreamController @Inject() (
       val excluded = Set(INACTIVE, SUBSUMED, VISITED)
       val notificationsToVisit = (if (excluded contains lastNotification.state) Set() else Set(lastNotification)) ++
           userNotificationRepo.getCreatedBefore(userId, lastNotification.createdAt, Integer.MAX_VALUE, excluded)
+
       for (notification <- notificationsToVisit) {
-        for (cid <- notification.commentId) {
-          val comment = commentRepo.get(cid)
-          notification.category match {
-            case MESSAGE => setMessageRead(userId, comment, quietly = true)
-            case COMMENT => setCommentRead(userId, comment, quietly = true)
-            case _ => // when we add other types of notifications mark them read here
-          }
+        notification.category match {
+          case MESSAGE | COMMENT =>
+            for (cid <- notification.commentId) {
+              val comment = commentRepo.get(cid)
+              notification.category match {
+                case MESSAGE => setMessageRead(userId, comment, quietly = true)
+                case COMMENT => setCommentRead(userId, comment, quietly = true)
+                case _ => // when we add other types of notifications mark them read here
+              }
+            }
+          case GLOBAL => userNotificationRepo.markVisited(userId, notification.externalId)
+          case _ => // when we add other types of notifications mark them read here
         }
       }
-      userChannel.push(userId, Json.arr("all_notifications_visited", lastId.id, lastNotification.createdAt))
+      userChannel.pushAndFanout(userId, Json.arr("all_notifications_visited", lastId.id, lastNotification.createdAt))
     }
   }
 
@@ -410,24 +404,30 @@ class ExtStreamController @Inject() (
     setCommentRead(userId, db.readOnly { implicit s => commentRepo.get(commentExtId) })
   }
 
+  private def setGlobalRead(userId: Id[User], globalExtId: ExternalId[UserNotification]): Unit = {
+    db.readWrite { implicit session =>
+      userNotificationRepo.markVisited(userId, globalExtId)
+    }
+  }
+
   private def setMessageRead(userId: Id[User], message: Comment, quietly: Boolean = false) {
     db.readWrite { implicit session =>
       val parent = message.parent.map(commentRepo.get).getOrElse(message)
-      (commentReadRepo.getByUserAndParent(userId, parent.id.get) match {
+      commentReadRepo.getByUserAndParent(userId, parent.id.get) match {
         case Some(cr) if cr.lastReadId != message.id.get =>
-          Some(commentReadRepo.save(cr.withLastReadId(message.id.get)))
+          commentReadRepo.save(cr.withLastReadId(message.id.get))
         case None =>
-          Some(commentReadRepo.save(CommentRead(userId = userId, uriId = parent.uriId, parentId = parent.id, lastReadId = message.id.get)))
-        case _ => None
-      }) foreach { _ =>
-        val nUri = normUriRepo.get(parent.uriId)
-        if (!quietly) {
-          userChannel.push(userId, Json.arr("message_read", nUri.url, parent.externalId.id, message.createdAt, message.externalId.id))
-        }
-
-        val messageIds = commentRepo.getMessageIdsCreatedBefore(nUri.id.get, parent.id.get, message.createdAt) :+ message.id.get
-        userNotificationRepo.markVisited(userId, messageIds)
+          commentReadRepo.save(CommentRead(userId = userId, uriId = parent.uriId, parentId = parent.id, lastReadId = message.id.get))
+        case _ => 
       }
+
+      val nUri = normUriRepo.get(parent.uriId)
+      if (!quietly) {
+        userChannel.pushAndFanout(userId, Json.arr("message_read", nUri.url, parent.externalId.id, message.createdAt, message.externalId.id))
+      }
+
+      val messageIds = commentRepo.getMessageIdsCreatedBefore(nUri.id.get, parent.id.get, message.createdAt) :+ message.id.get
+      userNotificationRepo.markCommentVisited(userId, messageIds)
     }
   }
 
@@ -443,11 +443,11 @@ class ExtStreamController @Inject() (
         val nUri = normUriRepo.get(comment.uriId)
 
         if (!quietly) {
-          userChannel.push(userId, Json.arr("comment_read", nUri.url, comment.createdAt, comment.externalId.id))
+          userChannel.pushAndFanout(userId, Json.arr("comment_read", nUri.url, comment.createdAt, comment.externalId.id))
         }
 
         val commentIds = commentRepo.getPublicIdsCreatedBefore(nUri.id.get, comment.createdAt) :+ comment.id.get
-        userNotificationRepo.markVisited(userId, commentIds)
+        userNotificationRepo.markCommentVisited(userId, commentIds)
       }
     }
   }
