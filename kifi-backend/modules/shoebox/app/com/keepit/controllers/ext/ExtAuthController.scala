@@ -69,7 +69,7 @@ class ExtAuthController @Inject() (
       "name" -> identity.fullName,
       "userId" -> user.externalId.id,
       "installationId" -> installation.externalId.id,
-      "experiments" -> request.experiments,
+      "experiments" -> request.experiments.map(_.value),
       "rules" -> sliderRuleGroup.compactJson,
       "patterns" -> urlPatterns
     )).withCookies(kifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))
