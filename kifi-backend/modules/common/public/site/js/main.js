@@ -498,6 +498,7 @@ $(function() {
 		$loadMore.addClass('hidden');
 
 		$query.attr("data-q", q);
+		if (!$query.val()) $query.val(q).focus();
 		var context = searchResponse && searchResponse.context;
 		$.getJSON(urlSearch, {q: q, f: "a", maxHits: 30, context: context}, function(data) {
 			updateCollectionsIfAnyUnknown(data.hits);
@@ -792,7 +793,7 @@ $(function() {
 				});
 				break;
 			case 'search':
-				doSearch(decodeURIComponent(queryFromQS(location.search)));
+				doSearch(decodeURIComponent(queryFromUri(state.hash)));
 				break;
 			case 'profile':
 				showProfile();
@@ -821,7 +822,7 @@ $(function() {
 				title = collections[uri.substr(kind.length + 1)].name;
 				break;
 			case 'search':
-				title = queryFromQS(uri.substr(kind.length));
+				title = queryFromUri(uri);
 				break;
 			case 'profile':
 				title = 'Profile';
@@ -832,8 +833,8 @@ $(function() {
 		History[opts && opts.replace ? 'replaceState' : 'pushState'](null, 'kifi.com • ' + title, uri);
 	}
 
-	function queryFromQS(qs) {
-		return qs.replace(/.*?[?&]q=([^&]*).*/, '$1').replace(/\+/g, ' ');
+	function queryFromUri(uri) {
+		return uri.replace(/.*?[?&]q=([^&]*).*/, '$1').replace(/\+/g, ' ');
 	}
 
 	var $main = $(".main").on("mousedown", ".keep-checkbox", function(e) {

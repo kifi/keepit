@@ -92,12 +92,13 @@ input.query {border: none; padding: 9px 50px 9px 20px; font-family: inherit; fon
 .query-wrap:not(.empty)>.query {background-image: none}
 input.query::-webkit-input-placeholder {color: #99a3b3}
 input.query::-moz-placeholder {color: #99a3b3}
+input.query::-ms-clear {display: none}
 .query-x-wrap {display: inline-block; width: 0; height: 48px; vertical-align: bottom; position: relative}
 .query-wrap.empty>.query-x-wrap {display: none}
 a.query-x[href] {position: absolute; right: 0; font-size: 42px; line-height: 48px; height: 48px; width: 52px; text-align: center; font-weight: 300; color: #b8c5d2; -webkit-font-smoothing: antialiased}
 a.query-x[href]:hover {color: #0089d5}
 a.query-x[href]:active {color: #556179}
-.query-x::before {content: "\00d7"; position: relative; bottom: 4px}
+.query-x::before {content: "\d7"; display: inline-block; vertical-align: bottom; position: relative; bottom: 4px}
 .main-head,
 .main-keeps {margin-left: 1px; box-shadow: -1px 0 #dbdee3}
 .main-head {padding: 13px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
@@ -247,7 +248,7 @@ input.friends-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; pad
 .keep-coll-a:hover {text-decoration: underline; -webkit-font-smoothing: antialiased}
 .keep-coll-x {display: none; position: absolute; top: 0; bottom: 0; right: 0; width: 0; text-align: center}
 .keep-coll:hover>.keep-coll-x {width: 10px}
-.keep-coll-x::before {content: "\00D7"; position: relative; bottom: 1px}
+.keep-coll-x::before {content: "\d7"; position: relative; bottom: 1px}
 .keep-who {font-size: 0}
 .keep-who>.pic {display: inline-block; vertical-align: middle; width: 23px; height: 23px; background-size: 100%; border-radius: 2px; margin-right: 1px; position: relative}
 .keep-who>.me {border-radius: 50% 0 0 50%}
@@ -314,7 +315,7 @@ input.friends-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; pad
 a.page-x[href] {position: absolute; top: 8px; right: 16px; width: 17px; height: 17px; border-radius: 50%; color: #b8c5d2; font-size: 16px; line-height: 1; text-align: center}
 a.page-x[href]:hover {background-color: #a0b1c2; color: #fff}
 a.page-x[href]:active {background-color: #8699ab; color: #fff}
-.page-x::before {content: "\00d7"; position: relative; top: -1px}
+.page-x::before {content: "\d7"; position: relative; top: -1px}
 .page-meta {font-size: 0}
 a.page-url[href] {font-size: 12px; line-height: 20px; color: inherit; -webkit-font-smoothing: antialiased; max-width: 100%; margin-bottom: 12px}
 a.page-url[href]:hover {text-decoration: underline}
@@ -400,7 +401,7 @@ a.page-priv[href]:active {background-color: #8699ab}
 .page-coll:hover>.page-coll-a {padding: 0 25px 0 7px}
 .page-coll-x {position: absolute; right: 0; top: 0; bottom: 0; width: 0; text-align: center; background-color: inherit}
 .page-coll:hover>.page-coll-x {width: 18px}
-.page-coll-x::before {content: "\00D7"; position: relative; bottom: 1px}
+.page-coll-x::before {content: "\d7"; position: relative; bottom: 1px}
 .page-coll-new {position: relative}
 .page-coll-add {display: inline-block; white-space: nowrap; font-size: 0; vertical-align: top}
 .page-coll-add::before {content: " "; display: inline-block; width: 18px; height: 18px; border-radius: 50%; vertical-align: bottom; position: relative; bottom: 3px; background: url(data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7) center/8px no-repeat; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
