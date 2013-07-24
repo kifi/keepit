@@ -220,11 +220,11 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
    * re-watches the node's children.
    */
   def watchChildren(path: Path, updateChildren: Seq[Node] => Unit){
-    var watchedChildren = Set[Node]()
-    
+    var watchedChildren = scala.collection.mutable.HashSet[Node]()
+
     case class ChildWatcher(node: Node) extends Watcher {
       def process(event: WatchedEvent) : Unit = watchedChildren.synchronized{
-        watchedChildren = watchedChildren - node 
+        watchedChildren -= node 
         val children = zk.getChildren(path.name, false).asScala.map(Node(_))
         updateChildren(children)
         doWatchChildren(children)
@@ -249,7 +249,7 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
       nodes.filterNot(watchedChildren.contains _).foreach{ node =>
         try { 
           zk.getData(path.name + "/" + node.name, ChildWatcher(node), new Stat())
-          watchedChildren = watchedChildren + node
+          watchedChildren += node
         } catch {
           case e:KeeperException =>
             log.warn("Failed to place watch on a child node!")
