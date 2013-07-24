@@ -177,7 +177,8 @@ class ExtSearchController @Inject() (
 
     val future = decorator.decorate(res)
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
-    val experts = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id)
+    val experts = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id).take(3)
+    log.info("experts recommended: " + experts.mkString(" ; "))
     val expertNames = {
       if (experts.size == 0) List.empty[String]
       else {
@@ -185,7 +186,6 @@ class ExtSearchController @Inject() (
         experts.flatMap{idMap.get(_)}.map{x => x.firstName + " " + x.lastName}
       }
     }
-
 
     PersonalSearchResultPacket(res.uuid, res.query,
       monitoredAwait.result(future, 5 seconds, s"getting search decorations for $userId", Nil),
