@@ -1111,7 +1111,7 @@ api.on.update.add(function() {
 var session, socket, onReadyTemp;
 
 function dannyPlay(filename) {
-  if(session.experiments.indexOf("dannyPlay") > 0) {
+  if (~session.experiments.indexOf("dannyPlay")) {
     var el = document.createElement("audio");
     el.src = "media/danny/" + filename;
     el.play();
