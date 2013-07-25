@@ -1,6 +1,9 @@
 var xhrDomain = 'https://api.kifi.com';
 var xhrBase = xhrDomain + '/site';
 
+var compareSearch = {usage: "search", sensitivity: "base"};
+var compareSort = {numeric: true};
+
 $.ajaxSetup({cache: true, crossDomain: true, xhrFields: {withCredentials: true}});
 
 $.timeago.settings.localeTitle = true;
@@ -408,20 +411,38 @@ $(function() {
 		}
 	}
 
-	var $friendsList = $('#friends-list').antiscroll({x: false, width: "100%"})
+	var $friendsFilter = $('.friends-filter').on('input', function() {
+		var val = $.trim(this.value);
+		if (val) {
+			var prefixes = val.split(/\s+/);
+			$friendsList.find('.friend').each(function() {
+				var $f = $(this), o = $f.data('o'), names = $.trim(o.firstName + ' ' + o.lastName).split(/\s+/);
+				$f.toggleClass('no-match', !prefixes.every(function(p) {
+					return names.some(function(n) {return 0 === p.localeCompare(n.substring(0, p.length), undefined, compareSearch)});
+				}));
+			});
+		} else {
+			$friendsList.find('.no-match').removeClass('no-match');
+		}
+	});
+	var $friendsList = $('#friends-list').antiscroll({x: false, width: '100%'})
 	.on('mouseover', '.friend-status', function() {
 		$(this).nextAll('.friend-action-desc').text('Unfriend this person');
 	}).on('mouseover', '.friend-mute', function() {
 		$(this).nextAll('.friend-action-desc').text('Don’t show this person’s keeps in my search results');
 	}).on('mouseout', '.friend-status,.friend-mute', function() {
 		$(this).nextAll('.friend-action-desc').empty();
+	}).on('transitionend', function() {
+		friendsScroller.refresh();
 	});
 	$friendsList.find('.antiscroll-inner').scroll(function() { // infinite scroll
 		$friendsList.prev().toggleClass('scrolled', this.scrollTop > 0);
 	});
 	var friendsScroller = $friendsList.data("antiscroll");
 	$(window).resize(friendsScroller.refresh.bind(friendsScroller));
-	var friendsTmpl = Tempo.prepare($friendsList).when(TempoEvent.Types.RENDER_COMPLETE, function() {
+	var friendsTmpl = Tempo.prepare($friendsList).when(TempoEvent.Types.ITEM_RENDER_COMPLETE, function(ev) {
+		$(ev.element).data("o", ev.item);
+	}).when(TempoEvent.Types.RENDER_COMPLETE, function() {
 		$friendsLoading.hide();
 		friendsScroller.refresh();
 	});
@@ -430,12 +451,13 @@ $(function() {
 		$('.friends-filter').val('');
 		friendsTmpl.clear();
 		$friendsLoading.show();
-		$.getJSON(xhrBase + '/user/all-connections', function(data) {
-			console.log('[prepFriendsTab] friends:', data.length);
+		$.getJSON(xhrBase + '/user/connections', function(data) {
+			console.log('[prepFriendsTab] friends:', data.connections.length);
 			$.when(promise.myNetworks).then(function() {
-				var friends = data.slice(0, 10), networks = myNetworks.reduce(function(o, n) {o[n.network] = true; return o}, {});
-				for (var i = 0; i < friends.length; i++) {
-					friends[i].networks = networks;
+				var friends = data.connections;
+				for (var f, i = 0; i < friends.length; i++) {
+					(f = friends[i]).networks = {};
+					f.picUri = formatPicUrl(f.id, f.pictureName, 200);
 				}
 				friendsTmpl.render(friends);
 			});
@@ -1152,19 +1174,19 @@ $(function() {
 			}).sort(function(c1, c2) {
 				var s1 = scores[c1.id];
 				var s2 = scores[c2.id];
-				return (s1.min - s2.min) || (s1.sum - s2.sum) || c1.name.localeCompare(c2.name, undefined, {numeric: true});
+				return (s1.min - s2.min) || (s1.sum - s2.sum) || c1.name.localeCompare(c2.name, undefined, compareSort);
 			}).splice(0, 4).map(function(c) {
 				for (var name = escapeHTMLContent(c.name), i = re.length; i--;) {
 					name = name.replace(new RegExp("^((?:[^&<]|&[^;]*;|<[^>]*>)*)\\b(" + re[i].source + ")", "gi"), "$1<b>$2</b>");
 				}
 				return {id: c.id, name: name};
 			});
-			if (!allColls.some(function(c) {return c.name.localeCompare(val, undefined, {usage: "search", sensitivity: "base"}) == 0})) {
+			if (!allColls.some(function(c) {return c.name.localeCompare(val, undefined, compareSearch) === 0})) {
 				colls.push({id: "", name: val});
 			}
 		} else {
 			colls = allColls.sort(function(c1, c2) {
-				return c2.keeps - c1.keeps || c1.name.localeCompare(c2.name, undefined, {numeric: true});
+				return c2.keeps - c1.keeps || c1.name.localeCompare(c2.name, undefined, compareSort);
 			}).splice(0, 4).map(function(c) {
 				return {id: c.id, name: escapeHTMLContent(c.name)};
 			});
