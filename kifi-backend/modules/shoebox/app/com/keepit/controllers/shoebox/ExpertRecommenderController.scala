@@ -28,7 +28,7 @@ import com.keepit.common.akka.SlowRunningExecutionContext
 
 @ImplementedBy(classOf[ExpertRecommenderControllerImpl])
 trait ExpertRecommenderController extends ShoeboxServiceController{
-  def init(): Unit
+  def enabled(): Boolean
   def suggestExperts(): Action[AnyContent]
 }
 
@@ -43,9 +43,11 @@ class ExpertRecommenderControllerImpl @Inject()(
   centralConfig: CentralConfig,
   healthcheckPlugin: HealthcheckPlugin
 ) extends ExpertRecommenderController with Logging{
-  var enabled = false
+  var serviceEnabled = false
   var scoreMap = MutMap.empty[(Id[User], Int), Float]
   var modelFlag: Option[String] = None
+
+  override def enabled() = { init(); true }
 
   def init() = {
     val flagKey = new TopicModelFlagKey()
@@ -62,8 +64,8 @@ class ExpertRecommenderControllerImpl @Inject()(
     }
   }
 
-  private def enableService() = { enabled = true }
-  private def disableService() = { enabled = false }
+  private def enableService() = { serviceEnabled = true }
+  private def disableService() = { serviceEnabled = false }
 
   private def createExpertRecommender(flagOpt: Option[String]): ExpertRecommender = {
     flagOpt match {
@@ -83,7 +85,7 @@ class ExpertRecommenderControllerImpl @Inject()(
     genScoreMap(rcmder).onComplete{
       case Success(m) => scoreMap = m ; enableService()
       case _ =>  healthcheckPlugin.addError(HealthcheckError(callType = Healthcheck.SEARCH,
-          errorMessage = Some("Error updating topics")))
+          errorMessage = Some("Error generating user-topic score map")))
     }
   }
 
@@ -101,7 +103,7 @@ class ExpertRecommenderControllerImpl @Inject()(
           scores += (user, x._1) -> x._2
         }
       }
-      log.info(s"topic score map has been generated for ${userIds.size} users. time elapsed: ${(System.currentTimeMillis() - t)/1000.0} seconds")
+      log.info(s"topic score map has been generated for ${userIds.size} users. keySet size: ${scores.keySet.size}. time elapsed: ${(System.currentTimeMillis() - t)/1000.0} seconds")
       scores
     } (SlowRunningExecutionContext.ec)
   }
@@ -129,7 +131,6 @@ class ExpertRecommenderControllerImpl @Inject()(
   }
 
   override def suggestExperts() = Action { request =>
-    println("\n\n\nranking experts")
     val req = request.body.asJson.get.asInstanceOf[JsArray].value
     val urisAndKeepers = req.map{ js =>
       val uriId = Id[NormalizedURI]((js \ "uri").as[Long])

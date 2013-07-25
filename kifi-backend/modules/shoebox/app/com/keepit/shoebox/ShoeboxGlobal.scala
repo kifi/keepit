@@ -44,6 +44,6 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[InvitationMailPlugin].enabled)
     require(injector.instance[ChannelPlugin].enabled)
     require(injector.instance[TopicUpdaterPlugin].enabled)
-    injector.instance[ExpertRecommenderController].init
+    require(injector.instance[ExpertRecommenderController].enabled)
   }
 }

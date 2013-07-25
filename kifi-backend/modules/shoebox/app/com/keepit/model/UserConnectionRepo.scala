@@ -21,6 +21,7 @@ trait UserConnectionRepo extends Repo[UserConnection] {
 class UserConnectionRepoImpl @Inject() (
   val db: DataBaseComponent,
   val clock: Clock,
+  val friendRequestRepo: FriendRequestRepo,
   val connCountCache: UserConnectionCountCache,
   val userConnCache: UserConnectionIdCache)
   extends DbRepo[UserConnection] with UserConnectionRepo {
@@ -71,6 +72,11 @@ class UserConnectionRepoImpl @Inject() (
       c <- table if c.user2 === userId && c.user1.inSet(users) || c.user1 === userId && c.user2.inSet(users)
     } yield c.state).update(UserConnectionStates.UNFRIENDED)
 
+    (friendRequestRepo.getBySender(userId).filter(users contains _.recipientId) ++
+        friendRequestRepo.getByRecipient(userId).filter(users contains _.senderId)) map { friendRequest =>
+      friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.IGNORED))
+    }
+
     (users + userId) foreach invalidateCache
     res
   }
@@ -84,6 +90,11 @@ class UserConnectionRepoImpl @Inject() (
       (for (c <- table if c.user1 === userId) yield c.user2) union
         (for (c <- table if c.user2 === userId) yield c.user1)
       }.list.toSet
+
+    (friendRequestRepo.getBySender(userId).filter(users contains _.recipientId) ++
+      friendRequestRepo.getByRecipient(userId).filter(users contains _.senderId)) map { friendRequest =>
+        friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.ACCEPTED))
+    }
 
     (users + userId) foreach invalidateCache
     table.insertAll(toInsert.map(connId => UserConnection(user1 = userId, user2 = connId)).toSeq: _*)

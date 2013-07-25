@@ -2,13 +2,14 @@ package com.keepit.controllers.website
 
 import com.google.inject.{Inject, Singleton}
 import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, WebsiteController}
+import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick._
-import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.model._
 import com.keepit.realtime.{DeviceType, UrbanAirship}
 
+import play.api.libs.json.Json.toJson
 import play.api.libs.json._
 
 @Singleton
@@ -23,6 +24,7 @@ class UserController @Inject() (db: Database,
   invitationRepo: InvitationRepo,
   networkInfoLoader: NetworkInfoLoader,
   actionAuthenticator: ActionAuthenticator,
+  friendRequestRepo: FriendRequestRepo,
   urbanAirship: UrbanAirship)
     extends WebsiteController(actionAuthenticator) {
 
@@ -61,13 +63,13 @@ class UserController @Inject() (db: Database,
   }
 
   def socialNetworkInfo() = AuthenticatedJsonAction { request =>
-    Ok(Json.toJson(db.readOnly { implicit s =>
+    Ok(toJson(db.readOnly { implicit s =>
       socialUserRepo.getByUser(request.userId).map(BasicSocialUser from _)
     }))
   }
 
   def friendNetworkInfo(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
-    Ok(Json.toJson(networkInfoLoader.load(request.userId, id)))
+    Ok(toJson(networkInfoLoader.load(request.userId, id)))
   }
 
   def unfriend(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
@@ -77,19 +79,51 @@ class UserController @Inject() (db: Database,
       }
       Ok(Json.obj("removed" -> removed))
     } getOrElse {
-      NotFound(Json.obj("error" -> s"Could not find user for id $id"))
+      NotFound(Json.obj("error" -> s"User with id $id not found."))
     }
   }
 
-  def friendRequest(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
-    db.readOnly { implicit s => userRepo.getOpt(id) } map { user =>
-      // TODO(greg): implement actual friend request; for now just adding connection
-      db.readWrite { implicit s =>
-        userConnectionRepo.addConnections(request.userId, user.id.toSet, requested = true)
-      }
-      Ok(Json.obj("requested" -> true))
-    } getOrElse {
-      NotFound(Json.obj("error" -> s"Could not find user for id $id"))
+  def friend(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+    db.readWrite { implicit s =>
+      userRepo.getOpt(id) map { user =>
+        if (friendRequestRepo.getBySenderAndRecipient(request.userId, user.id.get).isDefined) {
+          Ok(Json.obj("success" -> true, "alreadySent" -> true))
+        } else {
+          friendRequestRepo.getBySenderAndRecipient(user.id.get, request.userId) map { friendReq =>
+            userConnectionRepo.addConnections(friendReq.senderId, Set(friendReq.recipientId), requested = true)
+            // TODO(greg): trigger notification?
+            Ok(Json.obj("success" -> true, "acceptedRequest" -> true))
+          } getOrElse {
+            friendRequestRepo.save(FriendRequest(senderId = request.userId, recipientId = user.id.get))
+            Ok(Json.obj("success" -> true, "sentRequest" -> true))
+          }
+        }
+      } getOrElse NotFound(Json.obj("error" -> s"User with id $id not found."))
+    }
+  }
+
+  def ignoreFriendRequest(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+    db.readWrite { implicit s =>
+      userRepo.getOpt(id) map { sender =>
+        friendRequestRepo.getBySenderAndRecipient(sender.id.get, request.userId) map { friendRequest =>
+          friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.IGNORED))
+          Ok(Json.obj("success" -> true))
+        } getOrElse NotFound(Json.obj("error" -> s"There is no active friend request for user $id."))
+      } getOrElse BadRequest(Json.obj("error" -> s"User with id $id not found."))
+    }
+  }
+
+  def incomingFriendRequests = AuthenticatedJsonAction { request =>
+    db.readOnly { implicit s =>
+      val users = friendRequestRepo.getByRecipient(request.userId) map { fr => basicUserRepo.load(fr.senderId) }
+      Ok(Json.toJson(users))
+    }
+  }
+
+  def outgoingFriendRequests = AuthenticatedJsonAction { request =>
+    db.readOnly { implicit s =>
+      val users = friendRequestRepo.getBySender(request.userId) map { fr => basicUserRepo.load(fr.recipientId) }
+      Ok(Json.toJson(users))
     }
   }
 
@@ -135,7 +169,7 @@ class UserController @Inject() (db: Database,
         emails = Some(emailRepo.getByUser(request.userId).map(_.address))
       )
     }
-    Ok(Json.toJson(basicUser).as[JsObject] deepMerge Json.toJson(info).as[JsObject])
+    Ok(toJson(basicUser).as[JsObject] ++ toJson(info).as[JsObject] ++ Json.obj("experiments" -> request.experiments.map(_.value)))
   }
 
   private val SitePrefNames = Set("site_left_col_width")
@@ -181,7 +215,7 @@ class UserController @Inject() (db: Database,
     Ok(JsArray(connections.map { conn =>
       Json.obj(
         "label" -> conn._1.fullName,
-        "image" -> Json.toJson(conn._1.getPictureUrl(75, 75)),
+        "image" -> toJson(conn._1.getPictureUrl(75, 75)),
         "value" -> (conn._1.networkType + "/" + conn._1.socialId.id),
         "status" -> conn._2
       )
