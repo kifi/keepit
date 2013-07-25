@@ -42,6 +42,18 @@ class URIGraphController @Inject()(
     }
   }
 
+  def sharingUserInfoByPost(userId: Id[User]) = Action(parse.json) { implicit request =>
+    val infosFuture = future {
+      val searcher = mainSearcherFactory.getURIGraphSearcher(userId)
+      val ids = request.body.as[Seq[Int]].map(Id[NormalizedURI](_))
+      ids map searcher.getSharingUserInfo
+    }
+    Async {
+      infosFuture.map(info => Ok(Json.toJson(info)))
+    }
+  }
+
+  // TODO: remove after upgrading shoebox in prod
   def sharingUserInfo(userId: Id[User], uriIds: String) = Action { implicit request =>
     val jsonFuture = future {
       val searcher = mainSearcherFactory.getURIGraphSearcher(userId)
