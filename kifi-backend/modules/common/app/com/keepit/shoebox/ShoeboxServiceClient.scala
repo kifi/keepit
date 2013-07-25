@@ -397,10 +397,10 @@ class ShoeboxServiceClientImpl @Inject() (
       Json.obj("uri" -> JsNumber(uri.id), "users" -> JsArray(users.map{_.id}.map{JsNumber(_)}) )
     })
     call(Shoebox.internal.suggestExperts(), payload).map{ r =>
-      println("\n\n experts received \n\n")
+      log.info("\n\n experts received \n\n")
       r.json match {
         case jso: JsValue => {
-          println("\n\n got JsValue \n")
+          log.info("\n\n got JsValue \n")
           val rv = jso.as[JsArray].value.map{x => x.as[Long]}.map{Id[User](_)}
           rv.foreach(println(_))
           rv
