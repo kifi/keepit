@@ -608,7 +608,7 @@ $(function() {
 
 	function updateNumKeeps() {
 		$.getJSON(xhrBase + '/keeps/count', function(data) {
-			$('.left-col .my-keeps .keep-count').text(myKeepsCount = data.numKeeps);
+			$('.left-col .my-keeps .nav-count').text(myKeepsCount = data.numKeeps);
 		});
 	}
 
@@ -992,7 +992,7 @@ $(function() {
 				collectionId: collId,
 				keeps: $keeps.map(function() {var a = this.querySelector(".keep-title>a"); return {title: a.title, url: a.href}}).get()},
 			function(data) {
-				$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps += data.addedToCollection);
+				$collList.find(".collection[data-id=" + collId + "]").find(".nav-count").text(collections[collId].keeps += data.addedToCollection);
 				var collName = collections[collId].name;
 				$keeps.addClass("mine")
 					.find(".keep-colls:not(:has(.keep-coll[data-id=" + collId + "]))")
@@ -1015,7 +1015,7 @@ $(function() {
 
 	function removeKeepsFromCollection(collId, keepIds) {
 		$.postJson(xhrBase + '/collections/' + collId + '/removeKeeps', keepIds, function(data) {
-			$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps -= data.removed);
+			$collList.find(".collection[data-id=" + collId + "]").find(".nav-count").text(collections[collId].keeps -= data.removed);
 		}).error(showMessage.bind(null, 'Could not remove keep' + (keepIds.length > 1 ? 's' : '') + ' from collection, please try again later'));
 		var $allKeeps = $main.find(".keep");
 		var $keeps = $allKeeps.filter(function() {return keepIds.indexOf($(this).data("id")) >= 0});
@@ -1061,7 +1061,7 @@ $(function() {
 				var collCounts = $keeps.find(".keep-coll").remove().map(getDataId).get()
 					.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
 				for (var collId in collCounts) {
-					$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps -= collCounts[collId]);
+					$collList.find(".collection[data-id=" + collId + "]").find(".nav-count").text(collections[collId].keeps -= collCounts[collId]);
 				}
 			}).error(showMessage.bind(null, 'Could not remove keeps, please try again later'));
 		} else {  // toggle public/private
@@ -1222,7 +1222,9 @@ $(function() {
 	// load data for persistent (view-independent) page UI
 	var promise = {
 		me: $.getJSON(xhrBase + '/user/me', updateMe).promise(),
-		myNetworks: $.getJSON(xhrBase + '/user/networks', function (data) { myNetworks = data; }).promise(),
+		myNetworks: $.getJSON(xhrBase + '/user/networks', function(data) {
+			myNetworks = data;
+		}).promise(),
 		myPrefs: $.getJSON(xhrBase + '/user/prefs', function(data) {
 			myPrefs = data;
 			if (myPrefs.site_left_col_width) {
@@ -1231,6 +1233,9 @@ $(function() {
 		}).promise()};
 	updateCollections();
 	updateNumKeeps();
+	$.getJSON(xhrBase + '/user/connections/count', function(data) {
+		$('.left-col .my-friends .nav-count').text(data.count);
+	});
 
 	$.when(promise.me).done(function() {
 		if (location.port || ~me.experiments.indexOf('website friends')) {
