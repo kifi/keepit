@@ -47,9 +47,9 @@ class ExpertRecommenderControllerImpl @Inject()(
   var scoreMap = MutMap.empty[(Id[User], Int), Float]
   var modelFlag: Option[String] = None
 
-  override def enabled() = true
+  override def enabled() = { init(); true }
 
-  val init = {
+  def init() = {
     val flagKey = new TopicModelFlagKey()
     val flag = centralConfig(flagKey)
     val rcmder = createExpertRecommender(flag)
@@ -131,7 +131,6 @@ class ExpertRecommenderControllerImpl @Inject()(
   }
 
   override def suggestExperts() = Action { request =>
-    println("\n\n\nranking experts")
     val req = request.body.asJson.get.asInstanceOf[JsArray].value
     val urisAndKeepers = req.map{ js =>
       val uriId = Id[NormalizedURI]((js \ "uri").as[Long])
