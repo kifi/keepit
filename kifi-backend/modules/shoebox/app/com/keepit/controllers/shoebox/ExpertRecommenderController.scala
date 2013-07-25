@@ -47,9 +47,10 @@ class ExpertRecommenderControllerImpl @Inject()(
   var scoreMap = MutMap.empty[(Id[User], Int), Float]
   var modelFlag: Option[String] = None
 
-  override def enabled() = { init(); true }
+  override def enabled() = true
 
-  def init() = {
+  val init = {
+    log.info("init expert recommender")
     val flagKey = new TopicModelFlagKey()
     val flag = centralConfig(flagKey)
     val rcmder = createExpertRecommender(flag)
@@ -57,10 +58,13 @@ class ExpertRecommenderControllerImpl @Inject()(
     initScoreMap(rcmder)
 
     centralConfig.onChange(flagKey){ flagOpt =>
+      log.info("flag from zookeeper changed. will rebuild score map.")
       val newFlag = centralConfig(flagKey)
-      modelFlag = newFlag
-      val newRcmder = createExpertRecommender(flag)
-      initScoreMap(newRcmder)
+      if (modelFlag != newFlag) {
+        modelFlag = newFlag
+        val newRcmder = createExpertRecommender(flag)
+        initScoreMap(newRcmder)
+      }
     }
   }
 
