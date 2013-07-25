@@ -1251,7 +1251,7 @@ $(function() {
 	updateNumKeeps();
 
 	$.when(promise.me).done(function() {
-		if (location.port || ~me.experiments.indexOf('friends')) {
+		if (location.port || ~me.experiments.indexOf('website friends')) {
 			$('.my-friends').show();
 			$collList.removeClass('positioned').each(function() {this.style.top = this.offsetTop + 'px'}).addClass('positioned');
 		}
