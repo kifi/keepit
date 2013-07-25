@@ -1,23 +1,5 @@
-var urlBase = 'https://api.kifi.com';
-//var urlBase = 'http://dev.ezkeep.com:9000';
-var urlLinkNetwork = urlBase + '/link'
-var urlSite = urlBase + '/site';
-var urlSearch = urlBase + '/search';
-var urlKeeps =  urlSite + '/keeps';
-var urlKeepAdd =  urlKeeps + '/add';
-var urlKeepRemove =  urlKeeps + '/remove';
-var urlMyKeeps = urlKeeps + '/all';
-var urlMyKeepsCount = urlKeeps + '/count';
-var urlUser = urlSite + '/user';
-var urlMe = urlUser + '/me';
-var urlNetworks = urlUser + '/networks';
-var urlMyPrefs = urlUser + '/prefs';
-var urlChatter = urlSite + '/chatter';
-var urlCollections = urlSite + '/collections';
-var urlCollectionsAll = urlCollections + '/all';
-var urlCollectionsOrder = urlCollections + '/ordering';
-var urlCollectionsCreate = urlCollections + '/create';
-var urlScreenshot = urlKeeps + '/screenshot';
+var xhrDomain = 'https://api.kifi.com';
+var xhrBase = xhrDomain + '/site';
 
 $.ajaxSetup({cache: true, crossDomain: true, xhrFields: {withCredentials: true}});
 
@@ -75,7 +57,7 @@ $(function() {
 		maxWidth: 420,
 		stop: function(e, ui) {
 			console.log("[resizable:stop] saving");
-			$.postJson(urlMyPrefs, {site_left_col_width: String($leftCol.outerWidth())}, function(data) {
+			$.postJson(xhrBase + '/user/prefs', {site_left_col_width: String($leftCol.outerWidth())}, function(data) {
 				console.log("[prefs]", data);
 			});
 		}
@@ -302,12 +284,12 @@ $(function() {
 				$('.page-who-pics').append($detailed.find(".keep-who>.pic").clone());
 				$('.page-who-text').html($detailed.find(".keep-who-text").html());
 				var $pic = $('.page-pic'), $chatter = $('.page-chatter');
-				$.postJson(urlScreenshot, {url: o.url}, function(data) {
+				$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function(data) {
 					$pic.css('background-image', 'url(' + data.url + ')');
 				}).error(function() {
 					$pic.find('.page-pic-soon').show();
 				});
-				$.postJson(urlChatter, {url: o.url}, function(data) {
+				$.postJson(xhrBase + '/chatter', {url: o.url}, function(data) {
 					$chatter.find('.page-chatter-messages').attr('data-n', data.conversations || 0);
 					$chatter.find('.page-chatter-comments').attr('data-n', data.comments || 0);
 				});
@@ -374,7 +356,7 @@ $(function() {
 				var $save = $editContainer.find('.save')
 				var saveText = $save.text();
 				$save.text('Saving...');
-				$.postJson(urlMe, props, function(data) {
+				$.postJson(xhrBase + '/user/me', props, function(data) {
 					$editContainer.find('.editable').each(function () {
 						var $this = $(this);
 						var value = $this.find('input').val();
@@ -399,7 +381,7 @@ $(function() {
 				if (networkInfo) {
 					$this.attr('href', networkInfo.profileUrl).attr('title', 'View profile');
 				} else {
-					$this.addClass('not-connected').attr('href', urlLinkNetwork + '/' + name).attr('title', 'Click to connect');
+					$this.addClass('not-connected').attr('href', 'https://www.kifi.com/link/' + name).attr('title', 'Click to connect');
 				}
 			});
 		});
@@ -448,7 +430,7 @@ $(function() {
 		$('.friends-filter').val('');
 		friendsTmpl.clear();
 		$friendsLoading.show();
-		$.getJSON(urlUser + '/all-connections', function(data) {
+		$.getJSON(xhrBase + '/user/all-connections', function(data) {
 			console.log('[prepFriendsTab] friends:', data.length);
 			$.when(promise.myNetworks).then(function() {
 				var friends = data.slice(0, 10), networks = myNetworks.reduce(function(o, n) {o[n.network] = true; return o}, {});
@@ -483,7 +465,7 @@ $(function() {
 		$query.attr("data-q", q);
 		if (!$query.val()) $query.val(q).focus().closest($queryWrap).removeClass('empty');
 		var context = searchResponse && searchResponse.context;
-		$.getJSON(urlSearch, {q: q, f: "a", maxHits: 30, context: context}, function(data) {
+		$.getJSON(xhrDomain + '/search', {q: q, f: "a", maxHits: 30, context: context}, function(data) {
 			updateCollectionsIfAnyUnknown(data.hits);
 			$.when(promise.me, promise.collections).done(function() {
 				searchResponse = data;
@@ -532,7 +514,7 @@ $(function() {
 			params.collection = $('.left-col h3.active').data('id');
 		}
 		console.log("[anyNewKeeps] fetching", params);
-		$.getJSON(urlMyKeeps, params, function(data) {
+		$.getJSON(xhrBase + '/keeps/all', params, function(data) {
 			updateCollectionsIfAnyUnknown(data.keeps);
 			$.when(promise.collections).done(function() {
 				var keepIds = $myKeeps.find('.keep').map(getDataId).get().reduce(function(ids, id) {ids[id] = true; return ids}, {});
@@ -597,7 +579,7 @@ $(function() {
 				params.before = lastKeep;
 			}
 			console.log("Fetching %d keeps %s", params.count, lastKeep ? "before " + lastKeep : "");
-			$.getJSON(urlMyKeeps, params, function withKeeps(data) {
+			$.getJSON(xhrBase + '/keeps/all', params, function withKeeps(data) {
 				updateCollectionsIfAnyUnknown(data.keeps);
 				$.when(promise.me, promise.collections).done(function() {
 					var numShown = $myKeeps.find(".keep").length + data.keeps.length;
@@ -625,13 +607,13 @@ $(function() {
 	}
 
 	function updateNumKeeps() {
-		$.getJSON(urlMyKeepsCount, function(data) {
+		$.getJSON(xhrBase + '/keeps/count', function(data) {
 			$('.left-col .my-keeps .keep-count').text(myKeepsCount = data.numKeeps);
 		});
 	}
 
 	function updateCollections() {
-		promise.collections = $.getJSON(urlCollectionsAll, {sort: "user"}, function(data) {
+		promise.collections = $.getJSON(xhrBase + '/collections/all', {sort: "user"}, function(data) {
 			collTmpl.render(data.collections);
 			collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
 		}).promise();
@@ -662,7 +644,7 @@ $(function() {
 		var $coll = $collMenu.closest(".collection");
 		var collId = $coll.data("id");
 		console.log("Removing collection", collId);
-		$.postJson(urlCollections + '/' + collId + '/delete', {}, function(data) {
+		$.postJson(xhrBase + '/collections/' + collId + '/delete', {}, function(data) {
 			delete collections[collId];
 			$coll.slideUp(80, $.fn.remove.bind($coll));
 			if ($myKeeps.data("collId") === collId) {
@@ -697,7 +679,7 @@ $(function() {
 				var newName = $.trim(this.value) || oldName;
 				if (newName !== oldName) {
 					var collId = $coll.addClass("renamed").data("id");
-					$.postJson(urlCollections + '/' + collId + '/update', {name: newName}, function() {
+					$.postJson(xhrBase + '/collections/' + collId + '/update', {name: newName}, function() {
 						collections[collId].name = newName;
 						if ($myKeeps.data("collId") === collId) {
 							$main.find("h1").text(newName);
@@ -905,7 +887,7 @@ $(function() {
 		placeholder: "sortable-placeholder",
 		beforeStop: function(event, ui) {
 			// update the collection order
-			$.postJson(urlCollectionsOrder, $(this).find(".collection").map(getDataId).get(), function(data) {
+			$.postJson(xhrBase + '/collections/ordering', $(this).find(".collection").map(getDataId).get(), function(data) {
 				console.log(data);
 			}).error(function() {
 				showMessage('Could not reorder the collections, please try again later');
@@ -996,7 +978,7 @@ $(function() {
 
 	function createCollection(name, callback) {
 		$newColl.addClass("submitted");
-		$.postJson(urlCollectionsCreate, {name: name}, function(data) {
+		$.postJson(xhrBase + '/collections/create', {name: name}, function(data) {
 			collTmpl.prepend(collections[data.id] = {id: data.id, name: name, keeps: 0});
 			callback(data.id);
 		}).error(function() {
@@ -1006,7 +988,7 @@ $(function() {
 	}
 
 	function addKeepsToCollection(collId, $keeps, onError) {
-		$.postJson(urlKeepAdd, {
+		$.postJson(xhrBase + '/keeps/add', {
 				collectionId: collId,
 				keeps: $keeps.map(function() {var a = this.querySelector(".keep-title>a"); return {title: a.title, url: a.href}}).get()},
 			function(data) {
@@ -1032,7 +1014,7 @@ $(function() {
 	}
 
 	function removeKeepsFromCollection(collId, keepIds) {
-		$.postJson(urlCollections + "/" + collId + "/removeKeeps", keepIds, function(data) {
+		$.postJson(xhrBase + '/collections/' + collId + '/removeKeeps', keepIds, function(data) {
 			$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps -= data.removed);
 		}).error(showMessage.bind(null, 'Could not remove keep' + (keepIds.length > 1 ? 's' : '') + ' from collection, please try again later'));
 		var $allKeeps = $main.find(".keep");
@@ -1062,7 +1044,7 @@ $(function() {
 		var $a = $(this), howKept = $detail.children().attr("data-kept");
 		if (!howKept) {  // keep
 			howKept = $a.hasClass('page-keep') ? "pub" : "pri";
-			$.postJson(urlKeepAdd, {
+			$.postJson(xhrBase + '/keeps/add', {
 					keeps: $keeps.map(function() {
 						var a = $(this).find('.keep-title>a')[0];
 						return {title: a.title, url: a.href, isPrivate: howKept == 'pri'};
@@ -1072,7 +1054,7 @@ $(function() {
 					$keeps.addClass("mine").find(".keep-private").toggleClass("on", howKept == "pri");
 				}).error(showMessage.bind(null, 'Could not add keeps, please try again later'));
 		} else if ($a.hasClass('page-keep')) {  // unkeep
-			$.postJson(urlKeepRemove, $keeps.map(function() {return {url: this.querySelector('.keep-title>a').href}}).get(), function(data) {
+			$.postJson(xhrBase + '/keeps/remove', $keeps.map(function() {return {url: this.querySelector('.keep-title>a').href}}).get(), function(data) {
 				$detail.children().removeAttr('data-kept');
 				$detail.find('.page-coll').remove();
 				$keeps.removeClass("mine").find(".keep-private").removeClass("on");
@@ -1089,7 +1071,7 @@ $(function() {
 				var $keep = $(this), keepLink = $keep.find('.keep-title>a')[0];
 				// TODO: support bulk operation with one server request
 				$.postJson(
-					urlKeeps + "/" + $keep.data('id') + "/update",
+					xhrBase + '/keeps/' + $keep.data('id') + '/update',
 					{title: keepLink.title, url: keepLink.href, isPrivate: howKept == 'pri'},
 					function(data) {
 						$keep.find('.keep-private').toggleClass('on', howKept == 'pri');
@@ -1239,9 +1221,9 @@ $(function() {
 
 	// load data for persistent (view-independent) page UI
 	var promise = {
-		me: $.getJSON(urlMe, updateMe).promise(),
-		myNetworks: $.getJSON(urlNetworks, function (data) { myNetworks = data; }).promise(),
-		myPrefs: $.getJSON(urlMyPrefs, function(data) {
+		me: $.getJSON(xhrBase + '/user/me', updateMe).promise(),
+		myNetworks: $.getJSON(xhrBase + '/user/networks', function (data) { myNetworks = data; }).promise(),
+		myPrefs: $.getJSON(xhrBase + '/user/prefs', function(data) {
 			myPrefs = data;
 			if (myPrefs.site_left_col_width) {
 				$(".left-col").animate({width: +myPrefs.site_left_col_width}, 120);
@@ -1274,7 +1256,7 @@ $(function() {
 				picUri: formatPicUrl(id, $a.css('background-image').match(/\/([^\/]*)['"]?\)$/)[1], 200)});
 			var $el = $a.children();
 			configureHover($el, {canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
-			$.getJSON(urlUser + '/' + id + '/networks', function(networks) {
+			$.getJSON(xhrBase + '/user/' + id + '/networks', function(networks) {
 				for (nw in networks) {
 					$el.find('.fr-card-nw-' + nw)
 						.toggleClass('on', networks[nw].connected)
