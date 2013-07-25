@@ -49,7 +49,7 @@ class ExpertRecommenderControllerImpl @Inject()(
 
   override def enabled() = true
 
-  def init() = {
+  val init = {
     val flagKey = new TopicModelFlagKey()
     val flag = centralConfig(flagKey)
     val rcmder = createExpertRecommender(flag)
