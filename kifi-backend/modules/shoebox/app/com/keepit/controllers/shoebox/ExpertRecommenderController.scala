@@ -26,9 +26,14 @@ import com.keepit.learning.topicmodel._
 import com.keepit.common.controller.ShoeboxServiceController
 import com.keepit.common.akka.SlowRunningExecutionContext
 
+@ImplementedBy(classOf[ExpertRecommenderControllerImpl])
+trait ExpertRecommenderController extends ShoeboxServiceController{
+  def enabled(): Boolean
+  def suggestExperts(): Action[AnyContent]
+}
 
 @Singleton
-class ExpertRecommenderController @Inject()(
+class ExpertRecommenderControllerImpl @Inject()(
   db: Database,
   userRepo: UserRepo,
   uriTopicRepoA: UriTopicRepoA,
@@ -37,12 +42,14 @@ class ExpertRecommenderController @Inject()(
   bookmarkRepo: BookmarkRepo,
   centralConfig: CentralConfig,
   healthcheckPlugin: HealthcheckPlugin
-) extends ShoeboxServiceController with Logging{
-  var enabled = false
+) extends ExpertRecommenderController with Logging{
+  var serviceEnabled = false
   var scoreMap = MutMap.empty[(Id[User], Int), Float]
   var modelFlag: Option[String] = None
 
-  val init = {
+  override def enabled() = true
+
+  def init() = {
     val flagKey = new TopicModelFlagKey()
     val flag = centralConfig(flagKey)
     val rcmder = createExpertRecommender(flag)
@@ -57,8 +64,8 @@ class ExpertRecommenderController @Inject()(
     }
   }
 
-  private def enableService() = { enabled = true }
-  private def disableService() = { enabled = false }
+  private def enableService() = { serviceEnabled = true }
+  private def disableService() = { serviceEnabled = false }
 
   private def createExpertRecommender(flagOpt: Option[String]): ExpertRecommender = {
     flagOpt match {
@@ -78,7 +85,7 @@ class ExpertRecommenderController @Inject()(
     genScoreMap(rcmder).onComplete{
       case Success(m) => scoreMap = m ; enableService()
       case _ =>  healthcheckPlugin.addError(HealthcheckError(callType = Healthcheck.SEARCH,
-          errorMessage = Some("Error generating user-topic score map")))
+          errorMessage = Some("Error updating topics")))
     }
   }
 
@@ -96,7 +103,7 @@ class ExpertRecommenderController @Inject()(
           scores += (user, x._1) -> x._2
         }
       }
-      log.info(s"topic score map has been generated for ${userIds.size} users. time elapsed: ${(System.currentTimeMillis() - t)/1000.0} seconds")
+      log.info(s"topic score map has been generated for ${userIds.size} users. keySet size: ${scores.keySet.size}. time elapsed: ${(System.currentTimeMillis() - t)/1000.0} seconds")
       scores
     } (SlowRunningExecutionContext.ec)
   }
@@ -123,7 +130,8 @@ class ExpertRecommenderController @Inject()(
     } else Nil
   }
 
-  def suggestExperts() = Action { request =>
+  override def suggestExperts() = Action { request =>
+    println("\n\n\nranking experts")
     val req = request.body.asJson.get.asInstanceOf[JsArray].value
     val urisAndKeepers = req.map{ js =>
       val uriId = Id[NormalizedURI]((js \ "uri").as[Long])
