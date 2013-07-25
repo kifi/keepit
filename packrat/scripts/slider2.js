@@ -39,6 +39,7 @@ var generalPane, noticesPane, commentsPane, threadsPane, threadPane;  // stubs
 generalPane = noticesPane = commentsPane = threadsPane = threadPane = {update: $.noop, updateAll: $.noop};
 
 slider2 = function() {
+
   var $slider, $pane, paneHistory, lastShownAt;
 
   document.addEventListener("keydown", onKeyDown, true);
@@ -276,6 +277,7 @@ slider2 = function() {
   }
 
   function growSlider(fromClass, toClass) {
+    api.port.emit("danny_play", "small_keeper_slideout.mp3");
     $slider.addClass(fromClass).layout().addClass(toClass + " kifi-growing").removeClass(fromClass)
     .on("transitionend", function f(e) {
       if (e.target === this) {
@@ -425,6 +427,7 @@ slider2 = function() {
     }};
 
   function showPane(locator, back, paramsArg) {
+    api.port.emit("danny_play", "big_keper_slideout.mp3");
     api.log("[showPane]", locator, back ? "back" : "");
     var pane = toPaneName(locator);
     (createTemplateParams[pane] || function(cb) {cb()})(function(params, canonicalLocator) {
@@ -660,6 +663,7 @@ slider2 = function() {
       api.port.emit("comments", function(comments) {
         api.port.emit("session", function(session) {
           api.require("scripts/comments.js", function() {
+            api.port.emit("danny_play", "comments.mp3");
             commentsPane.render($box.find(".kifi-pane-tall"), comments, session);
           });
         });

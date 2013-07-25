@@ -93,7 +93,7 @@ api = function() {
           api.log("#a00", "[onDOMContentLoaded] %i url mismatch:\n%s\n%s", details.tabId, details.url, page.url);
         }
         injectContentScripts(page);
-      } else {
+      } else if (details.tabId >= 0) {
         chrome.tabs.get(details.tabId, function(tab) {
           if (tab && selectedTabIds[tab.windowId]) {  // normal win
             api.log("#a00", "[onDOMContentLoaded] no page for", details.tabId, details.url);

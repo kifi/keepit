@@ -15,7 +15,7 @@ import com.keepit.serializer.UriLabelSerializer
 import com.keepit.common.routes.Search
 import com.keepit.common.routes.Common
 import scala.concurrent.Promise
-import com.keepit.common.healthcheck.BenchmarkResults
+import com.keepit.common.healthcheck.{HealthcheckPlugin, BenchmarkResults}
 import play.api.libs.json.JsArray
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
@@ -68,7 +68,8 @@ trait SearchServiceClient extends ServiceClient {
 class SearchServiceClientImpl(
     override val serviceCluster: ServiceCluster,
     override val port: Int,
-    override val httpClient: HttpClient)
+    override val httpClient: HttpClient,
+    val healthcheck: HealthcheckPlugin)
   extends SearchServiceClient() {
 
   def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isKeep: Boolean): Unit = {

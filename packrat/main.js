@@ -260,7 +260,7 @@ const socketHandlers = {
       api.tabs.eachSelected(tellTab);
       tabsShowingNotificationsPane.forEach(tellTab);
       tellTabsNoticeCountIfChanged();
-      api.play("media/notification.mp3");
+      dannyPlay("notification.mp3") || api.play("media/notification.mp3");
     }
     function tellTab(tab) {
       if (told[tab.id]) return;
@@ -390,6 +390,9 @@ const socketHandlers = {
 // ===== Handling messages from content scripts or other extension pages
 
 api.port.on({
+  danny_play: function(filename) {
+    dannyPlay(filename);
+  },
   get_keeps: searchOnServer,
   get_chatter: function(urls, respond) {
     api.log("[get_chatter]", urls);
@@ -402,6 +405,7 @@ api.port.on({
   },
   keep: function(data, _, tab) {
     api.log("[keep]", data);
+    dannyPlay(data.how == "private" ? "keep_private.mp3" : "keep.mp3");
     (pageData[tab.nUri] || {}).kept = data.how;
     var bm = {
       title: data.title,
@@ -415,6 +419,7 @@ api.port.on({
   },
   unkeep: function(_, _, tab) {
     api.log("[unkeep]", tab.url);
+    dannyPlay("unkeep.mp3");
     delete (pageData[tab.nUri] || {}).kept;
     ajax("POST", "/bookmarks/remove", {url: tab.url}, function(o) {
       api.log("[unkeep] response:", o);
@@ -426,6 +431,7 @@ api.port.on({
   },
   set_private: function(priv, _, tab) {
     api.log("[setPrivate]", tab.url, priv);
+    dannyPlay("keep_private.mp3");
     ajax("POST", "/bookmarks/private", {url: tab.url, private: priv}, function(o) {
       api.log("[setPrivate] response:", o);
     });
@@ -1099,6 +1105,13 @@ api.on.update.add(function() {
 // ===== Session management
 
 var session, socket, onReadyTemp;
+
+function dannyPlay(filename) {
+  if (session && ~session.experiments.indexOf("dannyPlay")) {
+    api.play("media/danny/" + filename);
+    return true;
+  }
+}
 
 function authenticate(callback, retryMs) {
   if (api.prefs.get("env") === "development") {

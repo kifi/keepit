@@ -138,6 +138,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
     });
   })
   .on("click", ".kifi-compose-snapshot", function() {
+    api.port.emit("danny_play", "look_here.mp3");
     snapshot.take(composeTypeName, function(selector) {
       $d.focus();
       if (!selector) return;

@@ -35,10 +35,11 @@ section.main {display: table-cell; vertical-align: top; position: relative; min-
 .left-col .active {background-color: #e3e6ee}
 .left-col>*>h3:not(.active):hover {background-color: #e9ecf2}
 .left-col h3>a {display: block; padding: 0 6px 0 40px; color: #818692}
-.left-col .keep-count {float: right; margin: 10px 0 0; border: 1px solid #b8c5d2; border-radius: 10.5px; color: #628196; font-size: 12px; line-height: 20px; height: 19px; padding: 0 12px}
-@-moz-document url-prefix() {.left-col .keep-count {line-height: 18px}}
-.left-col .active .keep-count {color: #fff; background: #b8c5d2}
-.left-col>*>h3:not(.active):hover .keep-count {background: #eff2f7}
+.left-col .nav-count {float: right; margin: 10px 0 0; border: 1px solid #b8c5d2; border-radius: 10.5px; color: #628196; font-size: 12px; line-height: 20px; height: 19px; padding: 0 12px}
+@-moz-document url-prefix() {.left-col .nav-count {line-height: 18px}}
+.left-col .nav-count:empty {display: none}
+.left-col .active .nav-count {color: #fff; background: #b8c5d2}
+.left-col>*>h3:not(.active):hover .nav-count {background: #eff2f7}
 .left-col .active .view-name {color: #556179}
 .left-col .view-name::before {content: " "; display: inline-block; height: 21px; padding: 10px 0; background: url(../img/nav-icons.png) 0 no-repeat; background-size: auto 21px; vertical-align: top}
 .left-col .my-keeps .view-name::before {width: 21px; margin-right: 7px; background-position: -21px}
@@ -66,9 +67,9 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 .collection.renamed {-webkit-transition: background-color .16s; transition: background-color .16s}
 .collection.drop-hover {background-color: #6fa6ef}
 .collection.drop-hover .view-name {color: #fff}
-.collection.drop-hover .keep-count {background-color: #fff; border-color: #fff; color: #628196}
-.collection .keep-count {margin-top: 9px}
-.collection.renaming .keep-count {display: none}
+.collection.drop-hover .nav-count {background-color: #fff; border-color: #fff; color: #628196}
+.collection .nav-count {margin-top: 9px}
+.collection.renaming .nav-count {display: none}
 .coll-tri {position: absolute; top: 0; bottom: 0; left: -33px; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer; -webkit-transition: left .16s; transition: left .16s}
 .active>.coll-tri {background-color: #b8c5d2}
 .coll-tri::before {content: " "; border-width: 4px 4px 0; border-style: solid; border-color: #b8c5d2 transparent; font-size: 0; line-height: 0; vertical-align: 1px}
@@ -167,8 +168,8 @@ span.edit::before, span.save::before { display: inline-block; position: absolute
 .profile-nw.not-connected { transition: background .25s ease-in 50ms; }
 
 .friends {padding: 13px 20px 0}
-.friends-tabs {margin: 15px 0 24px; line-height: 46px; border-bottom: 2px solid #e3e6ee}
-.friends-tabs>a {display: inline-block; border: solid transparent; border-radius: 6px 6px 0 0; border-width: 2px 2px 0; padding: 0 40px; font-size: 18px; font-weight: 300; vertical-align: top; position: relative; bottom: -2px; -webkit-font-smoothing: antialiased}
+.friends-tabs {margin: 15px 0 24px; line-height: 46px; border-bottom: 2px solid #e3e6ee; white-space: nowrap}
+.friends-tabs>a {display: inline-block; border: solid transparent; border-radius: 6px 6px 0 0; border-width: 2px 2px 0; padding: 0 25px; font-size: 18px; font-weight: 300; vertical-align: top; position: relative; bottom: -2px; -webkit-font-smoothing: antialiased}
 .friends-tabs>a:not([href]) {border-color: #e3e6ee; background-color: #fff; color: #34495e}
 .friends-tabs>a[href]:not(:hover) {color: #627d99}
 .friends-tabs>a[href]:focus {border-color: rgba(227,230,238,.3)}
