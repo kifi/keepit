@@ -45,7 +45,7 @@ class SearchController @Inject()(
   def friendMapJson(userId: Id[User], q: Option[String] = None, minKeeps: Option[Int]) = Action { implicit request =>
     val data = new ArrayBuffer[JsArray]
     q.foreach{ q =>
-      val friendIdsFuture = shoeboxClient.getConnectedUsers(userId)
+      val friendIdsFuture = shoeboxClient.getSearchFriends(userId)
       val friendIds = Await.result(friendIdsFuture, 5 seconds)
       val allUserIds = (friendIds + userId).toArray
 

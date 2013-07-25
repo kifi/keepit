@@ -106,6 +106,8 @@ GET     /site/user/:id/networks     @com.keepit.controllers.website.UserControll
 POST    /site/user/:id/unfriend     @com.keepit.controllers.website.UserController.unfriend(id: ExternalId[User])
 POST    /site/user/:id/friend       @com.keepit.controllers.website.UserController.friend(id: ExternalId[User])
 POST    /site/user/:id/ignoreRequest @com.keepit.controllers.website.UserController.ignoreFriendRequest(id: ExternalId[User])
+POST    /site/user/:id/exclude      @com.keepit.controllers.website.UserController.excludeFriend(id: ExternalId[User])
+POST    /site/user/:id/include      @com.keepit.controllers.website.UserController.includeFriend(id: ExternalId[User])
 GET     /site/user/outgoingFriendRequests @com.keepit.controllers.website.UserController.outgoingFriendRequests
 GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserController.incomingFriendRequests
 GET     /site/user/connections      @com.keepit.controllers.website.UserController.connections()
@@ -351,6 +353,7 @@ POST    /internal/shoebox/database/reportArticleSearchResult  @com.keepit.contro
 GET     /internal/shoebox/database/socialUserInfoByNetworkAndSocialId @com.keepit.controllers.shoebox.ShoeboxController.getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String)
 GET     /internal/shoebox/database/socialUserInfosByUserId @com.keepit.controllers.shoebox.ShoeboxController.getSocialUserInfosByUserId(id: Id[User])
 GET     /internal/shoebox/database/sessionByExternalId @com.keepit.controllers.shoebox.ShoeboxController.getSessionByExternalId(sessionId: ExternalId[UserSession])
+GET     /internal/shoebox/database/searchFriends @com.keepit.controllers.shoebox.ShoeboxController.searchFriends(userId: Id[User])
 
 POST    /internal/shoebox/channel/user                @com.keepit.controllers.shoebox.ShoeboxController.userChannelFanout()
 POST    /internal/shoebox/channel/userBroadcast       @com.keepit.controllers.shoebox.ShoeboxController.userChannelBroadcastFanout()
