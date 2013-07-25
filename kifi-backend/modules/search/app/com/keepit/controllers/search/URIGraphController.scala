@@ -45,7 +45,7 @@ class URIGraphController @Inject()(
   def sharingUserInfo(userId: Id[User]) = Action(parse.json) { implicit request =>
     val infosFuture = future {
       val searcher = mainSearcherFactory.getURIGraphSearcher(userId)
-      val ids = request.body.as[Seq[Int]].map(Id[NormalizedURI](_))
+      val ids = request.body.as[Seq[Long]].map(Id[NormalizedURI](_))
       ids map searcher.getSharingUserInfo
     }
     Async {
