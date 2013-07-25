@@ -42,14 +42,14 @@ class URIGraphController @Inject()(
     }
   }
 
-  def sharingUserInfo(userId: Id[User], uriIds: String) = Action { implicit request =>
-    val jsonFuture = future {
+  def sharingUserInfo(userId: Id[User]) = Action(parse.json) { implicit request =>
+    val infosFuture = future {
       val searcher = mainSearcherFactory.getURIGraphSearcher(userId)
-      val ids = uriIds.split(",").map(_.trim).collect { case idStr if !idStr.isEmpty => Id[NormalizedURI](idStr.toLong) }
-      Json.toJson(ids map searcher.getSharingUserInfo)
+      val ids = request.body.as[Seq[Long]].map(Id[NormalizedURI](_))
+      ids map searcher.getSharingUserInfo
     }
-    Async{
-      jsonFuture.map(js => Ok(js))
+    Async {
+      infosFuture.map(info => Ok(Json.toJson(info)))
     }
   }
 

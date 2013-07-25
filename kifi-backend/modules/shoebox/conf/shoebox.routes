@@ -107,7 +107,10 @@ POST    /site/user/me               @com.keepit.controllers.website.UserControll
 GET     /site/user/networks         @com.keepit.controllers.website.UserController.socialNetworkInfo()
 GET     /site/user/:id/networks     @com.keepit.controllers.website.UserController.friendNetworkInfo(id: ExternalId[User])
 POST    /site/user/:id/unfriend     @com.keepit.controllers.website.UserController.unfriend(id: ExternalId[User])
-POST    /site/user/:id/friend       @com.keepit.controllers.website.UserController.friendRequest(id: ExternalId[User])
+POST    /site/user/:id/friend       @com.keepit.controllers.website.UserController.friend(id: ExternalId[User])
+POST    /site/user/:id/ignoreRequest @com.keepit.controllers.website.UserController.ignoreFriendRequest(id: ExternalId[User])
+GET     /site/user/outgoingFriendRequests @com.keepit.controllers.website.UserController.outgoingFriendRequests
+GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserController.incomingFriendRequests
 GET     /site/user/connections      @com.keepit.controllers.website.UserController.connections()
 GET     /site/user/connections/count @com.keepit.controllers.website.UserController.connectionCount()
 GET     /site/user/all-connections  @com.keepit.controllers.website.UserController.getAllConnections()
