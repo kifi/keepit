@@ -2,21 +2,26 @@ package com.keepit.common.service
 
 import scala.concurrent.Future
 
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, ErrorMessage, HealthcheckPlugin}
 import com.keepit.common.logging.Logging
-import com.keepit.common.zookeeper.ServiceCluster
 import com.keepit.common.net.{ClientResponse, HttpClient}
 import com.keepit.common.routes._
+import com.keepit.common.zookeeper.ServiceCluster
 
 import play.api.libs.json.{JsNull, JsValue}
-import play.api.mvc.Call
 
 class ServiceNotAvailableException(serviceType: ServiceType)
   extends Exception(s"Service of type ${serviceType.name} is not available")
+
+object ServiceClient {
+  val MaxUrlLength = 1000
+}
 
 trait ServiceClient extends Logging {
   protected def httpClient: HttpClient
 
   val serviceCluster: ServiceCluster
+  val healthcheck: HealthcheckPlugin
 
   private def nextHost(): String = serviceCluster.nextService map { service =>
     service.instanceInfo.localHostname
@@ -40,9 +45,16 @@ trait ServiceClient extends Logging {
 
   protected def call(call: ServiceRoute, body: JsValue = JsNull): Future[ClientResponse] = callUrl(call, url(call.url), body)
 
-  protected def callUrl(call: ServiceRoute, url: String, body: JsValue): Future[ClientResponse] = call match {
-    case c @ ServiceRoute(GET, _, _*) => httpClient.getFuture(url)
-    case c @ ServiceRoute(POST, _, _*) => httpClient.postFuture(url, body)
+  protected def callUrl(call: ServiceRoute, url: String, body: JsValue): Future[ClientResponse] = {
+    if (url.length > ServiceClient.MaxUrlLength) {
+      healthcheck.addError(HealthcheckError(callType = Healthcheck.INTERNAL, errorMessage = Some(ErrorMessage(
+        "Request URI too long!", Some(s"Request URI length ${url.length} > ${ServiceClient.MaxUrlLength}: $url"
+      )))))
+    }
+    call match {
+      case c @ ServiceRoute(GET, _, _*) => httpClient.getFuture(url)
+      case c @ ServiceRoute(POST, _, _*) => httpClient.postFuture(url, body)
+    }
   }
 
   protected def broadcast(call: ServiceRoute, body: JsValue = JsNull): Seq[Future[ClientResponse]] =
