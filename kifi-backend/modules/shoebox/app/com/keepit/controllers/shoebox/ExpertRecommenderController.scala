@@ -85,7 +85,7 @@ class ExpertRecommenderControllerImpl @Inject()(
     genScoreMap(rcmder).onComplete{
       case Success(m) => scoreMap = m ; enableService()
       case _ =>  healthcheckPlugin.addError(HealthcheckError(callType = Healthcheck.SEARCH,
-          errorMessage = Some("Error updating topics")))
+          errorMessage = Some("Error generating user-topic score map")))
     }
   }
 
