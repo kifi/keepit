@@ -88,4 +88,9 @@ case class SearchCacheModule(cachePluginModules: CachePluginModule*) extends Cac
   @Provides
   def userConnectionCountCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserConnectionCountCache((innerRepo, 10 seconds), (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def searchFriendsCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SearchFriendsCache((innerRepo, 10 seconds), (outerRepo, 7 days))
 }

@@ -51,7 +51,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
-  def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]]
   def reportArticleSearchResult(res: ArticleSearchResult): Unit
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
@@ -83,6 +82,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def uriChannelFanout(uri: String, msg: JsArray): Seq[Future[Int]]
   def uriChannelCountFanout(): Seq[Future[Int]]
   def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]]
+  def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -94,11 +94,11 @@ case class ShoeboxCacheProvider @Inject() (
     basicUserCache: BasicUserUserIdCache,
     activeSearchConfigExperimentsCache: ActiveExperimentsCache,
     userExperimentCache: UserExperimentCache,
-    userConnCache: UserConnectionIdCache,
     externalUserIdCache: ExternalUserIdCache,
     socialUserNetworkCache: SocialUserInfoNetworkCache,
     socialUserCache: SocialUserInfoUserCache,
-    userSessionExternalIdCache: UserSessionExternalIdCache)
+    userSessionExternalIdCache: UserSessionExternalIdCache,
+    searchFriendsCache: SearchFriendsCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
@@ -109,7 +109,7 @@ class ShoeboxServiceClientImpl @Inject() (
     extends ShoeboxServiceClient with Logging{
 
   // request consolidation
-  private[this] val consolidateConnectedUsersReq = new RequestConsolidator[UserConnectionIdKey, Set[Id[User]]](ttl = 3 seconds)
+  private[this] val consolidateSearchFriendsReq = new RequestConsolidator[SearchFriendsKey, Set[Id[User]]](ttl = 3 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[ClickHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
   private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[BrowsingHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
   private[this] val consolidateGetExperimentsReq = new RequestConsolidator[String, Seq[SearchConfigExperiment]](ttl = 30 seconds)
@@ -226,8 +226,8 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]] = consolidateConnectedUsersReq(UserConnectionIdKey(userId)) { key =>
-    cacheProvider.userConnCache.getOrElseFuture(key) {
+  def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = consolidateSearchFriendsReq(SearchFriendsKey(userId)){ key=>
+    cacheProvider.searchFriendsCache.getOrElseFuture(key) {
       call(Shoebox.internal.getConnectedUsers(userId)).map {r =>
         r.json.as[JsArray].value.map(jsv => Id[User](jsv.as[Long])).toSet
       }

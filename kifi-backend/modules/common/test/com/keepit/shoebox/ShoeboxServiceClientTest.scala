@@ -48,7 +48,7 @@ class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
     "get connected users' ids" in {
       running(new TestApplication(shoeboxServiceClientTestModules:_*)) {
         val shoeboxServiceClient = inject[ShoeboxServiceClient]
-        val userIdsFuture = shoeboxServiceClient.getConnectedUsers(user1965.id.get)
+        val userIdsFuture = shoeboxServiceClient.getSearchFriends(user1965.id.get)
         Await.result(userIdsFuture, Duration(5, SECONDS)) ===  Set(1933,1935,1927,1921).map(Id[User](_))
 
       }
