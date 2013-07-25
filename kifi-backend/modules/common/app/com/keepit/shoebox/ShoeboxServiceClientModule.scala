@@ -1,6 +1,7 @@
 package com.keepit.shoebox
 
 import com.google.inject.{Provides, Singleton}
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceDiscovery
 import com.keepit.common.service.ServiceType
@@ -17,11 +18,12 @@ case class ProdShoeboxServiceClientModule() extends ShoeboxServiceClientModule {
   def shoeboxServiceClient (
     client: HttpClient,
     cacheProvider: ShoeboxCacheProvider,
-    serviceDiscovery: ServiceDiscovery): ShoeboxServiceClient = {
+    serviceDiscovery: ServiceDiscovery,
+    healthcheck: HealthcheckPlugin): ShoeboxServiceClient = {
     new ShoeboxServiceClientImpl(
       serviceDiscovery.serviceCluster(ServiceType.SHOEBOX),
       current.configuration.getInt("service.shoebox.port").get,
-      client, cacheProvider)
+      client, cacheProvider, healthcheck)
   }
 
 }

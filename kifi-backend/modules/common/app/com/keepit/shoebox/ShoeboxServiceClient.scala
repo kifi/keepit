@@ -11,6 +11,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.State
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.net.HttpClient
@@ -103,7 +104,8 @@ class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
   override val port: Int,
   override val httpClient: HttpClient,
-  cacheProvider: ShoeboxCacheProvider)
+  cacheProvider: ShoeboxCacheProvider,
+  val healthcheck: HealthcheckPlugin)
     extends ShoeboxServiceClient with Logging{
 
   // request consolidation
@@ -397,10 +399,10 @@ class ShoeboxServiceClientImpl @Inject() (
       Json.obj("uri" -> JsNumber(uri.id), "users" -> JsArray(users.map{_.id}.map{JsNumber(_)}) )
     })
     call(Shoebox.internal.suggestExperts(), payload).map{ r =>
-      println("\n\n experts received \n\n")
+      log.info("\n\n experts received \n\n")
       r.json match {
         case jso: JsValue => {
-          println("\n\n got JsValue \n")
+          log.info("\n\n got JsValue \n")
           val rv = jso.as[JsArray].value.map{x => x.as[Long]}.map{Id[User](_)}
           rv.foreach(println(_))
           rv
