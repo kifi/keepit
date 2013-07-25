@@ -74,16 +74,6 @@ POST    /sign-up/terms              @com.keepit.controllers.website.OnboardingCo
 GET     /feedback                   @com.keepit.controllers.website.FeedbackController.feedback
 GET     /feedback/form              @com.keepit.controllers.website.FeedbackController.feedbackForm
 
-# Temporary hack for kifi.com site before we fully integrate it with Play!
-GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
-GET     /site/collection/:id        @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id: String)
-GET     /site/search                @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
-GET     /site/profile               @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
-GET     /site/friends               @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
-GET     /site/friends/invite        @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
-GET     /site/friends/requests      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
-GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSite(path: String, id = "")
-
 ##########################################
 # Web API
 ##########################################
@@ -123,6 +113,17 @@ GET     /site/user/connections/count @com.keepit.controllers.website.UserControl
 GET     /site/user/all-connections  @com.keepit.controllers.website.UserController.getAllConnections()
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
+
+# Temporary hack for kifi.com site before we fully integrate it with Play!
+GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/collection/:id        @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id: String)
+GET     /site/search                @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/profile               @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/friends               @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/friends/invite        @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/friends/requests      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSite(path: String, id = "")
+# NOTE: /site/*path route above must be last /site/ route because it will break any below it!
 
 ##########################################
 # External Services API
