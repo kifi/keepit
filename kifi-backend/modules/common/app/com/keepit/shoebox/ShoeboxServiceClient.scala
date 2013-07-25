@@ -11,6 +11,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.State
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.net.HttpClient
@@ -103,7 +104,8 @@ class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
   override val port: Int,
   override val httpClient: HttpClient,
-  cacheProvider: ShoeboxCacheProvider)
+  cacheProvider: ShoeboxCacheProvider,
+  val healthcheck: HealthcheckPlugin)
     extends ShoeboxServiceClient with Logging{
 
   // request consolidation
