@@ -10,6 +10,7 @@ import com.keepit.model._
 import com.keepit.realtime.{DeviceType, UrbanAirship}
 
 import play.api.libs.json._
+import play.api.libs.json.Json.toJson
 
 @Singleton
 class UserController @Inject() (db: Database,
@@ -61,13 +62,13 @@ class UserController @Inject() (db: Database,
   }
 
   def socialNetworkInfo() = AuthenticatedJsonAction { request =>
-    Ok(Json.toJson(db.readOnly { implicit s =>
+    Ok(toJson(db.readOnly { implicit s =>
       socialUserRepo.getByUser(request.userId).map(BasicSocialUser from _)
     }))
   }
 
   def friendNetworkInfo(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
-    Ok(Json.toJson(networkInfoLoader.load(request.userId, id)))
+    Ok(toJson(networkInfoLoader.load(request.userId, id)))
   }
 
   def unfriend(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
@@ -135,7 +136,7 @@ class UserController @Inject() (db: Database,
         emails = Some(emailRepo.getByUser(request.userId).map(_.address))
       )
     }
-    Ok(Json.toJson(basicUser).as[JsObject] deepMerge Json.toJson(info).as[JsObject])
+    Ok(toJson(basicUser).as[JsObject] ++ toJson(info).as[JsObject] ++ Json.obj("experiments" -> request.experiments.map(_.value)))
   }
 
   private val SitePrefNames = Set("site_left_col_width")
@@ -181,7 +182,7 @@ class UserController @Inject() (db: Database,
     Ok(JsArray(connections.map { conn =>
       Json.obj(
         "label" -> conn._1.fullName,
-        "image" -> Json.toJson(conn._1.getPictureUrl(75, 75)),
+        "image" -> toJson(conn._1.getPictureUrl(75, 75)),
         "value" -> (conn._1.networkType + "/" + conn._1.socialId.id),
         "status" -> conn._2
       )
