@@ -178,8 +178,8 @@ span.edit::before, span.save::before { display: inline-block; position: absolute
 input.friends-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; padding: 0 13px; font-size: 14px; -webkit-font-smoothing: antialiased}
 #friends-list {position: absolute; top: 260px; left: 20px; right: 0; bottom: 0; overflow-y: auto; overflow-x: hidden}
 #friends-list>.antiscroll-inner {position: absolute; left: 0; right: 0; top: 0; bottom: 0; overflow-y: auto; overflow-x: hidden; padding-right: 20px; -moz-box-sizing: border-box; box-sizing: border-box}
+.friend {border-top: 1px solid #e3e6ee; display: table; table-layout: fixed}
 .friend.no-match {display: none}
-.friend-2 {border-top: 1px solid #e3e6ee; display: table; table-layout: fixed}
 .friend:last-child {border-bottom: 1px solid #e3e6ee}
 .friend-pic {display: table-cell; width: 70px; padding: 15px 0; vertical-align: top}
 .friend-pic>img {width: 70px; height: 70px; border-radius: 4px}
