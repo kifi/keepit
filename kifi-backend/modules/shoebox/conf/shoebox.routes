@@ -124,6 +124,11 @@ GET     /site/user/all-connections  @com.keepit.controllers.website.UserControll
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
 
+##########################################
+# External Services API
+##########################################
+
+#todo(eishay): change routes and callback in sendgrid
 POST    /admin/logging/emails       @com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
 
 ##########################################
