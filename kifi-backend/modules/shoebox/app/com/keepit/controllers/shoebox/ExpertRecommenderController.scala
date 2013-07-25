@@ -57,10 +57,13 @@ class ExpertRecommenderControllerImpl @Inject()(
     initScoreMap(rcmder)
 
     centralConfig.onChange(flagKey){ flagOpt =>
+      log.info("flag from zookeeper changed. will rebuild score map.")
       val newFlag = centralConfig(flagKey)
-      modelFlag = newFlag
-      val newRcmder = createExpertRecommender(flag)
-      initScoreMap(newRcmder)
+      if (modelFlag != newFlag) {
+        modelFlag = newFlag
+        val newRcmder = createExpertRecommender(flag)
+        initScoreMap(newRcmder)
+      }
     }
   }
 
