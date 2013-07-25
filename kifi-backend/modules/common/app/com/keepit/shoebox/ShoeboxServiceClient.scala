@@ -398,7 +398,7 @@ class ShoeboxServiceClientImpl @Inject() (
     })
     call(Shoebox.internal.suggestExperts(), payload).map{ r =>
       r.json match {
-        case jso: JsValue => val rv = jso.as[JsArray].value.map{x => x.as[Long]}.map{Id[User](_)}; rv.foreach{ x => println(x) }; rv
+        case jso: JsValue => jso.as[JsArray].value.map{x => x.as[Long]}.map{Id[User](_)}
         case _ => List.empty[Id[User]]
       }
     }
