@@ -178,8 +178,8 @@ span.edit::before, span.save::before { display: inline-block; position: absolute
 input.friends-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; padding: 0 13px; font-size: 14px; -webkit-font-smoothing: antialiased}
 #friends-list {position: absolute; top: 260px; left: 20px; right: 0; bottom: 0; overflow-y: auto; overflow-x: hidden}
 #friends-list>.antiscroll-inner {position: absolute; left: 0; right: 0; top: 0; bottom: 0; overflow-y: auto; overflow-x: hidden; padding-right: 20px; -moz-box-sizing: border-box; box-sizing: border-box}
+.friend {border-top: 1px solid #e3e6ee; display: table; table-layout: fixed}
 .friend.no-match {display: none}
-.friend-2 {border-top: 1px solid #e3e6ee; display: table; table-layout: fixed}
 .friend:last-child {border-bottom: 1px solid #e3e6ee}
 .friend-pic {display: table-cell; width: 70px; padding: 15px 0; vertical-align: top}
 .friend-pic>img {width: 70px; height: 70px; border-radius: 4px}
@@ -190,11 +190,23 @@ input.friends-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; pad
 .friend-actions>*>a {display: inline-block; height: 32px; width: 32px; border-radius: 50%; margin-left: 4px; background-color: #d7e8b1; vertical-align: top; text-align: center; -moz-box-sizing: border-box; box-sizing: border-box}
 .friend-actions>*>a::before {content: " "; display: inline-block; margin-top: 8px; height: 16px; background-image: url(../img/friend-actions.png); background-size: auto 16px}
 .friend-mute::before {width: 17px; background-position: -17px}
-.friend-mute:hover {background-color: #fff; border: 2px solid #e3e6ee}
-.friend-mute:hover::before {background-position: 0; margin-top: 6px}
+
+.friend-mute.muted:not(:hover),
+.friend-mute.muted:not([href]) {background-color: #fff; border: 2px solid #e3e6ee}
+.friend-mute:not(.muted)[href]:hover {background-color: #fff; border: 2px solid #e3e6ee}
+.friend-mute.muted:not(:hover)::before,
+.friend-mute.muted:not([href])::before,
+.friend-mute:not(.muted)[href]:hover::before {background-position: 0; margin-top: 6px}
+
+.unfriended>*>.friend-mute,
+.requested>*>.friend-mute {display: none}
 .friend-status::before {width: 16px; background-position: -34px}
-.friend-status:hover {background-color: #e78881}
-.friend-status:hover::before {width: 19px; background-position: -50px}
+:not(.unfriended)>*>.friend-status:not([disabled]):hover {background-color: #e78881}
+:not(.unfriended)>*>.friend-status:not([disabled]):hover::before {background-position: -50px; width: 20px; position: relative; left: 2px}
+.unfriended>*>.friend-status {background-color: #6fa6ef}
+.unfriended>*>.friend-status::before {background-position: -70px; width: 20px; position: relative; left: 2px}
+.requested>*>.friend-status {background-color: #b8c5d2}
+.requested>*>.friend-status::before {background-position: -90px; width: 20px; position: relative; left: 2px}
 .friend-action-desc {position: absolute; right: 0; bottom: -20px; font-size: 13px; line-height: 1; font-weight: 300; color: #34495e; -webkit-font-smoothing: antialiased}
 
 .network-filters {}
@@ -461,13 +473,13 @@ span.long-text, a.long-text {display: inline-block}
 .friend-networks {font-size: 0; line-height: 0}
 a.friend-nw {width: 17px; height: 17px; display: inline-block; background: url(../img/social_icons.png) 0/68px; margin-right: 2px}
 a.friend-nw-facebook {background-position: 0 17px}
-a.friend-nw-facebook.on {background-position: 0 0}
+a.friend-nw-facebook[href] {background-position: 0 0}
 a.friend-nw-linkedin {background-position: -17px 17px}
-a.friend-nw-linkedin.on {background-position: -17px 0}
+a.friend-nw-linkedin[href] {background-position: -17px 0}
 a.friend-nw-twitter {background-position: -34px 17px}
-a.friend-nw-twitter.on {background-position: -34px 0}
+a.friend-nw-twitter[href] {background-position: -34px 0}
 a.friend-nw-pinterest {background-position: -51px 17px}
-a.friend-nw-pinterest.on {background-position: -51px 0}
+a.friend-nw-pinterest[href] {background-position: -51px 0}
 
 /* retina image overrides */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
