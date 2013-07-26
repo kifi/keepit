@@ -46,8 +46,8 @@ class TopicUpdater @Inject() (
     }
 
     centralConfig.onChange(flagKey){ flagOpt =>
-      log.info("topic model flag changed. refreshing inactive model")
       if ( flagOpt.isDefined && (flagOpt.get != modelAccessor.getCurrentFlag)) {
+        log.info("topic model flag changed. refreshing inactive model")
         refreshInactiveModel()
         modelAccessor.switchAccessor()    // changes internal flag
       }
@@ -102,25 +102,6 @@ class TopicUpdater @Inject() (
         log.info("model A refreshed")
       }
     }
-  }
-
-
-  def remodel() = {
-    def afterRefresh() = {
-      reset(useActive = false)        // wipe out content associated with the inactive model
-      var catchUp = false
-      while (!catchUp) {
-        val (m, n) = update(useActive = false)
-        if (m.max(n) < fetchSize) catchUp = true
-      }
-      modelAccessor.switchAccessor()      // change internal flag
-      log.info(s"successfully switched to model ${modelAccessor.getCurrentFlag}")
-    }
-
-    log.info(s"TopicUpdater: start remodelling ... ")
-    refreshInactiveModel()
-    afterRefresh()
-    centralConfig.update(flagKey, modelAccessor.getCurrentFlag)     // update flag to zookeeper
   }
 
   private def updateUriTopic(seqNum: SequenceNumber, useActive: Boolean): Int = {
@@ -311,3 +292,10 @@ trait TopicModelConfigKey extends CentralConfigKey {
 }
 
 case class TopicModelFlagKey(val name: String = "topic_model_flag") extends StringCentralConfigKey with TopicModelConfigKey
+
+object RemodelState{
+  val STARTED = "started"
+  val DONE = "done"
+}
+
+case class TopicRemodelKey(val name: String = "topic_model_remodel") extends StringCentralConfigKey with TopicModelConfigKey
