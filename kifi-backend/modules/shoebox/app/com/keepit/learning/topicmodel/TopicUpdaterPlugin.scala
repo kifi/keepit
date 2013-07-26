@@ -74,27 +74,44 @@ class TopicUpdaterPluginImpl @Inject() (
   override def onStart() {
      scheduleTask(actorFactory.system, 10 minutes, 2 minutes, actor, UpdateTopic)
      log.info("starting TopicUpdaterPluginImpl")
-     checkRemodelStatusOnStart()
+     scheduleTask(actorFactory.system, 1 minutes, 3650 days, "check remodel status")(checkRemodelStatusOnStart)
   }
   override def onStop() {
      log.info("stopping TopicUpdaterPluginImpl")
      cancelTasks()
   }
 
+  /**
+   * This will be effectively scheduled once for each machine. Only the leader
+   * can initialize the remodel process. If the leader is dead, the new leader
+   * will continue the remodel process.
+   */
   private def checkRemodelStatusOnStart() = {
     val remodelKey = new TopicRemodelKey()
-    if (centralConfig(remodelKey) == RemodelState.STARTED){
-      scheduleTaskOnce(actorFactory.system, 10 minutes, "will continue reconstructing topic model in 10 minutes ...")(actor ! ContinueRemodel)
-    } else if (centralConfig(remodelKey) != RemodelState.DONE){
-      log.info("defaulting remodel state to DONE")
+    val remodelStat = centralConfig(remodelKey)
+
+    if (!remodelStat.isDefined) {
+      log.info("remodel Key is not defined yet. Defaulting to DONE")
       centralConfig(remodelKey) = RemodelState.DONE
+    } else {
+      log.info(s"current remodel status is ${remodelStat.get}")
+    }
+
+    if (remodelStat == RemodelState.STARTED){
+      actor ! ContinueRemodel
+    }
+
+    centralConfig.onChange(remodelKey){ flagOpt =>
+      if (flagOpt.isDefined && (flagOpt.get == RemodelState.NEEDED)){
+        actor ! Remodel
+      }
     }
   }
 
   // triggered from admin
   override def remodel() = {
     log.info("admin reconstruct topic model ...")
-    scheduleTaskOnce(actorFactory.system, 1 seconds, "reconstruct topic model")(actor ! Remodel)
+    centralConfig.update(new TopicRemodelKey(), RemodelState.NEEDED)
   }
 
 }

@@ -294,6 +294,7 @@ trait TopicModelConfigKey extends CentralConfigKey {
 case class TopicModelFlagKey(val name: String = "topic_model_flag") extends StringCentralConfigKey with TopicModelConfigKey
 
 object RemodelState{
+  val NEEDED = "needed"
   val STARTED = "started"
   val DONE = "done"
 }

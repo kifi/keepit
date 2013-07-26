@@ -36,9 +36,10 @@ class TopicRemodeler @Inject()(
       if (continueFromLastInteruption) {
         log.info("remodelling, continued from last interuption")
       } else {
+        log.info("remodelling, from scratch")
         reset(useActive = false)        // wipe out content associated with the inactive model
         centralConfig.update(remodelKey, RemodelState.STARTED)
-        log.info("update remodel state to STARTED")
+        log.info("update remodel status to STARTED")
       }
 
       var catchUp = false
@@ -49,7 +50,7 @@ class TopicRemodeler @Inject()(
       modelAccessor.switchAccessor()                                  // change internal flag
       centralConfig.update(flagKey, modelAccessor.getCurrentFlag)     // update flag to zookeeper. accessor on other machines will switch model
       centralConfig.update(remodelKey, RemodelState.DONE)
-      log.info(s"successfully switched to model ${modelAccessor.getCurrentFlag}")
+      log.info(s"successfully switched to model ${modelAccessor.getCurrentFlag}. Remodel Status updated to DONE.")
     }
 
     log.info(s"TopicUpdater: start remodelling ... ")
