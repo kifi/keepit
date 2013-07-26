@@ -41,6 +41,7 @@ class FriendRequestTest extends Specification with ShoeboxTestInjector {
           friendRequestRepo.getByRecipient(users(2)) must beEmpty
           friendRequestRepo.getBySenderAndRecipient(users(0), users(1)) must beNone
           friendRequestRepo.getBySenderAndRecipient(users(0), users(2)) must beNone
+          friendRequestRepo.getBySenderAndRecipient(users(0), users(1), includeAccepted = true) must beSome
         }
       }
     }

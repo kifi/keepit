@@ -119,6 +119,21 @@ class UserController @Inject() (db: Database,
         friendRequestRepo.getBySenderAndRecipient(sender.id.get, request.userId) map { friendRequest =>
           friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.IGNORED))
           Ok(Json.obj("success" -> true))
+        } getOrElse NotFound(Json.obj("error" -> s"There is no active friend request from user $id."))
+      } getOrElse BadRequest(Json.obj("error" -> s"User with id $id not found."))
+    }
+  }
+
+  def cancelFriendRequest(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+    db.readWrite { implicit s =>
+      userRepo.getOpt(id) map { recipient =>
+        friendRequestRepo.getBySenderAndRecipient(request.userId, recipient.id.get, true) map { friendRequest =>
+          if (friendRequest.state == FriendRequestStates.ACCEPTED) {
+            BadRequest(Json.obj("error" -> s"The friend request has already been accepted", "alreadyAccepted" -> true))
+          } else {
+            friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.INACTIVE))
+            Ok(Json.obj("success" -> true))
+          }
         } getOrElse NotFound(Json.obj("error" -> s"There is no active friend request for user $id."))
       } getOrElse BadRequest(Json.obj("error" -> s"User with id $id not found."))
     }
