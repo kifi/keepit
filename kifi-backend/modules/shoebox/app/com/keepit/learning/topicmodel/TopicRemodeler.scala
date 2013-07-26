@@ -46,8 +46,8 @@ class TopicRemodeler @Inject()(
         val (m, n) = update(useActive = false)
         if (m.max(n) < fetchSize) catchUp = true
       }
-      modelAccessor.switchAccessor()      // change internal flag
-      centralConfig.update(flagKey, modelAccessor.getCurrentFlag)     // update flag to zookeeper
+      modelAccessor.switchAccessor()                                  // change internal flag
+      centralConfig.update(flagKey, modelAccessor.getCurrentFlag)     // update flag to zookeeper. accessor on other machines will switch model
       centralConfig.update(remodelKey, RemodelState.DONE)
       log.info(s"successfully switched to model ${modelAccessor.getCurrentFlag}")
     }

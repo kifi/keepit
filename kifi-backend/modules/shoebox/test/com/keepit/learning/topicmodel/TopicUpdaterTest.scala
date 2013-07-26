@@ -122,7 +122,7 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
         val topicUpdater = new TopicUpdater(db, uriRepo, bmRepo, articleStore, accessor, factory, centralConfig)
         val topicRemodeler = new TopicRemodeler(db, uriRepo, bmRepo, articleStore, accessor, factory, centralConfig)
         topicUpdater.update()
-        topicRemodeler.remodel(false)
+        topicRemodeler.remodel(continueFromLastInteruption = false)
 
         val uriTopicRepoB = inject[UriTopicRepoB]
         val userTopicRepoB = inject[UserTopicRepoB]
