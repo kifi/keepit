@@ -46,10 +46,11 @@ class UserController @Inject() (db: Database,
     Ok(Json.obj(
       "connections" -> db.readOnly { implicit s =>
         val searchFriends = searchFriendRepo.getSearchFriends(request.userId)
+        val socialUsers = socialUserRepo.getByUser(request.userId)
         userConnectionRepo.getConnectedUsers(request.userId).map { userId =>
           Json.toJson(basicUserRepo.load(userId)).asInstanceOf[JsObject] ++ Json.obj(
             "searchFriend" -> searchFriends.contains(userId),
-            "networks" -> networkInfoLoader.load(request.userId, userId)
+            "networks" -> networkInfoLoader.load(socialUsers, userId)
           )
         }
       }

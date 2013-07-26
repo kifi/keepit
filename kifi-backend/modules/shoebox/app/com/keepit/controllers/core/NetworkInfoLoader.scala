@@ -27,9 +27,8 @@ class NetworkInfoLoader @Inject() (
   socialConnectionRepo: SocialConnectionRepo,
   socialUserInfoRepo: SocialUserInfoRepo) {
 
-  def load(userId: Id[User], friendId: Id[User]): Map[SocialNetworkType, NetworkInfo] = {
+  def load(mySocialUsers: Seq[SocialUserInfo], friendId: Id[User]): Map[SocialNetworkType, NetworkInfo] = {
     db.readOnly { implicit s =>
-      val mySocialUsers = socialUserInfoRepo.getByUser(userId)
       for (su <- socialUserInfoRepo.getByUser(friendId)) yield {
         su.networkType -> NetworkInfo(
           profileUrl = su.getProfileUrl,
@@ -43,7 +42,8 @@ class NetworkInfoLoader @Inject() (
   }
 
   def load(userId: Id[User], friendId: ExternalId[User]): Map[SocialNetworkType, NetworkInfo] = {
-    db.readOnly { implicit s => userRepo.getOpt(friendId) } map { f => load(userId, f.id.get) } getOrElse Map.empty
+    db.readOnly { implicit s =>
+      userRepo.getOpt(friendId).map(f => socialUserInfoRepo.getByUser(userId) -> f.id.get)
+    } map { case (sus, fid) => load(sus, fid) } getOrElse Map.empty
   }
-
 }
