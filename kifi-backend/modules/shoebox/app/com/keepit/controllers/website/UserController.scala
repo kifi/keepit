@@ -127,7 +127,8 @@ class UserController @Inject() (db: Database,
   def cancelFriendRequest(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
     db.readWrite { implicit s =>
       userRepo.getOpt(id) map { recipient =>
-        friendRequestRepo.getBySenderAndRecipient(request.userId, recipient.id.get, true) map { friendRequest =>
+        friendRequestRepo.getBySenderAndRecipient(request.userId, recipient.id.get,
+            Set(FriendRequestStates.ACCEPTED, FriendRequestStates.ACTIVE)) map { friendRequest =>
           if (friendRequest.state == FriendRequestStates.ACCEPTED) {
             BadRequest(Json.obj("error" -> s"The friend request has already been accepted", "alreadyAccepted" -> true))
           } else {
