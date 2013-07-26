@@ -53,7 +53,8 @@ class UserController @Inject() (db: Database,
           Json.toJson(basicUserRepo.load(userId)).asInstanceOf[JsObject] ++ Json.obj(
             "searchFriend" -> searchFriends.contains(userId),
             "networks" -> networkInfoLoader.load(socialUsers, userId),
-            "unfriended" -> unfriended
+            "unfriended" -> unfriended,
+            "description" -> userValueRepo.getValue(userId, "user_description")
           )
         }
       }
