@@ -415,7 +415,7 @@ $(function() {
 		var val = $.trim(this.value);
 		if (val) {
 			var prefixes = val.split(/\s+/);
-			$friendsList.find('.friend').each(function() {
+			$friendsList.find('.friend').filter(function() {
 				var $f = $(this), o = $f.data('o'), names = $.trim(o.firstName + ' ' + o.lastName).split(/\s+/);
 				$f.toggleClass('no-match', !prefixes.every(function(p) {
 					return names.some(function(n) {return 0 === p.localeCompare(n.substring(0, p.length), undefined, compareSearch)});
@@ -427,21 +427,63 @@ $(function() {
 	});
 	var $friendsList = $('#friends-list').antiscroll({x: false, width: '100%'})
 	.on('mouseover', '.friend-status', function() {
-		$(this).nextAll('.friend-action-desc').text('Unfriend this person');
+		var $a = $(this), o = $a.closest('.friend').data('o');
+		$(this).nextAll('.friend-action-desc').text({
+			unfriended: 'Add ' + o.firstName + ' as a friend',
+			requested: 'Cancel friend request',
+			'': 'Unfriend ' + o.firstName}[o.state]);
+	}).on('click', '.friend-status', function() {
+		var $a = $(this), o = $a.closest('.friend').data('o'), xhr;
+		switch (o.state) {
+			case 'unfriended':
+				xhr = $.post(xhrBase + '/user/' + o.id + '/friend', function(data) {
+					o.state = data.acceptedRequest ? '' : 'requested';
+				}); break;
+			case 'requested':
+				xhr = $.post(xhrBase + '/user/' + o.id + '/cancelRequest', function(data) {
+					o.state = 'unfriended';
+				}).error(function() {
+					if (xhr && xhr.responseText && JSON.parse(xhr.responseText).alreadyAccepted) {
+						o.state = 'friend';
+					}
+				}); break;
+			default:
+				xhr = $.post(xhrBase + '/user/' + o.id + '/unfriend', function(data) {
+					o.state = 'unfriended';
+				});
+		}
+		xhr.always(function() {
+			$a.removeAttr('href').closest('.friend-actions').removeClass('requested unfriended').addClass(o.state);
+			$a.nextAll('.friend-action-desc').text('');
+		});
 	}).on('mouseover', '.friend-mute', function() {
-		$(this).nextAll('.friend-action-desc').text('Don’t show this person’s keeps in my search results');
+		var $a = $(this), o = $a.closest('.friend').data('o');
+		$a.nextAll('.friend-action-desc').text(o.searchFriend ?
+			'Don’t show ' + o.firstName + '’s keeps in my search results' :
+			'Show ' + o.firstName + '’s keeps in my search results');
+	}).on('click', '.friend-mute[href]', function() {
+		var $a = $(this), o = $a.closest('.friend').data('o'), mute = !!o.searchFriend;
+		$.post(mute ?
+				xhrBase + '/user/' + o.id + '/exclude' :
+				xhrBase + '/user/' + o.id + '/include', function() {
+			o.searchFriend = !mute;
+			$a.removeAttr('href').toggleClass('muted', mute).nextAll('.friend-action-desc').text('');
+		});
 	}).on('mouseout', '.friend-status,.friend-mute', function() {
-		$(this).nextAll('.friend-action-desc').empty();
-	}).on('transitionend', function() {
-		friendsScroller.refresh();
+		$(this).attr('href', 'javascript:').nextAll('.friend-action-desc').empty();
 	});
-	$friendsList.find('.antiscroll-inner').scroll(function() { // infinite scroll
+	$friendsList.find('.antiscroll-inner').scroll(function() {
 		$friendsList.prev().toggleClass('scrolled', this.scrollTop > 0);
 	});
 	var friendsScroller = $friendsList.data("antiscroll");
 	$(window).resize(friendsScroller.refresh.bind(friendsScroller));
 	var friendsTmpl = Tempo.prepare($friendsList).when(TempoEvent.Types.ITEM_RENDER_COMPLETE, function(ev) {
-		$(ev.element).data("o", ev.item);
+		var o = ev.item, $f = $(ev.element).data("o", o), url;
+		for (var nw in o.networks) {  // TODO: move networks to template (Tempo seems broken)
+			if (o.networks[nw].connected && (url = o.networks[nw].profileUrl)) {
+				$f.find('.friend-nw-' + nw).attr('href', url);
+			}
+		}
 	}).when(TempoEvent.Types.RENDER_COMPLETE, function() {
 		$friendsLoading.hide();
 		friendsScroller.refresh();
@@ -451,16 +493,25 @@ $(function() {
 		$('.friends-filter').val('');
 		friendsTmpl.clear();
 		$friendsLoading.show();
-		$.getJSON(xhrBase + '/user/connections', function(data) {
-			console.log('[prepFriendsTab] friends:', data.connections.length);
-			$.when(promise.myNetworks).then(function() {
-				var friends = data.connections;
-				for (var f, i = 0; i < friends.length; i++) {
-					(f = friends[i]).networks = {};
-					f.picUri = formatPicUrl(f.id, f.pictureName, 200);
-				}
-				friendsTmpl.render(friends);
+		$.when(
+			$.getJSON(xhrBase + '/user/connections'),
+			$.getJSON(xhrBase + '/user/outgoingFriendRequests'))
+		.done(function(a0, a1) {
+			var friends = a0[0].connections, requests = a1[0];
+			var requested = requests.reduce(function(o, u) {o[u.id] = true; return o}, {});
+			console.log('[prepFriendsTab] friends:', friends.length, 'req:', requests.length);
+			for (var f, i = 0; i < friends.length; i++) {
+				f = friends[i];
+				f.picUri = formatPicUrl(f.id, f.pictureName, 200);
+				f.state = requested[f.id] ? 'requested' : f.unfriended ? 'unfriended' : '';
+				delete f.unfriended;
+			}
+			friends.sort(function(f1, f2) {
+				return f1.firstName.localeCompare(f2.firstName, undefined, compareSort) ||
+				       f1.lastName.localeCompare(f2.lastName, undefined, compareSort) ||
+				       f1.id.localeCompare(f2.id, undefined, compareSort);
 			});
+			friendsTmpl.render(friends);
 		});
 	}
 
