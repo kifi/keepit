@@ -112,19 +112,6 @@ class BookmarksController @Inject() (
     }
   }
 
-  def screenshotUrl(url: String) = Action { request =>
-    Async {
-      db.readOnlyAsync { implicit session =>
-        uriRepo.getByUri(url)
-      } map { uri =>
-        s3ScreenshotStore.getScreenshotUrl(uri) match {
-          case Some(u) => Redirect(u)
-          case None => Ok(s3ScreenshotStore.blankImage).as("image/gif")
-        }
-      }
-    }
-  }
-
   def getScreenshotUrl() = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
     Async {

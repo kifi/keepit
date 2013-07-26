@@ -25,6 +25,7 @@ class UserController @Inject() (db: Database,
   networkInfoLoader: NetworkInfoLoader,
   actionAuthenticator: ActionAuthenticator,
   friendRequestRepo: FriendRequestRepo,
+  searchFriendRepo: SearchFriendRepo,
   urbanAirship: UrbanAirship)
     extends WebsiteController(actionAuthenticator) {
 
@@ -44,7 +45,14 @@ class UserController @Inject() (db: Database,
   def connections() = AuthenticatedJsonAction { request =>
     Ok(Json.obj(
       "connections" -> db.readOnly { implicit s =>
-        userConnectionRepo.getConnectedUsers(request.userId).map(basicUserRepo.load).toSeq
+        val searchFriends = searchFriendRepo.getSearchFriends(request.userId)
+        val socialUsers = socialUserRepo.getByUser(request.userId)
+        userConnectionRepo.getConnectedUsers(request.userId).map { userId =>
+          Json.toJson(basicUserRepo.load(userId)).asInstanceOf[JsObject] ++ Json.obj(
+            "searchFriend" -> searchFriends.contains(userId),
+            "networks" -> networkInfoLoader.load(socialUsers, userId)
+          )
+        }
       }
     ))
   }
@@ -124,6 +132,34 @@ class UserController @Inject() (db: Database,
     db.readOnly { implicit s =>
       val users = friendRequestRepo.getBySender(request.userId) map { fr => basicUserRepo.load(fr.recipientId) }
       Ok(Json.toJson(users))
+    }
+  }
+
+  def excludeFriend(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+    db.readWrite { implicit s =>
+      val friendIdOpt = userRepo.getOpt(id) collect {
+        case user if userConnectionRepo.getConnectionOpt(request.userId, user.id.get).isDefined => user.id.get
+      }
+      friendIdOpt map { friendId =>
+        val changed = searchFriendRepo.excludeFriend(request.userId, friendId)
+        Ok(Json.obj("changed" -> changed))
+      } getOrElse {
+        BadRequest(Json.obj("error" -> s"You are not friends with user $id"))
+      }
+    }
+  }
+
+  def includeFriend(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+    db.readWrite { implicit s =>
+      val friendIdOpt = userRepo.getOpt(id) collect {
+        case user if userConnectionRepo.getConnectionOpt(request.userId, user.id.get).isDefined => user.id.get
+      }
+      friendIdOpt map { friendId =>
+        val changed = searchFriendRepo.includeFriend(request.userId, friendId)
+        Ok(Json.obj("changed" -> changed))
+      } getOrElse {
+        BadRequest(Json.obj("error" -> s"You are not friends with user $id"))
+      }
     }
   }
 

@@ -220,7 +220,7 @@ class ZooKeeperClientImpl(servers: String, sessionTimeout: Int,
    * re-watches the node's children.
    */
   def watchChildren(path: Path, updateChildren: Seq[Node] => Unit){
-    var watchedChildren = scala.collection.mutable.HashSet[Node]()
+    val watchedChildren = scala.collection.mutable.HashSet[Node]()
 
     case class ChildWatcher(node: Node) extends Watcher {
       def process(event: WatchedEvent) : Unit = watchedChildren.synchronized{

@@ -11,6 +11,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.Id
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.db.State
+import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
 import com.keepit.common.net.HttpClient
@@ -50,7 +51,6 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]]
   def getUserIdsByExternalIds(userIds: Seq[ExternalId[User]]): Future[Seq[Id[User]]]
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
-  def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]]
   def reportArticleSearchResult(res: ArticleSearchResult): Unit
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
@@ -82,6 +82,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def uriChannelFanout(uri: String, msg: JsArray): Seq[Future[Int]]
   def uriChannelCountFanout(): Seq[Future[Int]]
   def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]]
+  def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -93,21 +94,22 @@ case class ShoeboxCacheProvider @Inject() (
     basicUserCache: BasicUserUserIdCache,
     activeSearchConfigExperimentsCache: ActiveExperimentsCache,
     userExperimentCache: UserExperimentCache,
-    userConnCache: UserConnectionIdCache,
     externalUserIdCache: ExternalUserIdCache,
     socialUserNetworkCache: SocialUserInfoNetworkCache,
     socialUserCache: SocialUserInfoUserCache,
-    userSessionExternalIdCache: UserSessionExternalIdCache)
+    userSessionExternalIdCache: UserSessionExternalIdCache,
+    searchFriendsCache: SearchFriendsCache)
 
 class ShoeboxServiceClientImpl @Inject() (
   override val serviceCluster: ServiceCluster,
   override val port: Int,
   override val httpClient: HttpClient,
-  cacheProvider: ShoeboxCacheProvider)
+  cacheProvider: ShoeboxCacheProvider,
+  val healthcheck: HealthcheckPlugin)
     extends ShoeboxServiceClient with Logging{
 
   // request consolidation
-  private[this] val consolidateConnectedUsersReq = new RequestConsolidator[UserConnectionIdKey, Set[Id[User]]](ttl = 3 seconds)
+  private[this] val consolidateSearchFriendsReq = new RequestConsolidator[SearchFriendsKey, Set[Id[User]]](ttl = 3 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[ClickHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
   private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[BrowsingHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
   private[this] val consolidateGetExperimentsReq = new RequestConsolidator[String, Seq[SearchConfigExperiment]](ttl = 30 seconds)
@@ -224,8 +226,8 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]] = consolidateConnectedUsersReq(UserConnectionIdKey(userId)) { key =>
-    cacheProvider.userConnCache.getOrElseFuture(key) {
+  def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = consolidateSearchFriendsReq(SearchFriendsKey(userId)){ key=>
+    cacheProvider.searchFriendsCache.getOrElseFuture(key) {
       call(Shoebox.internal.getConnectedUsers(userId)).map {r =>
         r.json.as[JsArray].value.map(jsv => Id[User](jsv.as[Long])).toSet
       }
@@ -397,10 +399,10 @@ class ShoeboxServiceClientImpl @Inject() (
       Json.obj("uri" -> JsNumber(uri.id), "users" -> JsArray(users.map{_.id}.map{JsNumber(_)}) )
     })
     call(Shoebox.internal.suggestExperts(), payload).map{ r =>
-      println("\n\n experts received \n\n")
+      log.info("\n\n experts received \n\n")
       r.json match {
         case jso: JsValue => {
-          println("\n\n got JsValue \n")
+          log.info("\n\n got JsValue \n")
           val rv = jso.as[JsArray].value.map{x => x.as[Long]}.map{Id[User](_)}
           rv.foreach(println(_))
           rv

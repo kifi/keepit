@@ -143,7 +143,9 @@ class ExpertRecommenderControllerImpl @Inject()(
     }
     val TOP_N = 4
     val ranks = rank(urisAndKeepers)
+    log.info(s"${ranks.size} friends ranked")
     val experts = ranks.take(TOP_N).filter(_._2 > 0.0).map{_._1}
+    log.info(s"returning ${experts.size} experts to shoebox client")
     Ok(JsArray(experts.map{x => JsNumber(x.id)}))
   }
 }
