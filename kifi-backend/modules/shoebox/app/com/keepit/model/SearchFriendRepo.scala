@@ -32,7 +32,7 @@ class SearchFriendRepoImpl @Inject() (
   import FortyTwoTypeMappers._
   import db.Driver.Implicit._
 
-  override val table = new RepoTable[SearchFriend](db, "filtered_friend") {
+  override val table = new RepoTable[SearchFriend](db, "search_friend") {
     def userId = column[Id[User]]("user_id", O.NotNull)
     def friendId = column[Id[User]]("friend_id", O.NotNull)
     def * = id.? ~ userId ~ friendId ~ state ~ createdAt ~ updatedAt <> (SearchFriend, SearchFriend.unapply _)
