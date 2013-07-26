@@ -47,10 +47,13 @@ class UserController @Inject() (db: Database,
       "connections" -> db.readOnly { implicit s =>
         val searchFriends = searchFriendRepo.getSearchFriends(request.userId)
         val socialUsers = socialUserRepo.getByUser(request.userId)
-        userConnectionRepo.getConnectedUsers(request.userId).map { userId =>
+        val connectionIds = userConnectionRepo.getConnectedUsers(request.userId)
+        val unfriendedIds = userConnectionRepo.getUnfriendedUsers(request.userId)
+        (connectionIds.map(_ -> false).toSeq ++ unfriendedIds.map(_ -> true).toSeq).map { case (userId, unfriended) =>
           Json.toJson(basicUserRepo.load(userId)).asInstanceOf[JsObject] ++ Json.obj(
             "searchFriend" -> searchFriends.contains(userId),
-            "networks" -> networkInfoLoader.load(socialUsers, userId)
+            "networks" -> networkInfoLoader.load(socialUsers, userId),
+            "unfriended" -> unfriended
           )
         }
       }
