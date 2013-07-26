@@ -1,8 +1,9 @@
 package com.keepit.common.cache
 
+import scala.concurrent.duration._
+
 import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
-import scala.concurrent.duration._
 import com.keepit.search.ActiveExperimentsCache
 import com.keepit.social.{CommentWithBasicUserCache, BasicUserUserIdCache}
 
@@ -137,6 +138,11 @@ case class ShoeboxCacheModule(cachePluginModules: CachePluginModule*) extends Ca
   @Provides
   def userConnectionIdCache(outerRepo: FortyTwoCachePlugin) =
     new UserConnectionIdCache((outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def unfriendedConnectionsCache(outerRepo: FortyTwoCachePlugin) =
+    new UnfriendedConnectionsCache((outerRepo, 7 days))
 
   @Singleton
   @Provides
