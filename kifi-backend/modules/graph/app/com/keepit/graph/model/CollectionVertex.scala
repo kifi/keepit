@@ -5,11 +5,12 @@ import com.keepit.model.Collection
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 
-case class CollectionVertex(id: VertexId[CollectionData], data: CollectionData) extends Vertex[CollectionData]
-
 case class CollectionData(id: Id[Collection], state: State[Collection]) extends VertexData
 
-object CollectionData {
+object CollectionData extends TypeProvider[CollectionData] {
+
+  implicit val typeCode = TypeCode('COLLECTION)
+
   def apply(collection: Collection): CollectionData = CollectionData(collection.id.get, collection.state)
 
   implicit val format = (

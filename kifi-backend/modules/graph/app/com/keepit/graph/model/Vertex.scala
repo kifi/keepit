@@ -1,30 +1,30 @@
 package com.keepit.graph.model
 
-import scala.reflect.runtime.universe._
 import play.api.libs.json._
 
-trait Vertex[+V <: VertexData] {
-  val id: VertexId[V]
-  val data: V
+trait Vertex[+V] {
+  def id: VertexId[V]
+  def data: V
+  def outgoingEdges[D, E](edgeTypes: TypeProvider[E]*): Seq[Edge[V, D, E]]
+  def incomingEdges[S, E](edgeTypes: TypeProvider[E]*): Seq[Edge[S, V, E]]
 }
 
-case class VertexId[+V <: VertexData](id: Long) {
+case class VertexId[+V](id: Long) {
   override def toString = id.toString
 }
 
 object VertexId {
 
-  def format[V <: VertexData]: Format[VertexId[V]] =
+  def format[V]: Format[VertexId[V]] =
     Format(__.read[Long].map(VertexId(_)), new Writes[VertexId[V]]{ def writes(o: VertexId[V]) = JsNumber(o.id) })
 }
 
 trait VertexData
 
 object VertexData {
-
-  def format[V <: VertexData]()(implicit tag: TypeTag[V]): Format[V] = tag.tpe match {
-    case t if t =:= typeOf[UserData] => UserData.format.asInstanceOf[Format[V]]
-    case t if t =:= typeOf[UriData] => UriData.format.asInstanceOf[Format[V]]
-    case t if t =:= typeOf[CollectionData] => CollectionData.format.asInstanceOf[Format[V]]
+  def typeCode(data: VertexData): TypeCode[VertexData] = data match {
+    case data: UserData => UserData.typeCode
+    case data: CollectionData => CollectionData.typeCode
+    case data: UriData => UriData.typeCode
   }
 }

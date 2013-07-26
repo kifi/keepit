@@ -5,11 +5,12 @@ import play.api.libs.json._
 import com.keepit.common.db.{Id, State}
 import play.api.libs.functional.syntax._
 
-case class UserVertex(id: VertexId[UserData], data: UserData) extends Vertex[UserData]
-
 case class UserData(id: Id[User], state: State[User]) extends VertexData
 
-object UserData {
+object UserData extends TypeProvider[UserData] {
+
+  implicit val typeCode = TypeCode('USER)
+
   def apply(user: User): UserData = UserData(user.id.get, user.state)
 
   implicit val format = (

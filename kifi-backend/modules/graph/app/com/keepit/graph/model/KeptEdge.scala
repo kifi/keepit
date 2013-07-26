@@ -5,12 +5,12 @@ import play.api.libs.json._
 import com.keepit.common.db.{Id, State}
 import play.api.libs.functional.syntax._
 
-case class KeptEdge(source: VertexId[UserData], destination: VertexId[UriData], data: KeptData)
-  extends Edge[UserData, UriData, KeptData]
-
 case class KeptData(id: Id[Bookmark], state: State[Bookmark]) extends EdgeData
 
-object KeptData {
+object KeptData extends TypeProvider[KeptData] {
+
+  implicit val typeCode = TypeCode('KEPT)
+
   def apply(bookmark: Bookmark): KeptData = KeptData(bookmark.id.get,  bookmark.state)
 
   implicit val format = (
