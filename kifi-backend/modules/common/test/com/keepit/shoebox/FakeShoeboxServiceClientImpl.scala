@@ -245,11 +245,6 @@ class FakeShoeboxServiceClientImpl(
     Future.successful(browsingHistoryTracker.getMultiHashFilter(userId).getFilter)
   }
 
-  def getConnectedUsers(userId: Id[User]): Future[Set[Id[User]]] = {
-    val connectedUsers = allUserConnections.getOrElse(userId, Set.empty)
-    Future.successful(connectedUsers)
-  }
-
   def reportArticleSearchResult(res: ArticleSearchResult): Unit = {}
 
   def getUsers(userIds: Seq[Id[User]]): Future[Seq[User]] = {
@@ -344,6 +339,9 @@ class FakeShoeboxServiceClientImpl(
     Future.successful(states)
   }
 
+  def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = {
+    Future.successful(allUserConnections.getOrElse(userId, Set.empty))
+  }
 }
 
 class FakeClickHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits: Int) extends ClickHistoryTracker with Logging {

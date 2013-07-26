@@ -23,7 +23,8 @@ class UserConnectionRepoImpl @Inject() (
   val clock: Clock,
   val friendRequestRepo: FriendRequestRepo,
   val connCountCache: UserConnectionCountCache,
-  val userConnCache: UserConnectionIdCache)
+  val userConnCache: UserConnectionIdCache,
+  val searchFriendsCache: SearchFriendsCache)
   extends DbRepo[UserConnection] with UserConnectionRepo {
 
   import DBSession._
@@ -33,13 +34,11 @@ class UserConnectionRepoImpl @Inject() (
   def invalidateCache(userId: Id[User]): Unit = {
     userConnCache.remove(UserConnectionIdKey(userId))
     connCountCache.remove(UserConnectionCountKey(userId))
+    searchFriendsCache.remove(SearchFriendsKey(userId))
   }
 
   override def invalidateCache(conn: UserConnection)(implicit session: RSession): UserConnection = {
-    for (u <- Set(conn.user1, conn.user2)) {
-      userConnCache.remove(UserConnectionIdKey(u))
-      connCountCache.remove(UserConnectionCountKey(u))
-    }
+    Set(conn.user1, conn.user2) foreach invalidateCache
     conn
   }
 
