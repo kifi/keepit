@@ -60,7 +60,7 @@ class URIGraphSearcher(searcher: Searcher, storeSearcher: Searcher) extends Base
 class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUserId: Id[User], shoeboxClient: ShoeboxServiceClient, monitoredAwait: MonitoredAwait)
   extends URIGraphSearcher(searcher, storeSearcher) {
 
-  private[this] val friendIdsFuture = shoeboxClient.getSearchFriends(myUserId)
+  private[this] val friendIdsFuture = shoeboxClient.getFriends(myUserId)
 
   private[this] lazy val myInfo: UserInfo = {
     val docid = reader.getIdMapper.getDocId(myUserId.id)
