@@ -10,27 +10,24 @@ import securesocial.core._
 
 class AuthController extends ShoeboxServiceController {
 
-  // Some of this is copied from ProviderController in SecureSocial
-  // We might be able to do this better but I'm just trying to get it working for now
+  implicit val readsOAuth2Info = Json.reads[OAuth2Info]
+
+  // Some of the below code is taken from ProviderController in SecureSocial
   def mobileAuth(providerName: String) = Action(parse.json) { implicit request =>
-  // e.g. { "accessToken": "..." }
-    val oauth2Info = Json.fromJson(request.body)(Json.reads[OAuth2Info]).asOpt
+    // format { "accessToken": "..." }
+    val oauth2Info = request.body.asOpt[OAuth2Info]
     val provider = Registry.providers.get(providerName).get
-    val authMethod = provider.authMethod
     val filledUser = provider.fillProfile(
-      SocialUser(UserId("", providerName), "", "", "", None, None, authMethod, oAuth2Info = oauth2Info))
+      SocialUser(UserId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = oauth2Info))
     UserService.find(filledUser.id) map { user =>
-      val withSession = Events.fire(new LoginEvent(user)).getOrElse(session)
-      Authenticator.create(user) match {
-        case Right(authenticator) =>
-          Ok(Json.obj("sessionId" -> authenticator.id)).withSession(
-            withSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
-              .withCookies(authenticator.toCookie)
-        case Left(error) => throw error
-      }
-    } getOrElse {
-      NotFound(Json.obj("error" -> "user not found"))
-    }
+      val newSession = Events.fire(new LoginEvent(user)).getOrElse(session)
+      Authenticator.create(user).fold(
+        error => throw error,
+        authenticator => Ok(Json.obj("sessionId" -> authenticator.id))
+          .withSession(newSession - SecureSocial.OriginalUrlKey - IdentityProvider.SessionId - OAuth1Provider.CacheKey)
+          .withCookies(authenticator.toCookie)
+      )
+    } getOrElse NotFound(Json.obj("error" -> "user not found"))
   }
 
   // These methods are nice wrappers for the SecureSocial authentication methods.
