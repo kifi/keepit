@@ -258,9 +258,21 @@
 				</nav>
 			</div>
 			<div class="friends-page" data-href="friends/requests">
-				<div class="friend-request-status">
-					You have no pending friend requests right now.
+				<div class="friend-reqs-status"></div>
+				<div class="friend-reqs">
+					<ul class="antiscroll-inner">
+						<li class="friend-req" data-template data-id="{{id}}">
+							<img class="friend-req-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{picUri}}">
+							<div class="friend-req-name">{{firstName}} {{lastName}}</div>
+							<div class="friend-req-q">Accept as your kifi friend?</div>
+							<div class="friend-req-act">
+								<a class="friend-req-y" href="javascript:">Yes</a>
+								<a class="friend-req-n" href="javascript:">Ignore</a>
+							</div>
+						</li>
+					</ul>
 				</div>
+				<img class="friend-reqs-loading" src="img/wait.gif">
 			</div>
 		</div>
 	</div>
