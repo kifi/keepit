@@ -390,6 +390,8 @@ $(function() {
 		});
 	}
 
+	// Friends Tabs/Pages
+
 	var $friends = $('.friends').on('click', '.friends-tabs>a[href]', function(e) {
 		e.preventDefault();
 		navigate(this.href);
@@ -410,6 +412,8 @@ $(function() {
 			navigate('friends', {replace: true});
 		}
 	}
+
+	// All kifi Friends
 
 	var $friendsFilter = $('.friends-filter').on('input', function() {
 		var val = $.trim(this.value);
@@ -515,8 +519,46 @@ $(function() {
 		});
 	}
 
+	// Friend Invites
+
 	function prepInviteTab() {}
-	function prepRequestsTab() {}
+
+	// Friend Requests
+
+	var $friendReqs = $('.friend-reqs').antiscroll({x: false, width: '100%'});
+	$friendReqs.find('.antiscroll-inner').scroll(function() {
+		$friendReqs.prev().toggleClass('scrolled', this.scrollTop > 0);
+	}).on('click', '.friend-req-y[href],.friend-req-n[href]', function() {
+		var $a = $(this), id = $a.closest('.friend-req').data('id'), accepting = $a.hasClass('friend-req-y');
+		$.post(accepting ?
+				xhrBase + '/user/' + id + '/friend' :
+				xhrBase + '/user/' + id + '/ignoreRequest', function() {
+			$a.closest('.friend-req-act').addClass('done');
+			$a.closest('.friend-req').find('.friend-req-q').text(
+				accepting ? 'Accepted as your kifi friend' : 'Friend request ignored');
+		}).error(function() {
+			$a.siblings('a').addBack().attr('href', 'javascript:');
+		});
+		$a.siblings('a').addBack().removeAttr('href');
+	});
+	var friendReqsScroller = $friendReqs.data("antiscroll");
+	$(window).resize(friendReqsScroller.refresh.bind(friendReqsScroller));
+	var friendReqsTmpl = Tempo.prepare($friendReqs).when(TempoEvent.Types.RENDER_COMPLETE, function() {
+		$friendReqsLoading.hide();
+		friendReqsScroller.refresh();
+	});
+	var $friendReqsLoading = $('.friend-reqs-loading');
+	function prepRequestsTab() {
+		$.getJSON(xhrBase + '/user/incomingFriendRequests', function(reqs) {
+			console.log('[prepRequestsTab] req:', reqs.length);
+			for (var r, i = 0; i < reqs.length; i++) {
+				r = reqs[i];
+				r.picUri = formatPicUrl(r.id, r.pictureName, 200);
+			}
+			$('.friend-reqs-status').text('You have ' + (reqs.length || 'no pending') + ' friend request' + (reqs.length == 1 ? '' : 's') + '.');
+			friendReqsTmpl.render(reqs);
+		});
+	}
 
 	function doSearch(q) {
 		if (q) {
