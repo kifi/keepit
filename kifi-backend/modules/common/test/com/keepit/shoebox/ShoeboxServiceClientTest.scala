@@ -28,6 +28,7 @@ class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
 
   val fakeShoeboxResponse: PartialFunction[String, FakeClientResponse] = {
     case s if s.contains("/internal/shoebox/database/getConnectedUsers") && s.contains("1965") => "[1933,1935,1927,1921]"
+    case s if s.contains("/internal/shoebox/database/searchFriends") && s.contains("1965") => "[1933,1935,1927,1921]"
     case s if s.contains("/internal/shoebox/database/getUsers") && s.contains("1965%2C1933") => Json.stringify(Json.toJson(users))
     case s if s.contains("/internal/shoebox/database/getPhrasesByPage") && s.contains("page=0&size=2") => Json.stringify(Json.toJson(phrases))
   }
