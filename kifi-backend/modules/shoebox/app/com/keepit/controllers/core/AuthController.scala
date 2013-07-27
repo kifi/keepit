@@ -10,7 +10,7 @@ import securesocial.core._
 
 class AuthController extends ShoeboxServiceController {
 
-  implicit val readsOAuth2Info = Json.reads[OAuth2Info]
+  private implicit val readsOAuth2Info = Json.reads[OAuth2Info]
 
   // Some of the below code is taken from ProviderController in SecureSocial
   def mobileAuth(providerName: String) = Action(parse.json) { implicit request =>
