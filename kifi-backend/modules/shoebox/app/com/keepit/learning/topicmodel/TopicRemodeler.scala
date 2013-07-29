@@ -33,11 +33,12 @@ class TopicRemodeler @Inject()(
 
   def remodel(continueFromLastInteruption: Boolean) = {
     def afterRefresh() = {
-      if (continueFromLastInteruption) {
+      if (continueFromLastInteruption && shouldContinueRemodel) {
         log.info("remodelling, continued from last interuption")
       } else {
         log.info("remodelling, from scratch")
         reset(useActive = false)        // wipe out content associated with the inactive model
+        centralConfig(new NewModelKey()) = modelAccessor.getInactiveFlag
         centralConfig.update(remodelKey, RemodelState.STARTED)
         log.info("update remodel status to STARTED")
       }
@@ -47,14 +48,17 @@ class TopicRemodeler @Inject()(
         val (m, n) = update(useActive = false)
         if (m.max(n) < fetchSize) catchUp = true
       }
-      modelAccessor.switchAccessor()                                  // change internal flag
-      centralConfig.update(flagKey, modelAccessor.getCurrentFlag)     // update flag to zookeeper. accessor on other machines will switch model
+      centralConfig.update(flagKey, modelAccessor.getInactiveFlag)
       centralConfig.update(remodelKey, RemodelState.DONE)
-      log.info(s"successfully switched to model ${modelAccessor.getCurrentFlag}. Remodel Status updated to DONE.")
     }
 
     log.info(s"TopicUpdater: start remodelling ... ")
     refreshInactiveModel()
     afterRefresh()
+  }
+
+  private def shouldContinueRemodel = {
+    val newModel = centralConfig(new NewModelKey())
+    newModel.isDefined && newModel.get != modelAccessor.getCurrentFlag
   }
 }

@@ -19,6 +19,7 @@ import com.keepit.common.zookeeper.CentralConfig
 case object UpdateTopic
 case object Remodel
 case object ContinueRemodel
+case object SwitchModel
 
 private[topicmodel] class TopicUpdaterActor @Inject() (
   healthcheckPlugin: HealthcheckPlugin,
@@ -33,6 +34,19 @@ private[topicmodel] class TopicUpdaterActor @Inject() (
       case e: Exception =>
         healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL,
           errorMessage = Some("Error updating topics")))
+    }
+
+    case SwitchModel => try {
+      if (topicUpdater.checkFlagConsistency){
+        log.info("SwitchModel msg received but ignored. Internal flag already matches central config")
+      } else {
+        log.info("SwitchModel msg received. Will refresh and switch model.")
+        topicUpdater.refreshAndSwitchModel()
+      }
+    } catch {
+      case e: Exception =>
+        healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL,
+          errorMessage = Some("Error handling SwitchModel message")))
     }
 
     case Remodel => try {
@@ -72,13 +86,23 @@ class TopicUpdaterPluginImpl @Inject() (
 
   override def enabled: Boolean = true
   override def onStart() {
-     scheduleTask(actorFactory.system, 10 minutes, 2 minutes, actor, UpdateTopic)
      log.info("starting TopicUpdaterPluginImpl")
-     scheduleTask(actorFactory.system, 1 minutes, 3650 days, "check remodel status")(checkRemodelStatusOnStart)
+     scheduleTask(actorFactory.system, 10 minutes, 2 minutes, actor, UpdateTopic)
+     watchModelFlag()
+     scheduleTask(actorFactory.system, 1 minutes, 3650 days, "check remodel status")(watchRemodelStatus)
   }
   override def onStop() {
      log.info("stopping TopicUpdaterPluginImpl")
      cancelTasks()
+  }
+
+  def watchModelFlag() = {
+    log.info("watching model flag")
+    val flagKey = new TopicModelFlagKey()
+    centralConfig.onChange(flagKey){ flagOpt =>
+      log.info("topic model flag may have changed. Send a msg to TopicUpdater actor. ")
+      actor ! SwitchModel
+    }
   }
 
   /**
@@ -86,7 +110,8 @@ class TopicUpdaterPluginImpl @Inject() (
    * can initialize the remodel process. If the leader is dead, the new leader
    * will continue the remodel process.
    */
-  private def checkRemodelStatusOnStart() = {
+  private def watchRemodelStatus() = {
+    log.info("watching remodel status")
     val remodelKey = new TopicRemodelKey()
     val remodelStat = centralConfig(remodelKey)
 

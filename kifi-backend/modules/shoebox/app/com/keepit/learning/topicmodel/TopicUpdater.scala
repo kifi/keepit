@@ -45,14 +45,13 @@ class TopicUpdater @Inject() (
       }
     }
 
-    centralConfig.onChange(flagKey){ flagOpt =>
-      if ( flagOpt.isDefined && (flagOpt.get != modelAccessor.getCurrentFlag)) {
-        log.info("topic model flag changed. refreshing inactive model")
-        refreshInactiveModel()
-        modelAccessor.switchAccessor()    // changes internal flag
-      }
-    }
     flagKey
+  }
+
+  // If we receive a SwitchModel message, check this first. Switch model only if this returns false.
+  def checkFlagConsistency = {
+    val flag = centralConfig(new TopicModelFlagKey())
+    !flag.isDefined || ( flag != Some(modelAccessor.getCurrentFlag) )
   }
 
   def getAccessor(useActive: Boolean) = if (useActive) modelAccessor.getActiveAccessor else modelAccessor.getInactiveAccessor
@@ -102,6 +101,11 @@ class TopicUpdater @Inject() (
         log.info("model A refreshed")
       }
     }
+  }
+
+  def refreshAndSwitchModel() = {
+    refreshInactiveModel()
+    modelAccessor.switchAccessor()
   }
 
   private def updateUriTopic(seqNum: SequenceNumber, useActive: Boolean): Int = {
@@ -300,3 +304,12 @@ object RemodelState{
 }
 
 case class TopicRemodelKey(val name: String = "topic_model_remodel") extends StringCentralConfigKey with TopicModelConfigKey
+
+object NewModelFlag{
+  val A = "a"
+  val B = "b"
+}
+
+case class NewModelKey(val name: String = "topic_model_newModel") extends StringCentralConfigKey with TopicModelConfigKey
+
+

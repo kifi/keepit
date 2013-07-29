@@ -66,6 +66,12 @@ class SwitchableTopicModelAccessor (
   private var accessorFlag = TopicModelAccessorFlag.A       // default to A for now. Will read this from configuration or zookeeper or DB
 
   def getCurrentFlag = accessorFlag
+
+  def getInactiveFlag = accessorFlag match {
+    case TopicModelAccessorFlag.A  => TopicModelAccessorFlag.B
+    case TopicModelAccessorFlag.B  => TopicModelAccessorFlag.A
+  }
+
   def setCurrentFlag(flag: String) = {
     flag match {
       case TopicModelAccessorFlag.A  => accessorFlag = flag
