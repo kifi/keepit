@@ -422,7 +422,7 @@ slider2 = function() {
     api.port.emit("danny_play", "big_keper_slideout.mp3");
     api.log("[showPane]", locator, back ? "back" : "");
     var pane = toPaneName(locator);
-    (createTemplateParams[pane] || function(cb) {cb()})(function(params, canonicalLocator) {
+    (createTemplateParams[pane] || function(cb) {cb({backButton: paneHistory && paneHistory[back ? 2 : 0]})})(function(params, canonicalLocator) {
       var loc = canonicalLocator || locator;
       if (loc !== (paneHistory && paneHistory[0])) {
         showPane2(loc, back, pane, params);
