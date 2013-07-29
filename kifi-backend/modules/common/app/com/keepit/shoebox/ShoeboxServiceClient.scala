@@ -83,6 +83,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def uriChannelCountFanout(): Seq[Future[Int]]
   def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]]
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]]
+  def getFriends(userId: Id[User]): Future[Set[Id[User]]]
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -98,6 +99,7 @@ case class ShoeboxCacheProvider @Inject() (
     socialUserNetworkCache: SocialUserInfoNetworkCache,
     socialUserCache: SocialUserInfoUserCache,
     userSessionExternalIdCache: UserSessionExternalIdCache,
+    userConnectionsCache: UserConnectionIdCache,
     searchFriendsCache: SearchFriendsCache)
 
 class ShoeboxServiceClientImpl @Inject() (
@@ -110,6 +112,7 @@ class ShoeboxServiceClientImpl @Inject() (
 
   // request consolidation
   private[this] val consolidateSearchFriendsReq = new RequestConsolidator[SearchFriendsKey, Set[Id[User]]](ttl = 3 seconds)
+  private[this] val consolidateUserConnectionsReq = new RequestConsolidator[UserConnectionIdKey, Set[Id[User]]](ttl = 3 seconds)
   private[this] val consolidateClickHistoryReq = new RequestConsolidator[ClickHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
   private[this] val consolidateBrowsingHistoryReq = new RequestConsolidator[BrowsingHistoryUserIdKey, Array[Byte]](ttl = 3 seconds)
   private[this] val consolidateGetExperimentsReq = new RequestConsolidator[String, Seq[SearchConfigExperiment]](ttl = 30 seconds)
@@ -228,6 +231,14 @@ class ShoeboxServiceClientImpl @Inject() (
 
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]] = consolidateSearchFriendsReq(SearchFriendsKey(userId)){ key=>
     cacheProvider.searchFriendsCache.getOrElseFuture(key) {
+      call(Shoebox.internal.getSearchFriends(userId)).map {r =>
+        r.json.as[JsArray].value.map(jsv => Id[User](jsv.as[Long])).toSet
+      }
+    }
+  }
+
+  def getFriends(userId: Id[User]): Future[Set[Id[User]]] = consolidateUserConnectionsReq(UserConnectionIdKey(userId)){ key=>
+    cacheProvider.userConnectionsCache.getOrElseFuture(key) {
       call(Shoebox.internal.getConnectedUsers(userId)).map {r =>
         r.json.as[JsArray].value.map(jsv => Id[User](jsv.as[Long])).toSet
       }

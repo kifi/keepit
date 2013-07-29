@@ -53,7 +53,8 @@ class UserController @Inject() (db: Database,
           Json.toJson(basicUserRepo.load(userId)).asInstanceOf[JsObject] ++ Json.obj(
             "searchFriend" -> searchFriends.contains(userId),
             "networks" -> networkInfoLoader.load(socialUsers, userId),
-            "unfriended" -> unfriended
+            "unfriended" -> unfriended,
+            "description" -> userValueRepo.getValue(userId, "user_description")
           )
         }
       }
@@ -127,7 +128,8 @@ class UserController @Inject() (db: Database,
   def cancelFriendRequest(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
     db.readWrite { implicit s =>
       userRepo.getOpt(id) map { recipient =>
-        friendRequestRepo.getBySenderAndRecipient(request.userId, recipient.id.get, true) map { friendRequest =>
+        friendRequestRepo.getBySenderAndRecipient(request.userId, recipient.id.get,
+            Set(FriendRequestStates.ACCEPTED, FriendRequestStates.ACTIVE)) map { friendRequest =>
           if (friendRequest.state == FriendRequestStates.ACCEPTED) {
             BadRequest(Json.obj("error" -> s"The friend request has already been accepted", "alreadyAccepted" -> true))
           } else {

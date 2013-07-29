@@ -220,12 +220,11 @@
 			</nav>
 			<div class="friends-page" data-href="friends">
 				<div class="above-friends-list">
-					<input class="friends-filter" type="text" placeholder="Type a friend’s name">
+					<input class="friends-filter" type="text" placeholder="Start typing a friend’s name">
 				</div>
 				<div id="friends-list">
 					<ul class="antiscroll-inner">
 						<li class="friend" data-template>
-						<div class="friend-2">
 							<div class="friend-pic">
 								<img src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{picUri}}">
 							</div>
@@ -233,20 +232,19 @@
 								<div class="friend-name">{{firstName}} {{lastName}}</div>
 								<div class="friend-label">Connected to you through:</div>
 								<div class="friend-networks">
-									<a class="friend-nw friend-nw-facebook{%if networks.facebook %} on{% endif %}"></a>
-									<a class="friend-nw friend-nw-linkedin{%if networks.linkedin %} on{% endif %}"></a>
+									<a class="friend-nw friend-nw-facebook" target="_blank"></a>
+									<a class="friend-nw friend-nw-linkedin" target="_blank"></a>
 									<a class="friend-nw friend-nw-twitter"></a>
 									<a class="friend-nw friend-nw-pinterest"></a>
 								</div>
 							</div>
-							<div class="friend-actions">
+							<div class="friend-actions {{state}}">
 								<div style="position:relative">
-									<a class="friend-mute" href="javascript:"></a>
+									<a class="friend-mute{% if searchFriend === false %} muted{% endif %}" href="javascript:"></a>
 									<a class="friend-status" href="javascript:"></a>
 									<div class="friend-action-desc"></div>
 								</div>
 							</div>
-						</div>
 						</li>
 					</ul>
 					<img class="friends-loading" src="img/wait.gif">
@@ -260,9 +258,21 @@
 				</nav>
 			</div>
 			<div class="friends-page" data-href="friends/requests">
-				<div class="friend-request-status">
-					You have no pending friend requests right now.
+				<div class="friend-reqs-status"></div>
+				<div class="friend-reqs">
+					<ul class="antiscroll-inner">
+						<li class="friend-req" data-template data-id="{{id}}">
+							<img class="friend-req-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{picUri}}">
+							<div class="friend-req-name">{{firstName}} {{lastName}}</div>
+							<div class="friend-req-q">Accept as your kifi friend?</div>
+							<div class="friend-req-act">
+								<a class="friend-req-y" href="javascript:">Yes</a>
+								<a class="friend-req-n" href="javascript:">Ignore</a>
+							</div>
+						</li>
+					</ul>
 				</div>
+				<img class="friend-reqs-loading" src="img/wait.gif">
 			</div>
 		</div>
 	</div>
