@@ -51,7 +51,7 @@ class TopicUpdater @Inject() (
   // If we receive a SwitchModel message, check this first. Switch model only if this returns false.
   def checkFlagConsistency = {
     val flag = centralConfig(new TopicModelFlagKey())
-    !flag.isDefined || ( flag != Some(modelAccessor.getCurrentFlag) )
+    !flag.isDefined || ( flag == Some(modelAccessor.getCurrentFlag) )
   }
 
   def getAccessor(useActive: Boolean) = if (useActive) modelAccessor.getActiveAccessor else modelAccessor.getInactiveAccessor
