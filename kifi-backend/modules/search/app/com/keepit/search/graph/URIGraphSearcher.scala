@@ -61,6 +61,7 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
   extends URIGraphSearcher(searcher, storeSearcher) {
 
   private[this] val friendIdsFuture = shoeboxClient.getFriends(myUserId)
+  private[this] val searchFriendIdsFuture = shoeboxClient.getFriends(myUserId)
 
   private[this] lazy val myInfo: UserInfo = {
     val docid = reader.getIdMapper.getDocId(myUserId.id)
@@ -79,6 +80,16 @@ class URIGraphSearcherWithUser(searcher: Searcher, storeSearcher: Searcher, myUs
   }
   lazy val friendsUriEdgeSets = {
     friendEdgeSet.destIdSet.foldLeft(Map.empty[Long, UserToUriEdgeSet]){ (m, f) =>
+      m + (f.id -> getUserToUriEdgeSet(f, publicOnly = true))
+    }
+  }
+
+  lazy val searchFriendEdgeSet = {
+    val friendIds = monitoredAwait.result(friendIdsFuture, 5 seconds, s"getting search friends edges")
+    UserToUserEdgeSet(myUserId, friendIds)
+  }
+  lazy val searchFriendsUriEdgeSets = {
+    searchFriendEdgeSet.destIdSet.foldLeft(Map.empty[Long, UserToUriEdgeSet]){ (m, f) =>
       m + (f.id -> getUserToUriEdgeSet(f, publicOnly = true))
     }
   }
