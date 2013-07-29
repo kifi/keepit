@@ -191,18 +191,18 @@
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 136px;
+  width: 178px;
   height: 42px;
   border-radius: 5px;
   -webkit-perspective: 200px;
   perspective: 200px;
 }
 .kifi-pane-parent .kifi-slider2-keep-card {
-  left: 174px;
+  left: 132px;
   right: auto;
 }
 .kifi-with-pane .kifi-slider2-keep-card {
-  width: 104px;
+  width: 146px;
 }
 .kifi-slider2-keep-card,
 .kifi-slider2-dock { /* width for .kifi-slider2-keep-card only */
@@ -427,8 +427,8 @@ a.kifi-slider2-keeper {
 .kifi-slider2-dock {
   position: absolute;
   bottom: 0;
-  right: 139px;
-  width: 171px;
+  right: 181px;
+  width: 129px;
   height: 42px;
   background: #67829c;
   border-radius: 5px;
@@ -442,7 +442,7 @@ a.kifi-slider2-keeper {
 .kifi-slider2-dock-btn {
   display: inline-block !important;
   height: 42px;
-  width: 42px;
+  width: 64px;
   background-repeat: no-repeat;
   text-align: center;
   vertical-align: top;
@@ -451,19 +451,11 @@ a.kifi-slider2-keeper {
 }
 .kifi-slider2-dock-btn.kifi-slider2-notices {
   background-size: auto 16px;
-  background-position: 15px 14px;
-}
-.kifi-slider2-dock-btn.kifi-slider2-comments {
-  background-size: auto 16px;
-  background-position: 12px 15px;
+  background-position: 26px 14px;
 }
 .kifi-slider2-dock-btn.kifi-slider2-messages {
   background-size: auto 17px;
-  background-position: 10px 15px;
-}
-.kifi-slider2-dock-btn.kifi-slider2-general {
-  background-size: auto 14px;
-  background-position: 12px 15px;
+  background-position: 21px 15px;
 }
 .kifi-slider2-x,
 .kifi-slider2-dock-btn {
