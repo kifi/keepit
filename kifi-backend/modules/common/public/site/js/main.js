@@ -1369,7 +1369,7 @@ $(function() {
 	// bind hover behavior later to avoid slowing down page load
 	var friendCardTmpl = Tempo.prepare('fr-card-template'); $('#fr-card-template').remove();
 	$.getScript('js/jquery-bindhover.js').done(function() {
-		$(document).bindHover(".pic.friend", function(configureHover) {
+		$(document).bindHover(".pic:not(.me)", function(configureHover) {
 			var $a = $(this), id = $a.data('id');
 			friendCardTmpl.into(this).render({
 				name: $a.data('name'),
