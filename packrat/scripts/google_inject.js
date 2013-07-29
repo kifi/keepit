@@ -508,6 +508,8 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
   }
 
   function processHit(hit) {
+    var friendsToShow = 8;
+
     hit.displayUrl = displayURLFormatter(hit.bookmark.url);
     hit.displayTitle = boldSearchTerms(hit.bookmark.title || "", response.query) || hit.displayUrl;
     hit.displayScore = response.showScores === true ? "[" + Math.round(hit.score * 100) / 100 + "] " : "";
@@ -515,8 +517,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     var who = response.filter && response.filter.who || "", ids = who.length > 1 ? who.split(".") : null;
     hit.displaySelf = who != "f" && !ids && hit.isMyBookmark;
     hit.displayUsers = who == "m" ? [] :
-      ids ? hit.users.filter(function(u) {return ~ids.indexOf(u.id)}) :
-      hit.users;
+      (ids ? hit.users.filter(function(u) {return ~ids.indexOf(u.id)}) : hit.users).slice(0, friendsToShow);
 
     var numOthers = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
     hit.whoKeptHtml = formatCountHtml(
