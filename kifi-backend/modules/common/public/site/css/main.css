@@ -482,15 +482,17 @@ span.long-text, a.long-text {display: inline-block}
 .fr-card-interests {color: #aaa}
 
 .friend-networks {font-size: 0; line-height: 0}
-a.friend-nw {width: 17px; height: 17px; display: inline-block; background: url(../img/social_icons.png) 0/68px; margin-right: 2px}
-a.friend-nw-facebook {background-position: 0 17px}
-a.friend-nw-facebook[href] {background-position: 0 0}
-a.friend-nw-linkedin {background-position: -17px 17px}
-a.friend-nw-linkedin[href] {background-position: -17px 0}
-a.friend-nw-twitter {background-position: -34px 17px}
-a.friend-nw-twitter[href] {background-position: -34px 0}
-a.friend-nw-pinterest {background-position: -51px 17px}
-a.friend-nw-pinterest[href] {background-position: -51px 0}
+a.friend-nw {width: 18px; height: 18px; display: inline-block; background: #ddd url(../img/networks-18.png) 0; background-size: auto 18px; border-radius: 2px; margin-right: 2px}
+a.friend-nw:not([href]):not(.friend-nw-kifi) {display: none}
+a.friend-nw-kifi {background-color: #74a2d7; border-radius: 50%}
+a.friend-nw-facebook {background-position: -18px}
+a.friend-nw-facebook[href] {background-color: #527bbd}
+a.friend-nw-linkedin {background-position: -36px}
+a.friend-nw-linkedin[href] {background-color: #5083c3}
+a.friend-nw-twitter {background-position: -54px}
+a.friend-nw-twitter[href] {background-color: #7acdf0}
+a.friend-nw-google {background-position: -72px}
+a.friend-nw-google[href] {background-color: #e9644b}
 
 /* retina image overrides */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
@@ -510,6 +512,7 @@ a.friend-nw-pinterest[href] {background-position: -51px 0}
   .profile>.networks>.kifi-k::before {background-image: url(../img/kifi-k.2x.png); background-size: 100%;}
   .profile-nw {background-image: url(../img/networks.2x.png)}
   .friend-actions>*>a::before {background-image: url(../img/friend-actions.2x.png)}
+  a.friend-nw {background-image: url(../img/networks-18.2x.png)}
 }
 
 .fancybox-inner {font-size: 16px}
