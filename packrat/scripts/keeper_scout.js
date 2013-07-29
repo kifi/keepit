@@ -111,7 +111,7 @@ var tile = tile || function() {  // idempotent for Chrome
         e.preventDefault();
         break;
       case 79: // o
-        keeper("togglePane", "key", "/general");
+        keeper("togglePane", "key", "/notices");
         e.preventDefault();
         break;
       }
