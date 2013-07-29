@@ -89,7 +89,7 @@ class TopicUpdaterPluginImpl @Inject() (
      log.info("starting TopicUpdaterPluginImpl")
      scheduleTask(actorFactory.system, 10 minutes, 2 minutes, actor, UpdateTopic)
      watchModelFlag()
-     scheduleTask(actorFactory.system, 1 minutes, 3650 days, "check remodel status")(watchRemodelStatus)
+     scheduleTask(actorFactory.system, 30 seconds, 3650 days, "check remodel status")(watchRemodelStatus)
   }
   override def onStop() {
      log.info("stopping TopicUpdaterPluginImpl")
