@@ -48,7 +48,9 @@ class TopicRemodeler @Inject()(
         val (m, n) = update(useActive = false)
         if (m.max(n) < fetchSize) catchUp = true
       }
+      log.info(s"topic model remodel: catch up done. setting model flag to ${modelAccessor.getInactiveFlag}")
       centralConfig.update(flagKey, modelAccessor.getInactiveFlag)
+      log.info("set remodel status to DONE")
       centralConfig.update(remodelKey, RemodelState.DONE)
     }
 

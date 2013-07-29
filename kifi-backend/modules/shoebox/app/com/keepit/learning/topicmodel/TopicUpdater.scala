@@ -77,7 +77,7 @@ class TopicUpdater @Inject() (
 
   // main entry point
   def update(useActive: Boolean = true): (Int, Int) = {
-    log.info(s"TopicUpdater: starting a new round of update ... current model is ${modelAccessor.getCurrentFlag}")
+    log.info(s"TopicUpdater: starting a new round of update ... current model is ${modelAccessor.getCurrentFlag}. useActive = ${useActive}")
     val (uriSeq, bookmarkSeq) = db.readOnly { implicit s =>
       getAccessor(useActive).topicSeqInfoRepo.getSeqNums match {
         case Some((uriSeq, bookmarkSeq)) => (uriSeq, bookmarkSeq)
@@ -106,6 +106,7 @@ class TopicUpdater @Inject() (
   def refreshAndSwitchModel() = {
     refreshInactiveModel()
     modelAccessor.switchAccessor()
+    log.info(s"successfully switched to model ${modelAccessor.getCurrentFlag}")
   }
 
   private def updateUriTopic(seqNum: SequenceNumber, useActive: Boolean): Int = {
