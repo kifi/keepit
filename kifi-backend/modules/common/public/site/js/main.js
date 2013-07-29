@@ -381,10 +381,34 @@ $(function() {
 				var networkInfo = myNetworks.filter(function (nw) {
 					return nw.network === name;
 				})[0];
+				var postLink = function (e) {
+					e.preventDefault();
+					$('<form>')
+						.attr('action', xhrDomain + $(this).data('action'))
+						.attr('method', 'post')
+						.appendTo('body')
+						.submit()
+						.remove();
+				};
 				if (networkInfo) {
 					$this.attr('href', networkInfo.profileUrl).attr('title', 'View profile');
+					if (myNetworks.length > 1) {
+						$('<a>').addClass('disconnect').text('Unlink')
+							.attr('href', 'javascript:')
+							.data('action', '/disconnect/' + name)
+							.click(postLink)
+							.appendTo($this.parent());
+					}
 				} else {
-					$this.addClass('not-connected').attr('href', 'https://www.kifi.com/link/' + name).attr('title', 'Click to connect');
+					$this.addClass('not-connected').attr('title', 'Click to connect')
+						.attr('href', 'javascript:')
+						.data('action', '/link/' + name)
+						.click(postLink);
+					$('<a>').attr('title', 'Click to connect').addClass('connect').text('Connect')
+						.attr('href', 'javascript:')
+						.data('action', '/link/' + name)
+						.click(postLink)
+						.appendTo($this.parent());
 				}
 			});
 		});
