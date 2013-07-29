@@ -120,9 +120,9 @@ class TopicUpdaterTest extends Specification with TopicUpdaterTestHelper {
         val centralConfig = inject[CentralConfig]
 
         val topicUpdater = new TopicUpdater(db, uriRepo, bmRepo, articleStore, accessor, factory, centralConfig)
-
+        val topicRemodeler = new TopicRemodeler(db, uriRepo, bmRepo, articleStore, accessor, factory, centralConfig)
         topicUpdater.update()
-        topicUpdater.remodel()
+        topicRemodeler.remodel(continueFromLastInteruption = false)
 
         val uriTopicRepoB = inject[UriTopicRepoB]
         val userTopicRepoB = inject[UserTopicRepoB]
