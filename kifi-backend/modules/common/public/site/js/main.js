@@ -1378,9 +1378,9 @@ $(function() {
 			configureHover($el, {canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
 			$.getJSON(xhrBase + '/user/' + id + '/networks', function(networks) {
 				for (nw in networks) {
-					$el.find('.fr-card-nw-' + nw)
-						.toggleClass('on', networks[nw].connected)
-						.attr('href', networks[nw].profileUrl || null);
+					console.log("[networks]", nw, networks[nw]);
+					$el.find('.friend-nw-' + nw)
+						.attr('href', networks[nw].connected && networks[nw].profileUrl || null);
 				}
 			});
 		});
