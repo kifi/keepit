@@ -8,7 +8,7 @@
 //  - initial rendering (up to 10)
 //  - scrolling down triggers fetching up to 10 older notifications (never highlighted as new)
 //  - receiving a new notification (unseen, unvisited), which may subsume an older notification
-//  - changing the state of a notification to "visited" (referenced comment/message has been read)
+//  - changing the state of a notification to "visited" (referenced message has been read)
 //  - receiving notifications that were created while disconnected from the server
 //  - receiving notification state changes that happened while disconnected
 //
@@ -21,7 +21,6 @@ noticesPane = function() {
   const NEW_FADE_DURATION = 3000; // length of the fade
 
   var templates = {};
-  api.load("html/metro/notice_comment.html", function(tmpl) {templates.comment = tmpl});
   api.load("html/metro/notice_message.html", function(tmpl) {templates.message = tmpl});
   api.load("html/metro/notice_global.html", function(tmpl) {templates.global = tmpl});
 
@@ -104,8 +103,6 @@ noticesPane = function() {
     notice.formatLocalDate = getLocalDateFormatter;
     notice.cdnBase = cdnBase;
     switch (notice.category) {
-    case "comment":
-      break;
     case "message":
       var nAuthors = notice.details.authors.length;
       notice.oneAuthor = nAuthors == 1;

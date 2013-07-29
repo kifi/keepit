@@ -190,14 +190,11 @@ const socketHandlers = {
       d.keeps = o.keeps || 0;
       d.otherKeeps = d.keeps - d.keepers.length - (d.kept == "public" ? 1 : 0);
       d.following = o.following;
-      d.comments = o.comments || [];
       d.threads = o.threads || [];
       d.messages = {};
-      d.lastCommentRead = o.lastCommentRead;
       d.lastMessageRead = o.lastMessageRead || {};
       d.counts = {
         n: numNotificationsNotVisited,
-        c: commentCount(d),
         m: messageCount(d)};
       d.tabs.forEach(function(tab) {
         initTab(tab, d);
@@ -205,13 +202,6 @@ const socketHandlers = {
       d.dispatchOn2();
 
       // send tabs any missed updates
-      if (dPrev.comments) {
-        for (i = dPrev.comments.length; i < d.comments.length; i++) {  // TODO: combine if more than one
-          d.tabs.forEach(function(tab) {
-            api.tabs.emit(tab, "comment", {comment: d.comments[i], userId: session.userId});
-          });
-        }
-      }
       if (dPrev.threads) {
         var threadsWithNewMessages = [];
         d.threads.forEach(function(th) {
@@ -292,29 +282,6 @@ const socketHandlers = {
   all_notifications_visited: function(id, time) {
     api.log("[socket:all_notifications_visited]", id, time);
     markAllNoticesVisited(id, time);
-  },
-  comment: function(nUri, c) {
-    api.log("[socket:comment]", c);
-    var d = pageData[nUri];
-    if (d && d.comments && !d.comments.some(hasId(c.id))) {
-      d.comments.push(c);
-      d.tabs.forEach(function(tab) {
-        api.tabs.emit(tab, "comment", {comment: c, userId: session.userId});
-      });
-      tellTabsIfCountChanged(d, "c", commentCount(d));
-    }
-  },
-  comment_read: function(nUri, time, id) {
-    api.log("[socket:comment_read]", nUri, time);
-    var d = pageData[nUri];
-    if (!d || new Date(d.lastCommentRead || 0) < new Date(time)) {
-      markNoticesVisited("comment", nUri, id, time);
-      if (d) {
-        d.lastCommentRead = time;
-        tellTabsIfCountChanged(d, "c", commentCount(d));
-      }
-      tellTabsNoticeCountIfChanged();
-    }
   },
   thread: function(th) {
     api.log("[socket:thread]", th);
@@ -442,11 +409,6 @@ api.port.on({
   keeper_shown: function(_, _, tab) {
     (pageData[tab.nUri] || {}).shown = true;  // server already notified via event log
   },
-  follow: function(data, respond, tab) {
-    ajax("POST", "/comments/" + (data ? "follow" : "unfollow"), {url: tab.url}, function(o) {
-      api.log("[follow] resp:", o);
-    });
-  },
   suppress_on_site: function(data, _, tab) {
     ajax("POST", "/users/slider/suppress", {url: tab.url, suppress: data});
     pageData[tab.nUri].neverOnSite = !!data;
@@ -473,13 +435,6 @@ api.port.on({
   log_event: function(data) {
     logEvent.apply(null, data);
   },
-  post_comment: function(data, respond) {
-    api.log("[post_comment]", data);
-    ajax("POST", "/comments", data, function(o) {
-      api.log("[post_comment] resp:", o);
-      respond(o);
-    });
-  },
   send_message: function(data, respond) {
     api.log("[send_message]", data);
     ajax("POST", "/messages", data, function(o) {
@@ -495,24 +450,6 @@ api.port.on({
       api.log("[send_reply] resp:", o);
       respond(o);
     });
-  },
-  delete_comment: function(id, respond) {
-    ajax("POST", "/comments/" + id + "/remove", function(o) {
-      api.log("[deleteComment] response:", o);
-      respond(o);
-    });
-  },
-  set_comment_read: function(o, _, tab) {
-    var d = pageData[tab.nUri];
-    if (!d || new Date(o.time) > new Date(d.lastCommentRead || 0)) {
-      markNoticesVisited("comment", tab.nUri, o.id, o.time);
-      if (d) {
-        d.lastCommentRead = o.time;
-        tellTabsIfCountChanged(d, "c", commentCount(d));  // tabs at this uri
-      }
-      tellTabsNoticeCountIfChanged();  // visible tabs
-      socket.send(["set_comment_read", o.id]);
-    }
   },
   set_message_read: function(o, _, tab) {
     var d = pageData[tab.nUri];
@@ -530,12 +467,6 @@ api.port.on({
     markNoticesVisited("global", undefined, o.noticeId);
     tellTabsNoticeCountIfChanged();  // visible tabs
     socket.send(["set_global_read", o.noticeId]);
-  },
-  comments: function(_, respond, tab) {
-    var d = pageData[tab.nUri];
-    if (d) d.on2(function() {
-      respond(d.comments);
-    });
   },
   threads: function(_, respond, tab) {
     var d = pageData[tab.nUri];
@@ -685,8 +616,7 @@ function insertNewNotification(n) {
   return true;
 }
 
-// id is of last read comment/message, timeStr is its createdAt time (not notification's).
-// locator not passed in the comments case.
+// id is of last read message, timeStr is its createdAt time (not notification's).
 // If category is global, we do not check the nUri, timeStr, and locator because id identifies
 // it sufficiently. `undefined` can be passed in for everything but category and id.
 function markNoticesVisited(category, nUri, id, timeStr, locator) {
@@ -722,13 +652,9 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
       var d = pageData[n.details.page];
       if (d && new Date(n.details.createdAt) > getTimeLastRead(n, d)) {
         switch (n.category) {
-          case "comment":
-            d.lastCommentRead = n.details.createdAt;
-            tellTabsIfCountChanged(d, "c", commentCount(d));  // tabs at this uri
-            break;
           case "message":
             d.lastMessageRead[n.details.locator.split("/")[2]] = n.details.createdAt;
-            tellTabsIfCountChanged(d, "m", messageCount(d));
+            tellTabsIfCountChanged(d, "m", messageCount(d));  // tabs at this uri
             break;
         }
       }
@@ -757,7 +683,6 @@ function decrementNumNotificationsNotVisited(n) {
 
 function getTimeLastRead(n, d) {
   return new Date(
-    n.category == "comment" ? (d.lastCommentRead || 0) :
     n.category == "message" && d.lastMessageRead ? (d.lastMessageRead[n.details.locator.split("/")[2]] || 0) : 0);
 }
 
@@ -794,10 +719,6 @@ function initTab(tab, d) {  // d is pageData[tab.nUri]
     ids.forEach(function(id) {
       socket.send(["get_thread", id]);
     });
-
-  } else if (ruleSet.rules.comment && d.counts.c && !d.neverOnSite) {  // open immediately to unread comment(s)
-    api.tabs.emit(tab, "open_to", {trigger: "comment", locator: "/comments"});
-
   } else if (!d.kept && !d.neverOnSite && (!d.sensitive || !ruleSet.rules.sensitive)) {  // auto-engagement
     var url = tab.url;
     if (ruleSet.rules.url && urlPatterns.some(function(re) {return re.test(url)})) {
@@ -824,11 +745,6 @@ function dateWithoutMs(t) { // until db has ms precision
   var d = new Date(t);
   d.setMilliseconds(0);
   return d;
-}
-
-function commentCount(d) {  // comments only count as unread if by a friend
-  var t = dateWithoutMs(d.lastCommentRead || 0);
-  return d.comments.filter(function(c) { return friendsById[c.user.id] && dateWithoutMs(c.createdAt) > t }).length;
 }
 
 function messageCount(d) {

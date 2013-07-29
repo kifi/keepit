@@ -411,7 +411,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     }).bindHover(".kifi-chatter", function(configureHover) {
       var n = $(this).data("n");
       render("html/search/chatter.html", {
-        numComments: n[0],
+        //numComments: n[0],
         numMessages: n[1],
         pluralize: function() {return pluralLambda}
       }, function(html) {

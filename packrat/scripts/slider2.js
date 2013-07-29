@@ -35,8 +35,8 @@ $.fn.scrollToBottom = function() {
 }();
 
 const CO_KEY = /^Mac/.test(navigator.platform) ? "⌘" : "Ctrl";
-var generalPane, noticesPane, commentsPane, threadsPane, threadPane;  // stubs
-generalPane = noticesPane = commentsPane = threadsPane = threadPane = {update: $.noop, updateAll: $.noop};
+var noticesPane, threadsPane, threadPane;  // stubs
+noticesPane = threadsPane = threadPane = {update: $.noop, updateAll: $.noop};
 
 slider2 = function() {
 
@@ -71,7 +71,7 @@ slider2 = function() {
 
   function createSlider(callback, locator) {
     var kept = tile && tile.dataset.kept;
-    var counts = JSON.parse(tile && tile.dataset.counts || '{"n":0,"c":0,"m":0}');
+    var counts = JSON.parse(tile && tile.dataset.counts || '{"n":0,"m":0}');
     api.log("[createSlider] kept: %s counts: %o", kept || "no", counts);
 
     render("html/metro/slider2.html", {
@@ -79,12 +79,9 @@ slider2 = function() {
       "isKept": kept,
       "isPrivate": kept == "private",
       "noticesCount": counts.n,
-      "commentCount": counts.c,
       "messageCount": counts.m,
       "atNotices": "/notices" == locator,
-      "atComments": "/comments" == locator,
-      "atMessages": /^\/messages/.test(locator),
-      "atGeneral": "/general" == locator
+      "atMessages": /^\/messages/.test(locator)
     }, function(html) {
       // attach event bindings
       $slider = $(html);
@@ -228,9 +225,7 @@ slider2 = function() {
       }).bindHover(".kifi-slider2-dock-btn", function(configureHover) {
         var tip = {
           n: ["Notifications", "View all of your notifications.<br>Any new ones are highlighted."],
-          c: ["Public Comments", "View and post comments<br>about this page."],
-          m: ["Private Messages (" + CO_KEY + "+Shift+M)", "Send this page to friends<br>and start a discussion."],
-          g: ["More Options (" + CO_KEY + "+Shift+O)", "Take notes about this page,<br>keep to a collection, read it<br>later and more."]
+          m: ["Private Messages (" + CO_KEY + "+Shift+M)", "Send this page to friends<br>and start a discussion."]
         }[this.dataset.loc.substr(1,1)];
         render("html/keeper/titled_tip.html", {title: tip[0], html: tip[1]}, function(html) {
           configureHover(html, {
@@ -399,18 +394,15 @@ slider2 = function() {
 
   function toPaneName(locator) {
     var name = locator.match(/[a-z]+\/?/)[0];
-    return {messages: "threads", "messages/": "thread", "comments/": "comments"}[name] || name;
+    return {messages: "threads", "messages/": "thread"}[name] || name;
   }
 
-  const paneIdxs = ["notices","comments","threads","thread","general"];
+  const paneIdxs = ["notices","threads","thread"];
   function toPaneIdx(name) {
     return paneIdxs.indexOf(name);
   }
 
   const createTemplateParams = {
-    general: function(cb) {
-      cb({title: document.title, url: document.URL});
-    },
     thread: function(cb, locator, recipients) {
       var id = locator.split("/")[2];  // can be id of any message (assumed to be parent if recipients provided)
       if (recipients) {
@@ -593,13 +585,10 @@ slider2 = function() {
             }
           })
           .on("click", ".kifi-pane-back", function() {
-            showPane(paneHistory[1] || this.dataset.loc || "/general", true);
-          })
-          .on("click", ".kifi-pane-action", function() {
-            var $n = $pane.find(".kifi-not-done"), d = $n.data();
-            clearTimeout(d.t);
-            $n.remove().removeClass("kifi-showing").appendTo($pane).layout().addClass("kifi-showing");
-            d.t = setTimeout($n.removeClass.bind($n, "kifi-showing"), 1000);
+            var loc = paneHistory[1] || this.dataset.loc;
+            if (loc) {
+              showPane(loc, true);
+            }
           })
           .on("kifi:show-pane", function(e, loc, paramsArg) {
             showPane(loc, false, paramsArg);
@@ -642,30 +631,10 @@ slider2 = function() {
   }
 
   const populatePane = {
-    general: function($box) {
-      api.port.emit("get_keepers", function(o) {
-        api.require("scripts/general.js", function() {
-          generalPane.render($box, {
-            kept: o.kept,
-            keepers: pick(o.keepers, 7),
-            keepersCaptionHtml: formatCountHtml(0, o.keepers.length, o.otherKeeps)});
-        });
-      });
-    },
     notices: function($box) {
       api.port.emit("notifications", function(o) {
         api.require("scripts/notices.js", function() {
           noticesPane.render($box.find(".kifi-pane-tall"), o.notifications, o.timeLastSeen, o.numNotVisited);
-        });
-      });
-    },
-    comments: function($box) {
-      api.port.emit("comments", function(comments) {
-        api.port.emit("session", function(session) {
-          api.require("scripts/comments.js", function() {
-            api.port.emit("danny_play", "comments.mp3");
-            commentsPane.render($box.find(".kifi-pane-tall"), comments, session);
-          });
         });
       });
     },
@@ -742,9 +711,6 @@ slider2 = function() {
     all_notifications_visited: function(o) {
       noticesPane.update(o, "markAllVisited");
     },
-    comment: function(o) {
-      commentsPane.update(o.comment, o.userId);
-    },
     thread_info: function(o) {
       threadsPane.update(o.thread, o.read);
     },
@@ -762,7 +728,6 @@ slider2 = function() {
       if (!$slider) return;
       var $btns = $slider.find(".kifi-slider2-dock-btn");
       [[".kifi-slider2-notices", o.n],
-       [".kifi-slider2-comments", o.c],
        [".kifi-slider2-messages", o.m]].forEach(function(a) {
         $btns.filter(a[0]).find(".kifi-count")
           .text(a[1] || "")
@@ -797,7 +762,7 @@ slider2 = function() {
         hidePane();
       } else {
         api.log("[togglePane] showing", locator || "");
-        showPane(locator || "/general");
+        showPane(locator || "/notices");
       }
     },
     showKeepers: function(keepers, otherKeeps) {
