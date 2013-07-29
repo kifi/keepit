@@ -54,7 +54,7 @@ class ExpertRecommenderControllerImpl @Inject()(
     val flagKey = new TopicModelFlagKey()
     val flag = centralConfig(flagKey)
     val rcmder = createExpertRecommender(flag)
-    modelFlag = flag
+    modelFlag = centralConfig(flagKey)
     initScoreMap(rcmder)
 
     centralConfig.onChange(flagKey){ flagOpt =>
@@ -76,8 +76,8 @@ class ExpertRecommenderControllerImpl @Inject()(
       case Some(TopicModelAccessorFlag.A) => new ExpertRecommender(db, uriTopicRepoA, clicksRepo, bookmarkRepo)
       case Some(TopicModelAccessorFlag.B) => new ExpertRecommender(db, uriTopicRepoB, clicksRepo, bookmarkRepo)
       case _ => {
-        healthcheckPlugin.addError(HealthcheckError(callType = Healthcheck.SEARCH,
-          errorMessage = Some("flag from zookeeper does not make sense. Expert recommender has been default to use uriTopicRepoA")))
+        log.warn("flag from zookeeper does not make sense. Expert recommender has been default to use uriTopicRepoA")
+        centralConfig(new TopicModelFlagKey()) = TopicModelAccessorFlag.A
         new ExpertRecommender(db, uriTopicRepoA, clicksRepo, bookmarkRepo)
       }
     }
