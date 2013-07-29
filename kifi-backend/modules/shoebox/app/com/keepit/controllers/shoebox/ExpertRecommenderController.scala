@@ -54,15 +54,15 @@ class ExpertRecommenderControllerImpl @Inject()(
     val flagKey = new TopicModelFlagKey()
     val flag = centralConfig(flagKey)
     val rcmder = createExpertRecommender(flag)
-    modelFlag = centralConfig(flagKey)
+    modelFlag = flag
     initScoreMap(rcmder)
 
     centralConfig.onChange(flagKey){ flagOpt =>
-      log.info("flag from zookeeper changed. will rebuild score map.")
       val newFlag = centralConfig(flagKey)
       if (modelFlag != newFlag) {
+        log.info("flag from zookeeper changed. will rebuild score map.")
         modelFlag = newFlag
-        val newRcmder = createExpertRecommender(flag)
+        val newRcmder = createExpertRecommender(newFlag)
         initScoreMap(newRcmder)
       }
     }
@@ -77,7 +77,6 @@ class ExpertRecommenderControllerImpl @Inject()(
       case Some(TopicModelAccessorFlag.B) => new ExpertRecommender(db, uriTopicRepoB, clicksRepo, bookmarkRepo)
       case _ => {
         log.warn("flag from zookeeper does not make sense. Expert recommender has been default to use uriTopicRepoA")
-        centralConfig(new TopicModelFlagKey()) = TopicModelAccessorFlag.A
         new ExpertRecommender(db, uriTopicRepoA, clicksRepo, bookmarkRepo)
       }
     }
