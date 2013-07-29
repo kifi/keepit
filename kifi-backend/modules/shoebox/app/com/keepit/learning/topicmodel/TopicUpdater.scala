@@ -77,7 +77,7 @@ class TopicUpdater @Inject() (
 
   // main entry point
   def update(useActive: Boolean = true): (Int, Int) = {
-    log.info("TopicUpdater: starting a new round of update ...")
+    log.info(s"TopicUpdater: starting a new round of update ... current model is ${modelAccessor.getCurrentFlag}")
     val (uriSeq, bookmarkSeq) = db.readOnly { implicit s =>
       getAccessor(useActive).topicSeqInfoRepo.getSeqNums match {
         case Some((uriSeq, bookmarkSeq)) => (uriSeq, bookmarkSeq)
