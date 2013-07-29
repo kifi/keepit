@@ -305,11 +305,4 @@ object RemodelState{
 
 case class TopicRemodelKey(val name: String = "topic_model_remodel") extends StringCentralConfigKey with TopicModelConfigKey
 
-object NewModelFlag{
-  val A = "a"
-  val B = "b"
-}
-
 case class NewModelKey(val name: String = "topic_model_newModel") extends StringCentralConfigKey with TopicModelConfigKey
-
-
