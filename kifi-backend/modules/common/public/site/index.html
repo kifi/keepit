@@ -252,11 +252,33 @@
 				</div>
 			</div>
 			<div class="friends-page" data-href="friends/invite">
-				<nav class="network-filters">
-					<a href="javascript:">All</a>
+				<nav class="invite-filters">
+					<a href="javascript:" class="selected">All</a>
 					<a href="javascript:" data-nw="facebook"></a>
 					<a href="javascript:" data-nw="linkedin"></a>
 				</nav>
+				<div class="above-invite-friends">
+					<input class="invite-filter" type="text" placeholder="Start typing a friend’s name">
+				</div>
+				<div class="invite-friends">
+					<ul class="antiscroll-inner">
+						<li class="invite-friend" data-template>
+							<img class="invite-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{image}}">
+							<div class="invite-name">{{label}}</div>
+							<div class="invite-status">
+								{% if status %}
+									{{status}}
+								{% else %}
+									Invite through {{value | replace '/.*', ''}}
+								{% endif %}
+							</div>
+							{% if !status %}
+								<a class="invite-button" href="javascript:"></a>
+							{% endif %}
+						</li>
+					</ul>
+					<img class="invite-friends-loading" src="img/wait.gif">
+				</div>
 			</div>
 			<div class="friends-page" data-href="friends/requests">
 				<div class="friend-reqs-status"></div>
