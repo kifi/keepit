@@ -253,7 +253,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
       icon: "facebook.png"
     }];
 
-  function displayURLFormatter(url) {
+  function displayURLFormatter(url, matches) {
     for (var i = 0; i < urlAutoFormatters.length; i++) {
       if (urlAutoFormatters[i].match.test(url)) {
         var iconUrl = api.url("images/results/" + urlAutoFormatters[i].icon);
@@ -261,11 +261,12 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
           urlAutoFormatters[i].template;
       }
     }
-    url = url.replace(/^https?:\/\//, "");
-    if (url.length > 64) {
-      url = url.substr(0, 60) + "...";
-    }
-    return boldSearchTerms(url, response.query);
+    var prefix = /^https?:\/\//;
+    var prefixLen = (url.match(prefix) || [])[0].length || 0;
+    url = url.replace(prefix, '');
+    url = url.length > 64 ? url.substr(0, 60) + "..." : url;
+    matches = matches.map(function (m) { return [m[0] - prefixLen, m[1]]; });
+    return boldSearchTerms(url, matches);
   }
 
   function bindHandlers() {
@@ -510,8 +511,8 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
   function processHit(hit) {
     var friendsToShow = 8;
 
-    hit.displayUrl = displayURLFormatter(hit.bookmark.url);
-    hit.displayTitle = boldSearchTerms(hit.bookmark.title || "", response.query) || hit.displayUrl;
+    hit.displayUrl = displayURLFormatter(hit.bookmark.url, (hit.bookmark.matches || {}).url);
+    hit.displayTitle = boldSearchTerms(hit.bookmark.title, (hit.bookmark.matches || {}).title) || hit.displayUrl;
     hit.displayScore = response.showScores === true ? "[" + Math.round(hit.score * 100) / 100 + "] " : "";
 
     var who = response.filter && response.filter.who || "", ids = who.length > 1 ? who.split(".") : null;
@@ -544,10 +545,12 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     return text + (text.substr(0, 2) == "1 " ? "" : "s");
   }
 
-  function boldSearchTerms(text, query) {
-    return (query.match(/\w+/g) || []).reduce(function(text, term) {
-      return text.replace(new RegExp("(\\b" + term + "\\b)", "ig"), "<b>$1</b>");
-    }, text);
+  function boldSearchTerms(text, matches) {
+    var before = '<b>', after = '</b>';
+    return (matches || []).reduce(function (text, match, i) {
+      var start = match[0] + i*(before.length + after.length), len = match[1];
+      return text.substr(0, start) + before + text.substr(start, len) + after + text.substr(start + len);
+    }, text || "");
   }
 
   function areSameFilter(f1, f2) {
