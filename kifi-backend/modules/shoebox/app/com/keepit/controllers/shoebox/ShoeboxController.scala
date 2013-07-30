@@ -118,6 +118,13 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(uri))
   }
 
+  def normalizeURL(url: String) = Action { //TODO Stephen: What if this is a new url?
+    val uriId = db.readOnly { implicit s =>
+      normUriRepo.getByUri(url).get
+    }
+    Ok(Json.toJson(uriId))
+  }
+
   def getNormalizedURIs(ids: String) = Action { request =>
      val uriIds = ids.split(',').map(id => Id[NormalizedURI](id.toLong))
      val uris = db.readOnly { implicit s => uriIds map normUriRepo.get }

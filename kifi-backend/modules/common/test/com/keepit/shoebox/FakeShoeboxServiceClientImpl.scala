@@ -207,6 +207,10 @@ class FakeShoeboxServiceClientImpl(
     Future.successful(uri)
   }
 
+  def normalizeURL(url: String): Future[Id[NormalizedURI]] = { //TODO Stephen: Make this more realistic?
+    Future.successful(Id[NormalizedURI](42)) 
+  }
+
   def getNormalizedURIs(ids: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]] = {
     val uris = ids.map(allNormalizedURIs(_))
     Future.successful(uris)

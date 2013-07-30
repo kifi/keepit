@@ -154,7 +154,7 @@ object ApplicationBuild extends Build {
 
     val bender = play.Project("bender", appVersion, Nil, path = file("modules/bender")).settings(
       commonSettings: _*
-    ).dependsOn(common % "test->test;compile->compile").aggregate(common)
+    ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
 
     val aaaMain = play.Project(appName, appVersion).settings(
       commonSettings: _*
