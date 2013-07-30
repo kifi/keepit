@@ -6,7 +6,6 @@ import com.keepit.classify.{DomainTagName, Domain}
 import com.keepit.common.db._
 import com.keepit.common.db.{Id, State, Model, ExternalId, LargeString}
 import com.keepit.common.mail._
-import com.keepit.common.social._
 import com.keepit.common.time._
 import com.keepit.common.net.UserAgent
 import com.keepit.model._
