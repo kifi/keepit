@@ -13,7 +13,7 @@ import MessagingTypeMappers._
 case class Message(
     id: Option[Id[Message]],
     createdAt: DateTime = currentDateTime(zones.PT), 
-    updateAt: DateTime = currentDateTime(zones.PT), 
+    updatedAt: DateTime = currentDateTime(zones.PT), 
     externalId: ExternalId[Message] = ExternalId(),
     from: Option[Id[User]],
     thread: Id[MessageThread],
@@ -24,7 +24,7 @@ case class Message(
   extends ModelWithExternalId[Message] {
 
   def withId(id: Id[Message]): Message = this.copy(id = Some(id))
-  def withUpdateTime(updateTime: DateTime) = this.copy(updateAt=updateTime) 
+  def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt=updateTime) 
 }
 
 
@@ -75,7 +75,7 @@ class MessageRepoImpl @Inject() (
     save(msg)
   }
 
-  def updateUriId(message: Message, uriId: Id[NormalizedURI])(implicit session: RWSession) : Unit = {
+  def updateUriId(message: Message, uriId: Id[NormalizedURI])(implicit session: RWSession) : Unit = { //TODO Stephen: Make this an update
     message.copy(sentOnUriId=Some(uriId))
     save(message)
   }

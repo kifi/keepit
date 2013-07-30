@@ -57,9 +57,11 @@ case class MessageThread(
 @ImplementedBy(classOf[MessageThreadRepoImpl])
 trait MessageThreadRepo extends Repo[MessageThread] with ExternalIdColumnFunction[MessageThread] {
 
-  def getOrCreate(participants: Set[Id[User]], urlOpt: Option[String], uriIdOpt: Option[Id[NormalizedURI]])(implicit session: RWSession) : MessageThread
+  def getOrCreate(participants: Set[Id[User]], urlOpt: Option[String], uriIdOpt: Option[Id[NormalizedURI]])(implicit session: RWSession) : (MessageThread, Boolean)
 
   override def get(id: ExternalId[MessageThread])(implicit session: RSession) : MessageThread
+
+  override def get(id: Id[MessageThread])(implicit session: RSession) : MessageThread
 }
 
 
@@ -81,7 +83,7 @@ class MessageThreadRepoImpl @Inject() (
 
   import db.Driver.Implicit._
 
-  def getOrCreate(participants: Set[Id[User]], urlOpt: Option[String], uriIdOpt: Option[Id[NormalizedURI]])(implicit session: RWSession) : MessageThread = {
+  def getOrCreate(participants: Set[Id[User]], urlOpt: Option[String], uriIdOpt: Option[Id[NormalizedURI]])(implicit session: RWSession) : (MessageThread, Boolean) = {
     //Note (stephen): This has a race condition: When two threads that would normally be merged are created at the exact same time two different conversations will be the result
     val mtps = MessageThreadParticipants(participants)
     val candidates : Seq[MessageThread]= (for (row <- table if row.participantsHash===mtps.hash && row.uriId===uriIdOpt) yield row).list.filter { thread =>
@@ -89,7 +91,7 @@ class MessageThreadRepoImpl @Inject() (
       thread.participants.isDefined &&
       thread.participants.get == mtps
     }
-    if (candidates.length>0) candidates.head
+    if (candidates.length>0) (candidates.head, false)
     else {
       val thread = MessageThread(
         id = None,
@@ -99,13 +101,17 @@ class MessageThreadRepoImpl @Inject() (
         participantsHash = Some(mtps.hash),
         replyable = true
       )
-      super.save(thread)
+      (super.save(thread), true)
     }
 
   }
 
   override def get(id: ExternalId[MessageThread])(implicit session: RSession) : MessageThread = {
     (for (row <- table if row.externalId===id) yield row).first
+  }
+
+  override def get(id: Id[MessageThread])(implicit session: RSession) : MessageThread = {
+    (for (row <- table if row.id===id) yield row).first
   }
 
 }

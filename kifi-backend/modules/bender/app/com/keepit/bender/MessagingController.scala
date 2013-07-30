@@ -13,11 +13,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.libs.json.{JsValue, JsNull}
 
 /* To future maintainers 
-*  If this is ever getting too slow the first things I would look at:
+*  If this is ever getting too slow the first things I would look at (in no particular order):
 *  -External Id lookups. Make those numeric Id (instead of giant strings) and index them in the db
 *  -Synchronous dependency on normalized url id in thread creation. Remove it.
 *  -Go to 64 bit for the participants hash
 *  -Use "Insert Ignore" where possible
+*  -Lazy creation of UserThread rows
+*  -Do batch updates when modifying UserThreads for a given thread (will require index on threadid) 
+*  -Make notifications not wait for a message ID
 */
 
 
@@ -52,9 +55,11 @@ class MessagingController(threadRepo: MessageThreadRepo, userThreadRepo: UserThr
     val participants = recipients + from
     val uriIdOpt = urlOpt.map{url: String => Await.result(shoebox.normalizeURL(url), 10 seconds)}
     val thread = db.readWrite{ implicit session => 
-      val thread = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt) 
-      participants.par.foreach{ userId => 
-        userThreadRepo.createIfNotExists(userId, thread.id.get, uriIdOpt)
+      val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt) 
+      if (isNew){
+        participants.par.foreach{ userId => 
+          userThreadRepo.createIfNotExists(userId, thread.id.get, uriIdOpt)
+        }
       }
       thread 
     }
@@ -78,18 +83,13 @@ class MessagingController(threadRepo: MessageThreadRepo, userThreadRepo: UserThr
   }
 
 
-  def sendMessage(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String]) : Message = { //TODO Stephen: Update last_msg_from_other
+  def sendMessage(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String]) : Message = {
     if (! thread.containsUser(from)) throw NotAuthorizedException()
     log.info(s"Sending message '$messageText' from $from to ${thread.participants}")
-    val message = db.readWrite{ implicit session => 
-      val message = messageRepo.create(from, thread, messageText, urlOpt)
-      thread.allUsersExcept(from).foreach { userId =>
-        userThreadRepo.setLastMsgFromOther(userId, thread.id.get, message.id.get)
-      }
-      message
-    }
+    val message = db.readWrite{ implicit session => messageRepo.create(from, thread, messageText, urlOpt) }
 
-    thread.allUsersExcept(from).foreach { userId =>
+    thread.allUsersExcept(from).par.foreach { userId =>
+      db.readWrite{ implicit session => userThreadRepo.setLastMsgFromOther(userId, thread.id.get, message.id.get) }
       sendNotificationForMessage(userId, message, thread)
     }
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
