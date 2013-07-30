@@ -46,6 +46,16 @@ kifi-backend/modules/search/.classpath
 kifi-backend/modules/search/.project
 kifi-backend/modules/search/.settings/*
 kifi-backend/modules/search/.cache
+kifi-backend/modules/bender/.target/*
+kifi-backend/modules/bender/.classpath
+kifi-backend/modules/bender/.project
+kifi-backend/modules/bender/.settings/*
+kifi-backend/modules/bender/.cache
+kifi-backend/modules/sqldb/.target/*
+kifi-backend/modules/sqldb/.classpath
+kifi-backend/modules/sqldb/.project
+kifi-backend/modules/sqldb/.settings/*
+kifi-backend/modules/sqldb/.cache
 # Compiled source #
 ###################
 *.com
