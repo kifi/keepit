@@ -356,16 +356,16 @@ $(function() {
 					props['emails'] = [props['email']];
 					delete props['email'];
 				}
+				$editContainer.find('.editable').each(function () {
+					var $this = $(this);
+					var value = $this.find('input').val();
+					$this.text(value);
+					props[$this.data('prop')] = value;
+				});
 				var $save = $editContainer.find('.save')
 				var saveText = $save.text();
 				$save.text('Saving...');
 				$.postJson(xhrBase + '/user/me', props, function(data) {
-					$editContainer.find('.editable').each(function () {
-						var $this = $(this);
-						var value = $this.find('input').val();
-						$this.text(value);
-						props[$this.data('prop')] = value;
-					});
 					$editContainer.removeClass('editing');
 					$save.text(saveText);
 					updateMe(data);
