@@ -521,7 +521,20 @@ $(function() {
 
 	// Friend Invites
 
-	function prepInviteTab() {}
+	var $nwFriends = $('.invite-friends').antiscroll({x: false, width: '100%'})
+	var nwFriendsScroller = $nwFriends.data("antiscroll");
+	$(window).resize(nwFriendsScroller.refresh.bind(nwFriendsScroller));  // TODO: throttle, and only bind while visible
+	var nwFriendsTmpl = Tempo.prepare($nwFriends).when(TempoEvent.Types.RENDER_COMPLETE, function() {
+		$nwFriendsLoading.hide();
+		nwFriendsScroller.refresh();
+	});
+	var $nwFriendsLoading = $('.invite-friends-loading');
+	function prepInviteTab() {
+		$.getJSON(xhrBase + '/user/all-connections', function(friends) {
+			console.log('[prepInviteTab] friends:', friends.length);
+			nwFriendsTmpl.render(friends);
+		});
+	}
 
 	// Friend Requests
 
