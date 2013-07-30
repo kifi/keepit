@@ -144,14 +144,15 @@ span.edit::before, span.save::before { display: inline-block; position: absolute
 .profile .contact-email { font-size: 17px; margin: 15px 0; }
 .profile .contact-email input { font-size: 17px; font: inherit; }
 .profile .contact-email .editable { display: inline-block; padding: 2px 0; }
-.profile>.networks { position: relative; font-size: 0; background-size: 62px; margin: 20px 0; padding: 0; }
+.profile>.networks { position: relative; font-size: 0; background-size: 62px; margin: 20px 0; padding: 0; text-align: center; }
 .profile>.networks>ul { margin: 0; padding: 60px 0 0 72px; }
+.profile>.networks>ul>li>.connect, .profile>.networks>ul>li>.disconnect { display: block; font-size: 12px; padding: 5px 0; }
 .profile>.networks>.kifi-k::before { position: absolute; display: block; content: "."; background: url(../img/kifi-k.png) no-repeat; background: size: 100%; top: -6px; left: -6px; border: 6px solid white; width: 62px; height: 62px; border-radius: 50%; z-index: 1;}
 .profile>.networks>.kifi-k::after { position: absolute; display: block; content: "."; z-index: 5; left: 40px; top: 0; width: 286px; height: 58px; }
 .profile>.networks::before { position: absolute; display: block; content: "."; top: 24px; left: 54px; width: 9px; width: 9px; height: 9px; background: #accc98; border: 2px solid white; border-radius: 50%; z-index: 2; }
 .profile>.networks::after { position: absolute; display: block; content: "."; top: 21px; left: 63px; width: 284px; height: 20px; background: #eff2f7; z-index: 0; }
-.profile>.networks>ul>li { display: inline-block; margin: 0 5px; width: 60px; height: 60px; font-size: 0; }
-.profile-nw { position: relative; display: inline-block; width: 100%; height: 100%; background-image: url(../img/networks.png); background-size: 240px 60px; }
+.profile>.networks>ul>li { display: block; float: left; margin: 0 5px; width: 60px; height: auto; font-size: 0; }
+.profile-nw { position: relative; display: block; width: 100%; height: 60px; background-image: url(../img/networks.png); background-size: 240px 60px; }
 .profile-nw.nw-facebook { background-color: #637ab8; }
 .profile-nw.nw-linkedin { background-color: #4f83c3; background-position: -60px 0; }
 .profile-nw.nw-twitter { background-color: #0da2d9; background-position: -120px 0; }
