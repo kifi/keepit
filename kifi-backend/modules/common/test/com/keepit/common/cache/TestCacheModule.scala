@@ -8,7 +8,7 @@ import com.keepit.search.ActiveExperimentsCache
 import com.keepit.social.{CommentWithBasicUserCache, BasicUserUserIdCache}
 
 case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
-  
+
   @Singleton
   @Provides
   def commentCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
@@ -138,5 +138,10 @@ case class TestCacheModule() extends CacheModule(HashMapMemoryCacheModule()) {
   @Provides
   def userConnectionCountCache(outerRepo: FortyTwoCachePlugin) =
     new UserConnectionCountCache((outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def searchFriendsCache(outerRepo: FortyTwoCachePlugin) =
+    new SearchFriendsCache((outerRepo, 7 days))
 }
 

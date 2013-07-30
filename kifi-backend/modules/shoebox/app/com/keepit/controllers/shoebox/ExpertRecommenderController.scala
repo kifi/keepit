@@ -58,11 +58,11 @@ class ExpertRecommenderControllerImpl @Inject()(
     initScoreMap(rcmder)
 
     centralConfig.onChange(flagKey){ flagOpt =>
-      log.info("flag from zookeeper changed. will rebuild score map.")
       val newFlag = centralConfig(flagKey)
       if (modelFlag != newFlag) {
+        log.info("flag from zookeeper changed. will rebuild score map.")
         modelFlag = newFlag
-        val newRcmder = createExpertRecommender(flag)
+        val newRcmder = createExpertRecommender(newFlag)
         initScoreMap(newRcmder)
       }
     }
@@ -76,8 +76,7 @@ class ExpertRecommenderControllerImpl @Inject()(
       case Some(TopicModelAccessorFlag.A) => new ExpertRecommender(db, uriTopicRepoA, clicksRepo, bookmarkRepo)
       case Some(TopicModelAccessorFlag.B) => new ExpertRecommender(db, uriTopicRepoB, clicksRepo, bookmarkRepo)
       case _ => {
-        healthcheckPlugin.addError(HealthcheckError(callType = Healthcheck.SEARCH,
-          errorMessage = Some("flag from zookeeper does not make sense. Expert recommender has been default to use uriTopicRepoA")))
+        log.warn("flag from zookeeper does not make sense. Expert recommender has been default to use uriTopicRepoA")
         new ExpertRecommender(db, uriTopicRepoA, clicksRepo, bookmarkRepo)
       }
     }
@@ -143,7 +142,9 @@ class ExpertRecommenderControllerImpl @Inject()(
     }
     val TOP_N = 4
     val ranks = rank(urisAndKeepers)
+    log.info(s"${ranks.size} friends ranked")
     val experts = ranks.take(TOP_N).filter(_._2 > 0.0).map{_._1}
+    log.info(s"returning ${experts.size} experts to shoebox client")
     Ok(JsArray(experts.map{x => JsNumber(x.id)}))
   }
 }

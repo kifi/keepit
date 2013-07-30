@@ -34,13 +34,13 @@
 		<h2>You</h2>
 		<h3 class="my-keeps">
 			<a href="">
-				<div class="keep-count">...</div>
+				<div class="nav-count"></div>
 				<div class="view-name">Your Keeps</div>
 			</a>
 		</h3>
 		<h3 class="my-friends" style="display:none">
 			<a href="friends">
-				<!--div class="keep-count">...</div-->
+				<div class="nav-count"></div>
 				<div class="view-name">Your Friends</div>
 			</a>
 		</h3>
@@ -54,7 +54,7 @@
 					<h3 class="collection" data-template data-id="{{id}}" style="display:none">
 						<div class="coll-tri"></div>
 						<a href="collection/{{id}}">
-							<div class="keep-count">{{keeps}}</div>
+							<div class="nav-count">{{keeps}}</div>
 							<div class="view-name long-text">{{name}}</div>
 						</a>
 					</h3>
@@ -141,7 +141,7 @@
 						<div class="keep-who">
 							<a class="pic me" title="You! You look great!"
 								data-pic="//djty7jcqog9qu.cloudfront.net/users/{{me.id}}/pics/100/{{me.pictureName}}"></a>
-							<a class="pic friend" data-template-for="keepers" href="javascript:" data-name="{{firstName}} {{lastName}}" data-id="{{id}}"
+							<a class="pic" data-template-for="keepers" href="javascript:" data-name="{{firstName}} {{lastName}}" data-id="{{id}}"
 								data-pic="//djty7jcqog9qu.cloudfront.net/users/{{id}}/pics/100/{{pictureName}}"></a>
 							<span class="keep-who-text" data-after-template>
 								<span class="keep-you">
@@ -220,27 +220,28 @@
 			</nav>
 			<div class="friends-page" data-href="friends">
 				<div class="above-friends-list">
-					<input class="friends-filter" type="text" placeholder="Type a friend’s name">
+					<input class="friends-filter" type="text" placeholder="Start typing a friend’s name">
 				</div>
 				<div id="friends-list">
 					<ul class="antiscroll-inner">
 						<li class="friend" data-template>
 							<div class="friend-pic">
-								<img src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{image}}">
+								<img src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{picUri}}">
 							</div>
 							<div class="friend-info">
-								<div class="friend-name">{{label}}</div>
+								<div class="friend-name">{{firstName}} {{lastName}}</div>
 								<div class="friend-label">Connected to you through:</div>
 								<div class="friend-networks">
-									<a class="friend-nw friend-nw-facebook{%if networks.facebook %} on{% endif %}"></a>
-									<a class="friend-nw friend-nw-linkedin{%if networks.linkedin %} on{% endif %}"></a>
+									<a class="friend-nw friend-nw-kifi"></a>
+									<a class="friend-nw friend-nw-facebook" target="_blank"></a>
+									<a class="friend-nw friend-nw-linkedin" target="_blank"></a>
 									<a class="friend-nw friend-nw-twitter"></a>
-									<a class="friend-nw friend-nw-pinterest"></a>
+									<a class="friend-nw friend-nw-google"></a>
 								</div>
 							</div>
-							<div class="friend-actions">
+							<div class="friend-actions {{state}}">
 								<div style="position:relative">
-									<a class="friend-mute" href="javascript:"></a>
+									<a class="friend-mute{% if searchFriend === false %} muted{% endif %}" href="javascript:"></a>
 									<a class="friend-status" href="javascript:"></a>
 									<div class="friend-action-desc"></div>
 								</div>
@@ -251,16 +252,50 @@
 				</div>
 			</div>
 			<div class="friends-page" data-href="friends/invite">
-				<nav class="network-filters">
-					<a href="javascript:">All</a>
+				<nav class="invite-filters">
+					<a href="javascript:" class="selected">All</a>
 					<a href="javascript:" data-nw="facebook"></a>
 					<a href="javascript:" data-nw="linkedin"></a>
 				</nav>
+				<div class="above-invite-friends">
+					<input class="invite-filter" type="text" placeholder="Start typing a friend’s name">
+				</div>
+				<div class="invite-friends">
+					<ul class="antiscroll-inner">
+						<li class="invite-friend" data-template>
+							<img class="invite-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{image}}">
+							<div class="invite-name">{{label}}</div>
+							<div class="invite-status">
+								{% if status %}
+									{{status}}
+								{% else %}
+									Invite through {{value | replace '/.*', ''}}
+								{% endif %}
+							</div>
+							{% if !status %}
+								<a class="invite-button" href="javascript:"></a>
+							{% endif %}
+						</li>
+					</ul>
+					<img class="invite-friends-loading" src="img/wait.gif">
+				</div>
 			</div>
 			<div class="friends-page" data-href="friends/requests">
-				<div class="friend-request-status">
-					You have no pending friend requests right now.
+				<div class="friend-reqs-status"></div>
+				<div class="friend-reqs">
+					<ul class="antiscroll-inner">
+						<li class="friend-req" data-template data-id="{{id}}">
+							<img class="friend-req-pic" src="data:image/gif;base64,R0lGODlhAQABAID/AP///wAAACwAAAAAAQABAAACAkQBADs=" data-src="{{picUri}}">
+							<div class="friend-req-name">{{firstName}} {{lastName}}</div>
+							<div class="friend-req-q">Accept as your kifi friend?</div>
+							<div class="friend-req-act">
+								<a class="friend-req-y" href="javascript:">Yes</a>
+								<a class="friend-req-n" href="javascript:">Ignore</a>
+							</div>
+						</li>
+					</ul>
 				</div>
+				<img class="friend-reqs-loading" src="img/wait.gif">
 			</div>
 		</div>
 	</div>
@@ -378,10 +413,11 @@
 					<div class="fr-card-interests">Coming soon</div>
 					<div class="fr-card-label">Connected to you through:</div>
 					<div class="friend-networks">
-						<a class="friend-nw friend-nw-facebook"></a>
-						<a class="friend-nw friend-nw-linkedin"></a>
+						<a class="friend-nw friend-nw-kifi"></a>
+						<a class="friend-nw friend-nw-facebook" target="_blank"></a>
+						<a class="friend-nw friend-nw-linkedin" target="_blank"></a>
 						<a class="friend-nw friend-nw-twitter"></a>
-						<a class="friend-nw friend-nw-pinterest"></a>
+						<a class="friend-nw friend-nw-google"></a>
 					</div>
 				</div>
 			</div>

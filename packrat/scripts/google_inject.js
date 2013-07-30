@@ -39,9 +39,6 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     clicks[isKifi ? "kifi" : "google"].push(href);
 
     if (href && resIdx >= 0) {
-      if(isKifi) {
-        api.port.emit("danny_play", "result_clicked.mp3");
-      }
       logEvent("search", isKifi ? "kifiResultClicked" : "googleResultClicked",
         {"url": href, "whichResult": resIdx, "query": response.query, "experimentId": response.experimentId, "kifiResultsCount": $kifiLi.length});
     }
@@ -151,13 +148,10 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
           prefetchMore();
         }.bind(null, resp.hits.slice());
         if (resp.show) {
-          api.port.emit("danny_play", "showing_kifi_results.mp3");
           onShow();
         } else {
           $res.data("onShow", onShow);
         }
-      } else {
-        api.port.emit("danny_play", "no_results.mp3");
       }
     });
 
@@ -411,7 +405,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     }).bindHover(".kifi-chatter", function(configureHover) {
       var n = $(this).data("n");
       render("html/search/chatter.html", {
-        numComments: n[0],
+        //numComments: n[0],
         numMessages: n[1],
         pluralize: function() {return pluralLambda}
       }, function(html) {
@@ -514,6 +508,8 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
   }
 
   function processHit(hit) {
+    var friendsToShow = 8;
+
     hit.displayUrl = displayURLFormatter(hit.bookmark.url);
     hit.displayTitle = boldSearchTerms(hit.bookmark.title || "", response.query) || hit.displayUrl;
     hit.displayScore = response.showScores === true ? "[" + Math.round(hit.score * 100) / 100 + "] " : "";
@@ -521,8 +517,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     var who = response.filter && response.filter.who || "", ids = who.length > 1 ? who.split(".") : null;
     hit.displaySelf = who != "f" && !ids && hit.isMyBookmark;
     hit.displayUsers = who == "m" ? [] :
-      ids ? hit.users.filter(function(u) {return ~ids.indexOf(u.id)}) :
-      hit.users;
+      (ids ? hit.users.filter(function(u) {return ~ids.indexOf(u.id)}) : hit.users).slice(0, friendsToShow);
 
     var numOthers = hit.count - hit.users.length - (hit.isMyBookmark && !hit.isPrivate ? 1 : 0);
     hit.whoKeptHtml = formatCountHtml(

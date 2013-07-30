@@ -45,14 +45,13 @@ class TopicUpdater @Inject() (
       }
     }
 
-    centralConfig.onChange(flagKey){ flagOpt =>
-      log.info("topic model flag changed. refreshing inactive model")
-      if ( flagOpt.isDefined && (flagOpt.get != modelAccessor.getCurrentFlag)) {
-        refreshInactiveModel()
-        modelAccessor.switchAccessor()    // changes internal flag
-      }
-    }
     flagKey
+  }
+
+  // If we receive a SwitchModel message, check this first. Switch model only if this returns false.
+  def checkFlagConsistency = {
+    val flag = centralConfig(new TopicModelFlagKey())
+    !flag.isDefined || ( flag == Some(modelAccessor.getCurrentFlag) )
   }
 
   def getAccessor(useActive: Boolean) = if (useActive) modelAccessor.getActiveAccessor else modelAccessor.getInactiveAccessor
@@ -78,7 +77,7 @@ class TopicUpdater @Inject() (
 
   // main entry point
   def update(useActive: Boolean = true): (Int, Int) = {
-    log.info("TopicUpdater: starting a new round of update ...")
+    log.info(s"TopicUpdater: starting a new round of update ... current model is ${modelAccessor.getCurrentFlag}. useActive = ${useActive}")
     val (uriSeq, bookmarkSeq) = db.readOnly { implicit s =>
       getAccessor(useActive).topicSeqInfoRepo.getSeqNums match {
         case Some((uriSeq, bookmarkSeq)) => (uriSeq, bookmarkSeq)
@@ -104,23 +103,10 @@ class TopicUpdater @Inject() (
     }
   }
 
-
-  def remodel() = {
-    def afterRefresh() = {
-      reset(useActive = false)        // wipe out content associated with the inactive model
-      var catchUp = false
-      while (!catchUp) {
-        val (m, n) = update(useActive = false)
-        if (m.max(n) < fetchSize) catchUp = true
-      }
-      modelAccessor.switchAccessor()      // change internal flag
-      log.info(s"successfully switched to model ${modelAccessor.getCurrentFlag}")
-    }
-
-    log.info(s"TopicUpdater: start remodelling ... ")
+  def refreshAndSwitchModel() = {
     refreshInactiveModel()
-    afterRefresh()
-    centralConfig.update(flagKey, modelAccessor.getCurrentFlag)     // update flag to zookeeper
+    modelAccessor.switchAccessor()
+    log.info(s"successfully switched to model ${modelAccessor.getCurrentFlag}")
   }
 
   private def updateUriTopic(seqNum: SequenceNumber, useActive: Boolean): Int = {
@@ -311,3 +297,13 @@ trait TopicModelConfigKey extends CentralConfigKey {
 }
 
 case class TopicModelFlagKey(val name: String = "topic_model_flag") extends StringCentralConfigKey with TopicModelConfigKey
+
+object RemodelState{
+  val NEEDED = "needed"
+  val STARTED = "started"
+  val DONE = "done"
+}
+
+case class TopicRemodelKey(val name: String = "topic_model_remodel") extends StringCentralConfigKey with TopicModelConfigKey
+
+case class NewModelKey(val name: String = "topic_model_newModel") extends StringCentralConfigKey with TopicModelConfigKey

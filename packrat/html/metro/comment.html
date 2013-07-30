@@ -1,8 +1,0 @@
-<div class="kifi-comment-posted" data-id="{{id}}">
-  <time datetime="{{createdAt}}">{{#formatLocalDate}}{{createdAt}}{{/formatLocalDate}}</time>
-  <img class="kifi-comment-pic{{#isLoggedInUser}} kifi-self{{/isLoggedInUser}}" src="{{cdnBase}}/users/{{user.id}}/pics/100/0.jpg">
-  <div class="kifi-comment-body">
-    <div class="kifi-comment-name">{{user.firstName}} {{user.lastName}}</div>
-    {{#formatComment}}{{{text}}}{{/formatComment}}
-  </div>
-</div>

@@ -25,6 +25,7 @@ class UserController @Inject() (db: Database,
   networkInfoLoader: NetworkInfoLoader,
   actionAuthenticator: ActionAuthenticator,
   friendRequestRepo: FriendRequestRepo,
+  searchFriendRepo: SearchFriendRepo,
   urbanAirship: UrbanAirship)
     extends WebsiteController(actionAuthenticator) {
 
@@ -44,7 +45,18 @@ class UserController @Inject() (db: Database,
   def connections() = AuthenticatedJsonAction { request =>
     Ok(Json.obj(
       "connections" -> db.readOnly { implicit s =>
-        userConnectionRepo.getConnectedUsers(request.userId).map(basicUserRepo.load).toSeq
+        val searchFriends = searchFriendRepo.getSearchFriends(request.userId)
+        val socialUsers = socialUserRepo.getByUser(request.userId)
+        val connectionIds = userConnectionRepo.getConnectedUsers(request.userId)
+        val unfriendedIds = userConnectionRepo.getUnfriendedUsers(request.userId)
+        (connectionIds.map(_ -> false).toSeq ++ unfriendedIds.map(_ -> true).toSeq).map { case (userId, unfriended) =>
+          Json.toJson(basicUserRepo.load(userId)).asInstanceOf[JsObject] ++ Json.obj(
+            "searchFriend" -> searchFriends.contains(userId),
+            "networks" -> networkInfoLoader.load(socialUsers, userId),
+            "unfriended" -> unfriended,
+            "description" -> userValueRepo.getValue(userId, "user_description")
+          )
+        }
       }
     ))
   }
@@ -108,6 +120,22 @@ class UserController @Inject() (db: Database,
         friendRequestRepo.getBySenderAndRecipient(sender.id.get, request.userId) map { friendRequest =>
           friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.IGNORED))
           Ok(Json.obj("success" -> true))
+        } getOrElse NotFound(Json.obj("error" -> s"There is no active friend request from user $id."))
+      } getOrElse BadRequest(Json.obj("error" -> s"User with id $id not found."))
+    }
+  }
+
+  def cancelFriendRequest(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+    db.readWrite { implicit s =>
+      userRepo.getOpt(id) map { recipient =>
+        friendRequestRepo.getBySenderAndRecipient(request.userId, recipient.id.get,
+            Set(FriendRequestStates.ACCEPTED, FriendRequestStates.ACTIVE)) map { friendRequest =>
+          if (friendRequest.state == FriendRequestStates.ACCEPTED) {
+            BadRequest(Json.obj("error" -> s"The friend request has already been accepted", "alreadyAccepted" -> true))
+          } else {
+            friendRequestRepo.save(friendRequest.copy(state = FriendRequestStates.INACTIVE))
+            Ok(Json.obj("success" -> true))
+          }
         } getOrElse NotFound(Json.obj("error" -> s"There is no active friend request for user $id."))
       } getOrElse BadRequest(Json.obj("error" -> s"User with id $id not found."))
     }
@@ -124,6 +152,34 @@ class UserController @Inject() (db: Database,
     db.readOnly { implicit s =>
       val users = friendRequestRepo.getBySender(request.userId) map { fr => basicUserRepo.load(fr.recipientId) }
       Ok(Json.toJson(users))
+    }
+  }
+
+  def excludeFriend(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+    db.readWrite { implicit s =>
+      val friendIdOpt = userRepo.getOpt(id) collect {
+        case user if userConnectionRepo.getConnectionOpt(request.userId, user.id.get).isDefined => user.id.get
+      }
+      friendIdOpt map { friendId =>
+        val changed = searchFriendRepo.excludeFriend(request.userId, friendId)
+        Ok(Json.obj("changed" -> changed))
+      } getOrElse {
+        BadRequest(Json.obj("error" -> s"You are not friends with user $id"))
+      }
+    }
+  }
+
+  def includeFriend(id: ExternalId[User]) = AuthenticatedJsonAction { request =>
+    db.readWrite { implicit s =>
+      val friendIdOpt = userRepo.getOpt(id) collect {
+        case user if userConnectionRepo.getConnectionOpt(request.userId, user.id.get).isDefined => user.id.get
+      }
+      friendIdOpt map { friendId =>
+        val changed = searchFriendRepo.includeFriend(request.userId, friendId)
+        Ok(Json.obj("changed" -> changed))
+      } getOrElse {
+        BadRequest(Json.obj("error" -> s"You are not friends with user $id"))
+      }
     }
   }
 

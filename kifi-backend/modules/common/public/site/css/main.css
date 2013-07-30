@@ -35,10 +35,11 @@ section.main {display: table-cell; vertical-align: top; position: relative; min-
 .left-col .active {background-color: #e3e6ee}
 .left-col>*>h3:not(.active):hover {background-color: #e9ecf2}
 .left-col h3>a {display: block; padding: 0 6px 0 40px; color: #818692}
-.left-col .keep-count {float: right; margin: 10px 0 0; border: 1px solid #b8c5d2; border-radius: 10.5px; color: #628196; font-size: 12px; line-height: 20px; height: 19px; padding: 0 12px}
-@-moz-document url-prefix() {.left-col .keep-count {line-height: 18px}}
-.left-col .active .keep-count {color: #fff; background: #b8c5d2}
-.left-col>*>h3:not(.active):hover .keep-count {background: #eff2f7}
+.left-col .nav-count {float: right; margin: 10px 0 0; border: 1px solid #b8c5d2; border-radius: 10.5px; color: #628196; font-size: 12px; line-height: 20px; height: 19px; padding: 0 12px}
+@-moz-document url-prefix() {.left-col .nav-count {line-height: 18px}}
+.left-col .nav-count:empty {display: none}
+.left-col .active .nav-count {color: #fff; background: #b8c5d2}
+.left-col>*>h3:not(.active):hover .nav-count {background: #eff2f7}
 .left-col .active .view-name {color: #556179}
 .left-col .view-name::before {content: " "; display: inline-block; height: 21px; padding: 10px 0; background: url(../img/nav-icons.png) 0 no-repeat; background-size: auto 21px; vertical-align: top}
 .left-col .my-keeps .view-name::before {width: 21px; margin-right: 7px; background-position: -21px}
@@ -66,9 +67,9 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 .collection.renamed {-webkit-transition: background-color .16s; transition: background-color .16s}
 .collection.drop-hover {background-color: #6fa6ef}
 .collection.drop-hover .view-name {color: #fff}
-.collection.drop-hover .keep-count {background-color: #fff; border-color: #fff; color: #628196}
-.collection .keep-count {margin-top: 9px}
-.collection.renaming .keep-count {display: none}
+.collection.drop-hover .nav-count {background-color: #fff; border-color: #fff; color: #628196}
+.collection .nav-count {margin-top: 9px}
+.collection.renaming .nav-count {display: none}
 .coll-tri {position: absolute; top: 0; bottom: 0; left: -33px; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer; -webkit-transition: left .16s; transition: left .16s}
 .active>.coll-tri {background-color: #b8c5d2}
 .coll-tri::before {content: " "; border-width: 4px 4px 0; border-style: solid; border-color: #b8c5d2 transparent; font-size: 0; line-height: 0; vertical-align: 1px}
@@ -167,17 +168,19 @@ span.edit::before, span.save::before { display: inline-block; position: absolute
 .profile-nw.not-connected { transition: background .25s ease-in 50ms; }
 
 .friends {padding: 13px 20px 0}
-.friends-tabs {margin: 15px 0 24px; line-height: 46px; border-bottom: 2px solid #e3e6ee}
-.friends-tabs>a {display: inline-block; border: solid transparent; border-radius: 6px 6px 0 0; border-width: 2px 2px 0; padding: 0 40px; font-size: 18px; font-weight: 300; vertical-align: top; position: relative; bottom: -2px; -webkit-font-smoothing: antialiased}
+.friends-tabs {margin: 15px 0 24px; line-height: 46px; border-bottom: 2px solid #e3e6ee; white-space: nowrap}
+.friends-tabs>a {display: inline-block; border: solid transparent; border-radius: 6px 6px 0 0; border-width: 2px 2px 0; padding: 0 25px; font-size: 18px; font-weight: 300; vertical-align: top; position: relative; bottom: -2px; -webkit-font-smoothing: antialiased}
 .friends-tabs>a:not([href]) {border-color: #e3e6ee; background-color: #fff; color: #34495e}
 .friends-tabs>a[href]:not(:hover) {color: #627d99}
 .friends-tabs>a[href]:focus {border-color: rgba(227,230,238,.3)}
 
 .above-friends-list {padding-bottom: 20px; border-bottom: 1px solid transparent}
-input.friends-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; padding: 0 13px; font-size: 14px; -webkit-font-smoothing: antialiased}
+input.friends-filter,
+input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; padding: 0 13px; font-size: 14px; -webkit-font-smoothing: antialiased}
 #friends-list {position: absolute; top: 260px; left: 20px; right: 0; bottom: 0; overflow-y: auto; overflow-x: hidden}
 #friends-list>.antiscroll-inner {position: absolute; left: 0; right: 0; top: 0; bottom: 0; overflow-y: auto; overflow-x: hidden; padding-right: 20px; -moz-box-sizing: border-box; box-sizing: border-box}
 .friend {border-top: 1px solid #e3e6ee; display: table; table-layout: fixed}
+.friend.no-match {display: none}
 .friend:last-child {border-bottom: 1px solid #e3e6ee}
 .friend-pic {display: table-cell; width: 70px; padding: 15px 0; vertical-align: top}
 .friend-pic>img {width: 70px; height: 70px; border-radius: 4px}
@@ -188,16 +191,51 @@ input.friends-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; pad
 .friend-actions>*>a {display: inline-block; height: 32px; width: 32px; border-radius: 50%; margin-left: 4px; background-color: #d7e8b1; vertical-align: top; text-align: center; -moz-box-sizing: border-box; box-sizing: border-box}
 .friend-actions>*>a::before {content: " "; display: inline-block; margin-top: 8px; height: 16px; background-image: url(../img/friend-actions.png); background-size: auto 16px}
 .friend-mute::before {width: 17px; background-position: -17px}
-.friend-mute:hover {background-color: #fff; border: 2px solid #e3e6ee}
-.friend-mute:hover::before {background-position: 0; margin-top: 6px}
+.friend-mute.muted:not(:hover),
+.friend-mute.muted:not([href]) {background-color: #fff; border: 2px solid #e3e6ee}
+.friend-mute:not(.muted)[href]:hover {background-color: #fff; border: 2px solid #e3e6ee}
+.friend-mute.muted:not(:hover)::before,
+.friend-mute.muted:not([href])::before,
+.friend-mute:not(.muted)[href]:hover::before {background-position: 0; margin-top: 6px}
+.unfriended>*>.friend-mute,
+.requested>*>.friend-mute {display: none}
 .friend-status::before {width: 16px; background-position: -34px}
-.friend-status:hover {background-color: #e78881}
-.friend-status:hover::before {width: 19px; background-position: -50px}
+:not(.unfriended)>*>.friend-status:not([disabled]):hover {background-color: #e78881}
+:not(.unfriended)>*>.friend-status:not([disabled]):hover::before {background-position: -50px; width: 20px; position: relative; left: 2px}
+.unfriended>*>.friend-status {background-color: #6fa6ef}
+.unfriended>*>.friend-status::before {background-position: -70px; width: 20px; position: relative; left: 2px}
+.requested>*>.friend-status {background-color: #b8c5d2}
+.requested>*>.friend-status::before {background-position: -90px; width: 20px; position: relative; left: 2px}
 .friend-action-desc {position: absolute; right: 0; bottom: -20px; font-size: 13px; line-height: 1; font-weight: 300; color: #34495e; -webkit-font-smoothing: antialiased}
 
-.network-filters {}
-.network-filters>a {font-size: 16px}
-.friend-request-status {font-size: 16px}
+.invite-filters {height: 49px; border-bottom: 1px solid #b8c5d2; margin-bottom: 14px}
+.invite-filters>a {display: inline-block; width: 36px; height: 36px; margin-right: 5px; vertical-align: top; -webkit-transition: height .1s; transition: height .1s}
+.invite-filters>a.selected {height: 49px}
+.invite-filters>a:not([data-nw]) {background-color: #b8c5d2; font-size: 12px; text-transform: uppercase; color: #fff; line-height: 36px; text-align: center}
+.invite-filters>a[data-nw=facebook] {background-color: #637ab8}
+.invite-filters>a[data-nw=linkedin] {background-color: #4f83c3}
+.invite-name {font-size: 16px; color: #34495e; -webkit-font-smoothing: antialiased}
+.invite-friend {margin-top: 12px; display: inline-block; vertical-align: top; width: 49%; min-width: 270px; background-color: #eff2f7; padding: 10px 16px 10px 10px; position: relative; -moz-box-sizing: border-box; box-sizing: border-box}
+.invite-friend:nth-child(odd) {margin-right: 2%}
+.invite-pic {float: left; width: 64px; height: 64px; border-radius: 2px; margin-right: 12px}
+.invite-status {font-size: 13px; font-weight: 300; color: #67829c}
+.invite-button {position: absolute; top: 25px; right: 20px; height: 32px; width: 32px; background-color: #6fa6ef; border-radius: 50%; text-align: center}
+.invite-button::before {content: " "; display: inline-block; margin-top: 8px; height: 16px; background: url(../img/friend-actions.png) -70px; background-size: auto 16px; width: 20px; position: relative; left: 1px}
+.invite-friends-loading {margin-top: 12px}
+
+.friend-reqs-status {margin-bottom: 4px}
+.friend-reqs-status,
+.friend-req-name {font-size: 16px; color: #34495e; -webkit-font-smoothing: antialiased}
+.friend-req {margin-top: 12px; display: inline-block; vertical-align: top; width: 49%; min-width: 270px; background-color: #eff2f7; padding: 10px 16px 13px 10px; -moz-box-sizing: border-box; box-sizing: border-box}
+.friend-req:nth-child(odd) {margin-right: 2%}
+.friend-req-pic {float: left; width: 64px; height: 64px; border-radius: 2px; margin-right: 12px}
+.friend-req-q {font-size: 13px; font-weight: 300; color: #67829c}
+.friend-req-act {margin-top: 20px; text-align: right; white-space: nowrap; height: 23px; -webkit-transition: height .2s; transition: height .2s}
+.friend-req-act.done {height: 0; overflow: hidden}
+a.friend-req-y,
+a.friend-req-n {background-color: #bbd2ef; color: #fff; display: inline-block; width: 75px; text-align: center; font-weight: 300; font-size: 13px; line-height: 23px; border-radius: 2px; margin-left: 5px}
+a.friend-req-y[href],
+a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 
 .check-all {position: absolute; top: 1px; left: 0; height: 17px; width: 17px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; border: 1px solid #e3e6ee; -moz-box-sizing: border-box; box-sizing: border-box}
 .check-all.live {cursor: pointer}
@@ -457,15 +495,17 @@ span.long-text, a.long-text {display: inline-block}
 .fr-card-interests {color: #aaa}
 
 .friend-networks {font-size: 0; line-height: 0}
-a.friend-nw {width: 17px; height: 17px; display: inline-block; background: url(../img/social_icons.png) 0/68px; margin-right: 2px}
-a.friend-nw-facebook {background-position: 0 17px}
-a.friend-nw-facebook.on {background-position: 0 0}
-a.friend-nw-linkedin {background-position: -17px 17px}
-a.friend-nw-linkedin.on {background-position: -17px 0}
-a.friend-nw-twitter {background-position: -34px 17px}
-a.friend-nw-twitter.on {background-position: -34px 0}
-a.friend-nw-pinterest {background-position: -51px 17px}
-a.friend-nw-pinterest.on {background-position: -51px 0}
+a.friend-nw {width: 18px; height: 18px; display: inline-block; background: #ddd url(../img/networks-18.png) 0; background-size: auto 18px; border-radius: 2px; margin-right: 2px}
+a.friend-nw:not([href]):not(.friend-nw-kifi) {display: none}
+a.friend-nw-kifi {background-color: #74a2d7; border-radius: 50%}
+a.friend-nw-facebook {background-position: -18px}
+a.friend-nw-facebook[href] {background-color: #527bbd}
+a.friend-nw-linkedin {background-position: -36px}
+a.friend-nw-linkedin[href] {background-color: #5083c3}
+a.friend-nw-twitter {background-position: -54px}
+a.friend-nw-twitter[href] {background-color: #7acdf0}
+a.friend-nw-google {background-position: -72px}
+a.friend-nw-google[href] {background-color: #e9644b}
 
 /* retina image overrides */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
@@ -485,6 +525,7 @@ a.friend-nw-pinterest.on {background-position: -51px 0}
   .profile>.networks>.kifi-k::before {background-image: url(../img/kifi-k.2x.png); background-size: 100%;}
   .profile-nw {background-image: url(../img/networks.2x.png)}
   .friend-actions>*>a::before {background-image: url(../img/friend-actions.2x.png)}
+  a.friend-nw {background-image: url(../img/networks-18.2x.png)}
 }
 
 .fancybox-inner {font-size: 16px}

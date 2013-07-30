@@ -13,7 +13,8 @@ trait FriendRequestRepo extends Repo[FriendRequest] {
       (implicit s:RSession): Seq[FriendRequest]
   def getByRecipient(userId: Id[User], states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))
       (implicit s: RSession): Seq[FriendRequest]
-  def getBySenderAndRecipient(senderId: Id[User], recipientId: Id[User])(implicit s: RSession): Option[FriendRequest]
+  def getBySenderAndRecipient(senderId: Id[User], recipientId: Id[User],
+      states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))(implicit s: RSession): Option[FriendRequest]
 }
 
 @Singleton
@@ -42,10 +43,11 @@ class FriendRequestRepoImpl @Inject() (
     (for (fr <- table if fr.recipientId === userId && fr.state.inSet(states)) yield fr).list
   }
 
-  def getBySenderAndRecipient(senderId: Id[User], recipientId: Id[User])
+  def getBySenderAndRecipient(senderId: Id[User], recipientId: Id[User],
+      states: Set[State[FriendRequest]] = Set(FriendRequestStates.ACTIVE))
       (implicit s: RSession): Option[FriendRequest] = {
     (for (fr <- table if fr.senderId === senderId && fr.recipientId === recipientId &&
-      fr.state === FriendRequestStates.ACTIVE) yield fr).firstOption
+      fr.state.inSet(states)) yield fr).sortBy(_.createdAt desc).firstOption
   }
 }
 

@@ -1,21 +1,33 @@
 package com.keepit.model
 
+import scala.concurrent.duration.Duration
 import scala.slick.lifted.Query
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.keepit.common.cache.{JsonCacheImpl, FortyTwoCachePlugin, Key}
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.slick._
 import com.keepit.common.time.Clock
+import com.keepit.serializer.TraversableFormat
 
 @ImplementedBy(classOf[UserConnectionRepoImpl])
 trait UserConnectionRepo extends Repo[UserConnection] {
   def getConnectedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]]
+  def getUnfriendedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]]
   def getConnectionOpt(u1: Id[User], u2: Id[User])(implicit session: RSession): Option[UserConnection]
   def addConnections(userId: Id[User], users: Set[Id[User]], requested: Boolean = false)(implicit session: RWSession)
   def unfriendConnections(userId: Id[User], users: Set[Id[User]])(implicit session: RWSession): Int
   def getConnectionCount(userId: Id[User])(implicit session: RSession): Int
 }
+
+case class UnfriendedConnectionsKey(userId: Id[User]) extends Key[Set[Id[User]]] {
+  val namespace = "unfriended_connections"
+  def toKey(): String = userId.id.toString
+}
+
+class UnfriendedConnectionsCache(inner: (FortyTwoCachePlugin, Duration), outer: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[UnfriendedConnectionsKey, Set[Id[User]]](inner, outer:_*)(TraversableFormat.set(Id.format[User]))
 
 @Singleton
 class UserConnectionRepoImpl @Inject() (
@@ -23,7 +35,9 @@ class UserConnectionRepoImpl @Inject() (
   val clock: Clock,
   val friendRequestRepo: FriendRequestRepo,
   val connCountCache: UserConnectionCountCache,
-  val userConnCache: UserConnectionIdCache)
+  val userConnCache: UserConnectionIdCache,
+  val unfriendedCache: UnfriendedConnectionsCache,
+  val searchFriendsCache: SearchFriendsCache)
   extends DbRepo[UserConnection] with UserConnectionRepo {
 
   import DBSession._
@@ -33,13 +47,12 @@ class UserConnectionRepoImpl @Inject() (
   def invalidateCache(userId: Id[User]): Unit = {
     userConnCache.remove(UserConnectionIdKey(userId))
     connCountCache.remove(UserConnectionCountKey(userId))
+    searchFriendsCache.remove(SearchFriendsKey(userId))
+    unfriendedCache.remove(UnfriendedConnectionsKey(userId))
   }
 
   override def invalidateCache(conn: UserConnection)(implicit session: RSession): UserConnection = {
-    for (u <- Set(conn.user1, conn.user2)) {
-      userConnCache.remove(UserConnectionIdKey(u))
-      connCountCache.remove(UserConnectionCountKey(u))
-    }
+    Set(conn.user1, conn.user2) foreach invalidateCache
     conn
   }
 
@@ -64,6 +77,13 @@ class UserConnectionRepoImpl @Inject() (
     userConnCache.getOrElse(UserConnectionIdKey(id)){
       ((for (c <- table if c.user1 === id && c.state === UserConnectionStates.ACTIVE) yield c.user2) union
         (for (c <- table if c.user2 === id && c.state === UserConnectionStates.ACTIVE) yield c.user1)).list.toSet
+    }
+  }
+
+  def getUnfriendedUsers(id: Id[User])(implicit session: RSession): Set[Id[User]] = {
+    unfriendedCache.getOrElse(UnfriendedConnectionsKey(id)) {
+      ((for (c <- table if c.user1 === id && c.state === UserConnectionStates.UNFRIENDED) yield c.user2) union
+          (for (c <- table if c.user2 === id && c.state === UserConnectionStates.UNFRIENDED) yield c.user1)).list.toSet
     }
   }
 

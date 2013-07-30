@@ -1,6 +1,9 @@
 var xhrDomain = 'https://api.kifi.com';
 var xhrBase = xhrDomain + '/site';
 
+var compareSearch = {usage: "search", sensitivity: "base"};
+var compareSort = {numeric: true};
+
 $.ajaxSetup({cache: true, crossDomain: true, xhrFields: {withCredentials: true}});
 
 $.timeago.settings.localeTitle = true;
@@ -387,6 +390,8 @@ $(function() {
 		});
 	}
 
+	// Friends Tabs/Pages
+
 	var $friends = $('.friends').on('click', '.friends-tabs>a[href]', function(e) {
 		e.preventDefault();
 		navigate(this.href);
@@ -408,20 +413,82 @@ $(function() {
 		}
 	}
 
-	var $friendsList = $('#friends-list').antiscroll({x: false, width: "100%"})
-	.on('mouseover', '.friend-status', function() {
-		$(this).nextAll('.friend-action-desc').text('Unfriend this person');
-	}).on('mouseover', '.friend-mute', function() {
-		$(this).nextAll('.friend-action-desc').text('Don’t show this person’s keeps in my search results');
-	}).on('mouseout', '.friend-status,.friend-mute', function() {
-		$(this).nextAll('.friend-action-desc').empty();
+	// All kifi Friends
+
+	var $friendsFilter = $('.friends-filter').on('input', function() {
+		var val = $.trim(this.value);
+		if (val) {
+			var prefixes = val.split(/\s+/);
+			$friendsList.find('.friend').filter(function() {
+				var $f = $(this), o = $f.data('o'), names = $.trim(o.firstName + ' ' + o.lastName).split(/\s+/);
+				$f.toggleClass('no-match', !prefixes.every(function(p) {
+					return names.some(function(n) {return 0 === p.localeCompare(n.substring(0, p.length), undefined, compareSearch)});
+				}));
+			});
+		} else {
+			$friendsList.find('.no-match').removeClass('no-match');
+		}
 	});
-	$friendsList.find('.antiscroll-inner').scroll(function() { // infinite scroll
+	var $friendsList = $('#friends-list').antiscroll({x: false, width: '100%'})
+	.on('mouseover', '.friend-status', function() {
+		var $a = $(this), o = $a.closest('.friend').data('o');
+		$(this).nextAll('.friend-action-desc').text({
+			unfriended: 'Add ' + o.firstName + ' as a friend',
+			requested: 'Cancel friend request',
+			'': 'Unfriend ' + o.firstName}[o.state]);
+	}).on('click', '.friend-status', function() {
+		var $a = $(this), o = $a.closest('.friend').data('o'), xhr;
+		switch (o.state) {
+			case 'unfriended':
+				xhr = $.post(xhrBase + '/user/' + o.id + '/friend', function(data) {
+					o.state = data.acceptedRequest ? '' : 'requested';
+				}); break;
+			case 'requested':
+				xhr = $.post(xhrBase + '/user/' + o.id + '/cancelRequest', function(data) {
+					o.state = 'unfriended';
+				}).error(function() {
+					if (xhr && xhr.responseText && JSON.parse(xhr.responseText).alreadyAccepted) {
+						o.state = 'friend';
+					}
+				}); break;
+			default:
+				xhr = $.post(xhrBase + '/user/' + o.id + '/unfriend', function(data) {
+					o.state = 'unfriended';
+				});
+		}
+		xhr.always(function() {
+			$a.removeAttr('href').closest('.friend-actions').removeClass('requested unfriended').addClass(o.state);
+			$a.nextAll('.friend-action-desc').text('');
+		});
+	}).on('mouseover', '.friend-mute', function() {
+		var $a = $(this), o = $a.closest('.friend').data('o');
+		$a.nextAll('.friend-action-desc').text(o.searchFriend ?
+			'Don’t show ' + o.firstName + '’s keeps in my search results' :
+			'Show ' + o.firstName + '’s keeps in my search results');
+	}).on('click', '.friend-mute[href]', function() {
+		var $a = $(this), o = $a.closest('.friend').data('o'), mute = !!o.searchFriend;
+		$.post(mute ?
+				xhrBase + '/user/' + o.id + '/exclude' :
+				xhrBase + '/user/' + o.id + '/include', function() {
+			o.searchFriend = !mute;
+			$a.removeAttr('href').toggleClass('muted', mute).nextAll('.friend-action-desc').text('');
+		});
+	}).on('mouseout', '.friend-status,.friend-mute', function() {
+		$(this).attr('href', 'javascript:').nextAll('.friend-action-desc').empty();
+	});
+	$friendsList.find('.antiscroll-inner').scroll(function() {
 		$friendsList.prev().toggleClass('scrolled', this.scrollTop > 0);
 	});
 	var friendsScroller = $friendsList.data("antiscroll");
 	$(window).resize(friendsScroller.refresh.bind(friendsScroller));
-	var friendsTmpl = Tempo.prepare($friendsList).when(TempoEvent.Types.RENDER_COMPLETE, function() {
+	var friendsTmpl = Tempo.prepare($friendsList).when(TempoEvent.Types.ITEM_RENDER_COMPLETE, function(ev) {
+		var o = ev.item, $f = $(ev.element).data("o", o), url;
+		for (var nw in o.networks) {  // TODO: move networks to template (Tempo seems broken)
+			if (o.networks[nw].connected && (url = o.networks[nw].profileUrl)) {
+				$f.find('.friend-nw-' + nw).attr('href', url);
+			}
+		}
+	}).when(TempoEvent.Types.RENDER_COMPLETE, function() {
 		$friendsLoading.hide();
 		friendsScroller.refresh();
 	});
@@ -430,20 +497,81 @@ $(function() {
 		$('.friends-filter').val('');
 		friendsTmpl.clear();
 		$friendsLoading.show();
-		$.getJSON(xhrBase + '/user/all-connections', function(data) {
-			console.log('[prepFriendsTab] friends:', data.length);
-			$.when(promise.myNetworks).then(function() {
-				var friends = data.slice(0, 10), networks = myNetworks.reduce(function(o, n) {o[n.network] = true; return o}, {});
-				for (var i = 0; i < friends.length; i++) {
-					friends[i].networks = networks;
-				}
-				friendsTmpl.render(friends);
+		$.when(
+			$.getJSON(xhrBase + '/user/connections'),
+			$.getJSON(xhrBase + '/user/outgoingFriendRequests'))
+		.done(function(a0, a1) {
+			var friends = a0[0].connections, requests = a1[0];
+			var requested = requests.reduce(function(o, u) {o[u.id] = true; return o}, {});
+			console.log('[prepFriendsTab] friends:', friends.length, 'req:', requests.length);
+			for (var f, i = 0; i < friends.length; i++) {
+				f = friends[i];
+				f.picUri = formatPicUrl(f.id, f.pictureName, 200);
+				f.state = requested[f.id] ? 'requested' : f.unfriended ? 'unfriended' : '';
+				delete f.unfriended;
+			}
+			friends.sort(function(f1, f2) {
+				return f1.firstName.localeCompare(f2.firstName, undefined, compareSort) ||
+				       f1.lastName.localeCompare(f2.lastName, undefined, compareSort) ||
+				       f1.id.localeCompare(f2.id, undefined, compareSort);
 			});
+			friendsTmpl.render(friends);
 		});
 	}
 
-	function prepInviteTab() {}
-	function prepRequestsTab() {}
+	// Friend Invites
+
+	var $nwFriends = $('.invite-friends').antiscroll({x: false, width: '100%'})
+	var nwFriendsScroller = $nwFriends.data("antiscroll");
+	$(window).resize(nwFriendsScroller.refresh.bind(nwFriendsScroller));  // TODO: throttle, and only bind while visible
+	var nwFriendsTmpl = Tempo.prepare($nwFriends).when(TempoEvent.Types.RENDER_COMPLETE, function() {
+		$nwFriendsLoading.hide();
+		nwFriendsScroller.refresh();
+	});
+	var $nwFriendsLoading = $('.invite-friends-loading');
+	function prepInviteTab() {
+		$.getJSON(xhrBase + '/user/all-connections', function(friends) {
+			console.log('[prepInviteTab] friends:', friends.length);
+			nwFriendsTmpl.render(friends);
+		});
+	}
+
+	// Friend Requests
+
+	var $friendReqs = $('.friend-reqs').antiscroll({x: false, width: '100%'});
+	$friendReqs.find('.antiscroll-inner').scroll(function() {
+		$friendReqs.prev().toggleClass('scrolled', this.scrollTop > 0);
+	}).on('click', '.friend-req-y[href],.friend-req-n[href]', function() {
+		var $a = $(this), id = $a.closest('.friend-req').data('id'), accepting = $a.hasClass('friend-req-y');
+		$.post(accepting ?
+				xhrBase + '/user/' + id + '/friend' :
+				xhrBase + '/user/' + id + '/ignoreRequest', function() {
+			$a.closest('.friend-req-act').addClass('done');
+			$a.closest('.friend-req').find('.friend-req-q').text(
+				accepting ? 'Accepted as your kifi friend' : 'Friend request ignored');
+		}).error(function() {
+			$a.siblings('a').addBack().attr('href', 'javascript:');
+		});
+		$a.siblings('a').addBack().removeAttr('href');
+	});
+	var friendReqsScroller = $friendReqs.data("antiscroll");
+	$(window).resize(friendReqsScroller.refresh.bind(friendReqsScroller));
+	var friendReqsTmpl = Tempo.prepare($friendReqs).when(TempoEvent.Types.RENDER_COMPLETE, function() {
+		$friendReqsLoading.hide();
+		friendReqsScroller.refresh();
+	});
+	var $friendReqsLoading = $('.friend-reqs-loading');
+	function prepRequestsTab() {
+		$.getJSON(xhrBase + '/user/incomingFriendRequests', function(reqs) {
+			console.log('[prepRequestsTab] req:', reqs.length);
+			for (var r, i = 0; i < reqs.length; i++) {
+				r = reqs[i];
+				r.picUri = formatPicUrl(r.id, r.pictureName, 200);
+			}
+			$('.friend-reqs-status').text('You have ' + (reqs.length || 'no pending') + ' friend request' + (reqs.length == 1 ? '' : 's') + '.');
+			friendReqsTmpl.render(reqs);
+		});
+	}
 
 	function doSearch(q) {
 		if (q) {
@@ -608,7 +736,7 @@ $(function() {
 
 	function updateNumKeeps() {
 		$.getJSON(xhrBase + '/keeps/count', function(data) {
-			$('.left-col .my-keeps .keep-count').text(myKeepsCount = data.numKeeps);
+			$('.left-col .my-keeps .nav-count').text(myKeepsCount = data.numKeeps);
 		});
 	}
 
@@ -992,7 +1120,7 @@ $(function() {
 				collectionId: collId,
 				keeps: $keeps.map(function() {var a = this.querySelector(".keep-title>a"); return {title: a.title, url: a.href}}).get()},
 			function(data) {
-				$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps += data.addedToCollection);
+				$collList.find(".collection[data-id=" + collId + "]").find(".nav-count").text(collections[collId].keeps += data.addedToCollection);
 				var collName = collections[collId].name;
 				$keeps.addClass("mine")
 					.find(".keep-colls:not(:has(.keep-coll[data-id=" + collId + "]))")
@@ -1015,7 +1143,7 @@ $(function() {
 
 	function removeKeepsFromCollection(collId, keepIds) {
 		$.postJson(xhrBase + '/collections/' + collId + '/removeKeeps', keepIds, function(data) {
-			$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps -= data.removed);
+			$collList.find(".collection[data-id=" + collId + "]").find(".nav-count").text(collections[collId].keeps -= data.removed);
 		}).error(showMessage.bind(null, 'Could not remove keep' + (keepIds.length > 1 ? 's' : '') + ' from collection, please try again later'));
 		var $allKeeps = $main.find(".keep");
 		var $keeps = $allKeeps.filter(function() {return keepIds.indexOf($(this).data("id")) >= 0});
@@ -1061,7 +1189,7 @@ $(function() {
 				var collCounts = $keeps.find(".keep-coll").remove().map(getDataId).get()
 					.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
 				for (var collId in collCounts) {
-					$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps -= collCounts[collId]);
+					$collList.find(".collection[data-id=" + collId + "]").find(".nav-count").text(collections[collId].keeps -= collCounts[collId]);
 				}
 			}).error(showMessage.bind(null, 'Could not remove keeps, please try again later'));
 		} else {  // toggle public/private
@@ -1152,19 +1280,19 @@ $(function() {
 			}).sort(function(c1, c2) {
 				var s1 = scores[c1.id];
 				var s2 = scores[c2.id];
-				return (s1.min - s2.min) || (s1.sum - s2.sum) || c1.name.localeCompare(c2.name, undefined, {numeric: true});
+				return (s1.min - s2.min) || (s1.sum - s2.sum) || c1.name.localeCompare(c2.name, undefined, compareSort);
 			}).splice(0, 4).map(function(c) {
 				for (var name = escapeHTMLContent(c.name), i = re.length; i--;) {
 					name = name.replace(new RegExp("^((?:[^&<]|&[^;]*;|<[^>]*>)*)\\b(" + re[i].source + ")", "gi"), "$1<b>$2</b>");
 				}
 				return {id: c.id, name: name};
 			});
-			if (!allColls.some(function(c) {return c.name.localeCompare(val, undefined, {usage: "search", sensitivity: "base"}) == 0})) {
+			if (!allColls.some(function(c) {return c.name.localeCompare(val, undefined, compareSearch) === 0})) {
 				colls.push({id: "", name: val});
 			}
 		} else {
 			colls = allColls.sort(function(c1, c2) {
-				return c2.keeps - c1.keeps || c1.name.localeCompare(c2.name, undefined, {numeric: true});
+				return c2.keeps - c1.keeps || c1.name.localeCompare(c2.name, undefined, compareSort);
 			}).splice(0, 4).map(function(c) {
 				return {id: c.id, name: escapeHTMLContent(c.name)};
 			});
@@ -1222,7 +1350,9 @@ $(function() {
 	// load data for persistent (view-independent) page UI
 	var promise = {
 		me: $.getJSON(xhrBase + '/user/me', updateMe).promise(),
-		myNetworks: $.getJSON(xhrBase + '/user/networks', function (data) { myNetworks = data; }).promise(),
+		myNetworks: $.getJSON(xhrBase + '/user/networks', function(data) {
+			myNetworks = data;
+		}).promise(),
 		myPrefs: $.getJSON(xhrBase + '/user/prefs', function(data) {
 			myPrefs = data;
 			if (myPrefs.site_left_col_width) {
@@ -1231,6 +1361,9 @@ $(function() {
 		}).promise()};
 	updateCollections();
 	updateNumKeeps();
+	$.getJSON(xhrBase + '/user/connections/count', function(data) {
+		$('.left-col .my-friends .nav-count').text(data.count);
+	});
 
 	$.when(promise.me).done(function() {
 		if (location.port || ~me.experiments.indexOf('website friends')) {
@@ -1249,7 +1382,7 @@ $(function() {
 	// bind hover behavior later to avoid slowing down page load
 	var friendCardTmpl = Tempo.prepare('fr-card-template'); $('#fr-card-template').remove();
 	$.getScript('js/jquery-bindhover.js').done(function() {
-		$(document).bindHover(".pic.friend", function(configureHover) {
+		$(document).bindHover(".pic:not(.me)", function(configureHover) {
 			var $a = $(this), id = $a.data('id');
 			friendCardTmpl.into(this).render({
 				name: $a.data('name'),
@@ -1258,9 +1391,9 @@ $(function() {
 			configureHover($el, {canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
 			$.getJSON(xhrBase + '/user/' + id + '/networks', function(networks) {
 				for (nw in networks) {
-					$el.find('.fr-card-nw-' + nw)
-						.toggleClass('on', networks[nw].connected)
-						.attr('href', networks[nw].profileUrl || null);
+					console.log("[networks]", nw, networks[nw]);
+					$el.find('.friend-nw-' + nw)
+						.attr('href', networks[nw].connected && networks[nw].profileUrl || null);
 				}
 			});
 		});
