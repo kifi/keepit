@@ -265,7 +265,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     var prefixLen = (url.match(prefix) || [])[0].length || 0;
     url = url.replace(prefix, '');
     url = url.length > 64 ? url.substr(0, 60) + "..." : url;
-    matches = matches.map(function (m) { return [m[0] - prefixLen, m[1]]; });
+    matches = (matches || []).map(function (m) { return [m[0] - prefixLen, m[1]]; });
     return boldSearchTerms(url, matches);
   }
 
