@@ -1,6 +1,6 @@
 package com.keepit.controllers.ext
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.db._
@@ -11,7 +11,6 @@ import com.keepit.model._
 
 import play.api.libs.json.Json
 
-@Singleton
 class ExtAuthController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,

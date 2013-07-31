@@ -17,7 +17,7 @@ import com.keepit.model._
 import com.keepit.common.db.Id
 
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.google.inject.{Inject, Singleton, Provider}
+import com.google.inject.Inject
 
 case class BenchmarkResults(cpu: Long, cpuPar: Long, memcacheRead: Double)
 
@@ -25,7 +25,6 @@ object BenchmarkResultsJson {
   implicit val benchmarksResultsFormat = Json.format[BenchmarkResults]
 }
 
-@Singleton
 class CommonBenchmarkController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   benchmarkRunner: BenchmarkRunner,
@@ -42,7 +41,6 @@ class CommonBenchmarkController @Inject() (
   }
 }
 
-@Singleton
 class BenchmarkRunner @Inject() (cache: UserExperimentCache) {
   def runBenchmark() = BenchmarkResults(cpuBenchmarkTime(), cpuParBenchmarkTime(), memcachedBenchmarkTime())
 

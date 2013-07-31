@@ -6,12 +6,11 @@ import com.keepit.common.db.LargeString._
 import com.keepit.model._
 import views.html
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.google.inject.{Inject, Singleton, Provider}
+import com.google.inject.Inject
 import com.keepit.common.store.S3ScreenshotStore
 import com.keepit.common.db.slick.Database
 import scala.concurrent.ExecutionContext.Implicits.global
 
-@Singleton
 class AdminScreenshotController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   s3ScreenshotStore: S3ScreenshotStore,

@@ -17,7 +17,6 @@ import scala.concurrent.duration._
 import com.keepit.search.index.Indexer
 import com.keepit.search.{IndexInfo, SharingUserInfo, MainSearcherFactory}
 
-
 class URIGraphController @Inject()(
     uriGraphPlugin: URIGraphPlugin,
     shoeboxClient: ShoeboxServiceClient,

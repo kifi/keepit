@@ -4,7 +4,7 @@ import scala.collection.mutable
 
 import org.joda.time.{Months, ReadablePeriod, Weeks}
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.analytics._
 import com.keepit.common.analytics.reports._
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
@@ -33,7 +33,6 @@ case class ActivityData(
   commenting1Wk: Int
 )
 
-@Singleton
 class AdminEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,

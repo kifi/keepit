@@ -1,6 +1,6 @@
 package com.keepit.controllers.ext
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.controller.{BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
@@ -28,7 +28,6 @@ private object SendableBookmark {
     SendableBookmark(b.externalId, b.title, b.url, b.isPrivate, b.state)
 }
 
-@Singleton
 class ExtBookmarksController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,

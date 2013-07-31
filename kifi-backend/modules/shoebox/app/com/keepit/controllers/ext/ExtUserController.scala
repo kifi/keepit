@@ -11,9 +11,8 @@ import com.keepit.model._
 import play.api.Play.current
 import play.api.libs.json.Json
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 
-@Singleton
 class ExtUserController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,

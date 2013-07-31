@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.controller.{AuthenticatedRequest, ActionAuthenticator, WebsiteController}
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick._
@@ -12,8 +12,8 @@ import com.keepit.realtime.{DeviceType, UrbanAirship}
 import play.api.libs.json.Json.toJson
 import play.api.libs.json._
 
-@Singleton
-class UserController @Inject() (db: Database,
+class UserController @Inject() (
+  db: Database,
   userRepo: UserRepo,
   basicUserRepo: BasicUserRepo,
   userConnectionRepo: UserConnectionRepo,

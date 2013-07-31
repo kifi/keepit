@@ -9,9 +9,8 @@ import play.api.libs.json.{JsNumber, JsObject}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 
-@Singleton
 class AdminArticleIndexerController @Inject()(
     actionAuthenticator: ActionAuthenticator,
     searchClient: SearchServiceClient,

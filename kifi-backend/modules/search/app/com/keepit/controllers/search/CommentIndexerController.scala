@@ -18,7 +18,6 @@ import scala.concurrent.duration._
 import com.keepit.search.index.Indexer
 import com.keepit.search.{SharingUserInfo, IndexInfo}
 
-
 class CommentIndexerController @Inject()(
     commentIndexerPlugin: CommentIndexerPlugin,
     shoeboxClient: ShoeboxServiceClient,

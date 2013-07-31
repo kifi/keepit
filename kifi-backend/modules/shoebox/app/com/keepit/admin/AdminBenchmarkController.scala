@@ -20,9 +20,8 @@ import com.keepit.common.healthcheck._
 import views.html
 
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.google.inject.{Inject, Singleton, Provider}
+import com.google.inject.Inject
 
-@Singleton
 class AdminBenchmarkController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   searchServiceClient: SearchServiceClient,

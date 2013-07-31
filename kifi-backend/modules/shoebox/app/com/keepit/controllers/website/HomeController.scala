@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.AuthenticatedRequest
 import com.keepit.common.controller.WebsiteController
@@ -17,7 +17,6 @@ import play.api.libs.iteratee.Enumerator
 import play.api.mvc._
 import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialGraphPlugin}
 
-@Singleton
 class HomeController @Inject() (db: Database,
   userRepo: UserRepo,
   userValueRepo: UserValueRepo,
