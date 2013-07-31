@@ -93,6 +93,7 @@ class ServiceDiscoveryImpl @Inject() (
       } else {
         log.warn("Zookeeper seems to have lost me! Re-registering.")
         register()
+        changeStatus(ServiceStatus.UP)
       }
     }
   }
