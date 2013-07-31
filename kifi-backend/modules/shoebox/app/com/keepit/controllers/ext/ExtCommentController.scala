@@ -2,7 +2,7 @@ package com.keepit.controllers.ext
 
 import scala.concurrent.future
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
@@ -15,7 +15,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import com.keepit.common.akka.RealtimeUserFacingExecutionContext
 
-@Singleton
 class ExtCommentController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,

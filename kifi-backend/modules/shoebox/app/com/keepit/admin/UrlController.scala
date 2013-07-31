@@ -34,9 +34,8 @@ import views.html
  * Charts, etc.
  */
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 
-@Singleton
 class UrlController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,

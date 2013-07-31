@@ -6,7 +6,7 @@ import scala.concurrent.promise
 
 import org.joda.time._
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.classify._
 import com.keepit.common.analytics.{MongoEventStore, EventFamilies, MongoSelector}
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
@@ -22,7 +22,6 @@ import play.api.libs.json.{JsBoolean, JsArray, JsObject, Json}
 import play.api.mvc.Action
 import views.html
 
-@Singleton
 class SliderAdminController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
@@ -37,6 +36,7 @@ class SliderAdminController @Inject() (
   mongoEventStore: MongoEventStore,
   userChannel: UserChannel)
     extends AdminController(actionAuthenticator) {
+
   def getRules = AdminHtmlAction { implicit request =>
     val groupName = "default"
     val group = db.readOnly { implicit session =>

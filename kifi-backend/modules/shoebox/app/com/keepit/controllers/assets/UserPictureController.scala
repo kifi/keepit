@@ -4,7 +4,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Try
 
 import com.google.inject.Inject
-import com.google.inject.Singleton
 import com.keepit.common.controller.{WebsiteController, ActionAuthenticator}
 import com.keepit.common.db.ExternalId
 import com.keepit.common.db.slick.Database
@@ -14,7 +13,6 @@ import scala.concurrent.Future
 
 import play.api.mvc.Action
 
-@Singleton
 class UserPictureController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,

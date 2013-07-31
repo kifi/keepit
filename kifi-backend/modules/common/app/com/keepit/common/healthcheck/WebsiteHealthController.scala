@@ -11,10 +11,9 @@ import securesocial.core.SecureSocial
 
 import views.html
 
-import com.google.inject.{Inject, Singleton, Provider}
+import com.google.inject.Inject
 import com.keepit.common.controller.{WebsiteController,ActionAuthenticator}
 
-@Singleton
 class WebsiteHealthController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   healthcheckPlugin: HealthcheckPlugin)
