@@ -1,11 +1,10 @@
 package com.keepit.controllers.ext
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.controller.{ShoeboxServiceController, WebsiteController, ActionAuthenticator}
 import com.keepit.common.db.slick._
 import com.keepit.model._
 
-@Singleton
 class ExtDeepLinkController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,

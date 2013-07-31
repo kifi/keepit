@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
@@ -29,7 +29,6 @@ case class UserStatistics(
     experiments: Set[State[ExperimentType]],
     kifiInstallations: Seq[KifiInstallation])
 
-@Singleton
 class AdminUserController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     db: Database,

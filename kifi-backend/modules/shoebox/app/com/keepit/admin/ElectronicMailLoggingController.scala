@@ -5,9 +5,8 @@ import play.api.mvc.Action
 import play.api.Play
 import play.api.http.ContentTypes
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 
-@Singleton
 class ElectronicMailLoggingController @Inject() (
   actionAuthenticator: ActionAuthenticator)
     extends WebsiteController(actionAuthenticator) {

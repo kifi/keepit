@@ -6,7 +6,6 @@ import com.keepit.common.controller.SearchServiceController
 import play.api.mvc.Action
 import play.api.libs.json.Json
 
-
 class SpellCorrectorController @Inject()(spellCorrector: SpellCorrector) extends SearchServiceController{
   def buildDictionary() = Action { request =>
     spellCorrector.buildDictionary()
