@@ -29,6 +29,11 @@ object PhraseDetector {
 
 @Singleton
 class PhraseDetector @Inject() (indexer: PhraseIndexer) {
+
+  def detect(terms: Array[Term]) = {
+    RemoveOverlapping.removeInclusions(detectAll(terms))
+  }
+
   def detectAll(terms: Array[Term]) = {
     var result = Set.empty[(Int, Int)] // (position, length)
     val pq = new PQ(terms.size)
@@ -37,9 +42,30 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
     indexer.getSearcher.indexReader.leaves.foreach{ subReaderContext =>
       pterms.foreach{ case (pterm, index) =>
         val tp = subReaderContext.reader.termPositionsEnum(pterm)
-        if (tp != null && tp.nextDoc() < NO_MORE_DOCS) pq.insertWithOverflow(new Word(index, tp))
+        if (tp == null) { // found a gap here
+          findPhrases(pq){ (position, length) => result += ((position, length)) }
+        } else {
+          pq.insertWithOverflow(new Word(index, tp))
+        }
       }
+      findPhrases(pq){ (position, length) => result += ((position, length)) }
+    }
+    result
+  }
+
+  private def findPhrases(pq: PQ)(f: (Int, Int)=>Unit): Unit = {
+    if (pq.size > 1) {
       var top = pq.top
+
+      while (top != null && top.doc == -1) {
+        top = if (top.nextDoc() < NO_MORE_DOCS) {
+          pq.updateTop()
+        } else {
+          pq.pop()
+          pq.top
+        }
+      }
+
       while (pq.size > 1) {
         val doc = top.doc
         val phraseIndex = top.index
@@ -47,7 +73,7 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
         while (top != null && top.doc == doc && top.index == (phraseIndex + phraseLength) && top.hasPosition(phraseLength)) {
           phraseLength += 1
           if (top.isEndOfPhrase) {
-            result += ((phraseIndex, phraseLength)) // one phrase found
+            f(phraseIndex, phraseLength) // one phrase found
           }
           top = if (top.nextDoc() < NO_MORE_DOCS) {
             pq.updateTop()
@@ -65,13 +91,14 @@ class PhraseDetector @Inject() (indexer: PhraseIndexer) {
           }
         }
       }
-      pq.clear()
     }
-    RemoveOverlapping.removeInclusions(result)
+    pq.clear()
   }
 
   private class Word(val index: Int, tp: DocsAndPositionsEnum) {
-    var doc = tp.docID()
+
+    var doc = -1
+
     private[this] var end = 0
 
     def nextDoc() = {
