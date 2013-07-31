@@ -332,7 +332,9 @@ const socketHandlers = {
         }
       }
       d.tabs.forEach(function(tab) {
-        api.tabs.emit(tab, "message", {thread: th, message: message, read: d.lastMessageRead[th.id], userId: session.userId});
+        whenTabSelected(tab, function (tab) {
+          api.tabs.emit(tab, "message", {thread: th, message: message, read: d.lastMessageRead[th.id], userId: session.userId});
+        });
       });
       tellTabsIfCountChanged(d, "m", messageCount(d));
     }
@@ -908,10 +910,21 @@ function clone(o) {
   return c;
 }
 
+function whenTabSelected(tab, callback) {
+  if (api.tabs.isSelected(tab)) {
+    callback(tab);
+  } else {
+    (tab.focusCallbacks = tab.focusCallbacks || []).push(callback);
+  }
+}
 // ===== Browser event listeners
 
 api.tabs.on.focus.add(function(tab) {
   api.log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab);
+  for (var cb; tab.focusCallbacks && (cb = tab.focusCallbacks.shift());) {
+    cb(tab);
+  }
+  delete tab.focusCallbacks;
   subscribe(tab);
   if (tab.autoShowSec != null && !tab.autoShowTimer) {
     scheduleAutoShow(tab);
