@@ -114,10 +114,10 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- table if row.user===userId && row.thread===threadId) yield row.lastSeen).update(currentDateTime(zones.PT))
   }
 
-  def getPendingNotifications(userId: Id[User])(implicit session: RSession) : Seq[Notification] = { //TODO Stephen: Nicer way of writing this?
-    (for (row <- table if row.user===userId && row.notificationPending===true) yield (row.thread, row.lastMsgFromOther.?, row.lastNotification)).list.map{ x =>
-      val (thread, message, payload) = x
-      Notification(thread, message.get, payload)
+  def getPendingNotifications(userId: Id[User])(implicit session: RSession) : Seq[Notification] = {
+    (for (row <- table if row.user===userId && row.notificationPending===true) yield (row.thread, row.lastMsgFromOther.?, row.lastNotification)).list.map{
+     case (thread, message, payload) =>
+        Notification(thread, message.get, payload)
     }
   }
 

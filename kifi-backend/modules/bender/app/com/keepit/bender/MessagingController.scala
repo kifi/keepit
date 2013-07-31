@@ -31,9 +31,15 @@ object MessagingController {
 }
 
 
-class MessagingController(threadRepo: MessageThreadRepo, userThreadRepo: UserThreadRepo, messageRepo: MessageRepo, shoebox: ShoeboxServiceClient, db: Database) extends Logging {
-
-  private var notificationCallbacks = Vector[(Option[Id[User]], Notification) => Unit]()
+class MessagingController(
+    threadRepo: MessageThreadRepo, 
+    userThreadRepo: UserThreadRepo, 
+    messageRepo: MessageRepo, 
+    shoebox: ShoeboxServiceClient, 
+    db: Database,
+    notificationRouter: NotificationRouter
+    )
+  extends Logging {
 
 
   private def sendNotificationForMessage(user: Id[User], message: Message, thread: MessageThread) : Unit = { //TODO Stephen: Construct and store notification json
@@ -42,14 +48,7 @@ class MessagingController(threadRepo: MessageThreadRepo, userThreadRepo: UserThr
         userThreadRepo.setNotification(user, thread.id.get)
       }
     }
-    notificationCallbacks.par.foreach{ f => 
-      f(Some(user), Notification(thread.id.get, message.id.get, JsNull))
-    }
-  }
-
-
-  def onNotification(f: (Option[Id[User]], Notification) => Unit) : Unit = {
-    notificationCallbacks = notificationCallbacks :+ f
+    notificationRouter.sendNotification(Some(user), Notification(thread.id.get, message.id.get, JsNull))
   }
 
 

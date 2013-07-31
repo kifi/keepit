@@ -4,7 +4,7 @@ import scala.slick.lifted.{BaseTypeMapper}
 import com.keepit.common.db.{Id}
 import com.keepit.common.db.slick.{IdMapperDelegate, StringMapperDelegate}
 import scala.slick.driver.{BasicProfile}
-import play.api.libs.json.{Json, JsValue, JsObject}
+import play.api.libs.json.{Json, JsValue, JsObject, JsSuccess}
 import com.keepit.model.{User}
 import org.joda.time.DateTime
 
@@ -25,20 +25,14 @@ object MessagingTypeMappers {
   implicit object MessageThreadParticipantsMapper extends BaseTypeMapper[MessageThreadParticipants] {
     def apply(profile: BasicProfile) = new StringMapperDelegate[MessageThreadParticipants](profile) {
       
-      //Todo Stephen: This is terrible
       def safeDestToSource(source: String): MessageThreadParticipants = {
-        Json.parse(source) match {
-          case obj: JsObject => {
-            val mtps = zero
-            mtps.participants = obj.fields.toMap.map( uid_dt => (Id[User](uid_dt._1.toLong), uid_dt._2.as[DateTime]) )
-            mtps
-          }
+        Json.parse(source).validate[MessageThreadParticipants] match {
+          case JsSuccess(mtps,_) => mtps
           case _ => throw InvalidDatabaseEncodingException(s"Could not decode JSON for MessageThreadParticipants: $source")
         }
       }
       
-      //Todo Stephen: And so is this
-      def sourceToDest(dest: MessageThreadParticipants): String = Json.stringify(JsObject(dest.participants.toSeq.map{x => (x._1.id.toString, Json.toJson(x._2))}))
+      def sourceToDest(dest: MessageThreadParticipants): String = Json.stringify(Json.toJson(dest))
       
       def zero: MessageThreadParticipants = MessageThreadParticipants(Set[Id[User]]())
 

@@ -11,7 +11,7 @@ import com.keepit.model.{User, NormalizedURI}
 import MessagingTypeMappers._
 
 case class Message(
-    id: Option[Id[Message]],
+    id: Option[Id[Message]] = None,
     createdAt: DateTime = currentDateTime(zones.PT), 
     updatedAt: DateTime = currentDateTime(zones.PT), 
     externalId: ExternalId[Message] = ExternalId(),

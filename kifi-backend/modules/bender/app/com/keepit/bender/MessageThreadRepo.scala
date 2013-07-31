@@ -10,6 +10,8 @@ import com.keepit.common.time.{currentDateTime, zones, Clock}
 import com.keepit.common.db.{ModelWithExternalId, Id, ExternalId}
 import com.keepit.model.{User, NormalizedURI}
 import play.api.libs.json._
+import play.api.libs.functional.syntax._
+import com.keepit.common.time.{DateTimeJsonFormat}
 import scala.slick.lifted.{BaseTypeMapper, TypeMapperDelegate}
 import scala.slick.driver.{BasicProfile}
 import scala.util.hashing.MurmurHash3
@@ -17,9 +19,7 @@ import MessagingTypeMappers._
 import scala.concurrent.duration.Duration
 import com.keepit.common.cache.{Key, JsonCacheImpl, FortyTwoCachePlugin}
 
-case class MessageThreadParticipants(initialParticipants: Set[Id[User]]) {
-  var participants : Map[Id[User], DateTime] = initialParticipants.map{userId => (userId, currentDateTime(zones.PT))}.toMap
-
+class MessageThreadParticipants(val participants : Map[Id[User], DateTime]) {
 
   def contains(user: Id[User]) : Boolean = participants.contains(user)
   def allExcept(user: Id[User]) : Set[Id[User]] = participants.keySet - user
@@ -32,6 +32,39 @@ case class MessageThreadParticipants(initialParticipants: Set[Id[User]]) {
   }
 
   override def hashCode = participants.keySet.hashCode
+
+}
+
+object MessageThreadParticipants{
+  implicit val format = new Format[MessageThreadParticipants] {
+    def reads(json: JsValue) = {
+      json match {
+        case obj: JsObject => {
+          val mtps = MessageThreadParticipants(obj.fields.toMap.map {
+            case (uid, timestamp) => (Id[User](uid.toLong), timestamp.as[DateTime])
+          })
+          JsSuccess(mtps)
+        }  
+        case _ => JsError()
+      }
+    }
+
+    def writes(mtps: MessageThreadParticipants) : JsValue = {
+      JsObject(
+        mtps.participants.toSeq.map{
+          case (uid, timestamp) => (uid.id.toString, Json.toJson(timestamp))
+        }
+      )
+    }
+  }
+
+  def apply(initialParticipants: Set[Id[User]]) : MessageThreadParticipants = {
+    new MessageThreadParticipants(initialParticipants.map{userId => (userId, currentDateTime(zones.PT))}.toMap)
+  }
+
+  def apply(participants: Map[Id[User], DateTime]) : MessageThreadParticipants = {
+    new MessageThreadParticipants(participants)
+  }
 
 }
 
@@ -55,6 +88,23 @@ case class MessageThread(
   def containsUser(user: Id[User]) : Boolean = participants.map(_.contains(user)).getOrElse(false)
   def allUsersExcept(user: Id[User]) : Set[Id[User]] = participants.map(_.allExcept(user)).getOrElse(Set[Id[User]]())
 }
+
+
+
+object MessageThread {
+  implicit def format = (
+    (__ \ 'id).formatNullable(Id.format[MessageThread]) and
+    (__ \ 'createdAt).format[DateTime] and
+    (__ \ 'updatedAt).format[DateTime] and
+    (__ \ 'externalId).format(ExternalId.format[MessageThread]) and
+    (__ \ 'uriId).formatNullable(Id.format[NormalizedURI]) and
+    (__ \ 'url).formatNullable[String] and
+    (__ \ 'participants).formatNullable[MessageThreadParticipants] and
+    (__ \ 'participantsHash).formatNullable[Int] and
+    (__ \ 'replyable).format[Boolean] 
+  )(MessageThread.apply, unlift(MessageThread.unapply))
+}
+
 
 @ImplementedBy(classOf[MessageThreadRepoImpl])
 trait MessageThreadRepo extends Repo[MessageThread] with ExternalIdColumnFunction[MessageThread] {
@@ -117,3 +167,15 @@ class MessageThreadRepoImpl @Inject() (
   }
 
 }
+
+
+
+case class MessageThreadExternalIdKey(externalId: ExternalId[MessageThread]) extends Key[MessageThread] {
+  override val version = 1
+  val namespace = "message_thread_by_external_id"
+  def toKey(): String = externalId.id
+}
+
+class MessageThreadExternalIdCache(innermostPluginSettings: (FortyTwoCachePlugin, Duration), innerToOuterPluginSettings: (FortyTwoCachePlugin, Duration)*)
+  extends JsonCacheImpl[MessageThreadExternalIdKey, MessageThread](innermostPluginSettings, innerToOuterPluginSettings:_*)
+

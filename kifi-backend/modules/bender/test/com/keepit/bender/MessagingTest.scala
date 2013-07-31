@@ -22,14 +22,15 @@ class MessagingTest extends Specification with DbTestInjector {
     val messageRepo = inject[MessageRepo]
     val shoebox = inject[ShoeboxServiceClient]
     val db = inject[Database]
-    val messagingController = new MessagingController(threadRepo, userThreadRepo, messageRepo, shoebox, db)
+    val notificationRouter = inject[NotificationRouter]
+    val messagingController = new MessagingController(threadRepo, userThreadRepo, messageRepo, shoebox, db, notificationRouter)
 
     val user1 = Id[User](42)
     val user2 = Id[User](43)
     val user3 = Id[User](44)
     val user2n3Set = Set[Id[User]](user2, user3)
 
-    (messagingController, user1, user2, user3, user2n3Set)
+    (messagingController, user1, user2, user3, user2n3Set, notificationRouter)
   }
 
   "Messaging Contoller" should {
@@ -37,7 +38,7 @@ class MessagingTest extends Specification with DbTestInjector {
     "send correctly" in {
       withDb(FakeShoeboxServiceModule()) { implicit injector =>
 
-        val (messagingController, user1, user2, user3, user2n3Set) = setup()
+        val (messagingController, user1, user2, user3, user2n3Set, notificationRouter) = setup()
 
         val msg1 = messagingController.sendNewMessage(user1, user2n3Set, Some("http://thenextgoogle.com"), "World!")
         val msg2 = messagingController.sendMessage(user1, msg1.thread, "Domination!", None)
@@ -59,11 +60,11 @@ class MessagingTest extends Specification with DbTestInjector {
       withDb(FakeShoeboxServiceModule()) { implicit injector =>
 
 
-        val (messagingController, user1, user2, user3, user2n3Set) = setup()
+        val (messagingController, user1, user2, user3, user2n3Set, notificationRouter) = setup()
 
         var notified = scala.collection.concurrent.TrieMap[Id[User], Int]()  
 
-        messagingController.onNotification{ (userId, notification) =>
+        notificationRouter.onNotification{ (userId, notification) =>
           // println(s"Got Notification $notification for $userId")
           if (notified.isDefinedAt(userId.get)) {
             notified(userId.get) = notified(userId.get) + 1 
