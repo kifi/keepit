@@ -112,7 +112,7 @@ class TopicUpdater @Inject() (
   private def updateUriTopic(seqNum: SequenceNumber, useActive: Boolean): Int = {
     def getOverdueUris(seqNum: SequenceNumber): Seq[NormalizedURI] = {
       db.readOnly { implicit s =>
-        uriRepo.getIndexable(seqNum, fetchSize)
+        uriRepo.getScraped(seqNum, fetchSize)
       }
     }
 
