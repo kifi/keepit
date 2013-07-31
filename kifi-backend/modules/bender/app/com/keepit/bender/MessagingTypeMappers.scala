@@ -9,7 +9,7 @@ import com.keepit.model.{User}
 import org.joda.time.DateTime
 
 
-case class InvalidDatabaseEncodingException() extends java.lang.Throwable
+case class InvalidDatabaseEncodingException(msg: String) extends java.lang.Throwable
 
 object MessagingTypeMappers {
 
@@ -33,7 +33,7 @@ object MessagingTypeMappers {
             mtps.participants = obj.fields.toMap.map( uid_dt => (Id[User](uid_dt._1.toLong), uid_dt._2.as[DateTime]) )
             mtps
           }
-          case _ => throw InvalidDatabaseEncodingException()
+          case _ => throw InvalidDatabaseEncodingException(s"Could not decode JSON for MessageThreadParticipants: $source")
         }
       }
       

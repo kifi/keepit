@@ -13,8 +13,8 @@ CREATE TABLE message_thread (
     replyable bool(1) NOT NULL,
 
     PRIMARY KEY (id),
-    KEY ext_id (external_id),
-    KEY participants_uri (uri_id, participants_hash)
+    KEY message_thread_i_ext_id (external_id),
+    KEY message_thread_i_participants_uri (uri_id, participants_hash)
 );
 
 CREATE TABLE message (
@@ -23,14 +23,14 @@ CREATE TABLE message (
     updated_at datetime NOT NULL,
     external_id varchar(36) NOT NULL,
 
-    sender bigint(20) NULL,
-    thread bigint(20) NOT NULL,
+    sender_id bigint(20) NULL,
+    thread_id bigint(20) NOT NULL,
     message_text longtext NOT NULL,
     sent_on_url text NULL,
     sent_on_uri_id bigint(20) NULL,
 
     PRIMARY KEY (id),
-    KEY my_thread (thread)  
+    KEY message_i_my_thread (thread)  
 );
 
 CREATE TABLE user_thread (
@@ -38,8 +38,8 @@ CREATE TABLE user_thread (
     created_at datetime NOT NULL,
     updated_at datetime NOT NULL,
 
-    user bigint(20) NOT NULL,
-    thread bigint(20) NOT NULL,
+    user_id bigint(20) NOT NULL,
+    thread_id bigint(20) NOT NULL,
     uri_id bigint(20) DEFAULT NULL,
     last_seen datetime DEFAULT NULL,
     notification_pending bool(1) NOT NULL,
@@ -48,8 +48,8 @@ CREATE TABLE user_thread (
     lastNotification longtext DEFAULT NULL,
 
     PRIMARY KEY (id),
-    KEY user_page (user, uri_id),
-    UNIQUE KEY user_thread (user, thread)
+    KEY user_thread_i_user_page (user, uri_id),
+    UNIQUE KEY user_thread_i_user_thread (user, thread)
 );
 
 

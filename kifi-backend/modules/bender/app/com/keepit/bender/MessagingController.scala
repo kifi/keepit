@@ -24,7 +24,7 @@ import play.api.libs.json.{JsValue, JsNull}
 */
 
 
-case class NotAuthorizedException() extends java.lang.Throwable
+case class NotAuthorizedException(msg: String) extends java.lang.Throwable
 
 object MessagingController {
   val THREAD_PAGE_SIZE = 20
@@ -37,8 +37,10 @@ class MessagingController(threadRepo: MessageThreadRepo, userThreadRepo: UserThr
 
 
   private def sendNotificationForMessage(user: Id[User], message: Message, thread: MessageThread) : Unit = { //TODO Stephen: Construct and store notification json
-    db.readWrite{ implicit session => 
-      userThreadRepo.setNotification(user, thread.id.get)
+    future {
+      db.readWrite{ implicit session => 
+        userThreadRepo.setNotification(user, thread.id.get)
+      }
     }
     notificationCallbacks.par.foreach{ f => 
       f(Some(user), Notification(thread.id.get, message.id.get, JsNull))
@@ -84,11 +86,20 @@ class MessagingController(threadRepo: MessageThreadRepo, userThreadRepo: UserThr
 
 
   def sendMessage(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String]) : Message = {
-    if (! thread.containsUser(from)) throw NotAuthorizedException()
+    if (! thread.containsUser(from)) throw NotAuthorizedException(s"User $from not authorized to send message on thread ${thread.id.get}")
     log.info(s"Sending message '$messageText' from $from to ${thread.participants}")
-    val message = db.readWrite{ implicit session => messageRepo.create(from, thread, messageText, urlOpt) }
+    val message = db.readWrite{ implicit session => 
+      messageRepo.save(Message(
+      id = None,
+      from = Some(from),
+      thread = thread.id.get,
+      messageText = messageText,
+      sentOnUrl = urlOpt,
+      sentOnUriId = None
+      )) 
+    }
 
-    thread.allUsersExcept(from).par.foreach { userId =>
+    thread.allUsersExcept(from).foreach { userId =>
       db.readWrite{ implicit session => userThreadRepo.setLastMsgFromOther(userId, thread.id.get, message.id.get) }
       sendNotificationForMessage(userId, message, thread)
     }

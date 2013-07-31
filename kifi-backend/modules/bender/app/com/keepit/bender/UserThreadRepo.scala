@@ -64,8 +64,8 @@ class UserThreadRepoImpl @Inject() (
   import db.Driver.Implicit._
 
   override val table = new RepoTable[UserThread](db, "user_thread") {
-    def user = column[Id[User]]("user", O.NotNull)
-    def thread = column[Id[MessageThread]]("thread", O.NotNull)
+    def user = column[Id[User]]("user_id", O.NotNull)
+    def thread = column[Id[MessageThread]]("thread_id", O.NotNull)
     def uriId = column[Id[NormalizedURI]]("uri_id", O.Nullable)
     def lastSeen = column[DateTime]("last_seen", O.Nullable)
     def notificationPending = column[Boolean]("notification_pending", O.NotNull)

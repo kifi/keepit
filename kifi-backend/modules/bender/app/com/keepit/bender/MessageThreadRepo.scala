@@ -9,17 +9,19 @@ import org.joda.time.DateTime
 import com.keepit.common.time.{currentDateTime, zones, Clock}
 import com.keepit.common.db.{ModelWithExternalId, Id, ExternalId}
 import com.keepit.model.{User, NormalizedURI}
-import play.api.libs.json.{Json, JsValue, JsObject}
+import play.api.libs.json._
 import scala.slick.lifted.{BaseTypeMapper, TypeMapperDelegate}
 import scala.slick.driver.{BasicProfile}
 import scala.util.hashing.MurmurHash3
 import MessagingTypeMappers._
+import scala.concurrent.duration.Duration
+import com.keepit.common.cache.{Key, JsonCacheImpl, FortyTwoCachePlugin}
 
 case class MessageThreadParticipants(initialParticipants: Set[Id[User]]) {
   var participants : Map[Id[User], DateTime] = initialParticipants.map{userId => (userId, currentDateTime(zones.PT))}.toMap
 
 
-  def contains(user: Id[User]) : Boolean = participants.isDefinedAt(user)
+  def contains(user: Id[User]) : Boolean = participants.contains(user)
   def allExcept(user: Id[User]) : Set[Id[User]] = participants.keySet - user
 
   def hash : Int = MurmurHash3.setHash(participants.keySet)

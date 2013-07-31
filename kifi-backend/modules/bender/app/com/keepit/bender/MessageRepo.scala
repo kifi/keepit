@@ -35,8 +35,6 @@ case class Message(
 @ImplementedBy(classOf[MessageRepoImpl])
 trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 
-  def create(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String])(implicit session: RWSession) : Message
-
   def updateUriId(message: Message, uriId: Id[NormalizedURI])(implicit session: RWSession) : Unit
 
   def get(thread: Id[MessageThread], from: Int, to: Option[Int])(implicit session: RSession)  : Seq[Message]
@@ -54,8 +52,8 @@ class MessageRepoImpl @Inject() (
   import db.Driver.Implicit._
 
   override val table = new RepoTable[Message](db, "message") with ExternalIdColumn[Message] {
-    def from = column[Id[User]]("sender", O.Nullable)
-    def thread = column[Id[MessageThread]]("thread", O.NotNull)
+    def from = column[Id[User]]("sender_id", O.Nullable)
+    def thread = column[Id[MessageThread]]("thread_id", O.NotNull)
     def messageText = column[String]("message_text", O.NotNull)
     def sentOnUrl = column[String]("sent_on_url", O.Nullable)
     def sentOnUriId = column[Id[NormalizedURI]]("sent_on_uri_id", O.Nullable)
@@ -63,21 +61,9 @@ class MessageRepoImpl @Inject() (
   }
 
 
-  def create(from: Id[User], thread: MessageThread, messageText: String, urlOpt: Option[String])(implicit session: RWSession) : Message = {
-    val msg = Message(
-      id = None,
-      from = Some(from),
-      thread = thread.id.get,
-      messageText = messageText,
-      sentOnUrl = urlOpt,
-      sentOnUriId = None
-    )
-    save(msg)
-  }
 
   def updateUriId(message: Message, uriId: Id[NormalizedURI])(implicit session: RWSession) : Unit = { //TODO Stephen: Make this an update
-    message.copy(sentOnUriId=Some(uriId))
-    save(message)
+    (for (row <- table if row.id===message.id) yield row.sentOnUriId).update(uriId)
   }
 
 

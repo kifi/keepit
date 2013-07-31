@@ -75,9 +75,7 @@ class MessagingTest extends Specification with DbTestInjector {
         val msg1 = messagingController.sendNewMessage(user1, user2n3Set, Some("http://kifi.com"), "Hello Chat")
         val msg2 = messagingController.sendNewMessage(user1, user2n3Set, Some("http://kifi.com"), "Hello Chat again!")
         
-        //let asyncs complete
-        Thread.sleep(2000)
-
+        
         notified.isDefinedAt(user1)===false
         notified(user2)===2
 
