@@ -143,7 +143,7 @@ class UrbanAirshipImpl @Inject()(
 
   def sendNotification(device: Device, notification: PushNotification): Unit = device.deviceType match {
     case DeviceType.IOS =>
-      authenticatedClient.withHeaders().post(s"${config.baseUrl}/api/push", Json.obj(
+      authenticatedClient.post(s"${config.baseUrl}/api/push", Json.obj(
         "device_tokens" -> Seq(device.token),
         "aps" -> Json.obj(
           "badge" -> notification.unvisitedCount,
