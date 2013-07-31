@@ -38,7 +38,7 @@ object Healthcheck {
   case object INTERNAL extends CallType
   case object EXTENSION extends CallType
 
-  val OPS_OF_THE_WEEK = EmailAddresses.LEO
+  val OPS_OF_THE_WEEK = EmailAddresses.EISHAY
 }
 
 case object ReportErrorsAction
