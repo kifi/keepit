@@ -66,14 +66,18 @@ class ScraperController @Inject() (
   }
 
   def getScraped(id: Id[NormalizedURI]) = AdminHtmlAction { implicit request =>
-    val article = articleStore.get(id).get
-    val (uri, info) = db.readOnly { implicit s =>
-      (normalizedURIRepo.get(article.id), scrapeInfoRepo.getByUri(article.id))
+    articleStore.get(id) match {
+      case Some(article) => {
+        val (uri, info) = db.readOnly { implicit s =>
+          (normalizedURIRepo.get(article.id), scrapeInfoRepo.getByUri(article.id))
+        }
+        if (info.isDefined)
+          Ok(html.admin.article(article, uri, info.get))
+        else
+          Ok("Oops, this page was not scraped.")
+      }
+      case None => Ok("Oops, this page was not scraped.")
     }
-    if (info.isDefined)
-      Ok(html.admin.article(article, uri, info.get))
-    else
-      Ok("Oops, there is no scrape info for this uri. Most likely it's not scraped.")
   }
 
   def getUnscrapable() = AdminHtmlAction { implicit request =>
