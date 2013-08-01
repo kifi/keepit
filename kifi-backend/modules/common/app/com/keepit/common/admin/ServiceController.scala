@@ -4,14 +4,11 @@ import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.zookeeper.{ServiceDiscovery, ServiceInstance, ServiceCluster}
 import com.keepit.common.service.{ServiceType, ServiceStatus}
 import com.keepit.common.amazon.{AmazonInstanceInfo}
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import views.html
 import com.keepit.common.logging.Logging
 import play.api.mvc._
 
-
-
-@Singleton
 class ServiceController @Inject() (
     serviceDiscovery: ServiceDiscovery) extends Controller with Logging {
 

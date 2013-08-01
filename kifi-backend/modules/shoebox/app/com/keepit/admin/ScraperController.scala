@@ -25,12 +25,11 @@ import com.keepit.scraper.DuplicateDocumentDetection
 import views.html
 
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.google.inject.{Inject, Singleton, Provider}
+import com.google.inject.Inject
 
 case class DisplayedDuplicate(id: Id[DuplicateDocument], normUriId: Id[NormalizedURI], url: String, percentMatch: Double)
 case class DisplayedDuplicates(normUriId: Id[NormalizedURI], url: String, dupes: Seq[DisplayedDuplicate])
 
-@Singleton
 class ScraperController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,

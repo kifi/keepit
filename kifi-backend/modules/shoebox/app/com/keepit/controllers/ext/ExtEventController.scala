@@ -1,6 +1,6 @@
 package com.keepit.controllers.ext
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.analytics._
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.db.{ExternalId, State}
@@ -10,7 +10,6 @@ import com.keepit.model._
 
 import play.api.libs.json._
 
-@Singleton
 class ExtEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   EventPersister: EventPersister,

@@ -1,6 +1,6 @@
 package com.keepit.controllers.ext
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.healthcheck._
 import com.keepit.common.time._
@@ -8,7 +8,6 @@ import com.keepit.common.time._
 import play.api.http.ContentTypes
 import play.api.libs.json._
 
-@Singleton
 class ExtErrorReportController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   healthcheck: HealthcheckPlugin)

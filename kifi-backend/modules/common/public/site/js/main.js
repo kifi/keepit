@@ -556,7 +556,27 @@ $(function() {
 	function prepInviteTab() {
 		$.getJSON(xhrBase + '/user/all-connections', function(friends) {
 			console.log('[prepInviteTab] friends:', friends.length);
-			nwFriendsTmpl.render(friends);
+			function filterFriends() {
+				var nw = $('.invite-filters>.selected').data('nw');
+				var words = $('.invite-filter').val().toLowerCase().split(/\s+/);
+				var filteredFriends = friends.filter(function (fr) {
+					if (nw && nw != fr.value.split('/')[0]) {
+						return false;
+					}
+					for (var i = 0; i < words.length; i++) {
+						if (~(' ' + fr.label).toLowerCase().indexOf(' ' + words[i])) {
+							return true;
+						}
+					}
+					return false;
+				});
+				nwFriendsTmpl.render(filteredFriends);
+			}
+			$('.invite-filters>a').click(function () {
+				$(this).addClass('selected').siblings().removeClass('selected').hide().show();
+				filterFriends();
+			});
+			$('.invite-filter').keyup(filterFriends).keyup();
 		});
 	}
 
@@ -1417,7 +1437,7 @@ $(function() {
 				for (nw in networks) {
 					console.log("[networks]", nw, networks[nw]);
 					$el.find('.friend-nw-' + nw)
-						.attr('href', networks[nw].connected && networks[nw].profileUrl || null);
+						.attr('href', networks[nw].connected || null);
 				}
 			});
 		});

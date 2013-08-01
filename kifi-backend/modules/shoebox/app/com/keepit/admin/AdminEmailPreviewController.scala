@@ -6,10 +6,9 @@ import com.keepit.common.db.LargeString._
 import com.keepit.model.{Comment, NormalizedURI, User, UrlHash}
 import views.html
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.google.inject.{Inject, Singleton, Provider}
+import com.google.inject.Inject
 import com.keepit.model.UserStates
 
-@Singleton
 class AdminEmailPreviewController @Inject() (
   actionAuthenticator: ActionAuthenticator)
     extends AdminController(actionAuthenticator) {

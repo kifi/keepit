@@ -5,7 +5,7 @@ import scala.concurrent.duration._
 import scala.concurrent.future
 import scala.concurrent.Future
 import scala.util.Try
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.performance._
 import com.keepit.common.time._
@@ -27,7 +27,6 @@ import play.modules.statsd.api.Statsd
 import com.keepit.social.BasicUser
 import scala.concurrent.Promise
 
-@Singleton
 class ExtSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   searchConfigManager: SearchConfigManager,
