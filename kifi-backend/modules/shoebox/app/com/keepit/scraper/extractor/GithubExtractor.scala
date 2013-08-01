@@ -10,7 +10,7 @@ import org.xml.sax.Attributes
 import org.xml.sax.ContentHandler
 import org.jsoup.nodes.Document
 
-object GithubExtractorFactory extends ExtractorFactory {
+object GithubExtractorWrapper extends ExtractorWrapper {
   def isDefinedAt(uri: URI) = {
     uri match {
       case URI(_, _, Some(Host("com", "github", _*)), _, Some(path), Some(query), _) =>

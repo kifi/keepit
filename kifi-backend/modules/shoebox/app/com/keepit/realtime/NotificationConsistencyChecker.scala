@@ -3,7 +3,7 @@ package com.keepit.realtime
 import scala.concurrent.duration._
 
 import com.google.inject.{ImplementedBy, Inject}
-import com.keepit.common.actor.ActorFactory
+import com.keepit.common.actor.ActorWrapper
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
@@ -45,18 +45,16 @@ trait NotificationConsistencyChecker extends Plugin {
 
 class NotificationConsistencyCheckerImpl @Inject()(
     system: ActorSystem,
-    actorFactory: ActorFactory[NotificationConsistencyActor],
+    actorWrapper: ActorWrapper[NotificationConsistencyActor],
     val schedulingProperties: SchedulingProperties) //only on leader
   extends SchedulingPlugin with NotificationConsistencyChecker {
 
-  private lazy val actor = actorFactory.actor
-
   def verifyVisited() {
-    actor ! VerifyVisited
+    actorWrapper.actor ! VerifyVisited
   }
 
   override def onStart() {
-    scheduleTask(system, 2 minutes, 1 hour, actor, VerifyVisited)
+    scheduleTask(system, 2 minutes, 1 hour, actorWrapper.actor, VerifyVisited)
     super.onStart()
   }
 }

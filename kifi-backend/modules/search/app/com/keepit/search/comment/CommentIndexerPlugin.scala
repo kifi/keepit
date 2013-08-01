@@ -9,7 +9,7 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
-import com.keepit.common.actor.ActorFactory
+import com.keepit.common.actor.ActorWrapper
 import com.keepit.inject._
 import play.api.Play.current
 import scala.concurrent.Future
@@ -41,18 +41,16 @@ trait CommentIndexerPlugin extends SchedulingPlugin {
 }
 
 class CommentIndexerPluginImpl @Inject() (
-    actorFactory: ActorFactory[CommentIndexerActor],
+    actorWrapper: ActorWrapper[CommentIndexerActor],
     commentIndexer: CommentIndexer)
   extends CommentIndexerPlugin with Logging {
 
   val schedulingProperties = SchedulingProperties.AlwaysEnabled
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private lazy val actor = actorFactory.actor
-
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actorFactory.system, 30 seconds, 1 minute, actor, Update)
+    scheduleTask(actorWrapper.system, 30 seconds, 1 minute, actorWrapper.actor, Update)
     log.info("starting CommentIndexerPluginImpl")
   }
   override def onStop() {
@@ -61,10 +59,10 @@ class CommentIndexerPluginImpl @Inject() (
     commentIndexer.close()
   }
 
-  override def update(): Future[Int] = actor.ask(Update)(1 minutes).mapTo[Int]
+  override def update(): Future[Int] = actorWrapper.actor.ask(Update)(1 minutes).mapTo[Int]
 
   override def reindex() {
     commentIndexer.reindex()
-    actor ! Update
+    actorWrapper.actor ! Update
   }
 }

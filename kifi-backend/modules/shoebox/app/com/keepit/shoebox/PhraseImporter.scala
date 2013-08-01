@@ -3,7 +3,7 @@ package com.keepit.shoebox
 import java.io._
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.akka.FortyTwoActor
-import com.keepit.common.actor.ActorFactory
+import com.keepit.common.actor.ActorWrapper
 import com.keepit.search.Lang
 import com.keepit.common.db.Id
 import com.keepit.common.logging.Logging
@@ -94,14 +94,12 @@ trait PhraseImporter {
 }
 
 class PhraseImporterImpl @Inject()(
-    actorFactory: ActorFactory[PhraseImporterActor],
+    actorWrapper: ActorWrapper[PhraseImporterActor],
     EventPersister: EventPersister)
   extends PhraseImporter {
 
-  private lazy val actor = actorFactory.actor
-
   def importFile(file: File): Unit = {
-    actor ! ImportFile(file)
+    actorWrapper.actor ! ImportFile(file)
   }
 }
 

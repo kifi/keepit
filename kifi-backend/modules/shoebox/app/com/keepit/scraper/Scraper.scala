@@ -7,7 +7,7 @@ import com.keepit.common.time._
 import com.keepit.common.net.URI
 import com.keepit.search.ArticleStore
 import com.keepit.model._
-import com.keepit.scraper.extractor.DefaultExtractorFactory
+import com.keepit.scraper.extractor.DefaultExtractorWrapper
 import com.keepit.scraper.extractor.Extractor
 import com.keepit.scraper.mediatypes.MediaTypes
 import com.keepit.search.LangDetector
@@ -170,12 +170,12 @@ class Scraper @Inject() (
           }.getOrElse(throw new Exception("failed to find an extractor factory"))
         case Failure(_) =>
           log.warn("uri parsing failed: [%s]".format(url))
-          DefaultExtractorFactory(url)
+          DefaultExtractorWrapper(url)
       }
     } catch {
       case e: Throwable =>
           log.warn("uri parsing failed: [%s][%s]".format(url, e.toString))
-          DefaultExtractorFactory(url)
+          DefaultExtractorWrapper(url)
     }
   }
 

@@ -4,7 +4,7 @@ import net.codingwell.scalaguice.ScalaModule
 import com.google.inject.Provides
 import com.keepit.inject.AppScoped
 import java.net.InetAddress
-import com.keepit.common.actor.ActorFactory
+import com.keepit.common.actor.ActorWrapper
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.plugin.SchedulingProperties
 
@@ -20,8 +20,8 @@ case class ProdHealthCheckModule() extends HealthCheckModule {
 
   @Provides
   @AppScoped
-  def healthcheckProvider(actorFactory: ActorFactory[HealthcheckActor],
+  def healthcheckProvider(actorWrapper: ActorWrapper[HealthcheckActor],
     services: FortyTwoServices, host: HealthcheckHost): HealthcheckPlugin = {
-    new HealthcheckPluginImpl(actorFactory, services, host)
+    new HealthcheckPluginImpl(actorWrapper, services, host)
   }
 }

@@ -9,7 +9,7 @@ import org.joda.time._
 
 import com.google.inject.Inject
 
-import com.keepit.common.actor.ActorFactory
+import com.keepit.common.actor.ActorWrapper
 import com.keepit.common.db.Id
 import com.keepit.common.healthcheck._
 import com.keepit.common.logging.Logging
@@ -65,13 +65,11 @@ trait EventPersister {
 }
 
 class EventPersisterImpl @Inject() (
-    actorFactory: ActorFactory[PersistEventActor])
+    actorWrapper: ActorWrapper[PersistEventActor])
   extends EventPersister with Logging {
 
-  private lazy val actor = actorFactory.actor
-
-  def persist(event: Event): Unit = actor ! Persist(event, currentDateTime)
-  def persist(events: Seq[Event]): Unit = actor ! PersistMany(events, currentDateTime)
+  def persist(event: Event): Unit = actorWrapper.actor ! Persist(event, currentDateTime)
+  def persist(events: Seq[Event]): Unit = actorWrapper.actor ! PersistMany(events, currentDateTime)
 }
 
 class FakeEventPersisterImpl @Inject() (

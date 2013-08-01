@@ -6,7 +6,7 @@ import scala.concurrent.duration._
 
 import com.google.inject.Inject
 import com.google.inject.ImplementedBy
-import com.keepit.common.actor.ActorFactory
+import com.keepit.common.actor.ActorWrapper
 import com.keepit.common.akka.AlertingActor
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
@@ -154,7 +154,7 @@ trait HealthcheckPlugin extends Plugin {
 }
 
 class HealthcheckPluginImpl @Inject() (
-    actorFactory: ActorFactory[HealthcheckActor],
+    actorWrapper: ActorWrapper[HealthcheckActor],
     services: FortyTwoServices,
     host: HealthcheckHost)
   extends HealthcheckPlugin
@@ -163,25 +163,23 @@ class HealthcheckPluginImpl @Inject() (
   val schedulingProperties = SchedulingProperties.AlwaysEnabled
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private lazy val actor = actorFactory.actor
-
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actorFactory.system, 0 seconds, 10 minutes, actor, ReportErrorsAction)
+    scheduleTask(actorWrapper.system, 0 seconds, 10 minutes, actorWrapper.actor, ReportErrorsAction)
   }
 
-  def errorCount(): Int = Await.result((actor ? ErrorCount).mapTo[Int], 1 seconds)
+  def errorCount(): Int = Await.result((actorWrapper.actor ? ErrorCount).mapTo[Int], 1 seconds)
 
-  def errors(): Seq[HealthcheckError] = Await.result((actor ? GetErrors).mapTo[List[HealthcheckError]], 1 seconds)
+  def errors(): Seq[HealthcheckError] = Await.result((actorWrapper.actor ? GetErrors).mapTo[List[HealthcheckError]], 1 seconds)
 
-  def resetErrorCount(): Unit = actor ! ResetErrorCount
+  def resetErrorCount(): Unit = actorWrapper.actor ! ResetErrorCount
 
-  def reportErrors(): Unit = actor ! ReportErrorsAction
+  def reportErrors(): Unit = actorWrapper.actor ! ReportErrorsAction
 
   def addError(error: HealthcheckError): HealthcheckError = {
     log.error(s"Healthcheck logged error: ${error}")
-    actor ! error
+    actorWrapper.actor ! error
     error
   }
 
@@ -191,7 +189,7 @@ class HealthcheckPluginImpl @Inject() (
     val email = (ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
         category = PostOffice.Categories.HEALTHCHECK))
-    actor ! email
+    actorWrapper.actor ! email
     email
   }
 
@@ -201,9 +199,9 @@ class HealthcheckPluginImpl @Inject() (
     val email = (ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
         category = PostOffice.Categories.HEALTHCHECK))
-    actor ! email
+    actorWrapper.actor ! email
     email
   }
 
-  override def warmUp() = scheduleTaskOnce(actorFactory.system, 3 minutes, "Healthcheck: consider service warm") {super.warmUp()}
+  override def warmUp() = scheduleTaskOnce(actorWrapper.system, 3 minutes, "Healthcheck: consider service warm") {super.warmUp()}
 }

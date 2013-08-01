@@ -1,7 +1,7 @@
 package com.keepit.controllers.search
 
 import com.keepit.common.controller.SearchServiceController
-import com.keepit.search.{ArticleSearchResultRef, SearchStatisticsExtractorFactory, UriLabel}
+import com.keepit.search.{ArticleSearchResultRef, SearchStatisticsExtractorWrapper, UriLabel}
 import com.google.inject.Inject
 import com.google.inject.Provider
 import com.keepit.common.db.ExternalId
@@ -15,7 +15,7 @@ import com.keepit.common.logging.Logging
 import play.api.libs.json.JsArray
 import com.keepit.serializer.UriLabelSerializer
 
-class SearchStatisticsController @Inject() (sseFactory: Provider[SearchStatisticsExtractorFactory])
+class SearchStatisticsController @Inject() (sseFactory: Provider[SearchStatisticsExtractorWrapper])
   extends SearchServiceController with Logging{
 
   def getSearchStatistics() = Action(parse.json) { request =>

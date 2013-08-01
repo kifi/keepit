@@ -13,7 +13,7 @@ import org.xml.sax.ContentHandler
 import play.api.http.MimeTypes
 
 
-object DefaultExtractorFactory extends ExtractorFactory {
+object DefaultExtractorWrapper extends ExtractorWrapper {
   def isDefinedAt(uri: URI) = true
   def apply(uri: URI) = new DefaultExtractor(uri.toString, Scraper.maxContentChars, htmlMapper)
   def apply(url: String) = new DefaultExtractor(url, Scraper.maxContentChars, htmlMapper)

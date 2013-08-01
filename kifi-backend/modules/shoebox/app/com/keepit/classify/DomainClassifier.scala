@@ -10,7 +10,7 @@ import java.util.UUID
 
 import com.coremedia.iso.Hex.encodeHex
 import com.google.inject.{Inject, ImplementedBy}
-import com.keepit.common.actor.ActorFactory
+import com.keepit.common.actor.ActorWrapper
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckPlugin
@@ -116,18 +116,16 @@ trait DomainClassifier {
 }
 
 class DomainClassifierImpl @Inject()(
-  actorFactory: ActorFactory[DomainClassificationActor],
+  actorWrapper: ActorWrapper[DomainClassificationActor],
   db: Database,
   domainRepo: DomainRepo,
   updater: SensitivityUpdater)
     extends DomainClassifier {
 
-  private lazy val actor = actorFactory.actor
-
   private val splitPattern = """\.""".r
 
   def fetchTags(domain: String): Future[Seq[DomainTagName]] = {
-    actor.ask(FetchTags(domain))(1 minute).mapTo[Seq[DomainTagName]]
+    actorWrapper.actor.ask(FetchTags(domain))(1 minute).mapTo[Seq[DomainTagName]]
   }
 
   def isSensitive(hostname: String): Either[Future[Boolean], Boolean] = {
@@ -142,7 +140,7 @@ class DomainClassifierImpl @Inject()(
         domain.sensitive.orElse(db.readWrite { implicit s => updater.calculateSensitivity(domain) })
       } match {
         case Some(sensitive) => Right(sensitive)
-        case None => Left(actor.ask(FetchDomainInfo(domainName))(1 minute).mapTo[Boolean])
+        case None => Left(actorWrapper.actor.ask(FetchDomainInfo(domainName))(1 minute).mapTo[Boolean])
       }
     }
   }
