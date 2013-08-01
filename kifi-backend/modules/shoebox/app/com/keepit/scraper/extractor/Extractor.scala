@@ -5,9 +5,9 @@ import com.keepit.scraper.HttpInputStream
 
 object Extractor {
   val factories = Seq(
-    YoutubeExtractorFactory,
-    GithubExtractorFactory,
-    DefaultExtractorFactory
+    YoutubeExtractorProvider,
+    GithubExtractorProvider,
+    DefaultExtractorProvider
   )
 }
 trait Extractor {
@@ -16,5 +16,5 @@ trait Extractor {
   def getMetadata(name: String): Option[String]
 }
 
-abstract class ExtractorFactory extends PartialFunction[URI, Extractor]
+abstract class ExtractorProvider extends PartialFunction[URI, Extractor]
 

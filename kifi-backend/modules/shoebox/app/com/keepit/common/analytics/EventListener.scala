@@ -2,7 +2,7 @@ package com.keepit.common.analytics
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.google.inject.{ Inject, Singleton, Provider }
-import com.keepit.common.actor.ActorFactory
+import com.keepit.common.actor.ActorProvider
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
@@ -84,11 +84,9 @@ object SearchEventName {
 
 @Singleton
 class EventHelper @Inject() (
-  actorFactory: ActorFactory[EventHelperActor],
+  actorProvider: ActorProvider[EventHelperActor],
   listeners: Set[EventListener]) {
-  private lazy val actor = actorFactory.get()
-
-  def newEvent(event: Event): Unit = actor ! event
+  def newEvent(event: Event): Unit = actorProvider.actor ! event
 
   def matchEvent(event: Event): Seq[String] =
     listeners.filter(_.onEvent.isDefinedAt(event)).map(_.getClass.getSimpleName.replaceAll("\\$", "")).toSeq

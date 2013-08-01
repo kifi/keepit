@@ -7,7 +7,7 @@ import org.joda.time.Days
 import com.google.inject.{ImplementedBy, Inject}
 import play.api.Plugin
 
-import com.keepit.common.actor.ActorFactory
+import com.keepit.common.actor.ActorProvider
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -84,22 +84,20 @@ trait InvitationMailPlugin extends Plugin {
 }
 
 class InvitationMailPluginImpl @Inject()(
-    actorFactory: ActorFactory[InvitationMailActor],
+    actorProvider: ActorProvider[InvitationMailActor],
     val schedulingProperties: SchedulingProperties //only on leader
     ) extends InvitationMailPlugin with SchedulingPlugin with Logging {
 
   override def enabled: Boolean = true
 
-  private lazy val actor = actorFactory.get()
-
   def resendNotifications() {
-    actor ! ResendNotifications
+    actorProvider.actor ! ResendNotifications
   }
   def notifyAcceptedUser(userId: Id[User]) {
-    actor ! NotifyAcceptedUser(userId)
+    actorProvider.actor ! NotifyAcceptedUser(userId)
   }
   override def onStart() {
     log.info("Starting InvitationMailPluginImpl")
-    scheduleTask(actorFactory.system, 10 seconds, 12 hours, actor, ResendNotifications)
+    scheduleTask(actorProvider.system, 10 seconds, 12 hours, actorProvider.actor, ResendNotifications)
   }
 }
