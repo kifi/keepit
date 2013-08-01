@@ -62,7 +62,7 @@ class MessageRepoImpl @Inject() (
 
 
 
-  def updateUriId(message: Message, uriId: Id[NormalizedURI])(implicit session: RWSession) : Unit = { //TODO Stephen: Make this an update
+  def updateUriId(message: Message, uriId: Id[NormalizedURI])(implicit session: RWSession) : Unit = {
     (for (row <- table if row.id===message.id) yield row.sentOnUriId).update(uriId)
   }
 
