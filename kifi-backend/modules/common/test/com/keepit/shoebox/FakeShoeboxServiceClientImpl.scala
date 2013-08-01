@@ -207,7 +207,7 @@ class FakeShoeboxServiceClientImpl(
     Future.successful(uri)
   }
 
-  def normalizeURL(url: String): Future[Id[NormalizedURI]] = { //TODO Stephen: Make this more realistic?
+  def normalizeURL(url: String): Future[Id[NormalizedURI]] = {
     Future.successful(Id[NormalizedURI](url.hashCode)) 
   }
 
