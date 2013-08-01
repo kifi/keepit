@@ -87,7 +87,7 @@ class SecureSocialUserPluginImpl @Inject() (
       // TODO: better way of dealing with emails that already exist; for now just link accounts
       socialUser.email flatMap emailRepo.getByAddressOpt map (_.userId)
     } flatMap userRepo.getOpt
-
+`
     suiOpt.map(_.withCredentials(socialUser)) match {
       case Some(socialUserInfo) if !socialUserInfo.userId.isEmpty =>
         // TODO(greg): handle case where user id in socialUserInfo is different from the one in the session

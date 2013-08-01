@@ -1,9 +1,11 @@
 package com.keepit.realtime
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.slick.driver.BasicProfile
 import scala.slick.lifted.BaseTypeMapper
 
-import org.joda.time.DateTime
+import org.joda.time.{Days, DateTime}
 
 import com.google.inject.{Inject, ImplementedBy}
 import com.keepit.common.db._
@@ -34,7 +36,8 @@ object DeviceStates extends States[Device]
 
 @ImplementedBy(classOf[DeviceRepoImpl])
 trait DeviceRepo extends Repo[Device] {
-  def getByUserId(userId: Id[User])(implicit s: RSession): Seq[Device]
+  def getByUserId(userId: Id[User], excludeState: Option[State[Device]] = Some(DeviceStates.INACTIVE))
+      (implicit s: RSession): Seq[Device]
   def get(userId: Id[User], token: String, deviceType: DeviceType)(implicit s: RSession): Option[Device]
 }
 
@@ -61,8 +64,8 @@ class DeviceRepoImpl @Inject()(val db: DataBaseComponent, val clock: Clock) exte
     def * = id.? ~ userId ~ token ~ deviceType ~ state ~ createdAt ~ updatedAt <> (Device.apply _, Device.unapply _)
   }
 
-  def getByUserId(userId: Id[User])(implicit s: RSession): Seq[Device] = {
-    (for (t <- table if t.userId === userId) yield t).list
+  def getByUserId(userId: Id[User], excludeState: Option[State[Device]])(implicit s: RSession): Seq[Device] = {
+    (for (t <- table if t.userId === userId && t.state =!= excludeState.orNull) yield t).list
   }
 
   def get(userId: Id[User], token: String, deviceType: DeviceType)(implicit s: RSession): Option[Device] = {
@@ -105,6 +108,7 @@ object PushNotification {
 
 object UrbanAirship {
   val NotificationSound = "notification.aiff"
+  val RecheckPeriod = Days.ONE
 }
 
 @ImplementedBy(classOf[UrbanAirshipImpl])
@@ -112,13 +116,15 @@ trait UrbanAirship {
   def registerDevice(userId: Id[User], token: String, deviceType: DeviceType): Device
   def notifyUser(userId: Id[User], notification: PushNotification): Unit
   def sendNotification(device: Device, notification: PushNotification): Unit
+  def updateDeviceState(device: Device): Future[Device]
 }
 
 class UrbanAirshipImpl @Inject()(
   client: HttpClient,
   config: UrbanAirshipConfig,
   deviceRepo: DeviceRepo,
-  db: Database
+  db: Database,
+  clock: Clock
 ) extends UrbanAirship {
 
   lazy val authenticatedClient: HttpClient = {
@@ -136,14 +142,28 @@ class UrbanAirshipImpl @Inject()(
     }
 
   def notifyUser(userId: Id[User], notification: PushNotification): Unit = {
-    for (device <- db.readOnly { implicit s => deviceRepo.getByUserId(userId) }) {
+    for {
+      deviceOpt <- db.readOnly { implicit s => deviceRepo.getByUserId(userId) }
+      device <- updateDeviceState(deviceOpt) if device.state == DeviceStates.ACTIVE
+    } {
       sendNotification(device, notification)
     }
   }
 
+  def updateDeviceState(device: Device): Future[Device] = {
+    if (device.updatedAt plus UrbanAirship.RecheckPeriod isBefore clock.now()) {
+      authenticatedClient.getFuture(s"${config.baseUrl}/api/device_tokens/${device.token}") map { r =>
+        val active = (r.json \ "active").as[Boolean]
+        db.readWrite { implicit s =>
+          deviceRepo.save(device.copy(state = if (active) DeviceStates.ACTIVE else DeviceStates.INACTIVE))
+        }
+      }
+    } else Future.successful(device)
+  }
+
   def sendNotification(device: Device, notification: PushNotification): Unit = device.deviceType match {
     case DeviceType.IOS =>
-      authenticatedClient.post(s"${config.baseUrl}/api/push", Json.obj(
+      authenticatedClient.postFuture(s"${config.baseUrl}/api/push", Json.obj(
         "device_tokens" -> Seq(device.token),
         "aps" -> Json.obj(
           "badge" -> notification.unvisitedCount,
