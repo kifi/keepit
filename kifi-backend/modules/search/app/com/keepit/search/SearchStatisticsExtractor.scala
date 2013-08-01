@@ -29,7 +29,7 @@ import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent.duration._
 
 @Singleton
-class SearchStatisticsExtractorFactory @Inject() (
+class SearchStatisticsExtractorProvider @Inject() (
   uriGraph: URIGraph,
   articleIndexer: ArticleIndexer, searchConfigManager: SearchConfigManager, mainSearcherFactory: MainSearcherFactory, parserFactory: MainQueryParserFactory,
   browsingHistoryBuilder: BrowsingHistoryBuilder, clickHistoryBuilder: ClickHistoryBuilder, resultClickTracker: ResultClickTracker, store: MongoEventStore,
