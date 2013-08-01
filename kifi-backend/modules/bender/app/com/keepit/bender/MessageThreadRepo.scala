@@ -120,7 +120,8 @@ trait MessageThreadRepo extends Repo[MessageThread] with ExternalIdColumnFunctio
 @Singleton
 class MessageThreadRepoImpl @Inject() (
     val clock: Clock, 
-    val db: DataBaseComponent 
+    val db: DataBaseComponent,
+    val threadExternalIdCache: MessageThreadExternalIdCache 
   ) 
   extends DbRepo[MessageThread] with MessageThreadRepo with ExternalIdColumnDbFunction[MessageThread] {
 
@@ -159,11 +160,11 @@ class MessageThreadRepoImpl @Inject() (
   }
 
   override def get(id: ExternalId[MessageThread])(implicit session: RSession) : MessageThread = {
-    (for (row <- table if row.externalId===id) yield row).first
+    threadExternalIdCache.getOrElse(MessageThreadExternalIdKey(id))(super.get(id))
   }
 
   override def get(id: Id[MessageThread])(implicit session: RSession) : MessageThread = {
-    (for (row <- table if row.id===id) yield row).first
+    super.get(id)
   }
 
 }

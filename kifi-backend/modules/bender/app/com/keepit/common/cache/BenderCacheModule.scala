@@ -11,7 +11,7 @@ case class BenderCacheModule(cachePluginModules: CachePluginModule*) extends Cac
 
   @Singleton
   @Provides
-  def messageThreadByExternalIdCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+  def messageThreadExternalIdCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new MessageThreadExternalIdCache((innerRepo, 1 hours), (outerRepo, 7 days))
 
   @Singleton
