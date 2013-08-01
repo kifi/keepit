@@ -39,7 +39,7 @@ private[scraper] class ScraperActor @Inject() (
 }
 
 trait ScraperPlugin extends Plugin {
-  def scrape(): Seq[(NormalizedURI, Option[Article])]
+  def scrapePending(): Future[Seq[(NormalizedURI, Option[Article])]]
   def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])]
 }
 
@@ -62,12 +62,9 @@ class ScraperPluginImpl @Inject() (
     scraper.close()
   }
 
-  override def scrape(): Seq[(NormalizedURI, Option[Article])] = {
-    val future = actorProvider.actor.ask(Scrape)(1 minutes).mapTo[Seq[(NormalizedURI, Option[Article])]]
-    Await.result(future, 1 minutes)
-  }
+  override def scrapePending(): Future[Seq[(NormalizedURI, Option[Article])]] =
+    actorProvider.actor.ask(Scrape)(1 minutes).mapTo[Seq[(NormalizedURI, Option[Article])]]
 
-  override def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])] = {
+  override def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])] = 
     actorProvider.actor.ask(ScrapeInstance(uri))(1 minutes).mapTo[(NormalizedURI, Option[Article])]
-  }
 }
