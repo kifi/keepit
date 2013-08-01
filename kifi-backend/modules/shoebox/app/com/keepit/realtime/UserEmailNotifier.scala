@@ -3,7 +3,7 @@ package com.keepit.realtime
 import scala.concurrent.duration._
 
 import com.google.inject.Inject
-import com.keepit.common.actor.ActorWrapper
+import com.keepit.common.actor.ActorProvider
 import com.keepit.common.akka._
 import com.keepit.common.db.Id
 import com.keepit.common.db.slick.Database
@@ -153,7 +153,7 @@ trait UserEmailNotifierPlugin extends SchedulingPlugin {
 }
 
 class UserEmailNotifierPluginImpl @Inject() (
-    actorWrapper: ActorWrapper[UserEmailNotifierActor],
+    actorProvider: ActorProvider[UserEmailNotifierActor],
     val schedulingProperties: SchedulingProperties) //only on leader
   extends UserEmailNotifierPlugin with Logging {
 
@@ -162,11 +162,11 @@ class UserEmailNotifierPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting UserEmailNotifierPluginImpl")
-    scheduleTask(actorWrapper.system, 30 seconds, 2 minutes, actorWrapper.actor, SendEmails)
+    scheduleTask(actorProvider.system, 30 seconds, 2 minutes, actorProvider.actor, SendEmails)
   }
 
   override def sendEmails() {
-    actorWrapper.actor ! SendEmails
+    actorProvider.actor ! SendEmails
   }
 }
 

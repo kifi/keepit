@@ -6,7 +6,7 @@ import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
 import com.keepit.common.akka.AlertingActor
 
 @Singleton
-class ActorWrapper[T <: Actor] @Inject() (
+class ActorProvider[T <: Actor] @Inject() (
     systemProvider: Provider[ActorSystem],
     builder: ActorBuilder,
     provider: Provider[T]) {

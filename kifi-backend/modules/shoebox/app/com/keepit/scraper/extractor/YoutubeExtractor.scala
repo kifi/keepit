@@ -10,7 +10,7 @@ import org.apache.tika.parser.html.HtmlMapper
 import org.xml.sax.Attributes
 import org.xml.sax.ContentHandler
 
-object YoutubeExtractorWrapper extends ExtractorWrapper {
+object YoutubeExtractorProvider extends ExtractorProvider {
   def isDefinedAt(uri: URI) = {
     uri match {
       case URI(_, _, Some(Host("com", "youtube", _*)), _, Some(path), Some(query), _) =>
