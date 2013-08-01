@@ -136,7 +136,7 @@ class ReportBuilderPluginImpl @Inject() (
   def buildReport(startDate: DateTime, endDate: DateTime, report: ReportRepo): Unit = actor ! BuildReport(startDate, endDate, report)
   def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit = actor ! BuildReports(startDate, endDate, reportGroup)
 
-  private lazy val actor = actorFactory.get()
+  private lazy val actor = actorFactory.actor
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {

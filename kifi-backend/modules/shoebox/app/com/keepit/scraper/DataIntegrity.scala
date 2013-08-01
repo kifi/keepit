@@ -30,7 +30,7 @@ class DataIntegrityPluginImpl @Inject() (
     val schedulingProperties: SchedulingProperties) //only on leader
   extends Logging with DataIntegrityPlugin {
 
-  private lazy val actor = actorFactory.get()
+  private lazy val actor = actorFactory.actor
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {

@@ -312,7 +312,7 @@ class DomainTagImporterImpl @Inject() (
   actorFactory: ActorFactory[DomainTagImportActor])
     extends DomainTagImporter {
 
-  private lazy val actor = actorFactory.get()
+  private lazy val actor = actorFactory.actor
 
   def refetchClassifications() {
     actor ! RefetchAll

@@ -83,7 +83,7 @@ class TopicUpdaterPluginImpl @Inject() (
 
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private lazy val actor = actorFactory.get()
+  private lazy val actor = actorFactory.actor
 
   override def enabled: Boolean = true
   override def onStart() {
@@ -141,7 +141,7 @@ class TopicModelSwitcherPluginImpl @Inject() (
 ) extends TopicModelSwitcherPlugin with Logging {
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private lazy val actor = actorFactory.get()
+  private lazy val actor = actorFactory.actor
 
   override def enabled: Boolean = true
 

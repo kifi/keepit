@@ -90,7 +90,7 @@ class ImageDataIntegrityPluginImpl @Inject()(
     actorFactory: ActorFactory[ImageDataIntegrityActor],
     val schedulingProperties: SchedulingProperties //only on leader
   ) extends SchedulingPlugin with ImageDataIntegrityPlugin {
-  private lazy val actor = actorFactory.get()
+  private lazy val actor = actorFactory.actor
 
   def verifyAll() {
     actor ! VerifyAllPictures

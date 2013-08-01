@@ -21,7 +21,7 @@ class MailSenderPluginImpl @Inject() (
     val schedulingProperties: SchedulingProperties) //only on leader
   extends Logging with MailSenderPlugin with SchedulingPlugin {
 
-  private lazy val actor = actorFactory.get()
+  private lazy val actor = actorFactory.actor
 
   // plugin lifecycle methods
   override def enabled: Boolean = true

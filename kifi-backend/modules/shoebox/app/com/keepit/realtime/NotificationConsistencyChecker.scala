@@ -49,7 +49,7 @@ class NotificationConsistencyCheckerImpl @Inject()(
     val schedulingProperties: SchedulingProperties) //only on leader
   extends SchedulingPlugin with NotificationConsistencyChecker {
 
-  private lazy val actor = actorFactory.get()
+  private lazy val actor = actorFactory.actor
 
   def verifyVisited() {
     actor ! VerifyVisited

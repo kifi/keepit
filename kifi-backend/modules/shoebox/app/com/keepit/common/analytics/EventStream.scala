@@ -27,7 +27,7 @@ class EventStream @Inject() (
     eventWriter: EventWriter) {
   implicit val timeout = Timeout(1 second)
 
-  private lazy val actor = actorFactory.get()
+  private lazy val actor = actorFactory.actor
 
   def newStream(): Future[(Iteratee[JsValue,_],Enumerator[JsValue])] = {
     (actor ? NewStream).map {

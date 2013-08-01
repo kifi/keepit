@@ -86,7 +86,7 @@ object SearchEventName {
 class EventHelper @Inject() (
   actorFactory: ActorFactory[EventHelperActor],
   listeners: Set[EventListener]) {
-  private lazy val actor = actorFactory.get()
+  private lazy val actor = actorFactory.actor
 
   def newEvent(event: Event): Unit = actor ! event
 

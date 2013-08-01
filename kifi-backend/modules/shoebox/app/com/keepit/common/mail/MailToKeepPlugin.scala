@@ -213,7 +213,7 @@ class MailToKeepPluginImpl @Inject()(
 
   override def enabled: Boolean = true
 
-  private lazy val actor = actorFactory.get()
+  private lazy val actor = actorFactory.actor
 
   def fetchNewKeeps() {
     actor ! FetchNewKeeps

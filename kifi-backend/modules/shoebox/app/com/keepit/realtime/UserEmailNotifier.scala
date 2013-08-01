@@ -159,7 +159,7 @@ class UserEmailNotifierPluginImpl @Inject() (
 
   implicit val actorTimeout = Timeout(5 second)
 
-  private lazy val actor = actorFactory.get()
+  private lazy val actor = actorFactory.actor
 
   override def enabled: Boolean = true
   override def onStart() {

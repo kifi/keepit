@@ -68,7 +68,7 @@ class EventPersisterImpl @Inject() (
     actorFactory: ActorFactory[PersistEventActor])
   extends EventPersister with Logging {
 
-  private lazy val actor = actorFactory.get()
+  private lazy val actor = actorFactory.actor
 
   def persist(event: Event): Unit = actor ! Persist(event, currentDateTime)
   def persist(events: Seq[Event]): Unit = actor ! PersistMany(events, currentDateTime)

@@ -98,7 +98,7 @@ class PhraseImporterImpl @Inject()(
     EventPersister: EventPersister)
   extends PhraseImporter {
 
-  private lazy val actor = actorFactory.get()
+  private lazy val actor = actorFactory.actor
 
   def importFile(file: File): Unit = {
     actor ! ImportFile(file)

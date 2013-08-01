@@ -70,7 +70,7 @@ class RemotePostOfficePluginImpl @Inject() (
   val schedulingProperties = SchedulingProperties.AlwaysEnabled
 
   implicit val actorTimeout = Timeout(5 seconds)
-  private lazy val actor = actorFactory.get()
+  private lazy val actor = actorFactory.actor
 
   override def enabled: Boolean = true
   override def onStart() {
