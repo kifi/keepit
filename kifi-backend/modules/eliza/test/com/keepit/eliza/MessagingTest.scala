@@ -1,4 +1,4 @@
-package com.keepit.bender
+package com.keepit.eliza
 
 import org.specs2.mutable._
 
@@ -9,7 +9,7 @@ import com.keepit.test.{DbTestInjector}
 import play.api.test.Helpers._
 import com.google.inject.Injector
 import com.keepit.shoebox.{ShoeboxServiceClient, FakeShoeboxServiceModule}
-import com.keepit.common.cache.{BenderCacheModule}
+import com.keepit.common.cache.{ElizaCacheModule}
 
 import com.keepit.common.db.{Model, Id, ExternalId}
 import com.keepit.model.{User, NormalizedURI}
@@ -37,7 +37,7 @@ class MessagingTest extends Specification with DbTestInjector {
   "Messaging Contoller" should {
 
     "send correctly" in {
-      withDb(BenderCacheModule(), FakeShoeboxServiceModule()) { implicit injector =>
+      withDb(ElizaCacheModule(), FakeShoeboxServiceModule()) { implicit injector =>
 
         val (messagingController, user1, user2, user3, user2n3Set, notificationRouter) = setup()
 
@@ -58,7 +58,7 @@ class MessagingTest extends Specification with DbTestInjector {
 
 
     "merge and notify correctly" in {
-      withDb(BenderCacheModule(), FakeShoeboxServiceModule()) { implicit injector =>
+      withDb(ElizaCacheModule(), FakeShoeboxServiceModule()) { implicit injector =>
 
 
         val (messagingController, user1, user2, user3, user2n3Set, notificationRouter) = setup()

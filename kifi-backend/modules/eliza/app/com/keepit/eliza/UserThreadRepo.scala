@@ -1,4 +1,4 @@
-package com.keepit.bender
+package com.keepit.eliza
 
 import com.google.inject.{Inject, Singleton, ImplementedBy}
 import com.keepit.common.db.slick.{Repo, DbRepo, ExternalIdColumnFunction, ExternalIdColumnDbFunction, DataBaseComponent}

@@ -1,4 +1,4 @@
-package com.keepit.bender
+package com.keepit.eliza
 
 import scala.slick.lifted.{BaseTypeMapper}
 import com.keepit.common.db.{Id}

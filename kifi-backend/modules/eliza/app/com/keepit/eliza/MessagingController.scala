@@ -1,4 +1,4 @@
-package com.keepit.bender
+package com.keepit.eliza
 
 import com.keepit.model.{User}
 import com.keepit.common.db.{Id, ExternalId}

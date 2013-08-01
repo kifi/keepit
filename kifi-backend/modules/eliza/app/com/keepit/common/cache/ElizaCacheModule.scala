@@ -5,9 +5,9 @@ import scala.concurrent.duration._
 import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
 import com.keepit.social.BasicUserUserIdCache
-import com.keepit.bender.{MessageThreadExternalIdCache}
+import com.keepit.eliza.{MessageThreadExternalIdCache}
 
-case class BenderCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
+case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
 
   @Singleton
   @Provides

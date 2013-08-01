@@ -1,4 +1,4 @@
-package com.keepit.bender
+package com.keepit.eliza
 
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.cache.{InMemoryCachePlugin, FortyTwoCachePlugin}
@@ -6,20 +6,20 @@ import com.keepit.common.healthcheck._
 import play.api.Mode._
 import play.api._
 
-object BenderGlobal extends FortyTwoGlobal(Prod) with BenderServices {
-  val module = BenderProdModule()
+object ElizaGlobal extends FortyTwoGlobal(Prod) with ElizaServices {
+  val module = ElizaProdModule()
 
   override def onStart(app: Application) {
-    log.info("starting bender")
-    startBenderServices()
+    log.info("starting eliza")
+    startElizaServices()
     super.onStart(app)
-    log.info("bender started")
+    log.info("eliza started")
   }
 
 }
 
-trait BenderServices { self: FortyTwoGlobal =>
-  def startBenderServices() {
+trait ElizaServices { self: FortyTwoGlobal =>
+  def startElizaServices() {
     require(injector.instance[HealthcheckPlugin].enabled)
     require(injector.instance[FortyTwoCachePlugin].enabled)
     require(injector.instance[InMemoryCachePlugin].enabled)
