@@ -10,7 +10,7 @@ case class FakeScraperModule() extends ScraperModule {
 }
 
 class FakeScraperPlugin() extends ScraperPlugin {
-  def scrape() = Seq()
+  def scrapePending() = Future.successful(Seq())
   def asyncScrape(uri: NormalizedURI) =
     Future.failed(new Exception("Not Implemented"))
 }
