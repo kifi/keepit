@@ -93,8 +93,8 @@ class MessagingController(
       from = Some(from),
       thread = thread.id.get,
       messageText = messageText,
-      sentOnUrl = urlOpt,
-      sentOnUriId = None
+      sentOnUrl = urlOpt.map(Some(_)).getOrElse(thread.url),
+      sentOnUriId = thread.uriId
       )) 
     }
 
