@@ -1,5 +1,6 @@
 package com.keepit.controllers.admin
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.data._
 import java.util.concurrent.TimeUnit
 import play.api._
@@ -48,8 +49,11 @@ class ScraperController @Inject() (
     extends AdminController(actionAuthenticator) {
 
   def scrape = AdminHtmlAction { implicit request =>
-    val articles = scraper.scrape()
-    Ok(html.admin.scrape(articles))
+    Async {
+      scraper.scrapePending() map { articles =>
+        Ok(html.admin.scrape(articles))
+      }
+    }
   }
 
   def searchScraper = AdminHtmlAction {implicit request =>
