@@ -17,6 +17,7 @@ case class Message(
     externalId: ExternalId[Message] = ExternalId(),
     from: Option[Id[User]],
     thread: Id[MessageThread],
+    threadExtId: ExternalId[MessageThread],
     messageText: String,
     sentOnUrl: Option[String],
     sentOnUriId: Option[Id[NormalizedURI]]
@@ -54,10 +55,11 @@ class MessageRepoImpl @Inject() (
   override val table = new RepoTable[Message](db, "message") with ExternalIdColumn[Message] {
     def from = column[Id[User]]("sender_id", O.Nullable)
     def thread = column[Id[MessageThread]]("thread_id", O.NotNull)
+    def threadExtId = column[ExternalId[MessageThread]]("thread_ext_id", O.NotNull)
     def messageText = column[String]("message_text", O.NotNull)
     def sentOnUrl = column[String]("sent_on_url", O.Nullable)
     def sentOnUriId = column[Id[NormalizedURI]]("sent_on_uri_id", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ from.? ~ thread ~ messageText ~ sentOnUrl.? ~ sentOnUriId.? <> (Message.apply _, Message.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ from.? ~ thread ~ threadExtId ~ messageText ~ sentOnUrl.? ~ sentOnUriId.? <> (Message.apply _, Message.unapply _)
   }
 
 

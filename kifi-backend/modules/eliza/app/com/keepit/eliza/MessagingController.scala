@@ -92,6 +92,7 @@ class MessagingController(
       id = None,
       from = Some(from),
       thread = thread.id.get,
+      threadExtId = thread.externalId,
       messageText = messageText,
       sentOnUrl = urlOpt.map(Some(_)).getOrElse(thread.url),
       sentOnUriId = thread.uriId
