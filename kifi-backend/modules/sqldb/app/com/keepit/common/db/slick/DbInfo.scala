@@ -14,8 +14,3 @@ trait DbInfo {
   def driverName: String
   def initTable[M](withDDL: {def ddl: DDL}): Unit = ???
 }
-
-case class ShoeboxDbInfo() extends DbInfo {
-  def database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
-  def driverName = Play.current.configuration.getString("db.shoebox.driver").get
-}

@@ -22,10 +22,3 @@ abstract class SlickModule(dbInfo: DbInfo) extends ScalaModule {
     bind[Database].in(classOf[Singleton])
   }
 }
-
-case class ShoeboxSlickModule() extends SlickModule(ShoeboxDbInfo()) {
-
-  @Provides @Singleton
-  def dbExecutionContextProvider(system: ActorSystem): DbExecutionContext =
-    DbExecutionContext(system.dispatchers.lookup("db-thread-pool-dispatcher"))
-}
