@@ -2,15 +2,15 @@ package com.keepit.dev
 
 import com.keepit.FortyTwoGlobal
 import play.api.Mode._
-import com.keepit.bender.{BenderProdModule, BenderServices}
+import com.keepit.eliza.{ElizaProdModule, ElizaServices}
 import com.google.inject.util.Modules
 import play.api.Application
 
-object BenderDevGlobal extends FortyTwoGlobal(Dev) with BenderServices {
-  override val module = BenderDevModule()
+object ElizaDevGlobal extends FortyTwoGlobal(Dev) with ElizaServices {
+  override val module = ElizaDevModule()
 
   override def onStart(app: Application) {
-    startBenderServices()
+    startElizaServices()
     super.onStart(app)
   }
 }
