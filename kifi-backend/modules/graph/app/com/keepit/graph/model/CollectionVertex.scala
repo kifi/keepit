@@ -7,14 +7,16 @@ import play.api.libs.functional.syntax._
 
 case class CollectionData(id: Id[Collection], state: State[Collection]) extends VertexData
 
-object CollectionData extends TypeProvider[CollectionData] {
+object CollectionData extends Companion[CollectionData] {
 
-  implicit val typeCode = TypeCode('COLLECTION)
-
-  def apply(collection: Collection): CollectionData = CollectionData(collection.id.get, collection.state)
+  case object COLLECTION extends TypeCode[CollectionData]
+  implicit val typeCode = COLLECTION
 
   implicit val format = (
     (__ \ 'id).format(Id.format[Collection]) and
     (__ \ 'state).format(State.format[Collection])
     )(CollectionData.apply, unlift(CollectionData.unapply))
+
+  def apply(collection: Collection): CollectionData = CollectionData(collection.id.get, collection.state)
+
 }

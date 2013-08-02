@@ -80,7 +80,8 @@ object ApplicationBuild extends Build {
     )
 
     val graphDependencies = Seq(
-    "org.neo4j" % "neo4j" % "2.0.0-M03"
+      ("org.neo4j" % "neo4j" % "1.9.M01").exclude("org.neo4j", "neo4j-lucene-index"),
+      "org.neo4j" % "neo4j-kernel-tests" % "1.9.M01" % "test" from "https://oss.sonatype.org/content/groups/scala-tools/org/neo4j/neo4j-kernel/1.9.M01/neo4j-kernel-1.9.M01.jar"
     )
 
     val _scalacOptions = Seq("-unchecked", "-deprecation", "-feature", "-language:reflectiveCalls",

@@ -7,14 +7,16 @@ import play.api.libs.functional.syntax._
 
 case class CollectsData(id: Id[Collection], state: State[Collection]) extends EdgeData
 
-object CollectsData extends TypeProvider[CollectsData] {
+object CollectsData extends Companion[CollectsData] {
 
-  implicit val typeCode = TypeCode('COLLECTS)
-
-  def apply(collection: Collection): CollectsData = CollectsData(collection.id.get, collection.state)
+  case object COLLECTS extends TypeCode[CollectsData]
+  implicit val typeCode = COLLECTS
 
   implicit val format = (
     (__ \ 'id).format(Id.format[Collection]) and
     (__ \ 'state).format(State.format[Collection])
     )(CollectsData.apply, unlift(CollectsData.unapply))
+
+  def apply(collection: Collection): CollectsData = CollectsData(collection.id.get, collection.state)
+
 }

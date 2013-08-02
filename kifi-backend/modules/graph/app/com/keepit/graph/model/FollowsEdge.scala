@@ -7,13 +7,15 @@ import com.keepit.model.UserConnection
 
 case class FollowsData(id: Id[UserConnection], state: State[UserConnection]) extends EdgeData
 
-object FollowsData extends TypeProvider[FollowsData] {
-  implicit val typeCode = TypeCode('FOLLOWS)
+object FollowsData extends Companion[FollowsData] {
 
-  def apply(userConnection: UserConnection): FollowsData = FollowsData(userConnection.id.get, userConnection.state)
+  case object FOLLOWS extends TypeCode[FollowsData]
+  implicit val typeCode = FOLLOWS
 
   implicit val format = (
     (__ \ 'id).format(Id.format[UserConnection]) and
     (__ \ 'state).format(State.format[UserConnection])
     )(FollowsData.apply, unlift(FollowsData.unapply))
+
+  def apply(userConnection: UserConnection): FollowsData = FollowsData(userConnection.id.get, userConnection.state)
 }

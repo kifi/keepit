@@ -1,7 +1,8 @@
 package com.keepit.graph.model
 
 trait Graph[V, E] {
-  def createVertices[U <: V <% TypeProvider[U]](verticesData: U*): Seq[Vertex[U]]
-  def createEdges[S <: V, D <: V, F <: E <% TypeProvider[F]](edges: (VertexId[S], VertexId[D], F)*): Seq[Edge[S, D, F]]
-  def getVertices[U <: V](vertexIds: VertexId[U]*): Seq[Vertex[U]]
+  def createVertices[T <: V : Companion](vertices : (VertexId[T], T)*): Seq[Vertex[T]]
+  def createEdges[S <: V : Companion, D <: V : Companion, T <: E : Companion](edges: (VertexId[S], VertexId[D], T)*): Seq[Edge[S, D, T]]
+  def createEdges[S <: V : Companion, D <: V : Companion, T <: E : Companion](edges: (Vertex[S], Vertex[D], T)*): Seq[Edge[S, D, T]]
+  def getVertices[T <: V](vertexIds: VertexId[T]*): Seq[Vertex[T]]
 }

@@ -1,30 +1,29 @@
 package com.keepit.graph.model
 
 import play.api.libs.json._
+import org.neo4j.graphdb.Node
+import com.keepit.graph.database.{NeoVertexFactory, NeoVertex}
 
-trait Vertex[+V] {
-  def id: VertexId[V]
-  def data: V
-  def outgoingEdges[D, E](edgeTypes: TypeProvider[E]*): Seq[Edge[V, D, E]]
-  def incomingEdges[S, E](edgeTypes: TypeProvider[E]*): Seq[Edge[S, V, E]]
+trait Vertex[+T] {
+  def id: VertexId[T]
+  def data: T
+
+  def outgoingEdges[V >: T, E](edgeTypes: Companion[_ <: E]*)(implicit graph: Graph[V, E]): Seq[Edge[T, V, E]]
+  def incomingEdges[V >: T, E](edgeTypes: Companion[_ <: E]*)(implicit graph: Graph[V, E]): Seq[Edge[V, T, E]]
 }
 
 case class VertexId[+V](id: Long) {
-  override def toString = id.toString
-}
-
-object VertexId {
-
-  def format[V]: Format[VertexId[V]] =
-    Format(__.read[Long].map(VertexId(_)), new Writes[VertexId[V]]{ def writes(o: VertexId[V]) = JsNumber(o.id) })
+  override def toString() = id.toString
 }
 
 trait VertexData
 
-object VertexData {
-  def typeCode(data: VertexData): TypeCode[VertexData] = data match {
-    case data: UserData => UserData.typeCode
-    case data: CollectionData => CollectionData.typeCode
-    case data: UriData => UriData.typeCode
+object VertexData extends NeoVertexFactory[VertexData] {
+  def neoVertex(node: Node) = {
+    Companion.fromTypeCodeString(node.getProperty("type").asInstanceOf[String]) match {
+      case UserData => NeoVertex[UserData](node)
+      case CollectionData => NeoVertex[CollectionData](node)
+      case UriData => NeoVertex[UriData](node)
+    }
   }
 }
