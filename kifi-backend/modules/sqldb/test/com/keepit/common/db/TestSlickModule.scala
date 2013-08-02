@@ -48,6 +48,7 @@ object TestDbInfo {
   val dbInfo = new DbInfo() {
     //later on we can customize it by the application name
     lazy val masterDatabase = SlickDatabase.forURL(url = url)
+    override def slaveDatabase = Some(masterDatabase)
     lazy val driverName = H2.driverName
   }
 }
