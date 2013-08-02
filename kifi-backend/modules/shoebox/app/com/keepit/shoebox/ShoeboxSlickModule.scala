@@ -13,7 +13,7 @@ import play.api.Play
 import akka.actor.ActorSystem
 
 case class ShoeboxDbInfo() extends DbInfo {
-  def database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
+  def masterDatabase = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
   def driverName = Play.current.configuration.getString("db.shoebox.driver").get
 }
 

@@ -10,7 +10,8 @@ import play.api.Play
 import akka.actor.ActorSystem
 
 trait DbInfo {
-  def database: SlickDatabase
+  def masterDatabase: SlickDatabase
+  def slaveDatabase: Option[SlickDatabase] = None
   def driverName: String
   def initTable[M](withDDL: {def ddl: DDL}): Unit = ???
 }
