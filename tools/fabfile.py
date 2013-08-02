@@ -14,6 +14,8 @@ def get_hosts(service_type):
         return ['b01', 'b02']
     elif service_type=="search":
         return ['b04', 'b05']
+    elif service_type=="eliza":
+        return ['b06', 'b07']
     else:
         raise Exception("Unknown Service Type: %s" % service_type)
 
@@ -104,7 +106,7 @@ def rollback(service_type, host, number=1):
 
 def deploy(service_type, mode="safe", retries="5", do_rollback=True):
     if mode not in ["safe", "force"]: raise Exception("Invalid Mode %s." % mode)
-    if service_type not in ["shoebox", "search"]: raise Exception("Unknown Service Type: %s" % service_type)
+    if service_type not in ["shoebox", "search", "eliza"]: raise Exception("Unknown Service Type: %s" % service_type)
     if mode=='force': mode="FORCE"
     hosts = get_hosts(service_type) if not fapi.env.hosts else fapi.env.hosts
     message_irc("----- Starting round robin deployment of %s to %s in %s mode." % (service_type.upper(), hosts, mode))
