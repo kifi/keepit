@@ -44,6 +44,12 @@ class SlickSessionProviderImpl extends SlickSessionProvider {
 
 case class DbExecutionContext(context: ExecutionContext)
 
+object Database {
+  sealed trait DBMasterSlave
+  case object Master extends DBMasterSlave
+  case object Slave extends DBMasterSlave
+}
+
 class Database @Inject() (
     val db: DataBaseComponent,
     val dbExecutionContext: DbExecutionContext,
@@ -53,6 +59,7 @@ class Database @Inject() (
   ) extends Logging {
 
   import DBSession._
+  import Database._
 
   implicit val executionContext = dbExecutionContext.context
 
@@ -73,10 +80,17 @@ class Database @Inject() (
   def readWriteAsync[T](f: RWSession => T): Future[T] = future { readWrite(f) }
   def readWriteAsync[T](attempts: Int)(f: RWSession => T): Future[T] = future { readWrite(attempts)(f) }
 
-  def readOnly[T](f: ROSession => T): T = enteringSession {
+  def readOnly[T](f: ROSession => T): T = readOnlyWithDb(db.masterDb, f)
+
+  def readOnly[T](dbMasterSlave: DBMasterSlave = Master)(f: ROSession => T): T = dbMasterSlave match {
+    case Master => readOnlyWithDb(db.masterDb, f)
+    case Slave => readOnlyWithDb(db.slaveDb.getOrElse(db.masterDb), f)
+  }
+
+  private def readOnlyWithDb[T](handle: SlickDatabase, f: ROSession => T): T = enteringSession {
     var s: Option[Session] = None
     val ro = new ROSession({
-      s = Some(sessionProvider.createReadOnlySession(db.masterDb))
+      s = Some(sessionProvider.createReadOnlySession(handle))
       s.get
     })
     try f(ro) finally s.foreach(_.close())
