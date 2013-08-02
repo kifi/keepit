@@ -132,7 +132,7 @@ class InviteController @Inject() (db: Database,
     db.readOnly { implicit session =>
       val invitation = invitationRepo.getOpt(id)
       invitation match {
-        case Some(invite) if invite.state == InvitationStates.ACTIVE =>
+        case Some(invite) if (invite.state == InvitationStates.ACTIVE || invite.state == InvitationStates.INACTIVE) =>
           val socialUser = socialUserInfoRepo.get(invitation.get.recipientSocialUserId)
           Ok(views.html.website.welcome(Some(id), Some(socialUser)))
         case _ =>
