@@ -23,7 +23,7 @@ import com.keepit.common.net.ProdHttpClientModule
 import com.keepit.inject.ProdFortyTwoModule
 import com.keepit.common.actor.DevActorSystemModule
 import com.keepit.common.zookeeper.DevDiscoveryModule
-import com.keepit.common.db.slick.ShoeboxSlickModule
+import com.keepit.shoebox.ShoeboxSlickModule
 
 case class ShoeboxDevModule() extends ShoeboxModule(
 
