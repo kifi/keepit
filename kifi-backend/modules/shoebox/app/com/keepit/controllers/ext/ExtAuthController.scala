@@ -1,6 +1,6 @@
 package com.keepit.controllers.ext
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.controller.FortyTwoCookies.KifiInstallationCookie
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.db._
@@ -11,7 +11,6 @@ import com.keepit.model._
 
 import play.api.libs.json.Json
 
-@Singleton
 class ExtAuthController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
@@ -20,7 +19,6 @@ class ExtAuthController @Inject() (
   installationRepo: KifiInstallationRepo,
   urlPatternRepo: URLPatternRepo,
   sliderRuleRepo: SliderRuleRepo,
-  userExperimentRepo: UserExperimentRepo,
   kifiInstallationCookie: KifiInstallationCookie)
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
@@ -49,7 +47,7 @@ class ExtAuthController @Inject() (
        })
     log.info(s"start details: $userAgent, $version, $installationIdOpt")
 
-    val (user, installation, experiments, sliderRuleGroup, urlPatterns) = db.readWrite{implicit s =>
+    val (user, installation, sliderRuleGroup, urlPatterns) = db.readWrite{implicit s =>
       val user: User = userRepo.get(userId)
       val installation: KifiInstallation = installationIdOpt flatMap { id =>
         installationRepo.getOpt(userId, id)
@@ -61,17 +59,16 @@ class ExtAuthController @Inject() (
         case Some(install) =>
           install
       }
-      val experiments: Set[String] = userExperimentRepo.getUserExperiments(user.id.get).map(_.value)
       val sliderRuleGroup: SliderRuleGroup = sliderRuleRepo.getGroup("default")
       val urlPatterns: Seq[String] = urlPatternRepo.getActivePatterns
-      (user, installation, experiments, sliderRuleGroup, urlPatterns)
+      (user, installation, sliderRuleGroup, urlPatterns)
     }
 
     Ok(Json.obj(
       "name" -> identity.fullName,
       "userId" -> user.externalId.id,
       "installationId" -> installation.externalId.id,
-      "experiments" -> experiments,
+      "experiments" -> request.experiments.map(_.value),
       "rules" -> sliderRuleGroup.compactJson,
       "patterns" -> urlPatterns
     )).withCookies(kifiInstallationCookie.encodeAsCookie(Some(installation.externalId)))

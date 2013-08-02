@@ -33,7 +33,9 @@ import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.shoebox.ClickHistoryTracker
 import com.keepit.shoebox.BrowsingHistoryTracker
 import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
+import scala.concurrent.future
 import com.keepit.common.akka.MonitoredAwait
 import play.modules.statsd.api.Statsd
 
@@ -121,20 +123,26 @@ class MainSearcher(
         }
     }
 
-  private[this] val friendEdgeSet = uriGraphSearcher.friendEdgeSet
+  private[this] lazy val fullFriendEdgeSet = uriGraphSearcher.friendEdgeSet
+  private[this] val friendEdgeSet = uriGraphSearcher.searchFriendEdgeSet
   private[this] val friendIds = friendEdgeSet.destIdSet
   private[this] val friendsUriEdgeSets = uriGraphSearcher.friendsUriEdgeSets
   private[this] val friendsUriEdgeAccessors = friendsUriEdgeSets.mapValues{ _.accessor }
-  private[this] val filteredFriendIds = filter.filterFriends(friendIds)
-  private[this] val filteredFriendEdgeSet = if (filter.isCustom) uriGraphSearcher.getUserToUserEdgeSet(userId, filteredFriendIds) else friendEdgeSet
+  private[this] val filteredFriendEdgeSet = {
+    if (filter.isCustom) {
+      uriGraphSearcher.getUserToUserEdgeSet(userId, filter.filterFriends(fullFriendEdgeSet.destIdSet)) // a custom filter can have non-search friends
+    } else {
+      friendEdgeSet
+    }
+  }
   private[this] val friendUris = if (filter.includeFriends) {
     filter.timeRange match {
       case Some(timeRange) =>
-        filteredFriendIds.foldLeft(Set.empty[Long]){ (s, f) =>
+        filteredFriendEdgeSet.destIdSet.foldLeft(Set.empty[Long]){ (s, f) =>
           s ++ friendsUriEdgeSets(f.id).filterByTimeRange(timeRange.start, timeRange.end).destIdLongSet
         }
       case _ =>
-        filteredFriendIds.foldLeft(Set.empty[Long]){ (s, f) =>
+        filteredFriendEdgeSet.destIdSet.foldLeft(Set.empty[Long]){ (s, f) =>
           s ++ friendsUriEdgeSets(f.id).destIdLongSet
         }
     }
@@ -242,6 +250,14 @@ class MainSearcher(
 
     val tProcessHits = currentDateTime.getMillis()
 
+    articleSearcher.indexWarmer.foreach{ warmer =>
+      parsedQuery.foreach{ query =>
+        future{
+          warmer.addTerms(QueryUtil.getTerms(query))
+        }
+      }
+    }
+
     val myTotal = myHits.totalHits
     val friendsTotal = friendsHits.totalHits
     val othersTotal = othersHits.totalHits
@@ -258,7 +274,7 @@ class MainSearcher(
     }
 
     val threshold = highScore * tailCutting
-    val friendStats = FriendStats(friendIds)
+    val friendStats = FriendStats(fullFriendEdgeSet.destIdSet)
     var numCollectStats = 20
 
     if (myHits.size > 0) {

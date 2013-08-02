@@ -26,7 +26,6 @@ class SecureSocialUserPluginImpl @Inject() (
   userRepo: UserRepo,
   imageStore: S3ImageStore,
   healthcheckPlugin: HealthcheckPlugin,
-  userExperimentRepo: UserExperimentRepo,
   emailRepo: EmailAddressRepo,
   socialGraphPlugin: SocialGraphPlugin)
   extends UserService with SecureSocialUserPlugin with Logging {

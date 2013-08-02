@@ -11,12 +11,11 @@ import play.api.libs.json._
 import play.api.mvc.Action
 import scala.concurrent.ExecutionContext.Implicits.global
 import views.html
-import scala.concurrent.Await
+import scala.concurrent.{Await, future, Future}
 import com.keepit.shoebox.ShoeboxServiceClient
 import scala.concurrent.duration._
 import com.keepit.search.index.Indexer
 import com.keepit.search.{IndexInfo, SharingUserInfo, MainSearcherFactory}
-
 
 class URIGraphController @Inject()(
     uriGraphPlugin: URIGraphPlugin,
@@ -42,10 +41,15 @@ class URIGraphController @Inject()(
     }
   }
 
-  def sharingUserInfo(userId: Id[User], uriIds: String) = Action { implicit request =>
-    val searcher = mainSearcherFactory.getURIGraphSearcher(userId)
-    val ids = uriIds.split(",").map(_.trim).collect { case idStr if !idStr.isEmpty => Id[NormalizedURI](idStr.toLong) }
-    Ok(Json.toJson(ids map searcher.getSharingUserInfo))
+  def sharingUserInfo(userId: Id[User]) = Action(parse.json) { implicit request =>
+    val infosFuture = future {
+      val searcher = mainSearcherFactory.getURIGraphSearcher(userId)
+      val ids = request.body.as[Seq[Long]].map(Id[NormalizedURI](_))
+      ids map searcher.getSharingUserInfo
+    }
+    Async {
+      infosFuture.map(info => Ok(Json.toJson(info)))
+    }
   }
 
   def indexInfo = Action { implicit request =>

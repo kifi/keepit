@@ -94,7 +94,7 @@ var nsISound, nsIIO;
 exports.play = function(path) {
   nsISound = nsISound || Cc["@mozilla.org/sound;1"].createInstance(Ci.nsISound);
   nsIIO = nsIIO || Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
-  sound.play(nsIIO.newURI(url(path), null, null));
+  nsISound.play(nsIIO.newURI(url(path), null, null));
 };
 
 exports.popup = {
@@ -352,6 +352,10 @@ exports.tabs = {
   isFocused: function(page) {
     var tab = tabsById[page.id], win = tab.window;
     return win === windows.activeWindow && tab === win.tabs.activeTab;
+  },
+  isSelected: function(page) {
+    var tab = tabsById[page.id], win = tab.window;
+    return tab === win.tabs.activeTab;
   },
   navigate: function(tabId, url) {
     var tab = tabsById[tabId], win;

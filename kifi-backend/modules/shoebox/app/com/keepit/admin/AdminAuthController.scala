@@ -18,9 +18,8 @@ import com.keepit.common.healthcheck._
 import com.keepit.common.db.slick._
 
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 
-@Singleton
 class AdminAuthController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,

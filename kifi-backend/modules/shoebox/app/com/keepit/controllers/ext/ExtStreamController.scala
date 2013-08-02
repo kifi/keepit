@@ -8,7 +8,6 @@ import scala.util.Random
 import org.joda.time.Seconds
 
 import com.google.inject.Inject
-import com.google.inject.Singleton
 import com.keepit.classify.{Domain, DomainRepo, DomainStates}
 import com.keepit.common.analytics._
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
@@ -48,7 +47,6 @@ import com.keepit.social.{SocialNetworkType, SocialId, CommentWithBasicUser, Bas
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]])
 
-@Singleton
 class ExtStreamController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
@@ -224,7 +222,7 @@ class ExtStreamController @Inject() (
               channel.push(Json.arr("friends", getFriends(userId)))
             },
             "get_networks" -> { case JsNumber(requestId) +: JsString(friendExtId) +: _ =>
-              channel.push(Json.arr(requestId, networkInfoLoader.load(userId, ExternalId(friendExtId))))
+              channel.push(Json.arr(requestId, networkInfoLoader.load(userId, ExternalId[User](friendExtId))))
             },
             "get_thread" -> { case JsString(threadId) +: _ =>
               channel.push(Json.arr("thread", getMessageThread(ExternalId[Comment](threadId)) match { case (nUri, msgs) =>
@@ -418,7 +416,7 @@ class ExtStreamController @Inject() (
           commentReadRepo.save(cr.withLastReadId(message.id.get))
         case None =>
           commentReadRepo.save(CommentRead(userId = userId, uriId = parent.uriId, parentId = parent.id, lastReadId = message.id.get))
-        case _ => 
+        case _ =>
       }
 
       val nUri = normUriRepo.get(parent.uriId)

@@ -3,7 +3,7 @@ package com.keepit.controllers.admin
 import scala.collection.mutable.{HashMap => MutableMap, SynchronizedMap}
 import scala.concurrent._
 import scala.concurrent.duration._
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 
 import com.keepit.search.{IndexInfo, SearchServiceClient}
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
@@ -21,7 +21,6 @@ import views.html
 import com.keepit.common.store.S3ScreenshotStore
 import com.keepit.common.db.Id
 
-@Singleton
 class AdminBookmarksController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
@@ -34,6 +33,8 @@ class AdminBookmarksController @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   s3ScreenshotStore: S3ScreenshotStore)
     extends AdminController(actionAuthenticator) {
+
+  implicit val dbMasterSlave = Database.Slave
 
   def edit(id: Id[Bookmark]) = AdminHtmlAction { request =>
     Async {

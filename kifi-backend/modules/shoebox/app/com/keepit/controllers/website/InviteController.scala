@@ -1,6 +1,6 @@
 package com.keepit.controllers.website
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.ExternalId
@@ -17,7 +17,6 @@ import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialId}
 
 case class BasicUserInvitation(name: String, picture: Option[String], state: State[Invitation])
 
-@Singleton
 class InviteController @Inject() (db: Database,
   userRepo: UserRepo,
   userValueRepo: UserValueRepo,

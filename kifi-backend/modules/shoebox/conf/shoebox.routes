@@ -74,7 +74,6 @@ POST    /sign-up/terms              @com.keepit.controllers.website.OnboardingCo
 GET     /feedback                   @com.keepit.controllers.website.FeedbackController.feedback
 GET     /feedback/form              @com.keepit.controllers.website.FeedbackController.feedbackForm
 
-
 ##########################################
 # Web API
 ##########################################
@@ -88,8 +87,6 @@ POST    /site/keeps/:id/update      @com.keepit.controllers.website.BookmarksCon
 POST    /site/keeps/:id/delete      @com.keepit.controllers.website.BookmarksController.unkeep(id: ExternalId[Bookmark])
 GET     /site/keeps/mutual/:id      @com.keepit.controllers.website.BookmarksController.mutualKeeps(id: ExternalId[User])
 POST    /site/keeps/screenshot      @com.keepit.controllers.website.BookmarksController.getScreenshotUrl()
-GET     /screenshot                 @com.keepit.controllers.website.BookmarksController.screenshotUrl(url: String ?= "")
-# TODO: /screenshot should be removed when no longer used
 
 GET     /site/collections/all       @com.keepit.controllers.website.BookmarksController.allCollections(sort: String ?= "last_kept")
 POST    /site/collections/ordering  @com.keepit.controllers.website.BookmarksController.updateCollectionOrdering()
@@ -106,20 +103,36 @@ GET     /site/user/me               @com.keepit.controllers.website.UserControll
 POST    /site/user/me               @com.keepit.controllers.website.UserController.updateCurrentUser()
 GET     /site/user/networks         @com.keepit.controllers.website.UserController.socialNetworkInfo()
 GET     /site/user/:id/networks     @com.keepit.controllers.website.UserController.friendNetworkInfo(id: ExternalId[User])
+POST    /site/user/:id/unfriend     @com.keepit.controllers.website.UserController.unfriend(id: ExternalId[User])
+POST    /site/user/:id/friend       @com.keepit.controllers.website.UserController.friend(id: ExternalId[User])
+POST    /site/user/:id/ignoreRequest @com.keepit.controllers.website.UserController.ignoreFriendRequest(id: ExternalId[User])
+POST    /site/user/:id/cancelRequest @com.keepit.controllers.website.UserController.cancelFriendRequest(id: ExternalId[User])
+POST    /site/user/:id/exclude      @com.keepit.controllers.website.UserController.excludeFriend(id: ExternalId[User])
+POST    /site/user/:id/include      @com.keepit.controllers.website.UserController.includeFriend(id: ExternalId[User])
+GET     /site/user/outgoingFriendRequests @com.keepit.controllers.website.UserController.outgoingFriendRequests
+GET     /site/user/incomingFriendRequests @com.keepit.controllers.website.UserController.incomingFriendRequests
 GET     /site/user/connections      @com.keepit.controllers.website.UserController.connections()
+GET     /site/user/connections/count @com.keepit.controllers.website.UserController.connectionCount()
 GET     /site/user/all-connections  @com.keepit.controllers.website.UserController.getAllConnections()
 GET     /site/user/prefs            @com.keepit.controllers.website.UserController.getPrefs()
 POST    /site/user/prefs            @com.keepit.controllers.website.UserController.savePrefs()
-
 
 # Temporary hack for kifi.com site before we fully integrate it with Play!
 GET     /site/                      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
 GET     /site/collection/:id        @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id: String)
 GET     /site/search                @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
 GET     /site/profile               @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/friends               @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/friends/invite        @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
+GET     /site/friends/requests      @com.keepit.controllers.website.HomeController.kifiSite(path = "index.html", id = "")
 GET     /site/*path                 @com.keepit.controllers.website.HomeController.kifiSite(path: String, id = "")
+# NOTE: /site/*path route above must be last /site/ route because it will break any below it!
 
+##########################################
+# External Services API
+##########################################
 
+#todo(eishay): change routes and callback in sendgrid
 POST    /admin/logging/emails       @com.keepit.controllers.admin.ElectronicMailLoggingController.doLog()
 
 ##########################################
@@ -341,6 +354,7 @@ POST    /internal/shoebox/database/reportArticleSearchResult  @com.keepit.contro
 GET     /internal/shoebox/database/socialUserInfoByNetworkAndSocialId @com.keepit.controllers.shoebox.ShoeboxController.getSocialUserInfoByNetworkAndSocialId(id: String, networkType: String)
 GET     /internal/shoebox/database/socialUserInfosByUserId @com.keepit.controllers.shoebox.ShoeboxController.getSocialUserInfosByUserId(id: Id[User])
 GET     /internal/shoebox/database/sessionByExternalId @com.keepit.controllers.shoebox.ShoeboxController.getSessionByExternalId(sessionId: ExternalId[UserSession])
+GET     /internal/shoebox/database/searchFriends @com.keepit.controllers.shoebox.ShoeboxController.searchFriends(userId: Id[User])
 
 POST    /internal/shoebox/channel/user                @com.keepit.controllers.shoebox.ShoeboxController.userChannelFanout()
 POST    /internal/shoebox/channel/userBroadcast       @com.keepit.controllers.shoebox.ShoeboxController.userChannelBroadcastFanout()
@@ -348,7 +362,7 @@ POST    /internal/shoebox/channel/userCount           @com.keepit.controllers.sh
 POST    /internal/shoebox/channel/uri                 @com.keepit.controllers.shoebox.ShoeboxController.uriChannelFanout()
 POST    /internal/shoebox/channel/uriCount            @com.keepit.controllers.shoebox.ShoeboxController.uriChannelCountFanout()
 
-POST     /internal/shoebox/learning/suggestExperts    @com.keepit.controllers.admin.TopicModelController.suggestExperts()
+POST     /internal/shoebox/learning/suggestExperts    @com.keepit.controllers.shoebox.ExpertRecommenderController.suggestExperts()
 
 
 ->  / common.Routes

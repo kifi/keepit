@@ -13,6 +13,7 @@ trait NormalizedURIRepo extends DbRepo[NormalizedURI] with ExternalIdColumnDbFun
   def getByState(state: State[NormalizedURI], limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
   def getByUri(url: String)(implicit session: RSession): Option[NormalizedURI]
   def getIndexable(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
+  def getScraped(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI]
 }
 
 @Singleton
@@ -44,6 +45,12 @@ class NormalizedURIRepoImpl @Inject() (
     val q = (for (f <- table if f.seq > sequenceNumber) yield f).sortBy(_.seq)
     (if (limit >= 0) q.take(limit) else q).list
   }
+
+  def getScraped(sequenceNumber: SequenceNumber, limit: Int = -1)(implicit session: RSession): Seq[NormalizedURI] = {
+    val q = (for (f <- table if (f.seq > sequenceNumber && f.state === NormalizedURIStates.SCRAPED)) yield f).sortBy(_.seq)
+    (if (limit >= 0) q.take(limit) else q).list
+  }
+
 
   override def invalidateCache(uri: NormalizedURI)(implicit session: RSession) = {
     uri.id map {id => idCache.set(NormalizedURIKey(id), uri)}

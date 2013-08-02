@@ -71,10 +71,13 @@ object ApplicationBuild extends Build {
       "edu.stanford.nlp" % "stanford-corenlp" % "1.3.5"
     )
 
+    val sqldbDependencies = Seq(
+      "mysql" % "mysql-connector-java" % "5.1.25"
+    )
+
     val shoeboxDependencies = Seq(
       "javax.mail" % "mail" % "1.4.5",
       "com.typesafe.slick" %% "slick-testkit" % "1.0.1",
-      "mysql" % "mysql-connector-java" % "5.1.25",
       "org.imgscalr" % "imgscalr-lib" % "4.2",
       "org.jsoup" % "jsoup" % "1.7.1"
     )
@@ -124,7 +127,7 @@ object ApplicationBuild extends Build {
       Tests.Argument("failtrace", "true")
     )
 
-    lazy val common = play.Project("common", appVersion, commonDependencies, path = file("modules/common")).settings(
+    val commonSettings = Seq(
       scalacOptions ++= _scalacOptions,
       routesImport ++= _routesImport,
       resolvers ++= commonResolvers,
@@ -135,43 +138,26 @@ object ApplicationBuild extends Build {
       parallelExecution in Test := true,
       testOptions in Test ++= _testOptions,
       EclipseKeys.skipParents in ThisBuild := false,
-
-      //https://groups.google.com/forum/?fromgroups=#!topic/play-framework/aa90AAp5bpo
       sources in doc in Compile := List()
     )
 
-    val shoebox = play.Project("shoebox", appVersion, commonDependencies ++ shoeboxDependencies, path = file("modules/shoebox")).settings(
-      scalacOptions ++= _scalacOptions,
-      routesImport ++= _routesImport,
-      resolvers ++= commonResolvers,
-      templatesImport ++= _templatesImport,
-      javaOptions in test ++= javaTestOptions,
+    lazy val common = play.Project("common", appVersion, commonDependencies, path = file("modules/common")).settings(
+      commonSettings: _*
+    )
 
-      javaOptions in test ++= javaTestOptions,
-      parallelExecution in Test := true,
-      testOptions in Test ++= _testOptions,
-      EclipseKeys.skipParents in ThisBuild := false,
-
-      //https://groups.google.com/forum/?fromgroups=#!topic/play-framework/aa90AAp5bpo
-      sources in doc in Compile := List()
+    lazy val sqldb = play.Project("sqldb", appVersion, sqldbDependencies, path = file("modules/sqldb")).settings(
+      commonSettings: _*
     ).dependsOn(common % "test->test;compile->compile").aggregate(common)
 
-    val search = play.Project("search", appVersion, commonDependencies ++ searchDependencies, path = file("modules/search")).settings(
-      scalacOptions ++= _scalacOptions,
-      routesImport ++= _routesImport,
-      resolvers ++= commonResolvers,
-      templatesImport ++= _templatesImport,
-      javaOptions in test ++= javaTestOptions,
+    val shoebox = play.Project("shoebox", appVersion, shoeboxDependencies, path = file("modules/shoebox")).settings(
+      commonSettings: _*
+    ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
 
-      javaOptions in test ++= javaTestOptions,
-      parallelExecution in Test := true,
-      testOptions in Test ++= _testOptions,
-      EclipseKeys.skipParents in ThisBuild := false,
-
-      //https://groups.google.com/forum/?fromgroups=#!topic/play-framework/aa90AAp5bpo
-      sources in doc in Compile := List()
+    val search = play.Project("search", appVersion, searchDependencies, path = file("modules/search")).settings(
+      commonSettings: _*
     ).dependsOn(common % "test->test;compile->compile").aggregate(common)
 
+<<<<<<< HEAD
     val graph = play.Project("graph", appVersion, commonDependencies ++ graphDependencies, path = file("modules/graph")).settings(
       scalacOptions ++= _scalacOptions,
       routesImport ++= _routesImport,
@@ -202,4 +188,13 @@ object ApplicationBuild extends Build {
       //https://groups.google.com/forum/?fromgroups=#!topic/play-framework/aa90AAp5bpo
       sources in doc in Compile := List()
     ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", graph % "test->test;compile->compile").aggregate(common, search, shoebox, graph)
+=======
+    val bender = play.Project("bender", appVersion, Nil, path = file("modules/bender")).settings(
+      commonSettings: _*
+    ).dependsOn(common % "test->test;compile->compile").aggregate(common)
+
+    val aaaMain = play.Project(appName, appVersion).settings(
+      commonSettings: _*
+    ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", bender % "compile->compile").aggregate(common, search, shoebox, bender)
+>>>>>>> b9e829ea8efc1724397cf3dd7880e65f3c7013e6
 }

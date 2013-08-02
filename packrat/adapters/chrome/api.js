@@ -93,7 +93,7 @@ api = function() {
           api.log("#a00", "[onDOMContentLoaded] %i url mismatch:\n%s\n%s", details.tabId, details.url, page.url);
         }
         injectContentScripts(page);
-      } else {
+      } else if (details.tabId >= 0) {
         chrome.tabs.get(details.tabId, function(tab) {
           if (tab && selectedTabIds[tab.windowId]) {  // normal win
             api.log("#a00", "[onDOMContentLoaded] no page for", details.tabId, details.url);
@@ -151,8 +151,8 @@ api = function() {
 
   var focusedWinId, topNormalWinId;
   chrome.windows.getLastFocused(null, function(win) {
-    focusedWinId = win.focused ? win.id : chrome.windows.WINDOW_ID_NONE;
-    topNormalWinId = win.type == "normal" ? win.id : chrome.windows.WINDOW_ID_NONE;
+    focusedWinId = win && win.focused ? win.id : chrome.windows.WINDOW_ID_NONE;
+    topNormalWinId = win && win.type == "normal" ? win.id : chrome.windows.WINDOW_ID_NONE;
   });
   chrome.windows.onFocusChanged.addListener(function(winId) {
     api.log("[onFocusChanged] win %o -> %o", focusedWinId, winId);
@@ -567,6 +567,14 @@ api = function() {
       },
       get: function(tabId) {
         return pages[tabId];
+      },
+      isSelected: function(tab) {
+        for (var winId in selectedTabIds) {
+          if (selectedTabIds[winId] === tab.id) {
+            return true;
+          }
+        }
+        return false;
       },
       isFocused: function(tab) {
         return selectedTabIds[focusedWinId] === tab.id;

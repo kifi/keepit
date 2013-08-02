@@ -15,7 +15,7 @@ import com.keepit.serializer.UriLabelSerializer
 import com.keepit.common.routes.Search
 import com.keepit.common.routes.Common
 import scala.concurrent.Promise
-import com.keepit.common.healthcheck.BenchmarkResults
+import com.keepit.common.healthcheck.{HealthcheckPlugin, BenchmarkResults}
 import play.api.libs.json.JsArray
 import com.keepit.model.NormalizedURI
 import com.keepit.model.User
@@ -68,7 +68,8 @@ trait SearchServiceClient extends ServiceClient {
 class SearchServiceClientImpl(
     override val serviceCluster: ServiceCluster,
     override val port: Int,
-    override val httpClient: HttpClient)
+    override val httpClient: HttpClient,
+    val healthcheck: HealthcheckPlugin)
   extends SearchServiceClient() {
 
   def logResultClicked(userId: Id[User], query: String, uriId: Id[NormalizedURI], rank: Int, isKeep: Boolean): Unit = {
@@ -128,7 +129,7 @@ class SearchServiceClientImpl(
   }
 
   def sharingUserInfo(userId: Id[User], uriId: Id[NormalizedURI]): Future[SharingUserInfo] = {
-    call(Search.internal.sharingUserInfo(userId, uriId.id.toString)) map { r =>
+    call(Search.internal.sharingUserInfo(userId), Json.toJson(Seq(uriId.id))) map { r =>
       Json.fromJson[Seq[SharingUserInfo]](r.json).get.head
     }
   }
@@ -137,7 +138,7 @@ class SearchServiceClientImpl(
     if (uriIds.isEmpty) {
       Promise.successful(Seq[SharingUserInfo]()).future
     } else {
-      call(Search.internal.sharingUserInfo(userId, uriIds.map(_.id).mkString(","))) map { r =>
+      call(Search.internal.sharingUserInfo(userId), Json.toJson(uriIds.map(_.id))) map { r =>
         Json.fromJson[Seq[SharingUserInfo]](r.json).get
       }
     }

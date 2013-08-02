@@ -7,7 +7,7 @@ import scala.concurrent.duration._
 
 import org.joda.time._
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.analytics.MongoEventStore
 import com.keepit.common.analytics.reports.{ReportRepo, DailyDustSettledKifiHadResultsByExperimentRepo, DailyKifiResultClickedByExperimentRepo, DailyGoogleResultClickedByExperimentRepo}
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
@@ -23,7 +23,6 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsString
 import views.html
 
-@Singleton
 class AdminSearchConfigController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,

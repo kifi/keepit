@@ -63,6 +63,8 @@ abstract class Indexer[T](
   lazy val indexWriter = new IndexWriter(indexDirectory, indexWriterConfig)
   private[this] val indexWriterLock = new AnyRef
 
+  val indexWarmer: Option[IndexWarmer] = None
+
   protected var searcher: Searcher = {
     if (!DirectoryReader.indexExists(indexDirectory)) {
       val seedDoc = new Document()
@@ -216,7 +218,7 @@ abstract class Indexer[T](
   def numDocs = (indexWriter.numDocs() - 1) // minus the seed doc
 
   def refreshSearcher() {
-    searcher = Searcher.reopen(searcher)
+    searcher = Searcher.reopen(searcher, indexWarmer)
   }
 
   def getFieldDecoder(fieldName: String) = {

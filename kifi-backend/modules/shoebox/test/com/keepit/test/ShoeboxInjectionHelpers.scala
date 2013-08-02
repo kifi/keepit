@@ -9,13 +9,14 @@ import com.keepit.common.mail.ElectronicMailRepo
 import com.google.inject.Injector
 
 trait ShoeboxInjectionHelpers { self: InjectorProvider =>
-
-  def db(implicit injector: Injector) = inject[Database]
+  
   def userSessionRepo(implicit injector: Injector) = inject[UserSessionRepo]
   def userRepo(implicit injector: Injector) = inject[UserRepo]
   def basicUserRepo(implicit injector: Injector) = inject[BasicUserRepo]
   def userConnRepo(implicit injector: Injector) = inject[UserConnectionRepo]
   def socialConnRepo(implicit injector: Injector) = inject[SocialConnectionRepo]
+  def friendRequestRepo(implicit injector: Injector) = inject[FriendRequestRepo]
+  def searchFriendRepo(implicit injector: Injector) = inject[SearchFriendRepo]
   def uriRepo(implicit injector: Injector) = inject[NormalizedURIRepo]
   def urlRepo(implicit injector: Injector) = inject[URLRepo]
   def bookmarkRepo(implicit injector: Injector) = inject[BookmarkRepo]

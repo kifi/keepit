@@ -1,6 +1,6 @@
 package com.keepit.controllers.admin
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db.slick._
 import com.keepit.model._
@@ -8,7 +8,6 @@ import com.keepit.realtime.UserNotifier
 
 import views.html
 
-@Singleton
 class AdminCommentController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
@@ -19,6 +18,8 @@ class AdminCommentController @Inject() (
   userRepo: UserRepo,
   userNotifier: UserNotifier)
     extends AdminController(actionAuthenticator) {
+
+  implicit val dbMasterSlave = Database.Slave
 
   def followsView = AdminHtmlAction { implicit request =>
     val uriAndUsers = db.readOnly { implicit s =>

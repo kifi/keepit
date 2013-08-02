@@ -124,6 +124,18 @@ class ExpertRecommenderTest extends Specification with DbSetupHelper{
       }
     }
 
+    "compute score for user" in {
+       withDb() { implicit injector =>
+        val (users, uris) = setup()
+        def userId(i: Int) = users(i).id.get
+        def log2(x: Double) = log(x)/log(2)
+        val rcmder = new ExpertRecommender(db, uriTopicRepoA, userBookmarkClicksRepo, bookmarkRepo)
+        rcmder.score(userId(0)) === Map(1 -> (log2(1 + 10 + 0.2 * 10 * 10).toFloat))
+        rcmder.score(userId(1)) === Map(1 -> (log2(1 + 10 + 0.8 * 10 * 10).toFloat))
+        rcmder.score(userId(9)) === Map(5 -> (log2(1 + 10 + 0.8 * 10 * 10).toFloat))
+       }
+    }
+
     "correctly compute scores and rank users" in {
        withDb() { implicit injector =>
          val (users, uris) = setup()

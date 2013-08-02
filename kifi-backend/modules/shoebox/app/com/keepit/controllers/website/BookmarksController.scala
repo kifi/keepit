@@ -1,7 +1,7 @@
 package com.keepit.controllers.website
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.WebsiteController
 import com.keepit.common.db.slick.DBSession.RWSession
@@ -56,7 +56,6 @@ private object KeepInfosWithCollection {
   )(KeepInfosWithCollection.apply _)
 }
 
-@Singleton
 class BookmarksController @Inject() (
     db: Database,
     userRepo: UserRepo,
@@ -109,19 +108,6 @@ class BookmarksController @Inject() (
       BadRequest(Json.obj(
         "error" -> "Could not parse JSON array of collection ids from request body"
       ))
-    }
-  }
-
-  def screenshotUrl(url: String) = Action { request =>
-    Async {
-      db.readOnlyAsync { implicit session =>
-        uriRepo.getByUri(url)
-      } map { uri =>
-        s3ScreenshotStore.getScreenshotUrl(uri) match {
-          case Some(u) => Redirect(u)
-          case None => Ok(s3ScreenshotStore.blankImage).as("image/gif")
-        }
-      }
     }
   }
 

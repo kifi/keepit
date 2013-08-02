@@ -1,6 +1,7 @@
 package com.keepit.controllers.admin
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
+
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.Database
@@ -9,7 +10,6 @@ import com.keepit.shoebox.PhraseImporter
 import com.keepit.search.{SearchServiceClient, Lang}
 import views.html
 
-@Singleton
 class PhraseController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,

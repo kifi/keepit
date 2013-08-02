@@ -1,44 +1,33 @@
 package com.keepit.controllers.ext
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.analytics._
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.common.db._
-import com.keepit.common.db.slick._
+import com.keepit.common.db.{ExternalId, State}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
 
 import play.api.libs.json._
 
-@Singleton
 class ExtEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
-  db: Database,
-  userExperimentRepo: UserExperimentRepo,
-  userRepo: UserRepo,
   EventPersister: EventPersister,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   def logUserEvents = AuthenticatedJsonToJsonAction { request =>
-    val userId = request.userId
-
     val json = request.body
     (json \ "version").as[Int] match {
-      case 1 => createEventsFromPayload(json, userId)
+      case 1 => createEventsFromPayload(json, request.user, request.experiments)
       case i => throw new Exception("Unknown events version: %s".format(i))
     }
     Ok(JsObject(Seq("stored" -> JsString("ok"))))
   }
 
-  private[ext] def createEventsFromPayload(params: JsValue, userId: Id[User]) = {
+  private[ext] def createEventsFromPayload(params: JsValue, user: User, experiments: Set[State[ExperimentType]]) = {
     val logRecievedTime = currentDateTime
-
-    val (user, experiments) = db.readOnly { implicit session =>
-      (userRepo.get(userId), userExperimentRepo.getUserExperiments(userId))
-    }
 
     val events = (params \ "events") match {
       case JsArray(ev) => ev map (  _.as[JsObject] )

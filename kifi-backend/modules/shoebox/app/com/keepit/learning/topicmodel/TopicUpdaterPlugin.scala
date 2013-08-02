@@ -3,24 +3,29 @@ package com.keepit.learning.topicmodel
 import akka.actor._
 import akka.pattern.ask
 import akka.util.Timeout
-import com.google.inject.Inject
+import com.google.inject.{Inject, Singleton}
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
-import com.keepit.common.actor.ActorFactory
+import com.keepit.common.actor.ActorProvider
 import com.keepit.inject._
 import play.api.Play.current
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import com.keepit.common.zookeeper.CentralConfig
+import play.api.Plugin
 
 case object UpdateTopic
 case object Remodel
+case object ContinueRemodel
+case object SwitchModel
 
 private[topicmodel] class TopicUpdaterActor @Inject() (
   healthcheckPlugin: HealthcheckPlugin,
-  topicUpdater: TopicUpdater
+  topicUpdater: TopicUpdater,
+  topicRemodeler: TopicRemodeler
 ) extends FortyTwoActor(healthcheckPlugin) with Logging {
 
   def receive() = {
@@ -28,15 +33,36 @@ private[topicmodel] class TopicUpdaterActor @Inject() (
       topicUpdater.update()
     } catch {
       case e: Exception =>
-        healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH,
+        healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL,
           errorMessage = Some("Error updating topics")))
     }
 
-    case Remodel => try {
-      topicUpdater.remodel()
+    case SwitchModel => try {
+      if (topicUpdater.checkFlagConsistency){
+        log.info("SwitchModel msg received but ignored. Internal flag already matches central config")
+      } else {
+        log.info("SwitchModel msg received. Will refresh and switch model.")
+        topicUpdater.refreshAndSwitchModel()
+      }
     } catch {
       case e: Exception =>
-        healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.SEARCH,
+        healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL,
+          errorMessage = Some("Error handling SwitchModel message")))
+    }
+
+    case Remodel => try {
+      topicRemodeler.remodel(continueFromLastInteruption = false)
+    } catch {
+      case e: Exception =>
+        healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL,
+          errorMessage = Some("Error reconstructing topic model")))
+    }
+
+    case ContinueRemodel => try {
+      topicRemodeler.remodel(continueFromLastInteruption = true)
+    } catch {
+      case e: Exception =>
+        healthcheckPlugin.addError(HealthcheckError(error = Some(e), callType = Healthcheck.INTERNAL,
           errorMessage = Some("Error reconstructing topic model")))
     }
 
@@ -48,30 +74,87 @@ trait TopicUpdaterPlugin extends SchedulingPlugin {
   def remodel(): Unit
 }
 
+@Singleton
 class TopicUpdaterPluginImpl @Inject() (
-    actorFactory: ActorFactory[TopicUpdaterActor],
-    topicUpdater: TopicUpdater,
+    actorProvider: ActorProvider[TopicUpdaterActor],
+    centralConfig: CentralConfig,
     val schedulingProperties: SchedulingProperties //only on leader
 ) extends TopicUpdaterPlugin with Logging{
 
   implicit val actorTimeout = Timeout(5 seconds)
 
-  private lazy val actor = actorFactory.get()
-
   override def enabled: Boolean = true
   override def onStart() {
-     scheduleTask(actorFactory.system, 5 minutes, 2 minutes, actor, UpdateTopic)
      log.info("starting TopicUpdaterPluginImpl")
+     scheduleTask(actorProvider.system, 10 minutes, 2 minutes, actorProvider.actor, UpdateTopic)
+     scheduleTask(actorProvider.system, 30 seconds, 3650 days, "check remodel status")(watchRemodelStatus)
   }
   override def onStop() {
      log.info("stopping TopicUpdaterPluginImpl")
      cancelTasks()
   }
 
+  /**
+   * This will be effectively scheduled once for each machine. Only the leader
+   * can initialize the remodel process. If the leader is dead, the new leader
+   * will continue the remodel process.
+   */
+  private def watchRemodelStatus() = {
+    log.info("watching remodel status")
+    val remodelKey = new TopicRemodelKey()
+    val remodelStat = centralConfig(remodelKey)
+
+    if (!remodelStat.isDefined) {
+      log.info("remodel Key is not defined yet. Defaulting to DONE")
+      centralConfig(remodelKey) = RemodelState.DONE
+    } else {
+      log.info(s"current remodel status is ${remodelStat.get}")
+    }
+
+    if (remodelStat == RemodelState.STARTED){
+      actorProvider.actor ! ContinueRemodel
+    }
+
+    centralConfig.onChange(remodelKey){ flagOpt =>
+      if (flagOpt.isDefined && (flagOpt.get == RemodelState.NEEDED)){
+        actorProvider.actor ! Remodel
+      }
+    }
+  }
+
+  // triggered from admin
   override def remodel() = {
     log.info("admin reconstruct topic model ...")
-    scheduleTaskOnce(actorFactory.system, 1 seconds, "reconstruct topic model")(actor ! Remodel)
+    centralConfig.update(new TopicRemodelKey(), RemodelState.NEEDED)
   }
 
 }
 
+trait TopicModelSwitcherPlugin extends Plugin
+
+@Singleton
+class TopicModelSwitcherPluginImpl @Inject() (
+  actorProvider: ActorProvider[TopicUpdaterActor],
+  centralConfig: CentralConfig
+) extends TopicModelSwitcherPlugin with Logging {
+  implicit val actorTimeout = Timeout(5 seconds)
+
+  override def enabled: Boolean = true
+
+  override def onStart() {
+     log.info("starting TopicModelSwitcherPluginImpl")
+     watchModelFlag()
+  }
+  override def onStop() {
+     log.info("stopping TopicModelSwitcherPluginImpl")
+  }
+
+  def watchModelFlag() = {
+    log.info("watching model flag")
+    val flagKey = new TopicModelFlagKey()
+    centralConfig.onChange(flagKey){ flagOpt =>
+      log.info("topic model flag may have changed. Send a msg to TopicUpdater actor. ")
+      actorProvider.actor ! SwitchModel
+    }
+  }
+}

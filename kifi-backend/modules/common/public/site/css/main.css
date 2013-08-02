@@ -32,13 +32,14 @@ section.main {display: table-cell; vertical-align: top; position: relative; min-
 .my-description {font-size: 12px; color: #818692;}
 .left-col h2 {margin: 4px 0 0; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased; padding: 0 0 0 39px}
 .left-col h3 {margin: 0; position: relative; font-size: 13px; line-height: 41px; -webkit-user-select: none; -moz-user-select: -moz-none; -ms-user-select: none}
-.left-col .active,
-.left-col>*>h3:not(.active):hover {background: #e3e6ee}
+.left-col .active {background-color: #e3e6ee}
+.left-col>*>h3:not(.active):hover {background-color: #e9ecf2}
 .left-col h3>a {display: block; padding: 0 6px 0 40px; color: #818692}
-.left-col .keep-count {float: right; margin: 10px 0 0; border: 1px solid #b8c5d2; border-radius: 10.5px; color: #628196; font-size: 12px; line-height: 20px; height: 19px; padding: 0 12px}
-@-moz-document url-prefix() {.left-col .keep-count {line-height: 18px}}
-.left-col .active .keep-count {color: #fff; background: #b8c5d2}
-.left-col>*>h3:not(.active):hover .keep-count {background: #eff2f7}
+.left-col .nav-count {float: right; margin: 10px 0 0; border: 1px solid #b8c5d2; border-radius: 10.5px; color: #628196; font-size: 12px; line-height: 20px; height: 19px; padding: 0 12px}
+@-moz-document url-prefix() {.left-col .nav-count {line-height: 18px}}
+.left-col .nav-count:empty {display: none}
+.left-col .active .nav-count {color: #fff; background: #b8c5d2}
+.left-col>*>h3:not(.active):hover .nav-count {background: #eff2f7}
 .left-col .active .view-name {color: #556179}
 .left-col .view-name::before {content: " "; display: inline-block; height: 21px; padding: 10px 0; background: url(../img/nav-icons.png) 0 no-repeat; background-size: auto 21px; vertical-align: top}
 .left-col .my-keeps .view-name::before {width: 21px; margin-right: 7px; background-position: -21px}
@@ -66,9 +67,9 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 .collection.renamed {-webkit-transition: background-color .16s; transition: background-color .16s}
 .collection.drop-hover {background-color: #6fa6ef}
 .collection.drop-hover .view-name {color: #fff}
-.collection.drop-hover .keep-count {background-color: #fff; border-color: #fff; color: #628196}
-.collection .keep-count {margin-top: 9px}
-.collection.renaming .keep-count {display: none}
+.collection.drop-hover .nav-count {background-color: #fff; border-color: #fff; color: #628196}
+.collection .nav-count {margin-top: 9px}
+.collection.renaming .nav-count {display: none}
 .coll-tri {position: absolute; top: 0; bottom: 0; left: -33px; width: 33px; background-color: #e3e6ee; text-align: center; cursor: pointer; -webkit-transition: left .16s; transition: left .16s}
 .active>.coll-tri {background-color: #b8c5d2}
 .coll-tri::before {content: " "; border-width: 4px 4px 0; border-style: solid; border-color: #b8c5d2 transparent; font-size: 0; line-height: 0; vertical-align: 1px}
@@ -87,21 +88,28 @@ h3.collection {border-bottom: 1px solid #dbdee3; position: relative}
 .query-wrap {background-color: #67829c; padding: 10px 120px 12px 0; transition: padding-right .3s; -webkit-transition: padding-right .3s; white-space: nowrap}
 .query-wrap.focus,
 .query-wrap:not(.empty) {padding-right: 0}
-input.query {border: none; padding: 9px 50px 9px 20px; font-family: inherit; font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; height: 48px; -moz-box-sizing: border-box; box-sizing: border-box; background: #fff url(../img/search.png) right 16px top 13px/26px auto no-repeat; -webkit-font-smoothing: antialiased}
-.query-wrap.focus>.query {background-position: right 16px top -24px}
-.query-wrap:not(.empty)>.query {background-image: none}
+input.query {border: none; padding: 9px 48px 9px 20px; font-family: inherit; font-size: 25px; line-height: 30px; font-weight: 300; width: 100%; height: 48px; -moz-box-sizing: border-box; box-sizing: border-box; -webkit-font-smoothing: antialiased}
 input.query::-webkit-input-placeholder {color: #99a3b3}
 input.query::-moz-placeholder {color: #99a3b3}
-.query-x-wrap {display: inline-block; width: 0; height: 48px; vertical-align: bottom; position: relative}
-.query-wrap.empty>.query-x-wrap {display: none}
-a.query-x[href] {position: absolute; right: 0; font-size: 42px; line-height: 48px; height: 48px; width: 52px; text-align: center; font-weight: 300; color: #b8c5d2; -webkit-font-smoothing: antialiased}
-a.query-x[href]:hover {color: #0089d5}
-a.query-x[href]:active {color: #556179}
-.query-x::before {content: "\00d7"; position: relative; bottom: 4px}
+input.query::-ms-clear {display: none}
+.query-icon {display: inline-block; height: 48px; width: 48px; vertical-align: bottom; position: relative; right: 48px; overflow: hidden}
+.query-mag {cursor: text}
+.query-mag,
+.query-x {position: absolute; top: 0; bottom: 0; left: 0; width: 100%; padding-top: 13px; text-align: center; -moz-box-sizing: border-box; box-sizing: border-box; -webkit-transition: left .15s .07s; transition: left .15s .07s}
+.query-mag::before,
+.query-x::before {content: " "; display: inline-block; vertical-align: bottom; height: 23px; background-image: url(../img/search.png); background-size: auto 23px}
+.query-mag::before {width: 26px}
+.focus>*>.query-mag::before {background-position: -26px}
+.query-x::before {width: 23px; background-position: -52px}
+.query-x:hover::before {background-position: -75px}
+.query-x:active::before {background-position: -98px}
+.empty>*>.query-x,
+:not(.empty)>*>.query-mag {left: 100%; -webkit-transition-delay: 0; transition-delay: 0}
 .main-head,
 .main-keeps {margin-left: 1px; box-shadow: -1px 0 #dbdee3}
 .main-head {padding: 13px 20px 0; height: 72px; box-sizing: border-box; -moz-box-sizing: border-box; border-bottom: 1px solid transparent}
-.main-head.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
+.main-head.scrolled,
+.above-friends-list.scrolled {border-bottom-color: #dbdee3; -webkit-transition: border-bottom-color 1s; transition: border-bottom-color 1s}
 .main[data-view=search] .main-head {padding-top: 10px; height: 37px}
 .main[data-view=search] .main-head>h1,
 .main:not([data-view=mine]):not([data-view=search]) .main-head,
@@ -119,46 +127,117 @@ h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-we
 .profile .profile-name .editable {font-size: 24px; padding: 3px;}
 .profile .profile-name input {font: inherit; font-size: 24px; width: 150px;}
 .profile .profile-description {display: block; font-size: 16px; padding: 5px; margin-left: 5px;}
+.profile .profile-description.editing [data-chars-left] { position: relative; padding-bottom: 18px; }
+.profile .profile-description.editing [data-chars-left]:after { content: attr(data-chars-left) " characters left"; display: block; position: absolute; bottom: 0; left: 2px; font-size: 12px; min-width: 150px; }
 .profile .profile-description input {font: inherit; font-size: 16px; width: 300px;}
 .edit-container span.edit, .edit-container span.save {display: none; cursor: pointer; vertical-align: top; background: #b8c5d2; color: white; font-size: 12px; padding: 4px; margin-left: 8px;}
 .edit-container:hover span.edit {display: inline-block; height: 12px;}
 .editing span.save {display: inline-block; height: 12px;}
-.edit-container .editable[data-placeholder]:empty:before { content: attr(data-placeholder); display: inline; color: #b3b3b3; }
+.edit-container [data-placeholder]:empty::before { content: attr(data-placeholder); color: #b3b3b3; }
 .edit-container.editing span.edit {display: none;}
 span.edit, span.save {position: relative;}
-span.edit:before, span.save:before { display: inline-block; position: absolute; top: 0; left: -8px; content: "."; font-size: 0; height: 0; width: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-right: 8px solid #b8c5d2; }
-.editing span.save:before {border-right-color: #accc98;}
+span.edit::before, span.save::before { display: inline-block; position: absolute; top: 0; left: -8px; content: "."; font-size: 0; height: 0; width: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-right: 8px solid #b8c5d2; }
+.editing span.save::before {border-right-color: #accc98;}
 .editing span.save {background: #accc98;}
 .editing input {background: #e2edfc;}
 .profile h2 { clear: both; border-bottom: 1px solid #818692; padding: 15px 0 0; }
 .profile .contact-email { font-size: 17px; margin: 15px 0; }
 .profile .contact-email input { font-size: 17px; font: inherit; }
-.profile .contact-email .editable { display: inline-block; padding: 2px 0;}
-.profile>.networks { position: relative; font-size: 0; background-size: 62px; margin: 20px 0; padding: 0; }
+.profile .contact-email .editable { display: inline-block; padding: 2px 0; }
+.profile>.networks { position: relative; font-size: 0; background-size: 62px; margin: 20px 0; padding: 0; text-align: center; }
 .profile>.networks>ul { margin: 0; padding: 60px 0 0 72px; }
-.profile>.networks>.kifi-k:before { position: absolute; display: block; content: "."; background: url(../img/kifi-k.png) no-repeat; background: size: 100%; top: -6px; left: -6px; border: 6px solid white; width: 62px; height: 62px; border-radius: 50%; z-index: 1;}
-.profile>.networks>.kifi-k:after { position: absolute; display: block; content: "*"; z-index: 5; left: 40px; top: 0; width: 286px; height: 58px; }
-.profile>.networks:before { position: absolute; display: block; content: "."; top: 24px; left: 54px; width: 9px; width: 9px; height: 9px; background: #accc98; border: 2px solid white; border-radius: 50%; z-index: 2; }
-.profile>.networks:after { position: absolute; display: block; content: "."; top: 21px; left: 63px; width: 284px; height: 20px; background: #eff2f7; z-index: 0; }
-.profile>.networks>ul>li { display: inline-block; margin: 0 5px; width: 60px; height: 60px; font-size: 0; }
-.profile-nw { position: relative; display: inline-block; width: 100%; height: 100%; background-image: url(../img/networks.png); background-size: 240px 60px; }
+.profile>.networks>ul>li>.connect, .profile>.networks>ul>li>.disconnect { display: block; font-size: 12px; padding: 5px 0; }
+.profile>.networks>.kifi-k::before { position: absolute; display: block; content: "."; background: url(../img/kifi-k.png) no-repeat; background: size: 100%; top: -6px; left: -6px; border: 6px solid white; width: 62px; height: 62px; border-radius: 50%; z-index: 1;}
+.profile>.networks>.kifi-k::after { position: absolute; display: block; content: "."; z-index: 5; left: 40px; top: 0; width: 286px; height: 58px; }
+.profile>.networks::before { position: absolute; display: block; content: "."; top: 24px; left: 54px; width: 9px; width: 9px; height: 9px; background: #accc98; border: 2px solid white; border-radius: 50%; z-index: 2; }
+.profile>.networks::after { position: absolute; display: block; content: "."; top: 21px; left: 63px; width: 284px; height: 20px; background: #eff2f7; z-index: 0; }
+.profile>.networks>ul>li { display: block; float: left; margin: 0 5px; width: 60px; height: auto; font-size: 0; }
+.profile-nw { position: relative; display: block; width: 100%; height: 60px; background-image: url(../img/networks.png); background-size: 240px 60px; }
 .profile-nw.nw-facebook { background-color: #637ab8; }
 .profile-nw.nw-linkedin { background-color: #4f83c3; background-position: -60px 0; }
 .profile-nw.nw-twitter { background-color: #0da2d9; background-position: -120px 0; }
 .profile-nw.nw-google { background-color: #dd4c39; background-position: -180px 0; }
-.profile-nw:before { position: absolute; display: block; content: "."; border-width: 3px 3px 0 0; border-style: solid; border-color: #accc98; height: 28px; top: -31px; z-index: 3; }
-.profile-nw.nw-facebook:before { left: -12px; width: 41px; }
-.profile-nw.nw-linkedin:before { left: -82px; width: 111px; }
-.profile-nw.nw-twitter:before { left: -152px; width: 181px; }
-.profile-nw.nw-google:before { left: -222px; width: 251px; }
+.profile-nw::before { position: absolute; display: block; content: "."; border-width: 3px 3px 0 0; border-style: solid; border-color: #accc98; height: 28px; top: -31px; z-index: 3; }
+.profile-nw.nw-facebook::before { left: -12px; width: 41px; }
+.profile-nw.nw-linkedin::before { left: -82px; width: 111px; }
+.profile-nw.nw-twitter::before { left: -152px; width: 181px; }
+.profile-nw.nw-google::before { left: -222px; width: 251px; }
 .profile-nw.not-connected:not(:hover) { background-color: #dbdee3; }
-.profile-nw.not-connected:before { border-color: #dbdee3; z-index: 2; }
-.profile-nw:after { position: absolute; display: block; content: "."; top: -6px; left: 24px; border-radius: 50%; width: 9px; height: 9px; background: #accc98; border: 2px solid white; }
-.profile-nw.not-connected:after { background: #dbdee3; }
+.profile-nw.not-connected::before { border-color: #dbdee3; z-index: 2; }
+.profile-nw::after { position: absolute; display: block; content: "."; top: -6px; left: 24px; border-radius: 50%; width: 9px; height: 9px; background: #accc98; border: 2px solid white; }
+.profile-nw.not-connected::after { background: #dbdee3; }
 .profile-nw.not-connected { transition: background .25s ease-in 50ms; }
 
-.my-friends {display: none} /* TODO: remove */
-.friends>h1 {padding: 13px 20px 0}
+.friends {padding: 13px 20px 0}
+.friends-tabs {margin: 15px 0 24px; line-height: 46px; border-bottom: 2px solid #e3e6ee; white-space: nowrap}
+.friends-tabs>a {display: inline-block; border: solid transparent; border-radius: 6px 6px 0 0; border-width: 2px 2px 0; padding: 0 25px; font-size: 18px; font-weight: 300; vertical-align: top; position: relative; bottom: -2px; -webkit-font-smoothing: antialiased}
+.friends-tabs>a:not([href]) {border-color: #e3e6ee; background-color: #fff; color: #34495e}
+.friends-tabs>a[href]:not(:hover) {color: #627d99}
+.friends-tabs>a[href]:focus {border-color: rgba(227,230,238,.3)}
+
+.above-friends-list {padding-bottom: 20px; border-bottom: 1px solid transparent}
+input.friends-filter,
+input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; padding: 0 13px; font-size: 14px; -webkit-font-smoothing: antialiased}
+#friends-list {position: absolute; top: 260px; left: 20px; right: 0; bottom: 0; overflow-y: auto; overflow-x: hidden}
+#friends-list>.antiscroll-inner {position: absolute; left: 0; right: 0; top: 0; bottom: 0; overflow-y: auto; overflow-x: hidden; padding-right: 20px; -moz-box-sizing: border-box; box-sizing: border-box}
+.friend {border-top: 1px solid #e3e6ee; display: table; table-layout: fixed}
+.friend.no-match {display: none}
+.friend:last-child {border-bottom: 1px solid #e3e6ee}
+.friend-pic {display: table-cell; width: 70px; padding: 15px 0; vertical-align: top}
+.friend-pic>img {width: 70px; height: 70px; border-radius: 4px}
+.friend-info {display: table-cell; width: 99%; padding: 15px 0 15px 16px; vertical-align: top}
+.friend-name {margin: 4px 0 15px; font-size: 16px; line-height: 1; color: #34495e; -webkit-font-smoothing: antialiased}
+.friend-label {margin: 0 0 6px; font-size: 12px; line-height: 1; font-weight: 300; color: #34495e; -webkit-font-smoothing: antialiased}
+.friend-actions {display: table-cell; padding: 15px 0; vertical-align: middle; white-space: nowrap}
+.friend-actions>*>a {display: inline-block; height: 32px; width: 32px; border-radius: 50%; margin-left: 4px; background-color: #d7e8b1; vertical-align: top; text-align: center; -moz-box-sizing: border-box; box-sizing: border-box}
+.friend-actions>*>a::before {content: " "; display: inline-block; margin-top: 8px; height: 16px; background-image: url(../img/friend-actions.png); background-size: auto 16px}
+.friend-mute::before {width: 17px; background-position: -17px}
+.friend-mute.muted:not(:hover),
+.friend-mute.muted:not([href]) {background-color: #fff; border: 2px solid #e3e6ee}
+.friend-mute:not(.muted)[href]:hover {background-color: #fff; border: 2px solid #e3e6ee}
+.friend-mute.muted:not(:hover)::before,
+.friend-mute.muted:not([href])::before,
+.friend-mute:not(.muted)[href]:hover::before {background-position: 0; margin-top: 6px}
+.unfriended>*>.friend-mute,
+.requested>*>.friend-mute {display: none}
+.friend-status::before {width: 16px; background-position: -34px}
+:not(.unfriended)>*>.friend-status:not([disabled]):hover {background-color: #e78881}
+:not(.unfriended)>*>.friend-status:not([disabled]):hover::before {background-position: -50px; width: 20px; position: relative; left: 2px}
+.unfriended>*>.friend-status {background-color: #6fa6ef}
+.unfriended>*>.friend-status::before {background-position: -70px; width: 20px; position: relative; left: 2px}
+.requested>*>.friend-status {background-color: #b8c5d2}
+.requested>*>.friend-status::before {background-position: -90px; width: 20px; position: relative; left: 2px}
+.friend-action-desc {position: absolute; right: 0; bottom: -20px; font-size: 13px; line-height: 1; font-weight: 300; color: #34495e; -webkit-font-smoothing: antialiased}
+
+.invite-filters {height: 49px; border-bottom: 1px solid #b8c5d2; margin-bottom: 14px}
+.invite-filters>a {display: inline-block; width: 36px; height: 36px; margin-right: 5px; vertical-align: top; -webkit-transition: height .1s; transition: height .1s}
+.invite-filters>a.selected {height: 49px}
+.invite-filters>a:not([data-nw]) {background-color: #b8c5d2; font-size: 12px; text-transform: uppercase; color: #fff; line-height: 36px; text-align: center}
+.invite-filters>a[data-nw=facebook] {background-color: #637ab8}
+.invite-filters>a[data-nw=linkedin] {background-color: #4f83c3}
+.invite-name {font-size: 16px; color: #34495e; -webkit-font-smoothing: antialiased}
+.invite-friends {margin-right: -2%;}
+.invite-friend {margin-top: 12px; display: inline-block; vertical-align: top; margin-right: 2%; width: 48%; min-width: 270px; background-color: #eff2f7; padding: 10px 16px 10px 10px; position: relative; -moz-box-sizing: border-box; box-sizing: border-box;}
+.invite-friend.no-match {display: none}
+.invite-pic {float: left; width: 64px; height: 64px; border-radius: 2px; margin-right: 12px}
+.invite-status {font-size: 13px; font-weight: 300; color: #67829c}
+.invite-button {position: absolute; top: 25px; right: 20px; height: 32px; width: 32px; background-color: #6fa6ef; border-radius: 50%; text-align: center}
+.invite-button::before {content: " "; display: inline-block; margin-top: 8px; height: 16px; background: url(../img/friend-actions.png) -70px; background-size: auto 16px; width: 20px; position: relative; left: 1px}
+.invite-friends-loading {margin-top: 12px;}
+
+.friend-reqs-status {margin-bottom: 4px}
+.friend-reqs-status,
+.friend-req-name {font-size: 16px; color: #34495e; -webkit-font-smoothing: antialiased}
+.friend-req {margin-top: 12px; display: inline-block; vertical-align: top; width: 49%; min-width: 270px; background-color: #eff2f7; padding: 10px 16px 13px 10px; -moz-box-sizing: border-box; box-sizing: border-box}
+.friend-req:nth-child(odd) {margin-right: 2%}
+.friend-req-pic {float: left; width: 64px; height: 64px; border-radius: 2px; margin-right: 12px}
+.friend-req-q {font-size: 13px; font-weight: 300; color: #67829c}
+.friend-req-act {margin-top: 20px; text-align: right; white-space: nowrap; height: 23px; -webkit-transition: height .2s; transition: height .2s}
+.friend-req-act.done {height: 0; overflow: hidden}
+a.friend-req-y,
+a.friend-req-n {background-color: #bbd2ef; color: #fff; display: inline-block; width: 75px; text-align: center; font-weight: 300; font-size: 13px; line-height: 23px; border-radius: 2px; margin-left: 5px}
+a.friend-req-y[href],
+a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 
 .check-all {position: absolute; top: 1px; left: 0; height: 17px; width: 17px; background: url(../img/check.png) 99px/12px 8px no-repeat #fff; border: 1px solid #e3e6ee; -moz-box-sizing: border-box; box-sizing: border-box}
 .check-all.live {cursor: pointer}
@@ -213,7 +292,7 @@ span.edit:before, span.save:before { display: inline-block; position: absolute; 
 .keep-coll-a:hover {text-decoration: underline; -webkit-font-smoothing: antialiased}
 .keep-coll-x {display: none; position: absolute; top: 0; bottom: 0; right: 0; width: 0; text-align: center}
 .keep-coll:hover>.keep-coll-x {width: 10px}
-.keep-coll-x::before {content: "\00D7"; position: relative; bottom: 1px}
+.keep-coll-x::before {content: "\d7"; position: relative; bottom: 1px}
 .keep-who {font-size: 0}
 .keep-who>.pic {display: inline-block; vertical-align: middle; width: 23px; height: 23px; background-size: 100%; border-radius: 2px; margin-right: 1px; position: relative}
 .keep-who>.me {border-radius: 50% 0 0 50%}
@@ -233,7 +312,8 @@ span.edit:before, span.save:before { display: inline-block; position: absolute; 
 .keep.mine .keep-others::before,
 .keep-who-text>.keep-friends+.keep-others::before {content: "+ "}
 .keep:not(.mine) .keep-you+.keep-kept-this::before {content: "Nobody has "; line-height: 23px}
-.keeps-loading {margin: 21px 50%; width: 44px; height: 8px; position: relative; left: -22px}
+.keeps-loading,
+.friends-loading {margin: 21px 50%; width: 44px; height: 8px; position: relative; left: -22px}
 .keeps-load-more {display: block; margin: 10px 0; background-color: #fcfdff; line-height: 30px; font-size: 16px; text-align: center}
 .keeps-load-more:hover {background-color: #f3fbff}
 .keeps-load-more:active {background-color: #f3f5f9}
@@ -246,11 +326,12 @@ span.edit:before, span.save:before { display: inline-block; position: absolute; 
 
 /* right col */
 
-nav {height: 70px; padding: 26px 18px 0 0; background-color: #67829c; text-align: right; font-size: 14px; -moz-box-sizing: border-box; box-sizing: border-box}
-nav>a[href] {padding: 10px 15px; color: #fff; border-left: 1px solid #fff; vertical-align: middle}
-nav>a:first-child {border-left: 0}
-nav>a[href]:hover {background-color: #a0b1c2}
-nav>a[href]:active {background-color: #8699ab}
+.top-right-nav {height: 70px; padding: 26px 18px 0 0; background-color: #67829c; text-align: right; font-size: 14px; -moz-box-sizing: border-box; box-sizing: border-box}
+.top-right-nav>a[href] {padding: 10px 15px; color: #fff; border-left: 1px solid #fff; vertical-align: middle}
+.top-right-nav>a:first-child {border-left: 0}
+.top-right-nav>a[href]:hover {background-color: #a0b1c2}
+.top-right-nav>a[href]:active {background-color: #8699ab}
+.top-right-nav>a[href]:focus {box-shadow: inset 0 0 0 2px #a0b1c2}
 
 .splash,
 .detail {position: absolute; top: 70px; left: 0; right: 0; bottom: 0}
@@ -278,7 +359,7 @@ nav>a[href]:active {background-color: #8699ab}
 a.page-x[href] {position: absolute; top: 8px; right: 16px; width: 17px; height: 17px; border-radius: 50%; color: #b8c5d2; font-size: 16px; line-height: 1; text-align: center}
 a.page-x[href]:hover {background-color: #a0b1c2; color: #fff}
 a.page-x[href]:active {background-color: #8699ab; color: #fff}
-.page-x::before {content: "\00d7"; position: relative; top: -1px}
+.page-x::before {content: "\d7"; position: relative; top: -1px}
 .page-meta {font-size: 0}
 a.page-url[href] {font-size: 12px; line-height: 20px; color: inherit; -webkit-font-smoothing: antialiased; max-width: 100%; margin-bottom: 12px}
 a.page-url[href]:hover {text-decoration: underline}
@@ -364,7 +445,7 @@ a.page-priv[href]:active {background-color: #8699ab}
 .page-coll:hover>.page-coll-a {padding: 0 25px 0 7px}
 .page-coll-x {position: absolute; right: 0; top: 0; bottom: 0; width: 0; text-align: center; background-color: inherit}
 .page-coll:hover>.page-coll-x {width: 18px}
-.page-coll-x::before {content: "\00D7"; position: relative; bottom: 1px}
+.page-coll-x::before {content: "\d7"; position: relative; bottom: 1px}
 .page-coll-new {position: relative}
 .page-coll-add {display: inline-block; white-space: nowrap; font-size: 0; vertical-align: top}
 .page-coll-add::before {content: " "; display: inline-block; width: 18px; height: 18px; border-radius: 50%; vertical-align: bottom; position: relative; bottom: 3px; background: url(data:image/gif;base64,R0lGODlhCAAIAIABAO/y9////yH5BAEKAAEALAAAAAAIAAgAAAINjAGmgXv5kJxUNXdXLgA7) center/8px no-repeat; image-rendering: -moz-crisp-edges; image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges}
@@ -414,21 +495,25 @@ span.long-text, a.long-text {display: inline-block}
 .fr-card .fr-card-name {font-size: 16px; color: #2d2d2d; white-space: nowrap}
 .fr-card-label {margin: 15px 0 3px}
 .fr-card-interests {color: #aaa}
-.fr-card-networks {font-size: 0; line-height: 0}
-.fr-card-networks a.fr-card-nw {width: 17px; height: 17px; display: inline-block; background: url(../img/social_icons.png) 0/68px; margin-right: 2px}
-.fr-card-networks a.fr-card-nw-facebook {background-position: 0 17px}
-.fr-card-networks a.fr-card-nw-facebook.on {background-position: 0 0}
-.fr-card-networks a.fr-card-nw-linkedin {background-position: -17px 17px}
-.fr-card-networks a.fr-card-nw-linkedin.on {background-position: -17px 0}
-.fr-card-networks a.fr-card-nw-twitter {background-position: -34px 17px}
-.fr-card-networks a.fr-card-nw-twitter.on {background-position: -34px 0}
-.fr-card-networks a.fr-card-nw-pinterest {background-position: -51px 17px}
-.fr-card-networks a.fr-card-nw-pinterest.on {background-position: -51px 0}
+
+.friend-networks {font-size: 0; line-height: 0}
+a.friend-nw {width: 18px; height: 18px; display: inline-block; background: #ddd url(../img/networks-18.png) 0; background-size: auto 18px; border-radius: 2px; margin-right: 2px}
+a.friend-nw:not([href]):not(.friend-nw-kifi) {display: none}
+a.friend-nw-kifi {background-color: #74a2d7; border-radius: 50%}
+a.friend-nw-facebook {background-position: -18px}
+a.friend-nw-facebook[href] {background-color: #527bbd}
+a.friend-nw-linkedin {background-position: -36px}
+a.friend-nw-linkedin[href] {background-color: #5083c3}
+a.friend-nw-twitter {background-position: -54px}
+a.friend-nw-twitter[href] {background-color: #7acdf0}
+a.friend-nw-google {background-position: -72px}
+a.friend-nw-google[href] {background-color: #e9644b}
 
 /* retina image overrides */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
   .header-logo {background-image: url(../img/kifi-logo.2x.png)}
-  input.query {background-image: url(../img/search.2x.png)}
+  .query-mag::before,
+  .query-x::before {background-image: url(../img/search.2x.png)}
   .left-col .my-keeps .view-name::before,
   #collections>h2::before {background-image: url(../img/nav-icons.2x.png)}
   .keep-private {background-image: url(../img/private.2x.png)}
@@ -439,8 +524,10 @@ span.long-text, a.long-text {display: inline-block}
   .page-how>.page-how-text::before,
   [data-kept^=p]>*>.page-keep[href]::before,
   .page-meta>.page-priv[href]::before {background-image: url(../img/keep-icons.2x.png)}
-  .profile>.networks>.kifi-k:before {background-image: url(../img/kifi-k.2x.png); background-size: 100%;}
+  .profile>.networks>.kifi-k::before {background-image: url(../img/kifi-k.2x.png); background-size: 100%;}
   .profile-nw {background-image: url(../img/networks.2x.png)}
+  .friend-actions>*>a::before {background-image: url(../img/friend-actions.2x.png)}
+  a.friend-nw {background-image: url(../img/networks-18.2x.png)}
 }
 
 .fancybox-inner {font-size: 16px}

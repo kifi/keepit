@@ -13,7 +13,7 @@ GET     /internal/search/comment/reindex      @com.keepit.controllers.search.Com
 POST    /internal/search/comment/dumpDoc      @com.keepit.controllers.search.CommentIndexerController.dumpLuceneDocument(id: Id[Comment])
 
 GET     /internal/search/uriGraph/info         @com.keepit.controllers.search.URIGraphController.indexInfo()
-GET     /internal/search/uriGraph/sharingUserInfo @com.keepit.controllers.search.URIGraphController.sharingUserInfo(userId: Id[User], uriIds: String)
+POST    /internal/search/uriGraph/sharingUserInfo/:userId @com.keepit.controllers.search.URIGraphController.sharingUserInfo(userId: Id[User])
 POST    /internal/search/uriGraph/update       @com.keepit.controllers.search.URIGraphController.updateURIGraph()
 POST    /internal/search/uriGraph/reindex      @com.keepit.controllers.search.URIGraphController.reindex()
 POST    /internal/search/uriGraph/dumpDoc/:id  @com.keepit.controllers.search.URIGraphController.dumpLuceneDocument(id: Id[User])

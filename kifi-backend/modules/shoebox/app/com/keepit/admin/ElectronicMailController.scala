@@ -9,9 +9,8 @@ import play.api.Play.current
 import views.html
 
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 
-@Singleton
 class ElectronicMailController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,

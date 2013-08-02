@@ -1,23 +1,8 @@
-var urlBase = 'https://api.kifi.com';
-//var urlBase = 'http://dev.ezkeep.com:9000';
-var urlLinkNetwork = urlBase + '/link'
-var urlSite = urlBase + '/site';
-var urlSearch = urlBase + '/search';
-var urlKeeps =  urlSite + '/keeps';
-var urlKeepAdd =  urlKeeps + '/add';
-var urlKeepRemove =  urlKeeps + '/remove';
-var urlMyKeeps = urlKeeps + '/all';
-var urlMyKeepsCount = urlKeeps + '/count';
-var urlUser = urlSite + '/user';
-var urlMe = urlUser + '/me';
-var urlNetworks = urlUser + '/networks';
-var urlMyPrefs = urlUser + '/prefs';
-var urlChatter = urlSite + '/chatter';
-var urlCollections = urlSite + '/collections';
-var urlCollectionsAll = urlCollections + '/all';
-var urlCollectionsOrder = urlCollections + '/ordering';
-var urlCollectionsCreate = urlCollections + '/create';
-var urlScreenshot = urlKeeps + '/screenshot';
+var xhrDomain = 'https://api.kifi.com';
+var xhrBase = xhrDomain + '/site';
+
+var compareSearch = {usage: "search", sensitivity: "base"};
+var compareSort = {numeric: true};
 
 $.ajaxSetup({cache: true, crossDomain: true, xhrFields: {withCredentials: true}});
 
@@ -36,6 +21,16 @@ $.fn.layout = function() {
 
 $.fn.removeText = function() {
 	return this.contents().filter(function() {return this.nodeType == 3}).remove().end().end();
+};
+
+$.postJson = function(uri, data, done) {
+	return $.ajax({
+		url: uri,
+		type: 'POST',
+		dataType: 'json',
+		data: JSON.stringify(data),
+		contentType: 'application/json',
+		success: done || $.noop});
 };
 
 // detaches and reattaches nested template so it will work as an independent template
@@ -65,15 +60,9 @@ $(function() {
 		maxWidth: 420,
 		stop: function(e, ui) {
 			console.log("[resizable:stop] saving");
-			$.ajax({
-				url: urlMyPrefs,
-				type: "POST",
-				dataType: 'json',
-				data: JSON.stringify({site_left_col_width: String($leftCol.outerWidth())}),
-				contentType: 'application/json',
-				done: function(data) {
-					console.log("[prefs]", data);
-				}});
+			$.postJson(xhrBase + '/user/prefs', {site_left_col_width: String($leftCol.outerWidth())}, function(data) {
+				console.log("[prefs]", data);
+			});
 		}
 	});
 	$leftCol.find(".ui-resizable-handle").appendTo($leftCol.find(".page-col-inner"));
@@ -298,28 +287,15 @@ $(function() {
 				$('.page-who-pics').append($detailed.find(".keep-who>.pic").clone());
 				$('.page-who-text').html($detailed.find(".keep-who-text").html());
 				var $pic = $('.page-pic'), $chatter = $('.page-chatter');
-				$.ajax({
-					url: urlScreenshot,
-					type: 'POST',
-					dataType: 'json',
-					data: JSON.stringify({url: o.url}),
-					contentType: 'application/json',
-					success: function(data) {
-						$pic.css('background-image', 'url(' + data.url + ')');
-					},
-					error: function() {
-						$pic.find('.page-pic-soon').show();
-					}});
-				$.ajax({
-					url: urlChatter,
-					type: 'POST',
-					dataType: 'json',
-					data: JSON.stringify({url: o.url}),
-					contentType: 'application/json',
-					success: function(data) {
-						$chatter.find('.page-chatter-messages').attr('data-n', data.conversations || 0);
-						$chatter.find('.page-chatter-comments').attr('data-n', data.comments || 0);
-					}});
+				$.postJson(xhrBase + '/keeps/screenshot', {url: o.url}, function(data) {
+					$pic.css('background-image', 'url(' + data.url + ')');
+				}).error(function() {
+					$pic.find('.page-pic-soon').show();
+				});
+				$.postJson(xhrBase + '/chatter', {url: o.url}, function(data) {
+					$chatter.find('.page-chatter-messages').attr('data-n', data.conversations || 0);
+					$chatter.find('.page-chatter-comments').attr('data-n', data.comments || 0);
+				});
 			} else { // multiple keeps
 				var collCounts = collIds.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
 				o.collections = Object.keys(collCounts).sort(function(id1, id2) {return collCounts[id1] - collCounts[id2]}).map(collIdAndName);
@@ -346,7 +322,10 @@ $(function() {
 					var $this = $(this);
 					var value = $this.text();
 					var maxlen = $this.data('maxlength');
-					var $input = $('<input>').val(value).attr('maxlength', maxlen).keyup(function (e) {
+					$('<input>').val(value).attr('maxlength', maxlen).keyup(function (e) {
+						if (maxlen) {
+							$(this).closest('.editable').attr('data-chars-left', maxlen - $(this).val().length);
+						}
 						if (e.keyCode === 13) {
 							$(this).closest('.edit-container').find('.save').click();
 						} else if (e.which === 27) {
@@ -360,8 +339,7 @@ $(function() {
 								}
 							});
 						}
-					});
-					$(this).html($input);
+					}).appendTo($this.empty()).keyup();
 				}).find('input');
 				$inputs[0].focus();
 				$inputs.on('keypress paste change', function () {
@@ -374,34 +352,26 @@ $(function() {
 			$('.profile .save').click(function () {
 				var props = {};
 				var $editContainer = $(this).closest('.edit-container');
+				if (props['email']) {
+					props['emails'] = [props['email']];
+					delete props['email'];
+				}
 				$editContainer.find('.editable').each(function () {
 					var $this = $(this);
 					var value = $this.find('input').val();
 					$this.text(value);
 					props[$this.data('prop')] = value;
 				});
-				if (props['email']) {
-					props['emails'] = [props['email']];
-					delete props['email'];
-				}
 				var $save = $editContainer.find('.save')
 				var saveText = $save.text();
 				$save.text('Saving...');
-				$.ajax({
-					url: urlMe,
-					type: "POST",
-					dataType: 'json',
-					data: JSON.stringify(props),
-					contentType: 'application/json',
-					error: function () {
-						showMessage('Uh oh! A bad thing happened!');
-						$save.text(saveText);
-					},
-					success: function (data) {
-						$editContainer.removeClass('editing')
-						$save.text(saveText);
-						updateMe(data);
-					}
+				$.postJson(xhrBase + '/user/me', props, function(data) {
+					$editContainer.removeClass('editing');
+					$save.text(saveText);
+					updateMe(data);
+				}).error(function() {
+					showMessage('Uh oh! A bad thing happened!');
+					$save.text(saveText);
 				});
 			});
 			$('.profile .networks a').each(function () {
@@ -411,21 +381,246 @@ $(function() {
 				var networkInfo = myNetworks.filter(function (nw) {
 					return nw.network === name;
 				})[0];
+				var postLink = function (e) {
+					e.preventDefault();
+					$('<form>')
+						.attr('action', xhrDomain + $(this).data('action'))
+						.attr('method', 'post')
+						.appendTo('body')
+						.submit()
+						.remove();
+				};
 				if (networkInfo) {
 					$this.attr('href', networkInfo.profileUrl).attr('title', 'View profile');
+					if (myNetworks.length > 1) {
+						$('<a>').addClass('disconnect').text('Unlink')
+							.attr('href', 'javascript:')
+							.data('action', '/disconnect/' + name)
+							.click(postLink)
+							.appendTo($this.parent());
+					}
 				} else {
-					$this.addClass('not-connected').attr('href', urlLinkNetwork + '/' + name).attr('title', 'Click to connect');
+					$this.addClass('not-connected').attr('title', 'Click to connect')
+						.attr('href', 'javascript:')
+						.data('action', '/link/' + name)
+						.click(postLink);
+					$('<a>').attr('title', 'Click to connect').addClass('connect').text('Connect')
+						.attr('href', 'javascript:')
+						.data('action', '/link/' + name)
+						.click(postLink)
+						.appendTo($this.parent());
 				}
 			});
 		});
 	}
 
-	//var friendsTmpl = Tempo.prepare("friends-template");
-	function showFriends() {
-		//friendsTmpl.render();
+	// Friends Tabs/Pages
+
+	var $friends = $('.friends').on('click', '.friends-tabs>a[href]', function(e) {
+		e.preventDefault();
+		navigate(this.href);
+	});
+	var $friendsTabs = $friends.find('.friends-tabs>a');
+	var $friendsTabPages = $friends.find('.friends-page');
+
+	function showFriends(path) {
 		$main.attr('data-view', 'friends');
 		$('.left-col .active').removeClass('active');
 		$('.my-friends').addClass('active');
+		var $tab = $friendsTabs.filter('[data-href="' + path + '"]').removeAttr('href');
+		if ($tab.length) {
+			$friendsTabs.not($tab).filter(':not([href])').each(function() {this.href = $(this).data('href')});
+			[prepFriendsTab, prepInviteTab, prepRequestsTab][$tab.index()]();
+			$friendsTabPages.hide().filter('[data-href="' + path + '"]').show().find('input').focus();
+		} else {
+			navigate('friends', {replace: true});
+		}
+	}
+
+	// All kifi Friends
+
+	var $friendsFilter = $('.friends-filter').on('input', function() {
+		var val = $.trim(this.value);
+		if (val) {
+			var prefixes = val.split(/\s+/);
+			$friendsList.find('.friend').filter(function() {
+				var $f = $(this), o = $f.data('o'), names = $.trim(o.firstName + ' ' + o.lastName).split(/\s+/);
+				$f.toggleClass('no-match', !prefixes.every(function(p) {
+					return names.some(function(n) {return 0 === p.localeCompare(n.substring(0, p.length), undefined, compareSearch)});
+				}));
+			});
+		} else {
+			$friendsList.find('.no-match').removeClass('no-match');
+		}
+	});
+	var $friendsList = $('#friends-list').antiscroll({x: false, width: '100%'})
+	.on('mouseover', '.friend-status', function() {
+		var $a = $(this), o = $a.closest('.friend').data('o');
+		$(this).nextAll('.friend-action-desc').text({
+			unfriended: 'Add ' + o.firstName + ' as a friend',
+			requested: 'Cancel friend request',
+			'': 'Unfriend ' + o.firstName}[o.state]);
+	}).on('click', '.friend-status', function() {
+		var $a = $(this), o = $a.closest('.friend').data('o'), xhr;
+		switch (o.state) {
+			case 'unfriended':
+				xhr = $.post(xhrBase + '/user/' + o.id + '/friend', function(data) {
+					o.state = data.acceptedRequest ? '' : 'requested';
+				}); break;
+			case 'requested':
+				xhr = $.post(xhrBase + '/user/' + o.id + '/cancelRequest', function(data) {
+					o.state = 'unfriended';
+				}).error(function() {
+					if (xhr && xhr.responseText && JSON.parse(xhr.responseText).alreadyAccepted) {
+						o.state = 'friend';
+					}
+				}); break;
+			default:
+				xhr = $.post(xhrBase + '/user/' + o.id + '/unfriend', function(data) {
+					o.state = 'unfriended';
+				});
+		}
+		xhr.always(function() {
+			$a.removeAttr('href').closest('.friend-actions').removeClass('requested unfriended').addClass(o.state);
+			$a.nextAll('.friend-action-desc').text('');
+		});
+	}).on('mouseover', '.friend-mute', function() {
+		var $a = $(this), o = $a.closest('.friend').data('o');
+		$a.nextAll('.friend-action-desc').text(o.searchFriend ?
+			'Don’t show ' + o.firstName + '’s keeps in my search results' :
+			'Show ' + o.firstName + '’s keeps in my search results');
+	}).on('click', '.friend-mute[href]', function() {
+		var $a = $(this), o = $a.closest('.friend').data('o'), mute = !!o.searchFriend;
+		$.post(mute ?
+				xhrBase + '/user/' + o.id + '/exclude' :
+				xhrBase + '/user/' + o.id + '/include', function() {
+			o.searchFriend = !mute;
+			$a.removeAttr('href').toggleClass('muted', mute).nextAll('.friend-action-desc').text('');
+		});
+	}).on('mouseout', '.friend-status,.friend-mute', function() {
+		$(this).attr('href', 'javascript:').nextAll('.friend-action-desc').empty();
+	});
+	$friendsList.find('.antiscroll-inner').scroll(function() {
+		$friendsList.prev().toggleClass('scrolled', this.scrollTop > 0);
+	});
+	var friendsScroller = $friendsList.data("antiscroll");
+	$(window).resize(friendsScroller.refresh.bind(friendsScroller));
+	var friendsTmpl = Tempo.prepare($friendsList).when(TempoEvent.Types.ITEM_RENDER_COMPLETE, function(ev) {
+		var o = ev.item, $f = $(ev.element).data("o", o), url;
+		for (var nw in o.networks) {  // TODO: move networks to template (Tempo seems broken)
+			if (o.networks[nw].connected && (url = o.networks[nw].profileUrl)) {
+				$f.find('.friend-nw-' + nw).attr('href', url);
+			}
+		}
+	}).when(TempoEvent.Types.RENDER_COMPLETE, function() {
+		$friendsLoading.hide();
+		friendsScroller.refresh();
+	});
+	var $friendsLoading = $('.friends-loading');
+	function prepFriendsTab() {
+		$('.friends-filter').val('');
+		friendsTmpl.clear();
+		$friendsLoading.show();
+		$.when(
+			$.getJSON(xhrBase + '/user/connections'),
+			$.getJSON(xhrBase + '/user/outgoingFriendRequests'))
+		.done(function(a0, a1) {
+			var friends = a0[0].connections, requests = a1[0];
+			var requested = requests.reduce(function(o, u) {o[u.id] = true; return o}, {});
+			console.log('[prepFriendsTab] friends:', friends.length, 'req:', requests.length);
+			for (var f, i = 0; i < friends.length; i++) {
+				f = friends[i];
+				f.picUri = formatPicUrl(f.id, f.pictureName, 200);
+				f.state = requested[f.id] ? 'requested' : f.unfriended ? 'unfriended' : '';
+				delete f.unfriended;
+			}
+			friends.sort(function(f1, f2) {
+				return f1.firstName.localeCompare(f2.firstName, undefined, compareSort) ||
+				       f1.lastName.localeCompare(f2.lastName, undefined, compareSort) ||
+				       f1.id.localeCompare(f2.id, undefined, compareSort);
+			});
+			friendsTmpl.render(friends);
+		});
+	}
+
+	// Friend Invites
+
+	var $nwFriends = $('.invite-friends').antiscroll({x: false, width: '100%'})
+	var nwFriendsScroller = $nwFriends.data("antiscroll");
+	$(window).resize(nwFriendsScroller.refresh.bind(nwFriendsScroller));  // TODO: throttle, and only bind while visible
+	var nwFriendsTmpl = Tempo.prepare($nwFriends).when(TempoEvent.Types.RENDER_COMPLETE, function() {
+		$nwFriendsLoading.hide();
+		nwFriendsScroller.refresh();
+	});
+	var $nwFriendsLoading = $('.invite-friends-loading');
+	function prepInviteTab() {
+		$.getJSON(xhrBase + '/user/all-connections', function(friends) {
+			console.log('[prepInviteTab] friends:', friends.length);
+			nwFriendsTmpl.render(friends);
+			function filterFriends() {
+				var nw = $('.invite-filters>.selected').data('nw');
+				var words = $('.invite-filter').val().toLowerCase().split(/\s+/);
+				var matches = {};
+				friends.forEach(function (fr) {
+					matches[fr.value] = (!nw || nw == fr.value.split('/')[0]) && words.reduce(function (v, word) {
+						return v && (' ' + fr.label).toLowerCase().indexOf(' ' + word) >= 0
+					}, true);
+				});
+				$('.invite-friends .invite-friend').each(function () {
+					var $this = $(this);
+					$this.toggleClass('no-match', !matches[$this.data('value')])
+				});
+			}
+			$('.invite-filters>a').click(function () {
+				$(this).addClass('selected').siblings().removeClass('selected');
+				filterFriends();
+			});
+			$('.invite-filter').keyup(filterFriends).keyup();
+			$('.invite-friends').on('click', '.invite-button', function () {
+				var fullSocialId = $(this).closest('.invite-friend').data('value');
+				// TODO: linkedin
+				if (fullSocialId.indexOf("facebook/") === 0) {
+					$(this).closest('form').attr('action', xhrDomain + '/invite').submit();
+				}
+			});
+		});
+	}
+
+	// Friend Requests
+
+	var $friendReqs = $('.friend-reqs').antiscroll({x: false, width: '100%'});
+	$friendReqs.find('.antiscroll-inner').scroll(function() {
+		$friendReqs.prev().toggleClass('scrolled', this.scrollTop > 0);
+	}).on('click', '.friend-req-y[href],.friend-req-n[href]', function() {
+		var $a = $(this), id = $a.closest('.friend-req').data('id'), accepting = $a.hasClass('friend-req-y');
+		$.post(accepting ?
+				xhrBase + '/user/' + id + '/friend' :
+				xhrBase + '/user/' + id + '/ignoreRequest', function() {
+			$a.closest('.friend-req-act').addClass('done');
+			$a.closest('.friend-req').find('.friend-req-q').text(
+				accepting ? 'Accepted as your kifi friend' : 'Friend request ignored');
+		}).error(function() {
+			$a.siblings('a').addBack().attr('href', 'javascript:');
+		});
+		$a.siblings('a').addBack().removeAttr('href');
+	});
+	var friendReqsScroller = $friendReqs.data("antiscroll");
+	$(window).resize(friendReqsScroller.refresh.bind(friendReqsScroller));
+	var friendReqsTmpl = Tempo.prepare($friendReqs).when(TempoEvent.Types.RENDER_COMPLETE, function() {
+		$friendReqsLoading.hide();
+		friendReqsScroller.refresh();
+	});
+	var $friendReqsLoading = $('.friend-reqs-loading');
+	function prepRequestsTab() {
+		$.getJSON(xhrBase + '/user/incomingFriendRequests', function(reqs) {
+			console.log('[prepRequestsTab] req:', reqs.length);
+			for (var r, i = 0; i < reqs.length; i++) {
+				r = reqs[i];
+				r.picUri = formatPicUrl(r.id, r.pictureName, 200);
+			}
+			$('.friend-reqs-status').text('You have ' + (reqs.length || 'no pending') + ' friend request' + (reqs.length == 1 ? '' : 's') + '.');
+			friendReqsTmpl.render(reqs);
+		});
 	}
 
 	function doSearch(q) {
@@ -446,8 +641,9 @@ $(function() {
 		$loadMore.addClass('hidden');
 
 		$query.attr("data-q", q);
+		if (!$query.val()) $query.val(q).focus().closest($queryWrap).removeClass('empty');
 		var context = searchResponse && searchResponse.context;
-		$.getJSON(urlSearch, {q: q, f: "a", maxHits: 30, context: context}, function(data) {
+		$.getJSON(xhrDomain + '/search', {q: q, f: "a", maxHits: 30, context: context}, function(data) {
 			updateCollectionsIfAnyUnknown(data.hits);
 			$.when(promise.me, promise.collections).done(function() {
 				searchResponse = data;
@@ -496,7 +692,7 @@ $(function() {
 			params.collection = $('.left-col h3.active').data('id');
 		}
 		console.log("[anyNewKeeps] fetching", params);
-		$.getJSON(urlMyKeeps, params, function(data) {
+		$.getJSON(xhrBase + '/keeps/all', params, function(data) {
 			updateCollectionsIfAnyUnknown(data.keeps);
 			$.when(promise.collections).done(function() {
 				var keepIds = $myKeeps.find('.keep').map(getDataId).get().reduce(function(ids, id) {ids[id] = true; return ids}, {});
@@ -561,7 +757,7 @@ $(function() {
 				params.before = lastKeep;
 			}
 			console.log("Fetching %d keeps %s", params.count, lastKeep ? "before " + lastKeep : "");
-			$.getJSON(urlMyKeeps, params, function withKeeps(data) {
+			$.getJSON(xhrBase + '/keeps/all', params, function withKeeps(data) {
 				updateCollectionsIfAnyUnknown(data.keeps);
 				$.when(promise.me, promise.collections).done(function() {
 					var numShown = $myKeeps.find(".keep").length + data.keeps.length;
@@ -589,13 +785,13 @@ $(function() {
 	}
 
 	function updateNumKeeps() {
-		$.getJSON(urlMyKeepsCount, function(data) {
-			$('.left-col .my-keeps .keep-count').text(myKeepsCount = data.numKeeps);
+		$.getJSON(xhrBase + '/keeps/count', function(data) {
+			$('.left-col .my-keeps .nav-count').text(myKeepsCount = data.numKeeps);
 		});
 	}
 
 	function updateCollections() {
-		promise.collections = $.getJSON(urlCollectionsAll, {sort: "user"}, function(data) {
+		promise.collections = $.getJSON(xhrBase + '/collections/all', {sort: "user"}, function(data) {
 			collTmpl.render(data.collections);
 			collections = data.collections.reduce(function(o, c) {o[c.id] = c; return o}, {});
 		}).promise();
@@ -626,26 +822,19 @@ $(function() {
 		var $coll = $collMenu.closest(".collection");
 		var collId = $coll.data("id");
 		console.log("Removing collection", collId);
-		$.ajax({
-			url: urlCollections + "/" + collId + "/delete",
-			type: "POST",
-			dataType: 'json',
-			data: '{}',
-			contentType: 'application/json',
-			error: showMessage.bind(null, 'Could not delete collection, please try again later'),
-			success: function(data) {
-				delete collections[collId];
-				$coll.slideUp(80, $.fn.remove.bind($coll));
-				if ($myKeeps.data("collId") === collId) {
-					$myKeeps.removeData("collId");
-					showMyKeeps();
-				}
-				var $keepColl = $main.find(".keep-coll[data-id=" + collId + "]");
-				if ($keepColl.length) $keepColl.css("width", $keepColl[0].offsetWidth);
-				var $pageColl = $detail.find(".page-coll[data-id=" + collId + "]");
-				if ($pageColl.length) $pageColl.css("width", $pageColl[0].offsetWidth);
-				$keepColl.add($pageColl).layout().on("transitionend", removeIfThis).addClass("removed");
-			}});
+		$.postJson(xhrBase + '/collections/' + collId + '/delete', {}, function(data) {
+			delete collections[collId];
+			$coll.slideUp(80, $.fn.remove.bind($coll));
+			if ($myKeeps.data("collId") === collId) {
+				$myKeeps.removeData("collId");
+				showMyKeeps();
+			}
+			var $keepColl = $main.find(".keep-coll[data-id=" + collId + "]");
+			if ($keepColl.length) $keepColl.css("width", $keepColl[0].offsetWidth);
+			var $pageColl = $detail.find(".page-coll[data-id=" + collId + "]");
+			if ($pageColl.length) $pageColl.css("width", $pageColl[0].offsetWidth);
+			$keepColl.add($pageColl).layout().on("transitionend", removeIfThis).addClass("removed");
+		}).error(showMessage.bind(null, 'Could not delete collection, please try again later'));
 	}).on("mouseup mousedown", ".coll-rename", function(e) {
 		if (e.which > 1) return;
 		hideCollMenu();
@@ -668,22 +857,14 @@ $(function() {
 				var newName = $.trim(this.value) || oldName;
 				if (newName !== oldName) {
 					var collId = $coll.addClass("renamed").data("id");
-					$.ajax({
-						url: urlCollections + "/" + collId + "/update",
-						type: "POST",
-						dataType: 'json',
-						data: JSON.stringify({name: newName}),
-						contentType: 'application/json',
-						error: function() {
-							showMessage('Could not rename collection, please try again later');
-							$name.text(oldName);
-						},
-						success: function() {
-							collections[collId].name = newName;
-							if ($myKeeps.data("collId") === collId) {
-								$main.find("h1").text(newName);
-							}
+					$.postJson(xhrBase + '/collections/' + collId + '/update', {name: newName}, function() {
+						collections[collId].name = newName;
+						if ($myKeeps.data("collId") === collId) {
+							$main.find("h1").text(newName);
 						}
+					}).error(function() {
+						showMessage('Could not rename collection, please try again later');
+						$name.text(oldName);
 					});
 				}
 				exitRename(newName);
@@ -716,9 +897,12 @@ $(function() {
 		}
 	});
 
+	var baseUriRe = new RegExp('^' + ($('base').attr('href') || ''));
 	$(window).on('statechange anchorchange', function(e) {
-		console.log('[' + e.type + ']', location.href);
-		var parts = location.pathname.substring($('base').attr('href').length).split('/');
+		var state = History.getState();
+		var hash = state.hash.replace(baseUriRe, '').replace(/^\.\//, '').replace(/[?#].*/, '');
+		var parts = hash.split('/');
+		console.log('[' + e.type + ']', hash, state);
 		switch (parts[0]) {
 			case '':
 				showMyKeeps();
@@ -737,13 +921,13 @@ $(function() {
 				});
 				break;
 			case 'search':
-				doSearch(decodeURIComponent(queryFromQS(location.search)));
+				doSearch(decodeURIComponent(queryFromUri(state.hash)));
 				break;
 			case 'profile':
 				showProfile();
 				break;
 			case 'friends':
-				showFriends();
+				showFriends(hash);
 				break;
 			default:
 				return;
@@ -751,11 +935,12 @@ $(function() {
 		hideKeepDetails();
 	});
 
-	function navigate(uri) {
+	function navigate(uri, opts) {
 		var baseUri = document.baseURI;
 		if (uri.substr(0, baseUri.length) == baseUri) {
 			uri = uri.substr(baseUri.length);
 		}
+		console.log('[navigate]', uri, opts || '');
 		var title, kind = uri.match(/[\w-]*/)[0];
 		switch (kind) {
 			case '':
@@ -765,19 +950,19 @@ $(function() {
 				title = collections[uri.substr(kind.length + 1)].name;
 				break;
 			case 'search':
-				title = queryFromQS(uri.substr(kind.length));
+				title = queryFromUri(uri);
 				break;
 			case 'profile':
 				title = 'Profile';
 				break;
 			case 'friends':
-				title = 'Friends';
+				title = {friends: 'Friends', 'friends/invite': 'Invite Friends', 'friends/requests': 'Friend Requests'}[uri];
 		}
-		History.pushState(null, 'kifi.com • ' + title, uri);
+		History[opts && opts.replace ? 'replaceState' : 'pushState'](null, 'kifi.com • ' + title, uri);
 	}
 
-	function queryFromQS(qs) {
-		return qs.replace(/.*?[?&]q=([^&]*).*/, '$1').replace(/\+/g, ' ');
+	function queryFromUri(uri) {
+		return uri.replace(/.*?[?&]q=([^&]*).*/, '$1').replace(/\+/g, ' ');
 	}
 
 	var $main = $(".main").on("mousedown", ".keep-checkbox", function(e) {
@@ -857,7 +1042,13 @@ $(function() {
 				searchTimeout = setTimeout(navigate.bind(null, uri), 500);  // instant search
 			}
 		}
-	})
+	});
+	$('.query-mag').mousedown(function(e) {
+		if (e.which == 1) {
+			e.preventDefault();
+			$query.focus();
+		}
+	});
 	$('.query-x').click(function() {
 		$query.val('').focus().triggerHandler('input');
 	});
@@ -874,17 +1065,12 @@ $(function() {
 		placeholder: "sortable-placeholder",
 		beforeStop: function(event, ui) {
 			// update the collection order
-			$.ajax({
-				url: urlCollectionsOrder,
-				type: "POST",
-				async: false,
-				dataType: 'json',
-				data: JSON.stringify($(this).find(".collection").map(getDataId).get()),
-				contentType: 'application/json',
-				error: showMessage.bind(null, 'Could not reorder the collections, please try again later'),
-				success: function(data) {
-					console.log(data);
-				}});
+			$.postJson(xhrBase + '/collections/ordering', $(this).find(".collection").map(getDataId).get(), function(data) {
+				console.log(data);
+			}).error(function() {
+				showMessage('Could not reorder the collections, please try again later');
+				// TODO: revert the re-order in the DOM
+			});
 		}
 	}).on("mousedown", ".coll-tri", function(e) {
 		if (e.button > 0) return;
@@ -970,37 +1156,21 @@ $(function() {
 
 	function createCollection(name, callback) {
 		$newColl.addClass("submitted");
-		$.ajax({
-			url: urlCollectionsCreate,
-			type: "POST",
-			dataType: 'json',
-			data: JSON.stringify({name: name}),
-			contentType: 'application/json',
-			error: function() {
-				showMessage('Could not create collection, please try again later');
-				callback();
-			},
-			success: function(data) {
-				collTmpl.prepend(collections[data.id] = {id: data.id, name: name, keeps: 0});
-				callback(data.id);
-			}});
+		$.postJson(xhrBase + '/collections/create', {name: name}, function(data) {
+			collTmpl.prepend(collections[data.id] = {id: data.id, name: name, keeps: 0});
+			callback(data.id);
+		}).error(function() {
+			showMessage('Could not create collection, please try again later');
+			callback();
+		});
 	}
 
 	function addKeepsToCollection(collId, $keeps, onError) {
-		$.ajax({
-			url: urlKeepAdd,
-			type: "POST",
-			dataType: 'json',
-			data: JSON.stringify({
+		$.postJson(xhrBase + '/keeps/add', {
 				collectionId: collId,
-				keeps: $keeps.map(function() {var a = this.querySelector(".keep-title>a"); return {title: a.title, url: a.href}}).get()}),
-			contentType: 'application/json',
-			error: function() {
-				showMessage('Could not add to collection, please try again later');
-				if (onError) onError();
-			},
-			success: function(data) {
-				$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps += data.addedToCollection);
+				keeps: $keeps.map(function() {var a = this.querySelector(".keep-title>a"); return {title: a.title, url: a.href}}).get()},
+			function(data) {
+				$collList.find(".collection[data-id=" + collId + "]").find(".nav-count").text(collections[collId].keeps += data.addedToCollection);
 				var collName = collections[collId].name;
 				$keeps.addClass("mine")
 					.find(".keep-colls:not(:has(.keep-coll[data-id=" + collId + "]))")
@@ -1015,21 +1185,16 @@ $(function() {
 						inCollTmpl.into($inColl[0]).append({id: collId, name: collName});
 					}
 				}
-			}
-		});
+			}).error(function() {
+				showMessage('Could not add to collection, please try again later');
+				if (onError) onError();
+			});
 	}
 
 	function removeKeepsFromCollection(collId, keepIds) {
-		$.ajax({
-			url: urlCollections + "/" + collId + "/removeKeeps",
-			type: "POST",
-			dataType: 'json',
-			data: JSON.stringify(keepIds),
-			contentType: 'application/json',
-			error: showMessage.bind(null, 'Could not remove keep' + (keepIds.length > 1 ? 's' : '') + ' from collection, please try again later'),
-			success: function(data) {
-				$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps -= data.removed);
-			}});
+		$.postJson(xhrBase + '/collections/' + collId + '/removeKeeps', keepIds, function(data) {
+			$collList.find(".collection[data-id=" + collId + "]").find(".nav-count").text(collections[collId].keeps -= data.removed);
+		}).error(showMessage.bind(null, 'Could not remove keep' + (keepIds.length > 1 ? 's' : '') + ' from collection, please try again later'));
 		var $allKeeps = $main.find(".keep");
 		var $keeps = $allKeeps.filter(function() {return keepIds.indexOf($(this).data("id")) >= 0});
 		var $keepColl = $keeps.find(".keep-coll[data-id=" + collId + "]");
@@ -1057,54 +1222,38 @@ $(function() {
 		var $a = $(this), howKept = $detail.children().attr("data-kept");
 		if (!howKept) {  // keep
 			howKept = $a.hasClass('page-keep') ? "pub" : "pri";
-			$.ajax({
-				url: urlKeepAdd,
-				type: "POST",
-				dataType: 'json',
-				data: JSON.stringify({
+			$.postJson(xhrBase + '/keeps/add', {
 					keeps: $keeps.map(function() {
 						var a = $(this).find('.keep-title>a')[0];
 						return {title: a.title, url: a.href, isPrivate: howKept == 'pri'};
-					}).get()}),
-				contentType: 'application/json',
-				error: showMessage.bind(null, 'Could not add keeps, please try again later'),
-				success: function(data) {
+					}).get()
+				}, function(data) {
 					$detail.children().attr('data-kept', howKept).find('.page-how').attr('class', 'page-how ' + howKept);
 					$keeps.addClass("mine").find(".keep-private").toggleClass("on", howKept == "pri");
-				}});
+				}).error(showMessage.bind(null, 'Could not add keeps, please try again later'));
 		} else if ($a.hasClass('page-keep')) {  // unkeep
-			$.ajax({
-				url: urlKeepRemove,
-				type: "POST",
-				dataType: 'json',
-				data: JSON.stringify($keeps.map(function() {return {url: this.querySelector('.keep-title>a').href}}).get()),
-				contentType: 'application/json',
-				error: showMessage.bind(null, 'Could not remove keeps, please try again later'),
-				success: function(data) {
-					$detail.children().removeAttr('data-kept');
-					$detail.find('.page-coll').remove();
-					$keeps.removeClass("mine").find(".keep-private").removeClass("on");
-					var collCounts = $keeps.find(".keep-coll").remove().map(getDataId).get()
-						.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
-					for (var collId in collCounts) {
-						$collList.find(".collection[data-id=" + collId + "]").find(".keep-count").text(collections[collId].keeps -= collCounts[collId]);
-					}
-				}});
+			$.postJson(xhrBase + '/keeps/remove', $keeps.map(function() {return {url: this.querySelector('.keep-title>a').href}}).get(), function(data) {
+				$detail.children().removeAttr('data-kept');
+				$detail.find('.page-coll').remove();
+				$keeps.removeClass("mine").find(".keep-private").removeClass("on");
+				var collCounts = $keeps.find(".keep-coll").remove().map(getDataId).get()
+					.reduce(function(o, id) {o[id] = (o[id] || 0) + 1; return o}, {});
+				for (var collId in collCounts) {
+					$collList.find(".collection[data-id=" + collId + "]").find(".nav-count").text(collections[collId].keeps -= collCounts[collId]);
+				}
+			}).error(showMessage.bind(null, 'Could not remove keeps, please try again later'));
 		} else {  // toggle public/private
 			howKept = howKept == "pub" ? "pri" : "pub";
 			$detail.children().attr('data-kept', howKept).find('.page-how').attr('class', 'page-how ' + howKept);
 			$keeps.each(function() {
 				var $keep = $(this), keepLink = $keep.find('.keep-title>a')[0];
-				$.ajax({
-					url: urlKeeps + "/" + $keep.data('id') + "/update",  // TODO: support bulk operation with one server request
-					type: "POST",
-					dataType: 'json',
-					data: JSON.stringify({title: keepLink.title, url: keepLink.href, isPrivate: howKept == 'pri'}),
-					contentType: 'application/json',
-					error: showMessage.bind(null, 'Could not update keep, please try again later'),
-					success: function(data) {
+				// TODO: support bulk operation with one server request
+				$.postJson(
+					xhrBase + '/keeps/' + $keep.data('id') + '/update',
+					{title: keepLink.title, url: keepLink.href, isPrivate: howKept == 'pri'},
+					function(data) {
 						$keep.find('.keep-private').toggleClass('on', howKept == 'pri');
-					}});
+					}).error(showMessage.bind(null, 'Could not update keep, please try again later'));
 			});
 		}
 	}).on("click", ".page-coll-a", function(e) {
@@ -1181,19 +1330,19 @@ $(function() {
 			}).sort(function(c1, c2) {
 				var s1 = scores[c1.id];
 				var s2 = scores[c2.id];
-				return (s1.min - s2.min) || (s1.sum - s2.sum) || c1.name.localeCompare(c2.name, undefined, {numeric: true});
+				return (s1.min - s2.min) || (s1.sum - s2.sum) || c1.name.localeCompare(c2.name, undefined, compareSort);
 			}).splice(0, 4).map(function(c) {
 				for (var name = escapeHTMLContent(c.name), i = re.length; i--;) {
 					name = name.replace(new RegExp("^((?:[^&<]|&[^;]*;|<[^>]*>)*)\\b(" + re[i].source + ")", "gi"), "$1<b>$2</b>");
 				}
 				return {id: c.id, name: name};
 			});
-			if (!allColls.some(function(c) {return c.name.localeCompare(val, undefined, {usage: "search", sensitivity: "base"}) == 0})) {
+			if (!allColls.some(function(c) {return c.name.localeCompare(val, undefined, compareSearch) === 0})) {
 				colls.push({id: "", name: val});
 			}
 		} else {
 			colls = allColls.sort(function(c1, c2) {
-				return c2.keeps - c1.keeps || c1.name.localeCompare(c2.name, undefined, {numeric: true});
+				return c2.keeps - c1.keeps || c1.name.localeCompare(c2.name, undefined, compareSort);
 			}).splice(0, 4).map(function(c) {
 				return {id: c.id, name: escapeHTMLContent(c.name)};
 			});
@@ -1250,9 +1399,11 @@ $(function() {
 
 	// load data for persistent (view-independent) page UI
 	var promise = {
-		me: $.getJSON(urlMe, updateMe).promise(),
-		myNetworks: $.getJSON(urlNetworks, function (data) { myNetworks = data; }).promise(),
-		myPrefs: $.getJSON(urlMyPrefs, function(data) {
+		me: $.getJSON(xhrBase + '/user/me', updateMe).promise(),
+		myNetworks: $.getJSON(xhrBase + '/user/networks', function(data) {
+			myNetworks = data;
+		}).promise(),
+		myPrefs: $.getJSON(xhrBase + '/user/prefs', function(data) {
 			myPrefs = data;
 			if (myPrefs.site_left_col_width) {
 				$(".left-col").animate({width: +myPrefs.site_left_col_width}, 120);
@@ -1260,6 +1411,16 @@ $(function() {
 		}).promise()};
 	updateCollections();
 	updateNumKeeps();
+	$.getJSON(xhrBase + '/user/connections/count', function(data) {
+		$('.left-col .my-friends .nav-count').text(data.count);
+	});
+
+	$.when(promise.me).done(function() {
+		if (location.port || ~me.experiments.indexOf('website friends')) {
+			$('.my-friends').show();
+			$collList.removeClass('positioned').each(function() {this.style.top = this.offsetTop + 'px'}).addClass('positioned');
+		}
+	});
 
 	// render initial view
 	$(window).trigger('statechange');
@@ -1271,18 +1432,18 @@ $(function() {
 	// bind hover behavior later to avoid slowing down page load
 	var friendCardTmpl = Tempo.prepare('fr-card-template'); $('#fr-card-template').remove();
 	$.getScript('js/jquery-bindhover.js').done(function() {
-		$(document).bindHover(".pic.friend", function(configureHover) {
+		$(document).bindHover(".pic:not(.me)", function(configureHover) {
 			var $a = $(this), id = $a.data('id');
 			friendCardTmpl.into(this).render({
 				name: $a.data('name'),
 				picUri: formatPicUrl(id, $a.css('background-image').match(/\/([^\/]*)['"]?\)$/)[1], 200)});
 			var $el = $a.children();
 			configureHover($el, {canLeaveFor: 600, hideAfter: 4000, click: "toggle"});
-			$.getJSON(urlUser + '/' + id + '/networks', function(networks) {
+			$.getJSON(xhrBase + '/user/' + id + '/networks', function(networks) {
 				for (nw in networks) {
-					$el.find('.fr-card-nw-' + nw)
-						.toggleClass('on', networks[nw].connected)
-						.attr('href', networks[nw].profileUrl || null);
+					console.log("[networks]", nw, networks[nw]);
+					$el.find('.friend-nw-' + nw)
+						.attr('href', networks[nw].connected || null);
 				}
 			});
 		});

@@ -136,6 +136,37 @@ class ExpertRecommender(
     log2(1 + score)
   }
 
+  // score a user in any topic she knows about
+  def score(userId: Id[User]): Map[Int, Float] = {
+    val (bmsByTopic, bmClicks) = db.readOnly{ implicit s =>
+      val bms = bookmarkRepo.getByUser(userId).filter(! _.isPrivate).map(_.uriId)
+      val bmAndTopics = bms.flatMap{ bm => uriTopicRepo.getAssignedTopicsByUriId(bm) match {
+        case Some( (Some(a), _) ) => Some((bm, a))
+        case _ => None
+        }
+      }
+      val bmsByTopic = bmAndTopics.groupBy(x => x._2).mapValues{x => x.map{_._1}}
+      var bmClicks = Map.empty[Id[NormalizedURI], (Int, Int)]
+       bmAndTopics.map{_._1}.foreach{ uriId =>
+         clicksRepo.getByUserUri(userId, uriId) match {
+           case Some(clicks) => bmClicks += (uriId -> (clicks.selfClicks, clicks.otherClicks))
+           case None =>
+         }
+       }
+       (bmsByTopic, bmClicks)
+    }
+
+    var scores = Map.empty[Int, Float]
+    for((topic, uris) <- bmsByTopic){
+      val clicksInTopic = uris.flatMap{ uriId => bmClicks.get(uriId) }
+      val (selfClicksSum, otherClicksSum) = clicksInTopic.foldLeft((0, 0)){case ((selfSum, otherSum), (selfClicks, otherClicks)) => (selfSum + selfClicks, otherSum + otherClicks)}
+      val bookmarkInTopic = uris.size
+      val score = log2(1 + bookmarkInTopic + 0.2 * selfClicksSum + 0.8 * otherClicksSum)
+      scores += (topic -> score.toFloat)
+    }
+    scores
+  }
+
   // main method
   def rank(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]) = {
     val users = urisAndKeepers.map{_._2}.flatten.toSet

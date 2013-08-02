@@ -5,7 +5,7 @@ import scala.concurrent.duration._
 import scala.concurrent.future
 import scala.concurrent.Future
 import scala.util.Try
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.performance._
 import com.keepit.common.time._
@@ -27,7 +27,6 @@ import play.modules.statsd.api.Statsd
 import com.keepit.social.BasicUser
 import scala.concurrent.Promise
 
-@Singleton
 class ExtSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   searchConfigManager: SearchConfigManager,
@@ -177,7 +176,7 @@ class ExtSearchController @Inject() (
 
     val future = decorator.decorate(res)
     val filter = IdFilterCompressor.fromSetToBase64(res.filter)
-    val experts = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id)
+    val experts = monitoredAwait.result(expertsFuture, 100 milliseconds, s"suggesting experts", List.empty[Id[User]]).filter(_.id != userId.id).take(3)
     val expertNames = {
       if (experts.size == 0) List.empty[String]
       else {
@@ -185,7 +184,7 @@ class ExtSearchController @Inject() (
         experts.flatMap{idMap.get(_)}.map{x => x.firstName + " " + x.lastName}
       }
     }
-
+    log.info("experts recommended: " + expertNames.mkString(" ; "))
 
     PersonalSearchResultPacket(res.uuid, res.query,
       monitoredAwait.result(future, 5 seconds, s"getting search decorations for $userId", Nil),

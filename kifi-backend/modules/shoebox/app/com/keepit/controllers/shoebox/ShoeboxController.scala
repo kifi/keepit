@@ -66,7 +66,8 @@ class ShoeboxController @Inject() (
   socialUserInfoRepo: SocialUserInfoRepo,
   sessionRepo: UserSessionRepo,
   userChannel: UserChannel,
-  uriChannel: UriChannel)
+  uriChannel: UriChannel,
+  searchFriendRepo: SearchFriendRepo)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
@@ -327,5 +328,11 @@ class ShoeboxController @Inject() (
 
   def uriChannelCountFanout() = Action { request =>
     Ok(uriChannel.localClientCount.toString)
+  }
+
+  def searchFriends(userId: Id[User]) = Action { request =>
+    db.readOnly { implicit s =>
+      Ok(Json.toJson(searchFriendRepo.getSearchFriends(userId).map(_.id)))
+    }
   }
 }

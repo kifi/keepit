@@ -12,12 +12,11 @@ import play.api.libs.json._
 import com.keepit.model._
 import com.keepit.common.db.slick._
 import com.keepit.common.controller.ActionAuthenticator
-import com.google.inject.{ Inject, Singleton }
 import com.keepit.common.crypto.UserVoiceTokenGenerator
 import com.keepit.common.store.S3ImageStore
 import scala.concurrent.ExecutionContext.Implicits.global
+import com.google.inject.Inject
 
-@Singleton
 class FeedbackController @Inject() (
   db: Database,
   actionAuthenticator: ActionAuthenticator,

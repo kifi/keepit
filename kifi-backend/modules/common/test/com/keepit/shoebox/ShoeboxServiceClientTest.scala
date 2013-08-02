@@ -28,6 +28,7 @@ class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
 
   val fakeShoeboxResponse: PartialFunction[String, FakeClientResponse] = {
     case s if s.contains("/internal/shoebox/database/getConnectedUsers") && s.contains("1965") => "[1933,1935,1927,1921]"
+    case s if s.contains("/internal/shoebox/database/searchFriends") && s.contains("1965") => "[1933,1935,1927,1921]"
     case s if s.contains("/internal/shoebox/database/getUsers") && s.contains("1965%2C1933") => Json.stringify(Json.toJson(users))
     case s if s.contains("/internal/shoebox/database/getPhrasesByPage") && s.contains("page=0&size=2") => Json.stringify(Json.toJson(phrases))
   }
@@ -45,10 +46,10 @@ class ShoeboxServiceClientTest extends Specification with ApplicationInjector {
       }
     }
 
-    "get connected users' ids" in {
+    "get friends' ids" in {
       running(new TestApplication(shoeboxServiceClientTestModules:_*)) {
         val shoeboxServiceClient = inject[ShoeboxServiceClient]
-        val userIdsFuture = shoeboxServiceClient.getConnectedUsers(user1965.id.get)
+        val userIdsFuture = shoeboxServiceClient.getFriends(user1965.id.get)
         Await.result(userIdsFuture, Duration(5, SECONDS)) ===  Set(1933,1935,1927,1921).map(Id[User](_))
 
       }

@@ -5,7 +5,7 @@ import scala.concurrent.duration._
 import scala.concurrent.future
 import scala.concurrent.Future
 import scala.util.Try
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.common.controller.{SearchServiceController, BrowserExtensionController, ActionAuthenticator}
 import com.keepit.common.performance._
@@ -30,8 +30,6 @@ import com.newrelic.api.agent.Trace
 import play.modules.statsd.api.Statsd
 import com.keepit.social.BasicUser
 
-
-@Singleton
 class ExtCommentSearchController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   commentIndexer: CommentIndexer,

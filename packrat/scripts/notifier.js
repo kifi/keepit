@@ -9,21 +9,6 @@ var notifier = {
   show: function(data) {
     var o = data.details;
     switch (data.category) {
-      case "comment":
-        KifiNotification.add({
-          title: o.author.firstName + " " + o.author.lastName,
-          subtitle: "Wrote a new KiFi Comment",
-          contentHtml: o.text,
-          link: o.title,
-          image: cdnBase + "/users/" + o.author.id + "/pics/100/0.jpg",
-          sticky: false,
-          showForMs: 60000,
-          clickAction: function() {
-            api.port.emit("open_deep_link", {nUri: o.page, locator: o.locator});
-            return false;
-          }
-        });
-        break;
       case "message":
         KifiNotification.add({
           title: o.authors[0].firstName + " " + o.authors[0].lastName,

@@ -88,6 +88,7 @@ object Shoebox extends Service {
     def uriChannelFanout() = ServiceRoute(POST, "/internal/shoebox/channel/uri")
     def uriChannelCountFanout() = ServiceRoute(POST, "/internal/shoebox/channel/uriCount")
     def suggestExperts() = ServiceRoute(POST, "/internal/shoebox/learning/suggestExperts")
+    def getSearchFriends(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/searchFriends", Param("userId", userId))
   }
 }
 
@@ -98,7 +99,7 @@ object Search extends Service {
     def commentReindex() = ServiceRoute(GET, "/internal/search/comment/reindex")
     def commentDumpLuceneDocument(id: Id[Comment]) = ServiceRoute(POST, "/internal/search/comment/dumpDoc", Param("id", id))
     def uriGraphInfo() = ServiceRoute(GET, "/internal/search/uriGraph/info")
-    def sharingUserInfo(userId: Id[User], uriIds: String) = ServiceRoute(GET, "/internal/search/uriGraph/sharingUserInfo", Param("userId", userId), Param("uriIds", uriIds))
+    def sharingUserInfo(id: Id[User]) = ServiceRoute(POST, s"/internal/search/uriGraph/sharingUserInfo/${id.id}")
     def updateURIGraph() = ServiceRoute(POST, "/internal/search/uriGraph/update")
     def uriGraphReindex() = ServiceRoute(POST, "/internal/search/uriGraph/reindex")
     def uriGraphDumpLuceneDocument(id: Id[User]) = ServiceRoute(POST, s"/internal/search/uriGraph/dumpDoc/${id.id}")

@@ -29,7 +29,7 @@ import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent.duration._
 
 @Singleton
-class SearchStatisticsExtractorFactory @Inject() (
+class SearchStatisticsExtractorProvider @Inject() (
   uriGraph: URIGraph,
   articleIndexer: ArticleIndexer, searchConfigManager: SearchConfigManager, mainSearcherFactory: MainSearcherFactory, parserFactory: MainQueryParserFactory,
   browsingHistoryBuilder: BrowsingHistoryBuilder, clickHistoryBuilder: ClickHistoryBuilder, resultClickTracker: ResultClickTracker, store: MongoEventStore,
@@ -153,7 +153,7 @@ class SearchStatisticsHelperSearcher(queryString: String, userId: Id[User], targ
   val context: Option[String] = None        // TODO: similar as above. Default context is empty
 //  val idFilter = IdFilterCompressor.fromBase64ToSet(context.getOrElse(""))
 
-  val friendIds = monitoredAwait.result(shoeboxServiceClient.getConnectedUsers(userId), 5 seconds, s"get friends ids for userId $userId")
+  val friendIds = monitoredAwait.result(shoeboxServiceClient.getSearchFriends(userId), 5 seconds, s"get friends ids for userId $userId")
   val searchFilter = filter match {
     case Some("m") =>
       SearchFilter.mine(context, monitoredAwait = monitoredAwait)
