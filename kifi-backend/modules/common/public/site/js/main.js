@@ -556,24 +556,26 @@ $(function() {
 	function prepInviteTab() {
 		$.getJSON(xhrBase + '/user/all-connections', function(friends) {
 			console.log('[prepInviteTab] friends:', friends.length);
+			nwFriendsTmpl.render(friends);
 			function filterFriends() {
 				var nw = $('.invite-filters>.selected').data('nw');
 				var words = $('.invite-filter').val().toLowerCase().split(/\s+/);
-				var filteredFriends = friends.filter(function (fr) {
-					if (nw && nw != fr.value.split('/')[0]) {
-						return false;
-					}
+				var friendMatches = {};
+				friends.forEach(function (fr) {
+					if (nw && nw != fr.value.split('/')[0]) return;
 					for (var i = 0; i < words.length; i++) {
 						if (~(' ' + fr.label).toLowerCase().indexOf(' ' + words[i])) {
-							return true;
+							return friendMatches[fr.value] = true;
 						}
 					}
-					return false;
 				});
-				nwFriendsTmpl.render(filteredFriends);
+				$('.invite-friends .invite-friend').each(function () {
+					var $this = $(this);
+					$this.toggleClass('no-match', !friendMatches[$this.data('value')])
+				});
 			}
 			$('.invite-filters>a').click(function () {
-				$(this).addClass('selected').siblings().removeClass('selected').hide().show();
+				$(this).addClass('selected').siblings().removeClass('selected');
 				filterFriends();
 			});
 			$('.invite-filter').keyup(filterFriends).keyup();
