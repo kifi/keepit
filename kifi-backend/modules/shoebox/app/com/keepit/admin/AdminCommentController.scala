@@ -19,6 +19,8 @@ class AdminCommentController @Inject() (
   userNotifier: UserNotifier)
     extends AdminController(actionAuthenticator) {
 
+  implicit val dbMasterSlave = Database.Slave
+
   def followsView = AdminHtmlAction { implicit request =>
     val uriAndUsers = db.readOnly { implicit s =>
       followRepo.all() map {f => (userRepo.get(f.userId), f, normalizedURIRepo.get(f.uriId))

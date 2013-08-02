@@ -85,13 +85,11 @@ class Database @Inject() (
 
   private def resolveDb(dbMasterSlave: DBMasterSlave) = dbMasterSlave match {
     case Master =>
-      log.info(s"session using Master db")
       Statsd.increment(s"db.read.master")
       db.masterDb
     case Slave =>
       db.slaveDb match {
         case None =>
-          log.info(s"session defaulting to Master db")
           Statsd.increment(s"db.read.master")
           db.masterDb
         case Some(handle) =>
