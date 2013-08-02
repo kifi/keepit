@@ -81,21 +81,33 @@ class Database @Inject() (
   def readWriteAsync[T](f: RWSession => T): Future[T] = future { readWrite(f) }
   def readWriteAsync[T](attempts: Int)(f: RWSession => T): Future[T] = future { readWrite(attempts)(f) }
 
-  def readOnly[T](f: ROSession => T)(implicit dbMasterSlave: DBMasterSlave = Master): T = readOnlyWithDb(db.masterDb, f)
+  def readOnly[T](f: ROSession => T)(implicit dbMasterSlave: DBMasterSlave = Master): T = readOnly(dbMasterSlave)(f)
 
-  def readOnly[T](dbMasterSlave: DBMasterSlave = Master)(f: ROSession => T): T = dbMasterSlave match {
-    case Master => readOnlyWithDb(db.masterDb, f)
-    case Slave => readOnlyWithDb(db.slaveDb.getOrElse(db.masterDb), f)
+  private def resolveDb(dbMasterSlave: DBMasterSlave) = dbMasterSlave match {
+    case Master =>
+      log.info(s"session using Master db")
+      Statsd.increment(s"db.read.master")
+      db.masterDb
+    case Slave =>
+      db.slaveDb match {
+        case None =>
+          log.info(s"session defaulting to Master db")
+          Statsd.increment(s"db.read.master")
+          db.masterDb
+        case Some(handle) =>
+          log.info(s"session using Slave db")
+          Statsd.increment(s"db.read.slave")
+          handle
+      }
   }
 
-  private def readOnlyWithDb[T](handle: SlickDatabase, f: ROSession => T): T = enteringSession {
+  def readOnly[T](dbMasterSlave: DBMasterSlave = Master)(f: ROSession => T): T = enteringSession {
+    val handle = resolveDb(dbMasterSlave)
     var s: Option[Session] = None
     val ro = new ROSession({
       s = Some(sessionProvider.createReadOnlySession(handle))
       val session = s.get
       val url = session.metaData.getURL
-      log.info(s"using session of $url")
-      Statsd.increment(s"db.read.$url")
       session
     })
     try f(ro) finally s.foreach(_.close())
