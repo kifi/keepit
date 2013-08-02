@@ -4,9 +4,9 @@ import os
 
 fapi.env.user = "fortytwo"
 
-#used to check if other machines are up. 
+#used to check if other machines are up.
 #Needs to be at least two, so they can check each other.
-master_hosts = ['b01', 'b02'] 
+master_hosts = ['b01', 'b02']
 
 
 def get_hosts(service_type):
@@ -26,14 +26,14 @@ def check_host(host):
             curlurlurlurl = "http://{0}:9000/internal/clusters/mystatus".format(host)
             result = fapi.run('curl ' + curlurlurlurl)
             return result.lower().strip()=="up"
-        except: 
+        except:
             return False
     return fapi.execute(do_check_up, hosts=[h for h in master_hosts if h!=host][:1]).values()[0]
 
 
 def verify_up(host, retries):
     """
-    Check if the given host is in status "UP", retrying 'retries' times with exponential backoff. 
+    Check if the given host is in status "UP", retrying 'retries' times with exponential backoff.
     """
     retries = int(retries)
     if retries<0:
@@ -59,7 +59,7 @@ def get_last(number=1):
 @fapi.parallel
 def upload(service_type, jobName='shoebox'):
     fapi.put('/var/lib/jenkins/jobs/{0}/lastSuccessful/archive/kifi-backend/modules/{1}/dist/{1}-*'.format(jobName, service_type), '~/repo')
-    
+
 def unpack():
     with fapi.cd('~/run'):
         fapi.run('unzip -o ~/repo/{0}.zip'.format(get_last()))
@@ -70,7 +70,7 @@ def restart(service_type, number=1):
 
 def stop(service_type):
     message_irc("Taking down %s on %s." % (service_type.upper(), fapi.env.host))
-    with cd('~/run'):
+    with fapi.cd('~/run'):
         fapi.run('/etc/init.d/{0} stop'.format(service_type))
 
 def start(service_type, number=1):
@@ -84,8 +84,8 @@ def start(service_type, number=1):
 
 def rollback(service_type, host, number=1):
     message_irc("Rolling back %s on %s by %s version." % (service_type.upper(), host, number))
-    fapi.execute(restart,service_type, number+1, hosts=[host])
-    #move all previous code versions to "rolled_back" dir
+    fapi.execute(restart,service_type, str(int(number)+1), hosts=[host])
+    #move all previous code versions to "rollback" dir
     try:
         versions = []
         for i in range(number):
@@ -101,7 +101,6 @@ def rollback(service_type, host, number=1):
     except Exception, e:
         print "WARNING: Could not move rolled back deploy files:", str(e)
         message_irc("WARNING: Could not move rolled back deploy files: " + str(e))
-
 
 
 def deploy(service_type, mode="safe", retries="5", do_rollback=True):
@@ -122,9 +121,10 @@ def deploy(service_type, mode="safe", retries="5", do_rollback=True):
         message_irc("Host %s is up." % host) if is_up else message_irc("Host %s is NOT up." % host)
         if mode=="safe" and not is_up:
             #rollback
-            if do_rollback: fapi.execute(rollback,service_type, host, 1)
+            if do_rollback: rollback(service_type, host, 1)
             message_irc("Aborting Deploy! (previous hosts may have new version running)")
             break
     message_irc("----- Deployment Ended")
+
 
 
