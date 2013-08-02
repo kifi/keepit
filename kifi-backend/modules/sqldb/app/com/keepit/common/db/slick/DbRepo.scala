@@ -52,7 +52,7 @@ trait DbRepo[M <: Model[M]] extends Repo[M] with DelayedInit {
     db.initTable(table)
   }
 
-  def descTable(): String = db.handle.withSession {
+  def descTable(): String = db.masterDb.withSession {
     table.ddl.createStatements mkString "\n"
   }
 

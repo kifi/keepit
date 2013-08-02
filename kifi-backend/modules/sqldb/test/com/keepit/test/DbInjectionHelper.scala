@@ -46,7 +46,7 @@ trait DbInjectionHelper { self: InjectorProvider =>
   }
 
   private def readWrite[T](db: H2)(f: RWSession => T) = {
-    val s = db.handle.createSession.forParameters(rsConcurrency = ResultSetConcurrency.Updatable)
+    val s = db.masterDb.createSession.forParameters(rsConcurrency = ResultSetConcurrency.Updatable)
     try {
       s.withTransaction {
         f(new RWSession(s))
