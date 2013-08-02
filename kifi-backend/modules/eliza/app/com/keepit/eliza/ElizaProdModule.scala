@@ -1,7 +1,7 @@
-package com.keepit.bender
+package com.keepit.eliza
 
 import com.keepit.social.RemoteSecureSocialModule
-import com.keepit.common.cache.{EhCacheCacheModule, MemcachedCacheModule, BenderCacheModule}
+import com.keepit.common.cache.{EhCacheCacheModule, MemcachedCacheModule, ElizaCacheModule}
 import com.keepit.shoebox.ProdShoeboxServiceClientModule
 import com.keepit.common.healthcheck.ProdHealthCheckModule
 import com.keepit.common.net.ProdHttpClientModule
@@ -9,11 +9,11 @@ import com.keepit.inject.ProdFortyTwoModule
 import com.keepit.common.actor.ProdActorSystemModule
 import com.keepit.common.zookeeper.ProdDiscoveryModule
 
-case class BenderProdModule() extends BenderModule(
+case class ElizaProdModule() extends ElizaModule(
 
   // Common Functional Modules
   fortyTwoModule = ProdFortyTwoModule(),
-  cacheModule = BenderCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
+  cacheModule = ElizaCacheModule(MemcachedCacheModule(), EhCacheCacheModule()),
   secureSocialModule = RemoteSecureSocialModule(),
   shoeboxServiceClientModule = ProdShoeboxServiceClientModule(),
   actorSystemModule = ProdActorSystemModule(),
@@ -21,5 +21,5 @@ case class BenderProdModule() extends BenderModule(
   healthCheckModule = ProdHealthCheckModule(),
   httpClientModule = ProdHttpClientModule()
 
-  // Bender Functional Modules
+  // Eliza Functional Modules
 )
