@@ -76,11 +76,12 @@ class Database @Inject() (
     DatabaseSessionLock.inSession.withValue(true) { f }
   }
 
-  def readOnlyAsync[T](f: ROSession => T): Future[T] = future { readOnly(f) }
+  def readOnlyAsync[T](f: ROSession => T)(implicit dbMasterSlave: DBMasterSlave = Master): Future[T] = future { readOnly(dbMasterSlave)(f) }
+  def readOnlyAsync[T](dbMasterSlave: DBMasterSlave = Master)(f: ROSession => T): Future[T] = future { readOnly(dbMasterSlave)(f) }
   def readWriteAsync[T](f: RWSession => T): Future[T] = future { readWrite(f) }
   def readWriteAsync[T](attempts: Int)(f: RWSession => T): Future[T] = future { readWrite(attempts)(f) }
 
-  def readOnly[T](f: ROSession => T): T = readOnlyWithDb(db.masterDb, f)
+  def readOnly[T](f: ROSession => T)(implicit dbMasterSlave: DBMasterSlave = Master): T = readOnlyWithDb(db.masterDb, f)
 
   def readOnly[T](dbMasterSlave: DBMasterSlave = Master)(f: ROSession => T): T = dbMasterSlave match {
     case Master => readOnlyWithDb(db.masterDb, f)
@@ -91,7 +92,11 @@ class Database @Inject() (
     var s: Option[Session] = None
     val ro = new ROSession({
       s = Some(sessionProvider.createReadOnlySession(handle))
-      s.get
+      val session = s.get
+      val url = session.metaData.getURL
+      log.info(s"using session of $s")
+      Statsd.increment(s"db.read.$url")
+      session
     })
     try f(ro) finally s.foreach(_.close())
   }

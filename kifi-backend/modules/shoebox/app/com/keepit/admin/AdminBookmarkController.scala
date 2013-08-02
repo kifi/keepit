@@ -34,6 +34,8 @@ class AdminBookmarksController @Inject() (
   s3ScreenshotStore: S3ScreenshotStore)
     extends AdminController(actionAuthenticator) {
 
+  implicit val dbMasterSlave = Database.Slave
+
   def edit(id: Id[Bookmark]) = AdminHtmlAction { request =>
     Async {
       db.readOnlyAsync { implicit session =>
