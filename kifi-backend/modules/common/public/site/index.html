@@ -273,7 +273,10 @@
 								{% endif %}
 							</div>
 							{% if !status %}
+							<form method="POST">
+								<input type="hidden" name="fullSocialId" value="{{value}}">
 								<a class="invite-button" href="javascript:"></a>
+							</form>
 							{% endif %}
 						</li>
 					</ul>
