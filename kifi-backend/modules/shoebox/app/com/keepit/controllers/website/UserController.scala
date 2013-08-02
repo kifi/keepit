@@ -254,7 +254,7 @@ class UserController @Inject() (
 
   def getAllConnections = AuthenticatedJsonAction { request =>
     val connections = db.readOnly { implicit conn =>
-      socialUserRepo.getByUser(request.user.id.get) flatMap { su =>
+      (socialUserRepo.getByUser(request.user.id.get) flatMap { su =>
         socialConnectionRepo.getSocialUserConnections(su.id.get) map { suc =>
 
           val status = suc.userId map (_ => "joined") getOrElse {
@@ -263,8 +263,8 @@ class UserController @Inject() (
             } getOrElse ""
           }
           (suc, status)
-        } sortBy { case (sui, status) => s"$status ${sui.fullName}" }
-      }
+        }
+      }) sortBy { case (sui, status) => s"$status ${sui.fullName}" }
     }
 
     Ok(JsArray(connections.map { conn =>
