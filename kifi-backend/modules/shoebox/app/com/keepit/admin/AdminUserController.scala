@@ -59,6 +59,7 @@ class AdminUserController @Inject() (
     invitationRepo: InvitationRepo,
     clock: Clock) extends AdminController(actionAuthenticator) {
 
+  implicit val dbMasterSlave = Database.Slave
 
   def merge = AdminHtmlAction { implicit request =>
     // This doesn't do a complete merge. It's designed for cases where someone accidentally creates a new user when
