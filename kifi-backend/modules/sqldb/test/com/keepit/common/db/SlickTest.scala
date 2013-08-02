@@ -81,6 +81,10 @@ class SlickTest extends Specification with DbTestInjector {
         inject[Database].readOnly(Database.Slave){ implicit session =>
           repo.count(session) === 2
         }
+
+        inject[Database].readOnly{ implicit session =>
+          repo.count(session) === 2
+        }(Database.Slave)
       }
     }
 
