@@ -7,7 +7,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.collection.mutable.Queue
 import akka.actor.Actor
 import scala.util.{Success, Failure}
-import com.keepit.common.actor.ActorFactory
+import com.keepit.common.actor.ActorProvider
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import scala.concurrent.duration._
 import akka.util.Timeout
@@ -64,19 +64,17 @@ trait RemotePostOfficePlugin extends Plugin {
 }
 
 class RemotePostOfficePluginImpl @Inject() (
-    actorFactory: ActorFactory[RemotePostOfficeActor])
+    actorProvider: ActorProvider[RemotePostOfficeActor])
   extends RemotePostOfficePlugin with SchedulingPlugin {
 
   val schedulingProperties = SchedulingProperties.AlwaysEnabled
 
   implicit val actorTimeout = Timeout(5 seconds)
-  private lazy val actor = actorFactory.get()
-
   override def enabled: Boolean = true
   override def onStart() {
-     scheduleTask(actorFactory.system, 30 seconds, 3 minutes, actor, SendQueuedEmails)
+     scheduleTask(actorProvider.system, 30 seconds, 3 minutes, actorProvider.actor, SendQueuedEmails)
   }
-  def sendMail(mail: ElectronicMail) = actor ! SendEmail(mail)
+  def sendMail(mail: ElectronicMail) = actorProvider.actor ! SendEmail(mail)
 }
 
 class RemotePostOfficeImpl @Inject() (

@@ -14,9 +14,8 @@ import com.keepit.common.db.slick._
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.db.ExternalId
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 
-@Singleton
 class OnboardingController @Inject() (db: Database,
   userRepo: UserRepo,
   userValueRepo: UserValueRepo,

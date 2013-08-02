@@ -2,7 +2,7 @@ package com.keepit.controllers.search
 
 import scala.Some
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.analytics.MongoEventStore
 import com.keepit.common.controller.SearchServiceController
 import com.keepit.common.db._
@@ -12,7 +12,6 @@ import com.keepit.search._
 import play.api.libs.json.Json
 import play.api.mvc.Action
 
-@Singleton
 class SearchConfigController @Inject() (
   configManager: SearchConfigManager,
   store: MongoEventStore)

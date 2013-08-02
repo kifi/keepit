@@ -6,7 +6,7 @@ import com.keepit.inject.AppScoped
 import com.keepit.common.healthcheck.{HealthcheckMailSender, LocalHealthcheckMailSender}
 import net.codingwell.scalaguice.ScalaModule
 import com.keepit.common.plugin.SchedulingProperties
-import com.keepit.common.actor.ActorFactory
+import com.keepit.common.actor.ActorProvider
 
 trait MailModule extends ScalaModule
 
@@ -49,12 +49,12 @@ case class DevMailModule() extends MailModule {
   @AppScoped
   @Provides
   def mailToKeepPlugin(
-    actorFactory: ActorFactory[MailToKeepActor],
+    actorProvider: ActorProvider[MailToKeepActor],
     mailToKeepServerSettings: Option[MailToKeepServerSettings],
     schedulingProperties: SchedulingProperties): MailToKeepPlugin = {
     mailToKeepServerSettingsOpt match {
       case None => new FakeMailToKeepPlugin()
-      case _ => new MailToKeepPluginImpl(actorFactory, schedulingProperties)
+      case _ => new MailToKeepPluginImpl(actorProvider, schedulingProperties)
     }
   }
 }

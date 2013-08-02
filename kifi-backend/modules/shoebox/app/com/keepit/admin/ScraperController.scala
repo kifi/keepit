@@ -1,5 +1,6 @@
 package com.keepit.controllers.admin
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.data._
 import java.util.concurrent.TimeUnit
 import play.api._
@@ -25,12 +26,11 @@ import com.keepit.scraper.DuplicateDocumentDetection
 import views.html
 
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
-import com.google.inject.{Inject, Singleton, Provider}
+import com.google.inject.Inject
 
 case class DisplayedDuplicate(id: Id[DuplicateDocument], normUriId: Id[NormalizedURI], url: String, percentMatch: Double)
 case class DisplayedDuplicates(normUriId: Id[NormalizedURI], url: String, dupes: Seq[DisplayedDuplicate])
 
-@Singleton
 class ScraperController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
@@ -49,8 +49,11 @@ class ScraperController @Inject() (
     extends AdminController(actionAuthenticator) {
 
   def scrape = AdminHtmlAction { implicit request =>
-    val articles = scraper.scrape()
-    Ok(html.admin.scrape(articles))
+    Async {
+      scraper.scrapePending() map { articles =>
+        Ok(html.admin.scrape(articles))
+      }
+    }
   }
 
   def searchScraper = AdminHtmlAction {implicit request =>
@@ -67,12 +70,24 @@ class ScraperController @Inject() (
   }
 
   def getScraped(id: Id[NormalizedURI]) = AdminHtmlAction { implicit request =>
-    val article = articleStore.get(id).get
-    val (uri, info) = db.readOnly { implicit s =>
-      (normalizedURIRepo.get(article.id), scrapeInfoRepo.getByUri(article.id))
+    def errorMsg(id: Id[NormalizedURI]) = {
+      val uri = db.readOnly{ implicit s =>
+        normalizedURIRepo.get(id)
+      }
+      Ok(s"Oops, this page was not scraped.\ntitle = ${uri.title.getOrElse("N/A")}\nurl = ${uri.url}")
     }
 
-    Ok(html.admin.article(article, uri, info.get))
+    articleStore.get(id) match {
+      case Some(article) => {
+        db.readOnly { implicit s =>
+          (normalizedURIRepo.get(article.id), scrapeInfoRepo.getByUri(article.id))
+        } match {
+          case (uri, Some(info)) => Ok(html.admin.article(article, uri, info))
+          case (uri, None) => errorMsg(id)
+        }
+      }
+      case None => errorMsg(id)
+    }
   }
 
   def getUnscrapable() = AdminHtmlAction { implicit request =>

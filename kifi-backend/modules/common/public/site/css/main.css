@@ -216,13 +216,14 @@ input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; padd
 .invite-filters>a[data-nw=facebook] {background-color: #637ab8}
 .invite-filters>a[data-nw=linkedin] {background-color: #4f83c3}
 .invite-name {font-size: 16px; color: #34495e; -webkit-font-smoothing: antialiased}
-.invite-friend {margin-top: 12px; display: inline-block; vertical-align: top; width: 49%; min-width: 270px; background-color: #eff2f7; padding: 10px 16px 10px 10px; position: relative; -moz-box-sizing: border-box; box-sizing: border-box}
-.invite-friend:nth-child(odd) {margin-right: 2%}
+.invite-friends {margin-right: -2%;}
+.invite-friend {margin-top: 12px; display: inline-block; vertical-align: top; margin-right: 2%; width: 48%; min-width: 270px; background-color: #eff2f7; padding: 10px 16px 10px 10px; position: relative; -moz-box-sizing: border-box; box-sizing: border-box;}
+.invite-friend.no-match {display: none}
 .invite-pic {float: left; width: 64px; height: 64px; border-radius: 2px; margin-right: 12px}
 .invite-status {font-size: 13px; font-weight: 300; color: #67829c}
 .invite-button {position: absolute; top: 25px; right: 20px; height: 32px; width: 32px; background-color: #6fa6ef; border-radius: 50%; text-align: center}
 .invite-button::before {content: " "; display: inline-block; margin-top: 8px; height: 16px; background: url(../img/friend-actions.png) -70px; background-size: auto 16px; width: 20px; position: relative; left: 1px}
-.invite-friends-loading {margin-top: 12px}
+.invite-friends-loading {margin-top: 12px;}
 
 .friend-reqs-status {margin-bottom: 4px}
 .friend-reqs-status,

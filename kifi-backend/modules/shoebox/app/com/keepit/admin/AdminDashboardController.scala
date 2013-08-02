@@ -17,6 +17,7 @@ import play.api._
 import play.api.libs.json.Json
 import views.html
 
+//this is a singleton, bad pattern but the code here will no scale and soon it will be refactored anyway
 @Singleton
 class AdminDashboardController @Inject() (
   actionAuthenticator: ActionAuthenticator,

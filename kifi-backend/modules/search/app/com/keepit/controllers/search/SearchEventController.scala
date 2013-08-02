@@ -8,7 +8,9 @@ import com.keepit.search.{ResultClicked, ResultClickTracker}
 import play.api.libs.json.{JsObject, JsString, Json}
 import play.api.mvc.Action
 
-class SearchEventController @Inject()(resultClickTracker: ResultClickTracker) extends SearchServiceController {
+class SearchEventController @Inject()(
+	resultClickTracker: ResultClickTracker) 
+  extends SearchServiceController {
 
   def logResultClicked = Action(parse.json) { request =>
     val rc = Json.fromJson[ResultClicked](request.body).get

@@ -2,16 +2,17 @@ package com.keepit.common.actor
 
 import akka.actor._
 import akka.testkit.TestActorRef
-import com.google.inject.{ImplementedBy, Provider, Inject}
+import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
 import com.keepit.common.akka.AlertingActor
 
-class ActorFactory[T <: Actor] @Inject() (
+@Singleton
+class ActorProvider[T <: Actor] @Inject() (
     systemProvider: Provider[ActorSystem],
     builder: ActorBuilder,
     provider: Provider[T]) {
 
-  def system: ActorSystem = systemProvider.get
-  def get(): ActorRef = builder(system, provider)
+  lazy val system: ActorSystem = systemProvider.get
+  lazy val actor: ActorRef = builder(system, provider)
 }
 
 @ImplementedBy(classOf[ActorBuilderImpl])

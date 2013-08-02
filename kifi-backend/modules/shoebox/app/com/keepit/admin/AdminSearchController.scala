@@ -2,7 +2,7 @@ package com.keepit.controllers.admin
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-import com.google.inject.{Inject, Singleton}
+import com.google.inject.Inject
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
@@ -13,7 +13,6 @@ import views.html
 
 case class ArticleSearchResultHitMeta(uri: NormalizedURI, users: Seq[User], scoring: Scoring, hit: ArticleHit)
 
-@Singleton
 class AdminSearchController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     db: Database,

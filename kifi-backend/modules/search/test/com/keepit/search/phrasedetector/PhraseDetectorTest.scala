@@ -20,7 +20,7 @@ import scala.collection.mutable.ListBuffer
 class PhraseDetectorTest extends Specification with ApplicationInjector {
 
   "PhraseDetectorTest" should {
-    "detects phrases in input text" in {
+    "detects all phrases in input text" in {
         running(new DeprecatedEmptyApplication()) {
         val indexer = new PhraseIndexerImpl(new RAMDirectory(), new IndexWriterConfig(Version.LUCENE_41, DefaultAnalyzer.forIndexing), inject[HealthcheckPlugin], inject[ShoeboxServiceClient])
         val lang = Lang("en")
@@ -37,8 +37,8 @@ class PhraseDetectorTest extends Specification with ApplicationInjector {
         val testcases = List(
           ("human genome", Set((0,2))),
           ("human genome research", Set((0,2))),
-          ("human genome research project", Set((0,2),(1,3))),
-          ("human genome project", Set((0,3))),
+          ("human genome research project", Set((0,2),(1,3),(2,2))),
+          ("human genome project", Set((0,2),(0,3))),
           ("product research project", Set((0,2),(1,2))),
           ("large classroom project", Set((1,2))))
 
@@ -60,37 +60,37 @@ class PhraseDetectorTest extends Specification with ApplicationInjector {
         ok === true
       }
     }
-    
-    
+
+
     "removal inclusion phrases" in {
       var phrases = Set((0, 2), (1, 1), (2, 3), (2, 4), (3,2), (4,3))   // (position, len)
       RemoveOverlapping.removeInclusions(phrases) === Set((0,2), (2, 4), (4, 3))
-      
+
       phrases = Set.empty[(Int, Int)]
       RemoveOverlapping.removeInclusions(phrases) === phrases
     }
-    
+
     "interval decomposer decompses correctly" in {
       var phrases = Set((0, 4), (0, 1), (0,2), (1, 3), (2, 1), (2,2), (2, 3))
       var intervals = Map( 0 -> Set(1, 2, 4), 1 -> Set(3), 2 -> Set(1, 2, 3))
       RemoveOverlapping.decompose((0,4), intervals) === Some(Set( ListBuffer((0, 4)), ListBuffer((0, 2), (2, 2)), ListBuffer((0, 1), (1, 3)) ))
-      
+
       RemoveOverlapping.decompose((0,6), intervals) === None
     }
-    
+
     "correctly and weakly remove overlapping" in {
       var phrases = Set((0, 4), (0, 1), (0,2), (1, 3), (2, 1), (2,2), (2, 4))
       RemoveOverlapping.weakRemoveInclusions(phrases) === Set((0, 2), (2, 2), (2, 4))
-      
+
       phrases = Set((0, 10), (0, 6), (6, 4), (0, 2), (2, 4), (6, 1), (7, 3), (1, 8), (2, 2), (4, 2), (6, 3))
       RemoveOverlapping.weakRemoveInclusions(phrases) === Set((0, 2), (2, 2), (4, 2), (6, 1), (7, 3))
-      
+
       phrases = Set((0,3), (0, 1), (1, 2))
       RemoveOverlapping.weakRemoveInclusions(phrases) === Set((0, 1), (1, 2))
-      
+
       phrases = Set((0,3))
       RemoveOverlapping.weakRemoveInclusions(phrases) === Set((0, 3))
-      
+
       phrases = Set.empty[(Int, Int)]
       RemoveOverlapping.removeInclusions(phrases) === phrases
     }
