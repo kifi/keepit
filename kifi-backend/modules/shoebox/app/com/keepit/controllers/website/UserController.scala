@@ -257,14 +257,13 @@ class UserController @Inject() (
       socialUserRepo.getByUser(request.user.id.get) flatMap { su =>
         socialConnectionRepo.getSocialUserConnections(su.id.get) map { suc =>
 
-          val status = if(suc.userId.isDefined) "joined"
-            else {
-              val existingInvite = invitationRepo.getByRecipient(suc.id.get)
-              if(existingInvite.isDefined && existingInvite.get.state != InvitationStates.INACTIVE) "invited"
-              else ""
-            }
+          val status = suc.userId map { _ =>
+            invitationRepo.getByRecipient(suc.id.get) collect {
+              case inv if inv.state != InvitationStates.INACTIVE => "invited"
+            } getOrElse ""
+          } getOrElse "joined"
           (suc, status)
-        }
+        } sortBy { case (sui, status) => s"$status ${sui.fullName}" }
       }
     }
 
