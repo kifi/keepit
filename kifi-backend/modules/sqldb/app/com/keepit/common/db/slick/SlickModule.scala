@@ -23,17 +23,6 @@ abstract class SlickModule(dbInfo: DbInfo) extends ScalaModule {
   }
 }
 
-trait DbInfo {
-  def database: SlickDatabase
-  def driverName: String
-  def initTable[M](withDDL: {def ddl: DDL}): Unit = ???
-}
-
-case class ShoeboxDbInfo() extends DbInfo {
-  def database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
-  def driverName = Play.current.configuration.getString("db.shoebox.driver").get
-}
-
 case class ShoeboxSlickModule() extends SlickModule(ShoeboxDbInfo()) {
 
   @Provides @Singleton
