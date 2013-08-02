@@ -1,6 +1,7 @@
 package com.keepit.shoebox
 
 import com.keepit.common.db.slick._
+import scala.util._
 import scala.slick.lifted.DDL
 import scala.slick.session.{Database => SlickDatabase}
 
@@ -13,7 +14,14 @@ import play.api.Play
 import akka.actor.ActorSystem
 
 case class ShoeboxDbInfo() extends DbInfo {
-  def database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
+  def masterDatabase = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
+  // can't probe for existing (or not) db, must try and possibly fail.
+  override def slaveDatabase = Try(SlickDatabase.forDataSource(DB.getDataSource("shoebox-slave")(Play.current))) match {
+    case Success(db) => Some(db)
+    case Failure(e) =>
+      println(s"could not load slave db for: $e")
+      None
+  }
   def driverName = Play.current.configuration.getString("db.shoebox.driver").get
 }
 

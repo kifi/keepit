@@ -47,9 +47,8 @@ object TestDbInfo {
   val url = "jdbc:h2:mem:shoebox;USER=shoebox;MODE=MYSQL;MVCC=TRUE;DB_CLOSE_DELAY=-1"
   val dbInfo = new DbInfo() {
     //later on we can customize it by the application name
-    lazy val database = SlickDatabase.forURL(url = url)
+    lazy val masterDatabase = SlickDatabase.forURL(url = url)
+    override def slaveDatabase = Some(masterDatabase)
     lazy val driverName = H2.driverName
-    //    lazy val database = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
-    //    lazy val driverName = Play.current.configuration.getString("db.shoebox.driver").get
   }
 }
