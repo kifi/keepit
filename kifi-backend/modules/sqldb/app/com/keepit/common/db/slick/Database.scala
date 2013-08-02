@@ -94,7 +94,7 @@ class Database @Inject() (
       s = Some(sessionProvider.createReadOnlySession(handle))
       val session = s.get
       val url = session.metaData.getURL
-      log.info(s"using session of $s")
+      log.info(s"using session of $url")
       Statsd.increment(s"db.read.$url")
       session
     })
