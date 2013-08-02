@@ -27,7 +27,8 @@ trait DataBaseComponent {
   val dialect: DatabaseDialect[_]
   // A database instance to which connections can be created.
   // Encapsulates either a DataSource or parameters for DriverManager.getConnection().
-  val handle: SlickDatabase
+  val masterDb: SlickDatabase
+  val slaveDb: Option[SlickDatabase]
 
   def getSequence(name: String): DbSequence
 

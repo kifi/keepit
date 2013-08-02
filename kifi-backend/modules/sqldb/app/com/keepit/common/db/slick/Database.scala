@@ -76,14 +76,14 @@ class Database @Inject() (
   def readOnly[T](f: ROSession => T): T = enteringSession {
     var s: Option[Session] = None
     val ro = new ROSession({
-      s = Some(sessionProvider.createReadOnlySession(db.handle))
+      s = Some(sessionProvider.createReadOnlySession(db.masterDb))
       s.get
     })
     try f(ro) finally s.foreach(_.close())
   }
 
   def readWrite[T](f: RWSession => T): T = enteringSession {
-    val s = sessionProvider.createReadWriteSession(db.handle)
+    val s = sessionProvider.createReadWriteSession(db.masterDb)
     try {
       s.withTransaction {
         f(new RWSession(s))
