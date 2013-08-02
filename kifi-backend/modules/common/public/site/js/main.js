@@ -558,7 +558,7 @@ $(function() {
 			console.log('[prepInviteTab] friends:', friends.length);
 			nwFriendsTmpl.render(friends);
 			function filterFriends() {
-				var nw = $('.invite-filters>.selected').data('nw');
+				var nw = $('.invite-filters').attr('data-nw-selected');
 				var words = $('.invite-filter').val().toLowerCase().split(/\s+/);
 				var matches = {};
 				friends.forEach(function (fr) {
@@ -572,7 +572,7 @@ $(function() {
 				});
 			}
 			$('.invite-filters>a').click(function () {
-				$(this).addClass('selected').siblings().removeClass('selected');
+				$(this).parent().attr('data-nw-selected', $(this).data('nw') || null);
 				filterFriends();
 			});
 			$('.invite-filter').keyup(filterFriends).keyup();
