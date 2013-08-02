@@ -560,18 +560,15 @@ $(function() {
 			function filterFriends() {
 				var nw = $('.invite-filters>.selected').data('nw');
 				var words = $('.invite-filter').val().toLowerCase().split(/\s+/);
-				var friendMatches = {};
+				var matches = {};
 				friends.forEach(function (fr) {
-					if (nw && nw != fr.value.split('/')[0]) return;
-					for (var i = 0; i < words.length; i++) {
-						if (~(' ' + fr.label).toLowerCase().indexOf(' ' + words[i])) {
-							return friendMatches[fr.value] = true;
-						}
-					}
+					matches[fr.value] = (!nw || nw == fr.value.split('/')[0]) && words.reduce(function (v, word) {
+						return v && (' ' + fr.label).toLowerCase().indexOf(' ' + word) >= 0
+					}, true);
 				});
 				$('.invite-friends .invite-friend').each(function () {
 					var $this = $(this);
-					$this.toggleClass('no-match', !friendMatches[$this.data('value')])
+					$this.toggleClass('no-match', !matches[$this.data('value')])
 				});
 			}
 			$('.invite-filters>a').click(function () {
@@ -579,6 +576,13 @@ $(function() {
 				filterFriends();
 			});
 			$('.invite-filter').keyup(filterFriends).keyup();
+			$('.invite-friends').on('click', '.invite-button', function () {
+				var fullSocialId = $(this).closest('.invite-friend').data('value');
+				// TODO: linkedin
+				if (fullSocialId.indexOf("facebook/") === 0) {
+					$(this).closest('form').attr('action', xhrDomain + '/invite').submit();
+				}
+			});
 		});
 	}
 
