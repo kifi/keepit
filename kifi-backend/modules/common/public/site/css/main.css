@@ -211,10 +211,17 @@ input.invite-filter {height: 34px; border: 1px solid #e3e6ee; width: 240px; padd
 
 .invite-filters {height: 49px; border-bottom: 1px solid #b8c5d2; margin-bottom: 14px}
 .invite-filters>a {display: inline-block; width: 36px; height: 36px; margin-right: 5px; vertical-align: top; -webkit-transition: height .1s; transition: height .1s}
-.invite-filters>a.selected {height: 49px}
 .invite-filters>a:not([data-nw]) {background-color: #b8c5d2; font-size: 12px; text-transform: uppercase; color: #fff; line-height: 36px; text-align: center}
+.invite-filters>a[data-nw] { background-image: url(../img/networks.png); background-repeat: no-repeat; background-size: 400%; }
 .invite-filters>a[data-nw=facebook] {background-color: #637ab8}
-.invite-filters>a[data-nw=linkedin] {background-color: #4f83c3}
+.invite-filters>a[data-nw=linkedin] {background-color: #4f83c3; background-position: -36px top;}
+.invite-filters[data-nw-selected=facebook] {border-color: #637ab8;}
+.invite-filters[data-nw-selected=linkedin] {border-color: #4f83c3;}
+
+.invite-filters:not([data-nw-selected])>:not([data-nw]),
+.invite-filters[data-nw-selected=facebook]>[data-nw=facebook],
+.invite-filters[data-nw-selected=linkedin]>[data-nw=linkedin] {height: 49px;}
+
 .invite-name {font-size: 16px; color: #34495e; -webkit-font-smoothing: antialiased}
 .invite-friends {margin-right: -2%;}
 .invite-friend {margin-top: 12px; display: inline-block; vertical-align: top; margin-right: 2%; width: 48%; min-width: 270px; background-color: #eff2f7; padding: 10px 16px 10px 10px; position: relative; -moz-box-sizing: border-box; box-sizing: border-box;}
@@ -525,6 +532,7 @@ a.friend-nw-google[href] {background-color: #e9644b}
   [data-kept^=p]>*>.page-keep[href]::before,
   .page-meta>.page-priv[href]::before {background-image: url(../img/keep-icons.2x.png)}
   .profile>.networks>.kifi-k::before {background-image: url(../img/kifi-k.2x.png); background-size: 100%;}
+  .invite-filters>a[data-nw] {background-image: url(../img/networks.2x.png)}
   .profile-nw {background-image: url(../img/networks.2x.png)}
   .friend-actions>*>a::before {background-image: url(../img/friend-actions.2x.png)}
   a.friend-nw {background-image: url(../img/networks-18.2x.png)}
