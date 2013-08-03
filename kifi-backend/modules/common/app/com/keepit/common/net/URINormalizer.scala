@@ -5,21 +5,31 @@ import util.{Failure, Success}
 
 object URINormalizer extends Logging {
 
-  val normalizers = Seq(AmazonNormalizer, GoogleNormalizer, YoutubeNormalizer, RemoveWWWNormalizer, LinkedInNormalizer, DefaultNormalizer)
+  val prenormalizers = Seq(AmazonNormalizer, GoogleNormalizer, YoutubeNormalizer, RemoveWWWNormalizer, LinkedInNormalizer, DefaultNormalizer)
 
-  def normalize(uriString: String) = {
-    URI.parse(uriString) match {
-      case Success(uri) =>
-        normalizers.find(_.isDefinedAt(uri)).map{ n =>
-          n.apply(uri)
-        }.getOrElse(throw new Exception("failed to find a normalizer"))
-      case Failure(_) =>
-        log.error("uri normalization failed: [%s]".format(uriString))
-        uriString
-    }
+  def normalize(uriString: String): String = try {
+    parseAndNormalize(uriString).map(_.toString).getOrElse(uriString)
+  } catch { case e: Exception =>
+    log.error("uri normalization failed: [%s] caused by [%s]".format(uriString, e.getMessage))
+    uriString
   }
 
-  trait Normalizer extends PartialFunction[URI, String]
+  def parseAndNormalize(uriString: String) : Option[URI] = URI.parse(uriString) match {
+    case Success(uri) =>
+      val prenormalizer = prenormalizers.find(_.isDefinedAt(uri)).getOrElse(throw new Exception("failed to find a pre-normalizer"))
+      Some(SmartNormalizer(prenormalizer(uri)))
+
+    case Failure(e) =>
+      log.error("uri normalization failed: [%s] caused by [%s]".format(uriString, e.getMessage))
+      None
+  }
+
+  trait Normalizer extends PartialFunction[URI, URI]
+
+  object SmartNormalizer extends Normalizer {
+    def isDefinedAt(uri: URI) = true // smart normalizer should always be applicable
+    def apply(uri: URI) = uri // ok, it is actually pretty dumb at this point
+  }
 
   object DefaultNormalizer extends Normalizer {
 
@@ -37,11 +47,11 @@ object URINormalizer extends Logging {
               val newParams = query.params.filter{ param => !stopParams.contains(param.name) }
               if (newParams.isEmpty) None else Some(Query(newParams))
             }
-            URI(scheme, userInfo, host, port, path, newQuery, None).toString
+            URI(scheme, userInfo, host, port, path, newQuery, None)
           } catch {
             case e: Exception =>
               log.warn("uri normalization failed: [%s] caused by [%s]".format(uri.raw, e.getMessage))
-              uri.raw.get
+              uri
           }
         case _ => throw new Exception("illegal invocation")
       }
@@ -75,12 +85,12 @@ object URINormalizer extends Logging {
       uri match {
         case URI(scheme, userInfo, host, port, path, _, _) =>
           path match {
-            case Some(product(_, key, _)) => URI(scheme, userInfo, normalize(host), port, Some(key), None, None).toString
-            case Some(product2(_, key, _)) => URI(scheme, userInfo, normalize(host), port, Some("/dp"+ key), None, None).toString
-            case Some(productReviews(_, key, _)) => URI(scheme, userInfo, normalize(host), port, Some(key), None, None).toString
-            case Some(profile(_, key, _)) => URI(scheme, userInfo, normalize(host), port, Some(key), None, None).toString
-            case Some(memberReviews(_, key, _)) => URI(scheme, userInfo, normalize(host), port, Some(key), None, None).toString
-            case Some(wishlist(_, key, _)) => URI(scheme, userInfo, normalize(host), port, Some(key), None, None).toString
+            case Some(product(_, key, _)) => URI(scheme, userInfo, normalize(host), port, Some(key), None, None)
+            case Some(product2(_, key, _)) => URI(scheme, userInfo, normalize(host), port, Some("/dp"+ key), None, None)
+            case Some(productReviews(_, key, _)) => URI(scheme, userInfo, normalize(host), port, Some(key), None, None)
+            case Some(profile(_, key, _)) => URI(scheme, userInfo, normalize(host), port, Some(key), None, None)
+            case Some(memberReviews(_, key, _)) => URI(scheme, userInfo, normalize(host), port, Some(key), None, None)
+            case Some(wishlist(_, key, _)) => URI(scheme, userInfo, normalize(host), port, Some(key), None, None)
             case _ => DefaultNormalizer(uri)
           }
         case _ => throw new Exception("illegal invocation")
@@ -118,19 +128,19 @@ object URINormalizer extends Logging {
     def apply(uri: URI) = {
       uri match {
         case URI(scheme, userInfo, host @ Some(Host("com", "google", "docs")), port, Some(document(_, docKey, _)), query, fragment) =>
-          URI(scheme, userInfo, host, port, Some(docKey + "edit"), query, None).toString
+          URI(scheme, userInfo, host, port, Some(docKey + "edit"), query, None)
         case URI(scheme, userInfo, host @ Some(Host("com", "google", "docs")), port, Some(file(_, fileKey, _)), query, fragment) =>
-          URI(scheme, userInfo, host, port, Some(fileKey + "edit"), query, None).toString
+          URI(scheme, userInfo, host, port, Some(fileKey + "edit"), query, None)
         case URI(scheme, userInfo, host @ Some(Host("com", "google", "docs")), port, Some(spreadsheet(_, spreadKey, _)), Some(query), fragment) =>
           val newQuery = Query(query.params.filter{ q => q.name == "key" || q.name == "authkey"})
-          URI(scheme, userInfo, host, port, Some(spreadKey), Some(newQuery), None).toString
+          URI(scheme, userInfo, host, port, Some(spreadKey), Some(newQuery), None)
         case URI(scheme, userInfo, host @ Some(Host("com", "google", "mail")), port, Some(gmail(_, addr)), _, Some(fragment)) =>
           val msgFragments = fragment.replaceAll("%2F","/").split("/")
           msgFragments.lastOption match {
-            case Some(id) if msgFragments.length > 1 => URI(scheme, userInfo, host, port, Some("/mail/" + addr), None, Some("search//" + id)).toString
-            case _ => URI(scheme, userInfo, host, port, Some("/mail/" + addr), None, Some(fragment)).toString
+            case Some(id) if msgFragments.length > 1 => URI(scheme, userInfo, host, port, Some("/mail/" + addr), None, Some("search//" + id))
+            case _ => URI(scheme, userInfo, host, port, Some("/mail/" + addr), None, Some(fragment))
           }
-        case _ => uri.raw.get // expects the raw uri string is always there
+        case _ => uri
       }
     }
   }
@@ -147,7 +157,7 @@ object URINormalizer extends Logging {
       uri match {
         case URI(scheme, _, host, port, path, Some(query), _) =>
           val newQuery = Query(query.params.filter{ _.name == "v" })
-          URI(scheme, None, host, port, path, Some(newQuery), None).toString
+          URI(scheme, None, host, port, path, Some(newQuery), None)
         case _ => throw new Exception("illegal invocation")
       }
     }
@@ -187,7 +197,7 @@ object URINormalizer extends Logging {
       uri match {
         case URI(scheme, userInfo, host, port, path, query, _) if query.isDefined => {
           (path, query.getOrElse("").toString) match {
-            case (Some("/profile/view"), profile(_, id, _)) => URI(scheme, userInfo, normalize(host), port, path, Some(Query("id="+ id)), None).toString
+            case (Some("/profile/view"), profile(_, id, _)) => URI(scheme, userInfo, normalize(host), port, path, Some(Query("id="+ id)), None)
             case _ => DefaultNormalizer(uri)
           }
         }
