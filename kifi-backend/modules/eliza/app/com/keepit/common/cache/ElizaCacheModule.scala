@@ -6,6 +6,7 @@ import com.google.inject.{Provides, Singleton}
 import com.keepit.model._
 import com.keepit.social.BasicUserUserIdCache
 import com.keepit.eliza.{MessageThreadExternalIdCache}
+import com.keepit.search.ActiveExperimentsCache
 
 case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends CacheModule(cachePluginModules:_*) {
 
