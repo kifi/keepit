@@ -83,4 +83,15 @@ case class ElizaCacheModule(cachePluginModules: CachePluginModule*) extends Cach
   @Provides
   def userConnectionCountCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
     new UserConnectionCountCache((innerRepo, 10 seconds), (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def searchFriendsCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new SearchFriendsCache((innerRepo, 10 seconds), (outerRepo, 7 days))
+
+  @Singleton
+  @Provides
+  def activeExperimentsCache(innerRepo: InMemoryCachePlugin, outerRepo: FortyTwoCachePlugin) =
+    new ActiveExperimentsCache((innerRepo, 5 minutes), (outerRepo, 7 days))
+
 }
