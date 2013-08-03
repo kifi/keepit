@@ -15,7 +15,7 @@ threadsPane = function() {
     render: function($container, o, prefs) {
       o.threads.forEach(function(t) {
         var n = messageCount(t, new Date(o.read[t.id] || 0));
-        t.messageCount = Math.abs(n);
+        t.messageCount = n < -9 ? "9+" : Math.abs(n);
         t.messagesUnread = n < 0;
         t.recipientsPictured = t.recipients.slice(0, 4);
       });
@@ -114,7 +114,7 @@ threadsPane = function() {
 
   function renderThread(th, readTime, callback) {
     var n = messageCount(th, new Date(readTime || 0));
-    th.messageCount = Math.abs(n);
+    th.messageCount = n < -9 ? "9+" : Math.abs(n);
     th.messagesUnread = n < 0;
     th.recipientsPictured = th.recipients.slice(0, 4);
     th.formatSnippet = getSnippetFormatter;
@@ -125,14 +125,13 @@ threadsPane = function() {
   }
 
   function messageCount(th, readTime) {
-    var n = 0, nUnr = 0;
+    var nUnr = 0;
     for (var id in th.messageTimes) {
       if (new Date(th.messageTimes[id]) > readTime) {
         nUnr++;
       }
-      n++;
     }
-    return -nUnr || n;
+    return -nUnr || th.messageCount;
   }
 
   function remove() {

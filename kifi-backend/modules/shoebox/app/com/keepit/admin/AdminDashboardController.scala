@@ -27,8 +27,11 @@ class AdminDashboardController @Inject() (
   clock: Clock)
     extends AdminController(actionAuthenticator) {
 
+  implicit val dbMasterSlave = Database.Slave
+
   implicit val timeout = BabysitterTimeout(1 minutes, 2 minutes)
 
+  //we must refactor it soon, can't load all bookmarks to memory just like that anymore
   private lazy val userCountByDate = calcCountByDate(db.readOnly(implicit session => userRepo.all).map(_.createdAt.toLocalDateInZone))
   private lazy val bookmarkCountByDate = calcCountByDate(db.readOnly(implicit session => bookmarkRepo.all).map(_.createdAt.toLocalDateInZone))
 

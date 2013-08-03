@@ -1,4 +1,4 @@
-package com.keepit.bender
+package com.keepit.eliza
 
 import com.keepit.common.cache.CacheModule
 import com.keepit.social.SecureSocialModule
@@ -11,7 +11,7 @@ import com.keepit.inject.{FortyTwoModule, ConfigurationModule}
 import com.keepit.common.actor.ActorSystemModule
 import com.keepit.common.zookeeper.DiscoveryModule
 
-abstract class BenderModule(
+abstract class ElizaModule(
 
   // Common Functional Modules
   val fortyTwoModule: FortyTwoModule,
@@ -24,7 +24,7 @@ abstract class BenderModule(
   val httpClientModule: HttpClientModule
 
 
-  // Bender Functional Modules
+  // Eliza Functional Modules
 
 ) extends ConfigurationModule(
     fortyTwoModule,
