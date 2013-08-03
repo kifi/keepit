@@ -13,7 +13,7 @@ class AdminClusterController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     serviceDiscovery: ServiceDiscovery) extends AdminController(actionAuthenticator) {
 
-    val serviceTypes : List[ServiceType] =  ServiceType.SEARCH :: ServiceType.SHOEBOX :: Nil
+    val serviceTypes : List[ServiceType] =  ServiceType.SEARCH :: ServiceType.SHOEBOX :: ServiceType.ELIZA :: Nil
 
     def clustersView = AdminHtmlAction { implicit request =>
         
