@@ -175,6 +175,8 @@ GET     /admin/data/renormalize     @com.keepit.controllers.admin.UrlController.
 POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.ScraperController.handleDuplicate
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.ScraperController.handleDuplicates
 GET     /admin/data/fixSeqNum       @com.keepit.controllers.admin.UrlController.fixSeqNum
+GET     /admin/data/contentCheck      @com.keepit.controllers.admin.ScraperController.contentCheck(url: String, url2: String)
+
 
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex

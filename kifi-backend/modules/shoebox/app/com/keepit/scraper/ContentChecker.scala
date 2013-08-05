@@ -1,6 +1,6 @@
 package com.keepit.scraper
 
-import com.google.inject.Inject
+import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.scraper.extractor.Extractor
 import com.keepit.scraper.extractor.DefaultExtractorProvider
 import scala.util.{Success, Failure}
@@ -13,14 +13,16 @@ import scala.concurrent._
 import ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
-
+@ImplementedBy(classOf[ContentCheckerImpl])
 trait ContentChecker {
   def check(urls: List[String]): Either[ContentCheckFail, ContentCheckSuccess]
+  def check2(url: String, url2: String): Either[ContentCheckFail, ContentCheckSuccess]
 }
 
 case class ContentCheckSuccess(finalUrl: String)
 case class ContentCheckFail(urls: List[String])
 
+@Singleton
 class ContentCheckerImpl @Inject()(
   db: Database,
   httpFetcher: HttpFetcher,
@@ -33,11 +35,15 @@ class ContentCheckerImpl @Inject()(
       results.forall(x => x.isRight) match {
         case false => Left[ContentCheckFail, ContentCheckSuccess](ContentCheckFail(urls))
         case true => {
-          val hashes = results.flatMap{
-            case Right(hash) => Some(hash)
+          val signatures = results.flatMap{
+            case Right(signature) => Some(signature)
             case Left(msg) => None
           }
-          hashes.distinct.size == hashes.size match {
+          val similar = {
+            if (signatures.size == 1) true
+            else signatures.tail.forall( x => x.similarTo(signatures.head) > 0.9)
+          }
+          similar match {
             case true => Right[ContentCheckFail, ContentCheckSuccess](ContentCheckSuccess(urls.head))     // lack of total order yet.
             case false => Left[ContentCheckFail, ContentCheckSuccess](ContentCheckFail(urls))
           }
@@ -47,7 +53,9 @@ class ContentCheckerImpl @Inject()(
     Await.result(rv, 5 minutes)
   }
 
-  private def getHashCode(url: String): Either[String, Int] = {
+  def check2(url: String, url2: String) = check(List(url, url2))
+
+  private def getHashCode(url: String): Either[String, Signature] = {
     val extractor = getExtractor(url)
     try {
       val fetchStatus = httpFetcher.fetch(url) { input => extractor.process(input) }
@@ -57,8 +65,11 @@ class ContentCheckerImpl @Inject()(
           if (isUnscrapable(url, fetchStatus.destinationUrl)) {
             Left("not_scrapable")
           } else {
-            val total = extractor.getContent + getTitle(extractor) + getDescription(extractor)
-            Right(total.hashCode)
+            val content = extractor.getContent
+            val title = getTitle(extractor)
+            val description = getDescription(extractor)
+            val signature = computeSignature(title, description.getOrElse(""), content)
+            Right(signature)
           }
         case _ => Left("fetch_failed")
       }
@@ -97,4 +108,6 @@ class ContentCheckerImpl @Inject()(
   private[this] def getDescription(x: Extractor): Option[String] = {
     x.getMetadata("description").orElse(x.getMetadata("Description")).orElse(x.getMetadata("DESCRIPTION"))
   }
+
+  private[this] def computeSignature(fields: String*) = fields.foldLeft(new SignatureBuilder){ (builder, text) => builder.add(text) }.build
 }
