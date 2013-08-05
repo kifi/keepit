@@ -265,9 +265,6 @@ class ExtStreamController @Inject() (
             "set_message_read" -> { case JsString(messageId) +: _ =>
               setMessageRead(userId, ExternalId[Comment](messageId))
             },
-            "set_comment_read" -> { case JsString(commentId) +: _ =>
-              setCommentRead(userId, ExternalId[Comment](commentId))
-            },
             "set_global_read" -> { case JsString(commentId) +: _ =>
               setGlobalRead(userId, ExternalId[UserNotification](commentId))
             },
@@ -360,7 +357,6 @@ class ExtStreamController @Inject() (
               val comment = commentRepo.get(cid)
               notification.category match {
                 case MESSAGE => setMessageRead(userId, comment, quietly = true)
-                case COMMENT => setCommentRead(userId, comment, quietly = true)
                 case _ => // when we add other types of notifications mark them read here
               }
             }
@@ -398,9 +394,6 @@ class ExtStreamController @Inject() (
     setMessageRead(userId, db.readOnly { implicit s => commentRepo.get(messageExtId) })
   }
 
-  private def setCommentRead(userId: Id[User], commentExtId: ExternalId[Comment]) {
-    setCommentRead(userId, db.readOnly { implicit s => commentRepo.get(commentExtId) })
-  }
 
   private def setGlobalRead(userId: Id[User], globalExtId: ExternalId[UserNotification]): Unit = {
     db.readWrite { implicit session =>
@@ -426,27 +419,6 @@ class ExtStreamController @Inject() (
 
       val messageIds = commentRepo.getMessageIdsCreatedBefore(nUri.id.get, parent.id.get, message.createdAt) :+ message.id.get
       userNotificationRepo.markCommentVisited(userId, messageIds)
-    }
-  }
-
-  private def setCommentRead(userId: Id[User], comment: Comment, quietly: Boolean = false) {
-    db.readWrite { implicit session =>
-      (commentReadRepo.getByUserAndUri(userId, comment.uriId) match {
-        case Some(cr) if cr.lastReadId != comment.id.get =>
-          Some(commentReadRepo.save(cr.withLastReadId(comment.id.get)))
-        case None =>
-          Some(commentReadRepo.save(CommentRead(userId = userId, uriId = comment.uriId, lastReadId = comment.id.get)))
-        case _ => None
-      }) foreach { _ =>
-        val nUri = normUriRepo.get(comment.uriId)
-
-        if (!quietly) {
-          userChannel.pushAndFanout(userId, Json.arr("comment_read", nUri.url, comment.createdAt, comment.externalId.id))
-        }
-
-        val commentIds = commentRepo.getPublicIdsCreatedBefore(nUri.id.get, comment.createdAt) :+ comment.id.get
-        userNotificationRepo.markCommentVisited(userId, commentIds)
-      }
     }
   }
 
