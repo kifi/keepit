@@ -41,7 +41,7 @@ class ExtCommentController @Inject() (
     }
     Ok(JsObject(counts.map { case (url, n) => url -> JsArray(Seq(JsNumber(n._1), JsNumber(n._2))) }))
   }
-  
+
   def sendMessageAction() = AuthenticatedJsonToJsonAction { request =>
     val o = request.body
     val (urlStr, title, text, recipients) = (
