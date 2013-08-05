@@ -1,4 +1,4 @@
-@(socialUserInfos: Seq[SocialUserInfo], page: Int, count: Long, pageCount: Int)
+@(socialUserInfos: Seq[SocialUserInfo], page: Int)
 
 @pagination(page: Int, pageCount: Int) = {
   <div class="pagination pagination-centered pagination-mini">
@@ -36,10 +36,10 @@
   </div>
 }
 
-@admin("There are " + count + " social users (displaying " + socialUserInfos.size + ")") {
-  <h2>Showing @socialUserInfos.size social users of @count total (Page @{page + 1})</h2>
+@admin("There are lots of social users (displaying " + socialUserInfos.size + ")") {
+  <h2>Showing @socialUserInfos.size social users (Page @{page + 1})</h2>
 
-  @pagination(page, pageCount)
+  @pagination(page, page + 100)
 
   <table class="table table-bordered">
     <tr>
@@ -62,5 +62,5 @@
   }
   </table>
 
-  @pagination(page, pageCount)
+  @pagination(page, page + 100)
 }
