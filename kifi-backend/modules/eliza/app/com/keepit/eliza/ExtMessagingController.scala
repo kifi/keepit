@@ -1,12 +1,17 @@
 package com.keepit.eliza
 
-import com.keepit.common.db.{ExternalId}
-import com.keepit.model.{User}
-import com.keepit.common.controller.{ElizaServiceController, BrowserExtensionController, ActionAuthenticator}
+import com.keepit.common.db.ExternalId
+import com.keepit.model.User
+import com.keepit.common.controller.{BrowserExtensionController, ActionAuthenticator}
+import com.keepit.shoebox.{ShoeboxServiceClient}
+import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-import play.api.libs.json.Json
+import play.api.libs.iteratee.Concurrent
+import play.api.libs.json.{Json, JsValue, JsArray}
+
+import akka.actor.ActorSystem
 
 import com.google.inject.Inject
 
@@ -14,10 +19,16 @@ import com.google.inject.Inject
 
 class ExtMessagingController @Inject() (
     messagingController: MessagingController,
-    actionAuthenticator: ActionAuthenticator
+    actionAuthenticator: ActionAuthenticator,
+    protected val shoebox: ShoeboxServiceClient,
+    protected val impersonateCookie: ImpersonateCookie,
+    protected val actorSystem: ActorSystem
   ) 
-  extends BrowserExtensionController(actionAuthenticator) with ElizaServiceController {
+  extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
 
+
+
+  /*********** REST *********************/
 
   def sendMessageAction() = AuthenticatedJsonToJsonAction { request =>
     val o = request.body
@@ -45,5 +56,19 @@ class ExtMessagingController @Inject() (
   }
 
 
+  /*********** WEBSOCKETS ******************/
+
+
+  override protected def websocketHandlers(channel: Concurrent.Channel[JsArray]) = Map[String, Seq[JsValue] => Unit](
+    "ping" -> { _ =>
+      channel.push(Json.arr("pong"))
+    }
+  )
+
+
+
 
 }
+
+
+
