@@ -1,7 +1,7 @@
 package com.keepit.controllers.ext
 
 import com.google.inject.Inject
-import com.keepit.common.controller.{ShoeboxServiceController, WebsiteController, ActionAuthenticator}
+import com.keepit.common.controller.{BrowserExtensionController, ShoeboxServiceController, WebsiteController, ActionAuthenticator}
 import com.keepit.common.db.slick._
 import com.keepit.model._
 import com.keepit.common.net.URINormalizer
@@ -20,14 +20,10 @@ class ExtPreferenceController @Inject() (
   sliderRuleRepo: SliderRuleRepo,
   urlPatternRepo: URLPatternRepo,
   userRepo: UserRepo,
-  userConnectionRepo: UserConnectionRepo,
-  basicUserRepo: BasicUserRepo,
-  networkInfoLoader: NetworkInfoLoader,
-  experimentRepo: UserExperimentRepo,
   userValueRepo: UserValueRepo,
   domainRepo: DomainRepo,
   userToDomainRepo: UserToDomainRepo)
-  extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
+  extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   private case class UserPrefs(enterToSend: Boolean)
   private implicit val userPrefsFormat = Json.format[UserPrefs]
@@ -46,26 +42,6 @@ class ExtPreferenceController @Inject() (
         Ok
       }
     }
-  }
-
-  def getFriends() = AuthenticatedJsonToJsonAction { request =>
-    val basicUsers = db.readOnly { implicit s =>
-      if (canMessageAllUsers(request.user.id.get)) {
-        userRepo.allExcluding(UserStates.PENDING, UserStates.BLOCKED, UserStates.INACTIVE)
-          .collect { case u if u.id.get != request.user.id.get => BasicUser.fromUser(u) }.toSet
-      } else {
-        userConnectionRepo.getConnectedUsers(request.user.id.get).map(basicUserRepo.load)
-      }
-    }
-    Ok(Json.toJson(basicUsers))
-  }
-
-  private def canMessageAllUsers(userId: Id[User])(implicit s: RSession): Boolean = {
-    experimentRepo.hasExperiment(userId, ExperimentTypes.CAN_MESSAGE_ALL_USERS)
-  }
-
-  def getNetworks(friendExtId: ExternalId[User]) = AuthenticatedJsonToJsonAction { request =>
-    Ok(Json.toJson(networkInfoLoader.load(request.user.id.get, friendExtId)))
   }
 
   def setEnterToSend(enterToSend: Boolean) = AuthenticatedJsonToJsonAction { request =>

@@ -51,12 +51,13 @@ GET     /session/end                @com.keepit.controllers.ext.ExtAuthControlle
 
 GET     /ext/ws                     @com.keepit.controllers.ext.ExtStreamController.ws()
 GET     /ext/normalize              @com.keepit.controllers.ext.ExtPreferenceController.normalize(url: String)
-GET     /ext/rules                  @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String)
-GET     /ext/friends                @com.keepit.controllers.ext.ExtPreferenceController.getFriends()
-GET     /ext/networks               @com.keepit.controllers.ext.ExtPreferenceController.getNetworks(friendExtId: ExternalId[User])
+GET     /ext/pref/rules                  @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String)
 GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs()
-POST    /ext/keeperPosition         @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPosition()
-POST    /ext/enterToSend            @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
+POST    /ext/pref/keeperPosition         @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPosition()
+POST    /ext/pref/enterToSend            @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
+GET     /ext/user/friends                @com.keepit.controllers.ext.ExtUserController.getFriends()
+GET     /ext/user/networks               @com.keepit.controllers.ext.ExtUserController.getNetworks(friendExtId: ExternalId[User])
+
 
 POST    /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
