@@ -30,7 +30,11 @@ CREATE TABLE message (
     sent_on_uri_id bigint(20) NULL,
 
     PRIMARY KEY (id),
-    KEY message_i_my_thread (thread)  
+    KEY message_i_my_thread (thread_id),  
+
+    FOREIGN KEY (thread_id)
+      REFERENCES message_thread(id)
+      ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
 CREATE TABLE user_thread (
@@ -48,8 +52,22 @@ CREATE TABLE user_thread (
     lastNotification longtext DEFAULT NULL,
 
     PRIMARY KEY (id),
-    KEY user_thread_i_user_page (user, uri_id),
-    UNIQUE KEY user_thread_i_user_thread (user, thread)
+    KEY user_thread_i_user_page (user_id, uri_id),
+    UNIQUE KEY user_thread_i_user_thread (user_id, thread_id),
+
+    FOREIGN KEY (thread_id)
+      REFERENCES message_thread(id)
+      ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+CREATE TABLE evolutions (
+    id bigint(20) NOT NULL AUTO_INCREMENT,
+    created_at timestamp NOT NULL,
+    name varchar(64) NOT NULL,
+    description varchar(512) DEFAULT '',
+
+    PRIMARY KEY (id),
+    CONSTRAINT evolutions_u_name UNIQUE (name)
 );
 
 

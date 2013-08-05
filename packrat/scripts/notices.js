@@ -1,7 +1,9 @@
 // @require styles/metro/notices.css
+// @require styles/antiscroll.css
 // @require scripts/formatting.js
 // @require scripts/api.js
 // @require scripts/lib/jquery.timeago.js
+// @require scripts/lib/antiscroll.min.js
 
 
 // There are several kinds of events that the notifications pane must handle:
@@ -30,15 +32,15 @@ noticesPane = function() {
     render: function($container, notices, timeLastSeen, numNotVisited) {
       timeLastSeen = new Date(timeLastSeen);
       render("html/metro/notices.html", {}, function(html) {
+        var $scrollable = $('<div class="antiscroll-wrap">');
+        $container.append($scrollable);
         $notices = $(html)
+          .addClass("antiscroll-inner")
           .append(notices.map(function(n) {
             return renderNotice(n, n.state != "visited" && new Date(n.time) > timeLastSeen);
           }).join(""))
-          .appendTo($container);
-        $notices.scrollable({
-          $above: $container.closest(".kifi-pane-box").find(".kifi-pane-title"),
-          $below: $("<div>").insertAfter($notices)})
-        .triggerHandler("scroll");
+          .appendTo($scrollable);
+        $scrollable.antiscroll({x: false})
         $notices.find("time").timeago();
 
         $notices.on("click", ".kifi-notice", function() {
