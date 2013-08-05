@@ -50,6 +50,15 @@ GET     /whois                      @com.keepit.controllers.ext.ExtAuthControlle
 GET     /session/end                @com.keepit.controllers.ext.ExtAuthController.logOut
 
 GET     /ext/ws                     @com.keepit.controllers.ext.ExtStreamController.ws()
+GET     /ext/normalize              @com.keepit.controllers.ext.ExtPreferenceController.normalize(url: String)
+GET     /ext/pref/rules                  @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String)
+GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs()
+POST    /ext/pref/keeperPosition         @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPosition()
+POST    /ext/pref/enterToSend            @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
+GET     /ext/user/friends                @com.keepit.controllers.ext.ExtUserController.getFriends()
+GET     /ext/user/networks               @com.keepit.controllers.ext.ExtUserController.getNetworks(friendExtId: ExternalId[User])
+
+
 POST    /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts
 GET     /r/:id                      @com.keepit.controllers.ext.ExtDeepLinkController.handle(id: String)
 
