@@ -11,8 +11,6 @@ import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import scala.concurrent.stm.{Ref, atomic}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
-//TODO Stephen: Get rid of this next one
-import scala.concurrent.Await
 import scala.concurrent.duration._
 
 import play.api.libs.concurrent.Akka
@@ -140,7 +138,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
               socketAliveCancellable().map(c => if(!c.isCancelled) c.cancel())
               socketAliveCancellable.single.swap {
                 import scala.concurrent.duration._
-                val c = actorSystem.scheduler.scheduleOnce(65.seconds) {
+                val c = actorSystem.scheduler.scheduleOnce(65.seconds) { //TODO: Move this out of the atomic (don't side effect in atomics!)
                   log.info(s"It seems like userId ${streamSession.userId}'s socket is stale.")
                 }
                 Some(c)
