@@ -31,6 +31,11 @@ class GeckoboardPublisherImpl @Inject() (httpClient: HttpClient)
     extends GeckoboardPublisher with Logging {
   import GeckoboardPublisher._
 
-  def publish(data: GeckoboardData[_]): Unit =
-    httpClient.post(pushUri + data.widget.key, Json.obj("api_key" -> apiKey, "data" -> data.json))
+  def publish(data: GeckoboardData[_]): Unit = {
+    val obj = Json.obj("api_key" -> apiKey, "data" -> data.json)
+    val url = pushUri + data.widget.id.id
+    httpClient.postFuture(url, obj) map {res =>
+      assume(res.body == """{"success":true}""")
+    }
+  }
 }

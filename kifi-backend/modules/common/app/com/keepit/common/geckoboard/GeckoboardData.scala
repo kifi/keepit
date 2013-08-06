@@ -9,7 +9,7 @@ trait GeckoboardData[T <: WidgetType] {
 }
 
 // http://www.geckoboard.com/developers/custom-widgets/widget-types/number-and-optional-secondary-stat/
-case class NumberAndSecondaryStat[T <: NumberAndSecondaryStatType](widget: GeckoboardWidget[T], first: Int, second: Int) extends GeckoboardData[T] {
+case class NumberAndSecondaryStat(val widget: GeckoboardWidget[NumberAndSecondaryStatType], first: Int, second: Int) extends GeckoboardData[NumberAndSecondaryStatType] {
   def json = Json.obj("item" -> Json.arr(
       Json.obj("text" -> "", "value" -> first),
       Json.obj("text" -> "", "value" -> second)
