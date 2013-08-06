@@ -152,7 +152,7 @@ const socketHandlers = {
     for (var i = 0; i < fr.length; i++) {
       var f = fr[i];
       if (friendsById[f.id]) {
-        friends = friends.filter(function (e) { e.id != f.id })
+        friends = friends.filter(function(e) {return e.id != f.id})
       }
       friends.push(f)
       friendsById[f.id] = f;
