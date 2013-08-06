@@ -15,7 +15,7 @@ import com.google.inject.Inject
 
 import org.joda.time.DateTime
 
-import play.api.libs.json.{JsValue, JsNull}
+import play.api.libs.json.{JsValue, JsNull, Json}
 
 /* To future maintainers 
 *  If this is ever getting too slow the first things I would look at (in no particular order):
@@ -48,13 +48,20 @@ class MessagingController @Inject() (
   extends Logging {
 
 
-  private def sendNotificationForMessage(user: Id[User], message: Message, thread: MessageThread) : Unit = { //TODO Stephen: Construct and store notification json
+  private def sendNotificationForMessage(user: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser) : Unit = { //TODO Stephen: Construct and store notification json
     future {
       db.readWrite{ implicit session => 
         userThreadRepo.setNotification(user, thread.id.get)
       }
     }
-    notificationRouter.sendNotification(Some(user), Notification(thread.id.get, message.id.get, JsNull))
+
+    notificationRouter.sendToUser(
+      user,
+      Json.arr("message", message.threadExtId.id, messageWithBasicUser)
+    )
+
+    //This is mostly for testing and monitoring
+    notificationRouter.sendNotification(Some(user), Notification(thread.id.get, message.id.get))
   }
 
   def constructRecipientSet(userExtIds: Seq[ExternalId[User]]) : Future[Set[Id[User]]] = {
@@ -109,9 +116,21 @@ class MessagingController @Inject() (
       )) 
     }
 
+    val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
+    val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1 seconds)
+    
+    val messageWithBasicUser = MessageWithBasicUser(
+      message.externalId,
+      message.createdAt,
+      message.messageText,
+      message.sentOnUrl.getOrElse(""),
+      message.from.map(id2BasicUser(_)),
+      message.from.map(participantSet - _).getOrElse(participantSet).toSeq.map(id2BasicUser(_))
+    )
+
     thread.allUsersExcept(from).foreach { userId =>
       db.readWrite{ implicit session => userThreadRepo.setLastMsgFromOther(userId, thread.id.get, message.id.get) }
-      sendNotificationForMessage(userId, message, thread)
+      sendNotificationForMessage(userId, message, thread, messageWithBasicUser)
     }
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
     urlOpt.foreach{ url =>
