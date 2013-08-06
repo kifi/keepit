@@ -30,8 +30,33 @@ class UriIntegrityActor @Inject()(
   healthcheckPlugin: HealthcheckPlugin
 ) extends FortyTwoActor(healthcheckPlugin) with Logging {
 
+  def handleChanged(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) = {
+    db.readWrite{ implicit s =>
+      urlRepo.getByNormUri(oldUri).map{ url =>
+        urlRepo.save(url.withNormUriId(newUri))
+      }
+      // still need to clean url cache
+
+      bookmarkRepo.getByUri(oldUri).map{ bm =>
+        bookmarkRepo.save(bm.withNormUriId(newUri))
+      }
+
+      commentRepo.getByUri(oldUri).map{ cm =>
+        commentRepo.save(cm.withNormUriId(newUri))
+      }
+
+      deepLinkRepo.getByUri(oldUri).map{ link =>
+        deepLinkRepo.save(link.withNormUriId(newUri))
+      }
+
+      followRepo.getByUri(oldUri, excludeState = None).map{ follow =>
+        followRepo.save(follow.withNormUriId(newUri))
+      }
+    }
+  }
+
   def receive = {
-    case ChangedUri(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) => ???
+    case ChangedUri(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) => handleChanged(oldUri, newUri)
   }
 
 }

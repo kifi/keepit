@@ -30,6 +30,7 @@ class ContentCheckerImpl @Inject()(
 ) extends ContentChecker with Logging {
 
   override def check(urls: List[String]): Either[ContentCheckFail, ContentCheckSuccess] = {
+    log.info(s"got ${urls.size} urls to c.c")
     val resultsFuture = Future.sequence(urls.map{ url => future{getHashCode(url)}})
     val rv = resultsFuture.map{ results =>
       results.forall(x => x.isRight) match {
@@ -69,6 +70,7 @@ class ContentCheckerImpl @Inject()(
             val title = getTitle(extractor)
             val description = getDescription(extractor)
             val signature = computeSignature(title, description.getOrElse(""), content)
+            log.info("content scraped: " + content + "\n\n==================================================\n\n")
             Right(signature)
           }
         case _ => Left("fetch_failed")
