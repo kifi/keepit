@@ -37,7 +37,7 @@ import org.joda.time.DateTime
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]])
 
-case class SocketInfo(id: Long, channel: Concurrent.Channel[JsArray], connectedAt: DateTime, subscriptions: TrieMap[String, Id[NormalizedURI]], userId: Id[User])
+case class SocketInfo(id: Long, channel: Concurrent.Channel[JsArray], connectedAt: DateTime, userId: Id[User])
 
 
 trait AuthenticatedWebSocketsController extends ElizaServiceController {
@@ -127,7 +127,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     authenticate(request) match {
       case Some(streamSessionFuture) =>  streamSessionFuture.map { streamSession =>
         implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
-        val socketInfo = SocketInfo(Random.nextLong(), channel, clock.now, TrieMap[String, Id[NormalizedURI]](), streamSession.userId)
+        val socketInfo = SocketInfo(Random.nextLong(), channel, clock.now, streamSession.userId)
         val handlers = websocketHandlers(socketInfo)
         val socketAliveCancellable: Ref[Option[Cancellable]] = Ref(None.asInstanceOf[Option[Cancellable]])
 
