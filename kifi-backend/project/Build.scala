@@ -153,7 +153,7 @@ object ApplicationBuild extends Build {
     ).dependsOn(common % "test->test;compile->compile").aggregate(common)
 
     val eliza = play.Project("eliza", appVersion, Nil, path = file("modules/eliza")).settings(
-      commonSettings: _*
+      (commonSettings ++ (routesImport += "com.keepit.eliza._")) : _*
     ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
 
     val aaaMain = play.Project(appName, appVersion).settings(
