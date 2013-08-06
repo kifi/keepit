@@ -232,9 +232,9 @@ class ScraperController @Inject() (
 
   def contentCheck(url: String, url2: String) = AdminHtmlAction { implicit request =>
     log.info("\n\n\n will do c.c. \n\n\n")
-    val rv = contentChecker.check2(url, url2)
-    if (rv.isRight) log.info("content check passed! ==============")
-    else log.info("contenct check failed! ==============")
+    val rv = contentChecker.check(List(url, url2))
+    if (rv.isRight) log.info("content check passed!")
+    else log.info("contenct check failed!")
     Ok
   }
 }

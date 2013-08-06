@@ -25,11 +25,15 @@ class UriIntegrityActor @Inject()(
   bookmarkRepo: BookmarkRepo,
   collectionRepo: CollectionRepo,
   commentRepo: CommentRepo,
+  commentReadRepo: CommentReadRepo,
   deepLinkRepo: DeepLinkRepo,
   followRepo: FollowRepo,
   healthcheckPlugin: HealthcheckPlugin
 ) extends FortyTwoActor(healthcheckPlugin) with Logging {
 
+  /**
+   * any reference to the old uri should be redirected to the new one
+   */
   def handleChanged(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) = {
     db.readWrite{ implicit s =>
       urlRepo.getByNormUri(oldUri).map{ url =>
@@ -45,6 +49,8 @@ class UriIntegrityActor @Inject()(
         commentRepo.save(cm.withNormUriId(newUri))
       }
 
+      // clean comment read repo?
+
       deepLinkRepo.getByUri(oldUri).map{ link =>
         deepLinkRepo.save(link.withNormUriId(newUri))
       }
@@ -52,6 +58,10 @@ class UriIntegrityActor @Inject()(
       followRepo.getByUri(oldUri, excludeState = None).map{ follow =>
         followRepo.save(follow.withNormUriId(newUri))
       }
+
+      // OrphanCleaner will clean scrapeInfo
+      uriRepo.save(uriRepo.get(oldUri).withState(NormalizedURIStates.INACTIVE))
+
     }
   }
 

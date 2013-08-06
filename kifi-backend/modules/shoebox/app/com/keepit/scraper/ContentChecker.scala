@@ -16,7 +16,6 @@ import scala.concurrent.duration._
 @ImplementedBy(classOf[ContentCheckerImpl])
 trait ContentChecker {
   def check(urls: List[String]): Either[ContentCheckFail, ContentCheckSuccess]
-  def check2(url: String, url2: String): Either[ContentCheckFail, ContentCheckSuccess]
 }
 
 case class ContentCheckSuccess(finalUrl: String)
@@ -30,7 +29,6 @@ class ContentCheckerImpl @Inject()(
 ) extends ContentChecker with Logging {
 
   override def check(urls: List[String]): Either[ContentCheckFail, ContentCheckSuccess] = {
-    log.info(s"got ${urls.size} urls to c.c")
     val resultsFuture = Future.sequence(urls.map{ url => future{getHashCode(url)}})
     val rv = resultsFuture.map{ results =>
       results.forall(x => x.isRight) match {
@@ -54,8 +52,6 @@ class ContentCheckerImpl @Inject()(
     Await.result(rv, 5 minutes)
   }
 
-  def check2(url: String, url2: String) = check(List(url, url2))
-
   private def getHashCode(url: String): Either[String, Signature] = {
     val extractor = getExtractor(url)
     try {
@@ -70,7 +66,6 @@ class ContentCheckerImpl @Inject()(
             val title = getTitle(extractor)
             val description = getDescription(extractor)
             val signature = computeSignature(title, description.getOrElse(""), content)
-            log.info("content scraped: " + content + "\n\n==================================================\n\n")
             Right(signature)
           }
         case _ => Left("fetch_failed")
