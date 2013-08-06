@@ -6,9 +6,11 @@ import com.keepit.common.db.slick.{Database}
 import com.keepit.shoebox.{ShoeboxServiceClient}
 import com.keepit.common.logging.Logging
 
-import scala.concurrent.{future, Await}
+import scala.concurrent.{future, Await, Future}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
+
+import com.google.inject.Inject
 
 import play.api.libs.json.{JsValue, JsNull}
 
@@ -31,7 +33,7 @@ object MessagingController {
 }
 
 
-class MessagingController(
+class MessagingController @Inject() (
     threadRepo: MessageThreadRepo, 
     userThreadRepo: UserThreadRepo, 
     messageRepo: MessageRepo, 
@@ -49,6 +51,10 @@ class MessagingController(
       }
     }
     notificationRouter.sendNotification(Some(user), Notification(thread.id.get, message.id.get, JsNull))
+  }
+
+  def constructRecipientSet(userExtIds: Seq[ExternalId[User]]) : Future[Set[Id[User]]] = {
+    shoebox.getUserIdsByExternalIds(userExtIds).map(_.toSet)
   }
 
 
@@ -92,6 +98,7 @@ class MessagingController(
       id = None,
       from = Some(from),
       thread = thread.id.get,
+      threadExtId = thread.externalId,
       messageText = messageText,
       sentOnUrl = urlOpt.map(Some(_)).getOrElse(thread.url),
       sentOnUriId = thread.uriId

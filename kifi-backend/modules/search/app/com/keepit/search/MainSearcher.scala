@@ -369,6 +369,8 @@ class MainSearcher(
           false
         }
       }
+      // if others have really high score, clear hits from mine and friends (this decision must be made after filtering out orphan URIs)
+      if (queue.size > 0 && highScore < queue.highScore * tailCutting * tailCutting) hits.clear()
       queue.foreach{ h => hits.insert(h) }
     }
 

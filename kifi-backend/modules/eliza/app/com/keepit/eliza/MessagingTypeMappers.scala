@@ -1,8 +1,8 @@
 package com.keepit.eliza
 
 import scala.slick.lifted.{BaseTypeMapper}
-import com.keepit.common.db.{Id}
-import com.keepit.common.db.slick.{IdMapperDelegate, StringMapperDelegate}
+import com.keepit.common.db.{Id, ExternalId}
+import com.keepit.common.db.slick.{IdMapperDelegate, ExternalIdMapperDelegate, StringMapperDelegate}
 import scala.slick.driver.{BasicProfile}
 import play.api.libs.json.{Json, JsValue, JsObject, JsSuccess}
 import com.keepit.model.{User}
@@ -15,6 +15,10 @@ object MessagingTypeMappers {
 
   implicit object ThreadIdTypeMapper extends BaseTypeMapper[Id[MessageThread]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[MessageThread](profile)
+  }
+
+  implicit object ThreadExtIdTypeMapper extends BaseTypeMapper[ExternalId[MessageThread]] {
+    def apply(profile: BasicProfile) = new ExternalIdMapperDelegate[MessageThread](profile)
   }
 
   implicit object MessageIdTypeMapper extends BaseTypeMapper[Id[Message]] {
