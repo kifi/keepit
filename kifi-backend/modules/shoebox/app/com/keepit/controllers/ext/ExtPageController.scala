@@ -21,7 +21,7 @@ class ExtPageController @Inject() (
   keeperInfoLoader: KeeperInfoLoader)
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
-  def getPageDetails(url: String) = AuthenticatedJsonToJsonAction { request =>
+  def getPageDetails(url: String) = AuthenticatedJsonAction { request =>
     val nUri = URINormalizer.normalize(url)
 
     Ok(Json.obj(
