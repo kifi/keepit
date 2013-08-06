@@ -30,7 +30,7 @@ class ExtPreferenceController @Inject() (
 
   def normalize(url: String) = AuthenticatedJsonAction { request =>
     // Todo: upgrade to new normalization
-    Ok(URINormalizer.normalize(url))
+    Ok(Json.arr(URINormalizer.normalize(url)))
   }
 
   def getRules(version: String) = AuthenticatedJsonAction { request =>
@@ -39,7 +39,7 @@ class ExtPreferenceController @Inject() (
       if (version != group.version) {
         Ok(Json.obj("slider_rules" -> group.compactJson, "url_patterns" -> urlPatternRepo.getActivePatterns()))
       } else {
-        Ok
+        Ok(Json.obj())
       }
     }
   }
