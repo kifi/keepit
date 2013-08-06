@@ -134,19 +134,6 @@ const socketHandlers = {
     api.log("[socket:experiments]", exp);
     session.experiments = exp;
   },
-  prefs: function(o) {
-    api.log("[socket:prefs]", o);
-    session.prefs = o;
-  },
-  friends: function(fr) {
-    api.log("[socket:friends]", fr);
-    friends = fr;
-    friendsById = {};
-    for (var i = 0; i < fr.length; i++) {
-      var f = fr[i];
-      friendsById[f.id] = f;
-    }
-  },
   new_friends: function(fr) {
     api.log("[socket:new_friends]", fr);
     for (var i = 0; i < fr.length; i++) {
@@ -158,78 +145,9 @@ const socketHandlers = {
       friendsById[f.id] = f;
     }
   },
-  slider_rules: function(o) {
-    api.log("[socket:slider_rules]", o);
-    ruleSet = o;
-  },
   url_patterns: function(patterns) {
     api.log("[socket:url_patterns]", patterns);
     urlPatterns = compilePatterns(patterns);
-  },
-  uri_1: function(uri, o) {
-    api.log("[socket:uri_1]", o);
-    var d = pageData[uri];
-    if (d) {
-      d.kept = o.kept;
-      d.position = o.position;
-      d.neverOnSite = o.neverOnSite;
-      d.sensitive = o.sensitive;
-      d.tabs.forEach(function(tab) {
-        setIcon(tab, d.kept);
-        sendInit(tab, d);
-      });
-    }
-  },
-  uri_2: function(uri, o) {
-    api.log("[socket:uri_2]", o);
-    var d = pageData[uri], dPrev, i;
-    if (d) {
-      dPrev = clone(d);
-      d.shown = o.shown;
-      d.keepers = o.keepers || [];
-      d.keeps = o.keeps || 0;
-      d.otherKeeps = d.keeps - d.keepers.length - (d.kept == "public" ? 1 : 0);
-      d.following = o.following;
-      d.threads = o.threads || [];
-      d.messages = {};
-      d.lastMessageRead = o.lastMessageRead || {};
-      d.counts = {
-        n: numNotificationsNotVisited,
-        m: messageCount(d)};
-      d.tabs.forEach(function(tab) {
-        initTab(tab, d);
-      });
-      d.dispatchOn2();
-
-      // send tabs any missed updates
-      if (dPrev.threads) {
-        var threadsWithNewMessages = [];
-        d.threads.forEach(function(th) {
-          var thPrev = dPrev.threads.filter(hasId(th.id))[0];
-          var numNew = th.messageCount - (thPrev && thPrev.messageCount || 0);
-          if (numNew) {
-            socket.send(["get_thread", th.id]);
-            (d.threadCallbacks = d.threadCallbacks || []).push({id: th.id, respond: function(th) {
-              d.tabs.forEach(function(tab) {
-                // TODO: may want to special case (numNew == 1) for an animation
-                api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages, userId: session.userId});
-              });
-            }});
-            threadsWithNewMessages.push(th);
-          }
-        });
-        if (threadsWithNewMessages.length == 1) {
-          var th = threadsWithNewMessages[0];
-          d.tabs.forEach(function(tab) {
-            api.tabs.emit(tab, "thread_info", {thread: th, read: d.lastMessageRead[th.id]});
-          });
-        } else if (threadsWithNewMessages.length > 1) {
-          d.tabs.forEach(function(tab) {
-            api.tabs.emit(tab, "threads", {threads: d.threads, readTimes: d.lastMessageRead, userId: session.userId});
-          });
-        }
-      }
-    }
   },
   notifications: function(arr, numNotVisited) {  // initial load of notifications
     api.log("[socket:notifications]", arr, numNotVisited);
