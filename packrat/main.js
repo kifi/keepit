@@ -422,11 +422,11 @@ api.port.on({
         pageData[nUri].position = o.pos;
       }
     }
-    socket.send(["set_keeper_position", o.host, o.pos]);
+    ajax("api", "POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos}, respond);
   },
   set_enter_to_send: function(data) {
     session.prefs.enterToSend = data;
-    socket.send(["set_enter_to_send", data]);
+    ajax("api", "POST", "/ext/pref/enterToSend?enterToSend=" + data);
   },
   log_event: function(data) {
     logEvent.apply(null, data);
@@ -837,7 +837,8 @@ function subscribe(tab) {
     api.icon.set(tab, "icons/keep.faint.png");
   }
   var d = pageData[tab.nUri || tab.url];
-  if (d && d.seq == socket.seq) {  // no need to ask server again
+
+  if (d) {  // no need to ask server again
     if (tab.seq == socket.seq) {  // tab is up-to-date
       if (d.counts) {
         d.counts.n = numNotificationsNotVisited;
@@ -847,26 +848,88 @@ function subscribe(tab) {
       var tabUpToDate = tab.seq == d.seq;
       finish(tab.nUri || tab.url);
       if (d.hasOwnProperty("kept")) {
-        if (!tabUpToDate) {
-          setIcon(tab, d.kept);
-          sendInit(tab, d);
-          if (d.counts) {
-            initTab(tab, d);
-          } // else wait for uri_2
-        }
+        setIcon(tab, d.kept);
+        sendInit(tab, d);
+        initTab(tab, d);
       } // else wait for uri_1
     }
-  } else if (socket) {
-    socket.send(["subscribe_uri", tab.url], function(uri) {
-      if (api.tabs.get(tab.id).url != tab.url) return;
+  } else {
+    ajax("api", "GET", "/ext/pageDetails?url=" + encodeURIComponent(tab.url), function(resp) {
+      api.log("[subscribe]", resp);
+      var uri = resp.normalized;
+      var uri_1 = resp.uri_1;
+      var uri_2 = resp.uri_2;
       d = pageData[uri] = pageData[uri] || new PageData;
-      d.seq = socket.seq;
+
+      if (api.tabs.get(tab.id).url != tab.url) return;
       finish(uri);
+
+      // uri_1
+      if (d) {
+        d.kept = uri_1.kept;
+        d.position = uri_1.position;
+        d.neverOnSite = uri_1.neverOnSite;
+        d.sensitive = uri_1.sensitive;
+        d.tabs.forEach(function(tab) {
+          setIcon(tab, d.kept);
+          sendInit(tab, d);
+        });
+      }
+
+      // uri_2
+      var dPrev, i;
+      if (d) {
+        dPrev = clone(d);
+        d.shown = uri_2.shown;
+        d.keepers = uri_2.keepers || [];
+        d.keeps = uri_2.keeps || 0;
+        d.otherKeeps = d.keeps - d.keepers.length - (d.kept == "public" ? 1 : 0);
+        d.following = uri_2.following;
+        d.threads = uri_2.threads || [];
+        d.messages = {};
+        d.lastMessageRead = uri_2.lastMessageRead || {};
+        d.counts = {
+          n: numNotificationsNotVisited,
+          m: messageCount(d)};
+        d.tabs.forEach(function(tab) {
+          initTab(tab, d);
+        });
+        d.dispatchOn2();
+
+        // send tabs any missed updates
+        if (dPrev.threads) {
+          var threadsWithNewMessages = [];
+          d.threads.forEach(function(th) {
+            var thPrev = dPrev.threads.filter(hasId(th.id))[0];
+            var numNew = th.messageCount - (thPrev && thPrev.messageCount || 0);
+            if (numNew) {
+              socket.send(["get_thread", th.id]);
+              (d.threadCallbacks = d.threadCallbacks || []).push({id: th.id, respond: function(th) {
+                d.tabs.forEach(function(tab) {
+                  // TODO: may want to special case (numNew == 1) for an animation
+                  api.tabs.emit(tab, "thread", {id: th.id, messages: th.messages, userId: session.userId});
+                });
+              }});
+              threadsWithNewMessages.push(th);
+            }
+          });
+          if (threadsWithNewMessages.length == 1) {
+            var th = threadsWithNewMessages[0];
+            d.tabs.forEach(function(tab) {
+              api.tabs.emit(tab, "thread_info", {thread: th, read: d.lastMessageRead[th.id]});
+            });
+          } else if (threadsWithNewMessages.length > 1) {
+            d.tabs.forEach(function(tab) {
+              api.tabs.emit(tab, "threads", {threads: d.threads, readTimes: d.lastMessageRead, userId: session.userId});
+            });
+          }
+        }
+      }
     });
   }
   function finish(uri) {
     tab.nUri = uri;
-    tab.seq = d.seq;
+    //tab.seq = d.seq;
     for (var i = 0; i < d.tabs.length; i++) {
       if (d.tabs[i].id == tab.id) {
         d.tabs.splice(i--, 1);
@@ -962,7 +1025,6 @@ api.tabs.on.unload.add(function(tab) {
       delete pageData[tab.nUri];
     }
   }
-  socket && socket.send(["unsubscribe_uri", tab.nUri || tab.url]);
 });
 
 function scheduleAutoShow(tab) {
@@ -1042,9 +1104,42 @@ api.on.update.add(function() {
   logEvent("extension", "update");
 });
 
+function getFriends() {
+  ajax("api", "GET", "/ext/user/friends", function(fr) {
+    api.log("[getFriends]", fr);
+    friends = fr;
+    friendsById = {};
+    for (var i = 0; i < fr.length; i++) {
+      var f = fr[i];
+      friendsById[f.id] = f;
+    }
+  });
+}
+
+function getPrefs() {
+  ajax("api", "GET", "/ext/prefs", function(o) {
+    api.log("[getPrefs]", o);
+    session.prefs = o;
+  });
+}
+
+function getRules() {
+  ajax("api", "GET", "/ext/pref/rules?version=" + ruleSet.version, function(o) {
+    api.log("[getRules]", o);
+    ruleSet = o;
+  });
+}
+
+
 // ===== Session management
 
 var session, socket, onReadyTemp;
+
+function connectSync() {
+  getRules();
+  getFriends();
+  getPrefs();
+}
 
 function authenticate(callback, retryMs) {
   if (api.prefs.get("env") === "development") {
@@ -1062,20 +1157,16 @@ function startSession(callback, retryMs) {
     api.log("[authenticate:done] reason: %s session: %o", api.loadReason, data);
     logEvent("extension", "authenticated");
 
+    connectSync();
+
     session = data;
     session.prefs = {}; // to come via socket
     socket = api.socket.open(apiBaseUri().replace(/^http/, "ws") + "/ext/ws", socketHandlers, function onConnect() {
-      socket.send(["get_prefs"]);
       socket.send(["get_last_notify_read_time"]);
       if (!notifications) {
         socket.send(["get_notifications", NOTIFICATION_BATCH_SIZE]);
       } else {
         socket.send(["get_missed_notifications", notifications.length ? notifications[0].time : new Date(0).toISOString()]);
-      }
-      socket.send(["get_friends"]);  // TODO: optimize seq > 1 case
-      if (socket.seq > 1) {  // reconnected
-        socket.send(["get_rules", ruleSet.version]);
-        api.tabs.eachSelected(subscribe);
       }
     }, function onDisconnect(why) {
       reportError("socket disconnect (" + why + ")");
