@@ -53,7 +53,8 @@ $(function() {
 
       $(this).autocomplete({
         minLength: 0,
-        source: connections,
+        // TODO: remove when facebook fixes https://developers.facebook.com/bugs/314349658708936
+        source: connections.filter(function(v) { return !!v.value.indexOf("facebook") }),
         focus: function( event, ui ) {
           $(this).val( ui.item.label );
           return false;
