@@ -51,7 +51,7 @@ PageData.prototype = {
 
 // ===== Server requests
 
-function ajax(method, uri, data, done, fail) {  // method and uri are required
+function ajax(service, method, uri, data, done, fail) {  // method and uri are required
   if (typeof data == "function") {  // shift args if data is missing and done is present
     fail = done, done = data, data = null;
   }
@@ -70,7 +70,7 @@ function ajax(method, uri, data, done, fail) {  // method and uri are required
     data = null;
   }
 
-  api.request(method, apiBaseUri() + uri, data, done, fail);
+  api.request(method, serviceNameToUri(service) + uri, data, done, fail);
 }
 
 // ===== Event logging
@@ -362,7 +362,7 @@ api.port.on({
   get_keeps: searchOnServer,
   get_chatter: function(urls, respond) {
     api.log("[get_chatter]", urls);
-    ajax("POST", "/search/chatter", urls, respond);
+    ajax("api", "POST", "/search/chatter", urls, respond);
   },
   get_keepers: function(_, respond, tab) {
     api.log("[get_keepers]", tab.id);
@@ -385,7 +385,7 @@ api.port.on({
   unkeep: function(_, _, tab) {
     api.log("[unkeep]", tab.url);
     delete (pageData[tab.nUri] || {}).kept;
-    ajax("POST", "/bookmarks/remove", {url: tab.url}, function(o) {
+    ajax("api", "POST", "/bookmarks/remove", {url: tab.url}, function(o) {
       api.log("[unkeep] response:", o);
     });
     pageData[tab.nUri].tabs.forEach(function(tab) {
@@ -395,7 +395,7 @@ api.port.on({
   },
   set_private: function(priv, _, tab) {
     api.log("[setPrivate]", tab.url, priv);
-    ajax("POST", "/bookmarks/private", {url: tab.url, private: priv}, function(o) {
+    ajax("api", "POST", "/bookmarks/private", {url: tab.url, private: priv}, function(o) {
       api.log("[setPrivate] response:", o);
     });
     pageData[tab.nUri].tabs.forEach(function(tab) {
@@ -406,7 +406,7 @@ api.port.on({
     (pageData[tab.nUri] || {}).shown = true;  // server already notified via event log
   },
   suppress_on_site: function(data, _, tab) {
-    ajax("POST", "/users/slider/suppress", {url: tab.url, suppress: data});
+    ajax("api", "POST", "/users/slider/suppress", {url: tab.url, suppress: data});
     pageData[tab.nUri].neverOnSite = !!data;
   },
   get_suppressed: function(_, respond, tab) {
@@ -433,7 +433,7 @@ api.port.on({
   },
   send_message: function(data, respond) {
     api.log("[send_message]", data);
-    ajax("POST", "/messages", data, function(o) {
+    ajax("api", "POST", "/messages", data, function(o) {
       api.log("[send_message] resp:", o);
       respond(o);
     });
@@ -442,7 +442,7 @@ api.port.on({
     api.log("[send_reply]", data);
     var id = data.threadId;
     delete data.threadId;
-    ajax("POST", "/messages/" + id, data, function(o) {
+    ajax("api", "POST", "/messages/" + id, data, function(o) {
       api.log("[send_reply] resp:", o);
       respond(o);
     });
@@ -811,7 +811,7 @@ function searchOnServer(request, respond) {
       params.end = params.start;
     }
   }
-  ajax("GET", "/search", params,
+  ajax("search", "GET", "/search", params,
     function(resp) {
       api.log("[searchOnServer] response:", resp);
       resp.session = session;
@@ -893,7 +893,7 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
   api.log("[postBookmarks]");
   supplyBookmarks(function(bookmarks) {
     api.log("[postBookmarks] bookmarks:", bookmarks);
-    ajax("POST", "/bookmarks/add", {
+    ajax("api", "POST", "/bookmarks/add", {
         bookmarks: bookmarks,
         source: bookmarkSource},
       function(o) {
@@ -998,7 +998,24 @@ function getId(o) {
 function devUriOr(uri) {
   return api.prefs.get("env") === "development" ? "http://dev.ezkeep.com:9000" : uri;
 }
-var apiBaseUri = devUriOr.bind(0, "https://api.kifi.com");
+function apiUri(service) {
+  return "https://" + (service === "" ? "api" : service) + ".kifi.com";
+}
+function serviceNameToUri(service) {
+  switch (service) {
+    case "eliza":
+      return elizaBaseUri();
+    case "search":
+      return searchBaseUri();
+    default:
+      return apiBaseUri();
+  }
+}
+
+var apiBaseUri = devUriOr.bind(0, apiUri(""));
+var searchBaseUri = devUriOr.bind(0, apiUri("search"));
+var elizaBaseUri = devUriOr.bind(0, apiUri("eliza"));
+
 var webBaseUri = devUriOr.bind(0, "https://www.kifi.com");
 var admBaseUri = devUriOr.bind(0, "https://admin.kifi.com");
 
@@ -1038,7 +1055,7 @@ function authenticate(callback, retryMs) {
 }
 
 function startSession(callback, retryMs) {
-  ajax("POST", "/kifi/start", {
+  ajax("api", "POST", "/kifi/start", {
     installation: getStored("kifi_installation_id"),
     version: api.version},
   function done(data) {
@@ -1164,7 +1181,7 @@ authenticate(function() {
 function reportError(errMsg, url, lineNo) {
   api.log('Reporting error "%s" in %s line %s', errMsg, url, lineNo);
   if ((api.prefs.get("env") === "production") === api.isPackaged()) {
-    ajax("POST", "/error/report", {message: errMsg + (url ? ' at ' + url + (lineNo ? ':' + lineNo : '') : '')});
+    ajax("api", "POST", "/error/report", {message: errMsg + (url ? ' at ' + url + (lineNo ? ':' + lineNo : '') : '')});
   }
 }
 if (typeof window !== 'undefined') {  // TODO: add to api, find equivalent for firefox
