@@ -46,6 +46,9 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   protected val impersonateCookie: ImpersonateCookie
   protected val actorSystem: ActorSystem
   protected val clock: Clock
+
+  protected def onConnect(socket: SocketInfo) : Unit
+  protected def onDisconnect(socket: SocketInfo) : Unit
   protected def websocketHandlers(socket: SocketInfo) : Map[String, Seq[JsValue] => Unit]
 
 
@@ -131,6 +134,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
         val handlers = websocketHandlers(socketInfo)
         val socketAliveCancellable: Ref[Option[Cancellable]] = Ref(None.asInstanceOf[Option[Cancellable]])
 
+        onConnect(socketInfo)
 
         def endSession(reason: String)(implicit channel: Concurrent.Channel[JsArray]) = {
           atomic { implicit txn =>
@@ -139,6 +143,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
           log.info(s"Closing socket of userId ${streamSession.userId} because: $reason")
           channel.push(Json.arr("goodbye", reason))
           channel.eofAndEnd()
+          onDisconnect(socketInfo)
         }
 
         val iteratee = asyncIteratee { jsArr =>

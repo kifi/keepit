@@ -21,6 +21,7 @@ import com.google.inject.Inject
 class ExtMessagingController @Inject() (
     messagingController: MessagingController,
     actionAuthenticator: ActionAuthenticator,
+    notificationRouter: NotificationRouter,
     protected val shoebox: ShoeboxServiceClient,
     protected val impersonateCookie: ImpersonateCookie,
     protected val actorSystem: ActorSystem,
@@ -60,7 +61,15 @@ class ExtMessagingController @Inject() (
   /*********** WEBSOCKETS ******************/
 
 
-  override protected def websocketHandlers(socket: SocketInfo) = Map[String, Seq[JsValue] => Unit](
+  protected def onConnect(socket: SocketInfo) : Unit = {
+    notificationRouter.registerUserSocket(socket)
+  }
+
+  protected def onDisconnect(socket: SocketInfo) : Unit = {
+    notificationRouter.unregisterUserSocket(socket)
+  }
+
+  protected def websocketHandlers(socket: SocketInfo) = Map[String, Seq[JsValue] => Unit](
     "ping" -> { _ =>
       socket.channel.push(Json.arr("pong"))
     },
