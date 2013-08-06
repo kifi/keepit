@@ -65,7 +65,7 @@ class ExtMessagingController @Inject() (
       socket.channel.push(Json.arr("pong"))
     },
     "stats" -> { _ =>
-      socket.channel.push(Json.arr(s"id:${socket.id}", clock.now.minus(socket.connectedAt.getMillis).getMillis / 1000.0, socket.subscriptions.keys))
+      socket.channel.push(Json.arr(s"id:${socket.id}", clock.now.minus(socket.connectedAt.getMillis).getMillis / 1000.0))
     },
     "get_thread" -> { case JsString(threadId) +: _ =>
       val messages = messagingController.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None)
@@ -109,19 +109,7 @@ class ExtMessagingController @Inject() (
     "set_global_read" -> { case JsString(messageId) +: _ =>
       messagingController.setLastSeen(socket.userId, ExternalId[Message](messageId))
     }
-    // TODO Stephen: Rework those last three
-    // "subscribe_uri" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
-    //   val nUri = URINormalizer.normalize(url)
-    //   subscriptions.putIfAbsent(nUri, uriChannel.subscribe(nUri, socketId, channel))
-    //   channel.push(Json.arr(requestId.toLong, nUri))
-    //   channel.push(Json.arr("uri_1", nUri, keeperInfoLoader.load1(userId, nUri)))
-    //   channel.push(Json.arr("uri_2", nUri, keeperInfoLoader.load2(userId, nUri)))
-    // },
-    // "unsubscribe_uri" -> { case JsString(url) +: _ =>
-    //   val nUri = URINormalizer.normalize(url)
-    //   subscriptions.get(nUri).foreach(_.unsubscribe())
-    //   subscriptions.remove(nUri)
-    // },
+    // TODO Stephen: Send this on to shoebox
     // "log_event" -> { case JsObject(pairs) +: _ =>
     //   logEvent(streamSession, JsObject(pairs))
     // },
