@@ -12,6 +12,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import com.google.inject.Inject
 
+import org.joda.time.DateTime
+
 import play.api.libs.json.{JsValue, JsNull}
 
 /* To future maintainers 
@@ -147,6 +149,30 @@ class MessagingController @Inject() (
     getThreadMessages(thread, pageOpt)
   }
 
+  def getThreadMessagesWithBasicUser(threadExtId: ExternalId[MessageThread], pageOpt: Option[Int]) : Seq[MessageWithBasicUser] = {
+    val thread = db.readOnly{ implicit session =>
+      threadRepo.get(threadExtId)
+    }
+    val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
+    val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1 seconds)
+    val messages = getThreadMessages(thread, pageOpt)
+    messages.map{ message =>
+      MessageWithBasicUser(
+        message.externalId,
+        message.createdAt,
+        message.messageText,
+        message.sentOnUrl.getOrElse(""),
+        message.from.map(id2BasicUser(_)),
+        message.from.map(participantSet - _).getOrElse(participantSet).toSeq.map(id2BasicUser(_))
+      )
+    }
+  }
+
+  def getThread(threadExtId: ExternalId[MessageThread]) : MessageThread = {
+    db.readOnly{ implicit session =>
+      threadRepo.get(threadExtId)
+    }
+  }
 
   def getThreads(user: Id[User], url: Option[String]=None): Seq[MessageThread] = {
     db.readOnly { implicit session =>
@@ -165,6 +191,14 @@ class MessagingController @Inject() (
     log.info("Setting all Notifications as read for user $userId.")
     db.readWrite{implicit session => userThreadRepo.clearNotification(userId)}
   }
+
+  def setAllNotificationsReadBefore(user: Id[User], messageId: ExternalId[Message]) : DateTime = {
+    db.readWrite{ implicit session =>
+      val message = messageRepo.get(messageId)
+      userThreadRepo.clearNotificationsBefore(user, message.createdAt)
+      message.createdAt
+    }
+  }
  
 
   def setLastSeen(userId: Id[User], threadId: Id[MessageThread]) : Unit = {
@@ -178,7 +212,31 @@ class MessagingController @Inject() (
     db.readOnly{ implicit session =>
       userThreadRepo.getPendingNotifications(userId)
     }
+  }
+
+  def setNotificationLastSeen(userId: Id[User], timestamp: DateTime) : Unit = {
+    db.readWrite{ implicit session =>
+      userThreadRepo.setNotificationLastSeen(userId, timestamp)
+    }
   } 
+
+  def getNotificationLastSeen(userId: Id[User]): Option[DateTime] = {
+    db.readOnly{ implicit session =>
+      userThreadRepo.getNotificationLastSeen(userId)
+    }
+  }
+
+  def getLatestNotifications(userId: Id[User], howMany: Int): Seq[JsValue] = {
+    db.readOnly{ implicit session =>
+      userThreadRepo.getLatestNotifications(userId, howMany)
+    }
+  }
+
+  def getPendingNotificationCount(userId: Id[User]): Int = {
+    db.readOnly{ implicit session =>
+      userThreadRepo.getPendingNotificationCount(userId)
+    }
+  }
 
 
 }

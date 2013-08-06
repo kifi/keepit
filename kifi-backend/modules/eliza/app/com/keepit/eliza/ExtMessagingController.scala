@@ -5,11 +5,12 @@ import com.keepit.model.User
 import com.keepit.common.controller.{BrowserExtensionController, ActionAuthenticator}
 import com.keepit.shoebox.{ShoeboxServiceClient}
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
+import com.keepit.common.time._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import play.api.libs.iteratee.Concurrent
-import play.api.libs.json.{Json, JsValue, JsArray}
+import play.api.libs.json.{Json, JsValue, JsArray, JsString, JsNumber}
 
 import akka.actor.ActorSystem
 
@@ -22,10 +23,10 @@ class ExtMessagingController @Inject() (
     actionAuthenticator: ActionAuthenticator,
     protected val shoebox: ShoeboxServiceClient,
     protected val impersonateCookie: ImpersonateCookie,
-    protected val actorSystem: ActorSystem
+    protected val actorSystem: ActorSystem,
+    protected val clock: Clock
   ) 
   extends BrowserExtensionController(actionAuthenticator) with AuthenticatedWebSocketsController {
-
 
 
   /*********** REST *********************/
@@ -59,10 +60,73 @@ class ExtMessagingController @Inject() (
   /*********** WEBSOCKETS ******************/
 
 
-  override protected def websocketHandlers(channel: Concurrent.Channel[JsArray]) = Map[String, Seq[JsValue] => Unit](
+  override protected def websocketHandlers(socket: SocketInfo) = Map[String, Seq[JsValue] => Unit](
     "ping" -> { _ =>
-      channel.push(Json.arr("pong"))
+      socket.channel.push(Json.arr("pong"))
+    },
+    "stats" -> { _ =>
+      socket.channel.push(Json.arr(s"id:${socket.id}", clock.now.minus(socket.connectedAt.getMillis).getMillis / 1000.0, socket.subscriptions.keys))
+    },
+    "get_thread" -> { case JsString(threadId) +: _ =>
+      val messages = messagingController.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None)
+      val url = messages.headOption.map(_.url).getOrElse("") //TODO: this needs to change when we have detached threads!
+      socket.channel.push(
+        Json.arr("thread", 
+          Json.obj("id" -> threadId, "uri" -> url, "messages" -> messages)
+        )
+      )
+    },
+    "set_all_notifications_visited" -> { case JsString(notifId) +: _ =>
+      val messageId = ExternalId[Message](notifId)
+      val lastModified = messagingController.setAllNotificationsReadBefore(socket.userId, messageId)
+      socket.channel.push(Json.arr("all_notifications_visited", notifId, lastModified))
+    },
+    "get_last_notify_read_time" -> { _ =>
+      val t = messagingController.getNotificationLastSeen(socket.userId)
+      socket.channel.push(Json.arr("last_notify_read_time", t.map(_.toStandardTimeString)))
+    },
+    "set_last_notify_read_time" -> { case JsString(time) +: _ =>
+      val t = parseStandardTime(time)
+      messagingController.setNotificationLastSeen(socket.userId, t)
+      socket.channel.push(Json.arr("last_notify_read_time", t.toStandardTimeString))
+    },
+    "get_notifications" -> { case JsNumber(howMany) +: _ =>
+      val notices = messagingController.getLatestNotifications(socket.userId, howMany.toInt)
+      val unvisited = messagingController.getPendingNotificationCount(socket.userId)
+      socket.channel.push(Json.arr("notifications", notices, unvisited))
     }
+
+
+    // "get_missed_notifications" -> { case JsString(time) +: _ =>
+    //   val notices = db.readOnly(implicit s => userNotificationRepo.getCreatedAfter(userId, parseStandardTime(time)))
+    //   channel.push(Json.arr("missed_notifications", notices.map(SendableNotification.fromUserNotification)))
+    // },
+    // "get_old_notifications" -> { case JsNumber(requestId) +: JsString(time) +: JsNumber(howMany) +: _ =>
+    //   val notices = db.readOnly(implicit s => userNotificationRepo.getCreatedBefore(userId, parseStandardTime(time), howMany.toInt))
+    //   channel.push(Json.arr(requestId.toLong, notices.map(SendableNotification.fromUserNotification)))
+    // },
+    // "set_message_read" -> { case JsString(messageId) +: _ =>
+    //   setMessageRead(userId, ExternalId[Comment](messageId))
+    // },
+    // "set_global_read" -> { case JsString(commentId) +: _ =>
+    //   setGlobalRead(userId, ExternalId[UserNotification](commentId))
+    // }
+    // "subscribe_uri" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
+    //   val nUri = URINormalizer.normalize(url)
+    //   subscriptions.putIfAbsent(nUri, uriChannel.subscribe(nUri, socketId, channel))
+    //   channel.push(Json.arr(requestId.toLong, nUri))
+    //   channel.push(Json.arr("uri_1", nUri, keeperInfoLoader.load1(userId, nUri)))
+    //   channel.push(Json.arr("uri_2", nUri, keeperInfoLoader.load2(userId, nUri)))
+    // },
+    // "unsubscribe_uri" -> { case JsString(url) +: _ =>
+    //   val nUri = URINormalizer.normalize(url)
+    //   subscriptions.get(nUri).foreach(_.unsubscribe())
+    //   subscriptions.remove(nUri)
+    // },
+    // TODO Stephen: Call out to shoebox
+    // "log_event" -> { case JsObject(pairs) +: _ =>
+    //   logEvent(streamSession, JsObject(pairs))
+    // },
   )
 
 
