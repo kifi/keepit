@@ -1,5 +1,8 @@
 package com.keepit.controllers.website
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
 import java.net.URLEncoder
 
 import com.google.inject.Inject
@@ -9,6 +12,7 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.State
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
+import com.keepit.common.net.HttpClient
 import com.keepit.common.social._
 import com.keepit.model._
 import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialId}
@@ -28,7 +32,8 @@ class InviteController @Inject() (db: Database,
   invitationRepo: InvitationRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   linkedIn: LinkedInSocialGraph,
-  actionAuthenticator: ActionAuthenticator)
+  actionAuthenticator: ActionAuthenticator,
+  httpClient: HttpClient)
     extends WebsiteController(actionAuthenticator) {
 
   private def createBasicUserInvitation(socialUser: SocialUserInfo, state: State[Invitation]): BasicUserInvitation = {
@@ -68,12 +73,16 @@ class InviteController @Inject() (db: Database,
 
   private val url = current.configuration.getString("application.baseUrl").get
   private val appId = current.configuration.getString("securesocial.facebook.clientId").get
-  private def fbInviteUrl(invite: Invitation)(implicit session: RSession) = {
+  private def fbInviteUrl(invite: Invitation)(implicit session: RSession): Future[String] = {
     val identity = socialUserInfoRepo.get(invite.recipientSocialUserId)
     val link = URLEncoder.encode(s"$url${routes.InviteController.acceptInvite(invite.externalId)}", "UTF-8")
     val confirmUri = URLEncoder.encode(
       s"$url${routes.InviteController.confirmInvite(invite.externalId, None, None)}", "UTF-8")
-    s"https://www.facebook.com/dialog/send?app_id=$appId&link=$link&redirect_uri=$confirmUri&to=${identity.socialId.id}"
+    // Workaround for https://developers.facebook.com/bugs/314349658708936
+    // See https://developers.facebook.com/bugs/576522152386211
+    httpClient.getFuture(s"https://developers.facebook.com/tools/debug/og/object?q=$link") map { _ =>
+      s"https://www.facebook.com/dialog/send?app_id=$appId&link=$link&redirect_uri=$confirmUri&to=${identity.socialId.id}"
+    }
   }
 
   def inviteConnection = AuthenticatedHtmlAction { implicit request =>
@@ -91,7 +100,7 @@ class InviteController @Inject() (db: Database,
         invitationRepo.getByRecipient(socialUserInfo.id.get) match {
           case Some(alreadyInvited) if alreadyInvited.state != InvitationStates.INACTIVE =>
             if(alreadyInvited.senderUserId == request.user.id) {
-              Redirect(fbInviteUrl(alreadyInvited))
+              Async { fbInviteUrl(alreadyInvited) map (Redirect(_)) }
             } else {
               Redirect(routes.InviteController.invite)
             }
@@ -112,7 +121,7 @@ class InviteController @Inject() (db: Database,
               )
               socialUserInfo.networkType match {
                 case SocialNetworks.FACEBOOK =>
-                  Redirect(fbInviteUrl(invitationRepo.save(invite)))
+                  Async { fbInviteUrl(invitationRepo.save(invite)) map (Redirect(_)) }
                 case SocialNetworks.LINKEDIN =>
                   val me = socialUserInfoRepo.getByUser(request.userId)
                     .find(_.networkType == SocialNetworks.LINKEDIN).get
