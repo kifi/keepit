@@ -28,12 +28,12 @@ class ExtPreferenceController @Inject() (
   private case class UserPrefs(enterToSend: Boolean)
   private implicit val userPrefsFormat = Json.format[UserPrefs]
 
-  def normalize(url: String) = AuthenticatedJsonToJsonAction { request =>
+  def normalize(url: String) = AuthenticatedJsonAction { request =>
     // Todo: upgrade to new normalization
     Ok(URINormalizer.normalize(url))
   }
 
-  def getRules(version: String) = AuthenticatedJsonToJsonAction { request =>
+  def getRules(version: String) = AuthenticatedJsonAction { request =>
     db.readOnly { implicit s =>
       val group = sliderRuleRepo.getGroup("default")
       if (version != group.version) {
@@ -44,12 +44,12 @@ class ExtPreferenceController @Inject() (
     }
   }
 
-  def setEnterToSend(enterToSend: Boolean) = AuthenticatedJsonToJsonAction { request =>
+  def setEnterToSend(enterToSend: Boolean) = AuthenticatedJsonAction { request =>
     db.readWrite(implicit s => userValueRepo.setValue(request.user.id.get, "enter_to_send", enterToSend.toString))
     Ok(Json.arr("prefs", loadUserPrefs(request.user.id.get)))
   }
 
-  def getPrefs() = AuthenticatedJsonToJsonAction { request =>
+  def getPrefs() = AuthenticatedJsonAction { request =>
     Ok(Json.arr("prefs", loadUserPrefs(request.user.id.get)))
   }
 
