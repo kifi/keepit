@@ -25,6 +25,7 @@ CREATE TABLE message (
 
     sender_id bigint(20) NULL,
     thread_id bigint(20) NOT NULL,
+    thread_ext_id varchar(36) NOT NULL,
     message_text longtext NOT NULL,
     sent_on_url text NULL,
     sent_on_uri_id bigint(20) NULL,
@@ -50,6 +51,8 @@ CREATE TABLE user_thread (
     muted bool(1) NOT NULL,
     last_msg_from_other bigint(20) DEFAULT NULL,
     lastNotification longtext DEFAULT NULL,
+    notification_updated_at datetime NOT NULL,
+    notification_last_seen datetime NOT NULL,
 
     PRIMARY KEY (id),
     KEY user_thread_i_user_page (user_id, uri_id),
