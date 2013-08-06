@@ -53,11 +53,11 @@ class ExtUserController @Inject() (
     Ok
   }
 
-  def getNetworks(friendExtId: ExternalId[User]) = AuthenticatedJsonToJsonAction { request =>
+  def getNetworks(friendExtId: ExternalId[User]) = AuthenticatedJsonAction { request =>
     Ok(Json.toJson(networkInfoLoader.load(request.user.id.get, friendExtId)))
   }
 
-  def getFriends() = AuthenticatedJsonToJsonAction { request =>
+  def getFriends() = AuthenticatedJsonAction { request =>
     val basicUsers = db.readOnly { implicit s =>
       if (canMessageAllUsers(request.user.id.get)) {
         userRepo.allExcluding(UserStates.PENDING, UserStates.BLOCKED, UserStates.INACTIVE)

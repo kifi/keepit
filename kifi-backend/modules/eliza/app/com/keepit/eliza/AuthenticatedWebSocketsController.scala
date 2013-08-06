@@ -3,15 +3,18 @@ package com.keepit.eliza
 
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.db.{ExternalId, Id, State}
-import com.keepit.model.{User, SocialUserInfo, ExperimentType, ExperimentTypes}
+import com.keepit.model.{User, SocialUserInfo, ExperimentType, ExperimentTypes, NormalizedURI}
 import com.keepit.shoebox.ShoeboxServiceClient
 import com.keepit.social.{SocialNetworkType, SocialId}
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
+import com.keepit.common.time._
 
 import scala.concurrent.stm.{Ref, atomic}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration._
+import scala.util.Random
+import scala.collection.concurrent.TrieMap
 
 import play.api.libs.concurrent.Akka
 import play.api.mvc.{WebSocket,RequestHeader}
@@ -25,6 +28,8 @@ import akka.actor.{Cancellable, ActorSystem}
 
 import securesocial.core.{Authenticator, UserService, SecureSocial}
 
+import org.joda.time.DateTime
+
 
 
 
@@ -32,13 +37,16 @@ import securesocial.core.{Authenticator, UserService, SecureSocial}
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]])
 
+case class SocketInfo(id: Long, channel: Concurrent.Channel[JsArray], connectedAt: DateTime, userId: Id[User])
+
 
 trait AuthenticatedWebSocketsController extends ElizaServiceController {
 
   protected val shoebox: ShoeboxServiceClient
   protected val impersonateCookie: ImpersonateCookie
   protected val actorSystem: ActorSystem
-  protected def websocketHandlers(channel: Concurrent.Channel[JsArray]) : Map[String, Seq[JsValue] => Unit]
+  protected val clock: Clock
+  protected def websocketHandlers(socket: SocketInfo) : Map[String, Seq[JsValue] => Unit]
 
 
 
@@ -119,7 +127,8 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     authenticate(request) match {
       case Some(streamSessionFuture) =>  streamSessionFuture.map { streamSession =>
         implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
-        val handlers = websocketHandlers(channel)
+        val socketInfo = SocketInfo(Random.nextLong(), channel, clock.now, streamSession.userId)
+        val handlers = websocketHandlers(socketInfo)
         val socketAliveCancellable: Ref[Option[Cancellable]] = Ref(None.asInstanceOf[Option[Cancellable]])
 
 

@@ -51,6 +51,7 @@ POST    /ext/pref/keeperPosition         @com.keepit.controllers.ext.ExtPreferen
 POST    /ext/pref/enterToSend            @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
 GET     /ext/user/friends                @com.keepit.controllers.ext.ExtUserController.getFriends()
 GET     /ext/user/networks               @com.keepit.controllers.ext.ExtUserController.getNetworks(friendExtId: ExternalId[User])
+GET     /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails(url: String)
 
 
 POST    /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts
