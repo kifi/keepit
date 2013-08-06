@@ -254,18 +254,17 @@ class UserController @Inject() (
 
   def getAllConnections = AuthenticatedJsonAction { request =>
     val connections = db.readOnly { implicit conn =>
-      socialUserRepo.getByUser(request.user.id.get) flatMap { su =>
+      (socialUserRepo.getByUser(request.user.id.get) flatMap { su =>
         socialConnectionRepo.getSocialUserConnections(su.id.get) map { suc =>
 
-          val status = if(suc.userId.isDefined) "joined"
-            else {
-              val existingInvite = invitationRepo.getByRecipient(suc.id.get)
-              if(existingInvite.isDefined && existingInvite.get.state != InvitationStates.INACTIVE) "invited"
-              else ""
-            }
+          val status = suc.userId map (_ => "joined") getOrElse {
+            invitationRepo.getByRecipient(suc.id.get) collect {
+              case inv if inv.state != InvitationStates.INACTIVE => "invited"
+            } getOrElse ""
+          }
           (suc, status)
         }
-      }
+      }) sortBy { case (sui, status) => (status, sui.fullName) }
     }
 
     Ok(JsArray(connections.map { conn =>

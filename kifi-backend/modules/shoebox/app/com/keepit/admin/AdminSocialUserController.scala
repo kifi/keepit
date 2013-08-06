@@ -40,14 +40,10 @@ class AdminSocialUserController @Inject() (
   }
 
   def socialUsersView(page: Int) = AdminHtmlAction { implicit request =>
-    val PAGE_SIZE = 100
+    val PAGE_SIZE = 50
     Async {
-      for {
-        socialUsers <- db.readOnlyAsync { implicit s => socialUserInfoRepo.page(page, PAGE_SIZE) }
-        count <- db.readOnlyAsync { implicit s => socialUserInfoRepo.count }
-      } yield {
-        val pageCount = (count / PAGE_SIZE + 1).toInt
-        Ok(html.admin.socialUsers(socialUsers, page, count, pageCount))
+      db.readOnlyAsync { implicit s => socialUserInfoRepo.page(page, PAGE_SIZE) } map { socialUsers =>
+        Ok(html.admin.socialUsers(socialUsers, page))
       }
     }
   }

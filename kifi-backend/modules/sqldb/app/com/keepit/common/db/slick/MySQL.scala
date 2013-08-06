@@ -6,7 +6,7 @@ import scala.slick.driver.MySQLDriver
 import scala.slick.session.{Database => SlickDatabase}
 
 // see https://groups.google.com/forum/?fromgroups=#!topic/scalaquery/36uU8koz8Gw
-class MySQL(val handle: SlickDatabase)
+class MySQL(val masterDb: SlickDatabase, val slaveDb: Option[SlickDatabase])
     extends DataBaseComponent {
   println("initiating MySQL driver")
   val Driver = MySQLDriver

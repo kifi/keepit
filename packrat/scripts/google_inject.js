@@ -546,10 +546,9 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
   }
 
   function boldSearchTerms(text, matches) {
-    var before = '<b>', after = '</b>';
-    return (matches || []).reduce(function (text, match, i) {
-      var start = match[0] + i*(before.length + after.length), len = match[1];
-      return text.substr(0, start) + before + text.substr(start, len) + after + text.substr(start + len);
+    return (matches || []).reduceRight(function (text, match) {
+      var start = match[0], len = match[1];
+      return text.substr(0, start) + '<b>' + text.substr(start, len) + '</b>' + text.substr(start + len);
     }, text || "");
   }
 
