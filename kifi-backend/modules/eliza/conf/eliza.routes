@@ -1,6 +1,7 @@
 
 ##########################################
 #INTERNAL ROUTES/Shoebox
+#INTERNAL ROUTES/Eliza
 ##########################################
 
 POST  /internal/eliza/sendToUserNoBroadcast     @com.keepit.eliza.ElizaController.sendToUserNoBroadcast
