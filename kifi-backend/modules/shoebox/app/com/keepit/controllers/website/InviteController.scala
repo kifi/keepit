@@ -1,5 +1,7 @@
 package com.keepit.controllers.website
 
+import java.net.URLEncoder
+
 import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.WebsiteController
@@ -68,8 +70,9 @@ class InviteController @Inject() (db: Database,
   private val appId = current.configuration.getString("securesocial.facebook.clientId").get
   private def fbInviteUrl(invite: Invitation)(implicit session: RSession) = {
     val identity = socialUserInfoRepo.get(invite.recipientSocialUserId)
-    val link = s"$url${routes.InviteController.acceptInvite(invite.externalId)}"
-    val confirmUri = s"$url${routes.InviteController.confirmInvite(invite.externalId, None, None)}"
+    val link = URLEncoder.encode(s"$url${routes.InviteController.acceptInvite(invite.externalId)}", "UTF-8")
+    val confirmUri = URLEncoder.encode(
+      s"$url${routes.InviteController.confirmInvite(invite.externalId, None, None)}", "UTF-8")
     s"https://www.facebook.com/dialog/send?app_id=$appId&link=$link&redirect_uri=$confirmUri&to=${identity.socialId.id}"
   }
 
