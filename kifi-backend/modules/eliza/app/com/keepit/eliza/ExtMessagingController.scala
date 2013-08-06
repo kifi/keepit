@@ -91,26 +91,25 @@ class ExtMessagingController @Inject() (
       socket.channel.push(Json.arr("last_notify_read_time", t.toStandardTimeString))
     },
     "get_notifications" -> { case JsNumber(howMany) +: _ =>
-      val notices = messagingController.getLatestNotifications(socket.userId, howMany.toInt)
+      val notices = messagingController.getLatestSendableNotifications(socket.userId, howMany.toInt)
       val unvisited = messagingController.getPendingNotificationCount(socket.userId)
       socket.channel.push(Json.arr("notifications", notices, unvisited))
+    },
+    "get_missed_notifications" -> { case JsString(time) +: _ =>
+      val notices = messagingController.getSendableNotificationsAfter(socket.userId, parseStandardTime(time))
+      socket.channel.push(Json.arr("missed_notifications", notices))
+    },
+    "get_old_notifications" -> { case JsNumber(requestId) +: JsString(time) +: JsNumber(howMany) +: _ =>
+      val notices = messagingController.getSendableNotificationsBefore(socket.userId, parseStandardTime(time), howMany.toInt)
+      socket.channel.push(Json.arr(requestId.toLong, notices))
+    },
+    "set_message_read" -> { case JsString(messageId) +: _ =>
+      messagingController.setLastSeen(socket.userId, ExternalId[Message](messageId))
+    },
+    "set_global_read" -> { case JsString(messageId) +: _ =>
+      messagingController.setLastSeen(socket.userId, ExternalId[Message](messageId))
     }
-
-
-    // "get_missed_notifications" -> { case JsString(time) +: _ =>
-    //   val notices = db.readOnly(implicit s => userNotificationRepo.getCreatedAfter(userId, parseStandardTime(time)))
-    //   channel.push(Json.arr("missed_notifications", notices.map(SendableNotification.fromUserNotification)))
-    // },
-    // "get_old_notifications" -> { case JsNumber(requestId) +: JsString(time) +: JsNumber(howMany) +: _ =>
-    //   val notices = db.readOnly(implicit s => userNotificationRepo.getCreatedBefore(userId, parseStandardTime(time), howMany.toInt))
-    //   channel.push(Json.arr(requestId.toLong, notices.map(SendableNotification.fromUserNotification)))
-    // },
-    // "set_message_read" -> { case JsString(messageId) +: _ =>
-    //   setMessageRead(userId, ExternalId[Comment](messageId))
-    // },
-    // "set_global_read" -> { case JsString(commentId) +: _ =>
-    //   setGlobalRead(userId, ExternalId[UserNotification](commentId))
-    // }
+    // TODO Stephen: Rework those last three
     // "subscribe_uri" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
     //   val nUri = URINormalizer.normalize(url)
     //   subscriptions.putIfAbsent(nUri, uriChannel.subscribe(nUri, socketId, channel))
@@ -123,7 +122,6 @@ class ExtMessagingController @Inject() (
     //   subscriptions.get(nUri).foreach(_.unsubscribe())
     //   subscriptions.remove(nUri)
     // },
-    // TODO Stephen: Call out to shoebox
     // "log_event" -> { case JsObject(pairs) +: _ =>
     //   logEvent(streamSession, JsObject(pairs))
     // },

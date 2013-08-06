@@ -50,7 +50,7 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def setNotification(user: Id[User], thread: Id[MessageThread])(implicit session: RWSession) : Unit
 
-  def setLastSeen(userId: Id[User], threadId: Id[MessageThread])(implicit session: RWSession) : Unit
+  def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession) : Unit
 
   def getPendingNotifications(userId: Id[User])(implicit session: RSession) : Seq[Notification]
 
@@ -60,9 +60,13 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def getNotificationLastSeen(userId: Id[User], threadIdOpt: Option[Id[MessageThread]]=None)(implicit session: RSession): Option[DateTime]
 
-  def getLatestNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsValue] 
+  def getLatestSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsValue] 
 
   def getPendingNotificationCount(userId: Id[User])(implicit session: RSession): Int
+
+  def getSendableNotificationsAfter(userId: Id[User], after: DateTime)(implicit session: RSession): Seq[JsValue]
+
+  def getSendableNotificationsBefore(userId: Id[User], before: DateTime, howMany: Int)(implicit session: RSession): Seq[JsValue]
 
 }
 
@@ -129,8 +133,8 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- table if row.user===userId && row.thread===threadId) yield row.notificationPending).update(true)
   }
 
-  def setLastSeen(userId: Id[User], threadId: Id[MessageThread])(implicit session: RWSession) : Unit = {
-    (for (row <- table if row.user===userId && row.thread===threadId) yield row.lastSeen).update(currentDateTime(zones.PT))
+  def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession) : Unit = {
+    (for (row <- table if row.user===userId && row.thread===threadId) yield row.lastSeen).update(timestamp)
   }
 
   def getPendingNotifications(userId: Id[User])(implicit session: RSession) : Seq[Notification] = {
@@ -160,7 +164,7 @@ class UserThreadRepoImpl @Inject() (
     }
   }
 
-  def getLatestNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsValue] = {
+  def getLatestSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsValue] = {
     (for (row <- table if row.user === userId) yield row)
       .sortBy(row => (row.createdAt) desc)
       .take(howMany).map(_.lastNotification).list
@@ -168,6 +172,21 @@ class UserThreadRepoImpl @Inject() (
 
   def getPendingNotificationCount(userId: Id[User])(implicit session: RSession): Int = {
     Query((for (row <- table if row.user===userId && row.notificationPending===true) yield row).length).first
+  }
+
+  def getSendableNotificationsAfter(userId: Id[User], after: DateTime)(implicit session: RSession): Seq[JsValue] = {
+    (for (row <- table if row.user===userId && row.notificationUpdatedAt > after) yield row)
+    .sortBy(row => (row.notificationUpdatedAt) desc)
+    .map(_.lastNotification) 
+    .list
+  }
+
+  def getSendableNotificationsBefore(userId: Id[User], before: DateTime, howMany: Int)(implicit session: RSession): Seq[JsValue] = {
+    (for (row <- table if row.user===userId && row.notificationUpdatedAt < before) yield row)
+    .sortBy(row => (row.notificationUpdatedAt) desc)
+    .map(_.lastNotification)
+    .take(howMany) 
+    .list
   }
 
 }

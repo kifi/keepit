@@ -5,6 +5,7 @@ import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.{Database}
 import com.keepit.shoebox.{ShoeboxServiceClient}
 import com.keepit.common.logging.Logging
+import com.keepit.common.time._
 
 import scala.concurrent.{future, Await, Future}
 import scala.concurrent.duration._
@@ -41,7 +42,8 @@ class MessagingController @Inject() (
     messageRepo: MessageRepo, 
     shoebox: ShoeboxServiceClient, 
     db: Database,
-    notificationRouter: NotificationRouter
+    notificationRouter: NotificationRouter,
+    clock: Clock
     )
   extends Logging {
 
@@ -200,13 +202,16 @@ class MessagingController @Inject() (
     }
   }
  
-
-  def setLastSeen(userId: Id[User], threadId: Id[MessageThread]) : Unit = {
+  def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestampOpt: Option[DateTime] = None) : Unit = {
     db.readWrite{ implicit session =>
-      userThreadRepo.setLastSeen(userId, threadId)
+      userThreadRepo.setLastSeen(userId, threadId, timestampOpt.getOrElse(clock.now))
     }
   }
 
+  def setLastSeen(userId: Id[User], messageExtId: ExternalId[Message]) : Unit = {
+    val message = db.readOnly{ implicit session => messageRepo.get(messageExtId) }
+    setLastSeen(userId, message.thread, Some(message.createdAt))
+  }
 
   def getPendingNotifications(userId: Id[User]) : Seq[Notification] = {
     db.readOnly{ implicit session =>
@@ -226,15 +231,27 @@ class MessagingController @Inject() (
     }
   }
 
-  def getLatestNotifications(userId: Id[User], howMany: Int): Seq[JsValue] = {
+  def getLatestSendableNotifications(userId: Id[User], howMany: Int): Seq[JsValue] = {
     db.readOnly{ implicit session =>
-      userThreadRepo.getLatestNotifications(userId, howMany)
+      userThreadRepo.getLatestSendableNotifications(userId, howMany)
     }
   }
 
   def getPendingNotificationCount(userId: Id[User]): Int = {
     db.readOnly{ implicit session =>
       userThreadRepo.getPendingNotificationCount(userId)
+    }
+  }
+
+  def getSendableNotificationsAfter(userId: Id[User], after: DateTime): Seq[JsValue] = {
+    db.readOnly{ implicit session =>
+      userThreadRepo.getSendableNotificationsAfter(userId, after)
+    }
+  }
+
+  def getSendableNotificationsBefore(userId: Id[User], after: DateTime, howMany: Int): Seq[JsValue] = {
+    db.readOnly{ implicit session =>
+      userThreadRepo.getSendableNotificationsBefore(userId, after, howMany)
     }
   }
 
