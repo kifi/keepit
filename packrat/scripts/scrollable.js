@@ -9,8 +9,8 @@
     }).scroll(throttle(onScroll, 50));
   };
   function onScroll() {
-    var sT = this.scrollTop, sH = this.scrollHeight, oH = this.offsetHeight, o = $(this).data();
+    var sT = this.scrollTop, sH = this.scrollHeight, cH = this.clientHeight, o = $(this).data();
     o.$above.toggleClass("kifi-can-scroll", sT > 0);
-    o.$below.toggleClass("kifi-can-scroll", sT < sH - oH);
+    o.$below.toggleClass("kifi-can-scroll", sT < sH - cH);
   }
 }();
