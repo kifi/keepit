@@ -1,3 +1,5 @@
+// @require scripts/scrollable.js
+
 function attachComposeBindings($c, composeTypeName, enterToSend) {
   var $f = $c.find(".kifi-compose");
   var $t = $f.find(".kifi-compose-to");
