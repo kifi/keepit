@@ -34,13 +34,13 @@ trait GeckoboardReporterPlugin extends SchedulingPlugin {
 
 class GeckoboardReporterPluginImpl @Inject() (
     actorProvider: ActorProvider[GeckoboardReporterActor],
-    // val schedulingProperties: SchedulingProperties,
+    val schedulingProperties: SchedulingProperties,
     totalKeepsPerHour: TotalKeepsPerHour,
     totalKeepsPerDay: TotalKeepsPerDay,
     totalKeepsPerWeek: TotalKeepsPerWeek,
     hoverKeepsPerWeek: HoverKeepsPerWeek)
 extends GeckoboardReporterPlugin with Logging {
- val schedulingProperties = SchedulingProperties.AlwaysEnabled
+ // val schedulingProperties = SchedulingProperties.AlwaysEnabled
 
   implicit val actorTimeout = Timeout(60 seconds)
 
