@@ -117,6 +117,10 @@ class ExtMessagingController @Inject() (
     },
     "set_global_read" -> { case JsString(messageId) +: _ =>
       messagingController.setLastSeen(socket.userId, ExternalId[Message](messageId))
+    },
+    "get_threads_by_url" -> { case JsString(url) +: _ =>
+      val threadInfos = messagingController.getThreadInfos(socket.userId, url)
+      socket.channel.push(Json.arr("thread_infos", threadInfos))
     }
     // TODO Stephen: Send this on to shoebox
     // "log_event" -> { case JsObject(pairs) +: _ =>

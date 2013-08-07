@@ -24,17 +24,18 @@ object GeckoboardPublisher {
 
 @ImplementedBy(classOf[GeckoboardPublisherImpl])
 trait GeckoboardPublisher {
-  def publish(data: GeckoboardData[_]): Unit
+  def publish[D <: GeckoboardData](widget: GeckoboardWidget[D]): Unit
 }
 
 class GeckoboardPublisherImpl @Inject() (httpClient: HttpClient)
     extends GeckoboardPublisher with Logging {
   import GeckoboardPublisher._
 
-  def publish(data: GeckoboardData[_]): Unit = {
+  def publish[D <: GeckoboardData](widget: GeckoboardWidget[D]): Unit = {
+    val data = widget.data()
     val obj = Json.obj("api_key" -> apiKey, "data" -> data.json)
     log.info(s"pushing o geckoboard: $obj")
-    val url = pushUri + data.widget.id.id
+    val url = pushUri + widget.id.id
     httpClient.postFuture(url, obj) map {res =>
       assume(res.body == """{"success":true}""")
     }
