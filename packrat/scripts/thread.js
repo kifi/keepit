@@ -7,6 +7,7 @@
 // @require scripts/render.js
 // @require scripts/compose.js
 // @require scripts/snapshot.js
+// @require scripts/prevent_ancestor_scroll.js
 
 threadPane = function() {
   var $scroller = $(), $holder = $(), buffer = {};
@@ -38,6 +39,7 @@ threadPane = function() {
         attachComposeBindings($container, "message", session.prefs.enterToSend);
 
         $scroller = $container.find(".kifi-messages-sent");
+        $scroller.preventAncestorScroll();
         $holder = $scroller.find(".kifi-messages-sent-inner").data("threadId", threadId);
         $container.closest(".kifi-pane-box").on("kifi:remove", function() {
           if ($holder.length && this.contains($holder[0])) {

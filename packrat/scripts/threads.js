@@ -8,6 +8,7 @@
 // @require scripts/render.js
 // @require scripts/compose.js
 // @require scripts/snapshot.js
+// @require scripts/prevent_ancestor_scroll.js
 
 threadsPane = function() {
   var $list = $();
@@ -51,6 +52,7 @@ threadsPane = function() {
         attachComposeBindings($container, "message", prefs.enterToSend);
 
         $list = $container.find(".kifi-threads-list");
+        $list.preventAncestorScroll();
         $container.closest(".kifi-pane-box").on("kifi:remove", function() {
           $list.length = 0;
         });
