@@ -370,5 +370,7 @@ POST    /internal/shoebox/channel/uriCount            @com.keepit.controllers.sh
 
 POST     /internal/shoebox/learning/suggestExperts    @com.keepit.controllers.shoebox.ExpertRecommenderController.suggestExperts()
 
+POST     /internal/geckoboard/refresh                 @com.keepit.reports.GeckoboardReporterController.refreshAll()
+
 
 ->  / common.Routes

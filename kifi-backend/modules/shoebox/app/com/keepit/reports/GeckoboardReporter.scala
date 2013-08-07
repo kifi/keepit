@@ -30,6 +30,7 @@ extends FortyTwoActor(healthcheckPlugin) with Logging {
 }
 
 trait GeckoboardReporterPlugin extends SchedulingPlugin {
+  def refreshAll(): Unit
 }
 
 class GeckoboardReporterPluginImpl @Inject() (
@@ -46,6 +47,13 @@ extends GeckoboardReporterPlugin with Logging {
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
+
+  def refreshAll(): Unit = {
+    actorProvider.actor ! totalKeepsPerHour
+    actorProvider.actor ! totalKeepsPerDay
+    actorProvider.actor ! totalKeepsPerWeek
+    actorProvider.actor ! hoverKeepsPerWeek
+  }
 
   override def onStart() {
     scheduleTask(actorProvider.system, 0 seconds, 10 minutes, actorProvider.actor, totalKeepsPerHour)
