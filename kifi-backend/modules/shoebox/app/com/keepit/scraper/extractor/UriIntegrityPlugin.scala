@@ -37,7 +37,7 @@ class UriIntegrityActor @Inject()(
   def handleChanged(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) = {
     db.readWrite{ implicit s =>
       urlRepo.getByNormUri(oldUri).map{ url =>
-        urlRepo.save(url.withNormUriId(newUri))
+        urlRepo.save(url.withNormUriId(newUri).withHistory(URLHistory(clock.now, newUri, URLHistoryCause.MERGE)))
       }
       // still need to clean url cache
 
