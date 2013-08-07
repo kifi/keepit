@@ -221,21 +221,17 @@ const socketHandlers = {
       api.log("[socket:thrad]", "Can't process thread, no pageData")
     }
   },
+  thread_infos: function(infos) {
+    infos.forEach(function(t) { pageInfo[t.nUrl].threads = []; });
+    infos.forEach(function(t) {
+      pageInfo[t.nUrl].threads.push(t);
+    });
+  },
   message: function(threadId, message) {
     api.log("[socket:message]", threadId, message, message.nUrl);
     var d = pageData[message.nUrl];
     if (d && !(messageData[threadId] || []).some(hasId(message.id))) {
-      // remove old copy of thread
-      for (var i = 0, n = d.threads.length; i < n; i++) {
-        if (d.threads[i].id == threadId) {
-          d.threads.splice(i, 1);
-          break;
-        }
-      }
-      // insert thread in chronological order
-      var t = new Date(th.lastCommentedAt);
-      for (i = d.threads.length; i > 0 && new Date(d.threads[i-1].lastCommentedAt) > t; i--);
-      d.threads.splice(i, 0, th);
+
       // insert message in chronological order
       if (th.messageCount > 1) {
         var messages = messageData[th.id];
@@ -247,12 +243,36 @@ const socketHandlers = {
       } else {
         messageData[threadId] = [message];
       }
+
+      // update thread
+      for (var i = 0, n = d.threads.length; i < n; i++) {
+        if (d.threads[i].id == threadId) {
+          var thread = d.threads[i];
+          if(!thread.createdAt) thread.createdAt = messageData[threadId][messageData[threadId].length-1].createdAt;
+          thread.digest = messageData[threadId][messageData[threadId].length-1].text;
+          thread.lastAuthor = messageData[threadId][messageData[threadId].length-1].user.id;
+          thread.lastCommmentedAt = messageData[threadId][messageData[threadId].length-1].createdAt;
+          thread.messageCount = messageData[threadId].length;
+          thread.messageTimes = messageData[threadId].map(function(el) { return el.createdAt; });
+          thread.recipients = messageData[threadId][messageData[threadId].length-1].recipients;
+          //d.threads.splice(i, 1);
+
+          // insert thread in chronological order
+          var t = new Date(thread.lastCommmentedAt);
+          for (i = d.threads.length; i > 0 && new Date(d.threads[i-1].lastCommentedAt) > t; i--);
+          d.threads.splice(i, 0, thread);
+
+          break;
+        }
+      }
+
       // ensure marked read if from this user
       if (message.user.id == session.userId) {
         if (new Date(message.createdAt) > new Date(d.lastMessageRead[th.id] || 0)) {
           d.lastMessageRead[threadId] = message.createdAt;
         }
       }
+
       d.tabs.forEach(function(tab) {
         whenTabSelected(tab, function (tab) {
           api.tabs.emit(tab, "message", {threadId: threadId, message: message, read: d.lastMessageRead[threadId], userId: session.userId});
@@ -758,6 +778,9 @@ function subscribe(tab) {
   if (!tab.icon) {
     api.icon.set(tab, "icons/keep.faint.png");
   }
+
+  socket.send(["get_threads_by_url", tab.nUri || tab.url]);
+
   var d = pageData[tab.nUri || tab.url];
 
   if (d) {  // no need to ask server again
@@ -807,7 +830,7 @@ function subscribe(tab) {
         d.keeps = uri_2.keeps || 0;
         d.otherKeeps = d.keeps - d.keepers.length - (d.kept == "public" ? 1 : 0);
         d.following = uri_2.following;
-        d.threads = uri_2.threads || [];
+        d.threads = [];
         d.lastMessageRead = uri_2.lastMessageRead || {};
         d.counts = {
           n: numNotificationsNotVisited,
