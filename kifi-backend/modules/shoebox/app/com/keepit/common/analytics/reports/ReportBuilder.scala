@@ -133,6 +133,8 @@ class ReportBuilderPluginImpl @Inject() (
   val schedulingProperties: SchedulingProperties) //only on leader
     extends Logging with ReportBuilderPlugin with SchedulingPlugin {
 
+  implicit val dbMasterSlave = Database.Slave
+
   def buildReport(startDate: DateTime, endDate: DateTime, report: ReportRepo): Unit = actorProvider.actor ! BuildReport(startDate, endDate, report)
   def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit = actorProvider.actor ! BuildReports(startDate, endDate, reportGroup)
 
