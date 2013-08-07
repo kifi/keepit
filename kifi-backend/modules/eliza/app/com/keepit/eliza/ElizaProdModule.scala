@@ -20,7 +20,8 @@ case class ElizaProdModule() extends ElizaModule(
   discoveryModule = ProdDiscoveryModule(),
   healthCheckModule = ProdHealthCheckModule(),
   httpClientModule = ProdHttpClientModule(),
-  elizaServiceClientModule = ProdElizaServiceClientModule()
+  elizaServiceClientModule = ProdElizaServiceClientModule(),
 
   // Eliza Functional Modules
+  elizaSlickModule = ElizaSlickModule()
 )
