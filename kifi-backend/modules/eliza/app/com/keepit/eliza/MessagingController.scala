@@ -71,9 +71,10 @@ class MessagingController @Inject() (
 
   def sendNewMessage(from: Id[User], recipients: Set[Id[User]], urlOpt: Option[String], messageText: String) : Message = {
     val participants = recipients + from
-    val uriIdOpt = urlOpt.map{url: String => Await.result(shoebox.normalizeURL(url), 10 seconds)}
+    val nUriOpt = urlOpt.map{url: String => Await.result(shoebox.normalizeURL(url), 10 seconds)}
+    val uriIdOpt = nUriOpt.flatMap(_.id)
     val thread = db.readWrite{ implicit session => 
-      val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt) 
+      val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url)) 
       if (isNew){
         participants.par.foreach{ userId => 
           userThreadRepo.createIfNotExists(userId, thread.id.get, uriIdOpt)
@@ -124,6 +125,7 @@ class MessagingController @Inject() (
       message.createdAt,
       message.messageText,
       message.sentOnUrl.getOrElse(""),
+      thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
       message.from.map(id2BasicUser(_)),
       message.from.map(participantSet - _).getOrElse(participantSet).toSeq.map(id2BasicUser(_))
     )
@@ -134,9 +136,9 @@ class MessagingController @Inject() (
     }
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
     urlOpt.foreach{ url =>
-      shoebox.normalizeURL(url).foreach{ uriId =>
+      shoebox.normalizeURL(url).foreach{ nUri =>
         db.readWrite { implicit session => 
-          messageRepo.updateUriId(message, uriId)
+          messageRepo.updateUriId(message, nUri.id.get)
         }
       }
     }
@@ -183,6 +185,7 @@ class MessagingController @Inject() (
         message.createdAt,
         message.messageText,
         message.sentOnUrl.getOrElse(""),
+        thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
         message.from.map(id2BasicUser(_)),
         message.from.map(participantSet - _).getOrElse(participantSet).toSeq.map(id2BasicUser(_))
       )
