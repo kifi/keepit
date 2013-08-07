@@ -16,8 +16,9 @@ class FailedUriNormalizationTest extends Specification with ShoeboxTestInjector{
           failedUriNormalizationRepo.createOrIncrease(raw, mapped)
           failedUriNormalizationRepo.createOrIncrease(raw, mapped)
         }
+
         db.readOnly{ implicit s =>
-          val r = failedUriNormalizationRepo.getByUrls(raw, mapped)
+          val r = failedUriNormalizationRepo.getByUrlHashes(NormalizedURIFactory.hashUrl(raw), NormalizedURIFactory.hashUrl(mapped))
           r.get.failedCounts === 3
           r.get.state === FailedUriNormalizationStates.ACTIVE
         }

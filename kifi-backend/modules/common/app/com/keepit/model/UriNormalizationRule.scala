@@ -11,6 +11,7 @@ case class UriNormalizationRule(
   id: Option[Id[UriNormalizationRule]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
+  urlHash: UrlHash,
   url: String,
   mappedUrl: String,
   state: State[UriNormalizationRule] = UriNormalizationRuleStates.ACTIVE

@@ -10,6 +10,8 @@ case class FailedUriNormalization(
   id: Option[Id[FailedUriNormalization]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
+  urlHash: UrlHash,
+  mappedUrlHash: UrlHash,
   url: String,
   mappedUrl: String,
   state: State[FailedUriNormalization] = FailedUriNormalizationStates.ACTIVE,

@@ -35,6 +35,9 @@ class ChangedURITest extends Specification with ShoeboxTestInjector{
 
          changes.size === 3
 
+         db.readOnly{ implicit s =>
+           changedURIRepo.getHighestSeqNum() === SequenceNumber(8)
+         }
        }
     }
   }

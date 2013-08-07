@@ -12,10 +12,10 @@ class UriNormalizationRuleTest extends Specification with ShoeboxTestInjector{
       val mapped = "www.test.com"
       withDb() { implicit injector =>
         db.readWrite{ implicit s =>
-          uriNormalizationRuleRepo.save(UriNormalizationRule(url = raw, mappedUrl = mapped))
+          uriNormalizationRuleRepo.save(UriNormalizationRule(urlHash = NormalizedURIFactory.hashUrl(raw), url = raw, mappedUrl = mapped))
         }
         db.readOnly{ implicit s =>
-          val r = uriNormalizationRuleRepo.getByUrl(raw)
+          val r = uriNormalizationRuleRepo.getByUrlHash(NormalizedURIFactory.hashUrl(raw))
           r.get === mapped
         }
       }
