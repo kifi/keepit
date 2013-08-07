@@ -221,6 +221,10 @@ object FortyTwoTypeMappers {
     def apply(profile: BasicProfile) = new DeepLocatorMapperDelegate(profile)
   }
 
+  implicit object NormalizationTypeMapper extends BaseTypeMapper[Normalization] {
+    def apply(profile: BasicProfile) = new NormalizationMapperDelegate(profile)
+  }
+
   implicit object JsArrayTypeMapper extends BaseTypeMapper[JsArray] {
     def apply(profile: BasicProfile) = new JsArrayMapperDelegate(profile)
   }
@@ -582,5 +586,14 @@ class UserNotificationDetailsMapperDelegate(profile: BasicProfile) extends Strin
   def zero = UserNotificationDetails(Json.obj())
   def sourceToDest(value: UserNotificationDetails) = Json.stringify(value.payload)
   def safeDestToSource(str: String) = UserNotificationDetails(Json.parse(str).asInstanceOf[JsObject])
+}
+
+//************************************
+//       Normalization -> String
+//************************************
+class NormalizationMapperDelegate[T](profile: BasicProfile) extends StringMapperDelegate[Normalization](profile) {
+  def zero = Normalization("")
+  def sourceToDest(value: Normalization): String = value.tag
+  def safeDestToSource(str: String): Normalization = Normalization(str)
 }
 

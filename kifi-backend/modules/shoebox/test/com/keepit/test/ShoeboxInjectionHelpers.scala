@@ -1,7 +1,7 @@
 package com.keepit.test
 
 import com.keepit.inject._
-import com.keepit.common.db.slick.{SlickSessionProvider, Database}
+import com.keepit.common.db.slick.SlickSessionProvider
 import com.keepit.model._
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.common.db.TestSlickSessionProvider
@@ -18,6 +18,7 @@ trait ShoeboxInjectionHelpers { self: InjectorProvider =>
   def friendRequestRepo(implicit injector: Injector) = inject[FriendRequestRepo]
   def searchFriendRepo(implicit injector: Injector) = inject[SearchFriendRepo]
   def uriRepo(implicit injector: Injector) = inject[NormalizedURIRepo]
+  def normalizedURIFactory(implicit injector: Injector) = inject[NormalizedURIFactory]
   def urlRepo(implicit injector: Injector) = inject[URLRepo]
   def bookmarkRepo(implicit injector: Injector) = inject[BookmarkRepo]
   def commentRepo(implicit injector: Injector) = inject[CommentRepo]

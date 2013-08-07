@@ -5,13 +5,13 @@ import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionC
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
-import com.keepit.common.net.URI
 import com.keepit.model._
 
 import play.api.Play.current
 import play.api.libs.json.Json
 
 import com.google.inject.Inject
+import com.keepit.common.net.URI
 
 class ExtUserController @Inject() (
   actionAuthenticator: ActionAuthenticator,

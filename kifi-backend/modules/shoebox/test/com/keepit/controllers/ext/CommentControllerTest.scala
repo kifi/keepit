@@ -83,7 +83,7 @@ class CommentControllerTest extends TestKit(ActorSystem()) with Specification wi
           val recepient = userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
           emailRepo.save(EmailAddress(userId = recepient.id.get, verifiedAt = Some(currentDateTime), address = "eishay@42go.com"))
           userExperimentRepo.save(UserExperiment(userId = recepient.id.get, experimentType = ExperimentTypes.ADMIN))
-          val uri = normalizedURIRepo.save(NormalizedURIFactory("Google", "http://www.google.com/"))
+          val uri = normalizedURIRepo.save(normalizedURIFactory.apply("Google", "http://www.google.com/"))
           val msg = inject[CommentRepo].save(Comment(uriId = uri.id.get, userId = user.id.get, pageTitle = "My Title",
             text = """Public Comment [look here](x-kifi-sel:body>div#page-container>div.column-container>div.left-container>div#module-post-detail.module-post-detail.__FIRST__.image>div.body-copy) on Google1""",
             permissions = CommentPermissions.MESSAGE))

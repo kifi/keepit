@@ -1,30 +1,14 @@
 package com.keepit.controllers.admin
 
-import play.api.data._
-import play.api._
-import play.api.Play.current
-import play.api.mvc._
-import play.api.libs.json.JsArray
-import play.api.libs.json.Json
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsString
-import play.api.libs.json.JsValue
-import play.api.libs.json.JsNumber
 
-import play.api.libs.concurrent.Execution.Implicits._
-import java.util.concurrent.TimeUnit
+import play.api.Play.current
 
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 
 import com.keepit.model._
-import com.keepit.search.ArticleStore
-import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.BabysitterTimeout
-import org.joda.time.LocalDate
-import org.joda.time.DateTimeZone
-import com.keepit.common.net.URINormalizer
 import com.keepit.common.mail._
 import play.api.libs.concurrent.Akka
 import scala.concurrent.duration._
@@ -48,7 +32,8 @@ class UrlController @Inject() (
   collectionRepo: CollectionRepo,
   commentRepo: CommentRepo,
   deepLinkRepo: DeepLinkRepo,
-  followRepo: FollowRepo)
+  followRepo: FollowRepo,
+  normalizedUriFactory: NormalizedURIFactory)
     extends AdminController(actionAuthenticator) {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
@@ -100,7 +85,7 @@ class UrlController @Inject() (
                 (nuri, URLHistoryCause.MERGE)
               case None =>
                 // No normalized URI exists for this url, create one
-                val nuri = NormalizedURIFactory(url.url)
+                val nuri = normalizedUriFactory(url.url)
                 ({if(!readOnly)
                   uriRepo.save(nuri)
                 else

@@ -1,7 +1,6 @@
 package com.keepit.scraper.extractor
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.URI
 import com.keepit.scraper.HttpInputStream
 import com.keepit.scraper.Scraper
 import org.apache.tika.detect.DefaultDetector
@@ -18,6 +17,7 @@ import org.xml.sax.Attributes
 import org.xml.sax.ContentHandler
 import org.xml.sax.SAXException
 import play.api.http.MimeTypes
+import com.keepit.common.net.URI
 
 abstract class TikaBasedExtractor(url: String, maxContentChars: Int, htmlMapper: Option[HtmlMapper]) extends Extractor with Logging {
 

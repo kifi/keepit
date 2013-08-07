@@ -180,7 +180,7 @@ class ExtCommentController @Inject() (
 
   private def getOrCreateUriAndUrl(urlStr: String): (NormalizedURI, URL) = {
     db.readWrite(attempts = 2) { implicit s =>
-      val uri = normalizedURIRepo.getByUri(urlStr).getOrElse(normalizedURIRepo.save(NormalizedURIFactory(url = urlStr)))
+      val uri = normalizedURIRepo.getByUriOrElseCreate(urlStr)
       val url: URL = urlRepo.get(urlStr).getOrElse(urlRepo.save(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
       (uri, url)
     }
@@ -200,8 +200,7 @@ class ExtCommentController @Inject() (
     if (text.isEmpty) throw new Exception("Empty comments are not allowed")
     val comment = db.readWrite {implicit s =>
       val userId = request.userId
-      val uri = normalizedURIRepo.save(normalizedURIRepo.getByUri(urlStr).getOrElse(NormalizedURIFactory(url = urlStr)))
-
+      val uri = normalizedURIRepo.getByUriOrElseCreate(urlStr)
       val url: URL = urlRepo.save(urlRepo.get(urlStr).getOrElse(URLFactory(url = urlStr, normalizedUriId = uri.id.get)))
 
       permissions.toLowerCase match {
@@ -289,7 +288,7 @@ class ExtCommentController @Inject() (
   def startFollowing() = AuthenticatedJsonToJsonAction { request =>
     val url = (request.body \ "url").as[String]
     db.readWrite { implicit session =>
-      val uriId = normalizedURIRepo.getByUri(url).getOrElse(normalizedURIRepo.save(NormalizedURIFactory(url = url))).id.get
+      val uriId = normalizedURIRepo.getByUriOrElseCreate(url).id.get
       followRepo.get(request.userId, uriId, excludeState = None) match {
         case Some(follow) if !follow.isActive =>
           Some(followRepo.save(follow.activate))

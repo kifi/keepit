@@ -158,7 +158,7 @@ class NormalizedURITest extends Specification with ShoeboxTestInjector {
 
   def createUri(title: String, url: String, state: State[NormalizedURI] = NormalizedURIStates.ACTIVE)(implicit
       session: RWSession, injector: Injector) = {
-    val uri = NormalizedURIFactory(title = title, url = url, state = state)
+    val uri = normalizedURIFactory.apply(title = title, url = url, state = state)
     try {
       uriRepo.save(uri)
     } catch {
