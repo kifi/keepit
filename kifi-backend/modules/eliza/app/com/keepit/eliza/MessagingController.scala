@@ -118,7 +118,7 @@ class MessagingController @Inject() (
       if (isNew){
         log.info(s"This is a new thread. Creating User Threads.")
         participants.par.foreach{ userId => 
-          userThreadRepo.createIfNotExists(userId, thread.id.get, uriIdOpt)
+          userThreadRepo.create(userId, thread.id.get, uriIdOpt)
         }
       }
       else{

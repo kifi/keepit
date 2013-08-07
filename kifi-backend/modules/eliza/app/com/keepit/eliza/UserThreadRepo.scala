@@ -41,7 +41,7 @@ case class UserThread(
 @ImplementedBy(classOf[UserThreadRepoImpl])
 trait UserThreadRepo extends Repo[UserThread] {
 
-  def createIfNotExists(user: Id[User], thread: Id[MessageThread], uriIdOpt: Option[Id[NormalizedURI]])(implicit session: RWSession) : Unit 
+  def create(user: Id[User], thread: Id[MessageThread], uriIdOpt: Option[Id[NormalizedURI]])(implicit session: RWSession) : UserThread
 
   def getThreads(user: Id[User], uriId: Option[Id[NormalizedURI]]=None)(implicit session: RSession) : Seq[Id[MessageThread]]
 
@@ -107,7 +107,7 @@ class UserThreadRepoImpl @Inject() (
     }
   }
 
-  def createIfNotExists(user: Id[User], thread: Id[MessageThread], uriIdOpt: Option[Id[NormalizedURI]])(implicit session: RWSession) : Unit = {
+  def create(user: Id[User], thread: Id[MessageThread], uriIdOpt: Option[Id[NormalizedURI]])(implicit session: RWSession) : UserThread = {
     val userThread = UserThread(
         id=None,
         user=user,
@@ -117,13 +117,7 @@ class UserThreadRepoImpl @Inject() (
         lastMsgFromOther=None,
         lastNotification=JsNull
       )
-    try{
-      save(userThread)
-    } catch {
-      case e: java.sql.SQLException => {
-        log.warn(s"User Thread seems to exists already ($e.toString)")  
-      }
-    }
+    save(userThread)
   }
 
   def clearNotification(user: Id[User], threadOpt: Option[Id[MessageThread]]=None)(implicit session: RWSession) : Unit = {
