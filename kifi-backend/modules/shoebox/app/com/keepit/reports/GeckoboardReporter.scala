@@ -59,6 +59,6 @@ class GeckoboardReporterPluginImpl @Inject() (
 
   override def onStart() {
     scheduleTask(actorProvider.system, 0 seconds, 10 minutes, actorProvider.actor, KeepsHourlyReport)
-    scheduleTask(actorProvider.system, 0 seconds, 1 hours, actorProvider.actor, KeepsDailyReport)
+    // scheduleTask(actorProvider.system, 0 seconds, 1 hours, actorProvider.actor, KeepsDailyReport)
   }
 }
