@@ -53,7 +53,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
   def reportArticleSearchResult(res: ArticleSearchResult): Unit
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
-  def normalizeURL(url: String): Future[Id[NormalizedURI]]
+  def normalizeURL(url: String): Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def sendMail(email: ElectronicMail): Future[Boolean]
   def persistServerSearchEvent(metaData: JsObject): Unit
@@ -256,8 +256,8 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def normalizeURL(url: String): Future[Id[NormalizedURI]] = {
-    call(Shoebox.internal.normalizeURL(url)).map(r => Id[NormalizedURI](r.json.as[Long]))
+  def normalizeURL(url: String): Future[NormalizedURI] = {
+    call(Shoebox.internal.normalizeURL(url)).map(r => Json.fromJson[NormalizedURI](r.json).get)
   }
 
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]] = {
