@@ -296,6 +296,10 @@ a.kifi-pane-back::after {
   right: 0;
   bottom: 0;
   background: #fafafa;
+  overflow: hidden;
+}
+.kifi-pane-tall>.antiscroll-inner {
+  overflow-x: hidden;
 }
 div.kifi-pane-tall-middle {
   display: table;

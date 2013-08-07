@@ -1,31 +1,13 @@
-.kifi-pane-tall .antiscroll-wrap, .kifi-pane-tall .antiscroll-inner {
-  height: 100%;
-}
-
-.antiscroll-wrap {
-  display: inline-block;
-  position: relative;
-  overflow: hidden;
-}
 .antiscroll-scrollbar {
-  background: gray;
-  background: rgba(0, 0, 0, 0.5);
-  -webkit-border-radius: 7px;
-  -moz-border-radius: 7px;
+  background: rgba(0,0,0,.5);
   border-radius: 7px;
-  -webkit-box-shadow: 0 0 1px #fff;
-  -moz-box-shadow: 0 0 1px #fff;  
   box-shadow: 0 0 1px #fff;
   position: absolute;
   opacity: 0;
-  filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=0);
-  -webkit-transition: linear 300ms opacity;
-  -moz-transition: linear 300ms opacity;
-  -o-transition: linear 300ms opacity;
+  transition: linear 300ms opacity;
 }
 .antiscroll-scrollbar-shown {
   opacity: 1;
-  filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=100);
 }
 .antiscroll-scrollbar-horizontal {
   height: 7px;
@@ -39,6 +21,6 @@
   right: 2px;
   top: 0;
 }
-.antiscroll-inner {overflow: scroll;}
-.antiscroll-inner::-webkit-scrollbar {width: 0; height: 0;}
-.antiscroll-inner::scrollbar {width: 0; height: 0;}
+.antiscroll-inner {overflow: scroll}
+.antiscroll-inner::-webkit-scrollbar {width: 0; height: 0}
+.antiscroll-inner::scrollbar {width: 0; height: 0}
