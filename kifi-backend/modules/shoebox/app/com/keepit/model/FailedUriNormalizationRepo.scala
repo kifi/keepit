@@ -25,8 +25,9 @@ class FailedUriNormalizationRepoImpl @Inject()(
     def mappedUrlHash = column[UrlHash]("mapped_url_hash", O.NotNull)
     def url = column[String]("url", O.NotNull)
     def mappedUrl = column[String]("mapped_url", O.NotNull)
-    def failedCounts = column[Int]("failed_counts", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ urlHash ~ mappedUrlHash ~url ~ mappedUrl ~ state ~ failedCounts <> (FailedUriNormalization.apply _, FailedUriNormalization.unapply _)
+    def counts = column[Int]("counts", O.NotNull)
+    def lastContentCheck = column[DateTime]("last_content_check", O.NotNull)
+    def * = id.? ~ createdAt ~ updatedAt ~ urlHash ~ mappedUrlHash ~url ~ mappedUrl ~ state ~ counts ~ lastContentCheck <> (FailedUriNormalization.apply _, FailedUriNormalization.unapply _)
   }
 
   def getByUrlHashes(urlHash: UrlHash, mappedUrlHash: UrlHash)(implicit session: RSession): Option[FailedUriNormalization] = {
@@ -37,8 +38,8 @@ class FailedUriNormalizationRepoImpl @Inject()(
     val (urlHash, mappedUrlHash) = (NormalizedURIFactory.hashUrl(url), NormalizedURIFactory.hashUrl(mappedUrl))
     val r = (for( r <- table if (r.urlHash === urlHash && r.mappedUrlHash === mappedUrlHash)) yield r).firstOption
     r match {
-      case Some(record) => save(record.withCounts(record.failedCounts + 1))
-      case None => save( FailedUriNormalization(urlHash = urlHash, mappedUrlHash = mappedUrlHash, url = url, mappedUrl = mappedUrl, failedCounts = 1) )
+      case Some(record) => save(record.withCounts(record.counts + 1))
+      case None => save( FailedUriNormalization(urlHash = urlHash, mappedUrlHash = mappedUrlHash, url = url, mappedUrl = mappedUrl, counts = 1, lastContentCheck = currentDateTime) )
     }
   }
 }

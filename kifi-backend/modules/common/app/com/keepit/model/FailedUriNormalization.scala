@@ -15,12 +15,13 @@ case class FailedUriNormalization(
   url: String,
   mappedUrl: String,
   state: State[FailedUriNormalization] = FailedUriNormalizationStates.ACTIVE,
-  failedCounts: Int
+  counts: Int,
+  lastContentCheck: DateTime
 ) extends Model[FailedUriNormalization] {
   def withId(id: Id[FailedUriNormalization]) = this.copy(id = Some(id))
   def withUpdateTime(now: DateTime) = this.copy(updatedAt = now)
   def withState(state: State[FailedUriNormalization]) = copy(state = state)
-  def withCounts(count: Int) = copy(failedCounts = count)
+  def withCounts(count: Int) = copy(counts = count)
 }
 
 object FailedUriNormalizationStates extends States[FailedUriNormalization]

@@ -5,7 +5,7 @@ CREATE TABLE uri_normalization_rule (
   created_at datetime NOT NULL,
   updated_at datetime NOT NULL,
   url_hash varchar(26) NOT NULL,
-  url varchar(3072) NOT NULL,
+  prep_url varchar(3072) NOT NULL,
   mapped_url varchar(3072) NOT NULL,
   state varchar(20) NOT NULL,
 
@@ -25,7 +25,8 @@ CREATE TABLE failed_uri_normalization (
   url varchar(3072) NOT NULL,
   mapped_url varchar(3072) NOT NULL,
   state varchar(20) NOT NULL,
-  failed_counts integer NOT NULL, 
+  counts integer NOT NULL,
+  last_content_check datetime NOT NULL, 
 
   Key (url_hash, mapped_url_hash),
   PRIMARY KEY (id),

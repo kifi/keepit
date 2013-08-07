@@ -19,7 +19,7 @@ class FailedUriNormalizationTest extends Specification with ShoeboxTestInjector{
 
         db.readOnly{ implicit s =>
           val r = failedUriNormalizationRepo.getByUrlHashes(NormalizedURIFactory.hashUrl(raw), NormalizedURIFactory.hashUrl(mapped))
-          r.get.failedCounts === 3
+          r.get.counts === 3
           r.get.state === FailedUriNormalizationStates.ACTIVE
         }
       }

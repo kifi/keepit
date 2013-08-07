@@ -5,14 +5,14 @@ import com.keepit.common.db._
 import com.keepit.common.time._
 
 /**
- * url: Typically this is NOT the raw url. It's raw url preprocessed by some simple regex rules.
+ * prepUrl: Typically this is NOT the raw url. It's raw url preprocessed by some simple regex rules.
  */
 case class UriNormalizationRule(
   id: Option[Id[UriNormalizationRule]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
   urlHash: UrlHash,
-  url: String,
+  prepUrl: String,
   mappedUrl: String,
   state: State[UriNormalizationRule] = UriNormalizationRuleStates.ACTIVE
 ) extends Model[UriNormalizationRule] {
