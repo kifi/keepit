@@ -22,10 +22,11 @@ abstract class ElizaModule(
   val discoveryModule: DiscoveryModule,
   val healthCheckModule: HealthCheckModule,
   val httpClientModule: HttpClientModule,
-  val elizaServiceClientModule: ElizaServiceClientModule
+  val elizaServiceClientModule: ElizaServiceClientModule,
 
 
   // Eliza Functional Modules
+  val elizaSlickModule: ElizaSlickModule
 
 ) extends ConfigurationModule(
     fortyTwoModule,
@@ -36,5 +37,6 @@ abstract class ElizaModule(
     discoveryModule,
     healthCheckModule,
     httpClientModule,
-    elizaServiceClientModule
+    elizaServiceClientModule,
+    elizaSlickModule
 )
