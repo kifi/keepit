@@ -38,6 +38,7 @@ class GeckoboardReporterPluginImpl @Inject() (
     totalKeepsPerHour: TotalKeepsPerHour,
     totalKeepsPerDay: TotalKeepsPerDay,
     totalKeepsPerWeek: TotalKeepsPerWeek,
+    hoverKeepsPerWeek: HoverKeepsPerWeek,
     val schedulingProperties: SchedulingProperties)
 extends GeckoboardReporterPlugin with Logging {
 //  val schedulingProperties = SchedulingProperties.AlwaysEnabled
@@ -51,5 +52,6 @@ extends GeckoboardReporterPlugin with Logging {
     scheduleTask(actorProvider.system, 0 seconds, 10 minutes, actorProvider.actor, totalKeepsPerHour)
     scheduleTask(actorProvider.system, 0 seconds, 1 hours, actorProvider.actor, totalKeepsPerDay)
     scheduleTask(actorProvider.system, 0 seconds, 6 hours, actorProvider.actor, totalKeepsPerWeek)
+    scheduleTask(actorProvider.system, 0 seconds, 6 hours, actorProvider.actor, hoverKeepsPerWeek)
   }
 }

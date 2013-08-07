@@ -4,7 +4,7 @@ import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
 import com.keepit.common.geckoboard._
 import akka.actor._
 import akka.util.Timeout
-import com.keepit.model.BookmarkRepo
+import com.keepit.model.{BookmarkRepo, BookmarkSource}
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.akka.FortyTwoActor
@@ -68,6 +68,25 @@ class TotalKeepsPerWeek @Inject() (
       val lastWeek = now.minusDays(7)
       (bookmarkRepo.getCountByTime(now.minusDays(7), now),
        bookmarkRepo.getCountByTime(lastWeek.minusDays(7), lastWeek))
+    }
+    NumberAndSecondaryStat(lastDay, dayAgo)
+  }
+}
+
+class HoverKeepsPerWeek @Inject() (
+    db: Database,
+    bookmarkRepo: BookmarkRepo,
+    clock: Clock)
+  extends GeckoboardWidget[NumberAndSecondaryStat](GeckoboardWidgetId("37507-4bbd5426-6e78-473f-bb05-ad8138647872")) {
+  implicit val dbMasterSlave = Database.Slave
+  val hover = BookmarkSource("HOVER_KEEP")
+
+  def data(): NumberAndSecondaryStat = {
+    val (lastDay, dayAgo) = db.readOnly { implicit s =>
+      val now = clock.now
+      val lastWeek = now.minusDays(7)
+      (bookmarkRepo.getCountByTimeAndSource(now.minusDays(7), now, source = hover),
+       bookmarkRepo.getCountByTimeAndSource(lastWeek.minusDays(7), lastWeek, source = hover))
     }
     NumberAndSecondaryStat(lastDay, dayAgo)
   }
