@@ -16,7 +16,7 @@ import akka.actor.ActorSystem
 case class ShoeboxDbInfo() extends DbInfo {
   def masterDatabase = SlickDatabase.forDataSource(DB.getDataSource("shoebox")(Play.current))
   // can't probe for existing (or not) db, must try and possibly fail.
-  override def slaveDatabase = Try(SlickDatabase.forDataSource(DB.getDataSource("shoeboxSlave")(Play.current))) match {
+  override def slaveDatabase = Try(SlickDatabase.forDataSource(DB.getDataSource("shoeboxslave")(Play.current))) match {
     case Success(db) =>
       println("loaded slave db")
       Some(db)
