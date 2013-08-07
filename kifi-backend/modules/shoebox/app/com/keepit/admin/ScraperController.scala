@@ -228,5 +228,6 @@ class ScraperController @Inject() (
     dupeDetect.asyncProcessDocuments()
     Redirect(com.keepit.controllers.admin.routes.ScraperController.documentIntegrity())
   }
+
 }
 

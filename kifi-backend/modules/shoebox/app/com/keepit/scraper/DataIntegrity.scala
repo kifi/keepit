@@ -86,6 +86,9 @@ class OrphanCleaner @Inject() (
     changedNuris.map(_.id.get)
   }
 
+  /**
+   * For an active/inactive uri, make sure its scrape info is inactive
+   */
   def cleanScrapeInfo(readOnly: Boolean = true)(implicit session: RWSession) = {
     val sis = scrapeInfoRepo.all() // allActive does the join with nuri. Come up with a better way?
     var oldScrapeInfos = Seq[ScrapeInfo]()

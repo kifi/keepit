@@ -9,7 +9,7 @@ import com.keepit.common.mail.ElectronicMailRepo
 import com.google.inject.Injector
 
 trait ShoeboxInjectionHelpers { self: InjectorProvider =>
-  
+
   def userSessionRepo(implicit injector: Injector) = inject[UserSessionRepo]
   def userRepo(implicit injector: Injector) = inject[UserRepo]
   def basicUserRepo(implicit injector: Injector) = inject[BasicUserRepo]
@@ -38,5 +38,8 @@ trait ShoeboxInjectionHelpers { self: InjectorProvider =>
   def uriTopicRepoA(implicit injector: Injector) = inject[UriTopicRepoA]
   def uriTopicRepoB(implicit injector: Injector) = inject[UriTopicRepoB]
   def userBookmarkClicksRepo(implicit injector: Injector) = inject[UserBookmarkClicksRepo]
+  def uriNormalizationRuleRepo(implicit injector: Injector) = inject[UriNormalizationRuleRepo]
+  def failedUriNormalizationRepo(implicit injector: Injector) = inject[FailedUriNormalizationRepo]
+  def changedURIRepo(implicit injector: Injector) = inject[ChangedURIRepo]
   def sessionProvider(implicit injector: Injector) = inject[SlickSessionProvider].asInstanceOf[TestSlickSessionProvider]
 }

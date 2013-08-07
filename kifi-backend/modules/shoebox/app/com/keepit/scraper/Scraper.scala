@@ -68,6 +68,29 @@ class Scraper @Inject() (
     safeProcessURI(uri, info)
   }
 
+  def getSignature(url: String): Option[Signature] = {
+    val extractor = getExtractor(url)
+    try {
+      val fetchStatus = httpFetcher.fetch(url) { input => extractor.process(input) }
+
+      fetchStatus.statusCode match {
+        case HttpStatus.SC_OK =>
+          if (isUnscrapable(url, fetchStatus.destinationUrl)) {
+            None
+          } else {
+            val content = extractor.getContent
+            val title = getTitle(extractor)
+            val description = getDescription(extractor)
+            val signature = computeSignature(title, description.getOrElse(""), content)
+            Some(signature)
+          }
+        case _ => None
+      }
+    } catch {
+      case e: Throwable => None
+    }
+  }
+
   private def safeProcessURI(uri: NormalizedURI, info: ScrapeInfo): (NormalizedURI, Option[Article]) = try {
       processURI(uri, info)
     } catch {
