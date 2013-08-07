@@ -129,6 +129,12 @@ object Search extends Service {
   }
 }
 
+object Eliza extends Service {
+  object internal {
+    def sendToUserNoBroadcast() = ServiceRoute(POST, "/internal/eliza/sendToUserNoBroadcast")
+  }
+}
+
 object Common {
   object internal {
     def benchmarksResults() = ServiceRoute(GET, "/internal/benchmark")

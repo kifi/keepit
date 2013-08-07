@@ -207,8 +207,15 @@ class FakeShoeboxServiceClientImpl(
     Future.successful(uri)
   }
 
-  def normalizeURL(url: String): Future[Id[NormalizedURI]] = {
-    Future.successful(Id[NormalizedURI](url.hashCode)) 
+  def normalizeURL(url: String): Future[NormalizedURI] = {
+    val fakeNUrl = NormalizedURI(
+      id = Some(Id[NormalizedURI](url.hashCode)),
+      url=url,
+      urlHash=UrlHash(url.hashCode.toString),
+      screenshotUpdatedAt=None
+    )
+
+    Future.successful(fakeNUrl) 
   }
 
   def getNormalizedURIs(ids: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]] = {
@@ -263,7 +270,12 @@ class FakeShoeboxServiceClientImpl(
 
   def getBasicUsers(userIds: Seq[Id[User]]): Future[Map[Id[User], BasicUser]] = {
     val basicUsers = userIds.map { id =>
-      val user = allUsers(id)
+      val dummyUser = User(
+        id = Some(id),
+        firstName = "Douglas",
+        lastName = "Adams-clone-" + id.toString
+      )
+      val user = allUsers.getOrElse(id,dummyUser)
       id -> BasicUser(
         externalId = user.externalId,
         firstName = user.firstName,

@@ -10,7 +10,7 @@ CREATE TABLE message_thread (
     url text NULL,
     participants mediumtext NULL,
     participants_hash int(11) NULL,
-    replyable bool(1) NOT NULL,
+    replyable bool NOT NULL,
 
     PRIMARY KEY (id),
     KEY message_thread_i_ext_id (external_id),
@@ -25,6 +25,7 @@ CREATE TABLE message (
 
     sender_id bigint(20) NULL,
     thread_id bigint(20) NOT NULL,
+    thread_ext_id varchar(36) NOT NULL,
     message_text longtext NOT NULL,
     sent_on_url text NULL,
     sent_on_uri_id bigint(20) NULL,
@@ -46,10 +47,12 @@ CREATE TABLE user_thread (
     thread_id bigint(20) NOT NULL,
     uri_id bigint(20) DEFAULT NULL,
     last_seen datetime DEFAULT NULL,
-    notification_pending bool(1) NOT NULL,
-    muted bool(1) NOT NULL,
+    notification_pending bool NOT NULL,
+    muted bool NOT NULL,
     last_msg_from_other bigint(20) DEFAULT NULL,
     lastNotification longtext DEFAULT NULL,
+    notification_updated_at datetime NOT NULL,
+    notification_last_seen datetime NOT NULL,
 
     PRIMARY KEY (id),
     KEY user_thread_i_user_page (user_id, uri_id),

@@ -11,10 +11,11 @@ import com.google.inject.{Inject, ImplementedBy}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
-import com.keepit.common.net.HttpClient
+import com.keepit.common.net.{NonOKResponseException, HttpClient}
 import com.keepit.common.time._
 import com.keepit.model.{UserNotificationCategories, UserNotification, User}
 
+import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 
 case class UrbanAirshipConfig(key: String, secret: String, baseUrl: String = "https://go.urbanairship.com")
@@ -143,8 +144,8 @@ class UrbanAirshipImpl @Inject()(
 
   def notifyUser(userId: Id[User], notification: PushNotification): Unit = {
     for {
-      deviceOpt <- db.readOnly { implicit s => deviceRepo.getByUserId(userId) }
-      device <- updateDeviceState(deviceOpt) if device.state == DeviceStates.ACTIVE
+      d <- db.readOnly { implicit s => deviceRepo.getByUserId(userId) }
+      device <- updateDeviceState(d) if device.state == DeviceStates.ACTIVE
     } {
       sendNotification(device, notification)
     }
@@ -152,11 +153,18 @@ class UrbanAirshipImpl @Inject()(
 
   def updateDeviceState(device: Device): Future[Device] = {
     if (device.updatedAt plus UrbanAirship.RecheckPeriod isBefore clock.now()) {
-      authenticatedClient.getFuture(s"${config.baseUrl}/api/device_tokens/${device.token}") map { r =>
+      authenticatedClient.getFuture(s"${config.baseUrl}/api/device_tokens/${device.token}", url => {
+        case e @ NonOKResponseException(url, response) if response.status == NOT_FOUND =>
+      }) map { r =>
         val active = (r.json \ "active").as[Boolean]
         db.readWrite { implicit s =>
           deviceRepo.save(device.copy(state = if (active) DeviceStates.ACTIVE else DeviceStates.INACTIVE))
         }
+      } recover {
+        case e @ NonOKResponseException(url, response) if response.status == NOT_FOUND =>
+          db.readWrite { implicit s =>
+            deviceRepo.save(device.copy(state = DeviceStates.INACTIVE))
+          }
       }
     } else Future.successful(device)
   }

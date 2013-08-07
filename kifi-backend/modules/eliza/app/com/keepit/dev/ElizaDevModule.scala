@@ -7,7 +7,7 @@ import com.keepit.inject.ProdFortyTwoModule
 import com.keepit.common.actor.DevActorSystemModule
 import com.keepit.common.zookeeper.DevDiscoveryModule
 import com.keepit.social.RemoteSecureSocialModule
-import com.keepit.eliza.ElizaModule
+import com.keepit.eliza.{ElizaSlickModule, ElizaModule, ProdElizaServiceClientModule}
 import com.keepit.common.healthcheck.ProdHealthCheckModule
 import com.keepit.common.cache.HashMapMemoryCacheModule
 
@@ -22,8 +22,10 @@ case class ElizaDevModule() extends ElizaModule(
   actorSystemModule = DevActorSystemModule(),
   discoveryModule = DevDiscoveryModule(),
   healthCheckModule = ProdHealthCheckModule(),
-  httpClientModule = ProdHttpClientModule()
+  httpClientModule = ProdHttpClientModule(),
+  elizaServiceClientModule = ProdElizaServiceClientModule(),
 
   // Eliza Functional Modules
+  elizaSlickModule = ElizaSlickModule()
 )
 
