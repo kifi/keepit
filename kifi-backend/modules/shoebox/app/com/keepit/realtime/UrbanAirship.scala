@@ -154,14 +154,14 @@ class UrbanAirshipImpl @Inject()(
   def updateDeviceState(device: Device): Future[Device] = {
     if (device.updatedAt plus UrbanAirship.RecheckPeriod isBefore clock.now()) {
       authenticatedClient.getFuture(s"${config.baseUrl}/api/device_tokens/${device.token}", url => {
-        case e @ NonOKResponseException(url, response) if response.status == NOT_FOUND =>
+        case e @ NonOKResponseException(url, response, _) if response.status == NOT_FOUND =>
       }) map { r =>
         val active = (r.json \ "active").as[Boolean]
         db.readWrite { implicit s =>
           deviceRepo.save(device.copy(state = if (active) DeviceStates.ACTIVE else DeviceStates.INACTIVE))
         }
       } recover {
-        case e @ NonOKResponseException(url, response) if response.status == NOT_FOUND =>
+        case e @ NonOKResponseException(url, response, _) if response.status == NOT_FOUND =>
           db.readWrite { implicit s =>
             deviceRepo.save(device.copy(state = DeviceStates.INACTIVE))
           }

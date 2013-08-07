@@ -15,8 +15,8 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.Healthcheck
 
-case class NonOKResponseException(url: String, response: ClientResponse)
-    extends Exception(s"Requesting $url, got a ${response.status}. Body: ${response.body}")
+case class NonOKResponseException(url: String, response: ClientResponse, requestBody: Option[JsValue] = None)
+    extends Exception(s"Requesting $url ${requestBody.map{b => b.toString}}, got a ${response.status}. Body: ${response.body}")
 
 trait HttpClient {
 
@@ -92,7 +92,7 @@ case class HttpClientImpl(
     val result = request.post(body).map { response =>
       val cr = res(request, response)
       if (response.status / 100 != validResponseClass) {
-        throw new NonOKResponseException(url, cr)
+        throw new NonOKResponseException(url, cr, Some(body))
       }
       cr
     }
@@ -108,7 +108,7 @@ case class HttpClientImpl(
     val result = request.put(body).map { response =>
       val cr = res(request, response)
       if (response.status / 100 != validResponseClass) {
-        throw new NonOKResponseException(url, cr)
+        throw new NonOKResponseException(url, cr, Some(body))
       }
       cr
     }
