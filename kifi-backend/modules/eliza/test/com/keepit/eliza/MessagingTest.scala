@@ -39,7 +39,7 @@ class MessagingTest extends Specification with DbTestInjector {
   "Messaging Contoller" should {
 
     "send correctly" in {
-      withDb(ElizaCacheModule(), FakeShoeboxServiceModule()) { implicit injector =>
+      withDb(ElizaCacheModule(), FakeShoeboxServiceModule(), TestElizaServiceClientModule()) { implicit injector =>
 
         val (messagingController, user1, user2, user3, user2n3Set, notificationRouter) = setup()
 
@@ -60,7 +60,7 @@ class MessagingTest extends Specification with DbTestInjector {
 
 
     "merge and notify correctly" in {
-      withDb(ElizaCacheModule(), FakeShoeboxServiceModule()) { implicit injector =>
+      withDb(ElizaCacheModule(), FakeShoeboxServiceModule(), TestElizaServiceClientModule()) { implicit injector =>
 
 
         val (messagingController, user1, user2, user3, user2n3Set, notificationRouter) = setup()

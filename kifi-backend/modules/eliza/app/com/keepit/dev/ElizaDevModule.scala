@@ -10,6 +10,7 @@ import com.keepit.social.RemoteSecureSocialModule
 import com.keepit.eliza.ElizaModule
 import com.keepit.common.healthcheck.ProdHealthCheckModule
 import com.keepit.common.cache.HashMapMemoryCacheModule
+import com.keepit.eliza.ProdElizaServiceClientModule
 
 
 case class ElizaDevModule() extends ElizaModule(
@@ -22,7 +23,8 @@ case class ElizaDevModule() extends ElizaModule(
   actorSystemModule = DevActorSystemModule(),
   discoveryModule = DevDiscoveryModule(),
   healthCheckModule = ProdHealthCheckModule(),
-  httpClientModule = ProdHttpClientModule()
+  httpClientModule = ProdHttpClientModule(),
+  elizaServiceClientModule = ProdElizaServiceClientModule()
 
   // Eliza Functional Modules
 )

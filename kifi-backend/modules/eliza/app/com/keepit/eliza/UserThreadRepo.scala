@@ -12,7 +12,7 @@ import play.api.libs.json.{Json, JsValue, JsNull}
 import scala.slick.lifted.Query
 import MessagingTypeMappers._
 
-case class Notification(thread: Id[MessageThread], message: Id[Message], payload: JsValue)
+case class Notification(thread: Id[MessageThread], message: Id[Message])
 
 
 case class UserThread(
@@ -138,9 +138,9 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getPendingNotifications(userId: Id[User])(implicit session: RSession) : Seq[Notification] = {
-    (for (row <- table if row.user===userId && row.notificationPending===true) yield (row.thread, row.lastMsgFromOther.?, row.lastNotification)).list.map{
-     case (thread, message, payload) =>
-        Notification(thread, message.get, payload)
+    (for (row <- table if row.user===userId && row.notificationPending===true) yield (row.thread, row.lastMsgFromOther.?)).list.map{
+     case (thread, message) =>
+        Notification(thread, message.get)
     }
   }
 
