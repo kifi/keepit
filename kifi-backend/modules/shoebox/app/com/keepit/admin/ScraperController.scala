@@ -45,8 +45,7 @@ class ScraperController @Inject() (
   commentRepo: CommentRepo,
   bookmarkRepo: BookmarkRepo,
   orphanCleaner: OrphanCleaner,
-  dupeDetect: DuplicateDocumentDetection,
-  contentChecker: ContentChecker)
+  dupeDetect: DuplicateDocumentDetection)
     extends AdminController(actionAuthenticator) {
 
   def scrape = AdminHtmlAction { implicit request =>
@@ -230,12 +229,5 @@ class ScraperController @Inject() (
     Redirect(com.keepit.controllers.admin.routes.ScraperController.documentIntegrity())
   }
 
-  def contentCheck(url: String, url2: String) = AdminHtmlAction { implicit request =>
-    log.info("\n\n\n will do c.c. \n\n\n")
-    val rv = contentChecker.check(List(url, url2))
-    if (rv.isRight) log.info("content check passed!")
-    else log.info("contenct check failed!")
-    Ok
-  }
 }
 
