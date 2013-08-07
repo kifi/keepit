@@ -102,6 +102,7 @@ class NotificationBroadcaster @Inject() (
   def push(notify: UserNotification) {
     lazy val unvisitedCount = db.readOnly { implicit s => userNotificationRepo.getUnvisitedCount(notify.userId) }
     for (pushNotification <- PushNotification.fromUserNotification(notify, unvisitedCount)) {
+      log.info("Push notification: " + pushNotification)
       urbanAirship.notifyUser(notify.userId, pushNotification)
     }
     val sendable = SendableNotification.fromUserNotification(notify)
