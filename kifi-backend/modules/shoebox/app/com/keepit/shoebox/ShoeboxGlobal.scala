@@ -16,6 +16,7 @@ import com.keepit.learning.topicmodel.TopicUpdaterPlugin
 import com.keepit.social.SocialGraphPlugin
 import com.keepit.controllers.shoebox.ExpertRecommenderController
 import com.keepit.learning.topicmodel.TopicModelSwitcherPlugin
+import com.keepit.scraper.extractor.UriIntegrityPlugin
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 
@@ -40,6 +41,7 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[HealthcheckPlugin].enabled)
     require(injector.instance[ReportBuilderPlugin].enabled)
     require(injector.instance[DataIntegrityPlugin].enabled)
+    require(injector.instance[UriIntegrityPlugin].enabled)
     require(injector.instance[FortyTwoCachePlugin].enabled)
     require(injector.instance[UserEmailNotifierPlugin].enabled)
     require(injector.instance[ImageDataIntegrityPlugin].enabled)

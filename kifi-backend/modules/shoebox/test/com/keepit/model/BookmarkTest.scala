@@ -11,6 +11,9 @@ import com.google.inject.Injector
 
 class BookmarkTest extends Specification with ShoeboxTestInjector {
 
+  val hover = BookmarkSource("HOVER_KEEP")
+  val initLoad = BookmarkSource("INIT_LOAD")
+
   def setup()(implicit injector: Injector) = {
     val t1 = new DateTime(2013, 2, 14, 21, 59, 0, 0, PT)
     val t2 = new DateTime(2013, 3, 22, 14, 30, 0, 0, PT)
@@ -26,14 +29,12 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
       val url1 = urlRepo.save(URLFactory(url = uri1.url, normalizedUriId = uri1.id.get))
       val url2 = urlRepo.save(URLFactory(url = uri2.url, normalizedUriId = uri2.id.get))
 
-      val hover = BookmarkSource("HOVER_KEEP")
-
       bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
         uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)))
       bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
         uriId = uri2.id.get, source = hover, createdAt = t1.plusHours(50)))
       bookmarkRepo.save(Bookmark(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
-        uriId = uri1.id.get, source = hover, createdAt = t2.plusDays(1)))
+        uriId = uri1.id.get, source = initLoad, createdAt = t2.plusDays(1)))
 
       (user1, user2, uri1, uri2)
     }
@@ -101,6 +102,16 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
         db.readOnly {implicit s =>
           bookmarkRepo.getCountByTime(clock.now.minusHours(3), clock.now) === 3
           bookmarkRepo.getCountByTime(clock.now.minusHours(6), clock.now.minusHours(3)) === 0
+        }
+      }
+    }
+    "count all by time and source" in {
+      withDb(FakeClockModule()) { implicit injector =>
+        setup()
+        val clock = inject[FakeClock]
+        db.readOnly {implicit s =>
+          bookmarkRepo.getCountByTimeAndSource(clock.now.minusHours(3), clock.now, initLoad) === 1
+          bookmarkRepo.getCountByTimeAndSource(clock.now.minusHours(3), clock.now, hover) === 2
         }
       }
     }

@@ -23,8 +23,9 @@ class MessageThreadParticipants(val participants : Map[Id[User], DateTime]) {
 
   def contains(user: Id[User]) : Boolean = participants.contains(user)
   def allExcept(user: Id[User]) : Set[Id[User]] = participants.keySet - user
-
-  def hash : Int = MurmurHash3.setHash(participants.keySet)
+  
+  lazy val all = participants.keySet
+  lazy val hash : Int = MurmurHash3.setHash(participants.keySet)
 
   override def equals(other: Any) : Boolean = other match {
     case mtps: MessageThreadParticipants => super.equals(other) || mtps.participants.keySet == participants.keySet 

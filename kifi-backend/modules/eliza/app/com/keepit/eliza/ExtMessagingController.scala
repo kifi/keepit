@@ -71,7 +71,9 @@ class ExtMessagingController @Inject() (
 
   protected def websocketHandlers(socket: SocketInfo) = Map[String, Seq[JsValue] => Unit](
     "ping" -> { _ =>
+      log.info(s"Received ping from user ${socket.userId} on socket ${socket.id}")
       socket.channel.push(Json.arr("pong"))
+      log.info(s"Sent pong to user ${socket.userId} on socket ${socket.id}")
     },
     "stats" -> { _ =>
       socket.channel.push(Json.arr(s"id:${socket.id}", clock.now.minus(socket.connectedAt.getMillis).getMillis / 1000.0))
@@ -117,6 +119,10 @@ class ExtMessagingController @Inject() (
     },
     "set_global_read" -> { case JsString(messageId) +: _ =>
       messagingController.setLastSeen(socket.userId, ExternalId[Message](messageId))
+    },
+    "get_threads_by_url" -> { case JsString(url) +: _ =>
+      val threadInfos = messagingController.getThreadInfos(socket.userId, url)
+      socket.channel.push(Json.arr("thread_infos", threadInfos))
     }
     // TODO Stephen: Send this on to shoebox
     // "log_event" -> { case JsObject(pairs) +: _ =>
