@@ -1,4 +1,5 @@
 // @require scripts/scrollable.js
+// @require scripts/throttle.js
 
 function attachComposeBindings($c, composeTypeName, enterToSend) {
   var $f = $c.find(".kifi-compose");
@@ -240,7 +241,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
   }).layout();
   updateMaxHeight();
 
-  $(window).on("resize", updateMaxHeight);
+  $(window).on("resize", throttle(updateMaxHeight, 50));
 
   var $box = $c.closest(".kifi-pane-box")
   if ($box.data("shown")) {
@@ -276,6 +277,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
         elAbove.scrollTop = 99999;
       }
       hOld = hNew;
+      $(elAbove).triggerHandler("scroll"); // for scrollable, in case this resize fired after scroll event
     }
   }
 }
