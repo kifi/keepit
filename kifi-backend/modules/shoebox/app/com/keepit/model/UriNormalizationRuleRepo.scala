@@ -22,7 +22,7 @@ class UriNormalizationRuleRepoImpl @Inject()(
   override val table = new RepoTable[UriNormalizationRule](db, "uri_normalization_rule"){
     def urlHash = column[UrlHash]("url_hash", O.NotNull)
     def url = column[String]("url", O.NotNull)
-    def mappedUrl = column[String]("mapped_uri", O.NotNull)
+    def mappedUrl = column[String]("mapped_url", O.NotNull)
     def * = id.? ~  createdAt ~ updatedAt ~ urlHash ~ url ~ mappedUrl ~ state <> (UriNormalizationRule.apply _, UriNormalizationRule.unapply _)
   }
 

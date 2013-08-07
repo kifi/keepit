@@ -4,7 +4,7 @@ import akka.util.Timeout
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.model._
-import com.google.inject.Inject
+import com.google.inject.{ImplementedBy, Inject}
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.logging.Logging
@@ -71,6 +71,7 @@ class UriIntegrityActor @Inject()(
 
 }
 
+@ImplementedBy(classOf[UriIntegrityPluginImpl])
 trait UriIntegrityPlugin extends Plugin {
   def fixChangedUri(change: ChangedUri): Unit
 }

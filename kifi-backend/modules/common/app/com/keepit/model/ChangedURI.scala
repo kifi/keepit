@@ -7,8 +7,8 @@ case class ChangedURI(
   id: Option[Id[ChangedURI]] = None,
   createdAt: DateTime = currentDateTime,
   updatedAt: DateTime = currentDateTime,
-  oldUri: Id[NormalizedURI],
-  newUri: Id[NormalizedURI],
+  oldUriId: Id[NormalizedURI],
+  newUriId: Id[NormalizedURI],
   state: State[ChangedURI] = ChangedURIStates.ACTIVE,
   seq: SequenceNumber = SequenceNumber.ZERO
 ) extends Model[ChangedURI] {

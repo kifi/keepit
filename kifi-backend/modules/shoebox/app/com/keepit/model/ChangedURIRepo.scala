@@ -24,10 +24,10 @@ class ChangedURIRepoImpl @Inject() (
   private val sequence = db.getSequence("changed_uri_sequence")
 
   override val table = new RepoTable[ChangedURI](db, "changed_uri") {
-    def oldUri = column[Id[NormalizedURI]]("old_uri", O.NotNull)
-    def newUri = column[Id[NormalizedURI]]("new_uri", O.NotNull)
+    def oldUriId = column[Id[NormalizedURI]]("old_uri_id", O.NotNull)
+    def newUriId = column[Id[NormalizedURI]]("new_uri_id", O.NotNull)
     def seq = column[SequenceNumber]("seq", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ oldUri ~ newUri ~ state ~ seq <> (ChangedURI.apply _, ChangedURI.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ oldUriId ~ newUriId ~ state ~ seq <> (ChangedURI.apply _, ChangedURI.unapply _)
   }
 
   override def save(model: ChangedURI)(implicit session: RWSession) = {

@@ -24,7 +24,7 @@ class FailedUriNormalizationRepoImpl @Inject()(
     def urlHash = column[UrlHash]("url_hash", O.NotNull)
     def mappedUrlHash = column[UrlHash]("mapped_url_hash", O.NotNull)
     def url = column[String]("url", O.NotNull)
-    def mappedUrl = column[String]("mapped_uri", O.NotNull)
+    def mappedUrl = column[String]("mapped_url", O.NotNull)
     def failedCounts = column[Int]("failed_counts", O.NotNull)
     def * = id.? ~ createdAt ~ updatedAt ~ urlHash ~ mappedUrlHash ~url ~ mappedUrl ~ state ~ failedCounts <> (FailedUriNormalization.apply _, FailedUriNormalization.unapply _)
   }

@@ -12,7 +12,7 @@ class ChangedURITest extends Specification with ShoeboxTestInjector{
        withDb() { implicit injector =>
          db.readWrite { implicit s =>
            (1 to 5).map{ i =>
-             val tmp = ChangedURI(oldUri = Id[NormalizedURI](i), newUri = Id[NormalizedURI](i+100))
+             val tmp = ChangedURI(oldUriId = Id[NormalizedURI](i), newUriId = Id[NormalizedURI](i+100))
              changedURIRepo.save(tmp)
            }
          }
@@ -24,7 +24,7 @@ class ChangedURITest extends Specification with ShoeboxTestInjector{
          val lastSeq = changes.last.seq
          db.readWrite { implicit s =>
            (6 to 8).map{ i =>
-             val tmp = ChangedURI(oldUri = Id[NormalizedURI](i), newUri = Id[NormalizedURI](i+100))
+             val tmp = ChangedURI(oldUriId = Id[NormalizedURI](i), newUriId = Id[NormalizedURI](i+100))
              changedURIRepo.save(tmp)
            }
          }
