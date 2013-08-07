@@ -4,7 +4,7 @@
 // @require scripts/api.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/antiscroll.min.js
-
+// @require scripts/prevent_ancestor_scroll.js
 
 // There are several kinds of events that the notifications pane must handle:
 //  - initial rendering (up to 10)
@@ -41,6 +41,7 @@ noticesPane = function() {
           }).join(""))
           .appendTo($scrollable);
         $scrollable.antiscroll({x: false})
+        $notices.preventAncestorScroll();
         $notices.find("time").timeago();
 
         $notices.on("click", ".kifi-notice", function() {
