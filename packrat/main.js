@@ -351,7 +351,7 @@ api.port.on({
   },
   send_message: function(data, respond) {
     api.log("[send_message]", data);
-    ajax("api", "POST", "/messages", data, function(o) {
+    ajax("eliza", "POST", "/eliza/messages", data, function(o) {
       api.log("[send_message] resp:", o);
       respond(o);
     });
@@ -360,7 +360,7 @@ api.port.on({
     api.log("[send_reply]", data);
     var id = data.threadId;
     delete data.threadId;
-    ajax("api", "POST", "/messages/" + id, data, function(o) {
+    ajax("eliza", "POST", "/eliza/messages/" + id, data, function(o) {
       api.log("[send_reply] resp:", o);
       respond(o);
     });
