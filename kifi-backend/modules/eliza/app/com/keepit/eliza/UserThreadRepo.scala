@@ -43,7 +43,7 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def createIfNotExists(user: Id[User], thread: Id[MessageThread], uriIdOpt: Option[Id[NormalizedURI]])(implicit session: RWSession) : Unit 
 
-  def getThreads(user: Id[User])(implicit session: RSession) : Seq[Id[MessageThread]]
+  def getThreads(user: Id[User], uriId: Option[Id[NormalizedURI]]=None)(implicit session: RSession) : Seq[Id[MessageThread]]
 
   def clearNotification(user: Id[User], thread: Option[Id[MessageThread]]=None)(implicit session: RWSession) : Unit
 
@@ -68,6 +68,8 @@ trait UserThreadRepo extends Repo[UserThread] {
   def getSendableNotificationsAfter(userId: Id[User], after: DateTime)(implicit session: RSession): Seq[JsValue]
 
   def getSendableNotificationsBefore(userId: Id[User], before: DateTime, howMany: Int)(implicit session: RSession): Seq[JsValue]
+
+  def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread
 
 }
 
@@ -97,8 +99,12 @@ class UserThreadRepoImpl @Inject() (
     def userThreadIndex = index("user_thread", (user,thread), unique=true)
   }
 
-  def getThreads(user: Id[User])(implicit session: RSession) : Seq[Id[MessageThread]] = {
-    (for (row <- table if row.user===user) yield row.thread).list
+  def getThreads(userId: Id[User], uriIdOpt: Option[Id[NormalizedURI]]=None)(implicit session: RSession) : Seq[Id[MessageThread]] = {
+    uriIdOpt.map{ uriId =>
+      (for (row <- table if row.user===userId && row.uriId===uriId) yield row.thread).list
+    } getOrElse {
+      (for (row <- table if row.user===userId) yield row.thread).list
+    }
   }
 
   def createIfNotExists(user: Id[User], thread: Id[MessageThread], uriIdOpt: Option[Id[NormalizedURI]])(implicit session: RWSession) : Unit = {
@@ -190,6 +196,10 @@ class UserThreadRepoImpl @Inject() (
     .map(_.lastNotification)
     .take(howMany) 
     .list
+  }
+
+  def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread = {
+    (for (row <- table if row.user===userId && row.thread===threadId) yield row).first
   }
 
 }
