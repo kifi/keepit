@@ -35,7 +35,7 @@ class FailedUriNormalizationRepoImpl @Inject()(
   }
 
   def createOrIncrease(prepUrl: String, mappedUrl: String)(implicit session: RWSession): Unit = {
-    val (prepUrlHash, mappedUrlHash) = (NormalizedURIFactory.hashUrl(prepUrl), NormalizedURIFactory.hashUrl(mappedUrl))
+    val (prepUrlHash, mappedUrlHash) = (NormalizedURI.hashUrl(prepUrl), NormalizedURI.hashUrl(mappedUrl))
     val r = (for( r <- table if (r.prepUrlHash === prepUrlHash && r.mappedUrlHash === mappedUrlHash)) yield r).firstOption
     r match {
       case Some(record) => save(record.withCounts(record.counts + 1))

@@ -9,7 +9,6 @@ import com.google.inject.{Inject, Singleton}
 import com.keepit.classify.{Domain, DomainClassifier, DomainRepo}
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-import com.keepit.common.net.URI
 import com.keepit.common.social._
 import com.keepit.common.time._
 import com.keepit.model._
@@ -18,6 +17,7 @@ import com.keepit.search.SearchServiceClient
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.keepit.social.{ThreadInfo, CommentWithBasicUser, BasicUser}
+import com.keepit.common.net.URI
 
 case class KeeperInfo1(  // information needed immediately when a page is visited
     kept: Option[String],

@@ -1,8 +1,6 @@
 package com.keepit.model
 
 import org.specs2.mutable.Specification
-import com.google.inject.Injector
-import com.keepit.common.db.Id
 import com.keepit.test._
 
 class FailedUriNormalizationTest extends Specification with ShoeboxTestInjector{
@@ -18,7 +16,7 @@ class FailedUriNormalizationTest extends Specification with ShoeboxTestInjector{
         }
 
         db.readOnly{ implicit s =>
-          val r = failedUriNormalizationRepo.getByUrlHashes(NormalizedURIFactory.hashUrl(raw), NormalizedURIFactory.hashUrl(mapped))
+          val r = failedUriNormalizationRepo.getByUrlHashes(NormalizedURI.hashUrl(raw), NormalizedURI.hashUrl(mapped))
           r.get.counts === 3
           r.get.state === FailedUriNormalizationStates.ACTIVE
         }

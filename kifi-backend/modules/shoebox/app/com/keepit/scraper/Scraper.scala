@@ -4,7 +4,6 @@ import com.keepit.common.logging.Logging
 import com.google.inject._
 import com.keepit.common.db.slick._
 import com.keepit.common.time._
-import com.keepit.common.net.URI
 import com.keepit.search.ArticleStore
 import com.keepit.model._
 import com.keepit.scraper.extractor.DefaultExtractorProvider
@@ -25,6 +24,7 @@ import com.keepit.common.healthcheck.HealthcheckError
 import scala.util.Success
 import com.keepit.model.ScrapeInfo
 import com.keepit.search.Article
+import com.keepit.common.net.URI
 
 object Scraper {
   val BATCH_SIZE = 100

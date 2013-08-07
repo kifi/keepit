@@ -1,7 +1,7 @@
 package com.keepit.scraper.extractor
 
-import com.keepit.common.net.URI
 import com.keepit.scraper.HttpInputStream
+import com.keepit.common.net.URI
 
 object Extractor {
   val factories = Seq(
