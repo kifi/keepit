@@ -19,7 +19,6 @@ import play.api.Play.current
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-
 case object KeepsHourlyReport
 
 private[reports] class GeckoboardReporterActor @Inject() (
@@ -29,6 +28,8 @@ private[reports] class GeckoboardReporterActor @Inject() (
     bookmarkRepo: BookmarkRepo,
     clock: Clock)
   extends FortyTwoActor(healthcheckPlugin) with Logging {
+
+  implicit val dbMasterSlave = Database.Slave
 
   def receive() = {
     case KeepsHourlyReport =>
@@ -58,5 +59,6 @@ class GeckoboardReporterPluginImpl @Inject() (
 
   override def onStart() {
     scheduleTask(actorProvider.system, 0 seconds, 10 minutes, actorProvider.actor, KeepsHourlyReport)
+    scheduleTask(actorProvider.system, 0 seconds, 1 hours, actorProvider.actor, KeepsDailyReport)
   }
 }
