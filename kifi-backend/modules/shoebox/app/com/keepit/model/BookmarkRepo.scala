@@ -20,6 +20,7 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
                 collectionId: Option[Id[Collection]], count: Int)(implicit session: RSession): Seq[Bookmark]
   def getCountByUser(userId: Id[User])(implicit session: RSession): Int
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int
+  def getCountByTimeAndSource(from: DateTime, to: DateTime, source: BookmarkSource)(implicit session: RSession): Int
   def getBookmarksChanged(num: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[Bookmark]
   def getNumMutual(userId: Id[User], otherUserId: Id[User])(implicit session: RSession): Int
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark]
@@ -116,6 +117,9 @@ class BookmarkRepoImpl @Inject() (
 
   def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int =
     Query((for(b <- table if b.updatedAt >= from && b.updatedAt <= to && b.state === BookmarkStates.ACTIVE) yield b).length).first
+
+  def getCountByTimeAndSource(from: DateTime, to: DateTime, source: BookmarkSource)(implicit session: RSession): Int =
+    Query((for(b <- table if b.updatedAt >= from && b.updatedAt <= to && b.state === BookmarkStates.ACTIVE && b.source === source) yield b).length).first
 
   def getBookmarksChanged(num: SequenceNumber, limit: Int)(implicit session: RSession): Seq[Bookmark] =
     (for (b <- table if b.seq > num) yield b).sortBy(_.seq).take(limit).list

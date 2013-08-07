@@ -14,7 +14,6 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.duration.FiniteDuration
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import scala.concurrent.duration._
-import WidgetType.NumberAndSecondaryStatType
 import org.specs2.mutable.Specification
 import play.api.libs.json._
 
@@ -24,12 +23,17 @@ class GeckoboardPublisherTest extends Specification with TestInjector {
   "GeckoboardPublisher" should {
 
     "serialize" in {
-      val data = NumberAndSecondaryStat(GeckoboardWidget.TotalKeepsPerHour, 10, 15)
+      val data = NumberAndSecondaryStat(10, 15)
       data.json.toString === """{"item":[{"text":"","value":10},{"text":"","value":15}]}"""
     }
 
     "send" in {
-      val data = NumberAndSecondaryStat(GeckoboardWidget.TotalKeepsPerHour, 10, 15)
+      class MyWidget ()
+        extends GeckoboardWidget[NumberAndSecondaryStat](GeckoboardWidgetId("37507-12ed349c-eee7-4564-b8b5-754d9ed0aeeb")) {
+
+        def data(): NumberAndSecondaryStat = NumberAndSecondaryStat(10, 15)
+      }
+
       val client = new FakeHttpClient() {
         override def post(url: String, body: JsValue, onFailure: => String => PartialFunction[Throwable, Unit] = defaultOnFailure): ClientResponse = {
           url === "https://push.geckoboard.com/v1/send/37507-12ed349c-eee7-4564-b8b5-754d9ed0aeeb"
@@ -38,7 +42,7 @@ class GeckoboardPublisherTest extends Specification with TestInjector {
         }
       }
       val publisher = new GeckoboardPublisherImpl(client)
-      publisher.publish(data)
+      publisher.publish(new MyWidget())
     }
   }
 }
