@@ -158,6 +158,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
                 Some(c)
               }
             }
+            log.info("WS request for: " + jsArr)
             Statsd.increment(s"websocket.handler.${jsArr.value(0)}")
             Statsd.time(s"websocket.handler.${jsArr.value(0)}") {handler(jsArr.value.tail)}
           } getOrElse {
