@@ -1,5 +1,6 @@
 package com.keepit.shoebox
 
+import com.keepit.reports._
 import com.keepit.common.cache.CacheModule
 import com.keepit.social.{SocialGraphModule, SecureSocialModule}
 import com.keepit.search.SearchServiceClientModule
@@ -45,7 +46,8 @@ abstract class ShoeboxModule(
   val topicModelModule: TopicModelModule,
   val domainTagImporterModule: DomainTagImporterModule,
   val sliderHistoryTrackerModule: SliderHistoryTrackerModule,
-  val userIndexModule: UserIndexModule = UserIndexModule()
+  val userIndexModule: UserIndexModule = UserIndexModule(),
+  val geckoboardModule: GeckoboardModule = GeckoboardModule()
 
 ) extends ConfigurationModule(
     fortyTwoModule,
@@ -71,5 +73,6 @@ abstract class ShoeboxModule(
     topicModelModule,
     domainTagImporterModule,
     sliderHistoryTrackerModule,
-    userIndexModule
+    userIndexModule,
+    geckoboardModule
 )

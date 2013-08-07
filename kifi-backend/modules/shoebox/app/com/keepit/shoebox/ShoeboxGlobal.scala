@@ -1,5 +1,6 @@
 package com.keepit.shoebox
 
+import com.keepit.reports._
 import com.keepit.FortyTwoGlobal
 import com.keepit.common.analytics.reports.ReportBuilderPlugin
 import com.keepit.common.cache.FortyTwoCachePlugin
@@ -47,5 +48,6 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[TopicUpdaterPlugin].enabled)
     require(injector.instance[TopicModelSwitcherPlugin].enabled)
     require(injector.instance[ExpertRecommenderController].enabled)
+    require(injector.instance[GeckoboardReporterPlugin].enabled)
   }
 }
