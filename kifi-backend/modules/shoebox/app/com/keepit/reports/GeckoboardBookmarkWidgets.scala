@@ -77,7 +77,7 @@ class HoverKeepsPerWeek @Inject() (
     db: Database,
     bookmarkRepo: BookmarkRepo,
     clock: Clock)
-  extends GeckoboardWidget[NumberAndSecondaryStat](GeckoboardWidgetId("37507-4bbd5426-6e78-473f-bb05-ad8138647872")) {
+  extends GeckoboardWidget[NumberAndSecondaryStat](GeckoboardWidgetId("37507-d7c4bed6-c213-46b5-a1f6-2d15966ace76")) {
   implicit val dbMasterSlave = Database.Slave
   val hover = BookmarkSource("HOVER_KEEP")
 
