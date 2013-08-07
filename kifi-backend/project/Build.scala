@@ -152,11 +152,11 @@ object ApplicationBuild extends Build {
       commonSettings: _*
     ).dependsOn(common % "test->test;compile->compile").aggregate(common)
 
-    val bender = play.Project("bender", appVersion, Nil, path = file("modules/bender")).settings(
-      commonSettings: _*
-    ).dependsOn(common % "test->test;compile->compile").aggregate(common)
+    val eliza = play.Project("eliza", appVersion, Nil, path = file("modules/eliza")).settings(
+      (commonSettings ++ (routesImport += "com.keepit.eliza._")) : _*
+    ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
 
     val aaaMain = play.Project(appName, appVersion).settings(
       commonSettings: _*
-    ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", bender % "compile->compile").aggregate(common, search, shoebox, bender)
+    ).dependsOn(common % "test->test;compile->compile", search % "test->test;compile->compile", shoebox % "test->test;compile->compile", eliza % "compile->compile").aggregate(common, search, shoebox, eliza)
 }

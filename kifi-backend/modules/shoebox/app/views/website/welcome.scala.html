@@ -1,7 +1,13 @@
 @(id: Option[ExternalId[Invitation]] = None, socialUser: Option[SocialUserInfo] = None,
     msg: Option[String] = None, skipLetMeIn: Boolean = false)
 
-@helper.main(title = "Welcome to Kifi!", hiddenElements = Seq("header")) {
+@helper.main(title = "Welcome to Kifi!", hiddenElements = Seq("header"), head = Html(s"""
+    <meta property="og:url" content="https://www.kifi.com${id map (com.keepit.controllers.website.routes.InviteController.acceptInvite(_).url) getOrElse com.keepit.controllers.website.routes.HomeController.home()}">
+    <meta property="og:image" content="https://www.kifi.com/assets/images/logo2.png">
+    <meta property="og:title" content="${if (id.isDefined && socialUser.isDefined) s"You're invited to join Kifi." else "Welcome to Kifi!"}">
+    <meta property="og:description" content="${if (id.isDefined && socialUser.isDefined) s"Hey ${socialUser.get.fullName}, you're invited to join Kifi! Click here to sign up." else "Welcome to Kifi!"}">
+    <meta property="og:site_name" content="Kifi">
+    """)) {
   <section class="content clearfix text_center welcome">
     <h1>Welcome to the <img src="@routes.Assets.at("images/logo2.png")" width="103" height="58" class="logo2"> private beta!</h1>
 

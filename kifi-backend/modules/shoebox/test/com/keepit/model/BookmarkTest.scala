@@ -3,7 +3,7 @@ package com.keepit.model
 import org.joda.time.DateTime
 import org.specs2.mutable._
 
-
+import com.keepit.common.time._
 import com.keepit.common.db.slick._
 import com.keepit.common.time.zones.PT
 import com.keepit.test._
@@ -88,9 +88,19 @@ class BookmarkTest extends Specification with ShoeboxTestInjector {
     }
     "count all" in {
       withDb() { implicit injector =>
-        val (user1, user2, uri1, uri2) = setup()
+        setup()
         db.readOnly {implicit s =>
           bookmarkRepo.count(s) === 3
+        }
+      }
+    }
+    "count all by time" in {
+      withDb(FakeClockModule()) { implicit injector =>
+        setup()
+        val clock = inject[FakeClock]
+        db.readOnly {implicit s =>
+          bookmarkRepo.getCountByTime(clock.now.minusHours(3), clock.now) === 3
+          bookmarkRepo.getCountByTime(clock.now.minusHours(6), clock.now.minusHours(3)) === 0
         }
       }
     }

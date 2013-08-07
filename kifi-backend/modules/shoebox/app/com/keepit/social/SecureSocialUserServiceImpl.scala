@@ -97,6 +97,12 @@ class SecureSocialUserPluginImpl @Inject() (
 
         //social user info with user must be FETCHED_USING_SELF, so setting user should trigger a pull
         //todo(eishay): send a direct fetch request
+
+        for (su <- socialUserInfoRepo.getByUser(user.id.get)
+            if su.networkType == socialUserInfo.networkType && su.id.get != socialUserInfo.id.get) {
+          throw new IllegalStateException(s"Social user for ${su.networkType} is already connected: $su")
+        }
+
         val sui = socialUserInfoRepo.save(socialUserInfo.withUser(user))
         if (userOpt.isEmpty) imageStore.updatePicture(sui, user.externalId)
         sui

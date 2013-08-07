@@ -1,5 +1,10 @@
 package com.keepit.controllers.website
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
+import java.net.URLEncoder
+
 import com.google.inject.Inject
 import com.keepit.common.controller.ActionAuthenticator
 import com.keepit.common.controller.WebsiteController
@@ -7,13 +12,14 @@ import com.keepit.common.db.ExternalId
 import com.keepit.common.db.State
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
+import com.keepit.common.net.HttpClient
 import com.keepit.common.social._
 import com.keepit.model._
+import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialId}
 
 import play.api.Play.current
 import play.api._
 import play.api.mvc._
-import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialId}
 
 case class BasicUserInvitation(name: String, picture: Option[String], state: State[Invitation])
 
@@ -26,7 +32,8 @@ class InviteController @Inject() (db: Database,
   invitationRepo: InvitationRepo,
   socialUserInfoRepo: SocialUserInfoRepo,
   linkedIn: LinkedInSocialGraph,
-  actionAuthenticator: ActionAuthenticator)
+  actionAuthenticator: ActionAuthenticator,
+  httpClient: HttpClient)
     extends WebsiteController(actionAuthenticator) {
 
   private def createBasicUserInvitation(socialUser: SocialUserInfo, state: State[Invitation]): BasicUserInvitation = {
@@ -66,9 +73,16 @@ class InviteController @Inject() (db: Database,
 
   private val url = current.configuration.getString("application.baseUrl").get
   private val appId = current.configuration.getString("securesocial.facebook.clientId").get
-  private def fbInviteUrl(invite: Invitation)(implicit session: RSession) = {
+  private def fbInviteUrl(invite: Invitation)(implicit session: RSession): Future[String] = {
     val identity = socialUserInfoRepo.get(invite.recipientSocialUserId)
-    s"https://www.facebook.com/dialog/send?app_id=$appId&name=You're%20invited%20to%20try%20KiFi!&picture=https://www.kifi.com/assets/images/kifi-fb-square.png&link=$url/invite/${invite.externalId.id}&description=Hey%20${identity.fullName}!%20You're%20invited%20to%20join%20KiFi.%20Click%20here%20to%20sign%20up&redirect_uri=$url/invite/confirm/${invite.externalId}&to=${identity.socialId.id}"
+    val link = URLEncoder.encode(s"$url${routes.InviteController.acceptInvite(invite.externalId)}", "UTF-8")
+    val confirmUri = URLEncoder.encode(
+      s"$url${routes.InviteController.confirmInvite(invite.externalId, None, None)}", "UTF-8")
+    // Workaround for https://developers.facebook.com/bugs/314349658708936
+    // See https://developers.facebook.com/bugs/576522152386211
+    httpClient.getFuture(s"https://developers.facebook.com/tools/debug/og/object?q=$link") map { _ =>
+      s"https://www.facebook.com/dialog/send?app_id=$appId&link=$link&redirect_uri=$confirmUri&to=${identity.socialId.id}"
+    }
   }
 
   def inviteConnection = AuthenticatedHtmlAction { implicit request =>
@@ -86,7 +100,7 @@ class InviteController @Inject() (db: Database,
         invitationRepo.getByRecipient(socialUserInfo.id.get) match {
           case Some(alreadyInvited) if alreadyInvited.state != InvitationStates.INACTIVE =>
             if(alreadyInvited.senderUserId == request.user.id) {
-              Redirect(fbInviteUrl(alreadyInvited))
+              Async { fbInviteUrl(alreadyInvited) map (Redirect(_)) }
             } else {
               Redirect(routes.InviteController.invite)
             }
@@ -107,12 +121,11 @@ class InviteController @Inject() (db: Database,
               )
               socialUserInfo.networkType match {
                 case SocialNetworks.FACEBOOK =>
-                  Redirect(fbInviteUrl(invitationRepo.save(invite)))
+                  Async { fbInviteUrl(invitationRepo.save(invite)) map (Redirect(_)) }
                 case SocialNetworks.LINKEDIN =>
                   val me = socialUserInfoRepo.getByUser(request.userId)
                     .find(_.networkType == SocialNetworks.LINKEDIN).get
-                  val path = com.keepit.controllers.website.routes.InviteController.acceptInvite(
-                    invite.externalId).url
+                  val path = routes.InviteController.acceptInvite(invite.externalId).url
                   val messageWithUrl = s"${message getOrElse ""}\n$url$path"
                   linkedIn.sendMessage(me, socialUserInfo, subject.getOrElse(""), messageWithUrl)
                   invitationRepo.save(invite.withState(InvitationStates.ACTIVE))
@@ -132,7 +145,7 @@ class InviteController @Inject() (db: Database,
     db.readOnly { implicit session =>
       val invitation = invitationRepo.getOpt(id)
       invitation match {
-        case Some(invite) if invite.state == InvitationStates.ACTIVE =>
+        case Some(invite) if (invite.state == InvitationStates.ACTIVE || invite.state == InvitationStates.INACTIVE) =>
           val socialUser = socialUserInfoRepo.get(invitation.get.recipientSocialUserId)
           Ok(views.html.website.welcome(Some(id), Some(socialUser)))
         case _ =>

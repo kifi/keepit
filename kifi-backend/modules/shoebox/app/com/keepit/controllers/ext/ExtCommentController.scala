@@ -42,44 +42,6 @@ class ExtCommentController @Inject() (
     Ok(JsObject(counts.map { case (url, n) => url -> JsArray(Seq(JsNumber(n._1), JsNumber(n._2))) }))
   }
 
-  def postCommentAction() = AuthenticatedJsonToJsonAction { request =>
-    val o = request.body
-    val (urlStr, title, text) = (
-      (o \ "url").as[String],
-      (o \ "title").as[String],
-      (o \ "text").as[String].trim)
-
-    val comment = postComment(request.user.id.get, urlStr, title, text)
-
-    Ok(Json.obj("id" -> comment.externalId.id, "createdAt" -> JsString(comment.createdAt.toString)))
-  }
-
-  private[ext] def postComment(userId: Id[User], urlStr: String, title: String, text: String): Comment = {
-    if (text.isEmpty) throw new Exception("Empty comments are not allowed")
-    val (uri, url) = getOrCreateUriAndUrl(urlStr)
-    val comment = db.readWrite { implicit s =>
-      val newComment = commentRepo.save(
-          Comment(uriId = uri.id.get, urlId = url.id, userId = userId,
-              pageTitle = title, text = LargeString(text),
-              permissions = CommentPermissions.PUBLIC, parent = None))
-      commentReadRepo.save(commentReadRepo.getByUserAndUri(userId, uri.id.get) match {
-        case Some(commentRead) => // existing CommentRead entry for this message thread
-          commentRead.withLastReadId(newComment.id.get)
-        case None =>
-          CommentRead(userId = userId, uriId = uri.id.get, lastReadId = newComment.id.get)
-      })
-      newComment
-    }
-
-    future {
-      userNotifier.comment(comment)
-    } onFailure { case e =>
-      log.error("Could not notify users for comment %s".format(comment.id.get), e)
-    }
-
-    comment
-  }
-
   def sendMessageAction() = AuthenticatedJsonToJsonAction { request =>
     val o = request.body
     val (urlStr, title, text, recipients) = (

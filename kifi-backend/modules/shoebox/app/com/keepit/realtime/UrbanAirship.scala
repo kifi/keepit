@@ -11,11 +11,13 @@ import com.google.inject.{Inject, ImplementedBy}
 import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick._
-import com.keepit.common.net.HttpClient
+import com.keepit.common.net.{NonOKResponseException, HttpClient}
 import com.keepit.common.time._
 import com.keepit.model.{UserNotificationCategories, UserNotification, User}
 
+import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
+import com.keepit.common.logging.Logging
 
 case class UrbanAirshipConfig(key: String, secret: String, baseUrl: String = "https://go.urbanairship.com")
 
@@ -125,14 +127,15 @@ class UrbanAirshipImpl @Inject()(
   deviceRepo: DeviceRepo,
   db: Database,
   clock: Clock
-) extends UrbanAirship {
+) extends UrbanAirship with Logging {
 
   lazy val authenticatedClient: HttpClient = {
     val encodedUserPass = new sun.misc.BASE64Encoder().encode(s"${config.key}:${config.secret}".getBytes)
     client.withHeaders("Authorization" -> s"Basic $encodedUserPass")
   }
 
-  def registerDevice(userId: Id[User], token: String, deviceType: DeviceType): Device =
+  def registerDevice(userId: Id[User], token: String, deviceType: DeviceType): Device = {
+    log.info(s"Registering device: $token (user $userId)")
     db.readWrite { implicit s =>
       deviceRepo.get(userId, token, deviceType) match {
         case Some(d) if d.state == DeviceStates.ACTIVE => d
@@ -140,39 +143,55 @@ class UrbanAirshipImpl @Inject()(
         case None => deviceRepo.save(Device(userId = userId, token = token, deviceType = deviceType))
       }
     }
+  }
 
   def notifyUser(userId: Id[User], notification: PushNotification): Unit = {
+    log.info(s"Notifying user: $userId")
     for {
-      deviceOpt <- db.readOnly { implicit s => deviceRepo.getByUserId(userId) }
-      device <- updateDeviceState(deviceOpt) if device.state == DeviceStates.ACTIVE
+      d <- db.readOnly { implicit s => deviceRepo.getByUserId(userId) }
+      device <- updateDeviceState(d) if device.state == DeviceStates.ACTIVE
     } {
       sendNotification(device, notification)
     }
   }
 
   def updateDeviceState(device: Device): Future[Device] = {
+    log.info(s"Checking state of device: ${device.token}")
     if (device.updatedAt plus UrbanAirship.RecheckPeriod isBefore clock.now()) {
-      authenticatedClient.getFuture(s"${config.baseUrl}/api/device_tokens/${device.token}") map { r =>
+      authenticatedClient.getFuture(s"${config.baseUrl}/api/device_tokens/${device.token}", url => {
+        case e @ NonOKResponseException(url, response) if response.status == NOT_FOUND =>
+      }) map { r =>
         val active = (r.json \ "active").as[Boolean]
         db.readWrite { implicit s =>
-          deviceRepo.save(device.copy(state = if (active) DeviceStates.ACTIVE else DeviceStates.INACTIVE))
+          val state = if (active) DeviceStates.ACTIVE else DeviceStates.INACTIVE
+          log.info(s"Setting device state to $state: ${device.token}")
+          deviceRepo.save(device.copy(state = state))
         }
+      } recover {
+        case e @ NonOKResponseException(url, response) if response.status == NOT_FOUND =>
+          db.readWrite { implicit s =>
+            log.info(s"Setting device state to inactive: ${device.token}")
+            deviceRepo.save(device.copy(state = DeviceStates.INACTIVE))
+          }
       }
     } else Future.successful(device)
   }
 
-  def sendNotification(device: Device, notification: PushNotification): Unit = device.deviceType match {
-    case DeviceType.IOS =>
-      authenticatedClient.postFuture(s"${config.baseUrl}/api/push", Json.obj(
-        "device_tokens" -> Seq(device.token),
-        "aps" -> Json.obj(
-          "badge" -> notification.unvisitedCount,
-          "alert" -> notification.message,
-          "sound" -> UrbanAirship.NotificationSound
-        ),
-        "id" -> notification.id.id
-      ))
-    case DeviceType.Android =>
-      ???
+  def sendNotification(device: Device, notification: PushNotification): Unit = {
+    log.info(s"Sending notification to device: ${device.token}")
+    device.deviceType match {
+      case DeviceType.IOS =>
+        authenticatedClient.postFuture(s"${config.baseUrl}/api/push", Json.obj(
+          "device_tokens" -> Seq(device.token),
+          "aps" -> Json.obj(
+            "badge" -> notification.unvisitedCount,
+            "alert" -> notification.message,
+            "sound" -> UrbanAirship.NotificationSound
+          ),
+          "id" -> notification.id.id
+        ))
+      case DeviceType.Android =>
+        ???
+    }
   }
 }

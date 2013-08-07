@@ -44,6 +44,8 @@ class SlickSessionProviderImpl extends SlickSessionProvider {
 
 case class DbExecutionContext(context: ExecutionContext)
 
+case class SlickDatabaseWrapper (slickDatabase: SlickDatabase, masterSlave: Database.DBMasterSlave)
+
 object Database {
   sealed trait DBMasterSlave
   case object Master extends DBMasterSlave
@@ -85,33 +87,31 @@ class Database @Inject() (
 
   private def resolveDb(dbMasterSlave: DBMasterSlave) = dbMasterSlave match {
     case Master =>
-      Statsd.increment(s"db.read.master")
-      db.masterDb
+      SlickDatabaseWrapper(db.masterDb, Master)
     case Slave =>
       db.slaveDb match {
         case None =>
-          Statsd.increment(s"db.read.master")
-          db.masterDb
+          SlickDatabaseWrapper(db.masterDb, Master)
         case Some(handle) =>
           log.info(s"session using Slave db")
-          Statsd.increment(s"db.read.slave")
-          handle
+          SlickDatabaseWrapper(handle, Slave)
       }
   }
 
   def readOnly[T](dbMasterSlave: DBMasterSlave = Master)(f: ROSession => T): T = enteringSession {
-    val handle = resolveDb(dbMasterSlave)
     var s: Option[Session] = None
     val ro = new ROSession({
-      s = Some(sessionProvider.createReadOnlySession(handle))
+      val handle = resolveDb(dbMasterSlave)
+      Statsd.increment(s"db.read.${handle.masterSlave}")
+      s = Some(sessionProvider.createReadOnlySession(handle.slickDatabase))
       val session = s.get
-      val url = session.metaData.getURL
       session
     })
     try f(ro) finally s.foreach(_.close())
   }
 
   def readWrite[T](f: RWSession => T): T = enteringSession {
+    Statsd.increment("db.write.Master")
     val s = sessionProvider.createReadWriteSession(db.masterDb)
     try {
       s.withTransaction {
