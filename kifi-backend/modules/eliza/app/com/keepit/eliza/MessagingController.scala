@@ -6,6 +6,7 @@ import com.keepit.common.db.slick.{Database}
 import com.keepit.shoebox.{ShoeboxServiceClient}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
+import com.keepit.social.BasicUser
 
 import scala.concurrent.{future, Await, Future}
 import scala.concurrent.duration._
@@ -48,6 +49,45 @@ class MessagingController @Inject() (
   extends Logging {
 
 
+  private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread]) : Seq[ElizaThreadInfo]  = {
+    //get all involved users
+    val allInvolvedUsers : Seq[Id[User]]= threads.flatMap{_.participants.map(_.all).getOrElse(Set())}
+    //get all basic users
+    val userId2BasicUser : Map[Id[User], BasicUser] = Await.result(shoebox.getBasicUsers(allInvolvedUsers.toSeq), 2 seconds) //Temporary
+    //get all messages
+    val messagesByThread : Map[Id[MessageThread], Seq[Message]] = threads.map{ thread =>
+      (thread.id.get, getThreadMessages(thread, None))
+    }.toMap
+    //get user_threads
+    val userThreads : Map[Id[MessageThread], UserThread] = db.readOnly{ implicit session => threads.map{ thread =>
+      (thread.id.get, userThreadRepo.getUserThread(userId, thread.id.get))
+    }}.toMap
+
+    threads.map{ thread =>
+      val lastMessage = db.readOnly{ implicit session => messageRepo.get(userThreads(thread.id.get).lastMsgFromOther.get) }
+
+      val messageTimes = messagesByThread(thread.id.get).map{ message =>
+        (message.externalId, message.createdAt)
+      }.toMap
+
+      ElizaThreadInfo(
+        externalId=thread.externalId,
+        recipients=thread.participants.map(_.all).getOrElse(Set()).map(userId2BasicUser(_)).toSeq,
+        digest= lastMessage.messageText,
+        lastAuthor=userId2BasicUser(lastMessage.from.get).externalId,
+        messageCount=messagesByThread(thread.id.get).length,
+        messageTimes=messageTimes,
+        createdAt=thread.createdAt,
+        lastCommentedAt= lastMessage.createdAt,
+        lastMessageRead=userThreads(thread.id.get).lastSeen,
+        nUrl = thread.nUrl.getOrElse("")
+      )
+
+    }
+
+  }
+
+
   private def sendNotificationForMessage(user: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser) : Unit = { //TODO Stephen: Construct and store notification json
     future {
       db.readWrite{ implicit session => 
@@ -76,9 +116,13 @@ class MessagingController @Inject() (
     val thread = db.readWrite{ implicit session => 
       val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url)) 
       if (isNew){
+        log.info(s"This is a new thread. Creating User Threads.")
         participants.par.foreach{ userId => 
-          userThreadRepo.createIfNotExists(userId, thread.id.get, uriIdOpt)
+          userThreadRepo.create(userId, thread.id.get, uriIdOpt)
         }
+      }
+      else{
+        log.info(s"Not actually a new thread. Merging.")
       }
       thread 
     }
@@ -275,6 +319,15 @@ class MessagingController @Inject() (
     db.readOnly{ implicit session =>
       userThreadRepo.getSendableNotificationsBefore(userId, after, howMany)
     }
+  }
+
+  def getThreadInfos(userId: Id[User], url: String): Seq[ElizaThreadInfo] = {
+    val uriId = Await.result(shoebox.normalizeURL(url), 2 seconds).id.get
+    val threads = db.readOnly { implicit session =>
+      val threadIds = userThreadRepo.getThreads(userId, Some(uriId))
+      threadIds.map(threadRepo.get(_))
+    }
+    buildThreadInfos(userId, threads)
   }
 
 

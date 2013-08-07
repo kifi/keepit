@@ -5,6 +5,7 @@ import com.keepit.common.db.slick.{Repo, DbRepo, ExternalIdColumnFunction, Exter
 import com.keepit.common.db.slick.FortyTwoTypeMappers._
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import org.joda.time.DateTime
+import com.keepit.common.logging.Logging
 import com.keepit.common.time.{currentDateTime, zones, Clock}
 import com.keepit.common.db.{Model, Id, ExternalId}
 import com.keepit.model.{User, NormalizedURI}
@@ -40,9 +41,9 @@ case class UserThread(
 @ImplementedBy(classOf[UserThreadRepoImpl])
 trait UserThreadRepo extends Repo[UserThread] {
 
-  def createIfNotExists(user: Id[User], thread: Id[MessageThread], uriIdOpt: Option[Id[NormalizedURI]])(implicit session: RWSession) : Unit 
+  def create(user: Id[User], thread: Id[MessageThread], uriIdOpt: Option[Id[NormalizedURI]])(implicit session: RWSession) : UserThread
 
-  def getThreads(user: Id[User])(implicit session: RSession) : Seq[Id[MessageThread]]
+  def getThreads(user: Id[User], uriId: Option[Id[NormalizedURI]]=None)(implicit session: RSession) : Seq[Id[MessageThread]]
 
   def clearNotification(user: Id[User], thread: Option[Id[MessageThread]]=None)(implicit session: RWSession) : Unit
 
@@ -68,6 +69,8 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def getSendableNotificationsBefore(userId: Id[User], before: DateTime, howMany: Int)(implicit session: RSession): Seq[JsValue]
 
+  def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread
+
 }
 
 
@@ -76,7 +79,7 @@ class UserThreadRepoImpl @Inject() (
     val clock: Clock, 
     val db: DataBaseComponent 
   ) 
-  extends DbRepo[UserThread] with UserThreadRepo {
+  extends DbRepo[UserThread] with UserThreadRepo with Logging {
 
   import db.Driver.Implicit._
 
@@ -96,11 +99,15 @@ class UserThreadRepoImpl @Inject() (
     def userThreadIndex = index("user_thread", (user,thread), unique=true)
   }
 
-  def getThreads(user: Id[User])(implicit session: RSession) : Seq[Id[MessageThread]] = {
-    (for (row <- table if row.user===user) yield row.thread).list
+  def getThreads(userId: Id[User], uriIdOpt: Option[Id[NormalizedURI]]=None)(implicit session: RSession) : Seq[Id[MessageThread]] = {
+    uriIdOpt.map{ uriId =>
+      (for (row <- table if row.user===userId && row.uriId===uriId) yield row.thread).list
+    } getOrElse {
+      (for (row <- table if row.user===userId) yield row.thread).list
+    }
   }
 
-  def createIfNotExists(user: Id[User], thread: Id[MessageThread], uriIdOpt: Option[Id[NormalizedURI]])(implicit session: RWSession) : Unit = {
+  def create(user: Id[User], thread: Id[MessageThread], uriIdOpt: Option[Id[NormalizedURI]])(implicit session: RWSession) : UserThread = {
     val userThread = UserThread(
         id=None,
         user=user,
@@ -110,11 +117,7 @@ class UserThreadRepoImpl @Inject() (
         lastMsgFromOther=None,
         lastNotification=JsNull
       )
-    try{
-      save(userThread)
-    } catch {
-      case e: java.sql.SQLException => {}
-    }
+    save(userThread)
   }
 
   def clearNotification(user: Id[User], threadOpt: Option[Id[MessageThread]]=None)(implicit session: RWSession) : Unit = {
@@ -187,6 +190,10 @@ class UserThreadRepoImpl @Inject() (
     .map(_.lastNotification)
     .take(howMany) 
     .list
+  }
+
+  def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread = {
+    (for (row <- table if row.user===userId && row.thread===threadId) yield row).first
   }
 
 }

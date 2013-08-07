@@ -50,7 +50,7 @@ CREATE TABLE user_thread (
     notification_pending bool NOT NULL,
     muted bool NOT NULL,
     last_msg_from_other bigint(20) DEFAULT NULL,
-    lastNotification longtext DEFAULT NULL,
+    last_notification longtext DEFAULT NULL,
     notification_updated_at datetime NOT NULL,
     notification_last_seen datetime NOT NULL,
 
