@@ -1044,7 +1044,7 @@ function getPrefs() {
 function getRules() {
   ajax("api", "GET", "/ext/pref/rules?version=" + ruleSet.version, function(o) {
     api.log("[getRules]", o);
-    ruleSet = o;
+    ruleSet.rules = o;
   });
 }
 
@@ -1079,7 +1079,7 @@ function startSession(callback, retryMs) {
 
     session = data;
     session.prefs = {}; // to come via socket
-    socket = api.socket.open(apiBaseUri().replace(/^http/, "ws") + "/ext/ws", socketHandlers, function onConnect() {
+    socket = api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws", socketHandlers, function onConnect() {
       socket.send(["get_last_notify_read_time"]);
       if (!notifications) {
         socket.send(["get_notifications", NOTIFICATION_BATCH_SIZE]);
