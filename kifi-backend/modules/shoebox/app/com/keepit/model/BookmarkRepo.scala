@@ -5,6 +5,7 @@ import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.common.db.{SequenceNumber, ExternalId, State, Id}
 import com.keepit.common.time.Clock
+import org.joda.time.DateTime
 import scala.Some
 
 @ImplementedBy(classOf[BookmarkRepoImpl])
@@ -18,6 +19,7 @@ trait BookmarkRepo extends Repo[Bookmark] with ExternalIdColumnFunction[Bookmark
   def getByUser(userId: Id[User], beforeId: Option[ExternalId[Bookmark]], afterId: Option[ExternalId[Bookmark]],
                 collectionId: Option[Id[Collection]], count: Int)(implicit session: RSession): Seq[Bookmark]
   def getCountByUser(userId: Id[User])(implicit session: RSession): Int
+  def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int
   def getBookmarksChanged(num: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[Bookmark]
   def getNumMutual(userId: Id[User], otherUserId: Id[User])(implicit session: RSession): Int
   def getByUrlId(urlId: Id[URL])(implicit session: RSession): Seq[Bookmark]
@@ -111,6 +113,9 @@ class BookmarkRepoImpl @Inject() (
     countCache.getOrElse(BookmarkCountKey(Some(userId))) {
       Query((for(b <- table if b.userId === userId && b.state === BookmarkStates.ACTIVE) yield b).length).first
     }
+
+  def getCountByTime(from: DateTime, to: DateTime)(implicit session: RSession): Int =
+    Query((for(b <- table if b.updatedAt >= from && b.updatedAt <= to && b.state === BookmarkStates.ACTIVE) yield b).length).first
 
   def getBookmarksChanged(num: SequenceNumber, limit: Int)(implicit session: RSession): Seq[Bookmark] =
     (for (b <- table if b.seq > num) yield b).sortBy(_.seq).take(limit).list
