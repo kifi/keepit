@@ -20,14 +20,14 @@ class UriNormalizationRuleRepoImpl @Inject()(
   import db.Driver.Implicit._
 
   override val table = new RepoTable[UriNormalizationRule](db, "uri_normalization_rule"){
-    def urlHash = column[UrlHash]("url_hash", O.NotNull)
+    def prepUrlHash = column[UrlHash]("prep_url_hash", O.NotNull)
     def prepUrl = column[String]("prep_url", O.NotNull)
     def mappedUrl = column[String]("mapped_url", O.NotNull)
-    def * = id.? ~  createdAt ~ updatedAt ~ urlHash ~ prepUrl ~ mappedUrl ~ state <> (UriNormalizationRule.apply _, UriNormalizationRule.unapply _)
+    def * = id.? ~  createdAt ~ updatedAt ~ prepUrlHash ~ prepUrl ~ mappedUrl ~ state <> (UriNormalizationRule.apply _, UriNormalizationRule.unapply _)
   }
 
-  def getByUrlHash(urlHash: UrlHash)(implicit session: RSession): Option[String] = {
-    (for(r <- table if r.urlHash === urlHash) yield r.mappedUrl).firstOption
+  def getByUrlHash(prepUrlHash: UrlHash)(implicit session: RSession): Option[String] = {
+    (for(r <- table if r.prepUrlHash === prepUrlHash) yield r.mappedUrl).firstOption
   }
 
 }

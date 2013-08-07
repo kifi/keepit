@@ -21,25 +21,25 @@ class FailedUriNormalizationRepoImpl @Inject()(
   import db.Driver.Implicit._
 
   override val table = new RepoTable[FailedUriNormalization](db, "failed_uri_normalization"){
-    def urlHash = column[UrlHash]("url_hash", O.NotNull)
+    def prepUrlHash = column[UrlHash]("prep_url_hash", O.NotNull)
     def mappedUrlHash = column[UrlHash]("mapped_url_hash", O.NotNull)
-    def url = column[String]("url", O.NotNull)
+    def prepUrl = column[String]("prep_url", O.NotNull)
     def mappedUrl = column[String]("mapped_url", O.NotNull)
     def counts = column[Int]("counts", O.NotNull)
     def lastContentCheck = column[DateTime]("last_content_check", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ urlHash ~ mappedUrlHash ~url ~ mappedUrl ~ state ~ counts ~ lastContentCheck <> (FailedUriNormalization.apply _, FailedUriNormalization.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ prepUrlHash ~ mappedUrlHash ~ prepUrl ~ mappedUrl ~ state ~ counts ~ lastContentCheck <> (FailedUriNormalization.apply _, FailedUriNormalization.unapply _)
   }
 
-  def getByUrlHashes(urlHash: UrlHash, mappedUrlHash: UrlHash)(implicit session: RSession): Option[FailedUriNormalization] = {
-    (for( r <- table if (r.urlHash === urlHash && r.mappedUrlHash === mappedUrlHash)) yield r).firstOption
+  def getByUrlHashes(prepUrlHash: UrlHash, mappedUrlHash: UrlHash)(implicit session: RSession): Option[FailedUriNormalization] = {
+    (for( r <- table if (r.prepUrlHash === prepUrlHash && r.mappedUrlHash === mappedUrlHash)) yield r).firstOption
   }
 
-  def createOrIncrease(url: String, mappedUrl: String)(implicit session: RWSession): Unit = {
-    val (urlHash, mappedUrlHash) = (NormalizedURIFactory.hashUrl(url), NormalizedURIFactory.hashUrl(mappedUrl))
-    val r = (for( r <- table if (r.urlHash === urlHash && r.mappedUrlHash === mappedUrlHash)) yield r).firstOption
+  def createOrIncrease(prepUrl: String, mappedUrl: String)(implicit session: RWSession): Unit = {
+    val (prepUrlHash, mappedUrlHash) = (NormalizedURIFactory.hashUrl(prepUrl), NormalizedURIFactory.hashUrl(mappedUrl))
+    val r = (for( r <- table if (r.prepUrlHash === prepUrlHash && r.mappedUrlHash === mappedUrlHash)) yield r).firstOption
     r match {
       case Some(record) => save(record.withCounts(record.counts + 1))
-      case None => save( FailedUriNormalization(urlHash = urlHash, mappedUrlHash = mappedUrlHash, url = url, mappedUrl = mappedUrl, counts = 1, lastContentCheck = currentDateTime) )
+      case None => save( FailedUriNormalization(prepUrlHash = prepUrlHash, mappedUrlHash = mappedUrlHash, prepUrl = prepUrl, mappedUrl = mappedUrl, counts = 1, lastContentCheck = currentDateTime) )
     }
   }
 }
