@@ -12,13 +12,13 @@ import com.keepit.common.db.{ExternalId, State, Id}
 import com.keepit.common.social.{ConnectionUpdater}
 import com.keepit.common.db.slick.DBSession.RSession
 import play.api.mvc._
-import com.keepit.common.net.URI
 import com.keepit.model.ExperimentType
 import com.keepit.model.KifiInstallation
 import scala.Some
 import com.keepit.model.User
 import securesocial.core.SecuredRequest
 import com.keepit.social.{SocialNetworkType, SocialId}
+import com.keepit.common.net.URI
 
 @Singleton
 class ShoeboxActionAuthenticator @Inject() (

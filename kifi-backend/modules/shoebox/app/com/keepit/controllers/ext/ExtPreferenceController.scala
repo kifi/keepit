@@ -4,7 +4,6 @@ import com.google.inject.Inject
 import com.keepit.common.controller.{BrowserExtensionController, ShoeboxServiceController, WebsiteController, ActionAuthenticator}
 import com.keepit.common.db.slick._
 import com.keepit.model._
-import com.keepit.common.net.URINormalizer
 import play.api.libs.json.{JsObject, Json}
 import com.keepit.common.db.{ExternalId, Id}
 import com.keepit.social.BasicUser
@@ -12,6 +11,7 @@ import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.social.BasicUserRepo
 import com.keepit.controllers.core.NetworkInfoLoader
 import com.keepit.classify.{DomainRepo, Domain, DomainStates}
+import com.keepit.normalizer.NormalizationService
 
 class ExtPreferenceController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -22,7 +22,8 @@ class ExtPreferenceController @Inject() (
   userRepo: UserRepo,
   userValueRepo: UserValueRepo,
   domainRepo: DomainRepo,
-  userToDomainRepo: UserToDomainRepo)
+  userToDomainRepo: UserToDomainRepo,
+  normalizationService: NormalizationService)
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
   private case class UserPrefs(enterToSend: Boolean)
@@ -30,7 +31,7 @@ class ExtPreferenceController @Inject() (
 
   def normalize(url: String) = AuthenticatedJsonAction { request =>
     // Todo: upgrade to new normalization
-    Ok(Json.arr(URINormalizer.normalize(url)))
+    Ok(Json.arr(normalizationService.normalize(url)))
   }
 
   def getRules(version: String) = AuthenticatedJsonAction { request =>

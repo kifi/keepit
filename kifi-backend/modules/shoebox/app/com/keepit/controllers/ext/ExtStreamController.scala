@@ -17,7 +17,6 @@ import com.keepit.common.db.Id
 import com.keepit.common.db.State
 import com.keepit.common.db.slick.DBSession.RSession
 import com.keepit.common.db.slick.Database
-import com.keepit.common.net.URINormalizer
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social._
 import com.keepit.common.time._
@@ -44,6 +43,7 @@ import org.joda.time.Seconds
 import scala.concurrent.Promise
 import scala.concurrent.stm._
 import com.keepit.social.{SocialNetworkType, SocialId, CommentWithBasicUser, BasicUser}
+import com.keepit.normalizer.NormalizationService
 
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]])
 
@@ -68,6 +68,7 @@ class ExtStreamController @Inject() (
   commentRepo: CommentRepo,
   commentReadRepo: CommentReadRepo,
   normUriRepo: NormalizedURIRepo,
+  normalizationService: NormalizationService,
   domainRepo: DomainRepo,
   commentWithBasicUserRepo: CommentWithBasicUserRepo,
   eventHelper: EventHelper,
@@ -192,20 +193,21 @@ class ExtStreamController @Inject() (
               channel.push(Json.arr(s"id:$socketId", clock.now.minus(connectedAt.getMillis).getMillis / 1000.0, subscriptions.keys))
             },
             "normalize" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
-              channel.push(Json.arr(requestId.toLong, URINormalizer.normalize(url)))
+              channel.push(Json.arr(requestId.toLong, normalizationService.normalize(url)))
             },
+
             "log_event" -> { case JsObject(pairs) +: _ =>
               logEvent(streamSession, JsObject(pairs))
             },
             "subscribe_uri" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
-                val nUri = URINormalizer.normalize(url)
+                val nUri = normalizationService.normalize(url)
                 subscriptions.putIfAbsent(nUri, uriChannel.subscribe(nUri, socketId, channel))
                 channel.push(Json.arr(requestId.toLong, nUri))
                 channel.push(Json.arr("uri_1", nUri, keeperInfoLoader.load1(userId, nUri)))
                 channel.push(Json.arr("uri_2", nUri, keeperInfoLoader.load2(userId, nUri)))
               },
             "unsubscribe_uri" -> { case JsString(url) +: _ =>
-                val nUri = URINormalizer.normalize(url)
+                val nUri = normalizationService.normalize(url)
                 subscriptions.get(nUri).foreach(_.unsubscribe())
                 subscriptions.remove(nUri)
              },

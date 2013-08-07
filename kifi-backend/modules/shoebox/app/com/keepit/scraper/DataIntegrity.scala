@@ -8,7 +8,6 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
-import com.keepit.common.net.URI
 import com.keepit.search.{Article, ArticleStore}
 import com.keepit.model._
 import org.apache.http.HttpStatus
@@ -22,6 +21,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
+import com.keepit.common.net.URI
 
 trait DataIntegrityPlugin extends SchedulingPlugin
 

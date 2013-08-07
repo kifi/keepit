@@ -7,10 +7,10 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.test._
 
-class NormalizedURITest extends Specification with ShoeboxTestInjector {
+class NormalizedURIRepoTest extends Specification with ShoeboxTestInjector {
 
   def setup()(implicit injector: Injector) = {
-    db.readWrite {implicit s =>
+    db.readWrite { implicit s =>
       uriRepo.count === 0 //making sure the db is clean, we had some strange failures
       userRepo.count === 0 //making sure the db is clean
       val user1 = userRepo.save(User(firstName = "Joe", lastName = "Smith"))
@@ -156,9 +156,36 @@ class NormalizedURITest extends Specification with ShoeboxTestInjector {
     }
   }
 
+  "getByUriOrElseCreate" should {
+    "Find an existing uri without creating a new one" in {
+      withDb() { implicit injector =>
+        db.readWrite { implicit s =>
+          uriRepo.count === 0
+          val xkcd = uriRepo.save(normalizedURIFactory.apply("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/"))
+          uriRepo.count === 1
+          uriRepo.getByUri("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/").get === xkcd
+          uriRepo.getByUriOrElseCreate("http://blag.xkcd.com/2006/12/11/the-map-of-the-internet/") === xkcd
+          uriRepo.count === 1
+        }
+      }
+    }
+
+    "Create a uri that does not exist" in {
+      withDb() { implicit injector =>
+        db.readWrite { implicit s =>
+          uriRepo.count === 0
+          uriRepo.getByUri("http://www.arte.tv/fr/3482046.html").isEmpty === true
+          val blowup = uriRepo.getByUriOrElseCreate("http://www.arte.tv/fr/3482046.html")
+          uriRepo.count === 1
+          blowup.url === "http://www.arte.tv/fr/3482046.html"
+        }
+      }
+    }
+  }
+
   def createUri(title: String, url: String, state: State[NormalizedURI] = NormalizedURIStates.ACTIVE)(implicit
       session: RWSession, injector: Injector) = {
-    val uri = NormalizedURIFactory(title = title, url = url, state = state)
+    val uri = normalizedURIFactory.apply(title = title, url = url, state = state)
     try {
       uriRepo.save(uri)
     } catch {
@@ -168,5 +195,4 @@ class NormalizedURITest extends Specification with ShoeboxTestInjector {
         throw e
     }
   }
-
 }

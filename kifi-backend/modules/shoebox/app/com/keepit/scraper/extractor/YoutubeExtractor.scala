@@ -1,14 +1,13 @@
 package com.keepit.scraper.extractor
 
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.Host
-import com.keepit.common.net.URI
 import com.keepit.scraper.Scraper
 import org.apache.tika.sax.ContentHandlerDecorator
 import org.apache.tika.parser.html.DefaultHtmlMapper
 import org.apache.tika.parser.html.HtmlMapper
 import org.xml.sax.Attributes
 import org.xml.sax.ContentHandler
+import com.keepit.common.net.{Host, URI}
 
 object YoutubeExtractorProvider extends ExtractorProvider {
   def isDefinedAt(uri: URI) = {

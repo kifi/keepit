@@ -8,7 +8,7 @@ import com.keepit.common.db.slick.DBSession._
 
 @ImplementedBy(classOf[UriNormalizationRuleRepoImpl])
 trait UriNormalizationRuleRepo extends Repo[UriNormalizationRule] {
-  def getByUrlHash(urlHash: UrlHash)(implicit session: RSession): Option[String]
+  def getByUrl(prepUrl: String)(implicit session: RSession): Option[String]
 }
 
 @Singleton
@@ -26,8 +26,8 @@ class UriNormalizationRuleRepoImpl @Inject()(
     def * = id.? ~  createdAt ~ updatedAt ~ prepUrlHash ~ prepUrl ~ mappedUrl ~ state <> (UriNormalizationRule.apply _, UriNormalizationRule.unapply _)
   }
 
-  def getByUrlHash(prepUrlHash: UrlHash)(implicit session: RSession): Option[String] = {
-    (for(r <- table if r.prepUrlHash === prepUrlHash) yield r.mappedUrl).firstOption
+  def getByUrl(prepUrl: String)(implicit session: RSession): Option[String] = {
+    (for(r <- table if r.prepUrlHash === NormalizedURI.hashUrl(prepUrl)) yield r.mappedUrl).firstOption
   }
 
 }
