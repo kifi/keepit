@@ -12,8 +12,8 @@ import MessagingTypeMappers._
 
 case class Message(
     id: Option[Id[Message]] = None,
-    createdAt: DateTime = currentDateTime(zones.PT), 
-    updatedAt: DateTime = currentDateTime(zones.PT), 
+    createdAt: DateTime = currentDateTime(zones.PT),
+    updatedAt: DateTime = currentDateTime(zones.PT),
     externalId: ExternalId[Message] = ExternalId(),
     from: Option[Id[User]],
     thread: Id[MessageThread],
@@ -21,17 +21,12 @@ case class Message(
     messageText: String,
     sentOnUrl: Option[String],
     sentOnUriId: Option[Id[NormalizedURI]]
-  ) 
+  )
   extends ModelWithExternalId[Message] {
 
   def withId(id: Id[Message]): Message = this.copy(id = Some(id))
-  def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt=updateTime) 
+  def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt=updateTime)
 }
-
-
-
-
-
 
 @ImplementedBy(classOf[MessageRepoImpl])
 trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
@@ -42,12 +37,11 @@ trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 
 }
 
-
 @Singleton
 class MessageRepoImpl @Inject() (
-    val clock: Clock, 
-    val db: DataBaseComponent 
-  ) 
+    val clock: Clock,
+    val db: DataBaseComponent
+  )
   extends DbRepo[Message] with MessageRepo with ExternalIdColumnDbFunction[Message] {
 
   import db.Driver.Implicit._

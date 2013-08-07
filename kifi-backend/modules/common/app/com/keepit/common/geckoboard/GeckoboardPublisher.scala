@@ -33,6 +33,7 @@ class GeckoboardPublisherImpl @Inject() (httpClient: HttpClient)
 
   def publish(data: GeckoboardData[_]): Unit = {
     val obj = Json.obj("api_key" -> apiKey, "data" -> data.json)
+    log.info(s"pushing o geckoboard: $obj")
     val url = pushUri + data.widget.id.id
     httpClient.postFuture(url, obj) map {res =>
       assume(res.body == """{"success":true}""")
