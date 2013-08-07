@@ -164,14 +164,14 @@ class UrbanAirshipImpl @Inject()(
         val active = (r.json \ "active").as[Boolean]
         db.readWrite { implicit s =>
           val state = if (active) DeviceStates.ACTIVE else DeviceStates.INACTIVE
+          log.info(s"Setting device state to $state: ${device.token}")
           deviceRepo.save(device.copy(state = state))
-          log.info(s"Device state set to $state: ${device.token}")
         }
       } recover {
         case e @ NonOKResponseException(url, response) if response.status == NOT_FOUND =>
           db.readWrite { implicit s =>
+            log.info(s"Setting device state to inactive: ${device.token}")
             deviceRepo.save(device.copy(state = DeviceStates.INACTIVE))
-            log.info(s"Device state set to $state: ${device.token}")
           }
       }
     } else Future.successful(device)
