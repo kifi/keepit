@@ -17,6 +17,7 @@ case class MessageWithBasicUser(
   createdAt: DateTime,
   text: String,
   url: String,
+  nUrl: String,
   user: Option[BasicUser],
   recipients: Seq[BasicUser]
 )
@@ -27,6 +28,7 @@ object MessageWithBasicUser {
     (__ \ 'createdAt).format(DateTimeJsonFormat) and
     (__ \ 'text).format[String] and
     (__ \ 'url).format[String] and
+    (__ \ 'nUrl).format[String] and
     (__ \ 'user).formatNullable[BasicUser] and
     (__ \ 'recipients).format[Seq[BasicUser]]
   )(MessageWithBasicUser.apply, unlift(MessageWithBasicUser.unapply))
