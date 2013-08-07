@@ -5,6 +5,7 @@ import com.keepit.common.db.slick.{Repo, DbRepo, ExternalIdColumnFunction, Exter
 import com.keepit.common.db.slick.FortyTwoTypeMappers._
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import org.joda.time.DateTime
+import com.keepit.common.logging.Logging
 import com.keepit.common.time.{currentDateTime, zones, Clock}
 import com.keepit.common.db.{Model, Id, ExternalId}
 import com.keepit.model.{User, NormalizedURI}
@@ -76,7 +77,7 @@ class UserThreadRepoImpl @Inject() (
     val clock: Clock, 
     val db: DataBaseComponent 
   ) 
-  extends DbRepo[UserThread] with UserThreadRepo {
+  extends DbRepo[UserThread] with UserThreadRepo with Logging {
 
   import db.Driver.Implicit._
 
@@ -113,7 +114,9 @@ class UserThreadRepoImpl @Inject() (
     try{
       save(userThread)
     } catch {
-      case e: java.sql.SQLException => {}
+      case e: java.sql.SQLException => {
+        log.warn(s"User Thread seems to exists already ($e.toString)")  
+      }
     }
   }
 

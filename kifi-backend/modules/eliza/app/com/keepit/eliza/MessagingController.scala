@@ -76,9 +76,13 @@ class MessagingController @Inject() (
     val thread = db.readWrite{ implicit session => 
       val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url)) 
       if (isNew){
+        log.info(s"This is a new thread. Creating User Threads.")
         participants.par.foreach{ userId => 
           userThreadRepo.createIfNotExists(userId, thread.id.get, uriIdOpt)
         }
+      }
+      else{
+        log.info(s"Not actually a new thread. Merging.")
       }
       thread 
     }
