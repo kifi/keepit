@@ -38,7 +38,7 @@ cp main.js out/firefox/lib/
 matches=()
 cssDeps=()
 jsDeps=()
-for s in $(ls scripts/*.js); do
+for s in $(find scripts -name '*.js'); do
   match=$(head -1 $s | grep '^// @match ' | cut -c11-)
   req=$(head -30 $s | grep '^// @require ' | cut -c13-)
   css=$(echo "$req" | grep css$)

@@ -7,10 +7,11 @@
 // @require scripts/render.js
 // @require scripts/compose.js
 // @require scripts/snapshot.js
+// @require scripts/lib/antiscroll.min.js
 // @require scripts/prevent_ancestor_scroll.js
 
 threadPane = function() {
-  var $scroller = $(), $holder = $(), buffer = {};
+  var $holder = $(), buffer = {};
   return {
     render: function($container, threadId, messages, session) {
       messages.forEach(function(m) {
@@ -38,12 +39,14 @@ threadPane = function() {
 
         attachComposeBindings($container, "message", session.prefs.enterToSend);
 
-        $scroller = $container.find(".kifi-messages-sent");
-        $scroller.preventAncestorScroll();
-        $holder = $scroller.find(".kifi-messages-sent-inner").data("threadId", threadId);
+        $holder = $container.find(".kifi-messages-sent-inner").preventAncestorScroll().data("threadId", threadId);
+        var scroller = $container.find(".kifi-scroll-wrap").antiscroll({x: false}).data("antiscroll");
+        $(window).on("resize.thread", scroller.refresh.bind(scroller));
+
         $container.closest(".kifi-pane-box").on("kifi:remove", function() {
           if ($holder.length && this.contains($holder[0])) {
-            $scroller = $holder = $();
+            $holder = $();
+            $(window).off("resize.thread");
           }
         });
 
@@ -53,8 +56,7 @@ threadPane = function() {
           api.log("[render] appending buffered message", buffer.message.id);
           messages.push(buffer.message);
           renderMessage(buffer.message, session.userId, function($m) {
-            $holder.append($m);
-            $scroller.scrollToBottom();
+            $holder.append($m).scrollToBottom();
           });
         }
 
@@ -70,8 +72,7 @@ threadPane = function() {
                 api.log("[update] comparing message text");
                 return $(el).data("text") === message.text;
               })) {
-            $holder.append($m);  // should we compare timestamps and insert in order?
-            $scroller.scrollToBottom();
+            $holder.append($m).scrollToBottom();  // should we compare timestamps and insert in order?
           }
           emitRead(threadId, message);
         });
@@ -87,8 +88,7 @@ threadPane = function() {
           renderMessage(m, userId, function($m) {
             arr[i] = $m;
             if (++n == arr.length) {
-              $holder.find(".kifi-message-sent").remove().end().append(arr);
-              $scroller.scrollToBottom();
+              $holder.find(".kifi-message-sent").remove().end().append(arr).scrollToBottom();
               emitRead(threadId, messages[messages.length - 1]);
             }
           });
@@ -112,8 +112,7 @@ threadPane = function() {
         lastName: ""}
     }, session.userId, function($m) {
       updateSentReply($reply = $m, resp);
-      $holder.append($m.data("text", text));
-      $scroller.scrollToBottom();
+      $holder.append($m.data("text", text)).scrollToBottom();
     });
   }
 
