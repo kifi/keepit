@@ -234,7 +234,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
   });
 
   var hOld, elAbove = $f[0].previousElementSibling;
-  var elScroll = $(elAbove).find(".antiscroll-inner").scrollable({
+  var elScroll = $(elAbove).find(".kifi-scroll-inner").scrollable({
     $above: $c.closest(".kifi-pane-box").find(".kifi-pane-title,.kifi-thread-who").last(),
     $below: $f
   })[0];

@@ -298,7 +298,7 @@ a.kifi-pane-back::after {
   background: #fafafa;
   overflow: hidden;
 }
-.kifi-pane-tall .antiscroll-inner {
+.kifi-pane-tall .kifi-scroll-inner {
   overflow-x: hidden;
 }
 div.kifi-pane-tall-middle {
