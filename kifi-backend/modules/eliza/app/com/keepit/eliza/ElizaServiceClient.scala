@@ -17,6 +17,7 @@ import com.google.inject.Inject
 trait ElizaServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ELIZA
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit
+  def sendToUser(userId: Id[User], data: JsArray): Unit
 }
 
 
@@ -33,6 +34,12 @@ class ElizaServiceClientImpl @Inject() (
     broadcast(Eliza.internal.sendToUserNoBroadcast, payload)
   }
 
+  def sendToUser(userId: Id[User], data: JsArray): Unit = {
+    implicit val userFormatter = Id.format[User]
+    val payload = Json.obj("userId" -> userId, "data" -> data)
+    call(Eliza.internal.sendToUser, payload)
+  }
+
 }
 
 class FakeElizaServiceClientImpl(val healthcheck: HealthcheckPlugin) extends ElizaServiceClient{
@@ -40,4 +47,6 @@ class FakeElizaServiceClientImpl(val healthcheck: HealthcheckPlugin) extends Eli
   protected def httpClient: com.keepit.common.net.HttpClient = ???
   
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit = {}
+
+  def sendToUser(userId: Id[User], data: JsArray): Unit = {}
 }
