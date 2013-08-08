@@ -67,7 +67,7 @@ class MessageRepoImpl @Inject() (
     val query = (for (row <- table if row.thread === thread) yield row).drop(from)
     to match {
       case Some(upper) => query.take(upper-from).sortBy(row => (row.createdAt) desc).list
-      case None => query.sortBy(row => (row.createdAt) desc).list
+      case None => query.sortBy(row => (row.createdAt) asc).list
     }
   }
 
