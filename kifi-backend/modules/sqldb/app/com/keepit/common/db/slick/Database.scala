@@ -99,25 +99,20 @@ class Database @Inject() (
   }
 
   def readOnly[T](dbMasterSlave: DBMasterSlave = Master)(f: ROSession => T): T = enteringSession {
-    var s: Option[Session] = None
     val ro = new ROSession({
       val handle = resolveDb(dbMasterSlave)
       Statsd.increment(s"db.read.${handle.masterSlave}")
-      s = Some(sessionProvider.createReadOnlySession(handle.slickDatabase))
-      val session = s.get
-      session
+      sessionProvider.createReadOnlySession(handle.slickDatabase)
     })
-    try f(ro) finally s.foreach(_.close())
+    try f(ro) finally ro.close()
   }
 
   def readWrite[T](f: RWSession => T): T = enteringSession {
-    Statsd.increment("db.write.Master")
-    val s = sessionProvider.createReadWriteSession(db.masterDb)
-    try {
-      s.withTransaction {
-        f(new RWSession(s))
-      }
-    } finally s.close()
+    val rw = new RWSession({
+      Statsd.increment("db.write.Master")
+      sessionProvider.createReadWriteSession(db.masterDb)
+    })
+    try rw.withTransaction { f(rw) } finally rw.close()
   }
 
   def readWrite[T](attempts: Int)(f: RWSession => T): T = {

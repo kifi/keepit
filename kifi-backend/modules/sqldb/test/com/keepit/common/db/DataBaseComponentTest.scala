@@ -12,6 +12,29 @@ class DataBaseComponentTest extends Specification with DbTestInjector {
 
   "Session" should {
 
+    "not create real sessions if not used" in {
+      withDb() { implicit injector: Injector =>
+        inject[TestSlickSessionProvider].doWithoutCreatingSessions {
+          db.readOnly { implicit s =>
+            1 === 1
+          }
+        }
+        inject[TestSlickSessionProvider].doWithoutCreatingSessions {
+          db.readWrite { implicit s =>
+            1 === 1
+          }
+        }
+      }
+    }
+
+    "execute all read-write sessions inside a transaction" in {
+      withDb() { implicit injector: Injector =>
+        db.readWrite { implicit s =>
+          s.conn.getAutoCommit must beFalse
+        }
+      }
+    }
+
     "not be executed inside another session: rw->ro" in {
       withDb() { implicit injector: Injector =>
         val fakeHealthcheck = inject[FakeHealthcheck]

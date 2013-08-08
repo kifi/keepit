@@ -16,7 +16,15 @@ import scala.concurrent._
 
 object DBSession {
   abstract class SessionWrapper(_session: => Session) extends Session {
-    lazy val session = _session
+    private var open = false
+    private var doRollback = false
+    private var inTransaction = false
+    lazy val session = {
+      val s = _session
+      if (inTransaction) s.conn.setAutoCommit(false)
+      open = true
+      s
+    }
 
     def conn: Connection = session.conn
     def metaData = session.metaData
@@ -24,9 +32,26 @@ object DBSession {
     override def resultSetType = session.resultSetType
     override def resultSetConcurrency = session.resultSetConcurrency
     override def resultSetHoldability = session.resultSetHoldability
-    def close() { throw new UnsupportedOperationException }
-    def rollback() { session.rollback() }
-    def withTransaction[T](f: => T): T = session.withTransaction(f)
+    def close() { if (open) session.close() }
+    def rollback() { doRollback = true }
+
+    def withTransaction[T](f: => T): T = if (inTransaction) f else {
+      if (open) conn.setAutoCommit(false)
+      inTransaction = true
+      try {
+        var done = false
+        try {
+          val res = f
+          done = true
+          res
+        } finally {
+          if (open && !done || doRollback) conn.rollback()
+        }
+      } finally {
+        if (open) conn.setAutoCommit(true)
+        inTransaction = false
+      }
+    }
 
     private val statementCache = new mutable.HashMap[String, PreparedStatement]
     def getPreparedStatement(statement: String): PreparedStatement =
@@ -38,7 +63,7 @@ object DBSession {
 
   abstract class RSession(roSession: => Session) extends SessionWrapper(roSession)
   class ROSession(roSession: => Session) extends RSession(roSession)
-  class RWSession(rwSession: Session) extends RSession(rwSession)
+  class RWSession(rwSession: => Session) extends RSession(rwSession)
 
   implicit def roToSession(roSession: ROSession): Session = roSession.session
   implicit def rwToSession(rwSession: RWSession): Session = rwSession.session
