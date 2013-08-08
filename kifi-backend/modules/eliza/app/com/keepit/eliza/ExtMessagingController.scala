@@ -93,8 +93,10 @@ class ExtMessagingController @Inject() (
       socket.channel.push(Json.arr("all_notifications_visited", notifId, lastModified))
     },
     "get_last_notify_read_time" -> { _ =>
-      val t = messagingController.getNotificationLastSeen(socket.userId)
-      socket.channel.push(Json.arr("last_notify_read_time", t.map(_.toStandardTimeString)))
+      val tOpt = messagingController.getNotificationLastSeen(socket.userId)
+      tOpt.map { t =>
+        socket.channel.push(Json.arr("last_notify_read_time", t.toStandardTimeString))
+      }
     },
     "set_last_notify_read_time" -> { case JsString(time) +: _ =>
       val t = parseStandardTime(time)
