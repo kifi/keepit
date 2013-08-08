@@ -1,17 +1,16 @@
 // A jQuery plugin to prevent scrolling of ancestor elements while scrolling inside this element
 $.fn.preventAncestorScroll = function() {
-  return $(this).on('DOMMouseScroll mousewheel', function(e) {
-    var $this = $(this),
-      scrollTop = this.scrollTop,
-      scrollHeight = this.scrollHeight,
-      height = $this.height(),
-      delta = (e.type === 'DOMMouseScroll' ? -40 * e.originalEvent.detail : e.originalEvent.wheelDelta);
-
-    if (delta < 0 && -delta > scrollHeight - height - scrollTop) {
-      $this.scrollTop(scrollHeight);
+  return this.on('wheel mousewheel', function(e) {
+    var sT = this.scrollTop, sT2, delta = e.type === 'wheel' ? e.originalEvent.deltaY : -e.originalEvent.wheelDelta;
+    if (delta > 0 && sT + delta > (sT2 = this.scrollHeight - this.clientHeight)) {
+      if (sT < sT2) {
+        this.scrollTop = sT2;
+      }
       return false;
-    } else if (delta > scrollTop) {
-      $this.scrollTop(0);
+    } else if (sT + delta < 0) {
+      if (sT > 0) {
+        this.scrollTop = 0;
+      }
       return false;
     }
   });
