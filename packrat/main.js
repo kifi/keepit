@@ -222,9 +222,14 @@ const socketHandlers = {
     }
   },
   thread_infos: function(infos) {
-    infos.forEach(function(t) { pageInfo[t.nUrl].threads = []; });
+    // infos may be for multiple URLs
     infos.forEach(function(t) {
-      pageInfo[t.nUrl].threads.push(t);
+      pageData[t.nUrl] = pageData[t.nUrl] || new PageData;
+      pageData[t.nUrl].threads = [];
+      socket.send(["get_thread", t.id]);
+    });
+    infos.forEach(function(t) {
+      pageData[t.nUrl].threads.push(t);
     });
   },
   message: function(threadId, message) {
@@ -233,29 +238,32 @@ const socketHandlers = {
     if (d && !(messageData[threadId] || []).some(hasId(message.id))) {
 
       // insert message in chronological order
-      if (th.messageCount > 1) {
-        var messages = messageData[th.id];
-        if (messages) {
-          t = new Date(message.createdAt);
-          for (i = messages.length; i > 0 && new Date(messages[i-1].createdAt) > t; i--);
-          messages.splice(i, 0, message);
-        }
-      } else {
-        messageData[threadId] = [message];
-      }
 
       // update thread
+      var thread;
       for (var i = 0, n = d.threads.length; i < n; i++) {
         if (d.threads[i].id == threadId) {
-          var thread = d.threads[i];
+          thread = d.threads[i];
+
+          if (thread && thread.messageCount > 1) {
+            var messages = messageData[threadId];
+            if (messages) {
+              t = new Date(message.createdAt);
+              for (i = messages.length; i > 0 && new Date(messages[i-1].createdAt) > t; i--);
+              messages.splice(i, 0, message);
+            }
+          } else {
+            messageData[threadId] = [message];
+          }
+
+          // until we have the updated threadinfos, do a best attempt at updating the thread
           if(!thread.createdAt) thread.createdAt = messageData[threadId][messageData[threadId].length-1].createdAt;
           thread.digest = messageData[threadId][messageData[threadId].length-1].text;
           thread.lastAuthor = messageData[threadId][messageData[threadId].length-1].user.id;
           thread.lastCommmentedAt = messageData[threadId][messageData[threadId].length-1].createdAt;
           thread.messageCount = messageData[threadId].length;
-          thread.messageTimes = messageData[threadId].map(function(el) { return el.createdAt; });
+          messageData[threadId].forEach(function(el) { thread.messageTimes[el.id] = el.createdAt; });
           thread.recipients = messageData[threadId][messageData[threadId].length-1].recipients;
-          //d.threads.splice(i, 1);
 
           // insert thread in chronological order
           var t = new Date(thread.lastCommmentedAt);
@@ -275,7 +283,8 @@ const socketHandlers = {
 
       d.tabs.forEach(function(tab) {
         whenTabSelected(tab, function (tab) {
-          api.tabs.emit(tab, "message", {threadId: threadId, message: message, read: d.lastMessageRead[threadId], userId: session.userId});
+          api.log("xxxxx", tab);
+          api.tabs.emit(tab, "message", {threadId: threadId, thread: thread, message: message, read: d.lastMessageRead[threadId], userId: session.userId});
         });
       });
       tellTabsIfCountChanged(d, "m", messageCount(d));
@@ -830,7 +839,7 @@ function subscribe(tab) {
         d.keeps = uri_2.keeps || 0;
         d.otherKeeps = d.keeps - d.keepers.length - (d.kept == "public" ? 1 : 0);
         d.following = uri_2.following;
-        d.threads = [];
+        d.threads = d.threads || [];
         d.lastMessageRead = uri_2.lastMessageRead || {};
         d.counts = {
           n: numNotificationsNotVisited,
@@ -1108,7 +1117,7 @@ function startSession(callback, retryMs) {
 
     session = data;
     session.prefs = {}; // to come via socket
-    socket = api.socket.open(elizaBaseUri().replace(/^http/, "ws") + "/eliza/ext/ws", socketHandlers, function onConnect() {
+    socket = api.socket.open("wss://eliza.kifi.com/eliza/ext/ws", socketHandlers, function onConnect() {
       socket.send(["get_last_notify_read_time"]);
       if (!notifications) {
         socket.send(["get_notifications", NOTIFICATION_BATCH_SIZE]);
