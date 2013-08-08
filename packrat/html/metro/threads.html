@@ -5,10 +5,12 @@
   </div>
 </div>
 <div class="kifi-pane-tall-bottom">
-  <div class="kifi-threads-list">
-    {{#threads}}
-      {{>thread}}
-    {{/threads}}
+  <div class="kifi-scroll-wrap">
+    <div class="kifi-threads-list antiscroll-inner">
+      {{#threads}}
+        {{>thread}}
+      {{/threads}}
+    </div>
   </div>
   {{>compose}}
 </div>

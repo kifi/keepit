@@ -8,6 +8,7 @@
 // @require scripts/render.js
 // @require scripts/compose.js
 // @require scripts/snapshot.js
+// @require scripts/lib/antiscroll.min.js
 // @require scripts/prevent_ancestor_scroll.js
 
 threadsPane = function() {
@@ -51,10 +52,13 @@ threadsPane = function() {
 
         attachComposeBindings($container, "message", prefs.enterToSend);
 
-        $list = $container.find(".kifi-threads-list");
-        $list.preventAncestorScroll();
+        $list = $container.find(".kifi-threads-list").preventAncestorScroll();
+        var scroller = $list.parent().antiscroll({x: false}).data("antiscroll");
+        $(window).on("resize.threads", scroller.refresh.bind(scroller));
+
         $container.closest(".kifi-pane-box").on("kifi:remove", function() {
           $list.length = 0;
+          $(window).off("resize.threads");
         });
       });
     },

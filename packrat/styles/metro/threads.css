@@ -7,8 +7,8 @@
 }
 .kifi-threads-list {
   padding: 0 6px 4px;
-  overflow-y: auto;
-  max-height: 0;
+  overflow-x: hidden;
+  max-height: inherit;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
   position: relative;

@@ -1,5 +1,4 @@
 // @require scripts/scrollable.js
-// @require scripts/throttle.js
 
 function attachComposeBindings($c, composeTypeName, enterToSend) {
   var $f = $c.find(".kifi-compose");
@@ -235,13 +234,14 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
   });
 
   var hOld, elAbove = $f[0].previousElementSibling;
-  $(elAbove).scrollable({
+  var elScroll = $(elAbove).find(".antiscroll-inner").scrollable({
     $above: $c.closest(".kifi-pane-box").find(".kifi-pane-title,.kifi-thread-who").last(),
     $below: $f
-  }).layout();
+  })[0];
+  $(elAbove).layout();
   updateMaxHeight();
 
-  $(window).on("resize", throttle(updateMaxHeight, 50));
+  $(window).on("resize", updateMaxHeight);
 
   var $box = $c.closest(".kifi-pane-box")
   if ($box.data("shown")) {
@@ -269,15 +269,14 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
     var hNew = Math.max(0, $c[0].offsetHeight - $f[0].offsetHeight);
     if (hNew != hOld) {
       api.log("[updateMaxHeight]", hOld, "->", hNew);
-      var scrollTop = elAbove.scrollTop;
+      var scrollTop = elScroll.scrollTop;
       elAbove.style.maxHeight = hNew + "px";
       if (hOld) {
-        elAbove.scrollTop = Math.max(0, scrollTop + hOld - hNew);
+        elScroll.scrollTop = Math.max(0, scrollTop + hOld - hNew);
       } else {
-        elAbove.scrollTop = 99999;
+        elScroll.scrollTop = 99999;
       }
       hOld = hNew;
-      $(elAbove).triggerHandler("scroll"); // for scrollable, in case this resize fired after scroll event
     }
   }
 }
