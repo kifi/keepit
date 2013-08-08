@@ -10,7 +10,7 @@ import com.keepit.common.time._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import play.api.libs.iteratee.Concurrent
-import play.api.libs.json.{Json, JsValue, JsArray, JsString, JsNumber}
+import play.api.libs.json.{Json, JsValue, JsArray, JsString, JsNumber, JsNull}
 
 import akka.actor.ActorSystem
 
@@ -111,6 +111,16 @@ class ExtMessagingController @Inject() (
     },
     "asdf2" -> { case JsNumber(howMany) +: _ =>
       val notices = messagingController.getLatestSendableNotifications(socket.userId, howMany.toInt)
+      val unvisited = messagingController.getPendingNotificationCount(socket.userId)
+      socket.channel.push(Json.arr("Hey There!"))
+    },
+    "asdf3" -> { case JsNumber(howMany) +: _ =>
+      val notices = messagingController.getLatestSendableNotifications(socket.userId, howMany.toInt).map { notice =>
+        notice match {
+          case JsNull => JsNumber(42)
+          case x => x
+        }
+      }
       val unvisited = messagingController.getPendingNotificationCount(socket.userId)
       socket.channel.push(Json.arr("Hey There!"))
     },
