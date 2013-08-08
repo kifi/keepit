@@ -163,6 +163,7 @@ class URI(val raw: Option[String], val scheme: Option[String], val userInfo: Opt
       case (Some("/"), None) => None
       case _ => path
     }
+
     var uri = try {
       new java.net.URI(scheme.orNull, userInfo.orNull, host.map(_.toString).orNull, port, updatedPath.orNull, null, null).toString
     } catch {
@@ -172,6 +173,13 @@ class URI(val raw: Option[String], val scheme: Option[String], val userInfo: Opt
     query.foreach{ query => uri = uri + "?" + query }
     fragment.foreach{ fragment => uri = uri + "#" + fragment }
     uri
+  }
+
+  def safeToString() = try {
+    Some(toString())
+  } catch { case e : Exception =>
+    URI.log.error("URI.toString() failed: [%s] caused by [%s]".format(raw, e.getMessage))
+    None
   }
 
   override def hashCode() = URI.unapply(this).hashCode()
