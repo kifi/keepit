@@ -87,18 +87,35 @@ class MessagingController @Inject() (
 
   }
 
+  private def buildMessageNotificationJson(message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser) : JsValue = {
+    Json.obj(
+      "id"     -> message.id.map(_.id),
+      "time"   -> message.createdAt,
+      "thread" -> thread.externalId.id,
+      "text"   -> message.messageText,
+      "url"    -> thread.nUrl,
+      "title"  -> thread.pageTitle,
+      "author" -> messageWithBasicUser.user
+    ) 
+  }
 
-  private def sendNotificationForMessage(user: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser) : Unit = { //TODO Stephen: Construct and store notification json
-    future {
-      db.readWrite{ implicit session => 
-        userThreadRepo.setNotification(user, thread.id.get)
-      }
-    }
-
+  private def sendNotificationForMessage(user: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser) : Unit = { //TODO Stephen: And store notification json
     notificationRouter.sendToUser(
       user,
       Json.arr("message", message.threadExtId.id, messageWithBasicUser)
     )
+
+    future {
+      val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser)
+      db.readWrite{ implicit session => 
+        userThreadRepo.setNotification(user, thread.id.get, notifJson)
+      }
+      notificationRouter.sendToUser(
+        user,
+        Json.arr("notification", notifJson)
+      )
+    }
+
 
     //This is mostly for testing and monitoring
     notificationRouter.sendNotification(Some(user), Notification(thread.id.get, message.id.get))
@@ -114,7 +131,7 @@ class MessagingController @Inject() (
     val nUriOpt = urlOpt.map{url: String => Await.result(shoebox.normalizeURL(url), 10 seconds)}
     val uriIdOpt = nUriOpt.flatMap(_.id)
     val thread = db.readWrite{ implicit session => 
-      val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url)) 
+      val (thread, isNew) = threadRepo.getOrCreate(participants, urlOpt, uriIdOpt, nUriOpt.map(_.url), nUriOpt.flatMap(_.title)) 
       if (isNew){
         log.info(s"This is a new thread. Creating User Threads.")
         participants.par.foreach{ userId => 
@@ -311,14 +328,12 @@ class MessagingController @Inject() (
 
   def getSendableNotificationsAfter(userId: Id[User], after: DateTime): Seq[JsValue] = {
     db.readOnly{ implicit session =>
-      userThreadRepo.getSendableNotificationsAfter(userId, after)
       userThreadRepo.getSendableNotificationsAfter(userId, after).filter(_!=null) //Workaraound for Json serialization bug
     }
   }
 
   def getSendableNotificationsBefore(userId: Id[User], after: DateTime, howMany: Int): Seq[JsValue] = {
     db.readOnly{ implicit session =>
-      userThreadRepo.getSendableNotificationsBefore(userId, after, howMany)
       userThreadRepo.getSendableNotificationsBefore(userId, after, howMany).filter(_!=null) //Workaraound for Json serialization bug
     }
   }
