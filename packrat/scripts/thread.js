@@ -136,6 +136,12 @@ threadPane = function() {
   }
 
   function emitRead(threadId, m) {
-    api.port.emit("set_message_read", {threadId: threadId, messageId: m.id, time: m.createdAt});
+    var hidden = 'hidden' in document ? 'hidden' : 'webkitHidden';
+    if (document[hidden]) {
+      api.log("[emitRead] waiting (hidden)", m.id);
+      $(document).off('.thread').one('visibilitychange.thread webkitvisibilitychange.thread', emitRead.bind(this, threadId, m));
+    } else {
+      api.port.emit("set_message_read", {threadId: threadId, messageId: m.id, time: m.createdAt});
+    }
   }
 }();
