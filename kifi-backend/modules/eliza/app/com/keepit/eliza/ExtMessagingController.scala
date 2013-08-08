@@ -1,17 +1,18 @@
 package com.keepit.eliza
 
-import com.keepit.common.db.ExternalId
-import com.keepit.model.User
+import com.keepit.common.db.{ExternalId, State}
+import com.keepit.model.{User, ExperimentType}
 import com.keepit.common.controller.{BrowserExtensionController, ActionAuthenticator}
 import com.keepit.shoebox.{ShoeboxServiceClient}
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
 import com.keepit.common.amazon.AmazonInstanceInfo
 
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import play.api.libs.iteratee.Concurrent
-import play.api.libs.json.{Json, JsValue, JsArray, JsString, JsNumber, JsNull}
+import play.api.libs.json.{Json, JsValue, JsArray, JsString, JsNumber, JsNull, JsObject}
 
 import akka.actor.ActorSystem
 
@@ -132,11 +133,16 @@ class ExtMessagingController @Inject() (
     "get_threads_by_url" -> { case JsString(url) +: _ =>
       val threadInfos = messagingController.getThreadInfos(socket.userId, url)
       socket.channel.push(Json.arr("thread_infos", threadInfos))
-    }
+    },
     // TODO Stephen: Send this on to shoebox
-    // "log_event" -> { case JsObject(pairs) +: _ =>
-    //   logEvent(streamSession, JsObject(pairs))
-    // },
+    "log_event" -> { case JsObject(pairs) +: _ =>
+      implicit val experimentFormat = State.format[ExperimentType]
+      val eventJson = JsObject(pairs).deepMerge(
+        Json.obj("experiments" -> socket.experiments)
+      )
+      shoebox.logEvent(socket.userId, eventJson)
+      // logEvent(streamSession, JsObject(pairs))
+    }
   )
 
 

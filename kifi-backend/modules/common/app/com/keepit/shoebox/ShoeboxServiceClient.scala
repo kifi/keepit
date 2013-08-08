@@ -85,6 +85,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]]
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]]
   def getFriends(userId: Id[User]): Future[Set[Id[User]]]
+  def logEvent(userId: Id[User], event: JsObject) : Unit
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -426,6 +427,12 @@ class ShoeboxServiceClientImpl @Inject() (
         case _ => List.empty[Id[User]]
       }
     }
+  }
+
+  def logEvent(userId: Id[User], event: JsObject) : Unit = {
+    implicit val userFormatter = Id.format[User]
+    val payload = Json.obj("userId" -> userId, "event" -> event)
+    call(Shoebox.internal.logEvent, payload)
   }
 
 }
