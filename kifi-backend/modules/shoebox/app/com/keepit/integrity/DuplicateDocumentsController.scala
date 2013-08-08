@@ -18,7 +18,6 @@ import com.keepit.model.FollowRepo
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURIRepo
 import com.keepit.model.NormalizedURIRepoImpl
-import com.keepit.scraper.DuplicateDocumentDetection
 
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
@@ -38,7 +37,8 @@ class DuplicateDocumentsController @Inject() (
   commentRepo: CommentRepo,
   bookmarkRepo: BookmarkRepo,
   orphanCleaner: OrphanCleaner,
-  dupeDetect: DuplicateDocumentDetection)
+  dupeDetect: DuplicateDocumentDetection,
+  duplicatesProcessor: DuplicateDocumentsProcessor)
     extends AdminController(actionAuthenticator) {
 
   def orphanCleanup() = AdminHtmlAction { implicit request =>
@@ -70,71 +70,19 @@ class DuplicateDocumentsController @Inject() (
     Ok(html.admin.documentIntegrity(loadedDupes))
   }
 
-  def typedAction(action: String) = action match {
-    case "ignore" => DuplicateDocumentStates.IGNORED
-    case "merge" => DuplicateDocumentStates.MERGED
-    case "unscrapable" => DuplicateDocumentStates.UNSCRAPABLE
-  }
-
   def handleDuplicate = AdminHtmlAction { implicit request =>
     val body = request.body.asFormUrlEncoded.get
-    val action = typedAction(body("action").head)
+    val action = body("action").head
     val id = Id[DuplicateDocument](body("id").head.toLong)
-
-    action match {
-      case DuplicateDocumentStates.MERGED =>
-        db.readOnly { implicit session =>
-          val d = duplicateDocumentRepo.get(id)
-          mergeUris(d.uri1Id, d.uri2Id)
-        }
-      case _ =>
-    }
-
-    db.readWrite { implicit session =>
-      duplicateDocumentRepo.save(duplicateDocumentRepo.get(id).withState(action))
-    }
+    duplicatesProcessor.handleDuplicates(Left[Id[DuplicateDocument], Id[NormalizedURI]](id), HandleDuplicatesAction(action))
     Ok
-  }
-
-  def mergeUris(parentId: Id[NormalizedURI], childId: Id[NormalizedURI]) = {
-    // Collect all entities who refer to N2 and change the ref to N1.
-    // Update the URL db entity with state: manual fix
-    db.readWrite { implicit session =>
-      // Bookmark
-      bookmarkRepo.getByUri(childId).map { bookmark =>
-        bookmarkRepo.save(bookmark.withNormUriId(parentId))
-      }
-      // Comment
-      commentRepo.getByUri(childId).map { comment =>
-        commentRepo.save(comment.withNormUriId(parentId))
-      }
-
-      // DeepLink
-      deeplinkRepo.getByUri(childId).map { deeplink =>
-        deeplinkRepo.save(deeplink.withNormUriId(parentId))
-      }
-
-      // Follow
-      followRepo.getByUri(childId, excludeState = None).map { follow =>
-        followRepo.save(follow.withNormUriId(parentId))
-      }
-    }
   }
 
   def handleDuplicates = AdminHtmlAction { implicit request =>
     val body = request.body.asFormUrlEncoded.get
     val action = body("action").head
     val id = Id[NormalizedURI](body("id").head.toLong)
-    db.readWrite { implicit session =>
-      duplicateDocumentRepo.getSimilarTo(id) map { dupe =>
-        action match {
-          case DuplicateDocumentStates.MERGED =>
-              mergeUris(dupe.uri1Id, dupe.uri2Id)
-          case _ =>
-        }
-        duplicateDocumentRepo.save(dupe.withState(typedAction(action)))
-      }
-    }
+    duplicatesProcessor.handleDuplicates(Right[Id[DuplicateDocument], Id[NormalizedURI]](id), HandleDuplicatesAction(action))
     Ok
   }
 

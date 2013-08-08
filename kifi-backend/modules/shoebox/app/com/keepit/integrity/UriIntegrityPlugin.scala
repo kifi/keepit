@@ -36,7 +36,8 @@ class UriIntegrityActor @Inject()(
   /**
    * any reference to the old uri should be redirected to the new one
    */
-  def handleChanged(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) = {
+  def handleChanged(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]): Unit = {
+    if (oldUri == newUri) return
     db.readWrite{ implicit s =>
       urlRepo.getByNormUri(oldUri).map{ url =>
         urlRepo.save(url.withNormUriId(newUri).withHistory(URLHistory(clock.now, newUri, URLHistoryCause.MERGE)))
@@ -83,7 +84,7 @@ class UriIntegrityActor @Inject()(
 
 @ImplementedBy(classOf[UriIntegrityPluginImpl])
 trait UriIntegrityPlugin extends Plugin {
-  def fixChangedUri(change: ChangedUri): Unit
+  def handleChangedUri(change: ChangedUri): Unit
 }
 
 class UriIntegrityPluginImpl @Inject() (
@@ -100,7 +101,7 @@ class UriIntegrityPluginImpl @Inject() (
      log.info("stopping UriIntegrityPluginImpl")
   }
 
-  override def fixChangedUri(change: ChangedUri) = {
+  override def handleChangedUri(change: ChangedUri) = {
     actorProvider.actor ! change
   }
 }
