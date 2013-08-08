@@ -89,7 +89,7 @@ class MessagingController @Inject() (
 
   private def buildMessageNotificationJson(message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser) : JsValue = {
     Json.obj(
-      "id"     -> message.id.map(_.id),
+      "id"     -> message.externalId.id,
       "time"   -> message.createdAt,
       "thread" -> thread.externalId.id,
       "text"   -> message.messageText,
