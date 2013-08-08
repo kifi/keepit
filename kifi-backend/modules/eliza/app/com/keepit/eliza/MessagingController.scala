@@ -64,7 +64,7 @@ class MessagingController @Inject() (
     }}.toMap
 
     threads.map{ thread =>
-      val lastMessage = db.readOnly{ implicit session => messageRepo.get(userThreads(thread.id.get).lastMsgFromOther.get) }
+      val lastMessage = messagesByThread(thread.id.get).head
 
       val messageTimes = messagesByThread(thread.id.get).map{ message =>
         (message.externalId, message.createdAt)
