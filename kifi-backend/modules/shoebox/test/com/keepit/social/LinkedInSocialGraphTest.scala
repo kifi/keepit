@@ -34,7 +34,7 @@ class LinkedInSocialGraphTest extends Specification with ShoeboxApplicationInjec
       running(new ShoeboxApplication(FakeHttpClientModule(fakeLinkedInResponse))) {
 
         val oAuth2Info = OAuth2Info("this_is_my_token")
-        val socialUser = SocialUser(UserId("rFOBMp35vZ", "linkedin"), "Greg", "Methvin", "Greg Methvin",
+        val socialUser = SocialUser(IdentityId("rFOBMp35vZ", "linkedin"), "Greg", "Methvin", "Greg Methvin",
           None, None, AuthenticationMethod.OAuth2, None, Some(oAuth2Info), None)
 
         val user = inject[Database].readWrite { implicit s =>

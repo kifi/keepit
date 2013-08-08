@@ -125,15 +125,15 @@ class ExtStreamController @Inject() (
      */
     for (
       auth <- getAuthenticatorFromRequest();
-      secSocialUser <- UserService.find(auth.userId)
+      secSocialUser <- UserService.find(auth.identityId)
     ) yield {
 
       val impersonatedUserIdOpt: Option[ExternalId[User]] =
         impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
 
       db.readOnly { implicit session =>
-        val socialUser = socialUserInfoRepo.get(SocialId(secSocialUser.id.id),
-          SocialNetworkType(secSocialUser.id.providerId))
+        val socialUser = socialUserInfoRepo.get(SocialId(secSocialUser.identityId.userId),
+          SocialNetworkType(secSocialUser.identityId.providerId))
         val userId = socialUser.userId.get
         val experiments = experimentRepo.getUserExperiments(userId)
         impersonatedUserIdOpt match {
