@@ -64,7 +64,7 @@ slider2 = function() {
       "bgDir": api.url("images/keeper"),
       "isKept": kept,
       "isPrivate": kept == "private",
-      "noticesCount": counts.n,
+      "noticesCount": Math.max(0, counts.n - counts.m),
       "messageCount": counts.m,
       "atNotices": "/notices" == locator,
       "atMessages": /^\/messages/.test(locator)
@@ -711,7 +711,7 @@ slider2 = function() {
     counts: function(o) {
       if (!$slider) return;
       var $btns = $slider.find(".kifi-slider2-dock-btn");
-      [[".kifi-slider2-notices", o.n],
+      [[".kifi-slider2-notices", Math.max(0, o.n - o.m)],
        [".kifi-slider2-messages", o.m]].forEach(function(a) {
         $btns.filter(a[0]).find(".kifi-count")
           .text(a[1] || "")
