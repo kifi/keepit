@@ -69,19 +69,13 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   implicit val jsonFrame: FrameFormatter[JsArray] = {
     FrameFormatter.stringFrame.transform(
       out => {
-        log.info("BADBADBAD out got:" + out.toString)
-        val x = Json.stringify(out)
-        log.info("BADBADBAD out turned into:" + x.toString)
-        x
+        Json.stringify(out)
       },
       in => {
-        log.info("BADBADBAD in got:" + in.toString)
-        val x = Json.parse(in) match {
+        Json.parse(in) match {
           case j: JsArray => j
           case j: JsValue => Json.arr(j)
         }
-        log.info("BADBADBAD in tuned into:" + x.toString)
-        x
       })
   }
 
