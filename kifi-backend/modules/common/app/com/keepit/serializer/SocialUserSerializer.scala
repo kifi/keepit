@@ -5,14 +5,17 @@ import play.api.libs.json._
 import securesocial.core._
 
 object SocialUserSerializer {
-  implicit val userIdSerializer = Json.format[UserId]
+  implicit val userIdSerializer = (
+    (__ \ "id").format[String] and
+    (__ \ "providerId").format[String]
+  )(IdentityId.apply, unlift(IdentityId.unapply))
   implicit val oAuth2InfoSerializer = Json.format[OAuth2Info]
   implicit val oAuth1InfoSerializer = Json.format[OAuth1Info]
   implicit val passwordInfoSerializer = Json.format[PasswordInfo]
 
   // This is written to be able to read our old SocialUser format as well as the new format and write the new format
   implicit val userSerializer: Format[SocialUser] = (
-    (__ \ "id").format[UserId] and
+    (__ \ "id").format[IdentityId] and
     (__ \ "firstName").formatNullable[String].inmap[String](_.getOrElse(""), Some(_)) and
     (__ \ "lastName").formatNullable[String].inmap[String](_.getOrElse(""), Some(_)) and
     OFormat(

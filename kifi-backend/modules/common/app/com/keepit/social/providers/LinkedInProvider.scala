@@ -5,7 +5,7 @@ import com.keepit.social.UserIdentityProvider
 import LinkedInProvider._
 import play.api.libs.ws.WS
 import play.api.{Logger, Application}
-import securesocial.core.{UserId, AuthenticationException, SocialUser}
+import securesocial.core.{IdentityId, AuthenticationException, SocialUser}
 
 /**
  * A LinkedIn Provider (OAuth2)
@@ -41,7 +41,7 @@ class LinkedInProvider(application: Application)
           val avatarUrl = (me \ PictureUrl).asOpt[String]
 
           SocialUser(user).copy(
-            id = UserId(userId, id),
+            identityId = IdentityId(userId, id),
             firstName = firstName,
             lastName = lastName,
             fullName= fullName,

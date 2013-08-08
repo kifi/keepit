@@ -139,7 +139,7 @@ class UrbanAirshipImpl @Inject()(
     db.readWrite { implicit s =>
       deviceRepo.get(userId, token, deviceType) match {
         case Some(d) if d.state == DeviceStates.ACTIVE => d
-        case Some(d) => d.copy(state = DeviceStates.ACTIVE)
+        case Some(d) => deviceRepo.save(d.copy(state = DeviceStates.ACTIVE))
         case None => deviceRepo.save(Device(userId = userId, token = token, deviceType = deviceType))
       }
     }
@@ -159,7 +159,7 @@ class UrbanAirshipImpl @Inject()(
     log.info(s"Checking state of device: ${device.token}")
     if (device.updatedAt plus UrbanAirship.RecheckPeriod isBefore clock.now()) {
       authenticatedClient.getFuture(s"${config.baseUrl}/api/device_tokens/${device.token}", url => {
-        case e @ NonOKResponseException(url, response) if response.status == NOT_FOUND =>
+        case e @ NonOKResponseException(url, response, _) if response.status == NOT_FOUND =>
       }) map { r =>
         val active = (r.json \ "active").as[Boolean]
         db.readWrite { implicit s =>
@@ -168,7 +168,7 @@ class UrbanAirshipImpl @Inject()(
           deviceRepo.save(device.copy(state = state))
         }
       } recover {
-        case e @ NonOKResponseException(url, response) if response.status == NOT_FOUND =>
+        case e @ NonOKResponseException(url, response, _) if response.status == NOT_FOUND =>
           db.readWrite { implicit s =>
             log.info(s"Setting device state to inactive: ${device.token}")
             deviceRepo.save(device.copy(state = DeviceStates.INACTIVE))

@@ -23,30 +23,37 @@ private[reports] class GeckoboardReporterActor @Inject() (
   healthcheckPlugin: HealthcheckPlugin,
   geckoboardPublisher: GeckoboardPublisher)
 extends FortyTwoActor(healthcheckPlugin) with Logging {
-
   def receive() = {
-    case widget: TotalKeepsPerHour => geckoboardPublisher.publish(widget)
+    case widget: GeckoboardWidget[_] => geckoboardPublisher.publish(widget)
     case m => throw new Exception("unknown message %s".format(m))
   }
 }
 
 trait GeckoboardReporterPlugin extends SchedulingPlugin {
+  def refreshAll(): Unit
 }
 
 class GeckoboardReporterPluginImpl @Inject() (
     actorProvider: ActorProvider[GeckoboardReporterActor],
+    val schedulingProperties: SchedulingProperties,
     totalKeepsPerHour: TotalKeepsPerHour,
     totalKeepsPerDay: TotalKeepsPerDay,
     totalKeepsPerWeek: TotalKeepsPerWeek,
-    hoverKeepsPerWeek: HoverKeepsPerWeek,
-    val schedulingProperties: SchedulingProperties)
+    hoverKeepsPerWeek: HoverKeepsPerWeek)
 extends GeckoboardReporterPlugin with Logging {
-//  val schedulingProperties = SchedulingProperties.AlwaysEnabled
+ // val schedulingProperties = SchedulingProperties.AlwaysEnabled
 
   implicit val actorTimeout = Timeout(60 seconds)
 
   // plugin lifecycle methods
   override def enabled: Boolean = true
+
+  def refreshAll(): Unit = {
+    actorProvider.actor ! totalKeepsPerHour
+    actorProvider.actor ! totalKeepsPerDay
+    actorProvider.actor ! totalKeepsPerWeek
+    actorProvider.actor ! hoverKeepsPerWeek
+  }
 
   override def onStart() {
     scheduleTask(actorProvider.system, 0 seconds, 10 minutes, actorProvider.actor, totalKeepsPerHour)

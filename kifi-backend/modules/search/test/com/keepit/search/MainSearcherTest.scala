@@ -38,8 +38,8 @@ class MainSearcherTest extends Specification with ApplicationInjector {
 
   def initData(numUsers: Int, numUris: Int) = {
     val users = (0 until numUsers).map {n => User(firstName = "foo" + n, lastName = "")}.toList
-    val uris =   (0 until numUris).map {n => NormalizedURIFactory(title = "a" + n,
-        url = "http://www.keepit.com/article" + n, state = SCRAPED)}.toList
+    val uris =   (0 until numUris).map {n => NormalizedURI.withHash(title = Some("a" + n),
+        normalizedUrl = "http://www.keepit.com/article" + n, state = SCRAPED)}.toList
     val fakeShoeboxClient = inject[ShoeboxServiceClient].asInstanceOf[FakeShoeboxServiceClientImpl]
     (fakeShoeboxClient.saveUsers(users:_*), fakeShoeboxClient.saveURIs(uris:_*))
   }

@@ -21,8 +21,8 @@ class FollowTest extends Specification with ShoeboxTestInjector {
         val (user1, user2, uriA, uriB) = inject[Database].readWrite{ implicit session =>
           (userRepo.save(User(firstName = "User", lastName = "1")),
            userRepo.save(User(firstName = "User", lastName = "2")),
-           uriRepo.save(NormalizedURIFactory("Google", "http://www.google.com/")),
-           uriRepo.save(NormalizedURIFactory("Amazon", "http://www.amazon.com/")))
+           uriRepo.save(normalizedURIFactory.apply("Google", "http://www.google.com/")),
+           uriRepo.save(normalizedURIFactory.apply("Amazon", "http://www.amazon.com/")))
         }
 
         inject[Database].readOnly{ implicit session =>
