@@ -312,12 +312,14 @@ class MessagingController @Inject() (
   def getSendableNotificationsAfter(userId: Id[User], after: DateTime): Seq[JsValue] = {
     db.readOnly{ implicit session =>
       userThreadRepo.getSendableNotificationsAfter(userId, after)
+      userThreadRepo.getSendableNotificationsAfter(userId, after).filter(_!=null) //Workaraound for Json serialization bug
     }
   }
 
   def getSendableNotificationsBefore(userId: Id[User], after: DateTime, howMany: Int): Seq[JsValue] = {
     db.readOnly{ implicit session =>
       userThreadRepo.getSendableNotificationsBefore(userId, after, howMany)
+      userThreadRepo.getSendableNotificationsBefore(userId, after, howMany).filter(_!=null) //Workaraound for Json serialization bug
     }
   }
 
