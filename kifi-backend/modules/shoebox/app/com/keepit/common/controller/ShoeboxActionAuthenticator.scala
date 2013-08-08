@@ -69,7 +69,7 @@ class ShoeboxActionAuthenticator @Inject() (
     val kifiInstallationId: Option[ExternalId[KifiInstallation]] = kifiInstallationCookie.decodeFromCookie(request.cookies.get(kifiInstallationCookie.COOKIE_NAME))
     val socialUser = request.user
     val (userId, experiments) =
-      loadUserContext(userIdOpt, SocialId(socialUser.id.id), SocialNetworkType(socialUser.id.providerId))
+      loadUserContext(userIdOpt, SocialId(socialUser.identityId.userId), SocialNetworkType(socialUser.identityId.providerId))
     val newSession = session + (ActionAuthenticator.FORTYTWO_USER_ID -> userId.toString)
     impersonatedUserIdOpt match {
       case Some(impExternalUserId) =>

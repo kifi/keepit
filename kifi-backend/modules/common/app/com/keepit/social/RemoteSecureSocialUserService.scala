@@ -11,7 +11,7 @@ import com.keepit.model.{UserSessionStates, UserSession}
 import com.keepit.common.db.ExternalId
 import com.keepit.common.logging.Logging
 import scala.Some
-import securesocial.core.UserId
+import securesocial.core.IdentityId
 import com.keepit.common.healthcheck.HealthcheckError
 import securesocial.core.providers.Token
 import scala.concurrent.duration._
@@ -36,7 +36,7 @@ class RemoteSecureSocialAuthenticatorPlugin @Inject()(
 
   private def authenticatorFromSession(session: UserSession): Authenticator = Authenticator(
     id = session.externalId.id,
-    userId = UserId(session.socialId.id, session.provider.name),
+    identityId = IdentityId(session.socialId.id, session.provider.name),
     creationDate = session.createdAt,
     lastUsed = session.updatedAt,
     expirationDate = session.expires
@@ -81,9 +81,9 @@ class RemoteSecureSocialUserPlugin @Inject() (
     maybeSocialGraphPlugin = Some(sgp)
   }
 
-  def find(id: UserId): Option[SocialUser] = reportExceptions {
-    val resFuture = shoeboxClient.getSocialUserInfoByNetworkAndSocialId(SocialId(id.id), SocialNetworkType(id.providerId))
-    monitoredAwait.result(resFuture, 3 seconds, s"get user for social user ${id.id} on $id.providerId") match {
+  def find(id: IdentityId): Option[SocialUser] = reportExceptions {
+    val resFuture = shoeboxClient.getSocialUserInfoByNetworkAndSocialId(SocialId(id.userId), SocialNetworkType(id.providerId))
+    monitoredAwait.result(resFuture, 3 seconds, s"get user for social user ${id.userId} on $id.providerId") match {
       case None =>
         log.info("No SocialUserInfo found for %s".format(id))
         None

@@ -10,7 +10,7 @@ import com.keepit.test.{ShoeboxApplication, ShoeboxApplicationInjector}
 
 import play.api.Play.current
 import play.api.test.Helpers._
-import securesocial.core.{Authenticator, UserId}
+import securesocial.core.{Authenticator, IdentityId}
 import com.keepit.common.time.FakeClock
 
 class SecureSocialAuthenticatorPluginTest extends Specification with ShoeboxApplicationInjector {
@@ -30,7 +30,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with ShoeboxAppl
         val authenticator = plugin.find(id.id).right.get.get
         authenticator.expired === false
         authenticator.expirationDate.getMillis === new DateTime("2020-10-20").getMillis
-        authenticator.userId === UserId("gm", "facebook")
+        authenticator.identityId === IdentityId("gm", "facebook")
       }
     }
     "not find deleted sessions" in {
@@ -46,7 +46,7 @@ class SecureSocialAuthenticatorPluginTest extends Specification with ShoeboxAppl
         val authenticator = plugin.find(id.id).right.get.get
         authenticator.expired === false
         authenticator.expirationDate.getMillis === new DateTime("2020-10-20").getMillis
-        authenticator.userId === UserId("gm", "facebook")
+        authenticator.identityId === IdentityId("gm", "facebook")
         plugin.delete(id.id)
         plugin.find(id.id) === Right(None)
       }
@@ -79,11 +79,11 @@ class SecureSocialAuthenticatorPluginTest extends Specification with ShoeboxAppl
             userId = user.id, socialId = socialId, fullName = "Greg Methvin", networkType = provider))
           user
         }
-        plugin.save(Authenticator(id.id, UserId(socialId.id, provider.name),
+        plugin.save(Authenticator(id.id, IdentityId(socialId.id, provider.name),
           new DateTime, new DateTime, new DateTime("2015-10-20")))
         val authenticator = plugin.find(id.id).right.get.get
-        authenticator.userId.id === socialId.id
-        authenticator.userId.providerId === provider.name
+        authenticator.identityId.userId === socialId.id
+        authenticator.identityId.providerId === provider.name
         inject[TestSlickSessionProvider].doWithoutCreatingSessions {
           // we should have an old session in the cache and we shouldn't care about updating the last used time
           plugin.save(authenticator.copy(lastUsed = authenticator.lastUsed.plusDays(1)))

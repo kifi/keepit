@@ -19,7 +19,7 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
     db.readWrite { implicit s =>
       val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
                                   tokenType = None, expiresIn = None, refreshToken = None)
-      val socialUser = SocialUser(UserId("100004067535411", "facebook"),"Boaz", "Tal", "Boaz Tal",
+      val socialUser = SocialUser(IdentityId("100004067535411", "facebook"),"Boaz", "Tal", "Boaz Tal",
         Some("boaz.tal@gmail.com"), Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None,
         Some(oAuth2Info), None)
 
@@ -44,7 +44,7 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
     "serialize properly" in {
       val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
         tokenType = None, expiresIn = None, refreshToken = None)
-      val socialUser = SocialUser(UserId("100004067535411", "facebook"),"Boaz", "Tal", "Boaz Tal",
+      val socialUser = SocialUser(IdentityId("100004067535411", "facebook"),"Boaz", "Tal", "Boaz Tal",
         Some("boaz.tal@gmail.com"), Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None,
         Some(oAuth2Info), None)
       val sui = SocialUserInfo(userId = Option(Id(1)), fullName = "Eishay Smith", state = SocialUserInfoStates.CREATED,
@@ -57,7 +57,7 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
     "serialize properly with null lastGraphRefresh" in {
       val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
         tokenType = None, expiresIn = None, refreshToken = None)
-      val socialUser = SocialUser(UserId("100004067535411", "facebook"),"Boaz", "Tal", "Boaz Tal",
+      val socialUser = SocialUser(IdentityId("100004067535411", "facebook"),"Boaz", "Tal", "Boaz Tal",
         Some("boaz.tal@gmail.com"), Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None,
         Some(oAuth2Info), None)
       val sui = SocialUserInfo(userId = Option(Id(1)), fullName = "Eishay Smith", state = SocialUserInfoStates.CREATED,
@@ -71,7 +71,7 @@ class SocialUserInfoTest extends Specification with ShoeboxTestInjector with Tes
     "serialize properly with no lastGraphRefresh" in {
       val oAuth2Info = OAuth2Info(accessToken = "AAAHiW1ZC8SzYBAOtjXeZBivJ77eNZCIjXOkkZAZBjfLbaP4w0uPnj0XzXQUi6ib8m9eZBlHBBxmzzFbEn7jrZADmHQ1gO05AkSZBsZAA43RZC9dQZDZD",
         tokenType = None, expiresIn = None, refreshToken = None)
-      val socialUser = SocialUser(UserId("100004067535411", "facebook"),"Boaz", "Tal", "Boaz Tal",
+      val socialUser = SocialUser(IdentityId("100004067535411", "facebook"),"Boaz", "Tal", "Boaz Tal",
         Some("boaz.tal@gmail.com"), Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None,
         Some(oAuth2Info), None)
       val sui = SocialUserInfo(userId = Option(Id(1)), fullName = "Eishay Smith", state = SocialUserInfoStates.CREATED,
