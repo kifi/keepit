@@ -13,9 +13,8 @@ $.fn.scrollToBottom = function() {
     var cH = this.clientHeight, sH = this.scrollHeight;
     if (cH < sH) {
       var sT = this.scrollTop, d = sH - sT - cH;
-      api.log("[scrollToBottom] cH:", cH, "sH:", sH, "sT:", sT, "d:", d);
       if (d > 0) {
-        this.scrollTop = sT + d;
+        $(this).animate({scrollTop: sT + d}, 40 * Math.log(d));
       }
     }
   });
