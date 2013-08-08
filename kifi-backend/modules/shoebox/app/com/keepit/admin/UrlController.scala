@@ -2,10 +2,8 @@ package com.keepit.controllers.admin
 
 
 import play.api.Play.current
-
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.BabysitterTimeout
@@ -13,12 +11,12 @@ import com.keepit.common.mail._
 import play.api.libs.concurrent.Akka
 import scala.concurrent.duration._
 import views.html
-
-/**
- * Charts, etc.
- */
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.google.inject.Inject
+import com.keepit.integrity.OrphanCleaner
+import com.keepit.integrity.DuplicateDocumentDetection
+import com.keepit.integrity.DuplicateDocumentsProcessor
+import com.keepit.integrity.HandleDuplicatesAction
 
 class UrlController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -33,7 +31,11 @@ class UrlController @Inject() (
   commentRepo: CommentRepo,
   deepLinkRepo: DeepLinkRepo,
   followRepo: FollowRepo,
-  normalizedUriFactory: NormalizedURIFactory)
+  normalizedUriFactory: NormalizedURIFactory,
+   duplicateDocumentRepo: DuplicateDocumentRepo,
+  orphanCleaner: OrphanCleaner,
+  dupeDetect: DuplicateDocumentDetection,
+  duplicatesProcessor: DuplicateDocumentsProcessor)
     extends AdminController(actionAuthenticator) {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
@@ -177,4 +179,59 @@ class UrlController @Inject() (
     }
     Ok("sequence number fix started")
   }
+
+  def orphanCleanup() = AdminHtmlAction { implicit request =>
+    Akka.future {
+      db.readWrite { implicit session =>
+        orphanCleaner.cleanNormalizedURIs(false)
+        orphanCleaner.cleanScrapeInfo(false)
+      }
+    }
+    Redirect(com.keepit.controllers.admin.routes.UrlController.documentIntegrity())
+  }
+
+  def documentIntegrity(page: Int = 0, size: Int = 50) = AdminHtmlAction { implicit request =>
+    val dupes = db.readOnly { implicit conn =>
+      duplicateDocumentRepo.getActive(page, size)
+    }
+
+    val groupedDupes = dupes.groupBy { case d => d.uri1Id }.toSeq.sortWith((a,b) => a._1.id < b._1.id)
+
+    val loadedDupes = db.readOnly { implicit session =>
+      groupedDupes map  { d =>
+        val dupeRecords = d._2.map { sd =>
+          DisplayedDuplicate(sd.id.get, sd.uri2Id, uriRepo.get(sd.uri2Id).url, sd.percentMatch)
+        }
+        DisplayedDuplicates(d._1, uriRepo.get(d._1).url, dupeRecords)
+      }
+    }
+
+    Ok(html.admin.documentIntegrity(loadedDupes))
+  }
+
+  def handleDuplicate = AdminHtmlAction { implicit request =>
+    val body = request.body.asFormUrlEncoded.get
+    val action = body("action").head
+    val id = Id[DuplicateDocument](body("id").head.toLong)
+    duplicatesProcessor.handleDuplicates(Left[Id[DuplicateDocument], Id[NormalizedURI]](id), HandleDuplicatesAction(action))
+    Ok
+  }
+
+  def handleDuplicates = AdminHtmlAction { implicit request =>
+    val body = request.body.asFormUrlEncoded.get
+    val action = body("action").head
+    val id = Id[NormalizedURI](body("id").head.toLong)
+    duplicatesProcessor.handleDuplicates(Right[Id[DuplicateDocument], Id[NormalizedURI]](id), HandleDuplicatesAction(action))
+    Ok
+  }
+
+  def duplicateDocumentDetection = AdminHtmlAction { implicit request =>
+    dupeDetect.asyncProcessDocuments()
+    Redirect(com.keepit.controllers.admin.routes.UrlController.documentIntegrity())
+  }
+
 }
+
+
+case class DisplayedDuplicate(id: Id[DuplicateDocument], normUriId: Id[NormalizedURI], url: String, percentMatch: Double)
+case class DisplayedDuplicates(normUriId: Id[NormalizedURI], url: String, dupes: Seq[DisplayedDuplicate])
