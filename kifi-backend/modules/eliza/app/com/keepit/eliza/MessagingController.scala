@@ -330,6 +330,8 @@ class MessagingController @Inject() (
     buildThreadInfos(userId, threads)
   }
 
+  def connectedSockets: Int  = notificationRouter.connectedSockets
+
 
 }
 
