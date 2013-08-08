@@ -23,9 +23,9 @@ class AdminAuthControllerTest extends Specification with ShoeboxApplicationInjec
   "AdminAuthController" should {
     "impersonate" in {
       running(new ShoeboxApplication(TestShoeboxSecureSocialModule())) {
-        val su1 = SocialUser(UserId("111", "facebook"), "A", "1", "A 1", Some("a1@gmail.com"),
+        val su1 = SocialUser(IdentityId("111", "facebook"), "A", "1", "A 1", Some("a1@gmail.com"),
           Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None, Some(OAuth2Info(accessToken = "A")), None)
-        val su2 = SocialUser(UserId("222", "facebook"), "B", "1", "B 1", Some("b1@gmail.com"),
+        val su2 = SocialUser(IdentityId("222", "facebook"), "B", "1", "B 1", Some("b1@gmail.com"),
           Some("http://www.fb.com/him"), AuthenticationMethod.OAuth2, None, Some(OAuth2Info(accessToken = "B")), None)
         val (admin, impersonate) = db.readWrite {implicit s =>
           val admin = userRepo.save(User(firstName = "A", lastName = "1"))

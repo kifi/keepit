@@ -1,8 +1,8 @@
 {
-  "name": "KiFi Beta",
+  "name": "Kifi Beta",
   "version": "see build.properties",
   "manifest_version": 2,
-  "description": "KiFi Private Beta",
+  "description": "Kifi Private Beta",
   "icons": {
     "48": "icons/kifi.48.png",
     "128": "icons/kifi.128.png",
@@ -13,7 +13,7 @@
     "default_icon": {
       "38": "icons/keep.faint.png"
     },
-    "default_title": "KiFi"
+    "default_title": "Kifi"
   },
   "background": {
     "page": "main.html"

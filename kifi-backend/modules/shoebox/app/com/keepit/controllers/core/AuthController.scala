@@ -18,8 +18,8 @@ class AuthController extends ShoeboxServiceController {
     val oauth2Info = request.body.asOpt[OAuth2Info]
     val provider = Registry.providers.get(providerName).get
     val filledUser = provider.fillProfile(
-      SocialUser(UserId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = oauth2Info))
-    UserService.find(filledUser.id) map { user =>
+      SocialUser(IdentityId("", provider.id), "", "", "", None, None, provider.authMethod, oAuth2Info = oauth2Info))
+    UserService.find(filledUser.identityId) map { user =>
       val newSession = Events.fire(new LoginEvent(user)).getOrElse(session)
       Authenticator.create(user).fold(
         error => throw error,
