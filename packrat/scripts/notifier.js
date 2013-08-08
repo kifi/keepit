@@ -12,7 +12,7 @@ var notifier = {
       case "message":
         KifiNotification.add({
           title: o.authors[0].firstName + " " + o.authors[0].lastName,
-          subtitle: "Sent you a new KiFi Message",
+          subtitle: "Sent you a new Kifi Message",
           contentHtml: o.text,
           link: o.title,
           image: cdnBase + "/users/" + o.authors[0].id + "/pics/100/0.jpg",
