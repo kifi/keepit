@@ -489,7 +489,7 @@ slider2 = function() {
             render("html/keeper/titled_tip.html", {
               dir: "below",
               title: "Give Us Feedback",
-              html: "Tell us your ideas for KiFi<br>or report an issue."
+              html: "Tell us your ideas for Kifi<br>or report an issue."
             }, function(html) {
               configureHover(html, {mustHoverFor: 700, hideAfter: 4000, click: "hide"});
             });
@@ -509,7 +509,7 @@ slider2 = function() {
             render("html/keeper/titled_tip.html", {
               dir: "below",
               title: "Settings",
-              html: "Customize your KiFi<br>experience."
+              html: "Customize your Kifi<br>experience."
             }, function(html) {
               configureHover(html, {mustHoverFor: 700, hideAfter: 3000, click: "hide"});
             });

@@ -73,7 +73,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
       preventDuplicates: true,
       allowTabOut: true,
       tokenValue: "id",
-      theme: "KiFi",
+      theme: "Kifi",
       zindex: 999999999992,
       resultsFormatter: function(f) {
         return "<li style='background-image:url(//" + cdnBase + "/users/" + f.id + "/pics/100/0.jpg)'>" +
