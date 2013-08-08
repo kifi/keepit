@@ -5,7 +5,10 @@ import play.api.libs.json._
 import securesocial.core._
 
 object SocialUserSerializer {
-  implicit val userIdSerializer = Json.format[IdentityId]
+  implicit val userIdSerializer = (
+    (__ \ "id").format[String] and
+    (__ \ "providerId").format[String]
+  )(IdentityId.apply, unlift(IdentityId.unapply))
   implicit val oAuth2InfoSerializer = Json.format[OAuth2Info]
   implicit val oAuth1InfoSerializer = Json.format[OAuth1Info]
   implicit val passwordInfoSerializer = Json.format[PasswordInfo]
