@@ -16,7 +16,7 @@ import securesocial.core.providers.Token
 import scala.Some
 import com.keepit.model.User
 import com.keepit.common.healthcheck.HealthcheckError
-import securesocial.core.UserId
+import securesocial.core.IdentityId
 import com.keepit.model.SocialUserInfo
 
 @Singleton
@@ -37,9 +37,9 @@ class SecureSocialUserPluginImpl @Inject() (
       throw ex
     }
 
-  def find(id: UserId): Option[SocialUser] = reportExceptions {
+  def find(id: IdentityId): Option[SocialUser] = reportExceptions {
     db.readOnly { implicit s =>
-      socialUserInfoRepo.getOpt(SocialId(id.id), SocialNetworkType(id.providerId))
+      socialUserInfoRepo.getOpt(SocialId(id.userId), SocialNetworkType(id.providerId))
     } match {
       case None =>
         log.info("No SocialUserInfo found for %s".format(id))
@@ -55,7 +55,7 @@ class SecureSocialUserPluginImpl @Inject() (
       val (userId, socialUser) = getUserIdAndSocialUser(identity)
       log.info("persisting social user %s".format(socialUser))
       val socialUserInfo = internUser(
-        SocialId(socialUser.id.id), SocialNetworkType(socialUser.id.providerId), socialUser, userId)
+        SocialId(socialUser.identityId.userId), SocialNetworkType(socialUser.identityId.providerId), socialUser, userId)
       require(socialUserInfo.credentials.isDefined,
         "social user info's credentials is not defined: %s".format(socialUserInfo))
       require(socialUserInfo.userId.isDefined, "social user id  is not defined: %s".format(socialUserInfo))
@@ -145,7 +145,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
     }
 
   private def sessionFromAuthenticator(authenticator: Authenticator): UserSession = {
-    val (socialId, provider) = (SocialId(authenticator.userId.id), SocialNetworkType(authenticator.userId.providerId))
+    val (socialId, provider) = (SocialId(authenticator.identityId.userId), SocialNetworkType(authenticator.identityId.providerId))
     val userId = db.readOnly { implicit s => socialUserInfoRepo.get(socialId, provider).userId }
     UserSession(
       userId = userId,
@@ -158,7 +158,7 @@ class SecureSocialAuthenticatorPluginImpl @Inject()(
   }
   private def authenticatorFromSession(session: UserSession): Authenticator = Authenticator(
     id = session.externalId.id,
-    userId = UserId(session.socialId.id, session.provider.name),
+    identityId = IdentityId(session.socialId.id, session.provider.name),
     creationDate = session.createdAt,
     lastUsed = session.updatedAt,
     expirationDate = session.expires

@@ -16,7 +16,7 @@ import play.api.libs.json.JsArray
 import com.keepit.common.controller.AuthenticatedRequest
 import play.api.libs.json.JsString
 import scala.Some
-import securesocial.core.UserId
+import securesocial.core.IdentityId
 import com.keepit.model.User
 import securesocial.core.OAuth2Info
 import com.keepit.model.SocialUserInfo
@@ -36,7 +36,7 @@ class ExtAuthControllerTest extends Specification with ShoeboxApplicationInjecto
 
         val oAuth2Info = OAuth2Info(accessToken = "A",
           tokenType = None, expiresIn = None, refreshToken = None)
-        val su = SocialUser(UserId("111", "facebook"), "A", "1", "A 1", Some("a1@gmail.com"),
+        val su = SocialUser(IdentityId("111", "facebook"), "A", "1", "A 1", Some("a1@gmail.com"),
           Some("http://www.fb.com/me"), AuthenticationMethod.OAuth2, None, Some(oAuth2Info), None)
         val user = db.readWrite {implicit s =>
           val user = userRepo.save(User(createdAt = now.minusDays(3), firstName = "A", lastName = "1"))
