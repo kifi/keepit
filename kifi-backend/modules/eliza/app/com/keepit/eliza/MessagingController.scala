@@ -87,15 +87,17 @@ class MessagingController @Inject() (
 
   }
 
-  private def buildMessageNotificationJson(message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser) : JsValue = {
+  private def buildMessageNotificationJson(message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, locator: String) : JsValue = {
     Json.obj(
-      "id"     -> message.externalId.id,
-      "time"   -> message.createdAt,
-      "thread" -> thread.externalId.id,
-      "text"   -> message.messageText,
-      "url"    -> thread.nUrl,
-      "title"  -> thread.pageTitle,
-      "author" -> messageWithBasicUser.user
+      "id"         -> message.externalId.id,
+      "time"       -> message.createdAt,
+      "thread"     -> thread.externalId.id,
+      "text"       -> message.messageText,
+      "url"        -> thread.nUrl,
+      "title"      -> thread.pageTitle,
+      "author"     -> messageWithBasicUser.user,
+      "recipients" -> messageWithBasicUser.recipients,
+      "locator"    -> locator
     ) 
   }
 
@@ -106,7 +108,8 @@ class MessagingController @Inject() (
     )
 
     future {
-      val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser)
+      val locator = "/messages/" + thread.externalId
+      val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator)
       db.readWrite{ implicit session => 
         userThreadRepo.setNotification(user, thread.id.get, notifJson)
       }
