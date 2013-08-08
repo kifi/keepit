@@ -109,6 +109,11 @@ class ExtMessagingController @Inject() (
       val unvisited = messagingController.getPendingNotificationCount(socket.userId)
       socket.channel.push(Json.arr("notifications", notices, unvisited))
     },
+    "asdf2" -> { case JsNumber(howMany) +: _ =>
+      val notices = messagingController.getLatestSendableNotifications(socket.userId, howMany.toInt)
+      val unvisited = messagingController.getPendingNotificationCount(socket.userId)
+      socket.channel.push(Json.arr("Hey There!"))
+    },
     "get_missed_notifications" -> { case JsString(time) +: _ =>
       val notices = messagingController.getSendableNotificationsAfter(socket.userId, parseStandardTime(time))
       socket.channel.push(Json.arr("missed_notifications", notices))
