@@ -180,6 +180,7 @@ POST    /admin/data/handleDuplicate @com.keepit.controllers.admin.ScraperControl
 POST    /admin/data/handleDuplicates @com.keepit.controllers.admin.ScraperController.handleDuplicates
 GET     /admin/data/fixSeqNum       @com.keepit.controllers.admin.UrlController.fixSeqNum
 
+
 GET     /admin/article/index        @com.keepit.controllers.admin.AdminArticleIndexerController.index
 GET     /admin/article/reindex      @com.keepit.controllers.admin.AdminArticleIndexerController.reindex
 GET     /admin/article/sequenceNumber @com.keepit.controllers.admin.AdminArticleIndexerController.getSequenceNumber
@@ -368,6 +369,8 @@ POST    /internal/shoebox/channel/uri                 @com.keepit.controllers.sh
 POST    /internal/shoebox/channel/uriCount            @com.keepit.controllers.shoebox.ShoeboxController.uriChannelCountFanout()
 
 POST     /internal/shoebox/learning/suggestExperts    @com.keepit.controllers.shoebox.ExpertRecommenderController.suggestExperts()
+
+POST     /internal/geckoboard/refresh                 @com.keepit.reports.GeckoboardReporterController.refreshAll()
 
 
 ->  / common.Routes

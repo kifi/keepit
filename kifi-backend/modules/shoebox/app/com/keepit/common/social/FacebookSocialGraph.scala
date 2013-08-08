@@ -36,7 +36,7 @@ class FacebookSocialGraph @Inject() (
     val jsons = try {
       fetchJsons(url(socialUserInfo.socialId, getAccessToken(socialUserInfo)))
     } catch {
-      case e @ NonOKResponseException(url, response) =>
+      case e @ NonOKResponseException(url, response, _) =>
         import FacebookSocialGraph.ErrorSubcodes._
         import SocialUserInfoStates._
         def fail(msg: String, state: State[SocialUserInfo] = FETCH_FAIL) {

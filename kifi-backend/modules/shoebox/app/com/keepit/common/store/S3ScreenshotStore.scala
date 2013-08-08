@@ -20,7 +20,6 @@ import com.keepit.common.healthcheck.Healthcheck
 import com.keepit.common.healthcheck.HealthcheckError
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.URI
 import com.keepit.common.strings.UTF8
 import com.keepit.common.time.Clock
 import com.keepit.common.time.DEFAULT_DATE_TIME_ZONE
@@ -35,6 +34,7 @@ import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
 import java.io.ByteArrayOutputStream
 import java.io.ByteArrayInputStream
+import com.keepit.common.net.URI
 
 
 @ImplementedBy(classOf[S3ScreenshotStoreImpl])

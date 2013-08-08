@@ -13,8 +13,8 @@ class CommentReadTest extends Specification with ShoeboxTestInjector {
       val user1 = userRepo.save(User(firstName = "Andrew", lastName = "Conner"))
       val user2 = userRepo.save(User(firstName = "Eishay", lastName = "Smith"))
 
-      val uri1 = uriRepo.save(NormalizedURIFactory("Google", "http://www.google.com/"))
-      val uri2 = uriRepo.save(NormalizedURIFactory("Bing", "http://www.bing.com/"))
+      val uri1 = uriRepo.save(normalizedURIFactory.apply("Google", "http://www.google.com/"))
+      val uri2 = uriRepo.save(normalizedURIFactory.apply("Bing", "http://www.bing.com/"))
 
       // Public
       val comment1 = commentRepo.save(Comment(uriId = uri1.id.get, userId = user1.id.get, pageTitle = uri1.title.get, text = "comment 1", permissions = CommentPermissions.PUBLIC))
@@ -77,6 +77,17 @@ class CommentReadTest extends Specification with ShoeboxTestInjector {
           commentReadRepo.save(CommentRead(userId = user2.id.get, uriId = uri2.id.get, lastReadId = msg3.id.get, parentId = Some(msg3.id.get)))
           commentReadRepo.getByUserAndParent(user1.id.get, msg3.id.get) must beNone
           commentReadRepo.getByUserAndParent(user2.id.get, msg3.id.get).get.lastReadId === msg3.id.get
+        }
+      }
+    }
+
+    "get commentRead by uriId" in {
+      withDb() { implicit injector =>
+        val (user1, user2, uri1, uri2, comment1, comment2, comment3, msg1, msg2, msg3) = setup()
+        db.readWrite { implicit s =>
+          commentReadRepo.save(CommentRead(userId = user1.id.get, uriId = uri1.id.get, lastReadId = comment2.id.get))
+          commentReadRepo.save(CommentRead(userId = user2.id.get, uriId = uri1.id.get, lastReadId = comment2.id.get))
+          commentReadRepo.getByUri(uri1.id.get).size === 2
         }
       }
     }

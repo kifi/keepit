@@ -13,4 +13,6 @@ class FakeScraperPlugin() extends ScraperPlugin {
   def scrapePending() = Future.successful(Seq())
   def asyncScrape(uri: NormalizedURI) =
     Future.failed(new Exception("Not Implemented"))
+  def asyncSignature(url: String): Future[Option[Signature]] =
+    Future.failed(new Exception("Not Implemented"))
 }

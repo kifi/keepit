@@ -179,8 +179,8 @@ class CollectionIndexerTest extends Specification with GraphTestHelper {
       running(new DeprecatedEmptyApplication().withShoeboxServiceModule) {
         val Seq(user) = saveUsers(User(firstName = "Agrajag", lastName = ""))
         val uris = saveURIs(
-          NormalizedURIFactory(title = "title", url = "http://www.keepit.com/article1", state=SCRAPED),
-          NormalizedURIFactory(title = "title", url = "http://www.keepit.com/article2", state=SCRAPED)
+          NormalizedURI.withHash(title = Some("title"), normalizedUrl = "http://www.keepit.com/article1", state = SCRAPED),
+          NormalizedURI.withHash(title = Some("title"), normalizedUrl = "http://www.keepit.com/article2", state = SCRAPED)
         )
         val bookmarks = saveBookmarksByUser(Seq((user, uris)), uniqueTitle = Some("line1 titles"))
         val collection = saveCollection(user, "CollectionOne")

@@ -2,9 +2,9 @@ package com.keepit.scraper.extractor
 
 import org.specs2.mutable._
 import org.jsoup.Jsoup
-import com.keepit.common.net.URI
 import java.io.FileInputStream
 import com.keepit.scraper.HttpInputStream
+import com.keepit.common.net.URI
 
 class GithubExtractorTest extends Specification {
 
