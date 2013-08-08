@@ -10,7 +10,7 @@ import com.keepit.common.time._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import play.api.libs.iteratee.Concurrent
-import play.api.libs.json.{Json, JsValue, JsArray, JsString, JsNumber}
+import play.api.libs.json.{Json, JsValue, JsArray, JsString, JsNumber, JsNull}
 
 import akka.actor.ActorSystem
 

@@ -17,6 +17,7 @@ a.kifi-pane-mark-notices-read:active {
   background-color: #607991;
 }
 .kifi-notices {
+  max-height: 100%;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }

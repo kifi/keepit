@@ -119,8 +119,8 @@ class ShoeboxController @Inject() (
   }
 
   def normalizeURL(url: String) = Action { //TODO Stephen: What if this is a new url?
-    val uriId = db.readOnly { implicit s =>
-      normUriRepo.getByUri(url).get
+    val uriId = db.readWrite { implicit s =>
+      normUriRepo.getByUriOrElseCreate(url)
     }
     Ok(Json.toJson(uriId))
   }

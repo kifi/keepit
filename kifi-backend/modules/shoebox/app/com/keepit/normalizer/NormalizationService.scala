@@ -21,17 +21,8 @@ case class NormalizationService(normalizers: URINormalizer*) extends SmartNormal
 
   def parseAndNormalize(uriString: String): Option[URI] = parse(uriString).map(apply(_))
 
-  def normalize(uriString: String): String = {
-    val normalizedUriStringOption = parseAndNormalize(uriString).map { uri =>
-      try {
-        Some(uri.toString())
-      } catch { case e : Exception =>
-        URI.log.error("URI.toString() failed: [%s] caused by [%s]".format(uriString, e.getMessage))
-        None
-      }
-    }
-    normalizedUriStringOption.flatten.getOrElse(uriString)
-  }
+  def normalize(uriString: String): String =
+    parseAndNormalize(uriString).map(_.safeToString()).flatten.getOrElse(uriString)
 
 }
 

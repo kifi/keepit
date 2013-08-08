@@ -66,14 +66,18 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
   }
 
 
-  implicit val jsonFrame: FrameFormatter[JsArray] =
+  implicit val jsonFrame: FrameFormatter[JsArray] = {
     FrameFormatter.stringFrame.transform(
-      Json.stringify,
-      in =>
+      out => {
+        Json.stringify(out)
+      },
+      in => {
         Json.parse(in) match {
           case j: JsArray => j
           case j: JsValue => Json.arr(j)
-        })
+        }
+      })
+  }
 
 
   // A hack which allows us to pass the SecureSocial session ID (sid) by query string.
