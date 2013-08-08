@@ -19,6 +19,7 @@ case class ChangedUri(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI])
 class UriIntegrityActor @Inject()(
   db: Database,
   clock: Clock,
+  urlHashCache: NormalizedURIUrlHashCache,
   uriRepo: NormalizedURIRepo,
   urlRepo: URLRepo,
   userRepo: UserRepo,
@@ -28,6 +29,7 @@ class UriIntegrityActor @Inject()(
   commentReadRepo: CommentReadRepo,
   deepLinkRepo: DeepLinkRepo,
   followRepo: FollowRepo,
+  scrapeInfoRepo: ScrapeInfoRepo,
   healthcheckPlugin: HealthcheckPlugin
 ) extends FortyTwoActor(healthcheckPlugin) with Logging {
 
@@ -39,7 +41,12 @@ class UriIntegrityActor @Inject()(
       urlRepo.getByNormUri(oldUri).map{ url =>
         urlRepo.save(url.withNormUriId(newUri).withHistory(URLHistory(clock.now, newUri, URLHistoryCause.MERGE)))
       }
-      // still need to clean url cache
+
+      uriRepo.save(uriRepo.get(oldUri).withState(NormalizedURIStates.INACTIVE))
+
+      scrapeInfoRepo.getByUri(oldUri).map{ info =>
+        scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
+      }
 
       bookmarkRepo.getByUri(oldUri).map{ bm =>
         bookmarkRepo.save(bm.withNormUriId(newUri))
@@ -49,7 +56,9 @@ class UriIntegrityActor @Inject()(
         commentRepo.save(cm.withNormUriId(newUri))
       }
 
-      // clean comment read repo?
+      commentReadRepo.getByUri(oldUri).map{ cm =>
+        commentReadRepo.save(cm.withNormUriId(newUri))
+      }
 
       deepLinkRepo.getByUri(oldUri).map{ link =>
         deepLinkRepo.save(link.withNormUriId(newUri))
@@ -59,8 +68,9 @@ class UriIntegrityActor @Inject()(
         followRepo.save(follow.withNormUriId(newUri))
       }
 
-      // OrphanCleaner will clean scrapeInfo
-      uriRepo.save(uriRepo.get(oldUri).withState(NormalizedURIStates.INACTIVE))
+      scrapeInfoRepo.getByUri(oldUri).map{ info =>
+        scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
+      }
 
     }
   }

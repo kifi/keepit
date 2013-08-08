@@ -80,6 +80,17 @@ class CommentReadTest extends Specification with ShoeboxTestInjector {
         }
       }
     }
+
+    "get commentRead by uriId" in {
+      withDb() { implicit injector =>
+        val (user1, user2, uri1, uri2, comment1, comment2, comment3, msg1, msg2, msg3) = setup()
+        db.readWrite { implicit s =>
+          commentReadRepo.save(CommentRead(userId = user1.id.get, uriId = uri1.id.get, lastReadId = comment2.id.get))
+          commentReadRepo.save(CommentRead(userId = user2.id.get, uriId = uri1.id.get, lastReadId = comment2.id.get))
+          commentReadRepo.getByUri(uri1.id.get).size === 2
+        }
+      }
+    }
   }
 
 }
