@@ -3,19 +3,48 @@ package com.keepit.controllers.ext
 import com.google.inject.Inject
 import com.keepit.common.analytics._
 import com.keepit.common.controller.{ShoeboxServiceController, BrowserExtensionController, ActionAuthenticator}
-import com.keepit.common.db.{ExternalId, State}
+import com.keepit.common.db.{ExternalId, State, Id}
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.time._
 import com.keepit.model._
+import com.keepit.common.db.slick.{Database}
+
+import scala.concurrent.future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import play.api.libs.json._
+import play.api.mvc.Action
 
 class ExtEventController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   EventPersister: EventPersister,
+  db: Database,
+  userRepo: UserRepo,
   implicit private val clock: Clock,
   implicit private val fortyTwoServices: FortyTwoServices)
     extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
+
+  def logEvent = Action { request =>
+    future{
+      val req = request.body.asJson.get.asInstanceOf[JsObject]
+      val userId = Id[User]((req \ "userId").as[Long])
+      val o = (req \ "event").asInstanceOf[JsObject]
+
+      implicit val experimentFormat = State.format[ExperimentType]
+      val eventTime = clock.now.minusMillis((o \ "msAgo").asOpt[Int].getOrElse(0))
+      val eventFamily = EventFamilies((o \ "eventFamily").as[String])
+      val eventName = (o \ "eventName").as[String]
+      val installId = (o \ "installId").as[String]
+      val metaData = (o \ "metaData").asOpt[JsObject].getOrElse(Json.obj())
+      val prevEvents = (o \ "prevEvents").asOpt[Seq[String]].getOrElse(Seq.empty).map(ExternalId[Event])
+      val experiments = (o \ "experiments").as[Seq[State[ExperimentType]]].toSet
+      val user = db.readOnly { implicit s => userRepo.get(userId) }
+      val event = Events.userEvent(eventFamily, eventName, user, experiments, installId, metaData, prevEvents, eventTime)
+      log.debug("Created new event: %s".format(event))
+      EventPersister.persist(event)
+    }
+    Ok("")
+  }
 
   def logUserEvents = AuthenticatedJsonToJsonAction { request =>
     val json = request.body
