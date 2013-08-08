@@ -1,4 +1,4 @@
-package com.keepit.scraper.extractor
+package com.keepit.integrity
 
 import akka.util.Timeout
 import com.keepit.common.db._

@@ -1,11 +1,11 @@
-@(dupes: Seq[com.keepit.controllers.admin.DisplayedDuplicates])(implicit flash: Flash)
+@(dupes: Seq[com.keepit.integrity.DisplayedDuplicates])(implicit flash: Flash)
 @import com.keepit.model.NormalizedURI
 
 @admin("Document Integrity") {
 
     <script>
       function handleDuplicate(action, id, element, cb) {
-        $.post("@com.keepit.controllers.admin.routes.ScraperController.handleDuplicate",
+        $.post("@com.keepit.integrity.routes.DuplicateDocumentsController.handleDuplicate",
           { 'action': action, 'id': id },
           function(data) {
             cb && cb(element);
@@ -13,7 +13,7 @@
         return true;
       }
       function handleDuplicates(action, id, element, cb) {
-        $.post("@com.keepit.controllers.admin.routes.ScraperController.handleDuplicates",
+        $.post("@com.keepit.integrity.routes.DuplicateDocumentsController.handleDuplicates",
           { 'action': action, 'id': id },
           function(data) {
             console.log(data);
@@ -41,9 +41,9 @@
         <div class="navbar-inner">
             <ul class="nav">
                 <li><a href="@com.keepit.controllers.admin.routes.ScraperController.getUnscrapable()">Unscrapables</a></li>
-                <li><a href="@com.keepit.controllers.admin.routes.ScraperController.orphanCleanup()">Clean up Orphans</a></li>
+                <li><a href="@com.keepit.integrity.routes.DuplicateDocumentsController.orphanCleanup()">Clean up Orphans</a></li>
                 <li><a href="@com.keepit.controllers.admin.routes.UrlController.renormalize()">Renormalize</a></li>
-                <li><a href="@com.keepit.controllers.admin.routes.ScraperController.duplicateDocumentDetection()">De-duplicate Documents</a></li>
+                <li><a href="@com.keepit.integrity.routes.DuplicateDocumentsController.duplicateDocumentDetection()">De-duplicate Documents</a></li>
             </ul>
         </div>
     </div>

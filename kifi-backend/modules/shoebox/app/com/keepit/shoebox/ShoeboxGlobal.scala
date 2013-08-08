@@ -16,7 +16,7 @@ import com.keepit.learning.topicmodel.TopicUpdaterPlugin
 import com.keepit.social.SocialGraphPlugin
 import com.keepit.controllers.shoebox.ExpertRecommenderController
 import com.keepit.learning.topicmodel.TopicModelSwitcherPlugin
-import com.keepit.scraper.extractor.UriIntegrityPlugin
+import com.keepit.integrity.{UriIntegrityPlugin, DataIntegrityPlugin}
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 
