@@ -102,45 +102,7 @@ class ExtMessagingController @Inject() (
       socket.channel.push(Json.arr("last_notify_read_time", t.toStandardTimeString))
     },
     "get_notifications" -> { case JsNumber(howMany) +: _ =>
-      socket.channel.push(Json.arr("hey_andrew"))
-    },
-    "asdf" -> { case JsNumber(howMany) +: _ =>
       val notices = messagingController.getLatestSendableNotifications(socket.userId, howMany.toInt)
-      val unvisited = messagingController.getPendingNotificationCount(socket.userId)
-      log.warn("BADBADBAD sending:" + Json.arr("notifications", notices, unvisited).toString)
-      socket.channel.push(Json.arr("notifications", notices, unvisited))
-      log.warn("BADBADBAD as:" + Json.stringify(Json.arr("notifications", notices, unvisited)))
-    },
-    "asdf2" -> { case JsNumber(howMany) +: _ =>
-      val notices = messagingController.getLatestSendableNotifications(socket.userId, howMany.toInt)
-      val unvisited = messagingController.getPendingNotificationCount(socket.userId)
-      socket.channel.push(Json.arr("Hey There!"))
-    },
-    "asdf3" -> { case JsNumber(howMany) +: _ =>
-      val notices = messagingController.getLatestSendableNotifications(socket.userId, howMany.toInt).map { notice =>
-        JsNumber(42)
-      }
-      val unvisited = messagingController.getPendingNotificationCount(socket.userId)
-      socket.channel.push(Json.arr("notifications", notices, unvisited))
-    },
-    "asdf4" -> { case JsNumber(howMany) +: _ =>
-      val notices = messagingController.getLatestSendableNotifications(socket.userId, howMany.toInt).map { notice =>
-        JsNull
-      }
-      val unvisited = messagingController.getPendingNotificationCount(socket.userId)
-      socket.channel.push(Json.arr("notifications", notices, unvisited))
-    },
-    "asdf5" -> { case JsNumber(howMany) +: _ =>
-      val notices = messagingController.getLatestSendableNotifications(socket.userId, howMany.toInt).map { notice =>
-        JsString("null")
-      }
-      val unvisited = messagingController.getPendingNotificationCount(socket.userId)
-      socket.channel.push(Json.arr("notifications", notices, unvisited))
-    },
-    "asdf6" -> { case JsNumber(howMany) +: _ =>
-      val notices = messagingController.getLatestSendableNotifications(socket.userId, howMany.toInt).map { notice =>
-        null.asInstanceOf[JsValue]
-      }
       val unvisited = messagingController.getPendingNotificationCount(socket.userId)
       socket.channel.push(Json.arr("notifications", notices, unvisited))
     },

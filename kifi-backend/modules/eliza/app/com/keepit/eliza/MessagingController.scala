@@ -299,7 +299,7 @@ class MessagingController @Inject() (
 
   def getLatestSendableNotifications(userId: Id[User], howMany: Int): Seq[JsValue] = {
     db.readOnly{ implicit session =>
-      userThreadRepo.getLatestSendableNotifications(userId, howMany)
+      userThreadRepo.getLatestSendableNotifications(userId, howMany).filter(_!=null) //Workaraound for Json serialization bug
     }
   }
 
