@@ -18,8 +18,7 @@ import play.api.Plugin
 import play.api.Play.current
 import scala.concurrent.Future
 import scala.concurrent.duration._
-
-import us.theatr.akka.quartz._
+import us.theatr.akka.quartz.QuartzActor
 
 private[reports] class GeckoboardReporterActor @Inject() (
   healthcheckPlugin: HealthcheckPlugin,
@@ -58,9 +57,9 @@ extends GeckoboardReporterPlugin with Logging {
   }
 
   override def onStart() {
-    quartz.actor ! AddCronSchedule(actorProvider.actor, "0 0/10 * * * ?", totalKeepsPerHour)
-    quartz.actor ! AddCronSchedule(actorProvider.actor, "0 0 * * * ?", totalKeepsPerDay)
-    quartz.actor ! AddCronSchedule(actorProvider.actor, "0 0 0/6 * * ?", totalKeepsPerWeek)
-    quartz.actor ! AddCronSchedule(actorProvider.actor, "0 0 0/6 * * ?", hoverKeepsPerWeek)
+    cronTask(quartz, actorProvider.actor, "0 0/10 * * * ?", totalKeepsPerHour)
+    cronTask(quartz, actorProvider.actor, "0 0 * * * ?", totalKeepsPerDay)
+    cronTask(quartz, actorProvider.actor, "0 0 0/6 * * ?", totalKeepsPerWeek)
+    cronTask(quartz, actorProvider.actor, "0 0 0/6 * * ?", hoverKeepsPerWeek)
   }
 }
