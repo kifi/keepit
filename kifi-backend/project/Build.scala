@@ -57,7 +57,8 @@ object ApplicationBuild extends Build {
       "net.codingwell" %% "scala-guice" % "3.0.2",
       "org.apache.lucene" % "lucene-core" % "4.2.1",
       "org.apache.lucene" % "lucene-analyzers-common" % "4.2.1",
-      "org.apache.lucene" % "lucene-suggest" % "4.2.1"
+      "org.apache.lucene" % "lucene-suggest" % "4.2.1",
+      "us.theatr" %% "akka-quartz" % "0.2.0"
     ) map (_.excludeAll(
       ExclusionRule(organization = "com.cedarsoft"),
       ExclusionRule(organization = "javax.jms"),
@@ -98,6 +99,7 @@ object ApplicationBuild extends Build {
         new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
       "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
       "kevoree Repository" at "http://maven2.kevoree.org/release/",
+      "FortyTwo Towl Repository" at "http://repo.42go.com:4242/fortytwo/content/repositories/towl",
       //for org.mongodb#casb
       "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
       "releases"  at "https://oss.sonatype.org/content/groups/scala-tools",
