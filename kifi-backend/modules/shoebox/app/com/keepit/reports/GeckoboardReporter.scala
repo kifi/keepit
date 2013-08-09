@@ -19,6 +19,8 @@ import play.api.Play.current
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
+import us.theatr.akka.quartz._
+
 private[reports] class GeckoboardReporterActor @Inject() (
   healthcheckPlugin: HealthcheckPlugin,
   geckoboardPublisher: GeckoboardPublisher)
@@ -35,14 +37,13 @@ trait GeckoboardReporterPlugin extends SchedulingPlugin {
 
 class GeckoboardReporterPluginImpl @Inject() (
     actorProvider: ActorProvider[GeckoboardReporterActor],
-    // quartz: ActorProvider[QuartzActor],
+    quartz: ActorProvider[QuartzActor],
     val schedulingProperties: SchedulingProperties,
     totalKeepsPerHour: TotalKeepsPerHour,
     totalKeepsPerDay: TotalKeepsPerDay,
     totalKeepsPerWeek: TotalKeepsPerWeek,
     hoverKeepsPerWeek: HoverKeepsPerWeek)
 extends GeckoboardReporterPlugin with Logging {
- // val schedulingProperties = SchedulingProperties.AlwaysEnabled
 
   implicit val actorTimeout = Timeout(60 seconds)
 
@@ -57,10 +58,9 @@ extends GeckoboardReporterPlugin with Logging {
   }
 
   override def onStart() {
-    // quartz.actor ! AddCronSchedule(destinationActorRef, "* 0/1 * * * ?", totalKeepsPerHour)
-    scheduleTask(actorProvider.system, 0 seconds, 10 minutes, actorProvider.actor, totalKeepsPerHour)
-    scheduleTask(actorProvider.system, 0 seconds, 1 hours, actorProvider.actor, totalKeepsPerDay)
-    scheduleTask(actorProvider.system, 0 seconds, 6 hours, actorProvider.actor, totalKeepsPerWeek)
-    scheduleTask(actorProvider.system, 0 seconds, 6 hours, actorProvider.actor, hoverKeepsPerWeek)
+    quartz.actor ! AddCronSchedule(actorProvider.actor, "0 0/10 * * * ?", totalKeepsPerHour)
+    quartz.actor ! AddCronSchedule(actorProvider.actor, "0 0 * * * ?", totalKeepsPerDay)
+    quartz.actor ! AddCronSchedule(actorProvider.actor, "0 0 0/6 * * ?", totalKeepsPerWeek)
+    quartz.actor ! AddCronSchedule(actorProvider.actor, "0 0 0/6 * * ?", hoverKeepsPerWeek)
   }
 }
