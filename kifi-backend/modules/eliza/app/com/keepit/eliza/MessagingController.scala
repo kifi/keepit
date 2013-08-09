@@ -191,7 +191,7 @@ class MessagingController @Inject() (
       message.sentOnUrl.getOrElse(""),
       thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
       message.from.map(id2BasicUser(_)),
-      message.from.map(participantSet - _).getOrElse(participantSet).toSeq.map(id2BasicUser(_))
+      participantSet.toSeq.map(id2BasicUser(_))
     )
 
     thread.participants.map(_.all.foreach { user =>
