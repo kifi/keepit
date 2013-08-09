@@ -134,14 +134,12 @@ class ExtMessagingController @Inject() (
       val threadInfos = messagingController.getThreadInfos(socket.userId, url)
       socket.channel.push(Json.arr("thread_infos", threadInfos))
     },
-    // TODO Stephen: Send this on to shoebox
     "log_event" -> { case JsObject(pairs) +: _ =>
       implicit val experimentFormat = State.format[ExperimentType]
       val eventJson = JsObject(pairs).deepMerge(
         Json.obj("experiments" -> socket.experiments)
       )
       shoebox.logEvent(socket.userId, eventJson)
-      // logEvent(streamSession, JsObject(pairs))
     }
   )
 
