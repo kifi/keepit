@@ -120,6 +120,10 @@ class MessagingController @Inject() (
 
     }
 
+    future{
+      shoebox.sendPushNotification(user, message.externalId.id, getPendingNotificationCount(user), message.messageText)
+    }
+
     //This is mostly for testing and monitoring
     notificationRouter.sendNotification(Some(user), Notification(thread.id.get, message.id.get))
   }

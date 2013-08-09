@@ -91,7 +91,7 @@ class ExtMessagingController @Inject() (
       val url = messages.headOption.map(_.nUrl).getOrElse("") //TODO: this needs to change when we have detached threads!
       socket.channel.push(
         Json.arr("thread", 
-          Json.obj("id" -> threadId, "uri" -> url, "messages" -> messages)
+          Json.obj("id" -> threadId, "uri" -> url, "messages" -> messages.reverse)
         )
       )
     },
