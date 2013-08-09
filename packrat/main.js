@@ -241,18 +241,24 @@ const socketHandlers = {
     var urisToUpdate = {};
     infos.forEach(function(t) {
       urisToUpdate[t.nUrl] = 1;
-      //socket.send(["get_thread", t.id]);
     });
 
     for (u in urisToUpdate) {
       pageData[u] = pageData[u] || new PageData;
       urisToUpdate[u] = clone(pageData[u]);
-      pageData[u].threads = [];
+      // for now, we can clear a url's threads. when we move to threads being on multiple pages, will need to be changed.
+      pageData[u].threads = []; // for now, we can clear a url's threads. when we move to threads being on multiple pages, will need to be changed.
     }
 
     infos.forEach(function(t) {
       var d = pageData[t.nUrl];
-      d.threads.push(t);
+      d.threads.push(t); // since threads was cleared above, can just push
+      for (var j = 0, len = t.recipients.length; j < len; j++) {
+        if (t.recipients[j].id == session.userId) {
+          t.recipients.splice(j, 1);
+          len--;
+        }
+      }
       d.lastMessageRead = d.lastMessageRead || {};
       d.lastMessageRead[t.id] = t.lastMessageRead;
       d.counts = {
@@ -488,7 +494,7 @@ api.port.on({
       respond({threads: d.threads, read: d.lastMessageRead});
     });
   },
-  thread: function(data, respond, tab) {  // data.id may be id of any message (not necessarily parent)
+  thread: function(data, respond, tab) {
     var d = pageData[tab.nUri];
     if (d) d.on2(function() {
       var th = d.threads.filter(function(t) {return t.id == data.id || t.messageTimes[data.id]})[0];
@@ -867,7 +873,7 @@ function subscribe(tab) {
         setIcon(tab, d.kept);
         sendInit(tab, d);
         initTab(tab, d);
-      } // else wait for uri_1
+      } // else wait for page data
     }
   } else {
     socket.send(["get_threads_by_url", tab.nUri || tab.url]);
