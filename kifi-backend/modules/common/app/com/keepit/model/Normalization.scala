@@ -2,16 +2,17 @@ package com.keepit.model
 
 import play.api.libs.json._
 
-case class Normalization(tag: String)
+case class Normalization(scheme: String) extends Ordered[Normalization] {
+  def priority = Normalization.priority(this)
+  def compare(that: Normalization) = - this.priority.compare(that.priority)
+}
 
-object Normalization extends Ordering[Normalization] {
+object Normalization {
 
   implicit def format: Format[Normalization] = Format(
     __.read[String].map(Normalization(_)),
-    new Writes[Normalization]{ def writes(o: Normalization) = JsString(o.tag) }
+    new Writes[Normalization]{ def writes(o: Normalization) = JsString(o.scheme) }
   )
-
-  def compare(a: Normalization, b: Normalization) = priority(a).compare(priority(b))
 
   val CANONICAL = Normalization("canonical")
   val OPENGRAPH = Normalization("og")
@@ -23,13 +24,13 @@ object Normalization extends Ordering[Normalization] {
   val HTTPM = Normalization("http://m")
 
   lazy val priority = Map[Normalization, Int](
-    CANONICAL -> 1,
-    OPENGRAPH -> 2,
-    HTTPS -> 3,
-    HTTPSWWW -> 4,
-    HTTP -> 5,
-    HTTPWWW -> 6,
-    HTTPSM -> 7,
-    HTTPM -> 8
+    CANONICAL -> 0,
+    OPENGRAPH -> 1,
+    HTTPS -> 2,
+    HTTPSWWW -> 3,
+    HTTP -> 4,
+    HTTPWWW -> 5,
+    HTTPSM -> 6,
+    HTTPM -> 7
   )
 }

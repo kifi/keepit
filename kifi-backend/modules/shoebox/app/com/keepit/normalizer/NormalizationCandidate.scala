@@ -7,7 +7,7 @@ case class NormalizationCandidate(url: String, normalization: Normalization)
 
 object NormalizationCandidate {
   def apply(json: JsObject, normalization: Normalization) : Option[NormalizationCandidate] =
-    for (url <- (json \ normalization.tag).asOpt[String]) yield NormalizationCandidate(url, normalization)
+    for (url <- (json \ normalization.scheme).asOpt[String]) yield NormalizationCandidate(url, normalization)
 
   def apply(json: JsObject): Seq[NormalizationCandidate] = {
     Normalization.priority.keys.map(normalization => apply(json, normalization)).flatten.toSeq

@@ -593,7 +593,7 @@ class UserNotificationDetailsMapperDelegate(profile: BasicProfile) extends Strin
 //************************************
 class NormalizationMapperDelegate[T](profile: BasicProfile) extends StringMapperDelegate[Normalization](profile) {
   def zero = Normalization("")
-  def sourceToDest(value: Normalization): String = value.tag
+  def sourceToDest(value: Normalization): String = value.scheme
   def safeDestToSource(str: String): Normalization = Normalization(str)
 }
 
