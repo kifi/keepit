@@ -35,6 +35,7 @@ trait GeckoboardReporterPlugin extends SchedulingPlugin {
 
 class GeckoboardReporterPluginImpl @Inject() (
     actorProvider: ActorProvider[GeckoboardReporterActor],
+    // quartz: ActorProvider[QuartzActor],
     val schedulingProperties: SchedulingProperties,
     totalKeepsPerHour: TotalKeepsPerHour,
     totalKeepsPerDay: TotalKeepsPerDay,
@@ -56,6 +57,7 @@ extends GeckoboardReporterPlugin with Logging {
   }
 
   override def onStart() {
+    // quartz.actor ! AddCronSchedule(destinationActorRef, "* 0/1 * * * ?", totalKeepsPerHour)
     scheduleTask(actorProvider.system, 0 seconds, 10 minutes, actorProvider.actor, totalKeepsPerHour)
     scheduleTask(actorProvider.system, 0 seconds, 1 hours, actorProvider.actor, totalKeepsPerDay)
     scheduleTask(actorProvider.system, 0 seconds, 6 hours, actorProvider.actor, totalKeepsPerWeek)
