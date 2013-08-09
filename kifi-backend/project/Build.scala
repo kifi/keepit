@@ -36,7 +36,7 @@ object ApplicationBuild extends Build {
     val commonDependencies = Seq(
       jdbc,
       "com.typesafe.play.plugins" %% "play-statsd" % "2.1.0",
-      "securesocial" %% "securesocial" % "master-SNAPSHOT",
+      "securesocial" %% "securesocial" % "master-20130808",
       "org.clapper" %% "grizzled-slf4j" % "1.0.1",
       "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
@@ -99,6 +99,7 @@ object ApplicationBuild extends Build {
         new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
       "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
       "kevoree Repository" at "http://maven2.kevoree.org/release/",
+      "FortyTwo Public Repository" at "http://repo.42go.com:4242/fortytwo/content/groups/public/",
       "FortyTwo Towel Repository" at "http://repo.42go.com:4242/fortytwo/content/repositories/towel",
       //for org.mongodb#casb
       "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
