@@ -71,6 +71,8 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread
 
+  def clearNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], msgId: Id[Message])(implicit session: RWSession): Unit
+
 }
 
 
@@ -196,6 +198,10 @@ class UserThreadRepoImpl @Inject() (
 
   def getUserThread(userId: Id[User], threadId: Id[MessageThread])(implicit session: RSession): UserThread = {
     (for (row <- table if row.user===userId && row.thread===threadId) yield row).first
+  }
+
+  def clearNotificationForMessage(userId: Id[User], threadId: Id[MessageThread], msgId: Id[Message])(implicit session: RWSession): Unit = {
+    (for (row <- table if row.user===userId && row.thread===threadId && row.lastMsgFromOther===msgId) yield row.notificationPending).update(false)
   }
 
 }
