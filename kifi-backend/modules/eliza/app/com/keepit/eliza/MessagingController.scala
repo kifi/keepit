@@ -89,16 +89,16 @@ class MessagingController @Inject() (
 
   private def buildMessageNotificationJson(message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser, locator: String) : JsValue = {
     Json.obj(
-      "id"         -> message.externalId.id,
-      "time"       -> message.createdAt,
-      "thread"     -> thread.externalId.id,
-      "text"       -> message.messageText,
-      "url"        -> thread.nUrl,
-      "title"      -> thread.pageTitle,
-      "author"     -> messageWithBasicUser.user,
-      "recipients" -> messageWithBasicUser.recipients,
-      "locator"    -> locator,
-      "unread"     -> true
+      "id"           -> message.externalId.id,
+      "time"         -> message.createdAt,
+      "thread"       -> thread.externalId.id,
+      "text"         -> message.messageText,
+      "url"          -> thread.nUrl,
+      "title"        -> thread.pageTitle,
+      "author"       -> messageWithBasicUser.user,
+      "participants" -> messageWithBasicUser.participants,
+      "locator"      -> locator,
+      "unread"       -> true
     ) 
   }
 
