@@ -105,9 +105,11 @@ class MessagingController @Inject() (
     future {
       val locator = "/messages/" + thread.externalId
       val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator)
+
       db.readWrite{ implicit session => 
-        userThreadRepo.setNotification(user, thread.id.get, notifJson)
+        userThreadRepo.setNotification(user, thread.id.get, message.id.get, notifJson)
       }
+      
       notificationRouter.sendToUser(
         user,
         Json.arr("notification", notifJson)
@@ -116,7 +118,6 @@ class MessagingController @Inject() (
       shoebox.createDeepLink(message.from.get, user, thread.uriId.get, DeepLocator(locator))
 
     }
-
 
     //This is mostly for testing and monitoring
     notificationRouter.sendNotification(Some(user), Notification(thread.id.get, message.id.get))
@@ -197,10 +198,9 @@ class MessagingController @Inject() (
         user,
         Json.arr("message", message.threadExtId.id, messageWithBasicUser)
       )
-    })
+    })             
 
     thread.allUsersExcept(from).foreach { userId =>
-      db.readWrite{ implicit session => userThreadRepo.setLastMsgFromOther(userId, thread.id.get, message.id.get) }
       sendNotificationForMessage(userId, message, thread, messageWithBasicUser)
     }
     //async update normalized url id so as not to block on that (the shoebox call yields a future)
@@ -356,6 +356,14 @@ class MessagingController @Inject() (
   }
 
   def connectedSockets: Int  = notificationRouter.connectedSockets
+
+  def setNotificationReadForMessage(userId: Id[User], msgExtId: ExternalId[Message]) : Unit = {
+    val message = db.readOnly{ implicit session => messageRepo.get(msgExtId) }
+    val thread  = db.readOnly{ implicit session => threadRepo.get(message.thread) } //TODO: This needs to change when we have detached threads
+    val nUrl : String = thread.nUrl.getOrElse("")
+    db.readWrite{ implicit session => userThreadRepo.clearNotificationForMessage(userId, thread.id.get, message.id.get) }
+    notificationRouter.sendToUser(userId, Json.arr("message_read", nUrl, message.threadExtId.id, message.createdAt, message.externalId.id))
+  }
 
 
 }

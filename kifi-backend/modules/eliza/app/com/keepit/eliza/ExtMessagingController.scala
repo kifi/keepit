@@ -125,7 +125,9 @@ class ExtMessagingController @Inject() (
       socket.channel.push(Json.arr(requestId.toLong, notices))
     },
     "set_message_read" -> { case JsString(messageId) +: _ =>
-      messagingController.setLastSeen(socket.userId, ExternalId[Message](messageId))
+      val msgExtId = ExternalId[Message](messageId)
+      messagingController.setNotificationReadForMessage(socket.userId, msgExtId)
+      messagingController.setLastSeen(socket.userId, msgExtId)
     },
     "set_global_read" -> { case JsString(messageId) +: _ =>
       messagingController.setLastSeen(socket.userId, ExternalId[Message](messageId))
