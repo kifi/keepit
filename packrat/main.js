@@ -242,14 +242,26 @@ const socketHandlers = {
     }
 
     infos.forEach(function(t) {
-      pageData[t.nUrl].threads.push(t);
+      var d = pageData[t.nUrl];
+      d.threads.push(t);
+      d.lastMessageRead = d.lastMessageRead || {};
+      d.lastMessageRead[t.id] = t.lastMessageRead;
+      d.counts = {
+        n: numNotificationsNotVisited,
+        m: messageCount(d)};
+      d.threadDataRecieved = true;
+      if (d.pageDetailsRecieved) {
+        d.pageDetailsRecieved = threadDataRecieved = false;
+        d.tabs.forEach(function(tab) {
+          initTab(tab, d);
+        });
+        d.dispatchOn2();
+      }
     });
 
     for (u in urisToUpdate) {
       var d = pageData[u];
       var dPrev = urisToUpdate[u];
-
-      api.log("xxxx","old",dPrev,"new",d);
 
       if (dPrev.threads) {
         var threadsWithNewMessages = [];
@@ -879,14 +891,16 @@ function subscribe(tab) {
       d.keeps = uri_2.keeps || 0;
       d.otherKeeps = d.keeps - d.keepers.length - (d.kept == "public" ? 1 : 0);
       d.threads = d.threads || [];
-      d.lastMessageRead = {};
-      d.counts = {
-        n: numNotificationsNotVisited,
-        m: messageCount(d)};
-      d.tabs.forEach(function(tab) {
-        initTab(tab, d);
-      });
-      d.dispatchOn2();
+      d.counts = d.counts || {};
+      d.lastMessageRead = d.lastMessageRead || {};
+      d.pageDetailsRecieved = true;
+      if (d.threadDataRecieved) {
+        d.pageDetailsRecieved = threadDataRecieved = false;
+        d.tabs.forEach(function(tab) {
+          initTab(tab, d);
+        });
+        d.dispatchOn2();
+      }
     });
   }
   function finish(uri) {
