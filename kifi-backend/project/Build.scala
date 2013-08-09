@@ -133,8 +133,7 @@ object ApplicationBuild extends Build {
       parallelExecution in Test := true,
       testOptions in Test ++= _testOptions,
       EclipseKeys.skipParents in ThisBuild := false,
-      sources in doc in Compile := List(),
-      aggregate in Test := false
+      sources in doc in Compile := List()
     )
 
     lazy val common = play.Project("common", appVersion, commonDependencies, path = file("modules/common")).settings(

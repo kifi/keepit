@@ -30,7 +30,7 @@ noticesPane = function() {
 
   return {
     render: function($container, notices, timeLastSeen, numNotVisited) {
-      timeLastSeen = new Date(timeLastSeen);
+      timeLastSeen = new Date(+new Date(timeLastSeen) + 1000);
       render("html/metro/notices.html", {}, function(html) {
         $notices = $(html)
           .append(notices.map(function(n) {
@@ -87,7 +87,7 @@ noticesPane = function() {
         case "new":
           console.log("adding new", a)
           showNew(a);
-          if (a.some(function(n) {return /^(un)?delivered$/.test(n.state)})) {
+          if (a.some(function(n) { return n.unread; })) {
             $markAll.show();
           }
           break;
@@ -107,7 +107,7 @@ noticesPane = function() {
   function renderNotice(notice, isNew) {
     api.log("rendering", notice, isNew)
     notice.isNew = isNew;
-    notice.isVisited = notice.state == "visited";
+    notice.isVisited = !notice.unread;
     notice.formatMessage = getSnippetFormatter;
     notice.formatLocalDate = getLocalDateFormatter;
     notice.cdnBase = cdnBase;

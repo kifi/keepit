@@ -19,7 +19,7 @@ var notifier = {
           sticky: false,
           showForMs: 60000,
           clickAction: function() {
-            api.port.emit("open_deep_link", {nUri: o.page, locator: o.locator});
+            api.port.emit("open_deep_link", {nUri: o.url, locator: o.locator});
             return false;
           }
         });

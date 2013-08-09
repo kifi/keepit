@@ -161,9 +161,10 @@ const socketHandlers = {
       for(var i = 0; i < arr.length; i++) {
         arr[i].category = "message";
         // remove current user from recipients
-        for (var j = 0; j < arr[i].recipients.length; j++) {
+        for (var j = 0, len = arr[i].recipients.length; j < len; j++) {
           if (arr[i].recipients[j].id == session.userId) {
             arr[i].recipients.splice(j, 1);
+            len--;
           }
         }
       }
@@ -244,7 +245,6 @@ const socketHandlers = {
     });
 
     for (u in urisToUpdate) {
-      api.log("xxxx", "updating",u, pageData[u])
       pageData[u] = pageData[u] || new PageData;
       urisToUpdate[u] = clone(pageData[u]);
       pageData[u].threads = [];
@@ -330,7 +330,7 @@ const socketHandlers = {
           if (!thread.createdAt) thread.createdAt = messageData[threadId][messageData[threadId].length-1].createdAt;
           thread.digest = messageData[threadId][messageData[threadId].length-1].text;
           thread.lastAuthor = messageData[threadId][messageData[threadId].length-1].user.id;
-          thread.lastCommmentedAt = messageData[threadId][messageData[threadId].length-1].createdAt;
+          thread.lastCommentedAt = messageData[threadId][messageData[threadId].length-1].createdAt;
           thread.messageCount = messageData[threadId].length;
           messageData[threadId].forEach(function(el) { thread.messageTimes[el.id] = el.createdAt; });
           thread.recipients = messageData[threadId][messageData[threadId].length-1].recipients;
@@ -346,7 +346,7 @@ const socketHandlers = {
 
       // ensure marked read if from this user
       if (message.user.id == session.userId) {
-        if (new Date(message.createdAt) > new Date(d.lastMessageRead[th.id] || 0)) {
+        if (new Date(message.createdAt) > new Date(d.lastMessageRead[threadId] || 0)) {
           d.lastMessageRead[threadId] = message.createdAt;
         }
       }
@@ -609,10 +609,10 @@ function insertNewNotification(n) {
   }
   notifications.splice(i, 0, n);
 
-  if (notificationNotVisited.test(n.state)) {  // may have been visited before arrival
+  if (n.unread) {  // may have been visited before arrival
     var d = pageData[n.url];
     if (d && new Date(n.time) <= getTimeLastRead(n, d)) {
-      n.state = "visited";
+      n.unread = false;
     } else {
       numNotificationsNotVisited++;
     }
@@ -622,7 +622,7 @@ function insertNewNotification(n) {
     var n2 = notifications[i];
     if (n2.thread == n.thread || n.locator == n2.locator) {
       notifications.splice(i--, 1);
-      if (notificationNotVisited.test(n2.state)) {
+      if (n2.unread) {
         decrementNumNotificationsNotVisited(n2);
       }
     }
@@ -636,12 +636,10 @@ function insertNewNotification(n) {
 function markNoticesVisited(category, nUri, id, timeStr, locator) {
   var time = timeStr ? new Date(timeStr) : null;
   notifications && notifications.forEach(function(n, i) {
-    //n.details.id = n.details.id || n.id;
     if ((!nUri || n.url == nUri) &&
-//        n.category == category &&
         (!locator || n.locator == locator) &&
         (n.id == id || new Date(n.time) <= time)) {
-      n.state = "visited";
+      n.unread = false;
       decrementNumNotificationsNotVisited(n);
     }
   });
@@ -660,8 +658,8 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
   var time = new Date(timeStr);
   for (var i = 0; i < notifications.length; i++) {
     var n = notifications[i];
-    if ((n.id == id || new Date(n.time) <= time) && notificationNotVisited.test(n.state)) {
-      n.state = "visited";
+    if ((n.id == id || new Date(n.time) <= time) && n.unread) {
+      n.unread = false;
       var d = pageData[n.url];
       if (d && new Date(n.time) > getTimeLastRead(n, d)) {
         switch (n.category) {
@@ -674,7 +672,7 @@ function markAllNoticesVisited(id, timeStr) {  // id and time of most recent not
     }
   }
   numNotificationsNotVisited = notifications.filter(function(n) {
-    return notificationNotVisited.test(n.state);
+    return n.unread;
   }).length;
   tabsShowingNotificationsPane.forEach(function(tab) {
     api.tabs.emit(tab, "all_notifications_visited", {
@@ -901,6 +899,7 @@ function subscribe(tab) {
       d.otherKeeps = d.keeps - d.keepers.length - (d.kept == "public" ? 1 : 0);
       d.threads = d.threads || [];
       d.counts = d.counts || {};
+      d.counts.n = numNotificationsNotVisited;
       d.lastMessageRead = d.lastMessageRead || {};
       d.pageDetailsRecieved = true;
       if (d.threadDataRecieved) {

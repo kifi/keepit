@@ -4,7 +4,7 @@
 var notifierScout = notifierScout || function() {  // idempotent for Chrome
   api.port.on({
     new_notification: function(n) {
-      if (n.state == "visited") return;
+      if (!n.unread) return;
       var p = document.querySelector(".kifi-pane"), loc = p && p.dataset.locator;
       if (loc !== "/notices" && loc !== n.locator) {
         api.require("scripts/notifier.js", function() {
