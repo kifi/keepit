@@ -17,6 +17,8 @@ import com.keepit.integrity.OrphanCleaner
 import com.keepit.integrity.DuplicateDocumentDetection
 import com.keepit.integrity.DuplicateDocumentsProcessor
 import com.keepit.integrity.HandleDuplicatesAction
+import com.keepit.integrity.UriIntegrityPlugin
+import com.keepit.integrity.ChangedUri
 
 class UrlController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -32,10 +34,11 @@ class UrlController @Inject() (
   deepLinkRepo: DeepLinkRepo,
   followRepo: FollowRepo,
   normalizedUriFactory: NormalizedURIFactory,
-   duplicateDocumentRepo: DuplicateDocumentRepo,
+  duplicateDocumentRepo: DuplicateDocumentRepo,
   orphanCleaner: OrphanCleaner,
   dupeDetect: DuplicateDocumentDetection,
-  duplicatesProcessor: DuplicateDocumentsProcessor)
+  duplicatesProcessor: DuplicateDocumentsProcessor,
+  uriIntegrityPlugin: UriIntegrityPlugin)
     extends AdminController(actionAuthenticator) {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
@@ -74,70 +77,25 @@ class UrlController @Inject() (
       val urlsSize = urls.size
       val changes = scala.collection.mutable.Map[String, Int]()
       changes += (("url", 0))
-      changes += (("bookmark", 0))
-      changes += (("comment", 0))
-      changes += (("deeplink", 0))
-      changes += (("follow", 0))
 
       urls map { url =>
-        url.state match {
-          case URLStates.ACTIVE =>
-            val (normalizedUri, reason) = uriRepo.getByUri(url.url) match {
-              case Some(nuri) =>
-                (nuri, URLHistoryCause.MERGE)
-              case None =>
-                // No normalized URI exists for this url, create one
-                val nuri = normalizedUriFactory(url.url)
-                ({if(!readOnly)
-                  uriRepo.save(nuri)
-                else
-                  nuri}, URLHistoryCause.SPLIT)
+        if (url.state == URLStates.ACTIVE) {
+          val (normalizedUri, reason) = uriRepo.getByUri(url.url) match {
+            // if nuri exists by current normalization rule, and if url.normalizedUriId was pointing to a different nuri, we need to merge
+            case Some(nuri) => (nuri, URLHistoryCause.MERGE)
+            // No normalized URI exists for this url, create one
+            case None => {
+              val tmp = normalizedUriFactory(url.url)
+              val nuri = if (!readOnly) uriRepo.save(tmp) else tmp
+              (nuri, URLHistoryCause.SPLIT)
             }
+          }
 
-            if(normalizedUri.id.isEmpty || url.normalizedUriId.id != normalizedUri.id.get.id) {
-              changes("url") += 1
-              if(!readOnly) {
-                urlRepo.save(url.withNormUriId(normalizedUri.id.get).withHistory(URLHistory(clock.now, normalizedUri.id.get,reason)))
-              }
-            }
-
-            bookmarkRepo.getByUrlId(url.id.get) map { s =>
-              if(normalizedUri.id.isEmpty || s.uriId.id != normalizedUri.id.get.id) {
-                changes("bookmark") += 1
-                if(!readOnly) {
-                  bookmarkRepo.save(s.withNormUriId(normalizedUri.id.get))
-                }
-              }
-            }
-
-            commentRepo.getByUrlId(url.id.get) map { s =>
-              if(normalizedUri.id.isEmpty || s.uriId.id != normalizedUri.id.get.id) {
-                changes("comment") += 1
-                if(!readOnly) {
-                  commentRepo.save(s.withNormUriId(normalizedUri.id.get))
-                }
-              }
-            }
-
-            deepLinkRepo.getByUrl(url.id.get) map { s =>
-              if(normalizedUri.id.isEmpty || s.uriId.get.id != normalizedUri.id.get.id) {
-                changes("deeplink") += 1
-                if(!readOnly) {
-                  deepLinkRepo.save(s.withNormUriId(normalizedUri.id.get))
-                }
-              }
-            }
-
-            followRepo.getByUrl(url.id.get, excludeState = None) map { s =>
-              if(normalizedUri.id.isEmpty || s.uriId.id != normalizedUri.id.get.id) {
-                changes("follow") += 1
-                if(!readOnly) {
-                  followRepo.save(s.withNormUriId(normalizedUri.id.get))
-                }
-              }
-            }
-
-          case _ => // ignore
+          // in readOnly mode, id maybe empty
+          if (normalizedUri.id.isEmpty || url.normalizedUriId.id != normalizedUri.id.get.id) {
+            changes("url") += 1
+            if (!readOnly) uriIntegrityPlugin.handleChangedUri(ChangedUri(oldUri = url.normalizedUriId, newUri = normalizedUri.id.get, reason))
+          }
         }
       }
       (urlsSize, changes)

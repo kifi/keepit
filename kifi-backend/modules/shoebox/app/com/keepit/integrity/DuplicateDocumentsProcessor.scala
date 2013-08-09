@@ -18,10 +18,10 @@ import com.keepit.model.FollowRepo
 import com.keepit.model.NormalizedURI
 import com.keepit.model.NormalizedURIRepo
 import com.keepit.model.NormalizedURIRepoImpl
-
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import views.html
+import com.keepit.model.URLHistoryCause
 
 @Singleton
 class DuplicateDocumentsProcessor @Inject()(
@@ -39,7 +39,7 @@ class DuplicateDocumentsProcessor @Inject()(
 ){
 
   def mergeUris(old: Id[NormalizedURI], intoNew: Id[NormalizedURI]) = {
-    uriIntegrityPlugin.handleChangedUri(ChangedUri(oldUri = old, newUri = intoNew))
+    uriIntegrityPlugin.handleChangedUri(ChangedUri(oldUri = old, newUri = intoNew, cause = URLHistoryCause.MERGE))
   }
 
   private def typedAction(dupAction: HandleDuplicatesAction) = {
