@@ -57,7 +57,6 @@ class NormalizedURIRepoImpl @Inject() (
     (if (limit >= 0) q.take(limit) else q).list
   }
 
-
   override def invalidateCache(uri: NormalizedURI)(implicit session: RSession) = {
     uri.id map {id => idCache.set(NormalizedURIKey(id), uri)}
     urlHashCache.set(NormalizedURIUrlHashKey(NormalizedURI.hashUrl(uri.url)), uri)
@@ -131,24 +130,23 @@ class NormalizedURIRepoImpl @Inject() (
 @Singleton
 case class NormalizedURIFactory @Inject() (normalizationService: NormalizationService) {
 
-  def normalize(url: String) = normalizationService.normalize(url)
+  def normalize(url: String)(implicit session: RSession) = normalizationService.normalize(url)
 
-  def apply(url: String): NormalizedURI =
+  def apply(url: String)(implicit session: RSession): NormalizedURI =
     apply(title = None, url = url, state = NormalizedURIStates.ACTIVE, normalization = None)
 
-  def apply(url: String, state: State[NormalizedURI]): NormalizedURI =
+  def apply(url: String, state: State[NormalizedURI])(implicit session: RSession): NormalizedURI =
     apply(title = None, url = url, state = state, normalization = None)
 
-  def apply(title: String, url: String): NormalizedURI =
+  def apply(title: String, url: String)(implicit session: RSession): NormalizedURI =
     apply(title = Some(title), url = url, state = NormalizedURIStates.ACTIVE, normalization = None)
 
-  def apply(title: String, url: String, state: State[NormalizedURI]): NormalizedURI =
+  def apply(title: String, url: String, state: State[NormalizedURI])(implicit session: RSession): NormalizedURI =
     apply(title = Some(title), url = url, state = state, normalization = None)
 
-  def apply(url: String, normalization: Normalization): NormalizedURI =
+  def apply(url: String, normalization: Normalization)(implicit session: RSession): NormalizedURI =
     apply(title = None, url = url, state = NormalizedURIStates.ACTIVE, normalization = Some(normalization))
 
-  def apply(url: String, title: Option[String] = None, state: State[NormalizedURI] = NormalizedURIStates.ACTIVE, normalization: Option[Normalization] = None): NormalizedURI =
+  def apply(url: String, title: Option[String] = None, state: State[NormalizedURI] = NormalizedURIStates.ACTIVE, normalization: Option[Normalization] = None)(implicit session: RSession): NormalizedURI =
     NormalizedURI.withHash(normalizedUrl = normalize(url), title = title, state = state, normalization = normalization)
-
 }

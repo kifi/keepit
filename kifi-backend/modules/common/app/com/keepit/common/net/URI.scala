@@ -1,6 +1,6 @@
 package com.keepit.common.net
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 import com.keepit.common.logging.Logging
 import com.keepit.common.strings.UTF8
@@ -10,6 +10,13 @@ object URI extends Logging {
     unapplyTry(uriString).map { case (scheme, userInfo, host, port, path, query, fragment) =>
       URI(Some(uriString), scheme, userInfo, host, port, path, query, fragment)
     }
+  }
+
+  def safelyParse(uriString: String): Option[URI] = parse(uriString) match {
+    case Success(uri) => Some(uri)
+    case Failure(e) =>
+      log.error("uri parsing failed: [%s] caused by [%s]".format(uriString, e.getMessage))
+      None
   }
 
   def apply(scheme: Option[String], userInfo: Option[String], host: Option[Host], port: Int, path: Option[String], query: Option[Query], fragment: Option[String]): URI =
@@ -175,7 +182,7 @@ class URI(val raw: Option[String], val scheme: Option[String], val userInfo: Opt
     uri
   }
 
-  def safeToString() = try {
+  def safelyToString() = try {
     Some(toString())
   } catch { case e : Exception =>
     URI.log.error("URI.toString() failed: [%s] caused by [%s]".format(raw, e.getMessage))
