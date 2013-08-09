@@ -54,6 +54,9 @@ PageData.prototype = {
 // ===== Server requests
 
 function ajax(service, method, uri, data, done, fail) {  // method and uri are required
+  if (service.match(/^(?:GET|POST|HEAD|OPTIONS|PUT)$/)) { // shift args if service is missing
+    fail = done, done = data, data = uri, uri = method, method = service, service = "api";
+  }
   if (typeof data == "function") {  // shift args if data is missing and done is present
     fail = done, done = data, data = null;
   }
@@ -157,6 +160,12 @@ const socketHandlers = {
       notifications = arr;
       for(var i = 0; i < arr.length; i++) {
         arr[i].category = "message";
+        // remove current user from recipients
+        for (var j = 0; j < arr[i].recipients.length; j++) {
+          if (arr[i].recipients[j].id == session.userId) {
+            arr[i].recipients.splice(j, 1);
+          }
+        }
       }
       haveAllNotifications = arr.length < NOTIFICATION_BATCH_SIZE;
       numNotificationsNotVisited = numNotVisited;
@@ -318,7 +327,7 @@ const socketHandlers = {
           }
 
           // until we have the updated threadinfos, do a best attempt at updating the thread
-          if(!thread.createdAt) thread.createdAt = messageData[threadId][messageData[threadId].length-1].createdAt;
+          if (!thread.createdAt) thread.createdAt = messageData[threadId][messageData[threadId].length-1].createdAt;
           thread.digest = messageData[threadId][messageData[threadId].length-1].text;
           thread.lastAuthor = messageData[threadId][messageData[threadId].length-1].user.id;
           thread.lastCommmentedAt = messageData[threadId][messageData[threadId].length-1].createdAt;
@@ -371,7 +380,7 @@ api.port.on({
   get_keeps: searchOnServer,
   get_chatter: function(urls, respond) {
     api.log("[get_chatter]", urls);
-    ajax("api", "POST", "/search/chatter", urls, respond);
+    ajax("POST", "/search/chatter", urls, respond);
   },
   get_keepers: function(_, respond, tab) {
     api.log("[get_keepers]", tab.id);
@@ -394,7 +403,7 @@ api.port.on({
   unkeep: function(_, _, tab) {
     api.log("[unkeep]", tab.url);
     delete (pageData[tab.nUri] || {}).kept;
-    ajax("api", "POST", "/bookmarks/remove", {url: tab.url}, function(o) {
+    ajax("POST", "/bookmarks/remove", {url: tab.url}, function(o) {
       api.log("[unkeep] response:", o);
     });
     pageData[tab.nUri].tabs.forEach(function(tab) {
@@ -404,7 +413,7 @@ api.port.on({
   },
   set_private: function(priv, _, tab) {
     api.log("[setPrivate]", tab.url, priv);
-    ajax("api", "POST", "/bookmarks/private", {url: tab.url, private: priv}, function(o) {
+    ajax("POST", "/bookmarks/private", {url: tab.url, private: priv}, function(o) {
       api.log("[setPrivate] response:", o);
     });
     pageData[tab.nUri].tabs.forEach(function(tab) {
@@ -415,7 +424,7 @@ api.port.on({
     (pageData[tab.nUri] || {}).shown = true;  // server already notified via event log
   },
   suppress_on_site: function(data, _, tab) {
-    ajax("api", "POST", "/users/slider/suppress", {url: tab.url, suppress: data});
+    ajax("POST", "/users/slider/suppress", {url: tab.url, suppress: data});
     pageData[tab.nUri].neverOnSite = !!data;
   },
   get_suppressed: function(_, respond, tab) {
@@ -431,11 +440,11 @@ api.port.on({
         pageData[nUri].position = o.pos;
       }
     }
-    ajax("api", "POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos}, respond);
+    ajax("POST", "/ext/pref/keeperPosition", {host: o.host, pos: o.pos}, respond);
   },
   set_enter_to_send: function(data) {
     session.prefs.enterToSend = data;
-    ajax("api", "POST", "/ext/pref/enterToSend?enterToSend=" + data);
+    ajax("POST", "/ext/pref/enterToSend?enterToSend=" + data);
   },
   log_event: function(data) {
     logEvent.apply(null, data);
@@ -865,7 +874,7 @@ function subscribe(tab) {
   } else {
     socket.send(["get_threads_by_url", tab.nUri || tab.url]);
 
-    ajax("api", "GET", "/ext/pageDetails?url=" + encodeURIComponent(tab.url), function(resp) {
+    ajax("GET", "/ext/pageDetails?url=" + encodeURIComponent(tab.url), function(resp) {
       api.log("[subscribe]", resp);
       var uri = resp.normalized;
       var uri_1 = resp.uri_1;
@@ -932,7 +941,7 @@ function postBookmarks(supplyBookmarks, bookmarkSource) {
   api.log("[postBookmarks]");
   supplyBookmarks(function(bookmarks) {
     api.log("[postBookmarks] bookmarks:", bookmarks);
-    ajax("api", "POST", "/bookmarks/add", {
+    ajax("POST", "/bookmarks/add", {
         bookmarks: bookmarks,
         source: bookmarkSource},
       function(o) {
@@ -1070,7 +1079,7 @@ api.on.update.add(function() {
 });
 
 function getFriends() {
-  ajax("api", "GET", "/ext/user/friends", function(fr) {
+  ajax("GET", "/ext/user/friends", function(fr) {
     api.log("[getFriends]", fr);
     friends = fr;
     friendsById = {};
@@ -1082,16 +1091,16 @@ function getFriends() {
 }
 
 function getPrefs() {
-  ajax("api", "GET", "/ext/prefs", function(o) {
+  ajax("GET", "/ext/prefs", function(o) {
     api.log("[getPrefs]", o);
     session.prefs = o;
   });
 }
 
 function getRules() {
-  ajax("api", "GET", "/ext/pref/rules?version=" + ruleSet.version, function(o) {
+  ajax("GET", "/ext/pref/rules?version=" + ruleSet.version, function(o) {
     api.log("[getRules]", o);
-    if(o && Object.getOwnPropertyNames(o).length > 0) {
+    if (o && Object.getOwnPropertyNames(o).length > 0) {
       ruleSet = o.slider_rules;
       urlPatterns = compilePatterns(o.url_patterns);
     }
@@ -1118,7 +1127,7 @@ function authenticate(callback, retryMs) {
 }
 
 function startSession(callback, retryMs) {
-  ajax("api", "POST", "/kifi/start", {
+  ajax("POST", "/kifi/start", {
     installation: getStored("kifi_installation_id"),
     version: api.version},
   function done(data) {
@@ -1240,7 +1249,7 @@ authenticate(function() {
 function reportError(errMsg, url, lineNo) {
   api.log('Reporting error "%s" in %s line %s', errMsg, url, lineNo);
   if ((api.prefs.get("env") === "production") === api.isPackaged()) {
-    ajax("api", "POST", "/error/report", {message: errMsg + (url ? ' at ' + url + (lineNo ? ':' + lineNo : '') : '')});
+    ajax("POST", "/error/report", {message: errMsg + (url ? ' at ' + url + (lineNo ? ':' + lineNo : '') : '')});
   }
 }
 if (typeof window !== 'undefined') {  // TODO: add to api, find equivalent for firefox
