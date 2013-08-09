@@ -5,6 +5,7 @@
 .kifi-pane * {
   overflow: visible;
   float: none;
+  clear: none;
   width: auto;
   line-height: normal;
   letter-spacing: normal;
