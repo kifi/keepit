@@ -266,9 +266,9 @@ const socketHandlers = {
       d.counts = {
         n: numNotificationsNotVisited,
         m: messageCount(d)};
-      d.threadDataRecieved = true;
-      if (d.pageDetailsRecieved) {
-        d.pageDetailsRecieved = threadDataRecieved = false;
+      d.threadDataReceived = true;
+      if (d.pageDetailsReceived) {
+        d.pageDetailsReceived = threadDataReceived = false;
         d.tabs.forEach(function(tab) {
           initTab(tab, d);
         });
@@ -909,9 +909,9 @@ function subscribe(tab) {
       d.counts = d.counts || {};
       d.counts.n = numNotificationsNotVisited;
       d.lastMessageRead = d.lastMessageRead || {};
-      d.pageDetailsRecieved = true;
-      if (d.threadDataRecieved) {
-        d.pageDetailsRecieved = threadDataRecieved = false;
+      d.pageDetailsReceived = true;
+      if (d.threadDataReceived) {
+        d.pageDetailsReceived = threadDataReceived = false;
         d.tabs.forEach(function(tab) {
           initTab(tab, d);
         });
