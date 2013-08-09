@@ -139,7 +139,7 @@ class UrbanAirshipImpl @Inject()(
     db.readWrite { implicit s =>
       deviceRepo.get(userId, token, deviceType) match {
         case Some(d) if d.state == DeviceStates.ACTIVE => d
-        case Some(d) => d.copy(state = DeviceStates.ACTIVE)
+        case Some(d) => deviceRepo.save(d.copy(state = DeviceStates.ACTIVE))
         case None => deviceRepo.save(Device(userId = userId, token = token, deviceType = deviceType))
       }
     }

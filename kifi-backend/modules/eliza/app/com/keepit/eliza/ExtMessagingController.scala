@@ -6,6 +6,7 @@ import com.keepit.common.controller.{BrowserExtensionController, ActionAuthentic
 import com.keepit.shoebox.{ShoeboxServiceClient}
 import com.keepit.common.controller.FortyTwoCookies.ImpersonateCookie
 import com.keepit.common.time._
+import com.keepit.common.amazon.AmazonInstanceInfo
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -22,6 +23,7 @@ class ExtMessagingController @Inject() (
     messagingController: MessagingController,
     actionAuthenticator: ActionAuthenticator,
     notificationRouter: NotificationRouter,
+    amazonInstanceInfo: AmazonInstanceInfo,
     protected val shoebox: ShoeboxServiceClient,
     protected val impersonateCookie: ImpersonateCookie,
     protected val actorSystem: ActorSystem,
@@ -76,7 +78,12 @@ class ExtMessagingController @Inject() (
       log.info(s"Sent pong to user ${socket.userId} on socket ${socket.id}")
     },
     "stats" -> { _ =>
-      socket.channel.push(Json.arr(s"id:${socket.id}", clock.now.minus(socket.connectedAt.getMillis).getMillis / 1000.0))
+      val stats = Json.obj(
+        "connected_for_seconds" -> clock.now.minus(socket.connectedAt.getMillis).getMillis / 1000.0,
+        "connected_sockets" -> notificationRouter.connectedSockets,
+        "server_ip" -> amazonInstanceInfo.publicIp.toString
+      )
+      socket.channel.push(Json.arr(s"id:${socket.id}", stats))
     },
     "get_thread" -> { case JsString(threadId) +: _ =>
       val messages = messagingController.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None)
@@ -93,8 +100,10 @@ class ExtMessagingController @Inject() (
       socket.channel.push(Json.arr("all_notifications_visited", notifId, lastModified))
     },
     "get_last_notify_read_time" -> { _ =>
-      val t = messagingController.getNotificationLastSeen(socket.userId)
-      socket.channel.push(Json.arr("last_notify_read_time", t.map(_.toStandardTimeString)))
+      val tOpt = messagingController.getNotificationLastSeen(socket.userId)
+      tOpt.map { t =>
+        socket.channel.push(Json.arr("last_notify_read_time", t.toStandardTimeString))
+      }
     },
     "set_last_notify_read_time" -> { case JsString(time) +: _ =>
       val t = parseStandardTime(time)
