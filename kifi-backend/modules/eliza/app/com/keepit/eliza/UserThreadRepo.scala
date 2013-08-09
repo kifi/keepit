@@ -182,7 +182,7 @@ class UserThreadRepoImpl @Inject() (
 
   def getLatestSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject] = {
     val rawNotifications = (for (row <- table if row.user === userId) yield row)
-                            .sortBy(row => (row.createdAt) desc)
+                            .sortBy(row => (row.notificationUpdatedAt) desc)
                             .take(howMany).map(row => row.lastNotification ~ row.notificationPending)
                             .list
     updateSendableNotifications(rawNotifications)
