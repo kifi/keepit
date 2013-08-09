@@ -99,6 +99,7 @@ object ApplicationBuild extends Build {
         new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
       "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
       "kevoree Repository" at "http://maven2.kevoree.org/release/",
+      "FortyTwo Public Repository" at "http://repo.42go.com:4242/fortytwo/content/groups/public/",
       "FortyTwo Towel Repository" at "http://repo.42go.com:4242/fortytwo/content/repositories/towel",
       //for org.mongodb#casb
       "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
