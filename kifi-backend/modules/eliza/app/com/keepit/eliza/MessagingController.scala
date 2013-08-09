@@ -1,6 +1,6 @@
 package com.keepit.eliza
 
-import com.keepit.model.{User}
+import com.keepit.model.{User, DeepLocator}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.{Database}
 import com.keepit.shoebox.{ShoeboxServiceClient}
@@ -117,6 +117,9 @@ class MessagingController @Inject() (
         user,
         Json.arr("notification", notifJson)
       )
+
+      shoebox.createDeepLink(message.from.get, user, thread.uriId.get, DeepLocator(locator))
+
     }
 
 

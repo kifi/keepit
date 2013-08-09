@@ -86,6 +86,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]]
   def getFriends(userId: Id[User]): Future[Set[Id[User]]]
   def logEvent(userId: Id[User], event: JsObject) : Unit
+  def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -434,5 +435,18 @@ class ShoeboxServiceClientImpl @Inject() (
     val payload = Json.obj("userId" -> userId, "event" -> event)
     call(Shoebox.internal.logEvent, payload)
   }
+
+  def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit = {
+    implicit val userFormatter = Id.format[User]
+    implicit val uriFormatter = Id.format[NormalizedURI]
+    val payload = Json.obj(
+      "initiator" -> initiator,
+      "recipient" -> recipient,
+      "uriId" -> uriId,
+      "locator" -> locator.value
+    )
+    call(Shoebox.internal.createDeepLink, payload)
+  }
+
 
 }
