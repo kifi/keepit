@@ -3,7 +3,7 @@ package com.keepit.normalizer
 import com.keepit.common.logging.Logging
 import com.keepit.common.net.{Query, URI}
 
-object DefaultNormalizer extends StaticNormalizer with Logging {
+object DefaultNormalizer extends URINormalizer with Logging {
 
   val stopParams = Set(
     "jsessionid", "phpsessid", "aspsessionid",

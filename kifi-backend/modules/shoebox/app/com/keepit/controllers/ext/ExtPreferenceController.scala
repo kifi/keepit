@@ -30,8 +30,8 @@ class ExtPreferenceController @Inject() (
   private implicit val userPrefsFormat = Json.format[UserPrefs]
 
   def normalize(url: String) = AuthenticatedJsonAction { request =>
-    // Todo: upgrade to new normalization
-    Ok(Json.arr(normalizationService.normalize(url)))
+    val json = db.readOnly { implicit session => Json.arr(normalizationService.normalize(url)) }
+    Ok(json)
   }
 
   def getRules(version: String) = AuthenticatedJsonAction { request =>
