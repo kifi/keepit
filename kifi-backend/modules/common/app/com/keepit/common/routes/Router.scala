@@ -90,6 +90,7 @@ object Shoebox extends Service {
     def uriChannelCountFanout() = ServiceRoute(POST, "/internal/shoebox/channel/uriCount")
     def suggestExperts() = ServiceRoute(POST, "/internal/shoebox/learning/suggestExperts")
     def getSearchFriends(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/searchFriends", Param("userId", userId))
+    def logEvent() = ServiceRoute(POST, "/internal/shoebox/logEvent")
   }
 }
 
@@ -132,6 +133,7 @@ object Search extends Service {
 object Eliza extends Service {
   object internal {
     def sendToUserNoBroadcast() = ServiceRoute(POST, "/internal/eliza/sendToUserNoBroadcast")
+    def sendToUser() = ServiceRoute(POST, "/internal/eliza/sendToUser")
   }
 }
 

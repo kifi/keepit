@@ -1,6 +1,5 @@
 package com.keepit.eliza
 
-
 import com.keepit.common.controller.ElizaServiceController
 import com.keepit.common.db.{ExternalId, Id, State}
 import com.keepit.model.{User, SocialUserInfo, ExperimentType, ExperimentTypes, NormalizedURI}
@@ -30,14 +29,9 @@ import securesocial.core.{Authenticator, UserService, SecureSocial}
 
 import org.joda.time.DateTime
 
-
-
-
-
-
 case class StreamSession(userId: Id[User], socialUser: SocialUserInfo, experiments: Set[State[ExperimentType]], adminUserId: Option[Id[User]])
 
-case class SocketInfo(id: Long, channel: Concurrent.Channel[JsArray], connectedAt: DateTime, userId: Id[User])
+case class SocketInfo(id: Long, channel: Concurrent.Channel[JsArray], connectedAt: DateTime, userId: Id[User], experiments: Set[State[ExperimentType]])
 
 
 trait AuthenticatedWebSocketsController extends ElizaServiceController {
@@ -99,22 +93,22 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     //Apologies for the nasty future nesting. Improvement suggestions appreciated.
     for (
       auth <- getAuthenticatorFromRequest();
-      secSocialUser <- UserService.find(auth.userId)
+      secSocialUser <- UserService.find(auth.identityId)
     ) yield {
 
       val impersonatedUserIdOpt: Option[ExternalId[User]] =
         impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
 
-      val socialUserFuture = shoebox.getSocialUserInfoByNetworkAndSocialId(SocialId(secSocialUser.id.id), SocialNetworkType(secSocialUser.id.providerId)).map(_.get)
+      val socialUserFuture = shoebox.getSocialUserInfoByNetworkAndSocialId(SocialId(secSocialUser.identityId.userId), SocialNetworkType(secSocialUser.identityId.providerId)).map(_.get)
 
-      socialUserFuture.flatMap{ socialUser => 
+      socialUserFuture.flatMap{ socialUser =>
         val userId = socialUser.userId.get
         val experimentsFuture = shoebox.getUserExperiments(userId).map(_.toSet)
-        experimentsFuture.flatMap{ experiments => 
+        experimentsFuture.flatMap{ experiments =>
           impersonatedUserIdOpt match {
             case Some(impExtUserId) if experiments.contains(ExperimentTypes.ADMIN) =>
               val impUserIdFuture = shoebox.getUserOpt(impExtUserId).map(_.get.id.get)
-              impUserIdFuture.flatMap{ impUserId => 
+              impUserIdFuture.flatMap{ impUserId =>
                 shoebox.getSocialUserInfosByUserId(impUserId).map{ impSocUserInfo =>
                   StreamSession(impUserId, impSocUserInfo.head, experiments, Some(userId))
                 }
@@ -134,7 +128,7 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     authenticate(request) match {
       case Some(streamSessionFuture) =>  streamSessionFuture.map { streamSession =>
         implicit val (enumerator, channel) = Concurrent.broadcast[JsArray]
-        val socketInfo = SocketInfo(Random.nextLong(), channel, clock.now, streamSession.userId)
+        val socketInfo = SocketInfo(Random.nextLong(), channel, clock.now, streamSession.userId, streamSession.experiments)
         val handlers = websocketHandlers(socketInfo)
         val socketAliveCancellable: Ref[Option[Cancellable]] = Ref(None.asInstanceOf[Option[Cancellable]])
 
@@ -181,4 +175,4 @@ trait AuthenticatedWebSocketsController extends ElizaServiceController {
     }
   }
 
-}  
+}

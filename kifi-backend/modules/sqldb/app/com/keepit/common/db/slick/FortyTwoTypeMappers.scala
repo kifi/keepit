@@ -21,7 +21,7 @@ import scala.slick.lifted.{BaseTypeMapper, TypeMapperDelegate}
 import scala.slick.session.{PositionedParameters, PositionedResult}
 import securesocial.core.AuthenticationMethod
 import securesocial.core.SocialUser
-import securesocial.core.UserId
+import securesocial.core.IdentityId
 import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialId}
 
 object FortyTwoGenericTypeMappers {
@@ -432,7 +432,7 @@ class SocialNetworkTypeMapperDelegate(profile: BasicProfile) extends StringMappe
 //       SocialNetworkType -> String
 //************************************
 class SocialUserMapperDelegate(profile: BasicProfile) extends StringMapperDelegate[SocialUser](profile) {
-  def zero = new SocialUser(id = UserId("", ""), firstName = "", lastName = "",
+  def zero = SocialUser(identityId = IdentityId("", ""), firstName = "", lastName = "",
     fullName = "", authMethod = AuthenticationMethod.OAuth2, email = None, avatarUrl = None)
   def sourceToDest(socialUser: SocialUser) = SocialUserSerializer.userSerializer.writes(socialUser).toString
   def safeDestToSource(str: String) = SocialUserSerializer.userSerializer.reads(Json.parse(str)).get

@@ -2,7 +2,7 @@ package com.keepit.normalizer
 
 import com.keepit.common.net.{Query, Host, URI}
 
-object GoogleNormalizer extends StaticNormalizer {
+object GoogleNormalizer extends URINormalizer {
 
   def isDefinedAt(uri: URI) = {
     uri.host match {

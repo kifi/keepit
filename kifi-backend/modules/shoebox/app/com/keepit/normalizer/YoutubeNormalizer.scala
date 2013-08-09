@@ -2,7 +2,7 @@ package com.keepit.normalizer
 
 import com.keepit.common.net.{Query, Host, URI}
 
-object YoutubeNormalizer extends StaticNormalizer {
+object YoutubeNormalizer extends URINormalizer {
   def isDefinedAt(uri: URI) = {
     uri match {
       case URI(_, _, Some(Host("com", "youtube", _*)), _, Some(path), Some(query), _) =>

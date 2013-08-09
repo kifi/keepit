@@ -2,7 +2,7 @@ package com.keepit.normalizer
 
 import com.keepit.common.net.{Host, URI}
 
-object RemoveWWWNormalizer extends StaticNormalizer {
+object RemoveWWWNormalizer extends URINormalizer {
   def isDefinedAt(uri: URI) = {
     uri.host match {
       case Some(Host("com", "techcrunch", "www")) => true

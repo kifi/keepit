@@ -125,15 +125,15 @@ class ExtStreamController @Inject() (
      */
     for (
       auth <- getAuthenticatorFromRequest();
-      secSocialUser <- UserService.find(auth.userId)
+      secSocialUser <- UserService.find(auth.identityId)
     ) yield {
 
       val impersonatedUserIdOpt: Option[ExternalId[User]] =
         impersonateCookie.decodeFromCookie(request.cookies.get(impersonateCookie.COOKIE_NAME))
 
       db.readOnly { implicit session =>
-        val socialUser = socialUserInfoRepo.get(SocialId(secSocialUser.id.id),
-          SocialNetworkType(secSocialUser.id.providerId))
+        val socialUser = socialUserInfoRepo.get(SocialId(secSocialUser.identityId.userId),
+          SocialNetworkType(secSocialUser.identityId.providerId))
         val userId = socialUser.userId.get
         val experiments = experimentRepo.getUserExperiments(userId)
         impersonatedUserIdOpt match {
@@ -193,24 +193,26 @@ class ExtStreamController @Inject() (
               channel.push(Json.arr(s"id:$socketId", clock.now.minus(connectedAt.getMillis).getMillis / 1000.0, subscriptions.keys))
             },
             "normalize" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
-              channel.push(Json.arr(requestId.toLong, normalizationService.normalize(url)))
+              db.readOnly { implicit session =>
+                channel.push(Json.arr(requestId.toLong, normalizationService.normalize(url)))
+              }
             },
 
             "log_event" -> { case JsObject(pairs) +: _ =>
               logEvent(streamSession, JsObject(pairs))
             },
             "subscribe_uri" -> { case JsNumber(requestId) +: JsString(url) +: _ =>
-                val nUri = normalizationService.normalize(url)
-                subscriptions.putIfAbsent(nUri, uriChannel.subscribe(nUri, socketId, channel))
-                channel.push(Json.arr(requestId.toLong, nUri))
-                channel.push(Json.arr("uri_1", nUri, keeperInfoLoader.load1(userId, nUri)))
-                channel.push(Json.arr("uri_2", nUri, keeperInfoLoader.load2(userId, nUri)))
-              },
+              val nUri =  db.readOnly { implicit session => normalizationService.normalize(url) }
+              subscriptions.putIfAbsent(nUri, uriChannel.subscribe(nUri, socketId, channel))
+              channel.push(Json.arr(requestId.toLong, nUri))
+              channel.push(Json.arr("uri_1", nUri, keeperInfoLoader.load1(userId, nUri)))
+              channel.push(Json.arr("uri_2", nUri, keeperInfoLoader.load2(userId, nUri)))
+            },
             "unsubscribe_uri" -> { case JsString(url) +: _ =>
-                val nUri = normalizationService.normalize(url)
-                subscriptions.get(nUri).foreach(_.unsubscribe())
-                subscriptions.remove(nUri)
-             },
+              val nUri =  db.readOnly { implicit session => normalizationService.normalize(url) }
+              subscriptions.get(nUri).foreach(_.unsubscribe())
+              subscriptions.remove(nUri)
+            },
             "get_rules" -> { case JsString(version) +: _ =>
               db.readOnly { implicit s =>
                 val group = sliderRuleRepo.getGroup("default")

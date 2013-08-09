@@ -362,6 +362,8 @@ class FakeShoeboxServiceClientImpl(
   def getFriends(userId: Id[User]): Future[Set[Id[User]]] = {
     Future.successful(allUserConnections.getOrElse(userId, Set.empty))
   }
+
+  def logEvent(userId: Id[User], event: JsObject) = {}
 }
 
 class FakeClickHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits: Int) extends ClickHistoryTracker with Logging {
