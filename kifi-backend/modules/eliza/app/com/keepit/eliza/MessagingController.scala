@@ -102,11 +102,6 @@ class MessagingController @Inject() (
   }
 
   private def sendNotificationForMessage(user: Id[User], message: Message, thread: MessageThread, messageWithBasicUser: MessageWithBasicUser) : Unit = { //TODO Stephen: And store notification json
-    notificationRouter.sendToUser(
-      user,
-      Json.arr("message", message.threadExtId.id, messageWithBasicUser)
-    )
-
     future {
       val locator = "/messages/" + thread.externalId
       val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator)
@@ -196,6 +191,13 @@ class MessagingController @Inject() (
       message.from.map(id2BasicUser(_)),
       message.from.map(participantSet - _).getOrElse(participantSet).toSeq.map(id2BasicUser(_))
     )
+
+    thread.participants.map(_.all.foreach { user =>
+      notificationRouter.sendToUser(
+        user,
+        Json.arr("message", message.threadExtId.id, messageWithBasicUser)
+      )
+    })
 
     thread.allUsersExcept(from).foreach { userId =>
       db.readWrite{ implicit session => userThreadRepo.setLastMsgFromOther(userId, thread.id.get, message.id.get) }
