@@ -1,22 +1,22 @@
 <div class="kifi-notice kifi-notice-message{{#isVisited}} kifi-notice-visited{{/isVisited}}{{#isNew}} kifi-notice-new{{/isNew}}" data-id="{{id}}" data-uri="{{url}}" data-locator="{{locator}}" data-created-at="{{time}}">
   <img class="kifi-notice-avatar" src="{{cdnBase}}/users/{{author.id}}/pics/200/0.jpg">
   <div class="kifi-notice-name">
-    {{#oneAuthor}}
-      <span class="kifi-author-name">{{recipients.0.firstName}} {{recipients.0.lastName}}</span>
-    {{/oneAuthor}}
-    {{#twoAuthors}}
-      <span class="kifi-author-name">{{recipients.0.firstName}}</span> and
-      <span class="kifi-author-name">{{recipients.1.firstName}}</span>
-    {{/twoAuthors}}
-    {{#threeAuthors}}
-      <span class="kifi-author-name">{{recipients.0.firstName}}</span>,
-      <span class="kifi-author-name">{{recipients.1.firstName}}</span> and
-      <span class="kifi-author-name">{{recipients.2.firstName}}</span>
-    {{/threeAuthors}}
-    {{#moreAuthors}}
-      <span class="kifi-author-name">{{recipients.0.firstName}}</span>,
-      <span class="kifi-author-name">{{recipients.1.firstName}}</span> and {{moreAuthors}} others
-    {{/moreAuthors}}
+    {{#oneParticipant}}
+      <span class="kifi-author-name">{{participants.0.firstName}} {{participants.0.lastName}}</span>
+    {{/oneParticipant}}
+    {{#twoParticipants}}
+      <span class="kifi-author-name">{{participants.0.firstName}}</span> and
+      <span class="kifi-author-name">{{participants.1.firstName}}</span>
+    {{/twoParticipants}}
+    {{#threeParticipants}}
+      <span class="kifi-author-name">{{participants.0.firstName}}</span>,
+      <span class="kifi-author-name">{{participants.1.firstName}}</span> and
+      <span class="kifi-author-name">{{participants.2.firstName}}</span>
+    {{/threeParticipants}}
+    {{#moreParticipants}}
+      <span class="kifi-author-name">{{participants.0.firstName}}</span>,
+      <span class="kifi-author-name">{{participants.1.firstName}}</span> and {{moreParticipants}} others
+    {{/moreParticipants}}
   </div>
   <div class="kifi-notice-action">
   	 Message

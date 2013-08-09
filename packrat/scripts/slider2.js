@@ -388,18 +388,18 @@ slider2 = function() {
   }
 
   const createTemplateParams = {
-    thread: function(cb, locator, recipients) {
-      var id = locator.split("/")[2];  // can be id of any message (assumed to be parent if recipients provided)
-      if (recipients) {
-        respond(recipients, locator);
+    thread: function(cb, locator, participants) {
+      var id = locator.split("/")[2];  // can be id of any message (assumed to be parent if participants provided)
+      if (participants) {
+        respond(participants, locator);
       } else {
-        api.log("[createTemplateParams] getting thread for recipients");
+        api.log("[createTemplateParams] getting thread for participants");
         api.port.emit("thread", {id: id, respond: true}, function(th) {
-          respond(th.messages[0].recipients, "/messages/" + th.id);
+          respond(th.participants, "/messages/" + th.id);
         });
       }
       function respond(r, canonicalLocator) {
-        cb({recipients: r, numRecipients: r.length > 1 ? r.length : null}, canonicalLocator);
+        cb({participants: r, numparticipants: r.length > 1 ? r.length : null}, canonicalLocator);
       }
     }};
 

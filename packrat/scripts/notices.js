@@ -113,11 +113,11 @@ noticesPane = function() {
     notice.cdnBase = cdnBase;
     switch (notice.category) {
       case "message":
-        var nAuthors = notice.recipients.length;
-        notice.oneAuthor = nAuthors == 1;
-        notice.twoAuthors = nAuthors == 2;
-        notice.threeAuthors = nAuthors == 3;
-        notice.moreAuthors = nAuthors > 3 ? nAuthors - 2 : 0;
+        var nParticipants = notice.participants.length;
+        notice.oneParticipant = nParticipants == 1;
+        notice.twoParticipants = nParticipants == 2;
+        notice.threeParticipants = nParticipants == 3;
+        notice.moreParticipants = nParticipants > 3 ? nParticipants - 2 : 0;
         break;
       case "global":
         break;

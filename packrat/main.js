@@ -160,10 +160,11 @@ const socketHandlers = {
       notifications = arr;
       for(var i = 0; i < arr.length; i++) {
         arr[i].category = "message";
-        // remove current user from recipients
-        for (var j = 0, len = arr[i].recipients.length; j < len; j++) {
-          if (arr[i].recipients[j].id == session.userId) {
-            arr[i].recipients.splice(j, 1);
+        // remove current user from participants
+        arr[i].participants = arr[i].participants || arr[i].recipients;
+        for (var j = 0, len = arr[i].participants.length; j < len; j++) {
+          if (arr[i].participants[j].id == session.userId) {
+            arr[i].participants.splice(j, 1);
             len--;
           }
         }
@@ -247,15 +248,16 @@ const socketHandlers = {
       pageData[u] = pageData[u] || new PageData;
       urisToUpdate[u] = clone(pageData[u]);
       // for now, we can clear a url's threads. when we move to threads being on multiple pages, will need to be changed.
-      pageData[u].threads = []; // for now, we can clear a url's threads. when we move to threads being on multiple pages, will need to be changed.
+      pageData[u].threads = [];
     }
 
     infos.forEach(function(t) {
       var d = pageData[t.nUrl];
       d.threads.push(t); // since threads was cleared above, can just push
-      for (var j = 0, len = t.recipients.length; j < len; j++) {
-        if (t.recipients[j].id == session.userId) {
-          t.recipients.splice(j, 1);
+      t.participants = t.participants || t.recipients;
+      for (var j = 0, len = t.participants.length; j < len; j++) {
+        if (t.participants[j].id == session.userId) {
+          t.participants.splice(j, 1);
           len--;
         }
       }
@@ -339,7 +341,7 @@ const socketHandlers = {
           thread.lastCommentedAt = messageData[threadId][messageData[threadId].length-1].createdAt;
           thread.messageCount = messageData[threadId].length;
           messageData[threadId].forEach(function(el) { thread.messageTimes[el.id] = el.createdAt; });
-          thread.recipients = messageData[threadId][messageData[threadId].length-1].recipients;
+          thread.participants = messageData[threadId][messageData[threadId].length-1].participants;
 
           // insert thread in chronological order
           //var t = new Date(thread.lastCommmentedAt);
@@ -500,7 +502,7 @@ api.port.on({
       var th = d.threads.filter(function(t) {return t.id == data.id || t.messageTimes[data.id]})[0];
       if (th && messageData[th.id]) {
         if (data.respond) {
-          respond({id: th.id, messages: messageData[th.id]});
+          respond({id: th.id, messages: messageData[th.id], participants: th.participants || th.recipients});
         }
       } else {
         var id = (th || data).id;
