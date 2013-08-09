@@ -16,7 +16,7 @@ import com.google.inject.Inject
 
 import org.joda.time.DateTime
 
-import play.api.libs.json.{JsValue, JsNull, Json}
+import play.api.libs.json.{JsValue, JsNull, Json, JsObject}
 
 /* To future maintainers 
 *  If this is ever getting too slow the first things I would look at (in no particular order):
@@ -97,7 +97,8 @@ class MessagingController @Inject() (
       "title"      -> thread.pageTitle,
       "author"     -> messageWithBasicUser.user,
       "recipients" -> messageWithBasicUser.recipients,
-      "locator"    -> locator
+      "locator"    -> locator,
+      "unread"     -> true
     ) 
   }
 
@@ -322,9 +323,9 @@ class MessagingController @Inject() (
     }
   }
 
-  def getLatestSendableNotifications(userId: Id[User], howMany: Int): Seq[JsValue] = {
+  def getLatestSendableNotifications(userId: Id[User], howMany: Int): Seq[JsObject] = {
     db.readOnly{ implicit session =>
-      userThreadRepo.getLatestSendableNotifications(userId, howMany).filter(_!=null) //Workaraound for Json serialization bug
+      userThreadRepo.getLatestSendableNotifications(userId, howMany)
     }
   }
 
@@ -334,15 +335,15 @@ class MessagingController @Inject() (
     }
   }
 
-  def getSendableNotificationsAfter(userId: Id[User], after: DateTime): Seq[JsValue] = {
+  def getSendableNotificationsAfter(userId: Id[User], after: DateTime): Seq[JsObject] = {
     db.readOnly{ implicit session =>
-      userThreadRepo.getSendableNotificationsAfter(userId, after).filter(_!=null) //Workaraound for Json serialization bug
+      userThreadRepo.getSendableNotificationsAfter(userId, after)
     }
   }
 
-  def getSendableNotificationsBefore(userId: Id[User], after: DateTime, howMany: Int): Seq[JsValue] = {
+  def getSendableNotificationsBefore(userId: Id[User], after: DateTime, howMany: Int): Seq[JsObject] = {
     db.readOnly{ implicit session =>
-      userThreadRepo.getSendableNotificationsBefore(userId, after, howMany).filter(_!=null) //Workaraound for Json serialization bug
+      userThreadRepo.getSendableNotificationsBefore(userId, after, howMany)
     }
   }
 
