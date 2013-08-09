@@ -66,7 +66,7 @@ class MessagingController @Inject() (
     threads.map{ thread =>
       val lastMessage = messagesByThread(thread.id.get).head
 
-      val messageTimes = messagesByThread(thread.id.get).map{ message =>
+      val messageTimes = messagesByThread(thread.id.get).take(10).map{ message =>
         (message.externalId, message.createdAt)
       }.toMap
 
