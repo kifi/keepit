@@ -34,7 +34,7 @@ noticesPane = function() {
       render("html/metro/notices.html", {}, function(html) {
         $notices = $(html)
           .append(notices.map(function(n) {
-            return renderNotice(n, n.state != "visited" && new Date(n.time) > timeLastSeen);
+            return renderNotice(n, new Date(n.time) > timeLastSeen);
           }).join(""))
           .appendTo($container)
           .preventAncestorScroll();
@@ -105,36 +105,32 @@ noticesPane = function() {
     }};
 
   function renderNotice(notice, isNew) {
+    api.log("rendering", notice, isNew)
     notice.isNew = isNew;
     notice.isVisited = notice.state == "visited";
     notice.formatMessage = getSnippetFormatter;
     notice.formatLocalDate = getLocalDateFormatter;
     notice.cdnBase = cdnBase;
     switch (notice.category) {
-    case "message":
-      var nAuthors = notice.details.authors.length;
-      notice.oneAuthor = nAuthors == 1;
-      notice.twoAuthors = nAuthors == 2;
-      notice.threeAuthors = nAuthors == 3;
-      notice.moreAuthors = nAuthors > 3 ? nAuthors - 2 : 0;
-      break;
-    case "global":
-      break;
-    default:
-      api.log("#a00", "[renderNotice] unrecognized category", notice.category);
-      return "";
+      case "message":
+        var nAuthors = notice.recipients.length;
+        notice.oneAuthor = nAuthors == 1;
+        notice.twoAuthors = nAuthors == 2;
+        notice.threeAuthors = nAuthors == 3;
+        notice.moreAuthors = nAuthors > 3 ? nAuthors - 2 : 0;
+        break;
+      case "global":
+        break;
+      default:
+        api.log("#a00", "[renderNotice] unrecognized category", notice.category);
+        return "";
     }
     return Mustache.render(templates[notice.category], notice);
   }
 
   function showNew(notices) {
     notices.forEach(function(n) {
-      if (n.details.subsumes) {
-        $notices.find(".kifi-notice[data-id='" + n.details.subsumes + "']").remove();
-      }
-      if (n.details.locator) {
-        $notices.find(".kifi-notice[data-locator='" + n.details.locator + "']").remove();
-      }
+      $notices.find(".kifi-notice[data-id='" + n.thread + "']").remove();
     });
     var $n = $(notices.map(function(n) {return renderNotice(n, true)}).join(""))
       .find("time").timeago().end()
@@ -202,3 +198,4 @@ noticesPane = function() {
     return d;
   }
 }();
+//@ sourceURL=http://kifi/notices.js

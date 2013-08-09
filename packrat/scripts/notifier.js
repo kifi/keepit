@@ -7,15 +7,15 @@
 
 var notifier = {
   show: function(data) {
-    var o = data.details;
+    var o = data;
     switch (data.category) {
       case "message":
         KifiNotification.add({
-          title: o.authors[0].firstName + " " + o.authors[0].lastName,
+          title: o.author.firstName + " " + o.author.lastName,
           subtitle: "Sent you a new Kifi Message",
           contentHtml: o.text,
           link: o.title,
-          image: cdnBase + "/users/" + o.authors[0].id + "/pics/100/0.jpg",
+          image: cdnBase + "/users/" + o.author.id + "/pics/100/0.jpg",
           sticky: false,
           showForMs: 60000,
           clickAction: function() {
