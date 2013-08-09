@@ -364,6 +364,8 @@ class FakeShoeboxServiceClientImpl(
   }
 
   def logEvent(userId: Id[User], event: JsObject) = {}
+
+  def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit = {}
 }
 
 class FakeClickHistoryTrackerImpl (tableSize: Int, numHashFuncs: Int, minHits: Int) extends ClickHistoryTracker with Logging {

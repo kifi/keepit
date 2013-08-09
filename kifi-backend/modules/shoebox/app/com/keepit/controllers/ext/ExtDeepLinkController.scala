@@ -4,6 +4,13 @@ import com.google.inject.Inject
 import com.keepit.common.controller.{ShoeboxServiceController, WebsiteController, ActionAuthenticator}
 import com.keepit.common.db.slick._
 import com.keepit.model._
+import com.keepit.common.db.Id
+
+import scala.concurrent.future
+import scala.concurrent.ExecutionContext.Implicits.global
+
+import play.api.mvc.Action
+import play.api.libs.json.{JsObject}
 
 class ExtDeepLinkController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -12,6 +19,30 @@ class ExtDeepLinkController @Inject() (
   normalizedURIRepo: NormalizedURIRepo)
     extends WebsiteController(actionAuthenticator) with ShoeboxServiceController {
 
+
+  
+  def createDeepLink() = Action { request =>
+    Async(future{
+      val req = request.body.asJson.get.asInstanceOf[JsObject]
+      val initiator = Id[User]((req \ "initiator").as[Long])
+      val recipient = Id[User]((req \ "recipient").as[Long])
+      val uriId = Id[NormalizedURI]((req \ "uriId").as[Long])
+      val locator = (req \ "locator").as[String]
+
+
+      db.readWrite{ implicit session => deepLinkRepo.save(
+        DeepLink(
+          initiatorUserId = Some(initiator),
+          recipientUserId = Some(recipient),
+          uriId = Some(uriId),
+          urlId = None,
+          deepLocator = DeepLocator(locator)
+        )
+      )}
+      Ok("")
+    })
+  }
+  
   def handle(token: String) = HtmlAction(authenticatedAction = { request =>
     getDeepLinkAndUrl(token) map { case (deepLink, url) =>
       deepLink.recipientUserId match {

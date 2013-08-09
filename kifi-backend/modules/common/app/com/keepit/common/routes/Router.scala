@@ -91,6 +91,7 @@ object Shoebox extends Service {
     def suggestExperts() = ServiceRoute(POST, "/internal/shoebox/learning/suggestExperts")
     def getSearchFriends(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/searchFriends", Param("userId", userId))
     def logEvent() = ServiceRoute(POST, "/internal/shoebox/logEvent")
+    def createDeepLink() = ServiceRoute(POST, "/internal/shoebox/database/createDeepLink")
   }
 }
 
