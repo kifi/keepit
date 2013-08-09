@@ -9,7 +9,7 @@ var notificationsCallbacks = [];
 // ===== Cached data from server
 
 var pageData = {}; // keyed by normalized url
-var messageData = {}; // keyed by thread id
+var messageData = {}; // keyed by thread id; todo: evict old threads from memory
 var notifications;  // [] would mean user has none
 var timeNotificationsLastSeen = new Date(0);
 var numNotificationsNotVisited = 0;  // may include some not yet loaded
@@ -158,7 +158,7 @@ const socketHandlers = {
     api.log("[socket:notifications]", arr, numNotVisited);
     if (!notifications) {
       notifications = arr;
-      for(var i = 0; i < arr.length; i++) {
+      for (var i = 0; i < arr.length; i++) {
         arr[i].category = "message";
         // remove current user from participants
         arr[i].participants = arr[i].participants || arr[i].recipients;
@@ -234,7 +234,7 @@ const socketHandlers = {
         }
       }
     } else {
-      api.log("[socket:thrad]", "Can't process thread, no pageData")
+      api.log("[socket:thread]", "Can't process thread, no pageData")
     }
   },
   thread_infos: function(infos) {
@@ -244,7 +244,7 @@ const socketHandlers = {
       urisToUpdate[t.nUrl] = 1;
     });
 
-    for (u in urisToUpdate) {
+    for (var u in urisToUpdate) {
       pageData[u] = pageData[u] || new PageData;
       urisToUpdate[u] = clone(pageData[u]);
       // for now, we can clear a url's threads. when we move to threads being on multiple pages, will need to be changed.
@@ -276,7 +276,7 @@ const socketHandlers = {
       }
     });
 
-    for (u in urisToUpdate) {
+    for (var u in urisToUpdate) {
       var d = pageData[u];
       var dPrev = urisToUpdate[u];
 
