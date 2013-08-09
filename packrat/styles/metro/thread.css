@@ -48,6 +48,9 @@ img.kifi-message-pic.kifi-self {
   margin-left: 45px;
   word-wrap: break-word;
 }
+.kifi-message-body p {
+  clear: none;
+}
 .kifi-message-name {
   position: relative;
   top: -2px;
