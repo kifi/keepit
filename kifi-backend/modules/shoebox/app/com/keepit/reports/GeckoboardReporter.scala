@@ -23,6 +23,7 @@ import us.theatr.akka.quartz.QuartzActor
 private[reports] class GeckoboardReporterActor @Inject() (
   healthcheckPlugin: HealthcheckPlugin,
   geckoboardPublisher: GeckoboardPublisher)
+
 extends FortyTwoActor(healthcheckPlugin) with Logging {
   def receive() = {
     case widget: GeckoboardWidget[_] => geckoboardPublisher.publish(widget)
