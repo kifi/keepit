@@ -105,9 +105,11 @@ class MessagingController @Inject() (
     future {
       val locator = "/messages/" + thread.externalId
       val notifJson = buildMessageNotificationJson(message, thread, messageWithBasicUser, locator)
+
       db.readWrite{ implicit session => 
-        userThreadRepo.setNotification(user, thread.id.get, notifJson)
+        userThreadRepo.setNotification(user, thread.id.get, message.id.get, notifJson)
       }
+      
       notificationRouter.sendToUser(
         user,
         Json.arr("notification", notifJson)
@@ -199,7 +201,6 @@ class MessagingController @Inject() (
     })             
 
     thread.allUsersExcept(from).foreach { userId =>
-      db.readWrite{ implicit session => userThreadRepo.setLastMsgFromOther(userId, thread.id.get, message.id.get) }
       sendNotificationForMessage(userId, message, thread, messageWithBasicUser)
     }
     //async update normalized url id so as not to block on that (the shoebox call yields a future)

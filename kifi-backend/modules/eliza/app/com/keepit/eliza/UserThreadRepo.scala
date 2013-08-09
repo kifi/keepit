@@ -49,13 +49,11 @@ trait UserThreadRepo extends Repo[UserThread] {
 
   def clearNotificationsBefore(user: Id[User], timeCutoff: DateTime)(implicit session: RWSession): Unit
 
-  def setNotification(user: Id[User], thread: Id[MessageThread], notifJson: JsValue)(implicit session: RWSession) : Unit
+  def setNotification(user: Id[User], thread: Id[MessageThread], message: Id[Message], notifJson: JsValue)(implicit session: RWSession) : Unit
 
   def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession) : Unit
 
   def getPendingNotifications(userId: Id[User])(implicit session: RSession) : Seq[Notification]
-
-  def setLastMsgFromOther(userId: Id[User], threadId: Id[MessageThread], messageId: Id[Message])(implicit session: RWSession) : Unit
 
   def setNotificationLastSeen(userId: Id[User], timestamp: DateTime, threadIdOpt: Option[Id[MessageThread]]=None)(implicit session: RWSession) : Unit
 
@@ -134,10 +132,10 @@ class UserThreadRepoImpl @Inject() (
     (for (row <- table if row.user===userId && row.notificationUpdatedAt<=timeCutoff) yield row.notificationPending).update(false)
   }
 
-  def setNotification(userId: Id[User], threadId: Id[MessageThread], notifJson: JsValue)(implicit session: RWSession) : Unit = {
-    (for (row <- table if row.user===userId && row.thread===threadId) yield (row.lastNotification)).update(notifJson)
-    (for (row <- table if row.user===userId && row.thread===threadId) yield row.notificationPending).update(true)
-    (for (row <- table if row.user===userId && row.thread===threadId) yield row.notificationUpdatedAt).update(currentDateTime(zones.PT))
+  def setNotification(userId: Id[User], threadId: Id[MessageThread], messageId: Id[Message], notifJson: JsValue)(implicit session: RWSession) : Unit = {
+    Query(table).filter(row => row.user===userId && row.thread===threadId)
+      .map(row => row.lastNotification ~ row.lastMsgFromOther ~ row.notificationPending ~ row.notificationUpdatedAt)
+      .update((notifJson, messageId, true, currentDateTime(zones.PT)))
   }
 
   def setLastSeen(userId: Id[User], threadId: Id[MessageThread], timestamp: DateTime)(implicit session: RWSession) : Unit = {
@@ -149,10 +147,6 @@ class UserThreadRepoImpl @Inject() (
      case (thread, message) =>
         Notification(thread, message.get)
     }
-  }
-
-  def setLastMsgFromOther(userId: Id[User], threadId: Id[MessageThread], messageId: Id[Message])(implicit session: RWSession) : Unit = {
-    (for (row <- table if row.user===userId && row.thread===threadId) yield row.lastMsgFromOther).update(messageId)
   }
 
   def setNotificationLastSeen(userId: Id[User], timestamp: DateTime, threadIdOpt: Option[Id[MessageThread]]=None)(implicit session: RWSession): Unit = {
