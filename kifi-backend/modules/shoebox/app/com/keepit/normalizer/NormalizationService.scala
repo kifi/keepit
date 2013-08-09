@@ -1,39 +1,38 @@
 package com.keepit.normalizer
 
-import com.keepit.common.logging.Logging
-import com.keepit.model.NormalizedURI
-import scala.util.{Failure, Success}
-import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.google.inject.{ImplementedBy, Inject, Singleton}
 import com.keepit.common.net.URI
+import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
+import com.keepit.model.{UriNormalizationRuleRepo, NormalizedURI}
+import com.keepit.common.logging.Logging
 
-@ImplementedBy(classOf[SmartNormalizationService])
-case class NormalizationService(normalizers: URINormalizer*) extends SmartNormalizer with Logging {
-  def isDefinedAt(uri: URI) = normalizers.exists(_.isDefinedAt(uri))
-  def apply(uri: URI): URI = normalizers.find(_.isDefinedAt(uri)).get.apply(uri)
-  def update(current: NormalizedURI, candidates: NormalizationCandidate*) = normalizers.filter(_.isSmart).foreach(_.update(current, candidates:_*))
+trait URINormalizer extends PartialFunction[URI, URI]
 
-  private def parse(uriString: String): Option[URI] = URI.parse(uriString) match {
-    case Success(uri) => Some(uri)
-    case Failure(e) =>
-      log.error("uri parsing failed: [%s] caused by [%s]".format(uriString, e.getMessage))
-      None
-  }
-
-  def parseAndNormalize(uriString: String): Option[URI] = parse(uriString).map(apply(_))
-
-  def normalize(uriString: String): String =
-    parseAndNormalize(uriString).map(_.safeToString()).flatten.getOrElse(uriString)
-
+@ImplementedBy(classOf[NormalizationServiceImpl])
+trait NormalizationService {
+  def update(current: NormalizedURI, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI
+  def normalize(uriString: String)(implicit session: RSession): String
 }
 
-object StaticNormalizationService extends NormalizationService(
-  AmazonNormalizer,
-  GoogleNormalizer,
-  YoutubeNormalizer,
-  RemoveWWWNormalizer,
-  LinkedInNormalizer,
-  DefaultNormalizer
-)
-
 @Singleton
-class SmartNormalizationService @Inject() (smartNormalizer: SmartNormalizer) extends NormalizationService(smartNormalizer)
+class NormalizationServiceImpl @Inject() (normalizationRuleRepo: UriNormalizationRuleRepo) extends NormalizationService with Logging {
+  val normalizers = Seq(AmazonNormalizer, GoogleNormalizer, YoutubeNormalizer, RemoveWWWNormalizer, LinkedInNormalizer, DefaultNormalizer)
+
+  def normalize(uriString: String)(implicit session: RSession): String = {
+    val prepUrl = for {
+      uri <- URI.safelyParse(uriString)
+      prepUri <- normalizers.find(_.isDefinedAt(uri)).map(_.apply(uri))
+      prepUrl <- prepUri.safelyToString()
+    } yield prepUrl
+
+    val mappedUrl = for {
+      prepUrl <- prepUrl
+      mappedUrl <- normalizationRuleRepo.getByUrl(prepUrl)
+    } yield mappedUrl
+
+    mappedUrl.getOrElse(prepUrl.getOrElse(uriString))
+  }
+
+ def update(current: NormalizedURI, candidates: NormalizationCandidate*)(implicit session: RWSession): NormalizedURI = current
+
+}

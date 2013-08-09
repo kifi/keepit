@@ -2,7 +2,7 @@ package com.keepit.normalizer
 
 import com.keepit.common.net.{Query, Host, URI}
 
-object LinkedInNormalizer extends StaticNormalizer {
+object LinkedInNormalizer extends URINormalizer {
   val profile = """(.*?id=)([0-9]{1,20})(.*)""".r
   val profileFull = """(.*)(profile/view\?)(.*?id=)([0-9]{1,20})(.*)""".r
 

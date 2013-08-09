@@ -16,6 +16,7 @@ import com.keepit.common.actor.TestActorSystemModule
 import com.keepit.common.store.ShoeboxFakeStoreModule
 import com.keepit.shoebox.FakeShoeboxServiceModule
 import com.keepit.search.TestSearchServiceClientModule
+import com.keepit.akka.TestKitScope
 
 class DomainClassifierTest extends TestKit(ActorSystem()) with Specification with ShoeboxApplicationInjector {
 
