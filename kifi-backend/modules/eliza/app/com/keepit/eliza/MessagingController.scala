@@ -121,7 +121,7 @@ class MessagingController @Inject() (
     }
 
     future{
-      shoebox.sendPushNotification(user, message.externalId.id, getPendingNotificationCount(user), message.messageText)
+      shoebox.sendPushNotification(user, message.externalId.id, getPendingNotificationCount(user), messageWithBasicUser.user.map(_.firstName + ": ").getOrElse("") + message.messageText)
     }
 
     //This is mostly for testing and monitoring
