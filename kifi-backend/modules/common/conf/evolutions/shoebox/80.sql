@@ -1,6 +1,6 @@
 # --- !Ups
 
-CREATE TABLE uri_normalization_rule (
+CREATE TABLE IF NOT EXISTS uri_normalization_rule (
   id bigint(20) NOT NULL AUTO_INCREMENT,
   created_at datetime NOT NULL,
   updated_at datetime NOT NULL,
@@ -26,7 +26,7 @@ CREATE TABLE failed_uri_normalization (
   mapped_url varchar(3072) NOT NULL,
   state varchar(20) NOT NULL,
   counts integer NOT NULL,
-  last_content_check datetime NOT NULL, 
+  last_content_check datetime NOT NULL,
 
   Key (prep_url_hash, mapped_url_hash),
   PRIMARY KEY (id),
@@ -39,7 +39,7 @@ CREATE TABLE changed_uri (
   id bigint(20) NOT NULL AUTO_INCREMENT,
   created_at datetime NOT NULL,
   updated_at datetime NOT NULL,
-  old_uri_id bigint(20) NOT NULL, 
+  old_uri_id bigint(20) NOT NULL,
   new_uri_id bigint(20) NOT NULL,
   state varchar(20) NOT NULL,
   seq bigint(20) NOT NULL,
