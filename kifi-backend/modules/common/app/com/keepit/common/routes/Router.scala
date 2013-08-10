@@ -136,6 +136,7 @@ object Eliza extends Service {
   object internal {
     def sendToUserNoBroadcast() = ServiceRoute(POST, "/internal/eliza/sendToUserNoBroadcast")
     def sendToUser() = ServiceRoute(POST, "/internal/eliza/sendToUser")
+    def importThread() = ServiceRoute(POST, "internal/eliza/importThread")
   }
 }
 

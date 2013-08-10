@@ -1,12 +1,13 @@
 package com.keepit.eliza
 
-import com.keepit.model.{User, DeepLocator}
+import com.keepit.model.{User, DeepLocator,NormalizedURI}
 import com.keepit.common.db.{Id, ExternalId}
 import com.keepit.common.db.slick.{Database}
 import com.keepit.shoebox.{ShoeboxServiceClient}
 import com.keepit.common.logging.Logging
 import com.keepit.common.time._
 import com.keepit.social.BasicUser
+import com.keepit.common.controller.ElizaServiceController
 
 import scala.concurrent.{future, Await, Future}
 import scala.concurrent.duration._
@@ -16,7 +17,9 @@ import com.google.inject.Inject
 
 import org.joda.time.DateTime
 
-import play.api.libs.json.{JsValue, JsNull, Json, JsObject}
+import play.api.libs.json.{JsValue, JsNull, Json, JsObject, JsArray}
+
+import play.api.mvc.Action //For migration only
 
 /* To future maintainers 
 *  If this is ever getting too slow the first things I would look at (in no particular order):
@@ -46,7 +49,102 @@ class MessagingController @Inject() (
     notificationRouter: NotificationRouter,
     clock: Clock
     )
-  extends Logging {
+  extends ElizaServiceController with Logging {
+
+
+
+  //migration code
+  private def recoverNotification(userId: Id[User], thread: MessageThread) : Unit = {
+
+    val lastMsgFromOther = getThreadMessages(thread, None).filter(_.from.map(_!=userId).getOrElse(true)).head
+
+    val locator = "/messages/" + thread.externalId
+
+    val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
+    val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 10 seconds)
+    val messageWithBasicUser = MessageWithBasicUser(
+      lastMsgFromOther.externalId,
+      lastMsgFromOther.createdAt,
+      lastMsgFromOther.messageText,
+      lastMsgFromOther.sentOnUrl.getOrElse(""),
+      thread.nUrl.getOrElse(""),
+      lastMsgFromOther.from.map(id2BasicUser(_)),
+      participantSet.toSeq.map(id2BasicUser(_))
+    )
+
+    val notifJson = buildMessageNotificationJson(lastMsgFromOther, thread, messageWithBasicUser, locator) 
+
+    db.readWrite{ implicit session =>
+      userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther.id.get, notifJson)
+      userThreadRepo.clearNotification(userId)
+    }
+
+  }
+
+
+  def importThread() = Action { request =>
+    val req = request.body.asJson.get.asInstanceOf[JsObject]
+
+    val uriId = Id[NormalizedURI]((req \ "uriId").as[Long])
+    val participants = (req \ "participants").as[JsArray].value.map(v => Id[User](v.as[Long]))
+    val extId = ExternalId[MessageThread]((req \ "extId").as[String])
+    val messages = (req \ "messages").as[JsArray].value
+
+    db.readWrite{ implicit session =>
+      if (threadRepo.getOpt(extId).isEmpty) {
+        val nUri = Await.result(shoebox.getNormalizedURI(uriId), 10 seconds)
+        //create thread
+        val mtps = MessageThreadParticipants(participants.toSet)
+        val thread = threadRepo.save(MessageThread(
+          id = None,
+          externalId = extId,
+          uriId = Some(uriId),
+          url = Some(nUri.url),
+          nUrl = Some(nUri.url),
+          pageTitle = nUri.title,
+          participants = Some(mtps),
+          participantsHash = Some(mtps.hash),
+          replyable = true
+        ))
+
+        //create userThreads
+        participants.toSet.foreach{ userId : Id[User] => 
+          userThreadRepo.create(userId, thread.id.get, Some(uriId))
+        }
+
+
+        messages.foreach{ messageJson =>
+          val text = (messageJson \ "text").as[String]
+          val from = Id[User]((messageJson \ "from").as[Long])
+          val createdAt = (messageJson \ "created_at").as[DateTime]
+
+          //create message
+          val message = messageRepo.save(Message(
+            id= None,
+            createdAt = createdAt,
+            from = Some(from),
+            thread = thread.id.get,
+            threadExtId = thread.externalId,
+            messageText = text,
+            sentOnUrl = thread.url,
+            sentOnUriId = Some(uriId)
+          ))
+
+        }
+
+        participants.toSet.foreach{ userId : Id[User] => 
+          recoverNotification(userId, thread)
+        }
+
+
+      }
+    }
+
+
+    
+    Ok("")
+    
+  }
 
 
   private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: String) : Seq[ElizaThreadInfo]  = {

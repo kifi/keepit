@@ -32,6 +32,9 @@ trait CommentRepo extends Repo[Comment] with ExternalIdColumnFunction[Comment] {
   def getMessageIdsCreatedBefore(uriId: Id[NormalizedURI], parentId: Id[Comment], time: DateTime)(implicit session: RSession): Seq[Id[Comment]]
   def getCommentsChanged(num: SequenceNumber, fetchSize: Int)(implicit session: RSession): Seq[Comment]
   def getCommentIdsByUser(userId: Id[User])(implicit ssession: RSession): Seq[Id[Comment]]
+
+  //migration code
+  def getAllRootMessages()(implicit session: RSession): Seq[Comment]
 }
 
 @Singleton
@@ -210,6 +213,12 @@ class CommentRepoImpl @Inject() (
       case _ => 
     }
     comment
+  }
+
+  //migration code
+
+  def getAllRootMessages()(implicit session: RSession): Seq[Comment] = {
+    (for (row <- table if row.parent===(None : Option[Id[Comment]])) yield row).list
   }
 
 }
