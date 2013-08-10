@@ -50,11 +50,11 @@ class NotificationConsistencyCheckerImpl @Inject()(
   extends SchedulingPlugin with NotificationConsistencyChecker {
 
   def verifyVisited() {
-    actorProvider.ref ! VerifyVisited
+    actor.ref ! VerifyVisited
   }
 
   override def onStart() {
-    scheduleTask(system, 2 minutes, 1 hour, actorProvider.ref, VerifyVisited)
+    scheduleTask(system, 2 minutes, 1 hour, actor.ref, VerifyVisited)
     super.onStart()
   }
 }

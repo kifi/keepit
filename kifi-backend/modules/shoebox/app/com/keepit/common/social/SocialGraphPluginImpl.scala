@@ -93,7 +93,7 @@ class SocialGraphPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting SocialGraphPluginImpl")
-    scheduleTask(actorProvider.system, 10 seconds, 1 minutes, actorProvider.ref, FetchAll)
+    scheduleTask(actor.system, 10 seconds, 1 minutes, actor.ref, FetchAll)
   }
   override def onStop() {
     log.info("stopping SocialGraphPluginImpl")
@@ -106,6 +106,6 @@ class SocialGraphPluginImpl @Inject() (
   override def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]] = {
     require(socialUserInfo.credentials.isDefined,
       "social user info's credentials are not defined: %s".format(socialUserInfo))
-    actorProvider.ref.ask(FetchUserInfo(socialUserInfo))(5 minutes).mapTo[Seq[SocialConnection]]
+    actor.ref.ask(FetchUserInfo(socialUserInfo))(5 minutes).mapTo[Seq[SocialConnection]]
   }
 }

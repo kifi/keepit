@@ -8,6 +8,7 @@ import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
 import com.keepit.common.time._
+import com.keepit.common.net.URI
 import com.keepit.search.{Article, ArticleStore}
 import com.keepit.model._
 import org.apache.http.HttpStatus
@@ -21,7 +22,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
-import com.keepit.common.net.URI
 
 trait DataIntegrityPlugin extends SchedulingPlugin
 
@@ -30,11 +30,10 @@ class DataIntegrityPluginImpl @Inject() (
     val schedulingProperties: SchedulingProperties) //only on leader
   extends Logging with DataIntegrityPlugin {
 
-  private lazy val actor = actorProvider.ref
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actorProvider.system, 5 minutes, 1 hour, actorProvider.ref, Cron)
+    scheduleTask(actor.system, 5 minutes, 1 hour, actor.ref, Cron)
   }
 }
 
@@ -86,9 +85,6 @@ class OrphanCleaner @Inject() (
     changedNuris.map(_.id.get)
   }
 
-  /**
-   * For an active/inactive uri, make sure its scrape info is inactive
-   */
   def cleanScrapeInfo(readOnly: Boolean = true)(implicit session: RWSession) = {
     val sis = scrapeInfoRepo.all() // allActive does the join with nuri. Come up with a better way?
     var oldScrapeInfos = Seq[ScrapeInfo]()

@@ -86,8 +86,8 @@ class TopicUpdaterPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
      log.info("starting TopicUpdaterPluginImpl")
-     scheduleTask(actorProvider.system, 10 minutes, 2 minutes, actorProvider.ref, UpdateTopic)
-     scheduleTask(actorProvider.system, 30 seconds, 3650 days, "check remodel status")(watchRemodelStatus)
+     scheduleTask(actor.system, 10 minutes, 2 minutes, actor.ref, UpdateTopic)
+     scheduleTask(actor.system, 30 seconds, 3650 days, "check remodel status")(watchRemodelStatus)
   }
   override def onStop() {
      log.info("stopping TopicUpdaterPluginImpl")
@@ -112,12 +112,12 @@ class TopicUpdaterPluginImpl @Inject() (
     }
 
     if (remodelStat == RemodelState.STARTED){
-      actorProvider.ref ! ContinueRemodel
+      actor.ref ! ContinueRemodel
     }
 
     centralConfig.onChange(remodelKey){ flagOpt =>
       if (flagOpt.isDefined && (flagOpt.get == RemodelState.NEEDED)){
-        actorProvider.ref ! Remodel
+        actor.ref ! Remodel
       }
     }
   }
@@ -154,7 +154,7 @@ class TopicModelSwitcherPluginImpl @Inject() (
     val flagKey = new TopicModelFlagKey()
     centralConfig.onChange(flagKey){ flagOpt =>
       log.info("topic model flag may have changed. Send a msg to TopicUpdater actor. ")
-      actorProvider.ref ! SwitchModel
+      actor.ref ! SwitchModel
     }
   }
 }

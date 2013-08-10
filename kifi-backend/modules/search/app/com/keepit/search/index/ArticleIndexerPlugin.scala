@@ -56,7 +56,7 @@ class ArticleIndexerPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting ArticleIndexerPluginImpl")
-    scheduleTask(actorProvider.system, 30 seconds, 1 minutes, actorProvider.ref, Index)
+    scheduleTask(actor.system, 30 seconds, 1 minutes, actor.ref, Index)
   }
   override def onStop() {
     log.info("stopping ArticleIndexerPluginImpl")
@@ -64,12 +64,12 @@ class ArticleIndexerPluginImpl @Inject() (
   }
 
   override def index(): Int = {
-    val future = actorProvider.ref.ask(Index)(1 minutes).mapTo[Int]
+    val future = actor.ref.ask(Index)(1 minutes).mapTo[Int]
     Await.result(future, 1 minutes)
   }
 
   override def reindex() {
     articleIndexer.reindex()
-    actorProvider.ref ! Index
+    actor.ref ! Index
   }
 }

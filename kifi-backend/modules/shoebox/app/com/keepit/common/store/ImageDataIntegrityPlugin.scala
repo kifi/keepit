@@ -91,11 +91,11 @@ class ImageDataIntegrityPluginImpl @Inject()(
     val schedulingProperties: SchedulingProperties //only on leader
   ) extends SchedulingPlugin with ImageDataIntegrityPlugin {
   def verifyAll() {
-    actorProvider.ref ! VerifyAllPictures
+    actor.ref ! VerifyAllPictures
   }
 
   override def onStart() {
-    scheduleTask(system, 2 minutes, 1 hour, actorProvider.ref, VerifyAllPictures)
+    scheduleTask(system, 2 minutes, 1 hour, actor.ref, VerifyAllPictures)
     super.onStart()
   }
 }

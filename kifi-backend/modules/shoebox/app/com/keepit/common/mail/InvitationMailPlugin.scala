@@ -91,13 +91,13 @@ class InvitationMailPluginImpl @Inject()(
   override def enabled: Boolean = true
 
   def resendNotifications() {
-    actorProvider.ref ! ResendNotifications
+    actor.ref ! ResendNotifications
   }
   def notifyAcceptedUser(userId: Id[User]) {
-    actorProvider.ref ! NotifyAcceptedUser(userId)
+    actor.ref ! NotifyAcceptedUser(userId)
   }
   override def onStart() {
     log.info("Starting InvitationMailPluginImpl")
-    scheduleTask(actorProvider.system, 10 seconds, 12 hours, actorProvider.ref, ResendNotifications)
+    scheduleTask(actor.system, 10 seconds, 12 hours, actor.ref, ResendNotifications)
   }
 }

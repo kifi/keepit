@@ -50,7 +50,7 @@ class CommentIndexerPluginImpl @Inject() (
 
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actorProvider.system, 30 seconds, 1 minute, actorProvider.ref, Update)
+    scheduleTask(actor.system, 30 seconds, 1 minute, actor.ref, Update)
     log.info("starting CommentIndexerPluginImpl")
   }
   override def onStop() {
@@ -59,10 +59,10 @@ class CommentIndexerPluginImpl @Inject() (
     commentIndexer.close()
   }
 
-  override def update(): Future[Int] = actorProvider.ref.ask(Update)(1 minutes).mapTo[Int]
+  override def update(): Future[Int] = actor.ref.ask(Update)(1 minutes).mapTo[Int]
 
   override def reindex() {
     commentIndexer.reindex()
-    actorProvider.ref ! Update
+    actor.ref ! Update
   }
 }

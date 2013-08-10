@@ -125,7 +125,7 @@ class DomainClassifierImpl @Inject()(
   private val splitPattern = """\.""".r
 
   def fetchTags(domain: String): Future[Seq[DomainTagName]] = {
-    actorProvider.ref.ask(FetchTags(domain))(1 minute).mapTo[Seq[DomainTagName]]
+    actor.ref.ask(FetchTags(domain))(1 minute).mapTo[Seq[DomainTagName]]
   }
 
   def isSensitive(hostname: String): Either[Future[Boolean], Boolean] = {
@@ -140,7 +140,7 @@ class DomainClassifierImpl @Inject()(
         domain.sensitive.orElse(db.readWrite { implicit s => updater.calculateSensitivity(domain) })
       } match {
         case Some(sensitive) => Right(sensitive)
-        case None => Left(actorProvider.ref.ask(FetchDomainInfo(domainName))(1 minute).mapTo[Boolean])
+        case None => Left(actor.ref.ask(FetchDomainInfo(domainName))(1 minute).mapTo[Boolean])
       }
     }
   }

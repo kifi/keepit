@@ -52,6 +52,6 @@ class SocialGraphRefresherImpl @Inject() (
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actorProvider.system, 90 seconds, 5 minutes, actorProvider.ref, RefreshAll)
+    scheduleTask(actor.system, 90 seconds, 5 minutes, actor.ref, RefreshAll)
   }
 }

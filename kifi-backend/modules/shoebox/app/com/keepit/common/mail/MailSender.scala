@@ -24,11 +24,11 @@ class MailSenderPluginImpl @Inject() (
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actorProvider.system, 5 seconds, 5 seconds, actorProvider.ref, ProcessOutbox)
+    scheduleTask(actor.system, 5 seconds, 5 seconds, actor.ref, ProcessOutbox)
   }
 
-  override def processOutbox() { actorProvider.ref ! ProcessOutbox }
-  override def processMail(mail: ElectronicMail) { actorProvider.ref ! ProcessMail(mail) }
+  override def processOutbox() { actor.ref ! ProcessOutbox }
+  override def processMail(mail: ElectronicMail) { actor.ref ! ProcessMail(mail) }
 }
 
 private[mail] case class ProcessOutbox()

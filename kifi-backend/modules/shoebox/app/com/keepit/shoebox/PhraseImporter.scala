@@ -99,7 +99,7 @@ class PhraseImporterImpl @Inject()(
   extends PhraseImporter {
 
   def importFile(file: File): Unit = {
-    actorProvider.ref ! ImportFile(file)
+    actor.ref ! ImportFile(file)
   }
 }
 

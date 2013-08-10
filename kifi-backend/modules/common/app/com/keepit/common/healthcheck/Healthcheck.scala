@@ -38,7 +38,7 @@ object Healthcheck {
   case object INTERNAL extends CallType
   case object EXTENSION extends CallType
 
-  val OPS_OF_THE_WEEK = EmailAddresses.STEPHEN
+  val OPS_OF_THE_WEEK = EmailAddresses.EISHAY
 }
 
 case object ReportErrorsAction
@@ -166,20 +166,20 @@ class HealthcheckPluginImpl @Inject() (
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actorProvider.system, 0 seconds, 10 minutes, actorProvider.ref, ReportErrorsAction)
+    scheduleTask(actor.system, 0 seconds, 10 minutes, actor.ref, ReportErrorsAction)
   }
 
-  def errorCount(): Int = Await.result((actorProvider.ref ? ErrorCount).mapTo[Int], 1 seconds)
+  def errorCount(): Int = Await.result((actor.ref ? ErrorCount).mapTo[Int], 1 seconds)
 
-  def errors(): Seq[HealthcheckError] = Await.result((actorProvider.ref ? GetErrors).mapTo[List[HealthcheckError]], 1 seconds)
+  def errors(): Seq[HealthcheckError] = Await.result((actor.ref ? GetErrors).mapTo[List[HealthcheckError]], 1 seconds)
 
-  def resetErrorCount(): Unit = actorProvider.ref ! ResetErrorCount
+  def resetErrorCount(): Unit = actor.ref ! ResetErrorCount
 
-  def reportErrors(): Unit = actorProvider.ref ! ReportErrorsAction
+  def reportErrors(): Unit = actor.ref ! ReportErrorsAction
 
   def addError(error: HealthcheckError): HealthcheckError = {
     log.error(s"Healthcheck logged error: ${error}")
-    actorProvider.ref ! error
+    actor.ref ! error
     error
   }
 
@@ -189,7 +189,7 @@ class HealthcheckPluginImpl @Inject() (
     val email = (ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
         category = PostOffice.Categories.HEALTHCHECK))
-    actorProvider.ref ! email
+    actor.ref ! email
     email
   }
 
@@ -199,9 +199,9 @@ class HealthcheckPluginImpl @Inject() (
     val email = (ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
         category = PostOffice.Categories.HEALTHCHECK))
-    actorProvider.ref ! email
+    actor.ref ! email
     email
   }
 
-  override def warmUp() = scheduleTaskOnce(actorProvider.system, 3 minutes, "Healthcheck: consider service warm") {super.warmUp()}
+  override def warmUp() = scheduleTaskOnce(actor.system, 3 minutes, "Healthcheck: consider service warm") {super.warmUp()}
 }

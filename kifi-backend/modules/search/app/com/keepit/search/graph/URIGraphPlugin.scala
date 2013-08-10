@@ -51,7 +51,7 @@ class URIGraphPluginImpl @Inject() (
 
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actorProvider.system, 30 seconds, 1 minute, actorProvider.ref, Update)
+    scheduleTask(actor.system, 30 seconds, 1 minute, actor.ref, Update)
     log.info("starting URIGraphPluginImpl")
   }
   override def onStop() {
@@ -60,15 +60,15 @@ class URIGraphPluginImpl @Inject() (
     uriGraph.close()
   }
 
-  override def update(): Future[Int] = actorProvider.ref.ask(Update)(1 minutes).mapTo[Int]
+  override def update(): Future[Int] = actor.ref.ask(Update)(1 minutes).mapTo[Int]
 
   override def reindex() {
     uriGraph.reindex()
-    actorProvider.ref ! Update
+    actor.ref ! Update
   }
 
   override def reindexCollection() {
     uriGraph.reindexCollection()
-    actorProvider.ref ! Update
+    actor.ref ! Update
   }
 }

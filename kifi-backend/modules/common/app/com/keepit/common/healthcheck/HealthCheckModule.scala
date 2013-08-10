@@ -22,6 +22,6 @@ case class ProdHealthCheckModule() extends HealthCheckModule {
   @AppScoped
   def healthcheckProvider(actor: ActorInstance[HealthcheckActor],
     services: FortyTwoServices, host: HealthcheckHost): HealthcheckPlugin = {
-    new HealthcheckPluginImpl(actorProvider, services, host)
+    new HealthcheckPluginImpl(actor, services, host)
   }
 }

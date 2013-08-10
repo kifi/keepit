@@ -24,17 +24,17 @@ class ActorInstanceTest extends Specification with TestInjector {
   "ActorInstance" should {
     "provide singletons" in {
       withInjector(StandaloneTestActorSystemModule()) { implicit injector =>
-      	val actorA = inject[ActorInstance[MyTestActorA]].actor
-      	val actorB = inject[ActorInstance[MyTestActorB]].actor
+      	val actorA = inject[ActorInstance[MyTestActorA]].ref
+      	val actorB = inject[ActorInstance[MyTestActorB]].ref
       	//checking we're not getting the same reference fo rdiferant actor types
       	actorA !== actorB
       	val factoryA = inject[ActorInstance[MyTestActorA]]
-      	factoryA.actor === factoryA.actor
+      	factoryA.ref === factoryA.ref
       	//making sure the actor factory is a singleton
-      	factoryA.actor === actorA
+      	factoryA.ref === actorA
       	val factoryB = inject[ActorInstance[MyTestActorB]]
-      	factoryB.actor === factoryB.actor
-      	factoryB.actor === actorB
+      	factoryB.ref === factoryB.ref
+      	factoryB.ref === actorB
       }
     }
   }

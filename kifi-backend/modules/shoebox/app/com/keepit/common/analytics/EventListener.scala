@@ -86,7 +86,7 @@ object SearchEventName {
 class EventHelper @Inject() (
   actor: ActorInstance[EventHelperActor],
   listeners: Set[EventListener]) {
-  def newEvent(event: Event): Unit = actorProvider.ref ! event
+  def newEvent(event: Event): Unit = actor.ref ! event
 
   def matchEvent(event: Event): Seq[String] =
     listeners.filter(_.onEvent.isDefinedAt(event)).map(_.getClass.getSimpleName.replaceAll("\\$", "")).toSeq

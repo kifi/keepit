@@ -162,11 +162,11 @@ class UserEmailNotifierPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting UserEmailNotifierPluginImpl")
-    scheduleTask(actorProvider.system, 30 seconds, 2 minutes, actorProvider.ref, SendEmails)
+    scheduleTask(actor.system, 30 seconds, 2 minutes, actor.ref, SendEmails)
   }
 
   override def sendEmails() {
-    actorProvider.ref ! SendEmails
+    actor.ref ! SendEmails
   }
 }
 

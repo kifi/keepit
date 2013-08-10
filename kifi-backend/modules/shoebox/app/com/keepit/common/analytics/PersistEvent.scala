@@ -68,8 +68,8 @@ class EventPersisterImpl @Inject() (
     actor: ActorInstance[PersistEventActor])
   extends EventPersister with Logging {
 
-  def persist(event: Event): Unit = actorProvider.ref ! Persist(event, currentDateTime)
-  def persist(events: Seq[Event]): Unit = actorProvider.ref ! PersistMany(events, currentDateTime)
+  def persist(event: Event): Unit = actor.ref ! Persist(event, currentDateTime)
+  def persist(events: Seq[Event]): Unit = actor.ref ! PersistMany(events, currentDateTime)
 }
 
 class FakeEventPersisterImpl @Inject() (

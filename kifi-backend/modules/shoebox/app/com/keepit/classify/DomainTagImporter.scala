@@ -313,14 +313,14 @@ class DomainTagImporterImpl @Inject() (
     extends DomainTagImporter {
 
   def refetchClassifications() {
-    actorProvider.ref ! RefetchAll
+    actor.ref ! RefetchAll
   }
 
   def removeTag(tagName: DomainTagName): Future[Option[DomainTag]] = {
-    actorProvider.ref.ask(RemoveTag(tagName))(1 minute).mapTo[Option[DomainTag]]
+    actor.ref.ask(RemoveTag(tagName))(1 minute).mapTo[Option[DomainTag]]
   }
 
   def applyTagToDomains(tagName: DomainTagName, domainNames: Seq[String]): Future[DomainTag] = {
-    actorProvider.ref.ask(ApplyTag(tagName, domainNames))(1 minute).mapTo[DomainTag]
+    actor.ref.ask(ApplyTag(tagName, domainNames))(1 minute).mapTo[DomainTag]
   }
 }
