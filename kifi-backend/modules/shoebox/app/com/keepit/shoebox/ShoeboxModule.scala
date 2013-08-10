@@ -19,6 +19,7 @@ import com.keepit.inject.{ConfigurationModule, FortyTwoModule}
 import com.keepit.common.actor.ActorSystemModule
 import com.keepit.common.zookeeper.DiscoveryModule
 import com.keepit.common.db.slick.SlickModule
+import com.keepit.eliza.ElizaServiceClientModule
 
 abstract class ShoeboxModule(
   // Common Functional Modules
@@ -36,6 +37,7 @@ abstract class ShoeboxModule(
   val healthCheckModule: HealthCheckModule,
   val httpClientModule: HttpClientModule,
   val shoeboxServiceClientModule: ShoeboxServiceClientModule,
+  val elizaServiceClientModule: ElizaServiceClientModule,
 
   // Shoebox Functional Modules
   val slickModule: SlickModule,
@@ -64,6 +66,7 @@ abstract class ShoeboxModule(
     healthCheckModule,
     httpClientModule,
     shoeboxServiceClientModule,
+    elizaServiceClientModule,
 
     slickModule,
     scraperModule,

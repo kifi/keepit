@@ -10,7 +10,7 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.net.HttpClient
 import com.keepit.common.zookeeper.ServiceCluster
 
-import play.api.libs.json.{JsArray, Json}
+import play.api.libs.json.{JsArray, Json, JsObject}
 
 import com.google.inject.Inject
 
@@ -18,6 +18,9 @@ trait ElizaServiceClient extends ServiceClient {
   final val serviceType = ServiceType.ELIZA
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit
   def sendToUser(userId: Id[User], data: JsArray): Unit
+
+  //migration
+  def importThread(data: JsObject): Unit
 }
 
 
@@ -40,6 +43,11 @@ class ElizaServiceClientImpl @Inject() (
     call(Eliza.internal.sendToUser, payload)
   }
 
+  //migration
+  def importThread(data: JsObject): Unit = {
+    call(Eliza.internal.importThread, data)
+  }
+
 }
 
 class FakeElizaServiceClientImpl(val healthcheck: HealthcheckPlugin) extends ElizaServiceClient{
@@ -49,4 +57,9 @@ class FakeElizaServiceClientImpl(val healthcheck: HealthcheckPlugin) extends Eli
   def sendToUserNoBroadcast(userId: Id[User], data: JsArray): Unit = {}
 
   def sendToUser(userId: Id[User], data: JsArray): Unit = {}
+
+  //migration
+  def importThread(data: JsObject): Unit = {}
+
+
 }
