@@ -9,7 +9,7 @@ import com.keepit.common.time._
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.akka.FortyTwoActor
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 import play.api.Plugin
 import scala.concurrent.duration._
 
@@ -87,7 +87,7 @@ trait UriIntegrityPlugin extends Plugin {
 }
 
 class UriIntegrityPluginImpl @Inject() (
-  actorProvider: ActorProvider[UriIntegrityActor]
+  actor: ActorInstance[UriIntegrityActor]
 ) extends UriIntegrityPlugin with Logging {
   implicit val actorTimeout = Timeout(5 seconds)
 
@@ -101,6 +101,6 @@ class UriIntegrityPluginImpl @Inject() (
   }
 
   override def fixChangedUri(change: ChangedUri) = {
-    actorProvider.actor ! change
+    actor.ref ! change
   }
 }

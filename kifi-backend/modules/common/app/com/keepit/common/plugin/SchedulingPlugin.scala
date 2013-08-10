@@ -3,7 +3,7 @@ package com.keepit.common.plugin
 import com.keepit.common.logging.Logging
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 
 import akka.actor.{ActorSystem, Cancellable, ActorRef}
 import play.api.Plugin
@@ -34,14 +34,14 @@ trait SchedulingPlugin extends Plugin with Logging {
       _cancellables :+= system.scheduler.schedule(initialDelay, frequency) { execute(f, taskName) }
     } else log.info(s"permanently disable scheduling for task: $taskName")
 
-  def cronTask(quartz: ActorProvider[QuartzActor], receiver: ActorRef, cron: String, message: Any): Unit = {
+  def cronTask(quartz: ActorInstance[QuartzActor], receiver: ActorRef, cron: String, message: Any): Unit = {
     val taskName = s"cron message $message to actor $receiver"
     if (!schedulingProperties.neverAllowScheduling) {
       log.info(s"Scheduling $taskName in Cron")
       val spigot = new Spigot {
         def open = schedulingProperties.allowScheduling
       }
-      quartz.actor ! AddCronSchedule(receiver, cron, message, false, spigot)
+      quartz.ref ! AddCronSchedule(receiver, cron, message, false, spigot)
     } else log.info(s"permanently disable cron for task: $taskName")
   }
 

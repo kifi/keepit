@@ -5,7 +5,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.Inject
 import com.keepit.common.akka.FortyTwoActor
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db.SequenceNumber
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.logging.Logging
@@ -45,7 +45,7 @@ trait ArticleIndexerPlugin extends SchedulingPlugin {
 }
 
 class ArticleIndexerPluginImpl @Inject() (
-    actorProvider: ActorProvider[ArticleIndexerActor],
+    actor: ActorInstance[ArticleIndexerActor],
     articleIndexer: ArticleIndexer)
   extends ArticleIndexerPlugin with Logging {
 
@@ -56,7 +56,7 @@ class ArticleIndexerPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting ArticleIndexerPluginImpl")
-    scheduleTask(actorProvider.system, 30 seconds, 1 minutes, actorProvider.actor, Index)
+    scheduleTask(actor.system, 30 seconds, 1 minutes, actor.ref, Index)
   }
   override def onStop() {
     log.info("stopping ArticleIndexerPluginImpl")
@@ -64,12 +64,12 @@ class ArticleIndexerPluginImpl @Inject() (
   }
 
   override def index(): Int = {
-    val future = actorProvider.actor.ask(Index)(1 minutes).mapTo[Int]
+    val future = actor.ref.ask(Index)(1 minutes).mapTo[Int]
     Await.result(future, 1 minutes)
   }
 
   override def reindex() {
     articleIndexer.reindex()
-    actorProvider.actor ! Index
+    actor.ref ! Index
   }
 }
