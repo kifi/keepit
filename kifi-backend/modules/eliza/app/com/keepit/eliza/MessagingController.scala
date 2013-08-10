@@ -72,7 +72,7 @@ class MessagingController @Inject() (
 
       ElizaThreadInfo(
         externalId=thread.externalId,
-        recipients=thread.participants.map(_.all).getOrElse(Set()).map(userId2BasicUser(_)).toSeq,
+        participants=thread.participants.map(_.all).getOrElse(Set()).map(userId2BasicUser(_)).toSeq,
         digest= lastMessage.messageText,
         lastAuthor=userId2BasicUser(lastMessage.from.get).externalId,
         messageCount=messagesByThread(thread.id.get).length,
