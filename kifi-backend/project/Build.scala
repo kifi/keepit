@@ -58,7 +58,7 @@ object ApplicationBuild extends Build {
       "org.apache.lucene" % "lucene-core" % "4.2.1",
       "org.apache.lucene" % "lucene-analyzers-common" % "4.2.1",
       "org.apache.lucene" % "lucene-suggest" % "4.2.1",
-      "us.theatr" %% "akka-quartz" % "0.2.0"
+      "us.theatr" %% "akka-quartz" % "0.2.0_42.1"
     ) map (_.excludeAll(
       ExclusionRule(organization = "com.cedarsoft"),
       ExclusionRule(organization = "javax.jms"),
