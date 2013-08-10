@@ -12,7 +12,7 @@ import play.api.libs.json._
 
 case class ElizaThreadInfo(
     externalId: ExternalId[MessageThread],
-    recipients: Seq[BasicUser],
+    participants: Seq[BasicUser],
     digest: String,
     lastAuthor: ExternalId[User],
     messageCount: Long,
@@ -26,7 +26,7 @@ case class ElizaThreadInfo(
 object ElizaThreadInfo {
   implicit val writesThreadInfo = (
     (__ \ 'id).write(ExternalId.format[MessageThread]) and
-    (__ \ 'recipients).write[Seq[BasicUser]] and
+    (__ \ 'participants).write[Seq[BasicUser]] and
     (__ \ 'digest).write[String] and
     (__ \ 'lastAuthor).write(ExternalId.format[User]) and
     (__ \ 'messageCount).write[Long] and
