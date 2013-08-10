@@ -11,7 +11,6 @@ import com.keepit.common.analytics.{EventFamilies, Events, EventPersister}
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.URI
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import com.keepit.controllers.core.BookmarkInterner
 import com.keepit.model.{EmailAddressRepo, User, UserRepo}
@@ -24,6 +23,7 @@ import javax.mail.internet.{InternetAddress, MimeMultipart}
 import javax.mail.search._
 import play.api.libs.json.Json
 import play.api.Plugin
+import com.keepit.common.net.URI
 
 private case object FetchNewKeeps
 

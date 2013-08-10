@@ -34,7 +34,7 @@ trait SchedulingPlugin extends Plugin with Logging {
       _cancellables :+= system.scheduler.schedule(initialDelay, frequency) { execute(f, taskName) }
     } else log.info(s"permanently disable scheduling for task: $taskName")
 
-  def cronTask(quartz: ActorInstance[QuartzActor], receiver: ActorRef, cron: String, message: Any): Unit = {
+  def cronTask(quartz: ActorProvider[QuartzActor], receiver: ActorRef, cron: String, message: Any): Unit = {
     val taskName = s"cron message $message to actor $receiver"
     if (!schedulingProperties.neverAllowScheduling) {
       log.info(s"Scheduling $taskName in Cron")

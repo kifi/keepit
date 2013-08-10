@@ -152,7 +152,7 @@ const socketHandlers = {
     for (var i = 0; i < fr.length; i++) {
       var f = fr[i];
       if (friendsById[f.id]) {
-        friends = friends.filter(function (e) { e.id != f.id })
+        friends = friends.filter(function(e) {return e.id != f.id})
       }
       friends.push(f)
       friendsById[f.id] = f;
@@ -332,9 +332,7 @@ const socketHandlers = {
         }
       }
       d.tabs.forEach(function(tab) {
-        whenTabSelected(tab, function (tab) {
-          api.tabs.emit(tab, "message", {thread: th, message: message, read: d.lastMessageRead[th.id], userId: session.userId});
-        });
+        api.tabs.emit(tab, "message", {thread: th, message: message, read: d.lastMessageRead[th.id], userId: session.userId});
       });
       tellTabsIfCountChanged(d, "m", messageCount(d));
     }
@@ -910,21 +908,10 @@ function clone(o) {
   return c;
 }
 
-function whenTabSelected(tab, callback) {
-  if (api.tabs.isSelected(tab)) {
-    callback(tab);
-  } else {
-    (tab.focusCallbacks = tab.focusCallbacks || []).push(callback);
-  }
-}
 // ===== Browser event listeners
 
 api.tabs.on.focus.add(function(tab) {
   api.log("#b8a", "[tabs.on.focus] %i %o", tab.id, tab);
-  for (var cb; tab.focusCallbacks && (cb = tab.focusCallbacks.shift());) {
-    cb(tab);
-  }
-  delete tab.focusCallbacks;
   subscribe(tab);
   if (tab.autoShowSec != null && !tab.autoShowTimer) {
     scheduleAutoShow(tab);

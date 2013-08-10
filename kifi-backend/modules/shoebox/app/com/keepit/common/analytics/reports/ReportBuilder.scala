@@ -133,21 +133,22 @@ class ReportBuilderPluginImpl @Inject() (
   val schedulingProperties: SchedulingProperties) //only on leader
     extends Logging with ReportBuilderPlugin with SchedulingPlugin {
 
-  def buildReport(startDate: DateTime, endDate: DateTime, report: ReportRepo): Unit = actorProvider.ref ! BuildReport(startDate, endDate, report)
-  def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit = actorProvider.ref ! BuildReports(startDate, endDate, reportGroup)
+  def buildReport(startDate: DateTime, endDate: DateTime, report: ReportRepo): Unit = actor.ref ! BuildReport(startDate, endDate, report)
+  def buildReports(startDate: DateTime, endDate: DateTime, reportGroup: ReportGroup): Unit = actor.ref ! BuildReports(startDate, endDate, reportGroup)
 
-  private lazy val actor = actorProvider.ref
+  implicit val dbMasterSlave = Database.Slave
+
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actorProvider.system, 10 seconds, 1 hour, actorProvider.ref, ReportCron(this))
+    scheduleTask(actor.system, 10 seconds, 1 hour, actor.ref, ReportCron(this))
   }
 
   override def reportCron(): Unit = {
     if (currentDateTime.hourOfDay().get() == 3) {// 3am PST
-      actorProvider.ref ! BuildReports(defaultStartTime, defaultEndTime,
+      actor.ref ! BuildReports(defaultStartTime, defaultEndTime,
          searchExperimentReports(db.readOnly { implicit s => searchConfigExperimentRepo.getActive() }))
-      actorProvider.ref ! BuildReports(defaultStartTime, defaultEndTime, dailyReports)
+      actor.ref ! BuildReports(defaultStartTime, defaultEndTime, dailyReports)
     }
   }
 

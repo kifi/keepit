@@ -10,8 +10,6 @@ import org.apache.lucene.util.Version
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.Healthcheck.INTERNAL
 import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
-import com.keepit.common.net.Host
-import com.keepit.common.net.URI
 import com.keepit.common.strings._
 import com.keepit.model._
 import com.keepit.model.CollectionStates._

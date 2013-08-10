@@ -13,7 +13,7 @@ import com.keepit.common.time.FakeClockModule
 import com.keepit.common.db.TestSlickModule
 import com.keepit.common.healthcheck.FakeHealthcheckModule
 import com.google.inject.util.Modules
-import com.google.inject.{Injector, Module}
+import com.google.inject.Module
 import com.keepit.common.cache.{HashMapMemoryCacheModule, ShoeboxCacheModule}
 import com.keepit.common.zookeeper.FakeDiscoveryModule
 
@@ -44,5 +44,10 @@ trait ShoeboxApplicationInjector extends ApplicationInjector with DbInjectionHel
 
 trait ShoeboxTestInjector extends EmptyInjector with DbInjectionHelper with ShoeboxInjectionHelpers {
   val mode = Mode.Test
-  val module = Modules.combine(FakeClockModule(), FakeHealthcheckModule(), TestSlickModule(TestDbInfo.dbInfo), ShoeboxCacheModule(HashMapMemoryCacheModule()))
+  val module = Modules.combine(
+    FakeClockModule(),
+    FakeHealthcheckModule(),
+    TestSlickModule(TestDbInfo.dbInfo),
+    ShoeboxCacheModule(HashMapMemoryCacheModule())
+  )
 }

@@ -225,7 +225,7 @@ form.kifi-compose input[type=text] { /* either input */
   box-shadow: none !important;
 }
 form.kifi-compose input[type=text].kifi-compose-to, /* initial input */
-form.kifi-compose ul.token-input-list-KiFi {
+form.kifi-compose ul.token-input-list-Kifi {
   width: 100%;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
@@ -245,7 +245,7 @@ form.kifi-compose input[type=text]#token-input-kifi-compose-to { /* token input 
 form.kifi-compose input[type=text]::-moz-placeholder {
   color: #a9a9a9 !important;
 }
-form.kifi-compose ul.token-input-list-KiFi {
+form.kifi-compose ul.token-input-list-Kifi {
   padding: 3px 0 0 !important;
   height: auto !important;
   min-height: 1px;
@@ -256,13 +256,13 @@ form.kifi-compose ul.token-input-list-KiFi {
   font: inherit;
   cursor: text;
 }
-form.kifi-compose li.token-input-input-token-KiFi { /* input wrapper */
+form.kifi-compose li.token-input-input-token-Kifi { /* input wrapper */
   float: left;
   margin: 0 0 3px 5px !important;
   padding: 0 !important;
   list-style-type: none;
 }
-form.kifi-compose li.token-input-token-KiFi {
+form.kifi-compose li.token-input-token-Kifi {
   overflow: hidden;
   margin: 0 0 3px 3px !important;
   padding: 2px 0 2px 5px !important;
@@ -272,28 +272,28 @@ form.kifi-compose li.token-input-token-KiFi {
   float: left;
   white-space: nowrap;
 }
-form.kifi-compose li.token-input-selected-token-KiFi {
+form.kifi-compose li.token-input-selected-token-Kifi {
   background-color: #4c8ffb;
 }
-form.kifi-compose li.token-input-token-KiFi>p {
+form.kifi-compose li.token-input-token-Kifi>p {
   display: inline;
   padding: 0;
   margin: 0;
 }
-form.kifi-compose li.token-input-token-KiFi .token-input-delete-token-KiFi {
+form.kifi-compose li.token-input-token-Kifi .token-input-delete-token-Kifi {
   margin-left: 5px;
   padding: 1px 4px 3px;
   position: relative;
   bottom: 1px;
   cursor: pointer;
 }
-form.kifi-compose li.token-input-token-KiFi .token-input-delete-token-KiFi:hover {
+form.kifi-compose li.token-input-token-Kifi .token-input-delete-token-Kifi:hover {
   background-color: #4c8ffb;
 }
-form.kifi-compose li.token-input-selected-token-KiFi .token-input-delete-token-KiFi:hover {
+form.kifi-compose li.token-input-selected-token-Kifi .token-input-delete-token-Kifi:hover {
   background-color: #6fa6ef;
 }
-div.token-input-dropdown-KiFi {
+div.token-input-dropdown-Kifi {
   border: 1px solid #ccc;
   border-top: none;
   background-color: #fff;
@@ -305,7 +305,7 @@ div.token-input-dropdown-KiFi {
   box-sizing: border-box;
 }
 /* searchingText or noResultText
-div.token-input-dropdown-KiFi>p {
+div.token-input-dropdown-Kifi>p {
   margin: 0 !important;
   padding: 5px;
   font: inherit;
@@ -313,7 +313,7 @@ div.token-input-dropdown-KiFi>p {
   color: #777;
 }
 */
-div.token-input-dropdown-KiFi>ul {
+div.token-input-dropdown-Kifi>ul {
   position: static;
   float: none;
   margin: 0 !important;
@@ -321,7 +321,7 @@ div.token-input-dropdown-KiFi>ul {
   font: inherit;
   color: inherit;
 }
-div.token-input-dropdown-KiFi>ul>li {
+div.token-input-dropdown-Kifi>ul>li {
   background: 6px 2px/28px no-repeat padding-box #fff;
   position: static;
   float: none;
@@ -333,12 +333,12 @@ div.token-input-dropdown-KiFi>ul>li {
   color: inherit;
   line-height: 28px;
 }
-div.token-input-dropdown-KiFi>ul>li>b {
+div.token-input-dropdown-Kifi>ul>li>b {
   font: inherit;
   font-weight: bold;
   color: inherit;
 }
-div.token-input-dropdown-KiFi>ul>li.token-input-selected-dropdown-item-KiFi {
+div.token-input-dropdown-Kifi>ul>li.token-input-selected-dropdown-item-Kifi {
   background-color: #6fa6ef;
   color: #fff;
 }

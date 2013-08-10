@@ -2,20 +2,18 @@ package com.keepit.model
 
 import scala.concurrent.duration._
 
-import java.security.MessageDigest
-
-import org.apache.commons.codec.binary.Base64
 import org.joda.time.DateTime
-
 import com.keepit.common.cache._
 import com.keepit.common.db._
 import com.keepit.common.logging.Logging
-import com.keepit.common.net.URINormalizer
-import com.keepit.common.strings._
 import com.keepit.common.time._
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import java.security.MessageDigest
+import org.apache.commons.codec.binary.Base64
+import com.keepit.common.strings._
+import play.api.libs.json.JsString
 
 case class URISearchResults(uri: NormalizedURI, score: Float)
 
@@ -29,7 +27,8 @@ case class NormalizedURI (
   urlHash: UrlHash,
   state: State[NormalizedURI] = NormalizedURIStates.ACTIVE,
   seq: SequenceNumber = SequenceNumber.ZERO,
-  screenshotUpdatedAt: Option[DateTime]
+  screenshotUpdatedAt: Option[DateTime] = None,
+  normalization: Option[Normalization] = None
 ) extends ModelWithExternalId[NormalizedURI] with Logging {
   def withId(id: Id[NormalizedURI]): NormalizedURI = copy(id = Some(id))
   def withUpdateTime(now: DateTime): NormalizedURI = copy(updatedAt = now)
@@ -49,8 +48,24 @@ object NormalizedURI {
     (__ \ 'urlHash).format[String].inmap(UrlHash.apply, unlift(UrlHash.unapply)) and
     (__ \ 'state).format(State.format[NormalizedURI]) and
     (__ \ 'seq).format(SequenceNumber.sequenceNumberFormat) and
-    (__ \ 'screenshotUpdatedAt).formatNullable[DateTime]
-  )(NormalizedURI.apply, unlift(NormalizedURI.unapply))
+    (__ \ 'screenshotUpdatedAt).formatNullable[DateTime] and
+    (__ \ 'normalization).formatNullable[Normalization]
+    )(NormalizedURI.apply, unlift(NormalizedURI.unapply))
+
+  def hashUrl(normalizedUrl: String): UrlHash = {
+    val binaryHash = MessageDigest.getInstance("MD5").digest(normalizedUrl)
+    UrlHash(new String(new Base64().encode(binaryHash), UTF8))
+  }
+
+  def withHash(
+    normalizedUrl: String, 
+    title: Option[String] = None, 
+    state: State[NormalizedURI] = NormalizedURIStates.ACTIVE, 
+    normalization: Option[Normalization] = None
+    ): NormalizedURI = {
+    if (normalizedUrl.size > URLFactory.MAX_URL_SIZE) throw new Exception(s"url size is ${normalizedUrl.size} which exceeds ${URLFactory.MAX_URL_SIZE}: $normalizedUrl")
+    NormalizedURI(title = title, url = normalizedUrl, urlHash = hashUrl(normalizedUrl), state = state, screenshotUpdatedAt = None, normalization = normalization)
+  } 
 }
 
 case class UrlHash(hash: String) extends AnyVal
@@ -114,30 +129,4 @@ object NormalizedURIStates extends States[NormalizedURI] {
   }
 }
 
-object NormalizedURIFactory {
 
-  def apply(url: String): NormalizedURI =
-    apply(title = None, url = url, state = NormalizedURIStates.ACTIVE)
-
-  def apply(url: String, state: State[NormalizedURI]): NormalizedURI =
-    apply(title = None, url = url, state = state)
-
-  def apply(title: String, url: String): NormalizedURI =
-    NormalizedURIFactory(title = Some(title), url = url, state = NormalizedURIStates.ACTIVE)
-
-  def apply(title: String, url: String, state: State[NormalizedURI]): NormalizedURI =
-    NormalizedURIFactory(title = Some(title), url = url, state = state)
-
-  def apply(title: Option[String], url: String, state: State[NormalizedURI]): NormalizedURI = {
-    val normalized = normalize(url)
-    if (normalized.size > URLFactory.MAX_URL_SIZE) throw new Exception(s"url size is ${normalized.size} which exceeds ${URLFactory.MAX_URL_SIZE}: $normalized")
-    NormalizedURI(title = title, url = normalized, urlHash = hashUrl(normalized), state = state, screenshotUpdatedAt = None)
-  }
-
-  def normalize(url: String) = URINormalizer.normalize(url)
-
-  def hashUrl(normalizedUrl: String): UrlHash = {
-    val binaryHash = MessageDigest.getInstance("MD5").digest(normalizedUrl)
-    UrlHash(new String(new Base64().encode(binaryHash), UTF8))
-  }
-}

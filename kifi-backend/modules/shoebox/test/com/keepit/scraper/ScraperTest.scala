@@ -37,7 +37,7 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
         val store = new FakeArticleStore()
         val scraper = getMockScraper(store)
         val url = "http://www.keepit.com/existing"
-        val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.SCRAPE_WANTED).copy(id = Some(Id(33)))
+        val uri = NormalizedURI.withHash(title = Some("title"), normalizedUrl = url, state = NormalizedURIStates.SCRAPE_WANTED).copy(id = Some(Id(33)))
         val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get))
 
         result must beAnInstanceOf[Scraped] // Article
@@ -54,7 +54,7 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
         val store = new FakeArticleStore()
         val scraper = getMockScraper(store)
         val url = "http://www.keepit.com/missing"
-        val uri = NormalizedURIFactory(title = "title", url = url, state = NormalizedURIStates.SCRAPE_WANTED).copy(id = Some(Id(44)))
+        val uri = NormalizedURI.withHash(title = Some("title"), normalizedUrl = url, state = NormalizedURIStates.SCRAPE_WANTED).copy(id = Some(Id(44)))
         val result = scraper.fetchArticle(uri, info = ScrapeInfo(uriId = uri.id.get))
         result must beAnInstanceOf[Error]
         (result: @unchecked) match {
@@ -68,9 +68,9 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
         inject[Database].readWrite { implicit s =>
           val uriRepo = inject[NormalizedURIRepo]
           val scrapeRepo = inject[ScrapeInfoRepo]
-          val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing")
+          val uri1 = uriRepo.save(NormalizedURI.withHash(title = Some("existing"), normalizedUrl = "http://www.keepit.com/existing")
               .withState(NormalizedURIStates.SCRAPED))
-          val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing")
+          val uri2 = uriRepo.save(NormalizedURI.withHash(title = Some("missing"), normalizedUrl = "http://www.keepit.com/missing")
               .withState(NormalizedURIStates.SCRAPED))
           val info1 = scrapeRepo.getByUri(uri1.id.get).get
           val info2 = scrapeRepo.getByUri(uri2.id.get).get
@@ -85,8 +85,8 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         val (uri1, uri2, info1, info2) = inject[Database].readWrite { implicit s =>
-          val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing", state = NormalizedURIStates.SCRAPE_WANTED))
-          val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing", state = NormalizedURIStates.SCRAPE_WANTED))
+          val uri1 = uriRepo.save(NormalizedURI.withHash(title = Some("existing"), normalizedUrl = "http://www.keepit.com/existing", state = NormalizedURIStates.SCRAPE_WANTED))
+          val uri2 = uriRepo.save(NormalizedURI.withHash(title = Some("missing"), normalizedUrl = "http://www.keepit.com/missing", state = NormalizedURIStates.SCRAPE_WANTED))
           val info1 = scrapeRepo.getByUri(uri1.id.get).get
           val info2 = scrapeRepo.getByUri(uri2.id.get).get
           (uri1, uri2, info1, info2)
@@ -112,8 +112,8 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         var (uri1, uri2, info1, info2) = inject[Database].readWrite { implicit s =>
-          val uri1 = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing", state = NormalizedURIStates.SCRAPE_WANTED))
-          val uri2 = uriRepo.save(NormalizedURIFactory(title = "missing", url = "http://www.keepit.com/missing", state = NormalizedURIStates.SCRAPE_WANTED))
+          val uri1 = uriRepo.save(NormalizedURI.withHash(title = Some("existing"), normalizedUrl = "http://www.keepit.com/existing", state = NormalizedURIStates.SCRAPE_WANTED))
+          val uri2 = uriRepo.save(NormalizedURI.withHash(title = Some("missing"), normalizedUrl = "http://www.keepit.com/missing", state = NormalizedURIStates.SCRAPE_WANTED))
           val info1 = scrapeRepo.getByUri(uri1.id.get).get
           val info2 = scrapeRepo.getByUri(uri2.id.get).get
           (uri1, uri2, info1, info2)
@@ -182,8 +182,8 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
       withDb() { implicit injector =>
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
-        var (uri1, info1) = inject[Database].readWrite { implicit s =>
-          val uri1 = uriRepo.save(NormalizedURIFactory(title = "notModified", url = "http://www.keepit.com/notModified", state = NormalizedURIStates.SCRAPE_WANTED))
+        val (uri1, info1) = inject[Database].readWrite { implicit s =>
+          val uri1 = uriRepo.save(NormalizedURI.withHash(title = Some("notModified"), normalizedUrl = "http://www.keepit.com/notModified", state = NormalizedURIStates.SCRAPE_WANTED))
           val info1 = scrapeRepo.getByUri(uri1.id.get).get
           (uri1, info1)
         }
@@ -227,7 +227,7 @@ class ScraperTest extends Specification with ShoeboxTestInjector {
         val uriRepo = inject[NormalizedURIRepo]
         val scrapeRepo = inject[ScrapeInfoRepo]
         var info = inject[Database].readWrite { implicit s =>
-          val uri = uriRepo.save(NormalizedURIFactory(title = "existing", url = "http://www.keepit.com/existing", state = NormalizedURIStates.SCRAPE_WANTED))
+          val uri = uriRepo.save(NormalizedURI.withHash(title = Some("existing"), normalizedUrl = "http://www.keepit.com/existing", state = NormalizedURIStates.SCRAPE_WANTED))
           scrapeRepo.getByUri(uri.id.get).get
         }
         inject[Database].readWrite { implicit s =>

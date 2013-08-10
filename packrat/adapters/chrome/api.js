@@ -568,14 +568,6 @@ api = function() {
       get: function(tabId) {
         return pages[tabId];
       },
-      isSelected: function(tab) {
-        for (var winId in selectedTabIds) {
-          if (selectedTabIds[winId] === tab.id) {
-            return true;
-          }
-        }
-        return false;
-      },
       isFocused: function(tab) {
         return selectedTabIds[focusedWinId] === tab.id;
       },

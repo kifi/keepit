@@ -53,7 +53,7 @@ trait ShoeboxServiceClient extends ServiceClient {
   def getBasicUsers(users: Seq[Id[User]]): Future[Map[Id[User],BasicUser]]
   def reportArticleSearchResult(res: ArticleSearchResult): Unit
   def getNormalizedURI(uriId: Id[NormalizedURI]) : Future[NormalizedURI]
-  def normalizeURL(url: String): Future[Id[NormalizedURI]]
+  def normalizeURL(url: String): Future[NormalizedURI]
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]]
   def sendMail(email: ElectronicMail): Future[Boolean]
   def persistServerSearchEvent(metaData: JsObject): Unit
@@ -85,6 +85,9 @@ trait ShoeboxServiceClient extends ServiceClient {
   def suggestExperts(urisAndKeepers: Seq[(Id[NormalizedURI], Seq[Id[User]])]): Future[Seq[Id[User]]]
   def getSearchFriends(userId: Id[User]): Future[Set[Id[User]]]
   def getFriends(userId: Id[User]): Future[Set[Id[User]]]
+  def logEvent(userId: Id[User], event: JsObject) : Unit
+  def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit
+  def sendPushNotification(user: Id[User], extId: String, unvisited: Int, msg: String) : Unit
 }
 
 case class ShoeboxCacheProvider @Inject() (
@@ -256,8 +259,8 @@ class ShoeboxServiceClientImpl @Inject() (
     }
   }
 
-  def normalizeURL(url: String): Future[Id[NormalizedURI]] = {
-    call(Shoebox.internal.normalizeURL(url)).map(r => Id[NormalizedURI](r.json.as[Long]))
+  def normalizeURL(url: String): Future[NormalizedURI] = {
+    call(Shoebox.internal.normalizeURL(url)).map(r => Json.fromJson[NormalizedURI](r.json).get)
   }
 
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]] = {
@@ -427,5 +430,34 @@ class ShoeboxServiceClientImpl @Inject() (
       }
     }
   }
+
+  def logEvent(userId: Id[User], event: JsObject) : Unit = {
+    implicit val userFormatter = Id.format[User]
+    val payload = Json.obj("userId" -> userId, "event" -> event)
+    call(Shoebox.internal.logEvent, payload)
+  }
+
+  def createDeepLink(initiator: Id[User], recipient: Id[User], uriId: Id[NormalizedURI], locator: DeepLocator) : Unit = {
+    implicit val userFormatter = Id.format[User]
+    implicit val uriFormatter = Id.format[NormalizedURI]
+    val payload = Json.obj(
+      "initiator" -> initiator,
+      "recipient" -> recipient,
+      "uriId" -> uriId,
+      "locator" -> locator.value
+    )
+    call(Shoebox.internal.createDeepLink, payload)
+  }
+
+  def sendPushNotification(user: Id[User], extId: String, unvisited: Int, msg: String) : Unit = {
+    val payload = Json.obj(
+      "userId" -> user.id,
+      "extId" -> extId,
+      "unvisited" -> unvisited,
+      "msg" -> msg
+    )
+    call(Shoebox.internal.sendPushNotification, payload)
+  }
+
 
 }

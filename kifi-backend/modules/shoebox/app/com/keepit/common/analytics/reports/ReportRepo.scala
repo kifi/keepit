@@ -276,6 +276,7 @@ class DailyUsefulPageRepo @Inject() (store: MongoEventStore) extends BasicDailyA
 }
 
 class DailyTotalUsersRepo @Inject() (store: MongoEventStore, db: Database) extends ReportRepo(store) with Logging {
+  implicit val dbMasterSlave = Database.Slave
   override val reportName = "DailyTotalUsers"
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
@@ -302,6 +303,7 @@ class DailyTotalUsersRepo @Inject() (store: MongoEventStore, db: Database) exten
 }
 
 class DailyPrivateKeepsRepo @Inject() (store: MongoEventStore, db: Database) extends ReportRepo(store) with Logging {
+  implicit val dbMasterSlave = Database.Slave
   override val reportName = "DailyPrivateKeeps"
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
@@ -329,6 +331,7 @@ class DailyPrivateKeepsRepo @Inject() (store: MongoEventStore, db: Database) ext
 }
 
 class DailyPublicKeepsRepo @Inject() (store: MongoEventStore, db: Database) extends ReportRepo(store) with Logging {
+  implicit val dbMasterSlave = Database.Slave
   override val reportName = "DailyPublicKeeps"
 
   def get(startDate: DateTime, endDate: DateTime): Report = {
@@ -356,6 +359,7 @@ class DailyPublicKeepsRepo @Inject() (store: MongoEventStore, db: Database) exte
 }
 
 class DailyNewThreadRepo @Inject() (store: MongoEventStore, db: Database) extends ReportRepo(store) with Logging {
+  implicit val dbMasterSlave = Database.Slave
   override val reportName = "DailyNewThread"
 
   def get(startDate: DateTime, endDate: DateTime): Report = {

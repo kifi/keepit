@@ -1,0 +1,43 @@
+package com.keepit.normalizer
+
+import com.keepit.common.net.{Query, Host, URI}
+
+object GoogleNormalizer extends URINormalizer {
+
+  def isDefinedAt(uri: URI) = {
+    uri.host match {
+      case Some(Host("com", "google", name)) =>
+        name match {
+          case "mail" => true
+          case "groups" => true
+          case "drive" => true
+          case "docs" => true
+          case _ => false
+        }
+      case _ => false
+    }
+  }
+  val document = """(.*)(/document/d/[^/]+/)(.*)""".r
+  val spreadsheet = """(.*)(/spreadsheet/ccc)(.*)""".r
+  val file = """(.*)(/file/d/[^/]+/)(.*)""".r
+  val gmail = """(/mail/)(.*)""".r
+
+  def apply(uri: URI) = {
+    uri match {
+      case URI(scheme, userInfo, host @ Some(Host("com", "google", "docs")), port, Some(document(_, docKey, _)), query, fragment) =>
+        URI(scheme, userInfo, host, port, Some(docKey + "edit"), query, None)
+      case URI(scheme, userInfo, host @ Some(Host("com", "google", "docs")), port, Some(file(_, fileKey, _)), query, fragment) =>
+        URI(scheme, userInfo, host, port, Some(fileKey + "edit"), query, None)
+      case URI(scheme, userInfo, host @ Some(Host("com", "google", "docs")), port, Some(spreadsheet(_, spreadKey, _)), Some(query), fragment) =>
+        val newQuery = Query(query.params.filter{ q => q.name == "key" || q.name == "authkey"})
+        URI(scheme, userInfo, host, port, Some(spreadKey), Some(newQuery), None)
+      case URI(scheme, userInfo, host @ Some(Host("com", "google", "mail")), port, Some(gmail(_, addr)), _, Some(fragment)) =>
+        val msgFragments = fragment.replaceAll("%2F","/").split("/")
+        msgFragments.lastOption match {
+          case Some(id) if msgFragments.length > 1 => URI(scheme, userInfo, host, port, Some("/mail/" + addr), None, Some("search//" + id))
+          case _ => URI(scheme, userInfo, host, port, Some("/mail/" + addr), None, Some(fragment))
+        }
+      case _ => uri
+    }
+  }
+}

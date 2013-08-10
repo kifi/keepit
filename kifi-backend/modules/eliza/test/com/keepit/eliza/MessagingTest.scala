@@ -10,6 +10,7 @@ import play.api.test.Helpers._
 import com.google.inject.Injector
 import com.keepit.shoebox.{ShoeboxServiceClient, FakeShoeboxServiceModule}
 import com.keepit.common.cache.{ElizaCacheModule}
+import com.keepit.common.time._
 
 import com.keepit.common.db.{Model, Id, ExternalId}
 import com.keepit.model.{User, NormalizedURI}
@@ -24,7 +25,8 @@ class MessagingTest extends Specification with DbTestInjector {
     val shoebox = inject[ShoeboxServiceClient]
     val db = inject[Database]
     val notificationRouter = inject[NotificationRouter]
-    val messagingController = new MessagingController(threadRepo, userThreadRepo, messageRepo, shoebox, db, notificationRouter)
+    val clock = inject[Clock]
+    val messagingController = new MessagingController(threadRepo, userThreadRepo, messageRepo, shoebox, db, notificationRouter, clock)
 
     val user1 = Id[User](42)
     val user2 = Id[User](43)
@@ -37,7 +39,7 @@ class MessagingTest extends Specification with DbTestInjector {
   "Messaging Contoller" should {
 
     "send correctly" in {
-      withDb(ElizaCacheModule(), FakeShoeboxServiceModule()) { implicit injector =>
+      withDb(ElizaCacheModule(), FakeShoeboxServiceModule(), TestElizaServiceClientModule()) { implicit injector =>
 
         val (messagingController, user1, user2, user3, user2n3Set, notificationRouter) = setup()
 
@@ -58,7 +60,7 @@ class MessagingTest extends Specification with DbTestInjector {
 
 
     "merge and notify correctly" in {
-      withDb(ElizaCacheModule(), FakeShoeboxServiceModule()) { implicit injector =>
+      withDb(ElizaCacheModule(), FakeShoeboxServiceModule(), TestElizaServiceClientModule()) { implicit injector =>
 
 
         val (messagingController, user1, user2, user3, user2n3Set, notificationRouter) = setup()

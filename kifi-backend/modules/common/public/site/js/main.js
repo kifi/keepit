@@ -110,17 +110,28 @@ $(function() {
 		$keepSpinner.hide();
 
 		if (ev.element === $myKeeps[0]) {
-			var now = new Date;
+			var today = new Date().setHours(0, 0, 0, 0), li = [];
 			$myKeeps.find("time").each(function() {
-				var age = daysBetween(new Date($(this).attr("datetime")), now);
-				if ($myKeeps.find('li.keep-group-title.today').length == 0 && age <= 1) {
-					$(this).closest(".keep").before('<li class="keep-group-title today">Today</li>');
-				} else if ($myKeeps.find('li.keep-group-title.yesterday').length == 0 && age > 1 && age < 2) {
-					$(this).closest(".keep").before('<li class="keep-group-title yesterday">Yesderday</li>');
-				} else if ($myKeeps.find('li.keep-group-title.week').length == 0 && age >= 2 && age <= 7) {
-					$(this).closest(".keep").before('<li class="keep-group-title week">Past Week</li>');
-				} else if ($myKeeps.find('li.keep-group-title.older').length == 0 && age > 7) {
-					$(this).closest(".keep").before('<li class="keep-group-title older">Older</li>');
+				switch (Math.round((today - new Date($(this).attr("datetime")).setHours(0, 0, 0, 0)) / 86400000)) {
+				case 0:
+					if (!li[0] && !(li[0] = $myKeeps.find('.keep-group-title.today').length)) {
+						$(this).closest(".keep").before('<li class="keep-group-title today">Today</li>');
+					}
+					break;
+				case 1:
+					if (!li[1] && !(li[1] = $myKeeps.find('.keep-group-title.yesterday').length)) {
+						$(this).closest(".keep").before('<li class="keep-group-title yesterday">Yesterday</li>');
+					}
+					break;
+				case 2: case 3: case 4: case 5: case 6:
+					if (!li[2] && !(li[2] = $myKeeps.find('.keep-group-title.week').length)) {
+						$(this).closest(".keep").before('<li class="keep-group-title week">Past Week</li>');
+					}
+					break;
+				default:
+					if (!$myKeeps.find('.keep-group-title.older').length) {
+						$(this).closest(".keep").before('<li class="keep-group-title older">Older</li>');
+					}
 					return false;
 				}
 			});
@@ -231,10 +242,6 @@ $(function() {
 
 	function identity(a) {
 		return a;
-	}
-
-	function daysBetween(date1, date2) {
-		return Math.round((date2 - date1) / 86400000);  // ms in one day
 	}
 
 	function formatPicUrl(userId, pictureName, size) {

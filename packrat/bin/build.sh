@@ -26,11 +26,9 @@ for d in html icons images media scripts styles; do
   cp -R $d out/firefox/data/
 done
 
-cd out/chrome/scripts
-for f in $(find * -type f); do
-  echo "//@ sourceURL=http://kifi/"$f >> $f
+for f in $(find out/chrome/scripts -name '*.js'); do
+  echo "//@ sourceURL=http://kifi/${f:19}" >> $f
 done
-cd -
 
 cp main.js out/chrome/
 cp main.js out/firefox/lib/
@@ -38,7 +36,7 @@ cp main.js out/firefox/lib/
 matches=()
 cssDeps=()
 jsDeps=()
-for s in $(ls scripts/*.js); do
+for s in $(find scripts -name '*.js'); do
   match=$(head -1 $s | grep '^// @match ' | cut -c11-)
   req=$(head -30 $s | grep '^// @require ' | cut -c13-)
   css=$(echo "$req" | grep css$)

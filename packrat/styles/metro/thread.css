@@ -1,19 +1,25 @@
 .kifi-messages-sent {
-  padding: 10px 12px 4px;
-  overflow-y: auto;
   max-height: 0;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
 }
+.kifi-messages-sent-inner {
+  max-height: inherit;
+}
 .kifi-message-sent {
+  margin: 0 12px;
   border-top: 1px solid #d2d2d2;
   padding: 14px 10px 12px 0;
   position: relative;
 }
+.kifi-message-sent:first-child {
+  margin-top: 10px;
+}
 .kifi-message-sent:last-child {
   padding-bottom: 0;
+  margin-bottom: 4px;
 }
-.kifi-message-sent time {
+.kifi-message-sent>time {
   position: absolute;
   right: 10px;
   top: -6px;
@@ -24,8 +30,8 @@
   color: #a9a9a9;
   display: none;
 }
-.kifi-message-sent:hover time,
-.kifi-messages-sent-inner:not(:hover) .kifi-message-sent:last-child time {
+.kifi-message-sent:hover>time,
+.kifi-messages-sent-inner:not(:hover)>.kifi-message-sent:last-child>time {
   display: block;
 }
 img.kifi-message-pic {

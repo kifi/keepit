@@ -12,25 +12,21 @@ import MessagingTypeMappers._
 
 case class Message(
     id: Option[Id[Message]] = None,
-    createdAt: DateTime = currentDateTime(zones.PT), 
-    updatedAt: DateTime = currentDateTime(zones.PT), 
+    createdAt: DateTime = currentDateTime(zones.PT),
+    updatedAt: DateTime = currentDateTime(zones.PT),
     externalId: ExternalId[Message] = ExternalId(),
     from: Option[Id[User]],
     thread: Id[MessageThread],
+    threadExtId: ExternalId[MessageThread],
     messageText: String,
     sentOnUrl: Option[String],
     sentOnUriId: Option[Id[NormalizedURI]]
-  ) 
+  )
   extends ModelWithExternalId[Message] {
 
   def withId(id: Id[Message]): Message = this.copy(id = Some(id))
-  def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt=updateTime) 
+  def withUpdateTime(updateTime: DateTime) = this.copy(updatedAt=updateTime)
 }
-
-
-
-
-
 
 @ImplementedBy(classOf[MessageRepoImpl])
 trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
@@ -41,12 +37,11 @@ trait MessageRepo extends Repo[Message] with ExternalIdColumnFunction[Message] {
 
 }
 
-
 @Singleton
 class MessageRepoImpl @Inject() (
-    val clock: Clock, 
-    val db: DataBaseComponent 
-  ) 
+    val clock: Clock,
+    val db: DataBaseComponent
+  )
   extends DbRepo[Message] with MessageRepo with ExternalIdColumnDbFunction[Message] {
 
   import db.Driver.Implicit._
@@ -54,10 +49,11 @@ class MessageRepoImpl @Inject() (
   override val table = new RepoTable[Message](db, "message") with ExternalIdColumn[Message] {
     def from = column[Id[User]]("sender_id", O.Nullable)
     def thread = column[Id[MessageThread]]("thread_id", O.NotNull)
+    def threadExtId = column[ExternalId[MessageThread]]("thread_ext_id", O.NotNull)
     def messageText = column[String]("message_text", O.NotNull)
     def sentOnUrl = column[String]("sent_on_url", O.Nullable)
     def sentOnUriId = column[Id[NormalizedURI]]("sent_on_uri_id", O.Nullable)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ from.? ~ thread ~ messageText ~ sentOnUrl.? ~ sentOnUriId.? <> (Message.apply _, Message.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ from.? ~ thread ~ threadExtId ~ messageText ~ sentOnUrl.? ~ sentOnUriId.? <> (Message.apply _, Message.unapply _)
   }
 
 
@@ -70,8 +66,8 @@ class MessageRepoImpl @Inject() (
   def get(thread: Id[MessageThread], from: Int, to: Option[Int])(implicit session: RSession) : Seq[Message] = {
     val query = (for (row <- table if row.thread === thread) yield row).drop(from)
     to match {
-      case Some(upper) => query.take(upper-from).list
-      case None => query.list
+      case Some(upper) => query.take(upper-from).sortBy(row => row.createdAt desc).list
+      case None => query.sortBy(row => row.createdAt desc).list
     }
   }
 

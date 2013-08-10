@@ -23,6 +23,7 @@ import com.keepit.inject.AppScoped
 
 case object Scrape
 case class ScrapeInstance(uri: NormalizedURI)
+case class GetSignature(url: String)
 
 private[scraper] class ScraperActor @Inject() (
     scraper: Scraper,
@@ -38,13 +39,25 @@ private[scraper] class ScraperActor @Inject() (
   }
 }
 
+private[scraper] class ScrapeSignatureActor @Inject() (
+  scraper: Scraper,
+  healthcheckPlugin: HealthcheckPlugin
+) extends FortyTwoActor(healthcheckPlugin) with Logging {
+  def receive() = {
+    case GetSignature(url) => sender ! scraper.getSignature(url)
+    case m => throw new Exception("unknown message %s".format(m))
+  }
+}
+
 trait ScraperPlugin extends Plugin {
   def scrapePending(): Future[Seq[(NormalizedURI, Option[Article])]]
   def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])]
+  def asyncSignature(url: String): Future[Option[Signature]]
 }
 
 class ScraperPluginImpl @Inject() (
     actor: ActorInstance[ScraperActor],
+    signatureActor: ActorInstance[ScrapeSignatureActor],
     scraper: Scraper,
     val schedulingProperties: SchedulingProperties) //only on leader
   extends ScraperPlugin with SchedulingPlugin with Logging {
@@ -55,7 +68,7 @@ class ScraperPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting ScraperPluginImpl")
-    scheduleTask(actorProvider.system, 30 seconds, 1 minutes, actorProvider.ref, Scrape)
+    scheduleTask(actor.system, 30 seconds, 1 minutes, actor.ref, Scrape)
   }
   override def onStop() {
     log.info("stopping ScraperPluginImpl")
@@ -63,8 +76,11 @@ class ScraperPluginImpl @Inject() (
   }
 
   override def scrapePending(): Future[Seq[(NormalizedURI, Option[Article])]] =
-    actorProvider.ref.ask(Scrape)(1 minutes).mapTo[Seq[(NormalizedURI, Option[Article])]]
+    actor.ref.ask(Scrape)(1 minutes).mapTo[Seq[(NormalizedURI, Option[Article])]]
 
   override def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])] =
-    actorProvider.ref.ask(ScrapeInstance(uri))(1 minutes).mapTo[(NormalizedURI, Option[Article])]
+    actor.ref.ask(ScrapeInstance(uri))(1 minutes).mapTo[(NormalizedURI, Option[Article])]
+
+  override def asyncSignature(url: String): Future[Option[Signature]] =
+    signatureActor.ref.ask(GetSignature(url))(1 minutes).mapTo[Option[Signature]]
 }

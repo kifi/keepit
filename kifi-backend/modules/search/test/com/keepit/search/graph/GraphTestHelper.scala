@@ -33,12 +33,12 @@ trait GraphTestHelper extends ApplicationInjector {
       User(firstName = "Hactar", lastName = "")
     )
     val uris = saveURIs(
-      NormalizedURIFactory(title = "a1", url = "http://www.keepit.com/article1", state = SCRAPED),
-      NormalizedURIFactory(title = "a2", url = "http://www.keepit.com/article2", state = SCRAPED),
-      NormalizedURIFactory(title = "a3", url = "http://www.keepit.org/article3", state = SCRAPED),
-      NormalizedURIFactory(title = "a4", url = "http://www.findit.com/article4", state = SCRAPED),
-      NormalizedURIFactory(title = "a5", url = "http://www.findit.com/article5", state = SCRAPED),
-      NormalizedURIFactory(title = "a6", url = "http://www.findit.org/article6", state = SCRAPED)
+      NormalizedURI.withHash(title = Some("1"), normalizedUrl = "http://www.keepit.com/article1", state = SCRAPED),
+      NormalizedURI.withHash(title = Some("2"), normalizedUrl = "http://www.keepit.com/article2", state = SCRAPED),
+      NormalizedURI.withHash(title = Some("3"), normalizedUrl = "http://www.keepit.org/article3", state = SCRAPED),
+      NormalizedURI.withHash(title = Some("4"), normalizedUrl = "http://www.findit.com/article4", state = SCRAPED),
+      NormalizedURI.withHash(title = Some("5"), normalizedUrl = "http://www.findit.com/article5", state = SCRAPED),
+      NormalizedURI.withHash(title = Some("6"), normalizedUrl = "http://www.findit.org/article6", state = SCRAPED)
     )
     (users, uris)
   }

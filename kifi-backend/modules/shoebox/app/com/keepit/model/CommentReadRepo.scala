@@ -10,6 +10,7 @@ import com.keepit.common.time.Clock
 trait CommentReadRepo extends Repo[CommentRead] {
   def getByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[CommentRead]
   def getByUserAndParent(userId: Id[User], parentId: Id[Comment])(implicit session: RSession): Option[CommentRead]
+  def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[CommentRead]
 }
 
 @Singleton
@@ -36,4 +37,8 @@ class CommentReadRepoImpl @Inject() (
 
   def getByUserAndUri(userId: Id[User], uriId: Id[NormalizedURI])(implicit session: RSession): Option[CommentRead] =
     (for (f <- table if f.userId === userId && f.uriId === uriId && f.parentId.isNull && f.state === CommentReadStates.ACTIVE) yield f).firstOption
+
+  // used for "grandfathering"
+  def getByUri(uriId: Id[NormalizedURI])(implicit session: RSession): Seq[CommentRead] =
+    (for (r <- table if r.uriId === uriId) yield r).list
 }

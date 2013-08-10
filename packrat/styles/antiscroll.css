@@ -1,0 +1,26 @@
+.kifi-scrollbar {
+  background: rgba(0,0,0,.5);
+  border-radius: 7px;
+  box-shadow: 0 0 1px #fff;
+  position: absolute;
+  opacity: 0;
+  transition: linear 300ms opacity;
+}
+.kifi-scrollbar-shown {
+  opacity: 1;
+}
+.kifi-scrollbar-horizontal {
+  height: 7px;
+  margin-left: 2px;
+  bottom: 2px;
+  left: 0;
+}
+.kifi-scrollbar-vertical {
+  width: 7px;
+  margin-top: 2px;
+  right: 2px;
+  top: 0;
+}
+.kifi-scroll-inner {overflow: scroll}
+.kifi-scroll-inner::-webkit-scrollbar {width: 0; height: 0}
+.kifi-scroll-inner::scrollbar {width: 0; height: 0}

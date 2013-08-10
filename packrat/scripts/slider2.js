@@ -19,20 +19,6 @@ $.fn.scrollToBottom = function() {
     }
   });
 };
-!function() {
-  $.fn.scrollable = function(o) {
-    return this.each(function() {
-      o.$above.addClass("kifi-scrollable-above");
-      o.$below.addClass("kifi-scrollable-below");
-      $(this).data(o);
-    }).scroll(onScroll);
-  };
-  function onScroll() {
-    var sT = this.scrollTop, sH = this.scrollHeight, oH = this.offsetHeight, o = $(this).data();
-    o.$above.toggleClass("kifi-can-scroll", sT > 0);
-    o.$below.toggleClass("kifi-can-scroll", sT < sH - oH);
-  }
-}();
 
 const CO_KEY = /^Mac/.test(navigator.platform) ? "⌘" : "Ctrl";
 var noticesPane, threadsPane, threadPane;  // stubs
@@ -78,7 +64,7 @@ slider2 = function() {
       "bgDir": api.url("images/keeper"),
       "isKept": kept,
       "isPrivate": kept == "private",
-      "noticesCount": counts.n,
+      "noticesCount": Math.max(0, counts.n - counts.m),
       "messageCount": counts.m,
       "atNotices": "/notices" == locator,
       "atMessages": /^\/messages/.test(locator)
@@ -503,7 +489,7 @@ slider2 = function() {
             render("html/keeper/titled_tip.html", {
               dir: "below",
               title: "Give Us Feedback",
-              html: "Tell us your ideas for KiFi<br>or report an issue."
+              html: "Tell us your ideas for Kifi<br>or report an issue."
             }, function(html) {
               configureHover(html, {mustHoverFor: 700, hideAfter: 4000, click: "hide"});
             });
@@ -523,7 +509,7 @@ slider2 = function() {
             render("html/keeper/titled_tip.html", {
               dir: "below",
               title: "Settings",
-              html: "Customize your KiFi<br>experience."
+              html: "Customize your Kifi<br>experience."
             }, function(html) {
               configureHover(html, {mustHoverFor: 700, hideAfter: 3000, click: "hide"});
             });
@@ -725,7 +711,7 @@ slider2 = function() {
     counts: function(o) {
       if (!$slider) return;
       var $btns = $slider.find(".kifi-slider2-dock-btn");
-      [[".kifi-slider2-notices", o.n],
+      [[".kifi-slider2-notices", Math.max(0, o.n - o.m)],
        [".kifi-slider2-messages", o.m]].forEach(function(a) {
         $btns.filter(a[0]).find(".kifi-count")
           .text(a[1] || "")

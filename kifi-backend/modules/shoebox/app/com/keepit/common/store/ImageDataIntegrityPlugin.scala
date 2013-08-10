@@ -77,7 +77,7 @@ private[store] class ImageDataIntegrityActor @Inject() (
   private def get(url: String): ClientResponse = try {
     httpClient.get(url, httpClient.ignoreFailure)
   } catch {
-    case NonOKResponseException(_, response) => response
+    case NonOKResponseException(_, response, _) => response
   }
 }
 

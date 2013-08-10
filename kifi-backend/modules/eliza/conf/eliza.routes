@@ -1,2 +1,27 @@
 
+##########################################
+# Extension API
+##########################################
+
+POST    /eliza/messages                   @com.keepit.eliza.ExtMessagingController.sendMessageAction()
+POST    /eliza/messages/:parentId         @com.keepit.eliza.ExtMessagingController.sendMessageReplyAction(parentId: ExternalId[MessageThread])
+
+GET     /eliza/ext/ws                     @com.keepit.eliza.ExtMessagingController.websocket()
+
+
+##########################################
+#INTERNAL ROUTES/Eliza
+##########################################
+
+POST  /internal/eliza/sendToUserNoBroadcast     @com.keepit.eliza.ElizaController.sendToUserNoBroadcast
+POST  /internal/eliza/sendToUser                @com.keepit.eliza.ElizaController.sendToUser
+
+
+
+
+
 ->  / common.Routes
+
+
+
+

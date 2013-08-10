@@ -264,7 +264,7 @@ class UserController @Inject() (
           }
           (suc, status)
         }
-      }) sortBy { case (sui, status) => s"$status ${sui.fullName}" }
+      }) sortBy { case (sui, status) => (status, sui.fullName) }
     }
 
     Ok(JsArray(connections.map { conn =>

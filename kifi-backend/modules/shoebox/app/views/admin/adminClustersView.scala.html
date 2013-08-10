@@ -37,13 +37,13 @@
 
     @admin("Clusters Overview") {
         <table class="table table-bordered">
-            <th>Service Type</th> <th>Zookeeper Id</th> <th>Leader?</th> <th>Instance Info</th> <th>State</th> <th>Version <small>(this machine thinks!)</small></th> <th>Capabilities</th>
+            <th>Service Type</th> <th>Zookeeper Id</th> <th>Leader?</th>  <th>IPs</th> <th>State</th> <th>Version <small>(this machine thinks!)</small></th> <th>Capabilities</th> <th>AWS Instance Details</th>
             @for(cmi <- data) {
                 <tr>
                     <td>@cmi.serviceType.name</td>
                     <td>@cmi.zkid</td>
                     <td>@cmi.isLeader</td>
-                    <td>@showInstanceInfo(cmi.instanceInfo)</td> 
+                    <td> @cmi.instanceInfo.localIp / @cmi.instanceInfo.publicIp  </td>
                     <td>@cmi.state.name</td>
                     <td>@cmi.version</td>
                     <td>
@@ -53,6 +53,19 @@
                         }
                       </ul>
                     </td>
+                    <td>
+                      <div id="@cmi.instanceInfo.instanceId" class="modal hide" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+                        <div class="modal-header">
+                          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                          <h3 id="myModalLabel">AWS Instance Details</h3>
+                        </div>
+                        <div class="modal-body">
+                          <p>@showInstanceInfo(cmi.instanceInfo)</p>
+                        </div>
+                      </div>
+                      
+                      <button type="button" data-toggle="modal" data-target="#@cmi.instanceInfo.instanceId">Show</button>
+                    </td> 
                 </tr>
             }
         </table>

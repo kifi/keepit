@@ -36,7 +36,7 @@ object ApplicationBuild extends Build {
     val commonDependencies = Seq(
       jdbc,
       "com.typesafe.play.plugins" %% "play-statsd" % "2.1.0",
-      "securesocial" %% "securesocial" % "master-SNAPSHOT",
+      "securesocial" %% "securesocial" % "master-20130808",
       "org.clapper" %% "grizzled-slf4j" % "1.0.1",
       "com.typesafe.akka" %% "akka-testkit" % "2.1.0",
       "org.igniterealtime.smack" % "smackx-debug" % "3.2.1",
@@ -57,7 +57,8 @@ object ApplicationBuild extends Build {
       "net.codingwell" %% "scala-guice" % "3.0.2",
       "org.apache.lucene" % "lucene-core" % "4.2.1",
       "org.apache.lucene" % "lucene-analyzers-common" % "4.2.1",
-      "org.apache.lucene" % "lucene-suggest" % "4.2.1"
+      "org.apache.lucene" % "lucene-suggest" % "4.2.1",
+      "us.theatr" %% "akka-quartz" % "0.2.0_42.1"
     ) map (_.excludeAll(
       ExclusionRule(organization = "com.cedarsoft"),
       ExclusionRule(organization = "javax.jms"),
@@ -98,6 +99,8 @@ object ApplicationBuild extends Build {
         new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
       "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
       "kevoree Repository" at "http://maven2.kevoree.org/release/",
+      "FortyTwo Public Repository" at "http://repo.42go.com:4242/fortytwo/content/groups/public/",
+      "FortyTwo Towel Repository" at "http://repo.42go.com:4242/fortytwo/content/repositories/towel",
       //for org.mongodb#casb
       "snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
       "releases"  at "https://oss.sonatype.org/content/groups/scala-tools",
@@ -153,7 +156,7 @@ object ApplicationBuild extends Build {
     ).dependsOn(common % "test->test;compile->compile").aggregate(common)
 
     val eliza = play.Project("eliza", appVersion, Nil, path = file("modules/eliza")).settings(
-      commonSettings: _*
+      (commonSettings ++ (routesImport += "com.keepit.eliza._")) : _*
     ).dependsOn(common % "test->test;compile->compile", sqldb % "test->test;compile->compile").aggregate(common, sqldb)
 
     val aaaMain = play.Project(appName, appVersion).settings(

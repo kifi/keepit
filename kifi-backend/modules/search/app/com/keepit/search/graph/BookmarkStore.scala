@@ -3,8 +3,6 @@ package com.keepit.search.graph
 import com.keepit.common.db._
 import com.keepit.common.healthcheck.Healthcheck.INTERNAL
 import com.keepit.common.healthcheck.{HealthcheckError, HealthcheckPlugin}
-import com.keepit.common.net.Host
-import com.keepit.common.net.URI
 import com.keepit.model._
 import com.keepit.model.BookmarkStates._
 import com.keepit.search.Lang

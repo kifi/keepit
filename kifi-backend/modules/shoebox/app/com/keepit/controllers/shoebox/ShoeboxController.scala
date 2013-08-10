@@ -26,6 +26,10 @@ import com.keepit.search.SearchConfigExperiment
 import com.keepit.search.SearchConfigExperimentRepo
 import com.keepit.shoebox.BrowsingHistoryTracker
 import com.keepit.shoebox.ClickHistoryTracker
+import com.keepit.realtime.{UrbanAirship, PushNotification}
+
+import scala.concurrent.future
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -67,7 +71,8 @@ class ShoeboxController @Inject() (
   sessionRepo: UserSessionRepo,
   userChannel: UserChannel,
   uriChannel: UriChannel,
-  searchFriendRepo: SearchFriendRepo)
+  searchFriendRepo: SearchFriendRepo,
+  urbanAirship: UrbanAirship)
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
@@ -119,8 +124,8 @@ class ShoeboxController @Inject() (
   }
 
   def normalizeURL(url: String) = Action { //TODO Stephen: What if this is a new url?
-    val uriId = db.readOnly { implicit s =>
-      normUriRepo.getByUri(url).get
+    val uriId = db.readWrite { implicit s =>
+      normUriRepo.getByUriOrElseCreate(url)
     }
     Ok(Json.toJson(uriId))
   }
@@ -341,5 +346,19 @@ class ShoeboxController @Inject() (
     db.readOnly { implicit s =>
       Ok(Json.toJson(searchFriendRepo.getSearchFriends(userId).map(_.id)))
     }
+  }
+
+  def sendPushNotification() = Action { request => 
+    Async(future{
+      val req = request.body.asJson.get.asInstanceOf[JsObject]
+      val userId = Id[User]((req \ "userId").as[Long])
+      val extId = ExternalId[UserNotification]((req \ "extId").as[String])
+      val unvisited = (req \ "unvisited").as[Int]
+      val msg = (req \ "msg").as[String]
+
+      urbanAirship.notifyUser(userId, PushNotification(extId, unvisited, msg))
+      Ok("")
+    })
+
   }
 }

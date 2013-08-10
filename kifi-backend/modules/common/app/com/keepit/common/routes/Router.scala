@@ -90,6 +90,9 @@ object Shoebox extends Service {
     def uriChannelCountFanout() = ServiceRoute(POST, "/internal/shoebox/channel/uriCount")
     def suggestExperts() = ServiceRoute(POST, "/internal/shoebox/learning/suggestExperts")
     def getSearchFriends(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/searchFriends", Param("userId", userId))
+    def logEvent() = ServiceRoute(POST, "/internal/shoebox/logEvent")
+    def createDeepLink() = ServiceRoute(POST, "/internal/shoebox/database/createDeepLink")
+    def sendPushNotification() = ServiceRoute(POST, "/internal/shoebox/device/sendPushNotification")
   }
 }
 
@@ -126,6 +129,13 @@ object Search extends Service {
     def resetUserConfig(id: Id[User]) = ServiceRoute(GET, s"/internal/search/searchConfig/${id.id}/reset")
     def getSearchDefaultConfig = ServiceRoute(GET, "/internal/search/defaultSearchConfig/defaultSearchConfig")
     def friendMapJson(userId: Id[User], query: Option[String] = None, minKeeps: Option[Int] = None) = ServiceRoute(GET, "/internal/search/search/friendMapJson", Param("userId", userId), Param("query", query), Param("minKeeps", minKeeps))
+  }
+}
+
+object Eliza extends Service {
+  object internal {
+    def sendToUserNoBroadcast() = ServiceRoute(POST, "/internal/eliza/sendToUserNoBroadcast")
+    def sendToUser() = ServiceRoute(POST, "/internal/eliza/sendToUser")
   }
 }
 

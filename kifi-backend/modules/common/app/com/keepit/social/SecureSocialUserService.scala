@@ -54,7 +54,7 @@ class SecureSocialUserService(implicit val application: Application) extends Use
     // we can fail with None.get which will let us know immediately that there is a problem.
     if (global.initialized) Some(global.injector.instance[SecureSocialUserPlugin]) else None
   }
-  def find(id: UserId): Option[SocialUser] = proxy.get.find(id)
+  def find(id: IdentityId): Option[SocialUser] = proxy.get.find(id)
   def save(user: Identity): SocialUser = proxy.get.save(user)
 
   def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser] =
@@ -83,7 +83,7 @@ class SecureSocialUserService(implicit val application: Application) extends Use
 }
 
 trait SecureSocialUserPlugin {
-  def find(id: UserId): Option[SocialUser]
+  def find(id: IdentityId): Option[SocialUser]
   def save(identity: Identity): SocialUser
 
   def findByEmailAndProvider(email: String, providerId: String): Option[SocialUser]

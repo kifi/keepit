@@ -2,7 +2,9 @@
 // @require scripts/formatting.js
 // @require scripts/api.js
 // @require scripts/lib/jquery.timeago.js
-
+// @require scripts/lib/antiscroll.min.js
+// @require scripts/scrollable.js
+// @require scripts/prevent_ancestor_scroll.js
 
 // There are several kinds of events that the notifications pane must handle:
 //  - initial rendering (up to 10)
@@ -34,12 +36,17 @@ noticesPane = function() {
           .append(notices.map(function(n) {
             return renderNotice(n, n.state != "visited" && new Date(n.time) > timeLastSeen);
           }).join(""))
-          .appendTo($container);
+          .appendTo($container)
+          .preventAncestorScroll();
         $notices.scrollable({
           $above: $container.closest(".kifi-pane-box").find(".kifi-pane-title"),
           $below: $("<div>").insertAfter($notices)})
         .triggerHandler("scroll");
         $notices.find("time").timeago();
+        $container.antiscroll({x: false});
+
+        var scroller = $container.data("antiscroll");
+        $(window).on("resize.notices", scroller.refresh.bind(scroller));
 
         $notices.on("click", ".kifi-notice", function() {
           if(this.dataset.locator) {
@@ -58,6 +65,7 @@ noticesPane = function() {
 
         var $box = $container.closest(".kifi-pane-box").on("kifi:remove", function() {
           $notices = null;
+          $(window).off("resize.notices");
           api.port.emit("notifications_pane", false);
         });
         api.port.emit("notifications_pane", true);

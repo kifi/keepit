@@ -23,8 +23,9 @@ class MessageThreadParticipants(val participants : Map[Id[User], DateTime]) {
 
   def contains(user: Id[User]) : Boolean = participants.contains(user)
   def allExcept(user: Id[User]) : Set[Id[User]] = participants.keySet - user
-
-  def hash : Int = MurmurHash3.setHash(participants.keySet)
+  
+  lazy val all = participants.keySet
+  lazy val hash : Int = MurmurHash3.setHash(participants.keySet)
 
   override def equals(other: Any) : Boolean = other match {
     case mtps: MessageThreadParticipants => super.equals(other) || mtps.participants.keySet == participants.keySet 
@@ -76,6 +77,8 @@ case class MessageThread(
     externalId: ExternalId[MessageThread] = ExternalId(),
     uriId: Option[Id[NormalizedURI]],
     url: Option[String],
+    nUrl: Option[String],
+    pageTitle: Option[String],
     participants: Option[MessageThreadParticipants],
     participantsHash: Option[Int],
     replyable: Boolean
@@ -99,6 +102,8 @@ object MessageThread {
     (__ \ 'externalId).format(ExternalId.format[MessageThread]) and
     (__ \ 'uriId).formatNullable(Id.format[NormalizedURI]) and
     (__ \ 'url).formatNullable[String] and
+    (__ \ 'nUrl).formatNullable[String] and    
+    (__ \ 'pageTitle).formatNullable[String] and  
     (__ \ 'participants).formatNullable[MessageThreadParticipants] and
     (__ \ 'participantsHash).formatNullable[Int] and
     (__ \ 'replyable).format[Boolean] 
@@ -109,7 +114,7 @@ object MessageThread {
 @ImplementedBy(classOf[MessageThreadRepoImpl])
 trait MessageThreadRepo extends Repo[MessageThread] with ExternalIdColumnFunction[MessageThread] {
 
-  def getOrCreate(participants: Set[Id[User]], urlOpt: Option[String], uriIdOpt: Option[Id[NormalizedURI]])(implicit session: RWSession) : (MessageThread, Boolean)
+  def getOrCreate(participants: Set[Id[User]], urlOpt: Option[String], uriIdOpt: Option[Id[NormalizedURI]], nUriOpt: Option[String], pageTitleOpt: Option[String])(implicit session: RWSession) : (MessageThread, Boolean)
 
   override def get(id: ExternalId[MessageThread])(implicit session: RSession) : MessageThread
 
@@ -128,15 +133,17 @@ class MessageThreadRepoImpl @Inject() (
   override val table = new RepoTable[MessageThread](db, "message_thread") with ExternalIdColumn[MessageThread] {
     def uriId = column[Id[NormalizedURI]]("uri_id", O.Nullable)
     def url = column[String]("url", O.Nullable)
+    def nUrl = column[String]("nUrl", O.Nullable)
+    def pageTitle = column[String]("page_title", O.Nullable)
     def participants = column[MessageThreadParticipants]("participants", O.Nullable)
     def participantsHash = column[Int]("participants_hash", O.Nullable)
     def replyable = column[Boolean]("replyable", O.NotNull)
-    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ uriId.? ~ url.? ~ participants.? ~ participantsHash.? ~ replyable <> (MessageThread.apply _, MessageThread.unapply _)
+    def * = id.? ~ createdAt ~ updatedAt ~ externalId ~ uriId.? ~ url.? ~ nUrl.? ~ pageTitle.? ~ participants.? ~ participantsHash.? ~ replyable <> (MessageThread.apply _, MessageThread.unapply _)
   }
 
   import db.Driver.Implicit._
 
-  def getOrCreate(participants: Set[Id[User]], urlOpt: Option[String], uriIdOpt: Option[Id[NormalizedURI]])(implicit session: RWSession) : (MessageThread, Boolean) = {
+  def getOrCreate(participants: Set[Id[User]], urlOpt: Option[String], uriIdOpt: Option[Id[NormalizedURI]], nUriOpt: Option[String], pageTitleOpt: Option[String])(implicit session: RWSession) : (MessageThread, Boolean) = {
     //Note (stephen): This has a race condition: When two threads that would normally be merged are created at the exact same time two different conversations will be the result
     val mtps = MessageThreadParticipants(participants)
     val candidates : Seq[MessageThread]= (for (row <- table if row.participantsHash===mtps.hash && row.uriId===uriIdOpt) yield row).list.filter { thread =>
@@ -150,6 +157,8 @@ class MessageThreadRepoImpl @Inject() (
         id = None,
         uriId = uriIdOpt,
         url = urlOpt,
+        nUrl = nUriOpt,
+        pageTitle=pageTitleOpt,
         participants = Some(mtps),
         participantsHash = Some(mtps.hash),
         replyable = true

@@ -15,7 +15,6 @@ import com.keepit.common.db.slick.Database
 import com.keepit.common.db.{ State, Id }
 import com.keepit.common.logging._
 import com.keepit.common.mail.LocalPostOffice
-import com.keepit.common.net.URINormalizer
 import com.keepit.common.service.FortyTwoServices
 import com.keepit.common.social._
 import com.keepit.common.time._
@@ -24,6 +23,7 @@ import com.keepit.social.BasicUser
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import com.keepit.normalizer.NormalizationService
 
 case class CommentDetails(
   id: String, // ExternalId[Comment]
@@ -102,6 +102,7 @@ class NotificationBroadcaster @Inject() (
   def push(notify: UserNotification) {
     lazy val unvisitedCount = db.readOnly { implicit s => userNotificationRepo.getUnvisitedCount(notify.userId) }
     for (pushNotification <- PushNotification.fromUserNotification(notify, unvisitedCount)) {
+      log.info("Push notification: " + pushNotification)
       urbanAirship.notifyUser(notify.userId, pushNotification)
     }
     val sendable = SendableNotification.fromUserNotification(notify)
@@ -130,6 +131,7 @@ class UserNotifier @Inject() (
   uriChannel: UriChannel,
   userChannel: UserChannel,
   threadInfoRepo: ThreadInfoRepo,
+  normalizationService: NormalizationService,
   clock: Clock,
   implicit val fortyTwoServices: FortyTwoServices) extends Logging {
 
@@ -275,7 +277,7 @@ class UserNotifier @Inject() (
           basicUserRepo.load(userId),
           deepLinkLocator,
           deepLinkUrl,
-          URINormalizer.normalize(uri.url),
+          normalizationService.normalize(uri.url),
           comment.pageTitle,
           comment.text,
           comment.createdAt,
@@ -314,7 +316,7 @@ class UserNotifier @Inject() (
         basicUserRepo.load(userId),
         deepLink.deepLocator.value,
         deepLink.url,
-        URINormalizer.normalize(uri.url),
+        normalizationService.normalize(uri.url),
         comment.pageTitle,
         comment.text,
         comment.createdAt,
@@ -377,7 +379,7 @@ class UserNotifier @Inject() (
       basicUserRepo.load(userId),
       deepLocator.value,
       deepLinkUrl,
-      URINormalizer.normalize(page),
+      normalizationService.normalize(page),
       message.pageTitle,
       message.text,
       message.createdAt,
