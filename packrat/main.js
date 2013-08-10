@@ -1,7 +1,6 @@
 var api = api || require("./api");
 
 const NOTIFICATION_BATCH_SIZE = 10;
-const notificationNotVisited = /^(un)?delivered$/;
 
 var tabsShowingNotificationsPane = [];
 var notificationsCallbacks = [];
@@ -197,6 +196,10 @@ const socketHandlers = {
     api.log("[socket:missed_notifications]", arr);
     for (var i = arr.length - 1; ~i; i--) {
       arr[i].category = "message";
+      if (pageData[arr[i].url]) {
+        socket.send(["get_threads_by_url", arr[i].url]);
+      }
+
       if (!insertNewNotification(arr[i])) {
         arr.splice(i, 1);
       }
@@ -323,25 +326,27 @@ const socketHandlers = {
         if (d.threads[i].id == threadId) {
           thread = d.threads[i];
 
-          if (thread && thread.messageCount > 1) {
-            var messages = messageData[threadId];
+          var messages;
+          if (thread.messageCount > 1) {
+            messages = messageData[threadId];
             if (messages) {
-              t = new Date(message.createdAt);
+              var t = new Date(message.createdAt);
               for (i = messages.length; i > 0 && new Date(messages[i-1].createdAt) > t; i--);
               messages.splice(i, 0, message);
             }
           } else {
-            messageData[threadId] = [message];
+            messageData[threadId] = messages = [message];
           }
 
+          var lastMessage = messages[messages.length-1];
           // until we have the updated threadinfos, do a best attempt at updating the thread
-          if (!thread.createdAt) thread.createdAt = messageData[threadId][messageData[threadId].length-1].createdAt;
-          thread.digest = messageData[threadId][messageData[threadId].length-1].text;
-          thread.lastAuthor = messageData[threadId][messageData[threadId].length-1].user.id;
-          thread.lastCommentedAt = messageData[threadId][messageData[threadId].length-1].createdAt;
-          thread.messageCount = messageData[threadId].length;
-          messageData[threadId].forEach(function(el) { thread.messageTimes[el.id] = el.createdAt; });
-          thread.participants = messageData[threadId][messageData[threadId].length-1].participants;
+          if (!thread.createdAt) thread.createdAt = lastMessage.createdAt;
+          thread.digest = lastMessage.text;
+          thread.lastAuthor = lastMessage.user.id;
+          thread.lastCommentedAt = lastMessage.createdAt;
+          thread.messageCount = messages.length;
+          messages.forEach(function(m) { thread.messageTimes[m.id] = m.createdAt; });
+          thread.participants = messageData[threadId][messages.length-1].participants;
 
           // insert thread in chronological order
           //var t = new Date(thread.lastCommmentedAt);
@@ -863,14 +868,13 @@ function subscribe(tab) {
   var d = pageData[tab.nUri || tab.url];
 
   if (d) {  // no need to ask server again
-    if (tab.seq == socket.seq) {  // tab is up-to-date
+    if (tab.nUri) {  // tab is already initialized
       if (d.counts) {
         d.counts.n = numNotificationsNotVisited;
         api.tabs.emit(tab, "counts", d.counts);
       }
     } else {
-      var tabUpToDate = tab.seq == d.seq;
-      finish(tab.nUri || tab.url);
+      finish(tab.url);
       if (d.hasOwnProperty("kept")) {
         setIcon(tab, d.kept);
         sendInit(tab, d);
@@ -880,7 +884,7 @@ function subscribe(tab) {
   } else {
     socket.send(["get_threads_by_url", tab.nUri || tab.url]);
 
-    ajax("GET", "/ext/pageDetails?url=" + encodeURIComponent(tab.url), function(resp) {
+    ajax("POST", "/ext/pageDetails", encodeURIComponent(tab.url), function(resp) {
       api.log("[subscribe]", resp);
       var uri = resp.normalized;
       var uri_1 = resp.uri_1;
@@ -921,7 +925,6 @@ function subscribe(tab) {
   }
   function finish(uri) {
     tab.nUri = uri;
-    //tab.seq = d.seq;
     for (var i = 0; i < d.tabs.length; i++) {
       if (d.tabs[i].id == tab.id) {
         d.tabs.splice(i--, 1);
@@ -1105,7 +1108,7 @@ function getPrefs() {
 }
 
 function getRules() {
-  ajax("GET", "/ext/pref/rules?version=" + ruleSet.version, function(o) {
+  ajax("GET", "/ext/pref/rules", {version: ruleSet.version}, function(o) {
     api.log("[getRules]", o);
     if (o && Object.getOwnPropertyNames(o).length > 0) {
       ruleSet = o.slider_rules;

@@ -21,7 +21,8 @@ class ExtPageController @Inject() (
   normalizationService: NormalizationService)
   extends BrowserExtensionController(actionAuthenticator) with ShoeboxServiceController {
 
-  def getPageDetails(url: String) = AuthenticatedJsonAction { request =>
+  def getPageDetails() = AuthenticatedJsonToJsonAction { request =>
+    val url = (request.body \ "url").as[String]
     val nUri =  db.readOnly { implicit session => normalizationService.normalize(url) }
 
     Ok(Json.obj(
