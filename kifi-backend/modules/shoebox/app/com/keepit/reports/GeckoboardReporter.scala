@@ -11,7 +11,7 @@ import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.time._
 import com.keepit.inject._
 import play.api.Plugin
@@ -36,8 +36,8 @@ trait GeckoboardReporterPlugin extends SchedulingPlugin {
 }
 
 class GeckoboardReporterPluginImpl @Inject() (
-    actorProvider: ActorProvider[GeckoboardReporterActor],
-    quartz: ActorProvider[QuartzActor],
+    actor: ActorInstance[GeckoboardReporterActor],
+    quartz: ActorInstance[QuartzActor],
     val schedulingProperties: SchedulingProperties,
     totalKeepsPerHour: TotalKeepsPerHour,
     totalKeepsPerDay: TotalKeepsPerDay,
@@ -51,16 +51,16 @@ extends GeckoboardReporterPlugin with Logging {
   override def enabled: Boolean = true
 
   def refreshAll(): Unit = {
-    actorProvider.actor ! totalKeepsPerHour
-    actorProvider.actor ! totalKeepsPerDay
-    actorProvider.actor ! totalKeepsPerWeek
-    actorProvider.actor ! hoverKeepsPerWeek
+    actor.ref ! totalKeepsPerHour
+    actor.ref ! totalKeepsPerDay
+    actor.ref ! totalKeepsPerWeek
+    actor.ref ! hoverKeepsPerWeek
   }
 
   override def onStart() {
-    cronTask(quartz, actorProvider.actor, "0 0/10 * * * ?", totalKeepsPerHour)
-    cronTask(quartz, actorProvider.actor, "0 0 * * * ?", totalKeepsPerDay)
-    cronTask(quartz, actorProvider.actor, "0 0 0/6 * * ?", totalKeepsPerWeek)
-    cronTask(quartz, actorProvider.actor, "0 0 0/6 * * ?", hoverKeepsPerWeek)
+    cronTask(quartz, actor.ref, "0 0/10 * * * ?", totalKeepsPerHour)
+    cronTask(quartz, actor.ref, "0 0 * * * ?", totalKeepsPerDay)
+    cronTask(quartz, actor.ref, "0 0 0/6 * * ?", totalKeepsPerWeek)
+    cronTask(quartz, actor.ref, "0 0 0/6 * * ?", hoverKeepsPerWeek)
   }
 }
