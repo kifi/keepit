@@ -30,11 +30,11 @@ noticesPane = function() {
 
   return {
     render: function($container, notices, timeLastSeen, numNotVisited) {
-      timeLastSeen = new Date(+new Date(timeLastSeen) + 1000);
+      timeLastSeen = new Date(+new Date(timeLastSeen) + 1000); // hack for old data that did not have millis presision 
       render("html/metro/notices.html", {}, function(html) {
         $notices = $(html)
           .append(notices.map(function(n) {
-            return renderNotice(n, new Date(n.time) > timeLastSeen);
+            return renderNotice(n, n.unread && new Date(n.time) > timeLastSeen);
           }).join(""))
           .appendTo($container)
           .preventAncestorScroll();
@@ -198,4 +198,4 @@ noticesPane = function() {
     return d;
   }
 }();
-//@ sourceURL=http://kifi/notices.js
+
