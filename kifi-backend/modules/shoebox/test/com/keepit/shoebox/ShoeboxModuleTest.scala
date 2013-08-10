@@ -30,6 +30,7 @@ import com.keepit.classify.FakeDomainTagImporterModule
 import com.keepit.learning.topicmodel.FakeWordTopicModule
 import com.keepit.learning.topicmodel.DevTopicModelModule
 import com.keepit.learning.topicmodel.DevTopicStoreModule
+import com.keepit.eliza.TestElizaServiceClientModule
 
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
 
@@ -64,7 +65,8 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         FakeWordTopicModule(),
         DevTopicModelModule(),
         DevTopicStoreModule(),
-        GeckoboardModule()
+        GeckoboardModule(),
+        TestElizaServiceClientModule()
       )) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {
