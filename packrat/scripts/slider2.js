@@ -389,7 +389,7 @@ slider2 = function() {
 
   const createTemplateParams = {
     thread: function(cb, locator, participants) {
-      var id = locator.split("/")[2];  // can be id of any message (assumed to be parent if participants provided)
+      var id = locator.split("/")[2];
       if (participants) {
         respond(participants, locator);
       } else {
@@ -399,7 +399,7 @@ slider2 = function() {
         });
       }
       function respond(r, canonicalLocator) {
-        cb({participants: r, numparticipants: r.length > 1 ? r.length : null}, canonicalLocator);
+        cb({participants: p, numParticipants: p.length > 1 ? p.length : null}, canonicalLocator);
       }
     }};
 
