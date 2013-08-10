@@ -49,7 +49,7 @@ class MessagingController @Inject() (
   extends Logging {
 
 
-  private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread]) : Seq[ElizaThreadInfo]  = {
+  private def buildThreadInfos(userId: Id[User], threads: Seq[MessageThread], requestUrl: String) : Seq[ElizaThreadInfo]  = {
     //get all involved users
     val allInvolvedUsers : Seq[Id[User]]= threads.flatMap{_.participants.map(_.all).getOrElse(Set())}
     //get all basic users
@@ -80,7 +80,8 @@ class MessagingController @Inject() (
         createdAt=thread.createdAt,
         lastCommentedAt= lastMessage.createdAt,
         lastMessageRead=userThreads(thread.id.get).lastSeen,
-        nUrl = thread.nUrl.getOrElse("")
+        nUrl = thread.nUrl.getOrElse(""),
+        url = requestUrl
       )
 
     }
@@ -357,7 +358,7 @@ class MessagingController @Inject() (
       val threadIds = userThreadRepo.getThreads(userId, Some(uriId))
       threadIds.map(threadRepo.get(_))
     }
-    buildThreadInfos(userId, threads)
+    buildThreadInfos(userId, threads, url)
   }
 
   def connectedSockets: Int  = notificationRouter.connectedSockets
