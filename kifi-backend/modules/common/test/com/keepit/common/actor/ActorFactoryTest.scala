@@ -19,23 +19,23 @@ class MyTestActorB extends Actor {
   }
 }
 
-class ActorProviderTest extends Specification with TestInjector {
+class ActorInstanceTest extends Specification with TestInjector {
 
-  "ActorProvider" should {
+  "ActorInstance" should {
     "provide singletons" in {
       withInjector(StandaloneTestActorSystemModule()) { implicit injector =>
-      	val actorA = inject[ActorProvider[MyTestActorA]].actor
-      	val actorB = inject[ActorProvider[MyTestActorB]].actor
+      	val actorA = inject[ActorInstance[MyTestActorA]].actor
+      	val actorB = inject[ActorInstance[MyTestActorB]].actor
       	//checking we're not getting the same reference fo rdiferant actor types
       	actorA !== actorB
-      	val factoryA = inject[ActorProvider[MyTestActorA]]
+      	val factoryA = inject[ActorInstance[MyTestActorA]]
       	factoryA.actor === factoryA.actor
       	//making sure the actor factory is a singleton
       	factoryA.actor === actorA
-      	val factoryB = inject[ActorProvider[MyTestActorB]]
+      	val factoryB = inject[ActorInstance[MyTestActorB]]
       	factoryB.actor === factoryB.actor
       	factoryB.actor === actorB
       }
-    }   
+    }
   }
 }

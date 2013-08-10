@@ -6,7 +6,7 @@ import scala.concurrent.duration._
 
 import com.google.inject.Inject
 import com.google.inject.ImplementedBy
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.AlertingActor
 import com.keepit.common.logging.Logging
 import com.keepit.common.mail.ElectronicMail
@@ -154,7 +154,7 @@ trait HealthcheckPlugin extends Plugin {
 }
 
 class HealthcheckPluginImpl @Inject() (
-    actorProvider: ActorProvider[HealthcheckActor],
+    actor: ActorInstance[HealthcheckActor],
     services: FortyTwoServices,
     host: HealthcheckHost)
   extends HealthcheckPlugin
@@ -166,20 +166,20 @@ class HealthcheckPluginImpl @Inject() (
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actorProvider.system, 0 seconds, 10 minutes, actorProvider.actor, ReportErrorsAction)
+    scheduleTask(actorProvider.system, 0 seconds, 10 minutes, actorProvider.ref, ReportErrorsAction)
   }
 
-  def errorCount(): Int = Await.result((actorProvider.actor ? ErrorCount).mapTo[Int], 1 seconds)
+  def errorCount(): Int = Await.result((actorProvider.ref ? ErrorCount).mapTo[Int], 1 seconds)
 
-  def errors(): Seq[HealthcheckError] = Await.result((actorProvider.actor ? GetErrors).mapTo[List[HealthcheckError]], 1 seconds)
+  def errors(): Seq[HealthcheckError] = Await.result((actorProvider.ref ? GetErrors).mapTo[List[HealthcheckError]], 1 seconds)
 
-  def resetErrorCount(): Unit = actorProvider.actor ! ResetErrorCount
+  def resetErrorCount(): Unit = actorProvider.ref ! ResetErrorCount
 
-  def reportErrors(): Unit = actorProvider.actor ! ReportErrorsAction
+  def reportErrors(): Unit = actorProvider.ref ! ReportErrorsAction
 
   def addError(error: HealthcheckError): HealthcheckError = {
     log.error(s"Healthcheck logged error: ${error}")
-    actorProvider.actor ! error
+    actorProvider.ref ! error
     error
   }
 
@@ -189,7 +189,7 @@ class HealthcheckPluginImpl @Inject() (
     val email = (ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
         category = PostOffice.Categories.HEALTHCHECK))
-    actorProvider.actor ! email
+    actorProvider.ref ! email
     email
   }
 
@@ -199,7 +199,7 @@ class HealthcheckPluginImpl @Inject() (
     val email = (ElectronicMail(from = EmailAddresses.ENG, to = List(EmailAddresses.ENG),
         subject = subject, htmlBody = message.body,
         category = PostOffice.Categories.HEALTHCHECK))
-    actorProvider.actor ! email
+    actorProvider.ref ! email
     email
   }
 

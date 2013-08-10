@@ -6,7 +6,7 @@ import com.keepit.common.healthcheck.HealthcheckPlugin
 import com.keepit.common.db.slick.Database
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.logging.Logging
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 import akka.util.Timeout
 import scala.concurrent.Future
@@ -83,7 +83,7 @@ private[social] class SocialGraphActor @Inject() (
 
 class SocialGraphPluginImpl @Inject() (
   graphs: Set[SocialGraph],
-  actorProvider: ActorProvider[SocialGraphActor],
+  actor: ActorInstance[SocialGraphActor],
   val schedulingProperties: SchedulingProperties) //only on leader
   extends SocialGraphPlugin with Logging with SchedulingPlugin {
 
@@ -93,7 +93,7 @@ class SocialGraphPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting SocialGraphPluginImpl")
-    scheduleTask(actorProvider.system, 10 seconds, 1 minutes, actorProvider.actor, FetchAll)
+    scheduleTask(actorProvider.system, 10 seconds, 1 minutes, actorProvider.ref, FetchAll)
   }
   override def onStop() {
     log.info("stopping SocialGraphPluginImpl")
@@ -106,6 +106,6 @@ class SocialGraphPluginImpl @Inject() (
   override def asyncFetch(socialUserInfo: SocialUserInfo): Future[Seq[SocialConnection]] = {
     require(socialUserInfo.credentials.isDefined,
       "social user info's credentials are not defined: %s".format(socialUserInfo))
-    actorProvider.actor.ask(FetchUserInfo(socialUserInfo))(5 minutes).mapTo[Seq[SocialConnection]]
+    actorProvider.ref.ask(FetchUserInfo(socialUserInfo))(5 minutes).mapTo[Seq[SocialConnection]]
   }
 }

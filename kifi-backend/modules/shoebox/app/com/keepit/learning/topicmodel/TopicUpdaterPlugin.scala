@@ -9,7 +9,7 @@ import com.keepit.common.db.SequenceNumber
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 import com.keepit.inject._
 import play.api.Play.current
 import scala.concurrent.Future
@@ -76,7 +76,7 @@ trait TopicUpdaterPlugin extends SchedulingPlugin {
 
 @Singleton
 class TopicUpdaterPluginImpl @Inject() (
-    actorProvider: ActorProvider[TopicUpdaterActor],
+    actor: ActorInstance[TopicUpdaterActor],
     centralConfig: CentralConfig,
     val schedulingProperties: SchedulingProperties //only on leader
 ) extends TopicUpdaterPlugin with Logging{
@@ -86,7 +86,7 @@ class TopicUpdaterPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
      log.info("starting TopicUpdaterPluginImpl")
-     scheduleTask(actorProvider.system, 10 minutes, 2 minutes, actorProvider.actor, UpdateTopic)
+     scheduleTask(actorProvider.system, 10 minutes, 2 minutes, actorProvider.ref, UpdateTopic)
      scheduleTask(actorProvider.system, 30 seconds, 3650 days, "check remodel status")(watchRemodelStatus)
   }
   override def onStop() {
@@ -112,12 +112,12 @@ class TopicUpdaterPluginImpl @Inject() (
     }
 
     if (remodelStat == RemodelState.STARTED){
-      actorProvider.actor ! ContinueRemodel
+      actorProvider.ref ! ContinueRemodel
     }
 
     centralConfig.onChange(remodelKey){ flagOpt =>
       if (flagOpt.isDefined && (flagOpt.get == RemodelState.NEEDED)){
-        actorProvider.actor ! Remodel
+        actorProvider.ref ! Remodel
       }
     }
   }
@@ -134,7 +134,7 @@ trait TopicModelSwitcherPlugin extends Plugin
 
 @Singleton
 class TopicModelSwitcherPluginImpl @Inject() (
-  actorProvider: ActorProvider[TopicUpdaterActor],
+  actor: ActorInstance[TopicUpdaterActor],
   centralConfig: CentralConfig
 ) extends TopicModelSwitcherPlugin with Logging {
   implicit val actorTimeout = Timeout(5 seconds)
@@ -154,7 +154,7 @@ class TopicModelSwitcherPluginImpl @Inject() (
     val flagKey = new TopicModelFlagKey()
     centralConfig.onChange(flagKey){ flagOpt =>
       log.info("topic model flag may have changed. Send a msg to TopicUpdater actor. ")
-      actorProvider.actor ! SwitchModel
+      actorProvider.ref ! SwitchModel
     }
   }
 }

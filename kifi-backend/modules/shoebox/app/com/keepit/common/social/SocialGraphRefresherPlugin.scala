@@ -10,7 +10,7 @@ import com.keepit.common.db.slick._
 import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.plugin._
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 import play.api.Plugin
 import com.keepit.social.SocialGraphPlugin
 
@@ -43,7 +43,7 @@ private[social] class SocialGraphRefresherActor @Inject() (
 trait SocialGraphRefresher extends Plugin {}
 
 class SocialGraphRefresherImpl @Inject() (
-    actorProvider: ActorProvider[SocialGraphRefresherActor],
+    actor: ActorInstance[SocialGraphRefresherActor],
     val schedulingProperties: SchedulingProperties) //only on leader
   extends SocialGraphRefresher with SchedulingPlugin {
 
@@ -52,6 +52,6 @@ class SocialGraphRefresherImpl @Inject() (
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actorProvider.system, 90 seconds, 5 minutes, actorProvider.actor, RefreshAll)
+    scheduleTask(actorProvider.system, 90 seconds, 5 minutes, actorProvider.ref, RefreshAll)
   }
 }

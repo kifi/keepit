@@ -6,7 +6,7 @@ import scala.concurrent.duration._
 import org.joda.time.DateTime
 
 import com.google.inject.{Inject, Singleton}
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.db.slick.Database
 import com.keepit.common.healthcheck.HealthcheckPlugin
@@ -23,15 +23,15 @@ import play.api.libs.json._
 
 @Singleton
 class EventStream @Inject() (
-    actorProvider: ActorProvider[EventStreamActor],
+    actor: ActorInstance[EventStreamActor],
     eventWriter: EventWriter) {
   implicit val timeout = Timeout(1 second)
 
   def newStream(): Future[(Iteratee[JsValue,_],Enumerator[JsValue])] = {
-    (actorProvider.actor ? NewStream).map {
+    (actorProvider.ref ? NewStream).map {
       case Connected(enumerator) =>
         // Since we're expecting no input from the client, just consume and discard the input
-        val iteratee = Iteratee.foreach[JsValue]{ s => actorProvider.actor ! ReplyEcho }
+        val iteratee = Iteratee.foreach[JsValue]{ s => actorProvider.ref ! ReplyEcho }
         (iteratee, enumerator)
     }
   }
@@ -41,7 +41,7 @@ class EventStream @Inject() (
     eventWriter.wrapEvent(event).map { wrappedEvent =>
       // Todo(Andrew): Wire up to new WS
       //adminEvent.broadcast("event", Json.toJson(wrappedEvent))
-      actorProvider.actor ! BroadcastEvent(Json.toJson(wrappedEvent))
+      actorProvider.ref ! BroadcastEvent(Json.toJson(wrappedEvent))
     }
   }
 

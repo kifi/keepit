@@ -3,7 +3,7 @@ package com.keepit.scraper
 import com.keepit.common.logging.Logging
 import com.google.inject.{Inject, ImplementedBy, Singleton}
 import com.keepit.common.healthcheck.HealthcheckPlugin
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
 import com.keepit.common.db.slick.DBSession._
@@ -26,15 +26,15 @@ import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 trait DataIntegrityPlugin extends SchedulingPlugin
 
 class DataIntegrityPluginImpl @Inject() (
-    actorProvider: ActorProvider[DataIntegrityActor],
+    actor: ActorInstance[DataIntegrityActor],
     val schedulingProperties: SchedulingProperties) //only on leader
   extends Logging with DataIntegrityPlugin {
 
-  private lazy val actor = actorProvider.actor
+  private lazy val actor = actorProvider.ref
   // plugin lifecycle methods
   override def enabled: Boolean = true
   override def onStart() {
-    scheduleTask(actorProvider.system, 5 minutes, 1 hour, actorProvider.actor, Cron)
+    scheduleTask(actorProvider.system, 5 minutes, 1 hour, actorProvider.ref, Cron)
   }
 }
 
