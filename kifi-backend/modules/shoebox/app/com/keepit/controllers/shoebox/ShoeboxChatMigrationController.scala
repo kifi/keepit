@@ -9,6 +9,9 @@ import com.keepit.eliza.ElizaServiceClient
 import play.api.libs.json.{Json, JsObject}
 import play.api.mvc.Action
 
+import scala.concurrent.future
+import scala.concurrent.ExecutionContext.Implicits.global
+
 import com.google.inject.Inject
 
 
@@ -21,16 +24,18 @@ class ShoeboxChatMigrationController @Inject() (
 
 
   def migrateToEliza() = Action {
-    log.warn("MIGRATE: Starting migration to Eliza!")
-    val threads = getThreads()
-    log.warn(s"MIGRATE: Got ${threads.length} threads to migrate.")
-    var i : Int = 0
-    threads.foreach{ thread =>
-      eliza.importThread(thread)
-      i = i + 1
-      log.warn(s"MIGRATE: Migrated thread $i out of ${threads.length}")
-    }
-    Ok("")
+    Async(future{
+      log.warn("MIGRATE: Starting migration to Eliza!")
+      val threads = getThreads()
+      log.warn(s"MIGRATE: Got ${threads.length} threads to migrate.")
+      var i : Int = 0
+      threads.foreach{ thread =>
+        eliza.importThread(thread)
+        i = i + 1
+        log.warn(s"MIGRATE: Migrated thread $i out of ${threads.length}")
+      }
+      Ok("")
+    })
   }
 
 
