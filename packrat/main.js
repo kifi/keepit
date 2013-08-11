@@ -831,6 +831,8 @@ function tellTabsIfCountChanged(d, key, count) {
 function searchOnServer(request, respond) {
   logEvent("search", "newSearch", {query: request.query, filter: request.filter});
 
+  if (getPrefetched(request, respond)) return;
+
   if (!session) {
     api.log("[searchOnServer] no session");
     respond({});
@@ -1002,6 +1004,33 @@ api.tabs.on.loading.add(function(tab) {
   api.log("#b8a", "[tabs.on.loading] %i %o", tab.id, tab);
   subscribe(tab);
 });
+
+const prefetchCache = {}, prefetchCacheTimeout = 10000;
+api.on.search.add(function prefetchResults(query) {
+  api.log('[prefetchResults] prefetching for query:', query);
+  searchOnServer({query: query}, function(response) {
+    var cached = prefetchCache[query];
+    cached.response = response;
+    while (cached.callbacks.length) cached.callbacks.shift()(response);
+    api.timers.setTimeout(function () { delete prefetchCache[query] }, prefetchCacheTimeout);
+  });
+  prefetchCache[query] = { callbacks: [], response: null };
+});
+
+function getPrefetched(request, cb) {
+  function callback(result) {
+    api.log('[getPrefetched] returning prefetched results:', result);
+    cb(result);
+  }
+  var cached = prefetchCache[request.query];
+  if (!cached || request.filter || request.lastUUID) return false;
+  if (cached.response) {
+    callback(cached.response);
+  } else {
+    cached.callbacks.push(callback);
+  }
+  return true;
+}
 
 api.tabs.on.ready.add(function(tab) {
   api.log("#b8a", "[tabs.on.ready] %i %o", tab.id, tab);
