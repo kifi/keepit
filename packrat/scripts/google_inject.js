@@ -16,8 +16,10 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
   }
 
   var $res = $();         // a reference to our search results (kept so that we can reinsert when removed)
+  var displayResults;     // a callback which is set if we have results before the template is rendered
   render("html/search/google.html", {}, function(html) {
     $res = $(Mustache.to_html(html)).hide();
+    displayResults && displayResults();
     bindHandlers();
   });
 
@@ -102,6 +104,10 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     idleTimer = setTimeout(onIdle, 1200);
     var t1 = +new Date;
     api.port.emit("get_keeps", {query: q, filter: f}, function results(resp) {
+      if (!$res[0]) {
+        displayResults = function() { results(resp) };
+        return;
+      }
       if (q != query || !areSameFilter(f, filter)) {
         api.log("[results] ignoring for query:", q, "filter:", f);
         return;
