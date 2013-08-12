@@ -1,23 +1,24 @@
 package com.keepit.model
 
-import com.google.inject.{Inject, Singleton, ImplementedBy}
-import com.keepit.common.db.slick._
-import com.keepit.common.db.slick.DBSession.RSession
-import com.keepit.common.db.Id
-import com.keepit.common.time.Clock
 import org.joda.time.DateTime
+
+import com.google.inject.{Inject, Singleton, ImplementedBy}
+import com.keepit.common.db.slick.DBSession.RSession
+import com.keepit.common.db.slick._
+import com.keepit.common.db.{State, Id}
+import com.keepit.common.time.Clock
 
 
 @ImplementedBy(classOf[EmailAddressRepoImpl])
 trait EmailAddressRepo extends Repo[EmailAddress] {
-  def getByAddressOpt(address: String)(implicit session: RSession): Option[EmailAddress]
+  def getByAddressOpt(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
+      (implicit session: RSession): Option[EmailAddress]
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress]
 }
 
 @Singleton
 class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Clock) extends DbRepo[EmailAddress] with EmailAddressRepo {
   import FortyTwoTypeMappers._
-  import scala.slick.lifted.Query
   import db.Driver.Implicit._
   import DBSession._
 
@@ -29,8 +30,9 @@ class EmailAddressRepoImpl @Inject() (val db: DataBaseComponent, val clock: Cloc
     def * = id.? ~ createdAt ~ updatedAt ~ userId ~ state ~ address ~ verifiedAt.? ~ lastVerificationSent.? <> (EmailAddress, EmailAddress.unapply _)
   }
 
-  def getByAddressOpt(address: String)(implicit session: RSession): Option[EmailAddress] =
-    (for(f <- table if f.address === address && f.state =!= EmailAddressStates.INACTIVE) yield f).firstOption
+  def getByAddressOpt(address: String, excludeState: Option[State[EmailAddress]] = Some(EmailAddressStates.INACTIVE))
+      (implicit session: RSession): Option[EmailAddress] =
+    (for(f <- table if f.address === address && f.state =!= excludeState.orNull) yield f).firstOption
 
   def getByUser(userId: Id[User])(implicit session: RSession): Seq[EmailAddress] =
     (for(f <- table if f.userId === userId && f.state =!= EmailAddressStates.INACTIVE) yield f).list
