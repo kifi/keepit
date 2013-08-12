@@ -12,11 +12,12 @@ import com.google.inject.Injector
 import com.keepit.shoebox.TestShoeboxServiceClientModule
 import com.keepit.social.{SocialNetworks, SocialId}
 import com.keepit.common.zookeeper.FakeDiscoveryModule
+import com.keepit.eliza.TestElizaServiceClientModule
 import play.api.test.Helpers._
 
 class SocialConnectionTest extends Specification with ShoeboxApplicationInjector {
 
-  val socialConnectionTestModules = Seq(FakeHttpClientModule(), ShoeboxFakeStoreModule(), TestShoeboxServiceClientModule())
+  val socialConnectionTestModules = Seq(FakeHttpClientModule(), ShoeboxFakeStoreModule(), TestShoeboxServiceClientModule(), TestElizaServiceClientModule())
 
   private def extractFacebookFriendInfo(json: JsValue)(implicit injector: Injector): Seq[(SocialUserInfo, JsValue)] = {
     inject[FacebookSocialGraph].extractFriends(json)
