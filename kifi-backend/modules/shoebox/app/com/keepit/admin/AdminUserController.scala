@@ -15,6 +15,8 @@ import com.keepit.model._
 import com.keepit.realtime.{UserNotifier, UserChannel}
 import com.keepit.search.SearchServiceClient
 import com.keepit.shoebox.usersearch.UserIndex
+import com.keepit.eliza.ElizaServiceClient
+
 
 import play.api.data.Forms._
 import play.api.data._
@@ -57,7 +59,8 @@ class AdminUserController @Inject() (
     userNotifier: UserNotifier,
     emailAddressRepo: EmailAddressRepo,
     invitationRepo: InvitationRepo,
-    clock: Clock) extends AdminController(actionAuthenticator) {
+    clock: Clock,
+    eliza: ElizaServiceClient) extends AdminController(actionAuthenticator) {
 
   implicit val dbMasterSlave = Database.Slave
 
@@ -277,6 +280,7 @@ class AdminUserController @Inject() (
         case None => Some(userExperimentRepo.save(UserExperiment(userId = userId, experimentType = expType)))
       }) foreach { _ =>
         userChannel.pushAndFanout(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
+        eliza.sendToUser(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
       }
     }
     Ok(Json.obj(experiment -> true))
@@ -299,6 +303,7 @@ class AdminUserController @Inject() (
       userExperimentRepo.get(userId, ExperimentTypes(experiment)).foreach { ue =>
         userExperimentRepo.save(ue.withState(UserExperimentStates.INACTIVE))
         userChannel.pushAndFanout(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
+        eliza.sendToUser(userId, Json.arr("experiments", userExperimentRepo.getUserExperiments(userId).map(_.value)))
       }
     }
     Ok(Json.obj(experiment -> false))
