@@ -35,6 +35,7 @@ case class NormalizedURI (
 
   def withState(state: State[NormalizedURI]) = copy(state = state)
   def withTitle(title: String) = if (title.isEmpty()) this else copy(title = Some(title))
+  def withNormalization(normalization: Normalization) = copy(normalization = Some(normalization))
 }
 
 object NormalizedURI {

@@ -16,7 +16,7 @@ trait URINormalizer extends PartialFunction[URI, URI]
 
 @ImplementedBy(classOf[NormalizationServiceImpl])
 trait NormalizationService {
-  def update(current: NormalizedURI, candidates: NormalizationCandidate*)(implicit normalizedURIRepo: NormalizedURIRepo, session: RWSession): Unit
+  def update(current: NormalizedURI, candidates: NormalizationCandidate*)(implicit normalizedURIRepo: NormalizedURIRepo, session: RWSession): Option[NormalizedURI]
   def normalize(uriString: String)(implicit session: RSession): String
 }
 
@@ -39,56 +39,44 @@ class NormalizationServiceImpl @Inject() (normalizationRuleRepo: UriNormalizatio
     mappedUrl.getOrElse(prepUrl.getOrElse(uriString))
   }
 
-  def update(current: NormalizedURI, candidates: NormalizationCandidate*)(implicit normalizedURIRepo: NormalizedURIRepo, session: RWSession): Unit = {
+  def update(current: NormalizedURI, candidates: NormalizationCandidate*)(implicit normalizedURIRepo: NormalizedURIRepo, session: RWSession): Option[NormalizedURI] = {
 
-    lazy val internalCandidates = URI.safelyParse(current.url) match {
-      case None => Seq.empty[NormalizationCandidate]
-      case Some(currentURI) => for {
-        normalization <- Normalization.priority.keys if normalization <= Normalization.HTTPS
-        candidateUrl <- currentURI.withScheme(normalization.scheme).safelyToString()
-      } yield NormalizationCandidate(candidateUrl, normalization)
-    }
-
-    val allCandidates = current.normalization match {
-     case Some(currentNormalization) => candidates.filter(_.normalization >= currentNormalization)
-     case None => candidates ++ internalCandidates
-    }
-
-    lazy val currentContentSignatureFuture = scraperPlugin.asyncSignature(current.url)
-    process(allCandidates.toList.sortBy(_.normalization).reverse)
-
-    def process(orderedCandidates: List[NormalizationCandidate]): Unit = orderedCandidates match {
-      case Nil =>
+    // Inner methods
+    def findStrongerMatch(orderedCandidates: List[NormalizationCandidate]): (Option[NormalizedURI], Seq[String]) = orderedCandidates match {
+      case Nil => (None, Nil)
       case strongerCandidate::weakerCandidates => {
+        assert(current.normalization.isEmpty || current.normalization.get <= strongerCandidate.normalization)
+        assert(weakerCandidates.isEmpty || weakerCandidates.head.normalization <= strongerCandidate.normalization)
+
         val strongerCandidateUrl = normalize(strongerCandidate.url)
 
-        if (current.url == strongerCandidateUrl && (current.normalization.isEmpty || current.normalization.get < strongerCandidate.normalization)) {
-          val currentUpdated = current.copy(normalization = Some(strongerCandidate.normalization))
-          normalizedURIRepo.save(currentUpdated)
-          val tobeGrandFathered = weakerCandidates.takeWhile(current.normalization.isEmpty || _.normalization >= current.normalization.get).map(_.url)
-          if (current.normalization.isEmpty) grandfather(currentUpdated, tobeGrandFathered)
+        if (current.url == strongerCandidateUrl) {
+          if (current.normalization == strongerCandidate.normalization) (None, Nil)
+          else {
+            val currentWithUpgradedNormalization = current.withNormalization(strongerCandidate.normalization)
+            val toBeMigrated = weakerCandidates.takeWhile(current.normalization.isEmpty || _.normalization >= current.normalization.get).map(_.url)
+            (Some(currentWithUpgradedNormalization), toBeMigrated)
+          }
         }
 
         else {
-          val candidateNormalizedURI = normalizedURIRepo.getByUri(strongerCandidateUrl)
-          candidateNormalizedURI match {
-            case None => process(weakerCandidates)
-            case Some(uri) => {
-              val uriUpdated =
-                if (uri.normalization.isEmpty || uri.normalization.get < strongerCandidate.normalization)
-                  normalizedURIRepo.save(uri.copy(normalization = Some(strongerCandidate.normalization)))
-                else uri
-
-              if (checkSignature(uriUpdated.url)) {
-                val tobeGrandFathered = Seq(current.url) ++ weakerCandidates.takeWhile(uri.normalization.isEmpty || _.normalization >= uri.normalization.get).map(_.url)
-                grandfather(uriUpdated, tobeGrandFathered)
-              }
-            }
+          val candidateNormalizedURI = normalizedURIRepo.getByUri(strongerCandidateUrl) match {
+            case None => NormalizedURI.withHash(normalizedUrl = strongerCandidateUrl, normalization = Some(strongerCandidate.normalization))
+            case Some(uri) =>
+              if (uri.normalization.isEmpty || uri.normalization.get < strongerCandidate.normalization)
+                uri.withNormalization(strongerCandidate.normalization)
+              else uri
           }
+          if (checkSignature(candidateNormalizedURI.url)) {
+            val toBeMigrated = current.url :: weakerCandidates.takeWhile(current.normalization.isEmpty || _.normalization >= current.normalization.get).map(_.url)
+            (Some(candidateNormalizedURI), toBeMigrated)
+          }
+          else findStrongerMatch(weakerCandidates)
         }
       }
     }
 
+    lazy val currentContentSignatureFuture = scraperPlugin.asyncSignature(current.url)
     def checkSignature(normalizedCandidateUrl: String): Boolean = {
       val signaturesFuture = for {
         currentContentSignatureOption <- currentContentSignatureFuture
@@ -103,8 +91,27 @@ class NormalizationServiceImpl @Inject() (normalizationRuleRepo: UriNormalizatio
       }
     }
 
-    def grandfather(authoritativeURI: NormalizedURI, oldUrls: Seq[String]): Unit = {
+    def migrate(authoritativeURI: NormalizedURI, urlsToBeMigrated: Seq[String]): NormalizedURI = {
+      normalizedURIRepo.save(authoritativeURI)
+      // For each existing url, add rule, grandfather references
     }
+
+    // Main code
+    lazy val internalCandidates = URI.safelyParse(current.url) match {
+      case None => Seq.empty[NormalizationCandidate]
+      case Some(currentURI) => for {
+        normalization <- Normalization.priority.keys if normalization <= Normalization.HTTPS
+        candidateUrl <- currentURI.withScheme(normalization.scheme).safelyToString()
+      } yield NormalizationCandidate(candidateUrl, normalization)
+    }
+
+    val allCandidates = current.normalization match {
+      case Some(currentNormalization) => candidates.filter(_.normalization >= currentNormalization)
+      case None => candidates ++ internalCandidates
+    }
+
+    val (authoritativeURI, urlsToBeMigrated) = findStrongerMatch(allCandidates.toList.sortBy(_.normalization).reverse)
+    authoritativeURI.map(migrate(_, urlsToBeMigrated))
 
   }
 }
