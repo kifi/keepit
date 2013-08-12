@@ -18,6 +18,10 @@ import play.api.Plugin
 import play.api.Play.current
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import org.joda.time.DateTime
+import com.keepit.common.db.slick.FortyTwoTypeMappers._
+import scala.slick.lifted.Query
+import scala.slick.jdbc.StaticQuery
 
 class TotalKeepsPerHour @Inject() (
     db: Database,
@@ -27,11 +31,15 @@ class TotalKeepsPerHour @Inject() (
   implicit val dbMasterSlave = Database.Slave
 
   def data(): NumberAndSecondaryStat = {
+    val sql = s"""select count(*) from bookmark where updated_at > ? and updated_at < ? and state = 'active'"""
+    val q = StaticQuery.query[(DateTime, DateTime), Int](sql)
     val (lastHour, hourAgo) = db.readOnly { implicit s =>
       val now = clock.now
       val yesterday = now.minusDays(1)
-      (bookmarkRepo.getCountByTime(now.minusHours(1), now),
-       bookmarkRepo.getCountByTime(yesterday.minusHours(1), yesterday))
+      (q.first(now.minusHours(1), now),
+      q.first(yesterday.minusHours(1), yesterday))
+      // (bookmarkRepo.getCountByTime(now.minusHours(1), now),
+      //  bookmarkRepo.getCountByTime(yesterday.minusHours(1), yesterday))
     }
     NumberAndSecondaryStat(lastHour, hourAgo)
   }

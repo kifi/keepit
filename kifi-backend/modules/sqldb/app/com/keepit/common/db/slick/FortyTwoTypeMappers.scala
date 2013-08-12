@@ -23,6 +23,7 @@ import securesocial.core.AuthenticationMethod
 import securesocial.core.SocialUser
 import securesocial.core.IdentityId
 import com.keepit.social.{SocialNetworks, SocialNetworkType, SocialId}
+import scala.slick.jdbc.SetParameter
 
 object FortyTwoGenericTypeMappers {
   def idMapper[M <: Model[M]] = new BaseTypeMapper[Id[M]] {
@@ -36,10 +37,27 @@ object FortyTwoGenericTypeMappers {
 
 object FortyTwoTypeMappers {
 
+  def seqParam[A](implicit pconv: SetParameter[A]): SetParameter[Seq[A]] = SetParameter {
+    case (seq, pp) =>
+      for (a <- seq) {
+        pconv.apply(a, pp)
+      }
+  }
+
+  implicit val listStringSP: SetParameter[List[String]] = seqParam[String]
+
   // Time
   implicit object DateTimeTypeMapper extends BaseTypeMapper[DateTime] {
     def apply(profile: BasicProfile) = new DateTimeMapperDelegate(profile)
   }
+
+  implicit object SetDateTime extends SetParameter[DateTime] {
+    def apply(v: DateTime, pp: PositionedParameters) {
+      pp.setTimestamp(new Timestamp(v.toDate().getTime()))
+    }
+  }
+
+  implicit val listDateTimeSP: SetParameter[List[DateTime]] = seqParam[DateTime]
 
   implicit object GenericIdTypeMapper extends BaseTypeMapper[Id[Model[_]]] {
     def apply(profile: BasicProfile) = new IdMapperDelegate[Model[_]](profile)
