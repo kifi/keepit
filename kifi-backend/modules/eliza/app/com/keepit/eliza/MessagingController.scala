@@ -57,14 +57,13 @@ class MessagingController @Inject() (
 
 
   //migration code
-  private def recoverNotification(userId: Id[User], thread: MessageThread, messages: Seq[Message])(implicit session: RWSession) : Unit = {
+  private def recoverNotification(userId: Id[User], thread: MessageThread, messages: Seq[Message], id2BasicUser: Map[Id[User], BasicUser])(implicit session: RWSession) : Unit = {
 
     messages.filter(_.from.map(_!=userId).getOrElse(true)).headOption.foreach{ lastMsgFromOther =>
 
       val locator = "/messages/" + thread.externalId
 
       val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
-      val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 10 seconds)
       val messageWithBasicUser = MessageWithBasicUser(
         lastMsgFromOther.externalId,
         lastMsgFromOther.createdAt,
@@ -79,6 +78,7 @@ class MessagingController @Inject() (
 
       userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther.id.get, notifJson)
       userThreadRepo.clearNotification(userId)
+      userThreadRepo.setLastSeen(userId, thread.id.get, currentDateTime(zones.PT))
     }
 
   }
@@ -117,13 +117,13 @@ class MessagingController @Inject() (
           }
 
 
-          messages.foreach{ messageJson =>
+          val dbMessages = messages.sortBy( j => -1*(j \ "created_at").as[Long]).map{ messageJson =>
             val text = (messageJson \ "text").as[String]
             val from = Id[User]((messageJson \ "from").as[Long])
             val createdAt = (messageJson \ "created_at").as[DateTime]
 
             //create message
-            val message = messageRepo.save(Message(
+            messageRepo.save(Message(
               id= None,
               createdAt = createdAt,
               from = Some(from),
@@ -137,9 +137,10 @@ class MessagingController @Inject() (
           }
 
           log.info("MIGRATION: Starting notification recovery for $extId.")
-          val dbMessages = getThreadMessages(thread, None)
+          val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
+          val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 10 seconds)
           participants.toSet.foreach{ userId : Id[User] => 
-            recoverNotification(userId, thread, dbMessages)
+            recoverNotification(userId, thread, dbMessages, id2BasicUser)
           }
           log.info(s"MIGRATION: Finished thread import for $extId")
 
