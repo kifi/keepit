@@ -30,10 +30,9 @@ class ShoeboxChatMigrationController @Inject() (
       log.warn(s"MIGRATE: Got ${threads.length} threads to migrate.")
       var i : Int = 0
       threads.foreach{ thread =>
-        eliza.importThread(thread)
+        eliza.synchronized { eliza.importThread(thread) } //needed some arbitrary singleton object
         i = i + 1
         log.warn(s"MIGRATE: Migrated thread $i out of ${threads.length}")
-        Thread.sleep(500)
       } 
     }
     Ok("")

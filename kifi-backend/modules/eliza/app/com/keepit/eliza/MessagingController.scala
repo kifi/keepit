@@ -57,9 +57,9 @@ class MessagingController @Inject() (
 
 
   //migration code
-  private def recoverNotification(userId: Id[User], thread: MessageThread)(implicit session: RWSession) : Unit = {
+  private def recoverNotification(userId: Id[User], thread: MessageThread, messages: Seq[Message])(implicit session: RWSession) : Unit = {
 
-    getThreadMessages(thread, None).filter(_.from.map(_!=userId).getOrElse(true)).headOption.foreach{ lastMsgFromOther =>
+    messages.filter(_.from.map(_!=userId).getOrElse(true)).headOption.foreach{ lastMsgFromOther =>
 
       val locator = "/messages/" + thread.externalId
 
@@ -77,17 +77,15 @@ class MessagingController @Inject() (
 
       val notifJson = buildMessageNotificationJson(lastMsgFromOther, thread, messageWithBasicUser, locator) 
 
-      // db.readWrite{ implicit session =>
-        userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther.id.get, notifJson)
-        userThreadRepo.clearNotification(userId)
-      // }
+      userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther.id.get, notifJson)
+      userThreadRepo.clearNotification(userId)
     }
 
   }
 
 
   def importThread() = Action { request =>
-    future {
+    future { shoebox.synchronized { //needed some arbitrary singleton object
       val req = request.body.asJson.get.asInstanceOf[JsObject]
 
       val uriId = Id[NormalizedURI]((req \ "uriId").as[Long])
@@ -139,8 +137,9 @@ class MessagingController @Inject() (
           }
 
           log.info("MIGRATION: Starting notification recovery for $extId.")
+          val dbMessages = getThreadMessages(thread, None)
           participants.toSet.foreach{ userId : Id[User] => 
-            recoverNotification(userId, thread)
+            recoverNotification(userId, thread, dbMessages)
           }
           log.info(s"MIGRATION: Finished thread import for $extId")
 
@@ -148,7 +147,7 @@ class MessagingController @Inject() (
           log.info(s"MIGRATION: Thread $extId already imported. Doing nothing.")
         }
       }
-    }
+    }}
 
 
 
