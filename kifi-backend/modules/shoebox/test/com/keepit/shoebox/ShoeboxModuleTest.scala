@@ -32,14 +32,6 @@ import com.keepit.learning.topicmodel.DevTopicStoreModule
 
 class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicationInjector {
 
-  // This should not be required once the Scraper is off Shoebox
-  case class FakeScraperInShoeboxModule() extends ScalaModule {
-    def configure() {
-      install(FakeScraperModule())
-      install(FakeShoeboxServiceModule())
-    }
-  }
-
   private def isShoeboxController(clazz: Class[_]): Boolean = {
     classOf[ShoeboxServiceController] isAssignableFrom clazz
   }
@@ -58,12 +50,12 @@ class ShoeboxModuleTest extends Specification with Logging with ShoeboxApplicati
         TestAnalyticsModule(),
         TestSliderHistoryTrackerModule(),
         TestSearchServiceClientModule(),
-        FakeScraperInShoeboxModule(),
         FakeDomainTagImporterModule(),
         FakeWordTopicModule(),
         DevTopicModelModule(),
         DevTopicStoreModule(),
-        GeckoboardModule()
+        GeckoboardModule(),
+        FakeShoeboxServiceModule() // This one should not be required once the Scraper is off Shoebox
       )) {
         val ClassRoute = "@(.+)@.+".r
         val classes = current.routes.map(_.documentation).reduce(_ ++ _).collect {

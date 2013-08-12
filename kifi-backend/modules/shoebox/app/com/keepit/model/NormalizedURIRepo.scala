@@ -122,7 +122,7 @@ class NormalizedURIRepoImpl @Inject() (
       case Some(normalizedURI)=> normalizedURI
       case None => save(normalizedURIFactory(url))
     }
-    Future(normalizedURIFactory.normalizationService.update(uri, candidates:_*))
+    Future(normalizedURIFactory.normalizationService.update(uri, candidates:_*)(this, session))
     uri
   }
 }

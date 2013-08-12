@@ -16,12 +16,12 @@ trait URINormalizer extends PartialFunction[URI, URI]
 
 @ImplementedBy(classOf[NormalizationServiceImpl])
 trait NormalizationService {
-  def update(current: NormalizedURI, candidates: NormalizationCandidate*)(implicit session: RWSession): Unit
+  def update(current: NormalizedURI, candidates: NormalizationCandidate*)(implicit normalizedURIRepo: NormalizedURIRepo, session: RWSession): Unit
   def normalize(uriString: String)(implicit session: RSession): String
 }
 
 @Singleton
-class NormalizationServiceImpl @Inject() (normalizationRuleRepo: UriNormalizationRuleRepo, normalizedURIrepo: NormalizedURIRepo, scraperPlugin: ScraperPlugin, monitoredAwait: MonitoredAwait) extends NormalizationService with Logging {
+class NormalizationServiceImpl @Inject() (normalizationRuleRepo: UriNormalizationRuleRepo, scraperPlugin: ScraperPlugin, monitoredAwait: MonitoredAwait) extends NormalizationService with Logging {
   val normalizers = Seq(AmazonNormalizer, GoogleNormalizer, YoutubeNormalizer, RemoveWWWNormalizer, LinkedInNormalizer, DefaultNormalizer)
 
   def normalize(uriString: String)(implicit session: RSession): String = {
@@ -39,7 +39,7 @@ class NormalizationServiceImpl @Inject() (normalizationRuleRepo: UriNormalizatio
     mappedUrl.getOrElse(prepUrl.getOrElse(uriString))
   }
 
-  def update(current: NormalizedURI, candidates: NormalizationCandidate*)(implicit session: RWSession): Unit = {
+  def update(current: NormalizedURI, candidates: NormalizationCandidate*)(implicit normalizedURIRepo: NormalizedURIRepo, session: RWSession): Unit = {
 
     lazy val internalCandidates = URI.safelyParse(current.url) match {
       case None => Seq.empty[NormalizationCandidate]
@@ -64,19 +64,19 @@ class NormalizationServiceImpl @Inject() (normalizationRuleRepo: UriNormalizatio
 
         if (current.url == strongerCandidateUrl && (current.normalization.isEmpty || current.normalization.get < strongerCandidate.normalization)) {
           val currentUpdated = current.copy(normalization = Some(strongerCandidate.normalization))
-          normalizedURIrepo.save(currentUpdated)
+          normalizedURIRepo.save(currentUpdated)
           val tobeGrandFathered = weakerCandidates.takeWhile(current.normalization.isEmpty || _.normalization >= current.normalization.get).map(_.url)
           if (current.normalization.isEmpty) grandfather(currentUpdated, tobeGrandFathered)
         }
 
         else {
-          val candidateNormalizedURI = normalizedURIrepo.getByUri(strongerCandidateUrl)
+          val candidateNormalizedURI = normalizedURIRepo.getByUri(strongerCandidateUrl)
           candidateNormalizedURI match {
             case None => process(weakerCandidates)
             case Some(uri) => {
               val uriUpdated =
                 if (uri.normalization.isEmpty || uri.normalization.get < strongerCandidate.normalization)
-                  normalizedURIrepo.save(uri.copy(normalization = Some(strongerCandidate.normalization)))
+                  normalizedURIRepo.save(uri.copy(normalization = Some(strongerCandidate.normalization)))
                 else uri
 
               if (checkSignature(uriUpdated.url)) {
