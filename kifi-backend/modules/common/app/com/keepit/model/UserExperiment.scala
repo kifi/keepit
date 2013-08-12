@@ -24,12 +24,12 @@ case class UserExperiment (
 final case class ExperimentType(value: String)
 
 object ExperimentTypes {
-  val ADMIN = State[ExperimentType]("admin")
+  val ADMIN = State[ExperimentType]("admin") //don't show in analytics
   val WEBSITE = State[ExperimentType]("website")
   val WEBSITE_FRIENDS = State[ExperimentType]("website friends")
-  val FAKE = State[ExperimentType]("fake")
-  val BLOCK = State[ExperimentType]("block")
-  val INACTIVE = State[ExperimentType]("inactive")
+  val FAKE = State[ExperimentType]("fake") //don't show in analytics
+  val BLOCK = State[ExperimentType]("block") //don't show in analytics
+  val INACTIVE = State[ExperimentType]("inactive") //don't show in analytics
   val NO_SEARCH_EXPERIMENTS = State[ExperimentType]("no search experiments")
   val CAN_INVITE = State[ExperimentType]("can invite")
   val CAN_MESSAGE_ALL_USERS = State[ExperimentType]("can message all users")
