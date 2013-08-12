@@ -24,7 +24,7 @@ class ShoeboxChatMigrationController @Inject() (
 
 
   def migrateToEliza() = Action {
-    Async(future{
+    future{
       log.warn("MIGRATE: Starting migration to Eliza!")
       val threads = getThreads()
       log.warn(s"MIGRATE: Got ${threads.length} threads to migrate.")
@@ -33,9 +33,10 @@ class ShoeboxChatMigrationController @Inject() (
         eliza.importThread(thread)
         i = i + 1
         log.warn(s"MIGRATE: Migrated thread $i out of ${threads.length}")
-      }
-      Ok("")
-    })
+        Thread.sleep(500)
+      } 
+    }
+    Ok("")
   }
 
 

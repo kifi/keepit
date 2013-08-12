@@ -19,7 +19,10 @@ import org.joda.time.DateTime
 
 import play.api.libs.json.{JsValue, JsNull, Json, JsObject, JsArray}
 
-import play.api.mvc.Action //For migration only
+
+ //For migration only
+import play.api.mvc.Action
+import com.keepit.common.db.slick.DBSession.RWSession
 
 /* To future maintainers 
 *  If this is ever getting too slow the first things I would look at (in no particular order):
@@ -54,94 +57,101 @@ class MessagingController @Inject() (
 
 
   //migration code
-  private def recoverNotification(userId: Id[User], thread: MessageThread) : Unit = {
+  private def recoverNotification(userId: Id[User], thread: MessageThread)(implicit session: RWSession) : Unit = {
 
-    val lastMsgFromOther = getThreadMessages(thread, None).filter(_.from.map(_!=userId).getOrElse(true)).head
+    getThreadMessages(thread, None).filter(_.from.map(_!=userId).getOrElse(true)).headOption.foreach{ lastMsgFromOther =>
 
-    val locator = "/messages/" + thread.externalId
+      val locator = "/messages/" + thread.externalId
 
-    val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
-    val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 10 seconds)
-    val messageWithBasicUser = MessageWithBasicUser(
-      lastMsgFromOther.externalId,
-      lastMsgFromOther.createdAt,
-      lastMsgFromOther.messageText,
-      lastMsgFromOther.sentOnUrl.getOrElse(""),
-      thread.nUrl.getOrElse(""),
-      lastMsgFromOther.from.map(id2BasicUser(_)),
-      participantSet.toSeq.map(id2BasicUser(_))
-    )
+      val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
+      val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 10 seconds)
+      val messageWithBasicUser = MessageWithBasicUser(
+        lastMsgFromOther.externalId,
+        lastMsgFromOther.createdAt,
+        lastMsgFromOther.messageText,
+        lastMsgFromOther.sentOnUrl.getOrElse(""),
+        thread.nUrl.getOrElse(""),
+        lastMsgFromOther.from.map(id2BasicUser(_)),
+        participantSet.toSeq.map(id2BasicUser(_))
+      )
 
-    val notifJson = buildMessageNotificationJson(lastMsgFromOther, thread, messageWithBasicUser, locator) 
+      val notifJson = buildMessageNotificationJson(lastMsgFromOther, thread, messageWithBasicUser, locator) 
 
-    db.readWrite{ implicit session =>
-      userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther.id.get, notifJson)
-      userThreadRepo.clearNotification(userId)
+      // db.readWrite{ implicit session =>
+        userThreadRepo.setNotification(userId, thread.id.get, lastMsgFromOther.id.get, notifJson)
+        userThreadRepo.clearNotification(userId)
+      // }
     }
 
   }
 
 
   def importThread() = Action { request =>
-    val req = request.body.asJson.get.asInstanceOf[JsObject]
+    future {
+      val req = request.body.asJson.get.asInstanceOf[JsObject]
 
-    val uriId = Id[NormalizedURI]((req \ "uriId").as[Long])
-    val participants = (req \ "participants").as[JsArray].value.map(v => Id[User](v.as[Long]))
-    val extId = ExternalId[MessageThread]((req \ "extId").as[String])
-    val messages = (req \ "messages").as[JsArray].value
+      val uriId = Id[NormalizedURI]((req \ "uriId").as[Long])
+      val participants = (req \ "participants").as[JsArray].value.map(v => Id[User](v.as[Long]))
+      val extId = ExternalId[MessageThread]((req \ "extId").as[String])
+      val messages = (req \ "messages").as[JsArray].value 
 
-    db.readWrite{ implicit session =>
-      if (threadRepo.getOpt(extId).isEmpty) {
-        val nUri = Await.result(shoebox.getNormalizedURI(uriId), 10 seconds)
-        //create thread
-        val mtps = MessageThreadParticipants(participants.toSet)
-        val thread = threadRepo.save(MessageThread(
-          id = None,
-          externalId = extId,
-          uriId = Some(uriId),
-          url = Some(nUri.url),
-          nUrl = Some(nUri.url),
-          pageTitle = nUri.title,
-          participants = Some(mtps),
-          participantsHash = Some(mtps.hash),
-          replyable = true
-        ))
-
-        //create userThreads
-        participants.toSet.foreach{ userId : Id[User] => 
-          userThreadRepo.create(userId, thread.id.get, Some(uriId))
-        }
-
-
-        messages.foreach{ messageJson =>
-          val text = (messageJson \ "text").as[String]
-          val from = Id[User]((messageJson \ "from").as[Long])
-          val createdAt = (messageJson \ "created_at").as[DateTime]
-
-          //create message
-          val message = messageRepo.save(Message(
-            id= None,
-            createdAt = createdAt,
-            from = Some(from),
-            thread = thread.id.get,
-            threadExtId = thread.externalId,
-            messageText = text,
-            sentOnUrl = thread.url,
-            sentOnUriId = Some(uriId)
+      db.readWrite{ implicit session =>
+        if (threadRepo.getOpt(extId).isEmpty) {
+          log.info(s"MIGRATION: Importing thread $extId with participants $participants on uriid $uriId")
+          val nUri = Await.result(shoebox.getNormalizedURI(uriId), 10 seconds)
+          //create thread
+          val mtps = MessageThreadParticipants(participants.toSet)
+          val thread = threadRepo.save(MessageThread(
+            id = None,
+            externalId = extId,
+            uriId = Some(uriId),
+            url = Some(nUri.url),
+            nUrl = Some(nUri.url),
+            pageTitle = nUri.title,
+            participants = Some(mtps),
+            participantsHash = Some(mtps.hash),
+            replyable = true
           ))
 
+          //create userThreads
+          participants.toSet.foreach{ userId : Id[User] => 
+            userThreadRepo.create(userId, thread.id.get, Some(uriId))
+          }
+
+
+          messages.foreach{ messageJson =>
+            val text = (messageJson \ "text").as[String]
+            val from = Id[User]((messageJson \ "from").as[Long])
+            val createdAt = (messageJson \ "created_at").as[DateTime]
+
+            //create message
+            val message = messageRepo.save(Message(
+              id= None,
+              createdAt = createdAt,
+              from = Some(from),
+              thread = thread.id.get,
+              threadExtId = thread.externalId,
+              messageText = text,
+              sentOnUrl = thread.url,
+              sentOnUriId = Some(uriId)
+            ))
+
+          }
+
+          log.info("MIGRATION: Starting notification recovery for $extId.")
+          participants.toSet.foreach{ userId : Id[User] => 
+            recoverNotification(userId, thread)
+          }
+          log.info(s"MIGRATION: Finished thread import for $extId")
+
+        } else {
+          log.info(s"MIGRATION: Thread $extId already imported. Doing nothing.")
         }
-
-        participants.toSet.foreach{ userId : Id[User] => 
-          recoverNotification(userId, thread)
-        }
-
-
       }
     }
 
 
-    
+
     Ok("")
     
   }
