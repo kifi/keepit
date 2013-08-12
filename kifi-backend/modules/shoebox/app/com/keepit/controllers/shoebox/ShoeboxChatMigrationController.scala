@@ -42,12 +42,20 @@ class ShoeboxChatMigrationController @Inject() (
   def getThreads() : Seq[JsObject]= {
 
     val rootMsgs = db.readOnly{ implicit session => commentRepo.getAllRootMessages() }
+
     rootMsgs.map{ comment =>
+      val rootJson = Json.obj(
+        "from" -> comment.userId.id,
+        "created_at" -> comment.createdAt,
+        "text" -> comment.text
+      )
+
+
       Json.obj(
         "uriId" -> comment.uriId.id,
         "participants" -> db.readOnly{ implicit session => commentRepo.getParticipantsUserIds(comment.id.get).map(_.id) },
         "extId" -> comment.externalId, 
-        "messages" -> getMessages(comment.id.get)
+        "messages" -> (getMessages(comment.id.get) :+ rootJson)
       )
     }
   }
