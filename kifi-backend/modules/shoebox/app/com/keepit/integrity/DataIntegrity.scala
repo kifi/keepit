@@ -1,4 +1,4 @@
-package com.keepit.scraper
+package com.keepit.integrity
 
 import com.keepit.common.logging.Logging
 import com.google.inject.{Inject, ImplementedBy, Singleton}
@@ -23,6 +23,7 @@ import scala.concurrent.duration._
 import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
 
+
 trait DataIntegrityPlugin extends SchedulingPlugin
 
 class DataIntegrityPluginImpl @Inject() (
@@ -37,10 +38,10 @@ class DataIntegrityPluginImpl @Inject() (
   }
 }
 
-private[scraper] case object CleanOrphans
-private[scraper] case object Cron
+private[integrity] case object CleanOrphans
+private[integrity] case object Cron
 
-private[scraper] class DataIntegrityActor @Inject() (
+private[integrity] class DataIntegrityActor @Inject() (
     healthcheckPlugin: HealthcheckPlugin,
     db: Database,
     orphanCleaner: OrphanCleaner)
