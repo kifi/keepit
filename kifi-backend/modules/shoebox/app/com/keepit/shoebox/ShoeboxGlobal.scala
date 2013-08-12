@@ -17,6 +17,7 @@ import com.keepit.social.SocialGraphPlugin
 import com.keepit.controllers.shoebox.ExpertRecommenderController
 import com.keepit.learning.topicmodel.TopicModelSwitcherPlugin
 import com.keepit.scraper.extractor.UriIntegrityPlugin
+import com.keepit.integrity.ChangedUriNotifierPlugin
 
 object ShoeboxGlobal extends FortyTwoGlobal(Prod) with ShoeboxServices {
 
@@ -51,5 +52,6 @@ trait ShoeboxServices { self: FortyTwoGlobal =>
     require(injector.instance[TopicModelSwitcherPlugin].enabled)
     require(injector.instance[ExpertRecommenderController].enabled)
     require(injector.instance[GeckoboardReporterPlugin].enabled)
+    require(injector.instance[ChangedUriNotifierPlugin].enabled)
   }
 }
