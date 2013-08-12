@@ -6,13 +6,13 @@ import com.google.inject.{ImplementedBy, Provider, Inject, Singleton}
 import com.keepit.common.akka.AlertingActor
 
 @Singleton
-class ActorProvider[T <: Actor] @Inject() (
+class ActorInstance[T <: Actor] @Inject() (
     systemProvider: Provider[ActorSystem],
     builder: ActorBuilder,
     provider: Provider[T]) {
 
   lazy val system: ActorSystem = systemProvider.get
-  lazy val actor: ActorRef = builder(system, provider)
+  lazy val ref: ActorRef = builder(system, provider)
 }
 
 @ImplementedBy(classOf[ActorBuilderImpl])

@@ -45,13 +45,13 @@ GET     /session/end                @com.keepit.controllers.ext.ExtAuthControlle
 
 GET     /ext/ws                     @com.keepit.controllers.ext.ExtStreamController.ws()
 GET     /ext/normalize              @com.keepit.controllers.ext.ExtPreferenceController.normalize(url: String)
-GET     /ext/pref/rules                  @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String)
+GET     /ext/pref/rules                  @com.keepit.controllers.ext.ExtPreferenceController.getRules(version: String ?= "")
 GET     /ext/prefs                  @com.keepit.controllers.ext.ExtPreferenceController.getPrefs()
 POST    /ext/pref/keeperPosition         @com.keepit.controllers.ext.ExtPreferenceController.setKeeperPosition()
 POST    /ext/pref/enterToSend            @com.keepit.controllers.ext.ExtPreferenceController.setEnterToSend(enterToSend: Boolean)
 GET     /ext/user/friends                @com.keepit.controllers.ext.ExtUserController.getFriends()
 GET     /ext/user/networks               @com.keepit.controllers.ext.ExtUserController.getNetworks(friendExtId: ExternalId[User])
-GET     /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails(url: String)
+POST    /ext/pageDetails            @com.keepit.controllers.ext.ExtPageController.getPageDetails()
 
 
 POST    /search/chatter             @com.keepit.controllers.ext.ExtCommentController.getCounts
@@ -369,11 +369,15 @@ POST    /internal/shoebox/channel/userCount           @com.keepit.controllers.sh
 POST    /internal/shoebox/channel/uri                 @com.keepit.controllers.shoebox.ShoeboxController.uriChannelFanout()
 POST    /internal/shoebox/channel/uriCount            @com.keepit.controllers.shoebox.ShoeboxController.uriChannelCountFanout()
 
+POST    /internal/shoebox/device/sendPushNotification @com.keepit.controllers.shoebox.ShoeboxController.sendPushNotification()
+
 POST     /internal/shoebox/learning/suggestExperts    @com.keepit.controllers.shoebox.ExpertRecommenderController.suggestExperts()
 
 POST    /internal/shoebox/logEvent                    @com.keepit.controllers.ext.ExtEventController.logEvent()
 
-POST    /internal/geckoboard/refresh                 @com.keepit.reports.GeckoboardReporterController.refreshAll()
+POST    /internal/geckoboard/refresh                  @com.keepit.reports.GeckoboardReporterController.refreshAll()
+
+GET     /internal/migrateToEliza                      @com.keepit.controllers.shoebox.ShoeboxChatMigrationController.migrateToEliza()
 
 
 

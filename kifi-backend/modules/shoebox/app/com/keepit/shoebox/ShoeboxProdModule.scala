@@ -19,6 +19,7 @@ import com.keepit.inject.ProdFortyTwoModule
 import com.keepit.common.actor.ProdActorSystemModule
 import com.keepit.common.zookeeper.ProdDiscoveryModule
 import com.keepit.integrity.DataIntegrityModule
+import com.keepit.eliza.ProdElizaServiceClientModule
 
 case class ShoeboxProdModule() extends ShoeboxModule(
   // Common Functional Modules
@@ -36,6 +37,7 @@ case class ShoeboxProdModule() extends ShoeboxModule(
   healthCheckModule = ProdHealthCheckModule(),
   httpClientModule = ProdHttpClientModule(),
   shoeboxServiceClientModule = ProdShoeboxServiceClientModule(),
+  elizaServiceClientModule = ProdElizaServiceClientModule(),
 
   // Shoebox Functional Modules
   slickModule = ShoeboxSlickModule(),

@@ -92,6 +92,7 @@ object Shoebox extends Service {
     def getSearchFriends(userId: Id[User]) = ServiceRoute(GET, "/internal/shoebox/database/searchFriends", Param("userId", userId))
     def logEvent() = ServiceRoute(POST, "/internal/shoebox/logEvent")
     def createDeepLink() = ServiceRoute(POST, "/internal/shoebox/database/createDeepLink")
+    def sendPushNotification() = ServiceRoute(POST, "/internal/shoebox/device/sendPushNotification")
   }
 }
 
@@ -135,6 +136,7 @@ object Eliza extends Service {
   object internal {
     def sendToUserNoBroadcast() = ServiceRoute(POST, "/internal/eliza/sendToUserNoBroadcast")
     def sendToUser() = ServiceRoute(POST, "/internal/eliza/sendToUser")
+    def importThread() = ServiceRoute(POST, "/internal/eliza/importThread")
   }
 }
 

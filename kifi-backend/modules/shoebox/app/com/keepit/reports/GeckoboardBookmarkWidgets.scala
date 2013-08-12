@@ -11,7 +11,7 @@ import com.keepit.common.akka.FortyTwoActor
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.plugin.{SchedulingPlugin, SchedulingProperties}
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 import com.keepit.common.time._
 import com.keepit.inject._
 import play.api.Plugin
