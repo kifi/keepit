@@ -10,6 +10,11 @@ class ChangedURITest extends Specification with ShoeboxTestInjector{
   "ChangedURIRepo" should {
     "work" in {
        withDb() { implicit injector =>
+
+         db.readOnly{ implicit s =>
+           changedURIRepo.getHighestSeqNum() === None
+         }
+
          db.readWrite { implicit s =>
            (1 to 5).map{ i =>
              val tmp = ChangedURI(oldUriId = Id[NormalizedURI](i), newUriId = Id[NormalizedURI](i+100))
@@ -36,7 +41,7 @@ class ChangedURITest extends Specification with ShoeboxTestInjector{
          changes.size === 3
 
          db.readOnly{ implicit s =>
-           changedURIRepo.getHighestSeqNum() === SequenceNumber(8)
+           changedURIRepo.getHighestSeqNum() === Some(SequenceNumber(8))
          }
        }
     }
