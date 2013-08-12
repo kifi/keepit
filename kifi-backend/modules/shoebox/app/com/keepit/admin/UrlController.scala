@@ -2,10 +2,8 @@ package com.keepit.controllers.admin
 
 
 import play.api.Play.current
-
 import com.keepit.common.db._
 import com.keepit.common.db.slick._
-
 import com.keepit.model._
 import com.keepit.common.time._
 import com.keepit.common.healthcheck.BabysitterTimeout
@@ -13,12 +11,14 @@ import com.keepit.common.mail._
 import play.api.libs.concurrent.Akka
 import scala.concurrent.duration._
 import views.html
-
-/**
- * Charts, etc.
- */
 import com.keepit.common.controller.{AdminController, ActionAuthenticator}
 import com.google.inject.Inject
+import com.keepit.integrity.OrphanCleaner
+import com.keepit.integrity.DuplicateDocumentDetection
+import com.keepit.integrity.DuplicateDocumentsProcessor
+import com.keepit.integrity.HandleDuplicatesAction
+import com.keepit.integrity.UriIntegrityPlugin
+import com.keepit.integrity.ChangedUri
 
 class UrlController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -33,7 +33,12 @@ class UrlController @Inject() (
   commentRepo: CommentRepo,
   deepLinkRepo: DeepLinkRepo,
   followRepo: FollowRepo,
-  normalizedUriFactory: NormalizedURIFactory)
+  normalizedUriFactory: NormalizedURIFactory,
+  duplicateDocumentRepo: DuplicateDocumentRepo,
+  orphanCleaner: OrphanCleaner,
+  dupeDetect: DuplicateDocumentDetection,
+  duplicatesProcessor: DuplicateDocumentsProcessor,
+  uriIntegrityPlugin: UriIntegrityPlugin)
     extends AdminController(actionAuthenticator) {
 
   implicit val timeout = BabysitterTimeout(5 minutes, 5 minutes)
@@ -72,70 +77,25 @@ class UrlController @Inject() (
       val urlsSize = urls.size
       val changes = scala.collection.mutable.Map[String, Int]()
       changes += (("url", 0))
-      changes += (("bookmark", 0))
-      changes += (("comment", 0))
-      changes += (("deeplink", 0))
-      changes += (("follow", 0))
 
       urls map { url =>
-        url.state match {
-          case URLStates.ACTIVE =>
-            val (normalizedUri, reason) = uriRepo.getByUri(url.url) match {
-              case Some(nuri) =>
-                (nuri, URLHistoryCause.MERGE)
-              case None =>
-                // No normalized URI exists for this url, create one
-                val nuri = normalizedUriFactory(url.url)
-                ({if(!readOnly)
-                  uriRepo.save(nuri)
-                else
-                  nuri}, URLHistoryCause.SPLIT)
+        if (url.state == URLStates.ACTIVE) {
+          val (normalizedUri, reason) = uriRepo.getByUri(url.url) match {
+            // if nuri exists by current normalization rule, and if url.normalizedUriId was pointing to a different nuri, we need to merge
+            case Some(nuri) => (nuri, URLHistoryCause.MERGE)
+            // No normalized URI exists for this url, create one
+            case None => {
+              val tmp = normalizedUriFactory(url.url)
+              val nuri = if (!readOnly) uriRepo.save(tmp) else tmp
+              (nuri, URLHistoryCause.SPLIT)
             }
+          }
 
-            if(normalizedUri.id.isEmpty || url.normalizedUriId.id != normalizedUri.id.get.id) {
-              changes("url") += 1
-              if(!readOnly) {
-                urlRepo.save(url.withNormUriId(normalizedUri.id.get).withHistory(URLHistory(clock.now, normalizedUri.id.get,reason)))
-              }
-            }
-
-            bookmarkRepo.getByUrlId(url.id.get) map { s =>
-              if(normalizedUri.id.isEmpty || s.uriId.id != normalizedUri.id.get.id) {
-                changes("bookmark") += 1
-                if(!readOnly) {
-                  bookmarkRepo.save(s.withNormUriId(normalizedUri.id.get))
-                }
-              }
-            }
-
-            commentRepo.getByUrlId(url.id.get) map { s =>
-              if(normalizedUri.id.isEmpty || s.uriId.id != normalizedUri.id.get.id) {
-                changes("comment") += 1
-                if(!readOnly) {
-                  commentRepo.save(s.withNormUriId(normalizedUri.id.get))
-                }
-              }
-            }
-
-            deepLinkRepo.getByUrl(url.id.get) map { s =>
-              if(normalizedUri.id.isEmpty || s.uriId.get.id != normalizedUri.id.get.id) {
-                changes("deeplink") += 1
-                if(!readOnly) {
-                  deepLinkRepo.save(s.withNormUriId(normalizedUri.id.get))
-                }
-              }
-            }
-
-            followRepo.getByUrl(url.id.get, excludeState = None) map { s =>
-              if(normalizedUri.id.isEmpty || s.uriId.id != normalizedUri.id.get.id) {
-                changes("follow") += 1
-                if(!readOnly) {
-                  followRepo.save(s.withNormUriId(normalizedUri.id.get))
-                }
-              }
-            }
-
-          case _ => // ignore
+          // in readOnly mode, id maybe empty
+          if (normalizedUri.id.isEmpty || url.normalizedUriId.id != normalizedUri.id.get.id) {
+            changes("url") += 1
+            if (!readOnly) uriIntegrityPlugin.handleChangedUri(ChangedUri(oldUri = url.normalizedUriId, newUri = normalizedUri.id.get, reason))
+          }
         }
       }
       (urlsSize, changes)
@@ -177,4 +137,59 @@ class UrlController @Inject() (
     }
     Ok("sequence number fix started")
   }
+
+  def orphanCleanup() = AdminHtmlAction { implicit request =>
+    Akka.future {
+      db.readWrite { implicit session =>
+        orphanCleaner.cleanNormalizedURIs(false)
+        orphanCleaner.cleanScrapeInfo(false)
+      }
+    }
+    Redirect(com.keepit.controllers.admin.routes.UrlController.documentIntegrity())
+  }
+
+  def documentIntegrity(page: Int = 0, size: Int = 50) = AdminHtmlAction { implicit request =>
+    val dupes = db.readOnly { implicit conn =>
+      duplicateDocumentRepo.getActive(page, size)
+    }
+
+    val groupedDupes = dupes.groupBy { case d => d.uri1Id }.toSeq.sortWith((a,b) => a._1.id < b._1.id)
+
+    val loadedDupes = db.readOnly { implicit session =>
+      groupedDupes map  { d =>
+        val dupeRecords = d._2.map { sd =>
+          DisplayedDuplicate(sd.id.get, sd.uri2Id, uriRepo.get(sd.uri2Id).url, sd.percentMatch)
+        }
+        DisplayedDuplicates(d._1, uriRepo.get(d._1).url, dupeRecords)
+      }
+    }
+
+    Ok(html.admin.documentIntegrity(loadedDupes))
+  }
+
+  def handleDuplicate = AdminHtmlAction { implicit request =>
+    val body = request.body.asFormUrlEncoded.get
+    val action = body("action").head
+    val id = Id[DuplicateDocument](body("id").head.toLong)
+    duplicatesProcessor.handleDuplicates(Left[Id[DuplicateDocument], Id[NormalizedURI]](id), HandleDuplicatesAction(action))
+    Ok
+  }
+
+  def handleDuplicates = AdminHtmlAction { implicit request =>
+    val body = request.body.asFormUrlEncoded.get
+    val action = body("action").head
+    val id = Id[NormalizedURI](body("id").head.toLong)
+    duplicatesProcessor.handleDuplicates(Right[Id[DuplicateDocument], Id[NormalizedURI]](id), HandleDuplicatesAction(action))
+    Ok
+  }
+
+  def duplicateDocumentDetection = AdminHtmlAction { implicit request =>
+    dupeDetect.asyncProcessDocuments()
+    Redirect(com.keepit.controllers.admin.routes.UrlController.documentIntegrity())
+  }
+
 }
+
+
+case class DisplayedDuplicate(id: Id[DuplicateDocument], normUriId: Id[NormalizedURI], url: String, percentMatch: Double)
+case class DisplayedDuplicates(normUriId: Id[NormalizedURI], url: String, dupes: Seq[DisplayedDuplicate])
