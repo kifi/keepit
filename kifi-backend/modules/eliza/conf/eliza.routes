@@ -16,6 +16,8 @@ GET     /eliza/ext/ws                     @com.keepit.eliza.ExtMessagingControll
 POST  /internal/eliza/sendToUserNoBroadcast     @com.keepit.eliza.ElizaController.sendToUserNoBroadcast
 POST  /internal/eliza/sendToUser                @com.keepit.eliza.ElizaController.sendToUser
 
+POST /internal/eliza/importThread               @com.keepit.eliza.MessagingController.importThread()
+
 
 
 

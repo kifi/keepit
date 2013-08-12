@@ -1,7 +1,7 @@
 package com.keepit.scraper
 
 import com.keepit.common.healthcheck.HealthcheckPlugin
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 import com.google.inject.Inject
 import com.keepit.common.logging.Logging
 import com.keepit.model.NormalizedURI
@@ -56,8 +56,8 @@ trait ScraperPlugin extends Plugin {
 }
 
 class ScraperPluginImpl @Inject() (
-    actorProvider: ActorProvider[ScraperActor],
-    signatureActorProvider: ActorProvider[ScrapeSignatureActor],
+    actor: ActorInstance[ScraperActor],
+    signatureActor: ActorInstance[ScrapeSignatureActor],
     scraper: Scraper,
     val schedulingProperties: SchedulingProperties) //only on leader
   extends ScraperPlugin with SchedulingPlugin with Logging {
@@ -68,7 +68,7 @@ class ScraperPluginImpl @Inject() (
   override def enabled: Boolean = true
   override def onStart() {
     log.info("starting ScraperPluginImpl")
-    scheduleTask(actorProvider.system, 30 seconds, 1 minutes, actorProvider.actor, Scrape)
+    scheduleTask(actor.system, 30 seconds, 1 minutes, actor.ref, Scrape)
   }
   override def onStop() {
     log.info("stopping ScraperPluginImpl")
@@ -76,11 +76,11 @@ class ScraperPluginImpl @Inject() (
   }
 
   override def scrapePending(): Future[Seq[(NormalizedURI, Option[Article])]] =
-    actorProvider.actor.ask(Scrape)(1 minutes).mapTo[Seq[(NormalizedURI, Option[Article])]]
+    actor.ref.ask(Scrape)(1 minutes).mapTo[Seq[(NormalizedURI, Option[Article])]]
 
   override def asyncScrape(uri: NormalizedURI): Future[(NormalizedURI, Option[Article])] =
-    actorProvider.actor.ask(ScrapeInstance(uri))(1 minutes).mapTo[(NormalizedURI, Option[Article])]
+    actor.ref.ask(ScrapeInstance(uri))(1 minutes).mapTo[(NormalizedURI, Option[Article])]
 
   override def asyncSignature(url: String): Future[Option[Signature]] =
-    signatureActorProvider.actor.ask(GetSignature(url))(1 minutes).mapTo[Option[Signature]]
+    signatureActor.ref.ask(GetSignature(url))(1 minutes).mapTo[Option[Signature]]
 }

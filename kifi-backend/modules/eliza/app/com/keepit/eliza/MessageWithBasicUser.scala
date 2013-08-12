@@ -19,7 +19,7 @@ case class MessageWithBasicUser(
   url: String,
   nUrl: String,
   user: Option[BasicUser],
-  recipients: Seq[BasicUser]
+  participants: Seq[BasicUser]
 )
 
 object MessageWithBasicUser {
@@ -30,6 +30,6 @@ object MessageWithBasicUser {
     (__ \ 'url).format[String] and
     (__ \ 'nUrl).format[String] and
     (__ \ 'user).formatNullable[BasicUser] and
-    (__ \ 'recipients).format[Seq[BasicUser]]
+    (__ \ 'participants).format[Seq[BasicUser]]
   )(MessageWithBasicUser.apply, unlift(MessageWithBasicUser.unapply))
 }

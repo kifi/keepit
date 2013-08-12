@@ -1,4 +1,4 @@
-package com.keepit.scraper.extractor
+package com.keepit.integrity
 
 import akka.util.Timeout
 import com.keepit.common.db._
@@ -9,12 +9,12 @@ import com.keepit.common.time._
 import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin, HealthcheckError}
 import com.keepit.common.logging.Logging
 import com.keepit.common.akka.FortyTwoActor
-import com.keepit.common.actor.ActorProvider
+import com.keepit.common.actor.ActorInstance
 import play.api.Plugin
 import scala.concurrent.duration._
 
 
-case class ChangedUri(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI])
+case class ChangedUri(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI], cause: URLHistoryCause)
 
 class UriIntegrityActor @Inject()(
   db: Database,
@@ -36,10 +36,11 @@ class UriIntegrityActor @Inject()(
   /**
    * any reference to the old uri should be redirected to the new one
    */
-  def handleChanged(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) = {
+  def handleChanged(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI], cause: URLHistoryCause): Unit = {
+    if (oldUri == newUri) return
     db.readWrite{ implicit s =>
       urlRepo.getByNormUri(oldUri).map{ url =>
-        urlRepo.save(url.withNormUriId(newUri).withHistory(URLHistory(clock.now, newUri, URLHistoryCause.MERGE)))
+        urlRepo.save(url.withNormUriId(newUri).withHistory(URLHistory(clock.now, newUri, cause)))
       }
 
       uriRepo.save(uriRepo.get(oldUri).withState(NormalizedURIStates.INACTIVE))
@@ -76,18 +77,18 @@ class UriIntegrityActor @Inject()(
   }
 
   def receive = {
-    case ChangedUri(oldUri: Id[NormalizedURI], newUri: Id[NormalizedURI]) => handleChanged(oldUri, newUri)
+    case ChangedUri(oldUri, newUri, cause) => handleChanged(oldUri, newUri, cause)
   }
 
 }
 
 @ImplementedBy(classOf[UriIntegrityPluginImpl])
 trait UriIntegrityPlugin extends Plugin {
-  def fixChangedUri(change: ChangedUri): Unit
+  def handleChangedUri(change: ChangedUri): Unit
 }
 
 class UriIntegrityPluginImpl @Inject() (
-  actorProvider: ActorProvider[UriIntegrityActor]
+  actor: ActorInstance[UriIntegrityActor]
 ) extends UriIntegrityPlugin with Logging {
   implicit val actorTimeout = Timeout(5 seconds)
 
@@ -100,7 +101,7 @@ class UriIntegrityPluginImpl @Inject() (
      log.info("stopping UriIntegrityPluginImpl")
   }
 
-  override def fixChangedUri(change: ChangedUri) = {
-    actorProvider.actor ! change
+  override def handleChangedUri(change: ChangedUri) = {
+    actor.ref ! change
   }
 }

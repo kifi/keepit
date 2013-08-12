@@ -11,6 +11,7 @@ import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.realtime.UserChannel
 import com.keepit.social.{SocialNetworkType, SocialId}
+import com.keepit.eliza.ElizaServiceClient
 
 import play.api.libs.json.Json
 
@@ -35,7 +36,8 @@ class UserConnectionCreator @Inject() (
     userValueRepo: UserValueRepo,
     clock: Clock,
     userChannel: UserChannel,
-    basicUserRepo: BasicUserRepo)
+    basicUserRepo: BasicUserRepo,
+    eliza: ElizaServiceClient)
   extends ConnectionUpdater with Logging {
 
   def createConnections(socialUserInfo: SocialUserInfo, socialIds: Seq[SocialId],
@@ -64,10 +66,12 @@ class UserConnectionCreator @Inject() (
       val newConnections = socialConnections -- existingConnections
       if (newConnections.nonEmpty) {
         userChannel.pushAndFanout(userId, Json.arr("new_friends", newConnections.map(basicUserRepo.load)))
+        eliza.sendToUser(userId, Json.arr("new_friends", newConnections.map(basicUserRepo.load)))
       }
       newConnections.foreach { connId =>
         log.info(s"Sending new connection to user $connId (to $userId)")
         userChannel.pushAndFanout(connId, Json.arr("new_friends", Set(basicUserRepo.load(userId))))
+        eliza.sendToUser(connId, Json.arr("new_friends", Set(basicUserRepo.load(userId))))
       }
       userConnectionRepo.addConnections(userId, newConnections)
       userValueRepo.setValue(userId, UserConnectionCreator.UpdatedUserConnectionsKey, clock.now.toStandardTimeString)
