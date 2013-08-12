@@ -3,19 +3,19 @@
   <div class="kifi-pane-title">Messages</div>
   <div class="kifi-thread-who">
     A conversation with{{!
-  }}{{^numparticipants}}:
+  }}{{^numParticipants}}:
       {{#participants}}
         <span class="kifi-thread-participant">{{firstName}} {{lastName}}</span>
       {{/participants}}
-    {{/numparticipants}}
-    {{#numparticipants}}
-      {{numparticipants}} people:
+    {{/numParticipants}}
+    {{#numParticipants}}
+      {{numParticipants}} people:
       <div class="kifi-thread-participants">
       {{#participants}}{{!
       }}<span class="kifi-thread-participant">{{firstName}} {{lastName}}</span>{{!
     }}{{/participants}}
       </div>
-    {{/numparticipants}}
+    {{/numParticipants}}
   </div>
   <div class="kifi-pane-tall"></div>
 </div>

@@ -398,7 +398,7 @@ slider2 = function() {
           respond(th.participants, "/messages/" + th.id);
         });
       }
-      function respond(r, canonicalLocator) {
+      function respond(p, canonicalLocator) {
         cb({participants: p, numParticipants: p.length > 1 ? p.length : null}, canonicalLocator);
       }
     }};
