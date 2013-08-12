@@ -44,8 +44,10 @@ class ChangedUriNotifierActor @Inject() (
   }
 }
 
+@ImplementedBy(classOf[ChangedUriNotifierPluginImpl])
 trait ChangedUriNotifierPlugin extends SchedulingPlugin
 
+@Singleton
 class ChangedUriNotifierPluginImpl @Inject()(
   actor: ActorInstance[ChangedUriNotifierActor],
   val schedulingProperties: SchedulingProperties  //only on leader
@@ -58,7 +60,7 @@ class ChangedUriNotifierPluginImpl @Inject()(
   }
 
   override def onStop() {
-    log.info("stopping TopicUpdaterPluginImpl")
+    log.info("stopping ChangedUriNotifierPluginImpl")
     cancelTasks()
   }
 }
