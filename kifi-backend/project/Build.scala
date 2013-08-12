@@ -97,7 +97,7 @@ object ApplicationBuild extends Build {
 
     val commonResolvers = Seq(
       Resolver.url("sbt-plugin-snapshots",
-        new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
+        new URL("http://repo.42go.com:4242/fortytwo/content/groups/public/"))(Resolver.ivyStylePatterns),
         // new URL("http://repo.scala-sbt.org/scalasbt/sbt-plugin-snapshots/"))(Resolver.ivyStylePatterns),
       // "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/",
       // "kevoree Repository" at "http://maven2.kevoree.org/release/",
