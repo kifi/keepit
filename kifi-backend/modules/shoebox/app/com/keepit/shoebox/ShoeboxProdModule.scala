@@ -18,6 +18,7 @@ import com.keepit.common.net.ProdHttpClientModule
 import com.keepit.inject.ProdFortyTwoModule
 import com.keepit.common.actor.ProdActorSystemModule
 import com.keepit.common.zookeeper.ProdDiscoveryModule
+import com.keepit.integrity.DataIntegrityModule
 import com.keepit.eliza.ProdElizaServiceClientModule
 
 case class ShoeboxProdModule() extends ShoeboxModule(
@@ -46,5 +47,6 @@ case class ShoeboxProdModule() extends ShoeboxModule(
   webSocketModule = ShoeboxWebSocketModule(),
   topicModelModule = LdaTopicModelModule(),
   domainTagImporterModule = ProdDomainTagImporterModule(),
-  sliderHistoryTrackerModule = ProdSliderHistoryTrackerModule()
+  sliderHistoryTrackerModule = ProdSliderHistoryTrackerModule(),
+  dataIntegrityModule = DataIntegrityModule()
 )

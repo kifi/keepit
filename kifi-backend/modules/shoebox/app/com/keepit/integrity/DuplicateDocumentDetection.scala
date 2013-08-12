@@ -1,4 +1,4 @@
-package com.keepit.scraper
+package com.keepit.integrity
 
 import com.keepit.model._
 import javax.xml.bind.DatatypeConverter._
@@ -10,6 +10,7 @@ import play.api.libs.concurrent.Akka
 import com.keepit.common.mail.{EmailAddresses, ElectronicMail, PostOffice, LocalPostOffice}
 import play.api.Play.current
 import com.google.inject.Inject
+import com.keepit.scraper.SignatureBuilder
 
 class DuplicateDocumentDetection @Inject() (
     db: Database,

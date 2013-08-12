@@ -19,6 +19,7 @@ import com.keepit.inject.{ConfigurationModule, FortyTwoModule}
 import com.keepit.common.actor.ActorSystemModule
 import com.keepit.common.zookeeper.DiscoveryModule
 import com.keepit.common.db.slick.SlickModule
+import com.keepit.integrity.DataIntegrityModule
 import com.keepit.eliza.ElizaServiceClientModule
 
 abstract class ShoeboxModule(
@@ -49,7 +50,8 @@ abstract class ShoeboxModule(
   val domainTagImporterModule: DomainTagImporterModule,
   val sliderHistoryTrackerModule: SliderHistoryTrackerModule,
   val userIndexModule: UserIndexModule = UserIndexModule(),
-  val geckoboardModule: GeckoboardModule = GeckoboardModule()
+  val geckoboardModule: GeckoboardModule = GeckoboardModule(),
+  val dataIntegrityModule: DataIntegrityModule
 
 ) extends ConfigurationModule(
     fortyTwoModule,
@@ -77,5 +79,6 @@ abstract class ShoeboxModule(
     domainTagImporterModule,
     sliderHistoryTrackerModule,
     userIndexModule,
-    geckoboardModule
+    geckoboardModule,
+    dataIntegrityModule
 )
