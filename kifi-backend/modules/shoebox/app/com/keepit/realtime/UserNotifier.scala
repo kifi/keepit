@@ -20,6 +20,7 @@ import com.keepit.common.social._
 import com.keepit.common.time._
 import com.keepit.model._
 import com.keepit.social.BasicUser
+import com.keepit.social.{ThreadInfo, CommentWithBasicUser}
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -199,29 +200,58 @@ class UserNotifier @Inject() (
   }
 
   def message(message: Comment): Unit = withThreadLock(message) {
-    val (thread, participants) = db.readOnly { implicit s =>
+    val SPECIAL_MESSAGE = " Hi, Kifi messages are down due to a system upgrade so your message was not sent. The upgrade should be finished this afternoon (PST). Check http://kifiupdates.tumblr.com/ for updates. Sorry for the inconvenience, and thanks for helping us build Kifi!"
+
+    //val (thread, participants) = 
+    db.readOnly { implicit s =>
       val normUri = normalUriRepo.get(message.uriId)
-      val parent = message.parent.map(commentRepo.get).getOrElse(message)
-      val threadInfo = threadInfoRepo.load(parent, Some(message.userId))
-      val messageJson = Json.arr("message", normUri.url, threadInfo, commentWithBasicUserRepo.load(message))
+      val parent = message
+      // val threadInfo = threadInfoRepo.load(parent, Some(message.userId))
+      val bu = basicUserRepo.load(message.userId)
+      val threadInfo = ThreadInfo(
+        externalId = message.externalId,
+        recipients = Seq(),
+        digest = message.text,
+        lastAuthor = bu.externalId,
+        messageCount = 1,
+        messageTimes = Map((Seq(message)).map {c => c.externalId -> c.createdAt}: _*),
+        createdAt = message.createdAt,
+        lastCommentedAt = message.createdAt
+      )
 
-      val participants = commentRepo.getParticipantsUserIds(message.id.get)
-      participants.map { p =>
-        userChannel.pushAndFanout(p, messageJson)
-      }
 
-      val thread = if (message eq parent) Seq(message) else (parent +: commentRepo.getChildren(parent.id.get)).reverse
+      // val cwbu = commentWithBasicUserRepo.load(message)
 
-      (thread, participants)
+      val cwbu = CommentWithBasicUser(
+        id=message.externalId,
+        createdAt=message.createdAt,
+        text=SPECIAL_MESSAGE,
+        user=bu.copy(firstName="Kifi", lastName=""),
+        permissions= CommentPermissions.MESSAGE,
+        recipients= Seq()
+      )
+      
+      // val cwbu2 = cwbu.copy(text=SPECIAL_MESSAGE)
+      
+      val messageJson = Json.arr("message", normUri.url, threadInfo, cwbu)
+      userChannel.pushAndFanout(message.userId, messageJson)
+      // val participants = commentRepo.getParticipantsUserIds(message.id.get)
+      // participants.map { p =>
+      //   userChannel.pushAndFanout(p, messageJson)
+      // }
+
+      //val thread = if (message eq parent) Seq(message) else (parent +: commentRepo.getChildren(parent.id.get)).reverse
+
+      //(thread, participants)
     }
 
-    db.readWrite { implicit s =>
-      createMessageUserNotifications(message, thread, participants) map {
-        case (messageDetails, userNotification) =>
-          log.info(s"Sending notification to ${userNotification.userId}: $messageDetails")
-          notificationBroadcast.push(userNotification)
-      }
-    }
+    // db.readWrite { implicit s =>
+    //   createMessageUserNotifications(message, thread, participants) map {
+    //     case (messageDetails, userNotification) =>
+    //       log.info(s"Sending notification to ${userNotification.userId}: $messageDetails")
+    //       notificationBroadcast.push(userNotification)
+    //   }
+    // }
   }
 
   def recreateMessageDetails(safeMode: Boolean)(implicit session: RWSession) = {
