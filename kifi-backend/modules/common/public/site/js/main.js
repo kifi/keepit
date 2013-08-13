@@ -1259,8 +1259,10 @@ $(function() {
 							.removeClass('mine selected detailed');
 							$priv.removeClass('on');
 						}));
-				$keepsToHide.each(function() {this.style.height = this.offsetHeight + 'px'}).layout().addClass('toggling').one('transitionend', function() {
-					$(this).data('prev', this.previousElementSibling).detach();
+				$keepsToHide.each(function() {
+					$(this).data('prev', this.previousElementSibling).css('height', this.offsetHeight);
+				}).layout().addClass('toggling').one('transitionend', function() {
+					$(this).detach();
 				}).addClass('unkept');
 				var $titlesToHide = searchResponse ? $() :
 					$myKeeps.find('.keep-group-title').filter(function() {
@@ -1268,8 +1270,10 @@ $(function() {
 							if (!$li.hasClass('detailed')) return;
 						}
 						return true;
+					}).each(function() {
+						$(this).data('prev', this.previousElementSibling);
 					}).one('transitionend', function() {
-						$(this).data('prev', this.previousElementSibling).detach();
+						$(this).detach();
 					}).css('height', 0);
 				hideKeepDetails();
 				$('.undo-message').text($keeps.length > 1 ? $keeps.length + ' Keeps deleted.' : 'Keep deleted.');
