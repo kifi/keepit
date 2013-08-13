@@ -903,7 +903,7 @@ function subscribe(tab) {
       var uri_2 = resp.uri_2;
       d = pageData[uri] = pageData[uri] || new PageData;
 
-      if (api.tabs.get(tab.id).url != tab.url) return;
+      if (api.tabs.get(tab.id) && api.tabs.get(tab.id).url != tab.url) return;
       finish(uri);
 
       // uri_1
