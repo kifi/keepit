@@ -39,12 +39,16 @@ class GeckoboardReporterPluginImpl @Inject() (
     actor: ActorInstance[GeckoboardReporterActor],
     quartz: ActorInstance[QuartzActor],
     val schedulingProperties: SchedulingProperties,
+    keepersPerHour: KeepersPerHour,
     totalKeepsPerHour: TotalKeepsPerHour,
     uiKeepsPerHour: UIKeepsPerHour,
+    keepersPerDay: KeepersPerDay,
     totalKeepsPerDay: TotalKeepsPerDay,
     uiKeepsPerDay: UIKeepsPerDay,
+    keepersPerWeek: KeepersPerWeek,
     totalKeepsPerWeek: TotalKeepsPerWeek,
     uiKeepsPerWeek: UIKeepsPerWeek,
+    keepersPerMonth: KeepersPerMonth,
     totalKeepsPerMonth: TotalKeepsPerMonth,
     uiKeepsPerMonth: UIKeepsPerMonth)
 extends GeckoboardReporterPlugin with Logging {
@@ -55,23 +59,31 @@ extends GeckoboardReporterPlugin with Logging {
   override def enabled: Boolean = true
 
   def refreshAll(): Unit = {
+    actor.ref ! keepersPerHour
     actor.ref ! totalKeepsPerHour
     actor.ref ! uiKeepsPerHour
+    actor.ref ! keepersPerDay
     actor.ref ! totalKeepsPerDay
     actor.ref ! uiKeepsPerDay
+    actor.ref ! keepersPerWeek
     actor.ref ! totalKeepsPerWeek
     actor.ref ! uiKeepsPerWeek
+    actor.ref ! keepersPerMonth
     actor.ref ! totalKeepsPerMonth
     actor.ref ! uiKeepsPerMonth
   }
 
   override def onStart() {
+    cronTask(quartz, actor.ref, "0 0/10 * * * ?", keepersPerHour)
     cronTask(quartz, actor.ref, "0 0/10 * * * ?", totalKeepsPerHour)
     cronTask(quartz, actor.ref, "0 0/10 * * * ?", uiKeepsPerHour)
-    cronTask(quartz, actor.ref, "0 0 * * * ?", totalKeepsPerDay)
-    cronTask(quartz, actor.ref, "0 0 * * * ?", uiKeepsPerDay)
-    cronTask(quartz, actor.ref, "0 0 0/6 * * ?", totalKeepsPerWeek)
-    cronTask(quartz, actor.ref, "0 0 0/6 * * ?", uiKeepsPerWeek)
+    cronTask(quartz, actor.ref, "0 0/30 * * * ?", keepersPerDay)
+    cronTask(quartz, actor.ref, "0 0/30 * * * ?", totalKeepsPerDay)
+    cronTask(quartz, actor.ref, "0 0/30 * * * ?", uiKeepsPerDay)
+    cronTask(quartz, actor.ref, "0 0 0/1 * * ?", keepersPerWeek)
+    cronTask(quartz, actor.ref, "0 0 0/1 * * ?", totalKeepsPerWeek)
+    cronTask(quartz, actor.ref, "0 0 0/1 * * ?", uiKeepsPerWeek)
+    cronTask(quartz, actor.ref, "0 0 0/6 * * ?", keepersPerMonth)
     cronTask(quartz, actor.ref, "0 0 0/6 * * ?", totalKeepsPerMonth)
     cronTask(quartz, actor.ref, "0 0 0/6 * * ?", uiKeepsPerMonth)
   }
