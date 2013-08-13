@@ -1,5 +1,8 @@
 // @require styles/metro/threads.css
 // @require styles/metro/compose.css
+// @require scripts/html/metro/threads.js
+// @require scripts/html/metro/thread.js
+// @require scripts/html/metro/compose.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/lib/jquery-tokeninput.js
 // @require scripts/api.js
@@ -19,9 +22,9 @@ threadsPane = function() {
         var n = messageCount(t, new Date(o.read[t.id] || 0));
         t.messageCount = n < -9 ? "9+" : Math.abs(n);
         t.messagesUnread = n < 0;
-        t.recipientsPictured = t.recipients.slice(0, 4);
+        t.participantsPictured = t.participants.slice(0, 4);
       });
-      render("html/metro/threads.html", {
+      $(render("html/metro/threads", {
         formatSnippet: getSnippetFormatter,
         formatLocalDate: getLocalDateFormatter,
         emptyUri: api.url("images/metro/bg_messages.png"),
@@ -33,10 +36,10 @@ threadsPane = function() {
         submitTip: (prefs.enterToSend ? "" : CO_KEY + "-") + "Enter to send",
         snapshotUri: api.url("images/snapshot.png")
       }, {
-        thread: "thread.html",
-        compose: "compose.html"
-      }, function(html) {
-        $(html).prependTo($container)
+        thread: "thread",
+        compose: "compose"
+      })).prependTo($container)
+      // TODO: unindent below
         .on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
         .on("click", "a[href^='x-kifi-sel:']", function(e) {
           e.preventDefault();
@@ -60,7 +63,6 @@ threadsPane = function() {
           $list.length = 0;
           $(window).off("resize.threads");
         });
-      });
     },
     update: function(thread, readTime) {
       if ($list.length) {
@@ -112,9 +114,9 @@ threadsPane = function() {
           o[f.id] = f;
           return o;
         }, {});
-        var recipients = recipientIds.map(function(id) {return friends[id]});
+        var participants = recipientIds.map(function(id) {return friends[id]});
         var locator = "/messages/" + (resp.parentId || resp.id);
-        $container.closest(".kifi-pane").triggerHandler("kifi:show-pane", [locator, recipients]);
+        $container.closest(".kifi-pane").triggerHandler("kifi:show-pane", [locator, participants]);
       });
   }
 
@@ -122,11 +124,11 @@ threadsPane = function() {
     var n = messageCount(th, new Date(readTime || 0));
     th.messageCount = n < -9 ? "9+" : Math.abs(n);
     th.messagesUnread = n < 0;
-    th.recipientsPictured = th.recipients.slice(0, 4);
+    th.participantsPictured = th.participants.slice(0, 4);
     th.formatSnippet = getSnippetFormatter;
     th.formatLocalDate = getLocalDateFormatter;
-    render("html/metro/thread.html", th, function(html) {
-      callback($(html).data("recipients", th.recipients).find("time").timeago().end());
+    render("html/metro/thread", th, function(html) {
+      callback($(html).data("participants", th. participants).find("time").timeago().end());
     });
   }
 

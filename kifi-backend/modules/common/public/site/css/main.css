@@ -259,12 +259,16 @@ a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 .main[data-view=search] .main-keeps {top: 107px}
 .main-keeps>.antiscroll-inner {height: 100%; width: 100%; overflow-x: hidden; padding: 1px 18px 0; box-sizing: border-box; -moz-box-sizing: border-box}
 
-.keep-group-title {margin-top: 7px; color: #67829c; font-size: 21px; font-weight: 100; letter-spacing: 1px; border-bottom: 1px solid #e3e6ee; padding: 4px 30px}
-.keep-group-title+.keep {border-top: 0}
-.keep {background-color: #fff; padding: 10px 0 13px 30px; border-top: 1px solid #f9f9f9; position: relative}
+.keep-group-title {margin-top: 7px; height: 33px; line-height: 33px; color: #67829c; font-size: 21px; font-weight: 100; letter-spacing: 1px; border-bottom: 1px solid #e3e6ee; padding: 0 30px; overflow: hidden; transition: height .3s ease-in-out}
+.keep-group-title+.keep {border-top: none}
+.keep {background-color: #fff; padding-left: 30px; border-top: 1px solid #f9f9f9; position: relative; -moz-box-sizing: border-box; box-sizing: border-box}
 .keep.detailed {background-color: #eff2f7}
 .keep.selected {background-color: #fffcf1; border-color: #f0f0f0}
 .keep.ui-draggable-dragging {border-top: none}
+.keep.toggling {overflow: hidden; transition: height .3s ease-in-out}
+.keep.unkept {height: 0 !important}
+.keep::before {content: " "; display: block; height: 10px}
+.keep::after {content: " "; display: block; height: 13px}
 .keep-arrow {position: absolute; right: 16px; width: 6px; height: 16px; bottom: 13px; border: solid transparent; border-width: 4px 8px; background: url(../img/arrow-r.png) left/13px 16px no-repeat content-box; cursor: pointer; -webkit-transition: -webkit-transform .2s; transition: -webkit-transform .2s, transform .2s}
 .keep-arrow:hover {background-color: rgba(0,0,0,.05); border-color: rgba(0,0,0,.05)}
 .keep:hover .keep-arrow,
@@ -344,7 +348,9 @@ a.friend-req-n[href] {background-color: #6fa6ef; color: #fff}
 .detail {position: absolute; top: 70px; left: 0; right: 0; bottom: 0}
 .right-col>*>*>.antiscroll-inner {position: absolute; top: 0; bottom: 0; left: 0; right: 0; overflow-x: hidden; overflow-y: scroll}
 
-.splash {background-color: #fff; border-left: 1px solid #dbdee3}
+.splash {background-color: #fff; border-left: 1px solid #dbdee3; z-index: 0}
+.splash>.undo-box {position: absolute; top: 0; left: 0; right: 0; background-color: #ffc; border-bottom: 1px solid #ff8; font-size: 13px; font-weight: 300; line-height: 24px; text-align: center; z-index: 1; display: none}
+a.undo-link[href] {margin-left: 4px; font-weight: 500}
 .splash>.antiscroll-inner {padding: 6px 0 0 36px; -moz-box-sizing: border-box; box-sizing: border-box}
 .splash h2 {margin: 30px 0 6px; font-size: 19px; line-height: 36px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
 .splash ul {margin: 0; padding: 0; list-style: none; font-size: 15px; line-height: 46px; -webkit-font-smoothing: antialiased}

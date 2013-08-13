@@ -87,13 +87,16 @@ class ExtMessagingController @Inject() (
       socket.channel.push(Json.arr(s"id:${socket.id}", stats))
     },
     "get_thread" -> { case JsString(threadId) +: _ =>
-      val messages = messagingController.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None)
-      val url = messages.headOption.map(_.nUrl).getOrElse("") //TODO: this needs to change when we have detached threads!
-      socket.channel.push(
-        Json.arr("thread", 
-          Json.obj("id" -> threadId, "uri" -> url, "messages" -> messages.reverse)
+      log.info(s"[get_thread] user ${socket.userId} requesting thread extId $threadId")
+        messagingController.getThreadMessagesWithBasicUser(ExternalId[MessageThread](threadId), None) map { messages =>
+        log.info(s"[get_thread] got messages: $messages")
+        val url = messages.headOption.map(_.nUrl).getOrElse("") //TODO: this needs to change when we have detached threads!
+        socket.channel.push(
+          Json.arr("thread",
+            Json.obj("id" -> threadId, "uri" -> url, "messages" -> messages.reverse)
+          )
         )
-      )
+      }
     },
     "set_all_notifications_visited" -> { case JsString(notifId) +: _ =>
       val messageId = ExternalId[Message](notifId)

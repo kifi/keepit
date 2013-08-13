@@ -1,4 +1,7 @@
 // @require styles/metro/notices.css
+// @require scripts/html/metro/notices.js
+// @require scripts/html/metro/notice_global.js
+// @require scripts/html/metro/notice_message.js
 // @require scripts/formatting.js
 // @require scripts/api.js
 // @require scripts/lib/jquery.timeago.js
@@ -22,19 +25,15 @@ noticesPane = function() {
   const NEW_FADE_TIMEOUT = 1000; // number of ms to wait before starting to fade
   const NEW_FADE_DURATION = 3000; // length of the fade
 
-  var templates = {};
-  api.load("html/metro/notice_message.html", function(tmpl) {templates.message = tmpl});
-  api.load("html/metro/notice_global.html", function(tmpl) {templates.global = tmpl});
-
   var $notices, $markAll;
 
   return {
     render: function($container, notices, timeLastSeen, numNotVisited) {
-      timeLastSeen = new Date(timeLastSeen);
-      render("html/metro/notices.html", {}, function(html) {
-        $notices = $(html)
+      timeLastSeen = new Date(+new Date(timeLastSeen) + 1000); // hack for old data that did not have millis presision
+      // TODO: unindent below
+        $notices = $(render("html/metro/notices", {}))
           .append(notices.map(function(n) {
-            return renderNotice(n, n.state != "visited" && new Date(n.time) > timeLastSeen);
+            return renderNotice(n, n.unread && new Date(n.time) > timeLastSeen);
           }).join(""))
           .appendTo($container)
           .preventAncestorScroll();
@@ -79,7 +78,6 @@ noticesPane = function() {
         if (notices.length && new Date(notices[0].time) > timeLastSeen) {
           api.port.emit("notifications_read", notices[0].time);
         }
-      });
     },
     update: function(a, kind) {
       if (!$notices) return;
@@ -87,7 +85,7 @@ noticesPane = function() {
         case "new":
           console.log("adding new", a)
           showNew(a);
-          if (a.some(function(n) {return /^(un)?delivered$/.test(n.state)})) {
+          if (a.some(function(n) { return n.unread; })) {
             $markAll.show();
           }
           break;
@@ -106,35 +104,29 @@ noticesPane = function() {
 
   function renderNotice(notice, isNew) {
     notice.isNew = isNew;
-    notice.isVisited = notice.state == "visited";
+    notice.isVisited = !notice.unread;
     notice.formatMessage = getSnippetFormatter;
     notice.formatLocalDate = getLocalDateFormatter;
     notice.cdnBase = cdnBase;
     switch (notice.category) {
-    case "message":
-      var nAuthors = notice.details.authors.length;
-      notice.oneAuthor = nAuthors == 1;
-      notice.twoAuthors = nAuthors == 2;
-      notice.threeAuthors = nAuthors == 3;
-      notice.moreAuthors = nAuthors > 3 ? nAuthors - 2 : 0;
-      break;
-    case "global":
-      break;
-    default:
-      api.log("#a00", "[renderNotice] unrecognized category", notice.category);
-      return "";
+      case "message":
+        var nParticipants = notice.participants.length;
+        notice.oneParticipant = nParticipants == 1;
+        notice.twoParticipants = nParticipants == 2;
+        notice.threeParticipants = nParticipants == 3;
+        notice.moreParticipants = nParticipants > 3 ? nParticipants - 2 : 0;
+        break;
+      case "global":
+        break;
+      default:
+        api.log("#a00", "[renderNotice] unrecognized category", notice.category);
+        return "";
     }
-    return Mustache.render(templates[notice.category], notice);
   }
 
   function showNew(notices) {
     notices.forEach(function(n) {
-      if (n.details.subsumes) {
-        $notices.find(".kifi-notice[data-id='" + n.details.subsumes + "']").remove();
-      }
-      if (n.details.locator) {
-        $notices.find(".kifi-notice[data-locator='" + n.details.locator + "']").remove();
-      }
+      $notices.find(".kifi-notice[data-id='" + n.thread + "']").remove();
     });
     var $n = $(notices.map(function(n) {return renderNotice(n, true)}).join(""))
       .find("time").timeago().end()
@@ -202,3 +194,4 @@ noticesPane = function() {
     return d;
   }
 }();
+

@@ -19,6 +19,7 @@ import com.keepit.integrity.DuplicateDocumentsProcessor
 import com.keepit.integrity.HandleDuplicatesAction
 import com.keepit.integrity.UriIntegrityPlugin
 import com.keepit.integrity.ChangedUri
+import com.keepit.integrity.MergedUri
 
 class UrlController @Inject() (
   actionAuthenticator: ActionAuthenticator,
@@ -47,8 +48,6 @@ class UrlController @Inject() (
     Ok(html.admin.adminDashboard())
   }
 
-  case class ChangedNormURI(context: String, url: String, currURI: String, from: Long, to: Long, toUri: String)
-
   def renormalize(readOnly: Boolean = true, domain: Option[String] = None) = AdminHtmlAction { implicit request =>
     Akka.future {
       try {
@@ -66,7 +65,6 @@ class UrlController @Inject() (
 
   def doRenormalize(readOnly: Boolean = true, domain: Option[String] = None) = {
     // Processes all models that reference a `NormalizedURI`, and renormalizes all URLs.
-    val changedURIs = scala.collection.mutable.MutableList[ChangedNormURI]()
     val (urlsSize, changes) = db.readWrite {implicit session =>
 
       val urls = domain match {
@@ -94,7 +92,7 @@ class UrlController @Inject() (
           // in readOnly mode, id maybe empty
           if (normalizedUri.id.isEmpty || url.normalizedUriId.id != normalizedUri.id.get.id) {
             changes("url") += 1
-            if (!readOnly) uriIntegrityPlugin.handleChangedUri(ChangedUri(oldUri = url.normalizedUriId, newUri = normalizedUri.id.get, reason))
+            if (!readOnly) uriIntegrityPlugin.handleChangedUri(MergedUri(oldUri = url.normalizedUriId, newUri = normalizedUri.id.get))
           }
         }
       }

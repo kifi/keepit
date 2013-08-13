@@ -7,19 +7,19 @@
 
 var notifier = {
   show: function(data) {
-    var o = data.details;
+    var o = data;
     switch (data.category) {
       case "message":
         KifiNotification.add({
-          title: o.authors[0].firstName + " " + o.authors[0].lastName,
+          title: o.author.firstName + " " + o.author.lastName,
           subtitle: "Sent you a new Kifi Message",
           contentHtml: o.text,
           link: o.title,
-          image: cdnBase + "/users/" + o.authors[0].id + "/pics/100/0.jpg",
+          image: cdnBase + "/users/" + o.author.id + "/pics/100/0.jpg",
           sticky: false,
           showForMs: 60000,
           clickAction: function() {
-            api.port.emit("open_deep_link", {nUri: o.page, locator: o.locator});
+            api.port.emit("open_deep_link", {nUri: o.url, locator: o.locator});
             return false;
           }
         });
@@ -65,7 +65,7 @@ var KifiNotification = {
   add: function(params) {
     params = $.extend(KifiNotification.defaultParams, params);
 
-    render("html/notify_box.html", {
+    render("html/notify_box", {
       formatSnippet: getSnippetFormatter,
       title: params.title,
       subtitle: params.subtitle,

@@ -38,12 +38,12 @@ class ShoeboxActionAuthenticator @Inject() (
     userIdOpt match {
       case None =>
         val socialUser = socialUserInfoRepo.get(socialId, socialNetworkType)
-        val userId = socialUser.userId.get
-        userId
+        socialUser.userId.getOrElse(
+          throw new IllegalStateException(s"User ID for social user not defined: $socialUser"))
       case Some(userId) =>
         val socialUser = socialUserInfoRepo.get(socialId, socialNetworkType)
         if (socialUser.userId.get != userId) {
-          log.error("Social user id %s does not match session user id %s".format(socialUser, userId))
+          log.error(s"Social user id $socialUser does not match session user id $userId")
         }
         userId
     }
@@ -55,9 +55,6 @@ class ShoeboxActionAuthenticator @Inject() (
       val userId = loadUserId(userIdOpt, socialId, socialNetworkType)
       (userId, getExperiments(userId))
     }
-    // for migration to new UserConnection
-    connectionUpdater.updateConnectionsIfNecessary(userId)
-    //
     (userId, experiments)
   }
 
