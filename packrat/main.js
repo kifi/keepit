@@ -541,6 +541,17 @@ api.port.on({
       respond([]);
     } else {
       socket.send(["get_old_notifications", timeStr, NOTIFICATION_BATCH_SIZE], function(arr) {
+        for (var i = 0; i < arr.length; i++) {
+          arr[i].category = "message";
+          // remove current user from participants
+          arr[i].participants = arr[i].participants || arr[i].recipients;
+          for (var j = 0, len = arr[i].participants.length; j < len; j++) {
+            if (arr[i].participants[j].id == session.userId) {
+              arr[i].participants.splice(j, 1);
+              len--;
+            }
+          }
+        }
         if (notifications[notifications.length - 1] === oldest) {
           notifications.push.apply(notifications, arr);
           if (arr.length < NOTIFICATION_BATCH_SIZE) {
