@@ -27,9 +27,6 @@ api = function() {
 
   return {
     dev: self.options.dev,
-    load: function(path, callback) {
-      api.port.emit("api:load", path, callback);
-    },
     log: function() {
       var d = new Date, ds = d.toString();
       var args = Array.prototype.slice.apply(arguments);
@@ -61,10 +58,10 @@ api = function() {
           }
         }
       }},
-    require: function(path, callback) {
+    require: function(paths, callback) {
       var callbackId = nextCallbackId++;
       callbacks[callbackId] = callback;
-      self.port.emit("api:require", path, callbackId);
+      self.port.emit("api:require", paths, callbackId);
     },
     url: function(path) {
       return self.options.dataUriPrefix + path;
