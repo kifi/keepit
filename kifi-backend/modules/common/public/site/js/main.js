@@ -630,6 +630,18 @@ $(function() {
 		});
 	}
 
+	function showBlog(path) {
+		$main.attr('data-view', 'blog');
+		$('.left-col .active').removeClass('active');
+		$('.blog iframe').attr('src','http://kifiupdates.tumblr.com/');
+	}
+	$('.updates-features').click(function(e) {
+		e.preventDefault();
+		console.log("forwarding user to", this.href)
+		navigate('blog', {replace: true});
+	});
+
+
 	function doSearch(q) {
 		if (q) {
 			searchResponse = null;
@@ -936,6 +948,9 @@ $(function() {
 			case 'friends':
 				showFriends(hash);
 				break;
+			case 'blog':
+				showBlog();
+				break;
 			default:
 				return;
 		}
@@ -947,8 +962,8 @@ $(function() {
 		if (uri.substr(0, baseUri.length) == baseUri) {
 			uri = uri.substr(baseUri.length);
 		}
-		console.log('[navigate]', uri, opts || '');
 		var title, kind = uri.match(/[\w-]*/)[0];
+		console.log('[navigate]', uri, opts || '', kind);
 		switch (kind) {
 			case '':
 				title = 'Your Keeps';
@@ -964,6 +979,8 @@ $(function() {
 				break;
 			case 'friends':
 				title = {friends: 'Friends', 'friends/invite': 'Invite Friends', 'friends/requests': 'Friend Requests'}[uri];
+			case 'blog':
+			  title = 'Updates and Features'
 		}
 		History[opts && opts.replace ? 'replaceState' : 'pushState'](null, 'kifi.com • ' + title, uri);
 	}

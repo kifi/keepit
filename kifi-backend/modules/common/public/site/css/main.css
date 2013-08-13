@@ -115,7 +115,8 @@ input.query::-ms-clear {display: none}
 .main:not([data-view=mine]):not([data-view=search]) .main-head,
 .main:not([data-view=mine]):not([data-view=search]) .main-keeps,
 .main:not([data-view=profile]) .profile,
-.main:not([data-view=friends]) .friends {display: none}
+.main:not([data-view=friends]) .friends,
+.main:not([data-view=blog]) .blog  {display: none}
 h1 {font-size: 27px; line-height: 32px; margin: 0 0 1px; color: #67829c; font-weight: 300; -webkit-font-smoothing: antialiased}
 
 .profile {position: absolute; top: 70px; left: 0; width: 100%; font-size: 14px; box-sizing: border-box; padding: 20px 50px; color: #818692;}
@@ -167,6 +168,9 @@ span.edit::before, span.save::before { display: inline-block; position: absolute
 .profile-nw::after { position: absolute; display: block; content: "."; top: -6px; left: 24px; border-radius: 50%; width: 9px; height: 9px; background: #accc98; border: 2px solid white; }
 .profile-nw.not-connected::after { background: #dbdee3; }
 .profile-nw.not-connected { transition: background .25s ease-in 50ms; }
+
+.blog {height:100%; width:100%;}
+.blog iframe {height:100%; width:100%; border:0;}
 
 .friends {padding: 13px 20px 0}
 .friends-tabs {margin: 15px 0 24px; line-height: 46px; border-bottom: 2px solid #e3e6ee; white-space: nowrap}
