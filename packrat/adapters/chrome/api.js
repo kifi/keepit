@@ -191,7 +191,7 @@ api = function() {
       }
     },
     "api:require": function(data, respond, tab) {
-      injectWithDeps(tab.id, data.path, data.injected, respond);
+      injectWithDeps(tab.id, data.paths, data.injected, respond);
     }};
   chrome.runtime.onConnect.addListener(function(port) {
     var tab = port.sender.tab;
@@ -278,8 +278,8 @@ api = function() {
     }
   }
 
-  function injectWithDeps(tabId, path, injected, callback) {
-    var o = deps(path, injected), n = 0;
+  function injectWithDeps(tabId, paths, injected, callback) {
+    var o = deps(paths, injected), n = 0;
     injectAll(chrome.tabs.insertCSS.bind(chrome.tabs), o.styles, done);
     injectAll(chrome.tabs.executeScript.bind(chrome.tabs), o.scripts, done);
     function done() {

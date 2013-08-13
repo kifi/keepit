@@ -34,6 +34,9 @@ object ExperimentTypes {
   val CAN_INVITE = State[ExperimentType]("can invite")
   val CAN_MESSAGE_ALL_USERS = State[ExperimentType]("can message all users")
 
+  val DONT_SHOW_IN_ANALYTICS = List(ADMIN, FAKE, BLOCK, INACTIVE)
+  val DONT_SHOW_IN_ANALYTICS_STR = DONT_SHOW_IN_ANALYTICS map {s => s"'$s'"} mkString ","
+
   def apply(str: String): State[ExperimentType] = str.toLowerCase.trim match {
     case ADMIN.value => ADMIN
     case WEBSITE.value => WEBSITE

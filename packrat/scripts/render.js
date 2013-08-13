@@ -2,45 +2,58 @@ var cdnBase = api.dev ?
   "http://dev.ezkeep.com:9000" : //d1scct5mnc9d9m.cloudfront.net
   "//djty7jcqog9qu.cloudfront.net";
 
-function render(path, params, partialPaths, callback) {
-  // sort out partialPaths and callback (both optional)
-  if (!callback && typeof partialPaths == "function") {
-    callback = partialPaths;
-    partialPaths = undefined;
-  }
-
-  loadPartials(path.replace(/[^\/]*$/, ""), partialPaths || {}, function(partials) {
-    loadFile(path, function(template) {
-      params = $.extend({cdnBase: cdnBase}, params);
-      callback(Mustache.render(template, params, partials));
-    });
-  });
-
-  function loadPartials(basePath, paths, callback) {
-    var partials = {}, names = Object.keys(paths), numLoaded = 0;
-    if (!names.length) {
-      callback(partials);
-    } else {
-      names.forEach(function(name) {
-        loadFile(basePath + paths[name], function(tmpl) {
-          partials[name] = tmpl;
-          if (++numLoaded == names.length) {
-            callback(partials);
-          }
+var render = function() {
+  return function(path, params, partials, callback) {  // partials and callback are both optional
+    if (!callback && typeof partials == "function") {
+      callback = partials, partials = null;
+    }
+    var paths = [path];
+    if (partials) {
+      var partialPaths = {}, basePath = path.replace(/[^\/]*$/, "");
+      for (var name in partials) {
+        paths.push(partialPaths[name] = basePath + partials[name]);
+      }
+    }
+    paths = paths.filter(notCached);
+    if (callback) { // async
+      if (paths.length) {
+        api.require(paths.map(toJsPath), function() {
+          callback(mustacheRender());
         });
-      });
+      } else {
+        callback(mustacheRender());
+      }
+    } else { // sync
+      if (paths.length) {
+        api.log('[render] not yet cached:', paths);
+        return '';
+      }
+      return mustacheRender();
     }
-  }
 
-  function loadFile(path, callback) {
-    var tmpl = render.cache[path];
-    if (tmpl) {
-      callback(tmpl);
-    } else {
-      api.load(path, function(tmpl) {
-        callback(render.cache[path] = tmpl);
-      });
+    function mustacheRender() {
+      var partialsHtml = {};
+      if (partials) {
+        for (var name in partials) {
+          partialsHtml[name] = render.cache[partialPaths[name]];
+        }
+      }
+      return Mustache.render(
+        render.cache[path],
+        $.extend({cdnBase: cdnBase}, params),
+        partialsHtml);
     }
+  };
+
+  function cached(path) {
+    return !!render.cache[path];
   }
-}
+  function notCached(path) {
+    return !render.cache[path];
+  }
+  function toJsPath(path) {
+    return "scripts/" + path + ".js";
+  }
+}();
+
 render.cache = {};

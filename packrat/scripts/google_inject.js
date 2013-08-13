@@ -6,7 +6,9 @@
 // @require scripts/lib/mustache.js
 // @require scripts/api.js
 // @require scripts/render.js
-
+// @require scripts/html/search/google.js
+// @require scripts/html/search/google_hits.js
+// @require scripts/html/search/google_hit.js
 
 var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test(location.host) && function() {  // idempotent for Chrome
   api.log("[google_inject]");
@@ -15,11 +17,8 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
     api.port.emit("log_event", Array.prototype.slice.call(arguments));
   }
 
-  var $res = $();         // a reference to our search results (kept so that we can reinsert when removed)
-  render("html/search/google.html", {}, function(html) {
-    $res = $(Mustache.to_html(html)).hide();
-    bindHandlers();
-  });
+  var $res = $(render("html/search/google", {})).hide();   // a reference to our search results (kept so that we can reinsert when removed)
+  bindHandlers();
 
   var filter;             // current search filter (null or {[who: "m"|"f"|dot-delimited user ids]?, [when: "t"|"y"|"w"|"m"]?})
   var query = "";         // latest search query
@@ -379,7 +378,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
       var i = $a.closest("li.g").prevAll("li.g").length;
       var j = $a.prevAll(".kifi-friend").length;
       var friend = response.hits[i].users[j];
-      render("html/friend_card.html", {
+      render("html/friend_card", {
         name: friend.firstName + " " + friend.lastName,
         id: friend.id,
         iconsUrl: api.url("images/social_icons.png")
@@ -396,7 +395,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
       });
     }).bindHover(".kifi-res-friends", function(configureHover) {
       var $a = $(this), i = $a.closest("li.g").prevAll("li.g").length;
-      render("html/search/friends.html", {friends: response.hits[i].users}, function(html) {
+      render("html/search/friends", {friends: response.hits[i].users}, function(html) {
         configureHover(html, {
           click: "toggle",
           position: function(w) {
@@ -405,7 +404,7 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
       });
     }).bindHover(".kifi-chatter", function(configureHover) {
       var n = $(this).data("n");
-      render("html/search/chatter.html", {
+      render("html/search/chatter", {
         //numComments: n[0],
         numMessages: n[1],
         pluralize: function() {return pluralLambda}
@@ -421,19 +420,16 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
   function appendResults() {
     $res.find(".kifi-res-title").toggleClass("kifi-collapsed", !response.show);
     $res.find(".kifi-filter-btn")[response.show ? "show" : "hide"]();
-    render("html/search/google_hits.html", {
+    $res.append(render(
+      "html/search/google_hits", {
         show: response.show,
         results: response.hits,
         anyResults: response.hits.length > 0,
         session: response.session,
         images: api.url("images"),
-        mayHaveMore: response.mayHaveMore
-      }, {
-        google_hit: "google_hit.html"
-      }, function(html) {
-        $res.append(html);
-        api.log("[appendResults] done");
-      });
+        mayHaveMore: response.mayHaveMore},
+      {google_hit: "google_hit"}));
+    api.log("[appendResults] done");
   }
 
   function loadChatter(hits) {
@@ -490,22 +486,16 @@ var googleInject = googleInject || /^www\.google\.[a-z]{2,3}(\.[a-z]{2})?$/.test
 
     var hitHtml = [];
     for (var i = 0; i < hits.length; i++) {
-      render("html/search/google_hit.html",
-        $.extend({session: response.session, images: api.url("images")}, hits[i]),
-        function(html) {
-          hitHtml.push(html);
-          if (hitHtml.length == hits.length) {
-            var $list = $("#kifi-res-list");
-            $(hitHtml.join("")).hide().insertAfter($list.children("li.g").last()).slideDown(200, function() {
-              $(this).css("overflow", "");  // slideDown clean-up
-            });
-            if (!response.mayHaveMore) {
-              $list.find(".kifi-res-more").hide(200);
-            }
-            loadChatter(hits);
-          }
-        });
+      hitHtml.push(render("html/search/google_hit", $.extend({session: response.session, images: api.url("images")}, hits[i])));
     }
+    var $list = $("#kifi-res-list");
+    $(hitHtml.join("")).hide().insertAfter($list.children("li.g").last()).slideDown(200, function() {
+      $(this).css("overflow", "");  // slideDown clean-up
+    });
+    if (!response.mayHaveMore) {
+      $list.find(".kifi-res-more").hide(200);
+    }
+    loadChatter(hits);
   }
 
   function processHit(hit) {

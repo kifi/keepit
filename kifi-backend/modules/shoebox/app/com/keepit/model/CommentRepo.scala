@@ -218,7 +218,7 @@ class CommentRepoImpl @Inject() (
   //migration code
 
   def getAllRootMessages()(implicit session: RSession): Seq[Comment] = {
-    (for (row <- table if row.parent.isNull) yield row).list
+    (for (row <- table if row.parent.isNull && row.permissions===CommentPermissions.MESSAGE) yield row).list
   }
 
 }

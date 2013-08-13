@@ -72,7 +72,8 @@ class ShoeboxController @Inject() (
   userChannel: UserChannel,
   uriChannel: UriChannel,
   searchFriendRepo: SearchFriendRepo,
-  urbanAirship: UrbanAirship)
+  urbanAirship: UrbanAirship,
+  emailAddressRepo: EmailAddressRepo )
   (implicit private val clock: Clock,
     private val fortyTwoServices: FortyTwoServices
 )
@@ -116,6 +117,17 @@ class ShoeboxController @Inject() (
     }
   }
 
+  def sendMailToUser = Action(parse.json) { request =>
+    val userId = Id[User]((request.body \ "user").as[Long])
+    val email = (request.body \ "email").as[ElectronicMail]
+    
+    val addrs = db.readOnly{ implicit session => emailAddressRepo.getByUser(userId) }
+    for (addr <- addrs.filter(_.verifiedAt.isDefined).headOption.orElse(addrs.headOption)) {
+      db.readWrite{ implicit session => postOffice.sendMail(email.copy(to=List(addr))) }
+    }
+    Ok("true")
+  }
+
   def getNormalizedURI(id: Long) = Action {
     val uri = db.readOnly { implicit s =>
       normUriRepo.get(Id[NormalizedURI](id))
@@ -123,8 +135,9 @@ class ShoeboxController @Inject() (
     Ok(Json.toJson(uri))
   }
 
-  def normalizeURL(url: String) = Action { //TODO Stephen: What if this is a new url?
-    val uriId = db.readWrite { implicit s =>
+  def normalizeURL() = Action(parse.json) { request =>
+    val url : String = Json.fromJson[String](request.body).get
+    val uriId = db.readWrite(attempts=2) { implicit s =>
       normUriRepo.getByUriOrElseCreate(url)
     }
     Ok(Json.toJson(uriId))
