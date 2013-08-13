@@ -12,7 +12,7 @@ import com.keepit.common.healthcheck.{Healthcheck, HealthcheckPlugin}
 import scala.util.{Try, Failure}
 import com.keepit.common.healthcheck.HealthcheckError
 import scala.util.Success
-import com.keepit.integrity.{ChangedUri, UriIntegrityPlugin}
+import com.keepit.integrity.{MergedUri, UriIntegrityPlugin}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 @ImplementedBy(classOf[NormalizationServiceImpl])
@@ -123,12 +123,12 @@ class NormalizationServiceImpl @Inject() (
 
     def migrate(authoritativeURI: NormalizedURI, urlsToBeMigrated: Seq[String]): NormalizedURI = {
       normalizedURIRepo.save(authoritativeURI)
-      val changedUris = for {
+      val mergedUris = for {
         url <- urlsToBeMigrated
         normalizedURI <- normalizedURIRepo.getByUri(url)
-      } yield ChangedUri(oldUri = normalizedURI.id.get, newUri = authoritativeURI.id.get, URLHistoryCause.MERGE)
+      } yield MergedUri(oldUri = normalizedURI.id.get, newUri = authoritativeURI.id.get)
 
-      changedUris.foreach(uriIntegrityPlugin.handleChangedUri(_))
+      mergedUris.foreach(uriIntegrityPlugin.handleChangedUri(_))
       authoritativeURI
     }
 
