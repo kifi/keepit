@@ -49,10 +49,10 @@ class UriIntegrityActor @Inject()(
       }
 
       val (u, v) = (uriRepo.get(oldUri), uriRepo.get(newUri))
-      uriRepo.save(u.withState(NormalizedURIStates.INACTIVE))
       if ( u.state != NormalizedURIStates.ACTIVE && u.state != NormalizedURIStates.INACTIVE && (v.state == NormalizedURIStates.ACTIVE || v.state == NormalizedURIStates.INACTIVE)){
         uriRepo.save(v.withState(NormalizedURIStates.SCRAPE_WANTED))
       }
+      uriRepo.save(u.withState(NormalizedURIStates.INACTIVE))
 
       urlRepo.getByNormUri(oldUri).map{ url =>
         val prepUrl = preNormalize(url.url)
