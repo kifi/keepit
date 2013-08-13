@@ -64,5 +64,3 @@ class RetentionOverMonth @Inject() (val db: Database, val clock: Clock)
   with RetentionWindow
 
 
-
-
