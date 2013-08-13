@@ -92,13 +92,13 @@ class UIKeepsPerDay @Inject() (val db: Database, val bookmarkRepo: BookmarkRepo,
 trait KeepsPerWeek extends KeepsPerTime {
   implicit val dbMasterSlave = Database.Slave
   def data(): NumberAndSecondaryStat = {
-    val (lastDay, dayAgo) = db.readOnly { implicit s =>
+    val (lastWeek, weekAgo) = db.readOnly { implicit s =>
       val now = clock.now
       val lastWeek = now.minusDays(7)
       (query.first(now.minusDays(7), now),
        query.first(lastWeek.minusDays(7), lastWeek))
     }
-    NumberAndSecondaryStat(lastDay, dayAgo)
+    NumberAndSecondaryStat(lastWeek, weekAgo)
   }
 }
 
@@ -107,5 +107,26 @@ class TotalKeepsPerWeek @Inject() (val db: Database, val bookmarkRepo: BookmarkR
   with KeepsPerWeek { val query = KeepQueries.KeepsByTime }
 
 class UIKeepsPerWeek @Inject() (val db: Database, val bookmarkRepo: BookmarkRepo, val clock: Clock)
-  extends GeckoboardWidget[NumberAndSecondaryStat](GeckoboardWidgetId("37507-f0758629-40c3-4d9f-9d90-452c2b3f3620"))
+  extends GeckoboardWidget[NumberAndSecondaryStat](GeckoboardWidgetId("37507-d7c4bed6-c213-46b5-a1f6-2d15966ace76"))
   with KeepsPerWeek { val query = KeepQueries.UIKeepsByTime }
+
+trait KeepsPerMonth extends KeepsPerTime {
+  implicit val dbMasterSlave = Database.Slave
+  def data(): NumberAndSecondaryStat = {
+    val (lastMonth, monthAgo) = db.readOnly { implicit s =>
+      val now = clock.now
+      val lastMonth = now.minusMonths(1)
+      (query.first(now.minusMonths(1), now),
+       query.first(lastMonth.minusMonths(1), lastMonth))
+    }
+    NumberAndSecondaryStat(lastMonth, monthAgo)
+  }
+}
+
+class TotalKeepsPerMonth @Inject() (val db: Database, val bookmarkRepo: BookmarkRepo, val clock: Clock)
+  extends GeckoboardWidget[NumberAndSecondaryStat](GeckoboardWidgetId("37507-ca144e78-c85d-4861-991a-2a30605a7c30"))
+  with KeepsPerMonth { val query = KeepQueries.KeepsByTime }
+
+class UIKeepsPerMonth @Inject() (val db: Database, val bookmarkRepo: BookmarkRepo, val clock: Clock)
+  extends GeckoboardWidget[NumberAndSecondaryStat](GeckoboardWidgetId("37507-d6815e63-0bc0-4bf6-8be8-fe47d8d05e00"))
+  with KeepsPerMonth { val query = KeepQueries.UIKeepsByTime }
