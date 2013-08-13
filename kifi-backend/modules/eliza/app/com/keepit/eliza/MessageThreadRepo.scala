@@ -143,6 +143,11 @@ class MessageThreadRepoImpl @Inject() (
 
   import db.Driver.Implicit._
 
+  override def invalidateCache(thread: MessageThread)(implicit session: RSession): MessageThread = {
+    threadExternalIdCache.set(MessageThreadExternalIdKey(thread.externalId), thread)
+    thread
+  }
+
   def getOrCreate(participants: Set[Id[User]], urlOpt: Option[String], uriIdOpt: Option[Id[NormalizedURI]], nUriOpt: Option[String], pageTitleOpt: Option[String])(implicit session: RWSession) : (MessageThread, Boolean) = {
     //Note (stephen): This has a race condition: When two threads that would normally be merged are created at the exact same time two different conversations will be the result
     val mtps = MessageThreadParticipants(participants)
@@ -181,7 +186,7 @@ class MessageThreadRepoImpl @Inject() (
 
 
 case class MessageThreadExternalIdKey(externalId: ExternalId[MessageThread]) extends Key[MessageThread] {
-  override val version = 1
+  override val version = 2
   val namespace = "message_thread_by_external_id"
   def toKey(): String = externalId.id
 }

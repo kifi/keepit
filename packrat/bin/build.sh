@@ -21,9 +21,20 @@ cp -R adapters/firefox out/
 cp adapters/shared/*.js out/chrome/
 cp adapters/shared/*.js out/firefox/lib/
 
-for d in html icons images media scripts styles; do
+for d in icons images media scripts styles; do
   cp -R $d out/chrome/
   cp -R $d out/firefox/data/
+done
+
+for f in $(find html -name '*.html'); do
+  f2="out/chrome/scripts/"${f/%.html/.js}
+  mkdir -p `dirname $f2`
+  echo -n "render.cache['${f%.html}']='" > $f2
+  # replace newlines and subsequent whitespace with a single space, then close the JS string and assignment
+  cat $f | sed -e ':a' -e 'N' -e '$!ba' -e 's/\n */ /g' -e "s/'/\\'/g" -e $'$s/$/\';/' >> $f2
+  f3=${f2/chrome/firefox\/data}
+  mkdir -p `dirname $f3`
+  cp $f2 $f3
 done
 
 for f in $(find out/chrome/scripts -name '*.js'); do
