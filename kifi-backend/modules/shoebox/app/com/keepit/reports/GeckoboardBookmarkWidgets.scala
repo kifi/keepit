@@ -22,7 +22,7 @@ import scala.concurrent.duration._
 import org.joda.time.DateTime
 import com.keepit.common.db.slick.FortyTwoTypeMappers._
 import scala.slick.lifted.Query
-import scala.slick.jdbc.StaticQuery
+import scala.slick.jdbc._
 
 object UserIdSql {
   val DontShowInAnalytics = s"select user_id from user_experiment where experiment_type in ($DONT_SHOW_IN_ANALYTICS_STR)"
@@ -33,87 +33,79 @@ object KeepQueries {
     s"""select count(*) from bookmark
           where updated_at > ? and updated_at < ? and state = 'active' and
           user_id not in (${UserIdSql.DontShowInAnalytics})""")
-  val HoverKeepsByTime = StaticQuery.query[(DateTime, DateTime), Int](
+  val UIKeepsByTime = StaticQuery.query[(DateTime, DateTime), Int](
     s"""select count(*) from bookmark
-          where updated_at > ? and updated_at < ? and state = 'active' and source in ('HOVER_KEEP', 'SITE') and
+          where updated_at > ? and updated_at < ? and state = 'active' and source != 'INIT_LOAD' and
           user_id not in (${UserIdSql.DontShowInAnalytics})""")
 
 }
 
-class TotalKeepsPerHour @Inject() (
-    db: Database,
-    bookmarkRepo: BookmarkRepo,
-    clock: Clock)
-  extends GeckoboardWidget[NumberAndSecondaryStat](GeckoboardWidgetId("37507-12ed349c-eee7-4564-b8b5-754d9ed0aeeb")) {
-  implicit val dbMasterSlave = Database.Slave
-  import KeepQueries._
+trait KeepsPerTime {
+  val query: StaticQuery1[(DateTime, DateTime), Int]
+  val db: Database
+  val bookmarkRepo: BookmarkRepo
+  val clock: Clock
+}
 
+trait KeepsPerHour extends KeepsPerTime {
+  implicit val dbMasterSlave = Database.Slave
   def data(): NumberAndSecondaryStat = {
     val now = clock.now
     val yesterday = now.minusDays(1)
     val (lastHour, hourAgo) = db.readOnly { implicit s =>
-      (KeepsByTime.first(now.minusHours(1), now),
-       KeepsByTime.first(yesterday.minusHours(1), yesterday))
+      (query.first(now.minusHours(1), now),
+       query.first(yesterday.minusHours(1), yesterday))
     }
     NumberAndSecondaryStat(lastHour, hourAgo)
   }
 }
 
-class TotalKeepsPerDay @Inject() (
-    db: Database,
-    bookmarkRepo: BookmarkRepo,
-    clock: Clock)
-  extends GeckoboardWidget[NumberAndSecondaryStat](GeckoboardWidgetId("37507-fd4ca50c-42bc-4f77-973c-cf240831e4a4")) {
-  import KeepQueries._
-  implicit val dbMasterSlave = Database.Slave
+class TotalKeepsPerHour @Inject() (val db: Database, val bookmarkRepo: BookmarkRepo, val clock: Clock)
+  extends GeckoboardWidget[NumberAndSecondaryStat](GeckoboardWidgetId("37507-12ed349c-eee7-4564-b8b5-754d9ed0aeeb"))
+  with KeepsPerHour { val query = KeepQueries.KeepsByTime }
 
+class UIKeepsPerHour @Inject() (val db: Database, val bookmarkRepo: BookmarkRepo, val clock: Clock)
+  extends GeckoboardWidget[NumberAndSecondaryStat](GeckoboardWidgetId("37507-8a571430-11a1-4f69-bfda-0e62fc814b4f"))
+  with KeepsPerHour { val query = KeepQueries.UIKeepsByTime }
+
+trait KeepsPerDay extends KeepsPerTime {
+  implicit val dbMasterSlave = Database.Slave
   def data(): NumberAndSecondaryStat = {
     val now = clock.now
     val lastWeek = now.minusDays(7)
     val (lastDay, dayAgo) = db.readOnly { implicit s =>
-      (KeepsByTime.first(now.minusDays(1), now),
-       KeepsByTime.first(lastWeek.minusDays(1), lastWeek))
+      (query.first(now.minusDays(1), now),
+       query.first(lastWeek.minusDays(1), lastWeek))
     }
     NumberAndSecondaryStat(lastDay, dayAgo)
   }
 }
 
-class TotalKeepsPerWeek @Inject() (
-    db: Database,
-    bookmarkRepo: BookmarkRepo,
-    clock: Clock)
-  extends GeckoboardWidget[NumberAndSecondaryStat](GeckoboardWidgetId("37507-f0758629-40c3-4d9f-9d90-452c2b3f3620")) {
-  import KeepQueries._
-  implicit val dbMasterSlave = Database.Slave
+class TotalKeepsPerDay @Inject() (val db: Database, val bookmarkRepo: BookmarkRepo, val clock: Clock)
+  extends GeckoboardWidget[NumberAndSecondaryStat](GeckoboardWidgetId("37507-fd4ca50c-42bc-4f77-973c-cf240831e4a4"))
+  with KeepsPerDay { val query = KeepQueries.KeepsByTime }
 
+class UIKeepsPerDay @Inject() (val db: Database, val bookmarkRepo: BookmarkRepo, val clock: Clock)
+  extends GeckoboardWidget[NumberAndSecondaryStat](GeckoboardWidgetId("37507-23830d70-7b5e-4690-ab88-ae482d8484f3"))
+  with KeepsPerDay { val query = KeepQueries.UIKeepsByTime }
+
+trait KeepsPerWeek extends KeepsPerTime {
+  implicit val dbMasterSlave = Database.Slave
   def data(): NumberAndSecondaryStat = {
     val (lastDay, dayAgo) = db.readOnly { implicit s =>
       val now = clock.now
       val lastWeek = now.minusDays(7)
-      (KeepsByTime.first(now.minusDays(7), now),
-       KeepsByTime.first(lastWeek.minusDays(7), lastWeek))
+      (query.first(now.minusDays(7), now),
+       query.first(lastWeek.minusDays(7), lastWeek))
     }
     NumberAndSecondaryStat(lastDay, dayAgo)
   }
 }
 
-class HoverKeepsPerWeek @Inject() (
-    db: Database,
-    bookmarkRepo: BookmarkRepo,
-    clock: Clock)
-  extends GeckoboardWidget[NumberAndSecondaryStat](GeckoboardWidgetId("37507-d7c4bed6-c213-46b5-a1f6-2d15966ace76")) {
-  import KeepQueries._
-  implicit val dbMasterSlave = Database.Slave
-  val hover = BookmarkSource("HOVER_KEEP")
+class TotalKeepsPerWeek @Inject() (val db: Database, val bookmarkRepo: BookmarkRepo, val clock: Clock)
+  extends GeckoboardWidget[NumberAndSecondaryStat](GeckoboardWidgetId("37507-f0758629-40c3-4d9f-9d90-452c2b3f3620"))
+  with KeepsPerWeek { val query = KeepQueries.KeepsByTime }
 
-  def data(): NumberAndSecondaryStat = {
-    val (lastDay, dayAgo) = db.readOnly { implicit s =>
-      val now = clock.now
-      val lastWeek = now.minusDays(7)
-      (HoverKeepsByTime.first(now.minusDays(7), now),
-       HoverKeepsByTime.first(lastWeek.minusDays(7), lastWeek))
-    }
-    NumberAndSecondaryStat(lastDay, dayAgo)
-  }
-}
-
+class UIKeepsPerWeek @Inject() (val db: Database, val bookmarkRepo: BookmarkRepo, val clock: Clock)
+  extends GeckoboardWidget[NumberAndSecondaryStat](GeckoboardWidgetId("37507-f0758629-40c3-4d9f-9d90-452c2b3f3620"))
+  with KeepsPerWeek { val query = KeepQueries.UIKeepsByTime }
