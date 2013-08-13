@@ -115,9 +115,9 @@ noticesPane = function() {
         notice.twoParticipants = nParticipants == 2;
         notice.threeParticipants = nParticipants == 3;
         notice.moreParticipants = nParticipants > 3 ? nParticipants - 2 : 0;
-        break;
+        return render("html/metro/notice_message", notice);
       case "global":
-        break;
+        return render("html/metro/notice_global", notice);
       default:
         api.log("#a00", "[renderNotice] unrecognized category", notice.category);
         return "";
