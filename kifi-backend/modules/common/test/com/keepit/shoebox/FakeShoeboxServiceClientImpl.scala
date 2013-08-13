@@ -19,6 +19,7 @@ import play.api.libs.json.JsObject
 import java.util.concurrent.atomic.AtomicInteger
 import collection.mutable.{Map => MutableMap}
 import com.keepit.social.{SocialNetworkType, SocialId, BasicUser}
+import com.keepit.common.mail.{ElectronicMail}
 
 // code below should be sync with code in ShoeboxController
 class FakeShoeboxServiceClientImpl(
@@ -287,6 +288,7 @@ class FakeShoeboxServiceClientImpl(
   }
 
   def sendMail(email: com.keepit.common.mail.ElectronicMail): Future[Boolean] = ???
+  def sendMailToUser(userId: Id[User], email: ElectronicMail): Future[Boolean] = ???
   def getPhrasesByPage(page: Int, size: Int): Future[Seq[Phrase]] = Future.successful(Seq())
   def getSocialUserInfoByNetworkAndSocialId(id: SocialId, networkType: SocialNetworkType): Future[Option[SocialUserInfo]] = ???
   def getSessionByExternalId(sessionId: com.keepit.common.db.ExternalId[com.keepit.model.UserSession]): scala.concurrent.Future[Option[com.keepit.model.UserSession]] = ???
