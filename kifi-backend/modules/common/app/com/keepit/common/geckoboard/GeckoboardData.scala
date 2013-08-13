@@ -13,3 +13,12 @@ case class NumberAndSecondaryStat(first: Int, second: Int) extends GeckoboardDat
       Json.obj("text" -> "", "value" -> second)
     ))
 }
+
+// http://www.geckoboard.com/developers/custom-widgets/widget-types/funnel/
+case class FunnelItem(label: String, value: Int)
+
+case class Funnel(values: Seq[FunnelItem]) extends GeckoboardData {
+  def json = Json.obj(
+    "item" -> Json.arr(values map {v => Json.obj("value" -> v.value, "label" -> v.label)})
+  )
+}
