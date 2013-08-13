@@ -48,6 +48,8 @@ class GeckoboardBookmarkWidgetsTest extends Specification with ShoeboxApplicatio
 
       bookmarkRepo.save(Bookmark(title = Some("G1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
         uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)))
+      bookmarkRepo.save(Bookmark(title = Some("B1"), userId = user1.id.get, url = url1.url, urlId = url1.id,
+        uriId = uri1.id.get, source = hover, createdAt = t1.plusMinutes(3)))
       bookmarkRepo.save(Bookmark(title = Some("A1"), userId = user1.id.get, url = url2.url, urlId = url2.id,
         uriId = uri2.id.get, source = initLoad, createdAt = t1.plusHours(50)))
       bookmarkRepo.save(Bookmark(title = None, userId = user2.id.get, url = url1.url, urlId = url1.id,
@@ -61,14 +63,19 @@ class GeckoboardBookmarkWidgetsTest extends Specification with ShoeboxApplicatio
     "Keeps" in {
       running(new ShoeboxApplication()) {
         setup()
-        inject[TotalKeepsPerHour].data === NumberAndSecondaryStat(2, 0)
-        inject[UIKeepsPerHour].data === NumberAndSecondaryStat(1, 0)
-        inject[TotalKeepsPerDay].data === NumberAndSecondaryStat(2, 0)
-        inject[UIKeepsPerDay].data === NumberAndSecondaryStat(1, 0)
-        inject[TotalKeepsPerWeek].data === NumberAndSecondaryStat(2, 0)
-        inject[UIKeepsPerWeek].data === NumberAndSecondaryStat(1, 0)
-        inject[TotalKeepsPerMonth].data === NumberAndSecondaryStat(2, 0)
-        inject[UIKeepsPerMonth].data === NumberAndSecondaryStat(1, 0)
+        inject[KeepersPerHour].data === NumberAndSecondaryStat(1, 0)
+        inject[KeepersPerDay].data === NumberAndSecondaryStat(1, 0)
+        inject[KeepersPerWeek].data === NumberAndSecondaryStat(1, 0)
+        inject[KeepersPerMonth].data === NumberAndSecondaryStat(1, 0)
+
+        inject[TotalKeepsPerHour].data === NumberAndSecondaryStat(3, 0)
+        inject[UIKeepsPerHour].data === NumberAndSecondaryStat(2, 0)
+        inject[TotalKeepsPerDay].data === NumberAndSecondaryStat(3, 0)
+        inject[UIKeepsPerDay].data === NumberAndSecondaryStat(2, 0)
+        inject[TotalKeepsPerWeek].data === NumberAndSecondaryStat(3, 0)
+        inject[UIKeepsPerWeek].data === NumberAndSecondaryStat(2, 0)
+        inject[TotalKeepsPerMonth].data === NumberAndSecondaryStat(3, 0)
+        inject[UIKeepsPerMonth].data === NumberAndSecondaryStat(2, 0)
       }
     }
   }
