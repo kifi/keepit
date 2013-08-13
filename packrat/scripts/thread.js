@@ -1,5 +1,8 @@
 // @require styles/metro/thread.css
 // @require styles/metro/compose.css
+// @require scripts/html/metro/messages.js
+// @require scripts/html/metro/message.js
+// @require scripts/html/metro/compose.js
 // @require scripts/lib/jquery.timeago.js
 // @require scripts/api.js
 // @require scripts/formatting.js
@@ -17,7 +20,7 @@ threadPane = function() {
       messages.forEach(function(m) {
         m.isLoggedInUser = m.user.id == session.userId;
       });
-      render("html/metro/messages.html", {
+      $(render("html/metro/messages", {
         formatMessage: getTextFormatter,
         formatLocalDate: getLocalDateFormatter,
         messages: messages,
@@ -26,10 +29,10 @@ threadPane = function() {
         submitTip: (session.prefs.enterToSend ? "" : CO_KEY + "-") + "Enter to send",
         snapshotUri: api.url("images/snapshot.png")
       }, {
-        message: "message.html",
-        compose: "compose.html"
-      }, function(html) {
-        $(html).prependTo($container)
+        message: "message",
+        compose: "compose"
+      })).prependTo($container)
+      // TODO: unindent below
         .on("mousedown", "a[href^='x-kifi-sel:']", lookMouseDown)
         .on("click", "a[href^='x-kifi-sel:']", function(e) {
           e.preventDefault();
@@ -61,7 +64,6 @@ threadPane = function() {
         }
 
         if (messages.length) emitRead(threadId, messages[messages.length - 1]);
-      });
     },
     update: function(threadId, message, userId) {
       if ($holder.length && $holder.data("threadId") == threadId) {
@@ -120,7 +122,7 @@ threadPane = function() {
     m.formatMessage = getTextFormatter;
     m.formatLocalDate = getLocalDateFormatter;
     m.isLoggedInUser = m.user.id == userId;
-    render("html/metro/message.html", m, function(html) {
+    render("html/metro/message", m, function(html) {
       callback($(html).find("time").timeago().end());
     });
   }
