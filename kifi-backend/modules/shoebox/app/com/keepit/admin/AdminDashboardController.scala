@@ -23,7 +23,6 @@ class AdminDashboardController @Inject() (
   actionAuthenticator: ActionAuthenticator,
   db: Database,
   userRepo: UserRepo,
-  bookmarkRepo: BookmarkRepo,
   clock: Clock)
     extends AdminController(actionAuthenticator) {
 
@@ -31,9 +30,7 @@ class AdminDashboardController @Inject() (
 
   implicit val timeout = BabysitterTimeout(1 minutes, 2 minutes)
 
-  //we must refactor it soon, can't load all bookmarks to memory just like that anymore
   private lazy val userCountByDate = calcCountByDate(db.readOnly(implicit session => userRepo.all).map(_.createdAt.toLocalDateInZone))
-  private lazy val bookmarkCountByDate = calcCountByDate(db.readOnly(implicit session => bookmarkRepo.all).map(_.createdAt.toLocalDateInZone))
 
   private def calcCountByDate(dates: => Seq[LocalDate]) = {
     val day0 = if(dates.isEmpty) currentDate else dates.min
@@ -52,10 +49,6 @@ class AdminDashboardController @Inject() (
 
   def usersByDate = AdminJsonAction { implicit request =>
     Ok(userCountByDate)
-  }
-
-  def bookmarksByDate = AdminJsonAction { implicit request =>
-    Ok(bookmarkCountByDate)
   }
 
 }
