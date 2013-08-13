@@ -260,7 +260,7 @@ class ShoeboxServiceClientImpl @Inject() (
   }
 
   def normalizeURL(url: String): Future[NormalizedURI] = {
-    call(Shoebox.internal.normalizeURL(url)).map(r => Json.fromJson[NormalizedURI](r.json).get)
+    call(Shoebox.internal.normalizeURL, JsString(url)).map(r => Json.fromJson[NormalizedURI](r.json).get)
   }
 
   def getNormalizedURIs(uriIds: Seq[Id[NormalizedURI]]): Future[Seq[NormalizedURI]] = {
