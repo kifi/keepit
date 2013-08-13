@@ -39,7 +39,7 @@ class DuplicateDocumentsProcessor @Inject()(
 ){
 
   def mergeUris(old: Id[NormalizedURI], intoNew: Id[NormalizedURI]) = {
-    uriIntegrityPlugin.handleChangedUri(ChangedUri(oldUri = old, newUri = intoNew, cause = URLHistoryCause.MERGE))
+    uriIntegrityPlugin.handleChangedUri(MergedUri(oldUri = old, newUri = intoNew))
   }
 
   private def typedAction(dupAction: HandleDuplicatesAction) = {
