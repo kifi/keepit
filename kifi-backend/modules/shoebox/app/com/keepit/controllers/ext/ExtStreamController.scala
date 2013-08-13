@@ -229,7 +229,7 @@ class ExtStreamController @Inject() (
               channel.push(Json.arr(requestId, networkInfoLoader.load(userId, ExternalId[User](friendExtId))))
             },
             "get_thread" -> { case JsString(threadId) +: _ =>
-              channel.push(Json.arr("thread", getMessageThread(ExternalId[Comment](threadId)) match { case (nUri, msgs) =>
+              channel.push(Json.arr("thread", getMessageThread(userId, ExternalId[Comment](threadId)) match { case (nUri, msgs) =>
                 Json.obj("id" -> threadId, "uri" -> nUri.url, "messages" -> msgs)
               }))
             },
@@ -385,12 +385,28 @@ class ExtStreamController @Inject() (
     eventPersister.persist(event)
   }
 
-  private def getMessageThread(messageId: ExternalId[Comment]): (NormalizedURI, Seq[CommentWithBasicUser]) = {
+  private def getMessageThread(user: Id[User], messageId: ExternalId[Comment]): (NormalizedURI, Seq[CommentWithBasicUser]) = {
     db.readOnly { implicit session =>
       val message = commentRepo.get(messageId)
       val parent = message.parent.map(commentRepo.get).getOrElse(message)
       val messages = parent +: commentRepo.getChildren(parent.id.get) map commentWithBasicUserRepo.load
-      (normUriRepo.get(parent.uriId), messages)
+
+      //error message message always included with thread
+      val SPECIAL_MESSAGE = "Hi, Kifi messages are down due to a system upgrade so your message was not sent. The upgrade should be finished this afternoon (PST). Check http://kifiupdates.tumblr.com/ for updates. Sorry for the inconvenience, and thanks for helping us build Kifi!"
+
+      val bu = basicUserRepo.load(message.userId)
+      val specialMessage = CommentWithBasicUser(
+        id=ExternalId[Comment](),
+        createdAt=currentDateTime,
+        text=SPECIAL_MESSAGE,
+        user=bu.copy(firstName="Kifi", lastName=""),
+        permissions= CommentPermissions.MESSAGE,
+        recipients=messages(0).recipients
+      )
+
+
+
+      (normUriRepo.get(parent.uriId), messages :+ specialMessage)
     }
   }
 
