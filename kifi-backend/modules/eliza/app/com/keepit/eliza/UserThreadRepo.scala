@@ -181,7 +181,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getLatestSendableNotifications(userId: Id[User], howMany: Int)(implicit session: RSession): Seq[JsObject] = {
-    val rawNotifications = (for (row <- table if row.user === userId) yield row)
+    val rawNotifications = (for (row <- table if row.user === userId && row.lastNotification=!=JsNull.asInstanceOf[JsValue] && row.lastNotification=!=null.asInstanceOf[JsValue]) yield row)
                             .sortBy(row => (row.notificationUpdatedAt) desc)
                             .take(howMany).map(row => row.lastNotification ~ row.notificationPending)
                             .list
@@ -193,7 +193,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getSendableNotificationsAfter(userId: Id[User], after: DateTime)(implicit session: RSession): Seq[JsObject] = {
-    val rawNotifications = (for (row <- table if row.user===userId && row.notificationUpdatedAt > after) yield row)
+    val rawNotifications = (for (row <- table if row.user===userId && row.notificationUpdatedAt > after && row.lastNotification=!=JsNull.asInstanceOf[JsValue] && row.lastNotification=!=null.asInstanceOf[JsValue]) yield row)
                             .sortBy(row => (row.notificationUpdatedAt) desc)
                             .map(row => row.lastNotification ~ row.notificationPending) 
                             .list
@@ -201,7 +201,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getSendableNotificationsBefore(userId: Id[User], before: DateTime, howMany: Int)(implicit session: RSession): Seq[JsObject] = {
-    val rawNotifications = (for (row <- table if row.user===userId && row.notificationUpdatedAt < before) yield row)
+    val rawNotifications = (for (row <- table if row.user===userId && row.notificationUpdatedAt < before && row.lastNotification=!=JsNull.asInstanceOf[JsValue] &&row.lastNotification=!=null.asInstanceOf[JsValue]) yield row)
                             .sortBy(row => (row.notificationUpdatedAt) desc)
                             .map(row => row.lastNotification ~ row.notificationPending)
                             .take(howMany) 
