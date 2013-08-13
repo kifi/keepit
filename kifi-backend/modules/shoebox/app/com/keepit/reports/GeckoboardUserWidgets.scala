@@ -60,7 +60,7 @@ trait RetentionWindow extends RetentionPerDay {
 }
 
 class RetentionOverMonth @Inject() (val db: Database, val clock: Clock)
-  extends GeckoboardWidget[SparkLine](GeckoboardWidgetId("37507-12ed349c-eee7-4564-b8b5-754d9ed0aeeb"))
+  extends GeckoboardWidget[SparkLine](GeckoboardWidgetId("37507-ed12ca14-740b-449b-8998-d9f7fc909c80"))
   with RetentionWindow
 
 
