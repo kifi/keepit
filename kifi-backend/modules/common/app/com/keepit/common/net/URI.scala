@@ -182,8 +182,6 @@ class URI(val raw: Option[String], val scheme: Option[String], val userInfo: Opt
     uri
   }
 
-  def withScheme(newScheme: String) = URI(raw, Some(newScheme), userInfo, host, port, path, query, fragment)
-
   def safelyToString() = try {
     Some(toString())
   } catch { case e : Exception =>

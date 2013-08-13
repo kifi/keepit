@@ -2,7 +2,7 @@ package com.keepit.normalizer
 
 import com.keepit.common.net.{Host, URI}
 
-object AmazonNormalizer extends URINormalizer {
+object AmazonNormalizer extends StaticNormalizer {
   val product = """(.*)(/dp/[^/]+)(/.*)""".r
   val product2 = """(.*/gp/product)(/[^/]+)(/.*)""".r
   val productReviews = """(.*)(/product-reviews/[^/]+)(/.*)""".r

@@ -5,14 +5,12 @@ import com.keepit.common.net.URI
 import com.keepit.common.db.slick.DBSession.{RWSession, RSession}
 import com.keepit.model.{Normalization, NormalizedURIRepo, UriNormalizationRuleRepo, NormalizedURI}
 import com.keepit.common.logging.Logging
-import scala.util.{Success, Failure}
 import com.keepit.scraper.ScraperPlugin
-import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 import com.keepit.common.akka.MonitoredAwait
 import scala.concurrent.duration._
-
-trait URINormalizer extends PartialFunction[URI, URI]
+import com.keepit.common.healthcheck.{Healthcheck, HealthcheckError, HealthcheckPlugin}
+import scala.util.{Try, Success, Failure}
 
 @ImplementedBy(classOf[NormalizationServiceImpl])
 trait NormalizationService {
@@ -21,27 +19,50 @@ trait NormalizationService {
 }
 
 @Singleton
-class NormalizationServiceImpl @Inject() (normalizationRuleRepo: UriNormalizationRuleRepo, scraperPlugin: ScraperPlugin, monitoredAwait: MonitoredAwait) extends NormalizationService with Logging {
-  val normalizers = Seq(AmazonNormalizer, GoogleNormalizer, YoutubeNormalizer, RemoveWWWNormalizer, LinkedInNormalizer, DefaultNormalizer)
+class NormalizationServiceImpl @Inject() (normalizationRuleRepo: UriNormalizationRuleRepo, scraperPlugin: ScraperPlugin, monitoredAwait: MonitoredAwait, healthcheckPlugin: HealthcheckPlugin) extends NormalizationService with Logging {
 
   def normalize(uriString: String)(implicit session: RSession): String = {
-    val prepUrl = for {
-      uri <- URI.safelyParse(uriString)
-      prepUri <- normalizers.find(_.isDefinedAt(uri)).map(_.apply(uri))
-      prepUrl <- prepUri.safelyToString()
+    val prepUrlTry = for {
+      uri <- URI.parse(uriString)
+      prepUrl <- Try { PreNormalizer(uri).toString() }
     } yield prepUrl
 
-    val mappedUrl = for {
-      prepUrl <- prepUrl
-      mappedUrl <- normalizationRuleRepo.getByUrl(prepUrl)
-    } yield mappedUrl
-
-    mappedUrl.getOrElse(prepUrl.getOrElse(uriString))
+    prepUrlTry match {
+      case Failure(e) => {
+        healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Static Normalization failed: ${e.getMessage}")))
+        uriString
+      }
+      case Success(prepUrl) => {
+        val mappedUrl = normalizationRuleRepo.getByUrl(prepUrl)
+        mappedUrl.getOrElse(prepUrl)
+      }
+    }
   }
 
   def update(current: NormalizedURI, candidates: NormalizationCandidate*)(implicit normalizedURIRepo: NormalizedURIRepo, session: RWSession): Option[NormalizedURI] = {
 
     // Inner methods
+    def buildInternalCandidates(): Seq[NormalizationCandidate] = {
+      val internalCandidatesTry =
+        for {
+          currentURI <- URI.parse(current.url)
+          internalCandidates <- Try {
+            for (normalization <- Normalization.priority.keys if normalization <= Normalization.HTTPS) yield {
+              val candidateUrl = SchemeNormalizer(normalization)(currentURI).toString()
+              NormalizationCandidate(candidateUrl, normalization)
+            }
+          }
+        } yield internalCandidates
+
+      internalCandidatesTry match {
+        case Success(internalCandidates) => internalCandidates.toSeq
+        case Failure(e) => {
+          healthcheckPlugin.addError(HealthcheckError(Some(e), None, None, Healthcheck.INTERNAL, Some(s"Normalization candidates could not be generated internally: ${e.getMessage}")))
+          Seq.empty[NormalizationCandidate]
+        }
+      }
+    }
+
     def findStrongerMatch(orderedCandidates: List[NormalizationCandidate]): (Option[NormalizedURI], Seq[String]) = orderedCandidates match {
       case Nil => (None, Nil)
       case strongerCandidate::weakerCandidates => {
@@ -96,18 +117,11 @@ class NormalizationServiceImpl @Inject() (normalizationRuleRepo: UriNormalizatio
       // For each existing url, add rule, grandfather references
     }
 
-    // Main code
-    lazy val internalCandidates = URI.safelyParse(current.url) match {
-      case None => Seq.empty[NormalizationCandidate]
-      case Some(currentURI) => for {
-        normalization <- Normalization.priority.keys if normalization <= Normalization.HTTPS
-        candidateUrl <- currentURI.withScheme(normalization.scheme).safelyToString()
-      } yield NormalizationCandidate(candidateUrl, normalization)
-    }
+    //Main routine
 
     val allCandidates = current.normalization match {
       case Some(currentNormalization) => candidates.filter(_.normalization >= currentNormalization)
-      case None => candidates ++ internalCandidates
+      case None => candidates ++ buildInternalCandidates()
     }
 
     val (authoritativeURI, urlsToBeMigrated) = findStrongerMatch(allCandidates.toList.sortBy(_.normalization).reverse)
