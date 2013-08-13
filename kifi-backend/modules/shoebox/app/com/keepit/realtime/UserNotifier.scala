@@ -199,29 +199,34 @@ class UserNotifier @Inject() (
   }
 
   def message(message: Comment): Unit = withThreadLock(message) {
-    val (thread, participants) = db.readOnly { implicit s =>
+    val SPECIAL_MESSAGE = "Message not sent: Please upgrade your extension!"
+
+    //val (thread, participants) = 
+    db.readOnly { implicit s =>
       val normUri = normalUriRepo.get(message.uriId)
       val parent = message.parent.map(commentRepo.get).getOrElse(message)
       val threadInfo = threadInfoRepo.load(parent, Some(message.userId))
-      val messageJson = Json.arr("message", normUri.url, threadInfo, commentWithBasicUserRepo.load(message))
+      val cwbu = commentWithBasicUserRepo.load(message)
+      val cwbu2 = cwbu.copy(text=SPECIAL_MESSAGE)
+      val messageJson = Json.arr("message", normUri.url, threadInfo, cwbu2)
+      userChannel.pushAndFanout(message.userId, messageJson)
+      // val participants = commentRepo.getParticipantsUserIds(message.id.get)
+      // participants.map { p =>
+      //   userChannel.pushAndFanout(p, messageJson)
+      // }
 
-      val participants = commentRepo.getParticipantsUserIds(message.id.get)
-      participants.map { p =>
-        userChannel.pushAndFanout(p, messageJson)
-      }
+      //val thread = if (message eq parent) Seq(message) else (parent +: commentRepo.getChildren(parent.id.get)).reverse
 
-      val thread = if (message eq parent) Seq(message) else (parent +: commentRepo.getChildren(parent.id.get)).reverse
-
-      (thread, participants)
+      //(thread, participants)
     }
 
-    db.readWrite { implicit s =>
-      createMessageUserNotifications(message, thread, participants) map {
-        case (messageDetails, userNotification) =>
-          log.info(s"Sending notification to ${userNotification.userId}: $messageDetails")
-          notificationBroadcast.push(userNotification)
-      }
-    }
+    // db.readWrite { implicit s =>
+    //   createMessageUserNotifications(message, thread, participants) map {
+    //     case (messageDetails, userNotification) =>
+    //       log.info(s"Sending notification to ${userNotification.userId}: $messageDetails")
+    //       notificationBroadcast.push(userNotification)
+    //   }
+    // }
   }
 
   def recreateMessageDetails(safeMode: Boolean)(implicit session: RWSession) = {

@@ -78,11 +78,11 @@ class ExtCommentController @Inject() (
             text = LargeString(text),
             permissions = CommentPermissions.MESSAGE,
             parent = None))
-          recipientUserIds foreach { userId =>
-            commentRecipientRepo.save(CommentRecipient(commentId = message.id.get, userId = Some(userId)))
-          }
-          commentReadRepo.save(
-            CommentRead(userId = userId, uriId = uri.id.get, parentId = Some(message.id.get), lastReadId = message.id.get))
+          // recipientUserIds foreach { userId =>
+          //   commentRecipientRepo.save(CommentRecipient(commentId = message.id.get, userId = Some(userId)))
+          // }
+          // commentReadRepo.save(
+          //   CommentRead(userId = userId, uriId = uri.id.get, parentId = Some(message.id.get), lastReadId = message.id.get))
           message
         }
         future {  // important that this is spawned only *after* above read/write transaction committed
@@ -122,14 +122,14 @@ class ExtCommentController @Inject() (
       (message, parent)
     }
 
-    db.readWrite(attempts = 2) { implicit s =>
-      commentReadRepo.save(commentReadRepo.getByUserAndParent(userId, parent.id.get) match {
-        case Some(commentRead) =>
-          commentRead.withLastReadId(message.id.get)
-        case None =>
-          CommentRead(userId = userId, uriId = parent.uriId, parentId = parent.id, lastReadId = message.id.get)
-      })
-    }
+    // db.readWrite(attempts = 2) { implicit s =>
+    //   commentReadRepo.save(commentReadRepo.getByUserAndParent(userId, parent.id.get) match {
+    //     case Some(commentRead) =>
+    //       commentRead.withLastReadId(message.id.get)
+    //     case None =>
+    //       CommentRead(userId = userId, uriId = parent.uriId, parentId = parent.id, lastReadId = message.id.get)
+    //   })
+    // }
 
     future {  // important that this is spawned only *after* above read/write transaction committed
       notifyRecipients(message)
