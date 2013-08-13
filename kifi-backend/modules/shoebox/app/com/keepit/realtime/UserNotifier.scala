@@ -200,7 +200,7 @@ class UserNotifier @Inject() (
   }
 
   def message(message: Comment): Unit = withThreadLock(message) {
-    val SPECIAL_MESSAGE = " Hi, Kifi messages are down due to a system upgrade so your message was not sent. The upgrade should be finished this afternoon (PST). Check http://kifiupdates.tumblr.com/ for updates. Sorry for the inconvenience, and thanks for helping us build Kifi!"
+    val SPECIAL_MESSAGE = "Hi, Kifi messages are down due to a system upgrade so your message was not sent. The upgrade should be finished this afternoon (PST). Check http://kifiupdates.tumblr.com/ for updates. Sorry for the inconvenience, and thanks for helping us build Kifi!"
 
     //val (thread, participants) = 
     db.readOnly { implicit s =>
