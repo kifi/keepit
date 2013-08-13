@@ -1115,7 +1115,7 @@ function getFriends() {
 function getPrefs() {
   ajax("GET", "/ext/prefs", function(o) {
     api.log("[getPrefs]", o);
-    session.prefs = o;
+    session.prefs = o[1];
   });
 }
 
