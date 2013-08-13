@@ -330,7 +330,7 @@ class MessagingController @Inject() (
 
 
   def getThreadMessages(thread: MessageThread, pageOpt: Option[Int]) : Seq[Message] = 
-    db.readOnly {implicit sesstion => 
+    db.readOnly { implicit session =>
       pageOpt.map { page =>
         val lower = MessagingController.THREAD_PAGE_SIZE*page
         val upper = MessagingController.THREAD_PAGE_SIZE*(page+1)-1
@@ -355,23 +355,27 @@ class MessagingController @Inject() (
     getThreadMessages(thread, pageOpt)
   }
 
-  def getThreadMessagesWithBasicUser(threadExtId: ExternalId[MessageThread], pageOpt: Option[Int]) : Seq[MessageWithBasicUser] = {
+  def getThreadMessagesWithBasicUser(threadExtId: ExternalId[MessageThread], pageOpt: Option[Int]): Future[Seq[MessageWithBasicUser]] = {
     val thread = db.readOnly{ implicit session =>
       threadRepo.get(threadExtId)
     }
+    log.info(s"[get_thread] got thread for extId $threadExtId: $thread")
     val participantSet = thread.participants.map(_.participants.keySet).getOrElse(Set())
-    val id2BasicUser = Await.result(shoebox.getBasicUsers(participantSet.toSeq), 1 seconds)
-    val messages = getThreadMessages(thread, pageOpt)
-    messages.map{ message =>
-      MessageWithBasicUser(
-        message.externalId,
-        message.createdAt,
-        message.messageText,
-        message.sentOnUrl.getOrElse(""),
-        thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
-        message.from.map(id2BasicUser(_)),
-        participantSet.toSeq.map(id2BasicUser(_))
-      )
+    log.info(s"[get_thread] got participants for extId $threadExtId: $participantSet")
+    shoebox.getBasicUsers(participantSet.toSeq) map { id2BasicUser =>
+      val messages = getThreadMessages(thread, pageOpt)
+      log.info(s"[get_thread] got raw messages for extId $threadExtId: $messages")
+      messages.map { message =>
+        MessageWithBasicUser(
+          message.externalId,
+          message.createdAt,
+          message.messageText,
+          message.sentOnUrl.getOrElse(""),
+          thread.nUrl.getOrElse(""), //TODO Stephen: This needs to change when we have detached threads
+          message.from.map(id2BasicUser(_)),
+          participantSet.toSeq.map(id2BasicUser(_))
+        )
+      }
     }
   }
 
