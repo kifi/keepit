@@ -126,7 +126,7 @@ function attachComposeBindings($c, composeTypeName, enterToSend) {
     setTimeout($submit.removeClass.bind($submit, "kifi-active"), 10);
   })
   .bindHover(".kifi-compose-snapshot", function(configureHover) {
-    render("html/keeper/titled_tip.html", {
+    render("html/keeper/titled_tip", {
       title: "Microfind",
       html: "Click to mark something on<br>the page and reference it in<br>your " + composeTypeName + "."
     }, function(html) {

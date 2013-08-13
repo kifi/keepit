@@ -147,7 +147,7 @@ var snapshot = {
     var $selectable = $shades.add($glass).appendTo("body").on("mousemove", function(e) {
       updateSelection(cX = e.clientX, cY = e.clientY, e.pageX - e.clientX, e.pageY - e.clientY);
     });
-    render("html/snapshot_bar.html", {"type": composeTypeName}, function(html) {
+    render("html/snapshot_bar", {"type": composeTypeName}, function(html) {
       api.require("scripts/lib/jquery-ui-draggable.min.js", function() {  // for draggable
         $(html).appendTo("body")
           .draggable({cursor: "move", distance: 10, handle: ".kifi-snapshot-bar", scroll: false})

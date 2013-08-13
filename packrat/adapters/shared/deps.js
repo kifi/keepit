@@ -1,19 +1,24 @@
 !function(exports, meta) {
-	exports.deps = function(path, injected) {
-		injected = injected || {};
-		function notYetInjected(path) {
-			return !injected[path];
+	exports.deps = function(paths, injected) {
+		paths = typeof paths == 'string' ? [paths] : paths;
+		var scripts = [], styles = {};
+		for (var i = 0; i < paths.length; i++) {
+			if (paths[i].substr(-3) == ".js") {
+				scripts.push(paths[i]);
+			} else {
+				styles[paths[i]] = true;
+			}
 		}
-
-		if (path.substr(-4) === ".css") {
-			return {scripts: [], styles: injected[path] ? [] : [path]};
-		}
-
-		var scripts = Object.keys([path].reduce(transitiveScriptDeps, {})).filter(notYetInjected);
+		var notInjected = not.bind(null, injected || {});
+		scripts = Object.keys(scripts.reduce(transitiveScriptDeps, {})).filter(notInjected);
 		return {
 			scripts: scripts,
-			styles: Object.keys(scripts.reduce(styleDeps, {})).filter(notYetInjected)};
+			styles: Object.keys(scripts.reduce(styleDeps, styles)).filter(notInjected)};
 	};
+
+	function not(obj, key) {
+		return !obj[key];
+	}
 
 	function transitiveScriptDeps(o, path) {
 		var deps = meta.scriptDeps[path];
