@@ -225,7 +225,7 @@ class UserThreadRepoImpl @Inject() (
   }
 
   def getUserThreadsForEmailing(before: DateTime)(implicit session: RSession) : Seq[UserThread] = {
-    (for (row <- table if row.notificationEmailed===false && (row.notificationLastSeen.isNull || row.notificationLastSeen < row.notificationUpdatedAt) && row.notificationUpdatedAt < before) yield row).list
+    (for (row <- table if row.notificationPending===true && row.notificationEmailed===false && (row.notificationLastSeen.isNull || row.notificationLastSeen < row.notificationUpdatedAt) && row.notificationUpdatedAt < before) yield row).list
   }
 
   def setNotificationEmailed(id: Id[UserThread], relevantMessageOpt: Option[Id[Message]])(implicit session: RWSession) : Unit = {

@@ -23,6 +23,6 @@ trait ElizaServices { self: FortyTwoGlobal =>
     require(injector.instance[HealthcheckPlugin].enabled)
     require(injector.instance[FortyTwoCachePlugin].enabled)
     require(injector.instance[InMemoryCachePlugin].enabled)
-    //require(injector.instance[ElizaEmailNotifierPlugin].enabled)
+    require(injector.instance[ElizaEmailNotifierPlugin].enabled)
   }
 }
