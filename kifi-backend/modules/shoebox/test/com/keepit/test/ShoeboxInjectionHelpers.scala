@@ -42,7 +42,7 @@ trait ShoeboxInjectionHelpers { self: InjectorProvider =>
   def uriTopicRepoB(implicit injector: Injector) = inject[UriTopicRepoB]
   def userBookmarkClicksRepo(implicit injector: Injector) = inject[UserBookmarkClicksRepo]
   def uriNormalizationRuleRepo(implicit injector: Injector) = inject[UriNormalizationRuleRepo]
-  def failedUriNormalizationRepo(implicit injector: Injector) = inject[FailedUriNormalizationRepo]
+  def failedContentCheckRepo(implicit injector: Injector) = inject[FailedContentCheckRepo]
   def changedURIRepo(implicit injector: Injector) = inject[ChangedURIRepo]
   def sessionProvider(implicit injector: Injector) = inject[SlickSessionProvider].asInstanceOf[TestSlickSessionProvider]
 }

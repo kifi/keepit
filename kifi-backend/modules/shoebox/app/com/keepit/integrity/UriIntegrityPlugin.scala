@@ -32,8 +32,11 @@ class UriIntegrityActor @Inject()(
   deepLinkRepo: DeepLinkRepo,
   followRepo: FollowRepo,
   scrapeInfoRepo: ScrapeInfoRepo,
+  uriNormRuleRepo: UriNormalizationRuleRepo,
   healthcheckPlugin: HealthcheckPlugin
 ) extends FortyTwoActor(healthcheckPlugin) with Logging {
+
+  private def preNormalize(uri: String): String = {uri}   // DUMMY
 
   /**
    * any reference to the old uri should be redirected to the new one
@@ -45,7 +48,16 @@ class UriIntegrityActor @Inject()(
         urlRepo.save(url.withNormUriId(newUri).withHistory(URLHistory(clock.now, newUri, URLHistoryCause.MERGE)))
       }
 
-      uriRepo.save(uriRepo.get(oldUri).withState(NormalizedURIStates.INACTIVE))
+      val (u, v) = (uriRepo.get(oldUri), uriRepo.get(newUri))
+      if ( u.state != NormalizedURIStates.ACTIVE && u.state != NormalizedURIStates.INACTIVE && (v.state == NormalizedURIStates.ACTIVE || v.state == NormalizedURIStates.INACTIVE)){
+        uriRepo.save(v.withState(NormalizedURIStates.SCRAPE_WANTED))
+      }
+      uriRepo.save(u.withState(NormalizedURIStates.INACTIVE))
+
+      urlRepo.getByNormUri(oldUri).map{ url =>
+        val prepUrl = preNormalize(url.url)
+        uriNormRuleRepo.save( UriNormalizationRule(prepUrl = prepUrl, mappedUrl = v.url, prepUrlHash = NormalizedURI.hashUrl(prepUrl)))
+      }
 
       scrapeInfoRepo.getByUri(oldUri).map{ info =>
         scrapeInfoRepo.save(info.withState(ScrapeInfoStates.INACTIVE))
@@ -76,7 +88,9 @@ class UriIntegrityActor @Inject()(
   def handleSplit(url: URL, newUri: Id[NormalizedURI]): Unit = {
     db.readWrite { implicit s =>
       urlRepo.save(url.withNormUriId(newUri).withHistory(URLHistory(clock.now, newUri, URLHistoryCause.SPLIT)))
-      uriRepo.save(uriRepo.get(newUri).withState(NormalizedURIStates.SCRAPE_WANTED))      // scrapeInfoRepo is also updated in the save() method.
+      val (u, v) = (uriRepo.get(url.normalizedUriId), uriRepo.get(newUri))
+      if (u.state != NormalizedURIStates.ACTIVE && u.state != NormalizedURIStates.INACTIVE && (v.state == NormalizedURIStates.ACTIVE || v.state == NormalizedURIStates.INACTIVE))
+        uriRepo.save(uriRepo.get(newUri).withState(NormalizedURIStates.SCRAPE_WANTED))
 
       bookmarkRepo.getByUrlId(url.id.get).map{ bm =>
         bookmarkRepo.save(bm.withNormUriId(newUri))
